@@ -20,6 +20,7 @@ export * as paletteQueue from "./palette-queue.js";
 export * as mainLoop from "./main-loop.js";
 export * as eventFlags from "./event-flags.js";
 export * as arrayHelpers from "./array-helpers.js";
+export * as stringFormat from "./string-format.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
