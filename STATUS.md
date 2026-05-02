@@ -1,8 +1,8 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0-3 ✅ + Phase 4a ✅ + Phase 4b ✅ + **Phase 4c ✅** (Musashi WASM come oracolo locale, NON come engine)
-**Prossima fase:** Phase 4d — differential testing **per-funzione** (validare modulo-per-modulo la rewrite TS contro il binario)
+**Fase corrente:** Phase 0-3 ✅ + Phase 4a-c ✅ + **Phase 4d.RNG ✅** (RNG TS bit-perfect vs binary, 10000/10000 match)
+**Prossima fase:** Phase 4d.next — replicare i sotto-update di MainUpdate (palette anim, fisica, AI) uno alla volta col differential per-funzione
 **Branch corrente:** `main`.
 
 **Decisione strategica chiarita** (Phase 4c):
@@ -216,15 +216,35 @@ Vedi `prompts/03-oracle.md`.
 
 **Test**: 69/69 passano. Typecheck clean.
 
-## Phase 4d — prossima fase suggerita
+## Phase 4d.RNG — RNG bit-perfect ✅
 
-**Differential testing per-funzione**:
-1. Setto un `GameState` X
-2. Eseguo la funzione TS che ho replicato (es. `physicsTick(X)`) → newX_ts
-3. Stesso X nella RAM Musashi, eseguo `system.call(0x...)` per la funzione binary corrispondente → newX_bin
-4. Confronto newX_ts vs newX_bin
+**Helper `callFunction(cpu, addr, args)`** in `binary-oracle-lib.ts`:
+- Spinge args RTL su stack + sentinel return address (0xCAFEBABE)
+- setRegister PC = addr, run in burst di 100 cicli con poll PC == sentinel
+- Pop tutto, ritorna D0 (return value) + cycles
+- Note: `system.call()` di musashi-wasm aveva timeout 1M cicli senza terminazione corretta su return (suspect bug); la mia impl manuale è ~660 cicli per RNG call.
 
-Permette validazione **modulo-per-modulo** mentre evolvo l'engine TS, senza dover lanciare l'intero scenario per ogni cambiamento.
+**`packages/cli/src/test-rng-parity.ts`**: differential testing RNG.
+Per N seed/limit pairs (deterministici via PRNG locale):
+1. set seed @ 0x4003A6
+2. callFunction(FUN_13A98, [limit]) → binary_d0, binary_seed_after
+3. rngNext(state, limit) → ts_return, ts_seed_after
+4. Confronto.
+
+**🎯 Risultato: 10000/10000 match (100%)** in ~25 secondi. PRD §6 Phase 4 acceptance soddisfatto bit-perfect per RNG.
+
+L'algoritmo TS che avevo derivato dal disassembly era già corretto sin dalla prima implementazione (Phase 4a). I primi 30 test fallivano per il bug in `callFunction` (uso scorretto di `system.call`).
+
+## Phase 4d.next — prossima fase
+
+**Differential per-funzione progressivo**:
+1. Identifica una funzione semplice del binario (palette anim @ 0x26BEE è candidata: poco state, lookup tables note)
+2. Riscrivi in TS idiomatic
+3. `callFunction(0x26BEE, ...)` su uno stato → binary_delta
+4. La tua implementazione TS sullo stesso stato → ts_delta
+5. Confronta. Se matcha, integra nel `tick()` dell'engine.
+
+Quando abbastanza sotto-update sono replicati, il `tick()` puro fa lo stesso lavoro del MainUpdate del binario. Parity sale automaticamente.
 
 ## Phase 5-7
 

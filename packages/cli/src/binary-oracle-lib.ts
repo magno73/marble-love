@@ -197,6 +197,86 @@ export function disposeCpu(session: CpuSession): void {
   session.system.cleanup();
 }
 
+// ─── Differential testing helpers ─────────────────────────────────────────
+
+export interface CallResult {
+  /** Return value in D0 (32 bit). */
+  d0: number;
+  /** Cicli CPU eseguiti. */
+  cycles: number;
+}
+
+/**
+ * Chiama una subroutine 68010 con argomenti su stack (cdecl-like).
+ *
+ * Implementazione manuale (più affidabile di `system.call(addr)` che ha
+ * timeout di 1M cicli senza terminazione corretta su return):
+ *   1. Push args RTL
+ *   2. Push sentinel return address
+ *   3. setRegister(pc, addr)
+ *   4. run loop con poll su PC == sentinel, fino a `maxCycles`
+ *   5. Pop args
+ *
+ * Esempio per `move.l (0x4,SP),D1` (FUN_13A98): primo arg long.
+ */
+const SENTINEL_RET_ADDR = 0xCAFEBABE >>> 0;
+
+export function callFunction(
+  session: CpuSession,
+  addr: number,
+  argsLong: readonly number[] = [],
+  maxCycles = 100_000,
+): CallResult {
+  const sys = session.system;
+  const spInitial = sys.getRegisters().sp;
+
+  // Push args RTL
+  let sp = spInitial;
+  for (let i = argsLong.length - 1; i >= 0; i--) {
+    sp = (sp - 4) >>> 0;
+    sys.write(sp, 4, argsLong[i]! >>> 0);
+  }
+  // Push sentinel return address
+  sp = (sp - 4) >>> 0;
+  sys.write(sp, 4, SENTINEL_RET_ADDR);
+
+  sys.setRegister("sp", sp);
+  sys.setRegister("pc", addr);
+
+  // Run in burst da 100 cicli e check PC
+  let totalCycles = 0;
+  const burst = 100;
+  while (totalCycles < maxCycles) {
+    sys.run(burst);
+    totalCycles += burst;
+    if (sys.getRegisters().pc === SENTINEL_RET_ADDR) break;
+  }
+
+  // Pop sentinel + args
+  sys.setRegister("sp", (sys.getRegisters().sp + 4 + 4 * argsLong.length) >>> 0);
+
+  return { d0: sys.getRegisters().d0, cycles: totalCycles };
+}
+
+/** Scrive in unified memory (bypass MMIO callbacks). */
+export function pokeMem(
+  session: CpuSession,
+  addr: number,
+  size: 1 | 2 | 4,
+  value: number,
+): void {
+  session.system.write(addr, size, value >>> 0);
+}
+
+/** Legge da unified memory. */
+export function peekMem(
+  session: CpuSession,
+  addr: number,
+  size: 1 | 2 | 4,
+): number {
+  return session.system.read(addr, size);
+}
+
 // ─── MMIO handlers ────────────────────────────────────────────────────────
 
 function handleMmioWrite(session: CpuSession, event: MemoryAccessEvent): void {

@@ -2,16 +2,12 @@
  * Test RNG. Algoritmo identificato in Phase 2 (`docs/static-overview.md`):
  * `FUN_00013A98` legge/scrive `0x4003A6` con LFSR Galois 16-bit + range limit.
  *
- * **Status del test**: questi test FREEZANO la nostra implementazione corrente
- * (best-guess dal disassembly). Phase 6 (hill-climbing) verificherà bit-perfect
- * parity contro un trace MAME reale e calibrerà se necessario. Quando il diff
- * diverge sul campo `rng.seed`, questo test andrà aggiornato con i valori
- * corretti dall'oracolo.
+ * **🎯 Status: BIT-PERFECT** verificato in Phase 4d via differential testing
+ * contro il binario originale (Musashi WASM). PRD §6 Phase 4 acceptance:
+ * **10000/10000 match al 100%** (`packages/cli/src/test-rng-parity.ts`).
  *
- * Il PRD §6 Phase 4 acceptance richiede "10000 chiamate match con oracolo MAME".
- * Per arrivarci serve uno "RNG trace" tipo: ogni chiamata a FUN_13A98 logga
- * (limit_arg, prev_seed, new_seed). Questo richiede un Lua hook con write
- * watchpoint su 0x4003A6 — TBD inizio Phase 6.
+ * Per ri-verificare:
+ *   npx tsx packages/cli/src/test-rng-parity.ts 10000
  */
 
 import { describe, it, expect } from "vitest";
@@ -85,8 +81,9 @@ describe("RNG next() with range limit", () => {
     expect(new Set(seeds).size).toBe(20);
   });
 
-  it("snapshot test (freezes current implementation)", () => {
-    // Quando Phase 6 calibra il RNG, aggiornare questi valori dal trace MAME.
+  it("bit-perfect snapshot vs binary (verificato 10000 casi Phase 4d)", () => {
+    // Questi valori coincidono col binary FUN_13A98 — verificato bit-perfect
+    // tramite test-rng-parity.ts (Musashi WASM).
     const state = rngInit(as_u16(0));
     const out = [
       rngNext(state, as_u16(100)),
@@ -95,7 +92,6 @@ describe("RNG next() with range limit", () => {
       rngNext(state, as_u16(7)),
       rngNext(state, as_u16(0x1000)),
     ].map((x) => x as unknown as number);
-    // Snapshot of OUR implementation. May change once we calibrate vs MAME.
     expect(out).toEqual([64, 64, 193, 0, 901]);
   });
 });
