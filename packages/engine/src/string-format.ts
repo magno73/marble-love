@@ -9,6 +9,7 @@
  */
 
 import type { GameState } from "./state.js";
+import type { RomImage } from "./bus.js";
 
 // ─── Memory dispatch (subset coerente con bus.ts) ─────────────────────────
 
@@ -22,6 +23,60 @@ function writeMemoryU8(state: GameState, addr: number, value: number): void {
     state.alphaRam[addr - 0xa03000] = v;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = v;
+  }
+}
+
+function readMemoryU8(
+  state: GameState,
+  rom: RomImage | null,
+  addr: number,
+): number {
+  if (rom !== null && addr < 0x80000) return rom.program[addr] ?? 0;
+  if (addr >= 0x400000 && addr < 0x402000) return state.workRam[addr - 0x400000] ?? 0;
+  if (addr >= 0xa02000 && addr < 0xa03000) return state.spriteRam[addr - 0xa02000] ?? 0;
+  if (addr >= 0xa03000 && addr < 0xa04000) return state.alphaRam[addr - 0xa03000] ?? 0;
+  if (addr >= 0xb00000 && addr < 0xb00800) return state.colorRam[addr - 0xb00000] ?? 0;
+  return 0;
+}
+
+// ─── strcpy (FUN_1D74) ────────────────────────────────────────────────────
+
+/**
+ * Replica `FUN_00001D74` — `strcpy(dest, src)`.
+ *
+ * Disassembly (5 istruzioni):
+ *   movea.l (0x4,SP),A1      ; A1 = arg1 (dest)
+ *   movea.l (0x8,SP),A0      ; A0 = arg2 (src)
+ *   loop:
+ *     move.b (A0)+,(A1)+     ; *dest++ = *src++ (Z flag = byte == 0)
+ *     bne.b loop
+ *   rts
+ *
+ * Copia byte-per-byte da `src` a `dest` finché non viene copiato un byte
+ * nullo (incluso il null terminator). Equivalente a C strcpy.
+ *
+ * Source può essere in ROM (string literals < 0x80000) o RAM. Dest
+ * deve essere in RAM scrivibile.
+ *
+ * **Verificato bit-perfect** vs `FUN_00001D74` tramite differential test.
+ */
+export function strcpy(
+  state: GameState,
+  rom: RomImage | null,
+  destAddr: number,
+  srcAddr: number,
+): void {
+  let d = destAddr >>> 0;
+  let s = srcAddr >>> 0;
+  // Safety cap: 68k strcpy non ha limite, ma in pratica le stringhe sono
+  // < 256 byte. 4096 è abbondante e previene loop infiniti su src senza NUL.
+  let safety = 4096;
+  while (safety-- > 0) {
+    const b = readMemoryU8(state, rom, s);
+    writeMemoryU8(state, d, b);
+    s = (s + 1) >>> 0;
+    d = (d + 1) >>> 0;
+    if (b === 0) break;
   }
 }
 

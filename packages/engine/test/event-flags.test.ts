@@ -9,10 +9,12 @@ import { describe, it, expect } from "vitest";
 import {
   consumeEventFlag,
   setFlagBit,
+  anyStatusFlagsSet,
   addToObjectAccumAndFlag,
   detectRisingEdgesAndPass,
   EVENT_FLAGS_OFF,
   STATUS_FLAGS_OFF,
+  SECONDARY_FLAGS_OFF,
   OBJECT_TRIGGER_FLAGS_OFF,
   EDGE_DETECTOR_PREV_OFF,
   OBJ_FIELD_TYPE,
@@ -116,6 +118,38 @@ describe("setFlagBit (FUN_5236)", () => {
     s.workRam[STATUS_FLAGS_OFF + 3] = 0x10;
     setFlagBit(s, 0);
     expect(readU32(s)).toBe(0xABCDEF11);
+  });
+});
+
+describe("anyStatusFlagsSet (FUN_52A2)", () => {
+  it("entrambi 0 → 0", () => {
+    const s = emptyGameState();
+    expect(anyStatusFlagsSet(s)).toBe(0);
+  });
+
+  it("solo primary set → 1", () => {
+    const s = emptyGameState();
+    s.workRam[STATUS_FLAGS_OFF + 3] = 1;
+    expect(anyStatusFlagsSet(s)).toBe(1);
+  });
+
+  it("solo secondary set → 1", () => {
+    const s = emptyGameState();
+    s.workRam[SECONDARY_FLAGS_OFF + 3] = 1;
+    expect(anyStatusFlagsSet(s)).toBe(1);
+  });
+
+  it("entrambi set → 1", () => {
+    const s = emptyGameState();
+    s.workRam[STATUS_FLAGS_OFF + 3] = 0xFF;
+    s.workRam[SECONDARY_FLAGS_OFF + 3] = 0xFF;
+    expect(anyStatusFlagsSet(s)).toBe(1);
+  });
+
+  it("bit alti del long: primary @ byte 0 → 1", () => {
+    const s = emptyGameState();
+    s.workRam[STATUS_FLAGS_OFF] = 0x80;
+    expect(anyStatusFlagsSet(s)).toBe(1);
   });
 });
 
