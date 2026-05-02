@@ -5,15 +5,16 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "marble-runner": "./src/marble-runner.ts"
+    "marble-runner": "./src/marble-runner.ts",
+    "binary-runner": "./src/binary-runner.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "start": "node --experimental-strip-types src/marble-runner.ts"
+    "build": "tsc"
   },
   "dependencies": {
-    "@marble-love/engine": "*"
+    "@marble-love/engine": "*",
+    "musashi-wasm": "^0.1.31"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

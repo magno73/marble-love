@@ -1,11 +1,13 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0-3 ✅ + Phase 4a ✅ + **Phase 4b ✅** (bus MMIO + level loader + workRamHash matching @ frame 0)
-**Prossima fase:** Phase 6 (hill-climbing) — il TS attualmente diverge al frame 6 perché non emula il 68010. Per chiudere serve o emulator 68010 (grosso) o Phase 4c (replicare manualmente i sotto-update di MainUpdate).
-**Branch corrente:** `main`. Tutte le fasi inline finora.
+**Fase corrente:** Phase 0-3 ✅ + Phase 4a ✅ + Phase 4b ✅ + **Phase 4c ✅** (Musashi WASM come oracolo locale, NON come engine)
+**Prossima fase:** Phase 4d — differential testing **per-funzione** (validare modulo-per-modulo la rewrite TS contro il binario)
+**Branch corrente:** `main`.
 
-**Risultato chiave:** **parità del 1%** sul primo scenario (6/600 frame match bit-perfect). Frame 0-5 coincidono completamente. Diff dice "ram-mismatch al frame 6" perché MAME inizia a popolare Work RAM e TS no (no CPU emu).
+**Decisione strategica chiarita** (Phase 4c):
+- musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
+- musashi-wasm fornisce: (1) **oracolo locale** alternativo a MAME (binary-runner) e (2) **differential per-funzione** (eseguo una funzione del binario, confronto col delta TS) → tool di sviluppo, non runtime.
 
 ---
 
@@ -191,6 +193,38 @@ Vedi `prompts/03-oracle.md`.
 
 - Calibrazione bit-perfect del RNG vs oracle (richiede call-by-call dump)
 - Hill climbing su scenari del curriculum
+
+## Phase 4c — Musashi WASM come oracolo locale ✅
+
+**Aggiunto** `musashi-wasm@0.1.31` come dependency del package `@marble-love/cli` (NON di `engine`, che resta puro).
+
+**`packages/cli/src/binary-oracle-lib.ts`**:
+- Wrapper attorno a `musashi-wasm/core` con memory layout che riflette `docs/hardware-map.md`
+- `createCpu(rom, state)`: inizializza System con regions (ROM, slapstic, Work RAM, cart RAM, PF/MO/Alpha/PAL RAM, EEPROM)
+- `runFrame(cpu)`: 119_480 cicli @ 7.16 MHz (NTSC), poi sync da unified memory → state.{workRam,spriteRam,colorRam}
+- MMIO write hooks (sound mailbox, watchdog, vblank ack) e read hooks (trackball, switches) — placeholder, da raffinare in 4d
+
+**`packages/cli/src/binary-runner.ts`**:
+- CLI entry equivalente a `oracle/run_oracle.ts` ma usa Musashi WASM invece di MAME
+- Output JSONL bit-compatibile con `oracle/mame_dumper.lua`
+- Use case: **trace generation senza MAME** (CI, dev offline, regressioni rapide)
+- Use case secondario (Phase 4d): differential per-funzione
+
+**Status**: binary-runner produce trace ma diverge da MAME al frame 4 (Musashi non gestisce esattamente le quirks Atari System 1: IRQ4 VBLANK injection, watchdog timer, slapstic 103 state machine). Phase 4d lo raffinerà o lo userà solo per analisi modulo-per-modulo invece che per parità globale.
+
+**Engine rimane PURO**: `@marble-love/engine` non ha dependencies WASM/native. Marble-runner usa solo il `tick()` TS.
+
+**Test**: 69/69 passano. Typecheck clean.
+
+## Phase 4d — prossima fase suggerita
+
+**Differential testing per-funzione**:
+1. Setto un `GameState` X
+2. Eseguo la funzione TS che ho replicato (es. `physicsTick(X)`) → newX_ts
+3. Stesso X nella RAM Musashi, eseguo `system.call(0x...)` per la funzione binary corrispondente → newX_bin
+4. Confronto newX_ts vs newX_bin
+
+Permette validazione **modulo-per-modulo** mentre evolvo l'engine TS, senza dover lanciare l'intero scenario per ogni cambiamento.
 
 ## Phase 5-7
 

@@ -3,11 +3,11 @@ import { emptyGameState, snapshotGameState } from "../src/state.js";
 import { as_u32 } from "../src/wrap.js";
 
 describe("GameState basics", () => {
-  it("emptyGameState ha sizing RAM atteso", () => {
+  it("emptyGameState ha sizing RAM atteso (verificato Phase 1)", () => {
     const s = emptyGameState();
-    expect(s.workRam.byteLength).toBe(0x4000);
-    expect(s.spriteRam.byteLength).toBe(0x800);
-    expect(s.colorRam.byteLength).toBe(0x800);
+    expect(s.workRam.byteLength).toBe(0x2000);   // 8 KB work RAM
+    expect(s.spriteRam.byteLength).toBe(0x1000); // 4 KB motion-object RAM
+    expect(s.colorRam.byteLength).toBe(0x800);   // 2 KB palette RAM
   });
 
   it("snapshot è deep-copy", () => {

@@ -165,11 +165,13 @@ export function emptyGameState(): GameState {
       buttons: as_u8(0),
       dipSwitches: as_u16(0),
     },
-    // Placeholder: sizing definitivo in Phase 1. Atari System 1 ha 16K work RAM
-    // (vedi atarisy1.cpp), quindi 0x4000 è il punto di partenza.
-    workRam: new Uint8Array(0x4000),
-    spriteRam: new Uint8Array(0x800),
-    colorRam: new Uint8Array(0x800),
+    // Sizing verificato Phase 1 (`docs/hardware-map.md`):
+    //   work RAM 8 KB ($400000-$401FFF)
+    //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banchi × 64 entry × 4 word)
+    //   palette RAM 2 KB ($B00000-$B007FF)
+    workRam: new Uint8Array(0x2000),    // 8 KB
+    spriteRam: new Uint8Array(0x1000),  // 4 KB
+    colorRam: new Uint8Array(0x800),    // 2 KB
   };
 }
 
