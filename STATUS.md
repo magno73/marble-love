@@ -1,9 +1,9 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ (MAME driver studied)
-**Prossima fase:** Phase 2 (Ghidra + reaper static analysis)
-**Branch corrente:** `main` (scaffold + phase-1 inline). Da Phase 2: branch dedicati.
+**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ (Ghidra static analysis)
+**Prossima fase:** Phase 3 (MAME oracle harness — popolare RAM addresses noti)
+**Branch corrente:** `main`. Tutte le fasi inline finora.
 
 ---
 
@@ -75,20 +75,31 @@
 
 ---
 
-## Phase 2 — Ghidra + reaper ⏭ prossimo
+## Phase 2 — Ghidra static analysis ✅
 
-Vedi `prompts/02-static-foundation.md`.
+**Tools usati:**
+- ✅ Ghidra 12.0.4 + OpenJDK 21 + wrapper `tools/ghidra_headless.sh`
+- ✅ `uv` 0.11.8 + PyGhidra 3.0.2 (installato via `uv tool install pyghidra`)
+- ✅ `tools/ghidra_analyze.py`: pipeline completa (apre progetto, aggiunge memory blocks RAM/MMIO + 24 labels, ri-analyze, dumpa 5 file in `ghidra_project/`)
+- ✅ `tools/ghidra_dump_range.py`: dump disassembly di range arbitrari
+- ✅ `tools/ghidra_disasm_at.py`: forza disassembly + analysis su indirizzi specifici
 
-**Pre-requisiti soddisfatti:**
-- ✅ Ghidra 12.0.4 installato + wrapper `tools/ghidra_headless.sh` testato
-- ✅ `tools/rom_prep.py` produce `ghidra_project/marble_program.bin` (557056 byte) da `roms/marble.zip` + `roms/atarisy1.zip`
-- ✅ Vector table verificata (SSP=0x00401F00, reset PC=0x00000466)
-- ✅ Memory map completa in `docs/hardware-map.md` per Ghidra memory map setup
+**Decisione**: reaper NON usato. Sono io l'LLM che farebbe il naming, lo faccio direttamente leggendo i dump invece di passare per OpenAI/Anthropic API.
 
-**Ancora da fare:**
-- [ ] verificare `uv` (`brew install uv` se manca)
-- [ ] clone di `reaper` (https://github.com/phulin/reaper) in dir esterna al repo
-- [ ] eseguire `prompts/02-static-foundation.md`
+**Risultati chiave** (tutti in `docs/static-overview.md`):
+- 340 funzioni rilevate. 24 simboli nominati (vector table + MMIO + ResetEntry).
+- **Reset PC** @ 0x466. Init clear di playfield/MO/alpha RAM, init palette, jump al cart entry.
+- **VBLANK ISR** @ 0x34A → `jmp *(0x10006)` → cart frame handler @ **0x10116**.
+- **Sound IRQ6 ISR** @ 0x36C → dispatch via `*(0x1001E)` → 0x17E.
+- **Main game tick** @ **0x10116**: ack VBLANK, frame counter `0x400014/0x400016`++, `jsr 0x28788` (MAIN UPDATE).
+- **MainUpdate** @ **0x28788**: scroll Y/X/AV-control sync, 7 sub-updates (4 palette anim + 2 BIOS + 3 game), watchdog kick, coin counter logic, dispatch a 0x10146.
+- **Game object array** @ **0x400018**, **226 byte/oggetto**, count @ **0x400396**. Field offset noti: +0x19 (type/palette), +0x70 (anim counter), +0xD8 (state).
+- **Frame counter**: byte @ 0x400014 (mid) e 0x400016 (low).
+- **Stack low water**: 0x400440 (debug, non rilevante per parità).
+
+**🚨 Open: RNG ancora da identificare.** Le top-called functions sono draw routines, non RNG. Strategia: identificarlo durante Phase 4-6 osservando trace MAME ad alta entropia.
+
+**🚨 Open: ≥80% naming non raggiunto** (PRD §6 acceptance). Postponed a Phase 2.5/inizio Phase 4 quando capirò meglio le 30 funzioni con xref ≥5 leggendo i sotto-update.
 
 ---
 
