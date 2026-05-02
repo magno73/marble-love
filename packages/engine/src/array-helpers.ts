@@ -32,6 +32,42 @@ function writeMemoryU16(state: GameState, addr: number, value: number): void {
   // Altri range: ignored (cart RAM 0x900000-, MMIO)
 }
 
+// ─── writeMemoryU8 dispatcher ─────────────────────────────────────────────
+
+function writeMemoryU8(state: GameState, addr: number, value: number): void {
+  const v = value & 0xff;
+  if (addr >= 0x400000 && addr < 0x402000) {
+    state.workRam[addr - 0x400000] = v;
+  } else if (addr >= 0xa02000 && addr < 0xa03000) {
+    state.spriteRam[addr - 0xa02000] = v;
+  } else if (addr >= 0xa03000 && addr < 0xa04000) {
+    state.spriteRam[addr - 0xa02000] = v;
+  } else if (addr >= 0xb00000 && addr < 0xb00800) {
+    state.colorRam[addr - 0xb00000] = v;
+  }
+  // Altri range: ignored
+}
+
+// ─── initStructHeader (FUN_255A) ──────────────────────────────────────────
+
+/**
+ * Replica `FUN_0000255A` — scrive byte a offsets 0/1/6 di una struct.
+ *
+ * Disassembly:
+ *   A0 = arg1 long (ptr); D1 = arg2 byte; D0 = arg3 byte
+ *   *A0 = D1; *(A0+1) = D0; *(A0+6) = 0; rts
+ */
+export function initStructHeader(
+  state: GameState,
+  ptr: number,
+  byteB: number,
+  byteC: number,
+): void {
+  writeMemoryU8(state, ptr, byteB & 0xff);
+  writeMemoryU8(state, (ptr + 1) >>> 0, byteC & 0xff);
+  writeMemoryU8(state, (ptr + 6) >>> 0, 0);
+}
+
 // ─── fillIncrementingU16 (FUN_1E3E) ──────────────────────────────────────
 
 /**

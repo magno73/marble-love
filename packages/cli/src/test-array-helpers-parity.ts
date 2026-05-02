@@ -40,6 +40,7 @@ import {
 import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_FILL = 0x00001e3e;
+const FUN_INIT_HEADER = 0x0000255a;
 const SENTINEL = 0xCAFEBABE >>> 0;
 
 function makeRng(seed: number): () => number {
@@ -112,14 +113,28 @@ async function main(): Promise<void> {
   const SCRATCH_ADDR = 0x401d00;
   const SCRATCH_SIZE = 0x100;
 
+  /** Generic call helper per funzioni a 3 long args (cdecl 68k). */
+  function call3LongArgs(addr: number, a1: number, a2: number, a3: number): void {
+    const sys = cpu.system;
+    let sp = sys.getRegisters().sp;
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, a3 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, a2 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, a1 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, SENTINEL);
+    sys.setRegister("sp", sp);
+    sys.setRegister("pc", addr);
+    for (let i = 0; i < 20_000; i++) {
+      if (sys.getRegisters().pc === SENTINEL) break;
+      sys.step();
+    }
+    sys.setRegister("sp", (sys.getRegisters().sp + 4 + 12) >>> 0);
+  }
+
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Generate random params
-    // count: 0..50 (entry per word, max 100 byte)
     const count = Math.floor(rng() * 50);
     const start = Math.floor(rng() * 0x10000) & 0xffff;
-    // dest: random offset within scratch area, ensure no overflow
     const maxOffset = SCRATCH_SIZE - count * 2;
     const offset = Math.floor(rng() * Math.max(1, maxOffset));
     const dest = SCRATCH_ADDR + offset;
@@ -157,8 +172,38 @@ async function main(): Promise<void> {
     console.log(`    diff at scratch offset 0x${firstFail.offset.toString(16)}: bin=0x${firstFail.binByte.toString(16)} ts=0x${firstFail.tsByte.toString(16)}`);
   }
 
+  // ─── initStructHeader (FUN_255A) ─────────────────────────────────────
+  console.log(`\n=== initStructHeader (FUN_255A) — ${n} casi ===`);
+  let ok2 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const offset = Math.floor(rng() * (SCRATCH_SIZE - 8));
+    const ptr = SCRATCH_ADDR + offset;
+    const byteB = Math.floor(rng() * 256) & 0xff;
+    const byteC = Math.floor(rng() * 256) & 0xff;
+
+    // Fill scratch with sentinel 0x55
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      pokeMem(cpu, SCRATCH_ADDR + j, 1, 0x55);
+      state.workRam[(SCRATCH_ADDR - 0x400000) + j] = 0x55;
+    }
+
+    call3LongArgs(FUN_INIT_HEADER, ptr, byteB, byteC);
+    arrayHelpers.initStructHeader(state, ptr, byteB, byteC);
+
+    let m = true;
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      if (peekMem(cpu, SCRATCH_ADDR + j, 1) !== (state.workRam[(SCRATCH_ADDR - 0x400000) + j] ?? 0)) {
+        m = false;
+        break;
+      }
+    }
+    if (m) ok2++;
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

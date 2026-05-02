@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { fillIncrementingU16 } from "../src/array-helpers.js";
+import { fillIncrementingU16, initStructHeader } from "../src/array-helpers.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("fillIncrementingU16 (FUN_1E3E)", () => {
@@ -62,5 +62,39 @@ describe("fillIncrementingU16 (FUN_1E3E)", () => {
     expect(((s.colorRam[0] ?? 0) << 8) | (s.colorRam[1] ?? 0)).toBe(0xFADE);
     expect(((s.colorRam[2] ?? 0) << 8) | (s.colorRam[3] ?? 0)).toBe(0xFADF);
     expect(((s.colorRam[4] ?? 0) << 8) | (s.colorRam[5] ?? 0)).toBe(0xFAE0);
+  });
+});
+
+describe("initStructHeader (FUN_255A)", () => {
+  it("scrive byte a offset 0/1, azzera offset 6", () => {
+    const s = emptyGameState();
+    // Pre-fill with 0xAA
+    for (let i = 0; i < 8; i++) s.workRam[0x100 + i] = 0xAA;
+    initStructHeader(s, 0x400100, 0x12, 0x34);
+    expect(s.workRam[0x100]).toBe(0x12);
+    expect(s.workRam[0x101]).toBe(0x34);
+    expect(s.workRam[0x102]).toBe(0xAA); // not touched
+    expect(s.workRam[0x103]).toBe(0xAA);
+    expect(s.workRam[0x104]).toBe(0xAA);
+    expect(s.workRam[0x105]).toBe(0xAA);
+    expect(s.workRam[0x106]).toBe(0); // cleared
+    expect(s.workRam[0x107]).toBe(0xAA);
+  });
+
+  it("byte values mascherati a 8 bit", () => {
+    const s = emptyGameState();
+    initStructHeader(s, 0x400100, 0x1FF, 0x200);
+    expect(s.workRam[0x100]).toBe(0xFF);
+    expect(s.workRam[0x101]).toBe(0x00);
+  });
+
+  it("ptr in colorRam", () => {
+    const s = emptyGameState();
+    s.colorRam[0x10] = 0xCC;
+    s.colorRam[0x16] = 0xCC;
+    initStructHeader(s, 0xB00010, 0xAB, 0xCD);
+    expect(s.colorRam[0x10]).toBe(0xAB);
+    expect(s.colorRam[0x11]).toBe(0xCD);
+    expect(s.colorRam[0x16]).toBe(0); // cleared
   });
 });
