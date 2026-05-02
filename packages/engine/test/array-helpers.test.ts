@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { fillIncrementingU16, initStructHeader } from "../src/array-helpers.js";
+import {
+  fillIncrementingU16,
+  initStructHeader,
+  clearPaletteRam,
+  swapLongPair,
+} from "../src/array-helpers.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("fillIncrementingU16 (FUN_1E3E)", () => {
@@ -96,5 +101,46 @@ describe("initStructHeader (FUN_255A)", () => {
     expect(s.colorRam[0x10]).toBe(0xAB);
     expect(s.colorRam[0x11]).toBe(0xCD);
     expect(s.colorRam[0x16]).toBe(0); // cleared
+  });
+});
+
+describe("clearPaletteRam (FUN_121A6)", () => {
+  it("azzera tutta la palette RAM (2 KB)", () => {
+    const s = emptyGameState();
+    s.colorRam.fill(0xFF);
+    clearPaletteRam(s);
+    for (let i = 0; i < s.colorRam.length; i++) {
+      expect(s.colorRam[i]).toBe(0);
+    }
+  });
+});
+
+describe("swapLongPair (FUN_12886)", () => {
+  it("scambia 2 long adiacenti", () => {
+    const s = emptyGameState();
+    // *0x401D00 = 0xDEADBEEF, *0x401D04 = 0x12345678
+    s.workRam[0x1D00] = 0xDE; s.workRam[0x1D01] = 0xAD;
+    s.workRam[0x1D02] = 0xBE; s.workRam[0x1D03] = 0xEF;
+    s.workRam[0x1D04] = 0x12; s.workRam[0x1D05] = 0x34;
+    s.workRam[0x1D06] = 0x56; s.workRam[0x1D07] = 0x78;
+    swapLongPair(s, 0x401D00);
+    // Now *0x401D00 = 0x12345678, *0x401D04 = 0xDEADBEEF
+    expect(s.workRam[0x1D00]).toBe(0x12);
+    expect(s.workRam[0x1D01]).toBe(0x34);
+    expect(s.workRam[0x1D02]).toBe(0x56);
+    expect(s.workRam[0x1D03]).toBe(0x78);
+    expect(s.workRam[0x1D04]).toBe(0xDE);
+    expect(s.workRam[0x1D05]).toBe(0xAD);
+    expect(s.workRam[0x1D06]).toBe(0xBE);
+    expect(s.workRam[0x1D07]).toBe(0xEF);
+  });
+
+  it("non tocca byte adiacenti", () => {
+    const s = emptyGameState();
+    s.workRam[0x1CFF] = 0xAA;
+    s.workRam[0x1D08] = 0xBB;
+    swapLongPair(s, 0x401D00);
+    expect(s.workRam[0x1CFF]).toBe(0xAA);
+    expect(s.workRam[0x1D08]).toBe(0xBB);
   });
 });
