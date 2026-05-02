@@ -119,11 +119,13 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
   const lines: string[] = [traceNs.serializeHeader(header)];
 
+  // Allineamento col Lua dumper MAME: dumpiamo PRIMA, poi tick. Il primo
+  // record rappresenta lo stato a frame 0 (post-init, pre-tick).
   for (let i = 0; i < ticks; i++) {
-    // TODO: applicare scenario.inputs[i] al state.input
-    tick(s);
     const frame: TraceFrame = traceNs.frameFromState(s);
     lines.push(traceNs.serializeFrame(frame));
+    // TODO: applicare scenario.inputs[i] al state.input
+    tick(s);
   }
 
   writeFileSync(outPath, lines.join("\n") + "\n", "utf8");

@@ -1,8 +1,8 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ (MAME oracle deterministic)
-**Prossima fase:** Phase 4 (TypeScript skeleton funzionante — rng, bus MMIO, level loader, runner che produce trace JSONL)
+**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + **Phase 4a ✅** (RNG identificato, pipeline diff end-to-end)
+**Prossima fase:** Phase 4b (bus MMIO completo + level loader) o Phase 6 (hill-climbing per chiudere divergenze)
 **Branch corrente:** `main`. Tutte le fasi inline finora.
 
 ---
@@ -120,9 +120,53 @@ Vedi `prompts/03-oracle.md`.
 
 ---
 
-## Phase 4-7
+## Phase 4a — RNG identified + pipeline functional ✅
 
-Scaffold pronto, prompt scritti in `prompts/04-typescript-skeleton.md`…`prompts/07-web.md`.
+🎯 **RNG trovato**: `FUN_00013A98` legge/scrive `0x004003A6` (u16) con Galois LFSR + range-limit. Algoritmo dal disassembly:
+- 17 istruzioni core, 28 callers
+- Feedback: `(state.high ^ state.low) ?: 0x40`, bit 6 = nuovo bit
+- Anti-zero attractor (special case quando XOR == 0)
+- Per chiamata `next(limit)`: avanza state di N=bit_length(limit) step + range-limit
+
+🎯 **Workflow di scoperta** (replicabile):
+1. `tools/mame_full_ram_dump.lua`: dumpa Work RAM completa ogni 30 frame
+2. `tools/find_rng_candidates.py`: ranking per varianza/uniqueness → 0x4003A6 emerge come terzo candidato
+3. `tools/find_rng_static.py`: scansione Ghidra per funzioni piccole con read+write stessa cella → conferma
+4. `tools/find_xrefs.py`: cross-check chi tocca 0x4003A6 → solo `FUN_00013A98`
+5. `tools/dump_rng_state.lua`: dump per-frame del valore (per Phase 6 calibration)
+
+🎯 **Implementazione TS** (`packages/engine/src/rng.ts`):
+- `rngStepOnce(state)`: singolo step LFSR
+- `rngAdvanceForLimit(state, limit)`: N step proporzionali al bit-length di limit
+- `rngNext(state, limit)`: avanza + range-limit
+- Test: 9 test, freeze snapshot. PRD §6 Phase 4 acceptance "10000 calls match oracle" → posticipato a Phase 6 (richiede call-by-call trace dump che faremo in calibrazione).
+
+🎯 **Pipeline differential funzionante** (`./harness/run_compare.sh attract_mode`):
+- Step 1: oracle MAME 600 frame (~9s wall)
+- Step 2: reimpl TS 600 frame (~1s wall)
+- Step 3: diff identifica primo frame divergente + campi
+- Step 4: report markdown per LLM
+- Output corrente: parità 0% (atteso, TS skeleton); divergenza @ frame 0 su `cpuTicks` (TS=0, MAME=1200) e `workRamHash` (TS=zero RAM, MAME=initialized RAM)
+
+🎯 **off-by-one fix**: marble-runner ora dumpa PRIMA di tickare (allineato col Lua dumper che dumpa a fine frame_done).
+
+50/50 test passano. Typecheck clean. Lint clean.
+
+## Open per Phase 4b (futuro)
+
+- Bus MMIO completo (read/write dispatch su F60000, F20000, FE0000, etc.)
+- Level loader (parser livelli da ROM, format già documentato in marble-madness-2026)
+- ROM CRC32 verification nell'header trace
+- Reset code emulation (eseguire bytes da 0x466 nel reimpl)
+
+## Open per Phase 6 (futuro)
+
+- Calibrazione bit-perfect del RNG vs oracle (richiede call-by-call dump)
+- Hill climbing su scenari del curriculum
+
+## Phase 5-7
+
+Scaffold pronto in `prompts/05-diff-harness.md`…`prompts/07-web.md`. Phase 5 è essenzialmente già fatta (run_compare.sh funziona).
 
 ---
 

@@ -62,13 +62,20 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
 
   const luaPath = resolve("oracle/mame_dumper.lua");
-  const seconds = Math.ceil(args.frames / 60) + 2; // +2s margine init
+  // MAME runs ~13× realtime senza throttle; bisogna comunque dare margine init.
+  // Frame count è il limite vero (Lua exits dopo MAX_FRAMES); seconds è solo
+  // un timeout di safety.
+  const seconds = Math.max(30, Math.ceil(args.frames / 60) + 5);
 
-  const childEnv = {
-    ...env,
+  // Path scenario JSON per input scriptato (se esiste)
+  const scenarioJsonPath = resolve("oracle/scenarios", `${args.scenario}.json`);
+
+  const childEnv: Record<string, string> = {
+    ...(env as Record<string, string>),
     MARBLE_LOVE_TRACE_PATH: outPath,
     MARBLE_LOVE_SCENARIO: args.scenario,
     MARBLE_LOVE_MAX_FRAMES: String(args.frames),
+    MARBLE_LOVE_INPUT_JSON: scenarioJsonPath,
   };
 
   const mameArgs = [
@@ -79,7 +86,7 @@ function main(): void {
     "-skip_gameinfo",
     "-seconds_to_run", String(seconds),
     "-autoboot_script", luaPath,
-    "-autoboot_delay", "1",
+    "-autoboot_delay", "0",
   ];
 
   console.log(`[oracle] ${args.mameBin} ${mameArgs.join(" ")}`);

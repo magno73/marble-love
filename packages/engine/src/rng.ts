@@ -1,63 +1,151 @@
 /**
- * rng.ts — replica esatta del PRNG di Marble Madness.
+ * rng.ts — replica del PRNG di Marble Madness.
  *
- * **Status: STUB.** Da identificare nel binario in Phase 2 (Ghidra + reaper).
- * Il PRD §10 lo cita come rischio "alto, bassa probabilità" e prima cosa da
- * chiudere appena lo static analysis è in piedi.
+ * **Identificato in Phase 2 (Ghidra)** — vedi `docs/static-overview.md`:
+ *   - Funzione: `FUN_00013A98` (28 xref, 17 instr core)
+ *   - State: u16 a `0x004003A6` in Work RAM
+ *   - Algoritmo: **Galois LFSR a 16 bit con feedback custom**
  *
- * Quando identificato, sostituire `next()` con la replica esatta. Lo stato
- * `RngState.seed` deve essere bit-identico a quello osservato in MAME RAM.
+ * Algoritmo derivato dal disassembly 68010:
  *
- * Ipotesi più probabili per un gioco Atari 1984 (da verificare):
- *  - LFSR a 16 bit con tap pattern stile Galois
- *  - LCG 16-bit (es. `seed = seed * a + c`)
- *  - Lookup table in ROM indicizzata da un counter
+ *   ```asm
+ *   move.w (0x4003A6), D0       ; state
+ *   move.l #-0x10000, D3         ; mask helper = 0xFFFF0000
+ *   loop_step:
+ *     move.w D0, D2
+ *     lsr.w  #8, D2              ; D2 = state >> 8
+ *     eor.b  D0, D2              ; D2.b = (state.h) XOR (state.l)
+ *     bne    skip
+ *     move.b #0x40, D2           ; if XOR==0: D2 = 0x40 (anti-zero attractor)
+ *   skip:
+ *     asl.b  #2, D2              ; X flag = bit 6 of D2.b (XOR result)
+ *     roxl.w #1, D0              ; new state = (D0<<1) | X; X = old bit 15
+ *     rol.l  #1, D3              ; mask helper rotates
+ *     lsr.w  #1, D1              ; D1 = limit, halve until 0
+ *     bne    loop_step
+ *   move.w D0, (0x4003A6)        ; save back
+ *   ; range-limit: D0 = D0 & D3.lo; while D0 > limit: D0 -= limit
+ *   ```
  *
- * Mai usare `Math.random()` qui dentro (PRD Appendice A). Mai.
+ * Per chiamata `next(limit)`:
+ *   - N = numero di shift right necessari per portare `limit` a 0
+ *   - Avanza state di N step LFSR
+ *   - Restituisce `state mod limit` (range-limited)
+ *
+ * **Caveat**: questa è la nostra MIGLIORE INTERPRETAZIONE del disassembly. Il
+ * comportamento esatto dei flag `asl.b` + `roxl.w` del 68010 è sottile; Phase 6
+ * (hill-climbing) verificherà bit-perfect parity contro l'oracolo MAME e
+ * potrebbe richiedere calibrazione minore.
  */
 
 import { type RngState } from "./state.js";
-import { as_u32, u32_and, u16_lo, u32_xor, u32_shl, u32_shr } from "./wrap.js";
-import type { u16, u32 } from "./wrap.js";
+import { as_u16, as_u32, u16_and, u16_or, u16_shl, u16_shr, u16_xor } from "./wrap.js";
+import type { u16 } from "./wrap.js";
+
+const FEEDBACK_FALLBACK = 0x40 as const; // se (high ^ low) == 0
 
 /**
- * Estrae il prossimo valore u16 dallo stato RNG e avanza lo stato.
+ * Avanza lo state RNG di un singolo step LFSR.
  *
- * **STUB**: implementa LFSR Galois a 16 bit con polynomial 0xB400 (placeholder
- * comune). Da rimpiazzare in Phase 2 con la replica esatta del binario.
+ * Nuovo state = (state << 1) | feedback_bit, dove:
+ *   feedback_byte = (state.high ^ state.low) ?: 0x40
+ *   feedback_bit  = bit 6 di feedback_byte (= il bit X dopo asl.b #2)
  */
-export function rngNext(state: RngState): u16 {
-  // Placeholder LFSR16. NON FIDARSI di questa formula prima di Phase 2.
-  const lsb = u32_and(state.seed, as_u32(1));
-  let next = u32_shr(state.seed, 1);
-  if ((lsb as unknown as number) !== 0) {
-    next = u32_xor(next, as_u32(0xb400));
-  }
-  state.seed = next;
-  state.callsThisFrame = as_u32((state.callsThisFrame as unknown as number) + 1);
-  return u16_lo(next);
+export function rngStepOnce(state: u16): u16 {
+  const s = state as unknown as number;
+  const xor_byte = ((s >>> 8) ^ (s & 0xff)) & 0xff;
+  const fb = xor_byte === 0 ? FEEDBACK_FALLBACK : xor_byte;
+  // asl.b #2 produces X = bit 6 of feedback (last shifted-out bit)
+  const fb_bit = (fb >>> 6) & 1;
+  // roxl.w #1: D0 << 1 | X; old bit 15 → new X (we discard it)
+  return as_u16(((s << 1) | fb_bit) & 0xffff);
 }
 
 /**
- * Inizializza lo stato RNG. Il seed iniziale del binario originale è
- * tipicamente derivato da:
- *  - valore in ROM al cold-boot
- *  - frame counter
- *  - input I/O
- * Da identificare in Phase 2.
+ * Avanza state di N step (numero di shift-right per portare `limit` a 0).
+ * Per `limit` u16, N = bit_length(limit), max 16 iterazioni.
  */
-export function rngInit(initialSeed: u32): RngState {
+export function rngAdvanceForLimit(state: u16, limit: u16): u16 {
+  let s = state as unknown as number;
+  let l = limit as unknown as number;
+  while (l !== 0) {
+    s = (rngStepOnce(as_u16(s)) as unknown as number);
+    l = l >>> 1;
+  }
+  return as_u16(s);
+}
+
+/**
+ * Maschera helper D3 dopo N rotazioni di `0xFFFF0000` per 32 bit.
+ * Dopo N ROL: i bit set originali (16-31) sono rotated.
+ */
+function maskHelperAfter(n: number): u16 {
+  // D3 starts 0xFFFF0000, after N ROL.L #1: high bits rotate
+  // D3.lo finale = top N bits di originale parte alta, shifted into low
+  const k = n & 31;
+  const v = ((0xffff0000 << k) | (0xffff0000 >>> (32 - k))) >>> 0;
+  return as_u16(v & 0xffff);
+}
+
+/**
+ * Genera un valore range-limited [0, limit).
+ *
+ * Mimica `FUN_00013A98`:
+ *   1. Avanza state di N=bit_length(limit) step
+ *   2. mask = D3.lo dopo N rotazioni
+ *   3. result = state & mask
+ *   4. while result > limit: result -= limit
+ */
+export function rngNext(rstate: RngState, limit: u16): u16 {
+  const limit_n = limit as unknown as number;
+  if (limit_n === 0) {
+    // PRD pendant: l'originale non gestisce 0; il binario itera 0 volte e
+    // ritorna lo state corrente non avanzato. Mantengo questo comportamento.
+    rstate.callsThisFrame = as_u32(
+      (rstate.callsThisFrame as unknown as number) + 1
+    );
+    return as_u16(rstate.seed as unknown as number);
+  }
+
+  // Count number of LFSR steps needed (bit length of limit)
+  let n = 0;
+  let l = limit_n;
+  while (l !== 0) {
+    n += 1;
+    l = l >>> 1;
+  }
+
+  const seed_old = rstate.seed as unknown as number;
+  const seed_new = rngAdvanceForLimit(as_u16(seed_old), limit);
+  rstate.seed = as_u32(seed_new as unknown as number);
+
+  // Range-limit
+  const mask = maskHelperAfter(n);
+  let r = (seed_new as unknown as number) & (mask as unknown as number);
+  while (r > limit_n) {
+    r -= limit_n;
+  }
+
+  rstate.callsThisFrame = as_u32(
+    (rstate.callsThisFrame as unknown as number) + 1
+  );
+  return as_u16(r);
+}
+
+/** Inizializza lo state RNG. Il seed iniziale del binario è 0 (Work RAM
+ *  azzerata al reset). Il primo step "interessante" avviene quando il cart
+ *  chiama `FUN_13A98` la prima volta. */
+export function rngInit(initialSeed: u16 = as_u16(0)): RngState {
   return {
-    seed: initialSeed,
+    seed: as_u32(initialSeed as unknown as number),
     callsThisFrame: as_u32(0),
   };
 }
 
-/** Reset contatore di chiamate per frame (utile a fine tick per il diff). */
+/** Reset contatore di chiamate per frame (debug-only). */
 export function rngClearFrameCounter(state: RngState): void {
   state.callsThisFrame = as_u32(0);
 }
 
-// Helper per silenziare unused warning su import che servono al refactor
-// futuro quando avremo l'algoritmo reale.
-void u32_shl;
+// Silenzia warning su import inutilizzati (per ora). Phase 4b rimuoverà.
+void u16_and; void u16_or; void u16_shl; void u16_shr; void u16_xor;
