@@ -13,9 +13,10 @@
 - ✅ Palette anim 4 (`paletteQueueDrain` vs FUN_26B88 drain) — 500/500 match
 - ✅ Palette queue push (`paletteQueuePush` vs FUN_26B66) — 500/500 match
 - ✅ MainUpdate prefix (`mainUpdateScrollSync` vs FUN_28788 0x28788..0x287D8) — 2000/2000 match
+- ✅ Event flag consume (`consumeEventFlag` vs FUN_2548) — 1000/1000 match
 
-**🎯 4 palette animations + RNG + scroll/AV sync bit-perfect.**
-Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari (non solo subroutine complete).
+**🎯 8 sub-systems bit-perfect.**
+Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
