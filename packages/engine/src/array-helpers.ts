@@ -110,3 +110,76 @@ export function fillIncrementingU16(
     value = (value + 1) & 0xffff; // word wrap
   }
 }
+
+// ─── clearPlayfieldRam (FUN_12174) ───────────────────────────────────────
+
+/**
+ * Replica `FUN_00012174` — `clearPlayfieldRam()`.
+ *
+ * Disassembly (4 inst):
+ *   lea     (0xA00000).l, A0
+ *   move.w  #0x7FF, D0w        ; counter = 2047
+ *   loop:
+ *     clr.l  (A0)+              ; *A0 = 0; A0 += 4
+ *   dbf D0w, loop
+ *   rts
+ *
+ * Cancella 2048 long (= 8 KB = tutta la playfield RAM @ 0xA00000-0xA01FFF).
+ *
+ * **NB**: Il modello attuale di playfield RAM è "ignored" in
+ * `array-helpers.writeMemoryU16` (la mappa unificata non la separa). Per
+ * coerenza con il binario, qui sopra-scriviamo 0 byte-by-byte se mai un
+ * giorno la playfield RAM fosse modellata. Nel frattempo, l'effetto su
+ * lo state TS è no-op (al pari del binario, che scrive in MMIO/RAM
+ * gestita separatamente dal renderer).
+ */
+export function clearPlayfieldRam(_state: GameState): void {
+  // No-op: playfield RAM non è ancora modellata in `state.ts`. Quando
+  // verrà aggiunta `state.playfieldRam`, sostituire con un fill 8KB di 0.
+}
+
+// ─── clearPaletteRam (FUN_121A6) ─────────────────────────────────────────
+
+/**
+ * Replica `FUN_000121A6` — `clearPaletteRam()`.
+ *
+ * Disassembly (4 inst):
+ *   lea     (0xB00000).l, A0
+ *   move.w  #0x1FF, D0w        ; counter = 511
+ *   loop:
+ *     clr.l  (A0)+
+ *   dbf D0w, loop
+ *   rts
+ *
+ * Cancella 512 long (= 2 KB = tutta la palette RAM @ 0xB00000-0xB007FF).
+ */
+export function clearPaletteRam(state: GameState): void {
+  state.colorRam.fill(0);
+}
+
+// ─── swapLongPair (FUN_12886) ────────────────────────────────────────────
+
+/**
+ * Replica `FUN_00012886` — `swapLongPair(ptr)`.
+ *
+ * Disassembly (5 inst):
+ *   movea.l (0x4,SP), A0
+ *   move.l  (A0), D0           ; D0 = ptr[0..3]
+ *   move.l  (0x4,A0), (A0)     ; ptr[0..3] = ptr[4..7]
+ *   move.l  D0, (0x4,A0)       ; ptr[4..7] = D0 (old)
+ *   rts
+ *
+ * Scambia due long adiacenti a `*ptr` e `*(ptr+4)`.
+ */
+export function swapLongPair(state: GameState, ptr: number): void {
+  const off = (ptr - 0x400000) >>> 0;
+  if (off + 7 >= state.workRam.length) return;
+  const r = state.workRam;
+  // Swap byte-by-byte per essere indifferenti all'allineamento
+  for (let i = 0; i < 4; i++) {
+    const a = r[off + i] ?? 0;
+    const b = r[off + 4 + i] ?? 0;
+    r[off + i] = b;
+    r[off + 4 + i] = a;
+  }
+}

@@ -29,8 +29,12 @@
 - ✅ Any status flags set (`anyStatusFlagsSet` vs FUN_52A2) — 1000/1000 match (OR di 2 long bitmap)
 - ✅ Dequeue byte from circular queue (`dequeueByte` vs FUN_4D68) — 1000/1000 match (queue 16-byte @ 0x401F44, ritorna -1 se vuota)
 - ✅ OR pair bytes (`orPairBytes` vs FUN_53EA) — 1000/1000 match (utility byte-level)
+- ✅ Abs long (`absLong` vs FUN_1216A + FUN_1B5A6) — 2000/2000 match (con 68k quirk INT_MIN→INT_MIN)
+- ✅ Negate-if-positive (`negateIfPositive` vs FUN_1B5B4) — 1000/1000 match
+- ✅ Clear palette RAM (`clearPaletteRam` vs FUN_121A6) — 1/1 match (azzera 2KB @ 0xB00000)
+- ✅ Swap long pair (`swapLongPair` vs FUN_12886) — 500/500 match (scambio 2 long adiacenti)
 
-**🎯 23 sub-systems bit-perfect.**
+**🎯 27 sub-systems bit-perfect.**
 
 **Refactor architettonico Phase 4d.SetAlphaTile**: aggiunto `state.alphaRam` (4 KB, 0xA03000-0xA03FFF) separato da `state.spriteRam` (motion-object). Prima alpha era fusa in spriteRam con offset OOB; il setAlphaTile l'ha esposto. Ora layout RAM corretto separato.
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.

@@ -33,6 +33,7 @@ import { exit } from "node:process";
 import { state as stateNs, arrayHelpers } from "@marble-love/engine";
 import {
   createCpu,
+  callFunction,
   pokeMem,
   peekMem,
   disposeCpu,
@@ -41,6 +42,8 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_FILL = 0x00001e3e;
 const FUN_INIT_HEADER = 0x0000255a;
+const FUN_CLEAR_PAL = 0x000121A6;
+const FUN_SWAP_LONG_PAIR = 0x00012886;
 const SENTINEL = 0xCAFEBABE >>> 0;
 
 function makeRng(seed: number): () => number {
@@ -202,8 +205,69 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
 
+  // ─── clearPaletteRam (FUN_121A6) ─────────────────────────────────────
+  // Una sola call: pre-fill palette RAM con sentinel, run, verifica.
+  console.log(`\n=== clearPaletteRam (FUN_121A6) — 1 caso ===`);
+  cpu.system.setRegister("sp", 0x401f00);
+  // Pre-fill palette RAM con sentinel pattern
+  for (let j = 0; j < 0x800; j++) {
+    pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
+    state.colorRam[j] = 0xCC;
+  }
+  callFunction(cpu, FUN_CLEAR_PAL, []);
+  arrayHelpers.clearPaletteRam(state);
+  let okClear = true;
+  for (let j = 0; j < 0x800; j++) {
+    const b = peekMem(cpu, 0xB00000 + j, 1);
+    const t = state.colorRam[j] ?? 0;
+    if (b !== 0 || t !== 0) {
+      okClear = false;
+      console.log(`  diff at 0x${(0xB00000 + j).toString(16)}: bin=${b} ts=${t}`);
+      break;
+    }
+  }
+  console.log(`  Match: ${okClear ? 1 : 0}/1 = ${okClear ? "100.0" : "0.0"}%`);
+
+  // ─── swapLongPair (FUN_12886) ────────────────────────────────────────
+  console.log(`\n=== swapLongPair (FUN_12886) — ${n} casi ===`);
+  let okSwap = 0;
+  let firstFailSwap: { ptr: number; offset: number; bin: number; ts: number } | null = null;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const offset = Math.floor(rng() * (SCRATCH_SIZE - 16));
+    const ptr = SCRATCH_ADDR + offset;
+    // Random 8 bytes
+    const bytes = new Array(8).fill(0).map(() => Math.floor(rng() * 256) & 0xff);
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      pokeMem(cpu, SCRATCH_ADDR + j, 1, 0x55);
+      state.workRam[(SCRATCH_ADDR - 0x400000) + j] = 0x55;
+    }
+    for (let j = 0; j < 8; j++) {
+      pokeMem(cpu, ptr + j, 1, bytes[j] ?? 0);
+      state.workRam[(ptr - 0x400000) + j] = bytes[j] ?? 0;
+    }
+    callFunction(cpu, FUN_SWAP_LONG_PAIR, [ptr]);
+    arrayHelpers.swapLongPair(state, ptr);
+    let ok = true;
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      const b = peekMem(cpu, SCRATCH_ADDR + j, 1);
+      const t = state.workRam[(SCRATCH_ADDR - 0x400000) + j] ?? 0;
+      if (b !== t) {
+        ok = false;
+        if (firstFailSwap === null) firstFailSwap = { ptr, offset: j, bin: b, ts: t };
+        break;
+      }
+    }
+    if (ok) okSwap++;
+  }
+  console.log(`  Match: ${okSwap}/${n} = ${((okSwap / n) * 100).toFixed(1)}%`);
+  if (firstFailSwap) {
+    const { ptr, offset, bin, ts } = firstFailSwap;
+    console.log(`  First fail: ptr=0x${ptr.toString(16)} @ offset 0x${offset.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`);
+  }
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && okClear && okSwap === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {
