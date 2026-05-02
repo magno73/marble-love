@@ -110,6 +110,7 @@ function main(): void {
     schemaVersion: traceNs.TRACE_SCHEMA_VERSION,
     source: "reimpl",
     scenario: scenario.name,
+    romCrc32: "",
     startedAt: new Date().toISOString(),
   };
 

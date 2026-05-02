@@ -24,8 +24,9 @@ export interface TraceHeader {
   schemaVersion: typeof TRACE_SCHEMA_VERSION;
   source: "mame" | "reimpl";
   scenario: string;
-  /** ROM crc32 (per garantire che oracle e reimpl usino lo stesso binario). */
-  romCrc32?: string;
+  /** ROM crc32 (per garantire che oracle e reimpl usino lo stesso binario).
+   *  Stringa hex; vuoto se non calcolato. */
+  romCrc32: string;
   startedAt: string; // ISO datetime, only for human reading; NOT diffed
 }
 
@@ -52,9 +53,13 @@ export interface TraceFrame {
   stats: { score: number; lives: number; timer: number; bonus: number };
   /** Input letto (post-MMIO). */
   input: { dx: number; dy: number; buttons: number };
-  /** Hash work-RAM (xxhash32 o crc32 — definito in harness).
-   *  Permette di rilevare divergenze ovunque senza dumpare 16K per frame. */
-  workRamHash?: string;
+  /** CRC32 della Work RAM 8 KB ($400000-$401FFF), escluso `0x440-0x447`
+   *  (stack low water mark, debug-only). Permette di rilevare divergenze
+   *  ovunque senza dumpare 8 KB per frame.
+   *
+   *  Nel trace MAME: calcolato da `oracle/mame_dumper.lua`. Nel reimpl: TBD
+   *  Phase 4-6 (calcolato sulla Uint8Array `state.workRam`). */
+  workRamHash: number;
 }
 
 /** Serializza un GameState in TraceFrame. Pure function: no mutation. */
@@ -84,7 +89,31 @@ export function frameFromState(s: GameState): TraceFrame {
       dy: raw(s.input.trackballDy),
       buttons: raw(s.input.buttons),
     },
+    /** Placeholder: in Phase 4 calcoleremo il CRC32 reale di `s.workRam`. */
+    workRamHash: crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448),
   };
+}
+
+/** CRC32 standard (IEEE 802.3, polynomial 0xEDB88320). Pre-computa la tabella
+ *  alla prima chiamata. Usato per fingerprint della Work RAM nel trace. */
+let crc32_table: Uint32Array | null = null;
+function crc32(buf: Uint8Array, start: number, length: number): number {
+  if (crc32_table === null) {
+    crc32_table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      crc32_table[i] = c >>> 0;
+    }
+  }
+  let c = 0xFFFFFFFF;
+  const end = Math.min(start + length, buf.length);
+  for (let i = start; i < end; i++) {
+    c = (c >>> 8) ^ (crc32_table[(c ^ (buf[i] ?? 0)) & 0xFF] ?? 0);
+  }
+  return (~c) >>> 0;
 }
 
 export function serializeHeader(h: TraceHeader): string {

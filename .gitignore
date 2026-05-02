@@ -5,6 +5,15 @@
 roms/
 !roms/.gitkeep
 
+# --- MAME runtime artifacts (cfg, nvram, snap, sta) ---
+cfg/
+nvram/
+snap/
+sta/
+diff/
+inp/
+state/
+
 # --- Trace differential ---
 traces/
 *.jsonl

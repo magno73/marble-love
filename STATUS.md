@@ -1,8 +1,8 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ (Ghidra static analysis)
-**Prossima fase:** Phase 3 (MAME oracle harness — popolare RAM addresses noti)
+**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ (MAME oracle deterministic)
+**Prossima fase:** Phase 4 (TypeScript skeleton funzionante — rng, bus MMIO, level loader, runner che produce trace JSONL)
 **Branch corrente:** `main`. Tutte le fasi inline finora.
 
 ---
@@ -103,11 +103,20 @@
 
 ---
 
-## Phase 3 — MAME oracle harness
+## Phase 3 — MAME oracle harness ✅
 
 Vedi `prompts/03-oracle.md`.
 
-Lo scaffold (`oracle/mame_dumper.lua`, `oracle/run_oracle.ts`, `oracle/scenarios/`) è già in piedi come stub. Phase 3 lo riempie e verifica determinismo.
+**Risultati:**
+- `oracle/mame_dumper.lua` riempito: legge frame counter (`0x400014`/`0x400016`), game object slot 0 (`0x400018`+0x00..0xD8), AV-control cache (`0x4003AE`), coin counter (`0x4003F4`), VBLANK skip (`0x401F40`), e calcola **CRC32 dell'intera Work RAM 8 KB** (escluso 0x440-0x447, stack low water debug-only).
+- **Input scriptato funzionante**: parser JSON Lua manuale (no JSON library disponibile in MAME), supporta `dx`, `dy`, `buttons`. Mappato a porte MAME `:IN0`/`:IN1` (trackball X/Y), `:F60000` (START1/START2), `:1820` (COIN1).
+- **Determinismo MAME verificato** (PRD §6 Phase 3 acceptance):
+  - 2 run di `attract_mode` 300 frame senza input → diff bit-identico ✅
+  - 2 run di `level1_no_input` 600 frame con input scriptato → diff bit-identico ✅
+- Schema TS aggiornato: `TraceFrame.workRamHash` ora è `number` required (CRC32 dell'8 KB), `TraceHeader.romCrc32` `string` required (placeholder per ora).
+- Engine `frameFromState` calcola CRC32 della propria `state.workRam` con la stessa formula del Lua (escludendo `0x440-0x447`). 3 nuovi test verificano: deterministico, sensibile alle modifiche, ignora il range escluso.
+
+**Tooling:** path ROM è `/Users/magnus-bot/Code/marble-love/roms` (contiene `marble.zip` + `atarisy1.zip`).
 
 ---
 
