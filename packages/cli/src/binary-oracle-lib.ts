@@ -80,6 +80,9 @@ function buildMemoryLayout(romSize: number) {
       { start: PAL_RAM_BASE, length: PAL_RAM_END - PAL_RAM_BASE, source: "zero" as const },
       // EEPROM 0xF00000-0xF003FF (zero-init; persistenza → Phase 7)
       { start: 0xf00000, length: 0x400, source: "zero" as const },
+      // MMIO trackball / switches (zero-init RAM; il test inietta valori
+      // tramite pokeMem invece di usare callback MMIO).
+      { start: 0xf20000, length: 0x40004, source: "zero" as const },
     ],
   };
 }

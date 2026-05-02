@@ -18,8 +18,9 @@
 - ✅ Init struct header (`initStructHeader` vs FUN_255A) — 500/500 match
 - ✅ Set status flag bit (`setFlagBit` vs FUN_5236) — 500/500 match
 - ✅ Format hex string (`formatHex` vs FUN_3A08) — 1000/1000 match
+- ✅ **Trackball input handler** (`trackballInputTick` vs FUN_1AC18) — 2000/2000 match — **🎯 prima game-logic CORE replicata**
 
-**🎯 12 sub-systems bit-perfect.**
+**🎯 13 sub-systems bit-perfect.**
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.
 
 **Calling convention 68k C scoperta**: tutti gli args sono LONG (32-bit) sullo stack, anche se la funzione li legge come word. Es. `move.w (0x12, SP), D0w` legge il low word di un long arg a SP+16..19.
