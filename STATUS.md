@@ -1,9 +1,13 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0-3 ✅ + Phase 4a-c ✅ + **Phase 4d.RNG ✅** (RNG TS bit-perfect vs binary, 10000/10000 match)
-**Prossima fase:** Phase 4d.next — replicare i sotto-update di MainUpdate (palette anim, fisica, AI) uno alla volta col differential per-funzione
+**Fase corrente:** Phase 0-3 ✅ + Phase 4a-c ✅ + Phase 4d.RNG ✅ + **Phase 4d.PaletteAnim ✅** (1° sotto-update di MainUpdate bit-perfect)
+**Prossima fase:** Phase 4d.next — sotto-update rimanenti di MainUpdate (3 palette anim, 2 BIOS calls, 3 game logic)
 **Branch corrente:** `main`.
+
+**Sub-systems bit-perfect verificati**:
+- ✅ RNG (`rngNext` vs FUN_13A98) — 10000/10000 match
+- ✅ Palette anim 1 (`paletteAnim1Tick` vs FUN_26BEE) — 1000/1000 match
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
@@ -235,16 +239,47 @@ Per N seed/limit pairs (deterministici via PRNG locale):
 
 L'algoritmo TS che avevo derivato dal disassembly era già corretto sin dalla prima implementazione (Phase 4a). I primi 30 test fallivano per il bug in `callFunction` (uso scorretto di `system.call`).
 
-## Phase 4d.next — prossima fase
+## Phase 4d.PaletteAnim — palette animation 1 ✅
 
-**Differential per-funzione progressivo**:
-1. Identifica una funzione semplice del binario (palette anim @ 0x26BEE è candidata: poco state, lookup tables note)
-2. Riscrivi in TS idiomatic
-3. `callFunction(0x26BEE, ...)` su uno stato → binary_delta
-4. La tua implementazione TS sullo stesso stato → ts_delta
-5. Confronta. Se matcha, integra nel `tick()` dell'engine.
+**`packages/engine/src/palette-anim.ts`**:
+- `paletteAnim1Tick(state, rom)`: replica `FUN_00026BEE`
+- Itera obj[0..count-1] dell'array @ 0x400018 stride 0xE2, count u16 @ 0x400396
+- Per ogni obj attivo (ctr != 0xFF, skip == 0): legge anim_ctr, indice `(sext_i32(ctr) >> 2) * 2` in lookup table ROM (0x20B34 o 0x20B54 basato su type), scrive u16 risultante in palette entry 3 (0xB00006) o entry 7 (0xB0000E)
+- Increment con wrap **signed** a 0x3F (sottigliezza: 64..127 reset, 128..255 NO reset)
 
-Quando abbastanza sotto-update sono replicati, il `tick()` puro fa lo stesso lavoro del MainUpdate del binario. Parity sale automaticamente.
+**Differential `test-palette-anim-parity.ts`**: **1000/1000 match al 100%**.
+
+**Bug nel test scoperto e documentato**: `0x400396` (count) collide con `obj[3].field_0xD8` (skip flag) — sono lo stesso byte. La fixture deve scrivere count DOPO i fields.
+
+**Engine tests**: 9 nuovi test in `palette-anim.test.ts` (78 totali).
+
+## Phase 4d.next — sotto-update rimanenti di MainUpdate
+
+I 7 jsr di `MainUpdate @ 0x28788` (Phase 2):
+1. ✅ `0x26BEE` palette anim 1 (FATTO)
+2. `0x26C78` palette anim 2 (probabile, simile signature)
+3. `0x26D4E` palette anim 3
+4. `0x26B88` palette anim 4
+5. `0x148` BIOS service (thunk to BIOS function — TBD)
+6. `0x15A` BIOS service (thunk)
+7. `0x28A96` probabile fisica/input
+8. `0x1AC18` probabile AI/sprite render
+9. `0x28972` probabile score/HUD
+
+Anche serve replicare il setup MainUpdate stesso (`0x28788`):
+- scrollDirty flag handling
+- xscroll/yscroll/AVcontrol sync
+- watchdog kick + coin counter
+- final dispatch a 0x10146
+
+Pattern di lavoro stabilito (replicabile):
+1. Disassembla la funzione (PyGhidra)
+2. Capisci pseudocode
+3. Riscrivi in TS idiomatic in nuovo modulo `engine/src/<nome>.ts`
+4. Crea `cli/src/test-<nome>-parity.ts` differential
+5. Iterazione fino a 100% match
+6. Aggiungi unit test
+7. Integra nel `tick()`
 
 ## Phase 5-7
 

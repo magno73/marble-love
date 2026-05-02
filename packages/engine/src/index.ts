@@ -15,6 +15,7 @@ export * as bus from "./bus.js";
 export * as physics from "./physics.js";
 export * as ai from "./ai.js";
 export * as level from "./level.js";
+export * as paletteAnim from "./palette-anim.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
