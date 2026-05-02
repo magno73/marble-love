@@ -11,10 +11,11 @@
 - ✅ Palette anim 2 (`paletteAnim2Tick` vs FUN_26C78) — 1000/1000 match
 - ✅ Palette anim 3 (`paletteAnim3Tick` vs FUN_26D4E scheduler) — 500/500 match
 - ✅ Palette anim 4 (`paletteQueueDrain` vs FUN_26B88 drain) — 500/500 match
-- ✅ Palette queue push (`paletteQueuePush` vs FUN_26B66) — 500/500 match (sub-helper di anim 3)
+- ✅ Palette queue push (`paletteQueuePush` vs FUN_26B66) — 500/500 match
+- ✅ MainUpdate prefix (`mainUpdateScrollSync` vs FUN_28788 0x28788..0x287D8) — 2000/2000 match
 
-**🎯 Tutte e 4 le palette animations di MainUpdate coperte bit-perfect.**
-Il MainUpdate originale chiamava 4 jsr a funzioni palette; il TS ne ha 4 idiomatic + 1 helper di queue.
+**🎯 4 palette animations + RNG + scroll/AV sync bit-perfect.**
+Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari (non solo subroutine complete).
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).

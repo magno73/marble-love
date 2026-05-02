@@ -258,6 +258,36 @@ export function callFunction(
   return { d0: sys.getRegisters().d0, cycles: totalCycles };
 }
 
+/**
+ * Esegui da `fromAddr` finché `PC == untilAddr` (o predicate true).
+ *
+ * Usa step() instruction-by-instruction per NON perdere il target (con run()
+ * a burst si saltano gli indirizzi specifici).
+ */
+export function runUntil(
+  session: CpuSession,
+  fromAddr: number,
+  untilAddr: number | ((pc: number) => boolean),
+  maxInstructions = 5_000,
+): { instructions: number; cycles: number; reachedTarget: boolean } {
+  const sys = session.system;
+  sys.setRegister("pc", fromAddr);
+
+  const matches = typeof untilAddr === "function"
+    ? untilAddr
+    : (pc: number) => pc === untilAddr;
+
+  let totalCycles = 0;
+  for (let i = 0; i < maxInstructions; i++) {
+    if (matches(sys.getRegisters().pc)) {
+      return { instructions: i, cycles: totalCycles, reachedTarget: true };
+    }
+    const r = sys.step();
+    totalCycles += r.cycles;
+  }
+  return { instructions: maxInstructions, cycles: totalCycles, reachedTarget: false };
+}
+
 /** Scrive in unified memory (bypass MMIO callbacks). */
 export function pokeMem(
   session: CpuSession,
