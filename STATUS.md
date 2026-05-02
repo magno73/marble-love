@@ -9,7 +9,12 @@
 - ✅ RNG (`rngNext` vs FUN_13A98) — 10000/10000 match
 - ✅ Palette anim 1 (`paletteAnim1Tick` vs FUN_26BEE) — 1000/1000 match
 - ✅ Palette anim 2 (`paletteAnim2Tick` vs FUN_26C78) — 1000/1000 match
-- ⏭ Palette anim 3+4 (FUN_26D4E + FUN_26B88): più complessi, queue-based con shared core (FUN_26B66 push, FUN_26B88 drain). Differiti.
+- ✅ Palette anim 3 (`paletteAnim3Tick` vs FUN_26D4E scheduler) — 500/500 match
+- ✅ Palette anim 4 (`paletteQueueDrain` vs FUN_26B88 drain) — 500/500 match
+- ✅ Palette queue push (`paletteQueuePush` vs FUN_26B66) — 500/500 match (sub-helper di anim 3)
+
+**🎯 Tutte e 4 le palette animations di MainUpdate coperte bit-perfect.**
+Il MainUpdate originale chiamava 4 jsr a funzioni palette; il TS ne ha 4 idiomatic + 1 helper di queue.
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
