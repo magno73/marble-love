@@ -1,0 +1,60 @@
+# --- ROMs (utente fornisce le proprie) ---
+*.rom
+*.zip
+*.7z
+roms/
+!roms/.gitkeep
+
+# --- Trace differential ---
+traces/
+*.jsonl
+!oracle/scenarios/*.json
+!**/fixtures/*.jsonl
+
+# --- Build/dipendenze ---
+node_modules/
+dist/
+build/
+packages/*/dist/
+.cache/
+.turbo/
+.vite/
+.bun/
+bun.lockb
+
+# --- TypeScript emit ---
+*.tsbuildinfo
+packages/web/vite.config.js
+packages/web/vite.config.js.map
+packages/web/vite.config.d.ts
+packages/web/vite.config.d.ts.map
+
+# --- Ghidra ---
+ghidra_project/
+*.gpr
+*.lock
+*.rep/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Logs / scratch ---
+*.log
+logs/
+.tmp/
+scratch/
+
+# --- Coverage ---
+coverage/
+*.lcov
+
+# --- Capacitor / mobile ---
+packages/mobile/ios/
+packages/mobile/android/
+
+# --- TypeScript ---
+*.tsbuildinfo

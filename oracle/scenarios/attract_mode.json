@@ -1,0 +1,6 @@
+{
+  "name": "attract_mode",
+  "description": "Power-on, nessun input, lascia che la attract mode parta. Test base di determinismo MAME e di parsing ROM.",
+  "ticks": 1800,
+  "inputs": {}
+}

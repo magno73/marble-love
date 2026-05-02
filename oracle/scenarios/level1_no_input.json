@@ -1,0 +1,11 @@
+{
+  "name": "level1_no_input",
+  "description": "Coin in, start, livello 1, nessun input dopo lo start. La biglia rotola da sola fino a perdere o cadere.",
+  "ticks": 3600,
+  "inputs": {
+    "60":  { "buttons": 4 },
+    "120": { "buttons": 0 },
+    "180": { "buttons": 1 },
+    "240": { "buttons": 0 }
+  }
+}

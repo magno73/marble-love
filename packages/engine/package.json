@@ -1,0 +1,29 @@
+{
+  "name": "@marble-love/engine",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./wrap": "./src/wrap.ts",
+    "./bus": "./src/bus.ts",
+    "./physics": "./src/physics.ts",
+    "./ai": "./src/ai.ts",
+    "./rng": "./src/rng.ts",
+    "./level": "./src/level.ts",
+    "./render": "./src/render.ts",
+    "./audio": "./src/audio.ts",
+    "./state": "./src/state.ts",
+    "./trace": "./src/trace.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

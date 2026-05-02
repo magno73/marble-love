@@ -1,0 +1,22 @@
+{
+  "name": "@marble-love/cli",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "marble-runner": "./src/marble-runner.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "start": "node --experimental-strip-types src/marble-runner.ts"
+  },
+  "dependencies": {
+    "@marble-love/engine": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

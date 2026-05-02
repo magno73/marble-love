@@ -1,0 +1,38 @@
+{
+  "name": "marble-love",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Reimplementazione TypeScript di Marble Madness (Atari 1984), differential testing vs MAME.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint \"packages/*/src/**/*.ts\" \"oracle/**/*.ts\" \"harness/**/*.ts\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "marble-runner": "tsx packages/cli/src/marble-runner.ts",
+    "oracle": "tsx oracle/run_oracle.ts",
+    "compare": "bash harness/run_compare.sh",
+    "diff": "tsx harness/diff.ts",
+    "report": "tsx harness/report.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/parser": "^8.59.1",
+    "@typescript-eslint/utils": "^8.59.1",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.59.1",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Marble Love</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #0a0a0a;
+        color: #f4f4f4;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        overflow: hidden;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+      .splash {
+        text-align: center;
+        max-width: 480px;
+        padding: 24px;
+      }
+      .splash h1 {
+        font-weight: 700;
+        font-size: 28px;
+        margin: 0 0 12px;
+      }
+      .splash p {
+        font-size: 14px;
+        line-height: 1.5;
+        opacity: 0.8;
+      }
+      .splash button {
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: #f4f4f4;
+        color: #0a0a0a;
+        border: 0;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .splash input[type="file"] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="splash" id="splash">
+        <h1>Marble Love</h1>
+        <p>
+          Reimplementazione di Marble Madness (Atari, 1984). Carica la tua ROM
+          locale (<code>marble.zip</code>). La ROM resta sul tuo dispositivo —
+          nessun server.
+        </p>
+        <label>
+          <input id="rom-input" type="file" accept=".zip,.7z" />
+          <button id="rom-btn" type="button">Carica ROM e gioca</button>
+        </label>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

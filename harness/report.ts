@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+/**
+ * report.ts — produce un report human/LLM-friendly partendo da
+ * `traces/divergence_<scen>.json`.
+ *
+ * Output: markdown su stdout. Pensato per essere letto sia da Marco che da
+ * Claude Code nel loop di hill-climbing (Phase 6).
+ *
+ * Uso: node --experimental-strip-types harness/report.ts <divergence.json>
+ */
+
+import { readFileSync } from "node:fs";
+import { argv, exit } from "node:process";
+
+const path = argv[2];
+if (!path) {
+  console.error("usage: report.ts <divergence.json>");
+  exit(2);
+}
+
+const r = JSON.parse(readFileSync(path, "utf8"));
+
+console.log(`# Divergence report — ${r.scenario}`);
+console.log("");
+console.log(`- **Parity:** ${(r.parity * 100).toFixed(2)}%`);
+console.log(`- **Frame compared:** ${r.framesCompared}`);
+console.log(`- **Truth frames total:** ${r.truthFrames}`);
+console.log(`- **Reimpl frames total:** ${r.reimplFrames}`);
+console.log("");
+
+if (!r.firstDivergence) {
+  console.log("✅ **Nessuna divergenza trovata.**");
+  console.log("");
+  console.log("Sposta lo scenario in `done/` nel curriculum e procedi al successivo.");
+  exit(0);
+}
+
+console.log(`## Prima divergenza @ frame ${r.firstDivergence.frame}`);
+console.log("");
+console.log(`**Sottosistema sospetto:** \`${r.suspectedSubsystem}\``);
+console.log("");
+console.log("**Campi divergenti:**");
+for (const f of r.firstDivergence.fields) console.log(`- \`${f}\``);
+console.log("");
+
+console.log("## Truth (MAME)");
+console.log("```json");
+console.log(JSON.stringify(r.firstDivergence.truth, null, 2));
+console.log("```");
+console.log("");
+
+console.log("## Reimpl (TS)");
+console.log("```json");
+console.log(JSON.stringify(r.firstDivergence.reimpl, null, 2));
+console.log("```");
+console.log("");
+
+console.log(`## Contesto: ${r.contextFramesBefore?.length ?? 0} frame precedenti`);
+console.log("```json");
+console.log(JSON.stringify(r.contextFramesBefore ?? [], null, 2));
+console.log("```");
