@@ -1,13 +1,13 @@
 /**
- * Test formatHex (FUN_3A08).
+ * Test formatHex (FUN_3A08) + setAlphaTile (FUN_3784).
  *
- * Bit-perfect verificato vs binary (1000/1000) tramite
- * `cli/src/test-string-format-parity.ts`.
+ * Bit-perfect verificati vs binary tramite `cli/src/test-string-format-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
-import { formatHex } from "../src/string-format.js";
+import { formatHex, setAlphaTile } from "../src/string-format.js";
 import { emptyGameState } from "../src/state.js";
+import { emptyRomImage } from "../src/bus.js";
 
 describe("formatHex (FUN_3A08)", () => {
   function readBytes(s: ReturnType<typeof emptyGameState>, addr: number, n: number): string {
@@ -63,5 +63,32 @@ describe("formatHex (FUN_3A08)", () => {
     expect(s.workRam[0x1D00 + 1]).toBe(0x30); // '0'
     expect(s.workRam[0x1D00 + 2]).toBe(0x31); // '1'
     expect(s.workRam[0x1D00 + 3]).toBe(0x30); // '0'
+  });
+});
+
+describe("setAlphaTile (FUN_3784)", () => {
+  it("non-rotation mode (rotFlag=0): col*shift + row*64", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    // rotFlag = 0 → use lookup table[1] for shift count
+    s.workRam[0x1f42] = 0; s.workRam[0x1f43] = 0;
+    rom.program[0x72a4 + 1] = 0; // shift 0 → arg1 << 0 = arg1
+    // arg1=2, arg2=3, arg3=0xF000, arg4=0x00BB
+    // d3 = 3 << 6 = 192
+    // d0 = 2 << 0 = 2
+    // d0 = (2 + 192) * 2 = 388 = 0x184
+    // dest = 0xA03000 + 0x184 = 0xA03184 → alphaRam[0x184]
+    setAlphaTile(s, rom, 2, 3, 0xF000, 0x00BB);
+    expect(((s.alphaRam[0x184] ?? 0) << 8) | (s.alphaRam[0x185] ?? 0)).toBe(0xF0BB);
+  });
+
+  it("OR di arg3 + arg4 word", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    s.workRam[0x1f42] = 0; s.workRam[0x1f43] = 0;
+    rom.program[0x72a5] = 0;
+    setAlphaTile(s, rom, 0, 0, 0x1000, 0x002A);
+    // d3=0, d0=0, dest = 0xA03000 → alphaRam[0]. value = 0x1000 | 0x002A = 0x102A
+    expect(((s.alphaRam[0] ?? 0) << 8) | (s.alphaRam[1] ?? 0)).toBe(0x102A);
   });
 });

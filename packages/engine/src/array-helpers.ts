@@ -23,8 +23,8 @@ function writeMemoryU16(state: GameState, addr: number, value: number): void {
     state.spriteRam[addr - 0xa02000] = (v >>> 8) & 0xff;
     state.spriteRam[addr - 0xa02000 + 1] = v & 0xff;
   } else if (addr >= 0xa03000 && addr < 0xa04000) {
-    state.spriteRam[addr - 0xa02000] = (v >>> 8) & 0xff;
-    state.spriteRam[addr - 0xa02000 + 1] = v & 0xff;
+    state.alphaRam[addr - 0xa03000] = (v >>> 8) & 0xff;
+    state.alphaRam[addr - 0xa03000 + 1] = v & 0xff;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = (v >>> 8) & 0xff;
     state.colorRam[addr - 0xb00000 + 1] = v & 0xff;
@@ -41,7 +41,7 @@ function writeMemoryU8(state: GameState, addr: number, value: number): void {
   } else if (addr >= 0xa02000 && addr < 0xa03000) {
     state.spriteRam[addr - 0xa02000] = v;
   } else if (addr >= 0xa03000 && addr < 0xa04000) {
-    state.spriteRam[addr - 0xa02000] = v;
+    state.alphaRam[addr - 0xa03000] = v;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = v;
   }

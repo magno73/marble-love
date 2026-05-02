@@ -132,9 +132,11 @@ export interface GameState {
   /** Region di memoria principale del 68010 (work RAM).
    *  Dimensione esatta da Phase 1 (atarisys1.cpp). */
   workRam: Uint8Array;
-  /** Sprite RAM (motion object table del System 1). */
+  /** Motion object RAM (sprite, 0xA02000-0xA02FFF, 4 KB). */
   spriteRam: Uint8Array;
-  /** Color RAM (palette). */
+  /** Alphanumerics RAM (HUD overlay, 0xA03000-0xA03FFF, 4 KB). */
+  alphaRam: Uint8Array;
+  /** Color RAM (palette IRGB-4444, 0xB00000-0xB007FF, 2 KB). */
   colorRam: Uint8Array;
 }
 
@@ -168,9 +170,11 @@ export function emptyGameState(): GameState {
     // Sizing verificato Phase 1 (`docs/hardware-map.md`):
     //   work RAM 8 KB ($400000-$401FFF)
     //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banchi × 64 entry × 4 word)
+    //   alpha RAM 4 KB ($A03000-$A03FFF, HUD overlay 64×32 tile)
     //   palette RAM 2 KB ($B00000-$B007FF)
     workRam: new Uint8Array(0x2000),    // 8 KB
     spriteRam: new Uint8Array(0x1000),  // 4 KB
+    alphaRam: new Uint8Array(0x1000),   // 4 KB
     colorRam: new Uint8Array(0x800),    // 2 KB
   };
 }
@@ -199,6 +203,7 @@ export function snapshotGameState(s: GameState): GameState {
     input: { ...s.input },
     workRam: new Uint8Array(s.workRam),
     spriteRam: new Uint8Array(s.spriteRam),
+    alphaRam: new Uint8Array(s.alphaRam),
     colorRam: new Uint8Array(s.colorRam),
   };
 }

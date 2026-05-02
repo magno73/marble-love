@@ -21,8 +21,11 @@
 - ✅ **Trackball input handler** (`trackballInputTick` vs FUN_1AC18) — 2000/2000 match — **🎯 prima game-logic CORE replicata**
 - ✅ Cascading timer 3-livelli (`tickCascadingTimer` vs FUN_28C38) — 1000/1000 match (sub di FUN_28A96)
 - ✅ Add accumulator + trigger flag (`addToObjectAccumAndFlag` vs FUN_28608) — 500/500 match
+- ✅ Set alpha tilemap tile (`setAlphaTile` vs FUN_3784) — 500/500 match (HUD print tile at coord)
 
-**🎯 15 sub-systems bit-perfect.**
+**🎯 16 sub-systems bit-perfect.**
+
+**Refactor architettonico Phase 4d.SetAlphaTile**: aggiunto `state.alphaRam` (4 KB, 0xA03000-0xA03FFF) separato da `state.spriteRam` (motion-object). Prima alpha era fusa in spriteRam con offset OOB; il setAlphaTile l'ha esposto. Ora layout RAM corretto separato.
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.
 
 **Calling convention 68k C scoperta**: tutti gli args sono LONG (32-bit) sullo stack, anche se la funzione li legge come word. Es. `move.w (0x12, SP), D0w` legge il low word di un long arg a SP+16..19.

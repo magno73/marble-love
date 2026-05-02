@@ -15,7 +15,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
-import { state as stateNs, stringFormat } from "@marble-love/engine";
+import { state as stateNs, stringFormat, bus as busNs } from "@marble-love/engine";
+import type { RomImage } from "@marble-love/engine";
 import {
   createCpu,
   pokeMem,
@@ -25,6 +26,7 @@ import {
 import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_FORMAT_HEX = 0x00003a08;
+const FUN_SET_ALPHA_TILE = 0x00003784;
 const SENTINEL = 0xCAFEBABE >>> 0;
 
 function makeRng(seed: number): () => number {
@@ -120,17 +122,87 @@ async function main(): Promise<void> {
     const { value, bufEnd, numDigits, showSpaces, offset, bin, ts } = firstFail;
     console.log(`  First fail: value=0x${value.toString(16)} bufEnd=0x${bufEnd.toString(16)} digits=${numDigits} showSp=${showSpaces}`);
     console.log(`    diff at scratch offset 0x${offset.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`);
-    // Print expected string
-    const expected: string[] = [];
-    for (let j = 0; j < numDigits + 1; j++) {
-      const b = peekMem(cpu, bufEnd + j, 1);
-      expected.push(`0x${b.toString(16).padStart(2, "0")}`);
+  }
+
+  // ─── setAlphaTile (FUN_3784) ─────────────────────────────────────────
+  console.log(`\n=== setAlphaTile (FUN_3784) — ${n} casi ===`);
+  // Build RomImage for TS (need rom.program)
+  const tsRom: RomImage = busNs.emptyRomImage();
+  tsRom.program.set(rom.subarray(0, tsRom.program.length));
+
+  let ok2 = 0;
+  let firstFail2: { args: number[]; binWord: number; tsWord: number; addr: number } | null = null;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    // Random args. arg1 byte (col), arg2 byte (row), arg3 word (attrs), arg4 word (tile).
+    const arg1 = Math.floor(rng() * 256) & 0xff;
+    const arg2 = Math.floor(rng() * 0x29) & 0xff; // 0..40 to keep in alpha bounds
+    const arg3 = Math.floor(rng() * 0x10000) & 0xffff;
+    const arg4 = Math.floor(rng() * 0x10000) & 0xffff;
+    // Random rotation flag (50% set vs not)
+    const rotFlag = rng() < 0.5 ? 0 : (1 + Math.floor(rng() * 4));
+
+    pokeMem(cpu, 0x401f42, 2, rotFlag);
+    state.workRam[0x1f42] = (rotFlag >>> 8) & 0xff;
+    state.workRam[0x1f43] = rotFlag & 0xff;
+
+    // Clear alpha RAM scratch (entire 4KB)
+    for (let j = 0; j < 0x1000; j += 2) {
+      pokeMem(cpu, 0xa03000 + j, 2, 0);
+      state.alphaRam[j] = 0;
+      state.alphaRam[j + 1] = 0;
     }
-    console.log(`    bin string @ bufEnd: [${expected.join(", ")}]`);
+
+    // Call binary (4 long args)
+    const sys = cpu.system;
+    let sp = sys.getRegisters().sp;
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, arg4 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, arg3 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, arg2 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, arg1 >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, SENTINEL);
+    sys.setRegister("sp", sp);
+    sys.setRegister("pc", FUN_SET_ALPHA_TILE);
+    for (let k = 0; k < 1000; k++) {
+      if (sys.getRegisters().pc === SENTINEL) break;
+      sys.step();
+    }
+    sys.setRegister("sp", (sys.getRegisters().sp + 4 + 16) >>> 0);
+
+    // Run TS
+    stringFormat.setAlphaTile(state, tsRom, arg1, arg2, arg3, arg4);
+
+    // Compare alpha RAM (only check the area where binary wrote)
+    let m = true;
+    let firstDiffOffset = -1;
+    for (let j = 0; j < 0x1000; j++) {
+      const b = peekMem(cpu, 0xa03000 + j, 1);
+      const t = state.alphaRam[j] ?? 0;
+      if (b !== t) {
+        m = false;
+        if (firstDiffOffset === -1) firstDiffOffset = j;
+        break;
+      }
+    }
+
+    if (m) ok2++;
+    else if (firstFail2 === null) {
+      const wordOffset = firstDiffOffset & ~1;
+      const binWord = peekMem(cpu, 0xa03000 + wordOffset, 2);
+      const tsWord = ((state.alphaRam[wordOffset] ?? 0) << 8) | (state.alphaRam[wordOffset + 1] ?? 0);
+      firstFail2 = { args: [arg1, arg2, arg3, arg4, rotFlag], binWord, tsWord, addr: 0xa03000 + wordOffset };
+    }
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
+  if (firstFail2) {
+    const { args, binWord, tsWord, addr } = firstFail2;
+    console.log(`  First fail: arg1=0x${args[0]!.toString(16)} arg2=0x${args[1]!.toString(16)} arg3=0x${args[2]!.toString(16)} arg4=0x${args[3]!.toString(16)} rotFlag=${args[4]}`);
+    console.log(`    @ alpha 0x${addr.toString(16)}: bin=0x${binWord.toString(16)} ts=0x${tsWord.toString(16)}`);
   }
 
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

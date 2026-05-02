@@ -48,8 +48,10 @@ function sext16(w: number): number {
 function readMemoryU8(state: GameState, addr: number): number {
   if (addr >= 0x400000 && addr < 0x402000) {
     return state.workRam[addr - 0x400000] ?? 0;
-  } else if (addr >= 0xa02000 && addr < 0xa04000) {
+  } else if (addr >= 0xa02000 && addr < 0xa03000) {
     return state.spriteRam[addr - 0xa02000] ?? 0;
+  } else if (addr >= 0xa03000 && addr < 0xa04000) {
+    return state.alphaRam[addr - 0xa03000] ?? 0;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     return state.colorRam[addr - 0xb00000] ?? 0;
   }
@@ -59,8 +61,10 @@ function writeMemoryU8(state: GameState, addr: number, v: number): void {
   const b = v & 0xff;
   if (addr >= 0x400000 && addr < 0x402000) {
     state.workRam[addr - 0x400000] = b;
-  } else if (addr >= 0xa02000 && addr < 0xa04000) {
+  } else if (addr >= 0xa02000 && addr < 0xa03000) {
     state.spriteRam[addr - 0xa02000] = b;
+  } else if (addr >= 0xa03000 && addr < 0xa04000) {
+    state.alphaRam[addr - 0xa03000] = b;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = b;
   }

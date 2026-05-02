@@ -16,16 +16,88 @@ function writeMemoryU8(state: GameState, addr: number, value: number): void {
   const v = value & 0xff;
   if (addr >= 0x400000 && addr < 0x402000) {
     state.workRam[addr - 0x400000] = v;
-  } else if (addr >= 0xa00000 && addr < 0xa02000) {
-    // Playfield RAM — non rappresentata separatamente, fallback al workRam
-    // (Phase 4: separare). Per ora ignored se non abbiamo PF separato.
   } else if (addr >= 0xa02000 && addr < 0xa03000) {
     state.spriteRam[addr - 0xa02000] = v;
   } else if (addr >= 0xa03000 && addr < 0xa04000) {
-    // Alpha RAM — accessibile come Uint8Array (per ora condivide spriteRam)
-    state.spriteRam[addr - 0xa02000] = v;
+    state.alphaRam[addr - 0xa03000] = v;
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = v;
+  }
+}
+
+// ─── setAlphaTile (FUN_3784) ──────────────────────────────────────────────
+
+/**
+ * Replica `FUN_00003784` — `setAlphaTile(arg1, arg2, arg3, arg4)`.
+ *
+ * Scrive un word in alpha tilemap @ `0xA03000`, con offset calcolato da
+ * 2 byte coordinate + lookup ROM table. Use case: print tile/char at
+ * (col, row) nel HUD overlay.
+ *
+ * Disassembly (cdecl 4 long args):
+ *   D1 = arg1.b (low byte di long arg1 @ SP+12)
+ *   D0 = arg2.b (low byte di long arg2 @ SP+16)
+ *   D2 = arg3.w (low word di long arg3 @ SP+20)
+ *   if *0x401F42 != 0:
+ *     D3 = 0x29 - sext_l(D0.b)        ; rotation mode
+ *   else:
+ *     D3 = sext_l(D0.b) << 6           ; row stride 64
+ *   D0 = sext_l(D1.b)
+ *   D1 = (sext_w(*0x401F42)) * 2 + 1
+ *   D1 = sext_l(*(0x72A4 + D1).b)     ; lookup shift count
+ *   D0 <<= D1
+ *   D0 += D3; D0 *= 2
+ *   *(0xA03000 + D0).w = arg4.w | D2.w
+ */
+export function setAlphaTile(
+  state: GameState,
+  rom: { program: Uint8Array },
+  arg1Byte: number,
+  arg2Byte: number,
+  arg3Word: number,
+  arg4Word: number,
+): void {
+  const ALPHA_RAM_BASE = 0xa03000;
+  const ROM_LOOKUP_TABLE = 0x72a4;
+  const ROTATION_FLAG_OFF = 0x1f42;
+
+  const arg1Long = ((arg1Byte & 0xff) << 24) >> 24;
+  const arg2Long = ((arg2Byte & 0xff) << 24) >> 24;
+
+  const rotFlag =
+    ((state.workRam[ROTATION_FLAG_OFF] ?? 0) << 8) |
+    (state.workRam[ROTATION_FLAG_OFF + 1] ?? 0);
+
+  let d3: number;
+  if (rotFlag !== 0) {
+    d3 = (0x29 - arg2Long) | 0;
+  } else {
+    d3 = (arg2Long << 6) | 0;
+  }
+
+  const rotFlagSigned = (rotFlag & 0x8000) ? rotFlag - 0x10000 : rotFlag;
+  // movea.l #0x72A4, A0; move.b (1, A0, D1*1), D1.b
+  // D1 = sext_l(rotFlag) * 2, then read byte at A0 + D1 + 1
+  const lookupIdx = (rotFlagSigned * 2 + 1) | 0;
+  const shiftByte = rom.program[(ROM_LOOKUP_TABLE + lookupIdx) >>> 0] ?? 0;
+  const shiftCount = ((shiftByte & 0xff) << 24) >> 24;
+
+  let d0 = arg1Long;
+  if (shiftCount >= 32 || shiftCount < 0) {
+    // asl.l con count fuori dal range: m68k cap a 64; >= 32 → 0
+    d0 = shiftCount < 0 ? d0 : 0;
+  } else {
+    d0 = (d0 << shiftCount) | 0;
+  }
+
+  d0 = ((d0 + d3) * 2) | 0;
+
+  const destAddr = (ALPHA_RAM_BASE + d0) >>> 0;
+  const value = ((arg3Word | arg4Word) & 0xffff) >>> 0;
+  if (destAddr >= 0xa03000 && destAddr < 0xa04000) {
+    const off = destAddr - 0xa03000;
+    state.alphaRam[off] = (value >>> 8) & 0xff;
+    state.alphaRam[off + 1] = value & 0xff;
   }
 }
 
