@@ -14,9 +14,12 @@
 - ✅ Palette queue push (`paletteQueuePush` vs FUN_26B66) — 500/500 match
 - ✅ MainUpdate prefix (`mainUpdateScrollSync` vs FUN_28788 0x28788..0x287D8) — 2000/2000 match
 - ✅ Event flag consume (`consumeEventFlag` vs FUN_2548) — 1000/1000 match
+- ✅ Fill incrementing u16 array (`fillIncrementingU16` vs FUN_1E3E) — 500/500 match
 
-**🎯 8 sub-systems bit-perfect.**
+**🎯 9 sub-systems bit-perfect.**
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.
+
+**Calling convention 68k C scoperta**: tutti gli args sono LONG (32-bit) sullo stack, anche se la funzione li legge come word. Es. `move.w (0x12, SP), D0w` legge il low word di un long arg a SP+16..19.
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
