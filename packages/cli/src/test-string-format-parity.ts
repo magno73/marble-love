@@ -27,6 +27,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_FORMAT_HEX = 0x00003a08;
 const FUN_SET_ALPHA_TILE = 0x00003784;
+const FUN_STRCPY = 0x00001d74;
 const SENTINEL = 0xCAFEBABE >>> 0;
 
 function makeRng(seed: number): () => number {
@@ -201,8 +202,79 @@ async function main(): Promise<void> {
     console.log(`    @ alpha 0x${addr.toString(16)}: bin=0x${binWord.toString(16)} ts=0x${tsWord.toString(16)}`);
   }
 
+  // ─── strcpy (FUN_1D74) ────────────────────────────────────────────────
+  console.log(`\n=== strcpy (FUN_1D74) — ${n} casi ===`);
+
+  let ok3 = 0;
+  let firstFail3: { srcLen: number; offset: number; bin: number; ts: number } | null = null;
+
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    // Random length 0..62; random src/dst offsets
+    const srcLen = Math.floor(rng() * 63);
+    const srcOff = Math.floor(rng() * (SCRATCH_SIZE - srcLen - 1));
+    const dstOff = Math.floor(rng() * (SCRATCH_SIZE - srcLen - 1));
+    const SRC_BASE = 0x401D00;
+    const DST_BASE = 0x401D80; // 128 byte separati per evitare overlap totale
+    const srcAddr = SRC_BASE + srcOff;
+    const dstAddr = DST_BASE + dstOff;
+
+    // Fill SRC area with random non-zero bytes + null at end, DST with sentinel 0x77
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      // src side
+      const srcRel = j;
+      let srcByte = 0x77;
+      if (srcRel >= srcOff && srcRel < srcOff + srcLen) {
+        srcByte = 1 + Math.floor(rng() * 254); // 1..254 (no NUL)
+      } else if (srcRel === srcOff + srcLen) {
+        srcByte = 0; // null terminator
+      }
+      pokeMem(cpu, SRC_BASE + j, 1, srcByte);
+      state.workRam[(SRC_BASE - 0x400000) + j] = srcByte;
+      // dst side
+      pokeMem(cpu, DST_BASE + j, 1, 0x77);
+      state.workRam[(DST_BASE - 0x400000) + j] = 0x77;
+    }
+
+    // Call binary: strcpy(dst, src) — 2 long args
+    const sys = cpu.system;
+    let sp = sys.getRegisters().sp;
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, srcAddr >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, dstAddr >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, SENTINEL);
+    sys.setRegister("sp", sp);
+    sys.setRegister("pc", FUN_STRCPY);
+    for (let k = 0; k < 100_000; k++) {
+      if (sys.getRegisters().pc === SENTINEL) break;
+      sys.step();
+    }
+    sys.setRegister("sp", (sys.getRegisters().sp + 4 + 8) >>> 0);
+
+    // Run TS (no rom needed: src in workRam)
+    stringFormat.strcpy(state, null, dstAddr, srcAddr);
+
+    let m = true;
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      const b = peekMem(cpu, DST_BASE + j, 1);
+      const t = state.workRam[(DST_BASE - 0x400000) + j] ?? 0;
+      if (b !== t) {
+        m = false;
+        if (firstFail3 === null) firstFail3 = { srcLen, offset: j, bin: b, ts: t };
+        break;
+      }
+    }
+    if (m) ok3++;
+  }
+  console.log(`  Match: ${ok3}/${n} = ${((ok3 / n) * 100).toFixed(1)}%`);
+  if (firstFail3) {
+    const { srcLen, offset, bin, ts } = firstFail3;
+    console.log(`  First fail: srcLen=${srcLen}`);
+    console.log(`    diff at dst offset 0x${offset.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`);
+  }
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

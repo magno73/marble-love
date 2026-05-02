@@ -19,6 +19,9 @@ export const EVENT_FLAGS_OFF = 0x06 as const;
 /** Offset della status-flags bitmap u32 BE (assoluto 0x401F5E). */
 export const STATUS_FLAGS_OFF = 0x1f5e as const;
 
+/** Offset della "secondary status flags" bitmap u32 BE (assoluto 0x401F76). */
+export const SECONDARY_FLAGS_OFF = 0x1f76 as const;
+
 /** Offset della "object trigger flags" bitmap u8 (assoluto 0x40039C). */
 export const OBJECT_TRIGGER_FLAGS_OFF = 0x39c as const;
 
@@ -175,6 +178,36 @@ export function addToObjectAccumAndFlag(
  *
  * Side effect: bit settato in u32 BE @ 0x401F5E (status flag bitmap).
  */
+/**
+ * Replica `FUN_000052A2` — `anyStatusFlagsSet()`.
+ *
+ * Disassembly (4 istruzioni):
+ *   move.l (0x00401F76).l, D0    ; D0 = secondary flags long
+ *   or.l   (0x00401F5E).l, D0    ; D0 |= primary status flags long
+ *   beq.b  skip                   ; if D0 == 0: skip (D0 stays 0)
+ *   moveq  #1, D0                 ; else D0 = 1
+ *   skip:
+ *   rts
+ *
+ * Ritorna 1 se almeno un bit è set in *0x401F5E o *0x401F76, altrimenti 0.
+ * Use case: "any pending status event?" check.
+ *
+ * **Verificato bit-perfect** vs `FUN_000052A2` tramite differential test.
+ */
+export function anyStatusFlagsSet(state: GameState): number {
+  const primary =
+    ((state.workRam[STATUS_FLAGS_OFF] ?? 0) << 24) |
+    ((state.workRam[STATUS_FLAGS_OFF + 1] ?? 0) << 16) |
+    ((state.workRam[STATUS_FLAGS_OFF + 2] ?? 0) << 8) |
+    (state.workRam[STATUS_FLAGS_OFF + 3] ?? 0);
+  const secondary =
+    ((state.workRam[SECONDARY_FLAGS_OFF] ?? 0) << 24) |
+    ((state.workRam[SECONDARY_FLAGS_OFF + 1] ?? 0) << 16) |
+    ((state.workRam[SECONDARY_FLAGS_OFF + 2] ?? 0) << 8) |
+    (state.workRam[SECONDARY_FLAGS_OFF + 3] ?? 0);
+  return ((primary | secondary) >>> 0) === 0 ? 0 : 1;
+}
+
 export function setFlagBit(state: GameState, bitNum: number): void {
   const arg = bitNum >>> 0; // unsigned
   let shift = arg >= 2 ? (arg - 2) : arg;

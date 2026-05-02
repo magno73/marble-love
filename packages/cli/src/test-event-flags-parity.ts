@@ -26,6 +26,7 @@ const FUN_CONSUME = 0x00002548;
 const FUN_SET_FLAG = 0x00005236;
 const FUN_ADD_ACCUM = 0x00028608;
 const FUN_EDGE_DETECT = 0x00000f6a;
+const FUN_ANY_STATUS_FLAGS = 0x000052a2;
 
 async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "500");
@@ -191,8 +192,51 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok4}/${n} = ${((ok4 / n) * 100).toFixed(1)}%`);
 
+  // ─── anyStatusFlagsSet (FUN_52A2) ────────────────────────────────────
+  console.log(`\n=== anyStatusFlagsSet (FUN_52A2) — ${n} casi ===`);
+  let ok5 = 0;
+  let firstFail5: { primary: number; secondary: number; bin: number; ts: number } | null = null;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    // Mix of zero-zero, single-bit, and full random patterns to hit every branch
+    const pattern = i % 4;
+    let primary: number;
+    let secondary: number;
+    if (pattern === 0) { primary = 0; secondary = 0; }
+    else if (pattern === 1) { primary = Math.floor(rng() * 0x100000000) >>> 0; secondary = 0; }
+    else if (pattern === 2) { primary = 0; secondary = Math.floor(rng() * 0x100000000) >>> 0; }
+    else { primary = Math.floor(rng() * 0x100000000) >>> 0; secondary = Math.floor(rng() * 0x100000000) >>> 0; }
+
+    pokeMem(cpu, 0x401f5e, 4, primary);
+    pokeMem(cpu, 0x401f76, 4, secondary);
+    state.workRam[0x1f5e] = (primary >>> 24) & 0xff;
+    state.workRam[0x1f5f] = (primary >>> 16) & 0xff;
+    state.workRam[0x1f60] = (primary >>> 8) & 0xff;
+    state.workRam[0x1f61] = primary & 0xff;
+    state.workRam[0x1f76] = (secondary >>> 24) & 0xff;
+    state.workRam[0x1f77] = (secondary >>> 16) & 0xff;
+    state.workRam[0x1f78] = (secondary >>> 8) & 0xff;
+    state.workRam[0x1f79] = secondary & 0xff;
+
+    const r = callFunction(cpu, FUN_ANY_STATUS_FLAGS, []);
+    const binD0 = r.d0 & 0xff; // returns 0 or 1
+
+    const tsD0 = eventFlags.anyStatusFlagsSet(state);
+
+    if (binD0 === tsD0) ok5++;
+    else if (firstFail5 === null) {
+      firstFail5 = { primary, secondary, bin: binD0, ts: tsD0 };
+    }
+  }
+  console.log(`  Match: ${ok5}/${n} = ${((ok5 / n) * 100).toFixed(1)}%`);
+  if (firstFail5) {
+    const { primary, secondary, bin, ts } = firstFail5;
+    console.log(`  First fail: primary=0x${primary.toString(16)} secondary=0x${secondary.toString(16)} bin=${bin} ts=${ts}`);
+  }
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n && ok3 === n && ok4 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

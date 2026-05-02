@@ -25,8 +25,10 @@
 - ✅ Rising edge detector (`detectRisingEdgesAndPass` vs FUN_F6A) — 500/500 match
 - ✅ Set alpha tilemap word (`setAlphaWord` vs FUN_383A) — 1000/1000 match
 - ✅ Clear alpha tiles from row (`clearAlphaTilesFromIndex` vs FUN_28C7E, chiama FUN_021E→FUN_383A in loop) — 1000/1000 match
+- ✅ strcpy (`strcpy` vs FUN_1D74) — 500/500 match (supporta src in ROM o RAM)
+- ✅ Any status flags set (`anyStatusFlagsSet` vs FUN_52A2) — 1000/1000 match (OR di 2 long bitmap)
 
-**🎯 19 sub-systems bit-perfect.**
+**🎯 21 sub-systems bit-perfect.**
 
 **Refactor architettonico Phase 4d.SetAlphaTile**: aggiunto `state.alphaRam` (4 KB, 0xA03000-0xA03FFF) separato da `state.spriteRam` (motion-object). Prima alpha era fusa in spriteRam con offset OOB; il setAlphaTile l'ha esposto. Ora layout RAM corretto separato.
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.

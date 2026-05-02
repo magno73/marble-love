@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { formatHex, setAlphaTile } from "../src/string-format.js";
+import { formatHex, setAlphaTile, strcpy } from "../src/string-format.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
@@ -90,5 +90,54 @@ describe("setAlphaTile (FUN_3784)", () => {
     setAlphaTile(s, rom, 0, 0, 0x1000, 0x002A);
     // d3=0, d0=0, dest = 0xA03000 → alphaRam[0]. value = 0x1000 | 0x002A = 0x102A
     expect(((s.alphaRam[0] ?? 0) << 8) | (s.alphaRam[1] ?? 0)).toBe(0x102A);
+  });
+});
+
+describe("strcpy (FUN_1D74)", () => {
+  it("copia stringa con null terminator (workRam → workRam)", () => {
+    const s = emptyGameState();
+    const SRC = 0x401D00;
+    const DST = 0x401E00;
+    // Scrivi "HELLO\0" in src
+    const msg = "HELLO";
+    for (let i = 0; i < msg.length; i++) {
+      s.workRam[(SRC - 0x400000) + i] = msg.charCodeAt(i);
+    }
+    s.workRam[(SRC - 0x400000) + msg.length] = 0;
+
+    strcpy(s, null, DST, SRC);
+
+    for (let i = 0; i < msg.length; i++) {
+      expect(s.workRam[(DST - 0x400000) + i]).toBe(msg.charCodeAt(i));
+    }
+    // Null terminator copied
+    expect(s.workRam[(DST - 0x400000) + msg.length]).toBe(0);
+  });
+
+  it("stringa vuota: copia solo il null", () => {
+    const s = emptyGameState();
+    const SRC = 0x401D00;
+    const DST = 0x401E00;
+    s.workRam[(SRC - 0x400000)] = 0;
+    s.workRam[(DST - 0x400000)] = 0xFF; // pre-fill destination
+
+    strcpy(s, null, DST, SRC);
+
+    expect(s.workRam[(DST - 0x400000)]).toBe(0);
+  });
+
+  it("legge da ROM se src < 0x80000", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    rom.program[0x1000] = 0x41; // 'A'
+    rom.program[0x1001] = 0x42; // 'B'
+    rom.program[0x1002] = 0;
+
+    const DST = 0x401E00;
+    strcpy(s, rom, DST, 0x1000);
+
+    expect(s.workRam[(DST - 0x400000)]).toBe(0x41);
+    expect(s.workRam[(DST - 0x400000) + 1]).toBe(0x42);
+    expect(s.workRam[(DST - 0x400000) + 2]).toBe(0);
   });
 });
