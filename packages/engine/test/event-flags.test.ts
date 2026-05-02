@@ -10,9 +10,11 @@ import {
   consumeEventFlag,
   setFlagBit,
   addToObjectAccumAndFlag,
+  detectRisingEdgesAndPass,
   EVENT_FLAGS_OFF,
   STATUS_FLAGS_OFF,
   OBJECT_TRIGGER_FLAGS_OFF,
+  EDGE_DETECTOR_PREV_OFF,
   OBJ_FIELD_TYPE,
   OBJ_FIELD_ACCUM,
 } from "../src/event-flags.js";
@@ -174,5 +176,49 @@ describe("addToObjectAccumAndFlag (FUN_28608)", () => {
     addToObjectAccumAndFlag(s, 0x401D00, 5);
     // 0xFFFFFFFE + 5 = 0x100000003 → wraps to 0x3
     expect(readAccum(s, 0x401D00)).toBe(0x3);
+  });
+});
+
+describe("detectRisingEdgesAndPass (FUN_F6A)", () => {
+  function setup(flag: number, prev: number) {
+    const s = emptyGameState();
+    s.workRam[0] = (flag >>> 8) & 0xff;
+    s.workRam[1] = flag & 0xff;
+    s.workRam[EDGE_DETECTOR_PREV_OFF] = (prev >>> 8) & 0xff;
+    s.workRam[EDGE_DETECTOR_PREV_OFF + 1] = prev & 0xff;
+    return s;
+  }
+
+  it("nessun cambiamento: no rising edges, ritorna solo high nibble", () => {
+    // flag = 0x3000 (high nibble + low 0), prev = 0
+    const s = setup(0x3000, 0);
+    expect(detectRisingEdgesAndPass(s)).toBe(0x3000);
+  });
+
+  it("rising edge bit 0", () => {
+    // flag = 0x0001 (low bit 0 set), prev = 0 → rising edge bit 0
+    const s = setup(0x0001, 0);
+    // high nibble = 0, rising = 1, return = 1
+    expect(detectRisingEdgesAndPass(s)).toBe(1);
+  });
+
+  it("falling edge bit 0 (NO ritorno)", () => {
+    // flag = 0 (current low bits = 0), prev = 1 → bit 0 fell, NOT rising
+    const s = setup(0, 1);
+    expect(detectRisingEdgesAndPass(s)).toBe(0);
+  });
+
+  it("salva nuovo prev (low 2 bits di flag)", () => {
+    const s = setup(0xABC3, 0); // low 2 bits = 3
+    detectRisingEdgesAndPass(s);
+    const newPrev = ((s.workRam[EDGE_DETECTOR_PREV_OFF] ?? 0) << 8) |
+                    (s.workRam[EDGE_DETECTOR_PREV_OFF + 1] ?? 0);
+    expect(newPrev).toBe(3);
+  });
+
+  it("high nibble 0xF000: sext_l → 0xFFFFF000 nel return", () => {
+    const s = setup(0xF002, 0); // high = 0xF, low2 = 2
+    // rising edge bit 1 = 2. Result = 0xFFFFF000 | 2 = 0xFFFFF002
+    expect(detectRisingEdgesAndPass(s) >>> 0).toBe(0xFFFFF002);
   });
 });

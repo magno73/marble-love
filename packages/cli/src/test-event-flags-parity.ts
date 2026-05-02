@@ -25,6 +25,7 @@ import {
 const FUN_CONSUME = 0x00002548;
 const FUN_SET_FLAG = 0x00005236;
 const FUN_ADD_ACCUM = 0x00028608;
+const FUN_EDGE_DETECT = 0x00000f6a;
 
 async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "500");
@@ -158,8 +159,40 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok3}/${n} = ${((ok3 / n) * 100).toFixed(1)}%`);
 
+  // ─── detectRisingEdgesAndPass (FUN_F6A) ──────────────────────────────
+  console.log(`\n=== detectRisingEdgesAndPass (FUN_F6A) — ${n} casi ===`);
+  let ok4 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    const flagWord = Math.floor(rng() * 0x10000) & 0xffff;
+    const prevState = Math.floor(rng() * 0x10000) & 0xffff;
+
+    pokeMem(cpu, 0x400000, 2, flagWord);
+    pokeMem(cpu, 0x40017c, 2, prevState);
+    state.workRam[0x00] = (flagWord >>> 8) & 0xff;
+    state.workRam[0x01] = flagWord & 0xff;
+    state.workRam[0x17c] = (prevState >>> 8) & 0xff;
+    state.workRam[0x17d] = prevState & 0xff;
+
+    const r = callFunction(cpu, FUN_EDGE_DETECT, []);
+    const binD0 = r.d0 >>> 0;
+    const binPrev = peekMem(cpu, 0x40017c, 2);
+
+    const tsD0 = eventFlags.detectRisingEdgesAndPass(state);
+    const tsPrev = ((state.workRam[0x17c] ?? 0) << 8) | (state.workRam[0x17d] ?? 0);
+
+    if (binD0 === tsD0 && binPrev === tsPrev) ok4++;
+    else if (ok4 + 3 > i) {
+      console.log(`  case ${i}: flag=0x${flagWord.toString(16)} prev=0x${prevState.toString(16)}`);
+      console.log(`    bin D0=0x${binD0.toString(16)} prev=0x${binPrev.toString(16)}`);
+      console.log(`    ts  D0=0x${tsD0.toString(16)} prev=0x${tsPrev.toString(16)}`);
+    }
+  }
+  console.log(`  Match: ${ok4}/${n} = ${((ok4 / n) * 100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n && ok3 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n && ok4 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

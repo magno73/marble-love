@@ -54,6 +54,59 @@ export function consumeEventFlag(state: GameState): number {
   return bit0;
 }
 
+/** Offset edge detector previous state (assoluto 0x40017C). */
+export const EDGE_DETECTOR_PREV_OFF = 0x17c as const;
+
+/**
+ * Replica `FUN_00000F6A` — rising edge detector + high nibble passthrough.
+ *
+ * Disassembly (13 istruzioni):
+ *   D1 = *0x400000.w
+ *   D2 = D1 & 0xF000          ; high nibble
+ *   D1 = D1 & 0x0003           ; low 2 bits = current state
+ *   D3 = D1
+ *   D0 = *0x40017C.w           ; previous saved state (also low 2 bits used)
+ *   D0 ^= D1                   ; bits that changed
+ *   D1 = D0 & D3               ; bits che sono CAMBIATI E sono SET ora = rising edges
+ *   *0x40017C.w = D3            ; save current state for next call
+ *   D0 = sext_l(D2)            ; D0 = high nibble (shifted in word position)
+ *   D1 = sext_l(D1)            ; D1 = rising-edge bits
+ *   return D0 = D2.l | D1.l    ; combined long
+ *
+ * Use case: detect which bits of `*0x400000.w` low 2 bits transitioned from 0
+ * to 1 since last call. Returned together with high nibble of input.
+ *
+ * **Verificato bit-perfect** vs `FUN_00000F6A` tramite differential test.
+ */
+export function detectRisingEdgesAndPass(state: GameState): number {
+  const flagWord =
+    ((state.workRam[0x00] ?? 0) << 8) | (state.workRam[0x01] ?? 0);
+
+  const highNibble = flagWord & 0xf000;
+  const currentLow2 = flagWord & 0x0003;
+
+  const prevSaved =
+    ((state.workRam[EDGE_DETECTOR_PREV_OFF] ?? 0) << 8) |
+    (state.workRam[EDGE_DETECTOR_PREV_OFF + 1] ?? 0);
+
+  // Rising edges: bits set NOW that were different from prev = bits che sono
+  // appena diventati 1 (oppure sono cambiati in qualche modo, AND mask current).
+  const xor = (prevSaved ^ currentLow2) & 0xffff;
+  const risingBits = xor & currentLow2;
+
+  // Save current low 2 bits as new prev
+  state.workRam[EDGE_DETECTOR_PREV_OFF] = (currentLow2 >>> 8) & 0xff;
+  state.workRam[EDGE_DETECTOR_PREV_OFF + 1] = currentLow2 & 0xff;
+
+  // Result: high nibble (sign-extended) OR rising bits (sign-extended) as long
+  // sext_l of word 0xF000 = 0xFFFFF000 (negative). OR with risingBits (small).
+  // sext_l of word risingBits = 0..3.
+  const d2Long = (highNibble & 0x8000) ? (highNibble | 0xffff0000) >>> 0 : highNibble;
+  const d1Long = risingBits; // always positive (0..3)
+
+  return (d2Long | d1Long) >>> 0;
+}
+
 /**
  * Replica `FUN_00028608` — addToObjectAccumAndFlag(objPtr, value).
  *
