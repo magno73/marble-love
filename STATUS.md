@@ -23,8 +23,10 @@
 - ✅ Add accumulator + trigger flag (`addToObjectAccumAndFlag` vs FUN_28608) — 500/500 match
 - ✅ Set alpha tilemap tile (`setAlphaTile` vs FUN_3784) — 500/500 match (HUD print tile at coord)
 - ✅ Rising edge detector (`detectRisingEdgesAndPass` vs FUN_F6A) — 500/500 match
+- ✅ Set alpha tilemap word (`setAlphaWord` vs FUN_383A) — 1000/1000 match
+- ✅ Clear alpha tiles from row (`clearAlphaTilesFromIndex` vs FUN_28C7E, chiama FUN_021E→FUN_383A in loop) — 1000/1000 match
 
-**🎯 17 sub-systems bit-perfect.**
+**🎯 19 sub-systems bit-perfect.**
 
 **Refactor architettonico Phase 4d.SetAlphaTile**: aggiunto `state.alphaRam` (4 KB, 0xA03000-0xA03FFF) separato da `state.spriteRam` (motion-object). Prima alpha era fusa in spriteRam con offset OOB; il setAlphaTile l'ha esposto. Ora layout RAM corretto separato.
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.

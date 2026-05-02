@@ -23,6 +23,7 @@ export * as arrayHelpers from "./array-helpers.js";
 export * as stringFormat from "./string-format.js";
 export * as trackballInput from "./trackball-input.js";
 export * as timerCascade from "./timer-cascade.js";
+export * as alphaTilemap from "./alpha-tilemap.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
