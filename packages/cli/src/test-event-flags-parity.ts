@@ -24,6 +24,7 @@ import {
 
 const FUN_CONSUME = 0x00002548;
 const FUN_SET_FLAG = 0x00005236;
+const FUN_ADD_ACCUM = 0x00028608;
 
 async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "500");
@@ -108,8 +109,57 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
 
+  // ─── addToObjectAccumAndFlag (FUN_28608) ─────────────────────────────
+  console.log(`\n=== addToObjectAccumAndFlag (FUN_28608) — ${n} casi ===`);
+  let ok3 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    // Random obj at random offset within scratch
+    const objAddr = 0x401d00 + Math.floor(rng() * 0x40);
+    const initialAccum = Math.floor(rng() * 0x100000000) >>> 0;
+    const value = Math.floor(rng() * 0x100000000) >>> 0;
+    const type = Math.floor(rng() * 35); // 0..34, copre shift>=32
+    const initialFlag = Math.floor(rng() * 256) & 0xff;
+
+    // Setup: obj.+0xBC = initialAccum, obj.+0x19 = type, *0x40039C = initialFlag
+    pokeMem(cpu, objAddr + 0xBC, 4, initialAccum);
+    pokeMem(cpu, objAddr + 0x19, 1, type);
+    pokeMem(cpu, 0x40039C, 1, initialFlag);
+    state.workRam[(objAddr - 0x400000) + 0xBC] = (initialAccum >>> 24) & 0xff;
+    state.workRam[(objAddr - 0x400000) + 0xBD] = (initialAccum >>> 16) & 0xff;
+    state.workRam[(objAddr - 0x400000) + 0xBE] = (initialAccum >>> 8) & 0xff;
+    state.workRam[(objAddr - 0x400000) + 0xBF] = initialAccum & 0xff;
+    state.workRam[(objAddr - 0x400000) + 0x19] = type;
+    state.workRam[0x39c] = initialFlag;
+
+    // Binary
+    callFunction(cpu, FUN_ADD_ACCUM, [objAddr, value]);
+    const binAccum = peekMem(cpu, objAddr + 0xBC, 4) >>> 0;
+    const binFlag = peekMem(cpu, 0x40039C, 1);
+
+    // TS
+    eventFlags.addToObjectAccumAndFlag(state, objAddr, value);
+    const tsAccumOff = (objAddr - 0x400000) + 0xBC;
+    const tsAccum = (
+      ((state.workRam[tsAccumOff] ?? 0) << 24) |
+      ((state.workRam[tsAccumOff + 1] ?? 0) << 16) |
+      ((state.workRam[tsAccumOff + 2] ?? 0) << 8) |
+      (state.workRam[tsAccumOff + 3] ?? 0)
+    ) >>> 0;
+    const tsFlag = state.workRam[0x39c] ?? 0;
+
+    if (binAccum === tsAccum && binFlag === tsFlag) ok3++;
+    else if (ok3 + 3 > i) {
+      console.log(`  case ${i}: type=${type} initAccum=0x${initialAccum.toString(16)} value=0x${value.toString(16)} initFlag=0x${initialFlag.toString(16)}`);
+      console.log(`    bin: accum=0x${binAccum.toString(16)} flag=0x${binFlag.toString(16)}`);
+      console.log(`    ts:  accum=0x${tsAccum.toString(16)} flag=0x${tsFlag.toString(16)}`);
+    }
+  }
+  console.log(`  Match: ${ok3}/${n} = ${((ok3 / n) * 100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

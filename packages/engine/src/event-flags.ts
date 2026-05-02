@@ -19,6 +19,14 @@ export const EVENT_FLAGS_OFF = 0x06 as const;
 /** Offset della status-flags bitmap u32 BE (assoluto 0x401F5E). */
 export const STATUS_FLAGS_OFF = 0x1f5e as const;
 
+/** Offset della "object trigger flags" bitmap u8 (assoluto 0x40039C). */
+export const OBJECT_TRIGGER_FLAGS_OFF = 0x39c as const;
+
+export const OBJ_BASE_ADDR = 0x400018 as const;
+export const OBJ_STRIDE = 0xe2 as const;
+export const OBJ_FIELD_TYPE = 0x19 as const;       // u8: object type
+export const OBJ_FIELD_ACCUM = 0xbc as const;      // u32 BE: long accumulator
+
 /**
  * Replica `FUN_00002548` — consume next event flag.
  *
@@ -44,6 +52,54 @@ export function consumeEventFlag(state: GameState): number {
   state.workRam[EVENT_FLAGS_OFF] = (newWord >>> 8) & 0xff;
   state.workRam[EVENT_FLAGS_OFF + 1] = newWord & 0xff;
   return bit0;
+}
+
+/**
+ * Replica `FUN_00028608` — addToObjectAccumAndFlag(objPtr, value).
+ *
+ * Disassembly (7 istruzioni):
+ *   A0 = obj pointer (arg1 long)
+ *   D0 = value (arg2 long)
+ *   *(0xBC, A0) += D0           ; obj.accumulator += value (long add BE)
+ *   D0 = 1
+ *   D1 = obj.+0x19 (byte = type)
+ *   D0 = 1 << D1   ; asl.l D1, D0
+ *   *0x40039C |= D0.b           ; setta bit `type` in flag byte
+ *   rts
+ *
+ * Use case: aggiunge contributo (es. score, time bonus) all'accumulator
+ * dell'obj e segnala l'evento nella bitmap globale.
+ */
+export function addToObjectAccumAndFlag(
+  state: GameState,
+  objPtr: number,
+  value: number,
+): void {
+  const objOff = objPtr - 0x400000;
+  const accumOff = objOff + OBJ_FIELD_ACCUM;
+
+  // Read u32 BE accumulator
+  const oldAccum =
+    ((state.workRam[accumOff] ?? 0) << 24) |
+    ((state.workRam[accumOff + 1] ?? 0) << 16) |
+    ((state.workRam[accumOff + 2] ?? 0) << 8) |
+    (state.workRam[accumOff + 3] ?? 0);
+  const newAccum = (oldAccum + value) >>> 0;
+  state.workRam[accumOff] = (newAccum >>> 24) & 0xff;
+  state.workRam[accumOff + 1] = (newAccum >>> 16) & 0xff;
+  state.workRam[accumOff + 2] = (newAccum >>> 8) & 0xff;
+  state.workRam[accumOff + 3] = newAccum & 0xff;
+
+  // Set bit `type` in flag byte at 0x40039C
+  const type = state.workRam[objOff + OBJ_FIELD_TYPE] ?? 0;
+  // asl.l D1, D0 — shift count è D1.b (low byte). 68k cap a 64.
+  // shift >= 32 → D0 = 0 (per long shift)
+  // Per byte OR usa solo low 8 bit del result.
+  let mask = 0;
+  if (type < 32) mask = (1 << type) >>> 0;
+  // OR in flag byte (low 8 bit only since `or.b D0b, ...`)
+  const cur = state.workRam[OBJECT_TRIGGER_FLAGS_OFF] ?? 0;
+  state.workRam[OBJECT_TRIGGER_FLAGS_OFF] = (cur | (mask & 0xff)) & 0xff;
 }
 
 /**
