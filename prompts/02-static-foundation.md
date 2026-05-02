@@ -4,8 +4,8 @@
 
 ## Pre-requisito
 
-- Ghidra 11.x installato (`/Applications/ghidra_11.x_PUBLIC/`)
-- `uv` installato per PyGhidra
+- Ghidra 12.0.4 installato (formula brew). Wrapper progetto-locale a `tools/ghidra_headless.sh` (imposta JAVA_HOME a OpenJDK 21).
+- `uv` installato per PyGhidra (verificare con `which uv`; se manca: `brew install uv`)
 - Phase 1 chiusa (`docs/hardware-map.md` completa)
 
 ## Input
@@ -16,11 +16,17 @@
 ## Step
 
 1. Lanciare `python3 tools/rom_prep.py --rom-zip roms/marble.zip --out ghidra_project/marble_program.bin`. Se `DEFAULT_PAIRS` è vuoto in `tools/rom_prep.py`, riempirlo con i nomi file letti da `atarisys1.cpp` ROM_START(marble) (output Phase 1).
-2. Aprire un Ghidra project headless (PyGhidra):
-   - Processor: `68000:BE:32:default`
+2. Aprire un Ghidra project headless. Esempio:
+   ```bash
+   ./tools/ghidra_headless.sh ghidra_project marble \
+       -import ghidra_project/marble_program.bin \
+       -processor 68000:BE:32:default \
+       -loader BinaryLoader \
+       -loader-baseAddr 0x000000
+   ```
    - Memory map riflesso da `docs/hardware-map.md`
    - Vector table parsato (entry point = reset vector)
-3. Auto-analysis completa
+3. Auto-analysis completa (passa `-analysisTimeoutPerFile 600`)
 4. Setup `reaper`:
    - `git clone https://github.com/phulin/reaper` (in directory esterna al repo)
    - Configurare puntando a `ghidra_project/`

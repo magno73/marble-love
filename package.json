@@ -9,8 +9,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint \"packages/*/src/**/*.ts\" \"oracle/**/*.ts\" \"harness/**/*.ts\"",

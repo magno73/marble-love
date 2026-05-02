@@ -13,12 +13,14 @@
 |---|---|---|
 | Node.js | ≥22 | ✅ v25.6.1 |
 | npm | qualsiasi | ✅ presente |
-| Bun | ≥1.1 (preferito) | ❌ **da installare**: `curl -fsSL https://bun.sh/install \| bash` |
+| Bun | ≥1.1 (preferito) | ✅ 1.3.13 (`~/.bun/bin/bun`, aggiunto a `~/.zshrc`) |
 | Git | ≥2 | ✅ 2.53.0 |
+| GitHub repo | privato | ✅ `magno73/marble-love` (push iniziale fatto al commit `bb4c19b`) |
 | MAME | ≥0.279 | ✅ 0.286 |
 | Python 3 | ≥3.11 | ✅ presente (per `tools/rom_prep.py`, PyGhidra) |
-| Ghidra | 11.x | ❌ **da installare** (Phase 2): https://ghidra-sre.org/ |
-| `uv` | recente | ⚠️ verificare (per PyGhidra/reaper) |
+| Ghidra | 11.x | ✅ 12.0.4 (formula brew, `ghidraRun` in PATH; headless via `tools/ghidra_headless.sh`) |
+| OpenJDK | ≥21 (per Ghidra) | ✅ 21.0.10 (`/opt/homebrew/opt/openjdk@21`, no PATH globale — wrapper imposta JAVA_HOME) |
+| `uv` | recente | ⚠️ verificare in Phase 2 (per PyGhidra/reaper) |
 | Claude Code CLI | recente | ✅ in uso |
 
 ---
@@ -44,8 +46,9 @@
 - [x] **Pipeline differential verificata**: trace identici → parità 100%; trace artificialmente divergenti → primo frame e campo identificati correttamente, sospettato `physics` calcolato bene
 - [x] `npx tsc -b` exit 0 — typecheck pulito su tutto il monorepo
 - [x] `npx eslint` exit 0 — nessuna violazione branded-arith
-- [ ] **TODO Marco:** push su GitHub privato (richiede auth `gh` o credentials)
-- [ ] **TODO Marco:** installare Bun e Ghidra (vedi tabella sopra)
+- [x] Push su GitHub privato — `https://github.com/magno73/marble-love`
+- [x] Bun, OpenJDK 21, Ghidra 12.0.4 installati e verificati
+- [x] `tools/ghidra_headless.sh`: wrapper progetto-locale per analyzeHeadless (no modifiche a PATH globale)
 
 ---
 
@@ -69,7 +72,7 @@
 ## Phase 2 — Ghidra + reaper
 
 Vedi `prompts/02-static-foundation.md`.
-Bloccato finché Ghidra non è installato.
+Pre-requisiti soddisfatti ✅ (Ghidra 12.0.4 + OpenJDK 21). PyGhidra/reaper richiederanno verifica `uv`.
 
 ---
 

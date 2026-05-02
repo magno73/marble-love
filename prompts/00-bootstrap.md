@@ -39,9 +39,11 @@
 
 ## Tool sulla macchina
 
-- ✅ Node.js 25, npm, MAME 0.286, Python 3, git
-- ❌ Bun (preferito ma opzionale: install con `curl -fsSL https://bun.sh/install | bash`)
-- ❌ Ghidra (Phase 2: install da https://ghidra-sre.org/)
-- ❌ `uv` (per PyGhidra/reaper, Phase 2)
+- ✅ Node.js 25, npm, MAME 0.286, Python 3, git, gh CLI (auth `magno73`)
+- ✅ Bun 1.3.13 (`~/.bun/bin/bun`, in `~/.zshrc`)
+- ✅ Ghidra 12.0.4 (formula brew). Headless wrapper: `./tools/ghidra_headless.sh`
+- ✅ OpenJDK 21.0.10 (`/opt/homebrew/opt/openjdk@21`)
+- ⚠️ `uv` da verificare in Phase 2 (per PyGhidra/reaper)
+- GitHub repo: `https://github.com/magno73/marble-love` (privato)
 
 Se manca un tool che ti serve: documenta in `BLOCKED.md` e chiedi a Marco di installarlo.

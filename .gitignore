@@ -32,8 +32,8 @@ packages/web/vite.config.d.ts.map
 # --- Ghidra ---
 ghidra_project/
 *.gpr
-*.lock
 *.rep/
+# (i .lock di Ghidra cadono dentro ghidra_project/, già ignored)
 
 # --- IDE / OS ---
 .vscode/
