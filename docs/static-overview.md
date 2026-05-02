@@ -1,16 +1,26 @@
 # Static Analysis — Overview iniziale del binario
 
-> **Status:** SKELETON. Phase 2 deliverable (post-Ghidra setup).
+> **Status:** Parzialmente compilato in Phase 1 (SSP, reset PC, vector table verificati). Il resto è Phase 2 deliverable (post-Ghidra setup).
 >
-> Questo documento è la "1-pagina" che il PRD §6 chiede: dopo il primo run di
-> reaper su Ghidra, scrivere qui i sospetti su:
->
-> - **Main loop**: indirizzo + chiamate principali
-> - **ISR**: vettori IRQ, cosa fa ognuno
-> - **RNG**: indirizzo della funzione, algoritmo identificato
-> - **Level loader**: indirizzo, tabella pointer livelli, format header
->
-> Funzioni con nome non-default ≥80% delle quelle chiamate >5 volte.
+> Questo documento è la "1-pagina" che il PRD §6 chiede.
+
+## Pre-Phase-2 (verificato dal blob ROM dopo `tools/rom_prep.py`)
+
+Il file `ghidra_project/marble_program.bin` (557056 byte = 0x88000) contiene:
+- 0x00000-0x07FFF: Motherboard BIOS interleaved (`136032.205.l13`/`.206.l12`, 32 KB)
+- 0x10000-0x2FFFF: Cartridge program (`136033.623`-`.630`, 4 × 32 KB = 128 KB)
+- 0x80000-0x87FFF: Slapstic-protected ROM (`136033.107`/`.108`, 32 KB)
+
+### Vector table (offset 0x000000)
+
+| Vector | Offset | Valore (big-endian) | Significato |
+|--------|--------|--------------------|-------------|
+| 0      | 0x000  | `00 40 1F 00`      | SSP iniziale = `0x00401F00` (top di Program RAM `0x400000-0x401FFF`) ✓ |
+| 1      | 0x004  | `00 00 04 66`      | Reset PC = `0x00000466` (subito dopo vector table 0x400) ✓ |
+| 2      | 0x008  | `00 00 03 00`      | Bus error handler @ `0x300` (probabilmente RTS/default) |
+| 3..    | 0x00C+ | `00 00 03 00` ...  | Tutti puntano a 0x300, default handler |
+
+Il fatto che SSP e reset PC siano valori sensati conferma che l'interleave even/odd è corretto e che il blob è leggibile.
 
 ## Main loop
 

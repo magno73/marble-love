@@ -1,9 +1,9 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0 ✅ completata + scaffold Phase 1-7 in piedi
-**Prossima fase:** Phase 1 (studio driver MAME atarisy1)
-**Branch corrente:** `main` (scaffold). Da Phase 1: branch dedicati.
+**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ (MAME driver studied)
+**Prossima fase:** Phase 2 (Ghidra + reaper static analysis)
+**Branch corrente:** `main` (scaffold + phase-1 inline). Da Phase 2: branch dedicati.
 
 ---
 
@@ -52,27 +52,43 @@
 
 ---
 
-## Phase 1 — Studio driver MAME ⏭ prossimo
+## Phase 1 — Studio driver MAME ✅
 
-**Goal:** capire come MAME implementa Atari System 1 → Marble Madness, abbastanza da non doverlo riaprire ogni volta.
+**Sorgenti consultati:**
+- `mame/src/mame/atari/atarisy1.cpp` (2705 righe)
+- `mame/src/mame/atari/atarisy1.h` (177 righe)
+- `mame/src/mame/atari/atarisy1_v.cpp` (655 righe)
+- `mame/src/mame/atari/slapstic.h` (header)
 
-**Deliverable** (vedi `prompts/01-mame-driver.md`):
-- [ ] `docs/hardware-map.md` (memory map completa)
-- [ ] `docs/cpu-config.md` (clock, vector table, IRQ)
-- [ ] `docs/sound-system.md` (mailbox 68010↔6502)
-- [ ] `docs/video-system.md` (tile/sprite/palette/scrolling)
-- [ ] `docs/rom-layout.md` (file ROM → contenuto, even/odd interleaving)
+**Deliverable completati:**
+- [x] `docs/hardware-map.md`: memory map completa 68010 + 6502, MMIO con bit field, sprite RAM layout, slapstic 103
+- [x] `docs/cpu-config.md`: M68010 @ 7.16 MHz, M6502 @ 1.79 MHz, vector table, IRQ4(VBLANK)/IRQ6(sound), Marble identifier byte 001
+- [x] `docs/sound-system.md`: mailbox $FE0001/$FC0001, NMI sul 6502, IRQ6 sul 68010, YM2151 + POKEY, Marble NON usa TMS5220
+- [x] `docs/video-system.md`: 336×240 @ 59.92 Hz, IRGB-4444 palette 1024 entries, 8 banchi sprite × 64 entries × 4 word, alpha 64×32
+- [x] `docs/rom-layout.md`: tutti i file `136033.*` con CRC32+SHA1, interleaving even/odd, offset esatti
+- [x] `tools/rom_prep.py` popolato con `DEFAULT_PAIRS` reali, **testato**: produce `ghidra_project/marble_program.bin` (557056 byte) da `roms/marble.zip` + `roms/atarisy1.zip`
+- [x] `docs/static-overview.md`: SSP=0x00401F00, reset PC=0x00000466 verificati nel blob
 
-**Criterio:** ogni accesso `MOVE.W $xxxxxx, ...` nel codice 68010 è interpretabile leggendo solo le doc qui. Niente più riaprire MAME source per cercare un MMIO.
+**Trackball insight critico per Marble:** `init_marble` setta `m_trackball_type=1` → `trakball_r` ruota le coordinate di 45° (`m_cur[player][0] = posx + posy; m_cur[player][1] = posx - posy`). Il reimpl deve fare la stessa rotazione PRIMA di passare i delta al 68010.
 
-**Fonte:** copia/clone di `mame` da GitHub (read-only), focalizza `src/mame/atari/atarisy1.cpp` e header inclusi.
+**IRQ Marble:** solo VBLANK (IRQ4) e sound (IRQ6). Niente IRQ2 (no ADC), niente IRQ3 (Marble usa classe base `atarisy1_state`, non `atarisy1r_state`).
 
 ---
 
-## Phase 2 — Ghidra + reaper
+## Phase 2 — Ghidra + reaper ⏭ prossimo
 
 Vedi `prompts/02-static-foundation.md`.
-Pre-requisiti soddisfatti ✅ (Ghidra 12.0.4 + OpenJDK 21). PyGhidra/reaper richiederanno verifica `uv`.
+
+**Pre-requisiti soddisfatti:**
+- ✅ Ghidra 12.0.4 installato + wrapper `tools/ghidra_headless.sh` testato
+- ✅ `tools/rom_prep.py` produce `ghidra_project/marble_program.bin` (557056 byte) da `roms/marble.zip` + `roms/atarisy1.zip`
+- ✅ Vector table verificata (SSP=0x00401F00, reset PC=0x00000466)
+- ✅ Memory map completa in `docs/hardware-map.md` per Ghidra memory map setup
+
+**Ancora da fare:**
+- [ ] verificare `uv` (`brew install uv` se manca)
+- [ ] clone di `reaper` (https://github.com/phulin/reaper) in dir esterna al repo
+- [ ] eseguire `prompts/02-static-foundation.md`
 
 ---
 
