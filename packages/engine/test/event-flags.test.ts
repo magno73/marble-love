@@ -6,7 +6,12 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { consumeEventFlag, EVENT_FLAGS_OFF } from "../src/event-flags.js";
+import {
+  consumeEventFlag,
+  setFlagBit,
+  EVENT_FLAGS_OFF,
+  STATUS_FLAGS_OFF,
+} from "../src/event-flags.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("consumeEventFlag (FUN_2548)", () => {
@@ -54,5 +59,56 @@ describe("consumeEventFlag (FUN_2548)", () => {
     const seq: number[] = [];
     for (let i = 0; i < 16; i++) seq.push(consumeEventFlag(s));
     expect(seq).toEqual([1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]);
+  });
+});
+
+describe("setFlagBit (FUN_5236)", () => {
+  function readU32(s: ReturnType<typeof emptyGameState>): number {
+    return (
+      ((s.workRam[STATUS_FLAGS_OFF] ?? 0) << 24) |
+      ((s.workRam[STATUS_FLAGS_OFF + 1] ?? 0) << 16) |
+      ((s.workRam[STATUS_FLAGS_OFF + 2] ?? 0) << 8) |
+      (s.workRam[STATUS_FLAGS_OFF + 3] ?? 0)
+    ) >>> 0;
+  }
+
+  it("arg=0 → bit 0", () => {
+    const s = emptyGameState();
+    setFlagBit(s, 0);
+    expect(readU32(s)).toBe(0x1);
+  });
+
+  it("arg=1 → bit 1", () => {
+    const s = emptyGameState();
+    setFlagBit(s, 1);
+    expect(readU32(s)).toBe(0x2);
+  });
+
+  it("arg=2 → bit 0 (riusato)", () => {
+    const s = emptyGameState();
+    setFlagBit(s, 2);
+    expect(readU32(s)).toBe(0x1);
+  });
+
+  it("arg=3 → bit 1", () => {
+    const s = emptyGameState();
+    setFlagBit(s, 3);
+    expect(readU32(s)).toBe(0x2);
+  });
+
+  it("arg=10 → bit 8", () => {
+    const s = emptyGameState();
+    setFlagBit(s, 10);
+    expect(readU32(s)).toBe(0x100);
+  });
+
+  it("OR con stato esistente (non clear)", () => {
+    const s = emptyGameState();
+    s.workRam[STATUS_FLAGS_OFF] = 0xAB;
+    s.workRam[STATUS_FLAGS_OFF + 1] = 0xCD;
+    s.workRam[STATUS_FLAGS_OFF + 2] = 0xEF;
+    s.workRam[STATUS_FLAGS_OFF + 3] = 0x10;
+    setFlagBit(s, 0);
+    expect(readU32(s)).toBe(0xABCDEF11);
   });
 });

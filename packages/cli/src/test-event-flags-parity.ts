@@ -23,6 +23,7 @@ import {
 } from "./binary-oracle-lib.js";
 
 const FUN_CONSUME = 0x00002548;
+const FUN_SET_FLAG = 0x00005236;
 
 async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "500");
@@ -74,8 +75,41 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
 
+  // ─── setFlagBit (FUN_5236) ───────────────────────────────────────────
+  console.log(`\n=== setFlagBit (FUN_5236) — ${n} casi ===`);
+  let ok2 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+
+    const initial = (Math.floor(rng() * 0x100000000) >>> 0);
+    const bitNum = Math.floor(rng() * 35); // 0..34, copre il caso shift >=32
+
+    pokeMem(cpu, 0x401f5e, 4, initial);
+    state.workRam[0x1f5e] = (initial >>> 24) & 0xff;
+    state.workRam[0x1f5f] = (initial >>> 16) & 0xff;
+    state.workRam[0x1f60] = (initial >>> 8) & 0xff;
+    state.workRam[0x1f61] = initial & 0xff;
+
+    callFunction(cpu, FUN_SET_FLAG, [bitNum]);
+    const binaryFlags = peekMem(cpu, 0x401f5e, 4) >>> 0;
+
+    eventFlags.setFlagBit(state, bitNum);
+    const tsFlags =
+      (((state.workRam[0x1f5e] ?? 0) << 24) |
+       ((state.workRam[0x1f5f] ?? 0) << 16) |
+       ((state.workRam[0x1f60] ?? 0) << 8) |
+       (state.workRam[0x1f61] ?? 0)) >>> 0;
+
+    if (binaryFlags === tsFlags) ok2++;
+    else if (ok2 + 3 > i) {
+      console.log(`  case ${i}: initial=0x${initial.toString(16)} bitNum=${bitNum}`);
+      console.log(`    bin=0x${binaryFlags.toString(16)} ts=0x${tsFlags.toString(16)}`);
+    }
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {
