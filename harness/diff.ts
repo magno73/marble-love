@@ -67,9 +67,14 @@ function readJsonl(path: string): { header: any; frames: any[] } {
   return { header, frames };
 }
 
+/** Campi escludidi dal diff: metadata, non parte del game state.
+ *  - cpuTicks: PC del 68010 / tick CPU; dipende dall'emulator, non dal game state */
+const EXCLUDED_FIELDS = new Set<string>(["cpuTicks"]);
+
 /** Confronta due valori e ritorna il path puntato (es. "marble.vx") se diversi. */
 function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   if (a === b) return;
+  if (EXCLUDED_FIELDS.has(path)) return;
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
     out.push(path);
     return;
@@ -78,7 +83,9 @@ function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   const bo = b as Record<string, unknown>;
   const keys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
   for (const k of keys) {
-    deepDiff(ao[k], bo[k], path === "" ? k : `${path}.${k}`, out);
+    const subpath = path === "" ? k : `${path}.${k}`;
+    if (EXCLUDED_FIELDS.has(subpath) || EXCLUDED_FIELDS.has(k)) continue;
+    deepDiff(ao[k], bo[k], subpath, out);
   }
 }
 

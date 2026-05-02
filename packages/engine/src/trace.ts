@@ -89,8 +89,10 @@ export function frameFromState(s: GameState): TraceFrame {
       dy: raw(s.input.trackballDy),
       buttons: raw(s.input.buttons),
     },
-    /** Placeholder: in Phase 4 calcoleremo il CRC32 reale di `s.workRam`. */
-    workRamHash: crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448),
+    /** CRC32 della Work RAM 8 KB (esclude 0x440-0x447 stack low water).
+     *  `>>> 0` forza il risultato a u32 unsigned (l'XOR può produrre signed). */
+    workRamHash:
+      (crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448)) >>> 0,
   };
 }
 

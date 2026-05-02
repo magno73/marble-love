@@ -1,9 +1,11 @@
 # STATUS — Marble Love
 
 **Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0 ✅ + Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + **Phase 4a ✅** (RNG identificato, pipeline diff end-to-end)
-**Prossima fase:** Phase 4b (bus MMIO completo + level loader) o Phase 6 (hill-climbing per chiudere divergenze)
+**Fase corrente:** Phase 0-3 ✅ + Phase 4a ✅ + **Phase 4b ✅** (bus MMIO + level loader + workRamHash matching @ frame 0)
+**Prossima fase:** Phase 6 (hill-climbing) — il TS attualmente diverge al frame 6 perché non emula il 68010. Per chiudere serve o emulator 68010 (grosso) o Phase 4c (replicare manualmente i sotto-update di MainUpdate).
 **Branch corrente:** `main`. Tutte le fasi inline finora.
+
+**Risultato chiave:** **parità del 1%** sul primo scenario (6/600 frame match bit-perfect). Frame 0-5 coincidono completamente. Diff dice "ram-mismatch al frame 6" perché MAME inizia a popolare Work RAM e TS no (no CPU emu).
 
 ---
 
@@ -152,12 +154,38 @@ Vedi `prompts/03-oracle.md`.
 
 50/50 test passano. Typecheck clean. Lint clean.
 
-## Open per Phase 4b (futuro)
+## Phase 4b — bus MMIO + level loader + parità @ frame 0 ✅
 
-- Bus MMIO completo (read/write dispatch su F60000, F20000, FE0000, etc.)
-- Level loader (parser livelli da ROM, format già documentato in marble-madness-2026)
-- ROM CRC32 verification nell'header trace
-- Reset code emulation (eseguire bytes da 0x466 nel reimpl)
+**Bus MMIO completo** (`packages/engine/src/bus.ts`):
+- Read/write dispatch tipizzato per tutti gli MMIO documentati
+- Memory map constants exported (ROM_BASE, WORK_RAM_BASE, MMIO_PF_XSCROLL, ...)
+- Trackball read 45° rotation (Marble-specific) implementato
+- Switch port read implementato
+- Cartridge RAM 1MB lazy-allocato via WeakMap (no alloc se non usato)
+- 9 test (read/write round-trip su tutte le region, MMIO no-throw, trackball, switches)
+
+**Level loader** (`packages/engine/src/level.ts`):
+- Pointer table verificata @ ROM `0x2BE00` (6 livelli ascendenti)
+- L1@0x2BEE2, L2@0x2C54C, L3@0x2CD9E, L4@0x2D648, L5@0x2DE1E, L6@0x2E790
+- `loadLevel(rom, index)` parsa header (36 byte) + height records (8 byte/each)
+- `loadAllLevels` carica tutti i 6
+- 10 test (constants + carica ROM reale via env/path discovery)
+
+**Boot RAM capture** (`tools/capture_boot_ram.lua`):
+- Dumpa Work RAM 8KB @ frame 0 → `traces/boot_ram_frame0.bin`
+- Scoperta: Work RAM è ALL-ZERO al frame 0 di MAME (motherboard BIOS test ancora in corso)
+- Conseguenza: il TS reimpl con `emptyGameState()` (workRam tutta zero) **matcha MAME bit-perfect a frame 0**
+
+**workRamHash unsigned fix** in `trace.ts`: `>>> 0` dopo XOR per coincidere col Lua.
+
+**diff.ts metadata exclusion**: `cpuTicks` ora escluso dal diff (è PC del 68010, non game state). Il diff confronta SOLO il game state vero.
+
+**Risultato pipeline finale**:
+- Frame 0-5: parità bit-perfect ✅ (6 frame match)
+- Frame 6: divergenza su `workRamHash` (MAME inizia a scrivere RAM, TS no)
+- Parità: **1.00%** = 6/600 frame del scenario `attract_mode`
+
+69/69 test passano.
 
 ## Open per Phase 6 (futuro)
 
