@@ -1,14 +1,21 @@
 /**
- * Test paletteAnim1Tick (FUN_00026BEE).
+ * Test palette animations 1 + 2 (FUN_00026BEE, FUN_00026C78).
  *
- * **Status**: bit-perfect verificato vs binary (1000/1000 match) tramite
- * `packages/cli/src/test-palette-anim-parity.ts`.
- *
- * Questi test cementano l'implementazione TS via input/output noti.
+ * **Status**: bit-perfect verificati vs binary (2000/2000 match totali)
+ * tramite `packages/cli/src/test-palette-anim-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
-import { paletteAnim1Tick, OBJ_BASE_ADDR, OBJ_STRIDE, OBJ_FIELD_TYPE, OBJ_FIELD_ANIM, OBJ_FIELD_SKIP } from "../src/palette-anim.js";
+import {
+  paletteAnim1Tick,
+  paletteAnim2Tick,
+  ANIM2_PARAMS,
+  OBJ_BASE_ADDR,
+  OBJ_STRIDE,
+  OBJ_FIELD_TYPE,
+  OBJ_FIELD_ANIM,
+  OBJ_FIELD_SKIP,
+} from "../src/palette-anim.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
@@ -126,5 +133,53 @@ describe("paletteAnim1Tick", () => {
     // Both counters incremented
     expect(state.workRam[off + OBJ_FIELD_ANIM]).toBe(1);
     expect(state.workRam[off + OBJ_STRIDE + OBJ_FIELD_ANIM]).toBe(1);
+  });
+});
+
+describe("paletteAnim2Tick (FUN_26C78)", () => {
+  function setup2(opts: { count: number; type: number; ctr: number; skip: number }) {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    state.workRam[0x396] = (opts.count >>> 8) & 0xff;
+    state.workRam[0x397] = opts.count & 0xff;
+    const off = OBJ_BASE_ADDR - 0x400000;
+    state.workRam[off + OBJ_FIELD_TYPE] = opts.type;
+    state.workRam[off + ANIM2_PARAMS.ctrOffset] = opts.ctr; // 0x71
+    state.workRam[off + OBJ_FIELD_SKIP] = opts.skip;
+    return { state, rom };
+  }
+
+  it("anim 2 NON controlla skip flag (diff vs anim 1)", () => {
+    // skip flag set, ma anim 2 ignora → counter incrementa, palette aggiornata
+    const { state, rom } = setup2({ count: 1, type: 0, ctr: 0, skip: 1 });
+    rom.program[0x20B74] = 0xCC; rom.program[0x20B75] = 0xDD;
+    paletteAnim2Tick(state, rom);
+    expect(state.workRam[(OBJ_BASE_ADDR - 0x400000) + 0x71]).toBe(1); // incremented
+    expect(state.colorRam[0x16]).toBe(0xCC); // palette anim 2 entry 11 @ 0xB00016
+    expect(state.colorRam[0x17]).toBe(0xDD);
+  });
+
+  it("anim 2 wrap signed a 0x1F (vs 0x3F di anim 1)", () => {
+    // ctr = 31 → +1 = 32. Signed 32 > 31 → reset.
+    const { state, rom } = setup2({ count: 1, type: 0, ctr: 31, skip: 0 });
+    paletteAnim2Tick(state, rom);
+    expect(state.workRam[(OBJ_BASE_ADDR - 0x400000) + 0x71]).toBe(0);
+  });
+
+  it("anim 2 usa asr #1 (div 2) vs anim 1 asr #2 (div 4)", () => {
+    const { state, rom } = setup2({ count: 1, type: 1, ctr: 4, skip: 0 });
+    // type != 0 → table A @ 0x20B94, idx = sext(4) >> 1 = 2 → addr = 0x20B94 + 2*2 = 0x20B98
+    rom.program[0x20B98] = 0xEE;
+    rom.program[0x20B99] = 0xFF;
+    paletteAnim2Tick(state, rom);
+    // palette dest B (anim 2 entry 15 @ 0xB0001E)
+    expect(state.colorRam[0x1E]).toBe(0xEE);
+    expect(state.colorRam[0x1F]).toBe(0xFF);
+  });
+
+  it("anim 2 disabled (ctr=0xFF): no-op", () => {
+    const { state, rom } = setup2({ count: 1, type: 1, ctr: 0xff, skip: 0 });
+    paletteAnim2Tick(state, rom);
+    expect(state.workRam[(OBJ_BASE_ADDR - 0x400000) + 0x71]).toBe(0xff);
   });
 });

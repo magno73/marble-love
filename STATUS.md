@@ -8,6 +8,8 @@
 **Sub-systems bit-perfect verificati**:
 - ✅ RNG (`rngNext` vs FUN_13A98) — 10000/10000 match
 - ✅ Palette anim 1 (`paletteAnim1Tick` vs FUN_26BEE) — 1000/1000 match
+- ✅ Palette anim 2 (`paletteAnim2Tick` vs FUN_26C78) — 1000/1000 match
+- ⏭ Palette anim 3+4 (FUN_26D4E + FUN_26B88): più complessi, queue-based con shared core (FUN_26B66 push, FUN_26B88 drain). Differiti.
 
 **Decisione strategica chiarita** (Phase 4c):
 - musashi-wasm **NON è l'engine del progetto**. Il reimpl resta codice TS idiomatic in `@marble-love/engine` per poter evolvere/ampliare (livelli custom, physics modificati, multiplayer, ...).
