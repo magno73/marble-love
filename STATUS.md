@@ -34,10 +34,16 @@
 - ✅ Clear palette RAM (`clearPaletteRam` vs FUN_121A6) — 1/1 match (azzera 2KB @ 0xB00000)
 - ✅ Swap long pair (`swapLongPair` vs FUN_12886) — 500/500 match (scambio 2 long adiacenti)
 - ✅ **Game-tick all timers** (`gameTickTimers` vs FUN_28A96, root game-logic) — 2000/2000 match — **🎯 SECONDO root game-logic CORE replicato** (418 byte, 5 jsr, dispatcher di per-object cascade timers + global timer + palette FX)
+- ✅ **Game-main-gate** (`gameMainGate` vs FUN_28972, root game-logic) — 1000+1000 match (Suite A: MMIO bit 6=1 / Suite B: MMIO bit 6=0) — **🎯 TERZO root game-logic CORE replicato** (292 byte, 8 jsr, debounce input + Block A/B gate + Block C timer increment)
+- ✅ Debounce input MMIO (`debounceInput` vs FUN_2893C, sub di FUN_28972) — verificato indirettamente
 
-**🎯 28 sub-systems bit-perfect.**
+**🎯 30 sub-systems bit-perfect.**
 
-**Tecnica nuova introdotta**: per testare bit-perfect un root che chiama un updater HUD complesso (`FUN_286EE`, 154 byte + 3 jsr verso 0x3874/0x255A/0x3520), patchamo l'entry di FUN_286EE → `rts` immediate (0x4E75) nel binario. La logica di game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
+**Tecniche nuove introdotte**:
+1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
+2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
+3. **Sub-function stubbing via patch**: funzioni gate (es. `FUN_01CC` → `FUN_472A`) patchabili in 4 byte a `moveq #N,D0; rts` per restituire deterministic. TS impl accetta `gateCheck?` callback matching la patch.
+4. **Hang detection in TS**: condizioni di pause infinita del binario (`bra .`) modellate come `state.hangRequested = true`, da gestire al game loop.
 
 **Refactor architettonico Phase 4d.SetAlphaTile**: aggiunto `state.alphaRam` (4 KB, 0xA03000-0xA03FFF) separato da `state.spriteRam` (motion-object). Prima alpha era fusa in spriteRam con offset OOB; il setAlphaTile l'ha esposto. Ora layout RAM corretto separato.
 Helper `runUntil(from, until|predicate)` aggiunto a binary-oracle-lib per testing di range arbitrari.
