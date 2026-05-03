@@ -32,6 +32,7 @@ export * as gameStateMachine from "./game-state-machine.js";
 export * as positionUpdate from "./position-update.js";
 export * as vectorScale from "./vector-scale.js";
 export * as stringRender from "./string-render.js";
+export * as stringClear from "./string-clear.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
