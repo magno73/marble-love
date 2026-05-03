@@ -40,8 +40,12 @@
 - ✅ **Position update** (`positionUpdate` vs FUN_1706C, 452 byte pure leaf) — 2000/2000 match (cardinale + diagonale, ROM table @ 0x23D40)
 - ✅ **Vector scale 2D** (`vectorScale` vs FUN_25E7C, 326 byte pure leaf) — 2000/2000 match (con input range [-256,255] per evitare divu.w overflow del 68k; modes 2,3,4,default; ROM lookup @ 0x1EEF8)
 - ✅ **Render string chain** (`renderStringChain` vs FUN_2572, 262 byte pure leaf) — 2000/2000 match (linked-list di entry + render con rotation 0..7 + case shift 'A'..'Z'; sub di FUN_2E18 ora replicata)
+- ✅ Remove from slots + chain clear (`removeFromSlots` vs FUN_2678, `clearStringChain` vs FUN_2ABC) — 1000+1000 match (sub di FUN_2E18 stati 1+2)
+- ✅ String shift forward/backward (`shiftStringChainForward` vs FUN_2766, `shiftStringChainBackward` vs FUN_2818) — 1000+1000 match (sub di FUN_2E18 stati 5+6)
+- ✅ State-machine schedule 3+4 (`scheduleStateMachine3` vs FUN_2BDA, `scheduleStateMachine4` vs FUN_2C60) — 2000+2000 match (sub di FUN_2E18 transizioni)
+- ✅ String step render/clear (`stepRenderState3` vs FUN_2CD4, `stepClearState4` vs FUN_2DA0) — 2000+2000 match (sub di FUN_2E18 stati 3+4 single-char)
 
-**🎯 34 sub-systems bit-perfect.**
+**🎯 42 sub-systems bit-perfect** (8/9 sub di FUN_2E18 replicate; manca solo FUN_295A, scroll alpha tilemap).
 
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
