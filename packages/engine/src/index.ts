@@ -30,6 +30,7 @@ export * as gameTickTimers from "./game-tick-timers.js";
 export * as gameMainGate from "./game-main-gate.js";
 export * as gameStateMachine from "./game-state-machine.js";
 export * as positionUpdate from "./position-update.js";
+export * as vectorScale from "./vector-scale.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
