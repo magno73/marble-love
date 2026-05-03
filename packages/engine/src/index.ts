@@ -27,6 +27,7 @@ export * as alphaTilemap from "./alpha-tilemap.js";
 export * as byteQueue from "./byte-queue.js";
 export * as mathHelpers from "./math-helpers.js";
 export * as gameTickTimers from "./game-tick-timers.js";
+export * as gameMainGate from "./game-main-gate.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
