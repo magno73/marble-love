@@ -34,6 +34,7 @@ export * as vectorScale from "./vector-scale.js";
 export * as stringRender from "./string-render.js";
 export * as stringClear from "./string-clear.js";
 export * as stringShift from "./string-shift.js";
+export * as stateMachineSchedule from "./state-machine-schedule.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
