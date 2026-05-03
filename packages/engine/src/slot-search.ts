@@ -92,6 +92,24 @@ export function findFreeSlotInTable_1EFFE(state: GameState, rom: RomImage): numb
   return result;
 }
 
+/**
+ * Replica `FUN_00012D6E` — find FIRST free in ROM table @ 0x1F016, 25 entries.
+ * Returns first ptr where byte+0x18 == 0, or -1 if none.
+ */
+export function findFirstFreeSlot_1F016(state: GameState, rom: RomImage): number {
+  let result = 0xffffffff;
+  for (let i = 0; i < 0x19; i++) {
+    const ptr = readU32Rom(rom, 0x1f016 + i * 4);
+    const ptrOff = (ptr - 0x400000) >>> 0;
+    const byteAt18 = state.workRam[ptrOff + 0x18] ?? 0;
+    if (byteAt18 === 0) {
+      result = ptr;
+      break; // EARLY exit (FIRST free)
+    }
+  }
+  return result;
+}
+
 /** Replica `FUN_0001730C` — scan @ 0x401482, stride 0x42, 7 entries, match field+0x30. */
 export function slotMatchesPtr_401482(state: GameState, argPtr: number): number {
   const argOff = argPtr - 0x400000;
