@@ -58,6 +58,15 @@
 
 **🎯 50 sub-systems bit-perfect** (33 → 50 in questa sessione, +17 commit, 50/314 ≈ 16% del binario coperto).
 
+- ✅ findFreeSlotInTable + slotMatchesPtr (FUN_14BCE + FUN_14C0C) — 1000+1000
+- ✅ 3 slot search variants (FUN_159D8, FUN_1599A, FUN_1730C) — 200×3
+- ✅ findFirstFreeSlot_1F016 (FUN_12D6E) — 200/200
+- ✅ eepromValidateAndClassify (FUN_3F3E) — 200/200
+- ✅ objDeriveShorts (FUN_253BC) — 200/200
+- ✅ slotMatchesPtr_400A9C (FUN_12DAE) — 200/200
+
+**🎯 59 sub-systems bit-perfect totali** (33 → 59 in questa sessione, +26 commit, 59/314 ≈ 19% del binario coperto).
+
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
 2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
