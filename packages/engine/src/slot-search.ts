@@ -62,3 +62,47 @@ export function slotMatchesPtr(state: GameState, argPtr: number): number {
   }
   return 0;
 }
+
+/** Replica `FUN_000159D8` — scan @ 0x4009A4, stride 0x7C, 2 entries, match field+0x72. */
+export function slotMatchesPtr_4009A4(state: GameState, argPtr: number): number {
+  const argOff = argPtr - 0x400000;
+  const target = readU32Workram(state, argOff + 2);
+  for (let i = 0; i < 2; i++) {
+    const slotOff = (0x4009A4 + i * 0x7C) - 0x400000;
+    const byteAt18 = state.workRam[slotOff + 0x18] ?? 0;
+    if (byteAt18 !== 0) {
+      const fld = readU32Workram(state, slotOff + 0x72);
+      if (fld === target) return 1;
+    }
+  }
+  return 0;
+}
+
+/** Replica `FUN_0001599A` — find free slot in 2-entry ROM table @ 0x1EFFE. */
+export function findFreeSlotInTable_1EFFE(state: GameState, rom: RomImage): number {
+  let result = 0xffffffff;
+  for (let i = 0; i < 2; i++) {
+    const ptr = readU32Rom(rom, 0x1effe + i * 4);
+    const ptrOff = (ptr - 0x400000) >>> 0;
+    const byteAt18 = state.workRam[ptrOff + 0x18] ?? 0;
+    if (byteAt18 === 0) {
+      result = ptr;
+    }
+  }
+  return result;
+}
+
+/** Replica `FUN_0001730C` — scan @ 0x401482, stride 0x42, 7 entries, match field+0x30. */
+export function slotMatchesPtr_401482(state: GameState, argPtr: number): number {
+  const argOff = argPtr - 0x400000;
+  const target = readU32Workram(state, argOff + 2);
+  for (let i = 0; i < 7; i++) {
+    const slotOff = (0x401482 + i * 0x42) - 0x400000;
+    const byteAt18 = state.workRam[slotOff + 0x18] ?? 0;
+    if (byteAt18 !== 0) {
+      const fld = readU32Workram(state, slotOff + 0x30);
+      if (fld === target) return 1;
+    }
+  }
+  return 0;
+}
