@@ -47,6 +47,17 @@
 
 **🎯 42 sub-systems bit-perfect** (8/9 sub di FUN_2E18 replicate; manca solo FUN_295A, scroll alpha tilemap).
 
+- ✅ binToBcd (FUN_3A6A, double-dabble) — 2000/2000
+- ✅ formatDecimal (FUN_3A54, BCD+formatHex trampoline) — 500/500
+- ✅ paletteInit (FUN_565A) — 1/1
+- ✅ copyGlobalsToObj (FUN_2648C) — 1000/1000
+- ✅ objIndexedByteAdvance (FUN_160AE, mulu.w unsigned) — 1000/1000
+- ✅ rleExpand (FUN_18FD0) — 1000/1000
+- ✅ trimTrailingSpace (FUN_28F28) — 1000/1000
+- ✅ findLastActiveSlot (FUN_172C2) — 1000/1000
+
+**🎯 50 sub-systems bit-perfect** (33 → 50 in questa sessione, +17 commit, 50/314 ≈ 16% del binario coperto).
+
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
 2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
