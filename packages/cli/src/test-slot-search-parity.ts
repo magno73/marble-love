@@ -147,8 +147,26 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok5}/${n} = ${((ok5/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== findFirstFreeSlot_1F016 (FUN_12D6E) — ${n} casi ===`);
+  let ok6 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    // Read 25 ROM ptrs and set their byte+0x18 random
+    for (let s = 0; s < 0x19; s++) {
+      const addr = 0x1f016 + s * 4;
+      const p = (rom[addr] << 24) | (rom[addr+1] << 16) | (rom[addr+2] << 8) | rom[addr+3];
+      const v = (r() < 0.7) ? Math.floor(r() * 255) + 1 : 0;
+      pokeMem(cpu, p + 0x18, 1, v);
+      stateInst.workRam[(p - 0x400000) + 0x18] = v;
+    }
+    const binR = callFunction(cpu, 0x12d6e, []);
+    const tsR = slotSearch.findFirstFreeSlot_1F016(stateInst, tsRom);
+    if ((binR.d0 >>> 0) === (tsR >>> 0)) ok6++;
+  }
+  console.log(`  Match: ${ok6}/${n} = ${((ok6/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n && ok6 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
