@@ -88,8 +88,28 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== eepromValidateAndClassify (FUN_3F3E) — ${n} casi ===`);
+  let ok3 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const PTR = 0x00401D80;
+    pokeMem(cpu, 0x00401FFC, 4, PTR);
+    stateInst.workRam[0x1FFC] = 0; stateInst.workRam[0x1FFD] = 0x40;
+    stateInst.workRam[0x1FFE] = 0x1D; stateInst.workRam[0x1FFF] = 0x80;
+    const a = Math.floor(r() * 256);
+    const b = (r() < 0.4) ? ((~a) & 0xff) : Math.floor(r() * 256);
+    pokeMem(cpu, PTR + 0xA, 1, a);
+    pokeMem(cpu, PTR + 0xB, 1, b);
+    stateInst.workRam[(PTR - 0x400000) + 0xA] = a;
+    stateInst.workRam[(PTR - 0x400000) + 0xB] = b;
+    const binR = callFunction(cpu, 0x3f3e, []);
+    const tsR = objectHelpers.eepromValidateAndClassify(stateInst);
+    if ((binR.d0 >>> 0) === (tsR >>> 0)) ok3++;
+  }
+  console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
