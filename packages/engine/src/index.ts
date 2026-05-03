@@ -37,6 +37,7 @@ export * as stringShift from "./string-shift.js";
 export * as stateMachineSchedule from "./state-machine-schedule.js";
 export * as stringStep from "./string-step.js";
 export * as bcd from "./bcd.js";
+export * as paletteInit from "./palette-init.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
