@@ -10,6 +10,7 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { binToBcd } from "./bcd.js";
 
 // ─── Memory dispatch (subset coerente con bus.ts) ─────────────────────────
 
@@ -230,4 +231,24 @@ export function formatHex(
     if (d0 === 0) break;
     d0 = (d0 - 1) | 0;
   }
+}
+
+// ─── formatDecimal (FUN_3A54) ─────────────────────────────────────────────
+
+/**
+ * Replica `FUN_00003A54` — `formatDecimal(value, bufEnd, numDigits, showSpaces)`.
+ *
+ * Trampolino: converte value in BCD via FUN_3A6A (binToBcd), poi formatta
+ * come hex via FUN_3A08 (formatHex). Risultato: ASCII decimale (perché le
+ * cifre BCD sono 0..9, mai > 9, quindi formatHex non aggiunge il +7 gap).
+ */
+export function formatDecimal(
+  state: GameState,
+  value: number,
+  bufEnd: number,
+  numDigits: number,
+  showSpaces: number,
+): void {
+  const bcdValue = binToBcd(value);
+  formatHex(state, bcdValue, bufEnd, numDigits, showSpaces);
 }
