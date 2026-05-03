@@ -70,8 +70,85 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
+  // Variants
+  console.log(`\n=== slotMatchesPtr_4009A4 (FUN_159D8) — ${n} casi ===`);
+  let ok3 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const ARG = 0x00401D00;
+    const target = Math.floor(r() * 0x10000);
+    pokeMem(cpu, ARG + 2, 4, target);
+    stateInst.workRam[(ARG - 0x400000) + 2] = (target >>> 24) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 3] = (target >>> 16) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 4] = (target >>> 8) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 5] = target & 0xff;
+    for (let s = 0; s < 2; s++) {
+      const slot = 0x4009A4 + s * 0x7C;
+      const v = (r() < 0.3) ? 0 : Math.floor(r() * 256);
+      pokeMem(cpu, slot + 0x18, 1, v);
+      stateInst.workRam[(slot - 0x400000) + 0x18] = v;
+      const fld = (r() < 0.3) ? target : Math.floor(r() * 0x10000);
+      pokeMem(cpu, slot + 0x72, 4, fld);
+      stateInst.workRam[(slot - 0x400000) + 0x72] = (fld >>> 24) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x73] = (fld >>> 16) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x74] = (fld >>> 8) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x75] = fld & 0xff;
+    }
+    const binR = callFunction(cpu, 0x159d8, [ARG]);
+    const tsR = slotSearch.slotMatchesPtr_4009A4(stateInst, ARG);
+    if ((binR.d0 & 0xff) === tsR) ok3++;
+  }
+  console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
+
+  console.log(`\n=== findFreeSlotInTable_1EFFE (FUN_1599A) — ${n} casi ===`);
+  let ok4 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    // Read rom table to know which workRam pointers
+    const ptr0 = (rom[0x1effe] << 24) | (rom[0x1efff] << 16) | (rom[0x1f000] << 8) | rom[0x1f001];
+    const ptr1 = (rom[0x1f002] << 24) | (rom[0x1f003] << 16) | (rom[0x1f004] << 8) | rom[0x1f005];
+    for (const p of [ptr0, ptr1]) {
+      const v = (r() < 0.5) ? 0 : Math.floor(r() * 256);
+      pokeMem(cpu, p + 0x18, 1, v);
+      stateInst.workRam[(p - 0x400000) + 0x18] = v;
+    }
+    const binR = callFunction(cpu, 0x1599a, []);
+    const tsR = slotSearch.findFreeSlotInTable_1EFFE(stateInst, tsRom);
+    if ((binR.d0 >>> 0) === (tsR >>> 0)) ok4++;
+  }
+  console.log(`  Match: ${ok4}/${n} = ${((ok4/n)*100).toFixed(1)}%`);
+
+  console.log(`\n=== slotMatchesPtr_401482 (FUN_1730C) — ${n} casi ===`);
+  let ok5 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const ARG = 0x00401D00;
+    const target = Math.floor(r() * 0x10000);
+    pokeMem(cpu, ARG + 2, 4, target);
+    stateInst.workRam[(ARG - 0x400000) + 2] = (target >>> 24) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 3] = (target >>> 16) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 4] = (target >>> 8) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 5] = target & 0xff;
+    for (let s = 0; s < 7; s++) {
+      const slot = 0x401482 + s * 0x42;
+      const v = (r() < 0.4) ? 0 : Math.floor(r() * 256);
+      pokeMem(cpu, slot + 0x18, 1, v);
+      stateInst.workRam[(slot - 0x400000) + 0x18] = v;
+      const fld = (r() < 0.3) ? target : Math.floor(r() * 0x10000);
+      pokeMem(cpu, slot + 0x30, 4, fld);
+      stateInst.workRam[(slot - 0x400000) + 0x30] = (fld >>> 24) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x31] = (fld >>> 16) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x32] = (fld >>> 8) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x33] = fld & 0xff;
+    }
+    const binR = callFunction(cpu, 0x1730c, [ARG]);
+    const tsR = slotSearch.slotMatchesPtr_401482(stateInst, ARG);
+    if ((binR.d0 & 0xff) === tsR) ok5++;
+  }
+  console.log(`  Match: ${ok5}/${n} = ${((ok5/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
