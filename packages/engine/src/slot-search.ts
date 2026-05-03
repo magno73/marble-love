@@ -93,6 +93,31 @@ export function findFreeSlotInTable_1EFFE(state: GameState, rom: RomImage): numb
 }
 
 /**
+ * Replica `FUN_00012DAE` — match w/ extra condition, @ 0x400A9C stride 0x56, 25 entries.
+ * Match if byte+0x18 == 1 AND (long+0x3A == *(arg+2) OR (long+2 == 0 AND byte+0x1F == 0xC)).
+ * Wait re-reading: byte+0x1F is offset within the SLOT, not arg. And long+2 of arg.
+ * Actually: tst.l (0x2,A0) reads long at arg+2. cmpi.b #0xC, (0x1F,A1) reads byte at slot+0x1F.
+ *
+ * Pattern: if byte+0x18 == 1:
+ *   if *(slot+0x3A).l == *(arg+2).l: match
+ *   else if *(arg+2).l == 0 AND *(slot+0x1F).b == 0xC: match
+ */
+export function slotMatchesPtr_400A9C(state: GameState, argPtr: number): number {
+  const argOff = argPtr - 0x400000;
+  const target = readU32Workram(state, argOff + 2);
+  for (let i = 0; i < 0x19; i++) {
+    const slotOff = (0x400A9C + i * 0x56) - 0x400000;
+    const byteAt18 = state.workRam[slotOff + 0x18] ?? 0;
+    if (byteAt18 === 1) {
+      const fld3A = readU32Workram(state, slotOff + 0x3A);
+      if (fld3A === target) return 1;
+      if (target === 0 && (state.workRam[slotOff + 0x1F] ?? 0) === 0xC) return 1;
+    }
+  }
+  return 0;
+}
+
+/**
  * Replica `FUN_00012D6E` — find FIRST free in ROM table @ 0x1F016, 25 entries.
  * Returns first ptr where byte+0x18 == 0, or -1 if none.
  */

@@ -147,6 +147,39 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok5}/${n} = ${((ok5/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== slotMatchesPtr_400A9C (FUN_12DAE) — ${n} casi ===`);
+  let okM = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const ARG = 0x00401D00;
+    // Half the cases: target = 0 (to test the alt match path)
+    const target = (r() < 0.5) ? 0 : Math.floor(r() * 0x10000);
+    pokeMem(cpu, ARG + 2, 4, target);
+    stateInst.workRam[(ARG - 0x400000) + 2] = (target >>> 24) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 3] = (target >>> 16) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 4] = (target >>> 8) & 0xff;
+    stateInst.workRam[(ARG - 0x400000) + 5] = target & 0xff;
+    for (let s = 0; s < 0x19; s++) {
+      const slot = 0x400A9C + s * 0x56;
+      const v = (r() < 0.5) ? 1 : (r() < 0.5 ? 0 : Math.floor(r() * 256));
+      pokeMem(cpu, slot + 0x18, 1, v);
+      stateInst.workRam[(slot - 0x400000) + 0x18] = v;
+      const fld = (r() < 0.3) ? target : Math.floor(r() * 0x10000);
+      pokeMem(cpu, slot + 0x3A, 4, fld);
+      stateInst.workRam[(slot - 0x400000) + 0x3A] = (fld >>> 24) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x3B] = (fld >>> 16) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x3C] = (fld >>> 8) & 0xff;
+      stateInst.workRam[(slot - 0x400000) + 0x3D] = fld & 0xff;
+      const v1f = (r() < 0.3) ? 0xC : Math.floor(r() * 256);
+      pokeMem(cpu, slot + 0x1F, 1, v1f);
+      stateInst.workRam[(slot - 0x400000) + 0x1F] = v1f;
+    }
+    const binR = callFunction(cpu, 0x12dae, [ARG]);
+    const tsR = slotSearch.slotMatchesPtr_400A9C(stateInst, ARG);
+    if ((binR.d0 & 0xff) === tsR) okM++;
+  }
+  console.log(`  Match: ${okM}/${n} = ${((okM/n)*100).toFixed(1)}%`);
+
   console.log(`\n=== findFirstFreeSlot_1F016 (FUN_12D6E) — ${n} casi ===`);
   let ok6 = 0;
   for (let i = 0; i < n; i++) {
@@ -166,7 +199,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok6}/${n} = ${((ok6/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n && ok6 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && ok4 === n && ok5 === n && ok6 === n && okM === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
