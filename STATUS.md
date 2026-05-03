@@ -39,8 +39,9 @@
 - ✅ **Game-state-machine tick** (`gameStateMachineTick` vs FUN_2E18, root game-logic) — 3000+3000+3000 = 9000/9000 match (Suite A: tutti state=0 / Suite B: state misti 1..6 / Suite C: Branch A mode≠0 state=7) — **🎯 QUARTO root game-logic CORE replicato — IL PIÙ GROSSO** (930 byte, 11 jsr a 10 target distinti, state-machine 4-slot con 7 stati)
 - ✅ **Position update** (`positionUpdate` vs FUN_1706C, 452 byte pure leaf) — 2000/2000 match (cardinale + diagonale, ROM table @ 0x23D40)
 - ✅ **Vector scale 2D** (`vectorScale` vs FUN_25E7C, 326 byte pure leaf) — 2000/2000 match (con input range [-256,255] per evitare divu.w overflow del 68k; modes 2,3,4,default; ROM lookup @ 0x1EEF8)
+- ✅ **Render string chain** (`renderStringChain` vs FUN_2572, 262 byte pure leaf) — 2000/2000 match (linked-list di entry + render con rotation 0..7 + case shift 'A'..'Z'; sub di FUN_2E18 ora replicata)
 
-**🎯 33 sub-systems bit-perfect.**
+**🎯 34 sub-systems bit-perfect.**
 
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
