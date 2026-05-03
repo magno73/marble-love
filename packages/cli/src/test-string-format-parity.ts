@@ -28,6 +28,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_FORMAT_HEX = 0x00003a08;
 const FUN_SET_ALPHA_TILE = 0x00003784;
 const FUN_STRCPY = 0x00001d74;
+const FUN_FORMAT_DEC = 0x00003a54;
 const SENTINEL = 0xCAFEBABE >>> 0;
 
 function makeRng(seed: number): () => number {
@@ -273,8 +274,50 @@ async function main(): Promise<void> {
     console.log(`    diff at dst offset 0x${offset.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`);
   }
 
+  // ─── formatDecimal (FUN_3A54) ────────────────────────────────────────
+  console.log(`\n=== formatDecimal (FUN_3A54) — ${n} casi ===`);
+  let ok4 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const value = Math.floor(rng() * 100000000);
+    const numDigits = 1 + Math.floor(rng() * 8);
+    const showSpaces = rng() < 0.5 ? 0 : 1;
+    const offset = Math.floor(rng() * (SCRATCH_SIZE - numDigits - 2));
+    const bufEnd = SCRATCH_ADDR + offset;
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      pokeMem(cpu, SCRATCH_ADDR + j, 1, 0x55);
+      state.workRam[(SCRATCH_ADDR - 0x400000) + j] = 0x55;
+    }
+    // Push 4 long args, call FUN_3A54
+    const sys = cpu.system;
+    let sp = sys.getRegisters().sp;
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, showSpaces >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, numDigits >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, bufEnd >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, value >>> 0);
+    sp = (sp - 4) >>> 0; sys.write(sp, 4, SENTINEL);
+    sys.setRegister("sp", sp);
+    sys.setRegister("pc", FUN_FORMAT_DEC);
+    for (let k = 0; k < 100_000; k++) {
+      if (sys.getRegisters().pc === SENTINEL) break;
+      sys.step();
+    }
+    sys.setRegister("sp", (sys.getRegisters().sp + 4 + 16) >>> 0);
+
+    stringFormat.formatDecimal(state, value, bufEnd, numDigits, showSpaces);
+
+    let m = true;
+    for (let j = 0; j < SCRATCH_SIZE; j++) {
+      if (peekMem(cpu, SCRATCH_ADDR + j, 1) !== (state.workRam[(SCRATCH_ADDR - 0x400000) + j] ?? 0)) {
+        m = false; break;
+      }
+    }
+    if (m) ok4++;
+  }
+  console.log(`  Match: ${ok4}/${n} = ${((ok4 / n) * 100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok === n && ok2 === n && ok3 === n) ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n && ok4 === n) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {
