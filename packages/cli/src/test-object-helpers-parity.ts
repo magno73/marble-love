@@ -88,6 +88,31 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== objDeriveShorts (FUN_253BC) — ${n} casi ===`);
+  let okDS = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const OBJ2 = 0x00401D00;
+    // Random fields
+    for (let j = 0; j < 0x40; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, OBJ2 + j, 1, v);
+      stateInst.workRam[(OBJ2 - 0x400000) + j] = v;
+    }
+    // Sometimes set byte+0x36 to skip
+    const skip = r() < 0.5 ? 1 : 0;
+    pokeMem(cpu, OBJ2 + 0x36, 1, skip);
+    stateInst.workRam[(OBJ2 - 0x400000) + 0x36] = skip;
+    callFunction(cpu, 0x253bc, [OBJ2]);
+    objectHelpers.objDeriveShorts(stateInst, OBJ2);
+    let m = true;
+    for (let j = 0; j < 0x40; j++) {
+      if (peekMem(cpu, OBJ2 + j, 1) !== (stateInst.workRam[(OBJ2 - 0x400000) + j] ?? 0)) { m = false; break; }
+    }
+    if (m) okDS++;
+  }
+  console.log(`  Match: ${okDS}/${n} = ${((okDS/n)*100).toFixed(1)}%`);
+
   console.log(`\n=== eepromValidateAndClassify (FUN_3F3E) — ${n} casi ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
@@ -109,7 +134,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
