@@ -33,6 +33,25 @@ export function copyGlobalsToObj(state: GameState, objAddr: number): void {
   writeU32(state, objOff + 0x14, readU32(state, 0x68c));
 }
 
+/**
+ * Replica `FUN_00003F3E` — eepromValidateAndClassify.
+ * Reads byte pair @ *0x401FFC + 0xA/0xB. If complementary (a == ~b),
+ * keep a; else clear a. If a >= 0xE0 unsigned: return 0. Else return (a & 3) + 1.
+ */
+export function eepromValidateAndClassify(state: GameState): number {
+  const ptr = readU32(state, 0x1ffc);
+  const ptrOff = (ptr - 0x400000) >>> 0;
+  const byteA = state.workRam[ptrOff + 0xA] ?? 0;
+  const byteB = state.workRam[ptrOff + 0xB] ?? 0;
+  const notB = (~byteB) & 0xff;
+  let d2 = (byteA === notB) ? byteA : 0;
+  // cmpi.b #-0x20 (= 0xE0), D2; bcs ok
+  // bcs = D2 < 0xE0 unsigned. If D2 >= 0xE0 unsigned: return 0.
+  if (d2 >= 0xE0) return 0;
+  // Else: return ((d2 & 3) + 1)
+  return ((d2 & 3) + 1) >>> 0;
+}
+
 export function objIndexedByteAdvance(state: GameState, objAddr: number, idxWord: number): void {
   const objOff = objAddr - 0x400000;
   const ptr = readU32(state, objOff + 0x6e);
