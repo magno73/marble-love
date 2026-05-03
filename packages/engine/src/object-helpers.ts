@@ -52,6 +52,37 @@ export function eepromValidateAndClassify(state: GameState): number {
   return ((d2 & 3) + 1) >>> 0;
 }
 
+/**
+ * Replica `FUN_000253BC` — derive shorts from longs in obj struct.
+ * If byte+0x36 != 0: no-op. Else:
+ *   *(A0+0x32).w = (*(A0+0xC).l >> 19) (signed asr)
+ *   *(A0+0x34).w = (*(A0+0x10).l >> 19) (signed asr)
+ *   *(A0+0x2A).l = *(A0+0x14).l
+ *   *(A0+0x1D).b = *(A0+0x1B).b
+ */
+export function objDeriveShorts(state: GameState, objAddr: number): void {
+  const objOff = objAddr - 0x400000;
+  const r = state.workRam;
+  if ((r[objOff + 0x36] ?? 0) !== 0) return;
+  // Read longs as signed
+  const longC = readU32(state, objOff + 0xC);
+  const longCSigned = longC >= 0x80000000 ? longC - 0x100000000 : longC;
+  const long10 = readU32(state, objOff + 0x10);
+  const long10Signed = long10 >= 0x80000000 ? long10 - 0x100000000 : long10;
+  // asr.l #19 then store .w
+  const w32 = (longCSigned >> 19) & 0xffff;
+  const w34 = (long10Signed >> 19) & 0xffff;
+  r[objOff + 0x32] = (w32 >>> 8) & 0xff;
+  r[objOff + 0x33] = w32 & 0xff;
+  r[objOff + 0x34] = (w34 >>> 8) & 0xff;
+  r[objOff + 0x35] = w34 & 0xff;
+  // Copy long *(A0+0x14) → *(A0+0x2A)
+  const long14 = readU32(state, objOff + 0x14);
+  writeU32(state, objOff + 0x2A, long14);
+  // Copy byte
+  r[objOff + 0x1D] = r[objOff + 0x1B] ?? 0;
+}
+
 export function objIndexedByteAdvance(state: GameState, objAddr: number, idxWord: number): void {
   const objOff = objAddr - 0x400000;
   const ptr = readU32(state, objOff + 0x6e);
