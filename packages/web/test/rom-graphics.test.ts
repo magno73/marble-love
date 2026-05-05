@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { decodeAlphaRom, splitGraphicsProms } from "../src/rom-graphics.js";
+import {
+  decodeAlphaRom,
+  decodeGraphicsLookups,
+  decodeObjectTile,
+  splitGraphicsProms,
+} from "../src/rom-graphics.js";
 
 describe("decodeAlphaRom", () => {
   it("decodes 8x8 2bpp alpha glyphs using the documented System 1 layout", () => {
@@ -41,5 +46,51 @@ describe("splitGraphicsProms", () => {
     expect(tables.remap[0x1ff]).toBe(0x22);
     expect(tables.color[0]).toBe(0x33);
     expect(tables.color[0x1ff]).toBe(0x44);
+  });
+});
+
+describe("decodeGraphicsLookups", () => {
+  it("decodes playfield and motion-object PROM lookup metadata", () => {
+    const proms = new Uint8Array(0x400).fill(0xff);
+    // playfield entry 0: bank 1 active-low, offset 5, 4bpp, color mask => 3.
+    proms[0x000] = 0xe5;
+    proms[0x200] = 0xcc;
+    // motion-object entry 0: bank 2 active-low, offset 7, 5bpp, MO color => 2.
+    proms[0x100] = 0xd7;
+    proms[0x300] = 0x11;
+
+    const lookups = decodeGraphicsLookups(proms);
+
+    expect(lookups.playfield[0]).toEqual({
+      offset: 5,
+      bank: 1,
+      color: 3,
+      bpp: 4,
+    });
+    expect(lookups.motionObjects[0]).toEqual({
+      offset: 7,
+      bank: 2,
+      color: 3,
+      bpp: 5,
+    });
+  });
+});
+
+describe("decodeObjectTile", () => {
+  it("decodes a synthetic 4bpp object tile from planar banks", () => {
+    const tiles = new Uint8Array(0x40000);
+    // MAME objlayout_4bpp plane offsets are 3,2,1,0 * 0x10000 bytes.
+    // Set x=0 on row 0 in all planes, producing pen 0b1111.
+    tiles[0x30000] = 0x01;
+    tiles[0x20000] = 0x01;
+    tiles[0x10000] = 0x01;
+    tiles[0x00000] = 0x01;
+
+    const tile = decodeObjectTile(tiles, 1, 0, 4);
+
+    expect(tile.width).toBe(8);
+    expect(tile.height).toBe(8);
+    expect(tile.pixels[0]).toBe(0x0f);
+    expect(tile.pixels[1]).toBe(0);
   });
 });
