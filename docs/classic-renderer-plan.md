@@ -68,6 +68,8 @@ Completed:
   missing required entries in one error.
 - Validates CRC32 values from `docs/rom-layout.md` by default.
 - Added splash status/error UI for ROM validation.
+- Added in-memory alpha ROM decoding using the documented MAME `anlayout`
+  values: 8x8, 2 bpp, plane offsets 0/4, row stride 16 bits.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
@@ -81,7 +83,8 @@ Verification:
 - Focused ESLint on changed source files: passed.
 - `npm run build --workspace @marble-love/web`: passed.
 - Local smoke test with user-provided `marble.zip` + `atarisy1.zip`: passed with
-  CRC32 validation enabled; no ROM bytes copied into the repo.
+  CRC32 validation enabled and 512 alpha glyphs decoded in memory; no ROM bytes
+  copied into the repo.
 
 Constraints:
 

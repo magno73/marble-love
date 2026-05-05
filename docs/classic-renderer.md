@@ -74,7 +74,9 @@ names from `docs/rom-layout.md`, and assembles raw byte regions for:
 - raw motherboard PROM entries.
 
 `packages/web/src/rom-graphics.ts` defines typed graphics containers and
-explicit `not-decoded` placeholders. This is still not a graphics decoder.
+explicit `not-decoded` placeholders. It also decodes the alphanumerics ROM into
+512 in-memory 8x8 2bpp glyphs using the documented MAME `anlayout` offsets. No
+decoded glyphs are written to disk.
 
 The loader supports split MAME-style input, where `marble.zip` contains the game
 ROMs and `atarisy1.zip` contains shared Atari System 1 motherboard files such as
@@ -85,8 +87,8 @@ The web splash now accepts multiple `.zip` files, validates CRC32 values from
 Remaining ROM work:
 
 - add SHA1 verification if needed for parity harness workflows;
-- decode alphanumerics, playfield tiles, motion-object graphics, and palette
-  PROM behavior;
+- connect decoded alphanumerics to real text/tile rendering;
+- decode playfield tiles, motion-object graphics, and palette PROM behavior;
 - keep decoded output in memory and never commit ROM-derived assets;
 - connect decoded textures to the frame renderer behind the neutral `Frame`
   model.
