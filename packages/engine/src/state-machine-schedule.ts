@@ -67,3 +67,49 @@ export function scheduleStateMachine4(state: GameState, dataPtr: number, thresho
   }
   return 0;
 }
+
+/**
+ * Replica `FUN_000028EA` — `scheduleStateMachine7(dataPtr, word16, target)`.
+ *
+ * Steps:
+ *   - Set *0x401F3E (target word) = arg3
+ *   - Call renderStringChain(dataPtr, sext_l(word16))  [side effect: writes alpha]
+ *   - Find first slot with state==0
+ *   - Set: data[i] = dataPtr, state[i] = 7, word16[i] = word16
+ *
+ * Side effects on workRam @ 0x401F3E + slot fields. Plus alpha tilemap from render.
+ */
+export function scheduleStateMachine7(
+  state: GameState,
+  rom: import("./bus.js").RomImage,
+  renderFn: (state: GameState, rom: import("./bus.js").RomImage, dataPtr: number, attrSigned: number) => number,
+  dataPtr: number,
+  word16: number,
+  target: number,
+): void {
+  const r = state.workRam;
+  // *0x401F3E = target word
+  r[0x1f3e] = (target >>> 8) & 0xff;
+  r[0x1f3f] = target & 0xff;
+
+  // Call render. arg2 is sext_l of word16 word.
+  const word16Word = word16 & 0xffff;
+  const word16Signed = word16Word & 0x8000 ? word16Word - 0x10000 : word16Word;
+  renderFn(state, rom, dataPtr >>> 0, word16Signed | 0);
+
+  // Find first free slot, fill state=7
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    if ((r[STATE_BASE_OFF + i] ?? 0) === 0) {
+      const dOff = DATA_PTR_BASE_OFF + i * 4;
+      const dp = dataPtr >>> 0;
+      r[dOff] = (dp >>> 24) & 0xff;
+      r[dOff + 1] = (dp >>> 16) & 0xff;
+      r[dOff + 2] = (dp >>> 8) & 0xff;
+      r[dOff + 3] = dp & 0xff;
+      r[STATE_BASE_OFF + i] = 7;
+      r[WORD16_BASE_OFF + i * 2] = (word16Word >>> 8) & 0xff;
+      r[WORD16_BASE_OFF + i * 2 + 1] = word16Word & 0xff;
+      return;
+    }
+  }
+}
