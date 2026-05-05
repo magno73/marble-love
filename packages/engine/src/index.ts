@@ -56,6 +56,7 @@ export * as proximityCheck from "./proximity-check.js";
 export * as objPickLarger from "./obj-pick-larger.js";
 export * as hudFormat from "./hud-format.js";
 export * as trackballApply from "./trackball-apply.js";
+export * as moveVelocity from "./move-velocity.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
