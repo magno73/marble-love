@@ -84,6 +84,33 @@ export function objDeriveShorts(state: GameState, objAddr: number): void {
 }
 
 /**
+ * Replica `FUN_00025B40` — `initObjArrays(objAddr)`.
+ * Clears byte+0xCA, then loops 8 entries:
+ *   - obj+0x74 + i*2 = ROM[0x1D3F4 + i].b sext × 0x800 (word)
+ *   - obj+0x84 + i*2 = ROM[0x1D3FC + i].b sext × 0x800 (word)
+ *   - obj+0x94 + i*2 = 0
+ */
+export function initObjArrays(state: GameState, rom: import("./bus.js").RomImage, objAddr: number): void {
+  const objOff = objAddr - 0x400000;
+  const r = state.workRam;
+  r[objOff + 0xCA] = 0;
+  for (let i = 0; i < 8; i++) {
+    const b1 = rom.program[0x1D3F4 + i] ?? 0;
+    const b1S = b1 & 0x80 ? b1 - 0x100 : b1;
+    const w1 = (b1S << 11) & 0xffff; // ext.w + asl.w 0xB → ×0x800
+    const b2 = rom.program[0x1D3FC + i] ?? 0;
+    const b2S = b2 & 0x80 ? b2 - 0x100 : b2;
+    const w2 = (b2S << 11) & 0xffff;
+    r[objOff + 0x74 + i * 2] = (w1 >>> 8) & 0xff;
+    r[objOff + 0x74 + i * 2 + 1] = w1 & 0xff;
+    r[objOff + 0x84 + i * 2] = (w2 >>> 8) & 0xff;
+    r[objOff + 0x84 + i * 2 + 1] = w2 & 0xff;
+    r[objOff + 0x94 + i * 2] = 0;
+    r[objOff + 0x94 + i * 2 + 1] = 0;
+  }
+}
+
+/**
  * Replica `FUN_00004008` — `eepromCommitDelta(deltaLong)`.
  * Uses FUN_3F3E (validate). Returns 1 if classify fails (no commit needed).
  * Else: if (delta >= total bytes counter @ 0x401FF5+0x401FF7): saturate,
