@@ -77,7 +77,7 @@ async function startGame(
   // TODO Phase 7: inizializzare bus con la ROM caricata, attivare engine.
   void rom;
 
-  const renderer = initRenderer(app);
+  const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
   let demoFrame = 0;
 

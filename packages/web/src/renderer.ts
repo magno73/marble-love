@@ -9,6 +9,7 @@ import type { Application } from "pixi.js";
 import { Container, Graphics } from "pixi.js";
 import { render as renderNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
+import type { DecodedAlphaGraphics, RomGraphicsAssets } from "./rom-graphics.js";
 
 type Frame = renderNs.Frame;
 type RgbaColor = renderNs.RgbaColor;
@@ -31,6 +32,10 @@ interface ClassicLayers {
   playfieldGraphics: Graphics;
   spriteGraphics: Graphics;
   alphaGraphics: Graphics;
+}
+
+interface RendererAssets {
+  alpha?: DecodedAlphaGraphics;
 }
 
 function rgbaToPixiColor(color: RgbaColor): number {
@@ -114,12 +119,54 @@ function drawSprites(frame: Frame, graphics: Graphics): void {
   }
 }
 
-function drawAlpha(frame: Frame, graphics: Graphics): void {
+function drawFallbackAlphaGlyph(
+  frame: Frame,
+  graphics: Graphics,
+  command: renderNs.AlphaCommand,
+): void {
+  const color = paletteLookup(frame, command.paletteIndex);
+  const glyphPattern = command.tileIndex;
+
+  for (let row = 0; row < 3; row += 1) {
+    for (let column = 0; column < 3; column += 1) {
+      const bit = (glyphPattern >> (row * 3 + column)) & 1;
+      if (bit === 1) {
+        graphics
+          .rect(command.x + 1 + column * 2, command.y + 1 + row * 2, 2, 2)
+          .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+      }
+    }
+  }
+}
+
+function drawDecodedAlphaGlyph(
+  frame: Frame,
+  graphics: Graphics,
+  command: renderNs.AlphaCommand,
+  alpha: DecodedAlphaGraphics,
+): boolean {
+  const glyph = alpha.glyphs[command.tileIndex];
+  if (glyph === undefined) return false;
+
+  for (let y = 0; y < glyph.height; y += 1) {
+    for (let x = 0; x < glyph.width; x += 1) {
+      const pen = glyph.pixels[y * glyph.width + x] ?? 0;
+      if (pen === 0 && command.opaque !== true) continue;
+
+      const color = paletteLookup(frame, command.paletteIndex * 4 + pen);
+      graphics
+        .rect(command.x + x, command.y + y, 1, 1)
+        .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+    }
+  }
+
+  return true;
+}
+
+function drawAlpha(frame: Frame, graphics: Graphics, assets: RendererAssets): void {
   graphics.clear();
 
   for (const command of frame.alpha) {
-    const color = paletteLookup(frame, command.paletteIndex);
-    const glyphPattern = command.tileIndex;
     const backgroundAlpha = command.opaque ? 0.72 : 0.18;
 
     if (command.opaque) {
@@ -128,15 +175,11 @@ function drawAlpha(frame: Frame, graphics: Graphics): void {
         .fill({ color: 0x000000, alpha: backgroundAlpha });
     }
 
-    for (let row = 0; row < 3; row += 1) {
-      for (let column = 0; column < 3; column += 1) {
-        const bit = (glyphPattern >> (row * 3 + column)) & 1;
-        if (bit === 1) {
-          graphics
-            .rect(command.x + 1 + column * 2, command.y + 1 + row * 2, 2, 2)
-            .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
-        }
-      }
+    if (
+      assets.alpha === undefined ||
+      !drawDecodedAlphaGlyph(frame, graphics, command, assets.alpha)
+    ) {
+      drawFallbackAlphaGlyph(frame, graphics, command);
     }
   }
 }
@@ -195,8 +238,15 @@ function initLayers(app: Application): ClassicLayers {
   };
 }
 
-export function initRenderer(app: Application): Renderer {
+function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
+  return graphics?.decodedAlpha.status === "decoded"
+    ? { alpha: graphics.decodedAlpha }
+    : {};
+}
+
+export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Renderer {
   const layers = initLayers(app);
+  const assets = rendererAssetsFromRom(graphics);
 
   return {
     draw(state: GameState): void {
@@ -207,7 +257,7 @@ export function initRenderer(app: Application): Renderer {
       applyViewportScale(app, layers.viewport, frame);
       drawPlayfield(frame, layers.playfieldGraphics);
       drawSprites(frame, layers.spriteGraphics);
-      drawAlpha(frame, layers.alphaGraphics);
+      drawAlpha(frame, layers.alphaGraphics, assets);
       drawChrome(frame, layers.chromeGraphics);
 
       if (frame.palette.length === 0) {

@@ -77,6 +77,9 @@ names from `docs/rom-layout.md`, and assembles raw byte regions for:
 explicit `not-decoded` placeholders. It also decodes the alphanumerics ROM into
 512 in-memory 8x8 2bpp glyphs using the documented MAME `anlayout` offsets. No
 decoded glyphs are written to disk.
+When ROM graphics are available, the Pixi renderer uses those decoded alpha
+glyphs for `Frame.alpha` commands; otherwise it keeps the synthetic block-glyph
+fallback.
 
 The loader supports split MAME-style input, where `marble.zip` contains the game
 ROMs and `atarisy1.zip` contains shared Atari System 1 motherboard files such as

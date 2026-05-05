@@ -70,6 +70,8 @@ Completed:
 - Added splash status/error UI for ROM validation.
 - Added in-memory alpha ROM decoding using the documented MAME `anlayout`
   values: 8x8, 2 bpp, plane offsets 0/4, row stride 16 bits.
+- Wired decoded alpha glyphs into the Pixi renderer for `Frame.alpha` commands,
+  with the previous synthetic block-glyph fallback still available.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
