@@ -85,6 +85,31 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okPL ? 1 : 0}/1`);
 
+  // FUN_10456: gameStateInit2Objs
+  console.log(`\n=== gameStateInit2Objs (FUN_10456) — 10 casi ===`);
+  let okGI2 = 0;
+  for (let i = 0; i < 10; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const count = i % 3;
+    pokeMem(cpu, 0x00400396, 2, count);
+    stateInst.workRam[0x396] = 0; stateInst.workRam[0x397] = count;
+    const dcByte = Math.floor(Math.random() * 256);
+    pokeMem(cpu, 0x004003DC, 1, dcByte);
+    stateInst.workRam[0x3DC] = dcByte;
+    callFunction(cpu, 0x10456, []);
+    initHelpers.gameStateInit2Objs(stateInst);
+    let m = true;
+    const ranges: Array<[number, number]> = [[0x18 + 0xBC, 0x18 + 0xC0], [0x18 + 0xD2, 0x18 + 0xD4], [0x18 + 0x18, 0x18 + 0x1B], [0xFA + 0xBC, 0xFA + 0xC0], [0xFA + 0xD2, 0xFA + 0xD4], [0xFA + 0x18, 0xFA + 0x1B], [0x98C + 0xA, 0x98C + 0xB], [0x98C + 0x16, 0x98C + 0x17], [0x010, 0x014], [0x3A4, 0x3A5], [0x3BA, 0x3BB], [0x3E0, 0x3E1], [0x3E8, 0x3E9], [0x398, 0x399], [0x654, 0x659]];
+    for (const [start, end] of ranges) {
+      for (let j = start; j < end; j++) {
+        if (peekMem(cpu, 0x400000 + j, 1) !== (stateInst.workRam[j] ?? 0)) { m = false; break; }
+      }
+      if (!m) break;
+    }
+    if (m) okGI2++;
+  }
+  console.log(`  Match: ${okGI2}/10`);
+
   // FUN_E24: palette bootstrap
   console.log(`\n=== paletteBootstrapInit (FUN_E24) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
@@ -179,7 +204,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL && okPE === 5 && okBS) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL && okPE === 5 && okBS && okGI2 === 10) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
