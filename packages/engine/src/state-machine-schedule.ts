@@ -73,6 +73,44 @@ export function scheduleStateMachine4(state: GameState, dataPtr: number, thresho
  * Replica `FUN_00002A24` — `scheduleStateMachine2(dataPtr, word16, threshold)`.
  * Render via FUN_2572, then schedule state=2: data, threshold, word16, flag30=1.
  */
+/**
+ * Replica `FUN_00002B50` — `scheduleStateMachine1(dataPtr, word16, threshold)`.
+ * Render via FUN_2572, then schedule state=1.
+ */
+export function scheduleStateMachine1(
+  state: GameState,
+  rom: import("./bus.js").RomImage,
+  renderFn: (state: GameState, rom: import("./bus.js").RomImage, dataPtr: number, attrSigned: number) => number,
+  dataPtr: number,
+  word16: number,
+  threshold: number,
+): number {
+  const r = state.workRam;
+  const w16Word = word16 & 0xffff;
+  const w16Signed = w16Word & 0x8000 ? w16Word - 0x10000 : w16Word;
+  renderFn(state, rom, dataPtr >>> 0, w16Signed | 0);
+
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    if ((r[STATE_BASE_OFF + i] ?? 0) === 0) {
+      const dOff = DATA_PTR_BASE_OFF + i * 4;
+      const dp = dataPtr >>> 0;
+      r[dOff] = (dp >>> 24) & 0xff;
+      r[dOff + 1] = (dp >>> 16) & 0xff;
+      r[dOff + 2] = (dp >>> 8) & 0xff;
+      r[dOff + 3] = dp & 0xff;
+      r[STATE_BASE_OFF + i] = 1;
+      r[THRESHOLD_BASE_OFF + i * 2] = (threshold >>> 8) & 0xff;
+      r[THRESHOLD_BASE_OFF + i * 2 + 1] = threshold & 0xff;
+      r[WORD16_BASE_OFF + i * 2] = (w16Word >>> 8) & 0xff;
+      r[WORD16_BASE_OFF + i * 2 + 1] = w16Word & 0xff;
+      r[COUNTER_BASE_OFF + i * 2] = 0;
+      r[COUNTER_BASE_OFF + i * 2 + 1] = 0;
+      return 1;
+    }
+  }
+  return 0;
+}
+
 export function scheduleStateMachine2(
   state: GameState,
   rom: import("./bus.js").RomImage,
