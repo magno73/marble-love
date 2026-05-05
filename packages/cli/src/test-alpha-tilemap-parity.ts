@@ -23,6 +23,7 @@ import { exit } from "node:process";
 import { state as stateNs, alphaTilemap } from "@marble-love/engine";
 import {
   createCpu,
+  callFunction,
   pokeMem,
   peekMem,
   disposeCpu,
@@ -186,8 +187,35 @@ async function main(): Promise<void> {
     console.log(`    @ 0x${addr.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`);
   }
 
+  // FUN_16E8E: clearAlphaRows
+  console.log(`\n=== clearAlphaRows (FUN_16E8E) — 30 casi ===`);
+  const tsRomCAR = (await import("@marble-love/engine")).bus.emptyRomImage();
+  tsRomCAR.program.set(rom.subarray(0, tsRomCAR.program.length));
+  let okCAR = 0;
+  for (let i = 0; i < 30; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    // rotation flag random 0..7
+    const rot = Math.floor(Math.random() * 8);
+    pokeMem(cpu, 0x00401F42, 2, rot);
+    state.workRam[0x1F42] = 0; state.workRam[0x1F43] = rot;
+    // Pre-fill alpha
+    for (let j = 0; j < 0x1000; j++) {
+      pokeMem(cpu, 0xa03000 + j, 1, 0xCC);
+      state.alphaRam[j] = 0xCC;
+    }
+    const startRow = i & 0x1F; // 0..29 (avoid 30+ for valid range)
+    callFunction(cpu, 0x16e8e, [startRow]);
+    (await import("@marble-love/engine")).alphaTilemap.clearAlphaRows(state, tsRomCAR, startRow);
+    let m = true;
+    for (let j = 0; j < 0x1000; j++) {
+      if (peekMem(cpu, 0xa03000 + j, 1) !== (state.alphaRam[j] ?? 0)) { m = false; break; }
+    }
+    if (m) okCAR++;
+  }
+  console.log(`  Match: ${okCAR}/30`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && okCAR === 30) ? 0 : 1);
 }
 
 main().catch((err: unknown) => {

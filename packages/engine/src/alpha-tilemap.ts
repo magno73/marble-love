@@ -121,6 +121,34 @@ export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array },
   return ((0xa03000 + d0) >>> 0);
 }
 
+/**
+ * Replica `FUN_00016E8E` — clear alpha tile rows.
+ *
+ * Per ogni riga r in [arg1.b .. 0x1E):
+ *   Call getAlphaTileAddr(col=3, row=r) → addr
+ *   Clear 0x24 words from addr
+ */
+export function clearAlphaRows(
+  state: GameState,
+  rom: { program: Uint8Array },
+  startRow: number,
+): void {
+  let r = startRow & 0xff;
+  while (r !== 0x1E) {
+    // Call getAlphaTileAddr(3, r)
+    const addr = getAlphaTileAddr(state, rom, 3, r);
+    let off = addr - 0xa03000;
+    for (let i = 0; i < 0x24; i++) {
+      if (off >= 0 && off < 0x1000) {
+        state.alphaRam[off] = 0;
+        state.alphaRam[off + 1] = 0;
+      }
+      off += 2;
+    }
+    r = (r + 1) & 0xff;
+  }
+}
+
 export function clearAlphaTilesFromIndex(state: GameState, startRow: number): void {
   // Replica del calcolo binario: D0w = arg1.w; D0w <<= 6 (word shift, wraps mod 0x10000)
   let counter = ((startRow & 0xffff) << 6) & 0xffff;
