@@ -71,3 +71,12 @@ export function computeSpriteCoords_v2(state: GameState, argAddr: number): void 
   const w4 = readU16(state, argOff + 0x14);
   compute(state, w0, w2, w4, argOff + 0x20);
 }
+
+/** Replica `FUN_0001778E` — variante che scrive a +0x28 invece di +0x20. */
+export function computeSpriteCoords_v3(state: GameState, argAddr: number): void {
+  const argOff = argAddr - 0x400000;
+  const w0 = readU16(state, argOff + 0xC);
+  const w2 = readU16(state, argOff + 0x10);
+  const w4 = readU16(state, argOff + 0x14);
+  compute(state, w0, w2, w4, argOff + 0x28);
+}
