@@ -89,6 +89,22 @@ export function computeSpriteCoords_v4(state: GameState, argAddr: number): void 
   compute(state, w0, w2, w4, argOff + 0xC);
 }
 
+/**
+ * Replica `FUN_000189E2` — `processAllSprites_v1()`.
+ * If *0x400394 != 0: exit. Else: loop D2=0..*0x400396, call computeSpriteCoords_v1
+ * on entry @ 0x40098C + D2 * 0xC.
+ */
+export function processAllSprites_v1(state: GameState): void {
+  const r = state.workRam;
+  const flag = ((r[0x394] ?? 0) << 8) | (r[0x395] ?? 0);
+  if (flag !== 0) return;
+  const count = ((r[0x396] ?? 0) << 8) | (r[0x397] ?? 0);
+  for (let d2 = 0; d2 < count; d2++) {
+    const argAddr = 0x40098C + d2 * 0xC;
+    computeSpriteCoords_v1(state, argAddr);
+  }
+}
+
 /** Replica `FUN_0001778E` — variante che scrive a +0x28 invece di +0x20. */
 export function computeSpriteCoords_v3(state: GameState, argAddr: number): void {
   const argOff = argAddr - 0x400000;
