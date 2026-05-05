@@ -48,9 +48,10 @@ export function validatePosition(
   const y = ((state.workRam[objOff + 0x10] ?? 0) << 8) | (state.workRam[objOff + 0x11] ?? 0);
   const xS = x & 0x8000 ? x - 0x10000 : x;
   const yS = y & 0x8000 ? y - 0x10000 : y;
-  if (proximityCheckArray(state, objPtr, xS | 0, yS | 0) !== 0) return 0;
-  if (testGridBitmapFn(rom, xS | 0, yS | 0) !== 0) return 0;
-  return 1;
+  // Returns 1 if EITHER check fails (proximity hit OR grid solid), 0 otherwise.
+  if (proximityCheckArray(state, objPtr, xS | 0, yS | 0) !== 0) return 1;
+  if (testGridBitmapFn(rom, xS | 0, yS | 0) !== 0) return 1;
+  return 0;
 }
 
 export function proximityCheckArray(state: GameState, excludePtr: number, xWord: number, yWord: number): number {
