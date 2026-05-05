@@ -80,13 +80,14 @@ async function startGame(
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
   let demoFrame = 0;
+  const useRomBackedDemoFrame = rom !== undefined;
 
   app.ticker.add(() => {
     s.input.trackballDx = inputState.consumeDx() as typeof s.input.trackballDx;
     s.input.trackballDy = inputState.consumeDy() as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
     tick(s);
-    if (useSyntheticDemoFrame) {
+    if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
       renderer.drawFrame(buildClassicDemoFrame(demoFrame));
       demoFrame += 1;
     } else {
