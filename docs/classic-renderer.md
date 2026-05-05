@@ -123,6 +123,8 @@ When a demo frame carries explicit `gfxBank`/`bitsPerPixel` metadata, the Pixi
 renderer can turn those decoded object tiles into in-memory textures. This is
 used only by the ROM-backed demo frame; real playfield RAM rendering remains
 unimplemented.
+The same texture path now supports ROM-backed demo motion objects. Chrome/debug
+rendering includes a tiny palette swatch preview from the current frame palette.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.
@@ -138,6 +140,9 @@ npm run build --workspace @marble-love/web
 npm run test
 npm run dev --workspace @marble-love/web
 ```
+
+In development, open `http://localhost:5173/?rom=1` to keep the ROM picker
+visible instead of auto-starting the synthetic demo.
 
 The loader was also smoke-tested locally against user-provided `marble.zip` +
 `atarisy1.zip` outside the repository with CRC32 validation enabled. No ROM

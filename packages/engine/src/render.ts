@@ -76,6 +76,13 @@ export interface PlayfieldWordInfo {
   flipX: boolean;
 }
 
+export interface PlayfieldLookupInfo {
+  offset: number;
+  bank: number;
+  color: number;
+  bpp: 4 | 5 | 6;
+}
+
 export interface Frame {
   nativeSize: FrameSize;
   /** Coord di scroll della tilemap (System 1 supporta scroll H/V). */
@@ -152,6 +159,37 @@ export function decodePlayfieldWord(word: number): PlayfieldWordInfo {
     lookupIndex: (word >>> 8) & 0x007f,
     flipX: (word & 0x8000) !== 0,
   };
+}
+
+export function buildPlayfieldFromRam(
+  playfieldRam: Uint8Array,
+  lookups: PlayfieldLookupInfo[],
+): TileCommand[] {
+  const commands: TileCommand[] = [];
+  const tileCount = Math.floor(playfieldRam.length / 2);
+
+  for (let index = 0; index < tileCount; index += 1) {
+    const offset = index * 2;
+    const word = ((playfieldRam[offset] ?? 0) << 8) | (playfieldRam[offset + 1] ?? 0);
+    const fields = decodePlayfieldWord(word);
+    const lookup = lookups[fields.lookupIndex];
+    if (lookup === undefined) continue;
+
+    commands.push({
+      tileIndex: lookup.offset * 256 + fields.tileIndexLow,
+      gfxBank: lookup.bank,
+      bitsPerPixel: lookup.bpp,
+      x: (index % 64) * 8,
+      y: Math.floor(index / 64) * 8,
+      width: 8,
+      height: 8,
+      paletteIndex: 0x20 + lookup.color * 8,
+      flipX: fields.flipX,
+      priority: fields.lookupIndex,
+    });
+  }
+
+  return commands;
 }
 
 /** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.

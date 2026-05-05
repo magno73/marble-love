@@ -23,7 +23,8 @@ const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
 const btn = document.getElementById("rom-btn") as HTMLButtonElement;
 const romStatus = document.getElementById("rom-status") as HTMLParagraphElement;
-const useSyntheticDemoFrame = import.meta.env.DEV;
+const forceRomPicker = new URLSearchParams(window.location.search).get("rom") === "1";
+const useSyntheticDemoFrame = import.meta.env.DEV && !forceRomPicker;
 
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
   romStatus.textContent = message;

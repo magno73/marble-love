@@ -3,6 +3,7 @@ import {
   buildAlphaFromRam,
   buildFrame,
   buildPaletteFromColorRam,
+  buildPlayfieldFromRam,
   decodePlayfieldWord,
   irgb4444ToRgba,
 } from "../src/render.js";
@@ -99,5 +100,42 @@ describe("decodePlayfieldWord", () => {
       lookupIndex: 0x7f,
       flipX: false,
     });
+  });
+});
+
+describe("buildPlayfieldFromRam", () => {
+  it("builds neutral tile commands from raw playfield RAM and lookup metadata", () => {
+    const ram = new Uint8Array([0x81, 0x34, 0x00, 0x12]);
+    const lookups = [
+      { offset: 2, bank: 1, color: 3, bpp: 5 as const },
+      { offset: 4, bank: 2, color: 1, bpp: 4 as const },
+    ];
+
+    expect(buildPlayfieldFromRam(ram, lookups)).toEqual([
+      {
+        tileIndex: 0x434,
+        gfxBank: 2,
+        bitsPerPixel: 4,
+        x: 0,
+        y: 0,
+        width: 8,
+        height: 8,
+        paletteIndex: 0x28,
+        flipX: true,
+        priority: 1,
+      },
+      {
+        tileIndex: 0x212,
+        gfxBank: 1,
+        bitsPerPixel: 5,
+        x: 8,
+        y: 0,
+        width: 8,
+        height: 8,
+        paletteIndex: 0x38,
+        flipX: false,
+        priority: 0,
+      },
+    ]);
   });
 });

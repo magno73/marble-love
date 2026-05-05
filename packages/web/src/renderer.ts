@@ -35,6 +35,7 @@ interface ClassicLayers {
   alphaLayer: Container;
   chromeLayer: Container;
   alphaSpriteLayer: Container;
+  spriteTextureLayer: Container;
   chromeGraphics: Graphics;
   playfieldGraphics: Graphics;
   spriteGraphics: Graphics;
@@ -48,6 +49,8 @@ interface RendererAssets {
   alphaTextureCache: Map<string, Texture>;
   playfieldSpritePool: Sprite[];
   playfieldTextureCache: Map<string, Texture>;
+  motionSpritePool: Sprite[];
+  motionTextureCache: Map<string, Texture>;
 }
 
 function rgbaToPixiColor(color: RgbaColor): number {
@@ -133,13 +136,16 @@ function objectTileTextureForCommand(
   }
 
   const tileIndex = "tileIndex" in command ? command.tileIndex : command.spriteIndex;
+  const textureCache =
+    "tileIndex" in command ? assets.playfieldTextureCache : assets.motionTextureCache;
   const cacheKey = [
+    "tileIndex" in command ? "pf" : "mo",
     command.gfxBank,
     command.bitsPerPixel,
     tileIndex,
     command.paletteIndex,
   ].join(":");
-  const cached = assets.playfieldTextureCache.get(cacheKey);
+  const cached = textureCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const tile = decodeObjectTile(
@@ -149,7 +155,7 @@ function objectTileTextureForCommand(
     command.bitsPerPixel,
   );
   const texture = textureFromObjectTile(frame, tile, command.paletteIndex);
-  assets.playfieldTextureCache.set(cacheKey, texture);
+  textureCache.set(cacheKey, texture);
   return texture;
 }
 
@@ -169,6 +175,26 @@ function acquirePlayfieldSprite(layers: ClassicLayers, assets: RendererAssets): 
 
 function hidePlayfieldSprites(assets: RendererAssets): void {
   for (const sprite of assets.playfieldSpritePool) {
+    sprite.visible = false;
+  }
+}
+
+function acquireMotionSprite(layers: ClassicLayers, assets: RendererAssets): Sprite {
+  const sprite = assets.motionSpritePool.find((candidate) => !candidate.visible);
+  if (sprite !== undefined) {
+    sprite.visible = true;
+    return sprite;
+  }
+
+  const created = new Sprite();
+  created.roundPixels = true;
+  layers.spriteTextureLayer.addChild(created);
+  assets.motionSpritePool.push(created);
+  return created;
+}
+
+function hideMotionSprites(assets: RendererAssets): void {
+  for (const sprite of assets.motionSpritePool) {
     sprite.visible = false;
   }
 }
@@ -209,14 +235,32 @@ function drawPlayfield(
   }
 }
 
-function drawSprites(frame: Frame, graphics: Graphics): void {
+function drawSprites(
+  frame: Frame,
+  graphics: Graphics,
+  layers: ClassicLayers,
+  assets: RendererAssets,
+): void {
   graphics.clear();
+  hideMotionSprites(assets);
 
   const sortedSprites = [...frame.sprites].sort(
     (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
   );
 
   for (const sprite of sortedSprites) {
+    const texture = objectTileTextureForCommand(frame, sprite, assets);
+    if (texture !== undefined && texture !== Texture.EMPTY) {
+      const pixiSprite = acquireMotionSprite(layers, assets);
+      pixiSprite.texture = texture;
+      pixiSprite.x = sprite.x;
+      pixiSprite.y = sprite.y;
+      pixiSprite.scale.x = (sprite.width ?? 16) / DEFAULT_TILE_SIZE;
+      pixiSprite.scale.y = (sprite.height ?? 16) / DEFAULT_TILE_SIZE;
+      pixiSprite.alpha = sprite.translucent === true ? 0.65 : 1;
+      continue;
+    }
+
     const color = paletteLookup(frame, sprite.paletteIndex);
     const width = sprite.width ?? 16;
     const height = sprite.height ?? 16;
@@ -371,6 +415,15 @@ function drawChrome(frame: Frame, graphics: Graphics): void {
     .rect(0, 0, frame.nativeSize.width, frame.nativeSize.height)
     .stroke({ color: 0x101820, alpha: 1, width: 1 });
 
+  const palettePreview = frame.palette.slice(0, 16);
+  for (let i = 0; i < palettePreview.length; i += 1) {
+    const color = palettePreview[i]?.rgba;
+    if (color === undefined) continue;
+    graphics
+      .rect(frame.nativeSize.width - 72 + i * 4, 4, 3, 3)
+      .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+  }
+
   if (frame.debugLabel === undefined) return;
 
   const blockCount = Math.min(16, frame.debugLabel.length);
@@ -387,6 +440,7 @@ function initLayers(app: Application): ClassicLayers {
   const viewport = new Container();
   const playfieldLayer = new Container();
   const spriteLayer = new Container();
+  const spriteTextureLayer = new Container();
   const alphaLayer = new Container();
   const alphaSpriteLayer = new Container();
   const chromeLayer = new Container();
@@ -401,6 +455,7 @@ function initLayers(app: Application): ClassicLayers {
   viewport.addChild(alphaLayer);
   viewport.addChild(chromeLayer);
   playfieldLayer.addChild(playfieldGraphics);
+  spriteLayer.addChild(spriteTextureLayer);
   spriteLayer.addChild(spriteGraphics);
   alphaLayer.addChild(alphaSpriteLayer);
   alphaLayer.addChild(alphaGraphics);
@@ -415,6 +470,7 @@ function initLayers(app: Application): ClassicLayers {
     alphaLayer,
     chromeLayer,
     alphaSpriteLayer,
+    spriteTextureLayer,
     chromeGraphics,
     playfieldGraphics,
     spriteGraphics,
@@ -431,6 +487,8 @@ function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
     alphaTextureCache: new Map(),
     playfieldSpritePool: [],
     playfieldTextureCache: new Map(),
+    motionSpritePool: [],
+    motionTextureCache: new Map(),
   };
 }
 
@@ -446,7 +504,7 @@ export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Re
     drawFrame(frame: Frame): void {
       applyViewportScale(app, layers.viewport, frame);
       drawPlayfield(frame, layers.playfieldGraphics, layers, assets);
-      drawSprites(frame, layers.spriteGraphics);
+      drawSprites(frame, layers.spriteGraphics, layers, assets);
       drawAlpha(frame, layers.alphaGraphics, layers, assets);
       drawChrome(frame, layers.chromeGraphics);
 
