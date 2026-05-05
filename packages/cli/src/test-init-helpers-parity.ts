@@ -85,6 +85,25 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okPL ? 1 : 0}/1`);
 
+  // FUN_26B2A: palette init enemy
+  console.log(`\n=== paletteInitEnemy (FUN_26B2A) — 5 casi ===`);
+  let okPE = 0;
+  for (let i = 0; i < 5; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    for (let j = 0; j < 0x800; j++) {
+      pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
+      stateInst.colorRam[j] = 0xCC;
+    }
+    callFunction(cpu, 0x26b2a, [i]);
+    initHelpers.paletteInitEnemy(stateInst, tsRom, i);
+    let m = true;
+    for (let j = 0; j < 0x800; j++) {
+      if (peekMem(cpu, 0xB00000 + j, 1) !== (stateInst.colorRam[j] ?? 0)) { m = false; break; }
+    }
+    if (m) okPE++;
+  }
+  console.log(`  Match: ${okPE}/5`);
+
   // FUN_31D0: game state machine init
   console.log(`\n=== gameStateMachineInit (FUN_31D0) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
@@ -145,7 +164,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL && okPE === 5) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
