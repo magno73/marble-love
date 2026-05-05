@@ -32,6 +32,38 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
 }
 
 /**
+ * Replica `FUN_00026B2A` — palette init enemy variant.
+ *
+ * Reads 0xC3 words from `ROM[0x1FC10 + arg.w * 0xC3 * 2]` and writes via
+ * ptr table @ 0x20534. Then calls FUN_26B10.
+ */
+export function paletteInitEnemy(state: GameState, rom: RomImage, levelIdx: number): void {
+  // arg.w * 0xC3 * 2 = byte offset
+  const idxWord = levelIdx & 0xffff;
+  const idxSigned = idxWord & 0x8000 ? idxWord - 0x10000 : idxWord;
+  const baseSrcOff = (0x1fc10 + idxSigned * 0xC3 * 2) >>> 0;
+  for (let i = 0; i < 0xC3; i++) {
+    const ptrAddr = 0x20534 + i * 4;
+    const dstAbs =
+      (((rom.program[ptrAddr] ?? 0) << 24) |
+        ((rom.program[ptrAddr + 1] ?? 0) << 16) |
+        ((rom.program[ptrAddr + 2] ?? 0) << 8) |
+        (rom.program[ptrAddr + 3] ?? 0)) >>> 0;
+    const dstOff = (dstAbs - 0xb00000) >>> 0;
+    if (dstOff >= 0x800) continue;
+    const srcOff = (baseSrcOff + i * 2) >>> 0;
+    state.colorRam[dstOff] = rom.program[srcOff] ?? 0;
+    state.colorRam[dstOff + 1] = rom.program[srcOff + 1] ?? 0;
+  }
+  // FUN_26B10
+  const SRC = 0x1fbd0;
+  for (let i = 0; i < 32; i++) {
+    state.colorRam[i * 2] = rom.program[SRC + i * 2] ?? 0;
+    state.colorRam[i * 2 + 1] = rom.program[SRC + i * 2 + 1] ?? 0;
+  }
+}
+
+/**
  * Replica `FUN_0001A41E` — palette init level: copy 192 words ROM→palette[0x400..0x57F]
  * + call paletteInit (FUN_26B10).
  *
