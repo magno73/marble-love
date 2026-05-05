@@ -38,6 +38,38 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
  * ptr table @ 0x20534. Then calls FUN_26B10.
  */
 /**
+ * Replica `FUN_00010456` — `gameStateInit2Objs()`. Init 2 obj structs + globals.
+ */
+export function gameStateInit2Objs(state: GameState): void {
+  const r = state.workRam;
+  const count = ((r[0x396] ?? 0) << 8) | (r[0x397] ?? 0);
+  for (let i = 0; i < 2; i++) {
+    const objOff = 0x18 + i * 0xE2;
+    for (let b = 0; b < 4; b++) r[objOff + 0xBC + b] = 0;
+    r[objOff + 0xD2] = 0;
+    r[objOff + 0xD3] = 0;
+    r[objOff + 0x19] = i & 0xff;
+    if (i < count) {
+      r[objOff + 0x18] = 3;
+      r[objOff + 0x1A] = 6;
+    } else {
+      r[objOff + 0x18] = 0;
+    }
+    r[0x98C + i * 0xC + 0xA] = 0xFF;
+  }
+  r[0x3A4] = 0xFF;
+  r[0x3BA] = 0;
+  r[0x3E0] = 0;
+  r[0x010] = 0; r[0x011] = 0; r[0x012] = 0; r[0x013] = 0;
+  r[0x3E8] = 1;
+  const dcByte = r[0x3DC] ?? 0;
+  r[0x398] = dcByte & 0x30;
+  r[0x658] = 0;
+  r[0x656] = 0;
+  r[0x654] = 0;
+}
+
+/**
  * Replica `FUN_00000E24` — palette bootstrap init (8 banks × 4 hardcoded words).
  *
  * Writes 32 hardcoded palette words at offsets 0..0x3F.
