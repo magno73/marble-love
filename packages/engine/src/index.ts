@@ -45,6 +45,7 @@ export * as slotSearch from "./slot-search.js";
 export * as initHelpers from "./init-helpers.js";
 export * as animationStep from "./animation-step.js";
 export * as spriteCoords from "./sprite-coords.js";
+export * as objectCompare from "./object-compare.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
