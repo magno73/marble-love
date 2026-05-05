@@ -113,6 +113,36 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okDS}/${n} = ${((okDS/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== triggerObjectEvent (FUN_285B0) — ${n} casi ===`);
+  let okT = 0;
+  // Need ROM
+  const tsRom2 = (await import("@marble-love/engine")).bus.emptyRomImage();
+  tsRom2.program.set(rom.subarray(0, tsRom2.program.length));
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const OBJT = 0x00401D00;
+    for (let j = 0; j < 0x100; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, OBJT + j, 1, v);
+      stateInst.workRam[(OBJT - 0x400000) + j] = v;
+    }
+    pokeMem(cpu, 0x0040039c, 1, Math.floor(r() * 256));
+    stateInst.workRam[0x39c] = peekMem(cpu, 0x40039c, 1);
+    const eb = Math.floor(r() * 16);
+    const tp = Math.floor(r() * 35);
+    pokeMem(cpu, OBJT + 0x19, 1, tp);
+    stateInst.workRam[(OBJT - 0x400000) + 0x19] = tp;
+    callFunction(cpu, 0x285b0, [OBJT, eb]);
+    objectHelpers.triggerObjectEvent(stateInst, tsRom2, OBJT, eb);
+    let m = true;
+    for (let j = 0; j < 0x100; j++) {
+      if (peekMem(cpu, OBJT + j, 1) !== (stateInst.workRam[(OBJT - 0x400000) + j] ?? 0)) { m = false; break; }
+    }
+    if (m && peekMem(cpu, 0x40039c, 1) !== (stateInst.workRam[0x39c] ?? 0)) m = false;
+    if (m) okT++;
+  }
+  console.log(`  Match: ${okT}/${n} = ${((okT/n)*100).toFixed(1)}%`);
+
   console.log(`\n=== eepromValidateAndClassify (FUN_3F3E) — ${n} casi ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
@@ -134,7 +164,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n && okT === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });

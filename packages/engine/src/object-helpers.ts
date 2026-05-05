@@ -83,6 +83,45 @@ export function objDeriveShorts(state: GameState, objAddr: number): void {
   r[objOff + 0x1D] = r[objOff + 0x1B] ?? 0;
 }
 
+/**
+ * Replica `FUN_000285B0` — `triggerObjectEvent(objAddr, eventByte)`.
+ * Calls FUN_28608 (addToObjectAccumAndFlag) with ROM lookup, then sets
+ * obj fields at +0xD4 (long), +0x70 (=0), +0x68 (=0), +0x69 (=-1), +0xD8 (=1).
+ */
+export function triggerObjectEvent(state: GameState, rom: import("./bus.js").RomImage, objAddr: number, eventByte: number): void {
+  const objOff = objAddr - 0x400000;
+  const r = state.workRam;
+  const eb = eventByte & 0xff;
+  // ROM 0x23CD4 + eb*2 → word, sext_l
+  const idx = 0x23cd4 + eb * 2;
+  const w = ((rom.program[idx] ?? 0) << 8) | (rom.program[idx + 1] ?? 0);
+  const wSigned = w & 0x8000 ? w - 0x10000 : w;
+  // Inline FUN_28608: *(obj+0xBC) += value (long), then OR bit (1<<obj.+0x19) into *0x40039C
+  const accumOff = objOff + 0xBC;
+  const oldAccum = readU32(state, accumOff);
+  const newAccum = (oldAccum + wSigned) >>> 0;
+  writeU32(state, accumOff, newAccum);
+  const type = r[objOff + 0x19] ?? 0;
+  let mask = 0;
+  if (type < 32) mask = (1 << type) >>> 0;
+  const cur = r[0x39c] ?? 0;
+  r[0x39c] = (cur | (mask & 0xff)) & 0xff;
+
+  // ROM 0x23CF6 + eb*4 → long, store at obj+0xD4
+  const idx2 = 0x23cf6 + eb * 4;
+  const longVal =
+    (((rom.program[idx2] ?? 0) << 24) |
+      ((rom.program[idx2 + 1] ?? 0) << 16) |
+      ((rom.program[idx2 + 2] ?? 0) << 8) |
+      (rom.program[idx2 + 3] ?? 0)) >>> 0;
+  writeU32(state, objOff + 0xD4, longVal);
+  // Other fields
+  r[objOff + 0x70] = 0;
+  r[objOff + 0x68] = 0;
+  r[objOff + 0x69] = 0xff;
+  r[objOff + 0xD8] = 1;
+}
+
 export function objIndexedByteAdvance(state: GameState, objAddr: number, idxWord: number): void {
   const objOff = objAddr - 0x400000;
   const ptr = readU32(state, objOff + 0x6e);
