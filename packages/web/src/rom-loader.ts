@@ -10,6 +10,7 @@ import { unzipSync } from "fflate";
 import type { RomImage } from "@marble-love/engine";
 import {
   decodeAlphaRom,
+  splitGraphicsProms,
   type RawRomEntry,
   type RomGraphicsAssets,
 } from "./rom-graphics.js";
@@ -264,6 +265,7 @@ function buildGraphicsAssets(
     tiles,
     sprites: tiles,
     proms,
+    promTables: splitGraphicsProms(proms),
     motherboardProms: motherboardPromFiles.map((file) => rawEntry(entries, file)),
     decodedPalette: { status: "not-decoded", source: "proms" },
     decodedAlpha: decodeAlphaRom(alpha),

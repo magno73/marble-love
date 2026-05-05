@@ -15,6 +15,11 @@ export interface DecodedPalettePlaceholder {
   source: "proms";
 }
 
+export interface GraphicsPromTables {
+  remap: Uint8Array;
+  color: Uint8Array;
+}
+
 export interface DecodedGraphicsPlaceholder {
   status: "not-decoded";
   source: "alpha" | "tiles" | "sprites";
@@ -45,6 +50,7 @@ export interface RomGraphicsAssets {
   sprites: Uint8Array;
   /** Graphics PROMs: remap + color tables, 0x400 bytes total. */
   proms: Uint8Array;
+  promTables: GraphicsPromTables;
   /** Motherboard PROM bytes kept raw for future validation/use. */
   motherboardProms: RawRomEntry[];
   decodedPalette: DecodedPalettePlaceholder;
@@ -58,6 +64,13 @@ const ALPHA_TILE_HEIGHT = 8;
 const ALPHA_TILE_BYTES = 16;
 const ALPHA_PLANE_OFFSETS = [0, 4] as const;
 const ALPHA_X_OFFSETS = [0, 1, 2, 3, 8, 9, 10, 11] as const;
+
+export function splitGraphicsProms(proms: Uint8Array): GraphicsPromTables {
+  return {
+    remap: proms.slice(0x000, 0x200),
+    color: proms.slice(0x200, 0x400),
+  };
+}
 
 function readMsbFirstBit(bytes: Uint8Array, bitOffset: number): number {
   const byte = bytes[bitOffset >>> 3] ?? 0;

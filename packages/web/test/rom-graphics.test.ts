@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeAlphaRom } from "../src/rom-graphics.js";
+import { decodeAlphaRom, splitGraphicsProms } from "../src/rom-graphics.js";
 
 describe("decodeAlphaRom", () => {
   it("decodes 8x8 2bpp alpha glyphs using the documented System 1 layout", () => {
@@ -22,5 +22,24 @@ describe("decodeAlphaRom", () => {
 
   it("ignores incomplete trailing bytes", () => {
     expect(decodeAlphaRom(new Uint8Array(17)).glyphs).toHaveLength(1);
+  });
+});
+
+describe("splitGraphicsProms", () => {
+  it("splits remap and color PROM tables without interpreting them", () => {
+    const proms = new Uint8Array(0x400);
+    proms[0] = 0x11;
+    proms[0x1ff] = 0x22;
+    proms[0x200] = 0x33;
+    proms[0x3ff] = 0x44;
+
+    const tables = splitGraphicsProms(proms);
+
+    expect(tables.remap).toHaveLength(0x200);
+    expect(tables.color).toHaveLength(0x200);
+    expect(tables.remap[0]).toBe(0x11);
+    expect(tables.remap[0x1ff]).toBe(0x22);
+    expect(tables.color[0]).toBe(0x33);
+    expect(tables.color[0x1ff]).toBe(0x44);
   });
 });
