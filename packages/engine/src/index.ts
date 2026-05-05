@@ -47,6 +47,7 @@ export * as animationStep from "./animation-step.js";
 export * as spriteCoords from "./sprite-coords.js";
 export * as objectCompare from "./object-compare.js";
 export * as spritePack from "./sprite-pack.js";
+export * as spriteDerive from "./sprite-derive.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
