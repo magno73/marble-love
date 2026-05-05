@@ -119,7 +119,10 @@ playfield RAM extraction remain TODOs.
 raw views in the web loader. The web graphics scaffold also builds playfield and
 motion-object lookup metadata from the PROM rules in `atarisy1_v.cpp`, and can
 decode a single 8x8 object tile from the documented 4/5/6bpp planar layouts.
-This is still not wired into real playfield rendering.
+When a demo frame carries explicit `gfxBank`/`bitsPerPixel` metadata, the Pixi
+renderer can turn those decoded object tiles into in-memory textures. This is
+used only by the ROM-backed demo frame; real playfield RAM rendering remains
+unimplemented.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.

@@ -32,6 +32,8 @@ export interface PaletteEntry {
 export interface TileCommand {
   /** Indice nel tile bank della ROM o fixture sintetica. */
   tileIndex: number;
+  gfxBank?: number;
+  bitsPerPixel?: 4 | 5 | 6;
   x: number;
   y: number;
   width?: number;
@@ -46,6 +48,8 @@ export interface TileCommand {
 export interface SpriteCommand {
   /** Indice nello sprite RAM (motion object) o fixture sintetica. */
   spriteIndex: number;
+  gfxBank?: number;
+  bitsPerPixel?: 4 | 5 | 6;
   x: number;
   y: number;
   width?: number;
