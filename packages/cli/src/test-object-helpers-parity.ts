@@ -200,8 +200,31 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
+  // Init obj arrays test
+  console.log(`\n=== initObjArrays (FUN_25B40) — ${n} casi ===`);
+  let okIO = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const OBJ4 = 0x00401D00;
+    for (let j = 0; j < 0x100; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, OBJ4 + j, 1, v);
+      stateInst.workRam[(OBJ4 - 0x400000) + j] = v;
+    }
+    callFunction(cpu, 0x25b40, [OBJ4]);
+    objectHelpers.initObjArrays(stateInst, tsRom2, OBJ4);
+    let m = true;
+    for (let j = 0; j < 0x100; j++) {
+      if (peekMem(cpu, OBJ4 + j, 1) !== (stateInst.workRam[(OBJ4 - 0x400000) + j] ?? 0)) {
+        m = false; break;
+      }
+    }
+    if (m) okIO++;
+  }
+  console.log(`  Match: ${okIO}/${n} = ${((okIO/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n && okT === n && okCD === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n && okT === n && okCD === n && okIO === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
