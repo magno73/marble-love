@@ -10,33 +10,59 @@
  */
 
 import { Application } from "pixi.js";
-import {
-  state as stateNs,
-  tick,
-} from "@marble-love/engine";
+import { state as stateNs, tick } from "@marble-love/engine";
 import { initInput } from "./input.js";
+import { buildClassicDemoFrame } from "./fixtures/classic-demo-frame.js";
 import { initRenderer } from "./renderer.js";
-import { extractRomZip } from "./rom-loader.js";
+import { extractRomZipFiles } from "./rom-loader.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
 const btn = document.getElementById("rom-btn") as HTMLButtonElement;
+const romStatus = document.getElementById("rom-status") as HTMLParagraphElement;
+const useSyntheticDemoFrame = import.meta.env.DEV;
+
+function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
+  romStatus.textContent = message;
+  romStatus.dataset.tone = tone;
+}
 
 btn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", async () => {
-  const file = fileInput.files?.[0];
-  if (!file) return;
+  const files = fileInput.files;
+  if (!files || files.length === 0) return;
   try {
-    const rom = await extractRomZip(file);
+    btn.disabled = true;
+    setRomStatus("Validazione ROM locale in corso...");
+    const rom = await extractRomZipFiles(files);
+    const warningText =
+      rom.validation.warnings.length > 0
+        ? ` (${rom.validation.warnings.length} avvisi di formato)`
+        : "";
+    setRomStatus(
+      `ROM valida: ${rom.validation.fileCount} file verificati CRC32${warningText}.`,
+      "ok",
+    );
     splash.remove();
     await startGame(rom);
   } catch (err) {
     console.error(err);
-    alert("Errore caricando la ROM: " + (err instanceof Error ? err.message : err));
+    setRomStatus(
+      "Errore caricando la ROM: " + (err instanceof Error ? err.message : err),
+      "error",
+    );
+    btn.disabled = false;
   }
 });
 
-async function startGame(rom: Awaited<ReturnType<typeof extractRomZip>>): Promise<void> {
+if (useSyntheticDemoFrame) {
+  splash.remove();
+  void startGame();
+}
+
+async function startGame(
+  rom?: Awaited<ReturnType<typeof extractRomZipFiles>>,
+): Promise<void> {
   const app = new Application();
   await app.init({
     background: "#0a0a0a",
@@ -53,12 +79,18 @@ async function startGame(rom: Awaited<ReturnType<typeof extractRomZip>>): Promis
 
   const renderer = initRenderer(app);
   const inputState = initInput();
+  let demoFrame = 0;
 
   app.ticker.add(() => {
     s.input.trackballDx = inputState.consumeDx() as typeof s.input.trackballDx;
     s.input.trackballDy = inputState.consumeDy() as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
     tick(s);
-    renderer.draw(s);
+    if (useSyntheticDemoFrame) {
+      renderer.drawFrame(buildClassicDemoFrame(demoFrame));
+      demoFrame += 1;
+    } else {
+      renderer.draw(s);
+    }
   });
 }
