@@ -83,6 +83,33 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
+  // V4
+  console.log(`\n=== computeSpriteCoords_v4 (FUN_18972) — ${n} casi ===`);
+  let okV4 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    setHud();
+    const ARG = 0x00401D00;
+    for (let j = 0; j < 0x20; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, ARG + j, 1, v);
+      stateInst.workRam[(ARG - 0x400000) + j] = v;
+    }
+    callFunction(cpu, 0x18972, [ARG]);
+    spriteCoords.computeSpriteCoords_v4(stateInst, ARG);
+    let m = true;
+    for (let j = 0; j < 0x20; j++) {
+      if (peekMem(cpu, ARG + j, 1) !== (stateInst.workRam[(ARG - 0x400000) + j] ?? 0)) { m = false; break; }
+    }
+    if (m) {
+      for (let j = 0x690; j <= 0x693; j++) {
+        if (peekMem(cpu, 0x400000 + j, 1) !== (stateInst.workRam[j] ?? 0)) { m = false; break; }
+      }
+    }
+    if (m) okV4++;
+  }
+  console.log(`  Match: ${okV4}/${n} = ${((okV4/n)*100).toFixed(1)}%`);
+
   // V3
   console.log(`\n=== computeSpriteCoords_v3 (FUN_1778E) — ${n} casi ===`);
   let ok3 = 0;
@@ -111,7 +138,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okV4 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });

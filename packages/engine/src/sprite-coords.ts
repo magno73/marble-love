@@ -72,6 +72,23 @@ export function computeSpriteCoords_v2(state: GameState, argAddr: number): void 
   compute(state, w0, w2, w4, argOff + 0x20);
 }
 
+/**
+ * Replica `FUN_00018972` — variante con byte inputs (× 8 scaling).
+ * Reads byte+4 (×8 → w0), byte+5 (×8 → w2), word+6 (= w4). Writes to +0xC long.
+ */
+export function computeSpriteCoords_v4(state: GameState, argAddr: number): void {
+  const argOff = argAddr - 0x400000;
+  const r = state.workRam;
+  const b4 = r[argOff + 4] ?? 0;
+  const b4Signed = b4 & 0x80 ? b4 - 0x100 : b4;
+  const w0 = (b4Signed << 3) & 0xffff;
+  const b5 = r[argOff + 5] ?? 0;
+  const b5Signed = b5 & 0x80 ? b5 - 0x100 : b5;
+  const w2 = (b5Signed << 3) & 0xffff;
+  const w4 = readU16(state, argOff + 6);
+  compute(state, w0, w2, w4, argOff + 0xC);
+}
+
 /** Replica `FUN_0001778E` — variante che scrive a +0x28 invece di +0x20. */
 export function computeSpriteCoords_v3(state: GameState, argAddr: number): void {
   const argOff = argAddr - 0x400000;
