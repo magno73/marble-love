@@ -31,6 +31,33 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
   }
 }
 
+/**
+ * Replica `FUN_00001CEA` — `paletteRamInitFull()`.
+ *
+ * 2 loops:
+ *   1. 256 iter: copy word from ROM[0x6A36 + i*4] to palette+0x200, +0x400, +0x600
+ *   2. 16 iter: copy word from ROM[0x6E34 + i*2] to palette[0..0x1F]
+ */
+export function paletteRamInitFull(state: GameState, rom: RomImage): void {
+  // Loop 1: 256 entries
+  for (let i = 0; i < 256; i++) {
+    const idx = 0x6a34 + 2 + i * 4; // ROM[base + 2 + i*4]
+    const w = ((rom.program[idx] ?? 0) << 8) | (rom.program[idx + 1] ?? 0);
+    // Write to 3 palette regions
+    for (const baseOff of [0x200, 0x400, 0x600]) {
+      state.colorRam[baseOff + i * 2] = (w >>> 8) & 0xff;
+      state.colorRam[baseOff + i * 2 + 1] = w & 0xff;
+    }
+  }
+  // Loop 2: 16 entries from 0x6E34
+  for (let i = 0; i < 16; i++) {
+    const idx = 0x6e34 + i * 2;
+    const w = ((rom.program[idx] ?? 0) << 8) | (rom.program[idx + 1] ?? 0);
+    state.colorRam[i * 2] = (w >>> 8) & 0xff;
+    state.colorRam[i * 2 + 1] = w & 0xff;
+  }
+}
+
 export function negateXYSwap(state: GameState, ptr: number): void {
   // *A0 = -(*A0+4); *(A0+4) = -(*A0)  (with intermediate save)
   const off = ptr - 0x400000;
