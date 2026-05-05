@@ -1,11 +1,8 @@
 /**
- * renderer.ts — adapter PixiJS per il renderer dell'engine.
+ * renderer.ts — adapter PixiJS per frame classici astratti.
  *
- * L'engine produce `Frame { tiles, sprites, scrollX, scrollY }` (neutro).
- * Qui traduciamo in PIXI.Container con sprite/tile.
- *
- * Phase 7: implementazione completa con texture atlas estratti dalla ROM
- * (decoded da `tools/rom_prep.py` o on-the-fly da `bus.rom.tiles`).
+ * L'engine produce un `Frame` neutro. Questo adapter disegna solo i comandi
+ * ricevuti, senza leggere o modificare la logica di gioco.
  */
 
 import type { Application } from "pixi.js";
@@ -13,27 +10,209 @@ import { Container, Graphics } from "pixi.js";
 import { render as renderNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
 
+type Frame = renderNs.Frame;
+type RgbaColor = renderNs.RgbaColor;
+
+const DEFAULT_TILE_SIZE = 8;
+const FALLBACK_COLOR = 0xff00ff;
+
 export interface Renderer {
   draw(state: GameState): void;
+  drawFrame(frame: Frame): void;
+}
+
+interface ClassicLayers {
+  viewport: Container;
+  playfieldLayer: Container;
+  spriteLayer: Container;
+  alphaLayer: Container;
+  chromeLayer: Container;
+  chromeGraphics: Graphics;
+  playfieldGraphics: Graphics;
+  spriteGraphics: Graphics;
+  alphaGraphics: Graphics;
+}
+
+function rgbaToPixiColor(color: RgbaColor): number {
+  return (color.r << 16) | (color.g << 8) | color.b;
+}
+
+function alphaFromRgba(color: RgbaColor): number {
+  return Math.max(0, Math.min(1, color.a / 255));
+}
+
+function paletteLookup(frame: Frame, paletteIndex: number): RgbaColor {
+  return (
+    frame.palette.find((entry) => entry.index === paletteIndex)?.rgba ?? {
+      r: 255,
+      g: 0,
+      b: 255,
+      a: 255,
+    }
+  );
+}
+
+function applyViewportScale(app: Application, viewport: Container, frame: Frame): void {
+  const screenWidth = app.renderer.width;
+  const screenHeight = app.renderer.height;
+  const scale = Math.max(
+    1,
+    Math.floor(
+      Math.min(
+        screenWidth / frame.nativeSize.width,
+        screenHeight / frame.nativeSize.height,
+      ),
+    ),
+  );
+
+  viewport.scale.set(scale);
+  viewport.x = Math.floor((screenWidth - frame.nativeSize.width * scale) / 2);
+  viewport.y = Math.floor((screenHeight - frame.nativeSize.height * scale) / 2);
+}
+
+function drawPlayfield(frame: Frame, graphics: Graphics): void {
+  graphics.clear();
+
+  for (const tile of frame.playfield) {
+    const color = paletteLookup(frame, tile.paletteIndex);
+    const width = tile.width ?? DEFAULT_TILE_SIZE;
+    const height = tile.height ?? DEFAULT_TILE_SIZE;
+    const shade = (tile.tileIndex + (tile.priority ?? 0)) % 3;
+
+    graphics
+      .rect(tile.x, tile.y, width, height)
+      .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+
+    if (shade === 0) {
+      graphics.rect(tile.x, tile.y, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
+    }
+  }
+}
+
+function drawSprites(frame: Frame, graphics: Graphics): void {
+  graphics.clear();
+
+  const sortedSprites = [...frame.sprites].sort(
+    (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
+  );
+
+  for (const sprite of sortedSprites) {
+    const color = paletteLookup(frame, sprite.paletteIndex);
+    const width = sprite.width ?? 16;
+    const height = sprite.height ?? 16;
+    const alpha = sprite.translucent
+      ? alphaFromRgba(color) * 0.65
+      : alphaFromRgba(color);
+    const x = sprite.flipX ? sprite.x - 1 : sprite.x;
+    const y = sprite.flipY ? sprite.y - 1 : sprite.y;
+
+    graphics.rect(x, y, width, height).fill({ color: rgbaToPixiColor(color), alpha });
+
+    graphics
+      .rect(x + 2, y + 2, Math.max(1, width - 4), Math.max(1, height - 4))
+      .fill({ color: 0x000000, alpha: sprite.translucent ? 0.12 : 0.2 });
+  }
+}
+
+function drawAlpha(frame: Frame, graphics: Graphics): void {
+  graphics.clear();
+
+  for (const command of frame.alpha) {
+    const color = paletteLookup(frame, command.paletteIndex);
+    const glyphPattern = command.tileIndex;
+    const backgroundAlpha = command.opaque ? 0.72 : 0.18;
+
+    if (command.opaque) {
+      graphics
+        .rect(command.x, command.y, DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE)
+        .fill({ color: 0x000000, alpha: backgroundAlpha });
+    }
+
+    for (let row = 0; row < 3; row += 1) {
+      for (let column = 0; column < 3; column += 1) {
+        const bit = (glyphPattern >> (row * 3 + column)) & 1;
+        if (bit === 1) {
+          graphics
+            .rect(command.x + 1 + column * 2, command.y + 1 + row * 2, 2, 2)
+            .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+        }
+      }
+    }
+  }
+}
+
+function drawChrome(frame: Frame, graphics: Graphics): void {
+  graphics.clear();
+  graphics
+    .rect(0, 0, frame.nativeSize.width, frame.nativeSize.height)
+    .stroke({ color: 0x101820, alpha: 1, width: 1 });
+
+  if (frame.debugLabel === undefined) return;
+
+  const blockCount = Math.min(16, frame.debugLabel.length);
+  for (let i = 0; i < blockCount; i += 1) {
+    const code = frame.debugLabel.charCodeAt(i);
+    const color = code % 2 === 0 ? 0x8ee6ad : 0xffd37a;
+    graphics
+      .rect(frame.nativeSize.width - 6 - i * 5, frame.nativeSize.height - 6, 3, 3)
+      .fill({ color, alpha: 0.9 });
+  }
+}
+
+function initLayers(app: Application): ClassicLayers {
+  const viewport = new Container();
+  const playfieldLayer = new Container();
+  const spriteLayer = new Container();
+  const alphaLayer = new Container();
+  const chromeLayer = new Container();
+  const chromeGraphics = new Graphics();
+  const playfieldGraphics = new Graphics();
+  const spriteGraphics = new Graphics();
+  const alphaGraphics = new Graphics();
+
+  app.stage.addChild(viewport);
+  viewport.addChild(playfieldLayer);
+  viewport.addChild(spriteLayer);
+  viewport.addChild(alphaLayer);
+  viewport.addChild(chromeLayer);
+  playfieldLayer.addChild(playfieldGraphics);
+  spriteLayer.addChild(spriteGraphics);
+  alphaLayer.addChild(alphaGraphics);
+  chromeLayer.addChild(chromeGraphics);
+
+  app.canvas.style.imageRendering = "pixelated";
+
+  return {
+    viewport,
+    playfieldLayer,
+    spriteLayer,
+    alphaLayer,
+    chromeLayer,
+    chromeGraphics,
+    playfieldGraphics,
+    spriteGraphics,
+    alphaGraphics,
+  };
 }
 
 export function initRenderer(app: Application): Renderer {
-  const root = new Container();
-  app.stage.addChild(root);
-
-  // Placeholder visuale: rettangolo che ruota leggermente, per dimostrare
-  // che il loop tickea. Phase 7: sostituire con tile/sprite veri.
-  const ph = new Graphics();
-  ph.rect(-32, -32, 64, 64).fill({ color: 0xff5f5f });
-  ph.x = app.canvas.width / 2;
-  ph.y = app.canvas.height / 2;
-  root.addChild(ph);
+  const layers = initLayers(app);
 
   return {
     draw(state: GameState): void {
-      const frame = renderNs.buildFrame(state);
-      ph.rotation = (frame.scrollX || (state.clock.frame as unknown as number)) * 0.01;
-      // TODO Phase 7: pool di sprite/tile, diff frame-by-frame.
+      this.drawFrame(renderNs.buildFrame(state));
+    },
+
+    drawFrame(frame: Frame): void {
+      applyViewportScale(app, layers.viewport, frame);
+      drawPlayfield(frame, layers.playfieldGraphics);
+      drawSprites(frame, layers.spriteGraphics);
+      drawAlpha(frame, layers.alphaGraphics);
+      drawChrome(frame, layers.chromeGraphics);
+
+      if (frame.palette.length === 0) {
+        layers.alphaGraphics.rect(0, 0, 1, 1).fill({ color: FALLBACK_COLOR, alpha: 0 });
+      }
     },
   };
 }

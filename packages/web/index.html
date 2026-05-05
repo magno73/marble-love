@@ -19,7 +19,11 @@
         height: 100%;
         background: #0a0a0a;
         color: #f4f4f4;
-        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
         overflow: hidden;
       }
       #app {
@@ -47,6 +51,17 @@
         line-height: 1.5;
         opacity: 0.8;
       }
+      .splash .status {
+        min-height: 22px;
+        margin: 16px 0 0;
+        color: #d6d6d6;
+      }
+      .splash .status[data-tone="ok"] {
+        color: #8ee6ad;
+      }
+      .splash .status[data-tone="error"] {
+        color: #ff9b9b;
+      }
       .splash button {
         margin-top: 20px;
         padding: 12px 20px;
@@ -56,6 +71,10 @@
         border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
+      }
+      .splash button:disabled {
+        cursor: wait;
+        opacity: 0.55;
       }
       .splash input[type="file"] {
         display: none;
@@ -67,14 +86,15 @@
       <div class="splash" id="splash">
         <h1>Marble Love</h1>
         <p>
-          Reimplementazione di Marble Madness (Atari, 1984). Carica la tua ROM
-          locale (<code>marble.zip</code>). La ROM resta sul tuo dispositivo —
-          nessun server.
+          Reimplementazione di Marble Madness (Atari, 1984). Carica la tua ROM locale
+          (<code>marble.zip</code> e, se serve, <code>atarisy1.zip</code>). La ROM resta
+          sul tuo dispositivo — nessun server.
         </p>
         <label>
-          <input id="rom-input" type="file" accept=".zip,.7z" />
-          <button id="rom-btn" type="button">Carica ROM e gioca</button>
+          <input id="rom-input" type="file" accept=".zip" multiple />
+          <button id="rom-btn" type="button">Carica ROM</button>
         </label>
+        <p class="status" id="rom-status" data-tone="idle"></p>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
