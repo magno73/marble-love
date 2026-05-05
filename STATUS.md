@@ -99,6 +99,13 @@
 
 **🎯 93 sub-systems bit-perfect** (93/314 ≈ 30% del binario coperto). State-machine schedulers ora completi per stati 1, 2, 3, 4, 5/6, 7.
 
+**Sessione 2026-05-05 batch 3 (+3)**:
+- ✅ trackballApplyDelta (FUN_25DF6) — 1000/1000
+- ✅ paletteInitLevel (FUN_1A41E) — 1/1, ROM ptr table 0x24694 (non-contiguous)
+- ✅ paletteInitEnemy (FUN_26B2A) — 5/5, ROM ptr table 0x20534
+
+**🎯 96 sub-systems bit-perfect** (96/314 ≈ 31% del binario coperto).
+
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
 2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
