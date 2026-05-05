@@ -52,6 +52,7 @@ export * as gridBitmapTest from "./grid-bitmap-test.js";
 export * as lerp from "./lerp.js";
 export * as timerDelta from "./timer-delta.js";
 export * as particleBounce from "./particle-bounce.js";
+export * as proximityCheck from "./proximity-check.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
