@@ -35,6 +35,58 @@ function writeU32(s: GameState, off: number, v: number): void {
   s.workRam[off + 3] = x & 0xff;
 }
 
+/**
+ * Replica `FUN_00014DEC` — variante con list ptr da obj+0x4E, stride 4 byte,
+ * write a obj+0x4A. Stesso algoritmo di findNearestNeighbor.
+ */
+export function findNearestNeighborV2(state: GameState, objAddr: number): void {
+  const objOff = objAddr - 0x400000;
+  const refX = (readU32S(state, objOff + 0xC) >> 19) & 0xffff;
+  const refY = (readU32S(state, objOff + 0x10) >> 19) & 0xffff;
+  const refXSigned = refX & 0x8000 ? refX - 0x10000 : refX;
+  const refYSigned = refY & 0x8000 ? refY - 0x10000 : refY;
+
+  let listAddr = readU32(state, objOff + 0x4E);
+  let bestDist = 0x400;
+  let bestPtr = 0xffffffff;
+
+  let safety = 256;
+  while (safety-- > 0) {
+    const listOff = (listAddr - 0x400000) >>> 0;
+    const b0 = state.workRam[listOff] ?? 0;
+    if (b0 === 0xFF) break;
+    const b1 = state.workRam[listOff + 1] ?? 0;
+    if (b1 === 0xFF) break;
+    const b0S = b0 & 0x80 ? b0 - 0x100 : b0;
+    const b1S = b1 & 0x80 ? b1 - 0x100 : b1;
+    const dx = (refXSigned - b0S) & 0xffff;
+    const dy = (refYSigned - b1S) & 0xffff;
+    const dxSigned = dx & 0x8000 ? dx - 0x10000 : dx;
+    const dySigned = dy & 0x8000 ? dy - 0x10000 : dy;
+    const dxAbsW = (dxSigned < 0 ? -dxSigned : dxSigned) & 0xffff;
+    const dyAbsW = (dySigned < 0 ? -dySigned : dySigned) & 0xffff;
+    const dxScaled = (dxAbsW << 4) & 0xffff;
+    const dyScaled = (dyAbsW << 4) & 0xffff;
+    let dist: number;
+    if (dxScaled <= dyScaled) {
+      const d1 = (dxScaled >>> 3) & 0xffff;
+      const d1Mul = (d1 * 3) >>> 0;
+      dist = (d1Mul + dyScaled) & 0xffff;
+    } else {
+      const d1 = (dyScaled >>> 3) & 0xffff;
+      const d1Mul = (d1 * 3) >>> 0;
+      dist = (d1Mul + dxScaled) & 0xffff;
+    }
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestPtr = listAddr;
+    }
+    listAddr = (listAddr + 4) >>> 0; // stride 4 (different from V1)
+  }
+
+  writeU32(state, objOff + 0x4A, bestPtr);
+}
+
 export function findNearestNeighbor(state: GameState, objAddr: number): void {
   const objOff = objAddr - 0x400000;
   // ref x/y = high word of long >> 19 → effectively 16-bit signed
