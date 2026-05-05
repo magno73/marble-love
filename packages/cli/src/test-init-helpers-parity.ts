@@ -55,6 +55,21 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2 ? 1 : 0}/1`);
 
+  // FUN_1CEA: palette init full
+  console.log(`\n=== paletteRamInitFull (FUN_1CEA) — 1 caso ===`);
+  cpu.system.setRegister("sp", 0x401f00);
+  for (let j = 0; j < 0x800; j++) {
+    pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
+    stateInst.colorRam[j] = 0xCC;
+  }
+  callFunction(cpu, 0x1cea, []);
+  initHelpers.paletteRamInitFull(stateInst, tsRom);
+  let okPF = true;
+  for (let j = 0; j < 0x800; j++) {
+    if (peekMem(cpu, 0xB00000 + j, 1) !== (stateInst.colorRam[j] ?? 0)) { okPF = false; break; }
+  }
+  console.log(`  Match: ${okPF ? 1 : 0}/1`);
+
   // FUN_1286E
   console.log(`\n=== negateXYSwap (FUN_1286E) — ${n} casi ===`);
   let ok3 = 0;
@@ -80,7 +95,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
