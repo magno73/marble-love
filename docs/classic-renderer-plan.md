@@ -82,6 +82,9 @@ Completed:
 - Added PROM-derived playfield/motion-object lookup metadata using the MAME
   `decode_gfx()` rules, plus a single-tile object planar decoder for documented
   4/5/6bpp 8x8 layouts.
+- Added optional `gfxBank`/`bitsPerPixel` command metadata and a ROM-backed demo
+  frame path that renders decoded object-tile textures in memory. This is a demo
+  path only, not real playfield RAM rendering.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
@@ -116,6 +119,8 @@ Completed:
   the documented System 1 alpha word layout.
 - Added deterministic playfield RAM word field extraction without wiring
   playfield RAM into `GameState`.
+- Extended neutral tile/sprite commands with optional graphics bank and bpp
+  metadata for renderer-side ROM-backed scaffolds.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds while
   leaving playfield and sprite command arrays empty.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.

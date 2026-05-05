@@ -12,7 +12,10 @@
 import { Application } from "pixi.js";
 import { state as stateNs, tick } from "@marble-love/engine";
 import { initInput } from "./input.js";
-import { buildClassicDemoFrame } from "./fixtures/classic-demo-frame.js";
+import {
+  buildClassicDemoFrame,
+  buildRomBackedDemoFrame,
+} from "./fixtures/classic-demo-frame.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 
@@ -88,7 +91,11 @@ async function startGame(
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
     tick(s);
     if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
-      renderer.drawFrame(buildClassicDemoFrame(demoFrame));
+      renderer.drawFrame(
+        rom === undefined
+          ? buildClassicDemoFrame(demoFrame)
+          : buildRomBackedDemoFrame(rom.graphics, demoFrame),
+      );
       demoFrame += 1;
     } else {
       renderer.draw(s);

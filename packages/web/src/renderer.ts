@@ -12,8 +12,10 @@ import type { GameState } from "@marble-love/engine";
 import type {
   DecodedAlphaGlyph,
   DecodedAlphaGraphics,
+  DecodedObjectTile,
   RomGraphicsAssets,
 } from "./rom-graphics.js";
+import { decodeObjectTile } from "./rom-graphics.js";
 
 type Frame = renderNs.Frame;
 type RgbaColor = renderNs.RgbaColor;
@@ -41,8 +43,11 @@ interface ClassicLayers {
 
 interface RendererAssets {
   alpha: DecodedAlphaGraphics | undefined;
+  romGraphics: RomGraphicsAssets | undefined;
   alphaSpritePool: Sprite[];
   alphaTextureCache: Map<string, Texture>;
+  playfieldSpritePool: Sprite[];
+  playfieldTextureCache: Map<string, Texture>;
 }
 
 function rgbaToPixiColor(color: RgbaColor): number {
@@ -86,10 +91,109 @@ function applyViewportScale(app: Application, viewport: Container, frame: Frame)
   viewport.y = Math.floor((screenHeight - frame.nativeSize.height * scale) / 2);
 }
 
-function drawPlayfield(frame: Frame, graphics: Graphics): void {
+function textureFromObjectTile(
+  frame: Frame,
+  tile: DecodedObjectTile,
+  paletteBase: number,
+): Texture {
+  const canvas = document.createElement("canvas");
+  canvas.width = tile.width;
+  canvas.height = tile.height;
+  const context = canvas.getContext("2d");
+  if (context === null) return Texture.EMPTY;
+
+  const imageData = context.createImageData(tile.width, tile.height);
+  for (let y = 0; y < tile.height; y += 1) {
+    for (let x = 0; x < tile.width; x += 1) {
+      const pen = tile.pixels[y * tile.width + x] ?? 0;
+      const color = paletteLookup(frame, paletteBase + pen);
+      const offset = (y * tile.width + x) * 4;
+      imageData.data[offset] = color.r;
+      imageData.data[offset + 1] = color.g;
+      imageData.data[offset + 2] = color.b;
+      imageData.data[offset + 3] = pen === 0 ? 0 : color.a;
+    }
+  }
+
+  context.putImageData(imageData, 0, 0);
+  return Texture.from(canvas, true);
+}
+
+function objectTileTextureForCommand(
+  frame: Frame,
+  command: renderNs.TileCommand | renderNs.SpriteCommand,
+  assets: RendererAssets,
+): Texture | undefined {
+  if (
+    assets.romGraphics === undefined ||
+    command.gfxBank === undefined ||
+    command.bitsPerPixel === undefined
+  ) {
+    return undefined;
+  }
+
+  const tileIndex = "tileIndex" in command ? command.tileIndex : command.spriteIndex;
+  const cacheKey = [
+    command.gfxBank,
+    command.bitsPerPixel,
+    tileIndex,
+    command.paletteIndex,
+  ].join(":");
+  const cached = assets.playfieldTextureCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const tile = decodeObjectTile(
+    assets.romGraphics.tiles,
+    command.gfxBank,
+    tileIndex,
+    command.bitsPerPixel,
+  );
+  const texture = textureFromObjectTile(frame, tile, command.paletteIndex);
+  assets.playfieldTextureCache.set(cacheKey, texture);
+  return texture;
+}
+
+function acquirePlayfieldSprite(layers: ClassicLayers, assets: RendererAssets): Sprite {
+  const sprite = assets.playfieldSpritePool.find((candidate) => !candidate.visible);
+  if (sprite !== undefined) {
+    sprite.visible = true;
+    return sprite;
+  }
+
+  const created = new Sprite();
+  created.roundPixels = true;
+  layers.playfieldLayer.addChild(created);
+  assets.playfieldSpritePool.push(created);
+  return created;
+}
+
+function hidePlayfieldSprites(assets: RendererAssets): void {
+  for (const sprite of assets.playfieldSpritePool) {
+    sprite.visible = false;
+  }
+}
+
+function drawPlayfield(
+  frame: Frame,
+  graphics: Graphics,
+  layers: ClassicLayers,
+  assets: RendererAssets,
+): void {
   graphics.clear();
+  hidePlayfieldSprites(assets);
 
   for (const tile of frame.playfield) {
+    const texture = objectTileTextureForCommand(frame, tile, assets);
+    if (texture !== undefined && texture !== Texture.EMPTY) {
+      const sprite = acquirePlayfieldSprite(layers, assets);
+      sprite.texture = texture;
+      sprite.x = tile.x;
+      sprite.y = tile.y;
+      sprite.scale.x = (tile.width ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
+      sprite.scale.y = (tile.height ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
+      continue;
+    }
+
     const color = paletteLookup(frame, tile.paletteIndex);
     const width = tile.width ?? DEFAULT_TILE_SIZE;
     const height = tile.height ?? DEFAULT_TILE_SIZE;
@@ -322,8 +426,11 @@ function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
   return {
     alpha:
       graphics?.decodedAlpha.status === "decoded" ? graphics.decodedAlpha : undefined,
+    romGraphics: graphics,
     alphaSpritePool: [],
     alphaTextureCache: new Map(),
+    playfieldSpritePool: [],
+    playfieldTextureCache: new Map(),
   };
 }
 
@@ -338,7 +445,7 @@ export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Re
 
     drawFrame(frame: Frame): void {
       applyViewportScale(app, layers.viewport, frame);
-      drawPlayfield(frame, layers.playfieldGraphics);
+      drawPlayfield(frame, layers.playfieldGraphics, layers, assets);
       drawSprites(frame, layers.spriteGraphics);
       drawAlpha(frame, layers.alphaGraphics, layers, assets);
       drawChrome(frame, layers.chromeGraphics);

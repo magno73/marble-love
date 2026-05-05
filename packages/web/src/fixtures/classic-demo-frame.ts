@@ -1,4 +1,5 @@
 import type { render as renderNs } from "@marble-love/engine";
+import type { GraphicsLookupEntry, RomGraphicsAssets } from "../rom-graphics.js";
 
 type Frame = renderNs.Frame;
 type PaletteEntry = renderNs.PaletteEntry;
@@ -128,4 +129,48 @@ export function buildClassicDemoFrame(frameNumber: number): Frame {
     alpha: buildAlpha(),
     debugLabel: "synthetic-classic-demo",
   };
+}
+
+function firstDrawablePlayfieldLookup(
+  graphics: RomGraphicsAssets,
+  startIndex: number,
+): { lookup: GraphicsLookupEntry; lookupIndex: number } {
+  for (let i = 0; i < graphics.lookupTables.playfield.length; i += 1) {
+    const lookupIndex = (startIndex + i) % graphics.lookupTables.playfield.length;
+    const lookup = graphics.lookupTables.playfield[lookupIndex];
+    if (lookup !== undefined && lookup.bank > 0) {
+      return { lookup, lookupIndex };
+    }
+  }
+
+  return {
+    lookup: { offset: 0, bank: 1, color: 0, bpp: 4 },
+    lookupIndex: 0,
+  };
+}
+
+export function buildRomBackedDemoFrame(
+  graphics: RomGraphicsAssets,
+  frameNumber: number,
+): Frame {
+  const frame = buildClassicDemoFrame(frameNumber);
+
+  frame.playfield = frame.playfield.map((tile, index) => {
+    const { lookup, lookupIndex } = firstDrawablePlayfieldLookup(
+      graphics,
+      tile.tileIndex + index,
+    );
+
+    return {
+      ...tile,
+      tileIndex: lookup.offset * 256 + (tile.tileIndex & 0xff),
+      gfxBank: lookup.bank,
+      bitsPerPixel: lookup.bpp,
+      paletteIndex: 0x20 + lookup.color * 8,
+      priority: lookupIndex,
+    };
+  });
+
+  frame.debugLabel = "rom-backed-demo";
+  return frame;
 }
