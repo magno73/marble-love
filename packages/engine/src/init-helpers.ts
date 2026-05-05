@@ -32,6 +32,47 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
 }
 
 /**
+ * Replica `FUN_000031D0` — `gameStateMachineInit()`.
+ *
+ * Init logic:
+ *   - rotation flag = (ROM[0x10072] != 0 AND ROM[0x10000..0x10001].w == 0x4EF9) ? 1 : 0
+ *   - Clear globals 0x401F00, 0x401F02, 0x401F3A, 0x401F3C, 0x401F3E
+ *   - Clear 4 slot state bytes (0x401F1C..1F1F) and 4 data ptrs (0x401F04..1F13)
+ *   - Clear alpha RAM 0xA03000..0xA03EFF (3840 byte = 0xF00)
+ */
+export function gameStateMachineInit(state: GameState, rom: RomImage): void {
+  // rotation flag: ROM byte at 0x10072 (truthy?) AND ROM word at 0x10000 == 0x4EF9
+  const b72 = rom.program[0x10072] ?? 0;
+  const w0 = ((rom.program[0x10000] ?? 0) << 8) | (rom.program[0x10001] ?? 0);
+  const rotFlag = (b72 !== 0 && w0 === 0x4EF9) ? 1 : 0;
+  state.workRam[0x1f42] = (rotFlag >>> 8) & 0xff;
+  state.workRam[0x1f43] = rotFlag & 0xff;
+  // Clear 5 word globals
+  for (const off of [0x1f00, 0x1f02, 0x1f3a, 0x1f3c, 0x1f3e]) {
+    state.workRam[off] = 0;
+    state.workRam[off + 1] = 0;
+  }
+  // Clear 4 slot state bytes
+  for (let i = 0; i < 4; i++) {
+    state.workRam[0x1f1c + i] = 0;
+  }
+  // Clear 4 data ptr longs
+  for (let i = 0; i < 4; i++) {
+    const off = 0x1f04 + i * 4;
+    state.workRam[off] = 0;
+    state.workRam[off + 1] = 0;
+    state.workRam[off + 2] = 0;
+    state.workRam[off + 3] = 0;
+  }
+  // Clear alpha RAM 0xA03000..0xA03EFF (note: word loop until 0xA03F00, so writes 0..0xEFE in word boundaries)
+  // Disasm: clr.w (A0)+ until A0 >= 0xA03F00 unsigned
+  // So clears words at 0..0xEFE inclusive (0xF00 bytes total)
+  for (let i = 0; i < 0xF00; i++) {
+    state.alphaRam[i] = 0;
+  }
+}
+
+/**
  * Replica `FUN_00001CEA` — `paletteRamInitFull()`.
  *
  * 2 loops:

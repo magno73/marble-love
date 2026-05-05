@@ -70,6 +70,41 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okPF ? 1 : 0}/1`);
 
+  // FUN_31D0: game state machine init
+  console.log(`\n=== gameStateMachineInit (FUN_31D0) — 1 caso ===`);
+  cpu.system.setRegister("sp", 0x401f00);
+  // Pre-fill: workRam globals and alpha
+  for (const off of [0x1f00, 0x1f02, 0x1f3a, 0x1f3c, 0x1f3e, 0x1f42]) {
+    pokeMem(cpu, 0x400000 + off, 2, 0xCCCC);
+    stateInst.workRam[off] = 0xCC; stateInst.workRam[off + 1] = 0xCC;
+  }
+  for (let i = 0; i < 4; i++) {
+    pokeMem(cpu, 0x401F1C + i, 1, 0xAA);
+    stateInst.workRam[0x1F1C + i] = 0xAA;
+    pokeMem(cpu, 0x401F04 + i * 4, 4, 0xBBBBBBBB);
+    for (let bb = 0; bb < 4; bb++) stateInst.workRam[0x1F04 + i * 4 + bb] = 0xBB;
+  }
+  for (let j = 0; j < 0x1000; j++) {
+    pokeMem(cpu, 0xa03000 + j, 1, 0xDD);
+    stateInst.alphaRam[j] = 0xDD;
+  }
+  callFunction(cpu, 0x31d0, []);
+  initHelpers.gameStateMachineInit(stateInst, tsRom);
+  let okGI = true;
+  // Check globals
+  for (const off of [0x1f00, 0x1f02, 0x1f3a, 0x1f3c, 0x1f3e, 0x1f42]) {
+    const bin = peekMem(cpu, 0x400000 + off, 2);
+    const ts = ((stateInst.workRam[off] ?? 0) << 8) | (stateInst.workRam[off + 1] ?? 0);
+    if (bin !== ts) { console.log(`  diff @ 0x${off.toString(16)}: bin=0x${bin.toString(16)} ts=0x${ts.toString(16)}`); okGI = false; }
+  }
+  for (let i = 0; i < 4; i++) {
+    if (peekMem(cpu, 0x401F1C + i, 1) !== (stateInst.workRam[0x1F1C + i] ?? 0)) okGI = false;
+  }
+  for (let j = 0; j < 0xF00; j++) {
+    if (peekMem(cpu, 0xa03000 + j, 1) !== (stateInst.alphaRam[j] ?? 0)) { okGI = false; break; }
+  }
+  console.log(`  Match: ${okGI ? 1 : 0}/1`);
+
   // FUN_1286E
   console.log(`\n=== negateXYSwap (FUN_1286E) — ${n} casi ===`);
   let ok3 = 0;
@@ -95,7 +130,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n && okPF) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF && okGI) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
