@@ -66,6 +66,12 @@ export interface AlphaCommand {
   opaque?: boolean;
 }
 
+export interface PlayfieldWordInfo {
+  tileIndexLow: number;
+  lookupIndex: number;
+  flipX: boolean;
+}
+
 export interface Frame {
   nativeSize: FrameSize;
   /** Coord di scroll della tilemap (System 1 supporta scroll H/V). */
@@ -134,6 +140,14 @@ export function buildAlphaFromRam(alphaRam: Uint8Array): AlphaCommand[] {
   }
 
   return alpha;
+}
+
+export function decodePlayfieldWord(word: number): PlayfieldWordInfo {
+  return {
+    tileIndexLow: word & 0x00ff,
+    lookupIndex: (word >>> 8) & 0x007f,
+    flipX: (word & 0x8000) !== 0,
+  };
 }
 
 /** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.

@@ -72,9 +72,13 @@ Completed:
   values: 8x8, 2 bpp, plane offsets 0/4, row stride 16 bits.
 - Wired decoded alpha glyphs into the Pixi renderer for `Frame.alpha` commands,
   with the previous synthetic block-glyph fallback still available.
+- Converted decoded alpha glyphs to in-memory Pixi textures and draw them
+  through a small sprite pool.
 - After a valid ROM load, the web app displays the explicit demo frame with
   decoded alpha glyphs available to the renderer. This remains a demo frame
   until real engine video RAM is wired.
+- Split graphics PROM bytes into raw remap/color tables without interpreting
+  final lookup behavior yet.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
@@ -106,6 +110,8 @@ Completed:
 - Added deterministic IRGB 4-4-4-4 palette conversion from `state.colorRam`.
 - Added deterministic alpha/HUD command extraction from `state.alphaRam` using
   the documented System 1 alpha word layout.
+- Added deterministic playfield RAM word field extraction without wiring
+  playfield RAM into `GameState`.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds while
   leaving playfield and sprite command arrays empty.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.

@@ -80,6 +80,8 @@ decoded glyphs are written to disk.
 When ROM graphics are available, the Pixi renderer uses those decoded alpha
 glyphs for `Frame.alpha` commands; otherwise it keeps the synthetic block-glyph
 fallback.
+Decoded alpha glyphs are converted to Pixi textures in memory and drawn through
+a small sprite pool. The fallback path remains `Graphics` based.
 Until real engine video RAM is wired, loading a valid ROM shows the same
 synthetic classic demo frame, but with any available alpha glyphs supplied by
 the locally decoded ROM data. This is still a demo frame, not real gameplay
@@ -111,6 +113,11 @@ is stable:
 Palette RAM and alpha RAM have a first deterministic scaffold. Motion-object
 linked-list walking, priority merge behavior, translucency palette behavior, and
 playfield RAM extraction remain TODOs.
+
+`decodePlayfieldWord()` extracts only the documented playfield RAM word fields
+(`tileIndexLow`, `lookupIndex`, `flipX`). PROM tables are split into remap/color
+raw views in the web loader, but the final lookup and planar graphics decoding
+remain deliberately unimplemented until that pass can be verified.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.

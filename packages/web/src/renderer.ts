@@ -6,10 +6,14 @@
  */
 
 import type { Application } from "pixi.js";
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import { render as renderNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
-import type { DecodedAlphaGraphics, RomGraphicsAssets } from "./rom-graphics.js";
+import type {
+  DecodedAlphaGlyph,
+  DecodedAlphaGraphics,
+  RomGraphicsAssets,
+} from "./rom-graphics.js";
 
 type Frame = renderNs.Frame;
 type RgbaColor = renderNs.RgbaColor;
@@ -28,6 +32,7 @@ interface ClassicLayers {
   spriteLayer: Container;
   alphaLayer: Container;
   chromeLayer: Container;
+  alphaSpriteLayer: Container;
   chromeGraphics: Graphics;
   playfieldGraphics: Graphics;
   spriteGraphics: Graphics;
@@ -35,7 +40,9 @@ interface ClassicLayers {
 }
 
 interface RendererAssets {
-  alpha?: DecodedAlphaGraphics;
+  alpha: DecodedAlphaGraphics | undefined;
+  alphaSpritePool: Sprite[];
+  alphaTextureCache: Map<string, Texture>;
 }
 
 function rgbaToPixiColor(color: RgbaColor): number {
@@ -55,6 +62,10 @@ function paletteLookup(frame: Frame, paletteIndex: number): RgbaColor {
       a: 255,
     }
   );
+}
+
+function exactPaletteLookup(frame: Frame, paletteIndex: number): RgbaColor | undefined {
+  return frame.palette.find((entry) => entry.index === paletteIndex)?.rgba;
 }
 
 function applyViewportScale(app: Application, viewport: Container, frame: Frame): void {
@@ -141,30 +152,90 @@ function drawFallbackAlphaGlyph(
 
 function drawDecodedAlphaGlyph(
   frame: Frame,
-  graphics: Graphics,
   command: renderNs.AlphaCommand,
   alpha: DecodedAlphaGraphics,
-): boolean {
+  assets: RendererAssets,
+): Texture | undefined {
   const glyph = alpha.glyphs[command.tileIndex];
-  if (glyph === undefined) return false;
+  if (glyph === undefined) return undefined;
 
+  return alphaTextureForGlyph(frame, command, glyph, assets);
+}
+
+function alphaTextureForGlyph(
+  frame: Frame,
+  command: renderNs.AlphaCommand,
+  glyph: DecodedAlphaGlyph,
+  assets: RendererAssets,
+): Texture | undefined {
+  const colors = [0, 1, 2, 3].map(
+    (pen) =>
+      exactPaletteLookup(frame, command.paletteIndex * 4 + pen) ??
+      paletteLookup(frame, command.paletteIndex),
+  );
+  const key = [
+    command.tileIndex,
+    command.paletteIndex,
+    command.opaque === true ? 1 : 0,
+    ...colors.flatMap((color) => [color.r, color.g, color.b, color.a]),
+  ].join(":");
+  const cached = assets.alphaTextureCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = glyph.width;
+  canvas.height = glyph.height;
+  const context = canvas.getContext("2d");
+  if (context === null) return undefined;
+
+  const imageData = context.createImageData(glyph.width, glyph.height);
   for (let y = 0; y < glyph.height; y += 1) {
     for (let x = 0; x < glyph.width; x += 1) {
       const pen = glyph.pixels[y * glyph.width + x] ?? 0;
-      if (pen === 0 && command.opaque !== true) continue;
-
-      const color = paletteLookup(frame, command.paletteIndex * 4 + pen);
-      graphics
-        .rect(command.x + x, command.y + y, 1, 1)
-        .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+      const offset = (y * glyph.width + x) * 4;
+      const color = colors[pen] ?? colors[0];
+      imageData.data[offset] = color?.r ?? 255;
+      imageData.data[offset + 1] = color?.g ?? 0;
+      imageData.data[offset + 2] = color?.b ?? 255;
+      imageData.data[offset + 3] =
+        pen === 0 && command.opaque !== true ? 0 : (color?.a ?? 255);
     }
   }
 
-  return true;
+  context.putImageData(imageData, 0, 0);
+  const texture = Texture.from(canvas, true);
+  assets.alphaTextureCache.set(key, texture);
+  return texture;
 }
 
-function drawAlpha(frame: Frame, graphics: Graphics, assets: RendererAssets): void {
+function acquireAlphaSprite(layers: ClassicLayers, assets: RendererAssets): Sprite {
+  const sprite = assets.alphaSpritePool.find((candidate) => !candidate.visible);
+  if (sprite !== undefined) {
+    sprite.visible = true;
+    return sprite;
+  }
+
+  const created = new Sprite();
+  created.roundPixels = true;
+  layers.alphaSpriteLayer.addChild(created);
+  assets.alphaSpritePool.push(created);
+  return created;
+}
+
+function hideAlphaSprites(assets: RendererAssets): void {
+  for (const sprite of assets.alphaSpritePool) {
+    sprite.visible = false;
+  }
+}
+
+function drawAlpha(
+  frame: Frame,
+  graphics: Graphics,
+  layers: ClassicLayers,
+  assets: RendererAssets,
+): void {
   graphics.clear();
+  hideAlphaSprites(assets);
 
   for (const command of frame.alpha) {
     const backgroundAlpha = command.opaque ? 0.72 : 0.18;
@@ -175,10 +246,16 @@ function drawAlpha(frame: Frame, graphics: Graphics, assets: RendererAssets): vo
         .fill({ color: 0x000000, alpha: backgroundAlpha });
     }
 
-    if (
-      assets.alpha === undefined ||
-      !drawDecodedAlphaGlyph(frame, graphics, command, assets.alpha)
-    ) {
+    const texture =
+      assets.alpha === undefined
+        ? undefined
+        : drawDecodedAlphaGlyph(frame, command, assets.alpha, assets);
+    if (texture !== undefined) {
+      const sprite = acquireAlphaSprite(layers, assets);
+      sprite.texture = texture;
+      sprite.x = command.x;
+      sprite.y = command.y;
+    } else {
       drawFallbackAlphaGlyph(frame, graphics, command);
     }
   }
@@ -207,6 +284,7 @@ function initLayers(app: Application): ClassicLayers {
   const playfieldLayer = new Container();
   const spriteLayer = new Container();
   const alphaLayer = new Container();
+  const alphaSpriteLayer = new Container();
   const chromeLayer = new Container();
   const chromeGraphics = new Graphics();
   const playfieldGraphics = new Graphics();
@@ -220,6 +298,7 @@ function initLayers(app: Application): ClassicLayers {
   viewport.addChild(chromeLayer);
   playfieldLayer.addChild(playfieldGraphics);
   spriteLayer.addChild(spriteGraphics);
+  alphaLayer.addChild(alphaSpriteLayer);
   alphaLayer.addChild(alphaGraphics);
   chromeLayer.addChild(chromeGraphics);
 
@@ -231,6 +310,7 @@ function initLayers(app: Application): ClassicLayers {
     spriteLayer,
     alphaLayer,
     chromeLayer,
+    alphaSpriteLayer,
     chromeGraphics,
     playfieldGraphics,
     spriteGraphics,
@@ -239,9 +319,12 @@ function initLayers(app: Application): ClassicLayers {
 }
 
 function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
-  return graphics?.decodedAlpha.status === "decoded"
-    ? { alpha: graphics.decodedAlpha }
-    : {};
+  return {
+    alpha:
+      graphics?.decodedAlpha.status === "decoded" ? graphics.decodedAlpha : undefined,
+    alphaSpritePool: [],
+    alphaTextureCache: new Map(),
+  };
 }
 
 export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Renderer {
@@ -257,7 +340,7 @@ export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Re
       applyViewportScale(app, layers.viewport, frame);
       drawPlayfield(frame, layers.playfieldGraphics);
       drawSprites(frame, layers.spriteGraphics);
-      drawAlpha(frame, layers.alphaGraphics, assets);
+      drawAlpha(frame, layers.alphaGraphics, layers, assets);
       drawChrome(frame, layers.chromeGraphics);
 
       if (frame.palette.length === 0) {

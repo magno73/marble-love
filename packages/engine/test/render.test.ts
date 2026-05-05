@@ -3,6 +3,7 @@ import {
   buildAlphaFromRam,
   buildFrame,
   buildPaletteFromColorRam,
+  decodePlayfieldWord,
   irgb4444ToRgba,
 } from "../src/render.js";
 import { emptyGameState } from "../src/state.js";
@@ -83,5 +84,20 @@ describe("buildFrame", () => {
     ]);
     expect(frame.playfield).toEqual([]);
     expect(frame.sprites).toEqual([]);
+  });
+});
+
+describe("decodePlayfieldWord", () => {
+  it("extracts documented playfield RAM word fields", () => {
+    expect(decodePlayfieldWord(0x80ab)).toEqual({
+      tileIndexLow: 0xab,
+      lookupIndex: 0x00,
+      flipX: true,
+    });
+    expect(decodePlayfieldWord(0x7f42)).toEqual({
+      tileIndexLow: 0x42,
+      lookupIndex: 0x7f,
+      flipX: false,
+    });
   });
 });
