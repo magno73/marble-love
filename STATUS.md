@@ -67,6 +67,25 @@
 
 **🎯 59 sub-systems bit-perfect totali** (33 → 59 in questa sessione, +26 commit, 59/314 ≈ 19% del binario coperto).
 
+**Sessione 2026-05-05 (+25)**:
+- ✅ initHelpers (FUN_11AC2 + FUN_26B10 + FUN_1286E)
+- ✅ animationStep (FUN_132E0) — animation pointer step
+- ✅ getAlphaTileAddr (FUN_37E4) — alpha tile address calc
+- ✅ scheduleStateMachine7 (FUN_28EA) — state=7 scheduler
+- ✅ spriteCoords v1+v2+v3+v4 (FUN_18A1E + FUN_199D6 + FUN_1778E + FUN_18972) — 4 varianti
+- ✅ compareObjDepth (FUN_15FE6) — z-order compare
+- ✅ packSpriteRecords (FUN_1A9CC) — sprite bit-pack
+- ✅ deriveSpriteFields + 2 wrappers (FUN_1BB50 + FUN_1BB08 + FUN_1BB28)
+- ✅ testGridBitmap (FUN_19460) — grid collision check
+- ✅ triggerObjectEvent (FUN_285B0)
+- ✅ lerpFromRom (FUN_1C61E)
+- ✅ processAllSprites_v1 (FUN_189E2) — loop su sprite table
+- ✅ timerDeltaAccumulate (FUN_43D6) — timer delta + bit dispatch
+- ✅ eepromCommitDelta (FUN_4008) — eeprom counter commit
+- ✅ initObjArrays (FUN_25B40) — init 8 entries arrays
+
+**🎯 84 sub-systems bit-perfect** (84/314 ≈ 27% del binario coperto).
+
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
 2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
