@@ -69,8 +69,54 @@ async function main(): Promise<void> {
     if (m) ok++;
   }
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
+
+  // FUN_2A24
+  console.log(`\n=== scheduleStateMachine2 (FUN_2A24) — ${n} casi ===`);
+  let ok2 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    pokeMem(cpu, 0x00401F00, 2, 0); pokeMem(cpu, 0x00401F42, 2, 0);
+    stateInst.workRam[0x1F00] = 0; stateInst.workRam[0x1F01] = 0;
+    stateInst.workRam[0x1F42] = 0; stateInst.workRam[0x1F43] = 0;
+    pokeMem(cpu, 0x00401D00, 1, 0); pokeMem(cpu, 0x00401D01, 1, 0);
+    pokeMem(cpu, 0x00401D02, 4, 0x00401D40);
+    pokeMem(cpu, 0x00401D06, 1, 0);
+    stateInst.workRam[0x1D00] = 0; stateInst.workRam[0x1D01] = 0;
+    stateInst.workRam[0x1D02] = 0; stateInst.workRam[0x1D03] = 0x40;
+    stateInst.workRam[0x1D04] = 0x1D; stateInst.workRam[0x1D05] = 0x40;
+    stateInst.workRam[0x1D06] = 0;
+    pokeMem(cpu, 0x00401D40, 1, 0);
+    stateInst.workRam[0x1D40] = 0;
+    for (let s = 0; s < 4; s++) {
+      const sb = (r() < 0.5) ? 0 : Math.floor(r() * 7) + 1;
+      pokeMem(cpu, 0x401F1C + s, 1, sb);
+      stateInst.workRam[0x1F1C + s] = sb;
+      // Reset slots
+      pokeMem(cpu, 0x401F04 + s * 4, 4, 0); pokeMem(cpu, 0x401F14 + s * 2, 2, 0);
+      pokeMem(cpu, 0x401F20 + s * 2, 2, 0); pokeMem(cpu, 0x401F28 + s * 2, 2, 0);
+      pokeMem(cpu, 0x401F30 + s, 1, 0);
+      for (let bb of [0x1F04 + s * 4, 0x1F04 + s * 4 + 1, 0x1F04 + s * 4 + 2, 0x1F04 + s * 4 + 3,
+                       0x1F14 + s * 2, 0x1F14 + s * 2 + 1, 0x1F20 + s * 2, 0x1F20 + s * 2 + 1,
+                       0x1F28 + s * 2, 0x1F28 + s * 2 + 1, 0x1F30 + s]) stateInst.workRam[bb] = 0;
+    }
+    const w16 = Math.floor(r() * 0x10000);
+    const th = Math.floor(r() * 0x10000);
+    const binR = callFunction(cpu, 0x2a24, [0x00401D00, w16, th]);
+    const tsR = stateMachineSchedule.scheduleStateMachine2(
+      stateInst, tsRom, stringRender.renderStringChain, 0x00401D00, w16, th,
+    );
+    let m = (binR.d0 & 0xff) === tsR;
+    if (m) {
+      for (let off = 0x1F00; off <= 0x1F3F; off++) {
+        if (peekMem(cpu, 0x400000 + off, 1) !== (stateInst.workRam[off] ?? 0)) { m = false; break; }
+      }
+    }
+    if (m) ok2++;
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
