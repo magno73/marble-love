@@ -32,6 +32,36 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
 }
 
 /**
+ * Replica `FUN_0001A41E` — palette init level: copy 192 words ROM→palette[0x400..0x57F]
+ * + call paletteInit (FUN_26B10).
+ *
+ * The disasm uses indirect ptrs from ROM 0x24694 but those simply form a table
+ * pointing at palette[0x400..0x57F] in 2-byte stride.
+ */
+export function paletteInitLevel(state: GameState, rom: RomImage): void {
+  // 192 words from ROM 0x24514 → palette via ptr table @ 0x24694
+  for (let i = 0; i < 192; i++) {
+    const ptrAddr = 0x24694 + i * 4;
+    const dstAbs =
+      (((rom.program[ptrAddr] ?? 0) << 24) |
+        ((rom.program[ptrAddr + 1] ?? 0) << 16) |
+        ((rom.program[ptrAddr + 2] ?? 0) << 8) |
+        (rom.program[ptrAddr + 3] ?? 0)) >>> 0;
+    const dstOff = (dstAbs - 0xb00000) >>> 0;
+    if (dstOff >= 0x800) continue; // out of palette range
+    const srcOff = 0x24514 + i * 2;
+    state.colorRam[dstOff] = rom.program[srcOff] ?? 0;
+    state.colorRam[dstOff + 1] = rom.program[srcOff + 1] ?? 0;
+  }
+  // Then FUN_26B10
+  const SRC = 0x1fbd0;
+  for (let i = 0; i < 32; i++) {
+    state.colorRam[i * 2] = rom.program[SRC + i * 2] ?? 0;
+    state.colorRam[i * 2 + 1] = rom.program[SRC + i * 2 + 1] ?? 0;
+  }
+}
+
+/**
  * Replica `FUN_000031D0` — `gameStateMachineInit()`.
  *
  * Init logic:

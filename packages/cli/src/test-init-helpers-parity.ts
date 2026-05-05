@@ -70,6 +70,21 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okPF ? 1 : 0}/1`);
 
+  // FUN_1A41E: palette init level
+  console.log(`\n=== paletteInitLevel (FUN_1A41E) — 1 caso ===`);
+  cpu.system.setRegister("sp", 0x401f00);
+  for (let j = 0; j < 0x800; j++) {
+    pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
+    stateInst.colorRam[j] = 0xCC;
+  }
+  callFunction(cpu, 0x1a41e, []);
+  initHelpers.paletteInitLevel(stateInst, tsRom);
+  let okPL = true;
+  for (let j = 0; j < 0x800; j++) {
+    if (peekMem(cpu, 0xB00000 + j, 1) !== (stateInst.colorRam[j] ?? 0)) { okPL = false; break; }
+  }
+  console.log(`  Match: ${okPL ? 1 : 0}/1`);
+
   // FUN_31D0: game state machine init
   console.log(`\n=== gameStateMachineInit (FUN_31D0) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
@@ -130,7 +145,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n && okPF && okGI) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
