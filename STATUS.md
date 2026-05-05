@@ -106,6 +106,16 @@
 
 **🎯 96 sub-systems bit-perfect** (96/314 ≈ 31% del binario coperto).
 
+**Sessione 2026-05-05 batch 4 (+7)**:
+- ✅ applyMoveVelocity (FUN_19976) — 500/500
+- ✅ validatePosition (FUN_1937C) — 500/500
+- ✅ findNearestNeighbor v1 + v2 (FUN_15D10 + FUN_14DEC) — 2000/2000
+- ✅ paletteBootstrapInit (FUN_E24) — 1/1, 32 hardcoded palette colors
+- ✅ clearAlphaRows (FUN_16E8E) — 30/30
+- ✅ gameStateInit2Objs (FUN_10456) — 10/10
+
+**🎯 103 sub-systems bit-perfect** (103/314 ≈ **33% del binario coperto**).
+
 **Tecniche nuove introdotte**:
 1. **HUD-updater patching**: per testare un root che chiama un updater HUD complesso (es. `FUN_286EE`, 154 byte + 3 jsr), patchamo l'entry → `rts` immediate (0x4E75) nel binario. La logica game state si verifica senza dover replicare la pipeline HUD. Il TS impl accetta un `hudCallback?` opzionale, no-op per default.
 2. **Spin-loop patching**: per evitare hang nei test, patchamo i `bne` degli spin loop su MMIO (es. wait_loop @ 0x28A22) → `bra` per esci-immediato. Il binario non spinea più aspettando hardware.
