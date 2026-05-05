@@ -79,6 +79,9 @@ Completed:
   until real engine video RAM is wired.
 - Split graphics PROM bytes into raw remap/color tables without interpreting
   final lookup behavior yet.
+- Added PROM-derived playfield/motion-object lookup metadata using the MAME
+  `decode_gfx()` rules, plus a single-tile object planar decoder for documented
+  4/5/6bpp 8x8 layouts.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
@@ -92,8 +95,9 @@ Verification:
 - Focused ESLint on changed source files: passed.
 - `npm run build --workspace @marble-love/web`: passed.
 - Local smoke test with user-provided `marble.zip` + `atarisy1.zip`: passed with
-  CRC32 validation enabled and 512 alpha glyphs decoded in memory; no ROM bytes
-  copied into the repo.
+  CRC32 validation enabled, 512 alpha glyphs decoded in memory, and 256
+  playfield plus 256 motion-object lookup entries produced; no ROM bytes copied
+  into the repo.
 
 Constraints:
 

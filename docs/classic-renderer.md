@@ -116,8 +116,10 @@ playfield RAM extraction remain TODOs.
 
 `decodePlayfieldWord()` extracts only the documented playfield RAM word fields
 (`tileIndexLow`, `lookupIndex`, `flipX`). PROM tables are split into remap/color
-raw views in the web loader, but the final lookup and planar graphics decoding
-remain deliberately unimplemented until that pass can be verified.
+raw views in the web loader. The web graphics scaffold also builds playfield and
+motion-object lookup metadata from the PROM rules in `atarisy1_v.cpp`, and can
+decode a single 8x8 object tile from the documented 4/5/6bpp planar layouts.
+This is still not wired into real playfield rendering.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.
