@@ -84,8 +84,68 @@ async function main(): Promise<void> {
     if (m) ok++;
   }
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
+
+  // V2: FUN_14DEC
+  console.log(`\n=== findNearestNeighborV2 (FUN_14DEC) — ${n} casi ===`);
+  let ok2 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const OBJ = 0x00401D00;
+    const LIST = 0x00401D80;
+    const x = (Math.floor(r() * 200) << 19) >>> 0;
+    const y = (Math.floor(r() * 200) << 19) >>> 0;
+    pokeMem(cpu, OBJ + 0xC, 4, x);
+    pokeMem(cpu, OBJ + 0x10, 4, y);
+    stateInst.workRam[(OBJ - 0x400000) + 0xC] = (x >>> 24) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0xD] = (x >>> 16) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0xE] = (x >>> 8) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0xF] = x & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x10] = (y >>> 24) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x11] = (y >>> 16) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x12] = (y >>> 8) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x13] = y & 0xff;
+    pokeMem(cpu, OBJ + 0x4E, 4, LIST);
+    stateInst.workRam[(OBJ - 0x400000) + 0x4E] = (LIST >>> 24) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x4F] = (LIST >>> 16) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x50] = (LIST >>> 8) & 0xff;
+    stateInst.workRam[(OBJ - 0x400000) + 0x51] = LIST & 0xff;
+    pokeMem(cpu, OBJ + 0x4A, 4, 0xCAFE0000);
+    stateInst.workRam[(OBJ - 0x400000) + 0x4A] = 0xCA;
+    stateInst.workRam[(OBJ - 0x400000) + 0x4B] = 0xFE;
+    stateInst.workRam[(OBJ - 0x400000) + 0x4C] = 0;
+    stateInst.workRam[(OBJ - 0x400000) + 0x4D] = 0;
+    // Setup list with 4-byte entries
+    const numEntries = 3 + Math.floor(r() * 6);
+    let off = 0;
+    for (let s = 0; s < numEntries; s++) {
+      const b0 = Math.floor(r() * 200);
+      const b1 = Math.floor(r() * 200);
+      pokeMem(cpu, LIST + off, 1, b0);
+      pokeMem(cpu, LIST + off + 1, 1, b1);
+      stateInst.workRam[(LIST - 0x400000) + off] = b0;
+      stateInst.workRam[(LIST - 0x400000) + off + 1] = b1;
+      for (let bb = 2; bb < 4; bb++) {
+        const v = Math.floor(r() * 256);
+        pokeMem(cpu, LIST + off + bb, 1, v);
+        stateInst.workRam[(LIST - 0x400000) + off + bb] = v;
+      }
+      off += 4;
+    }
+    pokeMem(cpu, LIST + off, 1, 0xFF);
+    stateInst.workRam[(LIST - 0x400000) + off] = 0xFF;
+    cpu.system.setRegister("d6", 0xFFFFFFFF);
+    callFunction(cpu, 0x14dec, [OBJ]);
+    nearestNeighbor.findNearestNeighborV2(stateInst, OBJ);
+    let m = true;
+    for (let j = 0x4A; j <= 0x4D; j++) {
+      if (peekMem(cpu, OBJ + j, 1) !== (stateInst.workRam[(OBJ - 0x400000) + j] ?? 0)) { m = false; break; }
+    }
+    if (m) ok2++;
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
