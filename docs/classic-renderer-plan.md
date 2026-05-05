@@ -85,6 +85,9 @@ Completed:
 - Added optional `gfxBank`/`bitsPerPixel` command metadata and a ROM-backed demo
   frame path that renders decoded object-tile textures in memory. This is a demo
   path only, not real playfield RAM rendering.
+- Extended the same ROM-backed texture path to synthetic motion-object demo
+  sprites and added separate playfield/motion texture caches and sprite pools.
+- Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
 - Added `packages/web/src/rom-graphics.ts` with typed raw containers and
@@ -121,6 +124,8 @@ Completed:
   playfield RAM into `GameState`.
 - Extended neutral tile/sprite commands with optional graphics bank and bpp
   metadata for renderer-side ROM-backed scaffolds.
+- Added `buildPlayfieldFromRam(playfieldRam, lookups)` as an explicit helper for
+  future playfield RAM integration. It is not connected to `GameState` yet.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds while
   leaving playfield and sprite command arrays empty.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.

@@ -149,6 +149,24 @@ function firstDrawablePlayfieldLookup(
   };
 }
 
+function firstDrawableSpriteLookup(
+  graphics: RomGraphicsAssets,
+  startIndex: number,
+): { lookup: GraphicsLookupEntry; lookupIndex: number } {
+  for (let i = 0; i < graphics.lookupTables.motionObjects.length; i += 1) {
+    const lookupIndex = (startIndex + i) % graphics.lookupTables.motionObjects.length;
+    const lookup = graphics.lookupTables.motionObjects[lookupIndex];
+    if (lookup !== undefined && lookup.bank > 0) {
+      return { lookup, lookupIndex };
+    }
+  }
+
+  return {
+    lookup: { offset: 0, bank: 1, color: 0, bpp: 4 },
+    lookupIndex: 0,
+  };
+}
+
 export function buildRomBackedDemoFrame(
   graphics: RomGraphicsAssets,
   frameNumber: number,
@@ -167,6 +185,22 @@ export function buildRomBackedDemoFrame(
       gfxBank: lookup.bank,
       bitsPerPixel: lookup.bpp,
       paletteIndex: 0x20 + lookup.color * 8,
+      priority: lookupIndex,
+    };
+  });
+
+  frame.sprites = frame.sprites.map((sprite, index) => {
+    const { lookup, lookupIndex } = firstDrawableSpriteLookup(
+      graphics,
+      sprite.spriteIndex + index,
+    );
+
+    return {
+      ...sprite,
+      spriteIndex: lookup.offset * 256 + (sprite.spriteIndex & 0xff),
+      gfxBank: lookup.bank,
+      bitsPerPixel: lookup.bpp,
+      paletteIndex: 0x10 + lookup.color * 8,
       priority: lookupIndex,
     };
   });
