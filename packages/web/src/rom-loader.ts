@@ -8,7 +8,11 @@
 
 import { unzipSync } from "fflate";
 import type { RomImage } from "@marble-love/engine";
-import type { RawRomEntry, RomGraphicsAssets } from "./rom-graphics.js";
+import {
+  decodeAlphaRom,
+  type RawRomEntry,
+  type RomGraphicsAssets,
+} from "./rom-graphics.js";
 
 export interface ExtractedRomImage extends RomImage {
   graphics: RomGraphicsAssets;
@@ -262,7 +266,7 @@ function buildGraphicsAssets(
     proms,
     motherboardProms: motherboardPromFiles.map((file) => rawEntry(entries, file)),
     decodedPalette: { status: "not-decoded", source: "proms" },
-    decodedAlpha: { status: "not-decoded", source: "alpha" },
+    decodedAlpha: decodeAlphaRom(alpha),
     decodedTiles: { status: "not-decoded", source: "tiles" },
     decodedSprites: { status: "not-decoded", source: "sprites" },
   };
