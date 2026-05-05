@@ -137,8 +137,44 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
+  // processAllSprites_v1
+  console.log(`\n=== processAllSprites_v1 (FUN_189E2) — ${n} casi ===`);
+  let okPA = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    setHud();
+    // *0x400394: 0 (run loop) most of the time
+    const flag = (r() < 0.7) ? 0 : Math.floor(r() * 0x10000);
+    pokeMem(cpu, 0x00400394, 2, flag);
+    stateInst.workRam[0x394] = (flag >>> 8) & 0xff; stateInst.workRam[0x395] = flag & 0xff;
+    // count: 0..6
+    const count = Math.floor(r() * 7);
+    pokeMem(cpu, 0x00400396, 2, count);
+    stateInst.workRam[0x396] = (count >>> 8) & 0xff; stateInst.workRam[0x397] = count & 0xff;
+    // Setup table @ 0x40098C with random data per slot
+    const tableSize = 7 * 0xC;
+    for (let j = 0; j < tableSize; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, 0x0040098C + j, 1, v);
+      stateInst.workRam[0x98C + j] = v;
+    }
+    callFunction(cpu, 0x189e2, []);
+    spriteCoords.processAllSprites_v1(stateInst);
+    let m = true;
+    for (let j = 0; j < tableSize; j++) {
+      if (peekMem(cpu, 0x40098C + j, 1) !== (stateInst.workRam[0x98C + j] ?? 0)) { m = false; break; }
+    }
+    if (m) {
+      for (let j = 0x690; j <= 0x693; j++) {
+        if (peekMem(cpu, 0x400000 + j, 1) !== (stateInst.workRam[j] ?? 0)) { m = false; break; }
+      }
+    }
+    if (m) okPA++;
+  }
+  console.log(`  Match: ${okPA}/${n} = ${((okPA/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && okV4 === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okV4 === n && okPA === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
