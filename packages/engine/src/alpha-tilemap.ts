@@ -87,6 +87,40 @@ export function setAlphaWord(state: GameState, index: number, value: number): vo
  * @param state    Game state
  * @param startRow Riga di partenza (0..30 per uso normale)
  */
+/**
+ * Replica `FUN_000037E4` — `getAlphaTileAddr(col, row)` — calcola indirizzo
+ * tile alpha tilemap dato (col, row) byte. Stessa formula di setAlphaTile
+ * ma RETURN ONLY (no write). Returns long address.
+ */
+export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array }, colByte: number, rowByte: number): number {
+  const ROTATION_OFF = 0x1f42;
+  const ROM_SHIFT_TABLE = 0x72a4;
+  const colSigned = (colByte & 0x80) ? (colByte & 0xff) - 0x100 : (colByte & 0xff);
+  const rowSigned = (rowByte & 0x80) ? (rowByte & 0xff) - 0x100 : (rowByte & 0xff);
+  const rotation = ((state.workRam[ROTATION_OFF] ?? 0) << 8) | (state.workRam[ROTATION_OFF + 1] ?? 0);
+  const rotSigned = rotation & 0x8000 ? rotation - 0x10000 : rotation;
+
+  let d2: number;
+  if (rotation !== 0) {
+    d2 = (0x29 - rowSigned) | 0;
+  } else {
+    d2 = (rowSigned << 6) | 0;
+  }
+
+  const shiftIdx = rotSigned * 2 + 1;
+  const shiftByte = rom.program[(ROM_SHIFT_TABLE + shiftIdx) >>> 0] ?? 0;
+  const shiftCount = shiftByte & 0x80 ? shiftByte - 0x100 : shiftByte;
+
+  let d0 = colSigned;
+  if (shiftCount >= 32 || shiftCount < 0) {
+    d0 = shiftCount < 0 ? d0 : 0;
+  } else {
+    d0 = (d0 << shiftCount) | 0;
+  }
+  d0 = ((d0 + d2) * 2) | 0;
+  return ((0xa03000 + d0) >>> 0);
+}
+
 export function clearAlphaTilesFromIndex(state: GameState, startRow: number): void {
   // Replica del calcolo binario: D0w = arg1.w; D0w <<= 6 (word shift, wraps mod 0x10000)
   let counter = ((startRow & 0xffff) << 6) & 0xffff;
