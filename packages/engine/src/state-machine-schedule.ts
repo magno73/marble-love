@@ -69,6 +69,61 @@ export function scheduleStateMachine4(state: GameState, dataPtr: number, thresho
 }
 
 /**
+ * Replica `FUN_000026C2` — `scheduleStateMachine5or6(dataPtr, word16, threshold)`.
+ *
+ * Render via FUN_2572 first, then schedule:
+ *   - Find slot with state==0
+ *   - threshold[i] = abs(threshold) (negate if negative)
+ *   - state[i] = 6 if threshold < 0 signed, else 5
+ *   - data[i] = dataPtr, word16[i] = word16, counter[i] = 0
+ *   - Returns 1 if scheduled, 0 if all slots full
+ */
+export function scheduleStateMachine5or6(
+  state: GameState,
+  rom: import("./bus.js").RomImage,
+  renderFn: (state: GameState, rom: import("./bus.js").RomImage, dataPtr: number, attrSigned: number) => number,
+  dataPtr: number,
+  word16: number,
+  threshold: number,
+): number {
+  const r = state.workRam;
+  // Render
+  const w16Word = word16 & 0xffff;
+  const w16Signed = w16Word & 0x8000 ? w16Word - 0x10000 : w16Word;
+  renderFn(state, rom, dataPtr >>> 0, w16Signed | 0);
+
+  const thWord = threshold & 0xffff;
+  const thSigned = thWord & 0x8000 ? thWord - 0x10000 : thWord;
+  const stateValue = thSigned < 0 ? 6 : 5;
+  const thAbs = thSigned < 0 ? (-thSigned) >>> 0 : thSigned;
+
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    if ((r[STATE_BASE_OFF + i] ?? 0) === 0) {
+      // data[i] = dataPtr
+      const dOff = DATA_PTR_BASE_OFF + i * 4;
+      const dp = dataPtr >>> 0;
+      r[dOff] = (dp >>> 24) & 0xff;
+      r[dOff + 1] = (dp >>> 16) & 0xff;
+      r[dOff + 2] = (dp >>> 8) & 0xff;
+      r[dOff + 3] = dp & 0xff;
+      // threshold[i] = thAbs (word, but stored full long via word write)
+      r[THRESHOLD_BASE_OFF + i * 2] = (thAbs >>> 8) & 0xff;
+      r[THRESHOLD_BASE_OFF + i * 2 + 1] = thAbs & 0xff;
+      // state[i] = stateValue
+      r[STATE_BASE_OFF + i] = stateValue & 0xff;
+      // word16[i] = w16Word
+      r[WORD16_BASE_OFF + i * 2] = (w16Word >>> 8) & 0xff;
+      r[WORD16_BASE_OFF + i * 2 + 1] = w16Word & 0xff;
+      // counter[i] = 0
+      r[COUNTER_BASE_OFF + i * 2] = 0;
+      r[COUNTER_BASE_OFF + i * 2 + 1] = 0;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/**
  * Replica `FUN_000028EA` — `scheduleStateMachine7(dataPtr, word16, target)`.
  *
  * Steps:
