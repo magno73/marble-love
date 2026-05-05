@@ -80,6 +80,10 @@ decoded glyphs are written to disk.
 When ROM graphics are available, the Pixi renderer uses those decoded alpha
 glyphs for `Frame.alpha` commands; otherwise it keeps the synthetic block-glyph
 fallback.
+Until real engine video RAM is wired, loading a valid ROM shows the same
+synthetic classic demo frame, but with any available alpha glyphs supplied by
+the locally decoded ROM data. This is still a demo frame, not real gameplay
+rendering.
 
 The loader supports split MAME-style input, where `marble.zip` contains the game
 ROMs and `atarisy1.zip` contains shared Atari System 1 motherboard files such as
