@@ -85,6 +85,21 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okPL ? 1 : 0}/1`);
 
+  // FUN_E24: palette bootstrap
+  console.log(`\n=== paletteBootstrapInit (FUN_E24) — 1 caso ===`);
+  cpu.system.setRegister("sp", 0x401f00);
+  for (let j = 0; j < 0x80; j++) {
+    pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
+    stateInst.colorRam[j] = 0xCC;
+  }
+  callFunction(cpu, 0xe24, []);
+  initHelpers.paletteBootstrapInit(stateInst);
+  let okBS = true;
+  for (let j = 0; j < 0x80; j++) {
+    if (peekMem(cpu, 0xB00000 + j, 1) !== (stateInst.colorRam[j] ?? 0)) { okBS = false; break; }
+  }
+  console.log(`  Match: ${okBS ? 1 : 0}/1`);
+
   // FUN_26B2A: palette init enemy
   console.log(`\n=== paletteInitEnemy (FUN_26B2A) — 5 casi ===`);
   let okPE = 0;
@@ -164,7 +179,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL && okPE === 5) ? 0 : 1);
+  exit((ok1 && ok2 && ok3 === n && okPF && okGI && okPL && okPE === 5 && okBS) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });

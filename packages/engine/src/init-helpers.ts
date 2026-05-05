@@ -37,6 +37,32 @@ export function copyRomToPalette32Words(state: GameState, rom: RomImage): void {
  * Reads 0xC3 words from `ROM[0x1FC10 + arg.w * 0xC3 * 2]` and writes via
  * ptr table @ 0x20534. Then calls FUN_26B10.
  */
+/**
+ * Replica `FUN_00000E24` — palette bootstrap init (8 banks × 4 hardcoded words).
+ *
+ * Writes 32 hardcoded palette words at offsets 0..0x3F.
+ */
+export function paletteBootstrapInit(state: GameState): void {
+  const banks: ReadonlyArray<readonly [number, ReadonlyArray<number>]> = [
+    [0x00, [0xDFFF, 0xDF00, 0xD0F0, 0xD00F]],
+    [0x08, [0xBFFF, 0xBF00, 0xB0F0, 0xB00F]],
+    [0x10, [0x9FFF, 0x9F00, 0x90F0, 0x900F]],
+    [0x18, [0x7FFF, 0x7F00, 0x70F0, 0x700F]],
+    [0x20, [0x5FFF, 0x5F00, 0x50F0, 0x500F]],
+    [0x28, [0x3FFF, 0x3F00, 0x30F0, 0x300F]],
+    [0x30, [0x1FFF, 0x1F00, 0x10F0, 0x100F]],
+    [0x38, [0x0FFF, 0x0F00, 0x00F0, 0x000F]],
+  ];
+  for (const [base, vals] of banks) {
+    for (let i = 0; i < 4; i++) {
+      const v = vals[i] ?? 0;
+      const off = base + i * 2;
+      state.colorRam[off] = (v >>> 8) & 0xff;
+      state.colorRam[off + 1] = v & 0xff;
+    }
+  }
+}
+
 export function paletteInitEnemy(state: GameState, rom: RomImage, levelIdx: number): void {
   // arg.w * 0xC3 * 2 = byte offset
   const idxWord = levelIdx & 0xffff;
