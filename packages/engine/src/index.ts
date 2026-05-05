@@ -50,6 +50,7 @@ export * as spritePack from "./sprite-pack.js";
 export * as spriteDerive from "./sprite-derive.js";
 export * as gridBitmapTest from "./grid-bitmap-test.js";
 export * as lerp from "./lerp.js";
+export * as timerDelta from "./timer-delta.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
