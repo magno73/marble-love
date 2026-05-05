@@ -29,6 +29,30 @@ function absWord(w: number): number {
   return w;
 }
 
+/**
+ * Replica `FUN_0001937C` — `validatePosition(objPtr)`.
+ *
+ * Reads obj+0xC (x word) and obj+0x10 (y word). Returns 1 if BOTH:
+ *   - proximityCheckArray(obj, x, y) == 0 (no nearby obj)
+ *   - testGridBitmap(x, y) == 0 (not on solid grid)
+ * Returns 0 if either fails.
+ */
+export function validatePosition(
+  state: GameState,
+  rom: import("./bus.js").RomImage,
+  testGridBitmapFn: (rom: import("./bus.js").RomImage, x: number, y: number) => number,
+  objPtr: number,
+): number {
+  const objOff = objPtr - 0x400000;
+  const x = ((state.workRam[objOff + 0xC] ?? 0) << 8) | (state.workRam[objOff + 0xD] ?? 0);
+  const y = ((state.workRam[objOff + 0x10] ?? 0) << 8) | (state.workRam[objOff + 0x11] ?? 0);
+  const xS = x & 0x8000 ? x - 0x10000 : x;
+  const yS = y & 0x8000 ? y - 0x10000 : y;
+  if (proximityCheckArray(state, objPtr, xS | 0, yS | 0) !== 0) return 0;
+  if (testGridBitmapFn(rom, xS | 0, yS | 0) !== 0) return 0;
+  return 1;
+}
+
 export function proximityCheckArray(state: GameState, excludePtr: number, xWord: number, yWord: number): number {
   for (let i = 0; i < 9; i++) {
     const entryAddr = (0x401890 + i * STRIDE) >>> 0;
