@@ -113,6 +113,43 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okDS}/${n} = ${((okDS/n)*100).toFixed(1)}%`);
 
+  console.log(`\n=== eepromCommitDelta (FUN_4008) — ${n} casi ===`);
+  let okCD = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    // Setup eeprom struct ptr @ 0x401FFC
+    const PTR = 0x00401D80;
+    pokeMem(cpu, 0x00401FFC, 4, PTR);
+    stateInst.workRam[0x1FFC] = 0; stateInst.workRam[0x1FFD] = 0x40;
+    stateInst.workRam[0x1FFE] = 0x1D; stateInst.workRam[0x1FFF] = 0x80;
+    // Validate bytes (50% complementary)
+    const a = Math.floor(r() * 256);
+    const b = (r() < 0.6) ? ((~a) & 0xff) : Math.floor(r() * 256);
+    pokeMem(cpu, PTR + 0xA, 1, a);
+    pokeMem(cpu, PTR + 0xB, 1, b);
+    stateInst.workRam[(PTR - 0x400000) + 0xA] = a;
+    stateInst.workRam[(PTR - 0x400000) + 0xB] = b;
+    // *0x401FF5 + 0x401FF7 random
+    const v5 = Math.floor(r() * 256);
+    const v7 = Math.floor(r() * 256);
+    pokeMem(cpu, 0x00401FF5, 1, v5);
+    pokeMem(cpu, 0x00401FF7, 1, v7);
+    stateInst.workRam[0x1FF5] = v5;
+    stateInst.workRam[0x1FF7] = v7;
+    // delta in [0, 256)
+    const delta = Math.floor(r() * 256);
+    const binR = callFunction(cpu, 0x4008, [delta]);
+    const tsR = objectHelpers.eepromCommitDelta(stateInst, delta);
+    let m = (binR.d0 & 0xff) === tsR;
+    if (m) {
+      // Compare *0x401FF5 + *0x401FF7
+      if (peekMem(cpu, 0x401FF5, 1) !== (stateInst.workRam[0x1FF5] ?? 0)) m = false;
+      else if (peekMem(cpu, 0x401FF7, 1) !== (stateInst.workRam[0x1FF7] ?? 0)) m = false;
+    }
+    if (m) okCD++;
+  }
+  console.log(`  Match: ${okCD}/${n} = ${((okCD/n)*100).toFixed(1)}%`);
+
   console.log(`\n=== triggerObjectEvent (FUN_285B0) — ${n} casi ===`);
   let okT = 0;
   // Need ROM
@@ -164,7 +201,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   disposeCpu(cpu);
-  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n && okT === n) ? 0 : 1);
+  exit((ok1 === n && ok2 === n && ok3 === n && okDS === n && okT === n && okCD === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });

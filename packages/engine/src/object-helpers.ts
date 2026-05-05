@@ -84,6 +84,51 @@ export function objDeriveShorts(state: GameState, objAddr: number): void {
 }
 
 /**
+ * Replica `FUN_00004008` — `eepromCommitDelta(deltaLong)`.
+ * Uses FUN_3F3E (validate). Returns 1 if classify fails (no commit needed).
+ * Else: if (delta >= total bytes counter @ 0x401FF5+0x401FF7): saturate,
+ * adjust *0x401FF5. Returns 1 success, 0 if would underflow.
+ */
+export function eepromCommitDelta(state: GameState, deltaLong: number): number {
+  const r = state.workRam;
+  // Inline FUN_3F3E
+  const ptr =
+    (((r[0x1ffc] ?? 0) << 24) |
+      ((r[0x1ffd] ?? 0) << 16) |
+      ((r[0x1ffe] ?? 0) << 8) |
+      (r[0x1fff] ?? 0)) >>> 0;
+  const ptrOff = (ptr - 0x400000) >>> 0;
+  const byteA = r[ptrOff + 0xA] ?? 0;
+  const byteB = r[ptrOff + 0xB] ?? 0;
+  const notB = (~byteB) & 0xff;
+  let validated = (byteA === notB) ? byteA : 0;
+  let classify: number;
+  if (validated >= 0xE0) classify = 0;
+  else classify = ((validated & 3) + 1) >>> 0;
+
+  if (classify === 0) return 1; // not initialized: success no-op
+
+  let d2 = deltaLong | 0;
+  // D0 = byte_at(A2) + *0x401FF5 (bytes, sext)
+  const byteFF7 = r[0x1ff7] ?? 0;
+  const byteFF5 = r[0x1ff5] ?? 0;
+  const d0 = (byteFF7 + byteFF5) >>> 0;
+  // cmp.l D2, D0 → D0 - D2 unsigned. bcc: D0 >= D2 unsigned → continue.
+  if ((d0 >>> 0) >= (d2 >>> 0)) {
+    // Spin: while D2 > 0 (signed) AND *A2 (unsigned) > 0: decrement both
+    while ((d2 | 0) > 0 && (r[0x1ff7] ?? 0) > 0) {
+      d2 = (d2 - 1) | 0;
+      r[0x1ff7] = ((r[0x1ff7] ?? 0) - 1) & 0xff;
+    }
+    // *0x401FF5 -= D2.b
+    r[0x1ff5] = ((r[0x1ff5] ?? 0) - (d2 & 0xff)) & 0xff;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+/**
  * Replica `FUN_000285B0` — `triggerObjectEvent(objAddr, eventByte)`.
  * Calls FUN_28608 (addToObjectAccumAndFlag) with ROM lookup, then sets
  * obj fields at +0xD4 (long), +0x70 (=0), +0x68 (=0), +0x69 (=-1), +0xD8 (=1).
