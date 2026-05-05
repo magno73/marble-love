@@ -19,6 +19,26 @@ function writeU16(s: GameState, off: number, v: number): void {
   s.workRam[off + 1] = v & 0xff;
 }
 
+/** Replica `FUN_0001BB08` — wrapper: setta xy globals da arg+0xC/+0x10 word + jsr derive. */
+export function deriveSpriteFromArg_v1(state: GameState, argAddr: number): void {
+  const argOff = argAddr - 0x400000;
+  writeU16(state, 0x690, readU16(state, argOff + 0xC));
+  writeU16(state, 0x692, readU16(state, argOff + 0x10));
+  deriveSpriteFields(state);
+}
+
+/** Replica `FUN_0001BB28` — wrapper: byte+4/+5 sext × 8 → globals + jsr derive. */
+export function deriveSpriteFromArg_v2(state: GameState, argAddr: number): void {
+  const argOff = argAddr - 0x400000;
+  const b4 = state.workRam[argOff + 4] ?? 0;
+  const b5 = state.workRam[argOff + 5] ?? 0;
+  const b4S = b4 & 0x80 ? b4 - 0x100 : b4;
+  const b5S = b5 & 0x80 ? b5 - 0x100 : b5;
+  writeU16(state, 0x690, (b4S << 3) & 0xffff);
+  writeU16(state, 0x692, (b5S << 3) & 0xffff);
+  deriveSpriteFields(state);
+}
+
 export function deriveSpriteFields(state: GameState): void {
   const x = readU16(state, 0x690);
   const y = readU16(state, 0x692);

@@ -39,8 +39,51 @@ async function main(): Promise<void> {
     if (m) ok++;
   }
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
+
+  // V1
+  console.log(`\n=== deriveSpriteFromArg_v1 (FUN_1BB08) — ${n} casi ===`);
+  let ok2 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const ARG = 0x00401D00;
+    for (let j = 0; j < 0x20; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, ARG + j, 1, v);
+      stateInst.workRam[(ARG - 0x400000) + j] = v;
+    }
+    callFunction(cpu, 0x1bb08, [ARG]);
+    spriteDerive.deriveSpriteFromArg_v1(stateInst, ARG);
+    let m = true;
+    for (let j = 0x690; j <= 0x6a3; j++) {
+      if (peekMem(cpu, 0x400000 + j, 1) !== (stateInst.workRam[j] ?? 0)) { m = false; break; }
+    }
+    if (m) ok2++;
+  }
+  console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
+
+  // V2
+  console.log(`\n=== deriveSpriteFromArg_v2 (FUN_1BB28) — ${n} casi ===`);
+  let ok3 = 0;
+  for (let i = 0; i < n; i++) {
+    cpu.system.setRegister("sp", 0x401f00);
+    const ARG = 0x00401D00;
+    for (let j = 0; j < 0x10; j++) {
+      const v = Math.floor(r() * 256);
+      pokeMem(cpu, ARG + j, 1, v);
+      stateInst.workRam[(ARG - 0x400000) + j] = v;
+    }
+    callFunction(cpu, 0x1bb28, [ARG]);
+    spriteDerive.deriveSpriteFromArg_v2(stateInst, ARG);
+    let m = true;
+    for (let j = 0x690; j <= 0x6a3; j++) {
+      if (peekMem(cpu, 0x400000 + j, 1) !== (stateInst.workRam[j] ?? 0)) { m = false; break; }
+    }
+    if (m) ok3++;
+  }
+  console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
+
   disposeCpu(cpu);
-  exit(ok === n ? 0 : 1);
+  exit((ok === n && ok2 === n && ok3 === n) ? 0 : 1);
 }
 
 main().catch(e => { console.error(e); exit(1); });
