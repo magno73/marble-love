@@ -42,6 +42,7 @@ export * as objectHelpers from "./object-helpers.js";
 export * as rleExpand from "./rle-expand.js";
 export * as stringTrim from "./string-trim.js";
 export * as slotSearch from "./slot-search.js";
+export * as initHelpers from "./init-helpers.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
