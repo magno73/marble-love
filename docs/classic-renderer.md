@@ -40,6 +40,9 @@ classic-style frame. It includes:
 
 These are fixture commands only. They are not extracted from Marble Madness ROMs,
 MAME screenshots, or any copyrighted pixel art.
+`packages/web/test/classic-demo-frame.test.ts` covers the fixture shape so the
+demo stays a readable ramp/platform composition instead of regressing into a
+full-screen checkerboard or fully ROM-textured diagnostics view.
 
 `packages/engine/src/render.ts` now extracts only two conservative, documented
 pieces from `GameState`: palette entries from `colorRam` and alpha/HUD commands
