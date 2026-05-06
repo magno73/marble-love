@@ -29,9 +29,11 @@ Step:
   "scenario": "level1_no_input",
   "parity": 0.058,                 // 0..1
   "framesCompared": 600,
+  "fromFrame": 0,                  // (opzionale) frame dal quale si confronta
   "firstDivergence": {
     "frame": 35,
     "fields": ["marble.vx", "marble.x"],
+    "annotated": ["marble.vx", "marble.x"],   // campi tradotti per leggibilità
     "truth":  { "f": 35, "marble": { "vx": 12, ... }, ... },
     "reimpl": { "f": 35, "marble": { "vx": 0,  ... }, ... }
   },
@@ -41,6 +43,16 @@ Step:
 ```
 
 `suspectedSubsystem` è euristico (mappa nome campo → modulo). Utile per orientare il fix successivo, non vincolante.
+
+### Schema v2: `workRamHashes` regional
+
+Schema v2 (`TRACE_SCHEMA_VERSION = 2`) aggiunge `workRamHashes`: array di 32 CRC32, uno per regione di 0x100 byte. Quando il diff trova una divergenza in una regione, `annotated` riporta `workRam[0x300..0x3ff]` invece del generico `workRamHash`. Permette di puntare al sub-system specifico molto più velocemente.
+
+Backward-compat: una oracle trace v1 + reimpl v2 produce un warning ma il diff continua usando il `workRamHash` globale.
+
+### Flag utili
+
+- `--from-frame N` salta i primi N frame nella comparazione (utile per ignorare la transitoria di boot MAME, frame 0-5 in attract_mode).
 
 ## Curriculum
 

@@ -36,7 +36,8 @@ Due track paralleli su `main`, **bridge attivo**:
 - ✅ `harness/diff.ts` supporta `--from-frame N` per saltare la transitoria di boot MAME
 - ✅ `marble-runner` supporta `--with-boot-init` per allinearsi al post-boot oracle
 - ✅ `state.clock.frame` ora aggiornato dal nuovo `mainTick` (era stale dal vecchio stub)
-- ⏳ **Parità attuale 0%** dal frame 6: la divergenza è attesa data la presenza di ~211 sub stubbed. Il diff segnala correttamente al primo punto di divergenza; l'iterazione consiste nel replicare le sub mancanti e ri-misurare.
+- ✅ **Trace localization (schema v2)**: `workRamHashes` array di 32 CRC32 regionali (regioni 0x100 byte). Diff annota `workRam[0x300..0x3ff]` invece del generico `workRamHash`. Backward-compat con oracle v1 (warning).
+- ⏳ **Parità attuale 0%** dal frame 6: la divergenza è attesa data la presenza di ~210 sub stubbed. Il diff ora punta alla regione specifica (es. region 1 = callback ptrs); ogni replica futura riduce le regioni divergenti.
 
 ## Prossime fasi
 

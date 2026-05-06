@@ -17,7 +17,7 @@ import type { GameState } from "./state.js";
 import { raw } from "./wrap.js";
 
 /** Versione dello schema. Bump quando aggiungi/togli campi. Diff fallisce se mismatch. */
-export const TRACE_SCHEMA_VERSION = 1 as const;
+export const TRACE_SCHEMA_VERSION = 2 as const;
 
 /** Header (prima riga del JSONL). */
 export interface TraceHeader {
@@ -60,6 +60,12 @@ export interface TraceFrame {
    *  Nel trace MAME: calcolato da `oracle/mame_dumper.lua`. Nel reimpl: TBD
    *  Phase 4-6 (calcolato sulla Uint8Array `state.workRam`). */
   workRamHash: number;
+  /** CRC32 per regione (32 regioni di 0x100 byte = 256). Indice = offset/0x100.
+   *  Region 4 (0x400-0x4FF) esclude `0x440-0x447` (stack low water).
+   *
+   *  Permette al diff di puntare alla regione specifica che diverge,
+   *  invece di limitarsi a "workRamHash mismatch". */
+  workRamHashes: number[];
 }
 
 /** Serializza un GameState in TraceFrame. Pure function: no mutation. */
@@ -93,7 +99,28 @@ export function frameFromState(s: GameState): TraceFrame {
      *  `>>> 0` forza il risultato a u32 unsigned (l'XOR può produrre signed). */
     workRamHash:
       (crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448)) >>> 0,
+    workRamHashes: workRamRegionalHashes(s.workRam),
   };
+}
+
+/**
+ * Calcola CRC32 per 32 regioni di 0x100 byte ciascuna sulla Work RAM 8 KB.
+ * Regione 4 (0x400-0x4FF) esclude `0x440-0x447` (stack low water mark).
+ *
+ * Output: array di 32 u32, indice = offset / 0x100.
+ */
+function workRamRegionalHashes(buf: Uint8Array): number[] {
+  const out = new Array<number>(32);
+  for (let i = 0; i < 32; i++) {
+    const start = i * 0x100;
+    if (i === 4) {
+      // 0x400-0x4FF con buco 0x440-0x447 (8 byte stack water)
+      out[i] = (crc32(buf, 0x400, 0x40) ^ crc32(buf, 0x448, 0x100 - 0x48)) >>> 0;
+    } else {
+      out[i] = crc32(buf, start, 0x100) >>> 0;
+    }
+  }
+  return out;
 }
 
 /** CRC32 standard (IEEE 802.3, polynomial 0xEDB88320). Pre-computa la tabella

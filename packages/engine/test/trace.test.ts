@@ -11,7 +11,7 @@ import { as_u32 } from "../src/wrap.js";
 
 describe("trace serialization", () => {
   it("header schema version stable", () => {
-    expect(TRACE_SCHEMA_VERSION).toBe(1);
+    expect(TRACE_SCHEMA_VERSION).toBe(2);
     const h: TraceHeader = {
       schemaVersion: TRACE_SCHEMA_VERSION,
       source: "reimpl",
@@ -62,5 +62,44 @@ describe("trace serialization", () => {
     sb.workRam[0x441] = 0xFF;
     sb.workRam[0x447] = 0xFF;
     expect(frameFromState(sa).workRamHash).toBe(frameFromState(sb).workRamHash);
+  });
+
+  it("workRamHashes ha 32 entry e cambia solo nella regione modificata", () => {
+    const sa = emptyGameState();
+    const sb = emptyGameState();
+    sb.workRam[0x350] = 0xAB; // region 3 (0x300-0x3FF)
+    const a = frameFromState(sa);
+    const b = frameFromState(sb);
+    expect(a.workRamHashes.length).toBe(32);
+    expect(b.workRamHashes.length).toBe(32);
+    for (let i = 0; i < 32; i++) {
+      if (i === 3) {
+        expect(a.workRamHashes[i]).not.toBe(b.workRamHashes[i]);
+      } else {
+        expect(a.workRamHashes[i]).toBe(b.workRamHashes[i]);
+      }
+    }
+  });
+
+  it("workRamHashes regione 4 ignora stack low water (0x440-0x447)", () => {
+    const sa = emptyGameState();
+    const sb = emptyGameState();
+    sb.workRam[0x440] = 0xFF;
+    sb.workRam[0x447] = 0xFF;
+    const a = frameFromState(sa);
+    const b = frameFromState(sb);
+    expect(a.workRamHashes[4]).toBe(b.workRamHashes[4]);
+  });
+
+  it("workRamHashes localizza correttamente bordi tra regioni", () => {
+    const sa = emptyGameState();
+    const sb = emptyGameState();
+    sb.workRam[0xFF] = 0x01; // ultimo byte regione 0
+    sb.workRam[0x100] = 0x01; // primo byte regione 1
+    const a = frameFromState(sa);
+    const b = frameFromState(sb);
+    expect(a.workRamHashes[0]).not.toBe(b.workRamHashes[0]);
+    expect(a.workRamHashes[1]).not.toBe(b.workRamHashes[1]);
+    expect(a.workRamHashes[2]).toBe(b.workRamHashes[2]);
   });
 });

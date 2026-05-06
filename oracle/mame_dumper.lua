@@ -28,7 +28,7 @@
 --   0x400440  u32  stack low water mark (debug, escluso dal hash)
 --   0x401F40  u16  vblank skip flag
 
-local SCHEMA_VERSION = 1
+local SCHEMA_VERSION = 2
 
 -- ─── Config ──────────────────────────────────────────────────────────────
 
@@ -203,7 +203,25 @@ local function read_state()
         -- Esclude 0x440-0x444 (stack low water debug-only).
         work_ram_hash = crc32_mem(0x400000, 0x440)
                       ~ crc32_mem(0x400448, 0x2000 - 0x448),
+        -- Hash per regione (32 regioni di 0x100 byte). Indice = offset/0x100.
+        -- Region 4 esclude 0x440-0x447 (stack water).
+        work_ram_hashes = work_ram_regional_hashes(),
     }
+end
+
+-- Calcola CRC32 per 32 regioni di 0x100 byte. Region 4 esclude 0x440-0x447.
+function work_ram_regional_hashes()
+    local h = {}
+    for i = 0, 31 do
+        local start = 0x400000 + i * 0x100
+        if i == 4 then
+            h[i + 1] = crc32_mem(0x400400, 0x40)
+                     ~ crc32_mem(0x400448, 0x100 - 0x48)
+        else
+            h[i + 1] = crc32_mem(start, 0x100)
+        end
+    end
+    return h
 end
 
 -- ─── JSONL writer ────────────────────────────────────────────────────────
@@ -224,6 +242,13 @@ local function write_header()
 end
 
 local function write_frame(s)
+    -- Build "workRamHashes" array literal
+    local parts = {}
+    for i = 1, 32 do
+        parts[i] = tostring(s.work_ram_hashes[i])
+    end
+    local hashes_json = "[" .. table.concat(parts, ",") .. "]"
+
     out:write(string.format(
         '{"f":%d,"cpuTicks":%d,' ..
         '"rng":{"seed":%d,"calls":0},' ..
@@ -231,14 +256,14 @@ local function write_frame(s)
         '"alive":%d,"spriteIndex":%d},' ..
         '"stats":{"score":%d,"lives":%d,"timer":%d,"bonus":%d},' ..
         '"input":{"dx":%d,"dy":%d,"buttons":%d},' ..
-        '"workRamHash":%d}\n',
+        '"workRamHash":%d,"workRamHashes":%s}\n',
         frame_count, s.cpu_pc,
         s.rng_seed,
         s.marble_x, s.marble_y, s.marble_z, s.marble_vx, s.marble_vy, s.marble_vz,
         (s.marble_st & 1), s.marble_type,
         s.obj_count, s.coin_ctr, s.frame_mid, s.frame_low,
         active_dx & 0xFF, active_dy & 0xFF, active_buttons,
-        s.work_ram_hash
+        s.work_ram_hash, hashes_json
     ))
 end
 
