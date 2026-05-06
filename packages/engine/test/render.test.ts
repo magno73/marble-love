@@ -149,6 +149,38 @@ describe("buildFrame", () => {
       },
     ]);
   });
+
+  it("can opt into building playfield commands from supplied RAM and lookups", () => {
+    const state = emptyGameState();
+    const playfieldRam = new Uint8Array([0x81, 0x12]);
+
+    const frame = buildFrame(state, {
+      playfieldRam,
+      playfieldLookups: [
+        { offset: 0, bank: 0, color: 0, bpp: 4 },
+        { offset: 3, bank: 2, color: 5, bpp: 5 },
+      ],
+      scrollX: 4,
+      scrollY: 8,
+    });
+
+    expect(frame.scrollX).toBe(4);
+    expect(frame.scrollY).toBe(8);
+    expect(frame.playfield).toEqual([
+      {
+        tileIndex: 0x312,
+        gfxBank: 2,
+        bitsPerPixel: 5,
+        x: 0,
+        y: 0,
+        width: 8,
+        height: 8,
+        paletteIndex: 0x48,
+        flipX: true,
+        priority: 1,
+      },
+    ]);
+  });
 });
 
 describe("decodePlayfieldWord", () => {

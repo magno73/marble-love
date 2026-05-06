@@ -97,7 +97,11 @@ async function startGame(
     tick(s);
     if (forceEngineDiagnosticFrame) {
       renderer.drawFrame(
-        buildEngineDiagnosticFrame(demoFrame, rom?.graphics.lookupTables.motionObjects),
+        buildEngineDiagnosticFrame(
+          demoFrame,
+          rom?.graphics.lookupTables.motionObjects,
+          rom?.graphics.lookupTables.playfield,
+        ),
       );
       demoFrame += 1;
     } else if (useSyntheticDemoFrame || useRomBackedDemoFrame) {

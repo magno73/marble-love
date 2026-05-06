@@ -122,10 +122,14 @@ export interface Frame {
 }
 
 export interface BuildFrameOptions {
+  playfieldRam?: Uint8Array;
+  playfieldLookups?: PlayfieldLookupInfo[];
   motionObjects?: "none" | "linked-list";
   motionObjectStartEntry?: number;
   maxMotionObjectEntries?: number;
   motionObjectLookups?: MotionObjectLookupInfo[];
+  scrollX?: number;
+  scrollY?: number;
   videoControlByte?: number;
 }
 
@@ -361,6 +365,10 @@ function buildDebugLabel(options: BuildFrameOptions): string | undefined {
  *  Default conservativo: palette/alpha soltanto. Gli sprite da motion-object RAM
  *  sono opt-in finché bank/register video e priority merge non sono persistenti. */
 export function buildFrame(state: GameState, options: BuildFrameOptions = {}): Frame {
+  const playfield =
+    options.playfieldRam !== undefined && options.playfieldLookups !== undefined
+      ? buildPlayfieldFromRam(options.playfieldRam, options.playfieldLookups)
+      : [];
   const sprites =
     options.motionObjects === "linked-list"
       ? buildSpritesFromMotionObjectList(
@@ -373,10 +381,10 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
 
   const frame: Frame = {
     nativeSize: CLASSIC_NATIVE_SIZE,
-    scrollX: 0,
-    scrollY: 0,
+    scrollX: options.scrollX ?? 0,
+    scrollY: options.scrollY ?? 0,
     palette: buildPaletteFromColorRam(state.colorRam),
-    playfield: [],
+    playfield,
     sprites,
     alpha: buildAlphaFromRam(state.alphaRam),
   };

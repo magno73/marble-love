@@ -3,6 +3,7 @@ import type { GraphicsLookupEntry } from "../rom-graphics.js";
 
 type Frame = renderNs.Frame;
 type MotionObjectLookupInfo = renderNs.MotionObjectLookupInfo;
+type PlayfieldLookupInfo = renderNs.PlayfieldLookupInfo;
 
 const COLOR_WORDS = [0x0000, 0xf222, 0xf363, 0xf5a4, 0xfbb5, 0xfff7, 0xf45c, 0xf9bb];
 
@@ -24,11 +25,31 @@ function graphicsLookupsToMotionLookups(
   );
 }
 
+function graphicsLookupsToPlayfieldLookups(
+  lookups: GraphicsLookupEntry[] | undefined,
+): PlayfieldLookupInfo[] {
+  return (
+    lookups?.map((lookup) => ({
+      offset: lookup.offset,
+      bank: lookup.bank,
+      color: lookup.color,
+      bpp: lookup.bpp,
+    })) ?? [
+      { offset: 0, bank: 0, color: 0, bpp: 4 },
+      { offset: 0, bank: 0, color: 1, bpp: 4 },
+      { offset: 0, bank: 0, color: 2, bpp: 4 },
+      { offset: 0, bank: 0, color: 3, bpp: 4 },
+    ]
+  );
+}
+
 export function buildEngineDiagnosticFrame(
   frameNumber: number,
-  lookups?: GraphicsLookupEntry[],
+  motionObjectLookups?: GraphicsLookupEntry[],
+  playfieldLookups?: GraphicsLookupEntry[],
 ): Frame {
   const state = stateNs.emptyGameState();
+  const playfieldRam = new Uint8Array(64 * 30 * 2);
 
   for (let i = 0; i < COLOR_WORDS.length; i += 1) {
     writeWord(state.colorRam, i * 2, COLOR_WORDS[i] ?? 0);
@@ -36,6 +57,18 @@ export function buildEngineDiagnosticFrame(
   writeWord(state.colorRam, 0x101 * 2, 0xfff7);
   writeWord(state.colorRam, 0x102 * 2, 0xf45c);
   writeWord(state.colorRam, 0x103 * 2, 0xf6af);
+  writeWord(state.colorRam, 0x28, 0xf363);
+  writeWord(state.colorRam, 0x30, 0xf5a4);
+  writeWord(state.colorRam, 0x38, 0xfbb5);
+
+  for (let row = 10; row < 22; row += 1) {
+    for (let column = 11; column < 38; column += 1) {
+      const offset = (row * 64 + column) * 2;
+      const lookupIndex = 1 + ((row + column + Math.floor(frameNumber / 24)) % 3);
+      const tileIndex = (row * 5 + column) & 0xff;
+      writeWord(playfieldRam, offset, (lookupIndex << 8) | tileIndex);
+    }
+  }
 
   // One looping motion-object list: entry 0 -> 1 -> 2 -> 0.
   const bob = Math.round(Math.sin(frameNumber / 20) * 3);
@@ -48,9 +81,11 @@ export function buildEngineDiagnosticFrame(
   writeWord(state.alphaRam, 4, 0x0447);
 
   return renderNs.buildFrame(state, {
+    playfieldRam,
+    playfieldLookups: graphicsLookupsToPlayfieldLookups(playfieldLookups),
     motionObjects: "linked-list",
     maxMotionObjectEntries: 8,
-    motionObjectLookups: graphicsLookupsToMotionLookups(lookups),
+    motionObjectLookups: graphicsLookupsToMotionLookups(motionObjectLookups),
     videoControlByte: 0x0c,
   });
 }

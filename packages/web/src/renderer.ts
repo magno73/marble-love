@@ -270,6 +270,17 @@ function drawPlayfield(
   hidePlayfieldSprites(assets);
 
   for (const tile of frame.playfield) {
+    const width = tile.width ?? DEFAULT_TILE_SIZE;
+    const height = tile.height ?? DEFAULT_TILE_SIZE;
+    if (
+      tile.x >= frame.nativeSize.width ||
+      tile.y >= frame.nativeSize.height ||
+      tile.x + width <= 0 ||
+      tile.y + height <= 0
+    ) {
+      continue;
+    }
+
     const texture = objectTileTextureForCommand(frame, tile, assets);
     if (texture !== undefined && texture !== Texture.EMPTY) {
       const sprite = acquirePlayfieldSprite(layers, assets);
@@ -282,8 +293,6 @@ function drawPlayfield(
     }
 
     const color = paletteLookup(frame, tile.paletteIndex);
-    const width = tile.width ?? DEFAULT_TILE_SIZE;
-    const height = tile.height ?? DEFAULT_TILE_SIZE;
     const shade = (tile.tileIndex + (tile.priority ?? 0)) % 3;
 
     graphics
