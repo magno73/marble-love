@@ -1,9 +1,33 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-02
-**Fase corrente:** Phase 0-3 ✅ + Phase 4a-c ✅ + Phase 4d.RNG ✅ + **Phase 4d.PaletteAnim ✅** (1° sotto-update di MainUpdate bit-perfect)
-**Prossima fase:** Phase 4d.next — sotto-update rimanenti di MainUpdate (3 palette anim, 2 BIOS calls, 3 game logic)
+**Ultimo update:** 2026-05-06
 **Branch corrente:** `main`.
+
+## Fase corrente
+
+Due track paralleli su `main`:
+
+### Track A — Phase 4d (replication bit-perfect)
+- ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
+- ✅ Phase 4a-c (RNG, primitive di base)
+- 🔄 **Phase 4d in corso**: 103/314 sub-systems bit-perfect (33% del binario)
+  - 4/4 root game-logic CORE replicati
+  - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
+  - >35.000 differential test cases passati al 100%
+
+### Track B — Classic Renderer (lavoro merged 2026-05-06)
+- ✅ `Frame` model neutrale in `packages/engine/src/render.ts` (Atari System 1 visible size, palette, scroll, 3 layer)
+- ✅ PixiJS pipeline in `packages/web/src/renderer.ts` (605 righe)
+- ✅ ROM graphics decode (`packages/web/src/rom-graphics.ts`)
+- ✅ ROM ZIP loader con fflate
+- ✅ Demo fixtures + 34 nuovi test
+- 📋 Vedi: `docs/classic-renderer.md`, `docs/classic-renderer-prd.md`, `docs/classic-renderer-plan.md`
+
+## Prossime fasi
+
+- **Track A**: continuare replication bit-perfect dei sub-system mancanti (~211 funzioni rimanenti, escludendo thunks)
+- **Track B**: collegamento Track A → Track B (Frame model alimentato dallo state replicato bit-perfect)
+- **Phase 5+** (futuro): trace-level testing con MAME come oracolo (vedi `harness/README.md`, `oracle/README.md`)
 
 **Sub-systems bit-perfect verificati**:
 - ✅ RNG (`rngNext` vs FUN_13A98) — 10000/10000 match

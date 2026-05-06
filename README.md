@@ -2,11 +2,14 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** Phase 4d in corso — **103/314 sub-systems bit-perfect (33% del binario)**. Vedi [`STATUS.md`](./STATUS.md).
-**PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
+**Status:** 2 track paralleli attivi:
+- **Track A — Phase 4d (replication bit-perfect)**: 103/314 sub-systems (33% del binario)
+- **Track B — Classic Renderer**: pipeline web PixiJS completa con `Frame` model neutrale
+
+Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
 
-## Avanzamento Phase 4d (replication bit-perfect)
+## Track A — Phase 4d (replication bit-perfect)
 
 | Categoria | Status |
 |---|---|
@@ -15,7 +18,18 @@
 | **Funzioni totali** | 314 (escludendo 29 thunks) |
 | **Replicate bit-perfect** | **103** (33%) |
 | **Differential test cases** | >35.000 random cases passati al 100% |
-| **Vitest** | 215/215 pass |
+| **Vitest** | 249/249 pass |
+
+## Track B — Classic Renderer
+
+| Componente | Status |
+|---|---|
+| **Engine `Frame` model** | ✅ `packages/engine/src/render.ts` — neutral data model (palette, scroll, 3 layer: playfield/MO/alpha) |
+| **PixiJS pipeline** | ✅ `packages/web/src/renderer.ts` — translate Frame → containers, integer scaling, no AA |
+| **ROM graphics decode** | ✅ `packages/web/src/rom-graphics.ts` — alpha glyphs + object tiles |
+| **ROM ZIP loader** | ✅ `packages/web/src/rom-loader.ts` con fflate |
+| **Demo fixtures** | ✅ classic-demo-frame, engine-diagnostic-frame |
+| **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 
 **Tecniche differential testing (Phase 4d, per-funzione)**:
 - ROM-blob caricato in **musashi-wasm** (M68k emulator) come oracolo per-funzione
