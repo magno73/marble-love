@@ -147,6 +147,10 @@ path and emit neutral sprite commands from `state.spriteRam`, while
 `buildFrame(state)` without options remains conservative. These are narrow
 diagnostic helpers: they skip timer entries, avoid gameplay behavior, and do not
 select the active bank from `$860001` yet.
+If optional PROM-derived motion-object lookup metadata is supplied, those sprite
+commands also carry `gfxBank`, `bitsPerPixel`, and ROM-backed palette indices so
+the web renderer can use decoded object textures. Without lookup metadata, the
+helpers keep producing plain neutral rectangle-friendly sprite commands.
 `decodeVideoControlByte(value)` separately exposes the documented alpha,
 playfield, and motion-object bank bits from `$860001`, but no persistent
 video-control state is modeled yet.
