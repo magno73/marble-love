@@ -90,9 +90,9 @@ describe("Task A main-loop init modules", () => {
     expect(calls).toEqual(["019C", "158AC:1", "11428", "10456", "16EC6", "10504", "11654"]);
   });
 
-  it("FUN_1101E state 4 performs level increment init path", () => {
+  it("FUN_1101E state 3 performs level increment init path", () => {
     const s = emptyGameState();
-    setW(s, 0x390, 4);
+    setW(s, 0x390, 3);
     setW(s, 0x394, 4);
     const calls: string[] = [];
 
@@ -101,7 +101,7 @@ describe("Task A main-loop init modules", () => {
       helper118D2: () => calls.push("118D2"),
       vblankAck: () => calls.push("28DEA"),
       clearPaletteRam: () => calls.push("121A6"),
-      clearMoAlphaRam: () => calls.push("12174"),
+      clearOther12186: () => calls.push("12186"),
       initFnPointers28580: () => calls.push("28580"),
       clearAlphaTiles28C7E: () => calls.push("28C7E"),
       sceneObjInit28CA6: () => calls.push("28CA6"),
@@ -109,9 +109,9 @@ describe("Task A main-loop init modules", () => {
     });
 
     expect(w(s, 0x394)).toBe(5);
-    expect(w(s, 0x390)).toBe(4);
+    expect(w(s, 0x390)).toBe(0);
     expect(s.workRam[0x39a]).toBe(1);
-    expect(calls).toEqual(["15884", "118D2", "28DEA", "121A6", "12174", "28580", "28C7E", "28CA6", "10504"]);
+    expect(calls).toEqual(["15884", "118D2", "28DEA", "121A6", "12186", "28580", "28C7E", "28CA6", "10504"]);
   });
 
   it("FUN_10504 deterministic init block and tail writes key globals", () => {
