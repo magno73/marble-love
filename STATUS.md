@@ -10,7 +10,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 106/314 sub-systems bit-perfect (34% del binario)
+- 🔄 **Phase 4d in corso**: 110/314 sub-systems bit-perfect (35% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
@@ -45,8 +45,11 @@ Due track paralleli su `main`, **bridge attivo**:
   - ✅ `0x1E00-0x1EFF`: risolto. Investigazione via `tools/watch_write.lua` (write-tap MAME) ha mostrato che i write a 0x1EE0-0x1EFF sono stack residue 68k (SP parte da 0x401F00 e scende fino a ~0x401EE8 in attract_mode). Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione conservativa di 0x1EE0-0x1EFF dal hash regione 30, analoga a 0x440-0x447 (stack low water).
 - 🎯 **Bit-perfect parity al frame 0** (reimpl post-bootInit ≡ oracle post-boot-46): le 32 regioni workRam tutte match. Al frame 1 divergenza esplode (29 fields) per via dei sub stubbed → loop iterativo "replica sub → re-run parity-check → vedi salire" è sbloccato.
 - 📋 **Top writers identificati via `tools/watch_write.lua`** (frame 46-47 MAME = primo + secondo tick):
-  - **FUN_4CA0** (sound dispatcher wrapper) — REPLICATO ✅ 2000/2000 vs binary patched-stubs (sub FUN_3E1A/FUN_4DCC/FUN_4C3E rimangono STUB).
-  - **FUN_4DCC** (sound chip writer, ~294 writes) — minimal stub: incrementa solo `*0x401FF8` (counter deterministico, prima istruzione di FUN_4DCC). Body completo richiede emulare YM2151 — fuori scope. Region 30+31 restano divergenti per la parte sound.
+  - **FUN_4CA0** (sound dispatcher wrapper) — REPLICATO ✅ 2000/2000 vs binary patched-stubs.
+  - **FUN_3E1A** (sound dispatch send sub) — REPLICATO ✅ 1000/1000 vs binary, integrato come default sub di soundTick.
+  - **FUN_4C3E** (sound status check sub) — REPLICATO ✅ 500/500 vs binary, integrato come default sub di soundTick.
+  - **FUN_4D1A** (IRQ sound input mailbox) — REPLICATO ✅ 1000/1000 vs binary patched (RTE→RTS + MMIO source patch). Non ancora integrato in mainTick (è IRQ separato).
+  - **FUN_4DCC** (sound chip writer, ~294 writes) — minimal stub: incrementa solo `*0x401FF8` (counter deterministico, prima istruzione di FUN_4DCC). Body completo richiede emulare YM2151 — fuori scope.
 
 ### Parity vs MAME (attract_mode, post-FUN_10392 + boot globals + timer init + inputMmio fix)
 
