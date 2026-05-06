@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 51% del binario replicato bit-perfect** (160/314 sub-systems), bridge engine ↔ renderer attivo.
+**Status:** **🎯 60% del binario replicato bit-perfect** (187/314 sub-systems), bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,11 +11,11 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems replicati bit-perfect | **160 / 314** (51%) |
-| Differential test cases | >70.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **85 file / 678 test** verde |
+| Sub-systems replicati bit-perfect | **187 / 314** (60%) |
+| Differential test cases | >85.000 random cases tutti 100% match vs musashi-wasm |
+| Vitest | **111 file / 888 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
-| Tooling agent paralleli | 11 batch, 53 funzioni in singola sessione (worktree-isolated) |
+| Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (Task A: main loop init chain) |
 
 ## Track A — Phase 4d (replication bit-perfect)
 
@@ -29,9 +29,10 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | **String / HUD render** | ✅ render-string-entry-286B0/28F62/28FA0/28FDE, format-and-render, render-glyph-loop, dispatch-strings |
 | **EEPROM / pacing** | ✅ eepromCommit, eepromCommitRequest |
 | **Slapstic** | ✅ lookup + table store |
+| **Boot/main loop init chain** | ✅ FUN_117B2 + FUN_11452 (Codex) replicati bit-perfect; FUN_1101E + FUN_10504 (Codex) come scheletri stub-injection (parity TBD) |
 | **Funzioni totali** | 314 (escludendo 29 thunks) |
-| **Replicate bit-perfect** | **160** (51%) |
-| **Differential test cases** | >70.000 random cases tutti 100% match |
+| **Replicate bit-perfect** | **187** (60%) |
+| **Differential test cases** | >85.000 random cases tutti 100% match |
 
 ## Track B — Classic Renderer
 
@@ -79,13 +80,21 @@ harness/parity-check.sh attract_mode 45 600 1
 
 ## Workflow multi-agent
 
-Il throughput sostenuto è ottenuto via **5 agent paralleli** con `isolation: "worktree"` (best practice Claude Code documentata):
+Due flussi paralleli operativi:
+
+**1. Claude Code in-process** (5 agent paralleli con `isolation: "worktree"`, best practice Claude Code documentata):
 - Ogni agent lavora in worktree git temporaneo isolato
 - Prompt focalizzato (~150 parole) con template + pattern noto
 - Tutti i risultati 500/500 bit-perfect vs binary
 - ~5 min wall time per batch da 5 funzioni
 
-Vedi `STATUS.md` per il diario dei batch.
+**2. Codex (OpenAI) in clone separato** via [`docs/codex-prd.md`](./docs/codex-prd.md):
+- Branch `codex/<task>` su GitHub, PR-based merge su main
+- Regole non-interferenza: NO edit a `main-tick.ts`, `boot-init.ts`, `STATUS.md`, `README.md`
+- Task A (main loop init) attualmente in 2 PR già merged: scheletro + parity bit-perfect FUN_117B2/FUN_11452
+- Marco fa review + integration finale al merge
+
+Vedi `STATUS.md` per il diario dei batch e `docs/codex-task-a-main-loop-init.md` per il progress Codex.
 
 ## Architettura
 
@@ -103,8 +112,8 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 
 | Pacchetto | Ruolo |
 |---|---|
-| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **160 moduli replicati bit-perfect**. |
-| `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL + ~85 parity test vs binary. |
+| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **187 moduli replicati bit-perfect**. |
+| `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL + ~95 parity test vs binary. |
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |
 
