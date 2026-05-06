@@ -7,12 +7,12 @@
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems bit-perfect | **160 / 314** (51%) |
-| Vitest | **85 file / 678 test** verde |
-| Differential test cases | >70.000 random cases tutti 100% match |
+| Sub-systems bit-perfect | **187 / 314** (60%) |
+| Vitest | **111 file / 888 test** verde |
+| Differential test cases | >85.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
-| Multi-agent throughput | 11 batch paralleli, 53 funzioni replicate in singola sessione |
+| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (Task A main loop init chain) |
 
 ## Fase corrente
 
@@ -21,7 +21,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 185/314 sub-systems bit-perfect (59% del binario)
+- 🔄 **Phase 4d in corso**: 187/314 sub-systems bit-perfect (60% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
@@ -119,9 +119,33 @@ Migrato a workflow multi-agent con `isolation: "worktree"` (best practice uffici
 | 8     | +5 | 145   | 46%  | 565    | render-string-28fde + sync-av + state-1eaa + format-render + array-9-clear |
 | 9     | +5 | 150   | 48%  | 593    | render-string-286b0/28f62/28fa0 + dispatch-table + eeprom-request |
 | 10    | +5 | 155   | 49%  | 632    | bsearch + glyph-loop + level-load + state-5608 + object-enter-1281c |
-| 11    | +5 | 160   | **51%** | 678 | state-dispatch + palette-rng + sprite-pos + waypoint + state-540a |
+| 11    | +5 | 160   | 51% | 678 | state-dispatch + palette-rng + sprite-pos + waypoint + state-540a |
+| 12    | +5 | 165   | 53% | 720 | sort-objects + state-validate + state-15bd0 + sprite-coords-jsr + mo-grid-init |
+| 13    | +5 | 170   | 54% | 759 | field-fetch + state-5584 + obj-type-dispatch + state-1960e + sprite-pair-coord |
+| 14    | +5 | 175   | 56% | 800 | state-59d2 + obj-dirty + alpha-ram-init + obj-init + sprite-project |
+| 15    | +5 | 180   | 57% | 838 | key-rank + hud-frame + bbox-hit + state-198bc + string-target |
+| 16    | +5 | 185   | **59%** | 883 | state-5d2a + marble-cell + hi-score + obj-state + slot-insert |
 
-**Risultato sessione**: +53 funzioni bit-perfect, +422 test smoke + parity, **superato il 50% del binario**.
+**Risultato sessione Claude Code**: +78 funzioni bit-perfect, +627 test smoke + parity, **superato il 50% del binario**.
+
+## Sessione 2026-05-06 — Codex Task A (main loop init chain)
+
+In parallelo, Codex agent lavora su `codex/a-*` branch via `docs/codex-prd.md` con regole non-interferenza (no edit a `main-tick.ts`/`boot-init.ts`/STATUS/README). Workflow PR-based con review + merge da Marco.
+
+**Task A — main loop init chain post-boot** (prerequisito per parità vs MAME post-boot):
+
+| Funzione | Status | Verifica |
+|---|---|---|
+| FUN_117B2 (entry chain) | ✅ replicato | parity 500/500 vs musashi-wasm |
+| FUN_11452 (transition dispatcher) | ✅ replicato | parity 500/500 vs musashi-wasm |
+| FUN_1101E (state dispatcher cases 0..6) | 🔧 scheletro + smoke | parity TBD |
+| FUN_10504 (init prefix + presentation middle) | 🔧 scheletro + smoke | parity TBD (middle è 2762 byte, work in progress) |
+
+Pattern utilizzato: stub-injection per JSR non replicate (`MainLoopInit117B2Subs`, etc.), big-endian RAM helpers, signed-compare guard `i8()` su byte counter (M68k `bgt` semantics).
+
+Test totali: 9 smoke + 2 parity. Vedi [`docs/codex-task-a-main-loop-init.md`](docs/codex-task-a-main-loop-init.md).
+
+**Conteggio finale**: 187/314 bit-perfect = 185 (Claude Code) + 2 (Codex). Gli scheletri Codex (1101E, 10504) NON sono conteggiati come bit-perfect finché non hanno parity 500/500.
 
 Tooling sviluppato:
 - `tools/watch_write.lua`: write-tap MAME su regione workRam

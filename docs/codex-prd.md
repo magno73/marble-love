@@ -57,7 +57,13 @@ Se hai dubbio: **lascialo nel modulo nuovo + parity test, NON integrare in mainT
 
 ## Tre task disponibili (scegline UNO)
 
-### Task A — FUN_117B2 main loop init chain ⭐ ALTA PRIORITÀ
+### Task A — FUN_117B2 main loop init chain ⭐ IN CORSO
+
+**Status (2026-05-06)**: 2 PR già merged su main:
+- `codex/a-main-loop-init-117b2`: 4 moduli scheletro + 9 smoke test
+- `codex/a-main-loop-init-parity`: parity 500/500 per FUN_117B2 e FUN_11452
+
+**Rimanente**: parity 500/500 per FUN_1101E e FUN_10504 (presentation middle 2762 byte). Vedi [`docs/codex-task-a-main-loop-init.md`](codex-task-a-main-loop-init.md) per progress.
 
 **Cosa**: replicare la chain `FUN_117B2 → FUN_1101E / FUN_11452 → FUN_10504 → FUN_10392`. È l'init chain post-boot che popola molto del workRam prima che inizino i tick di gioco. Replicarla in `bootInit` ridurrebbe drammaticamente la divergenza al frame 1 vs MAME.
 
