@@ -136,8 +136,11 @@ Completed:
   future playfield RAM integration. It is not connected to `GameState` yet.
 - Added documented motion-object word extraction and
   `buildSpritesFromMotionObjectRam(spriteRam, entryIndexes)` for explicit entry
-  diagnostics. It intentionally does not walk the active linked list or choose a
-  sprite bank yet.
+  diagnostics.
+- Added `walkMotionObjectLinkedList(spriteRam)` and
+  `buildSpritesFromMotionObjectList(spriteRam)` as bounded diagnostic helpers
+  for the documented word-3 links. They do not choose a sprite bank yet and are
+  not wired into `buildFrame(state)`.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds while
   leaving playfield and sprite command arrays empty.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.
@@ -147,8 +150,8 @@ Constraints:
 - Do not invent playfield RAM before it exists in `GameState`.
 - Do not change game logic, parity tests, RNG, physics, AI, or state-machine
   code.
-- Do not parse active `spriteRam` linked lists or sprite banking yet; the helper
-  only decodes explicitly supplied entries.
+- Do not wire active `spriteRam` lists or sprite banking into `buildFrame(state)`
+  yet; the helpers remain explicit diagnostics.
 
 Verification:
 

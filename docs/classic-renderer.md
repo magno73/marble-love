@@ -117,9 +117,10 @@ is stable:
 - future playfield RAM/tilemap state when it exists.
 
 Palette RAM and alpha RAM have a first deterministic scaffold. Motion-object
-single-entry word extraction also has a deterministic scaffold for diagnostics,
-but active linked-list walking, sprite bank selection, priority merge behavior,
-translucency palette behavior, and playfield RAM extraction remain TODOs.
+single-entry word extraction and bounded word-3 linked-list walking also have a
+deterministic scaffold for diagnostics, but sprite bank selection, priority
+merge behavior, translucency palette behavior, and playfield RAM extraction
+remain TODOs.
 
 `decodePlayfieldWord()` extracts only the documented playfield RAM word fields
 (`tileIndexLow`, `lookupIndex`, `flipX`). PROM tables are split into remap/color
@@ -136,9 +137,11 @@ The same texture path now supports ROM-backed demo motion objects. Chrome/debug
 rendering includes a tiny palette swatch preview from the current frame palette.
 
 `buildSpritesFromMotionObjectRam(spriteRam, entryIndexes)` can convert explicit
-motion-object RAM entries into neutral `SpriteCommand` values. This is a narrow
-diagnostic helper: it skips timer entries, does not follow word-3 links, and does
-not select the active bank from `$860001` yet.
+motion-object RAM entries into neutral `SpriteCommand` values.
+`walkMotionObjectLinkedList(spriteRam)` follows documented word-3 links with a
+bounded loop guard, and `buildSpritesFromMotionObjectList(spriteRam)` combines
+the two. These are narrow diagnostic helpers: they skip timer entries, avoid
+gameplay behavior, and do not select the active bank from `$860001` yet.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.

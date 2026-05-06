@@ -4,10 +4,12 @@ import {
   buildFrame,
   buildPaletteFromColorRam,
   buildPlayfieldFromRam,
+  buildSpritesFromMotionObjectList,
   buildSpritesFromMotionObjectRam,
   decodeMotionObjectWords,
   decodePlayfieldWord,
   irgb4444ToRgba,
+  walkMotionObjectLinkedList,
 } from "../src/render.js";
 import { emptyGameState } from "../src/state.js";
 
@@ -178,6 +180,59 @@ describe("buildSpritesFromMotionObjectRam", () => {
         height: 24,
         paletteIndex: 0x12a,
         flipX: true,
+        priority: 1,
+        translucent: true,
+      },
+    ]);
+  });
+});
+
+describe("walkMotionObjectLinkedList", () => {
+  it("walks word-3 links until an entry repeats", () => {
+    const ram = new Uint8Array(64 * 8);
+    ram[7] = 2;
+    ram[2 * 8 + 7] = 5;
+    ram[5 * 8 + 7] = 2;
+
+    expect(walkMotionObjectLinkedList(ram)).toEqual([0, 2, 5]);
+  });
+
+  it("honors the max entry limit and start entry", () => {
+    const ram = new Uint8Array(64 * 8);
+    ram[3 * 8 + 7] = 4;
+    ram[4 * 8 + 7] = 5;
+    ram[5 * 8 + 7] = 6;
+
+    expect(walkMotionObjectLinkedList(ram, 3, 2)).toEqual([3, 4]);
+  });
+});
+
+describe("buildSpritesFromMotionObjectList", () => {
+  it("builds neutral sprites from the walked motion-object list", () => {
+    const ram = new Uint8Array(64 * 8);
+    ram.set([0x00, 0x21, 0x01, 0x10, 0x00, 0x41, 0x00, 0x02], 0);
+    ram.set([0x00, 0x22, 0x02, 0x20, 0x80, 0x62, 0x00, 0x00], 16);
+
+    expect(buildSpritesFromMotionObjectList(ram)).toEqual([
+      {
+        spriteIndex: 0x10,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x101,
+        flipX: false,
+        priority: 0,
+        translucent: false,
+      },
+      {
+        spriteIndex: 0x20,
+        x: 3,
+        y: 1,
+        width: 24,
+        height: 24,
+        paletteIndex: 0x102,
+        flipX: false,
         priority: 1,
         translucent: true,
       },
