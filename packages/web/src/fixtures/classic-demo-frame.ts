@@ -24,20 +24,63 @@ const palette: PaletteEntry[] = [
   { index: 9, rgba: { r: 38, g: 32, b: 48, a: 170 } },
 ];
 
+function isInsidePlatform(
+  x: number,
+  y: number,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): boolean {
+  return x >= left && x < left + width && y >= top && y < top + height;
+}
+
+function isInsideRamp(x: number, y: number): boolean {
+  const centerY = 176 - (x - 36) * 0.42;
+  const taper = x < 82 || x > 262 ? 22 : 34;
+  return x >= 34 && x <= 292 && Math.abs(y - centerY) <= taper;
+}
+
+function paletteForSurface(x: number, y: number): number | undefined {
+  const onLowerPlatform = isInsidePlatform(x, y, 34, 150, 104, 54);
+  const onUpperPlatform = isInsidePlatform(x, y, 202, 66, 104, 56);
+  const onRamp = isInsideRamp(x, y);
+
+  if (!onLowerPlatform && !onUpperPlatform && !onRamp) {
+    const belowRamp = isInsideRamp(x, y - 14);
+    return belowRamp ? 9 : 0;
+  }
+
+  const edge =
+    y % 24 >= 16 ||
+    (onLowerPlatform && (x < 42 || y > 190)) ||
+    (onUpperPlatform && (x > 290 || y < 76));
+  if (edge) return 5;
+
+  const groove = Math.floor((x + y * 2) / 32) % 5 === 0;
+  if (groove) return 2;
+
+  return onRamp ? 4 : 3;
+}
+
 function buildPlayfield(frameNumber: number): TileCommand[] {
   const playfield: TileCommand[] = [];
-  const columns = Math.ceil(NATIVE_WIDTH / TILE_SIZE) + 2;
-  const rows = Math.ceil(NATIVE_HEIGHT / TILE_SIZE) + 2;
-  const scrollX = frameNumber % TILE_SIZE;
+  const columns = Math.ceil(NATIVE_WIDTH / TILE_SIZE);
+  const rows = Math.ceil(NATIVE_HEIGHT / TILE_SIZE);
+  const pulse = Math.floor(frameNumber / 18) % 4;
 
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
-      const ridge = (row + Math.floor(column / 3)) % 5;
-      const paletteIndex = 1 + ((column + row + ridge) % 4);
+      const x = column * TILE_SIZE;
+      const y = row * TILE_SIZE;
+      const paletteIndex = paletteForSurface(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+      if (paletteIndex === undefined) continue;
+
+      const ridge = Math.abs(row - column + pulse) % 7;
       playfield.push({
-        tileIndex: (row * columns + column) % 32,
-        x: column * TILE_SIZE - scrollX - TILE_SIZE,
-        y: row * TILE_SIZE - TILE_SIZE,
+        tileIndex: (row * 11 + column * 3 + ridge) % 64,
+        x,
+        y,
         width: TILE_SIZE,
         height: TILE_SIZE,
         paletteIndex,
@@ -121,7 +164,7 @@ function buildAlpha(): AlphaCommand[] {
 export function buildClassicDemoFrame(frameNumber: number): Frame {
   return {
     nativeSize: { width: NATIVE_WIDTH, height: NATIVE_HEIGHT },
-    scrollX: frameNumber % TILE_SIZE,
+    scrollX: 0,
     scrollY: 0,
     palette,
     playfield: buildPlayfield(frameNumber),
@@ -172,8 +215,17 @@ export function buildRomBackedDemoFrame(
   frameNumber: number,
 ): Frame {
   const frame = buildClassicDemoFrame(frameNumber);
+  const sampleStartX = 232;
+  const sampleStartY = 154;
 
   frame.playfield = frame.playfield.map((tile, index) => {
+    const inSampleStrip =
+      tile.x >= sampleStartX &&
+      tile.x < sampleStartX + 64 &&
+      tile.y >= sampleStartY &&
+      tile.y < sampleStartY + 24;
+    if (!inSampleStrip) return tile;
+
     const { lookup, lookupIndex } = firstDrawablePlayfieldLookup(
       graphics,
       tile.tileIndex + index,

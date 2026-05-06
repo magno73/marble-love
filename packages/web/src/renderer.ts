@@ -109,7 +109,10 @@ function textureFromObjectTile(
   for (let y = 0; y < tile.height; y += 1) {
     for (let x = 0; x < tile.width; x += 1) {
       const pen = tile.pixels[y * tile.width + x] ?? 0;
-      const color = paletteLookup(frame, paletteBase + pen);
+      const color =
+        exactPaletteLookup(frame, paletteBase + pen) ??
+        frame.palette[(paletteBase + pen) % frame.palette.length]?.rgba ??
+        paletteLookup(frame, paletteBase);
       const offset = (y * tile.width + x) * 4;
       imageData.data[offset] = color.r;
       imageData.data[offset + 1] = color.g;
@@ -217,6 +220,7 @@ function drawPlayfield(
       sprite.y = tile.y;
       sprite.scale.x = (tile.width ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
       sprite.scale.y = (tile.height ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
+      sprite.alpha = 1;
       continue;
     }
 
@@ -229,7 +233,7 @@ function drawPlayfield(
       .rect(tile.x, tile.y, width, height)
       .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
 
-    if (shade === 0) {
+    if (shade === 0 && tile.paletteIndex !== 0 && tile.paletteIndex !== 9) {
       graphics.rect(tile.x, tile.y, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
     }
   }
@@ -269,6 +273,23 @@ function drawSprites(
       : alphaFromRgba(color);
     const x = sprite.flipX ? sprite.x - 1 : sprite.x;
     const y = sprite.flipY ? sprite.y - 1 : sprite.y;
+
+    if (sprite.spriteIndex === 0) {
+      const radius = Math.min(width, height) / 2;
+      graphics.circle(x + radius, y + radius, radius).fill({
+        color: rgbaToPixiColor(color),
+        alpha,
+      });
+      graphics.circle(x + radius - 4, y + radius - 4, Math.max(2, radius / 3)).fill({
+        color: 0xffffff,
+        alpha: 0.5,
+      });
+      graphics.ellipse(x + radius, y + height + 3, radius, 3).fill({
+        color: 0x000000,
+        alpha: 0.28,
+      });
+      continue;
+    }
 
     graphics.rect(x, y, width, height).fill({ color: rgbaToPixiColor(color), alpha });
 
