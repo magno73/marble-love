@@ -64,6 +64,23 @@ Regioni residue (3 byte tipici per regione 3 dopo timer fix):
 Fix applicati questa sessione:
 - `inputMmio` default 0xFC (era 0x40) → fixa 0x3A8 e 0x3AC
 - Global timer inner @ 0x3A2 = 0xFF (TIMER_DISABLED) → fixa 0x39E-0x3A1 + 0x3A0 cascade
+
+### Visual smoke test (tools/visual-smoke-test)
+
+`packages/cli/src/visual-smoke-test.ts` esegue bootInit + N tick e ispeziona il `Frame` prodotto da `buildFrame(state)`.
+
+Dopo 300 tick:
+- ✅ palette: 1017/1024 colori non-zero (descending pattern + bootstrap init)
+- ❌ playfield: 0 (state non modella playfield tilemap RAM @ 0xA00000-0xA01FFF)
+- ❌ sprites: 0 (state.spriteRam vuoto, sub-functions di game state machine stubbed)
+- ❌ HUD: 0 (state.alphaRam vuoto, string-render subs stubbed)
+
+**Visivamente**: schermo nero con palette caricata. Per vedere qualcosa serve:
+1. Replicare le sub di gameStateMachineTick che popolano spriteRam/alphaRam
+2. Aggiungere `state.playfieldRam` (8 KB) e replicare i write game-side
+3. Far passare `playfieldRam` opt-in a `buildFrame` dal renderer web
+
+Commit `renderer.draw` aggiornato per passare motion-object lookups, ma il tilemap playfield richiede modello state esteso.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
