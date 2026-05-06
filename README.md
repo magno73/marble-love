@@ -2,23 +2,36 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** 2 track paralleli attivi:
-- **Track A — Phase 4d (replication bit-perfect)**: 103/314 sub-systems (33% del binario)
-- **Track B — Classic Renderer**: pipeline web PixiJS completa con `Frame` model neutrale
+**Status:** **🎯 51% del binario replicato bit-perfect** (160/314 sub-systems), bridge engine ↔ renderer attivo.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
+
+## Metriche progetto
+
+| Metrica | Valore |
+|---|---|
+| Sub-systems replicati bit-perfect | **160 / 314** (51%) |
+| Differential test cases | >70.000 random cases tutti 100% match vs musashi-wasm |
+| Vitest | **85 file / 678 test** verde |
+| Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
+| Tooling agent paralleli | 11 batch, 53 funzioni in singola sessione (worktree-isolated) |
 
 ## Track A — Phase 4d (replication bit-perfect)
 
 | Categoria | Status |
 |---|---|
-| **Root game-logic CORE** | ✅ 4/4 replicati (`trackballInputTick`, `gameTickTimers`, `gameMainGate`, `gameStateMachineTick`) |
-| **State machine schedulers** | ✅ Stati 1, 2, 3, 4, 5/6, 7 tutti coperti |
+| **Root game-logic CORE** | ✅ 4/4 (`trackballInputTick`, `gameTickTimers`, `gameMainGate`, `gameStateMachineTick`) |
+| **State machine schedulers** | ✅ Stati 1, 2, 3, 4, 5/6, 7 + state-sub 2BDA/2C60/2DA0/2ABC/2678/520E/525C/5334/535E/540A/5608/1EAA |
+| **Boot init** | ✅ `bootInit` orchestrator + slot-array bulk init + boot screen + spurious handler |
+| **Sound subsystem** | ✅ Wrapper FUN_4CA0 + sub FUN_3E1A/4C3E/4D1A/158AC/15884/4420 (chip writer FUN_4DCC ancora minimal-stub: richiede YM2151) |
+| **Palette / video** | ✅ paletteAnim 1/2/3, paletteQueue, paletteRngFill, palette init, pfScroll, tilemap blit, clear-pf |
+| **String / HUD render** | ✅ render-string-entry-286B0/28F62/28FA0/28FDE, format-and-render, render-glyph-loop, dispatch-strings |
+| **EEPROM / pacing** | ✅ eepromCommit, eepromCommitRequest |
+| **Slapstic** | ✅ lookup + table store |
 | **Funzioni totali** | 314 (escludendo 29 thunks) |
-| **Replicate bit-perfect** | **103** (33%) |
-| **Differential test cases** | >35.000 random cases passati al 100% |
-| **Vitest** | 249/249 pass |
+| **Replicate bit-perfect** | **160** (51%) |
+| **Differential test cases** | >70.000 random cases tutti 100% match |
 
 ## Track B — Classic Renderer
 
@@ -31,14 +44,48 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | **Demo fixtures** | ✅ classic-demo-frame, engine-diagnostic-frame |
 | **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 
-**Tecniche differential testing (Phase 4d, per-funzione)**:
+## Bridge Track A ↔ Track B
+
+| Componente | Stato |
+|---|---|
+| `mainTick(state, {rom})` | ✅ `packages/engine/src/main-tick.ts` orchestra le root sub replicate nell'ordine esatto di FUN_28788 |
+| `bootInit(state, rom)` | ✅ porta lo state al primo frame "post-boot pre-tick" |
+| Frontend integrato | ✅ `packages/web/src/main.ts` chiama bootInit + tick reale |
+| Visual smoke test | ✅ `packages/cli/src/visual-smoke-test.ts` — palette evolve, sprite/HUD richiedono altre sub |
+
+## Tecniche differential testing
+
 - ROM-blob caricato in **musashi-wasm** (M68k emulator) come oracolo per-funzione
 - Random input setup → `callFunction(addr)` sul binario + chiamata TS reimpl in parallelo
 - Compare bit-perfect su workRam / colorRam / spriteRam / alphaRam regions
-- Patch ROM (es. `rts` immediate) per stubbare sub-functions HUD/sound non ancora replicate
+- Patch ROM (es. `rts` immediate = 0x4E75) per stubbare sub-functions non ancora replicate
 - Spin-loop patching (`bne` → `bra`) per evitare hang in test deterministici
+- MMIO-source patching (es. 0xFC0001 → 0x00400440) per controllare letture MMIO via `pokeMem`
+- RTE → RTS patching per testare IRQ handlers via callFunction sentinel-based
 
-**Phase 5+ (futuro)**: trace-level testing con MAME come oracolo (vedi sezione sotto).
+## End-to-end vs MAME (schema v2)
+
+- `oracle/run_oracle.ts` lancia MAME con dumper Lua → `traces/oracle_<scenario>.jsonl`
+- `packages/cli/src/marble-runner.ts` esegue il reimpl → `traces/reimpl_<scenario>.jsonl`
+- `harness/diff.ts` confronta con `--truth-offset N` (allinea boot transient) e `--from-frame N`
+- **Trace localization v2**: 32 CRC32 regionali (regioni 0x100 byte) → diff annota "workRam[0x300..0x3ff]" invece del generico "workRamHash mismatch"
+- `tools/watch_write.lua` (write-tap MAME): logga `(frame, PC, addr, data, mask)` per identificare writer di una zona specifica
+- `MARBLE_DUMP_REGIONS=0x100,0x300` env var: dump hex byte-per-byte di regioni specifiche per debug
+
+```bash
+# Pipeline completa: reimpl trace + diff vs oracle
+harness/parity-check.sh attract_mode 45 600 1
+```
+
+## Workflow multi-agent
+
+Il throughput sostenuto è ottenuto via **5 agent paralleli** con `isolation: "worktree"` (best practice Claude Code documentata):
+- Ogni agent lavora in worktree git temporaneo isolato
+- Prompt focalizzato (~150 parole) con template + pattern noto
+- Tutti i risultati 500/500 bit-perfect vs binary
+- ~5 min wall time per batch da 5 funzioni
+
+Vedi `STATUS.md` per il diario dei batch.
 
 ## Architettura
 
@@ -56,8 +103,8 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 
 | Pacchetto | Ruolo |
 |---|---|
-| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. |
-| `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL dallo stesso scenario dell'oracolo. |
+| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **160 moduli replicati bit-perfect**. |
+| `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL + ~85 parity test vs binary. |
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |
 
@@ -76,41 +123,24 @@ npm run test
 # 4. Lint (custom rule per branded numeric types)
 npm run lint
 
-# 5. Web dev server (Phase 7+)
+# 5. Web dev server
 npm run dev --workspace @marble-love/web
 ```
 
-## Differential testing (cuore del progetto)
+## Differential testing per-funzione
 
-### Test per-funzione (Phase 4d)
-
-Per ogni sub-system replicato, esiste un test `packages/cli/src/test-*-parity.ts` che:
+Per ogni sub-system replicato, `packages/cli/src/test-*-parity.ts` esegue:
 1. Setup random workRam state in entrambi (musashi-wasm + TS state)
 2. Chiama la funzione binaria + la TS reimpl
 3. Confronta byte-by-byte le regioni di memoria modificate
 
 ```bash
-# Esempi di run (200/500/1000+ casi random per ogni test)
+# Esempi (200/500/1000+ casi random per ogni test)
 npx tsx packages/cli/src/test-game-tick-timers-parity.ts 2000
-npx tsx packages/cli/src/test-game-main-gate-parity.ts 1000
 npx tsx packages/cli/src/test-game-state-machine-parity.ts 3000
 npx tsx packages/cli/src/test-trackball-input-parity.ts 2000
-# ...e ~80 altri test parity
-```
-
-### Trace-level testing (Phase 5+, future)
-
-Vedi [`harness/README.md`](./harness/README.md) e [`oracle/README.md`](./oracle/README.md).
-
-```bash
-# Dump trace ground-truth da MAME
-npm run oracle -- --scenario level1_no_input
-
-# Run reimpl sullo stesso scenario
-npm run marble-runner -- --scenario level1_no_input
-
-# Diff e report
-npm run compare -- level1_no_input
+npx tsx packages/cli/src/test-sound-tick-parity.ts 2000
+# ...e ~85 altri test parity
 ```
 
 ## ROM
