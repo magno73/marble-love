@@ -98,6 +98,9 @@ Completed:
   integrated.
 - Added web fixture tests that lock in the ramp/platform composition and the
   limited ROM-backed diagnostics strip.
+- Added an opt-in web diagnostic frame at `?engine=1` that renders a synthetic
+  RAM-backed `buildFrame(state, ...)` path, including motion-object RAM and
+  optional ROM lookup metadata when loaded with `?rom=1&engine=1`.
 - Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
