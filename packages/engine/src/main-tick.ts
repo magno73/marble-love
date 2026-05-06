@@ -36,6 +36,8 @@ import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
+import { soundDispatchSend } from "./sound-dispatch-send.js";
+import { soundStatusCheck } from "./sound-status-check.js";
 import { paletteAnim1Tick, paletteAnim2Tick } from "./palette-anim.js";
 import { paletteAnim3Tick, paletteQueueDrain } from "./palette-queue.js";
 import { gameStateMachineTick } from "./game-state-machine.js";
@@ -129,8 +131,15 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
 
   gameStateMachineTick(state, rom, opts.stateMachineSubs);
 
-  // FUN_4CA0 (sound dispatcher wrapper, replicato; sub FUN_4DCC/3E1A/4C3E STUB)
-  soundTick(state, opts.soundSubs);
+  // FUN_4CA0 (sound dispatcher wrapper, replicato).
+  // Sub FUN_3E1A e FUN_4C3E ora replicate bit-perfect; FUN_4DCC ancora STUB
+  // (richiede emulare YM2151). Default subs: chiama le replicate.
+  const soundSubs: SoundTickSubs = opts.soundSubs ?? {
+    fun_3e1a: (argLong) => soundDispatchSend(state, rom, argLong),
+    fun_4c3e: (st, d0, a0) => soundStatusCheck(st, d0, a0),
+    // fun_4dcc: undefined → soundTick usa default mini-stub (counter increment)
+  };
+  soundTick(state, soundSubs);
 
   gameTickTimers(state, opts.hudCallback);
 
