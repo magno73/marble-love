@@ -139,6 +139,7 @@ export * as stateSub15BD0 from "./state-sub-15bd0.js";
 export * as spriteCoordsJsr150D0 from "./sprite-coords-jsr-150d0.js";
 export * as tilemapBlit17044 from "./tilemap-blit-17044.js";
 export * as bootScreenInit from "./boot-screen-init.js";
+export * as mainLoopInit117B2 from "./main-loop-init-117b2.js";
 export * as moGridInit2404 from "./mo-grid-init-2404.js";
 export * as spritePairCoordAdd1D82 from "./sprite-pair-coord-add-1d82.js";
 export * as render from "./render.js";
