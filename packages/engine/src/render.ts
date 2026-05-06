@@ -83,6 +83,19 @@ export interface PlayfieldLookupInfo {
   bpp: 4 | 5 | 6;
 }
 
+export interface MotionObjectEntryInfo {
+  tileIndex: number;
+  color: number;
+  xRaw: number;
+  yRaw: number;
+  widthTiles: number;
+  heightTiles: number;
+  link: number;
+  flipX: boolean;
+  priority: boolean;
+  timer: boolean;
+}
+
 export interface Frame {
   nativeSize: FrameSize;
   /** Coord di scroll della tilemap (System 1 supporta scroll H/V). */
@@ -192,9 +205,69 @@ export function buildPlayfieldFromRam(
   return commands;
 }
 
+export function decodeMotionObjectWords(
+  word0: number,
+  word1: number,
+  word2: number,
+  word3: number,
+): MotionObjectEntryInfo {
+  return {
+    tileIndex: word1 & 0x00ff,
+    color: (word1 >>> 8) & 0x00ff,
+    xRaw: (word2 & 0x3fe0) >>> 5,
+    yRaw: (word0 & 0x3fe0) >>> 5,
+    widthTiles: (word2 & 0x000f) + 1,
+    heightTiles: (word0 & 0x000f) + 1,
+    link: word3 & 0x003f,
+    flipX: (word0 & 0x8000) !== 0,
+    priority: (word2 & 0x8000) !== 0,
+    timer: word1 === 0xffff,
+  };
+}
+
+export function buildSpritesFromMotionObjectRam(
+  spriteRam: Uint8Array,
+  entryIndexes: number[],
+): SpriteCommand[] {
+  const sprites: SpriteCommand[] = [];
+
+  for (const entryIndex of entryIndexes) {
+    if (entryIndex < 0 || entryIndex >= 64) continue;
+
+    const byteOffset = entryIndex * 8;
+    if (byteOffset + 7 >= spriteRam.length) continue;
+
+    const word0 =
+      ((spriteRam[byteOffset] ?? 0) << 8) | (spriteRam[byteOffset + 1] ?? 0);
+    const word1 =
+      ((spriteRam[byteOffset + 2] ?? 0) << 8) | (spriteRam[byteOffset + 3] ?? 0);
+    const word2 =
+      ((spriteRam[byteOffset + 4] ?? 0) << 8) | (spriteRam[byteOffset + 5] ?? 0);
+    const word3 =
+      ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+    const fields = decodeMotionObjectWords(word0, word1, word2, word3);
+    if (fields.timer) continue;
+
+    sprites.push({
+      spriteIndex: fields.tileIndex,
+      x: fields.xRaw,
+      y: fields.yRaw,
+      width: fields.widthTiles * 8,
+      height: fields.heightTiles * 8,
+      paletteIndex: 0x100 + fields.color,
+      flipX: fields.flipX,
+      priority: fields.priority ? 1 : 0,
+      translucent: fields.priority,
+    });
+  }
+
+  return sprites;
+}
+
 /** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.
  *  Scaffold conservativo: legge solo palette/alpha RAM già presenti in state.
- *  TODO: aggiungere spriteRam e playfield RAM quando il modello memoria è stabile. */
+ *  TODO: collegare il walker spriteRam e la playfield RAM quando il modello
+ *  memoria/banking è stabile. */
 export function buildFrame(state: GameState): Frame {
   return {
     nativeSize: CLASSIC_NATIVE_SIZE,

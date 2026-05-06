@@ -4,6 +4,8 @@ import {
   buildFrame,
   buildPaletteFromColorRam,
   buildPlayfieldFromRam,
+  buildSpritesFromMotionObjectRam,
+  decodeMotionObjectWords,
   decodePlayfieldWord,
   irgb4444ToRgba,
 } from "../src/render.js";
@@ -135,6 +137,49 @@ describe("buildPlayfieldFromRam", () => {
         paletteIndex: 0x38,
         flipX: false,
         priority: 0,
+      },
+    ]);
+  });
+});
+
+describe("decodeMotionObjectWords", () => {
+  it("extracts documented motion-object entry fields", () => {
+    expect(decodeMotionObjectWords(0x83e2, 0x2a7f, 0x8563, 0x0034)).toEqual({
+      tileIndex: 0x7f,
+      color: 0x2a,
+      xRaw: 0x2b,
+      yRaw: 0x1f,
+      widthTiles: 4,
+      heightTiles: 3,
+      link: 0x34,
+      flipX: true,
+      priority: true,
+      timer: false,
+    });
+  });
+
+  it("marks timer entries without applying Atari System 1R timer behavior", () => {
+    expect(decodeMotionObjectWords(0x0000, 0xffff, 0x0000, 0x0000).timer).toBe(true);
+  });
+});
+
+describe("buildSpritesFromMotionObjectRam", () => {
+  it("builds neutral sprite commands from explicit motion-object entries", () => {
+    const ram = new Uint8Array(16);
+    ram.set([0x83, 0xe2, 0x2a, 0x7f, 0x85, 0x63, 0x00, 0x34], 0);
+    ram.set([0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00], 8);
+
+    expect(buildSpritesFromMotionObjectRam(ram, [0, 1, 64, -1])).toEqual([
+      {
+        spriteIndex: 0x7f,
+        x: 0x2b,
+        y: 0x1f,
+        width: 32,
+        height: 24,
+        paletteIndex: 0x12a,
+        flipX: true,
+        priority: 1,
+        translucent: true,
       },
     ]);
   });
