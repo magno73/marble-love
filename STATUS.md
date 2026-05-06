@@ -38,14 +38,12 @@ Due track paralleli su `main`, **bridge attivo**:
 - ✅ `state.clock.frame` ora aggiornato dal nuovo `mainTick` (era stale dal vecchio stub)
 - ✅ **Trace localization (schema v2)**: `workRamHashes` array di 32 CRC32 regionali (regioni 0x100 byte). Diff annota `workRam[0x300..0x3ff]` invece del generico `workRamHash`. Backward-compat con oracle v1 (warning).
 - ✅ Oracle trace v2 rigenerato con MAME 0.286.
-- ⏳ **Parità attuale 0%** dal frame 6. Le 6 regioni primarie divergenti al primo punto sono mappate:
-  - `0x000-0x0FF`: scroll Y / frame counter / global flags
-  - `0x100-0x1FF`: callback ptrs (FUN_FA0 init copia 3 long da ROM)
-  - `0x300-0x3FF`: player object slot
-  - `0x400-0x4FF`: main object area
-  - `0x1E00-0x1EFF`: late globals
-  - `0x1F00-0x1FFF`: state machine slots
-  Da frame 100 si propaga a `stats.score/timer`; da frame 300 a `marble.x/y/vx/vy/vz`. Replicare i sub che toccano ciascuna regione riduce la divergenza alla radice.
+- ⏳ **Parità in miglioramento**. Allineamento corretto: MAME completa il boot a frame 46 (RESET handler + setup hardware + IRQ vectors). Diff `--truth-offset 45` confronta `reimpl[i]` vs `oracle[i+45]` per parità tick-by-tick. Con allineamento corretto al frame 0:
+  - ✅ `0x000-0x0FF`: scroll/frame counter — match
+  - ✅ `0x100-0x1FF`: HUD strings (cold-boot di FUN_FA0) — DISATTIVATO in bootInit perché in attract_mode l'oracle non popola questa fascia (warm-boot path o FUN_FA0 mai chiamato)
+  - ✅ `0x300-0x3FF`, `0x400-0x4FF`, `0x1F00-0x1FFF`: match
+  - ⚠ `0x1E00-0x1EFF`: divergente (oracle ha 24 byte popolati a 0x1EE8-0x1EFF; addressing indiretto, sub sconosciuto)
+- 🔧 **Tooling debug**: `MARBLE_DUMP_REGIONS=0x100,0x300` (env var) attiva il dump hex-encoded di regioni specifiche sia nel reimpl trace sia nell'oracle MAME, per diff byte-by-byte.
 
 ## Prossime fasi
 

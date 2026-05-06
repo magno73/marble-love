@@ -43,6 +43,20 @@ local SCENARIO      = getenv("MARBLE_LOVE_SCENARIO", "unknown")
 local INPUT_JSON    = getenv("MARBLE_LOVE_INPUT_JSON", "")
 local MAX_FRAMES    = tonumber(getenv("MARBLE_LOVE_MAX_FRAMES", "600"))
 
+-- Lista di indici (offset workRam) di regioni da dumpare in hex.
+-- Es. MARBLE_DUMP_REGIONS=0x100,0x300 → dumpa workRam[0x100..0x1FF] e [0x300..0x3FF].
+-- Solo per debug puntuale (cresce dimensione trace).
+local DUMP_REGIONS = {}
+do
+    local s = getenv("MARBLE_DUMP_REGIONS", "")
+    for tok in string.gmatch(s, "[^,]+") do
+        local n = tonumber(tok:match("^%s*(.-)%s*$"))
+        if n ~= nil and n >= 0 and n < 0x2000 then
+            table.insert(DUMP_REGIONS, n)
+        end
+    end
+end
+
 -- ─── State ───────────────────────────────────────────────────────────────
 
 local out = nil
@@ -241,6 +255,15 @@ local function write_header()
     out:flush()
 end
 
+-- Hex-encode una regione di workRam: 256 byte → 512 char hex.
+local function dump_region_hex(off)
+    local parts = {}
+    for i = 0, 0xFF do
+        parts[i + 1] = string.format("%02x", mem:read_u8(0x400000 + off + i))
+    end
+    return table.concat(parts)
+end
+
 local function write_frame(s)
     -- Build "workRamHashes" array literal
     local parts = {}
@@ -249,6 +272,18 @@ local function write_frame(s)
     end
     local hashes_json = "[" .. table.concat(parts, ",") .. "]"
 
+    -- Build "workRamDumps" object (only if MARBLE_DUMP_REGIONS attivo)
+    local dumps_json = ""
+    if #DUMP_REGIONS > 0 then
+        local entries = {}
+        for _, off in ipairs(DUMP_REGIONS) do
+            local hex = dump_region_hex(off)
+            local key = string.format('"0x%03x"', off)
+            table.insert(entries, key .. ':"' .. hex .. '"')
+        end
+        dumps_json = ',"workRamDumps":{' .. table.concat(entries, ",") .. '}'
+    end
+
     out:write(string.format(
         '{"f":%d,"cpuTicks":%d,' ..
         '"rng":{"seed":%d,"calls":0},' ..
@@ -256,14 +291,14 @@ local function write_frame(s)
         '"alive":%d,"spriteIndex":%d},' ..
         '"stats":{"score":%d,"lives":%d,"timer":%d,"bonus":%d},' ..
         '"input":{"dx":%d,"dy":%d,"buttons":%d},' ..
-        '"workRamHash":%d,"workRamHashes":%s}\n',
+        '"workRamHash":%d,"workRamHashes":%s%s}\n',
         frame_count, s.cpu_pc,
         s.rng_seed,
         s.marble_x, s.marble_y, s.marble_z, s.marble_vx, s.marble_vy, s.marble_vz,
         (s.marble_st & 1), s.marble_type,
         s.obj_count, s.coin_ctr, s.frame_mid, s.frame_low,
         active_dx & 0xFF, active_dy & 0xFF, active_buttons,
-        s.work_ram_hash, hashes_json
+        s.work_ram_hash, hashes_json, dumps_json
     ))
 end
 

@@ -2,21 +2,21 @@
 # parity-check.sh — esegue la pipeline reimpl-trace → diff vs oracle.
 #
 # Uso:
-#   harness/parity-check.sh <scenario> [<from-frame>] [<ticks>]
+#   harness/parity-check.sh <scenario> [<truth-offset>] [<ticks>] [<from-frame>]
 #
 # Esempio:
-#   harness/parity-check.sh attract_mode 6 600
+#   harness/parity-check.sh attract_mode 45 600 0
 #
-# Skippa la transitoria di boot (default 6 frame per attract_mode) per
-# misurare la parità "post-boot". Richiede:
-#   - traces/oracle_<scenario>.jsonl pre-esistente (da `oracle/run_oracle.ts`)
-#   - ROM in ghidra_project/marble_program.bin
+# Allineamento: MAME ha una transitoria di boot di N frame prima del primo
+# tick (attract_mode → ~45). reimpl[i] viene confrontato con
+# oracle[i+truth-offset]. Per misurare parità "tick-by-tick".
 
 set -euo pipefail
 
 SCEN=${1:?scenario richiesto (es. attract_mode)}
-FROM=${2:-6}
+TRUTH_OFFSET=${2:-45}
 TICKS=${3:-600}
+FROM=${4:-0}
 
 ORACLE=traces/oracle_${SCEN}.jsonl
 REIMPL=traces/reimpl_${SCEN}.jsonl
@@ -32,12 +32,12 @@ echo "→ generating reimpl trace ($TICKS frame, with-boot-init)..."
 npx tsx packages/cli/src/marble-runner.ts \
     --scenario "$SCEN" --ticks "$TICKS" --with-boot-init --out "$REIMPL"
 
-echo "→ comparing oracle vs reimpl from frame $FROM..."
+echo "→ comparing reimpl[i] vs oracle[i+$TRUTH_OFFSET] from frame $FROM..."
 node --experimental-strip-types harness/diff.ts \
     --truth "$ORACLE" --reimpl "$REIMPL" \
-    --from-frame "$FROM" --out "$REPORT"
+    --truth-offset "$TRUTH_OFFSET" --from-frame "$FROM" --out "$REPORT"
 
 echo
 echo "report: $REPORT"
 echo "parity: $(jq -r '.parity' "$REPORT")"
-echo "first divergence: frame $(jq -r '.firstDivergence.frame // "none"' "$REPORT") fields $(jq -r '.firstDivergence.fields // [] | join(",")' "$REPORT")"
+echo "first divergence: frame $(jq -r '.firstDivergence.frame // "none"' "$REPORT") fields $(jq -r '.firstDivergence.annotated // [] | join(",")' "$REPORT")"

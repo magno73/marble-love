@@ -66,10 +66,45 @@ export interface TraceFrame {
    *  Permette al diff di puntare alla regione specifica che diverge,
    *  invece di limitarsi a "workRamHash mismatch". */
   workRamHashes: number[];
+  /** Dump esadecimale opzionale di una regione di 0x100 byte. Indicizzato
+   *  per offset (es. `"0x100"`). Solo se attivato via env `MARBLE_DUMP_REGIONS`
+   *  (lista di indici comma-separati). Usato per debug puntuale. */
+  workRamDumps?: Record<string, string>;
+}
+
+/** Lista di indici (offsets) di regioni da dumpare in hex. Letto da env var
+ *  `MARBLE_DUMP_REGIONS` (es. "0x100,0x300"). Cached: leggi una volta. */
+let dumpRegionsCache: number[] | null = null;
+function getDumpRegions(): number[] {
+  if (dumpRegionsCache !== null) return dumpRegionsCache;
+  const env = (typeof process !== "undefined" ? process.env["MARBLE_DUMP_REGIONS"] : undefined) ?? "";
+  dumpRegionsCache = env
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => Number(s))
+    .filter((n) => Number.isFinite(n) && n >= 0 && n < 0x2000);
+  return dumpRegionsCache;
+}
+
+function bytesToHex(buf: Uint8Array, start: number, length: number): string {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += ((buf[start + i] ?? 0) & 0xff).toString(16).padStart(2, "0");
+  }
+  return out;
 }
 
 /** Serializza un GameState in TraceFrame. Pure function: no mutation. */
 export function frameFromState(s: GameState): TraceFrame {
+  const regions = getDumpRegions();
+  const dumps: Record<string, string> | undefined = regions.length === 0
+    ? undefined
+    : Object.fromEntries(regions.map((off) => [
+        `0x${off.toString(16).padStart(3, "0")}`,
+        bytesToHex(s.workRam, off, 0x100),
+      ]));
+
   return {
     f: raw(s.clock.frame),
     cpuTicks: raw(s.clock.cpuTicks),
@@ -100,6 +135,7 @@ export function frameFromState(s: GameState): TraceFrame {
     workRamHash:
       (crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448)) >>> 0,
     workRamHashes: workRamRegionalHashes(s.workRam),
+    ...(dumps !== undefined ? { workRamDumps: dumps } : {}),
   };
 }
 

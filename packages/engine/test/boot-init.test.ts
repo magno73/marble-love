@@ -95,24 +95,16 @@ describe("bootInit", () => {
     expect(s.workRam[0x16]).toBe(5);
   });
 
-  it("warm boot: cold-init non si rifa se *0x400016 != 0", () => {
+  it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {
+    // Vedi commento in boot-init.ts: in attract_mode l'oracle non popola
+    // workRam[0x140-0x176] con le HUD strings. Il path cold-boot di
+    // FUN_FA0 non viene eseguito. Quindi bootInit lascia la regione 0.
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Pre-popola ROM con marker, fa primo bootInit
-    rom.program[0x10074] = 0xab;
-    rom.program[0x10075] = 0xcd;
-    rom.program[0x10076] = 0xef;
-    rom.program[0x10077] = 0x01;
+    rom.program[0x10074] = 0x00; rom.program[0x10075] = 0x01;
+    rom.program[0x10076] = 0x20; rom.program[0x10077] = 0x00;
+    rom.program[0x12000] = 0x48; rom.program[0x12001] = 0x00;
     bootInit(s, rom);
-    expect(s.workRam[0x140]).toBe(0xab);
-    expect(s.workRam[0x141]).toBe(0xcd);
-    // Simula warm boot: setta frame counter high
-    s.workRam[0x16] = 1;
-    s.workRam[0x140] = 0; // poison
-    s.workRam[0x141] = 0;
-    bootInit(s, rom);
-    // I 3 long copies NON dovrebbero essere rifatti
-    expect(s.workRam[0x140]).toBe(0);
-    expect(s.workRam[0x141]).toBe(0);
+    expect(s.workRam[0x140]).toBe(0); // strcpy SKIPPED
   });
 });
