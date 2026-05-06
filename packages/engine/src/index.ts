@@ -44,6 +44,7 @@ export * as stringTrim from "./string-trim.js";
 export * as slotSearch from "./slot-search.js";
 export * as initHelpers from "./init-helpers.js";
 export * as pfScroll from "./pf-scroll.js";
+export * as soundTick from "./sound-tick.js";
 export { bootInit } from "./boot-init.js";
 export * as animationStep from "./animation-step.js";
 export * as spriteCoords from "./sprite-coords.js";

@@ -10,7 +10,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 104/314 sub-systems bit-perfect (33% del binario)
+- 🔄 **Phase 4d in corso**: 105/314 sub-systems bit-perfect (33% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
@@ -45,7 +45,8 @@ Due track paralleli su `main`, **bridge attivo**:
   - ✅ `0x1E00-0x1EFF`: risolto. Investigazione via `tools/watch_write.lua` (write-tap MAME) ha mostrato che i write a 0x1EE0-0x1EFF sono stack residue 68k (SP parte da 0x401F00 e scende fino a ~0x401EE8 in attract_mode). Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione conservativa di 0x1EE0-0x1EFF dal hash regione 30, analoga a 0x440-0x447 (stack low water).
 - 🎯 **Bit-perfect parity al frame 0** (reimpl post-bootInit ≡ oracle post-boot-46): le 32 regioni workRam tutte match. Al frame 1 divergenza esplode (29 fields) per via dei sub stubbed → loop iterativo "replica sub → re-run parity-check → vedi salire" è sbloccato.
 - 📋 **Top writers identificati via `tools/watch_write.lua`** (frame 46-47 MAME = primo + secondo tick):
-  - **FUN_4CA0/FUN_4DCC** (sound, ~294 writes) — STUB. Top divergence per tick.
+  - **FUN_4CA0** (sound dispatcher wrapper) — REPLICATO ✅ 2000/2000 vs binary patched-stubs (sub FUN_3E1A/FUN_4DCC/FUN_4C3E rimangono STUB).
+  - **FUN_4DCC** (sound chip writer, ~294 writes) — STUB. Big work: parla con YM2151 + buffer comparison.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — one-shot, chiamato da FUN_10504 → FUN_117B2 (chain init non replicata).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).

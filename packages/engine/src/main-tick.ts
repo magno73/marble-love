@@ -34,6 +34,8 @@ import type { RomImage } from "./bus.js";
 
 import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
+import { soundTick } from "./sound-tick.js";
+import type { SoundTickSubs } from "./sound-tick.js";
 import { paletteAnim1Tick, paletteAnim2Tick } from "./palette-anim.js";
 import { paletteAnim3Tick, paletteQueueDrain } from "./palette-queue.js";
 import { gameStateMachineTick } from "./game-state-machine.js";
@@ -79,6 +81,8 @@ export interface MainTickOptions extends MainTickInputs {
   controlCallback?: GameMainGateOptions["controlCallback"];
   /** Skip frame counter increment (utile per test deterministici). */
   skipFrameCounter?: boolean;
+  /** Sub-functions stub di FUN_4CA0 sound dispatcher (FUN_3E1A, FUN_4DCC, FUN_4C3E). */
+  soundSubs?: SoundTickSubs;
 }
 
 /**
@@ -124,7 +128,8 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
 
   gameStateMachineTick(state, rom, opts.stateMachineSubs);
 
-  // FUN_4CA0 (sound) — STUB
+  // FUN_4CA0 (sound dispatcher wrapper, replicato; sub FUN_4DCC/3E1A/4C3E STUB)
+  soundTick(state, opts.soundSubs);
 
   gameTickTimers(state, opts.hudCallback);
 
