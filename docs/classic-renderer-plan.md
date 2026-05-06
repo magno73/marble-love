@@ -92,6 +92,8 @@ Completed:
   playfield/sprite commands.
 - Added renderer-side playfield culling at the native frame boundary so 64-column
   diagnostic tilemaps do not draw outside the classic 336x240 viewport.
+- Wired `Frame.scrollX`/`scrollY` into playfield drawing so tile commands are
+  rendered through the neutral frame scroll metadata.
 - Reworked the synthetic demo away from the early checkerboard/grid fixture into
   a more readable abstract isometric ramp/platform composition.
 - Limited ROM-backed playfield texture use to a small diagnostics strip in the

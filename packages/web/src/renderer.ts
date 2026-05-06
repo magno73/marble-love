@@ -272,11 +272,13 @@ function drawPlayfield(
   for (const tile of frame.playfield) {
     const width = tile.width ?? DEFAULT_TILE_SIZE;
     const height = tile.height ?? DEFAULT_TILE_SIZE;
+    const drawX = tile.x - frame.scrollX;
+    const drawY = tile.y - frame.scrollY;
     if (
-      tile.x >= frame.nativeSize.width ||
-      tile.y >= frame.nativeSize.height ||
-      tile.x + width <= 0 ||
-      tile.y + height <= 0
+      drawX >= frame.nativeSize.width ||
+      drawY >= frame.nativeSize.height ||
+      drawX + width <= 0 ||
+      drawY + height <= 0
     ) {
       continue;
     }
@@ -285,8 +287,8 @@ function drawPlayfield(
     if (texture !== undefined && texture !== Texture.EMPTY) {
       const sprite = acquirePlayfieldSprite(layers, assets);
       sprite.texture = texture;
-      sprite.x = tile.x;
-      sprite.y = tile.y;
+      sprite.x = drawX;
+      sprite.y = drawY;
       sprite.scale.set(1);
       sprite.alpha = 1;
       continue;
@@ -296,11 +298,11 @@ function drawPlayfield(
     const shade = (tile.tileIndex + (tile.priority ?? 0)) % 3;
 
     graphics
-      .rect(tile.x, tile.y, width, height)
+      .rect(drawX, drawY, width, height)
       .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
 
     if (shade === 0 && tile.paletteIndex !== 0 && tile.paletteIndex !== 9) {
-      graphics.rect(tile.x, tile.y, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
+      graphics.rect(drawX, drawY, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
     }
   }
 }

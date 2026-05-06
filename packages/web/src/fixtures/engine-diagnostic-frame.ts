@@ -83,6 +83,8 @@ export function buildEngineDiagnosticFrame(
   return renderNs.buildFrame(state, {
     playfieldRam,
     playfieldLookups: graphicsLookupsToPlayfieldLookups(playfieldLookups),
+    scrollX: frameNumber % 16,
+    scrollY: 0,
     motionObjects: "linked-list",
     maxMotionObjectEntries: 8,
     motionObjectLookups: graphicsLookupsToMotionLookups(motionObjectLookups),

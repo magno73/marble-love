@@ -59,6 +59,9 @@ The frame model follows the layer order documented in `docs/video-system.md`:
   metadata;
 - `alpha`: non-scrolling alphanumerics/HUD overlay.
 
+`Frame.scrollX` and `Frame.scrollY` are applied to playfield commands by the
+Pixi renderer. Sprite and alpha commands remain in screen coordinates.
+
 The current renderer uses the priority fields only for deterministic draw order
 within the synthetic command lists. It does not implement the real System 1
 priority merge or translucency palette behavior yet.
