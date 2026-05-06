@@ -119,11 +119,16 @@ export function frameFromState(s: GameState): TraceFrame {
       alive: s.marble.alive ? 1 : 0,
       spriteIndex: raw(s.marble.spriteIndex),
     },
+    // Stats: letti dagli stessi offset workRam che usa il MAME dumper Lua
+    // (vedi oracle/mame_dumper.lua righe ~199-204). Mappatura placeholder
+    // dal Phase 0; non sono i veri "score/lives" semantici. Tenuti per
+    // compatibilità schema. La parità è garantita solo finché entrambi i
+    // lati leggono dagli stessi indirizzi.
     stats: {
-      score: raw(s.stats.score),
-      lives: raw(s.stats.lives),
-      timer: raw(s.stats.levelTimer),
-      bonus: raw(s.stats.bonus),
+      score: ((s.workRam[0x396] ?? 0) << 8) | (s.workRam[0x397] ?? 0), // u16 @ 0x400396
+      lives: s.workRam[0x3F4] ?? 0,                                    // u8 @ 0x4003F4
+      timer: s.workRam[0x14] ?? 0,                                     // u8 @ 0x400014
+      bonus: s.workRam[0x16] ?? 0,                                     // u8 @ 0x400016
     },
     input: {
       dx: raw(s.input.trackballDx),
