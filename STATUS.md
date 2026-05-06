@@ -1,16 +1,16 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-06
+**Ultimo update:** 2026-05-03
 **Branch corrente:** `main`.
 
 ## Fase corrente
 
-Due track paralleli su `main`:
+Due track paralleli su `main`, **bridge attivo**:
 
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 103/314 sub-systems bit-perfect (33% del binario)
+- 🔄 **Phase 4d in corso**: 104/314 sub-systems bit-perfect (33% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
@@ -23,10 +23,26 @@ Due track paralleli su `main`:
 - ✅ Demo fixtures + 34 nuovi test
 - 📋 Vedi: `docs/classic-renderer.md`, `docs/classic-renderer-prd.md`, `docs/classic-renderer-plan.md`
 
+### Bridge Track A ↔ Track B (2026-05-03)
+- ✅ `mainTick(state, {rom})` in `packages/engine/src/main-tick.ts` orchestra le 10 root sub replicate nell'ordine di FUN_28788
+- ✅ `tick(s, opts)` in `packages/engine/src/index.ts` punta al nuovo orchestrator (signature breaking)
+- ✅ `bootInit(state, rom)` in `packages/engine/src/boot-init.ts` porta lo state al primo frame "post-boot pre-tick" (color RAM hardware pattern, palette, state machine globals)
+- ✅ Smoke test 7+8+9 verde su orchestrator/boot/pfScroll
+- ✅ Frontend `packages/web/src/main.ts` chiama bootInit + tick reale: lo state evolve frame-by-frame (palette anims, state machine, timers, trackball, main gate, **PF scroll**)
+- ⏳ Sub non ancora replicati stubbed no-op: FUN_4CA0 (sound), FUN_3F78 (eeprom), FUN_158AC (sound cmd), FUN_288F8 (attract), FUN_26F3E (late logic), FUN_10146 (timer secondario)
+
+### End-to-end differential vs MAME (2026-05-03)
+- ✅ `harness/parity-check.sh <scenario> [from] [ticks]` esegue marble-runner + diff in un comando
+- ✅ `harness/diff.ts` supporta `--from-frame N` per saltare la transitoria di boot MAME
+- ✅ `marble-runner` supporta `--with-boot-init` per allinearsi al post-boot oracle
+- ✅ `state.clock.frame` ora aggiornato dal nuovo `mainTick` (era stale dal vecchio stub)
+- ⏳ **Parità attuale 0%** dal frame 6: la divergenza è attesa data la presenza di ~211 sub stubbed. Il diff segnala correttamente al primo punto di divergenza; l'iterazione consiste nel replicare le sub mancanti e ri-misurare.
+
 ## Prossime fasi
 
-- **Track A**: continuare replication bit-perfect dei sub-system mancanti (~211 funzioni rimanenti, escludendo thunks)
-- **Track B**: collegamento Track A → Track B (Frame model alimentato dallo state replicato bit-perfect)
+- **Track A**: continuare replication bit-perfect dei sub-system mancanti (~210 funzioni rimanenti, escludendo thunks). Priorità ai sub stubbed dal bridge per riempire i buchi del frame e migliorare la parità misurata da `parity-check.sh`.
+- **Track B**: ora che lo state evolve, alimentare `buildFrame()` da state reale e verificare a video col renderer PixiJS.
+- **Trace localization** (futuro): estendere lo schema trace per dumpare regioni workRam invece del solo hash, così che `harness/diff.ts` possa puntare il byte specifico che diverge invece del solo "workRamHash mismatch".
 - **Phase 5+** (futuro): trace-level testing con MAME come oracolo (vedi `harness/README.md`, `oracle/README.md`)
 
 **Sub-systems bit-perfect verificati**:

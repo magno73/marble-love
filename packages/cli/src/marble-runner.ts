@@ -19,14 +19,17 @@ import { argv, exit } from "node:process";
 import {
   state as stateNs,
   trace as traceNs,
+  bus as busNs,
   tick,
+  bootInit,
 } from "@marble-love/engine";
-import type { TraceFrame, TraceHeader } from "@marble-love/engine";
+import type { TraceFrame, TraceHeader, RomImage } from "@marble-love/engine";
 
 interface CliArgs {
   scenario: string;
   ticks: number;
   out: string;
+  withBootInit: boolean;
 }
 
 function parseArgs(): CliArgs {
@@ -34,12 +37,14 @@ function parseArgs(): CliArgs {
   let scenario: string | undefined;
   let ticks = 600;
   let out: string | undefined;
+  let withBootInit = false;
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--scenario" || a === "-s") scenario = args[++i];
     else if (a === "--ticks" || a === "-t") ticks = Number(args[++i] ?? "600");
     else if (a === "--out" || a === "-o") out = args[++i];
+    else if (a === "--with-boot-init") withBootInit = true;
     else if (a === "--help" || a === "-h") {
       printHelp();
       exit(0);
@@ -56,6 +61,7 @@ function parseArgs(): CliArgs {
     scenario,
     ticks,
     out: out ?? `traces/reimpl_${scenario}.jsonl`,
+    withBootInit,
   };
 }
 
@@ -92,6 +98,27 @@ function main(): void {
 
   const state = stateNs.emptyGameState();
 
+  // ROM: caricata se disponibile (path standard o $MARBLE_ROM).
+  const romPath = process.env["MARBLE_ROM"] ?? resolve("ghidra_project/marble_program.bin");
+  const rom: RomImage = busNs.emptyRomImage();
+  try {
+    const romBuf = readFileSync(romPath);
+    rom.program.set(romBuf.subarray(0, rom.program.length));
+  } catch {
+    // ROM mancante: tick userà ROM vuota; le palette anim leggono 0 → no-op.
+    console.warn(`warning: ROM not found at ${romPath} (continuing with empty ROM)`);
+  }
+
+  // NB: bootInit NON viene chiamato di default. MAME al frame 0 cattura
+  // lo stato PRIMA che il RESET handler completi (workRam ancora 0).
+  // Il nostro marble-runner serve a diff vs oracle MAME, quindi vogliamo
+  // lo stesso allineamento. Per il frontend (main.ts) bootInit è invece
+  // chiamato perché vogliamo lo stato post-boot già al primo frame.
+  // Usa `--with-boot-init` per saltare la transitoria di boot in test.
+  if (args.withBootInit) {
+    bootInit(state, rom);
+  }
+
   const header: TraceHeader = {
     schemaVersion: traceNs.TRACE_SCHEMA_VERSION,
     source: "reimpl",
@@ -122,7 +149,7 @@ function main(): void {
 
     const frame: TraceFrame = traceNs.frameFromState(state);
     lines.push(traceNs.serializeFrame(frame));
-    tick(state);
+    tick(state, { rom });
   }
 
   writeFileSync(outPath, lines.join("\n") + "\n", "utf8");
