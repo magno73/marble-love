@@ -10,33 +10,67 @@
  */
 
 import { Application } from "pixi.js";
-import {
-  state as stateNs,
-  tick,
-} from "@marble-love/engine";
+import { state as stateNs, tick } from "@marble-love/engine";
 import { initInput } from "./input.js";
+import {
+  buildClassicDemoFrame,
+  buildRomBackedDemoFrame,
+} from "./fixtures/classic-demo-frame.js";
+import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { initRenderer } from "./renderer.js";
-import { extractRomZip } from "./rom-loader.js";
+import { extractRomZipFiles } from "./rom-loader.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
 const btn = document.getElementById("rom-btn") as HTMLButtonElement;
+const romStatus = document.getElementById("rom-status") as HTMLParagraphElement;
+const searchParams = new URLSearchParams(window.location.search);
+const forceRomPicker = searchParams.get("rom") === "1";
+const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
+const useSyntheticDemoFrame =
+  import.meta.env.DEV && !forceRomPicker && !forceEngineDiagnosticFrame;
+
+function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
+  romStatus.textContent = message;
+  romStatus.dataset.tone = tone;
+}
 
 btn.addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", async () => {
-  const file = fileInput.files?.[0];
-  if (!file) return;
+  const files = fileInput.files;
+  if (!files || files.length === 0) return;
   try {
-    const rom = await extractRomZip(file);
+    btn.disabled = true;
+    setRomStatus("Validazione ROM locale in corso...");
+    const rom = await extractRomZipFiles(files);
+    const warningText =
+      rom.validation.warnings.length > 0
+        ? ` (${rom.validation.warnings.length} avvisi di formato)`
+        : "";
+    setRomStatus(
+      `ROM valida: ${rom.validation.fileCount} file verificati CRC32${warningText}.`,
+      "ok",
+    );
     splash.remove();
     await startGame(rom);
   } catch (err) {
     console.error(err);
-    alert("Errore caricando la ROM: " + (err instanceof Error ? err.message : err));
+    setRomStatus(
+      "Errore caricando la ROM: " + (err instanceof Error ? err.message : err),
+      "error",
+    );
+    btn.disabled = false;
   }
 });
 
-async function startGame(rom: Awaited<ReturnType<typeof extractRomZip>>): Promise<void> {
+if (useSyntheticDemoFrame || (import.meta.env.DEV && forceEngineDiagnosticFrame)) {
+  splash.remove();
+  void startGame();
+}
+
+async function startGame(
+  rom?: Awaited<ReturnType<typeof extractRomZipFiles>>,
+): Promise<void> {
   const app = new Application();
   await app.init({
     background: "#0a0a0a",
@@ -51,14 +85,34 @@ async function startGame(rom: Awaited<ReturnType<typeof extractRomZip>>): Promis
   // TODO Phase 7: inizializzare bus con la ROM caricata, attivare engine.
   void rom;
 
-  const renderer = initRenderer(app);
+  const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
+  let demoFrame = 0;
+  const useRomBackedDemoFrame = rom !== undefined;
 
   app.ticker.add(() => {
     s.input.trackballDx = inputState.consumeDx() as typeof s.input.trackballDx;
     s.input.trackballDy = inputState.consumeDy() as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
     tick(s);
-    renderer.draw(s);
+    if (forceEngineDiagnosticFrame) {
+      renderer.drawFrame(
+        buildEngineDiagnosticFrame(
+          demoFrame,
+          rom?.graphics.lookupTables.motionObjects,
+          rom?.graphics.lookupTables.playfield,
+        ),
+      );
+      demoFrame += 1;
+    } else if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
+      renderer.drawFrame(
+        rom === undefined
+          ? buildClassicDemoFrame(demoFrame)
+          : buildRomBackedDemoFrame(rom.graphics, demoFrame),
+      );
+      demoFrame += 1;
+    } else {
+      renderer.draw(s);
+    }
   });
 }
