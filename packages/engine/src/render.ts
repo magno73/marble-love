@@ -96,6 +96,12 @@ export interface MotionObjectEntryInfo {
   timer: boolean;
 }
 
+export interface VideoControlInfo {
+  alphaBank: number;
+  playfieldTileBank: number;
+  motionObjectBank: number;
+}
+
 export interface Frame {
   nativeSize: FrameSize;
   /** Coord di scroll della tilemap (System 1 supporta scroll H/V). */
@@ -301,6 +307,14 @@ export function buildSpritesFromMotionObjectList(
     spriteRam,
     walkMotionObjectLinkedList(spriteRam, startEntry, maxEntries),
   );
+}
+
+export function decodeVideoControlByte(value: number): VideoControlInfo {
+  return {
+    alphaBank: value & 0x01,
+    playfieldTileBank: (value >>> 2) & 0x01,
+    motionObjectBank: (value >>> 3) & 0x07,
+  };
 }
 
 /** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.

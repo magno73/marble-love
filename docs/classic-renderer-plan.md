@@ -141,6 +141,8 @@ Completed:
   `buildSpritesFromMotionObjectList(spriteRam)` as bounded diagnostic helpers
   for the documented word-3 links. They do not choose a sprite bank yet and are
   not wired into `buildFrame(state)`.
+- Added `decodeVideoControlByte(value)` for the documented `$860001` alpha,
+  playfield, and motion-object bank bits. It is not wired to `GameState` yet.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds while
   leaving playfield and sprite command arrays empty.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.
@@ -152,6 +154,8 @@ Constraints:
   code.
 - Do not wire active `spriteRam` lists or sprite banking into `buildFrame(state)`
   yet; the helpers remain explicit diagnostics.
+- Do not introduce a stored video-control register until the memory/bus model is
+  ready for it; keep the decoder pure for now.
 
 Verification:
 

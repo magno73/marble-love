@@ -8,6 +8,7 @@ import {
   buildSpritesFromMotionObjectRam,
   decodeMotionObjectWords,
   decodePlayfieldWord,
+  decodeVideoControlByte,
   irgb4444ToRgba,
   walkMotionObjectLinkedList,
 } from "../src/render.js";
@@ -237,5 +238,20 @@ describe("buildSpritesFromMotionObjectList", () => {
         translucent: true,
       },
     ]);
+  });
+});
+
+describe("decodeVideoControlByte", () => {
+  it("extracts documented System 1 video banking bits", () => {
+    expect(decodeVideoControlByte(0b0011_1101)).toEqual({
+      alphaBank: 1,
+      playfieldTileBank: 1,
+      motionObjectBank: 7,
+    });
+    expect(decodeVideoControlByte(0)).toEqual({
+      alphaBank: 0,
+      playfieldTileBank: 0,
+      motionObjectBank: 0,
+    });
   });
 });

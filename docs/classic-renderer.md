@@ -142,6 +142,9 @@ motion-object RAM entries into neutral `SpriteCommand` values.
 bounded loop guard, and `buildSpritesFromMotionObjectList(spriteRam)` combines
 the two. These are narrow diagnostic helpers: they skip timer entries, avoid
 gameplay behavior, and do not select the active bank from `$860001` yet.
+`decodeVideoControlByte(value)` separately exposes the documented alpha,
+playfield, and motion-object bank bits from `$860001`, but no persistent
+video-control state is modeled yet.
 
 Until then, the renderer is a visual pipeline branch. It must not infer gameplay
 rules, mutate `GameState`, or touch parity-sensitive engine logic.
