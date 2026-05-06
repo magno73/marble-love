@@ -46,7 +46,13 @@ Due track paralleli su `main`, **bridge attivo**:
 - 🎯 **Bit-perfect parity al frame 0** (reimpl post-bootInit ≡ oracle post-boot-46): le 32 regioni workRam tutte match. Al frame 1 divergenza esplode (29 fields) per via dei sub stubbed → loop iterativo "replica sub → re-run parity-check → vedi salire" è sbloccato.
 - 📋 **Top writers identificati via `tools/watch_write.lua`** (frame 46-47 MAME = primo + secondo tick):
   - **FUN_4CA0** (sound dispatcher wrapper) — REPLICATO ✅ 2000/2000 vs binary patched-stubs (sub FUN_3E1A/FUN_4DCC/FUN_4C3E rimangono STUB).
-  - **FUN_4DCC** (sound chip writer, ~294 writes) — STUB. Big work: parla con YM2151 + buffer comparison.
+  - **FUN_4DCC** (sound chip writer, ~294 writes) — minimal stub: incrementa solo `*0x401FF8` (counter deterministico, prima istruzione di FUN_4DCC). Body completo richiede emulare YM2151 — fuori scope. Region 30+31 restano divergenti per la parte sound.
+
+### Parity vs MAME (attract_mode, post-FUN_10392 + boot globals)
+
+Steady state (frame 1..100): **8 fields divergenti** (era 29). Da frame 300+ marble physics inizia a divergere quando attract mode mostra gameplay.
+
+Regioni residue: 0x000 (frame counter low byte 0xE), 0x100 (HUD area non popolata), 0x300 (object slot), 0x400 (main object), 0x1D00 (late globals), 0x1E00 (sound + stack), 0x1F00 (sound state). Plus stats.score (legge u16 @ 0x396 in region 3) — matcha quando region 3 matcha.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
