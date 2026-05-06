@@ -83,6 +83,13 @@ export interface PlayfieldLookupInfo {
   bpp: 4 | 5 | 6;
 }
 
+export interface MotionObjectLookupInfo {
+  offset: number;
+  bank: number;
+  color: number;
+  bpp: 4 | 5 | 6;
+}
+
 export interface MotionObjectEntryInfo {
   tileIndex: number;
   color: number;
@@ -118,6 +125,7 @@ export interface BuildFrameOptions {
   motionObjects?: "none" | "linked-list";
   motionObjectStartEntry?: number;
   maxMotionObjectEntries?: number;
+  motionObjectLookups?: MotionObjectLookupInfo[];
   videoControlByte?: number;
 }
 
@@ -243,6 +251,7 @@ export function decodeMotionObjectWords(
 export function buildSpritesFromMotionObjectRam(
   spriteRam: Uint8Array,
   entryIndexes: number[],
+  lookups: MotionObjectLookupInfo[] = [],
 ): SpriteCommand[] {
   const sprites: SpriteCommand[] = [];
 
@@ -262,8 +271,9 @@ export function buildSpritesFromMotionObjectRam(
       ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
     const fields = decodeMotionObjectWords(word0, word1, word2, word3);
     if (fields.timer) continue;
+    const lookup = lookups[fields.color];
 
-    sprites.push({
+    const command: SpriteCommand = {
       spriteIndex: fields.tileIndex,
       x: fields.xRaw,
       y: fields.yRaw,
@@ -273,7 +283,16 @@ export function buildSpritesFromMotionObjectRam(
       flipX: fields.flipX,
       priority: fields.priority ? 1 : 0,
       translucent: fields.priority,
-    });
+    };
+
+    if (lookup !== undefined && lookup.bank > 0) {
+      command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
+      command.gfxBank = lookup.bank;
+      command.bitsPerPixel = lookup.bpp;
+      command.paletteIndex = 0x10 + lookup.color * 8;
+    }
+
+    sprites.push(command);
   }
 
   return sprites;
@@ -309,10 +328,12 @@ export function buildSpritesFromMotionObjectList(
   spriteRam: Uint8Array,
   startEntry = 0,
   maxEntries = MOTION_OBJECT_ENTRY_COUNT,
+  lookups: MotionObjectLookupInfo[] = [],
 ): SpriteCommand[] {
   return buildSpritesFromMotionObjectRam(
     spriteRam,
     walkMotionObjectLinkedList(spriteRam, startEntry, maxEntries),
+    lookups,
   );
 }
 
@@ -346,6 +367,7 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
           state.spriteRam,
           options.motionObjectStartEntry,
           options.maxMotionObjectEntries,
+          options.motionObjectLookups,
         )
       : [];
 

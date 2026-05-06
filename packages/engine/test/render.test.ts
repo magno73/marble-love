@@ -118,6 +118,37 @@ describe("buildFrame", () => {
     ]);
     expect(frame.debugLabel).toBe("engine-frame:alpha-bank-1:pf-bank-1:mo-bank-5");
   });
+
+  it("passes optional motion-object lookup metadata through buildFrame", () => {
+    const state = emptyGameState();
+    state.spriteRam.set([0x00, 0x21, 0x02, 0x22, 0x00, 0x41, 0x00, 0x00], 0);
+
+    const frame = buildFrame(state, {
+      motionObjects: "linked-list",
+      maxMotionObjectEntries: 1,
+      motionObjectLookups: [
+        { offset: 0, bank: 0, color: 0, bpp: 4 },
+        { offset: 0, bank: 0, color: 0, bpp: 4 },
+        { offset: 6, bank: 3, color: 2, bpp: 6 },
+      ],
+    });
+
+    expect(frame.sprites).toEqual([
+      {
+        spriteIndex: 0x622,
+        gfxBank: 3,
+        bitsPerPixel: 6,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x20,
+        flipX: false,
+        priority: 0,
+        translucent: false,
+      },
+    ]);
+  });
 });
 
 describe("decodePlayfieldWord", () => {
@@ -210,6 +241,33 @@ describe("buildSpritesFromMotionObjectRam", () => {
         flipX: true,
         priority: 1,
         translucent: true,
+      },
+    ]);
+  });
+
+  it("can enrich sprite commands with motion-object graphics lookup metadata", () => {
+    const ram = new Uint8Array(8);
+    ram.set([0x00, 0x21, 0x03, 0x10, 0x00, 0x41, 0x00, 0x00], 0);
+    const lookups = [
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 5, bank: 2, color: 4, bpp: 5 as const },
+    ];
+
+    expect(buildSpritesFromMotionObjectRam(ram, [0], lookups)).toEqual([
+      {
+        spriteIndex: 0x510,
+        gfxBank: 2,
+        bitsPerPixel: 5,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x30,
+        flipX: false,
+        priority: 0,
+        translucent: false,
       },
     ]);
   });

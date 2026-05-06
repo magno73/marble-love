@@ -150,6 +150,9 @@ Completed:
   `buildFrame(state, { motionObjects: "linked-list" })` path that emits sprite
   commands from `state.spriteRam`. Default `buildFrame(state)` remains
   conservative.
+- Added optional motion-object lookup metadata to the sprite RAM render helpers,
+  allowing PROM-derived bank/bpp/color data to flow into neutral
+  `SpriteCommand`s without making ROM graphics mandatory.
 - Updated `buildFrame(state)` to include palette and alpha scaffolds by default
   while leaving playfield and sprite command arrays empty unless explicitly
   requested.
