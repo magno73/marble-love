@@ -93,6 +93,8 @@ Completed:
   demo frame while keeping ROM-backed motion-object samples enabled. This keeps
   the visible scene readable until real playfield RAM and palette behavior are
   integrated.
+- Added web fixture tests that lock in the ramp/platform composition and the
+  limited ROM-backed diagnostics strip.
 - Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
