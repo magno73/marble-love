@@ -1,7 +1,7 @@
 # Classic Renderer
 
-> Status: Phase A scaffold. This document describes the synthetic web renderer
-> pipeline, not a ROM-accurate graphics decoder.
+> Status: renderer/ROM scaffold. This document describes the current web
+> renderer pipeline, not a full ROM-accurate scene renderer.
 
 Related branch documents:
 
@@ -33,8 +33,8 @@ The development web build uses
 `packages/web/src/fixtures/classic-demo-frame.ts` to generate a deterministic
 classic-style frame. It includes:
 
-- a fake scrolling tile grid;
-- a few fake sprite-like rectangles;
+- an abstract isometric ramp with two platforms and dark void/background;
+- a few fake sprite-like motion objects, including a marble-like marker;
 - fake alpha/HUD tile blocks;
 - a small synthetic palette.
 
@@ -84,8 +84,11 @@ Decoded alpha glyphs are converted to Pixi textures in memory and drawn through
 a small sprite pool. The fallback path remains `Graphics` based.
 Until real engine video RAM is wired, loading a valid ROM shows the same
 synthetic classic demo frame, but with any available alpha glyphs supplied by
-the locally decoded ROM data. This is still a demo frame, not real gameplay
-rendering.
+the locally decoded ROM data. A small controlled playfield sample area and the
+demo motion objects can also use decoded object-tile textures in memory. The
+main scene intentionally stays synthetic/readable until real playfield RAM,
+palette RAM, and priority rules are wired. This is still a demo frame, not real
+gameplay rendering.
 
 The loader supports split MAME-style input, where `marble.zip` contains the game
 ROMs and `atarisy1.zip` contains shared Atari System 1 motherboard files such as
@@ -121,8 +124,10 @@ motion-object lookup metadata from the PROM rules in `atarisy1_v.cpp`, and can
 decode a single 8x8 object tile from the documented 4/5/6bpp planar layouts.
 When a demo frame carries explicit `gfxBank`/`bitsPerPixel` metadata, the Pixi
 renderer can turn those decoded object tiles into in-memory textures. This is
-used only by the ROM-backed demo frame; real playfield RAM rendering remains
-unimplemented.
+used only by the ROM-backed demo frame. The ROM-backed fixture limits playfield
+texture use to a small diagnostics strip so incomplete palette/lookup behavior
+does not make the whole screen look like noise. Real playfield RAM rendering
+remains unimplemented.
 The same texture path now supports ROM-backed demo motion objects. Chrome/debug
 rendering includes a tiny palette swatch preview from the current frame palette.
 

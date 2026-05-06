@@ -87,6 +87,12 @@ Completed:
   path only, not real playfield RAM rendering.
 - Extended the same ROM-backed texture path to synthetic motion-object demo
   sprites and added separate playfield/motion texture caches and sprite pools.
+- Reworked the synthetic demo away from the early checkerboard/grid fixture into
+  a more readable abstract isometric ramp/platform composition.
+- Limited ROM-backed playfield texture use to a small diagnostics strip in the
+  demo frame while keeping ROM-backed motion-object samples enabled. This keeps
+  the visible scene readable until real playfield RAM and palette behavior are
+  integrated.
 - Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
