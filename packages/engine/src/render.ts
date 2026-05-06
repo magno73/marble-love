@@ -114,6 +114,13 @@ export interface Frame {
   debugLabel?: string;
 }
 
+export interface BuildFrameOptions {
+  motionObjects?: "none" | "linked-list";
+  motionObjectStartEntry?: number;
+  maxMotionObjectEntries?: number;
+  videoControlByte?: number;
+}
+
 export const CLASSIC_NATIVE_SIZE: FrameSize = {
   width: 336,
   height: 240,
@@ -317,18 +324,42 @@ export function decodeVideoControlByte(value: number): VideoControlInfo {
   };
 }
 
-/** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.
- *  Scaffold conservativo: legge solo palette/alpha RAM già presenti in state.
- *  TODO: collegare il walker spriteRam e la playfield RAM quando il modello
- *  memoria/banking è stabile. */
-export function buildFrame(state: GameState): Frame {
-  return {
+function buildDebugLabel(options: BuildFrameOptions): string | undefined {
+  if (options.videoControlByte === undefined) return undefined;
+
+  const video = decodeVideoControlByte(options.videoControlByte);
+  return [
+    "engine-frame",
+    `alpha-bank-${video.alphaBank}`,
+    `pf-bank-${video.playfieldTileBank}`,
+    `mo-bank-${video.motionObjectBank}`,
+  ].join(":");
+}
+
+/** Genera la lista draw del frame corrente.
+ *  Default conservativo: palette/alpha soltanto. Gli sprite da motion-object RAM
+ *  sono opt-in finché bank/register video e priority merge non sono persistenti. */
+export function buildFrame(state: GameState, options: BuildFrameOptions = {}): Frame {
+  const sprites =
+    options.motionObjects === "linked-list"
+      ? buildSpritesFromMotionObjectList(
+          state.spriteRam,
+          options.motionObjectStartEntry,
+          options.maxMotionObjectEntries,
+        )
+      : [];
+
+  const frame: Frame = {
     nativeSize: CLASSIC_NATIVE_SIZE,
     scrollX: 0,
     scrollY: 0,
     palette: buildPaletteFromColorRam(state.colorRam),
     playfield: [],
-    sprites: [],
+    sprites,
     alpha: buildAlphaFromRam(state.alphaRam),
   };
+  const debugLabel = buildDebugLabel(options);
+  if (debugLabel !== undefined) frame.debugLabel = debugLabel;
+
+  return frame;
 }

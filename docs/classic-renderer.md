@@ -140,8 +140,11 @@ rendering includes a tiny palette swatch preview from the current frame palette.
 motion-object RAM entries into neutral `SpriteCommand` values.
 `walkMotionObjectLinkedList(spriteRam)` follows documented word-3 links with a
 bounded loop guard, and `buildSpritesFromMotionObjectList(spriteRam)` combines
-the two. These are narrow diagnostic helpers: they skip timer entries, avoid
-gameplay behavior, and do not select the active bank from `$860001` yet.
+the two. `buildFrame(state, { motionObjects: "linked-list" })` can opt into this
+path and emit neutral sprite commands from `state.spriteRam`, while
+`buildFrame(state)` without options remains conservative. These are narrow
+diagnostic helpers: they skip timer entries, avoid gameplay behavior, and do not
+select the active bank from `$860001` yet.
 `decodeVideoControlByte(value)` separately exposes the documented alpha,
 playfield, and motion-object bank bits from `$860001`, but no persistent
 video-control state is modeled yet.
