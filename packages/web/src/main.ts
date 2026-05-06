@@ -10,7 +10,7 @@
  */
 
 import { Application } from "pixi.js";
-import { state as stateNs, tick } from "@marble-love/engine";
+import { state as stateNs, bus as busNs, tick, bootInit } from "@marble-love/engine";
 import { initInput } from "./input.js";
 import {
   buildClassicDemoFrame,
@@ -82,8 +82,11 @@ async function startGame(
   document.body.appendChild(app.canvas);
 
   const s = stateNs.emptyGameState();
-  // TODO Phase 7: inizializzare bus con la ROM caricata, attivare engine.
-  void rom;
+  // ROM real (se utente l'ha caricata) → mainTick legge palette tables.
+  // Altrimenti ROM vuota: tick gira ma le palette anim sono no-op.
+  const tickRom = rom ?? busNs.emptyRomImage();
+  // Boot init: pattern color RAM, palette base, state machine globals.
+  bootInit(s, tickRom);
 
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
@@ -91,10 +94,12 @@ async function startGame(
   const useRomBackedDemoFrame = rom !== undefined;
 
   app.ticker.add(() => {
-    s.input.trackballDx = inputState.consumeDx() as typeof s.input.trackballDx;
-    s.input.trackballDy = inputState.consumeDy() as typeof s.input.trackballDy;
+    const dx = inputState.consumeDx();
+    const dy = inputState.consumeDy();
+    s.input.trackballDx = dx as typeof s.input.trackballDx;
+    s.input.trackballDy = dy as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
-    tick(s);
+    tick(s, { rom: tickRom, p1X: dx, p1Y: dy });
     if (forceEngineDiagnosticFrame) {
       renderer.drawFrame(
         buildEngineDiagnosticFrame(

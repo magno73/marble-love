@@ -43,6 +43,8 @@ export * as rleExpand from "./rle-expand.js";
 export * as stringTrim from "./string-trim.js";
 export * as slotSearch from "./slot-search.js";
 export * as initHelpers from "./init-helpers.js";
+export * as pfScroll from "./pf-scroll.js";
+export { bootInit } from "./boot-init.js";
 export * as animationStep from "./animation-step.js";
 export * as spriteCoords from "./sprite-coords.js";
 export * as objectCompare from "./object-compare.js";
@@ -58,6 +60,7 @@ export * as hudFormat from "./hud-format.js";
 export * as trackballApply from "./trackball-apply.js";
 export * as moveVelocity from "./move-velocity.js";
 export * as nearestNeighbor from "./nearest-neighbor.js";
+export * as mainTick from "./main-tick.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
@@ -85,12 +88,31 @@ export type {
  *   5. avanza clock
  */
 import type { GameState } from "./state.js";
-import { aiTick } from "./ai.js";
-import { physicsTick } from "./physics.js";
+import type { RomImage } from "./bus.js";
 import { rngClearFrameCounter } from "./rng.js";
+import { mainTick as runMainTick } from "./main-tick.js";
+import type { MainTickOptions } from "./main-tick.js";
 
-export function tick(s: GameState): void {
+/**
+ * Tick principale del game engine — 1 frame @ 60 Hz.
+ *
+ * Orchestrator che chiama 9 root sub-systems replicati bit-perfect dal
+ * binario originale (`FUN_00028788`). Aggiorna `state.workRam`,
+ * `state.colorRam`, `state.alphaRam`, `state.spriteRam` coerentemente
+ * col binario.
+ *
+ * Per integrare col renderer:
+ * ```ts
+ * tick(state, {rom});
+ * const frame = render.buildFrame(state);
+ * // → consegna `frame` al renderer PixiJS
+ * ```
+ *
+ * Le sub-functions ancora non replicate (sound, EEPROM, FUN_26D8A scroll,
+ * FUN_26F3E late logic) sono no-op: lo state core si aggiorna ma audio
+ * e persistenza non avvengono ancora.
+ */
+export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTickOptions, "rom">>): void {
   rngClearFrameCounter(s.rng);
-  aiTick(s);
-  physicsTick(s);
+  runMainTick(s, opts as MainTickOptions);
 }

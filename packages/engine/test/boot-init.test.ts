@@ -1,0 +1,118 @@
+/**
+ * boot-init.test.ts — smoke + integration test della sequenza di boot.
+ *
+ * Verifica:
+ *  - colorRam ha il pattern decrescente del RESET handler
+ *  - palette base inizializzata via paletteRamInitFull
+ *  - workRam globals di state machine inizializzati (0x1F42 rotation flag)
+ *  - dopo `bootInit + tick + tick` lo state evolve senza eccezioni
+ */
+
+import { describe, it, expect } from "vitest";
+import { bootInit } from "../src/boot-init.js";
+import { tick } from "../src/index.js";
+import { emptyGameState } from "../src/state.js";
+import { emptyRomImage } from "../src/bus.js";
+
+describe("bootInit", () => {
+  it("non solleva eccezioni con state vuoto + ROM vuota", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    expect(() => bootInit(s, rom)).not.toThrow();
+  });
+
+  it("color RAM hardware init: pattern decrescente -0x1000+4*i", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    bootInit(s, rom);
+    // Dopo bootInit ROM-vuota:
+    //   0x000..0x01F: paletteRamInitFull loop2 (zero con ROM vuota)
+    //   0x020..0x1FE: hw pattern intatto (paletteRamInitFull loop1 parte da 0x200)
+    //   0x200..0x7FE: paletteRamInitFull loop1 (zero con ROM vuota)
+    // Verifica a 0x100 (centro fascia hw): iter = 0x100/2 + 1 = 0x81 →
+    //   d0 = -0x1000 + 0x81*4 = -0xCFC = 0xF304
+    const off = 0x100;
+    const iter = (off / 2) + 1;
+    const expected = (-0x1000 + iter * 4) & 0xffff;
+    const got = ((s.colorRam[off] ?? 0) << 8) | (s.colorRam[off + 1] ?? 0);
+    expect(got).toBe(expected);
+  });
+
+  it("palette region @ 0x200 inizializzata (paletteRamInitFull loop1)", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    // ROM vuota: paletteRamInitFull loop1 scrive 0 → ma dopo bootInit
+    // l'indice 0x200 è stato comunque toccato (overwrite del pattern hw)
+    // Verifica: prima bootInit l'area è 0, dopo bootInit ROM-vuota resta 0
+    bootInit(s, rom);
+    // Con ROM reale conterrebbe i color values; con ROM vuota = 0
+    expect(s.colorRam[0x200]).toBe(0);
+  });
+
+  it("gameStateMachineInit: rotation flag = 0 con ROM vuota", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    bootInit(s, rom);
+    // ROM[0x10000] = 0x00 0x00 (vuoto) → rotFlag = 0
+    expect(s.workRam[0x1f42]).toBe(0);
+    expect(s.workRam[0x1f43]).toBe(0);
+  });
+
+  it("gameStateMachineInit: rotation flag = 1 con ROM populata correttamente", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    rom.program[0x10000] = 0x4e;
+    rom.program[0x10001] = 0xf9;
+    rom.program[0x10072] = 0x01;
+    bootInit(s, rom);
+    expect(s.workRam[0x1f42]).toBe(0);
+    expect(s.workRam[0x1f43]).toBe(1);
+  });
+
+  it("alpha RAM clear (gameStateMachineInit clears 0xF00 byte)", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    // Pre-fill alpha RAM
+    for (let i = 0; i < 0x1000; i++) s.alphaRam[i] = 0xCC;
+    bootInit(s, rom);
+    // 0..0xEFF cleared
+    for (let i = 0; i < 0xF00; i++) {
+      expect(s.alphaRam[i]).toBe(0);
+    }
+    // 0xF00..0xFFF NOT cleared (gameStateMachineInit ferma a 0xF00)
+    expect(s.alphaRam[0xF00]).toBe(0xCC);
+  });
+
+  it("integrazione: bootInit + 5 tick → state evolve senza throw", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    bootInit(s, rom);
+    for (let i = 0; i < 5; i++) {
+      expect(() => tick(s, { rom })).not.toThrow();
+    }
+    // Frame counter avanza
+    expect(s.workRam[0x14]).toBe(5);
+    expect(s.workRam[0x16]).toBe(5);
+  });
+
+  it("warm boot: cold-init non si rifa se *0x400016 != 0", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    // Pre-popola ROM con marker, fa primo bootInit
+    rom.program[0x10074] = 0xab;
+    rom.program[0x10075] = 0xcd;
+    rom.program[0x10076] = 0xef;
+    rom.program[0x10077] = 0x01;
+    bootInit(s, rom);
+    expect(s.workRam[0x140]).toBe(0xab);
+    expect(s.workRam[0x141]).toBe(0xcd);
+    // Simula warm boot: setta frame counter high
+    s.workRam[0x16] = 1;
+    s.workRam[0x140] = 0; // poison
+    s.workRam[0x141] = 0;
+    bootInit(s, rom);
+    // I 3 long copies NON dovrebbero essere rifatti
+    expect(s.workRam[0x140]).toBe(0);
+    expect(s.workRam[0x141]).toBe(0);
+  });
+});
