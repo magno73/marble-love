@@ -94,33 +94,91 @@ function applyViewportScale(app: Application, viewport: Container, frame: Frame)
   viewport.y = Math.floor((screenHeight - frame.nativeSize.height * scale) / 2);
 }
 
-function textureFromObjectTile(
+function objectPenColor(frame: Frame, paletteBase: number, pen: number): RgbaColor {
+  return (
+    exactPaletteLookup(frame, paletteBase + pen) ??
+    frame.palette[(paletteBase + pen) % frame.palette.length]?.rgba ??
+    paletteLookup(frame, paletteBase)
+  );
+}
+
+function drawObjectTileIntoImageData(
   frame: Frame,
+  imageData: ImageData,
   tile: DecodedObjectTile,
   paletteBase: number,
-): Texture {
-  const canvas = document.createElement("canvas");
-  canvas.width = tile.width;
-  canvas.height = tile.height;
-  const context = canvas.getContext("2d");
-  if (context === null) return Texture.EMPTY;
-
-  const imageData = context.createImageData(tile.width, tile.height);
+  destinationX: number,
+  destinationY: number,
+  flipX: boolean,
+  flipY: boolean,
+): void {
+  const imageWidth = imageData.width;
+  const imageHeight = imageData.height;
   for (let y = 0; y < tile.height; y += 1) {
     for (let x = 0; x < tile.width; x += 1) {
+      const targetX = flipX ? imageWidth - 1 - (destinationX + x) : destinationX + x;
+      const targetY = flipY ? imageHeight - 1 - (destinationY + y) : destinationY + y;
+      if (
+        targetX < 0 ||
+        targetX >= imageWidth ||
+        targetY < 0 ||
+        targetY >= imageHeight
+      ) {
+        continue;
+      }
+
       const pen = tile.pixels[y * tile.width + x] ?? 0;
-      const color =
-        exactPaletteLookup(frame, paletteBase + pen) ??
-        frame.palette[(paletteBase + pen) % frame.palette.length]?.rgba ??
-        paletteLookup(frame, paletteBase);
-      const offset = (y * tile.width + x) * 4;
+      const color = objectPenColor(frame, paletteBase, pen);
+      const offset = (targetY * imageWidth + targetX) * 4;
       imageData.data[offset] = color.r;
       imageData.data[offset + 1] = color.g;
       imageData.data[offset + 2] = color.b;
       imageData.data[offset + 3] = pen === 0 ? 0 : color.a;
     }
   }
+}
 
+function textureFromObjectCommand(
+  frame: Frame,
+  command: renderNs.TileCommand | renderNs.SpriteCommand,
+  assets: RendererAssets,
+): Texture {
+  if (command.gfxBank === undefined || command.bitsPerPixel === undefined) {
+    return Texture.EMPTY;
+  }
+
+  const tileIndex = "tileIndex" in command ? command.tileIndex : command.spriteIndex;
+  const width = command.width ?? DEFAULT_TILE_SIZE;
+  const height = command.height ?? DEFAULT_TILE_SIZE;
+  const tilesWide = Math.max(1, Math.ceil(width / DEFAULT_TILE_SIZE));
+  const tilesHigh = Math.max(1, Math.ceil(height / DEFAULT_TILE_SIZE));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (context === null) return Texture.EMPTY;
+
+  const imageData = context.createImageData(width, height);
+  for (let tileY = 0; tileY < tilesHigh; tileY += 1) {
+    for (let tileX = 0; tileX < tilesWide; tileX += 1) {
+      const objectTile = decodeObjectTile(
+        assets.romGraphics?.tiles ?? new Uint8Array(),
+        command.gfxBank,
+        tileIndex + tileY * tilesWide + tileX,
+        command.bitsPerPixel,
+      );
+      drawObjectTileIntoImageData(
+        frame,
+        imageData,
+        objectTile,
+        command.paletteIndex,
+        tileX * DEFAULT_TILE_SIZE,
+        tileY * DEFAULT_TILE_SIZE,
+        command.flipX === true,
+        command.flipY === true,
+      );
+    }
+  }
   context.putImageData(imageData, 0, 0);
   return Texture.from(canvas, true);
 }
@@ -139,6 +197,8 @@ function objectTileTextureForCommand(
   }
 
   const tileIndex = "tileIndex" in command ? command.tileIndex : command.spriteIndex;
+  const width = command.width ?? DEFAULT_TILE_SIZE;
+  const height = command.height ?? DEFAULT_TILE_SIZE;
   const textureCache =
     "tileIndex" in command ? assets.playfieldTextureCache : assets.motionTextureCache;
   const cacheKey = [
@@ -147,17 +207,15 @@ function objectTileTextureForCommand(
     command.bitsPerPixel,
     tileIndex,
     command.paletteIndex,
+    width,
+    height,
+    command.flipX === true ? 1 : 0,
+    command.flipY === true ? 1 : 0,
   ].join(":");
   const cached = textureCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
-  const tile = decodeObjectTile(
-    assets.romGraphics.tiles,
-    command.gfxBank,
-    tileIndex,
-    command.bitsPerPixel,
-  );
-  const texture = textureFromObjectTile(frame, tile, command.paletteIndex);
+  const texture = textureFromObjectCommand(frame, command, assets);
   textureCache.set(cacheKey, texture);
   return texture;
 }
@@ -218,8 +276,7 @@ function drawPlayfield(
       sprite.texture = texture;
       sprite.x = tile.x;
       sprite.y = tile.y;
-      sprite.scale.x = (tile.width ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
-      sprite.scale.y = (tile.height ?? DEFAULT_TILE_SIZE) / DEFAULT_TILE_SIZE;
+      sprite.scale.set(1);
       sprite.alpha = 1;
       continue;
     }
@@ -259,8 +316,7 @@ function drawSprites(
       pixiSprite.texture = texture;
       pixiSprite.x = sprite.x;
       pixiSprite.y = sprite.y;
-      pixiSprite.scale.x = (sprite.width ?? 16) / DEFAULT_TILE_SIZE;
-      pixiSprite.scale.y = (sprite.height ?? 16) / DEFAULT_TILE_SIZE;
+      pixiSprite.scale.set(1);
       pixiSprite.alpha = sprite.translucent === true ? 0.65 : 1;
       continue;
     }

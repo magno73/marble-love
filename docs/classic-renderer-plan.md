@@ -87,6 +87,9 @@ Completed:
   path only, not real playfield RAM rendering.
 - Extended the same ROM-backed texture path to synthetic motion-object demo
   sprites and added separate playfield/motion texture caches and sprite pools.
+- Updated the ROM-backed object texture path to compose multi-tile command
+  textures in memory instead of scaling a single decoded 8x8 tile across larger
+  playfield/sprite commands.
 - Reworked the synthetic demo away from the early checkerboard/grid fixture into
   a more readable abstract isometric ramp/platform composition.
 - Limited ROM-backed playfield texture use to a small diagnostics strip in the

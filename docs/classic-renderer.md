@@ -129,10 +129,12 @@ motion-object lookup metadata from the PROM rules in `atarisy1_v.cpp`, and can
 decode a single 8x8 object tile from the documented 4/5/6bpp planar layouts.
 When a demo frame carries explicit `gfxBank`/`bitsPerPixel` metadata, the Pixi
 renderer can turn those decoded object tiles into in-memory textures. This is
-used only by the ROM-backed demo frame. The ROM-backed fixture limits playfield
-texture use to a small diagnostics strip so incomplete palette/lookup behavior
-does not make the whole screen look like noise. Real playfield RAM rendering
-remains unimplemented.
+used only by the ROM-backed demo frame. Larger commands are composed from
+multiple decoded 8x8 object tiles in memory rather than scaling one tile across
+the whole command. The ROM-backed fixture limits playfield texture use to a
+small diagnostics strip so incomplete palette/lookup behavior does not make the
+whole screen look like noise. Real playfield RAM rendering remains
+unimplemented.
 The same texture path now supports ROM-backed demo motion objects. Chrome/debug
 rendering includes a tiny palette swatch preview from the current frame palette.
 
