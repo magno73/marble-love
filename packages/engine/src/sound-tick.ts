@@ -29,6 +29,7 @@ import type { GameState } from "./state.js";
 const SND_CMD_OFF = 0x1f44; // *0x401F44: current sound command byte
 const SND_LAST_SENT_OFF = 0x1f45; // *0x401F45: last sent (bit 7 = pending)
 const SND_RETRY_OFF = 0x1ff4; // *0x401FF4: retry counter (saturated)
+const SND_TICK_COUNTER_OFF = 0x1ff8; // *0x401FF8: long counter (FUN_4DCC inc per call)
 
 export interface SoundTickSubs {
   /** FUN_3E1A: ack/dispatch send. arg long, no return. Default no-op. */
@@ -76,8 +77,25 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
   // *0x401F44 |= 0x80
   r[SND_CMD_OFF] = (r[SND_CMD_OFF] ?? 0) | 0x80;
 
-  // FUN_4DCC (sound chip writer) — sub
-  subs?.fun_4dcc?.(state);
+  // FUN_4DCC (sound chip writer) — sub.
+  // Default impl: incrementa il long counter @ 0x401FF8 (`addq.l 0x1, (0x401FF8)`,
+  // prima istruzione deterministica di FUN_4DCC). Resto STUB perché il vero
+  // FUN_4DCC interagisce col chip YM2151 via MMIO 0xF00001 — fuori scope
+  // finché non emuliamo il sound CPU. Subs custom override.
+  if (subs?.fun_4dcc !== undefined) {
+    subs.fun_4dcc(state);
+  } else {
+    let cnt =
+      ((r[SND_TICK_COUNTER_OFF] ?? 0) << 24) |
+      ((r[SND_TICK_COUNTER_OFF + 1] ?? 0) << 16) |
+      ((r[SND_TICK_COUNTER_OFF + 2] ?? 0) << 8) |
+      (r[SND_TICK_COUNTER_OFF + 3] ?? 0);
+    cnt = (cnt + 1) >>> 0;
+    r[SND_TICK_COUNTER_OFF] = (cnt >>> 24) & 0xff;
+    r[SND_TICK_COUNTER_OFF + 1] = (cnt >>> 16) & 0xff;
+    r[SND_TICK_COUNTER_OFF + 2] = (cnt >>> 8) & 0xff;
+    r[SND_TICK_COUNTER_OFF + 3] = cnt & 0xff;
+  }
 
   // FUN_4C3E(D0=0x10003, A0=0x401F44) — sub
   // Default ritorna 1 (= ok, skip retry); se 0 incrementa retry counter saturato
