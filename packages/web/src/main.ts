@@ -16,6 +16,7 @@ import {
   buildClassicDemoFrame,
   buildRomBackedDemoFrame,
 } from "./fixtures/classic-demo-frame.js";
+import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 
@@ -23,8 +24,11 @@ const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
 const btn = document.getElementById("rom-btn") as HTMLButtonElement;
 const romStatus = document.getElementById("rom-status") as HTMLParagraphElement;
-const forceRomPicker = new URLSearchParams(window.location.search).get("rom") === "1";
-const useSyntheticDemoFrame = import.meta.env.DEV && !forceRomPicker;
+const searchParams = new URLSearchParams(window.location.search);
+const forceRomPicker = searchParams.get("rom") === "1";
+const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
+const useSyntheticDemoFrame =
+  import.meta.env.DEV && !forceRomPicker && !forceEngineDiagnosticFrame;
 
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
   romStatus.textContent = message;
@@ -59,7 +63,7 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-if (useSyntheticDemoFrame) {
+if (useSyntheticDemoFrame || (import.meta.env.DEV && forceEngineDiagnosticFrame)) {
   splash.remove();
   void startGame();
 }
@@ -91,7 +95,12 @@ async function startGame(
     s.input.trackballDy = inputState.consumeDy() as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
     tick(s);
-    if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
+    if (forceEngineDiagnosticFrame) {
+      renderer.drawFrame(
+        buildEngineDiagnosticFrame(demoFrame, rom?.graphics.lookupTables.motionObjects),
+      );
+      demoFrame += 1;
+    } else if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
       renderer.drawFrame(
         rom === undefined
           ? buildClassicDemoFrame(demoFrame)

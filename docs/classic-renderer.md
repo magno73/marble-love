@@ -172,6 +172,10 @@ npm run dev --workspace @marble-love/web
 
 In development, open `http://localhost:5173/?rom=1` to keep the ROM picker
 visible instead of auto-starting the synthetic demo.
+Open `http://localhost:5173/?engine=1` to render the diagnostic engine-frame
+fixture, which builds a `Frame` through `buildFrame(state, ...)` from synthetic
+palette/alpha/motion-object RAM. Use `?rom=1&engine=1` to keep the ROM picker
+and pass loaded motion-object lookup metadata into that diagnostic path.
 
 The loader was also smoke-tested locally against user-provided `marble.zip` +
 `atarisy1.zip` outside the repository with CRC32 validation enabled. No ROM
