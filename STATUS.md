@@ -10,7 +10,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 145/314 sub-systems bit-perfect (46% del binario)
+- 🔄 **Phase 4d in corso**: 150/314 sub-systems bit-perfect (48% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
