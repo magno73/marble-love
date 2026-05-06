@@ -223,7 +223,10 @@ local function read_state()
     }
 end
 
--- Calcola CRC32 per 32 regioni di 0x100 byte. Region 4 esclude 0x440-0x447.
+-- Calcola CRC32 per 32 regioni di 0x100 byte.
+-- Esclusioni:
+--   Region 4 (0x400-0x4FF): esclude 0x440-0x447 (stack low water debug)
+--   Region 30 (0x1E00-0x1EFF): esclude 0x1EE0-0x1EFF (zona stack 68k residue)
 function work_ram_regional_hashes()
     local h = {}
     for i = 0, 31 do
@@ -231,6 +234,8 @@ function work_ram_regional_hashes()
         if i == 4 then
             h[i + 1] = crc32_mem(0x400400, 0x40)
                      ~ crc32_mem(0x400448, 0x100 - 0x48)
+        elseif i == 30 then
+            h[i + 1] = crc32_mem(0x401E00, 0xE0)
         else
             h[i + 1] = crc32_mem(start, 0x100)
         end

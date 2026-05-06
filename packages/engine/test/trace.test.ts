@@ -81,6 +81,27 @@ describe("trace serialization", () => {
     }
   });
 
+  it("workRamHashes regione 30 ignora stack residue (0x1EE0-0x1EFF)", () => {
+    const sa = emptyGameState();
+    const sb = emptyGameState();
+    sb.workRam[0x1EE0] = 0xFF;
+    sb.workRam[0x1EE8] = 0xAB;
+    sb.workRam[0x1EFF] = 0xCD;
+    const a = frameFromState(sa);
+    const b = frameFromState(sb);
+    expect(a.workRamHashes[30]).toBe(b.workRamHashes[30]);
+  });
+
+  it("workRamHashes regione 30 cattura modifiche fuori dalla zona stack", () => {
+    const sa = emptyGameState();
+    const sb = emptyGameState();
+    sb.workRam[0x1E00] = 0x01; // primo byte regione 30
+    sb.workRam[0x1EDF] = 0x02; // ultimo byte non-stack
+    const a = frameFromState(sa);
+    const b = frameFromState(sb);
+    expect(a.workRamHashes[30]).not.toBe(b.workRamHashes[30]);
+  });
+
   it("workRamHashes regione 4 ignora stack low water (0x440-0x447)", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();

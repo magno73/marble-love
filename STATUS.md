@@ -42,8 +42,11 @@ Due track paralleli su `main`, **bridge attivo**:
   - ✅ `0x000-0x0FF`: scroll/frame counter — match
   - ✅ `0x100-0x1FF`: HUD strings (cold-boot di FUN_FA0) — DISATTIVATO in bootInit perché in attract_mode l'oracle non popola questa fascia (warm-boot path o FUN_FA0 mai chiamato)
   - ✅ `0x300-0x3FF`, `0x400-0x4FF`, `0x1F00-0x1FFF`: match
-  - ⚠ `0x1E00-0x1EFF`: divergente (oracle ha 24 byte popolati a 0x1EE8-0x1EFF; addressing indiretto, sub sconosciuto)
-- 🔧 **Tooling debug**: `MARBLE_DUMP_REGIONS=0x100,0x300` (env var) attiva il dump hex-encoded di regioni specifiche sia nel reimpl trace sia nell'oracle MAME, per diff byte-by-byte.
+  - ✅ `0x1E00-0x1EFF`: risolto. Investigazione via `tools/watch_write.lua` (write-tap MAME) ha mostrato che i write a 0x1EE0-0x1EFF sono stack residue 68k (SP parte da 0x401F00 e scende fino a ~0x401EE8 in attract_mode). Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione conservativa di 0x1EE0-0x1EFF dal hash regione 30, analoga a 0x440-0x447 (stack low water).
+- 🎯 **Bit-perfect parity al frame 0** (reimpl post-bootInit ≡ oracle post-boot-46): le 32 regioni workRam tutte match. Al frame 1 divergenza esplode (29 fields) per via dei sub stubbed → loop iterativo "replica sub → re-run parity-check → vedi salire" è sbloccato.
+- 🔧 **Tooling debug**:
+  - `MARBLE_DUMP_REGIONS=0x100,0x300` (env var) attiva dump hex di regioni specifiche sia nel reimpl trace sia nell'oracle MAME, per diff byte-by-byte.
+  - `tools/watch_write.lua`: installa write-tap MAME su una regione di workRam, logga `(frame, PC, addr, data, mask)` per identificare tutti i writer di una zona specifica.
 
 ## Prossime fasi
 

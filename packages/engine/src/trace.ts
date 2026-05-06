@@ -141,7 +141,14 @@ export function frameFromState(s: GameState): TraceFrame {
 
 /**
  * Calcola CRC32 per 32 regioni di 0x100 byte ciascuna sulla Work RAM 8 KB.
- * Regione 4 (0x400-0x4FF) esclude `0x440-0x447` (stack low water mark).
+ *
+ * Esclusioni (stack-residue / debug-only, non parte del game state):
+ *   - Regione 4 (0x400-0x4FF): esclude `0x440-0x447` (stack low water debug)
+ *   - Regione 30 (0x1E00-0x1EFF): esclude `0x1EE0-0x1EFF` (zona stack 68k:
+ *     SP parte da 0x401F00 e scende. In attract_mode tipicamente scende fino
+ *     a ~0x401EE8 per chiamate annidate, lasciando residui dopo il pop.
+ *     Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione
+ *     conservativa dei 32 byte più alti della regione, validata su attract_mode.)
  *
  * Output: array di 32 u32, indice = offset / 0x100.
  */
@@ -152,6 +159,9 @@ function workRamRegionalHashes(buf: Uint8Array): number[] {
     if (i === 4) {
       // 0x400-0x4FF con buco 0x440-0x447 (8 byte stack water)
       out[i] = (crc32(buf, 0x400, 0x40) ^ crc32(buf, 0x448, 0x100 - 0x48)) >>> 0;
+    } else if (i === 30) {
+      // 0x1E00-0x1EFF con buco 0x1EE0-0x1EFF (32 byte stack residue)
+      out[i] = crc32(buf, 0x1E00, 0xE0) >>> 0;
     } else {
       out[i] = crc32(buf, start, 0x100) >>> 0;
     }
