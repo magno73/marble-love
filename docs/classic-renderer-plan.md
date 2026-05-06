@@ -10,6 +10,10 @@ engine parity logic. The branch should prove that the web app can render an
 abstract Atari System 1-style frame with explicit playfield, motion object, and
 alpha/HUD layers.
 
+Status: PRD scope complete for this branch. Remaining items in this document are
+future integration work and explicit non-goals, not blockers for the classic
+renderer/web pipeline PRD.
+
 ## Ground Rules
 
 - Keep `@marble-love/engine` pure: no DOM, PixiJS, browser APIs, ROM assets, or
@@ -109,8 +113,8 @@ Completed:
 - Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
-- Added `packages/web/src/rom-graphics.ts` with typed raw containers and
-  explicit `not-decoded` placeholders.
+- Added `packages/web/src/rom-graphics.ts` with typed raw containers, decoded
+  alpha graphics, PROM lookup metadata, and object-tile decode helpers.
 - Added `packages/web/test/rom-loader.test.ts` using artificial ZIP data only.
 
 Verification:
@@ -132,7 +136,7 @@ Constraints:
 
 ## Phase C — Real Engine Frame Integration Scaffold
 
-Status: partially implemented.
+Status: implemented for PRD scope.
 
 Completed:
 
@@ -150,8 +154,7 @@ Completed:
   diagnostics.
 - Added `walkMotionObjectLinkedList(spriteRam)` and
   `buildSpritesFromMotionObjectList(spriteRam)` as bounded diagnostic helpers
-  for the documented word-3 links. They do not choose a sprite bank yet and are
-  not wired into `buildFrame(state)`.
+  for the documented word-3 links.
 - Added `decodeVideoControlByte(value)` for the documented `$860001` alpha,
   playfield, and motion-object bank bits. It is not wired to `GameState` yet.
 - Added `BuildFrameOptions` and an opt-in
@@ -169,7 +172,7 @@ Completed:
   requested.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.
 
-Constraints:
+Future constraints:
 
 - Do not invent playfield RAM before it exists in `GameState`.
 - Do not change game logic, parity tests, RNG, physics, AI, or state-machine
@@ -182,14 +185,45 @@ Constraints:
 Verification:
 
 - `npm run typecheck --workspace @marble-love/engine`: passed.
+- `npm run typecheck --workspace @marble-love/web`: passed.
+- `npm run test`: passed.
+- `npm run build --workspace @marble-love/web`: passed.
 - `npm run test -- packages/engine/test/render.test.ts`: passed.
-- `npx eslint packages/engine/src/render.ts`: passed.
+- Focused ESLint on renderer/web source files: passed.
 
-## Current Definition Of Done
+## Final Definition Of Done
 
 - Engine remains stable and pure.
 - Web renderer draws abstract classic frames in correct layer order.
 - Development mode shows a synthetic classic-frame composition.
+- `?engine=1` shows a RAM-backed diagnostic frame generated through
+  `buildFrame(state, ...)`.
+- Local ROM ZIP loading validates `marble.zip` plus `atarisy1.zip`, decodes alpha
+  glyphs, builds playfield/motion-object lookup metadata, and keeps all ROM data
+  in memory only.
 - Real ROM decoding remains isolated and documented.
 - Root verification blockers are either fixed outside forbidden files or clearly
   documented as pre-existing.
+
+## Final Verification Snapshot
+
+Renderer-scope checks passed at PRD close:
+
+- `npx tsc -b packages/engine`
+- `npm run typecheck --workspace @marble-love/engine`
+- `npm run typecheck --workspace @marble-love/web`
+- `npm run test`
+- `npm run build --workspace @marble-love/web`
+- Focused ESLint on `packages/engine/src/render.ts` and changed web renderer
+  sources.
+- Prettier check on changed docs, engine, and web files.
+- Browser preview of `http://localhost:5173/?engine=1`.
+- Local ROM smoke test with user-provided `marble.zip` + `atarisy1.zip`.
+
+Root-level PRD commands still have pre-existing blockers outside renderer scope:
+
+- `npm run typecheck` and root `npm run build` fail in existing CLI parity files
+  such as `packages/cli/src/test-slot-search-parity.ts` and related
+  `test-*-parity.ts` files.
+- `npm run lint` fails before file linting because the configured
+  `oracle/**/*.ts` argument is ignored by the current ESLint setup.

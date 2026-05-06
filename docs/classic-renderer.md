@@ -1,7 +1,7 @@
 # Classic Renderer
 
-> Status: renderer/ROM scaffold. This document describes the current web
-> renderer pipeline, not a full ROM-accurate scene renderer.
+> Status: PRD scope complete for the classic renderer/web pipeline. This is a
+> safe visual pipeline branch, not a full ROM-accurate gameplay renderer.
 
 Related branch documents:
 
@@ -18,10 +18,10 @@ size, palette entries, scroll values, and three explicit draw layers:
 3. Alpha / HUD overlay
 
 `packages/web/src/renderer.ts` translates that model into PixiJS containers in
-the same order. It draws simple generated rectangles and HUD glyph blocks using
-the palette colors carried by the frame. The renderer preserves pixel-art
-behavior with antialiasing disabled and integer viewport scaling centered in the
-browser window.
+the same order. It draws generated fixture geometry, decoded alpha glyphs when
+available, and decoded ROM object-tile textures when commands include ROM
+graphics metadata. The renderer preserves pixel-art behavior with antialiasing
+disabled and integer viewport scaling centered in the browser window.
 
 In development mode, `packages/web/src/main.ts` bypasses the ROM splash and
 renders the synthetic fixture directly. Production mode still keeps the local
@@ -44,11 +44,12 @@ MAME screenshots, or any copyrighted pixel art.
 demo stays a readable ramp/platform composition instead of regressing into a
 full-screen checkerboard or fully ROM-textured diagnostics view.
 
-`packages/engine/src/render.ts` now extracts only two conservative, documented
-pieces from `GameState`: palette entries from `colorRam` and alpha/HUD commands
-from `alphaRam`. Playfield and motion-object command arrays remain empty until
-their memory integration is implemented narrowly. The engine does not generate
-fake visuals and remains DOM-free and PixiJS-free.
+`packages/engine/src/render.ts` extracts conservative, documented pieces from
+`GameState`: palette entries from `colorRam`, alpha/HUD commands from
+`alphaRam`, and optional motion-object commands from `spriteRam` when explicitly
+requested. It can also accept external playfield RAM snapshots through
+`BuildFrameOptions` without adding playfield RAM to `GameState`. The engine does
+not generate fake visuals and remains DOM-free and PixiJS-free.
 
 ## System 1 layer mapping
 
@@ -66,10 +67,10 @@ The current renderer uses the priority fields only for deterministic draw order
 within the synthetic command lists. It does not implement the real System 1
 priority merge or translucency palette behavior yet.
 
-## Remaining ROM work
+## ROM Work
 
-The ROM loader scaffold is implemented in `packages/web/src/rom-loader.ts`.
-It reads user-supplied ZIP files locally, validates expected Marble set 1 file
+The ROM loader is implemented in `packages/web/src/rom-loader.ts`. It reads
+user-supplied ZIP files locally, validates expected Marble set 1 file
 names from `docs/rom-layout.md`, and assembles raw byte regions for:
 
 - 68010 program ROM;
@@ -102,28 +103,30 @@ BIOS, alpha ROM, and motherboard PROMs. Both archives are merged in memory only.
 The web splash now accepts multiple `.zip` files, validates CRC32 values from
 `docs/rom-layout.md`, and shows status/errors without uploading anything.
 
-Remaining ROM work:
+Future ROM work outside this PRD:
 
 - add SHA1 verification if needed for parity harness workflows;
-- connect decoded alphanumerics to real text/tile rendering;
-- decode playfield tiles, motion-object graphics, and palette PROM behavior;
+- connect ROM graphics to real gameplay video RAM rather than diagnostics/demo
+  frames;
+- complete palette/translucency behavior;
 - keep decoded output in memory and never commit ROM-derived assets;
-- connect decoded textures to the frame renderer behind the neutral `Frame`
-  model.
+- preserve the neutral `Frame` boundary between engine and web renderer.
 
-## Remaining engine integration
+## Future Engine Integration
 
-`buildFrame(state)` should later read known video RAM only after the memory model
-is stable:
+`buildFrame(state)` remains conservative by default. It can opt into diagnostic
+playfield and motion-object rendering through `BuildFrameOptions`, but future
+real gameplay integration should still wait for the memory model to explicitly
+own:
 
 - `state.spriteRam` for motion objects;
 - future playfield RAM/tilemap state when it exists.
 
-Palette RAM and alpha RAM have a first deterministic scaffold. Motion-object
-single-entry word extraction and bounded word-3 linked-list walking also have a
-deterministic scaffold for diagnostics, but sprite bank selection, priority
-merge behavior, translucency palette behavior, and playfield RAM extraction
-remain TODOs.
+Palette RAM and alpha RAM have deterministic extraction. Motion-object
+single-entry word extraction, bounded word-3 linked-list walking, external
+playfield RAM extraction, and video-control bit decoding are implemented as
+renderer-facing helpers. Sprite bank persistence, priority merge behavior,
+translucency palette behavior, and real owned playfield RAM remain future work.
 
 `decodePlayfieldWord()` extracts only the documented playfield RAM word fields
 (`tileIndexLow`, `lookupIndex`, `flipX`). PROM tables are split into remap/color
@@ -161,8 +164,8 @@ helpers keep producing plain neutral rectangle-friendly sprite commands.
 playfield, and motion-object bank bits from `$860001`, but no persistent
 video-control state is modeled yet.
 
-Until then, the renderer is a visual pipeline branch. It must not infer gameplay
-rules, mutate `GameState`, or touch parity-sensitive engine logic.
+This renderer branch must not infer gameplay rules, mutate `GameState`, or touch
+parity-sensitive engine logic.
 
 ## Local verification
 
@@ -189,6 +192,6 @@ The loader was also smoke-tested locally against user-provided `marble.zip` +
 bytes or derived assets are copied into this branch.
 
 The PRD also asks for root `npm run typecheck`, `npm run lint`, and
-`npm run build`. At the time this README was added, those root commands had
-pre-existing failures outside the renderer scope. See
-`docs/classic-renderer-plan.md` for the current list.
+`npm run build`. At PRD close, those root commands still have pre-existing
+failures outside the renderer scope. See `docs/classic-renderer-plan.md` for
+the current list.
