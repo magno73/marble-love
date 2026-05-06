@@ -67,3 +67,4 @@ packages/mobile/android/
 
 # --- TypeScript ---
 *.tsbuildinfo
+.claude/worktrees/
