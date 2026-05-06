@@ -39,6 +39,7 @@ interface Args {
   out: string;
   context: number;
   fromFrame: number;
+  truthOffset: number;
 }
 
 function parseArgs(): Args {
@@ -48,18 +49,20 @@ function parseArgs(): Args {
   let out: string | undefined;
   let context = 5;
   let fromFrame = 0;
+  let truthOffset = 0;
   for (let i = 0; i < a.length; i++) {
     if (a[i] === "--truth") truth = a[++i];
     else if (a[i] === "--reimpl") reimpl = a[++i];
     else if (a[i] === "--out") out = a[++i];
     else if (a[i] === "--context") context = Number(a[++i] ?? "5");
     else if (a[i] === "--from-frame") fromFrame = Number(a[++i] ?? "0");
+    else if (a[i] === "--truth-offset") truthOffset = Number(a[++i] ?? "0");
   }
   if (!truth || !reimpl || !out) {
-    console.error("usage: diff.ts --truth A.jsonl --reimpl B.jsonl --out C.json [--context N] [--from-frame N]");
+    console.error("usage: diff.ts --truth A.jsonl --reimpl B.jsonl --out C.json [--context N] [--from-frame N] [--truth-offset N]");
     exit(2);
   }
-  return { truth, reimpl, out, context, fromFrame };
+  return { truth, reimpl, out, context, fromFrame, truthOffset };
 }
 
 function readJsonl(path: string): { header: any; frames: any[] } {
@@ -140,13 +143,16 @@ function main(): void {
     );
   }
 
-  const n = Math.min(t.frames.length, r.frames.length);
+  // Allineamento: reimpl[i] ↔ truth[i + truthOffset]. Comune se MAME ha
+  // un boot transient di N frame prima del primo tick, mentre reimpl ha
+  // bootInit istantaneo (es. attract_mode → truthOffset=45).
+  const n = Math.min(r.frames.length, t.frames.length - args.truthOffset);
   let firstDivIdx = -1;
   let firstDivFields: string[] = [];
 
   for (let i = args.fromFrame; i < n; i++) {
     const fields: string[] = [];
-    deepDiff(t.frames[i], r.frames[i], "", fields);
+    deepDiff(t.frames[i + args.truthOffset], r.frames[i], "", fields);
     if (fields.length > 0) {
       firstDivIdx = i;
       firstDivFields = fields;
@@ -171,16 +177,17 @@ function main(): void {
     console.log(`✅ parità raggiunta su ${compared} frame (da ${args.fromFrame}).`);
   } else {
     result.parity = (firstDivIdx - args.fromFrame) / compared;
+    const truthIdx = firstDivIdx + args.truthOffset;
     result.firstDivergence = {
-      frame: t.frames[firstDivIdx]?.f ?? firstDivIdx,
+      frame: r.frames[firstDivIdx]?.f ?? firstDivIdx,
       fields: firstDivFields,
       annotated: firstDivFields.map(annotateField),
-      truth: t.frames[firstDivIdx],
+      truth: t.frames[truthIdx],
       reimpl: r.frames[firstDivIdx],
     };
     result.contextFramesBefore = t.frames.slice(
-      Math.max(0, firstDivIdx - args.context),
-      firstDivIdx
+      Math.max(0, truthIdx - args.context),
+      truthIdx
     );
     result.suspectedSubsystem = suspectedSubsystem(firstDivFields);
     console.log(

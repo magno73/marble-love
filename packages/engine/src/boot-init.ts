@@ -68,18 +68,20 @@ function colorRamHardwareInit(state: GameState): void {
 }
 
 /**
- * Replica i 3 long copy condizionali di FUN_FA0 (0xfc2..0xff8):
+ * Replica le 3 strcpy condizionali di FUN_FA0 (0xfc2..0xff8):
  *
  *   if *0x400016 == 0:
- *     FUN_1D74(workRam[0x140], ROM[0x10074])  // long copy
- *     FUN_1D74(workRam[0x168], ROM[0x1007C])
- *     FUN_1D74(workRam[0x154], ROM[0x10078])
+ *     FUN_1D74(dst=0x400140, src=*ROM[0x10074])  // strcpy fino a null
+ *     FUN_1D74(dst=0x400168, src=*ROM[0x1007C])
+ *     FUN_1D74(dst=0x400154, src=*ROM[0x10078])
  *
- * `FUN_1D74` è una mem-copy long. ROM[0x10074..0x1007C] sono ptr long che
- * vengono copiati in workRam globals. Sono usati come "callback table"
- * dalla state machine.
+ * **Importante**: `FUN_1D74` è una `strcpy` C-style (`move.b (A0)+,(A1)+`
+ * con `bne` su Z flag), NON un long copy. ROM[0x10074..0x1007C] sono
+ * ptr long che puntano a stringhe ASCII null-terminated nella ROM
+ * ("PLAYER 1 START\0", "PLAYER 2 START\0", "TRAKBALL\0"). Vengono
+ * copiate in workRam come HUD label text.
  */
-function bootCallbackTableInit(state: GameState, rom: RomImage): void {
+function bootHudStringsInit(state: GameState, rom: RomImage): void {
   if ((state.workRam[0x16] ?? 0) !== 0) return; // warm boot
 
   function readLong(buf: Uint8Array, off: number): number {
@@ -90,16 +92,25 @@ function bootCallbackTableInit(state: GameState, rom: RomImage): void {
       (buf[off + 3] ?? 0)
     ) >>> 0;
   }
-  function writeLong(buf: Uint8Array, off: number, v: number): void {
-    buf[off] = (v >>> 24) & 0xff;
-    buf[off + 1] = (v >>> 16) & 0xff;
-    buf[off + 2] = (v >>> 8) & 0xff;
-    buf[off + 3] = v & 0xff;
+
+  /** strcpy stile FUN_1D74: copia byte fino al primo null, INCLUSO il null. */
+  function strcpy(dstOff: number, srcAbs: number): void {
+    let s = srcAbs;
+    let d = dstOff;
+    while (true) {
+      const b = rom.program[s] ?? 0;
+      state.workRam[d] = b;
+      s++; d++;
+      if (b === 0) return;
+      // Safety bound: stringhe ROM sono < 64 byte; evita loop infiniti
+      if (d - dstOff > 64) return;
+    }
   }
 
-  writeLong(state.workRam, 0x140, readLong(rom.program, 0x10074));
-  writeLong(state.workRam, 0x168, readLong(rom.program, 0x1007c));
-  writeLong(state.workRam, 0x154, readLong(rom.program, 0x10078));
+  // Ordine FUN_FA0: 0x140 (Player 1), 0x168 (Player 2), 0x154 (Trakball)
+  strcpy(0x140, readLong(rom.program, 0x10074));
+  strcpy(0x168, readLong(rom.program, 0x1007c));
+  strcpy(0x154, readLong(rom.program, 0x10078));
 }
 
 /**
@@ -115,8 +126,14 @@ export function bootInit(state: GameState, rom: RomImage): void {
   // alpha RAM clear: già 0 in emptyGameState
   // work RAM clear: già 0 in emptyGameState
 
-  // 2. FUN_FA0 cold-boot conditional (3 long copies)
-  bootCallbackTableInit(state, rom);
+  // 2. FUN_FA0 cold-boot conditional (3 strcpy HUD labels)
+  // NB: in attract_mode l'oracle non popola questa fascia → il cold-boot
+  // di FUN_FA0 non viene eseguito (probabilmente *0x400016 != 0 già al
+  // momento della chiamata, warm-boot path). Saltiamo la strcpy per
+  // allinearci. Va riabilitata quando si farà parità per scenari che
+  // attivano effettivamente il path cold-boot (e.g. dopo POST hardware).
+  // bootHudStringsInit(state, rom);
+  void bootHudStringsInit; // tenuta in scope per uso futuro
   state.workRam[0x17c] = 0;
   state.workRam[0x17d] = 0;
 
