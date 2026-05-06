@@ -37,7 +37,15 @@ Due track paralleli su `main`, **bridge attivo**:
 - ✅ `marble-runner` supporta `--with-boot-init` per allinearsi al post-boot oracle
 - ✅ `state.clock.frame` ora aggiornato dal nuovo `mainTick` (era stale dal vecchio stub)
 - ✅ **Trace localization (schema v2)**: `workRamHashes` array di 32 CRC32 regionali (regioni 0x100 byte). Diff annota `workRam[0x300..0x3ff]` invece del generico `workRamHash`. Backward-compat con oracle v1 (warning).
-- ⏳ **Parità attuale 0%** dal frame 6: la divergenza è attesa data la presenza di ~210 sub stubbed. Il diff ora punta alla regione specifica (es. region 1 = callback ptrs); ogni replica futura riduce le regioni divergenti.
+- ✅ Oracle trace v2 rigenerato con MAME 0.286.
+- ⏳ **Parità attuale 0%** dal frame 6. Le 6 regioni primarie divergenti al primo punto sono mappate:
+  - `0x000-0x0FF`: scroll Y / frame counter / global flags
+  - `0x100-0x1FF`: callback ptrs (FUN_FA0 init copia 3 long da ROM)
+  - `0x300-0x3FF`: player object slot
+  - `0x400-0x4FF`: main object area
+  - `0x1E00-0x1EFF`: late globals
+  - `0x1F00-0x1FFF`: state machine slots
+  Da frame 100 si propaga a `stats.score/timer`; da frame 300 a `marble.x/y/vx/vy/vz`. Replicare i sub che toccano ciascuna regione riduce la divergenza alla radice.
 
 ## Prossime fasi
 
