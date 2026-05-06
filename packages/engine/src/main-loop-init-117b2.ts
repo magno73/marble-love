@@ -20,6 +20,11 @@ function rb(state: GameState, addr: number): number {
   return state.workRam[off(addr)] ?? 0;
 }
 
+function i8(value: number): number {
+  const b = value & 0xff;
+  return (b & 0x80) !== 0 ? b - 0x100 : b;
+}
+
 function wb(state: GameState, addr: number, value: number): void {
   state.workRam[off(addr)] = value & 0xff;
 }
@@ -106,7 +111,7 @@ export function mainLoop117B2LoopBody(
     if (rb(state, 0x004003b2) === 0) addByte(state, 0x004003b4, 1);
   }
 
-  if (rb(state, 0x004003b4) > 8) {
+  if (i8(rb(state, 0x004003b4)) > 8) {
     subs.softReset100E0?.(state);
     wb(state, 0x004003b2, 0);
     wb(state, 0x004003b4, 0);
@@ -117,7 +122,7 @@ export function mainLoop117B2LoopBody(
     if (rw(state, 0x004003b8) === 0) subs.softReset100E0?.(state);
   }
 
-  wb(state, 0x00400444, (subs.randomMod13A98?.(state, 0x100) ?? 0) & 0xff);
+  subs.randomMod13A98?.(state, 0x100);
   subs.lateLogic26F3E?.(state);
   if (rb(state, 0x00400016) === 0) subs.vblankAck?.(state);
   wb(state, 0x0040039a, 1);

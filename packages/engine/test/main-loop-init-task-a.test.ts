@@ -27,7 +27,10 @@ describe("Task A main-loop init modules", () => {
       bootHelper1464A: () => calls.push("1464A"),
       init11452: () => calls.push("11452"),
       init1101E: () => calls.push("1101E"),
-      randomMod13A98: () => 0x5a,
+      randomMod13A98: () => {
+        calls.push("13A98");
+        return 0x5a;
+      },
       lateLogic26F3E: () => calls.push("26F3E"),
       vblankAck: () => calls.push("28DEA"),
     });
@@ -37,8 +40,8 @@ describe("Task A main-loop init modules", () => {
     expect(w(s, 0x390)).toBe(1);
     expect(w(s, 0x394)).toBe(1);
     expect(w(s, 0x392)).toBe(0);
-    expect(s.workRam[0x444]).toBe(0x5a);
-    expect(calls).toEqual(["1464A", "11452", "1101E", "26F3E", "28DEA", "28DEA"]);
+    expect(s.workRam[0x444]).toBe(0);
+    expect(calls).toEqual(["1464A", "11452", "1101E", "13A98", "26F3E", "28DEA", "28DEA"]);
   });
 
   it("FUN_117B2 loop body mirrors watchdog counters", () => {
