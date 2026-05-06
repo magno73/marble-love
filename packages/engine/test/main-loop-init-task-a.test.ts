@@ -1,0 +1,140 @@
+/**
+ * Smoke tests for Task A main-loop init chain modules.
+ */
+
+import { describe, expect, it } from "vitest";
+import { emptyRomImage } from "../src/bus.js";
+import { mainLoopInit10504 } from "../src/main-loop-init-10504.js";
+import { mainLoopInit1101E } from "../src/main-loop-init-1101e.js";
+import { mainLoopInit11452 } from "../src/main-loop-init-11452.js";
+import { mainLoopInit117B2, mainLoop117B2LoopBody } from "../src/main-loop-init-117b2.js";
+import { emptyGameState } from "../src/state.js";
+
+function w(s: ReturnType<typeof emptyGameState>, off: number): number {
+  return ((s.workRam[off] << 8) | s.workRam[off + 1]) & 0xffff;
+}
+
+function setW(s: ReturnType<typeof emptyGameState>, off: number, value: number): void {
+  s.workRam[off] = (value >>> 8) & 0xff;
+  s.workRam[off + 1] = value & 0xff;
+}
+
+describe("Task A main-loop init modules", () => {
+  it("FUN_117B2 bootstrap writes globals then invokes 11452 and loop body", () => {
+    const s = emptyGameState();
+    const calls: string[] = [];
+    mainLoopInit117B2(s, undefined, {
+      bootHelper1464A: () => calls.push("1464A"),
+      init11452: () => calls.push("11452"),
+      init1101E: () => calls.push("1101E"),
+      randomMod13A98: () => 0x5a,
+      lateLogic26F3E: () => calls.push("26F3E"),
+      vblankAck: () => calls.push("28DEA"),
+    });
+
+    expect(s.workRam[0x3f4]).toBe(0);
+    expect(s.workRam[0x3f2]).toBe(0);
+    expect(w(s, 0x390)).toBe(1);
+    expect(w(s, 0x394)).toBe(1);
+    expect(w(s, 0x392)).toBe(0);
+    expect(s.workRam[0x444]).toBe(0x5a);
+    expect(calls).toEqual(["1464A", "11452", "1101E", "26F3E", "28DEA", "28DEA"]);
+  });
+
+  it("FUN_117B2 loop body mirrors watchdog counters", () => {
+    const s = emptyGameState();
+    s.workRam[0x3b2] = 1;
+    setW(s, 0x3b8, 1);
+    const calls: string[] = [];
+
+    mainLoop117B2LoopBody(s, undefined, {
+      init1101E: () => calls.push("1101E"),
+      softReset100E0: () => calls.push("100E0"),
+      vblankAck: () => calls.push("28DEA"),
+    });
+
+    expect(s.workRam[0x3b2]).toBe(0);
+    expect(s.workRam[0x3b4]).toBe(1);
+    expect(w(s, 0x3b8)).toBe(0);
+    expect(calls).toEqual(["1101E", "100E0", "28DEA", "28DEA"]);
+  });
+
+  it("FUN_11452 state 0 toggles game mode and optionally chains 10504", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    rom.program[0x1d368] = 0x12;
+    rom.program[0x1d369] = 0x34;
+    rom.program[0x1d36a] = 0x56;
+    rom.program[0x1d36b] = 0x78;
+    setW(s, 0x390, 1);
+    setW(s, 0x392, 0);
+    setW(s, 0x394, 0);
+    const calls: string[] = [];
+
+    mainLoopInit11452(s, rom, {
+      memClear019C: () => calls.push("019C"),
+      soundCmd: (_st, cmd) => calls.push(`158AC:${cmd}`),
+      sceneInit11428: () => calls.push("11428"),
+      gameModePrep10456: () => calls.push("10456"),
+      helper16EC6: () => calls.push("16EC6"),
+      init10504: () => calls.push("10504"),
+      finalize11654: () => calls.push("11654"),
+    });
+
+    expect(w(s, 0x394)).toBe(1);
+    expect(w(s, 0x396)).toBe(1);
+    expect([...s.workRam.slice(0x446, 0x44a)]).toEqual([0x12, 0x34, 0x56, 0x78]);
+    expect(calls).toEqual(["019C", "158AC:1", "11428", "10456", "16EC6", "10504", "11654"]);
+  });
+
+  it("FUN_1101E state 4 performs level increment init path", () => {
+    const s = emptyGameState();
+    setW(s, 0x390, 4);
+    setW(s, 0x394, 4);
+    const calls: string[] = [];
+
+    mainLoopInit1101E(s, undefined, {
+      soundPair15884: () => calls.push("15884"),
+      helper118D2: () => calls.push("118D2"),
+      vblankAck: () => calls.push("28DEA"),
+      clearPaletteRam: () => calls.push("121A6"),
+      clearMoAlphaRam: () => calls.push("12174"),
+      initFnPointers28580: () => calls.push("28580"),
+      clearAlphaTiles28C7E: () => calls.push("28C7E"),
+      sceneObjInit28CA6: () => calls.push("28CA6"),
+      init10504: () => calls.push("10504"),
+    });
+
+    expect(w(s, 0x394)).toBe(5);
+    expect(w(s, 0x390)).toBe(4);
+    expect(s.workRam[0x39a]).toBe(1);
+    expect(calls).toEqual(["15884", "118D2", "28DEA", "121A6", "12174", "28580", "28C7E", "28CA6", "10504"]);
+  });
+
+  it("FUN_10504 deterministic init block and tail writes key globals", () => {
+    const s = emptyGameState();
+    setW(s, 0x394, 3);
+    setW(s, 0x396, 2);
+    s.workRam[0x18 + 0x18] = 1;
+    const calls: string[] = [];
+
+    mainLoopInit10504(s, {
+      clearPaletteRam: () => calls.push("121A6"),
+      hudFrameInit: () => calls.push("283C2"),
+      slotArrayBulkInit: () => calls.push("10392"),
+      randomMod: () => 0xab,
+      soundCmd: (_st, cmd) => calls.push(`158AC:${cmd}`),
+      vblankAck: () => calls.push("28DEA"),
+    });
+
+    expect(s.workRam[0x75c]).toBe(0);
+    expect(s.workRam[0x75e]).toBe(1);
+    expect(s.workRam[0x3f0]).toBe(1);
+    expect(s.workRam[0x3e0]).toBe(1);
+    expect(s.workRam[0x3a4]).toBe(0xff);
+    expect(s.workRam[0x76c]).toBe(1);
+    expect(s.workRam[0x444]).toBe(0xab);
+    expect(calls.slice(0, 3)).toEqual(["121A6", "283C2", "10392"]);
+    expect(calls).toContain("158AC:3");
+  });
+});
