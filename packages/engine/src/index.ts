@@ -69,6 +69,7 @@ export * as timerDelta from "./timer-delta.js";
 export * as vblankWait from "./vblank-wait.js";
 export * as particleBounce from "./particle-bounce.js";
 export * as specialAttract from "./special-attract.js";
+export * as soundPair15884 from "./sound-pair-15884.js";
 export * as proximityCheck from "./proximity-check.js";
 export * as objPickLarger from "./obj-pick-larger.js";
 export * as hudFormat from "./hud-format.js";
