@@ -158,6 +158,10 @@ export function bootInit(state: GameState, rom: RomImage): void {
   state.workRam[0x3b7] = 0x00;
   state.workRam[0x3b8] = 0x01;
   state.workRam[0x3b9] = 0x2c;
+  // Global cascading timer @ 0x40039E inner counter (offset +4 = 0x3A2):
+  // inizializzato a 0xFF (TIMER_DISABLED) dal binario per evitare cascade
+  // spurious al primo tick (verificato vs oracle frame 46).
+  state.workRam[0x3a2] = 0xff;
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
   // copyRomToWorkram66Words, etc.). Per ora gli campi non inizializzati

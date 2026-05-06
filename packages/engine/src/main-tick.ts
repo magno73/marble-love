@@ -62,8 +62,9 @@ export interface MainTickInputs {
   /** Trackball delta player 2 Y (signed byte). */
   p2Y?: number;
   /**
-   * MMIO byte @ 0xF60001 letto da gameMainGate (default 0x40 = bit 6 set,
-   * skip Block C). Bit 6 alto evita che il binario entri in spin loop.
+   * MMIO byte @ 0xF60001 letto da gameMainGate (default 0xFC = no buttons
+   * pressed, bit 6 set per skip Block C). Bit 6 alto evita spin loop.
+   * Verificato vs MAME attract_mode frame 46.
    */
   inputMmio?: number;
 }
@@ -141,7 +142,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     opts.p2Y ?? 0,
   );
 
-  const gateOpts: GameMainGateOptions = { mmioInput: opts.inputMmio ?? 0x40 };
+  const gateOpts: GameMainGateOptions = { mmioInput: opts.inputMmio ?? 0xfc };
   if (opts.gateCheck !== undefined) gateOpts.gateCheck = opts.gateCheck;
   if (opts.controlCallback !== undefined) gateOpts.controlCallback = opts.controlCallback;
   gameMainGate(state, gateOpts);
