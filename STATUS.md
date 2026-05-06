@@ -44,6 +44,11 @@ Due track paralleli su `main`, **bridge attivo**:
   - ✅ `0x300-0x3FF`, `0x400-0x4FF`, `0x1F00-0x1FFF`: match
   - ✅ `0x1E00-0x1EFF`: risolto. Investigazione via `tools/watch_write.lua` (write-tap MAME) ha mostrato che i write a 0x1EE0-0x1EFF sono stack residue 68k (SP parte da 0x401F00 e scende fino a ~0x401EE8 in attract_mode). Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione conservativa di 0x1EE0-0x1EFF dal hash regione 30, analoga a 0x440-0x447 (stack low water).
 - 🎯 **Bit-perfect parity al frame 0** (reimpl post-bootInit ≡ oracle post-boot-46): le 32 regioni workRam tutte match. Al frame 1 divergenza esplode (29 fields) per via dei sub stubbed → loop iterativo "replica sub → re-run parity-check → vedi salire" è sbloccato.
+- 📋 **Top writers identificati via `tools/watch_write.lua`** (frame 46-47 MAME = primo + secondo tick):
+  - **FUN_4CA0/FUN_4DCC** (sound, ~294 writes) — STUB. Top divergence per tick.
+  - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — one-shot, chiamato da FUN_10504 → FUN_117B2 (chain init non replicata).
+  - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
+  - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
 - 🔧 **Tooling debug**:
   - `MARBLE_DUMP_REGIONS=0x100,0x300` (env var) attiva dump hex di regioni specifiche sia nel reimpl trace sia nell'oracle MAME, per diff byte-by-byte.
   - `tools/watch_write.lua`: installa write-tap MAME su una regione di workRam, logga `(frame, PC, addr, data, mask)` per identificare tutti i writer di una zona specifica.
