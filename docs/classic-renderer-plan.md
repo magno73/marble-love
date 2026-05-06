@@ -90,6 +90,8 @@ Completed:
 - Updated the ROM-backed object texture path to compose multi-tile command
   textures in memory instead of scaling a single decoded 8x8 tile across larger
   playfield/sprite commands.
+- Added renderer-side playfield culling at the native frame boundary so 64-column
+  diagnostic tilemaps do not draw outside the classic 336x240 viewport.
 - Reworked the synthetic demo away from the early checkerboard/grid fixture into
   a more readable abstract isometric ramp/platform composition.
 - Limited ROM-backed playfield texture use to a small diagnostics strip in the
@@ -99,8 +101,9 @@ Completed:
 - Added web fixture tests that lock in the ramp/platform composition and the
   limited ROM-backed diagnostics strip.
 - Added an opt-in web diagnostic frame at `?engine=1` that renders a synthetic
-  RAM-backed `buildFrame(state, ...)` path, including motion-object RAM and
-  optional ROM lookup metadata when loaded with `?rom=1&engine=1`.
+  RAM-backed `buildFrame(state, ...)` path, including playfield RAM,
+  motion-object RAM, and optional ROM lookup metadata when loaded with
+  `?rom=1&engine=1`.
 - Added a tiny frame-palette swatch preview in the renderer chrome/debug layer.
 - Assembles raw `RomImage` byte regions for program, sound, tiles/sprites, and
   graphics PROMs.
@@ -153,6 +156,9 @@ Completed:
   `buildFrame(state, { motionObjects: "linked-list" })` path that emits sprite
   commands from `state.spriteRam`. Default `buildFrame(state)` remains
   conservative.
+- Added opt-in `buildFrame(state, { playfieldRam, playfieldLookups })` support
+  so external video RAM snapshots can produce playfield commands without adding
+  playfield RAM to `GameState`.
 - Added optional motion-object lookup metadata to the sprite RAM render helpers,
   allowing PROM-derived bank/bpp/color data to flow into neutral
   `SpriteCommand`s without making ROM graphics mandatory.

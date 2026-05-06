@@ -127,6 +127,9 @@ remain TODOs.
 raw views in the web loader. The web graphics scaffold also builds playfield and
 motion-object lookup metadata from the PROM rules in `atarisy1_v.cpp`, and can
 decode a single 8x8 object tile from the documented 4/5/6bpp planar layouts.
+`buildFrame(state, { playfieldRam, playfieldLookups })` can opt into playfield
+command generation from an external video RAM snapshot without adding playfield
+RAM to `GameState` yet.
 When a demo frame carries explicit `gfxBank`/`bitsPerPixel` metadata, the Pixi
 renderer can turn those decoded object tiles into in-memory textures. This is
 used only by the ROM-backed demo frame. Larger commands are composed from
@@ -174,8 +177,9 @@ In development, open `http://localhost:5173/?rom=1` to keep the ROM picker
 visible instead of auto-starting the synthetic demo.
 Open `http://localhost:5173/?engine=1` to render the diagnostic engine-frame
 fixture, which builds a `Frame` through `buildFrame(state, ...)` from synthetic
-palette/alpha/motion-object RAM. Use `?rom=1&engine=1` to keep the ROM picker
-and pass loaded motion-object lookup metadata into that diagnostic path.
+palette/alpha/playfield/motion-object RAM. Use `?rom=1&engine=1` to keep the
+ROM picker and pass loaded playfield plus motion-object lookup metadata into
+that diagnostic path.
 
 The loader was also smoke-tested locally against user-provided `marble.zip` +
 `atarisy1.zip` outside the repository with CRC32 validation enabled. No ROM
