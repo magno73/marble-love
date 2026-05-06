@@ -71,25 +71,44 @@ function readJsonl(path: string): { header: any; frames: any[] } {
 }
 
 /** Campi escludidi dal diff: metadata, non parte del game state.
- *  - cpuTicks: PC del 68010 / tick CPU; dipende dall'emulator, non dal game state */
+ *  - cpuTicks: PC del 68010 / tick CPU; dipende dall'emulator, non dal game state
+ *  - workRamHash: ridondante quando workRamHashes (regionale) è presente */
 const EXCLUDED_FIELDS = new Set<string>(["cpuTicks"]);
 
 /** Confronta due valori e ritorna il path puntato (es. "marble.vx") se diversi. */
 function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   if (a === b) return;
   if (EXCLUDED_FIELDS.has(path)) return;
+  // Schema mismatch v1/v2: se un lato manca un campo che l'altro ha,
+  // saltalo (l'altro lato semplicemente non lo dumpa).
+  if (a === undefined || b === undefined) return;
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
     out.push(path);
     return;
   }
   const ao = a as Record<string, unknown>;
   const bo = b as Record<string, unknown>;
+  // Schema v2: se workRamHashes è presente su ENTRAMBI i lati, salta il
+  // workRamHash globale (il regional dà più info; tenerli entrambi è rumore).
+  const bothHaveRegional =
+    Array.isArray(ao["workRamHashes"]) && Array.isArray(bo["workRamHashes"]);
   const keys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
   for (const k of keys) {
     const subpath = path === "" ? k : `${path}.${k}`;
     if (EXCLUDED_FIELDS.has(subpath) || EXCLUDED_FIELDS.has(k)) continue;
+    if (bothHaveRegional && k === "workRamHash") continue;
     deepDiff(ao[k], bo[k], subpath, out);
   }
+}
+
+/** Traduce "workRamHashes.5" in "workRam[0x500..0x5FF]" per leggibilità. */
+function annotateField(field: string): string {
+  const m = field.match(/^workRamHashes\.(\d+)$/);
+  if (!m) return field;
+  const idx = Number(m[1]);
+  const start = idx * 0x100;
+  const end = start + 0xff;
+  return `workRam[0x${start.toString(16).padStart(3, "0")}..0x${end.toString(16).padStart(3, "0")}]`;
 }
 
 function suspectedSubsystem(fields: string[]): string {
@@ -100,6 +119,8 @@ function suspectedSubsystem(fields: string[]): string {
     if (f.startsWith("enemies.") || f.startsWith("ai.")) return "ai";
     if (f.startsWith("input.")) return "input/io";
     if (f.startsWith("stats.")) return "game-logic";
+    const m = f.match(/^workRamHashes\.(\d+)$/);
+    if (m) return `workRam[0x${(Number(m[1]) * 0x100).toString(16).padStart(3, "0")}..]`;
     if (f.startsWith("workRamHash")) return "ram-mismatch";
   }
   return "unknown";
@@ -111,10 +132,12 @@ function main(): void {
   const r = readJsonl(args.reimpl);
 
   if (t.header.schemaVersion !== r.header.schemaVersion) {
-    console.error(
-      `schema mismatch: truth=${t.header.schemaVersion} reimpl=${r.header.schemaVersion} — fix oracle/mame_dumper.lua o engine/src/trace.ts`
+    // v2 introduce workRamHashes regional. Una mismatch v1/v2 è OK
+    // (i campi mancanti vengono saltati nel deepDiff) ma avvisa.
+    console.warn(
+      `warning: schema mismatch truth=${t.header.schemaVersion} reimpl=${r.header.schemaVersion} ` +
+      `(continuo, ma campi solo-v2 come workRamHashes saranno saltati)`
     );
-    exit(3);
   }
 
   const n = Math.min(t.frames.length, r.frames.length);
@@ -151,6 +174,7 @@ function main(): void {
     result.firstDivergence = {
       frame: t.frames[firstDivIdx]?.f ?? firstDivIdx,
       fields: firstDivFields,
+      annotated: firstDivFields.map(annotateField),
       truth: t.frames[firstDivIdx],
       reimpl: r.frames[firstDivIdx],
     };
@@ -162,7 +186,7 @@ function main(): void {
     console.log(
       `❌ divergenza al frame ${firstDivIdx} (${firstDivFields.length} campi). Sospettato: ${result.suspectedSubsystem}`
     );
-    console.log("   campi:", firstDivFields.slice(0, 8).join(", "));
+    console.log("   campi:", firstDivFields.slice(0, 8).map(annotateField).join(", "));
   }
 
   const outPath = resolve(args.out);
