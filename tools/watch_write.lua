@@ -25,6 +25,7 @@ local HI = tonumber(getenv("MARBLE_WATCH_HI", "0x401EFF"))
 local OUT = getenv("MARBLE_WATCH_OUT", "/tmp/marble_writes.log")
 local MAX = tonumber(getenv("MARBLE_WATCH_MAX", "5000"))
 local MAX_FRAMES = tonumber(getenv("MARBLE_LOVE_MAX_FRAMES", "100"))
+local FROM_FRAME = tonumber(getenv("MARBLE_WATCH_FROM_FRAME", "0"))
 
 local out_f = io.open(OUT, "w")
 if out_f == nil then
@@ -54,6 +55,7 @@ local function install_tap()
     -- callback(offset, data, mask) — offset = absolute addr in this space
     mem:install_write_tap(LO, HI, "marble_watch", function(offset, data, mask)
         if event_count >= MAX then return end
+        if frame_count < FROM_FRAME then return end
         local pc = cpu.state["PC"].value
         out_f:write(string.format(
             "frame=%d pc=0x%06x addr=0x%06x data=0x%08x mask=0x%08x\n",
