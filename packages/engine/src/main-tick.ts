@@ -38,6 +38,9 @@ import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
 import { soundStatusCheck } from "./sound-status-check.js";
+import { auxTimer } from "./aux-timer.js";
+import { specialAttract } from "./special-attract.js";
+import { eepromCommit } from "./eeprom-commit.js";
 import { paletteAnim1Tick, paletteAnim2Tick } from "./palette-anim.js";
 import { paletteAnim3Tick, paletteQueueDrain } from "./palette-queue.js";
 import { gameStateMachineTick } from "./game-state-machine.js";
@@ -164,7 +167,17 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3f4] = ((r[0x3f4] ?? 0) + 1) & 0xff;
   }
 
-  // FUN_10146, FUN_3F78, FUN_158AC, FUN_288F8 — STUB
+  // FUN_10146 (aux timer/byte queue drain) — REPLICATO
+  auxTimer(state);
+
+  // FUN_3F78 (sound pacing pseudo-eeprom) — REPLICATO
+  eepromCommit(state);
+
+  // FUN_158AC (sound cmd send) — STUB nel mainTick (chiamato condizionale
+  // da altre subs replicate; integra quando integriamo le sound subs).
+
+  // FUN_288F8 (special attract / end-screen sound) — REPLICATO
+  specialAttract(state);
 
   if ((r[0x3e2] ?? 0) !== 0) {
     r[0x3ae] = r[0x3b0] ?? 0;
