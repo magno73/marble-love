@@ -48,11 +48,22 @@ Due track paralleli su `main`, **bridge attivo**:
   - **FUN_4CA0** (sound dispatcher wrapper) — REPLICATO ✅ 2000/2000 vs binary patched-stubs (sub FUN_3E1A/FUN_4DCC/FUN_4C3E rimangono STUB).
   - **FUN_4DCC** (sound chip writer, ~294 writes) — minimal stub: incrementa solo `*0x401FF8` (counter deterministico, prima istruzione di FUN_4DCC). Body completo richiede emulare YM2151 — fuori scope. Region 30+31 restano divergenti per la parte sound.
 
-### Parity vs MAME (attract_mode, post-FUN_10392 + boot globals)
+### Parity vs MAME (attract_mode, post-FUN_10392 + boot globals + timer init + inputMmio fix)
 
 Steady state (frame 1..100): **8 fields divergenti** (era 29). Da frame 300+ marble physics inizia a divergere quando attract mode mostra gameplay.
 
-Regioni residue: 0x000 (frame counter low byte 0xE), 0x100 (HUD area non popolata), 0x300 (object slot), 0x400 (main object), 0x1D00 (late globals), 0x1E00 (sound + stack), 0x1F00 (sound state). Plus stats.score (legge u16 @ 0x396 in region 3) — matcha quando region 3 matcha.
+Regioni residue (3 byte tipici per regione 3 dopo timer fix):
+- 0x000: 7 byte (0x0E, 0x86, 0x88-0x89, 0xD8-0xDA = "AAA" pattern hi-score?)
+- 0x100: 10 byte (HUD area non popolata)
+- 0x300: 3 byte (0x397 obj_count, 0x3AA debounced input, 0x3F0 coin pulse)
+- 0x400: 7 byte (main object init bytes da FUN_117B2 chain)
+- 0x1D00: 10 byte (late globals 0x1DF0+)
+- 0x1E00: sound + stack residue
+- 0x1F00: sound state + state machine slots
+
+Fix applicati questa sessione:
+- `inputMmio` default 0xFC (era 0x40) → fixa 0x3A8 e 0x3AC
+- Global timer inner @ 0x3A2 = 0xFF (TIMER_DISABLED) → fixa 0x39E-0x3A1 + 0x3A0 cascade
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).

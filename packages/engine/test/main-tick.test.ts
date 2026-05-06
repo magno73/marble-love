@@ -64,11 +64,11 @@ describe("mainTick smoke", () => {
     expect(s.workRam[0x14]).toBe(100);
   });
 
-  it("inputMmio default 0x40 → gameMainGate skip Block C (no spin)", () => {
+  it("inputMmio default 0xFC → gameMainGate skip Block C (no spin)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Senza eccezioni anche con inputMmio bit 6 set
-    expect(() => mainTick(s, { rom, inputMmio: 0x40 })).not.toThrow();
+    // Senza eccezioni anche con inputMmio bit 6 set (default no-buttons)
+    expect(() => mainTick(s, { rom, inputMmio: 0xfc })).not.toThrow();
   });
 
   it("trackball deltas si propagano a gameTickTimers + trackball state", () => {
