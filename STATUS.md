@@ -1,7 +1,18 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-03
+**Ultimo update:** 2026-05-06
 **Branch corrente:** `main`.
+
+## Riepilogo metriche
+
+| Metrica | Valore |
+|---|---|
+| Sub-systems bit-perfect | **160 / 314** (51%) |
+| Vitest | **85 file / 678 test** verde |
+| Differential test cases | >70.000 random cases tutti 100% match |
+| Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
+| Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
+| Multi-agent throughput | 11 batch paralleli, 53 funzioni replicate in singola sessione |
 
 ## Fase corrente
 
@@ -91,12 +102,39 @@ Commit `renderer.draw` aggiornato per passare motion-object lookups, ma il tilem
   - `MARBLE_DUMP_REGIONS=0x100,0x300` (env var) attiva dump hex di regioni specifiche sia nel reimpl trace sia nell'oracle MAME, per diff byte-by-byte.
   - `tools/watch_write.lua`: installa write-tap MAME su una regione di workRam, logga `(frame, PC, addr, data, mask)` per identificare tutti i writer di una zona specifica.
 
+## Sessione 2026-05-06 — Multi-agent parallel batches
+
+Migrato a workflow multi-agent con `isolation: "worktree"` (best practice ufficiale Claude Code: ogni agent in worktree git temporanea isolata, prompt focalizzati ~150 parole, pattern + template noto). Throughput sostenuto: ~5 funzioni / ~5 min wall time per batch.
+
+| Batch | +N | Total | %    | Vitest | Funzioni replicate |
+|-------|----|-------|------|--------|--------------------|
+| Pre   | 107| 107   | 34%  | 256    | (pre-sessione) |
+| 1     | +3 | 110   | 35%  | 309    | sound-dispatch-send, status-check, irq-input |
+| 2     | +5 | 115   | 37%  | 349    | FUN_158AC sound-cmd + FUN_2678 + FUN_10146 + FUN_288F8 + FUN_3F78 |
+| 3     | +5 | 120   | 38%  | 378    | state-sub-2bda/2c60/2da0/2abc + boot-screen-init |
+| 4     | +5 | 125   | 40%  | 416    | slapstic-table/lookup + clear-pf + sound-cmd-gate + vblank-wait |
+| 5     | +5 | 130   | 41%  | 462    | object-state-23 + flag-mag + state-525c + script-slot + sound-pair |
+| 6     | +5 | 135   | 43%  | 501    | state-520e + tilemap-blit + state-5334/535e + scene-init |
+| 7     | +5 | 140   | 45%  | 536    | slot-array-tick + obj-pair + dispatch-strings + boot-spurious + wait-vblank-gated |
+| 8     | +5 | 145   | 46%  | 565    | render-string-28fde + sync-av + state-1eaa + format-render + array-9-clear |
+| 9     | +5 | 150   | 48%  | 593    | render-string-286b0/28f62/28fa0 + dispatch-table + eeprom-request |
+| 10    | +5 | 155   | 49%  | 632    | bsearch + glyph-loop + level-load + state-5608 + object-enter-1281c |
+| 11    | +5 | 160   | **51%** | 678 | state-dispatch + palette-rng + sprite-pos + waypoint + state-540a |
+
+**Risultato sessione**: +53 funzioni bit-perfect, +422 test smoke + parity, **superato il 50% del binario**.
+
+Tooling sviluppato:
+- `tools/watch_write.lua`: write-tap MAME su regione workRam
+- `MARBLE_DUMP_REGIONS=0x100,0x300` env var: dump hex regioni in trace
+- `harness/parity-check.sh`: pipeline reimpl + diff in 1 comando
+- `harness/diff.ts --truth-offset N`: alignment boot transient MAME
+- `packages/cli/src/visual-smoke-test.ts`: ispezione `Frame` post-bootInit
+
 ## Prossime fasi
 
-- **Track A**: continuare replication bit-perfect dei sub-system mancanti (~210 funzioni rimanenti, escludendo thunks). Priorità ai sub stubbed dal bridge per riempire i buchi del frame e migliorare la parità misurata da `parity-check.sh`.
-- **Track B**: ora che lo state evolve, alimentare `buildFrame()` da state reale e verificare a video col renderer PixiJS.
-- **Trace localization** (futuro): estendere lo schema trace per dumpare regioni workRam invece del solo hash, così che `harness/diff.ts` possa puntare il byte specifico che diverge invece del solo "workRamHash mismatch".
-- **Phase 5+** (futuro): trace-level testing con MAME come oracolo (vedi `harness/README.md`, `oracle/README.md`)
+- **Track A**: continuare replication bit-perfect (~154 funzioni rimanenti). Le funzioni più "spinose" sono FUN_4DCC (sound chip writer YM2151), FUN_117B2 main loop, FUN_26F3E (4818 byte late logic).
+- **Track B**: ora che lo state evolve e palette è popolata, estendere state model con `playfieldRam` (8 KB @ 0xA00000-0xA01FFF) per renderizzare playfield tilemap dal Frame.
+- **Phase 5+** (futuro): trace-level testing post-stabilizzazione con MAME oracolo per scenari level1/gameplay.
 
 **Sub-systems bit-perfect verificati**:
 - ✅ RNG (`rngNext` vs FUN_13A98) — 10000/10000 match
