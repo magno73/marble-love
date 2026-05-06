@@ -42,6 +42,7 @@ import {
   paletteBootstrapInit,
   gameStateMachineInit,
 } from "./init-helpers.js";
+import { slotArrayBulkInit } from "./slot-array-init.js";
 
 /**
  * Inizializza color RAM con il pattern decrescente del RESET handler
@@ -141,6 +142,22 @@ export function bootInit(state: GameState, rom: RomImage): void {
   paletteRamInitFull(state, rom);
   paletteBootstrapInit(state);
   gameStateMachineInit(state, rom);
+
+  // 4. Bulk init slot array (FUN_10392, chiamato dal main loop FUN_117B2
+  //    via FUN_10504 al primo giro, prima dell'avvio del game state machine).
+  slotArrayBulkInit(state);
+
+  // 5. Boot main path globals (FUN_100B0 + FUN_100E0):
+  //   *0x4003AE = 0x0080  (AV-control init)
+  //   *0x4003B6 = 0       (FUN_100B0 set 0xFFFF, FUN_100E0 increments → 0)
+  //   *0x4003B8 = 0x012C  (FUN_100E0 imposta countdown 300)
+  //   *0x4003B2 = 0       (FUN_100E0 cleared, già 0 in empty state)
+  state.workRam[0x3ae] = 0x00;
+  state.workRam[0x3af] = 0x80;
+  state.workRam[0x3b6] = 0x00;
+  state.workRam[0x3b7] = 0x00;
+  state.workRam[0x3b8] = 0x01;
+  state.workRam[0x3b9] = 0x2c;
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
   // copyRomToWorkram66Words, etc.). Per ora gli campi non inizializzati
