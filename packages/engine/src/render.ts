@@ -116,6 +116,8 @@ export const CLASSIC_NATIVE_SIZE: FrameSize = {
 const ALPHA_COLUMNS = 64;
 const ALPHA_TILE_SIZE = 8;
 const PALETTE_ENTRY_COUNT = 1024;
+const MOTION_OBJECT_ENTRY_COUNT = 64;
+const MOTION_OBJECT_ENTRY_BYTES = 8;
 
 export function irgb4444ToRgba(word: number): RgbaColor {
   const intensity = (word >>> 12) & 0x0f;
@@ -262,6 +264,43 @@ export function buildSpritesFromMotionObjectRam(
   }
 
   return sprites;
+}
+
+export function walkMotionObjectLinkedList(
+  spriteRam: Uint8Array,
+  startEntry = 0,
+  maxEntries = MOTION_OBJECT_ENTRY_COUNT,
+): number[] {
+  const entryIndexes: number[] = [];
+  const visited = new Set<number>();
+  let entryIndex = startEntry & 0x3f;
+
+  for (let count = 0; count < maxEntries; count += 1) {
+    if (visited.has(entryIndex)) break;
+
+    const byteOffset = entryIndex * MOTION_OBJECT_ENTRY_BYTES;
+    if (byteOffset + 7 >= spriteRam.length) break;
+
+    visited.add(entryIndex);
+    entryIndexes.push(entryIndex);
+
+    const word3 =
+      ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+    entryIndex = word3 & 0x003f;
+  }
+
+  return entryIndexes;
+}
+
+export function buildSpritesFromMotionObjectList(
+  spriteRam: Uint8Array,
+  startEntry = 0,
+  maxEntries = MOTION_OBJECT_ENTRY_COUNT,
+): SpriteCommand[] {
+  return buildSpritesFromMotionObjectRam(
+    spriteRam,
+    walkMotionObjectLinkedList(spriteRam, startEntry, maxEntries),
+  );
 }
 
 /** Genera la lista draw del frame corrente leggendo `state.spriteRam` e tilemap.
