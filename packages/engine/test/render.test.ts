@@ -90,6 +90,33 @@ describe("buildFrame", () => {
     ]);
     expect(frame.playfield).toEqual([]);
     expect(frame.sprites).toEqual([]);
+    expect(frame.debugLabel).toBeUndefined();
+  });
+
+  it("can opt into building sprites from the motion-object linked list", () => {
+    const state = emptyGameState();
+    state.spriteRam.set([0x00, 0x21, 0x01, 0x10, 0x00, 0x41, 0x00, 0x00], 0);
+
+    const frame = buildFrame(state, {
+      motionObjects: "linked-list",
+      maxMotionObjectEntries: 1,
+      videoControlByte: 0b0010_1101,
+    });
+
+    expect(frame.sprites).toEqual([
+      {
+        spriteIndex: 0x10,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x101,
+        flipX: false,
+        priority: 0,
+        translucent: false,
+      },
+    ]);
+    expect(frame.debugLabel).toBe("engine-frame:alpha-bank-1:pf-bank-1:mo-bank-5");
   });
 });
 

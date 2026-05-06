@@ -143,8 +143,13 @@ Completed:
   not wired into `buildFrame(state)`.
 - Added `decodeVideoControlByte(value)` for the documented `$860001` alpha,
   playfield, and motion-object bank bits. It is not wired to `GameState` yet.
-- Updated `buildFrame(state)` to include palette and alpha scaffolds while
-  leaving playfield and sprite command arrays empty.
+- Added `BuildFrameOptions` and an opt-in
+  `buildFrame(state, { motionObjects: "linked-list" })` path that emits sprite
+  commands from `state.spriteRam`. Default `buildFrame(state)` remains
+  conservative.
+- Updated `buildFrame(state)` to include palette and alpha scaffolds by default
+  while leaving playfield and sprite command arrays empty unless explicitly
+  requested.
 - Added `packages/engine/test/render.test.ts` for palette and alpha parsing.
 
 Constraints:
@@ -152,8 +157,8 @@ Constraints:
 - Do not invent playfield RAM before it exists in `GameState`.
 - Do not change game logic, parity tests, RNG, physics, AI, or state-machine
   code.
-- Do not wire active `spriteRam` lists or sprite banking into `buildFrame(state)`
-  yet; the helpers remain explicit diagnostics.
+- Do not make active `spriteRam` rendering the default until sprite banking and
+  video-control state are modeled.
 - Do not introduce a stored video-control register until the memory/bus model is
   ready for it; keep the decoder pure for now.
 
