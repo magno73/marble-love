@@ -75,8 +75,9 @@ function readJsonl(path: string): { header: any; frames: any[] } {
 
 /** Campi escludidi dal diff: metadata, non parte del game state.
  *  - cpuTicks: PC del 68010 / tick CPU; dipende dall'emulator, non dal game state
+ *  - f: frame counter, metadata di trace (allineamento gestito da --truth-offset)
  *  - workRamHash: ridondante quando workRamHashes (regionale) è presente */
-const EXCLUDED_FIELDS = new Set<string>(["cpuTicks"]);
+const EXCLUDED_FIELDS = new Set<string>(["cpuTicks", "f"]);
 
 /** Confronta due valori e ritorna il path puntato (es. "marble.vx") se diversi. */
 function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
