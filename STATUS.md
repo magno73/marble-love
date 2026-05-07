@@ -62,9 +62,30 @@ Due track paralleli su `main`, **bridge attivo**:
   - **FUN_4D1A** (IRQ sound input mailbox) — REPLICATO ✅ 1000/1000 vs binary patched (RTE→RTS + MMIO source patch). Non ancora integrato in mainTick (è IRQ separato).
   - **FUN_4DCC** (sound chip writer, ~294 writes) — minimal stub: incrementa solo `*0x401FF8` (counter deterministico, prima istruzione di FUN_4DCC). Body completo richiede emulare YM2151 — fuori scope.
 
-### Parity vs MAME (attract_mode, post-FUN_10392 + boot globals + timer init + inputMmio fix)
+### Parity vs MAME — multi-scenario findings
+
+#### attract_mode (passive)
 
 Steady state (frame 1..100): **8 fields divergenti** (era 29). Da frame 300+ marble physics inizia a divergere quando attract mode mostra gameplay.
+
+#### level1_basic_movement (active gameplay)
+
+| Frame | Fields divergenti | Nota |
+|---|---|---|
+| 30 | 8 | identico a attract_mode (no input ancora) |
+| 60 | 8 | post button press start |
+| 120 | 9 | post coin, region 0x200 nuova |
+| 200 | 8 | trackball input attiva, **marble.x/y/vx/vy/vz appaiono divergenti** |
+| 300+ | **28 fields** | gameplay attivo: rng.seed + marble physics + 16 regioni + tutti gli stats |
+
+**Root cause** del salto a 28 fields al frame 200+: physics + RNG consume non funzionante perché:
+- FUN_2572 (state 2 dispatch alt path) — NON replicato
+- FUN_2766 (state 5) — NON replicato
+- FUN_2818 (state 6) — NON replicato
+- FUN_2CD4 (state 3 condition) — NON replicato
+- FUN_295A (Branch A one-shot) — NON replicato
+
+Senza queste 5 sub state machine, il dispatcher FUN_2E18 non attiva i rami che muovono il marble + consumano RNG. Codex sta replicando queste 5 sub. Quando arrivano, parity level1 dovrebbe ripiombare a baseline 8-9 fields anche post-frame 200.
 
 Regioni residue (3 byte tipici per regione 3 dopo timer fix):
 - 0x000: 7 byte (0x0E, 0x86, 0x88-0x89, 0xD8-0xDA = "AAA" pattern hi-score?)
