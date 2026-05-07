@@ -37,7 +37,9 @@
  * 500/500 verificato.
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
+import { sceneObjInit28CA6 } from "./scene-obj-init-28ca6.js";
 
 /**
  * Bag delle 6 sub-jsr orchestrate da `FUN_00011428`. Ogni callback è opzionale
@@ -71,6 +73,7 @@ export interface SceneInit11428Subs {
 export function sceneInit11428(
   state: GameState,
   subs: SceneInit11428Subs = {},
+  rom?: RomImage,
 ): void {
   // 0x11428: jsr 0x28DEA — vblank ack.
   subs.vblankAck?.(state);
@@ -84,7 +87,7 @@ export function sceneInit11428(
   // 0x11442: jsr 0x28C7E — fill-loop, legge arg.w da (0xA,SP) → 0.
   subs.fillLoop?.(state);
   // 0x11448: jsr 0x28CA6 — scene object init (no stack arg).
-  subs.sceneObjInit?.(state);
+  (subs.sceneObjInit ?? ((s) => { if (rom !== undefined) sceneObjInit28CA6(s, rom); }))(state);
   // 0x1144E: addq.l #4,SP — cleanup push.
   // 0x11450: rts.
 }
