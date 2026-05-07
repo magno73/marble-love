@@ -4,6 +4,7 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 
@@ -126,7 +127,7 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.soundCmd?.(state, rw(state, 0x00400396) === 1 ? 0x62 : 0x63);
   ww(state, 0x00400394, readRomByte(rom, 0x0001f1c8));
   subs.gameModePrep10456?.(state);
-  subs.helper16EC6?.(state);
+  (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
   init10504(state, subs);
   ww(state, 0x00400390, 0);
 }
