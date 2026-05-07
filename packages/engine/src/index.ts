@@ -96,6 +96,7 @@ export * as soundStatusCheck from "./sound-status-check.js";
 export * as soundIrqInput from "./sound-irq-input.js";
 export * as soundDispatchSend from "./sound-dispatch-send.js";
 export * as soundCmdSend from "./sound-cmd-send.js";
+export * as soundCmdSend158AC from "./sound-cmd-send-158ac.js";
 export * as soundCmdGate from "./sound-cmd-gate.js";
 export * as flagScaledMagnitudeDispatch from "./flag-scaled-magnitude-dispatch.js";
 export * as eepromCommit from "./eeprom-commit.js";
