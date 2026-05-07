@@ -66,6 +66,14 @@ export interface MainLoopInit10504Subs {
   gameStateBanner?: (state: GameState, gameMode: number) => void; // FUN_26B2A
   soundCmd?: (state: GameState, cmd: number) => void; // FUN_158AC
   randomMod?: (state: GameState, maxExclusive: number) => number; // FUN_13A98
+  render0142?: (state: GameState, textPtr: number, tileBase: number) => void;
+  format28EB2?: (state: GameState) => void;
+  wait28DB8?: (state: GameState, frames: number) => void;
+  textPrint0118?: (state: GameState, textPtr: number) => void;
+  helper16E8E?: (state: GameState, arg: number) => void;
+  helper01BA?: (state: GameState, arg: number) => void;
+  helper0236?: (state: GameState) => number;
+  helper0230?: (state: GameState, arg: number) => number;
 }
 
 export interface MainLoopInit10504Options {
@@ -143,6 +151,12 @@ export function mainLoopInit10504(
 
   wb(state, 0x0040039a, 1);
   subs.vblankAck?.(state);
+  subs.render0142?.(state, 0x22b16, 0x1c00);
+  subs.render0142?.(state, 0x22b22, 0x2000);
+  if (playerCount === 2) {
+    subs.render0142?.(state, 0x22b2e, 0x1c00);
+    subs.render0142?.(state, 0x22b3a, 0x2400);
+  }
   wb(state, 0x0040039c, ((playerCount - 1) | playerCount) & 0xff);
   subs.objectDirtyDispatch?.(state);
 
@@ -157,7 +171,7 @@ export function mainLoopInit10504(
   }
 
   if (options.runPresentationMiddle === true) {
-    runPresentationMiddleMarker(state, subs, gameMode, playerCount);
+    runPresentationMiddle(state, subs, gameMode, playerCount);
   }
 
   addByte(state, 0x004003f0, 1);
@@ -189,7 +203,7 @@ export function mainLoopInit10504(
   wb(state, 0x00400444, (subs.randomMod?.(state, 0x100) ?? 0) & 0xff);
 }
 
-function runPresentationMiddleMarker(
+function runPresentationMiddle(
   state: GameState,
   subs: MainLoopInit10504Subs,
   gameMode: number,
@@ -199,9 +213,9 @@ function runPresentationMiddleMarker(
     ww(state, 0x00400082, 0x003c);
     return;
   }
-  if (gameMode < 2) {
-    subs.scrollStep26E14?.(state, gameMode);
-  }
+  subs.render0142?.(state, gameMode < 2 ? 0x2291e : 0x22942, 0x3000);
+  subs.render0142?.(state, 0x1f15e + gameMode * 4, 0x3000);
+  subs.render0142?.(state, 0x1f176 + gameMode * 4, 0x3400);
 }
 
 export const MAIN_LOOP_INIT_10504_ADDR = 0x00010504 as const;
