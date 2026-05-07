@@ -15,6 +15,12 @@
  *     per tutti e 24 gli indirizzi. I JMP hanno `targetAddr` != null; la
  *     entry 0x01010A ha `targetAddr: null` (non è un redirect).
  *   - `enableInterrupts1010A`: replica TS di FUN_01010A.
+ *
+ * Funzioni coperte (per discovery script):
+ *   FUN_000100 FUN_00010C FUN_000112 FUN_000118 FUN_00012A FUN_00013C
+ *   FUN_000148 FUN_00014E FUN_00015A FUN_000160 FUN_000178 FUN_00019C
+ *   FUN_0001A8 FUN_0001AE FUN_0001B4 FUN_0001C0 FUN_0001C6 FUN_000218
+ *   FUN_000224 FUN_000230 FUN_000236 FUN_00023C FUN_000254 FUN_01010A
  */
 
 /** Metadata di un IRQ-vector thunk estratto dal ROM. */

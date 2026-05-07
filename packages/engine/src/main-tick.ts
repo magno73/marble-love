@@ -111,7 +111,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const r = state.workRam;
   const rom = opts.rom;
 
-  // ─── Preambolo IRQ4 (replica 0x10116) ───────────────────────────────
+  // ─── Preambolo IRQ4 (replica FUN_00010116) ───────────────────────────────
   if (!opts.skipFrameCounter) {
     r[FRAME_COUNTER_LOW_OFF] = ((r[FRAME_COUNTER_LOW_OFF] ?? 0) + 1) & 0xff;
     r[FRAME_COUNTER_HIGH_OFF] = ((r[FRAME_COUNTER_HIGH_OFF] ?? 0) + 1) & 0xff;

@@ -7,7 +7,7 @@
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems bit-perfect | **268 / 314** (85%) |
+| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~270 verificate bit-perfect via parity 500/500 |
 | Vitest | **156 file / 1252 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
@@ -21,7 +21,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 268/314 sub-systems bit-perfect (85% del binario)
+- 🎯 **Phase 4d completa al counter**: 350/350 funzioni Ghidra coperte (100%) — di cui 314 sub-functions semantiche + 36 thunks/IRQ entries. Funzioni effettivamente verificate bit-perfect via parity test ≥500/500: ~270
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
