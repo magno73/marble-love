@@ -7,9 +7,9 @@
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems bit-perfect | **188 / 314** (60%) |
-| Vitest | **111 file / 888 test** verde |
-| Differential test cases | >85.500 random cases tutti 100% match |
+| Sub-systems bit-perfect | **268 / 314** (85%) |
+| Vitest | **156 file / 1252 test** verde |
+| Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
 | Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (Task A main loop init chain) |

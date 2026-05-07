@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 60% del binario replicato bit-perfect** (188/314 sub-systems), bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo.
+**Status:** **🎯 85% del binario replicato bit-perfect** (268/314 sub-systems), bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 156 test files / 1252 vitest verde.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,9 +11,9 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems replicati bit-perfect | **188 / 314** (60%) |
-| Differential test cases | >85.500 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **111 file / 888 test** verde |
+| Sub-systems replicati bit-perfect | **268 / 314** (85%) |
+| Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
+| Vitest | **156 file / 1252 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (Task A: main loop init chain) |
 
