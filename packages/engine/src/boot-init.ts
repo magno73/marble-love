@@ -164,20 +164,15 @@ export function bootInit(state: GameState, rom: RomImage): void {
   // spurious al primo tick (verificato vs oracle frame 46).
   state.workRam[0x3a2] = 0xff;
 
-  // 6. Main loop init chain (FUN_117B2 → FUN_11452 → FUN_10504 →
-  //    FUN_1101E, replicate da Codex). NON wirata in bootInit perché:
-  //    - MAME al frame 45 (= reimpl frame 0) ha già completato la chain
-  //      ma le scritture di Codex con default subs (no-op) non riproducono
-  //      esattamente le scritture di runtime di MAME (es. la chain modifica
-  //      0x700-0x7FF in modo che default-subs non emulano).
-  //    - Il loop body usa vblankAck per uscire — impostando loopIterations=0
-  //      si saltano scritture critiche; con loopIterations>=1 senza
-  //      vblankAck stub il loop produce divergenza spuria.
-  //    - Per allineare con MAME serve replicare anche le sub-routine non
-  //      ancora coperte (rendering primitives, sound dispatch reali, etc.)
-  //    Ri-abilita quando le sub default-injection saranno tutte
-  //    bit-perfect, oppure quando si avrà un boot transient simulator
-  //    coerente con MAME.
+  // 6. Main loop init chain (FUN_117B2 prefix only).
+  //    NOT wired: even with bootHelper1464A + gameModePrep10456 +
+  //    finalize11654 + soundMaybe11AC2 + stateDispatch12FD0 +
+  //    randomMod13A98 + clearPlayfieldOther12186 + playerSlotIter118D2
+  //    wirati come default, abilitare 117B2 prefix peggiora attract_mode
+  //    parity (9 → 12 fields divergenti, sospetto RNG advance).
+  //    Probabile causa: MAME oracle al frame 47 ha già consumato un path
+  //    specifico di RNG/sub che le default subs non riproducono per scenari
+  //    senza input. Riprovare quando la chain playfield Codex sarà completa.
   void mainLoopInit117B2; // tenuta in scope per uso futuro
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
