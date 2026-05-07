@@ -7,6 +7,7 @@ import type { RomImage } from "./bus.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
+import { clearPlayfieldOther12186 } from "./clear-playfield-other-12186.js";
 
 const WRAM = 0x00400000;
 
@@ -226,7 +227,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   wb(state, 0x00400460, 0xff);
   subs.vblankAck?.(state);
   subs.clearPaletteRam?.(state);
-  subs.clearOther12186?.(state);
+  (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
   subs.initFnPointers28580?.(state);
   subs.clearAlphaTiles28C7E?.(state);
   subs.sceneObjInit28CA6?.(state);
