@@ -112,6 +112,25 @@ async function main(): Promise<void> {
   }
   console.log(`  spriteRam non-zero bytes: ${spriteSet}/${state.spriteRam.length}`);
 
+  // Playfield RAM non-zero count (key check for tilemap chain)
+  let pfSet = 0;
+  for (let i = 0; i < state.playfieldRam.length; i++) {
+    if (state.playfieldRam[i] !== 0) pfSet++;
+  }
+  console.log(`  playfieldRam non-zero bytes: ${pfSet}/${state.playfieldRam.length}`);
+  if (pfSet > 0) {
+    // First/last non-zero offsets to confirm chain ran
+    let first = -1;
+    let last = -1;
+    for (let i = 0; i < state.playfieldRam.length; i++) {
+      if (state.playfieldRam[i] !== 0) {
+        if (first === -1) first = i;
+        last = i;
+      }
+    }
+    console.log(`    first non-zero @ 0x${first.toString(16)}, last @ 0x${last.toString(16)}`);
+  }
+
   // workRam non-zero count
   let workSet = 0;
   for (let i = 0; i < state.workRam.length; i++) {
