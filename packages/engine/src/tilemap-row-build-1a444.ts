@@ -12,6 +12,7 @@ import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import type { GameState } from "./state.js";
 import { buildTilemapSpan1AA38 } from "./tilemap-span-builder-1aa38.js";
 import { packTilemapEntries1A9CC } from "./tilemap-entry-pack-1a9cc.js";
+import { renderTileLine1AD54 } from "./render-tile-line-1ad54.js";
 
 export const TILEMAP_ROW_BUILD_1A444_ADDR = 0x0001a444 as const;
 
@@ -159,7 +160,11 @@ export function buildTilemapRows1A444(
         listAbs = (listAbs + 2) >>> 0;
       }
       const bit = (pendingBits >> (d3 & 0x0f)) & 1;
-      subs?.fun_1ad54?.({ destLong: destStart + d3 * 8, xLong: y, yLong: x, heightLong: height, bitLong: bit });
+      if (subs?.fun_1ad54) {
+        subs.fun_1ad54({ destLong: destStart + d3 * 8, xLong: y, yLong: x, heightLong: height, bitLong: bit });
+      } else {
+        renderTileLine1AD54(state, rom, destStart + d3 * 8, y, x, height, bit);
+      }
     }
 
     while (true) {
