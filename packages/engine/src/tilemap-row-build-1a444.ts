@@ -13,6 +13,8 @@ import { packTilemapEntries1A9CC } from "./tilemap-entry-pack-1a9cc.js";
 
 export const TILEMAP_ROW_BUILD_1A444_ADDR = 0x0001a444 as const;
 
+const WORK_RAM_BASE = 0x00400000 as const;
+const WORK_RAM_END = 0x00402000 as const;
 const STATE_PTR_OFF = 0x0474 as const;
 const ROW_ARG_BASE_OFF = 0x0478 as const;
 const BINSEARCH_BASE_PTR_OFF = 0x065a as const;
@@ -72,17 +74,44 @@ function readU32(state: GameState, off: number): number {
   );
 }
 
-function offFromAbs(addr: number): number {
-  return (addr >>> 0) - 0x00400000;
-}
-
 function readRomI16(rom: RomImage, addr: number): number {
   const w = ((rom.program[addr] ?? 0) << 8) | (rom.program[addr + 1] ?? 0);
   return w & 0x8000 ? w - 0x10000 : w;
 }
 
+function readRomU16(rom: RomImage, addr: number): number {
+  return (((rom.program[addr] ?? 0) << 8) | (rom.program[addr + 1] ?? 0)) & 0xffff;
+}
+
+function readRomU32(rom: RomImage, addr: number): number {
+  return (
+    (((rom.program[addr] ?? 0) << 24) |
+      ((rom.program[addr + 1] ?? 0) << 16) |
+      ((rom.program[addr + 2] ?? 0) << 8) |
+      (rom.program[addr + 3] ?? 0)) >>>
+    0
+  );
+}
+
 function readRomU8(rom: RomImage, addr: number): number {
   return rom.program[addr] ?? 0;
+}
+
+function readAbsU16(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_END) return readU16(state, a - WORK_RAM_BASE);
+  return readRomU16(rom, a);
+}
+
+function readAbsI16(state: GameState, rom: RomImage, addr: number): number {
+  const w = readAbsU16(state, rom, addr);
+  return w & 0x8000 ? w - 0x10000 : w;
+}
+
+function readAbsU32(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_END) return readU32(state, a - WORK_RAM_BASE);
+  return readRomU32(rom, a);
 }
 
 export function buildTilemapRows1A444(
@@ -91,12 +120,11 @@ export function buildTilemapRows1A444(
   subs?: TilemapRowBuild1A444Subs,
 ): void {
   const stateStruct = readU32(state, STATE_PTR_OFF);
-  const stateStructOff = offFromAbs(stateStruct);
-  const entryCount = readI16(state, stateStructOff + 0x1a);
-  const listPtr = readU32(state, stateStructOff + 0x08);
-  let listOff = offFromAbs(listPtr);
+  const entryCount = readAbsI16(state, rom, stateStruct + 0x1a);
+  const listPtr = readAbsU32(state, rom, stateStruct + 0x08);
+  let listAbs = listPtr >>> 0;
 
-  const index24 = readI16(state, stateStructOff + 0x24);
+  const index24 = readAbsI16(state, rom, stateStruct + 0x24);
   const basePtr = readU32(state, BINSEARCH_BASE_PTR_OFF);
   const d2 = (basePtr + index24 * 2) >>> 0;
   writeU32(state, BINSEARCH_END_PTR_OFF, (d2 - 2) >>> 0);
@@ -109,12 +137,13 @@ export function buildTilemapRows1A444(
     const y = ((d4 + 0x15) << 16) >> 16;
     const x = (((d4 >> 1) + 0x15) << 16) >> 16;
     let height = 0x18;
-    const limit = readI16(state, stateStructOff + 0x18) - 0x18;
-    if (d4 > limit) height = (readI16(state, stateStructOff + 0x18) - d4) << 16 >> 16;
+    const descriptorHeight = readAbsI16(state, rom, stateStruct + 0x18);
+    const limit = descriptorHeight - 0x18;
+    if (d4 > limit) height = (descriptorHeight - d4) << 16 >> 16;
 
     for (let i = 0; i < SCRATCH_CLEAR_LONGS; i++) writeU32(state, SCRATCH_BASE_OFF + i * 4, 0);
 
-    const destStart = readU32(state, stateStructOff + 0x1c);
+    const destStart = readAbsU32(state, rom, stateStruct + 0x1c);
     const levelIndex = readU16(state, 0x0394);
     const lookup = readRomU8(rom, 0x24994 + levelIndex);
     subs?.fun_2ffb8?.((lookup & 0x80) !== 0 ? lookup - 0x100 : lookup);
@@ -123,16 +152,16 @@ export function buildTilemapRows1A444(
     for (let d3 = 0; d3 < entryCount; d3++) {
       writeU8(state, TICK_03F0_OFF, (readU8(state, TICK_03F0_OFF) + 1) & 0xff);
       if ((d3 & 0x0f) === 0) {
-        pendingBits = readU16(state, listOff);
-        listOff += 2;
+        pendingBits = readAbsU16(state, rom, listAbs);
+        listAbs = (listAbs + 2) >>> 0;
       }
       const bit = (pendingBits >> (d3 & 0x0f)) & 1;
       subs?.fun_1ad54?.({ destLong: destStart + d3 * 8, xLong: y, yLong: x, heightLong: height, bitLong: bit });
     }
 
     while (true) {
-      lastWord = readU16(state, listOff);
-      listOff += 2;
+      lastWord = readAbsU16(state, rom, listAbs);
+      listAbs = (listAbs + 2) >>> 0;
       const masked = lastWord & 0xfffe;
       if (masked === 0xfffe) break;
 
@@ -140,8 +169,8 @@ export function buildTilemapRows1A444(
       const high = (lastWord >> 8) & 0xff;
       const index = (((high * 0x16) << 16) >>> 0) + low + 0x16 * 8;
       const targetOff = SCRATCH_BASE_OFF + index;
-      const value = readU16(state, listOff);
-      listOff += 2;
+      const value = readAbsU16(state, rom, listAbs);
+      listAbs = (listAbs + 2) >>> 0;
       state.workRam[targetOff] = (value >>> 8) & 0xff;
       state.workRam[targetOff + 1] = value & 0xff;
     }
