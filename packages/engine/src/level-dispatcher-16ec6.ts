@@ -8,6 +8,7 @@
  */
 
 import type { RomImage } from "./bus.js";
+import { levelDispatcherHelper18FD0 } from "./level-dispatcher-helper-18fd0.js";
 import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import type { GameState } from "./state.js";
 
@@ -108,6 +109,7 @@ export function levelDispatcher16EC6(
   subs?: LevelDispatcher16EC6Subs,
 ): void {
   const fun2ffb8 = subs?.fun_2ffb8 ?? ((argLong: number): void => { levelHelper2FFB8(rom, argLong); });
+  const fun18fd0 = subs?.fun_18fd0 ?? ((): void => { levelDispatcherHelper18FD0(state, rom); });
   const levelIndex = readU16(state, LEVEL_INDEX_OFF);
   const tableIndex = (levelIndex << 2) >>> 0;
   const statePtr = readRomU32(rom, LEVEL_PTR_TABLE + tableIndex);
@@ -123,7 +125,7 @@ export function levelDispatcher16EC6(
   const tableValue664 = readRomU16(rom, TABLE_239AC + levelIndex * 2);
   writeU16(state, TABLE_VALUE_0664_OFF, tableValue664);
 
-  subs?.fun_18fd0?.();
+  fun18fd0();
 
   const binsearchBase = readAbsU32(state, rom, statePtr + 0x26);
   writeU32(state, BINSEARCH_BASE_PTR_OFF, binsearchBase);
