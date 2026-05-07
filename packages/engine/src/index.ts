@@ -39,6 +39,7 @@ export * as stateSub26C2 from "./state-sub-26c2.js";
 export * as stateSub2ABC from "./state-sub-2abc.js";
 export * as stateSub2BDA from "./state-sub-2bda.js";
 export * as stateSub2C60 from "./state-sub-2c60.js";
+export * as stateSub2CD4 from "./state-sub-2cd4.js";
 export * as stateSub2DA0 from "./state-sub-2da0.js";
 export * as stateSub28EA from "./state-sub-28ea.js";
 export * as stateSub5200 from "./state-sub-5200.js";
