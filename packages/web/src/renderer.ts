@@ -586,12 +586,13 @@ export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Re
 
   return {
     draw(state: GameState): void {
-      // Passa motion-object lookup tables (decoded da ROM) a buildFrame
-      // per renderizzare gli sprite quando state.spriteRam è popolata.
-      // playfieldRam è state-specifico (0xA00000-0xA01FFF non modellato
-      // dallo state, è playfield tilemap RAM); finché non lo aggiungiamo
-      // allo state il playfield non si renderizza dal bridge.
+      // Passa motion-object + playfield lookup tables (decoded da ROM) a
+      // buildFrame. state.playfieldRam (8 KB @ 0xA00000-0xA01FFF) viene
+      // usato di default da buildFrame quando playfieldLookups è fornito.
       const opts: Parameters<typeof renderNs.buildFrame>[1] = {};
+      if (graphics?.lookupTables.playfield) {
+        opts.playfieldLookups = graphics.lookupTables.playfield;
+      }
       if (graphics?.lookupTables.motionObjects) {
         opts.motionObjects = "linked-list";
         opts.motionObjectLookups = graphics.lookupTables.motionObjects;

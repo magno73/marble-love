@@ -132,6 +132,10 @@ export interface GameState {
   /** Region di memoria principale del 68010 (work RAM).
    *  Dimensione esatta da Phase 1 (atarisys1.cpp). */
   workRam: Uint8Array;
+  /** Playfield tilemap RAM (background tilemap, 0xA00000-0xA01FFF, 8 KB).
+   *  64×64 tile entries (2 byte each) per Atari System 1 hardware spec.
+   *  Popolato da game-side write durante level load + scroll updates. */
+  playfieldRam: Uint8Array;
   /** Motion object RAM (sprite, 0xA02000-0xA02FFF, 4 KB). */
   spriteRam: Uint8Array;
   /** Alphanumerics RAM (HUD overlay, 0xA03000-0xA03FFF, 4 KB). */
@@ -169,13 +173,15 @@ export function emptyGameState(): GameState {
     },
     // Sizing verificato Phase 1 (`docs/hardware-map.md`):
     //   work RAM 8 KB ($400000-$401FFF)
+    //   playfield RAM 8 KB ($A00000-$A01FFF, 64x64 tile entries)
     //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banchi × 64 entry × 4 word)
     //   alpha RAM 4 KB ($A03000-$A03FFF, HUD overlay 64×32 tile)
     //   palette RAM 2 KB ($B00000-$B007FF)
-    workRam: new Uint8Array(0x2000),    // 8 KB
-    spriteRam: new Uint8Array(0x1000),  // 4 KB
-    alphaRam: new Uint8Array(0x1000),   // 4 KB
-    colorRam: new Uint8Array(0x800),    // 2 KB
+    workRam: new Uint8Array(0x2000),     // 8 KB
+    playfieldRam: new Uint8Array(0x2000), // 8 KB
+    spriteRam: new Uint8Array(0x1000),   // 4 KB
+    alphaRam: new Uint8Array(0x1000),    // 4 KB
+    colorRam: new Uint8Array(0x800),     // 2 KB
   };
 }
 
@@ -202,6 +208,7 @@ export function snapshotGameState(s: GameState): GameState {
     stats: { ...s.stats },
     input: { ...s.input },
     workRam: new Uint8Array(s.workRam),
+    playfieldRam: new Uint8Array(s.playfieldRam),
     spriteRam: new Uint8Array(s.spriteRam),
     alphaRam: new Uint8Array(s.alphaRam),
     colorRam: new Uint8Array(s.colorRam),
