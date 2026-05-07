@@ -199,6 +199,7 @@ export * as stateDispatch160F6 from "./state-dispatch-160f6.js";
 export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
+export * as irqVectorThunks from "./irq-vector-thunks.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
