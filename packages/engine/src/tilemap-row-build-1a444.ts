@@ -10,6 +10,7 @@
 import type { RomImage } from "./bus.js";
 import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import type { GameState } from "./state.js";
+import { buildTilemapSpan1AA38 } from "./tilemap-span-builder-1aa38.js";
 import { packTilemapEntries1A9CC } from "./tilemap-entry-pack-1a9cc.js";
 
 export const TILEMAP_ROW_BUILD_1A444_ADDR = 0x0001a444 as const;
@@ -185,7 +186,8 @@ export function buildTilemapRows1A444(
       writeU8(state, TICK_03F0_OFF, (readU8(state, TICK_03F0_OFF) + 1) & 0xff);
       const rowWord = readI16(state, rowArgOff);
       rowArgOff += 2;
-      subs?.fun_1aa38?.({ bitLong: d3 & 1, rowWordLong: rowWord, scratchAddr });
+      if (subs?.fun_1aa38) subs.fun_1aa38({ bitLong: d3 & 1, rowWordLong: rowWord, scratchAddr });
+      else buildTilemapSpan1AA38(state, rom, d3 & 1, rowWord, scratchAddr);
       scratchAddr = (scratchAddr + 0xb0) >>> 0;
     }
 
