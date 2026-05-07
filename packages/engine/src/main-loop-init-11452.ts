@@ -6,6 +6,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
+import { helper11FF8Default } from "./helper-11ff8.js";
 
 const WRAM = 0x00400000;
 
@@ -89,7 +90,7 @@ export function mainLoopInit11452(
         ww(state, 0x0040075a, 1);
         break;
       case 2:
-        state11452Case2(state, subs);
+        state11452Case2(state, rom, subs);
         break;
       case 3:
         state11452Case3(state, subs);
@@ -134,7 +135,7 @@ function state11452Case0(
   }
 }
 
-function state11452Case2(state: GameState, subs: MainLoopInit11452Subs): void {
+function state11452Case2(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11452Subs): void {
   subs.sceneInit11428?.(state);
   subs.gameStateBanner26B2A?.(state, 0);
   subs.helper26B66?.(state, 0x13);
@@ -145,7 +146,7 @@ function state11452Case2(state: GameState, subs: MainLoopInit11452Subs): void {
   wb(state, 0x0040000a, 0);
   subs.vblankAck?.(state);
   subs.helper18CD2?.(state);
-  subs.helper11FF8?.(state);
+  (subs.helper11FF8 ?? ((s: GameState) => helper11FF8Default(s, rom)))(state);
   subs.tilemapBlit17044?.(state);
   ww(state, 0x0040075a, 0x012c);
   if (rb(state, 0x004003e6) !== 0) {
