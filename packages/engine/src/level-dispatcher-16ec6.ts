@@ -8,6 +8,7 @@
  */
 
 import type { RomImage } from "./bus.js";
+import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import type { GameState } from "./state.js";
 
 export const LEVEL_DISPATCHER_16EC6_ADDR = 0x00016ec6 as const;
@@ -106,6 +107,7 @@ export function levelDispatcher16EC6(
   rom: RomImage,
   subs?: LevelDispatcher16EC6Subs,
 ): void {
+  const fun2ffb8 = subs?.fun_2ffb8 ?? ((argLong: number): void => { levelHelper2FFB8(rom, argLong); });
   const levelIndex = readU16(state, LEVEL_INDEX_OFF);
   const tableIndex = (levelIndex << 2) >>> 0;
   const statePtr = readRomU32(rom, LEVEL_PTR_TABLE + tableIndex);
@@ -113,7 +115,7 @@ export function levelDispatcher16EC6(
 
   const tableValue662 = readRomU16(rom, TABLE_239A0 + levelIndex * 2);
   writeU16(state, TABLE_VALUE_0662_OFF, tableValue662);
-  subs?.fun_2ffb8?.(signExtendWord(tableValue662));
+  fun2ffb8(signExtendWord(tableValue662));
 
   const previous664 = readU16(state, TABLE_VALUE_0664_OFF);
   subs?.fun_2ff28?.(signExtendWord(previous664));
