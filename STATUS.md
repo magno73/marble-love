@@ -85,7 +85,19 @@ Steady state (frame 1..100): **8 fields divergenti** (era 29). Da frame 300+ mar
 - FUN_2CD4 (state 3 condition) — REPLICATO ✅ 500/500
 - FUN_295A (Branch A one-shot) — REPLICATO ✅ 500/500
 
-Claude ha avviato il wireup in `mainTick`; prossimo step: re-run dei parity scenario `level1_basic_movement` dopo integrazione completa.
+Claude wireup in `mainTick` completato (commit `63c3e42`): tutti e 10 i state subs ora dispatchati come default callback (5 Claude + 5 Codex). Verificato attract_mode parity invariata (7 fields divergenti @ frame 1, identico al baseline pre-wireup).
+
+### playfieldRam writers — chain identificata (2026-05-07)
+
+Watch_write su MAME (level1_basic_movement, frame 50-200) ha rivelato:
+
+- **frame 108**: `FUN_12174` (`clearPlayfieldRam12174`) cancella 8 KB → REPLICATO ✅ commit `bd2bb` leaf trivial
+- **frame 110-200**: i WRITES di tile data vengono dalla chain
+  - `FUN_1101E` (Codex ✅) ─→ `FUN_16EC6` (TODO) ─→ `FUN_1A444` (TODO) ─→ `FUN_1A9CC` (✅ `packTilemapEntries1A9CC`)
+  - `FUN_11452` (Codex ✅) ─→ stesso path
+  - `FUN_118D2` (alt path, 1 caller solo: FUN_1101E@0x11380) → `FUN_16EC6` condizionale a `cmp.w #6, *0x400394` `ble`
+
+**Cosa manca per popolare playfieldRam**: replicare `FUN_1A444` + `FUN_16EC6`. Il packer leaf `FUN_1A9CC` è già stato replicato come `packTilemapEntries1A9CC` (Codex Task A renderer/playfield).
 
 Regioni residue (3 byte tipici per regione 3 dopo timer fix):
 - 0x000: 7 byte (0x0E, 0x86, 0x88-0x89, 0xD8-0xDA = "AAA" pattern hi-score?)
