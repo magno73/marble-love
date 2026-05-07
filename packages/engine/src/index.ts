@@ -185,6 +185,7 @@ export * as scoreTableUpdate4790 from "./score-table-update-4790.js";
 export * as levelHelper2FFB8 from "./level-helper-2ffb8.js";
 export * as tilemapEntryPack1A9CC from "./tilemap-entry-pack-1a9cc.js";
 export * as tilemapRowBuild1A444 from "./tilemap-row-build-1a444.js";
+export * as tilemapSpanBuilder1AA38 from "./tilemap-span-builder-1aa38.js";
 export * as levelDispatcher16EC6 from "./level-dispatcher-16ec6.js";
 export * as sortAdjacentObjects1A7A8 from "./sort-adjacent-objects-1a7a8.js";
 export * as decodeBitstream1A668 from "./decode-bitstream-1a668.js";
