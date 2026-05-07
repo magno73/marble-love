@@ -32,6 +32,7 @@ export * as gameMainGate from "./game-main-gate.js";
 export * as gameStateMachine from "./game-state-machine.js";
 export * as stateSub1EAA from "./state-sub-1eaa.js";
 export * as stateSub2678 from "./state-sub-2678.js";
+export * as stateSub2766 from "./state-sub-2766.js";
 export * as stateSub26C2 from "./state-sub-26c2.js";
 export * as stateSub2ABC from "./state-sub-2abc.js";
 export * as stateSub2BDA from "./state-sub-2bda.js";
