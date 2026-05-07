@@ -11,16 +11,17 @@
  *   2. paletteAnim2Tick (FUN_26C78) ✅
  *   3. paletteAnim3Tick (FUN_26D4E) ✅
  *   4. paletteQueueDrain (FUN_26B88) ✅
- *   5. gameStateMachineTick (FUN_2E18 via thunk 0x148) ✅
- *   6. soundTick (FUN_4CA0 via thunk 0x15A) — STUB
+ *   5. gameStateMachineTick (FUN_2E18 via thunk 0x148) ✅ tutti 10 subs wirati
+ *   6. soundTick (FUN_4CA0 via thunk 0x15A) ✅ (FUN_4DCC chip ancora minimal-stub)
  *   7. gameTickTimers (FUN_28A96) ✅
  *   8. trackballInputTick (FUN_1AC18) ✅
  *   9. gameMainGate (FUN_28972) ✅
- *   10. eepromCommitTick (FUN_3F78 via thunk 0x160) — STUB
- *   11. soundCommand (FUN_158AC) — STUB
- *   12. specialAttract (FUN_288F8) — STUB
- *   13. particleBounce (FUN_18DCA) ✅ (conditional su *0x4003E2)
- *   14. lateGameLogic (FUN_26F3E) — STUB (conditional)
+ *   10. auxTimer (FUN_10146) ✅
+ *   11. eepromCommit (FUN_3F78 via thunk 0x160) ✅
+ *   12. soundCommand (FUN_158AC) — STUB (chiamata condizionale da altre subs)
+ *   13. specialAttract (FUN_288F8) ✅
+ *   14. particleBounce (FUN_18DCA) ✅ (conditional su *0x4003E2)
+ *   15. lateGameLogic (FUN_26F3E) — STUB (conditional, requires sub-chain)
  *
  * Più condizionale FUN_26D8A (PF scroll setup) all'inizio.
  *

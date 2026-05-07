@@ -241,10 +241,10 @@ import type { MainTickOptions } from "./main-tick.js";
 /**
  * Tick principale del game engine — 1 frame @ 60 Hz.
  *
- * Orchestrator che chiama 9 root sub-systems replicati bit-perfect dal
+ * Orchestrator che chiama 14 root sub-systems replicati bit-perfect dal
  * binario originale (`FUN_00028788`). Aggiorna `state.workRam`,
- * `state.colorRam`, `state.alphaRam`, `state.spriteRam` coerentemente
- * col binario.
+ * `state.playfieldRam`, `state.colorRam`, `state.alphaRam`, `state.spriteRam`
+ * coerentemente col binario.
  *
  * Per integrare col renderer:
  * ```ts
@@ -253,9 +253,8 @@ import type { MainTickOptions } from "./main-tick.js";
  * // → consegna `frame` al renderer PixiJS
  * ```
  *
- * Le sub-functions ancora non replicate (sound, EEPROM, FUN_26D8A scroll,
- * FUN_26F3E late logic) sono no-op: lo state core si aggiorna ma audio
- * e persistenza non avvengono ancora.
+ * Sub ancora stubbed: FUN_158AC (sound cmd send conditional), FUN_26F3E
+ * (lateGameLogic conditional), FUN_4DCC (sound chip writer, richiede YM2151).
  */
 export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTickOptions, "rom">>): void {
   rngClearFrameCounter(s.rng);
