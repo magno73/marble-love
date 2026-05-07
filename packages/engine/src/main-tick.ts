@@ -46,6 +46,11 @@ import { stateSub2678 } from "./state-sub-2678.js";
 import { stateSub2BDA } from "./state-sub-2bda.js";
 import { stateSub2DA0 } from "./state-sub-2da0.js";
 import { stateSub2C60 } from "./state-sub-2c60.js";
+import { stateSub2572 } from "./state-sub-2572.js";
+import { stateSub2766 } from "./state-sub-2766.js";
+import { stateSub2818 } from "./state-sub-2818.js";
+import { stateSub295A } from "./state-sub-295a.js";
+import { stateSub2CD4 } from "./state-sub-2cd4.js";
 import { paletteAnim1Tick, paletteAnim2Tick } from "./palette-anim.js";
 import { paletteAnim3Tick, paletteQueueDrain } from "./palette-queue.js";
 import { gameStateMachineTick } from "./game-state-machine.js";
@@ -137,15 +142,20 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   paletteAnim3Tick(state);
   paletteQueueDrain(state, rom);
 
-  // Default state-machine subs: chiama le sub replicate. 5 su 10 sub
-  // disponibili (2abc/2678/2bda/2da0/2c60). Le restanti (295a/2572/2cd4/
-  // 2766/2818) restano no-op finché non vengono replicate.
+  // Default state-machine subs: chiama le sub replicate. 10/10 subs
+  // disponibili: 2abc/2678/2bda/2da0/2c60 (Claude) + 2572/2766/2818/295a/2cd4
+  // (Codex), tutte parity 500/500.
   const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
     fun_2abc: (argLong) => stateSub2ABC(state, rom, argLong),
     fun_2678: (argLong) => stateSub2678(state, argLong),
     fun_2bda: (a1, a2, a3) => { stateSub2BDA(state, a1, a2, a3); },
     fun_2da0: (a1, a2) => stateSub2DA0(state, rom, a1, a2),
     fun_2c60: (a1, a2) => { stateSub2C60(state, a1, a2); },
+    fun_295a: () => { stateSub295A(state, rom); },
+    fun_2572: (a1, a2) => { stateSub2572(state, rom, a1, a2); },
+    fun_2cd4: (a1, a2, a3) => stateSub2CD4(state, rom, a1, a2, a3),
+    fun_2766: (argLong) => { stateSub2766(state, rom, argLong); },
+    fun_2818: (argLong) => { stateSub2818(state, rom, argLong); },
   };
   gameStateMachineTick(state, rom, stateMachineSubs);
 
