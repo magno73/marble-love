@@ -15,6 +15,8 @@ const PATCHED_JSRS = [0x0002ffb8, 0x0001ad54, 0x0001aa38] as const;
 const STRUCT = 0x00400800;
 const LIST = 0x00400900;
 const PF_BASE = 0x00a00000;
+const ROM_STRUCT = 0x0002c54c;
+const ROM_LIST = 0x00030000;
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -76,6 +78,39 @@ function writeBothLong(
   writeBothByte(cpu, binState, tsState, addr + 3, value);
 }
 
+function writeBothRomByte(
+  cpu: Awaited<ReturnType<typeof createCpu>>,
+  tsRom: ReturnType<typeof busNs.emptyRomImage>,
+  addr: number,
+  value: number,
+): void {
+  const v = value & 0xff;
+  pokeMem(cpu, addr, 1, v);
+  tsRom.program[addr] = v;
+}
+
+function writeBothRomWord(
+  cpu: Awaited<ReturnType<typeof createCpu>>,
+  tsRom: ReturnType<typeof busNs.emptyRomImage>,
+  addr: number,
+  value: number,
+): void {
+  writeBothRomByte(cpu, tsRom, addr, value >>> 8);
+  writeBothRomByte(cpu, tsRom, addr + 1, value);
+}
+
+function writeBothRomLong(
+  cpu: Awaited<ReturnType<typeof createCpu>>,
+  tsRom: ReturnType<typeof busNs.emptyRomImage>,
+  addr: number,
+  value: number,
+): void {
+  writeBothRomByte(cpu, tsRom, addr, value >>> 24);
+  writeBothRomByte(cpu, tsRom, addr + 1, value >>> 16);
+  writeBothRomByte(cpu, tsRom, addr + 2, value >>> 8);
+  writeBothRomByte(cpu, tsRom, addr + 3, value);
+}
+
 async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "500");
   const rom = readFileSync(findRomBlobPath());
@@ -99,16 +134,31 @@ async function main(): Promise<void> {
     for (let j = 0; j < 0x2000; j++) writeBothByte(cpu, binState, tsState, 0x00400000 + j, 0);
     for (let j = 0; j < 0x2000; j++) writeBothByte(cpu, binState, tsState, PF_BASE + j, 0xcc);
 
-    writeBothLong(cpu, binState, tsState, 0x00400474, STRUCT);
-    writeBothLong(cpu, binState, tsState, 0x0040065a, 0x00401200);
+    const useRomDescriptor = (i % 5) === 0;
+    const levelIndex = useRomDescriptor ? Math.floor(rng() * 6) : Math.floor(rng() * 4);
+
+    writeBothWord(cpu, binState, tsState, 0x00400394, levelIndex);
     writeBothWord(cpu, binState, tsState, 0x00400662, Math.floor(rng() * 0x10000));
-    writeBothWord(cpu, binState, tsState, 0x00400394, Math.floor(rng() * 4));
-    writeBothLong(cpu, binState, tsState, STRUCT + 0x08, LIST);
-    writeBothWord(cpu, binState, tsState, STRUCT + 0x18, 0x0018);
-    writeBothWord(cpu, binState, tsState, STRUCT + 0x1a, 0x0000);
-    writeBothLong(cpu, binState, tsState, STRUCT + 0x1c, 0x00401400);
-    writeBothWord(cpu, binState, tsState, STRUCT + 0x24, Math.floor(rng() * 16));
-    writeBothWord(cpu, binState, tsState, LIST, 0xffff);
+
+    if (useRomDescriptor) {
+      writeBothLong(cpu, binState, tsState, 0x00400474, ROM_STRUCT);
+      writeBothLong(cpu, binState, tsState, 0x0040065a, 0x00401200);
+      writeBothRomLong(cpu, tsRom, ROM_STRUCT + 0x08, ROM_LIST);
+      writeBothRomWord(cpu, tsRom, ROM_STRUCT + 0x18, 0x0018);
+      writeBothRomWord(cpu, tsRom, ROM_STRUCT + 0x1a, 0x0000);
+      writeBothRomLong(cpu, tsRom, ROM_STRUCT + 0x1c, 0x00401400);
+      writeBothRomWord(cpu, tsRom, ROM_STRUCT + 0x24, Math.floor(rng() * 16));
+      writeBothRomWord(cpu, tsRom, ROM_LIST, 0xffff);
+    } else {
+      writeBothLong(cpu, binState, tsState, 0x00400474, STRUCT);
+      writeBothLong(cpu, binState, tsState, 0x0040065a, 0x00401200);
+      writeBothLong(cpu, binState, tsState, STRUCT + 0x08, LIST);
+      writeBothWord(cpu, binState, tsState, STRUCT + 0x18, 0x0018);
+      writeBothWord(cpu, binState, tsState, STRUCT + 0x1a, 0x0000);
+      writeBothLong(cpu, binState, tsState, STRUCT + 0x1c, 0x00401400);
+      writeBothWord(cpu, binState, tsState, STRUCT + 0x24, Math.floor(rng() * 16));
+      writeBothWord(cpu, binState, tsState, LIST, 0xffff);
+    }
     for (let j = 0; j < 0x30; j += 2) writeBothWord(cpu, binState, tsState, 0x00400478 + j, Math.floor(rng() * 0x10000));
 
     callFunction(cpu, FUN_1A444, [], 2_000_000);
