@@ -150,6 +150,7 @@ export * as formatAndRender28EB2 from "./format-and-render-28eb2.js";
 export * as particleBounce from "./particle-bounce.js";
 export * as specialAttract from "./special-attract.js";
 export * as soundPair15884 from "./sound-pair-15884.js";
+export * as soundMaybe11AC2 from "./sound-maybe-11ac2.js";
 export * as objectUpdatePair158CC from "./object-update-pair-158cc.js";
 export * as sceneInit11428 from "./scene-init-11428.js";
 export * as sceneObjInit28CA6 from "./scene-obj-init-28ca6.js";
