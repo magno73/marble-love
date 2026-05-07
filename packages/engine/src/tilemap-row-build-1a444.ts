@@ -8,6 +8,7 @@
  */
 
 import type { RomImage } from "./bus.js";
+import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import type { GameState } from "./state.js";
 import { packTilemapEntries1A9CC } from "./tilemap-entry-pack-1a9cc.js";
 
@@ -119,6 +120,7 @@ export function buildTilemapRows1A444(
   rom: RomImage,
   subs?: TilemapRowBuild1A444Subs,
 ): void {
+  const fun2ffb8 = subs?.fun_2ffb8 ?? ((argLong: number): void => { levelHelper2FFB8(rom, argLong); });
   const stateStruct = readU32(state, STATE_PTR_OFF);
   const entryCount = readAbsI16(state, rom, stateStruct + 0x1a);
   const listPtr = readAbsU32(state, rom, stateStruct + 0x08);
@@ -146,7 +148,7 @@ export function buildTilemapRows1A444(
     const destStart = readAbsU32(state, rom, stateStruct + 0x1c);
     const levelIndex = readU16(state, 0x0394);
     const lookup = readRomU8(rom, 0x24994 + levelIndex);
-    subs?.fun_2ffb8?.((lookup & 0x80) !== 0 ? lookup - 0x100 : lookup);
+    fun2ffb8((lookup & 0x80) !== 0 ? lookup - 0x100 : lookup);
 
     let pendingBits = 0;
     for (let d3 = 0; d3 < entryCount; d3++) {
@@ -175,7 +177,7 @@ export function buildTilemapRows1A444(
       state.workRam[targetOff + 1] = value & 0xff;
     }
 
-    subs?.fun_2ffb8?.(readI16(state, GLOBAL_0662_OFF));
+    fun2ffb8(readI16(state, GLOBAL_0662_OFF));
 
     let scratchAddr = SCRATCH_BASE;
     let rowArgOff = ROW_ARG_BASE_OFF;
