@@ -7,9 +7,9 @@
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems bit-perfect | **187 / 314** (60%) |
+| Sub-systems bit-perfect | **188 / 314** (60%) |
 | Vitest | **111 file / 888 test** verde |
-| Differential test cases | >85.000 random cases tutti 100% match |
+| Differential test cases | >85.500 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
 | Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (Task A main loop init chain) |
@@ -21,7 +21,7 @@ Due track paralleli su `main`, **bridge attivo**:
 ### Track A — Phase 4d (replication bit-perfect)
 - ✅ Phase 0-3 (scaffold, oracolo MAME, static analysis Ghidra)
 - ✅ Phase 4a-c (RNG, primitive di base)
-- 🔄 **Phase 4d in corso**: 187/314 sub-systems bit-perfect (60% del binario)
+- 🔄 **Phase 4d in corso**: 188/314 sub-systems bit-perfect (60% del binario)
   - 4/4 root game-logic CORE replicati
   - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
   - >35.000 differential test cases passati al 100%
@@ -138,14 +138,14 @@ In parallelo, Codex agent lavora su `codex/a-*` branch via `docs/codex-prd.md` c
 |---|---|---|
 | FUN_117B2 (entry chain) | ✅ replicato | parity 500/500 vs musashi-wasm |
 | FUN_11452 (transition dispatcher) | ✅ replicato | parity 500/500 vs musashi-wasm |
-| FUN_1101E (state dispatcher cases 0..6) | 🔧 scheletro + smoke | parity TBD |
+| FUN_1101E (state dispatcher cases 0..6) | ✅ replicato | parity 500/500 (con fix Codex su case order + 0x40075A test + textPrint vs soundCmd dispatch) |
 | FUN_10504 (init prefix + presentation middle) | 🔧 scheletro + smoke | parity TBD (middle è 2762 byte, work in progress) |
 
 Pattern utilizzato: stub-injection per JSR non replicate (`MainLoopInit117B2Subs`, etc.), big-endian RAM helpers, signed-compare guard `i8()` su byte counter (M68k `bgt` semantics).
 
 Test totali: 9 smoke + 2 parity. Vedi [`docs/codex-task-a-main-loop-init.md`](docs/codex-task-a-main-loop-init.md).
 
-**Conteggio finale**: 187/314 bit-perfect = 185 (Claude Code) + 2 (Codex). Gli scheletri Codex (1101E, 10504) NON sono conteggiati come bit-perfect finché non hanno parity 500/500.
+**Conteggio finale**: 188/314 bit-perfect = 185 (Claude Code) + 3 (Codex: 117B2, 11452, 1101E). Lo scheletro 10504 NON è ancora conteggiato come bit-perfect finché non ha parity 500/500.
 
 Tooling sviluppato:
 - `tools/watch_write.lua`: write-tap MAME su regione workRam

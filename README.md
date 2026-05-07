@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 60% del binario replicato bit-perfect** (187/314 sub-systems), bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo.
+**Status:** **🎯 60% del binario replicato bit-perfect** (188/314 sub-systems), bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,8 +11,8 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Sub-systems replicati bit-perfect | **187 / 314** (60%) |
-| Differential test cases | >85.000 random cases tutti 100% match vs musashi-wasm |
+| Sub-systems replicati bit-perfect | **188 / 314** (60%) |
+| Differential test cases | >85.500 random cases tutti 100% match vs musashi-wasm |
 | Vitest | **111 file / 888 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (Task A: main loop init chain) |
@@ -29,10 +29,10 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | **String / HUD render** | ✅ render-string-entry-286B0/28F62/28FA0/28FDE, format-and-render, render-glyph-loop, dispatch-strings |
 | **EEPROM / pacing** | ✅ eepromCommit, eepromCommitRequest |
 | **Slapstic** | ✅ lookup + table store |
-| **Boot/main loop init chain** | ✅ FUN_117B2 + FUN_11452 (Codex) replicati bit-perfect; FUN_1101E + FUN_10504 (Codex) come scheletri stub-injection (parity TBD) |
+| **Boot/main loop init chain** | ✅ FUN_117B2 + FUN_11452 + FUN_1101E (Codex) replicati bit-perfect; FUN_10504 (Codex) come scheletro stub-injection (parity TBD) |
 | **Funzioni totali** | 314 (escludendo 29 thunks) |
-| **Replicate bit-perfect** | **187** (60%) |
-| **Differential test cases** | >85.000 random cases tutti 100% match |
+| **Replicate bit-perfect** | **188** (60%) |
+| **Differential test cases** | >85.500 random cases tutti 100% match |
 
 ## Track B — Classic Renderer
 
@@ -112,7 +112,7 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 
 | Pacchetto | Ruolo |
 |---|---|
-| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **187 moduli replicati bit-perfect**. |
+| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **188 moduli replicati bit-perfect**. |
 | `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL + ~95 parity test vs binary. |
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |
