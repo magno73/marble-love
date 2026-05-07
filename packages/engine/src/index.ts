@@ -222,6 +222,7 @@ export * as render from "./render.js";
 export * as audio from "./audio.js";
 export * as trace from "./trace.js";
 export * as irqVectorThunks from "./irq-vector-thunks.js";
+export * as gameModePrep10456 from "./game-mode-prep-10456.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
