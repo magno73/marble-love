@@ -8,6 +8,7 @@ import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 import { clearPlayfieldOther12186 } from "./clear-playfield-other-12186.js";
+import { playerSlotIter118D2 } from "./player-slot-iter-118d2.js";
 
 const WRAM = 0x00400000;
 
@@ -119,6 +120,10 @@ function init10504(state: GameState, subs: MainLoopInit1101ESubs): void {
   (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs)))(state);
 }
 
+function helper118D2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
+  (subs.helper118D2 ?? ((s) => rom !== undefined ? playerSlotIter118D2(s, rom) : undefined))(state);
+}
+
 function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit1101ESubs): void {
   wb(state, 0x00400086, 0xff);
   subs.soundCmd?.(state, 2);
@@ -223,7 +228,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   wb(state, 0x0040039a, 1);
   addByte(state, 0x004003f0, 1);
   ww(state, 0x00400394, rw(state, 0x00400394) + 1);
-  subs.helper118D2?.(state);
+  helper118D2(state, subs, rom);
   wb(state, 0x00400460, 0xff);
   subs.vblankAck?.(state);
   subs.clearPaletteRam?.(state);
