@@ -9,6 +9,7 @@
 
 import type { GameState } from "./state.js";
 import { slotArrayBulkInit } from "./slot-array-init.js";
+import { randomMod13A98 } from "./random-mod-13a98.js";
 
 const WRAM = 0x00400000;
 
@@ -200,7 +201,7 @@ export function mainLoopInit10504(
   }
   wb(state, 0x004003a4, 0xff);
   wb(state, 0x0040076c, 1);
-  wb(state, 0x00400444, (subs.randomMod?.(state, 0x100) ?? 0) & 0xff);
+  wb(state, 0x00400444, (subs.randomMod ?? randomMod13A98)(state, 0x100) & 0xff);
 }
 
 function runPresentationMiddle(
