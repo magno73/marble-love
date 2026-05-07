@@ -94,7 +94,13 @@ function maskHelperAfter(n: number): u16 {
  *   1. Avanza state di N=bit_length(limit) step
  *   2. mask = D3.lo dopo N rotazioni
  *   3. result = state & mask
- *   4. while result > limit: result -= limit
+ *   4. while result >= limit: result -= limit
+ *
+ * NB: il binario @ 0x13AD0 fa `cmp.w D0,D1; bgt done; sub.w D1,D0; bra loop`,
+ * quindi exit quando D1 > D0 (= result > limit). Equivalente a `while
+ * result <= limit: sub`. Per result == limit: result -= limit → 0 (corretto
+ * per modulo). La condizione qui è quindi `>=` (era `>` — bug latente:
+ * quando result == limit avremmo ritornato limit invece di 0).
  */
 export function rngNext(rstate: RngState, limit: u16): u16 {
   const limit_n = limit as unknown as number;
@@ -120,9 +126,13 @@ export function rngNext(rstate: RngState, limit: u16): u16 {
   rstate.seed = as_u32(seed_new as unknown as number);
 
   // Range-limit
+  // NB: il binario fa `bgt done` (exit quando D1 > D0 signed), quindi continua
+  // il loop finché result <= limit. Per ottenere modulo standard `[0, limit)`
+  // la condizione qui è `>=` (era `>`, bug latente: quando result == limit
+  // ritornava limit invece di 0). Vedi disasm @ 0x13AD0.
   const mask = maskHelperAfter(n);
   let r = (seed_new as unknown as number) & (mask as unknown as number);
-  while (r > limit_n) {
+  while (r >= limit_n) {
     r -= limit_n;
   }
 
