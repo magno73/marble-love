@@ -365,9 +365,12 @@ function buildDebugLabel(options: BuildFrameOptions): string | undefined {
  *  Default conservativo: palette/alpha soltanto. Gli sprite da motion-object RAM
  *  sono opt-in finché bank/register video e priority merge non sono persistenti. */
 export function buildFrame(state: GameState, options: BuildFrameOptions = {}): Frame {
+  // Playfield RAM: usa state.playfieldRam come default; options.playfieldRam
+  // override (es. demo fixtures). Lookups sempre da options (richiede ROM).
+  const pfRam = options.playfieldRam ?? state.playfieldRam;
   const playfield =
-    options.playfieldRam !== undefined && options.playfieldLookups !== undefined
-      ? buildPlayfieldFromRam(options.playfieldRam, options.playfieldLookups)
+    options.playfieldLookups !== undefined && pfRam !== undefined
+      ? buildPlayfieldFromRam(pfRam, options.playfieldLookups)
       : [];
   const sprites =
     options.motionObjects === "linked-list"
