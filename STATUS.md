@@ -8,11 +8,11 @@
 | Metrica | Valore |
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~270 verificate bit-perfect via parity 500/500 |
-| Vitest | **163 file / 1266 test** verde |
+| Vitest | **164 file / 1268 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
-| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap 1A9CC) |
+| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap 1A9CC/1A444) |
 
 ## Fase corrente
 
@@ -128,7 +128,9 @@ Dopo 300 tick:
 3. Far passare `playfieldRam` opt-in a `buildFrame` dal renderer web
 
 Commit `renderer.draw` aggiornato per passare motion-object lookups, ma il tilemap playfield richiede modello state esteso.
-Codex Task A renderer/playfield: `packTilemapEntries1A9CC` (`FUN_1A9CC`) aggiunto come wrapper playfield-facing, parity 500/500 vs musashi-wasm; API TS usa `destOffsetInPlayfield` e scrive in `state.playfieldRam`.
+Codex renderer/playfield chain:
+- `packTilemapEntries1A9CC` (`FUN_1A9CC`) aggiunto come wrapper playfield-facing, parity 500/500 vs musashi-wasm; API TS usa `destOffsetInPlayfield` e scrive in `state.playfieldRam`.
+- `buildTilemapRows1A444` (`FUN_1A444`) aggiunto come skeleton row-builder con stub injection per `FUN_2FFB8`/`FUN_1AD54`/`FUN_1AA38` e pack finale reale via `FUN_1A9CC`; parity 500/500 sul path terminante zero-entry.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
