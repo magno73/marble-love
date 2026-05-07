@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
@@ -14,8 +14,14 @@ function rng(seed: number): () => number {
 }
 
 async function main(): Promise<void> {
-  const n = Number(process.argv[2] ?? "100");
-  const rom = readFileSync(resolve("ghidra_project/marble_program.bin"));
+  const n = Number(process.argv[2] ?? "500");
+  const romPath = [
+    process.env.MARBLE_ROM_BLOB,
+    resolve("ghidra_project/marble_program.bin"),
+    resolve("../marble-love/ghidra_project/marble_program.bin"),
+  ].find((p): p is string => p !== undefined && existsSync(p));
+  if (romPath === undefined) throw new Error("ROM blob not found");
+  const rom = readFileSync(romPath);
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xab7c);

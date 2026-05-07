@@ -90,7 +90,7 @@ async function main(): Promise<void> {
     writeBothWord(cpu, binState, tsState, WORK_RAM_BASE + 0x0664, Math.floor(rng() * 0x10000));
 
     callFunction(cpu, FUN_16EC6, [], 500_000);
-    levelNs.levelDispatcher16EC6(tsState, tsRom);
+    levelNs.levelDispatcher16EC6(tsState, tsRom, { fun_18fd0: () => undefined });
 
     let match = true;
     for (const off of COMPARE_OFFSETS) {
