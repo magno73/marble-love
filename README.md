@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~270+ bit-perfect via parity 500/500, resto via metadata thunks). Bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 165 test files / 1265 vitest verde.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~270+ bit-perfect via parity 500/500, resto via metadata thunks). Bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 165 test files / 1271 vitest verde.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -13,7 +13,7 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%, ~270 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **165 file / 1265 test** verde |
+| Vitest | **165 file / 1271 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap/level chain 1A9CC/1A444/16EC6) |
 
