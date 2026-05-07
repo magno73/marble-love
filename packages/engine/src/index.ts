@@ -202,6 +202,7 @@ export * as tilemapBlit17044 from "./tilemap-blit-17044.js";
 export * as bootScreenInit from "./boot-screen-init.js";
 export * as mainLoopInit117B2 from "./main-loop-init-117b2.js";
 export * as clearPlayfieldRam12174 from "./clear-playfield-ram-12174.js";
+export * as clearPlayfieldOther12186 from "./clear-playfield-other-12186.js";
 export * as moGridInit2404 from "./mo-grid-init-2404.js";
 export * as spritePairCoordAdd1D82 from "./sprite-pair-coord-add-1d82.js";
 export * as processAllSprites189E2 from "./process-all-sprites-189e2.js";
