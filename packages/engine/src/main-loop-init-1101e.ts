@@ -35,13 +35,6 @@ function rl(state: GameState, addr: number): number {
     ((state.workRam[off(addr) + 2] ?? 0) << 8) | (state.workRam[off(addr) + 3] ?? 0)) >>> 0);
 }
 
-function wl(state: GameState, addr: number, value: number): void {
-  state.workRam[off(addr)] = (value >>> 24) & 0xff;
-  state.workRam[off(addr) + 1] = (value >>> 16) & 0xff;
-  state.workRam[off(addr) + 2] = (value >>> 8) & 0xff;
-  state.workRam[off(addr) + 3] = value & 0xff;
-}
-
 function readRomByte(rom: RomImage | undefined, addr: number): number {
   return rom?.program[addr] ?? 0;
 }
@@ -52,6 +45,7 @@ function addByte(state: GameState, addr: number, value: number): void {
 
 export interface MainLoopInit1101ESubs {
   soundCmd?: (state: GameState, cmd: number) => void;
+  textPrint0118?: (state: GameState, textPtr: number) => void;
   sceneInit11428?: (state: GameState) => void;
   init10504?: (state: GameState) => void;
   init11452?: (state: GameState) => void;
@@ -72,6 +66,7 @@ export interface MainLoopInit1101ESubs {
   helper118D2?: (state: GameState) => void;
   clearPaletteRam?: (state: GameState) => void;
   clearMoAlphaRam?: (state: GameState) => void;
+  clearOther12186?: (state: GameState) => void;
   initFnPointers28580?: (state: GameState) => void;
   clearAlphaTiles28C7E?: (state: GameState) => void;
   sceneObjInit28CA6?: (state: GameState) => void;
@@ -97,13 +92,13 @@ export function mainLoopInit1101E(
       case1(state, subs);
       return;
     case 2:
-      case2(state, subs);
-      return;
-    case 3:
       case3(state, subs);
       return;
-    case 4:
+    case 3:
       case4(state, rom, subs);
+      return;
+    case 4:
+      case2(state, subs);
       return;
     case 5:
       case5(state, rom, subs);
@@ -138,15 +133,15 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
 
 function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
   if (rb(state, 0x004003ee) === 1 && rw(state, 0x004003ea) >= 0x18) {
-    subs.soundCmd?.(state, 0x22a56);
-    subs.soundCmd?.(state, 0x22a62);
-    subs.soundCmd?.(state, 0x22a6e);
+    subs.textPrint0118?.(state, 0x22a56);
+    subs.textPrint0118?.(state, 0x22a62);
+    subs.textPrint0118?.(state, 0x22a6e);
     ww(state, 0x0040075a, 0xffff);
   } else if (rb(state, 0x004003ee) === 0 && rw(state, 0x004003ea) >= 0x0c) {
     ww(state, 0x0040075a, 0xffff);
   }
 
-  if (rw(state, 0x0040075a) === 0x00ff) {
+  if (rw(state, 0x0040075a) === 0xffff) {
     if (rw(state, 0x00400392) !== 2) {
       wb(state, 0x00400086, 0xff);
       ww(state, 0x00400392, 2);
@@ -198,10 +193,8 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs): void {
   subs.gameStateBanner26B2A?.(state, 0);
   const a = subs.helper001C6?.(state, rl(state, 0x004000d4)) ?? 0;
   const b = subs.helper001C6?.(state, rl(state, 0x004001b6)) ?? 0;
-  if (a === b) {
-    if (rl(state, 0x004001b6) > rl(state, 0x004000d4)) wl(state, 0x004000d4, 0);
-    else wl(state, 0x004001b6, 0);
-  }
+  void a;
+  void b;
   const p0 = subs.helper11B18?.(state, 0x00400018) ?? 0;
   const p1 = subs.helper11B18?.(state, 0x004000fa) ?? 0;
   ww(state, 0x00400394, 1);
@@ -232,12 +225,16 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   wb(state, 0x00400460, 0xff);
   subs.vblankAck?.(state);
   subs.clearPaletteRam?.(state);
-  subs.clearMoAlphaRam?.(state);
+  subs.clearOther12186?.(state);
   subs.initFnPointers28580?.(state);
   subs.clearAlphaTiles28C7E?.(state);
   subs.sceneObjInit28CA6?.(state);
-  if (rw(state, 0x00400394) > 5) ww(state, 0x00400390, 6);
-  else init10504(state, subs);
+  if (rw(state, 0x00400394) > 5) {
+    ww(state, 0x00400390, 6);
+  } else {
+    init10504(state, subs);
+    ww(state, 0x00400390, 0);
+  }
   void rom;
 }
 
@@ -257,10 +254,10 @@ function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
 
 export const MAIN_LOOP_INIT_1101E_ADDR = 0x0001101e as const;
 export const MAIN_LOOP_INIT_1101E_SUB_ADDRS = [
-  0x000158ac, 0x00011428, 0x00010504, 0x00010fce, 0x00010456,
+  0x000158ac, 0x00000118, 0x00011428, 0x00010504, 0x00010fce, 0x00010456,
   0x00016ec6, 0x00011452, 0x00028dea, 0x00016a20, 0x00028232,
   0x00011654, 0x0000019c, 0x00026b2a, 0x000001c6, 0x00011b18,
   0x00000160, 0x000288f8, 0x00015884, 0x000118d2, 0x000121a6,
-  0x00012174, 0x00028580, 0x00028c7e, 0x00028ca6, 0x00018a88,
-  0x00028db8,
+  0x00012174, 0x00012186, 0x00028580, 0x00028c7e, 0x00028ca6,
+  0x00018a88, 0x00028db8,
 ] as const;
