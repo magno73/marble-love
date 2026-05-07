@@ -9,6 +9,8 @@ import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 import { clearPlayfieldOther12186 } from "./clear-playfield-other-12186.js";
 import { playerSlotIter118D2 } from "./player-slot-iter-118d2.js";
+import { gameModePrep10456 } from "./game-mode-prep-10456.js";
+import { finalize11654 } from "./finalize-11654.js";
 
 const WRAM = 0x00400000;
 
@@ -132,7 +134,7 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.sceneInit11428?.(state);
   subs.soundCmd?.(state, rw(state, 0x00400396) === 1 ? 0x62 : 0x63);
   ww(state, 0x00400394, readRomByte(rom, 0x0001f1c8));
-  subs.gameModePrep10456?.(state);
+  (subs.gameModePrep10456 ?? gameModePrep10456)(state);
   (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
   init10504(state, subs);
   ww(state, 0x00400390, 0);
@@ -154,7 +156,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
       ww(state, 0x00400392, 2);
       init11452(state, subs);
     } else {
-      subs.helper11654?.(state);
+      (subs.helper11654 ?? finalize11654)(state);
     }
     ww(state, 0x0040075a, 0);
   }

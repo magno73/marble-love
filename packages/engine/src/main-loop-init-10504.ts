@@ -10,6 +10,8 @@
 import type { GameState } from "./state.js";
 import { slotArrayBulkInit } from "./slot-array-init.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
+import { soundMaybe11AC2 } from "./sound-maybe-11ac2.js";
+import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
 
 const WRAM = 0x00400000;
 
@@ -119,7 +121,7 @@ export function mainLoopInit10504(
   wb(state, 0x0040076a, 0);
 
   if (gameMode === 2) {
-    subs.soundMaybe11AC2?.(state);
+    (subs.soundMaybe11AC2 ?? soundMaybe11AC2)(state);
   }
 
   const scrollBase = 0x0040097c;
@@ -129,7 +131,7 @@ export function mainLoopInit10504(
     subs.scrollRange144E4?.(state, scrollBase - 0x19, scrollBase);
   }
 
-  subs.stateDispatch12FD0?.(state);
+  (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
   wb(state, 0x0040039a, 1);
   subs.vblankAck?.(state);
   subs.helper1344C?.(state);

@@ -7,6 +7,8 @@ import type { RomImage } from "./bus.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
 import { helper11FF8Default } from "./helper-11ff8.js";
+import { gameModePrep10456 } from "./game-mode-prep-10456.js";
+import { finalize11654 } from "./finalize-11654.js";
 
 const WRAM = 0x00400000;
 
@@ -98,7 +100,7 @@ export function mainLoopInit11452(
     }
   }
 
-  subs.finalize11654?.(state);
+  (subs.finalize11654 ?? finalize11654)(state);
 }
 
 function state11452Case0(
@@ -128,7 +130,7 @@ function state11452Case0(
   const gameMode = rw(state, 0x00400394);
   wl(state, 0x00400446, readRomLong(rom, 0x0001d364 + gameMode * 4));
   ww(state, 0x00400396, 1);
-  subs.gameModePrep10456?.(state);
+  (subs.gameModePrep10456 ?? gameModePrep10456)(state);
   (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
   if (rw(state, 0x00400390) === 1) {
     (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs)))(state);
