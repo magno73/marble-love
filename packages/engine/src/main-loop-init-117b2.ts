@@ -6,6 +6,8 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { mainLoopInit1101E, type MainLoopInit1101ESubs } from "./main-loop-init-1101e.js";
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
+import { randomMod13A98 } from "./random-mod-13a98.js";
+import { bootHelper1464ADefault } from "./boot-helper-1464a.js";
 export { mainLoopInit1101E, type MainLoopInit1101ESubs } from "./main-loop-init-1101e.js";
 export { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 export { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
@@ -68,7 +70,7 @@ export function mainLoopInit117B2(
   wb(state, 0x004003f4, 0);
   wb(state, 0x004003f2, 0);
   wb(state, 0x004003f0, 0);
-  subs.bootHelper1464A?.(state);
+  (subs.bootHelper1464A ?? bootHelper1464ADefault)(state);
   ww(state, 0x00400390, 1);
   wb(state, 0x004003e4, 0);
   ww(state, 0x00400394, 1);
@@ -122,7 +124,7 @@ export function mainLoop117B2LoopBody(
     if (rw(state, 0x004003b8) === 0) subs.softReset100E0?.(state);
   }
 
-  subs.randomMod13A98?.(state, 0x100);
+  (subs.randomMod13A98 ?? randomMod13A98)(state, 0x100);
   subs.lateLogic26F3E?.(state);
   if (rb(state, 0x00400016) === 0) subs.vblankAck?.(state);
   wb(state, 0x0040039a, 1);
