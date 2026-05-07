@@ -183,6 +183,7 @@ export * as bsearchTable1ABD4 from "./bsearch-table-1abd4.js";
 export * as keyRankLookup4686 from "./key-rank-lookup-4686.js";
 export * as scoreTableUpdate4790 from "./score-table-update-4790.js";
 export * as tilemapEntryPack1A9CC from "./tilemap-entry-pack-1a9cc.js";
+export * as tilemapRowBuild1A444 from "./tilemap-row-build-1a444.js";
 export * as sortAdjacentObjects1A7A8 from "./sort-adjacent-objects-1a7a8.js";
 export * as decodeBitstream1A668 from "./decode-bitstream-1a668.js";
 export * as moBlockEmit1A8D2 from "./mo-block-emit-1a8d2.js";
