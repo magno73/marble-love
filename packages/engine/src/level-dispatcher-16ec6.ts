@@ -10,6 +10,7 @@
 import type { RomImage } from "./bus.js";
 import { levelDispatcherHelper18FD0 } from "./level-dispatcher-helper-18fd0.js";
 import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
+import { buildTilemapRows1A444 } from "./tilemap-row-build-1a444.js";
 import type { GameState } from "./state.js";
 
 export const LEVEL_DISPATCHER_16EC6_ADDR = 0x00016ec6 as const;
@@ -130,7 +131,8 @@ export function levelDispatcher16EC6(
   const binsearchBase = readAbsU32(state, rom, statePtr + 0x26);
   writeU32(state, BINSEARCH_BASE_PTR_OFF, binsearchBase);
 
-  subs?.fun_1a444?.();
+  if (subs?.fun_1a444) subs.fun_1a444();
+  else buildTilemapRows1A444(state, rom);
 
   let timerValue = signExtendWord(readAbsU16(state, rom, statePtr + 0x10));
   if (levelIndex === 4) {
