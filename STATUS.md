@@ -8,11 +8,11 @@
 | Metrica | Valore |
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~270 verificate bit-perfect via parity 500/500 |
-| Vitest | **164 file / 1268 test** verde |
+| Vitest | **165 file / 1265 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
-| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap 1A9CC/1A444) |
+| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap/level chain 1A9CC/1A444/16EC6) |
 
 ## Fase corrente
 
@@ -93,11 +93,11 @@ Watch_write su MAME (level1_basic_movement, frame 50-200) ha rivelato:
 
 - **frame 108**: `FUN_12174` (`clearPlayfieldRam12174`) cancella 8 KB → REPLICATO ✅ commit `bd2bb` leaf trivial
 - **frame 110-200**: i WRITES di tile data vengono dalla chain
-  - `FUN_1101E` (Codex ✅) ─→ `FUN_16EC6` (TODO) ─→ `FUN_1A444` (TODO) ─→ `FUN_1A9CC` (✅ `packTilemapEntries1A9CC`)
+  - `FUN_1101E` (Codex ✅) ─→ `FUN_16EC6` (✅ `levelDispatcher16EC6`) ─→ `FUN_1A444` (✅ `buildTilemapRows1A444` skeleton/observable path) ─→ `FUN_1A9CC` (✅ `packTilemapEntries1A9CC`)
   - `FUN_11452` (Codex ✅) ─→ stesso path
   - `FUN_118D2` (alt path, 1 caller solo: FUN_1101E@0x11380) → `FUN_16EC6` condizionale a `cmp.w #6, *0x400394` `ble`
 
-**Cosa manca per popolare playfieldRam**: replicare `FUN_1A444` + `FUN_16EC6`. Il packer leaf `FUN_1A9CC` è già stato replicato come `packTilemapEntries1A9CC` (Codex Task A renderer/playfield).
+**Cosa manca per popolare playfieldRam nel frame reale**: wireup/integration del dispatcher nel path main-loop e completamento dei helper pesanti del row builder (`FUN_1AD54`, `FUN_1AA38`, `FUN_2FFB8`) oltre allo skeleton osservabile già in parity. La chain `FUN_16EC6` → `FUN_1A444` → `FUN_1A9CC` è ora rappresentata in TS con parity 500/500 sui path isolati.
 
 Regioni residue (3 byte tipici per regione 3 dopo timer fix):
 - 0x000: 7 byte (0x0E, 0x86, 0x88-0x89, 0xD8-0xDA = "AAA" pattern hi-score?)
@@ -131,6 +131,7 @@ Commit `renderer.draw` aggiornato per passare motion-object lookups, ma il tilem
 Codex renderer/playfield chain:
 - `packTilemapEntries1A9CC` (`FUN_1A9CC`) aggiunto come wrapper playfield-facing, parity 500/500 vs musashi-wasm; API TS usa `destOffsetInPlayfield` e scrive in `state.playfieldRam`.
 - `buildTilemapRows1A444` (`FUN_1A444`) aggiunto come skeleton row-builder con stub injection per `FUN_2FFB8`/`FUN_1AD54`/`FUN_1AA38` e pack finale reale via `FUN_1A9CC`; parity 500/500 sul path terminante zero-entry.
+- `levelDispatcher16EC6` (`FUN_16EC6`) aggiunto come dispatcher osservabile con stub injection per `FUN_2FFB8`/`FUN_2FF28`/`FUN_18FD0`/`FUN_1A444`; parity 500/500 vs musashi-wasm con JSR patchati a `rts`.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
