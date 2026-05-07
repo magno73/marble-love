@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~270 bit-perfect via parity 500/500, resto via metadata thunks). Bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 156 test files / 1252 vitest verde.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~270+ bit-perfect via parity 500/500, resto via metadata thunks). Bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 163 test files / 1266 vitest verde.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -13,26 +13,26 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%, ~270 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **156 file / 1252 test** verde |
+| Vitest | **163 file / 1266 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
-| Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (Task A: main loop init chain) |
+| Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap 1A9CC) |
 
 ## Track A — Phase 4d (replication bit-perfect)
 
 | Categoria | Status |
 |---|---|
 | **Root game-logic CORE** | ✅ 4/4 (`trackballInputTick`, `gameTickTimers`, `gameMainGate`, `gameStateMachineTick`) |
-| **State machine schedulers** | ✅ Stati 1, 2, 3, 4, 5/6, 7 + state-sub 2BDA/2C60/2DA0/2ABC/2678/520E/525C/5334/535E/540A/5608/1EAA |
+| **State machine schedulers** | ✅ Stati 1, 2, 3, 4, 5/6, 7 + state-sub 2572/2766/2818/295A/2CD4/2BDA/2C60/2DA0/2ABC/2678/520E/525C/5334/535E/540A/5608/1EAA |
 | **Boot init** | ✅ `bootInit` orchestrator + slot-array bulk init + boot screen + spurious handler |
 | **Sound subsystem** | ✅ Wrapper FUN_4CA0 + sub FUN_3E1A/4C3E/4D1A/158AC/15884/4420 (chip writer FUN_4DCC ancora minimal-stub: richiede YM2151) |
-| **Palette / video** | ✅ paletteAnim 1/2/3, paletteQueue, paletteRngFill, palette init, pfScroll, tilemap blit, clear-pf |
+| **Palette / video** | ✅ paletteAnim 1/2/3, paletteQueue, paletteRngFill, palette init, pfScroll, tilemap blit, clear-pf, tilemap entry pack 1A9CC |
 | **String / HUD render** | ✅ render-string-entry-286B0/28F62/28FA0/28FDE, format-and-render, render-glyph-loop, dispatch-strings |
 | **EEPROM / pacing** | ✅ eepromCommit, eepromCommitRequest |
 | **Slapstic** | ✅ lookup + table store |
-| **Boot/main loop init chain** | ✅ FUN_117B2 + FUN_11452 + FUN_1101E (Codex) replicati bit-perfect; FUN_10504 (Codex) come scheletro stub-injection (parity TBD) |
+| **Boot/main loop init chain** | ✅ FUN_117B2 + FUN_11452 + FUN_1101E + FUN_10504 (Codex) replicati bit-perfect |
 | **Funzioni totali** | 314 (escludendo 29 thunks) |
-| **Replicate bit-perfect** | **188** (60%) |
-| **Differential test cases** | >85.500 random cases tutti 100% match |
+| **Replicate bit-perfect** | **~270+** via parity 500/500 (resto metadata thunks) |
+| **Differential test cases** | >100.000 random cases tutti 100% match |
 
 ## Track B — Classic Renderer
 
@@ -90,8 +90,8 @@ Due flussi paralleli operativi:
 
 **2. Codex (OpenAI) in clone separato** via [`docs/codex-prd.md`](./docs/codex-prd.md):
 - Branch `codex/<task>` su GitHub, PR-based merge su main
-- Regole non-interferenza: NO edit a `main-tick.ts`, `boot-init.ts`, `STATUS.md`, `README.md`
-- Task A (main loop init) attualmente in 2 PR già merged: scheletro + parity bit-perfect FUN_117B2/FUN_11452
+- Regole non-interferenza: branch/PR dedicati, niente write su aree possedute da altri agent
+- Task completati: main loop init chain, 5 state-machine subs, tilemap entry pack FUN_1A9CC
 - Marco fa review + integration finale al merge
 
 Vedi `STATUS.md` per il diario dei batch e `docs/codex-task-a-main-loop-init.md` per il progress Codex.
@@ -112,7 +112,7 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 
 | Pacchetto | Ruolo |
 |---|---|
-| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. **188 moduli replicati bit-perfect**. |
+| `@marble-love/engine` | Core logic puro: bus, physics, AI, RNG, level, render-adapter, audio-stub, state. No DOM. Moduli replicati bit-perfect in crescita continua via parity. |
 | `@marble-love/cli`    | Bun/Node runner (`marble-runner`) per produrre trace JSONL + ~95 parity test vs binary. |
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |

@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-06
+**Ultimo update:** 2026-05-07
 **Branch corrente:** `main`.
 
 ## Riepilogo metriche
@@ -8,11 +8,11 @@
 | Metrica | Valore |
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~270 verificate bit-perfect via parity 500/500 |
-| Vitest | **156 file / 1252 test** verde |
+| Vitest | **163 file / 1266 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
-| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (Task A main loop init chain) |
+| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap 1A9CC) |
 
 ## Fase corrente
 
@@ -23,7 +23,7 @@ Due track paralleli su `main`, **bridge attivo**:
 - ✅ Phase 4a-c (RNG, primitive di base)
 - 🎯 **Phase 4d completa al counter**: 350/350 funzioni Ghidra coperte (100%) — di cui 314 sub-functions semantiche + 36 thunks/IRQ entries. Funzioni effettivamente verificate bit-perfect via parity test ≥500/500: ~270
   - 4/4 root game-logic CORE replicati
-  - 6/7 state-machine schedulers (state 1, 2, 3, 4, 5/6, 7)
+  - State-machine schedulers + no-op subs completati: FUN_2572/2766/2818/295A/2CD4 + precedenti state subs
   - >35.000 differential test cases passati al 100%
 
 ### Track B — Classic Renderer (lavoro merged 2026-05-06)
@@ -78,14 +78,14 @@ Steady state (frame 1..100): **8 fields divergenti** (era 29). Da frame 300+ mar
 | 200 | 8 | trackball input attiva, **marble.x/y/vx/vy/vz appaiono divergenti** |
 | 300+ | **28 fields** | gameplay attivo: rng.seed + marble physics + 16 regioni + tutti gli stats |
 
-**Root cause** del salto a 28 fields al frame 200+: physics + RNG consume non funzionante perché:
-- FUN_2572 (state 2 dispatch alt path) — NON replicato
-- FUN_2766 (state 5) — NON replicato
-- FUN_2818 (state 6) — NON replicato
-- FUN_2CD4 (state 3 condition) — NON replicato
-- FUN_295A (Branch A one-shot) — NON replicato
+**Root cause storica** del salto a 28 fields al frame 200+: le 5 sub state-machine mancanti. Stato aggiornato:
+- FUN_2572 (state 2 dispatch alt path) — REPLICATO ✅ 500/500
+- FUN_2766 (state 5) — REPLICATO ✅ 500/500
+- FUN_2818 (state 6) — REPLICATO ✅ 500/500
+- FUN_2CD4 (state 3 condition) — REPLICATO ✅ 500/500
+- FUN_295A (Branch A one-shot) — REPLICATO ✅ 500/500
 
-Senza queste 5 sub state machine, il dispatcher FUN_2E18 non attiva i rami che muovono il marble + consumano RNG. Codex sta replicando queste 5 sub. Quando arrivano, parity level1 dovrebbe ripiombare a baseline 8-9 fields anche post-frame 200.
+Claude ha avviato il wireup in `mainTick`; prossimo step: re-run dei parity scenario `level1_basic_movement` dopo integrazione completa.
 
 Regioni residue (3 byte tipici per regione 3 dopo timer fix):
 - 0x000: 7 byte (0x0E, 0x86, 0x88-0x89, 0xD8-0xDA = "AAA" pattern hi-score?)
@@ -106,16 +106,17 @@ Fix applicati questa sessione:
 
 Dopo 300 tick:
 - ✅ palette: 1017/1024 colori non-zero (descending pattern + bootstrap init)
-- ❌ playfield: 0 (state non modella playfield tilemap RAM @ 0xA00000-0xA01FFF)
+- ❌ playfield: 0 nello smoke attuale (state modella `playfieldRam`, ma servono write game-side/level-load completi)
 - ❌ sprites: 0 (state.spriteRam vuoto, sub-functions di game state machine stubbed)
 - ❌ HUD: 0 (state.alphaRam vuoto, string-render subs stubbed)
 
 **Visivamente**: schermo nero con palette caricata. Per vedere qualcosa serve:
 1. Replicare le sub di gameStateMachineTick che popolano spriteRam/alphaRam
-2. Aggiungere `state.playfieldRam` (8 KB) e replicare i write game-side
+2. Replicare i write game-side verso `state.playfieldRam` (8 KB)
 3. Far passare `playfieldRam` opt-in a `buildFrame` dal renderer web
 
 Commit `renderer.draw` aggiornato per passare motion-object lookups, ma il tilemap playfield richiede modello state esteso.
+Codex Task A renderer/playfield: `packTilemapEntries1A9CC` (`FUN_1A9CC`) aggiunto come wrapper playfield-facing, parity 500/500 vs musashi-wasm; API TS usa `destOffsetInPlayfield` e scrive in `state.playfieldRam`.
   - **FUN_10392** (~110 writes, init slot arrays a 0x4019F8/0x401890/0x401482/0x401302/0x4009A4/0x400A9C) — REPLICATO ✅ 1/1 vs binary, integrato in `bootInit` (riduce da 24 a 6 regioni divergenti al frame 1).
   - **FUN_4D1A** (~12 writes/tick) — IRQ2/IRQ6 handler input MMIO 0xFC0001 (RTE confermato), legge bottoni e scrive struct a 0x401F44.
   - Replicati ✅: FUN_2E18, FUN_28A96, FUN_28972, FUN_26BEE/26C78/26B88, FUN_1AC18, FUN_28788 (mainTick orch).
