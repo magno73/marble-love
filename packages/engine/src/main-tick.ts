@@ -41,6 +41,11 @@ import { soundStatusCheck } from "./sound-status-check.js";
 import { auxTimer } from "./aux-timer.js";
 import { specialAttract } from "./special-attract.js";
 import { eepromCommit } from "./eeprom-commit.js";
+import { stateSub2ABC } from "./state-sub-2abc.js";
+import { stateSub2678 } from "./state-sub-2678.js";
+import { stateSub2BDA } from "./state-sub-2bda.js";
+import { stateSub2DA0 } from "./state-sub-2da0.js";
+import { stateSub2C60 } from "./state-sub-2c60.js";
 import { paletteAnim1Tick, paletteAnim2Tick } from "./palette-anim.js";
 import { paletteAnim3Tick, paletteQueueDrain } from "./palette-queue.js";
 import { gameStateMachineTick } from "./game-state-machine.js";
@@ -132,7 +137,17 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   paletteAnim3Tick(state);
   paletteQueueDrain(state, rom);
 
-  gameStateMachineTick(state, rom, opts.stateMachineSubs);
+  // Default state-machine subs: chiama le sub replicate. 5 su 10 sub
+  // disponibili (2abc/2678/2bda/2da0/2c60). Le restanti (295a/2572/2cd4/
+  // 2766/2818) restano no-op finché non vengono replicate.
+  const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
+    fun_2abc: (argLong) => stateSub2ABC(state, rom, argLong),
+    fun_2678: (argLong) => stateSub2678(state, argLong),
+    fun_2bda: (a1, a2, a3) => { stateSub2BDA(state, a1, a2, a3); },
+    fun_2da0: (a1, a2) => stateSub2DA0(state, rom, a1, a2),
+    fun_2c60: (a1, a2) => { stateSub2C60(state, a1, a2); },
+  };
+  gameStateMachineTick(state, rom, stateMachineSubs);
 
   // FUN_4CA0 (sound dispatcher wrapper, replicato).
   // Sub FUN_3E1A e FUN_4C3E ora replicate bit-perfect; FUN_4DCC ancora STUB
