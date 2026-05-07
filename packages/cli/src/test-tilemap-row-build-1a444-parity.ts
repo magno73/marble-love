@@ -162,7 +162,7 @@ async function main(): Promise<void> {
     for (let j = 0; j < 0x30; j += 2) writeBothWord(cpu, binState, tsState, 0x00400478 + j, Math.floor(rng() * 0x10000));
 
     callFunction(cpu, FUN_1A444, [], 2_000_000);
-    rowNs.buildTilemapRows1A444(tsState, tsRom);
+    rowNs.buildTilemapRows1A444(tsState, tsRom, { fun_1aa38: () => undefined });
 
     let match = true;
     for (const off of compareOffsets) {
