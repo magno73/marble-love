@@ -152,6 +152,7 @@ export * as specialAttract from "./special-attract.js";
 export * as soundPair15884 from "./sound-pair-15884.js";
 export * as objectUpdatePair158CC from "./object-update-pair-158cc.js";
 export * as sceneInit11428 from "./scene-init-11428.js";
+export * as sceneObjInit28CA6 from "./scene-obj-init-28ca6.js";
 export * as objDirtyDispatch28624 from "./obj-dirty-dispatch-28624.js";
 export * as hudFrameInit283C2 from "./hud-frame-init-283c2.js";
 export * as levelFractionRender28232 from "./level-fraction-render-28232.js";
