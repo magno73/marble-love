@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte e ~350 bit-perfect via parity 500/500** (resto via metadata thunks). Chain playfield + HUD ASCII "SCORE" + Frame.playfield 1375 tile reali Level 1 attivi. Web frontend real rendering. **220 test files / 1866 vitest verde**.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte e ~355 bit-perfect via parity 500/500** (resto via metadata thunks). Chain playfield + HUD ASCII "SCORE" + Frame.playfield 1375 tile reali Level 1 attivi. Web frontend real rendering. **222 test files / 1890 vitest verde**.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,9 +11,9 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%, ~350 con parity 500/500) |
+| Funzioni Ghidra coperte | **350 / 350** (100%, ~355 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **220 file / 1866 test** verde |
+| Vitest | **222 file / 1890 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
