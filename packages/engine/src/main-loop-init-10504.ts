@@ -17,6 +17,7 @@ import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import type { RomImage } from "./bus.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
 import { objectInit259B4 } from "./object-init-259b4.js";
+import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 
 const WRAM = 0x00400000;
 
@@ -140,7 +141,7 @@ export function mainLoopInit10504(
   (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
   wb(state, 0x0040039a, 1);
   subs.vblankAck?.(state);
-  subs.helper1344C?.(state);
+  (subs.helper1344C ?? ((s) => { if (rom !== undefined) slapsticDispatcher1344C(s, rom); }))(state);
 
   if (gameMode === 0 && rw(state, 0x00400390) !== 1) {
     ww(state, 0x00400000, 0xff10);

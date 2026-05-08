@@ -185,6 +185,7 @@ export * as objectSlotLookup11B18 from "./object-slot-lookup-11b18.js";
 export * as objectScanDispatch251DE from "./object-scan-dispatch-251de.js";
 export * as findNearestTarget2637A from "./find-nearest-target-2637a.js";
 export * as slapsticLookup from "./slapstic-lookup.js";
+export * as slapsticDispatcher1344C from "./slapstic-dispatcher-1344c.js";
 export * as slapsticTableStore from "./slapstic-table-store.js";
 export * as clearPfStride from "./clear-pf-stride.js";
 export * as bsearchTable1ABD4 from "./bsearch-table-1abd4.js";
