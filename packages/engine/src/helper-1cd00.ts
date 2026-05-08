@@ -415,7 +415,6 @@ export function helper1CD00(
   // ── Loop over shape entries ──────────────────────────────────────────────
   let entryRomAddr = shapePtr;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     // L_01CDCC: move.w (a0), -$2(a6) → scale = shape[0..1]
     const nxRaw = readShapeWord(entryRomAddr, 0);

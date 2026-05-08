@@ -299,7 +299,6 @@ function rectListSpawnLoop(
   let a2 = rectListPtr >>> 0;
 
   // Loop @ 0x12E18.
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const rect0 = readByteRom(rom, a2);
     if (rect0 === RECT_END_BYTE) return; // exit to post-loop (0x12EE6)

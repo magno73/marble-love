@@ -29,7 +29,6 @@ import {
 import type { RomImage } from "@marble-love/engine";
 // Direct import from engine src (modulo nuovo non ancora ri-esportato in
 // node_modules @marble-love/engine fino a build/install successive).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import * as oaiNsRaw from "../../engine/src/object-array-init-25b40.js";
 const oaiNs = oaiNsRaw as unknown as {
   objectArrayInit25B40: (
