@@ -228,6 +228,8 @@ export * as helper16E8E from "./helper-16e8e.js";
 export * as helper1E3E from "./helper-1e3e.js";
 export * as helper15FE6 from "./helper-15fe6.js";
 export * as helper3784 from "./helper-3784.js";
+export * as helper3A08 from "./helper-3a08.js";
+export * as helper3A54 from "./helper-3a54.js";
 export * as finalize11654 from "./finalize-11654.js";
 export * as bootHelper1464A from "./boot-helper-1464a.js";
 export * as clearPlayfieldRam12174 from "./clear-playfield-ram-12174.js";
