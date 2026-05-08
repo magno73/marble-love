@@ -20,6 +20,7 @@ export * as paletteQueue from "./palette-queue.js";
 export * as bannerHelper26B66 from "./banner-helper-26b66.js";
 export * as mainLoop from "./main-loop.js";
 export * as eventFlags from "./event-flags.js";
+export * as scrollFlagHelperF6A from "./scroll-flag-helper-f6a.js";
 export * as arrayHelpers from "./array-helpers.js";
 export * as stringFormat from "./string-format.js";
 export * as stringAddrCheck39F0 from "./string-addr-check-39f0.js";
