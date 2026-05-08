@@ -47,6 +47,7 @@ export * as stateSub2DA0 from "./state-sub-2da0.js";
 export * as stateSub28EA from "./state-sub-28ea.js";
 export * as stateSub5200 from "./state-sub-5200.js";
 export * as stateSub520E from "./state-sub-520e.js";
+export * as helper5236 from "./helper-5236.js";
 export * as orFlags5248 from "./or-flags-5248.js";
 export * as stateSub5250 from "./state-sub-5250.js";
 export * as stateSub525C from "./state-sub-525c.js";
@@ -249,6 +250,7 @@ export * as refreshFrame10FCE from "./refresh-frame-10fce.js";
 export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 export * as vblankHelpers from "./vblank-helpers.js";
 export * as scrollRange144E4 from "./scroll-range-144e4.js";
+export * as helper2548 from "./helper-2548.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
