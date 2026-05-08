@@ -212,6 +212,15 @@ export function bootInit(
     state.workRam[0x395] = options.preloadLevel & 0xff;
     clearPlayfieldRam12174(state);
     levelDispatcher16EC6(state, rom);
+
+    // Imposta state machine a 1 (= attract scenario / case 1) per attivare
+    // string render (HUD) durante il game tick. Senza questo, *0x390=0 → case 0
+    // (idle refresh) → niente HUD. Pattern usuale di FUN_117B2 prefix.
+    state.workRam[0x390] = 0;
+    state.workRam[0x391] = 1;
+    // player count = 1 (single player demo)
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
   }
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
