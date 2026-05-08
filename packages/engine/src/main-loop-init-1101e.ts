@@ -11,6 +11,12 @@ import { clearPlayfieldOther12186 } from "./clear-playfield-other-12186.js";
 import { playerSlotIter118D2 } from "./player-slot-iter-118d2.js";
 import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { finalize11654 } from "./finalize-11654.js";
+import { sceneInit11428 } from "./scene-init-11428.js";
+import { specialAttract } from "./special-attract.js";
+import { soundPair15884 } from "./sound-pair-15884.js";
+import { levelFractionRender28232 } from "./level-fraction-render-28232.js";
+import { stateSub16A20 } from "./state-sub-16a20.js";
+import { stateSub18A88 } from "./state-sub-18a88.js";
 
 const WRAM = 0x00400000;
 
@@ -119,7 +125,7 @@ function init11452(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage
 }
 
 function init10504(state: GameState, subs: MainLoopInit1101ESubs): void {
-  (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs)))(state);
+  (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs, {}, rom)))(state);
 }
 
 function helper118D2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
@@ -131,7 +137,7 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.soundCmd?.(state, 2);
   subs.soundCmd?.(state, 0);
   wb(state, 0x004003e2, 0);
-  subs.sceneInit11428?.(state);
+  (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
   subs.soundCmd?.(state, rw(state, 0x00400396) === 1 ? 0x62 : 0x63);
   ww(state, 0x00400394, readRomByte(rom, 0x0001f1c8));
   (subs.gameModePrep10456 ?? gameModePrep10456)(state);
@@ -161,7 +167,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
     ww(state, 0x0040075a, 0);
   }
 
-  subs.helper28232?.(state);
+  (subs.helper28232 ?? ((s) => { if (rom !== undefined) levelFractionRender28232(s, rom); }))(state);
   const timer = rw(state, 0x0040075a);
   if (timer > 0) {
     ww(state, 0x0040075a, timer - 1);
@@ -182,7 +188,7 @@ function case2(state: GameState, subs: MainLoopInit1101ESubs): void {
   wb(state, 0x00400008, 0);
   wb(state, 0x0040039a, 1);
   subs.vblankAck?.(state);
-  subs.helper16A20?.(state);
+  (subs.helper16A20 ?? ((s) => { if (rom !== undefined) { stateSub16A20(s, rom); } }))(state);
   if (rw(state, 0x00400390) !== 0) {
     ww(state, 0x00400390, 2);
     wb(state, 0x00400460, 0xff);
@@ -198,7 +204,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs): void {
   const d3 = rw(state, 0x00400396) === 1 ? 0 : 3 - side;
   subs.helper019C?.(state);
   addByte(state, 0x004003f0, 1);
-  subs.sceneInit11428?.(state);
+  (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
   subs.gameStateBanner26B2A?.(state, 0);
   const a = subs.helper001C6?.(state, rl(state, 0x004000d4)) ?? 0;
   const b = subs.helper001C6?.(state, rl(state, 0x004001b6)) ?? 0;
@@ -211,7 +217,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs): void {
   if (rw(state, 0x004003ea) !== 0xffff) {
     ww(state, 0x004003ea, subs.helper0160?.(state) ?? 0);
   }
-  subs.helper288F8?.(state);
+  (subs.helper288F8 ?? specialAttract)(state);
   wb(state, 0x004003e4, 0);
   ww(state, 0x00400392, 2);
   ww(state, 0x0040075a, 0x0096);
@@ -221,7 +227,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs): void {
 }
 
 function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit1101ESubs): void {
-  subs.soundPair15884?.(state);
+  (subs.soundPair15884 ?? soundPair15884)(state);
   ww(state, 0x00400768, 0xffff);
   if (rw(state, 0x00400394) === 3) subs.soundCmd?.(state, 0x11);
   wb(state, 0x00400008, 0);
@@ -255,7 +261,7 @@ function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
   subs.gameStateBanner26B2A?.(state, 0);
   subs.soundCmd?.(state, 0x1b);
   wb(state, 0x004003e8, 0);
-  subs.helper18A88?.(state);
+  (subs.helper18A88 ?? ((s) => { stateSub18A88(s); }))(state);
   subs.wait28DB8?.(state, 0xb4);
   wb(state, 0x004003e2, 0);
   ww(state, 0x00400390, 2);
