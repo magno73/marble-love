@@ -102,7 +102,11 @@ async function startGame(
   // preloadLevel=0 (level 1) per pre-caricare la tilemap via Codex chain
   // → state.playfieldRam popolata, renderer mostra subito il livello.
   // Solo se ROM reale è disponibile (i lookup ROM tile servono per dispatcher).
-  bootInit(s, tickRom, rom !== undefined ? { preloadLevel: 0 } : {});
+  bootInit(
+    s,
+    tickRom,
+    rom !== undefined ? { preloadLevel: 0, fullScreenInit: true } : {},
+  );
 
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
