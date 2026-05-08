@@ -23,6 +23,8 @@ import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
+import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
+import { sceneObjInit28CA6 } from "./scene-obj-init-28ca6.js";
 
 const WRAM = 0x00400000;
 
@@ -212,7 +214,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   subs.helper019C?.(state);
   addByte(state, 0x004003f0, 1);
   (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
-  subs.gameStateBanner26B2A?.(state, 0);
+  (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   const a = subs.helper001C6?.(state, rl(state, 0x004000d4)) ?? 0;
   const b = subs.helper001C6?.(state, rl(state, 0x004001b6)) ?? 0;
   void a;
@@ -250,7 +252,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
   (subs.initFnPointers28580 ?? ((s) => initFnPointers28580(s, rom)))(state);
   (subs.clearAlphaTiles28C7E ?? clearAlphaTiles28C7E)(state);
-  subs.sceneObjInit28CA6?.(state);
+  (subs.sceneObjInit28CA6 ?? ((s) => { if (rom !== undefined) sceneObjInit28CA6(s, rom); }))(state);
   if (rw(state, 0x00400394) > 5) {
     ww(state, 0x00400390, 6);
   } else {
@@ -264,7 +266,7 @@ function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);
   subs.clearMoAlphaRam?.(state);
-  subs.gameStateBanner26B2A?.(state, 0);
+  (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   subs.soundCmd?.(state, 0x1b);
   wb(state, 0x004003e8, 0);
   (subs.helper18A88 ?? ((s) => { stateSub18A88(s); }))(state);

@@ -13,6 +13,8 @@ import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
+import { sceneInit11428 } from "./scene-init-11428.js";
+import { stateSub2572 } from "./state-sub-2572.js";
 
 const WRAM = 0x00400000;
 
@@ -114,7 +116,7 @@ function state11452Case0(
 ): void {
   subs.soundCmd?.(state, 1);
   wb(state, 0x004003e2, 0);
-  subs.sceneInit11428?.(state);
+  (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
   addByte(state, 0x004003e4, 1);
 
   if (rb(state, 0x004003e4) > 7) {
@@ -142,7 +144,7 @@ function state11452Case0(
 }
 
 function state11452Case2(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11452Subs): void {
-  subs.sceneInit11428?.(state);
+  (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
   (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   (subs.helper26B66 ?? bannerHelper26B66)(state, 0x13);
   ww(state, 0x00400000, 0);
@@ -163,8 +165,11 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
 
 function state11452Case3(state: GameState, subs: MainLoopInit11452Subs): void {
   (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
-  subs.renderString0142?.(state, 0x22d26, 0x3000);
-  subs.renderString0142?.(state, 0x22d32, 0x3400);
+  const renderString0142 = subs.renderString0142 ?? ((s: GameState, ptr: number, tile: number) => {
+    if (rom !== undefined) stateSub2572(s, rom, ptr, tile);
+  });
+  renderString0142(state, 0x22d26, 0x3000);
+  renderString0142(state, 0x22d32, 0x3400);
   ww(state, 0x0040075a, 0x00c8);
   if ((rw(state, 0x004003dc) & 0x4000) !== 0) {
     wb(state, 0x004003e6, 1);
