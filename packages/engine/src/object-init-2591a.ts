@@ -131,6 +131,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { spriteHelper1B9CC } from "./sprite-helper-1b9cc.js";
 
 /** Base assoluta della work RAM (0x400000 nel bus M68k). */
 const WORK_RAM_BASE = 0x400000;
@@ -385,7 +386,7 @@ export function objectInit2591A(
   subs.fun_25B40?.(state, objAbs);
 
   // 0x2599A..0x2599E: FUN_1B9CC(A2, 0)
-  subs.fun_1B9CC?.(state, objAbs, 0);
+  (subs.fun_1B9CC ?? spriteHelper1B9CC)(state, objAbs, 0);
 
   // 0x259A4..0x259A6: FUN_13966(A2)
   subs.fun_13966?.(state, objAbs);
