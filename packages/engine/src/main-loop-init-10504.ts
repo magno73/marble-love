@@ -12,6 +12,9 @@ import { slotArrayBulkInit } from "./slot-array-init.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
 import { soundMaybe11AC2 } from "./sound-maybe-11ac2.js";
 import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
+import { pfScrollEmit26E14 } from "./pf-scroll-emit-26e14.js";
+import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
+import type { RomImage } from "./bus.js";
 
 const WRAM = 0x00400000;
 
@@ -92,6 +95,7 @@ export function mainLoopInit10504(
   state: GameState,
   subs: MainLoopInit10504Subs = {},
   options: MainLoopInit10504Options = {},
+  rom?: RomImage,
 ): void {
   const gameMode = rw(state, 0x00400394);
   const playerCount = rw(state, 0x00400396);
@@ -143,13 +147,14 @@ export function mainLoopInit10504(
 
   subs.levelInit16F6C?.(state);
   subs.objectInit259B4?.(state);
-  subs.lateLogic26F3E?.(state);
-  subs.lateLogic26F3E?.(state);
+  const lateLogic = subs.lateLogic26F3E ?? ((s: GameState) => { if (rom !== undefined) lateGameLogic26F3E(s, rom); });
+  lateLogic(state);
+  lateLogic(state);
   wb(state, 0x0040039a, 1);
   subs.vblankAck?.(state);
 
   if (gameMode === 0 && rw(state, 0x00400390) !== 1) {
-    subs.scrollStep26E14?.(state, rw(state, 0x00400000));
+    (subs.scrollStep26E14 ?? pfScrollEmit26E14)(state, rw(state, 0x00400000));
   }
 
   wb(state, 0x0040039a, 1);

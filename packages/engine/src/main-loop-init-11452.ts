@@ -9,6 +9,7 @@ import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-
 import { helper11FF8Default } from "./helper-11ff8.js";
 import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { finalize11654 } from "./finalize-11654.js";
+import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 
 const WRAM = 0x00400000;
 
@@ -133,7 +134,7 @@ function state11452Case0(
   (subs.gameModePrep10456 ?? gameModePrep10456)(state);
   (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
   if (rw(state, 0x00400390) === 1) {
-    (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs)))(state);
+    (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs, {}, rom)))(state);
   }
 }
 
@@ -149,7 +150,7 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
   subs.vblankAck?.(state);
   subs.helper18CD2?.(state);
   (subs.helper11FF8 ?? ((s: GameState) => helper11FF8Default(s, rom)))(state);
-  subs.tilemapBlit17044?.(state);
+  (subs.tilemapBlit17044 ?? ((s) => { if (rom !== undefined) tilemapBlit17044(rom, s.playfieldRam); }))(state);
   ww(state, 0x0040075a, 0x012c);
   if (rb(state, 0x004003e6) !== 0) {
     subs.soundCmd?.(state, subs.randomMod13A98?.(state, 3) ?? 0);
