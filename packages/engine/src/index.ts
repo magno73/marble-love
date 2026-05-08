@@ -180,6 +180,7 @@ export * as mainTick from "./main-tick.js";
 export * as auxTimer from "./aux-timer.js";
 export * as renderStringEntry28FDE from "./render-string-entry-28fde.js";
 export * as renderStringEntry28F62 from "./render-string-entry-28f62.js";
+export * as renderScore28E3C from "./render-score-28e3c.js";
 export * as renderStringEntry28FA0 from "./render-string-entry-28fa0.js";
 export * as renderStringEntry286B0 from "./render-string-entry-286b0.js";
 export * as objectEnterState23 from "./object-enter-state-23.js";
