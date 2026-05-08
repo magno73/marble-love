@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~330 bit-perfect via parity 500/500, resto via metadata thunks). Chain playfield + HUD score-placeholder end-to-end attive, multi-agent workflow (Claude Code + Codex) operativo. **208 test files / 1694 vitest verde**.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~345 bit-perfect via parity 500/500, resto via metadata thunks). Chain playfield + HUD ASCII "SCORE" + Frame.playfield 1375 tile reali Level 1 attivi. Web frontend real rendering. **218 test files / 1828 vitest verde**.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,13 +11,15 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%, ~330 con parity 500/500) |
+| Funzioni Ghidra coperte | **350 / 350** (100%, ~345 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **208 file / 1694 test** verde |
+| Vitest | **218 file / 1828 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
-| HUD attivato | ✅ alphaRam popolato (score placeholder via renderString286EE wirato come default) |
+| HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
+| **Frame Level 1 reale** | ✅ 1375/4096 tile, 1 sprite, 10 alpha chars (rampa diagonale visibile in ASCII map) |
+| **Web frontend real rendering** | ✅ default con ROM caricata; `?demo=1`/`?engine=1`/`?real=1` per modalità debug |
 | Multi-agent workflow | Claude Code (~150 funzioni / 35+ batch) + Codex (chain playfield 1A9CC/1A444/16EC6 + helpers 2FFB8/1AA38/18FD0/26B66/28C7E/28580/100E0/16F6C/259B4/11B18/1344C + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + state-machine subs) |
 
 ## Track A — Phase 4d (replication bit-perfect)
