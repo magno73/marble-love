@@ -17,6 +17,7 @@ export * as ai from "./ai.js";
 export * as level from "./level.js";
 export * as paletteAnim from "./palette-anim.js";
 export * as paletteQueue from "./palette-queue.js";
+export * as bannerHelper26B66 from "./banner-helper-26b66.js";
 export * as mainLoop from "./main-loop.js";
 export * as eventFlags from "./event-flags.js";
 export * as arrayHelpers from "./array-helpers.js";
