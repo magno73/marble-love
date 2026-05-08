@@ -7,18 +7,19 @@
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~325 verificate bit-perfect via parity 500/500 |
-| Vitest | **203 file / 1619 test** verde |
+| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~330 verificate bit-perfect via parity 500/500 |
+| Vitest | **208 file / 1694 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test + chain playfield end-to-end |
 | `bootInit({preloadLevel})` | ✅ opt-in pre-load level → state.playfieldRam popolato (1500-2900 byte/livello) |
 | `tick({runMainLoopBody})` | ✅ opt-in main-thread loop simulation → spriteRam ~110 byte, workRam attivo |
-| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C) |
+| **HUD attivato** | ✅ alphaRam popolato (~20 byte score placeholder via `renderString286EE` wirato come default in 10504) |
+| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 6 wireup default + helpers 5236/1E3E/2548/3784/286EE) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C) |
 
 ## Sessione 2026-05-08 (recap)
 
-**+47 file di test, +367 test verdi vs inizio sessione** (era 156/1252).
+**+52 file di test, +442 test verdi vs inizio sessione** (era 156/1252).
 
 ### Replicate this session
 - **Refresh chain** (Claude+Sonnet): FUN_10FCE, FUN_13EE6, FUN_1493C, FUN_1912C
