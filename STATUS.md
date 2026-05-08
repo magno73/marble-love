@@ -7,14 +7,41 @@
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~315 verificate bit-perfect via parity 500/500 |
-| Vitest | **194 file / 1550 test** verde |
+| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~325 verificate bit-perfect via parity 500/500 |
+| Vitest | **203 file / 1619 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test + chain playfield end-to-end |
 | `bootInit({preloadLevel})` | ✅ opt-in pre-load level → state.playfieldRam popolato (1500-2900 byte/livello) |
-| `tick({runMainLoopBody})` | ✅ opt-in main-thread loop simulation → state machine evolve, sprites attivi |
-| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette) + Codex (chain playfield + helper16EC6 + sceneObjInit + Cat.1 batch 16-21) |
+| `tick({runMainLoopBody})` | ✅ opt-in main-thread loop simulation → spriteRam ~110 byte, workRam attivo |
+| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C) |
+
+## Sessione 2026-05-08 (recap)
+
+**+47 file di test, +367 test verdi vs inizio sessione** (era 156/1252).
+
+### Replicate this session
+- **Refresh chain** (Claude+Sonnet): FUN_10FCE, FUN_13EE6, FUN_1493C, FUN_1912C
+- **Sub helpers** (Sonnet batch): FUN_11AC2, FUN_16E8E, FUN_12FD0, FUN_10456, FUN_11654, FUN_16A20
+- **Chain dependencies** (Sonnet): FUN_12186, FUN_13A98, FUN_11FF8, FUN_118D2, FUN_1464A
+- **Residue** (Sonnet): FUN_158AC, FUN_28608, FUN_13068, FUN_1B12A, FUN_26F3E
+- **Banner/palette** (Claude): FUN_26B2A, FUN_26B10, FUN_28DEA, FUN_28DB8, FUN_121A6
+- **Text-slot writers** (Claude): FUN_255A, FUN_28F28, FUN_28F62
+- **Codex batch grosso**: FUN_F6A, FUN_52DA, FUN_40D8, FUN_1B9CC, FUN_17CB8, FUN_28E3C
+- **Sonnet large**: FUN_144E4 scrollRange (364 byte)
+
+### Wireup default added
+- 16+ hook nei main-loop-init-* con default callback
+- Chain playfield end-to-end senza stub injection
+- vblankAck wirato in 7 callsites
+- helper16EC6 wirato in 1101e + 11452
+- gameStateBanner26B2A wirato in 11452 case2/case3
+- runMainLoopBody opt → mainTick → mainLoopInit1101E (state machine evolve)
+
+### Bug fix
+- `rngNext` off-by-one in range-limit reduction (commit `caab111`)
+- `1A444` ROM ptr (Codex `c84d8ae`)
+- `init10504/case1/2/3/6` rom propagation
 
 ## Fase corrente
 
