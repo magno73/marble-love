@@ -11,6 +11,7 @@ import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { finalize11654 } from "./finalize-11654.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
+import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 
 const WRAM = 0x00400000;
 
@@ -141,7 +142,7 @@ function state11452Case0(
 
 function state11452Case2(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11452Subs): void {
   subs.sceneInit11428?.(state);
-  subs.gameStateBanner26B2A?.(state, 0);
+  (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   (subs.helper26B66 ?? bannerHelper26B66)(state, 0x13);
   ww(state, 0x00400000, 0);
   ww(state, 0x00400002, 0);
@@ -160,7 +161,7 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
 }
 
 function state11452Case3(state: GameState, subs: MainLoopInit11452Subs): void {
-  subs.gameStateBanner26B2A?.(state, 0);
+  (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   subs.renderString0142?.(state, 0x22d26, 0x3000);
   subs.renderString0142?.(state, 0x22d32, 0x3400);
   ww(state, 0x0040075a, 0x00c8);
