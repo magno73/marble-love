@@ -22,6 +22,7 @@ import { clearPaletteRam121A6, vblankAck28DEA } from "./vblank-helpers.js";
 import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { stateSub2572 } from "./state-sub-2572.js";
 import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
+import { renderString286EE } from "./render-string-286ee.js";
 
 const WRAM = 0x00400000;
 
@@ -181,7 +182,7 @@ export function mainLoopInit10504(
   }))(state);
 
   for (let i = 0; i < playerCount; i++) {
-    subs.renderString?.(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
+    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EE(s, rom, slot, ord); }))(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
   }
 
   (subs.vblankAck ?? vblankAck28DEA)(state);
@@ -209,7 +210,7 @@ export function mainLoopInit10504(
       wl(state, base + 0x00, 0);
       addByte(state, 0x004003e0, 1);
     }
-    subs.renderString?.(state, base + 0x6a, playerCount + i - 1);
+    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EE(s, rom, slot, ord); }))(state, base + 0x6a, playerCount + i - 1);
   }
 
   if (gameMode === 3) {
