@@ -247,6 +247,7 @@ export * as trace from "./trace.js";
 export * as irqVectorThunks from "./irq-vector-thunks.js";
 export * as gameModePrep10456 from "./game-mode-prep-10456.js";
 export * as scriptSlotStep13068 from "./script-slot-step-13068.js";
+export * as helper12896 from "./helper-12896.js";
 export * as lateGameLogic26F3E from "./late-game-logic-26f3e.js";
 export * as refreshHelper1493C from "./refresh-helper-1493c.js";
 export * as refreshHelper1912C from "./refresh-helper-1912c.js";
@@ -257,9 +258,11 @@ export * as vblankHelpers from "./vblank-helpers.js";
 export * as scrollRange144E4 from "./scroll-range-144e4.js";
 export * as helper2548 from "./helper-2548.js";
 export * as helper1C88 from "./helper-1c88.js";
+export * as helper253BC from "./helper-253bc.js";
 export * as helper285B0 from "./helper-285b0.js";
 export * as helper1CD00 from "./helper-1cd00.js";
 export * as absHelpers from "./abs-helpers.js";
+export * as scrollCoordHelpers from "./scroll-coord-helpers.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
