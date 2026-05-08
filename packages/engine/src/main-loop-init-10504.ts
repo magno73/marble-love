@@ -19,6 +19,7 @@ import { levelInit16F6C } from "./level-init-16f6c.js";
 import { objectInit259B4 } from "./object-init-259b4.js";
 import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 import { clearPaletteRam121A6, vblankAck28DEA } from "./vblank-helpers.js";
+import { scrollRange144E4 } from "./scroll-range-144e4.js";
 
 const WRAM = 0x00400000;
 
@@ -134,9 +135,9 @@ export function mainLoopInit10504(
 
   const scrollBase = 0x0040097c;
   if (gameMode === 4) {
-    subs.scrollRange144E4?.(state, scrollBase + 0x19, scrollBase);
+    (subs.scrollRange144E4 ?? ((s, from, to) => scrollRange144E4(s, rom, from, to)))(state, scrollBase + 0x19, scrollBase);
   } else {
-    subs.scrollRange144E4?.(state, scrollBase - 0x19, scrollBase);
+    (subs.scrollRange144E4 ?? ((s, from, to) => scrollRange144E4(s, rom, from, to)))(state, scrollBase - 0x19, scrollBase);
   }
 
   (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
