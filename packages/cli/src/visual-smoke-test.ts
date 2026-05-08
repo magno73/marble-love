@@ -25,17 +25,12 @@ import {
   bootInit,
   tick,
   render as renderNs,
-  clearPlayfieldRam12174 as cprNs,
-  levelDispatcher16EC6 as ldNs,
 } from "@marble-love/engine";
-
-const { clearPlayfieldRam12174 } = cprNs;
-const { levelDispatcher16EC6 } = ldNs;
 
 async function main(): Promise<void> {
   const ticks = Number(process.argv[2] ?? "300");
   const levelArg = process.argv[3];
-  const levelIndex = levelArg !== undefined ? Number(levelArg) : null;
+  const levelIndex = levelArg !== undefined ? Number(levelArg) : undefined;
   const romPath = resolve("ghidra_project/marble_program.bin");
   const romBuf = readFileSync(romPath);
   const rom = busNs.emptyRomImage();
@@ -43,16 +38,9 @@ async function main(): Promise<void> {
 
   const state = stateNs.emptyGameState();
 
-  console.log(`\n=== bootInit ===`);
-  bootInit(state, rom);
-
-  // Optional: pre-load level via Codex chain (per validation rendering).
-  if (levelIndex !== null) {
-    console.log(`\n=== pre-load level ${levelIndex} (Codex chain) ===`);
-    state.workRam[0x394] = (levelIndex >>> 8) & 0xff;
-    state.workRam[0x395] = levelIndex & 0xff;
-    clearPlayfieldRam12174(state);
-    levelDispatcher16EC6(state, rom);
+  console.log(`\n=== bootInit ${levelIndex !== undefined ? `(preloadLevel=${levelIndex})` : ""} ===`);
+  bootInit(state, rom, levelIndex !== undefined ? { preloadLevel: levelIndex } : {});
+  if (levelIndex !== undefined) {
     const pfNonZero = state.playfieldRam.filter((b) => b !== 0).length;
     console.log(`  playfieldRam non-zero: ${pfNonZero}/${state.playfieldRam.length}`);
   }
