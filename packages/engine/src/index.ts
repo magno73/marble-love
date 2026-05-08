@@ -190,6 +190,7 @@ export * as keyRankLookup4686 from "./key-rank-lookup-4686.js";
 export * as scoreTableUpdate4790 from "./score-table-update-4790.js";
 export * as levelDispatcherHelper18FD0 from "./level-dispatcher-helper-18fd0.js";
 export * as levelHelper2FFB8 from "./level-helper-2ffb8.js";
+export * as levelInit16F6C from "./level-init-16f6c.js";
 export * as tilemapEntryPack1A9CC from "./tilemap-entry-pack-1a9cc.js";
 export * as tilemapRowBuild1A444 from "./tilemap-row-build-1a444.js";
 export * as tilemapSpanBuilder1AA38 from "./tilemap-span-builder-1aa38.js";
