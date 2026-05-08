@@ -102,10 +102,15 @@ async function startGame(
   // preloadLevel=0 (level 1) per pre-caricare la tilemap via Codex chain
   // → state.playfieldRam popolata, renderer mostra subito il livello.
   // Solo se ROM reale è disponibile (i lookup ROM tile servono per dispatcher).
+  // fullScreenInit popola lo spriteRam (visibili 2 sprite a 160,160) ma cancella
+  // l'HUD "SCORE" — opt-in via ?fullScreenInit=1.
+  const useFullScreenInit = searchParams.get("fullScreenInit") === "1";
   bootInit(
     s,
     tickRom,
-    rom !== undefined ? { preloadLevel: 0, fullScreenInit: true } : {},
+    rom !== undefined
+      ? { preloadLevel: 0, fullScreenInit: useFullScreenInit }
+      : {},
   );
 
   const renderer = initRenderer(app, rom?.graphics);

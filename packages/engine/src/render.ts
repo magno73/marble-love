@@ -211,6 +211,14 @@ export function buildPlayfieldFromRam(
   for (let index = 0; index < tileCount; index += 1) {
     const offset = index * 2;
     const word = ((playfieldRam[offset] ?? 0) << 8) | (playfieldRam[offset + 1] ?? 0);
+    // Skip "blank" tiles (word=0): in Atari System 1 il PROM lookup per
+    // lookup_index=0 fa fallback a bank=1 offset=0 color=0 = tile placeholder.
+    // Renderizzarlo riempie lo sfondo con il "tile 0" del bank 1 (pattern
+    // verde nel caso di Marble Madness) → strisce visibili. Skippando la
+    // word=0 il viewport mostra correttamente solo i tile "veri" sopra
+    // sfondo nero (background della console). Match MAME (tilemap transparent
+    // pen 0 fallback). Vedi `atarisy1_v.cpp:get_playfield_tile_info`.
+    if (word === 0) continue;
     const fields = decodePlayfieldWord(word);
     const lookup = lookups[fields.lookupIndex];
     if (lookup === undefined) continue;

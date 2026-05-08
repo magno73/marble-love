@@ -54,32 +54,43 @@ function writeU32BE(buf: Uint8Array, off: number, v: number): void {
  *     *0x400002 = *0x400000             ; latch Y target
  *     *0x4003AE = *0x4003B0             ; latch AV-control
  *     *0x40039A = 0                     ; clear flag
- *   *0x820000 = *0x400002               ; MMIO Y scroll
- *   *0x800000 = 0                       ; MMIO X scroll
- *   *0x860000 = *0x4003AE               ; MMIO AV-control
+ *   *0x820000 = *0x400002               ; MMIO Y scroll  (ALWAYS, fuori dall'if)
+ *   *0x800000 = 0                       ; MMIO X scroll  (ALWAYS)
+ *   *0x860000 = *0x4003AE               ; MMIO AV-control (ALWAYS)
  *
- * **NOTA**: nel reimpl puro NON tocchiamo MMIO (no scroll/AV register write).
- * Le scritture MMIO sono responsabilità del rendering layer (PixiJS adapter
- * legge questi cache fields dal state e li applica al render). Quindi questa
- * funzione modifica SOLO la Work RAM.
+ * Le 3 MMIO write sono fuori dall'if. videoScrollX/Y vengono aggiornati ad
+ * ogni chiamata (anche se il flag dirty era 0). Il rendering layer legge
+ * `state.videoScrollX/Y` e applica come scroll a `Frame.scrollX/Y`.
  */
 export function mainUpdateScrollSync(state: GameState): void {
   const flag = state.workRam[SCROLL_DIRTY_FLAG_OFF] ?? 0;
-  if (flag === 0) return;
 
-  // *0x400010 += 1 (long, addq.l #1)
-  let ctr = readU32BE(state.workRam, FRAME_TICK_LONG_OFF);
-  ctr = (ctr + 1) >>> 0;
-  writeU32BE(state.workRam, FRAME_TICK_LONG_OFF, ctr);
+  if (flag !== 0) {
+    // *0x400010 += 1 (long, addq.l #1)
+    let ctr = readU32BE(state.workRam, FRAME_TICK_LONG_OFF);
+    ctr = (ctr + 1) >>> 0;
+    writeU32BE(state.workRam, FRAME_TICK_LONG_OFF, ctr);
 
-  // *0x400002 = *0x400000 (word)
-  state.workRam[SCROLL_Y_LATCHED_OFF] = state.workRam[SCROLL_Y_TARGET_OFF] ?? 0;
-  state.workRam[SCROLL_Y_LATCHED_OFF + 1] = state.workRam[SCROLL_Y_TARGET_OFF + 1] ?? 0;
+    // *0x400002 = *0x400000 (word)
+    state.workRam[SCROLL_Y_LATCHED_OFF] = state.workRam[SCROLL_Y_TARGET_OFF] ?? 0;
+    state.workRam[SCROLL_Y_LATCHED_OFF + 1] = state.workRam[SCROLL_Y_TARGET_OFF + 1] ?? 0;
 
-  // *0x4003AE = *0x4003B0 (word)
-  state.workRam[AV_CONTROL_CACHE_OFF] = state.workRam[AV_CONTROL_NEW_OFF] ?? 0;
-  state.workRam[AV_CONTROL_CACHE_OFF + 1] = state.workRam[AV_CONTROL_NEW_OFF + 1] ?? 0;
+    // *0x4003AE = *0x4003B0 (word)
+    state.workRam[AV_CONTROL_CACHE_OFF] = state.workRam[AV_CONTROL_NEW_OFF] ?? 0;
+    state.workRam[AV_CONTROL_CACHE_OFF + 1] = state.workRam[AV_CONTROL_NEW_OFF + 1] ?? 0;
 
-  // Clear flag
-  state.workRam[SCROLL_DIRTY_FLAG_OFF] = 0;
+    // Clear flag
+    state.workRam[SCROLL_DIRTY_FLAG_OFF] = 0;
+  }
+
+  // ── 3 MMIO write sempre eseguite (fuori dall'if 0x40039A) ──
+  // *0x820000 = *0x400002 (Y scroll MMIO, 9-bit)
+  const yScrollWord =
+    (((state.workRam[SCROLL_Y_LATCHED_OFF] ?? 0) << 8) |
+      (state.workRam[SCROLL_Y_LATCHED_OFF + 1] ?? 0)) & 0xffff;
+  state.videoScrollY = yScrollWord & 0x1ff;
+  // *0x800000 = 0 (X scroll MMIO)
+  state.videoScrollX = 0;
+  // *0x860000 = *0x4003AE — AV control, no field dedicato (renderer legge il
+  // workRam direttamente se necessario per bank-select).
 }
