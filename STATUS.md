@@ -7,8 +7,8 @@
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~350 verificate bit-perfect via parity 500/500 |
-| Vitest | **220 file / 1866 test** verde |
+| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~355 verificate bit-perfect via parity 500/500 |
+| Vitest | **222 file / 1890 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Bridge engine ↔ renderer | ✅ attivo + visual smoke test + chain playfield end-to-end |
