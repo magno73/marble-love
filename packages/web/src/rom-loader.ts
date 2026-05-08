@@ -169,12 +169,23 @@ function validateRequiredEntries(entries: Map<string, Uint8Array>): void {
     .filter((name) => !entries.has(name.toLowerCase()));
 
   if (missing.length > 0) {
-    const missingParentFiles = missing.filter((name) => parentSetFileNames.has(name));
-    const parentHint =
-      missingParentFiles.length > 0
-        ? " The standard split MAME set also needs atarisy1.zip selected alongside marble.zip."
-        : "";
-    throw new Error(`Missing required ROM files: ${missing.join(", ")}.${parentHint}`);
+    const missingParent = missing.filter((name) => parentSetFileNames.has(name));
+    const missingChild = missing.filter((name) => !parentSetFileNames.has(name));
+
+    let hint = "";
+    if (missingParent.length > 0 && missingChild.length === 0) {
+      hint = " Hint: select atarisy1.zip together with marble.zip.";
+    } else if (missingChild.length > 0 && missingParent.length === 0) {
+      hint = " Hint: select marble.zip together with atarisy1.zip.";
+    } else if (missingChild.length > 0 && missingParent.length > 0) {
+      hint = " Hint: select BOTH marble.zip and atarisy1.zip in the file picker (cmd/ctrl+click to multi-select).";
+    }
+
+    const summary =
+      missing.length > 8
+        ? `${missing.slice(0, 8).join(", ")}, … (${missing.length} files total)`
+        : missing.join(", ");
+    throw new Error(`Missing required ROM files: ${summary}.${hint}`);
   }
 }
 

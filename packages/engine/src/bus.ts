@@ -259,11 +259,22 @@ export function write8(bus: Bus, addr: number, value: u8): void {
     return;
   }
 
-  // Video MMIO
-  if (a === MMIO_PF_XSCROLL || a === MMIO_PF_XSCROLL + 1) {
-    return; // tracked by upper layer; no-op here
+  // Video MMIO — playfield scroll registers (9-bit each, big-endian word
+  // at 0x800000 / 0x820000). High byte = bits 8 (clamp), low byte = bits 0..7.
+  if (a === MMIO_PF_XSCROLL) {
+    bus.state.videoScrollX = ((bus.state.videoScrollX & 0x00ff) | (v << 8)) & 0x1ff;
+    return;
   }
-  if (a === MMIO_PF_YSCROLL || a === MMIO_PF_YSCROLL + 1) {
+  if (a === MMIO_PF_XSCROLL + 1) {
+    bus.state.videoScrollX = ((bus.state.videoScrollX & 0x100) | (v & 0xff)) & 0x1ff;
+    return;
+  }
+  if (a === MMIO_PF_YSCROLL) {
+    bus.state.videoScrollY = ((bus.state.videoScrollY & 0x00ff) | (v << 8)) & 0x1ff;
+    return;
+  }
+  if (a === MMIO_PF_YSCROLL + 1) {
+    bus.state.videoScrollY = ((bus.state.videoScrollY & 0x100) | (v & 0xff)) & 0x1ff;
     return;
   }
   if (a === MMIO_PF_PRIORITY || a === MMIO_PF_PRIORITY + 1) {

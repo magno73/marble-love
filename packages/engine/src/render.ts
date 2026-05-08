@@ -384,8 +384,8 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
 
   const frame: Frame = {
     nativeSize: CLASSIC_NATIVE_SIZE,
-    scrollX: options.scrollX ?? 0,
-    scrollY: options.scrollY ?? 0,
+    scrollX: options.scrollX ?? state.videoScrollX,
+    scrollY: options.scrollY ?? state.videoScrollY,
     palette: buildPaletteFromColorRam(state.colorRam),
     playfield,
     sprites,
