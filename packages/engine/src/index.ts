@@ -257,6 +257,7 @@ export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 export * as vblankHelpers from "./vblank-helpers.js";
 export * as scrollRange144E4 from "./scroll-range-144e4.js";
 export * as helper2548 from "./helper-2548.js";
+export * as helper121B8 from "./helper-121b8.js";
 export * as helper1C88 from "./helper-1c88.js";
 export * as helper253BC from "./helper-253bc.js";
 export * as helper25FC2 from "./helper-25fc2.js";
