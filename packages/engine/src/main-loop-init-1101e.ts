@@ -21,6 +21,7 @@ import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { stateSub2678 } from "./state-sub-2678.js";
 import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
+import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
 
 const WRAM = 0x00400000;
 
@@ -215,8 +216,8 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   const b = subs.helper001C6?.(state, rl(state, 0x004001b6)) ?? 0;
   void a;
   void b;
-  const p0 = subs.helper11B18?.(state, 0x00400018) ?? 0;
-  const p1 = subs.helper11B18?.(state, 0x004000fa) ?? 0;
+  const p0 = (subs.helper11B18 ?? objectSlotLookup11B18)(state, 0x00400018);
+  const p1 = (subs.helper11B18 ?? objectSlotLookup11B18)(state, 0x004000fa);
   ww(state, 0x00400394, 1);
   ww(state, 0x00400390, 1);
   if (rw(state, 0x004003ea) !== 0xffff) {
