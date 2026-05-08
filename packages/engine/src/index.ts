@@ -104,6 +104,7 @@ export * as soundCmdGate from "./sound-cmd-gate.js";
 export * as flagScaledMagnitudeDispatch from "./flag-scaled-magnitude-dispatch.js";
 export * as eepromCommit from "./eeprom-commit.js";
 export * as eepromCommitRequest from "./eeprom-commit-request.js";
+export * as eepromHelper40D8 from "./eeprom-helper-40d8.js";
 export * as fieldFetch4058 from "./field-fetch-4058.js";
 export * as hiScoreDecode41c8 from "./hi-score-decode-41c8.js";
 export * as slotArrayInit from "./slot-array-init.js";
