@@ -225,6 +225,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { stringHelper17CB8 } from "./string-helper-17cb8.js";
 
 /** Base assoluta della work RAM (0x400000 nel bus M68k). */
 const WORK_RAM_BASE = 0x400000;
@@ -476,13 +477,13 @@ export function findNearestTarget2637A(
     // Tutti gli arg sono sign-extended a long. pixelX/pixelY sono in
     // [4, 0x7F4] → sign bit non set → sign-ext = zero-ext.
     const losResult =
-      (subs.lineOfSight17CB8?.(
+      ((subs.lineOfSight17CB8 ?? stringHelper17CB8)(
         state,
         objAbs,
         pixelX & 0xffff,
         pixelY & 0xffff,
         FIND_NEAREST_TARGET_2637A_CONSTS.losRange0x180,
-      ) ?? 0) | 0;
+      )) | 0;
     if (losResult !== 0) {
       // 0x2645A: bne.b 0x2647E → blocked, skip
       recAddr = (recAddr + FIND_NEAREST_TARGET_2637A_CONSTS.recordStride) >>> 0;
