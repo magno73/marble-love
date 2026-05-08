@@ -228,6 +228,7 @@ export * as irqVectorThunks from "./irq-vector-thunks.js";
 export * as gameModePrep10456 from "./game-mode-prep-10456.js";
 export * as scriptSlotStep13068 from "./script-slot-step-13068.js";
 export * as lateGameLogic26F3E from "./late-game-logic-26f3e.js";
+export * as refreshHelper1493C from "./refresh-helper-1493c.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
