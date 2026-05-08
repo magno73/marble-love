@@ -102,7 +102,9 @@ async function startGame(
     s.input.trackballDx = dx as typeof s.input.trackballDx;
     s.input.trackballDy = dy as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
-    tick(s, { rom: tickRom, p1X: dx, p1Y: dy });
+    // runMainLoopBody=true se ROM reale: avanza state machine 1101E + refresh10FCE
+    // ad ogni tick → spriteRam/workRam si popolano, gameplay simulation attiva.
+    tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
     if (forceEngineDiagnosticFrame) {
       renderer.drawFrame(
         buildEngineDiagnosticFrame(
