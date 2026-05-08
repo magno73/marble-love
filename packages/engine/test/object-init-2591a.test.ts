@@ -47,7 +47,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
 }
 
 describe("objectInit2591A (FUN_0002591A)", () => {
-  it("scrive i 12 campi diretti su A2 + i 2 globals (default subs no-op)", () => {
+  it("scrive i 12 campi diretti su A2 + i 2 globals con FUN_1B9CC isolata", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -61,7 +61,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     // Pre-fill obj con sentinel non-zero per verificare clear.
     for (let k = 0; k < 0x60; k++) s.workRam[objOff + k] = 0x55;
 
-    objectInit2591A(s, objPtr);
+    objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined });
 
     // 3 long ← 0
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
@@ -129,11 +129,10 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU32BE(s.workRam, objOff + 0x14)).toBe(0xdeadbeef);
   });
 
-  it("default subs={}: non solleva, scritture dirette comunque applicate", () => {
+  it("subs esplicite no-op: non solleva, scritture dirette comunque applicate", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1200;
-    expect(() => objectInit2591A(s, objPtr)).not.toThrow();
-    expect(() => objectInit2591A(s, objPtr, {})).not.toThrow();
+    expect(() => objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined })).not.toThrow();
     // Globals comunque scritti
     expect(readU16BE(s.workRam, 0x696)).toBe(0xffff);
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
@@ -169,7 +168,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
       s.workRam[objOff + Number(off)] = v;
     }
 
-    objectInit2591A(s, objPtr);
+    objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined });
 
     for (const [off, v] of Object.entries(neighbors)) {
       expect(s.workRam[objOff + Number(off)]).toBe(v);
