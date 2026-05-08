@@ -5,7 +5,7 @@ import { exit } from "node:process";
 
 import { state as stateNs, slotSearch, bus as busNs } from "@marble-love/engine";
 import type { RomImage } from "@marble-love/engine";
-import { createCpu, callFunction, pokeMem, peekMem, disposeCpu } from "./binary-oracle-lib.js";
+import { createCpu, callFunction, pokeMem, disposeCpu } from "./binary-oracle-lib.js";
 
 const FUN_FIND = 0x00014bce;
 const FUN_MATCH = 0x00014c0c;
@@ -105,8 +105,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
     // Read rom table to know which workRam pointers
-    const ptr0 = (rom[0x1effe] << 24) | (rom[0x1efff] << 16) | (rom[0x1f000] << 8) | rom[0x1f001];
-    const ptr1 = (rom[0x1f002] << 24) | (rom[0x1f003] << 16) | (rom[0x1f004] << 8) | rom[0x1f005];
+    const ptr0 = (rom[0x1effe]! << 24) | (rom[0x1efff]! << 16) | (rom[0x1f000]! << 8) | rom[0x1f001]!;
+    const ptr1 = (rom[0x1f002]! << 24) | (rom[0x1f003]! << 16) | (rom[0x1f004]! << 8) | rom[0x1f005]!;
     for (const p of [ptr0, ptr1]) {
       const v = (r() < 0.5) ? 0 : Math.floor(r() * 256);
       pokeMem(cpu, p + 0x18, 1, v);
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
     // Read 25 ROM ptrs and set their byte+0x18 random
     for (let s = 0; s < 0x19; s++) {
       const addr = 0x1f016 + s * 4;
-      const p = (rom[addr] << 24) | (rom[addr+1] << 16) | (rom[addr+2] << 8) | rom[addr+3];
+      const p = (rom[addr]! << 24) | (rom[addr+1]! << 16) | (rom[addr+2]! << 8) | rom[addr+3]!;
       const v = (r() < 0.7) ? Math.floor(r() * 255) + 1 : 0;
       pokeMem(cpu, p + 0x18, 1, v);
       stateInst.workRam[(p - 0x400000) + 0x18] = v;

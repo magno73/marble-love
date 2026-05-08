@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const STRUCT = 0x00401D00, STRING_ADDR = 0x00401D40;
   const r = rng(0xfaaa);
 
-  function runSuite(label: string, funAddr: number, tsFn: (s: any, r: any, ptr: number) => void): { ok: number; fail: any } {
+  function runSuite(_label: string, funAddr: number, tsFn: (s: any, r: any, ptr: number) => void): { ok: number; fail: any } {
     let ok = 0;
     let firstFail: any = null;
     for (let i = 0; i < n; i++) {

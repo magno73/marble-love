@@ -36,7 +36,6 @@ import {
 } from "./binary-oracle-lib.js";
 
 const FUN_2548 = 0x00002548;
-const WORK_RAM_BASE = 0x00400000;
 const LSR_FLAG_ABS = 0x00400006;
 const LSR_FLAG_OFF = 0x0006;
 

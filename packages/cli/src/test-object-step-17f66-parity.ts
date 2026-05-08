@@ -88,9 +88,6 @@ function makeRng(seed: number): () => number {
 }
 
 type CpuSync = Awaited<ReturnType<typeof createCpu>>;
-const createCpuSync = createCpu as unknown as (
-  cfg: Parameters<typeof createCpu>[0],
-) => CpuSync;
 
 /** Cattura workRam dal CPU in un Uint8Array. */
 function captureWorkRam(cpu: CpuSync): Uint8Array {

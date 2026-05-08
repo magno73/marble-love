@@ -46,8 +46,6 @@ import {
 
 const FUN_13D38 = 0x00013d38;
 const SLOT_PTR_TABLE = 0x0001f016;
-const SLOT_TABLE_RAM = 0x00400a9c;
-const SLOT_STRIDE = 0x56;
 const SLOT_COUNT = 0x19;
 
 function makeRng(seed: number): () => number {

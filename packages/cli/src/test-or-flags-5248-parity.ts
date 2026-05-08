@@ -67,7 +67,7 @@ async function main(): Promise<void> {
     }
     // Sync verso Musashi
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
-      pokeMem(cpu, WORK_RAM_BASE + b, stateInst.workRam[b]!);
+      pokeMem(cpu, WORK_RAM_BASE + b, 1, stateInst.workRam[b]!);
     }
 
     // D1 = edge case nei primi, poi random
@@ -88,10 +88,10 @@ async function main(): Promise<void> {
     cpu.system.setRegister("d1", d1);
     callFunction(cpu, FUN_5248);
     const binResult =
-      (peekMem(cpu, FLAGS_ABS) << 24 |
-        peekMem(cpu, FLAGS_ABS + 1) << 16 |
-        peekMem(cpu, FLAGS_ABS + 2) << 8 |
-        peekMem(cpu, FLAGS_ABS + 3)) >>>
+      (peekMem(cpu, FLAGS_ABS, 1) << 24 |
+        peekMem(cpu, FLAGS_ABS + 1, 1) << 16 |
+        peekMem(cpu, FLAGS_ABS + 2, 1) << 8 |
+        peekMem(cpu, FLAGS_ABS + 3, 1)) >>>
       0;
 
     // ── TS replica ─────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
 
     // Sync stato TS dalla workRam Musashi per prossima iterazione
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
-      stateInst.workRam[b] = peekMem(cpu, WORK_RAM_BASE + b);
+      stateInst.workRam[b] = peekMem(cpu, WORK_RAM_BASE + b, 1);
     }
   }
 

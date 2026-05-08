@@ -3,7 +3,7 @@
  * test-string-clear-parity.ts — differential FUN_2678 + FUN_2ABC.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
