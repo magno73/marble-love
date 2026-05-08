@@ -180,6 +180,7 @@ export * as renderStringEntry286B0 from "./render-string-entry-286b0.js";
 export * as objectEnterState23 from "./object-enter-state-23.js";
 export * as objectEnter1281C from "./object-enter-1281c.js";
 export * as objectInit2591A from "./object-init-2591a.js";
+export * as objectInit259B4 from "./object-init-259b4.js";
 export * as objectScanDispatch251DE from "./object-scan-dispatch-251de.js";
 export * as findNearestTarget2637A from "./find-nearest-target-2637a.js";
 export * as slapsticLookup from "./slapstic-lookup.js";
