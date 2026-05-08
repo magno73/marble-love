@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~270+ bit-perfect via parity 500/500, resto via metadata thunks). Bridge engine ↔ renderer attivo, multi-agent workflow (Claude Code + Codex) operativo. 168 test files / 1275 vitest verde.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte** (~325 bit-perfect via parity 500/500, resto via metadata thunks). Chain playfield end-to-end attiva, multi-agent workflow (Claude Code + Codex) operativo. **203 test files / 1619 vitest verde**.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -11,11 +11,13 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%, ~270 con parity 500/500) |
+| Funzioni Ghidra coperte | **350 / 350** (100%, ~325 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **168 file / 1275 test** verde |
+| Vitest | **203 file / 1619 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
-| Multi-agent workflow | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap/level chain 1A9CC/1A444/16EC6 + helpers 2FFB8/1AA38/18FD0) |
+| Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
+| State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
+| Multi-agent workflow | Claude Code (~150 funzioni / 35 batch) + Codex (chain playfield 1A9CC/1A444/16EC6 + helpers 2FFB8/1AA38/18FD0/26B66/28C7E/28580/100E0/16F6C/259B4/11B18/1344C + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + state-machine subs) |
 
 ## Track A — Phase 4d (replication bit-perfect)
 
