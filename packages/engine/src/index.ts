@@ -240,6 +240,7 @@ export * as refreshHelper1493C from "./refresh-helper-1493c.js";
 export * as refreshHelper1912C from "./refresh-helper-1912c.js";
 export * as refreshHelper13EE6 from "./refresh-helper-13ee6.js";
 export * as refreshFrame10FCE from "./refresh-frame-10fce.js";
+export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
