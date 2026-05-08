@@ -16,6 +16,7 @@ import { pfScrollEmit26E14 } from "./pf-scroll-emit-26e14.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import type { RomImage } from "./bus.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
+import { objectInit259B4 } from "./object-init-259b4.js";
 
 const WRAM = 0x00400000;
 
@@ -147,7 +148,7 @@ export function mainLoopInit10504(
   }
 
   (subs.levelInit16F6C ?? ((s) => { if (rom !== undefined) levelInit16F6C(s, rom); }))(state);
-  subs.objectInit259B4?.(state);
+  (subs.objectInit259B4 ?? ((s) => { if (rom !== undefined) objectInit259B4(s, rom); }))(state);
   const lateLogic = subs.lateLogic26F3E ?? ((s: GameState) => { if (rom !== undefined) lateGameLogic26F3E(s, rom); });
   lateLogic(state);
   lateLogic(state);
