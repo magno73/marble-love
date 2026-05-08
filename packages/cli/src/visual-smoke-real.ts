@@ -17,7 +17,7 @@
  * scroll, palette, ecc. — utile prima di lanciare il browser.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
@@ -131,10 +131,84 @@ function loadProms(): Uint8Array | null {
   return null;
 }
 
+// ─── PPM dumper ──────────────────────────────────────────────────────────
+// Produces a 512×512 P6 PPM showing the full 64×64 playfield tile-map with
+// sprites + alpha overlay. Colors are picked from the live palette via the
+// tile's paletteIndex × 16 + 1 slot — this is *not* the true rendered tile
+// (would require decoding the tile graphics ROM), but gives a per-tile color
+// signature that's enough to eyeball the level layout and sprite positions.
+
+function dumpFramePpm(
+  frame: ReturnType<typeof renderNs.buildFrame>,
+  outPath: string,
+): void {
+  const W = 512;
+  const H = 512;
+  const buf = new Uint8Array(W * H * 3);
+  // Background: dark grey
+  for (let i = 0; i < buf.length; i += 3) {
+    buf[i] = 0x10; buf[i + 1] = 0x10; buf[i + 2] = 0x10;
+  }
+
+  function pickColor(palIdx: number): [number, number, number] {
+    // 16 colors per palette in 4bpp; entry +1 skips transparent slot
+    const base = palIdx * 16;
+    for (let off = 1; off < 16; off++) {
+      const e = frame.palette[base + off];
+      if (e !== undefined && (e.rgba.r !== 0 || e.rgba.g !== 0 || e.rgba.b !== 0)) {
+        return [e.rgba.r, e.rgba.g, e.rgba.b];
+      }
+    }
+    return [0x40, 0x40, 0x40];
+  }
+
+  function fillBlock(px: number, py: number, sz: number, rgb: [number, number, number]): void {
+    for (let dy = 0; dy < sz; dy++) {
+      const y = py + dy;
+      if (y < 0 || y >= H) continue;
+      for (let dx = 0; dx < sz; dx++) {
+        const x = px + dx;
+        if (x < 0 || x >= W) continue;
+        const i = (y * W + x) * 3;
+        buf[i] = rgb[0]; buf[i + 1] = rgb[1]; buf[i + 2] = rgb[2];
+      }
+    }
+  }
+
+  // 1. Playfield (background): 8×8 px per tile
+  for (const t of frame.playfield) {
+    if (t.tileIndex === 0) continue;
+    const c = pickColor(t.paletteIndex);
+    fillBlock(t.x, t.y, 8, c);
+  }
+
+  // 2. Alpha (HUD): 8×8 px, color = palette[paletteIdx*16+1] but typically pal=0..7
+  // Alpha in System 1 uses dedicated palette base (0x000); we render it on top.
+  for (const a of frame.alpha) {
+    const c = pickColor(a.paletteIndex);
+    // Outline + fill to make HUD pop visually
+    fillBlock(a.x, a.y, 8, c);
+  }
+
+  // 3. Sprites (motion objects): bright red marker, 6×6 px centered
+  for (const sp of frame.sprites) {
+    fillBlock(sp.x + 1, sp.y + 1, 6, [0xff, 0x40, 0x40]);
+  }
+
+  // 4. Write PPM P6 header + raw RGB
+  const header = `P6\n${W} ${H}\n255\n`;
+  const headerBytes = new TextEncoder().encode(header);
+  const out = new Uint8Array(headerBytes.length + buf.length);
+  out.set(headerBytes, 0);
+  out.set(buf, headerBytes.length);
+  writeFileSync(outPath, out);
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────
 
 function main(): void {
   const ticks = Number(process.argv[2] ?? "300");
+  const ppmPath = process.argv[3];
 
   // 1. Load program ROM
   const romPath = resolve("ghidra_project/marble_program.bin");
@@ -334,6 +408,13 @@ function main(): void {
     console.log(`  ⚠️  alphaRam popolata (${alpNz} byte) ma Frame.alpha=0.`);
   } else if (frame.alpha.length > 0) {
     console.log(`  ✅ Frame.alpha popolato: ${frame.alpha.length}.`);
+  }
+
+  // Optional PPM dump
+  if (ppmPath !== undefined) {
+    const out = resolve(ppmPath);
+    dumpFramePpm(frame, out);
+    console.log(`\n  📸 PPM dump → ${out} (512×512, P6 binary)`);
   }
 }
 
