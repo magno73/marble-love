@@ -8,6 +8,7 @@ import { mainLoopInit1101E, type MainLoopInit1101ESubs } from "./main-loop-init-
 import { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
 import { bootHelper1464ADefault } from "./boot-helper-1464a.js";
+import { softReset100E0 } from "./soft-reset-100e0.js";
 export { mainLoopInit1101E, type MainLoopInit1101ESubs } from "./main-loop-init-1101e.js";
 export { mainLoopInit11452, type MainLoopInit11452Subs } from "./main-loop-init-11452.js";
 export { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
@@ -114,14 +115,14 @@ export function mainLoop117B2LoopBody(
   }
 
   if (i8(rb(state, 0x004003b4)) > 8) {
-    subs.softReset100E0?.(state);
+    (subs.softReset100E0 ?? softReset100E0)(state);
     wb(state, 0x004003b2, 0);
     wb(state, 0x004003b4, 0);
   }
 
   if (rw(state, 0x004003b8) !== 0) {
     ww(state, 0x004003b8, rw(state, 0x004003b8) - 1);
-    if (rw(state, 0x004003b8) === 0) subs.softReset100E0?.(state);
+    if (rw(state, 0x004003b8) === 0) (subs.softReset100E0 ?? softReset100E0)(state);
   }
 
   (subs.randomMod13A98 ?? randomMod13A98)(state, 0x100);
