@@ -266,6 +266,7 @@ export * as helper1CD00 from "./helper-1cd00.js";
 export * as absHelpers from "./abs-helpers.js";
 export * as scrollCoordHelpers from "./scroll-coord-helpers.js";
 export * as strcpy1D74 from "./strcpy-1d74.js";
+export * as miniHelpers from "./mini-helpers.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
