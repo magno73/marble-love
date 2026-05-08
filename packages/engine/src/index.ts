@@ -207,6 +207,7 @@ export * as spriteCoordsJsr150D0 from "./sprite-coords-jsr-150d0.js";
 export * as tilemapBlit17044 from "./tilemap-blit-17044.js";
 export * as bootScreenInit from "./boot-screen-init.js";
 export * as mainLoopInit117B2 from "./main-loop-init-117b2.js";
+export * as softReset100E0 from "./soft-reset-100e0.js";
 export * as helper11FF8 from "./helper-11ff8.js";
 export * as helper16E8E from "./helper-16e8e.js";
 export * as finalize11654 from "./finalize-11654.js";
