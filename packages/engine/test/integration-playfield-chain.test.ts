@@ -60,7 +60,8 @@ describe("integration: playfield chain (Codex tilemap loaders)", () => {
     const state = emptyGameState();
     bootInit(state, rom);
 
-    // Pre-condizione: playfield vuota dopo bootInit
+    // Pre-condizione: playfield vuota dopo bootInit (mainLoopInit117B2
+    // wireup è rolled back per preserving attract_mode parity).
     const preNonZero = state.playfieldRam.filter((b) => b !== 0).length;
     expect(preNonZero).toBe(0);
 

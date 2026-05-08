@@ -164,15 +164,20 @@ export function bootInit(state: GameState, rom: RomImage): void {
   // spurious al primo tick (verificato vs oracle frame 46).
   state.workRam[0x3a2] = 0xff;
 
-  // 6. Main loop init chain (FUN_117B2 prefix only).
-  //    NOT wired: even with bootHelper1464A + gameModePrep10456 +
-  //    finalize11654 + soundMaybe11AC2 + stateDispatch12FD0 +
-  //    randomMod13A98 + clearPlayfieldOther12186 + playerSlotIter118D2
-  //    wirati come default, abilitare 117B2 prefix peggiora attract_mode
-  //    parity (9 → 12 fields divergenti, sospetto RNG advance).
-  //    Probabile causa: MAME oracle al frame 47 ha già consumato un path
-  //    specifico di RNG/sub che le default subs non riproducono per scenari
-  //    senza input. Riprovare quando la chain playfield Codex sarà completa.
+  // 6. Main loop init chain (FUN_117B2 prefix only, loopIterations=0).
+  //    Stato: 2026-05-08 ri-tentato dopo chain playfield Codex completa +
+  //    9 default subs Cat.1 wirati. Risultato: peggiora attract_mode
+  //    aligned parity da 9 → 14 campi divergenti @ truth-offset=47.
+  //    Spiegazione: il prefix esegue intera chain `mainLoopInit11452 →
+  //    mainLoopInit10504 → levelDispatcher16EC6 → buildTilemapRows1A444`
+  //    che POPOLA state.playfieldRam con level 0, ma MAME oracle al frame
+  //    47 (post-FUN_FA0, primo tick) non ha ancora eseguito tale path —
+  //    il binario reale entra nel game loop iter normale. Differenza
+  //    semantica: bootInit "salta avanti" troppo.
+  //    Per RENDERING è utile (playfield popolato); per PARITY no.
+  //    Soluzione futura: trigger del wireup solo se chiamante esplicita
+  //    intenzione di "pre-load level" (renderer demo / smoke test), non
+  //    bootInit base. Vedi visual-smoke-test che chiama la chain manualm.
   void mainLoopInit117B2; // tenuta in scope per uso futuro
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
