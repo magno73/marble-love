@@ -123,7 +123,7 @@ export function mainLoopInit1101E(
       case5(state, rom, subs);
       return;
     case 6:
-      case6(state, subs);
+      case6(state, subs, rom);
       return;
   }
 }
@@ -261,7 +261,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   }
 }
 
-function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
+function case6(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   wb(state, 0x00400008, 0);
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);

@@ -101,7 +101,7 @@ export function mainLoopInit11452(
         state11452Case2(state, rom, subs);
         break;
       case 3:
-        state11452Case3(state, subs);
+        state11452Case3(state, subs, rom);
         break;
     }
   }
@@ -163,7 +163,7 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
   }
 }
 
-function state11452Case3(state: GameState, subs: MainLoopInit11452Subs): void {
+function state11452Case3(state: GameState, subs: MainLoopInit11452Subs, rom?: RomImage): void {
   (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   const renderString0142 = subs.renderString0142 ?? ((s: GameState, ptr: number, tile: number) => {
     if (rom !== undefined) stateSub2572(s, rom, ptr, tile);
