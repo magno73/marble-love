@@ -1,18 +1,20 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-07
+**Ultimo update:** 2026-05-08
 **Branch corrente:** `main`.
 
 ## Riepilogo metriche
 
 | Metrica | Valore |
 |---|---|
-| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~270 verificate bit-perfect via parity 500/500 |
-| Vitest | **168 file / 1275 test** verde |
+| Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~315 verificate bit-perfect via parity 500/500 |
+| Vitest | **194 file / 1550 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
-| Bridge engine ↔ renderer | ✅ attivo + visual smoke test |
-| Multi-agent throughput | Claude Code (16 batch / 78 funzioni) + Codex (main-loop init, state-machine subs, tilemap/level chain 1A9CC/1A444/16EC6 + helpers 2FFB8/1AA38/18FD0) |
+| Bridge engine ↔ renderer | ✅ attivo + visual smoke test + chain playfield end-to-end |
+| `bootInit({preloadLevel})` | ✅ opt-in pre-load level → state.playfieldRam popolato (1500-2900 byte/livello) |
+| `tick({runMainLoopBody})` | ✅ opt-in main-thread loop simulation → state machine evolve, sprites attivi |
+| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette) + Codex (chain playfield + helper16EC6 + sceneObjInit + Cat.1 batch 16-21) |
 
 ## Fase corrente
 
