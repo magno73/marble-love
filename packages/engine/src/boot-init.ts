@@ -46,6 +46,8 @@ import { slotArrayBulkInit } from "./slot-array-init.js";
 import { mainLoopInit117B2 } from "./main-loop-init-117b2.js";
 import { clearPlayfieldRam12174 } from "./clear-playfield-ram-12174.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
+import { moScreenInit1A286 } from "./mo-screen-init-1a286.js";
+import { moGridInit2404 } from "./mo-grid-init-2404.js";
 
 /**
  * Inizializza color RAM con il pattern decrescente del RESET handler
@@ -130,6 +132,17 @@ export interface BootInitOptions {
    * a boot, popola la playfield via game loop iterativo).
    */
   preloadLevel?: number;
+  /**
+   * Se true, dopo `preloadLevel` esegue la chain MO init scoperta nelle
+   * subs `level-enter`:
+   *   - moScreenInit1A286: 32 word slot headers (bank A/B/C/D × 8 entries)
+   *   - moGridInit2404(rom, arg1=1): 56 motion-object slot @ 0xA02200+
+   * Risultato: Frame.sprites passa da 0/1 (placeholder) a N>=2 sprite reali
+   * con coordinate non-zero, gfxBank, palette wirate. Il rendering Pixi
+   * mostra gli sprite. Opt-in: NON usare per parity test (il binario
+   * chiama queste sub solo a level-enter, non a boot).
+   */
+  fullScreenInit?: boolean;
 }
 
 /**
@@ -221,6 +234,13 @@ export function bootInit(
     // player count = 1 (single player demo)
     state.workRam[0x396] = 0;
     state.workRam[0x397] = 1;
+  }
+
+  // 8. Optional: full screen-init MO chain. Replica `level-enter` subs che
+  //    popolano gli sprite slot. Opt-in (preserva parity vs MAME oracle).
+  if (options.fullScreenInit === true) {
+    moScreenInit1A286(state, rom);
+    moGridInit2404(state, rom, 1);
   }
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,

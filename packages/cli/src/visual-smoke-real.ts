@@ -243,7 +243,7 @@ function main(): void {
 
   // 4. Engine init
   const s = stateNs.emptyGameState();
-  bootInit(s, rom, { preloadLevel: 0 });
+  bootInit(s, rom, { preloadLevel: 0, fullScreenInit: true });
 
   // 5. Run ticks
   console.log(`\n=== run ${ticks} tick (runMainLoopBody=true) ===`);
