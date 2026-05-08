@@ -10,6 +10,7 @@ import { helper11FF8Default } from "./helper-11ff8.js";
 import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { finalize11654 } from "./finalize-11654.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
+import { bannerHelper26B66 } from "./banner-helper-26b66.js";
 
 const WRAM = 0x00400000;
 
@@ -141,7 +142,7 @@ function state11452Case0(
 function state11452Case2(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11452Subs): void {
   subs.sceneInit11428?.(state);
   subs.gameStateBanner26B2A?.(state, 0);
-  subs.helper26B66?.(state, 0x13);
+  (subs.helper26B66 ?? bannerHelper26B66)(state, 0x13);
   ww(state, 0x00400000, 0);
   ww(state, 0x00400002, 0);
   wb(state, 0x00400008, 0);
