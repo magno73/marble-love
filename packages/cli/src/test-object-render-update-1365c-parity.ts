@@ -39,10 +39,8 @@ import {
 } from "@marble-love/engine";
 import type { RomImage } from "@marble-love/engine";
 // Relative import to access the worktree-local module (node_modules symlinks to main repo).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import * as ns from "../../engine/src/object-render-update-1365c.js";
 // GameState is structurally identical across repos; cast to avoid nominal-type error.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyState = any;
 import {
   createCpu,

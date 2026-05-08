@@ -40,4 +40,9 @@ export default [
       "marble-love/no-raw-arith-on-branded": "warn",
     },
   },
+  // oracle/ e harness/ sono fuori dai packages — base TS lint senza rule custom.
+  {
+    files: ["oracle/**/*.ts", "harness/**/*.ts"],
+    languageOptions: tsLanguageOptions,
+  },
 ];
