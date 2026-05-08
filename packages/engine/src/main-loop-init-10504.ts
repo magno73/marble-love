@@ -20,6 +20,8 @@ import { objectInit259B4 } from "./object-init-259b4.js";
 import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 import { clearPaletteRam121A6, vblankAck28DEA } from "./vblank-helpers.js";
 import { scrollRange144E4 } from "./scroll-range-144e4.js";
+import { stateSub2572 } from "./state-sub-2572.js";
+import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 
 const WRAM = 0x00400000;
 
@@ -164,14 +166,19 @@ export function mainLoopInit10504(
 
   wb(state, 0x0040039a, 1);
   (subs.vblankAck ?? vblankAck28DEA)(state);
-  subs.render0142?.(state, 0x22b16, 0x1c00);
-  subs.render0142?.(state, 0x22b22, 0x2000);
+  const render0142 = subs.render0142 ?? ((s: GameState, ptr: number, tile: number) => {
+    if (rom !== undefined) stateSub2572(s, rom, ptr, tile);
+  });
+  render0142(state, 0x22b16, 0x1c00);
+  render0142(state, 0x22b22, 0x2000);
   if (playerCount === 2) {
-    subs.render0142?.(state, 0x22b2e, 0x1c00);
-    subs.render0142?.(state, 0x22b3a, 0x2400);
+    render0142(state, 0x22b2e, 0x1c00);
+    render0142(state, 0x22b3a, 0x2400);
   }
   wb(state, 0x0040039c, ((playerCount - 1) | playerCount) & 0xff);
-  subs.objectDirtyDispatch?.(state);
+  (subs.objectDirtyDispatch ?? ((s) => {
+    if (rom !== undefined) objDirtyDispatch28624(s, rom.program.subarray(0x23d3a, 0x23e3a));
+  }))(state);
 
   for (let i = 0; i < playerCount; i++) {
     subs.renderString?.(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
@@ -184,7 +191,7 @@ export function mainLoopInit10504(
   }
 
   if (options.runPresentationMiddle === true) {
-    runPresentationMiddle(state, subs, gameMode, playerCount);
+    runPresentationMiddle(state, subs, gameMode, playerCount, rom);
   }
 
   addByte(state, 0x004003f0, 1);
@@ -221,14 +228,18 @@ function runPresentationMiddle(
   subs: MainLoopInit10504Subs,
   gameMode: number,
   _playerCount: number,
+  rom?: RomImage,
 ): void {
   if (rw(state, 0x00400390) === 1) {
     ww(state, 0x00400082, 0x003c);
     return;
   }
-  subs.render0142?.(state, gameMode < 2 ? 0x2291e : 0x22942, 0x3000);
-  subs.render0142?.(state, 0x1f15e + gameMode * 4, 0x3000);
-  subs.render0142?.(state, 0x1f176 + gameMode * 4, 0x3400);
+  const render0142 = subs.render0142 ?? ((s: GameState, ptr: number, tile: number) => {
+    if (rom !== undefined) stateSub2572(s, rom, ptr, tile);
+  });
+  render0142(state, gameMode < 2 ? 0x2291e : 0x22942, 0x3000);
+  render0142(state, 0x1f15e + gameMode * 4, 0x3000);
+  render0142(state, 0x1f176 + gameMode * 4, 0x3400);
 }
 
 export const MAIN_LOOP_INIT_10504_ADDR = 0x00010504 as const;
