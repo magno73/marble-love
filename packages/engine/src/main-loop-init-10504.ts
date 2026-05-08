@@ -125,7 +125,7 @@ export function mainLoopInit10504(
   wb(state, 0x0040076a, 0);
 
   if (gameMode === 2) {
-    (subs.soundMaybe11AC2 ?? soundMaybe11AC2)(state);
+    (subs.soundMaybe11AC2 ?? ((s: GameState) => { if (rom !== undefined) soundMaybe11AC2(s, rom); }))(state);
   }
 
   const scrollBase = 0x0040097c;
