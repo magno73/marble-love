@@ -1,0 +1,292 @@
+#!/usr/bin/env node
+/**
+ * visual-smoke-real.ts — diagnostic CLI che simula il path browser real-mode.
+ *
+ * Pipeline (mirror del web frontend con ROM caricata):
+ *   1. Load program ROM (ghidra_project/marble_program.bin)
+ *   2. Load PROMs (concat 136033.118 + 136033.119 = 1024 byte)
+ *   3. decodeGraphicsLookups(proms) → playfield + motionObject lookups
+ *   4. bootInit(state, rom, { preloadLevel: 0 })
+ *   5. Per N tick: tick(state, { rom, runMainLoopBody: true })
+ *   6. buildFrame(state, { playfieldLookups, motionObjectLookups, motionObjects })
+ *   7. Dump diagnostico dettagliato
+ *
+ * Uso: npx tsx packages/cli/src/visual-smoke-real.ts [N=300]
+ *
+ * Diagnosi: identifica se il bottleneck è in playfieldRam, lookup tables,
+ * scroll, palette, ecc. — utile prima di lanciare il browser.
+ */
+
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { exit } from "node:process";
+
+import {
+  state as stateNs,
+  bus as busNs,
+  bootInit,
+  tick,
+  render as renderNs,
+} from "@marble-love/engine";
+
+// ─── Inline copy of decodeGraphicsLookups (da packages/web/src/rom-graphics.ts) ─
+
+interface GraphicsLookupEntry {
+  offset: number;
+  bank: number;
+  color: number;
+  bpp: 4 | 5 | 6;
+}
+
+const PROM1_OFFSET_MASK = 0x07;
+const PROM1_BANK_1 = 0x10;
+const PROM1_BANK_2 = 0x20;
+const PROM1_BANK_3 = 0x40;
+const PROM1_BANK_4 = 0x80;
+const PROM2_PLANE_4_ENABLE = 0x40;
+const PROM2_PLANE_5_ENABLE = 0x80;
+const PROM2_BANK_5 = 0x20;
+const PROM2_BANK_6_OR_7 = 0x10;
+const PROM2_PF_COLOR_MASK = 0x0f;
+const PROM2_BANK_7 = 0x08;
+const PROM2_MO_COLOR_MASK = 0x07;
+
+function bppForProm2(prom2: number): 4 | 5 | 6 {
+  if ((prom2 & PROM2_PLANE_4_ENABLE) === 0) return 4;
+  return (prom2 & PROM2_PLANE_5_ENABLE) !== 0 ? 6 : 5;
+}
+
+function bankForProms(prom1: number, prom2: number): number {
+  if ((prom1 & PROM1_BANK_1) === 0) return 1;
+  if ((prom1 & PROM1_BANK_2) === 0) return 2;
+  if ((prom1 & PROM1_BANK_3) === 0) return 3;
+  if ((prom1 & PROM1_BANK_4) === 0) return 4;
+  if ((prom2 & PROM2_BANK_5) === 0) return 5;
+  if ((prom2 & PROM2_BANK_6_OR_7) === 0) {
+    return (prom2 & PROM2_BANK_7) === 0 ? 7 : 6;
+  }
+  return 0;
+}
+
+function decodeGraphicsLookups(proms: Uint8Array): {
+  playfield: GraphicsLookupEntry[];
+  motionObjects: GraphicsLookupEntry[];
+} {
+  const remap = proms.slice(0x000, 0x200);
+  const color = proms.slice(0x200, 0x400);
+  const playfield: GraphicsLookupEntry[] = [];
+  const motionObjects: GraphicsLookupEntry[] = [];
+
+  for (let table = 0; table < 2; table += 1) {
+    for (let i = 0; i < 256; i += 1) {
+      const promIndex = table * 256 + i;
+      const prom1 = remap[promIndex] ?? 0xff;
+      const prom2 = color[promIndex] ?? 0xff;
+      const bpp = bppForProm2(prom2);
+      let bank = bankForProms(prom1, prom2);
+      let offset = prom1 & PROM1_OFFSET_MASK;
+      let entryColor: number;
+
+      if (table === 0) {
+        entryColor = (~prom2 & PROM2_PF_COLOR_MASK) >>> (bpp - 4);
+        if (bank === 0) {
+          bank = 1;
+          offset = 0;
+          entryColor = 0;
+        }
+        playfield.push({ offset, bank, color: entryColor, bpp });
+      } else {
+        entryColor = (~prom2 & PROM2_MO_COLOR_MASK) >>> (bpp - 4);
+        motionObjects.push({ offset, bank, color: entryColor, bpp });
+      }
+    }
+  }
+
+  return { playfield, motionObjects };
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+function countNonZero(buf: Uint8Array): number {
+  let count = 0;
+  for (let i = 0; i < buf.length; i++) if (buf[i] !== 0) count += 1;
+  return count;
+}
+
+function loadProms(): Uint8Array | null {
+  const candidates = [
+    ["/tmp/prom118.bin", "/tmp/prom119.bin"],
+    ["roms/extracted/136033.118", "roms/extracted/136033.119"],
+  ];
+  for (const [a, b] of candidates) {
+    if (existsSync(a) && existsSync(b)) {
+      const proms = new Uint8Array(0x400);
+      const p118 = readFileSync(a);
+      const p119 = readFileSync(b);
+      proms.set(p118.subarray(0, 0x200), 0);
+      proms.set(p119.subarray(0, 0x200), 0x200);
+      return proms;
+    }
+  }
+  return null;
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────
+
+function main(): void {
+  const ticks = Number(process.argv[2] ?? "300");
+
+  // 1. Load program ROM
+  const romPath = resolve("ghidra_project/marble_program.bin");
+  if (!existsSync(romPath)) {
+    console.error(`error: ROM blob non trovata @ ${romPath}`);
+    exit(1);
+  }
+  const romBuf = readFileSync(romPath);
+  const rom = busNs.emptyRomImage();
+  rom.program.set(romBuf.subarray(0, rom.program.length));
+
+  // 2. Load PROMs
+  const proms = loadProms();
+  if (proms === null) {
+    console.error(
+      "error: PROMs non trovati. Estrai prima:\n" +
+        "  unzip -p roms/marble.zip 136033.118 > /tmp/prom118.bin\n" +
+        "  unzip -p roms/marble.zip 136033.119 > /tmp/prom119.bin",
+    );
+    exit(1);
+  }
+
+  // 3. decodeGraphicsLookups
+  const { playfield: playfieldLookups, motionObjects: motionObjectLookups } =
+    decodeGraphicsLookups(proms);
+
+  console.log("=== ROM + PROMs caricati ===");
+  console.log(`  program ROM: ${rom.program.length} byte`);
+  console.log(`  proms: ${proms.length} byte`);
+  console.log(`  playfield lookups: ${playfieldLookups.length} entries`);
+  console.log(`  motionObject lookups: ${motionObjectLookups.length} entries`);
+
+  // 4. Engine init
+  const s = stateNs.emptyGameState();
+  bootInit(s, rom, { preloadLevel: 0 });
+
+  // 5. Run ticks
+  console.log(`\n=== run ${ticks} tick (runMainLoopBody=true) ===`);
+  for (let i = 0; i < ticks; i++) {
+    tick(s, { rom, runMainLoopBody: true });
+  }
+
+  // 6. State diagnostics
+  const pfNz = countNonZero(s.playfieldRam);
+  const sprNz = countNonZero(s.spriteRam);
+  const alpNz = countNonZero(s.alphaRam);
+  const colNz = countNonZero(s.colorRam);
+  const wkNz = countNonZero(s.workRam);
+  console.log(`\n=== State RAM occupancy ===`);
+  console.log(`  playfieldRam: ${pfNz}/${s.playfieldRam.length} non-zero`);
+  console.log(`  spriteRam:    ${sprNz}/${s.spriteRam.length}`);
+  console.log(`  alphaRam:     ${alpNz}/${s.alphaRam.length}`);
+  console.log(`  colorRam:     ${colNz}/${s.colorRam.length}`);
+  console.log(`  workRam:      ${wkNz}/${s.workRam.length}`);
+
+  // 7. buildFrame con tutti i lookup
+  const opts: Parameters<typeof renderNs.buildFrame>[1] = {
+    playfieldLookups,
+    motionObjects: "linked-list",
+    motionObjectLookups,
+  };
+  const frame = renderNs.buildFrame(s, opts);
+
+  console.log(`\n=== Frame produced ===`);
+  console.log(`  scroll: (${frame.scrollX}, ${frame.scrollY})`);
+  console.log(`  palette entries: ${frame.palette.length}`);
+  const nzPalette = frame.palette.filter(
+    (p) => p.rgba.r !== 0 || p.rgba.g !== 0 || p.rgba.b !== 0,
+  );
+  console.log(`  palette non-zero: ${nzPalette.length}`);
+  console.log(`  playfield tiles: ${frame.playfield.length}`);
+  console.log(`  sprites: ${frame.sprites.length}`);
+  console.log(`  alpha chars: ${frame.alpha.length}`);
+
+  // 8. Sample tile/sprite/alpha
+  if (frame.playfield.length > 0) {
+    console.log(`\n  --- first 5 tiles ---`);
+    for (const t of frame.playfield.slice(0, 5)) {
+      console.log(
+        `    tileIndex=${t.tileIndex.toString(16)} gfxBank=${t.gfxBank} bpp=${t.bitsPerPixel}` +
+          ` x=${t.x} y=${t.y} pal=${t.paletteIndex} flipX=${t.flipX}`,
+      );
+    }
+  } else {
+    console.log(`\n  ⚠️  Frame.playfield vuoto (lookup miss?). Dump pf words:`);
+    for (let i = 0; i < 16; i++) {
+      const w = ((s.playfieldRam[i * 2] ?? 0) << 8) | (s.playfieldRam[i * 2 + 1] ?? 0);
+      const lookupIdx = (w >>> 8) & 0x7f;
+      const lookup = playfieldLookups[lookupIdx];
+      console.log(
+        `    pfRam[${i}].word=0x${w.toString(16).padStart(4, "0")}` +
+          ` → lookup[${lookupIdx}]=` +
+          (lookup ? `${JSON.stringify(lookup)}` : "undefined"),
+      );
+    }
+  }
+
+  if (frame.sprites.length > 0) {
+    console.log(`\n  --- first 5 sprites ---`);
+    for (const sp of frame.sprites.slice(0, 5)) {
+      console.log(
+        `    spriteIndex=${sp.spriteIndex} x=${sp.x} y=${sp.y}` +
+          ` gfxBank=${sp.gfxBank ?? "?"} bpp=${sp.bitsPerPixel ?? "?"} pal=${sp.paletteIndex}`,
+      );
+    }
+  }
+
+  if (frame.alpha.length > 0) {
+    console.log(`\n  --- first 10 alpha chars ---`);
+    for (const a of frame.alpha.slice(0, 10)) {
+      console.log(
+        `    tileIndex=0x${a.tileIndex.toString(16)} x=${a.x} y=${a.y} pal=${a.paletteIndex}`,
+      );
+    }
+  }
+
+  // Tile non-zero analysis
+  const nonZeroTiles = frame.playfield.filter((t) => t.tileIndex !== 0);
+  console.log(`\n  --- tile content analysis ---`);
+  console.log(`    total tiles: ${frame.playfield.length}`);
+  console.log(`    tiles with tileIndex != 0: ${nonZeroTiles.length}`);
+  if (nonZeroTiles.length > 0) {
+    console.log(`    first 5 non-zero tiles:`);
+    for (const t of nonZeroTiles.slice(0, 5)) {
+      console.log(
+        `      tileIndex=0x${t.tileIndex.toString(16)} bank=${t.gfxBank} x=${t.x} y=${t.y} pal=${t.paletteIndex}`,
+      );
+    }
+  }
+
+  // Diagnosi finale
+  console.log(`\n=== Diagnosis ===`);
+  if (frame.playfield.length === 0 && pfNz > 0) {
+    console.log(`  ⚠️  playfieldRam popolata (${pfNz} byte) ma Frame.playfield=0.`);
+    console.log(`      → Lookup miss: i word in pfRam decodano lookupIndex non in tabella.`);
+  } else if (frame.playfield.length > 0) {
+    console.log(`  ✅ Frame.playfield popolato: ${frame.playfield.length} tile.`);
+  } else {
+    console.log(`  ❌ playfieldRam vuota AND Frame.playfield=0.`);
+  }
+
+  if (frame.sprites.length === 0 && sprNz > 0) {
+    console.log(`  ⚠️  spriteRam popolata (${sprNz} byte) ma Frame.sprites=0.`);
+  } else if (frame.sprites.length > 0) {
+    console.log(`  ✅ Frame.sprites popolato: ${frame.sprites.length}.`);
+  }
+
+  if (frame.alpha.length === 0 && alpNz > 0) {
+    console.log(`  ⚠️  alphaRam popolata (${alpNz} byte) ma Frame.alpha=0.`);
+  } else if (frame.alpha.length > 0) {
+    console.log(`  ✅ Frame.alpha popolato: ${frame.alpha.length}.`);
+  }
+}
+
+main();
