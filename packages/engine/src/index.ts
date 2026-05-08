@@ -125,6 +125,7 @@ export * as objectCompare from "./object-compare.js";
 export * as spritePack from "./sprite-pack.js";
 export * as spriteDerive from "./sprite-derive.js";
 export * as spritePosUpdate1BAB2 from "./sprite-pos-update-1bab2.js";
+export * as spriteHelper1B9CC from "./sprite-helper-1b9cc.js";
 export * as objectCharcodeBroadcast1BBAA from "./object-charcode-broadcast-1bbaa.js";
 export * as spriteBracketLerp1C676 from "./sprite-bracket-lerp-1c676.js";
 export * as spriteRotate1C014 from "./sprite-rotate-1c014.js";

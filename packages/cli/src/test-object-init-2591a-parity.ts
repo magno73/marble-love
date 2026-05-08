@@ -216,7 +216,11 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN_2591A, [ptr]);
 
     // ── Run TS ─────────────────────────────────────────────────────────
-    oi2591aNs.objectInit2591A(stateInst, ptr);
+    oi2591aNs.objectInit2591A(stateInst, ptr, {
+      fun_1B9CC: () => {
+        /* patched to rts in the binary side */
+      },
+    });
 
     // ── Confronto ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;

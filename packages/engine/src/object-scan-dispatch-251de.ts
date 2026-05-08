@@ -99,6 +99,7 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { spriteHelper1B9CC } from "./sprite-helper-1b9cc.js";
 
 /** Base assoluta della work RAM (0x400000 nel bus M68k). */
 const WORK_RAM_BASE = 0x00400000;
@@ -456,7 +457,7 @@ function respawnBlock(
   writeU32BE(wr, a2 + 0x22, 0);
 
   // 0x2531A..0x2531E: jsr FUN_1B9CC(A2, 0)
-  subs.fun_1B9CC?.(state, a2, 0);
+  (subs.fun_1B9CC ?? spriteHelper1B9CC)(state, a2, 0);
 
   // 0x25324..0x2533C: subq.w #5, (0x6A,A2); tst.w; lea ...; bge skip;
   //                   move.w #1, (0x6A,A2); clr.b (0x6C,A2); clr.b (0x6E,A2)
