@@ -18,6 +18,8 @@ import { levelFractionRender28232 } from "./level-fraction-render-28232.js";
 import { stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
+import { stateSub2678 } from "./state-sub-2678.js";
+import { stateSub2572 } from "./state-sub-2572.js";
 
 const WRAM = 0x00400000;
 
@@ -149,9 +151,10 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
 
 function case1(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   if (rb(state, 0x004003ee) === 1 && rw(state, 0x004003ea) >= 0x18) {
-    subs.textPrint0118?.(state, 0x22a56);
-    subs.textPrint0118?.(state, 0x22a62);
-    subs.textPrint0118?.(state, 0x22a6e);
+    const textPrint = subs.textPrint0118 ?? ((s: GameState, ptr: number) => stateSub2678(s, ptr));
+    textPrint(state, 0x22a56);
+    textPrint(state, 0x22a62);
+    textPrint(state, 0x22a6e);
     ww(state, 0x0040075a, 0xffff);
   } else if (rb(state, 0x004003ee) === 0 && rw(state, 0x004003ea) >= 0x0c) {
     ww(state, 0x0040075a, 0xffff);
