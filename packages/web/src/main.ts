@@ -108,6 +108,29 @@ async function startGame(
   const inputState = initInput();
   let demoFrame = 0;
 
+  // ─── Manual scroll override (debug aid) ───────────────────────────────────
+  // Until the in-game state machine wires the PF scroll MMIO writes
+  // autonomously, expose keyboard scroll for level exploration:
+  //   ArrowUp/Down/Left/Right → scroll viewport across the 64×64 tilemap
+  //   Hold Shift → 8× faster
+  // Initial values from URL (?scrollX=N&scrollY=N) for deep-link sharing.
+  const initScrollX = Number(searchParams.get("scrollX") ?? "0") | 0;
+  const initScrollY = Number(searchParams.get("scrollY") ?? "0") | 0;
+  s.videoScrollX = ((initScrollX % 512) + 512) % 512;
+  s.videoScrollY = ((initScrollY % 512) + 512) % 512;
+  const heldKeys = new Set<string>();
+  window.addEventListener("keydown", (e) => {
+    if (
+      e.key === "ArrowUp" || e.key === "ArrowDown" ||
+      e.key === "ArrowLeft" || e.key === "ArrowRight" ||
+      e.key === "Shift"
+    ) {
+      heldKeys.add(e.key);
+      if (e.key.startsWith("Arrow")) e.preventDefault();
+    }
+  });
+  window.addEventListener("keyup", (e) => { heldKeys.delete(e.key); });
+
   // Render mode resolution priority:
   //   ?engine=1  → diagnostic frame
   //   ?demo=1    → demo (synthetic o ROM-backed)
@@ -140,6 +163,14 @@ async function startGame(
     s.input.trackballDx = dx as typeof s.input.trackballDx;
     s.input.trackballDy = dy as typeof s.input.trackballDy;
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
+
+    // Keyboard scroll override (until in-game scroll-write wires autonomously).
+    const scrollStep = heldKeys.has("Shift") ? 8 : 1;
+    if (heldKeys.has("ArrowLeft"))  s.videoScrollX = (s.videoScrollX - scrollStep + 512) % 512;
+    if (heldKeys.has("ArrowRight")) s.videoScrollX = (s.videoScrollX + scrollStep) % 512;
+    if (heldKeys.has("ArrowUp"))    s.videoScrollY = (s.videoScrollY - scrollStep + 512) % 512;
+    if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
+
     // runMainLoopBody=true se ROM reale: avanza state machine 1101E + refresh10FCE
     // ad ogni tick → spriteRam/workRam si popolano, gameplay simulation attiva.
     tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
@@ -190,6 +221,7 @@ async function startGame(
       }
       console.log(
         `[marble-love f=${frameCount}] mode=${renderMode}` +
+        ` scroll=(${s.videoScrollX},${s.videoScrollY})` +
         ` | pfRam=${pfNz}/${s.playfieldRam.length} sprRam=${sprNz}/${s.spriteRam.length}` +
         ` alpRam=${alpNz}/${s.alphaRam.length} colRam=${colNz}/${s.colorRam.length}` +
         frameStats,

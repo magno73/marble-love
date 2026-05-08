@@ -142,6 +142,12 @@ export interface GameState {
   alphaRam: Uint8Array;
   /** Color RAM (palette IRGB-4444, 0xB00000-0xB007FF, 2 KB). */
   colorRam: Uint8Array;
+  /** Playfield X scroll register (MMIO 0x800000, 9-bit, write-only).
+   *  Aggiornato da CPU write durante il main loop (es. FUN_2FFB8 pfScrollUpdate).
+   *  Letto dal renderer per posizionare il viewport sulla tilemap 64×64 (512×512 px). */
+  videoScrollX: number;
+  /** Playfield Y scroll register (MMIO 0x820000, 9-bit, write-only). */
+  videoScrollY: number;
 }
 
 // ─── Factory: stato vuoto ─────────────────────────────────────────────────
@@ -182,6 +188,8 @@ export function emptyGameState(): GameState {
     spriteRam: new Uint8Array(0x1000),   // 4 KB
     alphaRam: new Uint8Array(0x1000),    // 4 KB
     colorRam: new Uint8Array(0x800),     // 2 KB
+    videoScrollX: 0,
+    videoScrollY: 0,
   };
 }
 
@@ -212,5 +220,7 @@ export function snapshotGameState(s: GameState): GameState {
     spriteRam: new Uint8Array(s.spriteRam),
     alphaRam: new Uint8Array(s.alphaRam),
     colorRam: new Uint8Array(s.colorRam),
+    videoScrollX: s.videoScrollX,
+    videoScrollY: s.videoScrollY,
   };
 }
