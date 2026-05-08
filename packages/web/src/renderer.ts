@@ -95,9 +95,14 @@ function applyViewportScale(app: Application, viewport: Container, frame: Frame)
 }
 
 function objectPenColor(frame: Frame, paletteBase: number, pen: number): RgbaColor {
+  // MAME `set_granularity(8)` per Atari System 1: ogni paletteIndex (color)
+  // del tile_info occupa 8 slot consecutivi della palette globale. Il pen
+  // (pixel value 4/5/6 bpp) si somma al base × 8.
+  // Vedi `atarisy1_v.cpp` decode_gfx + `gfxdecode_device::set_granularity(8)`.
+  const idx = paletteBase * 8 + pen;
   return (
-    exactPaletteLookup(frame, paletteBase + pen) ??
-    frame.palette[(paletteBase + pen) % frame.palette.length]?.rgba ??
+    exactPaletteLookup(frame, idx) ??
+    frame.palette[idx % frame.palette.length]?.rgba ??
     paletteLookup(frame, paletteBase)
   );
 }
