@@ -22,6 +22,7 @@ import { stateSub2678 } from "./state-sub-2678.js";
 import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
+import { vblankAck28DEA } from "./vblank-helpers.js";
 
 const WRAM = 0x00400000;
 
@@ -193,7 +194,7 @@ function case2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   const saved = rb(state, 0x00400008);
   wb(state, 0x00400008, 0);
   wb(state, 0x0040039a, 1);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   (subs.helper16A20 ?? ((s) => { if (rom !== undefined) { stateSub16A20(s, rom); } }))(state);
   if (rw(state, 0x00400390) !== 0) {
     ww(state, 0x00400390, 2);
@@ -244,7 +245,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   ww(state, 0x00400394, rw(state, 0x00400394) + 1);
   helper118D2(state, subs, rom);
   wb(state, 0x00400460, 0xff);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   subs.clearPaletteRam?.(state);
   (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
   (subs.initFnPointers28580 ?? ((s) => initFnPointers28580(s, rom)))(state);

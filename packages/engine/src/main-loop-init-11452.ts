@@ -12,6 +12,7 @@ import { finalize11654 } from "./finalize-11654.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
+import { vblankAck28DEA } from "./vblank-helpers.js";
 
 const WRAM = 0x00400000;
 
@@ -149,7 +150,7 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
   wb(state, 0x00400008, 0);
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   subs.helper18CD2?.(state);
   (subs.helper11FF8 ?? ((s: GameState) => helper11FF8Default(s, rom)))(state);
   (subs.tilemapBlit17044 ?? ((s) => { if (rom !== undefined) tilemapBlit17044(rom, s.playfieldRam); }))(state);

@@ -18,6 +18,7 @@ import type { RomImage } from "./bus.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
 import { objectInit259B4 } from "./object-init-259b4.js";
 import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
+import { clearPaletteRam121A6, vblankAck28DEA } from "./vblank-helpers.js";
 
 const WRAM = 0x00400000;
 
@@ -103,7 +104,7 @@ export function mainLoopInit10504(
   const gameMode = rw(state, 0x00400394);
   const playerCount = rw(state, 0x00400396);
 
-  subs.clearPaletteRam?.(state);
+  (subs.clearPaletteRam ?? clearPaletteRam121A6)(state);
   (subs.hudFrameInit ?? (() => undefined))(state);
   (subs.slotArrayBulkInit ?? slotArrayBulkInit)(state);
 
@@ -140,7 +141,7 @@ export function mainLoopInit10504(
 
   (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
   wb(state, 0x0040039a, 1);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   (subs.helper1344C ?? ((s) => { if (rom !== undefined) slapsticDispatcher1344C(s, rom); }))(state);
 
   if (gameMode === 0 && rw(state, 0x00400390) !== 1) {
@@ -154,14 +155,14 @@ export function mainLoopInit10504(
   lateLogic(state);
   lateLogic(state);
   wb(state, 0x0040039a, 1);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
 
   if (gameMode === 0 && rw(state, 0x00400390) !== 1) {
     (subs.scrollStep26E14 ?? pfScrollEmit26E14)(state, rw(state, 0x00400000));
   }
 
   wb(state, 0x0040039a, 1);
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   subs.render0142?.(state, 0x22b16, 0x1c00);
   subs.render0142?.(state, 0x22b22, 0x2000);
   if (playerCount === 2) {
@@ -175,7 +176,7 @@ export function mainLoopInit10504(
     subs.renderString?.(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
   }
 
-  subs.vblankAck?.(state);
+  (subs.vblankAck ?? vblankAck28DEA)(state);
   subs.gameStateBanner?.(state, gameMode);
   if (gameMode === 0) {
     subs.soundCmd?.(state, 0);
