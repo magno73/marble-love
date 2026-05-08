@@ -20,6 +20,7 @@ import { stateSub18A88 } from "./state-sub-18a88.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { stateSub2678 } from "./state-sub-2678.js";
 import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
+import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 
 const WRAM = 0x00400000;
 
@@ -245,7 +246,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.vblankAck?.(state);
   subs.clearPaletteRam?.(state);
   (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
-  subs.initFnPointers28580?.(state);
+  (subs.initFnPointers28580 ?? ((s) => initFnPointers28580(s, rom)))(state);
   (subs.clearAlphaTiles28C7E ?? clearAlphaTiles28C7E)(state);
   subs.sceneObjInit28CA6?.(state);
   if (rw(state, 0x00400394) > 5) {

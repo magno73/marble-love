@@ -213,6 +213,7 @@ export * as finalize11654 from "./finalize-11654.js";
 export * as bootHelper1464A from "./boot-helper-1464a.js";
 export * as clearPlayfieldRam12174 from "./clear-playfield-ram-12174.js";
 export * as clearAlphaTiles28C7E from "./clear-alpha-tiles-28c7e.js";
+export * as initFnPointers28580 from "./init-fn-pointers-28580.js";
 export * as clearPlayfieldOther12186 from "./clear-playfield-other-12186.js";
 export * as moGridInit2404 from "./mo-grid-init-2404.js";
 export * as spritePairCoordAdd1D82 from "./sprite-pair-coord-add-1d82.js";
