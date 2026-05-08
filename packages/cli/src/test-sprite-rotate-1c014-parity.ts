@@ -150,7 +150,6 @@ async function main(): Promise<void> {
 
   const rb = makeRng(0x1c014);
   const randByte = (): number => Math.floor(rb() * 256) & 0xff;
-  const randWord = (): number => Math.floor(rb() * 0x10000) & 0xffff;
 
   let totalOk = 0;
   let firstFail: FailRecord | null = null;
@@ -250,7 +249,7 @@ async function main(): Promise<void> {
   // ─── Summary ───────────────────────────────────────────────────────────
   console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (firstFail !== null) {
-    const f = firstFail;
+    const f: FailRecord = firstFail;
     console.log(
       `  First fail (suite ${f.suite} tc=${f.tc}) ${f.label} @ A2+0x${f.offset.toString(16)}: ` +
         `bin=0x${f.bin.toString(16).padStart(2, "0")} ts=0x${f.ts.toString(16).padStart(2, "0")}`,

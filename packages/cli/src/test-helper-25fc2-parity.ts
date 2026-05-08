@@ -67,7 +67,6 @@ const WORK_RAM_SIZE = 0x2000;
 // ─── Buffer cattura in work RAM ───────────────────────────────────────────────
 // FUN_158AC sound buffer: cur ptr @ 0x401F0C, buffer 4 byte @ 0x401F00-0x401F03
 const SOUND_BUF_BASE  = 0x00401f00 as const;
-const SOUND_BUF_END   = 0x00401f04 as const;
 const SOUND_CUR_PTR   = 0x00401f0c as const;
 // FUN_25BAE call buffer: 3 entries × 8 byte @ 0x401F10-0x401F27, count @ 0x401F2C
 const OSE25_BUF_BASE  = 0x00401f10 as const;
@@ -361,7 +360,6 @@ async function main(): Promise<void> {
     // 20% → fuori range (< A1 o >= A1+0x80)
     // 40% → punta a sentinel in ROM
     let preAnimPtr: number;
-    let preAnimPtrIssentinel = false;
     const r5a = rng();
     if (r5a < 0.20) {
       // Dentro range A1..A1+0x7C (index 0..31), random
@@ -393,7 +391,6 @@ async function main(): Promise<void> {
       // Per semplificare: frame_ctr=fps → advance → nuovo ptr = preAnimPtr+4
       // preAnimPtr+4 = 0x20FDA → preAnimPtr = 0x20FD6.
       preAnimPtr = 0x00020fd6; // +4 = 0x20FDA = sentinel
-      preAnimPtrIssentinel = true;
     }
 
     // fps e frame_ctr

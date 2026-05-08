@@ -535,7 +535,6 @@ async function main(): Promise<void> {
   console.log(`\n=== FUN_000144E4 — Suite A: mode 0/1/2/5 (scaling+12DFA dispatch) — ${perSuite} casi ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    const mode = [0, 1, 2, 5][ri(4)]!;
     const boundary = ri(0x200) - 0x100; // boundary in [-256..255]
     // Choose from/to such that scaled values differ
     let fromWord: number, toWord: number;

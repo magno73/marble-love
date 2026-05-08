@@ -114,7 +114,7 @@ function countNonZero(buf: Uint8Array): number {
 }
 
 function loadProms(): Uint8Array | null {
-  const candidates = [
+  const candidates: Array<[string, string]> = [
     ["/tmp/prom118.bin", "/tmp/prom119.bin"],
     ["roms/extracted/136033.118", "roms/extracted/136033.119"],
   ];
