@@ -105,13 +105,9 @@ import type { GameState } from "./state.js";
 const WRAM = 0x00400000 as const;
 
 /** Byte offset workRam address 0x400394: game-mode word. */
-const OFF_GAME_MODE = (0x400394 - WRAM) as const; // 0x394
-/** Byte offset workRam address 0x400396: object-count word. */
-const OFF_OBJ_COUNT = (0x400396 - WRAM) as const; // 0x396
-/** Byte offset workRam address 0x40075c: sound-init flag. */
-const OFF_FLAG_75C = (0x40075c - WRAM) as const; // 0x75c
+const OFF_FLAG_75C = 0x40075c - WRAM; // 0x75c
 /** Byte offset workRam address 0x40075e: scripting-trigger enable flag. */
-const OFF_FLAG_75E = (0x40075e - WRAM) as const; // 0x75e
+const OFF_FLAG_75E = 0x40075e - WRAM; // 0x75e
 
 /** Absolute address of first player/enemy object. */
 export const OBJ_ARRAY_BASE = 0x00400018 as const;

@@ -10,7 +10,13 @@
  */
 
 import { Application } from "pixi.js";
-import { state as stateNs, bus as busNs, tick, bootInit } from "@marble-love/engine";
+import {
+  state as stateNs,
+  bus as busNs,
+  tick,
+  bootInit,
+  render as renderNs,
+} from "@marble-love/engine";
 import { initInput } from "./input.js";
 import {
   buildClassicDemoFrame,
@@ -27,8 +33,15 @@ const romStatus = document.getElementById("rom-status") as HTMLParagraphElement;
 const searchParams = new URLSearchParams(window.location.search);
 const forceRomPicker = searchParams.get("rom") === "1";
 const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
+const forceDemoFrame = searchParams.get("demo") === "1";
+const forceRealRendering = searchParams.get("real") === "1";
+// Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
 const useSyntheticDemoFrame =
-  import.meta.env.DEV && !forceRomPicker && !forceEngineDiagnosticFrame;
+  import.meta.env.DEV &&
+  !forceRomPicker &&
+  !forceEngineDiagnosticFrame &&
+  !forceDemoFrame &&
+  !forceRealRendering;
 
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
   romStatus.textContent = message;
@@ -94,8 +107,33 @@ async function startGame(
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
   let demoFrame = 0;
-  const useRomBackedDemoFrame = rom !== undefined;
 
+  // Render mode resolution priority:
+  //   ?engine=1  → diagnostic frame
+  //   ?demo=1    → demo (synthetic o ROM-backed)
+  //   ?real=1    → forza real anche senza ROM (frame quasi vuoto)
+  //   ROM caricata → REAL (default cambiato 2026-05-08)
+  //   no ROM in DEV → synthetic demo
+  //   altrimenti → real (frame potenzialmente vuoto)
+  type RenderMode = "diagnostic" | "demo" | "real";
+  const renderMode: RenderMode = forceEngineDiagnosticFrame
+    ? "diagnostic"
+    : forceDemoFrame
+      ? "demo"
+      : forceRealRendering
+        ? "real"
+        : rom !== undefined
+          ? "real"
+          : useSyntheticDemoFrame
+            ? "demo"
+            : "real";
+
+  console.log(
+    `[marble-love] renderMode=${renderMode} (rom=${rom !== undefined ? "real" : "none"}, ` +
+    `dev=${import.meta.env.DEV}, query={engine=${forceEngineDiagnosticFrame},demo=${forceDemoFrame},real=${forceRealRendering}})`,
+  );
+
+  let frameCount = 0;
   app.ticker.add(() => {
     const dx = inputState.consumeDx();
     const dy = inputState.consumeDy();
@@ -105,7 +143,9 @@ async function startGame(
     // runMainLoopBody=true se ROM reale: avanza state machine 1101E + refresh10FCE
     // ad ogni tick → spriteRam/workRam si popolano, gameplay simulation attiva.
     tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
-    if (forceEngineDiagnosticFrame) {
+    frameCount += 1;
+
+    if (renderMode === "diagnostic") {
       renderer.drawFrame(
         buildEngineDiagnosticFrame(
           demoFrame,
@@ -114,7 +154,7 @@ async function startGame(
         ),
       );
       demoFrame += 1;
-    } else if (useSyntheticDemoFrame || useRomBackedDemoFrame) {
+    } else if (renderMode === "demo") {
       renderer.drawFrame(
         rom === undefined
           ? buildClassicDemoFrame(demoFrame)
@@ -122,7 +162,46 @@ async function startGame(
       );
       demoFrame += 1;
     } else {
+      // renderMode === "real"
       renderer.draw(s);
     }
+
+    // Debug log ogni 60 frame: state RAM occupancy + Frame stats.
+    if (frameCount % 60 === 0) {
+      const pfNz = countNonZero(s.playfieldRam);
+      const sprNz = countNonZero(s.spriteRam);
+      const alpNz = countNonZero(s.alphaRam);
+      const colNz = countNonZero(s.colorRam);
+      // Frame stats: re-render-only se in real mode (altrimenti i campi
+      // del frame demo non riflettono lo state).
+      let frameStats = "";
+      if (renderMode === "real") {
+        const opts: Parameters<typeof renderNs.buildFrame>[1] = {};
+        if (rom?.graphics.lookupTables.playfield) {
+          opts.playfieldLookups = rom.graphics.lookupTables.playfield;
+        }
+        if (rom?.graphics.lookupTables.motionObjects) {
+          opts.motionObjects = "linked-list";
+          opts.motionObjectLookups = rom.graphics.lookupTables.motionObjects;
+        }
+        const f = renderNs.buildFrame(s, opts);
+        frameStats =
+          ` frame.tiles=${f.playfield.length} frame.sprites=${f.sprites.length} frame.alpha=${f.alpha.length}`;
+      }
+      console.log(
+        `[marble-love f=${frameCount}] mode=${renderMode}` +
+        ` | pfRam=${pfNz}/${s.playfieldRam.length} sprRam=${sprNz}/${s.spriteRam.length}` +
+        ` alpRam=${alpNz}/${s.alphaRam.length} colRam=${colNz}/${s.colorRam.length}` +
+        frameStats,
+      );
+    }
   });
+}
+
+function countNonZero(buf: Uint8Array): number {
+  let count = 0;
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] !== 0) count += 1;
+  }
+  return count;
 }

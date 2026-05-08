@@ -69,7 +69,6 @@ export function wait28DB8(state: GameState, frames: number): void {
   while (counter > 0) {
     vblankAck28DEA(state);
     // Confronta state byte attuale con quello catturato.
-    const currentStateLow = state.workRam[0x391] ?? 0;
     // Logica binario: se *0x400390 (word, sign-ext) != saved D2.w → D3 = 0.
     // D2 = saved state byte LOW. cmp.w D0 (= D2 ext.w), *0x400390.w.
     // Sign-ext byte → word. Se equal → preserva counter, else zero counter.
