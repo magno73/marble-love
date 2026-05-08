@@ -113,6 +113,44 @@ async function startGame(
       : {},
   );
 
+  // ─── MAME state import (debug fixture) ────────────────────────────────────
+  // ?mameDump=1 → fetch /mame_state.json (dump da MAME a un frame target)
+  // e popola lo state TS direttamente. Bypassa bootInit + tick.
+  // Permette di vedere cosa renderizza il Pixi pipeline col vero state MAME.
+  let mameDumpFrozen = false;
+  if (searchParams.get("mameDump") === "1") {
+    try {
+      const r = await fetch("/mame_state.json");
+      if (r.ok) {
+        const dump = await r.json() as {
+          frame: number;
+          workRam: string;
+          playfieldRam: string;
+          spriteRam: string;
+          alphaRam: string;
+          colorRam: string;
+        };
+        const hexToBytes = (hex: string, target: Uint8Array): void => {
+          for (let i = 0; i < target.length && i * 2 + 1 < hex.length; i++) {
+            target[i] = parseInt(hex.substr(i * 2, 2), 16);
+          }
+        };
+        hexToBytes(dump.workRam, s.workRam);
+        hexToBytes(dump.playfieldRam, s.playfieldRam);
+        hexToBytes(dump.spriteRam, s.spriteRam);
+        hexToBytes(dump.alphaRam, s.alphaRam);
+        hexToBytes(dump.colorRam, s.colorRam);
+        // Y scroll source from workRam[0x002] word
+        s.videoScrollY = (((s.workRam[2] ?? 0) << 8) | (s.workRam[3] ?? 0)) & 0x1ff;
+        s.videoScrollX = 0;
+        mameDumpFrozen = true;
+        console.log(`[mameDump] loaded MAME frame ${dump.frame} as fixture`);
+      }
+    } catch (e) {
+      console.warn("[mameDump] fetch failed:", e);
+    }
+  }
+
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
   let demoFrame = 0;
@@ -180,9 +218,10 @@ async function startGame(
     if (heldKeys.has("ArrowUp"))    s.videoScrollY = (s.videoScrollY - scrollStep + 512) % 512;
     if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
 
-    // runMainLoopBody=true se ROM reale: avanza state machine 1101E + refresh10FCE
-    // ad ogni tick → spriteRam/workRam si popolano, gameplay simulation attiva.
-    tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
+    // Se mameDump attivo, lo state è frozen → no tick (preserve dump bit-perfect).
+    if (!mameDumpFrozen) {
+      tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
+    }
     frameCount += 1;
 
     if (renderMode === "diagnostic") {
