@@ -265,6 +265,54 @@ function main(): void {
     }
   }
 
+  // ASCII art map del playfield (40 col × 30 row = 320×240 viewport / 8x8 tile)
+  console.log(`\n  --- ASCII map (60×30, '#'=tile != 0, '.'=tile 0, '@'=sprite) ---`);
+  // Costruisci indice per posizione (X/8, Y/8)
+  const tileMap = new Map<string, "#" | "@">();
+  for (const t of frame.playfield) {
+    if (t.tileIndex !== 0) {
+      const cx = Math.floor(t.x / 8);
+      const cy = Math.floor(t.y / 8);
+      tileMap.set(`${cx},${cy}`, "#");
+    }
+  }
+  for (const sp of frame.sprites) {
+    const cx = Math.floor(sp.x / 8);
+    const cy = Math.floor(sp.y / 8);
+    tileMap.set(`${cx},${cy}`, "@");
+  }
+  const COLS = 60;
+  const ROWS = 30;
+  for (let y = 0; y < ROWS; y++) {
+    let row = "    ";
+    for (let x = 0; x < COLS; x++) {
+      const cell = tileMap.get(`${x},${y}`);
+      row += cell ?? ".";
+    }
+    console.log(row);
+  }
+
+  // HUD as decoded string
+  if (frame.alpha.length > 0) {
+    console.log(`\n  --- HUD as decoded string (sorted by y, x) ---`);
+    const sorted = [...frame.alpha].sort((a, b) => a.y - b.y || a.x - b.x);
+    let curY = -1;
+    let line = "    ";
+    for (const a of sorted) {
+      if (a.y !== curY) {
+        if (line.length > 4) console.log(line);
+        line = `    y=${a.y.toString().padStart(3, " ")}: `;
+        curY = a.y;
+      }
+      // Decoded: alpha tile index 0x20-0x7E = ASCII printable
+      const ch = a.tileIndex >= 0x20 && a.tileIndex <= 0x7e
+        ? String.fromCharCode(a.tileIndex)
+        : `[${a.tileIndex.toString(16)}]`;
+      line += ch;
+    }
+    if (line.length > 4) console.log(line);
+  }
+
   // Diagnosi finale
   console.log(`\n=== Diagnosis ===`);
   if (frame.playfield.length === 0 && pfNz > 0) {
