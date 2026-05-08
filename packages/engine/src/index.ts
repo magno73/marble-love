@@ -259,6 +259,7 @@ export * as helper2548 from "./helper-2548.js";
 export * as helper1C88 from "./helper-1c88.js";
 export * as helper285B0 from "./helper-285b0.js";
 export * as helper1CD00 from "./helper-1cd00.js";
+export * as absHelpers from "./abs-helpers.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
