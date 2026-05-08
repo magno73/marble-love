@@ -86,7 +86,10 @@ async function startGame(
   // Altrimenti ROM vuota: tick gira ma le palette anim sono no-op.
   const tickRom = rom ?? busNs.emptyRomImage();
   // Boot init: pattern color RAM, palette base, state machine globals.
-  bootInit(s, tickRom);
+  // preloadLevel=0 (level 1) per pre-caricare la tilemap via Codex chain
+  // → state.playfieldRam popolata, renderer mostra subito il livello.
+  // Solo se ROM reale è disponibile (i lookup ROM tile servono per dispatcher).
+  bootInit(s, tickRom, rom !== undefined ? { preloadLevel: 0 } : {});
 
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();

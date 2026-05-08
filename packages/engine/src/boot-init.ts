@@ -44,6 +44,8 @@ import {
 } from "./init-helpers.js";
 import { slotArrayBulkInit } from "./slot-array-init.js";
 import { mainLoopInit117B2 } from "./main-loop-init-117b2.js";
+import { clearPlayfieldRam12174 } from "./clear-playfield-ram-12174.js";
+import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 
 /**
  * Inizializza color RAM con il pattern decrescente del RESET handler
@@ -116,13 +118,32 @@ function bootHudStringsInit(state: GameState, rom: RomImage): void {
 }
 
 /**
+ * Opzioni opzionali di `bootInit`.
+ */
+export interface BootInitOptions {
+  /**
+   * Se passato (0..5), dopo il bootInit base esegue la catena
+   * `clearPlayfieldRam12174 + levelDispatcher16EC6` per pre-caricare il
+   * livello indicato in `state.playfieldRam` (Codex chain end-to-end).
+   * Utile per smoke test / renderer demo. NON usare per scenari di parity
+   * vs MAME oracle: rompe l'allineamento (il binario reale non pre-load
+   * a boot, popola la playfield via game loop iterativo).
+   */
+  preloadLevel?: number;
+}
+
+/**
  * Esegue la sequenza di boot completa.
  *
  * Va chiamato UNA volta su uno `emptyGameState()` prima del primo `tick()`.
  * È idempotente (può essere richiamato senza side-effect dannosi grazie al
  * gate `*0x400016 == 0`), ma in pratica chiamarlo una volta sola.
  */
-export function bootInit(state: GameState, rom: RomImage): void {
+export function bootInit(
+  state: GameState,
+  rom: RomImage,
+  options: BootInitOptions = {},
+): void {
   // 1. Hardware init (RESET 0x466)
   colorRamHardwareInit(state);
   // alpha RAM clear: già 0 in emptyGameState
@@ -179,6 +200,19 @@ export function bootInit(state: GameState, rom: RomImage): void {
   //    intenzione di "pre-load level" (renderer demo / smoke test), non
   //    bootInit base. Vedi visual-smoke-test che chiama la chain manualm.
   void mainLoopInit117B2; // tenuta in scope per uso futuro
+
+  // 7. Optional pre-load level (gated, opt-in). Esegue manualmente la
+  //    chain di tile loading scoperta via watch_write MAME su level1:
+  //    `clearPlayfieldRam12174 + levelDispatcher16EC6` con sub default
+  //    Codex (buildTilemapRows1A444 → packTilemapEntries1A9CC).
+  //    Risultato: state.playfieldRam popolato con ~1500-2900 byte
+  //    (varia per livello). Vedi integration-playfield-chain.test.ts.
+  if (options.preloadLevel !== undefined) {
+    state.workRam[0x394] = (options.preloadLevel >>> 8) & 0xff;
+    state.workRam[0x395] = options.preloadLevel & 0xff;
+    clearPlayfieldRam12174(state);
+    levelDispatcher16EC6(state, rom);
+  }
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
   // copyRomToWorkram66Words, etc.). Per ora gli campi non inizializzati
