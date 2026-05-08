@@ -223,6 +223,13 @@ export function buildPlayfieldFromRam(
     const lookup = lookups[fields.lookupIndex];
     if (lookup === undefined) continue;
 
+    // Palette index: MAME `atarisy1_v.cpp:get_playfield_tile_info`:
+    //   color = 0x20 + ((lookup >> 12) & 15) << m_bank_color_shift[gfx]
+    // m_bank_color_shift = bpp - 3 (4bpp→1, 5bpp→2, 6bpp→3).
+    // Il vecchio codice usava sempre `* 8` (shift 3) — corretto solo per 6bpp.
+    // Per 4bpp i tile della rampa Beginner usavano palette sbagliata → colori
+    // verdi/gialli invece di blu/grigio.
+    const colorShift = lookup.bpp - 3;
     commands.push({
       tileIndex: lookup.offset * 256 + fields.tileIndexLow,
       gfxBank: lookup.bank,
@@ -231,7 +238,7 @@ export function buildPlayfieldFromRam(
       y: Math.floor(index / 64) * 8,
       width: 8,
       height: 8,
-      paletteIndex: 0x20 + lookup.color * 8,
+      paletteIndex: 0x20 + (lookup.color << colorShift),
       flipX: fields.flipX,
       priority: fields.lookupIndex,
     });
@@ -301,7 +308,9 @@ export function buildSpritesFromMotionObjectRam(
       command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
       command.gfxBank = lookup.bank;
       command.bitsPerPixel = lookup.bpp;
-      command.paletteIndex = 0x10 + lookup.color * 8;
+      // Stesso fix shift dipendente da bpp (vedi commento sopra in playfield).
+      const moColorShift = lookup.bpp - 3;
+      command.paletteIndex = 0x10 + (lookup.color << moColorShift);
     }
 
     sprites.push(command);
