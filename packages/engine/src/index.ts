@@ -51,6 +51,7 @@ export * as orFlags5248 from "./or-flags-5248.js";
 export * as stateSub5250 from "./state-sub-5250.js";
 export * as stateSub525C from "./state-sub-525c.js";
 export * as stateSub5284 from "./state-sub-5284.js";
+export * as stateBuilder52DA from "./state-builder-52da.js";
 export * as stateSub540A from "./state-sub-540a.js";
 export * as stateSub5334 from "./state-sub-5334.js";
 export * as stateSub535E from "./state-sub-535e.js";
