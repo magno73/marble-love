@@ -19,7 +19,7 @@ import { stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { stateSub2678 } from "./state-sub-2678.js";
-import { stateSub2572 } from "./state-sub-2572.js";
+import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 
 const WRAM = 0x00400000;
 
@@ -118,7 +118,7 @@ export function mainLoopInit1101E(
       case5(state, rom, subs);
       return;
     case 6:
-      case6(state, subs, rom);
+      case6(state, subs);
       return;
   }
 }
@@ -246,7 +246,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.clearPaletteRam?.(state);
   (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
   subs.initFnPointers28580?.(state);
-  subs.clearAlphaTiles28C7E?.(state);
+  (subs.clearAlphaTiles28C7E ?? clearAlphaTiles28C7E)(state);
   subs.sceneObjInit28CA6?.(state);
   if (rw(state, 0x00400394) > 5) {
     ww(state, 0x00400390, 6);
@@ -256,7 +256,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   }
 }
 
-function case6(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
+function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
   wb(state, 0x00400008, 0);
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);
