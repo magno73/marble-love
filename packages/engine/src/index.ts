@@ -212,6 +212,7 @@ export * as decodeBitstream1A668 from "./decode-bitstream-1a668.js";
 export * as moBlockEmit1A8D2 from "./mo-block-emit-1a8d2.js";
 export * as renderTileLine1AD54 from "./render-tile-line-1ad54.js";
 export * as slotInsertSorted18E6C from "./slot-insert-sorted-18e6c.js";
+export * as helper18F46 from "./helper-18f46.js";
 export * as bufferFill1B12A from "./buffer-fill-1b12a.js";
 export * as stateSub15BD0 from "./state-sub-15bd0.js";
 export * as stateSub14C46 from "./state-sub-14c46.js";
@@ -254,6 +255,8 @@ export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 export * as vblankHelpers from "./vblank-helpers.js";
 export * as scrollRange144E4 from "./scroll-range-144e4.js";
 export * as helper2548 from "./helper-2548.js";
+export * as helper1C88 from "./helper-1c88.js";
+export * as helper285B0 from "./helper-285b0.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
