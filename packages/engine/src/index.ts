@@ -248,6 +248,7 @@ export * as refreshHelper13EE6 from "./refresh-helper-13ee6.js";
 export * as refreshFrame10FCE from "./refresh-frame-10fce.js";
 export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 export * as vblankHelpers from "./vblank-helpers.js";
+export * as scrollRange144E4 from "./scroll-range-144e4.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
