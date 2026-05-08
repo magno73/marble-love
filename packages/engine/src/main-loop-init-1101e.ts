@@ -17,6 +17,7 @@ import { soundPair15884 } from "./sound-pair-15884.js";
 import { levelFractionRender28232 } from "./level-fraction-render-28232.js";
 import { stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
+import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 
 const WRAM = 0x00400000;
 
@@ -97,7 +98,7 @@ export function mainLoopInit1101E(
 
   switch (stateWord) {
     case 0:
-      subs.refresh10FCE?.(state);
+      (subs.refresh10FCE ?? ((s) => { if (rom !== undefined) refreshFrame10FCE(s, rom); }))(state);
       return;
     case 1:
       case1(state, subs);
@@ -179,7 +180,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
   }
 
   if (rw(state, 0x00400392) === 0 && rw(state, 0x00400390) === 1) {
-    subs.refresh10FCE?.(state);
+    (subs.refresh10FCE ?? ((s) => { if (rom !== undefined) refreshFrame10FCE(s, rom); }))(state);
   }
 }
 
