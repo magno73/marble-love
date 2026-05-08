@@ -101,22 +101,22 @@ export function mainLoopInit1101E(
       (subs.refresh10FCE ?? ((s) => { if (rom !== undefined) refreshFrame10FCE(s, rom); }))(state);
       return;
     case 1:
-      case1(state, subs);
+      case1(state, subs, rom);
       return;
     case 2:
-      case3(state, subs);
+      case3(state, subs, rom);
       return;
     case 3:
       case4(state, rom, subs);
       return;
     case 4:
-      case2(state, subs);
+      case2(state, subs, rom);
       return;
     case 5:
       case5(state, rom, subs);
       return;
     case 6:
-      case6(state, subs);
+      case6(state, subs, rom);
       return;
   }
 }
@@ -125,7 +125,7 @@ function init11452(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage
   (subs.init11452 ?? ((s) => mainLoopInit11452(s, rom, subs.init11452Subs)))(state);
 }
 
-function init10504(state: GameState, subs: MainLoopInit1101ESubs): void {
+function init10504(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs, {}, rom)))(state);
 }
 
@@ -143,11 +143,11 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   ww(state, 0x00400394, readRomByte(rom, 0x0001f1c8));
   (subs.gameModePrep10456 ?? gameModePrep10456)(state);
   (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
-  init10504(state, subs);
+  init10504(state, subs, rom);
   ww(state, 0x00400390, 0);
 }
 
-function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
+function case1(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   if (rb(state, 0x004003ee) === 1 && rw(state, 0x004003ea) >= 0x18) {
     subs.textPrint0118?.(state, 0x22a56);
     subs.textPrint0118?.(state, 0x22a62);
@@ -161,7 +161,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
     if (rw(state, 0x00400392) !== 2) {
       wb(state, 0x00400086, 0xff);
       ww(state, 0x00400392, 2);
-      init11452(state, subs);
+      init11452(state, subs, rom);
     } else {
       (subs.helper11654 ?? finalize11654)(state);
     }
@@ -175,7 +175,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
     if (rw(state, 0x0040075a) === 0) {
       const next = rw(state, 0x00400392) + 1;
       ww(state, 0x00400392, next > 2 ? 0 : next);
-      init11452(state, subs);
+      init11452(state, subs, rom);
     }
   }
 
@@ -184,7 +184,7 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs): void {
   }
 }
 
-function case2(state: GameState, subs: MainLoopInit1101ESubs): void {
+function case2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   const saved = rb(state, 0x00400008);
   wb(state, 0x00400008, 0);
   wb(state, 0x0040039a, 1);
@@ -198,7 +198,7 @@ function case2(state: GameState, subs: MainLoopInit1101ESubs): void {
   }
 }
 
-function case3(state: GameState, subs: MainLoopInit1101ESubs): void {
+function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   wb(state, 0x004003ac, 0);
   const side = rb(state, 0x004003a4) === 1 ? 2 : 1;
   const d2 = rw(state, 0x00400396) === 1 ? 0 : side;
@@ -248,13 +248,12 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   if (rw(state, 0x00400394) > 5) {
     ww(state, 0x00400390, 6);
   } else {
-    init10504(state, subs);
+    init10504(state, subs, rom);
     ww(state, 0x00400390, 0);
   }
-  void rom;
 }
 
-function case6(state: GameState, subs: MainLoopInit1101ESubs): void {
+function case6(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   wb(state, 0x00400008, 0);
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);

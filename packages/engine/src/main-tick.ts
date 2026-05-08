@@ -35,6 +35,7 @@ import type { RomImage } from "./bus.js";
 
 import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
+import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
@@ -100,6 +101,14 @@ export interface MainTickOptions extends MainTickInputs {
   skipFrameCounter?: boolean;
   /** Sub-functions stub di FUN_4CA0 sound dispatcher (FUN_3E1A, FUN_4DCC, FUN_4C3E). */
   soundSubs?: SoundTickSubs;
+  /**
+   * Se true, dopo mainTick chiama anche `mainLoopInit1101E(state, rom)` per
+   * far avanzare il dispatcher state machine `*0x400390`. Nel binario questo
+   * gira sul main thread (FUN_117B2 loop), separato dall'IRQ4 vblank.
+   * Approssima il game-loop body run per gameplay simulation. Default OFF
+   * (preserva parity vs MAME oracle).
+   */
+  runMainLoopBody?: boolean;
 }
 
 /**
@@ -210,5 +219,11 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3af] = r[0x3b1] ?? 0;
     particleBounce(state);
     // FUN_26F3E (lateGameLogic) — STUB
+  }
+
+  // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
+  // Default OFF — opt-in for renderer demo / game flow advancement.
+  if (opts.runMainLoopBody === true) {
+    mainLoopInit1101E(state, rom);
   }
 }
