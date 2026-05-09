@@ -80,9 +80,17 @@ far convergere `bootInit + tick(N)` allo state RAM MAME @ frame 2400.
 
 **Iter A1** (commit `05a3e1c`): Sonnet identifica `decode-bitstream-1a668.ts:write8Abs` droppa silently i write a pfRam range. Tentato fix: aggiungere branch pfRam. **Risultato**: pf match 24%→16%. Roll-back. Cause: altri call site di `decodeBitstream1A668` scrivono male in pfRam range.
 
-**Iter A2**: Sonnet identifica `levelInit16F6C` come la sub principale (= 2300 byte tile content via 32 row × 36 word). Pre-requisiti: workRam[0x474]=statePtr, [0x664]=1, [0x662]=0. Tentato fix: chiamare levelInit16F6C dopo levelDispatcher16EC6 + decode-bitstream pfRam-aware. **Risultato**: pf match 24%→16% (= conferma ipotesi A1). Roll-back. Working theory: decode-bitstream chiama `decodeBitstream1A668` con `outAbs` in pfRam range MA per livello SBAGLIATO (= preloadLevel TS != quello che MAME ha @ frame 2400).
+**Iter A2**: Sonnet identifica `levelInit16F6C` come la sub principale. Tentato fix: enable decode-bitstream pfRam-aware + chiamare levelInit16F6C. **Risultato**: pf match 24%→16%. Roll-back.
 
-**Next iter**: investigare il `m_playfield_tile_bank` dinamico (= forse tile_bank=1 in MAME @ frame 2400, mio TS=0). Indagare i call sites SPECIFICI di decodeBitstream1A668 per capire quali scrivono pfRam vs workRam.
+**Iter A3**: investigato call sites decodeBitstream1A668. 4 call sites:
+- level-init-16f6c.ts: outAbs=0xa00006+ (pfRam) ← intended
+- refresh-helper-13ee6.ts: outAbs=0x400706+ (workRam) ← deve restare workRam
+- slapstic-dispatcher-1344c.ts: outAbs=0xa00006+ (pfRam)
+Quindi enable pfRam in `write8Abs` causa drop perché altri caller scrivono pfRam (slapstic-dispatcher) ma con args diversi.
+**Pre-requisiti workRam**: MAME @ frame 2400 ha `0x394=0x1` (level Beginner), `0x474=0x2c54c` (statePtr ROM), `0x662=0x1`, `0x664=0x2`. Mio TS bootInit:0 ha `0x394=0`, `0x474=0x2bee2` (level 0 statePtr), `0x662=0`, `0x664=1`.
+**Tentato fix**: preloadLevel:1 + override workRam → pf match 24% INVARIATO (no progress).
+
+**STALLO**: 3 iterazioni di seguito senza miglioramento pf match. Causa root: lo state RAM @ MAME frame 2400 NON è "static preloadLevel" ma il risultato di evolution attraverso state machine. Direzione strategica documentata in [`docs/state-convergence-roadmap.md`](./docs/state-convergence-roadmap.md) — 3 alternative (full-game-loop, snapshot-hybrid, target-subs).
 
 ### Multi-agent throughput
 
