@@ -137,6 +137,28 @@ con drift accettabile, l'utente può chiamare `?` con altri params.
 con MAME state è ora **bit-perfect persistent** per qualunque numero di
 tick. State convergence raggiunta per direzione B (snapshot-hybrid).
 
+### Iter B3 — refreshHelper drift root cause diagnosed
+
+Sonnet sub-agent investigation. Findings:
+- workRam[0x974] = 0x400a9c sia in MAME @ frame 2400 sia in TS post-warmState ✓
+- workRam[0x006] = 0 in entrambi a t=0
+- AL TICK 1: TS setta 0x006 = 1 (= triggera refreshHelper al tick 2)
+- Da tick 2 in poi: TS scrive byte pfRam con minor differenze accumulanti
+
+Causa probabile: i `PATCHED_JSRS` del parity test 500/500 stubbano sub
+interne (FUN_2FFB8 slapstic, FUN_1AD54 tile line writer, FUN_1AA38 span
+builder) che nel real flow NON sono stub. Quindi il TS replica produce
+byte coerenti vs binary patched, ma diversi vs binary unpatched.
+
+**Fix decision**:
+- (B3-fix-A) Modificare la sub: rischio rompere parity 500/500
+- (B3-fix-B) Pre-popolare workRam: già OK (0x974 corretto)
+- (B3-fix-C) Bypass condizionale: già implementato via runMainLoopBody:false
+  in warmState mode
+
+Decisione: (C) è già attiva, (A) è scope troppo grande per state convergence
+incrementale. Pausa investigazione refreshHelper.
+
 ### Iter B2.1 — VISUAL VERIFICATION SUCCESS
 
 Headless screenshot triple compare (mameDump | mameLive | MAME oracle):
