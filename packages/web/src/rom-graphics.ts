@@ -187,7 +187,13 @@ export function decodeObjectTile(
       for (let plane = 0; plane < bpp; plane += 1) {
         const byteOffset =
           bankBase + (planeOffsets[plane] ?? 0) + tileIndex * OBJECT_TILE_BYTES + y;
-        pen |= readLsbFirstBit(tiles, byteOffset * 8 + x) << plane;
+        // MAME gfx_layout per Atari System 1 obj: planes[0] è il MSB del pen
+        // (planeOffsets ordinati da bpp-1 → 0). Il bit shift è (bpp-1-plane),
+        // non `plane`. Vedi `gfx_element::decodechar`:
+        //   `result |= 1 << (bpp - 1 - plane)`
+        // Bug pre-fix: pen aveva i bit in ordine invertito → tile renderizzati
+        // con palette index sbagliato (pen alto invece che pen basso).
+        pen |= readLsbFirstBit(tiles, byteOffset * 8 + x) << (bpp - 1 - plane);
       }
       pixels[y * OBJECT_TILE_WIDTH + x] = pen;
     }
