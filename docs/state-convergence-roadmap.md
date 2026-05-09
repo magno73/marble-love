@@ -70,3 +70,41 @@ Dopo ogni fix, re-run `probe-converge.ts` e verificare miglioramento di:
 
 Totale: **1-2 giorni di lavoro continuativo** per convergenza state TS ≡ MAME state.
 
+## Iter A1-A3 results (autonomous loop)
+
+3 iterazioni Sonnet sub-agent investigations, tutte hanno proposto fix che
+hanno PEGGIORATO o LASCIATO INVARIATO il match%:
+
+- **A1** (commit 05a3e1c): enable decode-bitstream pfRam write → 24%→16%
+- **A2** (commit 74dccf5): + chiamare levelInit16F6C → 24%→16%
+- **A3**: preloadLevel:1 + override workRam[0x662,0x664] → 24% invariato
+
+**Causa root identificata**: il livello che MAME ha @ frame 2400 NON è
+semplicemente "preloadLevel diverso da 0". È uno state RAM completo
+ottenuto dopo:
+- ~108 frame di boot init
+- N frame di attract demo gameplay (= state machine evolution)
+- Multiple chiamate a `levelDispatcher16EC6 + levelInit16F6C` con state diversi
+
+Cioè non basta un setup statico TS. Serve simulare l'EVOLUZIONE attraverso
+il game-loop, che richiede il `mainLoopInit117B2` chain attivo (ma
+rolled-back per parity test preservation).
+
+## Direzione strategica (post-stallo)
+
+3 alternative:
+
+**A) Branch `feature/full-game-loop`**: rimuovere il rollback parity-preserving
+e wirare `mainLoopInit117B2` come default. Costo: alcuni differential test
+parity potrebbero rompersi.
+
+**B) Snapshot-based hybrid**: usare il MAME state dump come "warm-state"
+iniziale + tick(N) reale. Bypass del state convergence problem ma richiede
+sempre il fixture MAME.
+
+**C) Identificare le 2-3 sub specifiche** che il game-loop chiama dopo
+`bootInit` (es. tilemap reload trigger su stato 5) e wirate solo quelle
+senza enable intera state machine.
+
+**Decisione**: opzione A è quella allineata col PRD (= replicare il binario
+M68010). Opzione C è più sicura ma rallenta convergenza.
