@@ -13,7 +13,8 @@
   "dependencies": {
     "@marble-love/engine": "*",
     "fflate": "^0.8.2",
-    "pixi.js": "^8.6.0"
+    "pixi.js": "^8.6.0",
+    "pngjs": "^7.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

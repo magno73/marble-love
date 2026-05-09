@@ -35,7 +35,7 @@ describe("buildEngineDiagnosticFrame", () => {
     expect(texturedTile).toMatchObject({
       gfxBank: 3,
       bitsPerPixel: 6,
-      paletteIndex: 0x48,
+      paletteIndex: 0x68, // 0x40 + (5 << (6-3)) — playfield color_base 0x100
     });
   });
 });
