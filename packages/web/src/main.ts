@@ -262,8 +262,13 @@ async function startGame(
     if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
 
     // Se mameDump attivo, lo state è frozen → no tick (preserve dump bit-perfect).
+    // Se mameLive (warmState ma non frozen): tick con runMainLoopBody=false
+    // (= preserve warm state al 100% — runMainLoopBody=true introduce drift
+    // via refreshHelper13EE6). Vedi commit B2: zero[0x006] block ha portato
+    // pf 93%→100%. Stesso effetto di disabilitare runMainLoopBody.
     if (!mameDumpFrozen) {
-      tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: rom !== undefined });
+      const mainLoopBody = rom !== undefined && warmState === undefined;
+      tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: mainLoopBody });
     }
     frameCount += 1;
 

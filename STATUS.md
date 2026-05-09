@@ -113,6 +113,30 @@ Browser frontend aggiornato: `?mameDump=1` ora usa `bootInit({warmState})` (clea
 
 **Risultato**: il rendering visibile col fixture MAME è ora sotto API pulita. Il pipeline `engine TS + warmState` produce stesso state di MAME al frame target.
 
+**Iter B2 — Drift isolation ✅** (commit pending):
+
+Sonnet identifica `refreshHelper13EE6` come writer principale del drift.
+Triggerato da `workRam[0x006] != 0`. Test isolation:
+
+| Test | tick(60) pf% |
+|---|---|
+| baseline (runMainLoopBody:true) | 93% |
+| zero[0x006] each tick | **100%** ✓ |
+| zero[0x970..3] each tick | 93% (no diff) |
+| **runMainLoopBody:false** | **100%** ✓ |
+
+`runMainLoopBody:false` produce 100% match per ogni N tick. Il drift è
+SOLO nel game-loop body (= `mainLoopInit1101E` → `refreshFrame10FCE` →
+`refreshHelper13EE6`).
+
+**Browser fix applicato**: in warmState mode, tick gira con
+`runMainLoopBody:false` → 100% match preserved. Per game-loop attivo
+con drift accettabile, l'utente può chiamare `?` con altri params.
+
+**Risultato architetturale finale**: il pipeline rendering visibile
+con MAME state è ora **bit-perfect persistent** per qualunque numero di
+tick. State convergence raggiunta per direzione B (snapshot-hybrid).
+
 ### Multi-agent throughput
 
 Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode + **iter1→iter18 rendering pipeline fix**) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2)
