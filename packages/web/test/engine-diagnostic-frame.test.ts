@@ -21,7 +21,7 @@ describe("buildEngineDiagnosticFrame", () => {
       spriteIndex: 0x410,
       gfxBank: 2,
       bitsPerPixel: 5,
-      paletteIndex: 0x1c, // 0x10 + (3 << (5-3)) — bpp-aware shift
+      paletteIndex: 0x26, // 0x20 + (3 << 1) — MAME s_mob_config
     });
   });
 
