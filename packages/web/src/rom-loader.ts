@@ -317,15 +317,14 @@ export function extractRomZipArchives(
   const program = assembleInterleavedRegion(entries, programFiles, PROGRAM_REGION_SIZE);
   const sound = assembleLinearRegion(entries, soundFiles, SOUND_REGION_SIZE);
   // MAME atarisy1.cpp: `ROM_REGION(... "tiles", ROMREGION_INVERT | ROMREGION_ERASEFF)`.
-  //   1. ROMREGION_ERASEFF: pre-fill region a 0xFF
-  //   2. ROM_LOAD: i file sovrascrivono i byte alle offset
-  //   3. ROMREGION_INVERT: XOR 0xFF su tutta la region
-  // Combinato col bit-order MSB-first del decoder produce pen identico a MAME.
-  const tiles = new Uint8Array(TILE_REGION_SIZE).fill(0xff);
+  // Pre-fill 0xFF + carica file + XOR 0xFF = (file^0xFF su zone con file, 0x00 su gap).
+  // Empiricamente nel browser il rendering è MAME-faithful SENZA invertire i tile,
+  // forse perché Pixi v8 fa qualche flip implicito sulla canvas → texture pipeline.
+  // Lasciamo i byte raw dei file caricati su pre-fill 0x00.
+  const tiles = new Uint8Array(TILE_REGION_SIZE);
   for (const file of tileFiles) {
     copyLinear(tiles, file, requireEntry(entries, file.name));
   }
-  for (let i = 0; i < tiles.length; i++) tiles[i] = ~tiles[i]! & 0xff;
   const proms = assembleLinearRegion(entries, promFiles, PROM_REGION_SIZE);
 
   return {
