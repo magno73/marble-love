@@ -137,20 +137,17 @@ async function startGame(
   // fullScreenInit popola lo spriteRam (visibili 2 sprite a 160,160) ma cancella
   // l'HUD "SCORE" — opt-in via ?fullScreenInit=1.
   const useFullScreenInit = searchParams.get("fullScreenInit") === "1";
-  bootInit(
-    s,
-    tickRom,
-    rom !== undefined
-      ? { preloadLevel: 0, fullScreenInit: useFullScreenInit }
-      : {},
-  );
 
-  // ─── MAME state import (debug fixture) ────────────────────────────────────
-  // ?mameDump=1 → fetch /mame_state.json (dump da MAME a un frame target)
-  // e popola lo state TS direttamente. Bypassa bootInit + tick.
-  // Permette di vedere cosa renderizza il Pixi pipeline col vero state MAME.
+  // ─── MAME warm state (snapshot-hybrid mode) ───────────────────────────────
+  // ?mameDump=1 → fetch /mame_state.json e usa come bootInit({warmState}).
+  // L'engine TS parte da quel state e può continuare via tick(N).
+  // ?mameLive=1 → come mameDump ma NON freeza il tick (lascia evolvere).
   let mameDumpFrozen = false;
-  if (searchParams.get("mameDump") === "1") {
+  type WarmState = NonNullable<NonNullable<Parameters<typeof bootInit>[2]>["warmState"]>;
+  let warmState: WarmState | undefined;
+  const useMameDump = searchParams.get("mameDump") === "1";
+  const useMameLive = searchParams.get("mameLive") === "1";
+  if (useMameDump || useMameLive) {
     try {
       const r = await fetch("/mame_state.json");
       if (r.ok) {
@@ -162,26 +159,40 @@ async function startGame(
           alphaRam: string;
           colorRam: string;
         };
-        const hexToBytes = (hex: string, target: Uint8Array): void => {
-          for (let i = 0; i < target.length && i * 2 + 1 < hex.length; i++) {
-            target[i] = parseInt(hex.substr(i * 2, 2), 16);
+        const hex2bytes = (hex: string, len: number): Uint8Array => {
+          const out = new Uint8Array(len);
+          for (let i = 0; i < len && i * 2 + 1 < hex.length; i++) {
+            out[i] = parseInt(hex.substr(i * 2, 2), 16);
           }
+          return out;
         };
-        hexToBytes(dump.workRam, s.workRam);
-        hexToBytes(dump.playfieldRam, s.playfieldRam);
-        hexToBytes(dump.spriteRam, s.spriteRam);
-        hexToBytes(dump.alphaRam, s.alphaRam);
-        hexToBytes(dump.colorRam, s.colorRam);
-        // Y scroll source from workRam[0x002] word
-        s.videoScrollY = (((s.workRam[2] ?? 0) << 8) | (s.workRam[3] ?? 0)) & 0x1ff;
-        s.videoScrollX = 0;
-        mameDumpFrozen = true;
-        console.log(`[mameDump] loaded MAME frame ${dump.frame} as fixture`);
+        warmState = {
+          workRam: hex2bytes(dump.workRam, 0x2000),
+          playfieldRam: hex2bytes(dump.playfieldRam, 0x2000),
+          spriteRam: hex2bytes(dump.spriteRam, 0x1000),
+          alphaRam: hex2bytes(dump.alphaRam, 0x1000),
+          colorRam: hex2bytes(dump.colorRam, 0x800),
+          videoScrollY: (((parseInt(dump.workRam.substr(4, 2), 16) << 8) |
+                          parseInt(dump.workRam.substr(6, 2), 16)) & 0x1ff),
+          videoScrollX: 0,
+        };
+        if (useMameDump) mameDumpFrozen = true;
+        console.log(`[warmState] loaded MAME frame ${dump.frame} (frozen=${mameDumpFrozen})`);
       }
     } catch (e) {
-      console.warn("[mameDump] fetch failed:", e);
+      console.warn("[warmState] fetch failed:", e);
     }
   }
+
+  bootInit(
+    s,
+    tickRom,
+    warmState !== undefined
+      ? { warmState }
+      : rom !== undefined
+        ? { preloadLevel: 0, fullScreenInit: useFullScreenInit }
+        : {},
+  );
 
   const renderer = initRenderer(app, rom?.graphics);
   const inputState = initInput();
