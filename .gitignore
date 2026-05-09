@@ -68,3 +68,4 @@ packages/mobile/android/
 # --- TypeScript ---
 *.tsbuildinfo
 .claude/worktrees/
+packages/web/public/roms

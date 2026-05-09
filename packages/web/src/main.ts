@@ -49,6 +49,35 @@ function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): 
 }
 
 btn.addEventListener("click", () => fileInput.click());
+
+// ?autoLoad=1 — DEV ONLY: fetcha /roms/marble.zip + /roms/atarisy1.zip
+// (symlinkati in public/roms) e li carica come File-like → extractRomZipFiles.
+// Per screenshot automatici / E2E test senza file picker.
+if (searchParams.get("autoLoad") === "1") {
+  void (async () => {
+    try {
+      setRomStatus("Auto-loading ROMs from /roms/...");
+      btn.disabled = true;
+      const [r1, r2] = await Promise.all([
+        fetch("/roms/marble.zip"),
+        fetch("/roms/atarisy1.zip"),
+      ]);
+      if (!r1.ok || !r2.ok) throw new Error(`fetch fail: ${r1.status}/${r2.status}`);
+      const [b1, b2] = await Promise.all([r1.blob(), r2.blob()]);
+      const f1 = new File([b1], "marble.zip");
+      const f2 = new File([b2], "atarisy1.zip");
+      const dt = new DataTransfer();
+      dt.items.add(f1);
+      dt.items.add(f2);
+      fileInput.files = dt.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    } catch (e) {
+      setRomStatus("autoLoad failed: " + (e instanceof Error ? e.message : e), "error");
+      btn.disabled = false;
+    }
+  })();
+}
+
 fileInput.addEventListener("change", async () => {
   const files = fileInput.files;
   if (!files || files.length === 0) return;
