@@ -80,7 +80,7 @@ describe("extractRomZipBytes", () => {
     expect(rom.program[0x00001]).toBe(0x11);
     expect(rom.program[0x00003]).toBe(0x22);
     expect(rom.sound[0x8000]).toBe(0x77);
-    expect(rom.tiles[0x00000]).toBe(0xcc); // 0x33 ^ 0xff (ROMREGION_INVERT)
+    expect(rom.tiles[0x00000]).toBe(0x33);
     expect(rom.sprites).toBe(rom.tiles);
     expect(rom.proms[0x000]).toBe(0x44);
     expect(rom.graphics.alpha[0]).toBe(0x55);

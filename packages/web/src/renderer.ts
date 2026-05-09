@@ -116,6 +116,7 @@ function drawObjectTileIntoImageData(
   destinationY: number,
   flipX: boolean,
   flipY: boolean,
+  transparentPen0: boolean,
 ): void {
   const imageWidth = imageData.width;
   const imageHeight = imageData.height;
@@ -138,7 +139,10 @@ function drawObjectTileIntoImageData(
       imageData.data[offset] = color.r;
       imageData.data[offset + 1] = color.g;
       imageData.data[offset + 2] = color.b;
-      imageData.data[offset + 3] = pen === 0 ? 0 : color.a;
+      // Playfield tilemap in MAME è OPAQUE (tutti i pen disegnati).
+      // Solo motion objects/sprite hanno transparent_pen=0.
+      // Vedi atarisy1_v.cpp s_mob_config:`transparent pen index = 0`.
+      imageData.data[offset + 3] = pen === 0 && transparentPen0 ? 0 : color.a;
     }
   }
 }
@@ -172,6 +176,9 @@ function textureFromObjectCommand(
         tileIndex + tileY * tilesWide + tileX,
         command.bitsPerPixel,
       );
+      // Playfield tile (TileCommand ha "tileIndex"): opaque, MAME tilemap default.
+      // Sprite (SpriteCommand ha "spriteIndex"): transparent_pen=0.
+      const isSprite = !("tileIndex" in command);
       drawObjectTileIntoImageData(
         frame,
         imageData,
@@ -181,6 +188,7 @@ function textureFromObjectCommand(
         tileY * DEFAULT_TILE_SIZE,
         command.flipX === true,
         command.flipY === true,
+        isSprite,
       );
     }
   }
