@@ -399,7 +399,7 @@ function drawFallbackAlphaGlyph(
   }
 }
 
-function drawDecodedAlphaGlyph(
+function _drawDecodedAlphaGlyph(
   frame: Frame,
   command: renderNs.AlphaCommand,
   alpha: DecodedAlphaGraphics,
@@ -410,6 +410,7 @@ function drawDecodedAlphaGlyph(
 
   return alphaTextureForGlyph(frame, command, glyph, assets);
 }
+void _drawDecodedAlphaGlyph;
 
 function alphaTextureForGlyph(
   frame: Frame,
@@ -457,7 +458,7 @@ function alphaTextureForGlyph(
   return texture;
 }
 
-function acquireAlphaSprite(layers: ClassicLayers, assets: RendererAssets): Sprite {
+function _acquireAlphaSprite(layers: ClassicLayers, assets: RendererAssets): Sprite {
   const sprite = assets.alphaSpritePool.find((candidate) => !candidate.visible);
   if (sprite !== undefined) {
     sprite.visible = true;
@@ -470,6 +471,7 @@ function acquireAlphaSprite(layers: ClassicLayers, assets: RendererAssets): Spri
   assets.alphaSpritePool.push(created);
   return created;
 }
+void _acquireAlphaSprite;
 
 function hideAlphaSprites(assets: RendererAssets): void {
   for (const sprite of assets.alphaSpritePool) {
@@ -482,7 +484,7 @@ function hideAlphaSprites(assets: RendererAssets): void {
 function drawAlpha(
   frame: Frame,
   graphics: Graphics,
-  layers: ClassicLayers,
+  _layers: ClassicLayers,
   assets: RendererAssets,
 ): void {
   graphics.clear();

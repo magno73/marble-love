@@ -163,10 +163,11 @@ export function decodeGraphicsLookups(proms: Uint8Array): GraphicsLookupTables {
   return { playfield, motionObjects };
 }
 
-function readLsbFirstBit(bytes: Uint8Array, bitOffset: number): number {
+function _readLsbFirstBit(bytes: Uint8Array, bitOffset: number): number {
   const byte = bytes[bitOffset >>> 3] ?? 0;
   return (byte >>> (bitOffset & 7)) & 1;
 }
+void _readLsbFirstBit;
 
 export function decodeObjectTile(
   tiles: Uint8Array,

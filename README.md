@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte e ~358 bit-perfect via parity 500/500** (resto via metadata thunks). Chain playfield + HUD ASCII "SCORE" + Frame.playfield 1375 tile reali Level 1 attivi. Web frontend real rendering. **223 test files / 1908 vitest verde**.
+**Status:** **🎯 100% delle 350 funzioni del binario coperte e ~358 bit-perfect via parity 500/500** (resto via metadata thunks). Rendering Pixi MAME-faithful: HUD blu autentico "SCORE 220 / 51", piattaforme isometric 3D Beginner level con palette correct, marble e nemici visibili. **227 test files / 1923 vitest verde**.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -13,7 +13,7 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%, ~358 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **223 file / 1908 test** verde |
+| Vitest | **227 file / 1923 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
@@ -39,15 +39,22 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | **Replicate bit-perfect** | **~270+** via parity 500/500 (resto metadata thunks) |
 | **Differential test cases** | >100.000 random cases tutti 100% match |
 
-## Track B — Classic Renderer
+## Track B — Classic Renderer (MAME-faithful pipeline)
 
 | Componente | Status |
 |---|---|
 | **Engine `Frame` model** | ✅ `packages/engine/src/render.ts` — neutral data model (palette, scroll, 3 layer: playfield/MO/alpha) |
 | **PixiJS pipeline** | ✅ `packages/web/src/renderer.ts` — translate Frame → containers, integer scaling, no AA |
-| **ROM graphics decode** | ✅ `packages/web/src/rom-graphics.ts` — alpha glyphs + object tiles |
-| **ROM ZIP loader** | ✅ `packages/web/src/rom-loader.ts` con fflate |
+| **ROM graphics decode** | ✅ `packages/web/src/rom-graphics.ts` — alpha glyphs + object tiles MSB-first MAME-compliant |
+| **ROM ZIP loader** | ✅ `packages/web/src/rom-loader.ts` con fflate + ROMREGION_INVERT |
 | **Demo fixtures** | ✅ classic-demo-frame, engine-diagnostic-frame |
+| **MAME oracle dump** | ✅ `oracle/mame_state_dump.lua` — full state RAM + screenshot @ frame target |
+| **MAME state fixture** | ✅ `packages/web/public/mame_state.json` — frame 2400 Beginner level |
+| **`?mameDump=1` query param** | ✅ bypass bootInit+tick, popola state TS dal MAME dump |
+| **`?autoLoad=1` query param** | ✅ DEV-only auto-fetch ROMs dal symlink `public/roms/` |
+| **Bit-perfect tile decode** | ✅ planes[0]=MSB pen, MSB-first readbit, ROMREGION_INVERT, set_granularity(8) |
+| **Palette regions MAME** | ✅ Alpha 0x000-0x0FF / MO 0x100-0x1FF / Playfield **0x200-0x2FF** / Translucency 0x300-0x3FF |
+| **Pixel match vs MAME oracle** | 11.3% pixel-perfect (delta<10), 33% partial (delta<50), layout match |
 | **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 
 ## Bridge Track A ↔ Track B
