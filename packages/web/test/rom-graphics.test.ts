@@ -79,12 +79,12 @@ describe("decodeGraphicsLookups", () => {
 describe("decodeObjectTile", () => {
   it("decodes a synthetic 4bpp object tile from planar banks", () => {
     const tiles = new Uint8Array(0x40000);
-    // MAME objlayout_4bpp plane offsets are 3,2,1,0 * 0x10000 bytes.
-    // Set x=0 on row 0 in all planes, producing pen 0b1111.
-    tiles[0x30000] = 0x01;
-    tiles[0x20000] = 0x01;
-    tiles[0x10000] = 0x01;
-    tiles[0x00000] = 0x01;
+    // MAME `readbit` MSB-first: bit position 0 = bit 7 (MSB) del byte.
+    // Setting all planes a 0x80 (bit 7 set) produce pen 0b1111 a x=0.
+    tiles[0x30000] = 0x80;
+    tiles[0x20000] = 0x80;
+    tiles[0x10000] = 0x80;
+    tiles[0x00000] = 0x80;
 
     const tile = decodeObjectTile(tiles, 1, 0, 4);
 
