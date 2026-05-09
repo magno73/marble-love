@@ -98,6 +98,21 @@ Quindi enable pfRam in `write8Abs` causa drop perché altri caller scrivono pfRa
 
 Roadmap completa in [`docs/state-convergence-roadmap.md`](./docs/state-convergence-roadmap.md).
 
+**Iter B1 — SUCCESSO ✅** (commit pending):
+Implementato `bootInit({warmState})` opt-in che popola state direttamente dai buffer e SALTA il bootInit standard. Risultati measurement:
+
+| Test | workRam | playfieldRam | spriteRam | alphaRam | colorRam |
+|---|---|---|---|---|---|
+| warmState + 0 tick | 100% | 100% | 100% | 100% | 100% |
+| warmState + tick(60) | 99% | 93% | 100% | 100% | 100% |
+| warmState + tick(600) | 99% | 59% | 100% | 100% | 100% |
+
+Drift su pfRam dipende da quanti tick si fanno. Con 0 tick (= "frozen state"), match perfetto.
+
+Browser frontend aggiornato: `?mameDump=1` ora usa `bootInit({warmState})` (clean) invece di copiare bytes manualmente. Aggiunto `?mameLive=1` per warm state + tick attivo.
+
+**Risultato**: il rendering visibile col fixture MAME è ora sotto API pulita. Il pipeline `engine TS + warmState` produce stesso state di MAME al frame target.
+
 ### Multi-agent throughput
 
 Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode + **iter1→iter18 rendering pipeline fix**) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2)

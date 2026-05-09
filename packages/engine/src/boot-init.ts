@@ -144,6 +144,26 @@ export interface BootInitOptions {
    * chiama queste sub solo a level-enter, non a boot).
    */
   fullScreenInit?: boolean;
+  /**
+   * "Warm state" (snapshot-hybrid mode): se passato, popola direttamente
+   * state.workRam/playfieldRam/spriteRam/alphaRam/colorRam dai buffer e
+   * SALTA tutto il bootInit standard. Utile per testing/demo quando si
+   * vuole partire da uno snapshot RAM esistente (es. MAME state dump @
+   * frame N) e poi avanzare via tick(M).
+   *
+   * Non si combina con `preloadLevel` o `fullScreenInit` (che vengono
+   * ignorati). Use case: simulare game-loop "warm" senza ri-boot full.
+   */
+  warmState?: {
+    workRam: Uint8Array;
+    playfieldRam: Uint8Array;
+    spriteRam: Uint8Array;
+    alphaRam: Uint8Array;
+    colorRam: Uint8Array;
+    /** Optional: scroll registers cached da MMIO write. */
+    videoScrollX?: number;
+    videoScrollY?: number;
+  };
 }
 
 /**
@@ -158,6 +178,20 @@ export function bootInit(
   rom: RomImage,
   options: BootInitOptions = {},
 ): void {
+  // 0. Snapshot-hybrid: se warmState passato, popola state direttamente e
+  //    saltato tutto il bootInit standard (= no boot rom code, no preloadLevel).
+  if (options.warmState !== undefined) {
+    const w = options.warmState;
+    state.workRam.set(w.workRam.subarray(0, state.workRam.length));
+    state.playfieldRam.set(w.playfieldRam.subarray(0, state.playfieldRam.length));
+    state.spriteRam.set(w.spriteRam.subarray(0, state.spriteRam.length));
+    state.alphaRam.set(w.alphaRam.subarray(0, state.alphaRam.length));
+    state.colorRam.set(w.colorRam.subarray(0, state.colorRam.length));
+    if (w.videoScrollX !== undefined) state.videoScrollX = w.videoScrollX & 0x1ff;
+    if (w.videoScrollY !== undefined) state.videoScrollY = w.videoScrollY & 0x1ff;
+    return;
+  }
+
   // 1. Hardware init (RESET 0x466)
   colorRamHardwareInit(state);
   // alpha RAM clear: già 0 in emptyGameState
