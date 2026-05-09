@@ -317,21 +317,15 @@ export function extractRomZipArchives(
   const program = assembleInterleavedRegion(entries, programFiles, PROGRAM_REGION_SIZE);
   const sound = assembleLinearRegion(entries, soundFiles, SOUND_REGION_SIZE);
   // MAME atarisy1.cpp: `ROM_REGION(... "tiles", ROMREGION_INVERT | ROMREGION_ERASEFF)`.
-  //   1. ROMREGION_ERASEFF: pre-fill region a 0xFF prima di caricare i file
-  //   2. (ROM_LOAD: i file sovrascrivono i byte alle loro offset)
-  //   3. ROMREGION_INVERT: inverte ogni byte (XOR 0xFF) dopo il caricamento
-  // Net equivalente: aree con file → byte_file XOR 0xFF; gap → 0x00.
-  // SHORT-CIRCUIT: pre-fill 0x00, NON invertire i file (XOR 0xFF su 0xFF + INVERT
-  // = no-op rispetto all'approccio classico). Vedi commento iter10.
-  // Equivalente algebrico: `region[i] = (file_byte ^ 0xff) | (gap_byte = 0)`.
-  // Né opzione produce risultato MAME-faithful — il binario del binario MM
-  // si aspetta che tiles ROM venga letto raw (senza invert) con LSB-first
-  // bit-order canonico, perché il decoder `gfx_element` MAME applica
-  // l'invert via `planeoffset` che non è quello applicato al tile data.
-  const tiles = new Uint8Array(TILE_REGION_SIZE);
+  //   1. ROMREGION_ERASEFF: pre-fill region a 0xFF
+  //   2. ROM_LOAD: i file sovrascrivono i byte alle offset
+  //   3. ROMREGION_INVERT: XOR 0xFF su tutta la region
+  // Combinato col bit-order MSB-first del decoder produce pen identico a MAME.
+  const tiles = new Uint8Array(TILE_REGION_SIZE).fill(0xff);
   for (const file of tileFiles) {
     copyLinear(tiles, file, requireEntry(entries, file.name));
   }
+  for (let i = 0; i < tiles.length; i++) tiles[i] = ~tiles[i]! & 0xff;
   const proms = assembleLinearRegion(entries, promFiles, PROM_REGION_SIZE);
 
   return {
