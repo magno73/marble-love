@@ -137,6 +137,23 @@ con drift accettabile, l'utente può chiamare `?` con altri params.
 con MAME state è ora **bit-perfect persistent** per qualunque numero di
 tick. State convergence raggiunta per direzione B (snapshot-hybrid).
 
+### Iter B2.1 — VISUAL VERIFICATION SUCCESS
+
+Headless screenshot triple compare (mameDump | mameLive | MAME oracle):
+
+- **mameDump** (frozen): piattaforme grigie + bordi blu, layout di "snapshot RAM"
+- **mameLive** (warm + tick): **IDENTICO al MAME oracle** — spike piramidi, tracks bianchi, marble visibile, sfondo bands blu autentiche
+- **MAME oracle** (riferimento): screenshot dal MAME runtime
+
+**Conclusione**: il MAME `screen_update` runtime processa qualche tick di
+post-processing tra il moment del dump RAM e il moment dello snapshot
+bitmap. Il mio TS `?mameLive=1` (= warm state + tick stable) replica
+proprio quel post-processing → **rendering visivo identico al MAME originale**.
+
+Screenshot disponibili:
+- `~/Desktop/marble-love-B2-TRIPLE-COMPARE.png` (3848×960)
+- `~/Desktop/marble-love-FEATURE-iter18-RECHECK.png`
+
 ### Multi-agent throughput
 
 Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode + **iter1→iter18 rendering pipeline fix**) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2)
