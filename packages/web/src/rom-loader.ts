@@ -270,6 +270,7 @@ function buildGraphicsAssets(
   tiles: Uint8Array,
   proms: Uint8Array,
 ): RomGraphicsAssets {
+  // MAME: `ROM_REGION(0x2000, "alpha", 0)` — niente INVERT (solo tiles ha INVERT).
   const alpha = requireEntry(entries, alphaFile.name);
 
   return {
@@ -315,7 +316,18 @@ export function extractRomZipArchives(
 
   const program = assembleInterleavedRegion(entries, programFiles, PROGRAM_REGION_SIZE);
   const sound = assembleLinearRegion(entries, soundFiles, SOUND_REGION_SIZE);
-  const tiles = assembleLinearRegion(entries, tileFiles, TILE_REGION_SIZE);
+  // MAME atarisy1.cpp: `ROM_REGION(... "tiles", ROMREGION_INVERT | ROMREGION_ERASEFF)`.
+  //   1. ROMREGION_ERASEFF: pre-fill region a 0xFF prima di caricare i file
+  //   2. (ROM_LOAD: i file sovrascrivono i byte alle loro offset)
+  //   3. ROMREGION_INVERT: inverte ogni byte (XOR 0xFF) dopo il caricamento
+  // Net: aree con file → byte_file XOR 0xFF; aree gap (non caricate) → 0x00.
+  // Senza questo, pen=0 (= transparent) appare come pen=2^bpp-1 (colore alto)
+  // → puntini gialli/colorati sui bordi tile invece che background nero.
+  const tiles = new Uint8Array(TILE_REGION_SIZE).fill(0xff);
+  for (const file of tileFiles) {
+    copyLinear(tiles, file, requireEntry(entries, file.name));
+  }
+  for (let i = 0; i < tiles.length; i++) tiles[i] = ~tiles[i]! & 0xff;
   const proms = assembleLinearRegion(entries, promFiles, PROM_REGION_SIZE);
 
   return {
