@@ -35,13 +35,16 @@ const forceRomPicker = searchParams.get("rom") === "1";
 const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
 const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
+const forceAutoLoad = searchParams.get("autoLoad") === "1";
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
+// E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
 const useSyntheticDemoFrame =
   import.meta.env.DEV &&
   !forceRomPicker &&
   !forceEngineDiagnosticFrame &&
   !forceDemoFrame &&
-  !forceRealRendering;
+  !forceRealRendering &&
+  !forceAutoLoad;
 
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
   romStatus.textContent = message;

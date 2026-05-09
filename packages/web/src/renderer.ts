@@ -469,6 +469,8 @@ function hideAlphaSprites(assets: RendererAssets): void {
   }
 }
 
+
+
 function drawAlpha(
   frame: Frame,
   graphics: Graphics,
@@ -479,25 +481,33 @@ function drawAlpha(
   hideAlphaSprites(assets);
 
   for (const command of frame.alpha) {
-    const backgroundAlpha = command.opaque ? 0.72 : 0.18;
-
-    if (command.opaque) {
-      graphics
-        .rect(command.x, command.y, DEFAULT_TILE_SIZE, DEFAULT_TILE_SIZE)
-        .fill({ color: 0x000000, alpha: backgroundAlpha });
-    }
-
-    const texture =
-      assets.alpha === undefined
-        ? undefined
-        : drawDecodedAlphaGlyph(frame, command, assets.alpha, assets);
-    if (texture !== undefined) {
-      const sprite = acquireAlphaSprite(layers, assets);
-      sprite.texture = texture;
-      sprite.x = command.x;
-      sprite.y = command.y;
-    } else {
+    if (assets.alpha === undefined) {
       drawFallbackAlphaGlyph(frame, graphics, command);
+      continue;
+    }
+    const glyph = assets.alpha.glyphs[command.tileIndex];
+    if (glyph === undefined) {
+      drawFallbackAlphaGlyph(frame, graphics, command);
+      continue;
+    }
+    // Disegna direttamente via Graphics.rect — bypass canvas+Texture pipeline
+    // che in Pixi v8 può non rigenerare la texture correttamente per ogni
+    // glyph (cache key collision o canvas not flushed). Rect-per-pixel è
+    // O(64) per glyph, ok per HUD piccolo (max ~300 glyph/frame).
+    const colors = [0, 1, 2, 3].map((pen) =>
+      exactPaletteLookup(frame, command.paletteIndex * 4 + pen) ??
+      paletteLookup(frame, command.paletteIndex),
+    );
+    for (let y = 0; y < glyph.height; y++) {
+      for (let x = 0; x < glyph.width; x++) {
+        const pen = glyph.pixels[y * glyph.width + x] ?? 0;
+        if (pen === 0 && command.opaque !== true) continue;
+        const c = colors[pen] ?? colors[0];
+        if (c === undefined) continue;
+        graphics
+          .rect(command.x + x, command.y + y, 1, 1)
+          .fill({ color: rgbaToPixiColor(c), alpha: alphaFromRgba(c) });
+      }
     }
   }
 }
