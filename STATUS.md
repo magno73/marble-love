@@ -1,7 +1,7 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-09
-**Branch corrente:** `main`.
+**Ultimo update:** 2026-05-08
+**Branch corrente:** `feature/visual-pixel-match`.
 
 ## Riepilogo metriche
 
@@ -59,6 +59,59 @@ match. Differenze ancora in diagnostica:
 5. **Per-scanline yscroll trick** non implementato (`adjusted_scroll -= scanline+1`)
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
+
+## Sessione 2026-05-08 — Iter B5: bisection refreshFrame10FCE
+
+Continuazione della convergence investigation post-pause B4. Obiettivo:
+identificare quale sub interna del game-loop produce il drift dello state
+TS rispetto a MAME quando `runMainLoopBody:true`.
+
+### Bisection setup
+
+Test: da `bootInit({warmState: mameDump})`, chiamare direttamente
+`refreshFrame10FCE` per 60 iter, override una sub alla volta, misurare
+pf match%.
+
+```
+refreshFrame10FCE direct 60 iter (default subs):     pf=93%
+refreshFrame10FCE all 11 subs no-op:                 pf=100%
+Only fun13EE6 active (altre 10 stub):                pf=93%
+Only objectScanDispatch251DE / processAllSprites189E2
+  / objectUpdatePair158CC / slotArrayTick1493C
+  / dispatchStrings17230 / refreshHelper1912C
+  / stateSub19BAA / stateSub1844A / stateDispatch12FD0
+  / objDirtyDispatch28624:                            pf=100%
+```
+
+**Risultato**: tra le 12 sub di refreshFrame10FCE, **solo `refreshHelper13EE6`**
+(FUN_13EE6) modifica pfRam in modo divergente dal warmState iniziale.
+
+### Caveat metodologico (importante)
+
+Il match% post-warmState **non è proxy di correttezza**. Il test confronta
+`TS_after_60_iter` vs `MAME_at_warmState_dump`, ma MAME stesso continuerebbe
+ad evolvere il pfRam nei 60 frame successivi. Il delta 100→93% può essere
+evoluzione legittima (refreshHelper13EE6 scrolla la mappa, scrive nuovi tile
+nelle colonne di edge) e non un bug.
+
+Per validare correttezza serve:
+- Dump MAME @ frame 2400 + dump @ frame 2460
+- Confronto `TS_after_60_iter_from_2400` vs `MAME_at_2460`
+
+Senza il secondo dump, non posso distinguere "drift = bug TS" da
+"drift = TS ha evoluto correttamente come avrebbe fatto MAME".
+
+### Decisioni
+
+1. **Bisection non risolutivo**: serve dump MAME multipli per validare
+2. **STOP iterazioni cieche**: ulteriori "iter B6, B7..." sul match% sono
+   metricamente non validi senza ground-truth multi-frame
+3. **Pipeline corretta** = warmState mode (`?mameDump=1` /
+   `?mameLive=1`): bit-perfect rendering verificato. Modalità di lavoro
+   prodotta finché non avremo IRQ scheduler completo
+4. **Prossimo step concreto**: estendere `oracle/mame_state_dump.lua` per
+   dumppare multipli frame (2400, 2410, 2420, ..., 2460) e confrontare
+   TS evolution vs MAME evolution frame-per-frame
 
 ## Sessione 2026-05-09 — State convergence autonomous loop (in corso)
 
