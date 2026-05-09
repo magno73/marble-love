@@ -225,10 +225,13 @@ export function buildPlayfieldFromRam(
 
     // Palette index: MAME `atarisy1_v.cpp:get_playfield_tile_info`:
     //   color = 0x20 + ((lookup >> 12) & 15) << m_bank_color_shift[gfx]
-    // m_bank_color_shift = bpp - 3 (4bpp→1, 5bpp→2, 6bpp→3).
-    // Il vecchio codice usava sempre `* 8` (shift 3) — corretto solo per 6bpp.
-    // Per 4bpp i tile della rampa Beginner usavano palette sbagliata → colori
-    // verdi/gialli invece di blu/grigio.
+    // m_bank_color_shift = bpp - 3.
+    // gfx_element constructor uses `color_base = 256` (= 0x100), so final
+    // palette index = 0x100 + color*8 + pen = 0x200 + ((lookup_color<<shift)<<3) + pen.
+    // Atari System 1 palette regions:
+    //   0x000-0x0FF Alphanumerics, 0x100-0x1FF Motion Object,
+    //   0x200-0x2FF Playfield, 0x300-0x3FF Translucency.
+    // Per cui per playfield uso paletteIndex base 0x40 → 0x40*8 = 0x200 ✓.
     const colorShift = lookup.bpp - 3;
     commands.push({
       tileIndex: lookup.offset * 256 + fields.tileIndexLow,
@@ -238,7 +241,7 @@ export function buildPlayfieldFromRam(
       y: Math.floor(index / 64) * 8,
       width: 8,
       height: 8,
-      paletteIndex: 0x20 + (lookup.color << colorShift),
+      paletteIndex: 0x40 + (lookup.color << colorShift),
       flipX: fields.flipX,
       priority: fields.lookupIndex,
     });

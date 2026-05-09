@@ -175,7 +175,7 @@ describe("buildFrame", () => {
         y: 0,
         width: 8,
         height: 8,
-        paletteIndex: 0x34, // 0x20 + (5 << (5-3)) — bpp-aware shift
+        paletteIndex: 0x54, // 0x40 + (5 << (5-3)) — color_base 0x100 — bpp-aware shift
         flipX: true,
         priority: 1,
       },
@@ -215,7 +215,7 @@ describe("buildPlayfieldFromRam", () => {
         y: 0,
         width: 8,
         height: 8,
-        paletteIndex: 0x22, // 0x20 + (1 << (4-3))
+        paletteIndex: 0x42, // 0x40 + (1 << (4-3))
         flipX: true,
         priority: 1,
       },
@@ -227,7 +227,7 @@ describe("buildPlayfieldFromRam", () => {
         y: 0,
         width: 8,
         height: 8,
-        paletteIndex: 0x2c, // 0x20 + (3 << (5-3))
+        paletteIndex: 0x4c, // 0x40 + (3 << (5-3))
         flipX: false,
         priority: 0,
       },
