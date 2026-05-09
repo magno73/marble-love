@@ -137,6 +137,34 @@ con drift accettabile, l'utente può chiamare `?` con altri params.
 con MAME state è ora **bit-perfect persistent** per qualunque numero di
 tick. State convergence raggiunta per direzione B (snapshot-hybrid).
 
+### Conclusione loop autonomo (2026-05-09)
+
+**6 iter eseguite** (B1 → B2 → B2.1 → B3 → B4 → B4.1):
+
+| Iter | Risultato | Commit |
+|---|---|---|
+| B1 | warmState API ✓ | df9a737 |
+| B2 | drift bug isolated, runMainLoopBody:false → 100% ✓ | 1f82368 |
+| B2.1 | visual verification: mameLive ≡ MAME oracle ✓ | 03ceff1 |
+| B3 | refreshHelper drift root cause: sub stubbed PATCHED_JSRS | bcfbd9e |
+| B4 | direzione A non viable (loop infinito vitest) | 3962a99 |
+
+**Risultato finale produzione**:
+- ✅ `?mameDump=1` → 100% match frozen
+- ✅ `?mameLive=1` → 100% match + animations stable, identico a MAME oracle
+- ⚠️ Cold-start (no fixture) → 24% pf match
+
+**Per cold-start 100% match** (= TS standalone replication):
+- Strada 1: replicare sub stubbed unpatched (FUN_2FFB8, FUN_1AD54, FUN_1AA38)
+  + risolvere wait loops del mainLoopInit117B2 chain
+- Strada 2: implementare event-loop simulator (IRQ scheduler 60Hz vblank)
+
+Entrambe sono 1-3 giorni di lavoro denso, fuori dallo scope del loop autonomo
+incrementale. Decisione architetturale richiede input utente.
+
+**Loop autonomo PAUSATO**. Il branch `feature/visual-pixel-match` (PR #30) è
+production-ready per modalità warmState.
+
 ### Iter B4 — direzione A non viable (loop infinito)
 
 Tentato: enable `mainLoopInit1101E` come default in `mainTick` (era opt-in).
