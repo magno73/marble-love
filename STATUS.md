@@ -58,7 +58,23 @@ match. Differenze ancora in diagnostica:
 4. **MO+PF priority merge** non implementata: `palette[0x300 + (pf_pen<<4) + mo_pen]` translucency blending
 5. **Per-scanline yscroll trick** non implementato (`adjusted_scroll -= scanline+1`)
 
-Lavoro in corso su branch `feature/visual-pixel-match`.
+Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
+
+## Sessione 2026-05-09 — State convergence autonomous loop (in corso)
+
+Setup loop autonomo che indaga e fixa iterativamente le sub mancanti per
+far convergere `bootInit + tick(N)` allo state RAM MAME @ frame 2400.
+
+**Probe diagnostici** (tools per il loop):
+- `packages/cli/src/probe-converge.ts` — % match TS vs MAME per ogni regione
+- `packages/cli/src/probe-pf-diff.ts` — playfield diff per 256-byte chunks
+
+**Roadmap dettagliata**: [`docs/state-convergence-roadmap.md`](./docs/state-convergence-roadmap.md)
+
+**Multi-agent**: Sonnet sub-agents in parallelo via `Agent` tool per:
+- Identify PC writers in MAME watch_write traces
+- Verify TS sub wiring vs MAME execution path
+- Replicate missing sub functions con parity 500/500
 
 ### Multi-agent throughput
 
