@@ -185,7 +185,7 @@ function textureFromObjectCommand(
     }
   }
   context.putImageData(imageData, 0, 0);
-  return Texture.from(canvas, true);
+  return Texture.from(canvas);
 }
 
 function objectTileTextureForCommand(
@@ -444,7 +444,7 @@ function alphaTextureForGlyph(
   }
 
   context.putImageData(imageData, 0, 0);
-  const texture = Texture.from(canvas, true);
+  const texture = Texture.from(canvas);
   assets.alphaTextureCache.set(key, texture);
   return texture;
 }
@@ -502,31 +502,10 @@ function drawAlpha(
   }
 }
 
-function drawChrome(frame: Frame, graphics: Graphics): void {
+function drawChrome(_frame: Frame, graphics: Graphics): void {
+  // Chrome overlay: rimosso debug palette swatches (inquinavano il rendering
+  // reale). Solo il bordo viewport rimane se vuoi tracciare la cliprect.
   graphics.clear();
-  graphics
-    .rect(0, 0, frame.nativeSize.width, frame.nativeSize.height)
-    .stroke({ color: 0x101820, alpha: 1, width: 1 });
-
-  const palettePreview = frame.palette.slice(0, 16);
-  for (let i = 0; i < palettePreview.length; i += 1) {
-    const color = palettePreview[i]?.rgba;
-    if (color === undefined) continue;
-    graphics
-      .rect(frame.nativeSize.width - 72 + i * 4, 4, 3, 3)
-      .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
-  }
-
-  if (frame.debugLabel === undefined) return;
-
-  const blockCount = Math.min(16, frame.debugLabel.length);
-  for (let i = 0; i < blockCount; i += 1) {
-    const code = frame.debugLabel.charCodeAt(i);
-    const color = code % 2 === 0 ? 0x8ee6ad : 0xffd37a;
-    graphics
-      .rect(frame.nativeSize.width - 6 - i * 5, frame.nativeSize.height - 6, 3, 3)
-      .fill({ color, alpha: 0.9 });
-  }
 }
 
 function initLayers(app: Application): ClassicLayers {
