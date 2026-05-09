@@ -48,6 +48,7 @@ import { clearPlayfieldRam12174 } from "./clear-playfield-ram-12174.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { moScreenInit1A286 } from "./mo-screen-init-1a286.js";
 import { moGridInit2404 } from "./mo-grid-init-2404.js";
+import { levelInit16F6C } from "./level-init-16f6c.js";
 
 /**
  * Inizializza color RAM con il pattern decrescente del RESET handler
@@ -242,6 +243,7 @@ export function bootInit(
     moScreenInit1A286(state, rom);
     moGridInit2404(state, rom, 1);
   }
+  void levelInit16F6C; // placeholder for future explicit wireup
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
   // copyRomToWorkram66Words, etc.). Per ora gli campi non inizializzati
