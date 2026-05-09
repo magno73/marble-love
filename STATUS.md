@@ -137,6 +137,28 @@ con drift accettabile, l'utente può chiamare `?` con altri params.
 con MAME state è ora **bit-perfect persistent** per qualunque numero di
 tick. State convergence raggiunta per direzione B (snapshot-hybrid).
 
+### Iter B4 — direzione A non viable (loop infinito)
+
+Tentato: enable `mainLoopInit1101E` come default in `mainTick` (era opt-in).
+Vitest gira > 30 min senza terminare → killed. Loop infinito in qualche test
+parity che invoca `tick(N)` con N alto.
+
+**Conclusione**: la direzione A "blind enable" non è praticabile. Il
+`mainLoopInit1101E` ha sub interne (es. `mainLoopInit117B2` chain con
+`spin-wait` su MMIO) che non terminano in TS senza un meccanismo di
+"yield" / event loop simulato.
+
+Per fare cold-start convergence (= bootInit + tick(2400) = MAME state
+@ frame 2400) serve UNA delle:
+- Replicare unpatched FUN_2FFB8/FUN_1AD54/FUN_1AA38 + handle wait loops
+- Implementare event-loop simulation (= IRQ scheduler, vblank timing,
+  trackball poll) che fa avanzare lo state come MAME
+- Stimato 1-3 giorni di lavoro continuativo
+
+**Stato finale state convergence (per ora)**:
+- ✅ Production-ready: `?mameDump=1` e `?mameLive=1` rendering MAME-identico
+- ⚠️ Cold-start (no fixture): 24% pf match — richiede investment ulteriore
+
 ### Iter B3 — refreshHelper drift root cause diagnosed
 
 Sonnet sub-agent investigation. Findings:
