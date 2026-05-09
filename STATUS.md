@@ -90,7 +90,13 @@ Quindi enable pfRam in `write8Abs` causa drop perché altri caller scrivono pfRa
 **Pre-requisiti workRam**: MAME @ frame 2400 ha `0x394=0x1` (level Beginner), `0x474=0x2c54c` (statePtr ROM), `0x662=0x1`, `0x664=0x2`. Mio TS bootInit:0 ha `0x394=0`, `0x474=0x2bee2` (level 0 statePtr), `0x662=0`, `0x664=1`.
 **Tentato fix**: preloadLevel:1 + override workRam → pf match 24% INVARIATO (no progress).
 
-**STALLO**: 3 iterazioni di seguito senza miglioramento pf match. Causa root: lo state RAM @ MAME frame 2400 NON è "static preloadLevel" ma il risultato di evolution attraverso state machine. Direzione strategica documentata in [`docs/state-convergence-roadmap.md`](./docs/state-convergence-roadmap.md) — 3 alternative (full-game-loop, snapshot-hybrid, target-subs).
+**Iter A4** (target-subs minimal): Sonnet identifica `tilemapBlit17044` come sub incrementale (= 240 byte ROM→pfRam). Tentato force `*0x392=2` per triggere via state machine, poi direct call. Entrambi peggiorano (24%→23%). Conferma: i byte di `tilemapBlit17044` (= attract title overlay) NON SONO presenti nel state MAME @ frame 2400 (= Beginner level gameplay).
+
+**STALLO 4 iter consecutive**: i 4 fix Sonnet-suggested hanno tutti peggiorato il match. Pattern emerso: lo state RAM @ MAME frame 2400 è risultato di state machine evolution complessa, non replicabile con setup statico singolo.
+
+**Decisione strategica**: STOP "blind fix" su `feature/visual-pixel-match`. Proseguire con direzione **B (snapshot-hybrid)** — usare il MAME state dump come "warm state" + tick(N) reali per state evolution incrementale verificabile.
+
+Roadmap completa in [`docs/state-convergence-roadmap.md`](./docs/state-convergence-roadmap.md).
 
 ### Multi-agent throughput
 
