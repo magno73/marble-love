@@ -226,6 +226,11 @@ export function bootInit(
     state.workRam[0x395] = options.preloadLevel & 0xff;
     clearPlayfieldRam12174(state);
     levelDispatcher16EC6(state, rom);
+    // TODO: levelInit16F6C call attempted ma peggiora pf match 24% → 16%.
+    // Probabilmente scrive content per livello diverso (= preloadLevel index
+    // mismatch con quello che MAME ha @ frame 2400). Lascio decode-bitstream
+    // pfRam-aware ma NO call esplicita per ora. Indagare arg specifico.
+    void levelInit16F6C;
 
     // Imposta state machine a 1 (= attract scenario / case 1) per attivare
     // string render (HUD) durante il game tick. Senza questo, *0x390=0 → case 0
@@ -243,7 +248,6 @@ export function bootInit(
     moScreenInit1A286(state, rom);
     moGridInit2404(state, rom, 1);
   }
-  void levelInit16F6C; // placeholder for future explicit wireup
 
   // TODO: replicare il resto di FUN_FA0 (sub di setup workRam globals,
   // copyRomToWorkram66Words, etc.). Per ora gli campi non inizializzati
