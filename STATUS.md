@@ -76,6 +76,14 @@ far convergere `bootInit + tick(N)` allo state RAM MAME @ frame 2400.
 - Verify TS sub wiring vs MAME execution path
 - Replicate missing sub functions con parity 500/500
 
+### Iterazioni autonomous loop
+
+**Iter A1** (commit `05a3e1c`): Sonnet identifica `decode-bitstream-1a668.ts:write8Abs` droppa silently i write a pfRam range. Tentato fix: aggiungere branch pfRam. **Risultato**: pf match 24%→16%. Roll-back. Cause: altri call site di `decodeBitstream1A668` scrivono male in pfRam range.
+
+**Iter A2**: Sonnet identifica `levelInit16F6C` come la sub principale (= 2300 byte tile content via 32 row × 36 word). Pre-requisiti: workRam[0x474]=statePtr, [0x664]=1, [0x662]=0. Tentato fix: chiamare levelInit16F6C dopo levelDispatcher16EC6 + decode-bitstream pfRam-aware. **Risultato**: pf match 24%→16% (= conferma ipotesi A1). Roll-back. Working theory: decode-bitstream chiama `decodeBitstream1A668` con `outAbs` in pfRam range MA per livello SBAGLIATO (= preloadLevel TS != quello che MAME ha @ frame 2400).
+
+**Next iter**: investigare il `m_playfield_tile_bank` dinamico (= forse tile_bank=1 in MAME @ frame 2400, mio TS=0). Indagare i call sites SPECIFICI di decodeBitstream1A668 per capire quali scrivono pfRam vs workRam.
+
 ### Multi-agent throughput
 
 Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode + **iter1→iter18 rendering pipeline fix**) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2)
