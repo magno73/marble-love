@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-08
+**Ultimo update:** 2026-05-09
 **Branch corrente:** `main`.
 
 ## Riepilogo metriche
@@ -8,16 +8,61 @@
 | Metrica | Valore |
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%) — di cui ~358 verificate bit-perfect via parity 500/500 |
-| Vitest | **223 file / 1908 test** verde |
+| Vitest | **227 file / 1923 test** verde |
 | Differential test cases | >100.000 random cases tutti 100% match |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
-| Bridge engine ↔ renderer | ✅ attivo + visual smoke test + chain playfield end-to-end |
-| `bootInit({preloadLevel})` | ✅ opt-in pre-load level → state.playfieldRam popolato (1500-2900 byte/livello) |
-| `tick({runMainLoopBody})` | ✅ opt-in main-thread loop simulation → spriteRam ~110 byte, workRam attivo |
-| **HUD attivato** | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
-| **Web frontend real rendering** | ✅ default con ROM caricata → renderer.draw(state) |
-| **Frame.playfield level 1** | ✅ 1375/4096 tile reali, 1 sprite, 10 alpha chars (validato via visual-smoke-real CLI) |
-| Multi-agent throughput | Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2) |
+| **Bridge engine ↔ renderer** | ✅ MAME-faithful pipeline: tile gfx decode + palette + HUD |
+| **MAME oracle pixel comparison** | 11% pixel-perfect, 33% partial (delta < 50/255) — layout ≡ MAME |
+| `bootInit({preloadLevel, fullScreenInit})` | ✅ pre-load level + MO RAM init opt-in |
+| `tick({runMainLoopBody})` | ✅ main-thread loop simulation |
+| **MAME state dump fixture** | ✅ `?mameDump=1` → state TS = state MAME @ frame 2400 |
+| **Web frontend real rendering** | ✅ Beginner level riconoscibile: HUD blu "SCORE 220/51", piattaforme grigie+blu |
+
+## Sessione 2026-05-09 — Visual Pixel-Match Iteration (iter1→iter18)
+
+Investigazione end-to-end del rendering pipeline tramite MAME oracle (Lua dump
+state RAM + MAME snapshot bitmap @ frame 2400). 18 iterazioni successive con
+screenshot headless Chrome → confronto vs `mame_snap.png`.
+
+### Bug fixati (in ordine di impatto visivo)
+
+1. **`paletteIndex` base 0x40 (= color_base 0x100 MAME)** — commit `3865779`. Atari System 1 palette device ha 4 zone × 256 entries: Alpha (0x000), MO (0x100), **Playfield (0x200)**, Translucency (0x300). Mio TS usava paletteBase 0x20 → palette[256+pen] = MO range. Fix: 0x40 → palette[512+pen] = playfield range. Risultato: piattaforme **GRIGIE con bordi BLU** (era giallo).
+2. **MO sprite paletteIndex 0x20 base** — commit `0ed8158`. Stessa logica per MO (s_mob_config base 0x100). Marble e nemici visibili.
+3. **MSB-first bit-reading** (`readbit` MAME) — commit `e7f5c61`.
+4. **Plane bit-order MSB-first** (planes[0] = MSB pen) — commit `32ed5e4`.
+5. **`Texture.from(canvas, true)` API legacy Pixi v8** — commit `32ed5e4`. Glyph alpha rotti.
+6. **autoLoad race condition** — commit `32ed5e4`. `useSyntheticDemoFrame` partiva con rom=undefined.
+7. **ROMREGION_INVERT applicato** — commit `d2c0c73`. File 145 dummy 0xFF → pen +16 shift.
+8. **set_granularity(8)** — commit `31eb94a`. `palette[paletteBase * 8 + pen]`, NOT `paletteBase + pen`.
+9. **Scroll MMIO write (0x800000/0x820000) wirato a state.videoScrollX/Y** — commit `352129e`.
+10. **Skip blank tiles (word=0)** — commit `352129e`.
+11. **Chrome debug overlay rimosso** — commit `352129e`. Palette swatches puliti.
+12. **`?autoLoad=1` query param** — commit `af7362c`. Fetch ROMs dal symlink dev.
+
+### Diagnostica e tooling sessione
+
+- `oracle/mame_state_dump.lua`: dump completo workRam + playfieldRam + spriteRam + alphaRam + colorRam + screen snapshot @ frame target
+- `packages/web/public/mame_state.json`: fixture frame 2400 (Beginner level attract demo)
+- `?mameDump=1` query param: bypass bootInit+tick, popola state TS dal MAME dump
+- Screenshot headless Chrome 336×240 (nativa Atari System 1 viewport)
+- Pixel diff TS vs MAME oracle (probe in `packages/cli/src/probe-*.ts`, scratch)
+
+### Differenze residue vs MAME oracle (per pixel-perfect)
+
+Pixel match esatto: 11.3% (delta < 10/255). Partial: 33% (delta < 50/255). Layout
+match. Differenze ancora in diagnostica:
+
+1. **Sfondo "bands" pattern** non renderizzato (pen=0 → palette[0x200] è 0,0,0 nero)
+2. **Marble sprite color**: viola/rosa invece di blu/bianca (palette[0x110+pen] mismatch)
+3. **Spike piramidi e acid pools**: rendered come piccoli tile invece di sprite multi-tile
+4. **MO+PF priority merge** non implementata: `palette[0x300 + (pf_pen<<4) + mo_pen]` translucency blending
+5. **Per-scanline yscroll trick** non implementato (`adjusted_scroll -= scanline+1`)
+
+Lavoro in corso su branch `feature/visual-pixel-match`.
+
+### Multi-agent throughput
+
+Claude (refresh chain + sub helpers + banner/palette + text-slot writers + scrollRange + 8 wireup default + helpers 5236/1E3E/2548/3784/286EE/abs/scroll-coord/strcpy + visual-smoke-real CLI + web real-mode + **iter1→iter18 rendering pipeline fix**) + Codex (chain playfield + Cat.1 batch + batch grosso F6A/52DA/40D8/1B9CC/17CB8/28E3C + residui 18F46/3A08/285B0/1C88/1CD00/12F44/12896/253BC/25FC2)
 
 ## Sessione 2026-05-08 (recap)
 
