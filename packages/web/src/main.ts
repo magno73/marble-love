@@ -194,7 +194,9 @@ async function startGame(
         : {},
   );
 
-  const useIndirect = searchParams.get("indirect") === "1";
+  // Default ON: indirect renderer = MAME bit-perfect bitmap_ind16 path.
+  // Disable con ?indirect=0 per fallback al renderer Pixi diretto (debug).
+  const useIndirect = searchParams.get("indirect") !== "0";
   const renderer = initRenderer(app, rom?.graphics, { indirect: useIndirect });
   if (useIndirect) {
     console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");

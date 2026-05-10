@@ -22,7 +22,6 @@
  */
 
 import type { GameState } from "./state.js";
-import type { RomImage } from "./bus.js";
 import { objectTypeDispatch194BA } from "./object-type-dispatch-194ba.js";
 import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 import { helper285B0 } from "./helper-285b0.js";
@@ -98,13 +97,10 @@ function addToObjectAccumAndFlag28608(
  *
  * @param state    GameState (`workRam` mutato).
  * @param entityAddr  Indirizzo abs M68k della entity (parametro stack arg).
- * @param rom      RomImage (per le sub interne — soundCmdSend e
- *                 objectTypeDispatch).
  */
 export function helper1924E(
   state: GameState,
   entityAddr: number,
-  rom: RomImage,
 ): void {
   const r = state.workRam;
   const a2Off = (entityAddr - WORK_RAM_BASE) >>> 0;
@@ -176,7 +172,7 @@ export function helper1924E(
     wl(r, a3Off + 0x00, 0);
 
     // 0x0192f0: jsr 0x194BA(a3)  — objectTypeDispatch
-    objectTypeDispatch194BA(state, (WORK_RAM_BASE + a3Off) >>> 0, rom);
+    objectTypeDispatch194BA(state, (WORK_RAM_BASE + a3Off) >>> 0);
 
     // 0x0192f8: cmpi.b #9, +0x25(a3); bne → 0x1931a
     const ty = rb(r, a3Off + 0x25);

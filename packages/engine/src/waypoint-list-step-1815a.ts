@@ -296,11 +296,6 @@ function readByte(state: GameState, off: number): number {
   return (state.workRam[off] ?? 0) & 0xff;
 }
 
-function readSByte(state: GameState, off: number): number {
-  const v = readByte(state, off);
-  return v & 0x80 ? v - 0x100 : v;
-}
-
 function writeByte(state: GameState, off: number, v: number): void {
   state.workRam[off] = v & 0xff;
 }
@@ -457,7 +452,6 @@ export function waypointListStep1815A(
   for (let iter = 0; iter < MAX_LIST_ITERATIONS; iter++) {
     // A3 = *(0x400446)
     const a3Addr = readLongBE(state, ptrOff);
-    const a3Off = (a3Addr - 0x400000) >>> 0;
 
     // Test terminator at *A3 (may be in ROM if a3Addr < 0x80000)
     const sx_b = readByteAbs(a3Addr);
