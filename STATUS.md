@@ -5,7 +5,7 @@
 
 ## 🎯 Highlight sessione 2026-05-10 (iter B5–B26)
 
-- **Drift workRam @ 2401: 99.7%** (24 byte residui, **-92%** da pre-sessione 283 byte)
+- **Drift workRam @ 2401: 99.8%** (16 byte residui, **-94%** da pre-sessione 283 byte)
 - **Marble bit-perfect MAME @ (107, 152)** via indirect renderer
 - **Indirect renderer default ON** (modalità MAME bit-perfect)
 - **`?play=1` opt-in**: gameplay live dal warm bootstrap MAME
@@ -37,7 +37,15 @@
 ### Iter B25 — FUN_158F6 (sub-158f6.ts, 46 istr) replicato (-13 byte → 33)
 ### Iter B26 — bracketLerp sub.w wrap fix + spritePosUpdate1BAB2 chain (-9 byte → 24)
 
-### Drift residuo (24 byte) — diagnosi finale 2026-05-10
+### Iter B27-B30 — replica chunked + stub strategici
+- B27: FUN_29CCE chunk minimal + FUN_14966 stub → 24→22
+- B28: FUN_FA0 vblank-snapshot stub @ 0x14 → 22→21
+- B29: FUN_150D0 in fun14966Stub epilogue → 21→16
+- B30: FUN_29CCE replica strutturale completa (250/1679 istr, 5 BLOCK
+  + jump table dispatch + LOOP outer) — invariato 16 (slot table @
+  0x400a9c VUOTA a frame 2400, LOOP non triggera)
+
+### Drift residuo (16 byte) — diagnosi finale 2026-05-10
 
 **Verificato bit-perfect via Musashi**: `waypointListStep1815A` (FUN_1815A) è bit-perfect.
 Il drift NON viene da quella sub — viene da sub interne di `helper121B8`.
