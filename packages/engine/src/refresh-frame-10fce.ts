@@ -35,6 +35,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
+import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
@@ -208,6 +209,11 @@ export function refreshFrame10FCE(
           // obj.z += obj.vz
           w32(objOff + 0x14, (r32(objOff + 0x14) + r32(objOff + 0x08)) >>> 0);
         }
+        // spritePosUpdate1BAB2 prima di spriteRotate/bracketLerp: scrive
+        // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields (factorA/B
+        // @ 0x69E/6A0 + tile shifts). Senza questa, bracketLerp legge POS_Z
+        // stale → OUT word sottostimati di 0x54 (= 8 byte cluster drift).
+        spritePosUpdate1BAB2(st, a2);
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);
       },
