@@ -260,10 +260,13 @@ async function startGame(
 
   let frameCount = 0;
   app.ticker.add(() => {
-    const dx = inputState.consumeDx();
-    const dy = inputState.consumeDy();
-    s.input.trackballDx = dx as typeof s.input.trackballDx;
-    s.input.trackballDy = dy as typeof s.input.trackballDy;
+    // Trackball MMIO absolute values (0..255 wrap-around). processAxis
+    // engine-side calcola delta = cur - prev (mod 256). Mantenere il valore
+    // assoluto integrato evita spurious delta a key-up.
+    const p1XAbs = inputState.consumeP1X();
+    const p1YAbs = inputState.consumeP1Y();
+    const p2XAbs = inputState.consumeP2X();
+    const p2YAbs = inputState.consumeP2Y();
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
 
     // Keyboard scroll override (until in-game scroll-write wires autonomously).
@@ -284,7 +287,12 @@ async function startGame(
       const forcePlay = searchParams.get("play") === "1";
       const mainLoopBody =
         forcePlay || (rom !== undefined && warmState === undefined);
-      tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: mainLoopBody });
+      tick(s, {
+        rom: tickRom,
+        p1X: p1XAbs, p1Y: p1YAbs,
+        p2X: p2XAbs, p2Y: p2YAbs,
+        runMainLoopBody: mainLoopBody,
+      });
     }
     frameCount += 1;
     // DEBUG: expose state to window globals every frame for headless inspection
