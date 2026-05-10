@@ -187,8 +187,8 @@ export function refreshFrame10FCE(
           fun26196: () => {},
         });
         // INTEGRATE_VEL extracted from helper121B8 (chain MAME-canonical).
-        // Estratto solo INTEGRATE_VEL path (= obj.{x,y,z} += obj.{vx,vy,vz})
-        // per evitare side-effect spurious del wiring helper121B8 totale.
+        // Wirare helper121B8 INTERO esplode drift (24→98) per side-effect di
+        // sub interne stub (es. fun_29cce/15bd0). Manteniamo surrogate manuale.
         {
           const wr = st.workRam;
           const objOff = (a2 - 0x400000) >>> 0;
@@ -210,9 +210,7 @@ export function refreshFrame10FCE(
           w32(objOff + 0x14, (r32(objOff + 0x14) + r32(objOff + 0x08)) >>> 0);
         }
         // spritePosUpdate1BAB2 prima di spriteRotate/bracketLerp: scrive
-        // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields (factorA/B
-        // @ 0x69E/6A0 + tile shifts). Senza questa, bracketLerp legge POS_Z
-        // stale → OUT word sottostimati di 0x54 (= 8 byte cluster drift).
+        // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields.
         spritePosUpdate1BAB2(st, a2);
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);

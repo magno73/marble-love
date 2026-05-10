@@ -37,15 +37,34 @@
 ### Iter B25 — FUN_158F6 (sub-158f6.ts, 46 istr) replicato (-13 byte → 33)
 ### Iter B26 — bracketLerp sub.w wrap fix + spritePosUpdate1BAB2 chain (-9 byte → 24)
 
-### Drift residuo (24 byte) — diagnosi @ 2026-05-10
+### Drift residuo (24 byte) — diagnosi finale 2026-05-10
+
+**Verificato bit-perfect via Musashi**: `waypointListStep1815A` (FUN_1815A) è bit-perfect.
+Il drift NON viene da quella sub — viene da sub interne di `helper121B8`.
+
+**Driver principale: FUN_00029CCE** (~12KB collision/physics pipeline):
+- 9 write sites a `(a2)` = obj.vx LONG (modifica per collision/bounce)
+- Chiamato da helper121B8 con DEFAULT no-op in TS
+- Modifica obj[0].vx da 0x24e9 (post-1815A) a 0x22ee (= MAME-correct)
 
 | Cluster | Byte | Bloccante |
 |---|---|---|
-| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | sub MAME mutating slot 0 fields (agent #131 in corso) |
-| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | path alternativo da identificare |
-| Sprite globals 0x690/691/693 | 3 | sub MAME chiamata DOPO spritePosUpdate1BAB2 (FUN_13334/17934/etc) |
-| Cluster B 0x750/0x751 | 2 | path indirect (no direct refs) |
-| Misc Sub-B (0x1386, 138d, 13e6, 13ed, 13ee) | 5 | FUN_14966 (188 istr) prescaler, troppo grosso per replica diretta |
+| Slot 0 obj fields (0x14, 0x1a..1f) | 5 | obj[0]+0x00..0x07 = vx/vy modificati da **FUN_29CCE** (~12KB) |
+| Slot 0 fields tail (0x37, 0x3b..3f) | 4 | shift register, scritti via FUN_29CCE chain |
+| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | obj[2]/obj[3] via FUN_29CCE multi-obj walk |
+| workRam[0x14] frame counter mid | 1 | **FUN_FA0** (3.3KB main thread loop, NON replicato) |
+| Sprite globals 0x690/691/693 | 3 | sub chiamata DOPO spritePosUpdate1BAB2 in helper121B8 |
+| Cluster B 0x750/0x751 | 2 | path indirect (FUN_12896/13334/14C46 grossi) |
+| Misc Sub-B (slot ticker @ 0x1386..0x13ee) | 5 | **FUN_14966** (188 istr) prescaler |
+
+**Roadmap drift = 0** richiede replica:
+- FUN_29CCE (12KB → ~3-4 settimane di lavoro)
+- FUN_FA0 (3.3KB → ~1-2 settimane)
+- FUN_14966 + sub callees FUN_15148 (200 istr) (~1 settimana)
+
+Iter B26 commit: tentato `helper121B8` intero (1636 byte) come surrogate → drift
+24→98 (= sub interne stub no-op buggate). Surrogate manuale chain mantenuta come
+miglior trade-off corrente.
 
 ### Ghidra xref findings (sessione)
 - `spriteBracketLerp1C676` ha **1 caller**: FUN_121B8 @ 0x122c6
