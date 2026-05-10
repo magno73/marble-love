@@ -126,6 +126,7 @@ import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper285B0 } from "./helper-285b0.js";
 import { helper25C74 } from "./helper-25c74.js";
 import { helper1924E } from "./helper-1924e.js";
+import { helper1BC88 } from "./helper-1bc88.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -657,7 +658,7 @@ export function helper121B8(
     if (subs.fun_1bc88 !== undefined) {
       d0_1bc88 = (subs.fun_1bc88(state, a2)) >>> 0;
     } else {
-      d0_1bc88 = 0; // default no-op returns 0
+      d0_1bc88 = helper1BC88(state, a2, rom) >>> 0;
     }
     if (d0_1bc88 !== 0) {
       // move.l A2,-(SP); jsr (A3); addq.l #4,SP

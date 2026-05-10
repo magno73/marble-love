@@ -174,6 +174,10 @@ export function refreshFrame10FCE(
           fun180BE: () => {},
           fun26196: () => {},
         });
+        // NOTA: helper121B8 NON va wirato qui in attract mode (*0x400390==1),
+        // perché objectStep17F66 special-dispatch path già esce con bra
+        // EPILOGUE dopo fun1815A. Wirarla causa side-effect spurious (87→150
+        // byte). I cluster residui hanno owner diversi.
         helper253BC(st, a2);
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);
