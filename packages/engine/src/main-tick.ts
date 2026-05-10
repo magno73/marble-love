@@ -21,7 +21,9 @@
  *   12. soundCommand (FUN_158AC) — STUB (chiamata condizionale da altre subs)
  *   13. specialAttract (FUN_288F8) ✅
  *   14. particleBounce (FUN_18DCA) ✅ (conditional su *0x4003E2)
- *   15. lateGameLogic (FUN_26F3E) — STUB (conditional, requires sub-chain)
+ *   15. lateGameLogic (FUN_26F3E) — chiamata dopo mainLoopInit1101E quando
+ *       runMainLoopBody=true. Pipeline sprite RAM emit (workRam obj → spriteRam
+ *       MO entry per-frame). Replica struttura di mainLoop117B2LoopBody.
  *
  * Più condizionale FUN_26D8A (PF scroll setup) all'inizio.
  *
@@ -36,6 +38,7 @@ import type { RomImage } from "./bus.js";
 import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
 import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
+import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
@@ -222,13 +225,22 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3ae] = r[0x3b0] ?? 0;
     r[0x3af] = r[0x3b1] ?? 0;
     particleBounce(state);
-    // FUN_26F3E (lateGameLogic) — STUB
+    // FUN_26F3E (lateGameLogic) — chiamata dopo IRQ4 path solo se
+    // *0x4003E2 != 0 (end-screen/special). Replica del binario: il main
+    // thread chiama lateGameLogic ogni frame via FUN_117B2 (vedi sotto).
   }
 
   // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
   // Default OFF — opt-in for renderer demo / game flow advancement.
   if (opts.runMainLoopBody === true) {
     mainLoopInit1101E(state, rom);
+    // FUN_26F3E (lateGameLogic) — sprite RAM emit pipeline. Senza questo,
+    // workRam evolve ma spriteRam @ 0xA02000-0xA02FFF resta invariata e il
+    // renderer browser legge una display-list stale ⇒ marble frozen.
+    // Replica la struttura di `mainLoop117B2LoopBody` @ 0x117B2 (vedi
+    // main-loop-init-117b2.ts:130) che dopo `mainLoopInit1101E` chiama
+    // sempre `lateGameLogic26F3E(state, rom)`.
+    lateGameLogic26F3E(state, rom);
   }
 
   // ─── Main-thread vblank-counter snapshot ────────────────────────────────
