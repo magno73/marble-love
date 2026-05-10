@@ -3,22 +3,41 @@
 **Ultimo update:** 2026-05-10
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 🎯 Highlight sessione 2026-05-10 (iter B5–B18)
+## 🎯 Highlight sessione 2026-05-10 (iter B5–B20)
 
+- **Drift workRam @ 2401: 99.2%** (65 byte residui, **-77%** da pre-sessione 283 byte)
 - **Marble bit-perfect MAME @ (107, 152)** via indirect renderer (commit `a38c521`)
-- **Drift workRam @ 2401: 98.9%** (82 byte residui, -71% da pre-sessione)
-- **INTEGRATE_VEL block estratto** da helper121B8 e wired in fun_253EC chain
-  MAME-canonical (commit B18: `helper253BC → objectStep17F66 → INTEGRATE_VEL`)
-  → drift 87 → 82 byte
-- **3 sub MAME replicate**: FUN_1725A, FUN_1924E, FUN_1BC88 + FUN_28608 inline
-- **Renderer rewrite**: bitmap_ind16 PF + MO + screen merge MAME-correct
-- **Indirect renderer default ON** (= modalità MAME bit-perfect attivata di default,
-  `?indirect=0` per disabilitare)
-- **`?play=1` opt-in**: forza `runMainLoopBody=true` ANCHE con warmState per
-  gameplay live dal warm bootstrap MAME (= attract mode demo animato)
-- **Cleanup**: 5 errori TS strict mode preesistenti chiusi (helper-1924e RomImage
-  param, main-tick / waypoint unused identifiers)
-- **30+ commit** in iter B5-B18
+- **Indirect renderer default ON** (modalità MAME bit-perfect)
+- **`?play=1` opt-in**: gameplay live dal warm bootstrap MAME
+
+### Iter B18 — INTEGRATE_VEL
+- Estratto da `helper121B8` e wired in `fun_253EC` chain MAME-canonical
+  (`helper253BC → objectStep17F66 → INTEGRATE_VEL`) → 87 → 82 byte
+
+### Iter B19 — Trackball + Sound CPU ack (agent investigation)
+- **Bug 1** trackball default 0x00 → 0xff (MMIO stable in attract): elimina
+  spurious 0x01010000 a obj1[+0xc6..0xc9] (slot 7 region)
+- **Bug 2** sound CPU M6502 ack simulato: `*0x401F44` azzerato a fine soundTick
+  (M6502 reale legge mailbox e ack entro frame). Test sound-tick aggiornati.
+- → 82 → 73 byte
+
+### Iter B20 — FUN_158F6 surrogate (Ghidra xref-driven)
+- Ghidra: `spriteBracketLerp1C676` ha 1 caller (FUN_121B8); `FUN_121B8` è
+  chiamato ANCHE da `FUN_158F6` ← `FUN_158CC` (objectUpdatePair).
+- TS aveva `objectUpdate` callback NO-OP → spriteBracketLerp non chiamato.
+- Wired surrogate FUN_158F6 ELSE-branch (helper253BC + INTEGRATE_VEL +
+  stateSub1B5C2 + spriteBracketLerp) per slot pair attivi (s18 != 0,2).
+- → 73 → 65 byte
+
+### Drift residuo (65 byte) — analizzato Ghidra
+| Cluster | Byte | Bloccante |
+|---|---|---|
+| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | helper253BC stub no-op (necessario impl) |
+| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | idem |
+| Cluster A 0x686..0x6a3 (vel-snap blob) | 12 | **FUN_29CCE** (~12KB collision pipeline) NON replicato |
+| Cluster B 0x750..0x783 (sprite render queue) | 12 | **FUN_14966** (per-slot ticker via slotArrayTick) stub |
+| Display list 0xa22..0xa49 | 8 | catena FUN_29CCE downstream |
+| Misc (0x971..73, 0x1386, 138d, 13e6, 13ed, 13ee) | 8 | sub minor non identificate |
 
 URLs di test:
 - `http://localhost:5173/?autoLoad=1&mameLive=1&play=1` — attract mode warm bootstrap
