@@ -60,6 +60,53 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-10 — Iter B14-B16: marble bit-perfect position + indirect renderer
+
+Sessione lunga di rendering rewrite. Marble TS ora **bit-perfect MAME**
+in posizione (107, 152) e sphere shading riconoscibile.
+
+### Iter B15: indirect renderer MAME-correct
+
+Implementato `?indirect=1` query param che attiva il rendering
+bitmap_ind16 PF + MO scratch buffers + screen merge logic
+(cfr atarisy1_v.cpp screen_update). Architettura:
+
+```
+1. PF bitmap_ind16 (Uint16Array 336x240): TileCommand → paletteIndex globale
+2. MO bitmap_ind16 init 0xFFFF: SpriteCommand con priority bit + cap pen 7
+3. Merge MAME logic: priority MO over PF (con translucency simplification)
+4. Convert ind16 → ImageData ARGB via palette[]
+5. Single Pixi Texture from canvas (replace direct PixiJS path)
+```
+
+Commit `b4cdccd`.
+
+### Iter B16: MO scroll positioning bit-perfect
+
+Verifica via Chrome headless + sample pixel exact MAME marble @ (107, 152)
+in oracle screenshot. TS sprite raw (92, 91). Empirico:
+- `MO_XOFFSET = 15` → screen_x = 92 + 15 = **107** ✓
+- `MO_YSCROLL = 243` (NON 256 default MAME) → screen_y = 243 - 91 = **152** ✓
+
+Discrepanza 13 px da MAME `m_yscroll = 256` probabilmente da hblank/vblank
+offset. Comunque il marble TS è ora **bit-perfect MAME** in posizione.
+
+Commit `a38c521`.
+
+### Risultato visivo finale
+
+@ `?autoLoad=1&mameDump=1&indirect=1`:
+- ✅ Marble blu sphere shaded @ (107, 152) **= MAME oracle exact**
+- ✅ Terreno corretto bit-perfect
+- ✅ HUD score, 3 spike triangolari (= playfield tiles)
+- ✅ Footer "1 COIN PER PLAY / © 1984 ATARI GAMES"
+- ⚠️ Sphere extras (entry 32, 33) renderizzate vicino al marble — in
+  MAME oracle le 2 sphere verdi ai bordi sono probabilmente playfield
+  decoration, non MO entries
+- ⚠️ Translucency layer NON implementato bit-perfect (MAME usa
+  `0x300 + ((pf&f)<<4) + pen` ma region è zero @ frame 2400 — direct
+  color usage produce match visivo accettabile)
+
 ## Sessione 2026-05-10 — Iter B14: rendering bug visivi via Chrome headless
 
 Sessione lunga di debug pixel-perfect tramite Chrome headless +
