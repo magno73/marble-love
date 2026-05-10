@@ -124,6 +124,7 @@ import { vectorScale } from "./vector-scale.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper285B0 } from "./helper-285b0.js";
+import { helper25C74 } from "./helper-25c74.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -869,8 +870,9 @@ export function helper121B8(
         const w_arg = d0_asr15 & 0xffff;
         if (subs.fun_25c74 !== undefined) {
           subs.fun_25c74(state, a2, w_arg);
+        } else {
+          helper25C74(state, a2, w_arg);
         }
-        // default: no-op (not yet implemented)
 
         // pea $46.l; jsr $158AC.l
         if (subs.fun_158ac !== undefined) {
