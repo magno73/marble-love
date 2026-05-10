@@ -125,6 +125,7 @@ import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper285B0 } from "./helper-285b0.js";
 import { helper25C74 } from "./helper-25c74.js";
+import { helper1924E } from "./helper-1924e.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -731,8 +732,9 @@ export function helper121B8(
       // move.l a2,-(a7); jsr $1924e.l; addq.l #4,a7
       if (subs.fun_1924e !== undefined) {
         subs.fun_1924e(state, a2);
+      } else {
+        helper1924E(state, a2, rom);
       }
-      // default: no-op (not yet implemented)
 
       // 0x00012408:
       // move.l a2,-(a7); jsr $19d94.l; addq.l #8,a7 (actually addq.l #8 after two args)
