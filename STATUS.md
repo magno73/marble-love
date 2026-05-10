@@ -60,6 +60,66 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-08 — Iter B6-B12: drift cumulativo -69% + 2 sub replicate
+
+Loop autonomo guidato da multi-frame oracle dump + multi-agent Sonnet.
+6 iterazioni B6-B12 con verifica metric corretta (probe-converge-multi).
+
+### Sub replicate (commit B11, B12)
+
+- **FUN_1725A** (`stringStep1725A`, 38 byte): "string animation step",
+  chiamato da `dispatchStrings17230` per ognuno dei 7 slot stringa @
+  0x401482. Avanza counter+cursor, dispatcha a `entityWaypointStep1D1EC`
+  e `computeSpriteCoords_v3`. Wirato come default callback in
+  `refresh-frame-10fce.ts`. A frame 2400 i 7 slot sono tutti vuoti
+  (state18=0) → sub no-op a runtime, ma replica disponibile per HUD
+  strings dinamici.
+
+- **FUN_1924E** (`helper1924E`, ~80 instr): "collision/proximity dispatcher".
+  Itera 9 obj @ 0x401890 stride 0x28, calcola distanza Manhattan vs
+  marble, su collisione attiva sequence (state, vel reset, type dispatch,
+  sound cmd, accumulator update). Wirata come default `fun_1924e` in
+  `helper121B8.ts`. Pre-condition: skip se `*0x400394 != 4`. In attract
+  mode `*0x400394 == 1` → no-op a runtime.
+
+- **FUN_28608** (`addToObjectAccumAndFlag28608`): inlinata in helper-1924e.ts
+  (precedentemente solo in object-helpers.ts:triggerObjectEvent).
+
+### Tentativo wiring helper121B8 totale
+
+Attempt B12: con `fun_25c74` e `fun_1924e` ora wirati, ho retentato wiring
+`helper121B8` in `fun_253EC` di refresh-frame. Risultato: 87 → 150 byte
+(rolled back). Le 2 sub stub residue **FUN_29CCE** (~200+ instr) e
+**FUN_1BC88** (~250+ instr) producono drift superiore al guadagno.
+
+Per sbloccare wiring helper121B8 servono entrambe replicate: ~giornata
+di lavoro per ognuna, totale ~2 giorni.
+
+### Sintesi finale
+
+| Iter | Fix | Byte div | workRam @ 2401 |
+|---|---|---|---|
+| Pre-B6 | (cold-start runMainLoopBody:true) | 283 | 96.5% |
+| B6 | counter spurious + stack mask | 137 | 98.2% |
+| B7 | wire spriteRotate + spriteBracketLerp | 112 | 98.5% |
+| B7.1 | inputMmio 0xfc → 0x6f | 111 | 98.5% |
+| B8 | wire objectStep17F66 chain | 111 | 98.5% |
+| **B9** | **waypointListStep1815A read da ROM** | **87** | **98.9%** |
+| B10-B12 | helper25C74/1925E/1725A replicate | 87 | 98.9% |
+
+**Drift totale ridotto -69%**. Tutti i 1923 vitest verde.
+
+### Plateau e prossimi passi
+
+Per andare oltre 87 byte residui servono:
+1. **Replicare FUN_29CCE + FUN_1BC88** (~2 giorni) — sblocca helper121B8
+2. **Implementare event-loop simulator** (IRQ scheduler + MMIO timing)
+   per i cluster `0x14, 0x16, 0x76f-0x783, 0x1f44` che dipendono da
+   timing reale
+
+Il "loop di iter incrementali" ha plateau qui. Step successivo richiede
+commitment sostanziale.
+
 ## Sessione 2026-05-08 — Iter B6-B9: drift cumulativo ridotto -69%
 
 Loop autonomo guidato da multi-frame oracle dump + multi-agent Sonnet
