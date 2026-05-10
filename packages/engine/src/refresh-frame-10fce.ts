@@ -274,6 +274,8 @@ export function refreshFrame10FCE(
   (subs.stateSub1844A ?? ((s) => { stateSub1844A(s, rom); }))(state);
 
   // 0001100A: jsr 0x00012FD0
+  // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato: gating *0x40075c == 0
+  // in MAME @ 2400, fix non applicabile per il drift cluster B residuo.)
   (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
 
   // 00011010: addq.b #1, (0x004003F0).l
