@@ -184,12 +184,9 @@ export function decodeObjectTile(
   bpp: 4 | 5 | 6,
   layout: GfxLayoutKind = "playfield",
 ): DecodedObjectTile {
-  // Verificato 2026-05-10 via tile atlas decode: stride 0x10000 + plane MSB +
-  // x MSB produce pattern sphere shaded riconoscibile per tile 2913 (= marble).
-  // Layout NON-MOB era già a 0x10000 → unico decode unifica entrambi.
   const pixels = new Uint8Array(OBJECT_TILE_WIDTH * OBJECT_TILE_HEIGHT);
   const planeStride = OBJECT_PLANE_STRIDE;
-  const bankBase = layout === "mob" ? 0 : OBJECT_BANK_STRIDE * (bankIndex - 1);
+  const bankBase = OBJECT_BANK_STRIDE * (bankIndex - 1);
   const planeOffsets = Array.from(
     { length: bpp },
     (_, plane) => (bpp - 1 - plane) * planeStride,

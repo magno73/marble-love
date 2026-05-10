@@ -142,7 +142,7 @@ describe("buildFrame", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x42, // 0x40 + 2 — MAME atarisy1 MO base 0x400, granularity 8
+        paletteIndex: 0x42, // 0x40 + 2 — sphere palette match (vedi render.ts)
         flipX: false,
         priority: 0,
         translucent: false,
@@ -296,7 +296,7 @@ describe("buildSpritesFromMotionObjectRam", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x44, // 0x40 + 4 — MAME atarisy1 MO base 0x400, granularity 8
+        paletteIndex: 0x44, // 0x40 + 4 — sphere palette match
         flipX: false,
         priority: 0,
         translucent: false,

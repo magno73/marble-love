@@ -311,13 +311,17 @@ export function buildSpritesFromMotionObjectRam(
       command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
       command.gfxBank = lookup.bank;
       command.bitsPerPixel = lookup.bpp;
-      // MAME atarisy1: motion object palette base @ byte 0x400 di colorRam
-      // (= word offset 512). Con granularity=8 (= 8 word per macro):
-      // paletteIndex_TS_base = 512/8 = 0x40. Per MO bpp=4 ogni color step =
-      // 1 macro (granularity_word_count / pen_count = 8/8 = 1 → no shift).
-      // Verificato 2026-05-10: palette[520..527] (= macro 0x41 = 0x40+1, color=1)
-      // contiene grigi+blu sphere texture (marble); palette[528..535] (= 0x42)
-      // contiene ciano scuro ecc.
+      // NOTE rendering layer simplification:
+      // MAME atarisy1 s_mob_config base 0x100 + (color << 1) + granularity 8
+      // calcola idx = 0x110 + pen (per color=1) — questa è MOB raw region.
+      // POI in screen_update high-priority MO viene mappato a translucency
+      // region: pf[x] = 0x300 + ((pf_color & 0xf) << 4) + mo_pen.
+      // Per atarisy1 frame 2400 attract: translucency region 0x300+ è zero
+      // (marble dovrebbe essere invisibile via algoritmo MAME esatto). Il
+      // MAME oracle visivo mostra marble BLU sphere — usa palette[520..527]
+      // (= byte 0x410-0x41F). Per matchare visivamente quel rendering, TS
+      // utilizza paletteIndex = 0x40 + color (= 0x41 per color=1 → idx 520+pen).
+      // NON è bit-perfect MAME flow ma produce sphere blu visivamente correct.
       command.paletteIndex = 0x40 + lookup.color;
     }
 
