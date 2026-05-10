@@ -60,6 +60,44 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-08 — Iter B6: multi-frame oracle + drift identificato
+
+Tool nuovo: `oracle/mame_state_multidump.lua` — dump multi-frame
+(default 2400/2410/.../2460) per validazione frame-per-frame.
+
+Probe nuovi:
+- `packages/cli/src/probe-converge-multi.ts` — confronto TS_evolution vs MAME_evolution
+- `packages/cli/src/probe-diff-bytes.ts` — byte-level diff a frame target
+
+### Risultati TS vs MAME @ frame 2400+N (warmState seed @2400)
+
+```
+frame   Δticks  workRam%  pfRam%   sprRam%  alphaRam% colorRam%
+ 2400        0    100.0%   100.0%   100.0%    100.0%    100.0%
+ 2401        1     96.5%   100.0%   100.0%    100.0%    100.0%
+ 2402        2     96.6%    99.1%    97.2%    100.0%    100.0%
+ 2410       10     96.1%    98.2%    95.2%    100.0%    100.0%
+ 2460       60     93.1%    93.0%    93.2%     97.8%     99.7%
+```
+
+**Drift reale identificato**: 1 tick = 283 byte di workRam divergono.
+Pattern dei 283 byte:
+- Quasi tutti "TS unchanged, MAME modified" → MAME esegue scritture che TS non replica
+- Alcuni "TS modified, MAME unchanged" → TS esegue scritture spurious (es. 0x14, 0x16)
+
+### Bug specifici identificati al frame 2401
+
+- `workRam[0x14]`: MAME 0x01→0x00 (decremento o overwrite); TS 0x01→0x02 (incremento spurious in main-tick.ts:131)
+- `workRam[0x16]`: MAME stays 0x00 (vblank flag clear post-IRQ); TS 0x00→0x01 (incremento spurious in main-tick.ts:132)
+- `workRam[0x1a-0x1f, 0x26-0x2b, 0x37, 0x3b-0x3f]`: MAME modifica, TS unchanged (sub IRQ handler / trackball / RNG seed stream non replicato)
+- `workRam[0x8d-0x9f]` (block 19 byte consecutivi): MAME modifica con pattern non-trivial, TS unchanged (likely RNG output stream o sound queue)
+
+### Prossimo step concreto
+
+1. Sub `FUN_10116` (IRQ4 vblank handler) deve essere disasmato e replicato bit-perfect — non solo "increment counter" approssimato come fa main-tick.ts:131
+2. I 283 byte divergenti sono la **lista lavori** per le sub mancanti — ciascun cluster di byte mappato a una sub IRQ-routed
+3. Probe-diff-bytes adesso è il **driver** del prossimo loop autonomo: ogni iter focus su 1 cluster, fix fino a 0 byte divergenti @ frame 2401, poi @ 2402, etc.
+
 ## Sessione 2026-05-08 — Iter B5: bisection refreshFrame10FCE
 
 Continuazione della convergence investigation post-pause B4. Obiettivo:
