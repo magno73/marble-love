@@ -168,6 +168,9 @@ function textureFromObjectCommand(
   if (context === null) return Texture.EMPTY;
 
   const imageData = context.createImageData(width, height);
+  // Playfield tile (TileCommand ha "tileIndex"): opaque, MAME tilemap default.
+  // Sprite (SpriteCommand ha "spriteIndex"): transparent_pen=0.
+  const isSprite = !("tileIndex" in command);
   for (let tileY = 0; tileY < tilesHigh; tileY += 1) {
     for (let tileX = 0; tileX < tilesWide; tileX += 1) {
       const objectTile = decodeObjectTile(
@@ -175,10 +178,8 @@ function textureFromObjectCommand(
         command.gfxBank,
         tileIndex + tileY * tilesWide + tileX,
         command.bitsPerPixel,
+        isSprite ? "mob" : "playfield",
       );
-      // Playfield tile (TileCommand ha "tileIndex"): opaque, MAME tilemap default.
-      // Sprite (SpriteCommand ha "spriteIndex"): transparent_pen=0.
-      const isSprite = !("tileIndex" in command);
       drawObjectTileIntoImageData(
         frame,
         imageData,

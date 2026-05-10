@@ -321,7 +321,10 @@ async function startGame(
         frameStats =
           ` frame.tiles=${f.playfield.length} frame.sprites=${f.sprites.length} frame.alpha=${f.alpha.length}`;
         // DEBUG: expose frame info for headless inspection
-        (window as unknown as { __lastFrame?: typeof f }).__lastFrame = f;
+        (window as unknown as { __lastFrame?: typeof f; __romTiles?: Uint8Array }).__lastFrame = f;
+        if (rom?.graphics.tiles) {
+          (window as unknown as { __romTiles?: Uint8Array }).__romTiles = rom.graphics.tiles;
+        }
       }
       console.log(
         `[marble-love f=${frameCount}] mode=${renderMode}` +
