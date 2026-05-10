@@ -45,6 +45,14 @@
   + jump table dispatch + LOOP outer) — invariato 16 (slot table @
   0x400a9c VUOTA a frame 2400, LOOP non triggera)
 
+### Iter B31 — tentativi finali repulsion sub
+- helper1BC88 wirato direttamente in fun_253EC chain → drift invariato
+  (gates skip per distanza: |dx|>7 OR |dy|>7 OR |dz|>14)
+- helper121B8 INTERO + fun_29cce wired → drift 16→85 (esplosione per
+  altre sub stub no-op interne)
+- Nessuno dei candidati noti modifica obj[0].vx di -0x1FB
+- helper25C74 già chiamata di default in helper121B8
+
 ### Drift residuo (16 byte) — diagnosi finale 2026-05-10
 
 **Verificato bit-perfect via Musashi**: `waypointListStep1815A` (FUN_1815A) è bit-perfect.
