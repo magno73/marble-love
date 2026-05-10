@@ -45,6 +45,23 @@
   + jump table dispatch + LOOP outer) — invariato 16 (slot table @
   0x400a9c VUOTA a frame 2400, LOOP non triggera)
 
+### Iter B32-B33 — Visual gameplay marble movement
+- B32: wired `lateGameLogic26F3E` (FUN_26F3E sprite emit pipeline) — drift
+  16→64 byte temporaneo per pipeline propagation
+- B33: nuova replica `fun_FA0_marbleEmit` (sub-fa0-marble-emit.ts, 225 LOC) —
+  delta-based shift di marble player MO entries 4-8 nei 2 banchi A/B.
+  Encoding: `((coord & 0x1ff) << 5) & 0x3fe0`. Scale empirico 1:1 derivato
+  da MAME f12000→f12010 (slot_x_high Δ+8 → marble screen_x Δ-15px).
+- **Gate game mode** (*0x400394 == 0): le 2 sub sprite-emit attive SOLO
+  in gameplay, non in title screen → drift 64→16 ripristinato bit-perfect
+
+**Trade-off accettato**: replica approssimata (delta-based) non bit-perfect
+ma sufficiente per movimento visivo nel browser. Test movimento:
+- spriteRam 62 byte/10 tick (target >50, raggiunto)
+- Marble screen-coord X: -15px (exact match MAME)
+- Marble screen-coord Y: +1-4px (direction match)
+- 1952/1952 vitest pass
+
 ### Iter B31 — tentativi finali repulsion sub
 - helper1BC88 wirato direttamente in fun_253EC chain → drift invariato
   (gates skip per distanza: |dx|>7 OR |dy|>7 OR |dz|>14)
