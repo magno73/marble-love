@@ -169,18 +169,38 @@ export function refreshFrame10FCE(
   (subs.objectScanDispatch251DE ?? ((s) => {
     objectScanDispatch251DE(s, rom, {
       fun_253EC: (st, a2) => {
-        // Chain TS chirurgica per fun_253EC. Note dal source MAME atarisy1
-        // (FUN_253EC state 0 path): chain canonica = helper253BC →
-        // objectStep17F66 → helper121B8. Quest'ultimo introdurrebbe drift
-        // (87 → 150 byte) per side-effect upstream → tenuto fuori dal
-        // chain default. spriteRotate + spriteBracketLerp come surrogate
-        // surface render.
         objectStep17F66(st, a2, {
           fun1815A: (a2Addr) => { waypointListStep1815A(st, a2Addr, undefined, rom); },
           fun180BE: () => {},
           fun26196: () => {},
         });
         helper253BC(st, a2);
+        // INTEGRATE_VEL extracted from helper121B8 (= MAME canonical chain
+        // helper253BC → objectStep17F66 → helper121B8 per state 0). Without
+        // velocity integration, posX/posY are not updated frame-by-frame
+        // and waypointListStep1815A diverges from MAME on subsequent frames.
+        // Estratto solo INTEGRATE_VEL path (= obj.{x,y,z} += obj.{vx,vy,vz})
+        // per evitare side-effect spurious del wiring helper121B8 totale.
+        {
+          const wr = st.workRam;
+          const objOff = (a2 - 0x400000) >>> 0;
+          const r32 = (off: number): number =>
+            (((wr[off] ?? 0) << 24) | ((wr[off + 1] ?? 0) << 16) |
+             ((wr[off + 2] ?? 0) << 8) | (wr[off + 3] ?? 0)) >>> 0;
+          const w32 = (off: number, v: number): void => {
+            const u = v >>> 0;
+            wr[off]     = (u >>> 24) & 0xff;
+            wr[off + 1] = (u >>> 16) & 0xff;
+            wr[off + 2] = (u >>> 8)  & 0xff;
+            wr[off + 3] = u & 0xff;
+          };
+          // obj.x += obj.vx
+          w32(objOff + 0x0c, (r32(objOff + 0x0c) + r32(objOff + 0x00)) >>> 0);
+          // obj.y += obj.vy
+          w32(objOff + 0x10, (r32(objOff + 0x10) + r32(objOff + 0x04)) >>> 0);
+          // obj.z += obj.vz
+          w32(objOff + 0x14, (r32(objOff + 0x14) + r32(objOff + 0x08)) >>> 0);
+        }
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);
       },
