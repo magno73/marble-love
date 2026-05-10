@@ -235,20 +235,16 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // Default OFF — opt-in for renderer demo / game flow advancement.
   if (opts.runMainLoopBody === true) {
     mainLoopInit1101E(state, rom);
-    // FUN_26F3E (lateGameLogic) — sprite RAM emit pipeline. Senza questo,
-    // workRam evolve ma spriteRam @ 0xA02000-0xA02FFF resta invariata e il
-    // renderer browser legge una display-list stale ⇒ marble frozen.
-    // Replica la struttura di `mainLoop117B2LoopBody` @ 0x117B2 (vedi
-    // main-loop-init-117b2.ts:130) che dopo `mainLoopInit1101E` chiama
-    // sempre `lateGameLogic26F3E(state, rom)`.
-    lateGameLogic26F3E(state, rom);
-    // FUN_FA0 chunk: marble player MO entry projection. lateGameLogic26F3E
-    // copre dispatchType 1/2/4 (entries 0..3 + cursor link) ma NON aggiorna
-    // le 5 entries marble (slot 4..8) per-frame con le coords correnti del
-    // slot pair @ 0x400A20. Senza questo patch il marble visivo resta fermo
-    // alla posizione del frame iniziale (warm state). Replica del bridge
-    // FUN_FA0 → MO entry coords. Vedi `sub-fa0-marble-emit.ts`.
-    fun_FA0_marbleEmit(state, rom);
+    // FUN_26F3E (lateGameLogic) + FUN_FA0 chunk (marble emit) — sprite RAM
+    // emit pipeline. Attivi SOLO in gameplay (*0x400394 == 0). In title
+    // screen (*0x400394 == 1) MAME non aggiorna spriteRam; abilitarli
+    // qui creerebbe drift spurious (~34 byte). Verificato vs MAME multi
+    // dump @ 2400-2460 (title) e @ 12000+ (gameplay).
+    const gameMode = ((r[0x394] ?? 0) << 8) | (r[0x395] ?? 0);
+    if (gameMode === 0) {
+      lateGameLogic26F3E(state, rom);
+      fun_FA0_marbleEmit(state, rom);
+    }
   }
 
   // ─── Main-thread vblank-counter snapshot ────────────────────────────────

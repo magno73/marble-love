@@ -173,6 +173,14 @@ function applyDelta(state: GameState, off: number, deltaPx: number): void {
 export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
   void rom;  // future: ROM-driven per-tile offsets
 
+  // Gate: attivo SOLO in gameplay (*0x400394 == 0).
+  // In title screen (*0x400394 == 1) MAME non muove il marble; abilitare
+  // l'emit qui causerebbe drift spurious nello sprite RAM. Verificato:
+  // frame 2400-2460 (title) *0x400394=1, MAME spriteRam invariata;
+  // frame 12000+ (demo gameplay) *0x400394=0, MAME spriteRam evolve.
+  const gameMode = (state.workRam[0x395] ?? 0) | ((state.workRam[0x394] ?? 0) << 8);
+  if (gameMode !== 0) return;
+
   // 1. Legge slot pair high-word coords correnti.
   const slotX_now = rwBE_workram(state, SLOT_PAIR_X_HIGH_OFF);
   const slotY_now = rwBE_workram(state, SLOT_PAIR_Y_HIGH_OFF);
