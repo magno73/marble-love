@@ -3,12 +3,14 @@
 **Ultimo update:** 2026-05-10
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 🎯 Highlight sessione 2026-05-10 (iter B5–B20)
+## 🎯 Highlight sessione 2026-05-10 (iter B5–B26)
 
-- **Drift workRam @ 2401: 99.2%** (65 byte residui, **-77%** da pre-sessione 283 byte)
-- **Marble bit-perfect MAME @ (107, 152)** via indirect renderer (commit `a38c521`)
+- **Drift workRam @ 2401: 99.7%** (24 byte residui, **-92%** da pre-sessione 283 byte)
+- **Marble bit-perfect MAME @ (107, 152)** via indirect renderer
 - **Indirect renderer default ON** (modalità MAME bit-perfect)
 - **`?play=1` opt-in**: gameplay live dal warm bootstrap MAME
+- **Engine TS animazione marble verificata**: 5 frame → vx/vy/x/y/z mutate
+  bit-perfect (test diretto da seed MAME)
 
 ### Iter B18 — INTEGRATE_VEL
 - Estratto da `helper121B8` e wired in `fun_253EC` chain MAME-canonical
@@ -29,16 +31,21 @@
   stateSub1B5C2 + spriteBracketLerp) per slot pair attivi (s18 != 0,2).
 - → 73 → 65 byte
 
-### Drift residuo (65 byte) — analizzato Ghidra (B20-B21)
+### Iter B22 — helper182BA (109 istr) replicato (-4 byte → 61)
+### Iter B23 — FUN_261BC (sub-261bc.ts, 92 istr) wired (cascading 0)
+### Iter B24 — slapsticDispatcher1344C wire (cluster Misc Sub-A) (-15 byte → 46)
+### Iter B25 — FUN_158F6 (sub-158f6.ts, 46 istr) replicato (-13 byte → 33)
+### Iter B26 — bracketLerp sub.w wrap fix + spritePosUpdate1BAB2 chain (-9 byte → 24)
 
-| Cluster | Byte | Bloccante (sub MAME mancante) |
+### Drift residuo (24 byte) — diagnosi @ 2026-05-10
+
+| Cluster | Byte | Bloccante |
 |---|---|---|
-| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | **FUN_261BC** (200+ istr) via FUN_26196 — scrive 0x37/0x3b/0x3d/0x3f. Possibile **FUN_15DB6** kind=0x23→0x20 per 0x1a |
-| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | NON via FUN_253EC (count=1 @2400). Path alternativo da identificare |
-| Cluster A 0x686..0x6a3 (vel-snap blob) | 12 | **FUN_29CCE** (~12KB collision pipeline) NON replicato |
-| Cluster B 0x750..0x783 (sprite render queue) | 12 | **FUN_14966** (188 istr) — richiede prima FUN_15148/1BB08/1CC62/150D0 |
-| Display list 0xa22..0xa49 | 8 | catena FUN_29CCE downstream |
-| Misc (0x971..73, 0x1386, 138d, 13e6, 13ed, 13ee) | 8 | sub minor non identificate |
+| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | sub MAME mutating slot 0 fields (agent #131 in corso) |
+| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | path alternativo da identificare |
+| Sprite globals 0x690/691/693 | 3 | sub MAME chiamata DOPO spritePosUpdate1BAB2 (FUN_13334/17934/etc) |
+| Cluster B 0x750/0x751 | 2 | path indirect (no direct refs) |
+| Misc Sub-B (0x1386, 138d, 13e6, 13ed, 13ee) | 5 | FUN_14966 (188 istr) prescaler, troppo grosso per replica diretta |
 
 ### Ghidra xref findings (sessione)
 - `spriteBracketLerp1C676` ha **1 caller**: FUN_121B8 @ 0x122c6
