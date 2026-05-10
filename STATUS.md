@@ -60,6 +60,92 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-10 — Iter B14: rendering bug visivi via Chrome headless
+
+Sessione lunga di debug pixel-perfect tramite Chrome headless +
+Playwright + tile atlas decoder. Identificati e fixati 5 bug rendering
+critici, marble da "rosa rotto" a "sphere blu shaded".
+
+### Tool sviluppati permanenti
+
+- **Chrome headless via Playwright**: screenshot automatici dev server
+- **`window.__lastFrame` + `__romTiles` exposure**: ispezione runtime via DevTools
+- **Tile atlas decoder**: render permutazioni stride/order per identificare
+  layout corretto della GFX ROM
+- **Side-by-side TS-vs-MAME automatico**: confronto visivo via Pillow
+
+### Bug rendering fixati
+
+1. `videoScrollY` sovrascritto a 0 dal "Manual scroll override" anche
+   con warmState attivo. Fix: skip override se warmState e nessun query
+   param scrollX/scrollY. Commit `815dfd7`.
+2. `paletteIndex` MO base era `0x20` (= region playfield) → marble usava
+   palette ROSA (palette[272..279]). Fix: base `0x40` → palette[520..527]
+   (sphere blu shading). Commit `815dfd7`/`a4d3bae`.
+3. `decodeObjectTile` shared per playfield + MO ma layout diversi. Fix:
+   parametro `layout: "playfield"|"mob"`. Commit `48006f4`.
+4. `mob` layout shift double `(color << 1)` rimosso (granularity 8 =
+   1 macro per color, non 2). Commit `a4d3bae`.
+5. Pen 8..15 in MOB cap'd a 7 (= 3-bit effettivo per granularity 8).
+   Sphere bottom-right ora usa blu chiaro (palette[527]) invece di
+   ciano scuro (palette[529]). Commit `a80adb2`.
+
+### Algoritmo MAME completo identificato (NON ancora implementato)
+
+Lettura source MAME `atarisy1_v.cpp` + `atarimo.cpp` via gh api:
+
+```
+1. decode_gfx(): PROM → motable[i] = offset|(bank<<8)|(color<<12)
+2. video_start(): codelookup[i] = (i & 0xff) | ((motable[i>>8] & 0xff) << 8)
+                  colorlookup[i] = ((motable[i] >> 12) & 15) << 1
+                  gfxlookup[i] = (motable[i] >> 8) & 15
+3. render_object(): per ogni entry MO:
+   - rawcode = w1 (16-bit)
+   - gfx_index = m_gfxlookup[rawcode>>8] = bank
+   - code = m_codelookup[rawcode]
+   - color = (m_colorlookup[high_byte] * 8) | (priority << 12)
+   - color += m_palettebase  (= 0x100 per atarisy1 MO)
+   - xpos -= m_xscroll, ypos -= m_yscroll
+   - transpen_raw → MO bitmap_ind16 stores `color + raw_pen`
+4. screen_update(): merge MO+PF nel bitmap output:
+   if (mo[x] & PRIORITY_MASK):
+     if ((mo[x] & 0x0f) != 1):
+       pf[x] = 0x300 + ((pf[x] & 0x0f) << 4) + (mo[x] & 0x0f)
+   else:
+     if (pf[x] color non-priority): pf[x] = mo[x]
+```
+
+### Anomalia palette translucency
+
+Region `palette[0x300..0x3FF]` (= byte 0x600+) **completamente zero** @
+frame 2400. Cioè marble priority=1 dovrebbe essere INVISIBILE via
+algoritmo MAME esatto (translucency black). Ma MAME oracle screenshot
+mostra marble BLU sphere (palette[520..527]). Anomalia non risolta —
+probabilmente MAME oracle screenshot da frame diverso o playfield
+priority pen interactions.
+
+### Risultato finale visivo
+
+- ✅ Marble blu sphere riconoscibile (era rosa rotto)
+- ✅ Terreno corretto (= MAME match)
+- ✅ HUD score, 3 spike triangolari, footer
+- ⚠️ Marble shape ancora parzialmente "blob" — 3 sprite (entry 0, 32, 33)
+  overlapping nel cluster (92-100, 91-114). MAME le mostra distanti.
+- ⚠️ Posizione marble TS top-left vs MAME centro — coordinate sprite
+  richiedono `xpos -= xscroll, ypos -= yscroll` ma applicarlo direttamente
+  porta off-screen. Bug in coordinate raw decode oppure `m_xoffset` MAME
+  default da implementare.
+
+### Per bit-perfect rendering
+
+Richiede ~2-3 giorni di renderer rewrite:
+1. MO bitmap_ind16 scratch (Uint16Array 512x512)
+2. PF bitmap_ind16 separato
+3. Screen_update merge logic con priority
+4. Translucency region post-processing
+5. Convert bitmap_ind16 → canvas RGBA via palette lookup
+6. Display via Pixi single texture
+
 ## Sessione 2026-05-08 — Iter B6-B13: drift -69% + 3 sub replicate
 
 Loop autonomo + multi-agent Sonnet. 8 iterazioni totali con verifica
