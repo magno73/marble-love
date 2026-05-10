@@ -45,6 +45,7 @@ import type { RomImage } from "./bus.js";
 import { stateValidateGrid15DB6 } from "./state-validate-grid-15db6.js";
 import type { StateValidateGrid15DB6Subs } from "./state-validate-grid-15db6.js";
 import { flagScaledMagnitudeDispatch } from "./flag-scaled-magnitude-dispatch.js";
+import { fun261BC } from "./sub-261bc.js";
 
 const WORK_RAM_BASE = 0x00400000;
 const OBJ_PTR_TABLE = 0x0001eff6;
@@ -279,7 +280,11 @@ export function helper182BA(
   }
 
   // 0x1843a: jsr 0x26196(A2)
-  flagScaledMagnitudeDispatch(state, a2, subs?.fun_261bc ?? (() => 0));
+  // Default inner = fun261BC (replicato in sub-261bc.ts). Caller può
+  // override via `subs.fun_261bc` per test/stub.
+  const innerCb = subs?.fun_261bc
+    ?? ((sp: number, mag: number) => fun261BC(state, sp, mag, rom.program));
+  flagScaledMagnitudeDispatch(state, a2, innerCb);
   // skipSeek branch already merged above (skip seek = true → no D2/D3 work,
   // straight to gravity + 26196 like MAME 0x1841a path).
   void skipSeek;
