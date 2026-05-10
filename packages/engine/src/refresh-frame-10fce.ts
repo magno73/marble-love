@@ -52,6 +52,7 @@ import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
 import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 import { refreshHelper1912C } from "./refresh-helper-1912c.js";
 import { refreshHelper13EE6 } from "./refresh-helper-13ee6.js";
+import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 
 const WRAM = 0x00400000;
 
@@ -159,7 +160,13 @@ export function refreshFrame10FCE(
   subs: RefreshFrame10FCESubs = {},
 ): void {
   // 00010FCE: jsr 0x00013EE6
-  (subs.fun13EE6 ?? ((s) => { refreshHelper13EE6(s, rom); }))(state);
+  // Wire fun1344c = slapsticDispatcher1344C: replica esistente che pulisce
+  // PENDING_RECORD @ 0x400970 (cluster Misc Sub-A: byte 0x971..0x973).
+  (subs.fun13EE6 ?? ((s) => {
+    refreshHelper13EE6(s, rom, {
+      fun1344c: (s2, r) => slapsticDispatcher1344C(s2, r),
+    });
+  }))(state);
 
   // 00010FD4: jsr 0x000251DE
   // FUN_253EC default chain (chirurgica, evita helper121B8 intero che ha
