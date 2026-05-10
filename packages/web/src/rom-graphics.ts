@@ -200,6 +200,12 @@ export function decodeObjectTile(
           bankBase + (planeOffsets[plane] ?? 0) + tileIndex * OBJECT_TILE_BYTES + y;
         pen |= readMsbFirstBit(tiles, byteOffset * 8 + x) << (bpp - 1 - plane);
       }
+      // MOB sprite (4bpp) con granularity 8: i pen value 8..15 in MAME
+      // wrap nello "next color macro". Visivamente per atarisy1 le palette
+      // pen 8..15 producono valori non-zero solo per pochi color, quindi
+      // spesso si ottengono pixel scuri. Cap pen a 7 per matchare il
+      // sphere shading visivo del marble (= 8 pen distinct, 3-bit effective).
+      if (layout === "mob" && pen > 7) pen = 7;
       pixels[y * OBJECT_TILE_WIDTH + x] = pen;
     }
   }
