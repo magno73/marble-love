@@ -136,11 +136,16 @@ function bracketLerp(
 
   if (dir === 1) {
     // lerp: OUT += ((lerpHi1 - lerpLo1) * factor + 4) asr 3
-    const d = i32(i32(sx16(lerpHi1) - sx16(lerpLo1)) * sx16(factor) + 4);
+    // M68k `sub.w` truncates the difference to 16 bits; `muls.w` then uses
+    // the low word of D0 as a signed 16-bit operand. Replicate by sx16-ing
+    // the wrapped difference before the signed multiply.
+    const diff1 = sx16((sx16(lerpHi1) - sx16(lerpLo1)) & 0xffff);
+    const d = i32(i32(diff1 * sx16(factor)) + 4);
     ww(s, outOff, (rw(s, outOff) + i32(d >> 3)) & 0xffff);
   } else if (dir === 3) {
     // lerp: OUT += ((lerpHi3 - lerpLo3) * factor + 4) asr 3
-    const d = i32(i32(sx16(lerpHi3) - sx16(lerpLo3)) * sx16(factor) + 4);
+    const diff3 = sx16((sx16(lerpHi3) - sx16(lerpLo3)) & 0xffff);
+    const d = i32(i32(diff3 * sx16(factor)) + 4);
     ww(s, outOff, (rw(s, outOff) + i32(d >> 3)) & 0xffff);
   }
   // dir==2 or dir==4 → no lerp
