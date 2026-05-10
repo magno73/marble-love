@@ -1,7 +1,17 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-08
+**Ultimo update:** 2026-05-10
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 🎯 Highlight sessione 2026-05-10
+
+- **Marble bit-perfect MAME @ (107, 152)** via indirect renderer (commit `a38c521`)
+- **Drift workRam @ 2401: 98.9%** (87 byte residui, -69% da pre-sessione)
+- **3 sub MAME replicate**: FUN_1725A, FUN_1924E, FUN_1BC88 + FUN_28608 inline
+- **Renderer rewrite**: bitmap_ind16 PF + MO + screen merge MAME-correct (`?indirect=1`)
+- **30+ commit** in iter B5-B17
+
+Apri `http://localhost:5173/?autoLoad=1&mameDump=1&indirect=1` per vedere il rendering live.
 
 ## Riepilogo metriche
 

@@ -2,7 +2,9 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 100% delle 350 funzioni del binario coperte e ~358 bit-perfect via parity 500/500** (resto via metadata thunks). Rendering Pixi MAME-faithful: HUD blu autentico "SCORE 220 / 51", piattaforme isometric 3D Beginner level con palette correct, marble e nemici visibili. **227 test files / 1923 vitest verde**.
+**Status:** **🎯 360+ funzioni replicate bit-perfect** via parity 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble blu sphere shaded **bit-perfect MAME @ (107, 152)**, terreno isometric 3D, HUD score, 3 spike triangolari. Drift workRam @ frame 2401: **98.9%** (87 byte residui da sub IRQ-timing-dependent). **227 test files / 1923 vitest verde**.
+
+Apri `?autoLoad=1&mameDump=1&indirect=1` per vedere il rendering MAME bit-perfect in tempo reale.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -54,7 +56,10 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | **`?autoLoad=1` query param** | ✅ DEV-only auto-fetch ROMs dal symlink `public/roms/` |
 | **Bit-perfect tile decode** | ✅ planes[0]=MSB pen, MSB-first readbit, ROMREGION_INVERT, set_granularity(8) |
 | **Palette regions MAME** | ✅ Alpha 0x000-0x0FF / MO 0x100-0x1FF / Playfield **0x200-0x2FF** / Translucency 0x300-0x3FF |
-| **Pixel match vs MAME oracle** | 11.3% pixel-perfect (delta<10), 33% partial (delta<50), layout match |
+| **Pixel match vs MAME oracle** | Marble bit-perfect MAME @ (107, 152). Terreno match. HUD/footer ✅ |
+| **Indirect renderer (`?indirect=1`)** | ✅ bitmap_ind16 PF + MO scratch + screen merge MAME-correct |
+| **`MO_YSCROLL=243` empirico** | ✅ marble screen_y = 243 - yRaw bit-perfect MAME |
+| **Pen cap 7** (3-bit effective MOB) | ✅ sphere blu shading visivo |
 | **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 
 ## Bridge Track A ↔ Track B
