@@ -436,18 +436,12 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
       : [];
   const sprites =
     options.motionObjects === "linked-list"
-      ? options.motionObjectStartEntry !== undefined
-        ? buildSpritesFromMotionObjectList(
-            state.spriteRam,
-            options.motionObjectStartEntry,
-            options.maxMotionObjectEntries,
-            options.motionObjectLookups,
-          )
-        : buildSpritesFromAllBanks(
-            state.spriteRam,
-            options.maxMotionObjectEntries,
-            options.motionObjectLookups,
-          )
+      ? buildSpritesFromMotionObjectList(
+          state.spriteRam,
+          options.motionObjectStartEntry,
+          options.maxMotionObjectEntries,
+          options.motionObjectLookups,
+        )
       : [];
 
   const frame: Frame = {
