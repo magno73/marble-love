@@ -21,7 +21,7 @@ describe("buildEngineDiagnosticFrame", () => {
       spriteIndex: 0x410,
       gfxBank: 2,
       bitsPerPixel: 5,
-      paletteIndex: 0x43, // 0x40 + 3 — MAME atarisy1 MO base 0x400, granularity 8
+      paletteIndex: 0x43, // 0x40 + 3 — sphere palette match
     });
   });
 
