@@ -90,9 +90,10 @@ describe("bootInit", () => {
     for (let i = 0; i < 5; i++) {
       expect(() => tick(s, { rom })).not.toThrow();
     }
-    // Frame counter avanza
-    expect(s.workRam[0x14]).toBe(5);
-    expect(s.workRam[0x16]).toBe(5);
+    // state.clock.frame avanza (counter canonico interno);
+    // workRam[0x14] e [0x16] sono gestiti dalle sub IRQ4 + body — non sono
+    // più semplici monotonic counter dopo il fix B6.
+    expect(s.clock.frame).toBe(5);
   });
 
   it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {

@@ -64,6 +64,10 @@ interface DiffEntry {
 function diff(region: string, ts: Uint8Array, mame: Uint8Array, baseArr: Uint8Array): DiffEntry[] {
   const out: DiffEntry[] = [];
   for (let i = 0; i < ts.length; i++) {
+    // workRam[0x1d22..0x1eff] = M68K supervisor stack di MAME (SSP=0x1F00,
+    // low-water 0x1d22). TS non ha M68K stack: differenze qui sono residue
+    // di push/pop irrilevanti al game state. Skip.
+    if (region === "workRam" && i >= 0x1d22 && i <= 0x1eff) continue;
     if (ts[i] !== mame[i]) {
       out.push({ region, off: i, ts: ts[i]!, mame: mame[i]!, baseSeed: baseArr[i]! });
     }
@@ -91,8 +95,8 @@ for (const d of all) {
 
 for (const [region, entries] of byRegion) {
   console.log(`=== ${region} (${entries.length} bytes) ===`);
-  // Show first 30 entries
-  for (const e of entries.slice(0, 30)) {
+  const limit = process.env.SHOW_ALL ? entries.length : 30;
+  for (const e of entries.slice(0, limit)) {
     const seedTag = e.baseSeed === e.ts ? " (TS unchanged)" :
                     e.baseSeed === e.mame ? " (MAME unchanged)" : "";
     console.log(
@@ -101,5 +105,5 @@ for (const [region, entries] of byRegion) {
       `seed=0x${e.baseSeed.toString(16).padStart(2, "0")}${seedTag}`,
     );
   }
-  if (entries.length > 30) console.log(`  ... +${entries.length - 30} more`);
+  if (entries.length > limit) console.log(`  ... +${entries.length - limit} more`);
 }

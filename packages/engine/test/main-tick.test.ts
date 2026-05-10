@@ -3,9 +3,14 @@
  *
  * Verifica che `mainTick(state, {rom})`:
  *  1. Non lanci eccezioni con state vuoto + ROM vuota
- *  2. Incrementi i frame counter @ 0x14/0x16
+ *  2. Incrementi `state.clock.frame` (counter canonico interno)
  *  3. Esegua mainUpdateScrollSync (prefix FUN_28788) quando il flag 0x39A è set
  *  4. Sia idempotente: 100 tick consecutivi senza errori, state coerente
+ *
+ * **Nota**: workRam[0x14] e workRam[0x16] NON sono frame counter monotonic.
+ * MAME li sovrascrive con altri valori durante il body del tick (vblank
+ * mailbox @ 0x16, sound-timer mirror @ 0x14). Vedi commit B6: il preambolo
+ * IRQ4 incrementa, ma il body azzera/sovrascrive — quindi qui non si testa.
  *
  * Non testa parità byte-perfect col binario (responsabilità dei singoli
  * test parity dei sub-systems). Verifica solo che il wire-up regga.
@@ -23,23 +28,22 @@ describe("mainTick smoke", () => {
     expect(() => mainTick(s, { rom })).not.toThrow();
   });
 
-  it("incrementa il frame counter @ 0x14 e 0x16", () => {
+  it("incrementa state.clock.frame (counter canonico interno)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
+    const start = s.clock.frame;
     mainTick(s, { rom });
-    expect(s.workRam[0x14]).toBe(1);
-    expect(s.workRam[0x16]).toBe(1);
+    expect(s.clock.frame).toBe(start + 1);
     mainTick(s, { rom });
-    expect(s.workRam[0x14]).toBe(2);
-    expect(s.workRam[0x16]).toBe(2);
+    expect(s.clock.frame).toBe(start + 2);
   });
 
-  it("skipFrameCounter: lascia 0x14/0x16 a 0", () => {
+  it("skipFrameCounter: non incrementa state.clock.frame", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
+    const start = s.clock.frame;
     mainTick(s, { rom, skipFrameCounter: true });
-    expect(s.workRam[0x14]).toBe(0);
-    expect(s.workRam[0x16]).toBe(0);
+    expect(s.clock.frame).toBe(start);
   });
 
   it("flag 0x39A set → esegue prefix scroll sync (latcha y, clear flag)", () => {
@@ -60,8 +64,8 @@ describe("mainTick smoke", () => {
     for (let i = 0; i < 100; i++) {
       expect(() => mainTick(s, { rom })).not.toThrow();
     }
-    // Il frame counter avrà fatto wrap byte (100 mod 256 = 100)
-    expect(s.workRam[0x14]).toBe(100);
+    // state.clock.frame ha registrato i 100 tick
+    expect(s.clock.frame).toBe(100);
   });
 
   it("inputMmio default 0xFC → gameMainGate skip Block C (no spin)", () => {
@@ -81,7 +85,7 @@ describe("mainTick smoke", () => {
     // qui (test smoke), solo che lo stato evolva senza throw
     expect(() => mainTick(s, { rom, p1X: 8, p1Y: -4 })).not.toThrow();
     // Sanity: il frame counter è continuato
-    expect(s.workRam[0x14]).toBe(2);
+    expect(s.clock.frame).toBe(2);
     void stableState;
   });
 });

@@ -44,11 +44,17 @@ function hex(s: string): Uint8Array {
   return o;
 }
 
-function pct(a: Uint8Array, b: Uint8Array): number {
+function pct(a: Uint8Array, b: Uint8Array, skipStack = false): number {
   const t = Math.min(a.length, b.length);
-  let m = 0;
-  for (let i = 0; i < t; i++) if (a[i] === b[i]) m++;
-  return Math.round((m * 1000) / t) / 10;
+  let m = 0, counted = 0;
+  for (let i = 0; i < t; i++) {
+    // workRam[0x1d22..0x1eff] = M68K supervisor stack residue (SSP=0x1F00).
+    // TS non ha M68K stack — skip dal confronto.
+    if (skipStack && i >= 0x1d22 && i <= 0x1eff) continue;
+    counted++;
+    if (a[i] === b[i]) m++;
+  }
+  return Math.round((m * 1000) / counted) / 10;
 }
 
 const raw = JSON.parse(readFileSync(DUMP_PATH, "utf-8")) as {
@@ -110,7 +116,7 @@ for (let i = 1; i < snapshots.length; i++) {
     tick(s, { rom, runMainLoopBody: true });
   }
 
-  const wp = pct(s.workRam, target.workRam);
+  const wp = pct(s.workRam, target.workRam, true);
   const pp = pct(s.playfieldRam, target.playfieldRam);
   const sp = pct(s.spriteRam, target.spriteRam);
   const ap = pct(s.alphaRam, target.alphaRam);
