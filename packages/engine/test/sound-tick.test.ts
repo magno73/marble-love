@@ -27,7 +27,10 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0); // retry reset
     expect(calls).toEqual([(0x10 << 8) | 0x02]); // dispatch
     expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // last_sent updated + flag
-    expect(s.workRam[0x1f44]).toBe(0x10 | 0x80); // cmd marked sent
+    // 0x1f44 azzerato dal sound-CPU ack simulato nel default fun_4dcc
+    // (M6502 legge mailbox e ack; senza emulare sound CPU si simula ack
+    // immediato per matchare frame-done dump MAME). Pre-fix era 0x10|0x80.
+    expect(s.workRam[0x1f44]).toBe(0); // cmd ack-cleared dal sound CPU sim
   });
 
   it("cmd >= 0x40: skip queue dispatch, solo mark sent", () => {
@@ -42,7 +45,8 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(calls.length).toBe(0); // no dispatch
     expect(s.workRam[0x1ff4]).toBe(0x33); // retry NOT reset
     expect(s.workRam[0x1f45]).toBe(0x12); // last_sent unchanged
-    expect(s.workRam[0x1f44]).toBe(0x80); // cmd unchanged (bit 7 already set)
+    // 0x1f44 azzerato da sound-CPU ack simulato (default fun_4dcc).
+    expect(s.workRam[0x1f44]).toBe(0); // ack-cleared
   });
 
   it("cmd < 0x40 con last_sent bit 7 zero: nessun dispatch ma update last_sent", () => {

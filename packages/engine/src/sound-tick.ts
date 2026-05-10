@@ -95,6 +95,10 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
     r[SND_TICK_COUNTER_OFF + 1] = (cnt >>> 16) & 0xff;
     r[SND_TICK_COUNTER_OFF + 2] = (cnt >>> 8) & 0xff;
     r[SND_TICK_COUNTER_OFF + 3] = cnt & 0xff;
+    // Simula sound-CPU M6502 ack: in MAME il sound CPU legge la mailbox
+    // *0x401F44 entro lo stesso frame e scrive 0x00 → frame-done dump vede 0.
+    // Senza questo, il bset #7 del 68k lascia 0x80 e diverge dall'oracle.
+    r[SND_CMD_OFF] = 0;
   }
 
   // FUN_4C3E(D0=0x10003, A0=0x401F44) — sub

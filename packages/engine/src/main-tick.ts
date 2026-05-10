@@ -181,12 +181,16 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
 
   gameTickTimers(state, opts.hudCallback);
 
+  // Default = 0xff (= MMIO trackball stable @ no-input in MAME) per evitare
+  // delta spurious al primo tick: cur=0 vs prev=0xff produrrebbe delta=1
+  // e scriverebbe 01 01 00 00 a obj1[+0xc6..0xc9] (= workRam[0x1c0..0x1c3]
+  // per slot 7 / obj P2). Verificato vs MAME oracle frame 2401.
   trackballInputTick(
     state,
-    opts.p1X ?? 0,
-    opts.p1Y ?? 0,
-    opts.p2X ?? 0,
-    opts.p2Y ?? 0,
+    opts.p1X ?? 0xff,
+    opts.p1Y ?? 0xff,
+    opts.p2X ?? 0xff,
+    opts.p2Y ?? 0xff,
   );
 
   const gateOpts: GameMainGateOptions = { mmioInput: opts.inputMmio ?? 0x6f };
