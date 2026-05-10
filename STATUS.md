@@ -3,15 +3,26 @@
 **Ultimo update:** 2026-05-10
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 🎯 Highlight sessione 2026-05-10
+## 🎯 Highlight sessione 2026-05-10 (iter B5–B18)
 
 - **Marble bit-perfect MAME @ (107, 152)** via indirect renderer (commit `a38c521`)
-- **Drift workRam @ 2401: 98.9%** (87 byte residui, -69% da pre-sessione)
+- **Drift workRam @ 2401: 98.9%** (82 byte residui, -71% da pre-sessione)
+- **INTEGRATE_VEL block estratto** da helper121B8 e wired in fun_253EC chain
+  MAME-canonical (commit B18: `helper253BC → objectStep17F66 → INTEGRATE_VEL`)
+  → drift 87 → 82 byte
 - **3 sub MAME replicate**: FUN_1725A, FUN_1924E, FUN_1BC88 + FUN_28608 inline
-- **Renderer rewrite**: bitmap_ind16 PF + MO + screen merge MAME-correct (`?indirect=1`)
-- **30+ commit** in iter B5-B17
+- **Renderer rewrite**: bitmap_ind16 PF + MO + screen merge MAME-correct
+- **Indirect renderer default ON** (= modalità MAME bit-perfect attivata di default,
+  `?indirect=0` per disabilitare)
+- **`?play=1` opt-in**: forza `runMainLoopBody=true` ANCHE con warmState per
+  gameplay live dal warm bootstrap MAME (= attract mode demo animato)
+- **Cleanup**: 5 errori TS strict mode preesistenti chiusi (helper-1924e RomImage
+  param, main-tick / waypoint unused identifiers)
+- **30+ commit** in iter B5-B18
 
-Apri `http://localhost:5173/?autoLoad=1&mameDump=1&indirect=1` per vedere il rendering live.
+URLs di test:
+- `http://localhost:5173/?autoLoad=1&mameLive=1&play=1` — attract mode warm bootstrap
+- `http://localhost:5173/?autoLoad=1&mameDump=1` — frozen frame 2400 MAME snapshot
 
 ### Discrepancy MAME oracle screenshot vs state dump (2026-05-10)
 
@@ -32,10 +43,17 @@ possibile con lo state dump corrente.
 - ⏳ FUN_29CCE branch fallback minimal stub (~30 LOC)
 - ⏳ MAME tooling addition: dump m_bank register per sphere verdi entry 2
 
-### Fase 2 — Drift 87→0 byte residuo (1-2 giorni)
-- ⏳ Agent investigation VX/VY waypoint precision bug (in corso)
-- ⏳ Wire helper121B8 chain MAME-correct without side-effect
-- ⏳ Trace cluster slot 0 obj fields non-helper121B8 sources
+### Fase 2 — Drift 82→0 byte residuo (1-2 giorni)
+- ✅ INTEGRATE_VEL block estratto + wired chain MAME-canonical (B18, -5 byte)
+- ⏳ Cluster `0x0674..0x06a3` (sprite globals 16+ byte) — spriteBracketLerp1C676
+  output divergence
+- ⏳ Cluster `0x0750..0x0783` (sprite RAM 12+ byte) — spriteRotate1C014 matrix
+  output non aggiorna correttamente
+- ⏳ Spurious VX writes a slot 7 (`0x1c0..0x1c3` = 0x01010000) — investigare
+  walk in `objectScanDispatch251DE`
+- ⏳ Spurious 0x80 a `0x401f44` (sound command byte) — sound init divergence
+- ⏳ Slot 0 obj fields `0x14, 0x1a..0x1f, 0x37, 0x3b, 0x3d, 0x3f` — mancano
+  mutazioni MAME side
 
 ### Fase 3 — Event-loop simulator (1-2 giorni)
 - ⏳ IRQ4 60Hz scheduler deterministic
