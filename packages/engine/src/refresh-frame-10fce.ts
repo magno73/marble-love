@@ -43,6 +43,7 @@ import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
+import { stringStep1725A } from "./string-step-1725a.js";
 import { stateSub19BAA } from "./state-sub-19baa.js";
 import { stateSub1844A } from "./state-sub-1844a.js";
 import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
@@ -193,7 +194,9 @@ export function refreshFrame10FCE(
   addByte(state, FRAME_CTR_ADDR, 1);
 
   // 00010FF2: jsr 0x00017230
-  (subs.dispatchStrings17230 ?? ((s) => { dispatchStrings17230(() => undefined); void s; }))(state);
+  (subs.dispatchStrings17230 ?? ((s) => {
+    dispatchStrings17230((slotAddr) => { stringStep1725A(s, slotAddr, rom); });
+  }))(state);
 
   // 00010FF8: jsr 0x0001912C
   (subs.fun1912C ?? ((s) => { refreshHelper1912C(s, rom); }))(state);
