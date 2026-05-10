@@ -37,6 +37,7 @@ import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
 import { stateSub1B5C2 } from "./state-sub-1b5c2.js";
+import { helper182BA } from "./helper-182ba.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
@@ -228,7 +229,8 @@ export function refreshFrame10FCE(
         if (s18 === 0 || s18 === 2) return; // skip / branch alt non replicato
         // ELSE branch FUN_158F6 (line 0x1597a..1598c):
         helper253BC(s, slotPtr);
-        // helper182BA stub (non replicato — 0 effetti finchè non implementato)
+        // FUN_182BA: state-validate-grid + seek/gravity + 26196 dispatch
+        helper182BA(s, slotPtr, rom);
         // helper121B8 surrogate: INTEGRATE_VEL + stateSub1B5C2 + spriteBracketLerp
         {
           const wr = s.workRam;
