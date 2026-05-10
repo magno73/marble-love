@@ -28,6 +28,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
 
 const WRAM = 0x00400000 as const;
 const SLOT_3_PTR = 0x00401422 as const;
@@ -68,7 +69,14 @@ export function fun14966Stub(slotPtr: number, state: GameState): void {
   // frame 2400→2401 con ticker 0→1 e limit≥2), bgt è preso → ritorniamo.
   // Per il caso ticker == limit (bgt non preso) lo stub ritorna comunque;
   // il body completo non è ancora portato (vedi nota di file).
-  return;
+  // Common epilogue (per ALL paths inclusa "bgt taken"):
+  // 0x14bbe: jsr FUN_150D0(A2). Per slot 1/2 con s1a=0, l'unico path che
+  // porta a 0x14bbe è SKIP s1a∈{1,5,6} block → direct call a FUN_150D0.
+  // FUN_150D0 scrive (A1+0x28) long packed → chiude byte 0x2b (= LSB di
+  // long +0x28) per slot 1/2 in cluster Misc Sub-B.
+  // inner264AA stub no-op (FUN_264AA non replicato; per slot 1/2 non
+  // necessario perché D2 calcolato dal body principale).
+  spriteCoordsJsr150D0(state, slotPtr, { inner264AA: () => 0 });
 }
 
 /** Indirizzo originale della sub. */
