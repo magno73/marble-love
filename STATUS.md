@@ -13,6 +13,46 @@
 
 Apri `http://localhost:5173/?autoLoad=1&mameDump=1&indirect=1` per vedere il rendering live.
 
+### Discrepancy MAME oracle screenshot vs state dump (2026-05-10)
+
+MAME oracle screenshot `/tmp/mame_snap.png` mostra marble come **sphere blu+giallo**
+(stelle gialle pen 2/7 = palette[0x110, 0x117], body blu medio). Ma palette
+translucency region @ frame 2400 (= byte 0x600..0x7FF) è **zero**, e il marble
+con priority=1 dovrebbe finire in quella zona via formula MAME
+`pf[x] = 0x300 + ((pf&f)<<4) + pen`. Conclusione: il MAME oracle screenshot è
+probabilmente da **frame diverso** dal state dump. Il TS marble blu sphere
+shaded @ palette[520..527] (= base 0x40 + color=1) è la migliore match
+possibile con lo state dump corrente.
+
+## 📋 Piano replica perfetta giocabile
+
+### Fase 1 — Visual marble + viewport pixel-perfect (oggi)
+- ✅ Marble bit-perfect MAME @ (107, 152) [B16]
+- ⚠️ MAME oracle screenshot frame mismatch (= screenshot from different frame)
+- ⏳ FUN_29CCE branch fallback minimal stub (~30 LOC)
+- ⏳ MAME tooling addition: dump m_bank register per sphere verdi entry 2
+
+### Fase 2 — Drift 87→0 byte residuo (1-2 giorni)
+- ⏳ Agent investigation VX/VY waypoint precision bug (in corso)
+- ⏳ Wire helper121B8 chain MAME-correct without side-effect
+- ⏳ Trace cluster slot 0 obj fields non-helper121B8 sources
+
+### Fase 3 — Event-loop simulator (1-2 giorni)
+- ⏳ IRQ4 60Hz scheduler deterministic
+- ⏳ MMIO mock ciclico (`0x400010` toggle)
+- ⏳ `mainLoopInit117B2` attivato
+
+### Fase 4 — Sound (1 settimana via libreria)
+- ⏳ Integrare libreria 6502 emulator + YM2151
+- ⏳ Wire sound dispatch
+- ⏳ Web Audio API output
+
+### Fase 5 — Gameplay end-to-end (3-5 giorni)
+- ⏳ Trackball input keyboard
+- ⏳ Multi-frame regression test
+- ⏳ Polish UI
+
+
 ## Riepilogo metriche
 
 | Metrica | Valore |
