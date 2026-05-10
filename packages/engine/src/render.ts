@@ -124,7 +124,7 @@ export interface Frame {
 export interface BuildFrameOptions {
   playfieldRam?: Uint8Array;
   playfieldLookups?: PlayfieldLookupInfo[];
-  motionObjects?: "none" | "linked-list";
+  motionObjects?: "none" | "linked-list" | "all-banks";
   motionObjectStartEntry?: number;
   maxMotionObjectEntries?: number;
   motionObjectLookups?: MotionObjectLookupInfo[];
@@ -446,6 +446,12 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
       ? buildSpritesFromMotionObjectList(
           state.spriteRam,
           options.motionObjectStartEntry,
+          options.maxMotionObjectEntries,
+          options.motionObjectLookups,
+        )
+      : options.motionObjects === "all-banks"
+      ? buildSpritesFromAllBanks(
+          state.spriteRam,
           options.maxMotionObjectEntries,
           options.motionObjectLookups,
         )

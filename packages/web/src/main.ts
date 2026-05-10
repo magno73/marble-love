@@ -335,7 +335,7 @@ async function startGame(
           opts.playfieldLookups = rom.graphics.lookupTables.playfield;
         }
         if (rom?.graphics.lookupTables.motionObjects) {
-          opts.motionObjects = "linked-list";
+          opts.motionObjects = "all-banks";
           opts.motionObjectLookups = rom.graphics.lookupTables.motionObjects;
         }
         const f = renderNs.buildFrame(s, opts);
