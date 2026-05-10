@@ -41,9 +41,11 @@ import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
 import { fun158F6 } from "./sub-158f6.js";
+import { fun29CCE } from "./sub-29cce.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
+import { fun14966Stub } from "./sub-14966-stub.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
 import { stringStep1725A } from "./string-step-1725a.js";
 import { stateSub19BAA } from "./state-sub-19baa.js";
@@ -212,6 +214,9 @@ export function refreshFrame10FCE(
         // spritePosUpdate1BAB2 prima di spriteRotate/bracketLerp: scrive
         // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields.
         spritePosUpdate1BAB2(st, a2);
+        // FUN_29CCE chunk minimal (collision pipeline): replica solo prologo
+        // side-effect (clr +0x58) + epilogo neg.l finale. Skip BLOCK A/B/C/D/E.
+        fun29CCE(st, a2, rom);
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);
       },
@@ -239,7 +244,11 @@ export function refreshFrame10FCE(
   }))(state);
 
   // 00010FE6: jsr 0x0001493C
-  (subs.slotArrayTick1493C ?? slotArrayTick)(state);
+  // Default callback per FUN_14966: stub minimal (head-only) — vedi
+  // `sub-14966-stub.ts` per coverage e workaround slot 3.
+  (subs.slotArrayTick1493C ?? ((s) => {
+    slotArrayTick(s, { fun_14966: fun14966Stub });
+  }))(state);
 
   // 00010FEC: addq.b #1, (0x004003F0).l
   addByte(state, FRAME_CTR_ADDR, 1);
