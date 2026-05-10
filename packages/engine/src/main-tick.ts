@@ -230,4 +230,21 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   if (opts.runMainLoopBody === true) {
     mainLoopInit1101E(state, rom);
   }
+
+  // ─── Main-thread vblank-counter snapshot ────────────────────────────────
+  // FUN_FA0 (entry-point main-thread loop) gira asincrono all'IRQ4. Ad ogni
+  // sync-vblank esegue:
+  //     btst.b #7, *0x400013     ; aspetta vblank
+  //     beq    skip
+  //     tst.w  (A3); bne loop    ; con timeout
+  //     move.w *0x400010, D0     ; legge HIGH-word del long counter @ 0x400010
+  //     andi.w #0xff, D0
+  //     move.w D0,    *0x400014  ; snapshot low-byte
+  // Sovrascrive l'increment-by-1 di IRQ4 (FUN_10116 @ 0x10126). Steady-state
+  // attract: `*0x400010` long < 0x10000 → high-word == 0 → *0x400014 = 0x00.
+  // Replica come stub minimo (= byte assignment a workRam[0x14]). Verificato
+  // vs MAME multi-frame dump (frame 2401..2460: workRam[0x14] alternates
+  // 0x00/0x01 in funzione di interleaving IRQ4↔main-thread).
+  // Riferimenti binario: writers @ 0x17aa, 0x1b82 (entrambi in FUN_FA0).
+  r[0x14] = r[0x11] ?? 0;
 }
