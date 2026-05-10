@@ -34,6 +34,8 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
+import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
+import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -154,7 +156,18 @@ export function refreshFrame10FCE(
   (subs.fun13EE6 ?? ((s) => { refreshHelper13EE6(s, rom); }))(state);
 
   // 00010FD4: jsr 0x000251DE
-  (subs.objectScanDispatch251DE ?? ((s) => { objectScanDispatch251DE(s, rom); }))(state);
+  // FUN_253EC default: solo spriteRotate1C014 + spriteBracketLerp1C676
+  // (rotation matrix + sprite slot output @ obj+0x75..+0xb3 e globals
+  // 0x400674..683). Il resto di helper121B8 ha sub stub no-op che
+  // produrrebbero drift, quindi vengono lasciati no-op.
+  (subs.objectScanDispatch251DE ?? ((s) => {
+    objectScanDispatch251DE(s, rom, {
+      fun_253EC: (st, a2) => {
+        spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
+        spriteBracketLerp1C676(st);
+      },
+    });
+  }))(state);
 
   // 00010FDA: jsr 0x000189E2
   (subs.processAllSprites189E2 ?? processAllSprites)(state);
