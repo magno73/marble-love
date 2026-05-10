@@ -29,15 +29,29 @@
   stateSub1B5C2 + spriteBracketLerp) per slot pair attivi (s18 != 0,2).
 - → 73 → 65 byte
 
-### Drift residuo (65 byte) — analizzato Ghidra
-| Cluster | Byte | Bloccante |
+### Drift residuo (65 byte) — analizzato Ghidra (B20-B21)
+
+| Cluster | Byte | Bloccante (sub MAME mancante) |
 |---|---|---|
-| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | helper253BC stub no-op (necessario impl) |
-| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | idem |
+| Slot 0 obj fields (0x14, 0x1a..1f, 0x37, 0x3b..3f) | 9 | **FUN_261BC** (200+ istr) via FUN_26196 — scrive 0x37/0x3b/0x3d/0x3f. Possibile **FUN_15DB6** kind=0x23→0x20 per 0x1a |
+| Slot 2/3 obj fields (0xbf, 0xc5, 0xcb, 0xd1, 0xdd) | 5 | NON via FUN_253EC (count=1 @2400). Path alternativo da identificare |
 | Cluster A 0x686..0x6a3 (vel-snap blob) | 12 | **FUN_29CCE** (~12KB collision pipeline) NON replicato |
-| Cluster B 0x750..0x783 (sprite render queue) | 12 | **FUN_14966** (per-slot ticker via slotArrayTick) stub |
+| Cluster B 0x750..0x783 (sprite render queue) | 12 | **FUN_14966** (188 istr) — richiede prima FUN_15148/1BB08/1CC62/150D0 |
 | Display list 0xa22..0xa49 | 8 | catena FUN_29CCE downstream |
 | Misc (0x971..73, 0x1386, 138d, 13e6, 13ed, 13ee) | 8 | sub minor non identificate |
+
+### Ghidra xref findings (sessione)
+- `spriteBracketLerp1C676` ha **1 caller**: FUN_121B8 @ 0x122c6
+- `helper121B8` ha **4 callers**: FUN_158F6 (×1), FUN_253EC (×3 jumptable s1a), entry point
+- `FUN_253EC` ha **giant jumptable s1a 0..11** — case 0 chain TS già MAME-correct
+- `helper253BC` (FUN_253BC) — già replicato bit-perfect (14 istr), tocca solo 0x1d/0x2a-2d/0x32-35
+- `helper182BA` (109 istr) — scrive solo `(A2)/0x4/0x8/0x68`, NON i drift fields. Drift fields vengono dai grandchildren (FUN_261BC, FUN_15D10/15E24)
+
+### Phase 5 partial — Trackball MMIO assoluto
+- `packages/web/src/input.ts` refactor: state assoluto 0..255 wrap-around (era delta -127..127)
+- Allinea il modello MMIO MAME (P1X/Y a 0xF20001/3 byte position absolute)
+- Elimina spurious delta a key-up (cur=0 vs prev=0xff seed → delta=1)
+- Mantiene cur=0xff stabile in idle
 
 URLs di test:
 - `http://localhost:5173/?autoLoad=1&mameLive=1&play=1` — attract mode warm bootstrap
