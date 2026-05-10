@@ -630,10 +630,18 @@ function renderIndirectViewport(
   }
 
   // ─── MO bitmap: render gli SpriteCommand ────────────────────────────────
+  // MAME atarisy1 m_yscroll(256): screen_y = (256 - yRaw) & 0x1ff
+  // m_xoffset implicito (= 15? deduced empirically from MAME oracle marble pos
+  // (107, 158) vs sprite raw (92, 91)).
+  // MAME atarisy1 m_yscroll=256 default. Empirico: marble MAME @ y=152, TS yRaw=91
+  // → effective MO_YSCROLL = 152 + 91 = 243. Discrepanza 13 px probabilmente
+  // da hblank/vblank offset o m_xoffset default.
+  const MO_YSCROLL = 243;
+  const MO_XOFFSET = 15;
   for (const sprite of frame.sprites) {
     if (sprite.gfxBank === undefined || sprite.bitsPerPixel === undefined) continue;
-    const drawX = sprite.x;
-    const drawY = sprite.y;
+    const drawX = (sprite.x + MO_XOFFSET) & 0x1ff;
+    const drawY = (MO_YSCROLL - sprite.y) & 0x1ff;
     const w = sprite.width ?? 8;
     const h = sprite.height ?? 8;
     if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
