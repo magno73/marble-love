@@ -127,10 +127,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const rom = opts.rom;
 
   // ─── Preambolo IRQ4 (replica FUN_00010116) ───────────────────────────────
+  // Nota: l'IRQ4 handler fa ADDQ.B #1 su 0x400016 (mailbox vblank) e 0x400014.
+  // Tuttavia entrambi vengono *sovrascritti* durante il body:
+  //   - 0x400016 azzerato da FUN_28DEA (vblankAck) ad ogni invocazione
+  //   - 0x400014 sovrascritto da subs a 0x17aa/0x1b82 (move.w 0x400010 → 0x400014)
+  // Il valore finale al frame_done MAME riflette quei sovrascrivimenti, non
+  // l'incremento IRQ. Replicare l'incremento qui produce drift cumulativo →
+  // skip e lascia che le sub corrette gestiscano i due offset.
   if (!opts.skipFrameCounter) {
-    r[FRAME_COUNTER_LOW_OFF] = ((r[FRAME_COUNTER_LOW_OFF] ?? 0) + 1) & 0xff;
-    r[FRAME_COUNTER_HIGH_OFF] = ((r[FRAME_COUNTER_HIGH_OFF] ?? 0) + 1) & 0xff;
-    // state.clock.frame: contatore canonico per trace + debugging.
     state.clock.frame = ((state.clock.frame + 1) >>> 0) as typeof state.clock.frame;
   }
 
