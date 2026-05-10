@@ -60,6 +60,48 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-10 — Iter B17: agent findings (FUN_29CCE no-op + sphere verdi)
+
+2 agenti Sonnet in parallelo per investigation profonda:
+
+### Agent 1: FUN_29CCE replication analysis
+
+**Conclusione**: FUN_29CCE @ frame 2400 è **no-op** (state byte
+`obj+0x37 = 0x53 = 83`, out of jump table range 5..59 → fallback path
+che scrive solo `obj+0x00..0x13` = NON nei cluster 87-byte residui).
+
+- Total disasm: 2331 istruzioni, 8078 byte, jump table 55 entries
+- Replicare full = 2-5 giorni, **ridurrebbe drift di solo 0-4 byte** @ 2400
+- Cluster 0x1a-0x3f drift = altre sub interne di helper121B8
+
+**Tentativo wiring helper121B8 in fun_253EC** (= MAME source confirmed
+chain `helper253BC → objectStep17F66 → helper121B8` per state 0):
+drift 87 → 150 byte. Roll-back. Side-effect upstream interferisce.
+
+### Agent 2: Sphere verdi MAME oracle identification
+
+**Conclusione**: le 2 sphere verdi MAME oracle sono **MO sprite entry 2**
+(NON playfield tile come ipotizzato).
+
+- Coordinate MAME: left @ (114, 184), right @ (201, 185), 12x12 px
+- Palette: MAME color=8, palette entries 320..327 (= MO region 0x100 +
+  color*8). RGB(0,109,54) bright + RGB(0,67,33) dark
+- MO entry 2: tile=32, color=8, xRaw=65, yRaw=65, size=2x2 (= 16x16)
+- TS calcolerebbe drawY = 243-65 = 178 (vicino MAME 184), drawX = 80
+  (MAME 114, diff 34)
+
+**Bug**: TS `walkMotionObjectLinkedList` parte da entry 0 e segue link
+(= visita 0 → 33 → 32). Entry 2 NON visitato. MAME usa registro
+`m_next_entry` o slipram non catturato dal Lua dump → start link
+diverso al frame 2400.
+
+**Per fixare** servirebbe:
+1. Aggiungere registro MO start a `mame_state_dump.lua`
+2. TS walk usa quel registro invece di hardcoded 0
+3. Verificare offset MO x-scroll (= +34 px da 80 a 114)
+
+Skipped per ora — richiede MAME tooling addition.
+
 ## Sessione 2026-05-10 — Iter B14-B16: marble bit-perfect position + indirect renderer
 
 Sessione lunga di rendering rewrite. Marble TS ora **bit-perfect MAME**
