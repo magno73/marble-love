@@ -184,15 +184,15 @@ export function decodeObjectTile(
   bpp: 4 | 5 | 6,
   layout: GfxLayoutKind = "playfield",
 ): DecodedObjectTile {
+  // Verificato 2026-05-10 via tile atlas decode: stride 0x10000 + plane MSB +
+  // x MSB produce pattern sphere shaded riconoscibile per tile 2913 (= marble).
+  // Layout NON-MOB era già a 0x10000 → unico decode unifica entrambi.
   const pixels = new Uint8Array(OBJECT_TILE_WIDTH * OBJECT_TILE_HEIGHT);
-  const planeStride = layout === "mob" ? 0x40000 : OBJECT_PLANE_STRIDE;
+  const planeStride = OBJECT_PLANE_STRIDE;
   const bankBase = layout === "mob" ? 0 : OBJECT_BANK_STRIDE * (bankIndex - 1);
-  // MAME atarisy1 gfx_mob_layout planes: { 0, RGN_FRAC(1,4), RGN_FRAC(2,4),
-  // RGN_FRAC(3,4) } con plane[0] = LSB del pen, plane[bpp-1] = MSB.
-  // Per playfield (TS legacy): plane[0] = MSB (mantenuto per parity esistente).
   const planeOffsets = Array.from(
     { length: bpp },
-    (_, plane) => (layout === "mob" ? plane : (bpp - 1 - plane)) * planeStride,
+    (_, plane) => (bpp - 1 - plane) * planeStride,
   );
 
   for (let y = 0; y < OBJECT_TILE_HEIGHT; y += 1) {
@@ -201,8 +201,7 @@ export function decodeObjectTile(
       for (let plane = 0; plane < bpp; plane += 1) {
         const byteOffset =
           bankBase + (planeOffsets[plane] ?? 0) + tileIndex * OBJECT_TILE_BYTES + y;
-        const shift = layout === "mob" ? plane : (bpp - 1 - plane);
-        pen |= readMsbFirstBit(tiles, byteOffset * 8 + x) << shift;
+        pen |= readMsbFirstBit(tiles, byteOffset * 8 + x) << (bpp - 1 - plane);
       }
       pixels[y * OBJECT_TILE_WIDTH + x] = pen;
     }
