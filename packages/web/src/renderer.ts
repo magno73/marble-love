@@ -765,7 +765,7 @@ export function initRenderer(
         opts.playfieldLookups = graphics.lookupTables.playfield;
       }
       if (graphics?.lookupTables.motionObjects) {
-        opts.motionObjects = "linked-list";
+        opts.motionObjects = "all-banks";
         opts.motionObjectLookups = graphics.lookupTables.motionObjects;
       }
       this.drawFrame(renderNs.buildFrame(state, opts));
