@@ -312,13 +312,13 @@ export function buildSpritesFromMotionObjectRam(
       command.gfxBank = lookup.bank;
       command.bitsPerPixel = lookup.bpp;
       // MAME atarisy1: motion object palette base @ byte 0x400 di colorRam
-      // (= word offset 512). Con granularity=8: paletteIndex_TS = 512/8 = 0x40.
-      // colorlookup[i] = (color & 15) << 1 (shift 1, granularity stride).
-      // Quindi paletteIndex = 0x40 + (color << 1).
-      // Verificato 2026-05-10 via headless inspect: palette[520..527] (color=1)
-      // contiene grigi+blu sphere texture (= marble blu); palette[272..279]
-      // (vecchia formula 0x20 base) era area playfield "color row" pattern.
-      command.paletteIndex = 0x40 + (lookup.color << 1);
+      // (= word offset 512). Con granularity=8 (= 8 word per macro):
+      // paletteIndex_TS_base = 512/8 = 0x40. Per MO bpp=4 ogni color step =
+      // 1 macro (granularity_word_count / pen_count = 8/8 = 1 → no shift).
+      // Verificato 2026-05-10: palette[520..527] (= macro 0x41 = 0x40+1, color=1)
+      // contiene grigi+blu sphere texture (marble); palette[528..535] (= 0x42)
+      // contiene ciano scuro ecc.
+      command.paletteIndex = 0x40 + lookup.color;
     }
 
     sprites.push(command);
