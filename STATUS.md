@@ -60,6 +60,62 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-08 — Iter B6-B9: drift cumulativo ridotto -69%
+
+Loop autonomo guidato da multi-frame oracle dump + multi-agent Sonnet
+analysis. 4 fix incrementali, ogni fix verificato con metric corretta
+(probe-converge-multi: TS evolution vs MAME evolution frame-per-frame).
+
+### Progressione byte divergenti @ frame 2401 (1 tick post-warmState)
+
+| Iter | Fix | Byte div | workRam % |
+|---|---|---|---|
+| B6 baseline | (counter spurious + stack mask) | 137 | 98.2% |
+| B7 | wire spriteRotate1C014 + spriteBracketLerp1C676 | 112 | 98.5% |
+| B7.1 | inputMmio default 0xfc → 0x6f | 111 | 98.5% |
+| B8 | wire objectStep17F66 chain (no-op fix) | 111 | 98.5% |
+| B9 | waypointListStep1815A read da ROM | **87** | **98.9%** |
+
+Riduzione totale: 283 → 87 byte (= **-69% drift**).
+
+### Fix chiave B9 (commit 2e58d42 + efd414c)
+
+waypointListStep1815A leggeva solo da `state.workRam`, ma in attract mode
+`*workRam[0x446] = 0x2421a` punta a ROM (waypoint table 24214h). Early
+return "list_empty" causava VX/VY del marble bloccati → spriteRotate1C014
+calcolava rotation matrix con input vecchi → 28 byte di drift in cluster
+0x8d-0xcb.
+
+Fix: helper interno `readByteAbs(absAddr)` che dispatcha a
+`rom.program` quando addr < 0x80000, replica fedelmente unified address
+space M68k. Cluster rotation matrix: 28 → 4 byte.
+
+### Cluster residui (87 byte, 29 cluster)
+
+| Cluster | Byte | Owner suspect |
+|---|---|---|
+| 0x14 | 1 | sub IRQ4 / body sovrascrittura |
+| 0x1a-0x3f | 13 | obj slot 0 fields (= helper121B8 sub stub) |
+| 0xbf, 0xc5, 0xcb, 0xd1 | 4 | rotation matrix residual (sub interna) |
+| 0xdd-0xe1, 0x1c0-0x1c3 | 9 | obj+0xc6 fields (vectorScale o helper121B8) |
+| 0x674-0x68b | 20 | sprite-bracket-lerp output (input upstream sbagliati) |
+| 0x69x, 0x6a3 | 4 | world position (helper1CD00 / helper121B8) |
+| 0x76f-0x783 | 12 | string-dispatch table (sub render-string non wired) |
+| 0x971-0x973, 0xa22-0xa49 | 16 | pool struct (counter dynamic) |
+| 0x1386, 0x138d, 0x13e6-0x13ee | 5 | slot array (slot-array-tick sub stub) |
+| 0x1f44 | 1 | sound queue status flag |
+
+### Plateau identificato
+
+Per ridurre ulteriormente serve uno dei due percorsi:
+1. **Replicare le sub stub di helper121B8** (FUN_29CCE, FUN_1BC88,
+   FUN_1924E, FUN_25C74, FUN_264AA) — ognuna ~200-500 LOC
+2. **Implementare event-loop simulator** (IRQ scheduler + MMIO timing)
+   per attivare il main game loop completo
+
+Alternativa pragmatica: continuare wiring chirurgico (sub-by-sub) come
+B7-B9, ma con ritorno marginale crescente.
+
 ## Sessione 2026-05-08 — Iter B6: multi-frame oracle + drift identificato
 
 Tool nuovo: `oracle/mame_state_multidump.lua` — dump multi-frame
