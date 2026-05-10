@@ -428,7 +428,23 @@ export function waypointListStep1815A(
   state: GameState,
   entityAddr: number,
   subs?: WaypointListStep1815ASubs,
+  rom?: import("./bus.js").RomImage,
 ): WaypointListStep1815AResult {
+  // Helper: lettura byte da abs M68k addr. Se l'indirizzo cade nella ROM
+  // (< 0x80000) e abbiamo l'image disponibile, legge da rom.program;
+  // altrimenti default a workRam (caso entity-pool internal list).
+  // Il binario M68k usa unified address space — `move.b (A3),D0b` con
+  // A3 in ROM legge la ROM. Replicare quel comportamento qui.
+  const readByteAbs = (absAddr: number): number => {
+    const a = absAddr >>> 0;
+    if (rom !== undefined && a < 0x80000) {
+      return (rom.program[a] ?? 0) & 0xff;
+    }
+    if (a >= 0x400000 && a < 0x402000) {
+      return (state.workRam[a - 0x400000] ?? 0) & 0xff;
+    }
+    return 0;
+  };
   const entOff = (entityAddr - 0x400000) >>> 0;
   const ptrOff = (GLOBAL_LIST_PTR_ADDR - 0x400000) >>> 0;
   const flagOff = (GLOBAL_EXHAUSTED_FLAG_ADDR - 0x400000) >>> 0;
@@ -443,8 +459,8 @@ export function waypointListStep1815A(
     const a3Addr = readLongBE(state, ptrOff);
     const a3Off = (a3Addr - 0x400000) >>> 0;
 
-    // Test terminator at *A3
-    const sx_b = readByte(state, a3Off);
+    // Test terminator at *A3 (may be in ROM if a3Addr < 0x80000)
+    const sx_b = readByteAbs(a3Addr);
     if (sx_b === 0) {
       return {
         exitMode: iter === 0 ? "list_empty" : "list_exhausted",
@@ -461,11 +477,11 @@ export function waypointListStep1815A(
     const targetX = readLongBE(state, entOff + ENTITY_TARGET_X_OFFSET);
     let d2 = ((sx << 19) - s32(targetX) + DELTA_BIAS) | 0;
 
-    const sy = sextB(readByte(state, a3Off + 1));
+    const sy = sextB(readByteAbs(a3Addr + 1));
     const targetY = readLongBE(state, entOff + ENTITY_TARGET_Y_OFFSET);
     let d3 = ((sy << 19) - s32(targetY) + DELTA_BIAS) | 0;
 
-    const sm = sextB(readByte(state, a3Off + 2));
+    const sm = sextB(readByteAbs(a3Addr + 2));
     let d5 = (sm << 16) | 0;
 
     // ─── D4.w = abs(d2) >> 12 ──────────────────────────────────────────
@@ -567,7 +583,8 @@ export function waypointListStep1815A(
     }
 
     // ─── In range: optional sound trigger ──────────────────────────────
-    const sound_idx = readSByte(state, a3Off + 3);
+    const _sound_byte = readByteAbs(a3Addr + 3);
+    const sound_idx = _sound_byte & 0x80 ? _sound_byte - 0x100 : _sound_byte;
     if (sound_idx >= 0) {
       // table_value = *(0x242aa + sound_idx*4) 32-bit BE
       // asl.w #2, D0w on byte-sext: D0.w = sound_idx * 4 (word). Negative
