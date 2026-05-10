@@ -169,7 +169,7 @@ export function refreshFrame10FCE(
     objectScanDispatch251DE(s, rom, {
       fun_253EC: (st, a2) => {
         objectStep17F66(st, a2, {
-          fun1815A: (a2Addr) => { waypointListStep1815A(st, a2Addr); },
+          fun1815A: (a2Addr) => { waypointListStep1815A(st, a2Addr, undefined, rom); },
           fun180BE: () => {},
           fun26196: () => {},
         });
