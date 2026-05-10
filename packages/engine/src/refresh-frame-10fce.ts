@@ -37,6 +37,7 @@ import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
+import { helper121B8 } from "./helper-121b8.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
@@ -190,8 +191,10 @@ export function refreshFrame10FCE(
           fun26196: () => {},
         });
         // INTEGRATE_VEL extracted from helper121B8 (chain MAME-canonical).
-        // Wirare helper121B8 INTERO esplode drift (24→98) per side-effect di
-        // sub interne stub (es. fun_29cce/15bd0). Manteniamo surrogate manuale.
+        // Wirare helper121B8 INTERO esplode drift (16→54) per side-effect di
+        // sub interne stub (es. fun_29cce/15bd0) anche con tutte noop —
+        // helper121B8 scrive globals 0x684/688/68c/69a/69c/696/698 che il
+        // surrogate manuale lascia stale. Manteniamo surrogate.
         {
           const wr = st.workRam;
           const objOff = (a2 - 0x400000) >>> 0;
@@ -215,31 +218,20 @@ export function refreshFrame10FCE(
         // spritePosUpdate1BAB2 prima di spriteRotate/bracketLerp: scrive
         // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields.
         spritePosUpdate1BAB2(st, a2);
-        // FUN_1B5C2 (stateSub1B5C2) chiamato da helper121B8 @ 0x12338.
-        // Applica absLong/negateIfPositive a D3 (vx) e D4 (vy) basato su
-        // gates @ 0x40066a (A3), 0x40069e (D2). Se D3 != obj.vx, scrive
-        // D3 a (A2) (= obj.vx) e setta flag @ 0x400666. Stesso per vy/0x400668.
-        // PROLOGUE: clr.b (0x400666); clr.b (0x400668)
         {
           const wr = st.workRam;
           wr[0x666] = 0;
           wr[0x668] = 0;
         }
         stateSub1B5C2(st, a2, 0x40066a, 0x40069e);
-        // POST_B5C2_UPDATE: if (flag666 || flag668) → jsr 1BAB2 (spritePosUpdate).
         {
           const wr = st.workRam;
           if ((wr[0x666] ?? 0) !== 0 || (wr[0x668] ?? 0) !== 0) {
             spritePosUpdate1BAB2(st, a2);
           }
-          // Reset flags PRIMA di 29CCE: helper121B8 @ 0x12358..0x12360 fa
-          // clr.b (0x400666) e clr.b (0x400668). 29CCE epilogue rilegge i
-          // flag come stati FRESH della collision pipeline, NON da 1B5C2.
           wr[0x666] = 0;
           wr[0x668] = 0;
         }
-        // FUN_29CCE chunk minimal (collision pipeline): replica solo prologo
-        // side-effect (clr +0x58) + epilogo neg.l finale. Skip BLOCK A/B/C/D/E.
         fun29CCE(st, a2, rom);
         spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
         spriteBracketLerp1C676(st);
