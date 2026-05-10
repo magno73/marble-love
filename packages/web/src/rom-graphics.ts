@@ -169,17 +169,30 @@ function _readLsbFirstBit(bytes: Uint8Array, bitOffset: number): number {
 }
 void _readLsbFirstBit;
 
+/**
+ * Layout selection per decodeObjectTile.
+ * - "playfield": MAME atarisy1 gfx_tile_layout, plane stride 0x10000
+ * - "mob": MAME atarisy1 gfx_mob_layout, plane stride 0x40000 (RGN_FRAC(1,4)
+ *   di TILE_REGION_SIZE 0x100000)
+ */
+export type GfxLayoutKind = "playfield" | "mob";
+
 export function decodeObjectTile(
   tiles: Uint8Array,
   bankIndex: number,
   tileIndex: number,
   bpp: 4 | 5 | 6,
+  layout: GfxLayoutKind = "playfield",
 ): DecodedObjectTile {
   const pixels = new Uint8Array(OBJECT_TILE_WIDTH * OBJECT_TILE_HEIGHT);
-  const bankBase = OBJECT_BANK_STRIDE * (bankIndex - 1);
+  const planeStride = layout === "mob" ? 0x40000 : OBJECT_PLANE_STRIDE;
+  const bankBase = layout === "mob" ? 0 : OBJECT_BANK_STRIDE * (bankIndex - 1);
+  // MAME atarisy1 gfx_mob_layout planes: { 0, RGN_FRAC(1,4), RGN_FRAC(2,4),
+  // RGN_FRAC(3,4) } con plane[0] = LSB del pen, plane[bpp-1] = MSB.
+  // Per playfield (TS legacy): plane[0] = MSB (mantenuto per parity esistente).
   const planeOffsets = Array.from(
     { length: bpp },
-    (_, plane) => (bpp - 1 - plane) * OBJECT_PLANE_STRIDE,
+    (_, plane) => (layout === "mob" ? plane : (bpp - 1 - plane)) * planeStride,
   );
 
   for (let y = 0; y < OBJECT_TILE_HEIGHT; y += 1) {
@@ -188,7 +201,8 @@ export function decodeObjectTile(
       for (let plane = 0; plane < bpp; plane += 1) {
         const byteOffset =
           bankBase + (planeOffsets[plane] ?? 0) + tileIndex * OBJECT_TILE_BYTES + y;
-        pen |= readMsbFirstBit(tiles, byteOffset * 8 + x) << (bpp - 1 - plane);
+        const shift = layout === "mob" ? plane : (bpp - 1 - plane);
+        pen |= readMsbFirstBit(tiles, byteOffset * 8 + x) << shift;
       }
       pixels[y * OBJECT_TILE_WIDTH + x] = pen;
     }
