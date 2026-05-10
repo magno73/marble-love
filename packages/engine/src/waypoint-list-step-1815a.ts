@@ -598,9 +598,8 @@ export function waypointListStep1815A(
 
     // Advance A3 by 4
     const newA3 = (a3Addr + WAYPOINT_RECORD_SIZE) >>> 0;
-    const newA3Off = (newA3 - 0x400000) >>> 0;
 
-    if (readByte(state, newA3Off) === 0) {
+    if (readByteAbs(newA3) === 0) {
       // List exhausted: set globals
       writeWordBE(state, flagOff, 1);
       writeByte(state, entOff + ENTITY_LIST_END_OFFSET, 0xff);
