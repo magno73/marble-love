@@ -279,10 +279,17 @@ async function startGame(
     // via refreshHelper13EE6). Vedi commit B2: zero[0x006] block ha portato
     // pf 93%→100%. Stesso effetto di disabilitare runMainLoopBody.
     if (!mameDumpFrozen) {
-      const mainLoopBody = rom !== undefined && warmState === undefined;
+      // ?play=1 → forza runMainLoopBody=true ANCHE con warmState (= gameplay
+      //          dal warm bootstrap MAME). Default: solo se non c'è warmState.
+      const forcePlay = searchParams.get("play") === "1";
+      const mainLoopBody =
+        forcePlay || (rom !== undefined && warmState === undefined);
       tick(s, { rom: tickRom, p1X: dx, p1Y: dy, runMainLoopBody: mainLoopBody });
     }
     frameCount += 1;
+    // DEBUG: expose state to window globals every frame for headless inspection
+    (window as unknown as { __mlState?: typeof s; __mlFrame?: number }).__mlState = s;
+    (window as unknown as { __mlFrame?: number }).__mlFrame = frameCount;
 
     if (renderMode === "diagnostic") {
       renderer.drawFrame(
@@ -327,7 +334,8 @@ async function startGame(
         frameStats =
           ` frame.tiles=${f.playfield.length} frame.sprites=${f.sprites.length} frame.alpha=${f.alpha.length}`;
         // DEBUG: expose frame info for headless inspection
-        (window as unknown as { __lastFrame?: typeof f; __romTiles?: Uint8Array }).__lastFrame = f;
+        (window as unknown as { __lastFrame?: typeof f; __romTiles?: Uint8Array; __mlState?: typeof s }).__lastFrame = f;
+        (window as unknown as { __mlState?: typeof s }).__mlState = s;
         if (rom?.graphics.tiles) {
           (window as unknown as { __romTiles?: Uint8Array }).__romTiles = rom.graphics.tiles;
         }
