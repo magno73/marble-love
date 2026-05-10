@@ -60,6 +60,63 @@ match. Differenze ancora in diagnostica:
 
 Lavoro in corso su branch `feature/visual-pixel-match` ([PR #30](https://github.com/magno73/marble-love/pull/30)).
 
+## Sessione 2026-05-08 — Iter B6-B13: drift -69% + 3 sub replicate
+
+Loop autonomo + multi-agent Sonnet. 8 iterazioni totali con verifica
+metric corretta.
+
+### Sub replicate (3 nuove)
+
+- **FUN_1725A** (`stringStep1725A`, 38 byte): string animation step.
+- **FUN_1924E** (`helper1924E`, ~80 instr): collision/proximity dispatcher.
+- **FUN_1BC88** (`helper1BC88`, ~227 instr, replicata da Sonnet agent):
+  obj-pair physics interaction. 561 LOC + 519 LOC parity test.
+- **FUN_28608** (`addToObjectAccumAndFlag28608`): inline in helper-1924e.ts.
+
+### Wiring helper121B8 — verdetto
+
+Tentato in B12 (con 25C74 default), B13 (con 25C74 + 1924E + 1BC88
+default): sempre 87→150 byte. Causa identificata:
+
+> In attract mode (`*0x400390==1`) `objectStep17F66` esegue special-dispatch
+> path che ESCE con `bra EPILOGUE` dopo `fun1815A` (waypointListStep1815A).
+> `helper121B8` NON viene chiamata dal binario in attract mode.
+
+Quindi i cluster residui (87 byte) NON sono prodotti da helper121B8.
+Owner sono altre sub: `dispatchStrings`, `slot-array-tick`, sound flow,
+sub IRQ-routed, ecc.
+
+### Sub stub residue di helper121B8
+
+- **FUN_29CCE** ancora no-op default. Size 0x1F8E = **8078 byte = ~2000 instr**.
+  Inaffrontabile in iter singolo. Ma comunque non triggerata in attract.
+
+### Risultato finale
+
+| Metrica | Inizio (pre-B6) | Fine (B13) |
+|---|---|---|
+| Byte divergenti @ 2401 | 283 | **87** (-69%) |
+| workRam % @ 2401 | 96.5% | **98.9%** |
+| pfRam % @ 2401 | 100% (post-mask) | **100%** |
+| spriteRam % @ 2401 | 100% | **100%** |
+| Sub replicate session | 0 | 3 (1725A, 1924E, 1BC88) |
+| Vitest | 1923/1923 | **1923/1923** |
+
+### Cluster residui (87 byte)
+
+Per andare oltre serve uno dei due percorsi:
+
+1. **Replicare FUN_29CCE** (~2000 instr) — sblocca helper121B8 ma non
+   è triggerata in attract. Utile solo per gameplay reale.
+2. **Event-loop simulator** (IRQ4 timing + MMIO 0x400010 emulato +
+   sound CPU emulato) — sblocca cluster timing-dependent
+   (`0x14, 0x1f44, 0x76f-0x783`).
+3. **Investigare drift VX/VY del marble**: TS calcola con waypoint
+   ROM record corretto, ma valore differisce da MAME (es. VY: TS
+   +0x9b3, MAME -0x20f). Probabilmente MAME al frame 2400 era già
+   in un cycle diverso del waypoint loop. Difficile da replicare
+   senza tracciare pre-2400 frames.
+
 ## Sessione 2026-05-08 — Iter B6-B12: drift cumulativo -69% + 2 sub replicate
 
 Loop autonomo guidato da multi-frame oracle dump + multi-agent Sonnet.
