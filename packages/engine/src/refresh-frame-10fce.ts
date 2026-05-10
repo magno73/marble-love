@@ -36,11 +36,10 @@ import type { RomImage } from "./bus.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
-import { stateSub1B5C2 } from "./state-sub-1b5c2.js";
-import { helper182BA } from "./helper-182ba.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
+import { fun158F6 } from "./sub-158f6.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -220,44 +219,17 @@ export function refreshFrame10FCE(
 
   // 00010FE0: jsr 0x000158CC
   // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) e 0x400A20 (P2) chiamando
-  // FUN_158F6(slotPtr). FUN_158F6 dispatch su obj+0x18:
+  // FUN_158F6(slotPtr). FUN_158F6 ora replicato bit-perfect in `sub-158f6.ts`:
+  // dispatch su obj+0x18:
   //   - s18==0 → no-op (skip)
-  //   - s18==2 → branch alt: jsr 25FC2, 1B9CC, 1281C
-  //   - else  → jsr 253BC, 182BA, 121B8 (= INTEGRATE_VEL + stateSub1B5C2 +
-  //                                       spriteBracketLerp via 121B8 chain)
-  // Chirurgico: replico l'ELSE branch (più comune in attract mode), saltando
-  // helper182BA (non ancora replicato) e usando solo le sub MAME bit-perfect
-  // necessarie per popolare cluster 0x674..683.
+  //   - s18==2 → jsr 25FC2 + 1B9CC + 1281C (state-2 branch)
+  //   - else  → jsr 253BC + 182BA + 121B8 (ELSE branch)
+  // Plus timer @ +0x6C (state 0x21/0x22 → 0x23 via FUN_160D4) e timer @ +0x56
+  // (state 0x24 → 0x23 via FUN_160D4).
   (subs.objectUpdatePair158CC ?? ((s) => {
     objectUpdatePair158CC(s, {
       objectUpdate: (slotPtr: number) => {
-        const objOff = (slotPtr - 0x400000) >>> 0;
-        const s18 = s.workRam[objOff + 0x18] ?? 0;
-        if (s18 === 0 || s18 === 2) return; // skip / branch alt non replicato
-        // ELSE branch FUN_158F6 (line 0x1597a..1598c):
-        helper253BC(s, slotPtr);
-        // FUN_182BA: state-validate-grid + seek/gravity + 26196 dispatch
-        helper182BA(s, slotPtr, rom);
-        // helper121B8 surrogate: INTEGRATE_VEL + stateSub1B5C2 + spriteBracketLerp
-        {
-          const wr = s.workRam;
-          const r32 = (off: number): number =>
-            (((wr[off] ?? 0) << 24) | ((wr[off + 1] ?? 0) << 16) |
-             ((wr[off + 2] ?? 0) << 8) | (wr[off + 3] ?? 0)) >>> 0;
-          const w32 = (off: number, v: number): void => {
-            const u = v >>> 0;
-            wr[off]     = (u >>> 24) & 0xff;
-            wr[off + 1] = (u >>> 16) & 0xff;
-            wr[off + 2] = (u >>> 8)  & 0xff;
-            wr[off + 3] = u & 0xff;
-          };
-          // obj.x += obj.vx, obj.y += obj.vy, obj.z += obj.vz
-          w32(objOff + 0x0c, (r32(objOff + 0x0c) + r32(objOff + 0x00)) >>> 0);
-          w32(objOff + 0x10, (r32(objOff + 0x10) + r32(objOff + 0x04)) >>> 0);
-          w32(objOff + 0x14, (r32(objOff + 0x14) + r32(objOff + 0x08)) >>> 0);
-        }
-        stateSub1B5C2(s, slotPtr, 0x40066a, 0x40069e);
-        spriteBracketLerp1C676(s);
+        fun158F6(s, slotPtr, rom);
       },
     });
   }))(state);
