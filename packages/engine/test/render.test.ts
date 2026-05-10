@@ -142,7 +142,7 @@ describe("buildFrame", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x24, // 0x20 + (2 << 1) — MAME s_mob_config base 0x100/8
+        paletteIndex: 0x44, // 0x40 + (2 << 1) — MAME atarisy1 MO @ byte 0x400
         flipX: false,
         priority: 0,
         translucent: false,
@@ -296,7 +296,7 @@ describe("buildSpritesFromMotionObjectRam", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x28, // 0x20 + (4 << 1) — MAME s_mob_config base 0x100/8
+        paletteIndex: 0x48, // 0x40 + (4 << 1) — MAME atarisy1 MO base @ byte 0x400 / 8
         flipX: false,
         priority: 0,
         translucent: false,
