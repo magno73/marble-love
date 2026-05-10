@@ -169,16 +169,15 @@ export function refreshFrame10FCE(
   (subs.objectScanDispatch251DE ?? ((s) => {
     objectScanDispatch251DE(s, rom, {
       fun_253EC: (st, a2) => {
+        // MAME canonical chain (atarisy1_v.cpp FUN_253EC state 0):
+        //   helper253BC → objectStep17F66 → helper121B8(INTEGRATE_VEL + ...)
+        helper253BC(st, a2);
         objectStep17F66(st, a2, {
           fun1815A: (a2Addr) => { waypointListStep1815A(st, a2Addr, undefined, rom); },
           fun180BE: () => {},
           fun26196: () => {},
         });
-        helper253BC(st, a2);
-        // INTEGRATE_VEL extracted from helper121B8 (= MAME canonical chain
-        // helper253BC → objectStep17F66 → helper121B8 per state 0). Without
-        // velocity integration, posX/posY are not updated frame-by-frame
-        // and waypointListStep1815A diverges from MAME on subsequent frames.
+        // INTEGRATE_VEL extracted from helper121B8 (chain MAME-canonical).
         // Estratto solo INTEGRATE_VEL path (= obj.{x,y,z} += obj.{vx,vy,vz})
         // per evitare side-effect spurious del wiring helper121B8 totale.
         {
