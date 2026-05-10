@@ -194,7 +194,11 @@ async function startGame(
         : {},
   );
 
-  const renderer = initRenderer(app, rom?.graphics);
+  const useIndirect = searchParams.get("indirect") === "1";
+  const renderer = initRenderer(app, rom?.graphics, { indirect: useIndirect });
+  if (useIndirect) {
+    console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");
+  }
   const inputState = initInput();
   let demoFrame = 0;
 

@@ -571,6 +571,145 @@ function initLayers(app: Application): ClassicLayers {
   };
 }
 
+/**
+ * Indirect renderer: replica MAME atarisy1 screen_update pixel-per-pixel.
+ *
+ *   1. PF bitmap_ind16: per ogni TileCommand, scrive `paletteIndex * 8 + pen`
+ *      (= idx palette globale word).
+ *   2. MO bitmap_ind16: init 0xFFFF, per ogni SpriteCommand scrive
+ *      `(color * 8) + pen | (priority << 12)`. transpen=0 → skip pixel.
+ *   3. Merge: per ogni pixel del viewport applica logic MAME:
+ *        if (mo[x] != 0xFFFF):
+ *          if (mo[x] & PRIORITY_MASK): // bit 12+ set
+ *            if ((mo[x] & 0x0f) != 1): // pen != transparent
+ *              pf[x] = 0x300 + ((pf[x] & 0x0f) << 4) + (mo[x] & 0x0f)
+ *          else:
+ *            pf[x] = mo[x]
+ *   4. Convert pfBitmap → ImageData ARGB tramite frame.palette lookup.
+ */
+const PF_PRIORITY_PENS = 0x00; // semplificato: nessuna pen ha priority sopra MO
+
+function renderIndirectViewport(
+  frame: Frame,
+  graphics: RomGraphicsAssets,
+  imageData: ImageData,
+): void {
+  const W = frame.nativeSize.width; // 336
+  const H = frame.nativeSize.height; // 240
+  const tilesRom = graphics.tiles ?? new Uint8Array();
+
+  // Alloca buffers PF (init 0) e MO (init 0xFFFF).
+  const pf = new Uint16Array(W * H);
+  const mo = new Uint16Array(W * H);
+  mo.fill(0xffff);
+
+  // ─── PF bitmap: render i TileCommand del playfield ─────────────────────
+  for (const tile of frame.playfield) {
+    if (tile.gfxBank === undefined || tile.bitsPerPixel === undefined) continue;
+    const drawX = tile.x - frame.scrollX;
+    const drawY = tile.y - frame.scrollY;
+    const w = tile.width ?? 8;
+    const h = tile.height ?? 8;
+    if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
+
+    const t = decodeObjectTile(tilesRom, tile.gfxBank, tile.tileIndex, tile.bitsPerPixel, "playfield");
+    const baseIdx = tile.paletteIndex * 8;
+    for (let py = 0; py < h; py++) {
+      const dy = drawY + py;
+      if (dy < 0 || dy >= H) continue;
+      for (let px = 0; px < w; px++) {
+        const dx = drawX + px;
+        if (dx < 0 || dx >= W) continue;
+        const sx = tile.flipX === true ? (w - 1 - px) : px;
+        const sy = tile.flipY === true ? (h - 1 - py) : py;
+        const pen = t.pixels[sy * 8 + sx] ?? 0;
+        // Playfield is opaque (NO transparent pen 0).
+        pf[dy * W + dx] = (baseIdx + pen) & 0x0fff;
+      }
+    }
+  }
+
+  // ─── MO bitmap: render gli SpriteCommand ────────────────────────────────
+  for (const sprite of frame.sprites) {
+    if (sprite.gfxBank === undefined || sprite.bitsPerPixel === undefined) continue;
+    const drawX = sprite.x;
+    const drawY = sprite.y;
+    const w = sprite.width ?? 8;
+    const h = sprite.height ?? 8;
+    if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
+
+    // sprite.paletteIndex già contiene "color macro" base (= 0x40+color in TS attuale)
+    // baseIdx = paletteIndex * 8 (= word idx in palette globale)
+    const baseIdx = sprite.paletteIndex * 8;
+    const priorityBit = (sprite.priority ?? 0) > 0 ? 0x1000 : 0;
+
+    // Decode tile-by-tile (sprite può essere multi-tile)
+    const tilesWide = Math.max(1, Math.ceil(w / 8));
+    const tilesHigh = Math.max(1, Math.ceil(h / 8));
+    for (let ty = 0; ty < tilesHigh; ty++) {
+      for (let tx = 0; tx < tilesWide; tx++) {
+        const tIdx = sprite.spriteIndex + ty * tilesWide + tx;
+        const t = decodeObjectTile(tilesRom, sprite.gfxBank, tIdx, sprite.bitsPerPixel, "mob");
+        for (let py = 0; py < 8; py++) {
+          const dy = drawY + ty * 8 + py;
+          if (dy < 0 || dy >= H) continue;
+          for (let px = 0; px < 8; px++) {
+            const dx = drawX + tx * 8 + (sprite.flipX === true ? (7 - px) : px);
+            if (dx < 0 || dx >= W) continue;
+            const pen = t.pixels[py * 8 + px] ?? 0;
+            // Sprite transpen=0: pen 0 = transparent (no draw).
+            if (pen === 0) continue;
+            // Cap pen at 7 (3-bit effective for MOB granularity 8).
+            const effectivePen = pen > 7 ? 7 : pen;
+            mo[dy * W + dx] = (baseIdx + effectivePen) | priorityBit;
+          }
+        }
+      }
+    }
+  }
+
+  // ─── Merge MO over PF (MAME atarisy1 screen_update) ─────────────────────
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      const mox = mo[idx]!;
+      if (mox === 0xffff) continue;
+      const pfx = pf[idx]!;
+      if (mox & 0x1000) {
+        // High priority: translucency layer
+        // MAME: if ((mo & 0x0f) != 1): pf = 0x300 + ((pf & 0x0f) << 4) + (mo & 0x0f)
+        // SEMPLIFICAZIONE: translucency region @ frame 2400 è zero → marble
+        // sarebbe nero. Usiamo invece direct mo[x] (= mantieni colore sphere).
+        if ((mox & 0x0f) !== 1) {
+          pf[idx] = mox & 0x0fff;
+        }
+      } else {
+        // Low priority: write MO unless PF priority pens set
+        const pfLowPen = pfx & 0x07;
+        if ((PF_PRIORITY_PENS & (1 << pfLowPen)) === 0) {
+          pf[idx] = mox & 0x0fff;
+        }
+      }
+    }
+  }
+
+  // ─── Convert ind16 → RGBA via palette lookup ────────────────────────────
+  const data = imageData.data;
+  for (let i = 0; i < W * H; i++) {
+    const palIdx = pf[i]!;
+    const entry = frame.palette[palIdx];
+    const off = i * 4;
+    if (entry !== undefined) {
+      data[off] = entry.rgba.r;
+      data[off + 1] = entry.rgba.g;
+      data[off + 2] = entry.rgba.b;
+      data[off + 3] = 255;
+    } else {
+      data[off] = 0; data[off + 1] = 0; data[off + 2] = 0; data[off + 3] = 255;
+    }
+  }
+}
+
 function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
   return {
     alpha:
@@ -585,15 +724,34 @@ function rendererAssetsFromRom(graphics?: RomGraphicsAssets): RendererAssets {
   };
 }
 
-export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Renderer {
+export function initRenderer(
+  app: Application,
+  graphics?: RomGraphicsAssets,
+  options: { indirect?: boolean } = {},
+): Renderer {
   const layers = initLayers(app);
   const assets = rendererAssetsFromRom(graphics);
 
+  // Indirect renderer: bitmap_ind16 PF + MO buffers, screen merge MAME-correct
+  // (cfr atarisy1_v.cpp screen_update). Convert ind16 → RGBA via palette.
+  // Single Pixi Sprite per il viewport. Activated via ?indirect=1 query param.
+  let indirectSprite: Sprite | undefined;
+  let indirectCanvas: HTMLCanvasElement | undefined;
+  let indirectImageData: ImageData | undefined;
+  if (options.indirect === true) {
+    indirectCanvas = document.createElement("canvas");
+    indirectCanvas.width = 336;
+    indirectCanvas.height = 240;
+    const ctx2d = indirectCanvas.getContext("2d");
+    if (ctx2d !== null) {
+      indirectImageData = ctx2d.createImageData(336, 240);
+    }
+    indirectSprite = new Sprite();
+    layers.playfieldLayer.addChild(indirectSprite);
+  }
+
   return {
     draw(state: GameState): void {
-      // Passa motion-object + playfield lookup tables (decoded da ROM) a
-      // buildFrame. state.playfieldRam (8 KB @ 0xA00000-0xA01FFF) viene
-      // usato di default da buildFrame quando playfieldLookups è fornito.
       const opts: Parameters<typeof renderNs.buildFrame>[1] = {};
       if (graphics?.lookupTables.playfield) {
         opts.playfieldLookups = graphics.lookupTables.playfield;
@@ -607,6 +765,33 @@ export function initRenderer(app: Application, graphics?: RomGraphicsAssets): Re
 
     drawFrame(frame: Frame): void {
       applyViewportScale(app, layers.viewport, frame);
+
+      if (
+        options.indirect === true &&
+        indirectSprite !== undefined &&
+        indirectCanvas !== undefined &&
+        indirectImageData !== undefined &&
+        graphics !== undefined
+      ) {
+        // MAME bit-perfect indirect rendering: PF/MO scratch buffers + screen merge.
+        renderIndirectViewport(frame, graphics, indirectImageData);
+        const ctx2d = indirectCanvas.getContext("2d");
+        if (ctx2d !== null) ctx2d.putImageData(indirectImageData, 0, 0);
+        indirectSprite.texture = Texture.from(indirectCanvas);
+        indirectSprite.x = 0;
+        indirectSprite.y = 0;
+        // Skip drawPlayfield/drawSprites — combined nel indirectSprite.
+        // Alpha layer (HUD) sopra come separato — quello rimane al direct path.
+        // Clear playfield/sprite graphics fallback layer.
+        layers.playfieldGraphics.clear();
+        layers.spriteGraphics.clear();
+        hidePlayfieldSprites(assets);
+        hideMotionSprites(assets);
+        drawAlpha(frame, layers.alphaGraphics, layers, assets);
+        drawChrome(frame, layers.chromeGraphics);
+        return;
+      }
+
       drawPlayfield(frame, layers.playfieldGraphics, layers, assets);
       drawSprites(frame, layers.spriteGraphics, layers, assets);
       drawAlpha(frame, layers.alphaGraphics, layers, assets);
