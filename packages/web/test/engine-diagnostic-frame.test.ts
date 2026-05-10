@@ -21,7 +21,7 @@ describe("buildEngineDiagnosticFrame", () => {
       spriteIndex: 0x410,
       gfxBank: 2,
       bitsPerPixel: 5,
-      paletteIndex: 0x26, // 0x20 + (3 << 1) — MAME s_mob_config
+      paletteIndex: 0x46, // 0x40 + (3 << 1) — MAME atarisy1 MO @ byte 0x400
     });
   });
 

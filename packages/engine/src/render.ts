@@ -311,11 +311,14 @@ export function buildSpritesFromMotionObjectRam(
       command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
       command.gfxBank = lookup.bank;
       command.bitsPerPixel = lookup.bpp;
-      // MAME atarisy1_v.cpp s_mob_config: base palette entry = 0x100.
-      // Con granularity=8: paletteIndex base = 0x100 / 8 = 0x20.
-      // colorlookup[i] = (color & 15) << 1 in MAME (= shift 1 sempre).
-      // Quindi paletteIndex = 0x20 + (color << 1).
-      command.paletteIndex = 0x20 + (lookup.color << 1);
+      // MAME atarisy1: motion object palette base @ byte 0x400 di colorRam
+      // (= word offset 512). Con granularity=8: paletteIndex_TS = 512/8 = 0x40.
+      // colorlookup[i] = (color & 15) << 1 (shift 1, granularity stride).
+      // Quindi paletteIndex = 0x40 + (color << 1).
+      // Verificato 2026-05-10 via headless inspect: palette[520..527] (color=1)
+      // contiene grigi+blu sphere texture (= marble blu); palette[272..279]
+      // (vecchia formula 0x20 base) era area playfield "color row" pattern.
+      command.paletteIndex = 0x40 + (lookup.color << 1);
     }
 
     sprites.push(command);

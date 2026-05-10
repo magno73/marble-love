@@ -204,10 +204,16 @@ async function startGame(
   //   ArrowUp/Down/Left/Right → scroll viewport across the 64×64 tilemap
   //   Hold Shift → 8× faster
   // Initial values from URL (?scrollX=N&scrollY=N) for deep-link sharing.
-  const initScrollX = Number(searchParams.get("scrollX") ?? "0") | 0;
-  const initScrollY = Number(searchParams.get("scrollY") ?? "0") | 0;
-  s.videoScrollX = ((initScrollX % 512) + 512) % 512;
-  s.videoScrollY = ((initScrollY % 512) + 512) % 512;
+  const hasScrollOverride = searchParams.has("scrollX") || searchParams.has("scrollY");
+  if (hasScrollOverride || warmState === undefined) {
+    // Override solo se l'utente ha esplicitato scrollX/scrollY o se non c'è
+    // warmState. In modalità mameDump/mameLive lo scroll è già impostato
+    // dal warmState (workRam[0x00..0x03]) — non vogliamo zerare.
+    const initScrollX = Number(searchParams.get("scrollX") ?? "0") | 0;
+    const initScrollY = Number(searchParams.get("scrollY") ?? "0") | 0;
+    s.videoScrollX = ((initScrollX % 512) + 512) % 512;
+    s.videoScrollY = ((initScrollY % 512) + 512) % 512;
+  }
   const heldKeys = new Set<string>();
   window.addEventListener("keydown", (e) => {
     if (
@@ -314,6 +320,8 @@ async function startGame(
         const f = renderNs.buildFrame(s, opts);
         frameStats =
           ` frame.tiles=${f.playfield.length} frame.sprites=${f.sprites.length} frame.alpha=${f.alpha.length}`;
+        // DEBUG: expose frame info for headless inspection
+        (window as unknown as { __lastFrame?: typeof f }).__lastFrame = f;
       }
       console.log(
         `[marble-love f=${frameCount}] mode=${renderMode}` +
