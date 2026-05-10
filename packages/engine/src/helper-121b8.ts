@@ -734,7 +734,7 @@ export function helper121B8(
       if (subs.fun_1924e !== undefined) {
         subs.fun_1924e(state, a2);
       } else {
-        helper1924E(state, a2, rom);
+        helper1924E(state, a2);
       }
 
       // 0x00012408:

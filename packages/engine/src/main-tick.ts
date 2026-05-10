@@ -64,11 +64,6 @@ import { gameMainGate } from "./game-main-gate.js";
 import type { GameMainGateOptions } from "./game-main-gate.js";
 import { particleBounce } from "./particle-bounce.js";
 
-/** Frame counter byte @ 0x400014 (incremented dall'IRQ handler in 0x10116). */
-const FRAME_COUNTER_LOW_OFF = 0x14;
-/** Frame counter byte @ 0x400016 (incremented dall'IRQ handler). */
-const FRAME_COUNTER_HIGH_OFF = 0x16;
-
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
   p1X?: number;
