@@ -58,10 +58,15 @@ const ABS_GLOBAL_X = 0x00400690 as const;
 const ABS_GLOBAL_Y = 0x00400692 as const;
 const ABS_GLOBAL_Z = 0x00400694 as const;
 
-/** Saved-velocity snapshot addresses used to reset a2 velocities on collision. */
-const ABS_SAVED_VX = 0x00400684 as const;
-const ABS_SAVED_VY = 0x00400688 as const;
-const ABS_SAVED_VZ = 0x0040068c as const;
+/**
+ * Position snapshot addresses (OFF_GLOBAL_X/Y/Z in helper-121b8).
+ * Written by helper-121b8 as obj.X/Y/Z before velocity integration.
+ * On collision, restored to a2.X/Y/Z (a2 snaps back to pre-integration pos).
+ * 0x1be0a: move.l $400684.l, $c(a2)
+ */
+const ABS_SNAP_X = 0x00400684 as const;
+const ABS_SNAP_Y = 0x00400688 as const;
+const ABS_SNAP_Z = 0x0040068c as const;
 
 /** Game-mode word @ 0x400394. Values 1/3/5 → loopCount=4; else → 2. */
 const ABS_GAME_MODE = 0x00400394 as const;
@@ -289,9 +294,9 @@ export function helper1BC88(
     // 0x400684 = ABS_SAVED_VX (in helper-121b8: OFF_GLOBAL_X = 0x684)
     // So: a2.$c (obj.X pos long) = value @ 0x400684 = global X snapshot (long)
     // This restores a2 position to the snapshot taken before velocity integration.
-    w32(state, a2 + 0x0c, r32(state, ABS_SAVED_VX));   // a2.X = saved global X
-    w32(state, a2 + 0x10, r32(state, ABS_SAVED_VY));   // a2.Y = saved global Y
-    w32(state, a2 + 0x14, r32(state, ABS_SAVED_VZ));   // a2.Z = saved global Z
+    w32(state, a2 + 0x0c, r32(state, ABS_SNAP_X));   // a2.X = position snapshot
+    w32(state, a2 + 0x10, r32(state, ABS_SNAP_Y));   // a2.Y = position snapshot
+    w32(state, a2 + 0x14, r32(state, ABS_SNAP_Z));   // a2.Z = position snapshot
 
     // ── Swap velocity longs between a2 and a3 ───────────────────────────
     // 0x1be22: move.l (a2), d0

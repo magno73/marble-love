@@ -99,6 +99,7 @@ describe("buildFrame", () => {
 
     const frame = buildFrame(state, {
       motionObjects: "linked-list",
+      motionObjectStartEntry: 0,
       maxMotionObjectEntries: 1,
       videoControlByte: 0b0010_1101,
     });
@@ -125,6 +126,7 @@ describe("buildFrame", () => {
 
     const frame = buildFrame(state, {
       motionObjects: "linked-list",
+      motionObjectStartEntry: 0,
       maxMotionObjectEntries: 1,
       motionObjectLookups: [
         { offset: 0, bank: 0, color: 0, bpp: 4 },

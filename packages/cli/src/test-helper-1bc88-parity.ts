@@ -265,9 +265,6 @@ async function main(): Promise<void> {
   const rng = makeRng(0x1bc88);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
   const rw = (): number => Math.floor(rng() * 0x10000) & 0xffff;
-  const rl = (): number =>
-    (((rw() & 0xffff) * 0x10000) + (rw() & 0xffff)) >>> 0;
-
   // Helper: random object slot bytes
   function randomObj(): number[] {
     return new Array(OBJ_STRIDE).fill(0).map(() => rb());
@@ -290,10 +287,6 @@ async function main(): Promise<void> {
     arr[off]     = (v >>> 8) & 0xff;
     arr[off + 1] =  v        & 0xff;
   }
-  function setB(arr: number[], off: number, v: number): void {
-    arr[off] = v & 0xff;
-  }
-
   let totalOk = 0;
   const failHolder: { value: FailRecord | null } = { value: null };
 
@@ -347,11 +340,8 @@ async function main(): Promise<void> {
     a2Obj[0x58] = 0; // NOT 0xa
 
     // Collision position: set globalX/Y/Z to exactly match slot1's position
-    const col3 = randomObj();
-    // slot3 is the "other" obj (idx = 3 in ROM table = slot 3)
     // a2Idx=0, loop will check idx=0,1,2,3; idx=0 == a2 → skip
     // Use idx=1 (0x4000fa) for guaranteed collision
-    const colIdx = 1;
     const colObj = randomObj();
     colObj[0x18] = 1; // active
     colObj[0x1a] = 0; // state1A NOT in {2,4,b}

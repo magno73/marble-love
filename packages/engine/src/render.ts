@@ -363,6 +363,46 @@ export function buildSpritesFromMotionObjectList(
   );
 }
 
+/**
+ * Walk i 4 banks Atari System 1 (entry start: 0, 16, 32, 48) e dedupe.
+ *
+ * Atari System 1 ha 4 banks separati nella MO RAM (256 byte = 32 entries
+ * ognuno apparentemente, ma actually 16 entries * 8 byte = 128 byte each;
+ * verified via MAME oracle dump @ frame 2400).
+ *
+ * Bank A walk parte da entry 0, Bank B da 16, Bank C da 32, Bank D da 48.
+ * Le linked list possono intersecarsi (= entry visitato da più banks),
+ * ma vogliamo renderizzare ogni entry valido UNA volta.
+ */
+export function walkMotionObjectAllBanks(
+  spriteRam: Uint8Array,
+  maxEntries = MOTION_OBJECT_ENTRY_COUNT,
+): number[] {
+  const seen = new Set<number>();
+  const ordered: number[] = [];
+  for (const start of [0, 16, 32, 48]) {
+    for (const e of walkMotionObjectLinkedList(spriteRam, start, maxEntries)) {
+      if (!seen.has(e)) {
+        seen.add(e);
+        ordered.push(e);
+      }
+    }
+  }
+  return ordered;
+}
+
+export function buildSpritesFromAllBanks(
+  spriteRam: Uint8Array,
+  maxEntries = MOTION_OBJECT_ENTRY_COUNT,
+  lookups: MotionObjectLookupInfo[] = [],
+): SpriteCommand[] {
+  return buildSpritesFromMotionObjectRam(
+    spriteRam,
+    walkMotionObjectAllBanks(spriteRam, maxEntries),
+    lookups,
+  );
+}
+
 export function decodeVideoControlByte(value: number): VideoControlInfo {
   return {
     alphaBank: value & 0x01,
@@ -396,12 +436,18 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
       : [];
   const sprites =
     options.motionObjects === "linked-list"
-      ? buildSpritesFromMotionObjectList(
-          state.spriteRam,
-          options.motionObjectStartEntry,
-          options.maxMotionObjectEntries,
-          options.motionObjectLookups,
-        )
+      ? options.motionObjectStartEntry !== undefined
+        ? buildSpritesFromMotionObjectList(
+            state.spriteRam,
+            options.motionObjectStartEntry,
+            options.maxMotionObjectEntries,
+            options.motionObjectLookups,
+          )
+        : buildSpritesFromAllBanks(
+            state.spriteRam,
+            options.maxMotionObjectEntries,
+            options.motionObjectLookups,
+          )
       : [];
 
   const frame: Frame = {

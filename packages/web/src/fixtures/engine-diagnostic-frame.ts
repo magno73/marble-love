@@ -86,6 +86,7 @@ export function buildEngineDiagnosticFrame(
     scrollX: frameNumber % 16,
     scrollY: 0,
     motionObjects: "linked-list",
+    motionObjectStartEntry: 0,
     maxMotionObjectEntries: 8,
     motionObjectLookups: graphicsLookupsToMotionLookups(motionObjectLookups),
     videoControlByte: 0x0c,
