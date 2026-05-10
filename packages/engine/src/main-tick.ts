@@ -39,6 +39,7 @@ import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
 import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
+import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
@@ -241,6 +242,13 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     // main-loop-init-117b2.ts:130) che dopo `mainLoopInit1101E` chiama
     // sempre `lateGameLogic26F3E(state, rom)`.
     lateGameLogic26F3E(state, rom);
+    // FUN_FA0 chunk: marble player MO entry projection. lateGameLogic26F3E
+    // copre dispatchType 1/2/4 (entries 0..3 + cursor link) ma NON aggiorna
+    // le 5 entries marble (slot 4..8) per-frame con le coords correnti del
+    // slot pair @ 0x400A20. Senza questo patch il marble visivo resta fermo
+    // alla posizione del frame iniziale (warm state). Replica del bridge
+    // FUN_FA0 → MO entry coords. Vedi `sub-fa0-marble-emit.ts`.
+    fun_FA0_marbleEmit(state, rom);
   }
 
   // ─── Main-thread vblank-counter snapshot ────────────────────────────────
