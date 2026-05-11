@@ -1,7 +1,45 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-11 (post agenti paralleli)
+**Ultimo update:** 2026-05-11 (post cluster diagnosis + M68K reference survey)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 🎯 Insight 2026-05-11 sera — convergenza root cause drift non-stack
+
+**Drift @ f+99 = 387 byte** = 172B stack residue (M68K ABI) + ~215B non-stack.
+
+Tre agent diagnostici paralleli hanno mappato i cluster non-stack e prodotto evidenza forte di **convergenza su un singolo upstream bug** (vs ipotesi precedente di 3 bug indipendenti):
+
+| Cluster | Bytes | Diagnosi |
+|---|---:|---|
+| #1+#7 (`0x0700..0x077f`, decode buffer) | 74 | Falsificato "consumer mancante di *0x400006" (Rule 12). Vero motivo: TS xscroll drift fa triggerare `decodeBitstream1A668` in frame sbagliati. STATUS.md:175 conferma `slot_x_high Δ+8` a f12000+. |
+| #8+#10 (`0x0640..0x06bf`, velocity globals) | 27 | Cascade di `P2.slot0 @ 0x400A20.x_long` divergente da f+68. Tutte sub locali bit-perfect. |
+| #9 (`0x0a00..0x0a3f`, P2 region) | 15 | Stessa cascade P2.slot0. |
+| Sparsi (#11-31) | ~99 | Probabili cascade downstream. |
+
+**Chain TS sospetta**: `objectUpdatePair158CC` → `fun158F6(slot_pair=P2)` → `helper253BC + helper182BA + helper121B8(slotPtr=0x400A20)`. Sospetti specifici (gia' tentati e rolled back per regressione obj0.x): `fun_29cce` NO_IMPL stub (helper-121b8.ts:620), `fun_1cc62` stub `→ obj.z` (workaround per FUN_1CABA non wired).
+
+**Tap pendente**: `oracle/mame_p2_slot0_tap.lua` su `0x400A00..0x400A3F` + `0x40097c..0x40097f` frame 12060..12080 per identificare primo write divergente bit-by-bit.
+
+## Survey reference codebases M68K (2026-05-11 sera)
+
+Per ridurre i **172B stack residue** (cluster #2-6 `0x1d40..0x1e7f`) serve un mini register file TS (D0-D7/A0-A7/PC/SR) con semantica `link/unlk/movem.l/move (d8,A6)` corretta.
+
+Decisione: **NO porting/embed di emulator esterni**. Solo lettura come reference per scrivere il nostro TS.
+
+| Reference | Cosa estrarre |
+|---|---|
+| **Musashi** (C, MIT, 68010 supp.) — github.com/kstenerud/Musashi | `m68kops.c` macros LINK_*/UNLK_*/MOVEM_*_PD/MOVE_*_AI per semantica esatta |
+| **Moira** (C++20, MIT, 68010, cycle-accurate) — github.com/dirkwhoffmann/Moira | Controprova quando Musashi macro-heavy |
+| **SingleStepTests/m68000** (JSON, MIT) — github.com/SingleStepTests/m68000 | Validation dataset: pre/post register+memory state per ogni opcode 68000. Le insn link/unlk/movem.l/move sono 68000 standard quindi coperte. |
+
+Piano register file (stima 2-3 giorni, NON settimane):
+1. Estrazione semantica da Musashi (~3h)
+2. Download Tom Harte dataset filtrato (~30m)
+3. Scrittura `packages/engine/src/m68k/regfile.ts` con branded types (`D0..D7: u32`, `A0..A7: u32`) per ~10 istruzioni stack ABI (~1 giorno)
+4. Vitest parity 100% pass Tom Harte (~3h)
+5. Wire nelle ~30 sub stack-heavy del cluster `0x1d40..0x1e7f` (~1 giorno)
+
+Effort target: 172B → ~0B sul cluster stack.
 
 ## 🎯 Highlight sessione 2026-05-11 — chain canonical + sweep wire missing
 
