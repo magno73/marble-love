@@ -15,6 +15,31 @@ Catena di 3 agent (B5 Sonnet → B6 Opus + briefing → verifica empirica) ha id
 
 **Implicazione**: implementare slapstic state machine (task #174) e' il prossimo step concreto per chiudere 74B + probabili cascade su altri cluster (xscroll, P2 region). Reference: `mame/src/mame/atari/slapstic.cpp`.
 
+### 2026-05-11 sera 20:00 — Slapstic 137412-103 state machine IMPLEMENTATA
+
+Agent Opus a8bf4636 + briefing pack ha implementato la FSM slapstic 103 completa:
+
+- **`packages/engine/src/m68k/slapstic-103.ts`** (370+ righe) — state machine bit-perfect derived from `mame/src/mame/atari/slapstic.cpp` config `slapstic103` branch `active_103_110`. Magic numbers `alt1..alt4`, `bit1..bit4` con mask/value, FSM stati ALIVE→ALT_VALID→BIT_SELECT→BIT_XOR, bus geometry 0x080000-0x087FFF con 4 bank × 8KB.
+- **`packages/engine/src/m68k/apply-slapstic-bank.ts`** — helper `loadRomBlob` che carica blob in `rom.slapsticBanks` (4 bank pristine) + helper `applySlapsticBank` che copia bank attivo in `rom.program[SLAPSTIC_BASE..]`.
+- **`packages/engine/test/slapstic-103.test.ts`** — 11/11 vitest pass.
+- **`oracle/mame_slapstic_tap.lua`** + **`packages/cli/src/test-slapstic-103-parity.ts`** — validation MAME (bank attivo in attract f12000 = 1, non 0).
+- Wire in `bus.ts`, `boot-init.ts`, `index.ts`, `slapstic-lookup.ts`, `rom-loader.ts`.
+
+### Drift impact slapstic 103
+
+```
+Drift workRam @ f+99:
+                        prima   dopo    delta
+total                   387     376     -11
+gameplay                215     204     -11    (-5%)
+cluster 0x0700          58      49      -9
+stack-residue (escluso) 172     172     0
+```
+
+obj0.x rimane bit-perfect 99/99 MAME ✓. Tutta la suite vitest pass + 11/11 slapstic.
+
+**Cluster 0x0700 sceso solo 9B (non 74)** perche' il bank attivo MAME a f12000 era gia' = 1 e ora TS carica bank 1 al warmState (probe-cluster-histogram.ts:31 `slapsticBank: 1`). Le restanti 49B sono cascade del decoder che continua iterando con stream diverso da MAME (Path B con d6 cache divergente, anche con i nuovi banks). Servirebbe analisi byte-by-byte dell'output decoder a livello di token per chiudere completamente.
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
