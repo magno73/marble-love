@@ -1,17 +1,55 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-11
+**Ultimo update:** 2026-05-11 (post agenti paralleli)
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 🎯 Highlight sessione 2026-05-11 — marble in moto bit-perfect
+## 🎯 Highlight sessione 2026-05-11 — chain canonical + sweep wire missing
 
-- **`obj0.x` BIT-PERFECT vs MAME su tutti 99 frame del ground truth** (`/tmp/mame_100f.json`, f12000-12099)
-- **Marble visibile rotola sul livello** (sfera bianca cromata + ombra scura), no più sprite "rotti", no più replay/playback
-- **Surrogate empirico `fun_FA0_marbleEmit` rimosso** in favore della chain MAME canonical
-- **9 fix bit-perfect** dalla disasm ROM (no più tentativi empirici)
-- **Drift workRam @ 100 frames**: ~180 byte (da ~547 pre-sessione)
-- **Single-frame test `lateGameLogic26F3E`**: 0 byte diff vs MAME (BIT-PERFECT)
-- **1937/1937 vitest passing**
+### Stato finale verificato (post 10 commit)
+- **`obj0.x` BIT-PERFECT vs MAME su tutti 99 frame** del ground truth (`/tmp/mame_100f.json`, f12000-12099)
+- **Drift workRam @ f+99**: **390 byte** / 8192 (da 547 pre-sessione, **-29%**)
+- **Drift spriteRam @ f+99**: 248 byte / 4096
+- **1952/1952 vitest verde** (+15 nuovi parity test da agenti paralleli)
+- **Marble visibile rotola sul livello** (sfera + ombra), chain canonical MAME senza replay
+- **Inventario aggiornato**: 6 sub NO_IMPL → ora bit-perfect (parity 100/100 o 500/500)
+
+### 10 fix bit-perfect applicati (in ordine)
+
+1. **`render.ts` layout MO RAM banked** — era packed (`entryIndex * 8`), ora banked (Y@0, code@0x80, X@0x100, Z@0x180, stride 2)
+2. **`renderer.ts` Pixi texture dirty** — `Texture.from(canvas)` cached → `texture.source.update()` ad ogni `drawFrame` (Pixi v8)
+3. **`refresh-frame-10fce.ts` FUN_253EC canonical dispatcher** — surrogate manuale rimosso, ora `helper253BC + objectStep17F66 + helper121B8` via JT @ 0x254BA → 0x256D2 (path `s1a=0`)
+4. **Stub `fun_1cc62 → obj.z`** in `helper121B8` chain — workaround OUT_OF_RANGE spurio; rende `D0 - obj.z = 0 ≤ 0x100000` → INTEGRATE_VEL eseguito
+5. **`late-game-logic-26f3e.ts` `dispatchType1` 4 bug** — orMask→localE, inner loop `+0x38`→`+0xa4`, missing 3rd direct emit, `dispatchType4` inner-loop base inline
+6. **12 `dispatchType*` filtri signed/unsigned** — era `s16(d4) < 0xc0` (= 192), corretto `<= -0x40` (= -64) — confusione signed byte
+7. **Game-tick rate 30Hz** — `FUN_117B2` chiama `FUN_28DEA` 2× per iter → body ogni 2 vsync. Counter `mainLoopBodyTicks` in `TickClock`. **→ obj0.x match MAME 99/99**
+8. **AV-control latch `*0x40039A = 1`** — post-tick `s.workRam[0x39a] = 1` in `main.ts` per latchare `r3AE = r3B0`
+9. **Replica 6 sub NO_IMPL bit-perfect**: sub-1bb08, sub-14dec, sub-1d242, sub-19692, sub-19976, sub-1937c (+15 parity test)
+10. **Chain canonical wire** in `refresh-frame-10fce.ts`:
+    - `scrollRange144E4` → `claimScriptSlot` (slot 0 popolamento, -12 byte drift)
+    - `scriptSlotStep13068` (timer progress, -12 byte)
+    - `helper12896` (bytecode interpreter script-slot, -64 byte drift)
+
+### Findings dagli agenti paralleli (Rule 12 fail loud)
+
+- **FUN_1CABA**: MAME NON chiama @ f12000-99 (63 invocazioni totali in 12000 frame, concentrate boot 18 + 173-237). Stub `fun_1cc62 → obj.z` corretto per la window di test.
+- **fun_29cce**: observably no-op in attract f12000-99 (tag=0x03 sempre fuori range 5..0x3b, flag X/Y=0). NO wire necessario. Drift residuo viene da slot table popolamento UPSTREAM, NON da 29cce.
+- **Browser ↔ CLI divergence**: **non esiste**, falso allarme (engine in stato stazionario, oscilla ma posizione stabile).
+- **FUN_4DCC YM2151**: 0 byte drift contribution (writes go to values già correnti). NO replica.
+- **String slot drift @ 0x136F..0x13F3**: ricategorizzato — NON string array, è 4-slot script array @ 0x1302 owned by `sub-14966-stub` (PARTIAL).
+- **Inventory stale**: 3 sub elencate come NO_IMPL (`FUN_2FF28/2FF40/2FFB8`, `FUN_1BB08`, `FUN_14DEC`) erano già replicate sotto nomi diversi.
+
+### Issue residuo aperto
+
+1. **Marble galleggia**: `obj0.z_long` non integrato. Replica `FUN_1CABA` (`sub-1caba-tile-redraw.ts`, 330 righe) esiste ma wire produce regressione (branch dispatch non bit-perfect per altri obj). MAME non chiama 1CABA nella window di test → manca ground truth per fix.
+2. **Drift residuo 390 byte workRam** principalmente in: slot table @ 0x400a9c (resto FUN_12896 chiamate non triggered + cluster B sprite-related) + sub-14966-stub PARTIAL (~18 byte) + cluster sprite-ram 248 byte.
+
+### Resources
+
+- **100-frame MAME ground truth**: `/tmp/mame_100f.json` (5.3 MB, frames 12000-12099)
+- **Differential test framework**: `packages/cli/src/probe-100f-diff.ts`, `probe-slot-table-diff.ts`, `probe-struct1c28.ts`, `probe-z.ts`
+- **MAME trace harness**: `oracle/mame_1caba_trace.lua` (per future investigations)
+- **CLAUDE.md** 12-rule template per agenti AI
+- **docs/missing-subs-inventory.md** roadmap residuo aggiornato
 
 ### Fix bit-perfect applicati (in ordine)
 
