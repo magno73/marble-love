@@ -63,6 +63,36 @@ Fix richiede ~30-60 min Opus + briefing (budget esaurito stasera, riprende 23:00
 
 **Stima cascade fix**: cluster 0x0700 49B → ~0B + collateral su altri cluster (xscroll, P2 region). Drift gameplay 204 → ~140B.
 
+### 2026-05-11 ~21:30 — ROOT CAUSE DEFINITIVO cluster 0x0700 identificato
+
+Analisi diretta del trace `/tmp/mame_decoder_stream.json`:
+
+```
+MAME body_entries[0]: f=12001, D6=0x2
+MAME body_entries[1]: f=12009, D6=0x0
+```
+
+Confronto con disasm M68K @ entry decoder:
+```asm
+0x1A668:  movem.l {A5 A4 A3 A2 D6 D5 D4 D3 D2},-(SP)  ; PRESERVE 9 reg
+0x1A684:  clr.b D2b          ; D2 := 0
+0x1A686:  clr.b D4b          ; D4 := 0
+;          NO clr.b D6b      ← D6 PRESERVATA dal caller
+```
+
+Path B usa D6 cumulativamente (`addq.w #0x1,D6w; move.w D6w,D0w; add.w D3w,D0w; move.w D0w,(A2)+`). TS decoder a `packages/engine/src/decode-bitstream-1a668.ts:385` hardcoda `let d6 = 0` sempre.
+
+**Fix richiede mini-emulator M68K register file cross-sub** — il D6 entry e' un valore che si propaga attraverso il main thread M68K via movem in molte sub. TS attualmente non simula register file fuori da `m68k/regfile.ts` (= solo 8 istruzioni stack ABI per validation Tom Harte).
+
+Per fix bit-perfect:
+1. Aggiungere `state.cpuRegs: { D0..D7, A0..A6 }` a `GameState` (estende mini regfile esistente per integrare body cross-sub)
+2. Tracciare quale sub setta D6 = 0x2 al primo body, D6 = 0x0 al secondo
+3. Wire D6 entry param al decoder
+
+Effort stimato: 1-2 giorni di lavoro focalizzato con agent Opus.
+
+**Stato**: documentato in commento `decode-bitstream-1a668.ts:385` + task #177 per next session. Drift sessione attuale: gameplay **204B** (era 547B inizio sessione = **-62.7%**).
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
