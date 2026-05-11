@@ -93,6 +93,44 @@ Effort stimato: 1-2 giorni di lavoro focalizzato con agent Opus.
 
 **Stato**: documentato in commento `decode-bitstream-1a668.ts:385` + task #177 per next session. Drift sessione attuale: gameplay **204B** (era 547B inizio sessione = **-62.7%**).
 
+### 2026-05-11 ~22:00 — VERA root cause cluster 0x0700 identificata (cascade OFF_SPEED)
+
+Dopo aver investigato D6 entry, brute-force ha rivelato che **D6 NON e' la causa**: best D6 per body 9-10 produce diff 30 e 49 anche scegliendo il valore ottimale.
+
+Vera causa identificata via `probe-srtgt-evolution.ts` + `probe-speed-accum.ts`:
+
+```
+f+56: OFF_SPEED (0x40000a) TS=1, MAME=2  (DIVERGENZA INIZIA QUI)
+f+56: srtgt TS=0xc1b7, MAME=0xc1b8 (diff -1)
+f+58: srtgt TS=0xc1b8, MAME=0xc1ba (diff -2)
+...
+f+70: srtgt TS=0xc1be, MAME=0xc1c6 (diff -8)
+```
+
+Cascade: speed=1 vs 2 → `d6 += spd` in `_posUpdate` (riga 689) → srtgt aggiornato +1 (TS) vs +2 (MAME) ogni 2 frame → `scrollIdx` divergente → `ctrlAbs` divergente → decoder reads stream da addr diverso → cluster 0x0700 output divergente.
+
+Speed selection @ `refresh-helper-13ee6.ts:677-683`:
+```typescript
+if (d0 < (center - dFar))      wb(wr, OFF_SPEED, sMaxB);  // = 3+?
+else if (d0 < (center - dNear)) wb(wr, OFF_SPEED, sLrgB);  // = 2
+else if (d0 > center)           wb(wr, OFF_SPEED, sSml);   // = 1
+```
+
+MAME a f+56 sceglie `sLrgB=2`, TS sceglie `sSml=1`. Significa:
+- MAME: `d0 < (center - dNear)` (= d0 più piccolo)
+- TS:   `d0 > center` (= d0 più grande)
+
+`d0 = sx16(d3)`. `d3` viene dal caller del chain `_posUpdate`. Fix richiede drill nel chain `_posUpdate ← parent` per identificare la sub upstream che computa d3 (= scroll delta dal target). Task #178 per next session.
+
+### Note infrastructure aggiunta (committata)
+
+- `state.clock.decoderD6Init: u16` — D6 entry value per decoder (default 0, override via probe/tabella)
+- `state.clock.decoderCallCount: u32` — counter invocazioni decoder per indexing tabelle
+- `decodeBitstream1A668` accetta param opzionale `d6Init: number = 0`
+- `refresh-helper-13ee6.ts:270` passa `state.clock.decoderD6Init` al decoder
+
+Infrastructure ready per fix futuro. Drift sessione invariato 204B (D6 brute-force ha confermato che D6 non e' la leva — la leva e' OFF_SPEED).
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".

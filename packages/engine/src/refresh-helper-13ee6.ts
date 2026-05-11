@@ -266,8 +266,13 @@ export function refreshHelper13EE6(
   // 0x13f8a: A0 = 0x400706 (output buffer)
   // 0x13f90: push A1=extStream, D2=ctrlStream, A0=0x400706
   // 0x13f96: jsr decodeBitstream1A668
+  // D6 entry: MAME preserva D6 cross-sub via movem; valore da state.clock.decoderD6Init
+  // (tabella o brute-force per replay bit-perfect attract). Counter
+  // decoderCallCount incrementato per indicizzare future tabelle.
   const outBufAbs = (WORK_RAM_BASE + OFF_DECBUF) >>> 0;
-  decodeBitstream1A668(state, rom, outBufAbs, d2ctrl, extStream);
+  const d6Init = state.clock.decoderD6Init;
+  decodeBitstream1A668(state, rom, outBufAbs, d2ctrl, extStream, d6Init);
+  state.clock.decoderCallCount = ((state.clock.decoderCallCount + 1) >>> 0) as typeof state.clock.decoderCallCount;
 
   // 0x13f9c: tst.l (*0x400978); lea (0xc,SP),SP; beq.w 0x14094
   const decNext = rl(wr, OFF_DECNEXT);
