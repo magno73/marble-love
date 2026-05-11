@@ -41,7 +41,18 @@
 ### Issue residuo aperto
 
 1. **Marble galleggia**: `obj0.z_long` non integrato. Replica `FUN_1CABA` (`sub-1caba-tile-redraw.ts`, 330 righe) esiste ma wire produce regressione (branch dispatch non bit-perfect per altri obj). MAME non chiama 1CABA nella window di test → manca ground truth per fix.
-2. **Drift residuo 390 byte workRam** principalmente in: slot table @ 0x400a9c (resto FUN_12896 chiamate non triggered + cluster B sprite-related) + sub-14966-stub PARTIAL (~18 byte) + cluster sprite-ram 248 byte.
+2. **Drift residuo 390 byte workRam** (pattern "subs no-op stub" già saturato — sweep sistematico ha rolled-back 0 wire utili):
+   - Side-effect bit-perfect mancanti in replica EXISTING (es. cluster `0x401C28` tile-redraw stub fallback)
+   - Secondary writes in sub non replicate: `FUN_19E42, FUN_1924E, FUN_2822E, FUN_17934`
+   - `sub-14966-stub` PARTIAL (~18 byte script slot array @ 0x1302)
+   - cluster sprite-ram 248 byte (probabile sprite render secondary writes)
+
+### Lesson learned dalla sessione
+
+- **Inventario stale**: 5+ sub elencate NO_IMPL erano già replicate sotto nomi diversi (Rule 8 read-before-write critica).
+- **Subs no-op stub saturati**: i wire mancanti banali sono stati tutti applicati. Drift residuo richiede replica completa di sub specifiche.
+- **Replica PARTIAL vs no-op**: wirare PARTIAL produce regressione cumulativa (drift PEGGIO che noop esplicito). Verificato 3 volte (`fun_29cce`, `sub-1caba-tile-redraw`, `fun_1bbaa` con dependency PARTIAL).
+- **MAME ground truth window**: f12000-99 è "demo steady-state" — molte sub gate chiuso. Per chiudere drift residuo potrebbe servire window diversa (es. boot, level-start).
 
 ### Resources
 
