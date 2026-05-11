@@ -1,7 +1,25 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-11 (post cluster diagnosis + M68K reference survey)
+**Ultimo update:** 2026-05-11 (post Opus validation 0x7F0FB + slapstic banking identificato come next target)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 🎯 Insight 2026-05-11 notte fonda — vero root cause cluster 0x0700 (74B)
+
+Catena di 3 agent (B5 Sonnet → B6 Opus + briefing → verifica empirica) ha identificato la causa **reale** del cluster di drift piu' grande:
+
+1. **Agent B5** (Sonnet, cluster 0x0700 byte-by-byte): TS e MAME chiamano `decodeBitstream1A668` allo STESSO frame f12002 con args bit-perfect IDENTICI. Decoder TS bit-perfect 500/500. Ma `ctrlStream = 0x7F0FB` cade nella zona vuota tra cartridge ROM e slapstic. TS legge `FF FF FF FF` dal binary → Path A → output uniforme `0F FF`. MAME produce pattern reale → MAME NON legge `FF` da li'.
+
+2. **Agent B6** (Opus + briefing pack): tap MAME read @ 0x7F0FB conferma TUTTI 0x00 (256 byte). Driver MAME `atarisy1.cpp:976` usa `ROM_REGION(0x88000, "maincpu", 0)` con flag default `ROMREGION_ERASE00`. TS `tools/rom_prep.py:137` pre-riempiva a 0xFF. **Fix chirurgico 1 carattere applicato**: `bytearray(b"\x00" * OUT_SIZE)`.
+
+3. **Verifica empirica post-fix**: drift invariato 387/215. Pattern TS cambiato da `0F FF` (Path A) a `00 01 00 02...` (Path B sequenziale), ma MAME ha pattern `00 4D 04 78 04 79... 00 4D 00 4E...` (4 word reali in mezzo a warm-preserved). **Vera causa del cluster 74B**: lo **slapstic 137412-103 banking** (`bus.ts:155` Phase 4c TODO) non e' implementato. TS legge sempre bank 0, MAME usa banking dinamico → `tileWord` legge da posto diverso → `ctrlStream` punta a addr diverso.
+
+**Implicazione**: implementare slapstic state machine (task #174) e' il prossimo step concreto per chiudere 74B + probabili cascade su altri cluster (xscroll, P2 region). Reference: `mame/src/mame/atari/slapstic.cpp`.
+
+## Briefing pack agent
+
+Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
+
+Validazione del pattern: agent B6 con briefing + Opus ha risolto in 30 min un task che agent B5 con Sonnet senza briefing aveva lasciato con ipotesi parziale.
 
 ## 🎯 Insight 2026-05-11 sera — convergenza root cause drift non-stack
 
