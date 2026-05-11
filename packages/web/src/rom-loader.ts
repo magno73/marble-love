@@ -8,6 +8,7 @@
 
 import { unzipSync } from "fflate";
 import type { RomImage } from "@marble-love/engine";
+import { emptyRomImage } from "@marble-love/engine/bus";
 import {
   decodeAlphaRom,
   decodeGraphicsLookups,
@@ -330,8 +331,20 @@ export function extractRomZipArchives(
   for (let i = 0; i < tiles.length; i++) tiles[i] = ~tiles[i]! & 0xff;
   const proms = assembleLinearRegion(entries, promFiles, PROM_REGION_SIZE);
 
+  // Slapstic 137412-103 setup: copia 4 bank pristine in `slapsticBanks` e
+  // popola program[0x80000..0x88000) col bank di reset (3) mirrorato 4x.
+  const slapsticBanks = program.subarray(0x80000, 0x88000).slice();
+  const slapsticFsm = emptyRomImage().slapsticFsm; // bank=3, IDLE
+  // Mirror bank 3 nelle 4 finestre
+  {
+    const src = slapsticBanks.subarray(slapsticFsm.bank * 0x2000, (slapsticFsm.bank + 1) * 0x2000);
+    for (let i = 0; i < 4; i++) program.set(src, 0x80000 + i * 0x2000);
+  }
+
   return {
     program,
+    slapsticBanks,
+    slapsticFsm,
     sound,
     tiles,
     sprites: tiles,

@@ -2,10 +2,10 @@
 // vs MAME ground truth f12001..f12099. Reports per-frame byte diff stats.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
+import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank as apply } from "@marble-love/engine";
 
 const rom = busNs.emptyRomImage();
-rom.program.set(readFileSync(resolve("ghidra_project/marble_program.bin")).subarray(0, rom.program.length));
+apply.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
 
 const groundTruth = JSON.parse(readFileSync("/tmp/mame_100f.json", "utf-8")) as {
   frames: number[];
@@ -27,6 +27,9 @@ const warm = {
   colorRam: hex2bytes((groundTruth.snapshots[0]! as unknown as { colorRam: string }).colorRam, 0x800),
   videoScrollX: 0,
   videoScrollY: 0,
+  // Slapstic chip 103: a MAME f=12000 attract il bank attivo e' 1 (verified
+  // tramite `oracle/mame_slapstic_tap.lua` + data-match analysis).
+  slapsticBank: 1,
 };
 
 const s = stateNs.emptyGameState();

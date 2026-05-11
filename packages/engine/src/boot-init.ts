@@ -36,6 +36,7 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
 
 import {
   paletteRamInitFull,
@@ -163,6 +164,17 @@ export interface BootInitOptions {
     /** Optional: scroll registers cached da MMIO write. */
     videoScrollX?: number;
     videoScrollY?: number;
+    /**
+     * Optional: slapstic bank attivo nello snapshot warm. Se passato, viene
+     * applicato a `rom.slapsticFsm.bank` + `applySlapsticBank(rom, bank)`.
+     * Default: usa il bank gia' presente in `rom.slapsticFsm` (tipicamente
+     * il bank di reset = 3 oppure quello settato da setup precedente).
+     *
+     * Per warm-state @ MAME f12000 attract mode, il bank corretto e' **1**
+     * (verificato via `oracle/mame_slapstic_tap.lua` analizzando i bytes
+     * letti).
+     */
+    slapsticBank?: number;
   };
 }
 
@@ -189,6 +201,12 @@ export function bootInit(
     state.colorRam.set(w.colorRam.subarray(0, state.colorRam.length));
     if (w.videoScrollX !== undefined) state.videoScrollX = w.videoScrollX & 0x1ff;
     if (w.videoScrollY !== undefined) state.videoScrollY = w.videoScrollY & 0x1ff;
+    if (w.slapsticBank !== undefined) {
+      rom.slapsticFsm.bank = w.slapsticBank & 3;
+      rom.slapsticFsm.state = "IDLE";
+      rom.slapsticFsm.loadedBank = 0;
+      applySlapsticBank(rom, rom.slapsticFsm.bank);
+    }
     return;
   }
 
