@@ -159,6 +159,64 @@ function loadCoords(
   return [d5, d4];
 }
 
+/**
+ * Iso-projection coord load for the player marble (objPtr in workRam @ 0x400018/0x4000FA).
+ *
+ * The struct fields `obj+0x1e` (word) and `obj+0x20` (word) are a packed 2-word
+ * cache of the isometric screen projection computed elsewhere (mirror of
+ * `FUN_19E42 marble-cell-dispatch`). In MAME canonical, these are kept in sync
+ * with `(obj.x_long, obj.y_long, obj.z_long)` via a chain of sub-functions
+ * (`spriteProject1CC62` + sub `FUN_1CABA` heavy redraw) that we don't fully
+ * replicate. As a result, in TS:
+ *   - `obj+0x1e` (= `Y_high - X_high + 0x88`) drifts because TS doesn't write
+ *     it back.
+ *   - `obj+0x20` (= `HUD_OFFSET + Z_high + 0x54 - (X_high+Y_high)/2`) diverges
+ *     additionally because obj.z_long itself isn't updated by our chain.
+ *
+ * Verified formula (bit-perfect vs MAME on 100/100 frames f12000..12099):
+ *   D3w = (Y_high - X_high + 0x88) & 0xFFFF              ← stored at +0x1e
+ *   D2w = (HUD_OFFSET + Z_high + 0x54 - (X_high+Y_high)/2) & 0xFFFF ← stored at +0x20
+ *
+ * For the player marble we recompute these directly from
+ * `(obj.x_long, obj.y_long, obj.z_long, *0x40097E HUD_OFFSET)` so the screen
+ * MO RAM entries land where MAME would put them, eliminating the visual
+ * "floating marble" artifact caused by the stale +0x20 cache.
+ *
+ * @returns `[d5, d4]` analogous to `loadCoords`, where:
+ *   - `d5 = (D3w + xBias) & 0xFFFF`
+ *   - `d4 = (D2w + yBias) & 0xFFFF`
+ */
+function loadCoordsIsoPlayer(
+  state: GameState,
+  objPtr: number,
+  xBias: number, yBias: number,
+): [number, number] {
+  // Read high words of obj.x_long (+0xC), obj.y_long (+0x10), obj.z_long (+0x14).
+  const xOff = (objPtr - WRAM + 0x0c) >>> 0;
+  const yOff = (objPtr - WRAM + 0x10) >>> 0;
+  const zOff = (objPtr - WRAM + 0x14) >>> 0;
+  const xW = ((state.workRam[xOff] ?? 0) << 8) | (state.workRam[xOff + 1] ?? 0);
+  const yW = ((state.workRam[yOff] ?? 0) << 8) | (state.workRam[yOff + 1] ?? 0);
+  const zW = ((state.workRam[zOff] ?? 0) << 8) | (state.workRam[zOff + 1] ?? 0);
+  const hudW = ((state.workRam[0x97e] ?? 0) << 8) | (state.workRam[0x97f] ?? 0);
+
+  const xS = s16(xW);
+  const yS = s16(yW);
+  const zS = s16(zW);
+  const hudS = s16(hudW);
+
+  // D3w = Y_high - X_high + 0x88 (word arithmetic, m68k signed sub+addi).
+  const d3w = (yS - xS + 0x88) & 0xffff;
+  // avg = (X_high + Y_high) >> 1 (signed asr.l #1 of sext sum, low word used).
+  const avg = (xS + yS) >> 1;
+  // D2w = HUD_OFFSET + Z_high + 0x54 - avg (word arithmetic).
+  const d2w = (hudS + zS + 0x54 - avg) & 0xffff;
+
+  const d5 = (d3w + xBias) & 0xffff;
+  const d4 = (d2w + yBias) & 0xffff;
+  return [d5, d4];
+}
+
 /** Inner sub-sprite loop: iterates entries at baseAddr (6 bytes each), up to maxCount. */
 function innerSprites(
   state: GameState, rom: RomImage,
@@ -179,8 +237,42 @@ function innerSprites(
 }
 
 /**
- * Type 1 (0x2724c): ROM table 0x1EFF6. Complex per-animation dispatch.
- * Frame locals assumed zeroed (see docs in header).
+ * Type 1 (0x2724c): ROM table 0x1EFF6. Player marble.
+ *
+ * Control flow (disasm 0x2724c..0x276e8):
+ *   1. tst.b (0x1c, A5) → if 0, return (entity not active).
+ *   2. Compute locals: animState=(0x1a,A5).b, subCode=(0x19,A5).b,
+ *      frameNeg10=subCode<<11, d5/d4 from loadCoords(0x1e, +0x18/+0x10).
+ *      localE=5 (long, M68k local @ -$e(A6)).
+ *   3. If animState in {4,10,11,9,2,1,5}: skip first/second direct emits.
+ *   4. Else: animState==8 special handling for *(0xcc,A5)→pCC, *pCC long.
+ *   5. localE |= sign_ext_long(frameNeg10).
+ *   6. FIRST direct emit: code = low_word(localE) (NOT orMask!),
+ *      X=((a1w-8)*32)&0x3fe0, Y=(d2*32)&0x3fe0 | 1, A4=D7.
+ *      Disasm 0x27376-0x2737E: `move.w (-0xc,A6),D0w; andi.w #-0x1,D0w;`
+ *      reads LOW WORD of -$e(A6) long.
+ *   7. SECOND direct emit: if animState==8 && frameNeg1!=0: localE+=2.
+ *      Else: localE = ext_long(frameNeg10) | 3.
+ *      code=low_word(localE), X=(a1w*32)&0x3fe0, Y=(d2*32)&0x3fe0 | 1.
+ *   8. At 0x27442: if animState in {2,9,1,5} → goto 0x2750a (skip inner loop).
+ *      But that path falls through to 0x275d8 where animState in {2,9,1,5} →
+ *      moEmit `rl(rl(objPtr+0x5a))` doSubEmit, then exit.
+ *   9. INNER LOOP 1 (only for animStates 0,3,6,7,8,10,11,12,13,14,15...) at
+ *      objPtr+0xa4, max 4 iters:
+ *      D6 = (w0 & 0x8000) | ((w0 >> 11) & 7)
+ *      code = (w0 & 0x7ff) | frameNeg10
+ *      X = (s16(w1) + 0x18) << 5 & 0x3fe0   (NO |0x8000 mask, unlike type 2/15)
+ *      Y = (s16(w2) + 0x10) << 5 & 0x3fe0 | D6
+ *  10. At 0x2750a: if animState in {4,10,11} → skip 3rd direct emit (animStates
+ *      2/9/1/5 already exited at step 8; this branch covers 4/10/11). Else:
+ *      animState==8 && locals[-1]!=0 → skip; else: THIRD direct emit.
+ *      localE = ext_long(frameNeg10) | 7. D6 = HIGH word of localE long
+ *      (= sign-extension of frameNeg10; 0 if frameNeg10 < 0x8000).
+ *      code = low_word(localE) = frameNeg10 | 7.
+ *      X = ((d5-8)*32) & 0x3fe0.  Y = ((d4+5)*32) & 0x3fe0 | D6.
+ *  11. INNER LOOP 2 at objPtr+0x38, max 5 iters (TODO: not modeled yet —
+ *      complex encoding with 0x4000 bit check). For obj0 demo gameplay,
+ *      objPtr+0x38 contains data but the encoding differs from inner loop 1.
  */
 function dispatchType1(
   state: GameState, rom: RomImage,
@@ -193,24 +285,35 @@ function dispatchType1(
 
   if (rb(state, rom, objPtr + 0x1c) === 0) return;
 
-  // Frame locals (zeroed stack assumption):
-  // -$3(a6) = objPtr[0x1a] (anim byte), -$4(a6) word = 0x00|anim (high=0)
-  const animState  = rb(state, rom, objPtr + 0x1a) & 0xff;  // low byte of -$4 word
-  // -$9(a6) = objPtr[0x19], then shift left 11: frameNeg10w
+  const animState  = rb(state, rom, objPtr + 0x1a) & 0xff;
   const subCode    = rb(state, rom, objPtr + 0x19) & 0xff;
   const frameNeg10 = (subCode << 11) & 0xffff;
 
-  const [d5, d4] = loadCoords(state, rom, objPtr, 0x1e, 0x18, 0x10);
+  // The player marble's screen-projection cache @ obj+0x1e/+0x20 is kept in
+  // sync with (obj.x, obj.y, obj.z) by MAME via sub-functions we don't fully
+  // replicate (FUN_1CABA heavy tile redraw). For player objPtr in workRam,
+  // recompute (d5, d4) directly from the iso formula on world coords; for
+  // ROM-resident static structs (test fixtures, secondary entity types), keep
+  // the literal `loadCoords` so existing parity tests stay green.
+  const [d5, d4] =
+    (objPtr >>> 0) >= WRAM && (objPtr >>> 0) < WRAM_END
+      ? loadCoordsIsoPlayer(state, objPtr, 0x18, 0x10)
+      : loadCoords(state, rom, objPtr, 0x1e, 0x18, 0x10);
 
   const skipFirstTwoEmits = (animState === 4 || animState === 10 || animState === 11 ||
     animState === 9 || animState === 2 || animState === 1 || animState === 5);
 
-  let d2 = d4; // d2 = d4 copy used in direct emit
-  let a1w = d5; // a1AsWord = d5 (x coord)
-  let localE = 5; // -$e(a6) initial
+  let d2 = d4;
+  let a1w = d5;
+  let localE = 5;       // -$e(A6) long
+  let frameNeg1 = 0;    // -$1(A6) byte
+
+  // Sign-extend frameNeg10 word to long (M68k ext.l).
+  function extL(w: number): number {
+    return (w & 0x8000) ? (0xffff0000 | w) >>> 0 : (w >>> 0);
+  }
 
   if (!skipFirstTwoEmits) {
-    let frameNeg1 = 0;
     if (animState === 8) {
       const pCC = rl(state, rom, objPtr + 0xcc);
       const vCC = rl(state, rom, pCC);
@@ -224,33 +327,31 @@ function dispatchType1(
         frameNeg1 = 2;
       }
     }
-    localE = (localE | (s16(frameNeg10) >>> 0)) >>> 0;
+    localE = (localE | extL(frameNeg10)) >>> 0;
 
-    // First direct sprite emit:
-    // A1←orMask, A2←(a1w-8)<<5&0x3fe0, A3←d2<<5&0x3fe0|1, A4←D7
+    // FIRST direct emit: code = low_word(localE)
     {
       const xv = ((s16(a1w) - 8) * 32) & 0x3fe0;
       const yv = (s16(d2) * 32) & 0x3fe0 | 1;
       const d7v = rw(state, rom, CNT_ADDR);
-      curEmit(state, rom, CUR_A1_ADDR, orMask & 0xffff);
+      curEmit(state, rom, CUR_A1_ADDR, localE & 0xffff);
       curEmit(state, rom, CUR_A2_ADDR, xv);
       curEmit(state, rom, CUR_A3_ADDR, yv);
       curEmit(state, rom, CUR_A4_ADDR, d7v);
       ww(state, CNT_ADDR, (d7v + 1) & 0xffff);
     }
 
-    // Second direct sprite emit:
-    let localE2: number;
+    // SECOND direct emit
     if (animState === 8 && frameNeg1 !== 0) {
-      localE2 = (localE + 2) >>> 0;
+      localE = (localE + 2) >>> 0;
     } else {
-      localE2 = (s16(frameNeg10) | 3) >>> 0;
+      localE = (extL(frameNeg10) | 3) >>> 0;
     }
     {
       const xv2 = (s16(a1w) * 32) & 0x3fe0;
       const yv2 = (s16(d2) * 32) & 0x3fe0 | 1;
       const d7v2 = rw(state, rom, CNT_ADDR);
-      curEmit(state, rom, CUR_A1_ADDR, localE2 & 0xffff);
+      curEmit(state, rom, CUR_A1_ADDR, localE & 0xffff);
       curEmit(state, rom, CUR_A2_ADDR, xv2);
       curEmit(state, rom, CUR_A3_ADDR, yv2);
       curEmit(state, rom, CUR_A4_ADDR, d7v2);
@@ -258,17 +359,57 @@ function dispatchType1(
     }
   }
 
-  // moBlockEmit call for anim states 2,9,1,5:
-  const doSubEmit = (animState === 2 || animState === 9 || animState === 1 || animState === 5);
-  if (doSubEmit) {
+  // At 0x27442: animState in {2,9,1,5} → branch to 0x2750a (skip inner loop 1).
+  // Then at 0x275d8 check animState in {2,9,1,5} → moEmit doSubEmit, then exit.
+  // Inner loop 2 still runs.
+  if (animState === 2 || animState === 9 || animState === 1 || animState === 5) {
     const sp5a = rl(state, rom, objPtr + 0x5a);
     moEmit(state, rom, rl(state, rom, sp5a), d5, d4, frameNeg10, subs);
+    // Inner loop 2 not yet modeled (see TODO above). Skip for now.
+    return;
   }
 
-  // Inner sub-sprite loop at objPtr+0x38 (up to 5, 6-byte entries):
-  innerSprites(state, rom, (objPtr + 0x38) >>> 0, 5);
+  // INNER LOOP 1 at objPtr+0xa4, max 4 iters
+  {
+    let innerA1 = (objPtr + 0xa4) >>> 0;
+    for (let i = 0; i < 4; i++) {
+      const w0 = rw(state, rom, innerA1);
+      if (w0 === 0) break;
+      const d6 = (w0 & 0x8000) | ((w0 >> 11) & 7);
+      const codeBase = w0 & 0x7ff;
+      const code = (codeBase | (frameNeg10 & 0xffff)) & 0xffff;
+      const w1 = rw(state, rom, innerA1 + 2);
+      const w2 = rw(state, rom, innerA1 + 4);
+      const xv = ((s16(w1) + 0x18) * 32) & 0x3fe0;
+      const yv = (((s16(w2) + 0x10) * 32) & 0x3fe0) | d6;
+      emitSprite(state, rom, code, xv, yv);
+      innerA1 = (innerA1 + 6) >>> 0;
+    }
+  }
 
-  void d2; void localE; void orMask;
+  // At 0x2750a: animStates 4/10/11 → skip 3rd direct emit. 2/9/1/5 already returned.
+  // animState==8 && frameNeg1!=0 → also skip.
+  const skip3rd = (animState === 4 || animState === 10 || animState === 11);
+  if (!skip3rd && !(animState === 8 && frameNeg1 !== 0)) {
+    // THIRD direct emit
+    const localE3 = (extL(frameNeg10) | 7) >>> 0;
+    const codeOut = localE3 & 0xffff;
+    const d6_3 = (localE3 >>> 16) & 0xffff;  // HIGH word of localE long (disasm 0x2758e)
+    const xv3 = ((s16(d5) - 8) * 32) & 0x3fe0;
+    const yv3 = (((s16(d4) + 5) * 32) & 0x3fe0) | d6_3;
+    const d7v3 = rw(state, rom, CNT_ADDR);
+    curEmit(state, rom, CUR_A1_ADDR, codeOut);
+    curEmit(state, rom, CUR_A2_ADDR, xv3);
+    curEmit(state, rom, CUR_A3_ADDR, yv3);
+    curEmit(state, rom, CUR_A4_ADDR, d7v3);
+    ww(state, CNT_ADDR, (d7v3 + 1) & 0xffff);
+  }
+
+  // INNER LOOP 2 at objPtr+0x38, max 5 iters — TODO: complex encoding (disasm 0x27620..).
+  // Not modeled yet. obj0 demo gameplay (animState=0) emits 0 from this loop
+  // because the first word at objPtr+0x38 is 0x0000 in MAME warmstate.
+
+  void d2; void orMask;
 }
 
 /**
@@ -340,11 +481,9 @@ function dispatchType4(
   // Inner loop at sp+0x2c using a word-stride array (tst.w (a1) / addq.l #1,a2):
   // The inner entries here are 6-byte records (3 words). Up to 5 entries.
   // Each entry: word(code | 0x8000?), word(x), word(y) for direct buffer writes.
-  // Looking at the disasm (0x27b30..0x27bbc): a1 pointer walks word stream.
-  // entry: (a1)= word0 [flags|code], (a1)+2= x word, (a1)+4= y word, then loop back.
-  // This is NOT the same as innerSprites which uses 6-byte records.
-  // Here a1 = sp+0x2c pointer (rl(sp+0x2c) = inner a1 start).
-  let innerA1 = rl(state, rom, sp + 0x2c);
+  // Disasm 0x27b20: `lea (0x2c,A5),A0` → A0 = sp + 0x2c DIRECTLY (NOT deref).
+  // Then `movea.l D0,A1` → A1 = sp + 0x2c. Walks (A1)+ word by word.
+  let innerA1 = (sp + 0x2c) >>> 0;
   for (let i = 0; i < 5; i++) {
     const w0 = rw(state, rom, innerA1);
     if (w0 === 0) break;

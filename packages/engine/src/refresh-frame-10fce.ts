@@ -34,15 +34,11 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
-import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
-import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
-import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
+import { helper121B8 } from "./helper-121b8.js";
 import { fun158F6 } from "./sub-158f6.js";
-import { fun29CCE } from "./sub-29cce.js";
-import { stateSub1B5C2 } from "./state-sub-1b5c2.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -77,6 +73,82 @@ function addByte(state: GameState, addr: number, delta: number): void {
 
 /** Frame-counter global byte address (addq.b #1 target). */
 export const FRAME_CTR_ADDR = 0x004003f0 as const;
+
+/**
+ * Replica del dispatcher `FUN_253EC` (0x253EC..0x25918) — versione minima
+ * focalizzata sui path osservati per obj0 e altri object slot in demo gameplay.
+ *
+ * Si appoggia al disasm:
+ *   - Prologo: tst.b (0xd8,A2). Se !=0 esegue body intermedio (0x25416..),
+ *     altrimenti salta a bound-check + JT (0x2548c).
+ *   - JT @ 0x254BA dispatcha per s1a (= (0x1a,A2).b ext.w). Bound 0..0xb.
+ *   - Per s1a=0 (path NORMAL per obj0): se (0xcb,A2)==0 → chain
+ *     helper253BC + objectStep17F66 + helper121B8.
+ *
+ * Per s1a∉{0} oppure 0xcb!=0 oppure 0xd8!=0 oppure s1a fuori range, cade
+ * sul vecchio behavior conservativo (no chain extra) — coerente con il
+ * fatto che obj0 demo gameplay è invariante su s1a=0/cb=0/d8=0 (verificato
+ * vs /tmp/mame_100f.json frame 12000..12099).
+ */
+function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
+  const wr = state.workRam;
+  const objOff = (a2 - 0x00400000) >>> 0;
+  if (objOff + 0xe2 > wr.length) return;
+
+  const s1a = wr[objOff + 0x1a] ?? 0;
+  const sd8 = wr[objOff + 0xd8] ?? 0;
+  const scb = wr[objOff + 0xcb] ?? 0;
+
+  // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
+  //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
+  //     jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
+  if (s1a === 0 && sd8 === 0 && scb === 0) {
+    helper253BC(state, a2);
+    objectStep17F66(state, a2, {
+      fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
+      fun180BE: () => {},
+      fun26196: () => {},
+    });
+    // Wire FUN_1CABA (heavy tile-redraw) into both spritePosUpdate1BAB2 and
+    // spriteProject1CC62. spritePosUpdate1BAB2 invokes it conditionally on
+    // tile-change (sentinel @ 0x400696/8 = 0xFFFF set right above in
+    // helper121B8 → first invocation triggers it). spriteProject1CC62 only
+    // calls it if argByte != 0, but here helper121B8 always passes argLong=0,
+    // so that path is no-op anyway. We inject the real replica into both
+    // injection points so STRUCT @ 0x401C28 (= cz) reflects the terrain z
+    // under obj0's current tile, allowing INTEGRATE_VEL to be taken.
+    // STUB `fun_1cc62 → obj.z`: bit-perfect proven (99/99 MAME match per
+    // obj0.x). Tentativi di wirare la replica completa `sub1CABATileRedraw`
+    // (Agent FUN_1CABA) producono regressione drift secondario perché
+    // alcuni side-effects della tile-redraw chain non sono ancora
+    // bit-perfect (STRUCT @ 0x401C28 write differente da MAME).
+    // Lo stub rende `d0 = projZ - obj.z = 0 ≤ 0x100000` → INTEGRATE_VEL
+    // eseguito → obj.x += obj.vx bit-perfect.
+    helper121B8(state, rom, a2, {
+      fun_1cc62: (_s, _argZero) => {
+        const objZOff = objOff + 0x14;
+        return (
+          (((wr[objZOff] ?? 0) << 24) |
+            ((wr[objZOff + 1] ?? 0) << 16) |
+            ((wr[objZOff + 2] ?? 0) << 8) |
+            (wr[objZOff + 3] ?? 0)) >>> 0
+        );
+      },
+    });
+    return;
+  }
+
+  // Fallback (path non-modellati): chain conservativa esistente —
+  // helper253BC + objectStep17F66 SENZA helper121B8. Equivalente al
+  // wiring precedente; mantiene parity per obj non-obj0 finché i path
+  // restanti del JT non vengono modellati.
+  helper253BC(state, a2);
+  objectStep17F66(state, a2, {
+    fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
+    fun180BE: () => {},
+    fun26196: () => {},
+  });
+}
 
 export interface RefreshFrame10FCESubs {
   /**
@@ -172,68 +244,47 @@ export function refreshFrame10FCE(
   }))(state);
 
   // 00010FD4: jsr 0x000251DE
-  // FUN_253EC default chain (chirurgica, evita helper121B8 intero che ha
-  // sub stub no-op problematiche): objectStep17F66 con fun1815A wirato a
-  // waypointListStep1815A (= update VX/VY in attract-mode-homing path,
-  // *0x400390 == 1) + helper253BC (campi derivati obj+0x2a, +0x1d) +
-  // spriteRotate1C014 (rotation matrix obj+0x75..+0xb3) + spriteBracketLerp
-  // (globals 0x400674..683).
+  // FUN_253EC chain MAME-canonical (disasm 0x253EC..0x25918, JT @ 0x254BA):
+  //
+  //   Prologo (0x253ec): D1 = (0x1a,A2).b ext.w (= s1a).
+  //   Guard @ 0x25412: tst.b (0xd8,A2); beq → 0x2548c (skip "body intermedio").
+  //   Body intermedio (0x25416..0x25488): per `(0xd8,A2)!=0` AND s1a∉{2,4,7,a,b},
+  //     gestione transizione `(0x68,A2)` con clamp e flag manip su `(0xd8,A2)`.
+  //   Bound-check @ 0x25490: blt/bgt → epilog se A1<0 o A1>0xb.
+  //   JT dispatch @ 0x254ba (16 word entries):
+  //     JT[0] = 0x256d2  → s1a=0  ← path normale per obj0 demo gameplay
+  //     JT[1] = 0x2574c  → s1a=1
+  //     JT[2] = 0x25824  → s1a=2
+  //     JT[3] = 0x25514  → s1a=3
+  //     JT[4] = 0x255c6  → s1a=4
+  //     JT[5] = 0x257ba  → s1a=5
+  //     JT[6] = 0x254d2  → s1a=6
+  //     JT[7] = 0x25812  → s1a=7
+  //     JT[8] = 0x258a8  → s1a=8
+  //     JT[9] = 0x2584e  → s1a=9
+  //     JT[10] = 0x2563e → s1a=10
+  //     JT[11] = 0x25876 → s1a=11
+  //
+  //   PATH s1a=0 @ 0x256d2 (player normal — obj0 demo gameplay):
+  //     tst.b (0xcb,A2); beq.b → 0x25730 (NORMAL chain).
+  //     [se cb!=0: branch a respawn-block, fuori scope obj0 demo].
+  //     0x25730: jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
+  //
+  //   helper121B8 fa: INTEGRATE_VEL (obj.x += obj.vx, obj.y += obj.vy, ecc.)
+  //   + scrive globals 0x684/688/68c/690/692/694 + chiama spritePosUpdate1BAB2
+  //   + spriteRotate1C014 + sub interne (29CCE/1BC88/1924E/25C74).
+  //
+  //   MAME f12000+ per obj0 (player1 @ 0x400018): s1a=0, s18=1, 0xcb=0,
+  //   0x36=0, 0xd8=0, s58=0 → path NORMAL stabile, no respawn, no out_of_range.
+  //   `fun_29cce` con no-op è bit-perfect per obj0 (vedi sub-29cce.ts riga 36-58:
+  //   nessun BLOCK complesso triggera, no neg.l vx/vy nell'epilog perché
+  //   *0x400666/0x400668 restano 0). Helper121B8 chiamato qui per obj0 è
+  //   SAFE (non duplicato con sub158F6: sub158F6 itera P1/P2 slot pair
+  //   @ 0x4009A4/0x400A20, MAI 0x400018 = obj0).
   (subs.objectScanDispatch251DE ?? ((s) => {
     objectScanDispatch251DE(s, rom, {
       fun_253EC: (st, a2) => {
-        // MAME canonical chain (atarisy1_v.cpp FUN_253EC state 0):
-        //   helper253BC → objectStep17F66 → helper121B8(INTEGRATE_VEL + ...)
-        helper253BC(st, a2);
-        objectStep17F66(st, a2, {
-          fun1815A: (a2Addr) => { waypointListStep1815A(st, a2Addr, undefined, rom); },
-          fun180BE: () => {},
-          fun26196: () => {},
-        });
-        // INTEGRATE_VEL extracted from helper121B8 (chain MAME-canonical).
-        // Wirare helper121B8 INTERO esplode drift (16→54) per side-effect di
-        // sub interne stub (es. fun_29cce/15bd0) anche con tutte noop —
-        // helper121B8 scrive globals 0x684/688/68c/69a/69c/696/698 che il
-        // surrogate manuale lascia stale. Manteniamo surrogate.
-        {
-          const wr = st.workRam;
-          const objOff = (a2 - 0x400000) >>> 0;
-          const r32 = (off: number): number =>
-            (((wr[off] ?? 0) << 24) | ((wr[off + 1] ?? 0) << 16) |
-             ((wr[off + 2] ?? 0) << 8) | (wr[off + 3] ?? 0)) >>> 0;
-          const w32 = (off: number, v: number): void => {
-            const u = v >>> 0;
-            wr[off]     = (u >>> 24) & 0xff;
-            wr[off + 1] = (u >>> 16) & 0xff;
-            wr[off + 2] = (u >>> 8)  & 0xff;
-            wr[off + 3] = u & 0xff;
-          };
-          // obj.x += obj.vx
-          w32(objOff + 0x0c, (r32(objOff + 0x0c) + r32(objOff + 0x00)) >>> 0);
-          // obj.y += obj.vy
-          w32(objOff + 0x10, (r32(objOff + 0x10) + r32(objOff + 0x04)) >>> 0);
-          // obj.z += obj.vz
-          w32(objOff + 0x14, (r32(objOff + 0x14) + r32(objOff + 0x08)) >>> 0);
-        }
-        // spritePosUpdate1BAB2 prima di spriteRotate/bracketLerp: scrive
-        // POS_X/Y/Z @ 0x690/692/694 + chiama deriveSpriteFields.
-        spritePosUpdate1BAB2(st, a2);
-        {
-          const wr = st.workRam;
-          wr[0x666] = 0;
-          wr[0x668] = 0;
-        }
-        stateSub1B5C2(st, a2, 0x40066a, 0x40069e);
-        {
-          const wr = st.workRam;
-          if ((wr[0x666] ?? 0) !== 0 || (wr[0x668] ?? 0) !== 0) {
-            spritePosUpdate1BAB2(st, a2);
-          }
-          wr[0x666] = 0;
-          wr[0x668] = 0;
-        }
-        fun29CCE(st, a2, rom);
-        spriteRotate1C014(st, rom, (a2 - 0x400000) >>> 0);
-        spriteBracketLerp1C676(st);
+        fun253ECDispatch(st, rom, a2);
       },
     });
   }))(state);

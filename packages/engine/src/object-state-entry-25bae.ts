@@ -168,6 +168,25 @@ export interface ObjectStateEntry25BAESubs {
    * la chiamiamo internamente per consentire stub injection in test.
    */
   fun_2591A?: (state: GameState, objPtr: number) => void;
+  /**
+   * **MAME-NET integration flag** (NON parte del disasm grezzo):
+   * Se `true`, il prologue comune NON azzera A2[+0x00] (vx) e A2[+0x04] (vy).
+   *
+   * **Motivazione bit-perfect (osservata in /tmp/mame_100f.json)**:
+   * In MAME demo gameplay f12000+, obj0 ha invariantemente s1a=0, s58=0,
+   * s36=0 — la chain `helper121B8 → OUT_OF_RANGE | BOUNCE_BELOW_TARGET`
+   * che invoca questa funzione con code=4 NON triggera mai. Il NETTO MAME
+   * osservato sul flusso live è: vx/vy preservate (perché 25BAE non è
+   * chiamato). In repliche TS dove `spriteProject1CC62` può ritornare un
+   * valore che fa triggerare spuriosamente OUT_OF_RANGE, attivare questo
+   * flag dal chiamante (refresh-frame / helper121B8) permette di preservare
+   * la velocità integrata da helper182BA senza distruggere il "movimento
+   * smooth" osservabile in MAME.
+   *
+   * **Default `false`** (= bit-perfect del disasm grezzo, parità isolata
+   * con MAME garantita dal test).
+   */
+  preserveVelocity?: boolean;
 }
 
 // ─── Helper interni: read/write byte/word/long su workRam (BE M68k) ──────
@@ -243,8 +262,12 @@ export function objectStateEntry25BAE(
   // 0x25BB8..0x25BBE: A2[+0x4] = 0 (long); A2[+0x0] = 0 (long).
   // Ordine binario: prima +0x4 poi +0x0 — replicato identico per
   // determinismo cross-platform (anche se equivalente per workRam pure).
-  writeU32BE(wr, objAbs + 0x04, 0);
-  writeU32BE(wr, objAbs + 0x00, 0);
+  // `preserveVelocity` flag (MAME-net integration override, vedi interfaccia
+  // `ObjectStateEntry25BAESubs.preserveVelocity` per motivazione):
+  if (subs.preserveVelocity !== true) {
+    writeU32BE(wr, objAbs + 0x04, 0);
+    writeU32BE(wr, objAbs + 0x00, 0);
+  }
 
   // 0x25BC0..0x25BCC: cmpi.b #6,(0x1A,A2); bne skip; move.b #3,(0x18,A2)
   if (readU8(wr, objAbs + 0x1a) === 0x06) {

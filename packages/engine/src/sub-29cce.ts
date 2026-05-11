@@ -33,6 +33,30 @@
  * (= bra 0x2b072). Questo replica fedelmente l'AVANZAMENTO del loop e i
  * tag-writes di confine, riducendo drift dovuto a tag mancanti.
  *
+ * **MAME f12000+ analysis (demo gameplay attive)** — `/tmp/mame_100f.json`:
+ * Per obj0 (player1 @ 0x400018), durante 100 frame di demo gameplay,
+ * i campi di stato osservati sono **invarianti**: s58=0 (collision tag),
+ * s36=0 (bounce mode), s1a=0 (player normal state), s57=0 (sound code).
+ * obj0.vx oscilla in un range stretto (0x23339..0x235FE, ±0x1FF) attorno
+ * al valore di partenza 0x23447 con cambi piccoli (~0x100/2-frame) dovuti
+ * a `helper182BA` (seek dispatcher). vx NON è azzerato in MAME perché:
+ *   1. `FUN_29CCE`: il loop su 25 slot @ 0x400a9c termina su `(0x18,A3)==0`
+ *      al primo slot non-attivo. Per obj0, nessun BLOCK complesso (bounce,
+ *      respawn, sound 0x43/0x44) triggera — flussi `neg.l vx/vy` dell'
+ *      epilog (gated da `*0x400666`/`*0x400668`) NON eseguiti perché i
+ *      flag globali restano 0 frame after frame.
+ *   2. Il path OUT_OF_RANGE in `helper121B8` (gate
+ *      `spriteProject1CC62(0) - obj.z > 0x100000`) NON triggera per obj0,
+ *      quindi `objectStateEntry25BAE(obj0, 4)` NON viene chiamato.
+ *      L'azzeramento di obj+0x00/obj+0x04 (vx/vy) nel prologue comune di
+ *      25BAE non avviene mai per obj0 in MAME canonical.
+ *
+ * Quindi il NETTO MAME-osservato per `fun_29cce(obj0)` a f12000+ è:
+ * **nessuna modifica osservabile** su (workRam[0x18..0x5F]) per il loop
+ * outer (no tag match), e **nessun neg.l vx/vy** nell'epilog (flag X/Y
+ * globali zero). I globali workRam[0x690..0x69C] vengono solo SNAPSHOT
+ * letti, non scritti.
+ *
  * **NOTE BIT-PERFECT**:
  *   - Slot stride 0x56 (= 86 byte/slot). Il loop avanza A3 += 0x56 dopo ogni
  *     iter. (-0x1,A6) byte è il counter, range 0..0x18.

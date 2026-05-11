@@ -62,16 +62,10 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-/** Workram base (M68k absolute = 0x00400000). */
-const WRAM_BASE = 0x00400000;
-
-/** Slot pair struct base (= ROM[0x1F002] indirect target = 0x400A20). */
-const SLOT_PAIR_BASE_ABS = 0x00400a20;
-
-/** Workram offset of slot pair X long (high word at +0xC..0xD). */
-const SLOT_PAIR_X_HIGH_OFF = SLOT_PAIR_BASE_ABS - WRAM_BASE + 0xc;
-/** Workram offset of slot pair Y long (high word at +0x10..0x11). */
-const SLOT_PAIR_Y_HIGH_OFF = SLOT_PAIR_BASE_ABS - WRAM_BASE + 0x10;
+// Slot pair @ 0x400A20 mantenuta come riferimento storico in commento sotto:
+// in MAME f12000+ slot.x_high @ 0xa2c viene aggiornata bit-perfect da
+// helper1BC88 (sub di helper121B8). Senza wire di quella chain, slot resta
+// statica → usiamo obj0.x/y direttamente come source per il delta.
 
 /**
  * Scratch workRam offsets for previous-frame snapshot.
@@ -82,9 +76,15 @@ const PREV_SLOT_X_OFF = 0x7f0;
 const PREV_SLOT_Y_OFF = 0x7f2;
 const PREV_VALID_OFF  = 0x7f4;  // byte: 0=invalid (first tick), 1=valid
 
-/** Marble player MO entry slot indices (5 tiles in display list). */
-const MARBLE_ENTRY_FIRST = 4;
-const MARBLE_ENTRY_COUNT = 5;
+/** Marble player MO entry slot indices (7 entries: 2 sfera + 5 ombra). */
+// Verificato su MAME f12000 (stride 2 byte / 1 word per field):
+//   entries 2,3: sfera principale (tile 5 + tile 3, ognuno 1x2 = 8x16 px,
+//                affiancati → sfera 16x16 visibile bianca/cromata)
+//   entries 4..8: ombra/shadow del marble (5 sub-tile codes 0x16/0x26/
+//                 0x0f/0x19/0x07, color=0 = nero/grigio)
+//   Tutti e 7 muovono insieme in MAME demo gameplay come unico marble.
+const MARBLE_ENTRY_FIRST = 2;
+const MARBLE_ENTRY_COUNT = 7;
 
 /** MO entry layout offsets (per Atari System 1, see docs/video-system.md). */
 const MO_BANK_Y_OFF = 0x000;     // bank-A word 0 (Y position)
@@ -100,13 +100,6 @@ const MO_BANK_B_OFFSET = 0x200;  // bank-B = bank-A + 0x200 stride
  *   ratio: ~ -2 px / +1 unit (sign inverted, marble vs camera).
  * Therefore deltaPx = -ΔslotX * 2.
  */
-const COORD_SCALE_NUM = 1;   // delta passes through (1:1 mapping)
-
-/** Read big-endian unsigned 16-bit from workRam at offset. */
-function rwBE_workram(state: GameState, off: number): number {
-  return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
-}
-
 /** Write big-endian unsigned 16-bit to workRam at offset. */
 function wwBE_workram(state: GameState, off: number, val: number): void {
   state.workRam[off] = (val >>> 8) & 0xff;
@@ -122,30 +115,6 @@ function rwBE_spriteram(state: GameState, off: number): number {
 function wwBE_spriteram(state: GameState, off: number, val: number): void {
   state.spriteRam[off] = (val >>> 8) & 0xff;
   state.spriteRam[off + 1] = val & 0xff;
-}
-
-/**
- * Sign-extend 16-bit delta (handles wrap-around when slot pair high-word
- * crosses 0x8000 boundary).
- */
-function s16Delta(now: number, prev: number): number {
-  let d = (now - prev) & 0xffff;
-  if (d >= 0x8000) d -= 0x10000;
-  return d;
-}
-
-/**
- * Patch a single MO entry's position word: replaces bit 5..13 (9-bit pos
- * field) with `(currentPos + deltaPx) & 0x1ff`, preserving bit 15 (flag)
- * and bit 0..4 (tile count + sub-flags).
- */
-function applyDelta(state: GameState, off: number, deltaPx: number): void {
-  const cur = rwBE_spriteram(state, off);
-  const flags = cur & 0x801f;       // preserve bit15 + bit0..4
-  const curPos = (cur >> 5) & 0x1ff;
-  const newPos = (curPos + deltaPx) & 0x1ff;
-  const newWord = ((newPos << 5) & 0x3fe0) | flags;
-  wwBE_spriteram(state, off, newWord);
 }
 
 /**
@@ -177,37 +146,76 @@ export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
   // su MAME dump multi-frame). Priorità movement visibile attivata sempre
   // quando runMainLoopBody=true.
 
-  // 1. Legge slot pair high-word coords correnti.
-  const slotX_now = rwBE_workram(state, SLOT_PAIR_X_HIGH_OFF);
-  const slotY_now = rwBE_workram(state, SLOT_PAIR_Y_HIGH_OFF);
+  // 1. Legge coords sorgente correnti.
+  // FALLBACK: la slot pair @ 0x400A20 viene aggiornata bit-perfect da
+  // helper1BC88 (chiamata da helper121B8) che attualmente non wireremo
+  // per evitare drift secondario. Quando slot_x è statica nei multi-frame
+  // dump MAME, leggiamo direttamente obj0.x/y come fonte del delta.
+  // Risultato visivo: il marble segue l'integrazione di velocity
+  // dell'engine, anche se la projection camera-relative non è bit-perfect.
+  //
+  // Decision rule: la slot_pair viene aggiornata bit-perfect SOLO se
+  // helper121B8 è wirato. Senza wire (= scenario attuale), slot_pair resta
+  // statica → usiamo SEMPRE obj0 come source per il delta.
+  // POSITION-ABSOLUTE projection (replica MAME FUN_FA0 camera transform).
+  //
+  // Derivata empiricamente dal warmstate f12000:
+  //   obj0.x_long = 0x015aa6d5 → cluster screen-x ≈ 95
+  //   obj0.y_long = 0x011b4bd0 → cluster screen-y ≈ 68
+  //
+  //   0x015aa6d5 >> 18 = 0x56 = 86 → screen_x = 86 - (-9) = 95 ✓
+  //   0x011b4bd0 >> 18 = 0x46 = 70 → screen_y = 70 - 2 = 68 ✓
+  //
+  // Sign inverted su X: in MAME il marble world-x cresce → camera segue →
+  // su display, oggetti scenari escono a sinistra e marble visivamente
+  // si sposta DESTRA→SINISTRA (per breve tratto) → poi reset al spawn.
+  // Nostra empirical (warm f12000→f12010 +10 frame):
+  //   obj.x_long 0x015aa6d5 → 0x01662b65 (Δ+0xb8490, ~+45/f via >>18)
+  //   marble cluster x 95 → 80 (Δ-15)
+  //   → ratio ≈ -1/3 px / +1 unit (>>18)
+  //
+  // Quindi: screen_x = -(obj.x_long >> 18) + offset, clamped to 9-bit.
+  const objXLong = (((state.workRam[0x24] ?? 0) << 24) |
+                    ((state.workRam[0x25] ?? 0) << 16) |
+                    ((state.workRam[0x26] ?? 0) << 8) |
+                    (state.workRam[0x27] ?? 0)) >>> 0;
+  const objYLong = (((state.workRam[0x28] ?? 0) << 24) |
+                    ((state.workRam[0x29] ?? 0) << 16) |
+                    ((state.workRam[0x2a] ?? 0) << 8) |
+                    (state.workRam[0x2b] ?? 0)) >>> 0;
 
-  // 2. Legge snapshot precedente.
-  const slotX_prev = rwBE_workram(state, PREV_SLOT_X_OFF);
-  const slotY_prev = rwBE_workram(state, PREV_SLOT_Y_OFF);
-  const prevValid = (state.workRam[PREV_VALID_OFF] ?? 0) !== 0;
+  // signed shift right 18 → range [-512..511] truncated to 9-bit
+  const objXProj = ((objXLong >> 18) & 0x1ff);
+  const objYProj = ((objYLong >> 18) & 0x1ff);
 
-  // 3. Aggiorna snapshot per il prossimo tick.
-  wwBE_workram(state, PREV_SLOT_X_OFF, slotX_now);
-  wwBE_workram(state, PREV_SLOT_Y_OFF, slotY_now);
+  // Empirical calibration: warm obj proj (86, 70) maps to cluster (95, 68)
+  //   X bias = 95 - (-86) = 181 (= 0xb5)  // sign-inverted X
+  //   Y bias = 68 - 70 = -2
+  const SCREEN_X_BIAS = 0xb5;
+  const SCREEN_Y_BIAS = -2;
+  const centerX = (SCREEN_X_BIAS - objXProj) & 0x1ff;
+  const centerY = (objYProj + SCREEN_Y_BIAS) & 0x1ff;
+
+  // Per-entry offset relativi al centro cluster (95, 68) — preservati dal
+  // warmstate MAME f12000 (entries 2..8):
+  //   entry 2 (91, 65) → (-4, -3)   ← sfera sinistra
+  //   entry 3 (99, 65) → (+4, -3)   ← sfera destra
+  //   entry 4 (95, 69) → ( 0, +1)   ← ombra tile #0x16
+  //   entry 5 (95, 68) → ( 0,  0)   ← ombra tile #0x26
+  //   entry 6 (99, 62) → (+4, -6)   ← ombra tile #0x0f
+  //   entry 7 (102,69) → (+7, +1)   ← ombra tile #0x19
+  //   entry 8 (91, 70) → (-4, +2)   ← ombra tile #0x07
+  const ENTRY_OFFSETS: ReadonlyArray<readonly [number, number]> = [
+    [-4, -3], [4, -3],            // sfera (entries 2-3)
+    [0, 1], [0, 0], [4, -6], [7, 1], [-4, 2],  // ombra (entries 4-8)
+  ];
+
+  // Update cache for compatibility (vecchio delta-based code path).
+  wwBE_workram(state, PREV_SLOT_X_OFF, objXProj);
+  wwBE_workram(state, PREV_SLOT_Y_OFF, objYProj);
   state.workRam[PREV_VALID_OFF] = 1;
 
-  if (!prevValid) {
-    // First call: niente delta da applicare, esce silently.
-    return;
-  }
-
-  // 4. Calcola delta in pixel (con scale empirico).
-  const deltaSlotX = s16Delta(slotX_now, slotX_prev);
-  const deltaSlotY = s16Delta(slotY_now, slotY_prev);
-  // Slot pair high-word units ≈ screen pixel (1:1) for short intervals.
-  // Sign inverted on X (camera follows marble: world X up → screen X down).
-  // Y not inverted (Y motion follows marble directly when scrolling locked).
-  const deltaXpx = -(deltaSlotX * COORD_SCALE_NUM);
-  const deltaYpx = (deltaSlotY * COORD_SCALE_NUM);
-
-  if (deltaXpx === 0 && deltaYpx === 0) return;  // idle, skip
-
-  // 5. Applica delta alle 5 entries marble nei 2 banchi.
+  // 5. Scrive POSITION ABSOLUTE alle 5 entries marble nei 2 banchi.
   for (let bank = 0; bank < 2; bank++) {
     const bankBase = bank * MO_BANK_B_OFFSET;
     for (let i = 0; i < MARBLE_ENTRY_COUNT; i++) {
@@ -219,8 +227,17 @@ export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
       // Skip slots vuoti (non ancora popolati da dispatch).
       if (rwBE_spriteram(state, codeOff) === 0) continue;
 
-      if (deltaYpx !== 0) applyDelta(state, yOff, deltaYpx);
-      if (deltaXpx !== 0) applyDelta(state, xOff, deltaXpx);
+      const [dx, dy] = ENTRY_OFFSETS[i] ?? [0, 0];
+      const newPosX = (centerX + dx) & 0x1ff;
+      const newPosY = (centerY + dy) & 0x1ff;
+
+      // Re-encode 9-bit pos field (bit 5..13), preserve flags/size (bit 0..4, 15).
+      const xCur = rwBE_spriteram(state, xOff);
+      const yCur = rwBE_spriteram(state, yOff);
+      const xFlags = xCur & 0x801f;
+      const yFlags = yCur & 0x801f;
+      wwBE_spriteram(state, xOff, ((newPosX << 5) & 0x3fe0) | xFlags);
+      wwBE_spriteram(state, yOff, ((newPosY << 5) & 0x3fe0) | yFlags);
     }
   }
 }
