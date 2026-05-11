@@ -31,7 +31,6 @@ import type { GameState } from "./state.js";
 import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
 
 const WRAM = 0x00400000 as const;
-const SLOT_3_PTR = 0x00401422 as const;
 
 /**
  * Stub di `FUN_00014966`. Implementa SOLO il prologo:
@@ -49,8 +48,11 @@ const SLOT_3_PTR = 0x00401422 as const;
  * riproducibile, e l'increment introdurrebbe drift nuovo).
  */
 export function fun14966Stub(slotPtr: number, state: GameState): void {
-  // Workaround anomalia slot 3 (vedi commento file).
-  if (slotPtr === SLOT_3_PTR) return;
+  // Slot 3 workaround RIMOSSO: l'anomalia documentata era specifica del
+  // frame 2400 (armed=1 ma nessun byte cambia in MAME). Nel ground truth
+  // f12000-12099 il ticker dello slot 3 evolve normalmente (50/99 cambi,
+  // pattern 0→1→0→1 con limit=2). Lasciamo che il path normale processi
+  // anche slot 3.
 
   const off = (slotPtr - WRAM) >>> 0;
 
