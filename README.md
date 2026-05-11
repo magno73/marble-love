@@ -2,7 +2,7 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 360+ funzioni replicate bit-perfect** via parity 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble cromata + ombra **rotola sul livello bit-perfect** in demo gameplay (warmstate f12000+), terreno isometric 3D, HUD score, 3 spike triangolari. **`obj0.x` bit-perfect MAME su 99/99 frame** del ground truth `/tmp/mame_100f.json`. Drift workRam @ 100 frame demo: **~180 byte residui** (era ~547 pre-sessione 2026-05-11). **1937 vitest verde**.
+**Status:** **🎯 366+ funzioni replicate bit-perfect** via parity 100/100 o 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble cromata + ombra **rotola sul livello bit-perfect** in demo gameplay (warmstate f12000+), terreno isometric 3D, HUD score, 3 spike triangolari. **`obj0.x` bit-perfect MAME su 99/99 frame** del ground truth `/tmp/mame_100f.json`. Drift workRam @ 100 frame demo: **390 byte residui** (era ~547 pre-sessione 2026-05-11, **-29%**). **1952 vitest verde**.
 
 Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo reale dal warm bootstrap MAME.
 
