@@ -46,6 +46,7 @@ import { fun14966Stub } from "./sub-14966-stub.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
 import { stringStep1725A } from "./string-step-1725a.js";
 import { stateSub19BAA } from "./state-sub-19baa.js";
+import { marbleCellDispatch19E42 } from "./marble-cell-dispatch-19e42.js";
 import { stateSub1844A } from "./state-sub-1844a.js";
 import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
 import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
@@ -341,7 +342,12 @@ export function refreshFrame10FCE(
   (subs.fun1912C ?? ((s) => { refreshHelper1912C(s, rom); }))(state);
 
   // 00010FFE: jsr 0x00019BAA
-  (subs.stateSub19BAA ?? ((s) => { stateSub19BAA(s, rom); }))(state);
+  // Wire fun_19e42 = marbleCellDispatch19E42 (replica bit-perfect già
+  // esistente in marble-cell-dispatch-19e42.ts). Senza wire, il callback
+  // è no-op stub e i globals velocity-per-direction @ 0x674..0x683 non
+  // si propagano correttamente, causando cluster drift @ 0x674..0x68B
+  // (22 byte) + cascade su obj struct screen-Y.
+  (subs.stateSub19BAA ?? ((s) => { stateSub19BAA(s, rom, { fun_19e42: marbleCellDispatch19E42 }); }))(state);
 
   // 00011004: jsr 0x0001844A
   (subs.stateSub1844A ?? ((s) => { stateSub1844A(s, rom); }))(state);
