@@ -18,7 +18,26 @@ Tre agent diagnostici paralleli hanno mappato i cluster non-stack e prodotto evi
 
 **Chain TS sospetta**: `objectUpdatePair158CC` → `fun158F6(slot_pair=P2)` → `helper253BC + helper182BA + helper121B8(slotPtr=0x400A20)`. Sospetti specifici (gia' tentati e rolled back per regressione obj0.x): `fun_29cce` NO_IMPL stub (helper-121b8.ts:620), `fun_1cc62` stub `→ obj.z` (workaround per FUN_1CABA non wired).
 
-**Tap pendente**: `oracle/mame_p2_slot0_tap.lua` su `0x400A00..0x400A3F` + `0x40097c..0x40097f` frame 12060..12080 per identificare primo write divergente bit-by-bit.
+### 2026-05-11 sera bis — vero root cause via tap P2.slot0 (Rule 12)
+
+Tap `mame_p2_slot0_tap.lua` + probe `probe-p2-slot0-writers.ts` hanno **falsificato** la diagnosi precedente:
+
+- Drift P2.slot0 **non inizia a f+68 ma a f+8** (= MAME f12008).
+- Primo campo divergente non e' `x_long @ +0x0c`, e' **`vx @ +0x00`** (slot+0x00..+0x03 = 0x400A20).
+- Tutte le sub coinvolte (`vectorScale`, `helper182BA`, `positionUpdate`, `helper121B8`, `objectUpdatePair158CC`, `fun158F6`) sono **bit-perfect**. Non e' bug di replica.
+- **Vero root cause: cadence mismatch**. MAME esegue il body P2-update DUE VOLTE consecutive ogni ~16 frame (pattern verificato via tap PC 0x017224 e 0x025fae). TS lo chiama una volta sola.
+- Risultato: **TS e' avanti di 1 step su P2** rispetto a MAME.
+
+Verifica dati (vx low long P2.slot0):
+| | TS tick(8).vx | MAME f12008.vx | MAME f12009.vx |
+|---|---|---|---|
+| valore | `0x00018aa1` | `0x0001971b` | `0x00018aa1` |
+
+obj0 NON ha questo pattern → la "doppia chiamata" e' SPECIFICA per il path `objectUpdatePair158CC` / `fun158F6`, non per `objectScanDispatch251DE` (= obj0). Per quello `obj0.x` resta bit-perfect 99/99.
+
+**Implicazione cruciale**: TUTTI i 215B drift non-stack sono cascade di questo singolo mismatch. xscroll ahead → decode triggera in frame sbagliati (cluster 0x0700, 74B). Velocity globals ahead → cluster 0x0640 (27B). P2 region ahead → cluster 0x0a00 (15B). Sparsi ~99B → propagazione downstream.
+
+**Next**: trovare il secondo callsite di `FUN_158CC` o `FUN_158F6` in ROM via Ghidra (task #157). La gate deve essere conditional con periodo ~16 frame.
 
 ## Survey reference codebases M68K (2026-05-11 sera)
 
