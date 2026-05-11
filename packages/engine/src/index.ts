@@ -176,6 +176,9 @@ export * as trackballClampFlags28468 from "./trackball-clamp-flags-28468.js";
 export * as hudFormat from "./hud-format.js";
 export * as trackballApply from "./trackball-apply.js";
 export * as moveVelocity from "./move-velocity.js";
+export * as sub19692 from "./sub-19692.js";
+export * as sub19976 from "./sub-19976.js";
+export * as sub1937C from "./sub-1937c.js";
 export * as nearestNeighbor from "./nearest-neighbor.js";
 export * as mainTick from "./main-tick.js";
 export * as auxTimer from "./aux-timer.js";
@@ -278,6 +281,9 @@ export * as helper28C38 from "./helper-28c38.js";
 export * as helper28D02 from "./helper-28d02.js";
 export * as helper25C74 from "./helper-25c74.js";
 export * as helper25E7C from "./helper-25e7c.js";
+export * as sub1BB08 from "./sub-1bb08.js";
+export * as sub14DEC from "./sub-14dec.js";
+export * as sub1D242 from "./sub-1d242.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";
