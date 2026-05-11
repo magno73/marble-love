@@ -61,13 +61,21 @@
 
 ### Achievement metrico finale
 
-- Drift workRam @ f+99: 547 → 390 byte (**-29%, -157 byte**)
-- Drift frame intermedi: -23% media (-50 a -77 byte sui frame f+60..f+90)
+- Drift workRam @ f+99 TOTALE: 547 → **387 byte** (**-29%, -160 byte**)
+- **Drift NON-STACK** (zona semanticamente fixable, esclusi M68K stack residue 0x1d70-0x1fef): **229 byte / 7552 = 3.03% diverging = 96.97% bit-perfect**
+- Drift STACK residue: 158 byte (= M68K push/pop scratch, IRRIDUCIBILE senza emulation byte-level)
+- Drift frame intermedi: -23% media sui f+60..f+90
 - Tests: 1937 → **1952** verde (+15 nuovi parity)
-- Function replicate bit-perfect: 360 → **366+** (incl. `FUN_1D242` nuova)
-- Commit: **14**
+- Function replicate bit-perfect: 360 → **366+**
+- Commit sessione: **15**
 - Files toccati: 25+
-- Hours: ~6 con 11 agenti paralleli
+
+### Critical correction (Rule 12 fail loud)
+
+**Errori precedenti corretti via MAME live write-tap**:
+- Cluster A 174 byte @ 0x1D40-0x1E40 originariamente classificato "stack/scratch cumulative" — **CONFERMATO**: 156 byte sono effettivamente stack M68K (SP oscilla 0x401da8-0x401e64 ogni frame, 5713 writes in window, 430 PC distinti). IRRIDUCIBILE.
+- **`FUN_1CABA NON chiamata` (precedente claim) è FALSO**: write-tap MAME live conferma 227 hits sull'entry @ f12000-99 (~2.2 call/frame). La replica `sub1CABATileRedraw` potrebbe ancora avere relevance — refinement TBD.
+- STRUCT @ 0x1C28 **già bit-perfect TS↔MAME** in window f12000-99 (entrambi `3fdc × 16`), contrariamente a quanto inizialmente diagnosticato.
 
 ### Next steps per chiudere ulteriore drift
 

@@ -3,28 +3,28 @@
 -- Output JSON.
 --
 -- Variabili d'ambiente:
---   MARBLE_1CABA_FRAMES    — CSV di frame numeri (default 12000..12004)
+--   MARBLE_1CABA_FRAMES    — CSV di frame numeri (default 200..210)
 --   MARBLE_1CABA_OUT       — file output (default /tmp/mame_1caba_trace.json)
---   MARBLE_1CABA_MAXCALLS  — max calls per frame (default 200)
+--   MARBLE_1CABA_MAXCALLS  — max calls totali (default 200)
+--   MARBLE_1CABA_RUN_UNTIL — frame max prima di forzare exit (default = last frame)
 
-local FRAMES_RAW = os.getenv("MARBLE_1CABA_FRAMES") or "12000,12001,12002,12003,12004"
+local FRAMES_RAW = os.getenv("MARBLE_1CABA_FRAMES") or "200,201,202,203,204,205,206,207,208,209"
 local OUT_PATH = os.getenv("MARBLE_1CABA_OUT") or "/tmp/mame_1caba_trace.json"
-local MAX_CALLS = tonumber(os.getenv("MARBLE_1CABA_MAXCALLS") or "300")
+local MAX_CALLS = tonumber(os.getenv("MARBLE_1CABA_MAXCALLS") or "200")
 
-local TARGET_FRAMES = {}
 local TARGET_SET = {}
+local LAST_FRAME = 0
 for tok in string.gmatch(FRAMES_RAW, "([^,]+)") do
     local f = tonumber(tok)
     if f ~= nil then
-        table.insert(TARGET_FRAMES, f)
         TARGET_SET[f] = true
+        if f > LAST_FRAME then LAST_FRAME = f end
     end
 end
-table.sort(TARGET_FRAMES)
-local LAST_FRAME = TARGET_FRAMES[#TARGET_FRAMES]
+LAST_FRAME = tonumber(os.getenv("MARBLE_1CABA_RUN_UNTIL") or tostring(LAST_FRAME))
 
 local FUN_1CABA_ENTRY = 0x1CABA
--- The RTS at end of FUN_1CABA is at 0x1CC5E (1 word, opcode 0x4E75).
+-- The RTS at end of FUN_1CABA is at 0x1CC5E (opcode 0x4E75).
 local FUN_1CABA_RTS = 0x1CC5E
 
 local cpu = nil
@@ -32,7 +32,11 @@ local mem = nil
 local frame_count = 0
 local calls = {}
 local pending_entry = nil
+local last_entry_pc = -1  -- dedup prefetch
+local last_exit_pc = -1
 local installed = false
+local total_entry_hits = 0
+local total_exit_hits = 0
 
 local function hex_region(addr, size)
     local parts = {}
@@ -52,7 +56,7 @@ end
 local function capture_entry_state()
     local lvlPtr = read_long_be(0x400474)
     local maxBound = 0
-    if lvlPtr ~= 0 and lvlPtr < 0xFFFFFF then
+    if lvlPtr ~= 0 and lvlPtr < 0x88000 then
         local ok, v = pcall(read_word_be, lvlPtr + 0x18)
         if ok then maxBound = v end
     end
@@ -64,27 +68,63 @@ local function capture_entry_state()
         bsearchPtr = read_long_be(0x40065A),
         maxBound = maxBound,
         struct_pre = hex_region(0x401C28, 32),
-        colBase = hex_region(0x400478, 0x100),
-        bsearchAlt = hex_region(0x40076E, 0x100),
-        pf_partial = hex_region(0xA00000, 0x800),
+        colBase = hex_region(0x400478, 0x200),
+        bsearchAlt = hex_region(0x40076E, 0x200),
+        -- pf and bsearch_data filled by capture_entry_state caller
+        pf = "",
+        bsearch_data = "",
     }
 end
 
-local debug_total_entry = 0
-local function on_entry_tap()
-    debug_total_entry = debug_total_entry + 1
-    if not TARGET_SET[frame_count] then return end
-    if #calls >= MAX_CALLS * #TARGET_FRAMES then return end
-    if pending_entry ~= nil then return end  -- already captured
-    pending_entry = capture_entry_state()
+local function capture_bsearch_blob(bsearchPtr)
+    -- bsearch base may be in workRam (0x400000+) or ROM. Cap dump to 2 KB.
+    -- Only dump if pointer lies in known safe ranges.
+    local addr = bsearchPtr
+    if addr == 0 then return "" end
+    local lo, hi = addr, addr + 0x800 - 1
+    local in_rom = (hi < 0x88000)
+    local in_wram = (lo >= 0x400000 and hi < 0x402000)
+    if not (in_rom or in_wram) then return "" end
+    return hex_region(addr, 0x800)
 end
 
-local function on_exit_tap()
-    if pending_entry == nil then return end
-    if not TARGET_SET[frame_count] then
-        pending_entry = nil
-        return
+local function capture_playfield_safe()
+    -- Playfield 0xA00000..0xA01FFF — read in pages to avoid bus errors.
+    local out = {}
+    local page = 0x100
+    for base = 0xA00000, 0xA01FFF, page do
+        local ok, hex = pcall(hex_region, base, page)
+        if ok then
+            table.insert(out, hex)
+        else
+            table.insert(out, string.rep("00", page))
+        end
     end
+    return table.concat(out)
+end
+
+local CAPTURE_ALL = (os.getenv("MARBLE_1CABA_ALL") == "1")
+
+-- Defer heavy state capture out of the tap. The tap just records "we are
+-- inside a call to FUN_1CABA": the actual capture happens in the next
+-- frame_done callback (which polls pending_entry and snapshots state).
+-- This avoids re-entrancy issues when reading large memory regions from
+-- inside an active read-tap callback (observed to silently disable the tap).
+local pending_marker = false
+local pending_marker_frame = -1
+
+local function on_entry_tap(offset)
+    total_entry_hits = total_entry_hits + 1
+    if not CAPTURE_ALL and not TARGET_SET[frame_count] then return end
+    if #calls >= MAX_CALLS then return end
+    if pending_marker then return end
+    pending_marker = true
+    pending_marker_frame = frame_count
+end
+
+local function on_exit_tap(offset)
+    total_exit_hits = total_exit_hits + 1
+    if pending_entry == nil then return end
     local exit_struct = hex_region(0x401C28, 32)
     table.insert(calls, {
         entry = pending_entry,
@@ -101,31 +141,35 @@ emu.register_frame_done(function()
     if not installed then
         mem:install_read_tap(FUN_1CABA_ENTRY, FUN_1CABA_ENTRY + 1, "1caba_entry",
             function(offset, data)
-                if offset == FUN_1CABA_ENTRY and pending_entry == nil then
-                    on_entry_tap()
+                if offset == FUN_1CABA_ENTRY then
+                    -- Note: prefetch may fire this multiple times for the same call.
+                    -- We dedup via pending_entry guard.
+                    on_entry_tap(offset)
                 end
                 return data
             end)
         mem:install_read_tap(FUN_1CABA_RTS, FUN_1CABA_RTS + 1, "1caba_exit",
             function(offset, data)
-                if offset == FUN_1CABA_RTS and pending_entry ~= nil then
-                    on_exit_tap()
+                if offset == FUN_1CABA_RTS then
+                    on_exit_tap(offset)
                 end
                 return data
             end)
         installed = true
     end
 
-    -- Reset prefetch dedup flags after each frame; m68k often prefetches
-    -- 1 word ahead, so a single call generates two reads at the same addr.
-    -- Resetting per-frame is too coarse; reset between entry/exit cycle.
     frame_count = frame_count + 1
-    pending_entry = nil  -- ensure no leak across frame boundary
 
+    if frame_count % 50 == 0 then
+        print(string.format("[mame_1caba_trace] fc=%d calls=%d eh=%d xh=%d",
+            frame_count, #calls, total_entry_hits, total_exit_hits))
+    end
     if frame_count >= LAST_FRAME then
         local out = assert(io.open(OUT_PATH, "w"))
         out:write("{\n")
         out:write(string.format('  "total_calls": %d,\n', #calls))
+        out:write(string.format('  "entry_hits": %d,\n', total_entry_hits))
+        out:write(string.format('  "exit_hits": %d,\n', total_exit_hits))
         out:write('  "calls": [\n')
         for i, c in ipairs(calls) do
             local sep = (i < #calls) and "," or ""
@@ -138,21 +182,24 @@ emu.register_frame_done(function()
                 '      "struct_post": "%s",\n' ..
                 '      "colBase": "%s",\n' ..
                 '      "bsearchAlt": "%s",\n' ..
-                '      "pf_partial": "%s"\n' ..
+                '      "bsearch_data": "%s",\n' ..
+                '      "pf": "%s"\n' ..
                 '    }%s\n',
                 c.entry.frame,
                 c.entry.tileX, c.entry.tileY,
                 c.entry.lvlPtr, c.entry.bsearchPtr, c.entry.maxBound,
                 c.entry.struct_pre, c.exit_struct,
-                c.entry.colBase, c.entry.bsearchAlt, c.entry.pf_partial,
+                c.entry.colBase, c.entry.bsearchAlt,
+                c.entry.bsearch_data,
+                c.entry.pf,
                 sep
             ))
         end
         out:write('  ]\n')
         out:write("}\n")
         out:close()
-        print(string.format("[mame_1caba_trace] total entry hits=%d saved %d calls to %s",
-            debug_total_entry, #calls, OUT_PATH))
+        print(string.format("[mame_1caba_trace] entry_hits=%d exit_hits=%d saved %d calls to %s",
+            total_entry_hits, total_exit_hits, #calls, OUT_PATH))
         manager.machine:exit()
     end
 end)
