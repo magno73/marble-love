@@ -40,6 +40,29 @@ obj0.x rimane bit-perfect 99/99 MAME ✓. Tutta la suite vitest pass + 11/11 sla
 
 **Cluster 0x0700 sceso solo 9B (non 74)** perche' il bank attivo MAME a f12000 era gia' = 1 e ora TS carica bank 1 al warmState (probe-cluster-histogram.ts:31 `slapsticBank: 1`). Le restanti 49B sono cascade del decoder che continua iterando con stream diverso da MAME (Path B con d6 cache divergente, anche con i nuovi banks). Servirebbe analisi byte-by-byte dell'output decoder a livello di token per chiudere completamente.
 
+### 2026-05-11 ~21:00 — Agent B9 decoder token-level (budget Opus esaurito mid-task)
+
+Agent Opus add3e93a ha esaurito budget prima del report finale, ma ha lasciato findings parziali importanti:
+
+1. **`ctrlAbs` reale al primo body = `0x080650`** (NON 0x7F0FB come pre-slapstic). Cade DENTRO lo slapstic ROM. Identificato via tap MAME `oracle/mame_decoder_stream_tap.lua`.
+2. **`extAbs = 0x02BE18`** in cartridge ROM (= bytes reali, ok).
+3. **Bank attivo MAME al primo body = 2**, NON 1 (probe `packages/cli/src/probe-0700-slapstic-bank.ts`):
+   ```
+   TS evolution bank:  3 (reset) → tick1=3 → tick2=1 → tick3-5=1 (stable)
+   MAME atteso:        2 al primo body
+   ```
+4. Output MAME tap: `/tmp/mame_decoder_stream.json` (29KB).
+5. Output TS instrumented: `/tmp/ts_decoder_stream.json` (17KB) — pronto per diff.
+
+**Mismatch bank 1 vs 2** = 1 unita' FSM. Probabili cause:
+- Una sub TS chiama `slapsticLookup` meno di MAME (= manca uno step nella sequenza alt1→alt2→alt3→alt4)
+- Bus `read8` non triggera la FSM su read pure dello slapstic
+- Sub upstream che TS skippa (es. `FUN_1344C` slapsticDispatcher)
+
+Fix richiede ~30-60 min Opus + briefing (budget esaurito stasera, riprende 23:00 Europe/Rome). Probe `mame_decoder_stream_tap.lua` + `probe-0700-token-trace.ts` lasciati committati per la prossima sessione.
+
+**Stima cascade fix**: cluster 0x0700 49B → ~0B + collateral su altri cluster (xscroll, P2 region). Drift gameplay 204 → ~140B.
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
