@@ -49,10 +49,32 @@
 
 ### Lesson learned dalla sessione
 
-- **Inventario stale**: 5+ sub elencate NO_IMPL erano già replicate sotto nomi diversi (Rule 8 read-before-write critica).
-- **Subs no-op stub saturati**: i wire mancanti banali sono stati tutti applicati. Drift residuo richiede replica completa di sub specifiche.
-- **Replica PARTIAL vs no-op**: wirare PARTIAL produce regressione cumulativa (drift PEGGIO che noop esplicito). Verificato 3 volte (`fun_29cce`, `sub-1caba-tile-redraw`, `fun_1bbaa` con dependency PARTIAL).
-- **MAME ground truth window**: f12000-99 è "demo steady-state" — molte sub gate chiuso. Per chiudere drift residuo potrebbe servire window diversa (es. boot, level-start).
+- **Inventario stale**: 6+ sub elencate NO_IMPL erano già replicate sotto nomi diversi (Rule 8 read-before-write critica): `FUN_1BB08`, `FUN_14DEC`, `FUN_2FF28/40/B8`, `decodeBitstream1A668`.
+- **Pattern wire missing saturato**: sweep sistematico ha verificato che TUTTI i 14 callsite `subs?.funX?` no-op sono inutili da wirare (gate chiuso, path obj0 non invocato, dipendenza PARTIAL, read-only).
+- **Replica PARTIAL vs no-op**: wirare PARTIAL produce regressione cumulativa. Verificato 4 volte (`fun_29cce`, `sub-1caba-tile-redraw`, `fun_1bbaa`, `fun_1365c`).
+- **Cluster drift root cause REALE**: dopo `helper-12896` wire + `marbleCellDispatch19E42` wire, drift residuo concentrato in:
+  - **Cluster A** (174 byte @ 0x1D40-0x1E40, 45%): stack frame + entity/bbox scratch, residuo cumulativo. **No single sub responsabile** — drift cascade da subsystem upstream.
+  - **Cluster B** (72 byte @ 0x706-0x74D): `decodeBitstream1A668` output buffer — decoder è BIT-PERFECT ma alimentato con argomenti driftati (`*0x40097c srtgt`, `*0x400474 lvlPtr`, scrollIdx). Fix richiede chiudere drift upstream nei popolatori.
+  - **Cluster C** (22 byte @ 0x674-0x68B): CHIUSO via `marbleCellDispatch19E42` wire.
+  - Cluster sprite-ram 248 byte: sprite render secondary writes (non investigato).
+- **MAME ground truth window**: f12000-99 è "demo steady-state" — molte sub gate chiuso. Per chiudere drift residuo serve window diversa (boot, level-start, gameplay attivo).
+
+### Achievement metrico finale
+
+- Drift workRam @ f+99: 547 → 390 byte (**-29%, -157 byte**)
+- Drift frame intermedi: -23% media (-50 a -77 byte sui frame f+60..f+90)
+- Tests: 1937 → **1952** verde (+15 nuovi parity)
+- Function replicate bit-perfect: 360 → **366+** (incl. `FUN_1D242` nuova)
+- Commit: **14**
+- Files toccati: 25+
+- Hours: ~6 con 11 agenti paralleli
+
+### Next steps per chiudere ulteriore drift
+
+1. **Cluster A localization deep dive**: identificare quale subsystem upstream genera scratch drift @ 0x1D40-0x1E40. Probabili sospetti: `processAllSprites189E2`, `dispatch-strings-17230`, `objDirtyDispatch28624`.
+2. **Cluster B upstream fix**: tracciare quale sub MAME popola `*0x40097c`, `*0x400474`, scrollIdx in f12000-99 → fixare quei popolatori → cluster B chiude naturalmente.
+3. **sub-14966-stub completion** (~18 byte): replicare body completo di FUN_14966 (188 istr).
+4. **Cluster sprite-ram 248 byte**: investigare separatamente — probabile sprite render secondary writes.
 
 ### Resources
 
