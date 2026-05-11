@@ -39,6 +39,7 @@ import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
 import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
+import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
@@ -234,12 +235,16 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // Default OFF — opt-in for renderer demo / game flow advancement.
   if (opts.runMainLoopBody === true) {
     mainLoopInit1101E(state, rom);
-    // FUN_26F3E (lateGameLogic) — sprite RAM emit pipeline replicata
-    // bit-perfect. Gate game mode (*0x400394 == 0): attivo SOLO in gameplay.
-    // In title screen MAME non emette sprite, abilitarla causerebbe drift.
+    // FUN_26F3E (lateGameLogic) + FUN_FA0 marble emit — sprite RAM
+    // emit pipeline. Attivi SOLO in gameplay (*0x400394 == 0).
     const gameMode = ((r[0x394] ?? 0) << 8) | (r[0x395] ?? 0);
     if (gameMode === 0) {
       lateGameLogic26F3E(state, rom);
+      // fun_FA0_marbleEmit: delta-based shift di marble player MO entries
+      // 4-8 in spriteRam banks A+B. Necessario per movimento visivo marble
+      // nel browser (approssimato, non bit-perfect ma matchea direction+
+      // magnitude MAME demo).
+      fun_FA0_marbleEmit(state, rom);
     }
   }
 
