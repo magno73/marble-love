@@ -52,6 +52,9 @@ import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 import { refreshHelper1912C } from "./refresh-helper-1912c.js";
 import { refreshHelper13EE6 } from "./refresh-helper-13ee6.js";
 import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
+import { scrollRange144E4 } from "./scroll-range-144e4.js";
+import { scriptSlotStep13068 } from "./script-slot-step-13068.js";
+import { claimScriptSlot } from "./script-slot-claim.js";
 
 const WRAM = 0x00400000;
 
@@ -237,9 +240,18 @@ export function refreshFrame10FCE(
   // 00010FCE: jsr 0x00013EE6
   // Wire fun1344c = slapsticDispatcher1344C: replica esistente che pulisce
   // PENDING_RECORD @ 0x400970 (cluster Misc Sub-A: byte 0x971..0x973).
+  // Wire fun144e4 = scrollRange144E4: dispatcher di scroll-row che chiama
+  // scriptRectDispatch12DFA (FUN_12DFA) → popola gli slot @ 0x400a9c quando
+  // la riga scroll attraversa una rect-list boundary (cluster slot 0 spawn
+  // @ f12056 in MAME ground truth). FUN_144E4 riceve oldTarget e newTarget
+  // come long sullo stack, ma legge solo i low word — passiamo i due long
+  // così come spinti dal binario e scrollRange144E4 fa il sext16 internamente.
   (subs.fun13EE6 ?? ((s) => {
     refreshHelper13EE6(s, rom, {
       fun1344c: (s2, r) => slapsticDispatcher1344C(s2, r),
+      fun144e4: (s2, r, oldTarget, newTarget) => {
+        scrollRange144E4(s2, r, oldTarget & 0xffff, newTarget & 0xffff);
+      },
     });
   }))(state);
 
@@ -336,7 +348,18 @@ export function refreshFrame10FCE(
   // 0001100A: jsr 0x00012FD0
   // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato: gating *0x40075c == 0
   // in MAME @ 2400, fix non applicabile per il drift cluster B residuo.)
-  (subs.stateDispatch12FD0 ?? stateDispatch12FD0)(state);
+  // Wire fun_12d46 = claimScriptSlot (alloca slot @ 0x400a9c per script
+  // 0x1d854; gated da gameMode==2 + obj+0x1b∈{9,a} — in demo gameplay
+  // gameMode=1, quindi il gate è falso ma il wire è canonical per parity).
+  // Wire fun_13068 = scriptSlotStep13068 (avanza state dei 25 slot @
+  // 0x400a9c — necessario per progredire s1a=3→2→...→0 dopo l'allocazione
+  // via scrollRange144E4 → scriptRectDispatch12DFA chain).
+  (subs.stateDispatch12FD0 ?? ((s) => {
+    stateDispatch12FD0(s, {
+      fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
+      fun_13068: (slotPtr) => { scriptSlotStep13068(s, rom, slotPtr); },
+    });
+  }))(state);
 
   // 00011010: addq.b #1, (0x004003F0).l
   addByte(state, FRAME_CTR_ADDR, 1);
