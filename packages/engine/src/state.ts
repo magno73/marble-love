@@ -117,6 +117,14 @@ export interface TickClock {
   cpuTicks: u32;
   /** Sub-frame per IRQ scanline (TBD). */
   scanline: u16;
+  /**
+   * Counter incrementato ad ogni invocazione di `tick(runMainLoopBody:true)`.
+   * `mainTick` esegue `mainLoopInit1101E + lateGameLogic26F3E` SOLO quando
+   * `(mainLoopBodyTicks & 1) === 0` (= ogni 2 tick). Replica MAME FUN_117B2
+   * che chiama `FUN_28DEA` (vblank-wait) 2× per iterazione → body ogni 2
+   * vsync = 30Hz game-tick rate.
+   */
+  mainLoopBodyTicks: u32;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -154,7 +162,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0) },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0) },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },
