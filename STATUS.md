@@ -128,6 +128,45 @@ Ogni Rule 12 ha risparmiato ore o giorni di lavoro su strategie sbagliate. Le ip
 
 **Prossima decisione utente**: tra B1/B2/B3 (task #168/#169/#170) quale indagare prima?
 
+### 2026-05-11 tarda sera — agent B2/B3/B4 + Rule 12 #7
+
+**B2 sub parity** (agent a05f12a6):
+- `FUN_26F3E` (lateGameLogic) = **bit-perfect 100/100** (escluso wrapper artifact `0x39a`)
+- `sub1CABATileRedraw` = NON wired, ma impact ZERO sul drift attract (MAME ha struct costante 3fdc che TS preserva via warm)
+- I 215B non vengono da queste 2 sub.
+
+**B3 per-byte map** (agent aa0307cf): `docs/gameplay-drift-byte-map.md`. Top finding = 6 byte "obj2 struct 0x01DF..0x01F7" early-diverge a f+1.
+
+**B4 obj2 investigation** (agent a5210503) — **Rule 12 #7**: "obj2" era misnomer.
+- Zona `0x01DC..0x02BC` = **scene-obj rect-list** (32 slot × 14B): `[typeCode, subIdx, xMin, yMin, zMin, xMax, yMax, zMax]`, inizializzata da `FUN_28CA6` e popolata da `FUN_1B12A bufferFill` (ognuno per ogni entity).
+- Solo 2 obj player esistono in Marble: obj0 (P1) @ 0x18, obj1 (P2) @ 0xFA. NON c'e' obj2.
+- Tentativo phase-flip body 30Hz (tick 1 = BODY invece di tick 2 = BODY) basato su "rect bbox cambia tra MAME f+0 e f+1" → ROLLED BACK: drift 387→442, obj0.x f+99 diverge.
+- Dati misurati: MAME aggiorna sub di **tipi diversi in frame diversi** — rect bbox tra frame dispari (f0→f1, f2→f3), obj0.x tra frame pari (f1→f2, f3→f4). Non e' phase mismatch unico, e' artefatto di quando MAME prende snapshot dentro il frame.
+
+### Stato finale drift residuo
+
+```
+387 byte totali
+├─ 172B stack-residue (escluso da invariante)
+└─ 215B gameplay
+   ├─ 74B cluster 0x0700 (decode buffer, decodeBitstream1A668)
+   ├─ 27B cluster 0x0640 (velocity globals)
+   ├─ 19B rect-slot 0x01DC..0x02BC (scene-obj rect-list)
+   ├─ 15B cluster 0x0a00 (P2 region)
+   └─ ~80B sparsi
+```
+
+**7 Rule 12 fail-loud in serie** hanno reorientato la roadmap su misurazione vs intuizione:
+1. Consumer *0x400006 mancante → falsificato
+2. P2.slot0 drift inizia f+68 su x_long → falsificato (inizia f+8 su vx)
+3. Secondo callsite JSR 158F6 → falsificato
+4. Cadenza dinamica 30/60Hz MAME → falsificato (30Hz puro)
+5. Wire 30 sub stack-heavy chiude cluster → falsificato (430 PC distinte)
+6. SUB_CYCLE_ESTIMATE calibration chiude cadenza → falsificato (gate corretto e' "behavior-correct" anche se "magnitude-wrong")
+7. obj2 cluster phase-flip body 30Hz → falsificato (drift sale, scene-obj rect-list)
+
+Lezione strutturale: ogni cluster di drift residuo ha root cause **non riducibile a ipotesi superficiale**. Diminishing returns alti sui prossimi 215B.
+
 ## Survey reference codebases M68K (2026-05-11 sera)
 
 Per ridurre i **172B stack residue** (cluster #2-6 `0x1d40..0x1e7f`) serve un mini register file TS (D0-D7/A0-A7/PC/SR) con semantica `link/unlk/movem.l/move (d8,A6)` corretta.
