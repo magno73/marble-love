@@ -54,6 +54,7 @@ import { refreshHelper13EE6 } from "./refresh-helper-13ee6.js";
 import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { scriptSlotStep13068 } from "./script-slot-step-13068.js";
+import { helper12896 } from "./helper-12896.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
 
 const WRAM = 0x00400000;
@@ -357,7 +358,11 @@ export function refreshFrame10FCE(
   (subs.stateDispatch12FD0 ?? ((s) => {
     stateDispatch12FD0(s, {
       fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
-      fun_13068: (slotPtr) => { scriptSlotStep13068(s, rom, slotPtr); },
+      fun_13068: (slotPtr) => {
+        scriptSlotStep13068(s, rom, slotPtr, {
+          fun12896: (st, sp) => { helper12896(st, rom, sp); },
+        });
+      },
     });
   }))(state);
 
