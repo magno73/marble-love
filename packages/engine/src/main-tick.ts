@@ -67,6 +67,10 @@ import { trackballInputTick } from "./trackball-input.js";
 import { gameMainGate } from "./game-main-gate.js";
 import type { GameMainGateOptions } from "./game-main-gate.js";
 import { particleBounce } from "./particle-bounce.js";
+import { CYCLES_PER_VBLANK } from "./m68k/cycle-table.js";
+import { addCpuCycles, resetCpuCycles } from "./m68k/clock.js";
+import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
+import { as_u32, raw } from "./wrap.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -234,31 +238,78 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
   // Default OFF — opt-in for renderer demo / game flow advancement.
   //
-  // ─── Game-tick gating @ 30Hz ──────────────────────────────────────────
-  // Il main thread (`FUN_117B2`, ROM 0x117B2..0x118CE) NON gira ogni vsync:
-  // dopo `jsr 0x26f3e` (lateGameLogic, 0x118AA) il loop body fa:
+  // ─── Game-tick gating dinamico 30/60Hz ────────────────────────────────
+  // Il main thread (`FUN_117B2`, ROM 0x117B2..0x118CE) NON gira ogni vsync.
+  // Dopo `jsr 0x26f3e` (lateGameLogic, 0x118AA) il loop body fa:
   //   0x118B0  tst.b *0x400016        ; vblank mailbox set by IRQ4
   //   0x118B8  bne  0x118C0
-  //   0x118BA  jsr  0x28DEA           ; clear+spin-wait su 0x400016
+  //   0x118BA  jsr  0x28DEA           ; spin-wait #1 (saltato se mailbox!=0)
   //   0x118C0  move.b #1, *0x40039A
-  //   0x118C8  jsr  0x28DEA           ; SECOND clear+spin-wait
+  //   0x118C8  jsr  0x28DEA           ; spin-wait #2 (sempre)
   //   0x118CE  bra  0x11804           ; loop top
-  // In steady-state attract il body completa in <1 vsync → mailbox==0 a 0x118B0
-  // → si entra in ENTRAMBE le `jsr 0x28DEA`, ognuna delle quali aspetta il
-  // prossimo IRQ4 (= 1 vsync). Conclusione: il body gira ogni 2 vsync (= 30Hz).
-  // Confermato da `/tmp/mame_100f.json`: obj0.x cambia a f12000→f12002→f12004…
-  // (= integration ogni 2 frame, MAI ogni frame).
   //
-  // Replica: `mainLoopBodyTicks` counter; eseguo body solo a tick PARI
-  // (= aspetto 1 vsync prima del primo body run). Phase verificata vs MAME
-  // warm-state f12000: il body è già stato eseguito a f12000, quindi
-  // f12001 (= primo tick TS dopo warm) = NO run, f12002 = run, ...
+  // Path 30Hz (body veloce, *0x400016 == 0 a fine body):
+  //   - entra in ENTRAMBE le `jsr 0x28DEA` → 2 vsync di wait → body ogni 2
+  //     vsync. Cadenza 30Hz.
+  // Path 60Hz (body lento, IRQ4 ha settato *0x400016 = 1 durante il body):
+  //   - skip prima `jsr 0x28DEA` → solo 1 vsync di wait → body extra dopo
+  //     1 vsync invece di 2 → cadenza 60Hz transitoria.
+  //
+  // Replica: per ogni tick (= 1 vsync simulato a 60Hz):
+  //   - `mainLoopBodyTicks` dispari → tick "wait", skip body, increment.
+  //   - `mainLoopBodyTicks` pari → tick "body candidate". Reset cpuTicks,
+  //     run body, accumula stime cicli sub. Se cpuTicks > CYCLES_PER_VBLANK:
+  //     setta mailbox (workRam[0x16]) = 1, e NON incrementa
+  //     mainLoopBodyTicks (resta pari → next tick è ancora body).
+  //     Altrimenti incrementa (next tick = wait).
+  //
+  // Phase warm-state f12000: body già eseguito a f12000, quindi f12001
+  // (= primo tick TS) = wait, f12002 = body, ecc. Inizializzazione
+  // mainLoopBodyTicks=0 → primo tick è "body" e poi alterna.
+  //
+  // **Nota cambio convenzione:** prima il gate era `mainLoopBodyTicks & 1 == 0`
+  // dopo l'increment (= run a 0, 2, 4...). Ora controlliamo PRIMA del run:
+  // even = body, odd = wait. Stessa sequenza di body run (ticks 0,2,4...
+  // diventano body), ma il counter è ora 0,1,2,3... lineare con il tick.
+  const OFF_VBLANK_MAILBOX = 0x16;
   if (opts.runMainLoopBody === true) {
+    // Increment first (matches previous TS convention: warm-state assumed
+    // mainLoopBodyTicks=0 → first tick post-warm gets value 1 → ODD = wait,
+    // second tick gets 2 → EVEN = body candidate). Phase verificata vs
+    // MAME warm-state f12000: body già stato eseguito a f12000, quindi
+    // primo TS tick (= f12001) = WAIT, secondo (= f12002) = BODY.
     state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks + 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
-    if ((state.clock.mainLoopBodyTicks & 1) === 0) {
+    const tickIsBody = (state.clock.mainLoopBodyTicks & 1) === 0;
+    if (!tickIsBody) {
+      // tick "wait" (corrisponde a uno dei due spin-wait MAME).
+      // No-op: nessun body, mainLoopBodyTicks già incrementato sopra.
+    } else {
+      // tick "body candidate": replica della sequenza FUN_117B2.
+      // clr.b (mailbox) — IRQ4 simulato la setterà se cpuTicks > vblank.
+      r[OFF_VBLANK_MAILBOX] = 0;
+      resetCpuCycles(state);
+
+      // Body run: mainLoopInit1101E (dispatcher) + lateGameLogic26F3E.
+      // Accumula overhead noti; il body delle sub è contato in refreshFrame10FCE.
+      addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_1101E_OVERHEAD"] ?? as_u32(40));
       mainLoopInit1101E(state, rom);
-      // FUN_26F3E (lateGameLogic) — chain MAME canonical.
+      // FUN_26F3E (lateGameLogic) — chain MAME canonical, post-body.
+      // Stima fast in attract (*0x3E2 == 0) vs full in gameplay.
+      const fun26F3EKey = (r[0x3e2] ?? 0) === 0 ? "FUN_26F3E_FAST" : "FUN_26F3E";
+      addCpuCycles(state, SUB_CYCLE_ESTIMATE[fun26F3EKey] ?? as_u32(2200));
       lateGameLogic26F3E(state, rom);
+
+      // tst.b *0x400016: IRQ4 mailbox set durante body? Settata se cpuTicks
+      // ha sforato un vblank intero (body lento → IRQ4 firato durante body).
+      // In quel caso, MAME esegue un body extra (skip primo spin-wait).
+      // Per replicare: decrementiamo il counter così il prossimo tick
+      // sarà di nuovo "even" → body extra.
+      if (raw(state.clock.cpuTicks) > raw(CYCLES_PER_VBLANK)) {
+        r[OFF_VBLANK_MAILBOX] = 1;
+        // Riporta il counter PRIMA dell'increment → prossimo tick: counter
+        // viene riportato a "even" (body) invece di "odd" (wait).
+        state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks - 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
+      }
     }
     // NB: fun_FA0_marbleEmit (= surrogate empirico) RIMOSSO. Il marble si
     // muoverà bit-perfect quando wirate le sub MAME mancanti (helper1BC88

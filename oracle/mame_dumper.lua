@@ -213,20 +213,24 @@ local function read_state()
         marble_type = mem:read_u8(0x400018 + 0x19),
         marble_anim = mem:read_u8(0x400018 + 0x70),
         marble_st   = mem:read_u8(0x400018 + 0xD8),
-        -- Hash dell'intera Work RAM 8 KB (signal forte per qualunque divergenza)
-        -- Esclude 0x440-0x444 (stack low water debug-only).
+        -- Hash dell'intera Work RAM 8 KB. Esclude zone stack 68k:
+        --   0x440-0x447   (stack low water debug)
+        --   0x1D40-0x1E7F (stack scratch chain attiva, ~430 PC distinte)
+        --   0x1EE0-0x1EFF (stack low water + sentinel bsr)
         work_ram_hash = crc32_mem(0x400000, 0x440)
-                      ~ crc32_mem(0x400448, 0x2000 - 0x448),
-        -- Hash per regione (32 regioni di 0x100 byte). Indice = offset/0x100.
-        -- Region 4 esclude 0x440-0x447 (stack water).
+                      ~ crc32_mem(0x400448, 0x1D40 - 0x448)
+                      ~ crc32_mem(0x401E80, 0x1EE0 - 0x1E80)
+                      ~ crc32_mem(0x401F00, 0x2000 - 0x1F00),
+        -- Hash per regione (32 regioni di 0x100 byte). Vedi work_ram_regional_hashes.
         work_ram_hashes = work_ram_regional_hashes(),
     }
 end
 
 -- Calcola CRC32 per 32 regioni di 0x100 byte.
--- Esclusioni:
---   Region 4 (0x400-0x4FF): esclude 0x440-0x447 (stack low water debug)
---   Region 30 (0x1E00-0x1EFF): esclude 0x1EE0-0x1EFF (zona stack 68k residue)
+-- Esclusioni (stack-residue 68K):
+--   Region 4 (0x400-0x4FF): esclude 0x440-0x447 (8 byte stack water)
+--   Region 29 (0x1D00-0x1DFF): esclude 0x1D40-0x1DFF (192 byte stack scratch)
+--   Region 30 (0x1E00-0x1EFF): esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
 function work_ram_regional_hashes()
     local h = {}
     for i = 0, 31 do
@@ -234,8 +238,13 @@ function work_ram_regional_hashes()
         if i == 4 then
             h[i + 1] = crc32_mem(0x400400, 0x40)
                      ~ crc32_mem(0x400448, 0x100 - 0x48)
+        elseif i == 29 then
+            -- 0x1D00-0x1DFF esclude 0x1D40-0x1DFF (192 byte stack scratch)
+            h[i + 1] = crc32_mem(0x401D00, 0x40)
         elseif i == 30 then
-            h[i + 1] = crc32_mem(0x401E00, 0xE0)
+            -- 0x1E00-0x1EFF esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
+            -- (rimane solo 0x1E80-0x1EDF = 96 byte)
+            h[i + 1] = crc32_mem(0x401E80, 0x60)
         else
             h[i + 1] = crc32_mem(start, 0x100)
         end

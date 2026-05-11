@@ -53,15 +53,22 @@ export interface TraceFrame {
   stats: { score: number; lives: number; timer: number; bonus: number };
   /** Input letto (post-MMIO). */
   input: { dx: number; dy: number; buttons: number };
-  /** CRC32 della Work RAM 8 KB ($400000-$401FFF), escluso `0x440-0x447`
-   *  (stack low water mark, debug-only). Permette di rilevare divergenze
-   *  ovunque senza dumpare 8 KB per frame.
+  /** CRC32 della Work RAM 8 KB ($400000-$401FFF), esclude zone stack 68k:
+   *    - `0x440-0x447`  (stack low water debug)
+   *    - `0x1D40-0x1E7F` (stack scratch chain attiva, ~320 byte, scritta da
+   *      ~430 PC distinte durante body — effetto compilatore C originale)
+   *    - `0x1EE0-0x1EFF` (stack low water + sentinel `bsr`)
    *
-   *  Nel trace MAME: calcolato da `oracle/mame_dumper.lua`. Nel reimpl: TBD
-   *  Phase 4-6 (calcolato sulla Uint8Array `state.workRam`). */
+   *  TS non emula il register file M68K bit-perfect → divergenza spuria su
+   *  queste zone. Esclusione coerente con precedente 0x1EE0-0x1EFF (STATUS.md).
+   *
+   *  Nel trace MAME: calcolato da `oracle/mame_dumper.lua`. */
   workRamHash: number;
   /** CRC32 per regione (32 regioni di 0x100 byte = 256). Indice = offset/0x100.
-   *  Region 4 (0x400-0x4FF) esclude `0x440-0x447` (stack low water).
+   *  Regioni con stack-residue escluso:
+   *    - Regione 4 (0x400-0x4FF): esclude 0x440-0x447
+   *    - Regione 29 (0x1D00-0x1DFF): esclude 0x1D40-0x1DFF
+   *    - Regione 30 (0x1E00-0x1EFF): esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
    *
    *  Permette al diff di puntare alla regione specifica che diverge,
    *  invece di limitarsi a "workRamHash mismatch". */
@@ -135,10 +142,15 @@ export function frameFromState(s: GameState): TraceFrame {
       dy: raw(s.input.trackballDy),
       buttons: raw(s.input.buttons),
     },
-    /** CRC32 della Work RAM 8 KB (esclude 0x440-0x447 stack low water).
-     *  `>>> 0` forza il risultato a u32 unsigned (l'XOR può produrre signed). */
+    /** CRC32 della Work RAM 8 KB (esclude zone stack 68k 0x440-0x447,
+     *  0x1D40-0x1E7F, 0x1EE0-0x1EFF). `>>> 0` forza u32 unsigned. */
     workRamHash:
-      (crc32(s.workRam, 0, 0x440) ^ crc32(s.workRam, 0x448, 0x2000 - 0x448)) >>> 0,
+      (
+        crc32(s.workRam, 0, 0x440) ^
+        crc32(s.workRam, 0x448, 0x1D40 - 0x448) ^
+        crc32(s.workRam, 0x1E80, 0x1EE0 - 0x1E80) ^
+        crc32(s.workRam, 0x1F00, 0x2000 - 0x1F00)
+      ) >>> 0,
     workRamHashes: workRamRegionalHashes(s.workRam),
     ...(dumps !== undefined ? { workRamDumps: dumps } : {}),
   };
@@ -147,13 +159,18 @@ export function frameFromState(s: GameState): TraceFrame {
 /**
  * Calcola CRC32 per 32 regioni di 0x100 byte ciascuna sulla Work RAM 8 KB.
  *
- * Esclusioni (stack-residue / debug-only, non parte del game state):
+ * Esclusioni (stack-residue 68K / debug-only, non parte del game state):
  *   - Regione 4 (0x400-0x4FF): esclude `0x440-0x447` (stack low water debug)
- *   - Regione 30 (0x1E00-0x1EFF): esclude `0x1EE0-0x1EFF` (zona stack 68k:
- *     SP parte da 0x401F00 e scende. In attract_mode tipicamente scende fino
- *     a ~0x401EE8 per chiamate annidate, lasciando residui dopo il pop.
- *     Il nostro reimpl TS non ha stack 68k → divergenza spuria. Esclusione
- *     conservativa dei 32 byte più alti della regione, validata su attract_mode.)
+ *   - Regione 29 (0x1D00-0x1DFF): esclude `0x1D40-0x1DFF` (stack scratch
+ *     chain attiva: scritto da ~430 PC distinte durante body, locali da
+ *     `link A6,#-N` + `movem.l ...,-(SP)` + `move (d8,A6)`. TS non emula
+ *     register file M68K → divergenza spuria. Confermato Rule 12: top-1 PC
+ *     copre 6% delle writes, helper121B8 prologue solo 1% — non riducibile
+ *     via wire di poche sub.)
+ *   - Regione 30 (0x1E00-0x1EFF): esclude `0x1E00-0x1E7F` (continuazione
+ *     stack scratch) + `0x1EE0-0x1EFF` (stack low water + sentinel `bsr`).
+ *     SP parte da 0x401F00 e scende fino a ~0x401D40 per chain annidate
+ *     gameplay-attivo, lasciando residui dopo il pop.
  *
  * Output: array di 32 u32, indice = offset / 0x100.
  */
@@ -162,11 +179,15 @@ function workRamRegionalHashes(buf: Uint8Array): number[] {
   for (let i = 0; i < 32; i++) {
     const start = i * 0x100;
     if (i === 4) {
-      // 0x400-0x4FF con buco 0x440-0x447 (8 byte stack water)
+      // 0x400-0x4FF esclude 0x440-0x447 (8 byte stack water)
       out[i] = (crc32(buf, 0x400, 0x40) ^ crc32(buf, 0x448, 0x100 - 0x48)) >>> 0;
+    } else if (i === 29) {
+      // 0x1D00-0x1DFF esclude 0x1D40-0x1DFF (192 byte stack scratch)
+      out[i] = crc32(buf, 0x1D00, 0x40) >>> 0;
     } else if (i === 30) {
-      // 0x1E00-0x1EFF con buco 0x1EE0-0x1EFF (32 byte stack residue)
-      out[i] = crc32(buf, 0x1E00, 0xE0) >>> 0;
+      // 0x1E00-0x1EFF esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
+      // (rimane solo 0x1E80-0x1EDF = 96 byte)
+      out[i] = crc32(buf, 0x1E80, 0x60) >>> 0;
     } else {
       out[i] = crc32(buf, start, 0x100) >>> 0;
     }
