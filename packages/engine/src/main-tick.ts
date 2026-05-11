@@ -278,6 +278,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     // second tick gets 2 → EVEN = body candidate). Phase verificata vs
     // MAME warm-state f12000: body già stato eseguito a f12000, quindi
     // primo TS tick (= f12001) = WAIT, secondo (= f12002) = BODY.
+    //
+    // NOTA (Rule 12): tentativo di phase-flip a "tick 1 = BODY" basato su
+    // osservazione "rect bbox cambia tra MAME f+0 e f+1" e' stato rolled
+    // back. Dati: 50 body in 99 tick vs MAME 49 in 100 frame (= TS avanti
+    // di 1 step). Drift gameplay 215 → 270, obj0.x diverge a f+99.
+    // MAME aggiorna sub di tipi diversi in frame diversi (rect a dispari,
+    // obj0.x a pari) — non e' phase mismatch unico, e' artefatto di
+    // timing snapshot intra-frame.
     state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks + 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
     const tickIsBody = (state.clock.mainLoopBodyTicks & 1) === 0;
     if (!tickIsBody) {
