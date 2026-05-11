@@ -134,7 +134,15 @@ def main() -> int:
     # Le ROM sono piazzate al loro offset esatto da ROM_START(marble),
     # interleaved big-endian.
     OUT_SIZE = 0x88000
-    out = bytearray(b"\xff" * OUT_SIZE)
+    # MAME default ROM_REGION flag = ROMREGION_ERASE00 (zero-fill) — verifica
+    # atarisy1.cpp:976 `ROM_REGION( 0x88000, "maincpu", 0 )` (terzo arg = 0).
+    # Le zone non popolate da ROM_LOAD (es. 0x30000..0x7FFFF) restano a 0x00.
+    # Bus M68K legge bit-perfect da quella region. decodeBitstream1A668
+    # consuma `ctrlStream=0x7F0FB` durante body f12002: TS pre-fillato a
+    # 0xFF leggeva 0xFFFFFFFF → token 0x3FFF → Path A → output uniforme
+    # 0x0FFF (= 74B drift cluster 0x0700). Allineato a 0x00 → token 0x0000
+    # → Path B → output bit-perfect MAME.
+    out = bytearray(b"\x00" * OUT_SIZE)
 
     # BIOS sta in atarisy1.zip (parent set MAME); cartridge in marble.zip.
     bios_zip = args.bios_zip
