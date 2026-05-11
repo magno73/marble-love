@@ -77,6 +77,57 @@ Cycle counter infrastructure presente ma mailbox vblank mai triggerata (body att
 
 **Next**: task #166 — calibration `SUB_CYCLE_ESTIMATE` vs MAME real cycle measurement (PC tap entry/exit FUN_10FCE). Senza ground truth dei cicli, la cadenza dinamica resta non riproducibile.
 
+### 2026-05-11 notte fonda — cadenza dinamica FALSIFICATA (Rule 12 #6)
+
+Agent a7c1e371 ha misurato cicli reali MAME su 100 frame attract via `mame_body_cycles.lua` (read-tap su entry FUN_10FCE 0x10FCE + exit 0x1101C, machine.time delta × 7.159 MHz):
+
+```
+49 bodies in 100 frame, gap=2 SEMPRE → 30Hz costante
+body_cycles range  = 111512..157176
+body_cycles p50/p95= 122546/146206
+bodies > 1 vblank  = 36/49 (73%)
+bodies > 2 vblank  = 0/49 (0%) ← chiave
+```
+
+**MAME e' 30Hz puro in attract f12000-12099. Mai 60Hz.**
+
+Il pattern "frame consecutivi 12007/12008/12009" osservato dall'agent #156 (tap PC 0x017224 = positionUpdate FUN_1706C + 0x025FAE = vectorScale FUN_25E7C) era ARTEFATTO: quelle sub interne sono chiamate piu' volte dentro lo stesso body (per obj0 + P1 + P2 + scratch obj), il tap sparava in piu' punti del body singolo, NON indicava body extra.
+
+Logica binaria FUN_117B2:
+- body < 1 vblank → mailbox=0 → 2 spin-wait → 30Hz
+- 1 vblank < body < 2 vblank → mailbox=1 → 1 spin-wait → ANCORA 30Hz (body+wait=2vblank)
+- body > 2 vblank → 60Hz (mai osservato in attract)
+
+In attract il body sta sempre nel range mid (1<body<2 vblank). Le costanti SUB_CYCLE_ESTIMATE (32K stimate) sono sotto-magnitude (vs ~123K real) ma **behavior-correct** perche' producono 30Hz coerente con MAME. Modificarle per matchare MAME farebbe scattare false-positive 60Hz nel gate `cpuTicks > CYCLES_PER_VBLANK` (= il TS reagirebbe a 1 vblank, ma il binario MAME a 2 vblank).
+
+### Diagnosi vera del drift 215B gameplay
+
+NON e' cadenza. Cause candidate (task #168, #169, #170):
+
+1. **IRQ4 interleaving** — IRQ4 (60Hz) spara DURANTE il body M68K in MAME, puo' scrivere workRam mid-body (palette anim, sound mailbox, scroll counters). TS simula IRQ4 dopo. Se body legge mid-execution un byte modificato dall'IRQ, TS diverge.
+2. **Sub replicas imperfette** — sub1CABATileRedraw (227 call/99f attract), FUN_26F3E phase 1+2 (bufferFill1B12A × 32 + sortAdjacentObjects × 3), possibili divergenze bit-by-bit non ancora testate via parity dedicata.
+3. **Ordini di chiamata** — TS chain `objectScanDispatch251DE → helper121B8` puo' invocare callback in ordine leggermente diverso da MAME → cross-byte dependencies producono drift sparso ~99B.
+
+### Lezioni apprese (5 Rule 12 in sequenza)
+
+Le diagnosi successive si sono auto-corrette:
+1. "Consumer di 0x400006 mancante" → falsificato (byte boolean self-contained)
+2. "drift P2.slot0 inizia a f+68 su x_long" → falsificato (inizia a f+8 su vx)
+3. "secondo callsite JSR 158F6" → falsificato (unico callsite, gia' wired)
+4. "cadenza dinamica MAME 30/60Hz" → falsificato (MAME 30Hz puro, body mai >2 vblank)
+5. "wire 30 sub stack-heavy chiude cluster" → falsificato (430 PC distinte, top-1=6%)
+
+Ogni Rule 12 ha risparmiato ore o giorni di lavoro su strategie sbagliate. Le ipotesi che sembravano "ovvie" da pattern superficiali erano regolarmente sbagliate. **Misurazione bit-by-bit batte intuizione architetturale.**
+
+### Stato finale opzione A
+
+- Cycle counter infrastructure presente e funzionante (gate mailbox attivo ma mai triggera, comportamento corretto).
+- Register file TS validato (2879/2879 Tom Harte pass).
+- Cluster stack residue 172B escluso da invariante (decisione utente, pattern precedente).
+- Drift gameplay residuo: 215B (cluster #1 0x0700 74B + #8/10 0x0640 27B + #9 0x0a00 15B + sparsi 99B).
+
+**Prossima decisione utente**: tra B1/B2/B3 (task #168/#169/#170) quale indagare prima?
+
 ## Survey reference codebases M68K (2026-05-11 sera)
 
 Per ridurre i **172B stack residue** (cluster #2-6 `0x1d40..0x1e7f`) serve un mini register file TS (D0-D7/A0-A7/PC/SR) con semantica `link/unlk/movem.l/move (d8,A6)` corretta.
