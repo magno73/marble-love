@@ -125,6 +125,16 @@ export interface TickClock {
    * vsync = 30Hz game-tick rate.
    */
   mainLoopBodyTicks: u32;
+  /**
+   * D6 entry value per la prossima invocazione di `decodeBitstream1A668`.
+   * MAME PRESERVA D6 cross-sub via movem; TS lo passa esplicitamente.
+   * Default 0. Override possibile via probe/tabella indexata da decoder
+   * body count per replay bit-perfect MAME.
+   */
+  decoderD6Init: u16;
+  /** Counter invocazioni del decoder. Incrementato in refresh-helper-13ee6
+   *  ad ogni chiamata. Usato per indicizzare la tabella D6 entry. */
+  decoderCallCount: u32;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -162,7 +172,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0) },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0) },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },

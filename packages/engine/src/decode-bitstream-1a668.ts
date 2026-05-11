@@ -366,6 +366,7 @@ export function decodeBitstream1A668(
   outAbs: number,
   ctrlAbs: number,
   extAbs: number,
+  d6Init: number = 0,
 ): void {
   // Stato dei "registri" replicato in JS.
   let a2 = outAbs >>> 0; // output write ptr
@@ -382,14 +383,10 @@ export function decodeBitstream1A668(
   // D5: scratch (14-bit token, indices, lookup result).
   let d5 = 0;
   // D6: auto-increment base for path B (preserved across iters).
-  // KNOWN BUG (Rule 12, agent B9): MAME PRESERVA D6 cross-sub via movem
-  // prologue. Al body entry, D6 ha il valore lasciato da una sub upstream
-  // (e.g. body 12001 D6=0x2, body 12009 D6=0x0 — verificato in
-  // /tmp/mame_decoder_stream.json body_entries[].d[6]). TS inizializza a 0
-  // sempre → cluster 0x0700 49B drift residuo. Fix vero richiede mini-
-  // emulator M68K register file cross-sub (= D0-D7/A0-A7 in state),
-  // troppo invasivo per ora. Documentato in STATUS.md task #177.
-  let d6 = 0;
+  // MAME PRESERVA D6 cross-sub via movem prologue, quindi D6 entry e' il
+  // valore lasciato dal caller. TS lo accetta come parametro `d6Init`
+  // (default 0). Caller deve passarlo correttamente per bit-perfect.
+  let d6 = d6Init & 0xffff;
 
   // Helper: ricarica byte cache (D2, D3) se D2 == 0. Identico in tutte e 5 le
   // sequenze 0x1A6A4, 0x1A6D4, 0x1A6FA, 0x1A736, 0x1A766.
