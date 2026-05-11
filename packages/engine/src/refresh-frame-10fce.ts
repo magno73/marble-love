@@ -37,7 +37,6 @@ import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { spriteBracketLerp1C676 } from "./sprite-bracket-lerp-1c676.js";
-import { helper121B8 } from "./helper-121b8.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
