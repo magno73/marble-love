@@ -84,10 +84,6 @@ for (let i = 0; i < 6; i++) {
     const idx = off * 2;
     return parseInt(wr.substr(idx, 8), 16);
   }
-  function _rw(off: number): number {
-    const idx = off * 2;
-    return parseInt(wr.substr(idx, 4), 16);
-  }
   function _rb(off: number): number {
     const idx = off * 2;
     return parseInt(wr.substr(idx, 2), 16);

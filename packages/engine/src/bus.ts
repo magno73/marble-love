@@ -39,6 +39,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { createSlapsticFsm, type SlapsticFsm } from "./m68k/slapstic-103.js";
 import type { u8, u16, u32 } from "./wrap.js";
 import {
   as_u8,
@@ -50,8 +51,33 @@ import {
 // ─── ROM image ────────────────────────────────────────────────────────────
 
 export interface RomImage {
-  /** Programma 68010 (interleaved even/odd already merged big-endian). */
+  /**
+   * Programma 68010 (interleaved even/odd already merged big-endian).
+   *
+   * Layout:
+   *   0x000000-0x07FFFF  main program ROM (512KB)
+   *   0x080000-0x087FFF  slapstic-mapped window (8KB visible, 4-way mirrored).
+   *                      Il contenuto qui presente riflette il **bank attivo**
+   *                      della state machine slapstic-103, mirrorato 4 volte.
+   *                      `slapsticBanks` mantiene la copia pristine dei 4 bank.
+   *
+   * Quando il bank cambia (`slapsticTick`), chiamare `applySlapsticBank` per
+   * aggiornare questa regione coerentemente.
+   */
   program: Uint8Array;
+  /**
+   * Backup pristine dei 4 bank slapstic (32 KB = 4 × 8 KB).
+   * Indicizzato come `slapsticBanks[bank*0x2000 + offset]`.
+   * Caricato da `loadSlapsticBanks(rom, source)` durante setup.
+   */
+  slapsticBanks: Uint8Array;
+  /**
+   * State machine slapstic 137412-103 — bank-switching tracking.
+   * Default state: bank = bankstart (3), state = IDLE.
+   * Mutato da `slapsticLookup` quando il TS chiama una lookup; impatta la
+   * regione `program[0x080000-0x087FFF]` via `applySlapsticBank`.
+   */
+  slapsticFsm: SlapsticFsm;
   /** Sound CPU 6502. */
   sound: Uint8Array;
   /** Tile graphics (planar, multiple banks). */
@@ -65,6 +91,8 @@ export interface RomImage {
 export function emptyRomImage(): RomImage {
   return {
     program: new Uint8Array(0x88000),  // 544 KB (incl. slapstic at 0x80000)
+    slapsticBanks: new Uint8Array(0x8000), // 32KB = 4 × 8KB pristine banks
+    slapsticFsm: createSlapsticFsm(),
     sound: new Uint8Array(0x10000),
     tiles: new Uint8Array(0x100000),
     sprites: new Uint8Array(0),
@@ -77,14 +105,12 @@ export function emptyRomImage(): RomImage {
 export interface Bus {
   rom: RomImage;
   state: GameState;
-  /** Slapstic bank corrente (0-3). Bank-switching gestito dal chip 103. */
-  slapsticBank: number;
   /** Counter di accessi MMIO non documentati (debug). */
   unmappedAccesses: number;
 }
 
 export function createBus(rom: RomImage, state: GameState): Bus {
-  return { rom, state, slapsticBank: 0, unmappedAccesses: 0 };
+  return { rom, state, unmappedAccesses: 0 };
 }
 
 // ─── Memory map constants ─────────────────────────────────────────────────
@@ -150,12 +176,14 @@ export function read8(bus: Bus, addr: number): u8 {
     return as_u8(bus.rom.program[a] ?? 0);
   }
 
-  // Slapstic ROM 0x080000-0x087FFF (bank-switched, 4×8KB)
-  // Per ora ignoriamo il bank state e leggiamo dal blob ROM (bank 0 attivo).
-  // Phase 4c: replicare slapstic 103 state machine.
+  // Slapstic ROM 0x080000-0x087FFF (bank-switched, 4×8KB con mirror).
+  // La regione `rom.program[0x80000..0x88000)` riflette il **bank attivo**
+  // mirrorato 4 volte; viene aggiornata da `applySlapsticBank` quando la
+  // FSM cambia bank. Per accessi tipici di bus (read normali), basta leggere
+  // dal program array. La FSM viene aggiornata solo dalle sub helper che
+  // chiamano esplicitamente `slapsticTick` o `slapsticLookup`.
   if (a >= SLAPSTIC_BASE && a < SLAPSTIC_END) {
-    const off = a - SLAPSTIC_BASE + bus.slapsticBank * 0x2000;
-    return as_u8(bus.rom.program[SLAPSTIC_BASE + off] ?? 0);
+    return as_u8(bus.rom.program[a] ?? 0);
   }
 
   // Sprite IRQ state read (always returns 0 since IRQ3 not used by Marble)
@@ -240,10 +268,12 @@ export function write8(bus: Bus, addr: number, value: u8): void {
   const a = addr >>> 0;
   const v = value as unknown as number;
 
-  // ROM is read-only; ignore writes
+  // ROM is read-only; ignore writes. Le scritture alla slapstic window
+  // (0x080000-0x087FFF) servono come trigger di state-machine sul chip
+  // reale, ma il TS-side il bank e' guidato da `slapsticLookup` (che e'
+  // l'unico callsite del binario che effettivamente fa una sequenza di
+  // accessi → bank switch). Quindi qui no-op.
   if (a < SLAPSTIC_END) {
-    // Slapstic write triggers bank switch logic — Phase 4c: implementare
-    // chip 103 state machine. Per ora: no-op.
     return;
   }
 

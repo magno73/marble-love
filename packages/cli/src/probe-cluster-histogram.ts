@@ -2,10 +2,10 @@
 // Output: top-30 cluster ordinati per # byte diff, per guidare il prossimo wire.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
+import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
 
 const rom = busNs.emptyRomImage();
-rom.program.set(readFileSync(resolve("ghidra_project/marble_program.bin")).subarray(0, rom.program.length));
+applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
 
 const groundTruth = JSON.parse(readFileSync("/tmp/mame_100f.json", "utf-8")) as {
   frames: number[];
@@ -27,6 +27,8 @@ const warm = {
   colorRam: hex2bytes(frame0.colorRam, 0x800),
   videoScrollX: 0,
   videoScrollY: 0,
+  // Slapstic 103 bank attivo a MAME f=12000 attract = 1.
+  slapsticBank: 1,
 };
 
 const s = stateNs.emptyGameState();
