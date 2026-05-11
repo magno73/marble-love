@@ -33,6 +33,9 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { addCpuCycles } from "./m68k/clock.js";
+import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
+import { as_u32 } from "./wrap.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
@@ -224,6 +227,29 @@ export interface RefreshFrame10FCESubs {
 }
 
 /**
+ * Cycle-accumulator decorator: aggiunge i cicli stimati per `key` al
+ * counter CPU di `state.clock.cpuTicks`, poi esegue `fn`.
+ *
+ * Il lookup in `SUB_CYCLE_ESTIMATE` cade su 100 cicli (overhead jsr+rts
+ * approssimativo) per chiavi non presenti. Usato dal main-tick per
+ * decidere se il body ha sforato `CYCLES_PER_VBLANK` (cadenza 60Hz).
+ */
+function callSub(state: GameState, key: string, fn: () => void): void {
+  addCpuCycles(state, SUB_CYCLE_ESTIMATE[key] ?? as_u32(100));
+  fn();
+}
+
+/** Legge `*0x400394.w` (game mode). Word big-endian. */
+function readGameModeWord(state: GameState): number {
+  return (((state.workRam[0x394] ?? 0) << 8) | (state.workRam[0x395] ?? 0)) & 0xffff;
+}
+
+/** Legge `*0x400396.w` (obj count attivi). */
+function readObjCount(state: GameState): number {
+  return (((state.workRam[0x396] ?? 0) << 8) | (state.workRam[0x397] ?? 0)) & 0xffff;
+}
+
+/**
  * Replica bit-perfect di `FUN_00010FCE`.
  *
  * Esegue 12 JSR in ordine + 2× `addq.b #1, (0x4003F0).l`.
@@ -239,6 +265,17 @@ export function refreshFrame10FCE(
   rom: RomImage,
   subs: RefreshFrame10FCESubs = {},
 ): void {
+  // ─── Cycle accounting (cadence simulation) ────────────────────────────
+  // Per ogni sub "fat" del body sommiamo una stima cicli M68010 (vedi
+  // SUB_CYCLE_ESTIMATE in m68k/sub-cycle-costs.ts), scegliendo fast/heavy
+  // in base ai gate condizionali letti dal workRam (game-mode word
+  // *0x400394 e obj count *0x400396). Il main-tick legge il totale a fine
+  // body per decidere se sforare la mailbox vblank (cadenza 60Hz).
+  const gameMode = readGameModeWord(state);
+  const objCount = readObjCount(state);
+  // FUN_10FCE overhead (orchestratore, 304 cicli)
+  addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_10FCE_OVERHEAD"] ?? as_u32(304));
+
   // 00010FCE: jsr 0x00013EE6
   // Wire fun1344c = slapsticDispatcher1344C: replica esistente che pulisce
   // PENDING_RECORD @ 0x400970 (cluster Misc Sub-A: byte 0x971..0x973).
@@ -248,14 +285,19 @@ export function refreshFrame10FCE(
   // @ f12056 in MAME ground truth). FUN_144E4 riceve oldTarget e newTarget
   // come long sullo stack, ma legge solo i low word — passiamo i due long
   // così come spinti dal binario e scrollRange144E4 fa il sext16 internamente.
-  (subs.fun13EE6 ?? ((s) => {
-    refreshHelper13EE6(s, rom, {
-      fun1344c: (s2, r) => slapsticDispatcher1344C(s2, r),
-      fun144e4: (s2, r, oldTarget, newTarget) => {
-        scrollRange144E4(s2, r, oldTarget & 0xffff, newTarget & 0xffff);
-      },
-    });
-  }))(state);
+  // FUN_13EE6: gate *0x400006 → fast quando 0 (attract steady-state).
+  // Heavy quando scroll attivo (gameplay).
+  const fun13EE6Key = (state.workRam[0x06] ?? 0) === 0 ? "FUN_13EE6_FAST" : "FUN_13EE6_HEAVY";
+  callSub(state, fun13EE6Key, () => {
+    (subs.fun13EE6 ?? ((s) => {
+      refreshHelper13EE6(s, rom, {
+        fun1344c: (s2, r) => slapsticDispatcher1344C(s2, r),
+        fun144e4: (s2, r, oldTarget, newTarget) => {
+          scrollRange144E4(s2, r, oldTarget & 0xffff, newTarget & 0xffff);
+        },
+      });
+    }))(state);
+  });
 
   // 00010FD4: jsr 0x000251DE
   // FUN_253EC chain MAME-canonical (disasm 0x253EC..0x25918, JT @ 0x254BA):
@@ -295,16 +337,33 @@ export function refreshFrame10FCE(
   //   *0x400666/0x400668 restano 0). Helper121B8 chiamato qui per obj0 è
   //   SAFE (non duplicato con sub158F6: sub158F6 itera P1/P2 slot pair
   //   @ 0x4009A4/0x400A20, MAI 0x400018 = obj0).
-  (subs.objectScanDispatch251DE ?? ((s) => {
-    objectScanDispatch251DE(s, rom, {
-      fun_253EC: (st, a2) => {
-        fun253ECDispatch(st, rom, a2);
-      },
-    });
-  }))(state);
+  // FUN_251DE: cost dominato dalla chain per-obj (helper121B8 ~4500/obj).
+  // count<=2 = attract (AVG 11180), count>6 = HEAVY (~60000).
+  // Path "skip respawn" (FAST) raro nel codice attuale (TS wira sempre la
+  // chain helper121B8 nel fun253ECDispatch).
+  const fun251DEKey =
+    objCount > 6 ? "FUN_251DE_HEAVY" : "FUN_251DE";
+  callSub(state, fun251DEKey, () => {
+    (subs.objectScanDispatch251DE ?? ((s) => {
+      objectScanDispatch251DE(s, rom, {
+        fun_253EC: (st, a2) => {
+          fun253ECDispatch(st, rom, a2);
+        },
+      });
+    }))(state);
+  });
 
   // 00010FDA: jsr 0x000189E2
-  (subs.processAllSprites189E2 ?? processAllSprites)(state);
+  // FUN_189E2: gate *0x400394.w == 0 (= attract title). Altrove fast.
+  const fun189E2Key =
+    gameMode === 0
+      ? objCount > 6
+        ? "FUN_189E2_HEAVY"
+        : "FUN_189E2"
+      : "FUN_189E2_FAST";
+  callSub(state, fun189E2Key, () => {
+    (subs.processAllSprites189E2 ?? processAllSprites)(state);
+  });
 
   // 00010FE0: jsr 0x000158CC
   // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) e 0x400A20 (P2) chiamando
@@ -315,31 +374,48 @@ export function refreshFrame10FCE(
   //   - else  → jsr 253BC + 182BA + 121B8 (ELSE branch)
   // Plus timer @ +0x6C (state 0x21/0x22 → 0x23 via FUN_160D4) e timer @ +0x56
   // (state 0x24 → 0x23 via FUN_160D4).
-  (subs.objectUpdatePair158CC ?? ((s) => {
-    objectUpdatePair158CC(s, {
-      objectUpdate: (slotPtr: number) => {
-        fun158F6(s, slotPtr, rom);
-      },
-    });
-  }))(state);
+  // FUN_158CC: stima conservativa AVG (attract con 2 slot pair attivi).
+  // Variante FAST quando entrambi slot s18=0 (raro in gameplay attract).
+  const slotP1State = state.workRam[0x9bc] ?? 0; // P1 slot @ 0x4009A4 + 0x18
+  const slotP2State = state.workRam[0xa38] ?? 0; // P2 slot @ 0x400A20 + 0x18
+  const fun158CCKey = slotP1State === 0 && slotP2State === 0 ? "FUN_158CC_FAST" : "FUN_158CC";
+  callSub(state, fun158CCKey, () => {
+    (subs.objectUpdatePair158CC ?? ((s) => {
+      objectUpdatePair158CC(s, {
+        objectUpdate: (slotPtr: number) => {
+          fun158F6(s, slotPtr, rom);
+        },
+      });
+    }))(state);
+  });
 
   // 00010FE6: jsr 0x0001493C
   // Default callback per FUN_14966: stub minimal (head-only) — vedi
   // `sub-14966-stub.ts` per coverage e workaround slot 3.
-  (subs.slotArrayTick1493C ?? ((s) => {
-    slotArrayTick(s, { fun_14966: fun14966Stub });
-  }))(state);
+  const fun1493CKey = gameMode === 4 ? "FUN_1493C_HEAVY" : "FUN_1493C";
+  callSub(state, fun1493CKey, () => {
+    (subs.slotArrayTick1493C ?? ((s) => {
+      slotArrayTick(s, { fun_14966: fun14966Stub });
+    }))(state);
+  });
 
   // 00010FEC: addq.b #1, (0x004003F0).l
   addByte(state, FRAME_CTR_ADDR, 1);
 
   // 00010FF2: jsr 0x00017230
-  (subs.dispatchStrings17230 ?? ((s) => {
-    dispatchStrings17230((slotAddr) => { stringStep1725A(s, slotAddr, rom); });
-  }))(state);
+  const fun17230Key = gameMode === 4 ? "FUN_17230_HEAVY" : "FUN_17230";
+  callSub(state, fun17230Key, () => {
+    (subs.dispatchStrings17230 ?? ((s) => {
+      dispatchStrings17230((slotAddr) => { stringStep1725A(s, slotAddr, rom); });
+    }))(state);
+  });
 
   // 00010FF8: jsr 0x0001912C
-  (subs.fun1912C ?? ((s) => { refreshHelper1912C(s, rom); }))(state);
+  // Gate: *0x400394.w == 4. Altrimenti fast (rts immediato).
+  const fun1912CKey = gameMode === 4 ? "FUN_1912C" : "FUN_1912C_FAST";
+  callSub(state, fun1912CKey, () => {
+    (subs.fun1912C ?? ((s) => { refreshHelper1912C(s, rom); }))(state);
+  });
 
   // 00010FFE: jsr 0x00019BAA
   // Wire fun_19e42 = marbleCellDispatch19E42 (replica bit-perfect già
@@ -347,10 +423,24 @@ export function refreshFrame10FCE(
   // è no-op stub e i globals velocity-per-direction @ 0x674..0x683 non
   // si propagano correttamente, causando cluster drift @ 0x674..0x68B
   // (22 byte) + cascade su obj struct screen-Y.
-  (subs.stateSub19BAA ?? ((s) => { stateSub19BAA(s, rom, { fun_19e42: marbleCellDispatch19E42 }); }))(state);
+  const fun19BAAKey =
+    gameMode === 4
+      ? objCount > 6
+        ? "FUN_19BAA_HEAVY"
+        : "FUN_19BAA"
+      : "FUN_19BAA_FAST";
+  callSub(state, fun19BAAKey, () => {
+    (subs.stateSub19BAA ?? ((s) => { stateSub19BAA(s, rom, { fun_19e42: marbleCellDispatch19E42 }); }))(state);
+  });
 
   // 00011004: jsr 0x0001844A
-  (subs.stateSub1844A ?? ((s) => { stateSub1844A(s, rom); }))(state);
+  // Gate: *0x400394.w == 3 AND *0x400760 != 0 (mode boss/transition).
+  const slot760 = state.workRam[0x760] ?? 0;
+  const fun1844AKey =
+    gameMode === 3 && slot760 !== 0 ? "FUN_1844A_HEAVY" : "FUN_1844A_FAST";
+  callSub(state, fun1844AKey, () => {
+    (subs.stateSub1844A ?? ((s) => { stateSub1844A(s, rom); }))(state);
+  });
 
   // 0001100A: jsr 0x00012FD0
   // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato: gating *0x40075c == 0
@@ -361,26 +451,32 @@ export function refreshFrame10FCE(
   // Wire fun_13068 = scriptSlotStep13068 (avanza state dei 25 slot @
   // 0x400a9c — necessario per progredire s1a=3→2→...→0 dopo l'allocazione
   // via scrollRange144E4 → scriptRectDispatch12DFA chain).
-  (subs.stateDispatch12FD0 ?? ((s) => {
-    stateDispatch12FD0(s, {
-      fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
-      fun_13068: (slotPtr) => {
-        scriptSlotStep13068(s, rom, slotPtr, {
-          fun12896: (st, sp) => { helper12896(st, rom, sp); },
-        });
-      },
-    });
-  }))(state);
+  const fun12FD0Key = gameMode === 4 ? "FUN_12FD0_HEAVY" : "FUN_12FD0";
+  callSub(state, fun12FD0Key, () => {
+    (subs.stateDispatch12FD0 ?? ((s) => {
+      stateDispatch12FD0(s, {
+        fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
+        fun_13068: (slotPtr) => {
+          scriptSlotStep13068(s, rom, slotPtr, {
+            fun12896: (st, sp) => { helper12896(st, rom, sp); },
+          });
+        },
+      });
+    }))(state);
+  });
 
   // 00011010: addq.b #1, (0x004003F0).l
   addByte(state, FRAME_CTR_ADDR, 1);
 
   // 00011016: jsr 0x00028624
   // ROM table @ 0x23D3A (16 bytes): pass slice from ROM program image.
-  (subs.objDirtyDispatch28624 ?? ((s) => {
-    const romTab = rom.program.subarray(0x23d3a, 0x23d3a + 16);
-    objDirtyDispatch28624(s, romTab);
-  }))(state);
+  const fun28624Key = objCount > 6 ? "FUN_28624_HEAVY" : "FUN_28624";
+  callSub(state, fun28624Key, () => {
+    (subs.objDirtyDispatch28624 ?? ((s) => {
+      const romTab = rom.program.subarray(0x23d3a, 0x23d3a + 16);
+      objDirtyDispatch28624(s, romTab);
+    }))(state);
+  });
 
   // 0001101C: rts
 }

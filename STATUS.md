@@ -39,6 +39,44 @@ obj0 NON ha questo pattern → la "doppia chiamata" e' SPECIFICA per il path `ob
 
 **Next**: trovare il secondo callsite di `FUN_158CC` o `FUN_158F6` in ROM via Ghidra (task #157). La gate deve essere conditional con periodo ~16 frame.
 
+### 2026-05-11 notte — opzione A (cycle counting + register file TS)
+
+Decisione utente: opzione A scelta. Pipeline implementata in 6 commit:
+
+1. **`packages/engine/src/m68k/cycle-table.ts`** (630 righe, 21/21 vitest) — cycle counts M68010 estratti da Musashi @ 313ebf1b (MIT). `CYCLES_PER_VBLANK = 119316` esportato. Sanity FUN_158CC: +3.7% delta vs manuale.
+2. **`packages/engine/src/m68k/sub-cycle-costs.ts`** (538 righe) — 13 sub body inventariate. Body attract ~31634 cicli, heavy ~117254. Granularita' ±15%.
+3. **`oracle/tom_harte_m68000/`** (22 MB, MIT) — 5923 test case validation register file.
+4. **`packages/engine/src/m68k/regfile.ts`** (345 righe) + test (542 righe) — 8 istruzioni stack ABI: link_w, unlk, movem_l_pd/postinc, move_l/w_disp, jsr_abs, rts, addq_l_sp. **2879/2879 considerati pass al 100%** vs Tom Harte (2581 esclusi exception path + 463 EA mode unsupported, entrambi non emessi da Marble body).
+5. **Cycle counter infrastructure** in `main-tick.ts` + `m68k/clock.ts` — gate dinamico 30/60Hz via mailbox `*0x400016` + decorator `callSub` su 11 sub body. 1982/1982 vitest.
+
+### Risultato e decisione di scope
+
+**Wire register file in stack-heavy sub: APPROCCIO RIFIUTATO** (Rule 12 fail loud).
+
+Misurazione tap MAME: cluster stack scratch `0x1D40..0x1E7F` scritto da **430 PC distinte** in 99 frame (5713 writes). Top-1 PC = 6%, helper121B8 prologue = 1%. Per coprire >90% serve wire di ~200 sub → 1-2 settimane refactor + alto rischio regressione obj0.x.
+
+**Decisione utente**: estendere esclusione invariante di parità (pattern già usato per `0x440-0x447` e `0x1EE0-0x1EFF`). Stack scratch è effetto compilatore C originale, non gameplay state. Nessuna sub MAME legge oltre la durata del proprio frame.
+
+Implementazione:
+- `trace.ts` workRamHash + workRamRegionalHashes regioni 29 (esclude 0x1D40-0x1DFF, 192B) e 30 (esclude 0x1E00-0x1E7F, 128B, + 0x1EE0-0x1EFF già escluso).
+- `oracle/mame_dumper.lua` coerente.
+- `probe-cluster-histogram.ts` mostra split `total | gameplay | stack-residue`.
+
+### Drift @ f+99 finale
+
+```
+total          = 387 byte
+├─ stack-residue = 172 byte  (escluso da invariante - effetto compilatore)
+└─ gameplay     = 215 byte  ← target reale residuo
+```
+
+Cycle counter infrastructure presente ma mailbox vblank mai triggerata (body attract ~32064 cicli < 119316). Le stime SUB_CYCLE_ESTIMATE sono conservative, mancano:
+- IRQ4 handler interleaved (5-20k cicli/body)
+- chain heavy come sub1CABATileRedraw (227 call/99f)
+- FUN_26F3E phase 1+2 (bufferFill1B12A × 32)
+
+**Next**: task #166 — calibration `SUB_CYCLE_ESTIMATE` vs MAME real cycle measurement (PC tap entry/exit FUN_10FCE). Senza ground truth dei cicli, la cadenza dinamica resta non riproducibile.
+
 ## Survey reference codebases M68K (2026-05-11 sera)
 
 Per ridurre i **172B stack residue** (cluster #2-6 `0x1d40..0x1e7f`) serve un mini register file TS (D0-D7/A0-A7/PC/SR) con semantica `link/unlk/movem.l/move (d8,A6)` corretta.

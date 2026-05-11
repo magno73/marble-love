@@ -85,7 +85,7 @@ const origWorkRam = s.workRam;
 // Replace s.workRam with a Proxy that intercepts numeric-index writes.
 // For TypedArrays, traps must use Reflect to preserve the internal-slot semantics.
 const proxy = new Proxy(origWorkRam, {
-  get(target, prop, receiver) {
+  get(target, prop) {
     const v = Reflect.get(target, prop, target);
     if (typeof v === "function") return v.bind(target);
     return v;

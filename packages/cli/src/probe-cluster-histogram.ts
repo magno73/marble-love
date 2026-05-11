@@ -44,14 +44,25 @@ const mameW = hex2bytes(lastFrame.workRam, 0x2000);
 const BUCKET = 0x40;
 const N = 0x2000 / BUCKET;
 const counts: number[] = Array(N).fill(0);
+// Zone stack 68k escluse dall'invariante di parità (vedi trace.ts /
+// mame_dumper.lua). Stack residue effetto compilatore C originale,
+// TS non emula register file M68K → divergenza spuria, non gameplay.
+const isStackResidue = (off: number) =>
+  (off >= 0x440 && off < 0x448) ||
+  (off >= 0x1D40 && off < 0x1E80) ||
+  (off >= 0x1EE0 && off < 0x1F00);
 let totW = 0;
+let totGameplay = 0;
+let stackResidue = 0;
 for (let i = 0; i < 0x2000; i++) {
   if (s.workRam[i] !== mameW[i]) {
     totW++;
     counts[Math.floor(i / BUCKET)]!++;
+    if (isStackResidue(i)) stackResidue++;
+    else totGameplay++;
   }
 }
-console.log(`f+${lastIdx} workRam total diff = ${totW}\n`);
+console.log(`f+${lastIdx} workRam diff: total=${totW} | gameplay=${totGameplay} | stack-residue=${stackResidue} (excluded)\n`);
 
 const ranked = counts
   .map((c, idx) => ({ start: idx * BUCKET, end: idx * BUCKET + BUCKET - 1, c }))
