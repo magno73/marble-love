@@ -77,10 +77,11 @@
  */
 
 import type { GameState } from "./state.js";
+import { sub1D242 } from "./sub-1d242.js";
 
 /** Stub injection per la JSR a 0x1D242. */
 export interface EntityWaypointStep1D1ECSubs {
-  /** FUN_1D242(entityPtr). Default no-op (matching `rts`). */
+  /** FUN_1D242(entityPtr). Default REAL = sub1D242 (bit-perfect). */
   fun_1d242?: (entityPtr: number) => void;
 }
 
@@ -170,6 +171,10 @@ export function entityWaypointStep1D1EC(
     }
   }
 
-  // jsr FUN_1D242(entityPtr)
-  subs?.fun_1d242?.(a0);
+  // jsr FUN_1D242(entityPtr). Default REAL = sub1D242 (bit-perfect).
+  if (subs?.fun_1d242 !== undefined) {
+    subs.fun_1d242(a0);
+  } else {
+    sub1D242(state, a0);
+  }
 }

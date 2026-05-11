@@ -280,6 +280,7 @@ Ordine per impatto stimato sul drift workRam/spriteRam @100f:
 
 ### 4.9 [LOW] FUN_4DCC YM2151 emulation
 - **File**: `state-sub-5284.ts`, `sound-tick.ts` — emulazione completa di chip YM2151. Drift impatto visivo nullo, solo sound.
+- **Verifica drift workRam (2026-05-11)**: 0 byte. Disasm 0x4DCC..0x4F2C mostra A2=0x401F5E base + scritture a `(0x00..0x18,A2)` = 0x401F5E..0x401F76 e absolute 0x401F64/0x401FF8. In attract steady-state `*0x401F76 == 0` (no comando pendente) → branch a 0x4E3C che, dato `*0x401F5E == 0`, salta a 0x4F20: tutte le scritture restanti non avvengono o producono valori già zero. Lo stub corrente (counter @0x401FF8 + clear 0x401F44) basta. Verifica diff per-byte sui range toccati (0x1F5E..0x1F77, 0x1FF8..0x1FFC) @ f+99 = 0/40 byte. Nessun fix necessario fino a quando *0x401F76 non sarà ≠ 0 (gameplay attivo con sound queue).
 
 ### 4.10 [LOW] Catch-all NO_IMPL: `fun_14dec`, `fun_1d242`, `fun_19692`, `fun_19976`, `fun_1937c`
 - Tutte mai chiamate in attract steady-state (gated da entity state). Diventeranno HIGH in level-load / gameplay attivo.

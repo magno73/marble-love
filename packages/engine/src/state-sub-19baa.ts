@@ -241,6 +241,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { rngNext } from "./rng.js";
 import { as_u16 } from "./wrap.js";
+import { sub1BB08 } from "./sub-1bb08.js";
 
 // ─── Global addresses (workRam offsets) ──────────────────────────────────
 
@@ -686,8 +687,12 @@ export function stateSub19BAA(
       const newY = (savedY + vel) >>> 0;
       writeLongBE(state, off + ENTITY_POS_Y_OFFSET, newY);
 
-      // jsr FUN_1BB08(entityAddr).
-      subs?.fun_1bb08?.(state, entityAddr);
+      // jsr FUN_1BB08(entityAddr). Default REAL = sub1BB08 (bit-perfect).
+      if (subs?.fun_1bb08 !== undefined) {
+        subs.fun_1bb08(state, entityAddr);
+      } else {
+        sub1BB08(state, entityAddr);
+      }
 
       // jsr FUN_1CC62(1) → D0.
       const cc62Result = (subs?.fun_1cc62?.(state, FUN_1CC62_ARG) ?? 0) >>> 0;
