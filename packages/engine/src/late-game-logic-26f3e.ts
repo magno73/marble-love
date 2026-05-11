@@ -911,4 +911,28 @@ export function lateGameLogic26F3E(
   if (rw(state, rom, CNT_ADDR) === 0) {
     ww(state, rl(state, rom, CUR_A3_ADDR), 0);
   }
+
+  // ── Post-body flag set (replica disasm 0x118C0 main-loop wrapper) ─────────
+  // Dopo `jsr 0x26F3E` (lateGameLogic), il main thread esegue
+  //   move.b #1, *0x40039A
+  // (`SCROLL_DIRTY_FLAG` in main-loop.ts). Il prossimo IRQ4 vblank handler
+  // (= mainTick → mainUpdateScrollSync) legge il flag, latcha
+  //   *0x4003AE = *0x4003B0  (AV-control word, sprite-bank toggler)
+  // e clear flag. Senza questo set TS-side, `0x4003AE` resta stale al valore
+  // warm (0x0080) per sempre, e Phase 3 di lateGameLogic computa sempre lo
+  // stesso `d3t2` ⇒ scriviamo nello stesso bank ogni frame anziché toggle
+  // bit-perfect tra bank 0 e bank 1 in lockstep con MAME.
+  //
+  // Disasm relevante (main-thread loop body 0x118A8..0x118CE):
+  //   0x118A8 jsr  0x26F3E      ; lateGameLogic
+  //   0x118AE tst.b *0x400016
+  //   ...
+  //   0x118C0 move.b #1, *0x40039A  ← QUESTO
+  //   0x118C6 jsr  0x28DEA      ; spin-wait next IRQ4
+  //
+  // Lo metto qui (fine di lateGameLogic) anziché in main-tick.ts perché il
+  // wrapper main-loop-body è tightly coupled a questa funzione ed è bit-perfect
+  // equivalente: l'effetto osservabile è identico (flag visto dal prossimo
+  // mainTick run).
+  state.workRam[0x39a] = 1;
 }
