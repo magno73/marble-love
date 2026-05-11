@@ -233,13 +233,40 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
 
   // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
   // Default OFF — opt-in for renderer demo / game flow advancement.
+  //
+  // ─── Game-tick gating @ 30Hz ──────────────────────────────────────────
+  // Il main thread (`FUN_117B2`, ROM 0x117B2..0x118CE) NON gira ogni vsync:
+  // dopo `jsr 0x26f3e` (lateGameLogic, 0x118AA) il loop body fa:
+  //   0x118B0  tst.b *0x400016        ; vblank mailbox set by IRQ4
+  //   0x118B8  bne  0x118C0
+  //   0x118BA  jsr  0x28DEA           ; clear+spin-wait su 0x400016
+  //   0x118C0  move.b #1, *0x40039A
+  //   0x118C8  jsr  0x28DEA           ; SECOND clear+spin-wait
+  //   0x118CE  bra  0x11804           ; loop top
+  // In steady-state attract il body completa in <1 vsync → mailbox==0 a 0x118B0
+  // → si entra in ENTRAMBE le `jsr 0x28DEA`, ognuna delle quali aspetta il
+  // prossimo IRQ4 (= 1 vsync). Conclusione: il body gira ogni 2 vsync (= 30Hz).
+  // Confermato da `/tmp/mame_100f.json`: obj0.x cambia a f12000→f12002→f12004…
+  // (= integration ogni 2 frame, MAI ogni frame).
+  //
+  // Replica: `mainLoopBodyTicks` counter; eseguo body solo a tick PARI
+  // (= aspetto 1 vsync prima del primo body run). Phase verificata vs MAME
+  // warm-state f12000: il body è già stato eseguito a f12000, quindi
+  // f12001 (= primo tick TS dopo warm) = NO run, f12002 = run, ...
   if (opts.runMainLoopBody === true) {
-    mainLoopInit1101E(state, rom);
-    // FUN_26F3E (lateGameLogic) + FUN_FA0 marble emit — sprite RAM emit
-    // pipeline. Attivi sempre quando runMainLoopBody (priorità movement
-    // visibile su drift bit-perfect plateau).
-    lateGameLogic26F3E(state, rom);
-    fun_FA0_marbleEmit(state, rom);
+    state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks + 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
+    if ((state.clock.mainLoopBodyTicks & 1) === 0) {
+      mainLoopInit1101E(state, rom);
+      // FUN_26F3E (lateGameLogic) — chain MAME canonical.
+      lateGameLogic26F3E(state, rom);
+    }
+    // NB: fun_FA0_marbleEmit (= surrogate empirico) RIMOSSO. Il marble si
+    // muoverà bit-perfect quando wirate le sub MAME mancanti (helper1BC88
+    // per slot_pair update, helper121B8 chain completa per spritePos /
+    // spriteRotate, camera projection FUN_FA0 reale). Senza quelle, il
+    // marble resta in posizione warm-state (= invisibilmente "fermo")
+    // ma niente sprite rotti che girano a caso.
+    void fun_FA0_marbleEmit;
   }
 
   // ─── Main-thread vblank-counter snapshot ────────────────────────────────

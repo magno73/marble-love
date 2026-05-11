@@ -2,9 +2,9 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 360+ funzioni replicate bit-perfect** via parity 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble blu sphere shaded **bit-perfect MAME @ (107, 152)**, terreno isometric 3D, HUD score, 3 spike triangolari. Drift workRam @ frame 2401: **98.9%** (87 byte residui da sub IRQ-timing-dependent). **227 test files / 1923 vitest verde**.
+**Status:** **🎯 360+ funzioni replicate bit-perfect** via parity 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble cromata + ombra **rotola sul livello bit-perfect** in demo gameplay (warmstate f12000+), terreno isometric 3D, HUD score, 3 spike triangolari. **`obj0.x` bit-perfect MAME su 99/99 frame** del ground truth `/tmp/mame_100f.json`. Drift workRam @ 100 frame demo: **~180 byte residui** (era ~547 pre-sessione 2026-05-11). **1937 vitest verde**.
 
-Apri `?autoLoad=1&mameDump=1&indirect=1` per vedere il rendering MAME bit-perfect in tempo reale.
+Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo reale dal warm bootstrap MAME.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -15,8 +15,10 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%, ~358 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | **227 file / 1923 test** verde |
+| Vitest | **1952 test** verde |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
+| **`obj0.x` evolution vs MAME** | **bit-perfect su 99/99 frame** del ground truth (warm f12000 + tick 99×) |
+| **Demo gameplay marble visivo** | ✅ marble rotola sul livello (sfera cromata + ombra) con `?mameLive=1&play=1` |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |

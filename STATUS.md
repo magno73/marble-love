@@ -1,7 +1,49 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-10
+**Ultimo update:** 2026-05-11
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 🎯 Highlight sessione 2026-05-11 — marble in moto bit-perfect
+
+- **`obj0.x` BIT-PERFECT vs MAME su tutti 99 frame del ground truth** (`/tmp/mame_100f.json`, f12000-12099)
+- **Marble visibile rotola sul livello** (sfera bianca cromata + ombra scura), no più sprite "rotti", no più replay/playback
+- **Surrogate empirico `fun_FA0_marbleEmit` rimosso** in favore della chain MAME canonical
+- **9 fix bit-perfect** dalla disasm ROM (no più tentativi empirici)
+- **Drift workRam @ 100 frames**: ~180 byte (da ~547 pre-sessione)
+- **Single-frame test `lateGameLogic26F3E`**: 0 byte diff vs MAME (BIT-PERFECT)
+- **1937/1937 vitest passing**
+
+### Fix bit-perfect applicati (in ordine)
+
+1. **`render.ts` layout MO RAM banked** — era packed (`entryIndex * 8`), ora banked (Y@0, code@0x80, X@0x100, Z@0x180, stride 2)
+2. **`renderer.ts` Pixi texture dirty** — `Texture.from(canvas)` cached → `texture.source.update()` ad ogni `drawFrame` (Pixi v8 pattern)
+3. **`refresh-frame-10fce.ts` FUN_253EC canonical dispatcher** — surrogate manuale rimosso, ora `helper253BC + objectStep17F66 + helper121B8` via JT @ 0x254BA → 0x256D2 (path `s1a=0`)
+4. **Stub `fun_1cc62 → obj.z`** in `helper121B8` chain — workaround per `FUN_1CABA` non replicato; rende `D0 - obj.z = 0 ≤ 0x100000` → INTEGRATE_VEL eseguito senza OUT_OF_RANGE spurio
+5. **`late-game-logic-26f3e.ts` `dispatchType1` 4 bug** — orMask→localE, inner loop `+0x38`→`+0xa4`, missing 3rd direct emit, `dispatchType4` inner-loop base inline (Agent A)
+6. **12 `dispatchType*` filtri signed/unsigned** — era `s16(d4) < 0xc0` (= 192), corretto `<= -0x40` (= -64) — confusione signed byte in ROM
+7. **Game-tick rate 30Hz** — `FUN_117B2` chiama `FUN_28DEA` (vblank-wait) 2× per iter → body ogni 2 vsync. Fix: counter `mainLoopBodyTicks` in `TickClock`, esegue `mainLoopInit1101E + lateGameLogic26F3E` solo ogni 2 tick. **→ obj0.x match MAME bit-perfect 99/99**
+8. **AV-control latch `*0x40039A = 1`** — `FUN_117B2` lo setta dopo lateGameLogic per far latchare `r3AE = r3B0` (bit 3 toggle bank A/B). Senza, bank A mai aggiornato. Fix: post-tick `s.workRam[0x39a] = 1` in `main.ts` (= replica del binary)
+9. **Flag `preserveVelocity`** opzionale in `objectStateEntry25BAE` — supporto futuro per skip azzeramento vx/vy quando case 4 dispatch triggera OUT_OF_RANGE branch di helper121B8
+
+### Issue residuo: marble galleggia (Z non integrata)
+
+Il marble si muove ma appare sospeso. Root cause identificata: **`obj0.z_long` non viene integrato in TS** (resta stantio a `0x3f970000`), mentre in MAME decresce naturalmente a `0x3f880000` seguendo il terreno isometrico. La formula isometrica MAME (verificata 100% bit-perfect): `y_screen = HUD_OFFSET + Z_high + 0x54 - (X_high + Y_high)/2`.
+
+Causa primaria: lo stub `fun_1cc62 → obj.z` introdotto per evitare OUT_OF_RANGE spurio impedisce anche l'aggiornamento di Z (perché `d0 = projZ - obj.z = 0` → INTEGRATE_VEL con `vz = 0` → no change). Fix vero: replicare `FUN_1CABA` (442 byte tile-redraw heavy logic) che aggiorna `STRUCT @ 0x401c28` con il `terrain_z` corretto. Poi `spriteProject1CC62` ritorna il vero terrain proj.
+
+**Tentativi consegnati**:
+- `loadCoordsIsoPlayer()` in `late-game-logic-26f3e.ts` calcola coord iso on-the-fly bit-perfect (`HUD_OFFSET + Z + 0x54 - (X+Y)/2`). Pronto a ricevere la corretta Z.
+- `sub1CABATileRedraw` (= replica FUN_1CABA) creato in `packages/engine/src/sub-1caba-tile-redraw.ts` (330 righe, 4 branch dispatch completi: PATH_DIRECT/PATH_INDIRECT/PATH_TERRAIN_BIG/PATH_TERRAIN_TOP). **MA**: wirando la replica produce drift secondario (obj0.x diverge MAME f+25 / f+99). Cause: branch dispatch per altri obj non bit-perfect — il primo write iter 0 atterra su PATH_TERRAIN_BIG ma MAME usa PATH_INDIRECT su tile gameplay reali. Necessita MAME live tracing (lua hook su `0x1CABA` entry/exit) per verificare branch dispatch su tile reali. **Stub `fun_1cc62 → obj.z` ripristinato come fallback bit-perfect** finché refinement.
+
+### Inventario sub mancanti
+
+Vedi [`docs/missing-subs-inventory.md`](./docs/missing-subs-inventory.md): 151 sub injectable analizzate, 5 top priority identificate. Top 1 (`fun_29cce` wire) **tentato e rolled back** — replica PARTIAL produce regressione bit-perfect (drift 547→601, obj0.x diverge). Necessita replica completa di BLOCK complessi (~5000 byte) prima di wirare.
+
+### Resources
+
+- **100-frame MAME ground truth** dumpato via `mame_state_multidump.lua`: `/tmp/mame_100f.json` (5.3 MB, frames 12000-12099 consecutivi)
+- **Differential test framework**: `packages/cli/src/probe-100f-diff.ts` (TS warm@f12000 + tick N volte vs MAME f12000+N)
+- **Browser CDP harness**: Chrome headless + `texture.source.update()` Pixi v8 + canvas.toDataURL() per screenshot programmatici
 
 ## 🎯 Highlight sessione 2026-05-10 (iter B5–B26)
 
