@@ -1,7 +1,46 @@
-# Codex briefing — Marble Love drift residuo (round 3)
+# Codex briefing — Marble Love drift residuo (round 4)
 
-> Brief per agent ChatGPT Codex CLI. Stato sessione 2026-05-12 post-fix #2.
-> Obiettivo: ridurre drift gameplay workRam da **68B** verso 0B.
+> Brief per agent ChatGPT Codex CLI. Stato sessione 2026-05-12 post-fix #3.
+> Obiettivo: ridurre drift gameplay workRam da **57B** verso 0B.
+
+## 0. Fix Claude round 3 (commit cc30f76, -11B gameplay)
+
+Drift 240/68 → 229/57. Portato FUN_14966 full body (`sub-14966.ts`,
+sostituisce `sub-14966-stub.ts`). Path C body reset ticker, advance pc58
++= sext(step)*4, pos+=vel quando state ∈ {0,3}, jsr FUN_15148 + jsr
+FUN_150D0 conditional state dispatch.
+
+Risultato: slot1/slot2 `+0x24` (ticker) ora bit-perfect MAME. Cluster
+0x13c0 11B → 7B, 0x0200 10B → 3B (cascade chiuso).
+
+Residual cluster top:
+```
+0x1400..0x143f   8B  slot3 vx/vy (helper12896 PC cascade)
+0x13c0..0x13ff   7B  slot2 tail (slot[0x58]/0x5c phase)
+0x03c0..0x03ff   6B  g_frame_counter timing cascade
+0x0400..0x043f   6B  stateSub cascade
+0x1440..0x147f   5B  slot3 cascade
+0x0380..0x03bf   4B
+0x1380..0x13bf   4B  slot1 minor cascade
+0x0200..0x023f   3B
+0x1340..0x137f   3B
+```
+
+## Finding sospeso: slot3 ticker phase off-by-one
+
+`probe-slot3-tick-ts.ts` mostra:
+- TS body fires a frame 2,4,6,...,98 (49 bodies, gate even/odd corretto).
+- MAME slot1/2 ticker pattern matcha TS perfettamente.
+- MAME slot3 ticker pattern off-by-one: a f=1 MAME slot3 tick=1 (body fired),
+  ma slot1/2 tick=1 (warm, no fire). Impossibile se body è sincrono per
+  tutti e 4 gli slot.
+
+Hypothesis (NON verified): `helper15148` case 0/3 (waypoint reached) fa
+`clr.b (0x24,A2)` + `move.b #2,(0x25,A2)` + reset altri campi. Se slot1
+hit waypoint più frequentemente, ticker viene resettato extra.
+
+Drill: tap MAME write @ 0x401386 e 0x401446 (slot1/3 ticker bytes), vedi
+se MAME fa write extra non visibili come addq.b normale.
 
 ## 1. Repo
 
