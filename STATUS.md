@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked ripristina biglia/avversario visibili)
+**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked + texture update ripristinano biglia/avversario animati)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-12 — Renderer Motion Object banked layout
@@ -10,10 +10,16 @@ era ormai coerente con MAME, ma `render.ts` la decodificava ancora come lista
 packed `entry * 8`. Atari System 1 usa invece bank da 0x200 byte con 64 entry
 e quattro word-plane a offset `0x00/0x80/0x100/0x180`.
 
+Secondo fix immediato: il path indiretto riscriveva il backing canvas ogni
+frame ma non chiamava `texture.source.update()` su Pixi v8, quindi il primo
+frame rimaneva in GPU e il canvas appariva statico anche con state/sprite
+aggiornati.
+
 Effetto:
 
 - il frontend `?autoLoad=1&mameLive=1&play=1` mostra di nuovo biglia e
-  avversario; i log runtime avanzano con `frame.sprites` ~50+.
+  avversario animati; i log runtime avanzano con `frame.sprites` ~50+ e il
+  viewport cambia tra f+60 e f+600.
 - `probe-video-diff` resta vicino all'oracolo: playfield/color exact, video
   totale 12 byte @ f+99.
 - Fixture legacy packed mantenute tramite fallback per non rompere i test

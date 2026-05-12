@@ -746,6 +746,7 @@ export function initRenderer(
   let indirectSprite: Sprite | undefined;
   let indirectCanvas: HTMLCanvasElement | undefined;
   let indirectImageData: ImageData | undefined;
+  let indirectTexture: Texture | undefined;
   if (options.indirect === true) {
     indirectCanvas = document.createElement("canvas");
     indirectCanvas.width = 336;
@@ -753,8 +754,12 @@ export function initRenderer(
     const ctx2d = indirectCanvas.getContext("2d");
     if (ctx2d !== null) {
       indirectImageData = ctx2d.createImageData(336, 240);
+      indirectTexture = Texture.from(indirectCanvas, true);
     }
     indirectSprite = new Sprite();
+    if (indirectTexture !== undefined) {
+      indirectSprite.texture = indirectTexture;
+    }
     layers.playfieldLayer.addChild(indirectSprite);
   }
 
@@ -785,7 +790,12 @@ export function initRenderer(
         renderIndirectViewport(frame, graphics, indirectImageData);
         const ctx2d = indirectCanvas.getContext("2d");
         if (ctx2d !== null) ctx2d.putImageData(indirectImageData, 0, 0);
-        indirectSprite.texture = Texture.from(indirectCanvas);
+        if (indirectTexture === undefined) {
+          indirectTexture = Texture.from(indirectCanvas, true);
+          indirectSprite.texture = indirectTexture;
+        } else {
+          indirectTexture.source.update();
+        }
         indirectSprite.x = 0;
         indirectSprite.y = 0;
         // Skip drawPlayfield/drawSprites — combined nel indirectSprite.
