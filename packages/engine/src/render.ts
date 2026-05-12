@@ -142,7 +142,11 @@ const ALPHA_COLUMNS = 64;
 const ALPHA_TILE_SIZE = 8;
 const PALETTE_ENTRY_COUNT = 1024;
 const MOTION_OBJECT_ENTRY_COUNT = 64;
-const MOTION_OBJECT_ENTRY_BYTES = 8;
+const MOTION_OBJECT_BANK_COUNT = 8;
+const MOTION_OBJECT_BANK_BYTES = 0x200;
+const MOTION_OBJECT_WORD_STRIDE_BYTES = 0x80;
+const MOTION_OBJECT_ENTRY_WORD_BYTES = 2;
+const LEGACY_PACKED_MOTION_OBJECT_ENTRY_BYTES = 8;
 
 export function irgb4444ToRgba(word: number): RgbaColor {
   const intensity = (word >>> 12) & 0x0f;
@@ -276,21 +280,39 @@ export function buildSpritesFromMotionObjectRam(
   lookups: MotionObjectLookupInfo[] = [],
 ): SpriteCommand[] {
   const sprites: SpriteCommand[] = [];
+  const useLegacyPackedLayout = isLikelyPackedMotionObjectRam(spriteRam);
 
-  for (const entryIndex of entryIndexes) {
-    if (entryIndex < 0 || entryIndex >= 64) continue;
+  for (const rawEntryIndex of entryIndexes) {
+    if (useLegacyPackedLayout) {
+      const command = buildPackedSpriteCommand(spriteRam, rawEntryIndex, lookups);
+      if (command !== undefined) sprites.push(command);
+      continue;
+    }
 
-    const byteOffset = entryIndex * 8;
-    if (byteOffset + 7 >= spriteRam.length) continue;
+    const bankIndex = Math.floor(rawEntryIndex / MOTION_OBJECT_ENTRY_COUNT);
+    const entryIndex = rawEntryIndex % MOTION_OBJECT_ENTRY_COUNT;
+    if (
+      bankIndex < 0 ||
+      bankIndex >= MOTION_OBJECT_BANK_COUNT ||
+      entryIndex < 0 ||
+      entryIndex >= MOTION_OBJECT_ENTRY_COUNT
+    ) continue;
+
+    const bankBase = bankIndex * MOTION_OBJECT_BANK_BYTES;
+    const word0Off = bankBase + entryIndex * MOTION_OBJECT_ENTRY_WORD_BYTES;
+    const word1Off = word0Off + MOTION_OBJECT_WORD_STRIDE_BYTES;
+    const word2Off = word1Off + MOTION_OBJECT_WORD_STRIDE_BYTES;
+    const word3Off = word2Off + MOTION_OBJECT_WORD_STRIDE_BYTES;
+    if (word3Off + 1 >= spriteRam.length) continue;
 
     const word0 =
-      ((spriteRam[byteOffset] ?? 0) << 8) | (spriteRam[byteOffset + 1] ?? 0);
+      ((spriteRam[word0Off] ?? 0) << 8) | (spriteRam[word0Off + 1] ?? 0);
     const word1 =
-      ((spriteRam[byteOffset + 2] ?? 0) << 8) | (spriteRam[byteOffset + 3] ?? 0);
+      ((spriteRam[word1Off] ?? 0) << 8) | (spriteRam[word1Off + 1] ?? 0);
     const word2 =
-      ((spriteRam[byteOffset + 4] ?? 0) << 8) | (spriteRam[byteOffset + 5] ?? 0);
+      ((spriteRam[word2Off] ?? 0) << 8) | (spriteRam[word2Off + 1] ?? 0);
     const word3 =
-      ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+      ((spriteRam[word3Off] ?? 0) << 8) | (spriteRam[word3Off + 1] ?? 0);
     const fields = decodeMotionObjectWords(word0, word1, word2, word3);
     if (fields.timer) continue;
     const lookup = lookups[fields.color];
@@ -331,26 +353,113 @@ export function buildSpritesFromMotionObjectRam(
   return sprites;
 }
 
+function isLikelyPackedMotionObjectRam(spriteRam: Uint8Array): boolean {
+  if (spriteRam.length <= MOTION_OBJECT_BANK_BYTES) return true;
+
+  const bankedWord1Entry0 =
+    ((spriteRam[MOTION_OBJECT_WORD_STRIDE_BYTES] ?? 0) << 8) |
+    (spriteRam[MOTION_OBJECT_WORD_STRIDE_BYTES + 1] ?? 0);
+  const packedWord1Entry0 =
+    ((spriteRam[2] ?? 0) << 8) |
+    (spriteRam[3] ?? 0);
+  const packedWord2Entry0 =
+    ((spriteRam[4] ?? 0) << 8) |
+    (spriteRam[5] ?? 0);
+
+  return bankedWord1Entry0 === 0 && (packedWord1Entry0 !== 0 || packedWord2Entry0 !== 0);
+}
+
+function buildPackedSpriteCommand(
+  spriteRam: Uint8Array,
+  entryIndex: number,
+  lookups: MotionObjectLookupInfo[],
+): SpriteCommand | undefined {
+  if (entryIndex < 0 || entryIndex >= MOTION_OBJECT_ENTRY_COUNT) return undefined;
+
+  const byteOffset = entryIndex * LEGACY_PACKED_MOTION_OBJECT_ENTRY_BYTES;
+  if (byteOffset + 7 >= spriteRam.length) return undefined;
+
+  const word0 =
+    ((spriteRam[byteOffset] ?? 0) << 8) | (spriteRam[byteOffset + 1] ?? 0);
+  const word1 =
+    ((spriteRam[byteOffset + 2] ?? 0) << 8) | (spriteRam[byteOffset + 3] ?? 0);
+  const word2 =
+    ((spriteRam[byteOffset + 4] ?? 0) << 8) | (spriteRam[byteOffset + 5] ?? 0);
+  const word3 =
+    ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+  const fields = decodeMotionObjectWords(word0, word1, word2, word3);
+  if (fields.timer) return undefined;
+
+  const command: SpriteCommand = {
+    spriteIndex: fields.tileIndex,
+    x: fields.xRaw,
+    y: fields.yRaw,
+    width: fields.widthTiles * 8,
+    height: fields.heightTiles * 8,
+    paletteIndex: 0x100 + fields.color,
+    flipX: fields.flipX,
+    priority: fields.priority ? 1 : 0,
+    translucent: fields.priority,
+  };
+
+  const lookup = lookups[fields.color];
+  if (lookup !== undefined && lookup.bank > 0) {
+    command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
+    command.gfxBank = lookup.bank;
+    command.bitsPerPixel = lookup.bpp;
+    command.paletteIndex = 0x40 + lookup.color;
+  }
+
+  return command;
+}
+
 export function walkMotionObjectLinkedList(
   spriteRam: Uint8Array,
   startEntry = 0,
   maxEntries = MOTION_OBJECT_ENTRY_COUNT,
 ): number[] {
   const entryIndexes: number[] = [];
+  if (isLikelyPackedMotionObjectRam(spriteRam)) {
+    const visited = new Set<number>();
+    let entryIndex = startEntry & 0x3f;
+
+    for (let count = 0; count < maxEntries; count += 1) {
+      if (visited.has(entryIndex)) break;
+
+      const byteOffset = entryIndex * LEGACY_PACKED_MOTION_OBJECT_ENTRY_BYTES;
+      if (byteOffset + 7 >= spriteRam.length) break;
+
+      visited.add(entryIndex);
+      entryIndexes.push(entryIndex);
+
+      const word3 =
+        ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+      entryIndex = word3 & 0x003f;
+    }
+
+    return entryIndexes;
+  }
+
   const visited = new Set<number>();
+  const bankIndex = Math.floor(startEntry / MOTION_OBJECT_ENTRY_COUNT);
+  const bankBaseEntry = bankIndex * MOTION_OBJECT_ENTRY_COUNT;
+  const bankByteBase = bankIndex * MOTION_OBJECT_BANK_BYTES;
   let entryIndex = startEntry & 0x3f;
 
   for (let count = 0; count < maxEntries; count += 1) {
     if (visited.has(entryIndex)) break;
 
-    const byteOffset = entryIndex * MOTION_OBJECT_ENTRY_BYTES;
-    if (byteOffset + 7 >= spriteRam.length) break;
+    const word3Off =
+      bankByteBase +
+      MOTION_OBJECT_WORD_STRIDE_BYTES * 3 +
+      entryIndex * MOTION_OBJECT_ENTRY_WORD_BYTES;
+    if (word3Off + 1 >= spriteRam.length) break;
 
     visited.add(entryIndex);
-    entryIndexes.push(entryIndex);
+    entryIndexes.push(bankBaseEntry + entryIndex);
 
     const word3 =
-      ((spriteRam[byteOffset + 6] ?? 0) << 8) | (spriteRam[byteOffset + 7] ?? 0);
+      ((spriteRam[word3Off] ?? 0) << 8) | (spriteRam[word3Off + 1] ?? 0);
     entryIndex = word3 & 0x003f;
   }
 
@@ -371,15 +480,8 @@ export function buildSpritesFromMotionObjectList(
 }
 
 /**
- * Walk i 4 banks Atari System 1 (entry start: 0, 16, 32, 48) e dedupe.
- *
- * Atari System 1 ha 4 banks separati nella MO RAM (256 byte = 32 entries
- * ognuno apparentemente, ma actually 16 entries * 8 byte = 128 byte each;
- * verified via MAME oracle dump @ frame 2400).
- *
- * Bank A walk parte da entry 0, Bank B da 16, Bank C da 32, Bank D da 48.
- * Le linked list possono intersecarsi (= entry visitato da più banks),
- * ma vogliamo renderizzare ogni entry valido UNA volta.
+ * Walk all 8 Atari System 1 MO banks. Each bank is a 0x200-byte slab with
+ * 64 entries whose four words live in four 0x80-byte planes.
  */
 export function walkMotionObjectAllBanks(
   spriteRam: Uint8Array,
@@ -387,7 +489,8 @@ export function walkMotionObjectAllBanks(
 ): number[] {
   const seen = new Set<number>();
   const ordered: number[] = [];
-  for (const start of [0, 16, 32, 48]) {
+  for (let bank = 0; bank < MOTION_OBJECT_BANK_COUNT; bank++) {
+    const start = bank * MOTION_OBJECT_ENTRY_COUNT;
     for (const e of walkMotionObjectLinkedList(spriteRam, start, maxEntries)) {
       if (!seen.has(e)) {
         seen.add(e);
