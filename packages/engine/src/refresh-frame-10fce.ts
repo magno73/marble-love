@@ -126,13 +126,22 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // injection points so STRUCT @ 0x401C28 (= cz) reflects the terrain z
     // under obj0's current tile, allowing INTEGRATE_VEL to be taken.
     // STUB `fun_1cc62 → obj.z`: bit-perfect proven (99/99 MAME match per
-    // obj0.x). Tentativi di wirare spriteProject1CC62 (real) o
-    // sub1CABATileRedraw (heavy redraw) producono regressione obj0.x.
-    // Cause: 1) sub1CABATileRedraw NON bit-perfect (B2 parity 0/100);
-    // 2) spriteProject senza sub1CABA → ritorna valore basato su STRUCT
-    // warm che non e' quello che MAME calcola (= MAME ha STRUCT aggiornata
-    // da sub1CABA). Per fix vero serve PRIMA fixare sub1CABATileRedraw
-    // bit-perfect, POI wirare spriteProject + sub1CABA insieme.
+    // obj0.x). Mantengo fino a quando sub1CABATileRedraw e' bit-perfect
+    // su input attract (non solo boot fixture).
+    //
+    // Findings task #181:
+    // - sub1CABATileRedraw VIENE chiamata in attract (tap spriteproj_return
+    //   mostra STRUCT @ 0x401C28 modificata frame-by-frame con mix
+    //   3f98/3f94 invece di costante 3fdc warm).
+    // - sub1CABATileRedraw test parity 54/54 era su boot/level-init fixture,
+    //   NON su attract input → su attract input scrive STRUCT divergente
+    //   da MAME (= cluster 0x1c00 +12B se wired).
+    // - MAME spriteProject1CC62 al PC 0x1242a ritorna 0x239f4 (NON
+    //   0x3fdc_0000 come TS calcola con STRUCT warm), perche' STRUCT in
+    //   MAME e' gia' aggiornata da sub1CABA.
+    //
+    // Per chiudere cascade obj0.z stuck → cluster 0x700 49B, serve fixare
+    // sub1CABATileRedraw bit-perfect SU INPUT ATTRACT (= task next session).
     helper121B8(state, rom, a2, {
       fun_1cc62: (_s, _argZero) => {
         const objZOff = objOff + 0x14;
