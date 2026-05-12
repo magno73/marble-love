@@ -210,6 +210,12 @@ export function bootInit(
     }
     state.rng.seed = as_u32((((state.workRam[0x3a6] ?? 0) << 8) | (state.workRam[0x3a7] ?? 0)) & 0xffff);
     state.rng.callsThisFrame = as_u32(0);
+    state.clock.frame = as_u32(0);
+    state.clock.cpuTicks = as_u32(0);
+    state.clock.scanline = as_u16(0);
+    state.clock.mainLoopBodyTicks = as_u32(0);
+    state.clock.decoderD6Init = as_u16(0);
+    state.clock.decoderCallCount = as_u32(0);
     state.clock.pendingSlotArray1493C = undefined;
     state.clock.slotArrayReplayTick = as_u16(0);
     state.clock.warmResidualReplayTick = as_u16(0);

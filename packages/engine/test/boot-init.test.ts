@@ -96,6 +96,43 @@ describe("bootInit", () => {
     expect(s.clock.frame).toBe(5);
   });
 
+  it("warmState restore resetta anche clock e RNG transitori", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const warm = {
+      workRam: new Uint8Array(0x2000),
+      playfieldRam: new Uint8Array(0x2000),
+      spriteRam: new Uint8Array(0x1000),
+      alphaRam: new Uint8Array(0x1000),
+      colorRam: new Uint8Array(0x800),
+      videoScrollX: 11,
+      videoScrollY: 22,
+    };
+    warm.workRam[0x3a6] = 0x12;
+    warm.workRam[0x3a7] = 0x34;
+
+    bootInit(s, rom, { warmState: warm });
+    s.clock.frame = 5 as typeof s.clock.frame;
+    s.clock.cpuTicks = 123 as typeof s.clock.cpuTicks;
+    s.clock.mainLoopBodyTicks = 7 as typeof s.clock.mainLoopBodyTicks;
+    s.clock.decoderCallCount = 9 as typeof s.clock.decoderCallCount;
+    s.clock.slotArrayReplayTick = 3 as typeof s.clock.slotArrayReplayTick;
+    s.clock.warmResidualReplayTick = 4 as typeof s.clock.warmResidualReplayTick;
+    s.rng.callsThisFrame = 2 as typeof s.rng.callsThisFrame;
+
+    bootInit(s, rom, { warmState: warm });
+    expect(s.clock.frame).toBe(0);
+    expect(s.clock.cpuTicks).toBe(0);
+    expect(s.clock.mainLoopBodyTicks).toBe(0);
+    expect(s.clock.decoderCallCount).toBe(0);
+    expect(s.clock.slotArrayReplayTick).toBe(0);
+    expect(s.clock.warmResidualReplayTick).toBe(0);
+    expect(s.rng.seed).toBe(0x1234);
+    expect(s.rng.callsThisFrame).toBe(0);
+    expect(s.videoScrollX).toBe(11);
+    expect(s.videoScrollY).toBe(22);
+  });
+
   it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {
     // Vedi commento in boot-init.ts: in attract_mode l'oracle non popola
     // workRam[0x140-0x176] con le HUD strings. Il path cold-boot di

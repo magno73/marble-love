@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked + texture update ripristinano biglia/avversario animati)
+**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked + texture update ripristinano demo animata stabile)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-12 — Renderer Motion Object banked layout
@@ -29,6 +29,33 @@ Verifiche:
 
 - `npx tsc -b` PASS.
 - Test mirati PASS: `render`, `classic-demo-frame`, `engine-diagnostic-frame`.
+- `probe-gameplay-byte-map`: gameplay drift ancora 0 byte @ f+99.
+
+## 2026-05-12 — Warm live demo guardrail
+
+Il segmento warm `?mameLive=1&play=1` è bit-perfect sulla finestra MAME
+f12000..f12099 e resta visivamente coerente per i primi secondi, ma il runtime
+non modella ancora il ciclo completo di morte/HUD/restart. Oltre il segmento
+affidabile lo state può degradare: marble sparita, scroll verso aree di
+playfield non renderizzate, HUD fermo e nemici ancora vivi.
+
+Fix frontend:
+
+- warmState web ora imposta esplicitamente `slapsticBank: 1`, come i probe CLI
+  e l'oracolo f12000.
+- `bootInit({ warmState })` resetta anche clock/RNG transitori, così può essere
+  usato come restore pulito del segmento demo.
+- in `mameLive+play`, default `loopReset=180` frame per rimanere dentro la
+  finestra visualmente stabile; `loopReset=0` disabilita il guardrail e mostra
+  il raw long-run incompleto.
+
+Verifiche:
+
+- browser: `?autoLoad=1&mameLive=1&play=1` cicla tra scroll 210/249/279 senza
+  scendere nel terreno corrotto.
+- `npx tsc -b` PASS.
+- Test mirati PASS: `boot-init`, `render`, `classic-demo-frame`,
+  `engine-diagnostic-frame`.
 - `probe-gameplay-byte-map`: gameplay drift ancora 0 byte @ f+99.
 
 ## 2026-05-12 — Round 4 warm drift 0B gameplay

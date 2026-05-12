@@ -36,6 +36,8 @@ const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
 const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
+const forcePlay = searchParams.get("play") === "1";
+const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
 // E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
 const useSyntheticDemoFrame =
@@ -175,6 +177,7 @@ async function startGame(
           videoScrollY: (((parseInt(dump.workRam.substr(4, 2), 16) << 8) |
                           parseInt(dump.workRam.substr(6, 2), 16)) & 0x1ff),
           videoScrollX: 0,
+          slapsticBank: 1,
         };
         if (useMameDump) mameDumpFrozen = true;
         console.log(`[warmState] loaded MAME frame ${dump.frame} (frozen=${mameDumpFrozen})`);
@@ -286,20 +289,18 @@ async function startGame(
       //          dal warm bootstrap MAME). Default: solo se non c'è warmState.
       // ?loopReset=N → replay loop: ogni N tick ricarica warmState (= evita
       //   drift catastrofico cumulativo che spinge marble fuori viewport).
-      //   Senza loopReset, dopo ~600 tick lo state degrada (obj0.z stuck
-      //   → 0, marble cade sotto il livello, sprite glitchati).
-      const forcePlay = searchParams.get("play") === "1";
-      const loopResetN = parseInt(searchParams.get("loopReset") ?? "0", 10);
+      //   Per la demo warm live, defaultiamo a 180 frame: il modello runtime
+      //   è validato bit-perfect sui primi 100 frame e resta visivamente sano
+      //   nel segmento iniziale. `loopReset=0` disabilita il guardrail.
+      const loopResetParam = searchParams.get("loopReset");
+      const defaultLoopResetN =
+        forcePlay && warmState !== undefined ? DEFAULT_WARM_PLAY_LOOP_RESET : 0;
+      const parsedLoopResetN = parseInt(loopResetParam ?? String(defaultLoopResetN), 10);
+      const loopResetN = Number.isFinite(parsedLoopResetN) ? parsedLoopResetN : 0;
       const mainLoopBody =
         forcePlay || (rom !== undefined && warmState === undefined);
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
-        // Reset warmState (= replay loop)
-        s.workRam.set(warmState.workRam);
-        s.playfieldRam.set(warmState.playfieldRam);
-        s.spriteRam.set(warmState.spriteRam);
-        s.alphaRam.set(warmState.alphaRam);
-        s.colorRam.set(warmState.colorRam);
-        s.clock.mainLoopBodyTicks = 0 as typeof s.clock.mainLoopBodyTicks;
+        bootInit(s, tickRom, { warmState });
       }
       tick(s, {
         rom: tickRom,
