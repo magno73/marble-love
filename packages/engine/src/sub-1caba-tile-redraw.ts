@@ -249,7 +249,39 @@ function asrW(v: number, n: number): number {
  * @param state  GameState (modifica `workRam[0x1c28..0x1c47]`).
  * @param rom    RomImage (ROM letture: 0x1eb3a, 0x1ed0a, 0x1ed62, 0x24b3a + lvlPtr).
  */
+// ─── Probe hook (registry-gated, OFF by default) ──────────────────────────
+// Callers (e.g. probe-1caba-runtime-state.ts) can register an observer to
+// inspect input/output state at each call. One-shot or multi-shot is up
+// to caller. Production paths never set this, so overhead is one undefined
+// check.
+type Sub1CabaObserver = (
+  state: GameState,
+  rom: RomImage,
+  callIndex: number,
+  phase: "pre" | "post",
+) => void;
+let __sub1caba_observer: Sub1CabaObserver | null = null;
+let __sub1caba_call_count = 0;
+export function setSub1CabaObserver(obs: Sub1CabaObserver | null): void {
+  __sub1caba_observer = obs;
+  __sub1caba_call_count = 0;
+}
+
 export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
+  const obs = __sub1caba_observer;
+  let observedCall = 0;
+  if (obs !== null) {
+    __sub1caba_call_count++;
+    observedCall = __sub1caba_call_count;
+    obs(state, rom, observedCall, "pre");
+  }
+  sub1CABATileRedrawImpl(state, rom);
+  if (obs !== null) {
+    obs(state, rom, observedCall, "post");
+  }
+}
+
+function sub1CABATileRedrawImpl(state: GameState, rom: RomImage): void {
   // ── Prologo: setup pointers + initial scan position ───────────────────────
   let a5 = STRUCT_OFF;                          // workRam offset for STRUCT writes
   const lvlPtr = r32(state, OFF_LVLPTR) >>> 0;  // *0x400474 = level header ptr (M68k abs)
