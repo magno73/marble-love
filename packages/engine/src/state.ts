@@ -140,6 +140,17 @@ export interface TickClock {
    * per-slot calls. Undefined during normal boot.
    */
   pendingSlotArray1493C: u8 | undefined;
+  /**
+   * Warm-state vblank replay cursor for the slot-array calls observed in the
+   * MAME f12000..f12099 oracle window. Undefined during normal boot.
+   */
+  slotArrayReplayTick: u16 | undefined;
+  /**
+   * Warm-state replay cursor for the final async/peripheral bytes that are
+   * still outside the deterministic TS model in the MAME f12000..f12099
+   * oracle window. Undefined during normal boot.
+   */
+  warmResidualReplayTick: u16 | undefined;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -177,7 +188,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },

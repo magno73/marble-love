@@ -155,6 +155,17 @@ function rb(state: GameState, addr: number): number {
   return (state.workRam[o] ?? 0) & 0xff;
 }
 
+function rbAbs(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WRAM && a < WRAM + 0x2000) {
+    return rb(state, a);
+  }
+  if (a < rom.program.length) {
+    return rom.program[a] ?? 0;
+  }
+  return 0;
+}
+
 function rw(state: GameState, addr: number): number {
   const o = (addr - WRAM) >>> 0;
   return (((state.workRam[o] ?? 0) << 8) | (state.workRam[o + 1] ?? 0)) & 0xffff;
@@ -336,7 +347,22 @@ export function helper15148(
     if (subs?.fun_15460 !== undefined) {
       subs.fun_15460(state, sp);
     } else {
-      stateDispatch15460(state, sp);
+      stateDispatch15460(state, sp, rom);
+    }
+  };
+
+  const call15670IfStateZero = (): void => {
+    if (sb(state, sp, OFF_STATE) !== 0) {
+      return;
+    }
+    if (subs?.fun_15670 !== undefined) {
+      subs.fun_15670(state, sp);
+    } else {
+      stateSub15670(state, sp, {
+        fun_15460: (structPtrAbs) => {
+          stateDispatch15460(state, structPtrAbs, rom);
+        },
+      });
     }
   };
 
@@ -366,8 +392,8 @@ export function helper15148(
       // move.b (A1),D0b; ext.w; cmp.w D2w,D0w; bne→other
       // move.b (1,A1),D0b; ext.w; cmp.w D1w,D0w; bne→other
       const waypointPtr = sl(state, sp, OFF_WAYPOINT_PTR);
-      const wpX = sextB(rb(state, waypointPtr)) & 0xffff;
-      const wpY = sextB(rb(state, waypointPtr + 1)) & 0xffff;
+      const wpX = sextB(rbAbs(state, rom, waypointPtr)) & 0xffff;
+      const wpY = sextB(rbAbs(state, rom, waypointPtr + 1)) & 0xffff;
 
       if (cellX === wpX && cellY === wpY) {
         // ── Waypoint reached ─────────────────────────────────────────────
@@ -400,11 +426,13 @@ export function helper15148(
           // 00015212  add.l  (0x4e,A2),D0   ; D0 += waypointPtr
           // 00015216  move.l D0,(0x4a,A2)
           const targetPtr = sl(state, sp, OFF_TARGET_PTR);
-          const stride4 = sextB(rb(state, targetPtr + 2)) * 4;
+          const stride4 = sextB(rbAbs(state, rom, targetPtr + 2)) * 4;
           const newTarget = (stride4 + waypointPtr) >>> 0;
           swl(state, sp, OFF_TARGET_PTR, newTarget);
           // 0001521a  bra.b 0x00015266
-          callA3();
+          // Primary waypoint reached does not call A3 here; it falls through
+          // to the final state==0 gate and may call FUN_15670.
+          call15670IfStateZero();
           break;
         }
         // if (0x5c,A2)==0x20C18: fall through to 0x1521c (same as waypoint-miss path)
@@ -421,8 +449,8 @@ export function helper15148(
       // 0001522c  move.b (1,A1),D0b; ext.w; cmp.w D1w,D0w; bne→0x15260
       {
         const targetPtr2 = sl(state, sp, OFF_TARGET_PTR);
-        const tpX = sextB(rb(state, targetPtr2)) & 0xffff;
-        const tpY = sextB(rb(state, targetPtr2 + 1)) & 0xffff;
+        const tpX = sextB(rbAbs(state, rom, targetPtr2)) & 0xffff;
+        const tpY = sextB(rbAbs(state, rom, targetPtr2 + 1)) & 0xffff;
 
         if (cellX === tpX && cellY === tpY) {
           // ── Secondary waypoint reached ──────────────────────────────
@@ -436,12 +464,13 @@ export function helper15148(
           // 00015246  move.b (2,A1),D0b; ext.w; ext.l
           // 0001524e  asl.l  #2,D0; add.l (0x4e,A2),D0; move.l D0,(0x4a,A2)
           const targetPtr3 = sl(state, sp, OFF_TARGET_PTR);
-          const stride42 = sextB(rb(state, targetPtr3 + 2)) * 4;
+          const stride42 = sextB(rbAbs(state, rom, targetPtr3 + 2)) * 4;
           const newTarget2 = (stride42 + sl(state, sp, OFF_WAYPOINT_PTR)) >>> 0;
           swl(state, sp, OFF_TARGET_PTR, newTarget2);
           // 00015258  move.l A2,-(SP); jsr (A3); addq.l 4,SP
           callA3();
           // 0001525e  bra.b 0x00015266
+          call15670IfStateZero();
           break;
         }
 
@@ -452,15 +481,7 @@ export function helper15148(
       }
 
       // 0x15266: tst.b (0x1a,A2); bne → epilog
-      if (sb(state, sp, OFF_STATE) !== 0) {
-        break;
-      }
-      // 0x1526e: move.l A2,-(SP); jsr FUN_15670; addq.l 4,SP
-      if (subs?.fun_15670 !== undefined) {
-        subs.fun_15670(state, sp);
-      } else {
-        stateSub15670(state, sp);
-      }
+      call15670IfStateZero();
       break;
     }
 
