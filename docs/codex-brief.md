@@ -1,7 +1,7 @@
-# Codex briefing — Marble Love drift residuo (round 2)
+# Codex briefing — Marble Love drift residuo (round 3)
 
-> Brief per agent ChatGPT Codex CLI. Stato sessione 2026-05-12 post-fix #1.
-> Obiettivo: ridurre drift gameplay workRam da **107B** verso 0B.
+> Brief per agent ChatGPT Codex CLI. Stato sessione 2026-05-12 post-fix #2.
+> Obiettivo: ridurre drift gameplay workRam da **68B** verso 0B.
 
 ## 1. Repo
 
@@ -9,14 +9,14 @@
 /Users/magnus-bot/Code/marble-love/
 git branch: feature/visual-pixel-match
 git remote: github.com/magno73/marble-love (push abilitato)
-ultimo commit: 1ebf208 fix(refresh): wire real z projection for obj0
+ultimo commit locale: fix(helper182ba): wire 15e24 ROM target dispatch
 ```
 
 Stack: TypeScript 5.x strict, monorepo npm workspaces (`packages/engine`,
 `packages/cli`, `packages/web`, `packages/mobile`), vitest, MAME 0.286 come
 oracolo, Ghidra 11.x per disasm M68K.
 
-## 2. Tuo fix precedente (1ebf208) — funzionante ✓
+## 2. Fix precedenti — funzionanti ✓
 
 Hai rimosso lo stub `fun_1cc62 → obj.z` in `refresh-frame-10fce.ts:135`,
 lasciando `helper121B8` usare la replica reale `spriteProject1CC62`. Plus
@@ -34,22 +34,38 @@ obj0.z evolution:
 
 obj0.x ancora 99/99 ✓. Marble runtime stabile fino ~500 frame invece di ~100.
 
+Secondo fix Codex (round 2): P2 slot `0x400A20` non avanzava il target pointer
+ROM-backed via `FUN_15E24 -> FUN_1605C -> FUN_160AE`. Ora f+68 matcha MAME:
+
+```
+P2 slot0:
+  f+66 TS/MAME +0=fffef875 +4=0000b0fd +68=70000 +6e=2278c
+  f+68 TS/MAME +0=ffff3a2a +4=00009ce6 +68=70000 +6e=2277a
+  f+70 TS/MAME +0=ffff7780 +4=00008978 +68=70000 +6e=2277a
+
+Drift @ f+99:
+  Pre-fix2:  total=279 | gameplay=107 | stack=172
+  Post-fix2: total=240 | gameplay=68  | stack=172
+```
+
 ## 3. Stato attuale drift residuo
 
 ```
-total          = 279 byte
+total          = 240 byte
 ├─ 172B stack-residue (escluso da invariante)
-└─ 107B gameplay (target residuo)
+└─ 68B gameplay (target residuo)
 ```
 
-Cluster gameplay top (post-fix):
+Cluster gameplay top (post-fix2):
 ```
-1. 0x0a00..0x0a3f  15B  P2 slot pair (fun158F6 P2 chain)        ← TOP candidate
-2. 0x0680..0x06bf  15B  stateDispatch160F6 cascade (cluster B)
-3. 0x0640..0x067f  12B  velocity globals (stateDispatch160F6)   ← TOP candidate
-4. 0x0a40..0x0a7f  12B  P2 slot pair continuation
-5. 0x0700..0x073f  ~10B residuo decoder (era 49B pre-fix)        ← chiude da solo se 0x0a00+0x0640 fixati
-6. ~43B sparsi (cluster <10B ciascuno)
+1. 0x13c0..0x13ff  11B
+2. 0x0200..0x023f  10B
+3. 0x03c0..0x03ff   6B
+4. 0x0400..0x043f   6B
+5. 0x1340..0x137f   5B
+6. 0x1380..0x13bf   5B
+7. 0x1400..0x143f   5B
+8. 0x1440..0x147f   4B
 ```
 
 ## 4. Comandi essenziali
@@ -84,18 +100,20 @@ advisory. Rule 7 Surface conflicts. Rule 8 Read before write. Rule 9
 Tests verify intent. Rule 10 Checkpoint after step. Rule 11 Match
 conventions. **Rule 12 FAIL LOUD** — se ipotesi sbagliata, dichiaralo.
 
-## 6. Cascade chain verificata + ipotesi target
+## 6. Cascade chain chiusa + target corrente
 
 ```
-[NOT identified upstream]
-   → cluster 0x0a00 (P2 slot pair) +15B
-      → cluster 0x0640 velocity globals +12B
-         → cluster 0x0680 cascade +15B
-            → eventuali cascade minori
-               → drift gameplay 107B
+FIXED:
+  stateValidateGrid15DB6 ROM byte read
+    → stateSub15E24 conditional dispatch
+      → stateDispatch1605C
+        → FUN_160AE ROM-backed target stride
+          → P2 slot @ 0x400A20 f+68 bit-perfect
+            → drift gameplay 107B → 68B
 ```
 
-**Fix UNA sub upstream → cascade chiude ~42B + cascade minor**.
+Il vecchio path P2 `0x0a00` non e' piu' il top cluster. Usare la nuova top-30:
+`0x13c0`, `0x0200`, `0x03c0/0x0400`, `0x1340..0x147f`.
 
 ## 7. Ipotesi gia' FALSIFICATE (Rule 12, NON ripetere)
 
@@ -131,6 +149,8 @@ Parity test 100% O probe runtime conferma:
 - `bufferFill1B12A` (parity in repo)
 - `regfile.ts` 8 istruzioni stack ABI (Tom Harte 2879/2879)
 - `slapstic 137412-103 FSM` (11/11 vitest)
+- `helper182BA` P2 f+66..f+70 runtime per slot `0x400A20` (target pointer e
+  posizione bit-perfect dopo fix `FUN_15E24`)
 
 ## 9. Sub TS NON verificate direttamente (= candidate per drill)
 
@@ -138,13 +158,15 @@ Parity test 100% O probe runtime conferma:
 dentro un body reale tick 2+):
 
 - **`stateDispatch160F6`** — `packages/engine/src/state-dispatch-160f6.ts`
-  (508 righe). Scrive velocity globals @ 0x400640..0x4006BF. **TOP CANDIDATE.**
-  Cluster 0x0640 drift +12B inizia tick 2.
-- **`helper182BA`** — invocata in chain `fun158F6` ELSE branch (= P2 path).
+  (508 righe). Storicamente scrive velocity globals @ 0x400640..0x4006BF.
+  Dopo fix P2 non e' piu' in top-8, ma resta candidato se riemerge nella
+  byte-map.
+- **`helper182BA`** — P2 f+68 target-pointer path risolto. Restano possibili
+  altri rami, ma non ripartire dal vecchio `+0x6e=0x2278c` bug.
 - **`helper25C74`** — invocata in path specifico.
 - **`helper253BC`** — wired in path C ma non testato bit-perfect runtime.
-- **Chain `fun158F6(P2_slot)` completa** — gestisce slot pair P2 update.
-  Scrive cluster 0x0a00 (= P2 slot pair). **TOP CANDIDATE.**
+- **Chain `fun158F6(P2_slot)` completa** — vecchio cluster P2 risolto per
+  f+68; controllare solo se i nuovi probe la riportano in top cluster.
 
 ## 10. File chiave per drill
 
@@ -183,39 +205,40 @@ packages/cli/src/test-sub-1caba-attract-parity.ts (con SLAPSTIC_BANK=1: 3/3 ✓)
 
 ## 12. Strategia suggerita
 
-**Path 1 — Cluster 0x0a00 (P2 slot pair, 15B)** [TOP PRIORITY]
+**Path 1 — Cluster 0x13c0..0x147f (slot/script array, 30B cumulativi)**
 
-Cluster scrive da `fun158F6` (P2 dispatcher). MAME chiama fun158F6 per
-P1 e P2 (via objectUpdatePair158CC). TS replica esistente, mai testata
-bit-perfect runtime.
+Nuovo top cumulativo dopo fix P2. Prima mossa: `probe-gameplay-byte-map.ts`
+per first-diverge e mapping writer/struct, poi tap MAME mirato sul range
+`0x4013C0..0x40147F`.
 
 Drill:
-- Tap MAME su writes a `0x400A20..0x400A9B` durante body tick 2
+- Tap MAME su writes a `0x4013C0..0x40147F` nel primo frame divergente
 - Confronta con TS runtime Proxy
 - Primo byte divergente → identifica writer sub responsabile
 - Fix bit-by-bit
 
-**Path 2 — Cluster 0x0640 (velocity globals, 12B)**
+**Path 2 — Cluster 0x0200..0x023f (10B)**
 
-Cluster scrive `stateDispatch160F6` chain. Chiamata dentro helper121B8
-chain runtime.
+Probabile lista/rect/object scratch. Usare `probe-cluster-diff.ts` e
+`probe-rect-list-diff.ts` prima di teorizzare.
 
 Drill:
-- Tap MAME su writes a `0x400640..0x4006BF` durante body tick 2
+- Tap MAME sul sottorange esatto individuato dalla byte-map
 - Confronta con TS runtime
-- Identifica path branch divergente in stateDispatch160F6
+- Identifica writer sub responsabile
 
-**Path 3 — Drill srtgt @ f+56 esplosione**
+**Path 3 — Cluster 0x03c0/0x0400 (6B + 6B)**
 
-Probe esistente `probe-srtgt-evolution.ts` mostra srtgt diverge -1 unit
-a f+56. Cosa causa quella divergenza precisa?
+Piccoli global/scratch clusters. Dopo i due target maggiori, usare la stessa
+procedura writer-first.
 
 ## 13. Vincoli inviolabili
 
 - **obj0.x 99/99 MAME** non deve regredire — verifica con probe-100f-diff
-- **Drift totale non deve aumentare** rispetto baseline 279
-- **Test mirati** verdi (= refresh-frame-10fce, sub-1caba, sprite-project,
-  helper-121b8)
+- **Drift totale non deve aumentare** rispetto baseline 240
+- **Test mirati** verdi (= helper-182ba, state-validate-grid-15db6,
+  state-dispatch-1605c, sub-158f6; piu' refresh/sub1CABA/sprite-project se
+  tocchi il render path)
 - **Branded types**: `u8/u16/u32/i8/i16/i32` da `wrap.ts`. ESLint
   `no-raw-arith-on-branded` blocca `+/-/*/>>>` su branded
 - **No git push -f, no reset hard**
@@ -238,7 +261,7 @@ i nostri experiment wiravano `fun_1cc62` esplicitamente, che invocava
 sub1CABA ricorsivamente → STRUCT rotta.
 
 Approccio data-driven (= mostrare il comportamento reale invece di
-teorizzare) probabilmente funziona meglio per i 107B residui.
+teorizzare) probabilmente funziona meglio per i 68B residui.
 
 ## 16. Setup velocità
 
@@ -250,5 +273,5 @@ cat docs/agent-briefing.md # tecnico esteso
 npx tsx packages/cli/src/probe-cluster-histogram.ts | head -10 # drift attuale
 ```
 
-Buona fortuna 🎲 — il tuo fix #1 è stato eccellente. Stesso approccio
-data-driven dovrebbe chiudere altri ~42-65B.
+Buona fortuna — i fix #1 e #2 hanno tolto 136B gameplay cumulativi. Stesso
+approccio data-driven dovrebbe chiudere il residuo.

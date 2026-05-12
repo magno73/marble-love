@@ -156,6 +156,11 @@ export interface StateValidateGrid15DB6Subs {
    * `flagLong` è 0 (no-match) o 1 (match), come long signed.
    */
   fun_15e24?: (structPtrLong: number, flagLong: number) => void;
+  /**
+   * Optional absolute byte reader for target pointers outside workRam
+   * (notably ROM-backed path tables used by FUN_182BA).
+   */
+  readByteAbs?: (addr: number) => number;
 }
 
 /** Read big-endian long from workRam (or 0 if out-of-range). */
@@ -224,7 +229,8 @@ export function stateValidateGrid15DB6(
   const currentPtr = readLongAbs(state, a0 + CURRENT_PTR_OFF);
 
   // D1 = signExt_l(byte (A1)); D2 = asr_signed(field_x, 19)
-  const b0 = readByteAbs(state, currentPtr);
+  const readTargetByte = subs?.readByteAbs ?? ((addr: number) => readByteAbs(state, addr));
+  const b0 = readTargetByte(currentPtr);
   const d1_a = sextByteL(b0); // signed long
   const fieldX = readLongAbs(state, a0 + FIELD_X_OFF);
   const d2_a = asrL(fieldX, ASR_COUNT); // signed long
@@ -234,7 +240,7 @@ export function stateValidateGrid15DB6(
 
   if (matched) {
     // 2nd compare: byte @ currentPtr+1 vs field_y >> 19
-    const b1 = readByteAbs(state, currentPtr + 1);
+    const b1 = readTargetByte(currentPtr + 1);
     const d1_b = sextByteL(b1);
     const fieldY = readLongAbs(state, a0 + FIELD_Y_OFF);
     const d2_b = asrL(fieldY, ASR_COUNT);

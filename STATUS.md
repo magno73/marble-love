@@ -1,7 +1,56 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (Codex: obj0.z_long writer wired, gameplay drift 204B → 107B)
+**Ultimo update:** 2026-05-12 (Codex: P2 target-pointer dispatch wired, gameplay drift 107B → 68B)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-12 — Codex fix P2 ROM target dispatch (-39B gameplay)
+
+Codex ha seguito il round 2 brief sul cluster P2 `0x0a00`: la divergenza
+persistente iniziava a f+68 per lo slot P2 @ `0x400A20`, dove TS non avanzava
+`+0x6e` da `0x2278c` a `0x2277a` e quindi clampava `+0x68` a `0x10000`.
+
+Fix chirurgico:
+
+- aggiunta replica `FUN_15E24` in `packages/engine/src/state-sub-15e24.ts`
+  con dispatch condizionale verso `FUN_1605C`.
+- `FUN_160AE` nel nuovo path legge anche liste target ROM-backed.
+- `stateValidateGrid15DB6` accetta un reader byte opzionale per confrontare
+  target pointer fuori workRam; `helper182BA` lo passa con ROM canonical.
+
+Misure post-fix:
+
+```
+probe-cluster-histogram:
+  total=240 | gameplay=68 | stack-residue=172
+
+baseline precedente:
+  total=279 | gameplay=107 | stack-residue=172
+
+delta:
+  -39B gameplay (-36.4% dal residuo round 2)
+```
+
+Verifica mirata P2:
+
+```
+f+66 TS/MAME: +0=fffef875 +4=0000b0fd +68=70000 +6e=2278c
+f+68 TS/MAME: +0=ffff3a2a +4=00009ce6 +68=70000 +6e=2277a
+f+70 TS/MAME: +0=ffff7780 +4=00008978 +68=70000 +6e=2277a
+```
+
+Invarianti:
+
+- `obj0.x` resta bit-perfect 99/99 vs MAME (`probe-100f-diff` f+99 ✓).
+- drift totale scende a 240B, nessuna regressione rispetto al cap 279B.
+- Test mirati PASS: `helper-182ba`, `state-validate-grid-15db6`,
+  `state-dispatch-1605c`, `sub-158f6`.
+- `npx tsc -b` PASS.
+
+Next target per 0B gameplay:
+
+1. Cluster residuo `0x13c0..0x13ff` 11B.
+2. Cluster `0x0200..0x023f` 10B.
+3. Cluster `0x03c0/0x0400` 6B+6B e residui `0x1340..0x147f`.
 
 ## 2026-05-12 — Codex fix obj0.z_long cascade (-97B gameplay)
 
