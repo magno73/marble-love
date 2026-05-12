@@ -135,6 +135,11 @@ export interface TickClock {
   /** Counter invocazioni del decoder. Incrementato in refresh-helper-13ee6
    *  ad ogni chiamata. Usato per indicizzare la tabella D6 entry. */
   decoderCallCount: u32;
+  /**
+   * Warm-state resume for FUN_1493C when an oracle snapshot lands between
+   * per-slot calls. Undefined during normal boot.
+   */
+  pendingSlotArray1493C: u8 | undefined;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -172,7 +177,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0) },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },
