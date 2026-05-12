@@ -207,6 +207,40 @@ Restanti 107B gameplay drift (= post-z-fix) sono cascade indipendenti:
 
 Effort totale: 2-3 giorni Opus + briefing. Architettonicamente solido (sub esistenti bit-perfect, manca solo connettere updater missing).
 
+### 2026-05-12 mattina — CASCADE ENDPOINT IDENTIFICATO (task #179)
+
+Tap MAME `mame_z_long_tap.lua` su writes a workRam[0x2c..0x2f] (= obj0.z_long) ha rivelato la sequenza esatta di scritture M68K per ogni body (frame dispari):
+
+```
+PC 0x122c2 (= post `add.l D0,(0x14,A2)` @ 0x122be):
+   INTEGRATE_VEL: obj.z_long += obj.vz_long
+   Effetto: scrive z_long con valore intermedio
+
+PC 0x12700 (= post `move.l D4,(0x14,A2)` @ 0x126fc):
+   D4 = d4_timer = fun_1cc62(state, 0)
+   Effetto: scrive z_long con valore CALCOLATO (terrain projection)
+   Pattern: z_high -= 1 ogni body (con accumulator 0x8000 in low word)
+```
+
+**Verifica TS**:
+- helper121B8 viene chiamato per obj0 al tick 2 (verified probe-h121-trace)
+- INTEGRATE_VEL branch preso (d0=0 ≤ 0x100000)
+- BUT: obj.vz_long = 0 in TS (= obj0+0x08, idem MAME) → integration scrive stesso valore → NO change
+- `d4_timer = fun_1cc62(state, 0)` con `fun_1cc62` = STUB che ritorna `obj.z` (helper-121b8.ts wire @ refresh-frame-10fce.ts:135-146)
+- `w32(state, OBJ_Z, d4_timer)` = `w32(state, OBJ_Z, obj.z)` = NO change
+- Plus: la writeback @ helper-121b8.ts:1067 e' dentro l'else di subState ∈ {1,2,3} branch; obj0.subState=2 entra in slot dispatch e NON raggiunge la write
+
+**Fix vero richiede 3 step**:
+1. **Replicare correttamente FUN_1CC62 (spriteProject1CC62)** — calcola terrain projection sotto obj. STUB attuale ritorna obj.z stale → no decrement.
+2. **Spostare z write fuori dell'else** — gate solo su `obj[0x36] == 0`, non su subState branching.
+3. **Wire FUN_1CABA** (sub-1caba-tile-redraw.ts 462 righe replica esistente NOT WIRED) o equivalente updater che computa terrain elevation per d4_timer.
+
+Tentativi precedenti (FUN_1CABA wire / fun_29cce) rolled back per regressione obj0.x. Approccio cauto: replicare FUN_1CC62 calculation isolato senza side-effect sprite buffer.
+
+Tap output: `/tmp/mame_z_long_trace.json` (204 writes, 102 frame, 2 PC distinct). Probe `oracle/mame_z_long_tap.lua` riusabile per future investigazioni.
+
+**Cascade chain ENDPOINT**: `fun_1cc62` stub return = root cause assoluto del drift cascade obj0.z → screenX → W20 → speed → srtgt → decoder → cluster 0x700.
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
