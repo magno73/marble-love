@@ -241,6 +241,40 @@ Tap output: `/tmp/mame_z_long_trace.json` (204 writes, 102 frame, 2 PC distinct)
 
 **Cascade chain ENDPOINT**: `fun_1cc62` stub return = root cause assoluto del drift cascade obj0.z → screenX → W20 → speed → srtgt → decoder → cluster 0x700.
 
+### 2026-05-12 mattina (commit 30bb311) — sub-1caba bit-perfect su input attract
+
+Agent Opus a2819595 (task #182) ha identificato e fixato 3 bug bit-perfect:
+
+1. **Prologue `a4Off = OFF_COL_BASE + d4Long * 2`** (NON `*4`). Disasm M68K
+   @ 0x1cb04: `lea 0x400478,A4; adda.l D4,A4; adda.l D4,A4` = **2 add**
+   di D4 long = D4*2. La doc precedente era ERRATA. Fix riga 275 di
+   sub-1caba-tile-redraw.ts.
+
+2. **Path `tc=0` deve scrivere 8 byte zero**. Disasm @ 0x1cb72:
+   `beq.w 0x1cc42` → target 0x1cc42 contiene `42 9d 42 9d` =
+   `clr.l (A5)+; clr.l (A5)+`. Skip body era WRONG, deve scrivere.
+   Fix riga 420-428.
+
+3. **`abortBody` (bmi/ble) deve scrivere 8 byte zero**. Stesso target
+   0x1cc42. Fix riga 298-304.
+
+Validation:
+- test-sub-1caba-attract-parity.ts: **3/3 = 100%** con bank=1
+- TS slapstic FSM raggiunge bank 1 dopo tick 2 → match MAME esecuzione
+- vitest sub-1caba-tile-redraw 2/2 pass
+- obj0.x 99/99 ✓
+- Drift 376/204/172 invariato
+
+Wire fun_1bab2 → sub1CABA NON applicato in produzione perche':
+- MAME chiama sub1CABA ~4.6× per body (= per ogni obj via helper121B8)
+- TS firing solo per obj0 (= path C s1a==0 in fun253ECDispatch)
+- Wire causa cluster 0x1c00 +12B (= prima call scrive 3f98×4_3f94×8_3f98×4,
+  call successive in MAME ripristinano 3fdc*16; TS firing 1× lascia
+  struct a 3f98)
+
+Task #183 next: wire helper121B8 per TUTTI gli obj (= invasivo, side-effect
+analysis necessaria). Atteso chiusura cluster 0x1c00 = 0B + cascade 0x700.
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
