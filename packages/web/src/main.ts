@@ -284,9 +284,23 @@ async function startGame(
     if (!mameDumpFrozen) {
       // ?play=1 → forza runMainLoopBody=true ANCHE con warmState (= gameplay
       //          dal warm bootstrap MAME). Default: solo se non c'è warmState.
+      // ?loopReset=N → replay loop: ogni N tick ricarica warmState (= evita
+      //   drift catastrofico cumulativo che spinge marble fuori viewport).
+      //   Senza loopReset, dopo ~600 tick lo state degrada (obj0.z stuck
+      //   → 0, marble cade sotto il livello, sprite glitchati).
       const forcePlay = searchParams.get("play") === "1";
+      const loopResetN = parseInt(searchParams.get("loopReset") ?? "0", 10);
       const mainLoopBody =
         forcePlay || (rom !== undefined && warmState === undefined);
+      if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
+        // Reset warmState (= replay loop)
+        s.workRam.set(warmState.workRam);
+        s.playfieldRam.set(warmState.playfieldRam);
+        s.spriteRam.set(warmState.spriteRam);
+        s.alphaRam.set(warmState.alphaRam);
+        s.colorRam.set(warmState.colorRam);
+        s.clock.mainLoopBodyTicks = 0 as typeof s.clock.mainLoopBodyTicks;
+      }
       tick(s, {
         rom: tickRom,
         p1X: p1XAbs, p1Y: p1YAbs,
