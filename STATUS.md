@@ -1,7 +1,29 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B, resta solo stack-residue 172B)
+**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked ripristina biglia/avversario visibili)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-12 — Renderer Motion Object banked layout
+
+Fix visuale a valle del drift workRam: la Motion Object RAM generata dal core
+era ormai coerente con MAME, ma `render.ts` la decodificava ancora come lista
+packed `entry * 8`. Atari System 1 usa invece bank da 0x200 byte con 64 entry
+e quattro word-plane a offset `0x00/0x80/0x100/0x180`.
+
+Effetto:
+
+- il frontend `?autoLoad=1&mameLive=1&play=1` mostra di nuovo biglia e
+  avversario; i log runtime avanzano con `frame.sprites` ~50+.
+- `probe-video-diff` resta vicino all'oracolo: playfield/color exact, video
+  totale 12 byte @ f+99.
+- Fixture legacy packed mantenute tramite fallback per non rompere i test
+  esistenti.
+
+Verifiche:
+
+- `npx tsc -b` PASS.
+- Test mirati PASS: `render`, `classic-demo-frame`, `engine-diagnostic-frame`.
+- `probe-gameplay-byte-map`: gameplay drift ancora 0 byte @ f+99.
 
 ## 2026-05-12 — Round 4 warm drift 0B gameplay
 
