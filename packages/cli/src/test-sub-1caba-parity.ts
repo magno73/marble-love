@@ -3,10 +3,22 @@
  * test-sub-1caba-parity.ts — differential FUN_0001CABA (sub1CABATileRedraw)
  * vs MAME ground truth.
  *
- * **CURRENT STATUS: 54/54 = 100% bit-perfect**. The replica in
- * `packages/engine/src/sub-1caba-tile-redraw.ts` matches MAME exactly for
- * every captured call in the firing window (f173..f257 = 66 calls in MAME,
- * 54 reach the exit tap before MAX_CALLS cap).
+ * **CURRENT STATUS (post-task #182): 41/54 = 76% match**. The previous
+ * 54/54 result was an artifact of the OLD replica's `tc=0 → no writes` and
+ * `abortBody → no writes` behavior. Disasm shows tc=0 and abortBody BOTH
+ * jump to 0x1cc42 = `clr.l (A5)+; clr.l (A5)+` (= write 8 zero bytes).
+ * After fixing the replica to match disasm (write 8 zeros on those paths),
+ * 13 boot fixture calls now produce zeros where MAME shows `4000*16`. Root
+ * cause: this test fixture only captures per-call colBase + bsearchAlt for
+ * the FIRST call. Subsequent calls use the GLOBAL workRam @ snap_frame=172,
+ * where bsearchAlt is all zeros (= no PATH_INDIRECT redispatch table yet).
+ * With stale bsearchAlt → tc=0 → clear-8-bytes path triggers, producing 0s
+ * that mismatch MAME's `4000*16`. The replica IS correct per disasm; the
+ * boot fixture is incomplete (= would need per-call bsearchAlt for all
+ * calls). The attract fixture (`test-sub-1caba-attract-parity.ts`) provides
+ * complete per-call state and verifies 3/3 = 100% with the corrected replica
+ * when slapstic bank is forced to 1 (= the bank TS naturally reaches via
+ * `applySlapsticBank` during attract execution).
  *
  * **Background**: FUN_1CABA is called 66 times in MAME boot/level-init
  * (window f173..f240), but **ZERO times** in the attract window f12000..12099
