@@ -269,9 +269,11 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
   // A6 = 0x24b3a; if (D4 bit 0): A6 += 0x12
   let a6 = ROM_TBL_24B3A + ((d4Long & 1) !== 0 ? 0x12 : 0);
 
-  // A4 = 0x400478 + D4 * 4 (workRam offset)
+  // A4 = 0x400478 + D4 * 2 (workRam offset)
+  // Disasm: `lea 0x400478, A4; adda.l D4, A4; adda.l D4, A4` — TWO adds of
+  // D4 (long), so net A4 += D4*2 (NOT D4*4 as previously documented).
   // (Long arith, since D4 is signed long now after ext.l)
-  let a4Off = (OFF_COL_BASE + d4Long * 4) >>> 0;
+  let a4Off = (OFF_COL_BASE + d4Long * 2) >>> 0;
   // For bounds checking — a4Off may be negative or out of range when d4Long < 0;
   // we'll guard via the bmi/cmp inside the loop.
 
@@ -280,21 +282,24 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
 
   // ── LOOP: 4 iterations ─────────────────────────────────────────────────────
   for (let d3 = 0; d3 < 4; d3++) {
-    // tst.w D4w; bmi → epilog (D4 < 0 → abort iter entirely)
-    // cmp.w D4w, D2w; ble → epilog (D2 <= D4 → abort)
-    // NB: both bounds break out of the WHOLE function loop (epilog 0x1CC42 →
-    // jumps directly to 0x1CC42 which is just before 0x1CC46... wait, both
-    // bma/ble jump to "epilog" which is the very end of the loop body just
-    // before increment. Actually checking disasm: bmi.w 0x1cc42, ble.w 0x1cc42.
-    // 0x1cc42 is the "no-op" gap before 0x1cc46 (END_OF_ITER). So branch
-    // skips this iter's body but STILL continues the loop via increment.
+    // tst.w D4w; bmi.w 0x1cc42 (D4 < 0 → write 8 zeros + EOI)
+    // cmp.w D4w, D2w; ble.w 0x1cc42 (D4 >= D2max → write 8 zeros + EOI)
+    // 0x1cc42 has `clr.l (A5)+; clr.l (A5)+` = writes 8 zero bytes to STRUCT,
+    // THEN proceeds to END_OF_ITER (0x1cc46). So abortBody = "clear 8 bytes".
 
     const d4Signed = s16(d4);
     let abortBody = false;
     if (d4Signed < 0) abortBody = true;
     if (s16(d2Max) <= d4Signed) abortBody = true;
 
-    if (!abortBody) {
+    if (abortBody) {
+      // Write 8 zero bytes via 2× clr.l (A5)+
+      w16(state, a5 + 0, 0);
+      w16(state, a5 + 2, 0);
+      w16(state, a5 + 4, 0);
+      w16(state, a5 + 6, 0);
+      a5 = (a5 + 8) >>> 0;
+    } else {
       // D0w = D6w
       let d0 = d6;
 
@@ -412,14 +417,15 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
           // bra 0x1cb64 → re-dispatch
           continue dispatchLoop;
         }
-        // tst.w D0w; beq.w 0x1cc42 → end of iter, A5 still advances 8
+        // tst.w D0w; beq.w 0x1cc42 → write 8 zero bytes + EOI
         if ((terrainCode & 0xffff) === 0) {
-          // No writes — but A5 still needs to advance by the loop step
-          // (from A6) at END_OF_ITER. The body 4 writes are SKIPPED entirely.
-          // Important: the disasm at 0x1cb72 branches to 0x1cc42 (gap before
-          // 0x1cc46), so we skip the body entirely. A5 NOT pre-advanced.
-          // We must NOT write any words; END_OF_ITER (A6 step + A5 += step)
-          // will handle A5 advancement.
+          // PATH_TC_ZERO: branches to 0x1cc42 = `clr.l (A5)+; clr.l (A5)+`
+          // → writes 8 zero bytes to STRUCT, THEN proceeds to END_OF_ITER.
+          w16(state, a5 + 0, 0);
+          w16(state, a5 + 2, 0);
+          w16(state, a5 + 4, 0);
+          w16(state, a5 + 6, 0);
+          a5 = (a5 + 8) >>> 0;
           break dispatchLoop;
         }
         // PATH_DIRECT (0x1CB76): D0w in [1..0x7FF]
@@ -442,10 +448,6 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
         break dispatchLoop;
       }
     }
-    // The `abortBody` path (bmi/ble) jumps to 0x1cc42 = end-of-iter, but
-    // crucially A5 IS NOT pre-advanced by the body. END_OF_ITER then advances
-    // A5/D4/D6/A4 via (A6)+ and continues. In the disasm, the bmi/ble's target
-    // 0x1cc42 is in a "gap" that's effectively just before 0x1cc46 (END_OF_ITER).
 
     // END_OF_ITER (0x1CC46):
     //   D6w += (A6)+         ; step1 word

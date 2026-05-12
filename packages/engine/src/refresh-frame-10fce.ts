@@ -142,6 +142,15 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     //
     // Per chiudere cascade obj0.z stuck → cluster 0x700 49B, serve fixare
     // sub1CABATileRedraw bit-perfect SU INPUT ATTRACT (= task next session).
+    // Task #182 NOTE: sub1CABATileRedraw è bit-perfect su attract input dopo
+    // fix d4*4→d4*2 in prologue (test-sub-1caba-attract-parity.ts 2/2 con
+    // bank=1, slapstic FSM raggiunge bank=1 dopo tick 2). MA wiring causa
+    // regressione cluster 0x1c00 +12B (drift gameplay 204→240B): MAME chiama
+    // sub1CABA ~4.6× per body (= per ogni oggetto via helper121B8), TS solo
+    // per obj0 (= path C). La prima call scrive 3f98×4_3f94×8_3f98×4, le call
+    // successive ripristinano 3fdc*16. TS firing solo obj0 → struct fissato a
+    // 3f98... invece di 3fdc*16 finale. Per chiudere serve wirare helper121B8
+    // per TUTTI gli oggetti (non solo obj0) — task separato e più invasivo.
     helper121B8(state, rom, a2, {
       fun_1cc62: (_s, _argZero) => {
         const objZOff = objOff + 0x14;

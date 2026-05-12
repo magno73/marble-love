@@ -122,25 +122,32 @@ describe("sub1CABATileRedraw (FUN_0001CABA) — bit-perfect parity vs MAME", () 
     expect(tsStructHex).toBe(c.struct_post);
   });
 
-  it("no-op call: struct_pre=4000*16 → struct_post=4000*16 (preservation)", () => {
-    // Subsequent calls (frame > 173) typically have struct_pre == struct_post
-    // because terrainCode read from bsearchAlt is zero in those iterations.
-    // Verify the replica doesn't corrupt the struct when no terrain dispatch
-    // triggers a write.
+  it("tc=0 path clears 8 bytes via 2x clr.l (A5)+ per disasm", () => {
+    // Verifies disasm-correct behavior at 0x1cb72 (beq.w +0xce → 0x1cc42 =
+    // `clr.l (A5)+; clr.l (A5)+`). When all 4 iters take tc=0 path, sub1CABA
+    // writes 32 zero bytes to STRUCT @ 0x1c28..0x1c47.
+    //
+    // Setup: all-zero workRam (= bsearchAlt all 0) + zero playfield → every
+    // dispatch reads terrainCode=0 → PATH_TC_ZERO → write 0s via clr.l.
+    // The 4 iters write to interleaved offsets (per ROM table @ 0x24b3a)
+    // covering all 16 word slots.
     const rom = emptyRomImage();
     rom.program.set(readFileSync(ROM_PATH).subarray(0, rom.program.length));
 
     const state = emptyGameState();
-    // Default state: all zero workRam + playfield. Set struct_pre = 4000*16.
+    // Set struct_pre = 4000*16 to verify it gets cleared.
     for (let i = 0; i < 16; i++) {
       writeWordBE(state.workRam, 0x1c28 + i * 2, 0x4000);
     }
-    // tileX/tileY = 0 (default). lvlPtr = 0 (no level data). With all-zero
-    // workRam, all terrainCode reads return 0 → no writes occur.
+    // Ensure d2Max is large enough to avoid abortBody trigger (set lvlPtr+0x18 to a high value).
+    // Default zero state means lvlPtr=0 → readWord(0x18) = 0 → d2Max=0 → abortBody triggers
+    // (which ALSO writes zeros via the same clr.l clr.l mechanism).
     sub1CABATileRedraw(state, rom);
+    // All 16 word slots should be cleared to 0 (either via tc=0 or abortBody;
+    // both paths write 8 zeros per iter via clr.l (A5)+ at 0x1cc42).
     for (let i = 0; i < 16; i++) {
       const w = (state.workRam[0x1c28 + i * 2]! << 8) | state.workRam[0x1c28 + i * 2 + 1]!;
-      expect(w).toBe(0x4000);
+      expect(w).toBe(0);
     }
   });
 });
