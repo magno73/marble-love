@@ -181,6 +181,32 @@ Stima cascade fix: cluster 0x0700 49B + ~80B sparsi (= cascade scroll/screenX de
 
 Effort: 1-2 giorni Opus + briefing. Task #178 aggiornato con dettaglio chain.
 
+### Esperimento empirico conferma cascade (probe-z-override-experiment.ts)
+
+Override `obj0.z_long` (workRam[0x2c..0x2f]) con MAME ground truth ad OGNI tick, misurato drift gameplay:
+
+```
+PRIMA (TS z_long invariato):  total=376 gameplay=204
+DOPO  (z_long = MAME GT):     total=279 gameplay=107
+DELTA:                        -97 byte gameplay (-47.5%)
+```
+
+**Prova definitiva**: 97 byte gameplay drift (47.5%) dipendono DIRETTAMENTE da `obj0.z_long`. Cascade chain confermata.
+
+Restanti 107B gameplay drift (= post-z-fix) sono cascade indipendenti:
+- ~19B rect-list (5B snapshot-timing artifact non-fixable + 14B block-obj cascade)
+- ~51B block-obj struct (0x1362/13c2/1422) cascade upstream da cluster 0x13c0 helper12896
+- ~37B altri sparsi (residual cascade)
+
+**Path to 0 byte gameplay**:
+1. Fix `obj0.z_long` writer M68K (`fun_1cc62` o `helper121B8 INTEGRATE_VEL`) → -97B
+2. Fix `block-obj` updater (cluster 0x13c0 helper12896 chain) → -51B  
+3. Fix rect-list snapshot-timing (potrebbe richiedere intra-frame snapshot alignment, non-trivial) → -14B
+4. Cascade residual → -16B
+5. Drift gameplay 0 ✓
+
+Effort totale: 2-3 giorni Opus + briefing. Architettonicamente solido (sub esistenti bit-perfect, manca solo connettere updater missing).
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
