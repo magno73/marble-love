@@ -131,6 +131,56 @@ MAME a f+56 sceglie `sLrgB=2`, TS sceglie `sSml=1`. Significa:
 
 Infrastructure ready per fix futuro. Drift sessione invariato 204B (D6 brute-force ha confermato che D6 non e' la leva — la leva e' OFF_SPEED).
 
+### 2026-05-12 notte — CASCADE CHAIN DEFINITIVA root cause cluster 0x700 + ~80B sparsi
+
+Drill manuale completo (probe-w20-writer, probe-screenx, probe-z-trace, probe-z-writer):
+
+```
+obj0.z_long stuck a 0x3f97_0000 in TS (NESSUN writer in TS — verified via Proxy tap)
+   ↓ MAME scende a 0x3f96_0000 (f+2), 0x3f94_8000 (f+4), ...
+TS obj0.z_high = 0x3f97 sempre
+MAME obj0.z_high decresce
+   ↓ delta z_high = +15 (TS - MAME)
+spriteHelper1B9CC:85 calcola screenX = HUD + z_high + 0x54 - avg
+   ↓ TS screenX = MAME screenX + 15
+sprite-helper-1b9cc.ts:94 scrive obj0+0x20 (= W20 = SL_OFF_W20)
+   ↓ TS obj0.W20 = MAME + 15 (verified probe-w20-writer)
+refreshHelper13EE6 _tail riga 538-543 fa min(d3, obj0.W20)
+   ↓ TS d3 = obj0.W20 piu' alto
+_posUpdate riga 677-683 speed selection:
+   d0 = sx16(d3)
+   if (d0 > center) speed = sSml (=1)  ← TS scatta perche' d0 > 72
+   MAME d0 < center, speed unchanged = 2
+   ↓ TS speed=1, MAME speed=2 da f+56
+OFF_SPEED divergenza
+   ↓
+srtgt += speed → TS rallenta scroll target di +1 vs +2 MAME
+   ↓ srtgt diverge -1 a f+56, -2 a f+58, -3 a f+60, ...
+scrollIdx = (srtgt - xbase) >> 3 diverge
+   ↓
+ctrlAbs = tileTablePtr + scrollIdx*2 punta addr diverso nello slapstic ROM
+   ↓
+decodeBitstream output diverso
+   ↓
+cluster 0x0700..0x073f 49B drift @ f+99
+```
+
+**Root cause assoluto**: TS non aggiorna `obj0.z_long` (= verified zero writes in workRam[0x2c..0x2f] durante body run). MAME ha una sub upstream che fa `z_long += vz_long` o simile. Il TS stub `fun_1cc62 → obj.z` (`helper-121b8.ts:620`) ritorna obj.z ma non lo aggiorna.
+
+**Tentativi precedenti** (STATUS.md sopra, sezione "marble galleggia"):
+- Wire `FUN_1CABA sub1CABATileRedraw`: rolled back per regressione obj0.x  
+- Wire `fun_29cce`: rolled back per regressione drift 547→601
+- TODO documentato in `docs/missing-subs-inventory.md:234`
+
+**Fix vero**: replicare il writer M68K di obj0.z_long. Probabili candidate:
+- helper121B8 INTEGRATE_VEL chain (NO_IMPL parts)
+- FUN_1CABA (replica 462 righe NOT wired)
+- Una sub in chain MAME canonical FUN_253EC → helper253BC → ?
+
+Stima cascade fix: cluster 0x0700 49B + ~80B sparsi (= cascade scroll/screenX dependent) = drift gameplay **204 → ~75B**. Restanti 75B verrebbero da rect-list cascade (snapshot timing + block-obj 19B fissi).
+
+Effort: 1-2 giorni Opus + briefing. Task #178 aggiornato con dettaglio chain.
+
 ## Briefing pack agent
 
 Creato `docs/agent-briefing.md` (205 righe) come pack riusabile per agent Opus su task complessi. Contiene: stack tecnico + CLAUDE.md 12-rule + 7 ipotesi falsificate (NON ripetere) + layout work-RAM + sub TS bit-perfect + MAME measurement reali + cluster ranking + tooling esistente + convenzioni dev. Pattern d'uso: prompt agent inizia con "Leggi PRIMA docs/agent-briefing.md".
