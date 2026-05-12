@@ -123,7 +123,16 @@
  * **Playfield RAM reads** (via PF_RAM_BASE = 0xA00000):
  *   - playfield long at offset derived from tile coords + ROM table.
  *
- * Verifica differential vs MAME @ frame 12000..12099 (probe-100f-diff.ts).
+ * **Parity status**: bit-perfect 54/54 vs MAME (window f173..f257 in
+ * boot/level-init; FUN_1CABA is NOT called in attract f12000..12099). See
+ * `packages/cli/src/test-sub-1caba-parity.ts` + `oracle/mame_1caba_capture.lua`.
+ *
+ * **Impact on attract drift**: ZERO. FUN_1CABA is invoked only at level-init
+ * time, not during the attract window used by `probe-100f-diff.ts`. STRUCT @
+ * 0x401C28 stays at `3fdc*16` throughout f12000..12099 in MAME (verified via
+ * tap on writes to 0x401C28..0x401C47 — 32 writes total in f0..f12010, all
+ * during boot, all with value 0). TS preserves the warm-state value
+ * identically (`probe-struct-1c28.ts` 99/99 OK).
  */
 
 import type { GameState } from "./state.js";
