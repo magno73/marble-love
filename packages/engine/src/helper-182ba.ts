@@ -46,6 +46,7 @@ import { stateValidateGrid15DB6 } from "./state-validate-grid-15db6.js";
 import type { StateValidateGrid15DB6Subs } from "./state-validate-grid-15db6.js";
 import { flagScaledMagnitudeDispatch } from "./flag-scaled-magnitude-dispatch.js";
 import { fun261BC } from "./sub-261bc.js";
+import { stateSub15E24 } from "./state-sub-15e24.js";
 
 const WORK_RAM_BASE = 0x00400000;
 const OBJ_PTR_TABLE = 0x0001eff6;
@@ -139,7 +140,14 @@ export function helper182BA(
   const a2Off = (a2 - WORK_RAM_BASE) >>> 0;
 
   // 0x182c4: jsr 0x15db6(A2)
-  stateValidateGrid15DB6(state, a2, subs?.validateGridSubs);
+  const validateGridSubs: StateValidateGrid15DB6Subs = {
+    ...subs?.validateGridSubs,
+    readByteAbs: subs?.validateGridSubs?.readByteAbs ?? ((addr: number) => readByteAbs(state, rom, addr)),
+    fun_15e24:
+      subs?.validateGridSubs?.fun_15e24 ??
+      ((ptr: number, flag: number) => stateSub15E24(state, rom, ptr, flag)),
+  };
+  stateValidateGrid15DB6(state, a2, validateGridSubs);
 
   // 0x182ca: cmpi.b #0x2, (0x36,A2); beq → 0x1841a (gravity-only path)
   const s36 = rB(state, a2Off + F_S36);
