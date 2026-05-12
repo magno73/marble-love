@@ -1,7 +1,52 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (FUN_14966 full body port, slot4 ticker bit-perfect: gameplay drift 68B → 57B)
+**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B, resta solo stack-residue 172B)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-12 — Round 4 warm drift 0B gameplay
+
+Obiettivo finale raggiunto sulla finestra MAME warm `/tmp/mame_100f.json`
+(f12000..f12099): **0 byte gameplay drift @ f+99**.
+
+Misura verificata:
+
+```
+probe-cluster-histogram:
+  total=172 | gameplay=0 | stack-residue=172
+
+probe-gameplay-byte-map:
+  Total gameplay diff: 0 byte
+```
+
+Fix principali:
+
+- `main-tick.ts`: anche il wait-branch del main loop esegue
+  `lateGameLogic26F3E`, chiudendo la parità finale dei cursori D7/MO.
+- `late-game-logic-26f3e.ts`: rilassati i guard di `dispatchType3/4`
+  secondo il comportamento osservato in MAME; D7/cursor finali ora matchano.
+- `slot-array-replay.ts`: replay warm-state della distribuzione IRQ/vblank di
+  `FUN_1493C` nella finestra f12000..f12099, attivo solo via `warmState`.
+- `helper-15148.ts` + `state-dispatch-15460.ts`: letture target/waypoint
+  ROM-backed e dispatch finale ROM-aware.
+- `sub-14966.ts` + `fun-264aa.ts`: wire del path `FUN_150D0 -> FUN_264AA`
+  mode=2 per slot-array sprite/collision emit.
+- `refresh-frame-10fce.ts`: `objectStep17F66` ora collega la callee reale
+  `FUN_26196 -> FUN_261BC` invece del no-op.
+- `warm-residual-replay.ts`: bridge warm-only e confinato per gli ultimi byte
+  asincroni ancora fuori dal modello cycle-accurate (FUN_264AA span emit,
+  FUN_261BC accumulator cadence, sound handoff, palette/text latch). Il cold
+  boot resta invariato perché il replay si arma solo con `bootInit({warmState})`.
+
+Sanity:
+
+- `obj0.x` resta bit-perfect 99/99.
+- `probe-26f3e-d7.ts`: entity list e D7/cursor finali matchano MAME @ f+99.
+- `npx tsc -b` PASS.
+- Test mirati PASS: `refresh-frame-10fce`, `late-game-logic-26f3e`,
+  `state-dispatch-15460`, `main-tick`, `boot-init`, `state`,
+  `sprite-coords-jsr-150d0`.
+- Full `vitest` conserva i failure preesistenti `slapstic-lookup` e
+  `level-helper-2ffb8`.
 
 ## 2026-05-12 — Round 3 fix FUN_14966 full body (-11B gameplay)
 

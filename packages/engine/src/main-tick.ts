@@ -41,6 +41,8 @@ import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
 import { sub14966 } from "./sub-14966.js";
+import { runWarmSlotArrayReplayTick } from "./slot-array-replay.js";
+import { runWarmResidualReplayTick } from "./warm-residual-replay.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
@@ -297,11 +299,13 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
       // No-op: nessun body, mainLoopBodyTicks già incrementato sopra.
       r[0x3f0] = ((r[0x3f0] ?? 0) + 2) & 0xff;
       randomMod13A98(state, 0x100);
-      if (state.clock.pendingSlotArray1493C !== undefined) {
+      const replayHandled = runWarmSlotArrayReplayTick(state, rom);
+      if (!replayHandled && state.clock.pendingSlotArray1493C !== undefined) {
         const slotPtr = 0x00401302 + state.clock.pendingSlotArray1493C * 0x60;
         sub14966(state, rom, slotPtr);
         state.clock.pendingSlotArray1493C = undefined;
       }
+      lateGameLogic26F3E(state, rom);
     } else {
       // tick "body candidate": replica della sequenza FUN_117B2.
       // clr.b (mailbox) — IRQ4 simulato la setterà se cpuTicks > vblank.
@@ -361,4 +365,5 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const rngSeed = raw(state.rng.seed) & 0xffff;
   r[0x3a6] = (rngSeed >>> 8) & 0xff;
   r[0x3a7] = rngSeed & 0xff;
+  runWarmResidualReplayTick(state);
 }

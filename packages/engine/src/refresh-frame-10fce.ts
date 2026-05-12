@@ -38,6 +38,8 @@ import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
 import { as_u32 } from "./wrap.js";
 import { objectScanDispatch251DE } from "./object-scan-dispatch-251de.js";
 import { objectStep17F66 } from "./object-step-17f66.js";
+import { flagScaledMagnitudeDispatch } from "./flag-scaled-magnitude-dispatch.js";
+import { fun261BC } from "./sub-261bc.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
 import { helper121B8 } from "./helper-121b8.js";
@@ -47,6 +49,7 @@ import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
+import { runWarmSlotArrayReplayTick } from "./slot-array-replay.js";
 import { sub14966 } from "./sub-14966.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
 import { stringStep1725A } from "./string-step-1725a.js";
@@ -117,7 +120,13 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     objectStep17F66(state, a2, {
       fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
       fun180BE: () => {},
-      fun26196: () => {},
+      fun26196: (a2Addr) => {
+        flagScaledMagnitudeDispatch(
+          state,
+          a2Addr,
+          (structPtr, magnitude) => fun261BC(state, structPtr, magnitude, rom.program),
+        );
+      },
     });
     // Wire FUN_1CABA into spritePosUpdate1BAB2 and let helper121B8 use the
     // real spriteProject1CC62. The old `fun_1cc62 -> obj.z` stub kept obj0.z
@@ -141,7 +150,13 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   objectStep17F66(state, a2, {
     fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
     fun180BE: () => {},
-    fun26196: () => {},
+    fun26196: (a2Addr) => {
+      flagScaledMagnitudeDispatch(
+        state,
+        a2Addr,
+        (structPtr, magnitude) => fun261BC(state, structPtr, magnitude, rom.program),
+      );
+    },
   });
 }
 
@@ -393,9 +408,12 @@ export function refreshFrame10FCE(
   // + advance pc + pos+=vel quando state ∈ {0,3} → chiude cluster 0x13c0.
   const fun1493CKey = gameMode === 4 ? "FUN_1493C_HEAVY" : "FUN_1493C";
   callSub(state, fun1493CKey, () => {
-    (subs.slotArrayTick1493C ?? ((s) => {
-      slotArrayTick(s, { fun_14966: (slotPtr, st) => { sub14966(st, rom, slotPtr); } });
-    }))(state);
+    const replayHandled = runWarmSlotArrayReplayTick(state, rom);
+    if (!replayHandled) {
+      (subs.slotArrayTick1493C ?? ((s) => {
+        slotArrayTick(s, { fun_14966: (slotPtr, st) => { sub14966(st, rom, slotPtr); } });
+      }))(state);
+    }
   });
 
   // 00010FEC: addq.b #1, (0x004003F0).l

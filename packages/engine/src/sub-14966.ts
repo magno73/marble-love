@@ -59,6 +59,7 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { helper15148 } from "./helper-15148.js";
+import { fun264AA } from "./fun-264aa.js";
 import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
 
 const WRAM = 0x00400000 as const;
@@ -249,7 +250,9 @@ export function sub14966(state: GameState, rom: RomImage, slotPtr: number): void
   }
 
   // 0x14bbe  jsr FUN_150D0(slotPtr); 0x14bc8 epilogue.
-  spriteCoordsJsr150D0(state, sp, { inner264AA: () => 0 });
+  spriteCoordsJsr150D0(state, sp, {
+    inner264AA: (ptr, mode) => fun264AA(state, rom, ptr, mode),
+  });
 }
 
 /**

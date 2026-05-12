@@ -37,7 +37,7 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
-import { as_u8, as_u32 } from "./wrap.js";
+import { as_u16, as_u32 } from "./wrap.js";
 
 import {
   paletteRamInitFull,
@@ -210,7 +210,9 @@ export function bootInit(
     }
     state.rng.seed = as_u32((((state.workRam[0x3a6] ?? 0) << 8) | (state.workRam[0x3a7] ?? 0)) & 0xffff);
     state.rng.callsThisFrame = as_u32(0);
-    state.clock.pendingSlotArray1493C = as_u8(3);
+    state.clock.pendingSlotArray1493C = undefined;
+    state.clock.slotArrayReplayTick = as_u16(0);
+    state.clock.warmResidualReplayTick = as_u16(0);
     return;
   }
 

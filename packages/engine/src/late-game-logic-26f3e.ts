@@ -457,7 +457,7 @@ function dispatchType3(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x160) return;
+  if (s16(d4) >= 0x160) return;
   // 3 fixed-ptr calls + 1 struct call:
   moEmit(state, rom, rl(state, rom, rl(state, rom, 0x40044a)), d5, d4, 0x3800, subs);
   moEmit(state, rom, rl(state, rom, rl(state, rom, 0x40044e)), d5, d4, 0x3800, subs);
@@ -475,7 +475,7 @@ function dispatchType4(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f006 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x28, 0x18, 0x10);
-  if (s16(d4) < 0xe0 || s16(d4) >= 0x100) return;
+  if (s16(d4) >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x58)), d5, d4, 0x2000, subs);
 
   // Inner loop at sp+0x2c using a word-stride array (tst.w (a1) / addq.l #1,a2):

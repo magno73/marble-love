@@ -242,6 +242,7 @@
  * Verifica bit-perfect via `cli/src/test-state-dispatch-15460-parity.ts`.
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
 /** WORK RAM base assoluta M68k. */
@@ -351,6 +352,17 @@ function readByteAbs(state: GameState, addr: number): number {
   return state.workRam[a - WORK_RAM_BASE] ?? 0;
 }
 
+function readByteAbsOrRom(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + WORK_RAM_SIZE) {
+    return state.workRam[a - WORK_RAM_BASE] ?? 0;
+  }
+  if (rom !== undefined && a < rom.program.length) {
+    return rom.program[a] ?? 0;
+  }
+  return 0;
+}
+
 /** Write unsigned byte to workRam (no-op if out-of-range). */
 function writeByteAbs(state: GameState, addr: number, value: number): void {
   const a = addr >>> 0;
@@ -366,7 +378,7 @@ function writeByteAbs(state: GameState, addr: number, value: number): void {
  * Sceglie l'animazione in base a quale direzione è impostata, scrive
  * vel_x = D3<<16, vel_y = D2<<16, flag (0x26)=1.
  */
-function caseTrackMarble(state: GameState, a0: number): void {
+function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
   // Cell coords (>>19 di pos)
   const posX = readLongAbs(state, a0 + POS_X_OFF);
   const posY = readLongAbs(state, a0 + POS_Y_OFF);
@@ -376,8 +388,8 @@ function caseTrackMarble(state: GameState, a0: number): void {
 
   // Target cell ptr (long @ +0x4A)
   const targetPtr = readLongAbs(state, a0 + TARGET_PTR_OFF);
-  const targetX = sextByteL(readByteAbs(state, targetPtr));
-  const targetY = sextByteL(readByteAbs(state, targetPtr + 1));
+  const targetX = sextByteL(readByteAbsOrRom(state, rom, targetPtr));
+  const targetY = sextByteL(readByteAbsOrRom(state, rom, targetPtr + 1));
 
   // tst.l (A0) — signed long
   const velXCurrent = readLongAbs(state, a0 + VEL_X_OFF) | 0;
@@ -572,6 +584,7 @@ function commonEpilog(state: GameState, a0: number): void {
 export function stateDispatch15460(
   state: GameState,
   structPtrLong: number,
+  rom?: RomImage,
 ): void {
   const a0 = structPtrLong >>> 0;
 
@@ -584,7 +597,7 @@ export function stateDispatch15460(
     switch (kindSigned) {
       case 0:
       case 3:
-        caseTrackMarble(state, a0);
+        caseTrackMarble(state, a0, rom);
         break;
       case 1:
         caseAnim20CD8(state, a0);
