@@ -1,7 +1,65 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-11 (post Opus validation 0x7F0FB + slapstic banking identificato come next target)
+**Ultimo update:** 2026-05-12 (Codex: obj0.z_long writer wired, gameplay drift 204B → 107B)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-12 — Codex fix obj0.z_long cascade (-97B gameplay)
+
+Codex ha letto `docs/codex-brief.md` e ha seguito il dato piu' recente di
+`STATUS.md`: il cluster `0x0640` e il decode drift erano ormai cascade a valle
+di `obj0.z_long` frozen. Fix chirurgico in
+`packages/engine/src/refresh-frame-10fce.ts`:
+
+- rimosso l'override `fun_1cc62 -> obj.z` nel path obj0 `fun253ECDispatch`.
+- `helper121B8` ora usa la replica reale `spriteProject1CC62`.
+- `spritePosUpdate1BAB2` resta wired con `sub1CABATileRedraw`.
+- Effetto: riprodotto il writer MAME @ `0x126fc` (`move.l D4,(0x14,A2)`),
+  cioe' `obj0.z_long` viene aggiornato dal terrain projection invece di restare
+  sul valore warm-state.
+
+Misure post-fix:
+
+```
+probe-cluster-histogram:
+  total=279 | gameplay=107 | stack-residue=172
+
+baseline precedente:
+  total=376 | gameplay=204 | stack-residue=172
+
+delta:
+  -97B gameplay (-47.5%), coerente con probe-z-override-experiment
+```
+
+Invarianti:
+
+- `obj0.x` resta bit-perfect 99/99 vs MAME (`probe-100f-diff` f+99 ✓).
+- `obj0.z_long` matcha MAME su f12000..12099 con ROM caricata via
+  `applySlapsticBank.loadRomBlob` e warmState `slapsticBank: 1`.
+- Cluster `0x0700` decode cascade chiuso dalla top-30 canonica; top gameplay
+  residui ora dominati da P2 slot pair / velocity globals / slot table:
+  `0x0a00=15B`, `0x0680=11B`, `0x13c0=11B`, `0x0200=10B`.
+
+Verifiche:
+
+- `npx tsc -b` PASS.
+- Mirati: `npx vitest run packages/engine/test/refresh-frame-10fce.test.ts
+  packages/engine/test/sub-1caba-tile-redraw.test.ts
+  packages/engine/test/sprite-project-1cc62.test.ts --reporter=basic`
+  PASS 16/16.
+- Full `npx vitest run --reporter=basic` mostra fail preesistenti:
+  `packages/engine/test/slapstic-lookup.test.ts` 8 fail
+  (`rom.slapsticFsm.bank` undefined) e
+  `packages/engine/test/level-helper-2ffb8.test.ts` 1 fail noto. Il runner si
+  e' poi appeso ed e' stato terminato manualmente.
+
+Next target per 0B gameplay:
+
+1. P2 slot pair drift (`0x0a00`, first mismatch f+8/f+68 pattern) resta il
+   contributore gameplay piu' grande.
+2. Velocity globals `0x0680` e slot/script table `0x13c0+` sono i prossimi
+   cluster misurabili.
+3. Correggere o quarantinare i fail preesistenti `slapstic-lookup` /
+   `level-helper-2ffb8` per rendere di nuovo affidabile il segnale full suite.
 
 ## 🎯 Insight 2026-05-11 notte fonda — vero root cause cluster 0x0700 (74B)
 

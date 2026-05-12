@@ -119,60 +119,15 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun180BE: () => {},
       fun26196: () => {},
     });
-    // Wire FUN_1CABA (heavy tile-redraw) into both spritePosUpdate1BAB2 and
-    // spriteProject1CC62. spritePosUpdate1BAB2 invokes it conditionally on
-    // tile-change (sentinel @ 0x400696/8 = 0xFFFF set right above in
-    // helper121B8 → first invocation triggers it). spriteProject1CC62 only
-    // calls it if argByte != 0, but here helper121B8 always passes argLong=0,
-    // so that path is no-op anyway. We inject the real replica into both
-    // injection points so STRUCT @ 0x401C28 (= cz) reflects the terrain z
-    // under obj0's current tile, allowing INTEGRATE_VEL to be taken.
-    // STUB `fun_1cc62 → obj.z`: bit-perfect proven (99/99 MAME match per
-    // obj0.x). Mantengo fino a quando sub1CABATileRedraw e' bit-perfect
-    // su input attract (non solo boot fixture).
-    //
-    // Findings task #181:
-    // - sub1CABATileRedraw VIENE chiamata in attract (tap spriteproj_return
-    //   mostra STRUCT @ 0x401C28 modificata frame-by-frame con mix
-    //   3f98/3f94 invece di costante 3fdc warm).
-    // - sub1CABATileRedraw test parity 54/54 era su boot/level-init fixture,
-    //   NON su attract input → su attract input scrive STRUCT divergente
-    //   da MAME (= cluster 0x1c00 +12B se wired).
-    // - MAME spriteProject1CC62 al PC 0x1242a ritorna 0x239f4 (NON
-    //   0x3fdc_0000 come TS calcola con STRUCT warm), perche' STRUCT in
-    //   MAME e' gia' aggiornata da sub1CABA.
-    //
-    // Per chiudere cascade obj0.z stuck → cluster 0x700 49B, serve fixare
-    // sub1CABATileRedraw bit-perfect SU INPUT ATTRACT (= task next session).
-    // Task #182 NOTE: sub1CABATileRedraw è bit-perfect su attract input dopo
-    // fix d4*4→d4*2 in prologue (test-sub-1caba-attract-parity.ts 2/2 con
-    // bank=1, slapstic FSM raggiunge bank=1 dopo tick 2). MA wiring causa
-    // regressione cluster 0x1c00 +12B (drift gameplay 204→240B): MAME chiama
-    // sub1CABA ~4.6× per body (= per ogni oggetto via helper121B8), TS solo
-    // per obj0 (= path C). La prima call scrive 3f98×4_3f94×8_3f98×4, le call
-    // successive ripristinano 3fdc*16. TS firing solo obj0 → struct fissato a
-    // 3f98... invece di 3fdc*16 finale. Per chiudere serve wirare helper121B8
-    // per TUTTI gli oggetti (non solo obj0) — task separato e più invasivo.
-    // Task #183: wire `fun_1bab2 → spritePosUpdate1BAB2(fun_1CABA → sub1CABA)`
-    // per path C (obj0). sub1CABATileRedraw è bit-perfect su attract input
-    // (task #182, test-sub-1caba-attract-parity.ts 3/3 con slapstic FSM bank=1).
-    // Necessario wirarlo SU TUTTI i call site dove helper121B8 viene invocato
-    // affinché STRUCT @ 0x401C28 torni a `3fdc*16` finale (MAME chiama
-    // sub1CABA ~4.6× per body).
+    // Wire FUN_1CABA into spritePosUpdate1BAB2 and let helper121B8 use the
+    // real spriteProject1CC62. The old `fun_1cc62 -> obj.z` stub kept obj0.z
+    // frozen; with the real projection, the MAME writer at 0x126fc is
+    // reproduced and obj0.z_long matches the f12000..12099 oracle.
     helper121B8(state, rom, a2, {
       fun_1bab2: (s, objAddr) => {
         spritePosUpdate1BAB2(s, objAddr, {
           fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
         });
-      },
-      fun_1cc62: (_s, _argZero) => {
-        const objZOff = objOff + 0x14;
-        return (
-          (((wr[objZOff] ?? 0) << 24) |
-            ((wr[objZOff + 1] ?? 0) << 16) |
-            ((wr[objZOff + 2] ?? 0) << 8) |
-            (wr[objZOff + 3] ?? 0)) >>> 0
-        );
       },
     });
     return;
