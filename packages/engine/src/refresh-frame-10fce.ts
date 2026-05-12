@@ -126,12 +126,13 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // injection points so STRUCT @ 0x401C28 (= cz) reflects the terrain z
     // under obj0's current tile, allowing INTEGRATE_VEL to be taken.
     // STUB `fun_1cc62 → obj.z`: bit-perfect proven (99/99 MAME match per
-    // obj0.x). Tentativi di wirare la replica completa `sub1CABATileRedraw`
-    // (Agent FUN_1CABA) producono regressione drift secondario perché
-    // alcuni side-effects della tile-redraw chain non sono ancora
-    // bit-perfect (STRUCT @ 0x401C28 write differente da MAME).
-    // Lo stub rende `d0 = projZ - obj.z = 0 ≤ 0x100000` → INTEGRATE_VEL
-    // eseguito → obj.x += obj.vx bit-perfect.
+    // obj0.x). Tentativi di wirare spriteProject1CC62 (real) o
+    // sub1CABATileRedraw (heavy redraw) producono regressione obj0.x.
+    // Cause: 1) sub1CABATileRedraw NON bit-perfect (B2 parity 0/100);
+    // 2) spriteProject senza sub1CABA → ritorna valore basato su STRUCT
+    // warm che non e' quello che MAME calcola (= MAME ha STRUCT aggiornata
+    // da sub1CABA). Per fix vero serve PRIMA fixare sub1CABATileRedraw
+    // bit-perfect, POI wirare spriteProject + sub1CABA insieme.
     helper121B8(state, rom, a2, {
       fun_1cc62: (_s, _argZero) => {
         const objZOff = objOff + 0x14;
