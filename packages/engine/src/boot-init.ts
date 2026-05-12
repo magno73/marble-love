@@ -37,6 +37,7 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
+import { as_u8, as_u32 } from "./wrap.js";
 
 import {
   paletteRamInitFull,
@@ -207,6 +208,9 @@ export function bootInit(
       rom.slapsticFsm.loadedBank = 0;
       applySlapsticBank(rom, rom.slapsticFsm.bank);
     }
+    state.rng.seed = as_u32((((state.workRam[0x3a6] ?? 0) << 8) | (state.workRam[0x3a7] ?? 0)) & 0xffff);
+    state.rng.callsThisFrame = as_u32(0);
+    state.clock.pendingSlotArray1493C = as_u8(3);
     return;
   }
 

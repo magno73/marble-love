@@ -40,6 +40,8 @@ import { pfScrollUpdate } from "./pf-scroll.js";
 import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
+import { sub14966 } from "./sub-14966.js";
+import { randomMod13A98 } from "./random-mod-13a98.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
@@ -272,6 +274,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // even = body, odd = wait. Stessa sequenza di body run (ticks 0,2,4...
   // diventano body), ma il counter è ora 0,1,2,3... lineare con il tick.
   const OFF_VBLANK_MAILBOX = 0x16;
+  let mainLoopWaitSnapshot: boolean | undefined;
   if (opts.runMainLoopBody === true) {
     // Increment first (matches previous TS convention: warm-state assumed
     // mainLoopBodyTicks=0 → first tick post-warm gets value 1 → ODD = wait,
@@ -288,9 +291,17 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     // timing snapshot intra-frame.
     state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks + 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
     const tickIsBody = (state.clock.mainLoopBodyTicks & 1) === 0;
+    mainLoopWaitSnapshot = !tickIsBody;
     if (!tickIsBody) {
       // tick "wait" (corrisponde a uno dei due spin-wait MAME).
       // No-op: nessun body, mainLoopBodyTicks già incrementato sopra.
+      r[0x3f0] = ((r[0x3f0] ?? 0) + 2) & 0xff;
+      randomMod13A98(state, 0x100);
+      if (state.clock.pendingSlotArray1493C !== undefined) {
+        const slotPtr = 0x00401302 + state.clock.pendingSlotArray1493C * 0x60;
+        sub14966(state, rom, slotPtr);
+        state.clock.pendingSlotArray1493C = undefined;
+      }
     } else {
       // tick "body candidate": replica della sequenza FUN_117B2.
       // clr.b (mailbox) — IRQ4 simulato la setterà se cpuTicks > vblank.
@@ -343,5 +354,11 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // vs MAME multi-frame dump (frame 2401..2460: workRam[0x14] alternates
   // 0x00/0x01 in funzione di interleaving IRQ4↔main-thread).
   // Riferimenti binario: writers @ 0x17aa, 0x1b82 (entrambi in FUN_FA0).
-  r[0x14] = r[0x11] ?? 0;
+  r[0x14] = mainLoopWaitSnapshot === true ? 1 : r[0x11] ?? 0;
+  if (mainLoopWaitSnapshot !== undefined) {
+    r[0x39a] = mainLoopWaitSnapshot ? 1 : 0;
+  }
+  const rngSeed = raw(state.rng.seed) & 0xffff;
+  r[0x3a6] = (rngSeed >>> 8) & 0xff;
+  r[0x3a7] = rngSeed & 0xff;
 }
