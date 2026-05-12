@@ -42,6 +42,8 @@ import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
 import { helper121B8 } from "./helper-121b8.js";
 import { fun158F6 } from "./sub-158f6.js";
+import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
+import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -151,7 +153,18 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // successive ripristinano 3fdc*16. TS firing solo obj0 → struct fissato a
     // 3f98... invece di 3fdc*16 finale. Per chiudere serve wirare helper121B8
     // per TUTTI gli oggetti (non solo obj0) — task separato e più invasivo.
+    // Task #183: wire `fun_1bab2 → spritePosUpdate1BAB2(fun_1CABA → sub1CABA)`
+    // per path C (obj0). sub1CABATileRedraw è bit-perfect su attract input
+    // (task #182, test-sub-1caba-attract-parity.ts 3/3 con slapstic FSM bank=1).
+    // Necessario wirarlo SU TUTTI i call site dove helper121B8 viene invocato
+    // affinché STRUCT @ 0x401C28 torni a `3fdc*16` finale (MAME chiama
+    // sub1CABA ~4.6× per body).
     helper121B8(state, rom, a2, {
+      fun_1bab2: (s, objAddr) => {
+        spritePosUpdate1BAB2(s, objAddr, {
+          fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+        });
+      },
       fun_1cc62: (_s, _argZero) => {
         const objZOff = objOff + 0x14;
         return (
@@ -402,7 +415,19 @@ export function refreshFrame10FCE(
     (subs.objectUpdatePair158CC ?? ((s) => {
       objectUpdatePair158CC(s, {
         objectUpdate: (slotPtr: number) => {
-          fun158F6(s, slotPtr, rom);
+          // Task #183: wire fun_1bab2 → spritePosUpdate1BAB2(fun_1CABA → sub1CABA)
+          // anche per slot pair P1/P2 via helper121B8 ELSE branch. STRUCT @ 0x401C28
+          // deve ritornare a 3fdc*16 finale dopo che MAME chiama sub1CABA ~4.6×
+          // per body (= per ogni oggetto).
+          fun158F6(s, slotPtr, rom, {
+            helper121B8Subs: {
+              fun_1bab2: (st, objAddr) => {
+                spritePosUpdate1BAB2(st, objAddr, {
+                  fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); },
+                });
+              },
+            },
+          });
         },
       });
     }))(state);
