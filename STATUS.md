@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (Codex: P2 target-pointer dispatch wired, gameplay drift 107B → 68B)
+**Ultimo update:** 2026-05-12 (FUN_14966 full body port, slot4 ticker bit-perfect: gameplay drift 68B → 57B)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-12 — Round 3 fix FUN_14966 full body (-11B gameplay)
+
+Round 3 brief Path 1 target: cluster `0x13c0..0x147f` (30B). Drill data-driven:
+
+1. `probe-gameplay-byte-map.ts` aggiornato per usare `applySlapsticBank` +
+   `slapsticBank: 1` (era senza slapstic → numeri inutili 444B vs reale 68B).
+2. Top byte `+0x24` (TS=0x32 MAME=0x00) → ticker mai resettato in TS.
+3. `sub-14966-stub.ts` portava solo il prologo (armed check + addq.b ticker),
+   skippando Path C (body quando ticker raggiunge limit).
+4. Ghidra force-disasm 0x14966..0x14c40 → 188 istruzioni reali.
+
+Fix in `packages/engine/src/sub-14966.ts`:
+
+- replica Path armed=0 (pure epilogue, no FUN_150D0)
+- replica Path B (bgt taken, ticker < limit): `cmpi.b #2,state` → jsr FUN_15148
+- replica Path C (body): clr ticker, slot[0x58] += sext(step)*4, sentinel
+  check, slot[0x58] = slot[0x5c] se sentinel/base, pos += vel quando state ∈
+  {0,3} e step > 0, jsr FUN_15148, jsr FUN_150D0
+- state dispatch 0x14a0a..0x14a24 (state in {1,5,6} → TODO complex block;
+  per slot1/2/3 in attract state resta 0 in 99/99 frame, branch non si attiva)
+- wirato in `refresh-frame-10fce.ts` al posto di `fun14966Stub`
+
+Misure post-fix:
+
+```
+probe-cluster-histogram:
+  pre-fix:  total=240 | gameplay=68 | stack-residue=172
+  post-fix: total=229 | gameplay=57 | stack-residue=172
+  delta:    -11B gameplay (-16.2%)
+```
+
+Cluster top post-fix:
+```
+0x1400..0x143f   8B  (was 5B, +3 cascade)
+0x13c0..0x13ff   7B  (was 11B, -4)
+0x03c0..0x03ff   6B
+0x0400..0x043f   6B
+0x1440..0x147f   5B  (was 4B, +1)
+0x0380..0x03bf   4B
+0x1380..0x13bf   4B  (was 5B, -1)
+0x0200..0x023f   3B  (was 10B, -7)
+0x1340..0x137f   3B  (was 5B, -2)
+```
+
+Slot1/2 `+0x24` (ticker) ora bit-perfect MAME. Slot3 `+0x24` ancora 0x01 vs
+0x00 (warm-state phase diverso da slot1/2: warm tick=0 vs 1 → cycle pattern
+off-by-one). Cluster 0x0200 quasi chiuso (cascade da slot4 fix).
+
+Invarianti:
+- `obj0.x` 99/99 ✓
+- Drift totale −11B
+- Test mirati PASS: `refresh-frame-10fce`, `slot-array-tick`,
+  `refresh-helper-1493c`, `helper-15148`
+- `tsc -b` PASS
+
+Next target per 0B gameplay:
+1. Cluster `0x1400..0x143f` slot3 vx/vy + slot2 tail (8B).
+2. Cluster `0x03c0/0x0400` AV-control + stateSub family (12B).
+3. Portare blocco state-{1,5,6} di FUN_14966 se compaiono regressioni.
 
 ## 2026-05-12 — Codex fix P2 ROM target dispatch (-39B gameplay)
 

@@ -47,7 +47,7 @@ import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
-import { fun14966Stub } from "./sub-14966-stub.js";
+import { sub14966 } from "./sub-14966.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
 import { stringStep1725A } from "./string-step-1725a.js";
 import { stateSub19BAA } from "./state-sub-19baa.js";
@@ -389,12 +389,12 @@ export function refreshFrame10FCE(
   });
 
   // 00010FE6: jsr 0x0001493C
-  // Default callback per FUN_14966: stub minimal (head-only) — vedi
-  // `sub-14966-stub.ts` per coverage e workaround slot 3.
+  // FUN_14966 ora full port: vedi `sub-14966.ts`. Body Path C reset ticker
+  // + advance pc + pos+=vel quando state ∈ {0,3} → chiude cluster 0x13c0.
   const fun1493CKey = gameMode === 4 ? "FUN_1493C_HEAVY" : "FUN_1493C";
   callSub(state, fun1493CKey, () => {
     (subs.slotArrayTick1493C ?? ((s) => {
-      slotArrayTick(s, { fun_14966: fun14966Stub });
+      slotArrayTick(s, { fun_14966: (slotPtr, st) => { sub14966(st, rom, slotPtr); } });
     }))(state);
   });
 
