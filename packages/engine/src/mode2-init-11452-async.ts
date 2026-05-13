@@ -333,7 +333,7 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
         },
       });
       state.clock.mode2Init11452Stage = undefined;
-      state.clock.mode2BottomHudDelay = as_u8(1);
+      state.clock.mode2BottomHudDelay = rb(state, 0x004003e4) === 1 ? as_u8(1) : undefined;
       return;
   }
 }

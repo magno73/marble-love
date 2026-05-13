@@ -78,6 +78,8 @@ import { objectInit2591A } from "./object-init-2591a.js";
 import { objectArrayInit25B40 } from "./object-array-init-25b40.js";
 import { pickObjLarger } from "./obj-pick-larger.js";
 import { fun29CCE } from "./sub-29cce.js";
+import { objectEnter1281C } from "./object-enter-1281c.js";
+import { fun264AA } from "./fun-264aa.js";
 
 const WRAM = 0x00400000;
 
@@ -87,6 +89,11 @@ function off(addr: number): number {
 
 function rb(state: GameState, addr: number): number {
   return state.workRam[off(addr)] ?? 0;
+}
+
+function s8(value: number): number {
+  const b = value & 0xff;
+  return b & 0x80 ? b - 0x100 : b;
 }
 
 function wb(state: GameState, addr: number, value: number): void {
@@ -160,6 +167,8 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       },
     });
   };
+  const enterObject1281C = (s: GameState, objAddr: number): number =>
+    objectEnter1281C(s, objAddr, (ptr, mode) => fun264AA(s, rom, ptr, mode));
   const runTerrainCollision = (s: GameState, objAddr: number): void => {
     fun29CCE(s, objAddr, rom);
   };
@@ -174,6 +183,29 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       },
     }, rom);
   };
+
+  // 0x25416..0x25488: transitional wobble for active carried/eaten states.
+  // This runs before the state jump table when obj+0xD8 is set, except for
+  // states 2/4/7/10/11. It drives obj+0x68, which late-game sprite emission
+  // uses as the small X offset for the state-6 tail block.
+  if (sd8 !== 0 && s1a !== 2 && s1a !== 4 && s1a !== 7 && s1a !== 10 && s1a !== 11) {
+    wb(state, a2 + 0x68, rb(state, a2 + 0x68) + rb(state, a2 + 0x69));
+    if (s8(rb(state, a2 + 0x68)) > 2) {
+      wb(state, a2 + 0x68, 2);
+      wb(state, a2 + 0x69, 0xff);
+    } else if (s8(rb(state, a2 + 0x68)) < -0x16) {
+      wb(state, a2 + 0x68, 0xea);
+      wb(state, a2 + 0x69, 1);
+    }
+
+    if ((rb(state, a2 + 0x68) & 1) !== 0) {
+      wb(state, a2 + 0x70, rb(state, a2 + 0x70) + 1);
+      if (s8(rb(state, a2 + 0x70)) > 0x28) {
+        wb(state, a2 + 0x70, 0xff);
+        wb(state, a2 + 0xd8, 0);
+      }
+    }
+  }
 
   // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
@@ -199,6 +231,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun_1bab2: updateSpritePos,
       fun_25bae: enterObjectState,
       fun_29cce: runTerrainCollision,
+      fun_1281c: enterObject1281C,
     });
     return;
   }
@@ -256,6 +289,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun_1bab2: updateSpritePos,
       fun_25bae: enterObjectState,
       fun_29cce: runTerrainCollision,
+      fun_1281c: enterObject1281C,
     });
 
     if (rb(state, a2 + 0x1a) === 5) {
@@ -286,6 +320,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun_1bab2: updateSpritePos,
       fun_25bae: enterObjectState,
       fun_29cce: runTerrainCollision,
+      fun_1281c: enterObject1281C,
     });
 
     wb(state, a2 + 0x57, (rb(state, a2 + 0x57) - 1) & 0xff);
