@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f12900 playfield ora bit-perfect dopo side-effect slapstic di `FUN_1AD54 -> FUN_2BC5C`)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f12950 playfield ora bit-perfect dopo prefetch slapstic `FUN_2FF40`)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-13 — Long demo-mode checkpoint
@@ -122,12 +122,54 @@ TARGET_FRAME=13200:
   pfRam diff = 461  (era 1083)
 ```
 
+Checkpoint successivo dopo `4a5d27b`:
+
+- Root cause del residuo PF f12950: MAME non vede solo le letture/scritture
+  nella window `0x80000..0x87fff`; il tap slapstic osserva tutto lo spazio CPU.
+  Il prefetch 68010 a `0x02ff5a` dentro `FUN_2FF40` matcha `alt1` (`test_any`)
+  prima della coppia protetta `0x87a28 -> 0x87a48+idx*2`. Senza quel touch TS
+  interpretava il `0x80080` finale come direct bank 0, mentre MAME committa il
+  bank caricato via alt path.
+- `renderTileLine1AD54` modella ora quel prefetch nel path
+  `FUN_1AD54 -> FUN_2BC5C -> FUN_2FF40`; aggiunto test di regressione sulla
+  sequenza slapstic `0x2ff5a,0x87a28,0x87a4c,0x80080`.
+- Effetto: il playfield resta exact anche al follow-up f12950; il residuo lungo
+  si sposta fuori dal primo rebuild PF e nel tratto f13200 rimangono 47 byte PF.
+
+Verifiche nuovo checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-render-tile-line-1ad54-parity.ts 20
+  PASS 20/20
+
+test-tilemap-row-build-full-1a444-parity.ts 20
+  PASS 20/20
+
+TARGET_FRAME=12900:
+  total diff = 587  (PF ancora 0; +4 byte non-PF rispetto a 4a5d27b)
+  pfRam diff = 0
+
+TARGET_FRAME=12911:
+  total diff = 202
+
+TARGET_FRAME=12950:
+  total diff = 1052 (era 1178)
+  pfRam diff = 0    (era 126)
+
+TARGET_FRAME=13200:
+  total diff = 1434 (era 1870)
+  pfRam diff = 47   (era 461)
+```
+
 Next loop:
 
-1. isolare la prima divergenza utile dopo il primo chunk exact, partendo dagli
-   offset PF residui f12950 (`0x657..0x674`, `0x6d5` e vicini);
-2. verificare se altri lettori protetti oltre `FUN_1AD54` richiedono touch
-   slapstic reali, prima di toccare ancora `FUN_1AA38/FUN_1A444`;
+1. isolare la prima divergenza utile dopo il primo chunk exact e il follow-up
+   f12950 exact, partendo dai 47 byte PF residui f13200;
+2. cercare altri `test_any` slapstic prodotti da prefetch/letture codice nei
+   helper protetti prima di toccare ancora `FUN_1AA38/FUN_1A444`;
 3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano
    il diff contro `/tmp/mame_demo_12000_18000_step10.json`.
 

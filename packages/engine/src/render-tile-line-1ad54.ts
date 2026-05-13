@@ -103,6 +103,10 @@ function slapsticEvent2BC5C(rom: RomImage, flagsWord: number): void {
   if ((d2 & 0x02) !== 0) touchSlapstic(rom, 0x80000);
   if ((d2 & 0x10) !== 0) {
     const index = (d2 & 0x0c) >> 2;
+    // The Slapstic tap observes the whole CPU address space. During the
+    // table-store helper, the 68010 prefetch at 0x02ff5a matches the chip-103
+    // alternate-banking `alt1` test_any pattern before the protected R/W pair.
+    touchSlapstic(rom, 0x2ff5a);
     touchSlapstic(rom, 0x87a28);
     touchSlapstic(rom, (0x87a48 + index * 2) >>> 0);
   }
