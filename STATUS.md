@@ -1,7 +1,64 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: state-6 sprite cadence checkpoint, f13920 historical 930 -> 868 byte; fresh bank-aware 953 -> 889)
+**Ultimo update:** 2026-05-13 (long demo: scroll-range script spawn checkpoint, f13920 historical 868 -> 558 byte; fresh bank-aware 889 -> 579)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo scroll-range script spawn checkpoint
+
+Il secondo attract cycle ora rientra nel set di script slot corretto: il
+rebuild `FUN_10504 -> FUN_144E4 -> FUN_12DFA` usava per errore l'indirizzo
+`0x40097C` come valore scroll, mentre il binario passa il long contenuto in
+`*0x40097C`. Questo impediva lo spawn dei nove script iniziali del secondo
+cycle e lasciava i successivi type5 negli slot 2/3 invece che 11/12.
+
+Fix stabile:
+
+- `mainLoopInit10504` legge il long BE a `0x40097C` e lo passa a
+  `scrollRange144E4`, matchando il disasm `move.l $40097c.l`.
+
+Effetto osservato:
+
+- A f13200 gli slot script 0..8 combaciano con MAME.
+- A f13600 gli slot 0..12 combaciano strutturalmente; i type5 sono ora in
+  11/12 come MAME.
+- Il residuo type5 e' ora stretto al contatore/record cadence di `slot+0x22`
+  e allo scroll/object cadence del tratto f13880..f13925, non piu' allo spawn
+  upstream.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-main-loop-init-10504-parity.ts 500
+  PASS 500/500
+
+test-scroll-range-144e4-parity.ts 500
+  PASS 500/500
+
+test-script-rect-dispatch-12dfa-parity.ts 500
+  PASS 500/500
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12950 total=1017, pfRam=0
+  f13200 total=748,  pfRam=0
+  f13920 total=558,  pfRam=0
+
+Fresh bank-aware oracle /tmp/mame_demo_bank_13880_13925_step1.json:
+  f13906 total=1052, pfRam=72
+  f13920 total=579,  pfRam=0
+```
+
+Drill aperto:
+
+- Nel fresh step-1 f13880..f13925 TS e MAME hanno gli stessi slot type5 11/12,
+  ma il contatore `slot+0x22` e il record ptr sono sfasati di circa un tick:
+  per esempio f13920 TS slot11 `rec=0x21306 c=4/5`, MAME
+  `rec=0x2130a c=1/5`; slot12 TS `c=1/5`, MAME `c=3/5`.
+- Il prossimo focus e' la cadence del pass `stateDispatch12FD0 ->
+  scriptSlotStep13068` rispetto ai marker IRQ/main-loop `0x14/0x39A/0x75A`,
+  non un remap locale dei type5.
 
 ## 2026-05-13 — Long demo state-6 sprite cadence checkpoint
 

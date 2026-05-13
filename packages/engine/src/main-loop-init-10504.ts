@@ -44,6 +44,12 @@ function rw(state: GameState, addr: number): number {
   return (((state.workRam[off(addr)] ?? 0) << 8) | (state.workRam[off(addr) + 1] ?? 0)) & 0xffff;
 }
 
+function rl(state: GameState, addr: number): number {
+  const o = off(addr);
+  return ((((state.workRam[o] ?? 0) << 24) | ((state.workRam[o + 1] ?? 0) << 16) |
+    ((state.workRam[o + 2] ?? 0) << 8) | (state.workRam[o + 3] ?? 0)) >>> 0);
+}
+
 function ww(state: GameState, addr: number, value: number): void {
   state.workRam[off(addr)] = (value >>> 8) & 0xff;
   state.workRam[off(addr) + 1] = value & 0xff;
@@ -138,7 +144,7 @@ export function mainLoopInit10504(
     (subs.soundMaybe11AC2 ?? ((s: GameState) => { if (rom !== undefined) soundMaybe11AC2(s, rom); }))(state);
   }
 
-  const scrollBase = 0x0040097c;
+  const scrollBase = rl(state, 0x0040097c);
   if (gameMode === 4) {
     (subs.scrollRange144E4 ?? ((s, from, to) => scrollRange144E4(s, rom, from, to)))(state, scrollBase + 0x19, scrollBase);
   } else {
