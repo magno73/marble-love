@@ -31,6 +31,7 @@ import { buildTilemapRows1A444, buildTilemapRows1A444ChunkPhase } from "./tilema
 import { levelInit16F6C } from "./level-init-16f6c.js";
 import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
+import { hudFrameInit283C2 } from "./hud-frame-init-283c2.js";
 
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
@@ -438,6 +439,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       }
       // MAME has the first decode rows visible at f12950, one sampled vblank
       // before the full FUN_10504 tail lands at f12960.
+      if (rb(state, 0x004003e4) === 2) {
+        hudFrameInit283C2(state, rom);
+      }
       decodeMode0LevelRowsPrefix(state, rom, MODE0_LEVEL_PREFIX_ROWS);
       state.clock.mode0Init11452Stage = as_u16(64);
       return;

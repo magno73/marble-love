@@ -159,6 +159,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode0Init11452Stage !== undefined &&
     state.clock.mode0Init11452Stage >= mode0AsyncRefreshStartStage &&
     state.clock.mode0Init11452Stage < ((r[0x3e4] ?? 0) === 3 ? 849 : 1020);
+  const mode0AsyncLevelFractionAtTickStart =
+    mode0AsyncRefreshAtTickStart &&
+    (
+      ((r[0x3e4] ?? 0) === 2 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
+      ((r[0x3e4] ?? 0) === 3 && (state.clock.mode0Init11452Stage ?? 0) > 92) ||
+      ((r[0x3e4] ?? 0) === 4 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
+      ((r[0x3e4] ?? 0) === 5 && (state.clock.mode0Init11452Stage ?? 0) > 90)
+    );
   const mainThreadBlockedAtTickStart =
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
@@ -349,6 +357,9 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
       // Accumula overhead noti; il body delle sub è contato in refreshFrame10FCE.
       addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_1101E_OVERHEAD"] ?? as_u32(40));
       if (mode0AsyncRefreshAtTickStart) {
+        if (mode0AsyncLevelFractionAtTickStart) {
+          levelFractionRender28232Default(state, rom);
+        }
         refreshFrame10FCE(state, rom);
       } else {
         mainLoopInit1101E(state, rom);
