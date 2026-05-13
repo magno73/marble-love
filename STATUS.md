@@ -1,7 +1,53 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (oracle warm dumps: slapsticBank serializzato/inferito; probe/web consumano il bank reale quando disponibile)
+**Ultimo update:** 2026-05-13 (long demo: handoff mode0->mode1->mode2 allineato, f13920 historical 1069 -> 990 byte)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo mode0 handoff checkpoint
+
+Il residuo long-run a f13920 veniva da due body mode0 extra durante l'uscita
+dal tratto attract: TS continuava a eseguire `refreshFrame10FCE` mentre MAME
+parcheggia il main thread, espone `0x400392=1` per due vblank e solo dopo arma
+il reset mode2. L'effetto visibile era scroll/object cadence avanti di due
+step (`obj0+0x57` 0x17 vs 0x19, xscroll/hud +4).
+
+Fix stabili:
+
+- `main-tick.ts` blocca il refresh async mode0 da stage 1020 in poi, evitando
+  gli ultimi due decrementi state6 e gli ultimi due advance scroll.
+- `mode2-init-11452-async.ts` modella il ponte `mode0 -> mode1 -> mode2`:
+  `0x400392=1` per due vblank, poi `0x400392=2` e start del reset mode2.
+- Durante il reset mode2 staged, `0x400014` segue il counter MAME (`1..8`)
+  prima del reset a zero.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-object-state-entry-25bae-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12950 total=1051, pfRam=0
+  f13200 total=988,  pfRam=0
+  f13400 total=1010, pfRam=0
+  f13550 total=1183, pfRam=59
+  f13920 total=990,  pfRam=0
+
+Fresh bank-aware oracle:
+  /tmp/mame_demo_bank_13880_13925_step1.json f13920 total=1037, pfRam=0
+```
 
 ## 2026-05-13 — Slapstic bank nei warm dump
 
