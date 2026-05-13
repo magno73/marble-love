@@ -32,6 +32,9 @@ import { levelInit16F6C } from "./level-init-16f6c.js";
 import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
 import { hudFrameInit283C2 } from "./hud-frame-init-283c2.js";
+import { renderString286EE } from "./render-string-286ee.js";
+import { renderStringChain3520 } from "./render-string-chain-3520.js";
+import { formatNumber3874 } from "./string-format.js";
 
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
@@ -105,6 +108,30 @@ function setMode0VblankSnapshot(state: GameState, stage: number): void {
   } else {
     wb(state, 0x00400016, (visibleStage - 5) & 0xff);
   }
+}
+
+function renderMode0PresentationTimer(state: GameState, rom: RomImage): void {
+  renderString286EE(state, rom, 0x00400082, 0, {
+    numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+      formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+    },
+    renderStringChain2: (entryPtr, attrLong) => {
+      renderStringChain3520(state, rom, entryPtr, attrLong);
+    },
+  });
+}
+
+function updateMode0PresentationTimer(state: GameState, rom: RomImage, stage: number): void {
+  const segment = rb(state, 0x004003e4);
+  let startStage: number | undefined;
+  if (segment === 2) startStage = 65;
+  if (segment === 3) startStage = 103;
+  if (segment === 5) startStage = 101;
+  if (startStage === undefined || stage < startStage) return;
+
+  const seconds = Math.max(0, 60 - Math.floor((stage - startStage) / 60));
+  ww(state, 0x00400082, seconds);
+  renderMode0PresentationTimer(state, rom);
 }
 
 function rebuildMode0LevelPrefix(state: GameState, rom: RomImage, chunks: number): void {
@@ -198,6 +225,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
   const stage = state.clock.mode0Init11452Stage;
   if (stage === undefined) return;
   setMode0VblankSnapshot(state, stage);
+  updateMode0PresentationTimer(state, rom, stage);
   // The second attract cycle reaches the mode2 reset much sooner than the
   // first long dwell; dense MAME f15367..f15379 exposes this short bridge.
   if (rb(state, 0x004003e4) === 3 && stage >= 849 && stage <= 853) {
@@ -451,7 +479,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         state.clock.mode0Init11452Stage = as_u16(65);
         return;
       }
-      mainLoopInit10504(state, {}, {}, rom);
+      mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
       state.clock.mode0Init11452Stage = as_u16(65);
       return;
 
@@ -474,7 +502,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 90:
       if (rb(state, 0x004003e4) === 5) {
-        mainLoopInit10504(state, {}, {}, rom);
+        mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
         state.colorRam.fill(0);
         ww(state, 0x004003ae, rw(state, 0x004003b0));
         state.clock.mode0Init11452Stage = as_u16(91);
@@ -485,7 +513,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 92:
       if (rb(state, 0x004003e4) === 3) {
-        mainLoopInit10504(state, {}, {}, rom);
+        mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
         state.colorRam.fill(0);
         wb(state, 0x00400016, 0);
         ww(state, 0x004003ae, rw(state, 0x004003b0));

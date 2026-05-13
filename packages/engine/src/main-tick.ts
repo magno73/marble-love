@@ -122,6 +122,19 @@ export interface MainTickOptions extends MainTickInputs {
   runMainLoopBody?: boolean;
 }
 
+function readWorkWord(state: GameState, off: number): number {
+  return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
+}
+
+function renderFinalizeHeader11654(state: GameState, rom: RomImage): void {
+  const mode = readWorkWord(state, 0x392);
+  const d2 = mode === 2 ? 0x2000 : 0;
+  if (d2 === 0) {
+    stateSub2572(state, rom, 0x00022a26, 0x1800);
+  }
+  stateSub2572(state, rom, 0x00022a32, (0x3000 - d2) >>> 0);
+}
+
 /**
  * Esegue un tick di gioco completo (= 1 frame @ 60 Hz).
  *
@@ -358,6 +371,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
       addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_1101E_OVERHEAD"] ?? as_u32(40));
       if (mode0AsyncRefreshAtTickStart) {
         if (mode0AsyncLevelFractionAtTickStart) {
+          renderFinalizeHeader11654(state, rom);
           levelFractionRender28232Default(state, rom);
         }
         refreshFrame10FCE(state, rom);

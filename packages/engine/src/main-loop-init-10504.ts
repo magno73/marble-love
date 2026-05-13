@@ -25,6 +25,10 @@ import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 import { renderString286EE } from "./render-string-286ee.js";
 import { hudFrameInit283C2 } from "./hud-frame-init-283c2.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
+import { renderScore28E3C } from "./render-score-28e3c.js";
+import { renderStringEntry28F62 } from "./render-string-entry-28f62.js";
+import { formatNumber3874 } from "./string-format.js";
+import { renderStringChain3520 } from "./render-string-chain-3520.js";
 
 const WRAM = 0x00400000;
 
@@ -68,6 +72,40 @@ function addByte(state: GameState, addr: number, delta: number): void {
 
 function objectSlotAddr(index: number): number {
   return 0x00400018 + index * 0xe2;
+}
+
+function objDirtyDispatch28624Default(state: GameState, rom: RomImage): void {
+  const renderStringChain = (s: GameState, structAddr: number, attrWord: number): void => {
+    stateSub2572(s, rom, structAddr, attrWord);
+  };
+
+  objDirtyDispatch28624(state, rom.program.subarray(0x23d3a, 0x23d3a + 16), {
+    renderStringHelper: (s, arg1, arg2, arg3, arg4, arg5, arg6) => {
+      renderScore28E3C(s, arg1, arg2, arg3, arg4, arg5, arg6, {
+        numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+          formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+        },
+        renderStringEntry28F62: (st, col, tickOff, attr) => {
+          renderStringEntry28F62(st, col, tickOff, attr, {
+            renderStringChain: (structAddr, attrWord) => {
+              renderStringChain(st, structAddr, attrWord);
+            },
+          });
+        },
+      });
+    },
+  });
+}
+
+function renderString286EEDefault(state: GameState, rom: RomImage, slotAddr: number, ordinal: number): void {
+  renderString286EE(state, rom, slotAddr, ordinal, {
+    numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+      formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+    },
+    renderStringChain2: (entryPtr, attrLong) => {
+      renderStringChain3520(state, rom, entryPtr, attrLong);
+    },
+  });
 }
 
 export interface MainLoopInit10504Subs {
@@ -186,11 +224,11 @@ export function mainLoopInit10504(
   }
   wb(state, 0x0040039c, ((playerCount - 1) | playerCount) & 0xff);
   (subs.objectDirtyDispatch ?? ((s) => {
-    if (rom !== undefined) objDirtyDispatch28624(s, rom.program.subarray(0x23d3a, 0x23e3a));
+    if (rom !== undefined) objDirtyDispatch28624Default(s, rom);
   }))(state);
 
   for (let i = 0; i < playerCount; i++) {
-    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EE(s, rom, slot, ord); }))(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
+    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EEDefault(s, rom, slot, ord); }))(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1);
   }
 
   (subs.vblankAck ?? vblankAck28DEA)(state);
@@ -218,7 +256,7 @@ export function mainLoopInit10504(
       wl(state, base + 0x00, 0);
       addByte(state, 0x004003e0, 1);
     }
-    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EE(s, rom, slot, ord); }))(state, base + 0x6a, playerCount + i - 1);
+    (subs.renderString ?? ((s, slot, ord) => { if (rom !== undefined) renderString286EEDefault(s, rom, slot, ord); }))(state, base + 0x6a, playerCount + i - 1);
   }
 
   if (gameMode === 3) {
