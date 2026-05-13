@@ -40,6 +40,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { scriptRectDispatch12DFA } from "./script-rect-dispatch-12dfa.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
+import { scrollSub15A12 } from "./scroll-sub-15a12.js";
 
 export const SCROLL_RANGE_144E4_ADDR = 0x000144e4 as const;
 
@@ -101,7 +102,7 @@ function asrL4byte(v: number): number {
 // ─── Injection interface ──────────────────────────────────────────────────────
 
 export interface ScrollRange144E4Subs {
-  /** FUN_15A12 — non replicata; default no-op. */
+  /** FUN_15A12 — default replica reale quando la ROM e' disponibile. */
   fun_15a12?: (state: GameState, d3b: number, d2b: number) => void;
   /** FUN_14C46 — non replicata; default no-op. */
   fun_14c46?: (state: GameState, d3b: number, d2b: number) => void;
@@ -160,7 +161,11 @@ export function scrollRange144E4(
   // ── 4 dispatcher calls ──────────────────────────────────────────────────
   // Arg order: callee sees d3b as arg1, d2b as arg2
   // (M68K push order: D2b first → arg2, D3b last → arg1; see file header)
-  (subs?.fun_15a12 ?? _noop)(state, d3b, d2b);
+  if (subs?.fun_15a12 !== undefined) {
+    subs.fun_15a12(state, d3b, d2b);
+  } else if (rom !== undefined) {
+    scrollSub15A12(state, rom, d3b, d2b);
+  }
   (subs?.fun_14c46 ?? _noop)(state, d3b, d2b);
   (subs?.fun_17346 ?? _noop)(state, d3b, d2b);
   // FUN_12DFA = scriptRectDispatch12DFA: arg1=d3b (from_scaled), arg2=d2b (to_scaled)
