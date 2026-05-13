@@ -10,7 +10,7 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
-import { as_u8 } from "./wrap.js";
+import { as_u8, as_u16 } from "./wrap.js";
 import { vblankAck28DEA, clearPaletteRam121A6 } from "./vblank-helpers.js";
 import { clearPlayfieldRam12174 } from "./clear-playfield-ram-12174.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
@@ -114,7 +114,7 @@ export function startMode2Init11452Async(state: GameState): void {
 export function startMode0Init11452Async(state: GameState): void {
   wb(state, 0x00400460, 0xff);
   wb(state, 0x004003e2, 0);
-  state.clock.mode0Init11452Stage = as_u8(0);
+  state.clock.mode0Init11452Stage = as_u16(0);
 }
 
 export function advanceMode0Init11452Async(state: GameState, rom: RomImage): void {
@@ -129,12 +129,12 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       clearPlayfieldRam12174(state);
       clearAlphaWords(state, 0, 1183);
       initFnPointers28580(state, rom);
-      state.clock.mode0Init11452Stage = as_u8(1);
+      state.clock.mode0Init11452Stage = as_u16(1);
       return;
 
     case 1:
       clearAlphaWords(state, 1183, 0x780);
-      state.clock.mode0Init11452Stage = as_u8(2);
+      state.clock.mode0Init11452Stage = as_u16(2);
       return;
 
     case 2:
@@ -142,12 +142,12 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
         fun_28dea: vblankAck28DEA,
       });
-      state.clock.mode0Init11452Stage = as_u8(3);
+      state.clock.mode0Init11452Stage = as_u16(3);
       return;
 
     case 3:
     case 4:
-      state.clock.mode0Init11452Stage = as_u8(stage + 1);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
 
     case 5: {
@@ -166,7 +166,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       wl(state, 0x00400446, readRomLong(rom, 0x0001d364 + gameMode * 4));
       ww(state, 0x00400396, 1);
       gameModePrep10456(state);
-      state.clock.mode0Init11452Stage = as_u8(6);
+      state.clock.mode0Init11452Stage = as_u16(6);
       return;
     }
 
@@ -176,58 +176,62 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 9:
     case 10:
     case 11:
-      state.clock.mode0Init11452Stage = as_u8(stage + 1);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
 
     case 12:
       rebuildMode0LevelPrefix(state, rom, 1);
-      state.clock.mode0Init11452Stage = as_u8(13);
+      state.clock.mode0Init11452Stage = as_u16(13);
       return;
 
     case 24:
       rebuildMode0LevelPrefix(state, rom, 2);
-      state.clock.mode0Init11452Stage = as_u8(25);
+      state.clock.mode0Init11452Stage = as_u16(25);
       return;
 
     case 33:
       rebuildMode0LevelPrefix(state, rom, 3);
-      state.clock.mode0Init11452Stage = as_u8(34);
+      state.clock.mode0Init11452Stage = as_u16(34);
       return;
 
     case 44:
       rebuildMode0LevelPrefix(state, rom, 4);
-      state.clock.mode0Init11452Stage = as_u8(45);
+      state.clock.mode0Init11452Stage = as_u16(45);
       return;
 
     case 53:
       rebuildMode0LevelPrefix(state, rom, 5);
-      state.clock.mode0Init11452Stage = as_u8(54);
+      state.clock.mode0Init11452Stage = as_u16(54);
       return;
 
     case 58:
       rebuildMode0LevelPrefix(state, rom, 6);
-      state.clock.mode0Init11452Stage = as_u8(59);
+      state.clock.mode0Init11452Stage = as_u16(59);
       return;
 
     case 63:
       // MAME has the first decode rows visible at f12950, one sampled vblank
       // before the full FUN_10504 tail lands at f12960.
       decodeMode0LevelRowsPrefix(state, rom, MODE0_LEVEL_PREFIX_ROWS);
-      state.clock.mode0Init11452Stage = as_u8(64);
+      state.clock.mode0Init11452Stage = as_u16(64);
       return;
 
     case 64:
       mainLoopInit10504(state, {}, {}, rom);
-      state.clock.mode0Init11452Stage = as_u8(65);
+      state.clock.mode0Init11452Stage = as_u16(65);
       return;
 
-    case 220:
+    case 1023:
+      // Long demo attract handoff: MAME keeps mode0 visible until f13910
+      // before arming the mode2 reset that lands at f13920.
       finalize11654(state, rom);
+      ww(state, 0x00400392, 2);
+      startMode2Init11452Async(state);
       state.clock.mode0Init11452Stage = undefined;
       return;
 
     default:
-      state.clock.mode0Init11452Stage = as_u8(stage + 1);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
   }
 }

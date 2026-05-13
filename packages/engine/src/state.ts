@@ -162,7 +162,7 @@ export interface TickClock {
    * from attract sub-mode 2 to 0 enters FUN_11452 and spans visible vblanks
    * before the level/HUD rebuild side effects land.
    */
-  mode0Init11452Stage: u8 | undefined;
+  mode0Init11452Stage: u16 | undefined;
   /**
    * One-frame delayed HUD refresh after the mode-2 reset path returns. MAME
    * renders the bottom credit/coin strings on the next visible frame, not while
