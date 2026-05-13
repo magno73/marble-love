@@ -768,11 +768,12 @@ export function helper121B8(
       d4_timer = (spriteProject1CC62(state, 0)) >>> 0;
     }
 
-    // stateDispatch160F6(state, a2, tileXPtr=0x4006A0, tileYPtr=0x40069E, prevTimer=d4_timer)
+    // FUN_160F6 sets A3=0x40069E and A4=0x4006A0 internally; keep the TS
+    // parameter order aligned with the dispatcher model's tileX/tileY reads.
     if (subs.fun_160f6 !== undefined) {
-      subs.fun_160f6(state, a2, 0x4006a0, 0x40069e, d4_timer);
+      subs.fun_160f6(state, a2, 0x40069e, 0x4006a0, d4_timer);
     } else {
-      stateDispatch160F6(state, a2, 0x4006a0, 0x40069e, d4_timer);
+      stateDispatch160F6(state, a2, 0x40069e, 0x4006a0, d4_timer);
     }
 
     // move.l (0x14,A2),D0; sub.l (0x40068C).l,D0; tst.l D0
