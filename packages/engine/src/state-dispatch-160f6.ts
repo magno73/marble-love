@@ -13,9 +13,9 @@
  *   link.w   A6, #-8               ; locali (-0x2,A6) e (-0x4,A6)
  *   movem.l  {D2-D7/A2-A4}, -(SP)
  *   movea.l  (0x8,A6),  A2         ; arg1: ptr struct oggetto (workRam abs)
- *   movea.l  (0xc,A6),  A3         ; arg2: ptr word tile-X corrente
- *   movea.l  (0x10,A6), A4         ; arg3: ptr word tile-Y corrente
- *   move.l   (0x14,A6), D1         ; arg4: long prevTimer
+ *   move.l   (0xc,A6), D1          ; arg2: long prevTimer
+ *   movea.l  #0x4006A0, A4         ; word tile-Y corrente
+ *   movea.l  #0x40069E, A3         ; word tile-X corrente
  *   ```
  *   Epilogo: `movem.l (SP)+, {D2-D7/A2-A4}; unlk A6; rts`.
  *
@@ -160,8 +160,8 @@ function sx16(w: number): number { return ((w & 0xffff) << 16) >> 16; }
  *
  * @param state     GameState — `workRam` mutato.
  * @param structPtr Indirizzo assoluto M68k del struct (A2).
- * @param tileXPtr  Indirizzo assoluto M68k della word tile-X (A3).
- * @param tileYPtr  Indirizzo assoluto M68k della word tile-Y (A4).
+ * @param tileXPtr  Indirizzo assoluto M68k della word tile-X (A3=0x40069E in binary).
+ * @param tileYPtr  Indirizzo assoluto M68k della word tile-Y (A4=0x4006A0 in binary).
  * @param prevTimer Long arg D1: timer precedente per il check idle→locked.
  * @param subs      Stub injection (sound + ROM reader).
  */

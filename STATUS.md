@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f12950 playfield ora bit-perfect dopo prefetch slapstic `FUN_2FF40`)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f13200 playfield ora bit-perfect dopo fix A3/A4 `FUN_160F6`)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-13 — Long demo-mode checkpoint
@@ -164,10 +164,48 @@ TARGET_FRAME=13200:
   pfRam diff = 47   (era 461)
 ```
 
+Checkpoint successivo:
+
+- Root cause del residuo PF f13200: `FUN_160F6` imposta internamente
+  `A3=0x40069E` e `A4=0x4006A0`; il caller TS di `helper121B8` passava questi
+  due pointer invertiti al modello del dispatcher.
+- Il branch runtime osservato su MAME a f13110 (`PC=0x163bc`, `state36=1`)
+  richiede il gate X letto da `0x40069E`. Con i pointer invertiti, TS vedeva
+  `0x4006A0=5`, saltava il movimento e lockava `obj0+0x36=2` otto frame prima.
+- Dopo il fix, il tap TS scrive `state36=1` nello stesso punto logico e il
+  playfield torna exact anche sul target f13200; resta un delta PF transitorio
+  di 47 byte a f13160 da isolare nel prossimo loop.
+
+Verifiche nuovo checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+TARGET_FRAME=12900:
+  total diff = 583
+  pfRam diff = 0
+
+TARGET_FRAME=12950:
+  total diff = 1052
+  pfRam diff = 0
+
+TARGET_FRAME=13200:
+  total diff = 1340 (era 1434)
+  pfRam diff = 0    (era 47)
+
+step10 scan:
+  first PF diff = f13160, 47 byte transient
+```
+
 Next loop:
 
 1. isolare la prima divergenza utile dopo il primo chunk exact e il follow-up
-   f12950 exact, partendo dai 47 byte PF residui f13200;
+   f13200 exact, partendo dal delta PF transitorio f13160 e dal residuo
+   non-PF f12950/f13200;
 2. cercare altri `test_any` slapstic prodotti da prefetch/letture codice nei
    helper protetti prima di toccare ancora `FUN_1AA38/FUN_1A444`;
 3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano
