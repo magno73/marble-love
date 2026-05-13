@@ -22,7 +22,7 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | **`obj0.x` evolution vs MAME** | **bit-perfect su 99/99 frame** del ground truth (warm f12000 + tick 99×) |
 | **Demo gameplay marble visivo** | 🟡 warm demo stabile e animato con `?mameLive=1&play=1`; raw long-run `loopReset=0` avanza oltre i primi secondi ma resta WIP |
-| **Long demo oracle f12000..18000** | 🟡 checkpoint 2026-05-13: `npx tsc -b` PASS; playfield exact fino a f12890, poi divergenza nel rebuild/transizione; f13200 diff totale 2474 byte |
+| **Long demo oracle f12000..18000** | 🟡 checkpoint 2026-05-13: `npx tsc -b` PASS; playfield exact fino a f12890; rebuild chunk cadence step-1 allineata sui principali eventi f12899/f12911/f12920/f12931/f12940/f12945/f12950/f12951; resta contenuto PF mixed-cell (f12900 pf diff 22, f13200 diff totale 2474 byte) |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
