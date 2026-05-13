@@ -48,7 +48,10 @@ import { fun158F6 } from "./sub-158f6.js";
 import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
+import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
+import { spriteProject1CC62 } from "./sprite-project-1cc62.js";
+import { spriteHelper1B9CC } from "./sprite-helper-1b9cc.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -68,6 +71,11 @@ import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { scriptSlotStep13068 } from "./script-slot-step-13068.js";
 import { helper12896 } from "./helper-12896.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
+import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
+import { stringHelper17CB8 } from "./string-helper-17cb8.js";
+import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
+import { objectInit2591A } from "./object-init-2591a.js";
+import { objectArrayInit25B40 } from "./object-array-init-25b40.js";
 
 const WRAM = 0x00400000;
 
@@ -128,6 +136,28 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
     });
   };
+  const updateSpriteProject = (s: GameState, argLong: number): number =>
+    spriteProject1CC62(s, argLong, {
+      fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+    });
+  const helper1B9CC = (s: GameState, objAddr: number, flagLong: number): void => {
+    spriteHelper1B9CC(s, objAddr, flagLong, {
+      fun_1bab2: updateSpritePos,
+    });
+  };
+  const enterObjectState = (s: GameState, objAddr: number, code: number): void => {
+    objectStateEntry25BAE(s, objAddr, code, {
+      soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
+      fun_2591A: (st, initObj) => {
+        objectInit2591A(st, initObj, {
+          fun_1BAB2: updateSpritePos,
+          fun_1CC62: updateSpriteProject,
+          fun_25B40: (st2, ptr) => { objectArrayInit25B40(st2, rom, ptr); },
+          fun_1B9CC: helper1B9CC,
+        });
+      },
+    });
+  };
 
   // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
@@ -151,7 +181,37 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // reproduced and obj0.z_long matches the f12000..12099 oracle.
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
+      fun_25bae: enterObjectState,
     });
+    return;
+  }
+
+  // JT[4] = 0x255C6. This is the long demo marble-eaten orbit state:
+  //   1B9CC(obj, 1); 13ADE(obj); wait until counter nearly done; then either
+  //   re-enter state 4 on a nearby target hit, or clear velocities/state.
+  // The previous fallback never called 13ADE, so obj0+0x57 stayed at 0x64 and
+  // the demo remained stuck in eaten mode while MAME resumed mode0 scroll.
+  if (s1a === 4) {
+    helper1B9CC(state, a2, 1);
+    const orbitDone = objectOrbitEmit13ADE(state, rom, a2);
+    let d2w = orbitDone & 0xffff;
+
+    if (orbitDone !== 0 || rb(state, a2 + 0x57) < 2) {
+      const targetY = (rb(state, a2 + 0x10) << 8) | rb(state, a2 + 0x11);
+      const targetX = (rb(state, a2 + 0x0c) << 8) | rb(state, a2 + 0x0d);
+      const hit = stringHelper17CB8(state, a2, targetX, targetY, 0x70);
+      if (hit !== 0) {
+        wb(state, a2 + 0x57, 0x65);
+        enterObjectState(state, a2, 4);
+        d2w = 0;
+      }
+    }
+
+    if (d2w !== 0) {
+      wl(state, a2 + 0x04, 0);
+      wl(state, a2 + 0x00, 0);
+      wb(state, a2 + 0x1a, 0);
+    }
     return;
   }
 
@@ -177,6 +237,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     });
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
+      fun_25bae: enterObjectState,
     });
 
     if (rb(state, a2 + 0x1a) === 5) {
