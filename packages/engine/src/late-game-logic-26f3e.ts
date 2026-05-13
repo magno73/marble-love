@@ -359,18 +359,15 @@ function dispatchType1(
     }
   }
 
-  // At 0x27442: animState in {2,9,1,5} → branch to 0x2750a (skip inner loop 1).
-  // Then at 0x275d8 check animState in {2,9,1,5} → moEmit doSubEmit, then exit.
-  // Inner loop 2 still runs.
-  if (animState === 2 || animState === 9 || animState === 1 || animState === 5) {
+  const skipInner1 = animState === 2 || animState === 9 || animState === 1 || animState === 5;
+
+  // At 0x27442: animState in {2,9,1,5} skips inner loop 1 and the third
+  // direct emit, but still falls through to inner loop 2 at obj+0x38.
+  if (skipInner1) {
     const sp5a = rl(state, rom, objPtr + 0x5a);
     moEmit(state, rom, rl(state, rom, sp5a), d5, d4, frameNeg10, subs);
-    // Inner loop 2 not yet modeled (see TODO above). Skip for now.
-    return;
-  }
-
-  // INNER LOOP 1 at objPtr+0xa4, max 4 iters
-  {
+  } else {
+    // INNER LOOP 1 at objPtr+0xa4, max 4 iters
     let innerA1 = (objPtr + 0xa4) >>> 0;
     for (let i = 0; i < 4; i++) {
       const w0 = rw(state, rom, innerA1);
@@ -385,29 +382,69 @@ function dispatchType1(
       emitSprite(state, rom, code, xv, yv);
       innerA1 = (innerA1 + 6) >>> 0;
     }
+
+    // At 0x2750a: animStates 4/10/11 → skip 3rd direct emit.
+    // animState==8 && frameNeg1!=0 → also skip.
+    const skip3rd = (animState === 4 || animState === 10 || animState === 11);
+    if (!skip3rd && !(animState === 8 && frameNeg1 !== 0)) {
+      // THIRD direct emit
+      const localE3 = (extL(frameNeg10) | 7) >>> 0;
+      const codeOut = localE3 & 0xffff;
+      const d6_3 = (localE3 >>> 16) & 0xffff;  // HIGH word of localE long (disasm 0x2758e)
+      const xv3 = ((s16(d5) - 8) * 32) & 0x3fe0;
+      const yv3 = (((s16(d4) + 5) * 32) & 0x3fe0) | d6_3;
+      const d7v3 = rw(state, rom, CNT_ADDR);
+      curEmit(state, rom, CUR_A1_ADDR, codeOut);
+      curEmit(state, rom, CUR_A2_ADDR, xv3);
+      curEmit(state, rom, CUR_A3_ADDR, yv3);
+      curEmit(state, rom, CUR_A4_ADDR, d7v3);
+      ww(state, CNT_ADDR, (d7v3 + 1) & 0xffff);
+    }
   }
 
-  // At 0x2750a: animStates 4/10/11 → skip 3rd direct emit. 2/9/1/5 already returned.
-  // animState==8 && frameNeg1!=0 → also skip.
-  const skip3rd = (animState === 4 || animState === 10 || animState === 11);
-  if (!skip3rd && !(animState === 8 && frameNeg1 !== 0)) {
-    // THIRD direct emit
-    const localE3 = (extL(frameNeg10) | 7) >>> 0;
-    const codeOut = localE3 & 0xffff;
-    const d6_3 = (localE3 >>> 16) & 0xffff;  // HIGH word of localE long (disasm 0x2758e)
-    const xv3 = ((s16(d5) - 8) * 32) & 0x3fe0;
-    const yv3 = (((s16(d4) + 5) * 32) & 0x3fe0) | d6_3;
-    const d7v3 = rw(state, rom, CNT_ADDR);
-    curEmit(state, rom, CUR_A1_ADDR, codeOut);
-    curEmit(state, rom, CUR_A2_ADDR, xv3);
-    curEmit(state, rom, CUR_A3_ADDR, yv3);
-    curEmit(state, rom, CUR_A4_ADDR, d7v3);
-    ww(state, CNT_ADDR, (d7v3 + 1) & 0xffff);
+  // INNER LOOP 2 at objPtr+0x38, max 5 iters (0x27620..0x276E4).
+  {
+    let innerA1 = (objPtr + 0x38) >>> 0;
+    for (let i = 0; i < 5; i++) {
+      const w0 = rw(state, rom, innerA1);
+      if (w0 === 0) break;
+
+      const d6 = (w0 & 0x8000) | ((w0 >> 11) & 7);
+      const codeBase = w0 & 0x07ff;
+      const xFlag = (w0 & 0x4000) !== 0 ? 0x8000 : 0;
+      const code = (w0 & 0x4000) !== 0
+        ? codeBase
+        : (codeBase | (frameNeg10 & 0xffff)) & 0xffff;
+      const w1 = rw(state, rom, innerA1 + 2);
+      const w2 = rw(state, rom, innerA1 + 4);
+      const xv = ((((s16(w1) + 0x18) * 32) & 0x3fe0) | xFlag) & 0xffff;
+      const yv = ((((s16(w2) + 0x10) * 32) & 0x3fe0) | d6) & 0xffff;
+
+      emitSprite(state, rom, code, xv, yv);
+      innerA1 = (innerA1 + 6) >>> 0;
+    }
   }
 
-  // INNER LOOP 2 at objPtr+0x38, max 5 iters — TODO: complex encoding (disasm 0x27620..).
-  // Not modeled yet. obj0 demo gameplay (animState=0) emits 0 from this loop
-  // because the first word at objPtr+0x38 is 0x0000 in MAME warmstate.
+  // Tail conditionals after the obj+0x38 loop (0x276E8..0x277B2). The long
+  // demo state-6 path uses obj+0xD8 to emit the award/banner sprite block;
+  // leaving this as a no-op kept D7 at 7 while MAME emitted 11+ entries.
+  if (rb(state, rom, objPtr + 0x67) !== 0) {
+    const p62 = rl(state, rom, objPtr + 0x62);
+    moEmit(state, rom, rl(state, rom, p62), d5, d4, 0x1000, subs);
+  }
+
+  if (rb(state, rom, objPtr + 0xd1) !== 0) {
+    const pCC = rl(state, rom, objPtr + 0xcc);
+    moEmit(state, rom, rl(state, rom, pCC), d5, d4, 0x1000, subs);
+  }
+
+  if (rb(state, rom, objPtr + 0xd8) !== 0 &&
+      animState !== 4 && animState !== 10 && animState !== 11 &&
+      animState !== 7 && animState !== 2) {
+    const d4Tail = (d4 + (animState === 6 ? 0x20 : 0x10)) & 0xffff;
+    const d5Tail = (d5 + s8(rb(state, rom, objPtr + 0x68))) & 0xffff;
+    moEmit(state, rom, rl(state, rom, objPtr + 0xd4), d5Tail, d4Tail, frameNeg10, subs);
+  }
 
   void d2; void orMask;
 }
@@ -776,18 +813,22 @@ function dispatchType0x2C(
   const localE1 = (s16(localA) | 0x10001) >>> 0;
   const localE2 = (s16(localA) | 0x10003) >>> 0;
 
-  // Entry 1: code=orMask, xv=(d5-8)<<5&0x3fe0, yv=d4<<5&0x3fe0|low16(localE1)
+  // Entry 1: code=low16(localE1), xv=(d5-8)<<5&0x3fe0,
+  // yv=d4<<5&0x3fe0|high16(localE1)
   {
     const xv = ((s16(d5) - 8) * 32) & 0x3fe0;
-    const yv = (s16(d4) * 32) & 0x3fe0 | (localE1 & 0xffff);
-    emitSprite(state, rom, orMask & 0xffff, xv, yv);
+    const yv = (s16(d4) * 32) & 0x3fe0 | ((localE1 >>> 16) & 0xffff);
+    emitSprite(state, rom, localE1 & 0xffff, xv, yv);
   }
-  // Entry 2: code=orMask, xv=d5<<5&0x3fe0, yv=d4<<5&0x3fe0|low16(localE2)
+  // Entry 2: code=low16(localE2), xv=d5<<5&0x3fe0,
+  // yv=d4<<5&0x3fe0|high16(localE2)
   {
     const xv2 = (s16(d5) * 32) & 0x3fe0;
-    const yv2 = (s16(d4) * 32) & 0x3fe0 | (localE2 & 0xffff);
-    emitSprite(state, rom, orMask & 0xffff, xv2, yv2);
+    const yv2 = (s16(d4) * 32) & 0x3fe0 | ((localE2 >>> 16) & 0xffff);
+    emitSprite(state, rom, localE2 & 0xffff, xv2, yv2);
   }
+
+  void orMask;
 }
 
 // ─── Main function ────────────────────────────────────────────────────────────

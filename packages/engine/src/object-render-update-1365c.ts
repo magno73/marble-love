@@ -80,6 +80,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { paletteQueuePush } from "./palette-queue.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
+import { helper285B0 } from "./helper-285b0.js";
 
 const WORK_RAM_BASE = 0x400000 as const;
 
@@ -518,7 +519,11 @@ export function objectRenderUpdate1365C(
           // D0 = sext_l(gameMode) * 2 + 3
           const d0For285 = ((sext16(gameMode) << 1) + 3) | 0;
           // jsr 0x285b0 — FUN_285B0(A2, D0_long)
-          subs.fun285B0?.(state, a2, d0For285 >>> 0);
+          if (subs.fun285B0 !== undefined) {
+            subs.fun285B0(state, a2, d0For285 >>> 0);
+          } else {
+            helper285B0(state, a2, d0For285 >>> 0, rom);
+          }
         }
       }
       // 0x137f2 (both paths converge here):
