@@ -1,7 +1,73 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: staged mode0 rebuild cadence for segments 3/5; PF exact through f18000 key windows)
+**Ultimo update:** 2026-05-14 (long demo: presentation HUD/timer render wired; alpha HUD residual nearly gone)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo presentation HUD checkpoint
+
+Il long demo non divergeva piu' sul playfield nelle finestre chiave, ma il
+render HUD/presentation restava parziale dopo i rebuild async: TS lasciava
+stale o sotto-emessi i campi alpha prodotti da `FUN_286EE -> FUN_3520`, e il
+timer presentation `obj0+0x6A` non veniva ristabilito durante i segmenti
+mode0 lunghi.
+
+Fix stabili:
+
+- Aggiunta la replica non-rotated di `FUN_3520/FUN_32BA` in
+  `render-string-chain-3520.ts`, usata dal path `FUN_286EE`.
+- `FUN_10504` e `FUN_10FCE` ora cablano il default reale di `FUN_28624` fino a
+  `FUN_28E3C -> FUN_28F62 -> FUN_2572`, invece di fermarsi al clear bitmap.
+- Il path async mode0 refresh invoca il render header/footer side-effect-free
+  `FUN_11654` prima di `FUN_28232`, allineando i campi HUD visibili senza
+  toccare payload playfield.
+- `advanceMode0Init11452Async` ristabilisce e ridisegna il presentation timer
+  `obj0+0x6A` nei segmenti 2/3/5, seguendo il countdown MAME osservato nei
+  dump long-run.
+
+Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
+
+- PF resta exact nelle finestre campionate; i residui sono non-PF.
+- f12950: `total=347`, `workRam=319`, `sprRam=28`, `alpha=0`.
+- f12960: `total=37`, `workRam=37`, `alpha=0`.
+- f13200: `total=123`, `workRam=60`, `sprRam=63`, `alpha=0`.
+- f13400: `total=93`, `workRam=61`, `sprRam=32`, `alpha=0`.
+- f13920: `total=117`, `workRam=72`, `sprRam=45`, `alpha=0`.
+- f14620: `total=208`, `workRam=153`, `sprRam=55`, `alpha=0`.
+- f17710: `total=289`, `workRam=180`, `sprRam=106`, `alpha=3`.
+- f18000: `total=392`, `workRam=212`, `sprRam=179`, `alpha=1`.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-object-state-entry-25bae-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+renderStringChain3520 parity smoke
+  PASS 4/4
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- Chiudere i residui workRam/sprite non-PF: i campioni peggiori rimasti sono
+  f17710/f18000 e lo sprite/cache object intorno a f13200/f13920.
+- Alpha e' quasi chiuso: restano solo 3 byte a f17710 e 1 byte a f18000.
+- Prossimo focus: emissione sprite/object cache e microcadence dei campi
+  presentation dopo il timer, evitando regressioni sul PF exact.
 
 ## 2026-05-13 — Long demo staged rebuild cadence checkpoint
 

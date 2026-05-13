@@ -65,6 +65,7 @@ export * as entityWaypointStep1D1EC from "./entity-waypoint-step-1d1ec.js";
 export * as syncAvToggle1E08 from "./sync-av-toggle-1e08.js";
 export * as renderGlyphLoop1E64 from "./render-glyph-loop-1e64.js";
 export * as renderStringChain3662 from "./render-string-chain-3662.js";
+export * as renderStringChain3520 from "./render-string-chain-3520.js";
 export * as positionUpdate from "./position-update.js";
 export * as vectorScale from "./vector-scale.js";
 export * as stringRender from "./string-render.js";
