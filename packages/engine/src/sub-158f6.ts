@@ -79,6 +79,7 @@ import { helper182BA } from "./helper-182ba.js";
 import type { Helper182BASubs } from "./helper-182ba.js";
 import { helper121B8 } from "./helper-121b8.js";
 import type { Helper121B8Subs } from "./helper-121b8.js";
+import { findNearestNeighbor } from "./nearest-neighbor.js";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,12 @@ function wW(state: GameState, off: number, v: number): void {
 }
 function sextW(w: number): number {
   return ((w & 0xffff) << 16) >> 16;
+}
+
+function enterState23Default(state: GameState, slotPtr: number, rom: RomImage): void {
+  objectEnterState23(state, slotPtr, {
+    fun_15d10: (st, ptr) => { findNearestNeighbor(st, ptr, rom); },
+  });
 }
 
 // ─── Sub-injection interface ─────────────────────────────────────────────────
@@ -222,7 +229,7 @@ export function fun158F6(
       const s1a = rB(state, a2Off + F_S1A);
       if (s1a === 0x21 || s1a === 0x22) {
         // 0x15926: jsr FUN_160D4(A2)
-        (subs.objectEnterState23 ?? objectEnterState23)(state, a2);
+        (subs.objectEnterState23 ?? ((st, ptr) => { enterState23Default(st, ptr, rom); }))(state, a2);
       }
     }
   }
@@ -243,7 +250,7 @@ export function fun158F6(
     const t56New = rB(state, a2Off + F_S56);
     if (t56New === 0) {
       // 0x15948: jsr FUN_160D4(A2)
-      (subs.objectEnterState23 ?? objectEnterState23)(state, a2);
+      (subs.objectEnterState23 ?? ((st, ptr) => { enterState23Default(st, ptr, rom); }))(state, a2);
     }
     // 0x15952: bra.b → 0x1597A (ELSE branch always, regardless of subq path)
     elseBranch(state, a2, rom, subs);

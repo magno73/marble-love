@@ -216,3 +216,97 @@ export function buildTilemapRows1A444(
   const clearLongs = Math.trunc((0x00401c48 - SCRATCH_BASE) / 4);
   for (let i = 0; i < clearLongs; i++) writeU32(state, SCRATCH_BASE_OFF + i * 4, 0);
 }
+
+export function buildTilemapRows1A444ChunkPhase(
+  state: GameState,
+  rom: RomImage,
+  chunkIndex: number,
+  phase: { ad54Count: number; aa38Count: number; packRows?: number },
+): void {
+  const stateStruct = readU32(state, STATE_PTR_OFF);
+  const entryCount = readAbsI16(state, rom, stateStruct + 0x1a);
+  const listPtr = readAbsU32(state, rom, stateStruct + 0x08);
+  let listAbs = listPtr >>> 0;
+
+  const index24 = readAbsI16(state, rom, stateStruct + 0x24);
+  const basePtr = readU32(state, BINSEARCH_BASE_PTR_OFF);
+  const d2 = (basePtr + index24 * 2) >>> 0;
+  writeU32(state, BINSEARCH_END_PTR_OFF, (d2 - 2) >>> 0);
+
+  let d4 = -0x18;
+  let chunksBuilt = 0;
+  let lastWord = 0;
+
+  while (true) {
+    d4 = ((d4 + 0x18) << 16) >> 16;
+    const y = ((d4 + 0x15) << 16) >> 16;
+    const x = (((d4 >> 1) + 0x15) << 16) >> 16;
+    let height = 0x18;
+    const descriptorHeight = readAbsI16(state, rom, stateStruct + 0x18);
+    const limit = descriptorHeight - 0x18;
+    if (d4 > limit) height = (descriptorHeight - d4) << 16 >> 16;
+
+    const isTarget = chunksBuilt === chunkIndex;
+    if (isTarget) {
+      for (let i = 0; i < SCRATCH_CLEAR_LONGS; i++) writeU32(state, SCRATCH_BASE_OFF + i * 4, 0);
+    }
+
+    const destStart = readAbsU32(state, rom, stateStruct + 0x1c);
+    let pendingBits = 0;
+    for (let d3 = 0; d3 < entryCount; d3++) {
+      if ((d3 & 0x0f) === 0) {
+        pendingBits = readAbsU16(state, rom, listAbs);
+        listAbs = (listAbs + 2) >>> 0;
+      }
+      if (isTarget && d3 < phase.ad54Count) {
+        const bit = (pendingBits >> (d3 & 0x0f)) & 1;
+        renderTileLine1AD54(state, rom, destStart + d3 * 8, y, x, height, bit);
+      }
+    }
+
+    while (true) {
+      lastWord = readAbsU16(state, rom, listAbs);
+      listAbs = (listAbs + 2) >>> 0;
+      const masked = lastWord & 0xfffe;
+      if (masked === 0xfffe) break;
+
+      const low = lastWord & 0xff;
+      const high = (lastWord >> 8) & 0xff;
+      const index = (high * 0x16 + low) * 8;
+      const targetOff = SCRATCH_BASE_OFF + index;
+      const value = readAbsU16(state, rom, listAbs);
+      listAbs = (listAbs + 2) >>> 0;
+      if (isTarget && phase.ad54Count >= entryCount) {
+        state.workRam[targetOff] = (value >>> 8) & 0xff;
+        state.workRam[targetOff + 1] = value & 0xff;
+      }
+    }
+
+    if (isTarget) {
+      if (phase.ad54Count >= entryCount) {
+        let scratchAddr = SCRATCH_BASE;
+        let rowArgOff = ROW_ARG_BASE_OFF + d4 * 2;
+        const rows = Math.min(height, phase.aa38Count);
+        for (let d3 = 0; d3 < rows; d3++) {
+          const rowWord = readI16(state, rowArgOff);
+          rowArgOff += 2;
+          buildTilemapSpan1AA38(state, rom, d3 & 1, rowWord, scratchAddr);
+          scratchAddr = (scratchAddr + 0xb0) >>> 0;
+        }
+
+        const packRows = Math.min(height >> 1, phase.packRows ?? 0);
+        let sourceAddr = SCRATCH_BASE;
+        for (let d3 = 0; d3 < packRows; d3++) {
+          const tableIndex = ((d4 >> 1) + d3) * 2;
+          const destOffset = readRomI16(rom, PF_ROW_OFFSET_TABLE + tableIndex);
+          packTilemapEntries1A9CC(state, destOffset, sourceAddr);
+          sourceAddr = (sourceAddr + 0x160) >>> 0;
+        }
+      }
+      return;
+    }
+
+    chunksBuilt++;
+    if ((lastWord & 0xffff) === 0xffff) break;
+  }
+}

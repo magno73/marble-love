@@ -10,6 +10,10 @@
  */
 
 import type { GameState } from "./state.js";
+import type { RomImage } from "./bus.js";
+
+const WORK_RAM_BASE = 0x00400000;
+const WORK_RAM_SIZE = 0x2000;
 
 function readU32S(s: GameState, off: number): number {
   const v =
@@ -35,11 +39,22 @@ function writeU32(s: GameState, off: number, v: number): void {
   s.workRam[off + 3] = x & 0xff;
 }
 
+function readByteAbs(s: GameState, addr: number, rom?: RomImage): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + WORK_RAM_SIZE) {
+    return s.workRam[a - WORK_RAM_BASE] ?? 0;
+  }
+  if (rom !== undefined && a < rom.program.length) {
+    return rom.program[a] ?? 0;
+  }
+  return 0;
+}
+
 /**
  * Replica `FUN_00014DEC` — variante con list ptr da obj+0x4E, stride 4 byte,
  * write a obj+0x4A. Stesso algoritmo di findNearestNeighbor.
  */
-export function findNearestNeighborV2(state: GameState, objAddr: number): void {
+export function findNearestNeighborV2(state: GameState, objAddr: number, rom?: RomImage): void {
   const objOff = objAddr - 0x400000;
   const refX = (readU32S(state, objOff + 0xC) >> 19) & 0xffff;
   const refY = (readU32S(state, objOff + 0x10) >> 19) & 0xffff;
@@ -52,10 +67,9 @@ export function findNearestNeighborV2(state: GameState, objAddr: number): void {
 
   let safety = 256;
   while (safety-- > 0) {
-    const listOff = (listAddr - 0x400000) >>> 0;
-    const b0 = state.workRam[listOff] ?? 0;
+    const b0 = readByteAbs(state, listAddr, rom);
     if (b0 === 0xFF) break;
-    const b1 = state.workRam[listOff + 1] ?? 0;
+    const b1 = readByteAbs(state, listAddr + 1, rom);
     if (b1 === 0xFF) break;
     const b0S = b0 & 0x80 ? b0 - 0x100 : b0;
     const b1S = b1 & 0x80 ? b1 - 0x100 : b1;
@@ -87,7 +101,7 @@ export function findNearestNeighborV2(state: GameState, objAddr: number): void {
   writeU32(state, objOff + 0x4A, bestPtr);
 }
 
-export function findNearestNeighbor(state: GameState, objAddr: number): void {
+export function findNearestNeighbor(state: GameState, objAddr: number, rom?: RomImage): void {
   const objOff = objAddr - 0x400000;
   // ref x/y = high word of long >> 19 → effectively 16-bit signed
   const refX = (readU32S(state, objOff + 0xC) >> 19) & 0xffff;
@@ -101,10 +115,9 @@ export function findNearestNeighbor(state: GameState, objAddr: number): void {
 
   let safety = 256;
   while (safety-- > 0) {
-    const listOff = (listAddr - 0x400000) >>> 0;
-    const b0 = state.workRam[listOff] ?? 0;
+    const b0 = readByteAbs(state, listAddr, rom);
     if (b0 === 0xFF) break;
-    const b1 = state.workRam[listOff + 1] ?? 0;
+    const b1 = readByteAbs(state, listAddr + 1, rom);
     if (b1 === 0xFF) break;
 
     // dx = refX - b0 (signed)

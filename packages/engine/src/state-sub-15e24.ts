@@ -12,6 +12,7 @@ import type { RomImage } from "./bus.js";
 import { helper15FE6 } from "./helper-15fe6.js";
 import { objectEnterState23 } from "./object-enter-state-23.js";
 import { stateDispatch1605C } from "./state-dispatch-1605c.js";
+import { findNearestNeighbor } from "./nearest-neighbor.js";
 
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
@@ -186,7 +187,8 @@ export function stateSub15E24(
     candidate = obj;
   }
 
-  if ((sextB(remainingByte) & 0xffff) !== (count & 0xffff)) {
+  const foundCandidate = (sextB(remainingByte) & 0xffff) !== (count & 0xffff);
+  if (foundCandidate) {
     if (count === 2 && remainingByte === 0) {
       const obj0 = OBJ_BASE;
       const obj1 = (OBJ_BASE + OBJ_STRIDE) >>> 0;
@@ -202,21 +204,25 @@ export function stateSub15E24(
 
     if (
       dist < 0x280 &&
-      (rl(state, a2 + F_6C) !== 0 || rb(state, a2 + F_LAYER) === 7 || rb(state, a2 + F_LAYER) === 9) &&
+      (rw(state, a2 + F_6C) !== 0 || rb(state, a2 + F_LAYER) === 7 || rb(state, a2 + F_LAYER) === 9) &&
       rb(state, a2 + F_36) === 0
     ) {
       wb(state, a2 + F_KIND, 0x21);
-    } else if (rl(state, a2 + F_6C) !== 0) {
+    } else if (rw(state, a2 + F_6C) !== 0) {
       wb(state, a2 + F_KIND, 0x22);
     } else if (rb(state, a2 + F_KIND) !== 0x23) {
       wb(state, a2 + F_KIND, 0x20);
     }
+  } else if (rb(state, a2 + F_KIND) !== 0x23) {
+    wb(state, a2 + F_KIND, 0x20);
   }
 
   const newKind = rb(state, a2 + F_KIND);
   if (oldKind !== newKind) {
     if (oldKind === 0x21) {
-      objectEnterState23(state, a2);
+      objectEnterState23(state, a2, {
+        fun_15d10: (st, ptr) => { findNearestNeighbor(st, ptr, rom); },
+      });
     } else {
       dispatchFlag = 1;
     }

@@ -145,6 +145,7 @@ function initSlotFromDescriptor(
   wb(state, slotAbs + 0x1a, 0x20);
   wl(state, slotAbs + 0x22, 0);
   wl(state, slotAbs + 0x1e, 0);
+  ww(state, slotAbs + 0x6c, 0xffff);
   wb(state, slotAbs + 0x67, 0);
   wb(state, slotAbs + 0x56, 0);
   wb(state, slotAbs + 0x58, 0);

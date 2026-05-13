@@ -47,6 +47,7 @@ import type { StateValidateGrid15DB6Subs } from "./state-validate-grid-15db6.js"
 import { flagScaledMagnitudeDispatch } from "./flag-scaled-magnitude-dispatch.js";
 import { fun261BC } from "./sub-261bc.js";
 import { stateSub15E24 } from "./state-sub-15e24.js";
+import { findNearestNeighbor } from "./nearest-neighbor.js";
 
 const WORK_RAM_BASE = 0x00400000;
 const OBJ_PTR_TABLE = 0x0001eff6;
@@ -143,6 +144,9 @@ export function helper182BA(
   const validateGridSubs: StateValidateGrid15DB6Subs = {
     ...subs?.validateGridSubs,
     readByteAbs: subs?.validateGridSubs?.readByteAbs ?? ((addr: number) => readByteAbs(state, rom, addr)),
+    fun_15d10:
+      subs?.validateGridSubs?.fun_15d10 ??
+      ((ptr: number) => { findNearestNeighbor(state, ptr, rom); }),
     fun_15e24:
       subs?.validateGridSubs?.fun_15e24 ??
       ((ptr: number, flag: number) => stateSub15E24(state, rom, ptr, flag)),
