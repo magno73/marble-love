@@ -1,7 +1,94 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: scroll-range script spawn checkpoint, f13920 historical 868 -> 558 byte; fresh bank-aware 889 -> 579)
+**Ultimo update:** 2026-05-13 (long demo: video-window tile pack + second-cycle handoff, f13920 historical 558 -> 146 byte; fresh bank-aware 579 -> 167)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo video-window pack + second-cycle handoff checkpoint
+
+Il rebuild del long demo ora scrive nella stessa finestra video del binario:
+`FUN_1A9CC` non e' solo un packer playfield, ma riceve un offset relativo a
+`0xA00000` e puo' produrre record anche in sprite/alpha RAM. Il write-tap MAME
+su `0xA02400..0xA0277F` ha confermato writer reali in `FUN_1A9CC`
+(`pc=0x1a9f6/0x1aa24/0x1aa2c`) durante il rebuild f12945..f12948; TS prima
+droppava quei byte perche' l'offset era oltre `playfieldRam.length`.
+
+Fix stabili:
+
+- `packTilemapEntries1A9CC` mappa l'offset video `0xA00000+off` su
+  playfield, sprite e alpha RAM, invece di limitarsi alla playfield.
+- Il rebuild staged mode0 a stage 58 ora emette 8 chunk, coprendo la stessa
+  fascia sprite `0x400..0x77f` osservata nel write-tap MAME.
+- Il secondo attract cycle (`0x4003E4 == 3`) usa l'handoff breve osservato nel
+  dense oracle: `0x40075A=1` a f15367, `0x400392=1` a f15369/f15370,
+  `0x400392=2` e `0x40075A=0` a f15371, poi mode2 reset e `0x40075A=0x012c`
+  a f15379.
+
+Effetto osservato:
+
+- Il primo rebuild non perde piu' record sprite/alpha prodotti dal packer.
+- f12950 e f13200 scendono rispettivamente a 605 e 336 byte totali sul dump
+  storico, con `pfRam=0`.
+- f13920 scende a 146 byte sul dump storico e 167 sul fresh bank-aware, con
+  playfield ancora exact.
+- Il secondo reset mode0->mode2 espone i marker pubblici `75A/392` nello stesso
+  ordine del dense oracle, anche se il contenuto object/scroll arrivante resta
+  gia' divergente.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-tilemap-entry-pack-1a9cc-parity.ts 500
+  PASS 500/500
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+test-main-loop-init-10504-parity.ts 500
+  PASS 500/500
+
+test-main-loop-init-1101e-parity.ts 500
+  PASS 500/500
+
+test-main-loop-init-11452-parity.ts 500
+  PASS 500/500
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12900 total=548
+  f12950 total=605,  pfRam=0
+  f13200 total=336,  pfRam=0
+  f13920 total=146,  pfRam=0
+  f14000 total=149,  pfRam=0
+  f15000 total=1092
+  f16000 total=5407
+  f17000 total=1082
+  f18000 total=538
+
+Fresh bank-aware oracle /tmp/mame_demo_bank_13880_13925_step1.json:
+  f13906 total=640, pfRam=72
+  f13910 total=463, pfRam=0
+  f13920 total=167, pfRam=0
+  f13925 total=167, pfRam=0
+```
+
+Drill aperto:
+
+- Il prossimo blocco non e' piu' PF rebuild: e' la cadence object/scroll gia'
+  divergente prima del secondo reset. Nel combined dense oracle
+  `12000 + 15300..15430`, TS entra nel reset con viewport/object words intorno
+  a `0x00c6/0x00c8`, mentre MAME e' a `0x0128`, e `0x40000A` resta `4` in TS
+  contro `1` MAME.
+- Focus consigliato: pacing `refreshFrame10FCE` / state-dispatch nel tratto
+  f15000..f15371 e la relazione con i marker `0x14/0x39A/0x3F0`, non ulteriori
+  patch locali al renderer tilemap.
 
 ## 2026-05-13 — Long demo scroll-range script spawn checkpoint
 

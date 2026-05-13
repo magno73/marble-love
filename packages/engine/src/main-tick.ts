@@ -155,7 +155,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const mode0AsyncRefreshAtTickStart =
     state.clock.mode0Init11452Stage !== undefined &&
     state.clock.mode0Init11452Stage >= 65 &&
-    state.clock.mode0Init11452Stage < 1020;
+    state.clock.mode0Init11452Stage < ((r[0x3e4] ?? 0) === 3 ? 849 : 1020);
   const mainThreadBlockedAtTickStart =
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||

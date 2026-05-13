@@ -2,8 +2,8 @@
  * tilemap-entry-pack-1a9cc.ts — `FUN_0001A9CC` playfield-facing wrapper.
  *
  * Packs six 0x40-byte descriptors into the compact tilemap record stream used
- * by Atari System 1 video RAM. The destination is expressed as an offset into
- * `state.playfieldRam` instead of the original absolute pointer.
+ * by Atari System 1 video RAM. The destination is expressed as an offset from
+ * `0xA00000`, matching the original caller's `0xA00000 + rowOffset` pointer.
  *
  * Binary note: the routine enters the sixth iteration with D2 == 5, writes the
  * first long, then exits before the second long+word block. Observable writes
@@ -35,30 +35,44 @@ function rorL(value: number, count: number): number {
   return ((v >>> c) | (v << (32 - c))) >>> 0;
 }
 
-function writePlayfieldByte(state: GameState, off: number, value: number): void {
-  if (off >= 0 && off < state.playfieldRam.length) state.playfieldRam[off] = value & 0xff;
+function writeVideoByte(state: GameState, off: number, value: number): void {
+  if (off >= 0 && off < state.playfieldRam.length) {
+    state.playfieldRam[off] = value & 0xff;
+    return;
+  }
+
+  const spriteOff = off - state.playfieldRam.length;
+  if (spriteOff >= 0 && spriteOff < state.spriteRam.length) {
+    state.spriteRam[spriteOff] = value & 0xff;
+    return;
+  }
+
+  const alphaOff = spriteOff - state.spriteRam.length;
+  if (alphaOff >= 0 && alphaOff < state.alphaRam.length) {
+    state.alphaRam[alphaOff] = value & 0xff;
+  }
 }
 
-function writePlayfieldWord(state: GameState, off: number, value: number): void {
+function writeVideoWord(state: GameState, off: number, value: number): void {
   const v = value & 0xffff;
-  writePlayfieldByte(state, off, (v >>> 8) & 0xff);
-  writePlayfieldByte(state, off + 1, v & 0xff);
+  writeVideoByte(state, off, (v >>> 8) & 0xff);
+  writeVideoByte(state, off + 1, v & 0xff);
 }
 
-function writePlayfieldLong(state: GameState, off: number, value: number): void {
+function writeVideoLong(state: GameState, off: number, value: number): void {
   const v = value >>> 0;
-  writePlayfieldByte(state, off, (v >>> 24) & 0xff);
-  writePlayfieldByte(state, off + 1, (v >>> 16) & 0xff);
-  writePlayfieldByte(state, off + 2, (v >>> 8) & 0xff);
-  writePlayfieldByte(state, off + 3, v & 0xff);
+  writeVideoByte(state, off, (v >>> 24) & 0xff);
+  writeVideoByte(state, off + 1, (v >>> 16) & 0xff);
+  writeVideoByte(state, off + 2, (v >>> 8) & 0xff);
+  writeVideoByte(state, off + 3, v & 0xff);
 }
 
 export function packTilemapEntries1A9CC(
   state: GameState,
-  destOffsetInPlayfield: number,
+  destOffsetFromVideoBase: number,
   sourceAddr: number,
 ): void {
-  let dstOff = destOffsetInPlayfield | 0;
+  let dstOff = destOffsetFromVideoBase | 0;
   let src = sourceAddr >>> 0;
 
   for (let d2 = 0; d2 < TILEMAP_ENTRY_PACK_ITERATIONS; d2++) {
@@ -69,7 +83,7 @@ export function packTilemapEntries1A9CC(
     const d1_10 = (readU16(state, src + 0x10) << 2) & 0xffff;
     d0 = (d0 & 0xffff0000) | ((d0 & 0xffff) | d1_10);
     d0 = (d0 & 0xffffff00) | ((d0 & 0xff) | readU8(state, src + 0x18));
-    writePlayfieldLong(state, dstOff, d0);
+    writeVideoLong(state, dstOff, d0);
     dstOff += 4;
 
     if (d2 === 5) break;
@@ -82,11 +96,11 @@ export function packTilemapEntries1A9CC(
     d0_20 = (d0_20 & 0xffff0000) | ((d0_20 & 0xffff) | d1_28);
     let d1_30 = rorL(readU16(state, src + 0x30), 6);
     d0_20 = (d0_20 & 0xffff0000) | ((d0_20 & 0xffff) | (d1_30 & 0xffff));
-    writePlayfieldLong(state, dstOff, d0_20);
+    writeVideoLong(state, dstOff, d0_20);
     dstOff += 4;
 
     d1_30 = ((d1_30 >>> 16) | (d1_30 << 16)) >>> 0;
-    writePlayfieldWord(state, dstOff, (d1_30 & 0xffff) | readU16(state, src + 0x38));
+    writeVideoWord(state, dstOff, (d1_30 & 0xffff) | readU16(state, src + 0x38));
     dstOff += 2;
 
     src = (src + TILEMAP_ENTRY_PACK_DESCRIPTOR_STRIDE) >>> 0;

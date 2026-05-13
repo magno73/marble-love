@@ -87,8 +87,15 @@ function setMode0VblankSnapshot(state: GameState, stage: number): void {
     wb(state, 0x0040039a, pulse);
     return;
   }
-  wb(state, 0x00400014, stage & 0xff);
-  wb(state, 0x00400016, stage < 5 ? stage : (stage - 5) & 0xff);
+  const visibleStage = (stage + 1) & 0xff;
+  wb(state, 0x00400014, visibleStage);
+  if (visibleStage < 5) {
+    wb(state, 0x00400016, visibleStage);
+  } else if (visibleStage >= 0x40) {
+    wb(state, 0x00400016, visibleStage <= 0x42 ? visibleStage - 0x40 : 0);
+  } else {
+    wb(state, 0x00400016, (visibleStage - 5) & 0xff);
+  }
 }
 
 function rebuildMode0LevelPrefix(state: GameState, rom: RomImage, chunks: number): void {
@@ -123,6 +130,40 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
   const stage = state.clock.mode0Init11452Stage;
   if (stage === undefined) return;
   setMode0VblankSnapshot(state, stage);
+  // The second attract cycle reaches the mode2 reset much sooner than the
+  // first long dwell; dense MAME f15367..f15379 exposes this short bridge.
+  if (rb(state, 0x004003e4) === 3 && stage >= 849 && stage <= 853) {
+    switch (stage) {
+      case 849:
+        ww(state, 0x0040075a, 1);
+        state.clock.mode0Init11452Stage = as_u16(850);
+        return;
+
+      case 850:
+        state.clock.mode0Init11452Stage = as_u16(851);
+        return;
+
+      case 851:
+        ww(state, 0x00400392, 1);
+        state.clock.mode0Init11452Stage = as_u16(852);
+        return;
+
+      case 852:
+        ww(state, 0x00400392, 1);
+        state.clock.mode0Init11452Stage = as_u16(853);
+        return;
+
+      case 853:
+        finalize11654(state, rom);
+        ww(state, 0x004003ae, rw(state, 0x004003ae) ^ 0x0008);
+        ww(state, 0x004003b0, rw(state, 0x004003ae));
+        ww(state, 0x0040075a, 0);
+        ww(state, 0x00400392, 2);
+        startMode2Init11452Async(state);
+        state.clock.mode0Init11452Stage = undefined;
+        return;
+    }
+  }
 
   switch (stage) {
     case 0:
@@ -207,7 +248,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 58:
-      rebuildMode0LevelPrefix(state, rom, 6);
+      rebuildMode0LevelPrefix(state, rom, 8);
       state.clock.mode0Init11452Stage = as_u16(59);
       return;
 
@@ -244,6 +285,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       // pass emits into the opposite sprite page.
       ww(state, 0x004003ae, rw(state, 0x004003ae) ^ 0x0008);
       ww(state, 0x004003b0, rw(state, 0x004003ae));
+      ww(state, 0x0040075a, 0);
       ww(state, 0x00400392, 2);
       startMode2Init11452Async(state);
       state.clock.mode0Init11452Stage = undefined;
