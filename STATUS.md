@@ -26,19 +26,27 @@ Fix stabili:
 - Durante il dwell post-reset `390=1/392=2/3e4=3`, `gameTickTimers` non avanza
   i cascading timer: evita il falso `0x400390=4 -> case3` che resettava
   prematuramente `0x4003e4` a 0 e rompeva il ciclo successivo.
+- Il path mode0 async refresh reinserisce il render HUD/fraction `FUN_28232`
+  dopo il `FUN_10504` di segmento 2/3/4/5, e il segmento 2 anticipa il solo
+  `hudFrameInit283C2` a stage 63 per allineare l'alpha gia' visibile a f12950.
 
 Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
 
 - PF exact nelle finestre chiave f12900/f13200/f13920/f14600/f16000/f17680/f18000.
+- f12950: `total=562`, `pf=0`, `alpha=0`; alpha nonzero `204/204`.
+- f13200: `total=412`, `pf=0`; alpha diff scesa a 67 byte.
 - f14600: `total=335`, `pf=0`, `alpha=0`, `color=0` (prima il full init era
   anticipato e lasciava PF/alpha/color fuori fase).
 - f14610: `total=296`, `pf=0`, `color=0`; resta `alpha=20`.
+- f14620: `total=481`, `pf=0`; alpha diff scesa a 62 byte.
 - f16000..f16040: niente piu' falso reset a `3e4=0`; `pf=0` e segment 4
   avanza con PF nonzero uguale a MAME.
+- f17000: `total=603`, `pf=0`; alpha diff scesa a 181 byte.
 - f17680: `pf 1517 -> 0`, `alpha 224 -> 0`, `color 395 -> 0`; PF nonzero
   `2657/2657`.
 - f17700: `total=518`, `pf=0`, `color=0`; resta `alpha=20`.
-- f18000: `total=786`, `pf=0`.
+- f17710: `total=559`, `pf=0`; alpha diff scesa a 62 byte.
+- f18000: `total=675`, `pf=0`; alpha diff scesa a 67 byte.
 
 Verifiche:
 
@@ -67,8 +75,8 @@ Drill aperto:
 - I residui dominanti sono workRam scratch/cache e sprite emission, non piu'
   PF payload: f14530/f17620 sono ancora ~3KB workRam, ma con PF/alpha/color
   coerenti.
-- Alpha HUD resta sotto-emesso dopo `FUN_10504`: esempi f14620/f17710 hanno
-  TS alpha nonzero 224 vs MAME 397.
+- Alpha HUD resta parzialmente sotto-emesso dopo `FUN_10504`: esempi
+  f14620/f17710 hanno TS alpha nonzero 335 vs MAME 397.
 - f16000 e f17680 sono molto migliori visivamente, ma restano 700..1500 byte
   di work/sprite. Prossimo drill consigliato: writer/call tap su alpha HUD
   post-`10504` e object-cache scratch fra stage 90..120.
