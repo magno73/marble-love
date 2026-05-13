@@ -50,6 +50,18 @@ function asrWord(value: number, bits: number): number {
   return (signExtendWord(value) >> bits) & 0xffff;
 }
 
+function resetIndirectTerrainTable(state: GameState): void {
+  // FUN_16F6C/FUN_2FF40 refreshes the low indirect terrain entries before a
+  // new level starts. These words are mutated by scroll patches during the
+  // prior attract segment; carrying them into mode 0 raises the marble terrain
+  // projection by 0x0d and stalls the long demo scroll.
+  for (let i = 0; i < 9; i++) {
+    const off = 0x076e + i * 2;
+    state.workRam[off] = 0xf0;
+    state.workRam[off + 1] = 0x40;
+  }
+}
+
 export function levelInit16F6C(
   state: GameState,
   rom: RomImage,
@@ -66,6 +78,7 @@ export function levelInit16F6C(
 
   const arg662 = signExtendWord(readU16Abs(state, rom, 0x00400662));
   fun2ff40(arg662);
+  resetIndirectTerrainTable(state);
 
   const statePtr = readU32Abs(state, rom, 0x00400474);
   let ctrlListAbs = readU32Abs(state, rom, statePtr + 0x04);

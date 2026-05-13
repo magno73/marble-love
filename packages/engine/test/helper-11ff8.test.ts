@@ -294,7 +294,7 @@ describe("helper11FF8 (FUN_11FF8)", () => {
     }
   });
 
-  it("phase 3: fun_28e3c called with correct args (score, 0, D4b, 0x14, 7, 0x1000)", () => {
+  it("phase 3: fun_28e3c called with correct args (score, 0, 0x14, D4b, 7, 0x1000)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -323,8 +323,8 @@ describe("helper11FF8 (FUN_11FF8)", () => {
     const [a1, a2, a3, a4, a5, a6] = capturedArgs[0]!;
     expect(a1).toBe(THE_SCORE);
     expect(a2).toBe(0);
-    expect(a3).toBe(0xb);
-    expect(a4).toBe(0x14);
+    expect(a3).toBe(0x14);
+    expect(a4).toBe(0xb);
     expect(a5).toBe(7);
     expect(a6).toBe(0x1000);
   });

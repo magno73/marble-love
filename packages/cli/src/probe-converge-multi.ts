@@ -20,14 +20,12 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
+import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
 
 const DUMP_PATH = process.env.MULTI_DUMP ?? "/tmp/mame_state_multi.json";
 
 const rom = busNs.emptyRomImage();
-rom.program.set(
-  readFileSync(resolve("ghidra_project/marble_program.bin")).subarray(0, rom.program.length),
-);
+applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
 
 interface Snapshot {
   frame: number;
@@ -110,6 +108,7 @@ for (let i = 1; i < snapshots.length; i++) {
       spriteRam: base.spriteRam,
       alphaRam: base.alphaRam,
       colorRam: base.colorRam,
+      slapsticBank: 1,
     },
   });
   for (let t = 0; t < dticks; t++) {

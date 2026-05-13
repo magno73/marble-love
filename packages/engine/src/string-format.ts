@@ -252,3 +252,121 @@ export function formatDecimal(
   const bcdValue = binToBcd(value);
   formatHex(state, bcdValue, bufEnd, numDigits, showSpaces);
 }
+
+const FUN_3874_DEC_TABLE = [
+  1_000_000_000,
+  100_000_000,
+  10_000_000,
+  1_000_000,
+  100_000,
+  10_000,
+  1_000,
+  100,
+  10,
+] as const;
+
+function isCommaPowerIndex(index: number): boolean {
+  return index === 0 || index === 3 || index === 6;
+}
+
+function writeRepeatedBuffer(state: GameState, addr: number, len: number, value: number): void {
+  const count = len & 0xff;
+  writeMemoryU8(state, (addr + count) >>> 0, 0);
+  for (let i = count - 1; i >= 0; i--) {
+    writeMemoryU8(state, (addr + i) >>> 0, value);
+  }
+}
+
+/**
+ * Replica the general `FUN_00003874` number formatter for the decimal paths
+ * used by HUD/high-score rendering.
+ *
+ * Unlike `FUN_3A54`, this writes forward into a pre-sized buffer, inserts
+ * thousands separators, and uses `fillExtra` to choose how many decimal
+ * places to reserve. This is the formatter called by `FUN_28E3C/28EB2`.
+ */
+export function formatNumber3874(
+  state: GameState,
+  value: number,
+  bufAddr: number,
+  fmtMode: number,
+  width: number,
+  fillExtra: number,
+): void {
+  const mode = fmtMode & 0xff;
+  if (mode !== 0x64 && mode !== 0x73) {
+    formatDecimal(state, value, bufAddr, width, fillExtra);
+    return;
+  }
+
+  const originalDigits = fillExtra & 0xff;
+  let digitsAndCommas = originalDigits;
+  if (mode === 0x73) digitsAndCommas = (digitsAndCommas + 1) & 0xff;
+
+  const startIndex = Math.max(0, Math.min(FUN_3874_DEC_TABLE.length, 10 - originalDigits));
+  let fill = 0x20;
+  if ((width & 0xff) !== 1) {
+    digitsAndCommas = (digitsAndCommas + Math.floor((((originalDigits - 1) & 0xff) >>> 0) / 3)) & 0xff;
+  } else {
+    fill = 0x30;
+  }
+
+  writeRepeatedBuffer(state, bufAddr, digitsAndCommas, fill);
+
+  let d1 = value >>> 0;
+  let a0 = bufAddr >>> 0;
+  let d4 = width & 0xff;
+  let signChar = 0;
+
+  if (mode === 0x73) {
+    if ((d1 & 0x80000000) !== 0) {
+      signChar = 0x2d;
+      d1 = (-d1) >>> 0;
+    } else {
+      signChar = 0x2b;
+    }
+    if (d4 === 0) {
+      const savedSign = signChar;
+      signChar = savedSign;
+      writeMemoryU8(state, a0, 0x20);
+    } else {
+      writeMemoryU8(state, a0, signChar);
+    }
+    a0 = (a0 + 1) >>> 0;
+  }
+
+  for (let i = startIndex; i < FUN_3874_DEC_TABLE.length; i++) {
+    const divisor = FUN_3874_DEC_TABLE[i]!;
+    let digit = 0;
+    while (d1 >= divisor) {
+      d1 = (d1 - divisor) >>> 0;
+      digit++;
+    }
+
+    if (digit === 0) {
+      if (d4 === 2) {
+        continue;
+      }
+      if (d4 === 0) {
+        a0 = (a0 + 1) >>> 0;
+        if (isCommaPowerIndex(i)) a0 = (a0 + 1) >>> 0;
+        continue;
+      }
+    } else if (d4 === 0 && mode === 0x73) {
+      writeMemoryU8(state, (a0 - 1) >>> 0, signChar);
+    }
+
+    d4 |= 0x04;
+    writeMemoryU8(state, a0, (digit + 0x30) & 0xff);
+    a0 = (a0 + 1) >>> 0;
+    if ((d4 & 1) === 0 && isCommaPowerIndex(i)) {
+      writeMemoryU8(state, a0, 0x2c);
+      a0 = (a0 + 1) >>> 0;
+    }
+  }
+
+  if (d4 === 0 && mode === 0x73) {
+    writeMemoryU8(state, (a0 - 1) >>> 0, signChar);
+  }
+  writeMemoryU8(state, a0, ((d1 & 0xff) + 0x30) & 0xff);
+}

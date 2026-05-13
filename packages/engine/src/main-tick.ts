@@ -38,6 +38,7 @@ import type { RomImage } from "./bus.js";
 import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
 import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
+import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
 import { sub14966 } from "./sub-14966.js";
@@ -74,7 +75,9 @@ import { particleBounce } from "./particle-bounce.js";
 import { CYCLES_PER_VBLANK } from "./m68k/cycle-table.js";
 import { addCpuCycles, resetCpuCycles } from "./m68k/clock.js";
 import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
-import { as_u32, raw } from "./wrap.js";
+import { as_u8, as_u32, raw } from "./wrap.js";
+import { advanceMode0Init11452Async, advanceMode2Init11452Async } from "./mode2-init-11452-async.js";
+import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -145,6 +148,17 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   if (!opts.skipFrameCounter) {
     state.clock.frame = ((state.clock.frame + 1) >>> 0) as typeof state.clock.frame;
   }
+  const asyncInitActiveAtTickStart =
+    state.clock.mode2Init11452Stage !== undefined ||
+    state.clock.mode2BottomHudDelay !== undefined ||
+    state.clock.mode0Init11452Stage !== undefined;
+  const mode0AsyncRefreshAtTickStart =
+    state.clock.mode0Init11452Stage !== undefined &&
+    state.clock.mode0Init11452Stage >= 65;
+  const mainThreadBlockedAtTickStart =
+    state.clock.mode2Init11452Stage !== undefined ||
+    state.clock.mode2BottomHudDelay !== undefined ||
+    (state.clock.mode0Init11452Stage !== undefined && !mode0AsyncRefreshAtTickStart);
 
   // ─── FUN_28788 prefix (scroll/MMIO setup) ────────────────────────────
   // Replica 0x28788..0x287D8: incrementer + latch Y target + AV-control.
@@ -191,7 +205,9 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   };
   soundTick(state, soundSubs);
 
-  gameTickTimers(state, opts.hudCallback);
+  if (!asyncInitActiveAtTickStart) {
+    gameTickTimers(state, opts.hudCallback);
+  }
 
   // Default = 0xff (= MMIO trackball stable @ no-input in MAME) per evitare
   // delta spurious al primo tick: cur=0 vs prev=0xff produrrebbe delta=1
@@ -277,7 +293,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // diventano body), ma il counter è ora 0,1,2,3... lineare con il tick.
   const OFF_VBLANK_MAILBOX = 0x16;
   let mainLoopWaitSnapshot: boolean | undefined;
-  if (opts.runMainLoopBody === true) {
+  if (opts.runMainLoopBody === true && !mainThreadBlockedAtTickStart) {
     // Increment first (matches previous TS convention: warm-state assumed
     // mainLoopBodyTicks=0 → first tick post-warm gets value 1 → ODD = wait,
     // second tick gets 2 → EVEN = body candidate). Phase verificata vs
@@ -315,7 +331,11 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
       // Body run: mainLoopInit1101E (dispatcher) + lateGameLogic26F3E.
       // Accumula overhead noti; il body delle sub è contato in refreshFrame10FCE.
       addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_1101E_OVERHEAD"] ?? as_u32(40));
-      mainLoopInit1101E(state, rom);
+      if (mode0AsyncRefreshAtTickStart) {
+        refreshFrame10FCE(state, rom);
+      } else {
+        mainLoopInit1101E(state, rom);
+      }
       // FUN_26F3E (lateGameLogic) — chain MAME canonical, post-body.
       // Stima fast in attract (*0x3E2 == 0) vs full in gameplay.
       const fun26F3EKey = (r[0x3e2] ?? 0) === 0 ? "FUN_26F3E_FAST" : "FUN_26F3E";
@@ -365,5 +385,15 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const rngSeed = raw(state.rng.seed) & 0xffff;
   r[0x3a6] = (rngSeed >>> 8) & 0xff;
   r[0x3a7] = rngSeed & 0xff;
+  advanceMode0Init11452Async(state, rom);
+  advanceMode2Init11452Async(state, rom);
+  if (state.clock.mode2BottomHudDelay !== undefined) {
+    if (state.clock.mode2BottomHudDelay > 0) {
+      state.clock.mode2BottomHudDelay = as_u8(state.clock.mode2BottomHudDelay - 1);
+    } else {
+      levelFractionRender28232Default(state, rom);
+      state.clock.mode2BottomHudDelay = undefined;
+    }
+  }
   runWarmResidualReplayTick(state);
 }

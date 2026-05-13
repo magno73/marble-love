@@ -80,6 +80,7 @@
  * Verifica bit-perfect via `cli/src/test-bsearch-table-1abd4-parity.ts`.
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
 /** Slot long @ `0x0040065A` — pointer alla base della table (in workRam). */
@@ -126,6 +127,17 @@ function readWordBE(mem: Uint8Array, off: number): number {
   return ((a << 8) | b) & 0xffff;
 }
 
+function readAbsWordBE(state: GameState, rom: RomImage | undefined, abs: number): number {
+  const a = abs >>> 0;
+  if (a >= WORK_RAM_BASE_ADDR && a + 1 < WORK_RAM_BASE_ADDR + WORK_RAM_SIZE) {
+    return readWordBE(state.workRam, a - WORK_RAM_BASE_ADDR);
+  }
+  if (rom !== undefined && a + 1 < rom.program.length) {
+    return (((rom.program[a] ?? 0) << 8) | (rom.program[a + 1] ?? 0)) & 0xffff;
+  }
+  return 0;
+}
+
 /**
  * Replica bit-perfect di `FUN_0001ABD4`.
  *
@@ -150,6 +162,7 @@ function readWordBE(mem: Uint8Array, off: number): number {
 export function bsearchTable1ABD4(
   state: GameState,
   targetLong: number,
+  rom?: RomImage,
   _subs?: BsearchTable1ABD4Subs,
 ): number {
   const r = state.workRam;
@@ -170,10 +183,7 @@ export function bsearchTable1ABD4(
   let step = INITIAL_STEP_BYTES;
 
   for (let iter = 0; iter < ITERATION_CAP; iter++) {
-    // Leggi word a probeAbs (deve essere in workRam range)
-    const probeOff = (probeAbs - WORK_RAM_BASE_ADDR) >>> 0;
-    const word =
-      probeOff + 1 < WORK_RAM_SIZE ? readWordBE(r, probeOff) : 0;
+    const word = readAbsWordBE(state, rom, probeAbs);
 
     if (target === word) {
       // Match: D0 = (A2 - A0) >> 1 (long sub modulo 2^32 → uint).

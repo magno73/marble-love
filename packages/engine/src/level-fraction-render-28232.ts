@@ -213,6 +213,10 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { renderScore28E3C } from "./render-score-28e3c.js";
+import { renderStringEntry28F62 } from "./render-string-entry-28f62.js";
+import { stateSub2572 } from "./state-sub-2572.js";
+import { formatNumber3874 } from "./string-format.js";
 
 // ─── Address constants ──────────────────────────────────────────────────
 
@@ -598,6 +602,36 @@ export const defaultInitStructHeader: InitStructHeaderFn = (
   state.workRam[(off + 1) & 0x1fff] = tickOffLong & 0xff;
   state.workRam[(off + INIT_STRUCT_MARKER_OFF) & 0x1fff] = 0;
 };
+
+export function levelFractionRender28232Default(
+  state: GameState,
+  rom: RomImage,
+): void {
+  const renderStringChain = (s: GameState, structAddr: number, attrWord: number): void => {
+    stateSub2572(s, rom, structAddr, attrWord);
+  };
+
+  levelFractionRender28232(state, rom, {
+    renderStringChain: (s, entryPtr, attrLong) => {
+      renderStringChain(s, entryPtr, attrLong);
+    },
+    initStructHeader: defaultInitStructHeader,
+    renderStringHelper: (s, arg1, arg2, arg3, arg4, arg5, arg6) => {
+      renderScore28E3C(s, arg1, arg2, arg3, arg4, arg5, arg6, {
+        numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+          formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+        },
+        renderStringEntry28F62: (st, col, tickOff, attr) => {
+          renderStringEntry28F62(st, col, tickOff, attr, {
+            renderStringChain: (structAddr, attrWord) => {
+              renderStringChain(st, structAddr, attrWord);
+            },
+          });
+        },
+      });
+    },
+  });
+}
 
 /**
  * Re-export del simbolo come "FUN_00028232" per mappatura esplicita

@@ -85,7 +85,9 @@
  * **Caller**: `FUN_000121B8` @ 0x123C6 (chiamata incondizionata).
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
+import { stateDispatch15460 } from "./state-dispatch-15460.js";
 
 const WORK_RAM_BASE = 0x400000 as const;
 
@@ -275,6 +277,42 @@ function writeLongBE(state: GameState, off: number, v: number): void {
   state.workRam[off + 3] = v & 0xff;
 }
 
+function canReadAbs(state: GameState, rom: RomImage | undefined, addr: number, length: number): boolean {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a + length <= WORK_RAM_BASE + state.workRam.length) {
+    return true;
+  }
+  return rom !== undefined && a + length <= rom.program.length;
+}
+
+function readByteAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + state.workRam.length) {
+    return readByte(state, a - WORK_RAM_BASE);
+  }
+  if (rom !== undefined && a < rom.program.length) {
+    return (rom.program[a] ?? 0) & 0xff;
+  }
+  return 0;
+}
+
+function readLongAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a + 4 <= WORK_RAM_BASE + state.workRam.length) {
+    return readLongBE(state, a - WORK_RAM_BASE);
+  }
+  if (rom !== undefined && a + 4 <= rom.program.length) {
+    return (
+      (((rom.program[a] ?? 0) << 24) |
+        ((rom.program[a + 1] ?? 0) << 16) |
+        ((rom.program[a + 2] ?? 0) << 8) |
+        (rom.program[a + 3] ?? 0)) >>>
+      0
+    );
+  }
+  return 0;
+}
+
 /** sign-extend byte → JS signed integer (-128..127). */
 function sextByte(v: number): number {
   const b = v & 0xff;
@@ -319,6 +357,7 @@ export function scriptSlotBboxTest14E92(
   state: GameState,
   entityAddr: number,
   subs?: ScriptSlotBboxTest14E92Subs,
+  rom?: RomImage,
 ): void {
   // Selector gate: `*0x400394 == 1 || == 2 || == 5`.
   const selector = readWordBE(state, SELECTOR_WORD_OFF);
@@ -355,19 +394,12 @@ export function scriptSlotBboxTest14E92(
     const bboxPtrLong = readLongBE(state, slotOff + SLOT_BBOX_PTR_OFF);
     const bboxRecPtr = bboxPtrLong; // pointer m68k absoluto (in workRam o ROM).
 
-    // Deref bboxRecPtr per leggere il primo long (sentinel check). Se il
-    // pointer punta in workRam (>= 0x400000), leggi da workRam; altrimenti
-    // assumiamo workRam-only per ora (il test di parity verifica entrambi
-    // i path tramite locazioni in workRam).
-    let derefLong: number;
-    if (bboxRecPtr >= WORK_RAM_BASE && bboxRecPtr < WORK_RAM_BASE + state.workRam.length) {
-      derefLong = readLongBE(state, bboxRecPtr - WORK_RAM_BASE);
-    } else {
-      // Fuori workRam: il binario leggerebbe ROM/altro. Per parity, il caller
-      // deve garantire che `bboxRecPtr` sia mappato in workRam (pattern del
-      // parity test che usa locazioni allocate in workRam libera).
-      derefLong = 0;
-    }
+    // Deref bboxRecPtr per leggere il primo long (sentinel check). In demo
+    // mode questo punta spesso in ROM (es. 0x20CBC -> 0x21B06), quindi il
+    // caller runtime passa `rom`. I parity test workRam-only restano supportati.
+    const derefLong = canReadAbs(state, rom, bboxRecPtr, 4)
+      ? readLongAbs(state, rom, bboxRecPtr)
+      : 0;
 
     // Bbox extents: 4 byte signed @ +4..+7 del record puntato (oppure default
     // se sentinel).
@@ -378,25 +410,14 @@ export function scriptSlotBboxTest14E92(
       d2 = BBOX_DEFAULT_D2;
       d4 = BBOX_DEFAULT_D4;
     } else {
-      // Le 4 byte sono in `bboxRecPtr + 4..7` (NON nel derefLong, ma in
-      // `*(bboxRecPtr+4..7)` direttamente — A0 dopo `movea.l (A0),A0`
-      // punta al record).
-      // Wait: il disasm fa `movea.l (0x58,A3),A0; movea.l (A0),A0` →
-      // A0 = `*(*(slot+0x58))`. Cioè doppio deref. Poi legge `(0x4,A0)..(0x7,A0)`.
-      // Quindi serve un secondo livello di dereference: il record bbox è
-      // puntato dal long letto da `bboxRecPtr`, NON è `bboxRecPtr` stesso.
       const recordPtr = derefLong;
-      if (
-        recordPtr >= WORK_RAM_BASE &&
-        recordPtr + 8 <= WORK_RAM_BASE + state.workRam.length
-      ) {
-        const recOff = recordPtr - WORK_RAM_BASE;
-        d0 = sextByte(readByte(state, recOff + 4));
-        d3 = sextByte(readByte(state, recOff + 5));
-        d2 = sextByte(readByte(state, recOff + 6));
-        d4 = sextByte(readByte(state, recOff + 7));
+      if (canReadAbs(state, rom, recordPtr, 8)) {
+        d0 = sextByte(readByteAbs(state, rom, recordPtr + 4));
+        d3 = sextByte(readByteAbs(state, rom, recordPtr + 5));
+        d2 = sextByte(readByteAbs(state, rom, recordPtr + 6));
+        d4 = sextByte(readByteAbs(state, rom, recordPtr + 7));
       } else {
-        // Record fuori workRam: assumiamo defaults (path improbabile in pratica).
+        // Record non leggibile nel test harness: conserva il vecchio fallback.
         d0 = BBOX_DEFAULT_D0;
         d3 = BBOX_DEFAULT_D3;
         d2 = BBOX_DEFAULT_D2;
@@ -482,7 +503,11 @@ export function scriptSlotBboxTest14E92(
     if (slotState0 === 0x00 || slotState0 === 0x03) {
       writeByte(state, slotOff + SLOT_STATE_OFF, SLOT_NEW_STATE);
       // jsr FUN_15460(slotPtr) — dispatcher di direzione, stub injection.
-      subs?.fun_15460?.(slotPtr, state);
+      if (subs?.fun_15460 !== undefined) {
+        subs.fun_15460(slotPtr, state);
+      } else if (rom !== undefined) {
+        stateDispatch15460(state, slotPtr, rom);
+      }
       // Copia entity[0..3] in slot[0] AND slot[0x1C].
       const entityField0 = readLongBE(state, entityOff + ENTITY_FIELD_0_OFF);
       writeLongBE(state, slotOff + SLOT_FIELD_0_OFF, entityField0);

@@ -679,7 +679,7 @@ export function helper121B8(
       if (subs.fun_14e92 !== undefined) {
         subs.fun_14e92(state, a2);
       } else {
-        scriptSlotBboxTest14E92(state, a2);
+        scriptSlotBboxTest14E92(state, a2, undefined, rom);
       }
       // Note: D0 from scriptSlotBboxTest14E92 - in the binary it's tested
       // but in TS the function is void; we proceed as if D0 checked

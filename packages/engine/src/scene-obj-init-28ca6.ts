@@ -14,6 +14,7 @@
 
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
+import { bufferFill1B12A } from "./buffer-fill-1b12a.js";
 
 const WORK_RAM_BASE = 0x00400000;
 
@@ -75,6 +76,20 @@ export function sceneObjInit28CA6(
   subs.fun_26f3e?.(state);
   writeByte(state, SCENE_OBJ_READY_FLAG, 1);
   subs.fun_28dea?.(state);
+}
+
+export function sceneObjInit28CA6Default(
+  state: GameState,
+  rom: RomImage,
+  subs: Omit<SceneObjInit28CA6Subs, "fun_1b12a"> = {},
+): void {
+  sceneObjInit28CA6(state, rom, {
+    ...subs,
+    fun_1b12a: (s, slotAbs) => {
+      const slotOff = off(slotAbs);
+      bufferFill1B12A(s, rom, s.workRam.subarray(slotOff, slotOff + SCENE_OBJ_SLOT_STRIDE));
+    },
+  });
 }
 
 export { sceneObjInit28CA6 as FUN_00028CA6 };

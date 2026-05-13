@@ -10,15 +10,13 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
+import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
 
 const DUMP_PATH = process.env.MULTI_DUMP ?? "/tmp/mame_state_multi.json";
 const TARGET_FRAME = Number(process.env.TARGET_FRAME ?? "2401");
 
 const rom = busNs.emptyRomImage();
-rom.program.set(
-  readFileSync(resolve("ghidra_project/marble_program.bin")).subarray(0, rom.program.length),
-);
+applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
 
 function hex(s: string): Uint8Array {
   const o = new Uint8Array(s.length / 2);
@@ -49,6 +47,7 @@ bootInit(s, rom, {
     spriteRam: hex(base.spriteRam as string),
     alphaRam: hex(base.alphaRam as string),
     colorRam: hex(base.colorRam as string),
+    slapsticBank: 1,
   },
 });
 for (let t = 0; t < dticks; t++) tick(s, { rom, runMainLoopBody: true });

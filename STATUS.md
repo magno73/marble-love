@@ -1,7 +1,56 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-12 (warm gameplay drift chiuso: gameplay drift 40B → 0B; renderer MO banked + texture update ripristinano demo animata stabile)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; demo raw avanza oltre i primi secondi ma diverge nel rebuild/playfield successivo)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo-mode checkpoint
+
+Obiettivo nuovo: riprodurre il demo mode completo, senza affidarsi al
+`loopReset` dei primi secondi. Questo checkpoint non e' ancora il traguardo
+finale, ma chiude vari freeze visibili del raw long-run:
+
+- il path "marble eaten / scripted carry" (`obj0+0x1A == 5`) ora continua a
+  chiamare movimento/collision/proiezione invece di congelare `obj0`;
+- `FUN_11452` mode-2/mode-0 e' modellata come init multi-vblank staged, cosi'
+  la transizione non comprime reset video/HUD/level rebuild nello stesso tick;
+- high-score/HUD render default ora wire-a `helper11FF8`, `FUN_28232`,
+  `stateSub2572`, `FUN_28E3C` e il formatter `FUN_3874`;
+- i path runtime leggono record/target ROM-backed dove il binario non usa
+  workRam (`14E92`, `1ABD4`, projection helpers);
+- `levelInit16F6C` resetta la tabella terrain indiretta prima del nuovo mode0;
+- `tilemap-row-build-1A444` avanza gli argomenti riga con `d4`, fissando il
+  payload critico gia' visto a PF `0x64e`;
+- il decoder puo' scrivere righe playfield e `renderTileLine1AD54` usa il bit
+  flag osservato nel byte basso.
+
+Verifiche checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+MULTI_DUMP=/tmp/mame_demo_12000_18000_step10.json \
+  npx tsx packages/cli/src/probe-converge-multi.ts
+
+  base warmState: f12000
+  playfield exact fino a f12890; divergenza nel rebuild/transizione da f12900
+
+TARGET_FRAME=13200 probe-diff-bytes:
+  total diff = 2474
+  workRam=548, pfRam=1083, sprRam=521, alpha=301, color=21
+
+TARGET_FRAME=14000 probe-diff-bytes:
+  total diff = 6304
+```
+
+Next loop:
+
+1. isolare la prima divergenza utile tra f12890..f13110, distinguendo cadence
+   `FUN_11452` da contenuto riga/spans;
+2. confrontare PF offsets gia' sospetti `0xa4e/0xace` e i target mixed-cell di
+   `FUN_1AA38/FUN_1A444` (`0x60ae`, `0x30ae`, `0x0050` e vicini);
+3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano
+   il diff contro `/tmp/mame_demo_12000_18000_step10.json`.
 
 ## 2026-05-12 — Renderer Motion Object banked layout
 

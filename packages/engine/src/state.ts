@@ -151,6 +151,24 @@ export interface TickClock {
    * oracle window. Undefined during normal boot.
    */
   warmResidualReplayTick: u16 | undefined;
+  /**
+   * Async resume cursor for FUN_11452 mode-2 initialization. The original
+   * routine spans several vblanks; TS advances these stages one frame at a time
+   * instead of compressing the full scene reset into the caller tick.
+   */
+  mode2Init11452Stage: u8 | undefined;
+  /**
+   * Async resume cursor for FUN_11452 mode-0 initialization. The transition
+   * from attract sub-mode 2 to 0 enters FUN_11452 and spans visible vblanks
+   * before the level/HUD rebuild side effects land.
+   */
+  mode0Init11452Stage: u8 | undefined;
+  /**
+   * One-frame delayed HUD refresh after the mode-2 reset path returns. MAME
+   * renders the bottom credit/coin strings on the next visible frame, not while
+   * FUN_11452 is still in its multi-vblank initialization body.
+   */
+  mode2BottomHudDelay: u8 | undefined;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -188,7 +206,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },

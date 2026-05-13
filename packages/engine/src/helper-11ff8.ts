@@ -31,7 +31,7 @@
  *   - Costruisce stringa in `*(0x40041E)`: `[space] "#" rank_str " " initials_null_term`
  *     (spazio iniziale omesso per D3b==9; rank: "10" per D3b==9, "1".."9" per D3b==0..8)
  *   - Chiama `renderStringEntry28F62(0xd, D4b, 0x1000)` per la riga
- *   - Chiama `fun_28e3c(score, 0, D4b, 0x14, 7, 0x1000)` per il punteggio
+ *   - Chiama `fun_28e3c(score, 0, 0x14, D4b, 7, 0x1000)` per il punteggio
  *   - `D4b++`
  *
  * **Disasm FUN_00011FF8 completo**:
@@ -116,8 +116,8 @@
  *
  *   00012120  pea (0x1000).w; [D4b ext.l push]; pea (0xd).w
  *   00012130  jsr 0x28f62.l                     ; renderStringEntry28F62(0xd, D4b, 0x1000)
- *   00012136  pea(0x1000); pea(7); pea(0x14); [D4b ext.l]; clr.l; (A2)long
- *   0001214e  jsr 0x28e3c.l                     ; fun_28e3c(score, 0, D4b, 0x14, 7, 0x1000)
+ *   00012136  pea(0x1000); pea(7); [D4b ext.l]; pea(0x14); clr.l; (A2)long
+ *   0001214e  jsr 0x28e3c.l                     ; fun_28e3c(score, 0, 0x14, D4b, 7, 0x1000)
  *   00012154  addq.b 0x1,D4b
  *   00012156  lea (0x24,SP),SP                  ; pop 9 longs (jsr 28f62: 3 + jsr 28e3c: 6)
  *   0001215a  addq.b 0x1,D3b
@@ -147,6 +147,9 @@ import type { RomImage } from "./bus.js";
 import { hiScoreDecode41c8 } from "./hi-score-decode-41c8.js";
 import { renderStringEntry28F62 } from "./render-string-entry-28f62.js";
 import { renderStringEntry286B0 } from "./render-string-entry-286b0.js";
+import { renderScore28E3C } from "./render-score-28e3c.js";
+import { stateSub2572 } from "./state-sub-2572.js";
+import { formatNumber3874 } from "./string-format.js";
 
 export const HELPER_11FF8_ADDR = 0x00011ff8 as const;
 
@@ -298,7 +301,7 @@ export interface Helper11FF8Subs {
 
   /**
    * `FUN_28E3C` — numeric score renderer (6-arg format-and-render).
-   * Called as `(score_long, 0, D4b, 0x14, 7, 0x1000)` per row.
+   * Called as `(score_long, 0, 0x14, D4b, 7, 0x1000)` per row.
    * Default: no-op.
    */
   fun_28e3c?: (
@@ -478,10 +481,10 @@ export function helper11FF8(
       renderStringEntry28F62(state, 0xd, d4b, 0x1000);
     }
 
-    // fun_28e3c(state, score_from_a2, 0, D4b, 0x14, 7, 0x1000)
+    // fun_28e3c(state, score_from_a2, 0, 0x14, D4b, 7, 0x1000)
     // A2 can be any address (ROM or workRam), use readAbsLong.
     const scoreLong = readAbsLong(state, rom, a2);
-    subs.fun_28e3c?.(state, scoreLong, 0, d4b, 0x14, 7, 0x1000);
+    subs.fun_28e3c?.(state, scoreLong, 0, 0x14, d4b, 7, 0x1000);
 
     // D4b++ (byte increment)
     d4b = (d4b + 1) & 0xff;
@@ -493,5 +496,55 @@ export function helper11FF8(
  * Calls `helper11FF8(state, rom, 0xff, {})`.
  */
 export function helper11FF8Default(state: GameState, rom?: RomImage): void {
-  helper11FF8(state, rom, 0xff);
+  if (rom === undefined) {
+    helper11FF8(state, rom, 0xff);
+    return;
+  }
+
+  const renderStringChain = (s: GameState, structAddr: number, attrWord: number): void => {
+    stateSub2572(s, rom, structAddr, attrWord);
+  };
+  const romRead8 = (absAddr: number): number => (rom.program[absAddr] ?? 0) & 0xff;
+
+  helper11FF8(state, rom, 0xff, {
+    renderString0142: (s, textPtr, attr) => {
+      renderStringChain(s, textPtr, attr);
+    },
+    renderStringEntry286B0: (s, arg1, arg2, arg3, arg4) => {
+      renderStringEntry286B0(
+        s,
+        arg1,
+        arg2,
+        arg3,
+        arg4,
+        { renderStringChain: (structAddr, attrWord) => renderStringChain(s, structAddr, attrWord) },
+        romRead8,
+      );
+    },
+    renderStringEntry28F62: (s, arg1, arg2, arg3) => {
+      renderStringEntry28F62(
+        s,
+        arg1,
+        arg2,
+        arg3,
+        { renderStringChain: (structAddr, attrWord) => renderStringChain(s, structAddr, attrWord) },
+      );
+    },
+    fun_28e3c: (s, arg1, arg2, arg3, arg4, arg5, arg6) => {
+      renderScore28E3C(s, arg1, arg2, arg3, arg4, arg5, arg6, {
+        numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+          formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+        },
+        renderStringEntry28F62: (st, col, tickOff, attr) => {
+          renderStringEntry28F62(
+            st,
+            col,
+            tickOff,
+            attr,
+            { renderStringChain: (structAddr, attrWord) => renderStringChain(st, structAddr, attrWord) },
+          );
+        },
+      });
+    },
+  });
 }

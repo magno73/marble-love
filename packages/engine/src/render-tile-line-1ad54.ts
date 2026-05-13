@@ -177,8 +177,8 @@ export function renderTileLine1AD54(
   // Leggi flags_word = word at ptrAbs+4
   const flags_word = rd16(state, rom, ptrAbs4); // byte[4..5]
   const ptrAbs6    = (ptrAbs4 + 2) >>> 0;
-  // btst.b #1, high byte of flags_word (byte[4])
-  if ((flags_word & 0x0200) !== 0) { // bit 1 of high byte = bit 9 of word
+  // btst.b #1, low byte of flags_word (byte[5]).
+  if ((flags_word & 0x0002) !== 0) {
     const bits = ((flags_word & 0xc) + 0x10) & 0xffff;
     a4 = (a4 | bits) & 0xffff;
   }
