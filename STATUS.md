@@ -43,6 +43,32 @@ TARGET_FRAME=14000 probe-diff-bytes:
   total diff = 6304
 ```
 
+Follow-up loop validato dopo `1f08117`:
+
+- `FUN_1AA38`: dal disasm M68K `0x1AA78..0x1AA82` la fast path
+  `value != 0 && value < 0x1000` controlla solo il primo lane (`A3`), non
+  `A3/A4/A5/A6`. La replica TS ora segue questa forma; parity mirata
+  `test-tilemap-span-builder-1aa38-parity.ts 200` resta 200/200.
+- `FUN_11452` mode0 async: i chunk 1/3/5 del rebuild vengono resi visibili un
+  vblank prima, e lo stage 63 decodifica le prime 18 righe `FUN_16F6C` prima
+  della coda completa `FUN_10504`, coerente con lo snapshot MAME f12950.
+
+Misure follow-up:
+
+```text
+TARGET_FRAME=12900:
+  pfRam diff = 22 byte; TS/MAME nonzero = 420/420
+
+TARGET_FRAME=12950:
+  total diff = 2088  (era 2666)
+  pfRam diff = 1036  (era 1600)
+  TS/MAME nonzero = 3128/3119
+
+TARGET_FRAME=13200:
+  total diff resta 2474; il prossimo blocker e' ancora il contenuto PF
+  stabile post-rebuild, non il timing dei primi chunk.
+```
+
 Next loop:
 
 1. isolare la prima divergenza utile tra f12890..f13110, distinguendo cadence

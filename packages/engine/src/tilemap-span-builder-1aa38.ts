@@ -121,11 +121,8 @@ export function buildTilemapSpan1AA38(
     let target: number | undefined;
     let transform = false;
 
-    for (const value of [a3, a4, a5, a6]) {
-      if (value !== 0 && signedLt(value, 0x1000)) {
-        target = value;
-        break;
-      }
+    if (a3 !== 0 && signedLt(a3, 0x1000)) {
+      target = a3;
     }
 
     if (target === undefined) {

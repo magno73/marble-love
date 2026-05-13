@@ -28,8 +28,11 @@ import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504 } from "./main-loop-init-10504.js";
 import { buildTilemapRows1A444 } from "./tilemap-row-build-1a444.js";
+import { levelInit16F6C } from "./level-init-16f6c.js";
+import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
 
 const WRAM = 0x00400000;
+const MODE0_LEVEL_PREFIX_ROWS = 18;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -89,6 +92,18 @@ function setMode0VblankSnapshot(state: GameState, stage: number): void {
 function rebuildMode0LevelPrefix(state: GameState, rom: RomImage, chunks: number): void {
   levelDispatcher16EC6(state, rom, { fun_1a444: () => undefined });
   buildTilemapRows1A444(state, rom, undefined, { maxOuterChunks: chunks });
+}
+
+function decodeMode0LevelRowsPrefix(state: GameState, rom: RomImage, rows: number): void {
+  let row = 0;
+  levelInit16F6C(state, rom, {
+    fun_1a668: (outAbs, ctrlAbs, extAbs) => {
+      if (row < rows) {
+        decodeBitstream1A668(state, rom, outAbs, ctrlAbs, extAbs);
+      }
+      row++;
+    },
+  });
 }
 
 export function startMode2Init11452Async(state: GameState): void {
@@ -162,13 +177,12 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 10:
     case 11:
     case 12:
-    case 13:
       state.clock.mode0Init11452Stage = as_u8(stage + 1);
       return;
 
-    case 14:
+    case 13:
       rebuildMode0LevelPrefix(state, rom, 1);
-      state.clock.mode0Init11452Stage = as_u8(15);
+      state.clock.mode0Init11452Stage = as_u8(14);
       return;
 
     case 29:
@@ -176,9 +190,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u8(30);
       return;
 
-    case 34:
+    case 33:
       rebuildMode0LevelPrefix(state, rom, 3);
-      state.clock.mode0Init11452Stage = as_u8(35);
+      state.clock.mode0Init11452Stage = as_u8(34);
       return;
 
     case 49:
@@ -186,14 +200,21 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u8(50);
       return;
 
-    case 54:
+    case 53:
       rebuildMode0LevelPrefix(state, rom, 5);
-      state.clock.mode0Init11452Stage = as_u8(55);
+      state.clock.mode0Init11452Stage = as_u8(54);
       return;
 
     case 59:
       rebuildMode0LevelPrefix(state, rom, 6);
       state.clock.mode0Init11452Stage = as_u8(60);
+      return;
+
+    case 63:
+      // MAME has the first decode rows visible at f12950, one sampled vblank
+      // before the full FUN_10504 tail lands at f12960.
+      decodeMode0LevelRowsPrefix(state, rom, MODE0_LEVEL_PREFIX_ROWS);
+      state.clock.mode0Init11452Stage = as_u8(64);
       return;
 
     case 64:
