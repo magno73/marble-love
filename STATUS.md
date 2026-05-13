@@ -1,7 +1,49 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: FUN_29CCE tag 0x1f side-wall bounce cablato; f13920 total 1069 / pfRam 0)
+**Ultimo update:** 2026-05-13 (oracle warm dumps: slapsticBank serializzato/inferito; probe/web consumano il bank reale quando disponibile)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Slapstic bank nei warm dump
+
+Il blocker successivo al checkpoint `FUN_29CCE` era il bank slapstic dei warm
+seed intermedi: il dump storico f12000 parte correttamente da bank 1 e la FSM TS
+switcha a bank 0 a f12899, ma un probe che parte direttamente da f13500/f13541
+non puo' dedurlo se il JSON contiene solo RAM. Risultato: `sub1CABA` leggeva la
+tabella bsearch del bank sbagliato e i micro-frame locali sembravano peggiori
+del long-run reale.
+
+Fix stabili:
+
+- `oracle/mame_state_dump.lua` e `oracle/mame_state_multidump.lua` emettono ora
+  `slapsticBank` per snapshot. Se MAME non espone `m_current_bank`, il dumper
+  lo inferisce con fingerprint ROM read-only (`readv_u16`) su quattro word
+  uniche dei bank protetti.
+- `probe-diff-bytes.ts` usa `base.slapsticBank` quando presente, oppure
+  `SLAPSTIC_BANK=N` come override esplicito; fallback invariato a bank 1 per i
+  vecchi dump f12000.
+- Il frontend `?mameDump=1` / `?mameLive=1` consuma `dump.slapsticBank` e
+  supporta `?slapsticBank=N` per override manuale, mantenendo fallback 1 sui
+  fixture vecchi.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+MAME smoke:
+  MARBLE_DUMP_FRAMES=1 -> slapsticBank=3
+  MARBLE_DUMP_FRAMES=1,2 -> slapsticBank=3,3
+
+probe-diff-bytes old dump fallback:
+  /tmp/mame_demo_12000_18000_step10.json f13920
+  Warm slapstic bank: 1
+  Total divergent bytes: 1069
+
+probe-diff-bytes override:
+  SLAPSTIC_BANK=0 /tmp/mame_demo_13500_13560_step1.json f13543
+  Warm slapstic bank: 0
+```
 
 ## 2026-05-13 — FUN_29CCE side-wall collision checkpoint
 

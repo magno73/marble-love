@@ -155,6 +155,7 @@ async function startGame(
       if (r.ok) {
         const dump = await r.json() as {
           frame: number;
+          slapsticBank?: number;
           workRam: string;
           playfieldRam: string;
           spriteRam: string;
@@ -168,6 +169,15 @@ async function startGame(
           }
           return out;
         };
+        const querySlapsticBank = searchParams.has("slapsticBank")
+          ? Number(searchParams.get("slapsticBank"))
+          : Number.NaN;
+        const dumpSlapsticBank = typeof dump.slapsticBank === "number" ? dump.slapsticBank : Number.NaN;
+        const warmSlapsticBank = Number.isFinite(querySlapsticBank)
+          ? querySlapsticBank & 3
+          : Number.isFinite(dumpSlapsticBank) && dumpSlapsticBank >= 0
+            ? dumpSlapsticBank & 3
+            : 1;
         warmState = {
           workRam: hex2bytes(dump.workRam, 0x2000),
           playfieldRam: hex2bytes(dump.playfieldRam, 0x2000),
@@ -177,7 +187,7 @@ async function startGame(
           videoScrollY: (((parseInt(dump.workRam.substr(4, 2), 16) << 8) |
                           parseInt(dump.workRam.substr(6, 2), 16)) & 0x1ff),
           videoScrollX: 0,
-          slapsticBank: 1,
+          slapsticBank: warmSlapsticBank,
         };
         if (useMameDump) mameDumpFrozen = true;
         console.log(`[warmState] loaded MAME frame ${dump.frame} (frozen=${mameDumpFrozen})`);
