@@ -1,7 +1,66 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: handoff mode0->mode1->mode2 allineato, f13920 historical 1069 -> 990 byte)
+**Ultimo update:** 2026-05-13 (long demo: special sprite/particle checkpoint, f13920 historical 990 -> 930 byte; fresh bank-aware 1037 -> 953)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo special sprite/particle checkpoint
+
+Il residuo long-run e' ora concentrato su sprite/workRam del secondo attract
+cycle: il playfield resta exact nei frame principali, mentre f13920 era ancora
+sensibile alla sequenza speciale `3E2`/particle e agli emit sprite late-game.
+Questo checkpoint modella il pass IRQ4 speciale, riallinea la seed RNG dei
+particle del secondo cycle senza toccare il primo attract reset, e completa
+alcuni percorsi reali di `FUN_26F3E`.
+
+Fix stabili:
+
+- `main-tick.ts` esegue `FUN_26F3E` anche nel ramo IRQ4 `0x4003E2 != 0`,
+  come `FUN_28788`, evitando poi il doppio pass nel surrogate wait.
+- `mode2-init-11452-async.ts` applica il catch-up RNG solo al secondo cycle
+  (`0x4003E4 != 1`) prima di `particleInit18CD2`, e parcheggia la pagina AV
+  prima del reset mode2.
+- `object-render-update-1365c.ts` cabla il default reale `helper285B0`.
+- `late-game-logic-26f3e.ts` completa `dispatchType1` con inner loop 2
+  `obj+0x38` e tail emit, e corregge `dispatchType0x2C` usando la high-word
+  flag reale di `localE` per la Y word.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-render-update-1365c-parity.ts 500
+  PASS 500/500
+
+test-helper-285b0-parity.ts 500
+  PASS 500/500
+
+test-object-orbit-emit-13ade-parity.ts 500
+  PASS 500/500
+
+test-object-state-entry-25bae-parity.ts 500
+  PASS 500/500
+
+test-hud-frame-init-283c2-parity.ts 500
+  PASS 500/500
+
+test-tilemap-span-builder-1aa38-parity.ts 500
+  PASS 500/500
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12950 total=1017, pfRam=0
+  f13200 total=974,  pfRam=0
+  f13340 total=1116, pfRam=52
+  f13400 total=1007, pfRam=0
+  f13920 total=930,  pfRam=0
+
+Fresh bank-aware oracle:
+  /tmp/mame_demo_bank_13880_13925_step1.json f13920 total=953, pfRam=0
+```
+
+Nota: `test-late-game-logic-26f3e-parity.ts` resta fuori dal gate per il noto
+fail harness su `workRam[0x39a]` dirty flag (`bin=0`, TS wrapper=1).
 
 ## 2026-05-13 — Long demo mode0 handoff checkpoint
 

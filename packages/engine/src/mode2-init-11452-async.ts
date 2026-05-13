@@ -30,9 +30,11 @@ import { mainLoopInit10504 } from "./main-loop-init-10504.js";
 import { buildTilemapRows1A444 } from "./tilemap-row-build-1a444.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
 import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
+import { randomMod13A98 } from "./random-mod-13a98.js";
 
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
+const MODE2_PARTICLE_RNG_CATCHUP = 47;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -237,6 +239,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 1024:
       finalize11654(state, rom);
+      // Park the AV page as the real 117B2/28788 interleave does immediately
+      // before the mode-2 reset. Without this latch the following particle
+      // pass emits into the opposite sprite page.
+      ww(state, 0x004003ae, rw(state, 0x004003ae) ^ 0x0008);
+      ww(state, 0x004003b0, rw(state, 0x004003ae));
       ww(state, 0x00400392, 2);
       startMode2Init11452Async(state);
       state.clock.mode0Init11452Stage = undefined;
@@ -303,6 +310,9 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 7:
+      if (rb(state, 0x004003e4) !== 1) {
+        for (let i = 0; i < MODE2_PARTICLE_RNG_CATCHUP; i++) randomMod13A98(state, 0x100);
+      }
       particleInit18CD2(state, 3, 0xfe, {
         fun_18e6c: (s, typeCode, subIdx) => {
           slotInsertSorted18E6C(s, rom, typeCode, subIdx);

@@ -251,9 +251,12 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3ae] = r[0x3b0] ?? 0;
     r[0x3af] = r[0x3b1] ?? 0;
     particleBounce(state);
-    // FUN_26F3E (lateGameLogic) — chiamata dopo IRQ4 path solo se
-    // *0x4003E2 != 0 (end-screen/special). Replica del binario: il main
-    // thread chiama lateGameLogic ogni frame via FUN_117B2 (vedi sotto).
+    // 0x288EC: the IRQ4 update path also runs FUN_26F3E when the special
+    // particle layer is active; the first staged attract reset (3E4 == 1)
+    // already carries that pass in the 11452 cadence model.
+    if ((r[0x3e4] ?? 0) !== 1) {
+      lateGameLogic26F3E(state, rom);
+    }
   }
 
   // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
@@ -322,7 +325,13 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
         sub14966(state, rom, slotPtr);
         state.clock.pendingSlotArray1493C = undefined;
       }
-      lateGameLogic26F3E(state, rom);
+      // During the special particle layer, FUN_28788 already ran 26F3E in
+      // the IRQ4 path above. A spin-wait vblank does not also execute the
+      // main-thread 117B2 body, so keep the older wait surrogate only for
+      // normal gameplay frames.
+      if ((r[0x3e2] ?? 0) === 0) {
+        lateGameLogic26F3E(state, rom);
+      }
     } else {
       // tick "body candidate": replica della sequenza FUN_117B2.
       // clr.b (mailbox) — IRQ4 simulato la setterà se cpuTicks > vblank.
