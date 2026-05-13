@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: special sprite/particle checkpoint, f13920 historical 990 -> 930 byte; fresh bank-aware 1037 -> 953)
+**Ultimo update:** 2026-05-13 (long demo: state-6 sprite cadence checkpoint, f13920 historical 930 -> 868 byte; fresh bank-aware 953 -> 889)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo state-6 sprite cadence checkpoint
+
+Il secondo attract cycle ora attraversa meglio la sequenza state-6/eaten-reset:
+il playfield resta exact sui frame principali e il residuo f13920 scende sotto
+900 byte. Il miglioramento viene da quattro path reali, senza `loopReset` e
+senza normalizzazioni globali del renderer tilemap.
+
+Fix stabili:
+
+- `FUN_264AA` replica il prelude condiviso `mode < 2`, azzerando i record
+  `obj+0x38` che MAME pulisce prima della dispatch sprite.
+- `FUN_253EC` cabla `objectEnter1281C -> FUN_264AA` nei path obj0 state 0/5/6
+  e modella il wobble transizionale `obj+0xD8` che aggiorna `+0x68/+0x69/+0x70`.
+- Il delay bottom-HUD del reset mode2 resta attivo solo nel primo cycle
+  (`0x4003E4 == 1`), evitando un frame extra nel long-run successivo.
+- `dispatchType5` emette il cel block low-band osservato nei trace MAME
+  tramite `FUN_1A8D2`/`p42+4`; senza questo, D7 restava corto di quattro
+  sprite intorno a f13906.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-render-update-1365c-parity.ts 500
+  PASS 500/500
+
+test-helper-285b0-parity.ts 500
+  PASS 500/500
+
+test-object-orbit-emit-13ade-parity.ts 500
+  PASS 500/500
+
+test-object-state-entry-25bae-parity.ts 500
+  PASS 500/500
+
+test-hud-frame-init-283c2-parity.ts 500
+  PASS 500/500
+
+test-tilemap-span-builder-1aa38-parity.ts 500
+  PASS 500/500
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12950 total=1017, pfRam=0
+  f13200 total=974,  pfRam=0
+  f13920 total=868,  pfRam=0
+
+Fresh bank-aware oracle /tmp/mame_demo_bank_13880_13925_step1.json:
+  f13906 total=1367, pfRam=72
+  f13920 total=889,  pfRam=0
+```
+
+Drill aperto:
+
+- I trace f13906 mostrano che MAME usa gli slot type5 11/12 mentre TS arriva
+  ancora con 2/3; forzare 2/3 -> 11/12 nel dispatcher peggiora f13920
+  (889 -> 1555), quindi il fix va cercato a monte nella cadence/rect-buffer
+  state, non come remap locale in `dispatchType5`.
 
 ## 2026-05-13 — Long demo special sprite/particle checkpoint
 

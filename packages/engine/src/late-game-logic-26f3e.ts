@@ -546,8 +546,19 @@ function dispatchType5(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x17, 0x10); // note +0x17 not +0x18
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x100) return;
-  moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5, d4, 0x1800, subs);
+  const p42 = rl(state, rom, sp + 0x42);
+  // Long-demo MAME traces show the low-band type-5 objects still emit the
+  // following cel block through FUN_1A8D2 before they scroll into the normal
+  // 0xc0..0x100 band; skipping it left D7 short by four sprites at f13906.
+  if (s16(d4) < 0xc0) {
+    const nextArg = rl(state, rom, (p42 + 4) >>> 0);
+    if (nextArg !== 0xffffffff) {
+      moEmit(state, rom, nextArg, d5, d4, 0x1800, subs);
+    }
+    return;
+  }
+  if (s16(d4) >= 0x100) return;
+  moEmit(state, rom, rl(state, rom, p42), d5, d4, 0x1800, subs);
 }
 
 /**

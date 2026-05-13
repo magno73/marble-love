@@ -1,8 +1,9 @@
 /**
  * fun-264aa.ts — partial replica of `FUN_000264AA`.
  *
- * This module currently ports the `mode=2` path used by `FUN_150D0`, i.e. the
- * slot-array sprite/collision emit path reached from `sub14966`.
+ * This module currently ports the shared sprite-list clear prelude plus the
+ * `mode=2` path used by `FUN_150D0`, i.e. the slot-array sprite/collision emit
+ * path reached from `sub14966`.
  */
 
 import type { RomImage } from "./bus.js";
@@ -141,6 +142,13 @@ export function fun264AA(
 ): number {
   const a2 = structPtr >>> 0;
   const d3 = s16(mode);
+
+  if (d3 < 2) {
+    for (let i = 0; i < 5; i++) {
+      wwWork(state, a2 + 0x38 + i * 6, 0);
+    }
+    return 0;
+  }
 
   if (d3 !== 2) {
     return 0;
