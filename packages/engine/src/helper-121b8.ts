@@ -202,17 +202,6 @@ function w32(state: GameState, off: number, v: number): void {
   state.workRam[off + 3] =  u         & 0xff;
 }
 
-function traceProjectStruct(state: GameState, objAddr: number, label: string): void {
-  if (typeof process === "undefined" || process.env?.MARBLE_TRACE_121B8_PROJECT !== "1" || objAddr !== PLAYER_ADDR_1) return;
-  console.error(
-    `${label} struct04=${r16(state, 0x1c2c).toString(16).padStart(4, "0")} ` +
-      `struct0e=${r16(state, 0x1c36).toString(16).padStart(4, "0")} ` +
-      `struct10=${r16(state, 0x1c38).toString(16).padStart(4, "0")} ` +
-      `struct1a=${r16(state, 0x1c42).toString(16).padStart(4, "0")} ` +
-      `frac=${r16(state, 0x69e)},${r16(state, 0x6a0)} bge=${r16(state, 0x6a2)}`,
-  );
-}
-
 /** sign-extend 32-bit unsigned → signed JS number */
 function s32(v: number): number {
   const u = v >>> 0;
@@ -679,7 +668,6 @@ export function helper121B8(
         spritePosUpdate1BAB2(state, a2);
       }
     }
-    traceProjectStruct(state, a2, "after1bc88");
 
     // POST_1BC88 (0x123BE):
     // tst.b D3; beq → POST_PLAYER_CHECKS
@@ -693,7 +681,6 @@ export function helper121B8(
       } else {
         scriptSlotBboxTest14E92(state, a2, undefined, rom);
       }
-      traceProjectStruct(state, a2, "after14e92");
       // Note: D0 from scriptSlotBboxTest14E92 - in the binary it's tested
       // but in TS the function is void; we proceed as if D0 checked
       // (The TS version returns void so we can't test D0 directly)
@@ -732,7 +719,6 @@ export function helper121B8(
       } else {
         stringViewportHit175C8(state, a2);
       }
-      traceProjectStruct(state, a2, "after175c8");
 
       // 0x000123ec:
       // move.l a2,-(a7); jsr $1881c.l; tst.l d0; addq.l #4,a7
@@ -742,7 +728,6 @@ export function helper121B8(
       } else {
         stateSub1881C(state, a2);
       }
-      traceProjectStruct(state, a2, "after1881c");
 
       // 0x00012400:
       // move.l a2,-(a7); jsr $1924e.l; addq.l #4,a7
@@ -751,7 +736,6 @@ export function helper121B8(
       } else {
         helper1924E(state, a2);
       }
-      traceProjectStruct(state, a2, "after1924e");
 
       // 0x00012408:
       // move.l a2,-(a7); jsr $19d94.l; addq.l #8,a7 (actually addq.l #8 after two args)
@@ -760,7 +744,6 @@ export function helper121B8(
       } else {
         bboxHitTest19D94(state, a2);
       }
-      traceProjectStruct(state, a2, "after19d94");
 
       // cmpi.b #0xB,(0x1A,A2); addq.l #8,SP; beq → EPILOGUE
       if (r8(state, objOff + OBJ_1A) === 0x0b) {
@@ -773,7 +756,6 @@ export function helper121B8(
       } else {
         objectRenderUpdate1365C(state, rom, a2);
       }
-      traceProjectStruct(state, a2, "after1365c");
     }
 
     // POST_PLAYER_CHECKS (0x12426):

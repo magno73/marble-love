@@ -25,6 +25,11 @@ function wL(workRam: Uint8Array, off: number, v: number): void {
   workRam[off + 3] =  v         & 0xff;
 }
 
+function wW(workRam: Uint8Array, off: number, v: number): void {
+  workRam[off] = (v >>> 8) & 0xff;
+  workRam[off + 1] = v & 0xff;
+}
+
 describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
   it("non solleva eccezioni con state vuoto e slot vuoto", () => {
     const s = emptyGameState();
@@ -161,5 +166,33 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     fun29CCE(s, SLOT, rom);
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x32);
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0xff);
+  });
+
+  it("LOOP color 0x1f: side-wall hit sets X flag, sends sound 0x42, and epilogue restores X/negates vx", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    let soundArg: number | undefined;
+
+    wL(s.workRam, SLOT_OFF + 0x00, 0x0000fea3);
+    wL(s.workRam, SLOT_OFF + 0x04, 0x00013cdc);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x01a12070);
+    wL(s.workRam, 0x684, 0x01a021cd);
+    wW(s.workRam, 0x690, 0x01a1);
+    wW(s.workRam, 0x692, 0x0171);
+
+    s.workRam[0xa9c + 0x18] = 1;
+    wW(s.workRam, 0xa9c + 0x0c, 0x01a0); // d6 = -1 vs g690
+    wW(s.workRam, 0xa9c + 0x10, 0x0178); // a0 = 7 vs g692
+    s.workRam[0xa9c + 0x1f] = 0x1f;
+
+    fun29CCE(s, SLOT, rom, {
+      soundCmdSend158AC: (_st, b) => { soundArg = b; return 1; },
+    });
+
+    expect(s.workRam[0x666]).toBe(1);
+    expect(s.workRam[0x668]).toBe(0);
+    expect(soundArg).toBe(0x42);
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x01a021cd);
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0xffff015d);
   });
 });

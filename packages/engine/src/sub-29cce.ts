@@ -224,6 +224,7 @@ export function fun29CCE(
   // Servono al loop outer (D6/A0/D1/D2 setup).
   const g690 = rWBE(state, G_690);
   const g692 = rWBE(state, G_692);
+  const initialVy = rL(state, a2Off + F_VY);
   const g696 = rWBE(state, G_696);
   const g698 = rWBE(state, G_698);
 
@@ -243,11 +244,10 @@ export function fun29CCE(
     // Compute D6, A0 (delta vs viewport globals): both are 16-bit signed.
     const slotX_w = rWBE(state, a3Off + SF_X);
     const slotY_w = rWBE(state, a3Off + SF_Y);
-    const _d6 = sextW((slotX_w - g690) & 0xffff);
-    const _a0 = sextW((slotY_w - g692) & 0xffff);
+    const d6 = sextW((slotX_w - g690) & 0xffff);
+    const a0 = sextW((slotY_w - g692) & 0xffff);
     const d1  = sextW((asrW3(slotX_w) - g696) & 0xffff);
     const d2  = sextW((asrW3(slotY_w) - g698) & 0xffff);
-    void _d6; void _a0;
 
     // 0x29d80..0x29d9c: color tag dispatch
     //  D0b = (0x1f,A3); ext.w; ext.l; cmp 5..0x3b → blt/bgt 0x2b072 (skip)
@@ -255,7 +255,7 @@ export function fun29CCE(
     const colorTagSx = colorTag >= 0x80 ? colorTag - 0x100 : colorTag;
 
     if (colorTagSx >= 5 && colorTagSx <= 0x3b) {
-      dispatchColor(state, a2Off, a3Off, colorTag, d1, d2);
+      dispatchColor(state, a2Off, a3Off, colorTag, d1, d2, d6, a0, initialVy, subs);
     }
 
     // 0x2b072: iter-epilog. Read `(0x58,A2)`. WHITE-LIST → advance iter.
@@ -338,6 +338,10 @@ function dispatchColor(
   colorTag: number,
   d1: number,
   d2: number,
+  d6: number,
+  a0: number,
+  initialVy: number,
+  subs: Sub29CCESubs,
 ): void {
   // Range checks per ogni color tag, derivati dai disasm 0x29f40..0x2b06c.
   // Pattern standard:
@@ -427,6 +431,25 @@ function dispatchColor(
       wB(state, a2Off + F_S58, rB(state, a3Off + SF_C));
       wB(state, a2Off + F_S59, 0xff);
       return;
+    // 0x2a124: 0x1f — side-wall bounce. The block uses viewport deltas
+    // D6/A0, not D1/D2. In the observed long demo f13542 case it sets the
+    // X collision flag, then the epilogue restores X and negates vx.
+    case 0x1f: {
+      if (a0 <= -0x0c) return;
+      if (a0 >= 0x54) return;
+      if (d6 <= -0x0e) return;
+      if (d6 >= 0) return;
+
+      const oldVy = initialVy | 0;
+      const hitsTop = a0 > -0x0c && a0 < -0x04 && oldVy < 0;
+      const hitsBottom = a0 > 0x4c && a0 < 0x54 && oldVy > 0;
+      if (hitsTop || hitsBottom) {
+        wB(state, G_FLAG_Y, 1);
+      }
+      wB(state, G_FLAG_X, 1);
+      (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, 0x42);
+      return;
+    }
     // 0x2a360: 0x12 — branch with cmpi.w threshold check:
     //   range -0x2 < D1 < 0x3 AND -0x1 < D2 < 0x5
     //   if (-0x16,A6) (= g694) > 0x3f40 → eseguito sub-arm; else no-op.

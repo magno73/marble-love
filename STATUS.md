@@ -1,7 +1,72 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; FUN_253EC state-4 eaten orbit cablato; f13920 playfield bit-perfect)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: FUN_29CCE tag 0x1f side-wall bounce cablato; f13920 total 1069 / pfRam 0)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — FUN_29CCE side-wall collision checkpoint
+
+Questo checkpoint riduce il drift object/sprite nel tratto mode0 lungo senza
+toccare il playfield exact dei checkpoint principali. Il caso concreto e'
+il long-demo intorno a f13542/f13543: MAME entra nel blocco `FUN_29CCE`
+per color tag `0x1f`, setta il flag X, ripristina `obj0.x` e inverte `vx`
+prima che `FUN_25E7C` (`vectorScale`) riscalari la velocita'.
+
+Fix stabili:
+
+- `FUN_29CCE` ora modella il blocco complesso `0x1f` (`0x2A124`): gate su
+  `D6/A0`, flag X sempre sul side-hit, flag Y solo sui bordi verticali,
+  sound command `0x42`, epilogo esistente restore/negate.
+- `FUN_253EC` cabla `FUN_29CCE` dentro `helper121B8` per obj0, state 5/6 e
+  slot-pair `FUN_158F6`; `FUN_1815A` usa la callback reale `FUN_26196 ->
+  FUN_261BC`; `FUN_180BE` ora chiama `pickObjLarger`.
+- Rimosse due trace env-gated rimaste nel codice (`MARBLE_TRACE_121B8_PROJECT`
+  e `MARBLE_TRACE_160F6_LOCK`): non cambiavano il runtime normale, ma tenevano
+  debug noise dentro moduli caldi.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+npx vitest run packages/engine/test/sub-29cce.test.ts
+  PASS 12/12
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-waypoint-list-step-1815a-parity.ts 200
+  PASS 200/200
+
+test-obj-pick-larger-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+Historical oracle /tmp/mame_demo_12000_18000_step10.json:
+  f12950 total=1051, pfRam=0
+  f13200 total=988,  pfRam=0
+  f13400 total=1010, pfRam=0
+  f13550 total=1183, pfRam=59
+  f13920 total=1069, pfRam=0
+
+Fresh oracle /tmp/mame_demo_fresh_12000_18000_step10.json:
+  f13200 total=1065, pfRam=0
+  f13920 total=1126, pfRam=0
+```
+
+Drill aperto:
+
+- Il micro-frame f13543 diventa quasi exact se il warm seed usa lo slapstic
+  bank 0 osservato da MAME (`0x81986 -> f01c`, `0x81924 -> 9f9c`); col seed
+  storico forzato a bank 1, `sub1CABA` legge zero dalla bsearch table e
+  `FUN_160F6` entra in lock verticale. Prossimo fix raccomandato: catturare
+  o ricostruire il bank slapstic corretto nei warm dump/probe, invece di
+  hardcodare bank 1.
 
 ## 2026-05-13 — FUN_253EC state-4 eaten orbit checkpoint
 
