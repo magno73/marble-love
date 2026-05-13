@@ -263,6 +263,7 @@ export * as refreshFrame10FCE from "./refresh-frame-10fce.js";
 export * as gameStateBanner26B2A from "./game-state-banner-26b2a.js";
 export * as vblankHelpers from "./vblank-helpers.js";
 export * as scrollRange144E4 from "./scroll-range-144e4.js";
+export * as scrollSub15A12 from "./scroll-sub-15a12.js";
 export * as helper2548 from "./helper-2548.js";
 export * as helper121B8 from "./helper-121b8.js";
 export * as helper1BC88 from "./helper-1bc88.js";

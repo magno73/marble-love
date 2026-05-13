@@ -1,7 +1,75 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: video-window tile pack + second-cycle handoff, f13920 historical 558 -> 146 byte; fresh bank-aware 579 -> 167)
+**Ultimo update:** 2026-05-13 (long demo: scroll-range object-pair spawn + collision state handoff; f14900 object pair exact, total 514 -> 364)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo object-pair spawn + collision handoff checkpoint
+
+Il tratto del secondo attract segment non lascia piu' stale lo slot P2
+`0x400A20`: MAME lo inizializza da `FUN_15A12` quando `scrollRange144E4`
+attraversa la soglia del descriptor, mentre TS prima lasciava `fun_15a12` a
+no-op. Questo impediva la collisione `FUN_1BC88` con obj0 intorno a f14858 e
+faceva divergere marble, sprite e cache object dopo f14900.
+
+Fix stabili:
+
+- Aggiunta la replica mirata `scrollSub15A12` per i due slot
+  `0x4009A4/0x400A20`: descriptor table ROM `0x22706`, free-slot lookup
+  `FUN_1599A`, duplicate guard `FUN_159D8`, init posizione/target/cache,
+  `FUN_1BAB2`, `FUN_1CC62`, `FUN_1B9CC`, insert sorted `FUN_18E6C` e cleanup
+  leaving-range via `FUN_15BD0`.
+- `scrollRange144E4` usa `scrollSub15A12` come default quando la ROM e'
+  disponibile, ma conserva l'override `fun_15a12` per i parity test.
+- `helper1BC88` corregge la JSR reale a `0x160D4`: il ramo collisione
+  non-player scrive `0x24/+0x56` e poi entra in state `0x23`, invece di
+  chiamare erroneamente `spritePosUpdate1BAB2`.
+- Il terzo attract segment ritarda l'async refresh mode0 da stage 65 a 95,
+  allineando la finestra object/scroll che porta al contatto f14858.
+
+Effetto osservato:
+
+- `0x400A20` combacia con MAME a f14540, f14610, f14620, f14850, f14860,
+  f14870 e f14900; prima era stale/inattivo e impediva il bounce.
+- `obj0` combacia con MAME attraverso il bounce f14858 e resta exact almeno
+  fino a f14900 nella finestra `12000 + 14540..14940`.
+- Totali long oracle migliorati:
+  - f12950: 605 -> 551
+  - f13200: 336 -> 309
+  - f13920: 146 -> 120
+  - f14610: 543 -> 490
+  - f14850: 587 -> 422
+  - f14860: 406 -> 340
+  - f14900: 514 -> 364
+  - f15000: 835 -> 563
+  - f15400: 809 -> 741
+  - f16000: 5417 -> 3843
+  - f17000: 1106 -> 609
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-scroll-range-144e4-parity.ts 100
+  PASS 100/100
+
+test-slot-insert-sorted-18e6c-parity.ts 100
+  PASS 100/100
+
+test-object-enter-state-23-parity.ts 100
+  PASS 100/100
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- f16000 resta il prossimo blocco grosso (`workRam` ~3.5KB, sprite ~289B):
+  non e' piu' il P2 stale che causava il bounce mancante, ma una divergenza
+  successiva del second-cycle reset/object cache. Continuare con dense oracle
+  f15400..f16000 e write-tap sui marker object/scroll.
 
 ## 2026-05-13 — Long demo video-window pack + second-cycle handoff checkpoint
 
