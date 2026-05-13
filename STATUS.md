@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f13200 playfield bit-perfect; HUD/banner default `FUN_10504` wired)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; mode0 handoff esteso fino a f13910/f13920; f13920 playfield bit-perfect)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-13 — Long demo-mode checkpoint
@@ -236,11 +236,49 @@ TARGET_FRAME=13200:
   alpha diff = 97 (era 301)
 ```
 
+Checkpoint successivo:
+
+- `FUN_11452` mode0 async non usa piu' un byte-stage: la fase visibile di
+  rebuild/scroll dura oltre 255 vblank e viene contata come `u16`, evitando il
+  wrap prematuro che faceva partire il mode2 intorno a f13170.
+- L'handoff mode0 -> mode2 e' ora agganciato allo stage 1023: a f13910 TS
+  espone `0x400392=2` come MAME senza ancora completare il reset PF, e a f13920
+  il reset mode2 atterra con timer `0x012b` e PF `234/234` nonzero.
+- Questo non chiude ancora lo scroll/object drift durante il lungo tratto mode0
+  (f13900 resta TS scroll `0x002a` vs MAME `0x014d`), ma rimuove il falso
+  reset anticipato e riallinea il prossimo ciclo demo su una base molto piu'
+  utile.
+
+Verifiche nuovo checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+TARGET_FRAME=12950:
+  total diff = 1052
+  pfRam diff = 0
+
+TARGET_FRAME=13200:
+  total diff = 1168
+  pfRam diff = 0
+
+TARGET_FRAME=13920:
+  total diff = 1223
+  pfRam diff = 0
+  TS/MAME timer = 0x012b/0x012b
+
+Fresh dump /tmp/mame_demo_fresh_12000_18000_step10.json @ f13920:
+  total diff = 1280
+  pfRam diff = 0
+```
+
 Next loop:
 
-1. isolare la prima divergenza utile dopo il primo chunk exact e il follow-up
-   f13200 exact, partendo dal residuo sprite/workRam f12950/f13200 e dai 97
-   byte alpha rimasti;
+1. isolare il drift scroll/object durante la lunga finestra mode0
+   f13200..f13910: obj0 e candidate slots non guidano ancora il target
+   `0x400000/0x40097c` fino a `0x014d`, quindi MAME costruisce molte piu'
+   righe PF prima del reset;
 2. cercare altri `test_any` slapstic prodotti da prefetch/letture codice nei
    helper protetti prima di toccare ancora `FUN_1AA38/FUN_1A444`;
 3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano
