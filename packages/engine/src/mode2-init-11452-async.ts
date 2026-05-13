@@ -221,9 +221,21 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u16(65);
       return;
 
+    case 1022:
+      // Long demo attract handoff: MAME parks the main-thread body, exposes
+      // mode 1 for two vblanks, then arms the mode2 reset. Keeping these
+      // frames staged prevents the mode0 object/scroll body from running two
+      // extra times before the reset path starts.
+      ww(state, 0x00400392, 1);
+      state.clock.mode0Init11452Stage = as_u16(1023);
+      return;
+
     case 1023:
-      // Long demo attract handoff: MAME keeps mode0 visible until f13910
-      // before arming the mode2 reset that lands at f13920.
+      ww(state, 0x00400392, 1);
+      state.clock.mode0Init11452Stage = as_u16(1024);
+      return;
+
+    case 1024:
       finalize11654(state, rom);
       ww(state, 0x00400392, 2);
       startMode2Init11452Async(state);
@@ -239,6 +251,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 export function advanceMode2Init11452Async(state: GameState, rom: RomImage): void {
   const stage = state.clock.mode2Init11452Stage;
   if (stage === undefined) return;
+  if (stage >= 1) {
+    wb(state, 0x00400014, stage);
+  }
 
   switch (stage) {
     case 0:
