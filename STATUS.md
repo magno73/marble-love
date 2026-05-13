@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f13200 playfield ora bit-perfect dopo fix A3/A4 `FUN_160F6`)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f13200 playfield bit-perfect; HUD/banner default `FUN_10504` wired)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-13 — Long demo-mode checkpoint
@@ -201,11 +201,46 @@ step10 scan:
   first PF diff = f13160, 47 byte transient
 ```
 
+Checkpoint successivo:
+
+- `FUN_10504` ora wire-a di default i due callee ROM-backed gia' replicati
+  invece di lasciarli no-op:
+  - `FUN_283C2` (`hudFrameInit283C2`) per ridisegnare il frame HUD;
+  - `FUN_26B2A` (`gameStateBanner26B2A`) per banner/palette scatter-write.
+- Effetto principale sul long demo: il residuo alpha a f13200 scende da 301
+  a 97 byte e il totale da 1340 a 1136 contro l'oracolo storico
+  `/tmp/mame_demo_12000_18000_step10.json`.
+- Controllo incrociato su un dump MAME fresco con base diversa:
+  f13200 scende da 1399 a 1195 byte, quindi il fix non e' specifico del seed
+  workRam storico.
+
+Verifiche nuovo checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+TARGET_FRAME=12950:
+  total diff = 1052
+  pfRam diff = 0
+
+TARGET_FRAME=13200:
+  total diff = 1136 (era 1340)
+  pfRam diff = 0
+  alpha diff = 97 (era 301)
+```
+
 Next loop:
 
 1. isolare la prima divergenza utile dopo il primo chunk exact e il follow-up
-   f13200 exact, partendo dal delta PF transitorio f13160 e dal residuo
-   non-PF f12950/f13200;
+   f13200 exact, partendo dal residuo sprite/workRam f12950/f13200 e dai 97
+   byte alpha rimasti;
 2. cercare altri `test_any` slapstic prodotti da prefetch/letture codice nei
    helper protetti prima di toccare ancora `FUN_1AA38/FUN_1A444`;
 3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano

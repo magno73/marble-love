@@ -23,6 +23,8 @@ import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { stateSub2572 } from "./state-sub-2572.js";
 import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 import { renderString286EE } from "./render-string-286ee.js";
+import { hudFrameInit283C2 } from "./hud-frame-init-283c2.js";
+import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 
 const WRAM = 0x00400000;
 
@@ -109,7 +111,7 @@ export function mainLoopInit10504(
   const playerCount = rw(state, 0x00400396);
 
   (subs.clearPaletteRam ?? clearPaletteRam121A6)(state);
-  (subs.hudFrameInit ?? (() => undefined))(state);
+  (subs.hudFrameInit ?? ((s: GameState) => { if (rom !== undefined) hudFrameInit283C2(s, rom); }))(state);
   (subs.slotArrayBulkInit ?? slotArrayBulkInit)(state);
 
   wb(state, 0x0040075c, 0);
@@ -186,7 +188,7 @@ export function mainLoopInit10504(
   }
 
   (subs.vblankAck ?? vblankAck28DEA)(state);
-  subs.gameStateBanner?.(state, gameMode);
+  (subs.gameStateBanner ?? ((s: GameState, mode: number) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, mode); }))(state, gameMode);
   if (gameMode === 0) {
     subs.soundCmd?.(state, 0);
   }
