@@ -305,14 +305,6 @@ export function stateDispatch160F6(
         wB(r, a2 + 0x36, 0x00);
         wL(r, a2 + 0x08, 0);
         const diff = (rLs(r, a2 + 0x14) - D1) | 0;
-        if (typeof process !== "undefined" && process.env?.MARBLE_TRACE_160F6_LOCK === "1" && structPtr === 0x00400018) {
-          console.error(
-            `160f6 lock check z=0x${(rLs(r, a2 + 0x14) >>> 0).toString(16).padStart(8, "0")} ` +
-              `prev=0x${(D1 >>> 0).toString(16).padStart(8, "0")} diff=0x${(diff >>> 0).toString(16).padStart(8, "0")} ` +
-              `D2=0x${(D2 & 0xffff).toString(16).padStart(4, "0")} char=0x${charcode.toString(16).padStart(2, "0")} ` +
-              `tile=${rWabs(state, tileXPtr)},${rWabs(state, tileYPtr)} track=${rWabs(state, 0x40069a)},${rWabs(state, 0x40069c)} snap=${rWabs(state, 0x400696)},${rWabs(state, 0x400698)}`,
-          );
-        }
         if (diff > TIMER_THRESHOLD) {
           wB(r, a2 + 0x36, 0x02);
           wW(r, a2 + 0x2e, rWabs(state, 0x400696) & 0xffff);

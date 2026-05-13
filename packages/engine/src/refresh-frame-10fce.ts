@@ -76,6 +76,8 @@ import { stringHelper17CB8 } from "./string-helper-17cb8.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { objectInit2591A } from "./object-init-2591a.js";
 import { objectArrayInit25B40 } from "./object-array-init-25b40.js";
+import { pickObjLarger } from "./obj-pick-larger.js";
+import { fun29CCE } from "./sub-29cce.js";
 
 const WRAM = 0x00400000;
 
@@ -158,6 +160,20 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       },
     });
   };
+  const runTerrainCollision = (s: GameState, objAddr: number): void => {
+    fun29CCE(s, objAddr, rom);
+  };
+  const stepWaypointList = (s: GameState, objAddr: number): void => {
+    waypointListStep1815A(s, objAddr, {
+      fun_26196: (st, a2Addr) => {
+        flagScaledMagnitudeDispatch(
+          st,
+          a2Addr,
+          (structPtr, magnitude) => fun261BC(st, structPtr, magnitude, rom.program),
+        );
+      },
+    }, rom);
+  };
 
   // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
@@ -165,8 +181,8 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   if (s1a === 0 && sd8 === 0 && scb === 0) {
     helper253BC(state, a2);
     objectStep17F66(state, a2, {
-      fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
-      fun180BE: () => {},
+      fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
+      fun180BE: () => { pickObjLarger(state); },
       fun26196: (a2Addr) => {
         flagScaledMagnitudeDispatch(
           state,
@@ -182,6 +198,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
       fun_25bae: enterObjectState,
+      fun_29cce: runTerrainCollision,
     });
     return;
   }
@@ -225,8 +242,8 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     helper25FC2(state, rom, a2);
     helper253BC(state, a2);
     objectStep17F66(state, a2, {
-      fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
-      fun180BE: () => {},
+      fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
+      fun180BE: () => { pickObjLarger(state); },
       fun26196: (a2Addr) => {
         flagScaledMagnitudeDispatch(
           state,
@@ -238,6 +255,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
       fun_25bae: enterObjectState,
+      fun_29cce: runTerrainCollision,
     });
 
     if (rb(state, a2 + 0x1a) === 5) {
@@ -255,14 +273,38 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     return;
   }
 
+  // JT[6] = 0x254D2. This short-lived "carried/eaten" state is visible in
+  // long demo mode around the mode0 rebuild handoff and again before the
+  // mode2 reset. The fallback skipped helper121B8 and the state-6 countdown,
+  // so TS could leave the orbit path in a stale normal state while MAME kept
+  // the object in state 6 with a live timer.
+  if (s1a === 6) {
+    if (((wr[0x390] ?? 0) << 8 | (wr[0x391] ?? 0)) === 1) {
+      stepWaypointList(state, a2);
+    }
+    helper121B8(state, rom, a2, {
+      fun_1bab2: updateSpritePos,
+      fun_25bae: enterObjectState,
+      fun_29cce: runTerrainCollision,
+    });
+
+    wb(state, a2 + 0x57, (rb(state, a2 + 0x57) - 1) & 0xff);
+    if (rb(state, a2 + 0x57) === 0 && rb(state, a2 + 0x18) !== 2) {
+      wb(state, a2 + 0x18, 3);
+      wl(state, a2 + 0x04, 0);
+      wl(state, a2 + 0x00, 0);
+    }
+    return;
+  }
+
   // Fallback (path non-modellati): chain conservativa esistente —
   // helper253BC + objectStep17F66 SENZA helper121B8. Equivalente al
   // wiring precedente; mantiene parity per obj non-obj0 finché i path
   // restanti del JT non vengono modellati.
   helper253BC(state, a2);
   objectStep17F66(state, a2, {
-    fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
-    fun180BE: () => {},
+    fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
+    fun180BE: () => { pickObjLarger(state); },
     fun26196: (a2Addr) => {
       flagScaledMagnitudeDispatch(
         state,
@@ -446,12 +488,11 @@ export function refreshFrame10FCE(
   //   + spriteRotate1C014 + sub interne (29CCE/1BC88/1924E/25C74).
   //
   //   MAME f12000+ per obj0 (player1 @ 0x400018): s1a=0, s18=1, 0xcb=0,
-  //   0x36=0, 0xd8=0, s58=0 → path NORMAL stabile, no respawn, no out_of_range.
-  //   `fun_29cce` con no-op è bit-perfect per obj0 (vedi sub-29cce.ts riga 36-58:
-  //   nessun BLOCK complesso triggera, no neg.l vx/vy nell'epilog perché
-  //   *0x400666/0x400668 restano 0). Helper121B8 chiamato qui per obj0 è
-  //   SAFE (non duplicato con sub158F6: sub158F6 itera P1/P2 slot pair
-  //   @ 0x4009A4/0x400A20, MAI 0x400018 = obj0).
+  //   0xd8=0 → path NORMAL stabile, no respawn, no out_of_range. FUN_29CCE
+  //   resta quasi sempre no-op, ma il long demo richiede almeno il blocco
+  //   side-wall tag 0x1f per ripristinare X e invertire vx prima di vectorScale.
+  //   Helper121B8 chiamato qui per obj0 è SAFE (non duplicato con sub158F6:
+  //   sub158F6 itera P1/P2 slot pair @ 0x4009A4/0x400A20, MAI 0x400018 = obj0).
   // FUN_251DE: cost dominato dalla chain per-obj (helper121B8 ~4500/obj).
   // count<=2 = attract (AVG 11180), count>6 = HEAVY (~60000).
   // Path "skip respawn" (FAST) raro nel codice attuale (TS wira sempre la
@@ -509,6 +550,7 @@ export function refreshFrame10FCE(
                   fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); },
                 });
               },
+              fun_29cce: (st, objAddr) => { fun29CCE(st, objAddr, rom); },
             },
           });
         },
