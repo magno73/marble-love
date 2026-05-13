@@ -14,6 +14,7 @@ import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } fro
 
 const DUMP_PATH = process.env.MULTI_DUMP ?? "/tmp/mame_state_multi.json";
 const TARGET_FRAME = Number(process.env.TARGET_FRAME ?? "2401");
+const SLAPSTIC_BANK_ENV = process.env.SLAPSTIC_BANK;
 
 const rom = busNs.emptyRomImage();
 applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
@@ -38,6 +39,13 @@ if (!target) {
 
 const baseFrame = base.frame as number;
 const dticks = TARGET_FRAME - baseFrame;
+const baseDumpBank = typeof base.slapsticBank === "number" ? base.slapsticBank : undefined;
+const envBank = SLAPSTIC_BANK_ENV !== undefined ? Number(SLAPSTIC_BANK_ENV) : undefined;
+const slapsticBank = Number.isFinite(envBank)
+  ? (envBank as number) & 3
+  : Number.isFinite(baseDumpBank)
+    ? (baseDumpBank as number) & 3
+    : 1;
 
 const s = stateNs.emptyGameState();
 bootInit(s, rom, {
@@ -47,7 +55,7 @@ bootInit(s, rom, {
     spriteRam: hex(base.spriteRam as string),
     alphaRam: hex(base.alphaRam as string),
     colorRam: hex(base.colorRam as string),
-    slapsticBank: 1,
+    slapsticBank,
   },
 });
 for (let t = 0; t < dticks; t++) tick(s, { rom, runMainLoopBody: true });
@@ -83,6 +91,7 @@ const all: DiffEntry[] = [
 ];
 
 console.log(`Diff TS_after_${dticks}_ticks vs MAME@${TARGET_FRAME} (base seed @${baseFrame}):`);
+console.log(`Warm slapstic bank: ${slapsticBank}`);
 console.log(`Total divergent bytes: ${all.length}\n`);
 
 // Group by region
