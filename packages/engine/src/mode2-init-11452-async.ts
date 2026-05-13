@@ -176,18 +176,17 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 9:
     case 10:
     case 11:
-    case 12:
       state.clock.mode0Init11452Stage = as_u8(stage + 1);
       return;
 
-    case 13:
+    case 12:
       rebuildMode0LevelPrefix(state, rom, 1);
-      state.clock.mode0Init11452Stage = as_u8(14);
+      state.clock.mode0Init11452Stage = as_u8(13);
       return;
 
-    case 29:
+    case 24:
       rebuildMode0LevelPrefix(state, rom, 2);
-      state.clock.mode0Init11452Stage = as_u8(30);
+      state.clock.mode0Init11452Stage = as_u8(25);
       return;
 
     case 33:
@@ -195,9 +194,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u8(34);
       return;
 
-    case 49:
+    case 44:
       rebuildMode0LevelPrefix(state, rom, 4);
-      state.clock.mode0Init11452Stage = as_u8(50);
+      state.clock.mode0Init11452Stage = as_u8(45);
       return;
 
     case 53:
@@ -205,9 +204,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u8(54);
       return;
 
-    case 59:
+    case 58:
       rebuildMode0LevelPrefix(state, rom, 6);
-      state.clock.mode0Init11452Stage = as_u8(60);
+      state.clock.mode0Init11452Stage = as_u8(59);
       return;
 
     case 63:

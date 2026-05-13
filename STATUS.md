@@ -52,11 +52,21 @@ Follow-up loop validato dopo `1f08117`:
 - `FUN_11452` mode0 async: i chunk 1/3/5 del rebuild vengono resi visibili un
   vblank prima, e lo stage 63 decodifica le prime 18 righe `FUN_16F6C` prima
   della coda completa `FUN_10504`, coerente con lo snapshot MAME f12950.
+- Follow-up cadence step-1: nuova finestra MAME
+  `/tmp/mame_demo_12890_12930_step1.json` mostra eventi PF a
+  `12899/12911/12919/12920/12931/12940/12945/12950/12951`. TS ora allinea i
+  rebuild principali a `12899/12911/12920/12931/12940/12945/12950/12951`
+  (resta da modellare il micro-delta MAME f12919 da 45 byte).
+- Drill PF contenuto: solver sui descriptor `FUN_1A9CC` conferma che i 22 byte
+  residui a f12900 vengono da word sorgente errati nei mixed cell di
+  `FUN_1AA38` (es. TS `0x12/0x01/0x05` dove MAME implica
+  `0x7c/0x68/0x45/0x4e`), non da pack `FUN_1A9CC` o da rowArg cadence.
 
 Misure follow-up:
 
 ```text
 TARGET_FRAME=12900:
+  total diff = 605  (era 606)
   pfRam diff = 22 byte; TS/MAME nonzero = 420/420
 
 TARGET_FRAME=12950:
@@ -67,6 +77,10 @@ TARGET_FRAME=12950:
 TARGET_FRAME=13200:
   total diff resta 2474; il prossimo blocker e' ancora il contenuto PF
   stabile post-rebuild, non il timing dei primi chunk.
+
+Step-1 cadence:
+  f12899 TS/MAME nonzero = 420/420, pfRam diff = 22
+  f12911 TS/MAME nonzero = 1010/1008, pfRam diff = 272
 ```
 
 Next loop:
