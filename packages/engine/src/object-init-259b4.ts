@@ -15,6 +15,7 @@ import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { spriteHelper1B9CC } from "./sprite-helper-1b9cc.js";
 import { spriteProject1CC62 } from "./sprite-project-1cc62.js";
 import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
+import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 
 const WRAM = 0x00400000;
 const WRAM_END = 0x00402000;
@@ -94,10 +95,25 @@ export function objectInit259B4(
   rom: RomImage,
   subs: ObjectInit259B4Subs = {},
 ): void {
-  const fun1bab2 = subs.fun_1bab2 ?? ((objAbs: number): void => { spritePosUpdate1BAB2(state, objAbs); });
-  const fun1cc62 = subs.fun_1cc62 ?? ((argLong: number): number => spriteProject1CC62(state, argLong));
+  const fun1bab2 = subs.fun_1bab2 ?? ((objAbs: number): void => {
+    spritePosUpdate1BAB2(state, objAbs, {
+      fun_1CABA: (s) => { sub1CABATileRedraw(s, rom); },
+    });
+  });
+  const fun1cc62 = subs.fun_1cc62 ?? ((argLong: number): number =>
+    spriteProject1CC62(state, argLong, {
+      fun_1CABA: (s) => { sub1CABATileRedraw(s, rom); },
+    }));
   const fun25b40 = subs.fun_25b40 ?? ((objAbs: number): void => { objectArrayInit25B40(state, rom, objAbs); });
-  const fun1b9cc = subs.fun_1b9cc ?? ((objAbs: number, argLong: number): void => { spriteHelper1B9CC(state, objAbs, argLong); });
+  const fun1b9cc = subs.fun_1b9cc ?? ((objAbs: number, argLong: number): void => {
+    spriteHelper1B9CC(state, objAbs, argLong, {
+      fun_1bab2: (s, obj) => {
+        spritePosUpdate1BAB2(s, obj, {
+          fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+        });
+      },
+    });
+  });
   const fun1c014 = subs.fun_1c014 ?? ((objAbs: number): void => { spriteRotate1C014(state, rom, objAbs - WRAM); });
   const fun1281c = subs.fun_1281c ?? ((objAbs: number): void => { objectEnter1281C(state, objAbs, () => 0); });
   const fun18e6c = subs.fun_18e6c ?? ((typeCode: number, subIdx: number): void => {

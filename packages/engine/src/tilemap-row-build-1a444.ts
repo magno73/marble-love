@@ -121,6 +121,7 @@ export function buildTilemapRows1A444(
   state: GameState,
   rom: RomImage,
   subs?: TilemapRowBuild1A444Subs,
+  options?: { maxOuterChunks?: number },
 ): void {
   const fun2ffb8 = subs?.fun_2ffb8 ?? ((argLong: number): void => { levelHelper2FFB8(rom, argLong); });
   const stateStruct = readU32(state, STATE_PTR_OFF);
@@ -135,6 +136,7 @@ export function buildTilemapRows1A444(
 
   let d4 = -0x18;
   let lastWord = 0;
+  let chunksBuilt = 0;
 
   while (true) {
     d4 = ((d4 + 0x18) << 16) >> 16;
@@ -175,7 +177,7 @@ export function buildTilemapRows1A444(
 
       const low = lastWord & 0xff;
       const high = (lastWord >> 8) & 0xff;
-      const index = (((high * 0x16) << 16) >>> 0) + low + 0x16 * 8;
+      const index = (high * 0x16 + low) * 8;
       const targetOff = SCRATCH_BASE_OFF + index;
       const value = readAbsU16(state, rom, listAbs);
       listAbs = (listAbs + 2) >>> 0;
@@ -186,7 +188,7 @@ export function buildTilemapRows1A444(
     fun2ffb8(readI16(state, GLOBAL_0662_OFF));
 
     let scratchAddr = SCRATCH_BASE;
-    let rowArgOff = ROW_ARG_BASE_OFF;
+    let rowArgOff = ROW_ARG_BASE_OFF + d4 * 2;
     for (let d3 = 0; d3 < height; d3++) {
       writeU8(state, TICK_03F0_OFF, (readU8(state, TICK_03F0_OFF) + 1) & 0xff);
       const rowWord = readI16(state, rowArgOff);
@@ -206,6 +208,8 @@ export function buildTilemapRows1A444(
       sourceAddr = (sourceAddr + 0x160) >>> 0;
     }
 
+    chunksBuilt++;
+    if (options?.maxOuterChunks !== undefined && chunksBuilt >= options.maxOuterChunks) break;
     if ((lastWord & 0xffff) === 0xffff) break;
   }
 

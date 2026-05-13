@@ -42,10 +42,13 @@ import { flagScaledMagnitudeDispatch } from "./flag-scaled-magnitude-dispatch.js
 import { fun261BC } from "./sub-261bc.js";
 import { waypointListStep1815A } from "./waypoint-list-step-1815a.js";
 import { helper253BC } from "./helper-253bc.js";
+import { helper25FC2 } from "./helper-25fc2.js";
 import { helper121B8 } from "./helper-121b8.js";
 import { fun158F6 } from "./sub-158f6.js";
 import { spritePosUpdate1BAB2 } from "./sprite-pos-update-1bab2.js";
 import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
+import { soundPair15884 } from "./sound-pair-15884.js";
+import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 import { processAllSprites } from "./process-all-sprites-189e2.js";
 import { objectUpdatePair158CC } from "./object-update-pair-158cc.js";
 import { slotArrayTick } from "./slot-array-tick.js";
@@ -80,6 +83,15 @@ function wb(state: GameState, addr: number, value: number): void {
   state.workRam[off(addr)] = value & 0xff;
 }
 
+function wl(state: GameState, addr: number, value: number): void {
+  const o = off(addr);
+  const v = value >>> 0;
+  state.workRam[o] = (v >>> 24) & 0xff;
+  state.workRam[o + 1] = (v >>> 16) & 0xff;
+  state.workRam[o + 2] = (v >>> 8) & 0xff;
+  state.workRam[o + 3] = v & 0xff;
+}
+
 function addByte(state: GameState, addr: number, delta: number): void {
   wb(state, addr, rb(state, addr) + delta);
 }
@@ -111,6 +123,11 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   const s1a = wr[objOff + 0x1a] ?? 0;
   const sd8 = wr[objOff + 0xd8] ?? 0;
   const scb = wr[objOff + 0xcb] ?? 0;
+  const updateSpritePos = (s: GameState, objAddr: number): void => {
+    spritePosUpdate1BAB2(s, objAddr, {
+      fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+    });
+  };
 
   // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
@@ -133,12 +150,47 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // frozen; with the real projection, the MAME writer at 0x126fc is
     // reproduced and obj0.z_long matches the f12000..12099 oracle.
     helper121B8(state, rom, a2, {
-      fun_1bab2: (s, objAddr) => {
-        spritePosUpdate1BAB2(s, objAddr, {
-          fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
-        });
+      fun_1bab2: updateSpritePos,
+    });
+    return;
+  }
+
+  // JT[5] = 0x257BA. This is the "marble eaten / scripted carry" state hit
+  // in long demo mode after FUN_14E92 sets obj0+0x1A=5. The binary still
+  // runs the canonical movement/collision chain here:
+  //   helper25FC2; helper253BC; objectStep17F66; helper121B8
+  // then, if the state is still 5, counts down +0x56 and eventually returns
+  // to state 0. The old fallback skipped helper121B8, leaving obj0 frozen.
+  if (s1a === 5) {
+    helper25FC2(state, rom, a2);
+    helper253BC(state, a2);
+    objectStep17F66(state, a2, {
+      fun1815A: (a2Addr) => { waypointListStep1815A(state, a2Addr, undefined, rom); },
+      fun180BE: () => {},
+      fun26196: (a2Addr) => {
+        flagScaledMagnitudeDispatch(
+          state,
+          a2Addr,
+          (structPtr, magnitude) => fun261BC(state, structPtr, magnitude, rom.program),
+        );
       },
     });
+    helper121B8(state, rom, a2, {
+      fun_1bab2: updateSpritePos,
+    });
+
+    if (rb(state, a2 + 0x1a) === 5) {
+      const count56 = rb(state, a2 + 0x56);
+      if (count56 !== 0) {
+        wb(state, a2 + 0x56, (count56 - 1) & 0xff);
+      }
+      if (rb(state, a2 + 0x56) === 0) {
+        soundPair15884(state);
+        wb(state, a2 + 0x1a, 0);
+        wl(state, a2 + 0x5a, 0);
+        spriteRotate1C014(state, rom, objOff);
+      }
+    }
     return;
   }
 

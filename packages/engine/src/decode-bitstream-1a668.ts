@@ -278,6 +278,9 @@ const PATH_E_BASE_LOW = 0x4e;
 function read8Abs(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
   if (a < ROM_END) return (rom.program[a] ?? 0) & 0xff;
+  if (a >= PF_RAM_BASE && a < PF_RAM_END) {
+    return (state.playfieldRam[a - PF_RAM_BASE] ?? 0) & 0xff;
+  }
   if (a >= WORK_RAM_BASE && a < WORK_RAM_END) {
     return (state.workRam[a - WORK_RAM_BASE] ?? 0) & 0xff;
   }
@@ -307,20 +310,19 @@ function read32Abs(state: GameState, rom: RomImage, abs: number): number {
 }
 
 /**
- * Scrive un byte in memoria assoluta M68k. Solo workRam scrivibile.
- *
- * TODO 2026-05-09: levelInit16F6C scrive a outAbs in pfRam range
- * (0xa00006+). Aggiungere branch pfRam → playfieldRam fa scendere il
- * match% playfield (24% → 16%) perché altri caller scrivono male in
- * quel range. Investigare prima.
+ * Scrive un byte in memoria assoluta M68k. Il decoder è usato sia per scratch
+ * workRam sia per righe playfield durante `levelInit16F6C`.
  */
 function write8Abs(state: GameState, abs: number, v: number): void {
   const a = abs >>> 0;
+  if (a >= PF_RAM_BASE && a < PF_RAM_END) {
+    state.playfieldRam[a - PF_RAM_BASE] = v & 0xff;
+    return;
+  }
   if (a >= WORK_RAM_BASE && a < WORK_RAM_END) {
     state.workRam[a - WORK_RAM_BASE] = v & 0xff;
   }
 }
-void PF_RAM_BASE; void PF_RAM_END;
 
 /**
  * Scrive una word BE in memoria assoluta M68k.

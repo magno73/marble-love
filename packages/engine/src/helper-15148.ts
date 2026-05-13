@@ -111,6 +111,7 @@ import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
 import { setScrollCoordsFromEntity1BB08 } from "./scroll-coord-helpers.js";
 import { spriteProject1CC62 } from "./sprite-project-1cc62.js";
+import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { vectorScale } from "./vector-scale.js";
 import { findNearestNeighborV2 } from "./nearest-neighbor.js";
@@ -660,7 +661,9 @@ export function helper15148(
       if (subs?.fun_1cc62 !== undefined) {
         d0cc = (subs.fun_1cc62(state, 1)) >>> 0;
       } else {
-        d0cc = (spriteProject1CC62(state, 1)) >>> 0;
+        d0cc = (spriteProject1CC62(state, 1, {
+          fun_1CABA: (s) => { sub1CABATileRedraw(s, rom); },
+        })) >>> 0;
       }
       swl(state, sp, OFF_POS_Z, d0cc);
 

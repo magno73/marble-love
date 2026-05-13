@@ -2,9 +2,9 @@
 
 > Reimplementazione TypeScript di **Marble Madness** (Atari, 1984, hardware Atari System 1, M68010 + 6502), verificata frame-by-frame contro MAME come oracolo.
 
-**Status:** **🎯 366+ funzioni replicate bit-perfect** via parity 100/100 o 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble cromata + ombra **rotola sul livello bit-perfect** in demo gameplay (warmstate f12000+, `?play=1`), terreno isometric 3D, HUD score, 3 spike triangolari. **`obj0.x` bit-perfect MAME su 99/99 frame** del ground truth `/tmp/mame_100f.json`; **`obj0.z_long` ora matcha MAME f12000..12099** nel path canonico slapstic. Drift workRam @ 100 frame demo: **172 byte** (solo stack-residue escluso da invariante + **0 gameplay residuo**). **Infrastruttura M68K**: register file TS (D0-D7/A0-A7, 8 istruzioni stack ABI, 2879/2879 Tom Harte pass) + cycle-table M68010 da Musashi MIT + 22MB validation dataset Tom Harte SingleStepTests + **slapstic 137412-103 state machine** (4 bank × 8KB con FSM bit-perfect MAME, 11/11 vitest). Sessione 2026-05-12: fix `obj0.z_long`, P2 `FUN_15E24`, warm slot-array interleaving, residual async bridge, renderer MO RAM banked, texture update Pixi v8 e warm demo guardrail; drift gameplay **204B → 107B → 68B → 40B → 0B** (vedi STATUS.md).
+**Status:** **🎯 366+ funzioni replicate bit-perfect** via parity 100/100 o 500/500. Rendering MAME-faithful con **indirect bitmap_ind16 path** (cfr atarisy1_v.cpp screen_update): marble cromata + ombra **rotola sul livello bit-perfect** in demo gameplay warm (warmstate f12000+, `?play=1`), terreno isometric 3D, HUD score, 3 spike triangolari. **`obj0.x` bit-perfect MAME su 99/99 frame** del ground truth `/tmp/mame_100f.json`; **`obj0.z_long` ora matcha MAME f12000..12099** nel path canonico slapstic. Drift workRam @ 100 frame demo: **172 byte** (solo stack-residue escluso da invariante + **0 gameplay residuo**). **Long demo-mode ancora WIP:** il raw long-run ora supera i freeze iniziali e attraversa path di morte/HUD/reset, ma non riproduce ancora l'intero demo; l'oracolo `/tmp/mame_demo_12000_18000_step10.json` diverge nel rebuild/playfield successivo (vedi STATUS.md). **Infrastruttura M68K**: register file TS (D0-D7/A0-A7, 8 istruzioni stack ABI, 2879/2879 Tom Harte pass) + cycle-table M68010 da Musashi MIT + 22MB validation dataset Tom Harte SingleStepTests + **slapstic 137412-103 state machine** (4 bank × 8KB con FSM bit-perfect MAME, 11/11 vitest). Sessione 2026-05-12/13: fix `obj0.z_long`, P2 `FUN_15E24`, warm slot-array interleaving, residual async bridge, renderer MO RAM banked, texture update Pixi v8, warm demo guardrail e checkpoint long demo; warm drift gameplay **204B → 107B → 68B → 40B → 0B**.
 
-Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo reale dal warm bootstrap MAME. La demo warm cicla il segmento stabile ogni 180 frame; usa `loopReset=0` solo per ispezionare il raw long-run incompleto.
+Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo reale dal warm bootstrap MAME. La demo warm puo' ancora ciclare il segmento stabile per uso visuale; usa `loopReset=0` per ispezionare il raw long-run incompleto mentre prosegue il lavoro sul demo mode completo.
 
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
@@ -15,13 +15,14 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 |---|---|
 | Funzioni Ghidra coperte | **350 / 350** (100%, ~358 con parity 500/500) |
 | Differential test cases | >100.000 random cases tutti 100% match vs musashi-wasm |
-| Vitest | Full suite con fail preesistenti in `slapstic-lookup` e `level-helper-2ffb8`; test mirati refresh/z-projection/P2 dispatch verdi |
+| Vitest | Full suite con fail preesistenti in `slapstic-lookup` e `level-helper-2ffb8`; typecheck e test/probe mirati usati come checkpoint |
 | **Drift workRam @ f+99** | **172B = 172B stack (escluso) + 0B gameplay** dopo warm slot-array replay + residual async bridge (era 376B / 204B gameplay) |
 | **Register file M68K TS** | ✅ 8 istruzioni stack ABI bit-perfect vs Tom Harte SingleStepTests (2879/2879 considerati pass al 100%, 22MB dataset MIT) |
 | **Cycle-table M68010** | ✅ Estratta da Musashi MIT (21/21 vitest, CYCLES_PER_VBLANK=119316, sanity FUN_158CC +3.7%) |
 | Frame 0 (post-bootInit) ↔ MAME | **bit-perfect** su tutte le 32 regioni workRam |
 | **`obj0.x` evolution vs MAME** | **bit-perfect su 99/99 frame** del ground truth (warm f12000 + tick 99×) |
-| **Demo gameplay marble visivo** | ✅ marble rotola sul livello (sfera cromata + ombra) con `?mameLive=1&play=1`; MO RAM banked, texture indiretta aggiornata ogni frame, loop guardrail 180 frame |
+| **Demo gameplay marble visivo** | 🟡 warm demo stabile e animato con `?mameLive=1&play=1`; raw long-run `loopReset=0` avanza oltre i primi secondi ma resta WIP |
+| **Long demo oracle f12000..18000** | 🟡 checkpoint 2026-05-13: `npx tsc -b` PASS; playfield exact fino a f12890, poi divergenza nel rebuild/transizione; f13200 diff totale 2474 byte |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |

@@ -14,7 +14,7 @@ import { finalize11654 } from "./finalize-11654.js";
 import { sceneInit11428 } from "./scene-init-11428.js";
 import { specialAttract } from "./special-attract.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
-import { levelFractionRender28232 } from "./level-fraction-render-28232.js";
+import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
 import { stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
@@ -24,7 +24,8 @@ import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
-import { sceneObjInit28CA6 } from "./scene-obj-init-28ca6.js";
+import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
+import { startMode0Init11452Async, startMode2Init11452Async } from "./mode2-init-11452-async.js";
 
 const WRAM = 0x00400000;
 
@@ -176,18 +177,36 @@ function case1(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
     ww(state, 0x0040075a, 0);
   }
 
-  (subs.helper28232 ?? ((s) => { if (rom !== undefined) levelFractionRender28232(s, rom); }))(state);
+  if (subs.helper28232 !== undefined) {
+    subs.helper28232(state);
+  } else if (
+    rom !== undefined &&
+    state.clock.mode2Init11452Stage === undefined &&
+    state.clock.mode2BottomHudDelay === undefined
+  ) {
+    levelFractionRender28232Default(state, rom);
+  }
   const timer = rw(state, 0x0040075a);
   if (timer > 0) {
     ww(state, 0x0040075a, timer - 1);
     if (rw(state, 0x0040075a) === 0) {
       const next = rw(state, 0x00400392) + 1;
       ww(state, 0x00400392, next > 2 ? 0 : next);
-      init11452(state, subs, rom);
+      if (rom !== undefined && subs.init11452 === undefined && rw(state, 0x00400392) === 2) {
+        startMode2Init11452Async(state);
+      } else if (rom !== undefined && subs.init11452 === undefined && rw(state, 0x00400392) === 0) {
+        startMode0Init11452Async(state);
+      } else {
+        init11452(state, subs, rom);
+      }
     }
   }
 
-  if (rw(state, 0x00400392) === 0 && rw(state, 0x00400390) === 1) {
+  if (
+    state.clock.mode0Init11452Stage === undefined &&
+    rw(state, 0x00400392) === 0 &&
+    rw(state, 0x00400390) === 1
+  ) {
     (subs.refresh10FCE ?? ((s) => { if (rom !== undefined) refreshFrame10FCE(s, rom); }))(state);
   }
 }
@@ -252,7 +271,7 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   (subs.clearOther12186 ?? clearPlayfieldOther12186)(state);
   (subs.initFnPointers28580 ?? ((s) => initFnPointers28580(s, rom)))(state);
   (subs.clearAlphaTiles28C7E ?? clearAlphaTiles28C7E)(state);
-  (subs.sceneObjInit28CA6 ?? ((s) => { if (rom !== undefined) sceneObjInit28CA6(s, rom); }))(state);
+  (subs.sceneObjInit28CA6 ?? ((s) => { if (rom !== undefined) sceneObjInit28CA6Default(s, rom); }))(state);
   if (rw(state, 0x00400394) > 5) {
     ww(state, 0x00400390, 6);
   } else {

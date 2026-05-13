@@ -97,7 +97,7 @@ export function buildTilemapSpan1AA38(
   let a2 = scratchAddr >>> 0;
   const stateStruct = readU32(state, rom, WORK_RAM_BASE + STATE_PTR_OFF);
   const packedTableBase = readU32(state, rom, stateStruct);
-  const search = subs?.bsearchTable1ABD4 ?? ((targetLong: number): number => bsearchTable1ABD4(state, targetLong));
+  const search = subs?.bsearchTable1ABD4 ?? ((targetLong: number): number => bsearchTable1ABD4(state, targetLong, rom));
 
   let d2 = 0x16;
   while (true) {
@@ -160,23 +160,27 @@ export function buildTilemapSpan1AA38(
             d3 = d5 === 0 ? 0x1000 : i16(d4 - d5);
           }
 
+          let canEncode = true;
           if (d3 === 0x1000) {
             d3 = 0x1f;
           } else if (signedGt(d3, 0x60)) {
             transform = true;
+            canEncode = false;
           } else {
             d3 = i16(readU16(state, rom, ROM_PAIR_TABLE + u16(d3) * 2));
             if (signedLt(d3, 0)) {
               transform = true;
-            } else {
-              let d1 = i16(d0 - rowWord + 0x40);
-              d1 = u16(d1 + u16(d3 << 7));
-              if (d0 === a4) d1 = u16(d1 + 0x1000);
-              if (d0 === a5) d1 = u16(d1 + 0x2000);
-              if (d0 === a6) d1 = u16(d1 + 0x4000);
-              if (d0 === a3) d1 = u16(d1 + 0x8000);
-              target = i16(d1);
+              canEncode = false;
             }
+          }
+          if (canEncode) {
+            let d1 = i16(d0 - rowWord + 0x40);
+            d1 = u16(d1 + u16(d3 << 7));
+            if (d0 === a4) d1 = u16(d1 + 0x1000);
+            if (d0 === a5) d1 = u16(d1 + 0x2000);
+            if (d0 === a6) d1 = u16(d1 + 0x4000);
+            if (d0 === a3) d1 = u16(d1 + 0x8000);
+            target = i16(d1);
           }
         }
       }
