@@ -53,12 +53,15 @@
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
+import { slapsticTick } from "./m68k/slapstic-103.js";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x400000 as const;
 const WORK_RAM_END  = 0x402000 as const;
 const ROM_END       = 0x88000  as const;
+const SLAPSTIC_BASE = 0x80000 as const;
 
 /** Offset assoluto nel workRam del buffer di celle output. */
 export const CELL_BUF_ABS  = 0x400a9c as const;
@@ -77,11 +80,34 @@ export const DIR_TABLE_ROM  = 0x1ecea  as const;
 
 function rd8(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
-  if (a < ROM_END) return (rom.program[a] ?? 0) & 0xff;
+  if (a < ROM_END) {
+    if (a >= SLAPSTIC_BASE) touchSlapstic(rom, a);
+    return (rom.program[a] ?? 0) & 0xff;
+  }
   if (a >= WORK_RAM_BASE && a < WORK_RAM_END) {
     return (state.workRam[a - WORK_RAM_BASE] ?? 0) & 0xff;
   }
   return 0;
+}
+
+function touchSlapstic(rom: RomImage, abs: number): void {
+  const prevBank = rom.slapsticFsm.bank;
+  slapsticTick(rom.slapsticFsm, abs >>> 0);
+  if (rom.slapsticFsm.bank !== prevBank) applySlapsticBank(rom, rom.slapsticFsm.bank);
+}
+
+function slapsticEvent2BC5C(rom: RomImage, flagsWord: number): void {
+  const d2 = flagsWord & 0xffff;
+  touchSlapstic(rom, 0x80000);
+  if ((d2 & 0x01) !== 0) touchSlapstic(rom, 0x86984);
+  if ((d2 & 0x02) !== 0) touchSlapstic(rom, 0x80000);
+  if ((d2 & 0x10) !== 0) {
+    const index = (d2 & 0x0c) >> 2;
+    touchSlapstic(rom, 0x87a28);
+    touchSlapstic(rom, (0x87a48 + index * 2) >>> 0);
+  }
+  if ((d2 & 0x80) !== 0) touchSlapstic(rom, 0x80000);
+  touchSlapstic(rom, (0x80080 + (d2 & 0x60)) >>> 0);
 }
 
 function rd16(state: GameState, rom: RomImage, abs: number): number {
@@ -196,6 +222,7 @@ export function renderTileLine1AD54(
   // ── Early exit se flag == 0 ───────────────────────────────────────────────
   if (flag === 0) {
     // move.w A4w, D0w; ext.l D0 → return sign-ext(A4 low word) as int32
+    slapsticEvent2BC5C(rom, a4);
     return ((a4 & 0xffff) << 16) >> 16;
   }
 
@@ -412,7 +439,7 @@ export function renderTileLine1AD54(
 
   // ── Exit @ 0x1B114 ────────────────────────────────────────────────────────
   // jsr 0x2bc5c (side-effect call on A4); return D0 = sign-ext(A4.w)
-  // We model the JSR call as no-op (side effect not implemented here).
+  slapsticEvent2BC5C(rom, a4);
   return ((a4 & 0xffff) << 16) >> 16;
 }
 

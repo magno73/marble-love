@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; demo raw avanza oltre i primi secondi ma diverge nel rebuild/playfield successivo)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; f12900 playfield ora bit-perfect dopo side-effect slapstic di `FUN_1AD54 -> FUN_2BC5C`)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-13 — Long demo-mode checkpoint
@@ -83,12 +83,51 @@ Step-1 cadence:
   f12911 TS/MAME nonzero = 1010/1008, pfRam diff = 272
 ```
 
+Checkpoint successivo dopo `ab3098d`:
+
+- `renderTileLine1AD54` ora modella il `jsr 0x2bc5c` finale osservato nel
+  disasm: le letture nella window `0x80000..0x87fff` fanno avanzare la FSM
+  slapstic e l'evento `2BC5C` applica i touch protetti derivati da `A4`.
+- Questo spiega i low scratch errati (`0x16/0x06`) nei primi mixed-cell: il TS
+  restava nel bank sbagliato tra descriptor, mentre MAME seleziona il bank
+  corretto prima dei descriptor successivi.
+- Il vecchio f12900 PF diff viene chiuso: il playfield del primo chunk e'
+  ora exact.
+
+Verifiche nuovo checkpoint:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-render-tile-line-1ad54-parity.ts 20
+  PASS 20/20
+
+test-tilemap-row-build-full-1a444-parity.ts 20
+  PASS 20/20
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+TARGET_FRAME=12900:
+  total diff = 583  (era 605)
+  pfRam diff = 0    (era 22)
+
+TARGET_FRAME=12950:
+  total diff = 1178 (era 2088)
+  pfRam diff = 126  (era 1036)
+
+TARGET_FRAME=13200:
+  total diff = 1870 (era 2474)
+  pfRam diff = 461  (era 1083)
+```
+
 Next loop:
 
-1. isolare la prima divergenza utile tra f12890..f13110, distinguendo cadence
-   `FUN_11452` da contenuto riga/spans;
-2. confrontare PF offsets gia' sospetti `0xa4e/0xace` e i target mixed-cell di
-   `FUN_1AA38/FUN_1A444` (`0x60ae`, `0x30ae`, `0x0050` e vicini);
+1. isolare la prima divergenza utile dopo il primo chunk exact, partendo dagli
+   offset PF residui f12950 (`0x657..0x674`, `0x6d5` e vicini);
+2. verificare se altri lettori protetti oltre `FUN_1AD54` richiedono touch
+   slapstic reali, prima di toccare ancora `FUN_1AA38/FUN_1A444`;
 3. rimuovere solo fix falsificati: niente fallback euristici se non abbassano
    il diff contro `/tmp/mame_demo_12000_18000_step10.json`.
 
