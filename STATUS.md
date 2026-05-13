@@ -1,7 +1,73 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; mode0 handoff esteso fino a f13910/f13920; f13920 playfield bit-perfect)
+**Ultimo update:** 2026-05-13 (long demo-mode checkpoint: warm gameplay 0B @ f+99 ancora valido; FUN_253EC state-4 eaten orbit cablato; f13920 playfield bit-perfect)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — FUN_253EC state-4 eaten orbit checkpoint
+
+Questo checkpoint chiude il freeze visibile dopo il morso del verme nel raw
+long-run: il ramo `FUN_253EC` JT[4] (`obj0+0x1A == 4`) ora esegue la chain
+reale `FUN_1B9CC(obj,1) -> FUN_13ADE(obj) -> FUN_17CB8(...) -> FUN_25BAE`
+invece del fallback generico `helper253BC + objectStep17F66`.
+
+Fix stabili:
+
+- `helper121B8` nel path obj0 `s1a=0/5` ora usa `FUN_25BAE` con `FUN_2591A`
+  full cablata (`1BAB2`, `1CC62`, `25B40`, `1B9CC`) quando il binario entra
+  nello stato 4. Questo allinea `obj0+0x0c/+0x10`, azzera `+0x36/+0x08` e
+  impedisce al marble di restare appeso in bounce/eaten state.
+- JT[4] decrementa `obj0+0x57` via `objectOrbitEmit13ADE`; quando l'orbita
+  finisce e non c'e' hit vicino, azzera `obj0.x/y` e rimette `obj0+0x1A=0`
+  come MAME.
+- A f13200 obj0 ora e' strutturalmente allineato a MAME:
+  `1A=04, 1C=01, 36=00, 57=25, x/y/z=0, 0x0c=011c0000, 0x10=00c40000`
+  (restano solo piccoli drift di packed screen word/scroll).
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-object-state-entry-25bae-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+TARGET_FRAME=12950:
+  total diff = 1052, pfRam diff = 0
+
+TARGET_FRAME=13200:
+  total diff = 990  (era 1168/1136 a seconda del pre-handoff accidental match)
+  pfRam diff = 0
+
+TARGET_FRAME=13340:
+  total diff = 1121
+  pfRam diff = 52
+
+TARGET_FRAME=13400:
+  total diff = 1012
+  pfRam diff = 0
+
+TARGET_FRAME=13920:
+  total diff = 1098
+  pfRam diff = 0
+```
+
+Blocker successivo:
+
+- Il tratto mode0 lungo ora riparte, ma `xscroll/hudOff/packed screen word`
+  resta sfasato di pochi pixel gia' da f13110 (`TS xscroll=0x0002` vs
+  `MAME=0x0004`) e accumula drift oggetto/scroll entro f13910.
+- Non reintrodurre normalizzazioni globali `FUN_1AA38`: il playfield e' exact
+  nei checkpoint principali; il residuo corrente e' object/scroll cadence.
 
 ## 2026-05-13 — Long demo-mode checkpoint
 
