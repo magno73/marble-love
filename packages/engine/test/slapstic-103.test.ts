@@ -96,3 +96,19 @@ describe("slapstic-103 — alt sequence does NOT inadvertently break on normal r
     expect(fsm.state).toBe("ACTIVE");
   });
 });
+
+describe("slapstic-103 — code-prefetch alt path", () => {
+  it("prefetch at 0x2ff5a can arm alt banking before the table-store R/W pair", () => {
+    const fsm = { bank: 2, state: "IDLE" as const, loadedBank: 0 };
+
+    slapsticTick(fsm, 0x080000); // reset access → ACTIVE
+    slapsticTick(fsm, 0x080000); // harmless in ACTIVE
+    slapsticTick(fsm, 0x02ff5a); // ALT1 test_any, outside protected window
+    slapsticTick(fsm, 0x087a28); // ALT2
+    slapsticTick(fsm, 0x087a4c); // ALT3, loads bank 2
+    slapsticTick(fsm, 0x080080); // ALT4 commit, not direct bank 0
+
+    expect(fsm.bank).toBe(2);
+    expect(fsm.state).toBe("IDLE");
+  });
+});

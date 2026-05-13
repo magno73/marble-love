@@ -45,6 +45,11 @@
  *                                                                    // (low 15 bit == 0)
  *   test_bank(b)    = test(range_mask | input_mask, range_value | (b << 1))
  *
+ * Nota hardware: MAME installa il tap slapstic su tutto l'address space CPU.
+ * Quindi `test_any` puo' essere armato anche da prefetch/letture codice fuori
+ * dalla window protetta (es. `0x02ff5a` in `FUN_2FF40`), non solo da accessi a
+ * `0x080000..0x087FFF`.
+ *
  * **Stati FSM** (per la branca 103-110):
  *   IDLE        - in attesa di un "reset access" (addr a 0x80000, low 15 bit clear)
  *   ACTIVE      - bank scelto + accetta direct/alt/bit transitions
@@ -170,9 +175,10 @@ export function createSlapsticFsm(): SlapsticFsm {
 /**
  * Intercetta un accesso (read O write) al bus alla `addr` indicata.
  *
- * **IMPORTANTE**: questa funzione va chiamata SU OGNI accesso al bus che cade
- * dentro `0x080000-0x087FFF` (write o read). MAME installa un "tap" su tutto
- * il range della address-space → ogni operazione triggera `m_state->test()`.
+ * **IMPORTANTE**: questa funzione va chiamata per ogni accesso al bus rilevante
+ * per lo slapstic. Gli accessi alla window `0x080000-0x087FFF` triggerano
+ * sempre la FSM, ma `test_any` richiede anche i prefetch/letture codice noti
+ * fuori range che matchano il pattern `alt1`.
  *
  * Ritorna il bank correntemente esposto dopo questo accesso. Il caller usa
  * `bank * 0x2000` come offset all'interno del blob ROM `0x080000`.
