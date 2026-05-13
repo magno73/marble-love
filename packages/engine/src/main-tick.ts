@@ -209,7 +209,11 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   };
   soundTick(state, soundSubs);
 
-  if (!asyncInitActiveAtTickStart) {
+  const mode2Segment3Dwell =
+    (((r[0x390] ?? 0) << 8) | (r[0x391] ?? 0)) === 1 &&
+    (((r[0x392] ?? 0) << 8) | (r[0x393] ?? 0)) === 2 &&
+    (r[0x3e4] ?? 0) === 3;
+  if (!asyncInitActiveAtTickStart && !mode2Segment3Dwell) {
     gameTickTimers(state, opts.hudCallback);
   }
 

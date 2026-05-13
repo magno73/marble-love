@@ -14,8 +14,8 @@
  * 3. `d2b = ((sext32(toWord)   - boundary) >> 4) & 0xFF`  (signed byte)
  * 4. If `d3b == d2b` → return (no-op).
  * 5. Chiama 4 dispatcher con `(d3b, d2b)`:
- *    - `FUN_15A12(d3b, d2b)` — non replicata; iniettabile.
- *    - `FUN_14C46(d3b, d2b)` — non replicata; iniettabile.
+ *    - `FUN_15A12(d3b, d2b)` — object-pair slot spawn/despawn.
+ *    - `FUN_14C46(d3b, d2b)` — script slot-array spawn/despawn.
  *    - `FUN_17346(d3b, d2b)` — non replicata; iniettabile.
  *    - `FUN_12DFA(d3b, d2b)` — replicata come `scriptRectDispatch12DFA`.
  * 6. Se mode == 3:
@@ -41,6 +41,13 @@ import type { RomImage } from "./bus.js";
 import { scriptRectDispatch12DFA } from "./script-rect-dispatch-12dfa.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
 import { scrollSub15A12 } from "./scroll-sub-15a12.js";
+import { stateSub14C46 } from "./state-sub-14c46.js";
+import { spriteProject1CC62 } from "./sprite-project-1cc62.js";
+import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
+import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
+import { helper18F46 } from "./helper-18f46.js";
+import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
+import { fun264AA } from "./fun-264aa.js";
 
 export const SCROLL_RANGE_144E4_ADDR = 0x000144e4 as const;
 
@@ -104,7 +111,7 @@ function asrL4byte(v: number): number {
 export interface ScrollRange144E4Subs {
   /** FUN_15A12 — default replica reale quando la ROM e' disponibile. */
   fun_15a12?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_14C46 — non replicata; default no-op. */
+  /** FUN_14C46 — default replica reale quando la ROM e' disponibile. */
   fun_14c46?: (state: GameState, d3b: number, d2b: number) => void;
   /** FUN_17346 — non replicata; default no-op. */
   fun_17346?: (state: GameState, d3b: number, d2b: number) => void;
@@ -166,7 +173,26 @@ export function scrollRange144E4(
   } else if (rom !== undefined) {
     scrollSub15A12(state, rom, d3b, d2b);
   }
-  (subs?.fun_14c46 ?? _noop)(state, d3b, d2b);
+  if (subs?.fun_14c46 !== undefined) {
+    subs.fun_14c46(state, d3b, d2b);
+  } else if (rom !== undefined) {
+    stateSub14C46(state, rom, d3b, d2b, {
+      fun_1cc62: (s, arg) => spriteProject1CC62(s, arg, {
+        fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+      }),
+      fun_150d0: (s, slotPtr) => {
+        spriteCoordsJsr150D0(s, slotPtr, {
+          inner264AA: (structPtr, mode) => fun264AA(s, rom, structPtr, mode),
+        });
+      },
+      fun_18e6c: (s, typeCode, subIdx) => {
+        slotInsertSorted18E6C(s, rom, typeCode, subIdx);
+      },
+      fun_18f46: (s, typeCode, subIdx) => {
+        helper18F46(s, rom, typeCode, subIdx);
+      },
+    });
+  }
   (subs?.fun_17346 ?? _noop)(state, d3b, d2b);
   // FUN_12DFA = scriptRectDispatch12DFA: arg1=d3b (from_scaled), arg2=d2b (to_scaled)
   if (rom !== undefined) {

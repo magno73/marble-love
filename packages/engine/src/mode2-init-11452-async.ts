@@ -27,7 +27,7 @@ import { stateSub2572 } from "./state-sub-2572.js";
 import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504 } from "./main-loop-init-10504.js";
-import { buildTilemapRows1A444 } from "./tilemap-row-build-1a444.js";
+import { buildTilemapRows1A444, buildTilemapRows1A444ChunkPhase } from "./tilemap-row-build-1a444.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
 import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
@@ -80,17 +80,25 @@ function clearAlphaWords(state: GameState, startWord: number, endWord: number): 
 }
 
 function setMode0VblankSnapshot(state: GameState, stage: number): void {
-  if (stage >= 70) {
+  const segment = rb(state, 0x004003e4);
+  const useLongVisibleCounter =
+    (segment === 3 && stage <= 92) ||
+    (segment === 5 && stage <= 90);
+  if (stage >= 70 && !useLongVisibleCounter) {
     const pulse = stage & 1;
     wb(state, 0x00400014, pulse);
     wb(state, 0x00400016, 0);
-    wb(state, 0x0040039a, pulse);
+    if (segment !== 3 || stage >= 91) {
+      wb(state, 0x0040039a, pulse);
+    }
     return;
   }
   const visibleStage = (stage + 1) & 0xff;
   wb(state, 0x00400014, visibleStage);
   if (visibleStage < 5) {
     wb(state, 0x00400016, visibleStage);
+  } else if (useLongVisibleCounter) {
+    wb(state, 0x00400016, (visibleStage - 5) & 0xff);
   } else if (visibleStage >= 0x40) {
     wb(state, 0x00400016, visibleStage <= 0x42 ? visibleStage - 0x40 : 0);
   } else {
@@ -114,6 +122,65 @@ function decodeMode0LevelRowsPrefix(state: GameState, rom: RomImage, rows: numbe
     },
   });
 }
+
+function usesMode0TilemapChunkPhases(state: GameState): boolean {
+  return rb(state, 0x004003e4) >= 2;
+}
+
+type TilemapChunkPhase = { ad54Count: number; aa38Count: number; packRows?: number };
+
+const MODE0_SEG4_CHUNK2_PHASES = new Map<number, TilemapChunkPhase>([
+  [13, { ad54Count: 12, aa38Count: 0 }],
+  [14, { ad54Count: 17, aa38Count: 0 }],
+  [15, { ad54Count: 23, aa38Count: 0 }],
+  [16, { ad54Count: 30, aa38Count: 0 }],
+  [17, { ad54Count: 42, aa38Count: 0 }],
+  [18, { ad54Count: 66, aa38Count: 3 }],
+  [19, { ad54Count: 66, aa38Count: 7 }],
+  [20, { ad54Count: 66, aa38Count: 11 }],
+  [21, { ad54Count: 66, aa38Count: 15 }],
+  [22, { ad54Count: 66, aa38Count: 19 }],
+  [23, { ad54Count: 66, aa38Count: 23 }],
+]);
+
+const MODE0_SEG4_CHUNK3_PHASES = new Map<number, TilemapChunkPhase>([
+  [24, { ad54Count: 21, aa38Count: 0 }],
+  [25, { ad54Count: 40, aa38Count: 0 }],
+  [26, { ad54Count: 43, aa38Count: 0 }],
+  [27, { ad54Count: 65, aa38Count: 0 }],
+  [28, { ad54Count: 66, aa38Count: 6 }],
+  [29, { ad54Count: 66, aa38Count: 10 }],
+  [30, { ad54Count: 66, aa38Count: 15 }],
+  [31, { ad54Count: 66, aa38Count: 20 }],
+  [32, { ad54Count: 66, aa38Count: 25, packRows: 2 }],
+]);
+
+const MODE0_SEG4_CHUNK4_PHASES = new Map<number, TilemapChunkPhase>([
+  [33, { ad54Count: 38, aa38Count: 0 }],
+  [34, { ad54Count: 45, aa38Count: 0 }],
+  [35, { ad54Count: 48, aa38Count: 0 }],
+  [36, { ad54Count: 54, aa38Count: 0 }],
+  [37, { ad54Count: 59, aa38Count: 0 }],
+  [38, { ad54Count: 66, aa38Count: 2 }],
+  [39, { ad54Count: 66, aa38Count: 6 }],
+  [40, { ad54Count: 66, aa38Count: 11 }],
+  [41, { ad54Count: 66, aa38Count: 15 }],
+  [42, { ad54Count: 66, aa38Count: 20 }],
+  [43, { ad54Count: 66, aa38Count: 24 }],
+]);
+
+const MODE0_SEG4_CHUNK5_PHASES = new Map<number, TilemapChunkPhase>([
+  [44, { ad54Count: 37, aa38Count: 0 }],
+  [45, { ad54Count: 49, aa38Count: 0 }],
+  [46, { ad54Count: 55, aa38Count: 0 }],
+  [47, { ad54Count: 62, aa38Count: 0 }],
+  [48, { ad54Count: 66, aa38Count: 1 }],
+  [49, { ad54Count: 66, aa38Count: 6 }],
+  [50, { ad54Count: 66, aa38Count: 11 }],
+  [51, { ad54Count: 66, aa38Count: 16 }],
+  [52, { ad54Count: 66, aa38Count: 21 }],
+  [53, { ad54Count: 66, aa38Count: 24 }],
+]);
 
 export function startMode2Init11452Async(state: GameState): void {
   wb(state, 0x00400460, 0xff);
@@ -209,6 +276,10 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       wl(state, 0x00400446, readRomLong(rom, 0x0001d364 + gameMode * 4));
       ww(state, 0x00400396, 1);
       gameModePrep10456(state);
+      if (rb(state, 0x004003e4) >= 4) {
+        ww(state, 0x004003ae, rw(state, 0x004003ae) ^ 0x0008);
+        ww(state, 0x004003b0, rw(state, 0x004003ae));
+      }
       state.clock.mode0Init11452Stage = as_u16(6);
       return;
     }
@@ -223,36 +294,148 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 12:
+      if (rb(state, 0x004003e4) >= 3) {
+        if (rb(state, 0x004003e4) === 3) {
+          buildTilemapRows1A444ChunkPhase(state, rom, 0, { ad54Count: 66, aa38Count: 24 });
+        }
+        state.clock.mode0Init11452Stage = as_u16(13);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 1);
       state.clock.mode0Init11452Stage = as_u16(13);
       return;
 
+    case 13:
+      if (rb(state, 0x004003e4) >= 3) {
+        rebuildMode0LevelPrefix(state, rom, 1);
+        buildTilemapRows1A444ChunkPhase(state, rom, 1, MODE0_SEG4_CHUNK2_PHASES.get(stage)!);
+        state.clock.mode0Init11452Stage = as_u16(14);
+        return;
+      }
+      if (usesMode0TilemapChunkPhases(state)) {
+        buildTilemapRows1A444ChunkPhase(state, rom, 1, MODE0_SEG4_CHUNK2_PHASES.get(stage)!);
+      }
+      state.clock.mode0Init11452Stage = as_u16(14);
+      return;
+
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23: {
+      const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK2_PHASES.get(stage) : undefined;
+      if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 1, phase);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+    }
+
     case 24:
+      if (usesMode0TilemapChunkPhases(state)) {
+        rebuildMode0LevelPrefix(state, rom, 2);
+        buildTilemapRows1A444ChunkPhase(state, rom, 2, MODE0_SEG4_CHUNK3_PHASES.get(stage)!);
+        state.clock.mode0Init11452Stage = as_u16(25);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 2);
       state.clock.mode0Init11452Stage = as_u16(25);
       return;
 
+    case 25:
+    case 26:
+    case 27:
+    case 28:
+    case 29:
+    case 30:
+    case 31:
+    case 32: {
+      const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK3_PHASES.get(stage) : undefined;
+      if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 2, phase);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+    }
+
     case 33:
+      if (usesMode0TilemapChunkPhases(state)) {
+        rebuildMode0LevelPrefix(state, rom, 3);
+        buildTilemapRows1A444ChunkPhase(state, rom, 3, MODE0_SEG4_CHUNK4_PHASES.get(stage)!);
+        state.clock.mode0Init11452Stage = as_u16(34);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 3);
       state.clock.mode0Init11452Stage = as_u16(34);
       return;
 
+    case 34:
+    case 35:
+    case 36:
+    case 37:
+    case 38:
+    case 39:
+    case 40:
+    case 41:
+    case 42:
+    case 43: {
+      const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK4_PHASES.get(stage) : undefined;
+      if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 3, phase);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+    }
+
     case 44:
+      if (usesMode0TilemapChunkPhases(state)) {
+        rebuildMode0LevelPrefix(state, rom, 4);
+        buildTilemapRows1A444ChunkPhase(state, rom, 4, MODE0_SEG4_CHUNK5_PHASES.get(stage)!);
+        state.clock.mode0Init11452Stage = as_u16(45);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 4);
       state.clock.mode0Init11452Stage = as_u16(45);
       return;
 
+    case 45:
+    case 46:
+    case 47:
+    case 48:
+    case 49:
+    case 50:
+    case 51:
+    case 52: {
+      const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK5_PHASES.get(stage) : undefined;
+      if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 4, phase);
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+    }
+
     case 53:
+      if (usesMode0TilemapChunkPhases(state)) {
+        rebuildMode0LevelPrefix(state, rom, 5);
+        buildTilemapRows1A444ChunkPhase(state, rom, 4, MODE0_SEG4_CHUNK5_PHASES.get(stage)!);
+        state.clock.mode0Init11452Stage = as_u16(54);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 5);
       state.clock.mode0Init11452Stage = as_u16(54);
       return;
 
     case 58:
+      if (rb(state, 0x004003e4) === 3) {
+        state.clock.mode0Init11452Stage = as_u16(59);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 8);
       state.clock.mode0Init11452Stage = as_u16(59);
       return;
 
     case 63:
+      if (rb(state, 0x004003e4) === 3 || rb(state, 0x004003e4) === 5) {
+        state.clock.mode0Init11452Stage = as_u16(64);
+        return;
+      }
       // MAME has the first decode rows visible at f12950, one sampled vblank
       // before the full FUN_10504 tail lands at f12960.
       decodeMode0LevelRowsPrefix(state, rom, MODE0_LEVEL_PREFIX_ROWS);
@@ -260,8 +443,70 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 64:
+      if (rb(state, 0x004003e4) === 3 || rb(state, 0x004003e4) === 5) {
+        state.clock.mode0Init11452Stage = as_u16(65);
+        return;
+      }
       mainLoopInit10504(state, {}, {}, rom);
       state.clock.mode0Init11452Stage = as_u16(65);
+      return;
+
+    case 68:
+      if (rb(state, 0x004003e4) === 3) {
+        rebuildMode0LevelPrefix(state, rom, 8);
+        state.clock.mode0Init11452Stage = as_u16(69);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(69);
+      return;
+
+    case 72:
+      if (rb(state, 0x004003e4) === 3) {
+        state.clock.mode0Init11452Stage = as_u16(73);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(73);
+      return;
+
+    case 90:
+      if (rb(state, 0x004003e4) === 5) {
+        mainLoopInit10504(state, {}, {}, rom);
+        state.colorRam.fill(0);
+        ww(state, 0x004003ae, rw(state, 0x004003b0));
+        state.clock.mode0Init11452Stage = as_u16(91);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(91);
+      return;
+
+    case 92:
+      if (rb(state, 0x004003e4) === 3) {
+        mainLoopInit10504(state, {}, {}, rom);
+        state.colorRam.fill(0);
+        wb(state, 0x00400016, 0);
+        ww(state, 0x004003ae, rw(state, 0x004003b0));
+        state.clock.mode0Init11452Stage = as_u16(93);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(93);
+      return;
+
+    case 100:
+      if (rb(state, 0x004003e4) === 5) {
+        gameStateBanner26B2A(state, rom, rw(state, 0x00400394));
+        state.clock.mode0Init11452Stage = as_u16(101);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(101);
+      return;
+
+    case 102:
+      if (rb(state, 0x004003e4) === 3) {
+        gameStateBanner26B2A(state, rom, rw(state, 0x00400394));
+        state.clock.mode0Init11452Stage = as_u16(103);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(103);
       return;
 
     case 1022:

@@ -28,6 +28,7 @@ import { soundPair15884 } from "./sound-pair-15884.js";
 import { stateSub15BD0 } from "./state-sub-15bd0.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { objectEnterState23 } from "./object-enter-state-23.js";
+import { findNearestNeighbor } from "./nearest-neighbor.js";
 
 // ─── ROM constants ────────────────────────────────────────────────────────────
 
@@ -152,6 +153,14 @@ export function helper1BC88(
   rom: RomImage,
   subs: { objectEnterState23?: (state: GameState, objAddr: number) => void } = {},
 ): number {
+  const enterState23 =
+    subs.objectEnterState23 ??
+    ((st: GameState, objAddr: number): void => {
+      objectEnterState23(st, objAddr, {
+        fun_15d10: (s, ptr) => { findNearestNeighbor(s, ptr, rom); },
+      });
+    });
+
   // link.w a6, #$fff4  (12 byte of locals: -$c..-$1)
   // movem.l d2-d7/a2-a4, -(a7)
   // movea.l $8(a6), a2  ← entityAddr (our parameter)
@@ -485,7 +494,7 @@ export function helper1BC88(
       // 0x1bf58: addi.b #$14, $56(a0)
       w8(state, a2 + 0x56, (r8(state, a2 + 0x56) + 0x14) & 0xff);
       // 0x1bf5e: move.l a0,-(a7); jsr $160d4.l; addq.l #4, a7
-      (subs.objectEnterState23 ?? objectEnterState23)(state, a2);
+      enterState23(state, a2);
     }
 
     // ── Update a3 state/sound if not a player ────────────────────────────
@@ -510,7 +519,7 @@ export function helper1BC88(
       // 0x1bf82: addi.b #$14, $56(a0)
       w8(state, a3 + 0x56, (r8(state, a3 + 0x56) + 0x14) & 0xff);
       // 0x1bf88: move.l a0,-(a7); jsr $160d4.l; addq.l #4,a7
-      (subs.objectEnterState23 ?? objectEnterState23)(state, a3);
+      enterState23(state, a3);
     }
 
     // ── Sound dispatch ───────────────────────────────────────────────────

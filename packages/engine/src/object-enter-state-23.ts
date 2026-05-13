@@ -58,6 +58,11 @@ export const STATE_VALUE_23 = 0x23 as const;
 /** Valore costante scritto nel long timer (big-endian: 00 07 00 00). */
 export const TIMER_LONG_VALUE = 0x00070000 as const;
 
+export interface ObjectEnterState23Subs {
+  /** Replica injected for the nested `FUN_15D10(objPtr)` call. */
+  fun_15d10?: (state: GameState, objPtr: number) => void;
+}
+
 /**
  * Replica `FUN_000160D4` — "enter state 0x23" wrapper.
  *
@@ -74,14 +79,15 @@ export const TIMER_LONG_VALUE = 0x00070000 as const;
  *               e lasciare almeno 0x6C byte disponibili (per i campi
  *               toccati: 0x1A byte + 0x68..0x6B long).
  */
-export function objectEnterState23(state: GameState, objPtr: number): void {
+export function objectEnterState23(state: GameState, objPtr: number, subs: ObjectEnterState23Subs = {}): void {
   const objOff = ((objPtr >>> 0) - WORK_RAM_BASE) >>> 0;
 
   // move.b #0x23, (0x1A, A2) — byte di stato.
   state.workRam[objOff + OBJECT_STATE_BYTE_OFF] = STATE_VALUE_23;
 
-  // jsr 0x00015D10 — helper non modellato qui (vedi nota in header).
-  // I caller del differential test patchano FUN_15D10 a `rts`.
+  // jsr 0x00015D10 — injected by runtime callers that need the full chain.
+  // The standalone parity test leaves this undefined, matching its RTS patch.
+  subs.fun_15d10?.(state, objPtr);
 
   // move.l #0x70000, (0x68, A2) — long timer big-endian 00 07 00 00.
   state.workRam[objOff + OBJECT_TIMER_LONG_OFF + 0] = (TIMER_LONG_VALUE >>> 24) & 0xff;

@@ -1,7 +1,77 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-13 (long demo: scroll-range object-pair spawn + collision state handoff; f14900 object pair exact, total 514 -> 364)
+**Ultimo update:** 2026-05-13 (long demo: staged mode0 rebuild cadence for segments 3/5; PF exact through f18000 key windows)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-13 — Long demo staged rebuild cadence checkpoint
+
+Il rebuild mode0 non e' uniforme fra gli attract segment: MAME lascia
+visibili i contatori `0x400014/0x400016` molto piu' a lungo in alcuni segmenti
+e sposta la coda pesante `FUN_10504` rispetto alla sequenza standard
+`63/64`. TS invece anticipava full playfield, alpha e palette; questo produceva
+terrain non renderizzato/fasi vuote quando il demo scorreva oltre i primi
+secondi.
+
+Fix stabili:
+
+- Aggiunto `buildTilemapRows1A444ChunkPhase`, che ricostruisce lo scratch
+  intermedio di `FUN_1A444` per chunk e fase `AD54/AA38`, senza ricorrere a
+  normalizzazioni globali di `FUN_1AA38`.
+- `advanceMode0Init11452Async` ora usa fasi chunk staged per i rebuild mode0
+  dei segmenti lunghi, con contatore visibile esteso nei segmenti 3 e 5.
+- Segmento 3: `rebuildMode0LevelPrefix(8)` slitta a stage 68, `FUN_10504`
+  slitta a stage 92, e il banner/palette diventa visibile a stage 102.
+- Segmento 5: salta il full `10504` standard a 64; `FUN_10504` cade a stage
+  90 e il banner/palette a stage 100, allineando f17680..f17710.
+- Durante il dwell post-reset `390=1/392=2/3e4=3`, `gameTickTimers` non avanza
+  i cascading timer: evita il falso `0x400390=4 -> case3` che resettava
+  prematuramente `0x4003e4` a 0 e rompeva il ciclo successivo.
+
+Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
+
+- PF exact nelle finestre chiave f12900/f13200/f13920/f14600/f16000/f17680/f18000.
+- f14600: `total=335`, `pf=0`, `alpha=0`, `color=0` (prima il full init era
+  anticipato e lasciava PF/alpha/color fuori fase).
+- f14610: `total=296`, `pf=0`, `color=0`; resta `alpha=20`.
+- f16000..f16040: niente piu' falso reset a `3e4=0`; `pf=0` e segment 4
+  avanza con PF nonzero uguale a MAME.
+- f17680: `pf 1517 -> 0`, `alpha 224 -> 0`, `color 395 -> 0`; PF nonzero
+  `2657/2657`.
+- f17700: `total=518`, `pf=0`, `color=0`; resta `alpha=20`.
+- f18000: `total=786`, `pf=0`.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-tilemap-span-builder-1aa38-parity.ts 200
+  PASS 200/200
+
+test-hud-frame-init-283c2-parity.ts 100
+  PASS 100/100
+
+test-object-orbit-emit-13ade-parity.ts 200
+  PASS 200/200
+
+test-object-state-entry-25bae-parity.ts 200
+  PASS 200/200
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- I residui dominanti sono workRam scratch/cache e sprite emission, non piu'
+  PF payload: f14530/f17620 sono ancora ~3KB workRam, ma con PF/alpha/color
+  coerenti.
+- Alpha HUD resta sotto-emesso dopo `FUN_10504`: esempi f14620/f17710 hanno
+  TS alpha nonzero 224 vs MAME 397.
+- f16000 e f17680 sono molto migliori visivamente, ma restano 700..1500 byte
+  di work/sprite. Prossimo drill consigliato: writer/call tap su alpha HUD
+  post-`10504` e object-cache scratch fra stage 90..120.
 
 ## 2026-05-13 — Long demo object-pair spawn + collision handoff checkpoint
 
