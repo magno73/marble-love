@@ -129,6 +129,14 @@ f4200 conferma che i warm seed stabili restano sani e che i seed presi a meta'
 transizione sono fragili solo come warm-start autonomi, non come percorso live
 continuo.
 
+**Checkpoint playable route smoke (2026-05-15):** aggiunta una guardia live
+multi-rotta in `packages/engine/test/playable-live-routes.test.ts`: prima
+rampa, lower bridge, lower worm loops e input misto pseudo-random partono dal
+seed manuale `coin_start_to_level1` e verificano a ogni tick che lo scroll non
+scappi, il PF resti popolato e la biglia non finisca bloccata nello state-1
+tumble. Questo copre in automatico i sintomi gameplay residui segnalati durante
+la prova manuale.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

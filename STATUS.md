@@ -1,7 +1,29 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable QA guard refresh)
+**Ultimo update:** 2026-05-15 (playable route smoke)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable route smoke
+
+QA notturno live dopo il refresh della guardia respawn: la simulazione manuale
+TS non riproduce piu' lo scroll runaway sui percorsi segnalati dall'utente, ma
+serviva una guardia piu' ampia del singolo state-1 repro.
+
+Fix:
+
+- Aggiunto `packages/engine/test/playable-live-routes.test.ts`.
+- Il test parte dallo stesso seed manuale `coin_start_to_level1`, forza il
+  dispatcher gameplay manuale, e percorre quattro rotte:
+  prima rampa death/respawn, lower bridge, lower worm loops e input misto
+  pseudo-random.
+- Ogni tick assertisce che lo scroll Y resti entro bound di rotta, che il PF
+  resti popolato, e che la biglia non termini bloccata nello state-1 tumble.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/state-sub-1b5c2.test.ts packages/engine/test/playable-respawn-state1.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Playable QA guard refresh
 
