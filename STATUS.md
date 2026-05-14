@@ -13,13 +13,15 @@ diagnostici warm:
   resta senza playfield caricata finche' l'utente non inserisce credito e
   preme START.
 - Il frontend modella un credito locale per il path browser: `5`/`C` aggiunge
-  coin, `Enter`/spazio attiva START1 active-low. `gameMainGate` riceve una
-  `gateCheck` che ritorna 1 solo se c'e' credito, poi lo consuma. Questo evita
-  il falso avvio diretto in demo e lascia il level load al case START reale del
-  main loop.
+  coin, `Enter`/spazio attiva START1 active-low. START consuma un credito e
+  carica il seed warm validato `coin_start_to_level1`, poi forza
+  `0x400390=0` per uscire dall'attract/demo e far applicare davvero la
+  trackball a `obj0`. Questo sostituisce il cold coin/start incompleto, che
+  rimbalzava nel ramo attract mode2.
 - Smoke browser via Chrome CDP su `?autoLoad=1&play=1`: prima del coin/start
   `state=1`, `count=0`, `pf=0`; dopo `5` + `Enter`, `state=0`, `count=1`,
-  `pf=4097`.
+  `pf=4174`, `Frame.playfield=2389`, `Frame.sprites=21`; tenendo
+  `ArrowRight` la posizione `obj0` cambia, quindi la biglia riceve input live.
 
 - `packages/web/src/input.ts` ora ruota i delta browser come MAME Marble
   (`trackballX = rawX + rawY`, `trackballY = rawX - rawY`) prima di integrarli
@@ -49,7 +51,8 @@ Validazione:
 - `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts` PASS.
 - `npm --workspace @marble-love/web run build` PASS.
 - Chrome CDP smoke `?autoLoad=1&play=1` PASS: coin/start carica il livello,
-  senza coin il livello non viene precaricato.
+  senza coin il livello non viene precaricato; freccia destra modifica la
+  posizione della biglia.
 - `git diff --check` PASS.
 
 ## 2026-05-14 — Coin/start + playable input replay

@@ -36,6 +36,7 @@ export interface InputState {
   buttons: number;
   inputMmio: number;
   consumeCoinPulses(): number;
+  setP1Absolute(x: number, y: number): void;
   consumeP1X(): number; // 0..255 absolute
   consumeP1Y(): number;
   consumeP2X(): number;
@@ -144,6 +145,10 @@ export function initInput(): InputState {
       const out = coinPulses;
       coinPulses = 0;
       return out;
+    },
+    setP1Absolute(x: number, y: number) {
+      p1X = x & 0xff;
+      p1Y = y & 0xff;
     },
     consumeP1X() { pollKeyboardAndGamepad(); return p1X; },
     consumeP1Y() { return p1Y; },

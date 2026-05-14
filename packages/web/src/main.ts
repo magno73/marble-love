@@ -155,6 +155,31 @@ async function startGame(
     }
     return out;
   };
+  const loadPlayableSeedWarmState = async (seedName: string): Promise<WarmState | undefined> => {
+    const safeSeedName = seedName.replace(/[^a-z0-9_-]/gi, "");
+    const r = await fetch(`/scenarios/playable/${safeSeedName}.seed.json`);
+    if (!r.ok) throw new Error(`fetch fail: ${r.status}`);
+    const seed = await r.json() as {
+      frame: number;
+      slapsticBank?: number;
+      workRam: string;
+      playfieldRam: string;
+      spriteRam: string;
+      alphaRam: string;
+      colorRam: string;
+    };
+    const workRam = hex2bytes(seed.workRam, 0x2000);
+    return {
+      workRam,
+      playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
+      spriteRam: hex2bytes(seed.spriteRam, 0x1000),
+      alphaRam: hex2bytes(seed.alphaRam, 0x1000),
+      colorRam: hex2bytes(seed.colorRam, 0x800),
+      videoScrollY: (((workRam[0x02] ?? 0) << 8) | (workRam[0x03] ?? 0)) & 0x1ff,
+      videoScrollX: 0,
+      slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
+    };
+  };
   let warmState: WarmState | undefined;
   const useMameDump = searchParams.get("mameDump") === "1";
   const useMameLive = searchParams.get("mameLive") === "1";
@@ -162,34 +187,20 @@ async function startGame(
     warmState === undefined &&
     rom !== undefined &&
     (forceCoinStart || (forcePlay && playableSeedName === null && !useMameDump && !useMameLive));
+  let coinStartWarmState: WarmState | undefined;
   if (playableSeedName !== null) {
     try {
-      const safeSeedName = playableSeedName.replace(/[^a-z0-9_-]/gi, "");
-      const r = await fetch(`/scenarios/playable/${safeSeedName}.seed.json`);
-      if (!r.ok) throw new Error(`fetch fail: ${r.status}`);
-      const seed = await r.json() as {
-        frame: number;
-        slapsticBank?: number;
-        workRam: string;
-        playfieldRam: string;
-        spriteRam: string;
-        alphaRam: string;
-        colorRam: string;
-      };
-      warmState = {
-        workRam: hex2bytes(seed.workRam, 0x2000),
-        playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
-        spriteRam: hex2bytes(seed.spriteRam, 0x1000),
-        alphaRam: hex2bytes(seed.alphaRam, 0x1000),
-        colorRam: hex2bytes(seed.colorRam, 0x800),
-        videoScrollY: (((parseInt(seed.workRam.substr(4, 2), 16) << 8) |
-                        parseInt(seed.workRam.substr(6, 2), 16)) & 0x1ff),
-        videoScrollX: 0,
-        slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
-      };
-      console.log(`[warmState] loaded playable seed ${safeSeedName} frame ${seed.frame}`);
+      warmState = await loadPlayableSeedWarmState(playableSeedName);
+      console.log(`[warmState] loaded playable seed ${playableSeedName}`);
     } catch (e) {
       console.warn("[warmState] playable seed fetch failed:", e);
+    }
+  } else if (useCoinStartFlow) {
+    try {
+      coinStartWarmState = await loadPlayableSeedWarmState("coin_start_to_level1");
+      console.log("[marble-love] prepared live gameplay seed coin_start_to_level1");
+    } catch (e) {
+      console.warn("[marble-love] live gameplay seed fetch failed:", e);
     }
   } else if (useMameDump || useMameLive) {
     try {
@@ -264,6 +275,8 @@ async function startGame(
   }
   const inputState = initInput();
   let browserCoinCredits = 0;
+  let previousInputButtons = 0;
+  let manualPlayStarted = false;
   let demoFrame = 0;
 
   // ─── Manual scroll override (debug aid) ───────────────────────────────────
@@ -330,11 +343,34 @@ async function startGame(
     const p1YAbs = inputState.consumeP1Y();
     const p2XAbs = inputState.consumeP2X();
     const p2YAbs = inputState.consumeP2Y();
-    s.input.buttons = inputState.buttons as typeof s.input.buttons;
+    const inputButtons = inputState.buttons;
+    s.input.buttons = inputButtons as typeof s.input.buttons;
     const coinPulses = inputState.consumeCoinPulses();
     if (useCoinStartFlow && coinPulses > 0) {
       browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
       console.log(`[marble-love] coin accepted, credits=${browserCoinCredits}`);
+    }
+    const startPressedThisFrame =
+      (inputButtons & 0x01) !== 0 && (previousInputButtons & 0x01) === 0;
+    previousInputButtons = inputButtons;
+    if (
+      useCoinStartFlow &&
+      !manualPlayStarted &&
+      startPressedThisFrame &&
+      browserCoinCredits > 0 &&
+      coinStartWarmState !== undefined
+    ) {
+      browserCoinCredits -= 1;
+      bootInit(s, tickRom, { warmState: coinStartWarmState });
+      // Warm playable oracle states are captured from attract/demo playback
+      // (0x400390=1). For live manual play, leave the validated RAM snapshot
+      // intact but switch the dispatcher out of attract so FUN_25DF6 applies
+      // trackball deltas to obj0.
+      s.workRam[0x390] = 0x00;
+      s.workRam[0x391] = 0x00;
+      inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
+      manualPlayStarted = true;
+      console.log(`[marble-love] START1 accepted, live gameplay seed loaded, credits=${browserCoinCredits}`);
     }
 
     // Keyboard scroll override (until in-game scroll-write wires autonomously).
@@ -378,14 +414,6 @@ async function startGame(
         inputMmio: inputState.inputMmio,
         runMainLoopBody: mainLoopBody,
       };
-      if (useCoinStartFlow) {
-        tickOptions.gateCheck = (count) => {
-          if (browserCoinCredits <= 0) return 0;
-          browserCoinCredits -= 1;
-          console.log(`[marble-love] START${count} accepted, credits=${browserCoinCredits}`);
-          return 1;
-        };
-      }
       tick(s, tickOptions);
     }
     frameCount += 1;
