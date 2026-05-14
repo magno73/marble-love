@@ -598,8 +598,13 @@ function renderIndirectViewport(
   const H = frame.nativeSize.height; // 240
   const tilesRom = graphics.tiles ?? new Uint8Array();
 
-  // Alloca buffers PF (init 0) e MO (init 0xFFFF).
+  // Alloca buffers PF e MO. PF init a 0x200 = palette index 0 della PF region
+  // (color RAM byte 0x400 → word $0000 = nero in MAME). Senza questo init le
+  // aree fuori dai tile playfield (es. title screen, off-bound dei livelli)
+  // mostrerebbero palette[0] = Alpha region index 0 = $afff = grigio chiaro,
+  // perche' Uint16Array defaults a zero. MO resta 0xFFFF (sentinel transparent).
   const pf = new Uint16Array(W * H);
+  pf.fill(0x200);
   const mo = new Uint16Array(W * H);
   mo.fill(0xffff);
 
