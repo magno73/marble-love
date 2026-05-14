@@ -111,6 +111,44 @@ Validazione:
   no-stack corrente e `slapsticBank=1`.
 - `git diff --check` PASS.
 
+## 2026-05-14 — Live gameplay respawn target scan
+
+Il controllo live web era gia' reale: forzando `0x400390=0` la trackball entra
+nel dispatcher gameplay e muove `obj0`. Il bug osservato dopo morte non era
+quindi input/browser, ma init oggetto incompleto nel path di respawn.
+
+Root cause:
+
+- `objectStateEntry25BAE -> objectInit2591A` chiamava il modello `FUN_2591A`
+  senza il primo callee reale `FUN_262B2`;
+- senza `FUN_262B2`, i globals target `0x400462/0x400466/0x400472`
+  restavano stale (`0x011c/0x00c4`) durante il respawn;
+- MAME invece ricalcola il target (`0x0074/0x0074`) e riporta la biglia
+  allo stato 0 senza scrollare via il playfield.
+
+Fix:
+
+- nuovo `packages/engine/src/object-target-init-262b2.ts` con il dispatch ROM
+  target-table, init sentinel, `FUN_2637A` e fallback backward scan reale di
+  `FUN_262B2`;
+- wiring nel runtime gameplay `FUN_2591A` quando `0x400390/0x400391 == 0`.
+  I segmenti attract/long-demo continuano a usare il modello staged esistente,
+  cosi' il guardrail long-demo non viene spostato dal fix live.
+
+Validazione:
+
+- riproduzione TS del caso live con input continuo: alla morte `target=74/74`,
+  state `4 -> 0`, scroll RAM resta `0/0` invece di correre verso il basso;
+- `npx tsc -b --pretty false` PASS;
+- `test-find-nearest-target-2637a-parity.ts 100` PASS;
+- `test-object-init-2591a-parity.ts 100` PASS;
+- `test-object-state-entry-25bae-parity.ts 100` PASS;
+- playable replay: `coin_start_to_level1` PASS @80,
+  `level1_trackball_short` PASS @100,
+  `level1_trackball_obstacle` PASS @82;
+- warm-seed gameplay suite 15/15 PASS;
+- `git diff --check` PASS.
+
 ## 2026-05-14 — Demo input replay via warm-seed scenarios
 
 Goal pivot successivo completato: input replay infrastrutturale per il demo

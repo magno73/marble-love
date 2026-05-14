@@ -79,6 +79,7 @@ import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
 import { stringHelper17CB8 } from "./string-helper-17cb8.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { objectInit2591A } from "./object-init-2591a.js";
+import { objectTargetInit262B2 } from "./object-target-init-262b2.js";
 import { objectArrayInit25B40 } from "./object-array-init-25b40.js";
 import { pickObjLarger } from "./obj-pick-larger.js";
 import { fun29CCE } from "./sub-29cce.js";
@@ -186,6 +187,13 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
       fun_2591A: (st, initObj) => {
         objectInit2591A(st, initObj, {
+          fun_262B2: (st2, ptr) => {
+            // Gameplay dispatch needs the real target scan for respawn; attract
+            // segments keep their staged long-demo model until that path is closed.
+            if ((st2.workRam[0x390] ?? 0) === 0 && (st2.workRam[0x391] ?? 0) === 0) {
+              objectTargetInit262B2(st2, rom, ptr);
+            }
+          },
           fun_1BAB2: updateSpritePos,
           fun_1CC62: updateSpriteProject,
           fun_25B40: (st2, ptr) => { objectArrayInit25B40(st2, rom, ptr); },
