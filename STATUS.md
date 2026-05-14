@@ -1,7 +1,58 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 prefix cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 scratch phase cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 scratch phase cadence
+
+Un tap MAME fresh `FUN_1A444/FUN_1AD54/FUN_1AA38/FUN_1A9CC`
+f17635..f17690 ha mostrato che, dopo il fix dei prefix PF, TS aveva ancora
+le phase scratch del segmento 5 troppo atomiche/anticipate. Il PF era ormai
+corretto, ma i blocchi `0x400A9C..0x401C48` restavano il grosso dei byte
+fresh residui.
+
+Fix stabile:
+
+- Aggiunte phase scratch-only specifiche del segmento 5 per i chunk 2..6.
+- I prefix PF gia' validati restano agli stage 39/49/60 e il full prefix 8
+  resta a stage 68.
+- Non vengono introdotti packRows sintetici: l'esperimento stage59 con pack
+  chunk4 e' stato falsificato perche' reintroduceva PF diff a f17669.
+- Chunk3 e chunk4 sono stati spostati di un vblank rispetto al tap grezzo,
+  perche' lo snapshot MAME vede la coda del chunk precedente: questo ha
+  chiuso i picchi f17648/f17658 senza rompere PF.
+
+Effetto osservato sui dump fresh bank-aware:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `60733 -> 16598`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `49288 -> 33516`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `18888 -> 16523`.
+- f17660 `2515 -> 789`, f17680 `1135 -> 496`, tutti con `pf=0`.
+
+Nota oracoli:
+
+- Il vecchio storico `/tmp/mame_demo_12000_18000_step10.json` non contiene
+  `slapsticBank` e peggiora su questa transizione (`143462 -> 145667`,
+  concentrato soprattutto a f17660). Per nuova localizzazione del segmento 5,
+  usare i dump fresh bank-aware e trattare lo storico come cross-check
+  secondario fuori dalle finestre bank-sensitive.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+
+Drill aperto:
+
+- Fresh f17640 resta workRam-heavy (`total=2298`, `pf=0`).
+- Fresh f17700/f17701 restano alpha/sprite/work residuali; PF resta exact.
+- Dopo f17710 il tail resta soprattutto workRam/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 prefix cadence
 
