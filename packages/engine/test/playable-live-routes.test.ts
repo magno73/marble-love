@@ -8,17 +8,13 @@ import { emptyRomImage } from "../src/bus.js";
 import { tick } from "../src/index.js";
 import { emptyGameState, type GameState } from "../src/state.js";
 
-interface Snapshot {
+interface PlayableSeed {
   slapsticBank?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
   alphaRam: string;
   colorRam: string;
-}
-
-interface Scenario {
-  snapshots: Snapshot[];
 }
 
 function hexToBytes(hex: string, expectedLength: number): Uint8Array {
@@ -37,12 +33,9 @@ function nonzero(bytes: Uint8Array): number {
 }
 
 function loadPlayableState(rom: ReturnType<typeof emptyRomImage>): GameState {
-  const scenario = JSON.parse(
-    readFileSync(resolve("oracle/scenarios/playable/coin_start_to_level1.json"), "utf-8"),
-  ) as Scenario;
-  const seed = scenario.snapshots[0];
-  expect(seed).toBeDefined();
-  if (seed === undefined) throw new Error("missing playable seed");
+  const seed = JSON.parse(
+    readFileSync(resolve("packages/web/public/scenarios/playable/manual_level1_start.seed.json"), "utf-8"),
+  ) as PlayableSeed;
 
   const state = emptyGameState();
   bootInit(state, rom, {
