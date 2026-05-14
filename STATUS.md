@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (pivot gameplay warm-seed scenarios)
+**Ultimo update:** 2026-05-14 (gameplay warm-seed scenarios 100-frame clean)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Pivot gameplay warm-seed scenarios
@@ -36,7 +36,7 @@ Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`)
 | Scenario | Seed | Fase | Streak PASS | Initial 60 | First fail |
 |---|---:|---:|---:|---|---|
 | `level1_spawn` | f13500 | 1 | 100 | PASS | none |
-| `level1_early` | f14000 | 1 | 78 | PASS | f+79 sprite=53 |
+| `level1_early` | f14120 | 0 | 100 | PASS | none |
 | `level1_midmap` | f14500 | 0 | 100 | PASS | none |
 | `level1_obstacle` | f15084 | 1 | 100 | PASS | none |
 | `level1_end` | f15800 | 0 | 100 | PASS | none |
@@ -46,10 +46,14 @@ Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`)
 
 Criterio del pivot (`>=60` frame consecutivi con PF=0, sprite<=50, HUD<=30):
 **8/8 PASS**. Anche il criterio piu' rigido "first 60 after seed" ora passa su
-tutti gli 8 scenari: `level2_early` e' stato spostato da f17000 a f17010 per
-evitare di seedare dieci frame prima di uno snapshot MAME intra-`FUN_26F3E`
-(f17013 fotografava il buffer MO dopo il clear sequenziale ma prima della
-dispatch completa).
+tutti gli 8 scenari, e tutti gli 8 scenari passano l'intera finestra 100/100
+sotto soglia. `level2_early` e' stato spostato da f17000 a f17010 per evitare
+di seedare dieci frame prima di uno snapshot MAME intra-`FUN_26F3E` (f17013
+fotografava il buffer MO dopo il clear sequenziale ma prima della dispatch
+completa). `level1_early` e' stato spostato da f14000 a f14120: la scansione
+temporanea f14080/f14100/f14120/... ha confermato che f14079/f14103 sono
+boundary intra-frame, mentre f14120 e' il primo seed early stabile con
+PF/sprite/HUD exact per 100 frame.
 
 Validazione:
 
@@ -66,10 +70,12 @@ Validazione:
 - Dopo il recapture `level1_obstacle` a f15084, anche il primo ostacolo passa
   100/100 frame (`max sprite=47`, PF=0, HUD<=3), chiudendo il boundary
   intra-frame del vecchio seed f15000/f+83.
-- Resta come unico superamento sprite su 100 frame `level1_early` f+79
-  (`sprite=53`), mentre i primi 60 frame restano PASS.
+- Dopo il recapture `level1_early` a f14120, anche lo scenario early passa
+  100/100 frame con PF/sprite/HUD exact; il vecchio f14000 aveva un picco
+  singolo f+79 (`sprite=53`) da snapshot intra-frame.
 - Long demo invariant invariato sul fresh bank-aware step10:
-  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15727 <= 16000`.
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15722 <= 16000`
+  con il checker no-stack corrente.
 
 ## 2026-05-14 — Long demo segment-4 highscore/PF visibility
 
