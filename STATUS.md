@@ -1,7 +1,51 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (active MO bank rendering)
+**Ultimo update:** 2026-05-14 (playable tutorial overlay scheduler)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Playable tutorial overlay scheduler
+
+Root cause del residuo alpha/HUD nei replay playable dopo f+80: due JSR reali
+della state-machine testuale erano ancora scollegati.
+
+- `FUN_2678` puliva lo slot state=1, ma nel binario chiama subito
+  `FUN_2ABC(dataPtr)` per cancellare anche le celle alpha della chain
+  precedente. TS azzerava lo slot ma lasciava residui visivi (`AVOID DELAYS`
+  nel seed `level1_trackball_short`).
+- `FUN_1815A` consuma i waypoint e, quando il quarto byte del record e'
+  positivo, usa la tabella ROM `0x242AA` e chiama il trampoline `0x12A`
+  (`FUN_2B50`, schedule state=1). TS trattava quel callback come no-op, quindi
+  non renderizzava overlay tutorial MAME come `FINISH RACE / IN THIS / TIME`
+  e `WARNING: / CLIFFS!`.
+
+Fix:
+
+- `main-tick.ts` cabla `stateSub2678 -> stateSub2ABC`.
+- `refresh-frame-10fce.ts` cabla `waypointListStep1815A.fun_012a` a
+  `scheduleStateMachine1(stateSub2572)` leggendo il pointer ROM da
+  `0x242AA + idx*4`.
+- Nessun hack su alpha/HUD: le chain testuali ora passano dal renderer e dallo
+  scheduler gia' parity-tested.
+
+Validazione:
+
+- `probe-playable-replay.ts`:
+  - `coin_start_to_level1` PASS @80; alpha a f+81 scende da 93B a 8B.
+  - `level1_trackball_short` PASS @100; alpha max 5B e nessun fail frame.
+  - `level1_trackball_obstacle` PASS @82; alpha a f+83 scende da 71B a 4B.
+- `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 no-stack:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `15727 -> 14501`, ancora sotto guardrail `14501 <= 16000`.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
+
+Residuo corrente: sprite/AV-bank latch micro-order intorno a
+`coin_start_to_level1` f+81 e `level1_trackball_obstacle` f+83. Il confronto
+active-bank mostra che gran parte del full sprite diff e' ancora pagina MO
+inattiva/latch, non terreno.
 
 ## 2026-05-14 — Active motion-object bank rendering
 

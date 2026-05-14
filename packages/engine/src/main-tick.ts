@@ -214,7 +214,9 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // (Codex), tutte parity 500/500.
   const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
     fun_2abc: (argLong) => stateSub2ABC(state, rom, argLong),
-    fun_2678: (argLong) => stateSub2678(state, argLong),
+    fun_2678: (argLong) => stateSub2678(state, argLong, {
+      fun_2abc: (clearArg) => stateSub2ABC(state, rom, clearArg),
+    }),
     fun_2bda: (a1, a2, a3) => { stateSub2BDA(state, a1, a2, a3); },
     fun_2da0: (a1, a2) => stateSub2DA0(state, rom, a1, a2),
     fun_2c60: (a1, a2) => { stateSub2C60(state, a1, a2); },

@@ -67,6 +67,7 @@ import { objDirtyDispatch28624 } from "./obj-dirty-dispatch-28624.js";
 import { renderScore28E3C } from "./render-score-28e3c.js";
 import { renderStringEntry28F62 } from "./render-string-entry-28f62.js";
 import { stateSub2572 } from "./state-sub-2572.js";
+import { scheduleStateMachine1 } from "./state-machine-schedule.js";
 import { formatNumber3874 } from "./string-format.js";
 import { refreshHelper1912C } from "./refresh-helper-1912c.js";
 import { refreshHelper13EE6 } from "./refresh-helper-13ee6.js";
@@ -209,12 +210,24 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   };
   const stepWaypointList = (s: GameState, objAddr: number): void => {
     waypointListStep1815A(s, objAddr, {
+      fun_012a: (threshold, attrWord, textPtr) => {
+        scheduleStateMachine1(s, rom, stateSub2572, textPtr, attrWord, threshold);
+      },
       fun_26196: (st, a2Addr) => {
         flagScaledMagnitudeDispatch(
           st,
           a2Addr,
           (structPtr, magnitude) => fun261BC(st, structPtr, magnitude, rom.program),
         );
+      },
+      lookupSoundTable: (idx) => {
+        const addr = 0x242aa + ((idx & 0xffff) << 2);
+        return (
+          ((rom.program[addr] ?? 0) << 24) |
+          ((rom.program[addr + 1] ?? 0) << 16) |
+          ((rom.program[addr + 2] ?? 0) << 8) |
+          (rom.program[addr + 3] ?? 0)
+        ) >>> 0;
       },
     }, rom);
   };
