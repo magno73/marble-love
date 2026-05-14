@@ -41,14 +41,15 @@ Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`)
 | `level1_obstacle` | f15000 | 1 | 82 | PASS | f+83 sprite=51 |
 | `level1_end` | f15800 | 0 | 100 | PASS | none |
 | `level2_spawn` | f16500 | 1 | 100 | PASS | none |
-| `level2_early` | f17000 | 1 | 87 | FAIL | f+13 sprite=51 |
+| `level2_early` | f17010 | 1 | 100 | PASS | none |
 | `intro_overlay` | f9700 | 1 | 100 | PASS | none |
 
 Criterio del pivot (`>=60` frame consecutivi con PF=0, sprite<=50, HUD<=30):
-**8/8 PASS**. Nota: `level2_early` non passa i primi 60 frame in senso stretto
-per un blip a f+13 (`sprite=51`, un byte oltre soglia), ma ha una finestra
-successiva da 87 frame consecutivi sotto soglia. Se vogliamo rendere il criterio
-"first 60 after seed" invece di "60 consecutive", quello e' il prossimo drill.
+**8/8 PASS**. Anche il criterio piu' rigido "first 60 after seed" ora passa su
+tutti gli 8 scenari: `level2_early` e' stato spostato da f17000 a f17010 per
+evitare di seedare dieci frame prima di uno snapshot MAME intra-`FUN_26F3E`
+(f17013 fotografava il buffer MO dopo il clear sequenziale ma prima della
+dispatch completa).
 
 Validazione:
 
@@ -59,6 +60,9 @@ Validazione:
 - Dopo lo scope del replay f12000, i probe gameplay restano 8/8 PASS; diversi
   scenari ora hanno HUD=0 nei primi blocchi e workRam no-stack piu' basso
   (`level1_end`/`level1_midmap` restano 100 frame sprite/PF/HUD exact).
+- Dopo il recapture `level2_early` a f17010, `level2_early` passa 100/100 frame
+  (`max sprite=47`, PF=0, HUD<=1), chiudendo il blip iniziale f+13 del vecchio
+  seed f17000.
 - Long demo invariant invariato sul fresh bank-aware step10:
   `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15727 <= 16000`.
 

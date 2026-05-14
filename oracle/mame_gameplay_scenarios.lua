@@ -24,7 +24,7 @@ local SCENARIOS = {
     { name = "level1_obstacle", frame = 15000, description = "First obstacle" },
     { name = "level1_end",      frame = 15800, description = "Finish line approach" },
     { name = "level2_spawn",    frame = 16500, description = "Level 2 Aerial Race spawn" },
-    { name = "level2_early",    frame = 17000, description = "500 frames post-spawn level 2" },
+    { name = "level2_early",    frame = 17010, description = "Stable early level 2 warm seed" },
     { name = "intro_overlay",   frame = 9700,  description = "RACE THIS LEVEL IN overlay" },
 }
 
