@@ -21,7 +21,7 @@ local SCENARIOS = {
     { name = "level1_spawn",    frame = 13500, description = "Marble spawn, gravity starts" },
     { name = "level1_early",    frame = 14000, description = "500 frames post-spawn, marble in motion" },
     { name = "level1_midmap",   frame = 14500, description = "Marble mid-map" },
-    { name = "level1_obstacle", frame = 15000, description = "First obstacle" },
+    { name = "level1_obstacle", frame = 15084, description = "Stable first obstacle warm seed" },
     { name = "level1_end",      frame = 15800, description = "Finish line approach" },
     { name = "level2_spawn",    frame = 16500, description = "Level 2 Aerial Race spawn" },
     { name = "level2_early",    frame = 17010, description = "Stable early level 2 warm seed" },
