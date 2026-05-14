@@ -26,6 +26,10 @@ Nuova infrastruttura:
   30Hz, diffa 100 frame e stampa max/sum per PF, sprite, HUD
   (`workRam[0x500..0x6ff]`), alpha, color e workRam no-stack. Con
   `SHOW_DIFFS=1` stampa i byte del frame di drill.
+- Il bridge warm legacy (`slotArrayReplayTick` + `warmResidualReplayTick`) ora
+  si arma solo sul seed attract f12000 storico che lo richiede. Gli otto seed
+  gameplay/overlay non ricevono piu' il replay f12000, chiudendo rumore HUD e
+  workRam non pertinente senza cambiare il guardrail long demo.
 
 Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`):
 
@@ -52,8 +56,11 @@ Validazione:
 - Smoke MAME capture hash PASS per tutti gli 8 JSON usando NVRAM/CFG pulite.
 - Probe scenario PASS su tutti gli 8 scenari secondo il criterio
   `>=60` frame consecutivi.
-- Long demo invariant invariato: nessun file engine modificato in questo
-  checkpoint; ultimo fresh step10 noto resta `15727 <= 16000`.
+- Dopo lo scope del replay f12000, i probe gameplay restano 8/8 PASS; diversi
+  scenari ora hanno HUD=0 nei primi blocchi e workRam no-stack piu' basso
+  (`level1_end`/`level1_midmap` restano 100 frame sprite/PF/HUD exact).
+- Long demo invariant invariato sul fresh bank-aware step10:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15727 <= 16000`.
 
 ## 2026-05-14 — Long demo segment-4 highscore/PF visibility
 

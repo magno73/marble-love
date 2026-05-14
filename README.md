@@ -18,8 +18,10 @@ pulite e `-nonvram_save`. Nuovo probe
 seed warm TS; tutti gli 8 scenari raggiungono il criterio `>=60` frame
 consecutivi con PF=0, sprite<=50 e HUD<=30. Nota aperta: `level2_early` ha un
 blip iniziale a f+13 (`sprite=51`) ma una finestra successiva da 87 frame PASS.
-Nessun file engine modificato in questo checkpoint; lo step10 fresh long demo
-resta invariato a `15727 <= 16000`.
+Il replay warm legacy f12000 (`slotArrayReplayTick`/`warmResidualReplayTick`) e'
+ora confinato al seed attract storico che lo richiede, quindi i seed gameplay
+non ereditano piu' rumore HUD/workRam del long-demo bridge. Lo step10 fresh
+long demo resta invariato a `15727 <= 16000`.
 
 ## Metriche progetto
 
