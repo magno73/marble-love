@@ -1,7 +1,29 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable timeout rebuild guard)
+**Ultimo update:** 2026-05-15 (scripted playable route capture)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Scripted playable route capture
+
+QA notturno ha bisogno di confrontare le stesse rotte manual-like tra TS e
+MAME, non solo il vecchio script fisso coin/start. `mame_playable_input_capture`
+ora accetta `MARBLE_PLAYABLE_ROUTE` con token screen-space (`D:171,R:206,...`)
+senza cambiare il comportamento default.
+
+Evidenza:
+
+- Smoke MAME temporaneo con rotta lower-bridge:
+  `D:171,R:206,L:188,DL:107,BR:260,R:180,N:300`, input da f2046.
+- `route_2045` replay PASS @80, coerente con il baseline
+  `coin_start_to_level1`.
+- Le finestre piu' tarde (`route_2550+`) evidenziano ancora drift full-MAME
+  dispatcher/sprite sotto input arbitrario; questo resta materiale di drill,
+  non una patch gameplay manuale.
+
+Validazione:
+
+- MAME headless route capture completata in `/tmp/marble_route_probe_scenarios`.
+- `npx tsx packages/cli/src/probe-playable-replay.ts /tmp/marble_route_probe_scenarios/route_2045.json /tmp/marble_route_probe_input.json` PASS @80.
 
 ## 2026-05-15 — Playable timeout rebuild guard
 

@@ -146,6 +146,12 @@ PF vuota e' il rebuild MAME-consistente, non lo scroll runaway precedente.
 `playable-live-routes.test.ts` ora protegge questo caso fino al PF pieno e allo
 scroll basso.
 
+**Checkpoint scripted playable routes (2026-05-15):**
+`oracle/mame_playable_input_capture.lua` accetta `MARBLE_PLAYABLE_ROUTE` per
+catturare in MAME le stesse rotte screen-space usate nei test live TS. Smoke
+lower-bridge temporaneo: `route_2045` replay PASS @80; le finestre piu' tarde
+restano un drill separato sul dispatcher full-MAME, non sul path manuale web.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con
