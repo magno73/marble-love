@@ -1,7 +1,74 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment 5 rebuild dwell aligned)
+**Ultimo update:** 2026-05-14 (long demo: segment 3 final rotate aligned)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-3 final rotate checkpoint
+
+Il residuo bridge f15367 era diventato un drift molto localizzato: la matrice
+rotazione di `obj0` (`obj0+0x74..0xA3`, `0x40008C..0x4000BB`) in MAME riceveva
+ancora un'ultima passata `FUN_1C014`, mentre TS si fermava al frame precedente
+durante il ponte corto segment-3 mode0->mode1->mode2.
+
+Nuovo tap MAME `oracle/mame_obj0_matrix_tap.lua` su f15362..f15370:
+
+- Scritture matrice a f15363, f15365 e f15367, 24 word per frame.
+- Writer PC nel range `0x01C3E0..0x01C440`, cioe' la catena `FUN_1C014`.
+- A f15367 MAME scrive `0x40008C=0x15D5`, `0x40008E=0xFD02`, ecc.; TS aveva
+  ancora la matrice vecchia `0x1601/0xFFC5`.
+
+Fix stabile:
+
+- Lo stage 849 del bridge segment-3 esegue una singola
+  `spriteRotate1C014(state, rom, 0x18)` prima di esporre `0x40075A=1`.
+- Non viene riaperto il refresh body completo: quell'esperimento e' stato
+  falsificato (`150186 -> 155584` di somma campionata), perche' peggiora le
+  finestre lunghe pur cercando di inseguire il frame wait.
+
+Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
+
+- Somma campionata: `150186 -> 146650`.
+- f15367..f15372: matrice obj0 diff `72 -> 0`; il residuo obj scende
+  `72 -> 20` per byte non-matrice.
+- f15370: `total=362 -> 310`, `workRam=210 -> 166`, PF resta `0`.
+- f15400: `total=359 -> 314`, `workRam=210 -> 166`, PF resta `0`.
+- Il beneficio propaga al segmento 4: f15990 `739 -> 687`, f16000
+  `677 -> 625`, f16010 `655 -> 603`, f16020 `622 -> 570`, f16030
+  `611 -> 559`, PF resta `0`.
+- Le finestre chiave restano stabili: f12950 `total=347`, f13200
+  `total=123`, f13920 `total=117`, f14530 `total=327`, f14580 `total=202`,
+  f17620 `total=338`, f17670 `total=1068`, f17680 `total=1201`,
+  f17690 `total=2357`, f17710 `total=287`.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 50
+  PASS 50/50
+
+test-object-state-entry-25bae-parity.ts 50
+  PASS 50/50
+
+test-hud-frame-init-283c2-parity.ts 50
+  PASS 50/50
+
+test-tilemap-span-builder-1aa38-parity.ts 50
+  PASS 50/50
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- f17690 resta il blocker maggiore (`total=2357`, `workRam=2205`), dominato
+  da scratch/cache e non da PF.
+- f17670/f17680 e f14590 sono ancora finestre sprite/workRam dense.
+- f17010 ha ancora PF residuo (`pfRam=234`) e merita una verifica separata
+  dopo aver chiuso le cadence non-PF.
 
 ## 2026-05-14 — Long demo tilemap phase checkpoint
 
