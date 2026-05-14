@@ -101,6 +101,14 @@ lo scroll con PF popolato. Aggiunto regression test
 warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`)
 restano PASS.
 
+**Checkpoint FUN_253EC state-7 settle (2026-05-14):** il drill bridge/lower
+platform ha chiuso un altro jump-table reale del dispatcher oggetti: `JT[7]`
+(`obj+0x1A=7`) ora segue il disasm `0x25812`, cioe' solo `FUN_253BC` e clear
+`obj+0x1C`, senza il vecchio fallback che chiamava anche `FUN_17F66`.
+Aggiunto regression test in `refresh-frame-10fce.test.ts`; playable replay 3/3,
+warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`)
+restano PASS.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

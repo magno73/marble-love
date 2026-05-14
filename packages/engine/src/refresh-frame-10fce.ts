@@ -439,6 +439,16 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     return;
   }
 
+  // JT[7] = 0x25812. MAME only refreshes the derived screen fields with
+  // FUN_253BC, then clears obj+0x1C before returning. The generic fallback
+  // also ran objectStep17F66, which could move the object in transient
+  // carried/death paths instead of leaving this one-vblank settle state still.
+  if (s1a === 7) {
+    helper253BC(state, a2);
+    wb(state, a2 + 0x1c, 0);
+    return;
+  }
+
   // Fallback (path non-modellati): chain conservativa esistente —
   // helper253BC + objectStep17F66 SENZA helper121B8. Equivalente al
   // wiring precedente; mantiene parity per obj non-obj0 finché i path
