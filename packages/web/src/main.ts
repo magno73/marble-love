@@ -233,13 +233,14 @@ async function startGame(
     s.videoScrollX = ((initScrollX % 512) + 512) % 512;
     s.videoScrollY = ((initScrollY % 512) + 512) % 512;
   }
+  const scrollOverrideEnabled = !forcePlay;
   const heldKeys = new Set<string>();
   window.addEventListener("keydown", (e) => {
-    if (
+    if (scrollOverrideEnabled && (
       e.key === "ArrowUp" || e.key === "ArrowDown" ||
       e.key === "ArrowLeft" || e.key === "ArrowRight" ||
       e.key === "Shift"
-    ) {
+    )) {
       heldKeys.add(e.key);
       if (e.key.startsWith("Arrow")) e.preventDefault();
     }
@@ -283,11 +284,13 @@ async function startGame(
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
 
     // Keyboard scroll override (until in-game scroll-write wires autonomously).
-    const scrollStep = heldKeys.has("Shift") ? 8 : 1;
-    if (heldKeys.has("ArrowLeft"))  s.videoScrollX = (s.videoScrollX - scrollStep + 512) % 512;
-    if (heldKeys.has("ArrowRight")) s.videoScrollX = (s.videoScrollX + scrollStep) % 512;
-    if (heldKeys.has("ArrowUp"))    s.videoScrollY = (s.videoScrollY - scrollStep + 512) % 512;
-    if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
+    if (scrollOverrideEnabled) {
+      const scrollStep = heldKeys.has("Shift") ? 8 : 1;
+      if (heldKeys.has("ArrowLeft"))  s.videoScrollX = (s.videoScrollX - scrollStep + 512) % 512;
+      if (heldKeys.has("ArrowRight")) s.videoScrollX = (s.videoScrollX + scrollStep) % 512;
+      if (heldKeys.has("ArrowUp"))    s.videoScrollY = (s.videoScrollY - scrollStep + 512) % 512;
+      if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
+    }
 
     // Se mameDump attivo, lo state è frozen → no tick (preserve dump bit-perfect).
     // Se mameLive (warmState ma non frozen): tick con runMainLoopBody=false
@@ -316,6 +319,7 @@ async function startGame(
         rom: tickRom,
         p1X: p1XAbs, p1Y: p1YAbs,
         p2X: p2XAbs, p2Y: p2YAbs,
+        inputMmio: inputState.inputMmio,
         runMainLoopBody: mainLoopBody,
       });
     }

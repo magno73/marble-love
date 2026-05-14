@@ -5,22 +5,47 @@
  * `processAxis` (engine/trackball-input.ts) legge come BYTE assoluto 0..255
  * con wrap-around. Il delta è ricavato 68k-side via `cur - prev` (mod 256).
  *
- * Quindi il browser deve **integrare** i delta (mouse/keyboard/gamepad/touch)
- * in un valore ABSOLUTE 0..255, non passare il delta diretto. Questo evita
- * il bug "primo frame": cur=0 vs prev=0xff (seed MAME) → delta=1 → write
- * spurious. Mantenendo cur=0xff stabile quando nessun input → delta=0.
+ * MAME ruota i due assi Marble a 45 gradi (`trakball_r`):
+ *   F20000 = rawX + rawY
+ *   F20002 = rawX - rawY
+ *
+ * Quindi il browser deve prima ruotare e poi **integrare** i delta
+ * (mouse/keyboard/gamepad/touch) in un valore ABSOLUTE 0..255, non passare il
+ * delta diretto. Questo evita il bug "primo frame": cur=0 vs prev=0xff
+ * (seed MAME) → delta=1 → write spurious. Mantenendo cur=0xff stabile quando
+ * nessun input → delta=0.
  *
  * Phase 7: implementare anche pulsanti virtuali e accelerometro mobile.
  */
 
 const KEYBOARD_TRACKBALL_EQUIV = 4; // tarato per gameplay piacevole
+const TRACKBALL_KEYS = new Set([
+  "arrowleft",
+  "arrowright",
+  "arrowup",
+  "arrowdown",
+  "a",
+  "d",
+  "w",
+  "s",
+]);
 
 export interface InputState {
   buttons: number;
+  inputMmio: number;
   consumeP1X(): number; // 0..255 absolute
   consumeP1Y(): number;
   consumeP2X(): number;
   consumeP2Y(): number;
+}
+
+export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number; y: number } {
+  const rawX = dx | 0;
+  const rawY = dy | 0;
+  return {
+    x: rawX + rawY,
+    y: rawX - rawY,
+  };
 }
 
 export function initInput(): InputState {
@@ -33,8 +58,16 @@ export function initInput(): InputState {
   let buttons = 0;
 
   const keys = new Set<string>();
+  const addP1Delta = (dx: number, dy: number): void => {
+    const rotated = rotateMarbleTrackballDelta(dx, dy);
+    p1X = (p1X + rotated.x) & 0xff;
+    p1Y = (p1Y + rotated.y) & 0xff;
+  };
+
   window.addEventListener("keydown", (e) => {
-    keys.add(e.key.toLowerCase());
+    const key = e.key.toLowerCase();
+    keys.add(key);
+    if (TRACKBALL_KEYS.has(key)) e.preventDefault();
     if (e.key === " " || e.key === "Enter") buttons |= 0x01;
   });
   window.addEventListener("keyup", (e) => {
@@ -44,8 +77,7 @@ export function initInput(): InputState {
 
   window.addEventListener("mousemove", (e) => {
     if (document.pointerLockElement) {
-      p1X = (p1X + (e.movementX | 0)) & 0xff;
-      p1Y = (p1Y + (e.movementY | 0)) & 0xff;
+      addP1Delta(e.movementX | 0, e.movementY | 0);
     }
   });
   window.addEventListener("click", () => {
@@ -60,8 +92,7 @@ export function initInput(): InputState {
   window.addEventListener("touchmove", (e) => {
     const t = e.touches[0];
     if (t && lastTouch) {
-      p1X = (p1X + ((t.clientX - lastTouch.x) | 0)) & 0xff;
-      p1Y = (p1Y + ((t.clientY - lastTouch.y) | 0)) & 0xff;
+      addP1Delta((t.clientX - lastTouch.x) | 0, (t.clientY - lastTouch.y) | 0);
       lastTouch = { x: t.clientX, y: t.clientY };
     }
   });
@@ -80,12 +111,17 @@ export function initInput(): InputState {
       dx += Math.round((gp.axes[2] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
       dy += Math.round((gp.axes[3] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
     }
-    p1X = (p1X + dx) & 0xff;
-    p1Y = (p1Y + dy) & 0xff;
+    addP1Delta(dx, dy);
   }
 
   return {
     get buttons() { return buttons; },
+    get inputMmio() {
+      let value = 0x6f;
+      if ((buttons & 0x01) !== 0) value &= ~0x01;
+      if ((buttons & 0x02) !== 0) value &= ~0x02;
+      return value & 0xff;
+    },
     consumeP1X() { pollKeyboardAndGamepad(); return p1X; },
     consumeP1Y() { return p1Y; },
     consumeP2X() { return p2X; },
