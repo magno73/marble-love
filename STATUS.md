@@ -1,7 +1,77 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment 5 chunk7 scratch narrowed)
+**Ultimo update:** 2026-05-14 (long demo: staged 1A444 slapstic helper cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo staged 1A444 slapstic helper checkpoint
+
+Il test manuale del long-run ha mostrato che le phase parziali
+`buildTilemapRows1A444ChunkPhase` riproducevano `AD54/AA38/pack`, ma saltavano
+i due side-effect `FUN_2FFB8` presenti nel binario reale:
+
+- helper prima del blocco `FUN_1AD54`, usando il lookup level `0x24994[level]`;
+- helper dopo la tabella overlay e prima di `FUN_1AA38/1A9CC`, usando
+  `0x400662`.
+
+Questo lasciava il bank slapstic TS fuori fase nei dwell staged. Nel fresh
+tail f17688..f17692 MAME resta bank 1, mentre TS era finito in bank 0; lo
+scratch chunk7 veniva quindi costruito con dati ROM incoerenti anche quando la
+cadence frame sembrava corretta.
+
+Fix stabile:
+
+- `buildTilemapRows1A444ChunkPhase` ora esegue i due `levelHelper2FFB8` nello
+  stesso punto della `FUN_1A444` completa.
+- Il fix e' comune a tutte le phase staged, ma non aggiunge `packRows` nuovi e
+  non cambia il clear stage83 del segmento 5.
+
+Effetto osservato:
+
+- Storico `/tmp/mame_demo_12000_18000_step10.json`: somma campionata
+  `145902 -> 141790`.
+- Storico: f14530 `327 -> 106`, f14580 `202 -> 126`, f15990 `739 -> 383`,
+  f17690 `559 -> 396`; PF resta exact nelle finestre chiave.
+- Fresh `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: finestra
+  f17660..f17720 `58208 -> 57365`; f17690 `525 -> 440`; bank TS/MAME allineato
+  a 1/1 su f17688..f17692.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 50
+  PASS 50/50
+
+test-object-state-entry-25bae-parity.ts 50
+  PASS 50/50
+
+test-hud-frame-init-283c2-parity.ts 50
+  PASS 50/50
+
+test-tilemap-span-builder-1aa38-parity.ts 50
+  PASS 50/50
+
+git diff --check
+  PASS
+```
+
+Falsificati e revertiti durante il test:
+
+- Stage83 `chunk7 complete + packRows + chunk8 AD54=23`: peggiora fresh
+  `58208 -> 68904`, soprattutto sprite (`152 -> 534`).
+- Stage83 solo `chunk8 AD54=23`: con bank corretto peggiora fresh
+  `57365 -> 57732`.
+
+Drill aperto:
+
+- f17693 resta il picco fresh piu' alto (`total=2378`, `workRam=2226`) per
+  scratch/cache visibile che non va risolto con il pack chunk7 finto, perche'
+  quello rompe sprite/PF successivi.
+- f17700 fresh resta PF-heavy (`pf=1517`) mentre lo storico resta PF exact:
+  prossimo passo e' localizzare il clear/rebuild reale tra f17699..f17702 con
+  write-tap o screenshot exact-frame solo come guida visuale.
 
 ## 2026-05-14 — Long demo segment-5 chunk7 scratch checkpoint
 

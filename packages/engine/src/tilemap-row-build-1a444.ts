@@ -252,6 +252,12 @@ export function buildTilemapRows1A444ChunkPhase(
     }
 
     const destStart = readAbsU32(state, rom, stateStruct + 0x1c);
+    if (isTarget) {
+      const levelIndex = readU16(state, 0x0394);
+      const lookup = readRomU8(rom, 0x24994 + levelIndex);
+      levelHelper2FFB8(rom, (lookup & 0x80) !== 0 ? lookup - 0x100 : lookup);
+    }
+
     let pendingBits = 0;
     for (let d3 = 0; d3 < entryCount; d3++) {
       if ((d3 & 0x0f) === 0) {
@@ -284,6 +290,8 @@ export function buildTilemapRows1A444ChunkPhase(
 
     if (isTarget) {
       if (phase.ad54Count >= entryCount) {
+        levelHelper2FFB8(rom, readI16(state, GLOBAL_0662_OFF));
+
         let scratchAddr = SCRATCH_BASE;
         let rowArgOff = ROW_ARG_BASE_OFF + d4 * 2;
         const rows = Math.min(height, phase.aa38Count);
