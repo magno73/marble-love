@@ -1,7 +1,68 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 alpha clear split)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 mode2 micro-cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 mode2 micro-cadence
+
+Drill sul residuo f17009/f17010 dopo il clear alpha: TS eseguiva nello stage
+6 del mode2 segment `4` il blocco banner/clear/vblank un vblank prima di MAME.
+Questo cancellava i latch video e introduceva un diff color/alpha/PF transiente,
+pur senza spostare il resto del tail segment-5.
+
+Fix stabile:
+
+- Per il solo segment `4`, i counter visibili `0x400014/0x400016` seguono la
+  fase osservata da MAME durante gli stage iniziali del reset mode2.
+- Lo stage 6 del segment `4` ora lascia visibile il frame corrente; il blocco
+  `gameStateBanner26B2A + bannerHelper26B66 + latch zero + vblankAck28DEA`
+  viene eseguito nello stage 7, insieme alla fase particle, senza ritardare la
+  chiusura complessiva del mode2.
+- La dwell globale mode2 resta falsificata: spostare l'intero completion rompe
+  il tail segment-5. Qui si sposta solo il micro-ordine dei side-effect video.
+
+Effetto osservato:
+
+- Fresh f16990..f17025 step1:
+  - somma locale `11252 -> 10874`;
+  - f17009 `580 -> 227`, con `color 344 -> 0`;
+  - f17010 `584 -> 562`: il color diff viene chiuso, resta alpha transiente
+    `296` e residuo work/sprite;
+  - f17004/f17005/f17006 restano alpha/PF/color exact.
+- Dump stabilizzati segment-5 invariati:
+  - dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`: `11352`;
+  - tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: `29070`;
+  - step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+    `15727`.
+- Legacy storico senza `slapsticBank`: `144786 -> 144809`; e' un delta piccolo
+  nello stesso tratto in cui i dump fresh bank-aware sono l'oracolo primario.
+
+Falsificato e revertito nel drill:
+
+- Forzare `0x4003AE/0x4003B0` a `0x0080` nello stage 1 riduceva due byte
+  workRam, ma peggiorava sprite f17005/f17006/f17013.
+- Una vera dwell pre-particle di un vblank migliorava molto f17009/f17010, ma
+  regrediva pesantemente dense/tail segment-5 (`11352 -> 32148`,
+  `29070 -> 42317`).
+- Rimuovere il banner helper nello stage ritardato lasciava color RAM stale e
+  faceva esplodere il diff locale.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17010/f17011 hanno ancora alpha/PF/work/sprite transitori da micro-ordine
+  finale; il tail segment-5 non va mosso di fase per chiuderli.
+- f176xx resta soprattutto object/sprite/cache con PF exact.
 
 ## 2026-05-14 — Long demo segment-4 alpha clear split
 
