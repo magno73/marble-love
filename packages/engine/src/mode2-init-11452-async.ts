@@ -40,6 +40,8 @@ import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
 const MODE2_PARTICLE_RNG_CATCHUP = 47;
+// Segment 5's long rebuild exposes the upper PF half one vblank before the tail.
+const MODE0_SEG5_DEFERRED_PF_TAIL = 0x08b2;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -610,7 +612,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 91:
       if (rb(state, 0x004003e4) === 5) {
+        const deferredPlayfieldTail = state.playfieldRam.slice(MODE0_SEG5_DEFERRED_PF_TAIL);
         mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
+        state.playfieldRam.set(deferredPlayfieldTail, MODE0_SEG5_DEFERRED_PF_TAIL);
         state.colorRam.fill(0);
         ww(state, 0x004003ae, rw(state, 0x004003b0));
         state.clock.mode0Init11452Stage = as_u16(92);
@@ -620,6 +624,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 92:
+      if (rb(state, 0x004003e4) === 5) {
+        levelInit16F6C(state, rom);
+        state.clock.mode0Init11452Stage = as_u16(93);
+        return;
+      }
       if (rb(state, 0x004003e4) === 3) {
         mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
         state.colorRam.fill(0);
