@@ -52,6 +52,18 @@ import { moScreenInit1A286 } from "./mo-screen-init-1a286.js";
 import { moGridInit2404 } from "./mo-grid-init-2404.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
 
+function shouldArmLegacyAttractWarmReplay(workRam: Uint8Array): boolean {
+  return (
+    (workRam[0x3e4] ?? 0) === 1 &&
+    (workRam[0x3e2] ?? 0) === 0 &&
+    (((workRam[0x390] ?? 0) << 8) | (workRam[0x391] ?? 0)) === 1 &&
+    (((workRam[0x392] ?? 0) << 8) | (workRam[0x393] ?? 0)) === 0 &&
+    (workRam[0x13f2] ?? 0) === 0xff &&
+    (workRam[0x13f3] ?? 0) === 0xa6 &&
+    (workRam[0x6f5] ?? 0) === 0x32
+  );
+}
+
 /**
  * Inizializza color RAM con il pattern decrescente del RESET handler
  * (0x4C4..0x4DC):
@@ -217,8 +229,9 @@ export function bootInit(
     state.clock.decoderD6Init = as_u16(0);
     state.clock.decoderCallCount = as_u32(0);
     state.clock.pendingSlotArray1493C = undefined;
-    state.clock.slotArrayReplayTick = as_u16(0);
-    state.clock.warmResidualReplayTick = as_u16(0);
+    const armLegacyWarmReplay = shouldArmLegacyAttractWarmReplay(state.workRam);
+    state.clock.slotArrayReplayTick = armLegacyWarmReplay ? as_u16(0) : undefined;
+    state.clock.warmResidualReplayTick = armLegacyWarmReplay ? as_u16(0) : undefined;
     return;
   }
 
