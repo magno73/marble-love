@@ -283,12 +283,17 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   if ((r[0x3e2] ?? 0) !== 0) {
     r[0x3ae] = r[0x3b0] ?? 0;
     r[0x3af] = r[0x3b1] ?? 0;
-    particleBounce(state);
-    // 0x288EC: the IRQ4 update path also runs FUN_26F3E when the special
-    // particle layer is active; the first staged attract reset (3E4 == 1)
-    // already carries that pass in the 11452 cadence model.
-    if ((r[0x3e4] ?? 0) !== 1) {
-      lateGameLogic26F3E(state, rom);
+    if (state.clock.particleLayerDelay !== undefined && state.clock.particleLayerDelay > 0) {
+      state.clock.particleLayerDelay = as_u8(state.clock.particleLayerDelay - 1);
+      if (state.clock.particleLayerDelay === 0) state.clock.particleLayerDelay = undefined;
+    } else {
+      particleBounce(state);
+      // 0x288EC: the IRQ4 update path also runs FUN_26F3E when the special
+      // particle layer is active; the first staged attract reset (3E4 == 1)
+      // already carries that pass in the 11452 cadence model.
+      if ((r[0x3e4] ?? 0) !== 1) {
+        lateGameLogic26F3E(state, rom);
+      }
     }
   }
 

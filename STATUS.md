@@ -1,7 +1,65 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: staged 1A444 tick cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 particle cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 particle cadence
+
+Drill sul residuo sprite/workRam del segmento 5: il residuo sprite da `140B`
+era gia' presente prima degli stage tilemap del segmento 5. I tap sui particle
+slot `0x400A9C` hanno mostrato che il problema nasceva dall'init particle del
+segmento 4 (`FUN_18CD2`), non da copy/clear tardivi nel tail.
+
+Fix stabile:
+
+- Il catchup RNG pre-`particleInit18CD2` resta `47` per i segmenti esistenti,
+  ma usa `377` nel segmento 4, che produce le stesse triple particle MAME dal
+  replay f12000.
+- Dopo l'init particle del segmento 4 il layer particle viene tenuto fermo per
+  un vblank: le velocity/mode erano gia' giuste, ma TS applicava un bounce in
+  anticipo rispetto a MAME.
+- Il fix e' confinato al cadence staged (`particleLayerDelay`), senza toccare
+  la parita' pura di `FUN_18CD2`.
+
+Effetto osservato sui dump fresh/legacy rispetto al checkpoint precedente:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `12720 -> 11460`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `30672 -> 29193`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `15947 -> 15742`.
+- Legacy storico senza `slapsticBank`: `147406 -> 145116`.
+- Le prime 3 particle slot ora matchano MAME a f17600; il residuo sprite nel
+  tail scende da `140B` a circa `105B` nei campioni f17640..f17700.
+
+Falsificato e revertito nel drill:
+
+- Ritardare il bridge mode1/mode2 del segmento 4 di un vblank allinea alcuni
+  marker locali f17001..f17004, ma peggiora il segmento 5 (`fresh step10
+  15742 -> 19419`, PF diff a f17670). Non va ripreso come handoff dwell
+  globale.
+
+Drill aperto:
+
+- Il residuo sprite rimasto inizia dagli entry 6+ della pagina MO e sembra
+  coordinate/cache di un'altra emissione, non il triple-particle init.
+- f17701/f17702 mantengono residui alpha/sprite/work post-rebuild; dopo f17710
+  il tail resta soprattutto object/sprite/cache.
+- I warm seed intermedi pre-f17600 possono divergere dal path f12000 se usati
+  come base isolata; il guardrail primario per questa zona resta il replay
+  fresh bank-aware f12000.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-particle-init-18cd2-parity.ts 50` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Long demo staged 1A444 tick cadence
 

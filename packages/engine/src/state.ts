@@ -169,6 +169,11 @@ export interface TickClock {
    * FUN_11452 is still in its multi-vblank initialization body.
    */
   mode2BottomHudDelay: u8 | undefined;
+  /**
+   * One-shot hold for the special particle layer after a staged FUN_18CD2 init.
+   * Undefined during normal gameplay.
+   */
+  particleLayerDelay: u8 | undefined;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -206,7 +211,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },
