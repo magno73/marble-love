@@ -82,6 +82,14 @@ Il bug del respawn basso non era terreno/collisione: phase `0` anticipava
 extra; phase `1` termina allineata a MAME a `38/38` con target respawn
 `0x9c/0x124`.
 
+**Checkpoint live downhill respawn (2026-05-14):** il runaway sulla prima rampa
+in discesa diagonale era una sub-JSR mancante nel wrapper: `FUN_121B8` chiamava
+`FUN_25C74` senza cablare `FUN_25BAE`/sound/`FUN_15BD0`, quindi TS rimaneva in
+`obj0+0x1A=1` con target stale `0x011c/0x00c4` mentre MAME entrava in
+`state=4` e ricalcolava il respawn `0x00d4/0x005c`. Ora `helper25C74` riceve
+le callback reali/iniettate; il repro browser-like down-left da f2045 e' exact
+vs MAME fino a f2450 (`state=4`, scroll `0/0`, PF `4174` al frame critico).
+
 **Checkpoint live respawn (2026-05-14):** il post-morte non era un problema di
 input o renderer: `FUN_2591A` mancava del callee reale `FUN_262B2`, quindi il
 respawn leggeva target globals stale e poteva scrollare via il playfield.

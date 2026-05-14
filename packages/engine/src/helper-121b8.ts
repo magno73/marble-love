@@ -875,7 +875,36 @@ export function helper121B8(
         if (subs.fun_25c74 !== undefined) {
           subs.fun_25c74(state, a2, w_arg);
         } else {
-          helper25C74(state, a2, w_arg);
+          helper25C74(state, a2, w_arg, {
+            objectStateEntry25BAE: (s, objPtr, code) => {
+              if (subs.fun_25bae !== undefined) {
+                subs.fun_25bae(s, objPtr, code);
+              } else {
+                objectStateEntry25BAE(s, objPtr, code);
+              }
+            },
+            soundPair15884: (s) => {
+              if (subs.fun_15884 !== undefined) {
+                subs.fun_15884(s);
+              } else {
+                soundPair15884(s);
+              }
+            },
+            soundCommand: (cmd) => {
+              if (subs.fun_158ac !== undefined) {
+                subs.fun_158ac(state, cmd);
+              } else {
+                soundCmdSend158AC(state, cmd);
+              }
+            },
+            stateSub15BD0: (s, objPtr, arg2, arg3) => {
+              if (subs.fun_15bd0 !== undefined) {
+                subs.fun_15bd0(s, objPtr, arg2, arg3);
+              } else {
+                stateSub15BD0(s, objPtr, arg2, arg3);
+              }
+            },
+          });
         }
 
         // pea $46.l; jsr $158AC.l
