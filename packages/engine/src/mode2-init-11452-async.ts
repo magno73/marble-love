@@ -41,6 +41,7 @@ const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
 const MODE2_PARTICLE_RNG_CATCHUP = 47;
 const MODE2_SEG4_PARTICLE_RNG_CATCHUP = 377;
+const MODE2_SEG4_BONUS_BANNER_CHAIN = 0x00022c4e;
 // Segment 5's long rebuild exposes the upper PF half one vblank before the tail.
 const MODE0_SEG5_DEFERRED_PF_TAIL = 0x08b2;
 
@@ -888,6 +889,9 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
         clearPaletteRam121A6(state);
         clearPlayfieldRam12174(state);
         clearAlphaWords(state, 0, 1183);
+      } else {
+        // One-vblank bonus/time banner visible in fresh MAME at f17004.
+        stateSub2572(state, rom, MODE2_SEG4_BONUS_BANNER_CHAIN, 0x3400);
       }
       initFnPointers28580(state, rom);
       state.clock.mode2Init11452Stage = as_u8(2);
