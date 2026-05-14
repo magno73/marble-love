@@ -16,11 +16,11 @@ describe("browser input mapping", () => {
   });
 
   it("maps live screen-space controls onto direct MMIO axes", () => {
-    expect(mapLiveScreenDeltaToTrackballDelta(8, 0)).toEqual({ x: 8, y: 0 });
-    expect(mapLiveScreenDeltaToTrackballDelta(-8, 0)).toEqual({ x: -8, y: 0 });
+    expect(mapLiveScreenDeltaToTrackballDelta(8, 0)).toEqual({ x: -8, y: 0 });
+    expect(mapLiveScreenDeltaToTrackballDelta(-8, 0)).toEqual({ x: 8, y: 0 });
     expect(mapLiveScreenDeltaToTrackballDelta(0, -8)).toEqual({ x: 0, y: 8 });
     expect(mapLiveScreenDeltaToTrackballDelta(0, 8)).toEqual({ x: 0, y: -8 });
-    expect(mapLiveScreenDeltaToTrackballDelta(4, -6)).toEqual({ x: 4, y: 6 });
+    expect(mapLiveScreenDeltaToTrackballDelta(4, -6)).toEqual({ x: -4, y: 6 });
   });
 
   it("maps arcade coin/start keys separately from trackball movement", () => {

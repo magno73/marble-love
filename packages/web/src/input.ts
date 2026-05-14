@@ -12,9 +12,9 @@
  * Il replay/oracle usa questa rotazione per restare fedele al trackball MAME.
  * Per il controllo umano live invece frecce/mouse sono screen-space: destra
  * deve muovere un solo asse orizzontale, non diventare diagonale. Il browser
- * quindi integra i delta live gia' nello spazio MMIO ruotato (con Y DOM
- * invertito), mantenendo comunque valori ABSOLUTE 0..255. Questo evita il bug
- * "primo frame": cur=0 vs prev=0xff
+ * quindi integra i delta live gia' nello spazio MMIO ruotato, con X invertito
+ * rispetto al DOM e Y DOM invertito, mantenendo comunque valori ABSOLUTE
+ * 0..255. Questo evita il bug "primo frame": cur=0 vs prev=0xff
  * (seed MAME) → delta=1 → write spurious. Mantenendo cur=0xff stabile quando
  * nessun input → delta=0.
  *
@@ -56,9 +56,10 @@ export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number;
 }
 
 export function mapLiveScreenDeltaToTrackballDelta(dx: number, dy: number): { x: number; y: number } {
+  const screenX = dx | 0;
   const screenY = dy | 0;
   return {
-    x: dx | 0,
+    x: screenX === 0 ? 0 : -screenX,
     y: screenY === 0 ? 0 : -screenY,
   };
 }

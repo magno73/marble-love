@@ -25,10 +25,11 @@ diagnostici warm:
 
 - `packages/web/src/input.ts` separa ora due mapping: `rotateMarbleTrackballDelta`
   resta il helper fedele a MAME (`rawX+rawY`, `rawX-rawY`) per trace/replay,
-  mentre l'input live usa `mapLiveScreenDeltaToTrackballDelta`, cioe' assi
-  diretti screen-space (`destra -> +X`, `sinistra -> -X`, `su -> +Y`,
-  `giu' -> -Y`). Questo evita che una singola freccia diventi un movimento
-  diagonale/invertito.
+  mentre l'input live usa `mapLiveScreenDeltaToTrackballDelta`: una freccia
+  resta su un solo asse trackball, con X invertito rispetto al DOM per
+  correggere destra/sinistra visive (`destra -> -X`, `sinistra -> +X`,
+  `su -> +Y`, `giu' -> -Y`). Questo evita che una singola freccia diventi un
+  movimento diagonale/invertito.
 - In `?play=1` le frecce non controllano piu' anche lo scroll-debug della
   viewport e bloccano il default scroll del browser: diventano input trackball
   pulito. Lo scroll manuale resta attivo fuori dal play mode.
