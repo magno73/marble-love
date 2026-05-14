@@ -165,9 +165,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mode0Init11452Stage !== undefined;
-  // The third attract segment holds the mode0 refresh body for an extra
-  // staged dwell; MAME keeps obj scroll words zero until around f14950.
-  const mode0AsyncRefreshStartStage = (r[0x3e4] ?? 0) === 3 ? 95 : 65;
+  // Some attract segments hold the mode0 refresh body for an extra staged
+  // dwell; MAME keeps the presentation object frozen until the delayed 10504
+  // handoff lands.
+  const mode0Segment = r[0x3e4] ?? 0;
+  const mode0AsyncRefreshStartStage =
+    mode0Segment === 3 ? 95 :
+    mode0Segment === 5 ? 91 :
+    65;
   const mode0AsyncRefreshAtTickStart =
     state.clock.mode0Init11452Stage !== undefined &&
     state.clock.mode0Init11452Stage >= mode0AsyncRefreshStartStage &&
@@ -175,10 +180,10 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const mode0AsyncLevelFractionAtTickStart =
     mode0AsyncRefreshAtTickStart &&
     (
-      ((r[0x3e4] ?? 0) === 2 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
-      ((r[0x3e4] ?? 0) === 3 && (state.clock.mode0Init11452Stage ?? 0) > 92) ||
-      ((r[0x3e4] ?? 0) === 4 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
-      ((r[0x3e4] ?? 0) === 5 && (state.clock.mode0Init11452Stage ?? 0) > 90)
+      (mode0Segment === 2 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
+      (mode0Segment === 3 && (state.clock.mode0Init11452Stage ?? 0) > 92) ||
+      (mode0Segment === 4 && (state.clock.mode0Init11452Stage ?? 0) > 64) ||
+      (mode0Segment === 5 && (state.clock.mode0Init11452Stage ?? 0) > 90)
     );
   const mainThreadBlockedAtTickStart =
     state.clock.mode2Init11452Stage !== undefined ||

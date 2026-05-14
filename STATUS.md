@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: presentation HUD/timer render wired; alpha HUD residual nearly gone)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 refresh dwell aligned; alpha HUD residual nearly gone)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Long demo presentation HUD checkpoint
@@ -10,6 +10,12 @@ render HUD/presentation restava parziale dopo i rebuild async: TS lasciava
 stale o sotto-emessi i campi alpha prodotti da `FUN_286EE -> FUN_3520`, e il
 timer presentation `obj0+0x6A` non veniva ristabilito durante i segmenti
 mode0 lunghi.
+
+Follow-up stabile: il segmento attract 5 ora ritarda il refresh body mode0
+fino allo stage 91, come il `FUN_10504` ritardato a stage 90. Questo mantiene
+congelato l'oggetto presentation durante il dwell pre-handoff (f17680/f17690)
+invece di farlo avanzare in anticipo; il PF resta exact e la somma dei diff
+sul dump storico f12000..18000 step10 scende `160763 -> 160525`.
 
 Fix stabili:
 
@@ -23,6 +29,9 @@ Fix stabili:
 - `advanceMode0Init11452Async` ristabilisce e ridisegna il presentation timer
   `obj0+0x6A` nei segmenti 2/3/5, seguendo il countdown MAME osservato nei
   dump long-run.
+- Il gate async refresh di `mainTick` ora tratta anche il segmento 5 come
+  dwell ritardato: stage 65 resta valido per i segmenti standard, ma `3e4=5`
+  parte da stage 91.
 
 Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
 
@@ -35,6 +44,12 @@ Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
 - f14620: `total=208`, `workRam=153`, `sprRam=55`, `alpha=0`.
 - f17710: `total=289`, `workRam=180`, `sprRam=106`, `alpha=3`.
 - f18000: `total=392`, `workRam=212`, `sprRam=179`, `alpha=1`.
+
+Con il follow-up segment-5:
+
+- f17680: `total=1303 -> 1201`, `workRam=1001 -> 892`, PF resta `0`.
+- f17690: `total=2460 -> 2357`, `workRam=2315 -> 2205`, PF resta `0`.
+- f17710: `total=289 -> 287`, alpha `3 -> 0`.
 
 Verifiche:
 
