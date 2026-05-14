@@ -19,7 +19,7 @@ local FRAME_COUNT = 100
 
 local SCENARIOS = {
     { name = "level1_spawn",    frame = 13500, description = "Marble spawn, gravity starts" },
-    { name = "level1_early",    frame = 14000, description = "500 frames post-spawn, marble in motion" },
+    { name = "level1_early",    frame = 14120, description = "Stable early level 1 motion" },
     { name = "level1_midmap",   frame = 14500, description = "Marble mid-map" },
     { name = "level1_obstacle", frame = 15084, description = "Stable first obstacle warm seed" },
     { name = "level1_end",      frame = 15800, description = "Finish line approach" },
