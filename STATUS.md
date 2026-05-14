@@ -1,7 +1,61 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 MO page latch)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 AV latch carry)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 AV latch carry
+
+Drill successivo sullo stesso tail: il fix pagina MO della scene init aveva
+ridotto lo sprite residual, ma `0x4003AE/0x4003B0` restavano `0080/0080`
+per tutto il prefix del segmento 5, mentre i dump fresh MAME mostrano
+`0088/0088` da f17617 a f17701. Questo lasciava due byte workRam stabili
+fuori fase in ogni snapshot e spostava il primo post-rebuild latch.
+
+Fix stabile:
+
+- La scene init del segmento 4 lascia visibile il latch pre-toggle `0x0080`
+  invece di ripristinare il valore TS stale.
+- L'handoff al segmento 5 parcheggia `0x4003AE/0x4003B0` su `0x0088` per il
+  prefix staged.
+- Il rebuild stage91 conserva lo stesso latch high-page per il primo snapshot
+  post-`FUN_10504`, poi la normale alternanza IRQ4 riprende.
+
+Effetto osservato sui dump fresh/legacy:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `12823 -> 12751`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `30802 -> 30698`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `15960 -> 15950`.
+- Legacy storico senza `slapsticBank`: `147438 -> 147420`.
+- PF resta exact nei campioni osservati; sprite residual resta `140B`, quindi
+  il prossimo blocker non e' piu' il latch pagina ma coordinate/cache sprite e
+  scratch workRam.
+
+Falsificato nel drill:
+
+- Ritardare l'intero start mode0 segment-4 di un vblank peggiora pesantemente
+  i guardrail (`dense 12823 -> 33615`, `tail 30802 -> 44089`) e reintroduce PF
+  diff; non va ripreso come shift globale.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17640..f17700: sprite residual `140B` ora e' coordinate/cache; MAME tap
+  mostra la scene init reale a f17615, ma spostarla globalmente rompe PF.
+- f17650/f17660 restano PF-exact ma scratch/work heavy.
+- f17701/f17702 mantengono residui alpha/sprite/work post-rebuild; dopo f17710
+  il tail resta soprattutto object/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-4 MO page latch
 
@@ -15,8 +69,7 @@ scene init del segmento 4 la clear/emit path passa dalla pagina MO `+0x200`
 Fix stabile:
 
 - Durante lo stage-2 `sceneObjInit28CA6` del segmento 4, TS forza
-  temporaneamente `0x4003AE=0x0080` solo per le due chiamate `FUN_26F3E`,
-  poi ripristina il latch AV salvato.
+  temporaneamente `0x4003AE=0x0080` solo per le due chiamate `FUN_26F3E`.
 - Nessun cambio di cadence, nessun pack sintetico e nessun reset: viene
   allineata solo la pagina MO usata da quella init scene tap-driven.
 
