@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isCoinKey, isStartKey, rotateMarbleTrackballDelta } from "../src/input.js";
+import {
+  isCoinKey,
+  isStartKey,
+  mapLiveScreenDeltaToTrackballDelta,
+  rotateMarbleTrackballDelta,
+} from "../src/input.js";
 
 describe("browser input mapping", () => {
   it("rotates raw browser deltas into Marble trackball MMIO axes", () => {
@@ -8,6 +13,14 @@ describe("browser input mapping", () => {
     expect(rotateMarbleTrackballDelta(0, 8)).toEqual({ x: 8, y: -8 });
     expect(rotateMarbleTrackballDelta(-8, 0)).toEqual({ x: -8, y: -8 });
     expect(rotateMarbleTrackballDelta(4, -6)).toEqual({ x: -2, y: 10 });
+  });
+
+  it("maps live screen-space controls onto direct MMIO axes", () => {
+    expect(mapLiveScreenDeltaToTrackballDelta(8, 0)).toEqual({ x: 8, y: 0 });
+    expect(mapLiveScreenDeltaToTrackballDelta(-8, 0)).toEqual({ x: -8, y: 0 });
+    expect(mapLiveScreenDeltaToTrackballDelta(0, -8)).toEqual({ x: 0, y: 8 });
+    expect(mapLiveScreenDeltaToTrackballDelta(0, 8)).toEqual({ x: 0, y: -8 });
+    expect(mapLiveScreenDeltaToTrackballDelta(4, -6)).toEqual({ x: 4, y: 6 });
   });
 
   it("maps arcade coin/start keys separately from trackball movement", () => {

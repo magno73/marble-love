@@ -5,13 +5,16 @@
  * `processAxis` (engine/trackball-input.ts) legge come BYTE assoluto 0..255
  * con wrap-around. Il delta è ricavato 68k-side via `cur - prev` (mod 256).
  *
- * MAME ruota i due assi Marble a 45 gradi (`trakball_r`):
+ * MAME ruota i due assi fisici Marble a 45 gradi (`trakball_r`):
  *   F20000 = rawX + rawY
  *   F20002 = rawX - rawY
  *
- * Quindi il browser deve prima ruotare e poi **integrare** i delta
- * (mouse/keyboard/gamepad/touch) in un valore ABSOLUTE 0..255, non passare il
- * delta diretto. Questo evita il bug "primo frame": cur=0 vs prev=0xff
+ * Il replay/oracle usa questa rotazione per restare fedele al trackball MAME.
+ * Per il controllo umano live invece frecce/mouse sono screen-space: destra
+ * deve muovere un solo asse orizzontale, non diventare diagonale. Il browser
+ * quindi integra i delta live gia' nello spazio MMIO ruotato (con Y DOM
+ * invertito), mantenendo comunque valori ABSOLUTE 0..255. Questo evita il bug
+ * "primo frame": cur=0 vs prev=0xff
  * (seed MAME) → delta=1 → write spurious. Mantenendo cur=0xff stabile quando
  * nessun input → delta=0.
  *
@@ -52,6 +55,14 @@ export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number;
   };
 }
 
+export function mapLiveScreenDeltaToTrackballDelta(dx: number, dy: number): { x: number; y: number } {
+  const screenY = dy | 0;
+  return {
+    x: dx | 0,
+    y: screenY === 0 ? 0 : -screenY,
+  };
+}
+
 export function isCoinKey(key: string): boolean {
   return COIN_KEYS.has(key.toLowerCase());
 }
@@ -71,10 +82,10 @@ export function initInput(): InputState {
   let coinPulses = 0;
 
   const keys = new Set<string>();
-  const addP1Delta = (dx: number, dy: number): void => {
-    const rotated = rotateMarbleTrackballDelta(dx, dy);
-    p1X = (p1X + rotated.x) & 0xff;
-    p1Y = (p1Y + rotated.y) & 0xff;
+  const addP1ScreenDelta = (dx: number, dy: number): void => {
+    const mapped = mapLiveScreenDeltaToTrackballDelta(dx, dy);
+    p1X = (p1X + mapped.x) & 0xff;
+    p1Y = (p1Y + mapped.y) & 0xff;
   };
 
   window.addEventListener("keydown", (e) => {
@@ -96,7 +107,7 @@ export function initInput(): InputState {
 
   window.addEventListener("mousemove", (e) => {
     if (document.pointerLockElement) {
-      addP1Delta(e.movementX | 0, e.movementY | 0);
+      addP1ScreenDelta(e.movementX | 0, e.movementY | 0);
     }
   });
   window.addEventListener("click", () => {
@@ -111,7 +122,7 @@ export function initInput(): InputState {
   window.addEventListener("touchmove", (e) => {
     const t = e.touches[0];
     if (t && lastTouch) {
-      addP1Delta((t.clientX - lastTouch.x) | 0, (t.clientY - lastTouch.y) | 0);
+      addP1ScreenDelta((t.clientX - lastTouch.x) | 0, (t.clientY - lastTouch.y) | 0);
       lastTouch = { x: t.clientX, y: t.clientY };
     }
   });
@@ -130,7 +141,7 @@ export function initInput(): InputState {
       dx += Math.round((gp.axes[2] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
       dy += Math.round((gp.axes[3] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
     }
-    addP1Delta(dx, dy);
+    addP1ScreenDelta(dx, dy);
   }
 
   return {
