@@ -39,6 +39,7 @@ export interface InputState {
   buttons: number;
   inputMmio: number;
   consumeCoinPulses(): number;
+  consumeStartPulses(): number;
   setP1Absolute(x: number, y: number): void;
   consumeP1X(): number; // 0..255 absolute
   consumeP1Y(): number;
@@ -81,6 +82,7 @@ export function initInput(): InputState {
   let p2Y = 0xff;
   let buttons = 0;
   let coinPulses = 0;
+  let startPulses = 0;
 
   const keys = new Set<string>();
   const addP1ScreenDelta = (dx: number, dy: number): void => {
@@ -93,7 +95,10 @@ export function initInput(): InputState {
     const key = e.key.toLowerCase();
     keys.add(key);
     if (TRACKBALL_KEYS.has(key)) e.preventDefault();
-    if (isStartKey(e.key)) buttons |= 0x01;
+    if (isStartKey(e.key)) {
+      buttons |= 0x01;
+      if (!e.repeat) startPulses += 1;
+    }
     if (isCoinKey(e.key)) {
       buttons |= 0x04;
       if (!e.repeat) coinPulses += 1;
@@ -156,6 +161,11 @@ export function initInput(): InputState {
     consumeCoinPulses() {
       const out = coinPulses;
       coinPulses = 0;
+      return out;
+    },
+    consumeStartPulses() {
+      const out = startPulses;
+      startPulses = 0;
       return out;
     },
     setP1Absolute(x: number, y: number) {

@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (live input scroll override isolation)
+**Ultimo update:** 2026-05-14 (manual play dispatcher split)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Manual play dispatcher split
+
+Il path browser `?autoLoad=1&play=1` stava usando il seed oracle
+`coin_start_to_level1` preservando anche il dispatcher MAME `0x400390=1`.
+Questa scelta e' utile per drill/replay perche' mantiene la micro-cadence della
+trace, ma per il gioco umano fa sembrare il livello ancora in attract/demo e
+puo' lasciare visibili overlay/tutorial da demo dopo START.
+
+Fix:
+
+- `packages/web/src/main.ts` separa ora i due casi: il play manuale default
+  (`?autoLoad=1&play=1` o `?coinStart=1`) carica il seed gameplay ma forza il
+  dispatcher live a `0x400390/0x400391 = 0` dopo START, come nel checkpoint
+  giocabile delle 18:30.
+- Il comportamento oracle precedente resta disponibile solo con
+  `?preserveDispatcher=1`, per drill MAME/TS su `coin_start_to_level1`.
+- `packages/web/src/input.ts` rende anche START un pulse frame-safe, come il
+  coin: una pressione rapida di `Enter`/spazio non puo' piu' perdersi tra due
+  tick del browser.
+- Nessuna modifica a engine, renderer, collisioni o replay CLI.
+
+Validazione prevista: typecheck, vitest web/input, playable replay 3/3 e smoke
+browser `5` + `Enter` sul path manuale.
 
 ## 2026-05-14 — Live input scroll override isolation
 

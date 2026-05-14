@@ -39,6 +39,7 @@ const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const forceCoinStart = searchParams.get("coinStart") === "1";
+const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
@@ -366,8 +367,10 @@ async function startGame(
       browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
       console.log(`[marble-love] coin accepted, credits=${browserCoinCredits}`);
     }
+    const startPulses = inputState.consumeStartPulses();
     const startPressedThisFrame =
-      (inputButtons & 0x01) !== 0 && (previousInputButtons & 0x01) === 0;
+      startPulses > 0 ||
+      ((inputButtons & 0x01) !== 0 && (previousInputButtons & 0x01) === 0);
     previousInputButtons = inputButtons;
     if (
       useCoinStartFlow &&
@@ -378,10 +381,14 @@ async function startGame(
     ) {
       browserCoinCredits -= 1;
       bootInit(s, tickRom, { warmState: coinStartWarmState });
-      // Preserve the MAME dispatcher state in the warm playable seed. The
-      // validated coin/start windows stay in 0x400390=1 and still read live
-      // trackball MMIO; forcing state 0 made arbitrary play paths diverge
-      // from MAME scroll/respawn cadence.
+      // Human live play should leave the attract/tutorial dispatcher after
+      // START. The replay/oracle seed intentionally preserves MAME's state=1
+      // micro-cadence, but in the browser that makes manual play look like the
+      // attract demo. Keep preservation opt-in for diagnostics.
+      if (!preservePlayableDispatcher) {
+        s.workRam[0x390] = 0x00;
+        s.workRam[0x391] = 0x00;
+      }
       s.clock.mainLoopBodyTicks = wrap.as_u32(1);
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
