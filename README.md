@@ -87,6 +87,15 @@ segmenti long-demo 4/5 restano sulla cadence esistente. Playable replay 3/3,
 warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`)
 restano PASS.
 
+**Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
+simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
+playable warm. Lo scroll override resta disponibile per diagnostica con
+`?scrollOverride=1` (o senza warm-state). Questo evita un falso offset
+marble-vs-muri causato dalla camera debug mentre i replay oracle level1 restano
+PF exact: `level1_trackball_short` ha active MO-bank sprite `0` e coordinate
+`obj0` identiche 100/100, `level1_trackball_obstacle` ha coordinate `obj0`
+identiche 100/100 e worst active MO-bank sprite `9`.
+
 **Checkpoint playable scroll/MO cadence (2026-05-14):** il residuo visuale
 marble-vs-rampa non era un offset renderer ma il micro-ordine di `FUN_26D8A`:
 con trackball reale TS applicava la line update una vblank prima di MAME,

@@ -1,7 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (playable segment-3 rebuild cadence)
+**Ultimo update:** 2026-05-14 (live input scroll override isolation)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Live input scroll override isolation
+
+Root cause plausibile del residuo visuale percepito "biglia offset rispetto ai
+muri": il frontend lasciava attivo lo scroll-debug tastiera quando il percorso
+live coin/start non usava `?play=1`. In quel caso le frecce venivano consumate
+sia da `input.ts` come trackball sia da `main.ts` come override viewport,
+spostando la camera indipendentemente dal modello MAME. Questo poteva simulare
+un offset collisione/terreno pur con PF e coordinate oggetto gia' allineate nei
+replay oracle.
+
+Fix:
+
+- `packages/web/src/main.ts` disabilita lo scroll override automatico durante
+  coin/start live e seed playable warm. L'override resta disponibile solo in
+  diagnostica senza warm-state o esplicitamente con `?scrollOverride=1`.
+- Nessuna patch a motore/collisione/renderer: i replay level1 in movimento
+  restano PF exact e coordinate `obj0` exact.
+
+Validazione:
+
+- `level1_trackball_short`: PF=0, active MO-bank sprite=0 e coordinate `obj0`
+  identiche per 100/100 frame.
+- `level1_trackball_obstacle`: coordinate `obj0` identiche per 100/100 frame,
+  worst active MO-bank sprite=9, PF=0.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Playable segment-3 rebuild cadence
 

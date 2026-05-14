@@ -309,7 +309,9 @@ async function startGame(
     s.videoScrollX = ((initScrollX % 512) + 512) % 512;
     s.videoScrollY = ((initScrollY % 512) + 512) % 512;
   }
-  const scrollOverrideEnabled = !forcePlay;
+  const scrollOverrideEnabled =
+    searchParams.get("scrollOverride") === "1" ||
+    (!forcePlay && !useCoinStartFlow && !warmStateIsPlayableSeed && warmState === undefined);
   const heldKeys = new Set<string>();
   window.addEventListener("keydown", (e) => {
     if (scrollOverrideEnabled && (
