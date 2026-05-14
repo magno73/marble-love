@@ -1,7 +1,32 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (coin/playable input replay)
+**Ultimo update:** 2026-05-14 (live browser trackball wiring)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Live browser trackball wiring
+
+Goal web input completato per il path playable warm:
+
+- `packages/web/src/input.ts` ora ruota i delta browser come MAME Marble
+  (`trackballX = rawX + rawY`, `trackballY = rawX - rawY`) prima di integrarli
+  nei byte MMIO assoluti `0..255`. Questo allinea mouse, touch, WASD/frecce e
+  gamepad al comportamento visto nella trace playable (`dx=8,dy=0 -> 8/8`,
+  `dx=0,dy=8 -> 8/248`).
+- In `?play=1` le frecce non controllano piu' anche lo scroll-debug della
+  viewport e bloccano il default scroll del browser: diventano input trackball
+  pulito. Lo scroll manuale resta attivo fuori dal play mode.
+- `packages/web/src/main.ts` passa anche `inputMmio` a `tick()`, derivato dai
+  pulsanti browser con START1 active-low su bit 0 (`Enter`/spazio). Il path
+  coin-credit completo da reset resta debito sound/main CPU separato, ma il
+  main gate ora riceve il byte switch corretto quando il runtime lo usa.
+- Aggiunto `packages/web/test/input.test.ts` per bloccare la rotazione 45 gradi.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Coin/start + playable input replay
 
