@@ -46,6 +46,10 @@ function signedLong(value: number): number {
   return value | 0;
 }
 
+function readWordBE(bytes: Uint8Array, off: number): number {
+  return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
+}
+
 function loadPlayableState(rom: ReturnType<typeof emptyRomImage>): GameState {
   const seed = JSON.parse(
     readFileSync(resolve("packages/web/public/scenarios/playable/manual_level1_start.seed.json"), "utf-8"),
@@ -169,5 +173,54 @@ describe("playable live route smoke", () => {
     }
     expect(sawExpectedState).toBe(true);
     expect(state.workRam[0x18 + 0x1a]).not.toBe(1);
+  });
+
+  it("time-out transition rebuilds the playfield instead of staying empty", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+
+    const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let emptyStart = -1;
+    let emptyEnd = -1;
+    let recoveredAt = -1;
+    let sawTimedMode2 = false;
+    let sawMode0Rebuild = false;
+
+    for (let i = 0; i < 4320; i++) {
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      const pfCount = nonzero(state.playfieldRam);
+      const mainState = readWordBE(state.workRam, 0x390);
+      const mode = readWordBE(state.workRam, 0x392);
+      sawTimedMode2 ||= mainState === 1 && mode === 2;
+      sawMode0Rebuild ||= mainState === 1 && mode === 0;
+
+      if (pfCount === 0) {
+        if (emptyStart < 0) emptyStart = i;
+        emptyEnd = i;
+      } else if (emptyStart >= 0 && recoveredAt < 0 && pfCount > 4000) {
+        recoveredAt = i;
+      }
+    }
+
+    expect(sawTimedMode2).toBe(true);
+    expect(sawMode0Rebuild).toBe(true);
+    expect(emptyStart).toBeGreaterThanOrEqual(0);
+    expect(emptyEnd - emptyStart).toBeLessThanOrEqual(16);
+    expect(recoveredAt).toBeGreaterThan(emptyEnd);
+    expect(recoveredAt).toBeLessThanOrEqual(4320);
+    expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
+    expect(state.videoScrollY).toBeLessThanOrEqual(5);
+    expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
 });
