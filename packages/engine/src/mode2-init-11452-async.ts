@@ -141,9 +141,17 @@ function updateMode0PresentationTimer(state: GameState, rom: RomImage, stage: nu
   renderMode0PresentationTimer(state, rom);
 }
 
-function rebuildMode0LevelPrefix(state: GameState, rom: RomImage, chunks: number): void {
+function rebuildMode0LevelPrefix(
+  state: GameState,
+  rom: RomImage,
+  chunks: number,
+  options?: { preserveFinalScratch?: boolean },
+): void {
   levelDispatcher16EC6(state, rom, { fun_1a444: () => undefined });
-  buildTilemapRows1A444(state, rom, undefined, { maxOuterChunks: chunks });
+  buildTilemapRows1A444(state, rom, undefined, {
+    maxOuterChunks: chunks,
+    preserveFinalScratch: options?.preserveFinalScratch === true || rb(state, 0x004003e4) === 5,
+  });
 }
 
 function decodeMode0LevelRowsPrefix(state: GameState, rom: RomImage, rows: number): void {
@@ -282,7 +290,7 @@ function advanceMode0Segment5TilemapScratchPhase(state: GameState, rom: RomImage
   if (rb(state, 0x004003e4) !== 5) return false;
 
   if (stage === 24) {
-    rebuildMode0LevelPrefix(state, rom, 2);
+    rebuildMode0LevelPrefix(state, rom, 2, { preserveFinalScratch: true });
     state.clock.mode0Init11452Stage = as_u16(25);
     return true;
   }
@@ -300,8 +308,8 @@ function advanceMode0Segment5TilemapScratchPhase(state: GameState, rom: RomImage
   }
 
   if (stage >= 38 && stage <= 59) {
-    if (stage === 39) rebuildMode0LevelPrefix(state, rom, 3);
-    if (stage === 49) rebuildMode0LevelPrefix(state, rom, 4);
+    if (stage === 39) rebuildMode0LevelPrefix(state, rom, 3, { preserveFinalScratch: true });
+    if (stage === 49) rebuildMode0LevelPrefix(state, rom, 4, { preserveFinalScratch: true });
 
     const chunk2Phase = MODE0_SEG5_CHUNK2_PHASES.get(stage);
     if (chunk2Phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 2, chunk2Phase);
@@ -324,7 +332,7 @@ function advanceMode0Segment5TilemapScratchPhase(state: GameState, rom: RomImage
   }
 
   if (stage >= 68 && stage <= 74) {
-    if (stage === 68) rebuildMode0LevelPrefix(state, rom, 8);
+    if (stage === 68) rebuildMode0LevelPrefix(state, rom, 8, { preserveFinalScratch: true });
     const phase = MODE0_SEG5_CHUNK6_PHASES.get(stage);
     if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 6, phase);
     state.clock.mode0Init11452Stage = as_u16(stage + 1);
@@ -631,7 +639,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 60:
       if (rb(state, 0x004003e4) === 5) {
-        rebuildMode0LevelPrefix(state, rom, 5);
+        rebuildMode0LevelPrefix(state, rom, 5, { preserveFinalScratch: true });
         buildTilemapRows1A444ChunkPhase(state, rom, 5, { ad54Count: 52, aa38Count: 0 });
         state.clock.mode0Init11452Stage = as_u16(61);
         return;
@@ -669,7 +677,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         return;
       }
       if (rb(state, 0x004003e4) === 5) {
-        rebuildMode0LevelPrefix(state, rom, 8);
+        rebuildMode0LevelPrefix(state, rom, 8, { preserveFinalScratch: true });
         state.clock.mode0Init11452Stage = as_u16(69);
         return;
       }

@@ -121,7 +121,7 @@ export function buildTilemapRows1A444(
   state: GameState,
   rom: RomImage,
   subs?: TilemapRowBuild1A444Subs,
-  options?: { maxOuterChunks?: number },
+  options?: { maxOuterChunks?: number; preserveFinalScratch?: boolean },
 ): void {
   const fun2ffb8 = subs?.fun_2ffb8 ?? ((argLong: number): void => { levelHelper2FFB8(rom, argLong); });
   const stateStruct = readU32(state, STATE_PTR_OFF);
@@ -213,8 +213,12 @@ export function buildTilemapRows1A444(
     if ((lastWord & 0xffff) === 0xffff) break;
   }
 
-  const clearLongs = Math.trunc((0x00401c48 - SCRATCH_BASE) / 4);
-  for (let i = 0; i < clearLongs; i++) writeU32(state, SCRATCH_BASE_OFF + i * 4, 0);
+  // Prefix/staged callers can stop mid-FUN_1A444; the real final scratch clear
+  // has not happened yet in those snapshots.
+  if (options?.preserveFinalScratch !== true) {
+    const clearLongs = Math.trunc((0x00401c48 - SCRATCH_BASE) / 4);
+    for (let i = 0; i < clearLongs; i++) writeU32(state, SCRATCH_BASE_OFF + i * 4, 0);
+  }
 }
 
 export function buildTilemapRows1A444ChunkPhase(
