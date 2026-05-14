@@ -1,7 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (FUN_1B5C2 signed gates)
+**Ultimo update:** 2026-05-15 (playable QA guard refresh)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable QA guard refresh
+
+Follow-up QA notturno dopo `FUN_1B5C2`: il vecchio regression test del respawn
+basso usava una traiettoria che, dopo il fix fisica/bridge, non entrava piu'
+nello stato `obj0+0x1A=1`. Il percorso non era piu' un bug runtime, ma una
+guardia fragile.
+
+Fix:
+
+- `packages/engine/test/playable-respawn-state1.test.ts` usa ora una rotta
+  deterministica aggiornata (`D/R/L/DL/N/U/U/N`) che attraversa davvero lo
+  stato `1` per 78 frame e poi rientra in `state 0`.
+- Le asserzioni sono state aggiornate sul nuovo target stabile MAME-like
+  (`244,268`), scrollY `<=90`, e playfield ancora popolato.
+
+QA extra:
+
+- Simulazioni lunghe TS manual-like su lower bridge, worms, prima rampa e input
+  pseudo-random non hanno riprodotto scroll runaway: PF resta popolato e lo
+  scroll non scappa.
+- Cattura MAME temporanea `/tmp/marble_qa_playable_scenarios` con finestre
+  f2440/f2600/f3000/f3400/f4200: i warm seed f3000 e f4200 restano sani sotto
+  soglia; i seed presi nel mezzo delle transizioni sono attesi fragili come
+  warm-start autonomi perche' manca il contesto async/cadence precedente.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/state-sub-1b5c2.test.ts packages/engine/test/playable-respawn-state1.test.ts --reporter=basic` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — FUN_1B5C2 signed gates
 
