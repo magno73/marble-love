@@ -206,4 +206,54 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect(changed).toEqual([frameCtrOff()]);
     expect(state.workRam[frameCtrOff()]).toBe(2);
   });
+
+  it("models FUN_253EC state 7 as a settle-only object path", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const obj = 0x18;
+
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 7;
+    state.workRam[obj + 0x1b] = 0x34;
+    state.workRam[obj + 0x1c] = 0x55;
+    state.workRam[obj + 0x36] = 0;
+
+    state.workRam[obj + 0x0c] = 0x00;
+    state.workRam[obj + 0x0d] = 0x90;
+    state.workRam[obj + 0x0e] = 0x00;
+    state.workRam[obj + 0x0f] = 0x00;
+    state.workRam[obj + 0x10] = 0x00;
+    state.workRam[obj + 0x11] = 0x50;
+    state.workRam[obj + 0x12] = 0x00;
+    state.workRam[obj + 0x13] = 0x00;
+    state.workRam[obj + 0x14] = 0x12;
+    state.workRam[obj + 0x15] = 0x34;
+    state.workRam[obj + 0x16] = 0x56;
+    state.workRam[obj + 0x17] = 0x78;
+
+    refreshFrame10FCE(state, rom, {
+      fun13EE6: () => undefined,
+      processAllSprites189E2: () => undefined,
+      objectUpdatePair158CC: () => undefined,
+      slotArrayTick1493C: () => undefined,
+      dispatchStrings17230: () => undefined,
+      fun1912C: () => undefined,
+      stateSub19BAA: () => undefined,
+      stateSub1844A: () => undefined,
+      stateDispatch12FD0: () => undefined,
+      objDirtyDispatch28624: () => undefined,
+    });
+
+    expect(state.workRam[obj + 0x1a]).toBe(7);
+    expect(state.workRam[obj + 0x1c]).toBe(0);
+    expect(state.workRam[obj + 0x1d]).toBe(0x34);
+    expect(state.workRam[obj + 0x2a]).toBe(0x12);
+    expect(state.workRam[obj + 0x2b]).toBe(0x34);
+    expect(state.workRam[obj + 0x2c]).toBe(0x56);
+    expect(state.workRam[obj + 0x2d]).toBe(0x78);
+    expect((state.workRam[obj + 0x32] << 8) | state.workRam[obj + 0x33]).toBe(0x12);
+    expect((state.workRam[obj + 0x34] << 8) | state.workRam[obj + 0x35]).toBe(0x0a);
+  });
 });

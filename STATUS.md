@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (lower-platform state-1 respawn)
+**Ultimo update:** 2026-05-14 (FUN_253EC state-7 settle)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — FUN_253EC state-7 settle
+
+Overnight gameplay QA sul path lower-platform/bridge ha evidenziato un altro
+entry reale non modellato nel dispatcher `FUN_253EC`: il jump-table `JT[7]`
+(`obj+0x1A=7`) e' uno stato transitorio di settle, non un normale movimento.
+
+Root cause:
+
+- Il disasm MAME/Ghidra a `0x25812` fa solo `FUN_253BC(obj)` e poi
+  `clr.b (0x1C,A2)`.
+- TS cadeva nel fallback generico `FUN_253BC + FUN_17F66`, quindi un oggetto in
+  state 7 poteva continuare a integrare waypoint/movimento durante un frame in
+  cui MAME lo lascia fermo e azzera `obj+0x1C`.
+- Questo non sostituisce il drill ancora aperto sul ponte/mobile collision:
+  rimuove un errore reale del dispatcher che puo' amplificare drift nei path di
+  morte/carry/bridge.
+
+Fix:
+
+- `packages/engine/src/refresh-frame-10fce.ts` replica `JT[7]` come path
+  settle-only: `FUN_253BC`, clear `obj+0x1C`, return.
+- `packages/engine/test/refresh-frame-10fce.test.ts` aggiunge un regression
+  test che verifica il clear di `+0x1C` e i side-effect derivati di
+  `FUN_253BC`, senza far avanzare `FUN_17F66`.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts packages/engine/test/playable-respawn-state1.test.ts packages/engine/test/refresh-frame-10fce.test.ts` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `probe-scenario-diff.ts` resta PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 no-stack invariato:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `15275 <= 16000`.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Lower-platform state-1 respawn
 
