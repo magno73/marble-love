@@ -47,7 +47,9 @@ interface DiffEntry {
 }
 
 const scenarioPath = process.argv[2];
-const inputPath = process.argv[3] ?? "oracle/scenarios/input/demo_attract.json";
+const defaultInputPath = process.env.REPLAY_PROBE_DEFAULT_INPUT ?? "oracle/scenarios/input/demo_attract.json";
+const replayProbeLabel = process.env.REPLAY_PROBE_LABEL ?? "Demo replay";
+const inputPath = process.argv[3] ?? defaultInputPath;
 if (scenarioPath === undefined) {
   console.error(
     "Usage: npx tsx packages/cli/src/probe-demo-replay.ts " +
@@ -307,7 +309,7 @@ const first60Pass = first60.length >= 60 && first60.every(frameWithinThreshold);
 const bestStreak = longestPassingStreak(best.diffs);
 const scenarioPass = bestStreak >= 60;
 
-console.log(`Demo replay ${scenarioName}: ${oracleFrames} frame oracle (seed MAME f${seedFrame})`);
+console.log(`${replayProbeLabel} ${scenarioName}: ${oracleFrames} frame oracle (seed MAME f${seedFrame})`);
 console.log(`  Input trace: ${trace.name} f${trace.startFrame}..f${trace.endFrame}`);
 console.log(`  Main-loop phase: ${best.phase}${phaseCandidates.length > 1 ? " (auto-selected)" : ""}`);
 
