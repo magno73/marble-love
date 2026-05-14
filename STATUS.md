@@ -15,8 +15,11 @@ l'altezza dello sprite.
 
 Fix:
 
-- `packages/web/src/renderer.ts` ora disegna gli sprite indirect con
-  `drawX = xRaw` e `drawY = -yRaw - 256 - heightPx`, senza offset empirici.
+- `packages/web/src/renderer.ts` ora disegna gli sprite reali/MAME con
+  `drawX = xRaw` e `drawY = -yRaw - 256 - heightPx`, senza offset empirici,
+  sia nel path indirect bitmap sia nel fallback Pixi diretto.
+- Le fixture diagnostiche screen-space (`rom-backed-demo`) restano escluse
+  dalla trasformazione MAME, quindi non vengono riposizionate come MO raw.
 - Nessuna patch a collisioni, scroll o terrain: il fix e' nel punto giusto,
   cioe' nella trasformazione video MO -> schermo.
 
@@ -31,7 +34,7 @@ Validazione:
 - Browser visual check su
   `?autoLoad=1&playableSeed=level1_trackball_short&real=1&indirect=1`.
 - `npx tsc -b --pretty false` PASS.
-- `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
 - `probe-playable-replay.ts` PASS sui tre scenari playable (`80/100`,
   `100/100`, `82/100`).
 - `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.

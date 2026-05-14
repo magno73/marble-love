@@ -76,6 +76,33 @@ function exactPaletteLookup(frame: Frame, paletteIndex: number): RgbaColor | und
   return frame.palette.find((entry) => entry.index === paletteIndex)?.rgba;
 }
 
+function usesMameMotionObjectCoordinates(frame: Frame, sprite: renderNs.SpriteCommand): boolean {
+  return (
+    frame.debugLabel !== "rom-backed-demo" &&
+    sprite.gfxBank !== undefined &&
+    sprite.bitsPerPixel !== undefined
+  );
+}
+
+function motionObjectScreenPosition(
+  frame: Frame,
+  sprite: renderNs.SpriteCommand,
+  height: number,
+): { x: number; y: number } {
+  if (!usesMameMotionObjectCoordinates(frame, sprite)) {
+    return { x: sprite.x, y: sprite.y };
+  }
+
+  // MAME `atarimo.cpp::render_object`:
+  //   xpos = xRaw + xoffset - xscroll
+  //   ypos = -yRaw - yscroll - heightPx
+  // System 1 sets yscroll=256 and never sets an MO xoffset.
+  return {
+    x: sprite.x & 0x1ff,
+    y: (-sprite.y - 256 - height) & 0x1ff,
+  };
+}
+
 function applyViewportScale(app: Application, viewport: Container, frame: Frame): void {
   const screenWidth = app.renderer.width;
   const screenHeight = app.renderer.height;
@@ -339,8 +366,13 @@ function drawSprites(
     if (texture !== undefined && texture !== Texture.EMPTY) {
       const pixiSprite = acquireMotionSprite(layers, assets);
       pixiSprite.texture = texture;
-      pixiSprite.x = sprite.x;
-      pixiSprite.y = sprite.y;
+      const pos = motionObjectScreenPosition(
+        frame,
+        sprite,
+        sprite.height ?? texture.height,
+      );
+      pixiSprite.x = pos.x;
+      pixiSprite.y = pos.y;
       pixiSprite.scale.set(1);
       pixiSprite.alpha = sprite.translucent === true ? 0.65 : 1;
       continue;
@@ -352,8 +384,9 @@ function drawSprites(
     const alpha = sprite.translucent
       ? alphaFromRgba(color) * 0.65
       : alphaFromRgba(color);
-    const x = sprite.flipX ? sprite.x - 1 : sprite.x;
-    const y = sprite.flipY ? sprite.y - 1 : sprite.y;
+    const pos = motionObjectScreenPosition(frame, sprite, height);
+    const x = sprite.flipX ? pos.x - 1 : pos.x;
+    const y = sprite.flipY ? pos.y - 1 : pos.y;
 
     if (sprite.spriteIndex === 0) {
       const radius = Math.min(width, height) / 2;
@@ -635,18 +668,13 @@ function renderIndirectViewport(
   }
 
   // ─── MO bitmap: render gli SpriteCommand ────────────────────────────────
-  // MAME `atarimo.cpp::render_object`:
-  //   xpos = xRaw + xoffset - xscroll
-  //   ypos = -yRaw - yscroll - heightPx
-  // System 1 sets yscroll=256 and never sets an MO xoffset.
-  const MO_YSCROLL = 256;
-  const MO_XOFFSET = 0;
   for (const sprite of frame.sprites) {
     if (sprite.gfxBank === undefined || sprite.bitsPerPixel === undefined) continue;
     const w = sprite.width ?? 8;
     const h = sprite.height ?? 8;
-    const drawX = (sprite.x + MO_XOFFSET) & 0x1ff;
-    const drawY = (-sprite.y - MO_YSCROLL - h) & 0x1ff;
+    const pos = motionObjectScreenPosition(frame, sprite, h);
+    const drawX = pos.x;
+    const drawY = pos.y;
     if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
 
     // sprite.paletteIndex già contiene "color macro" base (= 0x40+color in TS attuale)
