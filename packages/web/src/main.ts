@@ -376,12 +376,10 @@ async function startGame(
     ) {
       browserCoinCredits -= 1;
       bootInit(s, tickRom, { warmState: coinStartWarmState });
-      // Warm playable oracle states are captured from attract/demo playback
-      // (0x400390=1). For live manual play, leave the validated RAM snapshot
-      // intact but switch the dispatcher out of attract so FUN_25DF6 applies
-      // trackball deltas to obj0.
-      s.workRam[0x390] = 0x00;
-      s.workRam[0x391] = 0x00;
+      // Preserve the MAME dispatcher state in the warm playable seed. The
+      // validated coin/start windows stay in 0x400390=1 and still read live
+      // trackball MMIO; forcing state 0 made arbitrary play paths diverge
+      // from MAME scroll/respawn cadence.
       s.clock.mainLoopBodyTicks = wrap.as_u32(1);
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
