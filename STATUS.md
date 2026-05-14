@@ -1,7 +1,40 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (playable tutorial overlay scheduler)
+**Ultimo update:** 2026-05-14 (playable scroll/MO cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Playable scroll/MO cadence
+
+Root cause del residuo sprite tardo su contatto/rampa live: non era offset
+renderer, ma micro-ordine di `FUN_26D8A` durante gameplay con trackball reale.
+Nei frame `level1_trackball_obstacle` f2393/f2395/... TS applicava subito la
+scroll/MO line update e scriveva word0 degli sprite attivi un pixel piu' avanti;
+MAME espone quello stesso side effect al frame successivo. Esempio f2403:
+obj0/proiezione erano gia' allineati, ma tutte le entry MO attive TS avevano
+word0 `+0x20` rispetto a MAME.
+
+Fix:
+
+- `main-tick.ts` ora differisce di una vblank `FUN_26D8A` solo nel segmento
+  gameplay live (`0x4003E4 == 2`) quando c'e' movimento trackball P1 reale.
+- Attract/presentation e warm static restano sulla cadence immediata gia'
+  validata dal long demo.
+- `state.clock.pendingPfScrollUpdate` traccia il side effect pendente senza
+  alterare renderer, collisioni o stato oggetto.
+
+Validazione:
+
+- `level1_trackball_obstacle`: PASS passa da `82/100` a `100/100`; f+83
+  sprite scende `56 -> 42` e PF/HUD restano sotto soglia.
+- `level1_trackball_short`: resta PASS `100/100`.
+- `coin_start_to_level1`: resta PASS `80/100`.
+- `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 no-stack resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `15275 <= 16000`.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Playable tutorial overlay scheduler
 
