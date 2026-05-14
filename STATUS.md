@@ -1,7 +1,41 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: staged 1A444 slapstic helper cadence)
+**Ultimo update:** 2026-05-14 (long demo: bank-aware segment-5 rebuild delay)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo bank-aware segment-5 rebuild delay
+
+Dopo il ripristino dei side-effect `FUN_2FFB8` nelle phase staged, la vecchia
+ipotesi "segment 5 rebuild one frame later" e' stata ritestata su dump fresh
+bank-aware. Prima era stata scartata perche' peggiorava lo storico senza
+`slapsticBank`; con l'oracolo fresh il problema reale e' chiaro: TS completava
+il rebuild `FUN_10504` a f17700, mentre MAME lascia invariata la PF fino a
+f17700 e cambia progressivamente a f17701/f17702.
+
+Fix stabile:
+
+- Segmento 5: stage 90 ora e' un dwell; `mainLoopInit10504(...,
+  runPresentationMiddle)` viene eseguita a stage 91.
+- Nessun `loopReset` e nessun pack finto: il clear stage83 resta quello del
+  checkpoint precedente.
+
+Effetto osservato:
+
+- Fresh step1 `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `57365 -> 55914`; f17700 `total=1970 -> 579`, `pf=1517 -> 0`.
+- Fresh step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `20154 -> 18889`; f17700 `total=1970 -> 579`, `pf=1517 -> 0`; PF resta exact
+  da f17710 a f18000.
+- Storico `/tmp/mame_demo_12000_18000_step10.json` peggiora
+  `141790 -> 143463`, concentrato a f17700 (`pf=1517`). Questo dump non
+  contiene `slapsticBank` e diverge proprio in questa transizione; resta utile
+  come cross-check generale, ma non come veto per il tail f17700.
+
+Drill aperto:
+
+- f17693 fresh resta il picco maggiore (`total=2378`, `workRam=2226`).
+- Dopo f17710 il residuo fresh e' principalmente workRam/sprite/cache
+  350-520B per campione, con PF exact.
 
 ## 2026-05-14 — Long demo staged 1A444 slapstic helper checkpoint
 

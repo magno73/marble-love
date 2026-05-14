@@ -594,13 +594,21 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 90:
       if (rb(state, 0x004003e4) === 5) {
-        mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
-        state.colorRam.fill(0);
-        ww(state, 0x004003ae, rw(state, 0x004003b0));
         state.clock.mode0Init11452Stage = as_u16(91);
         return;
       }
       state.clock.mode0Init11452Stage = as_u16(91);
+      return;
+
+    case 91:
+      if (rb(state, 0x004003e4) === 5) {
+        mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
+        state.colorRam.fill(0);
+        ww(state, 0x004003ae, rw(state, 0x004003b0));
+        state.clock.mode0Init11452Stage = as_u16(92);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(92);
       return;
 
     case 92:
