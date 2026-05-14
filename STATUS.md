@@ -3,6 +3,43 @@
 **Ultimo update:** 2026-05-14 (browser live controls)
 **Branch corrente:** `feature/visual-pixel-match`.
 
+## 2026-05-14 — Live downhill death respawn
+
+Root cause del runaway sulla prima rampa in discesa diagonale: `FUN_121B8`
+entrava correttamente nel ramo bounce/reached-target e chiamava `FUN_25C74`,
+ma il wrapper TS lo invocava senza cablare le sue sub-JSR reali. In quel caso
+`FUN_25C74` scriveva `obj0+0x1A=1` e `obj0+0x57=0x64`, ma la successiva
+transizione `FUN_25BAE(obj0, 4)` restava no-op. MAME invece entra nello stato
+4 di morte/respawn, ricalcola il target a `212/92` e lascia lo scroll fermo;
+TS rimaneva nello stato 1 con target stale `284/196`, facendo scendere la
+camera e ricostruendo righe PF fuori contesto.
+
+Fix:
+
+- `packages/engine/src/helper-121b8.ts` passa a `helper25C74` le callback
+  reali/iniettate `objectStateEntry25BAE`, `soundPair15884`, `soundCmdSend158AC`
+  e `stateSub15BD0`.
+- Nessuna patch a renderer/camera/collisioni: il ramo motore ora segue la
+  catena MAME quando `FUN_25C74` decide una transizione di stato.
+
+Validazione:
+
+- Repro browser-like `down-left` da seed f2045: TS e MAME coincidono fino a
+  f2450; al frame critico f2344 entrambi hanno `objType=4`, target `212/92`,
+  scroll `0/0`, PF nonzero `4174`.
+- Scan direzioni live 1000 frame: il caso `down-left` non supera piu' scroll Y
+  `0` e alterna correttamente `state 0 -> 4 -> 0`; il caso `down` resta
+  allineato al respawn basso `38/38`.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts` PASS.
+- `test-helper-25c74-parity.ts 100` PASS; `test-helper-121b8-parity.ts 100` PASS.
+- `probe-playable-replay.ts` PASS sui tre scenari playable (`80/100`,
+  `100/100`, `82/100`).
+- `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 invariant: `15727 <= 16000`.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
+
 ## 2026-05-14 — Live playable phase alignment
 
 Root cause del respawn basso che scrollava via il terreno: dopo START il
