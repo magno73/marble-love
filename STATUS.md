@@ -1,7 +1,62 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 presentation timer)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 video clear cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 video clear cadence
+
+Drill sul transition mode2 del segmento 4: TS cancellava PF/palette/alpha in
+blocco appena entrava nello stage 1, mentre MAME espone ancora il PF/palette a
+f17004, cancella PF+palette a f17005 e cancella alpha entro f17006.
+
+Fix stabile:
+
+- `advanceMode2Init11452Async` ora spezza solo per attract segment `4` il clear
+  video in tre vblank:
+  - stage 1: `initFnPointers28580` senza clear video;
+  - stage 2: `clearPaletteRam121A6` + `clearPlayfieldRam12174`;
+  - stage 3: clear alpha completo.
+- Nessuna dwell globale mode2: particle/finalize/rebuild cadence restano quelli
+  gia' validati.
+
+Effetto osservato:
+
+- Fresh f16990..f17025 step1:
+  - somma locale `18536 -> 11568`;
+  - f17004 `7213 -> 295`, con PF `6393 -> 0` e color `344 -> 0`;
+  - f17005 `478 -> 428`;
+  - f17013 invariato `180`.
+- Dump stabilizzati segment-5 invariati:
+  - dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`: `11352`;
+  - tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: `29070`;
+  - step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+    `15727`;
+  - legacy storico `/tmp/mame_demo_12000_18000_step10.json`: `144786`.
+
+Falsificato e revertito nel drill:
+
+- Una dwell mode2 globale per il segmento 4 allineava meglio f17004 ma rompeva
+  il tail segment-5 (`dense 11352 -> 32652`, PF diff a f17670). Non va
+  ripresa.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17004/f17005 restano con residui alpha/sprite/work: MAME disegna testi
+  alpha transienti (`BONUS FOR`, `REMAINING`) che TS non riproduce ancora in
+  quella micro-finestra.
+- Il residuo sprite/workRam post f17013 e f176xx resta la prossima area:
+  pagina MO/cache e scratch, non PF.
 
 ## 2026-05-14 — Long demo segment-4 presentation timer
 

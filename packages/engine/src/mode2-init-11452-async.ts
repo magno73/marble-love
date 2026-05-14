@@ -884,19 +884,27 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 1:
-      clearPaletteRam121A6(state);
-      clearPlayfieldRam12174(state);
-      clearAlphaWords(state, 0, 1183);
+      if (rb(state, 0x004003e4) !== 4) {
+        clearPaletteRam121A6(state);
+        clearPlayfieldRam12174(state);
+        clearAlphaWords(state, 0, 1183);
+      }
       initFnPointers28580(state, rom);
       state.clock.mode2Init11452Stage = as_u8(2);
       return;
 
     case 2:
-      clearAlphaWords(state, 1183, 0x780);
+      if (rb(state, 0x004003e4) === 4) {
+        clearPaletteRam121A6(state);
+        clearPlayfieldRam12174(state);
+      } else {
+        clearAlphaWords(state, 1183, 0x780);
+      }
       state.clock.mode2Init11452Stage = as_u8(3);
       return;
 
     case 3:
+      if (rb(state, 0x004003e4) === 4) clearAlphaWords(state, 0, 0x780);
       state.clock.mode2Init11452Stage = as_u8(stage + 1);
       return;
 
