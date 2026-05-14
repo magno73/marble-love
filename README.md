@@ -30,7 +30,21 @@ streak da 77 frame e initial-60 puliti.
 Il replay warm legacy f12000 (`slotArrayReplayTick`/`warmResidualReplayTick`) e'
 ora confinato al seed attract storico che lo richiede, quindi i seed gameplay
 non ereditano piu' rumore HUD/workRam del long-demo bridge. Lo step10 fresh
-long demo resta sotto guardrail (`15722 <= 16000` con il checker no-stack corrente).
+long demo resta sotto guardrail (`15727 <= 16000` con il checker no-stack corrente).
+
+**Checkpoint input replay (2026-05-14):** aggiunto il replay MMIO input del demo
+attract. `docs/input-mmio-map.md` documenta `F20001/03/05/07` trackball
+ruotato, `F60001` switch low byte, ADC `F400xx` non usato e coin sul 6502.
+`oracle/mame_demo_input_tap.lua` cattura `oracle/scenarios/input/demo_attract.json`
+su `f9700..f21900` (`12201` frame, SHA-256
+`5570b1d5bbf9628760d44f2888cc8e5878fc96d200ee5da5d8ddfe236eea87a6`).
+Finding: nelle warm windows attract MAME non legge i MMIO input esterni
+tap-ati; la trace quindi mantiene default stabili trackball `0xff`, switch
+`0x6f`, buttons `0`. Nuovo engine `packages/engine/src/input-replay.ts`, smoke
+`packages/engine/test/input-replay-smoke.test.ts` e probe
+`packages/cli/src/probe-demo-replay.ts`: replay PASS sui 5 scenari minimi
+richiesti (`intro_overlay`, `level1_spawn`, `level1_midmap`,
+`level1_obstacle`, `level2_early`) e su tutta la suite 15/15.
 
 ## Metriche progetto
 
@@ -47,6 +61,7 @@ long demo resta sotto guardrail (`15722 <= 16000` con il checker no-stack corren
 | **Demo gameplay marble visivo** | 🟡 warm demo stabile e animato con `?mameLive=1&play=1`; raw long-run `loopReset=0` avanza oltre i primi secondi ma resta WIP |
 | **Long demo oracle f12000..18000** | 🟡 checkpoint 2026-05-14: `npx tsc -b` PASS; playfield exact fino a f18000 nelle finestre chiave storiche dopo `FUN_1AD54 -> FUN_2BC5C -> FUN_2FF40` slapstic prefetch side-effect, fix A3/A4 `FUN_160F6`, wiring HUD/banner di `FUN_10504`, `FUN_253EC` JT[4] eaten-orbit e `FUN_29CCE` tag `0x1f` side-wall bounce; rebuild chunk cadence staged e mode0 `FUN_10504` ritardato per segmenti 3/5 (f14600/f17680 PF/alpha/color non piu' anticipati); mode0→mode1→mode2 handoff riallineato anche nel secondo cycle f15367..f15379; dwell `390=1/392=2/3e4=3` protegge `gameTickTimers` dal falso reset; il refresh body del segmento 5 ora parte a stage 91, mantenendo fermo l'oggetto presentation pre-handoff; `FUN_15A12` object-pair spawn + `FUN_1BC88 -> FUN_160D4` allineano il bounce f14858 (`obj0` e `0x400A20` exact fino a f14900); `FUN_286EE -> FUN_3520` e timer presentation riducono alpha HUD a 0 nei campioni f12950/f13200/f13400/f13920/f14620; scratch/phase `FUN_1A444` descriptor-backed migliora la somma campionata `157172 -> 150186`, l'ultimo rotate `FUN_1C014` del bridge segment-3 la porta a `146650`, chunk7 scratch-only segment-5 la porta a `145902`, i side-effect `FUN_2FFB8` nelle phase staged la portano a `141790`, il rebuild segment-5 stage91 riduce il fresh bank-aware tail `58208 -> 57365 -> 55914`, lo scratch clear stage84 lo porta a `53820`, il rebuild PF segment-5 parziale lo porta a `53055` con f17701 PF `765 -> 0`, il prefix cadence segment-5 lo porta a `49288`, le phase scratch-only segment-5 chunk2..6 lo portano a `33516`, il chunk2 snapshot delay riduce il dense f17640..f17675 `16598 -> 14731`, la cadence HUD/counter segment-5 riduce tail `32891 -> 32604` e step10 `16523 -> 16309` chiudendo alpha f17700 `204 -> 0`, la preservazione scratch mid-`FUN_1A444` del segmento 5 riduce dense `14659 -> 13327`, tail `32604 -> 31346`, step10 `16309 -> 16161`, il latch pagina MO segment-4 riduce dense `13327 -> 12823`, tail `31346 -> 30802`, step10 `16161 -> 15960`, il carry AV latch segment-5 porta dense `12823 -> 12751`, tail `30802 -> 30698`, step10 `15960 -> 15950`, il tick staged `FUN_1A444` porta dense `12751 -> 12720`, tail `30698 -> 30672`, step10 `15950 -> 15947`, il timer presentation segment-4 porta dense `11460 -> 11352`, tail `29193 -> 29070`, step10 `15742 -> 15727`, il clear video mode2 segment-4 porta il fresh f16990..f17025 `18536 -> 11568` con f17004 `7213 -> 295`, il banner alpha f17004 porta la stessa finestra a `11464` con f17004 `209`, il clear alpha parziale f17005 la porta a `11252` con f17005 `198`, il micro-cadence mode2 segment-4 la porta a `10874` con f17009 `227`, e il delay hi-score/PF segment-4 la porta a `10335` con f17010 `257` e f17011 PF exact; PF exact da f17701/f17702 e poi da f17710 a f18000; residuo principale: workRam scratch/cache e sprite emission |
 | **Gameplay warm-seed scenarios** | ✅ 15/15 oracle checked-in in `oracle/scenarios/gameplay/` (level1_spawn, level1_early@f14120, level1_midmap, level1_obstacle@f15084, level1_end, level2_spawn, level2_early@f17010, level3_spawn@f18200, level3_early@f18700, level3_end@f19050, level4_spawn@f19600, level4_early@f20150, level5_spawn@f21250, level5_early@f21800, intro_overlay), 101 snapshot ciascuno; `probe-scenario-diff.ts` PASS su tutti con criterio `>=60` frame consecutivi PF=0/sprite<=50/HUD<=30, inclusi i primi 60 frame dal seed; 14/15 scenari passano 100/100 sotto soglia, con solo `level3_spawn` PASS @77 per un boundary tardo f+78 |
+| **Demo input replay warm-seed** | ✅ `mame_demo_input_tap.lua` + `input-replay.ts` + `probe-demo-replay.ts`; trace `demo_attract.json` f9700..f21900 deterministica; 5/5 scenari minimi e 15/15 suite PASS con input injected |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
