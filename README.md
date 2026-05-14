@@ -156,9 +156,9 @@ mentre playable replay 3/3 e warm-seed 15/15 restano PASS.
 | **`?autoLoad=1` query param** | ✅ DEV-only auto-fetch ROMs dal symlink `public/roms/` |
 | **Bit-perfect tile decode** | ✅ planes[0]=MSB pen, MSB-first readbit, ROMREGION_INVERT, set_granularity(8) |
 | **Palette regions MAME** | ✅ Alpha 0x000-0x0FF / MO 0x100-0x1FF / Playfield **0x200-0x2FF** / Translucency 0x300-0x3FF |
-| **Pixel match vs MAME oracle** | Marble bit-perfect MAME @ (107, 152). Terreno match. HUD/footer ✅ |
+| **Pixel match vs MAME oracle** | Marble/PF alignment uses MAME motion-object transform; terrain and HUD/footer ✅ |
 | **Indirect renderer (`?indirect=1`)** | ✅ bitmap_ind16 PF + MO scratch + screen merge MAME-correct |
-| **`MO_YSCROLL=243` empirico** | ✅ marble screen_y = 243 - yRaw bit-perfect MAME |
+| **MO coordinate transform** | ✅ MAME-faithful: `x=xRaw`, `y=-yRaw-256-heightPx` (no empirical +15/243 offset) |
 | **Pen cap 7** (3-bit effective MOB) | ✅ sphere blu shading visivo |
 | **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 

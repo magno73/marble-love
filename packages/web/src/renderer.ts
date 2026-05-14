@@ -635,20 +635,18 @@ function renderIndirectViewport(
   }
 
   // ─── MO bitmap: render gli SpriteCommand ────────────────────────────────
-  // MAME atarisy1 m_yscroll(256): screen_y = (256 - yRaw) & 0x1ff
-  // m_xoffset implicito (= 15? deduced empirically from MAME oracle marble pos
-  // (107, 158) vs sprite raw (92, 91)).
-  // MAME atarisy1 m_yscroll=256 default. Empirico: marble MAME @ y=152, TS yRaw=91
-  // → effective MO_YSCROLL = 152 + 91 = 243. Discrepanza 13 px probabilmente
-  // da hblank/vblank offset o m_xoffset default.
-  const MO_YSCROLL = 243;
-  const MO_XOFFSET = 15;
+  // MAME `atarimo.cpp::render_object`:
+  //   xpos = xRaw + xoffset - xscroll
+  //   ypos = -yRaw - yscroll - heightPx
+  // System 1 sets yscroll=256 and never sets an MO xoffset.
+  const MO_YSCROLL = 256;
+  const MO_XOFFSET = 0;
   for (const sprite of frame.sprites) {
     if (sprite.gfxBank === undefined || sprite.bitsPerPixel === undefined) continue;
-    const drawX = (sprite.x + MO_XOFFSET) & 0x1ff;
-    const drawY = (MO_YSCROLL - sprite.y) & 0x1ff;
     const w = sprite.width ?? 8;
     const h = sprite.height ?? 8;
+    const drawX = (sprite.x + MO_XOFFSET) & 0x1ff;
+    const drawY = (-sprite.y - MO_YSCROLL - h) & 0x1ff;
     if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
 
     // sprite.paletteIndex già contiene "color macro" base (= 0x40+color in TS attuale)

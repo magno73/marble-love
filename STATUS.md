@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (browser live controls)
+**Ultimo update:** 2026-05-14 (MO/PF visual alignment)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Motion-object visual alignment
+
+Root cause dell'offset visivo tra biglia e muri/rampe: il renderer indirect
+usava ancora la vecchia taratura empirica `MO_XOFFSET=15` e `MO_YSCROLL=243`.
+La fisica/collisione erano invece coerenti con il modello oggetto: biglia e
+nemici apparivano allineati tra loro perche' entrambi sono motion objects, ma
+il layer MO veniva disegnato spostato rispetto al playfield. La formula MAME
+reale in `atarimo.cpp::render_object` usa `xRaw`, `yscroll=256` e sottrae
+l'altezza dello sprite.
+
+Fix:
+
+- `packages/web/src/renderer.ts` ora disegna gli sprite indirect con
+  `drawX = xRaw` e `drawY = -yRaw - 256 - heightPx`, senza offset empirici.
+- Nessuna patch a collisioni, scroll o terrain: il fix e' nel punto giusto,
+  cioe' nella trasformazione video MO -> schermo.
+
+Validazione:
+
+- Cross-check sorgente MAME: `atarisy1_v.cpp::video_start()` imposta
+  `set_yscroll(256)` e `atarimo.cpp::render_object` applica
+  `-yRaw - yscroll - heightPx`; nessun `set_xoffset` per Atari System 1.
+- Probe sullo scenario `level1_trackball_short`: per uno sprite marble
+  `x=231,y=141,h=16`, il vecchio renderer produceva `(246,102)`, la formula
+  MAME produce `(231,99)`.
+- Browser visual check su
+  `?autoLoad=1&playableSeed=level1_trackball_short&real=1&indirect=1`.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `probe-playable-replay.ts` PASS sui tre scenari playable (`80/100`,
+  `100/100`, `82/100`).
+- `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Live downhill death respawn
 
