@@ -213,6 +213,123 @@ const MODE0_SEG4_CHUNK5_PHASES = new Map<number, TilemapChunkPhase>([
   [53, { ad54Count: 66, aa38Count: 24 }],
 ]);
 
+const MODE0_SEG5_CHUNK2_PHASES = new Map<number, TilemapChunkPhase>([
+  [28, { ad54Count: 4, aa38Count: 0 }],
+  [29, { ad54Count: 19, aa38Count: 0 }],
+  [30, { ad54Count: 19, aa38Count: 0 }],
+  [31, { ad54Count: 22, aa38Count: 0 }],
+  [32, { ad54Count: 60, aa38Count: 0 }],
+  [33, { ad54Count: 79, aa38Count: 4 }],
+  [34, { ad54Count: 79, aa38Count: 10 }],
+  [35, { ad54Count: 79, aa38Count: 15 }],
+  [36, { ad54Count: 79, aa38Count: 19 }],
+  [37, { ad54Count: 79, aa38Count: 23 }],
+  [38, { ad54Count: 79, aa38Count: 24 }],
+]);
+
+const MODE0_SEG5_CHUNK3_PHASES = new Map<number, TilemapChunkPhase>([
+  [39, { ad54Count: 10, aa38Count: 0 }],
+  [40, { ad54Count: 19, aa38Count: 0 }],
+  [41, { ad54Count: 36, aa38Count: 0 }],
+  [42, { ad54Count: 41, aa38Count: 0 }],
+  [43, { ad54Count: 58, aa38Count: 0 }],
+  [44, { ad54Count: 79, aa38Count: 4 }],
+  [45, { ad54Count: 79, aa38Count: 8 }],
+  [46, { ad54Count: 79, aa38Count: 13 }],
+  [47, { ad54Count: 79, aa38Count: 18 }],
+  [48, { ad54Count: 79, aa38Count: 22 }],
+  [49, { ad54Count: 79, aa38Count: 24 }],
+]);
+
+const MODE0_SEG5_CHUNK4_PHASES = new Map<number, TilemapChunkPhase>([
+  [49, { ad54Count: 3, aa38Count: 0 }],
+  [50, { ad54Count: 3, aa38Count: 0 }],
+  [51, { ad54Count: 41, aa38Count: 0 }],
+  [52, { ad54Count: 52, aa38Count: 0 }],
+  [53, { ad54Count: 75, aa38Count: 0 }],
+  [54, { ad54Count: 79, aa38Count: 2 }],
+  [55, { ad54Count: 79, aa38Count: 7 }],
+  [56, { ad54Count: 79, aa38Count: 11 }],
+  [57, { ad54Count: 79, aa38Count: 16 }],
+  [58, { ad54Count: 79, aa38Count: 20 }],
+  [59, { ad54Count: 79, aa38Count: 24 }],
+]);
+
+const MODE0_SEG5_CHUNK5_PHASES = new Map<number, TilemapChunkPhase>([
+  [62, { ad54Count: 61, aa38Count: 0 }],
+  [63, { ad54Count: 79, aa38Count: 4 }],
+  [64, { ad54Count: 79, aa38Count: 10 }],
+  [65, { ad54Count: 79, aa38Count: 15 }],
+  [66, { ad54Count: 79, aa38Count: 21 }],
+  [67, { ad54Count: 79, aa38Count: 24 }],
+]);
+
+const MODE0_SEG5_CHUNK6_PHASES = new Map<number, TilemapChunkPhase>([
+  [68, { ad54Count: 58, aa38Count: 0 }],
+  [69, { ad54Count: 69, aa38Count: 0 }],
+  [70, { ad54Count: 74, aa38Count: 0 }],
+  [71, { ad54Count: 79, aa38Count: 7 }],
+  [72, { ad54Count: 79, aa38Count: 14 }],
+  [73, { ad54Count: 79, aa38Count: 21 }],
+  [74, { ad54Count: 79, aa38Count: 24 }],
+]);
+
+function advanceMode0Segment5TilemapScratchPhase(state: GameState, rom: RomImage, stage: number): boolean {
+  if (rb(state, 0x004003e4) !== 5) return false;
+
+  if (stage === 24) {
+    rebuildMode0LevelPrefix(state, rom, 2);
+    state.clock.mode0Init11452Stage = as_u16(25);
+    return true;
+  }
+
+  if (stage >= 25 && stage <= 27) {
+    state.clock.mode0Init11452Stage = as_u16(stage + 1);
+    return true;
+  }
+
+  if (stage >= 28 && stage <= 37) {
+    const phase = MODE0_SEG5_CHUNK2_PHASES.get(stage);
+    if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 2, phase);
+    state.clock.mode0Init11452Stage = as_u16(stage + 1);
+    return true;
+  }
+
+  if (stage >= 38 && stage <= 59) {
+    if (stage === 39) rebuildMode0LevelPrefix(state, rom, 3);
+    if (stage === 49) rebuildMode0LevelPrefix(state, rom, 4);
+
+    const chunk2Phase = MODE0_SEG5_CHUNK2_PHASES.get(stage);
+    if (chunk2Phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 2, chunk2Phase);
+
+    const chunk3Phase = MODE0_SEG5_CHUNK3_PHASES.get(stage);
+    if (chunk3Phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 3, chunk3Phase);
+
+    const chunk4Phase = MODE0_SEG5_CHUNK4_PHASES.get(stage);
+    if (chunk4Phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 4, chunk4Phase);
+
+    state.clock.mode0Init11452Stage = as_u16(stage + 1);
+    return true;
+  }
+
+  if (stage >= 62 && stage <= 67) {
+    const phase = MODE0_SEG5_CHUNK5_PHASES.get(stage);
+    if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 5, phase);
+    state.clock.mode0Init11452Stage = as_u16(stage + 1);
+    return true;
+  }
+
+  if (stage >= 68 && stage <= 74) {
+    if (stage === 68) rebuildMode0LevelPrefix(state, rom, 8);
+    const phase = MODE0_SEG5_CHUNK6_PHASES.get(stage);
+    if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 6, phase);
+    state.clock.mode0Init11452Stage = as_u16(stage + 1);
+    return true;
+  }
+
+  return false;
+}
+
 export function startMode2Init11452Async(state: GameState): void {
   wb(state, 0x00400460, 0xff);
   state.clock.mode2Init11452Stage = as_u8(0);
@@ -264,6 +381,8 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         return;
     }
   }
+
+  if (advanceMode0Segment5TilemapScratchPhase(state, rom, stage)) return;
 
   switch (stage) {
     case 0:
