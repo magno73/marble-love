@@ -585,11 +585,19 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 83:
       if (rb(state, 0x004003e4) === 5) {
-        state.workRam.fill(0, 0x0a9c, 0x1c48);
         state.clock.mode0Init11452Stage = as_u16(84);
         return;
       }
       state.clock.mode0Init11452Stage = as_u16(84);
+      return;
+
+    case 84:
+      if (rb(state, 0x004003e4) === 5) {
+        state.workRam.fill(0, 0x0a9c, 0x1c48);
+        state.clock.mode0Init11452Stage = as_u16(85);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(85);
       return;
 
     case 90:
