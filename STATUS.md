@@ -1,38 +1,41 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 tile build start aligned)
+**Ultimo update:** 2026-05-14 (long demo: segment 3/5 tilemap phases aligned)
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 2026-05-14 — Long demo scratch cadence checkpoint
+## 2026-05-14 — Long demo tilemap phase checkpoint
 
 I residui peggiori rimasti nel long demo erano ormai quasi tutti scratch/cache
 `FUN_1A444`, non payload playfield. TS stava normalizzando troppo presto alcuni
 chunk staged: lo scratch diventava valido per il packer, ma non combaciava con
 il buffer intermedio raw che MAME lascia visibile durante i dwell mode0.
+Nuovi tap MAME puntuali hanno chiarito che alcuni stage usavano ancora il
+descriptor corto TS (66 entry) dove il binario aveva gia' fatto il setup
+`FUN_16EC6` e stava avanzando su 79 entry.
 
 Fix stabili:
 
-- Segmento 3: il primo chunk staged a stage 12 ora esegue solo `FUN_1AD54`
-  raw e rimanda `FUN_1AA38`; questo riduce i falsi word `0x009f/0x400x`
-  nello scratch a f14530 senza toccare il PF.
-- Segmento 3: stage 58 riproduce il clear/phase del chunk 7 senza pack, che
-  elimina lo scratch stale entro f14580 mantenendo PF e sprite cadence stabili.
-- Segmento 5: stage 10 applica il medesimo raw `FUN_1AD54` di chunk 0 prima
-  del dwell, chiudendo una grossa fascia di scratch/cache a f17620 senza
-  anticipare il rebuild playfield.
+- Segmento 3: stage 12 ora fa il setup `FUN_16EC6` e applica chunk0
+  `AD54=79/AA38=18`, come il tap f14530 (`d4=0x0000`, `1AA38` righe 14..17).
+- Segmento 3: stage 58 ora riproduce chunk5 `AD54=79/AA38=4`, come il tap
+  f14580 (`d4=0x0078`), invece del vecchio chunk7 sintetico.
+- Segmento 5: stage 10 ora fa il setup `FUN_16EC6` e applica chunk0
+  `AD54=79/AA38=2`, come il tap f17620 (`d4=0x0000`), chiudendo la grossa
+  fascia scratch/cache senza anticipare il rebuild playfield.
 - Segmento 4: un tap MAME su f15983..f15995 ha mostrato che il binario entra
   in `FUN_1A444` gia' a f15984 e a f15990 e' nel chunk 0 con 18 righe
   `FUN_1AA38` completate. TS ora fa il `FUN_16EC6` descriptor setup a stage 11
   e poi applica la phase chunk0 `AD54=66/AA38=18`, senza spostare globalmente
   la cadence del segmento.
 
-Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
+Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json` rispetto al
+checkpoint precedente:
 
-- Somma campionata: `160525 -> 157172`.
-- f14530: `total=2714 -> 2654`, `workRam=2689 -> 2629`, PF resta `0`.
-- f14580: `total=2617 -> 1761`, `workRam=2592 -> 1736`, PF resta `0`.
-- f15990: `total=2709 -> 739`, `workRam=2552 -> 582`, PF resta `0`.
-- f17620: `total=3236 -> 2769`, `workRam=3084 -> 2617`, PF resta `0`.
+- Somma campionata: `157172 -> 150855`.
+- f14530: `total=2654 -> 327`, `workRam=2629 -> 302`, PF resta `0`.
+- f14580: `total=1761 -> 202`, `workRam=1736 -> 177`, PF resta `0`.
+- f15990 resta stabile: `total=739`, `workRam=582`, PF `0`.
+- f17620: `total=2769 -> 338`, `workRam=2617 -> 186`, PF resta `0`.
 - Le finestre gia' chiuse restano stabili: f12950 `total=347`, f13200
   `total=123`, f13920 `total=117`, f17710 `total=287`.
 
@@ -66,6 +69,9 @@ Drill aperto:
   migliorando f17690 ha lasciato scratch stale e ha peggiorato f17700+.
   Prossimo drill: modellare anche il completamento/tail clear reale, non solo
   la snapshot intermedia.
+- Falsificati e revertiti: phase segment5 stage60/70 (migliorano f17670/f17680
+  ma peggiorano f17690+), completion chunk8 stage88, e sostituzione dello
+  stage68 segment3 con chunk6 (rompe il PF lungo del secondo handoff).
 
 ## 2026-05-14 — Long demo presentation HUD checkpoint
 
