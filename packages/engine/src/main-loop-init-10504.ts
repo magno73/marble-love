@@ -278,7 +278,8 @@ function runPresentationMiddle(
   rom?: RomImage,
 ): void {
   if (rw(state, 0x00400390) === 1) {
-    ww(state, 0x00400082, 0x003c);
+    const attractSegment = rb(state, 0x004003e4);
+    ww(state, 0x00400082, attractSegment === 4 ? 0x002d : 0x003c);
     return;
   }
   const render0142 = subs.render0142 ?? ((s: GameState, ptr: number, tile: number) => {

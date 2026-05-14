@@ -1,7 +1,60 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 particle cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 presentation timer)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 presentation timer
+
+Drill sul residuo stabile f17013+ / f176xx: il word `obj0+0x6A`
+(`0x400082`) restava a `0x003c` in TS durante il segmento 4, mentre il replay
+MAME fresh mostra `0x002d`. Il valore alimenta il timer presentation e produce
+un residuo workRam piccolo ma persistente in tutte le finestre successive.
+
+Fix stabile:
+
+- `runPresentationMiddle` di `FUN_10504` ora inizializza il timer a `45`
+  (`0x002d`) solo quando il segmento attract `0x4003E4` e' `4`; gli altri
+  segmenti mantengono il default `60` (`0x003c`).
+- Nessun cambio di cadence, PF, sprite page o rebuild: il fix tocca solo il
+  valore presentation osservato da MAME.
+
+Effetto osservato sui dump fresh/legacy:
+
+- Fresh f16990..f17025 step1: f17013 `183 -> 180`, f17020 `184 -> 181`.
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `11460 -> 11352`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `29193 -> 29070`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `15742 -> 15727`.
+- Legacy storico senza `slapsticBank`: `145116 -> 144786`.
+
+Falsificato e revertito nel drill:
+
+- Ritardare di una vblank il default stage mode2 del segmento 4 riduceva lo
+  sprite residual locale (`105B -> 90B`) ma rompeva il cadence tilemap del
+  segmento 5 (`fresh step10 15727 -> 19309`, PF diff a f17670). Non va
+  ripreso senza un modello reale della fase di completamento.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- Il residuo sprite `105B` nasce da una pagina MO sporcata durante il reset
+  mode2 segment-4. I cursori/latch sono riallineati da f17012 in avanti, ma i
+  byte gia' emessi restano nella pagina; serve modellare il micro-cadence reale
+  di `FUN_26F3E`/phase reset senza spostare il rebuild segment-5.
+- f17650/f17660 restano PF-exact ma scratch/work heavy; f17701/f17702
+  mantengono residui alpha/sprite/work post-rebuild.
 
 ## 2026-05-14 — Long demo segment-4 particle cadence
 
