@@ -24,6 +24,10 @@ The even addresses in the `0xF20000..0xF20007` and `0xF60000..0xF60003`
 word ranges are high bytes on the 68010 bus. The gameplay routines and parity
 tests use the low-byte addresses listed above.
 
+MAME Lua read taps report the even bus addresses for these byte handlers
+(`F20000/02/04/06`, `F60000`). The playable capture canonicalizes those reads
+to the TS low-byte constants (`F20001/03/05/07`, `F60001`) before writing JSON.
+
 ## Select/multiplex lines
 
 No Marble-specific ADC select-line write is required for the trackball path.
@@ -49,3 +53,26 @@ driven by internal game/demo state rather than fresh external trackball MMIO
 reads. The replay layer still injects the captured default bytes explicitly so
 future playable/coin-up traces can reuse the same mechanism without changing
 the probe surface.
+
+## Coin/start/playable tap finding
+
+`oracle/mame_playable_input_capture.lua` scripts a deterministic MAME session
+with a Coin 1 pulse, START1 pulse, and level-1 P1 trackball movement. It also
+captures three playable warm-seed oracle windows:
+
+| File | Seed | Result |
+| --- | ---: | --- |
+| `oracle/scenarios/playable/coin_start_to_level1.json` | f2045 | PASS @80 consecutive replay frames |
+| `oracle/scenarios/playable/level1_trackball_short.json` | f2240 | PASS @100 consecutive replay frames |
+| `oracle/scenarios/playable/level1_trackball_obstacle.json` | f2320 | PASS @82 consecutive replay frames |
+
+Input trace:
+
+| File | Frames | SHA-256 | Main tap totals |
+| --- | ---: | --- | --- |
+| `oracle/scenarios/input/playable_coin_start.json` | `1..2500` | `d92e4b2d7476fec451824efc734c1aac59c0a8613305964c5267e6a5588463ee` | `F20001/F20003/F20005/F20007 = 2256` each, `F60001 = 9306`, `FC0001 = 2382`; sound CPU `0x1820 = 964496` |
+
+The current TS replay goal starts from MAME warm playable seeds rather than
+emulating the full 6502 coin-credit path from reset. The sound CPU coin port is
+captured and exposed through `inputReplay.read8(0x1820, frame)`, while gameplay
+validation injects the 68010-visible trackball/switch bytes into `mainTick`.

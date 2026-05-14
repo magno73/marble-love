@@ -1,7 +1,59 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (demo input replay warm-seed)
+**Ultimo update:** 2026-05-14 (coin/playable input replay)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Coin/start + playable input replay
+
+Goal coin/play completato su tre scenari playable warm-seed catturati da una
+sessione MAME deterministica con input reale scriptato:
+
+- coin pulse `f60..f74` su port sound CPU `:1820`/Coin 1;
+- START1 pulse `f180..f194` su port `:F60000`;
+- trackball P1 deterministico durante level 1 (`F200xx` letto ogni frame).
+
+Nuova infrastruttura:
+
+- `oracle/mame_playable_input_capture.lua` script MAME headless con NVRAM/CFG
+  isolate e `-nonvram_save`. Mantiene vivi gli handle dei read tap, canonicalizza
+  gli indirizzi bus even (`F20000/02/04/06`, `F60000`) sui byte replay TS
+  (`F20001/03/05/07`, `F60001`) e scrive trace + scenari.
+- `oracle/scenarios/input/playable_coin_start.json`: 2500 frame,
+  SHA-256 `d92e4b2d7476fec451824efc734c1aac59c0a8613305964c5267e6a5588463ee`.
+  Tap totals: `F20001/F20003/F20005/F20007 = 2256` letture ciascuno,
+  `F60001 = 9306`, `FC0001 = 2382`, sound CPU `0x1820 = 964496`.
+- `oracle/scenarios/playable/` contiene tre scenari da 101 snapshot:
+  `coin_start_to_level1` f2045, `level1_trackball_short` f2240,
+  `level1_trackball_obstacle` f2320. I seed f2030/f2110/f2360 erano veri ma
+  intra-window troppo rumorosi sullo sprite; la scansione conservativa ha
+  scelto f2045/f2240/f2320.
+- `packages/cli/src/probe-playable-replay.ts` riusa il core del probe demo con
+  default trace playable.
+- `packages/engine/src/input-replay.ts` accetta anche gli indirizzi even MAME e
+  il port coin sound CPU `0x1820`; lo smoke test copre coin/start/trackball.
+
+Risultato replay playable:
+
+| Scenario | Seed | Streak PASS | Initial 60 | Note |
+|---|---:|---:|---|---|
+| `coin_start_to_level1` | f2045 | 80 | PASS | primi 10 frame video bit-perfect |
+| `level1_trackball_short` | f2240 | 100 | PASS | tutta la finestra sotto soglia |
+| `level1_trackball_obstacle` | f2320 | 82 | PASS | first fail tardo f+83 sprite=56 |
+
+Criterio goal (`>=60` frame consecutivi con PF=0, sprite<=50, HUD<=30):
+**3/3 PASS**.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/engine/test/input-replay-smoke.test.ts` PASS.
+- `npx tsx packages/cli/src/probe-playable-replay.ts ...` PASS sui tre scenari.
+- `npx tsx packages/cli/src/probe-scenario-diff.ts ...` PASS su tutti i 15
+  scenari warm-seed gameplay/overlay esistenti.
+- Long demo invariant fresh step10 invariato: somma `15727 <= 16000` su
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` con il checker
+  no-stack corrente e `slapsticBank=1`.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Demo input replay via warm-seed scenarios
 

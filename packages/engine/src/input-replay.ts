@@ -8,6 +8,7 @@ export const INPUT_MMIO_TRACKBALL2_Y = 0xf20007 as const;
 export const INPUT_MMIO_SWITCHES = 0xf60001 as const;
 export const INPUT_MMIO_ADC_BASE = 0xf40000 as const;
 export const INPUT_MMIO_ADC_END = 0xf40020 as const;
+export const INPUT_SOUND_COIN_PORT = 0x1820 as const;
 
 export interface DemoInputFrame {
   frame: number;
@@ -17,6 +18,9 @@ export interface DemoInputFrame {
   trackball2Y: number;
   switches: number;
   buttons: number;
+  coin1?: number;
+  scriptDx?: number;
+  scriptDy?: number;
   readCounts?: Record<string, number>;
 }
 
@@ -74,20 +78,26 @@ export function createInputReplay(trace: DemoInputTrace): InputReplay {
   const read8 = (addr: number, absoluteFrame: number): u8 => {
     const f = frame(absoluteFrame);
     switch (normalizeAddress(addr)) {
+      case 0xf20000:
       case INPUT_MMIO_TRACKBALL_X:
         return byte(f.trackballX, 0xff);
+      case 0xf20002:
       case INPUT_MMIO_TRACKBALL_Y:
         return byte(f.trackballY, 0xff);
+      case 0xf20004:
       case INPUT_MMIO_TRACKBALL2_X:
         return byte(f.trackball2X, 0xff);
+      case 0xf20006:
       case INPUT_MMIO_TRACKBALL2_Y:
         return byte(f.trackball2Y, 0xff);
+      case 0xf60000:
       case INPUT_MMIO_SWITCHES:
         return byte(f.switches, 0x6f);
-      case 0xf60000:
       case 0xf60002:
       case 0xf60003:
         return as_u8(0xff);
+      case INPUT_SOUND_COIN_PORT:
+        return byte(f.coin1 === 1 ? 0 : 1, 1);
       default:
         if (addr >= INPUT_MMIO_ADC_BASE && addr < INPUT_MMIO_ADC_END) {
           return as_u8(0xff);
