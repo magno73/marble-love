@@ -876,7 +876,14 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
   const stage = state.clock.mode2Init11452Stage;
   if (stage === undefined) return;
   if (stage >= 1) {
-    wb(state, 0x00400014, stage);
+    if (rb(state, 0x004003e4) === 4) {
+      // Segment 4 exposes the staged counter one IRQ behind, while the
+      // mailbox byte advances only during the early clear sub-phases.
+      wb(state, 0x00400014, (stage - 1) & 0xff);
+      wb(state, 0x00400016, stage >= 2 && stage <= 5 ? (stage - 1) & 0xff : 0);
+    } else {
+      wb(state, 0x00400014, stage);
+    }
   }
 
   switch (stage) {
@@ -929,6 +936,12 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 6:
+      if (rb(state, 0x004003e4) === 4) {
+        // MAME leaves the transition banner/video latches visible for one more
+        // vblank, then folds this clear into the particle init phase.
+        state.clock.mode2Init11452Stage = as_u8(7);
+        return;
+      }
       gameStateBanner26B2A(state, rom, 0);
       bannerHelper26B66(state, 0x13);
       ww(state, 0x00400000, 0);
@@ -941,6 +954,16 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 7:
+      if (rb(state, 0x004003e4) === 4) {
+        gameStateBanner26B2A(state, rom, 0);
+        bannerHelper26B66(state, 0x13);
+        ww(state, 0x00400000, 0);
+        ww(state, 0x00400002, 0);
+        wb(state, 0x00400008, 0);
+        wb(state, 0x00400006, 0);
+        wb(state, 0x0040000a, 0);
+        vblankAck28DEA(state);
+      }
       if (rb(state, 0x004003e4) !== 1) {
         const rngCatchup = rb(state, 0x004003e4) === 4
           ? MODE2_SEG4_PARTICLE_RNG_CATCHUP
