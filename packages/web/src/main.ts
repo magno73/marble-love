@@ -37,6 +37,7 @@ const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
+const forceCoinStart = searchParams.get("coinStart") === "1";
 const playableSeedName = searchParams.get("playableSeed");
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
@@ -157,6 +158,10 @@ async function startGame(
   let warmState: WarmState | undefined;
   const useMameDump = searchParams.get("mameDump") === "1";
   const useMameLive = searchParams.get("mameLive") === "1";
+  const useCoinStartFlow =
+    warmState === undefined &&
+    rom !== undefined &&
+    (forceCoinStart || (forcePlay && playableSeedName === null && !useMameDump && !useMameLive));
   if (playableSeedName !== null) {
     try {
       const safeSeedName = playableSeedName.replace(/[^a-z0-9_-]/gi, "");
@@ -233,9 +238,22 @@ async function startGame(
     warmState !== undefined
       ? { warmState }
       : rom !== undefined
-        ? { preloadLevel: 0, fullScreenInit: useFullScreenInit }
+        ? useCoinStartFlow
+          ? {}
+          : { preloadLevel: 0, fullScreenInit: useFullScreenInit }
         : {},
   );
+  if (useCoinStartFlow) {
+    // Start from the attract/start gate instead of showing a preloaded level.
+    // The full 6502 coin-credit path is not emulated yet, so browser coin
+    // pulses feed the gateCheck callback below.
+    s.workRam[0x390] = 0x00;
+    s.workRam[0x391] = 0x01;
+    s.workRam[0x3a8] = 0x6f;
+    s.workRam[0x3aa] = 0x6f;
+    s.workRam[0x3ac] = 0x00;
+    console.log("[marble-love] coin/start flow enabled: press 5 (coin), then Enter/Space (START1)");
+  }
 
   // Default ON: indirect renderer = MAME bit-perfect bitmap_ind16 path.
   // Disable con ?indirect=0 per fallback al renderer Pixi diretto (debug).
@@ -245,6 +263,7 @@ async function startGame(
     console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");
   }
   const inputState = initInput();
+  let browserCoinCredits = 0;
   let demoFrame = 0;
 
   // ─── Manual scroll override (debug aid) ───────────────────────────────────
@@ -312,6 +331,11 @@ async function startGame(
     const p2XAbs = inputState.consumeP2X();
     const p2YAbs = inputState.consumeP2Y();
     s.input.buttons = inputState.buttons as typeof s.input.buttons;
+    const coinPulses = inputState.consumeCoinPulses();
+    if (useCoinStartFlow && coinPulses > 0) {
+      browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
+      console.log(`[marble-love] coin accepted, credits=${browserCoinCredits}`);
+    }
 
     // Keyboard scroll override (until in-game scroll-write wires autonomously).
     if (scrollOverrideEnabled) {
@@ -347,13 +371,22 @@ async function startGame(
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
         bootInit(s, tickRom, { warmState });
       }
-      tick(s, {
+      const tickOptions: Parameters<typeof tick>[1] = {
         rom: tickRom,
         p1X: p1XAbs, p1Y: p1YAbs,
         p2X: p2XAbs, p2Y: p2YAbs,
         inputMmio: inputState.inputMmio,
         runMainLoopBody: mainLoopBody,
-      });
+      };
+      if (useCoinStartFlow) {
+        tickOptions.gateCheck = (count) => {
+          if (browserCoinCredits <= 0) return 0;
+          browserCoinCredits -= 1;
+          console.log(`[marble-love] START${count} accepted, credits=${browserCoinCredits}`);
+          return 1;
+        };
+      }
+      tick(s, tickOptions);
     }
     frameCount += 1;
     // DEBUG: expose state to window globals every frame for headless inspection

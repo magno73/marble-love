@@ -58,16 +58,18 @@ CPU `0x1820`. Nuovi scenari in `oracle/scenarios/playable/`:
 `packages/cli/src/probe-playable-replay.ts`. Warm-seed gameplay 15/15 resta
 PASS e lo step10 fresh long demo resta sotto guardrail (`15727 <= 16000`).
 
-**Checkpoint live input web (2026-05-14):** il runtime browser ora ruota i
-delta mouse/touch/WASD/frecce/gamepad come MAME Marble (`rawX+rawY`,
-`rawX-rawY`) prima di integrarli nei byte trackball MMIO; in `?play=1` le
-frecce non pilotano piu' anche lo scroll-debug della viewport; `Enter`/spazio
-propagano START1 active-low via `inputMmio` verso `mainTick`. Per il test
-manuale usare `?playableSeed=level1_trackball_short`: il frontend carica un
-seed playable compatto da `packages/web/public/scenarios/playable/` invece del
-dump generico `mame_state.json`, che puo' essere attract/non-playable. Il
-coin-credit completo da reset resta debito sound/main CPU, ma i warm playable
-seed possono ricevere input live coerente con le trace MAME.
+**Checkpoint live input web (2026-05-14):** `?autoLoad=1&play=1` ora segue un
+flusso coin/start manuale: non pre-carica piu' il livello, resta nel gate
+attract/start finche' `5`/`C` aggiunge credito e `Enter`/spazio passa START1.
+Il level load avviene poi nel case START del main loop (`state=0`, `count=1`,
+playfield popolata), invece di sembrare una demo gia' avviata. Il runtime
+browser ruota i delta mouse/touch/WASD/frecce/gamepad come MAME Marble
+(`rawX+rawY`, `rawX-rawY`) prima di integrarli nei byte trackball MMIO; in
+`?play=1` le frecce non pilotano piu' anche lo scroll-debug della viewport. I
+seed `?playableSeed=...` restano utili come diagnostica/replay warm, ma non sono
+il percorso consigliato per giocare manualmente. Il coin-credit completo via
+6502 resta debito sound/main CPU; il browser usa un credito locale conservativo
+per sbloccare il gate START.
 
 ## Metriche progetto
 
@@ -86,7 +88,7 @@ seed possono ricevere input live coerente con le trace MAME.
 | **Gameplay warm-seed scenarios** | ✅ 15/15 oracle checked-in in `oracle/scenarios/gameplay/` (level1_spawn, level1_early@f14120, level1_midmap, level1_obstacle@f15084, level1_end, level2_spawn, level2_early@f17010, level3_spawn@f18200, level3_early@f18700, level3_end@f19050, level4_spawn@f19600, level4_early@f20150, level5_spawn@f21250, level5_early@f21800, intro_overlay), 101 snapshot ciascuno; `probe-scenario-diff.ts` PASS su tutti con criterio `>=60` frame consecutivi PF=0/sprite<=50/HUD<=30, inclusi i primi 60 frame dal seed; 14/15 scenari passano 100/100 sotto soglia, con solo `level3_spawn` PASS @77 per un boundary tardo f+78 |
 | **Demo input replay warm-seed** | ✅ `mame_demo_input_tap.lua` + `input-replay.ts` + `probe-demo-replay.ts`; trace `demo_attract.json` f9700..f21900 deterministica; 5/5 scenari minimi e 15/15 suite PASS con input injected |
 | **Coin/play input replay** | ✅ `mame_playable_input_capture.lua` + `playable_coin_start.json` + `probe-playable-replay.ts`; scenari `coin_start_to_level1`, `level1_trackball_short`, `level1_trackball_obstacle` PASS con input reale injected (`80/100`, `100/100`, `82/100` sotto soglia) |
-| **Live browser input** | ✅ mouse/touch/WASD/frecce/gamepad ruotati come MAME trackball; frecce libere dal debug-scroll in `?play=1`; seed playable web via `?playableSeed=...`; START1 active-low passato via `inputMmio` |
+| **Live browser input** | ✅ `?autoLoad=1&play=1` richiede `5`/`C` coin + `Enter`/spazio START prima di caricare il livello; mouse/touch/WASD/frecce/gamepad ruotati come MAME trackball; frecce libere dal debug-scroll in `?play=1`; seed playable web via `?playableSeed=...` solo per diagnostica |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
