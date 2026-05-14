@@ -1,7 +1,69 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment 3 final rotate aligned)
+**Ultimo update:** 2026-05-14 (long demo: segment 5 chunk7 scratch narrowed)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 chunk7 scratch checkpoint
+
+Il picco f17690 era ancora dominato da scratch/cache `FUN_1A444`. Un tap MAME
+f17680..f17698 ha mostrato che, nel segmento 5, MAME espone il chunk 7
+(`d4=0x00A8`) con `FUN_1AA38` progressivo:
+
+- f17688: `AD54` completa 79 entry e `AA38` arriva a 2 righe.
+- f17689: `AA38=8`.
+- f17690: `AA38=13`.
+- f17691: `AA38=18`.
+- f17692: `AA38=23`.
+
+Fix stabile:
+
+- Stage 78..82 del segmento 5 applicano solo la phase scratch chunk7
+  `AD54=79`, `AA38=2/8/13/18/23`.
+- Stage 83 pulisce lo scratch `0x0A9C..0x1C48`, evitando di lasciare vivo il
+  buffer parziale nel tail.
+- Non vengono applicati `packRows` e non viene modellata l'intera sequenza
+  chunk6/chunk7/chunk8: quell'esperimento era piu' fedele al tap locale ma
+  peggiorava il long-run (`146650 -> 169882` storico, fresh step1
+  `66611 -> 80740`) per via di PF/sprite successivi.
+
+Effetto osservato:
+
+- Storico `/tmp/mame_demo_12000_18000_step10.json`: somma campionata
+  `146650 -> 145902`.
+- Storico f17690: `total=2357 -> 559`, `workRam=2205 -> 407`, PF resta `0`.
+- Storico f17700 resta stabile: `total=334 -> 336`, PF resta `0`.
+- Fresh `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: finestra
+  f17660..f17720 `66611 -> 58208`; f17690 `2338 -> 525`.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 50
+  PASS 50/50
+
+test-object-state-entry-25bae-parity.ts 50
+  PASS 50/50
+
+test-hud-frame-init-283c2-parity.ts 50
+  PASS 50/50
+
+test-tilemap-span-builder-1aa38-parity.ts 50
+  PASS 50/50
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- f17670 sul fresh oracle mostra ancora PF/work scratch divergente; il tap dice
+  che la sequenza chunk4->chunk5 e' reale, ma il pack completo va modellato
+  senza far deragliare gli sprite successivi.
+- f17700 fresh resta PF-heavy, mentre lo storico resta PF exact: da qui in poi
+  serve preferire dump fresh bank-aware quando si localizzano fix sul tail.
 
 ## 2026-05-14 — Long demo segment-3 final rotate checkpoint
 
@@ -62,10 +124,10 @@ git diff --check
   PASS
 ```
 
-Drill aperto:
+Drill aperto a quel checkpoint:
 
-- f17690 resta il blocker maggiore (`total=2357`, `workRam=2205`), dominato
-  da scratch/cache e non da PF.
+- f17690 era il blocker maggiore (`total=2357`, `workRam=2205`), dominato da
+  scratch/cache e non da PF; il checkpoint chunk7 sopra lo riduce a `559`.
 - f17670/f17680 e f14590 sono ancora finestre sprite/workRam dense.
 - f17010 ha ancora PF residuo (`pfRam=234`) e merita una verifica separata
   dopo aver chiuso le cadence non-PF.
