@@ -1,7 +1,51 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (manual play dispatcher split)
+**Ultimo update:** 2026-05-14 (lower-platform state-1 respawn)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Lower-platform state-1 respawn
+
+Bug live riportato: sulla piattaforma bassa con i due vermi, vicino al ponte
+mobile, la biglia poteva morire anche quando il ponte sembrava abbassato; dopo
+la morte lo schermo continuava a scrollare verso il basso mostrando terreno di
+altri livelli senza respawn visibile.
+
+Root cause:
+
+- Il dispatcher `FUN_253EC` modellava i path `obj0+0x1A=0/4/5/6`, ma non il
+  jump-table entry `JT[1] @ 0x2574C`.
+- Quando il live path entrava nello stato di tumble/death `obj0+0x1A=1`, TS
+  cadeva nel fallback conservativo `helper253BC + objectStep17F66` senza
+  eseguire `FUN_25FC2`, `FUN_121B8` e il tail counter `+0x56/+0x57`.
+- Effetto osservato nel repro browser-like: target respawn rimaneva stale
+  `284,196`, `obj0` si congelava in state 1 mentre le velocita' continuavano ad
+  accumulare, e lo scroll inseguiva coordinate incoerenti.
+
+Fix:
+
+- `packages/engine/src/refresh-frame-10fce.ts` replica ora il path reale
+  `JT[1]`: `FUN_25FC2 -> FUN_253BC -> FUN_17F66 -> FUN_121B8`, con le stesse
+  callback gia' usate dal path normale, piu' il tail `+0x57/+0x56` che torna a
+  `state 0` quando il mini-ciclo termina.
+- `packages/engine/test/playable-respawn-state1.test.ts` aggiunge un regression
+  test sul repro lower-platform: la sequenza raggiunge `state 1`, poi ricalcola
+  il target a `444,380`, torna a `state 0`, ferma lo scroll a `306` e mantiene
+  il playfield popolato.
+
+Validazione:
+
+- Repro sintetico live da `coin_start_to_level1`: prima target stale
+  `284,196`; dopo il fix target `444,380`, `state 4 -> 0`, PF stabile e nessun
+  runaway verso terreno vuoto.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts packages/engine/test/playable-respawn-state1.test.ts --reporter=basic` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `probe-scenario-diff.ts` resta PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 no-stack invariato:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `15275 <= 16000`.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Manual play dispatcher split
 

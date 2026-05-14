@@ -86,6 +86,7 @@ import { pickObjLarger } from "./obj-pick-larger.js";
 import { fun29CCE } from "./sub-29cce.js";
 import { objectEnter1281C } from "./object-enter-1281c.js";
 import { fun264AA } from "./fun-264aa.js";
+import { helper18F46 } from "./helper-18f46.js";
 
 const WRAM = 0x00400000;
 
@@ -208,6 +209,16 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   const runTerrainCollision = (s: GameState, objAddr: number): void => {
     fun29CCE(s, objAddr, rom);
   };
+  const stepAnimation25FC2 = (s: GameState, objAddr: number): void => {
+    helper25FC2(s, rom, objAddr, {
+      soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
+      soundPair15884: (st) => { soundPair15884(st); },
+      objectStateEntry25BAE: (st, ptr, code) => { enterObjectState(st, ptr, code); },
+      helper18F46: (st, r, typeCode, subIdx) => {
+        helper18F46(st, r, typeCode, subIdx);
+      },
+    });
+  };
   const stepWaypointList = (s: GameState, objAddr: number): void => {
     waypointListStep1815A(s, objAddr, {
       fun_012a: (threshold, attrWord, textPtr) => {
@@ -281,6 +292,54 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       fun_29cce: runTerrainCollision,
       fun_1281c: enterObject1281C,
     });
+    return;
+  }
+
+  // JT[1] = 0x2574C. This is the lower-platform/death tumble state reached
+  // by live play near the worm/bridge section. The binary keeps running the
+  // full movement/collision chain here, then advances the small +0x56/+0x57
+  // animation gate. Falling back to only helper253BC/objectStep17F66 freezes
+  // obj0 in state 1 while velocities keep accumulating, which lets the scroll
+  // target run away into unrelated terrain.
+  if (s1a === 1) {
+    stepAnimation25FC2(state, a2);
+    helper253BC(state, a2);
+    objectStep17F66(state, a2, {
+      fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
+      fun180BE: () => { pickObjLarger(state); },
+      fun26196: (a2Addr) => {
+        flagScaledMagnitudeDispatch(
+          state,
+          a2Addr,
+          (structPtr, magnitude) => fun261BC(state, structPtr, magnitude, rom.program),
+        );
+      },
+    });
+    helper121B8(state, rom, a2, {
+      fun_1bab2: updateSpritePos,
+      fun_25bae: enterObjectState,
+      fun_29cce: runTerrainCollision,
+      fun_1281c: enterObject1281C,
+    });
+
+    if (rb(state, a2 + 0x1a) !== 1) return;
+
+    if (rb(state, a2 + 0x57) !== 0) {
+      wb(state, a2 + 0x57, rb(state, a2 + 0x57) - 1);
+    }
+
+    if (s8(rb(state, a2 + 0x57)) >= s8(rb(state, a2 + 0x56))) {
+      wb(state, a2 + 0x56, rb(state, a2 + 0x56) + 1);
+      return;
+    }
+
+    wb(state, a2 + 0x56, rb(state, a2 + 0x56) - 1);
+    if (rb(state, a2 + 0x56) !== 0) return;
+
+    soundPair15884(state);
+    wb(state, a2 + 0x1a, 0);
+    wl(state, a2 + 0x5a, 0);
+    spriteRotate1C014(state, rom, objOff);
     return;
   }
 
