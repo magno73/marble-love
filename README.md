@@ -109,6 +109,17 @@ Aggiunto regression test in `refresh-frame-10fce.test.ts`; playable replay 3/3,
 warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`)
 restano PASS.
 
+**Checkpoint FUN_1B5C2 signed gates (2026-05-15):** il falso contatto sul ponte
+della piattaforma bassa era nel controller steering `FUN_1B5C2`, non in
+renderer/camera: i byte cardinali `0x40066c..672` sono confrontati signed dal
+binario e il path diagonal `btst #3` deve saltare quando `word@D2 >= 4`.
+TS trattava i byte come unsigned e aveva quel gate invertito, quindi poteva
+ribaltare `vx/vy` dello slot mobile `0x400A20` mentre MAME lo lasciava passare.
+La sub ora torna bit-perfect col binario (`test-state-sub-1b5c2-parity.ts
+2000/2000`, harness stack corretto); playable replay 3/3 e warm-seed 15/15
+restano PASS, web build PASS, e long demo fresh step10 no-stack resta sotto
+guardrail (`14501 <= 16000`).
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

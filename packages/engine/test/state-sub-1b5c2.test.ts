@@ -277,6 +277,58 @@ describe("stateSub1B5C2 (FUN_0001B5C2)", () => {
     expect(SOUND_CMD).toBe(0x34);
   });
 
+  it("treats direction flag bytes as signed comparisons", () => {
+    const s = emptyGameState();
+    setStruct(s, 0xffff8000, 0x00001000);
+    setBitmap(s, 0x00);
+    setD2Word(s, 2);
+    ww(s, GATE_PX_OFF, 5);
+    s.workRam[FLAG_PX_OFF] = 0xfa; // -6 as signed byte: non-zero and < 3
+
+    const r = stateSub1B5C2(s, STRUCT_ADDR, BITMAP_ADDR, D2W_ADDR);
+
+    expect(r.xChanged).toBe(true);
+    expect(r.d3Out).toBe(0x00008000);
+  });
+
+  it("block8 path A skips when the D2 word is >= 4", () => {
+    const s = emptyGameState();
+    setStruct(s, 0xfffde759, 0x00013d8e); // bridge slot: vx negative, vy positive
+    setBitmap(s, 0x08); // bit 3 set
+    setD2Word(s, 6); // wd2 >= 4 skips path A in the binary
+    setDeltaX(s, 1); // D5 != -1
+    setDeltaY(s, 0); // D6 != -1
+    ww(s, GATE_A0_OFF, 2); // wa0 < 4
+    ww(s, GATE_82_OFF, 15); // g82 >= 4
+
+    const r = stateSub1B5C2(s, STRUCT_ADDR, BITMAP_ADDR, D2W_ADDR);
+
+    expect(r.xChanged).toBe(false);
+    expect(r.yChanged).toBe(false);
+    expect(r.d3Out).toBe(0xfffde759);
+    expect(r.d4Out).toBe(0x00013d8e);
+    expect(s.workRam[CHG_X_OFF]).toBe(0);
+    expect(s.workRam[CHG_Y_OFF]).toBe(0);
+  });
+
+  it("block8 path A fires when the D2 word is < 4", () => {
+    const s = emptyGameState();
+    setStruct(s, 0xfffde759, 0xffff0000);
+    setBitmap(s, 0x08); // bit 3 set
+    setD2Word(s, 3); // wd2 < 4 lets path A continue
+    setDeltaX(s, 1);
+    setDeltaY(s, 0);
+    ww(s, GATE_A0_OFF, 2);
+    ww(s, GATE_82_OFF, 15);
+
+    const r = stateSub1B5C2(s, STRUCT_ADDR, BITMAP_ADDR, D2W_ADDR);
+
+    expect(r.xChanged).toBe(true);
+    expect(r.yChanged).toBe(true);
+    expect(r.d3Out).toBe(0x000218a7);
+    expect(r.d4Out).toBe(0x00010000);
+  });
+
   it("write-back: STRUCT_X_SRC written to A2+0xC when x changes", () => {
     const s = emptyGameState();
     setStruct(s, 0xffff8000, 0x00001000);

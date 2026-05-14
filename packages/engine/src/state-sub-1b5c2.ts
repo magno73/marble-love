@@ -295,6 +295,12 @@ function sextW(w: number): number {
   return v & 0x8000 ? v - 0x10000 : v;
 }
 
+/** Sign-extend 8-bit byte to signed int. */
+function sextB(b: number): number {
+  const v = b & 0xff;
+  return v & 0x80 ? v - 0x100 : v;
+}
+
 // ─── Replica ─────────────────────────────────────────────────────────────
 
 /**
@@ -357,11 +363,11 @@ export function stateSub1B5C2(
   const g80 = sextW(rw(state, GATE_80_OFF));
   const g82 = sextW(rw(state, GATE_82_OFF));
 
-  // Direction flags (byte) — active if ∈ [1, 2] (tst.b != 0 AND cmpi.b #3 bge)
-  const fPX = rb(state, FLAG_PX_OFF);
-  const fPY = rb(state, FLAG_PY_OFF);
-  const fNX = rb(state, FLAG_NX_OFF);
-  const fNY = rb(state, FLAG_NY_OFF);
+  // Direction flags (byte) — signed cmp.b: active if non-zero and < 3.
+  const fPX = sextB(rb(state, FLAG_PX_OFF));
+  const fPY = sextB(rb(state, FLAG_PY_OFF));
+  const fNX = sextB(rb(state, FLAG_NX_OFF));
+  const fNY = sextB(rb(state, FLAG_NY_OFF));
 
   // Direction bitmap bits (A3)
   const bm = rb(state, a3);
@@ -451,11 +457,11 @@ export function stateSub1B5C2(
   }
 
   // ── Block 8: absLong(D4) + absLong(D3) ──────────────────────────────────
-  // Path A (btst#3): bit3 set AND d5 != -1 AND d6 != -1 AND wd2 > 4 AND wa0 < 4 AND g82 >= 4
+  // Path A (btst#3): bit3 set AND d5 != -1 AND d6 != -1 AND wd2 < 4 AND wa0 < 4 AND g82 >= 4
   // Path B (btst#5): bit5 set AND d5 != 0  AND d6 != 0  AND g7E >= 4
   {
     const pathA =
-      (bm & 0x08) !== 0 && d5 !== -1 && d6 !== -1 && wd2 > 4 && wa0 < 4 && g82 >= 4;
+      (bm & 0x08) !== 0 && d5 !== -1 && d6 !== -1 && wd2 < 4 && wa0 < 4 && g82 >= 4;
     const pathB = (bm & 0x20) !== 0 && d5 !== 0 && d6 !== 0 && g7E >= 4;
     if (pathA || pathB) {
       d4 = absLong(d4);

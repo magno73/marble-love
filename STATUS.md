@@ -1,7 +1,50 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (FUN_253EC state-7 settle)
+**Ultimo update:** 2026-05-15 (FUN_1B5C2 signed gates)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — FUN_1B5C2 signed gates
+
+Overnight gameplay QA sul ponte della piattaforma bassa ha isolato il falso
+contatto non in renderer/camera ma nel controller di steering
+`FUN_0001B5C2`.
+
+Root cause:
+
+- Il binario usa `cmp.b` signed per i byte cardinali `0x40066c/66e/670/672`;
+  la replica TS li trattava unsigned. I valori `>=0x80` quindi disattivavano
+  path che in MAME sono ancora attivi perche' negativi signed.
+- Nel blocco diagonal `btst #3`, il branch `ble` dopo
+  `cmp.w (D2-as-A0),D0` salta quando `word@D2 >= 4`; TS aveva invertito la
+  condizione e attivava `absLong(D3/D4)` proprio nel caso del bridge.
+- Sul repro MAME lower bridge, il pair slot `0x400A20` a f2442 deve mantenere
+  `vx` negativo (`0xfffde759`-style) mentre TS lo ribaltava positivo, creando
+  un falso muro/contatto quando il ponte sembrava abbassato.
+
+Fix:
+
+- `packages/engine/src/state-sub-1b5c2.ts` ora sign-estende i flag cardinali
+  byte prima dei confronti e corregge il gate `btst #3` a `wd2 < 4`.
+- `packages/engine/test/state-sub-1b5c2.test.ts` copre sia il confronto byte
+  signed sia il caso bridge `wd2 >= 4` che deve saltare il path A.
+- `packages/cli/src/test-state-sub-1b5c2-parity.ts` corregge il fake stack del
+  body harness: il sentinel RTS ora sta sopra il frame `movem`, e il runner usa
+  `step()` per non saltare il PC transitorio di ritorno. Con il harness corretto
+  `FUN_1B5C2` passa `2000/2000` contro il binario.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/engine/test/state-sub-1b5c2.test.ts --reporter=basic` PASS.
+- `npx tsx packages/cli/src/test-state-sub-1b5c2-parity.ts 2000` PASS.
+- `npx tsx packages/cli/src/test-helper-121b8-parity.ts 2000` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `probe-scenario-diff.ts` resta PASS sui 15 scenari gameplay warm-seed.
+- Long demo fresh step10 no-stack resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `14501 <= 16000`.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — FUN_253EC state-7 settle
 
