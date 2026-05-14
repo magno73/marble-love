@@ -1,7 +1,36 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (stronger live route guards)
+**Ultimo update:** 2026-05-15 (playable timeout rebuild guard)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable timeout rebuild guard
+
+QA notturno sul gameplay live: il percorso no-input/manual-like puo' entrare
+nel timeout/rebuild di fine vita dopo la lower-platform, con PF vuoto per una
+breve finestra. Il comportamento sembrava simile allo scroll runaway visto in
+precedenza, quindi e' stato confrontato con MAME prima di toccare il motore.
+
+Evidenza:
+
+- Cattura MAME temporanea `/tmp/marble_late_playable_scenarios`:
+  `late_4100` PASS @91 e `late_4250` PASS @100 con input trace reale.
+- In TS il percorso no-input passa da `main=1/mode=2` al rebuild `main=1/mode=0`,
+  tiene il PF vuoto solo per una finestra corta, poi torna a PF pieno (>4000)
+  con scroll tornato basso. Questo conferma che non e' la regressione runaway
+  del lower-platform respawn.
+
+Fix di copertura:
+
+- `playable-live-routes.test.ts` aggiunge una guardia timeout che forza il
+  seed manuale browser con trackball neutro fino al rebuild, assertendo che il
+  PF non resti vuoto, che si ripopoli entro la finestra attesa e che la biglia
+  non resti nello state tumble.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- `npx tsc -b --pretty false` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Stronger live route guards
 
