@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (gameplay warm-seed scenarios 100-frame clean)
+**Ultimo update:** 2026-05-14 (gameplay warm-seed scenarios level 3/4/5)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Pivot gameplay warm-seed scenarios
@@ -13,7 +13,7 @@ separato.
 
 Nuova infrastruttura:
 
-- `oracle/mame_gameplay_scenarios.lua` cattura 8 scenari gameplay/overlay in
+- `oracle/mame_gameplay_scenarios.lua` cattura 15 scenari gameplay/overlay in
   `oracle/scenarios/gameplay/`, 101 snapshot ciascuno (`f0` seed + `f1..f100`
   oracle). Ogni frame include `workRam`, `playfieldRam`, `spriteRam`,
   `alphaRam`, `colorRam`, `slapsticBank` e un blocco `irq4` con pacing/counter
@@ -27,7 +27,7 @@ Nuova infrastruttura:
   (`workRam[0x500..0x6ff]`), alpha, color e workRam no-stack. Con
   `SHOW_DIFFS=1` stampa i byte del frame di drill.
 - Il bridge warm legacy (`slotArrayReplayTick` + `warmResidualReplayTick`) ora
-  si arma solo sul seed attract f12000 storico che lo richiede. Gli otto seed
+  si arma solo sul seed attract f12000 storico che lo richiede. I seed
   gameplay/overlay non ricevono piu' il replay f12000, chiudendo rumore HUD e
   workRam non pertinente senza cambiare il guardrail long demo.
 
@@ -42,27 +42,42 @@ Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`)
 | `level1_end` | f15800 | 0 | 100 | PASS | none |
 | `level2_spawn` | f16500 | 1 | 100 | PASS | none |
 | `level2_early` | f17010 | 1 | 100 | PASS | none |
+| `level3_spawn` | f18200 | 0 | 77 | PASS | f+78 sprite=53 |
+| `level3_early` | f18700 | 1 | 100 | PASS | none |
+| `level3_end` | f19050 | 1 | 100 | PASS | none |
+| `level4_spawn` | f19600 | 0 | 100 | PASS | none |
+| `level4_early` | f20150 | 0 | 100 | PASS | none |
+| `level5_spawn` | f21250 | 1 | 100 | PASS | none |
+| `level5_early` | f21800 | 0 | 100 | PASS | none |
 | `intro_overlay` | f9700 | 1 | 100 | PASS | none |
 
 Criterio del pivot (`>=60` frame consecutivi con PF=0, sprite<=50, HUD<=30):
-**8/8 PASS**. Anche il criterio piu' rigido "first 60 after seed" ora passa su
-tutti gli 8 scenari, e tutti gli 8 scenari passano l'intera finestra 100/100
-sotto soglia. `level2_early` e' stato spostato da f17000 a f17010 per evitare
-di seedare dieci frame prima di uno snapshot MAME intra-`FUN_26F3E` (f17013
-fotografava il buffer MO dopo il clear sequenziale ma prima della dispatch
-completa). `level1_early` e' stato spostato da f14000 a f14120: la scansione
-temporanea f14080/f14100/f14120/... ha confermato che f14079/f14103 sono
-boundary intra-frame, mentre f14120 e' il primo seed early stabile con
-PF/sprite/HUD exact per 100 frame.
+**15/15 PASS**. Anche il criterio piu' rigido "first 60 after seed" passa su
+tutti i 15 scenari. Quattordici scenari passano l'intera finestra 100/100 sotto
+soglia; `level3_spawn` resta comunque PASS con 77 frame consecutivi e un singolo
+boundary tardo f+78 (`sprite=53`). `level2_early` e' stato spostato da f17000 a
+f17010 per evitare di seedare dieci frame prima di uno snapshot MAME
+intra-`FUN_26F3E` (f17013 fotografava il buffer MO dopo il clear sequenziale ma
+prima della dispatch completa). `level1_early` e' stato spostato da f14000 a
+f14120: la scansione temporanea f14080/f14100/f14120/... ha confermato che
+f14079/f14103 sono boundary intra-frame, mentre f14120 e' il primo seed early
+stabile con PF/sprite/HUD exact per 100 frame. Per i nuovi livelli, la scansione
+MAME dei segmenti successivi ha identificato i seed stabili:
+`level3_spawn` f18200, `level3_early` f18700, `level3_end` f19050,
+`level4_spawn` f19600, `level4_early` f20150, `level5_spawn` f21250,
+`level5_early` f21800.
 
 Validazione:
 
 - `npx tsc -b --pretty false` PASS.
-- Smoke MAME capture hash PASS per tutti gli 8 JSON usando NVRAM/CFG pulite.
-- Probe scenario PASS su tutti gli 8 scenari secondo il criterio
+- Smoke MAME capture hash PASS per gli 8 JSON originali usando NVRAM/CFG pulite.
+- Probe scenario PASS su tutti i 15 scenari secondo il criterio
   `>=60` frame consecutivi.
-- Dopo lo scope del replay f12000, i probe gameplay restano 8/8 PASS; diversi
-  scenari ora hanno HUD=0 nei primi blocchi e workRam no-stack piu' basso
+- Nuovi scenari level3/4/5 catturati con NVRAM/CFG pulite e `-nonvram_save`:
+  7/7 PASS; `level3_early` e `level5_early` sono stati reseedati
+  conservativamente da f18650/f21750 a f18700/f21800 dopo i primi probe.
+- Dopo lo scope del replay f12000, i probe gameplay originali restano PASS;
+  diversi scenari ora hanno HUD=0 nei primi blocchi e workRam no-stack piu' basso
   (`level1_end`/`level1_midmap` restano 100 frame sprite/PF/HUD exact).
 - Dopo il recapture `level2_early` a f17010, `level2_early` passa 100/100 frame
   (`max sprite=47`, PF=0, HUD<=1), chiudendo il blip iniziale f+13 del vecchio

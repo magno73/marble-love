@@ -25,6 +25,13 @@ local SCENARIOS = {
     { name = "level1_end",      frame = 15800, description = "Finish line approach" },
     { name = "level2_spawn",    frame = 16500, description = "Level 2 Aerial Race spawn" },
     { name = "level2_early",    frame = 17010, description = "Stable early level 2 warm seed" },
+    { name = "level3_spawn",    frame = 18200, description = "Silly Race spawn" },
+    { name = "level3_early",    frame = 18700, description = "500 frames post-spawn Silly Race" },
+    { name = "level3_end",      frame = 19050, description = "Silly Race finish approach" },
+    { name = "level4_spawn",    frame = 19600, description = "Aerial Race 2 spawn" },
+    { name = "level4_early",    frame = 20150, description = "Aerial Race 2 early motion" },
+    { name = "level5_spawn",    frame = 21250, description = "Ultimate Race spawn" },
+    { name = "level5_early",    frame = 21800, description = "Ultimate Race early motion" },
     { name = "intro_overlay",   frame = 9700,  description = "RACE THIS LEVEL IN overlay" },
 }
 
