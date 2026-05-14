@@ -41,6 +41,8 @@ const forcePlay = searchParams.get("play") === "1";
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
+const manualPlayableSeedName = "manual_level1_start";
+const replayPlayableSeedName = "coin_start_to_level1";
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
 // E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
@@ -206,10 +208,16 @@ async function startGame(
     }
   } else if (useCoinStartFlow) {
     try {
-      coinStartWarmState = await loadPlayableSeedWarmState("coin_start_to_level1");
-      console.log("[marble-love] prepared live gameplay seed coin_start_to_level1");
+      coinStartWarmState = await loadPlayableSeedWarmState(manualPlayableSeedName);
+      console.log(`[marble-love] prepared live gameplay seed ${manualPlayableSeedName}`);
     } catch (e) {
-      console.warn("[marble-love] live gameplay seed fetch failed:", e);
+      console.warn(`[marble-love] live gameplay seed ${manualPlayableSeedName} fetch failed:`, e);
+      try {
+        coinStartWarmState = await loadPlayableSeedWarmState(replayPlayableSeedName);
+        console.warn(`[marble-love] falling back to replay seed ${replayPlayableSeedName}`);
+      } catch (fallbackError) {
+        console.warn("[marble-love] live gameplay fallback seed fetch failed:", fallbackError);
+      }
     }
   } else if (useMameDump || useMameLive) {
     try {

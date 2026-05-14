@@ -12,12 +12,16 @@
 --   MARBLE_PLAYABLE_OUT_DIR      scenario output directory
 --   MARBLE_PLAYABLE_INPUT_OUT    input trace output path
 --   MARBLE_PLAYABLE_SCENARIOS    optional CSV filter
+--   MARBLE_PLAYABLE_TRACKBALL_START optional first scripted trackball frame
+--   MARBLE_PLAYABLE_INPUT_TRACE_REF optional scenario inputTrace path
 
 local OUT_DIR = os.getenv("MARBLE_PLAYABLE_OUT_DIR") or "oracle/scenarios/playable"
 local INPUT_OUT = os.getenv("MARBLE_PLAYABLE_INPUT_OUT") or "oracle/scenarios/input/playable_coin_start.json"
+local INPUT_TRACE_REF = os.getenv("MARBLE_PLAYABLE_INPUT_TRACE_REF") or "oracle/scenarios/input/playable_coin_start.json"
 local ONLY_RAW = os.getenv("MARBLE_PLAYABLE_SCENARIOS") or ""
 local FRAME_LIST_RAW = os.getenv("MARBLE_PLAYABLE_FRAME_LIST") or ""
 local FRAME_COUNT = 100
+local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or "2020") or 2020
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -199,13 +203,14 @@ local function scripted_input(frame)
 
     local dx = 0
     local dy = 0
-    if frame >= 2020 and frame < 2130 then
+    local t = frame - TRACKBALL_START
+    if t >= 0 and t < 110 then
         dx = 8
-    elseif frame >= 2130 and frame < 2240 then
+    elseif t >= 110 and t < 220 then
         dy = 8
-    elseif frame >= 2240 and frame < 2350 then
+    elseif t >= 220 and t < 330 then
         dx = -8
-    elseif frame >= 2350 and frame < 2460 then
+    elseif t >= 330 and t < 440 then
         dx = 4
         dy = -6
     end
@@ -433,7 +438,7 @@ local function write_scenario(scenario)
     out:write(string.format('  "description": "%s",\n', json_escape(scenario.description)))
     out:write(string.format('  "seedFrame": %d,\n', scenario.frame))
     out:write(string.format('  "oracleFrames": %d,\n', FRAME_COUNT))
-    out:write('  "inputTrace": "oracle/scenarios/input/playable_coin_start.json",\n')
+    out:write(string.format('  "inputTrace": "%s",\n', json_escape(INPUT_TRACE_REF)))
     out:write('  "regions": {\n')
     out:write('    "workRam": {"address": "0x400000", "bytes": 8192},\n')
     out:write('    "playfieldRam": {"address": "0xa00000", "bytes": 8192},\n')

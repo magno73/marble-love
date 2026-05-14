@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable route smoke)
+**Ultimo update:** 2026-05-15 (neutral manual playable seed)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Neutral manual playable seed
+
+Il path browser `?autoLoad=1&play=1` caricava il seed replay
+`coin_start_to_level1` f2045, catturato dopo 25 frame di trackball scriptato
+MAME. Funzionava per i probe oracle, ma per il gioco manuale poteva partire
+con impulso/movimento ereditato e alimentare la confusione "sembra demo".
+
+Fix:
+
+- `oracle/mame_playable_input_capture.lua` accetta ora
+  `MARBLE_PLAYABLE_TRACKBALL_START`, cosi' si puo' ritardare solo lo script
+  input senza cambiare coin/start o MMIO tap.
+- Aggiunto seed web compatto
+  `packages/web/public/scenarios/playable/manual_level1_start.seed.json`:
+  stessa entrata level1 f2045, ma con trackball P1 neutro (`obj0` in state 0,
+  PF gia' popolato).
+- Il flusso browser coin/start usa `manual_level1_start`; il vecchio
+  `coin_start_to_level1` resta fallback e seed replay/oracle.
+- `playable-live-routes.test.ts` usa il seed manuale reale del browser, quindi
+  le guardie su bridge, worm, respawn e input misto coprono il percorso live
+  effettivo.
+
+Validazione:
+
+- Cattura temporanea MAME `/tmp/marble_manual_delayed_scenarios`:
+  `manual_level1_start` PASS @80 con input injected neutro nei primi 100 frame.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/state-sub-1b5c2.test.ts packages/engine/test/playable-respawn-state1.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- `npx tsx packages/cli/src/probe-playable-replay.ts ...` PASS sui tre scenari
+  playable checked-in (`80/100`, `100/100`, `100/100`).
+- `npx tsx packages/cli/src/probe-scenario-diff.ts ...` PASS sui 15 scenari
+  gameplay warm-seed.
+- Probe demo replay PASS sui 5 scenari minimi (`intro_overlay`,
+  `level1_spawn`, `level1_midmap`, `level1_obstacle`, `level2_early`).
+- `npm --prefix packages/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Playable route smoke
 
@@ -12,7 +49,7 @@ serviva una guardia piu' ampia del singolo state-1 repro.
 Fix:
 
 - Aggiunto `packages/engine/test/playable-live-routes.test.ts`.
-- Il test parte dallo stesso seed manuale `coin_start_to_level1`, forza il
+- Il test parte dallo stesso seed manuale browser, forza il
   dispatcher gameplay manuale, e percorre quattro rotte:
   prima rampa death/respawn, lower bridge, lower worm loops e input misto
   pseudo-random.
