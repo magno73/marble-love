@@ -1,7 +1,60 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 HUD/counter cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 prefix scratch preservation)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 prefix scratch preservation
+
+Drill sul dense fresh f17640..f17675: i prefix/staged `FUN_1A444`
+fermavano correttamente i chunk del segmento 5, ma `buildTilemapRows1A444`
+eseguiva comunque il clear finale dello scratch. In MAME quello snapshot e'
+ancora dentro `FUN_1A444`, quindi `STRUCT @0x401c28` resta popolato
+(`3fd6/3fd3`) invece di essere gia' zero.
+
+Fix stabile:
+
+- `buildTilemapRows1A444` accetta `preserveFinalScratch`, lasciando invariato
+  il path full/parity di default.
+- I prefix segment-5 passano `preserveFinalScratch` e il helper lo abilita
+  automaticamente quando `0x4003e4 == 5`.
+- Nessun packRows sintetico e nessun cambio di cadence: viene solo evitato il
+  clear finale prematuro nelle snapshot mid-`FUN_1A444`.
+
+Effetto osservato:
+
+- Dense fresh `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `14659 -> 13327`.
+- Tail fresh `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `32604 -> 31346`.
+- Step10 fresh `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `16309 -> 16161`.
+- Legacy storico senza `slapsticBank`: `147670 -> 147411`, quindi non c'e'
+  regressione globale neanche sull'oracolo secondario.
+- f17640/f17649/f17650/f17660/f17670/f17690/f17693 scendono di 37 byte
+  ciascuno, PF resta exact.
+
+Falsificato nel drill:
+
+- Saltare il clear finale globalmente per ogni `maxOuterChunks` migliorava i
+  fresh segment-5 ma faceva esplodere lo storico legacy a `406672`; il fix resta
+  quindi limitato al segmento 5/prefix mid-call.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17650/f17660 restano PF-exact ma scratch/work heavy, ora con
+  `STRUCT @0x401c28` corretto.
+- f17701/f17702 mantengono residui alpha/sprite/work post-rebuild.
+- Dopo f17710 il tail resta soprattutto object/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 HUD/counter cadence
 
