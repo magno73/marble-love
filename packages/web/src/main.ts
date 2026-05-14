@@ -51,6 +51,11 @@ const useSyntheticDemoFrame =
   !forceRealRendering &&
   !forceAutoLoad;
 
+function activeMotionObjectStartEntry(state: ReturnType<typeof stateNs.emptyGameState>): number {
+  const avControl = (((state.workRam[0x3ae] ?? 0) << 8) | (state.workRam[0x3af] ?? 0)) & 0xffff;
+  return ((avControl >>> 3) & 0x07) * 64;
+}
+
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
   romStatus.textContent = message;
   romStatus.dataset.tone = tone;
@@ -467,7 +472,9 @@ async function startGame(
           opts.playfieldLookups = rom.graphics.lookupTables.playfield;
         }
         if (rom?.graphics.lookupTables.motionObjects) {
-          opts.motionObjects = "all-banks";
+          opts.motionObjects = "linked-list";
+          opts.motionObjectStartEntry = activeMotionObjectStartEntry(s);
+          opts.maxMotionObjectEntries = 64;
           opts.motionObjectLookups = rom.graphics.lookupTables.motionObjects;
         }
         const f = renderNs.buildFrame(s, opts);

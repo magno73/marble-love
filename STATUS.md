@@ -1,7 +1,39 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (MO/PF visual alignment)
+**Ultimo update:** 2026-05-14 (active MO bank rendering)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Active motion-object bank rendering
+
+Root cause di un possibile residuo visuale/stale sprite nel play live: il web
+chiedeva a `buildFrame` di renderizzare `motionObjects: "all-banks"`. MAME non
+fa cosi': `atarisy1_v.cpp::bankselect_w` chiama
+`m_mob->set_bank((newselect >> 3) & 7)` e `atarimo.cpp` costruisce la display
+list solo dal banco attivo. Nei seed playable questo poteva includere vecchi
+sprite di pagine inattive: su `level1_trackball_short` f2240 TS vedeva 25
+motion objects nel render web, mentre il banco attivo `0x4003AE=0x0080`
+espone 9 entry reali.
+
+Fix:
+
+- `packages/web/src/renderer.ts` ora usa `linked-list` dal banco attivo:
+  `motionObjectStartEntry = (((0x4003AE >> 3) & 7) * 64)`.
+- `packages/web/src/main.ts` usa la stessa selezione anche per il frame di
+  debug/log esposto a browser, cosi' diagnostica e rendering coincidono.
+- Nessun cambio alla RAM o alla logica motore: e' una correzione del bridge
+  video, allineata al registro AV-control MAME.
+
+Validazione:
+
+- Probe f2240: render web all-banks `25` sprite, active bank MAME-style `9`.
+- Browser visual check su `?autoLoad=1&playableSeed=level1_trackball_short&real=1&indirect=1`.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `probe-playable-replay.ts` PASS sui tre scenari playable (`80/100`,
+  `100/100`, `82/100`).
+- `probe-scenario-diff.ts` PASS sui 15 scenari gameplay warm-seed.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Motion-object visual alignment
 

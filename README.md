@@ -158,7 +158,7 @@ mentre playable replay 3/3 e warm-seed 15/15 restano PASS.
 | **Palette regions MAME** | ✅ Alpha 0x000-0x0FF / MO 0x100-0x1FF / Playfield **0x200-0x2FF** / Translucency 0x300-0x3FF |
 | **Pixel match vs MAME oracle** | Marble/PF alignment uses MAME motion-object transform; terrain and HUD/footer ✅ |
 | **Indirect renderer (`?indirect=1`)** | ✅ bitmap_ind16 PF + MO scratch + screen merge MAME-correct |
-| **MO coordinate transform** | ✅ MAME-faithful in indirect and direct real-MO paths: `x=xRaw`, `y=-yRaw-256-heightPx` (no empirical +15/243 offset) |
+| **MO coordinate transform/bank** | ✅ MAME-faithful in indirect and direct real-MO paths: active AV-control bank only, `x=xRaw`, `y=-yRaw-256-heightPx` (no empirical +15/243 offset, no all-bank stale sprites) |
 | **Pen cap 7** (3-bit effective MOB) | ✅ sphere blu shading visivo |
 | **Docs** | 📋 [`docs/classic-renderer.md`](./docs/classic-renderer.md), [`docs/classic-renderer-prd.md`](./docs/classic-renderer-prd.md), [`docs/classic-renderer-plan.md`](./docs/classic-renderer-plan.md) |
 
