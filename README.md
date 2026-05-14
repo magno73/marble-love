@@ -62,15 +62,18 @@ PASS e lo step10 fresh long demo resta sotto guardrail (`14501 <= 16000`).
 flusso coin/start manuale: non pre-carica piu' il livello, resta nel gate
 attract/start finche' `5`/`C` aggiunge credito e `Enter`/spazio passa START1.
 START consuma il credito e carica il seed gameplay warm validato
-`coin_start_to_level1` preservando il dispatcher MAME del seed (`state=1`):
-il full path MAME legge comunque la trackball in questa finestra, mentre il
-vecchio force a `state=0` desincronizzava scroll/PF/respawn sotto input live
-arbitrario. Il runtime browser mantiene separati il helper replay MAME
+`coin_start_to_level1`; il play manuale esce dal dispatcher attract/demo dopo
+START per evitare overlay tutorial/demo e movimento autonomo. La preservazione
+del dispatcher MAME del seed (`state=1`) resta opt-in con
+`?preserveDispatcher=1` per drill oracle. Il runtime browser mantiene separati
+il helper replay MAME
 (`rawX+rawY`, `rawX-rawY`) e i controlli live screen-space:
 frecce/WASD, mouse, touch e gamepad scrivono un solo asse MMIO per volta, con
 X invertito rispetto al DOM e Y DOM invertito, cosi' una singola freccia non
 produce piu' una diagonale e destra/sinistra seguono la biglia a schermo. In
-`?play=1` le frecce non pilotano piu' anche lo scroll-debug della viewport.
+`?play=1` le frecce non pilotano piu' anche lo scroll-debug della viewport;
+coin e START sono entrambi pulse frame-safe, quindi una pressione rapida di
+`5` + `Enter` non si perde tra due tick.
 I seed `?playableSeed=...`
 restano utili come diagnostica/replay warm, ma non sono il percorso consigliato
 per giocare manualmente. Il coin-credit completo via 6502 resta debito
@@ -157,7 +160,7 @@ no-stack migliora `15727 -> 14501`.
 | **Gameplay warm-seed scenarios** | ✅ 15/15 oracle checked-in in `oracle/scenarios/gameplay/` (level1_spawn, level1_early@f14120, level1_midmap, level1_obstacle@f15084, level1_end, level2_spawn, level2_early@f17010, level3_spawn@f18200, level3_early@f18700, level3_end@f19050, level4_spawn@f19600, level4_early@f20150, level5_spawn@f21250, level5_early@f21800, intro_overlay), 101 snapshot ciascuno; `probe-scenario-diff.ts` PASS su tutti con criterio `>=60` frame consecutivi PF=0/sprite<=50/HUD<=30, inclusi i primi 60 frame dal seed; 14/15 scenari passano 100/100 sotto soglia, con solo `level3_spawn` PASS @77 per un boundary tardo f+78 |
 | **Demo input replay warm-seed** | ✅ `mame_demo_input_tap.lua` + `input-replay.ts` + `probe-demo-replay.ts`; trace `demo_attract.json` f9700..f21900 deterministica; 5/5 scenari minimi e 15/15 suite PASS con input injected |
 | **Coin/play input replay** | ✅ `mame_playable_input_capture.lua` + `playable_coin_start.json` + `probe-playable-replay.ts`; scenari `coin_start_to_level1`, `level1_trackball_short`, `level1_trackball_obstacle` PASS con input reale injected (`80/100`, `100/100`, `100/100` sotto soglia) |
-| **Live browser input** | ✅ `?autoLoad=1&play=1` richiede `5`/`C` coin + `Enter`/spazio START e poi carica `coin_start_to_level1` preservando il dispatcher MAME del seed; trace/replay conserva la rotazione MAME trackball, mentre mouse/touch/WASD/frecce/gamepad live usano assi screen-space mono-asse con X invertito per il controllo visivo; frecce libere dal debug-scroll in `?play=1`; seed playable web via `?playableSeed=...` solo per diagnostica |
+| **Live browser input** | ✅ `?autoLoad=1&play=1` richiede `5`/`C` coin + `Enter`/spazio START e poi carica `coin_start_to_level1` in dispatcher gameplay manuale; `?preserveDispatcher=1` conserva invece il dispatcher MAME per drill oracle; trace/replay conserva la rotazione MAME trackball, mentre mouse/touch/WASD/frecce/gamepad live usano assi screen-space mono-asse con X invertito per il controllo visivo; frecce libere dal debug-scroll in `?play=1`; seed playable web via `?playableSeed=...` solo per diagnostica |
 | Chain playfield end-to-end | ✅ `bootInit({preloadLevel: 0..5})` → state.playfieldRam popolato (1500-2900 byte/livello) |
 | State machine evolution | ✅ `tick({runMainLoopBody})` → spriteRam ~110 byte, workRam attivo |
 | HUD attivato | ✅ alphaRam popolato — "SCORE _____" decoded ASCII via renderString286EE |
