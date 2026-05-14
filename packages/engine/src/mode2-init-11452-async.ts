@@ -317,7 +317,17 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 7:
     case 8:
     case 9:
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+
     case 10:
+      // Segment 5 leaves raw 1AD54 scratch visible before the delayed PF rebuild.
+      if (rb(state, 0x004003e4) === 5) {
+        buildTilemapRows1A444ChunkPhase(state, rom, 0, { ad54Count: 66, aa38Count: 0 });
+      }
+      state.clock.mode0Init11452Stage = as_u16(stage + 1);
+      return;
+
     case 11:
       state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
@@ -325,7 +335,8 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 12:
       if (rb(state, 0x004003e4) >= 3) {
         if (rb(state, 0x004003e4) === 3) {
-          buildTilemapRows1A444ChunkPhase(state, rom, 0, { ad54Count: 66, aa38Count: 24 });
+          // MAME has not run 1AA38 yet here; keeping chunk 0 raw avoids stale 0x009f words.
+          buildTilemapRows1A444ChunkPhase(state, rom, 0, { ad54Count: 66, aa38Count: 0 });
         }
         state.clock.mode0Init11452Stage = as_u16(13);
         return;
@@ -453,6 +464,8 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 58:
       if (rb(state, 0x004003e4) === 3) {
+        // Reproduce the late scratch clear/phase without packing playfield rows.
+        buildTilemapRows1A444ChunkPhase(state, rom, 7, { ad54Count: 66, aa38Count: 24 });
         state.clock.mode0Init11452Stage = as_u16(59);
         return;
       }
