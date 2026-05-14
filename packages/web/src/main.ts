@@ -16,6 +16,7 @@ import {
   tick,
   bootInit,
   render as renderNs,
+  wrap,
 } from "@marble-love/engine";
 import { initInput } from "./input.js";
 import {
@@ -181,6 +182,7 @@ async function startGame(
     };
   };
   let warmState: WarmState | undefined;
+  let warmStateIsPlayableSeed = false;
   const useMameDump = searchParams.get("mameDump") === "1";
   const useMameLive = searchParams.get("mameLive") === "1";
   const useCoinStartFlow =
@@ -191,6 +193,7 @@ async function startGame(
   if (playableSeedName !== null) {
     try {
       warmState = await loadPlayableSeedWarmState(playableSeedName);
+      warmStateIsPlayableSeed = true;
       console.log(`[warmState] loaded playable seed ${playableSeedName}`);
     } catch (e) {
       console.warn("[warmState] playable seed fetch failed:", e);
@@ -254,6 +257,12 @@ async function startGame(
           : { preloadLevel: 0, fullScreenInit: useFullScreenInit }
         : {},
   );
+  if (warmStateIsPlayableSeed) {
+    // Playable warm seeds are MAME frame_done snapshots. The validated replay
+    // probes auto-select phase 1 for these windows; phase 0 advances the
+    // scroll/body interleave one vblank early and can expose stale PF rows.
+    s.clock.mainLoopBodyTicks = wrap.as_u32(1);
+  }
   if (useCoinStartFlow) {
     // Start from the attract/start gate instead of showing a preloaded level.
     // The full 6502 coin-credit path is not emulated yet, so browser coin
@@ -368,6 +377,7 @@ async function startGame(
       // trackball deltas to obj0.
       s.workRam[0x390] = 0x00;
       s.workRam[0x391] = 0x00;
+      s.clock.mainLoopBodyTicks = wrap.as_u32(1);
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
       console.log(`[marble-love] START1 accepted, live gameplay seed loaded, credits=${browserCoinCredits}`);

@@ -75,6 +75,13 @@ per giocare manualmente. Il coin-credit completo via 6502 resta debito
 sound/main CPU; il browser usa un credito locale conservativo per sbloccare la
 partita live.
 
+**Checkpoint live playable phase (2026-05-14):** dopo START il browser arma ora
+`mainLoopBodyTicks=1`, cioe' la phase auto-selezionata dai replay MAME playable.
+Il bug del respawn basso non era terreno/collisione: phase `0` anticipava
+`FUN_13EE6` di una vblank e portava lo scroll a `40/40`, scrivendo una riga PF
+extra; phase `1` termina allineata a MAME a `38/38` con target respawn
+`0x9c/0x124`.
+
 **Checkpoint live respawn (2026-05-14):** il post-morte non era un problema di
 input o renderer: `FUN_2591A` mancava del callee reale `FUN_262B2`, quindi il
 respawn leggeva target globals stale e poteva scrollare via il playfield.
