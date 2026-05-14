@@ -40,6 +40,7 @@ import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
 const MODE2_PARTICLE_RNG_CATCHUP = 47;
+const MODE2_SEG4_PARTICLE_RNG_CATCHUP = 377;
 // Segment 5's long rebuild exposes the upper PF half one vblank before the tail.
 const MODE0_SEG5_DEFERRED_PF_TAIL = 0x08b2;
 
@@ -925,13 +926,17 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
 
     case 7:
       if (rb(state, 0x004003e4) !== 1) {
-        for (let i = 0; i < MODE2_PARTICLE_RNG_CATCHUP; i++) randomMod13A98(state, 0x100);
+        const rngCatchup = rb(state, 0x004003e4) === 4
+          ? MODE2_SEG4_PARTICLE_RNG_CATCHUP
+          : MODE2_PARTICLE_RNG_CATCHUP;
+        for (let i = 0; i < rngCatchup; i++) randomMod13A98(state, 0x100);
       }
       particleInit18CD2(state, 3, 0xfe, {
         fun_18e6c: (s, typeCode, subIdx) => {
           slotInsertSorted18E6C(s, rom, typeCode, subIdx);
         },
       });
+      if (rb(state, 0x004003e4) === 4) state.clock.particleLayerDelay = as_u8(1);
       helper11FF8Default(state, rom);
       state.clock.mode2Init11452Stage = as_u8(8);
       return;

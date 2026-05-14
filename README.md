@@ -9,6 +9,13 @@ Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo real
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
 
+**Checkpoint recente (2026-05-14):** il cadence particle del segmento 4 ora usa
+il catchup RNG osservato su MAME e tiene fermo il layer particle per un vblank
+dopo `FUN_18CD2`. Questo rende exact le prime 3 particle slot a f17600 e riduce
+il long demo fresh tail `30672 -> 29193` (`step10 15947 -> 15742`, sprite
+residuo segment-5 circa `140B -> 105B`), con PF ancora exact nei campioni
+osservati.
+
 ## Metriche progetto
 
 | Metrica | Valore |
