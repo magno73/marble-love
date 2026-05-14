@@ -1,7 +1,59 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 chunk2 snapshot phase)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 HUD/counter cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 HUD/counter cadence
+
+Drill sul tail fresh f17690..f17710: dopo l'allineamento chunk2 restavano
+byte alpha/work concentrati a f17700, con PF gia' exact. Il probe isolato ha
+mostrato che MAME rende il frame statico HUD (`hudFrameInit283C2`) un vblank
+prima del full `FUN_10504`, mentre TS lo emetteva solo dentro stage91.
+
+Fix stabile:
+
+- Segment-5 espone il visible counter `0x400014/0x400016` con cadence
+  `stage-1`, non `stage+1`, fino al rebuild tail.
+- Stage90 segment-5 esegue solo `hudFrameInit283C2`: alpha HUD visibile a
+  f17700, PF/rebuild ancora deferiti a stage91/92.
+- Stage91 ripristina `0x400014 = stage-1` dopo `mainLoopInit10504`, mantenendo
+  il counter MAME a f17701.
+
+Effetto osservato sui dump fresh bank-aware:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `14731 -> 14659`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `32891 -> 32604`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `16523 -> 16309`.
+- f17700 `579 -> 373`, con `alpha=204 -> 0` e `pf=0`.
+- f17701 `454 -> 453`; f17640/f17650/f17660/f17670 calano di 2 byte ciascuno
+  grazie al counter visibile.
+- Storico legacy senza `slapsticBank`: `147857 -> 147670`; resta secondario,
+  ma non segnala regressione globale.
+
+Falsificato nel drill:
+
+- Ritardare globalmente il chunk3 di un altro vblank peggiora il dense fresh
+  `14731 -> 19058`, quindi resta revertito.
+- Preservare alphaRam durante stage91 resta falsificato (`32891 -> 37260`);
+  il fix corretto e' anticipare solo `hudFrameInit283C2` a stage90.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17650/f17660 restano PF-exact ma scratch/work heavy.
+- f17701/f17702 hanno ancora alpha/sprite/work residuali post-rebuild.
+- Dopo f17710 il tail resta soprattutto object/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 chunk2 snapshot phase
 

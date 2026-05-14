@@ -100,9 +100,13 @@ function setMode0VblankSnapshot(state: GameState, stage: number): void {
     }
     return;
   }
-  const visibleStage = (stage + 1) & 0xff;
+  // Segment 5 exposes this counter two vblanks later than the earlier staged
+  // rebuilds; fresh f17640..f17700 snapshots match stage-1 here.
+  const visibleStage = (segment === 5 ? stage - 1 : stage + 1) & 0xff;
   wb(state, 0x00400014, visibleStage);
-  if (visibleStage < 5) {
+  if (segment === 5 && stage >= 90) {
+    wb(state, 0x00400016, 0);
+  } else if (visibleStage < 5) {
     wb(state, 0x00400016, visibleStage);
   } else if (useLongVisibleCounter) {
     wb(state, 0x00400016, (visibleStage - 5) & 0xff);
@@ -744,6 +748,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 90:
       if (rb(state, 0x004003e4) === 5) {
+        // MAME has the static HUD frame visible one vblank before the full
+        // FUN_10504 rebuild lands; PF remains deferred until stage 91/92.
+        hudFrameInit283C2(state, rom);
         state.clock.mode0Init11452Stage = as_u16(91);
         return;
       }
@@ -756,6 +763,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
         state.playfieldRam.set(deferredPlayfieldTail, MODE0_SEG5_DEFERRED_PF_TAIL);
         state.colorRam.fill(0);
+        wb(state, 0x00400014, (stage - 1) & 0xff);
         ww(state, 0x004003ae, rw(state, 0x004003b0));
         state.clock.mode0Init11452Stage = as_u16(92);
         return;
