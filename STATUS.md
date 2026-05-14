@@ -1,7 +1,48 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 video clear cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 bonus banner)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 bonus banner
+
+Drill sul residuo alpha f17004 dopo il fix del clear video: MAME mostra per un
+solo vblank il banner ROM `BONUS FOR / REMAINING / TIME`, mentre TS lasciava
+quella finestra alpha a zero.
+
+Fix stabile:
+
+- Lo stage 1 del mode2 async per attract segment `4` ora renderizza la chain
+  ROM `0x22c4e` con `FUN_2572`/`stateSub2572` e attr `0x3400`.
+- Il clear alpha resta allo stage 3: anticiparlo allo stage 2 e' stato
+  falsificato perche' peggiora f17005.
+
+Effetto osservato:
+
+- Fresh f16990..f17025 step1:
+  - somma locale `11568 -> 11464`;
+  - f17004 `295 -> 209`, con alpha `86 -> 0`;
+  - f17005 `428 -> 410`;
+  - f17006 `198` e f17013 `180` invariati.
+- Dump stabilizzati segment-5 invariati:
+  - dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`: `11352`;
+  - tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: `29070`.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+
+Drill aperto:
+
+- f17005 mantiene residui alpha seed/clear-cadence: il broad clear stage2
+  peggiora, quindi serve il micro-order reale invece di anticipare il wipe.
+- Il residuo sprite/workRam post f17013 e f176xx resta la prossima area:
+  pagina MO/cache e scratch, non PF.
 
 ## 2026-05-14 — Long demo segment-4 video clear cadence
 
@@ -22,7 +63,7 @@ Fix stabile:
 Effetto osservato:
 
 - Fresh f16990..f17025 step1:
-  - somma locale `18536 -> 11568`;
+  - somma locale `18536 -> 11568` prima del banner alpha successivo;
   - f17004 `7213 -> 295`, con PF `6393 -> 0` e color `344 -> 0`;
   - f17005 `478 -> 428`;
   - f17013 invariato `180`.
@@ -52,11 +93,8 @@ Validazione:
 
 Drill aperto:
 
-- f17004/f17005 restano con residui alpha/sprite/work: MAME disegna testi
-  alpha transienti (`BONUS FOR`, `REMAINING`) che TS non riproduce ancora in
-  quella micro-finestra.
-- Il residuo sprite/workRam post f17013 e f176xx resta la prossima area:
-  pagina MO/cache e scratch, non PF.
+- Il residuo alpha f17004 e' stato chiuso dal checkpoint successivo con la
+  chain ROM `0x22c4e`; restano f17005 e il residuo sprite/workRam.
 
 ## 2026-05-14 — Long demo segment-4 presentation timer
 
