@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 refresh dwell aligned; alpha HUD residual nearly gone)
+**Ultimo update:** 2026-05-14 (long demo: staged scratch cadence improved for segments 3/5)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo scratch cadence checkpoint
+
+I residui peggiori rimasti nel long demo erano ormai quasi tutti scratch/cache
+`FUN_1A444`, non payload playfield. TS stava normalizzando troppo presto alcuni
+chunk staged: lo scratch diventava valido per il packer, ma non combaciava con
+il buffer intermedio raw che MAME lascia visibile durante i dwell mode0.
+
+Fix stabili:
+
+- Segmento 3: il primo chunk staged a stage 12 ora esegue solo `FUN_1AD54`
+  raw e rimanda `FUN_1AA38`; questo riduce i falsi word `0x009f/0x400x`
+  nello scratch a f14530 senza toccare il PF.
+- Segmento 3: stage 58 riproduce il clear/phase del chunk 7 senza pack, che
+  elimina lo scratch stale entro f14580 mantenendo PF e sprite cadence stabili.
+- Segmento 5: stage 10 applica il medesimo raw `FUN_1AD54` di chunk 0 prima
+  del dwell, chiudendo una grossa fascia di scratch/cache a f17620 senza
+  anticipare il rebuild playfield.
+
+Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
+
+- Somma campionata: `160525 -> 159142`.
+- f14530: `total=2714 -> 2654`, `workRam=2689 -> 2629`, PF resta `0`.
+- f14580: `total=2617 -> 1761`, `workRam=2592 -> 1736`, PF resta `0`.
+- f17620: `total=3236 -> 2769`, `workRam=3084 -> 2617`, PF resta `0`.
+- Le finestre gia' chiuse restano stabili: f12950 `total=347`, f13200
+  `total=123`, f13920 `total=117`, f17710 `total=287`.
+
+Verifiche:
+
+```text
+npx tsc -b --pretty false
+  PASS
+
+test-object-orbit-emit-13ade-parity.ts 50
+  PASS 50/50
+
+test-object-state-entry-25bae-parity.ts 50
+  PASS 50/50
+
+test-hud-frame-init-283c2-parity.ts 50
+  PASS 50/50
+
+test-tilemap-span-builder-1aa38-parity.ts 50
+  PASS 50/50
+
+git diff --check
+  PASS
+```
+
+Drill aperto:
+
+- f15990 resta il peggior campione del segmento 4 (`total=2709`,
+  `workRam=2552`): i marker visibili `0x14/0x16` sono ancora una vblank
+  indietro rispetto a MAME, ma lo shift globale di stage 4 e' stato
+  falsificato perche' peggiora la finestra f16000..f16030.
+- f17690 resta dominato da scratch/cache (`total=2357`, `workRam=2205`);
+  tentativi di riprodurre un phase raw a stage 80 hanno peggiorato il dwell
+  lungo, quindi il prossimo drill deve identificare il writer reale prima di
+  aggiungere altre fasi.
 
 ## 2026-05-14 — Long demo presentation HUD checkpoint
 
