@@ -120,6 +120,15 @@ La sub ora torna bit-perfect col binario (`test-state-sub-1b5c2-parity.ts
 restano PASS, web build PASS, e long demo fresh step10 no-stack resta sotto
 guardrail (`14501 <= 16000`).
 
+**Checkpoint playable QA guard refresh (2026-05-15):** dopo il fix del ponte,
+il vecchio repro del test `playable-respawn-state1` non attraversava piu' lo
+stato `obj0+0x1A=1`. Il test ora usa una rotta deterministica aggiornata che
+entra nello state-1 tumble, rientra in `state 0`, ferma lo scroll a `<=90` e
+mantiene PF popolato. QA extra con MAME temporaneo su f2440/f2600/f3000/f3400/
+f4200 conferma che i warm seed stabili restano sani e che i seed presi a meta'
+transizione sono fragili solo come warm-start autonomi, non come percorso live
+continuo.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

@@ -84,8 +84,10 @@ describe("playable lower-platform respawn", () => {
       ["R", 206],
       ["L", 188],
       ["DL", 107],
-      ["DL", 141],
-      ["N", 500],
+      ["N", 80],
+      ["U", 80],
+      ["U", 80],
+      ["N", 220],
     ] as const) {
       for (let i = 0; i < count; i++) plan.push(dir);
     }
@@ -94,6 +96,7 @@ describe("playable lower-platform respawn", () => {
       D: [0, 8],
       R: [8, 0],
       L: [-8, 0],
+      U: [0, -8],
       DL: [-8, 8],
       N: [0, 0],
     };
@@ -118,9 +121,9 @@ describe("playable lower-platform respawn", () => {
 
     expect(sawState1).toBe(true);
     expect(state.workRam[0x18 + 0x1a]).toBe(0);
-    expect(readLongBE(state.workRam, 0x462)).toBe(444);
-    expect(readLongBE(state.workRam, 0x466)).toBe(380);
-    expect(state.videoScrollY).toBeLessThanOrEqual(306);
-    expect(nonzero(state.playfieldRam)).toBeGreaterThan(6000);
+    expect(readLongBE(state.workRam, 0x462)).toBe(244);
+    expect(readLongBE(state.workRam, 0x466)).toBe(268);
+    expect(state.videoScrollY).toBeLessThanOrEqual(90);
+    expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
   });
 });
