@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (browser coin/start flow)
+**Ultimo update:** 2026-05-14 (browser live controls)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Live browser trackball wiring
@@ -23,11 +23,12 @@ diagnostici warm:
   `pf=4174`, `Frame.playfield=2389`, `Frame.sprites=21`; tenendo
   `ArrowRight` la posizione `obj0` cambia, quindi la biglia riceve input live.
 
-- `packages/web/src/input.ts` ora ruota i delta browser come MAME Marble
-  (`trackballX = rawX + rawY`, `trackballY = rawX - rawY`) prima di integrarli
-  nei byte MMIO assoluti `0..255`. Questo allinea mouse, touch, WASD/frecce e
-  gamepad al comportamento visto nella trace playable (`dx=8,dy=0 -> 8/8`,
-  `dx=0,dy=8 -> 8/248`).
+- `packages/web/src/input.ts` separa ora due mapping: `rotateMarbleTrackballDelta`
+  resta il helper fedele a MAME (`rawX+rawY`, `rawX-rawY`) per trace/replay,
+  mentre l'input live usa `mapLiveScreenDeltaToTrackballDelta`, cioe' assi
+  diretti screen-space (`destra -> +X`, `sinistra -> -X`, `su -> +Y`,
+  `giu' -> -Y`). Questo evita che una singola freccia diventi un movimento
+  diagonale/invertito.
 - In `?play=1` le frecce non controllano piu' anche lo scroll-debug della
   viewport e bloccano il default scroll del browser: diventano input trackball
   pulito. Lo scroll manuale resta attivo fuori dal play mode.
@@ -35,7 +36,8 @@ diagnostici warm:
   pulsanti browser con START1 active-low su bit 0 (`Enter`/spazio). Il path
   coin-credit completo via 6502 resta debito sound/main CPU separato, ma il
   browser non parte piu' senza credito.
-- Aggiunto `packages/web/test/input.test.ts` per bloccare la rotazione 45 gradi.
+- `packages/web/test/input.test.ts` blocca sia la rotazione 45 gradi usata dal
+  replay MAME, sia il mapping live diretto per frecce/mouse/touch/gamepad.
 - Aggiunti tre seed web compatti in `packages/web/public/scenarios/playable/`
   (`coin_start_to_level1`, `level1_trackball_short`,
   `level1_trackball_obstacle`) e query `?playableSeed=...`. Questi restano
@@ -52,7 +54,8 @@ Validazione:
 - `npm --workspace @marble-love/web run build` PASS.
 - Chrome CDP smoke `?autoLoad=1&play=1` PASS: coin/start carica il livello,
   senza coin il livello non viene precaricato; freccia destra modifica la
-  posizione della biglia.
+  posizione della biglia. Il nuovo test del mapper live conferma che una
+  freccia non inietta piu' entrambi gli assi trackball insieme.
 - `git diff --check` PASS.
 
 ## 2026-05-14 — Coin/start + playable input replay
