@@ -38,7 +38,7 @@ Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`)
 | `level1_spawn` | f13500 | 1 | 100 | PASS | none |
 | `level1_early` | f14000 | 1 | 78 | PASS | f+79 sprite=53 |
 | `level1_midmap` | f14500 | 0 | 100 | PASS | none |
-| `level1_obstacle` | f15000 | 1 | 82 | PASS | f+83 sprite=51 |
+| `level1_obstacle` | f15084 | 1 | 100 | PASS | none |
 | `level1_end` | f15800 | 0 | 100 | PASS | none |
 | `level2_spawn` | f16500 | 1 | 100 | PASS | none |
 | `level2_early` | f17010 | 1 | 100 | PASS | none |
@@ -63,6 +63,11 @@ Validazione:
 - Dopo il recapture `level2_early` a f17010, `level2_early` passa 100/100 frame
   (`max sprite=47`, PF=0, HUD<=1), chiudendo il blip iniziale f+13 del vecchio
   seed f17000.
+- Dopo il recapture `level1_obstacle` a f15084, anche il primo ostacolo passa
+  100/100 frame (`max sprite=47`, PF=0, HUD<=3), chiudendo il boundary
+  intra-frame del vecchio seed f15000/f+83.
+- Resta come unico superamento sprite su 100 frame `level1_early` f+79
+  (`sprite=53`), mentre i primi 60 frame restano PASS.
 - Long demo invariant invariato sul fresh bank-aware step10:
   `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15727 <= 16000`.
 
