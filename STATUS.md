@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 partial PF rebuild)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 prefix cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 prefix cadence
+
+Un dump fresh piu' fitto f17640..f17675 ha mostrato che TS esponeva i prefix
+PF del segmento 5 troppo presto:
+
+- chunk 3: TS cambiava PF a f17643, MAME a f17649;
+- chunk 4: TS cambiava PF a f17654, MAME a f17659;
+- chunk 5: TS cambiava PF a f17663 nel vecchio modello, MAME a f17670.
+
+Fix stabile:
+
+- Per il segmento 5, i `rebuildMode0LevelPrefix` dei chunk 3/4/5 sono
+  ritardati rispettivamente agli stage 39/49/60.
+- Le phase scratch esistenti restano dove sono, quindi non viene reintrodotto
+  il vecchio broad helper segment5 stages50..67 gia' falsificato.
+
+Effetto osservato:
+
+- Fresh dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `66375 -> 60733`.
+- Fresh tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `53055 -> 49288`.
+- Fresh step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `18889 -> 18888`.
+- Storico `/tmp/mame_demo_12000_18000_step10.json`:
+  `143463 -> 143462`.
+
+Falsificato nel drill:
+
+- Un clear scratch semplice a stage 58 non e' corretto: peggiora f17669
+  perche' MAME ha gia' scratch reale del chunk successivo.
+
+Drill aperto:
+
+- f17640/f17660 restano workRam-heavy: il residuo e' soprattutto scratch/cache
+  e non PF.
+- f17706/f17707 hanno ancora 395B color/palette residui nel fresh step1.
+- Dopo f17710 il tail e' PF exact e resta soprattutto workRam/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 partial PF rebuild
 
