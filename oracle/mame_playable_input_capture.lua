@@ -13,6 +13,7 @@
 --   MARBLE_PLAYABLE_INPUT_OUT    input trace output path
 --   MARBLE_PLAYABLE_SCENARIOS    optional CSV filter
 --   MARBLE_PLAYABLE_TRACKBALL_START optional first scripted trackball frame
+--   MARBLE_PLAYABLE_ROUTE        optional screen-space route, e.g. D:171,R:206
 --   MARBLE_PLAYABLE_INPUT_TRACE_REF optional scenario inputTrace path
 
 local OUT_DIR = os.getenv("MARBLE_PLAYABLE_OUT_DIR") or "oracle/scenarios/playable"
@@ -20,6 +21,7 @@ local INPUT_OUT = os.getenv("MARBLE_PLAYABLE_INPUT_OUT") or "oracle/scenarios/in
 local INPUT_TRACE_REF = os.getenv("MARBLE_PLAYABLE_INPUT_TRACE_REF") or "oracle/scenarios/input/playable_coin_start.json"
 local ONLY_RAW = os.getenv("MARBLE_PLAYABLE_SCENARIOS") or ""
 local FRAME_LIST_RAW = os.getenv("MARBLE_PLAYABLE_FRAME_LIST") or ""
+local ROUTE_RAW = os.getenv("MARBLE_PLAYABLE_ROUTE") or ""
 local FRAME_COUNT = 100
 local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or "2020") or 2020
 
@@ -93,6 +95,53 @@ local tap_handles = {}
 local script_buttons = 0
 local script_dx = 0
 local script_dy = 0
+local route_steps = {}
+local route_total = 0
+
+local ROUTE_DELTAS = {
+    N = {0, 0},
+    U = {0, -8},
+    D = {0, 8},
+    L = {-8, 0},
+    R = {8, 0},
+    UL = {-8, -8},
+    UR = {8, -8},
+    DL = {-8, 8},
+    DR = {8, 8},
+    BR = {4, -6},
+}
+
+local function parse_route()
+    if ROUTE_RAW == "" then return end
+    for tok in string.gmatch(ROUTE_RAW, "([^,]+)") do
+        local name, count_s = tok:match("^%s*([A-Za-z]+)%s*:%s*(%d+)%s*$")
+        if name == nil then
+            error("[mame_playable_input_capture] bad MARBLE_PLAYABLE_ROUTE token: " .. tok)
+        end
+        name = string.upper(name)
+        local delta = ROUTE_DELTAS[name]
+        if delta == nil then
+            error("[mame_playable_input_capture] unknown route direction: " .. name)
+        end
+        local count = tonumber(count_s)
+        if count == nil or count <= 0 then
+            error("[mame_playable_input_capture] bad route count: " .. count_s)
+        end
+        route_total = route_total + count
+        table.insert(route_steps, {
+            until_frame = route_total,
+            screen_dx = delta[1],
+            screen_dy = delta[2],
+        })
+    end
+    print(string.format(
+        "[mame_playable_input_capture] scripted screen-space route: %s (%d frames)",
+        ROUTE_RAW,
+        route_total
+    ))
+end
+
+parse_route()
 
 local INPUT_DEFAULTS = {
     [0xF20001] = 0xff,
@@ -204,6 +253,20 @@ local function scripted_input(frame)
     local dx = 0
     local dy = 0
     local t = frame - TRACKBALL_START
+    if #route_steps > 0 then
+        if t >= 0 then
+            local route_frame = t + 1
+            for _, step in ipairs(route_steps) do
+                if route_frame <= step.until_frame then
+                    -- Browser live controls use screen-space axes; Marble's raw
+                    -- trackball ports are inverted on both axes for the same feel.
+                    return buttons, (-step.screen_dx) & 0xff, (-step.screen_dy) & 0xff
+                end
+            end
+        end
+        return buttons, dx, dy
+    end
+
     if t >= 0 and t < 110 then
         dx = 8
     elseif t >= 110 and t < 220 then
