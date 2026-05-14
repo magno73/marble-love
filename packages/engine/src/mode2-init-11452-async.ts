@@ -329,6 +329,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 11:
+      if (rb(state, 0x004003e4) === 4) {
+        // MAME starts segment 4's tile build before the later generic stage-13 prefix.
+        levelDispatcher16EC6(state, rom, { fun_1a444: () => undefined });
+        buildTilemapRows1A444ChunkPhase(state, rom, 0, { ad54Count: 66, aa38Count: 18 });
+      }
       state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
 

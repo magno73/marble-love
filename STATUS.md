@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: staged scratch cadence improved for segments 3/5)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 tile build start aligned)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Long demo scratch cadence checkpoint
@@ -20,12 +20,18 @@ Fix stabili:
 - Segmento 5: stage 10 applica il medesimo raw `FUN_1AD54` di chunk 0 prima
   del dwell, chiudendo una grossa fascia di scratch/cache a f17620 senza
   anticipare il rebuild playfield.
+- Segmento 4: un tap MAME su f15983..f15995 ha mostrato che il binario entra
+  in `FUN_1A444` gia' a f15984 e a f15990 e' nel chunk 0 con 18 righe
+  `FUN_1AA38` completate. TS ora fa il `FUN_16EC6` descriptor setup a stage 11
+  e poi applica la phase chunk0 `AD54=66/AA38=18`, senza spostare globalmente
+  la cadence del segmento.
 
 Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json`:
 
-- Somma campionata: `160525 -> 159142`.
+- Somma campionata: `160525 -> 157172`.
 - f14530: `total=2714 -> 2654`, `workRam=2689 -> 2629`, PF resta `0`.
 - f14580: `total=2617 -> 1761`, `workRam=2592 -> 1736`, PF resta `0`.
+- f15990: `total=2709 -> 739`, `workRam=2552 -> 582`, PF resta `0`.
 - f17620: `total=3236 -> 2769`, `workRam=3084 -> 2617`, PF resta `0`.
 - Le finestre gia' chiuse restano stabili: f12950 `total=347`, f13200
   `total=123`, f13920 `total=117`, f17710 `total=287`.
@@ -54,14 +60,12 @@ git diff --check
 
 Drill aperto:
 
-- f15990 resta il peggior campione del segmento 4 (`total=2709`,
-  `workRam=2552`): i marker visibili `0x14/0x16` sono ancora una vblank
-  indietro rispetto a MAME, ma lo shift globale di stage 4 e' stato
-  falsificato perche' peggiora la finestra f16000..f16030.
 - f17690 resta dominato da scratch/cache (`total=2357`, `workRam=2205`);
-  tentativi di riprodurre un phase raw a stage 80 hanno peggiorato il dwell
-  lungo, quindi il prossimo drill deve identificare il writer reale prima di
-  aggiungere altre fasi.
+  il tap f17680..f17695 mostra MAME nel chunk 7 (`d4=0x00a8`) con `AA38`
+  progressivo, ma un esperimento stage 80 `chunk7 AD54=79/AA38=13` pur
+  migliorando f17690 ha lasciato scratch stale e ha peggiorato f17700+.
+  Prossimo drill: modellare anche il completamento/tail clear reale, non solo
+  la snapshot intermedia.
 
 ## 2026-05-14 — Long demo presentation HUD checkpoint
 
