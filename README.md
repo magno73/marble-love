@@ -75,6 +75,15 @@ per giocare manualmente. Il coin-credit completo via 6502 resta debito
 sound/main CPU; il browser usa un credito locale conservativo per sbloccare la
 partita live.
 
+**Checkpoint live respawn (2026-05-14):** il post-morte non era un problema di
+input o renderer: `FUN_2591A` mancava del callee reale `FUN_262B2`, quindi il
+respawn leggeva target globals stale e poteva scrollare via il playfield.
+`object-target-init-262b2.ts` ora replica init sentinel, dispatch target-table,
+`FUN_2637A` e fallback backward scan; il runtime gameplay lo cabla quando il
+dispatcher e' in play live (`0x400390/0x400391 == 0`). Il caso live riprodotto
+riporta il target a `0x74/0x74`, torna `state 4 -> 0` senza scroll impazzito,
+mentre playable replay 3/3 e warm-seed 15/15 restano PASS.
+
 ## Metriche progetto
 
 | Metrica | Valore |
