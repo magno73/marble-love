@@ -411,6 +411,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 33:
       if (usesMode0TilemapChunkPhases(state)) {
+        if (rb(state, 0x004003e4) === 5) {
+          buildTilemapRows1A444ChunkPhase(state, rom, 3, MODE0_SEG4_CHUNK4_PHASES.get(stage)!);
+          state.clock.mode0Init11452Stage = as_u16(34);
+          return;
+        }
         rebuildMode0LevelPrefix(state, rom, 3);
         buildTilemapRows1A444ChunkPhase(state, rom, 3, MODE0_SEG4_CHUNK4_PHASES.get(stage)!);
         state.clock.mode0Init11452Stage = as_u16(34);
@@ -431,6 +436,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 42:
     case 43: {
       const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK4_PHASES.get(stage) : undefined;
+      if (phase !== undefined && rb(state, 0x004003e4) === 5 && stage === 39) {
+        rebuildMode0LevelPrefix(state, rom, 3);
+      }
       if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 3, phase);
       state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
@@ -438,6 +446,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 44:
       if (usesMode0TilemapChunkPhases(state)) {
+        if (rb(state, 0x004003e4) === 5) {
+          buildTilemapRows1A444ChunkPhase(state, rom, 4, MODE0_SEG4_CHUNK5_PHASES.get(stage)!);
+          state.clock.mode0Init11452Stage = as_u16(45);
+          return;
+        }
         rebuildMode0LevelPrefix(state, rom, 4);
         buildTilemapRows1A444ChunkPhase(state, rom, 4, MODE0_SEG4_CHUNK5_PHASES.get(stage)!);
         state.clock.mode0Init11452Stage = as_u16(45);
@@ -456,6 +469,9 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 51:
     case 52: {
       const phase = usesMode0TilemapChunkPhases(state) ? MODE0_SEG4_CHUNK5_PHASES.get(stage) : undefined;
+      if (phase !== undefined && rb(state, 0x004003e4) === 5 && stage === 49) {
+        rebuildMode0LevelPrefix(state, rom, 4);
+      }
       if (phase !== undefined) buildTilemapRows1A444ChunkPhase(state, rom, 4, phase);
       state.clock.mode0Init11452Stage = as_u16(stage + 1);
       return;
@@ -463,6 +479,10 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 53:
       if (usesMode0TilemapChunkPhases(state)) {
+        if (rb(state, 0x004003e4) === 5) {
+          state.clock.mode0Init11452Stage = as_u16(54);
+          return;
+        }
         rebuildMode0LevelPrefix(state, rom, 5);
         buildTilemapRows1A444ChunkPhase(state, rom, 4, MODE0_SEG4_CHUNK5_PHASES.get(stage)!);
         state.clock.mode0Init11452Stage = as_u16(54);
@@ -488,6 +508,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 60:
       if (rb(state, 0x004003e4) === 5) {
+        rebuildMode0LevelPrefix(state, rom, 5);
         buildTilemapRows1A444ChunkPhase(state, rom, 5, { ad54Count: 52, aa38Count: 0 });
         state.clock.mode0Init11452Stage = as_u16(61);
         return;
