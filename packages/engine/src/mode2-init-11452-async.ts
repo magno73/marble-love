@@ -474,8 +474,21 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         state.clock.mode0Init11452Stage = as_u16(59);
         return;
       }
+      if (rb(state, 0x004003e4) === 5) {
+        state.clock.mode0Init11452Stage = as_u16(59);
+        return;
+      }
       rebuildMode0LevelPrefix(state, rom, 8);
       state.clock.mode0Init11452Stage = as_u16(59);
+      return;
+
+    case 60:
+      if (rb(state, 0x004003e4) === 5) {
+        buildTilemapRows1A444ChunkPhase(state, rom, 5, { ad54Count: 52, aa38Count: 0 });
+        state.clock.mode0Init11452Stage = as_u16(61);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(61);
       return;
 
     case 63:
@@ -503,6 +516,11 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
 
     case 68:
       if (rb(state, 0x004003e4) === 3) {
+        rebuildMode0LevelPrefix(state, rom, 8);
+        state.clock.mode0Init11452Stage = as_u16(69);
+        return;
+      }
+      if (rb(state, 0x004003e4) === 5) {
         rebuildMode0LevelPrefix(state, rom, 8);
         state.clock.mode0Init11452Stage = as_u16(69);
         return;
