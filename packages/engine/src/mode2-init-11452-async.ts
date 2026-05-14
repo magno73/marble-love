@@ -42,6 +42,7 @@ const MODE0_LEVEL_PREFIX_ROWS = 18;
 const MODE2_PARTICLE_RNG_CATCHUP = 47;
 const MODE2_SEG4_PARTICLE_RNG_CATCHUP = 377;
 const MODE2_SEG4_BONUS_BANNER_CHAIN = 0x00022c4e;
+const MODE2_SEG4_STAGE2_ALPHA_WORD_END = 0x480;
 // Segment 5's long rebuild exposes the upper PF half one vblank before the tail.
 const MODE0_SEG5_DEFERRED_PF_TAIL = 0x08b2;
 
@@ -901,6 +902,9 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
       if (rb(state, 0x004003e4) === 4) {
         clearPaletteRam121A6(state);
         clearPlayfieldRam12174(state);
+        // MAME exposes the lower alpha rows for one more vblank, but clears
+        // rows 0..17 before f17005; the full alpha wipe follows at stage 3.
+        clearAlphaWords(state, 0, MODE2_SEG4_STAGE2_ALPHA_WORD_END);
       } else {
         clearAlphaWords(state, 1183, 0x780);
       }

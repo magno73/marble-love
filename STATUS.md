@@ -1,7 +1,50 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 bonus banner)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 alpha clear split)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 alpha clear split
+
+Drill sul residuo alpha f17005: dopo il banner f17004, MAME non fa ancora un
+wipe completo della alpha RAM. Espone le righe basse per un altro vblank, ma
+cancella gia' le righe 0..17 prima di f17005. TS invece lasciava l'intero
+seed alpha visibile fino allo stage successivo.
+
+Fix stabile:
+
+- Lo stage 2 del mode2 async per attract segment `4` ora cancella solo i primi
+  `0x480` word alpha (18 righe) insieme a PF+palette.
+- Lo stage 3 mantiene il clear alpha completo. Il broad clear stage2 su tutta
+  l'alpha resta falsificato perche' rimuove righe che MAME conserva a f17005.
+
+Effetto osservato:
+
+- Fresh f16990..f17025 step1:
+  - somma locale `11464 -> 11252`;
+  - f17005 `410 -> 198`, con alpha `212 -> 0`;
+  - f17004 resta `209`, f17006 resta `198`, f17013 resta `180`.
+- Dump stabilizzati invariati:
+  - dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`: `11352`;
+  - tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: `29070`;
+  - step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+    `15727`;
+  - legacy storico `/tmp/mame_demo_12000_18000_step10.json`: `144786`.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+
+Drill aperto:
+
+- f17004/f17005/f17006 sono ora alpha/PF/color exact; resta work/sprite
+  residuo nello stesso transition.
+- Il residuo post f17013 e f176xx resta pagina MO/cache + scratch/workRam.
 
 ## 2026-05-14 — Long demo segment-4 bonus banner
 
@@ -13,8 +56,8 @@ Fix stabile:
 
 - Lo stage 1 del mode2 async per attract segment `4` ora renderizza la chain
   ROM `0x22c4e` con `FUN_2572`/`stateSub2572` e attr `0x3400`.
-- Il clear alpha resta allo stage 3: anticiparlo allo stage 2 e' stato
-  falsificato perche' peggiora f17005.
+- Il clear alpha completo resta allo stage 3; lo stage 2 viene raffinato dal
+  checkpoint successivo con il wipe parziale delle prime 18 righe.
 
 Effetto osservato:
 
@@ -39,10 +82,8 @@ Validazione:
 
 Drill aperto:
 
-- f17005 mantiene residui alpha seed/clear-cadence: il broad clear stage2
-  peggiora, quindi serve il micro-order reale invece di anticipare il wipe.
-- Il residuo sprite/workRam post f17013 e f176xx resta la prossima area:
-  pagina MO/cache e scratch, non PF.
+- f17005 alpha viene chiuso dal checkpoint successivo tramite clear parziale
+  righe 0..17; resta il residuo sprite/workRam.
 
 ## 2026-05-14 — Long demo segment-4 video clear cadence
 
