@@ -1,7 +1,59 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 highscore/PF visibility)
+**Ultimo update:** 2026-05-14 (pivot gameplay warm-seed scenarios)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Pivot gameplay warm-seed scenarios
+
+Stop al drift drill incrementale sui segmenti 4/5 del long demo. Il residuo
+fresh step10 e' sotto soglia (`15727 <= 16000`) ed e' concentrato in
+sprite/workRam scratch/cache non-PF. Il nuovo target e' gameplay-ready via
+warm-seed scenarios MAME, saltando coin-up/trackball/game-init come debito
+separato.
+
+Nuova infrastruttura:
+
+- `oracle/mame_gameplay_scenarios.lua` cattura 8 scenari gameplay/overlay in
+  `oracle/scenarios/gameplay/`, 101 snapshot ciascuno (`f0` seed + `f1..f100`
+  oracle). Ogni frame include `workRam`, `playfieldRam`, `spriteRam`,
+  `alphaRam`, `colorRam`, `slapsticBank` e un blocco `irq4` con pacing/counter
+  MAME.
+- Capture deterministica verificata con smoke hash. Nota operativa: usare
+  MAME headless con NVRAM/CFG temporanee pulite e `-nonvram_save`, ad esempio:
+  `mame marble -nothrottle -skip_gameinfo -video none -sound none -nvram_directory /tmp/marble_capture_nvram -cfg_directory /tmp/marble_capture_cfg -nonvram_save -autoboot_script oracle/mame_gameplay_scenarios.lua`.
+- `packages/cli/src/probe-scenario-diff.ts` carica uno scenario, bootstrappa
+  TS dal seed, prova automaticamente le due fasi possibili del main-loop
+  30Hz, diffa 100 frame e stampa max/sum per PF, sprite, HUD
+  (`workRam[0x500..0x6ff]`), alpha, color e workRam no-stack. Con
+  `SHOW_DIFFS=1` stampa i byte del frame di drill.
+
+Risultato probe scenario (`npx tsx packages/cli/src/probe-scenario-diff.ts ...`):
+
+| Scenario | Seed | Fase | Streak PASS | Initial 60 | First fail |
+|---|---:|---:|---:|---|---|
+| `level1_spawn` | f13500 | 1 | 100 | PASS | none |
+| `level1_early` | f14000 | 1 | 78 | PASS | f+79 sprite=53 |
+| `level1_midmap` | f14500 | 0 | 100 | PASS | none |
+| `level1_obstacle` | f15000 | 1 | 82 | PASS | f+83 sprite=51 |
+| `level1_end` | f15800 | 0 | 100 | PASS | none |
+| `level2_spawn` | f16500 | 1 | 100 | PASS | none |
+| `level2_early` | f17000 | 1 | 87 | FAIL | f+13 sprite=51 |
+| `intro_overlay` | f9700 | 1 | 100 | PASS | none |
+
+Criterio del pivot (`>=60` frame consecutivi con PF=0, sprite<=50, HUD<=30):
+**8/8 PASS**. Nota: `level2_early` non passa i primi 60 frame in senso stretto
+per un blip a f+13 (`sprite=51`, un byte oltre soglia), ma ha una finestra
+successiva da 87 frame consecutivi sotto soglia. Se vogliamo rendere il criterio
+"first 60 after seed" invece di "60 consecutive", quello e' il prossimo drill.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- Smoke MAME capture hash PASS per tutti gli 8 JSON usando NVRAM/CFG pulite.
+- Probe scenario PASS su tutti gli 8 scenari secondo il criterio
+  `>=60` frame consecutivi.
+- Long demo invariant invariato: nessun file engine modificato in questo
+  checkpoint; ultimo fresh step10 noto resta `15727 <= 16000`.
 
 ## 2026-05-14 — Long demo segment-4 highscore/PF visibility
 
