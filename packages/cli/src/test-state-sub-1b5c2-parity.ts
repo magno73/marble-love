@@ -122,16 +122,14 @@ function callBody(
   d3Val: number,
 ): void {
   const sys = cpu.system;
-  let sp = 0x401f00;
+  const sp = 0x401edc;
 
-  // Push SAVE_FRAME_REGS dummy longs (save frame for epilogue's movem.l (SP)+).
+  // The body starts after the prologue, so SP points at the saved movem frame
+  // and the RTS return address sits just above that frame.
   for (let i = 0; i < SAVE_FRAME_REGS; i++) {
-    sp = (sp - 4) >>> 0;
-    sys.write(sp, 4, 0xdeadbeef);
+    sys.write(sp + i * 4, 4, 0xdeadbeef);
   }
-  // Push sentinel return address.
-  sp = (sp - 4) >>> 0;
-  sys.write(sp, 4, SENTINEL);
+  sys.write(sp + SAVE_FRAME_REGS * 4, 4, SENTINEL);
 
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_1B5C2_BODY);
@@ -143,13 +141,12 @@ function callBody(
   sys.setRegister("a3", a3Addr >>> 0);   // A3 = bitmap ptr
   sys.setRegister("a4", FUN_1B5B4);      // A4 = negateIfPositive fn
 
-  // Run until sentinel.
-  const maxCycles = 500_000;
-  const burst = 100;
-  let total = 0;
-  while (total < maxCycles) {
-    sys.run(burst);
-    total += burst;
+  // Run until sentinel. Step instruction-by-instruction so the transient PC
+  // value immediately after RTS cannot be skipped by a burst run.
+  const maxInstructions = 2_000;
+  for (let i = 0; i < maxInstructions; i++) {
+    if (sys.getRegisters().pc === SENTINEL) break;
+    sys.step();
     if (sys.getRegisters().pc === SENTINEL) break;
   }
 
