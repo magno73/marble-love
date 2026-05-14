@@ -32,6 +32,20 @@ function nonzero(bytes: Uint8Array): number {
   return total;
 }
 
+function readLongBE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function signedLong(value: number): number {
+  return value | 0;
+}
+
 function loadPlayableState(rom: ReturnType<typeof emptyRomImage>): GameState {
   const seed = JSON.parse(
     readFileSync(resolve("packages/web/public/scenarios/playable/manual_level1_start.seed.json"), "utf-8"),
@@ -80,11 +94,13 @@ describe("playable live route smoke", () => {
       "first ramp death/respawn",
       expand([["D", 260], ["N", 500], ["D", 300], ["N", 400]]),
       80,
+      { sawState: 4 },
     ],
     [
       "lower platform bridge",
       expand([["D", 171], ["R", 206], ["L", 188], ["DL", 107], ["BR", 260], ["R", 180], ["N", 300]]),
       90,
+      { minMaxX: 300_000 },
     ],
     [
       "lower platform worm loops",
@@ -102,15 +118,18 @@ describe("playable live route smoke", () => {
         ["N", 600],
       ]),
       90,
+      {},
     ],
-    ["mixed manual input", pseudoRandomPlan(2200), 40],
-  ] as const)("%s does not run away or empty the playfield", (_name, plan, maxScrollY) => {
+    ["mixed manual input", pseudoRandomPlan(2200), 40, {}],
+  ] as const)("%s does not run away or empty the playfield", (_name, plan, maxScrollY, routeExpect) => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
     const state = loadPlayableState(rom);
 
     let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let maxObjX = Number.NEGATIVE_INFINITY;
+    let sawExpectedState = routeExpect.sawState === undefined;
     const deltas: Record<string, readonly [number, number]> = {
       D: [0, 8],
       U: [0, -8],
@@ -137,10 +156,18 @@ describe("playable live route smoke", () => {
         inputMmio: 0x6f,
       });
 
+      maxObjX = Math.max(maxObjX, signedLong(readLongBE(state.workRam, 0x18)));
+      if (routeExpect.sawState !== undefined && state.workRam[0x18 + 0x1a] === routeExpect.sawState) {
+        sawExpectedState = true;
+      }
       expect(state.videoScrollY).toBeLessThanOrEqual(maxScrollY);
       expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
     }
 
+    if (routeExpect.minMaxX !== undefined) {
+      expect(maxObjX).toBeGreaterThan(routeExpect.minMaxX);
+    }
+    expect(sawExpectedState).toBe(true);
     expect(state.workRam[0x18 + 0x1a]).not.toBe(1);
   });
 });

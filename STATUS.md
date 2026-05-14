@@ -1,7 +1,24 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (neutral manual playable seed)
+**Ultimo update:** 2026-05-15 (stronger live route guards)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Stronger live route guards
+
+Follow-up QA dopo il seed manuale neutro: il route smoke copriva gia' terrain
+runaway/PF-empty, ma ora verifica anche due segnali piu' vicini ai bug
+segnalati:
+
+- la rotta prima rampa deve attraversare lo stato death/respawn osservato
+  (`obj0+0x1A=4`) e poi tornare non bloccata;
+- la rotta lower bridge deve progredire oltre `obj0.x > 300000`, cosi' non
+  basta evitare lo scroll runaway: deve davvero passare il ponte.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- `npx tsc -b --pretty false` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Neutral manual playable seed
 
