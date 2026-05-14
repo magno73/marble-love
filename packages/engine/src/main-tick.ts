@@ -195,12 +195,30 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // Replica 0x28788..0x287D8: incrementer + latch Y target + AV-control.
   mainUpdateScrollSync(state);
 
-  // FUN_26D8A (PF scroll update) — conditional
+  // FUN_26D8A (PF scroll update) — conditional. In playable gameplay with
+  // live trackball movement, frame_done snapshots expose the trigger one
+  // vblank before the visible scroll/MO side effects, so schedule it there and
+  // apply the previous one below. Attract/presentation segments keep the
+  // immediate cadence already aligned by the long-demo oracle.
+  const runDeferredPfScroll = state.clock.pendingPfScrollUpdate !== undefined;
+  state.clock.pendingPfScrollUpdate = undefined;
+  const p1InputActive = (opts.p1X ?? 0xff) !== 0xff || (opts.p1Y ?? 0xff) !== 0xff;
+  const deferPfScrollUpdate =
+    opts.runMainLoopBody === true &&
+    (r[0x3e4] ?? 0) === 2 &&
+    p1InputActive;
   if (
     (r[0x08] ?? 0) !== 0 &&
     (r[0x0a] ?? 0) >= 2 &&
     (r[0x14] ?? 0) === 1
   ) {
+    if (deferPfScrollUpdate) {
+      state.clock.pendingPfScrollUpdate = as_u8(1);
+    } else {
+      pfScrollUpdate(state);
+    }
+  }
+  if (runDeferredPfScroll) {
     pfScrollUpdate(state);
   }
 

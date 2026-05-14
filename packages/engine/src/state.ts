@@ -179,6 +179,11 @@ export interface TickClock {
    * the next vblank after the reset body has otherwise returned.
    */
   mode2TilemapBlitDelay: u8 | undefined;
+  /**
+   * One-vblank deferred FUN_26D8A scroll update. The IRQ4 prefix observes the
+   * trigger before the visible MO/scroll side effects land in MAME snapshots.
+   */
+  pendingPfScrollUpdate: u8 | undefined;
 }
 
 // ─── GameState root ───────────────────────────────────────────────────────
@@ -216,7 +221,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },
