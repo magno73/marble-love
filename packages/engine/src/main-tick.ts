@@ -458,7 +458,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const rngSeed = raw(state.rng.seed) & 0xffff;
   r[0x3a6] = (rngSeed >>> 8) & 0xff;
   r[0x3a7] = rngSeed & 0xff;
-  advanceMode0Init11452Async(state, rom);
+  const deferNewPlayableMode0Reset =
+    state.clock.mode0Init11452Stage !== undefined &&
+    !asyncInitActiveAtTickStart &&
+    mode0Segment === 2 &&
+    readWorkWord(state, 0x394) === 1;
+  if (!deferNewPlayableMode0Reset) {
+    advanceMode0Init11452Async(state, rom);
+  }
   advanceMode2Init11452Async(state, rom);
   if (state.clock.mode2BottomHudDelay !== undefined) {
     if (state.clock.mode2BottomHudDelay > 0) {
