@@ -35,6 +35,7 @@ import { hudFrameInit283C2 } from "./hud-frame-init-283c2.js";
 import { renderString286EE } from "./render-string-286ee.js";
 import { renderStringChain3520 } from "./render-string-chain-3520.js";
 import { formatNumber3874 } from "./string-format.js";
+import { spriteRotate1C014 } from "./sprite-rotate-1c014.js";
 
 const WRAM = 0x00400000;
 const MODE0_LEVEL_PREFIX_ROWS = 18;
@@ -231,6 +232,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
   if (rb(state, 0x004003e4) === 3 && stage >= 849 && stage <= 853) {
     switch (stage) {
       case 849:
+        spriteRotate1C014(state, rom, 0x18);
         ww(state, 0x0040075a, 1);
         state.clock.mode0Init11452Stage = as_u16(850);
         return;
