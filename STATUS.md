@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment 3/5 tilemap phases aligned)
+**Ultimo update:** 2026-05-14 (long demo: segment 5 rebuild dwell aligned)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Long demo tilemap phase checkpoint
@@ -31,11 +31,14 @@ Fix stabili:
 Effetto osservato su `/tmp/mame_demo_12000_18000_step10.json` rispetto al
 checkpoint precedente:
 
-- Somma campionata: `157172 -> 150855`.
+- Somma campionata: `157172 -> 150855 -> 150186`.
 - f14530: `total=2654 -> 327`, `workRam=2629 -> 302`, PF resta `0`.
 - f14580: `total=1761 -> 202`, `workRam=1736 -> 177`, PF resta `0`.
 - f15990 resta stabile: `total=739`, `workRam=582`, PF `0`.
 - f17620: `total=2769 -> 338`, `workRam=2617 -> 186`, PF resta `0`.
+- f17670: `total=1737 -> 1068`, PF `129 -> 0`, grazie al rebuild
+  segmento 5 ritardato da stage 58 a stage 68 e alla snapshot stage 60
+  `chunk5 AD54=52/AA38=0`.
 - Le finestre gia' chiuse restano stabili: f12950 `total=347`, f13200
   `total=123`, f13920 `total=117`, f17710 `total=287`.
 
@@ -69,9 +72,13 @@ Drill aperto:
   migliorando f17690 ha lasciato scratch stale e ha peggiorato f17700+.
   Prossimo drill: modellare anche il completamento/tail clear reale, non solo
   la snapshot intermedia.
-- Falsificati e revertiti: phase segment5 stage60/70 (migliorano f17670/f17680
-  ma peggiorano f17690+), completion chunk8 stage88, e sostituzione dello
-  stage68 segment3 con chunk6 (rompe il PF lungo del secondo handoff).
+- Falsificati e revertiti: phase segment5 stage70 (migliora f17680 ma
+  peggiora f17690+), completion chunk8 stage88, e sostituzione dello stage68
+  segment3 con chunk6 (rompe il PF lungo del secondo handoff).
+- Follow-up falsificato dopo il delay stage58: aggiungere anche stage70
+  `chunk6 AD54=74/AA38=0` migliora f17680 ma peggiora f17690+; aggiungere
+  stage80 `chunk7 AD54=79/AA38=13` con clear low al tail migliora f17690 ma
+  peggiora f17700+ e la somma complessiva.
 
 ## 2026-05-14 — Long demo presentation HUD checkpoint
 
