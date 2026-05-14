@@ -288,6 +288,7 @@ export * as sub14DEC from "./sub-14dec.js";
 export * as sub1D242 from "./sub-1d242.js";
 export * as slapstic103 from "./m68k/slapstic-103.js";
 export * as applySlapsticBank from "./m68k/apply-slapstic-bank.js";
+export * as inputReplay from "./input-replay.js";
 
 // Re-export tipi più usati per ergonomia
 export type { GameState } from "./state.js";

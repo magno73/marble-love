@@ -1,0 +1,51 @@
+# Input MMIO Map
+
+Scope: Marble Madness on Atari System 1, for demo/replay input parity.
+
+Primary reference:
+- MAME `src/mame/atari/atarisy1.cpp`: `main_map`, `trakball_r`, `INPUT_PORTS_START(marble)`.
+- Local hardware summary: `docs/hardware-map.md`.
+- Ghidra MMIO xref dump: `ghidra_project/dump_xrefs_mmio.txt`.
+- MAME tap added in `oracle/mame_demo_input_tap.lua`.
+
+## 68010 input addresses
+
+| MMIO address | Meaning | MAME behavior | TS consumer |
+| --- | --- | --- | --- |
+| `0xF20001` | P1 rotated trackball X low byte | `trakball_r` offset 0; Marble computes `IN0 + IN1` when this pair is read | `trackballInputTick(state, p1X, ...)`; replay override in `packages/engine/src/input-replay.ts` |
+| `0xF20003` | P1 rotated trackball Y low byte | `trakball_r` offset 1; Marble returns cached `IN0 - IN1` | `trackballInputTick(state, p1Y, ...)`; replay override |
+| `0xF20005` | P2 rotated trackball X low byte | `trakball_r` offset 2; `IN2 + IN3` | `trackballInputTick(state, ..., p2X, ...)`; replay override |
+| `0xF20007` | P2 rotated trackball Y low byte | `trakball_r` offset 3; `IN2 - IN3` | `trackballInputTick(state, ..., p2Y)`; replay override |
+| `0xF40000-0xF4001F` | Joystick/ADC range | Used by other Atari System 1 games; Marble does not use it in the warm demo taps | Replay returns `0xff`; no Marble TS gameplay consumer |
+| `0xF60001` | Switch low byte | Active-low START1 bit 0, START2 bit 1; bit 4 VBLANK; bit 6 self-test; bit 7 sound command pending | `gameMainGate(..., { mmioInput })`; replay override |
+| `0x1820` on sound CPU | Coin/service status | Coin inputs are read by the 6502 sound CPU, not by the 68010 main CPU | Out of scope for warm demo replay; existing TS coin bookkeeping remains unchanged |
+
+The even addresses in the `0xF20000..0xF20007` and `0xF60000..0xF60003`
+word ranges are high bytes on the 68010 bus. The gameplay routines and parity
+tests use the low-byte addresses listed above.
+
+## Select/multiplex lines
+
+No Marble-specific ADC select-line write is required for the trackball path.
+`0xF40000..0xF4001F` writes arm joystick ADC behavior for other System 1 games;
+Marble uses `trakball_r` directly for `0xF20000..0xF20007`.
+
+`0x860001` audio/video control includes trackball test/resolution bits, but it is
+not an ADC multiplexer for demo input replay.
+
+## Warm demo tap finding
+
+`oracle/mame_demo_input_tap.lua` captures `0xF20000..0xF20007`,
+`0xF40000..0xF4001F`, and `0xF60000..0xF60003`.
+
+Current trace:
+
+| File | Frames | SHA-256 | Result |
+| --- | ---: | --- | --- |
+| `oracle/scenarios/input/demo_attract.json` | `9700..21900` | `5570b1d5bbf9628760d44f2888cc8e5878fc96d200ee5da5d8ddfe236eea87a6` | No reads observed in tapped MMIO ranges; replay frames therefore carry stable hardware defaults: trackballs `0xff`, switch low byte `0x6f`, buttons `0`. |
+
+Interpretation: the attract warm windows validated by the scenario suite are
+driven by internal game/demo state rather than fresh external trackball MMIO
+reads. The replay layer still injects the captured default bytes explicitly so
+future playable/coin-up traces can reuse the same mechanism without changing
+the probe surface.

@@ -1,7 +1,70 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (gameplay warm-seed scenarios level 3/4/5)
+**Ultimo update:** 2026-05-14 (demo input replay warm-seed)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Demo input replay via warm-seed scenarios
+
+Goal pivot successivo completato: input replay infrastrutturale per il demo
+gameplay, con capture MAME dei port input e probe TS da warm seed. Il finding
+chiave e' negativo ma utile: nelle finestre attract calde validate
+(`f9700..f21900`) MAME non legge i MMIO input esterni `F200xx/F400xx/F600xx`;
+la biglia del demo e' guidata da stato/script interno, mentre l'hardware input
+resta sui default stabili.
+
+Nuova infrastruttura:
+
+- `docs/input-mmio-map.md` documenta la mappa input:
+  `0xF20001/03/05/07` trackball ruotato P1/P2 low byte,
+  `0xF60001` switch low byte START/VBLANK/self-test/sound-pending,
+  `0xF40000..0xF4001F` ADC/joystick non usato da Marble, coin su 6502
+  `0x1820`.
+- `oracle/mame_demo_input_tap.lua` installa read tap su
+  `0xF20000..0xF20007`, `0xF40000..0xF4001F`, `0xF60000..0xF60003` e scrive
+  una trace frame-per-frame.
+- `oracle/scenarios/input/demo_attract.json` cattura `f9700..f21900`
+  (`12201` frame), abbastanza ampia per intro + tutti i seed gameplay
+  correnti. SHA-256:
+  `5570b1d5bbf9628760d44f2888cc8e5878fc96d200ee5da5d8ddfe236eea87a6`.
+  Recapture con NVRAM/CFG pulite e `-nonvram_save` produce file identico
+  byte-per-byte.
+- `packages/engine/src/input-replay.ts` espone parser/engine replay:
+  `read8(addr, frame)` per i MMIO catturati e `mainTickInputs(frame)` per
+  iniettare i byte in `mainTick`.
+- `packages/engine/test/input-replay-smoke.test.ts` verifica 50 frame di
+  letture MMIO TS == oracle MAME.
+- `packages/cli/src/probe-demo-replay.ts` carica uno scenario warm-seed, carica
+  la trace input, inietta i byte per il frame target e diffa 100 frame contro
+  oracle MAME con lo stesso criterio PF/sprite/HUD del probe statico.
+
+Risultato replay (`npx tsx packages/cli/src/probe-demo-replay.ts ...`):
+
+| Scenario | Seed | Streak PASS | Initial 60 | Note |
+|---|---:|---:|---|---|
+| `intro_overlay` | f9700 | 100 | PASS | criterio minimo |
+| `level1_spawn` | f13500 | 100 | PASS | criterio minimo |
+| `level1_midmap` | f14500 | 100 | PASS | criterio minimo, video exact |
+| `level1_obstacle` | f15084 | 100 | PASS | criterio minimo |
+| `level2_early` | f17010 | 100 | PASS | criterio minimo |
+| Tutta la suite gameplay/overlay | 15 scenari | 15/15 PASS | 15/15 PASS | solo `level3_spawn` resta PASS @77 per boundary tardo `sprite=53`, come nel probe statico |
+
+Interpretazione: il replay input non cambia i byte gameplay perche' i port non
+vengono letti in queste warm windows; questa e' comunque la parita' corretta
+per il demo attract MAME. La stessa infrastruttura potra' essere riusata per
+coin-up/playable traces dove `F200xx` verra' effettivamente letto.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- Probe demo replay PASS sui 5 scenari minimi richiesti:
+  `level1_spawn`, `level1_midmap`, `level1_obstacle`, `level2_early`,
+  `intro_overlay`.
+- Probe demo replay PASS su tutti i 15 scenari warm-seed.
+- Capture deterministica: `cmp` PASS tra trace checked-in e recapture `/tmp`.
+- Long demo invariant invariato sul fresh bank-aware step10:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma
+  `15727 <= 16000` con il checker no-stack corrente.
 
 ## 2026-05-14 — Pivot gameplay warm-seed scenarios
 
@@ -89,7 +152,7 @@ Validazione:
   100/100 frame con PF/sprite/HUD exact; il vecchio f14000 aveva un picco
   singolo f+79 (`sprite=53`) da snapshot intra-frame.
 - Long demo invariant invariato sul fresh bank-aware step10:
-  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15722 <= 16000`
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` somma `15727 <= 16000`
   con il checker no-stack corrente.
 
 ## 2026-05-14 — Long demo segment-4 highscore/PF visibility
