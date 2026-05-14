@@ -1,7 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: bank-aware segment-5 rebuild delay)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 scratch clear cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 scratch clear cadence
+
+Il picco fresh f17693 era quasi tutto scratch/cache: TS puliva
+`0x400A9C..0x401C48` allo stage 83, mentre MAME lascia ancora visibile lo
+scratch del chunk7 per un frame e lo pulisce al frame successivo.
+
+Fix stabile:
+
+- Segmento 5: lo stage 83 diventa un dwell senza clear.
+- Il clear scratch viene spostato allo stage 84.
+- Non viene introdotto pack fake o chunk8 sintetico: quei tentativi erano gia'
+  stati falsificati perche' rompevano sprite/PF successivi.
+
+Effetto osservato:
+
+- Fresh step1 `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `55914 -> 53820`.
+- f17693 `total=2378 -> 284`, `workRam=2226 -> 132`, PF resta `0`.
+- f17694 resta pulito (`total=284`, `workRam=132`), quindi lo scratch non
+  rimane stale nel tail.
+- Fresh step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  resta `18889` perche' non campiona f17693/f17694; storico step10 resta
+  invariato `143463`.
+
+Drill aperto:
+
+- f17701 fresh ha ancora PF parziale (`pf=765`): MAME completa il rebuild su
+  f17701/f17702, mentre TS e' ancora troppo atomico in quel punto.
+- Dopo f17710 il residuo principale resta workRam/sprite/cache 350-520B con
+  PF exact.
 
 ## 2026-05-14 — Long demo bank-aware segment-5 rebuild delay
 
