@@ -3,6 +3,37 @@
 **Ultimo update:** 2026-05-14 (browser live controls)
 **Branch corrente:** `feature/visual-pixel-match`.
 
+## 2026-05-14 — Live playable phase alignment
+
+Root cause del respawn basso che scrollava via il terreno: dopo START il
+browser caricava correttamente il seed warm `coin_start_to_level1` e usciva
+dall'attract, ma ripartiva con `mainLoopBodyTicks=0`. I replay playable MAME
+per la stessa finestra auto-selezionano invece phase `1`; phase `0` anticipa
+`FUN_13EE6` di una vblank, porta il target scroll a `40/40` invece di `38/38`
+e scrive una riga PF extra che MAME lascia vuota.
+
+Fix:
+
+- `packages/web/src/main.ts` arma `mainLoopBodyTicks=1` per i seed playable
+  (`?playableSeed=...`) e per il path manuale `5` + START che carica
+  `coin_start_to_level1`.
+- Nessuna patch a renderer, collisioni o terrain: il fix allinea la fase
+  main-loop della warm seed al replay oracle gia' validato.
+
+Validazione:
+
+- Probe live-down forzato da f2045: con phase `1`, TS e MAME terminano a
+  `scroll0/scroll2=38/38`, target `0x9c/0x124`, PF nonzero `4371`; phase `0`
+  terminava a `40/40` con 48 byte PF extra.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `probe-playable-replay.ts` PASS invariato sui tre scenari playable
+  (`80/100`, `100/100`, `82/100`).
+- `probe-scenario-diff.ts` PASS invariato su tutti i 15 scenari warm-seed
+  gameplay/overlay.
+- `git diff --check` PASS.
+
 ## 2026-05-14 — Live browser trackball wiring
 
 Goal web input completato per il path coin/start manuale e per i seed
