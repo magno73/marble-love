@@ -214,17 +214,17 @@ const MODE0_SEG4_CHUNK5_PHASES = new Map<number, TilemapChunkPhase>([
 ]);
 
 const MODE0_SEG5_CHUNK2_PHASES = new Map<number, TilemapChunkPhase>([
-  [28, { ad54Count: 4, aa38Count: 0 }],
-  [29, { ad54Count: 19, aa38Count: 0 }],
-  [30, { ad54Count: 19, aa38Count: 0 }],
-  [31, { ad54Count: 22, aa38Count: 0 }],
-  [32, { ad54Count: 60, aa38Count: 0 }],
-  [33, { ad54Count: 79, aa38Count: 4 }],
-  [34, { ad54Count: 79, aa38Count: 10 }],
-  [35, { ad54Count: 79, aa38Count: 15 }],
-  [36, { ad54Count: 79, aa38Count: 19 }],
-  [37, { ad54Count: 79, aa38Count: 23 }],
-  [38, { ad54Count: 79, aa38Count: 24 }],
+  [30, { ad54Count: 4, aa38Count: 0 }],
+  [31, { ad54Count: 19, aa38Count: 0 }],
+  [32, { ad54Count: 19, aa38Count: 0 }],
+  [33, { ad54Count: 22, aa38Count: 0 }],
+  [34, { ad54Count: 60, aa38Count: 0 }],
+  [35, { ad54Count: 79, aa38Count: 4 }],
+  [36, { ad54Count: 79, aa38Count: 10 }],
+  [37, { ad54Count: 79, aa38Count: 15 }],
+  [38, { ad54Count: 79, aa38Count: 19 }],
+  [39, { ad54Count: 79, aa38Count: 23 }],
+  [40, { ad54Count: 79, aa38Count: 24 }],
 ]);
 
 const MODE0_SEG5_CHUNK3_PHASES = new Map<number, TilemapChunkPhase>([
