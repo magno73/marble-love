@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (live playable dispatcher preservation)
+**Ultimo update:** 2026-05-14 (playable segment-3 rebuild cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Playable segment-3 rebuild cadence
+
+Nuovo drill live su input arbitrario screen-space down/right/diagonal: il fix
+dispatcher `state=1` aveva stabilizzato il play, ma la transizione mode0 del
+segmento gameplay successivo (`3e4=2/gamemode=1 -> 3e4=3/gamemode=0`) era
+ancora compressa rispetto a MAME. TS cancellava il PF nello stesso frame del
+mode switch e poi completava il rebuild tardi; MAME espone invece il mode
+switch a f3400, cancella a f3401, mostra prefix PF `2555` a f3460, prefix
+`3119` a f3465 e full PF `4039` + obj reset a f3466.
+
+Fix:
+
+- `main-tick.ts` non fa avanzare nello stesso tick il nuovo reset mode0 solo
+  nel caso playable reale `segment=2/gamemode=1`; il long-demo attract mantiene
+  la cadence precedente.
+- `mode2-init-11452-async.ts` aggiunge le fasi segment-3/gameMode-0 osservate
+  da MAME: rebuild prefix stage59, decode rows stage64, full `FUN_10504`
+  stage65.
+- Il branch e' intenzionalmente ristretto a `3e4=3 && 0x400394=0`; il segmento
+  3 attract (`gameMode=1`) e i segmenti 4/5 long-demo non cambiano.
+
+Validazione:
+
+- Trace MAME/TS temporaneo f3398..f3470: PF/object keyframes allineati
+  (`f3400 234`, `f3401 0`, `f3460 2555`, `f3465 3119`, `f3466 4039`,
+  obj `6/3 -> 0/0`).
+- Long demo fresh step10 no-stack invariato:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `15275 <= 16000`.
+- `npx tsc -b --pretty false` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `probe-scenario-diff.ts` resta PASS sui 15 scenari gameplay warm-seed.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Live playable dispatcher preservation
 

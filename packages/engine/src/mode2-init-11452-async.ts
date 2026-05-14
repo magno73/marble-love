@@ -658,6 +658,15 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       state.clock.mode0Init11452Stage = as_u16(59);
       return;
 
+    case 59:
+      if (rb(state, 0x004003e4) === 3 && rw(state, 0x00400394) === 0) {
+        rebuildMode0LevelPrefix(state, rom, 8);
+        state.clock.mode0Init11452Stage = as_u16(60);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(60);
+      return;
+
     case 60:
       if (rb(state, 0x004003e4) === 5) {
         rebuildMode0LevelPrefix(state, rom, 5, { preserveFinalScratch: true });
@@ -683,12 +692,29 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 64:
+      if (rb(state, 0x004003e4) === 3 && rw(state, 0x00400394) === 0) {
+        decodeMode0LevelRowsPrefix(state, rom, MODE0_LEVEL_PREFIX_ROWS);
+        state.clock.mode0Init11452Stage = as_u16(65);
+        return;
+      }
       if (rb(state, 0x004003e4) === 3 || rb(state, 0x004003e4) === 5) {
         state.clock.mode0Init11452Stage = as_u16(65);
         return;
       }
       mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
       state.clock.mode0Init11452Stage = as_u16(65);
+      return;
+
+    case 65:
+      if (rb(state, 0x004003e4) === 3 && rw(state, 0x00400394) === 0) {
+        mainLoopInit10504(state, {}, { runPresentationMiddle: true }, rom);
+        state.colorRam.fill(0);
+        wb(state, 0x00400016, 0);
+        ww(state, 0x004003ae, rw(state, 0x004003b0));
+        state.clock.mode0Init11452Stage = as_u16(66);
+        return;
+      }
+      state.clock.mode0Init11452Stage = as_u16(66);
       return;
 
     case 68:

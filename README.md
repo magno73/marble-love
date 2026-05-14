@@ -77,6 +77,16 @@ per giocare manualmente. Il coin-credit completo via 6502 resta debito
 sound/main CPU; il browser usa un credito locale conservativo per sbloccare la
 partita live.
 
+**Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
+arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
+della transizione mode0 `3e4=2/gamemode=1 -> 3e4=3/gamemode=0`: mode switch
+visibile prima del clear, PF clear al vblank successivo, prefix PF `2555` a
+f3460, prefix `3119` a f3465 e full PF `4039` + obj reset a f3466. Il fix e'
+ristretto al playable `gameMode=0` del segmento 3; il segmento 3 attract e i
+segmenti long-demo 4/5 restano sulla cadence esistente. Playable replay 3/3,
+warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`)
+restano PASS.
+
 **Checkpoint playable scroll/MO cadence (2026-05-14):** il residuo visuale
 marble-vs-rampa non era un offset renderer ma il micro-ordine di `FUN_26D8A`:
 con trackball reale TS applicava la line update una vblank prima di MAME,
