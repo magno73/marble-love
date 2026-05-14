@@ -29,10 +29,13 @@ const TRACKBALL_KEYS = new Set([
   "w",
   "s",
 ]);
+const START_KEYS = new Set([" ", "enter"]);
+const COIN_KEYS = new Set(["5", "c"]);
 
 export interface InputState {
   buttons: number;
   inputMmio: number;
+  consumeCoinPulses(): number;
   consumeP1X(): number; // 0..255 absolute
   consumeP1Y(): number;
   consumeP2X(): number;
@@ -48,6 +51,14 @@ export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number;
   };
 }
 
+export function isCoinKey(key: string): boolean {
+  return COIN_KEYS.has(key.toLowerCase());
+}
+
+export function isStartKey(key: string): boolean {
+  return START_KEYS.has(key.toLowerCase());
+}
+
 export function initInput(): InputState {
   // Stato assoluto trackball (= valore MMIO 0xF20001 etc.). Inizializzato a
   // 0xff (= MMIO stable in MAME attract mode con processAxis seed prev=0xff).
@@ -56,6 +67,7 @@ export function initInput(): InputState {
   let p2X = 0xff;
   let p2Y = 0xff;
   let buttons = 0;
+  let coinPulses = 0;
 
   const keys = new Set<string>();
   const addP1Delta = (dx: number, dy: number): void => {
@@ -68,11 +80,17 @@ export function initInput(): InputState {
     const key = e.key.toLowerCase();
     keys.add(key);
     if (TRACKBALL_KEYS.has(key)) e.preventDefault();
-    if (e.key === " " || e.key === "Enter") buttons |= 0x01;
+    if (isStartKey(e.key)) buttons |= 0x01;
+    if (isCoinKey(e.key)) {
+      buttons |= 0x04;
+      if (!e.repeat) coinPulses += 1;
+    }
   });
   window.addEventListener("keyup", (e) => {
-    keys.delete(e.key.toLowerCase());
-    if (e.key === " " || e.key === "Enter") buttons &= ~0x01;
+    const key = e.key.toLowerCase();
+    keys.delete(key);
+    if (isStartKey(e.key)) buttons &= ~0x01;
+    if (isCoinKey(e.key)) buttons &= ~0x04;
   });
 
   window.addEventListener("mousemove", (e) => {
@@ -121,6 +139,11 @@ export function initInput(): InputState {
       if ((buttons & 0x01) !== 0) value &= ~0x01;
       if ((buttons & 0x02) !== 0) value &= ~0x02;
       return value & 0xff;
+    },
+    consumeCoinPulses() {
+      const out = coinPulses;
+      coinPulses = 0;
+      return out;
     },
     consumeP1X() { pollKeyboardAndGamepad(); return p1X; },
     consumeP1Y() { return p1Y; },

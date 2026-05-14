@@ -1,11 +1,25 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (playable browser seed + live controls)
+**Ultimo update:** 2026-05-14 (browser coin/start flow)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Live browser trackball wiring
 
-Goal web input completato per il path playable warm:
+Goal web input completato per il path coin/start manuale e per i seed
+diagnostici warm:
+
+- `?autoLoad=1&play=1` ora usa un flusso coin/start: non chiama piu'
+  `bootInit({preloadLevel:0})`, parte dal gate attract/start (`0x400390=1`) e
+  resta senza playfield caricata finche' l'utente non inserisce credito e
+  preme START.
+- Il frontend modella un credito locale per il path browser: `5`/`C` aggiunge
+  coin, `Enter`/spazio attiva START1 active-low. `gameMainGate` riceve una
+  `gateCheck` che ritorna 1 solo se c'e' credito, poi lo consuma. Questo evita
+  il falso avvio diretto in demo e lascia il level load al case START reale del
+  main loop.
+- Smoke browser via Chrome CDP su `?autoLoad=1&play=1`: prima del coin/start
+  `state=1`, `count=0`, `pf=0`; dopo `5` + `Enter`, `state=0`, `count=1`,
+  `pf=4097`.
 
 - `packages/web/src/input.ts` ora ruota i delta browser come MAME Marble
   (`trackballX = rawX + rawY`, `trackballY = rawX - rawY`) prima di integrarli
@@ -17,14 +31,14 @@ Goal web input completato per il path playable warm:
   pulito. Lo scroll manuale resta attivo fuori dal play mode.
 - `packages/web/src/main.ts` passa anche `inputMmio` a `tick()`, derivato dai
   pulsanti browser con START1 active-low su bit 0 (`Enter`/spazio). Il path
-  coin-credit completo da reset resta debito sound/main CPU separato, ma il
-  main gate ora riceve il byte switch corretto quando il runtime lo usa.
+  coin-credit completo via 6502 resta debito sound/main CPU separato, ma il
+  browser non parte piu' senza credito.
 - Aggiunto `packages/web/test/input.test.ts` per bloccare la rotazione 45 gradi.
 - Aggiunti tre seed web compatti in `packages/web/public/scenarios/playable/`
   (`coin_start_to_level1`, `level1_trackball_short`,
-  `level1_trackball_obstacle`) e query `?playableSeed=...`. Questo evita di
-  usare il dump generico `mame_state.json` per il test manuale: quel dump puo'
-  essere attract/non-playable e far sembrare morte le frecce.
+  `level1_trackball_obstacle`) e query `?playableSeed=...`. Questi restano
+  strumenti diagnostici/replay warm, non il percorso consigliato per giocare
+  manualmente.
 - Con `?playableSeed=...`, `loopReset` defaulta a `0` per non riportare la
   partita al seed ogni 180 frame durante il controllo live. Il passo tastiera
   e' ora `8`, coerente con le trace playable MAME.
@@ -34,6 +48,8 @@ Validazione:
 - `npx tsc -b --pretty false` PASS.
 - `npx vitest run packages/web/test/input.test.ts packages/engine/test/input-replay-smoke.test.ts` PASS.
 - `npm --workspace @marble-love/web run build` PASS.
+- Chrome CDP smoke `?autoLoad=1&play=1` PASS: coin/start carica il livello,
+  senza coin il livello non viene precaricato.
 - `git diff --check` PASS.
 
 ## 2026-05-14 — Coin/start + playable input replay
