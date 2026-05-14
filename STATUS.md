@@ -1,7 +1,41 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (playable scroll/MO cadence)
+**Ultimo update:** 2026-05-14 (live playable dispatcher preservation)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Live playable dispatcher preservation
+
+Root cause di una nuova divergenza live sotto input arbitrario: dopo START il
+browser caricava il seed warm MAME `coin_start_to_level1`, ma forzava
+`0x400390=0` per uscire dall'attract. Il full path MAME coin/start/playable
+resta invece in `0x400390=1` in quella finestra e legge comunque la trackball
+MMIO. Sotto un percorso screen-space down/right/diagonal, preservare lo stato
+MAME mantiene TS molto piu' vicino al trace reale; forzare state 0 desincronizza
+scroll, PF e respawn.
+
+Fix:
+
+- `packages/web/src/main.ts` non forza piu' `0x400390/0x400391` a zero dopo
+  START. Il seed MAME resta intatto, con sola phase `mainLoopBodyTicks=1`
+  gia' validata.
+- Nessuna patch a renderer/collisioni/terrain: rimosso il broad state forcing
+  che stava mascherando il debito coin/start completo.
+
+Validazione:
+
+- Trace MAME temporaneo con input live screen-space convertito nei raw port
+  Marble: il seed f2045 resta `state=1` e legge F200xx.
+- Con TS che preserva `state=1`, il confronto sul percorso f2046..f4450 ha
+  1136 frame esatti sui campi principali prima delle differenze note di
+  micro-cadence; con il vecchio force `state=0` divergeva gia' a f2070 e poi
+  driftava pesantemente su scroll/PF.
+- `npx tsc -b --pretty false` PASS.
+- `npx vitest run packages/web/test/input.test.ts packages/web/test/classic-demo-frame.test.ts packages/web/test/engine-diagnostic-frame.test.ts packages/engine/test/input-replay-smoke.test.ts --reporter=basic` PASS.
+- `probe-playable-replay.ts` resta PASS sui tre scenari playable (`80/100`,
+  `100/100`, `100/100`).
+- `probe-scenario-diff.ts` resta PASS sui 15 scenari gameplay warm-seed.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-14 — Playable scroll/MO cadence
 
