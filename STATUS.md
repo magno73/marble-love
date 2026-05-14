@@ -1,7 +1,47 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 scratch clear cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 partial PF rebuild)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 partial PF rebuild
+
+Il nuovo blocker fresh f17701 era una cadence parziale di playfield: MAME
+espone il rebuild `FUN_10504` in due vblank. A f17701 la meta' alta del PF e'
+gia' rebuildata, mentre la tail da `0x08B2` resta ancora identica al frame
+precedente; a f17702 anche la tail arriva allo stato finale. TS invece
+completava tutto atomicamente nello stage 91.
+
+Fix stabile:
+
+- Segmento 5 stage 91: esegue ancora `mainLoopInit10504`, ma mantiene deferita
+  la tail PF da `0x08B2` usando il contenuto pre-rebuild.
+- Segmento 5 stage 92: completa solo il rebuild PF tramite `levelInit16F6C`,
+  senza rilanciare l'intero `mainLoopInit10504` (il doppio full init era stato
+  falsificato perche' peggiorava step10/historical).
+
+Effetto osservato:
+
+- Fresh step1 `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `53820 -> 53055`.
+- f17701 `total=1219 -> 454`, `pf=765 -> 0`.
+- f17702 resta PF exact (`total=624`, `pf=0`).
+- Fresh step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  resta `18889`; storico `/tmp/mame_demo_12000_18000_step10.json` resta
+  `143463`.
+
+Falsificato e revertito nel drill:
+
+- Spostare tutto `mainLoopInit10504` da stage 91 a stage 92: migliora f17702
+  localmente ma peggiora f17701 e sfascia la cadence.
+- Rilanciare il full `mainLoopInit10504` anche a stage 92: f17701 diventa PF
+  exact, ma fresh step10 peggiora `18889 -> 20109` e storico
+  `143463 -> 145126`.
+
+Drill aperto:
+
+- f17660..f17670 fresh resta PF/work-heavy.
+- f17706/f17707 hanno ancora 395B color/palette residui nel fresh step1.
+- Dopo f17710 il tail e' PF exact e resta soprattutto workRam/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 scratch clear cadence
 
