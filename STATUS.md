@@ -1,7 +1,56 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 scratch phase cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-5 chunk2 snapshot phase)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-5 chunk2 snapshot phase
+
+Drill successivo sullo stesso tap fresh ha mostrato che il chunk2 del segmento 5
+era ancora un po' troppo presto rispetto allo snapshot MAME: il tap grezzo vede
+le chiamate `FUN_1AD54`, ma lo snapshot confrontabile espone ancora parte della
+coda del frame precedente.
+
+Fix stabile:
+
+- Le phase scratch-only del chunk2 segment-5 sono ritardate di due stage.
+- I chunk3..6 restano invariati rispetto al checkpoint precedente.
+- PF resta exact nei campioni fresh osservati.
+
+Effetto osservato sui dump fresh bank-aware:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `16598 -> 14731`.
+- f17640 `2298 -> 694`, con `pf=0`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json` resta `32891`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` resta
+  `16523`.
+
+Nota oracoli:
+
+- Il vecchio storico senza `slapsticBank` peggiora ancora in questa zona
+  bank-sensitive (`145667 -> 147857`), quindi resta non-veto per la transizione
+  del segmento 5; usare fresh bank-aware per questo drill.
+
+Falsificato nel drill:
+
+- Anticipare il chunk3 a partire da stage40 peggiora il dense fresh
+  `14731 -> 16536`, quindi e' stato revertito.
+- Preservare alphaRam durante stage91 peggiora il tail fresh
+  `32891 -> 37260`, quindi e' stato revertito.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+
+Drill aperto:
+
+- Fresh dense ora ha i prossimi picchi a f17650/f17660, tutti PF exact.
+- f17700/f17701 restano alpha/sprite/work residuali; preservare alpha stage91
+  e' falsificato.
 
 ## 2026-05-14 — Long demo segment-5 scratch phase cadence
 
