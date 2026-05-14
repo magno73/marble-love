@@ -1,7 +1,55 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 prefix scratch preservation)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 MO page latch)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 MO page latch
+
+Drill sullo sprite residual costante del tail segment-5: tra f17640 e f17670
+non ci sono piu' write MO, quindi il drift veniva da una pagina sprite stantia
+scritta prima del rebuild. Il tap MAME f17600..f17640 mostra che durante la
+scene init del segmento 4 la clear/emit path passa dalla pagina MO `+0x200`
+(`0xA02200`), mentre TS entrava in `sceneObjInit28CA6 -> FUN_26F3E` con
+`0x4003AE == 0x0088` e toccava la pagina bassa `0xA02000`.
+
+Fix stabile:
+
+- Durante lo stage-2 `sceneObjInit28CA6` del segmento 4, TS forza
+  temporaneamente `0x4003AE=0x0080` solo per le due chiamate `FUN_26F3E`,
+  poi ripristina il latch AV salvato.
+- Nessun cambio di cadence, nessun pack sintetico e nessun reset: viene
+  allineata solo la pagina MO usata da quella init scene tap-driven.
+
+Effetto osservato sui dump fresh bank-aware:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `13327 -> 12823`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `31346 -> 30802`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `16161 -> 15960`.
+- Sprite residual scende `152 -> 140` a f17640/f17650/f17660/f17670/f17690/f17700,
+  con PF ancora exact.
+- Legacy storico senza `slapsticBank` resta secondario in questa finestra
+  bank-sensitive (`147411 -> 147438`), mentre i fresh bank-aware migliorano.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- Rimane lo sprite residual `140B` nella coda f17640..f17700: ora e'
+  soprattutto coordinate/cache sprite, non piu' la clear della pagina bassa.
+- f17650/f17660 restano PF-exact ma scratch/work heavy.
+- f17701/f17702 mantengono residui alpha/sprite/work post-rebuild; dopo f17710
+  il tail resta soprattutto object/sprite/cache.
 
 ## 2026-05-14 — Long demo segment-5 prefix scratch preservation
 

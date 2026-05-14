@@ -412,10 +412,22 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       return;
 
     case 2:
-      sceneObjInit28CA6Default(state, rom, {
-        fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
-        fun_28dea: vblankAck28DEA,
-      });
+      if (rb(state, 0x004003e4) === 4) {
+        // Fresh MAME taps show the segment-4 scene init clears/emits via the
+        // +0x200 MO page before the following segment-5 rebuild takes over.
+        const savedAv = rw(state, 0x004003ae);
+        ww(state, 0x004003ae, 0x0080);
+        sceneObjInit28CA6Default(state, rom, {
+          fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
+          fun_28dea: vblankAck28DEA,
+        });
+        ww(state, 0x004003ae, savedAv);
+      } else {
+        sceneObjInit28CA6Default(state, rom, {
+          fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
+          fun_28dea: vblankAck28DEA,
+        });
+      }
       state.clock.mode0Init11452Stage = as_u16(3);
       return;
 
