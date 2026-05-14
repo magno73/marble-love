@@ -78,6 +78,7 @@ import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
 import { as_u8, as_u32, raw } from "./wrap.js";
 import { advanceMode0Init11452Async, advanceMode2Init11452Async } from "./mode2-init-11452-async.js";
 import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
+import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -445,6 +446,14 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     } else {
       levelFractionRender28232Default(state, rom);
       state.clock.mode2BottomHudDelay = undefined;
+    }
+  }
+  if (state.clock.mode2TilemapBlitDelay !== undefined) {
+    if (state.clock.mode2TilemapBlitDelay > 0) {
+      state.clock.mode2TilemapBlitDelay = as_u8(state.clock.mode2TilemapBlitDelay - 1);
+    } else {
+      tilemapBlit17044(rom, state.playfieldRam);
+      state.clock.mode2TilemapBlitDelay = undefined;
     }
   }
   runWarmResidualReplayTick(state);

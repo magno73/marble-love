@@ -976,13 +976,19 @@ export function advanceMode2Init11452Async(state: GameState, rom: RomImage): voi
         },
       });
       if (rb(state, 0x004003e4) === 4) state.clock.particleLayerDelay = as_u8(1);
-      helper11FF8Default(state, rom);
+      if (rb(state, 0x004003e4) !== 4) helper11FF8Default(state, rom);
       state.clock.mode2Init11452Stage = as_u8(8);
       return;
 
     default:
+      const segment = rb(state, 0x004003e4);
+      if (segment === 4) helper11FF8Default(state, rom);
       lateGameLogic26F3E(state, rom);
-      tilemapBlit17044(rom, state.playfieldRam);
+      if (segment === 4) {
+        state.clock.mode2TilemapBlitDelay = as_u8(1);
+      } else {
+        tilemapBlit17044(rom, state.playfieldRam);
+      }
       ww(state, 0x0040075a, 0x012c);
       if (rb(state, 0x004003e6) !== 0) wb(state, 0x004003e6, 0);
       finalize11654(state, rom, {

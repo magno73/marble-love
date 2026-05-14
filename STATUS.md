@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-4 mode2 micro-cadence)
+**Ultimo update:** 2026-05-14 (long demo: segment-4 highscore/PF visibility)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo segment-4 highscore/PF visibility
+
+Drill sul residuo f17010/f17011 dopo il micro-cadence mode2: MAME riceve la
+hi-score alpha table e il PF blit un vblank piu' tardi rispetto a TS. Lo
+stage particle e il completion restano alla stessa fase, ma la visibilita' di
+`helper11FF8` e `tilemapBlit17044` e' split su due snapshot.
+
+Fix stabile:
+
+- Per attract segment `4`, `helper11FF8Default` non gira piu' nello stage 7:
+  viene spostato nel completion stage, cosi' la hi-score alpha table non
+  appare a f17010 ma e' presente dal frame successivo come MAME.
+- Il `tilemapBlit17044` del completion segment `4` e' differito di un vblank
+  tramite `mode2TilemapBlitDelay`: f17011 resta PF-zero come MAME, f17012 torna
+  PF exact.
+- La modifica e' confinata al segment `4`; i dump segment-5/tail restano
+  invariati.
+
+Effetto osservato:
+
+- Fresh f16990..f17025 step1:
+  - somma locale `10874 -> 10335`;
+  - f17010 `562 -> 257`, con alpha `296 -> 0`;
+  - f17011 `563 -> 329`, con PF `234 -> 0`;
+  - f17012 resta `275`, f17013 resta `180`.
+- Dump stabilizzati segment-5 invariati:
+  - dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`: `11352`;
+  - tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`: `29070`;
+  - step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+    `15727`.
+- Legacy storico senza `slapsticBank`: `144809 -> 145114`; resta secondario in
+  questa finestra perche' il fresh bank-aware locale e i tail fresh sono gli
+  oracoli primari.
+
+Falsificato e revertito nel drill:
+
+- Skippare `helper11FF8Default` senza reinserirlo nel completion chiudeva
+  f17010, ma lasciava la hi-score table mancante e peggiorava il tail locale.
+- Clear alpha dopo helper11FF8 chiudeva f17010, ma faceva divergere stabilmente
+  la hi-score table nei frame successivi.
+- Saltare `finalize11654` per il segment `4` riduceva f17011, ma lasciava un
+  residuo alpha persistente e peggiorava la somma locale.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-main-loop-init-10504-parity.ts 50` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `git diff --check` PASS.
+
+Drill aperto:
+
+- f17011/f17012 hanno ancora residui alpha piccoli (`48/51`) e work/sprite
+  residui; non spostare il completion globale per chiuderli.
+- f176xx resta soprattutto object/sprite/cache con PF exact.
 
 ## 2026-05-14 — Long demo segment-4 mode2 micro-cadence
 
