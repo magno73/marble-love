@@ -414,14 +414,14 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
     case 2:
       if (rb(state, 0x004003e4) === 4) {
         // Fresh MAME taps show the segment-4 scene init clears/emits via the
-        // +0x200 MO page before the following segment-5 rebuild takes over.
-        const savedAv = rw(state, 0x004003ae);
+        // +0x200 MO page, then keeps the pre-toggle AV latch visible until the
+        // segment-5 handoff latches 0x0088 on the next staged rebuild.
         ww(state, 0x004003ae, 0x0080);
         sceneObjInit28CA6Default(state, rom, {
           fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
           fun_28dea: vblankAck28DEA,
         });
-        ww(state, 0x004003ae, savedAv);
+        ww(state, 0x004003ae, 0x0080);
       } else {
         sceneObjInit28CA6Default(state, rom, {
           fun_26f3e: (s) => lateGameLogic26F3E(s, rom),
@@ -455,6 +455,12 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       if (rb(state, 0x004003e4) >= 4) {
         ww(state, 0x004003ae, rw(state, 0x004003ae) ^ 0x0008);
         ww(state, 0x004003b0, rw(state, 0x004003ae));
+        if (rb(state, 0x004003e4) === 5) {
+          // Segment 5 parks on the high MO page through the staged prefix
+          // rebuild; otherwise TS drifts by the AV latch bytes on every frame.
+          ww(state, 0x004003ae, 0x0088);
+          ww(state, 0x004003b0, 0x0088);
+        }
       }
       state.clock.mode0Init11452Stage = as_u16(6);
       return;
@@ -785,6 +791,10 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
         state.colorRam.fill(0);
         wb(state, 0x00400014, (stage - 1) & 0xff);
         ww(state, 0x004003ae, rw(state, 0x004003b0));
+        // The full 10504 rebuild preserves that parked high-page latch for
+        // the first post-rebuild snapshot before normal 28788 toggling resumes.
+        ww(state, 0x004003ae, 0x0088);
+        ww(state, 0x004003b0, 0x0088);
         state.clock.mode0Init11452Stage = as_u16(92);
         return;
       }
