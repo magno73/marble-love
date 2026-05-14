@@ -269,6 +269,7 @@ export function buildTilemapRows1A444ChunkPhase(
         listAbs = (listAbs + 2) >>> 0;
       }
       if (isTarget && d3 < phase.ad54Count) {
+        writeU8(state, TICK_03F0_OFF, (readU8(state, TICK_03F0_OFF) + 1) & 0xff);
         const bit = (pendingBits >> (d3 & 0x0f)) & 1;
         renderTileLine1AD54(state, rom, destStart + d3 * 8, y, x, height, bit);
       }
@@ -300,6 +301,7 @@ export function buildTilemapRows1A444ChunkPhase(
         let rowArgOff = ROW_ARG_BASE_OFF + d4 * 2;
         const rows = Math.min(height, phase.aa38Count);
         for (let d3 = 0; d3 < rows; d3++) {
+          writeU8(state, TICK_03F0_OFF, (readU8(state, TICK_03F0_OFF) + 1) & 0xff);
           const rowWord = readI16(state, rowArgOff);
           rowArgOff += 2;
           buildTilemapSpan1AA38(state, rom, d3 & 1, rowWord, scratchAddr);

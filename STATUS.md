@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (long demo: segment-5 AV latch carry)
+**Ultimo update:** 2026-05-14 (long demo: staged 1A444 tick cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-14 — Long demo staged 1A444 tick cadence
+
+Drill sul residuo scratch/workRam del segmento 5: il path completo
+`FUN_1A444` incrementava `0x4003F0` prima di ogni call `FUN_1AD54` e
+`FUN_1AA38`, mentre il path staged `buildTilemapRows1A444ChunkPhase`
+ricostruiva gli snapshot intermedi senza avanzare quel contatore. Il fix
+replica lo stesso side-effect nel path staged, senza modificare pack rows,
+playfield, sprite o cadence esterna.
+
+Effetto osservato sui dump fresh/legacy:
+
+- Dense `/tmp/mame_demo_fresh_17640_17675_step1_codex.json`:
+  `12751 -> 12720`.
+- Tail `/tmp/mame_demo_12000_plus_17660_17720_step1.json`:
+  `30698 -> 30672`.
+- Step10 `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`:
+  `15950 -> 15947`.
+- Legacy storico senza `slapsticBank`: `147420 -> 147406`.
+- PF resta exact nei campioni osservati; sprite residual resta `140B`.
+
+Drill aperto:
+
+- Il residuo sprite `140B` e' gia' presente prima dello stage segment-5 e non
+  ci sono write MO tra f17640 e f17650; non va corretto con una copia/clear
+  tardiva, ma risalendo al writer precedente (scene init / pf-scroll /
+  emissione sprite).
+- f17650/f17660 restano PF-exact ma scratch/work heavy.
+- f17701/f17702 mantengono residui alpha/sprite/work post-rebuild; dopo f17710
+  il tail resta soprattutto object/sprite/cache.
+
+Validazione:
+
+- `npx tsc -b --pretty false` PASS.
+- `test-hud-frame-init-283c2-parity.ts 50` PASS.
+- `test-tilemap-span-builder-1aa38-parity.ts 50` PASS.
+- `test-object-orbit-emit-13ade-parity.ts 50` PASS.
+- `test-object-state-entry-25bae-parity.ts 50` PASS.
+- `test-tilemap-row-build-1a444-parity.ts 50` PASS.
 
 ## 2026-05-14 — Long demo segment-5 AV latch carry
 
