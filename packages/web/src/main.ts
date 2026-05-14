@@ -37,6 +37,7 @@ const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
+const playableSeedName = searchParams.get("playableSeed");
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
 // E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
@@ -146,10 +147,46 @@ async function startGame(
   // ?mameLive=1 → come mameDump ma NON freeza il tick (lascia evolvere).
   let mameDumpFrozen = false;
   type WarmState = NonNullable<NonNullable<Parameters<typeof bootInit>[2]>["warmState"]>;
+  const hex2bytes = (hex: string, len: number): Uint8Array => {
+    const out = new Uint8Array(len);
+    for (let i = 0; i < len && i * 2 + 1 < hex.length; i++) {
+      out[i] = parseInt(hex.substr(i * 2, 2), 16);
+    }
+    return out;
+  };
   let warmState: WarmState | undefined;
   const useMameDump = searchParams.get("mameDump") === "1";
   const useMameLive = searchParams.get("mameLive") === "1";
-  if (useMameDump || useMameLive) {
+  if (playableSeedName !== null) {
+    try {
+      const safeSeedName = playableSeedName.replace(/[^a-z0-9_-]/gi, "");
+      const r = await fetch(`/scenarios/playable/${safeSeedName}.seed.json`);
+      if (!r.ok) throw new Error(`fetch fail: ${r.status}`);
+      const seed = await r.json() as {
+        frame: number;
+        slapsticBank?: number;
+        workRam: string;
+        playfieldRam: string;
+        spriteRam: string;
+        alphaRam: string;
+        colorRam: string;
+      };
+      warmState = {
+        workRam: hex2bytes(seed.workRam, 0x2000),
+        playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
+        spriteRam: hex2bytes(seed.spriteRam, 0x1000),
+        alphaRam: hex2bytes(seed.alphaRam, 0x1000),
+        colorRam: hex2bytes(seed.colorRam, 0x800),
+        videoScrollY: (((parseInt(seed.workRam.substr(4, 2), 16) << 8) |
+                        parseInt(seed.workRam.substr(6, 2), 16)) & 0x1ff),
+        videoScrollX: 0,
+        slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
+      };
+      console.log(`[warmState] loaded playable seed ${safeSeedName} frame ${seed.frame}`);
+    } catch (e) {
+      console.warn("[warmState] playable seed fetch failed:", e);
+    }
+  } else if (useMameDump || useMameLive) {
     try {
       const r = await fetch("/mame_state.json");
       if (r.ok) {
@@ -161,13 +198,6 @@ async function startGame(
           spriteRam: string;
           alphaRam: string;
           colorRam: string;
-        };
-        const hex2bytes = (hex: string, len: number): Uint8Array => {
-          const out = new Uint8Array(len);
-          for (let i = 0; i < len && i * 2 + 1 < hex.length; i++) {
-            out[i] = parseInt(hex.substr(i * 2, 2), 16);
-          }
-          return out;
         };
         const querySlapsticBank = searchParams.has("slapsticBank")
           ? Number(searchParams.get("slapsticBank"))
@@ -307,7 +337,9 @@ async function startGame(
       //   nel segmento iniziale. `loopReset=0` disabilita il guardrail.
       const loopResetParam = searchParams.get("loopReset");
       const defaultLoopResetN =
-        forcePlay && warmState !== undefined ? DEFAULT_WARM_PLAY_LOOP_RESET : 0;
+        forcePlay && warmState !== undefined && playableSeedName === null
+          ? DEFAULT_WARM_PLAY_LOOP_RESET
+          : 0;
       const parsedLoopResetN = parseInt(loopResetParam ?? String(defaultLoopResetN), 10);
       const loopResetN = Number.isFinite(parsedLoopResetN) ? parsedLoopResetN : 0;
       const mainLoopBody =

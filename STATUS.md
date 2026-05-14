@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-14 (live browser trackball wiring)
+**Ultimo update:** 2026-05-14 (playable browser seed + live controls)
 **Branch corrente:** `feature/visual-pixel-match`.
 
 ## 2026-05-14 — Live browser trackball wiring
@@ -20,6 +20,14 @@ Goal web input completato per il path playable warm:
   coin-credit completo da reset resta debito sound/main CPU separato, ma il
   main gate ora riceve il byte switch corretto quando il runtime lo usa.
 - Aggiunto `packages/web/test/input.test.ts` per bloccare la rotazione 45 gradi.
+- Aggiunti tre seed web compatti in `packages/web/public/scenarios/playable/`
+  (`coin_start_to_level1`, `level1_trackball_short`,
+  `level1_trackball_obstacle`) e query `?playableSeed=...`. Questo evita di
+  usare il dump generico `mame_state.json` per il test manuale: quel dump puo'
+  essere attract/non-playable e far sembrare morte le frecce.
+- Con `?playableSeed=...`, `loopReset` defaulta a `0` per non riportare la
+  partita al seed ogni 180 frame durante il controllo live. Il passo tastiera
+  e' ora `8`, coerente con le trace playable MAME.
 
 Validazione:
 
