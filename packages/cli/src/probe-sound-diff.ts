@@ -95,7 +95,7 @@ function main(): void {
   // a f100-200 (verifica empirica via mame_sound_reset_tap). Env override:
   //   SOUND_RESET_RELEASE_FRAME=<N>   default 0 (no hold, libero subito)
   const chip = createSoundChip({ roms: { rom421, rom422 } });
-  const releaseFrame = parseInt(process.env.SOUND_RESET_RELEASE_FRAME ?? "0", 10);
+  const releaseFrame = parseInt(process.env.SOUND_RESET_RELEASE_FRAME ?? "245", 10);
   if (releaseFrame > 0) {
     // Tick fake fino a releaseFrame (inReset=true → no cycle consumed)
     console.log(`Reset hold ${releaseFrame} frame, then release...`);
