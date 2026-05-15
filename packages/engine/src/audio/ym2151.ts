@@ -55,6 +55,7 @@ import {
 } from "./ym2151-channel.js";
 import { operatorSetFreq } from "./ym2151-operator.js";
 import { KC_TO_FREQ } from "./ym2151-tables.js";
+import { tickEnvClock } from "./ym2151-envelope.js";
 
 /** Sample rate native YM2151: clock 3.579545 MHz / 64 = 55930 Hz. */
 export const YM2151_NATIVE_SAMPLE_RATE = 55930;
@@ -252,22 +253,30 @@ function applyReg(ym: YM2151, reg: number, val: number): void {
 }
 
 /** Produce 1 sample stereo da tutti 8 channel attivi. Output [-1..+1] L+R.
- * Phase A2: avanza LFO + applica PM/AM modulation. */
+ * Phase A2: LFO advance. Phase A4: PM (phase modulation) + AM scale. */
 export function ym2151Sample(ym: YM2151): [number, number] {
   tickLfo(ym);
   let left = 0, right = 0;
   for (const ch of ym.channels) {
-    // Apply LFO amplitude modulation: vol scale (1 - AMS * lfoOutput * AMD/127)
-    // V3 minimal: PMS modula channel freq dinamicamente (TODO frame-by-frame freq update);
-    // qui solo AM scale.
+    // AM: lfoOutput (-1..+1) × PMS × AMD applicato come scale all'output channel
     const amScale = ch.ams === 0 || ym.lfoAmd === 0
       ? 1
       : 1 - (ch.ams * Math.abs(ym.lfoOutput) * ym.lfoAmd) / (127 * 4);
+    // PM (Phase A4 vibrato): lfoOutput × lfoPmd × channel.pms → phase offset
+    // applicato a phase accumulator di TUTTI gli op del channel.
+    // PMS scale: 0=no PM, 7=max vibrato. PMD 0..127.
+    const pmOffset = ym.lfoPmd === 0 || ch.pms === 0
+      ? 0
+      : Math.round(ym.lfoOutput * ym.lfoPmd * ch.pms * 4);  // phase units
+    if (pmOffset !== 0) {
+      for (const op of ch.op) {
+        op.phase = (op.phase + pmOffset) & ((1 << 20) - 1);
+      }
+    }
     const [l, r] = channelSample(ch);
     left += l * amScale;
     right += r * amScale;
   }
-  // Soft-clip per evitare saturazione
   return [Math.tanh(left * 0.5), Math.tanh(right * 0.5)];
 }
 
@@ -351,6 +360,8 @@ export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
   // Sample: 1 stereo sample ogni 64 cycle YM (= 55930 Hz native rate)
   while (ym.ymCycleAccumulator >= 64) {
     ym.ymCycleAccumulator -= 64;
+    // Tick global envelope clock (used by MAME-faithful rate table)
+    tickEnvClock();
     // Genera 1 sample stereo (carrier op output per ogni channel attivo)
     const [l, r] = ym2151Sample(ym);
     ym.sampleBuffer.push(l, r);

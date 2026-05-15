@@ -69,30 +69,90 @@ export const KC_TO_FREQ: Float32Array = (() => {
   return t;
 })();
 
-/** Envelope rate table: 64 entries × 8 sub-step. Per ogni rate value (0-63)
- * dà un increment per envelope counter @ sample rate native.
- * Rate 0 → never advance (silent). Rate 63 → fastest (instant).
- * Hardware: each rate has 8 phases di durata variable (esponenziale). */
-export const ENV_RATE_TABLE: Uint16Array = (() => {
-  const t = new Uint16Array(64 * 8);
-  // Approssimazione esponenziale: rate r → step (2^(r/8)) per sample
-  for (let r = 0; r < 64; r++) {
-    for (let p = 0; p < 8; p++) {
-      // MAME-style: rate < 2 = 0 step (silent), rate >= 62 = full step
-      if (r < 2) { t[r * 8 + p] = 0; continue; }
-      if (r >= 62) { t[r * 8 + p] = 8; continue; }
-      const shift = (r >> 2);
-      const stepIdx = r & 3;
-      // 4 step pattern per quarter-octave: [1,1,1,1] / [1,1,1,2] / [1,1,2,2] / [1,2,2,2]
-      const stepPatterns = [
-        [1, 1, 1, 1, 1, 1, 1, 1],
-        [2, 1, 1, 1, 2, 1, 1, 1],
-        [2, 1, 2, 1, 2, 1, 2, 1],
-        [2, 2, 2, 1, 2, 2, 2, 1],
-      ];
-      const base = stepPatterns[stepIdx]![p]!;
-      t[r * 8 + p] = base << Math.max(0, shift - 11);
-    }
+/** ENV_RATE_SHIFT: per ogni rate (0..63), shift right applicato all'envelope
+ * counter prima del check increment. Source: MAME ym2151.cpp eg_rate_shift[].
+ * Rate 0..63 = combo (key_scale + base_rate). Pre-shift produce la divisione
+ * binaria del clock envelope. */
+export const ENV_RATE_SHIFT: Uint8Array = new Uint8Array([
+  11, 11, 11, 11, 11, 11, 11, 11,  //  0..7
+  11, 11, 11, 11, 10, 10, 10, 10,  //  8..15
+   9,  9,  9,  9,  8,  8,  8,  8,  // 16..23
+   7,  7,  7,  7,  6,  6,  6,  6,  // 24..31
+   5,  5,  5,  5,  4,  4,  4,  4,  // 32..39
+   3,  3,  3,  3,  2,  2,  2,  2,  // 40..47
+   1,  1,  1,  1,  0,  0,  0,  0,  // 48..55
+   0,  0,  0,  0,  0,  0,  0,  0,  // 56..63
+]);
+
+/** ENV_RATE_SELECT: per ogni rate (0..63), indice in eg_inc[8] pattern.
+ * Source: MAME ym2151.cpp eg_rate_select[]. */
+export const ENV_RATE_SELECT: Uint8Array = new Uint8Array([
+  18, 18, 18, 18, 18, 18, 18, 18,  //  0..7   (rate <=1: hard-coded zero)
+   0,  1,  2,  3,  0,  1,  2,  3,  //  8..15
+   0,  1,  2,  3,  0,  1,  2,  3,
+   0,  1,  2,  3,  0,  1,  2,  3,
+   0,  1,  2,  3,  0,  1,  2,  3,
+   0,  1,  2,  3,  0,  1,  2,  3,
+   0,  1,  2,  3,  0,  1,  2,  3,
+   4,  5,  6,  7,  8,  9, 10, 11,  // 56..63
+   12, 12, 12, 12, 12, 12, 12, 12,
+].slice(0, 64));
+
+/** EG_INC: pattern di increment per ognuno dei 19 select × 8 step.
+ * Source: MAME ym2151.cpp eg_inc[]. Valori 0/1/2/4/8 = step amount. */
+export const EG_INC: Uint8Array = new Uint8Array([
+  // 0: 0,1, 0,1, 0,1, 0,1   slow rate (1/8)
+  0, 1, 0, 1, 0, 1, 0, 1,
+  // 1: 0,1, 0,1, 1,1, 0,1
+  0, 1, 0, 1, 1, 1, 0, 1,
+  // 2: 0,1, 1,1, 0,1, 1,1
+  0, 1, 1, 1, 0, 1, 1, 1,
+  // 3: 0,1, 1,1, 1,1, 1,1
+  0, 1, 1, 1, 1, 1, 1, 1,
+  // 4: 1,1, 1,1, 1,1, 1,1   medium
+  1, 1, 1, 1, 1, 1, 1, 1,
+  // 5: 1,1, 1,2, 1,1, 1,2
+  1, 1, 1, 2, 1, 1, 1, 2,
+  // 6: 1,2, 1,2, 1,2, 1,2
+  1, 2, 1, 2, 1, 2, 1, 2,
+  // 7: 1,2, 2,2, 1,2, 2,2
+  1, 2, 2, 2, 1, 2, 2, 2,
+  // 8: 2,2, 2,2, 2,2, 2,2   fast
+  2, 2, 2, 2, 2, 2, 2, 2,
+  // 9: 2,2, 2,4, 2,2, 2,4
+  2, 2, 2, 4, 2, 2, 2, 4,
+  // 10: 2,4, 2,4, 2,4, 2,4
+  2, 4, 2, 4, 2, 4, 2, 4,
+  // 11: 2,4, 4,4, 2,4, 4,4
+  2, 4, 4, 4, 2, 4, 4, 4,
+  // 12: 4,4, 4,4, 4,4, 4,4
+  4, 4, 4, 4, 4, 4, 4, 4,
+  // 13: 4,4, 4,8, 4,4, 4,8
+  4, 4, 4, 8, 4, 4, 4, 8,
+  // 14: 4,8, 4,8, 4,8, 4,8
+  4, 8, 4, 8, 4, 8, 4, 8,
+  // 15: 4,8, 8,8, 4,8, 8,8
+  4, 8, 8, 8, 4, 8, 8, 8,
+  // 16: 8,8, 8,8, 8,8, 8,8   fastest
+  8, 8, 8, 8, 8, 8, 8, 8,
+  // 17: max step (one-shot inst)
+  8, 8, 8, 8, 8, 8, 8, 8,
+  // 18: zero (rate <=1 silent)
+  0, 0, 0, 0, 0, 0, 0, 0,
+]);
+
+/** Legacy stub kept for compatibility (unused after envelope refactor). */
+export const ENV_RATE_TABLE: Uint16Array = new Uint16Array(64 * 8);
+
+/** Attenuation table dB-domain: idx 0..1023 → linear amplitude scale 1..0.
+ * Hardware OPM: 96dB max attenuation a counter 1023, esponenziale.
+ * Curve: amp = 10^(-att/1023 * 4.8) (≈96 dB span con 4.8 = 96/20). */
+export const ATT_TO_LINEAR: Float32Array = (() => {
+  const t = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) {
+    if (i >= 1023) { t[i] = 0; continue; }
+    // dB curve: 96 dB span, esponenziale
+    t[i] = Math.pow(10, -(i / 1023) * 4.8);
   }
   return t;
 })();
