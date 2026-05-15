@@ -113,13 +113,17 @@ anche questo caso bounded insieme alle rotte profonde.
 spostato su progressione giocabile oltre il level 1, ma il bound precedente
 `>120` frame e' solo entry/stability guard, non prova di livello completato. La
 rotta profonda live dal seed manuale `manual_level1_start` ora copre una ladder
-piu' severa: baseline level 1 con oltre 1500 frame giocabili, movimento X/Y e
+piu' severa: baseline level 1 con oltre 1500 frame stabili, movimento X/Y e
 death/recovery; poi finestre mapped level 2 (`0x3e4=4`, mapping MAME
 `level2_spawn`) e level 3 (`0x3e4=5`, mapping MAME `level3_spawn`) con oltre
-700 frame giocabili ciascuna, movimento X/Y, death/recovery, PF pieno, player
-`state 0`, PF-empty bound, `state 1/2` non-stuck, `state 6` bounded e scroll
-bound invariati. Nessuna patch engine: e' una guardia di ladder prima dei
-prossimi drill di completion/collisione/camera sui level 2/3.
+700 frame stabili ciascuna, movimento object X/Y, death/recovery, PF pieno,
+player `state 0`, PF-empty bound, `state 1/2` non-stuck, `state 6` bounded e
+scroll bound invariati. Follow-up probe: una route tutta neutra raggiunge le
+stesse finestre e input trackball attivo in `0x400390==1` viene campionato ma
+non cambia il path object; quindi questa e' una guardia timeout/rebuild, non
+completion/controllabilita' level 2/3. Nessuna patch engine: i prossimi drill
+devono cercare una route controllabile vera o confrontare contro input neutro e
+MAME route equivalente.
 
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
