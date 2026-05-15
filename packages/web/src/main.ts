@@ -24,10 +24,11 @@ import {
   buildRomBackedDemoFrame,
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
+import { isCoinStartAttractReady, writeBrowserCreditDigit } from "./coin-start-flow.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
-  createSoundChip, tickCycles as tickSoundCycles, SOUND_CYCLES_PER_FRAME,
+  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 
@@ -375,6 +376,36 @@ async function startGame(
         try {
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
+          // Release SoundChip dal HOLD reset hardware (main 68K $860001 bit 7=1).
+          // Senza release il 6502 non gira mai → no YM/POKEY write → no audio.
+          // Wire main↔sound mailbox e' debt separato (Codex engine main side);
+          // qui release manuale all'enable per fare partire il sound code.
+          if (soundChip !== undefined) {
+            releaseSoundReset(soundChip);
+            console.log("[sound] SoundChip released from hold reset");
+            // Wire engine soundCmdSend158AC → SoundChip submitCommand: ogni
+            // cmd emit dal main 68K TS verrà inoltrato al sound 6502 TS.
+            let cmdCount = 0;
+            setSoundCmdHook((cmd) => {
+              submitSoundCommand(soundChip!, (cmd & 0xff) as never);
+              cmdCount++;
+              if (cmdCount <= 20) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
+            });
+            console.log("[sound] engine→SoundChip cmd hook wired");
+            // ?soundTest=1 — invia cmd test artificiali ogni 2s per validare
+            // che il chain audio produce suono anche senza gameplay cmd reali
+            // (workaround per attract loop che non chiama soundCmdSend158AC).
+            if (searchParams.get("soundTest") === "1") {
+              const testCmds = [0x40, 0x41, 0x42, 0x43, 0x50, 0x60, 0x65];
+              let testIdx = 0;
+              setInterval(() => {
+                const cmd = testCmds[testIdx % testCmds.length]!;
+                submitSoundCommand(soundChip!, cmd as never);
+                console.log(`[soundTest] sent cmd $${cmd.toString(16)}`);
+                testIdx++;
+              }, 2000);
+            }
+          }
           btnAudio.textContent = "🔊 Audio ON";
           btnAudio.disabled = true;
           console.log("[sound] Web Audio started");
@@ -469,6 +500,15 @@ async function startGame(
     previousInputButtons = inputButtons;
     if (
       useCoinStartFlow &&
+      manualPlayStarted &&
+      !preservePlayableDispatcher &&
+      isCoinStartAttractReady(s)
+    ) {
+      manualPlayStarted = false;
+      console.log("[marble-love] coin/start flow rearmed after attract return");
+    }
+    if (
+      useCoinStartFlow &&
       !manualPlayStarted &&
       startPressedThisFrame &&
       browserCoinCredits > 0 &&
@@ -543,10 +583,14 @@ async function startGame(
         }
       }
     }
+    if (useCoinStartFlow && !manualPlayStarted && rom !== undefined) {
+      writeBrowserCreditDigit(s, rom, browserCoinCredits);
+    }
     frameCount += 1;
     // DEBUG: expose state to window globals every frame for headless inspection
     (window as unknown as { __mlState?: typeof s; __mlFrame?: number }).__mlState = s;
     (window as unknown as { __mlFrame?: number }).__mlFrame = frameCount;
+    (window as unknown as { __soundChip?: typeof soundChip }).__soundChip = soundChip;
 
     if (renderMode === "diagnostic") {
       renderer.drawFrame(
