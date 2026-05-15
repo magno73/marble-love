@@ -98,10 +98,10 @@ describe("sound command cue fallback", () => {
       const cue = soundCommandCue(cmd);
       expect(cue.freq).toBeGreaterThan(40);
       expect(cue.freq).toBeLessThan(3000);
-      expect(cue.vol).toBeGreaterThanOrEqual(0.48);
-      expect(cue.vol).toBeLessThanOrEqual(0.72);
-      expect(cue.durationMs).toBeGreaterThanOrEqual(70);
-      expect(cue.durationMs).toBeLessThanOrEqual(136);
+      expect(cue.vol).toBeGreaterThanOrEqual(0.72);
+      expect(cue.vol).toBeLessThanOrEqual(0.93);
+      expect(cue.durationMs).toBeGreaterThanOrEqual(130);
+      expect(cue.durationMs).toBeLessThanOrEqual(235);
     }
   });
 

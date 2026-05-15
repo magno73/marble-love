@@ -32,6 +32,26 @@ export function readWorkWordBE(state: Pick<CoinStartState, "workRam">, off: numb
   return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
 }
 
+export function writeWorkWordBE(state: Pick<CoinStartState, "workRam">, off: number, value: number): void {
+  state.workRam[off] = (value >>> 8) & 0xff;
+  state.workRam[off + 1] = value & 0xff;
+}
+
+export function prepareBrowserCoinStartAttract(state: CoinStartState): void {
+  writeWorkWordBE(state, MAIN_STATE_OFF, ATTRACT_MAIN_STATE);
+  writeWorkWordBE(state, MODE_SELECTOR_OFF, 2);
+  writeWorkWordBE(state, ATTRACT_TIMER_OFF, 0x012c);
+  writeWorkWordBE(state, 0x3a8, 0x006f);
+  writeWorkWordBE(state, 0x3aa, 0x006f);
+  state.workRam[0x3ac] = 0x00;
+
+  state.clock.mainThreadWaitDelay = undefined;
+  state.clock.mode0Init11452Stage = undefined;
+  state.clock.mode2BottomHudDelay = undefined;
+  state.clock.mode2TilemapBlitDelay = undefined;
+  state.clock.mode2Init11452Stage = 0;
+}
+
 export function isCoinStartAttractReady(state: CoinStartState): boolean {
   const attractMode = readWorkWordBE(state, MODE_SELECTOR_OFF);
   return (
