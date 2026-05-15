@@ -25,6 +25,7 @@ import {
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { isCoinStartAttractReady, prepareBrowserCoinStartAttract, writeBrowserCreditDigit } from "./coin-start-flow.js";
+import { applyLevelTimeOverride, parseLevelTimeOverrideParam } from "./level-time-override.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
@@ -45,6 +46,9 @@ const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const enableSound = searchParams.get("sound") !== "0";
 const runSoundChip = searchParams.get("soundChip") === "1";
+const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
+const showObjectDebugOverlay =
+  searchParams.get("debugObjects") === "1" || searchParams.get("debugState") === "1";
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -78,6 +82,94 @@ const useSyntheticDemoFrame =
 function activeMotionObjectStartEntry(state: ReturnType<typeof stateNs.emptyGameState>): number {
   const avControl = (((state.workRam[0x3ae] ?? 0) << 8) | (state.workRam[0x3af] ?? 0)) & 0xffff;
   return ((avControl >>> 3) & 0x07) * 64;
+}
+
+function readWorkWordBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number): number {
+  return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
+}
+
+function readWorkLongBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number): number {
+  return (
+    (((state.workRam[off] ?? 0) << 24) |
+      ((state.workRam[off + 1] ?? 0) << 16) |
+      ((state.workRam[off + 2] ?? 0) << 8) |
+      (state.workRam[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function signed32(value: number): number {
+  return value | 0;
+}
+
+function fixedToFloat(value: number): number {
+  return signed32(value) / 0x10000;
+}
+
+function objectDebugLine(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  index: number,
+  playerX: number,
+  playerY: number,
+  playerZ: number,
+): string {
+  const off = 0x18 + index * 0xe2;
+  const x = fixedToFloat(readWorkLongBE(state, off + 0x0c));
+  const y = fixedToFloat(readWorkLongBE(state, off + 0x10));
+  const z = fixedToFloat(readWorkLongBE(state, off + 0x14));
+  const active = state.workRam[off + 0x18] ?? 0;
+  const type = state.workRam[off + 0x19] ?? 0;
+  const objectState = state.workRam[off + 0x1a] ?? 0;
+  const kind = state.workRam[off + 0x1b] ?? 0;
+  const shape = readWorkWordBE(state, off + 0x38);
+  return `#${index} a=${active} type=${type} st=${objectState} k=${kind} shape=${shape.toString(16).padStart(4, "0")} ` +
+    `x=${x.toFixed(1)} y=${y.toFixed(1)} z=${z.toFixed(1)} ` +
+    `d=(${(x - playerX).toFixed(1)},${(y - playerY).toFixed(1)},${(z - playerZ).toFixed(1)})`;
+}
+
+function createObjectDebugOverlay(): HTMLPreElement {
+  const el = document.createElement("pre");
+  el.style.cssText =
+    "position:fixed;left:10px;top:10px;z-index:9998;margin:0;padding:8px 10px;" +
+    "max-width:520px;max-height:42vh;overflow:auto;background:rgba(0,0,0,.72);" +
+    "color:#b8f7ff;border:1px solid rgba(184,247,255,.45);font:12px/1.35 monospace;" +
+    "pointer-events:none;white-space:pre-wrap;";
+  document.body.appendChild(el);
+  return el;
+}
+
+function updateObjectDebugOverlay(
+  el: HTMLPreElement,
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  frameCount: number,
+): void {
+  const playerX = fixedToFloat(readWorkLongBE(state, 0x18 + 0x0c));
+  const playerY = fixedToFloat(readWorkLongBE(state, 0x18 + 0x10));
+  const playerZ = fixedToFloat(readWorkLongBE(state, 0x18 + 0x14));
+  const objectCount = Math.min(32, readWorkWordBE(state, 0x396) || 32);
+  const candidates: Array<{ index: number; rank: number }> = [];
+  for (let index = 1; index < objectCount; index++) {
+    const off = 0x18 + index * 0xe2;
+    const active = state.workRam[off + 0x18] ?? 0;
+    const type = state.workRam[off + 0x19] ?? 0;
+    const objectState = state.workRam[off + 0x1a] ?? 0;
+    const shape = readWorkWordBE(state, off + 0x38);
+    if (active === 0 && type === 0 && objectState === 0 && shape === 0) continue;
+    const x = fixedToFloat(readWorkLongBE(state, off + 0x0c));
+    const y = fixedToFloat(readWorkLongBE(state, off + 0x10));
+    const z = fixedToFloat(readWorkLongBE(state, off + 0x14));
+    const rank = Math.abs(x - playerX) + Math.abs(y - playerY) + Math.abs((z - playerZ) / 8);
+    candidates.push({ index, rank });
+  }
+  candidates.sort((a, b) => a.rank - b.rank);
+  const lines = [
+    `f=${frameCount} main=${readWorkWordBE(state, 0x390)} mode=${readWorkWordBE(state, 0x392)} level=${readWorkWordBE(state, 0x394)} ` +
+      `scroll=(${state.videoScrollX},${state.videoScrollY})`,
+    `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
+    "nearest objects:",
+    ...candidates.slice(0, 8).map(({ index }) => objectDebugLine(state, index, playerX, playerY, playerZ)),
+  ];
+  el.textContent = lines.join("\n");
 }
 
 function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): void {
@@ -344,11 +436,24 @@ async function startGame(
   if (useIndirect) {
     console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");
   }
+  const objectDebugOverlay = showObjectDebugOverlay ? createObjectDebugOverlay() : undefined;
   const inputState = initInput();
   let browserCoinCredits = 0;
   let previousInputButtons = 0;
   let manualPlayStarted = false;
+  let lastLevelTimeOverrideLevel: number | undefined;
   let demoFrame = 0;
+
+  function maybeApplyLevelTimeOverride(reason: string): void {
+    if (levelTimeOverride === undefined) return;
+    if ((s.workRam[0x18 + 0x18] ?? 0) === 0) return;
+    if (readWorkWordBE(s, 0x390) !== 0) return;
+    const levelIndex = readWorkWordBE(s, 0x394);
+    if (lastLevelTimeOverrideLevel === levelIndex) return;
+    applyLevelTimeOverride(s, levelTimeOverride);
+    lastLevelTimeOverrideLevel = levelIndex;
+    console.log(`[marble-love] levelTime=${levelTimeOverride}s applied for level index ${levelIndex} (${reason})`);
+  }
 
   // ─── Sound chip + Web Audio renderer (?sound != 0) ───────────────────────
   // V1 MVP audio: SoundChip 6502+YM2151+POKEY in tick parallelo, renderer polla
@@ -512,6 +617,7 @@ async function startGame(
       isCoinStartAttractReady(s)
     ) {
       manualPlayStarted = false;
+      lastLevelTimeOverrideLevel = undefined;
       console.log("[marble-love] coin/start flow rearmed after attract return");
     }
     if (
@@ -534,6 +640,8 @@ async function startGame(
       s.clock.mainLoopBodyTicks = wrap.as_u32(1);
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
+      lastLevelTimeOverrideLevel = undefined;
+      maybeApplyLevelTimeOverride("START1");
       console.log(`[marble-love] START1 accepted, live gameplay seed loaded, credits=${browserCoinCredits}`);
     }
 
@@ -581,6 +689,7 @@ async function startGame(
         runMainLoopBody: mainLoopBody,
       };
       tick(s, tickOptions);
+      maybeApplyLevelTimeOverride("level change");
       // Sound chip tick: the current 6502/YM/POKEY path is diagnostic-heavy
       // and does not yet produce full background music. Keep it opt-in so the
       // playable browser loop cannot slow down just because audio cues are on.
@@ -599,6 +708,9 @@ async function startGame(
     (window as unknown as { __mlState?: typeof s; __mlFrame?: number }).__mlState = s;
     (window as unknown as { __mlFrame?: number }).__mlFrame = frameCount;
     (window as unknown as { __soundChip?: typeof soundChip }).__soundChip = soundChip;
+    if (objectDebugOverlay !== undefined && frameCount % 5 === 0) {
+      updateObjectDebugOverlay(objectDebugOverlay, s, frameCount);
+    }
 
     if (renderMode === "diagnostic") {
       renderer.drawFrame(

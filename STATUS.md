@@ -1,7 +1,30 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (audio perf guard + LAN fallbacks)
+**Ultimo update:** 2026-05-15 (manual timer/debug aids)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — Manual timer/debug aids
+
+Follow-up live per provare la progressione oltre level 1 senza finire subito il
+tempo e per diagnosticare il punto segnalato dove la biglia sembra respinta da
+qualcosa non visibile.
+
+Modifiche:
+
+- Nuovo parametro browser `levelTime=N` (`1..999`): in `?autoLoad=1&play=1`
+  imposta il timer interno del livello a 120/180/etc. una sola volta per livello
+  quando il dispatcher e' in gameplay (`main=0`). Il countdown continua a
+  decrementare normalmente; non e' un freeze del timer.
+- L'override scrive sia `obj0+0x6A` (countdown player/HUD) sia il mirror
+  level-timer `0x097C`, cosi' copre i due path runtime gia' individuati.
+- Nuovo parametro `debugObjects=1`/`debugState=1`: overlay non interattiva con
+  coordinate fixed-point del player, timer, main/mode/level/scroll e oggetti
+  attivi piu' vicini. Serve a catturare un repro utile della possibile
+  collisione invisibile nello screen del ponte/lower platform.
+
+Nota: alcuni path HUD ROM restano a due cifre o clampano sopra 99; il valore
+interno 120/180 puo' quindi essere attivo anche se il display non mostra subito
+tutte le cifre.
 
 ## 2026-05-15 — Audio perf guard + LAN fallbacks
 
