@@ -496,6 +496,31 @@ async function startGame(
   let lastLevelTimeOverrideLevel: number | undefined;
   let demoFrame = 0;
 
+  // ─── Mobile/touch UI: pulsanti COIN + START on-screen ───────────────────
+  // Da mobile non ci sono tasti "5" / Enter. Simulo via dispatch keyboard
+  // event (input.ts listener resta unico path).
+  const makeMobileButton = (label: string, key: string, right: number, bg: string): HTMLButtonElement => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.style.cssText =
+      `position:fixed;bottom:20px;right:${right}px;z-index:9999;` +
+      `padding:14px 20px;font-size:18px;` +
+      `background:${bg};color:#fff;border:2px solid #888;border-radius:8px;` +
+      `cursor:pointer;font-family:system-ui,sans-serif;font-weight:bold;` +
+      `touch-action:manipulation;user-select:none;`;
+    const trigger = (e: Event): void => {
+      e.preventDefault();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { key }));
+    };
+    b.addEventListener("click", trigger);
+    b.addEventListener("touchstart", trigger, { passive: false });
+    document.body.appendChild(b);
+    return b;
+  };
+  makeMobileButton("🪙 COIN", "5", 160, "#2a4a2a");
+  makeMobileButton("▶ START", "Enter", 20, "#4a2a2a");
+
   function maybeApplyLevelTimeOverride(reason: string): void {
     if (levelTimeOverride === undefined) return;
     if ((s.workRam[0x18 + 0x18] ?? 0) === 0) return;
