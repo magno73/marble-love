@@ -9,6 +9,12 @@ Apri `?autoLoad=1&mameLive=1&play=1` per vedere il marble rotolare in tempo real
 Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-love-prd-v0.2.md).
 **License:** MIT (codice originale). Le ROM **non** sono incluse né distribuite — l'utente fornisce le proprie.
 
+**Checkpoint live gameplay (2026-05-15):** il timer level 1 ora aggiorna anche
+l'HUD live (`obj0+0x6A` passa dal decremento interno al render alpha via
+`FUN_286EE -> FUN_3520`). Il renderer playfield ora avvolge la tilemap 64x64
+su 512 px nel path indirect e nel fallback Pixi, evitando la fascia nera sotto
+il ponte levatoio quando lo scroll verticale entra nelle finestre basse.
+
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
 scenari MAME deterministici da 101 snapshot ciascuno (`f0` seed + 100 frame

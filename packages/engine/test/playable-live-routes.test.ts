@@ -463,6 +463,33 @@ describe("playable live route smoke", () => {
     expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(8_000_000);
   });
 
+  it("refreshes the visible timer HUD when the player timer decrements", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+    const initialAlpha = state.alphaRam.slice();
+    const initialTimer = readWordBE(state.workRam, 0x18 + 0x6a);
+
+    for (let frame = 0; frame < 60; frame++) {
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X: state.workRam[0x18 + 0xc9] ?? 0xff,
+        p1Y: state.workRam[0x18 + 0xc8] ?? 0xff,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+    }
+
+    let alphaDiffs = 0;
+    for (let i = 0; i < state.alphaRam.length; i++) {
+      if (state.alphaRam[i] !== initialAlpha[i]) alphaDiffs++;
+    }
+    expect(readWordBE(state.workRam, 0x18 + 0x6a)).toBe(initialTimer - 1);
+    expect(alphaDiffs).toBeGreaterThan(0);
+  });
+
   it.each([
     ["level2_spawn", 4, { maxScrollY: 160, minDiffX: 1_000_000, minDiffY: 6_000_000 }],
     ["level3_spawn", 5, { maxScrollY: 360, minDiffX: 8_000_000, minDiffY: 8_000_000 }],

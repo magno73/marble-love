@@ -79,6 +79,9 @@ import { as_u8, as_u32, raw } from "./wrap.js";
 import { advanceMode0Init11452Async, advanceMode2Init11452Async } from "./mode2-init-11452-async.js";
 import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
+import { renderString286EE } from "./render-string-286ee.js";
+import { formatNumber3874 } from "./string-format.js";
+import { renderStringChain3520 } from "./render-string-chain-3520.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -134,6 +137,17 @@ function renderFinalizeHeader11654(state: GameState, rom: RomImage): void {
     stateSub2572(state, rom, 0x00022a26, 0x1800);
   }
   stateSub2572(state, rom, 0x00022a32, (0x3000 - d2) >>> 0);
+}
+
+function renderTimerHud286EE(state: GameState, rom: RomImage, timerPtr: number, idx: number): void {
+  renderString286EE(state, rom, timerPtr, idx, {
+    numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+      formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+    },
+    renderStringChain2: (entryPtr, attrLong) => {
+      renderStringChain3520(state, rom, entryPtr, attrLong);
+    },
+  });
 }
 
 /**
@@ -261,7 +275,10 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     (((r[0x392] ?? 0) << 8) | (r[0x393] ?? 0)) === 2 &&
     (r[0x3e4] ?? 0) === 3;
   if (!asyncInitActiveAtTickStart && !mode2Segment3Dwell) {
-    gameTickTimers(state, opts.hudCallback);
+    gameTickTimers(
+      state,
+      opts.hudCallback ?? ((timerPtr, idx) => renderTimerHud286EE(state, rom, timerPtr, idx)),
+    );
   }
 
   // Default = 0xff (= MMIO trackball stable @ no-input in MAME) per evitare

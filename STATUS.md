@@ -1,7 +1,33 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable level-1 completion boundary)
+**Ultimo update:** 2026-05-15 (live timer HUD + playfield scroll wrap)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Live timer HUD + playfield scroll wrap
+
+Fix dei due bug osservati nel browser sul level 1:
+
+- Il timer interno `obj0+0x6A` veniva decrementato, ma il tick live chiamava
+  `gameTickTimers` senza callback HUD, quindi l'alpha RAM non veniva aggiornata
+  e a schermo restava visibile `60`. `mainTick` ora usa il path ROM reale
+  `FUN_286EE -> FUN_3520` come callback default quando il caller non ne passa
+  uno.
+- Il terreno sotto/dopo il ponte levatoio poteva apparire "rotto" con una
+  grande fascia nera: il renderer sottraeva `scrollX/scrollY` dai comandi
+  playfield senza wrap della tilemap System 1 64x64. Il path indirect
+  bitmap_ind16 e il fallback Pixi ora disegnano le copie wrapped a 512 px, così
+  le finestre con scroll verticale alto (es. `scrollY=346`) recuperano anche la
+  tail della tilemap invece di lasciarla nera.
+
+Validazione:
+
+- Browser smoke `?autoLoad=1&play=1`: dopo coin/start il timer scende
+  (`60 -> 59 -> ...`) nel canvas live.
+- Probe TS su frame high-scroll: a `scrollY=346` il vecchio culling vedeva
+  `827` tile, il wrap ne vede `1199`.
+- `npx vitest run packages/web/test/renderer.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS (19 test).
+- `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
 
 ## 2026-05-15 — Playable level-1 completion boundary
 
