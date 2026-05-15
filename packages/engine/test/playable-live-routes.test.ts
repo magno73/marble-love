@@ -519,6 +519,61 @@ describe("playable live route smoke", () => {
     expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(8_000_000);
   });
 
+  it.each([
+    ["manual_level2_start", 4],
+    ["manual_level3_start", 5],
+    ["manual_level4_start", 6],
+    ["manual_level5_start", 7],
+  ] as const)("proves %s is a distinct controllable practice seed", (seedName, segment) => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+    const candidate = JSON.parse(
+      readFileSync(resolve(`packages/web/public/scenarios/playable/${seedName}.seed.json`), "utf-8"),
+    ) as PlayableSeed;
+    const level1 = JSON.parse(
+      readFileSync(resolve("packages/web/public/scenarios/playable/manual_level1_start.seed.json"), "utf-8"),
+    ) as PlayableSeed;
+    const candidateWork = hexToBytes(candidate.workRam, 0x2000);
+    const candidatePlayfield = hexToBytes(candidate.playfieldRam, 0x2000);
+    const level1Playfield = hexToBytes(level1.playfieldRam, 0x2000);
+    let playfieldDiffs = 0;
+    for (let i = 0; i < candidatePlayfield.length; i++) {
+      if (candidatePlayfield[i] !== level1Playfield[i]) playfieldDiffs++;
+    }
+
+    expect(readWordBE(candidateWork, 0x390)).toBe(1);
+    expect(readWordBE(candidateWork, 0x392)).toBe(0);
+    expect(candidateWork[0x3e4]).toBe(segment);
+    expect(candidateWork[0x18 + 0x1a]).toBe(0);
+    expect(nonzero(candidatePlayfield)).toBeGreaterThan(4_000);
+    expect(playfieldDiffs).toBeGreaterThan(150);
+
+    const activePlan = expand([
+      ["R", 60],
+      ["D", 60],
+    ]);
+    const neutralPlan = expand([["N", activePlan.length]]);
+
+    const preservedActive = runRoute(rom, loadPlayableSeedState(rom, seedName, { manualDispatcher: false }), activePlan);
+    const preservedNeutral = runRoute(rom, loadPlayableSeedState(rom, seedName, { manualDispatcher: false }), neutralPlan);
+    expect(preservedActive.finalX).toBe(preservedNeutral.finalX);
+    expect(preservedActive.finalY).toBe(preservedNeutral.finalY);
+
+    const manualActive = runRoute(rom, loadPlayableSeedState(rom, seedName), activePlan);
+    const manualNeutral = runRoute(rom, loadPlayableSeedState(rom, seedName), neutralPlan);
+    expect(manualActive.mainState).toBe(0);
+    expect(manualActive.mode).toBe(0);
+    expect(manualActive.segment).toBe(segment);
+    expect(manualActive.playerState).toBe(0);
+    expect(manualActive.pfCount).toBeGreaterThan(4_000);
+    expect(manualActive.maxEmptyRun).toBe(0);
+    expect(manualActive.maxScrollY).toBeLessThanOrEqual(360);
+    expect(
+      Math.max(Math.abs(manualActive.finalX - manualNeutral.finalX), Math.abs(manualActive.finalY - manualNeutral.finalY)),
+    ).toBeGreaterThan(1_000_000);
+  });
+
   it("refreshes the visible timer HUD when the player timer decrements", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));

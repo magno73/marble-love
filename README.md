@@ -37,7 +37,9 @@ active/neutral, passa gli snapshot active come argomenti e aggiungi
 identici, il seed resta diagnostico anche quando il rearm manuale TS sembra
 controllabile. Per una tail manuale o playback con molti snapshot usa
 `--all-snapshots --target-segment N --only-candidates`, cosi' il probe estrae
-solo i frame che potrebbero diventare seed.
+solo i frame che potrebbero diventare seed. Il probe rifiuta inoltre i
+candidati con `playfieldRam` byte-identica al seed level 1 di riferimento
+(`--distinct-from`), cosi' non si ripete il falso positivo f6000.
 Per playtest manuale di progressione livelli, `?autoLoad=1&play=1&levelTime=180`
 o `levelTime=120` imposta il timer interno del livello al valore scelto una
 sola volta per livello, lasciando il countdown normale. Nota: alcuni path HUD
@@ -45,15 +47,19 @@ ROM mostrano solo due cifre o clampano sopra 99, quindi il valore alto puo'
 essere effettivo anche se il display non mostra subito 180/120. Per investigare
 collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
-Per partire direttamente da un livello di practice usa per ora
-`?autoLoad=1&startLevel=1&levelTime=180`: carica il seed playable reale
-`manual_level1_start`, riattiva il dispatcher manuale del browser e disabilita
-il loop reset automatico. `startLevel=2..5` resta intenzionalmente bloccato
-finche' non avremo seed giocabili verificati equivalenti: i vecchi
-`levelN_spawn` restano scenari oracle/demo e non corrispondono ai livelli
-playable. Nota sul falso candidato f6000: pur essendo controllabile, conservava
-la stessa `playfieldRam` di `manual_level1_start`, quindi non e' un seed visuale
-valido per il level 2 e non va cablato a `startLevel`.
+Per partire direttamente da un livello di practice usa
+`?autoLoad=1&startLevel=N&levelTime=180` con `N=1..5`: carica un seed playable,
+riattiva il dispatcher manuale del browser e disabilita il loop reset
+automatico. `startLevel=1` usa `manual_level1_start`; `startLevel=2..5` usa
+seed ricatturati da una rotta MAME coin/start reale (`manual_level2_start` ..
+`manual_level5_start`) e filtrati con criteri piu' severi del vecchio f6000:
+PF/terrain non identico al level 1, coppia MAME active-vs-neutral responsive,
+dispatcher MAME preservato non controllabile, dispatcher manuale browser
+controllabile, timer/PF/camera stabili e browser smoke visivo. I vecchi
+`levelN_spawn` restano scenari oracle/demo e non vanno usati come practice
+start. Nota sul falso candidato f6000: pur essendo controllabile, conservava la
+stessa `playfieldRam` di `manual_level1_start`, quindi non era un seed visuale
+valido per il level 2.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
