@@ -57,6 +57,16 @@ const SKIP_FLAG_WORD_OFF = 0x3b8 as const;
  *                     differential test per convergenza deterministica.
  * @returns            0 = skip flag attivo o chip mai ready; 1 = inviato.
  */
+/** Hook side-effect opzionale: chiamato quando soundCmdSend158AC manda un
+ * cmd al chip (ritorno 1). Usato dal web frontend per wirare al SoundChip
+ * TS (`submitCommand`). NON ha side effect sul state TS: solo emit esterno.
+ * Default `undefined` (no-op, parity test invariato). */
+let onSoundCmdHook: ((cmd: number) => void) | undefined = undefined;
+
+export function setSoundCmdHook(hook: ((cmd: number) => void) | undefined): void {
+  onSoundCmdHook = hook;
+}
+
 export function soundCmdSend158AC(
   state: GameState,
   cmd: number,
@@ -87,5 +97,9 @@ export function soundCmdSend158AC(
   }
 
   // Chip ready: FUN_4C6E scrive MMIO 0xFE0000, ritorna D0=1.
+  // Side-effect opzionale: notifica il sound chip TS (web frontend wire).
+  if (onSoundCmdHook !== undefined) {
+    onSoundCmdHook(cmd & 0xff);
+  }
   return 1;
 }
