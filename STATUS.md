@@ -1,7 +1,66 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable route ladder guard)
+**Ultimo update:** 2026-05-15 (sound chip cherry-pick end-to-end)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Sound chip end-to-end (cherry-pick da feature/sound-chip)
+
+Audio subsystem integrato nel main branch: 6502 sound CPU + YM2151 + POKEY +
+mailbox 68K↔6502 + Web Audio renderer via AudioWorklet. Cherry-pick non-git
+(copy files + edit minimali a `index.ts` + `main.ts`, zero conflict perche'
+m6502/ e audio/ erano completamente assenti dal main).
+
+**18 nuovi file** (engine + cli + web), **2 edit** (`engine/src/index.ts`
+re-export, `web/src/main.ts` wire `?sound=1`):
+
+- `packages/engine/src/m6502/`: addressing, bus, cpu, cycle-table, opcodes,
+  regfile (C2 core 151 opcodes) + mailbox, sound-mmu, sound-rom, sound-chip,
+  sound-clock (C4 + C7 facade).
+- `packages/engine/src/audio/`: ym2151 (256-byte reg file Phase 5 V2),
+  pokey (16-byte writeRegs Phase 6 V2), index barrel.
+- `packages/engine/test/`: m6502-smoke (C2), m6502-tom-harte (C3
+  SingleStepTests 65x02), m6502-mailbox (13/13), m6502-sound-rom (3/3),
+  m6502-sound-smoke (3/3 con ROM reale), ym2151 (10/10), pokey (11/11),
+  sound-chip-smoke (9/10, 1 skip sentinel).
+- `packages/cli/src/probe-sound-diff.ts`: differential testing TS SoundChip
+  vs MAME oracle. Output @ f600: 387B audioRam + 2 YM + 1 POKEY divergent
+  (root cause: V2 Timer A/B stub sempre 0 → boot code 6502 loop diverge da
+  MAME). Closure 0-byte richiede V3 Timer + envelope (deferito).
+- `packages/web/src/sound-renderer.ts`: bridge polling register shadow →
+  AudioWorklet `postMessage` events (`ym_voice` / `pokey_voice`).
+- `packages/web/public/sound-worklet.js`: AudioWorklet processor con 8
+  YM2151 voices (sine + ADSR envelope follower) + 4 POKEY voices (square /
+  white noise). V1 MVP audio basic, non bit-perfect chip-perfect.
+
+**Wire `?sound=1`** in `main.ts`: istanzia SoundChip da `rom.sound`
+($8000-$BFFF + $C000-$FFFF), mostra pulsante "🔊 Enable Audio" (richiesto
+da AudioContext per user gesture), ticker integra `tickSoundCycles(chip,
+29830)` + `soundRenderer.update(chip)` ogni frame.
+
+**Validazione**:
+- `npx tsc -b --pretty false` PASS.
+- 62/64 sound test PASS (2 skip = sentinel ROM-assenti, ma estratte in
+  `/tmp/sound-roms/` → smoke con ROM reale PASS).
+- `npm --workspace @marble-love/web run build` PASS, PWA 795KB precache.
+- Playwright smoke `?autoLoad=1&play=1&sound=1`: chain audio attivo
+  (`[sound] Web Audio started`), coin/start flow Codex coabita, engine
+  ticker continuo (~75 fps).
+- Zero touch a file Codex (`refresh-frame-10fce`, `fun-264aa`,
+  `state-sub-1b5c2`, ecc.) — surgical perfect.
+
+**Scope onestamente**: V1 audio sentibile in browser (sine + square + noise
+con envelope follower basic). NON bit-perfect chip-perfect — quello richiede
+V3 (envelope generator DR/AR/SR/RR per 32 operatori FM + LFSR poly 17-bit
+POKEY + Timer A/B counter con IRQ wire al 6502). PRD Phase 7 esplicito
+"audio prima versione semplice, POKEY/YM2151 chip-perfect rimandato a V2".
+
+**Usage**:
+```
+http://localhost:5173/?autoLoad=1&play=1&sound=1
+# Click 🔊 Enable Audio (top-right) per user-gesture AudioContext start.
+# Premi 5 (coin) + Enter (START1) → biglia spawn.
+# Muovi con mouse / WASD / frecce. Tones audible su YM2151/POKEY writes.
+```
 
 ## 2026-05-15 — Playable ladder wording correction
 
