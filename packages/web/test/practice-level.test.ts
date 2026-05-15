@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStartLevelParam, scenarioForStartLevel } from "../src/practice-level.js";
+import { parseStartLevelParam, playableSeedForStartLevel } from "../src/practice-level.js";
 
 describe("practice level query", () => {
-  it("maps supported levels to gameplay scenarios", () => {
-    expect(scenarioForStartLevel(parseStartLevelParam("1"))).toBe("level1_spawn");
-    expect(scenarioForStartLevel(parseStartLevelParam("2"))).toBe("level2_spawn");
-    expect(scenarioForStartLevel(parseStartLevelParam("3"))).toBe("level3_spawn");
-    expect(scenarioForStartLevel(parseStartLevelParam("4"))).toBe("level4_spawn");
-    expect(scenarioForStartLevel(parseStartLevelParam("5"))).toBe("level5_spawn");
+  it("maps only proven playable practice levels to playable seeds", () => {
+    expect(playableSeedForStartLevel(parseStartLevelParam("1"))).toBe("manual_level1_start");
+    expect(playableSeedForStartLevel(parseStartLevelParam("2"))).toBeUndefined();
+    expect(playableSeedForStartLevel(parseStartLevelParam("3"))).toBeUndefined();
+    expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBeUndefined();
+    expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBeUndefined();
   });
 
   it("rejects unsupported levels", () => {

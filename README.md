@@ -32,11 +32,12 @@ ROM mostrano solo due cifre o clampano sopra 99, quindi il valore alto puo'
 essere effettivo anche se il display non mostra subito 180/120. Per investigare
 collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
-Per partire direttamente da un livello di practice usa `startLevel=1..5`, ad
-esempio `?autoLoad=1&startLevel=3&levelTime=180`: carica il warm seed MAME
-`levelN_spawn`, riattiva il dispatcher manuale del browser e disabilita il
-loop reset automatico. E' pensato per provare collisioni/controlli/timeout dei
-livelli, non come prova di progressione reale dal livello precedente.
+Per partire direttamente da un livello di practice usa per ora
+`?autoLoad=1&startLevel=1&levelTime=180`: carica il seed playable reale
+`manual_level1_start`, riattiva il dispatcher manuale del browser e disabilita
+il loop reset automatico. `startLevel=2..5` e' intenzionalmente bloccato finche'
+non avremo seed giocabili verificati: i vecchi `levelN_spawn` restano scenari
+oracle/demo e non corrispondono ai livelli playable.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15

@@ -26,7 +26,7 @@ import {
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { isCoinStartAttractReady, prepareBrowserCoinStartAttract, writeBrowserCreditDigit } from "./coin-start-flow.js";
 import { applyLevelTimeOverride, parseLevelTimeOverrideParam } from "./level-time-override.js";
-import { parseStartLevelParam, scenarioForStartLevel } from "./practice-level.js";
+import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-level.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
@@ -56,7 +56,7 @@ const playableSeedName = searchParams.get("playableSeed");
 const manualPlayableSeedName = "manual_level1_start";
 const replayPlayableSeedName = "coin_start_to_level1";
 const startLevelPractice = parseStartLevelParam(searchParams.get("startLevel"));
-const startLevelScenarioName = scenarioForStartLevel(startLevelPractice);
+const startLevelPlayableSeedName = playableSeedForStartLevel(startLevelPractice);
 // ?scenario=NAME — gameplay warm-seed (oracle/scenarios/gameplay/NAME.json).
 // Carica snapshots[0] come warmState. Loop reset a 100 frame (oracle window).
 // Cherry-pick da feature/render-fix-bg (15 scenari MAME 101 snapshot ciascuno).
@@ -68,11 +68,13 @@ const KNOWN_SCENARIOS = new Set([
   "level5_spawn", "level5_early",
 ]);
 const explicitScenarioName = searchParams.get("scenario");
-const scenarioNameRaw = explicitScenarioName ?? startLevelScenarioName ?? null;
+const scenarioNameRaw = explicitScenarioName;
 const scenarioName =
   scenarioNameRaw !== null && KNOWN_SCENARIOS.has(scenarioNameRaw) ? scenarioNameRaw : null;
 const useStartLevelPractice =
-  explicitScenarioName === null && startLevelPractice !== undefined && scenarioName === startLevelScenarioName;
+  explicitScenarioName === null && playableSeedName === null && startLevelPractice !== undefined;
+const startLevelPracticeUnavailable =
+  useStartLevelPractice && startLevelPlayableSeedName === undefined;
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
@@ -140,6 +142,21 @@ function createObjectDebugOverlay(): HTMLPreElement {
     "max-width:520px;max-height:42vh;overflow:auto;background:rgba(0,0,0,.72);" +
     "color:#b8f7ff;border:1px solid rgba(184,247,255,.45);font:12px/1.35 monospace;" +
     "pointer-events:none;white-space:pre-wrap;";
+  document.body.appendChild(el);
+  return el;
+}
+
+function createStartLevelUnavailableOverlay(level: number): HTMLDivElement {
+  const el = document.createElement("div");
+  el.style.cssText =
+    "position:fixed;left:50%;top:50%;z-index:9999;transform:translate(-50%,-50%);" +
+    "width:min(520px,calc(100vw - 48px));box-sizing:border-box;padding:18px 20px;" +
+    "background:rgba(0,0,0,.86);border:1px solid rgba(184,247,255,.55);" +
+    "color:#d9f7ff;font:14px/1.45 system-ui,-apple-system,sans-serif;text-align:left;";
+  el.textContent =
+    `startLevel=${level} non ha ancora un seed giocabile verificato. ` +
+    "Per ora solo startLevel=1 usa il seed manuale reale; i vecchi levelN_spawn " +
+    "sono snapshot demo/oracle e non corrispondono ai livelli playable.";
   document.body.appendChild(el);
   return el;
 }
@@ -316,6 +333,7 @@ async function startGame(
     warmState === undefined &&
     rom !== undefined &&
     scenarioName === null &&
+    !useStartLevelPractice &&
     (forceCoinStart || (forcePlay && playableSeedName === null && !useMameDump && !useMameLive));
   let coinStartWarmState: WarmState | undefined;
   if (playableSeedName !== null) {
@@ -325,6 +343,14 @@ async function startGame(
       console.log(`[warmState] loaded playable seed ${playableSeedName}`);
     } catch (e) {
       console.warn("[warmState] playable seed fetch failed:", e);
+    }
+  } else if (useStartLevelPractice && startLevelPlayableSeedName !== undefined) {
+    try {
+      warmState = await loadPlayableSeedWarmState(startLevelPlayableSeedName);
+      warmStateIsPlayableSeed = true;
+      console.log(`[marble-love] loaded startLevel=${startLevelPractice} seed ${startLevelPlayableSeedName}`);
+    } catch (e) {
+      console.warn(`[marble-love] startLevel=${startLevelPractice} seed fetch failed:`, e);
     }
   } else if (useCoinStartFlow) {
     try {
@@ -366,7 +392,7 @@ async function startGame(
         };
         console.log(
           `[warmState] loaded gameplay scenario ${scenarioName} (frame ${dump.frame}` +
-          `${useStartLevelPractice ? `, startLevel=${startLevelPractice}` : ""})`,
+          ")",
         );
       }
     } catch (e) {
@@ -419,18 +445,19 @@ async function startGame(
     warmState !== undefined
       ? { warmState }
       : rom !== undefined
-        ? useCoinStartFlow
+        ? useCoinStartFlow || startLevelPracticeUnavailable
           ? {}
           : { preloadLevel: 0, fullScreenInit: useFullScreenInit }
         : {},
   );
+  const startLevelPracticeActive = useStartLevelPractice && warmState !== undefined;
   if (warmStateIsPlayableSeed) {
     // Playable warm seeds are MAME frame_done snapshots. The validated replay
     // probes auto-select phase 1 for these windows; phase 0 advances the
     // scroll/body interleave one vblank early and can expose stale PF rows.
     s.clock.mainLoopBodyTicks = wrap.as_u32(1);
   }
-  if (useStartLevelPractice && warmState !== undefined) {
+  if (startLevelPracticeActive) {
     // Practice warm seeds are entry snapshots for testing a specific level.
     // Re-arm the manual gameplay dispatcher so active input can move the
     // marble; raw `?scenario=...` keeps the MAME dispatcher for oracle drill.
@@ -439,7 +466,10 @@ async function startGame(
       s.workRam[0x391] = 0x00;
     }
     s.clock.mainLoopBodyTicks = wrap.as_u32(1);
-    console.log(`[marble-love] startLevel=${startLevelPractice} practice ready (${scenarioName})`);
+    console.log(`[marble-love] startLevel=${startLevelPractice} practice ready (${startLevelPlayableSeedName})`);
+  } else if (startLevelPracticeUnavailable && startLevelPractice !== undefined) {
+    createStartLevelUnavailableOverlay(startLevelPractice);
+    console.warn(`[marble-love] startLevel=${startLevelPractice} is not available yet: no proven playable seed`);
   }
   if (useCoinStartFlow) {
     // Start from the same staged attract/start gate reached after game over,
@@ -457,7 +487,8 @@ async function startGame(
   if (useIndirect) {
     console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");
   }
-  const objectDebugOverlay = showObjectDebugOverlay ? createObjectDebugOverlay() : undefined;
+  const objectDebugOverlay =
+    showObjectDebugOverlay && !startLevelPracticeUnavailable ? createObjectDebugOverlay() : undefined;
   const inputState = initInput();
   let browserCoinCredits = 0;
   let previousInputButtons = 0;
@@ -720,7 +751,7 @@ async function startGame(
       //   nel segmento iniziale. `loopReset=0` disabilita il guardrail.
       const loopResetParam = searchParams.get("loopReset");
       const defaultLoopResetN =
-        useStartLevelPractice
+        startLevelPracticeActive
           ? 0
           : scenarioName !== null && warmState !== undefined
           ? SCENARIO_LOOP_RESET
@@ -730,7 +761,8 @@ async function startGame(
       const parsedLoopResetN = parseInt(loopResetParam ?? String(defaultLoopResetN), 10);
       const loopResetN = Number.isFinite(parsedLoopResetN) ? parsedLoopResetN : 0;
       const mainLoopBody =
-        forcePlay || useStartLevelPractice || (rom !== undefined && warmState === undefined);
+        !startLevelPracticeUnavailable &&
+        (forcePlay || startLevelPracticeActive || (rom !== undefined && warmState === undefined));
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
         bootInit(s, tickRom, { warmState });
       }
