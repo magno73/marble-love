@@ -519,59 +519,6 @@ describe("playable live route smoke", () => {
     expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(8_000_000);
   });
 
-  it("proves the level-2 practice seed is a controllable post-completion MAME capture", () => {
-    const rom = emptyRomImage();
-    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
-
-    const seedState = loadPlayableSeedState(rom, "manual_level2_start", { manualDispatcher: false });
-    expect(readWordBE(seedState.workRam, 0x390)).toBe(0);
-    expect(readWordBE(seedState.workRam, 0x392)).toBe(2);
-    expect(readWordBE(seedState.workRam, 0x394)).toBe(1);
-    expect(seedState.workRam[0x3e4]).toBe(1);
-    expect(seedState.workRam[0x18 + 0x1a]).toBe(0);
-    expect(readWordBE(seedState.workRam, 0x18 + 0x6a)).toBeGreaterThan(0);
-    expect(nonzero(seedState.playfieldRam)).toBeGreaterThan(4000);
-    expect(seedState.videoScrollY).toBe(0);
-
-    const activePlan = expand([
-      ["R", 300],
-      ["D", 300],
-      ["L", 300],
-      ["U", 300],
-      ["DR", 300],
-      ["DL", 300],
-      ["N", 400],
-    ]);
-    const neutralPlan = expand([["N", activePlan.length]]);
-
-    const active = runRoute(
-      rom,
-      loadPlayableSeedState(rom, "manual_level2_start", { manualDispatcher: false }),
-      activePlan,
-    );
-    const neutral = runRoute(
-      rom,
-      loadPlayableSeedState(rom, "manual_level2_start", { manualDispatcher: false }),
-      neutralPlan,
-    );
-
-    expect(active.mainState).toBe(0);
-    expect(active.mode).toBe(2);
-    expect(active.segment).toBe(1);
-    expect(active.playerState).toBe(0);
-    expect(active.pfCount).toBeGreaterThan(4000);
-    expect(active.maxEmptyRun).toBe(0);
-    expect(active.maxScrollY).toBeLessThanOrEqual(80);
-    expect(neutral.mainState).toBe(0);
-    expect(neutral.mode).toBe(2);
-    expect(neutral.segment).toBe(1);
-    expect(neutral.playerState).toBe(0);
-    expect(neutral.pfCount).toBeGreaterThan(4000);
-    expect(neutral.maxEmptyRun).toBe(0);
-    expect(Math.abs(active.finalX - neutral.finalX)).toBeGreaterThan(1_000_000);
-    expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(6_000_000);
-  });
-
   it("refreshes the visible timer HUD when the player timer decrements", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));

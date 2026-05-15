@@ -1,0 +1,470 @@
+#!/usr/bin/env node
+/**
+ * scan-playable-terrain-hashes.ts — terrain fingerprint scanner for level seeds.
+ *
+ * This is intentionally stricter than naming a warm snapshot "level N". It
+ * compares playfield/color/alpha fingerprints and can run each seed through TS
+ * for a bounded route, sampling terrain hashes over time. A candidate level
+ * seed should be visually distinct from the known levels and then pass the
+ * separate active-vs-neutral audit before being wired to startLevel.
+ */
+
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { argv, exit } from "node:process";
+
+import { applySlapsticBank, bootInit, bus as busNs, state as stateNs, tick } from "@marble-love/engine";
+import type { GameState, RomImage } from "@marble-love/engine";
+
+interface SeedJson {
+  frame?: number;
+  slapsticBank?: number;
+  workRam: string;
+  playfieldRam: string;
+  spriteRam: string;
+  alphaRam: string;
+  colorRam: string;
+}
+
+interface ScenarioJson {
+  snapshots?: SeedJson[];
+}
+
+interface LoadedSeed {
+  path: string;
+  label: string;
+  seed: SeedJson;
+}
+
+interface CliArgs {
+  paths: string[];
+  frames: number;
+  sampleEvery: number;
+  plan: string;
+  json: boolean;
+  pairwiseOnly: boolean;
+  allSnapshots: boolean;
+  nearThreshold: number;
+}
+
+interface Fingerprint {
+  pfHash: string;
+  colorHash: string;
+  alphaHash: string;
+  coarseHash: string;
+  pfNonzero: number;
+  colorNonzero: number;
+  alphaNonzero: number;
+  pfChecksum: number;
+}
+
+interface SeedReport {
+  label: string;
+  frame: number | undefined;
+  main: number;
+  mode: number;
+  next: number;
+  segment: number;
+  playerState: number;
+  timer: number;
+  scrollWord: number;
+  x: number;
+  y: number;
+  fingerprint: Fingerprint;
+}
+
+interface PairwiseReport {
+  a: string;
+  b: string;
+  playfieldDiffs: number;
+  colorDiffs: number;
+  alphaDiffs: number;
+  coarseManhattan: number;
+  nearDuplicate: boolean;
+}
+
+const DEFAULT_PATHS = [
+  "packages/web/public/scenarios/playable/manual_level1_start.seed.json",
+  "packages/web/public/scenarios/playable/manual_level2_start.seed.json",
+  "packages/web/public/scenarios/playable/manual_level3_start.seed.json",
+  "packages/web/public/scenarios/playable/manual_level4_start.seed.json",
+  "packages/web/public/scenarios/playable/manual_level5_start.seed.json",
+  "oracle/scenarios/gameplay/level2_spawn.json",
+  "oracle/scenarios/gameplay/level3_spawn.json",
+  "oracle/scenarios/gameplay/level4_spawn.json",
+  "oracle/scenarios/gameplay/level5_spawn.json",
+];
+const DEFAULT_PLAN = "R:120,D:120,L:120,U:120,DR:120,DL:120,N:360";
+const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
+  D: [0, 8],
+  U: [0, -8],
+  R: [8, 0],
+  L: [-8, 0],
+  DR: [8, 8],
+  DL: [-8, 8],
+  UR: [8, -8],
+  UL: [-8, -8],
+  BR: [4, -6],
+  N: [0, 0],
+};
+
+function printHelp(): void {
+  console.log(`scan-playable-terrain-hashes — fingerprint candidate level seeds
+
+Usage:
+  npx tsx packages/cli/src/scan-playable-terrain-hashes.ts [options] [seed-or-scenario.json ...]
+
+Options:
+  --pairwise-only       Compare loaded seed snapshots without running TS
+  --all-snapshots       Load every snapshot from scenario files
+  --frames N            TS frames to run per seed (default: 960)
+  --sample-every N      Sample terrain every N frames (default: 30)
+  --plan SPEC           Route plan while running TS (default: ${DEFAULT_PLAN})
+  --near-threshold N    PF byte-diff threshold for near duplicates (default: 512)
+  --json                Emit JSON
+  -h, --help            Show this help
+
+The scanner is a discovery/filtering tool. Passing it does not by itself make a
+seed safe for startLevel; candidates still need active-vs-neutral control proof.
+`);
+}
+
+function parseArgs(): CliArgs {
+  const args = argv.slice(2);
+  const paths: string[] = [];
+  let frames = 960;
+  let sampleEvery = 30;
+  let plan = DEFAULT_PLAN;
+  let json = false;
+  let pairwiseOnly = false;
+  let allSnapshots = false;
+  let nearThreshold = 512;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--frames") {
+      frames = parsePositiveInt(args[++i], "--frames");
+    } else if (arg === "--sample-every") {
+      sampleEvery = parsePositiveInt(args[++i], "--sample-every");
+    } else if (arg === "--plan") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--plan requires a value");
+      plan = next;
+    } else if (arg === "--near-threshold") {
+      nearThreshold = parsePositiveInt(args[++i], "--near-threshold");
+    } else if (arg === "--pairwise-only") {
+      pairwiseOnly = true;
+    } else if (arg === "--all-snapshots") {
+      allSnapshots = true;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (arg === "-h" || arg === "--help") {
+      printHelp();
+      exit(0);
+    } else if (arg !== undefined) {
+      paths.push(arg);
+    }
+  }
+
+  return {
+    paths: paths.length > 0 ? paths : DEFAULT_PATHS.filter((path) => existsSync(resolve(path))),
+    frames,
+    sampleEvery,
+    plan,
+    json,
+    pairwiseOnly,
+    allSnapshots,
+    nearThreshold,
+  };
+}
+
+function parsePositiveInt(raw: string | undefined, label: string): number {
+  if (raw === undefined) throw new Error(`${label} requires a value`);
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer`);
+  return value;
+}
+
+function hexToBytes(hex: string, expectedLength: number, label: string): Uint8Array {
+  if (hex.length !== expectedLength * 2) {
+    throw new Error(`${label} has ${hex.length / 2} bytes, expected ${expectedLength}`);
+  }
+  const out = new Uint8Array(expectedLength);
+  for (let i = 0; i < expectedLength; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function readWordBE(bytes: Uint8Array, off: number): number {
+  return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
+}
+
+function readLongBE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function signedLong(value: number): number {
+  return value | 0;
+}
+
+function shortHash(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex").slice(0, 16);
+}
+
+function nonzero(bytes: Uint8Array): number {
+  let total = 0;
+  for (const value of bytes) if (value !== 0) total++;
+  return total;
+}
+
+function checksumBytes(bytes: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i++) sum = (sum + (bytes[i] ?? 0) * (i + 1)) >>> 0;
+  return sum >>> 0;
+}
+
+function countDiffs(a: Uint8Array, b: Uint8Array): number {
+  if (a.length !== b.length) throw new Error(`cannot diff buffers with different lengths ${a.length}/${b.length}`);
+  let diffs = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diffs++;
+  return diffs;
+}
+
+function bucketSignature(bytes: Uint8Array, bucketCount = 64): Uint16Array {
+  const buckets = new Uint16Array(bucketCount);
+  for (let i = 0; i < bytes.length; i++) {
+    const bucket = Math.min(bucketCount - 1, Math.floor((i * bucketCount) / bytes.length));
+    buckets[bucket] = ((buckets[bucket] ?? 0) + (bytes[i] ?? 0)) & 0xffff;
+  }
+  return buckets;
+}
+
+function bucketManhattan(a: Uint8Array, b: Uint8Array): number {
+  const aa = bucketSignature(a);
+  const bb = bucketSignature(b);
+  let total = 0;
+  for (let i = 0; i < aa.length; i++) total += Math.abs((aa[i] ?? 0) - (bb[i] ?? 0));
+  return total;
+}
+
+function bucketHash(bytes: Uint8Array): string {
+  const buckets = bucketSignature(bytes);
+  return createHash("sha256").update(Buffer.from(buckets.buffer)).digest("hex").slice(0, 16);
+}
+
+function fingerprint(playfieldRam: Uint8Array, colorRam: Uint8Array, alphaRam: Uint8Array): Fingerprint {
+  return {
+    pfHash: shortHash(playfieldRam),
+    colorHash: shortHash(colorRam),
+    alphaHash: shortHash(alphaRam),
+    coarseHash: bucketHash(playfieldRam),
+    pfNonzero: nonzero(playfieldRam),
+    colorNonzero: nonzero(colorRam),
+    alphaNonzero: nonzero(alphaRam),
+    pfChecksum: checksumBytes(playfieldRam),
+  };
+}
+
+function loadSeeds(path: string, allSnapshots: boolean): LoadedSeed[] {
+  const sourcePath = resolve(path);
+  const raw = JSON.parse(readFileSync(sourcePath, "utf-8")) as ScenarioJson | SeedJson;
+  if ("snapshots" in raw && Array.isArray(raw.snapshots)) {
+    const snapshots = allSnapshots ? raw.snapshots : raw.snapshots.slice(0, 1);
+    return snapshots.map((seed, index) => ({
+      path,
+      label: `${basename(path)}#${index}${seed.frame === undefined ? "" : `@f${seed.frame}`}`,
+      seed,
+    }));
+  }
+  return [{ path, label: basename(path), seed: raw as SeedJson }];
+}
+
+function seedReport(loaded: LoadedSeed): SeedReport {
+  const workRam = hexToBytes(loaded.seed.workRam, 0x2000, `${loaded.label} workRam`);
+  const playfieldRam = hexToBytes(loaded.seed.playfieldRam, 0x2000, `${loaded.label} playfieldRam`);
+  const colorRam = hexToBytes(loaded.seed.colorRam, 0x800, `${loaded.label} colorRam`);
+  const alphaRam = hexToBytes(loaded.seed.alphaRam, 0x1000, `${loaded.label} alphaRam`);
+  return {
+    label: loaded.label,
+    frame: loaded.seed.frame,
+    main: readWordBE(workRam, 0x390),
+    mode: readWordBE(workRam, 0x392),
+    next: readWordBE(workRam, 0x394),
+    segment: workRam[0x3e4] ?? 0,
+    playerState: workRam[0x18 + 0x1a] ?? 0,
+    timer: readWordBE(workRam, 0x18 + 0x6a),
+    scrollWord: readWordBE(workRam, 0x2) & 0x1ff,
+    x: signedLong(readLongBE(workRam, 0x18 + 0x0c)),
+    y: signedLong(readLongBE(workRam, 0x18 + 0x10)),
+    fingerprint: fingerprint(playfieldRam, colorRam, alphaRam),
+  };
+}
+
+function pairwiseReports(seeds: readonly LoadedSeed[], nearThreshold: number): PairwiseReport[] {
+  const reports: PairwiseReport[] = [];
+  for (let i = 0; i < seeds.length; i++) {
+    const a = seeds[i]!;
+    const aPf = hexToBytes(a.seed.playfieldRam, 0x2000, `${a.label} playfieldRam`);
+    const aColor = hexToBytes(a.seed.colorRam, 0x800, `${a.label} colorRam`);
+    const aAlpha = hexToBytes(a.seed.alphaRam, 0x1000, `${a.label} alphaRam`);
+    for (let j = i + 1; j < seeds.length; j++) {
+      const b = seeds[j]!;
+      const bPf = hexToBytes(b.seed.playfieldRam, 0x2000, `${b.label} playfieldRam`);
+      const playfieldDiffs = countDiffs(aPf, bPf);
+      reports.push({
+        a: a.label,
+        b: b.label,
+        playfieldDiffs,
+        colorDiffs: countDiffs(aColor, hexToBytes(b.seed.colorRam, 0x800, `${b.label} colorRam`)),
+        alphaDiffs: countDiffs(aAlpha, hexToBytes(b.seed.alphaRam, 0x1000, `${b.label} alphaRam`)),
+        coarseManhattan: bucketManhattan(aPf, bPf),
+        nearDuplicate: playfieldDiffs <= nearThreshold,
+      });
+    }
+  }
+  return reports;
+}
+
+function expandRouteSpec(spec: string, frames: number): string[] {
+  const out: string[] = [];
+  for (const part of spec.split(",")) {
+    const trimmed = part.trim();
+    if (trimmed === "") continue;
+    const [step, countRaw] = trimmed.split(":");
+    if (step === undefined || countRaw === undefined || SCREEN_DELTAS[step] === undefined) {
+      throw new Error(`invalid route part "${part}"`);
+    }
+    const count = parsePositiveInt(countRaw, `route count for ${step}`);
+    for (let i = 0; i < count && out.length < frames; i++) out.push(step);
+  }
+  while (out.length < frames) out.push("N");
+  return out;
+}
+
+function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
+  const [screenDx, screenDy] = SCREEN_DELTAS[step] ?? [0, 0];
+  return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
+}
+
+function loadStateFromSeed(rom: RomImage, seed: SeedJson): GameState {
+  const gameState = stateNs.emptyGameState();
+  bootInit(gameState, rom, {
+    warmState: {
+      workRam: hexToBytes(seed.workRam, 0x2000, "workRam"),
+      playfieldRam: hexToBytes(seed.playfieldRam, 0x2000, "playfieldRam"),
+      spriteRam: hexToBytes(seed.spriteRam, 0x1000, "spriteRam"),
+      alphaRam: hexToBytes(seed.alphaRam, 0x1000, "alphaRam"),
+      colorRam: hexToBytes(seed.colorRam, 0x800, "colorRam"),
+      slapsticBank: seed.slapsticBank ?? 1,
+    },
+  });
+  gameState.clock.mainLoopBodyTicks = 1 as typeof gameState.clock.mainLoopBodyTicks;
+  return gameState;
+}
+
+function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[], sampleEvery: number): SeedReport[] {
+  const state = loadStateFromSeed(rom, loaded.seed);
+  let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+  let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+  const samples: SeedReport[] = [];
+
+  for (let frame = 1; frame <= route.length; frame++) {
+    [p1X, p1Y] = advanceTrackball(p1X, p1Y, route[frame - 1] ?? "N");
+    tick(state, {
+      rom,
+      runMainLoopBody: true,
+      p1X,
+      p1Y,
+      p2X: 0xff,
+      p2Y: 0xff,
+      inputMmio: 0x6f,
+    });
+    if (frame % sampleEvery === 0 || frame === route.length) {
+      const report = seedReport({
+        path: loaded.path,
+        label: `${loaded.label}+${frame}`,
+        seed: {
+          frame,
+          slapsticBank: loaded.seed.slapsticBank ?? 1,
+          workRam: Buffer.from(state.workRam).toString("hex"),
+          playfieldRam: Buffer.from(state.playfieldRam).toString("hex"),
+          spriteRam: Buffer.from(state.spriteRam).toString("hex"),
+          alphaRam: Buffer.from(state.alphaRam).toString("hex"),
+          colorRam: Buffer.from(state.colorRam).toString("hex"),
+        },
+      });
+      samples.push(report);
+    }
+  }
+  return samples;
+}
+
+function printSeed(report: SeedReport): void {
+  const fp = report.fingerprint;
+  console.log(
+    `${report.label}: main=${report.main} mode=${report.mode} next=${report.next} seg=${report.segment} ` +
+      `state=${report.playerState} timer=${report.timer} scroll=${report.scrollWord} ` +
+      `pf=${fp.pfNonzero} pfHash=${fp.pfHash} coarse=${fp.coarseHash} checksum=${fp.pfChecksum}`,
+  );
+}
+
+function main(): void {
+  const args = parseArgs();
+  if (args.paths.length === 0) throw new Error("no seed/scenario paths found");
+  const seeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
+  const initialReports = seeds.map(seedReport);
+  const pairs = pairwiseReports(seeds, args.nearThreshold);
+
+  if (args.json) {
+    const runReports = args.pairwiseOnly
+      ? []
+      : (() => {
+          const rom = busNs.emptyRomImage();
+          applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+          const route = expandRouteSpec(args.plan, args.frames);
+          return seeds.map((seed) => ({ label: seed.label, samples: runSamples(rom, seed, route, args.sampleEvery) }));
+        })();
+    console.log(JSON.stringify({ initialReports, pairs, runReports }, null, 2));
+    return;
+  }
+
+  console.log("Initial terrain fingerprints:");
+  for (const report of initialReports) printSeed(report);
+
+  console.log("\nPairwise terrain diffs:");
+  for (const pair of pairs) {
+    const marker = pair.nearDuplicate ? "NEAR" : "    ";
+    console.log(
+      `${marker} ${pair.a} <-> ${pair.b}: pf=${pair.playfieldDiffs} color=${pair.colorDiffs} ` +
+        `alpha=${pair.alphaDiffs} coarse=${pair.coarseManhattan}`,
+    );
+  }
+
+  if (!args.pairwiseOnly) {
+    const rom = busNs.emptyRomImage();
+    applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const route = expandRouteSpec(args.plan, args.frames);
+    console.log(`\nTS sampled terrain every ${args.sampleEvery} frames over ${route.length} frames:`);
+    for (const seed of seeds) {
+      const samples = runSamples(rom, seed, route, args.sampleEvery);
+      const uniquePf = new Set(samples.map((sample) => sample.fingerprint.pfHash));
+      const uniqueCoarse = new Set(samples.map((sample) => sample.fingerprint.coarseHash));
+      const last = samples[samples.length - 1];
+      console.log(`\n${seed.label}: samples=${samples.length} uniquePf=${uniquePf.size} uniqueCoarse=${uniqueCoarse.size}`);
+      if (last !== undefined) printSeed(last);
+    }
+  }
+}
+
+try {
+  main();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  exit(1);
+}
