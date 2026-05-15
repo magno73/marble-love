@@ -19,6 +19,10 @@
 --   MARBLE_PLAYABLE_COIN_FRAME    first scripted coin frame (default 1200)
 --   MARBLE_PLAYABLE_START_FRAME   first scripted START1 frame (default 1500)
 --   MARBLE_PLAYABLE_FRAME_LIST   optional CSV of name:frame warm captures
+--   MARBLE_PLAYABLE_CAPTURE_FRAMES snapshots after each target frame (default 100)
+--   MARBLE_PLAYABLE_TIMER_OVERRIDE diagnostic player timer value for route search
+--   MARBLE_PLAYABLE_TIMER_START first frame for timer override (default 2045)
+--   MARBLE_PLAYABLE_TIMER_END   last frame for timer override (default 999999)
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
 --   MARBLE_PLAYABLE_MANUAL_WINDOW tail snapshots to save in manual/playback mode
@@ -37,8 +41,13 @@ local MANUAL_INPUT = os.getenv("MARBLE_PLAYABLE_MANUAL") == "1"
 local MANUAL_NAME = os.getenv("MARBLE_PLAYABLE_NAME") or "manual_play"
 local MANUAL_MAX_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_MAX_FRAME") or "")
 local MANUAL_WINDOW = tonumber(os.getenv("MARBLE_PLAYABLE_MANUAL_WINDOW") or "240") or 240
-local FRAME_COUNT = 100
+local FRAME_COUNT = tonumber(os.getenv("MARBLE_PLAYABLE_CAPTURE_FRAMES") or "100") or 100
+if FRAME_COUNT < 0 then FRAME_COUNT = 0 end
+FRAME_COUNT = math.floor(FRAME_COUNT)
 local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or "2020") or 2020
+local TIMER_OVERRIDE = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_OVERRIDE") or "")
+local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") or "2045") or 2045
+local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -654,6 +663,26 @@ local function install_taps()
     end
 end
 
+local function write_abs_u16(addr, value)
+    local v = value & 0xffff
+    if mem.write_u16 ~= nil then
+        mem:write_u16(addr, v)
+    elseif mem.write_u8 ~= nil then
+        mem:write_u8(addr, (v >> 8) & 0xff)
+        mem:write_u8(addr + 1, v & 0xff)
+    end
+end
+
+local function apply_timer_override(frame)
+    if TIMER_OVERRIDE == nil then return end
+    if mem == nil then return end
+    if frame < TIMER_OVERRIDE_START or frame > TIMER_OVERRIDE_END then return end
+
+    -- Diagnostic route-search aid only: obj0+0x6a is the player countdown.
+    -- Seeds promoted to startLevel still need normal active-vs-neutral proof.
+    write_abs_u16(0x400082, TIMER_OVERRIDE)
+end
+
 emu.register_frame_done(function()
     if cpu == nil then
         cpu = manager.machine.devices[":maincpu"]
@@ -677,6 +706,7 @@ emu.register_frame_done(function()
     end
 
     frame_count = frame_count + 1
+    apply_timer_override(frame_count)
 
     capture_input_frame()
     local hits = capture_by_frame[frame_count]
