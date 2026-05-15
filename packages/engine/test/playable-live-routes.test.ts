@@ -518,6 +518,63 @@ describe("playable live route smoke", () => {
     },
   );
 
+  it("guards the level-1 completion detector from a manually rearmed finish-line seed", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+    const completionPlan = expand([
+      ["L", 180],
+      ["DL", 900],
+    ]);
+    const neutralPlan = expand([["N", completionPlan.length]]);
+
+    const preservedActive = runRoute(rom, loadGameplayScenarioState(rom, "level1_end"), completionPlan);
+    const preservedNeutral = runRoute(rom, loadGameplayScenarioState(rom, "level1_end"), neutralPlan);
+
+    // The preserved MAME dispatcher autonomously advances through presentation
+    // windows, so it must not be counted as active manual completion proof.
+    expect(preservedActive.mainState).toBe(1);
+    expect(preservedActive.segment).toBeGreaterThanOrEqual(4);
+    expect(preservedActive.finalX).toBe(preservedNeutral.finalX);
+    expect(preservedActive.finalY).toBe(preservedNeutral.finalY);
+
+    const state = loadGameplayScenarioState(rom, "level1_end", { manualDispatcher: true });
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let firstCompletionFrame = -1;
+    let firstState6Frame = -1;
+
+    for (let frame = 1; frame <= completionPlan.length; frame++) {
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, completionPlan[frame - 1] ?? "N");
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      if (firstState6Frame < 0 && state.workRam[0x18 + 0x1a] === 6) {
+        firstState6Frame = frame;
+      }
+      if (firstCompletionFrame < 0 && readWordBE(state.workRam, 0x390) === 3) {
+        firstCompletionFrame = frame;
+      }
+    }
+
+    expect(firstState6Frame).toBeGreaterThan(0);
+    expect(firstCompletionFrame).toBeGreaterThan(firstState6Frame);
+    expect(firstCompletionFrame).toBeLessThan(1_000);
+    expect(readWordBE(state.workRam, 0x390)).toBe(0);
+    expect(readWordBE(state.workRam, 0x392)).toBe(2);
+    expect(readWordBE(state.workRam, 0x394)).toBe(2);
+    expect(state.workRam[0x3e4]).toBe(3);
+    expect(state.workRam[0x18 + 0x18]).toBe(1);
+    expect(state.workRam[0x18 + 0x1a]).toBe(0);
+  });
+
   it("time-out transition rebuilds the playfield instead of staying empty", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
