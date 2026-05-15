@@ -205,7 +205,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const p1InputActive = (opts.p1X ?? 0xff) !== 0xff || (opts.p1Y ?? 0xff) !== 0xff;
   const deferPfScrollUpdate =
     opts.runMainLoopBody === true &&
-    (r[0x3e4] ?? 0) === 2 &&
+    ((r[0x3e4] ?? 0) === 2 || (r[0x3e4] ?? 0) === 4) &&
     p1InputActive;
   if (
     (r[0x08] ?? 0) !== 0 &&

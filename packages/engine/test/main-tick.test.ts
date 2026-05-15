@@ -21,6 +21,15 @@ import { mainTick } from "../src/main-tick.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
+function readU16BE(buf: Uint8Array, off: number): number {
+  return ((buf[off] ?? 0) << 8) | (buf[off + 1] ?? 0);
+}
+
+function writeU16BE(buf: Uint8Array, off: number, v: number): void {
+  buf[off] = (v >>> 8) & 0xff;
+  buf[off + 1] = v & 0xff;
+}
+
 describe("mainTick smoke", () => {
   it("non solleva eccezioni con state e ROM vuoti", () => {
     const s = emptyGameState();
@@ -87,5 +96,46 @@ describe("mainTick smoke", () => {
     // Sanity: il frame counter è continuato
     expect(s.clock.frame).toBe(2);
     void stableState;
+  });
+
+  it("defers live PF scroll update in playable segment 4", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    s.workRam[0x08] = 1;
+    s.workRam[0x0a] = 2;
+    s.workRam[0x14] = 1;
+    s.workRam[0x3e4] = 4;
+    writeU16BE(s.workRam, 0x02, 0x00bb);
+    writeU16BE(s.spriteRam, 0x180, 0);
+
+    mainTick(s, { rom, runMainLoopBody: true, p1X: 0xfe, p1Y: 0xff });
+
+    expect(readU16BE(s.workRam, 0x02)).toBe(0x00bb);
+    expect(s.clock.pendingPfScrollUpdate).toBe(1);
+
+    s.workRam[0x14] = 0;
+    s.workRam[0x39a] = 0;
+    mainTick(s, { rom, runMainLoopBody: true, p1X: 0xff, p1Y: 0xff });
+
+    expect(readU16BE(s.workRam, 0x02)).toBe(0x00bc);
+    expect(s.clock.pendingPfScrollUpdate).toBeUndefined();
+  });
+
+  it("keeps live PF scroll update immediate outside deferred playable segments", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    s.workRam[0x08] = 1;
+    s.workRam[0x0a] = 2;
+    s.workRam[0x14] = 1;
+    s.workRam[0x3e4] = 0;
+    writeU16BE(s.workRam, 0x02, 0x00bb);
+    writeU16BE(s.spriteRam, 0x180, 0);
+
+    mainTick(s, { rom, runMainLoopBody: true, p1X: 0xfe, p1Y: 0xff });
+
+    expect(readU16BE(s.workRam, 0x02)).toBe(0x00bc);
+    expect(s.clock.pendingPfScrollUpdate).toBeUndefined();
   });
 });
