@@ -356,3 +356,4 @@ export {
 } from "./m6502/sound-chip.js";
 export { SOUND_CYCLES_PER_FRAME } from "./m6502/sound-clock.js";
 export { setSoundCmdHook } from "./sound-cmd-send-158ac.js";
+export { setGlobalSoundCmdHook } from "./sound-hook.js";
