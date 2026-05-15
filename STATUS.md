@@ -24,26 +24,28 @@ Fix:
 - La regression `level-time-override.test.ts` verifica che `0x097c..0x097f`
   resti invariato.
 
-## 2026-05-15 — Practice level starts
+## 2026-05-15 — Practice level starts corrected
 
-Follow-up per testare direttamente i livelli senza doverli raggiungere dal
-livello precedente.
+Follow-up sui test manuali: gli screenshot `startLevel=1/2/3/5` hanno mostrato
+che la mappa precedente usava `levelN_spawn` come se fossero start reali dei
+livelli. In realta' quei seed sono finestre gameplay/oracle demo e possono
+mostrare segmenti giallo/rosso o blu non corrispondenti al livello richiesto.
 
 Modifiche:
 
-- Nuovo parametro browser `startLevel=1..5`: mappa ai warm seed gameplay
-  `level1_spawn` .. `level5_spawn`.
-- In practice mode il browser riattiva il dispatcher manuale (`0x400390=0`)
-  sul seed MAME, imposta `mainLoopBodyTicks=1` e fa girare il main loop anche
-  senza `play=1`, cosi' la biglia risponde ai controlli.
-- Il loop reset automatico da 100 frame dei raw `?scenario=...` e' disabilitato
-  per `startLevel`, quindi il test non torna indietro mentre giochi. `scenario`
-  resta disponibile per drill/oracle raw e ha precedenza se specificato.
-- `startLevel` si combina con `levelTime=120/180` e `debugObjects=1` per
-  provare finitura livello, collisioni e oggetti vicini.
+- `startLevel=1` ora usa il seed playable verificato `manual_level1_start`.
+- `startLevel=2..5` viene accettato come query ma non carica piu' i seed
+  `levelN_spawn`: mostra un avviso esplicito finche' non catturiamo seed
+  giocabili veri per quei livelli.
+- I raw `?scenario=levelN_spawn` restano disponibili per drill/oracle, ma non
+  sono piu' esposti come modalita' practice.
 
-Nota: questa e' una modalita' practice da warm seed, non una prova che la
-progressione reale dal livello precedente sia gia' corretta.
+## 2026-05-15 — Practice level starts (superseded)
+
+Il primo tentativo aveva mappato `startLevel=1..5` ai warm seed gameplay
+`levelN_spawn`. I test manuali successivi hanno dimostrato che quei seed sono
+finestre oracle/demo, non start giocabili verificati dei livelli. Vedi la voce
+"Practice level starts corrected" sopra per il comportamento corrente.
 
 ## 2026-05-15 — Manual timer/debug aids
 
