@@ -109,14 +109,17 @@ successiva ha trovato una rotta sana ma sensibile che entra in `state 1` per
 decine di frame e poi recupera; `playable-live-routes.test.ts` ora codifica
 anche questo caso bounded insieme alle rotte profonde.
 
-**Checkpoint playable level progression guard (2026-05-15):** il nuovo goal e'
-spostato su progressione giocabile oltre il level 1. La rotta profonda live dal
-seed manuale `manual_level1_start` ora deve raggiungere finestre playable in
-segmento `0x3e4=4` (mapping MAME `level2_spawn`) e poi `0x3e4=5` (mapping MAME
-`level3_spawn`), con `main=1`, `mode=0`, PF pieno, player `state 0`, oltre 120
-frame giocabili per finestra, PF-empty bound e scroll bound invariati. Nessuna
-patch engine: e' una guardia di progressione prima dei prossimi drill collisione
-/camera sui level 2/3.
+**Checkpoint playable route ladder guard (2026-05-15):** il nuovo goal e'
+spostato su progressione giocabile oltre il level 1, ma il bound precedente
+`>120` frame e' solo entry/stability guard, non prova di livello completato. La
+rotta profonda live dal seed manuale `manual_level1_start` ora copre una ladder
+piu' severa: baseline level 1 con oltre 1500 frame giocabili, movimento X/Y e
+death/recovery; poi finestre mapped level 2 (`0x3e4=4`, mapping MAME
+`level2_spawn`) e level 3 (`0x3e4=5`, mapping MAME `level3_spawn`) con oltre
+700 frame giocabili ciascuna, movimento X/Y, death/recovery, PF pieno, player
+`state 0`, PF-empty bound, `state 1/2` non-stuck, `state 6` bounded e scroll
+bound invariati. Nessuna patch engine: e' una guardia di ladder prima dei
+prossimi drill di completion/collisione/camera sui level 2/3.
 
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME

@@ -1,9 +1,9 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable level progression guard)
+**Ultimo update:** 2026-05-15 (playable route ladder guard)
 **Branch corrente:** `feature/visual-pixel-match`.
 
-## 2026-05-15 — Playable level progression guard
+## 2026-05-15 — Playable route ladder guard
 
 Nuovo focus QA: dimostrare il passaggio playable oltre il primo livello prima
 di riprendere fuzz generico sul level 1. La prima mappatura ha confermato che
@@ -12,17 +12,22 @@ i seed MAME gameplay etichettano `level2_spawn` sul segmento `0x3e4=4` e
 seed neutro `manual_level1_start` e deve quindi raggiungere finestre giocabili
 in quei segmenti senza scorciatoie di stato.
 
-Fix/test:
+Follow-up dopo review del goal:
 
-- `playable-live-routes.test.ts` rinforza la rotta profonda manual-like:
-  richiede ingresso ordinato in una finestra playable level 2 (`segment=4`)
-  e poi level 3 (`segment=5`), entrambe con `main=1`, `mode=0`, PF pieno
-  (`>4000`) e player in `state 0`.
-- La guardia richiede oltre 120 frame giocabili in ciascuna finestra, mantiene
-  il bound su PF vuoto (`<=16` frame), vieta `state 1` stuck e conserva il
-  bound scroll (`<=360`).
+- Il vecchio bound `>120` frame resta esplicitamente trattato come entry guard,
+  non come prova di livello completato.
+- `playable-live-routes.test.ts` rinforza la rotta profonda manual-like in una
+  ladder piu' onesta: baseline level 1 con oltre 1500 frame giocabili,
+  movimento reale X/Y, death/recovery, lower route/timeout; poi finestre
+  mapped level 2 (`segment=4`) e level 3 (`segment=5`) con oltre 700 frame
+  giocabili ciascuna, movimento reale X/Y, death/recovery, PF pieno, player
+  `state 0`, PF-empty bound e scroll bound.
+- La guardia vieta `state 1/2` stuck, limita `state 6` transiente (`<=90`
+  frame), richiede recoveries nei segmenti 2/4/5 e conserva il bound scroll
+  (`<=360`).
 - Nessuna modifica engine: questo checkpoint fissa il segnale di progressione
-  live prima di cercare bug specifici di collisione/camera nei level 2/3.
+  live prima di cercare prove piu' forti di completamento/collisione/camera nei
+  level 2/3.
 
 Evidenza/validazione:
 

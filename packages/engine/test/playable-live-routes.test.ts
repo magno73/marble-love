@@ -285,7 +285,7 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
 
-  it("reaches level 2 and level 3 playable windows without losing terrain", () => {
+  it("guards a level-1 baseline and mapped level-2/3 playable windows", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
     const state = loadPlayableState(rom);
@@ -296,16 +296,31 @@ describe("playable live route smoke", () => {
     let maxEmptyRun = 0;
     let state1Run = 0;
     let maxState1Run = 0;
+    let state2Run = 0;
+    let maxState2Run = 0;
+    let state6Run = 0;
+    let maxState6Run = 0;
     let maxScrollY = 0;
     let sawMode2AfterEarlyRoute = false;
     // MAME gameplay warm seeds map level2_spawn to segment 4 and level3_spawn
-    // to segment 5; this live route proves the manual dispatcher reaches both.
+    // to segment 5. This is a route-ladder stability guard, not proof that
+    // those levels have a solved completion route.
     let level2EntryFrame = -1;
     let level3EntryFrame = -1;
     let level2PlayableFrames = 0;
     let level3PlayableFrames = 0;
+    let level1PlayableFrames = 0;
+    let deathEvents = 0;
+    let recoveries = 0;
+    let inDeath = false;
     let sawSegment5 = false;
     let sawSegment7 = false;
+    const playableMinXBySegment = new Map<number, number>();
+    const playableMaxXBySegment = new Map<number, number>();
+    const playableMinYBySegment = new Map<number, number>();
+    const playableMaxYBySegment = new Map<number, number>();
+    const deathSegments = new Set<number>();
+    const recoverySegments = new Set<number>();
 
     const plan = expand([
       ["D", 171],
@@ -352,13 +367,40 @@ describe("playable live route smoke", () => {
         state1Run = 0;
       }
 
+      if (state.workRam[0x18 + 0x1a] === 2) {
+        state2Run++;
+      } else {
+        maxState2Run = Math.max(maxState2Run, state2Run);
+        state2Run = 0;
+      }
+
+      if (state.workRam[0x18 + 0x1a] === 6) {
+        state6Run++;
+      } else {
+        maxState6Run = Math.max(maxState6Run, state6Run);
+        state6Run = 0;
+      }
+
       const mainState = readWordBE(state.workRam, 0x390);
       const mode = readWordBE(state.workRam, 0x392);
       const segment = state.workRam[0x3e4] ?? 0;
       const playerState = state.workRam[0x18 + 0x1a] ?? 0;
       const playableTerrain = mainState === 1 && mode === 0 && pfCount > 4000 && playerState === 0;
+      const isDeath = playerState === 4 || playerState === 5;
+      if (isDeath && !inDeath) {
+        deathEvents++;
+        deathSegments.add(segment);
+        inDeath = true;
+      } else if (inDeath && playerState === 0) {
+        recoveries++;
+        recoverySegments.add(segment);
+        inDeath = false;
+      }
       maxScrollY = Math.max(maxScrollY, state.videoScrollY);
       sawMode2AfterEarlyRoute ||= mainState === 1 && mode === 2 && segment >= 3;
+      if (playableTerrain && (segment === 2 || segment === 3)) {
+        level1PlayableFrames++;
+      }
       if (playableTerrain && segment === 4) {
         if (level2EntryFrame < 0) level2EntryFrame = frame;
         level2PlayableFrames++;
@@ -367,21 +409,52 @@ describe("playable live route smoke", () => {
         if (level3EntryFrame < 0) level3EntryFrame = frame;
         level3PlayableFrames++;
       }
+      if (playableTerrain) {
+        const objX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
+        const objY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
+        playableMinXBySegment.set(segment, Math.min(playableMinXBySegment.get(segment) ?? objX, objX));
+        playableMaxXBySegment.set(segment, Math.max(playableMaxXBySegment.get(segment) ?? objX, objX));
+        playableMinYBySegment.set(segment, Math.min(playableMinYBySegment.get(segment) ?? objY, objY));
+        playableMaxYBySegment.set(segment, Math.max(playableMaxYBySegment.get(segment) ?? objY, objY));
+      }
       sawSegment5 ||= mainState === 1 && segment >= 5;
       sawSegment7 ||= mainState === 1 && segment >= 7;
     }
 
     maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
     maxState1Run = Math.max(maxState1Run, state1Run);
+    maxState2Run = Math.max(maxState2Run, state2Run);
+    maxState6Run = Math.max(maxState6Run, state6Run);
+    const objDeltaX = (segment: number): number =>
+      (playableMaxXBySegment.get(segment) ?? 0) - (playableMinXBySegment.get(segment) ?? 0);
+    const objDeltaY = (segment: number): number =>
+      (playableMaxYBySegment.get(segment) ?? 0) - (playableMinYBySegment.get(segment) ?? 0);
     expect(sawMode2AfterEarlyRoute).toBe(true);
+    expect(level1PlayableFrames).toBeGreaterThan(1500);
     expect(level2EntryFrame).toBeGreaterThan(0);
     expect(level3EntryFrame).toBeGreaterThan(level2EntryFrame);
-    expect(level2PlayableFrames).toBeGreaterThan(120);
-    expect(level3PlayableFrames).toBeGreaterThan(120);
+    expect(level2PlayableFrames).toBeGreaterThan(700);
+    expect(level3PlayableFrames).toBeGreaterThan(700);
+    expect(objDeltaX(2)).toBeGreaterThan(1_000_000);
+    expect(objDeltaY(2)).toBeGreaterThan(1_000_000);
+    expect(objDeltaX(4)).toBeGreaterThan(1_000_000);
+    expect(objDeltaY(4)).toBeGreaterThan(1_000_000);
+    expect(objDeltaX(5)).toBeGreaterThan(1_000_000);
+    expect(objDeltaY(5)).toBeGreaterThan(1_000_000);
+    expect(deathEvents).toBeGreaterThanOrEqual(5);
+    expect(recoveries).toBe(deathEvents);
+    expect(deathSegments.has(2)).toBe(true);
+    expect(deathSegments.has(4)).toBe(true);
+    expect(deathSegments.has(5)).toBe(true);
+    expect(recoverySegments.has(2)).toBe(true);
+    expect(recoverySegments.has(4)).toBe(true);
+    expect(recoverySegments.has(5)).toBe(true);
     expect(sawSegment5).toBe(true);
     expect(sawSegment7).toBe(true);
     expect(maxEmptyRun).toBeLessThanOrEqual(16);
     expect(maxState1Run).toBe(0);
+    expect(maxState2Run).toBe(0);
+    expect(maxState6Run).toBeLessThanOrEqual(90);
     expect(maxScrollY).toBeLessThanOrEqual(360);
     expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
     expect(state.workRam[0x18 + 0x1a]).toBe(0);
