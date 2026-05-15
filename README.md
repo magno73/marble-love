@@ -45,17 +45,15 @@ ROM mostrano solo due cifre o clampano sopra 99, quindi il valore alto puo'
 essere effettivo anche se il display non mostra subito 180/120. Per investigare
 collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
-Per partire direttamente da un livello di practice usa
-`?autoLoad=1&startLevel=1&levelTime=180` o
-`?autoLoad=1&startLevel=2&levelTime=180`: caricano rispettivamente i seed
-playable verificati `manual_level1_start` e `manual_level2_start`, riattivano
-il dispatcher manuale del browser e disabilitano il loop reset automatico.
-`manual_level2_start` viene da una route MAME coin/start reale che completa il
-level 1 e cattura f6000 con level index `0x394=1`; active-vs-neutral diverge
-gia' col dispatcher preservato del seed e mantiene PF/camera/timer sani nel
-probe TS. `startLevel=3..5` resta intenzionalmente bloccato finche' non avremo
-seed giocabili verificati equivalenti: i vecchi `levelN_spawn` restano scenari
-oracle/demo e non corrispondono ai livelli playable.
+Per partire direttamente da un livello di practice usa per ora
+`?autoLoad=1&startLevel=1&levelTime=180`: carica il seed playable reale
+`manual_level1_start`, riattiva il dispatcher manuale del browser e disabilita
+il loop reset automatico. `startLevel=2..5` resta intenzionalmente bloccato
+finche' non avremo seed giocabili verificati equivalenti: i vecchi
+`levelN_spawn` restano scenari oracle/demo e non corrispondono ai livelli
+playable. Nota sul falso candidato f6000: pur essendo controllabile, conservava
+la stessa `playfieldRam` di `manual_level1_start`, quindi non e' un seed visuale
+valido per il level 2 e non va cablato a `startLevel`.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
@@ -179,11 +177,11 @@ manuale, non solo la stabilita' presentation/timeout. Follow-up ulteriore:
 funziona (`L:180,DL:900` attraversa `state 6`, poi `0x400390=3` e ritorna a
 dispatcher manuale con `0x400394=2`), mentre lo stesso seed con dispatcher MAME
 preservato resta active == neutral. Follow-up: una route MAME coin/start reale
-ha prodotto `manual_level2_start` a f6000 dopo completion level 1; il seed parte
-da `main=0/mode=2/0x394=1/0x3e4=1`, e `playable-live-routes.test.ts` ora prova
-che input attivo diverge da neutral senza riarmare artificialmente il
-dispatcher. Questo abilita `startLevel=2`, ma non prova ancora completion del
-level 2 ne' seed giocabili per 3/4/5.
+ha prodotto un candidato f6000 dopo completion level 1, ma il browser test
+manuale ha rivelato la falla: la `playfieldRam` era identica a
+`manual_level1_start`, quindi il candidato e' stato ritirato e `startLevel=2`
+rimane bloccato finche' non catturiamo un seed con terreno/dispatcher/timer
+coerenti col vero level 2.
 
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
