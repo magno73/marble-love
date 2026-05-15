@@ -1,7 +1,40 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (deep live route guards)
+**Ultimo update:** 2026-05-15 (transient state-1 live guard)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Transient state-1 live guard
+
+Follow-up QA su rotte browser-space pseudo-random dopo le guardie profonde:
+nessun nuovo bug engine riproducibile, ma una rotta manuale reale attraversa
+`state 1` per alcune decine di frame prima di uscire via death/recovery. Il
+caso e' sano nel runtime corrente, ma e' abbastanza vicino al recente fix
+state-1 lower-platform da meritare una regression dedicata.
+
+Finding:
+
+- Swarm TS live: 96 rotte manual-like dal seed browser, nessun PF vuoto
+  persistente, scroll runaway o stuck; diverse rotte entrano in `state 1` e
+  recuperano.
+- Drill MAME della finestra vicina (`state1_r1_3590`) resta PASS @100 sotto
+  threshold quando avviato dal warm snapshot; il confronto full-route conferma
+  che il browser dispatcher manuale e il dispatcher MAME preservato sono path
+  intenzionalmente diversi.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` aggiunge una guardia deterministica che forza
+  la rotta state-1 transiente, richiede uscita bounded (`<=80` frame), uscita
+  verso death/recovery e ritorno finale in `state 0`, senza empty PF lungo o
+  scroll oltre bound.
+- Nessuna modifica engine.
+
+Evidenza/validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS (10 test).
+- Targeted late-game/helper/main-tick/respawn/playable-live-routes vitest PASS (65 test).
+- `npx tsc -b --pretty false` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Deep live route guards
 
@@ -23,8 +56,8 @@ Finding:
 Fix/test:
 
 - `playable-live-routes.test.ts` ora riusa una helper trackball screen-space
-  comune e aggiunge due guardie live: progressione profonda dei rebuild timeout
-  e recuperi ripetuti da fall/death.
+  comune e aggiunge guardie live per progressione profonda dei rebuild timeout,
+  recuperi ripetuti da fall/death e state-1 transiente bounded.
 - Nessuna modifica engine: le guardie fissano i sintomi reali esercitati in
   QA per evitare regressioni sui prossimi port.
 

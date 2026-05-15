@@ -439,6 +439,119 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).toBe(0);
   });
 
+  it("bounds transient live state-1 tumble during manual input", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let state1Entries = 0;
+    let state1Run = 0;
+    let maxState1Run = 0;
+    let leftState1 = 0;
+    let emptyRun = 0;
+    let maxEmptyRun = 0;
+    let sawDeathAfterState1 = false;
+    let sawState0AfterState1 = false;
+    let sawSegment4 = false;
+
+    const plan = expand([
+      ["D", 171],
+      ["R", 206],
+      ["L", 188],
+      ["DL", 107],
+      ["BR", 260],
+      ["DR", 283],
+      ["U", 93],
+      ["L", 192],
+      ["DL", 67],
+      ["R", 47],
+      ["L", 93],
+      ["UL", 132],
+      ["UR", 101],
+      ["UL", 326],
+      ["BR", 81],
+      ["DR", 103],
+      ["U", 90],
+      ["DL", 102],
+      ["UR", 65],
+      ["BR", 40],
+      ["DR", 40],
+      ["N", 134],
+      ["R", 76],
+      ["UL", 40],
+      ["BR", 179],
+      ["D", 173],
+      ["U", 170],
+      ["DL", 51],
+      ["N", 113],
+      ["DL", 150],
+      ["BR", 69],
+      ["D", 72],
+      ["DL", 74],
+      ["R", 56],
+      ["D", 85],
+      ["R", 63],
+      ["UR", 85],
+      ["D", 107],
+      ["DR", 47],
+      ["L", 65],
+      ["DR", 52],
+      ["UL", 170],
+      ["N", 130],
+      ["L", 132],
+      ["N", 5000],
+    ]);
+
+    for (const step of plan) {
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      const playerState = state.workRam[0x18 + 0x1a] ?? 0;
+      if (playerState === 1) {
+        if (state1Run === 0) state1Entries++;
+        state1Run++;
+      } else if (state1Run > 0) {
+        maxState1Run = Math.max(maxState1Run, state1Run);
+        leftState1++;
+        sawDeathAfterState1 ||= playerState === 4 || playerState === 5;
+        sawState0AfterState1 ||= playerState === 0;
+        state1Run = 0;
+      }
+
+      const pfCount = nonzero(state.playfieldRam);
+      if (pfCount === 0) {
+        emptyRun++;
+      } else {
+        maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+        emptyRun = 0;
+      }
+
+      sawSegment4 ||= readWordBE(state.workRam, 0x390) === 1 && (state.workRam[0x3e4] ?? 0) >= 4;
+      expect(state.videoScrollY).toBeLessThanOrEqual(360);
+    }
+
+    maxState1Run = Math.max(maxState1Run, state1Run);
+    maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+    expect(state1Entries).toBeGreaterThanOrEqual(2);
+    expect(leftState1).toBe(state1Entries);
+    expect(maxState1Run).toBeLessThanOrEqual(80);
+    expect(sawDeathAfterState1).toBe(true);
+    expect(sawState0AfterState1).toBe(true);
+    expect(sawSegment4).toBe(true);
+    expect(maxEmptyRun).toBeLessThanOrEqual(16);
+    expect(state.workRam[0x18 + 0x1a]).toBe(0);
+  });
+
   it("refreshes player terrain shape records through FUN_264AA mode 0", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
