@@ -76,3 +76,48 @@ The current TS replay goal starts from MAME warm playable seeds rather than
 emulating the full 6502 coin-credit path from reset. The sound CPU coin port is
 captured and exposed through `inputReplay.read8(0x1820, frame)`, while gameplay
 validation injects the 68010-visible trackball/switch bytes into `mainTick`.
+
+## Manual MAME route capture
+
+For visual bugs that are easiest to reach by hand, record a native MAME input
+movie first:
+
+```sh
+mame marble -rompath /path/to/roms -window -skip_gameinfo -record /tmp/marble_issue.inp
+```
+
+Play normally, stop after the bug is visible, then replay the movie through the
+same Lua capture without scripted input injection:
+
+```sh
+STAMP="$(date +%Y%m%d_%H%M%S)"
+MARBLE_PLAYABLE_MANUAL=1 \
+MARBLE_PLAYABLE_NAME="manual_issue_${STAMP}" \
+MARBLE_PLAYABLE_MAX_FRAME=12000 \
+MARBLE_PLAYABLE_MANUAL_WINDOW=240 \
+MARBLE_PLAYABLE_INPUT_OUT="oracle/scenarios/input/manual_issue_${STAMP}.json" \
+MARBLE_PLAYABLE_INPUT_TRACE_REF="oracle/scenarios/input/manual_issue_${STAMP}.json" \
+MARBLE_PLAYABLE_OUT_DIR="oracle/scenarios/playable" \
+mame marble -rompath /path/to/roms -skip_gameinfo -nothrottle \
+  -playback /tmp/marble_issue.inp \
+  -autoboot_script oracle/mame_playable_input_capture.lua -autoboot_delay 0
+```
+
+`MARBLE_PLAYABLE_MANUAL=1` records the real MAME/playback MMIO reads and does
+not drive MAME ports from `MARBLE_PLAYABLE_ROUTE`. The capture writes the full
+input trace plus a tail scenario named `manual_issue_<stamp>_tail.json` covering
+the last `MARBLE_PLAYABLE_MANUAL_WINDOW + 1` frames before stop/max-frame. It
+also flushes on MAME shutdown, so stopping the playback after the visible issue
+still leaves a replayable tail window.
+
+Replay the captured tail against the TypeScript engine with:
+
+```sh
+npx tsx packages/cli/src/probe-playable-replay.ts \
+  "oracle/scenarios/playable/manual_issue_${STAMP}_tail.json" \
+  "oracle/scenarios/input/manual_issue_${STAMP}.json"
+```
+
+If a fixed frame is known, `MARBLE_PLAYABLE_FRAME_LIST=name:frame` can be used
+with manual mode to capture an additional deterministic warm window alongside
+the rolling tail.

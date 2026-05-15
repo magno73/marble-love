@@ -14,6 +14,10 @@ l'HUD live (`obj0+0x6A` passa dal decremento interno al render alpha via
 `FUN_286EE -> FUN_3520`). Il renderer playfield ora avvolge la tilemap 64x64
 su 512 px nel path indirect e nel fallback Pixi, evitando la fascia nera sotto
 il ponte levatoio quando lo scroll verticale entra nelle finestre basse.
+Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lua`
+supporta anche `MARBLE_PLAYABLE_MANUAL=1`: registra prima una movie MAME
+`.inp`, poi ripassala con `-playback` per ottenere trace JSON e tail snapshot
+replayabili dal probe TS.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15

@@ -1,7 +1,29 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (live timer HUD + playfield scroll wrap)
+**Ultimo update:** 2026-05-15 (manual MAME route capture)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Manual MAME route capture
+
+Nuovo workflow per i bug che l'utente riesce a raggiungere meglio giocando in
+MAME: si registra una movie nativa `.inp`, poi la si ripassa attraverso
+`oracle/mame_playable_input_capture.lua` con `MARBLE_PLAYABLE_MANUAL=1`. In
+questa modalita' lo script non inietta coin/start/trackball, ma salva i byte
+MMIO letti da MAME/playback e una finestra tail di snapshot warm attorno al
+punto finale.
+
+Uso previsto:
+
+- registra: `mame marble ... -record /tmp/marble_issue.inp`;
+- converti/replaya: `MARBLE_PLAYABLE_MANUAL=1 ... -playback
+  /tmp/marble_issue.inp -autoboot_script oracle/mame_playable_input_capture.lua`;
+- confronta: `npx tsx packages/cli/src/probe-playable-replay.ts
+  oracle/scenarios/playable/<name>_tail.json
+  oracle/scenarios/input/<name>.json`.
+
+Questo evita di inventare una route TS quando serve arrivare a un punto molto
+specifico del livello; resta comunque un confronto MAME-first, riproducibile e
+salvabile come regression mirata.
 
 ## 2026-05-15 — Live timer HUD + playfield scroll wrap
 
