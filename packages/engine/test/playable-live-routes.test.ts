@@ -17,6 +17,10 @@ interface PlayableSeed {
   colorRam: string;
 }
 
+interface GameplayScenario {
+  snapshots: PlayableSeed[];
+}
+
 function hexToBytes(hex: string, expectedLength: number): Uint8Array {
   expect(hex.length).toBe(expectedLength * 2);
   const out = new Uint8Array(expectedLength);
@@ -73,6 +77,37 @@ function loadPlayableState(rom: ReturnType<typeof emptyRomImage>): GameState {
   return state;
 }
 
+function loadGameplayScenarioState(
+  rom: ReturnType<typeof emptyRomImage>,
+  scenarioName: string,
+  options: { manualDispatcher?: boolean } = {},
+): GameState {
+  const scenario = JSON.parse(
+    readFileSync(resolve(`oracle/scenarios/gameplay/${scenarioName}.json`), "utf-8"),
+  ) as GameplayScenario;
+  const snapshot = scenario.snapshots[0];
+  expect(snapshot).toBeDefined();
+
+  const state = emptyGameState();
+  bootInit(state, rom, {
+    warmState: {
+      workRam: hexToBytes(snapshot.workRam, 0x2000),
+      playfieldRam: hexToBytes(snapshot.playfieldRam, 0x2000),
+      spriteRam: hexToBytes(snapshot.spriteRam, 0x1000),
+      alphaRam: hexToBytes(snapshot.alphaRam, 0x1000),
+      colorRam: hexToBytes(snapshot.colorRam, 0x800),
+      slapsticBank: snapshot.slapsticBank ?? 1,
+    },
+  });
+
+  if (options.manualDispatcher === true) {
+    state.workRam[0x390] = 0;
+    state.workRam[0x391] = 0;
+  }
+  state.clock.mainLoopBodyTicks = 1 as typeof state.clock.mainLoopBodyTicks;
+  return state;
+}
+
 function expand(parts: readonly (readonly [string, number])[]): string[] {
   const out: string[] = [];
   for (const [dir, count] of parts) {
@@ -108,6 +143,90 @@ const screenDeltas: Record<string, readonly [number, number]> = {
 function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
   const [screenDx, screenDy] = screenDeltas[step] ?? [0, 0];
   return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
+}
+
+interface RouteSummary {
+  deltaX: number;
+  deltaY: number;
+  finalX: number;
+  finalY: number;
+  mainState: number;
+  mode: number;
+  segment: number;
+  playerState: number;
+  pfCount: number;
+  maxEmptyRun: number;
+  maxScrollY: number;
+  deathEvents: number;
+  recoveries: number;
+}
+
+function runRoute(
+  rom: ReturnType<typeof emptyRomImage>,
+  state: GameState,
+  plan: readonly string[],
+): RouteSummary {
+  let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+  let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+  const initialX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
+  const initialY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
+  let deathEvents = 0;
+  let recoveries = 0;
+  let inDeath = false;
+  let maxScrollY = 0;
+  let emptyRun = 0;
+  let maxEmptyRun = 0;
+
+  for (const step of plan) {
+    [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+    tick(state, {
+      rom,
+      runMainLoopBody: true,
+      p1X,
+      p1Y,
+      p2X: 0xff,
+      p2Y: 0xff,
+      inputMmio: 0x6f,
+    });
+
+    const playerState = state.workRam[0x18 + 0x1a] ?? 0;
+    const isDeath = playerState === 4 || playerState === 5;
+    if (isDeath && !inDeath) {
+      deathEvents++;
+      inDeath = true;
+    } else if (inDeath && playerState === 0) {
+      recoveries++;
+      inDeath = false;
+    }
+
+    const pfCount = nonzero(state.playfieldRam);
+    if (pfCount === 0) {
+      emptyRun++;
+    } else {
+      maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+      emptyRun = 0;
+    }
+    maxScrollY = Math.max(maxScrollY, state.videoScrollY);
+  }
+
+  maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+  const finalX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
+  const finalY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
+  return {
+    deltaX: Math.abs(finalX - initialX),
+    deltaY: Math.abs(finalY - initialY),
+    finalX,
+    finalY,
+    mainState: readWordBE(state.workRam, 0x390),
+    mode: readWordBE(state.workRam, 0x392),
+    segment: state.workRam[0x3e4] ?? 0,
+    playerState: state.workRam[0x18 + 0x1a] ?? 0,
+    pfCount: nonzero(state.playfieldRam),
+    maxEmptyRun,
+    maxScrollY,
+    deathEvents,
+    recoveries,
+  };
 }
 
 describe("playable live route smoke", () => {
@@ -343,6 +462,61 @@ describe("playable live route smoke", () => {
     expect(Math.abs(active.finalX - neutral.finalX)).toBeGreaterThan(3_000_000);
     expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(8_000_000);
   });
+
+  it.each([
+    ["level2_spawn", 4, { maxScrollY: 160, minDiffX: 1_000_000, minDiffY: 6_000_000 }],
+    ["level3_spawn", 5, { maxScrollY: 360, minDiffX: 8_000_000, minDiffY: 8_000_000 }],
+  ] as const)(
+    "proves %s is controllable only after the manual dispatcher is rearmed",
+    (scenarioName, segment, routeExpect) => {
+      const rom = emptyRomImage();
+      loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+      const activePlan = expand([
+        ["R", 300],
+        ["D", 300],
+        ["L", 300],
+        ["U", 300],
+        ["DR", 300],
+        ["DL", 300],
+        ["N", 400],
+      ]);
+      const neutralPlan = expand([["N", activePlan.length]]);
+
+      const preservedActive = runRoute(rom, loadGameplayScenarioState(rom, scenarioName), activePlan);
+      const preservedNeutral = runRoute(rom, loadGameplayScenarioState(rom, scenarioName), neutralPlan);
+
+      // These checked-in MAME gameplay seeds are diagnostics, not level-complete
+      // proof. With the preserved dispatcher, direct trackball deltas are sampled
+      // but do not steer the object path.
+      expect(preservedActive.finalX).toBe(preservedNeutral.finalX);
+      expect(preservedActive.finalY).toBe(preservedNeutral.finalY);
+      expect(preservedActive.segment).toBe(preservedNeutral.segment);
+
+      const manualActive = runRoute(
+        rom,
+        loadGameplayScenarioState(rom, scenarioName, { manualDispatcher: true }),
+        activePlan,
+      );
+      const manualNeutral = runRoute(
+        rom,
+        loadGameplayScenarioState(rom, scenarioName, { manualDispatcher: true }),
+        neutralPlan,
+      );
+
+      expect(manualActive.mainState).toBe(0);
+      expect(manualActive.mode).toBe(0);
+      expect(manualActive.segment).toBe(segment);
+      expect(manualActive.playerState).toBe(0);
+      expect(manualActive.pfCount).toBeGreaterThan(4000);
+      expect(manualActive.maxEmptyRun).toBe(0);
+      expect(manualActive.maxScrollY).toBeLessThanOrEqual(routeExpect.maxScrollY);
+      expect(manualActive.deathEvents).toBeGreaterThanOrEqual(3);
+      expect(manualActive.recoveries).toBe(manualActive.deathEvents);
+      expect(Math.abs(manualActive.finalX - manualNeutral.finalX)).toBeGreaterThan(routeExpect.minDiffX);
+      expect(Math.abs(manualActive.finalY - manualNeutral.finalY)).toBeGreaterThan(routeExpect.minDiffY);
+    },
+  );
 
   it("time-out transition rebuilds the playfield instead of staying empty", () => {
     const rom = emptyRomImage();
