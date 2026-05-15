@@ -15,10 +15,12 @@ import { sceneInit11428 } from "./scene-init-11428.js";
 import { specialAttract } from "./special-attract.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
 import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
-import { stateSub16A20 } from "./state-sub-16a20.js";
+import { CLEAR_ROWS_ARG, WAIT_PHASE2_TICKS, stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
+import { renderStringEntry286B0 } from "./render-string-entry-286b0.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { stateSub2678 } from "./state-sub-2678.js";
+import { stateSub2572 } from "./state-sub-2572.js";
 import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
@@ -26,6 +28,7 @@ import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
 import { startMode0Init11452Async, startMode2Init11452Async } from "./mode2-init-11452-async.js";
+import { as_u8, as_u16 } from "./wrap.js";
 
 const WRAM = 0x00400000;
 
@@ -216,10 +219,35 @@ function case2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   wb(state, 0x00400008, 0);
   wb(state, 0x0040039a, 1);
   (subs.vblankAck ?? vblankAck28DEA)(state);
-  (subs.helper16A20 ?? ((s) => { if (rom !== undefined) { stateSub16A20(s, rom); } }))(state);
+  let timeoutSummaryMatched = false;
+  (subs.helper16A20 ?? ((s) => {
+    if (rom !== undefined) {
+      const result = stateSub16A20(s, rom, {
+        renderStr: (st, strPtr, col, tickOff, attr) => {
+          renderStringEntry286B0(
+            st,
+            strPtr,
+            col,
+            tickOff,
+            attr,
+            {
+              renderStringChain: (entryPtr, attrWord) =>
+                stateSub2572(st, rom, entryPtr, attrWord),
+            },
+            (absAddr) => rom.program[absAddr >>> 0] ?? 0,
+          );
+        },
+      });
+      timeoutSummaryMatched = result.phase2Matched > 0;
+    }
+  }))(state);
   if (rw(state, 0x00400390) !== 0) {
     ww(state, 0x00400390, 2);
     wb(state, 0x00400460, 0xff);
+    if (timeoutSummaryMatched && state.clock.mainThreadWaitDelay === undefined) {
+      state.clock.mainThreadWaitDelay = as_u16(WAIT_PHASE2_TICKS);
+      state.clock.mainThreadWaitClearRows = as_u8(CLEAR_ROWS_ARG);
+    }
   } else {
     wb(state, 0x00400008, saved);
   }

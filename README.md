@@ -11,9 +11,13 @@ Vedi [`STATUS.md`](./STATUS.md). **PRD:** [`marble-love-prd-v0.2.md`](./marble-l
 
 **Checkpoint live gameplay (2026-05-15):** il timer level 1 ora aggiorna anche
 l'HUD live (`obj0+0x6A` passa dal decremento interno al render alpha via
-`FUN_286EE -> FUN_3520`). Il renderer playfield ora avvolge la tilemap 64x64
-su 512 px nel path indirect e nel fallback Pixi, evitando la fascia nera sotto
-il ponte levatoio quando lo scroll verticale entra nelle finestre basse.
+`FUN_286EE -> FUN_3520`). Quando il countdown arriva a zero, il path timeout
+ora disegna e mantiene il riepilogo ROM `OUT OF TIME` / `GAME OVER` per il
+wait `0xB4` prima di pulire le righe alpha e proseguire, invece di saltare
+subito alla finestra presentation/demo. Il renderer playfield ora avvolge la
+tilemap 64x64 su 512 px nel path indirect e nel fallback Pixi, evitando la
+fascia nera sotto il ponte levatoio quando lo scroll verticale entra nelle
+finestre basse.
 Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lua`
 supporta anche `MARBLE_PLAYABLE_MANUAL=1`: registra prima una movie MAME
 `.inp`, poi ripassala con `-playback` per ottenere trace JSON e tail snapshot

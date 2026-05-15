@@ -1,7 +1,50 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (manual MAME route capture)
+**Ultimo update:** 2026-05-15 (timeout summary hold)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Timeout summary hold
+
+Follow-up al timer live gia' sistemato in `03e284b`: quando il countdown
+arriva a zero, il path ROM non deve saltare subito alla presentation/demo.
+`FUN_16A20` nel binario disegna la schermata testuale `OUT OF TIME` /
+`GAME OVER`, attende `0xB4` vblank e solo dopo pulisce le righe alpha e lascia
+proseguire il dispatcher.
+
+Root cause:
+
+- `main-loop-init-1101e.ts` chiamava `stateSub16A20` senza collegare
+  `renderStr`, quindi il riepilogo non appariva.
+- La wait di `FUN_28DB8` dentro `stateSub16A20` era sincrona/no-op nel modello
+  TS, quindi nello stesso flusso si cadeva subito in `state=2`/attract:
+  l'utente vedeva una finestra giallo/rossa e poi la demo, senza riepilogo
+  leggibile.
+
+Fix:
+
+- `case2` di `mainLoopInit1101E` ora collega `stateSub16A20.renderStr` al path
+  ROM `FUN_286B0 -> FUN_2572`, cosi' le stringhe del riepilogo arrivano in
+  alpha RAM.
+- `TickClock` aggiunge un hold main-thread differito per il wait `0xB4` e una
+  clear alpha rows differita; durante l'hold il body `117B2` non prosegue verso
+  l'attract rebuild.
+- La regression `playable-live-routes.test.ts` non accetta piu' il vecchio
+  "timeout rebuild immediato": richiede testo alpha presente durante l'hold,
+  niente mode2/mode0 attract durante il riepilogo, PF non vuoto, e clear delle
+  righe alpha al termine dell'attesa.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts packages/engine/test/main-loop-init-task-a.test.ts --reporter=basic` PASS (20 test).
+- `npx tsc -b --pretty false` PASS.
+- Warm-seed gameplay 15/15 PASS (`probe-scenario-diff.ts`; `level3_spawn`
+  resta il baseline storico PASS @77).
+- Playable replay 3/3 PASS (`coin_start_to_level1` PASS @78,
+  `level1_trackball_short` PASS @100, `level1_trackball_obstacle` PASS @100).
+- Long demo fresh converge su
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`: playfield resta
+  100% fino a f18000; alpha/color restano sui drift noti.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Manual MAME route capture
 
