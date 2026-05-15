@@ -33,7 +33,7 @@ import {
   type Mailbox8,
   createMailbox, mailboxWrite, mailboxRead,
 } from "./mailbox.js";
-import { type YM2151, createYM2151, ym2151TickCycles } from "../audio/ym2151.js";
+import { type YM2151, createYM2151, ym2151TickCycles, ym2151DrainSamples, YM2151_NATIVE_SAMPLE_RATE } from "../audio/ym2151.js";
 import { type POKEY, createPOKEY } from "../audio/pokey.js";
 import { type SoundRomFiles, buildSoundRom } from "./sound-rom.js";
 import { as_u8 } from "../wrap.js";
@@ -154,6 +154,14 @@ export function drainReplyEvents(chip: SoundChip): u8[] {
   }
   return out;
 }
+
+/** Drain accumulated YM2151 sample stream (interleaved L/R Float32-style numbers
+ * at YM2151 native sample rate 55930 Hz). Caller resample a output context rate. */
+export function drainYm2151Samples(chip: SoundChip): number[] {
+  return ym2151DrainSamples(chip.ym2151);
+}
+
+export { YM2151_NATIVE_SAMPLE_RATE };
 
 /** Snapshot register shadow per oracle diff (Phase 8). Ritorna riferimenti
  * shallow ai Uint8Array — caller non deve mutarli. */

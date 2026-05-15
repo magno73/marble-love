@@ -46,6 +46,18 @@
 
 import type { u8 } from "../wrap.js";
 import { as_u8 } from "../wrap.js";
+import {
+  type Channel,
+  createChannel,
+  channelSample,
+  channelKeyOn,
+  channelKeyOff,
+} from "./ym2151-channel.js";
+import { operatorSetFreq } from "./ym2151-operator.js";
+import { KC_TO_FREQ } from "./ym2151-tables.js";
+
+/** Sample rate native YM2151: clock 3.579545 MHz / 64 = 55930 Hz. */
+export const YM2151_NATIVE_SAMPLE_RATE = 55930;
 
 export interface YM2151 {
   /** 256-byte register shadow. Esposto per oracle diff. NON mutare manualmente:
@@ -73,6 +85,12 @@ export interface YM2151 {
   /** YM2151 cycle accumulator (modulo 64 / 1024 per scattare Timer A/B tick).
    * tickCycles converte cycle 6502 in cycle YM (×2 ratio). */
   ymCycleAccumulator: number;
+  /** 8 channels FM (V3 chip-perfect). Ogni channel ha 4 operatori. */
+  readonly channels: Channel[];
+  /** Sample accumulator: cycle 6502 → sample stream YM (1 sample ogni 64 YM cycle = 128 cycle 6502). */
+  sampleAccumulator: number;
+  /** Output sample buffer (interleaved L/R Float32). Drain via getSampleBuffer. */
+  sampleBuffer: number[];
 }
 
 export function createYM2151(): YM2151 {
@@ -88,7 +106,105 @@ export function createYM2151(): YM2151 {
     timerBCounter: 0,
     timerBIrqEnable: false,
     ymCycleAccumulator: 0,
+    channels: Array.from({ length: 8 }, () => createChannel()),
+    sampleAccumulator: 0,
+    sampleBuffer: [],
   };
+}
+
+/** Apply reg shadow → channel/operator params. Chiamato da writeData. */
+function applyReg(ym: YM2151, reg: number, val: number): void {
+  // Channel-level reg ($20..$3F): RL+FB+CONN, KC, KF, PMS+AMS
+  if (reg >= 0x20 && reg < 0x40) {
+    const ch = ym.channels[reg & 7];
+    if (ch === undefined) return;
+    if (reg < 0x28) {
+      // $20-$27: RL(7-6) + FB(5-3) + CONN/alg(2-0)
+      ch.lr = val & 0xc0;
+      ch.fb = (val >> 3) & 7;
+      ch.alg = val & 7;
+    } else if (reg < 0x30) {
+      // $28-$2F: KC (key code)
+      const baseFreq = KC_TO_FREQ[val] ?? 0;
+      for (const op of ch.op) operatorSetFreq(op, baseFreq, YM2151_NATIVE_SAMPLE_RATE);
+    } else if (reg < 0x38) {
+      // $30-$37: KF (key fraction, fine pitch)
+      // V3 minimal: ignored (small detune)
+    } else {
+      // $38-$3F: PMS(6-4) + AMS(1-0)
+      ch.pms = (val >> 4) & 7;
+      ch.ams = val & 3;
+    }
+    return;
+  }
+  // Operator-level reg ($40..$FF): 32 op indexed by (reg - $40)
+  // Layout: per 8-byte block, slot in (reg-base)/8, channel in (reg-base)&7
+  if (reg >= 0x40 && reg < 0x100) {
+    const opIdx = reg & 0x1f;
+    const ch = ym.channels[opIdx & 7];
+    if (ch === undefined) return;
+    const op = ch.op[(opIdx >> 3) & 3];
+    if (op === undefined) return;
+    if (reg < 0x60) {
+      // $40-$5F: DT1(6-4) + MUL(3-0)
+      op.dt1 = (val >> 4) & 7;
+      op.mul = val & 0xf;
+    } else if (reg < 0x80) {
+      // $60-$7F: TL (total level, bit 6-0)
+      op.tl = val & 0x7f;
+    } else if (reg < 0xa0) {
+      // $80-$9F: KS(7-6) + AR(4-0)
+      op.ks = (val >> 6) & 3;
+      op.ar = val & 0x1f;
+    } else if (reg < 0xc0) {
+      // $A0-$BF: AMS-EN(7) + D1R(4-0)
+      op.d1r = val & 0x1f;
+    } else if (reg < 0xe0) {
+      // $C0-$DF: DT2(7-6) + D2R(4-0)
+      op.d2r = val & 0x1f;
+    } else {
+      // $E0-$FF: D1L(7-4) + RR(3-0)
+      op.d1l = (val >> 4) & 0xf;
+      op.rr = val & 0xf;
+    }
+    return;
+  }
+  // Reg $08: KEY ON byte
+  if (reg === 0x08) {
+    const chIdx = val & 7;
+    const ch = ym.channels[chIdx];
+    if (ch !== undefined) {
+      // Slot mask convention: bit3=SM1=op1, bit4=SM2=op3, bit5=C1=op2, bit6=C2=op4
+      // (OPM mapping: cmp Yamaha datasheet § 4.4.1)
+      // V3 minimal: tutto bit set → keyOn, bit clear → keyOff
+      const keyMask =
+        ((val & 0x08) !== 0 ? 0x10 : 0) |  // op1
+        ((val & 0x10) !== 0 ? 0x20 : 0) |  // op2
+        ((val & 0x20) !== 0 ? 0x40 : 0) |  // op3
+        ((val & 0x40) !== 0 ? 0x80 : 0);   // op4
+      if (keyMask !== 0) channelKeyOn(ch, keyMask);
+      else channelKeyOff(ch, 0);
+    }
+  }
+}
+
+/** Produce 1 sample stereo da tutti 8 channel attivi. Output [-1..+1] L+R. */
+export function ym2151Sample(ym: YM2151): [number, number] {
+  let left = 0, right = 0;
+  for (const ch of ym.channels) {
+    const [l, r] = channelSample(ch);
+    left += l;
+    right += r;
+  }
+  // Soft-clip per evitare saturazione
+  return [Math.tanh(left * 0.5), Math.tanh(right * 0.5)];
+}
+
+/** Drain accumulated sample buffer. Caller uses returned arrays then sampleBuffer.length = 0. */
+export function ym2151DrainSamples(ym: YM2151): number[] {
+  const buf = ym.sampleBuffer;
+  ym.sampleBuffer = [];
+  return buf;
 }
 
 /** Carica il Timer A counter dal valore corrente di reg $10/$11 (10-bit:
@@ -112,11 +228,13 @@ export function ym2151WriteAddr(ym: YM2151, addr: u8): void {
 }
 
 /** Write a $1801: stora il byte nel reg selezionato + processa side effects
- * Timer A/B (V3). */
+ * Timer A/B (V3) + apply al channel/operator params (V3 chip-perfect). */
 export function ym2151WriteData(ym: YM2151, data: u8): void {
   const reg = ym.selectedReg;
   const v = data as number;
   ym.regs[reg] = v;
+  // V3 chip-perfect: applica il reg ai parametri channel/operator.
+  applyReg(ym, reg, v);
   // Side effects V3 Timer A/B (reg $14 = control register):
   //   bit 0 = load A (arm Timer A countdown se 1)
   //   bit 1 = load B
@@ -159,8 +277,12 @@ export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
   ym.ymCycleAccumulator += cycles6502 * 2;
   // Timer A: 1 tick ogni 64 cycle YM
   // Timer B: 1 tick ogni 1024 cycle YM (= 16× Timer A)
+  // Sample: 1 stereo sample ogni 64 cycle YM (= 55930 Hz native rate)
   while (ym.ymCycleAccumulator >= 64) {
     ym.ymCycleAccumulator -= 64;
+    // Genera 1 sample stereo (carrier op output per ogni channel attivo)
+    const [l, r] = ym2151Sample(ym);
+    ym.sampleBuffer.push(l, r);
     if (ym.timerAActive) {
       ym.timerACounter--;
       if (ym.timerACounter <= 0) {
