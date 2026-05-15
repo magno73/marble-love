@@ -48,6 +48,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
 
 /** Offset (work RAM) della word "game mode" letta da FUN_15884. */
 const GAME_MODE_WORD_OFF = 0x394;
@@ -90,6 +91,7 @@ export function soundPair15884(
 
   // First trigger — sempre eseguito (precede la cmp).
   subs?.soundCommand?.(SOUND_FIRST);
+  notifyGlobalSoundCmd(SOUND_FIRST);
 
   // Read uint16 big-endian @ workRam[0x394..0x395].
   // `cmp.w D0=2, mem.w` → branch se `mem == 2` (word, unsigned).
@@ -103,4 +105,5 @@ export function soundPair15884(
 
   // Second trigger — gated.
   subs?.soundCommand?.(SOUND_SECOND);
+  notifyGlobalSoundCmd(SOUND_SECOND);
 }

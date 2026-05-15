@@ -30,7 +30,7 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
-  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook,
+  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 
@@ -577,13 +577,15 @@ async function startGame(
             // Wire engine soundCmdSend158AC → SoundChip submitCommand: ogni
             // cmd emit dal main 68K TS verrà inoltrato al sound 6502 TS.
             let cmdCount = 0;
-            setSoundCmdHook((cmd) => {
+            const onCmd = (cmd: number) => {
               submitSoundCommand(soundChip!, (cmd & 0xff) as never);
               soundRenderer?.playCommandCue(cmd);
               cmdCount++;
-              if (cmdCount <= 20) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
-            });
-            console.log("[sound] engine→SoundChip cmd hook wired");
+              if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
+            };
+            setSoundCmdHook(onCmd);
+            setGlobalSoundCmdHook(onCmd);
+            console.log("[sound] engine→SoundChip cmd hook wired (158AC + global)");
             // ?soundTest=1 — invia cmd test artificiali ogni 2s per validare
             // che il chain audio produce suono anche senza gameplay cmd reali
             // (workaround per attract loop che non chiama soundCmdSend158AC).

@@ -57,6 +57,8 @@ const SKIP_FLAG_WORD_OFF = 0x3b8 as const;
  *                     differential test per convergenza deterministica.
  * @returns            0 = skip flag attivo o chip mai ready; 1 = inviato.
  */
+import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
+
 /** Hook side-effect opzionale: chiamato quando soundCmdSend158AC manda un
  * cmd al chip (ritorno 1). Usato dal web frontend per wirare al SoundChip
  * TS (`submitCommand`). NON ha side effect sul state TS: solo emit esterno.
@@ -101,5 +103,7 @@ export function soundCmdSend158AC(
   if (onSoundCmdHook !== undefined) {
     onSoundCmdHook(cmd & 0xff);
   }
+  // Notifica anche il global hook (fallback per altre sub-emit).
+  notifyGlobalSoundCmd(cmd & 0xff);
   return 1;
 }

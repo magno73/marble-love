@@ -48,6 +48,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
 
 /** Offset (workRam-relative) del flag "skip cmd" word. */
 const SKIP_FLAG_WORD_OFF = 0x3b8;
@@ -100,5 +101,7 @@ export function soundCmdSend(
     // Loop si esaurisce dopo 256 iterazioni → D0=0.
     return 0;
   }
+  // Side-effect opzionale: notifica web frontend del cmd inviato.
+  notifyGlobalSoundCmd(byteArg & 0xff);
   return 1;
 }
