@@ -22,6 +22,7 @@ type RgbaColor = renderNs.RgbaColor;
 
 const DEFAULT_TILE_SIZE = 8;
 const FALLBACK_COLOR = 0xff00ff;
+const PLAYFIELD_TILEMAP_SIZE = 64 * DEFAULT_TILE_SIZE;
 
 export interface Renderer {
   draw(state: GameState): void;
@@ -101,6 +102,33 @@ function motionObjectScreenPosition(
     x: sprite.x & 0x1ff,
     y: (-sprite.y - 256 - height) & 0x1ff,
   };
+}
+
+function positiveModulo(value: number, modulo: number): number {
+  return ((value % modulo) + modulo) % modulo;
+}
+
+export function wrappedPlayfieldDrawPositions(
+  tile: { x: number; y: number; width: number; height: number },
+  scroll: { x: number; y: number },
+  viewport: { width: number; height: number },
+  tilemapSize = PLAYFIELD_TILEMAP_SIZE,
+): { x: number; y: number }[] {
+  const baseX = positiveModulo(tile.x - scroll.x, tilemapSize);
+  const baseY = positiveModulo(tile.y - scroll.y, tilemapSize);
+  const xs = [baseX, baseX - tilemapSize];
+  const ys = [baseY, baseY - tilemapSize];
+  const out: { x: number; y: number }[] = [];
+
+  for (const x of xs) {
+    if (x >= viewport.width || x + tile.width <= 0) continue;
+    for (const y of ys) {
+      if (y >= viewport.height || y + tile.height <= 0) continue;
+      out.push({ x, y });
+    }
+  }
+
+  return out;
 }
 
 function activeMotionObjectStartEntry(state: GameState): number {
@@ -318,37 +346,35 @@ function drawPlayfield(
   for (const tile of frame.playfield) {
     const width = tile.width ?? DEFAULT_TILE_SIZE;
     const height = tile.height ?? DEFAULT_TILE_SIZE;
-    const drawX = tile.x - frame.scrollX;
-    const drawY = tile.y - frame.scrollY;
-    if (
-      drawX >= frame.nativeSize.width ||
-      drawY >= frame.nativeSize.height ||
-      drawX + width <= 0 ||
-      drawY + height <= 0
-    ) {
-      continue;
-    }
+    const drawPositions = wrappedPlayfieldDrawPositions(
+      { x: tile.x, y: tile.y, width, height },
+      { x: frame.scrollX, y: frame.scrollY },
+      frame.nativeSize,
+    );
+    if (drawPositions.length === 0) continue;
 
     const texture = objectTileTextureForCommand(frame, tile, assets);
-    if (texture !== undefined && texture !== Texture.EMPTY) {
-      const sprite = acquirePlayfieldSprite(layers, assets);
-      sprite.texture = texture;
-      sprite.x = drawX;
-      sprite.y = drawY;
-      sprite.scale.set(1);
-      sprite.alpha = 1;
-      continue;
-    }
-
     const color = paletteLookup(frame, tile.paletteIndex);
     const shade = (tile.tileIndex + (tile.priority ?? 0)) % 3;
 
-    graphics
-      .rect(drawX, drawY, width, height)
-      .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+    for (const { x: drawX, y: drawY } of drawPositions) {
+      if (texture !== undefined && texture !== Texture.EMPTY) {
+        const sprite = acquirePlayfieldSprite(layers, assets);
+        sprite.texture = texture;
+        sprite.x = drawX;
+        sprite.y = drawY;
+        sprite.scale.set(1);
+        sprite.alpha = 1;
+        continue;
+      }
 
-    if (shade === 0 && tile.paletteIndex !== 0 && tile.paletteIndex !== 9) {
-      graphics.rect(drawX, drawY, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
+      graphics
+        .rect(drawX, drawY, width, height)
+        .fill({ color: rgbaToPixiColor(color), alpha: alphaFromRgba(color) });
+
+      if (shade === 0 && tile.paletteIndex !== 0 && tile.paletteIndex !== 9) {
+        graphics.rect(drawX, drawY, width, 1).fill({ color: 0xffffff, alpha: 0.14 });
+      }
     }
   }
 }
@@ -649,25 +675,30 @@ function renderIndirectViewport(
   // ─── PF bitmap: render i TileCommand del playfield ─────────────────────
   for (const tile of frame.playfield) {
     if (tile.gfxBank === undefined || tile.bitsPerPixel === undefined) continue;
-    const drawX = tile.x - frame.scrollX;
-    const drawY = tile.y - frame.scrollY;
     const w = tile.width ?? 8;
     const h = tile.height ?? 8;
-    if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
+    const drawPositions = wrappedPlayfieldDrawPositions(
+      { x: tile.x, y: tile.y, width: w, height: h },
+      { x: frame.scrollX, y: frame.scrollY },
+      frame.nativeSize,
+    );
+    if (drawPositions.length === 0) continue;
 
     const t = decodeObjectTile(tilesRom, tile.gfxBank, tile.tileIndex, tile.bitsPerPixel, "playfield");
     const baseIdx = tile.paletteIndex * 8;
-    for (let py = 0; py < h; py++) {
-      const dy = drawY + py;
-      if (dy < 0 || dy >= H) continue;
-      for (let px = 0; px < w; px++) {
-        const dx = drawX + px;
-        if (dx < 0 || dx >= W) continue;
-        const sx = tile.flipX === true ? (w - 1 - px) : px;
-        const sy = tile.flipY === true ? (h - 1 - py) : py;
-        const pen = t.pixels[sy * 8 + sx] ?? 0;
-        // Playfield is opaque (NO transparent pen 0).
-        pf[dy * W + dx] = (baseIdx + pen) & 0x0fff;
+    for (const { x: drawX, y: drawY } of drawPositions) {
+      for (let py = 0; py < h; py++) {
+        const dy = drawY + py;
+        if (dy < 0 || dy >= H) continue;
+        for (let px = 0; px < w; px++) {
+          const dx = drawX + px;
+          if (dx < 0 || dx >= W) continue;
+          const sx = tile.flipX === true ? (w - 1 - px) : px;
+          const sy = tile.flipY === true ? (h - 1 - py) : py;
+          const pen = t.pixels[sy * 8 + sx] ?? 0;
+          // Playfield is opaque (NO transparent pen 0).
+          pf[dy * W + dx] = (baseIdx + pen) & 0x0fff;
+        }
       }
     }
   }
