@@ -44,6 +44,7 @@ const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const enableSound = searchParams.get("sound") !== "0";
+const runSoundChip = searchParams.get("soundChip") === "1";
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -373,12 +374,12 @@ async function startGame(
       btnAudio.addEventListener("click", async () => {
         try {
           if (soundStarted) {
-            soundRenderer?.playCommandCue(0x5a);
+            soundRenderer?.playCommandCue(0x5a, { force: true });
             return;
           }
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
-          soundRenderer.playCommandCue(0x40);
+          soundRenderer.playCommandCue(0x40, { force: true });
           // Release SoundChip dal HOLD reset hardware (main 68K $860001 bit 7=1).
           // Senza release il 6502 non gira mai → no YM/POKEY write → no audio.
           // Wire main↔sound mailbox e' debt separato (Codex engine main side);
@@ -405,13 +406,13 @@ async function startGame(
               setInterval(() => {
                 const cmd = testCmds[testIdx % testCmds.length]!;
                 submitSoundCommand(soundChip!, cmd as never);
-                soundRenderer?.playCommandCue(cmd);
+                soundRenderer?.playCommandCue(cmd, { force: true });
                 console.log(`[soundTest] sent cmd $${cmd.toString(16)}`);
                 testIdx++;
               }, 2000);
             }
           }
-          window.setTimeout(() => { soundRenderer?.playCommandCue(0x5a); }, 140);
+          window.setTimeout(() => { soundRenderer?.playCommandCue(0x5a, { force: true }); }, 140);
           btnAudio.textContent = "🔊 Test Audio";
           soundStarted = true;
           console.log("[sound] Web Audio started");
@@ -580,9 +581,10 @@ async function startGame(
         runMainLoopBody: mainLoopBody,
       };
       tick(s, tickOptions);
-      // Sound chip tick: avanza 6502 + chip per 1 frame (29830 cycle 6502).
-      // Renderer polla register shadow e aggiorna le voci AudioWorklet.
-      if (soundChip !== undefined) {
+      // Sound chip tick: the current 6502/YM/POKEY path is diagnostic-heavy
+      // and does not yet produce full background music. Keep it opt-in so the
+      // playable browser loop cannot slow down just because audio cues are on.
+      if (runSoundChip && soundChip !== undefined) {
         tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
         if (soundRenderer !== undefined && soundRenderer.isRunning()) {
           soundRenderer.update(soundChip);

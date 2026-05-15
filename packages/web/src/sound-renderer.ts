@@ -41,7 +41,7 @@ export interface SoundRenderer {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   update: (chip: { ym2151: { regs: Uint8Array }; pokey: { writeRegs: Uint8Array } }) => void;
-  playCommandCue: (cmd: number) => void;
+  playCommandCue: (cmd: number, options?: { force?: boolean }) => void;
   isRunning: () => boolean;
 }
 
@@ -135,6 +135,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   let node: AudioWorkletNode | null = null;
   let directCueOnly = false;
   let mediaCueOnly = false;
+  let lastCueWallTime = 0;
+  let lastCueAudioTime = -1;
   const mediaCueCache = new Map<string, string>();
   const prev: PrevState = {
     ymOn: new Array(8).fill(false),
@@ -242,8 +244,9 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     }
   }
 
-  function playCommandCue(cmd: number): void {
+  function playCommandCue(cmd: number, options?: { force?: boolean }): void {
     const cue = soundCommandCue(cmd);
+    if (options?.force !== true && shouldDropCommandCue()) return;
     if (ctx !== null) {
       if (ctx.state === "suspended") void ctx.resume();
       const now = ctx.currentTime;
@@ -262,6 +265,19 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       playMediaCue(cue);
     }
     if (node !== null) node.port.postMessage({ type: "cue", ...cue });
+  }
+
+  function shouldDropCommandCue(): boolean {
+    if (ctx !== null) {
+      const now = ctx.currentTime;
+      if (lastCueAudioTime >= 0 && now - lastCueAudioTime < 0.055) return true;
+      lastCueAudioTime = now;
+      return false;
+    }
+    const now = Date.now();
+    if (now - lastCueWallTime < 55) return true;
+    lastCueWallTime = now;
+    return false;
   }
 
   function isRunning(): boolean {

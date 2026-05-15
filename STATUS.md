@@ -1,7 +1,39 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (LAN browser audio fallbacks + initial attract)
+**Ultimo update:** 2026-05-15 (audio perf guard + LAN fallbacks)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — Audio perf guard + LAN fallbacks
+
+Follow-up live: i cue audio ora erano udibili, ma il gioco rallentava anche di
+2x+ e mancavano comunque musica di fondo e molti effetti.
+
+Root cause/status:
+
+- La musica di fondo e i suoni completi non sono ancora implementati: il path
+  chip-perfect 6502/YM2151/POKEY resta incompleto e oggi il browser usa cue V1
+  sui comandi main CPU.
+- Il tick diagnostico del SoundChip 6502 veniva eseguito ogni frame quando
+  l'audio era disponibile, pur non producendo ancora musica completa; questo
+  poteva appesantire il gameplay.
+- Raffiche di comandi sound potevano generare troppi cue/nodi audio ravvicinati.
+
+Fix:
+
+- Il tick 6502/YM/POKEY nel browser e' ora opt-in con `&soundChip=1`; di
+  default `?autoLoad=1&play=1` mantiene solo i cue leggeri e non deve piu'
+  rallentare il loop giocabile.
+- `SoundRenderer.playCommandCue` ha un rate-limit a ~18 cue/sec per i comandi
+  gameplay; i click manuali `Enable Audio` / `Test Audio` e `soundTest=1`
+  bypassano il limite con `force: true`.
+- Documentato esplicitamente che i cue V1 non sono musica/sound chip completo.
+
+Validazione:
+
+- `npx vitest run packages/web/test/sound-renderer.test.ts --reporter=dot` PASS.
+- `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — LAN browser audio fallbacks + initial attract
 

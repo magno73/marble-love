@@ -498,7 +498,7 @@ mailbox 68K↔6502 + Web Audio renderer.
 | **C7 SoundChip facade** | `src/m6502/{sound-chip,sound-clock}.ts` | 9/10 PASS smoke (NMI/IRQ edge-triggered) |
 | **C8 probe-sound-diff** | `packages/cli/src/probe-sound-diff.ts` | 387B audioRam + 2 YM + 1 POKEY divergent @ f600 (V2 Timer A/B stub) |
 | **C9 Web Audio renderer** | `packages/web/src/sound-renderer.ts` + `public/sound-worklet.js` | 17/17 PASS pure logic/fallback (ymKcToFreq, pokeyAudfToFreq, command cue fallback, no-Worklet/no-AudioContext startup, ...) |
-| **C10 Wire web audio** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" default-on + ticker hook (`sound=0` opt-out) |
+| **C10 Wire web audio** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" default-on + cue hook leggero (`sound=0` opt-out, `soundChip=1` diagnostico) |
 
 **62/64 sound test PASS** (2 skip = sentinel ROM-assenti). Build PWA 795KB.
 
@@ -515,6 +515,11 @@ ancora register writes gameplay completi. Il click su "Enable Audio" emette
 anche un breve cue di conferma e non richiede piu' che `AudioWorklet` sia
 disponibile sull'origine LAN.
 
+La musica di fondo e gli effetti chip-completi non sono ancora chiusi: il
+browser default tiene spento il tick diagnostico 6502/YM/POKEY per non
+rallentare il gameplay. Usa `&soundChip=1` solo per debug del driver sound
+parziale; i cue gameplay sono rate-limited e restano il feedback audio V1.
+
 **V3 sample-level chip-perfect deferito** (PRD Phase 7 V1 explicit "POKEY/
 YM2151 chip-perfect rimandato a V2"): envelope DR/AR/SR/RR per 32 operatori
 FM + 8 algoritmi FM + LFSR poly 17-bit + Timer A/B counter con IRQ wire al
@@ -526,6 +531,7 @@ http://localhost:5173/?autoLoad=1&play=1
 # 2. Premi 5 (coin) + Enter (START1) → biglia spawn
 # 3. Muovi con mouse / WASD / frecce. I comandi sound gameplay producono cue udibili.
 # Usa &sound=0 solo se vuoi nascondere/disabilitare il bottone audio.
+# Usa &soundChip=1 solo per debug: puo' rallentare e non produce ancora musica completa.
 ```
 
 ## Quickstart sviluppo
