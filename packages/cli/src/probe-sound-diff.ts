@@ -23,7 +23,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { createSoundChip, tickCycles, getRegisterShadow } from "../../engine/src/m6502/sound-chip.js";
+import { createSoundChip, tickCycles, getRegisterShadow, releaseSoundReset } from "../../engine/src/m6502/sound-chip.js";
 import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";
 
 interface MameDump {
@@ -62,7 +62,13 @@ function diffBytes(a: Uint8Array, b: Uint8Array, label: string): {
     if (a[i] !== b[i]) {
       count++;
       if (firstOffset < 0) firstOffset = i;
-      if (offsets.length < 10) offsets.push(i);
+      if (offsets.length < 12) offsets.push(i);
+    }
+  }
+  if (count > 0 && process.env.SHOW_DIFFS === "1") {
+    console.log(`  ${label} diff (TS / MAME):`);
+    for (const o of offsets) {
+      console.log(`    0x${o.toString(16).padStart(4, "0")}: ts=$${a[o]!.toString(16).padStart(2, "0")} mame=$${b[o]!.toString(16).padStart(2, "0")}`);
     }
   }
   const summary = count === 0
@@ -85,11 +91,26 @@ function main(): void {
   const rom421 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.421"));
   const rom422 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.422"));
 
-  // TS SoundChip da reset, tick fino a dump.frame
+  // TS SoundChip parte in HOLD reset (hardware). Main 68K lo libera intorno
+  // a f100-200 (verifica empirica via mame_sound_reset_tap). Env override:
+  //   SOUND_RESET_RELEASE_FRAME=<N>   default 0 (no hold, libero subito)
   const chip = createSoundChip({ roms: { rom421, rom422 } });
-  const targetCycles = dump.frame * SOUND_CYCLES_PER_FRAME;
-  console.log(`Ticking TS to ${targetCycles} cycles (${dump.frame} frame @ ${SOUND_CYCLES_PER_FRAME} cyc/frame)...`);
-  tickCycles(chip, targetCycles);
+  const releaseFrame = parseInt(process.env.SOUND_RESET_RELEASE_FRAME ?? "0", 10);
+  if (releaseFrame > 0) {
+    // Tick fake fino a releaseFrame (inReset=true → no cycle consumed)
+    console.log(`Reset hold ${releaseFrame} frame, then release...`);
+    releaseSoundReset(chip);  // simula main write $860001 bit 7
+    // Da releaseFrame in poi, tick reali
+    const cyclesAfterRelease = (dump.frame - releaseFrame) * SOUND_CYCLES_PER_FRAME;
+    console.log(`Ticking TS to ${cyclesAfterRelease} cycles post-release (${dump.frame - releaseFrame} frame)...`);
+    tickCycles(chip, cyclesAfterRelease);
+  } else {
+    // Legacy: no hold, libero da subito
+    releaseSoundReset(chip);
+    const targetCycles = dump.frame * SOUND_CYCLES_PER_FRAME;
+    console.log(`Ticking TS to ${targetCycles} cycles (${dump.frame} frame, no hold)...`);
+    tickCycles(chip, targetCycles);
+  }
   console.log(`TS @ ${chip.cpu.cycles} cycles, PC=$${(chip.cpu.rf.pc as number).toString(16)}`);
 
   // Estrai shadow MAME

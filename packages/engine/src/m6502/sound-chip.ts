@@ -49,6 +49,11 @@ export interface SoundChip {
   /** Coda dei byte scritti dal 6502 al main (drain via drainReplyEvents).
    * Pattern: ogni write $1810 da 6502 push qui; main pop in ordine FIFO. */
   replyQueue: number[];
+  /** Reset hold: il sound 6502 e' tenuto in reset dal main CPU finche' main
+   * non scrive `$860001` bit 7 = 1 (atarisy1.cpp bankselect_w). Mentre in
+   * hold, RAM resta 0, PC stuck a reset vector, no cycle consumed. Default
+   * true (= hardware power-on behaviour). Release via `releaseSoundReset()`. */
+  inReset: boolean;
 }
 
 export interface SoundChipConfig {
@@ -85,8 +90,27 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
 
   // Esegue reset sequence: PC = vector $FFFC/$FFFD.
   cpuReset(cpu, mmu);
+  // Sound 6502 parte in HOLD reset (hardware). Main 68K dovra' chiamare
+  // releaseSoundReset() per liberare il 6502 e farlo iniziare a girare.
+  return { cpu, mmu, ym2151, pokey, mainToSound, soundToMain, replyQueue, inReset: true };
+}
 
-  return { cpu, mmu, ym2151, pokey, mainToSound, soundToMain, replyQueue };
+/** Main CPU rilascia il 6502 dal reset hold. Equivale a write `$860001` bit
+ * 7 = 1 (atarisy1.cpp bankselect_w). Re-esegue reset sequence per fresh PC. */
+export function releaseSoundReset(chip: SoundChip): void {
+  chip.inReset = false;
+  cpuReset(chip.cpu, chip.mmu);
+  chip.cpu.cycles = 0;
+}
+
+/** Main CPU mette il 6502 in reset hold. Equivale a $860001 bit 7 = 0. */
+export function holdSoundReset(chip: SoundChip): void {
+  chip.inReset = true;
+  // Pulisci stato volatile: RAM, mailbox, chip shadow (hardware behaviour).
+  chip.mmu.ram.fill(0);
+  chip.cpu.cycles = 0;
+  chip.cpu.nmi = false;
+  chip.cpu.irq = false;
 }
 
 /** Avanza il 6502 per `cycles` cycle. Processa NMI/IRQ pendenti prima del
@@ -97,6 +121,8 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
  * (YM2151 timer, POKEY IRQ). V3 minimal: solo YM2151 Timer A/B. POKEY IRQ
  * deferito. */
 export function tickCycles(chip: SoundChip, cycles: number): number {
+  // Reset hold: no cycle consumed. RAM resta 0, chip resta a fresh state.
+  if (chip.inReset) return 0;
   const consumed = runForCycles(chip.cpu, chip.mmu, cycles);
   ym2151TickCycles(chip.ym2151, consumed);
   // IRQ logic: 6502 IRQ pin = (timerA_overflow AND irqA_enable) OR
@@ -143,7 +169,7 @@ export function getRegisterShadow(chip: SoundChip): {
   };
 }
 
-/** Hard reset: pulisce tutto. */
+/** Hard reset: pulisce tutto, ritorna a hold. */
 export function resetSoundChip(chip: SoundChip): void {
   cpuReset(chip.cpu, chip.mmu);
   chip.mainToSound.value = as_u8(0);
@@ -156,4 +182,6 @@ export function resetSoundChip(chip: SoundChip): void {
   chip.ym2151.timerAOverflow = false;
   chip.ym2151.timerBOverflow = false;
   chip.pokey.writeRegs.fill(0);
+  chip.mmu.ram.fill(0);
+  chip.inReset = true;
 }
