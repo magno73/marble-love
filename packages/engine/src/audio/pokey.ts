@@ -115,40 +115,50 @@ function tickPoly4(p: number): number {
   return ((p >> 1) | (bit << 3)) & 0xf;
 }
 
-/** Sample output stereo (mono in realtà, replicato L=R). */
+/** Sample output mono. AUDCTL routing (Phase A5):
+ *   bit 4 (0x10): CH1+CH2 join → 16-bit period counter (CH2 audf << 8 | CH1 audf)
+ *   bit 3 (0x08): CH3+CH4 join
+ *   bit 7 (0x80): poly9 noise mode (invece di poly17)
+ *   bit 6/5 (0x40/0x20): clock 1.79MHz per CH1/CH3 (vs 64KHz default) — TODO scale period
+ */
 function pokeySample(pk: POKEY): number {
+  const audctl = pk.writeRegs[0x08] ?? 0;
+  const ch12Join = (audctl & 0x10) !== 0;
+  const ch34Join = (audctl & 0x08) !== 0;
   let mix = 0;
   for (let ch = 0; ch < 4; ch++) {
+    // Skip CH2 se join 1+2 attivo (è low byte di period 16-bit)
+    if (ch === 1 && ch12Join) continue;
+    if (ch === 3 && ch34Join) continue;
     const audf = pk.writeRegs[ch * 2] ?? 0;
     const audc = pk.writeRegs[ch * 2 + 1] ?? 0;
     const vol = audc & 0xf;
     if (vol === 0) continue;
+    // Period: 16-bit join se attivo (CH1 low + CH2 high) o (CH3 low + CH4 high)
+    let period = audf;
+    if (ch === 0 && ch12Join) {
+      period = ((pk.writeRegs[2] ?? 0) << 8) | audf;
+    } else if (ch === 2 && ch34Join) {
+      period = ((pk.writeRegs[6] ?? 0) << 8) | audf;
+    }
     const channel = pk.channels[ch]!;
-    // Decrement counter; quando arriva a 0 toggle output + advance poly.
     channel.counter--;
     if (channel.counter <= 0) {
-      channel.counter = audf;
-      // Distortion bit 7=1 → pure tone (toggle deterministic).
-      // Distortion bit 7=0 → noise dal poly17 (o poly9 se AUDCTL bit 7 set).
+      channel.counter = period;
       const pureTone = (audc & 0x80) !== 0;
       if (pureTone) {
         channel.output = -channel.output;
       } else {
-        // Noise mode: usa bit 0 di poly17/poly9 come "toggle" se 1.
-        const audctl = pk.writeRegs[0x08] ?? 0;
         const usePoly9 = (audctl & 0x80) !== 0;
         const polyBit = usePoly9 ? (pk.poly9 & 1) : (pk.poly17 & 1);
         channel.output = polyBit !== 0 ? 1 : -1;
-        // Advance poly LFSR
         pk.poly17 = tickPoly17(pk.poly17);
         pk.poly9 = tickPoly9(pk.poly9);
       }
-      // Avanza poly5 sempre (high-freq filter)
       pk.poly5 = tickPoly5(pk.poly5);
       pk.poly4 = tickPoly4(pk.poly4);
     }
-    // vol 0..15 → -1..+1 scale
-    mix += channel.output * (vol / 15) * 0.15;  // 0.15 = headroom per 4 ch mix
+    mix += channel.output * (vol / 15) * 0.15;
   }
   return Math.tanh(mix);
 }

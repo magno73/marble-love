@@ -13,7 +13,28 @@
  * Reference: Yamaha OPM application manual + MAME ym2151.cpp:envelope_update.
  */
 
-import { ENV_RATE_TABLE } from "./ym2151-tables.js";
+import { ENV_RATE_SHIFT, ENV_RATE_SELECT, EG_INC } from "./ym2151-tables.js";
+
+/** Envelope clock counter (shared tra tutti gli operator).
+ * Incrementa ogni sample, usato come "tempo" globale del envelope generator. */
+let globalEnvClock = 0;
+export function resetEnvClock(): void { globalEnvClock = 0; }
+export function tickEnvClock(): void { globalEnvClock = (globalEnvClock + 1) & 0xffffffff; }
+export function getEnvClock(): number { return globalEnvClock; }
+
+/** Compute step amount per il rate corrente + env clock corrente.
+ * MAME-faithful: (clock >> rate_shift[r]) & 7 → eg_inc index → step amount. */
+function rateStep(rate: number): number {
+  if (rate < 2) return 0;
+  const r = Math.min(63, rate);
+  const shift = ENV_RATE_SHIFT[r]!;
+  // Skip steps based on shift: counter checked solo se (clock & ((1<<shift)-1)) == 0
+  // Then phase = (clock >> shift) & 7 → eg_inc table index
+  if (shift > 0 && (globalEnvClock & ((1 << shift) - 1)) !== 0) return 0;
+  const select = ENV_RATE_SELECT[r]!;
+  const phase = (globalEnvClock >> shift) & 7;
+  return EG_INC[select * 8 + phase] ?? 0;
+}
 
 export const ENV_STATE_OFF = 0;
 export const ENV_STATE_ATTACK = 1;
@@ -50,25 +71,20 @@ export function envelopeKeyOff(env: EnvelopeState): void {
   if (env.state !== ENV_STATE_OFF) env.state = ENV_STATE_RELEASE;
 }
 
-/** Avanza envelope per 1 sample. ar/d1r/d2r/rr sono rate 0..31 (1F).
- * d1l è sustain level 0..15 (4-bit). Ritorna attenuation effettivo 0..1023. */
+/** Avanza envelope per 1 sample (MAME-faithful rate table + eg_inc pattern).
+ * ar/d1r/d2r 0..31, rr 0..15, d1l 0..15. Ritorna attenuation 0..1023. */
 export function envelopeAdvance(
   env: EnvelopeState,
   ar: number, d1r: number, d2r: number, rr: number, d1l: number,
 ): number {
-  // Aumenta subCounter ogni sample (modulo 8).
-  env.subCounter = (env.subCounter + 1) & 7;
-  const phase = env.subCounter;
-
   switch (env.state) {
     case ENV_STATE_ATTACK: {
-      // AR rate * 2 = effective rate (OPM convention).
-      const rate = Math.min(63, ar * 2);
-      const step = ENV_RATE_TABLE[rate * 8 + phase] ?? 0;
+      const rate = ar * 2;  // OPM: AR rate * 2 = effective rate
+      const step = rateStep(rate);
       if (step > 0) {
-        // Attack curve: decay verso 0, ma con shape esponenziale.
-        // MAME approximation: counter -= ((counter >> 4) + 1) * step
-        env.counter -= ((env.counter >> 4) + 1) * step;
+        // Attack: exponential curve verso 0. MAME formula:
+        // counter = ~((~counter * step) >> 4)
+        env.counter = ~((~env.counter * step) >> 4);
         if (env.counter <= 0) {
           env.counter = 0;
           env.state = ENV_STATE_DECAY;
@@ -77,11 +93,8 @@ export function envelopeAdvance(
       break;
     }
     case ENV_STATE_DECAY: {
-      const rate = Math.min(63, d1r * 2);
-      const step = ENV_RATE_TABLE[rate * 8 + phase] ?? 0;
+      const step = rateStep(d1r * 2);
       env.counter += step;
-      // Sustain level = d1l * 64 (d1l è 4-bit, mapped a 6-bit shift).
-      // d1l = 15 → silence target (= sustain mai raggiunto, decay continua).
       const sustainTarget = d1l === 15 ? 1023 : d1l * 64;
       if (env.counter >= sustainTarget) {
         env.counter = sustainTarget;
@@ -90,9 +103,7 @@ export function envelopeAdvance(
       break;
     }
     case ENV_STATE_SUSTAIN: {
-      const rate = Math.min(63, d2r * 2);
-      const step = ENV_RATE_TABLE[rate * 8 + phase] ?? 0;
-      env.counter += step;
+      env.counter += rateStep(d2r * 2);
       if (env.counter >= 1023) {
         env.counter = 1023;
         env.state = ENV_STATE_OFF;
@@ -100,10 +111,8 @@ export function envelopeAdvance(
       break;
     }
     case ENV_STATE_RELEASE: {
-      // RR è 4-bit; effective rate = rr * 2 + 1.
-      const rate = Math.min(63, rr * 2 + 1);
-      const step = ENV_RATE_TABLE[rate * 8 + phase] ?? 0;
-      env.counter += step;
+      // RR è 4-bit; effective rate = rr * 2 + 1
+      env.counter += rateStep(rr * 2 + 1);
       if (env.counter >= 1023) {
         env.counter = 1023;
         env.state = ENV_STATE_OFF;

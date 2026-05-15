@@ -10,7 +10,7 @@
  */
 
 import { type EnvelopeState, createEnvelope, envelopeAdvance, envelopeKeyOn, envelopeKeyOff } from "./ym2151-envelope.js";
-import { SINE_TABLE, MUL_TABLE } from "./ym2151-tables.js";
+import { SINE_TABLE, MUL_TABLE, ATT_TO_LINEAR } from "./ym2151-tables.js";
 
 export interface Operator {
   /** Phase accumulator 20-bit (top 10 bit = sine LUT index). */
@@ -76,8 +76,8 @@ export function operatorSample(op: Operator, modulation: number = 0): number {
   // Read sine table at (phase + modulation) >> 10 bits index
   const phaseIdx = (((op.phase + modulation) >>> 0) >> 10) & 0x3ff;
   const sineRaw = SINE_TABLE[phaseIdx] ?? 0;  // -8192..+8191
-  // Linear attenuation: scale by (1 - att/1023)
-  const scaled = sineRaw * (1 - totalAtt / 1023);
+  // dB-domain attenuation (MAME-faithful): exponential curve, 96dB span.
+  const scaled = sineRaw * (ATT_TO_LINEAR[totalAtt] ?? 0);
   op.phase += op.phaseInc;
   if (op.phase >= (1 << 20)) op.phase -= (1 << 20);
   return scaled;
