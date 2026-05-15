@@ -25,6 +25,13 @@ Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lu
 supporta anche `MARBLE_PLAYABLE_MANUAL=1`: registra prima una movie MAME
 `.inp`, poi ripassala con `-playback` per ottenere trace JSON e tail snapshot
 replayabili dal probe TS.
+Per playtest manuale di progressione livelli, `?autoLoad=1&play=1&levelTime=180`
+o `levelTime=120` imposta il timer interno del livello al valore scelto una
+sola volta per livello, lasciando il countdown normale. Nota: alcuni path HUD
+ROM mostrano solo due cifre o clampano sopra 99, quindi il valore alto puo'
+essere effettivo anche se il display non mostra subito 180/120. Per investigare
+collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
+una overlay con coordinate player, timer e oggetti attivi piu' vicini.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
