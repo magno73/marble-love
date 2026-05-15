@@ -82,6 +82,14 @@ per giocare manualmente. Il coin-credit completo via 6502 resta debito
 sound/main CPU; il browser usa un credito locale conservativo per sbloccare la
 partita live.
 
+**Checkpoint playable shape records (2026-05-15):** QA notturno sulla rotta
+manual-like profonda `route_3600` ha chiuso il residuo sprite attivo della
+biglia: `FUN_264AA` ora emette anche i record shape mode0/mode1 a `obj+0x38`
+come MAME, e `FUN_177F8` legge la string table dalla finestra ROM slapstic
+`0x80000..0x87fff`. La rotta `route_3600` passa 100/100, con `obj0+0x38` e
+`D7` exact a f3653/f3655/f3657; playable replay 3/3, warm-seed gameplay 15/15,
+typecheck, targeted vitest, web build e long-demo guardrail restano verdi.
+
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
 della transizione mode0 `3e4=2/gamemode=1 -> 3e4=3/gamemode=0`: mode switch
