@@ -25,6 +25,7 @@
  */
 
 import type { GameState } from "./state.js";
+import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
 
 const SND_CMD_OFF = 0x1f44; // *0x401F44: current sound command byte
 const SND_LAST_SENT_OFF = 0x1f45; // *0x401F45: last sent (bit 7 = pending)
@@ -67,6 +68,13 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
       if (d0 !== d1) {
         const arg = ((d0 << 8) | d1) >>> 0;
         subs?.fun_3e1a?.(arg);
+        // V3 chip-perfect wire: notify global hook con il cmd byte (D0 = current cmd)
+        // così il SoundChip TS riceve il cmd via mailbox.
+        notifyGlobalSoundCmd(d0 & 0xff);
+        if (typeof globalThis !== "undefined") {
+          const g = globalThis as { __soundTickDispatchCount?: number };
+          g.__soundTickDispatchCount = (g.__soundTickDispatchCount ?? 0) + 1;
+        }
       }
     }
 

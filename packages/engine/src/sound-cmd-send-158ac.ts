@@ -105,5 +105,10 @@ export function soundCmdSend158AC(
   }
   // Notifica anche il global hook (fallback per altre sub-emit).
   notifyGlobalSoundCmd(cmd & 0xff);
+  // DEBUG: count calls
+  if (typeof globalThis !== "undefined") {
+    const g = globalThis as { __sound158ACCount?: number };
+    g.__sound158ACCount = (g.__sound158ACCount ?? 0) + 1;
+  }
   return 1;
 }
