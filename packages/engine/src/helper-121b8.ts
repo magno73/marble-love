@@ -773,7 +773,9 @@ export function helper121B8(
     if (subs.fun_160f6 !== undefined) {
       subs.fun_160f6(state, a2, 0x40069e, 0x4006a0, d4_timer);
     } else {
-      stateDispatch160F6(state, a2, 0x40069e, 0x4006a0, d4_timer);
+      stateDispatch160F6(state, a2, 0x40069e, 0x4006a0, d4_timer, {
+        romByte: (addr) => rom.program[addr] ?? 0,
+      });
     }
 
     // move.l (0x14,A2),D0; sub.l (0x40068C).l,D0; tst.l D0

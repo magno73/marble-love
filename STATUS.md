@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable bridge route delta guard)
+**Ultimo update:** 2026-05-15 (FUN_160F6 ROM speed table wiring)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — FUN_160F6 ROM speed table wiring
+
+QA notturno sul replay MAME temporaneo della rotta profonda ha isolato un
+drift gameplay reale nel dispatcher biglia, non nella camera o collisione.
+
+Root cause:
+
+- Il default path di `helper121B8` chiamava `stateDispatch160F6` senza
+  `romByte`, quindi la speed table ROM a `0x2398c` veniva letta come zero.
+- Nella rotta MAME `/tmp/marble_route_deep_scenarios/route_3600.json` questo
+  lasciava TS con `obj0.z/vz/state36` sfasati a f3627..f3657 pur avendo PF e
+  scroll gia' exact.
+
+Fix:
+
+- `helper121B8` ora passa il reader ROM reale al dispatcher `FUN_160F6`
+  quando non viene iniettato un override di test.
+- `helper-121b8.test.ts` aggiunge una regression mirata che forza una lettura
+  della speed table e verifica l'incremento `z`/bounce flag.
+
+Evidenza/validazione:
+
+- `route_3600` resta un drill residuo sprite/AV-latch, ma il segmento
+  f3627..f3657 ora ha `obj0.z`, `vz`, `state36` e `state58` exact contro MAME;
+  il primo fail resta a f+57 con PF=0, ma scende da `Sprite/HUD/WORK=68/11/50`
+  a `60/1/30`.
+- `route_3000` resta PASS @100; `route_2440` resta il vecchio rumore sulla
+  pagina MO inattiva.
+- `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/playable-live-routes.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/playable-respawn-state1.test.ts --reporter=basic` PASS.
+- `npx tsc -b --pretty false` PASS.
+- Playable replay 3/3 PASS (`80/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- `npm --prefix packages/web run build` PASS.
+- Long demo fresh step10 no-stack resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `15267 <= 16000` con scenario-mask; `14493 <= 16000` con converge-mask
+  storica.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Playable bridge route delta guard
 
