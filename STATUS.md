@@ -1,7 +1,28 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (practice level starts)
+**Ultimo update:** 2026-05-15 (levelTime scroll-target fix)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — levelTime scroll-target fix
+
+Follow-up live: aggiungendo `levelTime=120/180` al path
+`?autoLoad=1&play=1` il terreno scrollava verso l'alto e la playfield si
+rompeva, mentre la URL senza parametri extra restava sana.
+
+Root cause:
+
+- Il primo helper `levelTime` scriveva anche `0x40097C`, interpretato come
+  mirror del timer da `levelDispatcher16EC6`.
+- Nel gameplay live `0x40097C` e' pero' lo scroll row target (`srtgt`) usato
+  da `refreshHelper13EE6`/camera/PF rebuild. Scrivere 120/180 li' spostava
+  il target camera e produceva il terreno rotto visto nel browser.
+
+Fix:
+
+- `levelTime` ora scrive solo `obj0+0x6A`, cioe' il countdown player/HUD
+  decrementato dal runtime.
+- La regression `level-time-override.test.ts` verifica che `0x097c..0x097f`
+  resti invariato.
 
 ## 2026-05-15 — Practice level starts
 
@@ -36,8 +57,8 @@ Modifiche:
   imposta il timer interno del livello a 120/180/etc. una sola volta per livello
   quando il dispatcher e' in gameplay (`main=0`). Il countdown continua a
   decrementare normalmente; non e' un freeze del timer.
-- L'override scrive sia `obj0+0x6A` (countdown player/HUD) sia il mirror
-  level-timer `0x097C`, cosi' copre i due path runtime gia' individuati.
+- L'override scrive `obj0+0x6A` (countdown player/HUD). Non tocca
+  `0x40097C`, che durante gameplay e' lo scroll row target.
 - Nuovo parametro `debugObjects=1`/`debugState=1`: overlay non interattiva con
   coordinate fixed-point del player, timer, main/mode/level/scroll e oggetti
   attivi piu' vicini. Serve a catturare un repro utile della possibile

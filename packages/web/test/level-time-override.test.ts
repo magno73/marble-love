@@ -6,16 +6,6 @@ function readWordBE(bytes: Uint8Array, off: number): number {
   return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
 }
 
-function readLongBE(bytes: Uint8Array, off: number): number {
-  return (
-    (((bytes[off] ?? 0) << 24) |
-      ((bytes[off + 1] ?? 0) << 16) |
-      ((bytes[off + 2] ?? 0) << 8) |
-      (bytes[off + 3] ?? 0)) >>>
-    0
-  );
-}
-
 describe("level time override", () => {
   it("parses explicit debug level times", () => {
     expect(parseLevelTimeOverrideParam(null)).toBeUndefined();
@@ -32,10 +22,16 @@ describe("level time override", () => {
     expect(parseLevelTimeOverrideParam("abc")).toBeUndefined();
   });
 
-  it("writes the player countdown and level timer mirror", () => {
+  it("writes only the player countdown and preserves the scroll target", () => {
     const state = { workRam: new Uint8Array(0x2000) };
+    state.workRam[0x097c] = 0x12;
+    state.workRam[0x097d] = 0x34;
+    state.workRam[0x097e] = 0x56;
+    state.workRam[0x097f] = 0x78;
+
     applyLevelTimeOverride(state, 180);
+
     expect(readWordBE(state.workRam, 0x18 + 0x6a)).toBe(180);
-    expect(readLongBE(state.workRam, 0x097c)).toBe(180);
+    expect(Array.from(state.workRam.slice(0x097c, 0x0980))).toEqual([0x12, 0x34, 0x56, 0x78]);
   });
 });
