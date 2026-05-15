@@ -86,6 +86,63 @@ describe("YM2151 status read (Phase 5 stub)", () => {
   });
 });
 
+describe("YM2151 Timer A counter (V3)", () => {
+  it("write $14 bit 0 arma Timer A, $10/$11 settano periodo", async () => {
+    const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
+    const ym = createYM2151();
+    // Period max = 1024 tick (val=0 in $10/$11)
+    ym2151WriteAddr(ym, as_u8(0x10));
+    ym2151WriteData(ym, as_u8(0x00));
+    ym2151WriteAddr(ym, as_u8(0x11));
+    ym2151WriteData(ym, as_u8(0x00));
+    // Arm Timer A: $14 bit 0
+    ym2151WriteAddr(ym, as_u8(0x14));
+    ym2151WriteData(ym, as_u8(0x01));
+    expect(ym.timerAActive).toBe(true);
+    expect(ym.timerACounter).toBe(1024);
+    // Avanza 1024 tick × 64 cycle YM = 65536 cycle YM = 32768 cycle 6502
+    ym2151TickCycles(ym, 32768);
+    expect(ym.timerAOverflow).toBe(true);
+    expect(ym.timerACounter).toBeGreaterThan(0);  // auto-restart
+  });
+
+  it("write $14 bit 2 clear Timer A overflow flag", async () => {
+    const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
+    const ym = createYM2151();
+    ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0x00));
+    ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x00));
+    ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x01));
+    ym2151TickCycles(ym, 32768);
+    expect(ym.timerAOverflow).toBe(true);
+    ym2151WriteData(ym, as_u8(0x04));  // bit 2 = clear A
+    expect(ym.timerAOverflow).toBe(false);
+  });
+
+  it("Timer A periodo variabile via $10/$11 (val=1023 → period=1 tick)", async () => {
+    const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
+    const ym = createYM2151();
+    ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0xFF));
+    ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x03));
+    ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x01));
+    expect(ym.timerACounter).toBe(1);
+    ym2151TickCycles(ym, 32);  // 1 tick × 64 cycle YM = 64 YM = 32 6502
+    expect(ym.timerAOverflow).toBe(true);
+  });
+
+  it("IRQA enable bit 4: status bit 0 set su overflow", async () => {
+    const { ym2151TickCycles, ym2151ReadStatus } = await import("../src/audio/ym2151.js");
+    const ym = createYM2151();
+    ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0x00));
+    ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x00));
+    ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x11));  // arm + IRQA enable
+    expect(ym.timerAActive).toBe(true);
+    expect(ym.timerAIrqEnable).toBe(true);
+    ym2151TickCycles(ym, 32768);
+    expect(ym.timerAOverflow).toBe(true);
+    expect(ym2151ReadStatus(ym) as number).toBe(0x01);
+  });
+});
+
 describe("YM2151 reset", () => {
   it("reset pulisce reg file, selected, flags", () => {
     const ym = createYM2151();

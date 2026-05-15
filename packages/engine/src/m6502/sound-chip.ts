@@ -27,13 +27,13 @@
  * a un AudioWorklet via ring buffer.
  */
 
-import { type M6502Cpu, createCpu, reset as cpuReset, requestNmi, runForCycles } from "./cpu.js";
+import { type M6502Cpu, createCpu, reset as cpuReset, requestNmi, requestIrq, clearIrq, runForCycles } from "./cpu.js";
 import { type SoundMmu, createSoundMmu } from "./sound-mmu.js";
 import {
   type Mailbox8,
   createMailbox, mailboxWrite, mailboxRead,
 } from "./mailbox.js";
-import { type YM2151, createYM2151 } from "../audio/ym2151.js";
+import { type YM2151, createYM2151, ym2151TickCycles } from "../audio/ym2151.js";
 import { type POKEY, createPOKEY } from "../audio/pokey.js";
 import { type SoundRomFiles, buildSoundRom } from "./sound-rom.js";
 import { as_u8 } from "../wrap.js";
@@ -90,10 +90,23 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
 }
 
 /** Avanza il 6502 per `cycles` cycle. Processa NMI/IRQ pendenti prima del
- * prossimo opcode. Phase 5+ avanzera' anche envelope/timer YM2151 e
- * tone/LFSR POKEY proporzionali. */
+ * prossimo opcode. V3: avanza anche Timer A/B YM2151 e asserisce IRQ 6502
+ * su overflow se IRQA/B enable.
+ *
+ * IRQ wiring: il pin IRQ del 6502 e' "wire OR" con multiple sources
+ * (YM2151 timer, POKEY IRQ). V3 minimal: solo YM2151 Timer A/B. POKEY IRQ
+ * deferito. */
 export function tickCycles(chip: SoundChip, cycles: number): number {
-  return runForCycles(chip.cpu, chip.mmu, cycles);
+  const consumed = runForCycles(chip.cpu, chip.mmu, cycles);
+  ym2151TickCycles(chip.ym2151, consumed);
+  // IRQ logic: 6502 IRQ pin = (timerA_overflow AND irqA_enable) OR
+  //                          (timerB_overflow AND irqB_enable)
+  const irqPin =
+    (chip.ym2151.timerAOverflow && chip.ym2151.timerAIrqEnable) ||
+    (chip.ym2151.timerBOverflow && chip.ym2151.timerBIrqEnable);
+  if (irqPin) requestIrq(chip.cpu);
+  else clearIrq(chip.cpu);
+  return consumed;
 }
 
 /** Main CPU scrive cmd al sound: equivale a write $FE0001 (68K side).
