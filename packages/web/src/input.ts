@@ -45,6 +45,10 @@ export interface InputState {
   consumeP1Y(): number;
   consumeP2X(): number;
   consumeP2Y(): number;
+  /** Touch/UI helper: simula 1 pulse coin (= keydown "5"). */
+  triggerCoinPulse(): void;
+  /** Touch/UI helper: simula 1 pulse start (= keydown "Enter"). */
+  triggerStartPulse(): void;
 }
 
 export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number; y: number } {
@@ -176,5 +180,18 @@ export function initInput(): InputState {
     consumeP1Y() { return p1Y; },
     consumeP2X() { return p2X; },
     consumeP2Y() { return p2Y; },
+    triggerCoinPulse() {
+      coinPulses += 1;
+      buttons |= 0x04;
+      // Auto-release dopo 1 frame: buttons clear via consumeP1X poll? No,
+      // poll non resetta. Lascio buttons bit set; ricomincia da clear su
+      // keydown/keyup. Per browser coin pulse, basta pulse counter.
+      setTimeout(() => { buttons &= ~0x04; }, 50);
+    },
+    triggerStartPulse() {
+      startPulses += 1;
+      buttons |= 0x01;
+      setTimeout(() => { buttons &= ~0x01; }, 50);
+    },
   };
 }
