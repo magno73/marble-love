@@ -16,7 +16,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { as_u8 } from "../src/wrap.js";
 import {
-  createSoundChip, tickCycles, submitCommand, drainReplyEvents,
+  createSoundChip, tickCycles, submitCommand, drainReplyEvents, releaseSoundReset,
   getRegisterShadow, resetSoundChip,
 } from "../src/m6502/sound-chip.js";
 
@@ -42,8 +42,9 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.mainToSound.pending).toBe(false);
   });
 
-  it("tickCycles: 6502 avanza, no throw su boot code 5000 cycle", () => {
+  it("tickCycles: 6502 avanza post-release, no throw su boot code 5000 cycle", () => {
     const chip = createSoundChip({ roms: loadRoms() });
+    releaseSoundReset(chip);
     expect(() => tickCycles(chip, 5000)).not.toThrow();
     expect(chip.cpu.cycles).toBeGreaterThanOrEqual(5000);
   });
