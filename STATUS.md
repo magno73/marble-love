@@ -28,15 +28,21 @@ Fix:
 - `TickClock` aggiunge un hold main-thread differito per il wait `0xB4` e una
   clear alpha rows differita; durante l'hold il body `117B2` non prosegue verso
   l'attract rebuild.
+- Follow-up post-hold: `case3` ora passa `rom` a `FUN_11452`. Prima la
+  chiamata perdeva la ROM, quindi la schermata successiva non ricostruiva
+  playfield/hi-score/banner e poteva mostrare il vecchio livello colorato e
+  rotto dopo il `GAME OVER`.
 - La regression `playable-live-routes.test.ts` non accetta piu' il vecchio
   "timeout rebuild immediato": richiede testo alpha presente durante l'hold,
-  niente mode2/mode0 attract durante il riepilogo, PF non vuoto, e clear delle
-  righe alpha al termine dell'attesa.
+  niente mode2/mode0 attract durante il riepilogo, PF non vuoto, clear delle
+  righe alpha al termine dell'attesa, e cambio di playfield al passaggio
+  post-timeout.
 
 Validazione:
 
 - `npx vitest run packages/engine/test/playable-live-routes.test.ts packages/engine/test/main-loop-init-task-a.test.ts --reporter=basic` PASS (20 test).
 - `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
 - Warm-seed gameplay 15/15 PASS (`probe-scenario-diff.ts`; `level3_spawn`
   resta il baseline storico PASS @77).
 - Playable replay 3/3 PASS (`coin_start_to_level1` PASS @78,
