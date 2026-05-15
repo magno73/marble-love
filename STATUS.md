@@ -1,7 +1,48 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (FUN_264AA mode0 shape emit)
+**Ultimo update:** 2026-05-15 (type-5 current cel emit)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Type-5 current cel emit
+
+QA notturno su rotte playable piu' profonde ha isolato un residuo sprite nel
+passaggio `case6_4400`: playfield, coordinate marble, collisione e camera erano
+gia' exact contro MAME, ma gli oggetti type-5 low-band emettevano il cel block
+successivo e talvolta sparivano quando `p42+4` diventava sentinel.
+
+Root cause:
+
+- Il vecchio fix long-demo inferiva un caso speciale `p42+4` per type-5 sotto
+  `0xc0`; il disasm ROM `0x27DF6..0x27E1C` mostra invece un unico path:
+  skip solo se `d4 <= -0x40` o `d4 >= 0x100`, poi `FUN_1A8D2(*(p42), d5, d4,
+  0x1800)`.
+- Nel replay temporaneo `/tmp/marble_case6_scenarios/case6_4400.json`, MAME
+  usava `0x212e6 -> 0x212f2` come cel corrente mentre TS era un passo avanti;
+  a f4423 TS saltava anche l'emit quando il next pointer era `0xffffffff`.
+
+Fix:
+
+- `dispatchType5` ora segue il bound signed del disasm e passa sempre il cel
+  corrente `*(p42)` a `FUN_1A8D2`.
+- `late-game-logic-26f3e.test.ts` aggiunge regressioni per il low visible band
+  e per il bound signed `-0x40`.
+
+Evidenza/validazione:
+
+- `route_4200` migliora da PASS @63 a PASS @100; `route_4800` resta PASS @100
+  bit-perfect; `route_5400` resta PASS @100.
+- `case6_4480` resta PASS @100; `case6_4400` resta un drill residuo
+  sprite/cache non gameplay (`PF=0`, collisione/camera/obj exact nelle
+  finestre ispezionate).
+- `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- Targeted vitest bundle PASS (33 test).
+- `npx tsc -b --pretty false` PASS.
+- Playable replay 3/3 PASS (`78/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- `npm --prefix packages/web run build` PASS.
+- Long demo fresh step10 no-stack sampled sum resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `14954 <= 16000`.
 
 ## 2026-05-15 — FUN_264AA mode0 shape emit
 
