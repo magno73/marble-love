@@ -15,6 +15,11 @@
 --   MARBLE_PLAYABLE_TRACKBALL_START optional first scripted trackball frame
 --   MARBLE_PLAYABLE_ROUTE        optional screen-space route, e.g. D:171,R:206
 --   MARBLE_PLAYABLE_INPUT_TRACE_REF optional scenario inputTrace path
+--   MARBLE_PLAYABLE_FRAME_LIST   optional CSV of name:frame warm captures
+--   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
+--   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
+--   MARBLE_PLAYABLE_MANUAL_WINDOW tail snapshots to save in manual/playback mode
+--   MARBLE_PLAYABLE_NAME         base name for manual/playback trace + scenario
 
 local OUT_DIR = os.getenv("MARBLE_PLAYABLE_OUT_DIR") or "oracle/scenarios/playable"
 local INPUT_OUT = os.getenv("MARBLE_PLAYABLE_INPUT_OUT") or "oracle/scenarios/input/playable_coin_start.json"
@@ -22,6 +27,10 @@ local INPUT_TRACE_REF = os.getenv("MARBLE_PLAYABLE_INPUT_TRACE_REF") or "oracle/
 local ONLY_RAW = os.getenv("MARBLE_PLAYABLE_SCENARIOS") or ""
 local FRAME_LIST_RAW = os.getenv("MARBLE_PLAYABLE_FRAME_LIST") or ""
 local ROUTE_RAW = os.getenv("MARBLE_PLAYABLE_ROUTE") or ""
+local MANUAL_INPUT = os.getenv("MARBLE_PLAYABLE_MANUAL") == "1"
+local MANUAL_NAME = os.getenv("MARBLE_PLAYABLE_NAME") or "manual_play"
+local MANUAL_MAX_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_MAX_FRAME") or "")
+local MANUAL_WINDOW = tonumber(os.getenv("MARBLE_PLAYABLE_MANUAL_WINDOW") or "240") or 240
 local FRAME_COUNT = 100
 local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or "2020") or 2020
 
@@ -63,7 +72,10 @@ for _, scenario in ipairs(SCENARIOS) do
         table.insert(selected, scenario)
     end
 end
-if #selected == 0 then
+if MANUAL_INPUT and FRAME_LIST_RAW == "" and ONLY_RAW == "" then
+    selected = {}
+end
+if #selected == 0 and not MANUAL_INPUT then
     error("[mame_playable_input_capture] no scenarios selected")
 end
 
@@ -84,6 +96,7 @@ local slapstic_dev = nil
 local frame_count = 0
 local installed = false
 local last_frame = 0
+local finished = false
 local capture_by_frame = {}
 
 local current = {}
@@ -95,6 +108,8 @@ local tap_handles = {}
 local script_buttons = 0
 local script_dx = 0
 local script_dy = 0
+local sound_coin_value = 1
+local manual_tail_snapshots = {}
 local route_steps = {}
 local route_total = 0
 
@@ -167,7 +182,16 @@ for _, scenario in ipairs(selected) do
         last_frame = scenario.frame + FRAME_COUNT
     end
 end
-last_frame = math.max(last_frame, 2500)
+if MANUAL_INPUT then
+    last_frame = math.max(last_frame, MANUAL_MAX_FRAME or 18000)
+    print(string.format(
+        "[mame_playable_input_capture] manual/playback mode: recording real MAME input through f%d, tail window %d",
+        last_frame,
+        MANUAL_WINDOW
+    ))
+else
+    last_frame = math.max(last_frame, 2500)
+end
 
 local function key(addr)
     return string.format("%06x", addr)
@@ -239,6 +263,9 @@ end
 local function install_sound_read_tap(space, lo, hi, name)
     local handle = space:install_read_tap(lo, hi, name, function(offset, data, mask)
         local addr = normalize_tap_addr(lo, offset)
+        if addr == 0x1820 then
+            sound_coin_value = data & 0xff
+        end
         sound_totals[addr] = (sound_totals[addr] or 0) + 1
         return data
     end)
@@ -282,6 +309,7 @@ local function scripted_input(frame)
 end
 
 local function apply_input_for_frame(frame)
+    if MANUAL_INPUT then return end
     if ports == nil then return end
     script_buttons, script_dx, script_dy = scripted_input(frame)
 
@@ -325,6 +353,15 @@ end
 
 local function capture_input_frame()
     local switches = value(0xF60001)
+    local buttons = script_buttons
+    local coin1 = (script_buttons & 0x04) ~= 0 and 1 or 0
+    if MANUAL_INPUT then
+        buttons = 0
+        if (switches & 0x01) == 0 then buttons = buttons | 0x01 end
+        if (switches & 0x02) == 0 then buttons = buttons | 0x02 end
+        coin1 = (sound_coin_value & 0x01) == 0 and 1 or 0
+        if coin1 == 1 then buttons = buttons | 0x04 end
+    end
     table.insert(frames, string.format(
         '    {"frame":%d,"trackballX":%d,"trackballY":%d,"trackball2X":%d,"trackball2Y":%d,' ..
         '"switches":%d,"buttons":%d,"coin1":%d,"scriptDx":%d,"scriptDy":%d,"readCounts":%s}',
@@ -334,8 +371,8 @@ local function capture_input_frame()
         value(0xF20005),
         value(0xF20007),
         switches,
-        script_buttons,
-        (script_buttons & 0x04) ~= 0 and 1 or 0,
+        buttons,
+        coin1,
         script_dx,
         script_dy,
         read_count_json()
@@ -343,12 +380,16 @@ local function capture_input_frame()
 end
 
 local function write_input_json()
+    local trace_name = MANUAL_INPUT and MANUAL_NAME or "playable_coin_start"
+    local trace_description = MANUAL_INPUT
+        and "Manual/playback MAME input capture"
+        or "Scripted coin/start plus deterministic level-1 trackball input"
     local out = assert(io.open(INPUT_OUT, "w"))
     out:write("{\n")
     out:write('  "schemaVersion": 1,\n')
     out:write('  "source": "mame",\n')
-    out:write('  "name": "playable_coin_start",\n')
-    out:write('  "description": "Scripted coin/start plus deterministic level-1 trackball input",\n')
+    out:write(string.format('  "name": "%s",\n', json_escape(trace_name)))
+    out:write(string.format('  "description": "%s",\n', json_escape(trace_description)))
     out:write('  "startFrame": 1,\n')
     out:write(string.format('  "endFrame": %d,\n', last_frame))
     out:write(string.format('  "frameCount": %d,\n', #frames))
@@ -518,6 +559,67 @@ local function write_scenario(scenario)
     print(string.format("[mame_playable_input_capture] saved %s (%d snapshots)", path, #scenario.snapshots))
 end
 
+local function capture_manual_tail_snapshot()
+    if not MANUAL_INPUT or MANUAL_WINDOW <= 0 then return end
+    local pseudo = { frame = frame_count }
+    table.insert(manual_tail_snapshots, {
+        frame = frame_count,
+        json = capture_snapshot(pseudo, frame_count),
+    })
+    while #manual_tail_snapshots > MANUAL_WINDOW + 1 do
+        table.remove(manual_tail_snapshots, 1)
+    end
+end
+
+local function write_manual_tail_scenario()
+    if not MANUAL_INPUT or #manual_tail_snapshots == 0 then return end
+    local name = MANUAL_NAME .. "_tail"
+    local first_frame = manual_tail_snapshots[1].frame
+    local parts = {}
+    for _, snapshot in ipairs(manual_tail_snapshots) do
+        table.insert(parts, snapshot.json)
+    end
+
+    local path = OUT_DIR .. "/" .. name .. ".json"
+    local out = assert(io.open(path, "w"))
+    out:write("{\n")
+    out:write(string.format('  "name": "%s",\n', json_escape(name)))
+    out:write('  "description": "Manual/playback MAME capture tail window",\n')
+    out:write(string.format('  "seedFrame": %d,\n', first_frame))
+    out:write(string.format('  "oracleFrames": %d,\n', #manual_tail_snapshots - 1))
+    out:write(string.format('  "inputTrace": "%s",\n', json_escape(INPUT_TRACE_REF)))
+    out:write('  "regions": {\n')
+    out:write('    "workRam": {"address": "0x400000", "bytes": 8192},\n')
+    out:write('    "playfieldRam": {"address": "0xa00000", "bytes": 8192},\n')
+    out:write('    "spriteRam": {"address": "0xa02000", "bytes": 4096},\n')
+    out:write('    "alphaRam": {"address": "0xa03000", "bytes": 4096},\n')
+    out:write('    "colorRam": {"address": "0xb00000", "bytes": 2048},\n')
+    out:write('    "hudWorkRam": {"address": "0x400500", "bytes": 512}\n')
+    out:write('  },\n')
+    out:write('  "snapshots": [\n')
+    out:write(table.concat(parts, ",\n"))
+    out:write("\n  ]\n")
+    out:write("}\n")
+    out:close()
+    print(string.format(
+        "[mame_playable_input_capture] saved %s (f%d..f%d, %d snapshots)",
+        path,
+        first_frame,
+        manual_tail_snapshots[#manual_tail_snapshots].frame,
+        #manual_tail_snapshots
+    ))
+end
+
+local function finish_capture()
+    if finished then return end
+    finished = true
+    write_input_json()
+    for _, scenario in ipairs(selected) do
+        write_scenario(scenario)
+    end
+    write_manual_tail_scenario()
+end
+
 local function install_taps()
     install_main_read_tap(0xF20000, 0xF20007, "playable_input_trackball")
     install_main_read_tap(0xF60000, 0xF60003, "playable_input_switches")
@@ -572,15 +674,23 @@ emu.register_frame_done(function()
             ))
         end
     end
+    capture_manual_tail_snapshot()
 
     frame_reads = {}
     apply_input_for_frame(frame_count + 1)
 
     if frame_count >= last_frame then
-        write_input_json()
-        for _, scenario in ipairs(selected) do
-            write_scenario(scenario)
-        end
+        finish_capture()
         manager.machine:exit()
     end
 end)
+
+if MANUAL_INPUT and emu.add_machine_stop_notifier ~= nil then
+    emu.add_machine_stop_notifier(function()
+        finish_capture()
+    end)
+elseif MANUAL_INPUT and emu.register_stop ~= nil then
+    emu.register_stop(function()
+        finish_capture()
+    end)
+end
