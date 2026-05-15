@@ -136,8 +136,10 @@ multi-rotta in `packages/engine/test/playable-live-routes.test.ts`: prima
 rampa, lower bridge, lower worm loops e input misto pseudo-random partono dal
 seed manuale `manual_level1_start` e verificano a ogni tick che lo scroll non
 scappi, il PF resti popolato e la biglia non finisca bloccata nello state-1
-tumble. Questo copre in automatico i sintomi gameplay residui segnalati durante
-la prova manuale.
+tumble. La rotta lower-bridge misura ora il campo posizione reale `obj0.x`
+(`obj0+0x0C`) per evitare falsi positivi sul progresso oltre il ponte. Questo
+copre in automatico i sintomi gameplay residui segnalati durante la prova
+manuale.
 
 **Checkpoint playable timeout rebuild (2026-05-15):** il percorso no-input
 tardo e' stato confrontato con MAME in finestre temporanee f4100/f4250:

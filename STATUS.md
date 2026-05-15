@@ -1,7 +1,24 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (scripted playable route capture)
+**Ultimo update:** 2026-05-15 (playable route X guard)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable route X guard
+
+QA notturno ha trovato una debolezza nella guardia lower-bridge: il test diceva
+di verificare `obj0.x`, ma leggeva il primo long dello struct oggetto invece
+del campo posizione reale `obj0+0x0C`.
+
+Fix:
+
+- `playable-live-routes.test.ts` ora misura `readLongBE(workRam, 0x18 + 0x0C)`
+  per il progresso del ponte basso. La rotta continua a superare la soglia, ma
+  ora l'assert copre davvero la posizione X della biglia e non un campo
+  laterale.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
 
 ## 2026-05-15 — Scripted playable route capture
 
