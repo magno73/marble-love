@@ -34,6 +34,7 @@ interface CliArgs {
   plan: string;
   json: boolean;
   mameNeutralDir: string | undefined;
+  distinctFrom: string[];
   allSnapshots: boolean;
   targetSegment: number | undefined;
   onlyCandidates: boolean;
@@ -96,10 +97,18 @@ interface MamePairSummary {
   responsive: boolean;
 }
 
+interface PlayfieldReferenceSummary {
+  path: string;
+  diffs: number;
+  checksum: number;
+  exactMatch: boolean;
+}
+
 interface AuditSummary {
   path: string;
   sourcePath: string;
   initial: SeedSummary;
+  playfieldReferences: PlayfieldReferenceSummary[];
   mamePair: MamePairSummary | undefined;
   preserved: ComparisonSummary;
   manualRearm: ComparisonSummary;
@@ -128,6 +137,7 @@ const DEFAULT_PATHS = [
 ];
 
 const DEFAULT_PLAN = "R:300,D:300,L:300,U:300,DR:300,DL:300,N:400";
+const DEFAULT_DISTINCT_FROM = ["packages/web/public/scenarios/playable/manual_level1_start.seed.json"];
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
   U: [0, -8],
@@ -153,6 +163,10 @@ Options:
   --mame-neutral-dir DIR
                 Compare each input scenario against DIR/<same filename> from
                 a neutral MAME capture before doing the TS rearm probe
+  --distinct-from PATH
+                Reject practice promotion when playfieldRam is byte-identical
+                to this reference seed/scenario snapshot. Can be repeated.
+                Defaults to ${DEFAULT_DISTINCT_FROM[0]}.
   --all-snapshots
                 Audit every snapshot in each scenario file instead of only
                 the first seed frame. Useful for manual/playback tail captures.
@@ -175,6 +189,7 @@ function parseArgs(): CliArgs {
   let plan = DEFAULT_PLAN;
   let json = false;
   let mameNeutralDir: string | undefined;
+  const distinctFrom: string[] = [];
   let allSnapshots = false;
   let targetSegment: number | undefined;
   let onlyCandidates = false;
@@ -189,6 +204,10 @@ function parseArgs(): CliArgs {
       const next = args[++i];
       if (next === undefined) throw new Error("--mame-neutral-dir requires a value");
       mameNeutralDir = next;
+    } else if (arg === "--distinct-from") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--distinct-from requires a value");
+      distinctFrom.push(next);
     } else if (arg === "--all-snapshots") {
       allSnapshots = true;
     } else if (arg === "--target-segment") {
@@ -216,6 +235,7 @@ function parseArgs(): CliArgs {
     plan,
     json,
     mameNeutralDir,
+    distinctFrom: distinctFrom.length > 0 ? distinctFrom : DEFAULT_DISTINCT_FROM,
     allSnapshots,
     targetSegment,
     onlyCandidates,
@@ -237,6 +257,23 @@ function nonzero(bytes: Uint8Array): number {
   let total = 0;
   for (const value of bytes) if (value !== 0) total++;
   return total;
+}
+
+function checksumBytes(bytes: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    sum = (sum + (bytes[i] ?? 0) * (i + 1)) >>> 0;
+  }
+  return sum >>> 0;
+}
+
+function countDiffs(a: Uint8Array, b: Uint8Array): number {
+  if (a.length !== b.length) throw new Error(`cannot diff buffers with different lengths ${a.length}/${b.length}`);
+  let diffs = 0;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) diffs++;
+  }
+  return diffs;
 }
 
 function readWordBE(bytes: Uint8Array, off: number): number {
@@ -314,11 +351,7 @@ function loadSeeds(path: string, allSnapshots: boolean): LoadedSeed[] {
 function regionDiffs(activeHex: string, neutralHex: string, expectedLength: number, label: string): number {
   const active = hexToBytes(activeHex, expectedLength, `${label} active`);
   const neutral = hexToBytes(neutralHex, expectedLength, `${label} neutral`);
-  let diffs = 0;
-  for (let i = 0; i < active.length; i++) {
-    if (active[i] !== neutral[i]) diffs++;
-  }
-  return diffs;
+  return countDiffs(active, neutral);
 }
 
 function compareMamePair(activeSeed: SeedJson, neutralPath: string, neutralSeed: SeedJson): MamePairSummary {
@@ -494,14 +527,32 @@ function compareRoute(rom: RomImage, seed: SeedJson, plan: readonly string[], ma
   return { active, neutral, diffX, diffY, responsive, stable };
 }
 
+function comparePlayfieldReferences(seed: LoadedSeed, references: LoadedSeed[]): PlayfieldReferenceSummary[] {
+  const seedPlayfield = hexToBytes(seed.seed.playfieldRam, 0x2000, "seed playfieldRam");
+  return references
+    .filter((reference) => reference.label !== seed.label)
+    .map((reference) => {
+      const referencePlayfield = hexToBytes(reference.seed.playfieldRam, 0x2000, "reference playfieldRam");
+      const diffs = countDiffs(seedPlayfield, referencePlayfield);
+      return {
+        path: reference.label,
+        diffs,
+        checksum: checksumBytes(referencePlayfield),
+        exactMatch: diffs === 0,
+      };
+    });
+}
+
 function auditPath(
   rom: RomImage,
   loaded: LoadedSeed,
   plan: readonly string[],
   neutral: NeutralSeed | undefined,
+  playfieldReferences: LoadedSeed[],
 ): AuditSummary {
   const seed = loaded.seed;
   const initial = seedSummary(seed);
+  const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences);
   const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
   const preserved = compareRoute(rom, seed, plan, false);
   const manualRearm = compareRoute(rom, seed, plan, true);
@@ -510,6 +561,11 @@ function auditPath(
   const reasons: string[] = [];
 
   if (initial.pfCount <= 4_000) reasons.push("playfield is not fully populated at seed frame");
+  for (const reference of playfieldReferenceSummaries) {
+    if (reference.exactMatch) {
+      reasons.push(`playfield is byte-identical to reference ${reference.path}`);
+    }
+  }
   if (initial.main !== 0 && initial.mode === 2) reasons.push("seed starts in presentation/high-score mode");
   if (initial.playerState !== 0) reasons.push(`player starts in state ${initial.playerState}, not settled playable state 0`);
   if (!preserved.responsive) reasons.push("preserved dispatcher active route matches neutral route");
@@ -527,6 +583,7 @@ function auditPath(
 
   const isManualCandidate =
     initial.pfCount > 4_000 &&
+    playfieldReferenceSummaries.every((reference) => !reference.exactMatch) &&
     initial.playerState === 0 &&
     manualRearm.responsive &&
     manualRearm.stable &&
@@ -542,6 +599,7 @@ function auditPath(
     path: loaded.label,
     sourcePath: loaded.sourcePath,
     initial,
+    playfieldReferences: playfieldReferenceSummaries,
     mamePair,
     preserved,
     manualRearm,
@@ -562,6 +620,12 @@ function printSummary(summary: AuditSummary): void {
       `seg=${init.segment} state=${init.playerState} timer=${init.timer} scroll=${init.scrollWord} ` +
       `xy=${fmt(init.x)},${fmt(init.y)} pf=${init.pfCount}`,
   );
+  for (const reference of summary.playfieldReferences) {
+    console.log(
+      `  playfield ref: exact=${reference.exactMatch ? "yes" : "no "} diffs=${reference.diffs} ` +
+        `checksum=${reference.checksum} path=${reference.path}`,
+    );
+  }
   if (summary.mamePair !== undefined) {
     const pair = summary.mamePair;
     console.log(
@@ -597,13 +661,16 @@ function main(): void {
   const plan = expandRouteSpec(args.plan);
   const rom = busNs.emptyRomImage();
   applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+  const playfieldReferences = args.distinctFrom.flatMap((path) => loadSeeds(path, false));
 
   const loadedSeeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
   const filteredSeeds =
     args.targetSegment === undefined
       ? loadedSeeds
       : loadedSeeds.filter((seed) => seedSummary(seed.seed).segment === args.targetSegment);
-  const summaries = filteredSeeds.map((seed) => auditPath(rom, seed, plan, loadNeutralSeed(args, seed)));
+  const summaries = filteredSeeds.map((seed) =>
+    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences),
+  );
   const visibleSummaries = args.onlyCandidates
     ? summaries.filter((summary) => summary.verdict !== "diagnostic-only")
     : summaries;

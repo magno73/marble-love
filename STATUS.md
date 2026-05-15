@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (level-2 candidate withdrawn)
+**Ultimo update:** 2026-05-15 (verified practice seeds for startLevel 2..5)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — verified practice seeds for startLevel 2..5
+
+Nuova cattura MAME coin/start reale dalla rotta:
+`D:171,R:206,L:188,DL:107,BR:260,R:250,U:700,UR:318,R:250,U:250,DL:600,N:12000`.
+La stessa sessione e' stata ricatturata anche neutral per confrontare il path
+active-vs-neutral.
+
+Seed promossi a practice start:
+
+- `manual_level2_start` da MAME f15000, segmento 4.
+- `manual_level3_start` da MAME f16500, segmento 5.
+- `manual_level4_start` da MAME f18100, segmento 6.
+- `manual_level5_start` da MAME f19500, segmento 7.
+
+Criteri verificati prima del wiring:
+
+- PF/terrain non byte-identico a `manual_level1_start` (il falso f6000 viene
+  ancora bocciato dal probe).
+- Coppia MAME active/neutral responsive sullo stesso frame sorgente.
+- Dispatcher MAME preservato resta active == neutral, quindi non viene scambiato
+  per prova di controllo manuale.
+- Dispatcher manuale browser/TS riarmato diverge da neutral, resta su
+  `main=0/mode=0`, PF pieno, timer vivo e scroll bounded.
+- Browser smoke `startLevel=2..5&levelTime=180&debugObjects=1`: nessun overlay
+  "seed non verificato", canvas non blank, timer vivo; gli screenshot dei 4
+  start hanno hash distinti.
+
+Nota: questi seed abilitano il playtest diretto dei livelli 2..5. Non sono
+ancora prova di completamento manuale level 2 -> 3 -> 4 -> 5; quella resta il
+prossimo step QA.
+
+Validazione:
+
+- `npx vitest run packages/web/test/practice-level.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS (21 test).
 
 ## 2026-05-15 — level-2 candidate withdrawn
 

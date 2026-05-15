@@ -5,10 +5,10 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "../src/practice
 describe("practice level query", () => {
   it("maps only proven playable practice levels to playable seeds", () => {
     expect(playableSeedForStartLevel(parseStartLevelParam("1"))).toBe("manual_level1_start");
-    expect(playableSeedForStartLevel(parseStartLevelParam("2"))).toBeUndefined();
-    expect(playableSeedForStartLevel(parseStartLevelParam("3"))).toBeUndefined();
-    expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBeUndefined();
-    expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBeUndefined();
+    expect(playableSeedForStartLevel(parseStartLevelParam("2"))).toBe("manual_level2_start");
+    expect(playableSeedForStartLevel(parseStartLevelParam("3"))).toBe("manual_level3_start");
+    expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBe("manual_level4_start");
+    expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBe("manual_level5_start");
   });
 
   it("rejects unsupported levels", () => {
