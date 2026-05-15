@@ -340,3 +340,16 @@ export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTi
   rngClearFrameCounter(s.rng);
   runMainTick(s, opts as MainTickOptions);
 }
+
+// ─── Sound subsystem (cherry-pick da feature/sound-chip C4-C10) ─────────────
+export {
+  type SoundChip,
+  type SoundChipConfig,
+  createSoundChip,
+  tickCycles,
+  submitCommand,
+  drainReplyEvents,
+  getRegisterShadow,
+  resetSoundChip,
+} from "./m6502/sound-chip.js";
+export { SOUND_CYCLES_PER_FRAME } from "./m6502/sound-clock.js";

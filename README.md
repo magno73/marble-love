@@ -431,6 +431,42 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |
 
+## Sound chip end-to-end (cherry-pick da `feature/sound-chip`)
+
+Audio subsystem in 11 file engine + 3 test + 1 CLI + 2 web + 1 worklet,
+integrato in `?sound=1` query param. 6502 sound CPU + YM2151 + POKEY + mailbox
+68K↔6502 + Web Audio renderer.
+
+| Phase | File | Test |
+|---|---|---|
+| **C2 M6502 core** | `src/m6502/{addressing,bus,cpu,cycle-table,opcodes,regfile}.ts` | 65x02 Tom Harte SingleStepTests PASS |
+| **C4 mailbox + MMU + ROM** | `src/m6502/{mailbox,sound-mmu,sound-rom}.ts` | 19/19 PASS (incl. smoke con ROM reale 136033.421/.422) |
+| **C5 YM2151** | `src/audio/ym2151.ts` (Phase 5 V2 register-state parity) | 10/10 PASS |
+| **C6 POKEY** | `src/audio/pokey.ts` (Phase 6 V2 register-state parity) | 11/11 PASS |
+| **C7 SoundChip facade** | `src/m6502/{sound-chip,sound-clock}.ts` | 9/10 PASS smoke (NMI/IRQ edge-triggered) |
+| **C8 probe-sound-diff** | `packages/cli/src/probe-sound-diff.ts` | 387B audioRam + 2 YM + 1 POKEY divergent @ f600 (V2 Timer A/B stub) |
+| **C9 Web Audio renderer** | `packages/web/src/sound-renderer.ts` + `public/sound-worklet.js` | 13/13 PASS pure logic (ymKcToFreq, pokeyAudfToFreq, ...) |
+| **C10 Wire `?sound=1`** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" + ticker hook |
+
+**62/64 sound test PASS** (2 skip = sentinel ROM-assenti). Build PWA 795KB.
+
+**V1 MVP audio**: 8 YM2151 voices (sine + ADSR envelope follower) + 4 POKEY
+voices (square / white noise) sintetizzate da AudioWorklet a sample rate
+AudioContext default. Bridge `sound-renderer.ts` polla `chip.ym2151.regs` +
+`chip.pokey.writeRegs` ogni frame e posta eventi `ym_voice` / `pokey_voice`.
+
+**V3 sample-level chip-perfect deferito** (PRD Phase 7 V1 explicit "POKEY/
+YM2151 chip-perfect rimandato a V2"): envelope DR/AR/SR/RR per 32 operatori
+FM + 8 algoritmi FM + LFSR poly 17-bit + Timer A/B counter con IRQ wire al
+6502. Closure 0-byte register-state richiede V3.
+
+```
+http://localhost:5173/?autoLoad=1&play=1&sound=1
+# 1. Click 🔊 Enable Audio (top-right, richiesto da AudioContext user gesture)
+# 2. Premi 5 (coin) + Enter (START1) → biglia spawn
+# 3. Muovi con mouse / WASD / frecce. Tones audible su YM2151/POKEY writes.
+```
+
 ## Quickstart sviluppo
 
 ```bash

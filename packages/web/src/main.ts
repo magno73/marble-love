@@ -26,6 +26,10 @@ import {
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
+import {
+  createSoundChip, tickCycles as tickSoundCycles, SOUND_CYCLES_PER_FRAME,
+} from "@marble-love/engine";
+import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
@@ -38,6 +42,7 @@ const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
+const enableSound = searchParams.get("sound") === "1";
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -302,6 +307,44 @@ async function startGame(
   let manualPlayStarted = false;
   let demoFrame = 0;
 
+  // ─── Sound chip + Web Audio renderer (?sound=1) ───────────────────────────
+  // V1 MVP audio: SoundChip 6502+YM2151+POKEY in tick parallelo, renderer polla
+  // register shadow → AudioWorklet sintetizza tones (sine + square + noise).
+  // Cherry-pick da feature/sound-chip. AudioContext richiede user gesture →
+  // pulsante UI "Enable Audio".
+  let soundChip: ReturnType<typeof createSoundChip> | undefined;
+  let soundRenderer: SoundRenderer | undefined;
+  if (enableSound && rom !== undefined) {
+    const soundRomFull = rom.sound;
+    if (soundRomFull !== undefined && soundRomFull.length >= 0x10000) {
+      const rom421 = soundRomFull.slice(0x8000, 0xc000);
+      const rom422 = soundRomFull.slice(0xc000, 0x10000);
+      soundChip = createSoundChip({ roms: { rom421, rom422 } });
+      console.log("[sound] SoundChip ready, click 'Enable Audio' to start");
+
+      const btnAudio = document.createElement("button");
+      btnAudio.textContent = "🔊 Enable Audio";
+      btnAudio.style.cssText =
+        "position:fixed;top:10px;right:10px;z-index:9999;padding:8px 12px;" +
+        "background:#1a1a1a;color:#fff;border:1px solid #444;cursor:pointer;";
+      btnAudio.addEventListener("click", async () => {
+        try {
+          soundRenderer = await createSoundRenderer();
+          await soundRenderer.start();
+          btnAudio.textContent = "🔊 Audio ON";
+          btnAudio.disabled = true;
+          console.log("[sound] Web Audio started");
+        } catch (e) {
+          console.warn("[sound] start failed:", e);
+          btnAudio.textContent = "🔊 Audio failed";
+        }
+      });
+      document.body.appendChild(btnAudio);
+    } else {
+      console.warn("[sound] rom.sound non disponibile, audio disabilitato");
+    }
+  }
+
   // ─── Manual scroll override (debug aid) ───────────────────────────────────
   // Until the in-game state machine wires the PF scroll MMIO writes
   // autonomously, expose keyboard scroll for level exploration:
@@ -445,6 +488,14 @@ async function startGame(
         runMainLoopBody: mainLoopBody,
       };
       tick(s, tickOptions);
+      // Sound chip tick: avanza 6502 + chip per 1 frame (29830 cycle 6502).
+      // Renderer polla register shadow e aggiorna le voci AudioWorklet.
+      if (soundChip !== undefined) {
+        tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
+        if (soundRenderer !== undefined && soundRenderer.isRunning()) {
+          soundRenderer.update(soundChip);
+        }
+      }
     }
     frameCount += 1;
     // DEBUG: expose state to window globals every frame for headless inspection
