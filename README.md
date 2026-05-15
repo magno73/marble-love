@@ -173,6 +173,20 @@ playable-live-routes, targeted vitest bundle, typecheck, playable replay 3/3,
 warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`,
 `14501 <= 16000` con la mask storica) restano PASS.
 
+**Checkpoint segment-4 live PF scroll (2026-05-15):** una rotta manual-like
+post-lower-bridge confrontata con MAME (`route_3600`, f5645, `0x3e4=4`) ha
+mostrato che TS applicava `FUN_26D8A` una vblank troppo presto anche nel
+segmento live successivo: `videoScrollY` era `189` mentre MAME era ancora
+`188` a f+1. `main-tick.ts` ora usa lo stesso defer gia' validato per
+`0x3e4=2` anche su `0x3e4=4`, solo con `runMainLoopBody:true` e input P1
+attivo; fuori da quei casi il path resta immediato. Aggiunte regression in
+`main-tick.test.ts` per segmento 4 deferred e segmento 0 immediate. Il replay
+temporaneo `route_3600` sposta il primo fail da f+1 a f+3 con PF/scroll e
+coordinate marble agganciate; il residuo resta sprite/HUD/cache. Targeted
+vitest bundle, typecheck, playable replay 3/3, warm-seed 15/15, web build e
+long demo fresh step10 no-stack (`15275 <= 16000`, `14501 <= 16000`) restano
+PASS.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

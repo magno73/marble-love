@@ -1,7 +1,53 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (FUN_253EC state-8 countdown)
+**Ultimo update:** 2026-05-15 (segment-4 live PF scroll cadence)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Segment-4 live PF scroll cadence
+
+QA notturno su rotte manual-like piu' lunghe ha isolato un drift reale dopo il
+lower bridge: non era un nuovo scroll runaway, ma la stessa cadenza
+`FUN_26D8A` gia' vista all'inizio del playable che ricompare nel segmento live
+successivo.
+
+Root cause:
+
+- La rotta MAME temporanea `/tmp/marble_case16_probe/scenarios/route_3600.json`
+  parte a f5645 in playable segment flag `0x4003e4=4`, con input P1 attivo e
+  PF pieno (`5470`).
+- Prima del fix TS applicava il side-effect di `FUN_26D8A` nello stesso vblank:
+  a f+1 `videoScrollY` diventava `189` mentre MAME restava `188`, e il primo
+  fail visibile del replay arrivava subito a f+1.
+- Il defer precedente era ristretto a `0x3e4==2`; il trace mostra che anche
+  `0x3e4==4` espone il trigger un vblank prima degli effetti visibili
+  scroll/MO quando c'e' movimento trackball live.
+
+Fix:
+
+- `main-tick.ts` ora differisce il PF scroll update in gameplay live con input
+  P1 attivo per segmenti `0x3e4==2` e `0x3e4==4`.
+- La modifica resta confinata a `runMainLoopBody:true` + input P1 live; fuori
+  da quei segmenti il path `FUN_26D8A` resta immediato.
+- `main-tick.test.ts` aggiunge due regressioni: segmento 4 deferred e segmento
+  0 immediate.
+
+Evidenza/validazione:
+
+- `route_3600` non e' ancora uno scenario full-pass: dopo il fix il primo fail
+  si sposta da f+1 a f+3 e il residuo e' sprite/HUD/cache (`PF=0`, scroll e
+  coordinate marble exact nei primi frame), quindi il prossimo drill resta
+  sull'ordine sprite/AV latch, non su camera/collisione.
+- `npx vitest run packages/engine/test/main-tick.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- Targeted web/engine vitest bundle PASS.
+- `npx tsc -b --pretty false` PASS.
+- Playable replay 3/3 PASS (`80/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- `npm --prefix packages/web run build` PASS.
+- Long demo fresh step10 no-stack invariato:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `15275 <= 16000` con scenario-mask; `14501 <= 16000` con converge-mask
+  storica.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — FUN_253EC state-8 countdown
 
