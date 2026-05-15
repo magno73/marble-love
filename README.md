@@ -141,6 +141,19 @@ tumble. La rotta lower-bridge misura ora il campo posizione reale `obj0.x`
 sul progresso oltre il ponte. Questo copre in automatico i sintomi gameplay
 residui segnalati durante la prova manuale.
 
+**Checkpoint FUN_160F6 ROM speed table (2026-05-15):** il default path di
+`helper121B8` chiamava `stateDispatch160F6` senza reader ROM, quindi la speed
+table a `0x2398c` veniva letta come zero nel replay live profondo. Ora il
+dispatcher riceve `rom.program` anche senza override di test; aggiunta
+regression in `helper-121b8.test.ts`. Nel drill temporaneo
+`/tmp/marble_route_deep_scenarios/route_3600.json`, `obj0.z/vz/state36/state58`
+sono exact contro MAME a f3627..f3657 e il primo fail resta solo
+sprite/HUD/cache (`Sprite/HUD/WORK 68/11/50 -> 60/1/30`, PF=0). `route_3000`
+resta PASS @100, mentre `route_2440` resta il vecchio rumore su pagina MO
+inattiva. Targeted vitest bundle, typecheck, playable replay 3/3, warm-seed
+15/15, web build e long demo fresh step10 no-stack (`15267 <= 16000`,
+`14493 <= 16000` con la mask storica) restano PASS.
+
 **Checkpoint playable timeout rebuild (2026-05-15):** il percorso no-input
 tardo e' stato confrontato con MAME in finestre temporanee f4100/f4250:
 `late_4100` PASS @91 e `late_4250` PASS @100 con trace reale. La breve finestra

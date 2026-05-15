@@ -543,4 +543,33 @@ describe("helper121B8 (FUN_000121B8)", () => {
     // bounce flag non-zero → exits at 0x12740 before vectorScale
     expect(scale).not.toHaveBeenCalled();
   });
+
+  it("default FUN_160F6 wiring reads the ROM speed table", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const r = state.workRam;
+    const playerOff = 0x18;
+    const zStart = 0x00100000;
+
+    writeLongBE(r, playerOff + PZ, zStart);
+    r[playerOff + SB] = 0x00; // charcode whitelist
+    r[0x66c] = 1; // left input active
+    writeWordBE(r, 0x674, 3); // current left velocity
+    rom.program[0x2398c + 2] = 2; // bestMag=2, so z += (3 - 2) << 16
+
+    const subs = noopSubs();
+    delete subs.fun_160f6;
+    subs.fun_1cc62 = () => zStart;
+    subs.fun_1bab2 = (s) => {
+      writeWordBE(s.workRam, 0x696, 0);
+      writeWordBE(s.workRam, 0x698, 0);
+      writeWordBE(s.workRam, 0x69e, 2); // tile X -> table index 2
+      writeWordBE(s.workRam, 0x6a0, 0);
+    };
+
+    helper121B8(state, rom, 0x00400018, subs);
+
+    expect(readLongBE(r, playerOff + PZ)).toBe(zStart + 0x10000);
+    expect(r[playerOff + BOUNCE]).toBe(1);
+  });
 });
