@@ -280,4 +280,35 @@ describe("playable live route smoke", () => {
     expect(state.videoScrollY).toBeLessThanOrEqual(5);
     expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
+
+  it("refreshes player terrain shape records through FUN_264AA mode 0", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let sawTerrainShape = false;
+
+    for (const step of expand([["D", 180], ["R", 80]])) {
+      const [screenDx, screenDy] = step === "D" ? [0, 8] : [8, 0];
+      p1X = (p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff;
+      p1Y = (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff;
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      sawTerrainShape ||= readWordBE(state.workRam, 0x18 + 0x38) === 0x7500;
+      expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
+      expect(state.videoScrollY).toBeLessThanOrEqual(90);
+    }
+
+    expect(sawTerrainShape).toBe(true);
+  });
 });

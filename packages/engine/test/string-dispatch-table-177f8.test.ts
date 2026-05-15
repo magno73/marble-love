@@ -202,6 +202,26 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c0);
   });
 
+  it("legge anche la finestra ROM slapstic quando la string table punta sopra 0x80000", () => {
+    const { state, rom, pfRam } = makeFreshFixtures();
+    setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
+    setWord(state.workRam, 0x1000 + 0x18, 100);
+
+    // Live Marble level 1 can point the string table into the slapstic window
+    // (for example 0x81874). That is still readable program ROM.
+    setLong(state.workRam, WR_STRING_TABLE_PTR_ABS - WORK_RAM_BASE, 0x80000);
+    rom.program[0x80000] = 0x20;
+    rom.program[0x80001] = 0x00;
+    rom.program[0x24176] = 0x20;
+    rom.program[0x24177] = 0x00;
+    setWord(state.workRam, 0x478, 0x0100);
+
+    const res = stringDispatchTable177F8Detailed(state, rom, pfRam, 0, 0, 0);
+    expect(res.earlyExit).toBeNull();
+    expect(res.normalPath).toBe("top4_short");
+    expect(res.d0Word).toBe(0x00c0);
+  });
+
   it("path 'no_bit11' con pixel != 0: produce D0.w deterministico", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);

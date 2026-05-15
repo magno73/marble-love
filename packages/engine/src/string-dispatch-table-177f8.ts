@@ -242,7 +242,7 @@ function readByteAbs(
   addr: number,
 ): number {
   const a = addr >>> 0;
-  if (a < 0x80000) return rom.program[a] ?? 0;
+  if (a < rom.program.length) return rom.program[a] ?? 0;
   if (a >= WORK_RAM_BASE_ADDR && a < WORK_RAM_BASE_ADDR + WORK_RAM_SIZE) {
     return state.workRam[a - WORK_RAM_BASE_ADDR] ?? 0;
   }

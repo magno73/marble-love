@@ -1,7 +1,51 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (FUN_160F6 ROM speed table wiring)
+**Ultimo update:** 2026-05-15 (FUN_264AA mode0 shape emit)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — FUN_264AA mode0 shape emit
+
+QA notturno sulla rotta playable profonda ha chiuso il residuo sprite attivo
+che restava dopo il wiring della speed table: la differenza era nella
+generazione dei record shape della biglia, non in camera/collisione.
+
+Root cause:
+
+- Nel replay MAME temporaneo
+  `/tmp/marble_route_deep_scenarios/route_3600.json`, MAME aggiorna
+  `obj0+0x38..0x4f` a f3653..f3657 tramite il path mode0 di `FUN_264AA`;
+  TS invece puliva solo i record e lasciava shape stale/assenti.
+- Il primo port del ramo mode0 restava comunque muto perche'
+  `stringDispatchTable177F8` scartava le letture ROM sopra `0x80000`; il
+  playable usa una string-table pointer nella finestra slapstic (`0x81874`).
+
+Fix:
+
+- `FUN_264AA` ora implementa il ramo mode0/mode1 disassemblato: init da
+  `obj+0x1e`, branch speciale da `0x26760..0x26868`, emit dei record a
+  `obj+0x38`, gate/tail status e copertura mask.
+- `stringDispatchTable177F8` ora legge l'intero `rom.program`, inclusa la
+  finestra slapstic, invece di troncare artificialmente a `0x80000`.
+- Aggiunte regressioni mirate per la lettura slapstic della string table e per
+  il refresh dei player terrain shape records via mode0.
+
+Evidenza/validazione:
+
+- `route_3600` passa 100/100 contro MAME; `obj0+0x38` e `D7` sono exact a
+  f3653/f3655/f3657.
+- `route_3000` resta PASS @100; `route_2440` resta il vecchio drift sulla
+  pagina MO inattiva, non un nuovo errore gameplay.
+- `npx tsc -b --pretty false` PASS.
+- Targeted vitest bundle PASS (54 test), inclusi `helper-121b8`,
+  `playable-live-routes`, `main-tick`, `playable-respawn-state1` e
+  `string-dispatch-table-177f8`.
+- Playable replay 3/3 PASS (`78/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- `npm --prefix packages/web run build` PASS.
+- Long demo fresh step10 no-stack sampled sum resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `14989 <= 16000`.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — FUN_160F6 ROM speed table wiring
 
