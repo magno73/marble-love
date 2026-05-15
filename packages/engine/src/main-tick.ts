@@ -75,13 +75,14 @@ import { particleBounce } from "./particle-bounce.js";
 import { CYCLES_PER_VBLANK } from "./m68k/cycle-table.js";
 import { addCpuCycles, resetCpuCycles } from "./m68k/clock.js";
 import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
-import { as_u8, as_u32, raw } from "./wrap.js";
+import { as_u8, as_u16, as_u32, raw } from "./wrap.js";
 import { advanceMode0Init11452Async, advanceMode2Init11452Async } from "./mode2-init-11452-async.js";
 import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { renderString286EE } from "./render-string-286ee.js";
 import { formatNumber3874 } from "./string-format.js";
 import { renderStringChain3520 } from "./render-string-chain-3520.js";
+import { clearAlphaRows } from "./alpha-tilemap.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -179,7 +180,8 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const asyncInitActiveAtTickStart =
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
-    state.clock.mode0Init11452Stage !== undefined;
+    state.clock.mode0Init11452Stage !== undefined ||
+    state.clock.mainThreadWaitDelay !== undefined;
   // Some attract segments hold the mode0 refresh body for an extra staged
   // dwell; MAME keeps the presentation object frozen until the delayed 10504
   // handoff lands.
@@ -203,6 +205,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const mainThreadBlockedAtTickStart =
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
+    state.clock.mainThreadWaitDelay !== undefined ||
     (state.clock.mode0Init11452Stage !== undefined && !mode0AsyncRefreshAtTickStart);
 
   // ─── FUN_28788 prefix (scroll/MMIO setup) ────────────────────────────
@@ -498,6 +501,19 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     } else {
       tilemapBlit17044(rom, state.playfieldRam);
       state.clock.mode2TilemapBlitDelay = undefined;
+    }
+  }
+  if (state.clock.mainThreadWaitDelay !== undefined) {
+    if (state.clock.mainThreadWaitDelay > 0) {
+      state.workRam[0x16] = 0;
+      state.workRam[0x3f0] = ((state.workRam[0x3f0] ?? 0) + 1) & 0xff;
+      state.clock.mainThreadWaitDelay = as_u16(state.clock.mainThreadWaitDelay - 1);
+    } else {
+      if (state.clock.mainThreadWaitClearRows !== undefined) {
+        clearAlphaRows(state, rom, state.clock.mainThreadWaitClearRows);
+        state.clock.mainThreadWaitClearRows = undefined;
+      }
+      state.clock.mainThreadWaitDelay = undefined;
     }
   }
   runWarmResidualReplayTick(state);

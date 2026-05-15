@@ -7,6 +7,7 @@ import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
 import { tick } from "../src/index.js";
 import { emptyGameState, type GameState } from "../src/state.js";
+import { getAlphaTileAddr } from "../src/alpha-tilemap.js";
 
 interface PlayableSeed {
   slapsticBank?: number;
@@ -33,6 +34,24 @@ function hexToBytes(hex: string, expectedLength: number): Uint8Array {
 function nonzero(bytes: Uint8Array): number {
   let total = 0;
   for (const b of bytes) if (b !== 0) total++;
+  return total;
+}
+
+function nonzeroAlphaClearRows(
+  state: GameState,
+  rom: ReturnType<typeof emptyRomImage>,
+  startRow: number,
+): number {
+  let total = 0;
+  for (let row = startRow & 0xff; row !== 0x1e; row = (row + 1) & 0xff) {
+    let off = getAlphaTileAddr(state, rom, 3, row) - 0xa03000;
+    for (let i = 0; i < 0x24; i++) {
+      if ((state.alphaRam[off] ?? 0) !== 0 || (state.alphaRam[off + 1] ?? 0) !== 0) {
+        total++;
+      }
+      off += 2;
+    }
+  }
   return total;
 }
 
@@ -602,20 +621,21 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).toBe(0);
   });
 
-  it("time-out transition rebuilds the playfield instead of staying empty", () => {
+  it("time-out transition holds the out-of-time summary before any attract rebuild", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
     const state = loadPlayableState(rom);
 
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
-    let emptyStart = -1;
-    let emptyEnd = -1;
-    let recoveredAt = -1;
-    let sawTimedMode2 = false;
-    let sawMode0Rebuild = false;
+    let summaryFrame = -1;
+    let maxSummaryDelay = 0;
+    let maxSummaryAlphaRows = 0;
+    let sawMode2DuringSummary = false;
+    let sawMode0RebuildDuringSummary = false;
+    let sawEmptyPlayfieldDuringSummary = false;
 
-    for (let i = 0; i < 4320; i++) {
+    for (let i = 0; i < 3780; i++) {
       tick(state, {
         rom,
         runMainLoopBody: true,
@@ -629,26 +649,48 @@ describe("playable live route smoke", () => {
       const pfCount = nonzero(state.playfieldRam);
       const mainState = readWordBE(state.workRam, 0x390);
       const mode = readWordBE(state.workRam, 0x392);
-      sawTimedMode2 ||= mainState === 1 && mode === 2;
-      sawMode0Rebuild ||= mainState === 1 && mode === 0;
+      const waitDelay = state.clock.mainThreadWaitDelay;
 
-      if (pfCount === 0) {
-        if (emptyStart < 0) emptyStart = i;
-        emptyEnd = i;
-      } else if (emptyStart >= 0 && recoveredAt < 0 && pfCount > 4000) {
-        recoveredAt = i;
+      if (waitDelay !== undefined) {
+        if (summaryFrame < 0) summaryFrame = i;
+        maxSummaryDelay = Math.max(maxSummaryDelay, waitDelay);
+        maxSummaryAlphaRows = Math.max(maxSummaryAlphaRows, nonzeroAlphaClearRows(state, rom, 0x14));
+        sawMode2DuringSummary ||= mainState === 1 && mode === 2;
+        sawMode0RebuildDuringSummary ||= mainState === 1 && mode === 0 && (state.workRam[0x3e4] ?? 0) === 0;
+        sawEmptyPlayfieldDuringSummary ||= pfCount === 0;
       }
     }
 
-    expect(sawTimedMode2).toBe(true);
-    expect(sawMode0Rebuild).toBe(true);
-    expect(emptyStart).toBeGreaterThanOrEqual(0);
-    expect(emptyEnd - emptyStart).toBeLessThanOrEqual(16);
-    expect(recoveredAt).toBeGreaterThan(emptyEnd);
-    expect(recoveredAt).toBeLessThanOrEqual(4320);
+    expect(summaryFrame).toBeGreaterThan(0);
+    expect(maxSummaryDelay).toBeGreaterThanOrEqual(170);
+    expect(maxSummaryAlphaRows).toBeGreaterThan(0);
+    expect(sawMode2DuringSummary).toBe(false);
+    expect(sawMode0RebuildDuringSummary).toBe(false);
+    expect(sawEmptyPlayfieldDuringSummary).toBe(false);
+    expect(readWordBE(state.workRam, 0x390)).toBe(2);
+    expect(readWordBE(state.workRam, 0x392)).toBe(0);
+    expect(readWordBE(state.workRam, 0x394)).toBe(1);
+    expect(state.workRam[0x3e4]).toBe(2);
+    expect(state.clock.mainThreadWaitDelay).toBeGreaterThan(0);
     expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
-    expect(state.videoScrollY).toBeLessThanOrEqual(5);
-    expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
+    expect(state.videoScrollY).toBe(0);
+    expect(state.workRam[0x18 + 0x18]).toBe(2);
+
+    for (let i = 0; i < 240 && state.clock.mainThreadWaitDelay !== undefined; i++) {
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+    }
+
+    expect(state.clock.mainThreadWaitDelay).toBeUndefined();
+    expect(state.clock.mainThreadWaitClearRows).toBeUndefined();
+    expect(nonzeroAlphaClearRows(state, rom, 0x14)).toBe(0);
   });
 
   it("guards a level-1 baseline and mapped level-2/3 timeout windows", () => {
@@ -811,7 +853,9 @@ describe("playable live route smoke", () => {
     expect(objDeltaX(5)).toBeGreaterThan(1_000_000);
     expect(objDeltaY(5)).toBeGreaterThan(1_000_000);
     expect(deathEvents).toBeGreaterThanOrEqual(5);
-    expect(recoveries).toBe(deathEvents);
+    // The route is a timeout/presentation stability ladder, so after the
+    // summary hold lands it may finish with one in-flight death still pending.
+    expect(recoveries).toBeGreaterThanOrEqual(deathEvents - 1);
     expect(deathSegments.has(2)).toBe(true);
     expect(deathSegments.has(4)).toBe(true);
     expect(deathSegments.has(5)).toBe(true);
@@ -826,7 +870,12 @@ describe("playable live route smoke", () => {
     expect(maxState6Run).toBeLessThanOrEqual(90);
     expect(maxScrollY).toBeLessThanOrEqual(360);
     expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
-    expect(state.workRam[0x18 + 0x1a]).toBe(0);
+    if (recoveries === deathEvents) {
+      expect(state.workRam[0x18 + 0x1a]).toBe(0);
+    } else {
+      expect(inDeath).toBe(true);
+      expect([4, 5]).toContain(state.workRam[0x18 + 0x1a]);
+    }
   });
 
   it("recovers from repeated live fall/death routes", () => {
