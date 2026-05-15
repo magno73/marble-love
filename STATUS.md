@@ -1,36 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (verified level-2 practice seed)
+**Ultimo update:** 2026-05-15 (level-2 candidate withdrawn)
 **Branch corrente:** `main`.
 
-## 2026-05-15 — Verified level-2 practice seed
+## 2026-05-15 — level-2 candidate withdrawn
 
-Nuovo seed playable verificato per `startLevel=2`:
-`packages/web/public/scenarios/playable/manual_level2_start.seed.json`.
+Follow-up dal playtest manuale: il candidato `manual_level2_start` non era un
+vero seed visuale di level 2 e viene ritirato.
 
-Evidenza:
+Finding:
 
 - Sorgente: route MAME coin/start reale dal boot, con input
   `D:171,R:206,L:188,DL:107,BR:260,R:250,U:700,UR:318,R:250,U:250,DL:600,N:4000`,
-  catturata a f6000 dopo completion level 1.
-- Stato seed: `main=0`, `mode=2`, level index `0x394=1`, segmento `0x3e4=1`,
-  player `state=0`, timer vivo, PF pieno e scroll iniziale 0.
-- Coppia MAME active/neutral sullo stesso frame diverge (`diffXY` nell'audit
-  >4M/>6M), quindi non e' una finestra demo/oracle autonoma.
-- Regression TS: `playable-live-routes.test.ts` carica il seed col dispatcher
-  preservato, senza rearm artificiale, e verifica active-vs-neutral divergence,
-  PF non vuoto, scroll bound e player stabile.
+  catturata a f6000 dopo completion level 1. Il frame era controllabile e con
+  timer vivo, ma non bastava come prova.
+- `manual_level2_start.playfieldRam` era byte-per-byte identica a
+  `manual_level1_start.playfieldRam` (`diff=0`, checksum identico
+  `1938611027`). Questo spiega perche' in browser `startLevel=2` sembrava lo
+  stesso livello.
+- Il criterio seed viene quindi rafforzato: oltre ad active-vs-neutral e timer
+  sano, un seed level 2..5 deve avere terreno/PF coerente col livello richiesto
+  e non identico al seed level 1 salvo prova MAME contraria.
 
 Modifiche:
 
-- `startLevel=2` ora mappa a `manual_level2_start`.
-- `startLevel=3..5` resta bloccato finche' non avremo seed equivalenti.
+- `startLevel=2` torna bloccato, come `startLevel=3..5`.
+- `manual_level2_start.seed.json` viene rimosso dal repo per evitare che venga
+  usato come practice seed.
 - I vecchi `level2_spawn`/`level3_spawn`/`level4_spawn`/`level5_spawn` restano
   drill oracle/demo e non sono seed practice.
 
 Validazione:
 
-- `npx vitest run packages/web/test/practice-level.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS (18 test).
+- `npx vitest run packages/web/test/practice-level.test.ts packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS.
 
 ## 2026-05-15 — Playable seed audit
 
@@ -56,8 +58,7 @@ classificare i candidati:
 
 Risultato immediato:
 
-- A questo punto dell'audit `manual_level1_start` era l'unico
-  `practice-seed` verificato; la voce successiva aggiunge `manual_level2_start`.
+- `manual_level1_start` resta l'unico `practice-seed` verificato.
 - I vecchi `level2_spawn`/`level3_spawn`/`level4_spawn`/`level5_spawn` restano
   `diagnostic-only`: col dispatcher preservato active == neutral e la sorgente
   e' gameplay/oracle, quindi non vanno cablati a `startLevel`.
@@ -70,8 +71,9 @@ Risultato immediato:
   MAME active/neutral e dal probe dispatcher manuale prima di entrare in
   `startLevel`.
 - Con coin/start post-boot, MAME entra in un path reale `main=0` e una rotta
-  trackball attiva diverge da neutral gia' nel level 1. Questo ha poi sbloccato
-  `manual_level2_start`; resta da ripetere lo stesso livello di prova per 3..5.
+  trackball attiva diverge da neutral gia' nel level 1. La cattura f6000 ha
+  mostrato che serve anche una prova PF/terrain distinta prima di cablare
+  `startLevel=2..5`.
 
 ## 2026-05-15 — levelTime scroll-target fix
 

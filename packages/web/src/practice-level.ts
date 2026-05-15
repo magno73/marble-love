@@ -2,7 +2,6 @@ const SUPPORTED_START_LEVELS = new Set([1, 2, 3, 4, 5]);
 
 const START_LEVEL_PLAYABLE_SEEDS = new Map<number, string>([
   [1, "manual_level1_start"],
-  [2, "manual_level2_start"],
 ]);
 
 export function parseStartLevelParam(raw: string | null): number | undefined {
