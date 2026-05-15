@@ -124,6 +124,58 @@ describe("playable live route smoke", () => {
       90,
       {},
     ],
+    [
+      "state-2 respawn recovery",
+      expand([
+        ["DL", 12],
+        ["D", 43],
+        ["UR", 9],
+        ["DR", 54],
+        ["U", 11],
+        ["N", 55],
+        ["BR", 8],
+        ["U", 17],
+        ["DL", 33],
+        ["D", 18],
+        ["N", 30],
+        ["BR", 13],
+        ["UL", 40],
+        ["N", 13],
+        ["R", 48],
+        ["D", 8],
+        ["BR", 25],
+        ["UR", 8],
+        ["U", 47],
+        ["N", 35],
+        ["DL", 40],
+        ["BR", 31],
+        ["UR", 8],
+        ["BR", 21],
+        ["DR", 25],
+        ["DL", 32],
+        ["R", 60],
+        ["DR", 18],
+        ["R", 20],
+        ["UL", 46],
+        ["L", 40],
+        ["UL", 13],
+        ["DL", 43],
+        ["L", 107],
+        ["DR", 55],
+        ["UR", 23],
+        ["D", 44],
+        ["N", 19],
+        ["R", 24],
+        ["D", 27],
+        ["UR", 27],
+        ["D", 13],
+        ["U", 21],
+        ["UR", 16],
+        ["N", 400],
+      ]),
+      170,
+      { sawState: 2, finalState: 0 },
+    ],
     ["mixed manual input", pseudoRandomPlan(2200), 40, {}],
   ] as const)("%s does not run away or empty the playfield", (_name, plan, maxScrollY, routeExpect) => {
     const rom = emptyRomImage();
@@ -142,6 +194,7 @@ describe("playable live route smoke", () => {
       DR: [8, 8],
       DL: [-8, 8],
       UR: [8, -8],
+      UL: [-8, -8],
       BR: [4, -6],
       N: [0, 0],
     };
@@ -172,6 +225,9 @@ describe("playable live route smoke", () => {
       expect(maxObjX).toBeGreaterThan(routeExpect.minMaxX);
     }
     expect(sawExpectedState).toBe(true);
+    if (routeExpect.finalState !== undefined) {
+      expect(state.workRam[0x18 + 0x1a]).toBe(routeExpect.finalState);
+    }
     expect(state.workRam[0x18 + 0x1a]).not.toBe(1);
   });
 
