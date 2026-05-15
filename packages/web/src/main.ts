@@ -491,6 +491,36 @@ async function startGame(
       soundChip = createSoundChip({ roms: { rom421, rom422 } });
       console.log("[sound] SoundChip ready, click 'Enable Audio' to start");
 
+      // 🔔 BEEP TEST — sanity check audio path basic (OscillatorNode standalone,
+      // no AudioWorklet, no SoundChip): se NON senti questo, c'e' un problema
+      // a livello system/browser (volume muted, output device, autoplay
+      // policy). Se senti questo ma non l'audio del game, e' bug nel
+      // worklet/cue path.
+      const btnBeep = document.createElement("button");
+      btnBeep.textContent = "🔔 BEEP TEST 440Hz";
+      btnBeep.style.cssText =
+        "position:fixed;top:10px;right:160px;z-index:9999;padding:8px 12px;" +
+        "background:#2a2a4e;color:#fff;border:1px solid #666;cursor:pointer;";
+      btnBeep.addEventListener("click", async () => {
+        try {
+          const beepCtx = new AudioContext();
+          if (beepCtx.state === "suspended") await beepCtx.resume();
+          const osc = beepCtx.createOscillator();
+          const gain = beepCtx.createGain();
+          osc.frequency.value = 440;
+          gain.gain.value = 0.15;
+          osc.connect(gain).connect(beepCtx.destination);
+          osc.start();
+          setTimeout(() => { osc.stop(); beepCtx.close(); }, 800);
+          btnBeep.textContent = "🔔 BEEP! (440Hz 0.8s)";
+          console.log("[beep] AudioContext state:", beepCtx.state, "sampleRate:", beepCtx.sampleRate);
+        } catch (e) {
+          console.warn("[beep] failed:", e);
+          btnBeep.textContent = "🔔 BEEP FAILED";
+        }
+      });
+      document.body.appendChild(btnBeep);
+
       const btnAudio = document.createElement("button");
       btnAudio.textContent = "🔊 Enable Audio";
       btnAudio.style.cssText =
