@@ -115,8 +115,8 @@ export function soundCommandCue(cmd: number): SoundCommandCue {
   const octaveBump = (b >>> 5) & 0x03;
   const base = 185 + octaveBump * 55;
   const freq = base * Math.pow(2, (semitone - 7) / 12);
-  const durationMs = 70 + (((b >>> 3) & 0x03) * 22);
-  const vol = 0.48 + (((b >>> 6) & 0x03) * 0.08);
+  const durationMs = 130 + (((b >>> 3) & 0x03) * 35);
+  const vol = 0.72 + (((b >>> 6) & 0x03) * 0.07);
   const noise = (b & 0x08) !== 0 || b >= 0x58;
   return { freq, vol, noise, durationMs };
 }
@@ -205,8 +205,21 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   }
 
   function playCommandCue(cmd: number): void {
-    if (node === null) return;
-    node.port.postMessage({ type: "cue", ...soundCommandCue(cmd) });
+    const cue = soundCommandCue(cmd);
+    if (ctx !== null) {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = cue.noise ? "square" : "sine";
+      osc.frequency.setValueAtTime(cue.freq, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(cue.vol * 0.22, now + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + cue.durationMs / 1000);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + cue.durationMs / 1000 + 0.03);
+    }
+    if (node !== null) node.port.postMessage({ type: "cue", ...cue });
   }
 
   function isRunning(): boolean {

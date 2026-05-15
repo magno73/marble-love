@@ -139,9 +139,9 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
         if (v.noise) {
           v.phase += v.freq / sr;
           if (v.phase >= 1) { v.lastNoise = Math.random() * 2 - 1; v.phase -= 1; }
-          sample = v.lastNoise * v.env * 0.16;
+          sample = v.lastNoise * v.env * 0.28;
         } else {
-          sample = Math.sin(v.phase) * v.env * 0.16;
+          sample = Math.sin(v.phase) * v.env * 0.28;
           v.phase += (2 * Math.PI * v.freq) / sr;
           if (v.phase > 2 * Math.PI) v.phase -= 2 * Math.PI;
         }

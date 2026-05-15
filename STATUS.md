@@ -1,7 +1,34 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (browser sound command cue fallback)
-**Branch corrente:** `feature/visual-pixel-match`.
+**Ultimo update:** 2026-05-15 (LAN browser audio + initial attract)
+**Branch corrente:** `main`.
+
+## 2026-05-15 — LAN browser audio + initial attract
+
+Follow-up live via `http://192.168.85.200:5173/?autoLoad=1&play=1`: il Mac
+client mostrava solo il testo bottom `1 COIN PER PLAY / CREDITS: 0` su nero e
+non esponeva chiaramente un feedback audio udibile.
+
+Fix:
+
+- `?autoLoad=1&play=1` ora prepara il coin/start iniziale con lo stesso rebuild
+  staged attract/high-score usato dopo il game-over, invece di scrivere solo i
+  byte del gate su playfield vuoto.
+- Il bottone audio e' visibile di default quando la ROM e' caricata; `sound=0`
+  lo disabilita. Dopo il primo click resta come `Test Audio`, cosi' si puo'
+  riprovare il beep senza ricaricare.
+- I cue sound sono piu' lunghi/forti e passano anche da un `OscillatorNode`
+  diretto oltre che dall'AudioWorklet, cosi' il test click non dipende dal
+  synth worklet.
+
+Validazione:
+
+- Browser smoke locale `?autoLoad=1&play=1`: title/high-score visibile,
+  bottone `Enable Audio` presente, click -> `Test Audio`.
+- `npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/sound-renderer.test.ts --reporter=dot` PASS (18 test).
+- `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Browser sound command cue fallback
 

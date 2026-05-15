@@ -498,7 +498,7 @@ integrato in `?sound=1` query param. 6502 sound CPU + YM2151 + POKEY + mailbox
 | **C7 SoundChip facade** | `src/m6502/{sound-chip,sound-clock}.ts` | 9/10 PASS smoke (NMI/IRQ edge-triggered) |
 | **C8 probe-sound-diff** | `packages/cli/src/probe-sound-diff.ts` | 387B audioRam + 2 YM + 1 POKEY divergent @ f600 (V2 Timer A/B stub) |
 | **C9 Web Audio renderer** | `packages/web/src/sound-renderer.ts` + `public/sound-worklet.js` | 15/15 PASS pure logic (ymKcToFreq, pokeyAudfToFreq, command cue fallback, ...) |
-| **C10 Wire `?sound=1`** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" + ticker hook |
+| **C10 Wire web audio** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" default-on + ticker hook (`sound=0` opt-out) |
 
 **62/64 sound test PASS** (2 skip = sentinel ROM-assenti). Build PWA 795KB.
 
@@ -510,7 +510,7 @@ In piu', ogni `soundCmdSend158AC` emesso dal gameplay invia un breve cue
 deterministico al worklet: il comando continua ad andare al SoundChip reale,
 ma il browser resta udibile anche finche' il driver 6502/YM/POKEY non produce
 ancora register writes gameplay completi. Il click su "Enable Audio" emette
-anche un breve cue di conferma.
+anche un breve cue di conferma via `OscillatorNode` diretto e AudioWorklet.
 
 **V3 sample-level chip-perfect deferito** (PRD Phase 7 V1 explicit "POKEY/
 YM2151 chip-perfect rimandato a V2"): envelope DR/AR/SR/RR per 32 operatori
@@ -518,10 +518,11 @@ FM + 8 algoritmi FM + LFSR poly 17-bit + Timer A/B counter con IRQ wire al
 6502. Closure 0-byte register-state richiede V3.
 
 ```
-http://localhost:5173/?autoLoad=1&play=1&sound=1
+http://localhost:5173/?autoLoad=1&play=1
 # 1. Click 🔊 Enable Audio (top-right, richiesto da AudioContext user gesture)
 # 2. Premi 5 (coin) + Enter (START1) → biglia spawn
 # 3. Muovi con mouse / WASD / frecce. I comandi sound gameplay producono cue udibili.
+# Usa &sound=0 solo se vuoi nascondere/disabilitare il bottone audio.
 ```
 
 ## Quickstart sviluppo

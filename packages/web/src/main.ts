@@ -24,7 +24,7 @@ import {
   buildRomBackedDemoFrame,
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
-import { isCoinStartAttractReady, writeBrowserCreditDigit } from "./coin-start-flow.js";
+import { isCoinStartAttractReady, prepareBrowserCoinStartAttract, writeBrowserCreditDigit } from "./coin-start-flow.js";
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
@@ -43,7 +43,7 @@ const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
-const enableSound = searchParams.get("sound") === "1";
+const enableSound = searchParams.get("sound") !== "0";
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -328,14 +328,11 @@ async function startGame(
     s.clock.mainLoopBodyTicks = wrap.as_u32(1);
   }
   if (useCoinStartFlow) {
-    // Start from the attract/start gate instead of showing a preloaded level.
+    // Start from the same staged attract/start gate reached after game over,
+    // instead of leaving only the bottom credit alpha over a blank playfield.
     // The full 6502 coin-credit path is not emulated yet, so browser coin
     // pulses feed the gateCheck callback below.
-    s.workRam[0x390] = 0x00;
-    s.workRam[0x391] = 0x01;
-    s.workRam[0x3a8] = 0x6f;
-    s.workRam[0x3aa] = 0x6f;
-    s.workRam[0x3ac] = 0x00;
+    prepareBrowserCoinStartAttract(s);
     console.log("[marble-love] coin/start flow enabled: press 5 (coin), then Enter/Space (START1)");
   }
 
@@ -352,7 +349,7 @@ async function startGame(
   let manualPlayStarted = false;
   let demoFrame = 0;
 
-  // ─── Sound chip + Web Audio renderer (?sound=1) ───────────────────────────
+  // ─── Sound chip + Web Audio renderer (?sound != 0) ───────────────────────
   // V1 MVP audio: SoundChip 6502+YM2151+POKEY in tick parallelo, renderer polla
   // register shadow → AudioWorklet sintetizza tones (sine + square + noise).
   // Cherry-pick da feature/sound-chip. AudioContext richiede user gesture →
@@ -372,8 +369,13 @@ async function startGame(
       btnAudio.style.cssText =
         "position:fixed;top:10px;right:10px;z-index:9999;padding:8px 12px;" +
         "background:#1a1a1a;color:#fff;border:1px solid #444;cursor:pointer;";
+      let soundStarted = false;
       btnAudio.addEventListener("click", async () => {
         try {
+          if (soundStarted) {
+            soundRenderer?.playCommandCue(0x5a);
+            return;
+          }
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
           soundRenderer.playCommandCue(0x40);
@@ -409,8 +411,9 @@ async function startGame(
               }, 2000);
             }
           }
-          btnAudio.textContent = "🔊 Audio ON";
-          btnAudio.disabled = true;
+          window.setTimeout(() => { soundRenderer?.playCommandCue(0x5a); }, 140);
+          btnAudio.textContent = "🔊 Test Audio";
+          soundStarted = true;
           console.log("[sound] Web Audio started");
         } catch (e) {
           console.warn("[sound] start failed:", e);
