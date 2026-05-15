@@ -174,6 +174,10 @@ describe("Web Audio startup fallback", () => {
 
     renderer.playCommandCue(0x40);
     expect(createOscillatorCalls).toBe(1);
+    renderer.playCommandCue(0x41);
+    expect(createOscillatorCalls).toBe(1);
+    renderer.playCommandCue(0x41, { force: true });
+    expect(createOscillatorCalls).toBe(2);
 
     await renderer.stop();
     expect(createdContext?.close).toHaveBeenCalledTimes(1);
