@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (cherry-pick `?scenario=NAME` web wire)
+**Ultimo update:** 2026-05-15 (post-timeout high-score staged rebuild)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Post-timeout high-score staged rebuild
+
+Follow-up visivo sul timeout live: dopo `GAME OVER` non compariva piu' il
+vecchio salto immediato, ma il browser poteva mostrare una schermata mista con
+hi-score/title sopra il playfield demo e residui HUD (`SCORE`, timer `00`).
+
+Root cause:
+
+- Il path post-hold in `mainLoopInit1101E case3` richiamava `FUN_11452 mode 2`
+  in forma sincrona. Questo ricostruiva hi-score/banner con la ROM, ma saltava
+  il modello runtime staged di `mode2-init-11452-async` che in MAME espone i
+  vblank di clear video/alpha prima del rebuild.
+- Le righe alpha alte del gameplay rimanevano quindi vive quando appariva la
+  tabella hi-score.
+
+Fix:
+
+- Quando il post-timeout arriva a `main=1/mode=2` senza override test, `case3`
+  avvia `startMode2Init11452Async(state)` invece di comprimere `FUN_11452` in
+  un singolo tick.
+- La guardia `playable-live-routes` ora richiede che il post-timeout attraversi
+  il rebuild staged, pulisca le righe alpha alte prima della hi-score table e
+  non lasci il playfield level-1 pieno sotto la schermata attract.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts packages/engine/test/main-loop-init-task-a.test.ts --reporter=basic` PASS (20 test).
+- `npx tsc -b --pretty false` PASS.
+- Playable replay 3/3 PASS (`coin_start_to_level1` PASS @78,
+  `level1_trackball_short` PASS @100, `level1_trackball_obstacle` PASS @100).
+- Warm-seed gameplay 15/15 PASS (`level3_spawn` resta PASS @77).
+- `npm --workspace @marble-love/web run build` PASS.
+- Long demo fresh step10 no-stack resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `14175 <= 16000`.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Cherry-pick `?scenario=NAME` da feature/render-fix-bg
 
@@ -63,15 +99,15 @@ Fix:
 - `TickClock` aggiunge un hold main-thread differito per il wait `0xB4` e una
   clear alpha rows differita; durante l'hold il body `117B2` non prosegue verso
   l'attract rebuild.
-- Follow-up post-hold: `case3` ora passa `rom` a `FUN_11452`. Prima la
-  chiamata perdeva la ROM, quindi la schermata successiva non ricostruiva
-  playfield/hi-score/banner e poteva mostrare il vecchio livello colorato e
-  rotto dopo il `GAME OVER`.
+- Follow-up post-hold: `case3` passa attraverso il rebuild staged di
+  `FUN_11452 mode 2`. Prima la chiamata perdeva la ROM; poi la ricostruzione
+  sincrona saltava i vblank di clear video/alpha e poteva mostrare hi-score
+  sopra il vecchio HUD/playfield.
 - La regression `playable-live-routes.test.ts` non accetta piu' il vecchio
   "timeout rebuild immediato": richiede testo alpha presente durante l'hold,
   niente mode2/mode0 attract durante il riepilogo, PF non vuoto, clear delle
-  righe alpha al termine dell'attesa, e cambio di playfield al passaggio
-  post-timeout.
+  righe alpha al termine dell'attesa, clear delle righe alpha alte durante il
+  rebuild staged e cambio di playfield al passaggio post-timeout.
 
 Validazione:
 

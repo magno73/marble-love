@@ -15,8 +15,10 @@ l'HUD live (`obj0+0x6A` passa dal decremento interno al render alpha via
 ora disegna e mantiene il riepilogo ROM `OUT OF TIME` / `GAME OVER` per il
 wait `0xB4` prima di pulire le righe alpha e proseguire, invece di saltare
 subito alla finestra presentation/demo; il passaggio post-timeout richiama
-`FUN_11452` con la ROM corretta, quindi non riusa piu' il vecchio playfield del
-level 1. Il renderer playfield ora avvolge la tilemap 64x64 su 512 px nel path
+`FUN_11452 mode 2` tramite il rebuild staged usato dal runtime, quindi pulisce
+HUD/playfield prima della schermata hi-score e non mostra piu' un misto
+high-score/demo sopra il vecchio level 1. Il renderer playfield ora avvolge la
+tilemap 64x64 su 512 px nel path
 indirect e nel fallback Pixi, evitando la fascia nera sotto il ponte levatoio
 quando lo scroll verticale entra nelle finestre basse.
 Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lua`
