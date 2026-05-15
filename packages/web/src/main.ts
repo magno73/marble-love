@@ -48,7 +48,21 @@ const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1
 const playableSeedName = searchParams.get("playableSeed");
 const manualPlayableSeedName = "manual_level1_start";
 const replayPlayableSeedName = "coin_start_to_level1";
+// ?scenario=NAME — gameplay warm-seed (oracle/scenarios/gameplay/NAME.json).
+// Carica snapshots[0] come warmState. Loop reset a 100 frame (oracle window).
+// Cherry-pick da feature/render-fix-bg (15 scenari MAME 101 snapshot ciascuno).
+const KNOWN_SCENARIOS = new Set([
+  "level1_spawn", "level1_early", "level1_midmap", "level1_obstacle",
+  "level1_end", "level2_spawn", "level2_early", "intro_overlay",
+  "level3_spawn", "level3_early", "level3_end",
+  "level4_spawn", "level4_early",
+  "level5_spawn", "level5_early",
+]);
+const scenarioNameRaw = searchParams.get("scenario");
+const scenarioName =
+  scenarioNameRaw !== null && KNOWN_SCENARIOS.has(scenarioNameRaw) ? scenarioNameRaw : null;
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
+const SCENARIO_LOOP_RESET = 100;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
 // E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
 const useSyntheticDemoFrame =
@@ -223,6 +237,36 @@ async function startGame(
       } catch (fallbackError) {
         console.warn("[marble-love] live gameplay fallback seed fetch failed:", fallbackError);
       }
+    }
+  } else if (scenarioName !== null) {
+    // ?scenario=NAME: load gameplay warm-seed (snapshots[0] da 101-snapshot JSON).
+    try {
+      const r = await fetch(`/scenarios/gameplay/${scenarioName}.json`);
+      if (r.ok) {
+        const rawJson = await r.json() as { snapshots: Array<{
+          frame: number; slapsticBank?: number; workRam: string;
+          playfieldRam: string; spriteRam: string; alphaRam: string; colorRam: string;
+        }> };
+        const dump = rawJson.snapshots[0]!;
+        const dumpSlapsticBank = typeof dump.slapsticBank === "number" ? dump.slapsticBank : Number.NaN;
+        const warmSlapsticBank = Number.isFinite(dumpSlapsticBank) && dumpSlapsticBank >= 0
+          ? dumpSlapsticBank & 3
+          : 1;
+        warmState = {
+          workRam: hex2bytes(dump.workRam, 0x2000),
+          playfieldRam: hex2bytes(dump.playfieldRam, 0x2000),
+          spriteRam: hex2bytes(dump.spriteRam, 0x1000),
+          alphaRam: hex2bytes(dump.alphaRam, 0x1000),
+          colorRam: hex2bytes(dump.colorRam, 0x800),
+          videoScrollY: (((parseInt(dump.workRam.substr(4, 2), 16) << 8) |
+                          parseInt(dump.workRam.substr(6, 2), 16)) & 0x1ff),
+          videoScrollX: 0,
+          slapsticBank: warmSlapsticBank,
+        };
+        console.log(`[warmState] loaded gameplay scenario ${scenarioName} (frame ${dump.frame})`);
+      }
+    } catch (e) {
+      console.warn(`[warmState] scenario ${scenarioName} fetch failed:`, e);
     }
   } else if (useMameDump || useMameLive) {
     try {
@@ -470,9 +514,11 @@ async function startGame(
       //   nel segmento iniziale. `loopReset=0` disabilita il guardrail.
       const loopResetParam = searchParams.get("loopReset");
       const defaultLoopResetN =
-        forcePlay && warmState !== undefined && playableSeedName === null
-          ? DEFAULT_WARM_PLAY_LOOP_RESET
-          : 0;
+        scenarioName !== null && warmState !== undefined
+          ? SCENARIO_LOOP_RESET
+          : forcePlay && warmState !== undefined && playableSeedName === null
+            ? DEFAULT_WARM_PLAY_LOOP_RESET
+            : 0;
       const parsedLoopResetN = parseInt(loopResetParam ?? String(defaultLoopResetN), 10);
       const loopResetN = Number.isFinite(parsedLoopResetN) ? parsedLoopResetN : 0;
       const mainLoopBody =

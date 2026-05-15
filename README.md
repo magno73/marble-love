@@ -455,6 +455,32 @@ REIMPLEMENTAZIONE TS  ──▶ trace_reimpl.jsonl     Claude Code (hill-climbin
 | `@marble-love/web`    | Vite + PixiJS shell. ROM file picker locale. PWA installabile. |
 | `@marble-love/mobile` | Capacitor wrapper (V2). |
 
+## Warm-seed gameplay scenari (web) — `?scenario=NAME`
+
+15 scenari MAME warm-seed bit-perfect (101 snapshot ciascuno: `f0` seed + 100
+frame oracle) catturati in `oracle/scenarios/gameplay/` e wirati nel web app
+via `?scenario=NAME` (cherry-pick da `feature/render-fix-bg`). Coabita con
+`?playableSeed=NAME` (3 file `scenarios/playable/`) di Codex.
+
+Scenari disponibili:
+- **Practice Race**: `level1_spawn`, `level1_midmap`, `level2_spawn`, `level4_spawn`
+- **Aerial Race**: `level2_early`, `level4_early`, `level1_obstacle`,
+  `level3_spawn`, `level5_spawn`
+- **Intro overlay**: `intro_overlay` (Practice + "FINISH RACE IN THIS TIME")
+- **Title screen** (post-reseed conservativo): `level1_early`, `level1_end`,
+  `level3_early`, `level3_end`, `level5_early`
+
+Loop reset 100 frame = oracle window. Visivamente bit-perfect vs MAME (verifica
+10/10 side-by-side, vedi `~/Desktop/d4-mame-vs-ts/` per shot comparison).
+
+Usage:
+```
+http://localhost:5173/?autoLoad=1&scenario=level1_spawn        # Practice gameplay
+http://localhost:5173/?autoLoad=1&scenario=level2_early        # Aerial Race
+http://localhost:5173/?autoLoad=1&scenario=intro_overlay       # con overlay HUD
+http://localhost:5173/?autoLoad=1&scenario=level1_spawn&sound=1  # + audio
+```
+
 ## Sound chip end-to-end (cherry-pick da `feature/sound-chip`)
 
 Audio subsystem in 11 file engine + 3 test + 1 CLI + 2 web + 1 worklet,

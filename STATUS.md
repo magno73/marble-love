@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (timeout summary hold)
+**Ultimo update:** 2026-05-15 (cherry-pick `?scenario=NAME` web wire)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Cherry-pick `?scenario=NAME` da feature/render-fix-bg
+
+Wire web app per i 15 scenari MAME warm-seed gameplay (`oracle/scenarios/gameplay/
+*.json`, 101 snapshot ciascuno) portato dal worktree `feature/render-fix-bg`
+al main worktree. Coabita con `?playableSeed=NAME` di Codex (3 file
+`scenarios/playable/*.seed.json`).
+
+Modifiche `packages/web/src/main.ts`:
+- `KNOWN_SCENARIOS` set con 15 nomi gameplay
+- `?scenario=NAME` query param → fetch `/scenarios/gameplay/NAME.json` →
+  `snapshots[0]` come warmState
+- `SCENARIO_LOOP_RESET = 100` (= oracle window) per ricaricare seed ogni
+  100 frame ed evitare drift catastrofico post-window
+- Branch `else if (scenarioName !== null)` nel warm state load, prima di
+  `mameDump`/`mameLive`
+
+15 JSON copiati in `packages/web/public/scenarios/gameplay/`:
+`level1_spawn`, `level1_early`, `level1_midmap`, `level1_obstacle`,
+`level1_end`, `level2_spawn`, `level2_early`, `intro_overlay`,
+`level3_spawn`, `level3_early`, `level3_end`, `level4_spawn`, `level4_early`,
+`level5_spawn`, `level5_early`. Tutti 15 bit-perfect ≥60 frame consecutivi
+(PF=0, sprite≤50, HUD≤30 byte) vs MAME oracle (validato in `f671cf6` ..
+`cf76e88`).
+
+Validazione: `npx tsc -b --pretty false` PASS. `npm build` PASS, PWA 795KB
+precache. Zero touch a logica Codex (`playableSeed`, `coinStart`, `trackball`).
+
+Usage:
+```
+http://localhost:5173/?autoLoad=1&scenario=level1_spawn       # Practice Race
+http://localhost:5173/?autoLoad=1&scenario=level2_early       # Aerial Race
+http://localhost:5173/?autoLoad=1&scenario=intro_overlay      # FINISH RACE overlay
+http://localhost:5173/?autoLoad=1&scenario=level1_spawn&sound=1   # + audio
+```
 
 ## 2026-05-15 — Timeout summary hold
 
