@@ -3,6 +3,27 @@
 **Ultimo update:** 2026-05-15 (playable route ladder guard)
 **Branch corrente:** `feature/visual-pixel-match`.
 
+## 2026-05-15 — Playable ladder wording correction
+
+Follow-up immediato al checkpoint `a284929`: una route tutta neutra attraversa
+anche lei le finestre mapped `segment=4/5`, e input trackball attivo dentro
+quelle finestre viene registrato ma non cambia il path object quando
+`0x400390==1`. Quindi la guardia e' una prova di stabilita'
+timeout/rebuild/presentation, non una prova di completamento manuale dei
+level 2/3.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` rinomina la guardia profonda come
+  timeout-window ladder e sostituisce i counter `playableFrames` con
+  `stableFrames`.
+- Il commento del test ora richiede esplicitamente che una futura prova di
+  completion confronti contro input neutro o contro una route MAME equivalente.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS (10 test).
+
 ## 2026-05-15 — Playable route ladder guard
 
 Nuovo focus QA: dimostrare il passaggio playable oltre il primo livello prima

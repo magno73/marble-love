@@ -285,7 +285,7 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
 
-  it("guards a level-1 baseline and mapped level-2/3 playable windows", () => {
+  it("guards a level-1 baseline and mapped level-2/3 timeout windows", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
     const state = loadPlayableState(rom);
@@ -303,13 +303,13 @@ describe("playable live route smoke", () => {
     let maxScrollY = 0;
     let sawMode2AfterEarlyRoute = false;
     // MAME gameplay warm seeds map level2_spawn to segment 4 and level3_spawn
-    // to segment 5. This is a route-ladder stability guard, not proof that
-    // those levels have a solved completion route.
+    // to segment 5. This timeout/rebuild ladder is stable, but neutral input
+    // can reach the same windows; it is not proof of manual level completion.
     let level2EntryFrame = -1;
     let level3EntryFrame = -1;
-    let level2PlayableFrames = 0;
-    let level3PlayableFrames = 0;
-    let level1PlayableFrames = 0;
+    let level2StableFrames = 0;
+    let level3StableFrames = 0;
+    let level1StableFrames = 0;
     let deathEvents = 0;
     let recoveries = 0;
     let inDeath = false;
@@ -385,7 +385,7 @@ describe("playable live route smoke", () => {
       const mode = readWordBE(state.workRam, 0x392);
       const segment = state.workRam[0x3e4] ?? 0;
       const playerState = state.workRam[0x18 + 0x1a] ?? 0;
-      const playableTerrain = mainState === 1 && mode === 0 && pfCount > 4000 && playerState === 0;
+      const stableTerrain = mainState === 1 && mode === 0 && pfCount > 4000 && playerState === 0;
       const isDeath = playerState === 4 || playerState === 5;
       if (isDeath && !inDeath) {
         deathEvents++;
@@ -398,18 +398,18 @@ describe("playable live route smoke", () => {
       }
       maxScrollY = Math.max(maxScrollY, state.videoScrollY);
       sawMode2AfterEarlyRoute ||= mainState === 1 && mode === 2 && segment >= 3;
-      if (playableTerrain && (segment === 2 || segment === 3)) {
-        level1PlayableFrames++;
+      if (stableTerrain && (segment === 2 || segment === 3)) {
+        level1StableFrames++;
       }
-      if (playableTerrain && segment === 4) {
+      if (stableTerrain && segment === 4) {
         if (level2EntryFrame < 0) level2EntryFrame = frame;
-        level2PlayableFrames++;
+        level2StableFrames++;
       }
-      if (playableTerrain && segment === 5) {
+      if (stableTerrain && segment === 5) {
         if (level3EntryFrame < 0) level3EntryFrame = frame;
-        level3PlayableFrames++;
+        level3StableFrames++;
       }
-      if (playableTerrain) {
+      if (stableTerrain) {
         const objX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
         const objY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
         playableMinXBySegment.set(segment, Math.min(playableMinXBySegment.get(segment) ?? objX, objX));
@@ -430,11 +430,14 @@ describe("playable live route smoke", () => {
     const objDeltaY = (segment: number): number =>
       (playableMaxYBySegment.get(segment) ?? 0) - (playableMinYBySegment.get(segment) ?? 0);
     expect(sawMode2AfterEarlyRoute).toBe(true);
-    expect(level1PlayableFrames).toBeGreaterThan(1500);
+    expect(level1StableFrames).toBeGreaterThan(1500);
     expect(level2EntryFrame).toBeGreaterThan(0);
     expect(level3EntryFrame).toBeGreaterThan(level2EntryFrame);
-    expect(level2PlayableFrames).toBeGreaterThan(700);
-    expect(level3PlayableFrames).toBeGreaterThan(700);
+    expect(level2StableFrames).toBeGreaterThan(700);
+    expect(level3StableFrames).toBeGreaterThan(700);
+    // Object motion in the mapped windows is necessary for stability, but it
+    // is still compatible with the timeout/presentation path. A future route
+    // completion proof must compare against neutral input or MAME route input.
     expect(objDeltaX(2)).toBeGreaterThan(1_000_000);
     expect(objDeltaY(2)).toBeGreaterThan(1_000_000);
     expect(objDeltaX(4)).toBeGreaterThan(1_000_000);
