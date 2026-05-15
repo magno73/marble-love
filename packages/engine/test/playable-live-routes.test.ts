@@ -236,6 +236,114 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).not.toBe(1);
   });
 
+  it("proves level-1 manual input changes outcome versus neutral input", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+    const activePlan = expand([
+      ["D", 171],
+      ["R", 206],
+      ["L", 188],
+      ["DL", 107],
+      ["BR", 260],
+      ["R", 700],
+      ["D", 300],
+      ["R", 800],
+    ]);
+    const neutralPlan = expand([["N", activePlan.length]]);
+
+    const runPlan = (plan: readonly string[]) => {
+      const state = loadPlayableState(rom);
+      let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+      let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+      const initialX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
+      const initialY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
+      let deathEvents = 0;
+      let recoveries = 0;
+      let inDeath = false;
+      let maxScrollY = 0;
+      let emptyRun = 0;
+      let maxEmptyRun = 0;
+
+      for (const step of plan) {
+        [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+        tick(state, {
+          rom,
+          runMainLoopBody: true,
+          p1X,
+          p1Y,
+          p2X: 0xff,
+          p2Y: 0xff,
+          inputMmio: 0x6f,
+        });
+
+        const playerState = state.workRam[0x18 + 0x1a] ?? 0;
+        const isDeath = playerState === 4 || playerState === 5;
+        if (isDeath && !inDeath) {
+          deathEvents++;
+          inDeath = true;
+        } else if (inDeath && playerState === 0) {
+          recoveries++;
+          inDeath = false;
+        }
+
+        const pfCount = nonzero(state.playfieldRam);
+        if (pfCount === 0) {
+          emptyRun++;
+        } else {
+          maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+          emptyRun = 0;
+        }
+        maxScrollY = Math.max(maxScrollY, state.videoScrollY);
+      }
+
+      maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+      const finalX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
+      const finalY = signedLong(readLongBE(state.workRam, 0x18 + 0x10));
+      return {
+        deltaX: Math.abs(finalX - initialX),
+        deltaY: Math.abs(finalY - initialY),
+        finalX,
+        finalY,
+        mainState: readWordBE(state.workRam, 0x390),
+        mode: readWordBE(state.workRam, 0x392),
+        segment: state.workRam[0x3e4] ?? 0,
+        playerState: state.workRam[0x18 + 0x1a] ?? 0,
+        pfCount: nonzero(state.playfieldRam),
+        maxEmptyRun,
+        maxScrollY,
+        deathEvents,
+        recoveries,
+      };
+    };
+
+    const active = runPlan(activePlan);
+    const neutral = runPlan(neutralPlan);
+
+    expect(active.mainState).toBe(0);
+    expect(active.mode).toBe(0);
+    expect(active.segment).toBe(2);
+    expect(active.playerState).toBe(0);
+    expect(active.pfCount).toBeGreaterThan(4000);
+    expect(active.maxEmptyRun).toBe(0);
+    expect(active.maxScrollY).toBeLessThanOrEqual(90);
+    expect(active.deathEvents).toBeGreaterThanOrEqual(3);
+    expect(active.recoveries).toBe(active.deathEvents);
+    expect(active.deltaX).toBeGreaterThan(7_000_000);
+    expect(active.deltaY).toBeGreaterThan(9_000_000);
+
+    expect(neutral.mainState).toBe(0);
+    expect(neutral.mode).toBe(0);
+    expect(neutral.segment).toBe(2);
+    expect(neutral.playerState).toBe(0);
+    expect(neutral.pfCount).toBeGreaterThan(4000);
+    expect(neutral.deathEvents).toBe(0);
+    expect(neutral.maxScrollY).toBe(0);
+    expect(neutral.deltaY).toBeLessThan(1_000_000);
+    expect(Math.abs(active.finalX - neutral.finalX)).toBeGreaterThan(3_000_000);
+    expect(Math.abs(active.finalY - neutral.finalY)).toBeGreaterThan(8_000_000);
+  });
+
   it("time-out transition rebuilds the playfield instead of staying empty", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
