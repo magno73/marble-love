@@ -37,6 +37,14 @@ function nonzero(bytes: Uint8Array): number {
   return total;
 }
 
+function checksumBytes(bytes: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    sum = (sum + (bytes[i] ?? 0) * (i + 1)) >>> 0;
+  }
+  return sum >>> 0;
+}
+
 function nonzeroAlphaClearRows(
   state: GameState,
   rom: ReturnType<typeof emptyRomImage>,
@@ -691,6 +699,24 @@ describe("playable live route smoke", () => {
     expect(state.clock.mainThreadWaitDelay).toBeUndefined();
     expect(state.clock.mainThreadWaitClearRows).toBeUndefined();
     expect(nonzeroAlphaClearRows(state, rom, 0x14)).toBe(0);
+
+    const staleLevelPlayfieldChecksum = checksumBytes(state.playfieldRam);
+    for (let i = 0; i < 4 && readWordBE(state.workRam, 0x390) !== 1; i++) {
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+    }
+
+    expect(readWordBE(state.workRam, 0x390)).toBe(1);
+    expect(readWordBE(state.workRam, 0x392)).toBe(2);
+    expect(readWordBE(state.workRam, 0x75a)).toBe(0x12c);
+    expect(checksumBytes(state.playfieldRam)).not.toBe(staleLevelPlayfieldChecksum);
   });
 
   it("guards a level-1 baseline and mapped level-2/3 timeout windows", () => {

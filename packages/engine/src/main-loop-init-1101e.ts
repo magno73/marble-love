@@ -277,7 +277,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   wb(state, 0x004003e4, 0);
   ww(state, 0x00400392, 2);
   ww(state, 0x0040075a, 0x0096);
-  if (p0 === 0 && p1 === 0) init11452(state, subs);
+  if (p0 === 0 && p1 === 0) init11452(state, subs, rom);
   void d2;
   void d3;
 }
