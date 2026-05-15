@@ -160,7 +160,7 @@ describe("playable live route smoke", () => {
         inputMmio: 0x6f,
       });
 
-      maxObjX = Math.max(maxObjX, signedLong(readLongBE(state.workRam, 0x18)));
+      maxObjX = Math.max(maxObjX, signedLong(readLongBE(state.workRam, 0x18 + 0x0c)));
       if (routeExpect.sawState !== undefined && state.workRam[0x18 + 0x1a] === routeExpect.sawState) {
         sawExpectedState = true;
       }
