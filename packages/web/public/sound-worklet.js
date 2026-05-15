@@ -9,6 +9,7 @@
 //   { type: "ym_voice", ch: 0..7, on: false }
 //   { type: "pokey_voice", ch: 0..3, on: true, freq: Hz, vol: 0..1, noise: bool }
 //   { type: "pokey_voice", ch: 0..3, on: false }
+//   { type: "cue", freq: Hz, vol: 0..1, noise: bool, durationMs: number }
 //   { type: "reset" }
 //
 // Phase 5/6 V3 chip-perfect (deferito): qui useremmo envelope DR/AR/SR/RR
@@ -27,6 +28,11 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
       on: false, freq: 0, vol: 0, noise: false, phase: 0,
       env: 0, target: 0, lastNoise: 0,
     }));
+    this.cueVoices = Array.from({ length: 4 }, () => ({
+      freq: 0, vol: 0, noise: false, phase: 0,
+      env: 0, target: 0, lastNoise: 0, remaining: 0,
+    }));
+    this.nextCueVoice = 0;
     this.port.onmessage = (e) => this.handleMessage(e.data);
   }
 
@@ -57,9 +63,20 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
         v.on = false;
         v.target = 0;
       }
+    } else if (msg.type === "cue") {
+      const v = this.cueVoices[this.nextCueVoice % this.cueVoices.length];
+      this.nextCueVoice++;
+      if (v === undefined) return;
+      v.freq = Math.max(20, Math.min(3000, Number(msg.freq) || 220));
+      v.vol = Math.max(0, Math.min(1, Number(msg.vol) || 0.5));
+      v.noise = msg.noise === true;
+      v.target = v.vol;
+      v.remaining = Math.max(1, Math.round((Number(msg.durationMs) || 90) * this.sampleRate_ / 1000));
+      v.phase = 0;
     } else if (msg.type === "reset") {
       for (const v of this.ymVoices) { v.on = false; v.target = 0; v.env = 0; }
       for (const v of this.pokeyVoices) { v.on = false; v.target = 0; v.env = 0; }
+      for (const v of this.cueVoices) { v.target = 0; v.env = 0; v.remaining = 0; }
     }
   }
 
@@ -104,6 +121,29 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
           v.phase += v.freq / sr;
           if (v.phase >= 1) v.phase -= 1;
           sample = (v.phase < 0.5 ? 1 : -1) * v.env * 0.08;
+        }
+        mix += sample;
+      }
+
+      // Command cue voices: short audible fallback for main-CPU sound commands.
+      for (const v of this.cueVoices) {
+        if (v.remaining > 0) {
+          v.remaining--;
+        } else {
+          v.target = 0;
+        }
+        v.env += (v.target - v.env) * envRate * 50;
+        if (v.env < 0.0001 && v.remaining <= 0) continue;
+        if (v.freq <= 0) continue;
+        let sample;
+        if (v.noise) {
+          v.phase += v.freq / sr;
+          if (v.phase >= 1) { v.lastNoise = Math.random() * 2 - 1; v.phase -= 1; }
+          sample = v.lastNoise * v.env * 0.16;
+        } else {
+          sample = Math.sin(v.phase) * v.env * 0.16;
+          v.phase += (2 * Math.PI * v.freq) / sr;
+          if (v.phase > 2 * Math.PI) v.phase -= 2 * Math.PI;
         }
         mix += sample;
       }

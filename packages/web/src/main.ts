@@ -376,6 +376,7 @@ async function startGame(
         try {
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
+          soundRenderer.playCommandCue(0x40);
           // Release SoundChip dal HOLD reset hardware (main 68K $860001 bit 7=1).
           // Senza release il 6502 non gira mai → no YM/POKEY write → no audio.
           // Wire main↔sound mailbox e' debt separato (Codex engine main side);
@@ -388,6 +389,7 @@ async function startGame(
             let cmdCount = 0;
             setSoundCmdHook((cmd) => {
               submitSoundCommand(soundChip!, (cmd & 0xff) as never);
+              soundRenderer?.playCommandCue(cmd);
               cmdCount++;
               if (cmdCount <= 20) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
             });
@@ -401,6 +403,7 @@ async function startGame(
               setInterval(() => {
                 const cmd = testCmds[testIdx % testCmds.length]!;
                 submitSoundCommand(soundChip!, cmd as never);
+                soundRenderer?.playCommandCue(cmd);
                 console.log(`[soundTest] sent cmd $${cmd.toString(16)}`);
                 testIdx++;
               }, 2000);
