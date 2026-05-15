@@ -25,6 +25,14 @@ Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lu
 supporta anche `MARBLE_PLAYABLE_MANUAL=1`: registra prima una movie MAME
 `.inp`, poi ripassala con `-playback` per ottenere trace JSON e tail snapshot
 replayabili dal probe TS.
+Per filtrare i candidati prima di collegarli a `startLevel`, usa
+`npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
+attivo contro input neutro, sia con dispatcher MAME preservato sia col
+dispatcher manuale browser riarmato. Se hai una coppia di catture MAME
+active/neutral, passa gli snapshot active come argomenti e aggiungi
+`--mame-neutral-dir /path/neutral/scenarios`: se MAME active e neutral sono
+identici, il seed resta diagnostico anche quando il rearm manuale TS sembra
+controllabile.
 Per playtest manuale di progressione livelli, `?autoLoad=1&play=1&levelTime=180`
 o `levelTime=120` imposta il timer interno del livello al valore scelto una
 sola volta per livello, lasciando il countdown normale. Nota: alcuni path HUD

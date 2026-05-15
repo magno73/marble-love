@@ -1,7 +1,29 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (levelTime scroll-target fix)
+**Ultimo update:** 2026-05-15 (playable seed audit)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — Playable seed audit
+
+Nuovo focus: trovare seed giocabili veri per `startLevel=2..5`, non riciclare
+finestre demo/oracle. Aggiunto `packages/cli/src/audit-playable-seed.ts` per
+classificare i candidati:
+
+- Confronta input attivo vs neutral sullo stesso seed.
+- Riporta sia il dispatcher MAME preservato sia il dispatcher manuale browser
+  riarmato.
+- Puo' confrontare anche coppie di catture MAME active/neutral con
+  `--mame-neutral-dir`.
+
+Risultato immediato:
+
+- `manual_level1_start` resta l'unico `practice-seed` verificato.
+- I vecchi `level2_spawn`/`level3_spawn`/`level4_spawn`/`level5_spawn` restano
+  `diagnostic-only`: col dispatcher preservato active == neutral e la sorgente
+  e' gameplay/oracle, quindi non vanno cablati a `startLevel`.
+- Le finestre deep catturate da MAME durante la rotta lunga risultano byte
+  identiche fra active e neutral; anche quando un rearm manuale TS diverge, non
+  sono prova di seed giocabile o completion.
 
 ## 2026-05-15 — levelTime scroll-target fix
 
