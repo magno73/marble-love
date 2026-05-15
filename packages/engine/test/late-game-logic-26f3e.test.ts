@@ -363,6 +363,64 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     expect(emitCalls[0]?.arg2).toBe((0xe0 + 0x10) & 0xffff); // d4
   });
 
+  it("type 5 emits the current cel pointer in the low visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x05, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0080); // d4 = 0x90: below 0xc0, still visible by disasm.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x000212e6);
+    wl(state, celListPtr + 4, 0x000212f2);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x000212e6,
+      arg1: 0x0067,
+      arg2: 0x0090,
+      arg3: 0x1800,
+    }]);
+  });
+
+  it("type 5 skips objects below the signed -0x40 vertical bound", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x05, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffaf); // d4 = 0xffbf (-65), just below bound.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x000212e6);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
   it("moBlockEmit is called with correct args for type 0x2A", () => {
     const state = makeState();
     const rom = emptyRomImage();

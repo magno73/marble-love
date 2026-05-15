@@ -90,6 +90,15 @@ come MAME, e `FUN_177F8` legge la string table dalla finestra ROM slapstic
 `D7` exact a f3653/f3655/f3657; playable replay 3/3, warm-seed gameplay 15/15,
 typecheck, targeted vitest, web build e long-demo guardrail restano verdi.
 
+**Checkpoint type-5 playable emit (2026-05-15):** il residuo sprite nel drill
+`case6_4400` era un vecchio caso speciale type-5 derivato dal long-demo:
+TS usava `p42+4` sotto `0xc0`, ma il disasm ROM `0x27DF6..0x27E1C` emette
+sempre il cel corrente `*(p42)` per il range signed `-0x40 < d4 < 0x100`.
+`dispatchType5` ora segue quel bound e il replay laterale `route_4200` passa
+100/100; `route_4800`, `route_5400`, playable replay 3/3, warm-seed gameplay
+15/15, typecheck, targeted vitest, web build e long-demo guardrail restano
+verdi.
+
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
 della transizione mode0 `3e4=2/gamemode=1 -> 3e4=3/gamemode=0`: mode switch
