@@ -510,7 +510,7 @@ function auditPath(
   const reasons: string[] = [];
 
   if (initial.pfCount <= 4_000) reasons.push("playfield is not fully populated at seed frame");
-  if (initial.mode === 2) reasons.push("seed starts in presentation/high-score mode");
+  if (initial.main !== 0 && initial.mode === 2) reasons.push("seed starts in presentation/high-score mode");
   if (initial.playerState !== 0) reasons.push(`player starts in state ${initial.playerState}, not settled playable state 0`);
   if (!preserved.responsive) reasons.push("preserved dispatcher active route matches neutral route");
   if (mamePair !== undefined && !mamePair.responsive) {

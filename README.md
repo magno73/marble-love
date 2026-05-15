@@ -24,7 +24,10 @@ quando lo scroll verticale entra nelle finestre basse.
 Per repro manuali difficili da scriptare, `oracle/mame_playable_input_capture.lua`
 supporta anche `MARBLE_PLAYABLE_MANUAL=1`: registra prima una movie MAME
 `.inp`, poi ripassala con `-playback` per ottenere trace JSON e tail snapshot
-replayabili dal probe TS.
+replayabili dal probe TS. Per capture scriptati, coin/start sono ora applicati
+post-boot (`MARBLE_PLAYABLE_COIN_FRAME=1200`,
+`MARBLE_PLAYABLE_START_FRAME=1500` di default); i vecchi pulse f60/f180 erano
+troppo presto e producevano finestre attract/demo identiche al no-coin.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col

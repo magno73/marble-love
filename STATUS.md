@@ -20,6 +20,10 @@ classificare i candidati:
 - `oracle/mame_playable_input_capture.lua` ora accumula i contatori trackball
   raw per `MARBLE_PLAYABLE_ROUTE`; prima scriveva il delta come valore assoluto
   del port, rendendo i capture scriptati poco utili per route lunghe.
+- Coin/start scriptati sono stati spostati post-boot (`coin f1200`, `START1
+  f1500` di default) e i campi digitali MAME Lua usano valore logico
+  pressed=1. I vecchi pulse f60/f180 erano troppo presto e producevano snapshot
+  identici al no-coin.
 
 Risultato immediato:
 
@@ -35,6 +39,10 @@ Risultato immediato:
   active == neutral: quindi i seed futuri devono ancora passare dal confronto
   MAME active/neutral e dal probe dispatcher manuale prima di entrare in
   `startLevel`.
+- Con coin/start post-boot, MAME entra in un path reale `main=0` e una rotta
+  trackball attiva diverge da neutral gia' nel level 1. Questo non produce
+  ancora seed 2..5, ma sblocca la cattura di route controllabili reali invece
+  delle vecchie finestre attract/demo.
 
 ## 2026-05-15 — levelTime scroll-target fix
 

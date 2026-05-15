@@ -15,6 +15,9 @@
 --   MARBLE_PLAYABLE_TRACKBALL_START optional first scripted trackball frame
 --   MARBLE_PLAYABLE_ROUTE        optional screen-space route, e.g. D:171,R:206
 --   MARBLE_PLAYABLE_INPUT_TRACE_REF optional scenario inputTrace path
+--   MARBLE_PLAYABLE_COIN_START=0 disable scripted coin/start pulses
+--   MARBLE_PLAYABLE_COIN_FRAME    first scripted coin frame (default 1200)
+--   MARBLE_PLAYABLE_START_FRAME   first scripted START1 frame (default 1500)
 --   MARBLE_PLAYABLE_FRAME_LIST   optional CSV of name:frame warm captures
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
@@ -27,6 +30,9 @@ local INPUT_TRACE_REF = os.getenv("MARBLE_PLAYABLE_INPUT_TRACE_REF") or "oracle/
 local ONLY_RAW = os.getenv("MARBLE_PLAYABLE_SCENARIOS") or ""
 local FRAME_LIST_RAW = os.getenv("MARBLE_PLAYABLE_FRAME_LIST") or ""
 local ROUTE_RAW = os.getenv("MARBLE_PLAYABLE_ROUTE") or ""
+local SCRIPT_COIN_START = os.getenv("MARBLE_PLAYABLE_COIN_START") ~= "0"
+local COIN_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_COIN_FRAME") or "1200") or 1200
+local START_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_START_FRAME") or "1500") or 1500
 local MANUAL_INPUT = os.getenv("MARBLE_PLAYABLE_MANUAL") == "1"
 local MANUAL_NAME = os.getenv("MARBLE_PLAYABLE_NAME") or "manual_play"
 local MANUAL_MAX_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_MAX_FRAME") or "")
@@ -276,8 +282,10 @@ end
 
 local function scripted_input(frame)
     local buttons = 0
-    if frame >= 60 and frame < 75 then buttons = buttons | 0x04 end
-    if frame >= 180 and frame < 195 then buttons = buttons | 0x01 end
+    if SCRIPT_COIN_START then
+        if frame >= COIN_FRAME and frame < COIN_FRAME + 15 then buttons = buttons | 0x04 end
+        if frame >= START_FRAME and frame < START_FRAME + 15 then buttons = buttons | 0x01 end
+    end
 
     local dx = 0
     local dy = 0
@@ -333,23 +341,23 @@ local function apply_input_for_frame(frame)
     local start_port = ports[":F60000"]
     if start_port then
         if start_port.fields["1 Player Start"] then
-            start_port.fields["1 Player Start"]:set_value((script_buttons & 0x01) ~= 0 and 0 or 1)
+            start_port.fields["1 Player Start"]:set_value((script_buttons & 0x01) ~= 0 and 1 or 0)
         end
         if start_port.fields["2 Players Start"] then
-            start_port.fields["2 Players Start"]:set_value((script_buttons & 0x02) ~= 0 and 0 or 1)
+            start_port.fields["2 Players Start"]:set_value((script_buttons & 0x02) ~= 0 and 1 or 0)
         end
     end
 
     local coin_port = ports[":1820"]
     if coin_port then
         if coin_port.fields["Coin 1"] then
-            coin_port.fields["Coin 1"]:set_value((script_buttons & 0x04) ~= 0 and 0 or 1)
+            coin_port.fields["Coin 1"]:set_value((script_buttons & 0x04) ~= 0 and 1 or 0)
         end
         if coin_port.fields["Left Coin"] then
-            coin_port.fields["Left Coin"]:set_value(1)
+            coin_port.fields["Left Coin"]:set_value(0)
         end
         if coin_port.fields["Right Coin"] then
-            coin_port.fields["Right Coin"]:set_value(1)
+            coin_port.fields["Right Coin"]:set_value(0)
         end
     end
 end
