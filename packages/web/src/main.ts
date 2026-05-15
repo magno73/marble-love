@@ -629,15 +629,16 @@ async function startGame(
             // che il chain audio produce suono anche senza gameplay cmd reali
             // (workaround per attract loop che non chiama soundCmdSend158AC).
             if (searchParams.get("soundTest") === "1") {
-              const testCmds = [0x40, 0x41, 0x42, 0x43, 0x50, 0x60, 0x65];
+              // Cmd test: ciclo su tutti i byte 0x00-0xFF per identificare quali
+              // attivano write YM/POKEY (= cmd "validi" del sound driver Marble).
               let testIdx = 0;
               setInterval(() => {
-                const cmd = testCmds[testIdx % testCmds.length]!;
+                const cmd = testIdx & 0xff;
                 submitSoundCommand(soundChip!, cmd as never);
                 soundRenderer?.playCommandCue(cmd, { force: true });
-                console.log(`[soundTest] sent cmd $${cmd.toString(16)}`);
+                if (testIdx % 16 === 0) console.log(`[soundTest] cmd $${cmd.toString(16)}`);
                 testIdx++;
-              }, 2000);
+              }, 500);  // 1 cmd ogni 500ms = 128s per ciclare tutti
             }
           }
           window.setTimeout(() => { soundRenderer?.playCommandCue(0x5a, { force: true }); }, 140);

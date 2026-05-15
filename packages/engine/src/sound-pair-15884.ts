@@ -92,6 +92,11 @@ export function soundPair15884(
   // First trigger — sempre eseguito (precede la cmp).
   subs?.soundCommand?.(SOUND_FIRST);
   notifyGlobalSoundCmd(SOUND_FIRST);
+  // DEBUG: count calls
+  if (typeof globalThis !== "undefined") {
+    const g = globalThis as { __soundPair15884Count?: number };
+    g.__soundPair15884Count = (g.__soundPair15884Count ?? 0) + 1;
+  }
 
   // Read uint16 big-endian @ workRam[0x394..0x395].
   // `cmp.w D0=2, mem.w` → branch se `mem == 2` (word, unsigned).
