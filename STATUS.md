@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (post-timeout high-score staged rebuild)
+**Ultimo update:** 2026-05-15 (coin/start rearm after game over)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Coin/start rearm after game over
+
+Follow-up live browser dopo il fix high-score: il post-timeout torna allo
+schermo attract/hi-score, ma il bridge locale coin/start restava marcato come
+"partita gia' avviata". Il risultato visibile era:
+
+- `GAME OVER` e ritorno allo schermo attract corretti.
+- Premendo `5` non si vedeva salire `CREDITS`.
+- Premendo `Enter` dopo un nuovo coin non ripartiva la partita.
+
+Fix:
+
+- Aggiunto `packages/web/src/coin-start-flow.ts` con helper testabili per:
+  - riconoscere un attract stabile riavviabile (`main=1`, mode attract 0..2,
+    async rebuild idle, playfield non pieno);
+  - scrivere il credit locale browser nel digit alpha esistente
+    `CREDITS: 0`, senza overlay DOM e senza toccare il percorso 6502 coin
+    ancora non modellato.
+- `packages/web/src/main.ts` usa quel gate per rimettere `manualPlayStarted`
+  a `false` solo dopo il ritorno attract pulito, evitando rearm mentre c'e'
+  ancora un playfield gameplay/presentation pieno.
+- Il numero di credits locale viene renderizzato anche nella schermata
+  coin/start iniziale, quindi `5` aggiorna subito il digit visibile.
+- Nuova regression `packages/web/test/coin-start-flow.test.ts` per il gate
+  attract stabile, il blocco su playfield pieno e il digit alpha credits.
+
+Validazione:
+
+- Browser live `http://127.0.0.1:5173/?autoLoad=1&play=1`: `5` porta
+  `CREDITS: 1`, `Enter` avvia il livello; dopo timeout/game-over e ritorno
+  attract, un secondo `5` aggiorna di nuovo `CREDITS: 1` e `Enter` riavvia
+  il livello.
+- `npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/input.test.ts --reporter=dot` PASS (6 test).
+- `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Post-timeout high-score staged rebuild
 
