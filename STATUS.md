@@ -1,7 +1,28 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (manual timer/debug aids)
+**Ultimo update:** 2026-05-15 (practice level starts)
 **Branch corrente:** `main`.
+
+## 2026-05-15 — Practice level starts
+
+Follow-up per testare direttamente i livelli senza doverli raggiungere dal
+livello precedente.
+
+Modifiche:
+
+- Nuovo parametro browser `startLevel=1..5`: mappa ai warm seed gameplay
+  `level1_spawn` .. `level5_spawn`.
+- In practice mode il browser riattiva il dispatcher manuale (`0x400390=0`)
+  sul seed MAME, imposta `mainLoopBodyTicks=1` e fa girare il main loop anche
+  senza `play=1`, cosi' la biglia risponde ai controlli.
+- Il loop reset automatico da 100 frame dei raw `?scenario=...` e' disabilitato
+  per `startLevel`, quindi il test non torna indietro mentre giochi. `scenario`
+  resta disponibile per drill/oracle raw e ha precedenza se specificato.
+- `startLevel` si combina con `levelTime=120/180` e `debugObjects=1` per
+  provare finitura livello, collisioni e oggetti vicini.
+
+Nota: questa e' una modalita' practice da warm seed, non una prova che la
+progressione reale dal livello precedente sia gia' corretta.
 
 ## 2026-05-15 — Manual timer/debug aids
 

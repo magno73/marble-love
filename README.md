@@ -32,6 +32,11 @@ ROM mostrano solo due cifre o clampano sopra 99, quindi il valore alto puo'
 essere effettivo anche se il display non mostra subito 180/120. Per investigare
 collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
+Per partire direttamente da un livello di practice usa `startLevel=1..5`, ad
+esempio `?autoLoad=1&startLevel=3&levelTime=180`: carica il warm seed MAME
+`levelN_spawn`, riattiva il dispatcher manuale del browser e disabilita il
+loop reset automatico. E' pensato per provare collisioni/controlli/timeout dei
+livelli, non come prova di progressione reale dal livello precedente.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
