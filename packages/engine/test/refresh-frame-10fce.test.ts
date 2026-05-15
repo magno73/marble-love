@@ -256,4 +256,82 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect((state.workRam[obj + 0x32] << 8) | state.workRam[obj + 0x33]).toBe(0x12);
     expect((state.workRam[obj + 0x34] << 8) | state.workRam[obj + 0x35]).toBe(0x0a);
   });
+
+  it("models FUN_253EC state 8 countdown animation", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const obj = 0x18;
+
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 8;
+    state.workRam[obj + 0x1c] = 1;
+    state.workRam[obj + 0x56] = 1;
+    state.workRam[obj + 0x57] = 3;
+    state.workRam[obj + 0x6b] = 7;
+    state.workRam[obj + 0xd0] = 1;
+    state.workRam[obj + 0xcc] = 0x00;
+    state.workRam[obj + 0xcd] = 0x00;
+    state.workRam[obj + 0xce] = 0x12;
+    state.workRam[obj + 0xcf] = 0x34;
+
+    refreshFrame10FCE(state, rom, {
+      fun13EE6: () => undefined,
+      processAllSprites189E2: () => undefined,
+      objectUpdatePair158CC: () => undefined,
+      slotArrayTick1493C: () => undefined,
+      dispatchStrings17230: () => undefined,
+      fun1912C: () => undefined,
+      stateSub19BAA: () => undefined,
+      stateSub1844A: () => undefined,
+      stateDispatch12FD0: () => undefined,
+      objDirtyDispatch28624: () => undefined,
+    });
+
+    expect(state.workRam[obj + 0x1a]).toBe(8);
+    expect(state.workRam[obj + 0x56]).toBe(9);
+    expect(state.workRam[obj + 0x57]).toBe(2);
+    expect(((state.workRam[obj + 0x6a] ?? 0) << 8) | (state.workRam[obj + 0x6b] ?? 0)).toBe(8);
+    expect(state.workRam[obj + 0xd0]).toBe(0);
+    expect(
+      ((state.workRam[obj + 0xcc] ?? 0) << 24) |
+        ((state.workRam[obj + 0xcd] ?? 0) << 16) |
+        ((state.workRam[obj + 0xce] ?? 0) << 8) |
+        (state.workRam[obj + 0xcf] ?? 0),
+    ).toBe(0x1238);
+  });
+
+  it("models FUN_253EC state 8 terminal score/state init", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const obj = 0x18;
+
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 8;
+    state.workRam[obj + 0x1c] = 1;
+    state.workRam[obj + 0x56] = 1;
+    state.workRam[obj + 0x57] = 1;
+    state.workRam[obj + 0xd1] = 0x7f;
+
+    refreshFrame10FCE(state, rom, {
+      fun13EE6: () => undefined,
+      processAllSprites189E2: () => undefined,
+      objectUpdatePair158CC: () => undefined,
+      slotArrayTick1493C: () => undefined,
+      dispatchStrings17230: () => undefined,
+      fun1912C: () => undefined,
+      stateSub19BAA: () => undefined,
+      stateSub1844A: () => undefined,
+      stateDispatch12FD0: () => undefined,
+      objDirtyDispatch28624: () => undefined,
+    });
+
+    expect(state.workRam[obj + 0x1a]).toBe(0);
+    expect(state.workRam[obj + 0x57]).toBe(0);
+    expect(state.workRam[obj + 0xd1]).toBe(0);
+    expect(state.workRam[obj + 0xd8]).toBe(1);
+  });
 });

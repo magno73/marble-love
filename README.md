@@ -163,6 +163,16 @@ attraversa state 2 -> 4 -> 0, e il fuzz TS non mostra piu' gli stuck state-2.
 Playable replay 3/3, warm-seed 15/15, web build e long demo fresh step10 tail
 no-stack (`14465 <= 16000`, invariato senza/con JT[2]) restano PASS.
 
+**Checkpoint FUN_253EC state-8 countdown (2026-05-15):** il prossimo buco reale
+del dispatcher biglia era JT[8], non una correzione di camera/collisione. Il
+disasm ROM `0x258A8` mostra il countdown `obj+0x56/+0x57`, l'avanzamento
+`obj+0x6A/+0xCC`, il terminal `FUN_285B0(obj, 0x10)` e il tail
+`1B9CC -> 1C014 -> 1281C`; `refresh-frame-10fce.ts` ora replica quel path.
+Aggiunte regression mirate in `refresh-frame-10fce.test.ts`; refresh-frame,
+playable-live-routes, targeted vitest bundle, typecheck, playable replay 3/3,
+warm-seed 15/15, web build e long demo fresh step10 no-stack (`15275 <= 16000`,
+`14501 <= 16000` con la mask storica) restano PASS.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con
