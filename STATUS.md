@@ -1,7 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (transient state-1 live guard)
+**Ultimo update:** 2026-05-15 (playable level progression guard)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable level progression guard
+
+Nuovo focus QA: dimostrare il passaggio playable oltre il primo livello prima
+di riprendere fuzz generico sul level 1. La prima mappatura ha confermato che
+i seed MAME gameplay etichettano `level2_spawn` sul segmento `0x3e4=4` e
+`level3_spawn` sul segmento `0x3e4=5`; il dispatcher manuale browser parte dal
+seed neutro `manual_level1_start` e deve quindi raggiungere finestre giocabili
+in quei segmenti senza scorciatoie di stato.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` rinforza la rotta profonda manual-like:
+  richiede ingresso ordinato in una finestra playable level 2 (`segment=4`)
+  e poi level 3 (`segment=5`), entrambe con `main=1`, `mode=0`, PF pieno
+  (`>4000`) e player in `state 0`.
+- La guardia richiede oltre 120 frame giocabili in ciascuna finestra, mantiene
+  il bound su PF vuoto (`<=16` frame), vieta `state 1` stuck e conserva il
+  bound scroll (`<=360`).
+- Nessuna modifica engine: questo checkpoint fissa il segnale di progressione
+  live prima di cercare bug specifici di collisione/camera nei level 2/3.
+
+Evidenza/validazione:
+
+- Mapping MAME esistente: `oracle/scenarios/gameplay/level2_spawn.json` parte
+  con `0x3e4=4`, `level3_spawn.json` parte con `0x3e4=5`.
+- Catture temporanee `MARBLE_PLAYABLE_ROUTE` confermano che le warm-window
+  profonde restano replayabili sotto soglia; il path MAME con dispatcher
+  preservato non coincide frame-per-frame con il dispatcher manuale browser,
+  quindi questo checkpoint non introduce fix engine.
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS (10 test).
 
 ## 2026-05-15 — Transient state-1 live guard
 

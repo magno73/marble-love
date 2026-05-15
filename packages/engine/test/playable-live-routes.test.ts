@@ -285,7 +285,7 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
 
-  it("progresses through later timeout rebuilds without losing playable terrain", () => {
+  it("reaches level 2 and level 3 playable windows without losing terrain", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
     const state = loadPlayableState(rom);
@@ -298,6 +298,12 @@ describe("playable live route smoke", () => {
     let maxState1Run = 0;
     let maxScrollY = 0;
     let sawMode2AfterEarlyRoute = false;
+    // MAME gameplay warm seeds map level2_spawn to segment 4 and level3_spawn
+    // to segment 5; this live route proves the manual dispatcher reaches both.
+    let level2EntryFrame = -1;
+    let level3EntryFrame = -1;
+    let level2PlayableFrames = 0;
+    let level3PlayableFrames = 0;
     let sawSegment5 = false;
     let sawSegment7 = false;
 
@@ -317,7 +323,9 @@ describe("playable live route smoke", () => {
       ["N", 10000],
     ]);
 
+    let frame = 0;
     for (const step of plan) {
+      frame++;
       [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
       tick(state, {
         rom,
@@ -347,8 +355,18 @@ describe("playable live route smoke", () => {
       const mainState = readWordBE(state.workRam, 0x390);
       const mode = readWordBE(state.workRam, 0x392);
       const segment = state.workRam[0x3e4] ?? 0;
+      const playerState = state.workRam[0x18 + 0x1a] ?? 0;
+      const playableTerrain = mainState === 1 && mode === 0 && pfCount > 4000 && playerState === 0;
       maxScrollY = Math.max(maxScrollY, state.videoScrollY);
       sawMode2AfterEarlyRoute ||= mainState === 1 && mode === 2 && segment >= 3;
+      if (playableTerrain && segment === 4) {
+        if (level2EntryFrame < 0) level2EntryFrame = frame;
+        level2PlayableFrames++;
+      }
+      if (playableTerrain && segment === 5) {
+        if (level3EntryFrame < 0) level3EntryFrame = frame;
+        level3PlayableFrames++;
+      }
       sawSegment5 ||= mainState === 1 && segment >= 5;
       sawSegment7 ||= mainState === 1 && segment >= 7;
     }
@@ -356,6 +374,10 @@ describe("playable live route smoke", () => {
     maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
     maxState1Run = Math.max(maxState1Run, state1Run);
     expect(sawMode2AfterEarlyRoute).toBe(true);
+    expect(level2EntryFrame).toBeGreaterThan(0);
+    expect(level3EntryFrame).toBeGreaterThan(level2EntryFrame);
+    expect(level2PlayableFrames).toBeGreaterThan(120);
+    expect(level3PlayableFrames).toBeGreaterThan(120);
     expect(sawSegment5).toBe(true);
     expect(sawSegment7).toBe(true);
     expect(maxEmptyRun).toBeLessThanOrEqual(16);
