@@ -1,7 +1,39 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (type-5 current cel emit)
+**Ultimo update:** 2026-05-15 (deep live route guards)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Deep live route guards
+
+Follow-up QA notturno dopo il fix type-5: le nuove rotte profonde non hanno
+prodotto un bug gameplay TS live riproducibile. I fail caldi rimasti nei
+replay MAME temporanei (`route_13000`/boundary death) sono boundary artifact
+da warm snapshot senza lo stage async TS-only, mentre il percorso live continuo
+dal seed manuale resta sano.
+
+Finding:
+
+- Una rotta manual-like lunga attraversa lower bridge, segmenti timeout e
+  rebuild fino a `0x3e4>=7` senza PF vuoto persistente, scroll runaway o
+  `state-1` stuck.
+- Una rotta fall/death ripetuta genera molte transizioni morte (`state 4/5`)
+  e recupera ogni volta in `state 0`, poi prosegue fino ai segmenti successivi
+  con PF popolato.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` ora riusa una helper trackball screen-space
+  comune e aggiunge due guardie live: progressione profonda dei rebuild timeout
+  e recuperi ripetuti da fall/death.
+- Nessuna modifica engine: le guardie fissano i sintomi reali esercitati in
+  QA per evitare regressioni sui prossimi port.
+
+Evidenza/validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS (9 test).
+- Targeted vitest bundle PASS (64 test).
+- `npx tsc -b --pretty false` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Type-5 current cel emit
 
