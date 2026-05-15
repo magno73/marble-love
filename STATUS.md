@@ -1,13 +1,14 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (LAN browser audio + initial attract)
+**Ultimo update:** 2026-05-15 (LAN browser audio fallbacks + initial attract)
 **Branch corrente:** `main`.
 
-## 2026-05-15 — LAN browser audio + initial attract
+## 2026-05-15 — LAN browser audio fallbacks + initial attract
 
 Follow-up live via `http://192.168.85.200:5173/?autoLoad=1&play=1`: il Mac
 client mostrava solo il testo bottom `1 COIN PER PLAY / CREDITS: 0` su nero e
-non esponeva chiaramente un feedback audio udibile.
+non esponeva chiaramente un feedback audio udibile. Follow-up successivo:
+cliccando `Enable Audio` da browser LAN il bottone entrava in `Audio failed`.
 
 Fix:
 
@@ -20,12 +21,19 @@ Fix:
 - I cue sound sono piu' lunghi/forti e passano anche da un `OscillatorNode`
   diretto oltre che dall'AudioWorklet, cosi' il test click non dipende dal
   synth worklet.
+- `sound-renderer.ts` supporta `webkitAudioContext` e degrada in modo
+  conservativo quando `AudioWorklet` non e' disponibile su origine LAN/non
+  secure context: il worklet diventa opzionale e i cue restano udibili tramite
+  oscillatore diretto. Se manca proprio `AudioContext`, il test cue usa un WAV
+  generato al volo via elemento audio invece di far fallire il bottone.
 
 Validazione:
 
 - Browser smoke locale `?autoLoad=1&play=1`: title/high-score visibile,
   bottone `Enable Audio` presente, click -> `Test Audio`.
-- `npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/sound-renderer.test.ts --reporter=dot` PASS (18 test).
+- Browser smoke LAN `http://192.168.85.200:5173/?autoLoad=1&play=1`: click
+  `Enable Audio` -> `Test Audio`, niente ramo `Audio failed`.
+- `npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/sound-renderer.test.ts --reporter=dot` PASS (20 test).
 - `npx tsc -b --pretty false` PASS.
 - `npm --workspace @marble-love/web run build` PASS.
 - `git diff --check` PASS.

@@ -486,8 +486,8 @@ http://localhost:5173/?autoLoad=1&scenario=level1_spawn&sound=1  # + audio
 ## Sound chip end-to-end (cherry-pick da `feature/sound-chip`)
 
 Audio subsystem in 11 file engine + 3 test + 1 CLI + 2 web + 1 worklet,
-integrato in `?sound=1` query param. 6502 sound CPU + YM2151 + POKEY + mailbox
-68K↔6502 + Web Audio renderer.
+default-on nel browser (`sound=0` opt-out). 6502 sound CPU + YM2151 + POKEY +
+mailbox 68K↔6502 + Web Audio renderer.
 
 | Phase | File | Test |
 |---|---|---|
@@ -497,20 +497,23 @@ integrato in `?sound=1` query param. 6502 sound CPU + YM2151 + POKEY + mailbox
 | **C6 POKEY** | `src/audio/pokey.ts` (Phase 6 V2 register-state parity) | 11/11 PASS |
 | **C7 SoundChip facade** | `src/m6502/{sound-chip,sound-clock}.ts` | 9/10 PASS smoke (NMI/IRQ edge-triggered) |
 | **C8 probe-sound-diff** | `packages/cli/src/probe-sound-diff.ts` | 387B audioRam + 2 YM + 1 POKEY divergent @ f600 (V2 Timer A/B stub) |
-| **C9 Web Audio renderer** | `packages/web/src/sound-renderer.ts` + `public/sound-worklet.js` | 15/15 PASS pure logic (ymKcToFreq, pokeyAudfToFreq, command cue fallback, ...) |
+| **C9 Web Audio renderer** | `packages/web/src/sound-renderer.ts` + `public/sound-worklet.js` | 17/17 PASS pure logic/fallback (ymKcToFreq, pokeyAudfToFreq, command cue fallback, no-Worklet/no-AudioContext startup, ...) |
 | **C10 Wire web audio** | `packages/web/src/main.ts` | Pulsante "🔊 Enable Audio" default-on + ticker hook (`sound=0` opt-out) |
 
 **62/64 sound test PASS** (2 skip = sentinel ROM-assenti). Build PWA 795KB.
 
 **V1 MVP audio**: 8 YM2151 voices (sine + ADSR envelope follower) + 4 POKEY
-voices (square / white noise) sintetizzate da AudioWorklet a sample rate
-AudioContext default. Bridge `sound-renderer.ts` polla `chip.ym2151.regs` +
-`chip.pokey.writeRegs` ogni frame e posta eventi `ym_voice` / `pokey_voice`.
+voices (square / white noise) sintetizzate da AudioWorklet quando disponibile,
+con fallback LAN/Safari-friendly via `webkitAudioContext`, `OscillatorNode`
+diretto e cue WAV generato se manca `AudioContext`. Bridge
+`sound-renderer.ts` polla `chip.ym2151.regs` + `chip.pokey.writeRegs` ogni
+frame e posta eventi `ym_voice` / `pokey_voice` quando il worklet esiste.
 In piu', ogni `soundCmdSend158AC` emesso dal gameplay invia un breve cue
 deterministico al worklet: il comando continua ad andare al SoundChip reale,
 ma il browser resta udibile anche finche' il driver 6502/YM/POKEY non produce
 ancora register writes gameplay completi. Il click su "Enable Audio" emette
-anche un breve cue di conferma via `OscillatorNode` diretto e AudioWorklet.
+anche un breve cue di conferma e non richiede piu' che `AudioWorklet` sia
+disponibile sull'origine LAN.
 
 **V3 sample-level chip-perfect deferito** (PRD Phase 7 V1 explicit "POKEY/
 YM2151 chip-perfect rimandato a V2"): envelope DR/AR/SR/RR per 32 operatori
