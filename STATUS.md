@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (sound chip cherry-pick end-to-end)
+**Ultimo update:** 2026-05-15 (playable later-level dispatcher boundary)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable later-level dispatcher boundary
+
+Follow-up al nuovo goal level 1→2→3: i seed MAME `level2_spawn` e
+`level3_spawn` non bastano come prova di progressione live, ma ora fissano una
+diagnostica utile sul confine dispatcher. Con `0x400390==1` preservato,
+input attivo e input neutro producono lo stesso path oggetto; riarmando gli
+stessi seed al dispatcher manuale (`0x400390=0`, come il browser fa al primo
+START) l'input attivo diverge da quello neutro e mantiene PF/camera/death
+recovery sani nei segmenti 4 e 5.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` aggiunge helper per warm gameplay scenarios e
+  una guardia active-vs-neutral su `level2_spawn`/`level3_spawn`.
+- La guardia asserisce esplicitamente entrambe le meta': dispatcher preservato
+  non controllabile, dispatcher manuale controllabile. Questo non e' ancora
+  completamento level 1->2 o level 2->3; e' la prova ripetibile che la fisica
+  dei livelli successivi e' controllabile quando il path manuale viene
+  riarmato, mentre la transizione live resta il prossimo root-cause target.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS (13 test).
 
 ## 2026-05-15 — Sound chip end-to-end (cherry-pick da feature/sound-chip)
 

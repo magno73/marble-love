@@ -121,9 +121,12 @@ player `state 0`, PF-empty bound, `state 1/2` non-stuck, `state 6` bounded e
 scroll bound invariati. Follow-up probe: una route tutta neutra raggiunge le
 stesse finestre e input trackball attivo in `0x400390==1` viene campionato ma
 non cambia il path object; quindi questa e' una guardia timeout/rebuild, non
-completion/controllabilita' level 2/3. Nessuna patch engine: i prossimi drill
-devono cercare una route controllabile vera o confrontare contro input neutro e
-MAME route equivalente.
+completion/controllabilita' level 2/3. Follow-up checkpoint: i seed caldi
+`level2_spawn` e `level3_spawn` restano non controllabili con dispatcher MAME
+preservato (active == neutral), ma diventano controllabili se riarmati al
+dispatcher manuale (`0x400390=0`) come il browser fa al primo START. Questo
+fissa il prossimo confine: provare una transizione live che entra nel path
+manuale, non solo la stabilita' presentation/timeout.
 
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
