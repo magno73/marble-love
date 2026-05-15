@@ -99,6 +99,14 @@ sempre il cel corrente `*(p42)` per il range signed `-0x40 < d4 < 0x100`.
 15/15, typecheck, targeted vitest, web build e long-demo guardrail restano
 verdi.
 
+**Checkpoint deep live route guards (2026-05-15):** follow-up QA dopo il fix
+type-5 non ha trovato un nuovo bug engine live. Le divergenze rimaste sui warm
+seed MAME presi a meta' transizione sono artifact di snapshot senza lo stage
+async TS-only, mentre il percorso live continuo dal seed manuale attraversa
+lower bridge, timeout/rebuild fino a `0x3e4>=7` e fall/death ripetuti senza PF
+vuoto persistente, scroll runaway o state-1 stuck. `playable-live-routes.test.ts`
+ora codifica queste due rotte profonde come guardie regression.
+
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME
 della transizione mode0 `3e4=2/gamemode=1 -> 3e4=3/gamemode=0`: mode switch

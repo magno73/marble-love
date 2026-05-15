@@ -92,6 +92,24 @@ function pseudoRandomPlan(frames: number): string[] {
   return out;
 }
 
+const screenDeltas: Record<string, readonly [number, number]> = {
+  D: [0, 8],
+  U: [0, -8],
+  R: [8, 0],
+  L: [-8, 0],
+  DR: [8, 8],
+  DL: [-8, 8],
+  UR: [8, -8],
+  UL: [-8, -8],
+  BR: [4, -6],
+  N: [0, 0],
+};
+
+function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
+  const [screenDx, screenDy] = screenDeltas[step] ?? [0, 0];
+  return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
+}
+
 describe("playable live route smoke", () => {
   it.each([
     [
@@ -187,23 +205,9 @@ describe("playable live route smoke", () => {
     const initialObjX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
     let maxObjX = Number.NEGATIVE_INFINITY;
     let sawExpectedState = routeExpect.sawState === undefined;
-    const deltas: Record<string, readonly [number, number]> = {
-      D: [0, 8],
-      U: [0, -8],
-      R: [8, 0],
-      L: [-8, 0],
-      DR: [8, 8],
-      DL: [-8, 8],
-      UR: [8, -8],
-      UL: [-8, -8],
-      BR: [4, -6],
-      N: [0, 0],
-    };
 
     for (const step of plan) {
-      const [screenDx, screenDy] = deltas[step] ?? [0, 0];
-      p1X = (p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff;
-      p1Y = (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff;
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
       tick(state, {
         rom,
         runMainLoopBody: true,
@@ -281,6 +285,160 @@ describe("playable live route smoke", () => {
     expect(state.workRam[0x18 + 0x1a]).not.toBe(6);
   });
 
+  it("progresses through later timeout rebuilds without losing playable terrain", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let emptyRun = 0;
+    let maxEmptyRun = 0;
+    let state1Run = 0;
+    let maxState1Run = 0;
+    let maxScrollY = 0;
+    let sawMode2AfterEarlyRoute = false;
+    let sawSegment5 = false;
+    let sawSegment7 = false;
+
+    const plan = expand([
+      ["D", 171],
+      ["R", 206],
+      ["L", 188],
+      ["DL", 107],
+      ["BR", 260],
+      ["R", 700],
+      ["D", 300],
+      ["R", 800],
+      ["DR", 300],
+      ["R", 800],
+      ["U", 100],
+      ["R", 500],
+      ["N", 10000],
+    ]);
+
+    for (const step of plan) {
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      const pfCount = nonzero(state.playfieldRam);
+      if (pfCount === 0) {
+        emptyRun++;
+      } else {
+        maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+        emptyRun = 0;
+      }
+
+      if (state.workRam[0x18 + 0x1a] === 1) {
+        state1Run++;
+      } else {
+        maxState1Run = Math.max(maxState1Run, state1Run);
+        state1Run = 0;
+      }
+
+      const mainState = readWordBE(state.workRam, 0x390);
+      const mode = readWordBE(state.workRam, 0x392);
+      const segment = state.workRam[0x3e4] ?? 0;
+      maxScrollY = Math.max(maxScrollY, state.videoScrollY);
+      sawMode2AfterEarlyRoute ||= mainState === 1 && mode === 2 && segment >= 3;
+      sawSegment5 ||= mainState === 1 && segment >= 5;
+      sawSegment7 ||= mainState === 1 && segment >= 7;
+    }
+
+    maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+    maxState1Run = Math.max(maxState1Run, state1Run);
+    expect(sawMode2AfterEarlyRoute).toBe(true);
+    expect(sawSegment5).toBe(true);
+    expect(sawSegment7).toBe(true);
+    expect(maxEmptyRun).toBeLessThanOrEqual(16);
+    expect(maxState1Run).toBe(0);
+    expect(maxScrollY).toBeLessThanOrEqual(360);
+    expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
+    expect(state.workRam[0x18 + 0x1a]).toBe(0);
+  });
+
+  it("recovers from repeated live fall/death routes", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = loadPlayableState(rom);
+
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    let deathEvents = 0;
+    let recoveries = 0;
+    let inDeath = false;
+    let emptyRun = 0;
+    let maxEmptyRun = 0;
+    let sawSegment6 = false;
+
+    const plan = expand([
+      ["D", 260],
+      ["N", 520],
+      ["D", 330],
+      ["N", 600],
+      ["D", 260],
+      ["N", 700],
+      ["D", 260],
+      ["N", 900],
+      ["D", 360],
+      ["N", 2000],
+      ["D", 420],
+      ["N", 2500],
+      ["D", 500],
+      ["N", 3000],
+    ]);
+
+    for (const step of plan) {
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+
+      const playerState = state.workRam[0x18 + 0x1a] ?? 0;
+      const isDeath = playerState === 4 || playerState === 5;
+      if (isDeath && !inDeath) {
+        deathEvents++;
+        inDeath = true;
+      } else if (inDeath && playerState === 0) {
+        recoveries++;
+        inDeath = false;
+      }
+
+      const pfCount = nonzero(state.playfieldRam);
+      if (pfCount === 0) {
+        emptyRun++;
+      } else {
+        maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+        emptyRun = 0;
+      }
+      sawSegment6 ||= readWordBE(state.workRam, 0x390) === 1 && (state.workRam[0x3e4] ?? 0) >= 6;
+      expect(playerState).not.toBe(1);
+      expect(state.videoScrollY).toBeLessThanOrEqual(360);
+    }
+
+    maxEmptyRun = Math.max(maxEmptyRun, emptyRun);
+    expect(deathEvents).toBeGreaterThanOrEqual(4);
+    expect(recoveries).toBe(deathEvents);
+    expect(sawSegment6).toBe(true);
+    expect(maxEmptyRun).toBeLessThanOrEqual(16);
+    expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
+    expect(state.workRam[0x18 + 0x1a]).toBe(0);
+  });
+
   it("refreshes player terrain shape records through FUN_264AA mode 0", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
@@ -291,9 +449,7 @@ describe("playable live route smoke", () => {
     let sawTerrainShape = false;
 
     for (const step of expand([["D", 180], ["R", 80]])) {
-      const [screenDx, screenDy] = step === "D" ? [0, 8] : [8, 0];
-      p1X = (p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff;
-      p1Y = (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff;
+      [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
       tick(state, {
         rom,
         runMainLoopBody: true,
