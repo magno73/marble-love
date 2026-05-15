@@ -328,6 +328,30 @@ Validazione misurabile:
 
 ---
 
-## 8. Approval
+## 8. Progress log (2026-05-15)
+
+### Sessione 1 (commit `6288837` .. `adb2f19`)
+
+| Phase | Status | Commit | Note |
+|---|---|---|---|
+| **A0** Cmd flow diagnostic | 🔴 BLOCKER aperto | `6288837` | Trace tutte sub-emit: 0 calls in 15s gameplay. Counter `__sound158ACCount` / `__soundPair15884Count` / `__soundTickDispatchCount` in globalThis. workRam byte queue $401F44 mai popolato. |
+| **A1** Cycle-exact 6502 | 🟡 aperto | — | 387B audioRam @ f600 invariato. |
+| **A2** Envelope rate MAME | ✅ done | `831b200` | ENV_RATE_SHIFT[64] + ENV_RATE_SELECT[64] + EG_INC[19×8]. |
+| **A3** Attenuation dB | ✅ done | `831b200` | ATT_TO_LINEAR[1024] esponenziale 96dB. |
+| **A4** LFO PM vibrato | ✅ done | `831b200` | pmOffset = lfoOutput × PMD × PMS × 4. |
+| **A5** POKEY AUDCTL | ✅ done | `831b200` | Channel join 16-bit + poly9. |
+| **A6** Sample diff tool | ✅ done | `adb2f19` | probe-sound-sample-diff.ts cross-correlation. |
+| **A7** E2E validation | 🟡 pending | — | Richiede A0 fix + MAME WAV capture. |
+
+35/35 test PASS. Build PWA 795KB.
+
+**Blocker per "audio originale in browser"**:
+
+1. **A0**: gameplay sub che popolano byte queue $401F44 non eseguite in runtime → no cmd al sound 6502 → no audio chip-level.
+2. **A1**: 387B cycle skew → ISR sound code scrive register diversi da MAME.
+
+**Decisione strategica**: DSP audio infrastructure completa (A2-A6). Quando A0+A1 fixed, audio chip-perfect emergerà automaticamente. Manca il "feed" di cmd reali.
+
+## 9. Approval
 
 Marco approva il plan completo o vuole modifiche / priorità diverse?
