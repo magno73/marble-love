@@ -34,6 +34,9 @@ interface CliArgs {
   plan: string;
   json: boolean;
   mameNeutralDir: string | undefined;
+  allSnapshots: boolean;
+  targetSegment: number | undefined;
+  onlyCandidates: boolean;
 }
 
 interface SeedSummary {
@@ -95,12 +98,25 @@ interface MamePairSummary {
 
 interface AuditSummary {
   path: string;
+  sourcePath: string;
   initial: SeedSummary;
   mamePair: MamePairSummary | undefined;
   preserved: ComparisonSummary;
   manualRearm: ComparisonSummary;
   verdict: "practice-seed" | "candidate-needs-route-proof" | "diagnostic-only";
   reasons: string[];
+}
+
+interface LoadedSeed {
+  sourcePath: string;
+  label: string;
+  snapshotIndex: number;
+  seed: SeedJson;
+}
+
+interface NeutralSeed {
+  path: string;
+  seed: SeedJson;
 }
 
 const DEFAULT_PATHS = [
@@ -137,6 +153,14 @@ Options:
   --mame-neutral-dir DIR
                 Compare each input scenario against DIR/<same filename> from
                 a neutral MAME capture before doing the TS rearm probe
+  --all-snapshots
+                Audit every snapshot in each scenario file instead of only
+                the first seed frame. Useful for manual/playback tail captures.
+  --target-segment N
+                Pre-filter snapshots by workRam[0x3e4] segment before running
+                the active-vs-neutral probe
+  --only-candidates
+                Print only non-diagnostic verdicts
   --json        Emit machine-readable JSON
   -h, --help    Show this help
 
@@ -151,6 +175,9 @@ function parseArgs(): CliArgs {
   let plan = DEFAULT_PLAN;
   let json = false;
   let mameNeutralDir: string | undefined;
+  let allSnapshots = false;
+  let targetSegment: number | undefined;
+  let onlyCandidates = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -162,6 +189,18 @@ function parseArgs(): CliArgs {
       const next = args[++i];
       if (next === undefined) throw new Error("--mame-neutral-dir requires a value");
       mameNeutralDir = next;
+    } else if (arg === "--all-snapshots") {
+      allSnapshots = true;
+    } else if (arg === "--target-segment") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--target-segment requires a value");
+      const value = Number(next);
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        throw new Error(`invalid --target-segment value: ${next}`);
+      }
+      targetSegment = value;
+    } else if (arg === "--only-candidates") {
+      onlyCandidates = true;
     } else if (arg === "--json") {
       json = true;
     } else if (arg === "-h" || arg === "--help") {
@@ -172,7 +211,15 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { paths: paths.length > 0 ? paths : DEFAULT_PATHS, plan, json, mameNeutralDir };
+  return {
+    paths: paths.length > 0 ? paths : DEFAULT_PATHS,
+    plan,
+    json,
+    mameNeutralDir,
+    allSnapshots,
+    targetSegment,
+    onlyCandidates,
+  };
 }
 
 function hexToBytes(hex: string, expectedLength: number, label: string): Uint8Array {
@@ -244,14 +291,24 @@ function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [num
   return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
 }
 
-function loadSeed(path: string): SeedJson {
+function loadSeeds(path: string, allSnapshots: boolean): LoadedSeed[] {
   const raw = JSON.parse(readFileSync(resolve(path), "utf-8")) as ScenarioJson | SeedJson;
   if ("snapshots" in raw && Array.isArray(raw.snapshots)) {
-    const snapshot = raw.snapshots[0];
-    if (snapshot === undefined) throw new Error(`${path} has no snapshots`);
-    return snapshot;
+    if (raw.snapshots.length === 0) throw new Error(`${path} has no snapshots`);
+    const snapshots = allSnapshots ? raw.snapshots : [raw.snapshots[0]!];
+    return snapshots.map((seed, index) => {
+      const snapshotIndex = allSnapshots ? index : 0;
+      const frameSuffix = seed.frame === undefined ? "" : `@f${seed.frame}`;
+      return {
+        sourcePath: path,
+        label: allSnapshots ? `${path}#${snapshotIndex}${frameSuffix}` : path,
+        snapshotIndex,
+        seed,
+      };
+    });
   }
-  return raw as SeedJson;
+
+  return [{ sourcePath: path, label: path, snapshotIndex: 0, seed: raw as SeedJson }];
 }
 
 function regionDiffs(activeHex: string, neutralHex: string, expectedLength: number, label: string): number {
@@ -264,8 +321,7 @@ function regionDiffs(activeHex: string, neutralHex: string, expectedLength: numb
   return diffs;
 }
 
-function compareMamePair(activeSeed: SeedJson, neutralPath: string): MamePairSummary {
-  const neutralSeed = loadSeed(neutralPath);
+function compareMamePair(activeSeed: SeedJson, neutralPath: string, neutralSeed: SeedJson): MamePairSummary {
   const diffX = Math.abs(objectRawX(activeSeed) - objectRawX(neutralSeed));
   const diffY = Math.abs(objectRawY(activeSeed) - objectRawY(neutralSeed));
   const workRamDiffs = regionDiffs(activeSeed.workRam, neutralSeed.workRam, 0x2000, "workRam");
@@ -440,18 +496,17 @@ function compareRoute(rom: RomImage, seed: SeedJson, plan: readonly string[], ma
 
 function auditPath(
   rom: RomImage,
-  path: string,
+  loaded: LoadedSeed,
   plan: readonly string[],
-  mameNeutralDir: string | undefined,
+  neutral: NeutralSeed | undefined,
 ): AuditSummary {
-  const seed = loadSeed(path);
+  const seed = loaded.seed;
   const initial = seedSummary(seed);
-  const mamePair =
-    mameNeutralDir === undefined ? undefined : compareMamePair(seed, join(mameNeutralDir, basename(path)));
+  const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
   const preserved = compareRoute(rom, seed, plan, false);
   const manualRearm = compareRoute(rom, seed, plan, true);
-  const isGameplayOracleSeed = path.includes("oracle/scenarios/gameplay/");
-  const isCheckedInPlayableSeed = path.includes("packages/web/public/scenarios/playable/");
+  const isGameplayOracleSeed = loaded.sourcePath.includes("oracle/scenarios/gameplay/");
+  const isCheckedInPlayableSeed = loaded.sourcePath.includes("packages/web/public/scenarios/playable/");
   const reasons: string[] = [];
 
   if (initial.pfCount <= 4_000) reasons.push("playfield is not fully populated at seed frame");
@@ -483,7 +538,16 @@ function auditPath(
       : "candidate-needs-route-proof"
     : "diagnostic-only";
 
-  return { path, initial, mamePair, preserved, manualRearm, verdict, reasons };
+  return {
+    path: loaded.label,
+    sourcePath: loaded.sourcePath,
+    initial,
+    mamePair,
+    preserved,
+    manualRearm,
+    verdict,
+    reasons,
+  };
 }
 
 function fmt(value: number): string {
@@ -519,18 +583,50 @@ function printSummary(summary: AuditSummary): void {
   for (const reason of summary.reasons) console.log(`   - ${reason}`);
 }
 
+function loadNeutralSeed(args: CliArgs, loaded: LoadedSeed): NeutralSeed | undefined {
+  if (args.mameNeutralDir === undefined) return undefined;
+  const neutralPath = join(args.mameNeutralDir, basename(loaded.sourcePath));
+  const neutralSeeds = loadSeeds(neutralPath, args.allSnapshots);
+  const neutral = neutralSeeds.find((seed) => seed.snapshotIndex === loaded.snapshotIndex) ?? neutralSeeds[0];
+  if (neutral === undefined) throw new Error(`${neutralPath} has no neutral snapshot for ${loaded.label}`);
+  return { path: neutral.label, seed: neutral.seed };
+}
+
 function main(): void {
   const args = parseArgs();
   const plan = expandRouteSpec(args.plan);
   const rom = busNs.emptyRomImage();
   applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
 
-  const summaries = args.paths.map((path) => auditPath(rom, path, plan, args.mameNeutralDir));
+  const loadedSeeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
+  const filteredSeeds =
+    args.targetSegment === undefined
+      ? loadedSeeds
+      : loadedSeeds.filter((seed) => seedSummary(seed.seed).segment === args.targetSegment);
+  const summaries = filteredSeeds.map((seed) => auditPath(rom, seed, plan, loadNeutralSeed(args, seed)));
+  const visibleSummaries = args.onlyCandidates
+    ? summaries.filter((summary) => summary.verdict !== "diagnostic-only")
+    : summaries;
   if (args.json) {
-    console.log(JSON.stringify({ plan: args.plan, frames: plan.length, summaries }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          plan: args.plan,
+          frames: plan.length,
+          scannedSnapshots: loadedSeeds.length,
+          auditedSnapshots: filteredSeeds.length,
+          visibleSnapshots: visibleSummaries.length,
+          summaries: visibleSummaries,
+        },
+        null,
+        2,
+      ),
+    );
   } else {
-    console.log(`Plan ${args.plan} (${plan.length} frames)`);
-    for (const summary of summaries) printSummary(summary);
+    console.log(
+      `Plan ${args.plan} (${plan.length} frames); audited ${filteredSeeds.length}/${loadedSeeds.length} snapshot(s); showing ${visibleSummaries.length}`,
+    );
+    for (const summary of visibleSummaries) printSummary(summary);
   }
 }
 

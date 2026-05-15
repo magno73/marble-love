@@ -32,7 +32,9 @@ dispatcher manuale browser riarmato. Se hai una coppia di catture MAME
 active/neutral, passa gli snapshot active come argomenti e aggiungi
 `--mame-neutral-dir /path/neutral/scenarios`: se MAME active e neutral sono
 identici, il seed resta diagnostico anche quando il rearm manuale TS sembra
-controllabile.
+controllabile. Per una tail manuale o playback con molti snapshot usa
+`--all-snapshots --target-segment N --only-candidates`, cosi' il probe estrae
+solo i frame che potrebbero diventare seed.
 Per playtest manuale di progressione livelli, `?autoLoad=1&play=1&levelTime=180`
 o `levelTime=120` imposta il timer interno del livello al valore scelto una
 sola volta per livello, lasciando il countdown normale. Nota: alcuni path HUD
