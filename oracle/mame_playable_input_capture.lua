@@ -108,6 +108,8 @@ local tap_handles = {}
 local script_buttons = 0
 local script_dx = 0
 local script_dy = 0
+local script_trackball_x = 0xff
+local script_trackball_y = 0xff
 local sound_coin_value = 1
 local manual_tail_snapshots = {}
 local route_steps = {}
@@ -308,16 +310,24 @@ local function scripted_input(frame)
     return buttons, dx, dy
 end
 
+local function signed_delta(v)
+    v = v & 0xff
+    if v >= 0x80 then return v - 0x100 end
+    return v
+end
+
 local function apply_input_for_frame(frame)
     if MANUAL_INPUT then return end
     if ports == nil then return end
     script_buttons, script_dx, script_dy = scripted_input(frame)
+    script_trackball_x = (script_trackball_x + signed_delta(script_dx)) & 0xff
+    script_trackball_y = (script_trackball_y + signed_delta(script_dy)) & 0xff
 
     if ports[":IN0"] and ports[":IN0"].fields["Trackball X"] then
-        ports[":IN0"].fields["Trackball X"]:set_value(script_dx & 0xff)
+        ports[":IN0"].fields["Trackball X"]:set_value(script_trackball_x)
     end
     if ports[":IN1"] and ports[":IN1"].fields["Trackball Y"] then
-        ports[":IN1"].fields["Trackball Y"]:set_value(script_dy & 0xff)
+        ports[":IN1"].fields["Trackball Y"]:set_value(script_trackball_y)
     end
 
     local start_port = ports[":F60000"]

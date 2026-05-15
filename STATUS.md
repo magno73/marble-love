@@ -14,6 +14,12 @@ classificare i candidati:
   riarmato.
 - Puo' confrontare anche coppie di catture MAME active/neutral con
   `--mame-neutral-dir`.
+- Puo' scandire tutte le snapshot di una tail manuale/playback con
+  `--all-snapshots --target-segment N --only-candidates`, evitando di guardare
+  solo il primo frame del file.
+- `oracle/mame_playable_input_capture.lua` ora accumula i contatori trackball
+  raw per `MARBLE_PLAYABLE_ROUTE`; prima scriveva il delta come valore assoluto
+  del port, rendendo i capture scriptati poco utili per route lunghe.
 
 Risultato immediato:
 
@@ -24,6 +30,11 @@ Risultato immediato:
 - Le finestre deep catturate da MAME durante la rotta lunga risultano byte
   identiche fra active e neutral; anche quando un rearm manuale TS diverge, non
   sono prova di seed giocabile o completion.
+- Dopo il fix dei contatori trackball, una ricattura level-1 mostra i valori
+  raw che avanzano davvero, ma il path MAME preservato resta object-path
+  active == neutral: quindi i seed futuri devono ancora passare dal confronto
+  MAME active/neutral e dal probe dispatcher manuale prima di entrare in
+  `startLevel`.
 
 ## 2026-05-15 — levelTime scroll-target fix
 
