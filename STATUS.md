@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (coin/start rearm after game over)
+**Ultimo update:** 2026-05-15 (browser sound command cue fallback)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Browser sound command cue fallback
+
+Follow-up dopo il wire `soundCmdSend158AC -> SoundChip`: il browser avviava
+correttamente `AudioContext`/AudioWorklet, ma non si sentiva nulla durante il
+gameplay.
+
+Root cause osservata:
+
+- Smoke con ROM sound reali (`136033.421/.422`) mostra che il SoundChip 6502
+  gira, ma dopo i comandi restano solo i registri YM bootstrap (`$10=$c8`,
+  `$14=$05`) e nessun write POKEY gameplay. Quindi il renderer polling
+  YM/POKEY non riceve voci udibili anche se il comando viene inoltrato.
+- Il path chip-perfect resta debito successivo del driver 6502/YM/POKEY; per
+  il browser V1 serve intanto feedback acustico immediato.
+
+Fix:
+
+- `packages/web/src/sound-renderer.ts` esporta `soundCommandCue(cmd)` e
+  `SoundRenderer.playCommandCue(cmd)`: ogni byte comando diventa un breve tono
+  o noise cue deterministico e limitato.
+- `packages/web/public/sound-worklet.js` gestisce il nuovo evento `cue` con 4
+  voci one-shot sovrapponibili.
+- `packages/web/src/main.ts` mantiene il submit al SoundChip reale, ma chiama
+  anche `playCommandCue` subito al click "Enable Audio", per i comandi gameplay
+  e per `?soundTest=1`.
+- Regression pure logic in `packages/web/test/sound-renderer.test.ts` per
+  range/determinismo dei cue.
+
+Validazione:
+
+- `npx vitest run packages/web/test/sound-renderer.test.ts --reporter=dot` PASS.
+- `npx tsc -b --pretty false` PASS.
+- `npm --workspace @marble-love/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Coin/start rearm after game over
 
@@ -280,7 +315,8 @@ re-export, `web/src/main.ts` wire `?sound=1`):
   (root cause: V2 Timer A/B stub sempre 0 → boot code 6502 loop diverge da
   MAME). Closure 0-byte richiede V3 Timer + envelope (deferito).
 - `packages/web/src/sound-renderer.ts`: bridge polling register shadow →
-  AudioWorklet `postMessage` events (`ym_voice` / `pokey_voice`).
+  AudioWorklet `postMessage` events (`ym_voice` / `pokey_voice`) + command
+  cue fallback per feedback browser V1.
 - `packages/web/public/sound-worklet.js`: AudioWorklet processor con 8
   YM2151 voices (sine + ADSR envelope follower) + 4 POKEY voices (square /
   white noise). V1 MVP audio basic, non bit-perfect chip-perfect.
@@ -302,7 +338,7 @@ da AudioContext per user gesture), ticker integra `tickSoundCycles(chip,
   `state-sub-1b5c2`, ecc.) — surgical perfect.
 
 **Scope onestamente**: V1 audio sentibile in browser (sine + square + noise
-con envelope follower basic). NON bit-perfect chip-perfect — quello richiede
+con envelope follower basic + cue one-shot sui comandi sound). NON bit-perfect chip-perfect — quello richiede
 V3 (envelope generator DR/AR/SR/RR per 32 operatori FM + LFSR poly 17-bit
 POKEY + Timer A/B counter con IRQ wire al 6502). PRD Phase 7 esplicito
 "audio prima versione semplice, POKEY/YM2151 chip-perfect rimandato a V2".
@@ -312,7 +348,7 @@ POKEY + Timer A/B counter con IRQ wire al 6502). PRD Phase 7 esplicito
 http://localhost:5173/?autoLoad=1&play=1&sound=1
 # Click 🔊 Enable Audio (top-right) per user-gesture AudioContext start.
 # Premi 5 (coin) + Enter (START1) → biglia spawn.
-# Muovi con mouse / WASD / frecce. Tones audible su YM2151/POKEY writes.
+# Muovi con mouse / WASD / frecce. I comandi sound gameplay producono cue udibili.
 ```
 
 ## 2026-05-15 — Playable ladder wording correction

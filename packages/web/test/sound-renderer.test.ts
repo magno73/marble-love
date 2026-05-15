@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  ymKcToFreq, ymTlToVol, pokeyAudfToFreq, pokeyAudcToVol,
+  ymKcToFreq, ymTlToVol, pokeyAudfToFreq, pokeyAudcToVol, soundCommandCue,
 } from "../src/sound-renderer.js";
 
 describe("YM2151 KC → frequency", () => {
@@ -89,5 +89,25 @@ describe("POKEY AUDC vol bits 3-0", () => {
   });
   it("AUDC=0xA8 (vol 8) → ~0.53", () => {
     expect(pokeyAudcToVol(0xA8)).toBeCloseTo(8 / 15, 5);
+  });
+});
+
+describe("sound command cue fallback", () => {
+  it("maps every command to an audible bounded cue", () => {
+    for (let cmd = 0; cmd <= 0xff; cmd++) {
+      const cue = soundCommandCue(cmd);
+      expect(cue.freq).toBeGreaterThan(40);
+      expect(cue.freq).toBeLessThan(3000);
+      expect(cue.vol).toBeGreaterThanOrEqual(0.48);
+      expect(cue.vol).toBeLessThanOrEqual(0.72);
+      expect(cue.durationMs).toBeGreaterThanOrEqual(70);
+      expect(cue.durationMs).toBeLessThanOrEqual(136);
+    }
+  });
+
+  it("keeps noise cues deterministic for high/collision-like commands", () => {
+    expect(soundCommandCue(0x45).noise).toBe(false);
+    expect(soundCommandCue(0x5a).noise).toBe(true);
+    expect(soundCommandCue(0x3c).noise).toBe(true);
   });
 });

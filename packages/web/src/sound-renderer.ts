@@ -41,7 +41,15 @@ export interface SoundRenderer {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   update: (chip: { ym2151: { regs: Uint8Array }; pokey: { writeRegs: Uint8Array } }) => void;
+  playCommandCue: (cmd: number) => void;
   isRunning: () => boolean;
+}
+
+export interface SoundCommandCue {
+  freq: number;
+  vol: number;
+  noise: boolean;
+  durationMs: number;
 }
 
 interface PrevState {
@@ -91,6 +99,26 @@ export function ymTlToVol(tl: number): number {
 /** POKEY AUDC vol = bit 3-0. */
 export function pokeyAudcToVol(audc: number): number {
   return (audc & 0x0f) / 15;
+}
+
+/**
+ * Audible V1 fallback for logical sound commands.
+ *
+ * The TS SoundChip still models YM2151/POKEY as register-state devices, and the
+ * current 6502 path can run without producing gameplay register writes. Keep the
+ * real command mailbox wired, but also turn each main-CPU sound command into a
+ * short deterministic cue so browser play has immediate audio feedback.
+ */
+export function soundCommandCue(cmd: number): SoundCommandCue {
+  const b = cmd & 0xff;
+  const semitone = b % 24;
+  const octaveBump = (b >>> 5) & 0x03;
+  const base = 185 + octaveBump * 55;
+  const freq = base * Math.pow(2, (semitone - 7) / 12);
+  const durationMs = 70 + (((b >>> 3) & 0x03) * 22);
+  const vol = 0.48 + (((b >>> 6) & 0x03) * 0.08);
+  const noise = (b & 0x08) !== 0 || b >= 0x58;
+  return { freq, vol, noise, durationMs };
 }
 
 export async function createSoundRenderer(): Promise<SoundRenderer> {
@@ -176,9 +204,14 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     }
   }
 
+  function playCommandCue(cmd: number): void {
+    if (node === null) return;
+    node.port.postMessage({ type: "cue", ...soundCommandCue(cmd) });
+  }
+
   function isRunning(): boolean {
     return node !== null;
   }
 
-  return { start, stop, update, isRunning };
+  return { start, stop, update, playCommandCue, isRunning };
 }
