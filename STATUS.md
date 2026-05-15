@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable route X guard)
+**Ultimo update:** 2026-05-15 (state-2 respawn recovery)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — State-2 respawn recovery
+
+QA fuzz pre-timeout sul path browser manuale ha isolato un altro bug reale di
+gameplay: alcune rotte entravano nello stato `obj0+0x1A=2` con `main=0`, PF
+pieno e scroll sano, ma la biglia restava ferma per centinaia di frame.
+
+Root cause:
+
+- `FUN_253EC` aveva gia' i path JT[1]/JT[4]/JT[5]/JT[6]/JT[7] modellati, ma
+  JT[2] cadeva nel fallback conservativo.
+- Disasm ROM locale `0x25824` mostra il path reale:
+  `FUN_25FC2(obj) -> FUN_1B9CC(obj, 1) -> if obj+0x1C != 0 then FUN_1281C(obj)`.
+  Il fallback aggiornava solo campi derivati e non faceva avanzare la sequenza
+  post-death.
+
+Fix:
+
+- `refresh-frame-10fce.ts` ora cabla il branch `s1a === 2` di `FUN_253EC`.
+- `playable-live-routes.test.ts` aggiunge una rotta deterministica
+  `state-2 respawn recovery` e copre anche il token `UL` nel table input.
+  Prima del fix la rotta restava in state 2; ora attraversa state 2 -> state 4
+  -> state 0 senza svuotare PF o scrollare fuori.
+
+Evidenza/validazione:
+
+- Fuzz TS pre-timeout: i 4 casi `stuck-state` state-2 sono spariti; resta un
+  solo lead separato di high-scroll deep-map con PF pieno.
+- `npx tsc -b --pretty false` PASS.
+- Vitest targeted web/engine bundle incluso `playable-live-routes` PASS.
+- Playable replay 3/3 PASS (`80/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- Long demo fresh step10 tail no-stack guard resta invariato:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json` `14465 <= 16000`
+  con lo stesso risultato rimuovendo temporaneamente solo JT[2].
+- `npm --prefix packages/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Playable route X guard
 

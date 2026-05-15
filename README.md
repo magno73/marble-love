@@ -154,6 +154,15 @@ catturare in MAME le stesse rotte screen-space usate nei test live TS. Smoke
 lower-bridge temporaneo: `route_2045` replay PASS @80; le finestre piu' tarde
 restano un drill separato sul dispatcher full-MAME, non sul path manuale web.
 
+**Checkpoint state-2 respawn recovery (2026-05-15):** fuzz pre-timeout sul
+browser manuale ha trovato rotte che restavano in `obj0+0x1A=2` con PF pieno e
+`main=0`. Il disasm ROM di `FUN_253EC` mostra che JT[2] deve eseguire
+`25FC2 -> 1B9CC(obj,1) -> 1281C` condizionale; quel ramo ora e' cablato in
+`refresh-frame-10fce.ts`. Il nuovo route smoke `state-2 respawn recovery`
+attraversa state 2 -> 4 -> 0, e il fuzz TS non mostra piu' gli stuck state-2.
+Playable replay 3/3, warm-seed 15/15, web build e long demo fresh step10 tail
+no-stack (`14465 <= 16000`, invariato senza/con JT[2]) restano PASS.
+
 **Checkpoint live scroll override (2026-05-14):** le frecce non pilotano piu'
 simultaneamente trackball e scroll-debug viewport durante coin/start live o seed
 playable warm. Lo scroll override resta disponibile per diagnostica con

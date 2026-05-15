@@ -343,6 +343,19 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     return;
   }
 
+  // JT[2] = 0x25824. State 2 is the post-death/respawn animation path:
+  //   helper25FC2; helper1B9CC(obj, 1); if obj+0x1C != 0 then 1281C(obj).
+  // The fallback only refreshed derived fields, leaving live play frozen in
+  // state 2 after some lower-platform death routes.
+  if (s1a === 2) {
+    stepAnimation25FC2(state, a2);
+    helper1B9CC(state, a2, 1);
+    if (rb(state, a2 + 0x1c) !== 0) {
+      enterObject1281C(state, a2);
+    }
+    return;
+  }
+
   // JT[4] = 0x255C6. This is the long demo marble-eaten orbit state:
   //   1B9CC(obj, 1); 13ADE(obj); wait until counter nearly done; then either
   //   re-enter state 4 on a nearby target hit, or clear velocities/state.
