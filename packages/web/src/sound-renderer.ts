@@ -59,6 +59,15 @@ interface PrevState {
   pokeyFreq: number[];    // 4 channels
 }
 
+type AudioContextConstructor = new () => AudioContext;
+
+function getAudioContextConstructor(): AudioContextConstructor | undefined {
+  const globalWithWebAudio = globalThis as typeof globalThis & {
+    webkitAudioContext?: AudioContextConstructor;
+  };
+  return globalWithWebAudio.AudioContext ?? globalWithWebAudio.webkitAudioContext;
+}
+
 /** YM2151 KC byte → frequenza Hz. Convention OPM:
  *   octave = (kc >> 4) & 7, note = kc & 0x0F (skipping invalid note codes)
  *   Note codes valid: 0,1,2,4,5,6,8,9,10,12,13,14 (skip 3,7,11,15)
@@ -124,6 +133,9 @@ export function soundCommandCue(cmd: number): SoundCommandCue {
 export async function createSoundRenderer(): Promise<SoundRenderer> {
   let ctx: AudioContext | null = null;
   let node: AudioWorkletNode | null = null;
+  let directCueOnly = false;
+  let mediaCueOnly = false;
+  const mediaCueCache = new Map<string, string>();
   const prev: PrevState = {
     ymOn: new Array(8).fill(false),
     ymFreq: new Array(8).fill(0),
@@ -132,13 +144,37 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   };
 
   async function start(): Promise<void> {
-    if (ctx !== null) return;
-    ctx = new AudioContext();
-    await ctx.audioWorklet.addModule("/sound-worklet.js");
-    node = new AudioWorkletNode(ctx, "marble-sound", {
-      outputChannelCount: [2],
-    });
-    node.connect(ctx.destination);
+    if (ctx !== null) {
+      if (ctx.state === "suspended") await ctx.resume();
+      return;
+    }
+    const AudioContextCtor = getAudioContextConstructor();
+    if (AudioContextCtor === undefined) {
+      if (globalThis.Audio === undefined) {
+        throw new Error("Web Audio API is not available in this browser");
+      }
+      mediaCueOnly = true;
+      console.warn("[sound] AudioContext unavailable, using media cue fallback");
+      return;
+    }
+    ctx = new AudioContextCtor();
+    const audioWorklet = ctx.audioWorklet;
+    const AudioWorkletNodeCtor = globalThis.AudioWorkletNode;
+    if (audioWorklet !== undefined && AudioWorkletNodeCtor !== undefined) {
+      try {
+        await audioWorklet.addModule("/sound-worklet.js");
+        node = new AudioWorkletNodeCtor(ctx, "marble-sound", {
+          outputChannelCount: [2],
+        });
+        node.connect(ctx.destination);
+      } catch (e) {
+        directCueOnly = true;
+        console.warn("[sound] AudioWorklet unavailable, using direct cue fallback:", e);
+      }
+    } else {
+      directCueOnly = true;
+      console.warn("[sound] AudioWorklet unavailable, using direct cue fallback");
+    }
     // Resume on user gesture if needed
     if (ctx.state === "suspended") {
       await ctx.resume();
@@ -148,6 +184,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   async function stop(): Promise<void> {
     if (node !== null) { node.disconnect(); node = null; }
     if (ctx !== null) { await ctx.close(); ctx = null; }
+    directCueOnly = false;
+    mediaCueOnly = false;
     for (let i = 0; i < 8; i++) { prev.ymOn[i] = false; prev.ymFreq[i] = 0; }
     for (let i = 0; i < 4; i++) { prev.pokeyOn[i] = false; prev.pokeyFreq[i] = 0; }
   }
@@ -207,6 +245,7 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   function playCommandCue(cmd: number): void {
     const cue = soundCommandCue(cmd);
     if (ctx !== null) {
+      if (ctx.state === "suspended") void ctx.resume();
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -219,12 +258,74 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       osc.start(now);
       osc.stop(now + cue.durationMs / 1000 + 0.03);
     }
+    if (ctx === null && mediaCueOnly) {
+      playMediaCue(cue);
+    }
     if (node !== null) node.port.postMessage({ type: "cue", ...cue });
   }
 
   function isRunning(): boolean {
-    return node !== null;
+    return mediaCueOnly || (ctx !== null && (node !== null || directCueOnly));
+  }
+
+  function playMediaCue(cue: SoundCommandCue): void {
+    const key = `${Math.round(cue.freq)}:${cue.noise ? 1 : 0}:${cue.durationMs}`;
+    let dataUrl = mediaCueCache.get(key);
+    if (dataUrl === undefined) {
+      dataUrl = makeCueWavDataUrl(cue);
+      mediaCueCache.set(key, dataUrl);
+    }
+    const audio = new Audio(dataUrl);
+    audio.volume = Math.max(0, Math.min(1, cue.vol));
+    void audio.play().catch((e: unknown) => {
+      console.warn("[sound] media cue playback failed:", e);
+    });
   }
 
   return { start, stop, update, playCommandCue, isRunning };
+}
+
+function makeCueWavDataUrl(cue: SoundCommandCue): string {
+  const sampleRate = 22050;
+  const sampleCount = Math.max(1, Math.round(sampleRate * cue.durationMs / 1000));
+  const bytes = new Uint8Array(44 + sampleCount * 2);
+  const view = new DataView(bytes.buffer);
+  writeAscii(bytes, 0, "RIFF");
+  view.setUint32(4, 36 + sampleCount * 2, true);
+  writeAscii(bytes, 8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeAscii(bytes, 36, "data");
+  view.setUint32(40, sampleCount * 2, true);
+
+  let noise = 0x12345678;
+  for (let i = 0; i < sampleCount; i++) {
+    const t = i / sampleRate;
+    const env = Math.min(1, i / 160) * Math.max(0, 1 - i / sampleCount);
+    let sample: number;
+    if (cue.noise) {
+      noise = ((noise * 1664525) + 1013904223) >>> 0;
+      sample = (((noise >>> 16) & 0xffff) / 32768 - 1);
+    } else {
+      sample = Math.sin(2 * Math.PI * cue.freq * t);
+    }
+    view.setInt16(44 + i * 2, Math.round(sample * env * 0x5fff), true);
+  }
+
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return `data:audio/wav;base64,${btoa(binary)}`;
+}
+
+function writeAscii(bytes: Uint8Array, offset: number, text: string): void {
+  for (let i = 0; i < text.length; i++) {
+    bytes[offset + i] = text.charCodeAt(i);
+  }
 }

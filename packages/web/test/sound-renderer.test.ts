@@ -10,10 +10,15 @@
  * testato manualmente nel browser. Vedi `?sound=1` query param wire-up.
  */
 
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
-  ymKcToFreq, ymTlToVol, pokeyAudfToFreq, pokeyAudcToVol, soundCommandCue,
+  ymKcToFreq, ymTlToVol, pokeyAudfToFreq, pokeyAudcToVol, soundCommandCue, createSoundRenderer,
 } from "../src/sound-renderer.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("YM2151 KC → frequency", () => {
   it("KC = 0x4A (A4) → ~440 Hz", () => {
@@ -109,5 +114,96 @@ describe("sound command cue fallback", () => {
     expect(soundCommandCue(0x45).noise).toBe(false);
     expect(soundCommandCue(0x5a).noise).toBe(true);
     expect(soundCommandCue(0x3c).noise).toBe(true);
+  });
+});
+
+describe("Web Audio startup fallback", () => {
+  it("keeps direct command cues alive when AudioWorklet is unavailable", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    let createdContext: MockAudioContextNoWorklet | undefined;
+    let createOscillatorCalls = 0;
+
+    class MockAudioContextNoWorklet {
+      readonly audioWorklet = undefined;
+      state: AudioContextState = "suspended";
+      currentTime = 1;
+      readonly destination = {};
+
+      constructor() {
+        createdContext = this;
+      }
+
+      resume = vi.fn(async () => {
+        this.state = "running";
+      });
+
+      close = vi.fn(async () => {
+        this.state = "closed";
+      });
+
+      createOscillator(): OscillatorNode {
+        createOscillatorCalls++;
+        return {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn((target: unknown) => target),
+          start: vi.fn(),
+          stop: vi.fn(),
+        } as unknown as OscillatorNode;
+      }
+
+      createGain(): GainNode {
+        return {
+          gain: {
+            setValueAtTime: vi.fn(),
+            exponentialRampToValueAtTime: vi.fn(),
+          },
+          connect: vi.fn((target: unknown) => target),
+        } as unknown as GainNode;
+      }
+    }
+
+    vi.stubGlobal("AudioContext", MockAudioContextNoWorklet);
+    vi.stubGlobal("AudioWorkletNode", undefined);
+
+    const renderer = await createSoundRenderer();
+    await renderer.start();
+    expect(renderer.isRunning()).toBe(true);
+    expect(createdContext?.resume).toHaveBeenCalledTimes(1);
+
+    renderer.playCommandCue(0x40);
+    expect(createOscillatorCalls).toBe(1);
+
+    await renderer.stop();
+    expect(createdContext?.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to a generated media cue when AudioContext is unavailable", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    let playCalls = 0;
+    class MockAudioElement {
+      volume = 0;
+
+      constructor(readonly src: string) {}
+
+      play(): Promise<void> {
+        expect(this.src).toMatch(/^data:audio\/wav;base64,/);
+        playCalls++;
+        return Promise.resolve();
+      }
+    }
+
+    vi.stubGlobal("AudioContext", undefined);
+    vi.stubGlobal("webkitAudioContext", undefined);
+    vi.stubGlobal("Audio", MockAudioElement);
+
+    const renderer = await createSoundRenderer();
+    await renderer.start();
+    expect(renderer.isRunning()).toBe(true);
+
+    renderer.playCommandCue(0x5a);
+    expect(playCalls).toBe(1);
   });
 });
