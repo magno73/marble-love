@@ -104,7 +104,7 @@ describe("playable live route smoke", () => {
       "lower platform bridge",
       expand([["D", 171], ["R", 206], ["L", 188], ["DL", 107], ["BR", 260], ["R", 180], ["N", 300]]),
       90,
-      { minMaxX: 300_000 },
+      { minDeltaX: 1_000_000 },
     ],
     [
       "lower platform worm loops",
@@ -184,6 +184,7 @@ describe("playable live route smoke", () => {
 
     let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    const initialObjX = signedLong(readLongBE(state.workRam, 0x18 + 0x0c));
     let maxObjX = Number.NEGATIVE_INFINITY;
     let sawExpectedState = routeExpect.sawState === undefined;
     const deltas: Record<string, readonly [number, number]> = {
@@ -221,8 +222,8 @@ describe("playable live route smoke", () => {
       expect(nonzero(state.playfieldRam)).toBeGreaterThan(4000);
     }
 
-    if (routeExpect.minMaxX !== undefined) {
-      expect(maxObjX).toBeGreaterThan(routeExpect.minMaxX);
+    if (routeExpect.minDeltaX !== undefined) {
+      expect(maxObjX - initialObjX).toBeGreaterThan(routeExpect.minDeltaX);
     }
     expect(sawExpectedState).toBe(true);
     if (routeExpect.finalState !== undefined) {

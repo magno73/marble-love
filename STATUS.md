@@ -1,7 +1,38 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (segment-4 live PF scroll cadence)
+**Ultimo update:** 2026-05-15 (playable bridge route delta guard)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable bridge route delta guard
+
+Follow-up QA notturno dopo il fix segment-4 scroll: non ho trovato un nuovo
+bug engine riproducibile, ma ho trovato una debolezza nel route smoke del
+lower bridge.
+
+Finding:
+
+- La guardia lower-bridge misurava `obj0.x > 300000`, ma il seed manuale
+  `manual_level1_start` parte gia' ben oltre quella soglia.
+- Di fatto il test poteva passare senza verificare davvero che la biglia
+  avanzasse dopo il ponte.
+
+Fix:
+
+- `playable-live-routes.test.ts` ora salva `obj0.x` iniziale e richiede un
+  delta positivo reale (`> 1_000_000`) durante la rotta lower-bridge.
+- La guardia continua a coprire PF popolato, scroll bound e uscita dagli stati
+  di morte/respawn, ma ora protegge anche il progresso sul percorso.
+
+Evidenza/validazione:
+
+- Fuzz TS bounded sul playable manuale: 80 rotte pseudo-random x 4500 frame,
+  nessun `lowPF`, `pfEmpty`, `stuckState` o high-scroll/low-PF fuori dalle
+  transizioni MAME-consistenti.
+- Smoke manual-like estesi su bridge/worm area: PF resta popolato, scroll
+  resta entro bound e gli stati di respawn rientrano in `state 0`.
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- `npx tsc -b --pretty false` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — Segment-4 live PF scroll cadence
 
