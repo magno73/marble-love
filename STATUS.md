@@ -1,7 +1,49 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (state-2 respawn recovery)
+**Ultimo update:** 2026-05-15 (FUN_253EC state-8 countdown)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — FUN_253EC state-8 countdown
+
+QA notturno/fuzz sul playable manuale non ha piu' riprodotto uno scroll
+runaway hard dopo il fix state-2, ma il jump-table del dispatcher biglia aveva
+ancora buchi reali. Ho chiuso il prossimo branch confermato da disasm, evitando
+patch su camera/collisione finche' non c'e' un sintomo divergente.
+
+Root cause:
+
+- `FUN_253EC` aveva gia' i path JT[1]/JT[2]/JT[4]/JT[5]/JT[6]/JT[7]
+  modellati; JT[8] cadeva ancora nel fallback conservativo.
+- Il disasm ROM locale `0x258A8` mostra un path timer/animation reale:
+  countdown `obj+0x56`, ogni rollover ricarica `9`, incrementa `obj+0x6A`
+  e decrementa `obj+0x57`; se `obj+0x57` arriva a zero, il path azzera
+  `obj+0xD1`/`obj+0x1A` e chiama `FUN_285B0(obj, 0x10)`. Altrimenti aggiorna
+  `obj+0xD0` e avanza `obj+0xCC` a passi di 4 ogni due tick. Il tail comune e'
+  `FUN_1B9CC(obj, 1) -> FUN_1C014 -> FUN_1281C`.
+
+Fix:
+
+- `refresh-frame-10fce.ts` ora cabla il branch `s1a === 8` di `FUN_253EC`
+  seguendo il micro-ordine ROM.
+- `refresh-frame-10fce.test.ts` aggiunge regression mirate per il countdown
+  non terminale e per il terminal score/state init.
+
+Evidenza/validazione:
+
+- Fuzz TS pre-timeout 500 rotte x 3600 frame: nessun `stuck-state`, nessun
+  low-PF active e nessun high-scroll-low-PF sul path manuale corrente.
+- `npx vitest run packages/engine/test/refresh-frame-10fce.test.ts --reporter=basic` PASS.
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=basic` PASS.
+- Targeted web/engine vitest bundle PASS.
+- `npx tsc -b --pretty false` PASS.
+- Playable replay 3/3 PASS (`80/100`, `100/100`, `100/100`).
+- Warm-seed gameplay 15/15 PASS.
+- Long demo fresh step10 no-stack resta sotto guardrail:
+  `/tmp/mame_demo_fresh_12000_17660_18000_step10_codex.json`
+  `15275 <= 16000` con scenario-mask; `14501 <= 16000` con converge-mask
+  storica.
+- `npm --prefix packages/web run build` PASS.
+- `git diff --check` PASS.
 
 ## 2026-05-15 — State-2 respawn recovery
 

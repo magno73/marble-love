@@ -87,6 +87,7 @@ import { fun29CCE } from "./sub-29cce.js";
 import { objectEnter1281C } from "./object-enter-1281c.js";
 import { fun264AA } from "./fun-264aa.js";
 import { helper18F46 } from "./helper-18f46.js";
+import { helper285B0 } from "./helper-285b0.js";
 
 const WRAM = 0x00400000;
 
@@ -98,6 +99,22 @@ function rb(state: GameState, addr: number): number {
   return state.workRam[off(addr)] ?? 0;
 }
 
+function rw(state: GameState, addr: number): number {
+  const o = off(addr);
+  return (((state.workRam[o] ?? 0) << 8) | (state.workRam[o + 1] ?? 0)) & 0xffff;
+}
+
+function rl(state: GameState, addr: number): number {
+  const o = off(addr);
+  return (
+    (((state.workRam[o] ?? 0) << 24) |
+      ((state.workRam[o + 1] ?? 0) << 16) |
+      ((state.workRam[o + 2] ?? 0) << 8) |
+      (state.workRam[o + 3] ?? 0)) >>>
+    0
+  );
+}
+
 function s8(value: number): number {
   const b = value & 0xff;
   return b & 0x80 ? b - 0x100 : b;
@@ -105,6 +122,13 @@ function s8(value: number): number {
 
 function wb(state: GameState, addr: number, value: number): void {
   state.workRam[off(addr)] = value & 0xff;
+}
+
+function ww(state: GameState, addr: number, value: number): void {
+  const o = off(addr);
+  const v = value & 0xffff;
+  state.workRam[o] = (v >>> 8) & 0xff;
+  state.workRam[o + 1] = v & 0xff;
 }
 
 function wl(state: GameState, addr: number, value: number): void {
@@ -459,6 +483,38 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   if (s1a === 7) {
     helper253BC(state, a2);
     wb(state, a2 + 0x1c, 0);
+    return;
+  }
+
+  // JT[8] = 0x258A8. This timed animation path advances +0x6A/+0xCC while
+  // counting +0x57 down; when the timer expires, MAME clears state and runs
+  // FUN_285B0(obj, 0x10) before the usual sprite refresh tail.
+  if (s1a === 8) {
+    if (rb(state, a2 + 0x56) !== 0) {
+      wb(state, a2 + 0x56, rb(state, a2 + 0x56) - 1);
+    }
+
+    if (rb(state, a2 + 0x56) === 0) {
+      wb(state, a2 + 0x56, 9);
+      ww(state, a2 + 0x6a, rw(state, a2 + 0x6a) + 1);
+      wb(state, a2 + 0x57, rb(state, a2 + 0x57) - 1);
+    }
+
+    if (rb(state, a2 + 0x57) === 0) {
+      wb(state, a2 + 0xd1, 0);
+      wb(state, a2 + 0x1a, 0);
+      helper285B0(state, a2, 0x10, rom);
+    } else {
+      wb(state, a2 + 0xd0, rb(state, a2 + 0xd0) + 1);
+      if (rb(state, a2 + 0xd0) === 2) {
+        wb(state, a2 + 0xd0, 0);
+        wl(state, a2 + 0xcc, rl(state, a2 + 0xcc) + 4);
+      }
+    }
+
+    helper1B9CC(state, a2, 1);
+    spriteRotate1C014(state, rom, objOff);
+    enterObject1281C(state, a2);
     return;
   }
 
