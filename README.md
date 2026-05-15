@@ -126,7 +126,13 @@ completion/controllabilita' level 2/3. Follow-up checkpoint: i seed caldi
 preservato (active == neutral), ma diventano controllabili se riarmati al
 dispatcher manuale (`0x400390=0`) come il browser fa al primo START. Questo
 fissa il prossimo confine: provare una transizione live che entra nel path
-manuale, non solo la stabilita' presentation/timeout.
+manuale, non solo la stabilita' presentation/timeout. Follow-up ulteriore:
+`level1_end` riarmato manualmente prova che il detector TS di fine level 1
+funziona (`L:180,DL:900` attraversa `state 6`, poi `0x400390=3` e ritorna a
+dispatcher manuale con `0x400394=2`), mentre lo stesso seed con dispatcher MAME
+preservato resta active == neutral. Quindi il prossimo lavoro e' route/root
+cause dal seed browser `manual_level1_start` fino a quella condizione, non un
+rearm euristico o una scorciatoia di livello.
 
 **Checkpoint playable segment-3 cadence (2026-05-14):** il percorso live
 arbitrario screen-space down/right/diagonal ora segue il micro-ordine MAME

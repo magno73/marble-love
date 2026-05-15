@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (playable later-level dispatcher boundary)
+**Ultimo update:** 2026-05-15 (playable level-1 completion boundary)
 **Branch corrente:** `feature/visual-pixel-match`.
+
+## 2026-05-15 — Playable level-1 completion boundary
+
+Follow-up al target level 1→2→3: il problema ora e' separato in modo piu'
+pulito. Il detector TS di completamento level 1 non e' morto: partendo dal
+warm seed MAME `level1_end` riarmato al dispatcher manuale (`0x400390=0`),
+la route `L:180,DL:900` porta l'oggetto in `state 6`, fa scattare
+`0x400390=3` entro ~1000 frame e ritorna a dispatcher manuale con
+`0x400394=2`. Con lo stesso seed a dispatcher preservato, invece, input attivo
+e neutro restano identici e attraversano solo finestre presentation/timeout.
+
+Fix/test:
+
+- `playable-live-routes.test.ts` aggiunge una guardia finish-line che asserisce
+  entrambe le meta': dispatcher preservato non e' completion proof, dispatcher
+  manuale da `level1_end` attiva davvero il path `0x390=3`.
+- Nessun fix engine: la prossima root-cause resta trovare una route live dal
+  seed browser `manual_level1_start` che raggiunga quella condizione prima del
+  timeout, oppure provare con MAME che il port TS diverge nel percorso verso il
+  finish.
+
+Validazione:
+
+- `npx vitest run packages/engine/test/playable-live-routes.test.ts --reporter=dot` PASS (14 test).
 
 ## 2026-05-15 — Playable later-level dispatcher boundary
 
