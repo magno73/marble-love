@@ -42,7 +42,13 @@ export interface SoundRenderer {
   stop: () => Promise<void>;
   update: (chip: { ym2151: { regs: Uint8Array }; pokey: { writeRegs: Uint8Array } }) => void;
   playCommandCue: (cmd: number, options?: { force?: boolean }) => void;
+  /** V3 chip-perfect: stream PCM raw da YM2151 simulator. samples = interleaved
+   * L/R Float numeri @ nativeSampleRate Hz (55930 default). Renderer fa
+   * resampling a output sampleRate context e post al worklet via postMessage. */
+  pushYm2151Samples: (samples: number[], nativeSampleRate: number) => void;
   isRunning: () => boolean;
+  /** Output AudioContext sample rate (per resampling-side ratio compute). */
+  getSampleRate: () => number;
 }
 
 export interface SoundCommandCue {
@@ -298,7 +304,37 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     });
   }
 
-  return { start, stop, update, playCommandCue, isRunning };
+  function getSampleRate(): number {
+    return ctx?.sampleRate ?? 44100;
+  }
+
+  /** V3 chip-perfect: prende samples interleaved L/R @ nativeSampleRate,
+   * resample lineare a output ctx.sampleRate, posta come Float32Array al
+   * worklet. Resample ratio = native/output (es. 55930/44100 ≈ 1.268). */
+  function pushYm2151Samples(samples: number[], nativeSampleRate: number): void {
+    if (node === null || samples.length === 0) return;
+    const outSr = getSampleRate();
+    const ratio = nativeSampleRate / outSr;
+    const outSamples = Math.floor((samples.length / 2) / ratio);
+    if (outSamples <= 0) return;
+    const left = new Float32Array(outSamples);
+    const right = new Float32Array(outSamples);
+    // Linear interpolation resampling
+    for (let i = 0; i < outSamples; i++) {
+      const srcPos = i * ratio;
+      const srcIdx = Math.floor(srcPos) * 2;
+      const frac = srcPos - Math.floor(srcPos);
+      const l0 = samples[srcIdx] ?? 0;
+      const r0 = samples[srcIdx + 1] ?? 0;
+      const l1 = samples[srcIdx + 2] ?? l0;
+      const r1 = samples[srcIdx + 3] ?? r0;
+      left[i] = l0 * (1 - frac) + l1 * frac;
+      right[i] = r0 * (1 - frac) + r1 * frac;
+    }
+    node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
+  }
+
+  return { start, stop, update, playCommandCue, pushYm2151Samples, isRunning, getSampleRate };
 }
 
 function makeCueWavDataUrl(cue: SoundCommandCue): string {

@@ -30,7 +30,7 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
-  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook,
+  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook, drainYm2151Samples, YM2151_NATIVE_SAMPLE_RATE,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 
@@ -784,6 +784,11 @@ async function startGame(
         tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
         if (soundRenderer !== undefined && soundRenderer.isRunning()) {
           soundRenderer.update(soundChip);
+          // V3 chip-perfect: drain YM2151 sample stream e push al worklet.
+          const ymSamples = drainYm2151Samples(soundChip);
+          if (ymSamples.length > 0) {
+            soundRenderer.pushYm2151Samples(ymSamples, YM2151_NATIVE_SAMPLE_RATE);
+          }
         }
       }
     }

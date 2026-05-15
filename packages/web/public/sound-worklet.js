@@ -33,7 +33,34 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
       env: 0, target: 0, lastNoise: 0, remaining: 0,
     }));
     this.nextCueVoice = 0;
+    // PCM ring buffer per YM2151 chip-perfect sample stream
+    this.pcmL = new Float32Array(48000);  // 1 sec @ 48kHz buffer
+    this.pcmR = new Float32Array(48000);
+    this.pcmReadIdx = 0;
+    this.pcmWriteIdx = 0;
+    this.pcmAvailable = 0;
     this.port.onmessage = (e) => this.handleMessage(e.data);
+  }
+
+  enqueuePcm(left, right) {
+    const N = left.length;
+    const cap = this.pcmL.length;
+    for (let i = 0; i < N; i++) {
+      this.pcmL[this.pcmWriteIdx] = left[i];
+      this.pcmR[this.pcmWriteIdx] = right[i];
+      this.pcmWriteIdx = (this.pcmWriteIdx + 1) % cap;
+      if (this.pcmAvailable < cap) this.pcmAvailable++;
+      else this.pcmReadIdx = (this.pcmReadIdx + 1) % cap;  // overflow: drop oldest
+    }
+  }
+
+  dequeuePcm() {
+    if (this.pcmAvailable === 0) return null;
+    const l = this.pcmL[this.pcmReadIdx];
+    const r = this.pcmR[this.pcmReadIdx];
+    this.pcmReadIdx = (this.pcmReadIdx + 1) % this.pcmL.length;
+    this.pcmAvailable--;
+    return [l, r];
   }
 
   handleMessage(msg) {
@@ -73,10 +100,16 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
       v.target = v.vol;
       v.remaining = Math.max(1, Math.round((Number(msg.durationMs) || 90) * this.sampleRate_ / 1000));
       v.phase = 0;
+    } else if (msg.type === "ym_pcm") {
+      // V3 chip-perfect: stream PCM raw da YM2151 simulator (già resamplato a ctx rate)
+      if (msg.left instanceof Float32Array && msg.right instanceof Float32Array) {
+        this.enqueuePcm(msg.left, msg.right);
+      }
     } else if (msg.type === "reset") {
       for (const v of this.ymVoices) { v.on = false; v.target = 0; v.env = 0; }
       for (const v of this.pokeyVoices) { v.on = false; v.target = 0; v.env = 0; }
       for (const v of this.cueVoices) { v.target = 0; v.env = 0; v.remaining = 0; }
+      this.pcmReadIdx = 0; this.pcmWriteIdx = 0; this.pcmAvailable = 0;
     }
   }
 
@@ -148,10 +181,15 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
         mix += sample;
       }
 
-      // Soft clip
+      // V3 chip-perfect: aggiungi PCM stream da YM2151 simulator (stereo).
+      const pcm = this.dequeuePcm();
+      const pcmL = pcm !== null ? pcm[0] : 0;
+      const pcmR = pcm !== null ? pcm[1] : 0;
+
+      // Soft clip mono path
       mix = Math.tanh(mix * 0.7);
-      left[i] = mix;
-      right[i] = mix;
+      left[i] = Math.tanh(mix + pcmL);
+      right[i] = Math.tanh(mix + pcmR);
     }
     return true;
   }
