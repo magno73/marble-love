@@ -46,6 +46,8 @@ export interface SoundRenderer {
    * L/R Float numeri @ nativeSampleRate Hz (55930 default). Renderer fa
    * resampling a output sampleRate context e post al worklet via postMessage. */
   pushYm2151Samples: (samples: number[], nativeSampleRate: number) => void;
+  /** V3 chip-perfect POKEY: stream mono PCM. Resamplato + replicato L=R. */
+  pushPokeySamples: (samples: number[], nativeSampleRate: number) => void;
   isRunning: () => boolean;
   /** Output AudioContext sample rate (per resampling-side ratio compute). */
   getSampleRate: () => number;
@@ -334,7 +336,29 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
   }
 
-  return { start, stop, update, playCommandCue, pushYm2151Samples, isRunning, getSampleRate };
+  /** POKEY samples mono → resample + duplicate L=R per stereo output. */
+  function pushPokeySamples(samples: number[], nativeSampleRate: number): void {
+    if (node === null || samples.length === 0) return;
+    const outSr = getSampleRate();
+    const ratio = nativeSampleRate / outSr;
+    const outSamples = Math.floor(samples.length / ratio);
+    if (outSamples <= 0) return;
+    const left = new Float32Array(outSamples);
+    const right = new Float32Array(outSamples);
+    for (let i = 0; i < outSamples; i++) {
+      const srcPos = i * ratio;
+      const srcIdx = Math.floor(srcPos);
+      const frac = srcPos - srcIdx;
+      const s0 = samples[srcIdx] ?? 0;
+      const s1 = samples[srcIdx + 1] ?? s0;
+      const v = s0 * (1 - frac) + s1 * frac;
+      left[i] = v;
+      right[i] = v;
+    }
+    node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
+  }
+
+  return { start, stop, update, playCommandCue, pushYm2151Samples, pushPokeySamples, isRunning, getSampleRate };
 }
 
 function makeCueWavDataUrl(cue: SoundCommandCue): string {
