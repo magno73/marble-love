@@ -91,6 +91,19 @@ export interface YM2151 {
   sampleAccumulator: number;
   /** Output sample buffer (interleaved L/R Float32). Drain via getSampleBuffer. */
   sampleBuffer: number[];
+  // ─── LFO state (Phase A2) ───────────────────────────────────────────────
+  /** LFO frequency (LFRQ, reg $18). Bassa = lenta, alta = veloce. */
+  lfoFreq: number;
+  /** LFO waveform: 0=saw, 1=square, 2=triangle, 3=random (reg $1B bit 1-0). */
+  lfoWaveform: number;
+  /** Amplitude modulation depth (AMD, reg $19 bit 6-0). */
+  lfoAmd: number;
+  /** Phase modulation depth (PMD, reg $19 bit 7-set indicates PMD value). */
+  lfoPmd: number;
+  /** LFO phase accumulator 0..1 (normalized). */
+  lfoPhase: number;
+  /** LFO output corrente: -1..+1 (saw/triangle) o 0..1 (square/random). */
+  lfoOutput: number;
 }
 
 export function createYM2151(): YM2151 {
@@ -109,11 +122,61 @@ export function createYM2151(): YM2151 {
     channels: Array.from({ length: 8 }, () => createChannel()),
     sampleAccumulator: 0,
     sampleBuffer: [],
+    lfoFreq: 0,
+    lfoWaveform: 0,
+    lfoAmd: 0,
+    lfoPmd: 0,
+    lfoPhase: 0,
+    lfoOutput: 0,
   };
+}
+
+/** Avanza LFO per 1 sample @ YM native rate (55930 Hz).
+ * Hardware: LFO frequency tabella esponenziale, LFRQ 0..255.
+ * V3 approssimazione: phase += freq_hz / sample_rate, wrap mod 1. */
+function tickLfo(ym: YM2151): void {
+  if (ym.lfoFreq === 0) {
+    ym.lfoOutput = 0;
+    return;
+  }
+  // LFRQ → freq Hz: tabella exponential MAME. V3 approx: 0..30 Hz.
+  // freq = 0.005 * exp(LFRQ / 32)
+  const freqHz = 0.005 * Math.exp(ym.lfoFreq / 32);
+  ym.lfoPhase += freqHz / YM2151_NATIVE_SAMPLE_RATE;
+  if (ym.lfoPhase >= 1) ym.lfoPhase -= 1;
+  // Compute output based on waveform
+  switch (ym.lfoWaveform & 3) {
+    case 0: // Saw (down)
+      ym.lfoOutput = 1 - 2 * ym.lfoPhase;
+      break;
+    case 1: // Square
+      ym.lfoOutput = ym.lfoPhase < 0.5 ? 1 : -1;
+      break;
+    case 2: // Triangle
+      ym.lfoOutput = ym.lfoPhase < 0.5
+        ? (4 * ym.lfoPhase - 1)
+        : (3 - 4 * ym.lfoPhase);
+      break;
+    case 3: // Random (sample-and-hold)
+      // Cambia value solo ai wraparound
+      if (ym.lfoPhase < freqHz / YM2151_NATIVE_SAMPLE_RATE) {
+        ym.lfoOutput = Math.random() * 2 - 1;
+      }
+      break;
+  }
 }
 
 /** Apply reg shadow → channel/operator params. Chiamato da writeData. */
 function applyReg(ym: YM2151, reg: number, val: number): void {
+  // LFO control (Phase A2): $18 LFRQ, $19 AMD/PMD, $1B waveform
+  if (reg === 0x18) { ym.lfoFreq = val & 0xff; return; }
+  if (reg === 0x19) {
+    // bit 7: select PMD (1) or AMD (0); bit 6-0 = value
+    if ((val & 0x80) !== 0) ym.lfoPmd = val & 0x7f;
+    else ym.lfoAmd = val & 0x7f;
+    return;
+  }
+  if (reg === 0x1b) { ym.lfoWaveform = val & 3; return; }
   // Channel-level reg ($20..$3F): RL+FB+CONN, KC, KF, PMS+AMS
   if (reg >= 0x20 && reg < 0x40) {
     const ch = ym.channels[reg & 7];
@@ -188,13 +251,21 @@ function applyReg(ym: YM2151, reg: number, val: number): void {
   }
 }
 
-/** Produce 1 sample stereo da tutti 8 channel attivi. Output [-1..+1] L+R. */
+/** Produce 1 sample stereo da tutti 8 channel attivi. Output [-1..+1] L+R.
+ * Phase A2: avanza LFO + applica PM/AM modulation. */
 export function ym2151Sample(ym: YM2151): [number, number] {
+  tickLfo(ym);
   let left = 0, right = 0;
   for (const ch of ym.channels) {
+    // Apply LFO amplitude modulation: vol scale (1 - AMS * lfoOutput * AMD/127)
+    // V3 minimal: PMS modula channel freq dinamicamente (TODO frame-by-frame freq update);
+    // qui solo AM scale.
+    const amScale = ch.ams === 0 || ym.lfoAmd === 0
+      ? 1
+      : 1 - (ch.ams * Math.abs(ym.lfoOutput) * ym.lfoAmd) / (127 * 4);
     const [l, r] = channelSample(ch);
-    left += l;
-    right += r;
+    left += l * amScale;
+    right += r * amScale;
   }
   // Soft-clip per evitare saturazione
   return [Math.tanh(left * 0.5), Math.tanh(right * 0.5)];
