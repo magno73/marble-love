@@ -63,6 +63,25 @@ function nonzeroAlphaClearRows(
   return total;
 }
 
+function nonzeroAlphaRows(
+  state: GameState,
+  rom: ReturnType<typeof emptyRomImage>,
+  startRow: number,
+  rowCount: number,
+): number {
+  let total = 0;
+  for (let row = 0; row < rowCount; row++) {
+    let off = getAlphaTileAddr(state, rom, 3, (startRow + row) & 0xff) - 0xa03000;
+    for (let i = 0; i < 0x24; i++) {
+      if ((state.alphaRam[off] ?? 0) !== 0 || (state.alphaRam[off + 1] ?? 0) !== 0) {
+        total++;
+      }
+      off += 2;
+    }
+  }
+  return total;
+}
+
 function readLongBE(bytes: Uint8Array, off: number): number {
   return (
     (((bytes[off] ?? 0) << 24) |
@@ -700,8 +719,20 @@ describe("playable live route smoke", () => {
     expect(state.clock.mainThreadWaitClearRows).toBeUndefined();
     expect(nonzeroAlphaClearRows(state, rom, 0x14)).toBe(0);
 
+    const staleTopAlpha = nonzeroAlphaRows(state, rom, 0, 9);
     const staleLevelPlayfieldChecksum = checksumBytes(state.playfieldRam);
-    for (let i = 0; i < 4 && readWordBE(state.workRam, 0x390) !== 1; i++) {
+    let sawStagedMode2Rebuild = false;
+    let sawTopAlphaCleared = false;
+    for (
+      let i = 0;
+      i < 24 && !(
+        readWordBE(state.workRam, 0x390) === 1 &&
+        readWordBE(state.workRam, 0x392) === 2 &&
+        state.clock.mode2Init11452Stage === undefined &&
+        readWordBE(state.workRam, 0x75a) === 0x12c
+      );
+      i++
+    ) {
       tick(state, {
         rom,
         runMainLoopBody: true,
@@ -711,11 +742,18 @@ describe("playable live route smoke", () => {
         p2Y: 0xff,
         inputMmio: 0x6f,
       });
+      sawStagedMode2Rebuild ||= state.clock.mode2Init11452Stage !== undefined;
+      sawTopAlphaCleared ||= sawStagedMode2Rebuild && nonzeroAlphaRows(state, rom, 0, 9) === 0;
     }
 
+    expect(staleTopAlpha).toBeGreaterThan(0);
+    expect(sawStagedMode2Rebuild).toBe(true);
+    expect(sawTopAlphaCleared).toBe(true);
     expect(readWordBE(state.workRam, 0x390)).toBe(1);
     expect(readWordBE(state.workRam, 0x392)).toBe(2);
     expect(readWordBE(state.workRam, 0x75a)).toBe(0x12c);
+    expect(nonzeroAlphaRows(state, rom, 0, 9)).toBe(0);
+    expect(nonzero(state.playfieldRam)).toBeLessThan(1_000);
     expect(checksumBytes(state.playfieldRam)).not.toBe(staleLevelPlayfieldChecksum);
   });
 
