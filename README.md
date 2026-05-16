@@ -150,6 +150,13 @@ forzato e route `L:180,DL:763`, falsifica la promozione: active e neutral
 divergono in posizione, ma i trace descriptor restano solo su L2 `0x2c54c` e
 non vedono `main=3`, `levelIndex=2` o L3. Questo rafforza il gate: serve ancora
 una movie/manuale MAME reale o un planner piu' fedele prima di cablare seed.
+Per pianificare la nuova strategia detector-gate, usa
+`node --import tsx packages/cli/src/plan-detector-gate-rearm.ts trace.json`.
+Sul trace coin/start individua la finestra `obj0+0x18==3` a f1747 e stampa i
+comandi active/neutral con `MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES`. Questa strada
+ha prodotto il primo proof causale MAME verso L3, ma il chained probe
+`1746,1872` non avanza ancora a L4: i sample init `obj0+0x18==3` non bastano se
+`FUN_251DE_object_scan_dispatch` non passa davvero su quella finestra.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

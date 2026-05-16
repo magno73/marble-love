@@ -29,6 +29,7 @@
 --   MARBLE_PLAYABLE_TIMER_END   last frame for timer override (default 999999)
 --   MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1 clears 0x400390 once at route start
 --   MARBLE_PLAYABLE_FORCE_MANUAL_FRAME optional frame for manual dispatcher clear
+--   MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES optional CSV frames for repeated clears
 --   MARBLE_PLAYABLE_SERVICE_MODE=1 forces F60001 bit 6 low via read-tap
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
@@ -63,10 +64,11 @@ ROUTE_STEP = math.floor(ROUTE_STEP)
 local TIMER_OVERRIDE = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_OVERRIDE") or "")
 local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") or "2045") or 2045
 local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
-local FORCE_MANUAL_DISPATCHER = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1"
 local FORCE_MANUAL_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAME") or "")
+local FORCE_MANUAL_FRAMES_RAW = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES") or ""
+local FORCE_MANUAL_DISPATCHER = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1" or FORCE_MANUAL_FRAMES_RAW ~= ""
 local FORCE_SERVICE_MODE = os.getenv("MARBLE_PLAYABLE_SERVICE_MODE") == "1"
-local manual_dispatcher_applied = false
+local manual_dispatcher_index = 1
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -166,9 +168,25 @@ local function parse_pulses(raw, default_frame)
     return pulses
 end
 
+local function parse_frame_list(raw)
+    local frames = {}
+    if raw ~= "" then
+        for tok in string.gmatch(raw, "([^,]+)") do
+            local frame = tonumber(tok)
+            if frame == nil or frame < 0 then
+                error("[mame_playable_input_capture] bad force manual frame: " .. tok)
+            end
+            table.insert(frames, math.floor(frame))
+        end
+    end
+    table.sort(frames)
+    return frames
+end
+
 local COIN_PULSES = parse_pulses(COIN_PULSES_RAW, COIN_FRAME)
 local START_PULSES = parse_pulses(START_PULSES_RAW, START_FRAME)
 local P2_START_PULSES = parse_pulses(P2_START_PULSES_RAW, -1)
+local FORCE_MANUAL_FRAMES = parse_frame_list(FORCE_MANUAL_FRAMES_RAW)
 
 local function frame_in_pulse(frame, pulses)
     for _, start_frame in ipairs(pulses) do
@@ -755,17 +773,23 @@ end
 
 local function apply_manual_dispatcher_rearm(frame)
     if not FORCE_MANUAL_DISPATCHER then return end
-    if manual_dispatcher_applied then return end
     if mem == nil then return end
-    local start_frame = FORCE_MANUAL_FRAME or TRACKBALL_START
-    if frame < start_frame then return end
+    if #FORCE_MANUAL_FRAMES == 0 then
+        table.insert(FORCE_MANUAL_FRAMES, FORCE_MANUAL_FRAME or TRACKBALL_START)
+    end
 
     -- Mirrors the browser START path for human practice play: MAME's warm
     -- entry keeps the attract/tutorial dispatcher at 0x400390.w == 1, while
     -- browser manual play clears it once before consuming live trackball input.
-    write_abs_u16(0x400390, 0)
-    manual_dispatcher_applied = true
-    print(string.format("[mame_playable_input_capture] forced manual dispatcher at f%d", frame))
+    while manual_dispatcher_index <= #FORCE_MANUAL_FRAMES and frame >= FORCE_MANUAL_FRAMES[manual_dispatcher_index] do
+        write_abs_u16(0x400390, 0)
+        print(string.format(
+            "[mame_playable_input_capture] forced manual dispatcher at f%d (target f%d)",
+            frame,
+            FORCE_MANUAL_FRAMES[manual_dispatcher_index]
+        ))
+        manual_dispatcher_index = manual_dispatcher_index + 1
+    end
 end
 
 emu.register_frame_done(function()

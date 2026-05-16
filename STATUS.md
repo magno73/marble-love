@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME object-scan endgame gate trace)
+**Ultimo update:** 2026-05-16 (detector-gate rearm planner)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Detector-gate rearm planner and chained L4 falsification
+
+Aggiunta utility repo `packages/cli/src/plan-detector-gate-rearm.ts`. Legge un
+trace JSON di `oracle/mame_level_descriptor_tap.lua`, trova finestre sample
+detector-ready (`obj0+0x18 == 3`, di default anche `obj0+0x1A == 6`), propone
+il frame di rearm (`firstFrame - 1`) e stampa comandi MAME active/neutral con
+cfg pulita, descriptor trace, frame list e audit. Sul trace coin/start
+`/private/tmp/marble-coinstart-object-2600/trace.json` trova automaticamente:
+
+```text
+f1747-1831 samples=85 rearm=f1746 trackball=f2200 current=L2@0x0002c54c idx=1 target=L3
+```
+
+Esteso anche `oracle/mame_playable_input_capture.lua` con
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES=...`, lista CSV di clear ripetuti di
+`0x400390`. La compatibilita' col vecchio
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAME` resta: se la lista non e' presente, viene
+usato il singolo frame precedente.
+
+Probe chained verso L4:
+
+- planner su `/private/tmp/marble-detector-rearm-f1746-long/trace.json` con
+  `--target-level 4 --prefix-rearm-frames 1746` propone
+  `MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES=1746,1872`.
+- run active:
+  `/private/tmp/marble-detector-gate-rearm/01_L3_idx2_to_L4_f1873/active/trace.json`.
+
+Risultato: il secondo clear viene applicato (`forced manual dispatcher at
+f1872`), ma non produce un secondo hit su `FUN_251DE_endgame_set_flag` /
+`FUN_251DE_write_main3`. Il trace vede solo L2/L3 nella finestra
+f1822..f4073; L3 `0x2cd9e` resta caricato fino a f4073, nessun L4
+`0x2d648`. Questo falsifica l'ipotesi ingenua "ogni sample `obj0+0x18==3` e'
+un gate ripetibile": per scalare a L4-L6 il planner deve essere alimentato da
+finestre in cui il PC event `FUN_251DE_object_scan_dispatch` passa davvero sullo
+stato completion, non solo da sample RAM durante init/main=3. Nessun seed e'
+stato promosso.
 
 ## 2026-05-16 — Detector-gate rearm breakthrough toward L3
 
