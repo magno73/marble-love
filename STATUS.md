@@ -1,7 +1,64 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L4 `FUN_1CABA` direct terrain fix)
+**Ultimo update:** 2026-05-16 (L4 candidate route proof)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L4 candidate route proof
+
+L'audit candidate ora supporta `--step-pixels N`, cosi' puo' verificare
+route lente coerenti con gli sweep MAME fatti con
+`MARBLE_PLAYABLE_ROUTE_STEP=4`. Anche
+`summarize-bootstrap-frontiers.ts` propaga `--step-pixels` all'audit.
+
+Dopo il fix `FUN_1CABA`, la frontiera L4 `DR` ha due finestre buone con il
+piano step4:
+
+```sh
+node --import tsx packages/cli/src/summarize-bootstrap-frontiers.ts \
+  --root /private/tmp/marble-bootstrap-route-sweep \
+  --levels 4 \
+  --routes DR \
+  --step-pixels 4 \
+  --plan 'L:160,N:20,DR:40,R:20,DR:20,L:40,UR:40,L:40,DR:20,L:20,UR:20,N:40,L:20,N:20,R:20,L:20,N:440'
+```
+
+Risultato L4:
+
+- `DR` f3200: candidate, descriptor L4 `0x2d648`, MAME pair
+  `diffXY=4784701/0`, TS/manual `diffXY=1661360/9729`, deaths `0/0`.
+- `DR` f3400: candidate, descriptor L4 `0x2d648`, MAME pair
+  `diffXY=5196264/0`, TS/manual `diffXY=1821055/10298`, deaths `0/0`.
+
+Esportato seed diagnostico non cablato:
+`packages/web/public/scenarios/playable/candidate_level4_bootstrap_dr_f3200.seed.json`.
+Audit diretto:
+
+```sh
+node --import tsx packages/cli/src/audit-playable-seed.ts \
+  --step-pixels 4 \
+  --plan 'L:160,N:20,DR:40,R:20,DR:20,L:40,UR:40,L:40,DR:20,L:20,UR:20,N:40,L:20,N:20,R:20,L:20,N:440' \
+  --max-route-deaths 0 \
+  --mame-neutral-file /private/tmp/marble-bootstrap-route-sweep/l4/neutral/scenarios/f3200.json \
+  packages/web/public/scenarios/playable/candidate_level4_bootstrap_dr_f3200.seed.json
+```
+
+Verdict: `candidate-needs-route-proof` solo perche' e' un file `candidate_*`
+non ancora cablato; i gate tecnici passano: descriptor L4, PF distinta da L1,
+MAME active-vs-neutral responsive, TS/browser-style responsive e stable,
+death `0/0`.
+
+Visual smoke ROM-backed:
+
+```sh
+node --import tsx packages/cli/src/visual-smoke-real.ts \
+  --seed packages/web/public/scenarios/playable/candidate_level4_bootstrap_dr_f3200.seed.json \
+  --ticks 120 \
+  --out /private/tmp/marble-l4-candidate-f3320-after-1caba-fix.ppm
+```
+
+Risultato: L4 `0x2d648`, `main/mode=0/0`, state0, timer `96 -> 94`,
+`pf=3274`, scroll `(0,74)`, 1966 playfield tile, 7 sprite, 216 alpha char,
+frame nonblank. Non e' stato cablato `startLevel=4`.
 
 ## 2026-05-16 — L4 `FUN_1CABA` direct terrain fix
 
@@ -87,7 +144,11 @@ Finding L4:
   `state=1`; la death/state failure e' quindi effetto della divergenza
   height/collisione iniziata 40 frame prima.
 
-Prossimo fix utile per L4: instrumentare il path height/collision/surface
+Nota: questa sezione e' storica; il gap descritto sotto e' stato risolto dal
+fix `FUN_1CABA` sopra. Il prossimo lavoro L4 non e' piu' height/collision, ma
+browser/manual review e promozione controllata del candidato.
+
+Vecchio finding prima del fix: instrumentare il path height/collision/surface
 attorno a f3225, coordinate circa `x=231.05`, `y=188`, descriptor L4
 `0x2d648`. Non aumentare lo sweep finche' questa divergenza non e' spiegata.
 

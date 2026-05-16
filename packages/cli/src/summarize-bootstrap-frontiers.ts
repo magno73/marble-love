@@ -20,6 +20,7 @@ interface CliArgs {
   routes: string[] | undefined;
   plan: string;
   maxRouteDeaths: number;
+  stepPixels: number;
   topPerLevel: number;
   showAll: boolean;
   json: boolean;
@@ -27,6 +28,7 @@ interface CliArgs {
 
 interface AuditJson {
   plan: string;
+  stepPixels?: number;
   frames: number;
   maxRouteDeaths: number;
   summaries: AuditSummary[];
@@ -115,6 +117,7 @@ type FrontierClass =
 
 const DEFAULT_ROOT = "/private/tmp/marble-bootstrap-route-sweep";
 const DEFAULT_PLAN = "R:200,D:200,L:200,U:200,N:200";
+const DEFAULT_STEP_PIXELS = 8;
 const DEFAULT_TOP_PER_LEVEL = 12;
 
 function printHelp(): void {
@@ -131,6 +134,8 @@ Options:
   --plan SPEC            audit-playable-seed route plan
                          (default: ${DEFAULT_PLAN})
   --max-route-deaths N   audit-playable-seed --max-route-deaths (default: 0)
+  --step-pixels N        audit-playable-seed --step-pixels
+                         (default: ${DEFAULT_STEP_PIXELS}; use 4 for step-4 MAME sweeps)
   --top-per-level N      Rows printed per level unless --all (default: ${DEFAULT_TOP_PER_LEVEL})
   --all                  Print every audited row
   --json                 Emit machine-readable JSON
@@ -148,6 +153,7 @@ function parseArgs(): CliArgs {
   let routes: string[] | undefined;
   let plan = DEFAULT_PLAN;
   let maxRouteDeaths = 0;
+  let stepPixels = DEFAULT_STEP_PIXELS;
   let topPerLevel = DEFAULT_TOP_PER_LEVEL;
   let showAll = false;
   let json = false;
@@ -164,6 +170,8 @@ function parseArgs(): CliArgs {
       plan = requireValue(raw[++i], "--plan");
     } else if (arg === "--max-route-deaths") {
       maxRouteDeaths = parseNonNegativeInt(raw[++i], "--max-route-deaths");
+    } else if (arg === "--step-pixels") {
+      stepPixels = parsePositiveInt(raw[++i], "--step-pixels");
     } else if (arg === "--top-per-level") {
       topPerLevel = parseNonNegativeInt(raw[++i], "--top-per-level");
     } else if (arg === "--all") {
@@ -178,7 +186,7 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { root, levels, routes, plan, maxRouteDeaths, topPerLevel, showAll, json };
+  return { root, levels, routes, plan, maxRouteDeaths, stepPixels, topPerLevel, showAll, json };
 }
 
 function requireValue(raw: string | undefined, label: string): string {
@@ -189,6 +197,12 @@ function requireValue(raw: string | undefined, label: string): string {
 function parseNonNegativeInt(raw: string | undefined, label: string): number {
   const value = Number(requireValue(raw, label));
   if (!Number.isInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer`);
+  return value;
+}
+
+function parsePositiveInt(raw: string | undefined, label: string): number {
+  const value = Number(requireValue(raw, label));
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer`);
   return value;
 }
 
@@ -255,6 +269,8 @@ function runAudit(args: CliArgs, neutralDir: string, scenarioFiles: string[]): A
     args.plan,
     "--max-route-deaths",
     String(args.maxRouteDeaths),
+    "--step-pixels",
+    String(args.stepPixels),
     "--mame-neutral-dir",
     neutralDir,
     "--distinct-from",
@@ -388,7 +404,7 @@ function fmtPair(x: number | undefined, y: number | undefined): string {
 function printRows(args: CliArgs, rows: readonly FrontierRow[]): void {
   const stats = classStats(rows);
   console.log(
-    `Bootstrap frontier summary root=${resolve(args.root)} plan=${args.plan} maxDeaths=${args.maxRouteDeaths}`,
+    `Bootstrap frontier summary root=${resolve(args.root)} plan=${args.plan} stepPixels=${args.stepPixels} maxDeaths=${args.maxRouteDeaths}`,
   );
   console.log(
     `Audited ${rows.length} row(s); classes=${Object.entries(stats)
@@ -430,7 +446,13 @@ function main(): void {
     const args = parseArgs();
     const rows = buildRows(args);
     if (args.json) {
-      console.log(JSON.stringify({ root: resolve(args.root), plan: args.plan, rows, stats: classStats(rows) }, null, 2));
+      console.log(
+        JSON.stringify(
+          { root: resolve(args.root), plan: args.plan, stepPixels: args.stepPixels, rows, stats: classStats(rows) },
+          null,
+          2,
+        ),
+      );
     } else {
       printRows(args, rows);
     }

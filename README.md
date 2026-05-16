@@ -233,7 +233,14 @@ dispatcher manuale browser riarmato. Se hai una coppia di catture MAME
 active/neutral, passa gli snapshot active come argomenti e aggiungi
 `--mame-neutral-dir /path/neutral/scenarios`: se MAME active e neutral sono
 identici, il seed resta diagnostico anche quando il rearm manuale TS sembra
-controllabile. Per una tail manuale o playback con molti snapshot usa
+controllabile. Se la proof MAME e' stata generata con
+`MARBLE_PLAYABLE_ROUTE_STEP=4`, aggiungi `--step-pixels 4`: questo evita falsi
+negativi da route audit troppo aggressive. Sul candidato L4
+`candidate_level4_bootstrap_dr_f3200.seed.json`, il piano step4
+`L:160,N:20,DR:40,R:20,DR:20,L:40,UR:40,L:40,DR:20,L:20,UR:20,N:40,L:20,N:20,R:20,L:20,N:440`
+passa MAME pair responsive e TS/manual zero-death, ma resta candidato
+diagnostico finche' non viene completata la review browser/manuale e il wiring
+esplicito. Per una tail manuale o playback con molti snapshot usa
 `--all-snapshots --target-segment N --only-candidates`, cosi' il probe estrae
 solo i frame che potrebbero diventare seed. Il probe rifiuta inoltre i
 candidati con `playfieldRam` byte-identica al seed level 1 di riferimento
