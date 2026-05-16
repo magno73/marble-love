@@ -46,6 +46,7 @@ interface CliArgs {
   distinctFrom: string[];
   minPlayfieldDiff: number;
   maxRouteDeaths: number;
+  stepPixels: number;
   allSnapshots: boolean;
   targetSegment: number | undefined;
   onlyCandidates: boolean;
@@ -165,17 +166,18 @@ const DEFAULT_PLAN = "R:300,D:300,L:300,U:300,DR:300,DL:300,N:400";
 const DEFAULT_DISTINCT_FROM = ["packages/web/public/scenarios/playable/manual_level1_start.seed.json"];
 const DEFAULT_MIN_PLAYFIELD_DIFF = 512;
 const DEFAULT_MAX_ROUTE_DEATHS = 3;
+const DEFAULT_STEP_PIXELS = 8;
 const FALLBACK_MIN_PLAYABLE_PF = 4_001;
-const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
-  D: [0, 8],
-  U: [0, -8],
-  R: [8, 0],
-  L: [-8, 0],
-  DR: [8, 8],
-  DL: [-8, 8],
-  UR: [8, -8],
-  UL: [-8, -8],
-  BR: [4, -6],
+const SCREEN_DELTA_UNITS: Record<string, readonly [number, number]> = {
+  D: [0, 1],
+  U: [0, -1],
+  R: [1, 0],
+  L: [-1, 0],
+  DR: [1, 1],
+  DL: [-1, 1],
+  UR: [1, -1],
+  UL: [-1, -1],
+  BR: [0.5, -0.75],
   N: [0, 0],
 };
 
@@ -206,6 +208,10 @@ Options:
   --max-route-deaths N
                 Mark TS active-vs-neutral route unstable after more than N
                 death/recovery entries. Defaults to ${DEFAULT_MAX_ROUTE_DEATHS}.
+  --step-pixels N
+                Trackball screen-space delta per route frame.
+                Defaults to ${DEFAULT_STEP_PIXELS}. Use 4 for captures made
+                with MARBLE_PLAYABLE_ROUTE_STEP=4.
   --all-snapshots
                 Audit every snapshot in each scenario file instead of only
                 the first seed frame. Useful for manual/playback tail captures.
@@ -234,6 +240,7 @@ function parseArgs(): CliArgs {
   const distinctFrom: string[] = [];
   let minPlayfieldDiff = DEFAULT_MIN_PLAYFIELD_DIFF;
   let maxRouteDeaths = DEFAULT_MAX_ROUTE_DEATHS;
+  let stepPixels = DEFAULT_STEP_PIXELS;
   let allSnapshots = false;
   let targetSegment: number | undefined;
   let onlyCandidates = false;
@@ -268,6 +275,12 @@ function parseArgs(): CliArgs {
       const value = Number(next);
       if (!Number.isInteger(value) || value < 0) throw new Error(`invalid --max-route-deaths value: ${next}`);
       maxRouteDeaths = value;
+    } else if (arg === "--step-pixels") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--step-pixels requires a value");
+      const value = Number(next);
+      if (!Number.isInteger(value) || value <= 0) throw new Error(`invalid --step-pixels value: ${next}`);
+      stepPixels = value;
     } else if (arg === "--all-snapshots") {
       allSnapshots = true;
     } else if (arg === "--target-segment") {
@@ -303,6 +316,7 @@ function parseArgs(): CliArgs {
     distinctFrom: distinctFrom.length > 0 ? distinctFrom : DEFAULT_DISTINCT_FROM,
     minPlayfieldDiff,
     maxRouteDeaths,
+    stepPixels,
     allSnapshots,
     targetSegment,
     onlyCandidates,
@@ -405,7 +419,7 @@ function expandRouteSpec(spec: string): string[] {
     const trimmed = part.trim();
     if (trimmed === "") continue;
     const [step, countRaw] = trimmed.split(":");
-    if (step === undefined || countRaw === undefined || SCREEN_DELTAS[step] === undefined) {
+    if (step === undefined || countRaw === undefined || SCREEN_DELTA_UNITS[step] === undefined) {
       throw new Error(`invalid route part "${part}"`);
     }
     const count = Number(countRaw);
@@ -416,8 +430,10 @@ function expandRouteSpec(spec: string): string[] {
   return out;
 }
 
-function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
-  const [screenDx, screenDy] = SCREEN_DELTAS[step] ?? [0, 0];
+function advanceTrackball(p1X: number, p1Y: number, step: string, stepPixels: number): readonly [number, number] {
+  const [unitDx, unitDy] = SCREEN_DELTA_UNITS[step] ?? [0, 0];
+  const screenDx = Math.round(unitDx * stepPixels);
+  const screenDy = Math.round(unitDy * stepPixels);
   return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
 }
 
@@ -514,7 +530,7 @@ function loadStateFromSeed(rom: RomImage, seed: SeedJson, manualDispatcher: bool
   return gameState;
 }
 
-function runRoute(rom: RomImage, gameState: GameState, plan: readonly string[]): RouteSummary {
+function runRoute(rom: RomImage, gameState: GameState, plan: readonly string[], stepPixels: number): RouteSummary {
   let p1X = gameState.workRam[0x18 + 0xc9] ?? 0xff;
   let p1Y = gameState.workRam[0x18 + 0xc8] ?? 0xff;
   const initialX = signedLong(readLongBE(gameState.workRam, 0x18 + 0x0c));
@@ -533,7 +549,7 @@ function runRoute(rom: RomImage, gameState: GameState, plan: readonly string[]):
   let maxScrollY = 0;
 
   for (const step of plan) {
-    [p1X, p1Y] = advanceTrackball(p1X, p1Y, step);
+    [p1X, p1Y] = advanceTrackball(p1X, p1Y, step, stepPixels);
     tick(gameState, {
       rom,
       runMainLoopBody: true,
@@ -616,10 +632,11 @@ function compareRoute(
   manualDispatcher: boolean,
   minStablePf: number,
   maxRouteDeaths: number,
+  stepPixels: number,
 ): ComparisonSummary {
   const neutralPlan = Array.from({ length: plan.length }, () => "N");
-  const active = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), plan);
-  const neutral = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), neutralPlan);
+  const active = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), plan, stepPixels);
+  const neutral = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), neutralPlan, stepPixels);
   const diffX = Math.abs(active.finalX - neutral.finalX);
   const diffY = Math.abs(active.finalY - neutral.finalY);
   const responsive = diffX > 1_000_000 || diffY > 1_000_000;
@@ -680,13 +697,14 @@ function auditPath(
   minPlayfieldDiff: number,
   descriptors: readonly DescriptorSummary[],
   maxRouteDeaths: number,
+  stepPixels: number,
 ): AuditSummary {
   const seed = loaded.seed;
   const initial = seedSummary(seed, descriptors);
   const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences, minPlayfieldDiff);
   const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
-  const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf, maxRouteDeaths);
-  const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf, maxRouteDeaths);
+  const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf, maxRouteDeaths, stepPixels);
+  const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf, maxRouteDeaths, stepPixels);
   const isGameplayOracleSeed = loaded.sourcePath.includes("oracle/scenarios/gameplay/");
   const isCandidatePlayableSeed = basename(loaded.sourcePath).startsWith("candidate_");
   const isCheckedInPlayableSeed =
@@ -848,6 +866,7 @@ function main(): void {
       args.minPlayfieldDiff,
       descriptors,
       args.maxRouteDeaths,
+      args.stepPixels,
     ),
   );
   const visibleSummaries = args.onlyCandidates
@@ -858,6 +877,7 @@ function main(): void {
       JSON.stringify(
         {
           plan: args.plan,
+          stepPixels: args.stepPixels,
           frames: plan.length,
           maxRouteDeaths: args.maxRouteDeaths,
           scannedSnapshots: loadedSeeds.length,
@@ -872,7 +892,7 @@ function main(): void {
     );
   } else {
     console.log(
-      `Plan ${args.plan} (${plan.length} frames); audited ${routeAuditSeeds.length}/${filteredSeeds.length} ` +
+      `Plan ${args.plan} (${plan.length} frames, stepPixels=${args.stepPixels}); audited ${routeAuditSeeds.length}/${filteredSeeds.length} ` +
         `target-filtered snapshot(s), scanned ${loadedSeeds.length}; maxRouteDeaths=${args.maxRouteDeaths}; ` +
         `showing ${visibleSummaries.length}`,
     );
