@@ -38,6 +38,10 @@ f69000 (`pfDiff=0`) perche' era `state=6`, non un practice start giocabile; i
 frame stabili immediatamente dopo tornano alla famiglia PF warm lontana dal
 descrittore L2. Serve comunque audit paired active-vs-neutral e confronto
 descriptor prima di promuovere qualsiasi seed.
+Lo script supporta anche probe service/test con `MARBLE_PLAYABLE_SERVICE_MODE=1`
+e pulse multipli `MARBLE_PLAYABLE_START_PULSES=...`; il walk service mode
+headless e' stato auditato e non espone un level-select o practice-start utile:
+mostra solo switch/coin/game options, statistiche, istogrammi e test video/sound.
 Per generare il workflow completo senza ricordare tutti i path/env, usa
 `node --import tsx packages/cli/src/plan-mame-manual-level-capture.ts --name manual_levels`.
 Il planner stampa: record MAME `.inp`, replay/capture manuale, summary/export

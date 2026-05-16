@@ -1,7 +1,63 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (dense no-coin descriptor sweep)
+**Ultimo update:** 2026-05-16 (service-mode route ruled out)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Service-mode route ruled out
+
+Esteso `oracle/mame_playable_input_capture.lua` con:
+
+- `MARBLE_PLAYABLE_SERVICE_MODE=1`, che forza il bit service `F60001.6` low
+  via read-tap. `set_value` sul campo DIP MAME non modifica la lettura runtime,
+  quindi il read-tap e' necessario per una cattura headless riproducibile.
+- `MARBLE_PLAYABLE_COIN_PULSES`, `MARBLE_PLAYABLE_START_PULSES` e
+  `MARBLE_PLAYABLE_P2_START_PULSES`, CSV di frame start per inviare pulse
+  multipli senza patchare Lua temporaneo.
+
+Smoke service:
+
+```sh
+SDL_VIDEODRIVER=dummy \
+MARBLE_PLAYABLE_SERVICE_MODE=1 \
+MARBLE_PLAYABLE_COIN_START=0 \
+MARBLE_PLAYABLE_OUT_DIR=/private/tmp/marble-service-smoke/scenarios \
+MARBLE_PLAYABLE_INPUT_OUT=/private/tmp/marble-service-smoke/input.json \
+MARBLE_PLAYABLE_FRAME_LIST='service_f300:300' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=0 \
+mame marble -rompath roms -autoboot_script oracle/mame_playable_input_capture.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Le letture passano da `0x6f`/`0x7f` a service low (`0x2f`/`0x3f`);
+nel run stabile i frame campionati riportano `switches=47` (`0x2f`).
+
+Walk service con P1 START multipli:
+
+```sh
+SDL_VIDEODRIVER=dummy \
+MARBLE_PLAYABLE_SERVICE_MODE=1 \
+MARBLE_PLAYABLE_OUT_DIR=/private/tmp/marble-service-p1-walk/scenarios \
+MARBLE_PLAYABLE_INPUT_OUT=/private/tmp/marble-service-p1-walk/input.json \
+MARBLE_PLAYABLE_COIN_PULSES=1200 \
+MARBLE_PLAYABLE_START_PULSES='1500,3000,4500,6000,7500,9000,10500,12000,13500,15000,16500,18000,19500,21000,22500,24000' \
+MARBLE_PLAYABLE_FRAME_LIST='f1000:1000,f1600:1600,f3100:3100,f4600:4600,f6100:6100,f7600:7600,f9100:9100,f10600:10600,f12100:12100,f13600:13600,f15100:15100,f16600:16600,f18100:18100,f19600:19600,f21100:21100,f22600:22600,f24100:24100,f26000:26000' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=0 \
+mame marble -rompath roms -autoboot_script oracle/mame_playable_input_capture.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Alpha text decode attraversa: `Switch test`, `Coin Options`, `Game Options`,
+statistiche, istogrammi level 1/2/3, `Playfield Test`, motion-object tests,
+alpha/color/convergence/sound/palette tests. Non compare un menu level-select
+o practice-start. Descriptor audit su
+`/private/tmp/marble-service-p1-walk/descriptors/manifest.json`:
+
+- nessuna finestra byte-exact descriptor;
+- nessun frame stable-playable (`main/mode=0/0`, timer `0`, PF spesso vuoto);
+- `Playfield Test`/video tests sono diagnostics video, non seed o route proof.
+
+Interpretazione: il service DIP non fornisce una scorciatoia legittima per i
+sei `startLevel`. Resta valido il percorso movie/manuale o planner route reale.
 
 ## 2026-05-16 — Dense no-coin descriptor sweep
 
