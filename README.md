@@ -171,9 +171,9 @@ atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente, `main=3`) e
 lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Per target L1 usa previous
 index `0xffff`, che il branch ROM incrementa a `0`; per L2..L6 usa l'indice
 precedente naturale. Questa strada ha gia' prodotto descriptor reali
-L1/L3/L4/L5/L6 con proof post-seed; `manual_level1_start` resta il seed storico
-cablato ma punta alla famiglia descriptor L2 (`0x2c54c`). Non cablare ancora
-`startLevel=2..6` senza review finale del mapping.
+L1/L2/L3/L4/L5/L6 con proof post-seed; `manual_level1_start` resta il seed
+storico cablato ma punta alla famiglia descriptor L2 (`0x2c54c`). Non cablare
+ancora `startLevel=2..6` senza review finale del mapping.
 Per rendere ripetibili questi sweep usa
 `node --import tsx packages/cli/src/plan-bootstrap-route-sweep.ts`: il planner
 stampa le run MAME neutral/active con bootstrap ROM e gli audit
@@ -256,8 +256,12 @@ mapping: `manual_level1_start` ha pointer `0x2c54c` e quindi copre la famiglia
 descriptor L2; il vero buco era L1 `0x2bee2`. Il bootstrap target L1 ha prodotto
 `candidate_level1_postseed_r_f3020.seed.json` con proof MAME post-seed
 `seedExact=true`, active-vs-neutral forte, zero death e smoke ROM-backed stabile.
-Restano da fare review finale del mapping `startLevel` e parity/browser review
-prima di promuovere qualunque candidato.
+Il candidato canonico L2 e' ora
+`candidate_level2_postseed_dr_f3000.seed.json`: stesso terreno di
+`manual_level1_start`, ma con proof post-seed nominata correttamente,
+active/neutral exact in replay TS-vs-MAME per 180 frame e smoke ROM-backed
+stabile. Restano da fare review finale del mapping `startLevel` e
+parity/browser review prima di promuovere qualunque candidato.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col
