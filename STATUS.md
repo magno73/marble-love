@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (state-diverse route and level-index trace)
+**Ultimo update:** 2026-05-16 (MAME tap handles and level-index writer trace)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME tap handles and level-index writer trace
+
+Corretto `oracle/mame_level_descriptor_tap.lua`: ora conserva gli handle dei
+read/write taps, come fa gia' `mame_playable_input_capture.lua`. Senza handle
+persistenti il trace vedeva solo i write iniziali; con la fix il nuovo run
+headless no-coin in `/private/tmp/marble-index-write-trace-handles/trace.json`
+registra `146` eventi (`13` write a `workRam[0x394..0x395]`, `24` write a
+`workRam[0x474..0x477]`, PC taps per `FUN_11452`, `FUN_10504`, `FUN_16EC6`,
+`FUN_1A444`, `FUN_16F6C`).
+
+Finding importante: il writer ricorrente di `0x400394` e' `PC=0x011524`,
+dentro `FUN_11452` mode0, che fa il toggle XOR `0/1` prima di chiamare
+`FUN_16EC6`. I PC taps mostrano `FUN_16EC6` subito dopo con `idx=0` o `idx=1`,
+e i write a `0x400474` caricano solo L1 `0x2bee2` o L2 `0x2c54c`. Nessun evento
+o sample vede `idx=2..5`, nessun `main=3`, nessun pointer L3-L6.
+
+Interpretazione aggiornata: il path automatico/no-coin non entra nel branch di
+progressione livello `FUN_1101E case4`; gira nel rebuild/presentation
+`FUN_11452` che alterna i due descriptor tutorial/attract. Per trovare i sei
+seed serve ancora una route manuale/playback reale che arrivi al branch
+`0x400390=3` / progressione, oppure una proof statica del modo in cui la ROM
+abilita quel branch da input/credit/start validi. Nessun nuovo `startLevel` e'
+stato cablato.
 
 ## 2026-05-16 — State-diverse route and level-index trace
 

@@ -121,6 +121,12 @@ diagnostica browser, non come proof MAME. Il trace index no-coin
 `/private/tmp/marble-index-write-trace/trace.json` mostra `levelIndex` solo 0/1
 in sync con L1/L2; nessun path osservato tiene idx2..idx5. Sono proof negativi,
 non seed.
+Il tap MAME conserva ora gli handle dei read/write taps; il proof aggiornato
+`/private/tmp/marble-index-write-trace-handles/trace.json` registra i PC writer:
+i write ricorrenti a `0x400394` arrivano da `PC=0x011524` dentro `FUN_11452`
+mode0, che alterna XOR `0/1` prima di `FUN_16EC6`. Non c'e' ingresso osservato
+nel branch di progressione `FUN_1101E case4` (`main=3`), quindi L3-L6 restano
+non raggiunti dai path automatici.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

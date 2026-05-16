@@ -79,6 +79,7 @@ local seen_levels = {}
 local seen_level_count = 0
 local last_signature = nil
 local last_pc_key = nil
+local tap_handles = {}
 
 local INPUT_DEFAULTS = {
     [0xF20001] = 0xff,
@@ -233,16 +234,17 @@ local function canonical_input_addr(addr)
 end
 
 local function install_input_read_tap(lo, hi, name)
-    mem:install_read_tap(lo, hi, "level_descriptor_input_" .. name, function(offset, data, mask)
+    local handle = mem:install_read_tap(lo, hi, "level_descriptor_input_" .. name, function(offset, data, mask)
         local addr = canonical_input_addr(normalize_tap_addr(lo, offset))
         local v = data & 0xff
         input_current[addr] = v & 0xff
         return v & 0xff
     end)
+    table.insert(tap_handles, handle)
 end
 
 local function install_pc_tap(pc, name)
-    mem:install_read_tap(pc, pc + 1, "level_descriptor_" .. name, function(offset, data, mask)
+    local handle = mem:install_read_tap(pc, pc + 1, "level_descriptor_" .. name, function(offset, data, mask)
         if pc_state == nil or pc_state.value ~= pc then return data end
         local sp = sp_state and sp_state.value or 0
         local key = tostring(frame_count) .. ":" .. hx(pc, 6) .. ":" .. hx(sp, 8)
@@ -251,6 +253,7 @@ local function install_pc_tap(pc, name)
         add_event("pc", name, { tapPc = pc })
         return data
     end)
+    table.insert(tap_handles, handle)
 end
 
 local function install_taps()
@@ -263,7 +266,7 @@ local function install_taps()
     for _, p in ipairs(PCS) do
         install_pc_tap(p.pc, p.name)
     end
-    mem:install_write_tap(0x400474, 0x400477, "level_descriptor_ptr_write", function(offset, data, mask)
+    local ptr_handle = mem:install_write_tap(0x400474, 0x400477, "level_descriptor_ptr_write", function(offset, data, mask)
         local addr = normalize_tap_addr(0x400474, offset)
         add_write_event("workRam[0x474..0x477]", {
             writeAddr = addr,
@@ -271,7 +274,8 @@ local function install_taps()
             writeMask = mask or 0,
         })
     end)
-    mem:install_write_tap(0x400394, 0x400395, "level_descriptor_index_write", function(offset, data, mask)
+    table.insert(tap_handles, ptr_handle)
+    local index_handle = mem:install_write_tap(0x400394, 0x400395, "level_descriptor_index_write", function(offset, data, mask)
         local addr = normalize_tap_addr(0x400394, offset)
         add_write_event("workRam[0x394..0x395]", {
             writeAddr = addr,
@@ -279,6 +283,7 @@ local function install_taps()
             writeMask = mask or 0,
         })
     end)
+    table.insert(tap_handles, index_handle)
 end
 
 local function update_pointer_counts()
