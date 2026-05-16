@@ -40,6 +40,19 @@ finestre in cui il PC event `FUN_251DE_object_scan_dispatch` passa davvero sullo
 stato completion, non solo da sample RAM durante init/main=3. Nessun seed e'
 stato promosso.
 
+Probe TS dal candidato L3 diagnostico f2300:
+
+- `/private/tmp/marble-l3diag-target-l4-nodeath-2400/manifest.json`: con
+  `--max-deaths 0` il search verso descriptor L4 si ferma al primo chunk
+  (`frame=30`), nessun `main=3` o target L4.
+- `/private/tmp/marble-l3diag-target-l4-anydeath-600/manifest.json`: senza cap
+  death il search continua solo entrando in death/recovery (`deaths=3` a f600)
+  e resta su L3 `0x2cd9e`, nessun target L4.
+
+Quindi il frame L3 f2300 e' MAME-responsive e utile come diagnostica di
+descriptor-gate, ma non e' una base valida per promuovere seed o per una route
+L4 senza un gate MAME piu' forte.
+
 ## 2026-05-16 — Detector-gate rearm breakthrough toward L3
 
 Nuova ipotesi validata: il rearm manuale forzato non va fatto a un frame
