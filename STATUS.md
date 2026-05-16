@@ -1,7 +1,35 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (fine L2 transition + bulk descriptor audit)
+**Ultimo update:** 2026-05-16 (audit prefilter for manual tails)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Audit prefilter for manual tails
+
+`packages/cli/src/audit-playable-seed.ts --only-candidates` ora applica un
+prefiltro cheap prima dei replay TS active-vs-neutral: scarta subito snapshot
+con PF scarso, `main/mode` non `1/0`, timer morto, player non in `state=0`,
+snapshot gameplay/oracle caldi e near-duplicate rispetto ai riferimenti
+`--distinct-from`. Questo non promuove nuovi seed, ma rende praticabile auditare
+tail MAME/manuali dense senza spendere minuti su frame gia' impossibili.
+
+Verifica sul set rappresentativo di exact/near non giocabili:
+
+```sh
+node --import tsx packages/cli/src/audit-playable-seed.ts \
+  --all-snapshots \
+  --only-candidates \
+  --distinct-from packages/web/public/scenarios/playable/manual_level1_start.seed.json \
+  /private/tmp/marble_coin_late_fixed/scenarios/late_1500.json \
+  /private/tmp/marble_case16_probe/scenarios/route_3000.json \
+  /private/tmp/marble_completion_micro/scenarios/f4998.json \
+  /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/scenarios/f68979.json \
+  /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/scenarios/f69003.json
+```
+
+Risultato: `audited 0/205 target-filtered snapshot(s), scanned 205; showing 0`
+in meno di un secondo. Lo stesso comando prima entrava nei replay TS per frame
+gia' esclusi (`state=6`, `mode=2`, timer/PF non validi) e non era utile per il
+goal.
 
 ## 2026-05-16 — Fine L2 transition timeline audit
 
