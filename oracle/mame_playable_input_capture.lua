@@ -23,6 +23,8 @@
 --   MARBLE_PLAYABLE_TIMER_OVERRIDE diagnostic player timer value for route search
 --   MARBLE_PLAYABLE_TIMER_START first frame for timer override (default 2045)
 --   MARBLE_PLAYABLE_TIMER_END   last frame for timer override (default 999999)
+--   MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1 clears 0x400390 once at route start
+--   MARBLE_PLAYABLE_FORCE_MANUAL_FRAME optional frame for manual dispatcher clear
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
 --   MARBLE_PLAYABLE_MANUAL_WINDOW tail snapshots to save in manual/playback mode
@@ -48,6 +50,9 @@ local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or
 local TIMER_OVERRIDE = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_OVERRIDE") or "")
 local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") or "2045") or 2045
 local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
+local FORCE_MANUAL_DISPATCHER = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1"
+local FORCE_MANUAL_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAME") or "")
+local manual_dispatcher_applied = false
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -360,13 +365,13 @@ local function apply_input_for_frame(frame)
     local coin_port = ports[":1820"]
     if coin_port then
         if coin_port.fields["Coin 1"] then
-            coin_port.fields["Coin 1"]:set_value((script_buttons & 0x04) ~= 0 and 1 or 0)
+            coin_port.fields["Coin 1"]:set_value((script_buttons & 0x04) ~= 0 and 0 or 1)
         end
         if coin_port.fields["Left Coin"] then
-            coin_port.fields["Left Coin"]:set_value(0)
+            coin_port.fields["Left Coin"]:set_value(1)
         end
         if coin_port.fields["Right Coin"] then
-            coin_port.fields["Right Coin"]:set_value(0)
+            coin_port.fields["Right Coin"]:set_value(1)
         end
     end
 end
@@ -683,6 +688,21 @@ local function apply_timer_override(frame)
     write_abs_u16(0x400082, TIMER_OVERRIDE)
 end
 
+local function apply_manual_dispatcher_rearm(frame)
+    if not FORCE_MANUAL_DISPATCHER then return end
+    if manual_dispatcher_applied then return end
+    if mem == nil then return end
+    local start_frame = FORCE_MANUAL_FRAME or TRACKBALL_START
+    if frame < start_frame then return end
+
+    -- Mirrors the browser START path for human practice play: MAME's warm
+    -- entry keeps the attract/tutorial dispatcher at 0x400390.w == 1, while
+    -- browser manual play clears it once before consuming live trackball input.
+    write_abs_u16(0x400390, 0)
+    manual_dispatcher_applied = true
+    print(string.format("[mame_playable_input_capture] forced manual dispatcher at f%d", frame))
+end
+
 emu.register_frame_done(function()
     if cpu == nil then
         cpu = manager.machine.devices[":maincpu"]
@@ -707,6 +727,7 @@ emu.register_frame_done(function()
 
     frame_count = frame_count + 1
     apply_timer_override(frame_count)
+    apply_manual_dispatcher_rearm(frame_count)
 
     capture_input_frame()
     local hits = capture_by_frame[frame_count]
