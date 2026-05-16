@@ -20,6 +20,7 @@
  *   A0 = #0x400474              ; A0 = ptr to level header ptr
  *   A2 = #0x1ed62               ; A2 = ROM table (terrain coef, 32 word)
  *   A1 = (A0)                   ; A1 = level header ptr
+ *   A0 = (A1)                   ; A0 = direct terrain byte-record base
  *   D0w = *(0x400696)           ; tileX (= obj.x >> 3)
  *   D4w = *(0x400698)           ; tileY (= obj.y >> 3)
  *   D4w = (D4w + 1 + tileX) - 0x15
@@ -57,7 +58,7 @@
  *     if D0w == 0:      goto END_OF_ITER
  *
  *     ; --- PATH_DIRECT (0x1CB76): D0 ∈ [1..0x7FF] ---
- *     A0 = D0 + lvlPtr          ; A0 = ROM ptr (lvlPtr-relative offset)
+ *     A0 = D0 + *(lvlPtr+0)     ; A0 = direct terrain byte-record ptr
  *     D1w = (A4) - 0x80         ; D1 = tile X offset - 0x80
  *     repeat 4×:
  *       D0w = 0
@@ -461,8 +462,11 @@ function sub1CABATileRedrawImpl(state: GameState, rom: RomImage): void {
           break dispatchLoop;
         }
         // PATH_DIRECT (0x1CB76): D0w in [1..0x7FF]
-        // ext.l D0; A0 = D0 + (A1) where A1 = lvlPtr
-        const a0Long = (s16(terrainCode) + lvlPtr) >>> 0;
+        // ext.l D0; A0 = D0 + (A1), where (A1) is the descriptor's first
+        // long pointer. This is not lvlPtr-relative data: L4 reaches records
+        // in the slapstic window, e.g. lvlPtr 0x2d648 -> base 0x8123e.
+        const directRecordBase = readLongAbs(state, rom, lvlPtr) >>> 0;
+        const a0Long = (s16(terrainCode) + directRecordBase) >>> 0;
         // D1w = (A4) - 0x80
         let d1c = (r16(state, a4Off) - 0x80) & 0xffff;
         // 4× iter: D0w = 0; D0b = (A0)+; if 0 → (A5)+ = 0; else D0w += D1w; (A5)+ = D0w

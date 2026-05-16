@@ -195,10 +195,11 @@ Se hai una cattura MAME dense con `input.json`, il confronto piu' forte e'
 `node --import tsx packages/cli/src/compare-mame-ts-input-trace.ts --input /path/input.json /path/scenarios/fNNNN.json`.
 Questo replaya in TS gli assoluti trackball/switch effettivamente letti da
 MAME, invece di fidarsi del nome route. Sul caso L4 `DR` f3200 ha isolato il
-gap reale: input X varia ma Y resta costante in MAME, playfield e descriptor
-restano identici, TS diverge da MAME a f+25 sulla quota (`z`), supera 1px di
-errore a f+41 ed entra in state mismatch solo a f+65. Quindi L4 va debugato su
-height/collisione/surface attorno a `x=231.05,y=188`, non con sweep piu' larghi.
+gap `FUN_1CABA`: nel path direct MAME usa `*(lvlPtr+0)+terrainCode`, non
+`lvlPtr+terrainCode`. Dopo il fix, la dense L4 f3200..f3380 torna exact per
+180/180 frame su posizione, z, stato e playfield. L4 non va piu' trattato come
+bug height/collisione: resta una ricerca di route/finestra zero-death
+abbastanza controllabile.
 Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
@@ -219,8 +220,9 @@ distinte, ma non sono seed practice completi senza stato player/camera/dispatche
 validato.
 La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
 risolti. Per ogni livello mancante va classificato il failure dominante.
-L6 e' candidato da browser/manual review; L4 e' un gap collisione/height/input
-TS-vs-MAME perche' MAME risponde ma il replay muore; L5 f3400 va scartato
+L6 e' candidato da browser/manual review; L4 e' MAME/TS exact sulla finestra
+`DR` f3200 dopo il fix `1CABA`, ma manca ancora una route zero-death
+promuovibile; L5 f3400 va scartato
 perche' muore anche neutral; L3 richiede una finestra route-safe dopo il proof
 detector-gate; L2 va ricatturato da una transizione reale stabile, evitando i
 falsi exact in `state=6`.

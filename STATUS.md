@@ -1,7 +1,49 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L4 MAME-vs-TS first divergence)
+**Ultimo update:** 2026-05-16 (L4 `FUN_1CABA` direct terrain fix)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L4 `FUN_1CABA` direct terrain fix
+
+Risolta la divergenza L4 isolata nella dense capture
+`/private/tmp/marble-l4-first-divergence/l4/DR/scenarios/f3200.json`.
+Il tap mirato `oracle/mame_playable_surface_tap.lua` mostra che MAME chiama
+`FUN_1CABA` con input uguali a TS (`lvlPtr=0x2d648`, tile `28/23`,
+`A3=0xa007f2`, `A4=0x4004b6`), ma nel path direct usa come base il primo long
+del descriptor (`*(lvlPtr+0)=0x8123e`), non `lvlPtr` stesso. TS leggeva quindi
+record geometria L4 da `0x2d658`; MAME leggeva `0x8124e` nella finestra
+slapstic.
+
+Fix in `packages/engine/src/sub-1caba-tile-redraw.ts`: per il path direct
+`D0 in [1..0x7ff]`, `A0 = *(lvlPtr+0) + terrainCode`.
+
+Verifica autorevole:
+
+```sh
+node --import tsx packages/cli/src/compare-mame-ts-input-trace.ts \
+  --input /private/tmp/marble-l4-first-divergence/l4/DR/input.json \
+  --max-frames 180 \
+  --sample-every 60 \
+  /private/tmp/marble-l4-first-divergence/l4/DR/scenarios/f3200.json
+```
+
+Risultato: 180/180 frame exact su state, main/mode, descriptor, trackball,
+posizione, z e playfield (`maxPfByteDiffs=0`). Il vecchio primo delta z a
+f+25 e lo state mismatch a f+65 sono spariti.
+
+Gate L4 dopo il fix: il candidato bootstrap `DR` f3200 e' MAME-responsive e
+neutral-stable, ma il piano audit standard `R:200,D:200,L:200,U:200,N:200`
+resta death-prone sull'active route (`3/0` deaths). Quindi L4 non e' piu' un
+gap collisione/height TS-vs-MAME; e' ora una ricerca di route/finestra
+zero-death abbastanza controllabile.
+
+Verifiche di regressione:
+
+- `npm run typecheck --workspace @marble-love/engine -- --pretty false`
+- `npm run typecheck --workspace @marble-love/cli -- --pretty false`
+- `npm test -- packages/engine/test/sub-1caba-tile-redraw.test.ts`
+- L6 candidate audit resta `candidate-needs-route-proof`, zero-death e stable;
+  visual smoke ROM-backed genera frame nonblank.
 
 ## 2026-05-16 — L4 MAME-vs-TS first divergence
 
