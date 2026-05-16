@@ -35,6 +35,7 @@ interface CliArgs {
   json: boolean;
   mameNeutralDir: string | undefined;
   distinctFrom: string[];
+  minPlayfieldDiff: number;
   allSnapshots: boolean;
   targetSegment: number | undefined;
   onlyCandidates: boolean;
@@ -102,6 +103,7 @@ interface PlayfieldReferenceSummary {
   diffs: number;
   checksum: number;
   exactMatch: boolean;
+  nearDuplicate: boolean;
 }
 
 interface AuditSummary {
@@ -138,6 +140,7 @@ const DEFAULT_PATHS = [
 
 const DEFAULT_PLAN = "R:300,D:300,L:300,U:300,DR:300,DL:300,N:400";
 const DEFAULT_DISTINCT_FROM = ["packages/web/public/scenarios/playable/manual_level1_start.seed.json"];
+const DEFAULT_MIN_PLAYFIELD_DIFF = 512;
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
   U: [0, -8],
@@ -167,6 +170,10 @@ Options:
                 Reject practice promotion when playfieldRam is byte-identical
                 to this reference seed/scenario snapshot. Can be repeated.
                 Defaults to ${DEFAULT_DISTINCT_FROM[0]}.
+  --min-playfield-diff N
+                Reject practice promotion when a candidate differs from any
+                --distinct-from reference by fewer than N playfield bytes.
+                Defaults to ${DEFAULT_MIN_PLAYFIELD_DIFF}.
   --all-snapshots
                 Audit every snapshot in each scenario file instead of only
                 the first seed frame. Useful for manual/playback tail captures.
@@ -190,6 +197,7 @@ function parseArgs(): CliArgs {
   let json = false;
   let mameNeutralDir: string | undefined;
   const distinctFrom: string[] = [];
+  let minPlayfieldDiff = DEFAULT_MIN_PLAYFIELD_DIFF;
   let allSnapshots = false;
   let targetSegment: number | undefined;
   let onlyCandidates = false;
@@ -208,6 +216,12 @@ function parseArgs(): CliArgs {
       const next = args[++i];
       if (next === undefined) throw new Error("--distinct-from requires a value");
       distinctFrom.push(next);
+    } else if (arg === "--min-playfield-diff") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--min-playfield-diff requires a value");
+      const value = Number(next);
+      if (!Number.isInteger(value) || value < 0) throw new Error(`invalid --min-playfield-diff value: ${next}`);
+      minPlayfieldDiff = value;
     } else if (arg === "--all-snapshots") {
       allSnapshots = true;
     } else if (arg === "--target-segment") {
@@ -236,6 +250,7 @@ function parseArgs(): CliArgs {
     json,
     mameNeutralDir,
     distinctFrom: distinctFrom.length > 0 ? distinctFrom : DEFAULT_DISTINCT_FROM,
+    minPlayfieldDiff,
     allSnapshots,
     targetSegment,
     onlyCandidates,
@@ -527,7 +542,7 @@ function compareRoute(rom: RomImage, seed: SeedJson, plan: readonly string[], ma
   return { active, neutral, diffX, diffY, responsive, stable };
 }
 
-function comparePlayfieldReferences(seed: LoadedSeed, references: LoadedSeed[]): PlayfieldReferenceSummary[] {
+function comparePlayfieldReferences(seed: LoadedSeed, references: LoadedSeed[], minPlayfieldDiff: number): PlayfieldReferenceSummary[] {
   const seedPlayfield = hexToBytes(seed.seed.playfieldRam, 0x2000, "seed playfieldRam");
   return references
     .filter((reference) => reference.label !== seed.label)
@@ -539,6 +554,7 @@ function comparePlayfieldReferences(seed: LoadedSeed, references: LoadedSeed[]):
         diffs,
         checksum: checksumBytes(referencePlayfield),
         exactMatch: diffs === 0,
+        nearDuplicate: diffs < minPlayfieldDiff,
       };
     });
 }
@@ -549,10 +565,11 @@ function auditPath(
   plan: readonly string[],
   neutral: NeutralSeed | undefined,
   playfieldReferences: LoadedSeed[],
+  minPlayfieldDiff: number,
 ): AuditSummary {
   const seed = loaded.seed;
   const initial = seedSummary(seed);
-  const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences);
+  const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences, minPlayfieldDiff);
   const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
   const preserved = compareRoute(rom, seed, plan, false);
   const manualRearm = compareRoute(rom, seed, plan, true);
@@ -564,6 +581,8 @@ function auditPath(
   for (const reference of playfieldReferenceSummaries) {
     if (reference.exactMatch) {
       reasons.push(`playfield is byte-identical to reference ${reference.path}`);
+    } else if (reference.nearDuplicate) {
+      reasons.push(`playfield is near-duplicate of ${reference.path} (${reference.diffs} byte diffs < ${minPlayfieldDiff})`);
     }
   }
   if (initial.main !== 0 && initial.mode === 2) reasons.push("seed starts in presentation/high-score mode");
@@ -583,7 +602,7 @@ function auditPath(
 
   const isManualCandidate =
     initial.pfCount > 4_000 &&
-    playfieldReferenceSummaries.every((reference) => !reference.exactMatch) &&
+    playfieldReferenceSummaries.every((reference) => !reference.nearDuplicate) &&
     initial.playerState === 0 &&
     manualRearm.responsive &&
     manualRearm.stable &&
@@ -622,8 +641,8 @@ function printSummary(summary: AuditSummary): void {
   );
   for (const reference of summary.playfieldReferences) {
     console.log(
-      `  playfield ref: exact=${reference.exactMatch ? "yes" : "no "} diffs=${reference.diffs} ` +
-        `checksum=${reference.checksum} path=${reference.path}`,
+      `  playfield ref: exact=${reference.exactMatch ? "yes" : "no "} near=${reference.nearDuplicate ? "yes" : "no "} ` +
+        `diffs=${reference.diffs} checksum=${reference.checksum} path=${reference.path}`,
     );
   }
   if (summary.mamePair !== undefined) {
@@ -669,7 +688,7 @@ function main(): void {
       ? loadedSeeds
       : loadedSeeds.filter((seed) => seedSummary(seed.seed).segment === args.targetSegment);
   const summaries = filteredSeeds.map((seed) =>
-    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences),
+    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences, args.minPlayfieldDiff),
   );
   const visibleSummaries = args.onlyCandidates
     ? summaries.filter((summary) => summary.verdict !== "diagnostic-only")

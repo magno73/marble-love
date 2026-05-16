@@ -1,7 +1,39 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (runtime terrain clustering)
+**Ultimo update:** 2026-05-16 (candidate seed export/audit)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — candidate seed export/audit
+
+Follow-up sulla pipeline di discovery: lo scanner runtime ora puo' anche
+materializzare rappresentanti cluster stabili in una directory esplicita, senza
+toccare i seed ufficiali.
+
+Nuove opzioni:
+
+- `scan-playable-terrain-hashes.ts --emit-candidates-dir DIR`: scrive seed
+  rappresentanti e `manifest.json` per i cluster filtrati. Questi file sono
+  solo input per audit/MAME, non `startLevel`.
+- `--max-candidates N`: limita quanti rappresentanti esportare.
+- `audit-playable-seed.ts --min-playfield-diff N`: oltre al match byte-identico,
+  boccia candidati troppo simili ai riferimenti `--distinct-from`; default
+  `512` byte di `playfieldRam`.
+
+Evidenza su `/private/tmp/marble-level-candidates-wide`:
+
+- Comando export: `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-preset ladder --sample-every 120 --stable-only --cluster-by segment --min-cluster-samples 1 --emit-candidates-dir /private/tmp/marble-level-candidates-wide --max-candidates 12 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
+- Il tool ha scritto 12 candidati stabili e un manifest fuori dal repo.
+- Audit successivo con `audit-playable-seed.ts --distinct-from manual_level1_start`
+  non ha promosso nessun seed a `practice-seed`.
+- Candidati con PF identico o quasi identico al level1 (`diff=0`, `150`, `245`)
+  sono ora `diagnostic-only` grazie a `--min-playfield-diff`.
+- Alcuni candidati distinti restano `candidate-needs-route-proof` (es. segmenti
+  3/4/5 con PF diff > 1000 e manual rearm responsive), ma richiedono ancora
+  cattura/route MAME active-vs-neutral prima di poter diventare seed ufficiali.
+
+Questo e' il prossimo confine operativo: usare i candidati esportati come lista
+di frame/cluster da riprodurre in MAME o in una route browser controllabile,
+non come prova sufficiente.
 
 ## 2026-05-16 — runtime terrain clustering
 
