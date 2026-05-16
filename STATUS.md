@@ -1,7 +1,66 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L5 live-surface parity)
+**Ultimo update:** 2026-05-16 (L3 post-seed proof)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L3 post-seed proof and L2 falsification
+
+Nuovo sweep bootstrap mirato in
+`/private/tmp/marble-bootstrap-route-sweep-l23-20260516`: livelli 2/3,
+route `R,L,U,D,UL,UR,DL,DR`, step 4, snapshot f2600..f3600. Risultato:
+
+- L3 route `UR` produce 5 finestre `candidate` f2800..f3600: descriptor
+  L3 `0x2cd9e`, `main/mode=0/0`, state0, timer vivo, MAME
+  active-vs-neutral forte e audit TS zero-death.
+- L2 non produce candidati: le route cardinali/diagonali sono sotto soglia o
+  death-prone; le proof post-seed DR f2800/f3000 sono `seedExact=true`,
+  stable e zero-death, ma il playfield e' byte-identico a
+  `manual_level1_start.seed.json`, quindi non e' un livello distinto
+  promuovibile.
+
+Proof dedicata L3:
+
+- active descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-UR-active/scenarios/f3000.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-neutral/scenarios/f3000.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=3`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3000, route active `UR:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3001`
+
+Audit:
+
+```sh
+node --import tsx packages/cli/src/audit-post-seed-mame-proof.ts \
+  --min-tail-frames 120 \
+  /private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-UR-active/scenarios/f3000.json \
+  /private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-neutral/scenarios/f3000.json
+```
+
+Risultato: `post-seed-candidate`, descriptor L3 `0x2cd9e`,
+`seedExact=true`, `maxDiffXY=131362/5784545@3137`, deaths `0/0`, tail stable.
+Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level3_postseed_ur_f3000.seed.json`.
+
+Dense replay TS-vs-MAME:
+
+- active f3000 `UR:60,N:180`: 180/180 exact su state, main/mode, descriptor,
+  trackball, posizione, z e playfield (`dx=0`, `dy=0`, `dz=0`, `pfDiff=0`).
+- neutral f3000: 180/180 exact (`dx=0`, `dy=0`, `dz=0`, `pfDiff=0`).
+
+Smoke ROM-backed:
+
+```sh
+node --import tsx packages/cli/src/visual-smoke-real.ts \
+  --seed packages/web/public/scenarios/playable/candidate_level3_postseed_ur_f3000.seed.json \
+  --ticks 120 \
+  --out /private/tmp/marble-l3-postseed-f3120-smoke.ppm
+```
+
+Risultato: L3 `0x2cd9e`, `main/mode=0/0`, state0, timer `80 -> 78`,
+`xy=180,76`, `z=16408`, `pf=3428`, 1974 playfield tile, 7 sprite,
+215 alpha char, frame nonblank. Non e' stato cablato `startLevel=3`.
 
 ## 2026-05-16 — L5 live-surface parity
 
@@ -93,6 +152,30 @@ node --import tsx packages/cli/src/visual-smoke-real.ts \
 Risultato: L4 `0x2d648`, `main/mode=0/0`, state0, timer `96 -> 94`,
 `pf=3322`, scroll `(0,86)`, 2002 playfield tile, 7 sprite, 216 alpha char,
 frame nonblank. Non e' stato cablato `startLevel=4`.
+
+### L3 f3000
+
+Nuova coppia MAME post-seed:
+
+- active descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-UR-active/scenarios/f3000.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l3-f3000-neutral/scenarios/f3000.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=3`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3000, route active: `UR:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3001`
+
+Audit: `post-seed-candidate`, descriptor L3 `0x2cd9e`, `seedExact=true`,
+`maxDiffXY=131362/5784545@3137`, deaths `0/0`, tail stable. Active e neutral
+sono exact in `compare-mame-ts-input-trace` per 180 frame; visual smoke
+ROM-backed stabile/nonblank. Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level3_postseed_ur_f3000.seed.json`.
+
+Nota L2: lo stesso sweep L2 con DR f2800/f3000 produce proof post-seed
+`seedExact=true`, stable e zero-death, ma viene respinto perche' il playfield
+e' byte-identico a `manual_level1_start.seed.json`; resta un proof negativo,
+non un seed L2.
 
 ### L5 f3520
 
