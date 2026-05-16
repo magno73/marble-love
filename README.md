@@ -55,10 +55,15 @@ controllabili. I candidati `manual_level2_start` .. `manual_level5_start` del
 primo pass sono stati falsificati dal confronto playfield/hash: formavano solo
 due famiglie di terreno quasi duplicate, non quattro livelli reali. Usa
 `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --pairwise-only ...`
-per confrontare hash/diff di `playfieldRam`, `colorRam` e `alphaRam`, poi
-`audit-playable-seed.ts` per la prova active-vs-neutral prima di cablare un
-nuovo `startLevel`. I vecchi `levelN_spawn` restano scenari oracle/demo e non
-vanno usati come practice start.
+per confrontare hash/diff di `playfieldRam`, `colorRam` e `alphaRam`. Per
+cercare famiglie lungo una run TS invece di singoli file, usa ad esempio
+`npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-preset ladder --sample-every 120 --cluster-by segment --min-cluster-samples 1 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
+Il preset `ladder` segue la rotta profonda dei guardrail playable e stampa i
+cluster runtime; serve a trovare finestre candidate, non a promuoverle. Dopo un
+cluster distinto, `audit-playable-seed.ts` resta obbligatorio per la prova
+active-vs-neutral prima di cablare un nuovo `startLevel`. I vecchi
+`levelN_spawn` restano scenari oracle/demo e non vanno usati come practice
+start.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15

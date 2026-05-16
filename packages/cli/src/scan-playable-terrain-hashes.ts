@@ -37,15 +37,23 @@ interface LoadedSeed {
   seed: SeedJson;
 }
 
+type ClusterBy = "coarse" | "pf" | "segment";
+type PlanPreset = "sweep" | "ladder";
+
 interface CliArgs {
   paths: string[];
   frames: number;
+  framesExplicit: boolean;
   sampleEvery: number;
   plan: string;
+  planPreset: PlanPreset | undefined;
   json: boolean;
   pairwiseOnly: boolean;
   allSnapshots: boolean;
   nearThreshold: number;
+  clusterBy: ClusterBy;
+  stableOnly: boolean;
+  minClusterSamples: number;
 }
 
 interface Fingerprint {
@@ -84,6 +92,19 @@ interface PairwiseReport {
   nearDuplicate: boolean;
 }
 
+interface ClusterReport {
+  key: string;
+  count: number;
+  stableCount: number;
+  firstLabel: string;
+  lastLabel: string;
+  labels: string[];
+  segments: number[];
+  modes: string[];
+  pfHashes: number;
+  representative: SeedReport;
+}
+
 const DEFAULT_PATHS = [
   "packages/web/public/scenarios/playable/manual_level1_start.seed.json",
   "packages/web/public/scenarios/playable/manual_level2_start.seed.json",
@@ -96,6 +117,10 @@ const DEFAULT_PATHS = [
   "oracle/scenarios/gameplay/level5_spawn.json",
 ];
 const DEFAULT_PLAN = "R:120,D:120,L:120,U:120,DR:120,DL:120,N:360";
+const ROUTE_PRESETS: Record<PlanPreset, string> = {
+  sweep: DEFAULT_PLAN,
+  ladder: "D:171,R:206,L:188,DL:107,BR:260,R:700,D:300,R:800,DR:300,R:800,U:100,R:500,N:10000",
+};
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
   U: [0, -8],
@@ -121,6 +146,14 @@ Options:
   --frames N            TS frames to run per seed (default: 960)
   --sample-every N      Sample terrain every N frames (default: 30)
   --plan SPEC           Route plan while running TS (default: ${DEFAULT_PLAN})
+  --plan-preset NAME    Route preset: sweep or ladder. Ladder follows the
+                        existing deep playable route guard and defaults to its
+                        full length when --frames is omitted.
+  --cluster-by FIELD    Group runtime samples by coarse, pf, or segment
+                        (default: coarse)
+  --stable-only         Cluster only stable playable-looking samples
+  --min-cluster-samples N
+                        Hide clusters with fewer samples (default: 2)
   --near-threshold N    PF byte-diff threshold for near duplicates (default: 512)
   --json                Emit JSON
   -h, --help            Show this help
@@ -134,23 +167,45 @@ function parseArgs(): CliArgs {
   const args = argv.slice(2);
   const paths: string[] = [];
   let frames = 960;
+  let framesExplicit = false;
   let sampleEvery = 30;
   let plan = DEFAULT_PLAN;
+  let planPreset: PlanPreset | undefined;
   let json = false;
   let pairwiseOnly = false;
   let allSnapshots = false;
   let nearThreshold = 512;
+  let clusterBy: ClusterBy = "coarse";
+  let stableOnly = false;
+  let minClusterSamples = 2;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--frames") {
       frames = parsePositiveInt(args[++i], "--frames");
+      framesExplicit = true;
     } else if (arg === "--sample-every") {
       sampleEvery = parsePositiveInt(args[++i], "--sample-every");
     } else if (arg === "--plan") {
       const next = args[++i];
       if (next === undefined) throw new Error("--plan requires a value");
       plan = next;
+      planPreset = undefined;
+    } else if (arg === "--plan-preset") {
+      const next = args[++i];
+      if (next !== "sweep" && next !== "ladder") throw new Error(`invalid --plan-preset value: ${next ?? ""}`);
+      planPreset = next;
+      plan = ROUTE_PRESETS[next];
+    } else if (arg === "--cluster-by") {
+      const next = args[++i];
+      if (next !== "coarse" && next !== "pf" && next !== "segment") {
+        throw new Error(`invalid --cluster-by value: ${next ?? ""}`);
+      }
+      clusterBy = next;
+    } else if (arg === "--stable-only") {
+      stableOnly = true;
+    } else if (arg === "--min-cluster-samples") {
+      minClusterSamples = parsePositiveInt(args[++i], "--min-cluster-samples");
     } else if (arg === "--near-threshold") {
       nearThreshold = parsePositiveInt(args[++i], "--near-threshold");
     } else if (arg === "--pairwise-only") {
@@ -170,12 +225,17 @@ function parseArgs(): CliArgs {
   return {
     paths: paths.length > 0 ? paths : DEFAULT_PATHS.filter((path) => existsSync(resolve(path))),
     frames,
+    framesExplicit,
     sampleEvery,
     plan,
+    planPreset,
     json,
     pairwiseOnly,
     allSnapshots,
     nearThreshold,
+    clusterBy,
+    stableOnly,
+    minClusterSamples,
   };
 }
 
@@ -347,6 +407,22 @@ function expandRouteSpec(spec: string, frames: number): string[] {
   return out;
 }
 
+function routeSpecLength(spec: string): number {
+  let total = 0;
+  for (const part of spec.split(",")) {
+    const trimmed = part.trim();
+    if (trimmed === "") continue;
+    const [, countRaw] = trimmed.split(":");
+    total += parsePositiveInt(countRaw, `route count in ${part}`);
+  }
+  return total;
+}
+
+function routeForArgs(args: CliArgs): string[] {
+  const frames = args.planPreset !== undefined && !args.framesExplicit ? routeSpecLength(args.plan) : args.frames;
+  return expandRouteSpec(args.plan, frames);
+}
+
 function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
   const [screenDx, screenDy] = SCREEN_DELTAS[step] ?? [0, 0];
   return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
@@ -405,6 +481,71 @@ function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[],
   return samples;
 }
 
+function isStablePlayableSample(report: SeedReport): boolean {
+  return report.main === 1 && report.mode === 0 && report.playerState === 0 && report.timer > 0 && report.fingerprint.pfNonzero > 4_000;
+}
+
+function clusterKey(report: SeedReport, clusterBy: ClusterBy): string {
+  if (clusterBy === "pf") return `${report.fingerprint.pfHash}:${report.fingerprint.colorHash}`;
+  if (clusterBy === "segment") {
+    return `seg${report.segment}:${report.fingerprint.coarseHash}:${report.fingerprint.colorHash}`;
+  }
+  return `${report.fingerprint.coarseHash}:${report.fingerprint.colorHash}`;
+}
+
+function clusterSamples(
+  samples: readonly SeedReport[],
+  clusterBy: ClusterBy,
+  stableOnly: boolean,
+  minClusterSamples: number,
+): ClusterReport[] {
+  const groups = new Map<string, SeedReport[]>();
+  for (const sample of samples) {
+    if (stableOnly && !isStablePlayableSample(sample)) continue;
+    const key = clusterKey(sample, clusterBy);
+    const group = groups.get(key);
+    if (group === undefined) groups.set(key, [sample]);
+    else group.push(sample);
+  }
+
+  return Array.from(groups.entries())
+    .map(([key, group]) => {
+      const representative = group[0]!;
+      return {
+        key,
+        count: group.length,
+        stableCount: group.filter(isStablePlayableSample).length,
+        firstLabel: group[0]!.label,
+        lastLabel: group[group.length - 1]!.label,
+        labels: group.map((sample) => sample.label),
+        segments: Array.from(new Set(group.map((sample) => sample.segment))).sort((a, b) => a - b),
+        modes: Array.from(new Set(group.map((sample) => `${sample.main}/${sample.mode}`))).sort(),
+        pfHashes: new Set(group.map((sample) => sample.fingerprint.pfHash)).size,
+        representative,
+      };
+    })
+    .filter((cluster) => cluster.count >= minClusterSamples)
+    .sort((a, b) => b.stableCount - a.stableCount || b.count - a.count || a.key.localeCompare(b.key));
+}
+
+function printClusters(clusters: readonly ClusterReport[]): void {
+  if (clusters.length === 0) {
+    console.log("  no clusters matched the current filters");
+    return;
+  }
+  for (const cluster of clusters) {
+    const rep = cluster.representative;
+    console.log(
+      `  count=${cluster.count} stable=${cluster.stableCount} segments=${cluster.segments.join("/")} ` +
+        `modes=${cluster.modes.join("/")} pfHashes=${cluster.pfHashes} key=${cluster.key}`,
+    );
+    console.log(
+      `    first=${cluster.firstLabel} last=${cluster.lastLabel} repTimer=${rep.timer} ` +
+        `repPf=${rep.fingerprint.pfNonzero} repChecksum=${rep.fingerprint.pfChecksum}`,
+    );
+  }
+}
+
 function printSeed(report: SeedReport): void {
   const fp = report.fingerprint;
   console.log(
@@ -427,10 +568,17 @@ function main(): void {
       : (() => {
           const rom = busNs.emptyRomImage();
           applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
-          const route = expandRouteSpec(args.plan, args.frames);
-          return seeds.map((seed) => ({ label: seed.label, samples: runSamples(rom, seed, route, args.sampleEvery) }));
+          const route = routeForArgs(args);
+          const runReports = seeds.map((seed) => ({ label: seed.label, samples: runSamples(rom, seed, route, args.sampleEvery) }));
+          const clusters = clusterSamples(
+            runReports.flatMap((report) => report.samples),
+            args.clusterBy,
+            args.stableOnly,
+            args.minClusterSamples,
+          );
+          return { routeFrames: route.length, runReports, clusters };
         })();
-    console.log(JSON.stringify({ initialReports, pairs, runReports }, null, 2));
+    console.log(JSON.stringify({ initialReports, pairs, ...runReports }, null, 2));
     return;
   }
 
@@ -449,16 +597,27 @@ function main(): void {
   if (!args.pairwiseOnly) {
     const rom = busNs.emptyRomImage();
     applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
-    const route = expandRouteSpec(args.plan, args.frames);
+    const route = routeForArgs(args);
     console.log(`\nTS sampled terrain every ${args.sampleEvery} frames over ${route.length} frames:`);
+    const allSamples: SeedReport[] = [];
     for (const seed of seeds) {
       const samples = runSamples(rom, seed, route, args.sampleEvery);
+      allSamples.push(...samples);
       const uniquePf = new Set(samples.map((sample) => sample.fingerprint.pfHash));
       const uniqueCoarse = new Set(samples.map((sample) => sample.fingerprint.coarseHash));
+      const stableSamples = samples.filter(isStablePlayableSample);
       const last = samples[samples.length - 1];
-      console.log(`\n${seed.label}: samples=${samples.length} uniquePf=${uniquePf.size} uniqueCoarse=${uniqueCoarse.size}`);
+      console.log(
+        `\n${seed.label}: samples=${samples.length} stable=${stableSamples.length} ` +
+          `uniquePf=${uniquePf.size} uniqueCoarse=${uniqueCoarse.size}`,
+      );
       if (last !== undefined) printSeed(last);
     }
+    console.log(
+      `\nRuntime terrain clusters (by=${args.clusterBy}, stableOnly=${args.stableOnly}, ` +
+        `minSamples=${args.minClusterSamples}):`,
+    );
+    printClusters(clusterSamples(allSamples, args.clusterBy, args.stableOnly, args.minClusterSamples));
   }
 }
 
