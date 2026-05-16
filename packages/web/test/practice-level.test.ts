@@ -9,13 +9,14 @@ describe("practice level query", () => {
     expect(playableSeedForStartLevel(parseStartLevelParam("3"))).toBeUndefined();
     expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBeUndefined();
     expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBeUndefined();
+    expect(playableSeedForStartLevel(parseStartLevelParam("6"))).toBeUndefined();
   });
 
   it("rejects unsupported levels", () => {
     expect(parseStartLevelParam(null)).toBeUndefined();
     expect(parseStartLevelParam("")).toBeUndefined();
     expect(parseStartLevelParam("0")).toBeUndefined();
-    expect(parseStartLevelParam("6")).toBeUndefined();
+    expect(parseStartLevelParam("7")).toBeUndefined();
     expect(parseStartLevelParam("2.5")).toBeUndefined();
     expect(parseStartLevelParam("abc")).toBeUndefined();
   });

@@ -1,7 +1,57 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L3 post-seed proof)
+**Ultimo update:** 2026-05-16 (L1 descriptor bootstrap proof)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L1 descriptor bootstrap proof and L2 remap
+
+Il blocco "L2 mancante" era in parte una falsa formulazione: il seed storico
+`manual_level1_start` ha `workRam[0x474]=0x2c54c`, `word394=1`,
+`main/mode=1/0`, state0 e timer vivo. Quindi copre gia' la famiglia runtime del
+descrittore ROM L2, anche se resta cablato come `startLevel=1` per compatibilita'
+browser. Il vero buco nella matrice dei sei descrittori era L1 `0x2bee2`.
+
+Aggiornato `oracle/mame_playable_input_capture.lua`: il bootstrap diagnostico
+`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL` accetta ora `1..6`. Per L1 usa il
+previous index `0xffff`, lasciando che `FUN_1101E case4` incrementi a `0` e che
+la ROM esegua realmente `FUN_118D2/FUN_16EC6`; non copia playfield a mano.
+Anche `plan-bootstrap-route-sweep.ts` e `summarize-bootstrap-frontiers.ts`
+accettano/scoprono `l1`.
+
+Proof MAME L1:
+
+- neutral descriptor-tapped:
+  `/private/tmp/marble-bootstrap-l1-20260516/neutral/trace.json`
+- pointer windows: L2 `0x2c54c` f1747..2340, poi L1 `0x2bee2` f2341..3800.
+- f2400 e' byte-exact col descrittore L1 (`pfDiff=0`) ma ancora transition
+  `state=6`; f2800/f3000/f3020 diventano giocabili `main/mode=0/0`, state0,
+  timer vivo, descriptor L1.
+
+Proof post-seed scelta:
+
+- active:
+  `/private/tmp/marble-post-seed-proof-l1-f3020/R-active/scenarios/f3020.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l1-f3020/neutral/scenarios/f3020.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3020, route active `R:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3021`
+
+Audit post-seed: `post-seed-candidate`, descriptor L1 `0x2bee2`,
+`seedExact=true`, `maxDiffXY=1766030/3449662@3200`, deaths `0/0`, tail stable.
+Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level1_postseed_r_f3020.seed.json`.
+
+Replay TS-vs-MAME dal seed L1 non e' ancora pulito quanto L3/L4/L5: stato,
+main/mode, descriptor e trackball restano allineati, ma c'e' un transiente di
+fase iniziale >1px e un piccolo PF diff temporaneo che converge entro la tail.
+Lo smoke ROM-backed invece e' stabile/nonblank per 120 tick:
+descriptor `0x2bee2`, `main/mode=0/0`, state0, timer `54 -> 52`,
+`xy=232.11,140.00`, `z=16372`, 2454 playfield tile, 7 sprite, 215 alpha char.
+Non e' stato cablato alcuno `startLevel`: serve una review finale del mapping
+browser, perche' `manual_level1_start` oggi resta il seed cablato di
+`startLevel=1` pur puntando al descrittore L2.
 
 ## 2026-05-16 — L3 post-seed proof and L2 falsification
 

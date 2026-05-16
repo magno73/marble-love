@@ -165,14 +165,15 @@ carica L3 con auto-clear a f1747; la long run fino a f6500 non trova gate
 naturali successivi verso L4-L6.
 Per materializzare i descrittori successivi senza copiare RAM a mano, il
 capture ha anche un bootstrap diagnostico:
-`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=2..6` +
+`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1..6` +
 `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=N`. Scrive solo il minimo stato di completion
 atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente, `main=3`) e
-lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Questa strada ha gia' prodotto
-L4/L5/L6 descriptor reali; L6 `UL` f3600 passa audit TS intermedio zero-death,
-L5 f3400 resta MAME-responsive ma viene demesso dal gate zero-death, e L4 e'
-MAME-responsive ma death-prone nel replay TS. Non cablare ancora
-`startLevel=2..6`.
+lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Per target L1 usa previous
+index `0xffff`, che il branch ROM incrementa a `0`; per L2..L6 usa l'indice
+precedente naturale. Questa strada ha gia' prodotto descriptor reali
+L1/L3/L4/L5/L6 con proof post-seed; `manual_level1_start` resta il seed storico
+cablato ma punta alla famiglia descriptor L2 (`0x2c54c`). Non cablare ancora
+`startLevel=2..6` senza review finale del mapping.
 Per rendere ripetibili questi sweep usa
 `node --import tsx packages/cli/src/plan-bootstrap-route-sweep.ts`: il planner
 stampa le run MAME neutral/active con bootstrap ROM e gli audit
@@ -250,12 +251,13 @@ Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
 La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
-risolti. Per ogni livello mancante va classificato il failure dominante.
-L4 e L6 hanno ora proof MAME post-seed e smoke browser-style nonblank/stable;
-L3 ha ora proof MAME post-seed `UR` f3000 e replay TS exact; L5 ha proof MAME
-post-seed e il replay browser/TS e' stato riallineato via surface parity; L2
-resta il livello mancante e va ricatturato da una transizione reale stabile,
-evitando i falsi exact in `state=6` e i playfield identici al seed L1.
+risolti. Il finding nuovo e' che il problema "L2 mancante" era un problema di
+mapping: `manual_level1_start` ha pointer `0x2c54c` e quindi copre la famiglia
+descriptor L2; il vero buco era L1 `0x2bee2`. Il bootstrap target L1 ha prodotto
+`candidate_level1_postseed_r_f3020.seed.json` con proof MAME post-seed
+`seedExact=true`, active-vs-neutral forte, zero death e smoke ROM-backed stabile.
+Restano da fare review finale del mapping `startLevel` e parity/browser review
+prima di promuovere qualunque candidato.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col

@@ -129,7 +129,7 @@ Usage:
 Options:
   --root DIR             Sweep root from plan-bootstrap-route-sweep
                          (default: ${DEFAULT_ROOT})
-  --levels CSV           Limit levels, e.g. 4,5,6 (default: auto-detect l2..l6)
+  --levels CSV           Limit levels, e.g. 1,4,5,6 (default: auto-detect l1..l6)
   --routes CSV           Limit active route dirs, e.g. U,DR,UL (default: auto)
   --plan SPEC            audit-playable-seed route plan
                          (default: ${DEFAULT_PLAN})
@@ -163,7 +163,7 @@ function parseArgs(): CliArgs {
     if (arg === "--root") {
       root = requireValue(raw[++i], "--root");
     } else if (arg === "--levels") {
-      levels = parseCsvInts(requireValue(raw[++i], "--levels"), "--levels", 2, 6);
+      levels = parseCsvInts(requireValue(raw[++i], "--levels"), "--levels", 1, 6);
     } else if (arg === "--routes") {
       routes = parseCsvStrings(requireValue(raw[++i], "--routes"), "--routes");
     } else if (arg === "--plan") {
@@ -249,7 +249,7 @@ function listScenarioFiles(path: string): string[] {
 
 function discoverLevels(root: string): number[] {
   return listDirs(root)
-    .map((entry) => /^l([2-6])$/.exec(entry)?.[1])
+    .map((entry) => /^l([1-6])$/.exec(entry)?.[1])
     .filter((value): value is string => value !== undefined)
     .map((value) => Number(value))
     .sort((a, b) => a - b);
@@ -330,7 +330,7 @@ function scoreRow(row: Omit<FrontierRow, "score">): number {
 function buildRows(args: CliArgs): FrontierRow[] {
   const root = resolve(args.root);
   const levels = args.levels ?? discoverLevels(root);
-  if (levels.length === 0) throw new Error(`no l2..l6 level directories found in ${root}`);
+  if (levels.length === 0) throw new Error(`no l1..l6 level directories found in ${root}`);
 
   const rows: FrontierRow[] = [];
   for (const level of levels) {
