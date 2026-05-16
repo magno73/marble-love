@@ -163,6 +163,15 @@ quando MAME vede `main=1`, `mode=0`, `obj0+0x18=3`, `obj0+0x1A=6` dopo lo
 start scriptato. La proof `/private/tmp/marble-detector-auto/trace.json`
 carica L3 con auto-clear a f1747; la long run fino a f6500 non trova gate
 naturali successivi verso L4-L6.
+Per materializzare i descrittori successivi senza copiare RAM a mano, il
+capture ha anche un bootstrap diagnostico:
+`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=2..6` +
+`MARBLE_PLAYABLE_BOOTSTRAP_FRAME=N`. Scrive solo il minimo stato di completion
+atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente, `main=3`) e
+lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Questa strada ha gia' prodotto
+L4/L5/L6 descriptor reali; L5 f3400 passa MAME active-vs-neutral e audit TS
+come candidato, mentre L4 e L6 restano diagnostic finche' non passano anche
+browser/parity e route review. Non cablare ancora `startLevel=2..6`.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
