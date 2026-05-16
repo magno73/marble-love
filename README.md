@@ -43,6 +43,17 @@ Per generare il workflow completo senza ricordare tutti i path/env, usa
 Il planner stampa: record MAME `.inp`, replay/capture manuale, summary/export
 dei candidati stable-playable e audit finale. Questo e' il percorso consigliato
 per scoprire i sei start level reali.
+Se manca ancora una movie manuale utile, puoi generare route candidate dal seed
+playable corrente con
+`node --import tsx packages/cli/src/search-playable-route.ts --out-dir /private/tmp/marble-manual-route-search`.
+Il finder fa beam-search deterministico nel runtime TS verso `state=6`,
+`main=3` o cambio segment stable-playable, poi scrive un manifest per
+`plan-mame-candidate-captures.ts`. I manifest prodotti dal path manual-rearmed
+marcano `forceManualDispatcher=true`: il planner propaga
+`MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` e
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=N` anche in MAME active/neutral. Anche qui
+il risultato resta un candidato: solo una coppia MAME active-vs-neutral
+distinta, giocabile e vicina/aligned ai descriptor puo' diventare seed.
 Per identificare la famiglia ROM di ogni finestra catturata, usa
 `node --import tsx packages/cli/src/inspect-level-descriptors.ts`. Il tool
 legge i sei descrittori reali dalla pointer table `0x2BE00`, riproduce i loro
@@ -112,6 +123,9 @@ ora scarta anche near-duplicate con `--min-playfield-diff` (default 512 byte PF)
 prima di cablare un nuovo `startLevel`. Per generare i comandi MAME active,
 neutral e audit da un manifest usa
 `npx tsx packages/cli/src/plan-mame-candidate-captures.ts manifest.json`.
+Se il manifest non contiene gia' il flag forced-manual, puoi passare
+`--force-manual-dispatcher` e opzionalmente `--force-manual-frame N` al planner
+per generare le stesse env MAME.
 Per catture MAME/playback con molti snapshot, prima di fare confronti pairwise
 usa `scan-playable-terrain-hashes.ts --summary-only --all-snapshots ...`: stampa
 conteggi compatti di mode/segment/state, finestre stable-playable e hash
