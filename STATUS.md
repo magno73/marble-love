@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L1 descriptor bootstrap proof)
+**Ultimo update:** 2026-05-16 (L2 canonical candidate)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L2 canonical candidate after remap
+
+Dopo il remap L1/L2, la proof L2 gia' esistente e' stata riclassificata: non
+e' un falso positivo da scartare, ma la conferma che il seed storico
+`manual_level1_start` appartiene alla famiglia runtime del descrittore L2
+`0x2c54c`.
+
+Proof post-seed L2:
+
+- active:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l2-f3000-DR-active/scenarios/f3000.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l23-20260516/l2-f3000-neutral/scenarios/f3000.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=2`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3000, route active `DR:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3001`
+
+Audit post-seed con soglia distinct disattivata per il reference storico:
+`post-seed-candidate`, descriptor L2 `0x2c54c`, `seedExact=true`,
+`maxDiffXY=1174454/0@3077`, deaths `0/0`, tail stable. Esportato candidato non
+cablato:
+`packages/web/public/scenarios/playable/candidate_level2_postseed_dr_f3000.seed.json`.
+
+Dense replay TS-vs-MAME:
+
+- active f3000 `DR:60,N:180`: 180/180 exact su state, main/mode, descriptor,
+  trackball, posizione, z e playfield (`dx=0`, `dy=0`, `dz=0`, `pfDiff=0`).
+- neutral f3000: 180/180 exact.
+
+Smoke ROM-backed L2: 120 tick stabili/nonblank, descriptor `0x2c54c`,
+`main/mode=0/0`, state0, timer `54 -> 52`, `xy=220.00,108.00`, `z=16378`,
+2389 playfield tile, 9 sprite, 215 alpha char.
+
+Differenza dal seed storico: `playfieldRam` e `colorRam` sono byte-identici a
+`manual_level1_start`, mentre work/sprite/alpha differiscono; questo e'
+coerente col fatto che `manual_level1_start` e' il vecchio nome browser per la
+stessa famiglia L2. Non e' stato cablato alcun nuovo `startLevel`.
 
 ## 2026-05-16 — L1 descriptor bootstrap proof and L2 remap
 
