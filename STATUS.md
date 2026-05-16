@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME coin polarity + forced dispatcher proof)
+**Ultimo update:** 2026-05-16 (fine L2 transition timeline audit)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Fine L2 transition timeline audit
+
+Aggiunto a `packages/cli/src/inspect-level-descriptors.ts` il riepilogo
+timeline `--timeline-summary` / `--timeline-only`, per comprimere catture
+MAME dense in range frame-adjacent con stesso stato, hash PF e descriptor
+nearest. Questo rende auditabili le finestre di transizione senza stampare una
+riga per snapshot.
+
+Comando riproducibile usato sulla cattura fine del pass L2:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --extra-scenario-dir /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/scenarios \
+  --timeline-only \
+  --max-nearest 2 \
+  --out-dir /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/descriptors-timeline-only
+```
+
+Finding chiave f68960..f69140:
+
+- f68979..f69000: match byte-perfect col descrittore ROM L2
+  (`pfHash=7eade065cc22ab2f`, `pfDiff=0`, `colorDiff=0`, `alphaDiff=0`), ma
+  non e' seed giocabile perche' `state=6`.
+- f69001 resta PF L2 exact ma ha gia' `alphaDiff=204` e resta `state=6`.
+- f69003 e' il primo frame `stable=yes` (`main=1 mode=0 state=0 timer=45`),
+  ma il terreno e' gia' tornato alla famiglia warm `fe66bf77699cb9b0`,
+  distante dal descrittore L2 (`pfDiff=1517`).
+- f69007..f69140 resta stable-playable, ma sempre sulla stessa famiglia warm
+  `fe66bf77699cb9b0`, non su una geometria L2 distinta.
+
+Interpretazione: la cattura fine falsifica l'ipotesi "abbiamo solo mancato di
+poco lo start L2 giocabile". Il descrittore L2 reale viene caricato, ma solo in
+una finestra di transizione non controllabile (`state=6`); quando torna lo
+stato giocabile, il playfield non e' piu' il descriptor L2. `startLevel=2..6`
+resta bloccato finche' una route MAME manuale/playback non produce finestre
+stable-playable distintive, controllabili active-vs-neutral e vicine/aligned ai
+descriptor ROM.
 
 ## 2026-05-16 — MAME coin polarity + forced dispatcher proof
 
