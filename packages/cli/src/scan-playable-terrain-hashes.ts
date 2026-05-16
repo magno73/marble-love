@@ -91,6 +91,11 @@ interface Fingerprint {
 interface SeedReport {
   label: string;
   frame: number | undefined;
+  routeLabel: string | undefined;
+  routeSpec: string | undefined;
+  routeFrame: number | undefined;
+  absoluteFrame: number | undefined;
+  mameTrackballStart: number | undefined;
   main: number;
   mode: number;
   next: number;
@@ -134,6 +139,11 @@ interface RuntimeSamples {
 interface CandidateManifestEntry {
   file: string;
   sourceLabel: string;
+  routeLabel: string | undefined;
+  routeFrame: number | undefined;
+  absoluteFrame: number | undefined;
+  mameTrackballStart: number | undefined;
+  routeSpec: string | undefined;
   clusterKey: string;
   count: number;
   stableCount: number;
@@ -566,6 +576,11 @@ function seedReport(
   return {
     label: loaded.label,
     frame: loaded.seed.frame,
+    routeLabel: undefined,
+    routeSpec: undefined,
+    routeFrame: undefined,
+    absoluteFrame: undefined,
+    mameTrackballStart: undefined,
     main: readWordBE(workRam, 0x390),
     mode: readWordBE(workRam, 0x392),
     next: readWordBE(workRam, 0x394),
@@ -634,6 +649,7 @@ function routeSpecLength(spec: string): number {
 interface RouteRun {
   label: string;
   route: string[];
+  spec: string;
 }
 
 function routeRunsForArgs(args: CliArgs): RouteRun[] {
@@ -641,10 +657,11 @@ function routeRunsForArgs(args: CliArgs): RouteRun[] {
     return Object.entries(ROUTE_SUITES[args.planSuite]).map(([label, spec]) => ({
       label,
       route: expandRouteSpec(spec, args.framesExplicit ? args.frames : routeSpecLength(spec)),
+      spec,
     }));
   }
   const frames = args.planPreset !== undefined && !args.framesExplicit ? routeSpecLength(args.plan) : args.frames;
-  return [{ label: "single", route: expandRouteSpec(args.plan, frames) }];
+  return [{ label: "single", route: expandRouteSpec(args.plan, frames), spec: args.plan }];
 }
 
 function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
@@ -672,6 +689,7 @@ function runSamples(
   rom: RomImage,
   loaded: LoadedSeed,
   routeLabel: string,
+  routeSpec: string | undefined,
   route: readonly string[],
   sampleEvery: number,
   playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
@@ -696,6 +714,7 @@ function runSamples(
     });
     if (frame % sampleEvery === 0 || frame === route.length) {
       const label = routeLabel === "single" ? `${loaded.label}+${frame}` : `${loaded.label}+${routeLabel}+${frame}`;
+      const absoluteFrame = loaded.seed.frame === undefined ? undefined : loaded.seed.frame + frame;
       const seed: SeedJson = {
         frame,
         slapsticBank: loaded.seed.slapsticBank ?? 1,
@@ -705,7 +724,13 @@ function runSamples(
         alphaRam: Buffer.from(state.alphaRam).toString("hex"),
         colorRam: Buffer.from(state.colorRam).toString("hex"),
       };
-      reports.push(seedReport({ path: loaded.path, label, seed }, playfieldLookups, lookupSource));
+      const report = seedReport({ path: loaded.path, label, seed }, playfieldLookups, lookupSource);
+      report.routeLabel = routeLabel;
+      report.routeSpec = routeSpec;
+      report.routeFrame = frame;
+      report.absoluteFrame = absoluteFrame;
+      report.mameTrackballStart = loaded.seed.frame === undefined ? undefined : loaded.seed.frame + 1;
+      reports.push(report);
       seedsByLabel.set(label, seed);
     }
   }
@@ -773,7 +798,8 @@ function printClusters(clusters: readonly ClusterReport[]): void {
     );
     console.log(
       `    first=${cluster.firstLabel} last=${cluster.lastLabel} repTimer=${rep.timer} ` +
-        `repPf=${rep.fingerprint.pfNonzero} repChecksum=${rep.fingerprint.pfChecksum}`,
+        `repPf=${rep.fingerprint.pfNonzero} repChecksum=${rep.fingerprint.pfChecksum}` +
+        (rep.absoluteFrame === undefined ? "" : ` absFrame=${rep.absoluteFrame} mameTrackballStart=${rep.mameTrackballStart}`),
     );
   }
 }
@@ -800,6 +826,11 @@ function writeCandidateSeeds(
     manifest.push({
       file,
       sourceLabel: rep.label,
+      routeLabel: rep.routeLabel,
+      routeFrame: rep.routeFrame,
+      absoluteFrame: rep.absoluteFrame,
+      mameTrackballStart: rep.mameTrackballStart,
+      routeSpec: rep.routeSpec,
       clusterKey: cluster.key,
       count: cluster.count,
       stableCount: cluster.stableCount,
@@ -848,7 +879,7 @@ function main(): void {
           const seedMaps: Map<string, SeedJson>[] = [];
           const runReports = seeds.flatMap((seed) =>
             routeRuns.map((routeRun) => {
-              const runtime = runSamples(rom, seed, routeRun.label, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
+              const runtime = runSamples(rom, seed, routeRun.label, routeRun.spec, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
               seedMaps.push(runtime.seedsByLabel);
               return { label: seed.label, route: routeRun.label, routeFrames: routeRun.route.length, samples: runtime.reports };
             }),
@@ -894,7 +925,7 @@ function main(): void {
     for (const seed of seeds) {
       const seedSamples: SeedReport[] = [];
       for (const routeRun of routeRuns) {
-        const runtime = runSamples(rom, seed, routeRun.label, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
+        const runtime = runSamples(rom, seed, routeRun.label, routeRun.spec, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
         const samples = runtime.reports;
         seedSamples.push(...samples);
         allSamples.push(...samples);
