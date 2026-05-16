@@ -44,6 +44,7 @@ interface CliArgs {
   mameNeutralDir: string | undefined;
   distinctFrom: string[];
   minPlayfieldDiff: number;
+  maxRouteDeaths: number;
   allSnapshots: boolean;
   targetSegment: number | undefined;
   onlyCandidates: boolean;
@@ -162,6 +163,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_PLAN = "R:300,D:300,L:300,U:300,DR:300,DL:300,N:400";
 const DEFAULT_DISTINCT_FROM = ["packages/web/public/scenarios/playable/manual_level1_start.seed.json"];
 const DEFAULT_MIN_PLAYFIELD_DIFF = 512;
+const DEFAULT_MAX_ROUTE_DEATHS = 3;
 const FALLBACK_MIN_PLAYABLE_PF = 4_001;
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
@@ -196,6 +198,9 @@ Options:
                 Reject practice promotion when a candidate differs from any
                 --distinct-from reference by fewer than N playfield bytes.
                 Defaults to ${DEFAULT_MIN_PLAYFIELD_DIFF}.
+  --max-route-deaths N
+                Mark TS active-vs-neutral route unstable after more than N
+                death/recovery entries. Defaults to ${DEFAULT_MAX_ROUTE_DEATHS}.
   --all-snapshots
                 Audit every snapshot in each scenario file instead of only
                 the first seed frame. Useful for manual/playback tail captures.
@@ -222,6 +227,7 @@ function parseArgs(): CliArgs {
   let mameNeutralDir: string | undefined;
   const distinctFrom: string[] = [];
   let minPlayfieldDiff = DEFAULT_MIN_PLAYFIELD_DIFF;
+  let maxRouteDeaths = DEFAULT_MAX_ROUTE_DEATHS;
   let allSnapshots = false;
   let targetSegment: number | undefined;
   let onlyCandidates = false;
@@ -246,6 +252,12 @@ function parseArgs(): CliArgs {
       const value = Number(next);
       if (!Number.isInteger(value) || value < 0) throw new Error(`invalid --min-playfield-diff value: ${next}`);
       minPlayfieldDiff = value;
+    } else if (arg === "--max-route-deaths") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--max-route-deaths requires a value");
+      const value = Number(next);
+      if (!Number.isInteger(value) || value < 0) throw new Error(`invalid --max-route-deaths value: ${next}`);
+      maxRouteDeaths = value;
     } else if (arg === "--all-snapshots") {
       allSnapshots = true;
     } else if (arg === "--target-segment") {
@@ -275,6 +287,7 @@ function parseArgs(): CliArgs {
     mameNeutralDir,
     distinctFrom: distinctFrom.length > 0 ? distinctFrom : DEFAULT_DISTINCT_FROM,
     minPlayfieldDiff,
+    maxRouteDeaths,
     allSnapshots,
     targetSegment,
     onlyCandidates,
@@ -587,6 +600,7 @@ function compareRoute(
   plan: readonly string[],
   manualDispatcher: boolean,
   minStablePf: number,
+  maxRouteDeaths: number,
 ): ComparisonSummary {
   const neutralPlan = Array.from({ length: plan.length }, () => "N");
   const active = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), plan);
@@ -596,6 +610,9 @@ function compareRoute(
   const responsive = diffX > 1_000_000 || diffY > 1_000_000;
   const stable =
     active.pfCount >= minStablePf &&
+    active.playerState === 0 &&
+    active.deathEvents <= maxRouteDeaths &&
+    neutral.deathEvents <= maxRouteDeaths &&
     active.maxEmptyRun <= 16 &&
     active.maxState1Run === 0 &&
     active.maxState2Run <= 60 &&
@@ -647,13 +664,14 @@ function auditPath(
   playfieldReferences: LoadedSeed[],
   minPlayfieldDiff: number,
   descriptors: readonly DescriptorSummary[],
+  maxRouteDeaths: number,
 ): AuditSummary {
   const seed = loaded.seed;
   const initial = seedSummary(seed, descriptors);
   const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences, minPlayfieldDiff);
   const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
-  const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf);
-  const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf);
+  const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf, maxRouteDeaths);
+  const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf, maxRouteDeaths);
   const isGameplayOracleSeed = loaded.sourcePath.includes("oracle/scenarios/gameplay/");
   const isCheckedInPlayableSeed = loaded.sourcePath.includes("packages/web/public/scenarios/playable/");
   const reasons: string[] = [];
@@ -681,6 +699,11 @@ function auditPath(
     reasons.push("paired MAME active capture does not move differently from neutral capture");
   }
   if (!manualRearm.responsive) reasons.push("manual rearm still does not diverge from neutral input");
+  if (manualRearm.active.deathEvents > maxRouteDeaths || manualRearm.neutral.deathEvents > maxRouteDeaths) {
+    reasons.push(
+      `manual rearm route is death-prone (active/neutral deaths ${manualRearm.active.deathEvents}/${manualRearm.neutral.deathEvents} > ${maxRouteDeaths})`,
+    );
+  }
   if (!manualRearm.stable) reasons.push("manual rearm route is not stable enough for practice start");
   if (isGameplayOracleSeed) {
     reasons.push("source is gameplay/oracle warm seed; needs MAME playable-route capture before startLevel wiring");
@@ -757,7 +780,8 @@ function printSummary(summary: AuditSummary): void {
     console.log(
       `  ${label}: responsive=${cmp.responsive ? "yes" : "no "} stable=${cmp.stable ? "yes" : "no "} ` +
         `diffXY=${cmp.diffX}/${cmp.diffY} final active main/mode/seg/state=${cmp.active.main}/${cmp.active.mode}/${cmp.active.segment}/${cmp.active.playerState} ` +
-        `pf=${cmp.active.pfCount} emptyRun=${cmp.active.maxEmptyRun} scrollMax=${cmp.active.maxScrollY}`,
+        `pf=${cmp.active.pfCount} emptyRun=${cmp.active.maxEmptyRun} scrollMax=${cmp.active.maxScrollY} ` +
+        `deaths=${cmp.active.deathEvents}/${cmp.neutral.deathEvents}`,
     );
   }
   console.log(`  verdict: ${summary.verdict}`);
@@ -790,7 +814,16 @@ function main(): void {
     ? filteredSeeds.filter((seed) => passesCheapCandidateGate(seed, playfieldReferences, args.minPlayfieldDiff, descriptors))
     : filteredSeeds;
   const summaries = routeAuditSeeds.map((seed) =>
-    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences, args.minPlayfieldDiff, descriptors),
+    auditPath(
+      rom,
+      seed,
+      plan,
+      loadNeutralSeed(args, seed),
+      playfieldReferences,
+      args.minPlayfieldDiff,
+      descriptors,
+      args.maxRouteDeaths,
+    ),
   );
   const visibleSummaries = args.onlyCandidates
     ? summaries.filter((summary) => summary.verdict !== "diagnostic-only")
@@ -801,6 +834,7 @@ function main(): void {
         {
           plan: args.plan,
           frames: plan.length,
+          maxRouteDeaths: args.maxRouteDeaths,
           scannedSnapshots: loadedSeeds.length,
           targetFilteredSnapshots: filteredSeeds.length,
           auditedSnapshots: routeAuditSeeds.length,
@@ -814,7 +848,8 @@ function main(): void {
   } else {
     console.log(
       `Plan ${args.plan} (${plan.length} frames); audited ${routeAuditSeeds.length}/${filteredSeeds.length} ` +
-        `target-filtered snapshot(s), scanned ${loadedSeeds.length}; showing ${visibleSummaries.length}`,
+        `target-filtered snapshot(s), scanned ${loadedSeeds.length}; maxRouteDeaths=${args.maxRouteDeaths}; ` +
+        `showing ${visibleSummaries.length}`,
     );
     for (const summary of visibleSummaries) printSummary(summary);
   }
