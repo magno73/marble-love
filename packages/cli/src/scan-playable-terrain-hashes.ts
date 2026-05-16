@@ -74,6 +74,7 @@ interface CliArgs {
   stableOnly: boolean;
   minClusterSamples: number;
   emitCandidatesDir: string | undefined;
+  emitLoadedCandidatesDir: string | undefined;
   maxCandidates: number;
 }
 
@@ -235,7 +236,12 @@ Options:
                         Hide clusters with fewer samples (default: 2)
   --emit-candidates-dir DIR
                         Write stable representative seed JSON files plus a
-                        manifest. This is for audit input, not startLevel wiring.
+                        manifest from TS runtime samples. This is for audit
+                        input, not startLevel wiring.
+  --emit-loaded-candidates-dir DIR
+                        Write stable representative seed JSON files plus a
+                        manifest directly from loaded snapshots, useful for
+                        long MAME manual/playback captures.
   --max-candidates N    Limit emitted candidates (default: 12)
   --near-threshold N    PF byte-diff threshold for near duplicates (default: 512)
   --json                Emit JSON
@@ -267,6 +273,7 @@ function parseArgs(): CliArgs {
   let stableOnly = false;
   let minClusterSamples = 2;
   let emitCandidatesDir: string | undefined;
+  let emitLoadedCandidatesDir: string | undefined;
   let maxCandidates = 12;
 
   for (let i = 0; i < args.length; i++) {
@@ -306,6 +313,10 @@ function parseArgs(): CliArgs {
       const next = args[++i];
       if (next === undefined) throw new Error("--emit-candidates-dir requires a value");
       emitCandidatesDir = next;
+    } else if (arg === "--emit-loaded-candidates-dir") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--emit-loaded-candidates-dir requires a value");
+      emitLoadedCandidatesDir = next;
     } else if (arg === "--max-candidates") {
       maxCandidates = parsePositiveInt(args[++i], "--max-candidates");
     } else if (arg === "--near-threshold") {
@@ -343,6 +354,7 @@ function parseArgs(): CliArgs {
     stableOnly,
     minClusterSamples,
     emitCandidatesDir,
+    emitLoadedCandidatesDir,
     maxCandidates,
   };
 }
@@ -944,9 +956,20 @@ function main(): void {
   const seeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
   const { playfieldLookups, source: lookupSource } = loadPromLookups();
   const initialReports = seeds.map((seed) => seedReport(seed, playfieldLookups, lookupSource));
+  const loadedSeedMap = new Map(seeds.map((seed) => [seed.label, seed.seed] as const));
+  const loadedCandidateClusters =
+    args.emitLoadedCandidatesDir === undefined ? [] : clusterSamples(initialReports, args.clusterBy, true, args.minClusterSamples);
+  const emittedLoadedCandidates =
+    args.emitLoadedCandidatesDir === undefined
+      ? []
+      : writeCandidateSeeds(args.emitLoadedCandidatesDir, loadedCandidateClusters, loadedSeedMap, args.maxCandidates);
   if (args.summaryOnly) {
     console.log(`Render fingerprint lookup source: ${lookupSource}`);
     printSnapshotSummary(seeds, initialReports);
+    if (args.emitLoadedCandidatesDir !== undefined) {
+      console.log(`\nWrote ${emittedLoadedCandidates.length} loaded stable representative candidate seed(s) to ${resolve(args.emitLoadedCandidatesDir)}`);
+      console.log("These are discovery candidates only; run audit-playable-seed.ts before wiring startLevel.");
+    }
     return;
   }
   const pairs = pairwiseReports(seeds, args.nearThreshold);
@@ -979,13 +1002,17 @@ function main(): void {
                 );
           return { routeRuns: routeRuns.map((routeRun) => ({ label: routeRun.label, frames: routeRun.route.length })), runReports, clusters, emittedCandidates };
         })();
-    console.log(JSON.stringify({ initialReports, pairs, ...runReports }, null, 2));
+    console.log(JSON.stringify({ initialReports, pairs, loadedCandidateClusters, emittedLoadedCandidates, ...runReports }, null, 2));
     return;
   }
 
   console.log(`Render fingerprint lookup source: ${lookupSource}`);
   console.log("Initial terrain fingerprints:");
   for (const report of initialReports) printSeed(report);
+  if (args.emitLoadedCandidatesDir !== undefined) {
+    console.log(`\nWrote ${emittedLoadedCandidates.length} loaded stable representative candidate seed(s) to ${resolve(args.emitLoadedCandidatesDir)}`);
+    console.log("These are discovery candidates only; run audit-playable-seed.ts before wiring startLevel.");
+  }
 
   console.log("\nPairwise terrain diffs:");
   for (const pair of pairs) {

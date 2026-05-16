@@ -82,7 +82,10 @@ Per catture MAME/playback con molti snapshot, prima di fare confronti pairwise
 usa `scan-playable-terrain-hashes.ts --summary-only --all-snapshots ...`: stampa
 conteggi compatti di mode/segment/state, finestre stable-playable e hash
 coarse/render, cosi' si vede subito se una tail contiene davvero terreno
-giocabile o solo presentation/high-score/demo.
+giocabile o solo presentation/high-score/demo. Se la tail contiene finestre
+interessanti, aggiungi `--emit-loaded-candidates-dir /private/tmp/...` per
+scrivere rappresentanti stable-playable direttamente dalle snapshot caricate,
+sempre come input di audit e mai come wiring automatico.
 Attenzione: quando un candidato nasce da un seed warm/browser-rearmed, il frame
 assoluto MAME generato dal planner e' un proof/falsification check, non una
 garanzia di equivalenza; se l'audit torna in `mode=2`, timer `0` o state non
