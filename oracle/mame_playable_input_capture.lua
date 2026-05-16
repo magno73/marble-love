@@ -18,6 +18,9 @@
 --   MARBLE_PLAYABLE_COIN_START=0 disable scripted coin/start pulses
 --   MARBLE_PLAYABLE_COIN_FRAME    first scripted coin frame (default 1200)
 --   MARBLE_PLAYABLE_START_FRAME   first scripted START1 frame (default 1500)
+--   MARBLE_PLAYABLE_COIN_PULSES   optional CSV start frames for Coin 1 pulses
+--   MARBLE_PLAYABLE_START_PULSES  optional CSV start frames for P1 START pulses
+--   MARBLE_PLAYABLE_P2_START_PULSES optional CSV start frames for P2 START pulses
 --   MARBLE_PLAYABLE_FRAME_LIST   optional CSV of name:frame warm captures
 --   MARBLE_PLAYABLE_CAPTURE_FRAMES snapshots after each target frame (default 100)
 --   MARBLE_PLAYABLE_TIMER_OVERRIDE diagnostic player timer value for route search
@@ -25,6 +28,7 @@
 --   MARBLE_PLAYABLE_TIMER_END   last frame for timer override (default 999999)
 --   MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1 clears 0x400390 once at route start
 --   MARBLE_PLAYABLE_FORCE_MANUAL_FRAME optional frame for manual dispatcher clear
+--   MARBLE_PLAYABLE_SERVICE_MODE=1 forces F60001 bit 6 low via read-tap
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
 --   MARBLE_PLAYABLE_MANUAL_WINDOW tail snapshots to save in manual/playback mode
@@ -39,6 +43,9 @@ local ROUTE_RAW = os.getenv("MARBLE_PLAYABLE_ROUTE") or ""
 local SCRIPT_COIN_START = os.getenv("MARBLE_PLAYABLE_COIN_START") ~= "0"
 local COIN_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_COIN_FRAME") or "1200") or 1200
 local START_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_START_FRAME") or "1500") or 1500
+local COIN_PULSES_RAW = os.getenv("MARBLE_PLAYABLE_COIN_PULSES") or ""
+local START_PULSES_RAW = os.getenv("MARBLE_PLAYABLE_START_PULSES") or ""
+local P2_START_PULSES_RAW = os.getenv("MARBLE_PLAYABLE_P2_START_PULSES") or ""
 local MANUAL_INPUT = os.getenv("MARBLE_PLAYABLE_MANUAL") == "1"
 local MANUAL_NAME = os.getenv("MARBLE_PLAYABLE_NAME") or "manual_play"
 local MANUAL_MAX_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_MAX_FRAME") or "")
@@ -52,6 +59,7 @@ local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") o
 local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
 local FORCE_MANUAL_DISPATCHER = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1"
 local FORCE_MANUAL_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAME") or "")
+local FORCE_SERVICE_MODE = os.getenv("MARBLE_PLAYABLE_SERVICE_MODE") == "1"
 local manual_dispatcher_applied = false
 
 local DEFAULT_SCENARIOS = {
@@ -134,6 +142,36 @@ local sound_coin_value = 1
 local manual_tail_snapshots = {}
 local route_steps = {}
 local route_total = 0
+
+local function parse_pulses(raw, default_frame)
+    local pulses = {}
+    if raw == "" then
+        table.insert(pulses, default_frame)
+        return pulses
+    end
+    for tok in string.gmatch(raw, "([^,]+)") do
+        local frame = tonumber(tok)
+        if frame == nil or frame < 0 then
+            error("[mame_playable_input_capture] bad pulse frame: " .. tok)
+        end
+        table.insert(pulses, math.floor(frame))
+    end
+    table.sort(pulses)
+    return pulses
+end
+
+local COIN_PULSES = parse_pulses(COIN_PULSES_RAW, COIN_FRAME)
+local START_PULSES = parse_pulses(START_PULSES_RAW, START_FRAME)
+local P2_START_PULSES = parse_pulses(P2_START_PULSES_RAW, -1)
+
+local function frame_in_pulse(frame, pulses)
+    for _, start_frame in ipairs(pulses) do
+        if start_frame >= 0 and frame >= start_frame and frame < start_frame + 15 then
+            return true
+        end
+    end
+    return false
+end
 
 local ROUTE_DELTAS = {
     N = {0, 0},
@@ -254,7 +292,7 @@ local function value(addr)
     return 0xff
 end
 
-local function record_read(addr, data)
+local function override_read(addr, data)
     local value_u8 = data & 0xff
     local canonical = addr
     if addr == 0xF20000 then canonical = 0xF20001 end
@@ -264,9 +302,13 @@ local function record_read(addr, data)
     if addr == 0xF60000 then canonical = 0xF60001 end
     if addr == 0xFC0000 then canonical = 0xFC0001 end
     if addr == 0xFE0000 then canonical = 0xFE0001 end
+    if canonical == 0xF60001 and FORCE_SERVICE_MODE then
+        value_u8 = value_u8 & ~0x40
+    end
     current[canonical] = value_u8
     frame_reads[canonical] = (frame_reads[canonical] or 0) + 1
     totals[canonical] = (totals[canonical] or 0) + 1
+    return value_u8
 end
 
 local function normalize_tap_addr(base, offset)
@@ -276,8 +318,7 @@ end
 
 local function install_main_read_tap(lo, hi, name)
     local handle = mem:install_read_tap(lo, hi, name, function(offset, data, mask)
-        record_read(normalize_tap_addr(lo, offset), data)
-        return data
+        return override_read(normalize_tap_addr(lo, offset), data)
     end)
     table.insert(tap_handles, handle)
 end
@@ -297,8 +338,9 @@ end
 local function scripted_input(frame)
     local buttons = 0
     if SCRIPT_COIN_START then
-        if frame >= COIN_FRAME and frame < COIN_FRAME + 15 then buttons = buttons | 0x04 end
-        if frame >= START_FRAME and frame < START_FRAME + 15 then buttons = buttons | 0x01 end
+        if frame_in_pulse(frame, COIN_PULSES) then buttons = buttons | 0x04 end
+        if frame_in_pulse(frame, START_PULSES) then buttons = buttons | 0x01 end
+        if frame_in_pulse(frame, P2_START_PULSES) then buttons = buttons | 0x02 end
     end
 
     local dx = 0
