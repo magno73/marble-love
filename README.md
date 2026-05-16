@@ -127,6 +127,10 @@ i write ricorrenti a `0x400394` arrivano da `PC=0x011524` dentro `FUN_11452`
 mode0, che alterna XOR `0/1` prima di `FUN_16EC6`. Non c'e' ingresso osservato
 nel branch di progressione `FUN_1101E case4` (`main=3`), quindi L3-L6 restano
 non raggiunti dai path automatici.
+Anche il replay coin/start corretto
+`/private/tmp/marble-coinstart-index-handles/trace.json` resta `seenLevelCount=2`
+fino a f30000: i pulse coin/start sono letti, ma non producono idx2..idx5 o
+`main=3`.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
