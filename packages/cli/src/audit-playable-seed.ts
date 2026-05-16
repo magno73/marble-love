@@ -187,6 +187,8 @@ Options:
 
 Without paths, audits the checked-in level1 playable seed and the old
 level2..5 gameplay/oracle spawn snapshots.
+With --only-candidates, snapshots that fail the cheap practice-start gate are
+skipped before expensive active-vs-neutral TS route replay.
 `);
 }
 
@@ -559,6 +561,22 @@ function comparePlayfieldReferences(seed: LoadedSeed, references: LoadedSeed[], 
     });
 }
 
+function passesCheapCandidateGate(
+  loaded: LoadedSeed,
+  playfieldReferences: LoadedSeed[],
+  minPlayfieldDiff: number,
+): boolean {
+  const initial = seedSummary(loaded.seed);
+  if (initial.pfCount <= 4_000) return false;
+  if (initial.main !== 1 || initial.mode !== 0) return false;
+  if (initial.timer <= 0) return false;
+  if (initial.playerState !== 0) return false;
+  if (loaded.sourcePath.includes("oracle/scenarios/gameplay/")) return false;
+
+  const referenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences, minPlayfieldDiff);
+  return referenceSummaries.every((reference) => !reference.nearDuplicate);
+}
+
 function auditPath(
   rom: RomImage,
   loaded: LoadedSeed,
@@ -695,7 +713,10 @@ function main(): void {
     args.targetSegment === undefined
       ? loadedSeeds
       : loadedSeeds.filter((seed) => seedSummary(seed.seed).segment === args.targetSegment);
-  const summaries = filteredSeeds.map((seed) =>
+  const routeAuditSeeds = args.onlyCandidates
+    ? filteredSeeds.filter((seed) => passesCheapCandidateGate(seed, playfieldReferences, args.minPlayfieldDiff))
+    : filteredSeeds;
+  const summaries = routeAuditSeeds.map((seed) =>
     auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences, args.minPlayfieldDiff),
   );
   const visibleSummaries = args.onlyCandidates
@@ -708,7 +729,8 @@ function main(): void {
           plan: args.plan,
           frames: plan.length,
           scannedSnapshots: loadedSeeds.length,
-          auditedSnapshots: filteredSeeds.length,
+          targetFilteredSnapshots: filteredSeeds.length,
+          auditedSnapshots: routeAuditSeeds.length,
           visibleSnapshots: visibleSummaries.length,
           summaries: visibleSummaries,
         },
@@ -718,7 +740,8 @@ function main(): void {
     );
   } else {
     console.log(
-      `Plan ${args.plan} (${plan.length} frames); audited ${filteredSeeds.length}/${loadedSeeds.length} snapshot(s); showing ${visibleSummaries.length}`,
+      `Plan ${args.plan} (${plan.length} frames); audited ${routeAuditSeeds.length}/${filteredSeeds.length} ` +
+        `target-filtered snapshot(s), scanned ${loadedSeeds.length}; showing ${visibleSummaries.length}`,
     );
     for (const summary of visibleSummaries) printSummary(summary);
   }
