@@ -32,6 +32,7 @@ interface CliArgs {
   stableOnly: boolean;
   timelineSummary: boolean;
   timelineOnly: boolean;
+  transitionSummary: boolean;
   maxNearest: number;
 }
 
@@ -142,6 +143,8 @@ Options:
   --stable-only           Only print snapshot associations that look playable
   --timeline-summary      Collapse frame-adjacent snapshots into compact ranges
   --timeline-only         Print timeline ranges instead of per-snapshot lines
+  --transition-summary    Summarize exact descriptor-load windows and the first
+                          later stable-playable frame in the capture
   --max-nearest N         Nearest checked-in snapshots per descriptor (default: 4)
   -h, --help              Show this help
 
@@ -161,6 +164,7 @@ function parseArgs(): CliArgs {
   let stableOnly = false;
   let timelineSummary = false;
   let timelineOnly = false;
+  let transitionSummary = false;
   let maxNearest = 4;
 
   for (let i = 0; i < raw.length; i++) {
@@ -182,6 +186,8 @@ function parseArgs(): CliArgs {
     } else if (arg === "--timeline-only") {
       timelineSummary = true;
       timelineOnly = true;
+    } else if (arg === "--transition-summary") {
+      transitionSummary = true;
     } else if (arg === "--max-nearest") {
       maxNearest = parsePositiveInt(raw[++i], "--max-nearest");
     } else if (arg === "-h" || arg === "--help") {
@@ -204,6 +210,7 @@ function parseArgs(): CliArgs {
     stableOnly,
     timelineSummary,
     timelineOnly,
+    transitionSummary,
     maxNearest,
   };
 }
@@ -552,6 +559,101 @@ function printTimelineSummary(associations: readonly SnapshotAssociation[]): voi
   flush();
 }
 
+interface TransitionWindow {
+  descriptor: number;
+  firstFrame: number;
+  lastFrame: number;
+  state: number | undefined;
+  timer: number | undefined;
+  exactCount: number;
+  firstStable: SnapshotAssociation | undefined;
+}
+
+function exactDescriptorMatch(entry: SnapshotAssociation): boolean {
+  return entry.playfieldDiffs === 0 && entry.colorDiffs === 0 && entry.alphaDiffs === 0;
+}
+
+function transitionWindows(associations: readonly SnapshotAssociation[]): TransitionWindow[] {
+  const framed = associations
+    .filter((entry): entry is SnapshotAssociation & { frame: number } => entry.frame !== undefined)
+    .slice()
+    .sort((a, b) => a.frame - b.frame || a.label.localeCompare(b.label));
+  const windows: TransitionWindow[] = [];
+  let i = 0;
+
+  while (i < framed.length) {
+    const entry = framed[i]!;
+    if (!exactDescriptorMatch(entry)) {
+      i++;
+      continue;
+    }
+
+    const descriptor = entry.nearestDescriptor;
+    let last = entry;
+    let j = i + 1;
+    while (
+      j < framed.length &&
+      exactDescriptorMatch(framed[j]!) &&
+      framed[j]!.nearestDescriptor === descriptor &&
+      framed[j]!.frame === last.frame + 1
+    ) {
+      last = framed[j]!;
+      j++;
+    }
+
+    let firstStable: SnapshotAssociation | undefined;
+    for (let k = j; k < framed.length; k++) {
+      const candidate = framed[k]!;
+      if (exactDescriptorMatch(candidate)) break;
+      if (candidate.stablePlayable) {
+        firstStable = candidate;
+        break;
+      }
+    }
+
+    windows.push({
+      descriptor,
+      firstFrame: entry.frame,
+      lastFrame: last.frame,
+      state: entry.playerState,
+      timer: entry.timer,
+      exactCount: last.frame - entry.frame + 1,
+      firstStable,
+    });
+    i = j;
+  }
+
+  return windows;
+}
+
+function printTransitionSummary(associations: readonly SnapshotAssociation[]): void {
+  const windows = transitionWindows(associations);
+  console.log("\nExact descriptor transition summary:");
+  if (windows.length === 0) {
+    console.log("  no byte-exact descriptor windows found in compared snapshots");
+    return;
+  }
+
+  for (const window of windows) {
+    const range =
+      window.firstFrame === window.lastFrame
+        ? `f${window.firstFrame}`
+        : `f${window.firstFrame}-f${window.lastFrame}`;
+    const stable = window.firstStable;
+    const stableText =
+      stable === undefined
+        ? "firstStable=none before next exact descriptor"
+        : `firstStable=f${stable.frame ?? "?"} seg=${stable.segment ?? "?"} state=${stable.playerState ?? "?"} ` +
+          `timer=${stable.timer ?? "?"} pf=${stable.pfNonzero} pfHash=${stable.pfHash} ` +
+          `nearest=L${stable.nearestDescriptor} pfDiff=${stable.playfieldDiffs} ` +
+          `colorDiff=${stable.colorDiffs} alphaDiff=${stable.alphaDiffs}`;
+    console.log(
+      `  L${window.descriptor} exact ${range} count=${window.exactCount} ` +
+        `state=${window.state ?? "?"} timer=${window.timer ?? "?"}; ${stableText}`,
+    );
+  }
+}
+
 function main(): void {
   const args = parseArgs();
   const romPath = resolve(args.romPath);
@@ -571,6 +673,7 @@ function main(): void {
   printDescriptorPairwise(descriptors);
   printNearestSnapshots(descriptors, snapshots, args.maxNearest);
   if (args.timelineSummary) printTimelineSummary(associations);
+  if (args.transitionSummary) printTransitionSummary(associations);
   if (!args.timelineOnly) printSnapshotAssociations(associations, args.stableOnly);
 
   const pairwise = [];
@@ -611,6 +714,33 @@ function main(): void {
     })),
     descriptorPairwiseDiffs: pairwise,
     snapshotAssociations: associations,
+    transitionSummary: transitionWindows(associations).map((window) => ({
+      descriptor: window.descriptor,
+      firstFrame: window.firstFrame,
+      lastFrame: window.lastFrame,
+      exactCount: window.exactCount,
+      state: window.state,
+      timer: window.timer,
+      firstStable:
+        window.firstStable === undefined
+          ? undefined
+          : {
+              label: window.firstStable.label,
+              frame: window.firstStable.frame,
+              stablePlayable: window.firstStable.stablePlayable,
+              main: window.firstStable.main,
+              mode: window.firstStable.mode,
+              segment: window.firstStable.segment,
+              playerState: window.firstStable.playerState,
+              timer: window.firstStable.timer,
+              pfNonzero: window.firstStable.pfNonzero,
+              pfHash: window.firstStable.pfHash,
+              nearestDescriptor: window.firstStable.nearestDescriptor,
+              playfieldDiffs: window.firstStable.playfieldDiffs,
+              colorDiffs: window.firstStable.colorDiffs,
+              alphaDiffs: window.firstStable.alphaDiffs,
+            },
+    })),
   };
 
   mkdirSync(outDir, { recursive: true });

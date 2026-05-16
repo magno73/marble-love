@@ -54,6 +54,11 @@ usa ad esempio
 Per catture dense frame-by-frame, aggiungi `--timeline-only` per collassare
 snapshot adiacenti con stesso stato/descriptor in range leggibili, ad esempio
 `node --import tsx packages/cli/src/inspect-level-descriptors.ts --no-default-snapshots --extra-scenario-dir /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/scenarios --timeline-only`.
+Per auditare direttamente il gate di promozione usa anche
+`--transition-summary`: stampa ogni finestra byte-exact del descrittore ROM e
+il primo frame stable-playable successivo. Le ultime catture MAME autopilot
+confermano L1/L2 exact solo in `state=6`; i frame stabili subito dopo tornano
+a PF warm distanti (`pfDiff=1484`/`1517`), quindi restano diagnostici.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
