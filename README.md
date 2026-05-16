@@ -195,7 +195,10 @@ Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
 La proof MAME resta legata allo scenario originale active/neutral: se rinomini
-il seed per il web, non usare quel basename come sorgente del paired audit.
+il seed per il web, usa `audit-playable-seed.ts --mame-neutral-file
+/path/to/neutral/fNNNN.json` per conservare il pair MAME corretto. I file
+`candidate_*.seed.json` restano candidati espliciti e non vengono classificati
+come `practice-seed`.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

@@ -26,11 +26,15 @@ Verifiche eseguite:
 - `trace-playable-seed-route.ts --dispatcher manual` sul seed esportato:
   L6 `0x2e790`, 1000 frame TS, `stable=yes`, `diffXY=1146474/70440`,
   deaths `0/0`.
-- `audit-playable-seed.ts` resta da eseguire sulla sorgente MAME originale
-  `/private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json`
-  con neutral dir, perche' il seed web esportato ha basename diverso dalla
-  coppia neutral. Risultato confermato: `candidate-needs-route-proof`, L6,
-  MAME `diffXY=5556111/0`, TS `diffXY=1146474/70440`, deaths `0/0`.
+- `audit-playable-seed.ts` supporta ora `--mame-neutral-file PATH`, cosi' un
+  seed web esportato/renamed puo' essere auditato contro la neutral MAME
+  originale invece di dipendere da `DIR/<same filename>`.
+- Audit diretto del seed esportato:
+  `--mame-neutral-file /private/tmp/marble-bootstrap-route-sweep/l6/neutral/scenarios/f3600.json`
+  produce `candidate-needs-route-proof`, L6, MAME `diffXY=5556111/0`, TS
+  `diffXY=1146474/70440`, deaths `0/0`. I file `candidate_*.seed.json` sotto
+  `public/scenarios/playable` restano candidati e non vengono piu' classificati
+  come `practice-seed`.
 - `npm run build --workspace @marble-love/web` passa con il seed diagnostico
   presente e Vite copia il file in `dist/scenarios/playable/`.
 

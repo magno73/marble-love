@@ -42,6 +42,7 @@ interface CliArgs {
   plan: string;
   json: boolean;
   mameNeutralDir: string | undefined;
+  mameNeutralFile: string | undefined;
   distinctFrom: string[];
   minPlayfieldDiff: number;
   maxRouteDeaths: number;
@@ -190,6 +191,10 @@ Options:
   --mame-neutral-dir DIR
                 Compare each input scenario against DIR/<same filename> from
                 a neutral MAME capture before doing the TS rearm probe
+  --mame-neutral-file PATH
+                Compare every input scenario/seed against this explicit
+                neutral MAME snapshot. Useful after exporting or renaming a
+                candidate for ?playableSeed review.
   --distinct-from PATH
                 Reject practice promotion when playfieldRam is byte-identical
                 to this reference seed/scenario snapshot. Can be repeated.
@@ -225,6 +230,7 @@ function parseArgs(): CliArgs {
   let plan = DEFAULT_PLAN;
   let json = false;
   let mameNeutralDir: string | undefined;
+  let mameNeutralFile: string | undefined;
   const distinctFrom: string[] = [];
   let minPlayfieldDiff = DEFAULT_MIN_PLAYFIELD_DIFF;
   let maxRouteDeaths = DEFAULT_MAX_ROUTE_DEATHS;
@@ -242,6 +248,10 @@ function parseArgs(): CliArgs {
       const next = args[++i];
       if (next === undefined) throw new Error("--mame-neutral-dir requires a value");
       mameNeutralDir = next;
+    } else if (arg === "--mame-neutral-file") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--mame-neutral-file requires a value");
+      mameNeutralFile = next;
     } else if (arg === "--distinct-from") {
       const next = args[++i];
       if (next === undefined) throw new Error("--distinct-from requires a value");
@@ -280,11 +290,16 @@ function parseArgs(): CliArgs {
     }
   }
 
+  if (mameNeutralDir !== undefined && mameNeutralFile !== undefined) {
+    throw new Error("--mame-neutral-dir and --mame-neutral-file are mutually exclusive");
+  }
+
   return {
     paths: paths.length > 0 ? paths : DEFAULT_PATHS,
     plan,
     json,
     mameNeutralDir,
+    mameNeutralFile,
     distinctFrom: distinctFrom.length > 0 ? distinctFrom : DEFAULT_DISTINCT_FROM,
     minPlayfieldDiff,
     maxRouteDeaths,
@@ -673,7 +688,9 @@ function auditPath(
   const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf, maxRouteDeaths);
   const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf, maxRouteDeaths);
   const isGameplayOracleSeed = loaded.sourcePath.includes("oracle/scenarios/gameplay/");
-  const isCheckedInPlayableSeed = loaded.sourcePath.includes("packages/web/public/scenarios/playable/");
+  const isCandidatePlayableSeed = basename(loaded.sourcePath).startsWith("candidate_");
+  const isCheckedInPlayableSeed =
+    loaded.sourcePath.includes("packages/web/public/scenarios/playable/") && !isCandidatePlayableSeed;
   const reasons: string[] = [];
 
   if (initial.descriptorLevel === undefined) {
@@ -708,7 +725,9 @@ function auditPath(
   if (isGameplayOracleSeed) {
     reasons.push("source is gameplay/oracle warm seed; needs MAME playable-route capture before startLevel wiring");
   }
-  if (!isGameplayOracleSeed && !isCheckedInPlayableSeed) {
+  if (isCandidatePlayableSeed) {
+    reasons.push("source is an exported candidate playable seed; keep it out of startLevel until browser review and final wiring");
+  } else if (!isGameplayOracleSeed && !isCheckedInPlayableSeed) {
     reasons.push(
       mamePair === undefined
         ? "source is not a checked-in playable seed; pair it with MAME active-vs-neutral capture before wiring"
@@ -789,6 +808,12 @@ function printSummary(summary: AuditSummary): void {
 }
 
 function loadNeutralSeed(args: CliArgs, loaded: LoadedSeed): NeutralSeed | undefined {
+  if (args.mameNeutralFile !== undefined) {
+    const neutralSeeds = loadSeeds(args.mameNeutralFile, args.allSnapshots);
+    const neutral = neutralSeeds.find((seed) => seed.snapshotIndex === loaded.snapshotIndex) ?? neutralSeeds[0];
+    if (neutral === undefined) throw new Error(`${args.mameNeutralFile} has no neutral snapshot for ${loaded.label}`);
+    return { path: neutral.label, seed: neutral.seed };
+  }
   if (args.mameNeutralDir === undefined) return undefined;
   const neutralPath = join(args.mameNeutralDir, basename(loaded.sourcePath));
   const neutralSeeds = loadSeeds(neutralPath, args.allSnapshots);
