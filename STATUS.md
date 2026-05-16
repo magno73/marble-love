@@ -3,6 +3,56 @@
 **Ultimo update:** 2026-05-16 (MAME object-scan endgame gate trace)
 **Branch corrente:** `main`.
 
+## 2026-05-16 — Detector-gate rearm breakthrough toward L3
+
+Nuova ipotesi validata: il rearm manuale forzato non va fatto a un frame
+arbitrario di una finestra presentation, ma appena prima di una finestra
+naturale in cui `FUN_251DE` vede `obj0+0x18 == 3`. Nel trace coin/start questo
+accade attorno alla transizione L1->L2 f1747. Con
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=1746`, cfg pulita, MAME entra finalmente
+nel ramo causale reale:
+
+- trace corto: `/private/tmp/marble-detector-rearm-f1746/trace.json`.
+- `FUN_251DE_object_scan_dispatch` e `FUN_253EC_object_step` girano a f1830;
+  poi hit su `FUN_251DE_endgame_set_flag` (`0x253A4`) e
+  `FUN_251DE_write_main3` (`0x253B2`).
+- write ROM reale a `workRam[0x390..0x391] = 3` da `PC=0x253B6`.
+- `FUN_118D2`/dispatcher alzano `levelIndex` a `2` e `FUN_16EC6` carica L3
+  `0x2cd9e` a f1872; pointer window L3 da f1873 in poi.
+
+Estensione active/neutral:
+
+- active: `/private/tmp/marble-detector-rearm-f1746-long/trace.json`, route
+  `R:300,D:300,L:300,U:300,N:500` da f2200.
+- neutral: `/private/tmp/marble-detector-rearm-f1746-neutral/trace.json`, route
+  `N:1700` da f2200.
+- Entrambe restano su pointer L3 `0x2cd9e`; dai frame f2300/f2500/f3000/f3600
+  lo stato e' `main/mode=0/0`, `levelIndex=2`, `objCount=1`, `obj0+0x1A=0`,
+  timer vivo. Active-vs-neutral diverge in posizione (es. f2300 active
+  `160.2/95.3`, neutral `180/76`; f2500 active `158.4/80.5`, neutral
+  `180/76`).
+
+Audit:
+
+```sh
+node --import tsx packages/cli/src/audit-playable-seed.ts \
+  --mame-neutral-dir /private/tmp/marble-detector-rearm-f1746-neutral/scenarios \
+  --distinct-from packages/web/public/scenarios/playable/manual_level1_start.seed.json \
+  /private/tmp/marble-detector-rearm-f1746-long/scenarios/f2300.json \
+  /private/tmp/marble-detector-rearm-f1746-long/scenarios/f2500.json \
+  /private/tmp/marble-detector-rearm-f1746-long/scenarios/f3000.json \
+  /private/tmp/marble-detector-rearm-f1746-long/scenarios/f3600.json
+```
+
+Risultato audit: tutti i frame restano `diagnostic-only`. Motivi principali:
+seed fuori dal criterio playable `main/mode=1/0` (`0/0`), PF non giudicato
+pienamente popolato dal gate attuale, e stabilita' browser/manual da rivedere.
+Quindi non e' ancora un `startLevel`, ma e' la prima proof MAME causale che
+attraversa il detector ROM e carica L3 controllabile. La prossima direzione
+intelligente e' automatizzare questo "detector-gate rearm" e produrre finestre
+candidate per L3-L6, invece di cercare route trackball lunghe da stati
+presentation.
+
 ## 2026-05-16 — MAME object-scan endgame gate trace
 
 Esteso `oracle/mame_level_descriptor_tap.lua` per tracciare il gate causale di
