@@ -87,6 +87,15 @@ nessun exact L3-L6, e le finestre stable sparse restano lontane dai descriptor
 (`pfDiff` tipicamente `1819..3502`). Anche gli oracle storici
 `level2_spawn`..`level5_spawn` non contengono descriptor exact; sono materiale
 diagnostico, non start level.
+Per provare direttamente quali descriptor ROM vengono caricati da una route
+MAME, usa `oracle/mame_level_descriptor_tap.lua`. Con
+`MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1` il tap gira insieme a
+`mame_playable_input_capture.lua` e registra `0x400474` in
+`pointerWindows`; usa una `-cfg_directory` temporanea pulita per evitare DIP
+service persistenti nel cfg locale. L'ultimo no-coin proof fino a f65000 in
+`/private/tmp/marble-level-descriptor-nocoin-65000/trace.json` vede solo L1
+`0x2bee2` e L2 `0x2c54c`; L3-L6 restano a `0` frame, quindi l'attract no-coin
+non puo' produrre i sei seed reali.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

@@ -1,7 +1,63 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (service-mode route ruled out)
+**Ultimo update:** 2026-05-16 (direct descriptor pointer trace)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Direct descriptor pointer trace
+
+Aggiunto `oracle/mame_level_descriptor_tap.lua`, probe MAME che registra
+direttamente il level descriptor pointer runtime `0x400474`, i conteggi per
+descrittore e le finestre contigue `pointerWindows`. Il probe puo' comporsi
+con `oracle/mame_playable_input_capture.lua` nella stessa sessione MAME tramite
+`MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1`, cosi' il trace dei pointer segue
+la stessa route input/manual/playback usata per generare gli scenari.
+
+Nota operativa: usa una `-cfg_directory` temporanea pulita per questi proof.
+Il file locale `cfg/marble.cfg` puo' persistere il DIP `Service Mode=On`; in
+quel caso le letture `F60001` diventano `0x2f/0x3f` e la route entra nel
+service/test path invece dell'attract riproducibile (`0x6f/0x7f`). Non serve
+modificare il cfg locale: basta passare una directory temporanea vuota.
+
+Comando no-coin pointer proof fino a f65000:
+
+```sh
+rm -rf /private/tmp/marble-level-descriptor-nocoin-65000 \
+  /private/tmp/marble-mame-cfg-default
+mkdir -p /private/tmp/marble-mame-cfg-default
+SDL_VIDEODRIVER=dummy \
+MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1 \
+MARBLE_DESCRIPTOR_TRACE_TO=65000 \
+MARBLE_DESCRIPTOR_TRACE_OUT=/private/tmp/marble-level-descriptor-nocoin-65000/trace.json \
+MARBLE_DESCRIPTOR_TRACE_SAMPLE_EVERY=600 \
+MARBLE_DESCRIPTOR_TRACE_MAX_EVENTS=50000 \
+MARBLE_DESCRIPTOR_TRACE_MAX_SAMPLES=50000 \
+MARBLE_PLAYABLE_COIN_START=0 \
+MARBLE_PLAYABLE_OUT_DIR=/private/tmp/marble-level-descriptor-nocoin-65000/scenarios \
+MARBLE_PLAYABLE_INPUT_OUT=/private/tmp/marble-level-descriptor-nocoin-65000/input.json \
+MARBLE_PLAYABLE_FRAME_LIST='f65000:65000' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=0 \
+mame marble -rompath roms \
+  -cfg_directory /private/tmp/marble-mame-cfg-default \
+  -autoboot_script oracle/mame_level_descriptor_tap.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Finding da `/private/tmp/marble-level-descriptor-nocoin-65000/trace.json`:
+
+- `seenLevelCount=2`; il route no-coin carica solo i pointer ROM L1/L2.
+- L1 `0x2bee2`: `34859` frame, primo f114, ultimo f65000.
+- L2 `0x2c54c`: `30028` frame, primo f1747, ultimo f63997.
+- L3 `0x2cd9e`, L4 `0x2d648`, L5 `0x2de1e`, L6 `0x2e790`: `0` frame.
+- Le finestre contigue alternano solo L1/L2, ad esempio L1 f114..1746,
+  L2 f1747..3207, L1 f3208..4839, L2 f4840..6300, e cosi' via fino a f65000.
+
+Interpretazione: questo e' un proof MAME diretto, indipendente dal solo
+confronto playfield/hash, che l'attract no-coin campionato non raggiunge mai i
+descriptor pointer L3-L6. Rinforza lo sweep denso: il percorso attract non puo'
+produrre i sei seed reali. Resta necessario un playback/manual movie o una
+route planner MAME-live che raggiunga finestre L3-L6 descriptor-aligned,
+stable-playable e controllabili active-vs-neutral prima di cablare
+`startLevel=2..6`.
 
 ## 2026-05-16 — Service-mode route ruled out
 
