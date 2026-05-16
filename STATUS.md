@@ -1,7 +1,26 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (startLevel earliest-start tightening)
+**Ultimo update:** 2026-05-16 (startLevel intro-banner wiring)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — startLevel intro-banner true starts
+
+I sei `startLevel=1..6` sono ora cablati ai frame MAME in cui il gioco originale
+disegna il banner iniziale del livello. Il marker e' l'alpha overlay originale,
+non una finestra post-seed piu' tarda:
+
+| startLevel | seed | banner | first frame |
+| --- | --- | --- | ---: |
+| 1 | `start_level1_intro_practice_f2479` | `TIME TO FINISH / PRACTICE RACE` | 2479 |
+| 2 | `start_level2_intro_beginner_f2436` | `TIME TO FINISH / BEGINNER RACE` | 2436 |
+| 3 | `start_level3_intro_intermediate_f2435` | `EXTRA TIME FOR / INTERMEDIATE RACE` | 2435 |
+| 4 | `start_level4_intro_aerial_f2414` | `EXTRA TIME FOR / AERIAL RACE` | 2414 |
+| 5 | `start_level5_intro_silly_f2472` | `EXTRA TIME FOR / SILLY RACE` + subtitle | 2472 |
+| 6 | `start_level6_intro_ultimate_f2429` | `EXTRA TIME FOR / ULTIMATE RACE` | 2429 |
+
+Aggiunta utility `packages/cli/src/detect-level-intro-banners.ts` per scansionare
+seed/scenari e trovare questi marker direttamente in `alphaRam`. Review visuale
+Playwright completata sui sei banner distinti prima del wiring.
 
 ## 2026-05-16 — startLevel earliest-start tightening
 

@@ -307,10 +307,12 @@ collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
 Per partire direttamente da un livello di practice usa
 `?autoLoad=1&startLevel=N&levelTime=180`. `startLevel=1..6` ora mappa ai sei
-seed post-seed descriptor reali verificati:
-L1 `candidate_level1_postseed_r_f2800`, L2 `candidate_level2_postseed_dr_f3000`,
-L3 `candidate_level3_postseed_ur_f3000`, L4 `candidate_level4_postseed_dr_f3000`,
-L5 `candidate_level5_postseed_dl_f2800`, L6 `candidate_level6_postseed_ul_f3600`.
+frame MAME in cui il gioco originale disegna il banner intro del livello:
+L1 `start_level1_intro_practice_f2479`, L2 `start_level2_intro_beginner_f2436`,
+L3 `start_level3_intro_intermediate_f2435`, L4 `start_level4_intro_aerial_f2414`,
+L5 `start_level5_intro_silly_f2472`, L6 `start_level6_intro_ultimate_f2429`.
+Per auditarli usa
+`node --import tsx packages/cli/src/detect-level-intro-banners.ts --lines packages/web/public/scenarios/playable/start_level*_intro_*.seed.json`.
 Il vecchio seed `manual_level1_start` appartiene alla famiglia descriptor L2
 (`0x2c54c`) e resta solo come seed legacy/live-play.
 I candidati `manual_level2_start` .. `manual_level5_start` del primo pass sono
