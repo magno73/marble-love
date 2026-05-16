@@ -38,6 +38,7 @@ interface CliArgs {
   outDir: string;
   frames: number;
   chunk: number;
+  stepPixels: number;
   beamWidth: number;
   maxCandidates: number;
   directions: string[];
@@ -48,6 +49,8 @@ interface CliArgs {
   targetSegment: number | undefined;
   targetDescriptor: number | undefined;
   targetDescriptorPtr: number | undefined;
+  diversityPrefixChunks: number | undefined;
+  maxDeaths: number | undefined;
   mameTrackballStart: number | undefined;
 }
 
@@ -94,17 +97,20 @@ interface CandidateManifestEntry {
   file: string;
   sourceLabel: string;
   routeLabel: string;
+  finalFrame: number;
   routeFrame: number;
   absoluteFrame: number | undefined;
   mameTrackballStart: number | undefined;
   forceManualDispatcher: boolean;
   forceManualFrame: number | undefined;
   routeSpec: string;
+  stepPixels: number;
   segment: number;
   main: number;
   mode: number;
   timer: number;
   playerState: number;
+  descriptorPtr: string;
   pfNonzero: number;
   pfHash: string;
   coarseHash: string;
@@ -125,16 +131,16 @@ const DEFAULT_SEED =
 const DEFAULT_ROM = "ghidra_project/marble_program.bin";
 const DEFAULT_OUT_DIR = "/private/tmp/marble-manual-route-search";
 const DEFAULT_DIRECTIONS = ["D", "R", "L", "DR", "DL", "UR", "UL", "BR", "N"];
-const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
-  D: [0, 8],
-  U: [0, -8],
-  R: [8, 0],
-  L: [-8, 0],
-  DR: [8, 8],
-  DL: [-8, 8],
-  UR: [8, -8],
-  UL: [-8, -8],
-  BR: [4, -6],
+const SCREEN_DELTA_UNITS: Record<string, readonly [number, number]> = {
+  D: [0, 1],
+  U: [0, -1],
+  R: [1, 0],
+  L: [-1, 0],
+  DR: [1, 1],
+  DL: [-1, 1],
+  UR: [1, -1],
+  UL: [-1, -1],
+  BR: [0.5, -0.75],
   N: [0, 0],
 };
 
@@ -150,6 +156,7 @@ Options:
   --out-dir DIR          Output manifest dir (default: ${DEFAULT_OUT_DIR})
   --frames N             Search horizon in route frames (default: 3600)
   --chunk N              Frames per beam expansion (default: 30)
+  --step-pixels N        Trackball screen-space delta per frame (default: 8)
   --beam-width N         Nodes retained per expansion (default: 96)
   --max-candidates N     Routes written to manifest (default: 12)
   --directions LIST      Comma-separated route directions
@@ -160,6 +167,12 @@ Options:
   --target-y N           Scoring target Y in world pixels (default: 419.3)
   --target-segment N     Prefer stable-playable frames with runtime segment N
   --target-descriptor N  Prefer runtime level descriptor pointer L1..L6
+  --diversity-prefix-chunks N
+                          Retain one route per early chunk-prefix key while
+                          filling the beam. Default: 8 for target searches,
+                          otherwise 0.
+  --max-deaths N         Hard cap on death events while expanding the beam.
+                          Useful for rejecting attract/death-cycle routes.
   --mame-trackball-start N
                           Override MAME route start frame in manifest
   -h, --help             Show this help
@@ -176,6 +189,7 @@ function parseArgs(): CliArgs {
   let outDir = DEFAULT_OUT_DIR;
   let frames = 3600;
   let chunk = 30;
+  let stepPixels = 8;
   let beamWidth = 96;
   let maxCandidates = 12;
   let directions = DEFAULT_DIRECTIONS;
@@ -185,6 +199,8 @@ function parseArgs(): CliArgs {
   let targetY = 419.3;
   let targetSegment: number | undefined;
   let targetDescriptor: number | undefined;
+  let diversityPrefixChunks: number | undefined;
+  let maxDeaths: number | undefined;
   let mameTrackballStart: number | undefined;
 
   for (let i = 0; i < raw.length; i++) {
@@ -194,6 +210,8 @@ function parseArgs(): CliArgs {
     else if (arg === "--out-dir") outDir = requireValue(raw[++i], "--out-dir");
     else if (arg === "--frames") frames = parsePositiveInt(raw[++i], "--frames");
     else if (arg === "--chunk") chunk = parsePositiveInt(raw[++i], "--chunk");
+    else if (arg === "--step-pixels")
+      stepPixels = parsePositiveInt(raw[++i], "--step-pixels");
     else if (arg === "--beam-width")
       beamWidth = parsePositiveInt(raw[++i], "--beam-width");
     else if (arg === "--max-candidates")
@@ -209,6 +227,13 @@ function parseArgs(): CliArgs {
       targetSegment = parsePositiveInt(raw[++i], "--target-segment");
     else if (arg === "--target-descriptor")
       targetDescriptor = parseTargetDescriptor(raw[++i], "--target-descriptor");
+    else if (arg === "--diversity-prefix-chunks")
+      diversityPrefixChunks = parseNonNegativeInt(
+        raw[++i],
+        "--diversity-prefix-chunks",
+      );
+    else if (arg === "--max-deaths")
+      maxDeaths = parseNonNegativeInt(raw[++i], "--max-deaths");
     else if (arg === "--mame-trackball-start")
       mameTrackballStart = parsePositiveInt(raw[++i], "--mame-trackball-start");
     else if (arg === "-h" || arg === "--help") {
@@ -227,6 +252,7 @@ function parseArgs(): CliArgs {
     outDir,
     frames,
     chunk,
+    stepPixels,
     beamWidth,
     maxCandidates,
     directions,
@@ -237,6 +263,8 @@ function parseArgs(): CliArgs {
     targetSegment,
     targetDescriptor,
     targetDescriptorPtr: undefined,
+    diversityPrefixChunks,
+    maxDeaths,
     mameTrackballStart,
   };
 }
@@ -251,6 +279,14 @@ function parsePositiveInt(raw: string | undefined, label: string): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0)
     throw new Error(`${label} must be a positive integer`);
+  return value;
+}
+
+function parseNonNegativeInt(raw: string | undefined, label: string): number {
+  if (raw === undefined) throw new Error(`${label} requires a value`);
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0)
+    throw new Error(`${label} must be a non-negative integer`);
   return value;
 }
 
@@ -276,7 +312,7 @@ function parseDirections(raw: string): string[] {
     .filter((part) => part !== "");
   if (directions.length === 0) throw new Error("--directions produced no directions");
   for (const direction of directions) {
-    if (SCREEN_DELTAS[direction] === undefined)
+    if (SCREEN_DELTA_UNITS[direction] === undefined)
       throw new Error(`unknown direction: ${direction}`);
   }
   return directions;
@@ -349,7 +385,7 @@ function expandRouteSpec(spec: string): string[] {
     if (
       direction === undefined ||
       countRaw === undefined ||
-      SCREEN_DELTAS[direction] === undefined
+      SCREEN_DELTA_UNITS[direction] === undefined
     ) {
       throw new Error(`invalid route part: ${part}`);
     }
@@ -391,8 +427,11 @@ function advanceTrackball(
   p1X: number,
   p1Y: number,
   step: string,
+  stepPixels: number,
 ): readonly [number, number] {
-  const [screenDx, screenDy] = SCREEN_DELTAS[step] ?? [0, 0];
+  const [unitDx, unitDy] = SCREEN_DELTA_UNITS[step] ?? [0, 0];
+  const screenDx = Math.round(unitDx * stepPixels);
+  const screenDy = Math.round(unitDy * stepPixels);
   return [
     (p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff,
     (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff,
@@ -544,7 +583,7 @@ function tickNode(
 
   for (let i = 0; i < frames; i++) {
     frame++;
-    [p1X, p1Y] = advanceTrackball(p1X, p1Y, direction);
+    [p1X, p1Y] = advanceTrackball(p1X, p1Y, direction, args.stepPixels);
     tick(state, {
       rom,
       runMainLoopBody: true,
@@ -720,6 +759,55 @@ function sortNodes(a: SearchNode, b: SearchNode, args: CliArgs): number {
   return bHit - aHit || b.bestScore - a.bestScore || b.score - a.score;
 }
 
+function chunkDirections(node: SearchNode, chunkFrames: number): string[] {
+  const chunks: string[] = [];
+  for (let start = 0; start < node.chunks.length; start += chunkFrames) {
+    chunks.push(node.chunks[start] ?? "N");
+  }
+  return chunks;
+}
+
+function diversityKey(node: SearchNode, args: CliArgs): string {
+  const prefixChunks = args.diversityPrefixChunks ?? 0;
+  if (prefixChunks <= 0) return "";
+  const routeChunks = chunkDirections(node, args.chunk).slice(0, prefixChunks);
+  const summary = summarize(node.state);
+  return [
+    routeChunks.join("/"),
+    `desc=${formatHex32(summary.descriptorPtr)}`,
+    `seg=${summary.segment}`,
+    `state=${summary.playerState}`,
+  ].join("|");
+}
+
+function selectBeam(sortedNodes: SearchNode[], args: CliArgs): SearchNode[] {
+  const prefixChunks = args.diversityPrefixChunks ?? 0;
+  if (prefixChunks <= 0) return sortedNodes.slice(0, args.beamWidth);
+
+  const selected: SearchNode[] = [];
+  const selectedSet = new Set<SearchNode>();
+  const seenKeys = new Set<string>();
+  for (const node of sortedNodes) {
+    const key = diversityKey(node, args);
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    selected.push(node);
+    selectedSet.add(node);
+    if (selected.length >= args.beamWidth) return selected;
+  }
+  for (const node of sortedNodes) {
+    if (selectedSet.has(node)) continue;
+    selected.push(node);
+    if (selected.length >= args.beamWidth) break;
+  }
+  return selected;
+}
+
+function filterByHardLimits(nodes: SearchNode[], args: CliArgs): SearchNode[] {
+  if (args.maxDeaths === undefined) return nodes;
+  return nodes.filter((node) => node.deathEvents <= args.maxDeaths!);
+}
+
 function routeFrameForCandidate(node: SearchNode): number {
   return (
     node.firstTargetDescriptorFrame ??
@@ -748,17 +836,20 @@ function manifestEntry(
     file,
     sourceLabel: `route_f${routeFrame}`,
     routeLabel: "manual-route-search",
+    finalFrame: node.frame,
     routeFrame,
     absoluteFrame: seedFrame === undefined ? undefined : seedFrame + routeFrame,
     mameTrackballStart,
     forceManualDispatcher: args.manualDispatcher,
     forceManualFrame: args.manualDispatcher ? mameTrackballStart : undefined,
     routeSpec,
+    stepPixels: args.stepPixels,
     segment: summary.segment,
     main: summary.main,
     mode: summary.mode,
     timer: summary.timer,
     playerState: summary.playerState,
+    descriptorPtr: formatHex32(summary.descriptorPtr),
     pfNonzero: summary.pfNonzero,
     pfHash: summary.pfHash,
     coarseHash: summary.coarseHash,
@@ -799,6 +890,11 @@ function main(): void {
     if (args.targetDescriptorPtr === undefined)
       throw new Error(`missing descriptor pointer for L${args.targetDescriptor}`);
   }
+  const targetRequested =
+    args.targetDescriptorPtr !== undefined || args.targetSegment !== undefined;
+  if (args.diversityPrefixChunks === undefined) {
+    args.diversityPrefixChunks = targetRequested ? 8 : 0;
+  }
   const seed = loadSeed(args.seedPath);
   const seedState = stateFromSeed(rom, seed, args.manualDispatcher);
   const initial = summarize(seedState);
@@ -831,10 +927,11 @@ function main(): void {
   const iterations = Math.ceil(Math.max(0, args.frames - prefix.length) / args.chunk);
 
   console.log(
-    `search seed=${resolve(args.seedPath)} frames=${args.frames} chunk=${args.chunk} ` +
+    `search seed=${resolve(args.seedPath)} frames=${args.frames} chunk=${args.chunk} stepPixels=${args.stepPixels} ` +
       `beam=${args.beamWidth} directions=${args.directions.join("/")} manualDispatcher=${args.manualDispatcher} ` +
       `targetSegment=${args.targetSegment ?? "-"} targetDescriptor=${args.targetDescriptor ?? "-"} ` +
-      `targetDescriptorPtr=${formatHex32(args.targetDescriptorPtr)}`,
+      `targetDescriptorPtr=${formatHex32(args.targetDescriptorPtr)} diversityPrefixChunks=${args.diversityPrefixChunks} ` +
+      `maxDeaths=${args.maxDeaths ?? "-"}`,
   );
   console.log(
     `initial main/mode=${initial.main}/${initial.mode} seg=${initial.segment} state=${initial.playerState} ` +
@@ -853,8 +950,15 @@ function main(): void {
         );
       }
     }
-    next.sort((a, b) => sortNodes(a, b, args));
-    beam = next.slice(0, args.beamWidth);
+    const limitedNext = filterByHardLimits(next, args);
+    if (limitedNext.length === 0) {
+      console.log(
+        `[search] stopping at frame ${beam[0]!.frame}; all ${next.length} expansions violate hard limits`,
+      );
+      break;
+    }
+    limitedNext.sort((a, b) => sortNodes(a, b, args));
+    beam = selectBeam(limitedNext, args);
     const best = beam[0]!;
     if (
       iteration % 10 === 0 ||
@@ -896,6 +1000,7 @@ function main(): void {
         search: {
           frames: args.frames,
           chunk: args.chunk,
+          stepPixels: args.stepPixels,
           beamWidth: args.beamWidth,
           directions: args.directions,
           routePrefix: args.routePrefix,
@@ -908,6 +1013,9 @@ function main(): void {
             args.targetDescriptorPtr === undefined
               ? undefined
               : formatHex32(args.targetDescriptorPtr),
+          diversityPrefixChunks: args.diversityPrefixChunks,
+          maxDeaths: args.maxDeaths,
+          completedFrames: beam[0]?.frame,
         },
         candidates: manifestCandidates,
       },

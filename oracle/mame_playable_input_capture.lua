@@ -14,6 +14,7 @@
 --   MARBLE_PLAYABLE_SCENARIOS    optional CSV filter
 --   MARBLE_PLAYABLE_TRACKBALL_START optional first scripted trackball frame
 --   MARBLE_PLAYABLE_ROUTE        optional screen-space route, e.g. D:171,R:206
+--   MARBLE_PLAYABLE_ROUTE_STEP   optional route delta per frame (default 8)
 --   MARBLE_PLAYABLE_INPUT_TRACE_REF optional scenario inputTrace path
 --   MARBLE_PLAYABLE_COIN_START=0 disable scripted coin/start pulses
 --   MARBLE_PLAYABLE_COIN_FRAME    first scripted coin frame (default 1200)
@@ -54,6 +55,9 @@ local FRAME_COUNT = tonumber(os.getenv("MARBLE_PLAYABLE_CAPTURE_FRAMES") or "100
 if FRAME_COUNT < 0 then FRAME_COUNT = 0 end
 FRAME_COUNT = math.floor(FRAME_COUNT)
 local TRACKBALL_START = tonumber(os.getenv("MARBLE_PLAYABLE_TRACKBALL_START") or "2020") or 2020
+local ROUTE_STEP = tonumber(os.getenv("MARBLE_PLAYABLE_ROUTE_STEP") or "8") or 8
+if ROUTE_STEP < 1 then ROUTE_STEP = 1 end
+ROUTE_STEP = math.floor(ROUTE_STEP)
 local TIMER_OVERRIDE = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_OVERRIDE") or "")
 local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") or "2045") or 2045
 local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
@@ -173,18 +177,31 @@ local function frame_in_pulse(frame, pulses)
     return false
 end
 
-local ROUTE_DELTAS = {
+local ROUTE_DELTA_UNITS = {
     N = {0, 0},
-    U = {0, -8},
-    D = {0, 8},
-    L = {-8, 0},
-    R = {8, 0},
-    UL = {-8, -8},
-    UR = {8, -8},
-    DL = {-8, 8},
-    DR = {8, 8},
-    BR = {4, -6},
+    U = {0, -1},
+    D = {0, 1},
+    L = {-1, 0},
+    R = {1, 0},
+    UL = {-1, -1},
+    UR = {1, -1},
+    DL = {-1, 1},
+    DR = {1, 1},
+    BR = {0.5, -0.75},
 }
+
+local function route_delta(name)
+    local unit = ROUTE_DELTA_UNITS[name]
+    if unit == nil then return nil end
+    local function round(v)
+        if v >= 0 then return math.floor(v + 0.5) end
+        return math.ceil(v - 0.5)
+    end
+    return {
+        round(unit[1] * ROUTE_STEP),
+        round(unit[2] * ROUTE_STEP),
+    }
+end
 
 local function parse_route()
     if ROUTE_RAW == "" then return end
@@ -194,7 +211,7 @@ local function parse_route()
             error("[mame_playable_input_capture] bad MARBLE_PLAYABLE_ROUTE token: " .. tok)
         end
         name = string.upper(name)
-        local delta = ROUTE_DELTAS[name]
+        local delta = route_delta(name)
         if delta == nil then
             error("[mame_playable_input_capture] unknown route direction: " .. name)
         end
@@ -210,9 +227,10 @@ local function parse_route()
         })
     end
     print(string.format(
-        "[mame_playable_input_capture] scripted screen-space route: %s (%d frames)",
+        "[mame_playable_input_capture] scripted screen-space route: %s (%d frames, step=%d)",
         ROUTE_RAW,
-        route_total
+        route_total,
+        ROUTE_STEP
     ))
 end
 

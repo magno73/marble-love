@@ -1,7 +1,61 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (targeted descriptor route proof)
+**Ultimo update:** 2026-05-16 (route-search hard limits)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Route-search hard limits
+
+Esteso ancora il finder/replay per distinguere meglio route reali da cicli di
+morte/attract:
+
+- `packages/cli/src/search-playable-route.ts` ora supporta
+  `--diversity-prefix-chunks N` (default 8 per search con target), cosi' la beam
+  conserva prefissi di route divergenti invece di riempirsi di varianti tardive
+  di `D:*`.
+- aggiunto `--max-deaths N`, hard cap sui death events durante l'espansione.
+  Con `--max-deaths 0` il finder si ferma appena tutte le espansioni rimaste
+  richiedono una morte.
+- aggiunto `--step-pixels N` al finder e `MARBLE_PLAYABLE_ROUTE_STEP` al replay
+  MAME, per variare l'ampiezza trackball per frame mantenendo lo stesso
+  `MARBLE_PLAYABLE_ROUTE`.
+
+Risultati nuovi:
+
+- L3 target con beam diversificata:
+  `/private/tmp/marble-target-l3-search-diverse-3600/manifest.json`.
+  Nessun `firstTargetDescriptorFrame`; i prefissi alternativi ora compaiono nel
+  manifest (`D:210,R:30,D:3360`, ecc.), ma convergono ancora alla stessa famiglia
+  runtime, finale `segment=4`, descriptor L2 `0x2c54c`, `deathEvents=2`.
+- L3 target no-death:
+  `/private/tmp/marble-target-l3-nodeath-3600/manifest.json`.
+  Con `--max-deaths 0` il search si ferma a f570: tutte le 2160 espansioni del
+  chunk successivo violano il limite. Miglior stato pulito: `segment=2`,
+  descriptor L2 `0x2c54c`, `timer=51`, `pfNonzero=5803`, `x=383.1`, `y=339.9`.
+- L3 target no-death con input piu' lento:
+  `/private/tmp/marble-target-l3-nodeath-step4-3600/manifest.json`.
+  `--step-pixels 4` non supera il blocco: stesso stop a f570, quindi la
+  semplificazione input/physics del planner e' ancora insufficiente per completare
+  una route reale senza morte.
+- Smoke MAME `MARBLE_PLAYABLE_ROUTE_STEP=4` su `D:120` passa e stampa
+  `step=4`, quindi il parametro replay e' operativo.
+
+Route MAME ladder articolata:
+
+```sh
+MARBLE_PLAYABLE_ROUTE='D:171,R:206,L:188,DL:107,BR:260,R:700,D:300,R:800,DR:300,R:800,U:100,R:500,N:6000'
+```
+
+Trace in `/private/tmp/marble-ladder-mame-descriptor/trace.json` fino a f15000:
+
+- `seenLevelCount=2`; pointer windows ancora solo L1/L2.
+- compare un L2 byte-exact a f8000, ma e' `state=6`, non stable-playable.
+- stable-playable campionati: segmenti 3/4/5/7/2/3, ma nearest descriptor resta
+  lontano (`pfDiff=1484`, `1517`, `1873`, ecc.).
+
+Interpretazione: il prossimo passo non e' promuovere seed, ma migliorare il
+planner verso una route fisicamente valida senza morte oppure acquisire una
+movie/manual playback reale. Le route automatiche attuali, anche articolate e
+diversificate, continuano a provare solo il ciclo L1/L2.
 
 ## 2026-05-16 — Targeted descriptor route proof
 
