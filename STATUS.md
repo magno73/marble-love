@@ -1,7 +1,26 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME snapshot stability summary)
+**Ultimo update:** 2026-05-16 (manual MAME level-capture planner)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — manual MAME level-capture planner
+
+Aggiunto `packages/cli/src/plan-mame-manual-level-capture.ts`, un planner
+operativo per il prossimo pass sui sei livelli reali. Stampa una sequenza
+ripetibile:
+
+- registra una movie MAME nativa (`mame marble -record ...`) mentre si gioca;
+- ripassa la movie con `MARBLE_PLAYABLE_MANUAL=1` e
+  `oracle/mame_playable_input_capture.lua`;
+- genera trace input + scenario tail multi-snapshot;
+- passa la tail a `scan-playable-terrain-hashes.ts --summary-only
+  --all-snapshots --emit-loaded-candidates-dir`;
+- audita i seed esportati con `audit-playable-seed.ts --only-candidates`.
+
+Questo non identifica ancora i sei livelli, ma rimuove l'ultimo pezzo manuale
+fragile della pipeline: ora una run MAME giocata davvero puo' diventare subito
+cluster di finestre stable-playable + candidati auditabili, senza promuovere
+snapshot demo/presentation o TS warm-only.
 
 ## 2026-05-16 — MAME snapshot stability summary
 
