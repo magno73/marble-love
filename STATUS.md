@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME candidate proof result)
+**Ultimo update:** 2026-05-16 (MAME snapshot stability summary)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME snapshot stability summary
+
+Follow-up sul proof MAME: `scan-playable-terrain-hashes.ts` ora ha
+`--summary-only`, pensato per scenario/catture con centinaia di snapshot.
+Invece di generare migliaia di confronti pairwise, stampa per file:
+conteggi `main/mode`, segmenti, player-state, range timer/scroll, numero di
+hash PF/coarse/render distinti e prime finestre che soddisfano il criterio
+stable-playable (`main=1 mode=0 state=0 timer>0 pf>4000`).
+
+Evidenza sulle catture active/neutral del proof candidato:
+
+- `03_ladder_seg2_f480`: 101 snapshot, 0 stable-playable; tutto `main=0 mode=2`.
+- `06_ladder_seg3_f1440`: 101 snapshot, 0 stable-playable; tutto `main=0 mode=2`.
+- `07_ladder_seg4_f3600`: 101 snapshot, 0 stable-playable; mode `1/2`, `4/2`
+  o `2/2`, timer `0`.
+- `05_ladder_seg5_f4560`: 41/101 stable-playable in active e 41/101 in neutral,
+  ma con stessi hash/scroll/timer (`pfHash=9e10f9a028d4b1c1`,
+  `renderCoarse=e73e2232500c5064`), quindi resta una finestra non promossa:
+  serve divergenza active-vs-neutral e/o una route MAME-live vera.
+
+Questo non identifica ancora i sei livelli, ma rende il prossimo pass molto piu'
+meccanico: una cattura manuale/playback puo' essere filtrata rapidamente per
+finestre giocabili reali prima dell'audit e prima di qualsiasi `startLevel`.
 
 ## 2026-05-16 — MAME candidate proof result
 

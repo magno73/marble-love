@@ -67,6 +67,7 @@ interface CliArgs {
   planSuite: PlanSuite | undefined;
   json: boolean;
   pairwiseOnly: boolean;
+  summaryOnly: boolean;
   allSnapshots: boolean;
   nearThreshold: number;
   clusterBy: ClusterBy;
@@ -217,6 +218,7 @@ Usage:
 
 Options:
   --pairwise-only       Compare loaded seed snapshots without running TS
+  --summary-only        Print compact loaded-snapshot stability summaries and exit
   --all-snapshots       Load every snapshot from scenario files
   --frames N            TS frames to run per seed (default: 960)
   --sample-every N      Sample terrain every N frames (default: 30)
@@ -258,6 +260,7 @@ function parseArgs(): CliArgs {
   let planSuite: PlanSuite | undefined;
   let json = false;
   let pairwiseOnly = false;
+  let summaryOnly = false;
   let allSnapshots = false;
   let nearThreshold = 512;
   let clusterBy: ClusterBy = "coarse";
@@ -309,6 +312,8 @@ function parseArgs(): CliArgs {
       nearThreshold = parsePositiveInt(args[++i], "--near-threshold");
     } else if (arg === "--pairwise-only") {
       pairwiseOnly = true;
+    } else if (arg === "--summary-only") {
+      summaryOnly = true;
     } else if (arg === "--all-snapshots") {
       allSnapshots = true;
     } else if (arg === "--json") {
@@ -331,6 +336,7 @@ function parseArgs(): CliArgs {
     planSuite,
     json,
     pairwiseOnly,
+    summaryOnly,
     allSnapshots,
     nearThreshold,
     clusterBy,
@@ -861,12 +867,88 @@ function printSeed(report: SeedReport): void {
   );
 }
 
+function incrementCount(counts: Map<string, number>, key: string): void {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+
+function formatCounts(counts: ReadonlyMap<string, number>, limit = 10): string {
+  const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const shown = entries.slice(0, limit).map(([key, count]) => `${key}:${count}`);
+  if (entries.length > limit) shown.push(`...+${entries.length - limit}`);
+  return shown.length === 0 ? "none" : shown.join(" ");
+}
+
+function printSnapshotSummary(seeds: readonly LoadedSeed[], reports: readonly SeedReport[]): void {
+  const byPath = new Map<string, SeedReport[]>();
+  for (let i = 0; i < reports.length; i++) {
+    const path = seeds[i]?.path ?? "<unknown>";
+    const group = byPath.get(path);
+    if (group === undefined) byPath.set(path, [reports[i]!]);
+    else group.push(reports[i]!);
+  }
+
+  console.log("Loaded snapshot stability summary:");
+  for (const [path, group] of byPath.entries()) {
+    const modeCounts = new Map<string, number>();
+    const segmentCounts = new Map<string, number>();
+    const stateCounts = new Map<string, number>();
+    const pfHashes = new Set<string>();
+    const coarseHashes = new Set<string>();
+    const renderCoarseHashes = new Set<string>();
+    let minTimer = Number.POSITIVE_INFINITY;
+    let maxTimer = Number.NEGATIVE_INFINITY;
+    let minScroll = Number.POSITIVE_INFINITY;
+    let maxScroll = Number.NEGATIVE_INFINITY;
+
+    for (const report of group) {
+      incrementCount(modeCounts, `${report.main}/${report.mode}`);
+      incrementCount(segmentCounts, String(report.segment));
+      incrementCount(stateCounts, String(report.playerState));
+      pfHashes.add(report.fingerprint.pfHash);
+      coarseHashes.add(report.fingerprint.coarseHash);
+      renderCoarseHashes.add(report.fingerprint.render.renderCoarseHash);
+      minTimer = Math.min(minTimer, report.timer);
+      maxTimer = Math.max(maxTimer, report.timer);
+      minScroll = Math.min(minScroll, report.scrollWord);
+      maxScroll = Math.max(maxScroll, report.scrollWord);
+    }
+
+    const stable = group.filter(isStablePlayableSample);
+    console.log(
+      `\n${path}: snapshots=${group.length} stablePlayable=${stable.length} ` +
+        `uniquePf=${pfHashes.size} uniqueCoarse=${coarseHashes.size} uniqueRenderCoarse=${renderCoarseHashes.size}`,
+    );
+    console.log(
+      `  modes=${formatCounts(modeCounts)} segments=${formatCounts(segmentCounts)} states=${formatCounts(stateCounts)} ` +
+        `timer=${minTimer}-${maxTimer} scroll=${minScroll}-${maxScroll}`,
+    );
+    if (stable.length === 0) {
+      console.log("  no stable playable snapshots matched main=1/mode=0/state=0/timer>0/pf>4000");
+      continue;
+    }
+    console.log("  first stable playable snapshots:");
+    for (const report of stable.slice(0, 8)) {
+      console.log(
+        `    ${report.label}: frame=${report.frame ?? "?"} seg=${report.segment} timer=${report.timer} ` +
+          `scroll=${report.scrollWord} pf=${report.fingerprint.pfNonzero} ` +
+          `pfHash=${report.fingerprint.pfHash} renderCoarse=${report.fingerprint.render.renderCoarseHash}`,
+      );
+    }
+    if (stable.length > 8) console.log(`    ...+${stable.length - 8} more`);
+  }
+}
+
 function main(): void {
   const args = parseArgs();
   if (args.paths.length === 0) throw new Error("no seed/scenario paths found");
   const seeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
   const { playfieldLookups, source: lookupSource } = loadPromLookups();
   const initialReports = seeds.map((seed) => seedReport(seed, playfieldLookups, lookupSource));
+  if (args.summaryOnly) {
+    console.log(`Render fingerprint lookup source: ${lookupSource}`);
+    printSnapshotSummary(seeds, initialReports);
+    return;
+  }
   const pairs = pairwiseReports(seeds, args.nearThreshold);
 
   if (args.json) {
