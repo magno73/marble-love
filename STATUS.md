@@ -1,7 +1,54 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (detector-ready auto rearm)
+**Ultimo update:** 2026-05-16 (descriptor-aware audit + ROM dispatcher bootstrap)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Descriptor-aware audit + ROM dispatcher bootstrap
+
+Corretto `packages/cli/src/audit-playable-seed.ts`: il gate non usa piu' la
+soglia generica `pf > 4000` per tutti i livelli. Ora legge `workRam[0x474]`,
+associa il seed ai sei descrittori ROM reali, stampa `desc=Lx@ptr`, e usa una
+soglia playfield proporzionale al descrittore (`max(1200, descriptorPf*0.75)`).
+Accetta inoltre `main/mode=0/0` come compatibile con practice perche' il path
+browser `startLevel` cancella `0x400390` all'ingresso manuale.
+
+Effetto sull'L3 detector-gate:
+
+- `/private/tmp/marble-detector-rearm-f1746-long/scenarios/f2300.json`
+  diventa `candidate-needs-route-proof`: L3 `0x2cd9e`, `pf=3428`,
+  MAME active-vs-neutral responsive, manual route stabile.
+- f2500 idem.
+- f3000 resta diagnostic per stabilita' route, f3600 per MAME pair non
+  responsive.
+
+Nuova strategia MAME sperimentale in `oracle/mame_playable_input_capture.lua`:
+`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=2..6` +
+`MARBLE_PLAYABLE_BOOTSTRAP_FRAME=N`. Il capture scrive solo il minimo stato di
+completion atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente,
+`main=3`) e poi lascia che `FUN_118D2`/`FUN_16EC6` reali carichino il livello.
+Non copia playfield o object RAM a mano.
+
+Proof/diagnostica:
+
+- L4 da L3 auto detector + bootstrap:
+  `/private/tmp/marble-l3-bootstrap-l4-v2-active/trace.json` vede
+  L1->L2->L3->L4, pointer L4 `0x2d648` f2341..3900 e player slot attivo.
+  Non e' ancora seed: la coppia MAME non supera active-vs-neutral e l'audit TS
+  non diverge dai frame stabilizzati.
+- L5:
+  `/private/tmp/marble-l3-bootstrap-l5-v2-active/trace.json` e neutral
+  corrispondente vedono L5 `0x2de1e`; f3400 passa descriptor-aware audit e
+  MAME pair (`diffXY=3071443/2102582`) come `candidate-needs-route-proof`.
+- L6:
+  `/private/tmp/marble-l3-bootstrap-l6-v2-active/trace.json` e neutral
+  corrispondente vedono L6 `0x2e790`; MAME f3000 e' responsive, ma il replay TS
+  non diverge ancora, quindi resta diagnostic-only.
+
+Interpretazione: la via intelligente non e' piu' cercare lunghe route casuali.
+La pipeline corretta e': detector-gate reale per arrivare a L3, completion
+bootstrap minimo per materializzare L4-L6 via ROM dispatcher, poi audit
+descriptor-aware + MAME active-vs-neutral + browser/parity review. Nessun nuovo
+`startLevel` e' stato cablato o promosso.
 
 ## 2026-05-16 — Detector-ready auto rearm
 

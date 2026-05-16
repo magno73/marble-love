@@ -12,7 +12,15 @@ import { readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { argv, exit } from "node:process";
 
-import { applySlapsticBank, bootInit, bus as busNs, state as stateNs, tick } from "@marble-love/engine";
+import {
+  applySlapsticBank,
+  bootInit,
+  bus as busNs,
+  level as levelNs,
+  levelDispatcher16EC6 as dispatcherNs,
+  state as stateNs,
+  tick,
+} from "@marble-love/engine";
 import type { GameState, RomImage } from "@marble-love/engine";
 
 interface SeedJson {
@@ -47,6 +55,10 @@ interface SeedSummary {
   main: number;
   mode: number;
   next: number;
+  descriptorPointer: number;
+  descriptorLevel: number | undefined;
+  descriptorPfNonzero: number | undefined;
+  minPlayablePf: number;
   segment: number;
   playerState: number;
   timer: number;
@@ -130,6 +142,15 @@ interface NeutralSeed {
   seed: SeedJson;
 }
 
+interface DescriptorSummary {
+  level: number;
+  index: number;
+  pointer: number;
+  byteSize: number;
+  pfNonzero: number;
+  minPlayablePf: number;
+}
+
 const DEFAULT_PATHS = [
   "packages/web/public/scenarios/playable/manual_level1_start.seed.json",
   "oracle/scenarios/gameplay/level2_spawn.json",
@@ -141,6 +162,7 @@ const DEFAULT_PATHS = [
 const DEFAULT_PLAN = "R:300,D:300,L:300,U:300,DR:300,DL:300,N:400";
 const DEFAULT_DISTINCT_FROM = ["packages/web/public/scenarios/playable/manual_level1_start.seed.json"];
 const DEFAULT_MIN_PLAYFIELD_DIFF = 512;
+const FALLBACK_MIN_PLAYABLE_PF = 4_001;
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
   U: [0, -8],
@@ -323,6 +345,32 @@ function objectRawY(seed: SeedJson): number {
   return signedLong(readLongBE(hexToBytes(seed.workRam, 0x2000, "workRam"), 0x18 + 0x10));
 }
 
+function descriptorSummaries(rom: RomImage): DescriptorSummary[] {
+  return levelNs.loadAllLevels(rom).map((level) => {
+    const gameState = stateNs.emptyGameState();
+    gameState.workRam[0x394] = (level.index >>> 8) & 0xff;
+    gameState.workRam[0x395] = level.index & 0xff;
+    dispatcherNs.levelDispatcher16EC6(gameState, rom);
+    const pfNonzero = nonzero(gameState.playfieldRam);
+    return {
+      level: level.index + 1,
+      index: level.index,
+      pointer: level.romOffset,
+      byteSize: level.byteSize,
+      pfNonzero,
+      minPlayablePf: Math.max(1_200, Math.floor(pfNonzero * 0.75)),
+    };
+  });
+}
+
+function descriptorForPointer(descriptors: readonly DescriptorSummary[], pointer: number): DescriptorSummary | undefined {
+  return descriptors.find((descriptor) => descriptor.pointer === pointer);
+}
+
+function practiceCompatibleMainMode(summary: SeedSummary): boolean {
+  return summary.mode === 0 && (summary.main === 0 || summary.main === 1);
+}
+
 function expandRouteSpec(spec: string): string[] {
   const out: string[] = [];
   for (const part of spec.split(",")) {
@@ -392,15 +440,21 @@ function compareMamePair(activeSeed: SeedJson, neutralPath: string, neutralSeed:
   };
 }
 
-function seedSummary(seed: SeedJson): SeedSummary {
+function seedSummary(seed: SeedJson, descriptors: readonly DescriptorSummary[] = []): SeedSummary {
   const workRam = hexToBytes(seed.workRam, 0x2000, "workRam");
   const playfieldRam = hexToBytes(seed.playfieldRam, 0x2000, "playfieldRam");
+  const descriptorPointer = readLongBE(workRam, 0x474);
+  const descriptor = descriptorForPointer(descriptors, descriptorPointer);
   return {
     frame: seed.frame,
     slapsticBank: seed.slapsticBank ?? 1,
     main: readWordBE(workRam, 0x390),
     mode: readWordBE(workRam, 0x392),
     next: readWordBE(workRam, 0x394),
+    descriptorPointer,
+    descriptorLevel: descriptor?.level,
+    descriptorPfNonzero: descriptor?.pfNonzero,
+    minPlayablePf: descriptor?.minPlayablePf ?? FALLBACK_MIN_PLAYABLE_PF,
     segment: workRam[0x3e4] ?? 0,
     playerState: workRam[0x18 + 0x1a] ?? 0,
     timer: readWordBE(workRam, 0x18 + 0x6a),
@@ -527,7 +581,13 @@ function runRoute(rom: RomImage, gameState: GameState, plan: readonly string[]):
   };
 }
 
-function compareRoute(rom: RomImage, seed: SeedJson, plan: readonly string[], manualDispatcher: boolean): ComparisonSummary {
+function compareRoute(
+  rom: RomImage,
+  seed: SeedJson,
+  plan: readonly string[],
+  manualDispatcher: boolean,
+  minStablePf: number,
+): ComparisonSummary {
   const neutralPlan = Array.from({ length: plan.length }, () => "N");
   const active = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), plan);
   const neutral = runRoute(rom, loadStateFromSeed(rom, seed, manualDispatcher), neutralPlan);
@@ -535,7 +595,7 @@ function compareRoute(rom: RomImage, seed: SeedJson, plan: readonly string[], ma
   const diffY = Math.abs(active.finalY - neutral.finalY);
   const responsive = diffX > 1_000_000 || diffY > 1_000_000;
   const stable =
-    active.pfCount > 4_000 &&
+    active.pfCount >= minStablePf &&
     active.maxEmptyRun <= 16 &&
     active.maxState1Run === 0 &&
     active.maxState2Run <= 60 &&
@@ -565,10 +625,12 @@ function passesCheapCandidateGate(
   loaded: LoadedSeed,
   playfieldReferences: LoadedSeed[],
   minPlayfieldDiff: number,
+  descriptors: readonly DescriptorSummary[],
 ): boolean {
-  const initial = seedSummary(loaded.seed);
-  if (initial.pfCount <= 4_000) return false;
-  if (initial.main !== 1 || initial.mode !== 0) return false;
+  const initial = seedSummary(loaded.seed, descriptors);
+  if (initial.descriptorLevel === undefined) return false;
+  if (initial.pfCount < initial.minPlayablePf) return false;
+  if (!practiceCompatibleMainMode(initial)) return false;
   if (initial.timer <= 0) return false;
   if (initial.playerState !== 0) return false;
   if (loaded.sourcePath.includes("oracle/scenarios/gameplay/")) return false;
@@ -584,19 +646,27 @@ function auditPath(
   neutral: NeutralSeed | undefined,
   playfieldReferences: LoadedSeed[],
   minPlayfieldDiff: number,
+  descriptors: readonly DescriptorSummary[],
 ): AuditSummary {
   const seed = loaded.seed;
-  const initial = seedSummary(seed);
+  const initial = seedSummary(seed, descriptors);
   const playfieldReferenceSummaries = comparePlayfieldReferences(loaded, playfieldReferences, minPlayfieldDiff);
   const mamePair = neutral === undefined ? undefined : compareMamePair(seed, neutral.path, neutral.seed);
-  const preserved = compareRoute(rom, seed, plan, false);
-  const manualRearm = compareRoute(rom, seed, plan, true);
+  const preserved = compareRoute(rom, seed, plan, false, initial.minPlayablePf);
+  const manualRearm = compareRoute(rom, seed, plan, true, initial.minPlayablePf);
   const isGameplayOracleSeed = loaded.sourcePath.includes("oracle/scenarios/gameplay/");
   const isCheckedInPlayableSeed = loaded.sourcePath.includes("packages/web/public/scenarios/playable/");
   const reasons: string[] = [];
 
-  if (initial.pfCount <= 4_000) reasons.push("playfield is not fully populated at seed frame");
-  if (initial.main !== 1 || initial.mode !== 0) reasons.push(`seed starts outside playable main/mode 1/0 (${initial.main}/${initial.mode})`);
+  if (initial.descriptorLevel === undefined) {
+    reasons.push(`seed descriptor pointer 0x${initial.descriptorPointer.toString(16)} is not one of the six ROM descriptors`);
+  }
+  if (initial.pfCount < initial.minPlayablePf) {
+    reasons.push(`playfield is below descriptor-aware threshold (${initial.pfCount} < ${initial.minPlayablePf})`);
+  }
+  if (!practiceCompatibleMainMode(initial)) {
+    reasons.push(`seed starts outside practice-compatible main/mode 0|1/0 (${initial.main}/${initial.mode})`);
+  }
   if (initial.timer <= 0) reasons.push("seed starts with a dead/zero timer");
   for (const reference of playfieldReferenceSummaries) {
     if (reference.exactMatch) {
@@ -624,10 +694,10 @@ function auditPath(
   }
 
   const isManualCandidate =
-    initial.pfCount > 4_000 &&
+    initial.descriptorLevel !== undefined &&
+    initial.pfCount >= initial.minPlayablePf &&
     playfieldReferenceSummaries.every((reference) => !reference.nearDuplicate) &&
-    initial.main === 1 &&
-    initial.mode === 0 &&
+    practiceCompatibleMainMode(initial) &&
     initial.timer > 0 &&
     initial.playerState === 0 &&
     manualRearm.responsive &&
@@ -662,6 +732,8 @@ function printSummary(summary: AuditSummary): void {
   console.log(`\n${summary.path}`);
   console.log(
     `  seed: frame=${init.frame ?? "?"} bank=${init.slapsticBank} main=${init.main} mode=${init.mode} next=${init.next} ` +
+      `desc=${init.descriptorLevel === undefined ? "?" : `L${init.descriptorLevel}`}@0x${init.descriptorPointer.toString(16)} ` +
+      `descPf=${init.descriptorPfNonzero ?? "?"} minPf=${init.minPlayablePf} ` +
       `seg=${init.segment} state=${init.playerState} timer=${init.timer} scroll=${init.scrollWord} ` +
       `xy=${fmt(init.x)},${fmt(init.y)} pf=${init.pfCount}`,
   );
@@ -706,18 +778,19 @@ function main(): void {
   const plan = expandRouteSpec(args.plan);
   const rom = busNs.emptyRomImage();
   applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+  const descriptors = descriptorSummaries(rom);
   const playfieldReferences = args.distinctFrom.flatMap((path) => loadSeeds(path, false));
 
   const loadedSeeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
   const filteredSeeds =
     args.targetSegment === undefined
       ? loadedSeeds
-      : loadedSeeds.filter((seed) => seedSummary(seed.seed).segment === args.targetSegment);
+      : loadedSeeds.filter((seed) => seedSummary(seed.seed, descriptors).segment === args.targetSegment);
   const routeAuditSeeds = args.onlyCandidates
-    ? filteredSeeds.filter((seed) => passesCheapCandidateGate(seed, playfieldReferences, args.minPlayfieldDiff))
+    ? filteredSeeds.filter((seed) => passesCheapCandidateGate(seed, playfieldReferences, args.minPlayfieldDiff, descriptors))
     : filteredSeeds;
   const summaries = routeAuditSeeds.map((seed) =>
-    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences, args.minPlayfieldDiff),
+    auditPath(rom, seed, plan, loadNeutralSeed(args, seed), playfieldReferences, args.minPlayfieldDiff, descriptors),
   );
   const visibleSummaries = args.onlyCandidates
     ? summaries.filter((summary) => summary.verdict !== "diagnostic-only")

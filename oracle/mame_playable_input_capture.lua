@@ -35,6 +35,9 @@
 --   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START first auto gate frame
 --                                     (default: START_FRAME)
 --   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX max automatic clears (default 8)
+--   MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL level 2..6 to load through the
+--                                     ROM main=3 transition branch
+--   MARBLE_PLAYABLE_BOOTSTRAP_FRAME frame for the bootstrap main=3 write
 --   MARBLE_PLAYABLE_SERVICE_MODE=1 forces F60001 bit 6 low via read-tap
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
@@ -74,6 +77,8 @@ local FORCE_MANUAL_FRAMES_RAW = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES")
 local FORCE_MANUAL_ON_DETECTOR_READY = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_READY") == "1"
 local FORCE_MANUAL_ON_DETECTOR_START = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START") or tostring(START_FRAME)) or START_FRAME
 local FORCE_MANUAL_ON_DETECTOR_MAX = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX") or "8") or 8
+local BOOTSTRAP_TARGET_LEVEL = tonumber(os.getenv("MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL") or "")
+local BOOTSTRAP_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_BOOTSTRAP_FRAME") or "")
 local FRAME_FORCE_MANUAL_DISPATCHER =
     os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1"
     or FORCE_MANUAL_FRAMES_RAW ~= ""
@@ -83,6 +88,19 @@ local FORCE_MANUAL_DISPATCHER =
 local FORCE_SERVICE_MODE = os.getenv("MARBLE_PLAYABLE_SERVICE_MODE") == "1"
 local manual_dispatcher_index = 1
 local detector_rearm_count = 0
+local bootstrap_applied = false
+
+if BOOTSTRAP_TARGET_LEVEL ~= nil then
+    BOOTSTRAP_TARGET_LEVEL = math.floor(BOOTSTRAP_TARGET_LEVEL)
+    if BOOTSTRAP_TARGET_LEVEL < 2 or BOOTSTRAP_TARGET_LEVEL > 6 then
+        error("[mame_playable_input_capture] MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL must be 2..6")
+    end
+    if BOOTSTRAP_FRAME == nil then
+        BOOTSTRAP_FRAME = TRACKBALL_START
+    else
+        BOOTSTRAP_FRAME = math.floor(BOOTSTRAP_FRAME)
+    end
+end
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -775,6 +793,13 @@ local function write_abs_u16(addr, value)
     end
 end
 
+local function write_abs_u8(addr, value)
+    local v = value & 0xff
+    if mem.write_u8 ~= nil then
+        mem:write_u8(addr, v)
+    end
+end
+
 local function read_abs_u8(addr)
     if mem == nil then return 0 end
     return mem:read_u8(addr) & 0xff
@@ -840,6 +865,31 @@ local function apply_detector_ready_rearm(frame)
     ))
 end
 
+local function apply_level_bootstrap(frame)
+    if BOOTSTRAP_TARGET_LEVEL == nil then return end
+    if bootstrap_applied then return end
+    if mem == nil then return end
+    if frame < BOOTSTRAP_FRAME then return end
+
+    -- Exercise the real ROM transition path instead of copying descriptor RAM
+    -- by hand. FUN_1101E case main=3 increments 0x400394 before calling
+    -- FUN_118D2/FUN_16EC6, so seed the previous index for target levels 2..6.
+    -- FUN_118D2/FUN_259B4 only reinitializes player/object slots that are in
+    -- completion state 3; other slot states are deliberately cleared.
+    write_abs_u8(0x400030, 3)
+    write_abs_u8(0x400032, 6)
+    write_abs_u16(0x400394, BOOTSTRAP_TARGET_LEVEL - 2)
+    write_abs_u16(0x400392, 0)
+    write_abs_u16(0x400390, 3)
+    bootstrap_applied = true
+    print(string.format(
+        "[mame_playable_input_capture] ROM dispatcher bootstrap target L%d at f%d (prev idx %d)",
+        BOOTSTRAP_TARGET_LEVEL,
+        frame,
+        BOOTSTRAP_TARGET_LEVEL - 2
+    ))
+end
+
 emu.register_frame_done(function()
     if cpu == nil then
         cpu = manager.machine.devices[":maincpu"]
@@ -863,6 +913,7 @@ emu.register_frame_done(function()
     end
 
     frame_count = frame_count + 1
+    apply_level_bootstrap(frame_count)
     apply_timer_override(frame_count)
     apply_manual_dispatcher_rearm(frame_count)
     apply_detector_ready_rearm(frame_count)
