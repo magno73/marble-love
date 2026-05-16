@@ -104,7 +104,11 @@ MAME, usa `oracle/mame_level_descriptor_tap.lua`. Con
 `MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1` il tap gira insieme a
 `mame_playable_input_capture.lua` e registra `0x400474` in
 `pointerWindows`; usa una `-cfg_directory` temporanea pulita per evitare DIP
-service persistenti nel cfg locale. L'ultimo no-coin proof fino a f65000 in
+service persistenti nel cfg locale. Il tap registra anche il gate endgame di
+`FUN_251DE`/`FUN_253EC`, i write a `0x400390` e i campi object `+0x18`,
+`+0x1A`, `+0x20`, `+0x36`: la run forced-manual step4 f15780..f17200 resta su
+L2, non colpisce `0x253A4`/`0x253B2`, e vede solo il write manuale forzato a
+`0x400390`. L'ultimo no-coin proof fino a f65000 in
 `/private/tmp/marble-level-descriptor-nocoin-65000/trace.json` vede solo L1
 `0x2bee2` e L2 `0x2c54c`; L3-L6 restano a `0` frame, quindi l'attract no-coin
 non puo' produrre i sei seed reali.

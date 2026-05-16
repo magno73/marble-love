@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME forced-manual L3 falsification)
+**Ultimo update:** 2026-05-16 (MAME object-scan endgame gate trace)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME object-scan endgame gate trace
+
+Esteso `oracle/mame_level_descriptor_tap.lua` per tracciare il gate causale di
+fine livello, non solo il pointer descriptor: PC tap su `FUN_10FCE`,
+`FUN_251DE`, `FUN_253EC`, `0x253A4`/`0x253B2`, write tap su
+`workRam[0x390..0x391]`, e campi frame-level `objCount`, `obj0State18`
+(`obj+0x18`), `obj0Substate1a` (`obj+0x1A`), `obj0GateX20` (`obj+0x20`) e
+`obj0Field36` (`obj+0x36`). Smoke MAME headless con cfg pulita:
+`/private/tmp/marble-descriptor-object-smoke2/trace.json`.
+
+Run MAME forced-manual attiva da boot/attract al frame reale `level1_end`
+f15800, cfg pulita, rearm manuale forzato a f15800 e route step4
+`L:180,DL:1200`:
+
+- descriptor/object trace:
+  `/private/tmp/marble-l1end-forced-object-step4/trace.json`.
+- snapshots catturate:
+  `/private/tmp/marble-l1end-forced-object-step4/scenarios/`.
+
+Risultato: `seenLevelCount=1`, unica pointer window L2 `0x2c54c` per tutta la
+finestra f15780..f17200. Il trace registra `FUN_251DE_object_scan_dispatch=700`
+e `FUN_253EC_object_step=1384`, ma nessun hit su
+`FUN_251DE_endgame_set_flag` (`0x253A4`) o `FUN_251DE_write_main3`
+(`0x253B2`). L'unico write a `workRam[0x390..0x391]` e' il rearm forzato a
+f15800 (`PC=0x028DF0`, data `0`). I sample restano sempre `main!=3`,
+`levelIndex<2`, `objCount=1`, `obj0State18=1`; `obj0Substate1a` non raggiunge
+mai `5`/`6`, e non compare alcun pointer L3-L6.
+
+`inspect-level-descriptors --transition-summary` sugli snapshot della stessa
+run non trova finestre byte-exact dei descrittori ROM; le snapshot f15800,
+f16743, f17000 e f17200 non sono stable-playable (`main/mode=0/2`) e restano
+lontane dai descriptor. Interpretazione: il forced-manual MAME e' responsive,
+ma non sta esercitando un vero path di completamento livello; il gate endgame di
+`FUN_251DE` non setta `main=3`. Il proof TS warm `level1_end -> L3` resta un
+test di wiring engine, non un seed promuovibile. Nessun nuovo `startLevel` e'
+stato cablato.
 
 ## 2026-05-16 — MAME forced-manual L3 falsification
 
