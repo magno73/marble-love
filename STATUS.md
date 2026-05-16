@@ -1,7 +1,39 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME candidate proof planning)
+**Ultimo update:** 2026-05-16 (MAME candidate proof result)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME candidate proof result
+
+Prima esecuzione del proof MAME active-vs-neutral sui quattro candidati piu'
+promettenti della suite multi-route. Comandi derivati dal planner
+`plan-mame-candidate-captures.ts`.
+
+Catture:
+
+- Active: `MARBLE_PLAYABLE_ROUTE=D:171,R:206,L:188,DL:107,BR:260,R:700,D:300,R:800,DR:300,R:800,U:100,R:500,N:10000`,
+  `MARBLE_PLAYABLE_TRACKBALL_START=2046`,
+  `MARBLE_PLAYABLE_FRAME_LIST=03_ladder_seg2_f480:2525,05_ladder_seg5_f4560:6605,06_ladder_seg3_f1440:3485,07_ladder_seg4_f3600:5645`.
+- Neutral: stessa frame-list, route `N:4661`.
+- Output temporaneo:
+  `/private/tmp/marble-mame-candidate-captures/active_2046_D_171_R_206_L_188_DL_107_BR`
+  e
+  `/private/tmp/marble-mame-candidate-captures/neutral_2046_D_171_R_206_L_188_DL_107_BR`.
+
+Audit:
+
+- `03_ladder_seg2_f480`: MAME active-vs-neutral responsive (`diffXY=6006742/919369`), ma il seed catturato e' `main=0 mode=2 seg=1`, quindi presentation/non-practice.
+- `06_ladder_seg3_f1440`: MAME responsive (`diffXY=224212/13626186`), ma parte da `main=0 mode=2 seg=1` e la route non resta stabile.
+- `07_ladder_seg4_f3600`: MAME responsive (`diffXY=1739907/12620502`), ma parte in `main=4 mode=2`, timer `0`, state `4`.
+- `05_ladder_seg5_f4560`: non responsive in MAME (`diffXY=0/0`) e parte in state `4`; il rearm TS manuale e' responsive/stable ma non basta.
+
+Risultato: nessun candidato viene promosso. Il proof falsifica l'ipotesi che
+`absoluteFrame = manual_level1_start.frame + routeFrame` basti a riprodurre in
+MAME boot il path TS warm/browser-rearmed: i frame MAME corrispondenti cadono
+spesso in presentation/high-score o stato non giocabile. La lista corta resta
+utile come diagnostica TS, ma il prossimo step deve cercare route MAME-live
+vere dal boot oppure capture manuali/playback che arrivino a finestre
+controllabili e stabili, non solo proiettare i frame TS warm su MAME.
 
 ## 2026-05-16 — MAME candidate proof planning
 

@@ -77,9 +77,12 @@ riprodurre il candidato in MAME. Dopo un cluster distinto,
 ora scarta anche near-duplicate con `--min-playfield-diff` (default 512 byte PF)
 prima di cablare un nuovo `startLevel`. Per generare i comandi MAME active,
 neutral e audit da un manifest usa
-`npx tsx packages/cli/src/plan-mame-candidate-captures.ts manifest.json`. I
-vecchi `levelN_spawn` restano scenari oracle/demo e non vanno usati come
-practice start.
+`npx tsx packages/cli/src/plan-mame-candidate-captures.ts manifest.json`.
+Attenzione: quando un candidato nasce da un seed warm/browser-rearmed, il frame
+assoluto MAME generato dal planner e' un proof/falsification check, non una
+garanzia di equivalenza; se l'audit torna in `mode=2`, timer `0` o state non
+giocabile, serve una route MAME-live/manuale vera. I vecchi `levelN_spawn`
+restano scenari oracle/demo e non vanno usati come practice start.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
