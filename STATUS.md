@@ -1,7 +1,26 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (six candidate seed audit)
+**Ultimo update:** 2026-05-16 (startLevel 1..6 wired to real descriptors)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — startLevel real descriptor wiring
+
+Dopo il gate `verify-start-level-candidates.ts --proofs`, il mapping pubblico
+`startLevel=1..6` e' stato cablato ai sei seed post-seed descriptor reali:
+
+| startLevel | seed | desc |
+| --- | --- | --- |
+| 1 | `candidate_level1_postseed_r_f3020` | `0x2bee2` |
+| 2 | `candidate_level2_postseed_dr_f3000` | `0x2c54c` |
+| 3 | `candidate_level3_postseed_ur_f3000` | `0x2cd9e` |
+| 4 | `candidate_level4_postseed_dr_f3200` | `0x2d648` |
+| 5 | `candidate_level5_postseed_dl_f3520` | `0x2de1e` |
+| 6 | `candidate_level6_postseed_ul_f3600` | `0x2e790` |
+
+`manual_level1_start` non e' piu' il seed practice di `startLevel=1`; resta
+seed legacy/live-play per `?play=1` e drill espliciti via
+`?playableSeed=manual_level1_start`. Questo risolve l'ambiguita' storica:
+`startLevel=N` ora significa livello ROM reale N, non il vecchio nome browser.
 
 ## 2026-05-16 — Six candidate seed audit
 
@@ -37,10 +56,8 @@ Risultato: `verdict: pass`. Matrice seed/proof:
 
 La distanza minima pairwise tra playfield dei sei candidati e' L3/L4 = `4547`
 byte, sopra la soglia `512`; gli hash playfield sono unici. Questo chiude il
-gate di identificazione/seed-candidate dei sei descrittori reali. Non e' stato
-cablato `startLevel`: resta da decidere il mapping pubblico, perche'
-`manual_level1_start` e' ancora il seed legacy di `startLevel=1` ma punta alla
-famiglia descriptor L2.
+gate di identificazione/seed-candidate dei sei descrittori reali e ha permesso
+il wiring `startLevel=1..6` nella sezione successiva.
 
 ## 2026-05-16 — L2 canonical candidate after remap
 

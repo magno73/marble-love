@@ -155,8 +155,8 @@ function createStartLevelUnavailableOverlay(level: number): HTMLDivElement {
     "color:#d9f7ff;font:14px/1.45 system-ui,-apple-system,sans-serif;text-align:left;";
   el.textContent =
     `startLevel=${level} non ha ancora un seed giocabile verificato. ` +
-    "Per ora solo startLevel=1 usa il seed manuale reale; i vecchi levelN_spawn " +
-    "sono snapshot demo/oracle e non corrispondono ai livelli playable.";
+    "Il mapping practice resta bloccato finche' il candidato non passa il gate " +
+    "descriptor, MAME active-vs-neutral e smoke browser.";
   document.body.appendChild(el);
   return el;
 }
