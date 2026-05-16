@@ -490,6 +490,9 @@ async function startGame(
   const objectDebugOverlay =
     showObjectDebugOverlay && !startLevelPracticeUnavailable ? createObjectDebugOverlay() : undefined;
   const inputState = initInput();
+  if (warmStateIsPlayableSeed) {
+    inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
+  }
   let browserCoinCredits = 0;
   let previousInputButtons = 0;
   let manualPlayStarted = false;

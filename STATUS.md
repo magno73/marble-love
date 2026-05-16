@@ -1,7 +1,61 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L6 playableSeed export review)
+**Ultimo update:** 2026-05-16 (seed review strategy + L6 visual smoke parity)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Seed review strategy + L6 visual smoke parity
+
+Decisione tecnica: i sei livelli ROM sono gia' identificati; il lavoro
+rimanente non e' discovery dei descrittori, ma trovare finestre runtime sane.
+Ogni start level deve quindi passare una catena separata:
+
+- descriptor ROM reale in `workRam[0x474]`;
+- playfield/camera/player state coerenti e distinti da L1;
+- input active-vs-neutral responsivo in MAME;
+- replay TS/browser zero-death o con failure spiegata;
+- review visuale con ROM/PROM reali prima di qualunque wiring `startLevel`.
+
+Correzioni fatte per rendere affidabile la review locale:
+
+- `packages/cli/src/visual-smoke-real.ts` ora accetta `--seed PATH`,
+  `--ticks N`, `--out PATH` e `--preserve-dispatcher`, carica PROM anche da
+  `roms/marble.zip`, e renderizza un PPM da seed flat o scenario snapshot.
+- Lo smoke usa `applySlapsticBank.loadRomBlob()` come gli audit: copiare solo
+  `rom.program` lasciava vuoti i bank slapstic pristine e produceva falsi
+  death/parity gap dopo il primo tick.
+- Lo smoke e il path browser allineano l'input assoluto P1 ai byte salvati nel
+  seed (`obj0+0xc9/0xc8`). Senza questo, un `?playableSeed=...` partiva con
+  un delta trackball spurio rispetto all'audit.
+
+Verifica L6 sul candidato diagnostico
+`packages/web/public/scenarios/playable/candidate_level6_bootstrap_ul_f3600.seed.json`:
+
+```sh
+node --import tsx packages/cli/src/visual-smoke-real.ts \
+  --seed packages/web/public/scenarios/playable/candidate_level6_bootstrap_ul_f3600.seed.json \
+  --ticks 120 \
+  --out /private/tmp/marble-l6-candidate-f3720-aligned.ppm
+```
+
+Risultato: L6 `0x2e790`, `main/mode=0/0`, `state=0`, timer `78 -> 76`,
+`pf=3486`, scroll `0`, frame nonblank con 2121 playfield tile, 12 sprite e
+216 alpha char. Questo allinea lo smoke al tracer/audit (`N:120` zero death).
+Il seed resta comunque `candidate-needs-route-proof`: non e' stato cablato
+`startLevel=6` e il browser/manual review resta un gate prima della promozione.
+
+Riflessione operativa per i livelli mancanti:
+
+- L6 e' la frontiera piu' matura: chiudere browser/manual review e solo dopo
+  decidere se promuovere.
+- L4 non va cercato a caso: i dati indicano MAME-responsive ma death-prone nel
+  replay TS. La prossima azione utile e' un diff primo-frame su collisione,
+  height/z, state machine e trackball, non uno sweep piu' largo.
+- L5 f3400 muore anche neutral: va scartato come seed e va cercata una finestra
+  piu' tarda o piu' energeticamente quieta dopo bootstrap ROM.
+- L3 ha proof causale detector-gate verso il descriptor, ma manca ancora una
+  finestra route-safe; trattarlo come ricerca di finestra stabile post-load.
+- L2 va rifatto dal path di transizione reale/stable, evitando i falsi exact
+  `state=6`.
 
 ## 2026-05-16 — L6 playableSeed export review
 

@@ -17,11 +17,13 @@
  * scroll, palette, ecc. — utile prima di lanciare il browser.
  */
 
+import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { exit } from "node:process";
 
 import {
+  applySlapsticBank,
   state as stateNs,
   bus as busNs,
   bootInit,
@@ -107,10 +109,117 @@ function decodeGraphicsLookups(proms: Uint8Array): {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
+interface CliArgs {
+  ticks: number;
+  ppmPath: string | undefined;
+  seedPath: string | undefined;
+  preserveDispatcher: boolean;
+}
+
+interface SeedJson {
+  frame?: number;
+  slapsticBank?: number;
+  workRam: string;
+  playfieldRam: string;
+  spriteRam: string;
+  alphaRam: string;
+  colorRam: string;
+}
+
+interface ScenarioJson {
+  snapshots?: SeedJson[];
+}
+
 function countNonZero(buf: Uint8Array): number {
   let count = 0;
   for (let i = 0; i < buf.length; i++) if (buf[i] !== 0) count += 1;
   return count;
+}
+
+function parseArgs(): CliArgs {
+  const raw = process.argv.slice(2);
+  let ticks = 300;
+  let ppmPath: string | undefined;
+  let seedPath: string | undefined;
+  let preserveDispatcher = false;
+  const positional: string[] = [];
+
+  for (let i = 0; i < raw.length; i++) {
+    const arg = raw[i]!;
+    if (arg === "--seed") {
+      seedPath = requireValue(raw[++i], "--seed");
+    } else if (arg === "--ticks") {
+      ticks = parseNonNegativeInt(raw[++i], "--ticks");
+    } else if (arg === "--out" || arg === "--ppm") {
+      ppmPath = requireValue(raw[++i], arg);
+    } else if (arg === "--preserve-dispatcher") {
+      preserveDispatcher = true;
+    } else if (arg === "-h" || arg === "--help") {
+      console.log(`visual-smoke-real - render a ROM-backed diagnostic frame
+
+Usage:
+  node --import tsx packages/cli/src/visual-smoke-real.ts [ticks] [out.ppm]
+  node --import tsx packages/cli/src/visual-smoke-real.ts --seed seed.json --ticks 0 --out out.ppm
+
+Options:
+  --seed PATH              Load a flat seed JSON or scenario snapshot instead
+                           of booting/preloading level 1
+  --ticks N                Ticks to run after boot/warm load (default: 300)
+  --out, --ppm PATH        Optional PPM dump path
+  --preserve-dispatcher    Do not clear workRam[0x390] for --seed review
+  -h, --help               Show this help
+`);
+      exit(0);
+    } else {
+      positional.push(arg);
+    }
+  }
+
+  if (positional[0] !== undefined) ticks = parseNonNegativeInt(positional[0], "ticks");
+  if (positional[1] !== undefined) ppmPath = positional[1];
+  return { ticks, ppmPath, seedPath, preserveDispatcher };
+}
+
+function requireValue(raw: string | undefined, label: string): string {
+  if (raw === undefined || raw === "") throw new Error(`${label} requires a value`);
+  return raw;
+}
+
+function parseNonNegativeInt(raw: string | undefined, label: string): number {
+  const value = Number(requireValue(raw, label));
+  if (!Number.isInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer`);
+  return value;
+}
+
+function hexToBytes(hex: string, expectedLength: number, label: string): Uint8Array {
+  if (hex.length !== expectedLength * 2) {
+    throw new Error(`${label} has ${hex.length / 2} bytes, expected ${expectedLength}`);
+  }
+  const out = new Uint8Array(expectedLength);
+  for (let i = 0; i < expectedLength; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+function readWordBE(bytes: Uint8Array, off: number): number {
+  return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
+}
+
+function readLongBE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function signedLong(value: number): number {
+  return value | 0;
+}
+
+function fixed16(bytes: Uint8Array, off: number): number {
+  return signedLong(readLongBE(bytes, off)) / 65536;
 }
 
 function loadProms(): Uint8Array | null {
@@ -128,7 +237,50 @@ function loadProms(): Uint8Array | null {
       return proms;
     }
   }
+  if (existsSync("roms/marble.zip")) {
+    const proms = new Uint8Array(0x400);
+    const p118 = execFileSync("unzip", ["-p", "roms/marble.zip", "136033.118"]);
+    const p119 = execFileSync("unzip", ["-p", "roms/marble.zip", "136033.119"]);
+    proms.set(p118.subarray(0, 0x200), 0);
+    proms.set(p119.subarray(0, 0x200), 0x200);
+    return proms;
+  }
   return null;
+}
+
+function loadSeed(path: string): SeedJson {
+  const raw = JSON.parse(readFileSync(resolve(path), "utf-8")) as ScenarioJson | SeedJson;
+  if ("snapshots" in raw && Array.isArray(raw.snapshots)) {
+    const seed = raw.snapshots[0];
+    if (seed === undefined) throw new Error(`${path} has no snapshots`);
+    return seed;
+  }
+  return raw as SeedJson;
+}
+
+function warmStateFromSeed(seed: SeedJson): NonNullable<NonNullable<Parameters<typeof bootInit>[2]>["warmState"]> {
+  const workRam = hexToBytes(seed.workRam, 0x2000, "workRam");
+  return {
+    workRam,
+    playfieldRam: hexToBytes(seed.playfieldRam, 0x2000, "playfieldRam"),
+    spriteRam: hexToBytes(seed.spriteRam, 0x1000, "spriteRam"),
+    alphaRam: hexToBytes(seed.alphaRam, 0x1000, "alphaRam"),
+    colorRam: hexToBytes(seed.colorRam, 0x800, "colorRam"),
+    videoScrollY: readWordBE(workRam, 0x02) & 0x1ff,
+    videoScrollX: 0,
+    slapsticBank: seed.slapsticBank ?? 1,
+  };
+}
+
+function printPlayableState(prefix: string, workRam: Uint8Array, pfCount: number): void {
+  const desc = readLongBE(workRam, 0x474);
+  console.log(
+    `${prefix} main/mode=${readWordBE(workRam, 0x390)}/${readWordBE(workRam, 0x392)}` +
+      ` next=${readWordBE(workRam, 0x394)} desc=0x${desc.toString(16)}` +
+      ` state=${workRam[0x18 + 0x1a] ?? 0} timer=${readWordBE(workRam, 0x18 + 0x6a)}` +
+      ` xy=${fixed16(workRam, 0x18 + 0x0c).toFixed(2)},${fixed16(workRam, 0x18 + 0x10).toFixed(2)}` +
+      ` z=${fixed16(workRam, 0x18 + 0x14).toFixed(2)} pf=${pfCount}`,
+  );
 }
 
 // ─── PPM dumper ──────────────────────────────────────────────────────────
@@ -207,8 +359,7 @@ function dumpFramePpm(
 // ─── Main ────────────────────────────────────────────────────────────────
 
 function main(): void {
-  const ticks = Number(process.argv[2] ?? "300");
-  const ppmPath = process.argv[3];
+  const args = parseArgs();
 
   // 1. Load program ROM
   const romPath = resolve("ghidra_project/marble_program.bin");
@@ -218,13 +369,13 @@ function main(): void {
   }
   const romBuf = readFileSync(romPath);
   const rom = busNs.emptyRomImage();
-  rom.program.set(romBuf.subarray(0, rom.program.length));
+  applySlapsticBank.loadRomBlob(rom, romBuf);
 
   // 2. Load PROMs
   const proms = loadProms();
   if (proms === null) {
     console.error(
-      "error: PROMs non trovati. Estrai prima:\n" +
+      "error: PROMs non trovati. Estrai prima o aggiungi roms/marble.zip:\n" +
         "  unzip -p roms/marble.zip 136033.118 > /tmp/prom118.bin\n" +
         "  unzip -p roms/marble.zip 136033.119 > /tmp/prom119.bin",
     );
@@ -243,12 +394,41 @@ function main(): void {
 
   // 4. Engine init
   const s = stateNs.emptyGameState();
-  bootInit(s, rom, { preloadLevel: 0, fullScreenInit: true });
+  let seedNeutralP1X: number | undefined;
+  let seedNeutralP1Y: number | undefined;
+  if (args.seedPath !== undefined) {
+    const seed = loadSeed(args.seedPath);
+    bootInit(s, rom, { warmState: warmStateFromSeed(seed) });
+    if (!args.preserveDispatcher) {
+      s.workRam[0x390] = 0;
+      s.workRam[0x391] = 0;
+    }
+    s.clock.mainLoopBodyTicks = 1 as typeof s.clock.mainLoopBodyTicks;
+    seedNeutralP1X = s.workRam[0x18 + 0xc9] ?? 0xff;
+    seedNeutralP1Y = s.workRam[0x18 + 0xc8] ?? 0xff;
+    console.log(`\n=== warm seed loaded ===`);
+    console.log(`  seed: ${resolve(args.seedPath)} frame=${seed.frame ?? "?"}`);
+    printPlayableState("  seed state:", s.workRam, countNonZero(s.playfieldRam));
+  } else {
+    bootInit(s, rom, { preloadLevel: 0, fullScreenInit: true });
+  }
 
   // 5. Run ticks
-  console.log(`\n=== run ${ticks} tick (runMainLoopBody=true) ===`);
-  for (let i = 0; i < ticks; i++) {
-    tick(s, { rom, runMainLoopBody: true });
+  console.log(`\n=== run ${args.ticks} tick (runMainLoopBody=true) ===`);
+  for (let i = 0; i < args.ticks; i++) {
+    if (seedNeutralP1X !== undefined && seedNeutralP1Y !== undefined) {
+      tick(s, {
+        rom,
+        runMainLoopBody: true,
+        p1X: seedNeutralP1X,
+        p1Y: seedNeutralP1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+    } else {
+      tick(s, { rom, runMainLoopBody: true });
+    }
   }
 
   // 6. State diagnostics
@@ -263,6 +443,7 @@ function main(): void {
   console.log(`  alphaRam:     ${alpNz}/${s.alphaRam.length}`);
   console.log(`  colorRam:     ${colNz}/${s.colorRam.length}`);
   console.log(`  workRam:      ${wkNz}/${s.workRam.length}`);
+  printPlayableState("  final state:", s.workRam, pfNz);
 
   // 7. buildFrame con tutti i lookup
   const opts: Parameters<typeof renderNs.buildFrame>[1] = {
@@ -411,10 +592,10 @@ function main(): void {
   }
 
   // Optional PPM dump
-  if (ppmPath !== undefined) {
-    const out = resolve(ppmPath);
+  if (args.ppmPath !== undefined) {
+    const out = resolve(args.ppmPath);
     dumpFramePpm(frame, out);
-    console.log(`\n  📸 PPM dump → ${out} (512×512, P6 binary)`);
+    console.log(`\n  PPM dump -> ${out} (512x512, P6 binary)`);
   }
 }
 

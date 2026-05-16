@@ -199,9 +199,23 @@ il seed per il web, usa `audit-playable-seed.ts --mame-neutral-file
 /path/to/neutral/fNNNN.json` per conservare il pair MAME corretto. I file
 `candidate_*.seed.json` restano candidati espliciti e non vengono classificati
 come `practice-seed`.
+Prima della review browser puoi fare uno smoke visuale locale ROM-backed con
+`node --import tsx packages/cli/src/visual-smoke-real.ts --seed packages/web/public/scenarios/playable/candidate_name.seed.json --ticks 120 --out /private/tmp/candidate.ppm`.
+Il tool carica i bank slapstic con lo stesso `loadRomBlob()` degli audit,
+recupera le PROM da `roms/marble.zip` se non sono in `/tmp`, e mantiene
+l'input assoluto P1 salvato nel seed per evitare un delta trackball spurio al
+primo frame. Il path browser `?playableSeed=...` fa lo stesso allineamento:
+questo rende confrontabili audit, smoke e frontend.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
+La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
+risolti. Per ogni livello mancante va classificato il failure dominante.
+L6 e' candidato da browser/manual review; L4 e' un gap collisione/height/input
+TS-vs-MAME perche' MAME risponde ma il replay muore; L5 f3400 va scartato
+perche' muore anche neutral; L3 richiede una finestra route-safe dopo il proof
+detector-gate; L2 va ricatturato da una transizione reale stabile, evitando i
+falsi exact in `state=6`.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col
