@@ -254,7 +254,7 @@ La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
 risolti. Il finding nuovo e' che il problema "L2 mancante" era un problema di
 mapping: `manual_level1_start` ha pointer `0x2c54c` e quindi copre la famiglia
 descriptor L2; il vero buco era L1 `0x2bee2`. Il bootstrap target L1 ha prodotto
-`candidate_level1_postseed_r_f3020.seed.json` con proof MAME post-seed
+`candidate_level1_postseed_r_f2800.seed.json` con proof MAME post-seed
 `seedExact=true`, active-vs-neutral forte, zero death e smoke ROM-backed stabile.
 Il candidato canonico L2 e' ora
 `candidate_level2_postseed_dr_f3000.seed.json`: stesso terreno di
@@ -266,6 +266,11 @@ controlla descriptor L1..L6, frame/fase, stato giocabile, playfield distinti e
 coppie MAME post-seed seed-exact/responsive. Dopo quel gate, `startLevel=1..6`
 e' cablato ai candidati descriptor reali; `manual_level1_start` resta un seed
 legacy/live-play accessibile via `?play=1` o `?playableSeed=manual_level1_start`.
+Review visuale Playwright successiva: L2/L3/L6 sono stati mantenuti, mentre
+L1/L4/L5 sono stati stretti su finestre piu' vicine all'inizio reale:
+L1 `f3020 -> f2800`, L4 `f3200 -> f3000`, L5 `f3520 -> f2800`. Le nuove
+finestre passano lo stesso gate MAME active-vs-neutral e il replay
+TS-vs-MAME exact 180/180 frame.
 I seed possono portare metadata opzionale `mainLoopBodyTicks`: default `1`, ma
 il candidato L1 usa `0` per riprodurre la fase MAME exact; web loader e tool
 seed-driven (`visual-smoke-real`, `audit-playable-seed`,
@@ -303,9 +308,9 @@ una overlay con coordinate player, timer e oggetti attivi piu' vicini.
 Per partire direttamente da un livello di practice usa
 `?autoLoad=1&startLevel=N&levelTime=180`. `startLevel=1..6` ora mappa ai sei
 seed post-seed descriptor reali verificati:
-L1 `candidate_level1_postseed_r_f3020`, L2 `candidate_level2_postseed_dr_f3000`,
-L3 `candidate_level3_postseed_ur_f3000`, L4 `candidate_level4_postseed_dr_f3200`,
-L5 `candidate_level5_postseed_dl_f3520`, L6 `candidate_level6_postseed_ul_f3600`.
+L1 `candidate_level1_postseed_r_f2800`, L2 `candidate_level2_postseed_dr_f3000`,
+L3 `candidate_level3_postseed_ur_f3000`, L4 `candidate_level4_postseed_dr_f3000`,
+L5 `candidate_level5_postseed_dl_f2800`, L6 `candidate_level6_postseed_ul_f3600`.
 Il vecchio seed `manual_level1_start` appartiene alla famiglia descriptor L2
 (`0x2c54c`) e resta solo come seed legacy/live-play.
 I candidati `manual_level2_start` .. `manual_level5_start` del primo pass sono
