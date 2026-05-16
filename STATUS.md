@@ -1,7 +1,44 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (candidate seed export/audit)
+**Ultimo update:** 2026-05-16 (render-command seed fingerprints)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — render-command seed fingerprints
+
+Follow-up sul goal "sei livelli": lo scanner runtime ora calcola anche un
+fingerprint di render per ogni seed/campione, oltre agli hash
+`playfieldRam`/color/alpha.
+
+Dettagli:
+
+- Se sono disponibili i PROM grafici (`/tmp/prom118.bin` + `/tmp/prom119.bin`
+  oppure `roms/extracted/136033.118` + `136033.119`), il fingerprint usa il
+  decode lookup playfield con bank/colore/bpp.
+- In assenza dei PROM, come sul workspace corrente, il tool dichiara
+  `Render fingerprint lookup source: raw-playfield-fallback` e usa una firma
+  grezza dei comandi playfield/alpha/sprite. Questo e' un filtro diagnostico,
+  non una prova screenshot/canvas finale.
+- Il cluster key runtime include ora anche `renderCoarseHash`, quindi due
+  finestre con stesso segmento/coarse PF ma comandi render diversi non vengono
+  fuse silenziosamente.
+- I manifest esportati con `--emit-candidates-dir` includono `renderHash` e
+  `renderCoarseHash`.
+
+Evidenza sul seed `manual_level1_start`:
+
+- Comando: `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-preset ladder --sample-every 240 --stable-only --cluster-by segment --emit-candidates-dir /private/tmp/marble-level-candidates-render --max-candidates 4 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
+- Lookup source: `raw-playfield-fallback`.
+- Il seed iniziale misura `render=95353861bfdaae95/b9c72f596fb7dda3`,
+  `cmds=2389/295/1274`.
+- La run lunga produce solo 2 rappresentanti stabili esportati:
+  `seg3:f93cbf8275d52794:b565df2385bf72ba:34ecd29359095835` e
+  `seg6:2b53b8cbdc564d03:b9c72f596fb7dda3:b6e2715fd9085768`.
+
+Interpretazione: anche aggiungendo la firma render-command, la route corrente
+non scopre sei famiglie di livello. Questo rafforza il blocco su
+`startLevel=2..5`: servono catture/run mirate che producano cluster stabili e
+distinti, poi audit active-vs-neutral e prova visuale/MAME prima di cablare un
+nuovo seed practice.
 
 ## 2026-05-16 — candidate seed export/audit
 

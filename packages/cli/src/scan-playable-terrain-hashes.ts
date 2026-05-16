@@ -27,6 +27,22 @@ interface SeedJson {
   colorRam: string;
 }
 
+interface GraphicsLookupEntry {
+  offset: number;
+  bank: number;
+  color: number;
+  bpp: 4 | 5 | 6;
+}
+
+interface RenderFingerprint {
+  renderHash: string;
+  renderCoarseHash: string;
+  playfieldCommands: number;
+  alphaCommands: number;
+  spriteNonzero: number;
+  lookupSource: string;
+}
+
 interface ScenarioJson {
   snapshots?: SeedJson[];
 }
@@ -67,6 +83,7 @@ interface Fingerprint {
   colorNonzero: number;
   alphaNonzero: number;
   pfChecksum: number;
+  render: RenderFingerprint;
 }
 
 interface SeedReport {
@@ -126,7 +143,21 @@ interface CandidateManifestEntry {
   pfHash: string;
   coarseHash: string;
   pfChecksum: number;
+  renderHash: string;
+  renderCoarseHash: string;
 }
+
+const PROM1_OFFSET_MASK = 0x07;
+const PROM1_BANK_1 = 0x10;
+const PROM1_BANK_2 = 0x20;
+const PROM1_BANK_3 = 0x40;
+const PROM1_BANK_4 = 0x80;
+const PROM2_PLANE_4_ENABLE = 0x40;
+const PROM2_PLANE_5_ENABLE = 0x80;
+const PROM2_BANK_5 = 0x20;
+const PROM2_BANK_6_OR_7 = 0x10;
+const PROM2_PF_COLOR_MASK = 0x0f;
+const PROM2_BANK_7 = 0x08;
 
 const DEFAULT_PATHS = [
   "packages/web/public/scenarios/playable/manual_level1_start.seed.json",
@@ -187,6 +218,9 @@ Options:
 
 The scanner is a discovery/filtering tool. Passing it does not by itself make a
 seed safe for startLevel; candidates still need active-vs-neutral control proof.
+When PROMs are available in /tmp/prom118.bin+/tmp/prom119.bin or roms/extracted,
+render fingerprints use PROM lookup colors; otherwise they fall back to raw
+playfield/alpha/sprite command signatures.
 `);
 }
 
@@ -355,7 +389,122 @@ function bucketHash(bytes: Uint8Array): string {
   return createHash("sha256").update(Buffer.from(buckets.buffer)).digest("hex").slice(0, 16);
 }
 
-function fingerprint(playfieldRam: Uint8Array, colorRam: Uint8Array, alphaRam: Uint8Array): Fingerprint {
+function bppForProm2(prom2: number): 4 | 5 | 6 {
+  if ((prom2 & PROM2_PLANE_4_ENABLE) === 0) return 4;
+  return (prom2 & PROM2_PLANE_5_ENABLE) !== 0 ? 6 : 5;
+}
+
+function bankForProms(prom1: number, prom2: number): number {
+  if ((prom1 & PROM1_BANK_1) === 0) return 1;
+  if ((prom1 & PROM1_BANK_2) === 0) return 2;
+  if ((prom1 & PROM1_BANK_3) === 0) return 3;
+  if ((prom1 & PROM1_BANK_4) === 0) return 4;
+  if ((prom2 & PROM2_BANK_5) === 0) return 5;
+  if ((prom2 & PROM2_BANK_6_OR_7) === 0) return (prom2 & PROM2_BANK_7) === 0 ? 7 : 6;
+  return 0;
+}
+
+function decodePlayfieldLookups(proms: Uint8Array): GraphicsLookupEntry[] {
+  const remap = proms.slice(0x000, 0x200);
+  const color = proms.slice(0x200, 0x400);
+  const playfield: GraphicsLookupEntry[] = [];
+  for (let i = 0; i < 256; i++) {
+    const prom1 = remap[i] ?? 0xff;
+    const prom2 = color[i] ?? 0xff;
+    const bpp = bppForProm2(prom2);
+    let bank = bankForProms(prom1, prom2);
+    let offset = prom1 & PROM1_OFFSET_MASK;
+    let entryColor = (~prom2 & PROM2_PF_COLOR_MASK) >>> (bpp - 4);
+    if (bank === 0) {
+      bank = 1;
+      offset = 0;
+      entryColor = 0;
+    }
+    playfield.push({ offset, bank, color: entryColor, bpp });
+  }
+  return playfield;
+}
+
+function loadPromLookups(): { playfieldLookups: GraphicsLookupEntry[] | undefined; source: string } {
+  const candidates: Array<[string, string, string]> = [
+    ["/tmp/prom118.bin", "/tmp/prom119.bin", "/tmp/prom118.bin+/tmp/prom119.bin"],
+    ["roms/extracted/136033.118", "roms/extracted/136033.119", "roms/extracted/136033.118+136033.119"],
+  ];
+  for (const [a, b, source] of candidates) {
+    if (existsSync(a) && existsSync(b)) {
+      const proms = new Uint8Array(0x400);
+      proms.set(readFileSync(a).subarray(0, 0x200), 0);
+      proms.set(readFileSync(b).subarray(0, 0x200), 0x200);
+      return { playfieldLookups: decodePlayfieldLookups(proms), source };
+    }
+  }
+  return { playfieldLookups: undefined, source: "raw-playfield-fallback" };
+}
+
+function renderFingerprint(
+  playfieldRam: Uint8Array,
+  alphaRam: Uint8Array,
+  spriteRam: Uint8Array,
+  playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
+  lookupSource: string,
+): RenderFingerprint {
+  const hash = createHash("sha256");
+  const coarseBuckets = new Uint32Array(64);
+  let playfieldCommands = 0;
+  for (let index = 0; index < Math.floor(playfieldRam.length / 2); index++) {
+    const off = index * 2;
+    const word = ((playfieldRam[off] ?? 0) << 8) | (playfieldRam[off + 1] ?? 0);
+    if (word === 0) continue;
+    playfieldCommands++;
+    const lookupIndex = (word >>> 8) & 0x7f;
+    const tileLow = word & 0xff;
+    const flip = (word & 0x8000) !== 0 ? 1 : 0;
+    const lookup = playfieldLookups?.[lookupIndex];
+    const bank = lookup?.bank ?? -1;
+    const color = lookup?.color ?? lookupIndex;
+    const bpp = lookup?.bpp ?? 4;
+    const tileIndex = lookup === undefined ? tileLow : lookup.offset * 256 + tileLow;
+    const bucket = Math.min(coarseBuckets.length - 1, Math.floor((index * coarseBuckets.length) / 0x1000));
+    const bucketValue = coarseBuckets[bucket] ?? 0;
+    coarseBuckets[bucket] = (bucketValue + ((tileIndex ^ (color << 8) ^ (bank << 12) ^ word) >>> 0)) >>> 0;
+    hash.update(`${index}:${tileIndex}:${bank}:${color}:${bpp}:${flip};`);
+  }
+
+  let alphaCommands = 0;
+  for (let index = 0; index < Math.floor(alphaRam.length / 2); index++) {
+    const off = index * 2;
+    const word = ((alphaRam[off] ?? 0) << 8) | (alphaRam[off + 1] ?? 0);
+    if (word === 0) continue;
+    alphaCommands++;
+    hash.update(`a${index}:${word};`);
+  }
+
+  let spriteNonzero = 0;
+  for (let i = 0; i < spriteRam.length; i++) {
+    const value = spriteRam[i] ?? 0;
+    if (value === 0) continue;
+    spriteNonzero++;
+    hash.update(`s${i}:${value};`);
+  }
+
+  return {
+    renderHash: hash.digest("hex").slice(0, 16),
+    renderCoarseHash: createHash("sha256").update(Buffer.from(coarseBuckets.buffer)).digest("hex").slice(0, 16),
+    playfieldCommands,
+    alphaCommands,
+    spriteNonzero,
+    lookupSource,
+  };
+}
+
+function fingerprint(
+  playfieldRam: Uint8Array,
+  colorRam: Uint8Array,
+  alphaRam: Uint8Array,
+  spriteRam: Uint8Array,
+  playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
+  lookupSource: string,
+): Fingerprint {
   return {
     pfHash: shortHash(playfieldRam),
     colorHash: shortHash(colorRam),
@@ -365,6 +514,7 @@ function fingerprint(playfieldRam: Uint8Array, colorRam: Uint8Array, alphaRam: U
     colorNonzero: nonzero(colorRam),
     alphaNonzero: nonzero(alphaRam),
     pfChecksum: checksumBytes(playfieldRam),
+    render: renderFingerprint(playfieldRam, alphaRam, spriteRam, playfieldLookups, lookupSource),
   };
 }
 
@@ -382,11 +532,16 @@ function loadSeeds(path: string, allSnapshots: boolean): LoadedSeed[] {
   return [{ path, label: basename(path), seed: raw as SeedJson }];
 }
 
-function seedReport(loaded: LoadedSeed): SeedReport {
+function seedReport(
+  loaded: LoadedSeed,
+  playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
+  lookupSource: string,
+): SeedReport {
   const workRam = hexToBytes(loaded.seed.workRam, 0x2000, `${loaded.label} workRam`);
   const playfieldRam = hexToBytes(loaded.seed.playfieldRam, 0x2000, `${loaded.label} playfieldRam`);
   const colorRam = hexToBytes(loaded.seed.colorRam, 0x800, `${loaded.label} colorRam`);
   const alphaRam = hexToBytes(loaded.seed.alphaRam, 0x1000, `${loaded.label} alphaRam`);
+  const spriteRam = hexToBytes(loaded.seed.spriteRam, 0x1000, `${loaded.label} spriteRam`);
   return {
     label: loaded.label,
     frame: loaded.seed.frame,
@@ -399,7 +554,7 @@ function seedReport(loaded: LoadedSeed): SeedReport {
     scrollWord: readWordBE(workRam, 0x2) & 0x1ff,
     x: signedLong(readLongBE(workRam, 0x18 + 0x0c)),
     y: signedLong(readLongBE(workRam, 0x18 + 0x10)),
-    fingerprint: fingerprint(playfieldRam, colorRam, alphaRam),
+    fingerprint: fingerprint(playfieldRam, colorRam, alphaRam, spriteRam, playfieldLookups, lookupSource),
   };
 }
 
@@ -481,7 +636,14 @@ function loadStateFromSeed(rom: RomImage, seed: SeedJson): GameState {
   return gameState;
 }
 
-function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[], sampleEvery: number): RuntimeSamples {
+function runSamples(
+  rom: RomImage,
+  loaded: LoadedSeed,
+  route: readonly string[],
+  sampleEvery: number,
+  playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
+  lookupSource: string,
+): RuntimeSamples {
   const state = loadStateFromSeed(rom, loaded.seed);
   let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
   let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
@@ -510,7 +672,7 @@ function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[],
         alphaRam: Buffer.from(state.alphaRam).toString("hex"),
         colorRam: Buffer.from(state.colorRam).toString("hex"),
       };
-      reports.push(seedReport({ path: loaded.path, label, seed }));
+      reports.push(seedReport({ path: loaded.path, label, seed }, playfieldLookups, lookupSource));
       seedsByLabel.set(label, seed);
     }
   }
@@ -522,11 +684,12 @@ function isStablePlayableSample(report: SeedReport): boolean {
 }
 
 function clusterKey(report: SeedReport, clusterBy: ClusterBy): string {
-  if (clusterBy === "pf") return `${report.fingerprint.pfHash}:${report.fingerprint.colorHash}`;
+  const renderCoarse = report.fingerprint.render.renderCoarseHash;
+  if (clusterBy === "pf") return `${report.fingerprint.pfHash}:${renderCoarse}:${report.fingerprint.colorHash}`;
   if (clusterBy === "segment") {
-    return `seg${report.segment}:${report.fingerprint.coarseHash}:${report.fingerprint.colorHash}`;
+    return `seg${report.segment}:${report.fingerprint.coarseHash}:${renderCoarse}:${report.fingerprint.colorHash}`;
   }
-  return `${report.fingerprint.coarseHash}:${report.fingerprint.colorHash}`;
+  return `${report.fingerprint.coarseHash}:${renderCoarse}:${report.fingerprint.colorHash}`;
 }
 
 function clusterSamples(
@@ -615,6 +778,8 @@ function writeCandidateSeeds(
       pfHash: rep.fingerprint.pfHash,
       coarseHash: rep.fingerprint.coarseHash,
       pfChecksum: rep.fingerprint.pfChecksum,
+      renderHash: rep.fingerprint.render.renderHash,
+      renderCoarseHash: rep.fingerprint.render.renderCoarseHash,
     });
   }
   writeFileSync(resolve(dir, "manifest.json"), `${JSON.stringify({ candidates: manifest }, null, 2)}\n`);
@@ -626,7 +791,9 @@ function printSeed(report: SeedReport): void {
   console.log(
     `${report.label}: main=${report.main} mode=${report.mode} next=${report.next} seg=${report.segment} ` +
       `state=${report.playerState} timer=${report.timer} scroll=${report.scrollWord} ` +
-      `pf=${fp.pfNonzero} pfHash=${fp.pfHash} coarse=${fp.coarseHash} checksum=${fp.pfChecksum}`,
+      `pf=${fp.pfNonzero} pfHash=${fp.pfHash} coarse=${fp.coarseHash} checksum=${fp.pfChecksum} ` +
+      `render=${fp.render.renderHash}/${fp.render.renderCoarseHash} ` +
+      `cmds=${fp.render.playfieldCommands}/${fp.render.alphaCommands}/${fp.render.spriteNonzero}`,
   );
 }
 
@@ -634,7 +801,8 @@ function main(): void {
   const args = parseArgs();
   if (args.paths.length === 0) throw new Error("no seed/scenario paths found");
   const seeds = args.paths.flatMap((path) => loadSeeds(path, args.allSnapshots));
-  const initialReports = seeds.map(seedReport);
+  const { playfieldLookups, source: lookupSource } = loadPromLookups();
+  const initialReports = seeds.map((seed) => seedReport(seed, playfieldLookups, lookupSource));
   const pairs = pairwiseReports(seeds, args.nearThreshold);
 
   if (args.json) {
@@ -646,7 +814,7 @@ function main(): void {
           const route = routeForArgs(args);
           const seedMaps: Map<string, SeedJson>[] = [];
           const runReports = seeds.map((seed) => {
-            const runtime = runSamples(rom, seed, route, args.sampleEvery);
+            const runtime = runSamples(rom, seed, route, args.sampleEvery, playfieldLookups, lookupSource);
             seedMaps.push(runtime.seedsByLabel);
             return { label: seed.label, samples: runtime.reports };
           });
@@ -667,6 +835,7 @@ function main(): void {
     return;
   }
 
+  console.log(`Render fingerprint lookup source: ${lookupSource}`);
   console.log("Initial terrain fingerprints:");
   for (const report of initialReports) printSeed(report);
 
@@ -687,7 +856,7 @@ function main(): void {
     const allSamples: SeedReport[] = [];
     const allSeedEntries: [string, SeedJson][] = [];
     for (const seed of seeds) {
-      const runtime = runSamples(rom, seed, route, args.sampleEvery);
+      const runtime = runSamples(rom, seed, route, args.sampleEvery, playfieldLookups, lookupSource);
       const samples = runtime.reports;
       allSamples.push(...samples);
       allSeedEntries.push(...runtime.seedsByLabel.entries());
