@@ -271,6 +271,14 @@ local function install_taps()
             writeMask = mask or 0,
         })
     end)
+    mem:install_write_tap(0x400394, 0x400395, "level_descriptor_index_write", function(offset, data, mask)
+        local addr = normalize_tap_addr(0x400394, offset)
+        add_write_event("workRam[0x394..0x395]", {
+            writeAddr = addr,
+            writeData = data or 0,
+            writeMask = mask or 0,
+        })
+    end)
 end
 
 local function update_pointer_counts()
