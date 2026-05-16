@@ -260,8 +260,12 @@ Il candidato canonico L2 e' ora
 `candidate_level2_postseed_dr_f3000.seed.json`: stesso terreno di
 `manual_level1_start`, ma con proof post-seed nominata correttamente,
 active/neutral exact in replay TS-vs-MAME per 180 frame e smoke ROM-backed
-stabile. Restano da fare review finale del mapping `startLevel` e
-parity/browser review prima di promuovere qualunque candidato.
+stabile. Il gate aggregato dei sei candidati e' ora riproducibile con
+`node --import tsx packages/cli/src/verify-start-level-candidates.ts --proofs`:
+controlla descriptor L1..L6, frame/fase, stato giocabile, playfield distinti e
+coppie MAME post-seed seed-exact/responsive. Resta da fare la review finale del
+mapping `startLevel`: non e' piu' un problema di discovery, ma di promozione
+browser esplicita.
 I seed possono portare metadata opzionale `mainLoopBodyTicks`: default `1`, ma
 il candidato L1 usa `0` per riprodurre la fase MAME exact; web loader e tool
 seed-driven (`visual-smoke-real`, `audit-playable-seed`,
@@ -298,11 +302,13 @@ collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
 Per partire direttamente da un livello di practice usa
 `?autoLoad=1&startLevel=N&levelTime=180`. Al momento solo `startLevel=1` e'
-cablato, tramite il seed verificato `manual_level1_start`; `startLevel=2..6`
-restano intenzionalmente bloccati finche' non abbiamo seed distinti e
-controllabili. I candidati `manual_level2_start` .. `manual_level5_start` del
-primo pass sono stati falsificati dal confronto playfield/hash: formavano solo
-due famiglie di terreno quasi duplicate, non i restanti cinque livelli reali. Usa
+cablato, tramite il seed legacy `manual_level1_start`, che pero' appartiene alla
+famiglia descriptor L2 (`0x2c54c`). I candidati post-seed L1..L6 sono verificati
+ma non ancora promossi a wiring pubblico: prima serve scegliere il mapping
+browser per non scambiare il vecchio `startLevel=1` con il vero descriptor L1.
+I candidati `manual_level2_start` .. `manual_level5_start` del primo pass sono
+stati falsificati dal confronto playfield/hash: formavano solo due famiglie di
+terreno quasi duplicate, non i restanti cinque livelli reali. Usa
 `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --pairwise-only ...`
 per confrontare hash/diff di `playfieldRam`, `colorRam` e `alphaRam`. Per
 cercare famiglie lungo una run TS invece di singoli file, usa ad esempio
