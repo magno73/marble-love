@@ -141,6 +141,11 @@ Il path TS integrato di completamento livello ora richiama correttamente
 `0x2cd9e` a f943 (`levelIndex=2`, segment 3). Questo conferma la progressione
 descriptor nel motore TS, ma non promuove un seed: la ricerca aggiornata da
 `manual_level1_start` fino a f3600 resta su L2 e non trova `main=3`.
+Anche il replay MAME diagnostico da boot/attract a f15800, con rearm manuale
+forzato e route `L:180,DL:763`, falsifica la promozione: active e neutral
+divergono in posizione, ma i trace descriptor restano solo su L2 `0x2c54c` e
+non vedono `main=3`, `levelIndex=2` o L3. Questo rafforza il gate: serve ancora
+una movie/manuale MAME reale o un planner piu' fedele prima di cablare seed.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

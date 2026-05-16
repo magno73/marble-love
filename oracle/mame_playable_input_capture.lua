@@ -51,6 +51,8 @@ local MANUAL_INPUT = os.getenv("MARBLE_PLAYABLE_MANUAL") == "1"
 local MANUAL_NAME = os.getenv("MARBLE_PLAYABLE_NAME") or "manual_play"
 local MANUAL_MAX_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_MAX_FRAME") or "")
 local MANUAL_WINDOW = tonumber(os.getenv("MARBLE_PLAYABLE_MANUAL_WINDOW") or "240") or 240
+local DESCRIPTOR_TRACE_TO = tonumber(os.getenv("MARBLE_DESCRIPTOR_TRACE_TO") or "")
+local DESCRIPTOR_TRACE_COMPOSED = os.getenv("MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE") == "1"
 local FRAME_COUNT = tonumber(os.getenv("MARBLE_PLAYABLE_CAPTURE_FRAMES") or "100") or 100
 if FRAME_COUNT < 0 then FRAME_COUNT = 0 end
 FRAME_COUNT = math.floor(FRAME_COUNT)
@@ -269,6 +271,9 @@ if MANUAL_INPUT then
     ))
 else
     last_frame = math.max(last_frame, 2500)
+end
+if DESCRIPTOR_TRACE_COMPOSED and DESCRIPTOR_TRACE_TO ~= nil then
+    last_frame = math.max(last_frame, math.floor(DESCRIPTOR_TRACE_TO))
 end
 
 local function key(addr)
