@@ -4,11 +4,11 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "../src/practice
 
 describe("practice level query", () => {
   it("maps only proven playable practice levels to playable seeds", () => {
-    expect(playableSeedForStartLevel(parseStartLevelParam("1"))).toBe("candidate_level1_postseed_r_f3020");
+    expect(playableSeedForStartLevel(parseStartLevelParam("1"))).toBe("candidate_level1_postseed_r_f2800");
     expect(playableSeedForStartLevel(parseStartLevelParam("2"))).toBe("candidate_level2_postseed_dr_f3000");
     expect(playableSeedForStartLevel(parseStartLevelParam("3"))).toBe("candidate_level3_postseed_ur_f3000");
-    expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBe("candidate_level4_postseed_dr_f3200");
-    expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBe("candidate_level5_postseed_dl_f3520");
+    expect(playableSeedForStartLevel(parseStartLevelParam("4"))).toBe("candidate_level4_postseed_dr_f3000");
+    expect(playableSeedForStartLevel(parseStartLevelParam("5"))).toBe("candidate_level5_postseed_dl_f2800");
     expect(playableSeedForStartLevel(parseStartLevelParam("6"))).toBe("candidate_level6_postseed_ul_f3600");
   });
 

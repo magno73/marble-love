@@ -1,7 +1,30 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (startLevel 1..6 wired to real descriptors)
+**Ultimo update:** 2026-05-16 (startLevel earliest-start tightening)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — startLevel earliest-start tightening
+
+Dopo review visuale Playwright dei sei `startLevel`, L2/L3/L6 sono stati
+mantenuti perche' gia' centrati sulla partenza. L1/L4/L5 sono stati sostituiti
+con finestre post-seed piu' precoci, senza rilassare il gate MAME:
+
+| startLevel | prima | ora | miglioramento |
+| --- | --- | --- | --- |
+| 1 | `candidate_level1_postseed_r_f3020` | `candidate_level1_postseed_r_f2800` | timer `54 -> 58`, xy `157.57,140 -> 140,140` |
+| 4 | `candidate_level4_postseed_dr_f3200` | `candidate_level4_postseed_dr_f3000` | timer `96 -> 99`, xy invariato `308,188` |
+| 5 | `candidate_level5_postseed_dl_f3520` | `candidate_level5_postseed_dl_f2800` | timer `80 -> 92`, xy invariato `1004,996` |
+
+Nuove proof locali:
+
+- L1: `/private/tmp/marble-earliest-start-proof-20260516/l1-f2800`
+- L4: `/private/tmp/marble-earliest-start-proof-20260516/l4-f3000-detector`
+- L5: `/private/tmp/marble-earliest-start-proof-20260516/l5-f2800-detector`
+
+Le tre coppie active/neutral sono `seedExact=true`, stable e responsive. Il
+replay TS-vs-MAME delle input trace e' exact per 180/180 frame sia active sia
+neutral (`dx=0`, `dy=0`, `dz=0`, `pfDiff=0`). L1 richiede
+`mainLoopBodyTicks=0`; L4/L5 restano in fase `1`.
 
 ## 2026-05-16 — startLevel real descriptor wiring
 
@@ -10,11 +33,11 @@ Dopo il gate `verify-start-level-candidates.ts --proofs`, il mapping pubblico
 
 | startLevel | seed | desc |
 | --- | --- | --- |
-| 1 | `candidate_level1_postseed_r_f3020` | `0x2bee2` |
+| 1 | `candidate_level1_postseed_r_f2800` | `0x2bee2` |
 | 2 | `candidate_level2_postseed_dr_f3000` | `0x2c54c` |
 | 3 | `candidate_level3_postseed_ur_f3000` | `0x2cd9e` |
-| 4 | `candidate_level4_postseed_dr_f3200` | `0x2d648` |
-| 5 | `candidate_level5_postseed_dl_f3520` | `0x2de1e` |
+| 4 | `candidate_level4_postseed_dr_f3000` | `0x2d648` |
+| 5 | `candidate_level5_postseed_dl_f2800` | `0x2de1e` |
 | 6 | `candidate_level6_postseed_ul_f3600` | `0x2e790` |
 
 `manual_level1_start` non e' piu' il seed practice di `startLevel=1`; resta
@@ -47,11 +70,11 @@ Risultato: `verdict: pass`. Matrice seed/proof:
 
 | ROM level | seed | desc | frame | phase | route | proof tail |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| L1 | `candidate_level1_postseed_r_f3020` | `0x2bee2` | 3020 | 0 | `R:60,N:180` | seedExact, stable, responsive `1766030/3449662@3200` |
+| L1 | `candidate_level1_postseed_r_f2800` | `0x2bee2` | 2800 | 0 | `R:60,N:180` | seedExact, stable, responsive `311251/3296796@2980` |
 | L2 | `candidate_level2_postseed_dr_f3000` | `0x2c54c` | 3000 | 1 | `DR:60,N:180` | seedExact, stable, responsive `1174454/0@3077` |
 | L3 | `candidate_level3_postseed_ur_f3000` | `0x2cd9e` | 3000 | 1 | `UR:60,N:180` | seedExact, stable, responsive `123889/5784545@3135` |
-| L4 | `candidate_level4_postseed_dr_f3200` | `0x2d648` | 3200 | 1 | `DR:60,N:180` | seedExact, stable, responsive `2967501/0@3379` |
-| L5 | `candidate_level5_postseed_dl_f3520` | `0x2de1e` | 3520 | 1 | `DL:60,N:180` | seedExact, stable, responsive `0/2967501@3699` |
+| L4 | `candidate_level4_postseed_dr_f3000` | `0x2d648` | 3000 | 1 | `DR:60,N:180` | seedExact, stable, responsive `2967501/0@3179` |
+| L5 | `candidate_level5_postseed_dl_f2800` | `0x2de1e` | 2800 | 1 | `DL:60,N:180` | seedExact, stable, responsive `0/2967501@2979` |
 | L6 | `candidate_level6_postseed_ul_f3600` | `0x2e790` | 3600 | 1 | `UL:180` | seedExact, stable, responsive `1022747/0@3780` |
 
 La distanza minima pairwise tra playfield dei sei candidati e' L3/L4 = `4547`
