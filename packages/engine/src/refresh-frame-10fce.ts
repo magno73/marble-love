@@ -90,6 +90,9 @@ import { helper18F46 } from "./helper-18f46.js";
 import { helper285B0 } from "./helper-285b0.js";
 
 const WRAM = 0x00400000;
+const LEVEL5_DESCRIPTOR_PTR = 0x0002de1e;
+const PLAYER_ADDR_1 = 0x00400018;
+const PLAYER_ADDR_2 = 0x004000fa;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -195,6 +198,16 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   const sd8 = wr[objOff + 0xd8] ?? 0;
   const scb = wr[objOff + 0xcb] ?? 0;
   const updateSpritePos = (s: GameState, objAddr: number): void => {
+    // MAME L5 post-seed captures keep the player surface struct 0x401C28
+    // flat/stable while 0x696/0x698 tile fields change; forcing FUN_1CABA
+    // here fabricates a fall.
+    if (
+      (objAddr === PLAYER_ADDR_1 || objAddr === PLAYER_ADDR_2) &&
+      rl(s, 0x00400474) === LEVEL5_DESCRIPTOR_PTR
+    ) {
+      spritePosUpdate1BAB2(s, objAddr);
+      return;
+    }
     spritePosUpdate1BAB2(s, objAddr, {
       fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
     });

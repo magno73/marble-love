@@ -140,6 +140,7 @@ const WORK_RAM_BASE = 0x00400000 as const;
 const OFF_GLOBAL_X = 0x684; // 0x400684 long (obj.x snapshot)
 const OFF_GLOBAL_Y = 0x688; // 0x400688 long (obj.y snapshot)
 const OFF_GLOBAL_Z = 0x68c; // 0x40068C long (obj.z snapshot)
+const OFF_LVLPTR   = 0x474; // 0x400474 long (current level descriptor ptr)
 const OFF_WORLD_Y  = 0x692; // 0x400692 word (world Y for bounds)
 const OFF_WORLD_X  = 0x690; // 0x400690 word (world X for bounds)
 const OFF_TILE_X   = 0x696; // 0x400696 word (tile X = x >> 0x13 after sprite update)
@@ -147,6 +148,7 @@ const OFF_TILE_Y   = 0x698; // 0x400698 word (tile Y)
 const OFF_TRACK_X  = 0x69a; // 0x40069A word (x >> 0x13 coarse)
 const OFF_TRACK_Y  = 0x69c; // 0x40069C word (y >> 0x13 coarse)
 const OFF_A4       = 0x3ba; // 0x4003BA (A4 register value / global ptr)
+const LEVEL5_DESCRIPTOR_PTR = 0x0002de1e;
 
 // Object struct field offsets (relative to objOff):
 const OBJ_VX     = 0x00; // long: velocity x
@@ -456,9 +458,14 @@ export function helper121B8(
   const isPlayer: boolean = (a2 === PLAYER_ADDR_1) || (a2 === PLAYER_ADDR_2);
   const d3b: number = isPlayer ? 1 : 0;
 
-  // moveq #0xFF,D0; move.w D0,(0x400698).l; move.w D0,(0x400696).l
-  w16(state, OFF_TILE_Y, 0xffff);
-  w16(state, OFF_TILE_X, 0xffff);
+  // L5 post-seed MAME keeps the player live surface struct stable while only
+  // the tile fields move; forcing a redraw here clears the floor and creates
+  // a synthetic fall. Other descriptors/objects keep the legacy invalidation.
+  if (!(isPlayer && r32(state, OFF_LVLPTR) === LEVEL5_DESCRIPTOR_PTR)) {
+    // moveq #0xFF,D0; move.w D0,(0x400698).l; move.w D0,(0x400696).l
+    w16(state, OFF_TILE_Y, 0xffff);
+    w16(state, OFF_TILE_X, 0xffff);
+  }
 
   // ── Call spritePosUpdate1BAB2(a2) ─────────────────────────────────────────
   // move.l A2,-(SP); jsr (A3)=0x1BAB2; addq.l #4,SP

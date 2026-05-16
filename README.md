@@ -195,9 +195,13 @@ come `candidate_level6_postseed_ul_f3600.seed.json`. Anche L4 f3200
 stable) ed e' esportato come `candidate_level4_postseed_dr_f3200.seed.json`.
 L5 f3520 `DL:60,N:180` passa la proof MAME post-seed
 (`maxDiffXY=0/2967501`, deaths `0/0`) ed e' esportato come
-`candidate_level5_postseed_dl_f3520.seed.json`, ma lo smoke browser/TS entra
-ancora in `state=4` dopo 120 tick: non cablarlo finche' quel gap parity non e'
-risolto.
+`candidate_level5_postseed_dl_f3520.seed.json`. Il successivo gap browser/TS
+non era un seed sbagliato: MAME mantiene stabile la surface player `0x401C28`
+nel post-seed L5, mentre TS forzava `FUN_1CABA` e cancellava il pavimento. La
+guardia player-scoped su descriptor L5 `0x2de1e` rende active e neutral exact
+contro MAME per 180 frame e lo smoke ROM-backed resta stabile per 120 tick.
+Il seed resta candidato non cablato finche' non passa il gate completo di
+wiring/manual review.
 Quando una finestra MAME-responsive fallisce il gate TS, usa
 `node --import tsx packages/cli/src/trace-playable-seed-route.ts scenario.json`.
 Il tracer riproduce la route dell'audit e stampa il primo `death-enter`,
@@ -213,7 +217,11 @@ gap `FUN_1CABA`: nel path direct MAME usa `*(lvlPtr+0)+terrainCode`, non
 `lvlPtr+terrainCode`. Dopo il fix, la dense L4 f3200..f3380 torna exact per
 180/180 frame su posizione, z, stato e playfield. L4 non va piu' trattato come
 bug height/collisione: resta una ricerca di route/finestra zero-death
-abbastanza controllabile.
+abbastanza controllabile. Sul caso L5 f3520 lo stesso confronto ha dimostrato
+che il seed MAME era sano e il bug era TS-side: il player L5 non deve forzare
+un redraw `FUN_1CABA` quando MAME preserva la surface live stabile. Dopo la
+guardia L5 player-scoped, active e neutral sono 180/180 exact e il visual smoke
+non entra piu' in death state.
 Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
@@ -235,9 +243,10 @@ validato.
 La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
 risolti. Per ogni livello mancante va classificato il failure dominante.
 L4 e L6 hanno ora proof MAME post-seed e smoke browser-style nonblank/stable;
-L5 ha proof MAME post-seed ma fallisce ancora il replay browser/TS; L3 richiede
-una finestra route-safe dopo il proof detector-gate; L2 va ricatturato da una
-transizione reale stabile, evitando i falsi exact in `state=6`.
+L5 ha proof MAME post-seed e il replay browser/TS e' stato riallineato via
+surface parity; L3 richiede una finestra route-safe dopo il proof
+detector-gate; L2 va ricatturato da una transizione reale stabile, evitando i
+falsi exact in `state=6`.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col
