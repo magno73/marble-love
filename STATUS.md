@@ -10,14 +10,17 @@ soglia generica `pf > 4000` per tutti i livelli. Ora legge `workRam[0x474]`,
 associa il seed ai sei descrittori ROM reali, stampa `desc=Lx@ptr`, e usa una
 soglia playfield proporzionale al descrittore (`max(1200, descriptorPf*0.75)`).
 Accetta inoltre `main/mode=0/0` come compatibile con practice perche' il path
-browser `startLevel` cancella `0x400390` all'ingresso manuale.
+browser `startLevel` cancella `0x400390` all'ingresso manuale. Il gate di
+stabilita' ora conteggia anche death/recovery nella route TS
+active-vs-neutral (`--max-route-deaths`, default 3), cosi' una finestra
+responsive ma ingestibile non passa come seed.
 
 Effetto sull'L3 detector-gate:
 
-- `/private/tmp/marble-detector-rearm-f1746-long/scenarios/f2300.json`
-  diventa `candidate-needs-route-proof`: L3 `0x2cd9e`, `pf=3428`,
-  MAME active-vs-neutral responsive, manual route stabile.
-- f2500 idem.
+- `/private/tmp/marble-detector-rearm-f1746-long/scenarios/f2300.json` e
+  f2500 restano MAME-responsive su L3 `0x2cd9e`, ma vengono demossi a
+  `diagnostic-only` perche' la route TS entra in 9 death/recovery
+  (`maxRouteDeaths=3`).
 - f3000 resta diagnostic per stabilita' route, f3600 per MAME pair non
   responsive.
 

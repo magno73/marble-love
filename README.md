@@ -186,7 +186,10 @@ controllabile. Per una tail manuale o playback con molti snapshot usa
 `--all-snapshots --target-segment N --only-candidates`, cosi' il probe estrae
 solo i frame che potrebbero diventare seed. Il probe rifiuta inoltre i
 candidati con `playfieldRam` byte-identica al seed level 1 di riferimento
-(`--distinct-from`), cosi' non si ripete il falso positivo f6000.
+(`--distinct-from`), cosi' non si ripete il falso positivo f6000. Il gate e'
+descriptor-aware e death-aware: usa `workRam[0x474]` per applicare soglie PF
+per L1..L6 e `--max-route-deaths N` (default 3) per declassare finestre
+responsive ma troppo instabili in death/recovery.
 Per playtest manuale di progressione livelli, `?autoLoad=1&play=1&levelTime=180`
 o `levelTime=120` imposta il timer interno del livello al valore scelto una
 sola volta per livello, lasciando il countdown normale. Nota: alcuni path HUD
