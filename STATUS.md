@@ -1,7 +1,54 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (ROM level descriptor inspector)
+**Ultimo update:** 2026-05-16 (MAME scripted route descriptor/audit pass)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME scripted route descriptor/audit pass
+
+Eseguito un nuovo pass MAME headless reale dal boot, con coin/start scriptati,
+cfg/nvram temporanei puliti e route lunga `ladder` (`D/R/L/DL/BR/.../N`) fino a
+f90000. Output:
+
+- active: `/private/tmp/marble-mame-route-scan-ladder/scenarios`
+- neutral paired: `/private/tmp/marble-mame-route-scan-ladder-neutral/scenarios`
+- candidati stable esportati:
+  `/private/tmp/marble-mame-route-scan-ladder/candidates/manifest.json`
+- associazione descriptor:
+  `/private/tmp/marble-mame-route-scan-ladder/descriptors/manifest.json`
+
+Lo scanner ha trovato 7 cluster stable-playable nel pass active. I cluster sono
+ancora diagnostici: molte finestre ricadono sulla famiglia PF gia' nota
+`fe66bf77699cb9b0`, e l'associazione ai descriptor ROM resta lontana:
+
+- f39000 `seg7` nearest L1, `pfDiff=3730`;
+- f42000 `seg2` nearest L1, `pfDiff=1984`;
+- f45000 `seg4` nearest L1, `pfDiff=1819`;
+- f87000 `seg2` nearest L1, `pfDiff=2519`;
+- f90000 `seg4` nearest L1, `pfDiff=1926`;
+- i cluster `fe66bf77699cb9b0` restano nearest L2 con `pfDiff=1517`.
+
+Audit paired MAME:
+
+```sh
+node --import tsx packages/cli/src/audit-playable-seed.ts \
+  --mame-neutral-dir /private/tmp/marble-mame-route-scan-ladder-neutral/scenarios \
+  --only-candidates \
+  --distinct-from packages/web/public/scenarios/playable/manual_level1_start.seed.json \
+  /private/tmp/marble-mame-route-scan-ladder/scenarios/*.json
+```
+
+Risultato: `audited 30/30`, `showing 0`. Nessun seed viene promosso. Alcune
+finestre sono manual-rearm responsive/stable, ma il paired MAME active-vs-neutral
+resta non responsive (`diffXY=0/0` o sotto soglia) e/o il dispatcher preservato
+segue neutral. Il falso positivo f3000 ha esposto un bug nel filtro: era
+`main=0 mode=2` ma veniva mostrato come candidato. `audit-playable-seed.ts`
+ora richiede esplicitamente seed iniziale `main=1 mode=0`, timer vivo e player
+state 0 prima di qualsiasi verdict non-diagnostic.
+
+Interpretazione: la route MAME scriptata lunga falsifica un'altra classe di
+warm/presentation candidate e conferma che serve ancora una cattura
+manuale/playback o una route MAME-live davvero controllante per raggiungere i
+sei start. `startLevel=2..6` resta non cablato.
 
 ## 2026-05-16 — ROM level descriptor inspector
 

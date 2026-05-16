@@ -578,6 +578,8 @@ function auditPath(
   const reasons: string[] = [];
 
   if (initial.pfCount <= 4_000) reasons.push("playfield is not fully populated at seed frame");
+  if (initial.main !== 1 || initial.mode !== 0) reasons.push(`seed starts outside playable main/mode 1/0 (${initial.main}/${initial.mode})`);
+  if (initial.timer <= 0) reasons.push("seed starts with a dead/zero timer");
   for (const reference of playfieldReferenceSummaries) {
     if (reference.exactMatch) {
       reasons.push(`playfield is byte-identical to reference ${reference.path}`);
@@ -585,7 +587,6 @@ function auditPath(
       reasons.push(`playfield is near-duplicate of ${reference.path} (${reference.diffs} byte diffs < ${minPlayfieldDiff})`);
     }
   }
-  if (initial.main !== 0 && initial.mode === 2) reasons.push("seed starts in presentation/high-score mode");
   if (initial.playerState !== 0) reasons.push(`player starts in state ${initial.playerState}, not settled playable state 0`);
   if (!preserved.responsive) reasons.push("preserved dispatcher active route matches neutral route");
   if (mamePair !== undefined && !mamePair.responsive) {
@@ -597,12 +598,19 @@ function auditPath(
     reasons.push("source is gameplay/oracle warm seed; needs MAME playable-route capture before startLevel wiring");
   }
   if (!isGameplayOracleSeed && !isCheckedInPlayableSeed) {
-    reasons.push("source is not a checked-in playable seed; pair it with MAME active-vs-neutral capture before wiring");
+    reasons.push(
+      mamePair === undefined
+        ? "source is not a checked-in playable seed; pair it with MAME active-vs-neutral capture before wiring"
+        : "source is a temporary MAME capture; promote to a checked-in playable seed only after descriptor and browser stability review",
+    );
   }
 
   const isManualCandidate =
     initial.pfCount > 4_000 &&
     playfieldReferenceSummaries.every((reference) => !reference.nearDuplicate) &&
+    initial.main === 1 &&
+    initial.mode === 0 &&
+    initial.timer > 0 &&
     initial.playerState === 0 &&
     manualRearm.responsive &&
     manualRearm.stable &&
