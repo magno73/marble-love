@@ -26,6 +26,7 @@ import type { GameState, RomImage } from "@marble-love/engine";
 interface SeedJson {
   frame?: number;
   slapsticBank?: number;
+  mainLoopBodyTicks?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
@@ -526,7 +527,7 @@ function loadStateFromSeed(rom: RomImage, seed: SeedJson, manualDispatcher: bool
     gameState.workRam[0x390] = 0;
     gameState.workRam[0x391] = 0;
   }
-  gameState.clock.mainLoopBodyTicks = 1 as typeof gameState.clock.mainLoopBodyTicks;
+  gameState.clock.mainLoopBodyTicks = (seed.mainLoopBodyTicks ?? 1) as typeof gameState.clock.mainLoopBodyTicks;
   return gameState;
 }
 

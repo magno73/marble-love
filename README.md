@@ -262,6 +262,11 @@ Il candidato canonico L2 e' ora
 active/neutral exact in replay TS-vs-MAME per 180 frame e smoke ROM-backed
 stabile. Restano da fare review finale del mapping `startLevel` e
 parity/browser review prima di promuovere qualunque candidato.
+I seed possono portare metadata opzionale `mainLoopBodyTicks`: default `1`, ma
+il candidato L1 usa `0` per riprodurre la fase MAME exact; web loader e tool
+seed-driven (`visual-smoke-real`, `audit-playable-seed`,
+`search-playable-route`, `trace-playable-seed-route`) lo rispettano, mentre
+`compare-mame-ts-input-trace` puo' usare metadata snapshot o override CLI.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col

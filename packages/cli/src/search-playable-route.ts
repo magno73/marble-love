@@ -27,6 +27,7 @@ interface SeedJson {
   name?: string;
   frame?: number;
   slapsticBank?: number;
+  mainLoopBodyTicks?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
@@ -531,7 +532,7 @@ function stateFromSeed(
     gameState.workRam[0x390] = 0;
     gameState.workRam[0x391] = 0;
   }
-  gameState.clock.mainLoopBodyTicks = 1 as typeof gameState.clock.mainLoopBodyTicks;
+  gameState.clock.mainLoopBodyTicks = (seed.mainLoopBodyTicks ?? 1) as typeof gameState.clock.mainLoopBodyTicks;
   return gameState;
 }
 
