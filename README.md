@@ -191,6 +191,14 @@ Il tracer riproduce la route dell'audit e stampa il primo `death-enter`,
 f3200 e L5 f3400 muoiono anche in neutral, mentre L4 `DR` f3200 resta stable
 con input neutro ma non trova una route controllabile lunga zero-death; L6
 `UL` f3600 resta invece stable e responsive per 1000 frame TS.
+Se hai una cattura MAME dense con `input.json`, il confronto piu' forte e'
+`node --import tsx packages/cli/src/compare-mame-ts-input-trace.ts --input /path/input.json /path/scenarios/fNNNN.json`.
+Questo replaya in TS gli assoluti trackball/switch effettivamente letti da
+MAME, invece di fidarsi del nome route. Sul caso L4 `DR` f3200 ha isolato il
+gap reale: input X varia ma Y resta costante in MAME, playfield e descriptor
+restano identici, TS diverge da MAME a f+25 sulla quota (`z`), supera 1px di
+errore a f+41 ed entra in state mismatch solo a f+65. Quindi L4 va debugato su
+height/collisione/surface attorno a `x=231.05,y=188`, non con sweep piu' larghi.
 Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
