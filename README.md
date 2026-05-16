@@ -54,6 +54,13 @@ marcano `forceManualDispatcher=true`: il planner propaga
 `MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=N` anche in MAME active/neutral. Anche qui
 il risultato resta un candidato: solo una coppia MAME active-vs-neutral
 distinta, giocabile e vicina/aligned ai descriptor puo' diventare seed.
+Per proof MAME in cui la prima snapshot deve restare non forzata
+(`main=1/mode=0`) e il dispatcher viene cancellato solo dal frame successivo,
+usa `node --import tsx packages/cli/src/audit-mame-route-proof.ts --neutral neutral.json active.json`.
+Questo verifica il seed iniziale, la distanza da `manual_level1_start`, la
+nearest ROM descriptor e una coda active-vs-neutral. I candidati attract
+`f12000`, `f36000` e `f39000` passano la divergenza MAME in questa forma, ma
+restano diagnostici perche' sono ancora lontani dai descriptor ROM.
 Per identificare la famiglia ROM di ogni finestra catturata, usa
 `node --import tsx packages/cli/src/inspect-level-descriptors.ts`. Il tool
 legge i sei descrittori reali dalla pointer table `0x2BE00`, riproduce i loro

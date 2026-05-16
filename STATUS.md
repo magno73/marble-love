@@ -1,7 +1,62 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (manual route search proof pipeline)
+**Ultimo update:** 2026-05-16 (post-force MAME route proof audit)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Post-force MAME route proof audit
+
+Aggiunto `packages/cli/src/audit-mame-route-proof.ts` per auditare una forma
+di proof che `audit-playable-seed.ts` non modellava bene: snapshot iniziale
+non modificata e ancora `main=1/mode=0`, poi forced manual dispatcher al frame
+successivo e confronto MAME active-vs-neutral su una coda piu' avanti. Il tool
+verifica:
+
+- gate iniziale (`main=1 mode=0 state=0 timer>0 PF>4000`);
+- distanza da `manual_level1_start`;
+- nearest ROM descriptor e warning se `pfDiff > 1024`;
+- divergenza active-vs-neutral su snapshot proof (`diffXY`, byte diff RAM);
+- stato/timer/PF della coda proof.
+
+Schema MAME usato per i candidati attract gia' indicati dall'handoff:
+
+```sh
+SDL_VIDEODRIVER=dummy \
+MARBLE_PLAYABLE_COIN_START=0 \
+MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1 \
+MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=<frame+1> \
+MARBLE_PLAYABLE_TRACKBALL_START=<frame+2> \
+MARBLE_PLAYABLE_ROUTE='R:300,D:300,L:300,U:300,DR:300,DL:300,N:400' \
+MARBLE_PLAYABLE_FRAME_LIST='attract_f<frame>:<frame>' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=360 \
+mame marble -rompath roms -autoboot_script oracle/mame_playable_input_capture.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Risultati:
+
+- `f12000` (`/private/tmp/marble-attract-postforce-f12000-proof`):
+  iniziale `seg=1`, `pfHash=0dd9e862a4be1192`, nearest L2 `pfDiff=2508`,
+  distinto da `manual_level1_start` (`991` PF diffs). Proof responsive a
+  `#180` (`diffXY=1907528/3478441`, state `0`) e a `#360`
+  (`diffXY=2809506/11374783`, state `0`). Verdict:
+  `diagnostic-route-proof`, perche' il nearest descriptor resta lontano.
+- `f36000` (`/private/tmp/marble-attract-postforce-f36000-proof`):
+  iniziale `seg=2`, `pfHash=ff0ea3512d878bec`, nearest L1 `pfDiff=2799`,
+  distinto dal seed level 1 (`6178` PF diffs). Proof utile a `#240`
+  (`diffXY=8033901/2295590`, state `0`); a `#360` entra in state `4`.
+  Verdict diagnostico: descriptor lontano.
+- `f39000` (`/private/tmp/marble-attract-postforce-f39000-proof`):
+  iniziale `seg=4`, `pfHash=61bf68f6c93286e2`, nearest L1 `pfDiff=2418`,
+  distinto dal seed level 1 (`5797` PF diffs). Proof utile a `#240`
+  (`diffXY=8549969/2689353`, state `0`); a `#360` entra in state `4`.
+  Verdict diagnostico: descriptor lontano.
+
+Interpretazione: il proof MAME post-force conferma che questi attract windows
+possono essere resi controllabili nel regime browser-manual, ma non li promuove
+a `startLevel`: restano lontani dai descrittori ROM e sono quindi ancora
+falsification/probe, non seed start reali. Il prossimo passo deve cercare una
+movie/manual route o un target di search che raggiunga finestre stable-playable
+controllabili e descriptor-aligned, non solo attract windows controllabili.
 
 ## 2026-05-16 — Manual route search proof pipeline
 
