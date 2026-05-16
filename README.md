@@ -191,6 +191,11 @@ Il tracer riproduce la route dell'audit e stampa il primo `death-enter`,
 f3200 e L5 f3400 muoiono anche in neutral, mentre L4 `DR` f3200 resta stable
 con input neutro ma non trova una route controllabile lunga zero-death; L6
 `UL` f3600 resta invece stable e responsive per 1000 frame TS.
+Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
+`node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
+e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
+La proof MAME resta legata allo scenario originale active/neutral: se rinomini
+il seed per il web, non usare quel basename come sorgente del paired audit.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
