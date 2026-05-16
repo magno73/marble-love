@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (post-seed MAME proof L4/L5/L6)
+**Ultimo update:** 2026-05-16 (L5 live-surface parity)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L5 live-surface parity
+
+Il candidato L5 post-seed f3520 non era un seed sbagliato: la coppia MAME
+active/neutral era gia' `post-seed-candidate`, ma il runtime TS/browser faceva
+cadere il player entro 120 tick. La dense capture ha isolato il gap: MAME
+mantiene stabile la surface struct player `0x401C28` (`surf1a=16168`,
+pattern `3f28`) mentre i global tile `0x400696/0x400698` cambiano; TS forzava
+`FUN_1CABA` tramite invalidazione tile e cancellava il pavimento, generando una
+caduta sintetica.
+
+Fix in `packages/engine/src/helper-121b8.ts` e
+`packages/engine/src/refresh-frame-10fce.ts`: per il solo player sul descriptor
+L5 `0x2de1e`, il path post-seed preserva la surface live invece di forzare il
+redraw. Gli altri descriptor e gli altri oggetti mantengono il comportamento
+legacy. Questo non cabla `startLevel=5`: e' una guardia di parita' engine
+scoped al comportamento osservato in MAME.
+
+Verifiche:
+
+- L5 active `DL:60,N:180` f3520: `compare-mame-ts-input-trace` 180/180 exact,
+  `dx=0`, `dy=0`, `dz=0`, `maxPfByteDiffs=0`.
+- L5 neutral f3520: 180/180 exact, `dx=0`, `dy=0`, `dz=0`,
+  `maxPfByteDiffs=0`.
+- L4 post-seed `DR` f3200 resta 180/180 exact.
+- L6 post-seed `UL` f3600 resta state/main/descriptor/playfield exact, con
+  delta iniziale sotto 1 px come prima.
+- Smoke ROM-backed L5:
+  `candidate_level5_postseed_dl_f3520.seed.json`, 120 tick, finale
+  `main/mode=0/0`, descriptor `0x2de1e`, state0, timer `78`, `xy=1004,996`,
+  `z=16168`, `pf=4651`, frame popolato.
+
+Il test storico `playable-live-routes.test.ts` resta rosso su due aspettative
+legacy (`level2_spawn maxScrollY` e numero di entry state-1), ma lo stesso
+fallimento si riproduce su HEAD pulito `3a3b255`, quindi non e' regressione di
+questa patch.
 
 ## 2026-05-16 — Post-seed MAME proof gate
 
@@ -85,10 +121,11 @@ Risultato: `post-seed-candidate`, descriptor L5 `0x2de1e`, `seedExact=true`,
 vede L5 da f2341 a f3700. Esportato candidato non cablato:
 `packages/web/public/scenarios/playable/candidate_level5_postseed_dl_f3520.seed.json`.
 
-Blocco residuo: lo smoke browser/TS sul seed esportato renderizza un frame
-nonblank, ma dopo 120 tick entra in `state=4` (`xy=1004,980`, `z=0`). Quindi
-L5 e' ora MAME-proof come seed post-seed, ma non e' ancora promuovibile finche'
-il gap TS/browser non viene risolto.
+Il vecchio blocco TS/browser e' stato risolto dalla guardia live-surface
+descritta sopra: active e neutral sono ora exact contro MAME per 180 frame e lo
+smoke ROM-backed resta stabile per 120 tick. Il seed resta comunque candidato
+non cablato finche' la promozione `startLevel` non passa il gate completo di
+wiring/manual review insieme agli altri livelli.
 
 ### L6 f3600
 
