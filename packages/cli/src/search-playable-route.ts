@@ -17,6 +17,7 @@ import {
   bootInit,
   bus as busNs,
   level as levelNs,
+  levelDispatcher16EC6 as dispatcherNs,
   state as stateNs,
   tick,
 } from "@marble-love/engine";
@@ -60,6 +61,7 @@ interface CliArgs {
   diversityStateBucket: number | undefined;
   maxDeaths: number | undefined;
   mameTrackballStart: number | undefined;
+  descriptors?: readonly DescriptorSummary[];
 }
 
 interface StateSummary {
@@ -74,8 +76,20 @@ interface StateSummary {
   pfHash: string;
   coarseHash: string;
   descriptorPtr: number;
+  descriptorLevel: number | undefined;
+  descriptorPfNonzero: number | undefined;
+  minPlayablePf: number;
   x: number;
   y: number;
+}
+
+interface DescriptorSummary {
+  level: number;
+  index: number;
+  pointer: number;
+  byteSize: number;
+  pfNonzero: number;
+  minPlayablePf: number;
 }
 
 interface SearchNode {
@@ -138,6 +152,7 @@ const DEFAULT_SEED =
   "packages/web/public/scenarios/playable/manual_level1_start.seed.json";
 const DEFAULT_ROM = "ghidra_project/marble_program.bin";
 const DEFAULT_OUT_DIR = "/private/tmp/marble-manual-route-search";
+const FALLBACK_MIN_PLAYABLE_PF = 4_001;
 const DEFAULT_DIRECTIONS = ["D", "R", "L", "DR", "DL", "UR", "UL", "BR", "N"];
 const SCREEN_DELTA_UNITS: Record<string, readonly [number, number]> = {
   D: [0, 1],
@@ -520,7 +535,37 @@ function stateFromSeed(
   return gameState;
 }
 
-function summarize(state: GameState): StateSummary {
+function descriptorSummaries(rom: RomImage): DescriptorSummary[] {
+  return levelNs.loadAllLevels(rom).map((level) => {
+    const gameState = stateNs.emptyGameState();
+    gameState.workRam[0x394] = (level.index >>> 8) & 0xff;
+    gameState.workRam[0x395] = level.index & 0xff;
+    dispatcherNs.levelDispatcher16EC6(gameState, rom);
+    const pfNonzero = nonzero(gameState.playfieldRam);
+    return {
+      level: level.index + 1,
+      index: level.index,
+      pointer: level.romOffset,
+      byteSize: level.byteSize,
+      pfNonzero,
+      minPlayablePf: Math.max(1_200, Math.floor(pfNonzero * 0.75)),
+    };
+  });
+}
+
+function descriptorForPointer(
+  descriptors: readonly DescriptorSummary[] | undefined,
+  pointer: number,
+): DescriptorSummary | undefined {
+  return descriptors?.find((descriptor) => descriptor.pointer === pointer);
+}
+
+function summarize(
+  state: GameState,
+  descriptors?: readonly DescriptorSummary[],
+): StateSummary {
+  const descriptorPtr = readLongBE(state.workRam, 0x474);
+  const descriptor = descriptorForPointer(descriptors, descriptorPtr);
   return {
     main: readWordBE(state.workRam, 0x390),
     mode: readWordBE(state.workRam, 0x392),
@@ -532,7 +577,10 @@ function summarize(state: GameState): StateSummary {
     pfNonzero: nonzero(state.playfieldRam),
     pfHash: shortHash(state.playfieldRam),
     coarseHash: bucketHash(state.playfieldRam),
-    descriptorPtr: readLongBE(state.workRam, 0x474),
+    descriptorPtr,
+    descriptorLevel: descriptor?.level,
+    descriptorPfNonzero: descriptor?.pfNonzero,
+    minPlayablePf: descriptor?.minPlayablePf ?? FALLBACK_MIN_PLAYABLE_PF,
     x: signedLong(readLongBE(state.workRam, 0x18 + 0x0c)) / 65536,
     y: signedLong(readLongBE(state.workRam, 0x18 + 0x10)) / 65536,
   };
@@ -540,11 +588,11 @@ function summarize(state: GameState): StateSummary {
 
 function isStablePlayable(summary: StateSummary): boolean {
   return (
-    summary.main === 1 &&
+    (summary.main === 0 || summary.main === 1) &&
     summary.mode === 0 &&
     summary.playerState === 0 &&
     summary.timer > 0 &&
-    summary.pfNonzero > 4_000
+    summary.pfNonzero >= summary.minPlayablePf
   );
 }
 
@@ -588,7 +636,7 @@ function scoreSummary(
       score -= 15_000;
     }
   }
-  if (summary.pfNonzero < 4_000 && summary.timer > 0)
+  if (summary.pfNonzero < summary.minPlayablePf && summary.timer > 0)
     score -= targetRequested ? 60_000 : 20_000;
   if (summary.timer <= 0) score -= 80_000;
   if (summary.playerState === 4 || summary.playerState === 5)
@@ -642,7 +690,7 @@ function tickNode(
       inputMmio: 0x6f,
     });
 
-    const summary = summarize(state);
+    const summary = summarize(state, args.descriptors);
     maxX = Math.max(maxX, summary.x);
     maxY = Math.max(maxY, summary.y);
     if (summary.pfNonzero === 0) {
@@ -819,7 +867,7 @@ function diversityKey(node: SearchNode, args: CliArgs): string {
   const prefixChunks = args.diversityPrefixChunks ?? 0;
   if (prefixChunks <= 0) return "";
   const routeChunks = chunkDirections(node, args.chunk).slice(0, prefixChunks);
-  const summary = summarize(node.state);
+  const summary = summarize(node.state, args.descriptors);
   return [
     routeChunks.join("/"),
     `desc=${formatHex32(summary.descriptorPtr)}`,
@@ -831,7 +879,7 @@ function diversityKey(node: SearchNode, args: CliArgs): string {
 function stateDiversityKey(node: SearchNode, args: CliArgs): string {
   const bucket = args.diversityStateBucket ?? 0;
   if (bucket <= 0) return "";
-  const summary = summarize(node.state);
+  const summary = summarize(node.state, args.descriptors);
   return [
     `desc=${formatHex32(summary.descriptorPtr)}`,
     `main=${summary.main}`,
@@ -907,7 +955,7 @@ function manifestEntry(
   seed: SeedJson,
   args: CliArgs,
 ): CandidateManifestEntry {
-  const summary = summarize(node.state);
+  const summary = summarize(node.state, args.descriptors);
   const routeSpec = compressRoute(node.chunks);
   const routeFrame = routeFrameForCandidate(node);
   const seedFrame = seed.frame;
@@ -948,8 +996,8 @@ function manifestEntry(
   };
 }
 
-function printNode(index: number, node: SearchNode): void {
-  const summary = summarize(node.state);
+function printNode(index: number, node: SearchNode, args: CliArgs): void {
+  const summary = summarize(node.state, args.descriptors);
   console.log(
     `${String(index + 1).padStart(2, "0")} score=${node.bestScore.toFixed(0)} frame=${node.frame} ` +
       `routeFrame=${routeFrameForCandidate(node)} first6=${node.firstState6Frame ?? "-"} ` +
@@ -966,6 +1014,7 @@ function printNode(index: number, node: SearchNode): void {
 function main(): void {
   const args = parseArgs();
   const rom = loadRom(args.romPath);
+  args.descriptors = descriptorSummaries(rom);
   if (args.targetDescriptor !== undefined) {
     args.targetDescriptorPtr =
       levelNs.readLevelPointerTable(rom)[args.targetDescriptor - 1];
@@ -982,7 +1031,7 @@ function main(): void {
   }
   const seed = loadSeed(args.seedPath, args.snapshotIndex);
   const seedState = stateFromSeed(rom, seed, args.manualDispatcher);
-  const initial = summarize(seedState);
+  const initial = summarize(seedState, args.descriptors);
   const prefix =
     args.routePrefix === undefined ? [] : expandRouteSpec(args.routePrefix);
   const initialNode: SearchNode = {
@@ -1050,7 +1099,7 @@ function main(): void {
       best.firstState6Frame !== undefined ||
       best.firstMain3Frame !== undefined
     ) {
-      printNode(0, best);
+      printNode(0, best, args);
     }
     if (
       args.targetDescriptorPtr === undefined &&
@@ -1112,7 +1161,7 @@ function main(): void {
   );
 
   console.log(`\nTop ${candidates.length} route candidate(s):`);
-  candidates.forEach((candidate, index) => printNode(index, candidate));
+  candidates.forEach((candidate, index) => printNode(index, candidate, args));
   console.log(`\nWrote manifest: ${join(resolve(args.outDir), "manifest.json")}`);
   console.log(
     "Run plan-mame-candidate-captures.ts on this manifest before treating any candidate as proof.",

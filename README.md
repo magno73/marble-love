@@ -184,6 +184,17 @@ Il summarizer esegue l'audit active/neutral su tutte le route e separa le
 finestre in `candidate`, `death-prone`, `ts-control-gap`, `ts-stability-gap` e
 `not-responsive`, cosi' L4 puo' essere trattato come gap TS-vs-MAME invece che
 come ricerca cieca di route.
+Per una proof piu' severa, in cui l'input active parte solo dopo il frame seed,
+usa `node --import tsx packages/cli/src/audit-post-seed-mame-proof.ts active.json neutral.json`.
+La coppia MAME deve essere byte-identica al primo snapshot e divergere solo
+nella tail post-seed; questo evita di promuovere seed gia' contaminati da input
+pre-seed. Con questo gate L6 f3600 `UL:180` passa come candidato post-seed
+(`seedExact=true`, `maxDiffXY=1022747/0`, deaths `0/0`, stable) ed e' esportato
+come `candidate_level6_postseed_ul_f3600.seed.json`. L5 f3520 `DL:60,N:180`
+passa la proof MAME post-seed (`maxDiffXY=0/2967501`, deaths `0/0`) ed e'
+esportato come `candidate_level5_postseed_dl_f3520.seed.json`, ma lo smoke
+browser/TS entra ancora in `state=4` dopo 120 tick: non cablarlo finche' quel
+gap parity non e' risolto.
 Quando una finestra MAME-responsive fallisce il gate TS, usa
 `node --import tsx packages/cli/src/trace-playable-seed-route.ts scenario.json`.
 Il tracer riproduce la route dell'audit e stampa il primo `death-enter`,
@@ -220,10 +231,10 @@ distinte, ma non sono seed practice completi senza stato player/camera/dispatche
 validato.
 La strategia corrente non e' aumentare sweep ciechi: i descrittori sono
 risolti. Per ogni livello mancante va classificato il failure dominante.
-L6 e' candidato da browser/manual review; L4 e' MAME/TS exact sulla finestra
-`DR` f3200 dopo il fix `1CABA`, ma manca ancora una route zero-death
-promuovibile; L5 f3400 va scartato
-perche' muore anche neutral; L3 richiede una finestra route-safe dopo il proof
+L6 ha ora proof MAME post-seed e smoke browser-style nonblank/stable; L4 e'
+MAME/TS exact sulla finestra `DR` f3200 dopo il fix `1CABA`, ma manca ancora
+una proof post-seed/browser completa; L5 ha proof MAME post-seed ma fallisce
+ancora il replay browser/TS; L3 richiede una finestra route-safe dopo il proof
 detector-gate; L2 va ricatturato da una transizione reale stabile, evitando i
 falsi exact in `state=6`.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa

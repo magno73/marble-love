@@ -1,7 +1,85 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L4 candidate route proof)
+**Ultimo update:** 2026-05-16 (post-seed MAME proof L5/L6)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Post-seed MAME proof gate
+
+Aggiunta utility `packages/cli/src/audit-post-seed-mame-proof.ts`. A differenza
+del frontier audit classico, questa prova richiede che le catture MAME active e
+neutral siano byte-identiche al primo snapshot seed, e che l'input active parta
+solo dai frame successivi (`MARBLE_PLAYABLE_TRACKBALL_START=seedFrame+1`). Il
+gate misura poi divergenza active-vs-neutral, death events e stabilita' sulla
+tail post-seed. Questo evita di promuovere finestre gia' contaminate da una
+route pre-seed.
+
+Aggiornato anche `packages/cli/src/search-playable-route.ts`: la nozione di
+stable-playable e' ora allineata all'audit descriptor-aware (`main/mode=0|1/0`
+e soglia PF derivata dal descriptor ROM), invece del vecchio `main=1` +
+`pf > 4000` che penalizzava L4/L6 e alcune finestre L5.
+
+### L5 f3520
+
+Nuova coppia MAME post-seed:
+
+- active descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l5-f3520/DL-proof/active/scenarios/f3520.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l5-f3520/neutral/scenarios/f3520.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=5`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3520, route active: `DL:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3521`
+
+Audit:
+
+```sh
+node --import tsx packages/cli/src/audit-post-seed-mame-proof.ts \
+  --min-tail-frames 120 \
+  /private/tmp/marble-post-seed-proof-l5-f3520/DL-proof/active/scenarios/f3520.json \
+  /private/tmp/marble-post-seed-proof-l5-f3520/neutral/scenarios/f3520.json
+```
+
+Risultato: `post-seed-candidate`, descriptor L5 `0x2de1e`, `seedExact=true`,
+`maxDiffXY=0/2967501@3699`, deaths `0/0`, tail stable. Il trace descriptor
+vede L5 da f2341 a f3700. Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level5_postseed_dl_f3520.seed.json`.
+
+Blocco residuo: lo smoke browser/TS sul seed esportato renderizza un frame
+nonblank, ma dopo 120 tick entra in `state=4` (`xy=1004,980`, `z=0`). Quindi
+L5 e' ora MAME-proof come seed post-seed, ma non e' ancora promuovibile finche'
+il gap TS/browser non viene risolto.
+
+### L6 f3600
+
+Nuova coppia MAME post-seed:
+
+- active descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l6-f3600/UL180-proof/scenarios/f3600.json`
+- neutral:
+  `/private/tmp/marble-post-seed-proof-l6-f3600/neutral/scenarios/f3600.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=6`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3600, route active: `UL:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3601`
+
+Audit: `post-seed-candidate`, descriptor L6 `0x2e790`, `seedExact=true`,
+`maxDiffXY=1022747/0@3780`, deaths `0/0`, tail stable. Il trace descriptor
+vede L6 da f2341 a f3780. Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level6_postseed_ul_f3600.seed.json`.
+
+Smoke ROM-backed:
+
+```sh
+node --import tsx packages/cli/src/visual-smoke-real.ts \
+  --seed packages/web/public/scenarios/playable/candidate_level6_postseed_ul_f3600.seed.json \
+  --ticks 120 \
+  --out /private/tmp/marble-l6-postseed-f3720-smoke.ppm
+```
+
+Risultato: L6 `0x2e790`, `main/mode=0/0`, state0, timer `78 -> 76`,
+`pf=3486`, 2121 playfield tile, 12 sprite, 216 alpha char, frame nonblank.
+Non e' stato cablato `startLevel=6`.
 
 ## 2026-05-16 — L4 candidate route proof
 
