@@ -51,6 +51,9 @@ fingerprint (`L1 0x2bee2`, `L2 0x2c54c`, `L3 0x2cd9e`, `L4 0x2d648`,
 `/private/tmp/marble-six-level-descriptors`. Su una tail MAME manuale/playback
 usa ad esempio
 `node --import tsx packages/cli/src/inspect-level-descriptors.ts --no-default-snapshots --all-snapshots --stable-only /private/tmp/marble-manual-level-capture/scenarios/manual_levels_tail.json`.
+Per catture dense frame-by-frame, aggiungi `--timeline-only` per collassare
+snapshot adiacenti con stesso stato/descriptor in range leggibili, ad esempio
+`node --import tsx packages/cli/src/inspect-level-descriptors.ts --no-default-snapshots --extra-scenario-dir /private/tmp/marble-mame-l2-transition-fine-forced-manual-active/scenarios --timeline-only`.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

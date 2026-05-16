@@ -30,6 +30,8 @@ interface CliArgs {
   allSnapshots: boolean;
   defaultSnapshots: boolean;
   stableOnly: boolean;
+  timelineSummary: boolean;
+  timelineOnly: boolean;
   maxNearest: number;
 }
 
@@ -138,6 +140,8 @@ Options:
   --all-snapshots         Use every scenario snapshot instead of only #0
   --no-default-snapshots  Compare only explicit path/dir arguments
   --stable-only           Only print snapshot associations that look playable
+  --timeline-summary      Collapse frame-adjacent snapshots into compact ranges
+  --timeline-only         Print timeline ranges instead of per-snapshot lines
   --max-nearest N         Nearest checked-in snapshots per descriptor (default: 4)
   -h, --help              Show this help
 
@@ -155,6 +159,8 @@ function parseArgs(): CliArgs {
   let allSnapshots = false;
   let defaultSnapshots = true;
   let stableOnly = false;
+  let timelineSummary = false;
+  let timelineOnly = false;
   let maxNearest = 4;
 
   for (let i = 0; i < raw.length; i++) {
@@ -171,6 +177,11 @@ function parseArgs(): CliArgs {
       defaultSnapshots = false;
     } else if (arg === "--stable-only") {
       stableOnly = true;
+    } else if (arg === "--timeline-summary") {
+      timelineSummary = true;
+    } else if (arg === "--timeline-only") {
+      timelineSummary = true;
+      timelineOnly = true;
     } else if (arg === "--max-nearest") {
       maxNearest = parsePositiveInt(raw[++i], "--max-nearest");
     } else if (arg === "-h" || arg === "--help") {
@@ -183,7 +194,18 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { romPath, outDir, comparePaths, extraDirs, allSnapshots, defaultSnapshots, stableOnly, maxNearest };
+  return {
+    romPath,
+    outDir,
+    comparePaths,
+    extraDirs,
+    allSnapshots,
+    defaultSnapshots,
+    stableOnly,
+    timelineSummary,
+    timelineOnly,
+    maxNearest,
+  };
 }
 
 function requireValue(value: string | undefined, label: string): string {
@@ -467,6 +489,69 @@ function printSnapshotAssociations(associations: readonly SnapshotAssociation[],
   }
 }
 
+function timelineKey(entry: SnapshotAssociation): string {
+  return [
+    entry.stablePlayable ? "stable" : "nonstable",
+    entry.main ?? "?",
+    entry.mode ?? "?",
+    entry.segment ?? "?",
+    entry.playerState ?? "?",
+    entry.timer ?? "?",
+    entry.scrollWord ?? "?",
+    entry.pfNonzero,
+    entry.pfHash,
+    entry.nearestDescriptor,
+    entry.playfieldDiffs,
+    entry.colorDiffs,
+    entry.alphaDiffs,
+  ].join("|");
+}
+
+function printTimelineSummary(associations: readonly SnapshotAssociation[]): void {
+  const framed = associations
+    .filter((entry) => entry.frame !== undefined)
+    .slice()
+    .sort((a, b) => (a.frame ?? 0) - (b.frame ?? 0) || a.label.localeCompare(b.label));
+  if (framed.length === 0) return;
+
+  console.log("\nSnapshot timeline summary:");
+  let first = framed[0]!;
+  let last = framed[0]!;
+  let key = timelineKey(first);
+
+  const flush = (): void => {
+    const firstFrame = first.frame ?? "?";
+    const lastFrame = last.frame ?? "?";
+    const count =
+      typeof firstFrame === "number" && typeof lastFrame === "number"
+        ? lastFrame - firstFrame + 1
+        : 1;
+    const range = firstFrame === lastFrame ? `f${firstFrame}` : `f${firstFrame}-f${lastFrame}`;
+    console.log(
+      `  ${range} count=${count} stable=${first.stablePlayable ? "yes" : "no"} ` +
+        `main/mode=${first.main ?? "?"}/${first.mode ?? "?"} seg=${first.segment ?? "?"} ` +
+        `state=${first.playerState ?? "?"} timer=${first.timer ?? "?"} scroll=${first.scrollWord ?? "?"} ` +
+        `pf=${first.pfNonzero} pfHash=${first.pfHash} nearest=L${first.nearestDescriptor} ` +
+        `pfDiff=${first.playfieldDiffs} colorDiff=${first.colorDiffs} alphaDiff=${first.alphaDiffs}`,
+    );
+  };
+
+  for (const entry of framed.slice(1)) {
+    const nextKey = timelineKey(entry);
+    const adjacent =
+      typeof last.frame === "number" && typeof entry.frame === "number" && entry.frame === last.frame + 1;
+    if (nextKey === key && adjacent) {
+      last = entry;
+      continue;
+    }
+    flush();
+    first = entry;
+    last = entry;
+    key = nextKey;
+  }
+  flush();
+}
+
 function main(): void {
   const args = parseArgs();
   const romPath = resolve(args.romPath);
@@ -485,7 +570,8 @@ function main(): void {
   printDescriptorTable(descriptors);
   printDescriptorPairwise(descriptors);
   printNearestSnapshots(descriptors, snapshots, args.maxNearest);
-  printSnapshotAssociations(associations, args.stableOnly);
+  if (args.timelineSummary) printTimelineSummary(associations);
+  if (!args.timelineOnly) printSnapshotAssociations(associations, args.stableOnly);
 
   const pairwise = [];
   for (let i = 0; i < descriptors.length; i++) {
