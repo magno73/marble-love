@@ -1,7 +1,53 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (seed review strategy + L6 visual smoke parity)
+**Ultimo update:** 2026-05-16 (L4 MAME-vs-TS first divergence)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L4 MAME-vs-TS first divergence
+
+Aggiunta utility `packages/cli/src/compare-mame-ts-input-trace.ts`: parte da
+una scenario MAME dense, carica la prima snapshot come warm seed TS, poi avanza
+TS usando gli assoluti reali di `input.json` (`trackballX/Y`, P2 e switch)
+invece di reinterpretare il label route (`DR`, `UL`, ecc.). Questo e' il
+confronto autorevole per i gap TS-vs-MAME, perche' misura la route effettiva
+letta da MAME.
+
+Cattura dense mirata generata per L4:
+
+- out root: `/private/tmp/marble-l4-first-divergence/l4/DR`
+- route MAME: `MARBLE_PLAYABLE_ROUTE='DR:900'`, step 4, bootstrap L4 f2300,
+  capture `f3200:3200` con `MARBLE_PLAYABLE_CAPTURE_FRAMES=180`
+- risultato: `/private/tmp/marble-l4-first-divergence/l4/DR/scenarios/f3200.json`
+  contiene 181 snapshot consecutive f3200..f3380.
+
+Comando di confronto:
+
+```sh
+node --import tsx packages/cli/src/compare-mame-ts-input-trace.ts \
+  --input /private/tmp/marble-l4-first-divergence/l4/DR/input.json \
+  --max-frames 180 \
+  --sample-every 60 \
+  /private/tmp/marble-l4-first-divergence/l4/DR/scenarios/f3200.json
+```
+
+Finding L4:
+
+- l'input MAME effettivo della route `DR` ha `inputDistinct=32/1`: X cambia,
+  Y resta costante a `0`. Quindi gli audit basati solo sul nome route possono
+  simulare un esperimento diverso se applicano anche Y.
+- Con l'input assoluto MAME reale, TS e MAME restano exact su stato, posizione,
+  z e playfield fino a f+24.
+- Prima divergenza fisica: f+25/abs=3225. MAME resta `z=16320`, TS scende a
+  `z=16319.25`; playfield byte-diff `0`.
+- Primo delta posizione >1 px: f+41/abs=3241, con TS gia' sotto la superficie
+  MAME (`z=16299.75` vs `16320`).
+- Primo state mismatch: f+65/abs=3265. MAME resta `state=0`, TS entra in
+  `state=1`; la death/state failure e' quindi effetto della divergenza
+  height/collisione iniziata 40 frame prima.
+
+Prossimo fix utile per L4: instrumentare il path height/collision/surface
+attorno a f3225, coordinate circa `x=231.05`, `y=188`, descriptor L4
+`0x2d648`. Non aumentare lo sweep finche' questa divergenza non e' spiegata.
 
 ## 2026-05-16 — Seed review strategy + L6 visual smoke parity
 
