@@ -32,6 +32,9 @@ const ALPHA_END     = 0x00a04000;
 const PAL_BASE      = 0x00b00000;
 const PAL_END       = 0x00b00800;
 
+const PLAYER1_OBJ   = 0x00400018;
+const PLAYER2_OBJ   = 0x004000fa;
+
 const ROM_LOOKUP    = 0x1f0e2;        // entity pointer lookup table
 
 const ENTITY_BASE   = 0x004003bc;     // entity list start (absolute)
@@ -291,12 +294,11 @@ function dispatchType1(
 
   // The player marble's screen-projection cache @ obj+0x1e/+0x20 is kept in
   // sync with (obj.x, obj.y, obj.z) by MAME via sub-functions we don't fully
-  // replicate (FUN_1CABA heavy tile redraw). For player objPtr in workRam,
-  // recompute (d5, d4) directly from the iso formula on world coords; for
-  // ROM-resident static structs (test fixtures, secondary entity types), keep
-  // the literal `loadCoords` so existing parity tests stay green.
+  // replicate (FUN_1CABA heavy tile redraw). Recompute only for the two player
+  // objects. Other type-1 workRam entries (pair/script slots) maintain their
+  // own cache and must render from it, otherwise physics and visuals drift.
   const [d5, d4] =
-    (objPtr >>> 0) >= WRAM && (objPtr >>> 0) < WRAM_END
+    objPtr === PLAYER1_OBJ || objPtr === PLAYER2_OBJ
       ? loadCoordsIsoPlayer(state, objPtr, 0x18, 0x10)
       : loadCoords(state, rom, objPtr, 0x1e, 0x18, 0x10);
 

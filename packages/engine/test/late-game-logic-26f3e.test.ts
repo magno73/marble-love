@@ -290,6 +290,47 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     state.workRam[rectBufPtr - WRAM + 1] = subIdx & 0xff;
   }
 
+  function s16(value: number): number {
+    const word = value & 0xffff;
+    return word >= 0x8000 ? word - 0x10000 : word;
+  }
+
+  function setupType1Object(
+    state: GameState,
+    rom: RomImage,
+    subIdx: number,
+    objAbs: number,
+  ): void {
+    setupEntity(state, rom, 0, 0x00401e00, 0x01, subIdx);
+    romW32(rom, 0x1eff6 + subIdx * 4, objAbs);
+
+    wb(state, objAbs + 0x18, 0x01);
+    wb(state, objAbs + 0x1a, 0x00);
+    wb(state, objAbs + 0x1c, 0x01);
+    ww(state, objAbs + 0x1e, 100);
+    ww(state, objAbs + 0x20, 80);
+    wl(state, objAbs + 0x0c, 300 << 16);
+    wl(state, objAbs + 0x10, 500 << 16);
+    wl(state, objAbs + 0x14, 16348 << 16);
+    ww(state, 0x0040097e, 0);
+  }
+
+  function firstDirectSprite(state: GameState): { code: number; x: number; y: number } {
+    const bankOffset = ((rw(state, 0x004003b0) & 0x08) << 6) & 0x03ff;
+    return {
+      code: rws(state, 0x00a02080 + bankOffset),
+      x: rws(state, 0x00a02100 + bankOffset),
+      y: rws(state, 0x00a02000 + bankOffset),
+    };
+  }
+
+  function expectedFromD5D4(d5: number, d4: number): { x: number; y: number } {
+    return {
+      x: ((s16(d5) - 8) * 32) & 0x3fe0,
+      y: (s16(d4) * 32) & 0x3fe0 | 1,
+    };
+  }
+
   it("type 0x2C emits 2 direct sprite entries to cursors", () => {
     const state = makeState();
     const rom = emptyRomImage();
@@ -442,6 +483,51 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     });
     // Type 0x2A emits 2 direct entries → counter should be 2
     expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 1 renders non-player workRam objects from their projection cache", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    const objAbs = 0x004009a4;
+    setupType1Object(state, rom, 2, objAbs);
+
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+    });
+
+    const cacheExpected = expectedFromD5D4(100 + 0x18, 80 + 0x10);
+    const isoExpected = expectedFromD5D4(
+      500 - 300 + 0x88 + 0x18,
+      16348 + 0x54 - ((300 + 500) >> 1) + 0x10,
+    );
+    const sprite = firstDirectSprite(state);
+    expect(cacheExpected).not.toEqual(isoExpected);
+    expect(sprite.code).toBe(0x0005);
+    expect(sprite.x).toBe(cacheExpected.x);
+    expect(sprite.y).toBe(cacheExpected.y);
+  });
+
+  it("type 1 keeps the player-only iso projection correction for player object 0", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    setupType1Object(state, rom, 0, 0x00400018);
+
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+    });
+
+    const cacheExpected = expectedFromD5D4(100 + 0x18, 80 + 0x10);
+    const isoExpected = expectedFromD5D4(
+      500 - 300 + 0x88 + 0x18,
+      16348 + 0x54 - ((300 + 500) >> 1) + 0x10,
+    );
+    const sprite = firstDirectSprite(state);
+    expect(cacheExpected).not.toEqual(isoExpected);
+    expect(sprite.code).toBe(0x0005);
+    expect(sprite.x).toBe(isoExpected.x);
+    expect(sprite.y).toBe(isoExpected.y);
   });
 });
 
