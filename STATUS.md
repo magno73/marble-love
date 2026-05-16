@@ -1,7 +1,62 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (audit prefilter for manual tails)
+**Ultimo update:** 2026-05-16 (MAME autoplay descriptor transitions)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME autoplay descriptor transition audit
+
+`packages/cli/src/inspect-level-descriptors.ts` ora supporta
+`--transition-summary`: oltre alla timeline compatta, stampa le finestre
+byte-exact in cui una cattura MAME combacia coi descrittori ROM e il primo
+frame stable-playable successivo. Il manifest include lo stesso
+`transitionSummary`, cosi' il gate "descriptor exact ma non giocabile" resta
+auditabile senza parsing manuale della timeline.
+
+Nuova cattura MAME headless dal boot coin/start con dispatcher MAME preservato
+e input trackball neutro, mirata attorno alle transizioni:
+
+```sh
+SDL_VIDEODRIVER=dummy \
+MARBLE_PLAYABLE_OUT_DIR=/private/tmp/marble-mame-autoplay-descriptor-fine/scenarios \
+MARBLE_PLAYABLE_INPUT_OUT=/private/tmp/marble-mame-autoplay-descriptor-fine/input.json \
+MARBLE_PLAYABLE_ROUTE='N:21000' \
+MARBLE_PLAYABLE_TRACKBALL_START=2020 \
+MARBLE_PLAYABLE_FRAME_LIST='<f3180..f3300,f7950..f8050,f11450..f11550,f15950..f16100,f20700..f20850>' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=0 \
+mame marble -rompath roms -autoboot_script oracle/mame_playable_input_capture.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Inspector:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --extra-scenario-dir /private/tmp/marble-mame-autoplay-descriptor-fine/scenarios \
+  --transition-summary \
+  --timeline-only \
+  --max-nearest 1 \
+  --out-dir /private/tmp/marble-mame-autoplay-descriptor-fine/descriptors-transition
+```
+
+Finding chiave:
+
+- L1 exact `f3262..f3265` e `f16039..f16042`, sempre `state=6`.
+  Il primo frame stable-playable successivo e' gia' `pfDiff=1484` dal L1
+  descriptor (`pfHash=24c9fd7c7f114124`, PF `4039`).
+- L2 exact `f7994..f8014`, `f11492..f11512`, `f20771..f20791`, sempre
+  `state=6`. Il primo frame stable-playable successivo e' gia' `pfDiff=1517`
+  dal L2 descriptor (`pfHash=fe66bf77699cb9b0`, PF `4174`).
+- In questa route MAME autopilot/neutra non compaiono finestre exact per L3,
+  L4, L5 o L6. Lo sweep e' comunque diagnostico/autopilot: non fornisce
+  controllo active-vs-neutral e non promuove seed.
+
+Interpretazione: la cattura MAME reale rafforza il vincolo gia' emerso nella
+finestra L2 manual-dispatcher: i match ROM exact sono finestre di load/
+transition, non seed giocabili. I frame stabili immediatamente dopo sono warm
+families riciclate e distanti dai descrittori, quindi `startLevel=2..6` resta
+bloccato finche' non esiste una route manuale/playback che raggiunga finestre
+stable-playable distintive e controllabili.
 
 ## 2026-05-16 — Audit prefilter for manual tails
 
