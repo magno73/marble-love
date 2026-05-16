@@ -47,6 +47,20 @@ Proof/diagnostica:
   corrispondente vedono L6 `0x2e790`; MAME f3000 e' responsive, ma il replay TS
   non diverge ancora, quindi resta diagnostic-only.
 
+Route sweep successivo con bootstrap L4/L6, step trackball 4, route
+`U/N/L/R/UL/DR:900`, capture f2800..f3600:
+
+- L4: diverse route sono MAME-responsive (es. `U` f3000/f3200, `DR`
+  f3000..f3600), ma nessuna passa l'audit TS death-aware, nemmeno con piano
+  intermedio `R:200,D:200,L:200,U:200,N:200 --max-route-deaths 0`.
+- L6: route `UL:900` produce candidati f3200/f3400/f3600. Il migliore e'
+  `/private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json`:
+  descriptor L6 `0x2e790`, MAME pair responsive (`diffXY=5556111/0`), e audit
+  TS con piano intermedio zero-death:
+  `R:200,D:200,L:200,U:200,N:200 --max-route-deaths 0` passa come
+  `candidate-needs-route-proof` (`diffXY=1146474/70440`, deaths `0/0`).
+  Resta temporaneo: serve browser/parity review prima di promuovere seed.
+
 Interpretazione: la via intelligente non e' piu' cercare lunghe route casuali.
 La pipeline corretta e': detector-gate reale per arrivare a L3, completion
 bootstrap minimo per materializzare L4-L6 via ROM dispatcher, poi audit
