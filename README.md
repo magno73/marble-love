@@ -51,7 +51,10 @@ Se manca ancora una movie manuale utile, puoi generare route candidate dal seed
 playable corrente con
 `node --import tsx packages/cli/src/search-playable-route.ts --out-dir /private/tmp/marble-manual-route-search`.
 Il finder fa beam-search deterministico nel runtime TS verso `state=6`,
-`main=3` o cambio segment stable-playable, poi scrive un manifest per
+`main=3`, cambio segment stable-playable o, con `--target-descriptor N`, verso
+un pointer ROM L1..L6 specifico letto da `workRam[0x474]`; con
+`--target-segment N` puo' anche cercare finestre stable-playable di un segmento
+runtime senza trattarlo come numero livello. Scrive poi un manifest per
 `plan-mame-candidate-captures.ts`. I manifest prodotti dal path manual-rearmed
 marcano `forceManualDispatcher=true`: il planner propaga
 `MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` e
@@ -96,6 +99,12 @@ service persistenti nel cfg locale. L'ultimo no-coin proof fino a f65000 in
 `/private/tmp/marble-level-descriptor-nocoin-65000/trace.json` vede solo L1
 `0x2bee2` e L2 `0x2c54c`; L3-L6 restano a `0` frame, quindi l'attract no-coin
 non puo' produrre i sei seed reali.
+Una route continua `D:7200` dal seed playable level 1 e' stata replayata in
+MAME fino a f9000 (`/private/tmp/marble-d7200-mame-active/trace.json`): raggiunge
+segmenti stable-playable 3/5/6, ma il pointer runtime continua ad alternare
+solo L1/L2 e gli snapshot stabili restano lontani dai descriptor (`pfDiff`
+1484/1819/1517). Anche una ricerca TS `--target-descriptor 3` fino a 3600 frame
+non ha trovato L3. Sono proof negativi, non seed.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

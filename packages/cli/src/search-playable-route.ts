@@ -12,7 +12,14 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv, exit } from "node:process";
 
-import { applySlapsticBank, bootInit, bus as busNs, state as stateNs, tick } from "@marble-love/engine";
+import {
+  applySlapsticBank,
+  bootInit,
+  bus as busNs,
+  level as levelNs,
+  state as stateNs,
+  tick,
+} from "@marble-love/engine";
 import type { GameState, RomImage } from "@marble-love/engine";
 
 interface SeedJson {
@@ -38,6 +45,9 @@ interface CliArgs {
   manualDispatcher: boolean;
   targetX: number;
   targetY: number;
+  targetSegment: number | undefined;
+  targetDescriptor: number | undefined;
+  targetDescriptorPtr: number | undefined;
   mameTrackballStart: number | undefined;
 }
 
@@ -52,6 +62,7 @@ interface StateSummary {
   pfNonzero: number;
   pfHash: string;
   coarseHash: string;
+  descriptorPtr: number;
   x: number;
   y: number;
 }
@@ -68,6 +79,8 @@ interface SearchNode {
   firstState6Frame: number | undefined;
   firstMain3Frame: number | undefined;
   firstStableSegmentChangeFrame: number | undefined;
+  firstTargetDescriptorFrame: number | undefined;
+  firstTargetStableSegmentFrame: number | undefined;
   maxX: number;
   maxY: number;
   deathEvents: number;
@@ -99,13 +112,16 @@ interface CandidateManifestEntry {
   firstState6Frame: number | undefined;
   firstMain3Frame: number | undefined;
   firstStableSegmentChangeFrame: number | undefined;
+  firstTargetDescriptorFrame: number | undefined;
+  firstTargetStableSegmentFrame: number | undefined;
   maxX: number;
   maxY: number;
   deathEvents: number;
   recoveries: number;
 }
 
-const DEFAULT_SEED = "packages/web/public/scenarios/playable/manual_level1_start.seed.json";
+const DEFAULT_SEED =
+  "packages/web/public/scenarios/playable/manual_level1_start.seed.json";
 const DEFAULT_ROM = "ghidra_project/marble_program.bin";
 const DEFAULT_OUT_DIR = "/private/tmp/marble-manual-route-search";
 const DEFAULT_DIRECTIONS = ["D", "R", "L", "DR", "DL", "UR", "UL", "BR", "N"];
@@ -142,6 +158,8 @@ Options:
   --preserve-dispatcher  Do not clear 0x400390 before route search
   --target-x N           Scoring target X in world pixels (default: 435.5)
   --target-y N           Scoring target Y in world pixels (default: 419.3)
+  --target-segment N     Prefer stable-playable frames with runtime segment N
+  --target-descriptor N  Prefer runtime level descriptor pointer L1..L6
   --mame-trackball-start N
                           Override MAME route start frame in manifest
   -h, --help             Show this help
@@ -165,6 +183,8 @@ function parseArgs(): CliArgs {
   let manualDispatcher = true;
   let targetX = 435.5;
   let targetY = 419.3;
+  let targetSegment: number | undefined;
+  let targetDescriptor: number | undefined;
   let mameTrackballStart: number | undefined;
 
   for (let i = 0; i < raw.length; i++) {
@@ -174,14 +194,23 @@ function parseArgs(): CliArgs {
     else if (arg === "--out-dir") outDir = requireValue(raw[++i], "--out-dir");
     else if (arg === "--frames") frames = parsePositiveInt(raw[++i], "--frames");
     else if (arg === "--chunk") chunk = parsePositiveInt(raw[++i], "--chunk");
-    else if (arg === "--beam-width") beamWidth = parsePositiveInt(raw[++i], "--beam-width");
-    else if (arg === "--max-candidates") maxCandidates = parsePositiveInt(raw[++i], "--max-candidates");
-    else if (arg === "--directions") directions = parseDirections(requireValue(raw[++i], "--directions"));
-    else if (arg === "--route-prefix") routePrefix = requireValue(raw[++i], "--route-prefix");
+    else if (arg === "--beam-width")
+      beamWidth = parsePositiveInt(raw[++i], "--beam-width");
+    else if (arg === "--max-candidates")
+      maxCandidates = parsePositiveInt(raw[++i], "--max-candidates");
+    else if (arg === "--directions")
+      directions = parseDirections(requireValue(raw[++i], "--directions"));
+    else if (arg === "--route-prefix")
+      routePrefix = requireValue(raw[++i], "--route-prefix");
     else if (arg === "--preserve-dispatcher") manualDispatcher = false;
     else if (arg === "--target-x") targetX = parseNumber(raw[++i], "--target-x");
     else if (arg === "--target-y") targetY = parseNumber(raw[++i], "--target-y");
-    else if (arg === "--mame-trackball-start") mameTrackballStart = parsePositiveInt(raw[++i], "--mame-trackball-start");
+    else if (arg === "--target-segment")
+      targetSegment = parsePositiveInt(raw[++i], "--target-segment");
+    else if (arg === "--target-descriptor")
+      targetDescriptor = parseTargetDescriptor(raw[++i], "--target-descriptor");
+    else if (arg === "--mame-trackball-start")
+      mameTrackballStart = parsePositiveInt(raw[++i], "--mame-trackball-start");
     else if (arg === "-h" || arg === "--help") {
       printHelp();
       exit(0);
@@ -205,6 +234,9 @@ function parseArgs(): CliArgs {
     manualDispatcher,
     targetX,
     targetY,
+    targetSegment,
+    targetDescriptor,
+    targetDescriptorPtr: undefined,
     mameTrackballStart,
   };
 }
@@ -217,7 +249,8 @@ function requireValue(value: string | undefined, label: string): string {
 function parsePositiveInt(raw: string | undefined, label: string): number {
   if (raw === undefined) throw new Error(`${label} requires a value`);
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer`);
+  if (!Number.isInteger(value) || value <= 0)
+    throw new Error(`${label} must be a positive integer`);
   return value;
 }
 
@@ -228,6 +261,14 @@ function parseNumber(raw: string | undefined, label: string): number {
   return value;
 }
 
+function parseTargetDescriptor(raw: string | undefined, label: string): number {
+  const value = parsePositiveInt(raw, label);
+  if (value < 1 || value > levelNs.LEVEL_COUNT) {
+    throw new Error(`${label} must be in range 1..${levelNs.LEVEL_COUNT}`);
+  }
+  return value;
+}
+
 function parseDirections(raw: string): string[] {
   const directions = raw
     .split(",")
@@ -235,7 +276,8 @@ function parseDirections(raw: string): string[] {
     .filter((part) => part !== "");
   if (directions.length === 0) throw new Error("--directions produced no directions");
   for (const direction of directions) {
-    if (SCREEN_DELTAS[direction] === undefined) throw new Error(`unknown direction: ${direction}`);
+    if (SCREEN_DELTAS[direction] === undefined)
+      throw new Error(`unknown direction: ${direction}`);
   }
   return directions;
 }
@@ -245,7 +287,8 @@ function hexToBytes(hex: string, expectedLength: number, label: string): Uint8Ar
     throw new Error(`${label} has ${hex.length / 2} bytes, expected ${expectedLength}`);
   }
   const out = new Uint8Array(expectedLength);
-  for (let i = 0; i < expectedLength; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < expectedLength; i++)
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   return out;
 }
 
@@ -261,6 +304,10 @@ function readLongBE(bytes: Uint8Array, off: number): number {
       (bytes[off + 3] ?? 0)) >>>
     0
   );
+}
+
+function formatHex32(value: number | undefined): string {
+  return value === undefined ? "-" : `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
 }
 
 function signedLong(value: number): number {
@@ -280,10 +327,16 @@ function shortHash(bytes: Uint8Array): string {
 function bucketHash(bytes: Uint8Array): string {
   const buckets = new Uint16Array(64);
   for (let i = 0; i < bytes.length; i++) {
-    const bucket = Math.min(buckets.length - 1, Math.floor((i * buckets.length) / bytes.length));
+    const bucket = Math.min(
+      buckets.length - 1,
+      Math.floor((i * buckets.length) / bytes.length),
+    );
     buckets[bucket] = ((buckets[bucket] ?? 0) + (bytes[i] ?? 0)) & 0xffff;
   }
-  return createHash("sha256").update(Buffer.from(buckets.buffer)).digest("hex").slice(0, 16);
+  return createHash("sha256")
+    .update(Buffer.from(buckets.buffer))
+    .digest("hex")
+    .slice(0, 16);
 }
 
 function expandRouteSpec(spec: string): string[] {
@@ -293,11 +346,16 @@ function expandRouteSpec(spec: string): string[] {
     if (trimmed === "") continue;
     const [directionRaw, countRaw] = trimmed.split(":");
     const direction = directionRaw?.trim().toUpperCase();
-    if (direction === undefined || countRaw === undefined || SCREEN_DELTAS[direction] === undefined) {
+    if (
+      direction === undefined ||
+      countRaw === undefined ||
+      SCREEN_DELTAS[direction] === undefined
+    ) {
       throw new Error(`invalid route part: ${part}`);
     }
     const count = Number(countRaw);
-    if (!Number.isInteger(count) || count < 0) throw new Error(`invalid route count in ${part}`);
+    if (!Number.isInteger(count) || count < 0)
+      throw new Error(`invalid route count in ${part}`);
     for (let i = 0; i < count; i++) out.push(direction);
   }
   return out;
@@ -321,12 +379,24 @@ function compressRoute(steps: readonly string[]): string {
 }
 
 function sanitizeFilePart(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 120) || "candidate";
+  return (
+    value
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 120) || "candidate"
+  );
 }
 
-function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
+function advanceTrackball(
+  p1X: number,
+  p1Y: number,
+  step: string,
+): readonly [number, number] {
   const [screenDx, screenDy] = SCREEN_DELTAS[step] ?? [0, 0];
-  return [(p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff, (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff];
+  return [
+    (p1X + (screenDx !== 0 ? -screenDx : 0)) & 0xff,
+    (p1Y + (screenDy !== 0 ? -screenDy : 0)) & 0xff,
+  ];
 }
 
 function loadRom(path: string): RomImage {
@@ -339,7 +409,11 @@ function loadSeed(path: string): SeedJson {
   return JSON.parse(readFileSync(resolve(path), "utf-8")) as SeedJson;
 }
 
-function stateFromSeed(rom: RomImage, seed: SeedJson, manualDispatcher: boolean): GameState {
+function stateFromSeed(
+  rom: RomImage,
+  seed: SeedJson,
+  manualDispatcher: boolean,
+): GameState {
   const gameState = stateNs.emptyGameState();
   bootInit(gameState, rom, {
     warmState: {
@@ -371,13 +445,34 @@ function summarize(state: GameState): StateSummary {
     pfNonzero: nonzero(state.playfieldRam),
     pfHash: shortHash(state.playfieldRam),
     coarseHash: bucketHash(state.playfieldRam),
+    descriptorPtr: readLongBE(state.workRam, 0x474),
     x: signedLong(readLongBE(state.workRam, 0x18 + 0x0c)) / 65536,
     y: signedLong(readLongBE(state.workRam, 0x18 + 0x10)) / 65536,
   };
 }
 
-function scoreSummary(summary: StateSummary, node: SearchNode, args: CliArgs, initialSegment: number): number {
-  const distance = Math.hypot((args.targetX - summary.x) * 1.15, args.targetY - summary.y);
+function isStablePlayable(summary: StateSummary): boolean {
+  return (
+    summary.main === 1 &&
+    summary.mode === 0 &&
+    summary.playerState === 0 &&
+    summary.timer > 0 &&
+    summary.pfNonzero > 4_000
+  );
+}
+
+function scoreSummary(
+  summary: StateSummary,
+  node: SearchNode,
+  args: CliArgs,
+  initialSegment: number,
+): number {
+  const distance = Math.hypot(
+    (args.targetX - summary.x) * 1.15,
+    args.targetY - summary.y,
+  );
+  const targetRequested =
+    args.targetDescriptorPtr !== undefined || args.targetSegment !== undefined;
   let score = 0;
   score += summary.x * 5;
   score += summary.y * 9;
@@ -386,17 +481,36 @@ function scoreSummary(summary: StateSummary, node: SearchNode, args: CliArgs, in
   score -= distance * 12;
   score += summary.timer * 80;
 
-  if (summary.main === 3 && summary.timer > 0) score += 1_000_000;
-  if (summary.playerState === 6 && summary.timer > 0) score += 750_000;
-  if (summary.main === 1 && summary.mode === 0 && summary.playerState === 0 && summary.timer > 0) score += 3_000;
-  if (summary.segment !== initialSegment && summary.main === 1 && summary.mode === 0 && summary.timer > 0) score += 12_000;
-  if (summary.pfNonzero < 4_000 && summary.timer > 0) score -= 20_000;
+  if (summary.main === 3 && summary.timer > 0)
+    score += targetRequested ? 25_000 : 1_000_000;
+  if (summary.playerState === 6 && summary.timer > 0)
+    score += targetRequested ? 20_000 : 750_000;
+  const stablePlayable = isStablePlayable(summary);
+  if (stablePlayable) score += 3_000;
+  if (summary.segment !== initialSegment && stablePlayable) score += 12_000;
+  if (args.targetSegment !== undefined) {
+    if (summary.segment === args.targetSegment && stablePlayable) score += 2_000_000;
+    score -= Math.abs(summary.segment - args.targetSegment) * 6_000;
+  }
+  if (args.targetDescriptorPtr !== undefined) {
+    if (summary.descriptorPtr === args.targetDescriptorPtr) {
+      score += 3_000_000;
+      if (summary.playerState === 6 && summary.timer > 0) score += 500_000;
+      if (stablePlayable) score += 250_000;
+    } else if (summary.descriptorPtr !== 0) {
+      score -= 15_000;
+    }
+  }
+  if (summary.pfNonzero < 4_000 && summary.timer > 0)
+    score -= targetRequested ? 60_000 : 20_000;
   if (summary.timer <= 0) score -= 80_000;
-  if (summary.playerState === 4 || summary.playerState === 5) score -= 3_500;
-  if (summary.playerState === 1 || summary.playerState === 2) score -= 2_000;
-  score -= node.deathEvents * 950;
+  if (summary.playerState === 4 || summary.playerState === 5)
+    score -= targetRequested ? 50_000 : 3_500;
+  if (summary.playerState === 1 || summary.playerState === 2)
+    score -= targetRequested ? 15_000 : 2_000;
+  score -= node.deathEvents * (targetRequested ? 50_000 : 950);
   score += node.recoveries * 250;
-  score -= node.maxEmptyRun * 400;
+  score -= node.maxEmptyRun * (targetRequested ? 2_000 : 400);
   return score;
 }
 
@@ -415,6 +529,8 @@ function tickNode(
   let firstState6Frame = node.firstState6Frame;
   let firstMain3Frame = node.firstMain3Frame;
   let firstStableSegmentChangeFrame = node.firstStableSegmentChangeFrame;
+  let firstTargetDescriptorFrame = node.firstTargetDescriptorFrame;
+  let firstTargetStableSegmentFrame = node.firstTargetStableSegmentFrame;
   let maxX = node.maxX;
   let maxY = node.maxY;
   let deathEvents = node.deathEvents;
@@ -458,7 +574,11 @@ function tickNode(
       inDeath = false;
     }
 
-    if (firstState6Frame === undefined && summary.playerState === 6 && summary.timer > 0) {
+    if (
+      firstState6Frame === undefined &&
+      summary.playerState === 6 &&
+      summary.timer > 0
+    ) {
       firstState6Frame = frame;
     }
     if (firstMain3Frame === undefined && summary.main === 3 && summary.timer > 0) {
@@ -467,13 +587,24 @@ function tickNode(
     if (
       firstStableSegmentChangeFrame === undefined &&
       summary.segment !== initialSegment &&
-      summary.main === 1 &&
-      summary.mode === 0 &&
-      summary.playerState === 0 &&
-      summary.timer > 0 &&
-      summary.pfNonzero > 4_000
+      isStablePlayable(summary)
     ) {
       firstStableSegmentChangeFrame = frame;
+    }
+    if (
+      firstTargetStableSegmentFrame === undefined &&
+      args.targetSegment !== undefined &&
+      summary.segment === args.targetSegment &&
+      isStablePlayable(summary)
+    ) {
+      firstTargetStableSegmentFrame = frame;
+    }
+    if (
+      firstTargetDescriptorFrame === undefined &&
+      args.targetDescriptorPtr !== undefined &&
+      summary.descriptorPtr === args.targetDescriptorPtr
+    ) {
+      firstTargetDescriptorFrame = frame;
     }
 
     const scoredNode: SearchNode = {
@@ -485,6 +616,8 @@ function tickNode(
       firstState6Frame,
       firstMain3Frame,
       firstStableSegmentChangeFrame,
+      firstTargetDescriptorFrame,
+      firstTargetStableSegmentFrame,
       maxX,
       maxY,
       deathEvents,
@@ -515,6 +648,8 @@ function tickNode(
     firstState6Frame,
     firstMain3Frame,
     firstStableSegmentChangeFrame,
+    firstTargetDescriptorFrame,
+    firstTargetStableSegmentFrame,
     maxX,
     maxY,
     deathEvents,
@@ -525,7 +660,13 @@ function tickNode(
   };
 }
 
-function runPrefix(rom: RomImage, node: SearchNode, prefix: readonly string[], args: CliArgs, initialSegment: number): SearchNode {
+function runPrefix(
+  rom: RomImage,
+  node: SearchNode,
+  prefix: readonly string[],
+  args: CliArgs,
+  initialSegment: number,
+): SearchNode {
   let current = node;
   for (const step of prefix) {
     current = tickNode(rom, current, step, 1, args, initialSegment);
@@ -533,22 +674,75 @@ function runPrefix(rom: RomImage, node: SearchNode, prefix: readonly string[], a
   return { ...current, chunks: prefix.slice() };
 }
 
-function sortNodes(a: SearchNode, b: SearchNode): number {
-  const aHit = a.firstMain3Frame !== undefined ? 2 : a.firstState6Frame !== undefined ? 1 : 0;
-  const bHit = b.firstMain3Frame !== undefined ? 2 : b.firstState6Frame !== undefined ? 1 : 0;
+function sortNodes(a: SearchNode, b: SearchNode, args: CliArgs): number {
+  const targetRequested =
+    args.targetDescriptorPtr !== undefined || args.targetSegment !== undefined;
+  if (targetRequested) {
+    const aHit =
+      a.firstTargetDescriptorFrame !== undefined
+        ? 2
+        : a.firstTargetStableSegmentFrame !== undefined
+          ? 1
+          : 0;
+    const bHit =
+      b.firstTargetDescriptorFrame !== undefined
+        ? 2
+        : b.firstTargetStableSegmentFrame !== undefined
+          ? 1
+          : 0;
+    return bHit - aHit || b.score - a.score || b.bestScore - a.bestScore;
+  }
+
+  const aHit =
+    a.firstTargetDescriptorFrame !== undefined
+      ? 5
+      : a.firstTargetStableSegmentFrame !== undefined
+        ? 4
+        : a.firstMain3Frame !== undefined
+          ? 3
+          : a.firstState6Frame !== undefined
+            ? 2
+            : a.firstStableSegmentChangeFrame !== undefined
+              ? 1
+              : 0;
+  const bHit =
+    b.firstTargetDescriptorFrame !== undefined
+      ? 5
+      : b.firstTargetStableSegmentFrame !== undefined
+        ? 4
+        : b.firstMain3Frame !== undefined
+          ? 3
+          : b.firstState6Frame !== undefined
+            ? 2
+            : b.firstStableSegmentChangeFrame !== undefined
+              ? 1
+              : 0;
   return bHit - aHit || b.bestScore - a.bestScore || b.score - a.score;
 }
 
 function routeFrameForCandidate(node: SearchNode): number {
-  return node.firstMain3Frame ?? node.firstState6Frame ?? node.firstStableSegmentChangeFrame ?? node.bestFrame;
+  return (
+    node.firstTargetDescriptorFrame ??
+    node.firstTargetStableSegmentFrame ??
+    node.firstMain3Frame ??
+    node.firstState6Frame ??
+    node.firstStableSegmentChangeFrame ??
+    node.bestFrame
+  );
 }
 
-function manifestEntry(index: number, node: SearchNode, seed: SeedJson, args: CliArgs): CandidateManifestEntry {
+function manifestEntry(
+  index: number,
+  node: SearchNode,
+  seed: SeedJson,
+  args: CliArgs,
+): CandidateManifestEntry {
   const summary = summarize(node.state);
   const routeSpec = compressRoute(node.chunks);
   const routeFrame = routeFrameForCandidate(node);
   const seedFrame = seed.frame;
-  const mameTrackballStart = args.mameTrackballStart ?? (seedFrame === undefined ? undefined : seedFrame + 1);
+  const mameTrackballStart =
+    args.mameTrackballStart ?? (seedFrame === undefined ? undefined : seedFrame + 1);
   const file = `${String(index + 1).padStart(2, "0")}_route_f${routeFrame}_seg${summary.segment}_${sanitizeFilePart(summary.pfHash)}.seed.json`;
   return {
     file,
@@ -572,6 +766,8 @@ function manifestEntry(index: number, node: SearchNode, seed: SeedJson, args: Cl
     firstState6Frame: node.firstState6Frame,
     firstMain3Frame: node.firstMain3Frame,
     firstStableSegmentChangeFrame: node.firstStableSegmentChangeFrame,
+    firstTargetDescriptorFrame: node.firstTargetDescriptorFrame,
+    firstTargetStableSegmentFrame: node.firstTargetStableSegmentFrame,
     maxX: node.maxX,
     maxY: node.maxY,
     deathEvents: node.deathEvents,
@@ -585,7 +781,9 @@ function printNode(index: number, node: SearchNode): void {
     `${String(index + 1).padStart(2, "0")} score=${node.bestScore.toFixed(0)} frame=${node.frame} ` +
       `routeFrame=${routeFrameForCandidate(node)} first6=${node.firstState6Frame ?? "-"} ` +
       `firstMain3=${node.firstMain3Frame ?? "-"} stableSeg=${node.firstStableSegmentChangeFrame ?? "-"} ` +
+      `targetDesc=${node.firstTargetDescriptorFrame ?? "-"} targetSeg=${node.firstTargetStableSegmentFrame ?? "-"} ` +
       `main/mode=${summary.main}/${summary.mode} seg=${summary.segment} state=${summary.playerState} timer=${summary.timer} ` +
+      `desc=${formatHex32(summary.descriptorPtr)} ` +
       `x=${summary.x.toFixed(1)} y=${summary.y.toFixed(1)} max=${node.maxX.toFixed(1)}/${node.maxY.toFixed(1)} ` +
       `pf=${summary.pfNonzero} deaths=${node.deathEvents} recoveries=${node.recoveries}`,
   );
@@ -595,10 +793,17 @@ function printNode(index: number, node: SearchNode): void {
 function main(): void {
   const args = parseArgs();
   const rom = loadRom(args.romPath);
+  if (args.targetDescriptor !== undefined) {
+    args.targetDescriptorPtr =
+      levelNs.readLevelPointerTable(rom)[args.targetDescriptor - 1];
+    if (args.targetDescriptorPtr === undefined)
+      throw new Error(`missing descriptor pointer for L${args.targetDescriptor}`);
+  }
   const seed = loadSeed(args.seedPath);
   const seedState = stateFromSeed(rom, seed, args.manualDispatcher);
   const initial = summarize(seedState);
-  const prefix = args.routePrefix === undefined ? [] : expandRouteSpec(args.routePrefix);
+  const prefix =
+    args.routePrefix === undefined ? [] : expandRouteSpec(args.routePrefix);
   const initialNode: SearchNode = {
     state: seedState,
     p1X: seedState.workRam[0x18 + 0xc9] ?? 0xff,
@@ -611,6 +816,8 @@ function main(): void {
     firstState6Frame: undefined,
     firstMain3Frame: undefined,
     firstStableSegmentChangeFrame: undefined,
+    firstTargetDescriptorFrame: undefined,
+    firstTargetStableSegmentFrame: undefined,
     maxX: initial.x,
     maxY: initial.y,
     deathEvents: 0,
@@ -625,7 +832,9 @@ function main(): void {
 
   console.log(
     `search seed=${resolve(args.seedPath)} frames=${args.frames} chunk=${args.chunk} ` +
-      `beam=${args.beamWidth} directions=${args.directions.join("/")} manualDispatcher=${args.manualDispatcher}`,
+      `beam=${args.beamWidth} directions=${args.directions.join("/")} manualDispatcher=${args.manualDispatcher} ` +
+      `targetSegment=${args.targetSegment ?? "-"} targetDescriptor=${args.targetDescriptor ?? "-"} ` +
+      `targetDescriptorPtr=${formatHex32(args.targetDescriptorPtr)}`,
   );
   console.log(
     `initial main/mode=${initial.main}/${initial.mode} seg=${initial.segment} state=${initial.playerState} ` +
@@ -639,26 +848,40 @@ function main(): void {
     if (framesThisChunk === 0) break;
     for (const node of beam) {
       for (const direction of args.directions) {
-        next.push(tickNode(rom, node, direction, framesThisChunk, args, initial.segment));
+        next.push(
+          tickNode(rom, node, direction, framesThisChunk, args, initial.segment),
+        );
       }
     }
-    next.sort(sortNodes);
+    next.sort((a, b) => sortNodes(a, b, args));
     beam = next.slice(0, args.beamWidth);
     const best = beam[0]!;
-    if (iteration % 10 === 0 || best.firstState6Frame !== undefined || best.firstMain3Frame !== undefined) {
+    if (
+      iteration % 10 === 0 ||
+      best.firstState6Frame !== undefined ||
+      best.firstMain3Frame !== undefined
+    ) {
       printNode(0, best);
     }
-    if (best.firstMain3Frame !== undefined) break;
+    if (
+      args.targetDescriptorPtr === undefined &&
+      args.targetSegment === undefined &&
+      best.firstMain3Frame !== undefined
+    ) {
+      break;
+    }
   }
 
   const unique = new Map<string, SearchNode>();
-  for (const node of beam.sort(sortNodes)) {
+  for (const node of beam.sort((a, b) => sortNodes(a, b, args))) {
     const route = compressRoute(node.chunks);
     if (!unique.has(route)) unique.set(route, node);
     if (unique.size >= args.maxCandidates) break;
   }
   const candidates = Array.from(unique.values()).slice(0, args.maxCandidates);
-  const manifestCandidates = candidates.map((candidate, index) => manifestEntry(index, candidate, seed, args));
+  const manifestCandidates = candidates.map((candidate, index) =>
+    manifestEntry(index, candidate, seed, args),
+  );
 
   mkdirSync(resolve(args.outDir), { recursive: true });
   writeFileSync(
@@ -679,6 +902,12 @@ function main(): void {
           manualDispatcher: args.manualDispatcher,
           targetX: args.targetX,
           targetY: args.targetY,
+          targetSegment: args.targetSegment,
+          targetDescriptor: args.targetDescriptor,
+          targetDescriptorPtr:
+            args.targetDescriptorPtr === undefined
+              ? undefined
+              : formatHex32(args.targetDescriptorPtr),
         },
         candidates: manifestCandidates,
       },
@@ -690,7 +919,9 @@ function main(): void {
   console.log(`\nTop ${candidates.length} route candidate(s):`);
   candidates.forEach((candidate, index) => printNode(index, candidate));
   console.log(`\nWrote manifest: ${join(resolve(args.outDir), "manifest.json")}`);
-  console.log("Run plan-mame-candidate-captures.ts on this manifest before treating any candidate as proof.");
+  console.log(
+    "Run plan-mame-candidate-captures.ts on this manifest before treating any candidate as proof.",
+  );
 }
 
 try {

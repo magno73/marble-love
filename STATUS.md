@@ -1,7 +1,72 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (direct descriptor pointer trace)
+**Ultimo update:** 2026-05-16 (targeted descriptor route proof)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Targeted descriptor route proof
+
+Esteso `packages/cli/src/search-playable-route.ts` con:
+
+- `--target-descriptor N`, che legge la pointer table ROM L1..L6 e preferisce
+  route il cui `workRam[0x474]` raggiunge quel descriptor pointer runtime.
+- `--target-segment N`, per preferire finestre stable-playable di un segmento
+  specifico senza trattare il segmento come numero livello.
+- stampa/manifest di `desc=0x...`, `firstTargetDescriptorFrame` e
+  `firstTargetStableSegmentFrame`.
+
+Smoke L3:
+
+```sh
+node --import tsx packages/cli/src/search-playable-route.ts \
+  --preserve-dispatcher --target-descriptor 3 \
+  --frames 3600 --chunk 30 --beam-width 96 --max-candidates 8 \
+  --out-dir /private/tmp/marble-target-l3-search-3600b
+```
+
+Risultato: nessun `targetDesc` per L3 `0x2cd9e`. Il manifest resta una famiglia
+`D:*`, con `D:3600` come top route, `firstState6Frame=1361`,
+`firstStableSegmentChangeFrame=1421`, `segment=4`, descriptor runtime finale
+ancora L2 `0x2c54c`, `deathEvents=2`, `recoveries=2`. Questo e' un proof
+negativo/falsification input, non un seed.
+
+Replay MAME continuo della route `D:7200` dal seed playable level 1, con cfg
+temporanea pulita:
+
+```sh
+SDL_VIDEODRIVER=dummy \
+MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1 \
+MARBLE_DESCRIPTOR_TRACE_TO=9000 \
+MARBLE_DESCRIPTOR_TRACE_OUT=/private/tmp/marble-d7200-mame-active/trace.json \
+MARBLE_DESCRIPTOR_TRACE_SAMPLE_EVERY=60 \
+MARBLE_PLAYABLE_OUT_DIR=/private/tmp/marble-d7200-mame-active/scenarios \
+MARBLE_PLAYABLE_INPUT_OUT=/private/tmp/marble-d7200-mame-active/input.json \
+MARBLE_PLAYABLE_TRACKBALL_START=2046 \
+MARBLE_PLAYABLE_ROUTE='D:7200' \
+MARBLE_PLAYABLE_FRAME_LIST='seg3_f3300:3300,state6_f4213:4213,stable4_f4899:4899,seg5_f6570:6570,f7200:7200,f8200:8200,f9000:9000' \
+MARBLE_PLAYABLE_CAPTURE_FRAMES=0 \
+mame marble -rompath roms -cfg_directory /private/tmp/marble-mame-cfg-d7200 \
+  -autoboot_script oracle/mame_level_descriptor_tap.lua \
+  -nothrottle -video none -sound none -nonvram_save
+```
+
+Finding da `/private/tmp/marble-d7200-mame-active/trace.json`:
+
+- `seenLevelCount=2`; nessun frame L3-L6.
+- pointer windows: L1 f114..1746, L2 f1747..3207, L1 f3208..4839,
+  L2 f4840..6300, L1 f6301..7932, L2 f7933..9000.
+- la route raggiunge snapshot stable-playable avanzati (`seg3_f3300`,
+  `seg5_f6570`, `f7200`, `f8200`), ma restano nearest lontani dai descriptor:
+  seg3/f3300 nearest L1 `pfDiff=1484`, seg5/f6570 nearest L1 `pfDiff=1819`,
+  f8200 nearest L2 `pfDiff=1517`.
+- `stable4_f4899` e' vicino a L2 (`pfDiff=129`) ma e' `state=6`, non
+  stable-playable, e non e' byte-exact descriptor.
+- `inspect-level-descriptors --transition-summary` su questa cattura non trova
+  finestre byte-exact dei descriptor nelle snapshot campionate.
+
+Interpretazione: una progressione automatica/route-search che fa avanzare i
+segmenti runtime non prova i sei livelli reali. Il gate resta invariato: niente
+`startLevel=2..6` finche' non esistono seed distinti, giocabili, controllabili
+active-vs-neutral e supportati da MAME/manual route proof descriptor-aligned.
 
 ## 2026-05-16 — Direct descriptor pointer trace
 
