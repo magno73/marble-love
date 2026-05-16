@@ -141,7 +141,12 @@ function init10504(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage
 }
 
 function helper118D2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
-  (subs.helper118D2 ?? ((s) => rom !== undefined ? playerSlotIter118D2(s, rom) : undefined))(state);
+  (subs.helper118D2 ?? ((s) => {
+    if (rom === undefined) return;
+    playerSlotIter118D2(s, rom, {
+      fun_16ec6: (st) => levelDispatcher16EC6(st, rom),
+    });
+  }))(state);
 }
 
 function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit1101ESubs): void {
