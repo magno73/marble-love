@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (playable route failure tracer)
+**Ultimo update:** 2026-05-16 (L6 playableSeed export review)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — L6 playableSeed export review
+
+Aggiunta utility `packages/cli/src/export-playable-seed.ts`: estrae una
+snapshot scenario MAME/TS nel formato flat `*.seed.json` consumato dal path web
+`?playableSeed=NAME`. Il tool valida le lunghezze RAM e scrive solo il file
+richiesto; non modifica `practice-level.ts`, non aggiorna
+`START_LEVEL_PLAYABLE_SEEDS` e non cabla `startLevel`.
+
+Comando usato per portare il candidato L6 nel path web diagnostico:
+
+```sh
+node --import tsx packages/cli/src/export-playable-seed.ts --force \
+  --name candidate_level6_bootstrap_ul_f3600 \
+  --source 'MAME bootstrap L6 UL route f3600; diagnostic candidate, not startLevel-wired' \
+  --out packages/web/public/scenarios/playable/candidate_level6_bootstrap_ul_f3600.seed.json \
+  /private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json
+```
+
+Verifiche eseguite:
+
+- `trace-playable-seed-route.ts --dispatcher manual` sul seed esportato:
+  L6 `0x2e790`, 1000 frame TS, `stable=yes`, `diffXY=1146474/70440`,
+  deaths `0/0`.
+- `audit-playable-seed.ts` resta da eseguire sulla sorgente MAME originale
+  `/private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json`
+  con neutral dir, perche' il seed web esportato ha basename diverso dalla
+  coppia neutral. Risultato confermato: `candidate-needs-route-proof`, L6,
+  MAME `diffXY=5556111/0`, TS `diffXY=1146474/70440`, deaths `0/0`.
+- `npm run build --workspace @marble-love/web` passa con il seed diagnostico
+  presente e Vite copia il file in `dist/scenarios/playable/`.
+
+Browser visual review resta pending in questa sessione perche' l'automazione
+browser non era disponibile. Nessun `startLevel=6` e' stato cablato;
+`practice-level.ts` resta mappato solo al seed verificato di L1.
 
 ## 2026-05-16 — Playable route failure tracer
 
