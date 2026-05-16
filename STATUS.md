@@ -1,7 +1,50 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (bootstrap frontier summarizer)
+**Ultimo update:** 2026-05-16 (playable route failure tracer)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Playable route failure tracer
+
+Aggiunta utility `packages/cli/src/trace-playable-seed-route.ts`: carica un
+seed/scenario MAME, riproduce in TS la stessa route dell'audit
+active-vs-neutral e stampa gli eventi che spiegano il fallimento (`death-enter`,
+`death-exit`, `state-change`, cambio descriptor/main/segment, PF empty,
+scroll overflow). Supporta dispatcher `manual`, `preserved` o `both`; non
+scrive seed e non modifica `startLevel`.
+
+Comandi chiave verificati:
+
+```sh
+node --import tsx packages/cli/src/trace-playable-seed-route.ts \
+  --dispatcher manual \
+  /private/tmp/marble-bootstrap-route-sweep/l4/R/scenarios/f3200.json
+
+node --import tsx packages/cli/src/trace-playable-seed-route.ts \
+  --dispatcher manual \
+  /private/tmp/marble-l3-bootstrap-l5-v2-active/scenarios/f3400.json
+
+node --import tsx packages/cli/src/trace-playable-seed-route.ts \
+  --dispatcher manual \
+  /private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json
+```
+
+Nuova evidenza:
+
+- L4 `R` f3200 non e' un seed: anche la neutral route TS entra in death a
+  `f+51` (`abs=3251`) e recupera a `f+147`. Quindi quella finestra e'
+  MAME-responsive ma intrinsecamente instabile nel replay TS/browser.
+- L4 `DR` f3200 e' piu' interessante: con `N:1000` resta stabile e zero-death,
+  ma le route attive muoiono; `search-playable-route.ts --max-deaths 0` si
+  ferma a frame 100 con step 8 e a frame 120 con step 4, perche' tutte le
+  espansioni successive violano il cap death. Questo restringe il prossimo
+  debug L4 a collisione/height/state parity TS-vs-MAME o a una finestra
+  bootstrap diversa, non a sweep ciechi.
+- L5 f3400 non e' seed con gate zero-death: active e neutral muoiono entrambi a
+  `f+19` e recuperano a `f+115`. Resta MAME-responsive, ma non e' un practice
+  start affidabile.
+- L6 `UL` f3600 resta pulito: 1000 frame TS, deaths `0/0`, stable yes,
+  `diffXY=1146474/70440`. E' il candidato da portare a browser/parity review,
+  ancora senza cablare `startLevel=6`.
 
 ## 2026-05-16 — Bootstrap frontier summarizer
 
