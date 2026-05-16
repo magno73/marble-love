@@ -626,6 +626,7 @@ describe("playable live route smoke", () => {
     let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
     let firstCompletionFrame = -1;
     let firstState6Frame = -1;
+    let firstL3DescriptorFrame = -1;
 
     for (let frame = 1; frame <= completionPlan.length; frame++) {
       [p1X, p1Y] = advanceTrackball(p1X, p1Y, completionPlan[frame - 1] ?? "N");
@@ -645,14 +646,26 @@ describe("playable live route smoke", () => {
       if (firstCompletionFrame < 0 && readWordBE(state.workRam, 0x390) === 3) {
         firstCompletionFrame = frame;
       }
+      if (
+        firstCompletionFrame > 0 &&
+        firstL3DescriptorFrame < 0 &&
+        readWordBE(state.workRam, 0x390) === 0 &&
+        readWordBE(state.workRam, 0x394) === 2 &&
+        readLongBE(state.workRam, 0x474) === 0x0002cd9e
+      ) {
+        firstL3DescriptorFrame = frame;
+        break;
+      }
     }
 
     expect(firstState6Frame).toBeGreaterThan(0);
     expect(firstCompletionFrame).toBeGreaterThan(firstState6Frame);
     expect(firstCompletionFrame).toBeLessThan(1_000);
+    expect(firstL3DescriptorFrame).toBeGreaterThan(firstCompletionFrame);
     expect(readWordBE(state.workRam, 0x390)).toBe(0);
     expect(readWordBE(state.workRam, 0x392)).toBe(2);
     expect(readWordBE(state.workRam, 0x394)).toBe(2);
+    expect(readLongBE(state.workRam, 0x474)).toBe(0x0002cd9e);
     expect(state.workRam[0x3e4]).toBe(3);
     expect(state.workRam[0x18 + 0x18]).toBe(1);
     expect(state.workRam[0x18 + 0x1a]).toBe(0);

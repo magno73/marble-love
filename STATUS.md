@@ -1,7 +1,33 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME tap handles and level-index writer trace)
+**Ultimo update:** 2026-05-16 (integrated level-completion descriptor dispatch)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Integrated level-completion descriptor dispatch
+
+Corretto il wiring integrato di `FUN_1101E case4`: il fallback TypeScript di
+`helper118D2` ora passa a `playerSlotIter118D2` la callback
+`FUN_16EC6` (`levelDispatcher16EC6`). Prima del fix, il completamento del
+livello poteva incrementare `workRam[0x394]` a `2`, ma restava sul pointer L2
+`0x2c54c` perche' il dispatcher non veniva richiamato nel path integrato.
+
+Proof TS dal warm scenario `oracle/scenarios/gameplay/level1_end.json`
+snapshot 0, con dispatcher manualmente riarmato come nel practice browser e
+route `L:180,DL:900`: dopo `main=3` a f941/f942, a f943 il runtime torna a
+`main=0`, `mode=2`, `levelIndex=2`, segment `3`, player state `0`, e carica il
+descrittore L3 `0x2cd9e` con PF nonzero `3428`. Il regression test
+`playable-live-routes.test.ts` ora copre questo gate e pretende il pointer L3
+dopo il frame di completamento.
+
+Questo e' progresso sul runtime TS, non un seed: parte da uno snapshot warm
+checked-in e da un rearm diagnostico, non da una movie MAME/manuale da boot.
+La ricerca aggiornata dal seed `manual_level1_start` dopo la fix
+(`/private/tmp/marble-target-l3-manual-after-118d2-wire-3600/manifest.json`,
+`--target-descriptor 3`, f3600) non trova ancora L3 ne' `main=3`; il candidato
+top resta `main/mode=0/0`, segment `2`, timer `0`, descriptor L2 `0x2c54c`,
+senza death. Quindi il gate resta invariato: non cablare `startLevel=2..6`
+finche' i seed non sono distinti, giocabili, controllabili active-vs-neutral e
+supportati da proof MAME/manuale descriptor-aligned.
 
 ## 2026-05-16 — MAME tap handles and level-index writer trace
 

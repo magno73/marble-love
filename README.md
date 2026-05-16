@@ -131,6 +131,12 @@ Anche il replay coin/start corretto
 `/private/tmp/marble-coinstart-index-handles/trace.json` resta `seenLevelCount=2`
 fino a f30000: i pulse coin/start sono letti, ma non producono idx2..idx5 o
 `main=3`.
+Il path TS integrato di completamento livello ora richiama correttamente
+`FUN_16EC6` da `FUN_118D2`: dal warm `level1_end` con rearm manuale e route
+`L:180,DL:900`, il runtime raggiunge `main=3` e poi carica il descrittore L3
+`0x2cd9e` a f943 (`levelIndex=2`, segment 3). Questo conferma la progressione
+descriptor nel motore TS, ma non promuove un seed: la ricerca aggiornata da
+`manual_level1_start` fino a f3600 resta su L2 e non trova `main=3`.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
