@@ -54,9 +54,12 @@ Il finder fa beam-search deterministico nel runtime TS verso `state=6`,
 `main=3`, cambio segment stable-playable o, con `--target-descriptor N`, verso
 un pointer ROM L1..L6 specifico letto da `workRam[0x474]`; con
 `--target-segment N` puo' anche cercare finestre stable-playable di un segmento
-runtime senza trattarlo come numero livello. Scrive poi un manifest per
-`plan-mame-candidate-captures.ts`. I manifest prodotti dal path manual-rearmed
-marcano `forceManualDispatcher=true`: il planner propaga
+runtime senza trattarlo come numero livello. Per evitare falsi positivi da
+ciclo death/attract, usa `--max-deaths 0`; per non far collassare la beam su
+varianti tardive della stessa route, usa `--diversity-prefix-chunks N`; per
+provare input piu' lenti/veloci, usa `--step-pixels N`. Scrive poi un manifest
+per `plan-mame-candidate-captures.ts`. I manifest prodotti dal path
+manual-rearmed marcano `forceManualDispatcher=true`: il planner propaga
 `MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` e
 `MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=N` anche in MAME active/neutral. Anche qui
 il risultato resta un candidato: solo una coppia MAME active-vs-neutral
@@ -104,7 +107,12 @@ MAME fino a f9000 (`/private/tmp/marble-d7200-mame-active/trace.json`): raggiung
 segmenti stable-playable 3/5/6, ma il pointer runtime continua ad alternare
 solo L1/L2 e gli snapshot stabili restano lontani dai descriptor (`pfDiff`
 1484/1819/1517). Anche una ricerca TS `--target-descriptor 3` fino a 3600 frame
-non ha trovato L3. Sono proof negativi, non seed.
+non ha trovato L3. Una route ladder articolata fino a f15000
+(`/private/tmp/marble-ladder-mame-descriptor/trace.json`) resta ugualmente su
+L1/L2; trova L2 byte-exact solo in `state=6`. Il finder no-death
+`--target-descriptor 3 --max-deaths 0` si ferma a f570 perche' tutte le
+espansioni successive richiedono una morte, anche con `--step-pixels 4`.
+Sono proof negativi, non seed.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
