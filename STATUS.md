@@ -1,7 +1,45 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (render-command seed fingerprints)
+**Ultimo update:** 2026-05-16 (multi-route seed discovery)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — multi-route seed discovery
+
+Lo scanner runtime ora supporta `--plan-suite discovery`: invece di seguire una
+singola rotta, esegue una suite deterministica (`ladder`, `sweep`, `lower`,
+`upper`, `zigzag`) e aggrega tutti i campioni nello stesso clustering. Questo
+serve a cercare cluster terreno stabili da piu' traiettorie TS, senza
+promuovere automaticamente seed practice.
+
+Evidenza su `manual_level1_start`:
+
+- Comando discovery: `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-suite discovery --sample-every 240 --stable-only --cluster-by segment --emit-candidates-dir /private/tmp/marble-level-candidates-suite --max-candidates 12 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
+- Rotte eseguite: `ladder:14432`, `sweep:1080`, `lower:5100`,
+  `upper:4680`, `zigzag:4800`.
+- Campioni aggregati: 128 totali, 60 stabili.
+- Cluster stabili esportati: 11 rappresentanti in
+  `/private/tmp/marble-level-candidates-suite`.
+- Rispetto alla sola `ladder`, la suite trova piu' finestre stabili nei
+  segmenti 2/3/4/5/6, incluse firme render-command diverse; non dimostra pero'
+  sei livelli distinti.
+
+Audit successivo:
+
+- Comando: `npx tsx packages/cli/src/audit-playable-seed.ts --distinct-from packages/web/public/scenarios/playable/manual_level1_start.seed.json /private/tmp/marble-level-candidates-suite/*.seed.json`.
+- Risultato: 0 `practice-seed`.
+- Candidati che restano interessanti ma richiedono route proof/MAME:
+  - `seg2` f480: PF diff 1111, manual responsive/stable.
+  - `seg3` f1440: PF diff 4863, manual responsive/stable.
+  - `seg4` f3600: PF diff 1989, manual responsive/stable.
+  - `seg5` f4560: PF diff 4863, manual responsive/stable.
+- Tutti i candidati restano `diagnostic-only` o `candidate-needs-route-proof`
+  perche' il dispatcher MAME preservato rimane active == neutral; serve una
+  cattura MAME active-vs-neutral o una route live reale prima di cablare
+  qualsiasi `startLevel`.
+
+Prossimo passo operativo: usare questi quattro frame/cluster come lista corta
+per catture MAME o browser route mirate, invece di ripartire da screenshot o
+nomi `levelN_spawn`.
 
 ## 2026-05-16 — render-command seed fingerprints
 

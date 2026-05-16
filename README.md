@@ -59,7 +59,10 @@ per confrontare hash/diff di `playfieldRam`, `colorRam` e `alphaRam`. Per
 cercare famiglie lungo una run TS invece di singoli file, usa ad esempio
 `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-preset ladder --sample-every 120 --cluster-by segment --min-cluster-samples 1 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
 Il preset `ladder` segue la rotta profonda dei guardrail playable e stampa i
-cluster runtime; serve a trovare finestre candidate, non a promuoverle. Per
+cluster runtime; serve a trovare finestre candidate, non a promuoverle. Per una
+ricerca piu' ampia usa `--plan-suite discovery`, che aggrega piu' traiettorie
+deterministiche (`ladder`, `sweep`, `lower`, `upper`, `zigzag`) nello stesso
+clustering e produce una lista corta di frame/cluster da auditare. Per
 materializzare candidati auditabili fuori dal repo, aggiungi
 `--emit-candidates-dir /private/tmp/marble-level-candidates --stable-only`: lo
 scanner scrive seed rappresentanti e `manifest.json`, ma non li collega al
