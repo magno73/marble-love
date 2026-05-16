@@ -1,7 +1,66 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME scripted route descriptor/audit pass)
+**Ultimo update:** 2026-05-16 (MAME coin polarity + forced dispatcher proof)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME coin polarity + forced dispatcher proof
+
+Corretto `oracle/mame_playable_input_capture.lua`: gli input coin MAME sono
+active-low. `Coin 1` ora viene portato a `0` durante il pulse e torna a `1`
+quando inattivo; `Left Coin` e `Right Coin` restano inattivi a `1`. Con
+cfg/nvram puliti, lo smoke headless torna a entrare in una finestra reale:
+
+- output: `/private/tmp/marble-current-coin-start-smoke-coinfix/scenarios`
+- `coin_start_to_level1` f2045: `main=1 mode=0 seg=2 state=0 timer=60`,
+  `pfHash=fe66bf77699cb9b0`
+
+Lo stesso script ora supporta anche una diagnostica esplicita:
+`MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` con
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=N` cancella una sola volta `0x400390.w`,
+replicando il rearm che il browser applica quando entra in practice manuale. La
+coppia MAME corta active/neutral:
+
+- active: `/private/tmp/marble-mame-manual-dispatcher-smoke-active/scenarios`
+- neutral: `/private/tmp/marble-mame-manual-dispatcher-smoke-neutral/scenarios`
+
+conferma che dopo f2046 la route MAME diverge (`f2240` e `f3000` responsive),
+ma i frame post-rearm non diventano automaticamente seed validi: f2045 e'
+ancora il seed level 1 noto, mentre f2240/f3000 partono da `main=0` o non sono
+stabili per il gate di practice start.
+
+Rerun della ladder lunga con rearm forzato:
+
+- active: `/private/tmp/marble-mame-route-scan-ladder-forced-manual-active/scenarios`
+- neutral: `/private/tmp/marble-mame-route-scan-ladder-forced-manual-neutral/scenarios`
+- candidate export:
+  `/private/tmp/marble-mame-route-scan-ladder-forced-manual-active/candidates/manifest.json`
+- descriptor manifest:
+  `/private/tmp/marble-mame-route-scan-ladder-forced-manual-active/descriptors/manifest.json`
+
+Lo scanner ha esportato quattro cluster loaded stable (`f18000`, `f42000`,
+`f33000`, `f45000`). L'audit sui file candidati classifica `f42000`, `f33000`
+e `f45000` come `candidate-needs-route-proof` solo in TS manual-rearm; il
+paired MAME active-vs-neutral sulle snapshot route resta sotto soglia e
+`--only-candidates` mostra `0`. Nessun seed viene promosso.
+
+Cattura densa intorno al punto piu' interessante:
+
+- active: `/private/tmp/marble-mame-l2-transition-dense-forced-manual-active/scenarios`
+- window: f66000..f70500 ogni 100 frame
+
+Finding chiave: f69000 e' un match byte-perfect col descrittore ROM L2
+(`pfHash=7eade065cc22ab2f`, `pfDiff=0`, `colorDiff=0`, `alphaDiff=0`), ma non
+e' un practice start giocabile: `main=1 mode=0 seg=5 state=6 timer=45`.
+Il frame successivo stabile osservato (f69100+) torna alla famiglia PF warm
+`fe66bf77699cb9b0`, distante dal descrittore L2 (`pfDiff=1517`). Quindi il
+match L2 reale e' una finestra di load/transition, non un seed startLevel.
+
+Interpretazione: il fix coin rende riproducibile il boot coin/start reale e il
+rearm dispatcher rende utili le route MAME come diagnostica browser-equivalente,
+ma la ladder scriptata non basta a produrre i sei start. Serve ancora una movie
+MAME manuale/playback o una route MAME-live migliore che raggiunga gli start in
+stato `main=1 mode=0 state=0`, con terreno vicino/aligned ai descrittori ROM e
+paired active-vs-neutral convincente. `startLevel=2..6` resta non cablato.
 
 ## 2026-05-16 — MAME scripted route descriptor/audit pass
 
