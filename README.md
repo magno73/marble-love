@@ -33,6 +33,17 @@ Per generare il workflow completo senza ricordare tutti i path/env, usa
 Il planner stampa: record MAME `.inp`, replay/capture manuale, summary/export
 dei candidati stable-playable e audit finale. Questo e' il percorso consigliato
 per scoprire i sei start level reali.
+Per identificare la famiglia ROM di ogni finestra catturata, usa
+`node --import tsx packages/cli/src/inspect-level-descriptors.ts`. Il tool
+legge i sei descrittori reali dalla pointer table `0x2BE00`, riproduce i loro
+fingerprint (`L1 0x2bee2`, `L2 0x2c54c`, `L3 0x2cd9e`, `L4 0x2d648`,
+`L5 0x2de1e`, `L6 0x2e790`) e scrive un manifest in
+`/private/tmp/marble-six-level-descriptors`. Su una tail MAME manuale/playback
+usa ad esempio
+`node --import tsx packages/cli/src/inspect-level-descriptors.ts --no-default-snapshots --all-snapshots --stable-only /private/tmp/marble-manual-level-capture/scenarios/manual_levels_tail.json`.
+Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
+distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
+validato.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col
@@ -54,11 +65,11 @@ collisioni "invisibili" durante il playtest, aggiungi `&debugObjects=1`: compare
 una overlay con coordinate player, timer e oggetti attivi piu' vicini.
 Per partire direttamente da un livello di practice usa
 `?autoLoad=1&startLevel=N&levelTime=180`. Al momento solo `startLevel=1` e'
-cablato, tramite il seed verificato `manual_level1_start`; `startLevel=2..5`
+cablato, tramite il seed verificato `manual_level1_start`; `startLevel=2..6`
 restano intenzionalmente bloccati finche' non abbiamo seed distinti e
 controllabili. I candidati `manual_level2_start` .. `manual_level5_start` del
 primo pass sono stati falsificati dal confronto playfield/hash: formavano solo
-due famiglie di terreno quasi duplicate, non quattro livelli reali. Usa
+due famiglie di terreno quasi duplicate, non i restanti cinque livelli reali. Usa
 `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --pairwise-only ...`
 per confrontare hash/diff di `playfieldRam`, `colorRam` e `alphaRam`. Per
 cercare famiglie lungo una run TS invece di singoli file, usa ad esempio

@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (manual MAME level-capture planner)
+**Ultimo update:** 2026-05-16 (ROM level descriptor inspector)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — ROM level descriptor inspector
+
+Aggiunto `packages/cli/src/inspect-level-descriptors.ts`, utility riproducibile
+per identificare i sei descrittori livello reali dalla pointer table ROM
+`0x2BE00` e confrontare snapshot checked-in o catture MAME/playback contro
+quelle superfici. Il tool scrive un manifest fuori repo, per default in
+`/private/tmp/marble-six-level-descriptors/manifest.json`, e stampa anche
+associazioni diagnostiche per finestre stable-playable:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --out-dir /private/tmp/marble-six-level-descriptors
+```
+
+Per una tail manuale/playback con molti snapshot:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --all-snapshots \
+  --stable-only \
+  /private/tmp/marble-manual-level-capture/scenarios/manual_levels_tail.json
+```
+
+Finding descriptor ROM, riprodotto dal tool:
+
+- L1 `0x2bee2`, size `1642`, PF `2555`, hash `86e682e9f7ac1aa7`, coarse `7da6b7fb8424a073`.
+- L2 `0x2c54c`, size `2130`, PF `2657`, hash `7eade065cc22ab2f`, coarse `7a502464fb02e069`.
+- L3 `0x2cd9e`, size `2218`, PF `2164`, hash `771510b00efbed2e`, coarse `9d220249507ab080`.
+- L4 `0x2d648`, size `2006`, PF `1550`, hash `96d71a7d71989ae8`, coarse `acad6b9269ff6930`.
+- L5 `0x2de1e`, size `2418`, PF `2896`, hash `368dcba7f9065c79`, coarse `717f1596acdc21a1`.
+- L6 `0x2e790`, size `2560`, PF `1743`, hash `6abd748c52908138`, coarse `4cbef509436e9e1f`.
+
+Pairwise PF diffs restano tutti grandi (`2272..3285`), quindi i sei descrittori
+ROM sono distinti. I vecchi snapshot `levelN_spawn` e il seed
+`manual_level1_start` non sono match puliti dei descriptor-start: per esempio
+L1 resta a `pfDiff=1819` dai vecchi spawn, L2 a `pfDiff=1517` dal seed level 1
+manuale e dagli spawn riciclati, mentre L3/L4/L5/L6 vengono spesso avvicinati
+da snapshot mode2/PF scarso.
+
+Run diagnostico sulle catture no-coin attract gia' presenti in
+`/private/tmp/marble-attract-level-scan/scenarios`:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --extra-scenario-dir /private/tmp/marble-attract-level-scan/scenarios \
+  --out-dir /private/tmp/marble-six-level-descriptors-attract \
+  --stable-only
+```
+
+Le finestre stable-playable attract si associano solo in modo lontano a L1/L2
+(`pfDiff=1517..3074`) e non provano start level reali. `segment` continua a non
+essere un level number (`1,3,5,7` poi `2,4,6` nel no-coin scan). Il prossimo
+pass deve usare movie MAME manuali/playback: cluster stable-playable, associa
+ogni finestra al descrittore ROM piu' vicino con questo tool, poi audita
+active-vs-neutral con `audit-playable-seed.ts`. `startLevel=2..6` resta
+intenzionalmente non cablato finche' non esistono seed distinti, controllabili
+e supportati da proof MAME/manuale.
 
 ## 2026-05-16 — manual MAME level-capture planner
 
