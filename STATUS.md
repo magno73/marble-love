@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (L2 canonical candidate)
+**Ultimo update:** 2026-05-16 (six candidate seed audit)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Six candidate seed audit
+
+Aggiunta utility di promozione non-cablante:
+`packages/cli/src/verify-start-level-candidates.ts`.
+Il tool verifica i sei seed post-seed checked-in, senza modificare
+`practice-level.ts`:
+
+- descriptor ROM atteso L1..L6;
+- frame, `next`, `main/mode=0/0`, state0 e timer vivo;
+- metadata fase replay (`mainLoopBodyTicks`, L1=0 e L2..L6=1);
+- playfield/sprite/alpha/color non vuoti;
+- `playfieldRam` distinti tra tutti i sei candidati;
+- con `--proofs`, coppie MAME post-seed locali seed-exact,
+  stable e responsive active-vs-neutral.
+
+Comando passato:
+
+```sh
+node --import tsx packages/cli/src/verify-start-level-candidates.ts --proofs
+```
+
+Risultato: `verdict: pass`. Matrice seed/proof:
+
+| ROM level | seed | desc | frame | phase | route | proof tail |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| L1 | `candidate_level1_postseed_r_f3020` | `0x2bee2` | 3020 | 0 | `R:60,N:180` | seedExact, stable, responsive `1766030/3449662@3200` |
+| L2 | `candidate_level2_postseed_dr_f3000` | `0x2c54c` | 3000 | 1 | `DR:60,N:180` | seedExact, stable, responsive `1174454/0@3077` |
+| L3 | `candidate_level3_postseed_ur_f3000` | `0x2cd9e` | 3000 | 1 | `UR:60,N:180` | seedExact, stable, responsive `123889/5784545@3135` |
+| L4 | `candidate_level4_postseed_dr_f3200` | `0x2d648` | 3200 | 1 | `DR:60,N:180` | seedExact, stable, responsive `2967501/0@3379` |
+| L5 | `candidate_level5_postseed_dl_f3520` | `0x2de1e` | 3520 | 1 | `DL:60,N:180` | seedExact, stable, responsive `0/2967501@3699` |
+| L6 | `candidate_level6_postseed_ul_f3600` | `0x2e790` | 3600 | 1 | `UL:180` | seedExact, stable, responsive `1022747/0@3780` |
+
+La distanza minima pairwise tra playfield dei sei candidati e' L3/L4 = `4547`
+byte, sopra la soglia `512`; gli hash playfield sono unici. Questo chiude il
+gate di identificazione/seed-candidate dei sei descrittori reali. Non e' stato
+cablato `startLevel`: resta da decidere il mapping pubblico, perche'
+`manual_level1_start` e' ancora il seed legacy di `startLevel=1` ma punta alla
+famiglia descriptor L2.
 
 ## 2026-05-16 — L2 canonical candidate after remap
 
