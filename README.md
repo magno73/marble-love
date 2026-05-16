@@ -170,8 +170,14 @@ capture ha anche un bootstrap diagnostico:
 atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente, `main=3`) e
 lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Questa strada ha gia' prodotto
 L4/L5/L6 descriptor reali; L5 f3400 passa MAME active-vs-neutral e audit TS
-come candidato, mentre L4 e L6 restano diagnostic finche' non passano anche
-browser/parity e route review. Non cablare ancora `startLevel=2..6`.
+come candidato, L6 `UL` f3600 passa anche un audit TS intermedio zero-death,
+mentre L4 resta diagnostic finche' non passa una route piu' stabile. Non
+cablare ancora `startLevel=2..6`.
+Per rendere ripetibili questi sweep usa
+`node --import tsx packages/cli/src/plan-bootstrap-route-sweep.ts`: il planner
+stampa le run MAME neutral/active con bootstrap ROM e gli audit
+`audit-playable-seed.ts`. Per esempio `--levels 6 --routes UL:900` riproduce la
+famiglia che ha prodotto il miglior candidato L6.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

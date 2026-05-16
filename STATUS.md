@@ -53,6 +53,9 @@ Route sweep successivo con bootstrap L4/L6, step trackball 4, route
 - L4: diverse route sono MAME-responsive (es. `U` f3000/f3200, `DR`
   f3000..f3600), ma nessuna passa l'audit TS death-aware, nemmeno con piano
   intermedio `R:200,D:200,L:200,U:200,N:200 --max-route-deaths 0`.
+  Debug mirato su `DR` f3200: il MAME pair e' forte, ma il replay TS entra in
+  state1 per 96 frame e/o in death/recovery; anche piani `DR:300,N:700`,
+  `U/R/L:300,N:700` e varianti con delay restano senza candidati zero-death.
 - L6: route `UL:900` produce candidati f3200/f3400/f3600. Il migliore e'
   `/private/tmp/marble-bootstrap-route-sweep/l6/UL/scenarios/f3600.json`:
   descriptor L6 `0x2e790`, MAME pair responsive (`diffXY=5556111/0`), e audit
@@ -60,6 +63,16 @@ Route sweep successivo con bootstrap L4/L6, step trackball 4, route
   `R:200,D:200,L:200,U:200,N:200 --max-route-deaths 0` passa come
   `candidate-needs-route-proof` (`diffXY=1146474/70440`, deaths `0/0`).
   Resta temporaneo: serve browser/parity review prima di promuovere seed.
+
+Aggiunta utility `packages/cli/src/plan-bootstrap-route-sweep.ts`: stampa i
+comandi MAME neutral/active e gli audit per riprodurre sweep bootstrap
+`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL`. Esempio per il candidato L6:
+
+```sh
+node --import tsx packages/cli/src/plan-bootstrap-route-sweep.ts \
+  --levels 6 --routes UL:900 \
+  --out-root /private/tmp/marble-bootstrap-route-sweep
+```
 
 Interpretazione: la via intelligente non e' piu' cercare lunghe route casuali.
 La pipeline corretta e': detector-gate reale per arrivare a L3, completion
