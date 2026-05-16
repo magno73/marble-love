@@ -21,6 +21,8 @@ interface CandidateEntry {
   routeFrame?: number;
   absoluteFrame?: number;
   mameTrackballStart?: number;
+  forceManualDispatcher?: boolean;
+  forceManualFrame?: number;
   routeSpec?: string;
   segment: number;
   pfNonzero: number;
@@ -33,6 +35,8 @@ interface CliArgs {
   outRoot: string;
   captureFrames: number;
   only: Set<string>;
+  forceManualDispatcher: boolean;
+  forceManualFrame: number | undefined;
 }
 
 interface CaptureGroup {
@@ -40,6 +44,8 @@ interface CaptureGroup {
   routeSpec: string;
   neutralSpec: string;
   mameTrackballStart: number;
+  forceManualDispatcher: boolean;
+  forceManualFrame: number | undefined;
   candidates: CandidateEntry[];
 }
 
@@ -55,6 +61,13 @@ Options:
   --capture-frames N   Snapshot frames after each candidate frame (default: 100)
   --only LIST           Comma-separated candidate selectors. Values can be
                         manifest indexes (1-based), filenames, or source labels.
+  --force-manual-dispatcher
+                        Force browser-style manual dispatcher rearm in MAME.
+                        This is also enabled automatically when manifest
+                        candidates contain forceManualDispatcher=true.
+  --force-manual-frame N
+                        Frame for the forced dispatcher clear. Defaults to the
+                        candidate mameTrackballStart when force is enabled.
   -h, --help            Show this help
 
 The scanner manifest must include routeSpec, absoluteFrame, routeFrame, and
@@ -67,6 +80,8 @@ function parseArgs(): CliArgs {
   let outRoot = "/private/tmp/marble-mame-candidate-captures";
   let captureFrames = 100;
   const only = new Set<string>();
+  let forceManualDispatcher = false;
+  let forceManualFrame: number | undefined;
   const paths: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
@@ -84,6 +99,10 @@ function parseArgs(): CliArgs {
         const trimmed = token.trim();
         if (trimmed !== "") only.add(trimmed);
       }
+    } else if (arg === "--force-manual-dispatcher") {
+      forceManualDispatcher = true;
+    } else if (arg === "--force-manual-frame") {
+      forceManualFrame = parsePositiveInt(args[++i], "--force-manual-frame");
     } else if (arg === "-h" || arg === "--help") {
       printHelp();
       exit(0);
@@ -93,7 +112,7 @@ function parseArgs(): CliArgs {
   }
 
   if (paths.length !== 1) throw new Error("expected exactly one manifest path");
-  return { manifestPath: paths[0]!, outRoot, captureFrames, only };
+  return { manifestPath: paths[0]!, outRoot, captureFrames, only, forceManualDispatcher, forceManualFrame };
 }
 
 function parsePositiveInt(raw: string | undefined, label: string): number {
@@ -135,13 +154,15 @@ function requireCandidateFields(candidate: CandidateEntry): void {
   }
 }
 
-function groupCandidates(candidates: CandidateEntry[], captureFrames: number): CaptureGroup[] {
+function groupCandidates(candidates: CandidateEntry[], captureFrames: number, args: CliArgs): CaptureGroup[] {
   const groups = new Map<string, CaptureGroup>();
   for (const candidate of candidates) {
     requireCandidateFields(candidate);
     const routeSpec = candidate.routeSpec!;
     const start = candidate.mameTrackballStart!;
-    const key = `${start}:${routeSpec}`;
+    const forceManualDispatcher = args.forceManualDispatcher || candidate.forceManualDispatcher === true;
+    const forceManualFrame = forceManualDispatcher ? args.forceManualFrame ?? candidate.forceManualFrame ?? start : undefined;
+    const key = `${start}:${forceManualDispatcher ? `manual@${forceManualFrame}` : "preserved"}:${routeSpec}`;
     const existing = groups.get(key);
     const group =
       existing ??
@@ -151,6 +172,8 @@ function groupCandidates(candidates: CandidateEntry[], captureFrames: number): C
           routeSpec,
           neutralSpec: "N:1",
           mameTrackballStart: start,
+          forceManualDispatcher,
+          forceManualFrame,
           candidates: [],
         };
         groups.set(key, created);
@@ -181,13 +204,21 @@ function printCommand(env: Record<string, string>, args: readonly string[]): voi
   console.log(envText === "" ? argText : `${envText} ${argText}`);
 }
 
+function manualDispatcherEnv(group: CaptureGroup): Record<string, string> {
+  if (!group.forceManualDispatcher) return {};
+  return {
+    MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER: "1",
+    ...(group.forceManualFrame === undefined ? {} : { MARBLE_PLAYABLE_FORCE_MANUAL_FRAME: String(group.forceManualFrame) }),
+  };
+}
+
 function main(): void {
   const args = parseArgs();
   const manifest = JSON.parse(readFileSync(resolve(args.manifestPath), "utf-8")) as CandidateManifest;
   const allCandidates = manifest.candidates ?? [];
   const candidates = selectedCandidates(allCandidates, args.only);
   if (candidates.length === 0) throw new Error("no candidates selected");
-  const groups = groupCandidates(candidates, args.captureFrames);
+  const groups = groupCandidates(candidates, args.captureFrames, args);
 
   console.log(`# MAME candidate proof plan from ${args.manifestPath}`);
   console.log(`# selected=${candidates.length} captureFrames=${args.captureFrames}`);
@@ -199,10 +230,15 @@ function main(): void {
     const neutralInput = join(neutralDir, "input.json");
 
     console.log("");
-    console.log(`# group trackballStart=${group.mameTrackballStart} candidates=${group.candidates.length}`);
+    console.log(
+      `# group trackballStart=${group.mameTrackballStart} manualDispatcher=${group.forceManualDispatcher}` +
+        (group.forceManualFrame === undefined ? "" : ` manualFrame=${group.forceManualFrame}`) +
+        ` candidates=${group.candidates.length}`,
+    );
     console.log("# active capture");
     printCommand(
       {
+        ...manualDispatcherEnv(group),
         MARBLE_PLAYABLE_OUT_DIR: activeDir,
         MARBLE_PLAYABLE_INPUT_OUT: activeInput,
         MARBLE_PLAYABLE_ROUTE: group.routeSpec,
@@ -215,6 +251,7 @@ function main(): void {
     console.log("# neutral capture");
     printCommand(
       {
+        ...manualDispatcherEnv(group),
         MARBLE_PLAYABLE_OUT_DIR: neutralDir,
         MARBLE_PLAYABLE_INPUT_OUT: neutralInput,
         MARBLE_PLAYABLE_ROUTE: group.neutralSpec,

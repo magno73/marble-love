@@ -1,7 +1,67 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (MAME autoplay descriptor transitions)
+**Ultimo update:** 2026-05-16 (manual route search proof pipeline)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Manual route search proof pipeline
+
+Aggiunto `packages/cli/src/search-playable-route.ts`, beam-search
+deterministico sul runtime TS a partire da un seed playable. Il tool cerca
+route manuali candidate verso completion/transition (`state=6`, `main=3` o
+stable segment change), scrive un manifest compatibile con
+`plan-mame-candidate-captures.ts`, e marca le route come
+`forceManualDispatcher=true` quando la simulazione cancella `0x400390` come fa
+il browser practice manuale. E' solo candidate generation: nessun seed puo'
+essere promosso senza replay MAME active-vs-neutral.
+
+`packages/cli/src/plan-mame-candidate-captures.ts` ora propaga
+`MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` e
+`MARBLE_PLAYABLE_FORCE_MANUAL_FRAME=N` dai manifest o dall'opzione
+`--force-manual-dispatcher`, cosi' le route trovate nel path manual-rearmed TS
+vengono validate nello stesso regime anche in MAME.
+
+Smoke riproducibile:
+
+```sh
+node --import tsx packages/cli/src/search-playable-route.ts \
+  --frames 900 \
+  --chunk 30 \
+  --beam-width 48 \
+  --max-candidates 4 \
+  --out-dir /private/tmp/marble-manual-route-search-smoke
+```
+
+Il candidato migliore non completa il livello, ma produce una route MAME
+riproducibile:
+
+- route: `DR:60,L:30,DL:30,L:90,UL:30,D:120,DL:30,D:120,DL:30,D:150,DL:30,D:120,DL:30,D:30`
+- target capture: `absoluteFrame=2312`, `mameTrackballStart=2046`,
+  `forceManualFrame=2046`
+- catture:
+  - active `/private/tmp/marble-manual-route-search-smoke/mame-proof/active/route_best_f267.json`
+  - neutral `/private/tmp/marble-manual-route-search-smoke/mame-proof/neutral/route_best_f267.json`
+
+Audit sulla coppia MAME:
+
+```sh
+node --import tsx packages/cli/src/audit-playable-seed.ts \
+  --all-snapshots \
+  --mame-neutral-dir /private/tmp/marble-manual-route-search-smoke/mame-proof/neutral \
+  --distinct-from packages/web/public/scenarios/playable/manual_level1_start.seed.json \
+  /private/tmp/marble-manual-route-search-smoke/mame-proof/active/route_best_f267.json
+```
+
+Finding: la route e' davvero responsive in MAME forced-manual (`diffXY` fino a
+circa `12.3M/2.1M` active-vs-neutral), quindi la pipeline di proof funziona.
+Pero' tutte le 21 snapshot restano diagnostiche: `main/mode=0/0`, segment `2`,
+nessun `main=1 mode=0` stable-playable, nessun descriptor exact, e PF ancora
+near/adjacent alla famiglia level 1 (`pfDiff` piu' vicino a L2 `1995..2054`;
+inizialmente near duplicate del seed level 1). Nessun seed viene promosso.
+
+Prossimo passo operativo: usare lo stesso finder con prefissi/target migliori
+o una movie `.inp` manuale; appena compare una route che raggiunge `state=6` o
+un segment-change stable con timer vivo, il manifest ora puo' generare
+direttamente la coppia MAME active/neutral forzata per l'audit.
 
 ## 2026-05-16 — MAME autoplay descriptor transition audit
 
