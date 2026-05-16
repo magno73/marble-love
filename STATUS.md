@@ -1,7 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (scenario snapshot L3 route probe)
+**Ultimo update:** 2026-05-16 (MAME forced-manual L3 falsification)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME forced-manual L3 falsification
+
+Corretto `oracle/mame_playable_input_capture.lua` nel modo composito con
+`mame_level_descriptor_tap.lua`: quando
+`MARBLE_DESCRIPTOR_TRACE_PLAYABLE_CAPTURE=1`, il capture ora estende
+`last_frame` almeno fino a `MARBLE_DESCRIPTOR_TRACE_TO`, evitando che il capture
+playable esca prima che il descriptor tap scriva `trace.json`.
+
+Run MAME diagnostici da boot/attract fino al frame reale `level1_end` f15800,
+con cfg temporanee pulite e rearm manuale forzato a f15800:
+
+- active step8:
+  `/private/tmp/marble-l1end-forced-l3-active/trace.json`,
+  route `L:180,DL:763`, `MARBLE_PLAYABLE_TRACKBALL_START=15801`.
+- neutral paired:
+  `/private/tmp/marble-l1end-forced-l3-neutral/trace.json`, route `N:943`.
+- active step4:
+  `/private/tmp/marble-l1end-forced-l3-active-step4/trace.json`,
+  route `L:180,DL:1200`, `MARBLE_PLAYABLE_ROUTE_STEP=4`.
+
+Risultato: tutti e tre i descriptor trace hanno `seenLevelCount=1` nella
+finestra `15780..16800/17200` e una sola pointer window L2 `0x2c54c`; nessun
+campione vede `main=3`, `levelIndex=2` o pointer L3 `0x2cd9e`. Active-vs-neutral
+e' responsive come input MAME forced-manual (`l3_f16743`: active step8 x/y
+circa `9.9/-122.5`, neutral `444/444`; step4 active x/y circa `217.2/84.7`),
+ma non produce progressione descriptor. `inspect-level-descriptors
+--transition-summary` sulle snapshot active/neutral non trova finestre
+byte-exact dei descrittori.
+
+Interpretazione: il proof TS warm `level1_end -> L3` resta utile per il wiring
+engine, ma non e' equivalente a una proof MAME forced-manual e non puo' essere
+usato per promuovere seed. Il prossimo passo resta trovare una movie/manuale
+MAME reale o un planner MAME-live/TS piu' fedele che faccia comparire
+`main=3`/L3-L6 senza forzature diagnostiche.
 
 ## 2026-05-16 — Scenario snapshot L3 route probe
 
