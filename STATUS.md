@@ -11,6 +11,10 @@ Invece di generare migliaia di confronti pairwise, stampa per file:
 conteggi `main/mode`, segmenti, player-state, range timer/scroll, numero di
 hash PF/coarse/render distinti e prime finestre che soddisfano il criterio
 stable-playable (`main=1 mode=0 state=0 timer>0 pf>4000`).
+Lo stesso pass puo' anche materializzare una lista corta da catture gia'
+caricate con `--emit-loaded-candidates-dir DIR`: clusterizza solo le snapshot
+stable-playable e scrive seed rappresentanti + manifest, senza far avanzare TS
+e senza promuovere nulla a `startLevel`.
 
 Evidenza sulle catture active/neutral del proof candidato:
 
@@ -22,6 +26,12 @@ Evidenza sulle catture active/neutral del proof candidato:
   ma con stessi hash/scroll/timer (`pfHash=9e10f9a028d4b1c1`,
   `renderCoarse=e73e2232500c5064`), quindi resta una finestra non promossa:
   serve divergenza active-vs-neutral e/o una route MAME-live vera.
+- Export loaded-candidate sulle stesse quattro catture active scrive 1 solo
+  rappresentante in `/private/tmp/marble-loaded-mame-candidates-active`; lo
+  stesso export sul neutral scrive lo stesso cluster. L'audit MAME paired su
+  `05_ladder_seg5_f4560` con `--all-snapshots --only-candidates` mostra 0
+  candidati non-diagnostic, confermando che il nuovo export serve come filtro
+  iniziale, non come promozione.
 
 Questo non identifica ancora i sei livelli, ma rende il prossimo pass molto piu'
 meccanico: una cattura manuale/playback puo' essere filtrata rapidamente per
