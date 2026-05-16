@@ -46,7 +46,7 @@ Usage:
 Options:
   --out-root DIR          Output root (default: ${DEFAULT_OUT_ROOT})
   --rompath DIR           MAME ROM path (default: roms)
-  --levels CSV            Target levels 2..6 (default: ${DEFAULT_LEVELS.join(",")})
+  --levels CSV            Target levels 1..6 (default: ${DEFAULT_LEVELS.join(",")})
   --routes CSV            Active route specs (default: ${DEFAULT_ROUTES.join(",")})
   --frame-list SPEC       MARBLE_PLAYABLE_FRAME_LIST
                           (default: ${DEFAULT_FRAME_LIST})
@@ -95,7 +95,7 @@ function parseArgs(): CliArgs {
     } else if (arg === "--rompath") {
       rompath = requireValue(raw[++i], "--rompath");
     } else if (arg === "--levels") {
-      levels = parseCsvInts(requireValue(raw[++i], "--levels"), "--levels", 2, 6);
+      levels = parseCsvInts(requireValue(raw[++i], "--levels"), "--levels", 1, 6);
     } else if (arg === "--routes") {
       routes = parseCsvStrings(requireValue(raw[++i], "--routes"), "--routes");
     } else if (arg === "--frame-list") {

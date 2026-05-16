@@ -35,7 +35,7 @@
 --   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START first auto gate frame
 --                                     (default: START_FRAME)
 --   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX max automatic clears (default 8)
---   MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL level 2..6 to load through the
+--   MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL level 1..6 to load through the
 --                                     ROM main=3 transition branch
 --   MARBLE_PLAYABLE_BOOTSTRAP_FRAME frame for the bootstrap main=3 write
 --   MARBLE_PLAYABLE_SERVICE_MODE=1 forces F60001 bit 6 low via read-tap
@@ -92,8 +92,8 @@ local bootstrap_applied = false
 
 if BOOTSTRAP_TARGET_LEVEL ~= nil then
     BOOTSTRAP_TARGET_LEVEL = math.floor(BOOTSTRAP_TARGET_LEVEL)
-    if BOOTSTRAP_TARGET_LEVEL < 2 or BOOTSTRAP_TARGET_LEVEL > 6 then
-        error("[mame_playable_input_capture] MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL must be 2..6")
+    if BOOTSTRAP_TARGET_LEVEL < 1 or BOOTSTRAP_TARGET_LEVEL > 6 then
+        error("[mame_playable_input_capture] MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL must be 1..6")
     end
     if BOOTSTRAP_FRAME == nil then
         BOOTSTRAP_FRAME = TRACKBALL_START
@@ -873,12 +873,15 @@ local function apply_level_bootstrap(frame)
 
     -- Exercise the real ROM transition path instead of copying descriptor RAM
     -- by hand. FUN_1101E case main=3 increments 0x400394 before calling
-    -- FUN_118D2/FUN_16EC6, so seed the previous index for target levels 2..6.
+    -- FUN_118D2/FUN_16EC6, so seed the previous index for the target level.
+    -- Target L1 uses 0xffff: the case4 word increment wraps it to index 0.
     -- FUN_118D2/FUN_259B4 only reinitializes player/object slots that are in
     -- completion state 3; other slot states are deliberately cleared.
     write_abs_u8(0x400030, 3)
     write_abs_u8(0x400032, 6)
-    write_abs_u16(0x400394, BOOTSTRAP_TARGET_LEVEL - 2)
+    local previous_index = BOOTSTRAP_TARGET_LEVEL - 2
+    if BOOTSTRAP_TARGET_LEVEL == 1 then previous_index = 0xffff end
+    write_abs_u16(0x400394, previous_index)
     write_abs_u16(0x400392, 0)
     write_abs_u16(0x400390, 3)
     bootstrap_applied = true
@@ -886,7 +889,7 @@ local function apply_level_bootstrap(frame)
         "[mame_playable_input_capture] ROM dispatcher bootstrap target L%d at f%d (prev idx %d)",
         BOOTSTRAP_TARGET_LEVEL,
         frame,
-        BOOTSTRAP_TARGET_LEVEL - 2
+        previous_index
     ))
 end
 

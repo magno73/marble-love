@@ -1,4 +1,4 @@
-const SUPPORTED_START_LEVELS = new Set([1, 2, 3, 4, 5]);
+const SUPPORTED_START_LEVELS = new Set([1, 2, 3, 4, 5, 6]);
 
 const START_LEVEL_PLAYABLE_SEEDS = new Map<number, string>([
   [1, "manual_level1_start"],
