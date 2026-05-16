@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (post-seed MAME proof L5/L6)
+**Ultimo update:** 2026-05-16 (post-seed MAME proof L4/L5/L6)
 **Branch corrente:** `main`.
 
 ## 2026-05-16 — Post-seed MAME proof gate
@@ -17,6 +17,46 @@ Aggiornato anche `packages/cli/src/search-playable-route.ts`: la nozione di
 stable-playable e' ora allineata all'audit descriptor-aware (`main/mode=0|1/0`
 e soglia PF derivata dal descriptor ROM), invece del vecchio `main=1` +
 `pf > 4000` che penalizzava L4/L6 e alcune finestre L5.
+
+### L4 f3200
+
+Nuova coppia MAME post-seed:
+
+- active descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l4-f3200/DR-proof/active/scenarios/f3200.json`
+- neutral descriptor-tapped:
+  `/private/tmp/marble-post-seed-proof-l4-f3200/DR-proof/neutral/scenarios/f3200.json`
+- bootstrap ROM: `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=4`,
+  `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=2300`
+- seed: f3200, route active: `DR:60,N:180`, step 4,
+  `MARBLE_PLAYABLE_TRACKBALL_START=3201`
+
+Audit:
+
+```sh
+node --import tsx packages/cli/src/audit-post-seed-mame-proof.ts \
+  --min-tail-frames 120 \
+  /private/tmp/marble-post-seed-proof-l4-f3200/DR-proof/active/scenarios/f3200.json \
+  /private/tmp/marble-post-seed-proof-l4-f3200/DR-proof/neutral/scenarios/f3200.json
+```
+
+Risultato: `post-seed-candidate`, descriptor L4 `0x2d648`, `seedExact=true`,
+`maxDiffXY=2967501/0@3379`, deaths `0/0`, tail stable. Il trace descriptor
+vede L4 da f2341 a f3380 in active e neutral. Esportato candidato non cablato:
+`packages/web/public/scenarios/playable/candidate_level4_postseed_dr_f3200.seed.json`.
+
+Smoke ROM-backed:
+
+```sh
+node --import tsx packages/cli/src/visual-smoke-real.ts \
+  --seed packages/web/public/scenarios/playable/candidate_level4_postseed_dr_f3200.seed.json \
+  --ticks 120 \
+  --out /private/tmp/marble-l4-postseed-f3320-smoke.ppm
+```
+
+Risultato: L4 `0x2d648`, `main/mode=0/0`, state0, timer `96 -> 94`,
+`pf=3322`, scroll `(0,86)`, 2002 playfield tile, 7 sprite, 216 alpha char,
+frame nonblank. Non e' stato cablato `startLevel=4`.
 
 ### L5 f3520
 
