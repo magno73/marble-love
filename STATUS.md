@@ -1,7 +1,40 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (multi-route seed discovery)
+**Ultimo update:** 2026-05-16 (MAME candidate proof planning)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — MAME candidate proof planning
+
+Follow-up sulla lista corta multi-route: il manifest dei candidati ora porta i
+metadati necessari per riprodurre ogni finestra in MAME senza inferenze dai
+nomi file:
+
+- `routeLabel` / `routeSpec`
+- `routeFrame`
+- `absoluteFrame`
+- `mameTrackballStart`
+
+Con `manual_level1_start` (`frame=2045`), per esempio il candidato `seg4 f3600`
+viene esportato come `absoluteFrame=5645` e `mameTrackballStart=2046`, cioe'
+la route MAME deve iniziare subito dopo il seed neutro per corrispondere alla
+run TS.
+
+Aggiunto anche `packages/cli/src/plan-mame-candidate-captures.ts`: legge un
+`manifest.json` dello scanner e stampa tre comandi per gruppo compatibile:
+
+- cattura MAME active con `MARBLE_PLAYABLE_ROUTE`;
+- cattura MAME neutral con route `N:<frames>`;
+- audit `audit-playable-seed.ts --mame-neutral-dir ...` sugli stessi scenario.
+
+Smoke sul manifest corrente:
+
+- Comando: `npx tsx packages/cli/src/plan-mame-candidate-captures.ts --only 3,5,6,7 /private/tmp/marble-level-candidates-suite/manifest.json`.
+- Output: un gruppo `mameTrackballStart=2046` con frame list
+  `03_ladder_seg2_f480:2525,05_ladder_seg5_f4560:6605,06_ladder_seg3_f1440:3485,07_ladder_seg4_f3600:5645`.
+
+Questo non promuove ancora nessun seed. Chiude pero' il gap pratico tra
+discovery TS e prova MAME active-vs-neutral: i quattro candidati piu'
+interessanti sono ora riproducibili con comandi consistenti.
 
 ## 2026-05-16 — multi-route seed discovery
 

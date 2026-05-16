@@ -70,12 +70,16 @@ browser. Lo scanner calcola anche un fingerprint di render: con i PROM grafici
 presenti usa lookup bank/colore/bpp, mentre senza PROM dichiara
 `raw-playfield-fallback` e usa una firma grezza dei comandi playfield/alpha/sprite.
 Il manifest esportato include `renderHash` e `renderCoarseHash`, utili per
-evitare di fondere finestre che sembrano uguali nel solo PF. Dopo un cluster
-distinto, `audit-playable-seed.ts` resta obbligatorio per la prova
-active-vs-neutral e ora scarta anche near-duplicate con `--min-playfield-diff`
-(default 512 byte PF) prima di cablare un nuovo `startLevel`. I vecchi
-`levelN_spawn` restano scenari oracle/demo e non vanno usati come practice
-start.
+evitare di fondere finestre che sembrano uguali nel solo PF; include anche
+`routeSpec`, `routeFrame`, `absoluteFrame` e `mameTrackballStart` per
+riprodurre il candidato in MAME. Dopo un cluster distinto,
+`audit-playable-seed.ts` resta obbligatorio per la prova active-vs-neutral e
+ora scarta anche near-duplicate con `--min-playfield-diff` (default 512 byte PF)
+prima di cablare un nuovo `startLevel`. Per generare i comandi MAME active,
+neutral e audit da un manifest usa
+`npx tsx packages/cli/src/plan-mame-candidate-captures.ts manifest.json`. I
+vecchi `levelN_spawn` restano scenari oracle/demo e non vanno usati come
+practice start.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
