@@ -49,12 +49,17 @@ for _, d in ipairs(DESCRIPTORS) do
 end
 
 local PCS = {
+    { pc = 0x010fce, name = "FUN_10FCE_refresh_frame" },
     { pc = 0x010504, name = "FUN_10504_main_loop_init" },
     { pc = 0x011452, name = "FUN_11452_mode2_init" },
     { pc = 0x016ec6, name = "FUN_16EC6_level_dispatcher" },
     { pc = 0x016f6c, name = "FUN_16F6C_level_init" },
     { pc = 0x01a236, name = "FUN_1A236_init_level_load" },
     { pc = 0x01a444, name = "FUN_1A444_tilemap_rows" },
+    { pc = 0x0251de, name = "FUN_251DE_object_scan_dispatch" },
+    { pc = 0x0253a4, name = "FUN_251DE_endgame_set_flag" },
+    { pc = 0x0253b2, name = "FUN_251DE_write_main3" },
+    { pc = 0x0253ec, name = "FUN_253EC_object_step" },
 }
 
 local cpu = nil
@@ -151,8 +156,19 @@ local function state_snapshot(kind, name)
         main = safe_u16(0x400390),
         mode = safe_u16(0x400392),
         levelIndex = safe_u16(0x400394),
+        objCount = safe_u16(0x400396),
         segment = safe_u8(0x4003e4),
-        playerState = safe_u16(0x400032),
+        playerOcc = safe_u8(0x400030),
+        playerState = safe_u8(0x400032),
+        playerKind = safe_u8(0x40003d),
+        obj0State18 = safe_u8(0x400030),
+        obj0Substate1a = safe_u8(0x400032),
+        obj0GateX20 = safe_u16(0x400038),
+        obj0Field36 = safe_u8(0x40004e),
+        playerXWord = safe_u16(0x400038),
+        playerYWord = safe_u16(0x40003c),
+        playerXLong = safe_u32(0x400024),
+        playerYLong = safe_u32(0x400028),
         playerTimer = safe_u16(0x400082),
         levelPtr = ptr,
         level = level,
@@ -193,8 +209,19 @@ local function add_write_event(name, extra)
         main = 0,
         mode = 0,
         levelIndex = 0,
+        objCount = 0,
         segment = 0,
+        playerOcc = 0,
         playerState = 0,
+        playerKind = 0,
+        obj0State18 = 0,
+        obj0Substate1a = 0,
+        obj0GateX20 = 0,
+        obj0Field36 = 0,
+        playerXWord = 0,
+        playerYWord = 0,
+        playerXLong = 0,
+        playerYLong = 0,
         playerTimer = 0,
         levelPtr = 0,
         level = 0,
@@ -284,6 +311,15 @@ local function install_taps()
         })
     end)
     table.insert(tap_handles, index_handle)
+    local main_handle = mem:install_write_tap(0x400390, 0x400391, "level_descriptor_main_write", function(offset, data, mask)
+        local addr = normalize_tap_addr(0x400390, offset)
+        add_write_event("workRam[0x390..0x391]", {
+            writeAddr = addr,
+            writeData = data or 0,
+            writeMask = mask or 0,
+        })
+    end)
+    table.insert(tap_handles, main_handle)
 end
 
 local function update_pointer_counts()
@@ -338,8 +374,15 @@ local function update_frame_samples()
         tostring(safe_u16(0x400390)),
         tostring(safe_u16(0x400392)),
         tostring(safe_u16(0x400394)),
+        tostring(safe_u16(0x400396)),
         tostring(safe_u8(0x4003e4)),
-        tostring(safe_u16(0x400032)),
+        tostring(safe_u8(0x400030)),
+        tostring(safe_u8(0x400032)),
+        tostring(safe_u8(0x40003d)),
+        tostring(safe_u16(0x400038)),
+        tostring(safe_u8(0x40004e)),
+        tostring(safe_u16(0x400038)),
+        tostring(safe_u16(0x40003c)),
         tostring(safe_u16(0x400082)),
     }, ":")
     local periodic = SAMPLE_EVERY > 0 and ((frame_count - FROM_FR) % SAMPLE_EVERY == 0)
@@ -363,8 +406,19 @@ local function event_json(s, indent)
         string.format('"main":%d', s.main),
         string.format('"mode":%d', s.mode),
         string.format('"levelIndex":%d', s.levelIndex),
+        string.format('"objCount":%d', s.objCount),
         string.format('"segment":%d', s.segment),
+        string.format('"playerOcc":%d', s.playerOcc),
         string.format('"playerState":%d', s.playerState),
+        string.format('"playerKind":%d', s.playerKind),
+        string.format('"obj0State18":%d', s.obj0State18),
+        string.format('"obj0Substate1a":%d', s.obj0Substate1a),
+        string.format('"obj0GateX20":%d', s.obj0GateX20),
+        string.format('"obj0Field36":%d', s.obj0Field36),
+        string.format('"playerXWord":%d', s.playerXWord),
+        string.format('"playerYWord":%d', s.playerYWord),
+        string.format('"playerXLong":"%s"', hx(s.playerXLong, 8)),
+        string.format('"playerYLong":"%s"', hx(s.playerYLong, 8)),
         string.format('"playerTimer":%d', s.playerTimer),
         string.format('"levelPtr":"%s"', hx(s.levelPtr, 8)),
         string.format('"levelLabel":"%s"', label_for_ptr(s.levelPtr)),
