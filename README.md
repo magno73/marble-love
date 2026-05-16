@@ -169,15 +169,21 @@ capture ha anche un bootstrap diagnostico:
 `MARBLE_PLAYABLE_BOOTSTRAP_FRAME=N`. Scrive solo il minimo stato di completion
 atteso dal ROM (`obj0+0x18=3`, `obj0+0x1A=6`, indice precedente, `main=3`) e
 lascia che MAME esegua `FUN_118D2`/`FUN_16EC6`. Questa strada ha gia' prodotto
-L4/L5/L6 descriptor reali; L5 f3400 passa MAME active-vs-neutral e audit TS
-come candidato, L6 `UL` f3600 passa anche un audit TS intermedio zero-death,
-mentre L4 resta diagnostic finche' non passa una route piu' stabile. Non
-cablare ancora `startLevel=2..6`.
+L4/L5/L6 descriptor reali; L6 `UL` f3600 passa audit TS intermedio zero-death,
+L5 f3400 resta MAME-responsive ma viene demesso dal gate zero-death, e L4 e'
+MAME-responsive ma death-prone nel replay TS. Non cablare ancora
+`startLevel=2..6`.
 Per rendere ripetibili questi sweep usa
 `node --import tsx packages/cli/src/plan-bootstrap-route-sweep.ts`: il planner
 stampa le run MAME neutral/active con bootstrap ROM e gli audit
 `audit-playable-seed.ts`. Per esempio `--levels 6 --routes UL:900` riproduce la
 famiglia che ha prodotto il miglior candidato L6.
+Per classificare una root sweep gia' catturata, usa
+`node --import tsx packages/cli/src/summarize-bootstrap-frontiers.ts --root /private/tmp/marble-bootstrap-route-sweep`.
+Il summarizer esegue l'audit active/neutral su tutte le route e separa le
+finestre in `candidate`, `death-prone`, `ts-control-gap`, `ts-stability-gap` e
+`not-responsive`, cosi' L4 puo' essere trattato come gap TS-vs-MAME invece che
+come ricerca cieca di route.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

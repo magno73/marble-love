@@ -1,7 +1,35 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (descriptor-aware audit + ROM dispatcher bootstrap)
+**Ultimo update:** 2026-05-16 (bootstrap frontier summarizer)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Bootstrap frontier summarizer
+
+Aggiunta utility `packages/cli/src/summarize-bootstrap-frontiers.ts`: legge una
+root prodotta da `plan-bootstrap-route-sweep.ts`, esegue
+`audit-playable-seed.ts --json` su ogni coppia active/neutral MAME e classifica
+ogni finestra come `candidate`, `death-prone`, `ts-control-gap`,
+`ts-stability-gap`, `not-responsive`, ecc. Non scrive seed e non modifica
+`startLevel`; serve a trasformare gli sweep bootstrap in una tabella
+riproducibile di frontiere da promuovere o debug parity.
+
+Comando verificato sui dati correnti:
+
+```sh
+node --import tsx packages/cli/src/summarize-bootstrap-frontiers.ts \
+  --root /private/tmp/marble-bootstrap-route-sweep \
+  --levels 4,6 --top-per-level 8
+```
+
+Risultato: 60 finestre auditate. L6 `UL` f3600 resta l'unico
+`candidate-needs-route-proof` nello sweep (`diffXY` MAME `5556111/0`, replay TS
+`1146474/70440`, deaths `0/0`). L4 non e' descriptor-missing: le finestre
+migliori sono MAME-responsive ma `death-prone` nel replay TS (`R` f3200,
+`DR` f3200/f3400/f3600), quindi la prossima azione utile e' investigare il
+primo frame di divergenza/stato morte TS-vs-MAME invece di aumentare sweep
+casuali. L5 f3400, auditato con lo stesso piano zero-death, viene demesso a
+`diagnostic-only` per deaths `1/1`; resta una frontiera MAME-responsive, non un
+seed promuovibile.
 
 ## 2026-05-16 — Descriptor-aware audit + ROM dispatcher bootstrap
 
