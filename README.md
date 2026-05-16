@@ -28,6 +28,11 @@ replayabili dal probe TS. Per capture scriptati, coin/start sono ora applicati
 post-boot (`MARBLE_PLAYABLE_COIN_FRAME=1200`,
 `MARBLE_PLAYABLE_START_FRAME=1500` di default); i vecchi pulse f60/f180 erano
 troppo presto e producevano finestre attract/demo identiche al no-coin.
+Per generare il workflow completo senza ricordare tutti i path/env, usa
+`node --import tsx packages/cli/src/plan-mame-manual-level-capture.ts --name manual_levels`.
+Il planner stampa: record MAME `.inp`, replay/capture manuale, summary/export
+dei candidati stable-playable e audit finale. Questo e' il percorso consigliato
+per scoprire i sei start level reali.
 Per filtrare i candidati prima di collegarli a `startLevel`, usa
 `npx tsx packages/cli/src/audit-playable-seed.ts`. Il probe confronta input
 attivo contro input neutro, sia con dispatcher MAME preservato sia col
