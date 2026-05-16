@@ -27,6 +27,14 @@ seed serve ancora una route manuale/playback reale che arrivi al branch
 abilita quel branch da input/credit/start validi. Nessun nuovo `startLevel` e'
 stato cablato.
 
+Replay coin/start con il tap corretto:
+`/private/tmp/marble-coinstart-index-handles/trace.json` arriva a f30000 con
+`277` eventi e `seenLevelCount=2`. L'input trace conferma pulse coin f1200 e
+START1 f1500 letti dai port, ma i sample non hanno mai `idx>1` o `main=3`; i
+soli write a `0x400394` sono bootstrap/clear e `PC=0x011524` con dati `0/1`.
+Quindi il problema non e' un tap perso o un pulse ignorato dal capture: anche il
+path coin/start scriptato resta nel ciclo descriptor L1/L2.
+
 ## 2026-05-16 — State-diverse route and level-index trace
 
 Esteso `packages/cli/src/search-playable-route.ts` con
