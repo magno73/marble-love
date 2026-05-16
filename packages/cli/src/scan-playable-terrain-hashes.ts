@@ -55,6 +55,7 @@ interface LoadedSeed {
 
 type ClusterBy = "coarse" | "pf" | "segment";
 type PlanPreset = "sweep" | "ladder";
+type PlanSuite = "discovery";
 
 interface CliArgs {
   paths: string[];
@@ -63,6 +64,7 @@ interface CliArgs {
   sampleEvery: number;
   plan: string;
   planPreset: PlanPreset | undefined;
+  planSuite: PlanSuite | undefined;
   json: boolean;
   pairwiseOnly: boolean;
   allSnapshots: boolean;
@@ -175,6 +177,15 @@ const ROUTE_PRESETS: Record<PlanPreset, string> = {
   sweep: DEFAULT_PLAN,
   ladder: "D:171,R:206,L:188,DL:107,BR:260,R:700,D:300,R:800,DR:300,R:800,U:100,R:500,N:10000",
 };
+const ROUTE_SUITES: Record<PlanSuite, Record<string, string>> = {
+  discovery: {
+    ladder: ROUTE_PRESETS.ladder,
+    sweep: ROUTE_PRESETS.sweep,
+    lower: "D:360,R:480,DL:180,R:720,D:240,R:720,N:2400",
+    upper: "U:240,R:600,UR:240,R:480,D:240,R:480,N:2400",
+    zigzag: "R:360,D:180,L:180,D:180,R:540,U:180,R:540,DL:240,N:2400",
+  },
+};
 const SCREEN_DELTAS: Record<string, readonly [number, number]> = {
   D: [0, 8],
   U: [0, -8],
@@ -203,6 +214,8 @@ Options:
   --plan-preset NAME    Route preset: sweep or ladder. Ladder follows the
                         existing deep playable route guard and defaults to its
                         full length when --frames is omitted.
+  --plan-suite NAME     Run a deterministic route suite and aggregate samples.
+                        Currently: discovery.
   --cluster-by FIELD    Group runtime samples by coarse, pf, or segment
                         (default: coarse)
   --stable-only         Cluster only stable playable-looking samples
@@ -232,6 +245,7 @@ function parseArgs(): CliArgs {
   let sampleEvery = 30;
   let plan = DEFAULT_PLAN;
   let planPreset: PlanPreset | undefined;
+  let planSuite: PlanSuite | undefined;
   let json = false;
   let pairwiseOnly = false;
   let allSnapshots = false;
@@ -254,11 +268,17 @@ function parseArgs(): CliArgs {
       if (next === undefined) throw new Error("--plan requires a value");
       plan = next;
       planPreset = undefined;
+      planSuite = undefined;
     } else if (arg === "--plan-preset") {
       const next = args[++i];
       if (next !== "sweep" && next !== "ladder") throw new Error(`invalid --plan-preset value: ${next ?? ""}`);
       planPreset = next;
+      planSuite = undefined;
       plan = ROUTE_PRESETS[next];
+    } else if (arg === "--plan-suite") {
+      const next = args[++i];
+      if (next !== "discovery") throw new Error(`invalid --plan-suite value: ${next ?? ""}`);
+      planSuite = next;
     } else if (arg === "--cluster-by") {
       const next = args[++i];
       if (next !== "coarse" && next !== "pf" && next !== "segment") {
@@ -298,6 +318,7 @@ function parseArgs(): CliArgs {
     sampleEvery,
     plan,
     planPreset,
+    planSuite,
     json,
     pairwiseOnly,
     allSnapshots,
@@ -610,9 +631,20 @@ function routeSpecLength(spec: string): number {
   return total;
 }
 
-function routeForArgs(args: CliArgs): string[] {
+interface RouteRun {
+  label: string;
+  route: string[];
+}
+
+function routeRunsForArgs(args: CliArgs): RouteRun[] {
+  if (args.planSuite !== undefined) {
+    return Object.entries(ROUTE_SUITES[args.planSuite]).map(([label, spec]) => ({
+      label,
+      route: expandRouteSpec(spec, args.framesExplicit ? args.frames : routeSpecLength(spec)),
+    }));
+  }
   const frames = args.planPreset !== undefined && !args.framesExplicit ? routeSpecLength(args.plan) : args.frames;
-  return expandRouteSpec(args.plan, frames);
+  return [{ label: "single", route: expandRouteSpec(args.plan, frames) }];
 }
 
 function advanceTrackball(p1X: number, p1Y: number, step: string): readonly [number, number] {
@@ -639,6 +671,7 @@ function loadStateFromSeed(rom: RomImage, seed: SeedJson): GameState {
 function runSamples(
   rom: RomImage,
   loaded: LoadedSeed,
+  routeLabel: string,
   route: readonly string[],
   sampleEvery: number,
   playfieldLookups: readonly GraphicsLookupEntry[] | undefined,
@@ -662,7 +695,7 @@ function runSamples(
       inputMmio: 0x6f,
     });
     if (frame % sampleEvery === 0 || frame === route.length) {
-      const label = `${loaded.label}+${frame}`;
+      const label = routeLabel === "single" ? `${loaded.label}+${frame}` : `${loaded.label}+${routeLabel}+${frame}`;
       const seed: SeedJson = {
         frame,
         slapsticBank: loaded.seed.slapsticBank ?? 1,
@@ -811,13 +844,15 @@ function main(): void {
       : (() => {
           const rom = busNs.emptyRomImage();
           applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
-          const route = routeForArgs(args);
+          const routeRuns = routeRunsForArgs(args);
           const seedMaps: Map<string, SeedJson>[] = [];
-          const runReports = seeds.map((seed) => {
-            const runtime = runSamples(rom, seed, route, args.sampleEvery, playfieldLookups, lookupSource);
-            seedMaps.push(runtime.seedsByLabel);
-            return { label: seed.label, samples: runtime.reports };
-          });
+          const runReports = seeds.flatMap((seed) =>
+            routeRuns.map((routeRun) => {
+              const runtime = runSamples(rom, seed, routeRun.label, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
+              seedMaps.push(runtime.seedsByLabel);
+              return { label: seed.label, route: routeRun.label, routeFrames: routeRun.route.length, samples: runtime.reports };
+            }),
+          );
           const allSamples = runReports.flatMap((report) => report.samples);
           const clusters = clusterSamples(allSamples, args.clusterBy, args.stableOnly, args.minClusterSamples);
           const emittedCandidates =
@@ -829,7 +864,7 @@ function main(): void {
                   new Map(seedMaps.flatMap((map) => Array.from(map.entries()))),
                   args.maxCandidates,
                 );
-          return { routeFrames: route.length, runReports, clusters, emittedCandidates };
+          return { routeRuns: routeRuns.map((routeRun) => ({ label: routeRun.label, frames: routeRun.route.length })), runReports, clusters, emittedCandidates };
         })();
     console.log(JSON.stringify({ initialReports, pairs, ...runReports }, null, 2));
     return;
@@ -851,24 +886,33 @@ function main(): void {
   if (!args.pairwiseOnly) {
     const rom = busNs.emptyRomImage();
     applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
-    const route = routeForArgs(args);
-    console.log(`\nTS sampled terrain every ${args.sampleEvery} frames over ${route.length} frames:`);
+    const routeRuns = routeRunsForArgs(args);
+    const routeSummary = routeRuns.map((routeRun) => `${routeRun.label}:${routeRun.route.length}`).join(", ");
+    console.log(`\nTS sampled terrain every ${args.sampleEvery} frames over route(s) ${routeSummary}:`);
     const allSamples: SeedReport[] = [];
     const allSeedEntries: [string, SeedJson][] = [];
     for (const seed of seeds) {
-      const runtime = runSamples(rom, seed, route, args.sampleEvery, playfieldLookups, lookupSource);
-      const samples = runtime.reports;
-      allSamples.push(...samples);
-      allSeedEntries.push(...runtime.seedsByLabel.entries());
-      const uniquePf = new Set(samples.map((sample) => sample.fingerprint.pfHash));
-      const uniqueCoarse = new Set(samples.map((sample) => sample.fingerprint.coarseHash));
-      const stableSamples = samples.filter(isStablePlayableSample);
-      const last = samples[samples.length - 1];
-      console.log(
-        `\n${seed.label}: samples=${samples.length} stable=${stableSamples.length} ` +
-          `uniquePf=${uniquePf.size} uniqueCoarse=${uniqueCoarse.size}`,
-      );
-      if (last !== undefined) printSeed(last);
+      const seedSamples: SeedReport[] = [];
+      for (const routeRun of routeRuns) {
+        const runtime = runSamples(rom, seed, routeRun.label, routeRun.route, args.sampleEvery, playfieldLookups, lookupSource);
+        const samples = runtime.reports;
+        seedSamples.push(...samples);
+        allSamples.push(...samples);
+        allSeedEntries.push(...runtime.seedsByLabel.entries());
+        const uniquePf = new Set(samples.map((sample) => sample.fingerprint.pfHash));
+        const uniqueCoarse = new Set(samples.map((sample) => sample.fingerprint.coarseHash));
+        const stableSamples = samples.filter(isStablePlayableSample);
+        const last = samples[samples.length - 1];
+        console.log(
+          `\n${seed.label} [${routeRun.label}]: samples=${samples.length} stable=${stableSamples.length} ` +
+            `uniquePf=${uniquePf.size} uniqueCoarse=${uniqueCoarse.size}`,
+        );
+        if (last !== undefined) printSeed(last);
+      }
+      if (routeRuns.length > 1) {
+        const stableSamples = seedSamples.filter(isStablePlayableSample);
+        console.log(`${seed.label} [all-routes]: samples=${seedSamples.length} stable=${stableSamples.length}`);
+      }
     }
     console.log(
       `\nRuntime terrain clusters (by=${args.clusterBy}, stableOnly=${args.stableOnly}, ` +
