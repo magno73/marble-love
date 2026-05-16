@@ -184,6 +184,13 @@ Il summarizer esegue l'audit active/neutral su tutte le route e separa le
 finestre in `candidate`, `death-prone`, `ts-control-gap`, `ts-stability-gap` e
 `not-responsive`, cosi' L4 puo' essere trattato come gap TS-vs-MAME invece che
 come ricerca cieca di route.
+Quando una finestra MAME-responsive fallisce il gate TS, usa
+`node --import tsx packages/cli/src/trace-playable-seed-route.ts scenario.json`.
+Il tracer riproduce la route dell'audit e stampa il primo `death-enter`,
+`death-exit` o cambio state/main/segment. Sui dati correnti mostra che L4 `R`
+f3200 e L5 f3400 muoiono anche in neutral, mentre L4 `DR` f3200 resta stable
+con input neutro ma non trova una route controllabile lunga zero-death; L6
+`UL` f3600 resta invece stable e responsive per 1000 frame TS.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.
