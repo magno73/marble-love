@@ -1,6 +1,6 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (fine L2 transition timeline audit)
+**Ultimo update:** 2026-05-16 (fine L2 transition + bulk descriptor audit)
 **Branch corrente:** `main`.
 
 ## 2026-05-16 — Fine L2 transition timeline audit
@@ -41,6 +41,23 @@ stato giocabile, il playfield non e' piu' il descriptor L2. `startLevel=2..6`
 resta bloccato finche' una route MAME manuale/playback non produce finestre
 stable-playable distintive, controllabili active-vs-neutral e vicine/aligned ai
 descriptor ROM.
+
+Bulk sweep stretto sulle catture temporanee gia' presenti in `/private/tmp`
+con lo stesso inspector (`pfDiff<=256` oppure `stablePlayable && pfDiff<=1024`)
+ha scritto `/private/tmp/marble-bulk-descriptor-tight.sorted.tsv`: 79 righe
+totali, 0 stable-playable e 58 match exact (`pfDiff=0`). I match exact/near
+compaiono solo in queste famiglie:
+
+- L2 exact/near in `marble-mame-l2-transition-*`,
+  `marble-mame-route-scan-ladder-forced-manual-active`,
+  `marble_case16_probe`, `marble_completion_micro`,
+  `marble_confirm_completion_no_timer`, `marble_post_completion`;
+- L1 exact/near in `marble_coin_late_fixed`.
+
+Tutti sono non-promotable: `state=6` e/o `mode=2`/`main!=1`, quindi non
+raggiungono il gate iniziale per practice start giocabile. Il miglior gruppo
+stable-playable osservato nel bulk sweep resta lontano dai descriptor ROM
+(`pfDiff` minimo circa `1484`), coerente con le precedenti falsificazioni.
 
 ## 2026-05-16 — MAME coin polarity + forced dispatcher proof
 
