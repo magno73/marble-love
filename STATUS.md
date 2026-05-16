@@ -1,7 +1,46 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (integrated level-completion descriptor dispatch)
+**Ultimo update:** 2026-05-16 (scenario snapshot L3 route probe)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Scenario snapshot L3 route probe
+
+Esteso `packages/cli/src/search-playable-route.ts`: `--seed` puo' ora puntare
+anche a uno scenario JSON con array `snapshots`, selezionando lo snapshot con
+`--snapshot-index N` (default `0` per scenario JSON). Questo rende riproducibile
+via CLI il proof warm `level1_end -> L3`, senza script inline.
+
+Proof diagnostico:
+
+```sh
+node --import tsx packages/cli/src/search-playable-route.ts \
+  --seed oracle/scenarios/gameplay/level1_end.json \
+  --snapshot-index 0 \
+  --route-prefix L:180,DL:763 \
+  --target-descriptor 3 \
+  --frames 943 \
+  --chunk 30 \
+  --beam-width 16 \
+  --max-candidates 1 \
+  --out-dir /private/tmp/marble-level1-end-scenario-l3-proof-f943
+```
+
+Il manifest
+`/private/tmp/marble-level1-end-scenario-l3-proof-f943/manifest.json` registra
+`firstState6Frame=881`, `firstMain3Frame=941`,
+`firstTargetDescriptorFrame=943`; finale f943 `main/mode=0/2`, segment `3`,
+player state `0`, timer `48`, descriptor L3 `0x2cd9e`, PF nonzero `3428`.
+Questo conferma in modo riusabile il gate TS di progressione, ma resta un proof
+warm/diagnostico: lo snapshot iniziale e' checked-in e il dispatcher viene
+riarmato manualmente.
+
+Controprova dal seed practice reale: un probe fuori repo con
+`manual_level1_start` e timer esteso a `180`
+(`/private/tmp/marble-target-l3-timer180-3600/manifest.json`) resta su L2 fino a
+f3600 (`main/mode=0/0`, segment `2`, timer `120`, descriptor `0x2c54c`,
+x/y circa `307/272`, nessun `main=3` o target L3). Quindi il blocco del finder
+non era solo il countdown a zero; serve ancora una route MAME/manuale reale o un
+planner fisico migliore. Nessun nuovo `startLevel` e' stato cablato.
 
 ## 2026-05-16 — Integrated level-completion descriptor dispatch
 

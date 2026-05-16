@@ -23,6 +23,7 @@ import {
 import type { GameState, RomImage } from "@marble-love/engine";
 
 interface SeedJson {
+  name?: string;
   frame?: number;
   slapsticBank?: number;
   workRam: string;
@@ -32,8 +33,14 @@ interface SeedJson {
   colorRam: string;
 }
 
+interface ScenarioJson {
+  name?: string;
+  snapshots: SeedJson[];
+}
+
 interface CliArgs {
   seedPath: string;
+  snapshotIndex: number | undefined;
   romPath: string;
   outDir: string;
   frames: number;
@@ -153,6 +160,9 @@ Usage:
 
 Options:
   --seed PATH            Seed JSON (default: ${DEFAULT_SEED})
+                          Can also be a scenario JSON with snapshots
+  --snapshot-index N     Snapshot index when --seed points at a scenario JSON
+                          (default: 0 for scenario JSON)
   --rom PATH             Program ROM blob (default: ${DEFAULT_ROM})
   --out-dir DIR          Output manifest dir (default: ${DEFAULT_OUT_DIR})
   --frames N             Search horizon in route frames (default: 3600)
@@ -190,6 +200,7 @@ The manifest is compatible with plan-mame-candidate-captures.ts. Use
 function parseArgs(): CliArgs {
   const raw = argv.slice(2);
   let seedPath = DEFAULT_SEED;
+  let snapshotIndex: number | undefined;
   let romPath = DEFAULT_ROM;
   let outDir = DEFAULT_OUT_DIR;
   let frames = 3600;
@@ -212,6 +223,8 @@ function parseArgs(): CliArgs {
   for (let i = 0; i < raw.length; i++) {
     const arg = raw[i]!;
     if (arg === "--seed") seedPath = requireValue(raw[++i], "--seed");
+    else if (arg === "--snapshot-index")
+      snapshotIndex = parseNonNegativeInt(raw[++i], "--snapshot-index");
     else if (arg === "--rom") romPath = requireValue(raw[++i], "--rom");
     else if (arg === "--out-dir") outDir = requireValue(raw[++i], "--out-dir");
     else if (arg === "--frames") frames = parsePositiveInt(raw[++i], "--frames");
@@ -256,6 +269,7 @@ function parseArgs(): CliArgs {
 
   return {
     seedPath,
+    snapshotIndex,
     romPath,
     outDir,
     frames,
@@ -453,8 +467,33 @@ function loadRom(path: string): RomImage {
   return rom;
 }
 
-function loadSeed(path: string): SeedJson {
-  return JSON.parse(readFileSync(resolve(path), "utf-8")) as SeedJson;
+function isScenarioJson(value: unknown): value is ScenarioJson {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { snapshots?: unknown }).snapshots)
+  );
+}
+
+function loadSeed(path: string, snapshotIndex: number | undefined): SeedJson {
+  const parsed = JSON.parse(readFileSync(resolve(path), "utf-8")) as SeedJson | ScenarioJson;
+  if (!isScenarioJson(parsed)) {
+    if (snapshotIndex !== undefined)
+      throw new Error("--snapshot-index is only valid when --seed is a scenario JSON");
+    return parsed;
+  }
+
+  const index = snapshotIndex ?? 0;
+  const snapshot = parsed.snapshots[index];
+  if (snapshot === undefined) {
+    throw new Error(
+      `scenario ${path} has ${parsed.snapshots.length} snapshot(s), cannot read index ${index}`,
+    );
+  }
+  return {
+    ...snapshot,
+    name: snapshot.name ?? `${parsed.name ?? "scenario"}[${index}]`,
+  };
 }
 
 function stateFromSeed(
@@ -941,7 +980,7 @@ function main(): void {
   if (args.diversityStateBucket === undefined) {
     args.diversityStateBucket = targetRequested ? 48 : 0;
   }
-  const seed = loadSeed(args.seedPath);
+  const seed = loadSeed(args.seedPath, args.snapshotIndex);
   const seedState = stateFromSeed(rom, seed, args.manualDispatcher);
   const initial = summarize(seedState);
   const prefix =
@@ -1051,6 +1090,7 @@ function main(): void {
           directions: args.directions,
           routePrefix: args.routePrefix,
           manualDispatcher: args.manualDispatcher,
+          snapshotIndex: args.snapshotIndex,
           targetX: args.targetX,
           targetY: args.targetY,
           targetSegment: args.targetSegment,
