@@ -63,11 +63,16 @@ cluster runtime; serve a trovare finestre candidate, non a promuoverle. Per
 materializzare candidati auditabili fuori dal repo, aggiungi
 `--emit-candidates-dir /private/tmp/marble-level-candidates --stable-only`: lo
 scanner scrive seed rappresentanti e `manifest.json`, ma non li collega al
-browser. Dopo un cluster distinto, `audit-playable-seed.ts` resta obbligatorio
-per la prova active-vs-neutral e ora scarta anche near-duplicate con
-`--min-playfield-diff` (default 512 byte PF) prima di cablare un nuovo
-`startLevel`. I vecchi `levelN_spawn` restano scenari oracle/demo e non vanno
-usati come practice start.
+browser. Lo scanner calcola anche un fingerprint di render: con i PROM grafici
+presenti usa lookup bank/colore/bpp, mentre senza PROM dichiara
+`raw-playfield-fallback` e usa una firma grezza dei comandi playfield/alpha/sprite.
+Il manifest esportato include `renderHash` e `renderCoarseHash`, utili per
+evitare di fondere finestre che sembrano uguali nel solo PF. Dopo un cluster
+distinto, `audit-playable-seed.ts` resta obbligatorio per la prova
+active-vs-neutral e ora scarta anche near-duplicate con `--min-playfield-diff`
+(default 512 byte PF) prima di cablare un nuovo `startLevel`. I vecchi
+`levelN_spawn` restano scenari oracle/demo e non vanno usati come practice
+start.
 
 **Checkpoint recente (2026-05-14):** pivot completato da long-demo byte drill a
 gameplay-ready warm seeds. Nuovi oracle in `oracle/scenarios/gameplay/`: 15
