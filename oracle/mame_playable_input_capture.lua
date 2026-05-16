@@ -30,6 +30,11 @@
 --   MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1 clears 0x400390 once at route start
 --   MARBLE_PLAYABLE_FORCE_MANUAL_FRAME optional frame for manual dispatcher clear
 --   MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES optional CSV frames for repeated clears
+--   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_READY=1 clears 0x400390 when
+--                                     obj0 is in a natural detector-ready gate
+--   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START first auto gate frame
+--                                     (default: START_FRAME)
+--   MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX max automatic clears (default 8)
 --   MARBLE_PLAYABLE_SERVICE_MODE=1 forces F60001 bit 6 low via read-tap
 --   MARBLE_PLAYABLE_MANUAL=1     record user/playback input; do not inject input
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
@@ -66,9 +71,18 @@ local TIMER_OVERRIDE_START = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_START") o
 local TIMER_OVERRIDE_END = tonumber(os.getenv("MARBLE_PLAYABLE_TIMER_END") or "999999") or 999999
 local FORCE_MANUAL_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAME") or "")
 local FORCE_MANUAL_FRAMES_RAW = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES") or ""
-local FORCE_MANUAL_DISPATCHER = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1" or FORCE_MANUAL_FRAMES_RAW ~= ""
+local FORCE_MANUAL_ON_DETECTOR_READY = os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_READY") == "1"
+local FORCE_MANUAL_ON_DETECTOR_START = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START") or tostring(START_FRAME)) or START_FRAME
+local FORCE_MANUAL_ON_DETECTOR_MAX = tonumber(os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX") or "8") or 8
+local FRAME_FORCE_MANUAL_DISPATCHER =
+    os.getenv("MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER") == "1"
+    or FORCE_MANUAL_FRAMES_RAW ~= ""
+local FORCE_MANUAL_DISPATCHER =
+    FRAME_FORCE_MANUAL_DISPATCHER
+    or FORCE_MANUAL_ON_DETECTOR_READY
 local FORCE_SERVICE_MODE = os.getenv("MARBLE_PLAYABLE_SERVICE_MODE") == "1"
 local manual_dispatcher_index = 1
+local detector_rearm_count = 0
 
 local DEFAULT_SCENARIOS = {
     { name = "coin_start_to_level1", frame = 2045, description = "Level 1 entry after scripted coin/start" },
@@ -761,6 +775,16 @@ local function write_abs_u16(addr, value)
     end
 end
 
+local function read_abs_u8(addr)
+    if mem == nil then return 0 end
+    return mem:read_u8(addr) & 0xff
+end
+
+local function read_abs_u16(addr)
+    if mem == nil then return 0 end
+    return mem:read_u16(addr) & 0xffff
+end
+
 local function apply_timer_override(frame)
     if TIMER_OVERRIDE == nil then return end
     if mem == nil then return end
@@ -772,7 +796,7 @@ local function apply_timer_override(frame)
 end
 
 local function apply_manual_dispatcher_rearm(frame)
-    if not FORCE_MANUAL_DISPATCHER then return end
+    if not FRAME_FORCE_MANUAL_DISPATCHER then return end
     if mem == nil then return end
     if #FORCE_MANUAL_FRAMES == 0 then
         table.insert(FORCE_MANUAL_FRAMES, FORCE_MANUAL_FRAME or TRACKBALL_START)
@@ -790,6 +814,30 @@ local function apply_manual_dispatcher_rearm(frame)
         ))
         manual_dispatcher_index = manual_dispatcher_index + 1
     end
+end
+
+local function apply_detector_ready_rearm(frame)
+    if not FORCE_MANUAL_ON_DETECTOR_READY then return end
+    if mem == nil then return end
+    if frame < FORCE_MANUAL_ON_DETECTOR_START then return end
+    if detector_rearm_count >= FORCE_MANUAL_ON_DETECTOR_MAX then return end
+
+    -- Conservative automatic version of the manual f1747 proof: rearm only
+    -- when the ROM has naturally staged an object-completion slot while still
+    -- holding the presentation dispatcher flag. This avoids clearing the later
+    -- L3 init-only samples that do not reach FUN_251DE as completion gates.
+    if read_abs_u16(0x400390) ~= 1 then return end
+    if read_abs_u16(0x400392) ~= 0 then return end
+    if read_abs_u8(0x400030) ~= 3 then return end
+    if read_abs_u8(0x400032) ~= 6 then return end
+
+    write_abs_u16(0x400390, 0)
+    detector_rearm_count = detector_rearm_count + 1
+    print(string.format(
+        "[mame_playable_input_capture] auto detector-ready manual dispatcher at f%d (count %d)",
+        frame,
+        detector_rearm_count
+    ))
 end
 
 emu.register_frame_done(function()
@@ -817,6 +865,7 @@ emu.register_frame_done(function()
     frame_count = frame_count + 1
     apply_timer_override(frame_count)
     apply_manual_dispatcher_rearm(frame_count)
+    apply_detector_ready_rearm(frame_count)
 
     capture_input_frame()
     local hits = capture_by_frame[frame_count]

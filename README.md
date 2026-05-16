@@ -157,6 +157,12 @@ comandi active/neutral con `MARBLE_PLAYABLE_FORCE_MANUAL_FRAMES`. Questa strada
 ha prodotto il primo proof causale MAME verso L3, ma il chained probe
 `1746,1872` non avanza ancora a L4: i sample init `obj0+0x18==3` non bastano se
 `FUN_251DE_object_scan_dispatch` non passa davvero su quella finestra.
+Per riprodurre il gate L3 senza frame hardcoded, il capture supporta anche
+`MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_READY=1`: cancella `0x400390` solo
+quando MAME vede `main=1`, `mode=0`, `obj0+0x18=3`, `obj0+0x1A=6` dopo lo
+start scriptato. La proof `/private/tmp/marble-detector-auto/trace.json`
+carica L3 con auto-clear a f1747; la long run fino a f6500 non trova gate
+naturali successivi verso L4-L6.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

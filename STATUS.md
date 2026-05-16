@@ -1,7 +1,47 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (detector-gate rearm planner)
+**Ultimo update:** 2026-05-16 (detector-ready auto rearm)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Detector-ready auto rearm
+
+Esteso `oracle/mame_playable_input_capture.lua` con
+`MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_READY=1`. In questa modalita' il
+capture cancella `0x400390` senza frame hardcoded solo quando il runtime MAME
+ha naturalmente staged un gate compatibile con il detector:
+
+- `main == 1`
+- `mode == 0`
+- `obj0+0x18 == 3`
+- `obj0+0x1A == 6`
+
+Il default parte da `MARBLE_PLAYABLE_START_FRAME` per evitare falsi gate di
+boot/title; `MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_START` e
+`MARBLE_PLAYABLE_FORCE_MANUAL_ON_DETECTOR_MAX` permettono di restringere lo
+sweep. Importante: l'auto mode non attiva piu' il fallback frame-based
+`TRACKBALL_START`.
+
+Proof MAME breve:
+
+- `/private/tmp/marble-detector-auto/trace.json`
+- nessun `MARBLE_PLAYABLE_FORCE_MANUAL_FRAME`
+- auto-clear a f1747
+- `FUN_251DE_endgame_set_flag` / `FUN_251DE_write_main3` a f1830
+- `FUN_16EC6` carica L3 `0x2cd9e` a f1872/f1873
+
+Proof MAME lunga neutral:
+
+- `/private/tmp/marble-detector-auto-long/trace.json`, f1700..f6500
+- pointer windows L1 f1700..1746, L2 f1747..1872, L3 f1873..6500
+- main writes `0`: f1747 auto-clear e f2121 ROM/runtime clear
+- main write `3`: solo f1830
+- object-scan completion-ready PC event: solo f1830
+
+Quindi il gate f1747 e' ora riproducibile senza hardcode. La stessa long run
+non trova pero' gate naturali successivi verso L4-L6; il prossimo passo resta
+trovare o generare una finestra in cui `FUN_251DE_object_scan_dispatch` passi
+realmente su uno stato completion dopo L3, non solo sample RAM transitori.
+Nessun seed e' stato promosso.
 
 ## 2026-05-16 — Detector-gate rearm planner and chained L4 falsification
 
