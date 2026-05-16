@@ -1,7 +1,49 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-15 (terrain-hash seed discovery goal)
+**Ultimo update:** 2026-05-16 (runtime terrain clustering)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — runtime terrain clustering
+
+La pipeline seed ora non si limita piu' al confronto statico di file `.seed`:
+`packages/cli/src/scan-playable-terrain-hashes.ts` supporta anche run TS
+campionate e clustering runtime. Nuove opzioni principali:
+
+- `--plan-preset ladder`: usa la route profonda gia' codificata nei guardrail
+  playable (`D/R/L/DL/.../N`) e, se `--frames` non e' specificato, la esegue per
+  la sua lunghezza completa.
+- `--cluster-by coarse|pf|segment`: raggruppa i campioni per famiglia terrain
+  coarse, hash PF esatto o segmento+coarse.
+- `--stable-only` e `--min-cluster-samples`: filtrano le finestre runtime che
+  sembrano gameplay stabile (`main=1`, `mode=0`, player state 0, timer vivo,
+  PF > 4000).
+
+Evidenza raccolta sul seed verificato `manual_level1_start`:
+
+- Comando: `npx tsx packages/cli/src/scan-playable-terrain-hashes.ts --plan-preset ladder --sample-every 120 --cluster-by segment --min-cluster-samples 1 packages/web/public/scenarios/playable/manual_level1_start.seed.json`.
+- Output: 121 campioni, 40 campioni stabili, 28 hash PF/coarse unici.
+- I segmenti `2/4/6` ricadono nella stessa famiglia coarse `2b53b8cbdc564d03`
+  con checksum PF `1938611027` quando stabili; i segmenti `3/5/7` ricadono
+  nella famiglia `f93cbf8275d52794` con checksum `1136770553`. Questo conferma
+  che il solo `0x3e4`/segmento non identifica un livello distinto.
+- Le finestre mode2/presentation ripetono PF scarso (`pf=234`) e vengono
+  escluse dai cluster stabili.
+
+Confronto sugli oracle gameplay esistenti:
+
+- `level1_spawn`, `level2_spawn` e `level4_spawn` sono near/exact duplicate tra
+  loro nel PF; `level1_obstacle`, `level3_spawn` e `level5_spawn` ricadono in
+  un'altra famiglia ripetuta.
+- `level2_early` e `level4_early` differiscono di soli 215 byte PF.
+- Quindi gli oracle attuali sono utili come diagnostica, ma non bastano per
+  nominare sei start level distinti. Servono run/capture piu' mirati che
+  producano cluster stabili e distinti, poi prova controllabilita'
+  active-vs-neutral.
+
+Prossimo passo concreto: usare il clustering runtime come filtro di discovery
+per estrarre finestre candidate dense, poi salvare solo quelle che non sono
+near-duplicate e passarle ad `audit-playable-seed.ts` con confronto MAME quando
+il cluster e' ambiguo.
 
 ## 2026-05-15 — terrain-hash seed discovery goal
 
