@@ -50,6 +50,7 @@ interface CliArgs {
   targetDescriptor: number | undefined;
   targetDescriptorPtr: number | undefined;
   diversityPrefixChunks: number | undefined;
+  diversityStateBucket: number | undefined;
   maxDeaths: number | undefined;
   mameTrackballStart: number | undefined;
 }
@@ -171,6 +172,10 @@ Options:
                           Retain one route per early chunk-prefix key while
                           filling the beam. Default: 8 for target searches,
                           otherwise 0.
+  --diversity-state-bucket N
+                          Retain one node per physical state bucket before
+                          route-prefix diversity. Default: 48 for target
+                          searches, otherwise 0.
   --max-deaths N         Hard cap on death events while expanding the beam.
                           Useful for rejecting attract/death-cycle routes.
   --mame-trackball-start N
@@ -200,6 +205,7 @@ function parseArgs(): CliArgs {
   let targetSegment: number | undefined;
   let targetDescriptor: number | undefined;
   let diversityPrefixChunks: number | undefined;
+  let diversityStateBucket: number | undefined;
   let maxDeaths: number | undefined;
   let mameTrackballStart: number | undefined;
 
@@ -232,6 +238,8 @@ function parseArgs(): CliArgs {
         raw[++i],
         "--diversity-prefix-chunks",
       );
+    else if (arg === "--diversity-state-bucket")
+      diversityStateBucket = parseNonNegativeInt(raw[++i], "--diversity-state-bucket");
     else if (arg === "--max-deaths")
       maxDeaths = parseNonNegativeInt(raw[++i], "--max-deaths");
     else if (arg === "--mame-trackball-start")
@@ -264,6 +272,7 @@ function parseArgs(): CliArgs {
     targetDescriptor,
     targetDescriptorPtr: undefined,
     diversityPrefixChunks,
+    diversityStateBucket,
     maxDeaths,
     mameTrackballStart,
   };
@@ -780,20 +789,54 @@ function diversityKey(node: SearchNode, args: CliArgs): string {
   ].join("|");
 }
 
+function stateDiversityKey(node: SearchNode, args: CliArgs): string {
+  const bucket = args.diversityStateBucket ?? 0;
+  if (bucket <= 0) return "";
+  const summary = summarize(node.state);
+  return [
+    `desc=${formatHex32(summary.descriptorPtr)}`,
+    `main=${summary.main}`,
+    `mode=${summary.mode}`,
+    `seg=${summary.segment}`,
+    `state=${summary.playerState}`,
+    `x=${Math.floor(summary.x / bucket)}`,
+    `y=${Math.floor(summary.y / bucket)}`,
+    `scroll=${Math.floor(summary.scrollY / bucket)}`,
+    `timer=${Math.floor(summary.timer / 5)}`,
+    `pf=${Math.floor(summary.pfNonzero / 256)}`,
+  ].join("|");
+}
+
 function selectBeam(sortedNodes: SearchNode[], args: CliArgs): SearchNode[] {
   const prefixChunks = args.diversityPrefixChunks ?? 0;
-  if (prefixChunks <= 0) return sortedNodes.slice(0, args.beamWidth);
+  const stateBucket = args.diversityStateBucket ?? 0;
+  if (prefixChunks <= 0 && stateBucket <= 0)
+    return sortedNodes.slice(0, args.beamWidth);
 
   const selected: SearchNode[] = [];
   const selectedSet = new Set<SearchNode>();
-  const seenKeys = new Set<string>();
-  for (const node of sortedNodes) {
-    const key = diversityKey(node, args);
-    if (seenKeys.has(key)) continue;
-    seenKeys.add(key);
-    selected.push(node);
-    selectedSet.add(node);
-    if (selected.length >= args.beamWidth) return selected;
+  if (stateBucket > 0) {
+    const seenStateKeys = new Set<string>();
+    for (const node of sortedNodes) {
+      const key = stateDiversityKey(node, args);
+      if (seenStateKeys.has(key)) continue;
+      seenStateKeys.add(key);
+      selected.push(node);
+      selectedSet.add(node);
+      if (selected.length >= args.beamWidth) return selected;
+    }
+  }
+  if (prefixChunks > 0) {
+    const seenRouteKeys = new Set<string>();
+    for (const node of sortedNodes) {
+      if (selectedSet.has(node)) continue;
+      const key = diversityKey(node, args);
+      if (seenRouteKeys.has(key)) continue;
+      seenRouteKeys.add(key);
+      selected.push(node);
+      selectedSet.add(node);
+      if (selected.length >= args.beamWidth) return selected;
+    }
   }
   for (const node of sortedNodes) {
     if (selectedSet.has(node)) continue;
@@ -895,6 +938,9 @@ function main(): void {
   if (args.diversityPrefixChunks === undefined) {
     args.diversityPrefixChunks = targetRequested ? 8 : 0;
   }
+  if (args.diversityStateBucket === undefined) {
+    args.diversityStateBucket = targetRequested ? 48 : 0;
+  }
   const seed = loadSeed(args.seedPath);
   const seedState = stateFromSeed(rom, seed, args.manualDispatcher);
   const initial = summarize(seedState);
@@ -931,7 +977,7 @@ function main(): void {
       `beam=${args.beamWidth} directions=${args.directions.join("/")} manualDispatcher=${args.manualDispatcher} ` +
       `targetSegment=${args.targetSegment ?? "-"} targetDescriptor=${args.targetDescriptor ?? "-"} ` +
       `targetDescriptorPtr=${formatHex32(args.targetDescriptorPtr)} diversityPrefixChunks=${args.diversityPrefixChunks} ` +
-      `maxDeaths=${args.maxDeaths ?? "-"}`,
+      `diversityStateBucket=${args.diversityStateBucket} maxDeaths=${args.maxDeaths ?? "-"}`,
   );
   console.log(
     `initial main/mode=${initial.main}/${initial.mode} seg=${initial.segment} state=${initial.playerState} ` +
@@ -1014,6 +1060,7 @@ function main(): void {
               ? undefined
               : formatHex32(args.targetDescriptorPtr),
           diversityPrefixChunks: args.diversityPrefixChunks,
+          diversityStateBucket: args.diversityStateBucket,
           maxDeaths: args.maxDeaths,
           completedFrames: beam[0]?.frame,
         },

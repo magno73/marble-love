@@ -1,7 +1,47 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (route-search hard limits)
+**Ultimo update:** 2026-05-16 (state-diverse route and level-index trace)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — State-diverse route and level-index trace
+
+Esteso `packages/cli/src/search-playable-route.ts` con
+`--diversity-state-bucket N` (default 48 per target search). La selezione beam
+ora prova prima a mantenere stati fisici distinti per descriptor/main/mode/
+segment/playerState/bucket di posizione/scroll/timer/PF, poi riempie con la
+diversita' di prefisso route. Questo evita che una beam target venga saturata
+solo da varianti testualmente diverse ma fisicamente identiche.
+
+Risultati:
+
+- `/private/tmp/marble-target-l3-nodeath-state-diverse-3600/manifest.json`:
+  anche con state diversity, `--preserve-dispatcher --target-descriptor 3
+  --max-deaths 0` si ferma a f570. Tutte le 2160 espansioni successive violano
+  il limite no-death. I candidati finali sono ancora `segment=2`, descriptor L2
+  `0x2c54c`, timer 51, nessun L3. Questo conferma che il path preservato non e'
+  una route controllabile utile: collassa sul dispatcher interno L1/L2.
+- `/private/tmp/marble-target-l3-manual-nodeath-state-2400/manifest.json`:
+  senza `--preserve-dispatcher` il path manuale e' controllabile e resta
+  no-death fino a f2400, con route diverse e posizione attorno a x/y 435/420.
+  Pero' resta `main/mode=0/0`, segment 2, descriptor L2; non produce transizioni
+  ROM L3-L6. Utile come diagnostica di controllo browser, non come MAME route
+  proof descriptor-aligned.
+
+Esteso `oracle/mame_level_descriptor_tap.lua` con un write tap su
+`workRam[0x394..0x395]` (level index candidate). Nuovo trace no-coin breve in
+`/private/tmp/marble-index-write-trace/trace.json`:
+
+- `seenLevelCount=2`, ancora solo L1/L2.
+- I sample `levelIndex` alternano solo `0/1`, sincronizzati con i pointer:
+  f114 L1 idx0, f1747 L2 idx1, f3208 L1 idx0, f4840 L2 idx1, f6301 L1 idx0,
+  f7933 L2 idx1, f9394 L1 idx0, f11431 L2 idx1, f12892 L1 idx0, f14524 L2 idx1.
+- Nessun sample idx2..idx5, quindi nessun path osservato verso pointer L3-L6.
+
+Interpretazione: il problema non e' solo la clusterizzazione dei playfield. Nei
+percorsi automatici osservati il runtime non arriva proprio a scrivere/tenere un
+level index 2..5 davanti a `FUN_16EC6`. Serve una movie/manual route reale che
+superi il ciclo attract L1/L2 oppure un'analisi del codice che identifichi il
+vero progresso livello/credit/start state usato dalla ROM.
 
 ## 2026-05-16 — Route-search hard limits
 
