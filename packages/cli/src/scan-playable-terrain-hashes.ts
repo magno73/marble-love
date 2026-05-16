@@ -10,7 +10,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { argv, exit } from "node:process";
 
@@ -54,6 +54,8 @@ interface CliArgs {
   clusterBy: ClusterBy;
   stableOnly: boolean;
   minClusterSamples: number;
+  emitCandidatesDir: string | undefined;
+  maxCandidates: number;
 }
 
 interface Fingerprint {
@@ -105,6 +107,27 @@ interface ClusterReport {
   representative: SeedReport;
 }
 
+interface RuntimeSamples {
+  reports: SeedReport[];
+  seedsByLabel: Map<string, SeedJson>;
+}
+
+interface CandidateManifestEntry {
+  file: string;
+  sourceLabel: string;
+  clusterKey: string;
+  count: number;
+  stableCount: number;
+  segment: number;
+  main: number;
+  mode: number;
+  timer: number;
+  pfNonzero: number;
+  pfHash: string;
+  coarseHash: string;
+  pfChecksum: number;
+}
+
 const DEFAULT_PATHS = [
   "packages/web/public/scenarios/playable/manual_level1_start.seed.json",
   "packages/web/public/scenarios/playable/manual_level2_start.seed.json",
@@ -154,6 +177,10 @@ Options:
   --stable-only         Cluster only stable playable-looking samples
   --min-cluster-samples N
                         Hide clusters with fewer samples (default: 2)
+  --emit-candidates-dir DIR
+                        Write stable representative seed JSON files plus a
+                        manifest. This is for audit input, not startLevel wiring.
+  --max-candidates N    Limit emitted candidates (default: 12)
   --near-threshold N    PF byte-diff threshold for near duplicates (default: 512)
   --json                Emit JSON
   -h, --help            Show this help
@@ -178,6 +205,8 @@ function parseArgs(): CliArgs {
   let clusterBy: ClusterBy = "coarse";
   let stableOnly = false;
   let minClusterSamples = 2;
+  let emitCandidatesDir: string | undefined;
+  let maxCandidates = 12;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -206,6 +235,12 @@ function parseArgs(): CliArgs {
       stableOnly = true;
     } else if (arg === "--min-cluster-samples") {
       minClusterSamples = parsePositiveInt(args[++i], "--min-cluster-samples");
+    } else if (arg === "--emit-candidates-dir") {
+      const next = args[++i];
+      if (next === undefined) throw new Error("--emit-candidates-dir requires a value");
+      emitCandidatesDir = next;
+    } else if (arg === "--max-candidates") {
+      maxCandidates = parsePositiveInt(args[++i], "--max-candidates");
     } else if (arg === "--near-threshold") {
       nearThreshold = parsePositiveInt(args[++i], "--near-threshold");
     } else if (arg === "--pairwise-only") {
@@ -236,6 +271,8 @@ function parseArgs(): CliArgs {
     clusterBy,
     stableOnly,
     minClusterSamples,
+    emitCandidatesDir,
+    maxCandidates,
   };
 }
 
@@ -444,11 +481,12 @@ function loadStateFromSeed(rom: RomImage, seed: SeedJson): GameState {
   return gameState;
 }
 
-function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[], sampleEvery: number): SeedReport[] {
+function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[], sampleEvery: number): RuntimeSamples {
   const state = loadStateFromSeed(rom, loaded.seed);
   let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
   let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
-  const samples: SeedReport[] = [];
+  const reports: SeedReport[] = [];
+  const seedsByLabel = new Map<string, SeedJson>();
 
   for (let frame = 1; frame <= route.length; frame++) {
     [p1X, p1Y] = advanceTrackball(p1X, p1Y, route[frame - 1] ?? "N");
@@ -462,23 +500,21 @@ function runSamples(rom: RomImage, loaded: LoadedSeed, route: readonly string[],
       inputMmio: 0x6f,
     });
     if (frame % sampleEvery === 0 || frame === route.length) {
-      const report = seedReport({
-        path: loaded.path,
-        label: `${loaded.label}+${frame}`,
-        seed: {
-          frame,
-          slapsticBank: loaded.seed.slapsticBank ?? 1,
-          workRam: Buffer.from(state.workRam).toString("hex"),
-          playfieldRam: Buffer.from(state.playfieldRam).toString("hex"),
-          spriteRam: Buffer.from(state.spriteRam).toString("hex"),
-          alphaRam: Buffer.from(state.alphaRam).toString("hex"),
-          colorRam: Buffer.from(state.colorRam).toString("hex"),
-        },
-      });
-      samples.push(report);
+      const label = `${loaded.label}+${frame}`;
+      const seed: SeedJson = {
+        frame,
+        slapsticBank: loaded.seed.slapsticBank ?? 1,
+        workRam: Buffer.from(state.workRam).toString("hex"),
+        playfieldRam: Buffer.from(state.playfieldRam).toString("hex"),
+        spriteRam: Buffer.from(state.spriteRam).toString("hex"),
+        alphaRam: Buffer.from(state.alphaRam).toString("hex"),
+        colorRam: Buffer.from(state.colorRam).toString("hex"),
+      };
+      reports.push(seedReport({ path: loaded.path, label, seed }));
+      seedsByLabel.set(label, seed);
     }
   }
-  return samples;
+  return { reports, seedsByLabel };
 }
 
 function isStablePlayableSample(report: SeedReport): boolean {
@@ -546,6 +582,45 @@ function printClusters(clusters: readonly ClusterReport[]): void {
   }
 }
 
+function sanitizeFilePart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 120) || "candidate";
+}
+
+function writeCandidateSeeds(
+  dir: string,
+  clusters: readonly ClusterReport[],
+  seedsByLabel: ReadonlyMap<string, SeedJson>,
+  maxCandidates: number,
+): CandidateManifestEntry[] {
+  mkdirSync(resolve(dir), { recursive: true });
+  const manifest: CandidateManifestEntry[] = [];
+  const stableClusters = clusters.filter((cluster) => cluster.stableCount > 0 && isStablePlayableSample(cluster.representative));
+  for (const cluster of stableClusters.slice(0, maxCandidates)) {
+    const seed = seedsByLabel.get(cluster.representative.label);
+    if (seed === undefined) continue;
+    const rep = cluster.representative;
+    const file = `${String(manifest.length + 1).padStart(2, "0")}_${sanitizeFilePart(rep.label)}_seg${rep.segment}_${rep.fingerprint.coarseHash}.seed.json`;
+    writeFileSync(resolve(dir, file), `${JSON.stringify(seed, null, 2)}\n`);
+    manifest.push({
+      file,
+      sourceLabel: rep.label,
+      clusterKey: cluster.key,
+      count: cluster.count,
+      stableCount: cluster.stableCount,
+      segment: rep.segment,
+      main: rep.main,
+      mode: rep.mode,
+      timer: rep.timer,
+      pfNonzero: rep.fingerprint.pfNonzero,
+      pfHash: rep.fingerprint.pfHash,
+      coarseHash: rep.fingerprint.coarseHash,
+      pfChecksum: rep.fingerprint.pfChecksum,
+    });
+  }
+  writeFileSync(resolve(dir, "manifest.json"), `${JSON.stringify({ candidates: manifest }, null, 2)}\n`);
+  return manifest;
+}
+
 function printSeed(report: SeedReport): void {
   const fp = report.fingerprint;
   console.log(
@@ -569,14 +644,24 @@ function main(): void {
           const rom = busNs.emptyRomImage();
           applySlapsticBank.loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
           const route = routeForArgs(args);
-          const runReports = seeds.map((seed) => ({ label: seed.label, samples: runSamples(rom, seed, route, args.sampleEvery) }));
-          const clusters = clusterSamples(
-            runReports.flatMap((report) => report.samples),
-            args.clusterBy,
-            args.stableOnly,
-            args.minClusterSamples,
-          );
-          return { routeFrames: route.length, runReports, clusters };
+          const seedMaps: Map<string, SeedJson>[] = [];
+          const runReports = seeds.map((seed) => {
+            const runtime = runSamples(rom, seed, route, args.sampleEvery);
+            seedMaps.push(runtime.seedsByLabel);
+            return { label: seed.label, samples: runtime.reports };
+          });
+          const allSamples = runReports.flatMap((report) => report.samples);
+          const clusters = clusterSamples(allSamples, args.clusterBy, args.stableOnly, args.minClusterSamples);
+          const emittedCandidates =
+            args.emitCandidatesDir === undefined
+              ? []
+              : writeCandidateSeeds(
+                  args.emitCandidatesDir,
+                  clusters,
+                  new Map(seedMaps.flatMap((map) => Array.from(map.entries()))),
+                  args.maxCandidates,
+                );
+          return { routeFrames: route.length, runReports, clusters, emittedCandidates };
         })();
     console.log(JSON.stringify({ initialReports, pairs, ...runReports }, null, 2));
     return;
@@ -600,9 +685,12 @@ function main(): void {
     const route = routeForArgs(args);
     console.log(`\nTS sampled terrain every ${args.sampleEvery} frames over ${route.length} frames:`);
     const allSamples: SeedReport[] = [];
+    const allSeedEntries: [string, SeedJson][] = [];
     for (const seed of seeds) {
-      const samples = runSamples(rom, seed, route, args.sampleEvery);
+      const runtime = runSamples(rom, seed, route, args.sampleEvery);
+      const samples = runtime.reports;
       allSamples.push(...samples);
+      allSeedEntries.push(...runtime.seedsByLabel.entries());
       const uniquePf = new Set(samples.map((sample) => sample.fingerprint.pfHash));
       const uniqueCoarse = new Set(samples.map((sample) => sample.fingerprint.coarseHash));
       const stableSamples = samples.filter(isStablePlayableSample);
@@ -617,7 +705,13 @@ function main(): void {
       `\nRuntime terrain clusters (by=${args.clusterBy}, stableOnly=${args.stableOnly}, ` +
         `minSamples=${args.minClusterSamples}):`,
     );
-    printClusters(clusterSamples(allSamples, args.clusterBy, args.stableOnly, args.minClusterSamples));
+    const clusters = clusterSamples(allSamples, args.clusterBy, args.stableOnly, args.minClusterSamples);
+    printClusters(clusters);
+    if (args.emitCandidatesDir !== undefined) {
+      const manifest = writeCandidateSeeds(args.emitCandidatesDir, clusters, new Map(allSeedEntries), args.maxCandidates);
+      console.log(`\nWrote ${manifest.length} stable representative candidate seed(s) to ${resolve(args.emitCandidatesDir)}`);
+      console.log("These are discovery candidates only; run audit-playable-seed.ts before wiring startLevel.");
+    }
   }
 }
 
