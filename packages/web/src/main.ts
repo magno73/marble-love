@@ -300,13 +300,18 @@ async function startGame(
     }
     return out;
   };
-  const loadPlayableSeedWarmState = async (seedName: string): Promise<WarmState | undefined> => {
+  interface LoadedPlayableSeed {
+    warmState: WarmState;
+    mainLoopBodyTicks: number | undefined;
+  }
+  const loadPlayableSeedWarmState = async (seedName: string): Promise<LoadedPlayableSeed | undefined> => {
     const safeSeedName = seedName.replace(/[^a-z0-9_-]/gi, "");
     const r = await fetch(`/scenarios/playable/${safeSeedName}.seed.json`);
     if (!r.ok) throw new Error(`fetch fail: ${r.status}`);
     const seed = await r.json() as {
       frame: number;
       slapsticBank?: number;
+      mainLoopBodyTicks?: number;
       workRam: string;
       playfieldRam: string;
       spriteRam: string;
@@ -315,17 +320,21 @@ async function startGame(
     };
     const workRam = hex2bytes(seed.workRam, 0x2000);
     return {
-      workRam,
-      playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
-      spriteRam: hex2bytes(seed.spriteRam, 0x1000),
-      alphaRam: hex2bytes(seed.alphaRam, 0x1000),
-      colorRam: hex2bytes(seed.colorRam, 0x800),
-      videoScrollY: (((workRam[0x02] ?? 0) << 8) | (workRam[0x03] ?? 0)) & 0x1ff,
-      videoScrollX: 0,
-      slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
+      warmState: {
+        workRam,
+        playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
+        spriteRam: hex2bytes(seed.spriteRam, 0x1000),
+        alphaRam: hex2bytes(seed.alphaRam, 0x1000),
+        colorRam: hex2bytes(seed.colorRam, 0x800),
+        videoScrollY: (((workRam[0x02] ?? 0) << 8) | (workRam[0x03] ?? 0)) & 0x1ff,
+        videoScrollX: 0,
+        slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
+      },
+      mainLoopBodyTicks: typeof seed.mainLoopBodyTicks === "number" ? seed.mainLoopBodyTicks : undefined,
     };
   };
   let warmState: WarmState | undefined;
+  let warmStateMainLoopBodyTicks: number | undefined;
   let warmStateIsPlayableSeed = false;
   const useMameDump = searchParams.get("mameDump") === "1";
   const useMameLive = searchParams.get("mameLive") === "1";
@@ -336,9 +345,12 @@ async function startGame(
     !useStartLevelPractice &&
     (forceCoinStart || (forcePlay && playableSeedName === null && !useMameDump && !useMameLive));
   let coinStartWarmState: WarmState | undefined;
+  let coinStartMainLoopBodyTicks: number | undefined;
   if (playableSeedName !== null) {
     try {
-      warmState = await loadPlayableSeedWarmState(playableSeedName);
+      const loaded = await loadPlayableSeedWarmState(playableSeedName);
+      warmState = loaded?.warmState;
+      warmStateMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
       warmStateIsPlayableSeed = true;
       console.log(`[warmState] loaded playable seed ${playableSeedName}`);
     } catch (e) {
@@ -346,7 +358,9 @@ async function startGame(
     }
   } else if (useStartLevelPractice && startLevelPlayableSeedName !== undefined) {
     try {
-      warmState = await loadPlayableSeedWarmState(startLevelPlayableSeedName);
+      const loaded = await loadPlayableSeedWarmState(startLevelPlayableSeedName);
+      warmState = loaded?.warmState;
+      warmStateMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
       warmStateIsPlayableSeed = true;
       console.log(`[marble-love] loaded startLevel=${startLevelPractice} seed ${startLevelPlayableSeedName}`);
     } catch (e) {
@@ -354,12 +368,16 @@ async function startGame(
     }
   } else if (useCoinStartFlow) {
     try {
-      coinStartWarmState = await loadPlayableSeedWarmState(manualPlayableSeedName);
+      const loaded = await loadPlayableSeedWarmState(manualPlayableSeedName);
+      coinStartWarmState = loaded?.warmState;
+      coinStartMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
       console.log(`[marble-love] prepared live gameplay seed ${manualPlayableSeedName}`);
     } catch (e) {
       console.warn(`[marble-love] live gameplay seed ${manualPlayableSeedName} fetch failed:`, e);
       try {
-        coinStartWarmState = await loadPlayableSeedWarmState(replayPlayableSeedName);
+        const loaded = await loadPlayableSeedWarmState(replayPlayableSeedName);
+        coinStartWarmState = loaded?.warmState;
+        coinStartMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
         console.warn(`[marble-love] falling back to replay seed ${replayPlayableSeedName}`);
       } catch (fallbackError) {
         console.warn("[marble-love] live gameplay fallback seed fetch failed:", fallbackError);
@@ -452,10 +470,10 @@ async function startGame(
   );
   const startLevelPracticeActive = useStartLevelPractice && warmState !== undefined;
   if (warmStateIsPlayableSeed) {
-    // Playable warm seeds are MAME frame_done snapshots. The validated replay
-    // probes auto-select phase 1 for these windows; phase 0 advances the
-    // scroll/body interleave one vblank early and can expose stale PF rows.
-    s.clock.mainLoopBodyTicks = wrap.as_u32(1);
+    // Playable warm seeds are MAME frame_done snapshots. Most reviewed windows
+    // use phase 1; descriptor L1 post-seed starts on phase 0, carried by seed
+    // metadata so browser replay can match the MAME capture.
+    s.clock.mainLoopBodyTicks = wrap.as_u32(warmStateMainLoopBodyTicks ?? 1);
   }
   if (startLevelPracticeActive) {
     // Practice warm seeds are entry snapshots for testing a specific level.
@@ -465,7 +483,7 @@ async function startGame(
       s.workRam[0x390] = 0x00;
       s.workRam[0x391] = 0x00;
     }
-    s.clock.mainLoopBodyTicks = wrap.as_u32(1);
+    s.clock.mainLoopBodyTicks = wrap.as_u32(warmStateMainLoopBodyTicks ?? 1);
     console.log(`[marble-love] startLevel=${startLevelPractice} practice ready (${startLevelPlayableSeedName})`);
   } else if (startLevelPracticeUnavailable && startLevelPractice !== undefined) {
     createStartLevelUnavailableOverlay(startLevelPractice);
@@ -764,7 +782,7 @@ async function startGame(
         s.workRam[0x390] = 0x00;
         s.workRam[0x391] = 0x00;
       }
-      s.clock.mainLoopBodyTicks = wrap.as_u32(1);
+      s.clock.mainLoopBodyTicks = wrap.as_u32(coinStartMainLoopBodyTicks ?? 1);
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
       lastLevelTimeOverrideLevel = undefined;

@@ -82,10 +82,14 @@ Audit post-seed: `post-seed-candidate`, descriptor L1 `0x2bee2`,
 Esportato candidato non cablato:
 `packages/web/public/scenarios/playable/candidate_level1_postseed_r_f3020.seed.json`.
 
-Replay TS-vs-MAME dal seed L1 non e' ancora pulito quanto L3/L4/L5: stato,
-main/mode, descriptor e trackball restano allineati, ma c'e' un transiente di
-fase iniziale >1px e un piccolo PF diff temporaneo che converge entro la tail.
-Lo smoke ROM-backed invece e' stabile/nonblank per 120 tick:
+Replay TS-vs-MAME dal seed L1 e' exact usando la fase MAME corretta
+`mainLoopBodyTicks=0`, ora salvata nel seed:
+active e neutral sono 180/180 exact su state, main/mode, descriptor, trackball,
+posizione, z e playfield (`dx=0`, `dy=0`, `dz=0`, `pfDiff=0`). La vecchia fase
+browser hardcoded `1` generava un transiente iniziale >1px, quindi il loader web
+e i tool di review leggono ora l'eventuale metadata `mainLoopBodyTicks` dal
+seed, defaultando a `1` per i seed storici. Lo smoke ROM-backed resta
+stabile/nonblank per 120 tick:
 descriptor `0x2bee2`, `main/mode=0/0`, state0, timer `54 -> 52`,
 `xy=232.11,140.00`, `z=16372`, 2454 playfield tile, 7 sprite, 215 alpha char.
 Non e' stato cablato alcuno `startLevel`: serve una review finale del mapping

@@ -119,6 +119,7 @@ interface CliArgs {
 interface SeedJson {
   frame?: number;
   slapsticBank?: number;
+  mainLoopBodyTicks?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
@@ -403,7 +404,7 @@ function main(): void {
       s.workRam[0x390] = 0;
       s.workRam[0x391] = 0;
     }
-    s.clock.mainLoopBodyTicks = 1 as typeof s.clock.mainLoopBodyTicks;
+    s.clock.mainLoopBodyTicks = (seed.mainLoopBodyTicks ?? 1) as typeof s.clock.mainLoopBodyTicks;
     seedNeutralP1X = s.workRam[0x18 + 0xc9] ?? 0xff;
     seedNeutralP1Y = s.workRam[0x18 + 0xc8] ?? 0xff;
     console.log(`\n=== warm seed loaded ===`);

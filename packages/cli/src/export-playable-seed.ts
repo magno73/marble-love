@@ -16,6 +16,7 @@ interface SeedJson {
   source?: string;
   frame?: number;
   slapsticBank?: number;
+  mainLoopBodyTicks?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
@@ -34,6 +35,7 @@ interface CliArgs {
   snapshotIndex: number;
   name: string | undefined;
   source: string | undefined;
+  mainLoopBodyTicks: number | undefined;
   force: boolean;
 }
 
@@ -48,6 +50,8 @@ Options:
   --snapshot-index N   Scenario snapshot index (default: 0)
   --name NAME          Seed name written into JSON metadata
   --source TEXT        Seed source metadata. Defaults to input path + index.
+  --main-loop-body-ticks N
+                       Optional replay phase metadata for browser/CLI seed review
   --force             Overwrite an existing output file
   -h, --help           Show this help
 
@@ -63,6 +67,7 @@ function parseArgs(): CliArgs {
   let snapshotIndex = 0;
   let name: string | undefined;
   let source: string | undefined;
+  let mainLoopBodyTicks: number | undefined;
   let force = false;
 
   for (let i = 0; i < raw.length; i++) {
@@ -75,6 +80,8 @@ function parseArgs(): CliArgs {
       name = requireValue(raw[++i], "--name");
     } else if (arg === "--source") {
       source = requireValue(raw[++i], "--source");
+    } else if (arg === "--main-loop-body-ticks") {
+      mainLoopBodyTicks = parseNonNegativeInt(raw[++i], "--main-loop-body-ticks");
     } else if (arg === "--force") {
       force = true;
     } else if (arg === "-h" || arg === "--help") {
@@ -89,7 +96,7 @@ function parseArgs(): CliArgs {
 
   if (paths.length !== 1) throw new Error("expected exactly one input path");
   if (outputPath === undefined) throw new Error("--out is required");
-  return { inputPath: paths[0]!, outputPath, snapshotIndex, name, source, force };
+  return { inputPath: paths[0]!, outputPath, snapshotIndex, name, source, mainLoopBodyTicks, force };
 }
 
 function requireValue(raw: string | undefined, label: string): string {
@@ -146,6 +153,9 @@ function main(): void {
       source: args.source ?? `${args.inputPath}#snapshot${args.snapshotIndex}`,
       ...(seed.frame === undefined ? {} : { frame: seed.frame }),
       ...(seed.slapsticBank === undefined ? {} : { slapsticBank: seed.slapsticBank }),
+      ...(args.mainLoopBodyTicks === undefined && seed.mainLoopBodyTicks === undefined
+        ? {}
+        : { mainLoopBodyTicks: args.mainLoopBodyTicks ?? seed.mainLoopBodyTicks }),
       workRam: seed.workRam,
       playfieldRam: seed.playfieldRam,
       spriteRam: seed.spriteRam,

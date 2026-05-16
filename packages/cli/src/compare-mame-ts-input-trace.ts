@@ -25,6 +25,7 @@ import type { GameState, RomImage } from "@marble-love/engine";
 interface SnapshotJson {
   frame?: number;
   slapsticBank?: number;
+  mainLoopBodyTicks?: number;
   workRam: string;
   playfieldRam: string;
   spriteRam: string;
@@ -56,6 +57,7 @@ interface CliArgs {
   dispatcher: "manual" | "preserved";
   startIndex: number;
   maxFrames: number | undefined;
+  mainLoopBodyTicks: number | undefined;
   sampleEvery: number;
   json: boolean;
 }
@@ -133,6 +135,7 @@ Options:
   --dispatcher MODE        manual or preserved (default: manual)
   --start-index N          Scenario snapshot index to use as seed (default: 0)
   --max-frames N           Max frames to compare after the seed
+  --main-loop-body-ticks N Override replay phase; defaults to snapshot metadata or 1
   --sample-every N         Print one text row every N frames (default: 20)
   --json                   Print summary JSON
   -h, --help               Show this help
@@ -146,6 +149,7 @@ function parseArgs(): CliArgs {
   let dispatcher: "manual" | "preserved" = "manual";
   let startIndex = 0;
   let maxFrames: number | undefined;
+  let mainLoopBodyTicks: number | undefined;
   let sampleEvery = 20;
   let json = false;
   const paths: string[] = [];
@@ -164,6 +168,8 @@ function parseArgs(): CliArgs {
       startIndex = parseNonNegativeInt(raw[++i], "--start-index");
     } else if (arg === "--max-frames") {
       maxFrames = parsePositiveInt(raw[++i], "--max-frames");
+    } else if (arg === "--main-loop-body-ticks") {
+      mainLoopBodyTicks = parseNonNegativeInt(raw[++i], "--main-loop-body-ticks");
     } else if (arg === "--sample-every") {
       sampleEvery = parsePositiveInt(raw[++i], "--sample-every");
     } else if (arg === "--json") {
@@ -187,6 +193,7 @@ function parseArgs(): CliArgs {
     dispatcher,
     startIndex,
     maxFrames,
+    mainLoopBodyTicks,
     sampleEvery,
     json,
   };
@@ -269,7 +276,12 @@ function loadRom(path: string): RomImage {
   return rom;
 }
 
-function loadStateFromSnapshot(rom: RomImage, snapshot: SnapshotJson, dispatcher: "manual" | "preserved"): GameState {
+function loadStateFromSnapshot(
+  rom: RomImage,
+  snapshot: SnapshotJson,
+  dispatcher: "manual" | "preserved",
+  mainLoopBodyTicks: number | undefined,
+): GameState {
   const state = stateNs.emptyGameState();
   bootInit(state, rom, {
     warmState: {
@@ -285,7 +297,7 @@ function loadStateFromSnapshot(rom: RomImage, snapshot: SnapshotJson, dispatcher
     state.workRam[0x390] = 0;
     state.workRam[0x391] = 0;
   }
-  state.clock.mainLoopBodyTicks = 1 as typeof state.clock.mainLoopBodyTicks;
+  state.clock.mainLoopBodyTicks = (mainLoopBodyTicks ?? snapshot.mainLoopBodyTicks ?? 1) as typeof state.clock.mainLoopBodyTicks;
   return state;
 }
 
@@ -374,7 +386,7 @@ function main(): void {
   if (seed === undefined) throw new Error(`${args.scenarioPath} has no snapshot index ${args.startIndex}`);
   const inputFrames = loadInputTrace(args.inputPath);
   const rom = loadRom(args.romPath);
-  const state = loadStateFromSnapshot(rom, seed, args.dispatcher);
+  const state = loadStateFromSnapshot(rom, seed, args.dispatcher, args.mainLoopBodyTicks);
   const maxIndex = Math.min(
     snapshots.length - 1,
     args.maxFrames === undefined ? snapshots.length - 1 - args.startIndex : args.startIndex + args.maxFrames,
