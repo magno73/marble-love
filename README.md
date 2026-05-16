@@ -77,6 +77,12 @@ Per auditare direttamente il gate di promozione usa anche
 il primo frame stable-playable successivo. Le ultime catture MAME autopilot
 confermano L1/L2 exact solo in `state=6`; i frame stabili subito dopo tornano
 a PF warm distanti (`pfDiff=1484`/`1517`), quindi restano diagnostici.
+Uno sweep no-coin denso da 3046 snapshot attorno alle transizioni note ha
+confermato lo stesso pattern: solo L1/L2 exact (L1 `3` snapshot, L2 `25`),
+nessun exact L3-L6, e le finestre stable sparse restano lontane dai descriptor
+(`pfDiff` tipicamente `1819..3502`). Anche gli oracle storici
+`level2_spawn`..`level5_spawn` non contengono descriptor exact; sono materiale
+diagnostico, non start level.
 Questa associazione e' diagnostica: i descrittori ROM provano le sei geometrie
 distinte, ma non sono seed practice completi senza stato player/camera/dispatcher
 validato.

@@ -1,7 +1,72 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (post-force MAME route proof audit)
+**Ultimo update:** 2026-05-16 (dense no-coin descriptor sweep)
 **Branch corrente:** `main`.
+
+## 2026-05-16 — Dense no-coin descriptor sweep
+
+Catturato uno sweep MAME no-coin piu' denso attorno alle finestre sparse gia'
+note dall'handoff e alle transizioni L1/L2 note, con 3046 snapshot in:
+
+- scenari: `/private/tmp/marble-attract-dense-descriptor-sweep/scenarios`
+- manifest descriptor:
+  `/private/tmp/marble-attract-dense-descriptor-sweep/descriptors/manifest.json`
+
+Comando di audit:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --all-snapshots \
+  --extra-scenario-dir /private/tmp/marble-attract-dense-descriptor-sweep/scenarios \
+  --transition-summary \
+  --timeline-only \
+  --max-nearest 1 \
+  --out-dir /private/tmp/marble-attract-dense-descriptor-sweep/descriptors
+```
+
+Finding:
+
+- descriptor exact trovati solo per L1/L2: L1 `3` snapshot exact, L2 `25`
+  snapshot exact; nessun exact L3/L4/L5/L6 nella route no-coin campionata.
+- L1 exact: `f3265`, `f35410`, `f41595`, sempre `state=6`, `timer=48`.
+  Primo stable successivo: hash `24c9fd7c7f114124`, nearest L1
+  `pfDiff=1484`, quindi non descriptor-aligned come seed giocabile.
+- L2 exact: finestre attorno a `f11495..f11510`, `f14585..f14605`,
+  `f17680..f17695`, `f20775..f20790`, `f56415..f56430`,
+  `f59510..f59525`, sempre `state=6`, `timer=45`. Primo stable successivo:
+  hash `fe66bf77699cb9b0`, nearest L2 `pfDiff=1517`, quindi di nuovo
+  transizione/load, non practice start.
+- Le finestre stable-playable sparse restano famiglie warm lontane dai
+  descrittori. Esempi: `0dd9e862a4be1192` nearest L2 `pfDiff=2508`,
+  `61bf68f6c93286e2` nearest L1 `pfDiff=2418`,
+  `ff0ea3512d878bec` nearest L1 `pfDiff=2799`.
+
+Audit separato sugli scenari oracle gameplay checked-in (`level2_spawn` ..
+`level5_spawn`) conferma che sono diagnostici/oracle, non start reali:
+
+```sh
+node --import tsx packages/cli/src/inspect-level-descriptors.ts \
+  --no-default-snapshots \
+  --all-snapshots \
+  --extra-scenario-dir oracle/scenarios/gameplay \
+  --transition-summary \
+  --timeline-only \
+  --max-nearest 2 \
+  --out-dir /private/tmp/marble-oracle-gameplay-descriptors
+```
+
+Risultato: nessuna finestra byte-exact descriptor negli snapshot oracle. I
+vecchi `level2_spawn`/`level4_spawn` hanno tratti stable con hash
+`9e10f9a028d4b1c1` nearest L1 `pfDiff=1819`; `level3_spawn`/`level5_spawn`
+riusano la famiglia L2 warm `fe66bf77699cb9b0` nearest L2 `pfDiff=1517`.
+
+Interpretazione: il no-coin attract e gli oracle gameplay storici non
+forniscono i sei seed. Per L3-L6 serve ancora una movie/manual route o un
+planner che raggiunga finestre descriptor-aligned e poi stable-playable con
+input controllabile. I candidati prodotti dal route search forced-manual
+restano inoltre post-clear `main/mode=0/0`; sono proof di divergenza, non seed
+`startLevel`.
 
 ## 2026-05-16 — Post-force MAME route proof audit
 
