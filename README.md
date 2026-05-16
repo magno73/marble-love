@@ -59,7 +59,11 @@ ciclo death/attract, usa `--max-deaths 0`; per non far collassare la beam su
 varianti tardive della stessa route, usa `--diversity-prefix-chunks N`; per
 mantenere anche stati fisici distinti nella beam target usa
 `--diversity-state-bucket N`; per provare input piu' lenti/veloci, usa
-`--step-pixels N`. Scrive poi un manifest
+`--step-pixels N`. `--seed` puo' anche puntare a uno scenario JSON checked-in:
+usa `--snapshot-index N` per selezionare lo snapshot. Questo e' utile per proof
+diagnostici riproducibili, per esempio `level1_end` snapshot 0 con
+`--route-prefix L:180,DL:763 --target-descriptor 3` carica L3 a f943; resta
+comunque warm/diagnostico, non un seed MAME da boot. Scrive poi un manifest
 per `plan-mame-candidate-captures.ts`. I manifest prodotti dal path
 manual-rearmed marcano `forceManualDispatcher=true`: il planner propaga
 `MARBLE_PLAYABLE_FORCE_MANUAL_DISPATCHER=1` e
