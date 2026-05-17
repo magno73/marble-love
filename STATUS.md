@@ -46,8 +46,13 @@ MAME senza shortcut.
 - Cross-correlation -0.0442 (TS sceglie tracce diverse da MAME nel
   audible window: $A0xx tracks vs $CCxx)
 
-**Test**: 144 sound test PASS (3 skipped). 2 ym2151 test aggiornati per
-riflettere il bit mapping corretto.
+**Test**: 145 sound test PASS (3 skipped). 2 ym2151 test aggiornati per
+riflettere il bit mapping corretto. Nuovo test regression
+`sound-chip-smoke.test.ts > chip genera audio da cmd-tape replay senza
+workaround (post bit-fix)`: verifica che simulando 14000 frame con la
+long tape attract-music, il chip produce maxAbs > 0.001 e popola >= 20
+voice register, senza nessun hack. Lock contro regressioni del bit
+mapping o IRQ interleave.
 
 **Next step**: drill TS branch decision che porta a music ID diverso da
 MAME. Probabile cycle skew o NMI ordering. Cross-correlation > 0.7
