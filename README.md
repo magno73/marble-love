@@ -862,11 +862,19 @@ event di attract loop dopo 4 min reali. Cmd-tape esteso a 14000 frame
 disponibile in `oracle/scenarios/sound-cmd-tape-attract-music.json` per
 testing audibili.
 
-**Identificato music engine path** (sessione 4c-4e): KEY ON write at
+**Identificato music engine path** (sessione 4c-4f): KEY ON write at
 PC=`$8FCC` e' GATED da `audioRam $0573 bit 6`. Disassembly:
 `LDA $0573; AND #$40; BEQ skip; ... STA $1801` ($8FB8-$8FCC).
-TS ha `$0573=$00` → KEY ON skippato → silenzio. MAME enable bit 6 via
-`$890C STA $0573 (#$40)` inside un caller che TS non raggiunge.
+TS ha `$0573=$00` → KEY ON skippato → silenzio.
+
+Il path che enables `$0573 = $40` parte da `$87F4 LDA ($0E),Y` (read
+music data via pointer in zp $0E/$0F). Se byte != 0 → JMP $8867 →
+$8912 → $890C STA $0573 #$40. TS legge da pointer $A052, MAME da $CCE8
+— diversi music tracks. Entrambi puntano a real data ma di tracce diverse:
+TS reads music che non triggera path, MAME reads attract music con note
+reali. Gap finale: identificare cosa setta zp $0E/$0F (music pointer)
+nel cmd handler — probabile cmd byte specifico (es. $61, $01) imposta il
+pointer e TS prende branch diverso.
 
 | Phase | File | Test |
 |---|---|---|
