@@ -840,7 +840,10 @@ reset, releaseSoundReset rifira pending), reply queue drain mancante. Vedi
 correttamente, dispatcher musica `$9622` raggiunto via IRQ handler, 66/96
 voice register YM2151 scritti. Audio ancora silente perche' i pitch register
 $28-$2F (KC) e $30-$37 (KF) non vengono mai scritti dal dispatcher — drill
-A1 cycle-exact 6502 necessario per chiudere.
+A1 cycle-exact 6502 necessario per chiudere. Sample generator chip verificato
+funzionante via test regressione (`sound-chip-smoke.test.ts`: maxAbs > 0.1
+con KC/KF settati manualmente). API `forceSoundIrqHack(chip)` esposta come
+workaround opt-in.
 
 | Phase | File | Test |
 |---|---|---|
