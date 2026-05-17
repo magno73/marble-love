@@ -93,6 +93,38 @@ handler $81A6 + dispatcher $9622 funzionino.
 attivo, identificare branch che diverge da MAME (probabile: state byte zp
 $32/$33/$34 con valore diverso che salta `$93A4`).
 
+**🔥 BREAKTHROUGH 2026-05-17 (sessione 4b)**: con `forceSoundIrqHack` attivo,
+TS RAGGIUNGE PC=$93A4/$93A7 a f370! Scrive reg $2B/$33 = 0 e voice setup
+completo come MAME. Sono solo VALORI = 0 (init phase).
+
+**Discovery decisivo — MAME WAV E' SILENTE PER 100 SECONDI**:
+
+```bash
+mame marble -nothrottle -skip_gameinfo -wavwrite /tmp/marble_long.wav \
+  -autoboot_script oracle/mame_sound_cmd_capture.lua \
+  -video none -seconds_to_run 120
+# Result: 100.1s WAV, max abs = 0, ALL 9.6M samples = 0
+```
+
+Anche con coin+start scripted, 6144 cmd inviati al sound 6502, 33656 YM2151
+register writes ricevuti, MAME produce **zero audible output** per 100 sec.
+KC ($28-$2F) ricevono 4 writes tutti zero. KF ($30-$37) ricevono 568 writes
+tutti zero. Cioe' MAME stesso non sta producendo audio in questo scenario.
+
+**Implicazione**: la cross-correlation 0.0 TS vs MAME WAV non e' un fallimento
+del nostro chip — entrambi sono silenti correttamente perche' Marble Madness
+con coin+start scripted **non triggera mai una nota audibile in 100 sec**.
+Probabilmente serve gameplay avanzato (post-spawn, marble rolling, level
+complete jingle) per attivare music engine con KC/KF non-zero.
+
+**Conseguenza per validation**: il cross-correlation audio sample-level non
+e' un test valido per questo scenario. Better metrics:
+- Register state byte-by-byte diff TS vs MAME shadow (gia' = 0 byte diff
+  per $14, ora anche $20-$FF parzialmente matchati)
+- audioRam diff per stato sound 6502 (TS=616, MAME=525 → in ballpark)
+- PC reachability: TS ora raggiunge $93A4 (PC della "play note" routine),
+  e tutte le altre routine ROM-defined.
+
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
 Bypass del blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime
