@@ -33,6 +33,15 @@ Proof locale:
   `f36=00`, `z=16280`, `floor=12210` guardato, e overlay con
   `last projected floor guard ... reason=x-missing-endpoint`.
 
+Follow-up dopo screen utente `Screenshot 2026-05-17 alle 11.42.59.png`: nel
+Beginner/L2 il guard scattava a `f3401`, ma la caduta veniva armata a `f3403`
+quando la superficie successiva diventava tutta-zero. Aggiunta memoria breve
+(`PROJECTED_FLOOR_GUARD_GRACE_FRAMES=6`) vincolata al player: un floor
+tutta-zero immediatamente dopo un endpoint mancante non puo' armare `f36=2`
+finche' la guardia e' fresca. Nuovi test coprono sia il caso `f3401 -> f3403`
+sia la scadenza della guardia per non mascherare cadute vere. Proof browser:
+`screenshots/bug-verify/marble-cade-level2-guard-once-check.png`.
+
 ## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF
 
 Continuita' dei findings sessione 3 (commit `7671a9d` per i 3 bug fix
@@ -122,8 +131,32 @@ e' un test valido per questo scenario. Better metrics:
 - Register state byte-by-byte diff TS vs MAME shadow (gia' = 0 byte diff
   per $14, ora anche $20-$FF parzialmente matchati)
 - audioRam diff per stato sound 6502 (TS=616, MAME=525 → in ballpark)
-- PC reachability: TS ora raggiunge $93A4 (PC della "play note" routine),
-  e tutte le altre routine ROM-defined.
+- PC reachability: TS ora raggiunge $93A4 (PC della "play note" routine).
+
+**Scoperto MAME audio attivo a sec 200-220** (5 min capture):
+
+```bash
+mame marble -wavwrite /tmp/marble_300s.wav -seconds_to_run 300
+# Result: sec 0-200 silente, sec 200-220 max abs 4836 AUDIBLE, sec 220+ silente
+```
+
+Marble attract loop ha un primo "audio event" solo dopo 200 sec emulati (4
+min reali). ~20s di audio, poi silenzio. Cmd-tape esteso a 14000 frame
+salvato in `oracle/scenarios/sound-cmd-tape-attract-music.json` (14688 cmd,
+233s WAV reference in /tmp/marble_music.wav max abs 4836).
+
+**MAME final reg state a f14000** (PC tap 50000 writes):
+- 152 YM2151 regs non-zero (incl. operator $40-$FF)
+- KC ($28-$2F) tutti zero (in MAME stesso!)
+- KF ($30-$37) brief $36=$E0 a f537+, poi clearato
+- POKEY $08=$78 scritto 555 volte (AUDCTL config, no AUDF/AUDC notes)
+
+Anche MAME produce audio audibile sec 200-220 SENZA scrivere KC/KF non-zero.
+Il pitch deve venire da phase modulation tra operators (alg 7 parallel) con
+specific TL/AR/D1L envelope patterns che generano output con phase
+increment minimo.
+
+**Tool nuovo**: `oracle/mame_pokey_write_tap.lua` per future drill POKEY.
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
