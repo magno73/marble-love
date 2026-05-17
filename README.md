@@ -850,6 +850,13 @@ Identificato il PC della routine "play note" MAME via
 **PC=$93A4** scrive KC ($28-$2B) e KF ($30-$33). Si attiva a f375 (cmd 0x08
 nella tape). Helpers $8E9C/$8EAF/$8EC2 scrivono KF aggiuntivi.
 
+**Verificato con `forceSoundIrqHack`**: TS RAGGIUNGE $93A4 con valori = 0
+(init phase, matches MAME). MAME WAV completo da 100 sec con coin+start
+scripted e' **completamente silente** (max abs = 0 su 9.6M sample): Marble
+Madness in questo scenario non triggera note audibili. Cross-correlation
+non valida come metric — usare register-state diff (TS shadow byte-by-byte
+vs MAME) o PC reachability.
+
 | Phase | File | Test |
 |---|---|---|
 | **C2 M6502 core** | `src/m6502/{addressing,bus,cpu,cycle-table,opcodes,regfile}.ts` | 65x02 Tom Harte SingleStepTests PASS |
