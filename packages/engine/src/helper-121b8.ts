@@ -119,7 +119,10 @@ import { positionUpdate } from "./position-update.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
 import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 import { stateSub15BD0 } from "./state-sub-15bd0.js";
-import { trackballApplyDelta } from "./trackball-apply.js";
+import {
+  sanitizeProjectedTerrainDeltas,
+  trackballApplyDelta,
+} from "./trackball-apply.js";
 import { vectorScale } from "./vector-scale.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
@@ -457,6 +460,13 @@ export function helper121B8(
   // clr.b D0; set_d3: move.b D0,D3
   const isPlayer: boolean = (a2 === PLAYER_ADDR_1) || (a2 === PLAYER_ADDR_2);
   const d3b: number = isPlayer ? 1 : 0;
+  const callSpritePosUpdate = (s: GameState, objAddr: number): void => {
+    if (subs.fun_1bab2 !== undefined) {
+      subs.fun_1bab2(s, objAddr);
+    } else {
+      spritePosUpdate1BAB2(s, objAddr);
+    }
+  };
 
   // L5 post-seed MAME keeps the player live surface struct stable while only
   // the tile fields move; forcing a redraw here clears the floor and creates
@@ -562,6 +572,14 @@ export function helper121B8(
     }
 
     if (doBounce) {
+      const bounceBefore = {
+        x: r32(state, objOff + OBJ_X),
+        y: r32(state, objOff + OBJ_Y),
+        z: r32(state, objOff + OBJ_Z),
+        vx: r32(state, objOff + OBJ_VX),
+        vy: r32(state, objOff + OBJ_VY),
+        vz: r32(state, objOff + OBJ_VZ),
+      };
       // BOUNCE_RESTORE:
       // jsr $12886 = swapLongPair(a2)
       if (subs.fun_12886 !== undefined) {
@@ -590,6 +608,26 @@ export function helper121B8(
       } else {
         spritePosUpdate1BAB2(state, a2);
       }
+      state.debug ??= {};
+      state.debug.lastHelper121B8BoundsBounce = {
+        frame: Number(state.clock.frame),
+        entityAddr: a2,
+        d1: d1w,
+        d4: s32(d4),
+        d5: s32(d5),
+        xBefore: bounceBefore.x | 0,
+        yBefore: bounceBefore.y | 0,
+        zBefore: bounceBefore.z | 0,
+        vxBefore: bounceBefore.vx | 0,
+        vyBefore: bounceBefore.vy | 0,
+        vzBefore: bounceBefore.vz | 0,
+        xAfter: r32(state, objOff + OBJ_X) | 0,
+        yAfter: r32(state, objOff + OBJ_Y) | 0,
+        zAfter: r32(state, objOff + OBJ_Z) | 0,
+        vxAfter: r32(state, objOff + OBJ_VX) | 0,
+        vyAfter: r32(state, objOff + OBJ_VY) | 0,
+        vzAfter: r32(state, objOff + OBJ_VZ) | 0,
+      };
     }
 
     // POST_BOUNDS label (0x12328):
@@ -1106,7 +1144,9 @@ export function helper121B8(
     if (subs.fun_1b9cc !== undefined) {
       subs.fun_1b9cc(state, a2, 0);
     } else {
-      spriteHelper1B9CC(state, a2, 0);
+      spriteHelper1B9CC(state, a2, 0, {
+        fun_1bab2: callSpritePosUpdate,
+      });
     }
 
     // tst.b D3; beq → POST_PLAYER_ROTVEC (0x1272A)
@@ -1205,6 +1245,11 @@ export function helper121B8(
         if (subs.fun_25df6 !== undefined) {
           subs.fun_25df6(state, a2);
         } else {
+          // Runtime guard for TS-generated discontinuity/sentinel terrain
+          // projections. MAME reaches FUN_25DF6 with sane player deltas; when
+          // our rebuilt surface leaks a wall edge here it becomes a huge
+          // invisible impulse after the ROM's x4 boost.
+          sanitizeProjectedTerrainDeltas(state);
           trackballApplyDelta(state, a2);
         }
       }

@@ -35,11 +35,24 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { sub1CABATileRedraw } from "../src/sub-1caba-tile-redraw.js";
+import { spritePosUpdate1BAB2 } from "../src/sprite-pos-update-1bab2.js";
+import { bootInit } from "../src/boot-init.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
+import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 
 const FIXTURE_PATH = resolve(__dirname, "fixtures", "sub-1caba-firstcall.json");
 const ROM_PATH = resolve(__dirname, "..", "..", "..", "ghidra_project", "marble_program.bin");
+const L2_SEED_PATH = resolve(
+  __dirname,
+  "..",
+  "..",
+  "web",
+  "public",
+  "scenarios",
+  "playable",
+  "start_level2_intro_beginner_f2436.seed.json",
+);
 
 interface CallTrace {
   frame: number;
@@ -58,6 +71,15 @@ interface Fixture {
   playfieldRam: string;
   spriteRam: string;
   firstCall: CallTrace;
+}
+
+interface PlayableSeed {
+  slapsticBank?: number;
+  workRam: string;
+  playfieldRam: string;
+  spriteRam: string;
+  alphaRam: string;
+  colorRam: string;
 }
 
 function hex2bytes(hex: string, len: number): Uint8Array {
@@ -149,5 +171,39 @@ describe("sub1CABATileRedraw (FUN_0001CABA) — bit-perfect parity vs MAME", () 
       const w = (state.workRam[0x1c28 + i * 2]! << 8) | state.workRam[0x1c28 + i * 2 + 1]!;
       expect(w).toBe(0);
     }
+  });
+
+  it("Beginner L2 tile (78,67) reads the video RAM row that lands in motion-object RAM", () => {
+    const seed = JSON.parse(readFileSync(L2_SEED_PATH, "utf-8")) as PlayableSeed;
+
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(ROM_PATH));
+
+    const state = emptyGameState();
+    bootInit(state, rom, {
+      warmState: {
+        workRam: hex2bytes(seed.workRam, 0x2000),
+        playfieldRam: hex2bytes(seed.playfieldRam, 0x2000),
+        spriteRam: hex2bytes(seed.spriteRam, 0x1000),
+        alphaRam: hex2bytes(seed.alphaRam, 0x1000),
+        colorRam: hex2bytes(seed.colorRam, 0x800),
+        slapsticBank: seed.slapsticBank ?? 1,
+      },
+    });
+
+    const playerOff = 0x18;
+    writeLongBE(state.workRam, playerOff + 0x0c, Math.round(628 * 0x10000) >>> 0);
+    writeLongBE(state.workRam, playerOff + 0x10, Math.round(536.9 * 0x10000) >>> 0);
+    writeLongBE(state.workRam, playerOff + 0x14, Math.round(16176 * 0x10000) >>> 0);
+    writeWordBE(state.workRam, 0x696, 0xffff);
+    writeWordBE(state.workRam, 0x698, 0xffff);
+
+    spritePosUpdate1BAB2(state, 0x00400018, {
+      fun_1CABA: (s) => { sub1CABATileRedraw(s, rom); },
+    });
+
+    expect(((state.workRam[0x696] ?? 0) << 8) | (state.workRam[0x697] ?? 0)).toBe(78);
+    expect(((state.workRam[0x698] ?? 0) << 8) | (state.workRam[0x699] ?? 0)).toBe(67);
+    expect(((state.workRam[0x1c36] ?? 0) << 8) | (state.workRam[0x1c37] ?? 0)).toBe(0x3f30);
   });
 });

@@ -393,6 +393,36 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     return;
   }
 
+  // JT[3] = 0x25514. Timed collision/launch settle state. Catapult tag 0x0A
+  // enters here with obj+0x58=0x0A and obj+0x59=0x0F: the original holds the
+  // marble on the animated arm, counts +0x59 down, then clears state back to
+  // normal so the previously injected velocities can be integrated by JT[0].
+  if (s1a === 3) {
+    helper1B9CC(state, a2, 1);
+    spriteRotate1C014(state, rom, objOff);
+    enterObject1281C(state, a2);
+
+    const tag58 = rb(state, a2 + 0x58);
+    if (tag58 === 0) return;
+
+    wb(state, a2 + 0x59, rb(state, a2 + 0x59) - 1);
+    if (rb(state, a2 + 0x59) !== 0) return;
+
+    if (tag58 === 0x12) {
+      helper285B0(state, a2, 9, rom);
+    } else if (tag58 === 0x13 || tag58 === 0x14 || tag58 === 0x20 || tag58 === 0x22 || tag58 === 0x25) {
+      helper285B0(state, a2, 5, rom);
+    } else if (tag58 === 0x0a) {
+      soundCmdSend158AC(state, 0x45);
+    }
+
+    wb(state, a2 + 0x58, 0);
+    wl(state, a2 + 0x26, 0);
+    wl(state, a2 + 0x22, 0);
+    wb(state, a2 + 0x1a, 0);
+    return;
+  }
+
   // JT[4] = 0x255C6. This is the long demo marble-eaten orbit state:
   //   1B9CC(obj, 1); 13ADE(obj); wait until counter nearly done; then either
   //   re-enter state 4 on a nearby target hit, or clear velocities/state.
@@ -774,16 +804,19 @@ export function refreshFrame10FCE(
       objectUpdatePair158CC(s, {
         objectUpdate: (slotPtr: number) => {
           // Task #183: wire fun_1bab2 → spritePosUpdate1BAB2(fun_1CABA → sub1CABA)
-          // anche per slot pair P1/P2 via helper121B8 ELSE branch. STRUCT @ 0x401C28
-          // deve ritornare a 3fdc*16 finale dopo che MAME chiama sub1CABA ~4.6×
-          // per body (= per ogni oggetto).
+          // anche per slot pair P1/P2, sia nel branch state-2 (1B9CC diretto)
+          // sia nel branch ELSE via helper121B8.
+          const updateSpritePos = (st: GameState, objAddr: number): void => {
+            spritePosUpdate1BAB2(st, objAddr, {
+              fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); },
+            });
+          };
           fun158F6(s, slotPtr, rom, {
+            spriteHelper1B9CCSubs: {
+              fun_1bab2: updateSpritePos,
+            },
             helper121B8Subs: {
-              fun_1bab2: (st, objAddr) => {
-                spritePosUpdate1BAB2(st, objAddr, {
-                  fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); },
-                });
-              },
+              fun_1bab2: updateSpritePos,
               fun_29cce: (st, objAddr) => { fun29CCE(st, objAddr, rom); },
             },
           });

@@ -147,6 +147,8 @@ const MOTION_OBJECT_BANK_BYTES = 0x200;
 const MOTION_OBJECT_WORD_STRIDE_BYTES = 0x80;
 const MOTION_OBJECT_ENTRY_WORD_BYTES = 2;
 const LEGACY_PACKED_MOTION_OBJECT_ENTRY_BYTES = 8;
+const MOTION_OBJECT_PALETTE_BASE = 0x20;
+const HIGH_PRIORITY_MO_VISUAL_PALETTE_BASE = 0x40;
 
 export function irgb4444ToRgba(word: number): RgbaColor {
   const intensity = (word >>> 12) & 0x0f;
@@ -274,6 +276,17 @@ export function decodeMotionObjectWords(
   };
 }
 
+function motionObjectPaletteIndex(lookup: MotionObjectLookupInfo, priority: boolean): number {
+  // Normal motion objects use Atari System 1's MO palette region:
+  // color_base 0x100, granularity 8 => paletteIndex base 0x20.
+  // High-priority MOs go through the translucency compositor in the original.
+  // The TS renderer keeps the existing visual workaround for those, otherwise
+  // the marble loses its blue sphere in warm gameplay frames.
+  return priority
+    ? HIGH_PRIORITY_MO_VISUAL_PALETTE_BASE + lookup.color
+    : MOTION_OBJECT_PALETTE_BASE + (lookup.color << 1);
+}
+
 export function buildSpritesFromMotionObjectRam(
   spriteRam: Uint8Array,
   entryIndexes: number[],
@@ -333,18 +346,7 @@ export function buildSpritesFromMotionObjectRam(
       command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
       command.gfxBank = lookup.bank;
       command.bitsPerPixel = lookup.bpp;
-      // NOTE rendering layer simplification:
-      // MAME atarisy1 s_mob_config base 0x100 + (color << 1) + granularity 8
-      // calcola idx = 0x110 + pen (per color=1) — questa è MOB raw region.
-      // POI in screen_update high-priority MO viene mappato a translucency
-      // region: pf[x] = 0x300 + ((pf_color & 0xf) << 4) + mo_pen.
-      // Per atarisy1 frame 2400 attract: translucency region 0x300+ è zero
-      // (marble dovrebbe essere invisibile via algoritmo MAME esatto). Il
-      // MAME oracle visivo mostra marble BLU sphere — usa palette[520..527]
-      // (= byte 0x410-0x41F). Per matchare visivamente quel rendering, TS
-      // utilizza paletteIndex = 0x40 + color (= 0x41 per color=1 → idx 520+pen).
-      // NON è bit-perfect MAME flow ma produce sphere blu visivamente correct.
-      command.paletteIndex = 0x40 + lookup.color;
+      command.paletteIndex = motionObjectPaletteIndex(lookup, fields.priority);
     }
 
     sprites.push(command);
@@ -407,7 +409,7 @@ function buildPackedSpriteCommand(
     command.spriteIndex = lookup.offset * 256 + fields.tileIndex;
     command.gfxBank = lookup.bank;
     command.bitsPerPixel = lookup.bpp;
-    command.paletteIndex = 0x40 + lookup.color;
+    command.paletteIndex = motionObjectPaletteIndex(lookup, fields.priority);
   }
 
   return command;

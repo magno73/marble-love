@@ -194,6 +194,148 @@ export interface TickClock {
   mainThreadWaitClearRows: u8 | undefined;
 }
 
+export interface ObjectPairCollisionDebug {
+  frame: number;
+  selfAddr: number;
+  targetAddr: number;
+  loopIndex: number;
+  savedX: number;
+  savedY: number;
+  savedZ: number;
+  deltaX: number;
+  deltaY: number;
+  deltaZ: number;
+  selfState: number;
+  targetState: number;
+  selfKind: number;
+  targetKind: number;
+  selfX: number;
+  selfY: number;
+  selfZ: number;
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+  selfVxBefore: number;
+  selfVyBefore: number;
+  targetVxBefore: number;
+  targetVyBefore: number;
+  selfVxAfter: number;
+  selfVyAfter: number;
+  targetVxAfter: number;
+  targetVyAfter: number;
+}
+
+export interface ScriptSlotCollisionDebug {
+  frame: number;
+  entityAddr: number;
+  slotIndex: number;
+  slotAddr: number;
+  slotState: number;
+  entityState: number;
+  slotX: number;
+  slotY: number;
+  slotZ: number;
+  bboxX0: number;
+  bboxY0: number;
+  bboxX1: number;
+  bboxY1: number;
+  marbleX0: number;
+  marbleY0: number;
+  marbleZ0: number;
+  marbleX1: number;
+  marbleY1: number;
+  marbleZ1: number;
+}
+
+export interface TerrainSlotCollisionDebug {
+  frame: number;
+  entityAddr: number;
+  slotIndex: number;
+  slotAddr: number;
+  colorTag: number;
+  reason: string;
+  d1: number;
+  d2: number;
+  d6: number;
+  a0: number;
+  slotX: number;
+  slotY: number;
+  slotZ: number;
+  entityX: number;
+  entityY: number;
+  entityZ: number;
+  entityVxBefore: number;
+  entityVyBefore: number;
+  flagX: number;
+  flagY: number;
+}
+
+export interface Helper121B8BoundsBounceDebug {
+  frame: number;
+  entityAddr: number;
+  d1: number;
+  d4: number;
+  d5: number;
+  xBefore: number;
+  yBefore: number;
+  zBefore: number;
+  vxBefore: number;
+  vyBefore: number;
+  vzBefore: number;
+  xAfter: number;
+  yAfter: number;
+  zAfter: number;
+  vxAfter: number;
+  vyAfter: number;
+  vzAfter: number;
+}
+
+export interface TrackballApplyDebug {
+  frame: number;
+  entityAddr: number;
+  rawX: number;
+  rawY: number;
+  appliedX: number;
+  appliedY: number;
+  vxBefore: number;
+  vyBefore: number;
+  vxAfter: number;
+  vyAfter: number;
+  cx0: number;
+  cx1: number;
+  cy0: number;
+  cz: number;
+  fracX: number;
+  fracY: number;
+  bge: number;
+}
+
+export interface TrackballSanitizeDebug {
+  frame: number;
+  rawX: number;
+  rawY: number;
+  suppressedX: boolean;
+  suppressedY: boolean;
+  reasonX: string;
+  reasonY: string;
+  cx0: number;
+  cx1: number;
+  cy0: number;
+  cz: number;
+  fracX: number;
+  fracY: number;
+  bge: number;
+}
+
+export interface GameDebugState {
+  lastObjectPairCollision?: ObjectPairCollisionDebug;
+  lastScriptSlotCollision?: ScriptSlotCollisionDebug;
+  lastTerrainSlotCollision?: TerrainSlotCollisionDebug;
+  lastHelper121B8BoundsBounce?: Helper121B8BoundsBounceDebug;
+  lastTrackballApply?: TrackballApplyDebug;
+  lastTrackballSanitize?: TrackballSanitizeDebug;
+}
+
 // ─── GameState root ───────────────────────────────────────────────────────
 
 export interface GameState {
@@ -223,6 +365,8 @@ export interface GameState {
   videoScrollX: number;
   /** Playfield Y scroll register (MMIO 0x820000, 9-bit, write-only). */
   videoScrollY: number;
+  /** Runtime-only diagnostics. Not mirrored into emulated RAM. */
+  debug?: GameDebugState | undefined;
 }
 
 // ─── Factory: stato vuoto ─────────────────────────────────────────────────
@@ -265,6 +409,7 @@ export function emptyGameState(): GameState {
     colorRam: new Uint8Array(0x800),     // 2 KB
     videoScrollX: 0,
     videoScrollY: 0,
+    debug: {},
   };
 }
 
@@ -297,5 +442,6 @@ export function snapshotGameState(s: GameState): GameState {
     colorRam: new Uint8Array(s.colorRam),
     videoScrollX: s.videoScrollX,
     videoScrollY: s.videoScrollY,
+    debug: s.debug === undefined ? undefined : { ...s.debug },
   };
 }

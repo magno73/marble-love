@@ -121,8 +121,10 @@
  * **WorkRam writes**:
  *   - `0x401c28..0x401c47` (STRUCT, 32 byte = 16 word): terrain heights per sub-tile.
  *
- * **Playfield RAM reads** (via PF_RAM_BASE = 0xA00000):
- *   - playfield long at offset derived from tile coords + ROM table.
+ * **Video RAM reads** (via the 0xA00000 video RAM address space):
+ *   - video long at offset derived from tile coords + ROM table. Some valid
+ *     rows land past playfield RAM into motion-object RAM (0xA02000+), matching
+ *     the original Atari System 1 address map.
  *
  * **Parity status**: bit-perfect 54/54 vs MAME (window f173..f257 in
  * boot/level-init; FUN_1CABA is NOT called in attract f12000..12099). See
@@ -146,8 +148,13 @@ export const SUB_1CABA_ADDR = 0x0001caba as const;
 
 /** Base workRam (M68k 0x400000). */
 const WORK_RAM_BASE = 0x00400000 as const;
-/** Base playfield RAM (M68k 0xa00000). Aliased a `state.workRam` via bus. */
+/** Base video RAM ranges (M68k absolute addresses). */
 const PF_RAM_BASE = 0x00a00000 as const;
+const PF_RAM_END = 0x00a02000 as const;
+const MO_RAM_BASE = 0x00a02000 as const;
+const MO_RAM_END = 0x00a03000 as const;
+const ALPHA_RAM_BASE = 0x00a03000 as const;
+const ALPHA_RAM_END = 0x00a04000 as const;
 
 /** STRUCT @ 0x401c28..0x401c47 (16 word). */
 const STRUCT_OFF = 0x1c28;
@@ -192,40 +199,29 @@ function romB(rom: RomImage, addr: number): number {
 function romW(rom: RomImage, addr: number): number {
   return (((rom.program[addr] ?? 0) << 8) | (rom.program[addr + 1] ?? 0)) & 0xffff;
 }
-/** Read M68k word at abs address `a` (BE). Handles ROM + slapstic, workRam, playfield. */
-function readWordAbs(state: GameState, rom: RomImage, a: number): number {
+/** Read M68k byte at abs address `a`. Handles ROM + slapstic, workRam, and video RAM. */
+function readByteAbs(state: GameState, rom: RomImage, a: number): number {
   const u = a >>> 0;
   // ROM 0x000000-0x07FFFF and slapstic 0x080000-0x087FFF live in rom.program (size 0x88000)
-  if (u < 0x088000) return romW(rom, u);
-  if (u >= WORK_RAM_BASE && u < WORK_RAM_BASE + 0x2000) return r16(state, u - WORK_RAM_BASE);
-  if (u >= PF_RAM_BASE && u < PF_RAM_BASE + 0x2000) {
-    const off = u - PF_RAM_BASE;
-    return (((state.playfieldRam[off] ?? 0) << 8) | (state.playfieldRam[off + 1] ?? 0)) & 0xffff;
-  }
+  if (u < 0x088000) return romB(rom, u);
+  if (u >= WORK_RAM_BASE && u < WORK_RAM_BASE + 0x2000) return state.workRam[u - WORK_RAM_BASE] ?? 0;
+  if (u >= PF_RAM_BASE && u < PF_RAM_END) return state.playfieldRam[u - PF_RAM_BASE] ?? 0;
+  if (u >= MO_RAM_BASE && u < MO_RAM_END) return state.spriteRam[u - MO_RAM_BASE] ?? 0;
+  if (u >= ALPHA_RAM_BASE && u < ALPHA_RAM_END) return state.alphaRam[u - ALPHA_RAM_BASE] ?? 0;
   return 0;
+}
+/** Read M68k word at abs address `a` (BE). Handles ROM + slapstic, workRam, and video RAM. */
+function readWordAbs(state: GameState, rom: RomImage, a: number): number {
+  return ((readByteAbs(state, rom, a) << 8) | readByteAbs(state, rom, (a + 1) >>> 0)) & 0xffff;
 }
 /** Read M68k long at abs address `a` (BE). */
 function readLongAbs(state: GameState, rom: RomImage, a: number): number {
-  const u = a >>> 0;
-  if (u < 0x088000) {
-    return (
-      (((rom.program[u] ?? 0) << 24) |
-        ((rom.program[u + 1] ?? 0) << 16) |
-        ((rom.program[u + 2] ?? 0) << 8) |
-        (rom.program[u + 3] ?? 0)) >>> 0
-    );
-  }
-  if (u >= WORK_RAM_BASE && u < WORK_RAM_BASE + 0x2000) return r32(state, u - WORK_RAM_BASE);
-  if (u >= PF_RAM_BASE && u < PF_RAM_BASE + 0x2000) {
-    const off = u - PF_RAM_BASE;
-    return (
-      (((state.playfieldRam[off] ?? 0) << 24) |
-        ((state.playfieldRam[off + 1] ?? 0) << 16) |
-        ((state.playfieldRam[off + 2] ?? 0) << 8) |
-        (state.playfieldRam[off + 3] ?? 0)) >>> 0
-    );
-  }
-  return 0;
+  return (
+    ((readByteAbs(state, rom, a) << 24) |
+      (readByteAbs(state, rom, (a + 1) >>> 0) << 16) |
+      (readByteAbs(state, rom, (a + 2) >>> 0) << 8) |
+      readByteAbs(state, rom, (a + 3) >>> 0)) >>> 0
+  );
 }
 
 /** sign-extend 16-bit word → JS signed number. */

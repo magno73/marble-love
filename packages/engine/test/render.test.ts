@@ -142,7 +142,7 @@ describe("buildFrame", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x42, // 0x40 + 2 — sphere palette match (vedi render.ts)
+        paletteIndex: 0x24,
         flipX: false,
         priority: 0,
         translucent: false,
@@ -296,10 +296,37 @@ describe("buildSpritesFromMotionObjectRam", () => {
         y: 1,
         width: 16,
         height: 16,
-        paletteIndex: 0x44, // 0x40 + 4 — sphere palette match
+        paletteIndex: 0x28,
         flipX: false,
         priority: 0,
         translucent: false,
+      },
+    ]);
+  });
+
+  it("keeps the high-priority motion-object visual palette workaround", () => {
+    const ram = new Uint8Array(8);
+    ram.set([0x00, 0x21, 0x03, 0x10, 0x80, 0x41, 0x00, 0x00], 0);
+    const lookups = [
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 0, bank: 0, color: 0, bpp: 4 as const },
+      { offset: 5, bank: 2, color: 4, bpp: 5 as const },
+    ];
+
+    expect(buildSpritesFromMotionObjectRam(ram, [0], lookups)).toEqual([
+      {
+        spriteIndex: 0x510,
+        gfxBank: 2,
+        bitsPerPixel: 5,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x44,
+        flipX: false,
+        priority: 1,
+        translucent: true,
       },
     ]);
   });

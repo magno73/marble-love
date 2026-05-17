@@ -55,6 +55,12 @@ const soundReplayUrl = searchParams.get("soundReplay");
 const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
 const showObjectDebugOverlay =
   searchParams.get("debugObjects") === "1" || searchParams.get("debugState") === "1";
+const freezeOnBug = showObjectDebugOverlay && searchParams.get("freezeOnBug") === "1";
+const freezeOnAir = freezeOnBug && searchParams.get("freezeOnAir") === "1";
+const freezeOnState4 = freezeOnBug && searchParams.get("freezeOnState4") === "1";
+const freezeOnImpulse = freezeOnBug && searchParams.get("freezeOnImpulse") !== "0";
+const freezeImpulseMinDvRaw = Number(searchParams.get("freezeImpulseMinDv") ?? "8");
+const freezeImpulseMinDv = Number.isFinite(freezeImpulseMinDvRaw) ? freezeImpulseMinDvRaw : 8;
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -62,6 +68,26 @@ const manualPlayableSeedName = "manual_level1_start";
 const replayPlayableSeedName = "coin_start_to_level1";
 const startLevelPractice = parseStartLevelParam(searchParams.get("startLevel"));
 const startLevelPlayableSeedName = playableSeedForStartLevel(startLevelPractice);
+const debugForcedPlayer = parseDebugPlayerParam(searchParams.get("debugPlayer"));
+const debugForcedScrollX = parseOptionalNumberParam(searchParams.get("debugScrollX"));
+const debugForcedScrollY = parseOptionalNumberParam(searchParams.get("debugScrollY"));
+const debugZeroForcedVelocity = debugForcedPlayer !== undefined && searchParams.get("debugZeroVelocity") !== "0";
+const debugForceBeforeTick = searchParams.get("debugForceBeforeTick") === "1";
+const debugForceOnce = searchParams.get("debugForceOnce") === "1";
+const debugForcedPlayerBytes = new Map<number, number>();
+for (const [param, off] of [
+  ["debugPlayerState", 0x1a],
+  ["debugPlayerKind", 0x1b],
+  ["debugPlayerBounce", 0x36],
+  ["debugPlayerF57", 0x57],
+  ["debugPlayerF58", 0x58],
+  ["debugPlayerF59", 0x59],
+  ["debugPlayerF5f", 0x5f],
+  ["debugPlayerF60", 0x60],
+] as const) {
+  const value = parseOptionalNumberParam(searchParams.get(param));
+  if (value !== undefined) debugForcedPlayerBytes.set(off, value & 0xff);
+}
 // ?scenario=NAME — gameplay warm-seed (oracle/scenarios/gameplay/NAME.json).
 // Carica snapshots[0] come warmState. Loop reset a 100 frame (oracle window).
 // Cherry-pick da feature/render-fix-bg (15 scenari MAME 101 snapshot ciascuno).
@@ -111,12 +137,109 @@ function readWorkLongBE(state: ReturnType<typeof stateNs.emptyGameState>, off: n
   );
 }
 
+function writeWorkWordBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number, value: number): void {
+  const word = value & 0xffff;
+  state.workRam[off] = (word >>> 8) & 0xff;
+  state.workRam[off + 1] = word & 0xff;
+}
+
+function writeWorkLongBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number, value: number): void {
+  const long = value >>> 0;
+  state.workRam[off] = (long >>> 24) & 0xff;
+  state.workRam[off + 1] = (long >>> 16) & 0xff;
+  state.workRam[off + 2] = (long >>> 8) & 0xff;
+  state.workRam[off + 3] = long & 0xff;
+}
+
+function parseOptionalNumberParam(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function parseDebugPlayerParam(raw: string | null): { x: number; y: number; z: number } | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  const parts = raw.split(",").map((part) => Number(part.trim()));
+  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return undefined;
+  return { x: parts[0]!, y: parts[1]!, z: parts[2]! };
+}
+
+function fixedLongFromFloat(value: number): number {
+  return Math.round(value * 0x10000) >>> 0;
+}
+
+function applyDebugForcedState(state: ReturnType<typeof stateNs.emptyGameState>): void {
+  if (debugForcedScrollX !== undefined) {
+    const scrollX = ((Math.round(debugForcedScrollX) % 512) + 512) % 512;
+    state.videoScrollX = scrollX;
+  }
+  if (debugForcedScrollY !== undefined) {
+    const scrollY = ((Math.round(debugForcedScrollY) % 512) + 512) % 512;
+    writeWorkWordBE(state, 0x000, scrollY);
+    writeWorkWordBE(state, 0x002, scrollY);
+    state.videoScrollY = scrollY;
+  }
+  if (debugForcedPlayer !== undefined) {
+    const objOff = 0x18;
+    writeWorkLongBE(state, objOff + 0x0c, fixedLongFromFloat(debugForcedPlayer.x));
+    writeWorkLongBE(state, objOff + 0x10, fixedLongFromFloat(debugForcedPlayer.y));
+    writeWorkLongBE(state, objOff + 0x14, fixedLongFromFloat(debugForcedPlayer.z));
+    if (debugZeroForcedVelocity) {
+      writeWorkLongBE(state, objOff + 0x00, 0);
+      writeWorkLongBE(state, objOff + 0x04, 0);
+      writeWorkLongBE(state, objOff + 0x08, 0);
+    }
+    for (const [off, value] of debugForcedPlayerBytes) state.workRam[objOff + off] = value;
+  }
+}
+
+let debugForcedStateApplied = false;
+
+function maybeApplyDebugForcedState(state: ReturnType<typeof stateNs.emptyGameState>): void {
+  if (debugForceOnce && debugForcedStateApplied) return;
+  applyDebugForcedState(state);
+  debugForcedStateApplied = true;
+}
+
 function signed32(value: number): number {
   return value | 0;
 }
 
+function signed16(value: number): number {
+  const word = value & 0xffff;
+  return word >= 0x8000 ? word - 0x10000 : word;
+}
+
 function fixedToFloat(value: number): number {
   return signed32(value) / 0x10000;
+}
+
+function fixedRawToFloat(value: number): number {
+  return (value | 0) / 0x10000;
+}
+
+function projectedFloorDebug(state: ReturnType<typeof stateNs.emptyGameState>): {
+  value: number;
+  cx0: number;
+  cx1: number;
+  cy0: number;
+  cz: number;
+  fracX: number;
+  fracY: number;
+  bge: number;
+} {
+  const structOff = 0x1c28;
+  const cx0 = signed16(readWorkWordBE(state, structOff + 0x04));
+  const cx1 = signed16(readWorkWordBE(state, structOff + 0x0e));
+  const cy0 = signed16(readWorkWordBE(state, structOff + 0x10));
+  const cz = signed16(readWorkWordBE(state, structOff + 0x1a));
+  const fracX = signed16(readWorkWordBE(state, 0x69e));
+  const fracY = signed16(readWorkWordBE(state, 0x6a0));
+  const bge = signed16(readWorkWordBE(state, 0x6a2));
+  const dx = bge !== 0 ? cx1 - cx0 : cy0 - cz;
+  const dy = bge !== 0 ? cx0 - cz : cx1 - cy0;
+  const value = (((cz << 16) + (((dy * fracY + dx * fracX) << 13) | 0)) | 0) / 0x10000;
+  return { value, cx0, cx1, cy0, cz, fracX, fracY, bge };
 }
 
 function objectDebugLine(
@@ -140,15 +263,371 @@ function objectDebugLine(
     `d=(${(x - playerX).toFixed(1)},${(y - playerY).toFixed(1)},${(z - playerZ).toFixed(1)})`;
 }
 
+function playerPhysicsDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const objOff = 0x18;
+  const vx = fixedToFloat(readWorkLongBE(state, objOff + 0x00));
+  const vy = fixedToFloat(readWorkLongBE(state, objOff + 0x04));
+  const vz = fixedToFloat(readWorkLongBE(state, objOff + 0x08));
+  const z = fixedToFloat(readWorkLongBE(state, objOff + 0x14));
+  const zTarget = fixedToFloat(readWorkLongBE(state, objOff + 0x2a));
+  const floor = projectedFloorDebug(state);
+  const field20 = signed16(readWorkWordBE(state, objOff + 0x20));
+  const tileX = signed16(readWorkWordBE(state, objOff + 0x2e));
+  const tileY = signed16(readWorkWordBE(state, objOff + 0x30));
+  return `player phys v=(${vx.toFixed(2)},${vy.toFixed(2)},${vz.toFixed(2)}) ` +
+    `floorNow=${floor.value.toFixed(1)} dzFloor=${(floor.value - z).toFixed(1)} zTarget=${zTarget.toFixed(1)} ` +
+    `proj=(cx0:${floor.cx0} cx1:${floor.cx1} cy0:${floor.cy0} cz:${floor.cz} fx:${floor.fracX} fy:${floor.fracY} bge:${floor.bge}) ` +
+    `w20=${field20} tile=(${tileX},${tileY}) ` +
+    `f36=${(state.workRam[objOff + 0x36] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f56=${(state.workRam[objOff + 0x56] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f57=${(state.workRam[objOff + 0x57] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f58=${(state.workRam[objOff + 0x58] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f59=${(state.workRam[objOff + 0x59] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f5f=${(state.workRam[objOff + 0x5f] ?? 0).toString(16).padStart(2, "0")} ` +
+    `f60=${(state.workRam[objOff + 0x60] ?? 0).toString(16).padStart(2, "0")} ` +
+    `d2=${readWorkWordBE(state, objOff + 0xd2)}`;
+}
+
+function scriptSlotDebugLine(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  index: number,
+  playerX: number,
+  playerY: number,
+  playerZ: number,
+): string {
+  const off = 0x1302 + index * 0x60;
+  const x = signed16(readWorkWordBE(state, off + 0x0c));
+  const y = signed16(readWorkWordBE(state, off + 0x10));
+  const z = signed16(readWorkWordBE(state, off + 0x14));
+  const active = state.workRam[off + 0x18] ?? 0;
+  const type = state.workRam[off + 0x19] ?? 0;
+  const slotState = state.workRam[off + 0x1a] ?? 0;
+  const bboxPtr = readWorkLongBE(state, off + 0x58);
+  const animPtr = readWorkLongBE(state, off + 0x5c);
+  return `slot${index} a=${active} type=${type} st=${slotState} ` +
+    `x=${x} y=${y} z=${z} bbox=${bboxPtr.toString(16).padStart(6, "0")} anim=${animPtr.toString(16).padStart(6, "0")} ` +
+    `d=(${(x - playerX).toFixed(1)},${(y - playerY).toFixed(1)},${(z - playerZ).toFixed(1)})`;
+}
+
+function collisionGateDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const bytes = [0x666, 0x668, 0x66a, 0x66c, 0x66e, 0x670, 0x672]
+    .map((off) => `${off.toString(16)}=${(state.workRam[off] ?? 0).toString(16).padStart(2, "0")}`)
+    .join(" ");
+  const gates = [0x674, 0x676, 0x678, 0x67a, 0x67c, 0x67e, 0x680, 0x682]
+    .map((off) => `${off.toString(16)}=${signed16(readWorkWordBE(state, off))}`)
+    .join(" ");
+  const track = `base=(${signed16(readWorkWordBE(state, 0x696))},${signed16(readWorkWordBE(state, 0x698))}) ` +
+    `cur=(${signed16(readWorkWordBE(state, 0x69a))},${signed16(readWorkWordBE(state, 0x69c))}) ` +
+    `d2=${signed16(readWorkWordBE(state, 0x69e))} a0=${signed16(readWorkWordBE(state, 0x6a0))}`;
+  return `collision ${bytes}\ncollision gates ${gates}\ncollision ${track}`;
+}
+
+function objectAddrDebugLabel(addr: number): string {
+  if (addr >= 0x00400018 && addr < 0x00400018 + 0xe2 * 32) {
+    const index = Math.floor((addr - 0x00400018) / 0xe2);
+    const exact = 0x00400018 + index * 0xe2;
+    if (exact === addr) return `#${index}@${addr.toString(16)}`;
+  }
+  return `@${addr.toString(16)}`;
+}
+
+function lastObjectPairCollisionDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastObjectPairCollision;
+  if (hit === undefined) return "last obj-pair collision: -";
+  return `last obj-pair collision f=${hit.frame} loop=${hit.loopIndex} ` +
+    `self=${objectAddrDebugLabel(hit.selfAddr)} st/k=${hit.selfState}/${hit.selfKind} ` +
+    `target=${objectAddrDebugLabel(hit.targetAddr)} st/k=${hit.targetState}/${hit.targetKind} ` +
+    `delta=(${hit.deltaX},${hit.deltaY},${hit.deltaZ}) saved=(${hit.savedX},${hit.savedY},${hit.savedZ})\n` +
+    `  self p=(${fixedRawToFloat(hit.selfX).toFixed(1)},${fixedRawToFloat(hit.selfY).toFixed(1)},${fixedRawToFloat(hit.selfZ).toFixed(1)}) ` +
+    `v ${fixedRawToFloat(hit.selfVxBefore).toFixed(2)},${fixedRawToFloat(hit.selfVyBefore).toFixed(2)} -> ` +
+    `${fixedRawToFloat(hit.selfVxAfter).toFixed(2)},${fixedRawToFloat(hit.selfVyAfter).toFixed(2)}\n` +
+    `  target p=(${fixedRawToFloat(hit.targetX).toFixed(1)},${fixedRawToFloat(hit.targetY).toFixed(1)},${fixedRawToFloat(hit.targetZ).toFixed(1)}) ` +
+    `v ${fixedRawToFloat(hit.targetVxBefore).toFixed(2)},${fixedRawToFloat(hit.targetVyBefore).toFixed(2)} -> ` +
+    `${fixedRawToFloat(hit.targetVxAfter).toFixed(2)},${fixedRawToFloat(hit.targetVyAfter).toFixed(2)}`;
+}
+
+function lastScriptSlotCollisionDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastScriptSlotCollision;
+  if (hit === undefined) return "last script-slot collision: -";
+  return `last script-slot collision f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `slot=${hit.slotIndex}@${hit.slotAddr.toString(16)} st=${hit.slotState} entitySt=${hit.entityState} ` +
+    `slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) ` +
+    `bbox=(${hit.bboxX0},${hit.bboxY0})..(${hit.bboxX1},${hit.bboxY1}) ` +
+    `marble=(${hit.marbleX0},${hit.marbleY0},${hit.marbleZ0})..(${hit.marbleX1},${hit.marbleY1},${hit.marbleZ1})`;
+}
+
+function lastTerrainSlotCollisionDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTerrainSlotCollision;
+  if (hit === undefined) return "last terrain-slot collision: -";
+  return `last terrain-slot collision f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `slot=${hit.slotIndex}@${hit.slotAddr.toString(16)} tag=${hit.colorTag.toString(16).padStart(2, "0")} ` +
+    `reason=${hit.reason} d1/d2=(${hit.d1},${hit.d2}) d6/a0=(${hit.d6},${hit.a0}) flags=(${hit.flagX},${hit.flagY})\n` +
+    `  slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) entity=(` +
+    `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)},${fixedRawToFloat(hit.entityZ).toFixed(1)}) ` +
+    `vBefore=(${fixedRawToFloat(hit.entityVxBefore).toFixed(2)},${fixedRawToFloat(hit.entityVyBefore).toFixed(2)})`;
+}
+
+function lastBoundsBounceDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastHelper121B8BoundsBounce;
+  if (hit === undefined) return "last bounds bounce: -";
+  return `last bounds bounce f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `d1=${hit.d1} d4/d5=(${fixedRawToFloat(hit.d4).toFixed(2)},${fixedRawToFloat(hit.d5).toFixed(2)})\n` +
+    `  p=(${fixedRawToFloat(hit.xBefore).toFixed(1)},${fixedRawToFloat(hit.yBefore).toFixed(1)},${fixedRawToFloat(hit.zBefore).toFixed(1)}) -> ` +
+    `(${fixedRawToFloat(hit.xAfter).toFixed(1)},${fixedRawToFloat(hit.yAfter).toFixed(1)},${fixedRawToFloat(hit.zAfter).toFixed(1)}) ` +
+    `v=(${fixedRawToFloat(hit.vxBefore).toFixed(2)},${fixedRawToFloat(hit.vyBefore).toFixed(2)},${fixedRawToFloat(hit.vzBefore).toFixed(2)}) -> ` +
+    `(${fixedRawToFloat(hit.vxAfter).toFixed(2)},${fixedRawToFloat(hit.vyAfter).toFixed(2)},${fixedRawToFloat(hit.vzAfter).toFixed(2)})`;
+}
+
+function lastTrackballApplyDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTrackballApply;
+  if (hit === undefined) return "last FUN_25DF6 apply: -";
+  return `last FUN_25DF6 apply f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `raw=(${hit.rawX},${hit.rawY}) applied=(${hit.appliedX},${hit.appliedY}) ` +
+    `v=(${fixedRawToFloat(hit.vxBefore).toFixed(2)},${fixedRawToFloat(hit.vyBefore).toFixed(2)}) -> ` +
+    `(${fixedRawToFloat(hit.vxAfter).toFixed(2)},${fixedRawToFloat(hit.vyAfter).toFixed(2)}) ` +
+    `proj=(cx0:${hit.cx0} cx1:${hit.cx1} cy0:${hit.cy0} cz:${hit.cz} ` +
+    `fx:${hit.fracX} fy:${hit.fracY} bge:${hit.bge})`;
+}
+
+function lastTrackballSanitizeDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTrackballSanitize;
+  if (hit === undefined) return "last terrain delta guard: -";
+  return `last terrain delta guard f=${hit.frame} raw=(${hit.rawX},${hit.rawY}) ` +
+    `suppress=(${hit.suppressedX ? hit.reasonX : "-"},${hit.suppressedY ? hit.reasonY : "-"}) ` +
+    `proj=(cx0:${hit.cx0} cx1:${hit.cx1} cy0:${hit.cy0} cz:${hit.cz} ` +
+    `fx:${hit.fracX} fy:${hit.fracY} bge:${hit.bge})`;
+}
+
+function debugForcedStateLine(): string {
+  const parts: string[] = [];
+  if (debugForcedPlayer !== undefined) {
+    parts.push(`player=(${debugForcedPlayer.x},${debugForcedPlayer.y},${debugForcedPlayer.z})`);
+  }
+  if (debugForcedScrollX !== undefined) parts.push(`scrollX=${debugForcedScrollX}`);
+  if (debugForcedScrollY !== undefined) parts.push(`scrollY=${debugForcedScrollY}`);
+  if (debugForceBeforeTick) parts.push("beforeTick=1");
+  if (debugForceOnce) parts.push("once=1");
+  if (parts.length === 0) return "debug forced state: -";
+  return `debug forced state: ${parts.join(" ")}`;
+}
+
+interface PlayerImpulseSample {
+  frame: number;
+  level: number;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  state: number;
+  kind: number;
+  w20: number;
+  f36: number;
+  f56: number;
+  f57: number;
+  f58: number;
+  f59: number;
+  f5f: number;
+  f60: number;
+  chgX: number;
+  chgY: number;
+  tileX: number;
+  tileY: number;
+  d2Counter: number;
+}
+
+let lastPlayerImpulseSample: PlayerImpulseSample | undefined;
+let playerImpulseHistory: string[] = [];
+let lastPlayerImpulseLine = "last impulse history: -";
+let airStartLine = "air start: -";
+let debugFreezeActive = false;
+
+function debugFreezeArmedLine(): string {
+  if (!freezeOnBug) return "debug freeze: off";
+  const modes = [
+    freezeOnImpulse ? `impulse>=${freezeImpulseMinDv.toFixed(1)}` : "",
+    freezeOnAir ? "air" : "",
+    freezeOnState4 ? "state4" : "",
+  ].filter(Boolean).join(",");
+  return `debug freeze: armed ${modes || "none"}`;
+}
+
+let debugFreezeLine = debugFreezeArmedLine();
+
+function samplePlayerImpulse(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  frameCount: number,
+): PlayerImpulseSample {
+  const objOff = 0x18;
+  return {
+    frame: frameCount,
+    level: readWorkWordBE(state, 0x394),
+    x: fixedToFloat(readWorkLongBE(state, objOff + 0x0c)),
+    y: fixedToFloat(readWorkLongBE(state, objOff + 0x10)),
+    z: fixedToFloat(readWorkLongBE(state, objOff + 0x14)),
+    vx: fixedToFloat(readWorkLongBE(state, objOff + 0x00)),
+    vy: fixedToFloat(readWorkLongBE(state, objOff + 0x04)),
+    vz: fixedToFloat(readWorkLongBE(state, objOff + 0x08)),
+    state: state.workRam[objOff + 0x1a] ?? 0,
+    kind: state.workRam[objOff + 0x1b] ?? 0,
+    w20: signed16(readWorkWordBE(state, objOff + 0x20)),
+    f36: state.workRam[objOff + 0x36] ?? 0,
+    f56: state.workRam[objOff + 0x56] ?? 0,
+    f57: state.workRam[objOff + 0x57] ?? 0,
+    f58: state.workRam[objOff + 0x58] ?? 0,
+    f59: state.workRam[objOff + 0x59] ?? 0,
+    f5f: state.workRam[objOff + 0x5f] ?? 0,
+    f60: state.workRam[objOff + 0x60] ?? 0,
+    chgX: state.workRam[0x666] ?? 0,
+    chgY: state.workRam[0x668] ?? 0,
+    tileX: signed16(readWorkWordBE(state, objOff + 0x2e)),
+    tileY: signed16(readWorkWordBE(state, objOff + 0x30)),
+    d2Counter: readWorkWordBE(state, objOff + 0xd2),
+  };
+}
+
+function speed2d(sample: PlayerImpulseSample): number {
+  return Math.hypot(sample.vx, sample.vy);
+}
+
+function formatPlayerImpulseSample(sample: PlayerImpulseSample): string {
+  return `f=${sample.frame} p=(${sample.x.toFixed(1)},${sample.y.toFixed(1)},${sample.z.toFixed(1)}) ` +
+    `v=(${sample.vx.toFixed(2)},${sample.vy.toFixed(2)},${sample.vz.toFixed(2)}) ` +
+    `st=${sample.state} k=${sample.kind} w20=${sample.w20} tile=(${sample.tileX},${sample.tileY}) ` +
+    `f36=${sample.f36.toString(16).padStart(2, "0")} f56=${sample.f56.toString(16).padStart(2, "0")} ` +
+    `f57=${sample.f57.toString(16).padStart(2, "0")} f58=${sample.f58.toString(16).padStart(2, "0")} ` +
+    `f59=${sample.f59.toString(16).padStart(2, "0")} ` +
+    `f5f=${sample.f5f.toString(16).padStart(2, "0")} f60=${sample.f60.toString(16).padStart(2, "0")} ` +
+    `d2=${sample.d2Counter} chg=(${sample.chgX},${sample.chgY})`;
+}
+
+function pushPlayerImpulseHistory(reason: string, previous: PlayerImpulseSample, current: PlayerImpulseSample): void {
+  playerImpulseHistory.unshift(
+    `${reason}\n  prev ${formatPlayerImpulseSample(previous)}\n  now  ${formatPlayerImpulseSample(current)}`,
+  );
+  playerImpulseHistory = playerImpulseHistory.slice(0, 5);
+  lastPlayerImpulseLine = ["last impulse history:", ...playerImpulseHistory].join("\n");
+}
+
+function recordAirStart(previous: PlayerImpulseSample, current: PlayerImpulseSample): void {
+  if (previous.f36 === 0x02 || current.f36 !== 0x02) return;
+  airStartLine =
+    `air start\n  prev ${formatPlayerImpulseSample(previous)}\n  now  ${formatPlayerImpulseSample(current)}`;
+  if (freezeOnAir) armDebugFreeze("air start", current);
+}
+
+function armDebugFreeze(reason: string, current: PlayerImpulseSample): void {
+  if (!freezeOnBug || debugFreezeActive) return;
+  debugFreezeActive = true;
+  debugFreezeLine =
+    `debug freeze: ${reason} @ f=${current.frame} p=(${current.x.toFixed(1)},${current.y.toFixed(1)},${current.z.toFixed(1)})`;
+}
+
+function recordPlayerImpulseDebug(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  frameCount: number,
+): void {
+  const current = samplePlayerImpulse(state, frameCount);
+  const previous = lastPlayerImpulseSample;
+  if (previous === undefined || current.frame <= previous.frame || current.level !== previous.level) {
+    lastPlayerImpulseSample = current;
+    if (previous !== undefined && current.level !== previous.level) {
+      playerImpulseHistory = [];
+      lastPlayerImpulseLine = "last impulse history: -";
+      airStartLine = "air start: -";
+      debugFreezeActive = false;
+      debugFreezeLine = debugFreezeArmedLine();
+    }
+    return;
+  }
+
+  if (freezeOnAir && current.f36 === 0x02) armDebugFreeze("air", current);
+  if (freezeOnState4 && current.state === 0x04) armDebugFreeze("state 4", current);
+
+  const dv = Math.hypot(current.vx - previous.vx, current.vy - previous.vy, current.vz - previous.vz);
+  const prevSpeed = speed2d(previous);
+  const currentSpeed = speed2d(current);
+  const dot = previous.vx * current.vx + previous.vy * current.vy;
+  const posStep = Math.hypot(current.x - previous.x, current.y - previous.y, (current.z - previous.z) / 8);
+  const suddenStop = prevSpeed > 0.35 && currentSpeed < prevSpeed * 0.4;
+  const reverse = prevSpeed > 0.35 && currentSpeed > 0.05 && dot < 0;
+  const stateFlip =
+    current.state !== previous.state ||
+    current.kind !== previous.kind ||
+    current.f36 !== previous.f36 ||
+    current.f56 !== previous.f56 ||
+    current.f58 !== previous.f58 ||
+    current.f59 !== previous.f59 ||
+    current.f5f !== previous.f5f ||
+    current.f60 !== previous.f60;
+  const f57Countdown = current.f57 === ((previous.f57 - 1) & 0xff);
+  const f57Jump = current.f57 !== previous.f57 && !f57Countdown;
+  const state4Entry = previous.state !== 0x04 && current.state === 0x04;
+  const tileJump =
+    (current.tileX !== previous.tileX || current.tileY !== previous.tileY) &&
+    (posStep < 1 || current.state !== 0 || previous.state !== 0);
+  const collisionFlag = current.chgX !== 0 || current.chgY !== 0;
+  recordAirStart(previous, current);
+  if (freezeOnState4 && state4Entry) armDebugFreeze("state 4 entry", current);
+  if (freezeOnImpulse && dv > freezeImpulseMinDv) armDebugFreeze(`large impulse dv=${dv.toFixed(2)}`, current);
+  if (dv > 0.35 || suddenStop || reverse || stateFlip || f57Jump || tileJump || collisionFlag) {
+    const reasons = [
+      dv > 0.35 ? `dv=${dv.toFixed(2)}` : "",
+      suddenStop ? "stop" : "",
+      reverse ? "reverse" : "",
+      stateFlip ? "state/flag" : "",
+      f57Jump ? "f57" : "",
+      tileJump ? "tile" : "",
+      collisionFlag ? "chg" : "",
+    ].filter(Boolean).join(",");
+    pushPlayerImpulseHistory(reasons, previous, current);
+  }
+  lastPlayerImpulseSample = current;
+}
+
 function createObjectDebugOverlay(): HTMLPreElement {
   const el = document.createElement("pre");
   el.style.cssText =
     "position:fixed;left:10px;top:10px;z-index:9998;margin:0;padding:8px 10px;" +
-    "max-width:520px;max-height:42vh;overflow:auto;background:rgba(0,0,0,.72);" +
+    "max-width:min(1080px,calc(100vw - 20px));max-height:44vh;overflow:auto;background:rgba(0,0,0,.72);" +
     "color:#b8f7ff;border:1px solid rgba(184,247,255,.45);font:12px/1.35 monospace;" +
     "pointer-events:none;white-space:pre-wrap;";
   document.body.appendChild(el);
   return el;
+}
+
+function createObjectDebugToggleButton(
+  initialEnabled: boolean,
+  onToggle: (enabled: boolean) => void,
+): HTMLButtonElement {
+  let enabled = initialEnabled;
+  const b = document.createElement("button");
+  b.type = "button";
+  b.style.cssText =
+    "position:fixed;left:20px;bottom:20px;z-index:10000;padding:9px 12px;" +
+    "min-width:104px;background:#141414;color:#fff;border:1px solid #666;" +
+    "border-radius:6px;cursor:pointer;font:700 13px/1 system-ui,-apple-system,sans-serif;" +
+    "touch-action:manipulation;user-select:none;-webkit-user-select:none;";
+  const render = (): void => {
+    b.textContent = enabled ? "DEBUG ON" : "DEBUG OFF";
+    b.setAttribute("aria-pressed", enabled ? "true" : "false");
+    b.style.background = enabled ? "#213d44" : "#141414";
+    b.style.borderColor = enabled ? "#7fcde0" : "#666";
+  };
+  b.addEventListener("click", (event) => {
+    event.preventDefault();
+    enabled = !enabled;
+    if (!enabled) {
+      debugFreezeActive = false;
+      debugFreezeLine = debugFreezeArmedLine();
+    }
+    onToggle(enabled);
+    render();
+  });
+  render();
+  document.body.appendChild(b);
+  return b;
 }
 
 function createStartLevelUnavailableOverlay(level: number): HTMLDivElement {
@@ -190,12 +669,39 @@ function updateObjectDebugOverlay(
     candidates.push({ index, rank });
   }
   candidates.sort((a, b) => a.rank - b.rank);
+  const scriptSlots: Array<{ index: number; rank: number }> = [];
+  for (let index = 0; index < 4; index++) {
+    const off = 0x1302 + index * 0x60;
+    const active = state.workRam[off + 0x18] ?? 0;
+    const slotState = state.workRam[off + 0x1a] ?? 0;
+    if (active === 0 && slotState === 0) continue;
+    const x = signed16(readWorkWordBE(state, off + 0x0c));
+    const y = signed16(readWorkWordBE(state, off + 0x10));
+    const z = signed16(readWorkWordBE(state, off + 0x14));
+    const rank = Math.abs(x - playerX) + Math.abs(y - playerY) + Math.abs((z - playerZ) / 8);
+    scriptSlots.push({ index, rank });
+  }
+  scriptSlots.sort((a, b) => a.rank - b.rank);
   const lines = [
     `f=${frameCount} main=${readWorkWordBE(state, 0x390)} mode=${readWorkWordBE(state, 0x392)} level=${readWorkWordBE(state, 0x394)} ` +
       `scroll=(${state.videoScrollX},${state.videoScrollY})`,
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
+    playerPhysicsDebugLine(state),
+    collisionGateDebugLine(state),
+    lastObjectPairCollisionDebugLine(state),
+    lastScriptSlotCollisionDebugLine(state),
+    lastTerrainSlotCollisionDebugLine(state),
+    lastBoundsBounceDebugLine(state),
+    lastTrackballApplyDebugLine(state),
+    lastTrackballSanitizeDebugLine(state),
+    debugForcedStateLine(),
     "nearest objects:",
     ...candidates.slice(0, 8).map(({ index }) => objectDebugLine(state, index, playerX, playerY, playerZ)),
+    debugFreezeLine,
+    airStartLine,
+    lastPlayerImpulseLine,
+    "nearest script slots:",
+    ...scriptSlots.slice(0, 4).map(({ index }) => scriptSlotDebugLine(state, index, playerX, playerY, playerZ)),
   ];
   el.textContent = lines.join("\n");
 }
@@ -514,8 +1020,19 @@ async function startGame(
   if (useIndirect) {
     console.log("[marble-love] indirect renderer enabled (MAME bit-perfect bitmap_ind16 path)");
   }
-  const objectDebugOverlay =
-    showObjectDebugOverlay && !startLevelPracticeUnavailable ? createObjectDebugOverlay() : undefined;
+  let objectDebugEnabled = showObjectDebugOverlay && !startLevelPracticeUnavailable;
+  let objectDebugOverlay = objectDebugEnabled ? createObjectDebugOverlay() : undefined;
+  if (!startLevelPracticeUnavailable && showObjectDebugOverlay) {
+    createObjectDebugToggleButton(objectDebugEnabled, (enabled) => {
+      objectDebugEnabled = enabled;
+      if (enabled && objectDebugOverlay === undefined) {
+        objectDebugOverlay = createObjectDebugOverlay();
+      }
+      if (objectDebugOverlay !== undefined) {
+        objectDebugOverlay.style.display = enabled ? "block" : "none";
+      }
+    });
+  }
   const inputState = initInput();
   if (warmStateIsPlayableSeed) {
     inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
@@ -813,7 +1330,7 @@ async function startGame(
     // (= preserve warm state al 100% — runMainLoopBody=true introduce drift
     // via refreshHelper13EE6). Vedi commit B2: zero[0x006] block ha portato
     // pf 93%→100%. Stesso effetto di disabilitare runMainLoopBody.
-    if (!mameDumpFrozen) {
+    if (!mameDumpFrozen && !debugFreezeActive) {
       // ?play=1 → forza runMainLoopBody=true ANCHE con warmState (= gameplay
       //          dal warm bootstrap MAME). Default: solo se non c'è warmState.
       // ?loopReset=N → replay loop: ogni N tick ricarica warmState (= evita
@@ -845,7 +1362,9 @@ async function startGame(
         inputMmio: inputState.inputMmio,
         runMainLoopBody: mainLoopBody,
       };
+      if (debugForceBeforeTick) maybeApplyDebugForcedState(s);
       tick(s, tickOptions);
+      if (!debugForceBeforeTick || !debugForceOnce) maybeApplyDebugForcedState(s);
       maybeApplyLevelTimeOverride("level change");
       // Sound chip tick: the current 6502/YM/POKEY path is diagnostic-heavy
       // and does not yet produce full background music. Keep it opt-in so the
@@ -874,7 +1393,10 @@ async function startGame(
     (window as unknown as { __mlState?: typeof s; __mlFrame?: number }).__mlState = s;
     (window as unknown as { __mlFrame?: number }).__mlFrame = frameCount;
     (window as unknown as { __soundChip?: typeof soundChip }).__soundChip = soundChip;
-    if (objectDebugOverlay !== undefined && frameCount % 5 === 0) {
+    if (objectDebugEnabled) {
+      recordPlayerImpulseDebug(s, frameCount);
+    }
+    if (objectDebugEnabled && objectDebugOverlay !== undefined && frameCount % 5 === 0) {
       updateObjectDebugOverlay(objectDebugOverlay, s, frameCount);
     }
 

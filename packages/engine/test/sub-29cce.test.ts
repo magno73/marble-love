@@ -8,6 +8,8 @@ import { emptyRomImage } from "../src/bus.js";
 
 const SLOT = 0x004009a4;
 const SLOT_OFF = 0x09a4;
+const SLOT_TABLE_OFF = 0x0a9c;
+const CATAPULT_SCRIPT = 0x1db80;
 
 function rL(workRam: Uint8Array, off: number): number {
   return (
@@ -28,6 +30,26 @@ function wL(workRam: Uint8Array, off: number, v: number): void {
 function wW(workRam: Uint8Array, off: number, v: number): void {
   workRam[off] = (v >>> 8) & 0xff;
   workRam[off + 1] = v & 0xff;
+}
+
+function wRomW(program: Uint8Array, off: number, v: number): void {
+  program[off] = (v >>> 8) & 0xff;
+  program[off + 1] = v & 0xff;
+}
+
+function signed32(v: number): number {
+  return v | 0;
+}
+
+function setupCatapultSlot(s: ReturnType<typeof emptyGameState>): void {
+  s.workRam[SLOT_TABLE_OFF + 0x18] = 1;
+  wL(s.workRam, SLOT_TABLE_OFF + 0x0c, 0x01000000);
+  wL(s.workRam, SLOT_TABLE_OFF + 0x10, 0x02000000);
+  s.workRam[SLOT_TABLE_OFF + 0x1f] = 0x0a;
+  wL(s.workRam, SLOT_TABLE_OFF + 0x3e, 0x00020c14);
+  wL(s.workRam, SLOT_TABLE_OFF + 0x46, 0x00020c14);
+  wW(s.workRam, 0x690, 0x0100);
+  wW(s.workRam, 0x692, 0x0200);
 }
 
 describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
@@ -166,6 +188,75 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     fun29CCE(s, SLOT, rom);
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x32);
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0xff);
+  });
+
+  it("LOOP color 0x0a: catapult launches grounded marble and starts arm script", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+
+    // Keep helper12896 from consuming an all-zero fake script in this unit test.
+    // The real ROM has the catapult animation bytecode at 0x1DB80.
+    wRomW(rom.program, CATAPULT_SCRIPT, 0xffff);
+    setupCatapultSlot(s);
+    wL(s.workRam, SLOT_OFF + 0x14, 0x003fc000);
+
+    fun29CCE(s, SLOT, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x01000000);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x02000000);
+    expect(rL(s.workRam, SLOT_OFF + 0x14)).toBe(0x003cc000);
+    expect(rL(s.workRam, SLOT_OFF + 0x08)).toBe(0x000a0000);
+    expect(signed32(rL(s.workRam, SLOT_OFF + 0x00))).toBeGreaterThanOrEqual(-0x1000);
+    expect(signed32(rL(s.workRam, SLOT_OFF + 0x00))).toBeLessThanOrEqual(0x0fff);
+    expect(signed32(rL(s.workRam, SLOT_OFF + 0x04))).toBeGreaterThanOrEqual(-0x2efff);
+    expect(signed32(rL(s.workRam, SLOT_OFF + 0x04))).toBeLessThanOrEqual(-0x25000);
+    expect(s.workRam[SLOT_OFF + 0x36]).toBe(0x02);
+    expect(s.workRam[SLOT_OFF + 0x1a]).toBe(0x03);
+    expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x0a);
+    expect(s.workRam[SLOT_OFF + 0x59]).toBe(0x0f);
+    expect(rL(s.workRam, SLOT_TABLE_OFF + 0x36)).toBe(CATAPULT_SCRIPT + 2);
+    expect(sounds.slice(0, 2)).toEqual([0x3a, 0x3b]);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0a);
+  });
+
+  it("LOOP color 0x0a: fuori dal tight hitbox non lancia", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupCatapultSlot(s);
+    wL(s.workRam, SLOT_TABLE_OFF + 0x0c, 0x01080000); // d6 = +8 → skip
+    wL(s.workRam, SLOT_OFF + 0x14, 0x003fc000);
+
+    fun29CCE(s, SLOT, rom);
+
+    expect(rL(s.workRam, SLOT_OFF + 0x14)).toBe(0x003fc000);
+    expect(rL(s.workRam, SLOT_OFF + 0x08)).toBe(0);
+    expect(s.workRam[SLOT_OFF + 0x1a]).toBe(0);
+    expect(s.workRam[SLOT_OFF + 0x58]).toBe(0);
+  });
+
+  it("LOOP color 0x0a: catapult busy restores saved XY without relaunching", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupCatapultSlot(s);
+    wL(s.workRam, SLOT_TABLE_OFF + 0x3e, 0x00020c18);
+    wL(s.workRam, 0x684, 0x0badcafe);
+    wL(s.workRam, 0x688, 0x0ddf00d0);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, SLOT_OFF + 0x10, 0x22222222);
+    wL(s.workRam, SLOT_OFF + 0x14, 0x003fc000);
+
+    fun29CCE(s, SLOT, rom);
+
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x0badcafe);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x0ddf00d0);
+    expect(rL(s.workRam, SLOT_OFF + 0x14)).toBe(0x003fc000);
+    expect(rL(s.workRam, SLOT_OFF + 0x08)).toBe(0);
+    expect(s.workRam[SLOT_OFF + 0x58]).toBe(0);
   });
 
   it("LOOP color 0x1f: side-wall hit sets X flag, sends sound 0x42, and epilogue restores X/negates vx", () => {

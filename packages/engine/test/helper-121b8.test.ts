@@ -489,6 +489,104 @@ describe("helper121B8 (FUN_000121B8)", () => {
     expect(cb).toHaveBeenCalledWith(state, 0x00400018, 0);
   });
 
+  it("in-range player default FUN_25DF6 path suppresses terrain discontinuity impulses", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const r = state.workRam;
+    const playerOff = 0x00400018 - 0x400000;
+
+    writeLongBE(r, playerOff + VX, Math.round(0.05 * 0x10000));
+    writeLongBE(r, playerOff + VY, Math.round(0.49 * 0x10000));
+    writeLongBE(r, playerOff + PZ, 0x003f8800);
+
+    writeWordBE(r, 0x1c28 + 0x04, 16264);
+    writeWordBE(r, 0x1c28 + 0x0e, 16264);
+    writeWordBE(r, 0x1c28 + 0x10, 16472);
+    writeWordBE(r, 0x1c28 + 0x1a, 16264);
+    writeWordBE(r, 0x6a2, 0);
+    writeWordBE(r, 0x6a4, 208);
+    writeWordBE(r, 0x6a6, 0);
+
+    const subs = noopSubs();
+    subs.fun_1cc62 = () => 0x003f8800;
+    delete subs.fun_25df6;
+
+    helper121B8(state, rom, 0x00400018, subs);
+
+    expect(readLongBE(r, playerOff + VX)).toBe(Math.round(0.05 * 0x10000));
+    expect(readLongBE(r, playerOff + VY)).toBe(Math.round(0.49 * 0x10000));
+    expect(state.debug?.lastTrackballSanitize).toMatchObject({
+      rawX: 208,
+      rawY: 0,
+      suppressedX: true,
+      suppressedY: false,
+      reasonX: "large-discontinuity",
+    });
+    expect(state.debug?.lastTrackballApply).toMatchObject({
+      rawX: 0,
+      rawY: 0,
+      appliedX: 0,
+      appliedY: 0,
+    });
+  });
+
+  it("in-range player follows ROM floor projection when an endpoint is missing", () => {
+    const state = emptyGameState();
+    state.clock.frame = 3051 as any;
+    const rom = emptyRomImage();
+    const r = state.workRam;
+    const playerOff = 0x00400018 - 0x400000;
+    const zStart = 16280 << 16;
+    const bogusFloor = 12210 << 16;
+
+    writeLongBE(r, playerOff + PZ, zStart);
+    writeLongBE(r, playerOff + VZ, 0);
+    writeWordBE(r, 0x1c28 + 0x04, 16280);
+    writeWordBE(r, 0x1c28 + 0x0e, 0);
+    writeWordBE(r, 0x1c28 + 0x10, 16280);
+    writeWordBE(r, 0x1c28 + 0x1a, 16280);
+    writeWordBE(r, 0x69e, 2);
+    writeWordBE(r, 0x6a0, 4);
+    writeWordBE(r, 0x6a2, 1);
+
+    const subs = noopSubs();
+    subs.fun_1cc62 = () => bogusFloor;
+    delete subs.fun_160f6;
+
+    helper121B8(state, rom, 0x00400018, subs);
+
+    expect(r[playerOff + BOUNCE]).toBe(2);
+    expect(readLongBE(r, playerOff + VZ)).toBe(0xffffa000);
+  });
+
+  it("in-range player still enters fall lock when the projected floor is trusted", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const r = state.workRam;
+    const playerOff = 0x00400018 - 0x400000;
+    const zStart = 16280 << 16;
+    const floorBelow = 12210 << 16;
+
+    writeLongBE(r, playerOff + PZ, zStart);
+    writeLongBE(r, playerOff + VZ, 0);
+    writeWordBE(r, 0x1c28 + 0x04, 16280);
+    writeWordBE(r, 0x1c28 + 0x0e, 16280);
+    writeWordBE(r, 0x1c28 + 0x10, 16280);
+    writeWordBE(r, 0x1c28 + 0x1a, 16280);
+    writeWordBE(r, 0x69e, 2);
+    writeWordBE(r, 0x6a0, 4);
+    writeWordBE(r, 0x6a2, 1);
+
+    const subs = noopSubs();
+    subs.fun_1cc62 = () => floorBelow;
+    delete subs.fun_160f6;
+
+    helper121B8(state, rom, 0x00400018, subs);
+
+    expect(r[playerOff + BOUNCE]).toBe(2);
+    expect(readLongBE(r, playerOff + VZ)).toBe(0xffffa000);
+  });
+
   it("in-range non-player: does NOT call fun_14e92, fun_175c8, fun_1924e", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
@@ -520,6 +618,19 @@ describe("helper121B8 (FUN_000121B8)", () => {
 
     expect(bab2.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(b5c2).toHaveBeenCalledOnce();
+  });
+
+  it("default spriteHelper1B9CC reuses the wired fun_1bab2 redraw path", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const subs = noopSubs();
+    const bab2 = vi.fn();
+    subs.fun_1bab2 = bab2;
+    delete subs.fun_1b9cc;
+
+    helper121B8(state, rom, OBJ_ABS, subs);
+
+    expect(bab2.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
   it("in-range player obj[0x36]=1 (not 2) → exits before state-byte dispatch", () => {

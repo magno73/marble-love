@@ -232,6 +232,14 @@ non entra piu' in death state. Sul caso L3 f3000 `UR`, il confronto dense e'
 gia' exact 180/180 sia active sia neutral; quindi L3 non e' piu' bloccato da
 gap TS/browser, ma resta candidato non cablato fino alla review finale dei
 seed startLevel.
+Sul bug live Beginner/L2 "marble che cade" vicino alla tromba viola, la causa
+non era una tile mancante: `FUN_1CABA` leggeva una riga terrain a `0xA02404`,
+cioe' nella Motion Object RAM della memory map Atari System 1, mentre il port
+TS accettava solo `0xA00000..0xA01FFF` come playfield. Ora
+`sub1CABATileRedraw` legge l'intero spazio video usato dal binario
+(`playfieldRam`, `spriteRam`/MO e `alphaRam`) e il regression test sul seed
+`start_level2_intro_beginner_f2436` verifica che la tile `(78,67)` non produca
+piu' endpoint terrain zero.
 Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.
