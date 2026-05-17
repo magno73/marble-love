@@ -55,14 +55,10 @@ emu.register_frame_done(function()
             local cp = pc
             table.insert(tap_handles, sound_mem:install_read_tap(cp, cp, "cp_"..pc, function(o, d, m)
                 if hits[cp] == nil then
-                    -- Compute cycles via emulator time × 6502 clock (1.789772 MHz).
-                    -- machine.time.attoseconds e' frazione di secondo in attoseconds.
-                    -- 1 cycle 6502 = 1/1789772 sec ≈ 5.587e11 attoseconds.
+                    -- Save secs + attoseconds separately, compute cycles in Python
+                    -- to avoid Lua 1e18 precision issues.
                     local t = manager.machine.time
-                    local secs = t.seconds
-                    local attos = t.attoseconds
-                    local cyc = math.floor(secs * 1789772 + attos * 1789772 / 1e18)
-                    hits[cp] = { cycle = cyc, frame = frame_count }
+                    hits[cp] = { secs = t.seconds, attos = t.attoseconds, frame = frame_count }
                 end
                 return d
             end))
@@ -84,8 +80,8 @@ emu.register_frame_done(function()
         for _, pc in ipairs(CHECKPOINTS) do
             if hits[pc] ~= nil then
                 local sep = first and "" or ","
-                out:write(string.format('%s\n  "0x%04x": {"cycle": %d, "frame": %d}',
-                    sep, pc, hits[pc].cycle, hits[pc].frame))
+                out:write(string.format('%s\n  "0x%04x": {"secs": %d, "attos": "%s", "frame": %d}',
+                    sep, pc, hits[pc].secs, tostring(hits[pc].attos), hits[pc].frame))
                 first = false
             end
         end

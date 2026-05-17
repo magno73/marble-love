@@ -114,12 +114,12 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     mailboxWrite(mainToSound, as_u8(0x77), () => nmiAsserted++);
     expect(nmiAsserted).toBe(1);
     // bit 3 ($08) = main→sound pending (NMI source) per atarisy1.cpp::switch_6502_r
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0x08);
+    expect((mmu.read8(as_u16(0x1820)) as number) & 0x08).toBe(0x08);
     // 6502 legge il byte da $1810 → ack
     const v = mmu.read8(as_u16(0x1810));
     expect(v as number).toBe(0x77);
     expect(nmiReleased).toBe(1);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0); // pending clear
+    expect((mmu.read8(as_u16(0x1820)) as number) & 0x08).toBe(0); // pending clear
   });
 
   it("write $1810 = sound→main latch, IRQ6 callback edge-triggered", () => {
@@ -134,11 +134,11 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     mmu.write8(as_u16(0x1810), as_u8(0x55));
     expect(irq6Asserted).toBe(1);
     // bit 4 ($10) = sound→main pending (response buffer full)
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0x10);
+    expect((mmu.read8(as_u16(0x1820)) as number) & 0x10).toBe(0x10);
     // 68K simula read da $FC0001 → ack
     const v = mailboxRead(soundToMain);
     expect(v as number).toBe(0x55);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0); // pending clear
+    expect((mmu.read8(as_u16(0x1820)) as number) & 0x10).toBe(0); // pending clear
   });
 
   it("status $1820 combinato: bit3 main-pending + bit4 sound-pending coesistono", () => {
@@ -150,7 +150,8 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     });
     mailboxWrite(mainToSound, as_u8(0x11));
     mmu.write8(as_u16(0x1810), as_u8(0x22));
-    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x18); // bit3 ($08) + bit4 ($10) = 0x18
+    // bit 7 + bits 0-2 ($87 pull-up base) + bit3 ($08 main pending) + bit4 ($10 sound pending) = $9F
+    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x9f);
   });
 });
 
@@ -163,12 +164,14 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     });
   }
 
-  it("YM2151 $1800/$1801: write salvati in shadow, read ritorna 0 (Phase 4 stub)", () => {
+  it("YM2151 $1800/$1801: write salvati in shadow, read ritorna status", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x1800), as_u8(0x20));  // register select
     mmu.write8(as_u16(0x1801), as_u8(0xC0));  // register data
     expect(mmu.ym2151.regs[0x20]).toBe(0xC0);
-    expect(mmu.read8(as_u16(0x1801)) as number).toBe(0);
+    // Read $1801 ritorna status byte. Dopo write busy bit (b7) e' set (~68
+    // master clock). Timer flag bits 0/1 = 0 (no overflow). Mascher solo timer.
+    expect((mmu.read8(as_u16(0x1801)) as number) & 0x03).toBe(0);
   });
 
   it("POKEY $1870-$187F: write salvati in shadow, read ritorna 0", () => {

@@ -105,16 +105,17 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
     }
     if (a === 0x1820) {
       // status: per atarisy1.cpp::switch_6502_r:
+      //   bit 7 ($80) = self-test switch (idle = 1; pull-up reale)
       //   bit 3 ($08) = main→sound pending (cmd buffer full, NMI source)
       //   bit 4 ($10) = sound→main pending (response buffer full)
-      //   bit 0-2 = coin inputs (stub V2: 0 = pressed, default 1=released
-      //             tramite open-bus altri bit). Marble sound code NMI handler
-      //             a $9566 fa BIT $1820 con A=$10 e BNE-loop, aspettando che
-      //             il response buffer (bit 4) sia letto dal main. Fino al
-      //             commit precedente i bit erano scambiati → loop infinito.
+      //   bit 0-2 = coin inputs (idle = 1, pressed = 0)
+      // Verificato 2026-05-17 via oracle/mame_1820_value_tap.lua: MAME al boot
+      // ritorna $8F (= $87 base + bit 3 main pending). Senza i bit di pull-up
+      // alti, boot $8018 `LDA $1820 AND #$80 BEQ` prende ramo divergente.
+      const base = 0x87;
       const b3 = cfg.mainToSound.pending ? 0x08 : 0;
       const b4 = cfg.soundToMain.pending ? 0x10 : 0;
-      return as_u8(b3 | b4);
+      return as_u8(base | b3 | b4);
     }
     if (a >= 0x1870 && a < 0x1880) {
       return pokeyRead(pokey, as_u8(a - 0x1870));

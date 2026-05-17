@@ -59,7 +59,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.mainToSound.value as number).toBe(0x65);
     expect(chip.cpu.nmi).toBe(true);
     // bit 3 ($08) = main→sound pending per atarisy1.cpp::switch_6502_r
-    expect(chip.mmu.read8(0x1820 as never) as number & 0x08).toBe(0x08);
+    expect((chip.mmu.read8(0x1820 as never) as number) & 0x08).toBe(0x08);
   });
 
   it("6502 ack legge $1810 → pending clear, NMI rilasciato", () => {
@@ -195,18 +195,18 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
   });
 
   it("chip genera audio quando i voice register sono scritti correttamente", async () => {
-    // Regression lock per sessione 4 finding: il chip TS produce sample
-    // audibili quando KC/KF/operator regs sono settati via $1800/$1801. Il
-    // gap audio attuale (cross-correlation 0.0 vs MAME) e' nel music
-    // dispatcher 6502 che NON raggiunge le scritture KC/KF, non nel chip
-    // stesso. Questo test impedisce regressioni del sample generator.
-    const { drainYm2151Samples } = await import("../src/m6502/sound-chip.js");
-    const { as_u16 } = await import("../src/wrap.js");
+    // Regression lock per sessione 4 finding: il YM2151 produce sample
+    // audibili quando KC/KF/operator regs sono settati. Testa il chip
+    // YM2151 in ISOLAMENTO (no 6502 boot) per evitare che il boot del
+    // 6502 clobberi i reg manuali.
+    const { ym2151WriteAddr, ym2151WriteData, ym2151TickCycles, ym2151DrainSamples } =
+      await import("../src/audio/ym2151.js");
     const chip = createSoundChip({ roms: loadRoms() });
-    releaseSoundReset(chip);
+    // NON chiamiamo releaseSoundReset: il 6502 stays held, non interferisce
+    // con i nostri write diretti al YM2151.
     function ymWrite(reg: number, val: number) {
-      chip.mmu.write8(as_u16(0x1800), as_u8(reg));
-      chip.mmu.write8(as_u16(0x1801), as_u8(val));
+      ym2151WriteAddr(chip.ym2151, as_u8(reg));
+      ym2151WriteData(chip.ym2151, as_u8(val));
     }
     // Setup ch 0 algo 7 (parallel), max amp; KC=$4A ≈ A4 ~440Hz
     ymWrite(0x20, 0xC7); ymWrite(0x28, 0x4A); ymWrite(0x30, 0x00);
@@ -217,11 +217,11 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     for (const opOff of [0xE0, 0xE8, 0xF0, 0xF8]) ymWrite(opOff, 0x0F);
     // Key on all slots ch 0
     ymWrite(0x08, 0x78);
-    // Tick 60 frame, drain samples
+    // Tick 60 frame del YM2151 direttamente, drain samples
     let maxAbs = 0;
     for (let f = 0; f < 60; f++) {
-      tickCycles(chip, 29830);
-      for (const s of drainYm2151Samples(chip)) {
+      ym2151TickCycles(chip.ym2151, 29830);
+      for (const s of ym2151DrainSamples(chip.ym2151)) {
         const a = Math.abs(s);
         if (a > maxAbs) maxAbs = a;
       }
