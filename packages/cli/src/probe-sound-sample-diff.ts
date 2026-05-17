@@ -25,7 +25,7 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { createSoundChip, tickCycles, releaseSoundReset, drainYm2151Samples, drainPokeySamples, submitCommand, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE } from "../../engine/src/m6502/sound-chip.js";
+import { createSoundChip, tickCycles, releaseSoundReset, drainYm2151Samples, drainPokeySamples, drainReplyEvents, submitCommand, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE } from "../../engine/src/m6502/sound-chip.js";
 import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";
 import { as_u8 } from "../../engine/src/wrap.js";
 
@@ -137,9 +137,8 @@ function main(): void {
   const rom421 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.421"));
   const rom422 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.422"));
 
-  // Crea SoundChip + release (post f245 default)
+  // Crea SoundChip; release del reset al primo cmd frame (matching MAME).
   const chip = createSoundChip({ roms: { rom421, rom422 } });
-  releaseSoundReset(chip);
 
   // Run N frame, inject cmd dal tape al frame giusto
   const cmdByFrame = new Map<number, number[]>();
@@ -147,15 +146,25 @@ function main(): void {
     if (!cmdByFrame.has(c.frame)) cmdByFrame.set(c.frame, []);
     cmdByFrame.get(c.frame)!.push(c.byte);
   }
+  const firstCmdFrame = cmdByFrame.size > 0
+    ? Math.min(...Array.from(cmdByFrame.keys()))
+    : 0;
+  let resetReleased = false;
 
   const ymSamples: number[] = [];
   const pokeySamples: number[] = [];
   for (let f = 0; f < frames; f++) {
+    // Hardware-faithful: submit cmd (NMI suppressed in reset), then release.
     const cmds = cmdByFrame.get(f);
     if (cmds !== undefined) {
       for (const c of cmds) submitCommand(chip, as_u8(c));
     }
+    if (!resetReleased && f >= firstCmdFrame) {
+      releaseSoundReset(chip);
+      resetReleased = true;
+    }
     tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+    drainReplyEvents(chip);  // simula main 68K read $FC0001
     const ym = drainYm2151Samples(chip);
     const pk = drainPokeySamples(chip);
     ymSamples.push(...ym);

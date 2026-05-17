@@ -1,16 +1,47 @@
 import { readFileSync } from "node:fs";
-import { createSoundChip, releaseSoundReset, drainYm2151Samples, drainPokeySamples, loadCmdTape, tickFrameWithTape, getRegisterShadow } from "../../engine/src/m6502/sound-chip.js";
+import { createSoundChip, releaseSoundReset, drainYm2151Samples, drainPokeySamples, loadCmdTape, submitCommand, tickCycles, drainReplyEvents, getRegisterShadow } from "../../engine/src/m6502/sound-chip.js";
+import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";
+import { as_u8 } from "../../engine/src/wrap.js";
 
 const rom421 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.421"));
 const rom422 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.422"));
 const tape = loadCmdTape(JSON.parse(readFileSync("oracle/scenarios/sound-cmd-tape-attract.json", "utf8")));
 
 const chip = createSoundChip({ roms: { rom421, rom422 } });
-releaseSoundReset(chip);
+// CRITICAL: in MAME il main 68K tiene il sound 6502 in reset fino al primo
+// cmd (~f244 nella tape attract). Se TS rilascia il reset a f0, il 6502 gira
+// 244 frame in idle accumulando state divergente. Fix: rilascia solo al
+// primo frame in cui arriva un cmd.
+const firstCmdFrame = Math.min(...Array.from(tape.byFrame.keys()));
+// MAME hardware ordering a f244: $FE0001 write (cmd, sound CPU in reset) →
+// $860001 bit7=1 (release). Cmd va in soundlatch SENZA NMI (CPU in reset
+// non latch l'edge), poi 6502 esce dal reset e legge $1810 via polling.
+// Per replicarlo: a firstCmdFrame, sottometti i cmd PRIMA di rilasciare il
+// reset (submitCommand sopprime NMI quando inReset=true).
+const RESET_RELEASE_OFFSET = Number(process.env.RESET_OFFSET ?? "0");
+const releaseFrame = Math.max(0, firstCmdFrame - RESET_RELEASE_OFFSET);
+console.log(`First cmd frame: ${firstCmdFrame}, release at: ${releaseFrame}`);
 
 let totalYm = 0, totalPk = 0, maxAbsYm = 0, maxAbsPk = 0;
+let released = false;
 for (let f = 0; f < 600; f++) {
-  tickFrameWithTape(chip, tape, f);
+  // STEP 1: submit cmd di questo frame. submitCommand sopprime NMI se inReset.
+  const frameCmds = tape.byFrame.get(f);
+  if (frameCmds !== undefined) {
+    for (const b of frameCmds) submitCommand(chip, as_u8(b));
+  }
+  // STEP 2: release del reset al frame target (DOPO submit per matching MAME)
+  if (!released && f >= releaseFrame) {
+    releaseSoundReset(chip);
+    released = true;
+    console.log(`Released sound reset at f${f}`);
+  }
+  // STEP 3: tick cycle del frame.
+  tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+  // STEP 4: drain reply queue. Simula main 68K che legge $FC0001 (IRQ6
+  // handler). Senza drain, soundToMain.pending resta true e il sound 6502
+  // si blocca nel NMI handler waiting for response buffer clear.
+  drainReplyEvents(chip);
   const ym = drainYm2151Samples(chip);
   const pk = drainPokeySamples(chip);
   for (const s of ym) { totalYm++; if (Math.abs(s) > maxAbsYm) maxAbsYm = Math.abs(s); }
@@ -31,6 +62,13 @@ let audioRamNonZero = 0;
 for (let i = 0; i < chip.mmu.ram.length; i++) if (chip.mmu.ram[i] !== 0) audioRamNonZero++;
 console.log(`audioRam non-zero bytes: ${audioRamNonZero}/${chip.mmu.ram.length}`);
 console.log(`audioRam[0..63]:`, Array.from(chip.mmu.ram.slice(0,64)).map(b=>b.toString(16).padStart(2,'0')).join(' '));
+// Print non-zero byte offsets to see what 6502 wrote
+const nonZeroOffsets: number[] = [];
+for (let i = 0; i < chip.mmu.ram.length; i++) if (chip.mmu.ram[i] !== 0) nonZeroOffsets.push(i);
+console.log(`Non-zero offsets:`, nonZeroOffsets.slice(0,30).map(o => `$${o.toString(16)}=$${chip.mmu.ram[o]!.toString(16).padStart(2,'0')}`).join(' '));
+const cpuInner = chip.cpu as unknown as { rf?: { pc?: number; sp?: number; a?: number; x?: number; y?: number } };
+const rf = cpuInner.rf;
+if (rf) console.log(`CPU rf: PC=$${(rf.pc??0).toString(16)} SP=$${(rf.sp??0).toString(16)} A=$${(rf.a??0).toString(16)} X=$${(rf.x??0).toString(16)} Y=$${(rf.y??0).toString(16)}`);
 console.log(`CPU state keys:`, Object.keys(chip.cpu).slice(0,20).join(','));
 console.log(`YM2151 keys:`, Object.keys(chip.ym2151).slice(0,30).join(','));
 const ym = chip.ym2151 as unknown as Record<string, unknown>;

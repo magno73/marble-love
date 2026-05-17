@@ -18,14 +18,18 @@
 import {
   createSoundChip,
   releaseSoundReset,
+  submitCommand,
+  tickCycles,
   drainYm2151Samples,
   drainPokeySamples,
+  drainReplyEvents,
   loadCmdTape,
-  tickFrameWithTape,
+  SOUND_CYCLES_PER_FRAME,
   YM2151_NATIVE_SAMPLE_RATE,
   POKEY_NATIVE_SAMPLE_RATE,
   type CmdTape,
 } from "@marble-love/engine";
+import { wrap } from "@marble-love/engine";
 import type { extractRomZipFiles } from "./rom-loader.js";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 
@@ -75,7 +79,10 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   );
 
   const chip = createSoundChip({ roms: { rom421, rom422 } });
-  releaseSoundReset(chip);
+  // NOTE: hardware-faithful ordering — il release del reset avviene al
+  // primo cmd frame, DOPO che il cmd e' stato submitted (NMI suppressed
+  // durante reset). Vedi `loop` sotto.
+  const firstCmdFrame = Math.min(...Array.from(tape.byFrame.keys()));
 
   const btn = document.createElement("button");
   btn.textContent = "▶ Start Replay";
@@ -89,6 +96,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   let frame = 0;
   let loops = 0;
   let started = false;
+  let resetReleased = false;
 
   btn.addEventListener("click", async () => {
     if (started) return;
@@ -108,7 +116,21 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
     }
 
     setInterval(() => {
-      tickFrameWithTape(chip, tape, frame);
+      // Hardware-faithful ordering (matching MAME atarisy1 a f244):
+      // 1. submit cmd (NMI suppressed se chip ancora in reset)
+      // 2. release reset al primo cmd frame (NMI line si attiva su pending)
+      // 3. tick cycles del frame
+      // 4. drain reply queue (simula main 68K che legge $FC0001)
+      const cmds = tape.byFrame.get(frame);
+      if (cmds !== undefined) {
+        for (const b of cmds) submitCommand(chip, wrap.as_u8(b & 0xff));
+      }
+      if (!resetReleased && frame >= firstCmdFrame) {
+        releaseSoundReset(chip);
+        resetReleased = true;
+      }
+      tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+      drainReplyEvents(chip);
       const ym = drainYm2151Samples(chip);
       const pk = drainPokeySamples(chip);
       if (ym.length > 0) renderer!.pushYm2151Samples(ym, YM2151_NATIVE_SAMPLE_RATE);
@@ -117,6 +139,8 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       if (frame >= tape.totalFrames) {
         frame = 0;
         loops++;
+        // Reset chip for next loop iteration so cycle skew doesn't accumulate
+        resetReleased = false;
       }
       if (frame % 60 === 0) {
         setStatus(

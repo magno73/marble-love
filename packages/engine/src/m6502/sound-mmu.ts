@@ -104,12 +104,16 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
       return mailboxRead(cfg.mainToSound, cfg.onMainToSoundAck);
     }
     if (a === 0x1820) {
-      // status: bit 3 = sound→main pending (impedisce sound CPU di
-      //                sovrascrivere prima che main legga),
-      //         bit 4 = main→sound pending (input ready dal 68K)
-      // Altri bit: switch coin/self-test/etc., stub = 0.
-      const b3 = cfg.soundToMain.pending ? 0x08 : 0;
-      const b4 = cfg.mainToSound.pending ? 0x10 : 0;
+      // status: per atarisy1.cpp::switch_6502_r:
+      //   bit 3 ($08) = main→sound pending (cmd buffer full, NMI source)
+      //   bit 4 ($10) = sound→main pending (response buffer full)
+      //   bit 0-2 = coin inputs (stub V2: 0 = pressed, default 1=released
+      //             tramite open-bus altri bit). Marble sound code NMI handler
+      //             a $9566 fa BIT $1820 con A=$10 e BNE-loop, aspettando che
+      //             il response buffer (bit 4) sia letto dal main. Fino al
+      //             commit precedente i bit erano scambiati → loop infinito.
+      const b3 = cfg.mainToSound.pending ? 0x08 : 0;
+      const b4 = cfg.soundToMain.pending ? 0x10 : 0;
       return as_u8(b3 | b4);
     }
     if (a >= 0x1870 && a < 0x1880) {
