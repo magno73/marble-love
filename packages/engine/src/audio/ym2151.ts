@@ -404,8 +404,12 @@ export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
 export function ym2151ReadStatus(ym: YM2151): u8 {
   const b0 = ym.timerAOverflow ? 0x01 : 0;
   const b1 = ym.timerBOverflow ? 0x02 : 0;
-  // bit 7 = busy: stub V2 sempre false (chip sempre pronto). Real hardware
-  // setta busy per ~32 cycle dopo write, ma il sound code Marble non polla.
+  // bit 7 = busy: V3 sempre false. Real hardware setta busy per 68 master
+  // clock dopo write a $1801. Boot $8FED polla bit 7 → senza modello busy,
+  // 4 call dell'init sub eseguono 28 cycle piu' veloce di MAME (verificato
+  // 2026-05-17 via probe-pc-cycles). Modello busy aggiunto e poi rimosso:
+  // rompeva music driver state machine (audio output → 0). Approccio
+  // corretto richiede MAME tap su $1801 reads per misurare busy duration.
   return as_u8(b0 | b1);
 }
 

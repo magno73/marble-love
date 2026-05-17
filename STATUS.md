@@ -1,7 +1,56 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (audio sessione 4j: $14 bit mapping + IRQ real-time → audio reale!)
+**Ultimo update:** 2026-05-17 (audio sessione 4k: $1820 pull-up base — boot path cycle-aligned)
 **Branch corrente:** `main`.
+
+## 2026-05-17 — Audio sessione 4k: $1820 pull-up base + drill A1 cycle-exact
+
+🎯 **Drill A1 cycle-exact identifica root cause divergenza boot path**:
+
+Nuovo tooling: `oracle/mame_sound_pc_cycles.lua` + `packages/cli/src/probe-pc-cycles.ts`
+checkpoint cycle count del sound 6502 su 33 PC nel boot path. Confronto
+diretto TS vs MAME identifica il PRIMO punto di divergenza.
+
+**Root cause #1**: bit-7 di `$1820` (status switch register) era SEMPRE 0
+in TS. MAME hardware ha pull-up resistors su bit 7 + bits 0-2 → ritorna
+sempre 1 quando non attivati (verificato via `oracle/mame_1820_value_tap.lua`:
+$1820 al boot = **$8F** = $87 base + bit 3 main pending).
+
+Boot a `$8018`: `LDA $1820 AND #$80 BEQ $802C`. Con bit 7 = 0 in TS, BEQ
+taken → path divergente che impiega 1,700,000 cycle invece di 2,569 per
+arrivare a `$80C3` main loop.
+
+**Fix**: `sound-mmu.ts` $1820 read ritorna `$87 | b3 | b4` (pull-up base
+$87 + bit 3 main→sound pending + bit 4 sound→main pending).
+
+**Risultati cycle-exact post-fix**:
+
+| PC | MAME | TS (pre) | TS (post) |
+|----|------|----------|-----------|
+| `$8002` | 0 | 0 | 0 |
+| `$8016` | 26 | 26 | **26 ✓** |
+| `$8177` (init sub) | 2,347 | — | **2,347 ✓** |
+| `$8179` | 2,349 | — | **2,349 ✓** |
+| `$80C3` (main loop) | 2,569 | 1,721,548 | **2,541** |
+| `$80EE` | 7,466 | — | 7,341 |
+| `$81FE` | 10,737 | — | 10,708 |
+
+Boot path TS ora segue MAME cycle-by-cycle fino a `$8179`. Drift residuo
+~28 cycle nella init sub $8177-$81A5 (4 chiamate a $8FED YM busy-wait —
+modello busy bit YM2151 non implementato).
+
+**Test fix**: `m6502-mailbox.test.ts` aveva bug di operator precedence
+`read8(...) as number & 0x08` (parsed come `as (number & 0x08)` type
+intersection, no runtime mask). Aggiunti parens espliciti: `(read8(...) as
+number) & 0x08`. Test "voice register correttamente" rifattorizzato per
+testare il YM2151 in isolamento (no 6502 boot che clobberava i regs).
+
+**Test**: 38/38 sound test PASS.
+
+**Next step**: il drift 28 cycle viene da `$8FED` YM busy polling — non
+modellato. Quando implementato corretamente romperà il music driver state
+(provato: con busyCycles=68 master, audio output → 0). Approccio richiede
+modello accurato della busy duration MAME (forse via tap su $1801 reads).
 
 ## 2026-05-17 — Audio sessione 4j: chip produce audio reale, hack rimosso
 

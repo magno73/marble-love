@@ -844,14 +844,26 @@ pending, era scambiato), NMI/reset race (submitCommand sopprime NMI durante
 reset, releaseSoundReset rifira pending), reply queue drain mancante. Vedi
 `docs/audio-chip-perfect-prd.md` § 9.
 
-**Audio status corrente** (sessione 4j 2026-05-17): chip TS produce audio
-reale (`maxAbs=0.08`) **senza workaround**. Due bug critici fixati:
+**Audio status corrente** (sessione 4k 2026-05-17): drill A1 cycle-exact
+identifica root cause divergenza boot path. **3 bug critici fixati**:
 
-1. `$14` bit mapping era invertito vs ymfm/MAME: bit 2/3 sono
+1. **$1820 pull-up base** (sessione 4k): bit 7 + bits 0-2 erano 0 in TS,
+   mentre MAME hardware ha pull-up resistors → ritorna `$87 | b3 | b4`.
+   Verificato via `oracle/mame_1820_value_tap.lua`: MAME ritorna $8F al
+   boot. Senza fix, boot `$8018 LDA $1820 AND #$80 BEQ` prendeva ramo
+   divergente → 1.7M cycle vs 2.5K MAME per arrivare a main loop $80C3.
+2. `$14` bit mapping era invertito vs ymfm/MAME: bit 2/3 sono
    enable_timer_a/b (IRQ gate), bit 4/5 sono reset_timer_a/b (clear flag).
    TS interpretava 2/3 come "clear flag" → IRQ mai abilitato.
-2. `cpu.irq` aggiornato solo a fine frame → infinite IRQ loop. Fix:
+3. `cpu.irq` aggiornato solo a fine frame → infinite IRQ loop. Fix:
    interleave `step()` + chip tick + IRQ pin update ad ogni istruzione.
+
+**Drill A1 cycle-exact** (`probe-pc-cycles.ts` + `mame_sound_pc_cycles.lua`):
+33 checkpoint PC su boot path, confronto cycle count TS vs MAME. Post-fix
+$1820: boot path TS segue MAME cycle-by-cycle fino a `$8179`. Drift residuo
+28 cycle nella init sub `$8FED` YM busy-wait — modello busy bit YM2151 non
+implementato (busyCycles=68 master rompe music driver state machine →
+audio output → 0; modello accurato richiede MAME tap su $1801 reads).
 
 Risultati: 66/96 voice reg scritti, 862 byte audioRam non-zero, audio
 audibile. Cross-correlation con MAME WAV ancora bassa (TS sceglie music
