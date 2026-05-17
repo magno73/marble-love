@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (audio cmd-tape replay infrastructure)
+**Ultimo update:** 2026-05-17 (audio: 66/96 voice regs, gap KC/KF residuo)
 **Branch corrente:** `main`.
+
+## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF
+
+Continuita' dei findings sessione 3 (commit `7671a9d` per i 3 bug fix
+critici $1820/NMI/reply).
+
+**Step decisivo**: hot-patch `forceSoundIrqHack(chip)` che forza
+`timerAOverflow=true, timerAIrqEnable=true` PRIMA di ogni `tickCycles` (non
+dopo). Risultato dopo 3000 frame:
+
+- Voice register YM2151 ($20-$7F): **66/96 popolati** (prima: 0!).
+- audioRam: 816 byte non-zero (MAME: ~525).
+- zp $00 incrementato (handler IRQ esegue), zp $01 azzerato dopo wait loop.
+- Dispatcher `$9622` raggiunto via IRQ handler ($81ED JSR $9622).
+
+**Cosa funziona ora**:
+
+- Boot init: $10=$C8, $11=$00, $14=$05 (timer A loaded).
+- IRQ handler $81A6 esegue: clear flag A, re-arm timer, JSR $9622 (music).
+- $9622 dispatcher accede al jump table indicizzato da zp $32/$33/$34.
+- Routine pointed-to scrivono RL/FB/CONN ($20-$27), DT1/MUL ($40-$5F),
+  TL ($60-$67), D1L/RR/D1R/D2R ($80-$FF) — register-state OK.
+
+**Cosa NON funziona** (audio silente nonostante register popolati):
+
+- Pitch register **MAI scritti**: $28-$2F (KC) e $30-$37 (KF) restano 0.
+- Channel state TS: `kc=0, kf=0` su tutte 8 voci → frequency=0 → silenzio.
+- Cross-correlation TS vs MAME WAV: ancora 0.0.
+
+**API esportata**: `forceSoundIrqHack(chip)` in `@marble-love/engine`,
+opt-in via `?soundIrqHack=1` nel ramo soundReplay. Default off — non
+bit-perfect ma sblocca music dispatcher per testing.
+
+**Next session**: identificare il branch del dispatcher $9622 che porta a
+KC/KF writes (probabile: zp $32/$33/$34 deve raggiungere valore specifico),
+MAME PC trace post-$9622 entry → confronto con TS, drill cycle table M6502.
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 

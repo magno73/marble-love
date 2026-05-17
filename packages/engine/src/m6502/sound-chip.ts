@@ -250,6 +250,20 @@ export function loadCmdTape(tape: CmdTape): LoadedCmdTape {
   return { byFrame, totalFrames: maxFrame + 1, cmdCount: tape.cmds.length };
 }
 
+/** Workaround sessione 4 (2026-05-17): forza Timer A IRQ assertion PRIMA del
+ * tickCycles per sbloccare il music dispatcher. Senza questo, il 6502 boota
+ * ma `$14=$11` (IRQ enable) non viene mai scritto perche' il path che lo
+ * setta e' nel handler IRQ stesso (chicken-and-egg con il FIRST IRQ che
+ * dovrebbe fire). MAME bypassa il problema in modi che non sono chiari dal
+ * disassembly statico — potrebbe essere cycle skew, potrebbe essere una
+ * quirk del MAME ym2151 emulator. Questo workaround non e' bit-perfect ma
+ * sblocca 66/96 voice register writes. Default off per non interferire con
+ * altri scenari sound (eg. test, gameplay future). */
+export function forceSoundIrqHack(chip: SoundChip): void {
+  chip.ym2151.timerAOverflow = true;
+  chip.ym2151.timerAIrqEnable = true;
+}
+
 /** Avanza il sound chip per un frame (SOUND_CYCLES_PER_FRAME cycle 6502)
  * iniettando i cmd del tape registrati per quel frame.
  *

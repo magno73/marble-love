@@ -359,6 +359,7 @@ export {
   drainPokeySamples,
   loadCmdTape,
   tickFrameWithTape,
+  forceSoundIrqHack,
   YM2151_NATIVE_SAMPLE_RATE,
   POKEY_NATIVE_SAMPLE_RATE,
 } from "./m6502/sound-chip.js";
