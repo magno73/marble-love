@@ -881,14 +881,14 @@ contiene per ogni slot LO+HI. TS slot table popolata con tracce
 $A0xx-$BDxx. MAME slot table ha tracce **$CCxx** in slot 8/9/10/13
 (es. slot 13 = $CCB4 e' il track audible a sec 200-220).
 
-Music init routine `$91A8` (sessione 4h) carica music pointer da una di
-2 ROM lookup tables: $9647+ (music ID bit 7 = 1) o $9747+ (bit 7 = 0).
-Table 2 ($9747+) contiene attract music tracks: idx $1C = $CCB4, idx
-$1D = $CCE8, idx $1E = $CD38, idx $1F = $CD8C. Per attivare attract
-music serve music ID 0x1C..0x1F. La routine $91A8 NON e' referenziata
-da nessun JSR/JMP/data table in ROM — entry via RTS-trick o JMP
-indirect. Per chiudere il gap finale serve dynamic instruction trace
-MAME a music-ID-write per identificare il caller divergente.
+Music init via **RTS-trick** (sessione 4i): routine `$8359` carica indirizzi
+da tabella `$862F/$8630`, PHA hi+lo, RTS → JMP indirect. Music ID `$9B3D,Y`
+mappa a cmd code 0-13 → entry in jump table. Music ID $14 → cmd $06 →
+routine `$84E9` (attract music init) → fall through `$85C0` → STA `$0258,Y`
+con valore $CC. Trace MAME conferma a f12484: PC=$85D5, X=$38, zp $19=$14.
+Per riprodurre in TS bit-perfect serve verificare cosa setta zp $19=$14
+nel music engine (probabile timer event), e che TS reach `$8135 JSR $8359`
+con stessa state.
 
 | Phase | File | Test |
 |---|---|---|

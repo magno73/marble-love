@@ -366,7 +366,68 @@ Per chiudere serve dynamic trace MAME instruction-by-instruction durante
 music ID write per identificare il caller di $91A8 e il branch divergente
 che TS prende.
 
-**Stato finale audio drill sessione 4 (4a-4h)**:
+**Sessione 4i — RTS-trick dispatch + caller di $91A8 identificato**:
+
+Music init e' chiamata via **RTS-trick** (push addr-1, RTS) attraverso una
+jump table al `$862F/$8630`. La routine `$8359` carica indirizzi da questa
+tabella e fa RTS per saltare:
+
+```
+$8359 CPY #$68            ; check music ID bound
+$835B BCS skip
+$835D LDA $9B3D,Y         ; music ID → cmd code
+$8360 CMP #$0E
+$8362 BCS skip
+$8364 ASL                 ; X = cmd code * 2
+$8365 TAX
+$8366 LDA $8630,X         ; PCH from table
+$8369 PHA                 ; push hi
+$836A LDA $862F,X         ; PCL from table
+$836D PHA                 ; push lo
+$836E LDA $9BA5,Y         ; setup A
+$8371 RTS                 ; → JMP to table[cmd_code]
+```
+
+**Music dispatch table** (`$862F/$8630`, 13 entries):
+
+| cmd code | routine | uso |
+|---|---|---|
+| $00 | $8372 | (entry 0) |
+| $01 | $8375 | music ID $12/$13 |
+| $02 | $8380 | music ID $00 |
+| $03 | $838B | |
+| $04 | $83A4 | music ID $3A/$40 |
+| $05 | $83C6 | |
+| $06 | **$84E9** | **music ID $14,$08,$0A,$0C,$0E,$10 ecc. (attract music!)** |
+| $07 | $8450 | |
+| $08 | $83EB | music ID $09/$0B/$0D/$0F/$11 |
+| $09 | $8422 | |
+| $0A | $862E | |
+| $0B | $846C | |
+| $0C-$0D | $862E (dup) | |
+
+**Music ID lookup** (`$9B3D`, 0x68 entries): music ID → cmd code. Music ID
+$14 (attract music nei capture MAME) → cmd $06 → routine **$84E9**.
+
+**$84E9 e' la routine attract music init**. Eventually flow reaches:
+- `$85C0` ASL + TAX + LDA $9647/$9747,X + STA $0248/$0258,Y (slot writer
+  con i 2 ROM tables identificate prima)
+
+**Capture conferma**: a f12484 (1 frame prima del primo KEY ON), MAME
+scrive $0265=$CC, $0262=$CC, $0261=$CD, $0260=$CD (slot HI). PC=$85D5
+(= STA $0258,Y nel writer). Caller via stack: $8138 (= JSR $8359 a $8135).
+
+**zp $19 = $14 al momento del write** = music ID $14 = "attract music".
+
+**Per riprodurre bit-perfect in TS**:
+
+1. Verificare che TS reach $8135 → JSR $8359 con Y=$14 quando appropriato
+2. Trace TS PC durante f12480-f12485 senza `forceSoundIrqHack`
+3. Identificare cosa setta zp $19 = $14 in MAME (chi imposta il music ID
+   per attract trigger) — probabile timer-based event nella music engine
+4. Replicare il path bit-perfect (no shortcut/hot-patch)
+
+## Stato finale audio drill sessione 4 (4a-4i)
 
 Infrastruttura audio TS funzionalmente completa:
 - ✅ Cmd processing (NMI handler $9566)
