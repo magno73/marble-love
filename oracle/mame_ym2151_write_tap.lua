@@ -101,6 +101,14 @@ emu.register_frame_done(function()
             out:write(string.format('    {"frame": %d, "reg": "0x%02x", "data": "0x%02x"}%s\n',
                 w.frame, w.reg, w.data, sep))
         end
+        out:write("  ],\n")
+        out:write('  "rawWrites": [\n')
+        for i, w in ipairs(ym_writes) do
+            if i > 50 then break end
+            local sep = (i < math.min(50, #ym_writes)) and "," or ""
+            out:write(string.format('    {"frame": %d, "addr": "0x%04x", "data": "0x%02x"}%s\n',
+                w.frame, w.addr, w.data, sep))
+        end
         out:write("  ]\n")
         out:write("}\n")
         out:close()
