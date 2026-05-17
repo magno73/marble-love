@@ -25,9 +25,9 @@ emu.register_frame_done(function()
         table.insert(tap_handles, sound_mem:install_write_tap(0x1000, 0x3FFF, "p_w", function(o, d, m)
             local masked = o & 0xD87F
             if (masked & 0xFFF0) == 0x1870 then
-                if #writes < 5000 then
+                if true then
                     local pc = audiocpu.state["PC"] and audiocpu.state["PC"].value or -1
-                    table.insert(writes, { frame = frame_count, reg = o & 0x0F, data = d & 0xff, pc = pc })
+                    if (d & 0xff) ~= 0 then table.insert(writes, { frame = frame_count, reg = o & 0x0F, data = d & 0xff, pc = pc }) end
                 end
             end
             return d
