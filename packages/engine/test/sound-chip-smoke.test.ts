@@ -139,6 +139,43 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     // Non garantiamo che il 6502 abbia letto entro 10000 cycle, ma neanche
     // dovrebbe rimanere stuck.
   });
+
+  it("chip genera audio quando i voice register sono scritti correttamente", async () => {
+    // Regression lock per sessione 4 finding: il chip TS produce sample
+    // audibili quando KC/KF/operator regs sono settati via $1800/$1801. Il
+    // gap audio attuale (cross-correlation 0.0 vs MAME) e' nel music
+    // dispatcher 6502 che NON raggiunge le scritture KC/KF, non nel chip
+    // stesso. Questo test impedisce regressioni del sample generator.
+    const { drainYm2151Samples } = await import("../src/m6502/sound-chip.js");
+    const { as_u16 } = await import("../src/wrap.js");
+    const chip = createSoundChip({ roms: loadRoms() });
+    releaseSoundReset(chip);
+    function ymWrite(reg: number, val: number) {
+      chip.mmu.write8(as_u16(0x1800), as_u8(reg));
+      chip.mmu.write8(as_u16(0x1801), as_u8(val));
+    }
+    // Setup ch 0 algo 7 (parallel), max amp; KC=$4A ≈ A4 ~440Hz
+    ymWrite(0x20, 0xC7); ymWrite(0x28, 0x4A); ymWrite(0x30, 0x00);
+    // Setup 4 operators: MUL=1, TL=0 (loudest), AR=31 (fast attack), RR=15
+    for (const opOff of [0x40, 0x48, 0x50, 0x58]) ymWrite(opOff, 0x01);
+    for (const opOff of [0x60, 0x68, 0x70, 0x78]) ymWrite(opOff, 0x00);
+    for (const opOff of [0x80, 0x88, 0x90, 0x98]) ymWrite(opOff, 0x1F);
+    for (const opOff of [0xE0, 0xE8, 0xF0, 0xF8]) ymWrite(opOff, 0x0F);
+    // Key on all slots ch 0
+    ymWrite(0x08, 0x78);
+    // Tick 60 frame, drain samples
+    let maxAbs = 0;
+    for (let f = 0; f < 60; f++) {
+      tickCycles(chip, 29830);
+      for (const s of drainYm2151Samples(chip)) {
+        const a = Math.abs(s);
+        if (a > maxAbs) maxAbs = a;
+      }
+    }
+    // Verifica: dopo attack (60 frame ≈ 1 sec), envelope al sustain → sample
+    // audibili. Soglia conservativa 0.1 (su scala -1..+1 = ~-20dB).
+    expect(maxAbs).toBeGreaterThan(0.1);
+  });
 });
 
 describe.skipIf(haveRoms)("SoundChip facade skip: rom assenti", () => {

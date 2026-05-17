@@ -1,7 +1,37 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (audio: 66/96 voice regs, gap KC/KF residuo)
+**Ultimo update:** 2026-05-17 (runtime: projected-floor guard per falso fall L4)
 **Branch corrente:** `main`.
+
+## 2026-05-17 — Runtime: falso fall su Aerial/L4 da endpoint floor mancante
+
+Bug utente "marble che cade": lo screenshot `marble che cade` mostrava la
+marble su Aerial/L4 a `x=594,y=572,z=16280`, ma l'overlay esponeva
+`proj=(cx0:16280 cx1:0 cy0:16280 cz:16280 fx:2 fy:4 bge:1)` e
+`floorNow=12210`. Il problema non era una collisione invisibile: il renderer/
+physics TS stava interpolando il pavimento usando `cx1=0` come endpoint reale,
+quindi `FUN_160F6` riceveva un `prevTimer/floor` spurio molto piu' basso e
+armava `obj0+0x36=2`, `vz=-0x6000`.
+
+Fix:
+
+- `projectedFloorMissingEndpointReason` rileva endpoint 0/non-zero usati da
+  `FUN_1CC62` quando la frazione corrispondente contribuisce davvero al floor.
+- `helper121B8` applica la guardia solo al player: passa a `FUN_160F6` la quota
+  corrente invece del floor spurio, non arma il fall da z-drift e non snap-pa
+  `obj.z` al `d4_timer` invalidato.
+- L'overlay debug ora mostra `last projected floor guard`, utile per distinguere
+  questa classe di bug da collisioni con oggetti/slot.
+
+Proof locale:
+
+- Unit regression: `helper-121b8.test.ts` replica il caso `cx1=0, fx=2` e
+  verifica `f36=0`, `vz=0`, `z` stabile; un floor valido sotto la marble continua
+  invece ad armare il fall.
+- Playwright screenshot:
+  `screenshots/bug-verify/marble-cade-guard-check.png` mostra nello stesso punto
+  `f36=00`, `z=16280`, `floor=12210` guardato, e overlay con
+  `last projected floor guard ... reason=x-missing-endpoint`.
 
 ## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF
 
@@ -34,6 +64,12 @@ dopo). Risultato dopo 3000 frame:
 **API esportata**: `forceSoundIrqHack(chip)` in `@marble-love/engine`,
 opt-in via `?soundIrqHack=1` nel ramo soundReplay. Default off — non
 bit-perfect ma sblocca music dispatcher per testing.
+
+**Regression lock (test nuovo)**: `sound-chip-smoke.test.ts` verifica che il
+chip TS genera sample audibili (`maxAbs > 0.1`) quando KC/KF/operator regs
+sono scritti via $1800/$1801. Conferma che il gap audio attuale e' nel
+music dispatcher 6502 (non raggiunge KC/KF writes), non nel sample generator
+del chip stesso.
 
 **Next session**: identificare il branch del dispatcher $9622 che porta a
 KC/KF writes (probabile: zp $32/$33/$34 deve raggiungere valore specifico),
