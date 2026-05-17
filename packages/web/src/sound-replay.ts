@@ -24,7 +24,6 @@ import {
   drainPokeySamples,
   drainReplyEvents,
   loadCmdTape,
-  forceSoundIrqHack,
   SOUND_CYCLES_PER_FRAME,
   YM2151_NATIVE_SAMPLE_RATE,
   POKEY_NATIVE_SAMPLE_RATE,
@@ -57,11 +56,7 @@ function setStatus(text: string): void {
 }
 
 export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
-  // `?soundIrqHack=1`: forza Timer A IRQ assertion prima di ogni tickCycles
-  // per sbloccare il music dispatcher (sessione 4 finding). Non bit-perfect
-  // ma produce voice register writes parziali. Vedi docs/audio-chip-perfect-prd.md.
-  const useIrqHack = new URLSearchParams(window.location.search).get("soundIrqHack") === "1";
-  setStatus(`[soundReplay] loading tape ${tapeUrl}... irqHack=${useIrqHack}`);
+  setStatus(`[soundReplay] loading tape ${tapeUrl}...`);
 
   const soundRomFull = rom.sound;
   if (soundRomFull === undefined || soundRomFull.length < 0x10000) {
@@ -133,9 +128,6 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       if (!resetReleased && frame >= firstCmdFrame) {
         releaseSoundReset(chip);
         resetReleased = true;
-      }
-      if (useIrqHack && resetReleased) {
-        forceSoundIrqHack(chip);
       }
       tickCycles(chip, SOUND_CYCLES_PER_FRAME);
       drainReplyEvents(chip);

@@ -844,14 +844,21 @@ pending, era scambiato), NMI/reset race (submitCommand sopprime NMI durante
 reset, releaseSoundReset rifira pending), reply queue drain mancante. Vedi
 `docs/audio-chip-perfect-prd.md` § 9.
 
-**Audio status corrente** (sessione 4): il sound 6502 boota e processa cmd
-correttamente, dispatcher musica `$9622` raggiunto via IRQ handler, 66/96
-voice register YM2151 scritti. Audio ancora silente perche' i pitch register
-$28-$2F (KC) e $30-$37 (KF) non vengono mai scritti dal dispatcher — drill
-A1 cycle-exact 6502 necessario per chiudere. Sample generator chip verificato
-funzionante via test regressione (`sound-chip-smoke.test.ts`: maxAbs > 0.1
-con KC/KF settati manualmente). API `forceSoundIrqHack(chip)` esposta come
-workaround opt-in.
+**Audio status corrente** (sessione 4j 2026-05-17): chip TS produce audio
+reale (`maxAbs=0.08`) **senza workaround**. Due bug critici fixati:
+
+1. `$14` bit mapping era invertito vs ymfm/MAME: bit 2/3 sono
+   enable_timer_a/b (IRQ gate), bit 4/5 sono reset_timer_a/b (clear flag).
+   TS interpretava 2/3 come "clear flag" → IRQ mai abilitato.
+2. `cpu.irq` aggiornato solo a fine frame → infinite IRQ loop. Fix:
+   interleave `step()` + chip tick + IRQ pin update ad ogni istruzione.
+
+Risultati: 66/96 voice reg scritti, 862 byte audioRam non-zero, audio
+audibile. Cross-correlation con MAME WAV ancora bassa (TS sceglie music
+tracks $A0xx invece di $CCxx attract music) — drill rimanente per
+chiudere completamente.
+
+`forceSoundIrqHack` rimosso. Il chip ora segue il path bit-perfect MAME.
 
 Identificato il PC della routine "play note" MAME via
 `oracle/mame_ym2151_write_pc_tap.lua` (PC tracking per ogni write YM2151):

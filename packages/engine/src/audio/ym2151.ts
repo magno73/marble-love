@@ -315,22 +315,33 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
   ym.regs[reg] = v;
   // V3 chip-perfect: applica il reg ai parametri channel/operator.
   applyReg(ym, reg, v);
-  // Side effects V3 Timer A/B (reg $14 = control register):
-  //   bit 0 = load A (arm Timer A countdown se 1)
-  //   bit 1 = load B
-  //   bit 2 = clear flag A (write 1 cancella overflow flag)
-  //   bit 3 = clear flag B
-  //   bit 4 = IRQA enable
-  //   bit 5 = IRQB enable
-  //   bit 6 = chip reset (raro)
+  // Side effects V3 Timer A/B (reg $14 = control register).
+  //
+  // Bit mapping CORRETTO (verificato 2026-05-17 contro ymfm_opm.h + ymfm_fm.ipp
+  // → handler ymfm::set_reset_status):
+  //   bit 0 = load_timer_a  (arm Timer A counter from regs $10/$11)
+  //   bit 1 = load_timer_b
+  //   bit 2 = enable_timer_a (= IRQ "enable" semantica MAME: quando timer overflows
+  //                            E enable_timer_a=1, status TIMERA = 1 → IRQ asserito)
+  //   bit 3 = enable_timer_b
+  //   bit 4 = reset_timer_a (= clear status TIMERA = clear overflow flag)
+  //   bit 5 = reset_timer_b
+  //   bit 6 = unused
   //   bit 7 = CSM (key-on-with-timer, V3 deferito)
+  //
+  // ❌ Era SBAGLIATO prima (commit 7671a9d): bit 2/3 trattati come "clear flag",
+  // bit 4/5 come "IRQA/B enable". Esattamente l'opposto del bit layout MAME ymfm.
+  // Conseguenza: boot init scrive $14=$05 = LOAD A + bit 2 → in MAME = abilita
+  // Timer A IRQ → IRQ fires su overflow. In TS interpretava bit 2 come "clear
+  // flag" → Timer A IRQ MAI abilitato → chicken-and-egg con $14=$11 mai scritto.
   if (reg === 0x14) {
-    // Clear flag prima dell'arm: hardware atomic
-    if ((v & 0x04) !== 0) ym.timerAOverflow = false;
-    if ((v & 0x08) !== 0) ym.timerBOverflow = false;
-    ym.timerAIrqEnable = (v & 0x10) !== 0;
-    ym.timerBIrqEnable = (v & 0x20) !== 0;
-    // Arm Timer A: solo sulla transizione 0→1 (se gia' active, ricarica)
+    // Reset overflow flag (bit 4/5 = reset_timer_a/b)
+    if ((v & 0x10) !== 0) ym.timerAOverflow = false;
+    if ((v & 0x20) !== 0) ym.timerBOverflow = false;
+    // Enable bits (bit 2/3 = enable_timer_a/b: gates IRQ assertion on overflow)
+    ym.timerAIrqEnable = (v & 0x04) !== 0;
+    ym.timerBIrqEnable = (v & 0x08) !== 0;
+    // Arm Timer A: load from regs $10/$11 (bit 0 = load_timer_a)
     if ((v & 0x01) !== 0) {
       ym.timerACounter = timerALoadValue(ym);
       ym.timerAActive = true;

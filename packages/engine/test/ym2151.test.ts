@@ -106,7 +106,8 @@ describe("YM2151 Timer A counter (V3)", () => {
     expect(ym.timerACounter).toBeGreaterThan(0);  // auto-restart
   });
 
-  it("write $14 bit 2 clear Timer A overflow flag", async () => {
+  it("write $14 bit 4 clear Timer A overflow flag", async () => {
+    // Bit mapping ymfm-faithful: bit 4 = reset_timer_a (clear overflow flag)
     const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0x00));
@@ -114,7 +115,7 @@ describe("YM2151 Timer A counter (V3)", () => {
     ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x01));
     ym2151TickCycles(ym, 32768);
     expect(ym.timerAOverflow).toBe(true);
-    ym2151WriteData(ym, as_u8(0x04));  // bit 2 = clear A
+    ym2151WriteData(ym, as_u8(0x10));  // bit 4 = reset_timer_a
     expect(ym.timerAOverflow).toBe(false);
   });
 
@@ -129,12 +130,16 @@ describe("YM2151 Timer A counter (V3)", () => {
     expect(ym.timerAOverflow).toBe(true);
   });
 
-  it("IRQA enable bit 4: status bit 0 set su overflow", async () => {
+  it("Timer A enable bit 2: arm + enable → overflow asserts IRQ gate", async () => {
+    // Bit mapping ymfm-faithful: bit 0 = load_timer_a, bit 2 = enable_timer_a
+    // (= IRQ enable nella semantica MAME). $14=$05 = bit 0 + bit 2 = "load
+    // timer + enable IRQ assertion on overflow". E' il valore che Marble
+    // sound ROM scrive a boot init a $819F-$81A2.
     const { ym2151TickCycles, ym2151ReadStatus } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0x00));
     ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x00));
-    ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x11));  // arm + IRQA enable
+    ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x05));  // load + enable
     expect(ym.timerAActive).toBe(true);
     expect(ym.timerAIrqEnable).toBe(true);
     ym2151TickCycles(ym, 32768);

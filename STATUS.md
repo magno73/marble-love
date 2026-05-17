@@ -1,7 +1,57 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (runtime: fix FUN_1CABA video RAM read Beginner/L2)
+**Ultimo update:** 2026-05-17 (audio sessione 4j: $14 bit mapping + IRQ real-time → audio reale!)
 **Branch corrente:** `main`.
+
+## 2026-05-17 — Audio sessione 4j: chip produce audio reale, hack rimosso
+
+🎉 **Breakthrough audio**: dopo 2 bug fix critici, il TS SoundChip produce
+sample stream audibile (`maxAbs = 0.08`) **senza nessun workaround**:
+
+**Bug fix #1**: reg `$14` bit mapping era completamente SBAGLIATO (verificato
+contro ymfm source `ymfm_opm.h`):
+
+| Bit | Ex (TS sbagliato) | Corretto (ymfm/MAME) |
+|---|---|---|
+| 0 | load_timer_a | load_timer_a ✓ |
+| 1 | load_timer_b | load_timer_b ✓ |
+| 2 | "clear flag A" ❌ | **enable_timer_a** (IRQ gate) |
+| 3 | "clear flag B" ❌ | **enable_timer_b** |
+| 4 | "IRQA enable" ❌ | **reset_timer_a** (clear status flag) |
+| 5 | "IRQB enable" ❌ | **reset_timer_b** |
+| 7 | CSM | CSM ✓ |
+
+Marble boot init scrive `$14=$05` = bit 0 + bit 2. In MAME = LOAD + enable
+Timer A IRQ → Timer A overflow setta status TIMERA → IRQ pin asserito. In
+TS interpretava bit 2 come "clear flag" → IRQ MAI abilitato → chicken-and-
+egg che richiedeva il workaround `forceSoundIrqHack`.
+
+**Bug fix #2**: `tickCycles` aggiornava `cpu.irq` solo a fine frame, non
+in tempo reale. Quando l'handler IRQ clearava il timer flag con `$14=$11`,
+`cpu.irq` restava settato per il resto del frame → CPU rientrava
+nell'handler ad ogni istruzione (infinite IRQ loop). Fix: interleave
+`step()` + `ym2151TickCycles` + IRQ pin update ad ogni istruzione → IRQ
+line riflette lo state del chip real-time, matching hardware.
+
+**`forceSoundIrqHack` RIMOSSO** dalle public API e dal `?soundIrqHack=1`
+query param. Non più necessario — il chip ora segue il path bit-perfect
+MAME senza shortcut.
+
+**Risultati su tape attract-music (14000 frame, no hack)**:
+- Voice register YM2151: **66/96** popolati
+- audioRam non-zero: **862/4096** (vs MAME 525, simile)
+- maxAbs sample stream: **0.0810** (audio reale, non più silenzio!)
+- Slot table popolata con music tracks $A3-$A7
+- RMS error vs MAME WAV: 0.0077 (non-zero)
+- Cross-correlation -0.0442 (TS sceglie tracce diverse da MAME nel
+  audible window: $A0xx tracks vs $CCxx)
+
+**Test**: 144 sound test PASS (3 skipped). 2 ym2151 test aggiornati per
+riflettere il bit mapping corretto.
+
+**Next step**: drill TS branch decision che porta a music ID diverso da
+MAME. Probabile cycle skew o NMI ordering. Cross-correlation > 0.7
+realisticamente raggiungibile.
 
 ## 2026-05-17 — Runtime: fix FUN_1CABA video RAM read Beginner/L2
 
