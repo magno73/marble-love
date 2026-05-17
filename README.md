@@ -879,10 +879,16 @@ Il path enables `$0573 = $40` parte da `$87F4 LDA ($0E),Y` (read music
 data via pointer in zp $0E/$0F). Music pointer table a $0248-$0267
 contiene per ogni slot LO+HI. TS slot table popolata con tracce
 $A0xx-$BDxx. MAME slot table ha tracce **$CCxx** in slot 8/9/10/13
-(es. slot 13 = $CCB4 e' il track audible a sec 200-220). Gap finale:
-TS music engine non assegna MAI tracce $CCxx — il routing "cmd byte →
-music ID → slot pointer" diverge da MAME. Richiede ROM disassembly
-approfondito multi-giorno per chiudere completamente.
+(es. slot 13 = $CCB4 e' il track audible a sec 200-220).
+
+Music init routine `$91A8` (sessione 4h) carica music pointer da una di
+2 ROM lookup tables: $9647+ (music ID bit 7 = 1) o $9747+ (bit 7 = 0).
+Table 2 ($9747+) contiene attract music tracks: idx $1C = $CCB4, idx
+$1D = $CCE8, idx $1E = $CD38, idx $1F = $CD8C. Per attivare attract
+music serve music ID 0x1C..0x1F. La routine $91A8 NON e' referenziata
+da nessun JSR/JMP/data table in ROM — entry via RTS-trick o JMP
+indirect. Per chiudere il gap finale serve dynamic instruction trace
+MAME a music-ID-write per identificare il caller divergente.
 
 | Phase | File | Test |
 |---|---|---|
