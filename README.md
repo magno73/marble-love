@@ -857,6 +857,13 @@ Madness in questo scenario non triggera note audibili. Cross-correlation
 non valida come metric — usare register-state diff (TS shadow byte-by-byte
 vs MAME) o PC reachability.
 
+**Audio MAME attivo a sec 200-220** (verificato in 5min run): primo audio
+event di attract loop dopo 4 min reali. Cmd-tape esteso a 14000 frame
+disponibile in `oracle/scenarios/sound-cmd-tape-attract-music.json` per
+testing audibili. Anche MAME stesso scrive KC/KF tutti zero in questo
+scenario — il pitch deve venire da phase modulation operator (alg 7
+parallel) con specific TL/AR/D1L envelope.
+
 | Phase | File | Test |
 |---|---|---|
 | **C2 M6502 core** | `src/m6502/{addressing,bus,cpu,cycle-table,opcodes,regfile}.ts` | 65x02 Tom Harte SingleStepTests PASS |
