@@ -140,6 +140,60 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     // dovrebbe rimanere stuck.
   });
 
+  it("chip genera audio da cmd-tape replay senza workaround (post bit-fix)", async () => {
+    // Regression lock 2026-05-17 sessione 4j: dopo i fix di
+    //   1) $14 bit mapping (bit 2/3 = enable_timer, bit 4/5 = reset_timer)
+    //   2) cpu.irq aggiornato real-time durante tickCycles (no end-of-frame)
+    // il SoundChip TS produce audio audibile via tape replay SENZA il
+    // workaround `forceSoundIrqHack`. Questo test garantisce che future
+    // regressioni del bit mapping o dell'interleave IRQ vengano catturate.
+    const { drainYm2151Samples, drainPokeySamples, drainReplyEvents, loadCmdTape } =
+      await import("../src/m6502/sound-chip.js");
+    // Use the long tape (14000 frame, covers sec 200 audible window).
+    const longTapePath = "oracle/scenarios/sound-cmd-tape-attract-music.json";
+    if (!existsSync(longTapePath)) {
+      // Tape long missing: skip test (sleeve the short tape path).
+      return;
+    }
+    const tapeJson = readFileSync(longTapePath, "utf8");
+    const tape = loadCmdTape(JSON.parse(tapeJson));
+    const firstCmd = Math.min(...Array.from(tape.byFrame.keys()));
+    const chip = createSoundChip({ roms: loadRoms() });
+    let released = false;
+    let maxAbs = 0;
+    let voiceWritten = 0;
+    // Run 14000 frame: la tape lunga registra anche l'audible window di MAME
+    // a sec 200+ (f12000+) dove il chip TS deve produrre sample non-zero.
+    for (let f = 0; f < 14000; f++) {
+      const cmds = tape.byFrame.get(f);
+      if (cmds !== undefined) {
+        for (const b of cmds) {
+          const { submitCommand: submit } = await import("../src/m6502/sound-chip.js");
+          submit(chip, as_u8(b));
+        }
+      }
+      if (!released && f >= firstCmd) {
+        releaseSoundReset(chip);
+        released = true;
+      }
+      tickCycles(chip, 29830);
+      drainReplyEvents(chip);
+      for (const s of drainYm2151Samples(chip)) {
+        const a = Math.abs(s);
+        if (a > maxAbs) maxAbs = a;
+      }
+      drainPokeySamples(chip);
+    }
+    for (let r = 0x20; r < 0x80; r++) {
+      if (chip.ym2151.regs[r] !== 0) voiceWritten++;
+    }
+    // Threshold conservative: chip deve produrre almeno un campione > 0.001
+    // (esiste segnale, non silenzio totale) e popolare almeno 20 voice
+    // registers ($20-$7F = RL/FB/CONN + KC + KF + op params).
+    expect(maxAbs).toBeGreaterThan(0.001);
+    expect(voiceWritten).toBeGreaterThan(20);
+  });
+
   it("chip genera audio quando i voice register sono scritti correttamente", async () => {
     // Regression lock per sessione 4 finding: il chip TS produce sample
     // audibili quando KC/KF/operator regs sono settati via $1800/$1801. Il
