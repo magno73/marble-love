@@ -58,6 +58,34 @@ mapping o IRQ interleave.
 MAME. Probabile cycle skew o NMI ordering. Cross-correlation > 0.7
 realisticamente raggiungibile.
 
+**Sessione 4k (2026-05-17) — zp $19 NON e' music ID**:
+
+Trace TS zp $19 con PC: ogni write `STY $19` viene da PC=`$873d` (24 writes
+del valore `$14`). Disassembly area $8722-$873d rivela:
+
+```
+$8722 LDA ($0E),Y    ; read music data byte
+$8724 BPL +$17 ($873D)   ; if bit 7 clear (= data value, not control)
+...
+$873D STY $19        ; save music data OFFSET to zp $19
+```
+
+Quindi `zp $19` e' il **music data offset** corrente (posizione dentro la
+track), non il music ID dispatch. Mio fraintendimento precedente.
+
+MAME zp $19 a f1324 = $09 (offset diverso da TS $14 — divergenza music
+engine state per cycle skew). Entrambi MAME e TS a f1324 puntano a tracce
+$A3xx (music ptr $A3F0 in MAME). Attract music ($CCxx) attivata da MAME
+solo a f12484 — TS non raggiunge mai.
+
+**Tool nuovi**: probe-zp19-pc.ts, probe-queue-snap.ts, probe-queue-v2.ts
+(filtra RAM test writes con PC < $8400).
+
+Music engine state diverge non perche' TS riceve cmd diversi, ma perche'
+processa stati interni ($0308 array, $0210/$0211 queue indici, music data
+parser via $($0E),Y) con timing leggermente diverso. La chiusura completa
+del gap richiede A1 cycle-exact 6502 drill (deferred per cost/benefit).
+
 ## 2026-05-17 — Runtime: fix FUN_1CABA video RAM read Beginner/L2
 
 Bug utente "marble che cade": lo screenshot corretto e' nel Beginner/L2
