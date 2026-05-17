@@ -184,6 +184,32 @@ $32/$33/$34) ha valore diverso che salta le entry "play note".
 **Tool nuovi**: `oracle/mame_pokey_write_tap.lua` POKEY drill,
 `mame_ym2151_write_pc_tap.lua` con frame filter per scenari lunghi.
 
+**Diff zp state TS vs MAME a f12500** (via `oracle/mame_sound_zp_dump.lua`):
+
+| zp | TS | MAME | Status |
+|---|---|---|---|
+| $00 | $48 | $71 | ≠ (frame counter, cycle skew) |
+| $14 | $ff | $fe | ≠ (counter, TS non avanza) |
+| $1C | $09 | $03 | ≠ (music data pointer LO?) |
+| $1D | $9a | $81 | ≠ (music data pointer HI?) |
+| **$32** | **$03** | **$00** | **≠ key state byte** |
+| **$33** | **$03** | **$00** | **≠ key state byte** |
+| $34 | $00 | $00 | ✅ (both = 0, dispatcher main never runs in either) |
+
+**TS zp $32 set a f297 da PC=$9594** (traced via mmu.write8 hook), poi
+mai modificato. MAME ha invece $32 che evolve nel tempo (probabilmente
+decrementato dal $9622 dispatcher main quando un altro path setta $34>=4).
+
+**Insight chiave**: il dispatcher $9622 main path (con $34>=4) non runs
+in NESSUNO dei due. MAME play music via path diverso — probabilmente
+NMI cmd handler. Solo JSR a routine $9351 trovato (al PC=$885E), che
+e' una sotto-routine del music engine ROM $93** ($93A4, $93BE, $9385,
+$9443 ecc.).
+
+**Next step concreto**: MAME PC trace a f12485 per identificare la call
+chain completa che porta a $8FCC (KEY ON). Probabile: NMI cmd handler →
+... → $9351 → $93xx → $8E72/$8FC0.
+
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
 Bypass del blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime

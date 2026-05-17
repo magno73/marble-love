@@ -867,8 +867,10 @@ a f12485 MAME scrive KC con valori reali ($29/$42/$32/$49/...) via
 PC=`$8EE2` (KC writer routine) e KEY ON via PC=`$8FC4` (slot mask $F).
 In TS audible window con `forceSoundIrqHack` attivo: voice setup OK
 ($20-$23, $30-$33, $40-$F8) ma **0 KEY ON, 0 non-zero KC**. Il branch
-music data table decision diverge — zp $32/$33/$34 (music sequencer
-state) ha valore diverso in TS che salta le entry "play note".
+music data table decision diverge — zp $32/$33 (music sequencer state)
+in TS resta $03 vs $00 in MAME, e dispatcher $9622 main path con
+$34>=4 non runs in NESSUNO dei due. MAME play music via path diverso
+(probabile NMI cmd handler → $9351 → $93xx → $8E72/$8FC0).
 
 | Phase | File | Test |
 |---|---|---|
