@@ -860,9 +860,15 @@ vs MAME) o PC reachability.
 **Audio MAME attivo a sec 200-220** (verificato in 5min run): primo audio
 event di attract loop dopo 4 min reali. Cmd-tape esteso a 14000 frame
 disponibile in `oracle/scenarios/sound-cmd-tape-attract-music.json` per
-testing audibili. Anche MAME stesso scrive KC/KF tutti zero in questo
-scenario — il pitch deve venire da phase modulation operator (alg 7
-parallel) con specific TL/AR/D1L envelope.
+testing audibili.
+
+**Identificato music engine path** (sessione 4c, frame-filter YM PC tap):
+a f12485 MAME scrive KC con valori reali ($29/$42/$32/$49/...) via
+PC=`$8EE2` (KC writer routine) e KEY ON via PC=`$8FC4` (slot mask $F).
+In TS audible window con `forceSoundIrqHack` attivo: voice setup OK
+($20-$23, $30-$33, $40-$F8) ma **0 KEY ON, 0 non-zero KC**. Il branch
+music data table decision diverge — zp $32/$33/$34 (music sequencer
+state) ha valore diverso in TS che salta le entry "play note".
 
 | Phase | File | Test |
 |---|---|---|

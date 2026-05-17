@@ -35,11 +35,12 @@ Proof locale:
 
 Follow-up dopo screen utente `Screenshot 2026-05-17 alle 11.42.59.png`: nel
 Beginner/L2 il guard scattava a `f3401`, ma la caduta veniva armata a `f3403`
-quando la superficie successiva diventava tutta-zero. Aggiunta memoria breve
-(`PROJECTED_FLOOR_GUARD_GRACE_FRAMES=6`) vincolata al player: un floor
-tutta-zero immediatamente dopo un endpoint mancante non puo' armare `f36=2`
-finche' la guardia e' fresca. Nuovi test coprono sia il caso `f3401 -> f3403`
-sia la scadenza della guardia per non mascherare cadute vere. Proof browser:
+quando la superficie successiva diventava tutta-zero. Il primo fix a finestra
+temporale faceva solo cadere la marble piu' avanti. La guardia ora viene
+portata nello stato debug (`projectedFloorGuardCarry`) e resta attiva mentre
+la proiezione e' una sentinel tutta-zero; si cancella appena torna una
+superficie non-vuota valida. Nuovi test coprono sia il carry `f3401 -> f3403`
+sia il clear su superficie valida per non mascherare cadute vere. Proof browser:
 `screenshots/bug-verify/marble-cade-level2-guard-once-check.png`.
 
 ## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF
@@ -151,12 +152,37 @@ salvato in `oracle/scenarios/sound-cmd-tape-attract-music.json` (14688 cmd,
 - KF ($30-$37) brief $36=$E0 a f537+, poi clearato
 - POKEY $08=$78 scritto 555 volte (AUDCTL config, no AUDF/AUDC notes)
 
-Anche MAME produce audio audibile sec 200-220 SENZA scrivere KC/KF non-zero.
-Il pitch deve venire da phase modulation tra operators (alg 7 parallel) con
-specific TL/AR/D1L envelope patterns che generano output con phase
-increment minimo.
+**Correzione 2026-05-17 (sessione 4c)** con frame-window filter del YM PC tap:
 
-**Tool nuovo**: `oracle/mame_pokey_write_tap.lua` per future drill POKEY.
+```bash
+# YM tap con filter frame_count >= 12000
+# Captures only audible window (50000 writes f12000-f12951)
+```
+
+A f12485 MAME triggera prima NOTE PLAY event:
+
+| PC | Reg | Val | Routine |
+|---|---|---|---|
+| `$8E96` | $21 | $E0 | RL/FB/CONN ch 1 |
+| `$8EA9` | $31 | $00 | KF ch 1 |
+| **`$8EE2`** | **$29** | **$29** | **KC ch 1 (NOTE!)** |
+| `$8F90` | $79/$71/$69/$61 | $0F/$3F/$17/$10 | D1L/RR/D2R per slot |
+| **`$8FC4`** | **$08** | **$79** | **KEY ON ch 1 mask=$F** |
+
+In audible window: 75 KEY ON writes (slot mask $F), 150 non-zero KC writes
+con valori reali $29/$42/$32/$49/$39/$4D (note codes!). Routine entry
+`$8FC0` = KEY ON writer, `$8E72` = KC writer.
+
+**In TS**: con `forceSoundIrqHack` attivo, voice setup ($20-$23, $30-$33,
+$40-$F8) ok, ma **0 KEY ON, 0 non-zero KC**. TS dispatcher non raggiunge
+$8FC4 / $8EE2 — il branch music data table decision diverge.
+
+Gap finale identificato: il music data table pointer in TS punta a entry
+diverse rispetto a MAME. Probabilmente lo stato del music sequencer (zp
+$32/$33/$34) ha valore diverso che salta le entry "play note".
+
+**Tool nuovi**: `oracle/mame_pokey_write_tap.lua` POKEY drill,
+`mame_ym2151_write_pc_tap.lua` con frame filter per scenari lunghi.
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
