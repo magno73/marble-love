@@ -113,12 +113,13 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     // 68K simula write a $FE0001 (= mailboxWrite con NMI callback).
     mailboxWrite(mainToSound, as_u8(0x77), () => nmiAsserted++);
     expect(nmiAsserted).toBe(1);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0x10); // bit 4 main pending
+    // bit 3 ($08) = main→sound pending (NMI source) per atarisy1.cpp::switch_6502_r
+    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0x08);
     // 6502 legge il byte da $1810 → ack
     const v = mmu.read8(as_u16(0x1810));
     expect(v as number).toBe(0x77);
     expect(nmiReleased).toBe(1);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0); // pending clear
+    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0); // pending clear
   });
 
   it("write $1810 = sound→main latch, IRQ6 callback edge-triggered", () => {
@@ -132,14 +133,15 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     });
     mmu.write8(as_u16(0x1810), as_u8(0x55));
     expect(irq6Asserted).toBe(1);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0x08); // bit 3 sound pending
+    // bit 4 ($10) = sound→main pending (response buffer full)
+    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0x10);
     // 68K simula read da $FC0001 → ack
     const v = mailboxRead(soundToMain);
     expect(v as number).toBe(0x55);
-    expect(mmu.read8(as_u16(0x1820)) as number & 0x08).toBe(0); // pending clear
+    expect(mmu.read8(as_u16(0x1820)) as number & 0x10).toBe(0); // pending clear
   });
 
-  it("status $1820 combinato: bit3 sound-pending + bit4 main-pending coesistono", () => {
+  it("status $1820 combinato: bit3 main-pending + bit4 sound-pending coesistono", () => {
     const mainToSound = createMailbox();
     const soundToMain = createMailbox();
     const mmu = createSoundMmu({
@@ -148,7 +150,7 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     });
     mailboxWrite(mainToSound, as_u8(0x11));
     mmu.write8(as_u16(0x1810), as_u8(0x22));
-    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x18); // bit3+bit4 = 0x18
+    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x18); // bit3 ($08) + bit4 ($10) = 0x18
   });
 });
 

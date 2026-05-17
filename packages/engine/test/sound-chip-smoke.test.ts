@@ -49,16 +49,22 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.cpu.cycles).toBeGreaterThanOrEqual(5000);
   });
 
-  it("submitCommand: asserisce NMI 6502, status $1820 bit 4 set", () => {
+  it("submitCommand post-release: asserisce NMI 6502, status $1820 bit 3 set", () => {
     const chip = createSoundChip({ roms: loadRoms() });
+    // Hardware-faithful: NMI assertion solo dopo reset release (durante hold,
+    // l'edge non viene latched dal CPU in reset).
+    releaseSoundReset(chip);
     submitCommand(chip, as_u8(0x65));
     expect(chip.mainToSound.pending).toBe(true);
     expect(chip.mainToSound.value as number).toBe(0x65);
     expect(chip.cpu.nmi).toBe(true);
+    // bit 3 ($08) = main→sound pending per atarisy1.cpp::switch_6502_r
+    expect(chip.mmu.read8(0x1820 as never) as number & 0x08).toBe(0x08);
   });
 
   it("6502 ack legge $1810 → pending clear, NMI rilasciato", () => {
     const chip = createSoundChip({ roms: loadRoms() });
+    releaseSoundReset(chip);
     submitCommand(chip, as_u8(0x42));
     // Simula 6502 ISR che legge cmd
     const cmd = chip.mmu.read8(0x1810 as never);

@@ -97,11 +97,22 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
 }
 
 /** Main CPU rilascia il 6502 dal reset hold. Equivale a write `$860001` bit
- * 7 = 1 (atarisy1.cpp bankselect_w). Re-esegue reset sequence per fresh PC. */
+ * 7 = 1 (atarisy1.cpp bankselect_w). Re-esegue reset sequence per fresh PC.
+ *
+ * Se la soundlatch ha gia' pending=true (cmd scritto durante reset hold),
+ * asserisce NMI: simula il comportamento hardware MAME dove l'edge negativo
+ * del NMI line viene latched (o ri-sampled) quando il CPU esce dal reset.
+ * Senza questa, il 6502 partirebbe senza NMI pending e il sound code marble
+ * resterebbe stuck nel polling loop $9569 (BIT $1820 / BNE) aspettando un
+ * NMI che non arriva mai (subsequent cmd writes non rifirano edge perche'
+ * pending e' gia' true). */
 export function releaseSoundReset(chip: SoundChip): void {
   chip.inReset = false;
   cpuReset(chip.cpu, chip.mmu);
   chip.cpu.cycles = 0;
+  if (chip.mainToSound.pending) {
+    requestNmi(chip.cpu);
+  }
 }
 
 /** Main CPU mette il 6502 in reset hold. Equivale a $860001 bit 7 = 0. */
@@ -138,10 +149,27 @@ export function tickCycles(chip: SoundChip, cycles: number): number {
 }
 
 /** Main CPU scrive cmd al sound: equivale a write $FE0001 (68K side).
- * Asserisce NMI al 6502 sulla transizione false→true del pending. */
+ * Asserisce NMI al 6502 sulla transizione false→true del pending.
+ *
+ * Sopprime NMI durante reset hold: real hardware il sound 6502 e' in reset
+ * quando il main scrive $FE0001 prima di rilasciare $860001 bit7=1 (verificato
+ * via MAME write taps a f244 nel marble attract: ordering e' $FE0001=cmd →
+ * $860001=$80 release). NMI e' edge-triggered, ma con CPU in reset l'edge
+ * negativo non viene latched internamente. Quando il reset si rilascia, NMI
+ * line resta LOW (pending) ma senza un nuovo edge il 6502 non lo serve mai.
+ * Il sound code legge $1810 esplicitamente via polling del status bit a $1820
+ * durante boot init.
+ *
+ * Bug fix: senza questa guardia, TS asseriva NMI durante reset hold, e quando
+ * `releaseSoundReset` veniva chiamato (con `cpuReset` che NON azzera
+ * `cpu.nmi`), il primo opcode dopo reset era SKIPPED in favore di NMI service
+ * → il NMI handler partiva con stato non-init (boot $8002 mai eseguito) →
+ * loop infinito in PC=$9569. */
 export function submitCommand(chip: SoundChip, byte: u8): void {
   mailboxWrite(chip.mainToSound, byte, () => {
-    requestNmi(chip.cpu);
+    if (!chip.inReset) {
+      requestNmi(chip.cpu);
+    }
   });
 }
 

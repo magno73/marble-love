@@ -18,8 +18,12 @@ import {
   createSoundChip,
   releaseSoundReset,
   loadCmdTape,
-  tickFrameWithTape,
+  submitCommand,
+  tickCycles,
+  drainReplyEvents,
 } from "../../engine/src/m6502/sound-chip.js";
+import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";
+import { as_u8 } from "../../engine/src/wrap.js";
 
 interface MameDumpEntry {
   frame: number;
@@ -83,7 +87,8 @@ function main(): void {
   const rom421 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.421"));
   const rom422 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.422"));
   const chip = createSoundChip({ roms: { rom421, rom422 } });
-  releaseSoundReset(chip);
+  // Hardware-faithful ordering: hold reset until first cmd, submit cmd
+  // during reset (NMI suppressed), then release. Matches MAME atarisy1.
 
   // Snapshot frames sorted
   const snapFrames = mameDumps.dumps.map((d) => d.frame).sort((a, b) => a - b);
@@ -97,12 +102,19 @@ function main(): void {
   console.log(`Cmd tape: ${tape.cmdCount} cmds, totalFrames=${tape.totalFrames}`);
   console.log(`Running TS chip to f${maxFrame}...\n`);
 
+  let released = false;
+  const firstCmdFrame = Math.min(...Array.from(tape.byFrame.keys()));
   for (let f = 0; f <= maxFrame; f++) {
-    tickFrameWithTape(chip, tape, f);
-    // Drain samples to keep memory bounded (we don't use them here)
-    if (f % 60 === 0) {
-      // chip.ym2151.sampleBuffer is internal; drain via API
+    const cmds = tape.byFrame.get(f);
+    if (cmds !== undefined) {
+      for (const b of cmds) submitCommand(chip, as_u8(b));
     }
+    if (!released && f >= firstCmdFrame) {
+      releaseSoundReset(chip);
+      released = true;
+    }
+    tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+    drainReplyEvents(chip);
     if (mameByFrame.has(f)) {
       const tsRam = chip.mmu.ram;
       const mameRam = mameByFrame.get(f)!;
