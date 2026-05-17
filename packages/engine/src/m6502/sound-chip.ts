@@ -36,6 +36,7 @@ import {
 import { type YM2151, createYM2151, ym2151TickCycles, ym2151DrainSamples, YM2151_NATIVE_SAMPLE_RATE } from "../audio/ym2151.js";
 import { type POKEY, createPOKEY, pokeyTickCycles, pokeyDrainSamples, POKEY_NATIVE_SAMPLE_RATE } from "../audio/pokey.js";
 import { type SoundRomFiles, buildSoundRom } from "./sound-rom.js";
+import { SOUND_CYCLES_PER_FRAME } from "./sound-clock.js";
 import { as_u8 } from "../wrap.js";
 import type { u8 } from "../wrap.js";
 
@@ -181,6 +182,75 @@ export function getRegisterShadow(chip: SoundChip): {
     ym2151Regs: chip.ym2151.regs,
     pokeyWriteRegs: chip.pokey.writeRegs,
   };
+}
+
+/** Cmd-tape replay API (Phase A7 bypass A0).
+ *
+ * Quando il main TS engine non emette cmd al sound 6502 (blocker A0 nel
+ * dominio Codex), possiamo bypassare il main e iniettare direttamente i cmd
+ * registrati da MAME via `oracle/mame_sound_cmd_capture.lua`. Il chip TS
+ * riceve gli stessi byte in input agli stessi frame e produce gli stessi
+ * sample stream — audio bit-perfect senza dipendere da gameplay events.
+ *
+ * Formato tape:
+ *   { cmds: [{frame: N, byte: B}, ...] }
+ *
+ * `loadCmdTape` raggruppa i cmd per frame in O(1) lookup. `tickFrameWithTape`
+ * lo combina con il normale `tickCycles(SOUND_CYCLES_PER_FRAME)`. */
+export interface CmdTape {
+  cmds: ReadonlyArray<{ readonly frame: number; readonly byte: number }>;
+}
+
+export interface LoadedCmdTape {
+  byFrame: Map<number, number[]>;
+  totalFrames: number;
+  cmdCount: number;
+}
+
+export function loadCmdTape(tape: CmdTape): LoadedCmdTape {
+  const byFrame = new Map<number, number[]>();
+  let maxFrame = 0;
+  for (const c of tape.cmds) {
+    let bucket = byFrame.get(c.frame);
+    if (bucket === undefined) {
+      bucket = [];
+      byFrame.set(c.frame, bucket);
+    }
+    bucket.push(c.byte & 0xff);
+    if (c.frame > maxFrame) maxFrame = c.frame;
+  }
+  return { byFrame, totalFrames: maxFrame + 1, cmdCount: tape.cmds.length };
+}
+
+/** Avanza il sound chip per un frame (SOUND_CYCLES_PER_FRAME cycle 6502)
+ * iniettando i cmd del tape registrati per quel frame.
+ *
+ * Cmd spread sub-frame: per frame con >1 cmd, distribuisce le `submitCommand`
+ * uniformemente nei cycle 6502 del frame, tickando un pezzo di cycle fra una
+ * submit e l'altra. Senza questo spread, cmd back-to-back nel medesimo frame
+ * collassano nel mailbox (write con pending=true non rifa NMI edge-trigger) e
+ * il 6502 vede solo l'ultimo byte. MAME registra il frame solo, non il
+ * sub-cycle offset, quindi lo spread e' uniforme. */
+export function tickFrameWithTape(chip: SoundChip, tape: LoadedCmdTape, frame: number): number {
+  const cmds = tape.byFrame.get(frame);
+  if (cmds === undefined || cmds.length === 0) {
+    return tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+  }
+  if (cmds.length === 1) {
+    submitCommand(chip, as_u8(cmds[0]!));
+    return tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+  }
+  // Spread N cmd su N slot egual-cycle. Ogni slot e' `slotCycles` cycle.
+  const slotCycles = Math.floor(SOUND_CYCLES_PER_FRAME / cmds.length);
+  let consumed = 0;
+  for (let i = 0; i < cmds.length; i++) {
+    submitCommand(chip, as_u8(cmds[i]!));
+    const remaining = i === cmds.length - 1
+      ? SOUND_CYCLES_PER_FRAME - consumed
+      : slotCycles;
+    consumed += tickCycles(chip, remaining);
+  }
+  return consumed;
 }
 
 /** Hard reset: pulisce tutto, ritorna a hold. */

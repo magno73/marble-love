@@ -345,6 +345,8 @@ export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTi
 export {
   type SoundChip,
   type SoundChipConfig,
+  type CmdTape,
+  type LoadedCmdTape,
   createSoundChip,
   tickCycles,
   submitCommand,
@@ -355,6 +357,8 @@ export {
   holdSoundReset,
   drainYm2151Samples,
   drainPokeySamples,
+  loadCmdTape,
+  tickFrameWithTape,
   YM2151_NATIVE_SAMPLE_RATE,
   POKEY_NATIVE_SAMPLE_RATE,
 } from "./m6502/sound-chip.js";

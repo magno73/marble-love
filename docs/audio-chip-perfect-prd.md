@@ -352,6 +352,129 @@ Validazione misurabile:
 
 **Decisione strategica**: DSP audio infrastructure completa (A2-A6). Quando A0+A1 fixed, audio chip-perfect emergerà automaticamente. Manca il "feed" di cmd reali.
 
+## 9. Progress log (2026-05-17) — Bypass A0 via cmd-tape replay
+
+Strategia: invece di sbloccare A0 nel dominio Codex (gameplay sub), bypassare
+completamente registrando i sound cmd da MAME e replicandoli al chip TS via
+`submitCommand` al frame esatto. Il cmd flow main→sound diventa una "tape"
+deterministica.
+
+### E1 — MAME cmd-tape capture ✅
+
+- `oracle/mame_sound_cmd_capture.lua`: install write tap su `$FE0001`
+  (soundlatch) sul main 68K + read taps a osservazione su `$F60001` (switches),
+  `$1820` (coin port sound CPU), `$FC0001` (sound response). Inietta coin pulse
+  f1200..f1214 e start pulse f1500..f1514 via `ioport_field:set_value`. Polarita'
+  verificata empiricamente: Coin 1 = 0 quando pressed (IP_ACTIVE_LOW), 1 Player
+  Start = 1 quando pressed.
+- **Root cause "0 cmds" iniziale**: i tap handle restituiti da
+  `install_*_tap` venivano GC-collected immediatamente. Senza riferimento Lua
+  che li tenga in vita, il tap smette di firare. Fix: `tap_handles = {}` +
+  `table.insert(tap_handles, handle)` per ogni install (stesso pattern di
+  `mame_playable_input_capture.lua`). Bug critico, non documentato.
+- Output: `oracle/scenarios/sound-cmd-tape-attract.json` con **2941 cmds**
+  registrati su 3000 frame (50s emulati). Distribuzione: 0x03 = 94%
+  (tick/keep-alive), 0x07 = 5%, + 15 byte vari (0x00..0x61) per eventi
+  specifici.
+
+### E2 — MAME WAV reference ✅
+
+- `mame -wavwrite /tmp/marble_attract.wav -seconds_to_run 60` con stesso
+  autoboot script. Output: 50.06s @ 48000 Hz stereo, 2.4M sample-frame, 9.6MB.
+
+### E3 — TS cmd-tape player ✅
+
+- `packages/engine/src/m6502/sound-chip.ts`: aggiunto `loadCmdTape(tape)`
+  + `tickFrameWithTape(chip, tape, frame)` con cmd spread sub-frame (mailbox
+  edge-triggered: cmd back-to-back nello stesso frame senza tick intermedio
+  collassano).
+- `packages/engine/src/index.ts`: export `CmdTape`, `LoadedCmdTape`,
+  `loadCmdTape`, `tickFrameWithTape`.
+- `packages/web/src/sound-replay.ts`: ramo isolato `?soundReplay=<path>` che
+  fetcha la tape JSON, istanzia chip standalone, mostra "Start Replay"
+  button (user gesture per AudioContext), loop @60fps via setInterval.
+  Riavvolge a frame 0 quando la tape finisce (replay infinito).
+- `packages/web/src/main.ts`: intercept singolo dopo ROM load — se
+  `soundReplay` set, chiama `runSoundReplay(rom, url)` invece di
+  `startGame(rom)`. Non tocca il ramo `?sound=1` normale (resta dipendente da
+  Codex).
+
+### E4 — Validation cross-correlation ❌ (chip silente)
+
+`probe-sound-sample-diff --frames 3000`:
+
+```
+TS YM2151 samples: 5,593,240 (= 2,796,620 stereo @ 55930Hz)
+TS POKEY samples:  699,155 mono @ 13990Hz
+Cross-correlation TS vs MAME: 0.0000
+RMS: 0.0000
+```
+
+**Diagnosi**: il TS SoundChip riceve i cmd correttamente (mailbox pending +
+reply queue popolata) ma produce sample stream completamente nullo
+(`maxAbs = 0.000e+0` su 5.6M sample YM). Inspect register shadow @ f600:
+
+- YM2151 non-zero regs: SOLO `$10=$C8` (Timer A counter) + `$14=$05`
+  (Timer A load + clear flag A, **senza bit 4 IRQ_EN_A**).
+- POKEY non-zero regs: SOLO `$0F=$03` (SKCTL).
+- Tutte 8 voci YM2151: TL=0, AR=0, env=OFF → silent.
+- 4 voci POKEY: AUDF=0, AUDC=0 → silent.
+- 6502 ha girato 17.9M cycle (esattamente 600 × 29830 = SOUND_CYCLES_PER_FRAME),
+  audioRam ha 117 byte non-zero a f600 — la sound CPU **sta eseguendo codice**
+  ma non raggiunge il dispatcher musica che scriverebbe i voice register.
+
+**Root cause**: il sound 6502 TS non esegue lo stesso path della MAME 6502
+per i cmd di tape. Sospetti (in ordine di probabilita'):
+
+1. **A1 cycle skew**: 387B audioRam diff a f600 vs MAME → stack/state diverge
+   nel cmd dispatcher → branch a routine "noop" invece di routine "play note".
+2. **Timer A IRQ wiring**: `timerAOverflow=true` + `timerAIrqEnable=false` →
+   gli overflow di Timer A non triggerano IRQ. Marble's music sequencer potrebbe
+   essere IRQ-driven (non NMI-only). Se MAME's 6502 abilita IRQ in un'altra
+   write a $14 (es. `$14=$15` o `$14=$11` in code path successivo), la TS chip
+   potrebbe averla persa per A1 cycle skew.
+3. **NMI re-entry race**: cmd back-to-back con NMI handler in corso. Mailbox
+   `pending=true` blocca edge re-trigger. Spread sub-frame applicato ma non
+   risolve tutto.
+
+### E5 — Verify + commit ✅
+
+- `npx tsc -b --pretty false`: PASS.
+- `npx vitest run packages/engine/test/sound packages/engine/test/m6502
+  packages/engine/test/ym2151 packages/engine/test/pokey`: **143 passed |
+  3 skipped (146)** — tutti i test sound-domain passano.
+- 2 fail in `packages/engine/test/playable-live-routes.test.ts` non
+  correlate alle mie modifiche (Codex parallel work in helper-121b8 / state /
+  sub-29cce, lasciate WIP nel working tree — non committate qui).
+
+### Stato corrente — onesto
+
+**Cosa funziona**:
+
+- Infrastructure end-to-end: capture MAME → tape JSON → TS replay → AudioContext.
+- 2941 cmd reali deterministici registrati e replicabili.
+- Quando A1 o il chip semantics gap sara' chiuso, il path cmd-tape attiverà
+  immediatamente audio chip-perfect senza tocchi al dominio Codex.
+
+**Cosa NON funziona**:
+
+- TS chip produce silenzio assoluto: voice register YM2151/POKEY non scritti.
+- Cross-correlation 0.0 (success criterion era > 0.9 su ≥60 frame).
+- Il gap **non e' nel DSP** (envelope/attenuation/LFO/AUDCTL — tutto chip-perfect
+  in A2-A5). E' nel **sound 6502 execution path** che non raggiunge il
+  music dispatcher. Drill A1 (cycle-exact) necessario.
+
+**Next steps suggeriti**:
+
+1. Drill A1: bisect frame-by-frame audioRam diff vs MAME (387B @ f600). Trovare
+   primo opcode/cycle che diverge. Hypothesis: page-cross penalty, branch-taken
+   cycle, indexed addressing penalty in M6502 cycle table.
+2. Alternativamente, hot-patch il TS `$14` write per forzare IRQ_EN_A=1
+   dopo l'init. Se Marble's dispatcher e' IRQ-driven, questo dovrebbe far
+   partire il music sequencer e produrre audio (anche se non bit-perfect).
+3. Estendere `probe-sound-sample-diff` per dump shadow register frame-by-frame
+   → identificare a quale frame i due chip divergono.
+
 ## 9. Approval
 
 Marco approva il plan completo o vuole modifiche / priorità diverse?
