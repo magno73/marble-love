@@ -862,15 +862,11 @@ event di attract loop dopo 4 min reali. Cmd-tape esteso a 14000 frame
 disponibile in `oracle/scenarios/sound-cmd-tape-attract-music.json` per
 testing audibili.
 
-**Identificato music engine path** (sessione 4c, frame-filter YM PC tap):
-a f12485 MAME scrive KC con valori reali ($29/$42/$32/$49/...) via
-PC=`$8EE2` (KC writer routine) e KEY ON via PC=`$8FC4` (slot mask $F).
-In TS audible window con `forceSoundIrqHack` attivo: voice setup OK
-($20-$23, $30-$33, $40-$F8) ma **0 KEY ON, 0 non-zero KC**. Il branch
-music data table decision diverge — zp $32/$33 (music sequencer state)
-in TS resta $03 vs $00 in MAME, e dispatcher $9622 main path con
-$34>=4 non runs in NESSUNO dei due. MAME play music via path diverso
-(probabile NMI cmd handler → $9351 → $93xx → $8E72/$8FC0).
+**Identificato music engine path** (sessione 4c-4e): KEY ON write at
+PC=`$8FCC` e' GATED da `audioRam $0573 bit 6`. Disassembly:
+`LDA $0573; AND #$40; BEQ skip; ... STA $1801` ($8FB8-$8FCC).
+TS ha `$0573=$00` → KEY ON skippato → silenzio. MAME enable bit 6 via
+`$890C STA $0573 (#$40)` inside un caller che TS non raggiunge.
 
 | Phase | File | Test |
 |---|---|---|

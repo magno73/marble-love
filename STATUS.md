@@ -1,47 +1,42 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (runtime: projected-floor guard per falso fall L4)
+**Ultimo update:** 2026-05-17 (runtime: fix stale terrain redraw Beginner/L2)
 **Branch corrente:** `main`.
 
-## 2026-05-17 — Runtime: falso fall su Aerial/L4 da endpoint floor mancante
+## 2026-05-17 — Runtime: fix stale terrain redraw Beginner/L2
 
-Bug utente "marble che cade": lo screenshot `marble che cade` mostrava la
-marble su Aerial/L4 a `x=594,y=572,z=16280`, ma l'overlay esponeva
-`proj=(cx0:16280 cx1:0 cy0:16280 cz:16280 fx:2 fy:4 bge:1)` e
-`floorNow=12210`. Il problema non era una collisione invisibile: il renderer/
-physics TS stava interpolando il pavimento usando `cx1=0` come endpoint reale,
-quindi `FUN_160F6` riceveva un `prevTimer/floor` spurio molto piu' basso e
-armava `obj0+0x36=2`, `vz=-0x6000`.
+Bug utente "marble che cade": lo screenshot corretto e' nel Beginner/L2
+(`level=1`) vicino alla tromba viola, intorno a `x=628,y=537,z=16176`,
+`tile=(78,67)`. L'overlay mostrava una proiezione parziale/stale
+`cx1=0` durante `FUN_25DF6`, poi la marble entrava in `f36=02` e cadeva.
+
+Root-cause verificata:
+
+- forzando `candidate_level2_postseed_dr_f3000` su `tile=(78,67)`,
+  `sub1CABATileRedraw` produce una surface valida, non zero:
+  `cx0=16233,cx1=16151,cy0=16231,cz=16233`;
+- il binario originale locale (`FUN_121B8`/`FUN_1BAB2`/`FUN_1CABA`) produce la
+  stessa surface valida quando il redraw e' eseguito;
+- quindi il problema NON era una tile mancante nella ROM: era una struct
+  terreno stale/parziale rimasta in `0x401C28` lungo la pipeline TS.
 
 Fix:
 
-- `projectedFloorMissingEndpointReason` rileva endpoint 0/non-zero usati da
-  `FUN_1CC62` quando la frazione corrispondente contribuisce davvero al floor.
-- `helper121B8` applica la guardia solo al player: passa a `FUN_160F6` la quota
-  corrente invece del floor spurio, non arma il fall da z-drift e non snap-pa
-  `obj.z` al `d4_timer` invalidato.
-- L'overlay debug ora mostra `last projected floor guard`, utile per distinguere
-  questa classe di bug da collisioni con oggetti/slot.
+- `helper121B8` ora passa lo stesso `fun_1bab2` cablato dal caller anche alla
+  chiamata interna default di `spriteHelper1B9CC`. Prima quel fallback chiamava
+  `spritePosUpdate1BAB2` senza `sub1CABA`, quindi poteva aggiornare i globals
+  tile lasciando una proiezione vecchia con endpoint a zero;
+- `refreshFrame10FCE` ora cabla `spriteHelper1B9CCSubs.fun_1bab2` anche nel
+  branch state-2 di `fun158F6`, non solo nel branch `helper121B8`;
+- aggiunto test regressivo: `helper121B8` default `spriteHelper1B9CC` riusa il
+  redraw path cablato.
 
-Proof locale:
+Verifica:
 
-- Unit regression: `helper-121b8.test.ts` replica il caso `cx1=0, fx=2` e
-  verifica `f36=0`, `vz=0`, `z` stabile; un floor valido sotto la marble continua
-  invece ad armare il fall.
-- Playwright screenshot:
-  `screenshots/bug-verify/marble-cade-guard-check.png` mostra nello stesso punto
-  `f36=00`, `z=16280`, `floor=12210` guardato, e overlay con
-  `last projected floor guard ... reason=x-missing-endpoint`.
-
-Follow-up dopo screen utente `Screenshot 2026-05-17 alle 11.42.59.png`: nel
-Beginner/L2 il guard scattava a `f3401`, ma la caduta veniva armata a `f3403`
-quando la superficie successiva diventava tutta-zero. Il primo fix a finestra
-temporale faceva solo cadere la marble piu' avanti. La guardia ora viene
-portata nello stato debug (`projectedFloorGuardCarry`) e resta attiva mentre
-la proiezione e' una sentinel tutta-zero; si cancella appena torna una
-superficie non-vuota valida. Nuovi test coprono sia il carry `f3401 -> f3403`
-sia il clear su superficie valida per non mascherare cadute vere. Proof browser:
-`screenshots/bug-verify/marble-cade-level2-guard-once-check.png`.
+- `npx vitest run packages/engine/test/helper-121b8.test.ts`
+- `npx tsc -b packages/engine/tsconfig.json packages/web/tsconfig.json`
+- `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/sub-29cce.test.ts packages/engine/test/trackball-apply.test.ts`
+- `npm --workspace @marble-love/web run build`
 
 ## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF
 
@@ -206,9 +201,45 @@ NMI cmd handler. Solo JSR a routine $9351 trovato (al PC=$885E), che
 e' una sotto-routine del music engine ROM $93** ($93A4, $93BE, $9385,
 $9443 ecc.).
 
-**Next step concreto**: MAME PC trace a f12485 per identificare la call
-chain completa che porta a $8FCC (KEY ON). Probabile: NMI cmd handler →
-... → $9351 → $93xx → $8E72/$8FC0.
+**🎯 SMOKING GUN sessione 4e**: KEY ON ($8FCC) e' CONDIZIONALE su
+`audioRam $0573 bit 6`. Disassembly $8FB8-$8FCC:
+
+```
+$8FB8 LDA $0573
+$8FBB AND #$40           ; mask bit 6
+$8FBD BEQ +$13 ($8FD2)   ; SE bit 6 = 0 → skip KEY ON, jump to RTS
+$8FBF LDY #$08
+$8FC1 JSR $8FED          ; wait
+$8FC4 STY $1800          ; select reg $08
+$8FC7 LDA $0576
+$8FCA ORA #$78
+$8FCC STA $1801          ; KEY ON write
+```
+
+**Check audioRam in TS a f12500**: `$0573 = $00` → bit 6 clear → BEQ
+takes → KEY ON skipped → silenzio.
+
+**Write a $0573 = $40** identificato da ROM scan (5 writes totali):
+- `$867B`: $0573 = $00 (clear)
+- `$86AA, $883D`: $0573 = $80 (bit 7)
+- **`$890C`: $0573 = $40 (bit 6 = enable KEY ON!)**
+- `$8C53`: ORA #$20 (set bit 5)
+
+**Caller di `$890C` not reached in TS**: il path che imposta $0573 = $40
+in MAME non viene mai eseguito da TS. Probabile: cmd handler NMI specific
+o evento music tick che fa branch al codice $8900+.
+
+**Per chiudere il gap audio**:
+1. Identificare cosa chiama il path `$8900+ → $890C`.
+2. Replicare la condizione in TS (es. via cmd handler che set $0573 bit 6
+   quando appropriato).
+3. Verificare con probe-audio: TS dovrebbe generare sample audibili
+   quando $0573 = $40.
+
+**Stack tap nuovo**: `oracle/mame_keyon_stack_tap.lua` dumpa stack 6502
++ zp al momento di ogni KEY ON. Conferma: KEY ON eseguito durante JSR
+nested level 1 con return addr $8FE4 (= post-`JSR $8E72` at $8FE1). PHP
+`$0573` check inside $8E72 routine flow path.
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
