@@ -27,7 +27,7 @@
  * a un AudioWorklet via ring buffer.
  */
 
-import { type M6502Cpu, createCpu, reset as cpuReset, requestNmi, requestIrq, clearIrq, runForCycles } from "./cpu.js";
+import { type M6502Cpu, createCpu, reset as cpuReset, requestNmi, requestIrq, clearIrq, step as cpuStep } from "./cpu.js";
 import { type SoundMmu, createSoundMmu } from "./sound-mmu.js";
 import {
   type Mailbox8,
@@ -99,20 +99,17 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
 /** Main CPU rilascia il 6502 dal reset hold. Equivale a write `$860001` bit
  * 7 = 1 (atarisy1.cpp bankselect_w). Re-esegue reset sequence per fresh PC.
  *
- * Se la soundlatch ha gia' pending=true (cmd scritto durante reset hold),
- * asserisce NMI: simula il comportamento hardware MAME dove l'edge negativo
- * del NMI line viene latched (o ri-sampled) quando il CPU esce dal reset.
- * Senza questa, il 6502 partirebbe senza NMI pending e il sound code marble
- * resterebbe stuck nel polling loop $9569 (BIT $1820 / BNE) aspettando un
- * NMI che non arriva mai (subsequent cmd writes non rifirano edge perche'
- * pending e' gia' true). */
+ * NON re-asserisce NMI sui cmd pending: il boot code del sound 6502 marble
+ * legge esplicitamente `$1810` a `$80DF LDA $1810` per consumare il cmd in
+ * arrivo durante il reset hold. NMI durante reset non e' latched dal CPU
+ * (matching ymfm/hardware), quindi non c'e' edge "in arrivo" da
+ * ri-asserire. Una versione precedente firava NMI qui ma causava NMI
+ * service prima del boot init → 6502 saltava setup stack/zp → infinito
+ * loop nel handler. Restituita no-op per matching hardware corretto. */
 export function releaseSoundReset(chip: SoundChip): void {
   chip.inReset = false;
   cpuReset(chip.cpu, chip.mmu);
   chip.cpu.cycles = 0;
-  if (chip.mainToSound.pending) {
-    requestNmi(chip.cpu);
-  }
 }
 
 /** Main CPU mette il 6502 in reset hold. Equivale a $860001 bit 7 = 0. */
@@ -135,17 +132,30 @@ export function holdSoundReset(chip: SoundChip): void {
 export function tickCycles(chip: SoundChip, cycles: number): number {
   // Reset hold: no cycle consumed. RAM resta 0, chip resta a fresh state.
   if (chip.inReset) return 0;
-  const consumed = runForCycles(chip.cpu, chip.mmu, cycles);
-  ym2151TickCycles(chip.ym2151, consumed);
-  pokeyTickCycles(chip.pokey, consumed);
-  // IRQ logic: 6502 IRQ pin = (timerA_overflow AND irqA_enable) OR
-  //                          (timerB_overflow AND irqB_enable)
-  const irqPin =
-    (chip.ym2151.timerAOverflow && chip.ym2151.timerAIrqEnable) ||
-    (chip.ym2151.timerBOverflow && chip.ym2151.timerBIrqEnable);
-  if (irqPin) requestIrq(chip.cpu);
-  else clearIrq(chip.cpu);
-  return consumed;
+  // Interleave CPU step + chip tick + IRQ pin update per matching hardware
+  // real-time IRQ line behavior. Senza questo, cpu.irq restava settato per
+  // tutto il frame anche dopo che l'handler IRQ aveva clearato il timer flag
+  // → CPU rientrava nell'handler ad ogni istruzione (infinite IRQ loop).
+  // Chunk size 32 cycle 6502 = 1 Timer A tick (64 cycle YM) → granularity OK
+  // per Timer A IRQ semantics.
+  const start = chip.cpu.cycles;
+  while (chip.cpu.cycles - start < cycles) {
+    const stepStart = chip.cpu.cycles;
+    cpuStep(chip.cpu, chip.mmu);
+    const stepCycles = chip.cpu.cycles - stepStart;
+    ym2151TickCycles(chip.ym2151, stepCycles);
+    pokeyTickCycles(chip.pokey, stepCycles);
+    // IRQ pin = (timerA_overflow AND timer_a_enable) OR (timerB...). Aggiorna
+    // dopo ogni istruzione cosi' il CPU vede l'IRQ line real-time. In MAME's
+    // ymfm, l'IRQ pin riflette lo status TIMERA bit live; il flag viene clearato
+    // dal write $14 bit 4 (reset_timer_a) dentro l'handler.
+    const irqPin =
+      (chip.ym2151.timerAOverflow && chip.ym2151.timerAIrqEnable) ||
+      (chip.ym2151.timerBOverflow && chip.ym2151.timerBIrqEnable);
+    if (irqPin) requestIrq(chip.cpu);
+    else clearIrq(chip.cpu);
+  }
+  return chip.cpu.cycles - start;
 }
 
 /** Main CPU scrive cmd al sound: equivale a write $FE0001 (68K side).
@@ -248,20 +258,6 @@ export function loadCmdTape(tape: CmdTape): LoadedCmdTape {
     if (c.frame > maxFrame) maxFrame = c.frame;
   }
   return { byFrame, totalFrames: maxFrame + 1, cmdCount: tape.cmds.length };
-}
-
-/** Workaround sessione 4 (2026-05-17): forza Timer A IRQ assertion PRIMA del
- * tickCycles per sbloccare il music dispatcher. Senza questo, il 6502 boota
- * ma `$14=$11` (IRQ enable) non viene mai scritto perche' il path che lo
- * setta e' nel handler IRQ stesso (chicken-and-egg con il FIRST IRQ che
- * dovrebbe fire). MAME bypassa il problema in modi che non sono chiari dal
- * disassembly statico — potrebbe essere cycle skew, potrebbe essere una
- * quirk del MAME ym2151 emulator. Questo workaround non e' bit-perfect ma
- * sblocca 66/96 voice register writes. Default off per non interferire con
- * altri scenari sound (eg. test, gameplay future). */
-export function forceSoundIrqHack(chip: SoundChip): void {
-  chip.ym2151.timerAOverflow = true;
-  chip.ym2151.timerAIrqEnable = true;
 }
 
 /** Avanza il sound chip per un frame (SOUND_CYCLES_PER_FRAME cycle 6502)
