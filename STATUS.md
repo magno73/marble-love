@@ -286,6 +286,41 @@ con note reali che SI triggera path.
 3. La tape ha cmd $61, $01, $07 etc. — uno di questi setta music
 4. Cycle skew o ordering differente causa diverse music pointer init
 
+**Sessione 4g — music pointer table diff a f12500** (Lua tap su audioRam
+$0248-$0267, la slot table letta dalla routine $86xx):
+
+| slot | TS lo/hi → ptr | MAME lo/hi → ptr |
+|---|---|---|
+| 6 | F0/A6 → $A6F0 | 74/A6 → $A674 |
+| 7 | D0/BD → $BDD0 | 50/A6 → $A650 |
+| 8 | 70/A5 → $A570 | 8C/CD → **$CD8C** |
+| 9 | 2C/A3 → $A32C | 38/CD → **$CD38** |
+| 10 | 76/A3 → $A376 | E8/CC → **$CCE8** |
+| 11 | 0C/A5 → $A50C | 30/A1 → $A130 |
+| 12 | 5A/A2 → $A25A | 52/A0 → $A052 |
+| 13 | B2/A1 → $A1B2 | B4/CC → **$CCB4** |
+| 14 | 30/A1 → $A130 | 5A/A2 → $A25A |
+| 15 | 52/A0 → $A052 | B2/A1 → $A1B2 |
+
+MAME ha tracce **$CCxx** in slot 8/9/10/13 (attract music). TS ha solo
+tracce $A0xx-$BDxx. Differenza significativa: MAME's slot 13 = $CCB4 e'
+il track audibile a sec 200-220. TS non assegna nessuno slot a track
+$CCxx — quindi attract music non puo' suonare in TS.
+
+**Conclusione architetturale del drill audio**:
+
+Il TS sound subsystem e' funzionalmente complete: cmd processing,
+NMI/IRQ handling, voice setup, register writes, sample generator
+(verificato via test). Manca solo il **music track selection routing**
+— quale cmd byte trigger quale music ID, e come music ID si traduce in
+$0248,X / $0258,X slot pointer.
+
+Per chiudere serve drill ROM disassembly approfondito (multi-giorno):
+- Identificare music ID → track ptr lookup table in ROM
+- Verificare cmd handler routing che setta music ID
+- Trace cmd byte processing TS vs MAME a frame specifici per branch
+  divergente che assegna $CCxx tracks vs $A0xx tracks
+
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
 Bypass del blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime
