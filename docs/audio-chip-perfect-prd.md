@@ -475,6 +475,89 @@ per i cmd di tape. Sospetti (in ordine di probabilita'):
 3. Estendere `probe-sound-sample-diff` per dump shadow register frame-by-frame
    → identificare a quale frame i due chip divergono.
 
+### Sessione 2 (2026-05-17 cont) — Drill audioRam diff + reset timing
+
+Approfondimento delle diagnostiche tramite due nuovi tool:
+
+**`oracle/mame_sound_audioram_dump.lua`**: snapshot della RAM del sound 6502
+(`$0000-$0FFF`) ai frame elencati in `MARBLE_SND_DUMP_FRAMES`. Output JSON
+con hex region per ogni snapshot.
+
+**`packages/cli/src/probe-audioram-diff.ts`**: confronto byte-by-byte TS vs
+MAME a snapshot frame multipli. Identifica primo divergence + sample dei
+primi 16 byte diff.
+
+**Key findings**:
+
+| Frame | MAME non-zero | TS non-zero (release-at-f0) | Diff bytes |
+|---|---|---|---|
+| 100 | 0 | 117 | 117 (TS has, MAME doesn't) |
+| 200 | 0 | 117 | 117 |
+| 244 | 0 | 117 | 117 |
+| 245 | 126 | 117 | 22 |
+| 300 | 150 | 117 | 47 |
+| 600 | 234 | 117 | 158 |
+| 1000 | 541 | 117 | 446 |
+| 3000 | 525 | 117 | 439 |
+
+**Insight #1 — Reset timing**: MAME tiene il sound 6502 in reset fino a
+f244 (audioRam = 0 fino a quel punto). TS rilascia il reset a f0 in
+`probe-sound-sample-diff` e `sound-replay`. **MAME write tap su $860001
+conferma**: il main 68K scrive bit7=1 (reset release) per la prima volta a
+**f244**, nello stesso frame in cui scrive il primo cmd 0x00 a $FE0001.
+Ordering visto in MAME a f244:
+
+1. `move.b #$00, $860001` (bit7=0, reset ancora hold)
+2. `move.b #$00, $FE0001` (write soundlatch — cmd 0x00, NMI pending)
+3. `move.b #$80, $860001` (bit7=1, **release**)
+4. `move.b #$80, $860001` (re-write, idle)
+
+Quindi quando il sound 6502 esce dal reset, il primo cmd e' gia' in
+soundlatch e NMI e' gia' asserito. Il 6502 esegue il vettore di reset $8002,
+poi serve NMI sul boundary di prima istruzione.
+
+Probe `probe-chip-debug.ts` con release-at-f244 (matching MAME): dopo 355
+frame il 6502 e' stuck a **PC=$9569** con stack contents
+`$1FC=$08 $1FD=$24 $1FE=$32 $1FF=$80` — NMI ha pushato PC=$8032 (= early boot
+code) e il 6502 e' stuck in handler. **5 byte audioRam non-zero in 355 frame**.
+
+Insight: in MAME, il 6502 va dal reset a stato "126 byte populated + cmd
+0x00 processato" in **una sola frame** (f244→f245, ~30K cycles). In TS lo
+stesso scenario stall completamente — il 6502 non riesce ad uscire dal NMI
+handler. **Probabile root cause**: il NMI handler depende da stato che il
+boot init avrebbe dovuto inizializzare PRIMA che NMI venisse servito. La
+sequence reset-release+cmd-immediate in TS porta il 6502 a entrare in NMI
+handler con state non-init → loop infinito.
+
+**Insight #2 — Isolated cmd test**: `probe-isolated-cmds.ts` invia singoli
+cmd byte (0x00, 0x03, 0x07, 0x0a, 0x2f, 0x32, 0x34, 0x39, 0x3a, 0x3b, 0x3d,
+0x40, 0x42, 0x45, 0x46, 0x61) a chip freshly-booted (release a f0 + 60f
+warmup). **Tutti i cmd: 0 voice register written**. Anche 0x61+0x01 paired
+(simulate music start) o 60 tick + 0x61 + 0x01 + 120 tick sustained:
+0 voice regs.
+
+→ Il chip TS in stato "idle dopo boot" NON processa cmd in modo da
+scrivere voice register. Cycle skew + state divergence accumulati durante
+boot impediscono al cmd dispatcher di raggiungere il path "play note".
+
+**Conclusione drill**: il problema NON e' nel mailbox o nel timing degli
+NMI. E' a livello **6502 execution path divergence** dal cycle 1 fino a
+runtime. La fix richiede:
+
+1. Cycle-exact 6502 (A1 documented). Bisect frame-by-frame audioRam diff
+   per trovare primo opcode che diverge.
+2. Oppure: replicare esattamente il pattern hardware MAME — sound CPU
+   reset hold fino al primo cmd, MA con corretto handling
+   reset+pending-NMI race condition.
+
+**Tools nuovi pronti per drill futuro**:
+
+- `oracle/mame_sound_audioram_dump.lua` — MAME audioRam snapshot multi-frame
+- `oracle/mame_sound_reset_release_tap.lua` — trace reset release timing
+- `packages/cli/src/probe-audioram-diff.ts` — TS vs MAME audioRam diff
+- `packages/cli/src/probe-chip-debug.ts` — chip state inspector (PC, regs, audioRam)
+- `packages/cli/src/probe-isolated-cmds.ts` — isolated cmd byte tester
+
 ## 9. Approval
 
 Marco approva il plan completo o vuole modifiche / priorità diverse?
