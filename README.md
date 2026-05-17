@@ -825,6 +825,23 @@ Audio subsystem in 11 file engine + 3 test + 1 CLI + 2 web + 1 worklet,
 default-on nel browser (`sound=0` opt-out). 6502 sound CPU + YM2151 + POKEY +
 mailbox 68K↔6502 + Web Audio renderer.
 
+**Cmd-tape replay path** (`?soundReplay=<url>`, 2026-05-17): bypass del
+blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime). Registra
+in MAME tutti i write a `$FE0001` (soundlatch) via `oracle/
+mame_sound_cmd_capture.lua` durante coin+start scripted, replica al
+SoundChip TS al frame esatto. `oracle/scenarios/sound-cmd-tape-attract.json`
+contiene 2941 cmd reali su 3000 frame deterministici. Bug critici trovati e
+fixati nello stesso drill: `$1820` bit mapping ($08=main pending, $10=sound
+pending, era scambiato), NMI/reset race (submitCommand sopprime NMI durante
+reset, releaseSoundReset rifira pending), reply queue drain mancante. Vedi
+`docs/audio-chip-perfect-prd.md` § 9.
+
+**Audio status corrente** (sessione 4): il sound 6502 boota e processa cmd
+correttamente, dispatcher musica `$9622` raggiunto via IRQ handler, 66/96
+voice register YM2151 scritti. Audio ancora silente perche' i pitch register
+$28-$2F (KC) e $30-$37 (KF) non vengono mai scritti dal dispatcher — drill
+A1 cycle-exact 6502 necessario per chiudere.
+
 | Phase | File | Test |
 |---|---|---|
 | **C2 M6502 core** | `src/m6502/{addressing,bus,cpu,cycle-table,opcodes,regfile}.ts` | 65x02 Tom Harte SingleStepTests PASS |
