@@ -33,6 +33,7 @@ import {
   createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook, drainYm2151Samples, drainPokeySamples, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
+import { runSoundReplay } from "./sound-replay.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
@@ -47,6 +48,10 @@ const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const enableSound = searchParams.get("sound") !== "0";
 const runSoundChip = searchParams.get("soundChip") === "1";
+// `?soundReplay=<path>` — bypass A0 cmd-flow blocker: invece di startGame
+// completo, esegui solo SoundChip + cmd-tape replay (audio chip-perfect).
+// Path relativo a /public es. `scenarios/sound/cmd-tape-attract.json`.
+const soundReplayUrl = searchParams.get("soundReplay");
 const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
 const showObjectDebugOverlay =
   searchParams.get("debugObjects") === "1" || searchParams.get("debugState") === "1";
@@ -246,6 +251,10 @@ fileInput.addEventListener("change", async () => {
       "ok",
     );
     splash.remove();
+    if (soundReplayUrl !== null) {
+      await runSoundReplay(rom, soundReplayUrl);
+      return;
+    }
     await startGame(rom);
   } catch (err) {
     console.error(err);

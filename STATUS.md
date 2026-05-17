@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-16 (startLevel intro-banner wiring)
+**Ultimo update:** 2026-05-17 (audio cmd-tape replay infrastructure)
 **Branch corrente:** `main`.
+
+## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
+
+Bypass del blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime
+browser) via cmd-tape: registra in MAME tutti i write a `$FE0001` (soundlatch)
+durante coin+start scripted, li ripeti al SoundChip TS al frame esatto via
+`submitCommand`. L'audio bit-perfect emerge senza dipendere da gameplay events
+Codex.
+
+**Infrastructure (works)**:
+
+- `oracle/mame_sound_cmd_capture.lua` — capture script con tap handle
+  retention (bug critico: senza `tap_handles = {}` table, i tap GC-collected
+  immediately e registrano 0 write).
+- `oracle/scenarios/sound-cmd-tape-attract.json` — 2941 cmd reali su 3000
+  frame (50s), 17 byte unici (0x03 = 94% tick, + cmd di evento).
+- `/tmp/marble_attract.wav` — MAME reference 48kHz stereo (riproducibile).
+- `packages/engine/src/m6502/sound-chip.ts`: nuove API `loadCmdTape` +
+  `tickFrameWithTape` con cmd spread sub-frame (mailbox edge-trigger).
+- `packages/web/src/sound-replay.ts` + ramo `?soundReplay=<url>` in
+  `main.ts` — isolated path, no engine/render/input, solo AudioContext +
+  cmd replay loop @60fps.
+- 143 sound test PASS.
+
+**Chip ancora silente** (E4 fail):
+
+- Cross-correlation TS vs MAME WAV: 0.0000 (target era > 0.9).
+- TS SoundChip riceve i cmd correttamente (mailbox + reply queue popolati)
+  ma scrive solo Timer A + SKCTL ($10=$C8, $14=$05, POKEY $0F=$03). Tutte
+  8 voci YM2151 e 4 POKEY restano a TL/AUDC=0 → silenzio assoluto.
+- Root cause sospetta: A1 cycle-exact 387B audioRam diff a f600 → stack/state
+  diverge nel cmd dispatcher → branch a routine "noop" invece di "play note".
+  Hypothesis secondaria: Timer A IRQ wiring (`timerAIrqEnable=false`).
+
+**Next**: drill A1 cycle-exact 6502 bisect. Vedi `docs/audio-chip-perfect-prd.md`
+sezione 9 per dettagli completi.
 
 ## 2026-05-16 — startLevel intro-banner true starts
 
