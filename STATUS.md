@@ -241,6 +241,40 @@ o evento music tick che fa branch al codice $8900+.
 nested level 1 con return addr $8FE4 (= post-`JSR $8E72` at $8FE1). PHP
 `$0573` check inside $8E72 routine flow path.
 
+**Sessione 4f — call chain di $890C identificato**:
+
+ROM scan rivela `$87F8 JMP $8867`. Disassembly $87F0-$87F8:
+
+```
+$87F0 LDA #$00
+$87F2 STA $19
+$87F4 LDA ($0E),Y    ← read music data byte via pointer $0E/$0F + Y
+$87F6 BEQ +$03 ($87FB)
+$87F8 JMP $8867       ← se non-zero, JMP a routine che setta $0573 = $40
+```
+
+Quindi il path che enables KEY ON e' **music data driven**: legge un
+byte da `($0E),Y` (music pointer + offset). Se non-zero, JMP $8867 →
+$8874 JMP $8912 → ... → $890C STA $0573 (#$40).
+
+**Music pointer diff TS vs MAME**:
+- TS `$0E/$0F = $52/$A0` → music ptr = $A052
+- MAME `$0E/$0F = $E8/$CC` → music ptr = $CCE8
+
+**Entrambi puntano a real music data** (non zero), ma a track diversi:
+- $A052 contiene: `$9D $00 $9E $00 ... $21 $03 $23 $03 $24 $03` (note + dur)
+- $CCE8 contiene: `$80 $A0 ... $21 $04 $2D $04 $23 $04` (attract music)
+
+TS legge un OTHER track ($A0xx) che probabilmente non triggera $8867 path
+o non ha note "audible" nella sequenza. MAME legge attract track ($CCxx)
+con note reali che SI triggera path.
+
+**Per chiudere il gap**:
+1. Identificare cosa setta zp $0E/$0F = $E8/$CC vs $52/$A0
+2. Probabile: cmd handler che imposta music pointer in base a cmd byte
+3. La tape ha cmd $61, $01, $07 etc. — uno di questi setta music
+4. Cycle skew o ordering differente causa diverse music pointer init
+
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
 Bypass del blocker A0 (cmd flow main TS → sound 6502 mai eseguito in runtime
