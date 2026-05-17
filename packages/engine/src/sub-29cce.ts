@@ -28,10 +28,12 @@
  *
  * **Scope replica**: PROLOGO + LOOP outer + tutte le 25 iter + jump table
  * con dispatch completo. **BLOCK A simple** (range-check + tag-write) è
- * implementato fully. **BLOCK complessi con sub-calls** (sound, helper1CD00,
- * helper25C74, divs.w bounce) sono trattati come fallthrough no-op
- * (= bra 0x2b072). Questo replica fedelmente l'AVANZAMENTO del loop e i
- * tag-writes di confine, riducendo drift dovuto a tag mancanti.
+ * implementato fully. **BLOCK 0x0a catapult** è implementato con launch,
+ * sound-pair e script kick. Gli altri **BLOCK complessi con sub-calls**
+ * (sound, helper1CD00, helper25C74, divs.w bounce) sono trattati come
+ * fallthrough no-op (= bra 0x2b072). Questo replica fedelmente
+ * l'AVANZAMENTO del loop e i tag-writes di confine, riducendo drift dovuto a
+ * tag mancanti.
  *
  * **MAME f12000+ analysis (demo gameplay attive)** — `/tmp/mame_100f.json`:
  * Per obj0 (player1 @ 0x400018), durante 100 frame di demo gameplay,
@@ -70,22 +72,33 @@
  *
  * **Sub callees usati**:
  *  - FUN_158AC = `soundCmdSend158AC` (ad arg byte)
- *  - FUN_2648C = `copyGlobalsToObj` (per BLOCK D arm 0xa)
+ *  - FUN_2648C = `copyGlobalsToObj` (per BLOCK 0x0a catapult two-player wait)
+ *  - FUN_15884 = `soundPair15884` (per BLOCK 0x0a catapult launch)
+ *  - FUN_12896 = `helper12896` (per script arm catapulta)
  *  - altri (helper1CD00, helper25C74, etc.) — solo nei BLOCK COMPLESSI
  *    che restano fallthrough no-op in questa implementazione.
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
+import { helper12896 } from "./helper-12896.js";
+import { copyGlobalsToObj } from "./object-helpers.js";
+import { randomMod13A98 } from "./random-mod-13a98.js";
 import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
+import { soundPair15884 } from "./sound-pair-15884.js";
 
 const WORK_RAM_BASE = 0x00400000;
 
 // Slot field offsets (A2 — caller's slot)
 const F_VX  = 0x00;
 const F_VY  = 0x04;
+const F_VZ  = 0x08;
 const F_X   = 0x0c;
 const F_Y   = 0x10;
+const F_Z   = 0x14;
+const F_TYPE = 0x19;
+const F_STATE_1A = 0x1a;
+const F_STATE_36 = 0x36;
 const F_S58 = 0x58;
 const F_S59 = 0x59;
 
@@ -111,6 +124,16 @@ const SF_S18 = 0x18;
 const SF_X   = 0x0c;
 const SF_Y   = 0x10;
 const SF_C   = 0x1f;
+const SF_TIMER_1C = 0x1c;
+const SF_PC_36    = 0x36;
+const SF_REC_3E   = 0x3e;
+const SF_BASE_46  = 0x46;
+
+const OBJ_COUNT = 0x0396;
+const PLAYER_PTR_TABLE = 0x0001eff6;
+const PLAYER1_OBJ = 0x00400018;
+const PLAYER2_OBJ = 0x004000fa;
+const CATAPULT_SCRIPT = 0x0001db80;
 
 // ─── Helpers byte/word/long M68k big-endian ──────────────────────────────
 
@@ -142,6 +165,15 @@ function wL(state: GameState, off: number, v: number): void {
   state.workRam[off + 3] =  u         & 0xff;
 }
 
+function romL(rom: RomImage, off: number): number {
+  return (
+    (((rom.program[off]     ?? 0) << 24) |
+     ((rom.program[off + 1] ?? 0) << 16) |
+     ((rom.program[off + 2] ?? 0) <<  8) |
+      (rom.program[off + 3] ?? 0)) >>> 0
+  );
+}
+
 // sign-extend word (16-bit two's complement) to a JS-signed integer.
 function sextW(w: number): number {
   const u = w & 0xffff;
@@ -156,6 +188,44 @@ function asrW3(w: number): number {
 // neg.l (signed two's complement negation, 32-bit).
 function negL(v: number): number {
   return ((-(v | 0)) | 0) >>> 0;
+}
+
+function recordTerrainSlotDebug(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  colorTag: number,
+  reason: string,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  vxBefore: number,
+  vyBefore: number,
+): void {
+  state.debug ??= {};
+  state.debug.lastTerrainSlotCollision = {
+    frame: Number(state.clock.frame),
+    entityAddr: (WORK_RAM_BASE + a2Off) >>> 0,
+    slotIndex: Math.floor((a3Off - (SLOT_TABLE_BASE - WORK_RAM_BASE)) / SLOT_STRIDE),
+    slotAddr: (WORK_RAM_BASE + a3Off) >>> 0,
+    colorTag,
+    reason,
+    d1,
+    d2,
+    d6,
+    a0,
+    slotX: sextW(rWBE(state, a3Off + SF_X)),
+    slotY: sextW(rWBE(state, a3Off + SF_Y)),
+    slotZ: sextW(rWBE(state, a3Off + 0x14)),
+    entityX: rL(state, a2Off + F_X) | 0,
+    entityY: rL(state, a2Off + F_Y) | 0,
+    entityZ: rL(state, a2Off + 0x14) | 0,
+    entityVxBefore: vxBefore | 0,
+    entityVyBefore: vyBefore | 0,
+    flagX: rB(state, G_FLAG_X),
+    flagY: rB(state, G_FLAG_Y),
+  };
 }
 
 // "WHITE-LIST" boundary-tag values used by both the iter-epilog (0x2b072)
@@ -201,13 +271,13 @@ export const SUB_29CCE_ADDR = 0x00029cce as const;
  *
  * @param state    GameState corrente. `workRam` mutato in-place.
  * @param slotPtr  Indirizzo assoluto M68k del slot A2 (es. 0x4009A4).
- * @param _rom     ROM image (per ora inutilizzato; le complex cases skippate).
+ * @param rom      ROM image (usata dai complex cases implementati).
  * @param subs     Stub injection (opzionale).
  */
 export function fun29CCE(
   state: GameState,
   slotPtr: number,
-  _rom: RomImage,
+  rom: RomImage,
   subs: Sub29CCESubs = {},
 ): void {
   const a2 = slotPtr >>> 0;
@@ -255,7 +325,19 @@ export function fun29CCE(
     const colorTagSx = colorTag >= 0x80 ? colorTag - 0x100 : colorTag;
 
     if (colorTagSx >= 5 && colorTagSx <= 0x3b) {
-      dispatchColor(state, a2Off, a3Off, colorTag, d1, d2, d6, a0, initialVy, subs);
+      const tagBefore = rB(state, a2Off + F_S58);
+      const flagXBefore = rB(state, G_FLAG_X);
+      const flagYBefore = rB(state, G_FLAG_Y);
+      const vxBefore = rL(state, a2Off + F_VX);
+      const vyBefore = rL(state, a2Off + F_VY);
+      dispatchColor(state, rom, a2Off, a3Off, colorTag, d1, d2, d6, a0, initialVy, subs);
+      const tagAfter = rB(state, a2Off + F_S58);
+      const flagXAfter = rB(state, G_FLAG_X);
+      const flagYAfter = rB(state, G_FLAG_Y);
+      if (tagAfter !== tagBefore || flagXAfter !== flagXBefore || flagYAfter !== flagYBefore) {
+        const reason = flagXAfter !== flagXBefore || flagYAfter !== flagYBefore ? "flag" : "tag";
+        recordTerrainSlotDebug(state, a2Off, a3Off, colorTag, reason, d1, d2, d6, a0, vxBefore, vyBefore);
+      }
     }
 
     // 0x2b072: iter-epilog. Read `(0x58,A2)`. WHITE-LIST → advance iter.
@@ -318,6 +400,89 @@ function rangeWrite(
   wB(state, a2Off + F_S59, 0xff);
 }
 
+function objectPtrForPlayerIndex(rom: RomImage, playerIndex: number): number {
+  const tablePtr = romL(rom, PLAYER_PTR_TABLE + playerIndex * 4);
+  if (tablePtr >= WORK_RAM_BASE && tablePtr < WORK_RAM_BASE + 0x2000) {
+    return tablePtr >>> 0;
+  }
+  return playerIndex === 0 ? PLAYER1_OBJ : PLAYER2_OBJ;
+}
+
+function runCatapult0A(
+  state: GameState,
+  rom: RomImage,
+  a2Off: number,
+  a3Off: number,
+  d6: number,
+  a0: number,
+  subs: Sub29CCESubs,
+): void {
+  // 0x29e22..0x29e3e: tight center hitbox, using viewport deltas.
+  if (d6 <= -0x08) return;
+  if (d6 >=  0x08) return;
+  if (a0 <= -0x08) return;
+  if (a0 >=  0x08) return;
+
+  // The original only launches when the marble is grounded.
+  if (rL(state, a2Off + F_VZ) !== 0) return;
+
+  // If the catapult script is already away from its base frame, the original
+  // just restores the marble's saved XY and leaves the arm alone.
+  if (
+    rL(state, a3Off + SF_REC_3E) !== rL(state, a3Off + SF_BASE_46) ||
+    rWBE(state, a3Off + SF_TIMER_1C) !== 0
+  ) {
+    wL(state, a2Off + F_X, rL(state, G_X_RESTORE));
+    wL(state, a2Off + F_Y, rL(state, G_Y_RESTORE));
+    return;
+  }
+
+  // Two-player guard: if the other marble is already on a catapult arm, this
+  // object snaps to the saved globals and waits instead of launching too.
+  if (rWBE(state, OBJ_COUNT) === 2) {
+    const playerIndex = rB(state, a2Off + F_TYPE);
+    if (playerIndex === 0 || playerIndex === 1) {
+      const otherPtr = objectPtrForPlayerIndex(rom, 1 - playerIndex);
+      const otherOff = (otherPtr - WORK_RAM_BASE) >>> 0;
+      if (
+        otherPtr >= WORK_RAM_BASE &&
+        otherPtr < WORK_RAM_BASE + 0x2000 &&
+        rB(state, otherOff + 0x18) === 1 &&
+        rB(state, otherOff + F_S58) === 0x0a
+      ) {
+        copyGlobalsToObj(state, WORK_RAM_BASE + a2Off);
+        wL(state, a2Off + F_VX, 0);
+        wL(state, a2Off + F_VY, 0);
+        return;
+      }
+    }
+  }
+
+  // 0x29ea8..0x29f1e: real catapult launch. This is the missing physical
+  // piece: snap to the arm, lift the Z baseline, inject velocity, tag object,
+  // then start the catapult script at 0x1DB80.
+  wL(state, a2Off + F_X, rL(state, a3Off + SF_X));
+  wL(state, a2Off + F_Y, rL(state, a3Off + SF_Y));
+  wL(state, a2Off + F_Z, (rL(state, a2Off + F_Z) - 0x00030000) >>> 0);
+  wL(state, a2Off + F_VZ, 0x000a0000);
+  wL(state, a2Off + F_VX, ((randomMod13A98(state, 0x2000) - 0x1000) | 0) >>> 0);
+  wL(state, a2Off + F_VY, ((-0x25000 - randomMod13A98(state, 0xa000)) | 0) >>> 0);
+  wB(state, a2Off + F_STATE_36, 0x02);
+
+  soundPair15884(state, {
+    soundCommand: (cmd) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, cmd); },
+  });
+
+  wB(state, a2Off + F_STATE_1A, 0x03);
+  wB(state, a2Off + F_S58, rB(state, a3Off + SF_C));
+  wB(state, a2Off + F_S59, 0x0f);
+
+  wL(state, a3Off + SF_PC_36, CATAPULT_SCRIPT);
+  helper12896(state, rom, WORK_RAM_BASE + a3Off, {
+    fun158ac: (st, arg) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(st, arg); },
+  });
+}
+
 /**
  * Dispatch su color tag (range 5..0x3b).
  *
@@ -325,14 +490,18 @@ function rangeWrite(
  * implementate fully:
  *   0x10, 0x12, 0x32-0x37, 0x2d-0x31, 0x38-0x3b.
  *
+ * Complex cases implemented:
+ *   0x0a — catapult arm launch + script kick.
+ *
  * Le branch SKIP (no-op fallthrough = bra epilog_iter):
- *   0x05 (kick + sound), 0x0a (respawn arm), 0x0b/0x0c/0x0d (BLOCK C bounce),
+ *   0x05 (kick + sound), 0x0b/0x0c/0x0d (BLOCK C bounce),
  *   0x13/0x14/0x15/0x16 (helper1CD00), 0x17/0x18 (range checks D6/A0 invece
  *   di D1/D2 — più complessi), 0x1a-0x1f (sound + flag), 0x20 (heavy
  *   respawn), 0x21/0x22 (sound dispatch), 0x23-0x27 (helper1CD00).
  */
 function dispatchColor(
   state: GameState,
+  rom: RomImage,
   a2Off: number,
   a3Off: number,
   colorTag: number,
@@ -352,6 +521,11 @@ function dispatchColor(
   //   write tag, -1; bra 0x2b072
 
   switch (colorTag) {
+    // 0x29e22: catapult arm. Tight D6/A0 hitbox; on success it snaps and
+    // launches the marble, tags +0x58=0x0a, and starts script 0x1DB80.
+    case 0x0a:
+      runCatapult0A(state, rom, a2Off, a3Off, d6, a0, subs);
+      return;
     // 0x2a1e4: D1∈[0..0x10), D2∈[0..0xe)
     case 0x10: rangeWrite(state, a2Off, a3Off, d1, d2, 0, 0x10, 0, 0xe); return;
     // 0x2a258: D1∈[0..0x4), D2∈[0..0x2)

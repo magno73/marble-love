@@ -257,6 +257,85 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect((state.workRam[obj + 0x34] << 8) | state.workRam[obj + 0x35]).toBe(0x0a);
   });
 
+  it("models FUN_253EC state 3 catapult countdown release", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const obj = 0x18;
+
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 3;
+    state.workRam[obj + 0x36] = 2;
+    state.workRam[obj + 0x58] = 0x0a;
+    state.workRam[obj + 0x59] = 1;
+    state.workRam[obj + 0x22] = 0xde;
+    state.workRam[obj + 0x23] = 0xad;
+    state.workRam[obj + 0x24] = 0xbe;
+    state.workRam[obj + 0x25] = 0xef;
+    state.workRam[obj + 0x26] = 0xca;
+    state.workRam[obj + 0x27] = 0xfe;
+    state.workRam[obj + 0x28] = 0xba;
+    state.workRam[obj + 0x29] = 0xbe;
+
+    refreshFrame10FCE(state, rom, {
+      fun13EE6: () => undefined,
+      processAllSprites189E2: () => undefined,
+      objectUpdatePair158CC: () => undefined,
+      slotArrayTick1493C: () => undefined,
+      dispatchStrings17230: () => undefined,
+      fun1912C: () => undefined,
+      stateSub19BAA: () => undefined,
+      stateSub1844A: () => undefined,
+      stateDispatch12FD0: () => undefined,
+      objDirtyDispatch28624: () => undefined,
+    });
+
+    expect(state.workRam[obj + 0x1a]).toBe(0);
+    expect(state.workRam[obj + 0x36]).toBe(2);
+    expect(state.workRam[obj + 0x58]).toBe(0);
+    expect(state.workRam[obj + 0x59]).toBe(0);
+    expect(state.workRam.slice(obj + 0x22, obj + 0x2a)).toEqual(new Uint8Array(8));
+  });
+
+  it("keeps FUN_253EC state 3 active while catapult countdown is nonzero", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const obj = 0x18;
+
+    state.workRam[0x396] = 0;
+    state.workRam[0x397] = 1;
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 3;
+    state.workRam[obj + 0x08] = 0x00;
+    state.workRam[obj + 0x09] = 0x0a;
+    state.workRam[obj + 0x58] = 0x0a;
+    state.workRam[obj + 0x59] = 2;
+
+    refreshFrame10FCE(state, rom, {
+      fun13EE6: () => undefined,
+      processAllSprites189E2: () => undefined,
+      objectUpdatePair158CC: () => undefined,
+      slotArrayTick1493C: () => undefined,
+      dispatchStrings17230: () => undefined,
+      fun1912C: () => undefined,
+      stateSub19BAA: () => undefined,
+      stateSub1844A: () => undefined,
+      stateDispatch12FD0: () => undefined,
+      objDirtyDispatch28624: () => undefined,
+    });
+
+    expect(state.workRam[obj + 0x1a]).toBe(3);
+    expect(state.workRam[obj + 0x58]).toBe(0x0a);
+    expect(state.workRam[obj + 0x59]).toBe(1);
+    expect(
+      ((state.workRam[obj + 0x08] ?? 0) << 24) |
+        ((state.workRam[obj + 0x09] ?? 0) << 16) |
+        ((state.workRam[obj + 0x0a] ?? 0) << 8) |
+        (state.workRam[obj + 0x0b] ?? 0),
+    ).toBe(0x000a0000);
+  });
+
   it("models FUN_253EC state 8 countdown animation", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();

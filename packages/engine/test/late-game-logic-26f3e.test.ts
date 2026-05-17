@@ -462,6 +462,211 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     expect(emitCalls).toEqual([]);
   });
 
+  it("type 10 renders the Aerial catapult in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0a, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0a);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049); // d4 = 0x59, visible but below the old 0xc0 bound.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x3000,
+    }]);
+  });
+
+  it("type 10 keeps the original lower cull for non-catapult structs", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0a, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x09);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049);
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
+  it("type 11 renders catapult accessory sprites in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0b, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0a);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049); // d4 = 0x59, below the old 0xe0 bound.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x1800,
+    }]);
+    expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 11 keeps the original lower cull for non-catapult structs", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0b, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x09);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049);
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+    expect(rw(state, 0x00400406)).toBe(0);
+  });
+
+  it("type 12 renders catapult base sprites in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0c, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0a);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049);
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x3800,
+    }]);
+  });
+
+  it("type 12 keeps the original lower cull for non-catapult structs", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0c, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x09);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0x0049);
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
+  it("catapult structs are still culled below the expanded visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0a, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0a);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffaf); // d4 = -65, just below expanded -0x40 bound.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
   it("moBlockEmit is called with correct args for type 0x2A", () => {
     const state = makeState();
     const rom = emptyRomImage();

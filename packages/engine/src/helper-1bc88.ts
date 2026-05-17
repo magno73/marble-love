@@ -274,6 +274,18 @@ export function helper1BC88(
     // 0x1bdcc: moveq #$1, d7
     // 0x1bdce: move.w d7, -$2(a6)   → collisionFlag = 1
     collisionFlag = 1;
+    const debugBefore = {
+      selfX: s32(r32(state, a2 + 0x0c)),
+      selfY: s32(r32(state, a2 + 0x10)),
+      selfZ: s32(r32(state, a2 + 0x14)),
+      targetX: s32(r32(state, a3 + 0x0c)),
+      targetY: s32(r32(state, a3 + 0x10)),
+      targetZ: s32(r32(state, a3 + 0x14)),
+      selfVx: s32(r32(state, a2 + 0x00)),
+      selfVy: s32(r32(state, a2 + 0x04)),
+      targetVx: s32(r32(state, a3 + 0x00)),
+      targetVy: s32(r32(state, a3 + 0x04)),
+    };
 
     // ── Determine if a2/a3 are player objects ───────────────────────────
     // d3b = 1 if a2 is player1 or player2; else 0
@@ -478,6 +490,37 @@ export function helper1BC88(
     w32(state, a3 + 0x00, (s32(r32(state, a3 + 0x00)) + d5_a3) >>> 0);
     // 0x1bf3a: move.l d1, d0; add.l d0, $4(a3)
     w32(state, a3 + 0x04, (s32(r32(state, a3 + 0x04)) + d1_a3) >>> 0);
+    state.debug ??= {};
+    state.debug.lastObjectPairCollision = {
+      frame: Number(state.clock.frame),
+      selfAddr: a2,
+      targetAddr: a3,
+      loopIndex: loopIdx,
+      savedX,
+      savedY,
+      savedZ,
+      deltaX: d1x,
+      deltaY: d3y,
+      deltaZ: localZ,
+      selfState: r8(state, a2 + 0x1a),
+      targetState: r8(state, a3 + 0x1a),
+      selfKind: r8(state, a2 + 0x1b),
+      targetKind: r8(state, a3 + 0x1b),
+      selfX: debugBefore.selfX,
+      selfY: debugBefore.selfY,
+      selfZ: debugBefore.selfZ,
+      targetX: debugBefore.targetX,
+      targetY: debugBefore.targetY,
+      targetZ: debugBefore.targetZ,
+      selfVxBefore: debugBefore.selfVx,
+      selfVyBefore: debugBefore.selfVy,
+      targetVxBefore: debugBefore.targetVx,
+      targetVyBefore: debugBefore.targetVy,
+      selfVxAfter: s32(r32(state, a2 + 0x00)),
+      selfVyAfter: s32(r32(state, a2 + 0x04)),
+      targetVxAfter: s32(r32(state, a3 + 0x00)),
+      targetVyAfter: s32(r32(state, a3 + 0x04)),
+    };
 
     // ── Update a2 state/sound if not a player ────────────────────────────
     // 0x1bf3e: tst.b d3; bne → skip_a2_state

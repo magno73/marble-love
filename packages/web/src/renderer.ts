@@ -713,7 +713,8 @@ function renderIndirectViewport(
     const drawY = pos.y;
     if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
 
-    // sprite.paletteIndex già contiene "color macro" base (= 0x40+color in TS attuale)
+    // sprite.paletteIndex contiene il color macro già normalizzato dal motore:
+    // normal MO usa 0x20+color*2, high-priority mantiene il workaround 0x40+color.
     // baseIdx = paletteIndex * 8 (= word idx in palette globale)
     const baseIdx = sprite.paletteIndex * 8;
     const priorityBit = (sprite.priority ?? 0) > 0 ? 0x1000 : 0;

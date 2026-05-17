@@ -1,27 +1,37 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (runtime: fix stale terrain redraw Beginner/L2)
+**Ultimo update:** 2026-05-17 (runtime: fix FUN_1CABA video RAM read Beginner/L2)
 **Branch corrente:** `main`.
 
-## 2026-05-17 — Runtime: fix stale terrain redraw Beginner/L2
+## 2026-05-17 — Runtime: fix FUN_1CABA video RAM read Beginner/L2
 
 Bug utente "marble che cade": lo screenshot corretto e' nel Beginner/L2
 (`level=1`) vicino alla tromba viola, intorno a `x=628,y=537,z=16176`,
-`tile=(78,67)`. L'overlay mostrava una proiezione parziale/stale
-`cx1=0` durante `FUN_25DF6`, poi la marble entrava in `f36=02` e cadeva.
+`tile=(78,67)`. L'overlay mostrava una proiezione parziale `cx1=0` durante
+`FUN_25DF6`, poi la marble entrava in `f36=02` e cadeva, anche se il terreno
+era visibilmente presente.
 
 Root-cause verificata:
 
-- forzando `candidate_level2_postseed_dr_f3000` su `tile=(78,67)`,
-  `sub1CABATileRedraw` produce una surface valida, non zero:
-  `cx0=16233,cx1=16151,cy0=16231,cz=16233`;
-- il binario originale locale (`FUN_121B8`/`FUN_1BAB2`/`FUN_1CABA`) produce la
-  stessa surface valida quando il redraw e' eseguito;
-- quindi il problema NON era una tile mancante nella ROM: era una struct
-  terreno stale/parziale rimasta in `0x401C28` lungo la pipeline TS.
+- `spritePosUpdate1BAB2 -> sub1CABATileRedraw` sul seed Beginner reale e sulla
+  posizione dello screenshot deriva correttamente `tile=(78,67)`;
+- dentro `FUN_1CABA`, una delle quattro righe della surface legge
+  `0xA02404`. Nella memory map Atari System 1 questo e' Motion Object RAM
+  (`0xA02000..0xA02FFF`), ma il port TS di `sub1CABA` trattava come valida
+  solo la playfield RAM `0xA00000..0xA01FFF`, quindi leggeva zero;
+- quello zero finiva in `0x401C28` come endpoint nullo (`cx1=0`), quindi la
+  fisica pensava che la marble fosse fuori superficie mentre il renderer
+  mostrava ancora terreno.
 
 Fix:
 
+- `sub1CABATileRedraw` ora legge il bus video completo usato da quella routine:
+  playfield RAM, Motion Object RAM e alpha RAM. I read word/long sono composti
+  byte-per-byte, quindi funzionano anche se una lettura attraversa un confine
+  di regione video;
+- aggiunto test regressivo sul seed `start_level2_intro_beginner_f2436`:
+  posizione `x=628,y=536.9,z=16176`, redraw su `tile=(78,67)`, endpoint
+  `0x401C28+0x0E` non piu' zero (`0x3f30`);
 - `helper121B8` ora passa lo stesso `fun_1bab2` cablato dal caller anche alla
   chiamata interna default di `spriteHelper1B9CC`. Prima quel fallback chiamava
   `spritePosUpdate1BAB2` senza `sub1CABA`, quindi poteva aggiornare i globals
@@ -33,9 +43,10 @@ Fix:
 
 Verifica:
 
+- `npx vitest run packages/engine/test/sub-1caba-tile-redraw.test.ts`
 - `npx vitest run packages/engine/test/helper-121b8.test.ts`
 - `npx tsc -b packages/engine/tsconfig.json packages/web/tsconfig.json`
-- `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/sub-29cce.test.ts packages/engine/test/trackball-apply.test.ts`
+- `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/sub-1caba-tile-redraw.test.ts packages/engine/test/sub-29cce.test.ts packages/engine/test/trackball-apply.test.ts`
 - `npm --workspace @marble-love/web run build`
 
 ## 2026-05-17 — Audio sessione 4: dispatcher musica raggiunto, gap KC/KF

@@ -492,6 +492,28 @@ export function scriptSlotBboxTest14E92(
       yPass = true;
     }
     if (!yPass) continue;
+    state.debug ??= {};
+    state.debug.lastScriptSlotCollision = {
+      frame: Number(state.clock.frame),
+      entityAddr,
+      slotIndex: i,
+      slotAddr: slotPtr,
+      slotState: readByte(state, slotOff + SLOT_STATE_OFF),
+      entityState: readByte(state, (entityAddr - WORK_RAM_BASE) + ENTITY_STATE_OFF),
+      slotX,
+      slotY,
+      slotZ,
+      bboxX0: slotXNear,
+      bboxY0: slotYNear,
+      bboxX1: slotXFar,
+      bboxY1: slotYFar,
+      marbleX0: marbleXNear,
+      marbleY0: marbleYNear,
+      marbleZ0: marbleZNear,
+      marbleX1: marbleXFar,
+      marbleY1: marbleYFar,
+      marbleZ1: marbleZFar,
+    };
 
     // ─── HIT path (D2 = 1) ──────────────────────────────────────────────
     // tst.b (0x1A, A3) — slot state == 0?

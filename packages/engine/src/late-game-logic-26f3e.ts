@@ -162,6 +162,15 @@ function loadCoords(
   return [d5, d4];
 }
 
+function lowerVisibleBoundForStruct(
+  state: GameState,
+  rom: RomImage,
+  structPtr: number,
+  defaultBound: number,
+): number {
+  return rb(state, rom, structPtr + 0x1f) === 0x0a ? -0x40 : defaultBound;
+}
+
 /**
  * Iso-projection coord load for the player marble (objPtr in workRam @ 0x400018/0x4000FA).
  *
@@ -636,7 +645,8 @@ function dispatchType10(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x120) return;
+  const d4s = s16(d4);
+  if (d4s < lowerVisibleBoundForStruct(state, rom, sp, 0xc0) || d4s >= 0x120) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5, d4, 0x3000, subs);
 }
 
@@ -651,7 +661,8 @@ function dispatchType11_13(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5base, d4base] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
-  if (s16(d4base) < 0xe0 || s16(d4base) >= 0x100) return;
+  const d4baseS = s16(d4base);
+  if (d4baseS < lowerVisibleBoundForStruct(state, rom, sp, 0xe0) || d4baseS >= 0x100) return;
 
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5base, d4base, 0x1800, subs);
 
@@ -693,7 +704,8 @@ function dispatchType12(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
-  if (s16(d4) < 0xe0 || s16(d4) >= 0x100) return;
+  const d4s = s16(d4);
+  if (d4s < lowerVisibleBoundForStruct(state, rom, sp, 0xe0) || d4s >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5, d4, 0x3800, subs);
 }
 
