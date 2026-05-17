@@ -875,14 +875,14 @@ PC=`$8FCC` e' GATED da `audioRam $0573 bit 6`. Disassembly:
 `LDA $0573; AND #$40; BEQ skip; ... STA $1801` ($8FB8-$8FCC).
 TS ha `$0573=$00` → KEY ON skippato → silenzio.
 
-Il path che enables `$0573 = $40` parte da `$87F4 LDA ($0E),Y` (read
-music data via pointer in zp $0E/$0F). Se byte != 0 → JMP $8867 →
-$8912 → $890C STA $0573 #$40. TS legge da pointer $A052, MAME da $CCE8
-— diversi music tracks. Entrambi puntano a real data ma di tracce diverse:
-TS reads music che non triggera path, MAME reads attract music con note
-reali. Gap finale: identificare cosa setta zp $0E/$0F (music pointer)
-nel cmd handler — probabile cmd byte specifico (es. $61, $01) imposta il
-pointer e TS prende branch diverso.
+Il path enables `$0573 = $40` parte da `$87F4 LDA ($0E),Y` (read music
+data via pointer in zp $0E/$0F). Music pointer table a $0248-$0267
+contiene per ogni slot LO+HI. TS slot table popolata con tracce
+$A0xx-$BDxx. MAME slot table ha tracce **$CCxx** in slot 8/9/10/13
+(es. slot 13 = $CCB4 e' il track audible a sec 200-220). Gap finale:
+TS music engine non assegna MAI tracce $CCxx — il routing "cmd byte →
+music ID → slot pointer" diverge da MAME. Richiede ROM disassembly
+approfondito multi-giorno per chiudere completamente.
 
 | Phase | File | Test |
 |---|---|---|
