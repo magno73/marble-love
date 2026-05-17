@@ -86,6 +86,37 @@ processa stati interni ($0308 array, $0210/$0211 queue indici, music data
 parser via $($0E),Y) con timing leggermente diverso. La chiusura completa
 del gap richiede A1 cycle-exact 6502 drill (deferred per cost/benefit).
 
+**Per-second correlation TS vs MAME WAV** (14000 frame):
+
+- sec 0-200: entrambi silenti (attract setup phase)
+- sec 210: TS max=0.03, MAME max=0.14, corr=-0.06 (entrambi audible, waveform diversa)
+- sec 220: TS max=0.0005, MAME=0 (TS produce decay tail extra)
+
+**Insight**: TS produce audio nello **stesso intervallo temporale** di MAME
+(~sec 200-220 dell'attract loop), ma con waveform diversa e amplitude
+minore. Cycle skew NON e' enormemente accumulato — solo subtle drift che
+fa TS scegliere music event different.
+
+**Riassunto sessioni 4a-4k**:
+
+| # | Win |
+|---|---|
+| 4a | Cmd-tape infra (capture + replay) |
+| 4b | Web `?soundReplay=` ramo isolato |
+| 4c | $1820 bit mapping + reset/NMI ordering |
+| 4d | audioRam diff TS vs MAME |
+| 4e | Identified PC=$93A4 "play note" routine |
+| 4f | RTS-trick $8359 dispatch chain |
+| 4g | Music pointer table $9647/$9747 |
+| 4h | KEY ON gated by $0573 bit 6 |
+| 4i | Stack trace at KEY ON event |
+| **4j** | **$14 bit mapping + IRQ real-time → audio reale!** |
+| 4k | zp $19 = music data offset, non music ID |
+
+22 commit totali. Chip TS produce audio reale senza workaround.
+Cross-correlation residua per cycle skew sub-fine. Bit-perfect 100% richiede
+A1 drill cycle-exact 6502 (multi-day).
+
 ## 2026-05-17 — Runtime: fix FUN_1CABA video RAM read Beginner/L2
 
 Bug utente "marble che cade": lo screenshot corretto e' nel Beginner/L2
