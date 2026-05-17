@@ -554,9 +554,104 @@ runtime. La fix richiede:
 
 - `oracle/mame_sound_audioram_dump.lua` — MAME audioRam snapshot multi-frame
 - `oracle/mame_sound_reset_release_tap.lua` — trace reset release timing
+- `oracle/mame_ym2151_write_tap.lua` — trace YM2151 register writes
 - `packages/cli/src/probe-audioram-diff.ts` — TS vs MAME audioRam diff
 - `packages/cli/src/probe-chip-debug.ts` — chip state inspector (PC, regs, audioRam)
 - `packages/cli/src/probe-isolated-cmds.ts` — isolated cmd byte tester
+
+### Sessione 3 (2026-05-17 cont) — Bug fix critici + remaining IRQ gap
+
+**Fix 1 — $1820 bit assignment swapped** (sound-mmu.ts):
+
+MAME atarisy1.cpp::switch_6502_r definisce bit 3 ($08) = main→sound pending
+(NMI source), bit 4 ($10) = sound→main pending. TS aveva i bit scambiati.
+Il sound code marble a $9566 (NMI handler entry) fa `BIT $1820` con A=$10
+e BNE-loop aspettando che il response buffer (sound→main) si svuoti. Con
+bit scambiati, il loop era infinito → 6502 mai usciva dal NMI handler.
+
+**Fix 2 — Reset+NMI race condition** (sound-chip.ts):
+
+TS asseriva NMI anche con chip in reset. `releaseSoundReset()` chiama
+`cpuReset()` che azzera `cpu.nmi`, ma il caller poi `submitCommand()`
+asseriva NMI nuovamente PRIMA che il primo opcode del boot vector ($8002)
+fosse eseguito. Il 6502 saltava direttamente al NMI handler con stato non
+inizializzato → loop infinito a PC=$9569.
+
+Fix: `submitCommand()` sopprime NMI quando `chip.inReset=true` (replica
+hardware: edge negativo del NMI line non viene latched dal CPU in reset).
+`releaseSoundReset()` re-asserisce NMI se mailbox e' gia' pending (matching
+MAME atarisy1 ordering verificato via $860001 write tap: f244 ha
+sequenza $FE0001=cmd → $860001=bit7=1 release).
+
+**Fix 3 — Reply queue mai drained** (probe + sound-replay):
+
+Senza simulare main 68K che legge $FC0001 (ack del response buffer),
+`soundToMain.pending` resta true indefinitamente. Il sound 6502 NMI
+handler a $9566 fa BIT $1820 con mask $10 (sound→main pending) e BNE-loop
+aspettando che il response buffer si svuoti. Fix: `drainReplyEvents()` ad
+ogni frame nel cmd-tape player simula il main 68K read $FC0001.
+
+**Result delle fix** (probe-audioram-diff f3000):
+
+| Frame | MAME non-zero | TS prima fix | TS dopo fix |
+|---|---|---|---|
+| 245  | 126 | 117 | 8 (chip in reset, just boot start) |
+| 600  | 483 | 117 (idle, cmd dropped) | 421 (cmd queueing) |
+| 1000 | 541 | 117 | 579 |
+| 3000 | 525 | 117 | 616 (TS slightly ahead — queue accumulation) |
+
+Il 6502 ora riceve i cmd, accoda nel ring buffer audioRam[$02..$0c], e
+incrementa il queue pointer. Pre-fix audioRam restava stuck a 117 byte
+(boot init + NMI handler deadlock). Post-fix audioRam grows like MAME.
+
+**Remaining gap** — Timer A IRQ dispatcher NON ATTIVO in TS:
+
+Confronto YM2151 register writes (oracle/mame_ym2151_write_tap.lua, MAME):
+
+- f244: `$10=$C8, $11=$00, $14=$05` (boot init, TS matches)
+- f244: `$08=$07..$00` (key-off all 8 channels, TS NON scrive)
+- f244: `$14=$11` (LOAD Timer A + IRQ_EN_A=1, **TS NON scrive**)
+- f244: `$14=$05` (clear flag, IRQ handler iteration)
+- f245+: `$14=$11/$05` alternato 10459 volte (IRQ handler periodico)
+- f245+: voice register writes ($20-$7F): 2344 per `$20-$23`, key codes,
+  attenuation, etc. **TS NON scrive nulla di tutto cio'**.
+
+Root cause: il TS 6502 raggiunge il main loop a $80F0, ma non scrive mai
+`$14=$11` (enable Timer A IRQ). Senza IRQ enable, Timer A overflow non
+fira IRQ, IRQ handler ($81A6) non gira, voice register non vengono mai
+scritti.
+
+Chicken-and-egg: l'IRQ handler stesso e' l'unico path che scrive $14=$11
+(via `LDX #$11; STX $1801` a $81B1/$81BB). Per la PRIMA volta che il
+handler firma, IRQ_EN_A deve gia' essere settato. MAME entra nel handler
+a f244 (immediato dopo boot init), ma il path esatto non e' chiaro dal
+disassembly statico — necessario PC-by-PC trace tramite MAME debugger o
+breakpoint Lua.
+
+Hypothesis: il boot init dovrebbe terminare con sequence che, dopo il YM
+init, esegue una routine "music engine start" che (1) fa key-off all
+channels, (2) scrive `$14=$11` per abilitare IRQ, (3) entra in main loop.
+Questa routine in TS non viene raggiunta — probabilmente per cycle skew
+A1 che fa divergere il flow del boot post-YM-init.
+
+**Next steps**:
+
+1. MAME Lua tap su PC del sound 6502 al f244..f246 → estrarre la sequence
+   esatta di chiamate. Identificare la routine "music engine start".
+2. Trace TS 6502 PC al stesso range e identificare branch divergente.
+3. Fixare il bug A1 sottostante (probabile: cycle table per opcode che
+   diverge da MAME M6502 emulator).
+4. Alternativamente: hot-patch nel sound-chip.ts che inietta `$14=$11`
+   write dopo N cycle post-release → soluzione non-bit-perfect ma audio
+   audibile.
+
+**State a fine sessione 3**:
+
+- 143/143 sound test PASS (3 test aggiornati per i fix di bit mapping).
+- Infrastruttura cmd-tape funziona end-to-end.
+- 6502 boot ok, cmd queue popolato correttamente.
+- Voice register YM2151 ancora 0 → audio silente (correlation 0.0 vs MAME WAV).
+- A1 drill remains (più focalizzato ora: solo il branch che porta a $14=$11).
 
 ## 9. Approval
 
