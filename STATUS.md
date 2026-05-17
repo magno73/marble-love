@@ -71,9 +71,27 @@ sono scritti via $1800/$1801. Conferma che il gap audio attuale e' nel
 music dispatcher 6502 (non raggiunge KC/KF writes), non nel sample generator
 del chip stesso.
 
-**Next session**: identificare il branch del dispatcher $9622 che porta a
-KC/KF writes (probabile: zp $32/$33/$34 deve raggiungere valore specifico),
-MAME PC trace post-$9622 entry → confronto con TS, drill cycle table M6502.
+**PC source di KC/KF in MAME** (identificato via `oracle/
+mame_ym2151_write_pc_tap.lua`, sound 6502 PC tracking per ogni write):
+
+| PC | Routine | Cosa scrive |
+|---|---|---|
+| `$8179..$81A2` | `$8177` YM init | $10, $11, $14=$05 (boot) |
+| `$8285..$829E` | `$8280` key-off all | $08=$07..$00 (key off ch 0-7) |
+| `$81B8..$81C3` | `$81A6` IRQ handler | $14=$11/$05 alternato (250 Hz) |
+| **`$93A4`** | **music note start** | **KC ($28-$2B), KF ($30-$33)** |
+| `$8E9C, $8EAF, $8EC2` | helpers note | KF + altri params |
+| `$93BE, $93C6` | full voice setup | $43-$E3 (DT1/MUL/TL/AR/D1R/D2R/RR) |
+| `$9443` | secondary helper | misc |
+
+KC/KF writes iniziano a **f375** (131 frame dopo boot, cmd 0x08 nella tape).
+La routine `$93A4` e' chiamata dal music dispatcher quando una nuova nota
+deve partire. In TS questa routine non viene mai raggiunta nonostante IRQ
+handler $81A6 + dispatcher $9622 funzionino.
+
+**Next session**: trace TS 6502 PC durante f300-f400 con `forceSoundIrqHack`
+attivo, identificare branch che diverge da MAME (probabile: state byte zp
+$32/$33/$34 con valore diverso che salta `$93A4`).
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 

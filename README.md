@@ -845,6 +845,11 @@ funzionante via test regressione (`sound-chip-smoke.test.ts`: maxAbs > 0.1
 con KC/KF settati manualmente). API `forceSoundIrqHack(chip)` esposta come
 workaround opt-in.
 
+Identificato il PC della routine "play note" MAME via
+`oracle/mame_ym2151_write_pc_tap.lua` (PC tracking per ogni write YM2151):
+**PC=$93A4** scrive KC ($28-$2B) e KF ($30-$33). Si attiva a f375 (cmd 0x08
+nella tape). Helpers $8E9C/$8EAF/$8EC2 scrivono KF aggiuntivi.
+
 | Phase | File | Test |
 |---|---|---|
 | **C2 M6502 core** | `src/m6502/{addressing,bus,cpu,cycle-table,opcodes,regfile}.ts` | 65x02 Tom Harte SingleStepTests PASS |
