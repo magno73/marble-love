@@ -315,11 +315,73 @@ NMI/IRQ handling, voice setup, register writes, sample generator
 — quale cmd byte trigger quale music ID, e come music ID si traduce in
 $0248,X / $0258,X slot pointer.
 
-Per chiudere serve drill ROM disassembly approfondito (multi-giorno):
-- Identificare music ID → track ptr lookup table in ROM
-- Verificare cmd handler routing che setta music ID
-- Trace cmd byte processing TS vs MAME a frame specifici per branch
-  divergente che assegna $CCxx tracks vs $A0xx tracks
+**Sessione 4h — Music ID lookup table identificata in ROM**:
+
+ROM disassembly trovato il music init routine a $91A8 + 2 lookup tables
+in ROM:
+
+**Routine `$91A8`** (music init):
+```
+$91A8 STA $19           ; music ID in zp $19
+$91AA JSR $82E8         ; helper
+$91AD BEQ +$3F          ; skip if invalid
+$91B0..$91CA            ; save state via ($1D),Y indirect
+$91CB LDA $19
+$91CD ASL               ; carry = bit 7 of music ID, A = ID*2
+$91CE TAY
+$91CF LDA $9647,Y       ; table 1 ($9647): LO byte
+$91D2 BCC +3
+$91D4 LDA $9747,Y       ; table 2 ($9747): LO byte (alt)
+$91D7 STA $0248,X       ; slot LO
+$91DA STA $0E           ; current music ptr LO
+$91DC LDA $9648,Y       ; table 1: HI byte
+$91DF BCC +3
+$91E1 LDA $9748,Y       ; table 2: HI byte (alt)
+$91E4 STA $0258,X       ; slot HI
+$91E7 STA $0F           ; current music ptr HI
+```
+
+**ROM Music Pointer Tables**:
+- `$9647+` Table 1 (selected when music ID bit 7 = 1)
+- `$9747+` Table 2 (selected when music ID bit 7 = 0)
+
+**Table 2 ($9747+) contiene attract music**:
+- $9747 (idx 0): $BE98
+- $977F (idx $1C × 2 = $38): **$CCB4** ← audible track
+- $9781 (idx $1D × 2 = $3A): **$CCE8**
+- $9783 (idx $1E × 2 = $3C): **$CD38**
+- $9785 (idx $1F × 2 = $3E): **$CD8C**
+
+Per giocare attract music (audible a sec 200), serve music ID 0x1C..0x1F
+(bit 7 clear → use table 2 → load $CCxx ptr).
+
+**Mistero finale**: $91A8 routine **non e' referenziata da nessun JSR/
+JMP/data table** nel ROM. Sembra unreachable via static analysis.
+Probabili meccanismi di entry:
+- RTS-trick (push return addr - 1, then RTS)
+- Self-modifying code
+- Indirect JMP (zp) con pointer caricato dinamicamente
+
+Per chiudere serve dynamic trace MAME instruction-by-instruction durante
+music ID write per identificare il caller di $91A8 e il branch divergente
+che TS prende.
+
+**Stato finale audio drill sessione 4 (4a-4h)**:
+
+Infrastruttura audio TS funzionalmente completa:
+- ✅ Cmd processing (NMI handler $9566)
+- ✅ IRQ handler ($81A6, via forceSoundIrqHack workaround)
+- ✅ Voice setup (66/96 registers scritti)
+- ✅ Sample generator (test regression locked)
+- ✅ Music dispatcher ($9622 raggiunto)
+- ✅ Music note routine path mapped ($87F4 → $8867 → $890C → $0573)
+- ✅ Music pointer slot table identified ($0248-$0267)
+- ✅ ROM music pointer tables identified ($9647, $9747)
+- ❌ Music ID dispatch path (call chain a $91A8 unclear)
+
+Cross-correlation TS vs MAME WAV: 0.0 (TS silent, MAME WAV silent o
+attract music). Validation audio sample-level non praticabile senza
+scenari reali e dispatch routing fix.
 
 ## 2026-05-17 — Audio: cmd-tape replay infrastructure (bypass A0)
 
