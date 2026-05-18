@@ -67,7 +67,7 @@ const freezeImpulseMinDv = Number.isFinite(freezeImpulseMinDvRaw) ? freezeImpuls
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
-const manualPlayableSeedName = "manual_level1_start";
+const livePlaySeedName = playableSeedForStartLevel(1) ?? "manual_level1_start";
 const replayPlayableSeedName = "coin_start_to_level1";
 const startLevelPractice = parseStartLevelParam(searchParams.get("startLevel"));
 const startLevelPlayableSeedName = playableSeedForStartLevel(startLevelPractice);
@@ -992,12 +992,12 @@ async function startGame(
     }
   } else if (useCoinStartFlow) {
     try {
-      const loaded = await loadPlayableSeedWarmState(manualPlayableSeedName);
+      const loaded = await loadPlayableSeedWarmState(livePlaySeedName);
       coinStartWarmState = loaded?.warmState;
       coinStartMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
-      console.log(`[marble-love] prepared live gameplay seed ${manualPlayableSeedName}`);
+      console.log(`[marble-love] prepared live gameplay seed ${livePlaySeedName}`);
     } catch (e) {
-      console.warn(`[marble-love] live gameplay seed ${manualPlayableSeedName} fetch failed:`, e);
+      console.warn(`[marble-love] live gameplay seed ${livePlaySeedName} fetch failed:`, e);
       try {
         const loaded = await loadPlayableSeedWarmState(replayPlayableSeedName);
         coinStartWarmState = loaded?.warmState;

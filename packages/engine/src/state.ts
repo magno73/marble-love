@@ -192,6 +192,17 @@ export interface TickClock {
   mainThreadWaitDelay: u16 | undefined;
   /** Alpha row clear that must run after the deferred main-thread wait. */
   mainThreadWaitClearRows: u8 | undefined;
+  /**
+   * Warm-state resume cursor for level-intro seeds captured inside the
+   * FUN_10504 HUD/timer presentation loop. Undefined during normal gameplay.
+   */
+  levelIntroBannerResumeTick: u16 | undefined;
+  /**
+   * Timer value observed when the level-intro presentation starts. FUN_10504
+   * adds the level-specific bonus to this base; later levels can start from a
+   * non-zero carryover timer.
+   */
+  levelIntroBannerBaseTimer: u16 | undefined;
 }
 
 export interface ObjectPairCollisionDebug {
@@ -460,7 +471,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined, levelIntroBannerResumeTick: undefined, levelIntroBannerBaseTimer: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },

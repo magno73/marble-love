@@ -161,7 +161,7 @@ function initSlotFromDescriptor(
       });
     },
   });
-  slotInsertSorted18E6C(state, rom, rb(state, slotAbs + 0x19), 2);
+  slotInsertSorted18E6C(state, rom, 2, rb(state, slotAbs + 0x19));
 }
 
 function clearSlotsLeavingRange(state: GameState, fromScaled: number, toScaled: number): void {
