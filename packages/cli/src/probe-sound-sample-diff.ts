@@ -127,11 +127,14 @@ function main(): void {
   console.log(`MAME WAV: ${mameWavData.sampleRate}Hz × ${mameWavData.channels}ch × ${mameWavData.samples.length} samples`);
 
   // Carica cmd tape (opzionale)
-  let cmdTape: CmdTape = { cmds: [] };
+  let cmdTape: CmdTape & { cmds: Array<{ frame: number; byte: number; secs?: number; attos?: string }> } =
+    { cmds: [] };
   if (cmdTapeArg !== undefined && existsSync(cmdTapeArg)) {
-    cmdTape = JSON.parse(readFileSync(cmdTapeArg, "utf8")) as CmdTape;
+    cmdTape = JSON.parse(readFileSync(cmdTapeArg, "utf8")) as any;
     console.log(`Cmd tape: ${cmdTape.cmds.length} cmds`);
   }
+  const hasCyclePrecision = cmdTape.cmds.length > 0 && cmdTape.cmds[0]!.secs !== undefined;
+  console.log(`Cycle-precise tape: ${hasCyclePrecision}`);
 
   // Carica ROM
   const rom421 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.421"));
@@ -140,7 +143,9 @@ function main(): void {
   // Crea SoundChip; release del reset al primo cmd frame (matching MAME).
   const chip = createSoundChip({ roms: { rom421, rom422 } });
 
-  // Run N frame, inject cmd dal tape al frame giusto
+  // Run N frame, inject cmd dal tape al frame giusto.
+  // NOTA: cycle-precise replay disabilitato in probe-sound-sample-diff per
+  // array overflow su 14000 frame. Vedi probe-ym-writes per cycle-precise.
   const cmdByFrame = new Map<number, number[]>();
   for (const c of cmdTape.cmds) {
     if (!cmdByFrame.has(c.frame)) cmdByFrame.set(c.frame, []);
@@ -154,7 +159,6 @@ function main(): void {
   const ymSamples: number[] = [];
   const pokeySamples: number[] = [];
   for (let f = 0; f < frames; f++) {
-    // Hardware-faithful: submit cmd (NMI suppressed in reset), then release.
     const cmds = cmdByFrame.get(f);
     if (cmds !== undefined) {
       for (const c of cmds) submitCommand(chip, as_u8(c));
@@ -164,11 +168,11 @@ function main(): void {
       resetReleased = true;
     }
     tickCycles(chip, SOUND_CYCLES_PER_FRAME);
-    drainReplyEvents(chip);  // simula main 68K read $FC0001
+    drainReplyEvents(chip);
     const ym = drainYm2151Samples(chip);
     const pk = drainPokeySamples(chip);
-    ymSamples.push(...ym);
-    pokeySamples.push(...pk);
+    for (const s of ym) ymSamples.push(s);
+    for (const s of pk) pokeySamples.push(s);
   }
   console.log(`TS YM2151 samples: ${ymSamples.length} (= ${ymSamples.length / 2} stereo @ ${YM2151_NATIVE_SAMPLE_RATE}Hz)`);
   console.log(`TS POKEY samples:  ${pokeySamples.length} mono @ ${POKEY_NATIVE_SAMPLE_RATE}Hz`);
