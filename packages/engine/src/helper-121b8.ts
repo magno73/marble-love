@@ -124,6 +124,7 @@ import {
   trackballApplyDelta,
 } from "./trackball-apply.js";
 import { vectorScale } from "./vector-scale.js";
+import { recordObjectStateEntryDebug } from "./object-state-debug.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper285B0 } from "./helper-285b0.js";
@@ -885,6 +886,11 @@ export function helper121B8(
               soundCmdSend158AC(state, 0x46);
             }
             w8(state, objOff + OBJ_57, 0x64);
+            recordObjectStateEntryDebug(state, a2, 4, "FUN_121B8/bounce-below-target", {
+              floorNow: d4_timer | 0,
+              zDelta: diffSigned,
+              detail: "f36=2 target-z drift",
+            });
             if (subs.fun_25bae !== undefined) {
               subs.fun_25bae(state, a2, 4);
             } else {
@@ -924,6 +930,10 @@ export function helper121B8(
         } else {
           helper25C74(state, a2, w_arg, {
             objectStateEntry25BAE: (s, objPtr, code) => {
+              recordObjectStateEntryDebug(s, objPtr, code, "FUN_121B8/FUN_25C74", {
+                floorNow: d4_timer | 0,
+                detail: `arg=${w_arg}`,
+              });
               if (subs.fun_25bae !== undefined) {
                 subs.fun_25bae(s, objPtr, code);
               } else {
@@ -1277,6 +1287,10 @@ export function helper121B8(
       // move.b #0x65,(0x57,A2)
       w8(state, objOff + OBJ_57, 0x65);
       // pea $4.w; move.l A2,-(SP); jsr $25BAE.l; lea.l $C(SP),SP
+      recordObjectStateEntryDebug(state, a2, 4, "FUN_121B8/out-of-range", {
+        zDelta: d0Signed,
+        detail: "abs(z-global)>0x100000",
+      });
       if (subs.fun_25bae !== undefined) {
         subs.fun_25bae(state, a2, 4);
       } else {

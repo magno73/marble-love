@@ -312,6 +312,33 @@ function scriptSlotDebugLine(
     `d=(${(x - playerX).toFixed(1)},${(y - playerY).toFixed(1)},${(z - playerZ).toFixed(1)})`;
 }
 
+function terrainSlotDebugLine(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  index: number,
+  playerX: number,
+  playerY: number,
+  playerZ: number,
+): string {
+  const off = 0x0a9c + index * 0x56;
+  const x = signed16(readWorkWordBE(state, off + 0x0c));
+  const y = signed16(readWorkWordBE(state, off + 0x10));
+  const z = signed16(readWorkWordBE(state, off + 0x14));
+  const active = state.workRam[off + 0x18] ?? 0;
+  const slotState = state.workRam[off + 0x1a] ?? 0;
+  const tag = state.workRam[off + 0x1f] ?? 0;
+  const g690 = signed16(readWorkWordBE(state, 0x690));
+  const g692 = signed16(readWorkWordBE(state, 0x692));
+  const g696 = signed16(readWorkWordBE(state, 0x696));
+  const g698 = signed16(readWorkWordBE(state, 0x698));
+  const d6 = signed16((x - g690) & 0xffff);
+  const a0 = signed16((y - g692) & 0xffff);
+  const d1 = signed16(((x >> 3) - g696) & 0xffff);
+  const d2 = signed16(((y >> 3) - g698) & 0xffff);
+  return `terrain${index} a=${active} st=${slotState} tag=${tag.toString(16).padStart(2, "0")} ` +
+    `x=${x} y=${y} z=${z} d1/d2=(${d1},${d2}) d6/a0=(${d6},${a0}) ` +
+    `d=(${(x - playerX).toFixed(1)},${(y - playerY).toFixed(1)},${(z - playerZ).toFixed(1)})`;
+}
+
 function collisionGateDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
   const bytes = [0x666, 0x668, 0x66a, 0x66c, 0x66e, 0x670, 0x672]
     .map((off) => `${off.toString(16)}=${(state.workRam[off] ?? 0).toString(16).padStart(2, "0")}`)
@@ -368,6 +395,64 @@ function lastTerrainSlotCollisionDebugLine(state: ReturnType<typeof stateNs.empt
     `  slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) entity=(` +
     `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)},${fixedRawToFloat(hit.entityZ).toFixed(1)}) ` +
     `vBefore=(${fixedRawToFloat(hit.entityVxBefore).toFixed(2)},${fixedRawToFloat(hit.entityVyBefore).toFixed(2)})`;
+}
+
+function lastTubeProbeDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTubeProbe;
+  if (hit === undefined) return "last tube probe: -";
+  return `last tube probe f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `slot=${hit.slotIndex}@${hit.slotAddr.toString(16)} tag=${hit.colorTag.toString(16).padStart(2, "0")} ` +
+    `result=${hit.result} d1/d2=(${hit.d1},${hit.d2}) d6/a0=(${hit.d6},${hit.a0}) ` +
+    `st/f36/f58/f59=${hit.state1a}/${hit.state36.toString(16).padStart(2, "0")}/` +
+    `${hit.f58.toString(16).padStart(2, "0")}/${hit.f59.toString(16).padStart(2, "0")}\n` +
+    `  slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) entity=(` +
+    `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)},${fixedRawToFloat(hit.entityZ).toFixed(1)}) ` +
+    `v=(${fixedRawToFloat(hit.entityVx).toFixed(2)},${fixedRawToFloat(hit.entityVy).toFixed(2)},${fixedRawToFloat(hit.entityVz).toFixed(2)})`;
+}
+
+function lastTerrainScanStopDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTerrainScanStop;
+  if (hit === undefined) return "last terrain scan stop: -";
+  return `last terrain scan stop f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `reason=${hit.reason} iter=${hit.iterCount} slot=${hit.slotIndex}@${hit.slotAddr.toString(16)} ` +
+    `a=${hit.active} st=${hit.slotState} tag=${hit.colorTag.toString(16).padStart(2, "0")} ` +
+    `d1/d2=(${hit.d1},${hit.d2}) d6/a0=(${hit.d6},${hit.a0}) ` +
+    `f58/f59=${hit.f58.toString(16).padStart(2, "0")}/${hit.f59.toString(16).padStart(2, "0")}\n` +
+    `  slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) entity=(` +
+    `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)},${fixedRawToFloat(hit.entityZ).toFixed(1)})`;
+}
+
+function lastObjectStateEntryDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastObjectStateEntry;
+  if (hit === undefined) return "last object-state entry: -";
+  const tag =
+    hit.colorTag === undefined
+      ? ""
+      : ` tag=${hit.colorTag.toString(16).padStart(2, "0")}`;
+  const slot = hit.slotIndex === undefined ? "" : ` slot=${hit.slotIndex}`;
+  const d =
+    hit.d1 === undefined
+      ? ""
+      : ` d1/d2=(${hit.d1},${hit.d2}) d6/a0=(${hit.d6},${hit.a0})`;
+  const floor =
+    hit.floorNow === undefined
+      ? ""
+      : ` floor=${fixedRawToFloat(hit.floorNow).toFixed(1)}`;
+  const zDelta =
+    hit.zDelta === undefined
+      ? ""
+      : ` zDelta=${fixedRawToFloat(hit.zDelta).toFixed(1)}`;
+  const detail = hit.detail === undefined ? "" : ` ${hit.detail}`;
+  return `last object-state entry f=${hit.frame} source=${hit.source} ` +
+    `entity=${objectAddrDebugLabel(hit.entityAddr)} code=${hit.code}${slot}${tag}${d}${floor}${zDelta}${detail}\n` +
+    `  prev a/type/st/k=${hit.active}/${hit.type}/${hit.prevState}/${hit.prevKind} ` +
+    `f36=${hit.prevF36.toString(16).padStart(2, "0")} f56=${hit.prevF56.toString(16).padStart(2, "0")} ` +
+    `f57=${hit.prevF57.toString(16).padStart(2, "0")} f58=${hit.prevF58.toString(16).padStart(2, "0")} ` +
+    `f59=${hit.prevF59.toString(16).padStart(2, "0")} f5f=${hit.prevF5f.toString(16).padStart(2, "0")} ` +
+    `f60=${hit.prevF60.toString(16).padStart(2, "0")}\n` +
+    `  p=(${fixedRawToFloat(hit.prevX).toFixed(1)},${fixedRawToFloat(hit.prevY).toFixed(1)},${fixedRawToFloat(hit.prevZ).toFixed(1)}) ` +
+    `targetZ=${fixedRawToFloat(hit.prevTargetZ).toFixed(1)} ` +
+    `v=(${fixedRawToFloat(hit.prevVx).toFixed(2)},${fixedRawToFloat(hit.prevVy).toFixed(2)},${fixedRawToFloat(hit.prevVz).toFixed(2)})`;
 }
 
 function lastBoundsBounceDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
@@ -672,6 +757,20 @@ function updateObjectDebugOverlay(
     candidates.push({ index, rank });
   }
   candidates.sort((a, b) => a.rank - b.rank);
+  const terrainSlots: Array<{ index: number; rank: number }> = [];
+  for (let index = 0; index < 25; index++) {
+    const off = 0x0a9c + index * 0x56;
+    const active = state.workRam[off + 0x18] ?? 0;
+    const slotState = state.workRam[off + 0x1a] ?? 0;
+    const tag = state.workRam[off + 0x1f] ?? 0;
+    if (active === 0 && slotState === 0 && tag === 0) continue;
+    const x = signed16(readWorkWordBE(state, off + 0x0c));
+    const y = signed16(readWorkWordBE(state, off + 0x10));
+    const z = signed16(readWorkWordBE(state, off + 0x14));
+    const rank = Math.abs(x - playerX) + Math.abs(y - playerY) + Math.abs((z - playerZ) / 8);
+    terrainSlots.push({ index, rank });
+  }
+  terrainSlots.sort((a, b) => a.rank - b.rank);
   const scriptSlots: Array<{ index: number; rank: number }> = [];
   for (let index = 0; index < 4; index++) {
     const off = 0x1302 + index * 0x60;
@@ -694,6 +793,13 @@ function updateObjectDebugOverlay(
     lastObjectPairCollisionDebugLine(state),
     lastScriptSlotCollisionDebugLine(state),
     lastTerrainSlotCollisionDebugLine(state),
+    lastTubeProbeDebugLine(state),
+    lastTerrainScanStopDebugLine(state),
+    lastObjectStateEntryDebugLine(state),
+    "terrain prefix slots:",
+    ...Array.from({ length: 8 }, (_, index) => terrainSlotDebugLine(state, index, playerX, playerY, playerZ)),
+    "nearest terrain slots:",
+    ...terrainSlots.slice(0, 4).map(({ index }) => terrainSlotDebugLine(state, index, playerX, playerY, playerZ)),
     lastBoundsBounceDebugLine(state),
     lastTrackballApplyDebugLine(state),
     lastTrackballSanitizeDebugLine(state),

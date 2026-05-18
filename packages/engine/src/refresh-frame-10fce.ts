@@ -78,6 +78,7 @@ import { helper12896 } from "./helper-12896.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
 import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
 import { stringHelper17CB8 } from "./string-helper-17cb8.js";
+import { recordObjectStateEntryDebug } from "./object-state-debug.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { objectInit2591A } from "./object-init-2591a.js";
 import { objectTargetInit262B2 } from "./object-target-init-262b2.js";
@@ -241,6 +242,19 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       },
     });
   };
+  const enterObjectStateFrom = (source: string) =>
+    (s: GameState, objAddr: number, code: number): void => {
+      const existing = s.debug?.lastObjectStateEntry;
+      const alreadyRecorded =
+        existing !== undefined &&
+        existing.frame === Number(s.clock.frame ?? 0) &&
+        existing.entityAddr === (objAddr >>> 0) &&
+        existing.code === (code & 0xff);
+      if (!alreadyRecorded) {
+        recordObjectStateEntryDebug(s, objAddr, code, source);
+      }
+      enterObjectState(s, objAddr, code);
+    };
   const enterObject1281C = (s: GameState, objAddr: number): number =>
     objectEnter1281C(s, objAddr, (ptr, mode) => fun264AA(s, rom, ptr, mode));
   const runTerrainCollision = (s: GameState, objAddr: number): void => {
@@ -250,7 +264,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     helper25FC2(s, rom, objAddr, {
       soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
       soundPair15884: (st) => { soundPair15884(st); },
-      objectStateEntry25BAE: (st, ptr, code) => { enterObjectState(st, ptr, code); },
+      objectStateEntry25BAE: enterObjectStateFrom("FUN_25FC2"),
       helper18F46: (st, r, typeCode, subIdx) => {
         helper18F46(st, r, typeCode, subIdx);
       },
@@ -325,7 +339,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     // reproduced and obj0.z_long matches the f12000..12099 oracle.
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
-      fun_25bae: enterObjectState,
+      fun_25bae: enterObjectStateFrom("FUN_121B8"),
       fun_29cce: runTerrainCollision,
       fun_1281c: enterObject1281C,
     });
@@ -354,7 +368,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     });
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
-      fun_25bae: enterObjectState,
+      fun_25bae: enterObjectStateFrom("FUN_121B8"),
       fun_29cce: runTerrainCollision,
       fun_1281c: enterObject1281C,
     });
@@ -439,7 +453,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
       const hit = stringHelper17CB8(state, a2, targetX, targetY, 0x70);
       if (hit !== 0) {
         wb(state, a2 + 0x57, 0x65);
-        enterObjectState(state, a2, 4);
+        enterObjectStateFrom("refresh/JT4-orbit")(state, a2, 4);
         d2w = 0;
       }
     }
@@ -474,7 +488,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     });
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
-      fun_25bae: enterObjectState,
+      fun_25bae: enterObjectStateFrom("FUN_121B8"),
       fun_29cce: runTerrainCollision,
       fun_1281c: enterObject1281C,
     });
@@ -505,7 +519,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     }
     helper121B8(state, rom, a2, {
       fun_1bab2: updateSpritePos,
-      fun_25bae: enterObjectState,
+      fun_25bae: enterObjectStateFrom("FUN_121B8"),
       fun_29cce: runTerrainCollision,
       fun_1281c: enterObject1281C,
     });
