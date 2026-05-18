@@ -83,6 +83,7 @@ import { renderString286EE } from "./render-string-286ee.js";
 import { formatNumber3874 } from "./string-format.js";
 import { renderStringChain3520 } from "./render-string-chain-3520.js";
 import { clearAlphaRows } from "./alpha-tilemap.js";
+import { advanceLevelIntroBannerResume } from "./level-intro-banner-resume.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -517,4 +518,5 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     }
   }
   runWarmResidualReplayTick(state);
+  advanceLevelIntroBannerResume(state, (timerPtr, idx) => renderTimerHud286EE(state, rom, timerPtr, idx));
 }

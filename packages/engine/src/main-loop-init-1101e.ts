@@ -28,6 +28,7 @@ import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
 import { startMode0Init11452Async, startMode2Init11452Async } from "./mode2-init-11452-async.js";
+import { armLevelIntroBannerResume } from "./level-intro-banner-resume.js";
 import { as_u8, as_u16 } from "./wrap.js";
 
 const WRAM = 0x00400000;
@@ -314,7 +315,9 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   if (rw(state, 0x00400394) > 5) {
     ww(state, 0x00400390, 6);
   } else {
+    const carryoverTimer = rw(state, 0x00400082);
     init10504(state, subs, rom);
+    armLevelIntroBannerResume(state, { baseTimer: carryoverTimer, parkTimer: true });
     ww(state, 0x00400390, 0);
   }
 }
