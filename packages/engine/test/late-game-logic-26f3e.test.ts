@@ -404,6 +404,120 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     expect(emitCalls[0]?.arg2).toBe((0xe0 + 0x10) & 0xffff); // d4
   });
 
+  it("type 4 culls at the binary lower edge -0x20", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x04, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f006, structPtr);
+    ww(state, structPtr + 0x28, 0x0050);
+    ww(state, structPtr + 0x2a, 0xffd0); // d4 = -0x20, culled by the binary.
+    wl(state, structPtr + 0x58, celListPtr);
+    wl(state, celListPtr, 0x00020c60);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
+  it("type 4 renders just above the binary lower edge", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x04, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f006, structPtr);
+    ww(state, structPtr + 0x28, 0x0050);
+    ww(state, structPtr + 0x2a, 0xffd1); // d4 = -0x1f, first visible row.
+    wl(state, structPtr + 0x58, celListPtr);
+    wl(state, celListPtr, 0x00020c60);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x00020c60,
+      arg1: 0x0068,
+      arg2: 0xffe1,
+      arg3: 0x2000,
+    }]);
+  });
+
+  it("type 14 renders in the lower visible band used by Ultimate course sprites", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0e, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f07a, structPtr);
+    ww(state, structPtr + 0x28, 0x0050);
+    ww(state, structPtr + 0x2a, 0xffd0); // d4 = -0x20, visible for type 14.
+    wl(state, structPtr + 0x3a, celListPtr);
+    wl(state, celListPtr, 0x00020f24);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x00020f24,
+      arg1: 0x0068,
+      arg2: 0xffe0,
+      arg3: 0x3000,
+    }]);
+  });
+
+  it("type 14 culls at its binary lower edge -0x30", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0e, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f07a, structPtr);
+    ww(state, structPtr + 0x28, 0x0050);
+    ww(state, structPtr + 0x2a, 0xffc0); // d4 = -0x30, culled by the binary.
+    wl(state, structPtr + 0x3a, celListPtr);
+    wl(state, celListPtr, 0x00020f24);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
   it("type 5 emits the current cel pointer in the low visible band", () => {
     const state = makeState();
     const rom = emptyRomImage();
@@ -555,7 +669,41 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     expect(rw(state, 0x00400406)).toBe(2);
   });
 
-  it("type 11 keeps the original lower cull for non-catapult structs", () => {
+  it("type 11 renders Aerial accessory structs tagged 0x0b above -0x20", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0b, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0b);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffdc); // d4 = -0x14, visible in MAME L4.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0xffec,
+      arg3: 0x1800,
+    }]);
+    expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 11 renders accessory sprites in the binary visible band regardless of subtype byte", () => {
     const state = makeState();
     const rom = emptyRomImage();
     state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
@@ -568,6 +716,94 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     wb(state, structPtr + 0x1f, 0x09);
     ww(state, structPtr + 0x4e, 0x0050);
     ww(state, structPtr + 0x50, 0x0049);
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x1800,
+    }]);
+    expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 11 culls at the binary lower edge -0x20", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0b, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0b);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffd0); // d4 = -0x20, culled by the binary.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+    expect(rw(state, 0x00400406)).toBe(0);
+  });
+
+  it("type 13 shares the type 11 lower visible edge", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0d, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0d);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffd1); // d4 = -0x1f, first visible row.
+    wl(state, structPtr + 0x42, celListPtr);
+    wl(state, celListPtr, 0x0002108e);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([0x0002108e]);
+    expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 13 keeps tagged 0x0d accessory structs culled below -0x20", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0d, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0d);
+    ww(state, structPtr + 0x4e, 0x0050);
+    ww(state, structPtr + 0x50, 0xffaf); // d4 = -65, below the binary lower bound.
     wl(state, structPtr + 0x42, celListPtr);
     wl(state, celListPtr, 0x0002108e);
 

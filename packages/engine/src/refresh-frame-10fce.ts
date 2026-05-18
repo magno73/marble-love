@@ -89,11 +89,11 @@ import { objectEnter1281C } from "./object-enter-1281c.js";
 import { fun264AA } from "./fun-264aa.js";
 import { helper18F46 } from "./helper-18f46.js";
 import { helper285B0 } from "./helper-285b0.js";
+import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
+import { computeSpriteCoords_v4 } from "./sprite-coords.js";
+import { postStateChange13966 } from "./post-state-change-13966.js";
 
 const WRAM = 0x00400000;
-const LEVEL5_DESCRIPTOR_PTR = 0x0002de1e;
-const PLAYER_ADDR_1 = 0x00400018;
-const PLAYER_ADDR_2 = 0x004000fa;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -199,16 +199,6 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   const sd8 = wr[objOff + 0xd8] ?? 0;
   const scb = wr[objOff + 0xcb] ?? 0;
   const updateSpritePos = (s: GameState, objAddr: number): void => {
-    // MAME L5 post-seed captures keep the player surface struct 0x401C28
-    // flat/stable while 0x696/0x698 tile fields change; forcing FUN_1CABA
-    // here fabricates a fall.
-    if (
-      (objAddr === PLAYER_ADDR_1 || objAddr === PLAYER_ADDR_2) &&
-      rl(s, 0x00400474) === LEVEL5_DESCRIPTOR_PTR
-    ) {
-      spritePosUpdate1BAB2(s, objAddr);
-      return;
-    }
     spritePosUpdate1BAB2(s, objAddr, {
       fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
     });
@@ -238,6 +228,7 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
           fun_1CC62: updateSpriteProject,
           fun_25B40: (st2, ptr) => { objectArrayInit25B40(st2, rom, ptr); },
           fun_1B9CC: helper1B9CC,
+          fun_13966: (st2, ptr) => { postStateChange13966(st2, rom, ptr); },
         });
       },
     });
@@ -892,7 +883,22 @@ export function refreshFrame10FCE(
   const fun1844AKey =
     gameMode === 3 && slot760 !== 0 ? "FUN_1844A_HEAVY" : "FUN_1844A_FAST";
   callSub(state, fun1844AKey, () => {
-    (subs.stateSub1844A ?? ((s) => { stateSub1844A(s, rom); }))(state);
+    (subs.stateSub1844A ?? ((s) => {
+      stateSub1844A(s, rom, {
+        fun_18e6c: (typeCode, subIdx, st, r) => {
+          slotInsertSorted18E6C(st, r, typeCode, subIdx);
+        },
+        fun_18f46: (typeCode, subIdx, st) => {
+          helper18F46(st, rom, typeCode, subIdx);
+        },
+        fun_18972: (entryAbsAddr, st) => {
+          computeSpriteCoords_v4(st, entryAbsAddr);
+        },
+        soundCommand: (cmd) => {
+          soundCmdSend158AC(s, cmd);
+        },
+      });
+    }))(state);
   });
 
   // 0001100A: jsr 0x00012FD0

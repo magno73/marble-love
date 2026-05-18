@@ -21,7 +21,8 @@
  * Phase 7: implementare anche pulsanti virtuali e accelerometro mobile.
  */
 
-const KEYBOARD_TRACKBALL_EQUIV = 8; // MAME playable trace usa passi ±8
+const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 8; // MAME playable trace usa passi ±8
+const MAX_KEYBOARD_TRACKBALL_EQUIV = 64;
 const TRACKBALL_KEYS = new Set([
   "arrowleft",
   "arrowright",
@@ -51,6 +52,15 @@ export interface InputState {
   triggerStartPulse(): void;
 }
 
+export interface InputOptions {
+  keyboardTrackballStep?: number;
+}
+
+export function normalizeKeyboardTrackballStep(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return DEFAULT_KEYBOARD_TRACKBALL_EQUIV;
+  return Math.max(1, Math.min(MAX_KEYBOARD_TRACKBALL_EQUIV, Math.round(value)));
+}
+
 export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number; y: number } {
   const rawX = dx | 0;
   const rawY = dy | 0;
@@ -77,7 +87,9 @@ export function isStartKey(key: string): boolean {
   return START_KEYS.has(key.toLowerCase());
 }
 
-export function initInput(): InputState {
+export function initInput(options: InputOptions = {}): InputState {
+  const keyboardTrackballStep = normalizeKeyboardTrackballStep(options.keyboardTrackballStep);
+
   // Stato assoluto trackball (= valore MMIO 0xF20001 etc.). Inizializzato a
   // 0xff (= MMIO stable in MAME attract mode con processAxis seed prev=0xff).
   let p1X = 0xff;
@@ -142,14 +154,14 @@ export function initInput(): InputState {
 
   function pollKeyboardAndGamepad(): void {
     let dx = 0, dy = 0;
-    if (keys.has("arrowleft")  || keys.has("a")) dx -= KEYBOARD_TRACKBALL_EQUIV;
-    if (keys.has("arrowright") || keys.has("d")) dx += KEYBOARD_TRACKBALL_EQUIV;
-    if (keys.has("arrowup")    || keys.has("w")) dy -= KEYBOARD_TRACKBALL_EQUIV;
-    if (keys.has("arrowdown")  || keys.has("s")) dy += KEYBOARD_TRACKBALL_EQUIV;
+    if (keys.has("arrowleft")  || keys.has("a")) dx -= keyboardTrackballStep;
+    if (keys.has("arrowright") || keys.has("d")) dx += keyboardTrackballStep;
+    if (keys.has("arrowup")    || keys.has("w")) dy -= keyboardTrackballStep;
+    if (keys.has("arrowdown")  || keys.has("s")) dy += keyboardTrackballStep;
     const gp = navigator.getGamepads?.()[0];
     if (gp) {
-      dx += Math.round((gp.axes[2] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
-      dy += Math.round((gp.axes[3] ?? 0) * KEYBOARD_TRACKBALL_EQUIV);
+      dx += Math.round((gp.axes[2] ?? 0) * keyboardTrackballStep);
+      dy += Math.round((gp.axes[3] ?? 0) * keyboardTrackballStep);
     }
     addP1ScreenDelta(dx, dy);
   }

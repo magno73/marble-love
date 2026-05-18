@@ -81,6 +81,7 @@ import type { RomImage } from "./bus.js";
 import { paletteQueuePush } from "./palette-queue.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
 import { helper285B0 } from "./helper-285b0.js";
+import { postStateChange13966 } from "./post-state-change-13966.js";
 
 const WORK_RAM_BASE = 0x400000 as const;
 
@@ -667,7 +668,9 @@ export function objectRenderUpdate1365C(
     const finalNewState = readU8(w, a2 + A2_NEW_STATE_BYTE_OFF);
     if (finalNewState !== d2b) {
       // 0x1393e: move.l A2,-(SP); jsr 0x13966; addq.l #4,SP
-      subs.fun13966?.(state, a2);
+      (subs.fun13966 ?? ((st, objPtr) => {
+        postStateChange13966(st, rom, objPtr);
+      }))(state, a2);
     }
 
     // Done — epilogue (0x1395e): restore registers, rts.
