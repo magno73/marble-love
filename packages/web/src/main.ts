@@ -1380,7 +1380,13 @@ async function startGame(
       if (runSoundChip && soundChip !== undefined) {
         tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
         if (soundRenderer !== undefined && soundRenderer.isRunning()) {
-          soundRenderer.update(soundChip);
+          // NOTA (2026-05-18): soundRenderer.update() era una RE-SINTESI
+          // heuristica (sine/square tones da YM regs) — produceva i beep
+          // che l'utente sentiva. Con PCM stream reale dal chip, e' RUMORE.
+          // `?soundSynthCue=1` per riabilitare debug.
+          if (searchParams.get("soundSynthCue") === "1") {
+            soundRenderer.update(soundChip);
+          }
           // V3 chip-perfect: drain YM2151 + POKEY sample streams e push al worklet.
           const ymSamples = drainYm2151Samples(soundChip);
           if (ymSamples.length > 0) {
