@@ -98,6 +98,13 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   let started = false;
   let resetReleased = false;
 
+  // `?soundReplayFastForward=N` — pre-ticka N frame del chip al click "Start",
+  // saltando il boot silente. Default: 11900 (= ~198s, finestra audibile dell'
+  // attract music inizia subito invece di aspettare 200s real-time).
+  // ?soundReplayFastForward=0 per replay completo da frame 0.
+  const ffParam = new URLSearchParams(window.location.search).get("soundReplayFastForward");
+  const fastForward = ffParam === null ? 11900 : Math.max(0, Number.parseInt(ffParam, 10) || 0);
+
   btn.addEventListener("click", async () => {
     if (started) return;
     started = true;
@@ -113,6 +120,28 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       btn.disabled = false;
       started = false;
       return;
+    }
+
+    // Fast-forward: tick il chip senza output audio per skippare boot silente.
+    if (fastForward > 0) {
+      btn.textContent = `⏩ Fast-forward ${fastForward} frames...`;
+      setStatus(`[soundReplay] fast-forwarding ${fastForward} frames (boot silent)`);
+      const ff = Math.min(fastForward, tape.totalFrames);
+      for (let f = 0; f < ff; f++) {
+        const cmds = tape.byFrame.get(f);
+        if (cmds !== undefined) for (const b of cmds) submitCommand(chip, wrap.as_u8(b & 0xff));
+        if (!resetReleased && f >= firstCmdFrame) {
+          releaseSoundReset(chip);
+          resetReleased = true;
+        }
+        tickCycles(chip, SOUND_CYCLES_PER_FRAME);
+        drainReplyEvents(chip);
+        // Drain samples ma scarta (silent boot phase)
+        drainYm2151Samples(chip);
+        drainPokeySamples(chip);
+      }
+      frame = ff;
+      btn.textContent = "⏵ Replaying...";
     }
 
     setInterval(() => {
