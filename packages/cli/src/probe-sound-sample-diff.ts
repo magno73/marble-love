@@ -190,7 +190,8 @@ function main(): void {
     : mameWavData.samples;
 
   console.log(`\n--- Cross-correlation TS vs MAME (left channel) ---`);
-  const cc = crossCorrelation(tsMix, mameLeft, 200);
+  // Lag range: ±5000 samples (~90ms ~5 frames) per coprire drift inter-frame.
+  const cc = crossCorrelation(tsMix, mameLeft, 5000);
   console.log(`Best lag: ${cc.lag} samples`);
   console.log(`Coefficient: ${cc.coeff.toFixed(4)} (>0.95 = audio identico, >0.7 = riconoscibile)`);
 

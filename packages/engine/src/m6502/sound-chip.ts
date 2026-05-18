@@ -85,7 +85,15 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
     },
     onSoundToMainPost: () => {
       // 6502 ha scritto reply via $1810: push in queue per main drain.
+      // CRITICAL: auto-clear pending immediatamente (simula 68K IRQ6 che
+      // legge $FC0001 in microsecondi). Senza auto-clear, l'NMI handler
+      // del sound 6502 stalla nel polling loop a $9569 (BIT $1820 BNE -7)
+      // finche' drainReplyEvents a fine frame non chiama mailboxRead.
+      // Stall mid-frame su NMI causa drift di 1 frame nel music dispatcher
+      // (verificato 2026-05-18 via ym_writes diff: TS lagga 4 IRQ = 1 frame
+      // sul cmd $08 a frame 375).
       replyQueue.push(soundToMain.value as number);
+      soundToMain.pending = false;
     },
   });
 

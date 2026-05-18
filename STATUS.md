@@ -1,7 +1,87 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-17 (audio sessione 4k: $1820 pull-up base — boot path cycle-aligned)
+**Ultimo update:** 2026-05-18 (audio sessione 4l: Timer A edge-trigger + auto-drain — write log diff 1098 bit-perfect)
 **Branch corrente:** `main`.
+
+## 2026-05-18 — Audio sessione 4l: drill write log identifies 3 core bugs
+
+🎯 **Strumento decisivo**: `oracle/mame_ym2151_write_log.lua` +
+`packages/cli/src/probe-ym-writes.ts` registrano OGNI write YM2151 con
+(reg, val, cycle, pc). Diff diretto identifica la PRIMA divergenza.
+
+**Risultato sessione**: i primi **1098 write YM2151 matchano BIT-PERFECT**
+(reg + val) tra MAME e TS. Music engine TS è logicamente corretto. Drift
+prima del fix era +48K cyc dopo 1000 write (lineare). Dopo i 3 fix sotto:
+drift bounded ±100 cyc fino a idx 1098.
+
+### Fix 1 — Timer A edge-trigger su write $14 bit 0 (LOAD)
+
+Per ymfm semantics: bit 0 di $14 (load_timer_a) è **edge-triggered su
+inactive→active**. Se timer già active e bit 0 set, NON resetta counter.
+TS implementava level-triggered → ogni $14=$11/$14=$05 nell'IRQ handler
+RESETTAVA il counter → +103 cyc drift per IRQ cycle = +48K cyc drift su
+1000 IRQ.
+
+Fix in `ym2151.ts::ym2151WriteData`:
+```ts
+if ((v & 0x01) !== 0) {
+  if (!ym.timerAActive) {  // edge-triggered: solo su inactive→active
+    ym.timerACounter = timerALoadValue(ym);
+    ym.timerAActive = true;
+  }
+}
+```
+
+Impatto: audio maxAbs 0.08 → 0.137 (+71%). Drift lineare ELIMINATO.
+
+### Fix 2 — Auto-drain sound→main pending in onSoundToMainPost
+
+NMI handler ($9569) polla `BIT $1820` aspettando bit 4 (sound→main) =0.
+Senza auto-drain, ogni write 6502 $1810 setta pending=1 e l'NMI handler
+del prossimo cmd stalla nel polling loop fino a drainReplyEvents a fine
+frame.
+
+Hardware-faithful: 68K IRQ6 handler legge $FC0001 in microsecondi. TS
+simula via `onSoundToMainPost` che pushea byte AND clearuna pending
+immediatamente.
+
+Fix in `sound-chip.ts`:
+```ts
+onSoundToMainPost: () => {
+  replyQueue.push(soundToMain.value as number);
+  soundToMain.pending = false;  // auto-drain
+},
+```
+
+Test "drainReplyEvents" aggiornato: ora estrae TUTTI i byte invece di
+solo il primo (loss-semantic vecchio non era hardware-faithful).
+
+### Fix 3 — Cross-correlation lag range esteso
+
+`probe-sound-sample-diff.ts` cercava lag in ±200 samples (3.6ms). 1 frame
+audio = 535 samples. Esteso a ±5000 samples per coprire drift inter-frame.
+
+### Divergenza residua: idx 1099+ (post-1098 writes)
+
+A idx 1099 MAME inizia music dispatcher (`JSR $9622` dentro IRQ handler
+a `$81EE`) scrivendo channel setup ($08=$03 KON ch3, poi $23=$dc...). TS
+allo stesso punto sta facendo il PROSSIMO IRQ ack ($14=$11) — TS lagga
+1 frame nel music dispatch trigger.
+
+Drill ha verificato:
+- zp[$01] = 0 in entrambi a IRQ entry (gate $81D5 BEQ check passa)
+- B flag pushato da IRQ = 0 in entrambi (gate $81E2 AND #$10 BEQ passa)
+- IRQ count fino a cycle 3.9M: MAME = TS = 544 (identico)
+
+L'IRQ handler MAME chiama `$9622` music dispatcher; TS handler termina
+(o chiama ma dispatcher non scrive). audioRam state probabilmente diverge
+prima di IRQ N: TS ha 862 byte non-zero vs MAME 525 (TS over-popolato).
+
+**Next step**: capture audioRam snapshot byte-by-byte in MAME e TS a IRQ
+N moment, identifica cmd byte / store address che diverge. Probabile bug
+in NMI handler cmd processing path.
+
+## 2026-05-17 — Audio sessione 4k: $1820 pull-up base + drill A1 cycle-exact
 
 ## 2026-05-17 — Audio sessione 4k: $1820 pull-up base + drill A1 cycle-exact
 
