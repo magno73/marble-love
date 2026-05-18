@@ -77,9 +77,42 @@ L'IRQ handler MAME chiama `$9622` music dispatcher; TS handler termina
 (o chiama ma dispatcher non scrive). audioRam state probabilmente diverge
 prima di IRQ N: TS ha 862 byte non-zero vs MAME 525 (TS over-popolato).
 
-**Next step**: capture audioRam snapshot byte-by-byte in MAME e TS a IRQ
-N moment, identifica cmd byte / store address che diverge. Probabile bug
-in NMI handler cmd processing path.
+### Drill audioRam diff: identificata divergenza a frame 350+
+
+`oracle/mame_audioram_snapshot.lua` + `probe-audioram-snapshot.ts`
+snapshot RAM $0000-$0FFF a frame target. Diff a f=350-375:
+
+- `$0000` (IRQ counter): TS ha **6 più** di MAME (32 vs 26 a f=374)
+- `$01fb`/`$0210`/`$0211` (cmd counters): TS ha **1 in meno** di MAME
+- `$01eb-$01f2` (stack/cmd buffer): TS popolato dove MAME è zero
+
+Causa probabile: cmd tape submette cmds back-to-back senza step 6502.
+A f=305 ($03+$61+$01 in 1 frame) TS perde 2 cmds (latch overwrite).
+A f=375 ($03+$08) TS perde 1.
+
+### Fix 4 — Cycle-precise cmd-tape capture
+
+`oracle/mame_sound_cmd_capture.lua` ora cattura `secs`+`attos` per ogni
+cmd, non solo frame. MAME 68K spacing tra cmds in multi-cmd frame:
+4089-13432 cyc (verificato f=305 = $03 → +12891 → +13432 cyc; f=375
+= $03 → +4089 cyc). Tape `oracle/scenarios/sound-cmd-tape-attract-
+cycle-precise.json` (14688 cmds, 14000 frames).
+
+`probe-ym-writes.ts` ora replay cmds al cycle 6502 esatto entro frame
+(tickToCycle helper). 6502 ha tempo di processare ogni NMI prima del
+cmd successivo. Bit-perfect tape replay foundation.
+
+### Divergenza residua: idx 1099 persiste
+
+Anche con cycle-precise replay, idx 1099 diverge (TS lagga 1 frame in
+music dispatch trigger). audioRam state diverge prima — root cause
+probabilmente in NMI handler cmd processing semantics o zp variable
+initialization.
+
+**Next session**: drill PC trace + audioRam byte-precise diff a cycle
+3.5M-3.9M, identificare quale opcode/handler scrive bytes EXTRA in
+TS a $01eb-$01f2 (stack area). Possibile bug 6502 push semantics
+(nested interrupts, stack frame ordering).
 
 ## 2026-05-17 — Audio sessione 4k: $1820 pull-up base + drill A1 cycle-exact
 
