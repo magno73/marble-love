@@ -105,6 +105,12 @@ export interface YM2151 {
   lfoPhase: number;
   /** LFO output corrente: -1..+1 (saw/triangle) o 0..1 (square/random). */
   lfoOutput: number;
+  /** Busy flag remaining in YM master cycles. Real hardware: 64 master clock
+   * dopo write a $1801 (data); $1800 (addr) NON triggera busy. Verificato
+   * 2026-05-18 via oracle/mame_1801_busy_tap.lua. Boot $8FED polla bit 7.
+   * Modello pronto ma non attivo: settando busy=64 raggiunge cycle-perfect
+   * boot vs MAME ma rompe music driver (tight-loops post-boot). */
+  busyCycles: number;
 }
 
 export function createYM2151(): YM2151 {
@@ -129,6 +135,7 @@ export function createYM2151(): YM2151 {
     lfoPmd: 0,
     lfoPhase: 0,
     lfoOutput: 0,
+    busyCycles: 0,
   };
 }
 
@@ -313,6 +320,10 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
   const reg = ym.selectedReg;
   const v = data as number;
   ym.regs[reg] = v;
+  // BUSY model NON attivo: settando busyCycles=64 raggiunge cycle-perfect
+  // boot path vs MAME ma rompe music driver state machine (audio→0). Da
+  // re-attivare quando i tight-loop del music driver sono mappati. Vedi
+  // commento di YM2151.busyCycles + ym2151ReadStatus.
   // V3 chip-perfect: applica il reg ai parametri channel/operator.
   applyReg(ym, reg, v);
   // Side effects V3 Timer A/B (reg $14 = control register).
@@ -365,7 +376,11 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
  * (SoundChip facade chiama requestIrq se timer*IrqEnable e overflow set). */
 export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
   // 2× ratio: 6502 @ 1.789 MHz, YM2151 @ 3.579 MHz
-  ym.ymCycleAccumulator += cycles6502 * 2;
+  const ymCycles = cycles6502 * 2;
+  if (ym.busyCycles > 0) {
+    ym.busyCycles = Math.max(0, ym.busyCycles - ymCycles);
+  }
+  ym.ymCycleAccumulator += ymCycles;
   // Timer A: 1 tick ogni 64 cycle YM
   // Timer B: 1 tick ogni 1024 cycle YM (= 16× Timer A)
   // Sample: 1 stereo sample ogni 64 cycle YM (= 55930 Hz native rate)
@@ -404,13 +419,12 @@ export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
 export function ym2151ReadStatus(ym: YM2151): u8 {
   const b0 = ym.timerAOverflow ? 0x01 : 0;
   const b1 = ym.timerBOverflow ? 0x02 : 0;
-  // bit 7 = busy: V3 sempre false. Real hardware setta busy per 68 master
-  // clock dopo write a $1801. Boot $8FED polla bit 7 → senza modello busy,
-  // 4 call dell'init sub eseguono 28 cycle piu' veloce di MAME (verificato
-  // 2026-05-17 via probe-pc-cycles). Modello busy aggiunto e poi rimosso:
-  // rompeva music driver state machine (audio output → 0). Approccio
-  // corretto richiede MAME tap su $1801 reads per misurare busy duration.
-  return as_u8(b0 | b1);
+  // bit 7 = BUSY: rimane high per 64 master clock dopo write a $1801 (data).
+  // Verificato via oracle/mame_1801_busy_tap.lua 2026-05-18: read $1801 a
+  // Δ=24..30 cyc post-write = busy; Δ=38..44 cyc post-write = clear. Write
+  // a $1800 (addr) NON triggera busy.
+  const b7 = ym.busyCycles > 0 ? 0x80 : 0;
+  return as_u8(b0 | b1 | b7);
 }
 
 /** Hard reset: pulisce reg file e flag. Chiamato da LS259 outlatch bit 0

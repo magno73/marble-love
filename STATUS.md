@@ -47,10 +47,39 @@ testare il YM2151 in isolamento (no 6502 boot che clobberava i regs).
 
 **Test**: 38/38 sound test PASS.
 
-**Next step**: il drift 28 cycle viene da `$8FED` YM busy polling — non
-modellato. Quando implementato corretamente romperà il music driver state
-(provato: con busyCycles=68 master, audio output → 0). Approccio richiede
-modello accurato della busy duration MAME (forse via tap su $1801 reads).
+### 2026-05-18 — Misura busy duration via tap $1801
+
+`oracle/mame_1801_busy_tap.lua`: log tutti read/write di $1801+$1800 con
+cycle count. Risultati:
+
+- **Solo write a $1801 (data) triggerano BUSY**. Write a $1800 (addr) NON.
+- **Busy duration ~64 master clock** (= 32 6502 cycle): post-write a Δ=24-30
+  cyc reads ritornano bit 7 set; Δ=38-44 cyc reads ritornano bit 7 clear.
+
+Pattern verificato (W $1801=$c8 @ cyc+83):
+```
+R $1801 @ cyc+107 (Δ=24) v=$80 busy=True
+R $1801 @ cyc+121 (Δ=38) v=$00 busy=False
+```
+
+Modello implementato in `ym2151.ts`:
+- `busyCycles` field in YM2151 state (in master clock units)
+- `ym2151WriteData` setta busy = 64
+- `ym2151TickCycles` decrementa busy * 2 (6502→master conversion)
+- `ym2151ReadStatus` ritorna bit 7 se busy > 0
+
+**Con busyCycles=64**: boot path TS **PERFECTLY ALLINEATO** vs MAME su tutti
+i checkpoint da $8002 a $80EA (delta 0). Drift residuo solo nell'IRQ
+handler $81A6-$81B1 (Timer A vector entry).
+
+**MA**: audio output → 0 dopo 14000 frame. Il music driver post-boot fa
+tight-loop su `$1801` che con busy=1 spinna accumulando drift→divergenza
+state machine. **Mantenuto a busy=0** finche' i tight-loop del driver non
+sono identificati e fixati. Setting flag in commento per future re-enable.
+
+**Next step**: trace PC del music driver durante tight-loop su $1801,
+identificare il pattern (`LDA $1801; BMI -3`?), capire se è waited
+intentionalmente o se è un bug TS in altra parte del chip.
 
 ## 2026-05-17 — Audio sessione 4j: chip produce audio reale, hack rimosso
 
