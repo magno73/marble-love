@@ -1,7 +1,43 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-18 (audio sessione 4l: chip default-ON + rimozione beep cue stand-in)
+**Ultimo update:** 2026-05-18 (Runtime: fix Beginner/L2 tube terrain scan)
 **Branch corrente:** `main`.
+
+## 2026-05-18 — Runtime: fix FUN_29CCE terrain scan nei tubi Beginner/L2
+
+Bug utente: nel livello Beginner/L2, entrando nei tubi viola la marble cadeva
+e moriva anche se il tubo e il terreno erano visibili. Gli screenshot debug
+mostravano collider tubo attivi in slot terrain successivi, ma il probe del tubo
+non scattava nel frame di ingresso.
+
+Root-cause verificata via disassemblato ROM:
+
+- `FUN_29CCE` non termina al primo slot terrain inattivo;
+- il branch reale e' `tst.b (0x18,A3); beq 0x2b0f6`, dove `0x2b0f6` avanza
+  `A3 += 0x56`, incrementa il counter e continua fino a 25 slot;
+- il port TS usava invece `break` sul primo `s18==0`, quindi un buco negli
+  slot 0/1 rendeva invisibili alla collisione i collider tubo renderizzati agli
+  slot 2..5.
+
+Fix:
+
+- `packages/engine/src/sub-29cce.ts`: gli slot terrain inattivi vengono saltati
+  con `continue`, come nel ROM, invece di chiudere il loop;
+- aggiunta diagnostica `lastTerrainScanStop`/`lastTubeProbe` e overlay web per
+  vedere prefix slot, nearest slot e punto in cui la scansione si ferma;
+- aggiunto helper `object-state-debug.ts` per tracciare ingressi a
+  `objectStateEntry25BAE` durante i bug di caduta;
+- `packages/engine/test/sub-29cce.test.ts`: regressione "slot inattivi prima
+  del tubo" con tag tubo `0x14` allo slot 4, che ora viene raggiunto e teleporta.
+
+Verifica:
+
+- `npx vitest run packages/engine/test/sub-29cce.test.ts packages/engine/test/helper-1cd00.test.ts`
+- `npm --workspace @marble-love/web run build`
+
+Nota: `packages/engine/test/playable-live-routes.test.ts` ha 3 aspettative
+storiche da ricertificare dopo questo fix engine; non sono state aggiornate a
+mano senza proof MAME per evitare di mascherare rotte diagnostiche obsolete.
 
 ## 2026-05-18 — Audio sessione 4l (cont.): web SoundChip default-ON
 

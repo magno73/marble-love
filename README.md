@@ -240,6 +240,15 @@ TS accettava solo `0xA00000..0xA01FFF` come playfield. Ora
 (`playfieldRam`, `spriteRam`/MO e `alphaRam`) e il regression test sul seed
 `start_level2_intro_beginner_f2436` verifica che la tile `(78,67)` non produca
 piu' endpoint terrain zero.
+Il secondo bug Beginner/L2 nei tubi era un errore nel port del loop terrain
+`FUN_29CCE`, non nella geometria del livello: il ROM fa `tst.b (0x18,A3);
+beq 0x2b0f6`, quindi gli slot inattivi vengono saltati e la scansione continua
+fino a 25 slot. Il TS invece interrompeva il loop al primo slot inattivo; se
+gli slot 0/1 erano vuoti, i collider del tubo renderizzati agli slot successivi
+rimanevano visibili ma invisibili alla collisione e la marble cadeva. Ora
+`fun29CCE` avanza su ogni slot inattivo, i tag tubo Beginner restano raggiungibili
+anche dietro buchi nella slot table, e `sub-29cce.test.ts` copre il caso
+regressivo con un tubo `tag=0x14` allo slot 4 preceduto da slot inattivi.
 Per provare un candidato MAME nel path web senza cablarlo a `startLevel`, usa
 `node --import tsx packages/cli/src/export-playable-seed.ts --out packages/web/public/scenarios/playable/candidate_name.seed.json scenario.json`
 e apri `?autoLoad=1&playableSeed=candidate_name&play=1&debugObjects=1`.

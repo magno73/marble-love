@@ -327,10 +327,97 @@ export interface TrackballSanitizeDebug {
   bge: number;
 }
 
+export interface ObjectStateEntryDebug {
+  frame: number;
+  source: string;
+  entityAddr: number;
+  code: number;
+  active: number;
+  type: number;
+  prevState: number;
+  prevKind: number;
+  prevF36: number;
+  prevF56: number;
+  prevF57: number;
+  prevF58: number;
+  prevF59: number;
+  prevF5f: number;
+  prevF60: number;
+  prevX: number;
+  prevY: number;
+  prevZ: number;
+  prevVx: number;
+  prevVy: number;
+  prevVz: number;
+  prevTargetZ: number;
+  detail?: string;
+  slotIndex?: number;
+  colorTag?: number;
+  d1?: number;
+  d2?: number;
+  d6?: number;
+  a0?: number;
+  floorNow?: number;
+  zDelta?: number;
+}
+
+export interface TubeProbeDebug {
+  frame: number;
+  entityAddr: number;
+  slotIndex: number;
+  slotAddr: number;
+  colorTag: number;
+  result: string;
+  d1: number;
+  d2: number;
+  d6: number;
+  a0: number;
+  slotX: number;
+  slotY: number;
+  slotZ: number;
+  entityX: number;
+  entityY: number;
+  entityZ: number;
+  entityVx: number;
+  entityVy: number;
+  entityVz: number;
+  state36: number;
+  state1a: number;
+  f58: number;
+  f59: number;
+}
+
+export interface TerrainScanStopDebug {
+  frame: number;
+  entityAddr: number;
+  reason: string;
+  iterCount: number;
+  slotIndex: number;
+  slotAddr: number;
+  active: number;
+  slotState: number;
+  colorTag: number;
+  d1: number;
+  d2: number;
+  d6: number;
+  a0: number;
+  f58: number;
+  f59: number;
+  slotX: number;
+  slotY: number;
+  slotZ: number;
+  entityX: number;
+  entityY: number;
+  entityZ: number;
+}
+
 export interface GameDebugState {
   lastObjectPairCollision?: ObjectPairCollisionDebug;
   lastScriptSlotCollision?: ScriptSlotCollisionDebug;
   lastTerrainSlotCollision?: TerrainSlotCollisionDebug;
+  lastObjectStateEntry?: ObjectStateEntryDebug;
+  lastTubeProbe?: TubeProbeDebug;
+  lastTerrainScanStop?: TerrainScanStopDebug;
   lastHelper121B8BoundsBounce?: Helper121B8BoundsBounceDebug;
   lastTrackballApply?: TrackballApplyDebug;
   lastTrackballSanitize?: TrackballSanitizeDebug;
