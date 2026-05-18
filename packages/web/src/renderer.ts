@@ -85,7 +85,14 @@ function usesMameMotionObjectCoordinates(frame: Frame, sprite: renderNs.SpriteCo
   );
 }
 
-function motionObjectScreenPosition(
+const MOTION_OBJECT_BITMAP_SIZE = 512;
+
+function wrapMotionObjectViewportCoordinate(value: number, viewportExtent: number): number {
+  const wrapped = value & (MOTION_OBJECT_BITMAP_SIZE - 1);
+  return wrapped >= viewportExtent ? wrapped - MOTION_OBJECT_BITMAP_SIZE : wrapped;
+}
+
+export function motionObjectScreenPosition(
   frame: Frame,
   sprite: renderNs.SpriteCommand,
   height: number,
@@ -99,8 +106,8 @@ function motionObjectScreenPosition(
   //   ypos = -yRaw - yscroll - heightPx
   // System 1 sets yscroll=256 and never sets an MO xoffset.
   return {
-    x: sprite.x & 0x1ff,
-    y: (-sprite.y - 256 - height) & 0x1ff,
+    x: wrapMotionObjectViewportCoordinate(sprite.x, frame.nativeSize.width),
+    y: wrapMotionObjectViewportCoordinate(-sprite.y - 256 - height, frame.nativeSize.height),
   };
 }
 

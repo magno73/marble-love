@@ -523,7 +523,8 @@ function dispatchType4(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f006 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x28, 0x18, 0x10);
-  if (s16(d4) >= 0x100) return;
+  const d4s = s16(d4);
+  if (d4s <= -0x20 || d4s >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x58)), d5, d4, 0x2000, subs);
 
   // Inner loop at sp+0x2c using a word-stride array (tst.w (a1) / addq.l #1,a2):
@@ -662,7 +663,7 @@ function dispatchType11_13(
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5base, d4base] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
   const d4baseS = s16(d4base);
-  if (d4baseS < lowerVisibleBoundForStruct(state, rom, sp, 0xe0) || d4baseS >= 0x100) return;
+  if (d4baseS <= -0x20 || d4baseS >= 0x100) return;
 
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5base, d4base, 0x1800, subs);
 
@@ -719,7 +720,8 @@ function dispatchType14(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f07a + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x28, 0x18, 0x10);
-  if (s16(d4) < 0xd0 || s16(d4) >= 0x120) return;
+  const d4s = s16(d4);
+  if (d4s <= -0x30 || d4s >= 0x120) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x3a)), d5, d4, 0x3000, subs);
 }
 

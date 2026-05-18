@@ -18,7 +18,7 @@ import {
   render as renderNs,
   wrap,
 } from "@marble-love/engine";
-import { initInput } from "./input.js";
+import { initInput, normalizeKeyboardTrackballStep } from "./input.js";
 import {
   buildClassicDemoFrame,
   buildRomBackedDemoFrame,
@@ -64,6 +64,7 @@ const freezeOnState4 = freezeOnBug && searchParams.get("freezeOnState4") === "1"
 const freezeOnImpulse = freezeOnBug && searchParams.get("freezeOnImpulse") !== "0";
 const freezeImpulseMinDvRaw = Number(searchParams.get("freezeImpulseMinDv") ?? "8");
 const freezeImpulseMinDv = Number.isFinite(freezeImpulseMinDvRaw) ? freezeImpulseMinDvRaw : 8;
+const keyboardTrackballStep = normalizeKeyboardTrackballStep(parseOptionalNumberParam(searchParams.get("keyboardStep")));
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -213,6 +214,11 @@ function signed16(value: number): number {
   return word >= 0x8000 ? word - 0x10000 : word;
 }
 
+function signed8(value: number): number {
+  const byte = value & 0xff;
+  return byte >= 0x80 ? byte - 0x100 : byte;
+}
+
 function fixedToFloat(value: number): number {
   return signed32(value) / 0x10000;
 }
@@ -289,6 +295,13 @@ function playerPhysicsDebugLine(state: ReturnType<typeof stateNs.emptyGameState>
     `f5f=${(state.workRam[objOff + 0x5f] ?? 0).toString(16).padStart(2, "0")} ` +
     `f60=${(state.workRam[objOff + 0x60] ?? 0).toString(16).padStart(2, "0")} ` +
     `d2=${readWorkWordBE(state, objOff + 0xd2)}`;
+}
+
+function trackballInputDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const objOff = 0x18;
+  return `trackball input step=${keyboardTrackballStep} ` +
+    `saved=(${state.workRam[objOff + 0xc9] ?? 0},${state.workRam[objOff + 0xc8] ?? 0}) ` +
+    `delta=(${signed8(state.workRam[objOff + 0xc7] ?? 0)},${signed8(state.workRam[objOff + 0xc6] ?? 0)})`;
 }
 
 function scriptSlotDebugLine(
@@ -789,6 +802,9 @@ function updateObjectDebugOverlay(
       `scroll=(${state.videoScrollX},${state.videoScrollY})`,
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
     playerPhysicsDebugLine(state),
+    trackballInputDebugLine(state),
+    lastTrackballApplyDebugLine(state),
+    lastTrackballSanitizeDebugLine(state),
     collisionGateDebugLine(state),
     lastObjectPairCollisionDebugLine(state),
     lastScriptSlotCollisionDebugLine(state),
@@ -801,8 +817,6 @@ function updateObjectDebugOverlay(
     "nearest terrain slots:",
     ...terrainSlots.slice(0, 4).map(({ index }) => terrainSlotDebugLine(state, index, playerX, playerY, playerZ)),
     lastBoundsBounceDebugLine(state),
-    lastTrackballApplyDebugLine(state),
-    lastTrackballSanitizeDebugLine(state),
     debugForcedStateLine(),
     "nearest objects:",
     ...candidates.slice(0, 8).map(({ index }) => objectDebugLine(state, index, playerX, playerY, playerZ)),
@@ -1142,7 +1156,7 @@ async function startGame(
       }
     });
   }
-  const inputState = initInput();
+  const inputState = initInput({ keyboardTrackballStep });
   if (warmStateIsPlayableSeed) {
     inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
   }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { wrappedPlayfieldDrawPositions } from "../src/renderer.js";
+import { motionObjectScreenPosition, wrappedPlayfieldDrawPositions } from "../src/renderer.js";
+import type { render as renderNs } from "@marble-love/engine";
 
 describe("wrappedPlayfieldDrawPositions", () => {
   it("wraps playfield tiles back into view when vertical scroll crosses the tilemap edge", () => {
@@ -55,5 +56,51 @@ describe("wrappedPlayfieldDrawPositions", () => {
         { width: 336, height: 240 },
       ),
     ).toEqual([]);
+  });
+});
+
+describe("motionObjectScreenPosition", () => {
+  const frame = {
+    nativeSize: { width: 336, height: 240 },
+    scrollX: 0,
+    scrollY: 0,
+    palette: [],
+    playfield: [],
+    sprites: [],
+    alpha: [],
+  } satisfies renderNs.Frame;
+
+  it("wraps MAME 9-bit MO coordinates back into the visible viewport", () => {
+    expect(
+      motionObjectScreenPosition(
+        frame,
+        {
+          spriteIndex: 1,
+          gfxBank: 1,
+          bitsPerPixel: 4,
+          x: 500,
+          y: 240,
+          paletteIndex: 0x20,
+        },
+        16,
+      ),
+    ).toEqual({ x: -12, y: 0 });
+  });
+
+  it("keeps ROM-backed demo coordinates unwrapped", () => {
+    expect(
+      motionObjectScreenPosition(
+        { ...frame, debugLabel: "rom-backed-demo" },
+        {
+          spriteIndex: 1,
+          gfxBank: 1,
+          bitsPerPixel: 4,
+          x: 500,
+          y: 240,
+          paletteIndex: 0x20,
+        },
+        16,
+      ),
+    ).toEqual({ x: 500, y: 240 });
   });
 });
