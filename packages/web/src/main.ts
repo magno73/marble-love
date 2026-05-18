@@ -47,7 +47,10 @@ const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const enableSound = searchParams.get("sound") !== "0";
-const runSoundChip = searchParams.get("soundChip") === "1";
+// SoundChip tick default-ON (sessione 4l 2026-05-18): post-fix Timer A
+// edge-trigger + $1820 pull-up + auto-drain, il chip produce audio reale
+// (maxAbs 0.137 + 1098 write YM bit-perfect vs MAME). `?soundChip=0` opt-out.
+const runSoundChip = searchParams.get("soundChip") !== "0";
 // `?soundReplay=<path>` — bypass A0 cmd-flow blocker: invece di startGame
 // completo, esegui solo SoundChip + cmd-tape replay (audio chip-perfect).
 // Path relativo a /public es. `scenarios/sound/cmd-tape-attract.json`.
@@ -1165,7 +1168,12 @@ async function startGame(
             let cmdCount = 0;
             const onCmd = (cmd: number) => {
               submitSoundCommand(soundChip!, (cmd & 0xff) as never);
-              soundRenderer?.playCommandCue(cmd);
+              // playCommandCue stand-in beep RIMOSSO: chip ora produce audio
+              // reale (sessione 4l 2026-05-18). I beep erano placeholder per
+              // quando il chip non ticchettava. `?soundCue=1` per riabilitare.
+              if (searchParams.get("soundCue") === "1") {
+                soundRenderer?.playCommandCue(cmd);
+              }
               cmdCount++;
               if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
             };
