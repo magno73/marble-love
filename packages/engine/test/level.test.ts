@@ -49,8 +49,8 @@ describe("Level loader (constants)", () => {
   it("LEVEL_COUNT = 6", () => {
     expect(LEVEL_COUNT).toBe(6);
   });
-  it("LEVEL_HEADER_SIZE = 36", () => {
-    expect(LEVEL_HEADER_SIZE).toBe(36);
+  it("LEVEL_HEADER_SIZE = 0x2E (verified Phase 1 static — was 36 pre-fix)", () => {
+    expect(LEVEL_HEADER_SIZE).toBe(0x2e);
   });
   it("HEIGHT_RECORD_SIZE = 8", () => {
     expect(HEIGHT_RECORD_SIZE).toBe(8);
