@@ -122,4 +122,58 @@ Quando i 7 success criteria del PRD sono soddisfatti:
 
 ---
 
-Status: **open** — started 2026-05-18 on branch `claude/marble-1984-analysis-I0AJ0`.
+Status: **phase-1-static-done** — started 2026-05-18 on branch `claude/marble-1984-analysis-I0AJ0`.
+
+## Phase 1 static — done
+
+Deliverable Phase 1 (verifica statica via re-reading dei consumer engine
+gia' bit-perfect contro il binario originale):
+
+- `docs/level-header-format.md` — doc completo dei field verificati, con
+  citation file:line per ogni offset noto e lista esplicita degli
+  UNKNOWN restanti.
+- `packages/engine/src/level.ts` — `LEVEL_HEADER_SIZE` corretto da
+  `36` a `0x2E`. `LevelHeader` typed con 10 field decoded:
+  `directTerrainPtr`, `tileWordTablePtr`, `rleSourcePtr`, `yScrollBase`,
+  `yScrollRange`, `entityInitPositions[6]`, `maxTileBound`,
+  `subPatternTablePtr`, `binsearchBasePtr`, `extByteTablePtr`. Field
+  UNKNOWN (`+0x08`, `+0x24..0x25`, `+0x1A..0x1F` se entity 3..5 non
+  attive) restano accessibili via `header.raw`.
+- `packages/engine/test/level-header-decode.test.ts` — 20/20 unit test
+  verdi, ROM-free, verificano mapping offset→field, signedness,
+  lunghezza minima del raw.
+- `packages/cli/src/probe-level-header.ts` — probe ready-to-run su ROM
+  blob, stampa tabella decoded + heuristics record + hex dump per i 6
+  header reali. Esegue solo con `MARBLE_LOVE_ROM_BLOB=...` impostato
+  oppure `ghidra_project/marble_program.bin` in path.
+- `oracle/mame_level_header_tap.lua` — script Lua ready-to-run che
+  installa read taps su tutti i field noti dei 6 header. Output formato
+  `FRAME PC OFFSET LEVEL FIELD VALUE SIZE`. Richiede MAME + ROMs.
+
+Validation post-Phase-1 (eseguita in container):
+
+- `npx tsc -p packages/engine/tsconfig.json --noEmit`: 0 errori.
+- `npx tsc -p packages/cli/tsconfig.json --noEmit`: solo errore
+  pre-esistente in `probe-pc-cycles.ts` (non causato da Phase 1).
+- `npx vitest run packages/engine/test/level.test.ts`: 4 pass + 6 skip
+  (ROM-side skipped, atteso).
+- `npx vitest run packages/engine/test/level-header-decode.test.ts`:
+  20 pass.
+
+## Aperture residue (richiedono ROM + MAME + Ghidra)
+
+Bloccanti per i success criteria 2, 3, 5 del PRD. Vedi
+`docs/level-header-format.md` "Aperture residue" per dettaglio:
+
+1. MAME tap su 6 livelli (script `oracle/mame_level_header_tap.lua`
+   ready, da lanciare con ROMs locali).
+2. Probe ROM dump (probe `packages/cli/src/probe-level-header.ts` ready,
+   da lanciare con ROMs locali).
+3. Decode UNKNOWN restanti: `+0x08` (long), `+0x24..0x25` (word).
+4. Decode word 1-3 dei height records.
+5. Parity test musashi-wasm di `decodeLevelHeader` come componente
+   nuovo (500/500 random ROM-region inputs).
+6. Link finale del doc da `docs/findings/README.md` o `STATUS.md`.
+
+Conflict resolution rule del goal resta attiva durante Phase 2:
+**stop e flag a Marco** se un file off-limits diventa necessario.
