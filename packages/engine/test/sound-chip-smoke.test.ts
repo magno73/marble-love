@@ -78,26 +78,28 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     chip.mmu.write8(0x1810 as never, as_u8(0x99));
     expect(chip.replyQueue.length).toBe(1);
     expect(chip.replyQueue[0]).toBe(0x99);
-    expect(chip.soundToMain.pending).toBe(true);
+    // pending cleared immediatamente: simula 68K IRQ6 handler che legge
+    // $FC0001 in microsecondi (auto-drain).
+    expect(chip.soundToMain.pending).toBe(false);
   });
 
-  it("drainReplyEvents: estrae byte edge-triggered, hardware-correct", () => {
-    // Comportamento hardware: sound→main latch e' overwrite-on-write quando
-    // pending. Il main DEVE leggere $FC0001 tra scritture per non perdere
-    // byte. Edge-triggered callback push solo sulla transizione false→true.
+  it("drainReplyEvents: estrae TUTTI i byte (68K auto-drain veloce)", () => {
+    // Hardware-faithful: real 68K IRQ6 handler legge $FC0001 in pochi
+    // cycle, quindi ogni write 6502 $1810 produce 1 IRQ6 e tutti i byte
+    // sono processati (NON overwrite). TS simula via onSoundToMainPost
+    // che pushea + clear pending = nessuna collisione.
+    // Verificato necessario 2026-05-18: senza auto-drain, NMI handler
+    // ($9569 BIT $1820 BNE) stalla nel polling loop, drift di 1 frame.
     const chip = createSoundChip({ roms: loadRoms() });
     chip.mmu.write8(0x1810 as never, as_u8(0x11));
-    // Senza ack del main, una seconda write 6502 sovrascrive il latch ma NON
-    // ri-arma il callback (gia' pending). Realismo: 6502 farebbe poll $1820
-    // bit 3 prima di STA $1810.
     chip.mmu.write8(0x1810 as never, as_u8(0x22));
     chip.mmu.write8(0x1810 as never, as_u8(0x33));
     const out1 = drainReplyEvents(chip);
-    expect(out1.map((b) => b as number)).toEqual([0x11]);
+    expect(out1.map((b) => b as number)).toEqual([0x11, 0x22, 0x33]);
     expect(chip.replyQueue.length).toBe(0);
     expect(chip.soundToMain.pending).toBe(false);
 
-    // Pattern corretto: main legge → 6502 scrive nuovo → main legge → ...
+    // Pattern: ogni write 6502 → 1 byte in queue.
     chip.mmu.write8(0x1810 as never, as_u8(0xAA));
     expect(drainReplyEvents(chip).map((b) => b as number)).toEqual([0xAA]);
     chip.mmu.write8(0x1810 as never, as_u8(0xBB));

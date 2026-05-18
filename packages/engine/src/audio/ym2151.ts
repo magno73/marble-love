@@ -352,16 +352,26 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
     // Enable bits (bit 2/3 = enable_timer_a/b: gates IRQ assertion on overflow)
     ym.timerAIrqEnable = (v & 0x04) !== 0;
     ym.timerBIrqEnable = (v & 0x08) !== 0;
-    // Arm Timer A: load from regs $10/$11 (bit 0 = load_timer_a)
+    // Arm Timer A: load from regs $10/$11 (bit 0 = load_timer_a). Per ymfm
+    // semantics: il reload e' EDGE-TRIGGERED su inactive→active. Se il timer
+    // e' gia' attivo e bit 0 ancora set, NON resetta il counter (il timer
+    // continua il count corrente). Verificato 2026-05-18 via ym_writes diff
+    // MAME vs TS: senza edge-trigger, l'IRQ handler che scrive $14=$11 e
+    // $14=$05 con bit 0 set ENTRAMBI causava 2 reset counter per IRQ →
+    // ~103 cyc drift per IRQ cycle vs MAME.
     if ((v & 0x01) !== 0) {
-      ym.timerACounter = timerALoadValue(ym);
-      ym.timerAActive = true;
+      if (!ym.timerAActive) {
+        ym.timerACounter = timerALoadValue(ym);
+        ym.timerAActive = true;
+      }
     } else {
       ym.timerAActive = false;
     }
     if ((v & 0x02) !== 0) {
-      ym.timerBCounter = timerBLoadValue(ym);
-      ym.timerBActive = true;
+      if (!ym.timerBActive) {
+        ym.timerBCounter = timerBLoadValue(ym);
+        ym.timerBActive = true;
+      }
     } else {
       ym.timerBActive = false;
     }
