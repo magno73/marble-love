@@ -10,6 +10,8 @@
  */
 
 import type { GameState } from "./state.js";
+import type { RomImage } from "./bus.js";
+import { stateSub2572 } from "./state-sub-2572.js";
 import type { u16 } from "./wrap.js";
 import { as_u16 } from "./wrap.js";
 
@@ -35,6 +37,10 @@ const CLEAR_START_COL = 3;
 const CLEAR_COL_COUNT = 0x24;
 const BANNER_TIMER_ROW = 9;
 const BANNER_TIMER_COL = 29;
+const INTRO_HEADER_TIME_CHAIN = 0x0002291e as const;
+const INTRO_HEADER_EXTRA_CHAIN = 0x00022942 as const;
+const INTRO_RACE_NAME_PTR_TABLE = 0x0001f15e as const;
+const INTRO_RACE_SUFFIX_PTR_TABLE = 0x0001f176 as const;
 const BANNER_TIMER_BLANK_WORD = 0x353c;
 const BANNER_TIMER_DIGIT_WORDS: readonly (readonly [number, number, number, number])[] = [
   [0x3500, 0x3501, 0x3502, 0x3503], // 0
@@ -69,6 +75,8 @@ export type IntroBannerHudCallback = (timerPtr: number, idx: number) => void;
 export interface ArmLevelIntroBannerResumeOptions {
   /** Carryover timer captured before runtime level init rebuilds obj0. */
   baseTimer?: number;
+  /** ROM image used to redraw the level intro strings on runtime transitions. */
+  rom?: RomImage;
   /**
    * Runtime level transitions enter through FUN_1101E state 3, not a warm seed,
    * so park the player timer while the presentation adds the bonus time.
@@ -84,6 +92,15 @@ function writeWordBE(bytes: Uint8Array, off: number, value: number): void {
   const v = value & 0xffff;
   bytes[off] = (v >>> 8) & 0xff;
   bytes[off + 1] = v & 0xff;
+}
+
+function readRomLongBE(rom: RomImage, addr: number): number {
+  return (
+    (((rom.program[addr] ?? 0) << 24) |
+      ((rom.program[addr + 1] ?? 0) << 16) |
+      ((rom.program[addr + 2] ?? 0) << 8) |
+      (rom.program[addr + 3] ?? 0)) >>> 0
+  );
 }
 
 function alphaLineIncludes(state: GameState, row: number, phrase: string): boolean {
@@ -161,6 +178,16 @@ function updateBannerRemainingTimer(state: GameState, remaining: number): void {
   writeBannerTimerDigit(state, BANNER_TIMER_COL + 2, ones);
 }
 
+function renderLevelIntroBannerText(state: GameState, rom: RomImage, levelIdx: number): void {
+  const headerChain = levelIdx < 2 ? INTRO_HEADER_TIME_CHAIN : INTRO_HEADER_EXTRA_CHAIN;
+  const raceNameChain = readRomLongBE(rom, INTRO_RACE_NAME_PTR_TABLE + levelIdx * 4);
+  const raceSuffixChain = readRomLongBE(rom, INTRO_RACE_SUFFIX_PTR_TABLE + levelIdx * 4);
+
+  stateSub2572(state, rom, headerChain, 0x3000);
+  stateSub2572(state, rom, raceNameChain, 0x3000);
+  stateSub2572(state, rom, raceSuffixChain, 0x3400);
+}
+
 function clearResumeCursor(state: GameState): void {
   state.clock.levelIntroBannerResumeTick = undefined;
   state.clock.levelIntroBannerBaseTimer = undefined;
@@ -185,6 +212,9 @@ export function armLevelIntroBannerResume(
     state.workRam[PLAYER_TIMER_MEDIUM_OFF] = 9;
     state.workRam[PLAYER_TIMER_PAD_OFF] = 5;
     state.workRam[PLAYER_TIMER_INNER_OFF] = 0xff;
+  }
+  if (options.rom !== undefined && !hasLevelIntroBanner(state, levelIdx)) {
+    renderLevelIntroBannerText(state, options.rom, levelIdx);
   }
   updateBannerRemainingTimer(state, extraTime);
   return true;

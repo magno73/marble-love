@@ -237,6 +237,7 @@ describe("level intro banner warm-state resume", () => {
     expect(readWordBE(state.workRam, 0x394)).toBe(1);
     expect(readWordBE(state.workRam, 0x82)).toBe(36);
     expect(state.workRam[0x86]).toBe(0xff);
+    expect(hasIntroBanner(state)).toBe(true);
 
     for (let i = 1; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
@@ -244,6 +245,7 @@ describe("level intro banner warm-state resume", () => {
 
     expect(readWordBE(state.workRam, 0x82)).toBe(91);
     expect(state.workRam[0x86]).toBe(5);
+    expect(hasIntroBanner(state)).toBe(false);
   });
 
   it("preserves carryover seconds and adds the L3 intro bonus during level transition", () => {
@@ -264,6 +266,7 @@ describe("level intro banner warm-state resume", () => {
     expect(readWordBE(state.workRam, 0x394)).toBe(2);
     expect(readWordBE(state.workRam, 0x82)).toBe(47);
     expect(state.workRam[0x86]).toBe(0xff);
+    expect(hasIntroBanner(state)).toBe(true);
 
     for (let i = 1; i < 96; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
@@ -271,6 +274,7 @@ describe("level intro banner warm-state resume", () => {
 
     expect(readWordBE(state.workRam, 0x82)).toBe(77);
     expect(state.workRam[0x86]).toBe(5);
+    expect(hasIntroBanner(state)).toBe(false);
   });
 
   it("rebuilds the L2 black enemy draw-list entry during a runtime L1 to L2 transition", () => {
@@ -290,6 +294,24 @@ describe("level intro banner warm-state resume", () => {
     tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
 
     expect(readWordBE(state.workRam, 0x394)).toBe(1);
+    expect(state.clock.levelEndScoreResumePending).toBe(1);
+    expect(state.clock.mainThreadWaitDelay).toBeGreaterThan(0);
+    expect(activeDrawListEntries(state)).not.toContainEqual([0x02, 0x01]);
+
+    for (
+      let i = 0;
+      i < 120 && (
+        state.clock.levelEndScoreResumePending !== undefined ||
+        readWordBE(state.workRam, 0x390) !== 0
+      );
+      i++
+    ) {
+      tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
+    }
+
+    expect(state.clock.levelEndScoreResumePending).toBeUndefined();
+    expect(state.clock.mainThreadWaitDelay).toBeUndefined();
+    expect(readWordBE(state.workRam, 0x390)).toBe(0);
     expect(activeDrawListEntries(state)).toContainEqual([0x02, 0x01]);
     expect(activeDrawListEntries(state)).toContainEqual([0x01, 0x00]);
     expect(activeDrawListEntries(state)).not.toContainEqual([0x01, 0x02]);
