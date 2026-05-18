@@ -177,6 +177,9 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
           outputChannelCount: [2],
         });
         node.connect(ctx.destination);
+        // Reset esplicito: garantisce stato pulito anche dopo HMR/reload
+        // (evita voci YM/POKEY residue da sessioni precedenti).
+        node.port.postMessage({ type: "reset" });
       } catch (e) {
         directCueOnly = true;
         console.warn("[sound] AudioWorklet unavailable, using direct cue fallback:", e);

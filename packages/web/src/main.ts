@@ -1150,12 +1150,13 @@ async function startGame(
       btnAudio.addEventListener("click", async () => {
         try {
           if (soundStarted) {
-            soundRenderer?.playCommandCue(0x5a, { force: true });
+            // Click successivo = no-op (era chime di re-test, ora rumoroso)
             return;
           }
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
-          soundRenderer.playCommandCue(0x40, { force: true });
+          // Chime di "audio enabled" RIMOSSO (era beep stand-in).
+          // Reset worklet già chiamato dentro start().
           // Release SoundChip dal HOLD reset hardware (main 68K $860001 bit 7=1).
           // Senza release il 6502 non gira mai → no YM/POKEY write → no audio.
           // Wire main↔sound mailbox e' debt separato (Codex engine main side);
@@ -1196,8 +1197,8 @@ async function startGame(
               }, 500);  // 1 cmd ogni 500ms = 128s per ciclare tutti
             }
           }
-          window.setTimeout(() => { soundRenderer?.playCommandCue(0x5a, { force: true }); }, 140);
-          btnAudio.textContent = "🔊 Test Audio";
+          // Chime delay RIMOSSO (era beep).
+          btnAudio.textContent = "🔊 Audio ON";
           soundStarted = true;
           console.log("[sound] Web Audio started");
         } catch (e) {
