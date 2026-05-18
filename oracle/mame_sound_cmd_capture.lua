@@ -78,10 +78,15 @@ local function install_taps()
     -- Il tap critico: $FE0001 write da main = soundlatch cmd al sound 6502.
     -- Bus 16-bit del 68010: write a $FE0000 con mask & 0xff != 0 colpisce
     -- l'odd byte ($FE0001) che e' il vero soundlatch.
+    -- ALSO captures sub-frame cycle offset for cycle-precise replay (sessione 4l).
     table.insert(tap_handles,
         main_mem:install_write_tap(0xFE0000, 0xFE0001, "snd_cap_cmd_w", function(o, d, m)
             if (m & 0xff) ~= 0 then
-                table.insert(cmds, { frame = frame_count, byte = (d & 0xff) })
+                local t = manager.machine.time
+                table.insert(cmds, {
+                    frame = frame_count, byte = (d & 0xff),
+                    secs = t.seconds, attos = tostring(t.attoseconds),
+                })
             end
             return d
         end))
@@ -120,7 +125,8 @@ local function dump_json()
     out:write('  "cmds": [\n')
     for i, c in ipairs(cmds) do
         local sep = (i < #cmds) and "," or ""
-        out:write(string.format('    {"frame": %d, "byte": %d}%s\n', c.frame, c.byte, sep))
+        out:write(string.format('    {"frame": %d, "byte": %d, "secs": %d, "attos": "%s"}%s\n',
+            c.frame, c.byte, c.secs or 0, c.attos or "0", sep))
     end
     out:write("  ]\n")
     out:write("}\n")
