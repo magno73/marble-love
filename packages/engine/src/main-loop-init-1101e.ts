@@ -18,10 +18,15 @@ import { levelFractionRender28232Default } from "./level-fraction-render-28232.j
 import { CLEAR_ROWS_ARG, WAIT_PHASE2_TICKS, stateSub16A20 } from "./state-sub-16a20.js";
 import { stateSub18A88 } from "./state-sub-18a88.js";
 import { renderStringEntry286B0 } from "./render-string-entry-286b0.js";
+import { renderStringEntry28F62 } from "./render-string-entry-28f62.js";
+import { renderStringEntry28FA0 } from "./render-string-entry-28fa0.js";
+import { renderScore28E3C } from "./render-score-28e3c.js";
+import { formatAndRender28EB2 } from "./format-and-render-28eb2.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { stateSub2678 } from "./state-sub-2678.js";
 import { stateSub2572 } from "./state-sub-2572.js";
 import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
+import { clearAlphaTilesFromIndex } from "./alpha-tilemap.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
@@ -29,9 +34,26 @@ import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
 import { startMode0Init11452Async, startMode2Init11452Async } from "./mode2-init-11452-async.js";
 import { armLevelIntroBannerResume } from "./level-intro-banner-resume.js";
+import { renderStringChain3520 } from "./render-string-chain-3520.js";
+import { formatNumber3874 } from "./string-format.js";
+import { trimTrailingSpace } from "./string-trim.js";
+import { objectAccumFlag28608 } from "./object-accum-flag-28608.js";
+import { particleInit18CD2 } from "./particle-init-18cd2.js";
 import { as_u8, as_u16 } from "./wrap.js";
 
 const WRAM = 0x00400000;
+const LEVEL_END_SCORE_WAIT_TICKS = 0x28 as const;
+const FINAL_SCORE_WAIT_TICKS = 0xb4 as const;
+
+const SLOT_BASE_ADDR = 0x00400018 as const;
+const SLOT_STRIDE = 0xe2 as const;
+const SLOT_STATE_OFF = 0x18 as const;
+const SLOT_SCORE_OFF = 0x6a as const;
+const SCORE_RENDER_TABLE = 0x0001d36e as const;
+const LEVEL_END_TEXT_PTR_P0 = 0x00022b82 as const;
+const LEVEL_END_TEXT_PTR_P1 = 0x00022b9a as const;
+const TILE_BASE_P0 = 0x2000 as const;
+const TILE_BASE_P1 = 0x2400 as const;
 
 function off(addr: number): number {
   return addr - WRAM;
@@ -65,6 +87,188 @@ function readRomByte(rom: RomImage | undefined, addr: number): number {
 
 function addByte(state: GameState, addr: number, value: number): void {
   wb(state, addr, rb(state, addr) + value);
+}
+
+function sextWord(value: number): number {
+  const w = value & 0xffff;
+  return w & 0x8000 ? w - 0x10000 : w;
+}
+
+function sextByte(value: number): number {
+  const b = value & 0xff;
+  return b & 0x80 ? (b | 0xffffff00) >> 0 : b;
+}
+
+function colorRamWrite(state: GameState, colorOff: number, value: number): void {
+  const v = value & 0xffff;
+  state.colorRam[colorOff] = (v >>> 8) & 0xff;
+  state.colorRam[colorOff + 1] = v & 0xff;
+}
+
+function renderString2572Default(state: GameState, rom: RomImage, entryPtr: number, attrWord: number): void {
+  stateSub2572(state, rom, entryPtr, attrWord);
+}
+
+function renderScore28E3CDefault(
+  state: GameState,
+  rom: RomImage,
+  arg1: number,
+  arg2: number,
+  arg3: number,
+  arg4: number,
+  arg5: number,
+  arg6: number,
+): void {
+  renderScore28E3C(state, arg1, arg2, arg3, arg4, arg5, arg6, {
+    numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+      formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+    },
+    renderStringEntry28F62: (st, col, tickOff, attr) => {
+      renderStringEntry28F62(st, col, tickOff, attr, {
+        renderStringChain: (structAddr, attrWord) => {
+          renderString2572Default(st, rom, structAddr, attrWord);
+        },
+      });
+    },
+  });
+}
+
+function renderStringEntry286B0Default(
+  state: GameState,
+  rom: RomImage,
+  arg1: number,
+  arg2: number,
+  arg3: number,
+  arg4: number,
+): void {
+  renderStringEntry286B0(
+    state,
+    arg1,
+    arg2,
+    arg3,
+    arg4,
+    {
+      renderStringChain: (structAddr, attrWord) => {
+        renderString2572Default(state, rom, structAddr, attrWord);
+      },
+    },
+    (absAddr) => rom.program[absAddr >>> 0] ?? 0,
+  );
+}
+
+function formatAndRender28EB2Default(
+  state: GameState,
+  rom: RomImage,
+  arg1: number,
+  arg2: number,
+  arg3: number,
+  arg4: number,
+  arg5: number,
+  arg6: number,
+): void {
+  formatAndRender28EB2(state, arg1, arg2, arg3, arg4, arg5, arg6, {
+    numberFormatter: (st, value, bufEnd, fmtMode, width, fillExtra) => {
+      formatNumber3874(st, value, bufEnd, fmtMode, width, fillExtra);
+    },
+    trimTrailingSpace: (st, strPtr, maxLen) => {
+      trimTrailingSpace(st, strPtr, maxLen);
+    },
+    renderStringEntry: (st, col, tickOff, attr) => {
+      renderStringEntry28FA0(st, col, tickOff, attr, {
+        renderStringChain2: (structAddr, attrLong) => {
+          renderStringChain3520(st, rom, structAddr, attrLong);
+        },
+      });
+    },
+  });
+}
+
+function renderLevelEndScorePrelude(state: GameState, rom: RomImage): number {
+  colorRamWrite(state, 0x00, 0x0000);
+  colorRamWrite(state, 0x08, 0x0000);
+  colorRamWrite(state, 0x3a, 0x0000);
+  colorRamWrite(state, 0x10, 0x0000);
+  colorRamWrite(state, 0x18, 0x0000);
+  colorRamWrite(state, 0x12, 0xafff);
+  colorRamWrite(state, 0x1a, 0xafff);
+  colorRamWrite(state, 0x16, 0xf00f);
+  colorRamWrite(state, 0x1e, 0xaf00);
+
+  let matched = 0;
+  const slotCount = rw(state, 0x00400396);
+  for (let d2 = 0; (d2 & 0x80 ? d2 - 256 : d2) !== (slotCount & 0xffff); d2 = (d2 + 1) & 0xff) {
+    const slotAddr = SLOT_BASE_ADDR + d2 * SLOT_STRIDE;
+    if (rb(state, slotAddr + SLOT_STATE_OFF) !== 3) continue;
+    matched++;
+
+    wb(state, slotAddr + 0xd8, 0);
+    wb(state, slotAddr + 0x71, 0xff);
+    wb(state, slotAddr + 0x70, 0);
+
+    const tileBase = d2 !== 0 ? TILE_BASE_P1 : TILE_BASE_P0;
+    const textPtr = d2 !== 0 ? LEVEL_END_TEXT_PTR_P1 : LEVEL_END_TEXT_PTR_P0;
+    renderString2572Default(state, rom, textPtr, tileBase);
+
+    const scoreSigned = sextWord(rw(state, slotAddr + SLOT_SCORE_OFF));
+    const clamped = scoreSigned > 99 ? 99 : scoreSigned;
+    const scoreValue = (clamped * 100) >> 0;
+    const tableByte = rom.program[(SCORE_RENDER_TABLE + d2) >>> 0] ?? 0;
+    renderScore28E3CDefault(
+      state,
+      rom,
+      scoreValue >>> 0,
+      0,
+      sextByte(tableByte),
+      4,
+      5,
+      tileBase,
+    );
+  }
+  return matched;
+}
+
+function playerSlotIter118D2PostScoreHold(state: GameState, rom: RomImage, subs: MainLoopInit1101ESubs): void {
+  playerSlotIter118D2(state, rom, {
+    fun_0142: () => undefined,
+    fun_28e3c: () => undefined,
+    fun_28db8: () => undefined,
+    fun_158ac: (st, cmd) => {
+      subs.soundCmd?.(st, cmd);
+      return 1;
+    },
+    fun_16ec6: (st) => levelDispatcher16EC6(st, rom),
+    fun_28608: (st, slotPtr, value) => objectAccumFlag28608(st, slotPtr, value),
+  });
+}
+
+function stateSub18A88Default(state: GameState, rom: RomImage): number {
+  const result = stateSub18A88(state, {
+    particleInit: (st, count, mode) => {
+      particleInit18CD2(st, count, mode);
+    },
+    clearAlphaTiles: (st, startRow) => {
+      clearAlphaTilesFromIndex(st, startRow);
+    },
+    renderStringVia142: (st, entryPtr, attrLong) => {
+      renderString2572Default(st, rom, entryPtr, attrLong);
+    },
+    renderStringVia200: (st, entryPtr, attrLong) => {
+      renderStringChain3520(st, rom, entryPtr, attrLong);
+    },
+    renderTag: (st, a1, a2, a3, a4) => {
+      renderStringEntry286B0Default(st, rom, a1, a2, a3, a4);
+    },
+    renderStringHelper: (st, a1, a2, a3, a4, a5, a6) => {
+      renderScore28E3CDefault(st, rom, a1, a2, a3, a4, a5, a6);
+    },
+    addToObjectAccum: (st, objPtr, value) => {
+      objectAccumFlag28608(st, objPtr, value);
+    },
+    formatAndRender: (st, a1, a2, a3, a4, a5, a6) => {
+      formatAndRender28EB2Default(st, rom, a1, a2, a3, a4, a5, a6);
+    },
+  });
+  return result.matchedCount;
 }
 
 export interface MainLoopInit1101ESubs {
@@ -295,6 +499,17 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
 }
 
 function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit1101ESubs): void {
+  if (
+    state.clock.levelEndScoreResumePending !== undefined &&
+    rom !== undefined &&
+    subs.helper118D2 === undefined
+  ) {
+    state.clock.levelEndScoreResumePending = undefined;
+    playerSlotIter118D2PostScoreHold(state, rom, subs);
+    finishCase4Transition(state, rom, subs);
+    return;
+  }
+
   (subs.soundPair15884 ?? soundPair15884)(state);
   ww(state, 0x00400768, 0xffff);
   if (rw(state, 0x00400394) === 3) subs.soundCmd?.(state, 0x11);
@@ -304,7 +519,21 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   wb(state, 0x0040039a, 1);
   addByte(state, 0x004003f0, 1);
   ww(state, 0x00400394, rw(state, 0x00400394) + 1);
+
+  if (rom !== undefined && subs.helper118D2 === undefined) {
+    const matched = renderLevelEndScorePrelude(state, rom);
+    if (matched > 0) {
+      state.clock.levelEndScoreResumePending = as_u8(1);
+      state.clock.mainThreadWaitDelay = as_u16(LEVEL_END_SCORE_WAIT_TICKS);
+      return;
+    }
+  }
+
   helper118D2(state, subs, rom);
+  finishCase4Transition(state, rom, subs);
+}
+
+function finishCase4Transition(state: GameState, rom: RomImage | undefined, subs: MainLoopInit1101ESubs): void {
   wb(state, 0x00400460, 0xff);
   (subs.vblankAck ?? vblankAck28DEA)(state);
   subs.clearPaletteRam?.(state);
@@ -317,7 +546,11 @@ function case4(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   } else {
     const carryoverTimer = rw(state, 0x00400082);
     init10504(state, subs, rom);
-    armLevelIntroBannerResume(state, { baseTimer: carryoverTimer, parkTimer: true });
+    armLevelIntroBannerResume(state, {
+      baseTimer: carryoverTimer,
+      parkTimer: true,
+      ...(rom === undefined ? {} : { rom }),
+    });
     ww(state, 0x00400390, 0);
   }
 }
@@ -330,8 +563,19 @@ function case6(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   (subs.gameStateBanner26B2A ?? ((s, m) => { if (rom !== undefined) gameStateBanner26B2A(s, rom, m); }))(state, 0);
   subs.soundCmd?.(state, 0x1b);
   wb(state, 0x004003e8, 0);
-  (subs.helper18A88 ?? ((s) => { stateSub18A88(s); }))(state);
-  subs.wait28DB8?.(state, 0xb4);
+  let matched = 0;
+  (subs.helper18A88 ?? ((s) => {
+    if (rom !== undefined) {
+      matched = stateSub18A88Default(s, rom);
+    } else {
+      matched = stateSub18A88(s).matchedCount;
+    }
+  }))(state);
+  if (subs.wait28DB8 !== undefined) {
+    subs.wait28DB8(state, FINAL_SCORE_WAIT_TICKS);
+  } else if (matched > 0) {
+    state.clock.mainThreadWaitDelay = as_u16(FINAL_SCORE_WAIT_TICKS);
+  }
   wb(state, 0x004003e2, 0);
   ww(state, 0x00400390, 2);
 }

@@ -7,6 +7,28 @@
 
 ---
 
+## Nota post-investigazione (2026-05-18)
+
+Questo PRD descrive correttamente il sintomo utente, ma la diagnosi sotto e'
+parziale per i seed attualmente cablati. I sei `start_level*_intro_*` non sono
+nel path `0x40075a=0x012c`: le proof MAME active-vs-neutral mostrano il loop
+visibile in `FUN_10504` con timer object `0x400082..0x400086`, mentre
+`0x40075a` resta zero. Per questo non va usato come criterio per rinominare o
+spostare i seed.
+
+Il caso `?autoLoad=1&play=1` osservato il 2026-05-18 aveva inoltre una causa
+indipendente: la route default entrava nel gate coin/start ma preparava
+`manual_level1_start`, che appartiene alla famiglia descriptor L2 e parte con
+timer gia' a 60 senza banner intro. La correzione accettata e' quindi:
+
+- `?autoLoad=1&play=1` resta nel gate attract/coin/start e, dopo START, carica
+  il true-start L1 provato `start_level1_intro_practice_f2479`.
+- `?autoLoad=1&coinStart=1` mantiene lo stesso gate esplicito e carica lo
+  stesso seed live dopo START.
+- Il resume del banner e' un cursor runtime ristretto ai seed true-start
+  riconosciuti da workRam/object state + phrase alpha; non modifica seed,
+  startLevel, terreno, collisioni o mapping.
+
 ## 1. Problema
 
 Nel binario originale Marble Madness, l'inizio di ogni livello mostra un banner a centro schermo (es. `TIME TO FINISH / PRACTICE RACE`, `EXTRA TIME FOR / AERIAL RACE`) per ~5 secondi mentre il timer del livello viene caricato dei secondi disponibili. Il banner poi sparisce automaticamente e la corsa parte.

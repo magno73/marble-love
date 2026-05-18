@@ -193,6 +193,12 @@ export interface TickClock {
   /** Alpha row clear that must run after the deferred main-thread wait. */
   mainThreadWaitClearRows: u8 | undefined;
   /**
+   * Continuation marker for the level-complete score text in FUN_118D2.
+   * Set after rendering the summary and cleared once the post-wait level
+   * transition resumes.
+   */
+  levelEndScoreResumePending: u8 | undefined;
+  /**
    * Warm-state resume cursor for level-intro seeds captured inside the
    * FUN_10504 HUD/timer presentation loop. Undefined during normal gameplay.
    */
@@ -471,7 +477,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined, levelIntroBannerResumeTick: undefined, levelIntroBannerBaseTimer: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined, levelEndScoreResumePending: undefined, levelIntroBannerResumeTick: undefined, levelIntroBannerBaseTimer: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },
