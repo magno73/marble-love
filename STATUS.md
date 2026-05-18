@@ -1,7 +1,31 @@
 # STATUS — Marble Love
 
-**Ultimo update:** 2026-05-18 (audio sessione 4l: Timer A edge-trigger + auto-drain — write log diff 1098 bit-perfect)
+**Ultimo update:** 2026-05-18 (audio sessione 4l: chip default-ON + rimozione beep cue stand-in)
 **Branch corrente:** `main`.
+
+## 2026-05-18 — Audio sessione 4l (cont.): web SoundChip default-ON
+
+🔧 **UX fix critico**: utente reportava "solo beep, no music" testando
+il gioco. Causa: `?soundChip` era opt-in (default OFF) → chip non
+ticchettava → no sample YM/POKEY → solo `playCommandCue` (beep
+sintetizzato placeholder per cmd visualization).
+
+**Fix** in `packages/web/src/main.ts`:
+- `?soundChip` default-ON (era opt-in). Chip ora ticchetta sempre,
+  produce audio reale post-fix sessione 4l.
+- `playCommandCue` rimosso dalla per-cmd callback (era stand-in beep
+  per cmd visualization; ora il chip produce audio reale → beeps
+  ridondanti/rumorosi). Override `?soundCue=1` per debug.
+
+**Per attract music**: il main engine TS non emette ancora cmd al
+chip (blocker A0 Codex). Usare:
+```
+?soundReplay=scenarios/sound/cmd-tape-attract-music.json
+```
+con tape `oracle/scenarios/sound-cmd-tape-attract-music.json` per
+ascoltare attract music cycle-precise.
+
+
 
 ## 2026-05-18 — Audio sessione 4l: drill write log identifies 3 core bugs
 
