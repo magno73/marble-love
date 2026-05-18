@@ -177,12 +177,17 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
           outputChannelCount: [2],
         });
         node.connect(ctx.destination);
-        // Reset esplicito: garantisce stato pulito anche dopo HMR/reload
-        // (evita voci YM/POKEY residue da sessioni precedenti).
         node.port.postMessage({ type: "reset" });
+        console.log("[sound] AudioWorklet loaded successfully (PCM audio active)");
       } catch (e) {
         directCueOnly = true;
-        console.warn("[sound] AudioWorklet unavailable, using direct cue fallback:", e);
+        const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+        console.error("[sound] AudioWorklet FAILED:", msg);
+        console.error("[sound] Stack:", e instanceof Error ? e.stack : "n/a");
+        console.error("[sound] Browser:", navigator.userAgent);
+        console.error("[sound] Page secure context:", window.isSecureContext);
+        console.error("[sound] AudioContext state:", ctx.state, "sampleRate:", ctx.sampleRate);
+        console.error("[sound] → Fallback: PCM audio DISABLED, beeps NO-OP. Game audio will be SILENT.");
       }
     } else {
       directCueOnly = true;
@@ -256,9 +261,19 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   }
 
   function playCommandCue(cmd: number, options?: { force?: boolean }): void {
+    // OscillatorNode beep stand-in DISABILITATO (2026-05-18): era il source
+    // dei beep continui che user reportava. Il chip ora produce audio reale
+    // via PCM stream. Se AudioWorklet fallisce, playCommandCue diventa no-op
+    // (utente preferisce silenzio a beep). Per debug usare `?soundCue=1` con
+    // `soundCueForce=1` per riabilitare.
     const cue = soundCommandCue(cmd);
     if (options?.force !== true && shouldDropCommandCue()) return;
-    if (ctx !== null) {
+    const forceBeep = new URLSearchParams(globalThis.location?.search ?? "").get("soundCueForce") === "1";
+    if (forceBeep && mediaCueOnly) {
+      playMediaCue(cue);
+      return;
+    }
+    if (forceBeep && ctx !== null) {
       if (ctx.state === "suspended") void ctx.resume();
       const now = ctx.currentTime;
       const osc = ctx.createOscillator();
@@ -272,9 +287,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       osc.start(now);
       osc.stop(now + cue.durationMs / 1000 + 0.03);
     }
-    if (ctx === null && mediaCueOnly) {
-      playMediaCue(cue);
-    }
+    // node.port message: invia cue al worklet (suoneranno tramite cueVoices
+    // se worklet caricato; no-op altrimenti).
     if (node !== null) node.port.postMessage({ type: "cue", ...cue });
   }
 
