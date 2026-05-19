@@ -23,6 +23,9 @@
 
 const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 32;
 const MAX_KEYBOARD_TRACKBALL_EQUIV = 64;
+const DEFAULT_POINTER_TRACKBALL_SCALE = 2;
+const MIN_POINTER_TRACKBALL_SCALE = 0.25;
+const MAX_POINTER_TRACKBALL_SCALE = 8;
 const TRACKBALL_KEYS = new Set([
   "arrowleft",
   "arrowright",
@@ -54,11 +57,17 @@ export interface InputState {
 
 export interface InputOptions {
   keyboardTrackballStep?: number;
+  pointerTrackballScale?: number;
 }
 
 export function normalizeKeyboardTrackballStep(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) return DEFAULT_KEYBOARD_TRACKBALL_EQUIV;
   return Math.max(1, Math.min(MAX_KEYBOARD_TRACKBALL_EQUIV, Math.round(value)));
+}
+
+export function normalizePointerTrackballScale(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return DEFAULT_POINTER_TRACKBALL_SCALE;
+  return Math.max(MIN_POINTER_TRACKBALL_SCALE, Math.min(MAX_POINTER_TRACKBALL_SCALE, value));
 }
 
 export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number; y: number } {
@@ -89,6 +98,7 @@ export function isStartKey(key: string): boolean {
 
 export function initInput(options: InputOptions = {}): InputState {
   const keyboardTrackballStep = normalizeKeyboardTrackballStep(options.keyboardTrackballStep);
+  const pointerTrackballScale = normalizePointerTrackballScale(options.pointerTrackballScale);
 
   // Stato assoluto trackball (= valore MMIO 0xF20001 etc.). Inizializzato a
   // 0xff (= MMIO stable in MAME attract mode con processAxis seed prev=0xff).
@@ -101,8 +111,10 @@ export function initInput(options: InputOptions = {}): InputState {
   let startPulses = 0;
 
   const keys = new Set<string>();
-  const addP1ScreenDelta = (dx: number, dy: number): void => {
-    const mapped = mapLiveScreenDeltaToTrackballDelta(dx, dy);
+  const addP1ScreenDelta = (dx: number, dy: number, scale = 1): void => {
+    const scaledX = Math.round(dx * scale);
+    const scaledY = Math.round(dy * scale);
+    const mapped = mapLiveScreenDeltaToTrackballDelta(scaledX, scaledY);
     p1X = (p1X + mapped.x) & 0xff;
     p1Y = (p1Y + mapped.y) & 0xff;
   };
@@ -129,7 +141,7 @@ export function initInput(options: InputOptions = {}): InputState {
 
   window.addEventListener("mousemove", (e) => {
     if (document.pointerLockElement) {
-      addP1ScreenDelta(e.movementX | 0, e.movementY | 0);
+      addP1ScreenDelta(e.movementX | 0, e.movementY | 0, pointerTrackballScale);
     }
   });
   window.addEventListener("click", () => {
@@ -144,7 +156,11 @@ export function initInput(options: InputOptions = {}): InputState {
   window.addEventListener("touchmove", (e) => {
     const t = e.touches[0];
     if (t && lastTouch) {
-      addP1ScreenDelta((t.clientX - lastTouch.x) | 0, (t.clientY - lastTouch.y) | 0);
+      addP1ScreenDelta(
+        (t.clientX - lastTouch.x) | 0,
+        (t.clientY - lastTouch.y) | 0,
+        pointerTrackballScale,
+      );
       lastTouch = { x: t.clientX, y: t.clientY };
     }
   });
