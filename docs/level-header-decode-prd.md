@@ -275,7 +275,9 @@ Tutti devono restare verdi/invariati:
 
 - `npm test`: 1982/1982 pass (vedi `agent-briefing.md` sezione 13).
 - `obj0.x bit-perfect 99/99` MAME.
-- Drift workRam @ f+99 invariato (387B totale, 215B gameplay).
+- Drift workRam @ f+99 invariato rispetto alla baseline corrente
+  (`total=172 | gameplay=0 | stack-residue=172` su `origin/main` `0edb629`;
+  il vecchio `387B/215B` del briefing e' stale).
 
 Se uno di questi degrada, hai introdotto regressione: **rollback,
 non avanzare**.
@@ -389,3 +391,53 @@ Prompt suggerito da incollare al lancio:
 > 5). Lavora nel branch `codex/level-header-decode` (o equivalente
 > worktree). Quando finisci ogni passo del metodo (1-5), checkpoint
 > esplicito con cosa hai verificato e cosa resta UNKNOWN.
+
+## Phase 2 Checkpoints
+
+Status 2026-05-19: D1/D2 completati; D3 parziale; D4 completato.
+`FUN_1A444` ha chiuso i vecchi UNKNOWN `+0x08` e `+0x24`, e ha chiarito
+gli overlap `+0x1A` e `+0x1C`. MAME tap phase2 sui 6 livelli:
+`/tmp/marble-level-header-tap-phase2-L{1..6}.log`; comparazione raw
+ROM-vs-tap: `/tmp/marble-headers-vs-tap-phase2.diff` con
+`checked=2943 mismatches=0`.
+
+Entity-init slot 4..5: UNKNOWN-verified per uso entity nei path testati.
+La run diagnostica `/tmp/marble-level-header-tap-L1-entities6.log` ha
+forzato `MARBLE_LEVEL_TAP_FORCE_ENTITY_INIT_COUNT=6`, ma il ROM consumer
+`FUN_259B4` ha comunque letto solo `entityInitPos_0..3`. I byte
+`+0x1C..+0x1F` restano decodati come `tileLineDescriptorPtr`.
+
+D4 parity artifacts:
+
+- `runs/level-header-parity-16ec6.txt`: `Match: 500/500 = 100.0%`.
+- `runs/level-header-parity-16f6c.txt`: `Match: 500/500 = 100.0%`.
+- `runs/level-header-parity-259b4.txt`: `Match: 500/500 = 100.0%`.
+
+Resta grigio per Rule 12: legacy `HeightRecord` post-header. I target
+indicati dal PRD (`FUN_121B8`, `FUN_1CD00`, `FUN_19D94`) non hanno mostrato
+read diretti del blocco post-header; non viene inventata semantica per
+`word1..word3`.
+
+D5 validation: completato dopo la correzione dei failure baseline presenti
+anche su `origin/main` (`0edb629`) e dell'hang in
+`integration-playfield-chain.test.ts` causato da caricamento ROM senza
+`loadRomBlob`.
+
+Gate eseguiti:
+
+- `npm run typecheck` -> PASS.
+- `npm run test --silent` -> PASS, `255 passed | 3 skipped` test files,
+  `2206 passed | 17 skipped` tests.
+- `npx tsc -b` -> PASS.
+- `npm run lint` -> PASS.
+- `npx eslint packages/` -> PASS.
+- `npx tsx packages/cli/src/test-level-header-decode-parity.ts 500` ->
+  PASS per `16ec6`, `16f6c`, `259b4`.
+- `/tmp/mame_100f.json` rigenerato con `oracle/mame_state_multidump.lua`
+  su frame `12000..12099`; `probe-cluster-histogram.ts` -> `total=172 |
+  gameplay=0 | stack-residue=172`. Lo stesso valore e' stato verificato su
+  `origin/main` (`0edb629`), quindi il vecchio atteso `387/215` del briefing
+  e' stale rispetto alla baseline corrente, non una regressione di questo
+  branch.
+- `probe-100f-diff.ts | grep "obj0.x"` -> tutti i checkpoint stampati,
+  incluso `f+99`, restano `TS == MAME`.

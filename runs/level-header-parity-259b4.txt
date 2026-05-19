@@ -1,0 +1,6 @@
+=== objectInit259B4 (FUN_259B4) - 500 cases ===
+Match: 500/500 = 100.0%
+First fail: none
+
+Patched heavy JSRs to RTS and FUN_1CC62 to deterministic D0.
+Compared object/global direct effects and checked decoded entity packed positions.

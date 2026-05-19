@@ -189,7 +189,8 @@ npm test  # atteso: 1982 + N nuovi pass
 
 # Drift workRam @ f+99
 npx tsx packages/cli/src/probe-cluster-histogram.ts | head -1
-# atteso: total=387 (invariato)
+# atteso baseline corrente origin/main 0edb629: total=172 | gameplay=0 |
+# stack-residue=172. Il vecchio total=387/gameplay=215 del briefing e' stale.
 
 # obj0.x bit-perfect 99/99
 npx tsx packages/cli/src/probe-100f-diff.ts | grep obj0.x

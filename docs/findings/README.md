@@ -13,6 +13,9 @@ HN, technical writeup post-launch).
   — *2026-05-13*. Hardware quirk del chip slapstic 137412-103. Prefetch CPU
   fuori dal range protetto può armare la FSM se matcha pattern `alt1`.
   Impact: chiuso 126B PF diff a f12950.
+- [Level descriptor header format](../level-header-format.md)
+  — *2026-05-19*. Layout byte-per-byte del descriptor dei 6 livelli Marble
+  con consumer M68010, tap MAME, parity artifacts e UNKNOWN verificati.
 
 ## Aggiungere nuovi finding
 
