@@ -33,7 +33,6 @@ const hits = new Map<number, { cycle: number; frame: number }>();
 const TARGET_FRAME = Number(process.env.TARGET_FRAME ?? "500");
 
 let released = false;
-let bootCycle = 0;  // cycle count del 6502 a PC=0x8002 (start of boot)
 
 for (let f = 0; f < TARGET_FRAME; f++) {
   const cmds = tape.byFrame.get(f);
