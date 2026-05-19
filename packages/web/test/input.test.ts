@@ -40,7 +40,7 @@ describe("browser input mapping", () => {
   });
 
   it("normalizes keyboard trackball step for debug tuning", () => {
-    expect(normalizeKeyboardTrackballStep(undefined)).toBe(8);
+    expect(normalizeKeyboardTrackballStep(undefined)).toBe(32);
     expect(normalizeKeyboardTrackballStep(16.4)).toBe(16);
     expect(normalizeKeyboardTrackballStep(0)).toBe(1);
     expect(normalizeKeyboardTrackballStep(999)).toBe(64);
@@ -70,6 +70,35 @@ describe("browser input mapping", () => {
 
     expect(input.consumeP1X()).toBe(0xef);
     expect(input.consumeP1Y()).toBe(0xff);
+  });
+
+  it("uses raw touch movement deltas like a screen trackball", () => {
+    type TouchHandler = (event: { touches: Array<{ clientX: number; clientY: number }> }) => void;
+    const listeners: Record<string, TouchHandler[]> = {};
+    vi.stubGlobal("window", {
+      addEventListener(type: string, handler: TouchHandler) {
+        listeners[type] ??= [];
+        listeners[type].push(handler);
+      },
+    });
+    vi.stubGlobal("document", {
+      pointerLockElement: null,
+      body: { requestPointerLock: undefined },
+    });
+    vi.stubGlobal("navigator", {
+      getGamepads: () => [],
+    });
+
+    const input = initInput();
+    for (const handler of listeners.touchstart ?? []) {
+      handler({ touches: [{ clientX: 100, clientY: 100 }] });
+    }
+    for (const handler of listeners.touchmove ?? []) {
+      handler({ touches: [{ clientX: 110, clientY: 90 }] });
+    }
+
+    expect(input.consumeP1X()).toBe(0xf5);
+    expect(input.consumeP1Y()).toBe(0x09);
   });
 
   it("latches coin and start as frame-safe pulses", () => {
