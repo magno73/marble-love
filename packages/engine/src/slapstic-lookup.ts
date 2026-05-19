@@ -50,7 +50,7 @@
  */
 
 import type { RomImage } from "./bus.js";
-import { slapsticTick } from "./m68k/slapstic-103.js";
+import { slapsticTick, type SlapsticFsm } from "./m68k/slapstic-103.js";
 import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
 
 /** Base della tabella indicizzata, dentro la slapstic-protected ROM region. */
@@ -58,6 +58,28 @@ export const SLAPSTIC_LOOKUP_BASE = 0x080080 as const;
 
 /** Indirizzo della "trigger read" che il binario fa prima del lookup. */
 export const SLAPSTIC_TRIGGER_ADDR = 0x080000 as const;
+
+type SlapsticRuntimeRom = {
+  slapsticBanks?: Uint8Array;
+  slapsticFsm?: SlapsticFsm;
+};
+
+const loadedSlapsticBankSets = new WeakSet<Uint8Array>();
+
+function hasLoadedSlapsticBanks(rom: RomImage): rom is RomImage & Required<SlapsticRuntimeRom> {
+  const banks = (rom as SlapsticRuntimeRom).slapsticBanks;
+  const fsm = (rom as SlapsticRuntimeRom).slapsticFsm;
+  if (banks === undefined || fsm === undefined) return false;
+  if (loadedSlapsticBankSets.has(banks)) return true;
+
+  for (let i = 0; i < banks.length; i += 1) {
+    if ((banks[i] ?? 0) !== 0) {
+      loadedSlapsticBankSets.add(banks);
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Replica `FUN_0002FFB8` — lookup IRQ-safe in ROM slapstic.
@@ -92,17 +114,17 @@ export function slapsticLookup(rom: RomImage, argW: number): number {
   // EA = 0x80080 + idx, calcolato come unsigned 32-bit (wrap come sul 68K).
   const addr = (SLAPSTIC_LOOKUP_BASE + idx) >>> 0;
 
-  // Slapstic FSM tick: simula i due accessi al bus del binario.
-  //   1. move.w (0x080000).l, D0w  →  reset access (IDLE→ACTIVE, oppure no-op)
-  //   2. move.w (0x0,A0,D0w), D0w  →  potenziale direct bank switch se
-  //                                    addr matcha un bank value (0x80080/A0/C0/E0)
-  // Dopo questa sequenza, il bank in `rom.slapsticFsm` riflette esattamente
-  // quello che MAME ha. Se cambia → rebuild della region program[].
-  const prevBank = rom.slapsticFsm.bank;
-  slapsticTick(rom.slapsticFsm, SLAPSTIC_TRIGGER_ADDR);
-  slapsticTick(rom.slapsticFsm, addr);
-  if (rom.slapsticFsm.bank !== prevBank) {
-    applySlapsticBank(rom, rom.slapsticFsm.bank);
+  // Slapstic FSM tick: simula i due accessi al bus del binario, ma solo
+  // quando la ROM ha davvero i bank pristine caricati. I test storici e alcune
+  // fixture sintetiche scrivono direttamente in `program[0x80000..]`; applicare
+  // bank vuoti cancellerebbe quei dati invece di modellare hardware reale.
+  if (hasLoadedSlapsticBanks(rom)) {
+    const prevBank = rom.slapsticFsm.bank;
+    slapsticTick(rom.slapsticFsm, SLAPSTIC_TRIGGER_ADDR);
+    slapsticTick(rom.slapsticFsm, addr);
+    if (rom.slapsticFsm.bank !== prevBank) {
+      applySlapsticBank(rom, rom.slapsticFsm.bank);
+    }
   }
 
   return readRomWordBE(rom, addr);
@@ -128,4 +150,3 @@ function readRomWordBE(rom: RomImage, addr: number): number {
   const lo = rom.program[a + 1] ?? 0;
   return ((hi << 8) | lo) & 0xffff;
 }
-

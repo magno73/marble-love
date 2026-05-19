@@ -125,12 +125,37 @@ describe("bootInit", () => {
     expect(s.clock.cpuTicks).toBe(0);
     expect(s.clock.mainLoopBodyTicks).toBe(0);
     expect(s.clock.decoderCallCount).toBe(0);
-    expect(s.clock.slotArrayReplayTick).toBe(0);
-    expect(s.clock.warmResidualReplayTick).toBe(0);
+    expect(s.clock.slotArrayReplayTick).toBeUndefined();
+    expect(s.clock.warmResidualReplayTick).toBeUndefined();
     expect(s.rng.seed).toBe(0x1234);
     expect(s.rng.callsThisFrame).toBe(0);
     expect(s.videoScrollX).toBe(11);
     expect(s.videoScrollY).toBe(22);
+  });
+
+  it("warmState restore arma il replay legacy solo per snapshot attract riconosciuti", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const warm = {
+      workRam: new Uint8Array(0x2000),
+      playfieldRam: new Uint8Array(0x2000),
+      spriteRam: new Uint8Array(0x1000),
+      alphaRam: new Uint8Array(0x1000),
+      colorRam: new Uint8Array(0x800),
+    };
+    warm.workRam[0x3e4] = 1;
+    warm.workRam[0x390] = 0x00;
+    warm.workRam[0x391] = 0x01;
+    warm.workRam[0x392] = 0x00;
+    warm.workRam[0x393] = 0x00;
+    warm.workRam[0x13f2] = 0xff;
+    warm.workRam[0x13f3] = 0xa6;
+    warm.workRam[0x6f5] = 0x32;
+
+    bootInit(s, rom, { warmState: warm });
+
+    expect(s.clock.slotArrayReplayTick).toBe(0);
+    expect(s.clock.warmResidualReplayTick).toBe(0);
   });
 
   it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {

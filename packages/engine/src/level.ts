@@ -19,10 +19,10 @@
  * (extByteTablePtr long) finisce a byte `+0x2D`.
  *
  * Dopo l'header fisso, alla posizione `+0x2E`, inizia una **tabella
- * per-colonna** (long entries indicizzate per `col*4`) seguita dai height
- * records (8 byte ciascuno). Il limite tra column table e records non e'
- * ancora isolato staticamente — vedi `docs/level-header-format.md`
- * "Aperture residue".
+ * per-colonna** (long entries indicizzate per `col*4`) seguita da strutture
+ * terrain/row-builder ROM-specifiche. Il vecchio nome "height records" resta
+ * solo per compatibilita' del parser legacy; vedi
+ * `docs/level-header-format.md` "Aperture residue".
  */
 
 import type { RomImage } from "./bus.js";
@@ -41,8 +41,8 @@ export const LEVEL_COLUMN_TABLE_OFFSET = 0x2E as const;
  * un consumer engine bit-perfect contro il binario originale (vedi
  * `docs/level-header-format.md` per la mappa file:line).
  *
- * I field "UNKNOWN" del header originale (`+0x08`, `+0x24..0x25`,
- * `+0x1A..0x1F`) sono accessibili solo via `raw`.
+ * I field sovrapposti del header originale restano accessibili anche via
+ * `raw`, oltre ai nomi semantici verificati.
  */
 export interface LevelHeader {
   /** Bytes raw del header (0x2E byte). */
@@ -59,6 +59,12 @@ export interface LevelHeader {
    * (`level-init-16f6c.ts:84`, `refresh-helper-13ee6.ts:245`).
    */
   tileWordTablePtr: number;
+  /**
+   * `+0x08` (long): Row-build bit-list pointer.
+   * Puntatore consumato da `FUN_1A444`: ogni 16 tile-line descriptor legge una
+   * word di bit flag da questa lista e la passa a `FUN_1AD54`.
+   */
+  rowBuildBitListPtr: number;
   /**
    * `+0x0C` (long): RLE-compressed scroll-row source pointer.
    * Espanso da `FUN_18FD0` (`rle-expand.ts:54`) in `0x400478+`.
@@ -81,16 +87,29 @@ export interface LevelHeader {
    * `+0x14..+0x1F` (6 packed word): Entity initial position array.
    * `[i]` = packed `hi=vx>>8, lo=vy>>8` per entity i (0..5). In
    * attract/playable solo i=0 (P1) e i=1 (P2) sono attivi (`obj+0x18==3`).
+   * Gli slot i=2..5 sono sovrapposti a field consumati da altri subsystem.
    */
   entityInitPositions: readonly number[];
   /**
    * `+0x18` (signed word): Max tile bound. Column-index limit per il
    * tile-redraw loop e boundary per `string-dispatch-table-177f8`.
    * **Nota**: byte fisicamente sovrapposto a `entityInitPositions[2]`.
-   * I due semantici non collidono in attract/playable perche' entity 2
-   * non e' attiva.
+   * I due semantici non collidono nei path naturali perche' entity 2
+   * non e' attiva in stato 3.
    */
   maxTileBound: number;
+  /**
+   * `+0x1A` (signed word): Tile-line descriptor count per chunk.
+   * Consumato da `FUN_1A444` come limite del loop che chiama `FUN_1AD54`.
+   * Sovrapposto fisicamente a `entityInitPositions[3]`.
+   */
+  rowBuildEntryCount: number;
+  /**
+   * `+0x1C` (long): Tile-line descriptor table pointer.
+   * Base passata da `FUN_1A444` a `FUN_1AD54` con stride 8 byte.
+   * Sovrapposta fisicamente a `entityInitPositions[4..5]`.
+   */
+  tileLineDescriptorPtr: number;
   /**
    * `+0x20` (long): Sub-pattern pointer table.
    * Pointer a una tabella di long entries indicizzate per
@@ -98,6 +117,11 @@ export interface LevelHeader {
    * "data ptr" interpretato byte-by-byte; valore `0x80` resetta il ptr.
    */
   subPatternTablePtr: number;
+  /**
+   * `+0x24` (signed word): Binsearch end index.
+   * `FUN_1A444` calcola `0x40065e = binsearchBasePtr + value*2 - 2`.
+   */
+  binsearchEndIndex: number;
   /**
    * `+0x26` (long): Binsearch base pointer.
    * Terrain-code lookup table. Stored a `0x40065a` dal `FUN_16EC6`
@@ -116,10 +140,10 @@ export interface LevelHeader {
 /**
  * Height record decoded.
  *
- * **Solo word 0 e' parzialmente decodato** (slope orient/magnitude).
- * Words 1-3 sono UNKNOWN — richiedono MAME play-trace + Ghidra xref
- * sui consumer della fisica del marble per essere chiusi (vedi
- * `docs/level-header-format.md` "Aperture residue").
+ * **Legacy parser**: il blocco post-header non e' ancora dimostrato come
+ * array uniforme di record geometria 8-byte. Solo word 0 espone la vecchia
+ * ipotesi slope orient/magnitude; words 1-3 sono UNKNOWN (vedi
+ * `docs/level-header-format.md` "Legacy HeightRecord parser").
  *
  * Formula supposta (da `marble-madness-2026`, da verificare):
  *   `z_cell = z_base + (dx*sdx + dy*sdy) * slopeVal`
@@ -203,6 +227,7 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
 
   const directTerrainPtr = readU32BE(raw, 0x00);
   const tileWordTablePtr = readU32BE(raw, 0x04);
+  const rowBuildBitListPtr = readU32BE(raw, 0x08);
   const rleSourcePtr = readU32BE(raw, 0x0c);
   const yScrollBase = signExtendWord(readU16BE(raw, 0x10));
   const yScrollRange = signExtendWord(readU16BE(raw, 0x12));
@@ -217,8 +242,11 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
   // Max tile bound: stessa locazione fisica di entityInitPositions[2] (+0x18).
   // Semantica indipendente — non collide in path testati.
   const maxTileBound = signExtendWord(readU16BE(raw, 0x18));
+  const rowBuildEntryCount = signExtendWord(readU16BE(raw, 0x1a));
+  const tileLineDescriptorPtr = readU32BE(raw, 0x1c);
 
   const subPatternTablePtr = readU32BE(raw, 0x20);
+  const binsearchEndIndex = signExtendWord(readU16BE(raw, 0x24));
   const binsearchBasePtr = readU32BE(raw, 0x26);
   const extByteTablePtr = readU32BE(raw, 0x2a);
 
@@ -226,12 +254,16 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
     raw,
     directTerrainPtr,
     tileWordTablePtr,
+    rowBuildBitListPtr,
     rleSourcePtr,
     yScrollBase,
     yScrollRange,
     entityInitPositions,
     maxTileBound,
+    rowBuildEntryCount,
+    tileLineDescriptorPtr,
     subPatternTablePtr,
+    binsearchEndIndex,
     binsearchBasePtr,
     extByteTablePtr,
   };

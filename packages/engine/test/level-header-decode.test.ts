@@ -31,7 +31,7 @@ function makeRawHeader(): Uint8Array {
   raw[0x05] = 0xfe;
   raw[0x06] = 0xba;
   raw[0x07] = 0xbe;
-  // +0x08..0x0B = 0x11 0x22 0x33 0x44 → UNKNOWN (preserved in raw only)
+  // +0x08..0x0B = 0x11 0x22 0x33 0x44 → rowBuildBitListPtr
   raw[0x08] = 0x11;
   raw[0x09] = 0x22;
   raw[0x0a] = 0x33;
@@ -60,7 +60,7 @@ function makeRawHeader(): Uint8Array {
   raw[0x21] = 0x88;
   raw[0x22] = 0x77;
   raw[0x23] = 0x66;
-  // +0x24..0x25 = 0x55 0x44 → UNKNOWN (preserved in raw only)
+  // +0x24..0x25 = 0x55 0x44 → binsearchEndIndex
   raw[0x24] = 0x55;
   raw[0x25] = 0x44;
   // +0x26..0x29 = 0xF0 0xE0 0xD0 0xC0 → binsearchBasePtr
@@ -107,6 +107,11 @@ describe("decodeLevelHeader (synthetic input)", () => {
     expect(h.tileWordTablePtr).toBe(0xcafebabe);
   });
 
+  it("decodes rowBuildBitListPtr at +0x08 (BE long unsigned)", () => {
+    const h = decodeLevelHeader(makeRawHeader());
+    expect(h.rowBuildBitListPtr).toBe(0x11223344);
+  });
+
   it("decodes rleSourcePtr at +0x0C (BE long unsigned)", () => {
     const h = decodeLevelHeader(makeRawHeader());
     expect(h.rleSourcePtr).toBe(0xaabbccdd);
@@ -146,6 +151,28 @@ describe("decodeLevelHeader (synthetic input)", () => {
     expect(h.maxTileBound).toBe(0x3003);
   });
 
+  it("decodes rowBuildEntryCount at +0x1A as SIGNED word", () => {
+    const h = decodeLevelHeader(makeRawHeader());
+    expect(h.rowBuildEntryCount).toBe(0x4004);
+    expect(h.entityInitPositions[3]).toBe(0x4004);
+  });
+
+  it("decodes tileLineDescriptorPtr at +0x1C (BE long unsigned)", () => {
+    const h = decodeLevelHeader(makeRawHeader());
+    expect(h.tileLineDescriptorPtr).toBe(0x50056006);
+    expect(h.entityInitPositions[4]).toBe(0x5005);
+    expect(h.entityInitPositions[5]).toBe(0x6006);
+  });
+
+  it("rowBuildEntryCount treats high bit as sign (negative case)", () => {
+    const raw = makeRawHeader();
+    raw[0x1a] = 0x80;
+    raw[0x1b] = 0x01;
+    const h = decodeLevelHeader(raw);
+    expect(h.rowBuildEntryCount).toBe(-32767);
+    expect(h.entityInitPositions[3]).toBe(0x8001);
+  });
+
   it("maxTileBound treats high bit as sign (negative case)", () => {
     const raw = makeRawHeader();
     raw[0x18] = 0xff;
@@ -160,6 +187,19 @@ describe("decodeLevelHeader (synthetic input)", () => {
     expect(h.subPatternTablePtr).toBe(0x99887766);
   });
 
+  it("decodes binsearchEndIndex at +0x24 as SIGNED word", () => {
+    const h = decodeLevelHeader(makeRawHeader());
+    expect(h.binsearchEndIndex).toBe(0x5544);
+  });
+
+  it("binsearchEndIndex treats high bit as sign (negative case)", () => {
+    const raw = makeRawHeader();
+    raw[0x24] = 0xff;
+    raw[0x25] = 0xfe;
+    const h = decodeLevelHeader(raw);
+    expect(h.binsearchEndIndex).toBe(-2);
+  });
+
   it("decodes binsearchBasePtr at +0x26 (BE long unsigned)", () => {
     const h = decodeLevelHeader(makeRawHeader());
     expect(h.binsearchBasePtr).toBe(0xf0e0d0c0);
@@ -170,14 +210,14 @@ describe("decodeLevelHeader (synthetic input)", () => {
     expect(h.extByteTablePtr).toBe(0x01020304);
   });
 
-  it("preserves raw bytes for UNKNOWN fields (+0x08, +0x24..0x25)", () => {
+  it("preserves raw bytes for row-builder fields", () => {
     const h = decodeLevelHeader(makeRawHeader());
-    // +0x08..0x0B (UNKNOWN long)
+    // +0x08..0x0B (rowBuildBitListPtr)
     expect(h.raw[0x08]).toBe(0x11);
     expect(h.raw[0x09]).toBe(0x22);
     expect(h.raw[0x0a]).toBe(0x33);
     expect(h.raw[0x0b]).toBe(0x44);
-    // +0x24..0x25 (UNKNOWN word)
+    // +0x24..0x25 (binsearchEndIndex)
     expect(h.raw[0x24]).toBe(0x55);
     expect(h.raw[0x25]).toBe(0x44);
   });
@@ -193,12 +233,16 @@ describe("decodeLevelHeader (zero header)", () => {
     const h = decodeLevelHeader(new Uint8Array(LEVEL_HEADER_SIZE));
     expect(h.directTerrainPtr).toBe(0);
     expect(h.tileWordTablePtr).toBe(0);
+    expect(h.rowBuildBitListPtr).toBe(0);
     expect(h.rleSourcePtr).toBe(0);
     expect(h.yScrollBase).toBe(0);
     expect(h.yScrollRange).toBe(0);
     expect(h.entityInitPositions).toEqual([0, 0, 0, 0, 0, 0]);
     expect(h.maxTileBound).toBe(0);
+    expect(h.rowBuildEntryCount).toBe(0);
+    expect(h.tileLineDescriptorPtr).toBe(0);
     expect(h.subPatternTablePtr).toBe(0);
+    expect(h.binsearchEndIndex).toBe(0);
     expect(h.binsearchBasePtr).toBe(0);
     expect(h.extByteTablePtr).toBe(0);
   });
