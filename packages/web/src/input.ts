@@ -21,7 +21,7 @@
  * Phase 7: implementare anche pulsanti virtuali e accelerometro mobile.
  */
 
-const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 8; // MAME playable trace usa passi ±8
+const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 32;
 const MAX_KEYBOARD_TRACKBALL_EQUIV = 64;
 const TRACKBALL_KEYS = new Set([
   "arrowleft",
