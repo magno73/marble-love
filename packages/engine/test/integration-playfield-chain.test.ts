@@ -27,6 +27,7 @@ import type { RomImage } from "../src/bus.js";
 import { bootInit } from "../src/boot-init.js";
 import { clearPlayfieldRam12174 } from "../src/clear-playfield-ram-12174.js";
 import { levelDispatcher16EC6 } from "../src/level-dispatcher-16ec6.js";
+import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 
 function findRomBlob(): string | null {
   const candidates = [
@@ -43,9 +44,8 @@ function findRomBlob(): string | null {
 function loadRomFromBlob(): RomImage | null {
   const path = findRomBlob();
   if (path === null) return null;
-  const program = readFileSync(path);
   const rom = emptyRomImage();
-  rom.program.set(program.subarray(0, rom.program.length));
+  loadRomBlob(rom, readFileSync(path));
   return rom;
 }
 

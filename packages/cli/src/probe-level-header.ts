@@ -1,0 +1,161 @@
+/**
+ * probe-level-header.ts — dump dei 6 level descriptor header reali con field
+ * decoded.
+ *
+ * Scope: PRD `docs/level-header-decode-prd.md` Phase 1, deliverable
+ * "probe CLI". Lanciabile in due modi:
+ *
+ *   - Con blob ROM in path canonico:
+ *       `npx tsx packages/cli/src/probe-level-header.ts`
+ *   - Con blob ROM via env var:
+ *       `MARBLE_LOVE_ROM_BLOB=path/to/marble_program.bin npx tsx ...`
+ *
+ * Se la ROM non e' disponibile, esce con exit code 2 e messaggio chiaro.
+ *
+ * Output:
+ *   - Tabella per livello con tutti i field decoded di
+ *     `docs/level-header-format.md`.
+ *   - Heuristics per i records (count, slope distribution).
+ *   - Hex dump del fixed header (0x2E byte) per audit visivo.
+ */
+
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { bus as busNs, level as levelNs } from "@marble-love/engine";
+import type { RomImage } from "@marble-love/engine";
+
+type LevelData = ReturnType<typeof levelNs.loadLevel>;
+
+const LEVEL_NAMES = [
+  "Practice",
+  "Beginner",
+  "Intermediate",
+  "Aerial",
+  "Silly",
+  "Ultimate",
+] as const;
+
+function findRomBlob(): string | null {
+  const candidates = [
+    process.env["MARBLE_LOVE_ROM_BLOB"],
+    resolve(process.cwd(), "ghidra_project/marble_program.bin"),
+    resolve(process.cwd(), "../../ghidra_project/marble_program.bin"),
+  ].filter((x): x is string => typeof x === "string");
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+function loadRomFromBlob(path: string): RomImage {
+  const program = readFileSync(path);
+  const rom = busNs.emptyRomImage();
+  rom.program.set(program.subarray(0, rom.program.length));
+  return rom;
+}
+
+function hex(value: number, width: number): string {
+  return "0x" + value.toString(16).padStart(width, "0").toUpperCase();
+}
+
+function dumpHexLine(bytes: Uint8Array, offset: number, length: number): string {
+  const parts: string[] = [];
+  for (let i = 0; i < length; i++) {
+    parts.push((bytes[offset + i] ?? 0).toString(16).padStart(2, "0").toUpperCase());
+  }
+  return parts.join(" ");
+}
+
+function printLevel(level: LevelData): void {
+  const name = LEVEL_NAMES[level.index] ?? `Level${level.index}`;
+  console.log("");
+  console.log("====================================================");
+  console.log(`Level ${level.index} — ${name}`);
+  console.log("====================================================");
+  console.log(`  ROM offset:        ${hex(level.romOffset, 6)}`);
+  console.log(`  Block size:        ${level.byteSize} bytes`);
+  console.log(`  Records (max):     ${level.records.length}`);
+  console.log("");
+  console.log("  Decoded header (0x00..0x2D):");
+  console.log(`    +0x00  directTerrainPtr:   ${hex(level.header.directTerrainPtr, 8)}`);
+  console.log(`    +0x04  tileWordTablePtr:   ${hex(level.header.tileWordTablePtr, 8)}`);
+  console.log(`    +0x08  UNKNOWN (long):     ${dumpHexLine(level.header.raw, 0x08, 4)}`);
+  console.log(`    +0x0C  rleSourcePtr:       ${hex(level.header.rleSourcePtr, 8)}`);
+  console.log(`    +0x10  yScrollBase:        ${level.header.yScrollBase} (${hex(level.header.yScrollBase & 0xffff, 4)})`);
+  console.log(`    +0x12  yScrollRange:       ${level.header.yScrollRange} (${hex(level.header.yScrollRange & 0xffff, 4)})`);
+  console.log(`    +0x14  entityInitPos[0]:   ${hex(level.header.entityInitPositions[0] ?? 0, 4)}`);
+  console.log(`    +0x16  entityInitPos[1]:   ${hex(level.header.entityInitPositions[1] ?? 0, 4)}`);
+  console.log(`    +0x18  maxTileBound:       ${level.header.maxTileBound} (= entityInitPos[2] = ${hex(level.header.entityInitPositions[2] ?? 0, 4)})`);
+  console.log(`    +0x1A  entityInitPos[3]:   ${hex(level.header.entityInitPositions[3] ?? 0, 4)}  (UNKNOWN if entity 3 not active)`);
+  console.log(`    +0x1C  entityInitPos[4]:   ${hex(level.header.entityInitPositions[4] ?? 0, 4)}  (UNKNOWN if entity 4 not active)`);
+  console.log(`    +0x1E  entityInitPos[5]:   ${hex(level.header.entityInitPositions[5] ?? 0, 4)}  (UNKNOWN if entity 5 not active)`);
+  console.log(`    +0x20  subPatternTablePtr: ${hex(level.header.subPatternTablePtr, 8)}`);
+  console.log(`    +0x24  UNKNOWN (word):     ${dumpHexLine(level.header.raw, 0x24, 2)}`);
+  console.log(`    +0x26  binsearchBasePtr:   ${hex(level.header.binsearchBasePtr, 8)}`);
+  console.log(`    +0x2A  extByteTablePtr:    ${hex(level.header.extByteTablePtr, 8)}`);
+  console.log("");
+  console.log("  Raw hex dump (0x2E byte fixed header):");
+  for (let row = 0; row < levelNs.LEVEL_HEADER_SIZE; row += 16) {
+    const length = Math.min(16, levelNs.LEVEL_HEADER_SIZE - row);
+    console.log(`    +${hex(row, 2).slice(2)}  ${dumpHexLine(level.header.raw, row, length)}`);
+  }
+
+  // Heuristics su records
+  if (level.records.length > 0) {
+    const slopeOrientCounts = new Map<number, number>();
+    let nonZeroRecords = 0;
+    for (const r of level.records) {
+      slopeOrientCounts.set(
+        r.slopeOrient,
+        (slopeOrientCounts.get(r.slopeOrient) ?? 0) + 1,
+      );
+      if (r.word0 + r.word1 + r.word2 + r.word3 > 0) nonZeroRecords++;
+    }
+    console.log("");
+    console.log("  Records heuristics:");
+    console.log(`    Total records (block area / 8): ${level.records.length}`);
+    console.log(`    Non-zero records:              ${nonZeroRecords}`);
+    console.log(`    slopeOrient distribution:`);
+    const sortedOrients = Array.from(slopeOrientCounts.keys()).sort((a, b) => a - b);
+    for (const orient of sortedOrients) {
+      console.log(`      ${hex(orient, 1)}: ${slopeOrientCounts.get(orient)}`);
+    }
+  }
+}
+
+function main(): number {
+  const romPath = findRomBlob();
+  if (romPath === null) {
+    console.error("[probe-level-header] ROM blob not found.");
+    console.error("  Tried:");
+    console.error("    - env MARBLE_LOVE_ROM_BLOB");
+    console.error("    - ./ghidra_project/marble_program.bin");
+    console.error("    - ../../ghidra_project/marble_program.bin");
+    console.error("");
+    console.error("Generate the blob with `tools/rom_prep.py` from your own MAME ROM dump");
+    console.error("(roms/marble.zip + roms/atarisy1.zip).");
+    return 2;
+  }
+
+  console.log(`[probe-level-header] Loaded ROM blob from: ${romPath}`);
+  const rom = loadRomFromBlob(romPath);
+
+  console.log("");
+  console.log(`Level header size: ${levelNs.LEVEL_HEADER_SIZE} (0x${levelNs.LEVEL_HEADER_SIZE.toString(16).toUpperCase()})`);
+  console.log(`Height record size: ${levelNs.HEIGHT_RECORD_SIZE}`);
+  console.log(`Levels: ${levelNs.LEVEL_COUNT}`);
+
+  const levels = levelNs.loadAllLevels(rom);
+  for (const lvl of levels) {
+    printLevel(lvl);
+  }
+
+  console.log("");
+  console.log("====================================================");
+  console.log("Done. See `docs/level-header-format.md` for field semantics.");
+  console.log("====================================================");
+
+  return 0;
+}
+
+process.exit(main());

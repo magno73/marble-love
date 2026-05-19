@@ -21,7 +21,7 @@ describe("buildEngineDiagnosticFrame", () => {
       spriteIndex: 0x410,
       gfxBank: 2,
       bitsPerPixel: 5,
-      paletteIndex: 0x43, // 0x40 + 3 — sphere palette match
+      paletteIndex: 0x26, // normal MO palette: 0x20 + (color 3 << 1)
     });
   });
 

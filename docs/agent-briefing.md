@@ -110,11 +110,18 @@ In `packages/engine/src/trace.ts` `workRamHash` + `workRamRegionalHashes` (regio
 - `0x1D40-0x1E7F` (320B) stack scratch chain attiva, 430 PC distinte
 - `0x1EE0-0x1EFF` (32B) stack low water + sentinel bsr
 
-`probe-cluster-histogram.ts` mostra split `total=387 | gameplay=215 | stack-residue=172 (excluded)`.
+`probe-cluster-histogram.ts` mostra split corrente `total=172 | gameplay=0 | stack-residue=172 (excluded)`
+quando `/tmp/mame_100f.json` viene rigenerato con MAME 0.286 su
+frame 12000-12099. Il vecchio split `total=387 | gameplay=215` era una
+baseline storica ed e' stale rispetto a `origin/main` `0edb629`.
 
-## 8. Cluster drift gameplay residuo 215B
+## 8. Cluster drift gameplay residuo
 
-Top-5 cluster (top contributor per fix candidato):
+Baseline corrente: 0B gameplay drift a f+99; resta solo stack residue
+escluso dall'invariante. La lista sotto e' storica per leggere vecchi
+handoff o diff pre-`0edb629`.
+
+Top-5 cluster storici (top contributor per fix candidato):
 ```
 1. 0x0700..0x073F  58B  decodeBitstream1A668 output (first f+2)
 2. 0x0740..0x077F  16B  decodeBitstream1A668 continuation (first f+1)
@@ -137,7 +144,7 @@ Mappa completa per-byte in `docs/gameplay-drift-byte-map.md`.
 ## 10. Convenzioni dev
 
 - **NO commit** dagli agent: lasciali untracked, l'utente committa
-- **Drift invariato a fine task**: `npx tsx packages/cli/src/probe-cluster-histogram.ts | head -1` deve mostrare `total=387` se non hai applicato fix intenzionale
+- **Drift invariato a fine task**: `npx tsx packages/cli/src/probe-cluster-histogram.ts` deve mostrare `total=172 | gameplay=0 | stack-residue=172` sulla baseline corrente se non hai applicato fix intenzionale
 - **obj0.x 99/99 MAME** = invariante: `npx tsx packages/cli/src/probe-100f-diff.ts` deve mostrare `obj0.x TS=... MAME=... ✓` su tutti i 99 frame
 - **1982/1982 vitest verdi**: `npm run test --silent` deve mostrare 1982 pass
 - **Typecheck pulito**: `npx tsc -b` exit 0
@@ -183,17 +190,16 @@ Mappa completa per-byte in `docs/gameplay-drift-byte-map.md`.
 ## 13. Stato corrente sintesi
 
 ```
-Drift @ f+99 = 387 byte
+Drift @ f+99 = 172 byte
 ├─ 172B stack-residue (escluso da invariante)
-└─ 215B gameplay (target residuo)
-   ├─ 74B  cluster 0x0700  (decode buffer)
-   ├─ 27B  cluster 0x0640  (velocity globals)
-   ├─ 19B  rect-slot list  (scene-obj rect-list)
-   ├─ 15B  cluster 0x0a00  (P2 region cascade)
-   └─ ~80B sparsi
+└─ 0B gameplay
 ```
 
-obj0.x bit-perfect 99/99. 1982/1982 vitest. Tutta l'infrastruttura M68K (cycle-table + sub-cycle-costs + regfile + Tom Harte validation) e' committata e funzionante ma per il momento il cycle counter non triggera (= behavior corretto, MAME 30Hz puro).
+obj0.x bit-perfect 99/99. D5 2026-05-19: `npm run test --silent` verde
+con 2206 pass / 17 skip. Tutta l'infrastruttura M68K (cycle-table +
+sub-cycle-costs + regfile + Tom Harte validation) e' committata e
+funzionante ma per il momento il cycle counter non triggera (= behavior
+corretto, MAME 30Hz puro).
 
 ---
 

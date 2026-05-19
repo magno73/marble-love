@@ -118,7 +118,59 @@ describe("sound command cue fallback", () => {
 });
 
 describe("Web Audio startup fallback", () => {
-  it("keeps direct command cues alive when AudioWorklet is unavailable", async () => {
+  it("keeps direct command cue fallback silent by default when AudioWorklet is unavailable", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    let createOscillatorCalls = 0;
+
+    class MockAudioContextNoWorklet {
+      readonly audioWorklet = undefined;
+      state: AudioContextState = "suspended";
+      currentTime = 1;
+      readonly destination = {};
+
+      resume = vi.fn(async () => {
+        this.state = "running";
+      });
+
+      close = vi.fn(async () => {
+        this.state = "closed";
+      });
+
+      createOscillator(): OscillatorNode {
+        createOscillatorCalls++;
+        return {
+          type: "sine",
+          frequency: { setValueAtTime: vi.fn() },
+          connect: vi.fn((target: unknown) => target),
+          start: vi.fn(),
+          stop: vi.fn(),
+        } as unknown as OscillatorNode;
+      }
+
+      createGain(): GainNode {
+        return {
+          gain: {
+            setValueAtTime: vi.fn(),
+            exponentialRampToValueAtTime: vi.fn(),
+          },
+          connect: vi.fn((target: unknown) => target),
+        } as unknown as GainNode;
+      }
+    }
+
+    vi.stubGlobal("AudioContext", MockAudioContextNoWorklet);
+    vi.stubGlobal("AudioWorkletNode", undefined);
+
+    const renderer = await createSoundRenderer();
+    await renderer.start();
+    renderer.playCommandCue(0x40);
+
+    expect(createOscillatorCalls).toBe(0);
+    await renderer.stop();
+  });
+
+  it("keeps forced direct command cues alive when AudioWorklet is unavailable", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     let createdContext: MockAudioContextNoWorklet | undefined;
@@ -164,6 +216,7 @@ describe("Web Audio startup fallback", () => {
       }
     }
 
+    vi.stubGlobal("location", { search: "?soundCueForce=1" });
     vi.stubGlobal("AudioContext", MockAudioContextNoWorklet);
     vi.stubGlobal("AudioWorkletNode", undefined);
 
@@ -183,7 +236,7 @@ describe("Web Audio startup fallback", () => {
     expect(createdContext?.close).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to a generated media cue when AudioContext is unavailable", async () => {
+  it("falls back to a forced generated media cue when AudioContext is unavailable", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     let playCalls = 0;
@@ -202,6 +255,7 @@ describe("Web Audio startup fallback", () => {
     vi.stubGlobal("AudioContext", undefined);
     vi.stubGlobal("webkitAudioContext", undefined);
     vi.stubGlobal("Audio", MockAudioElement);
+    vi.stubGlobal("location", { search: "?soundCueForce=1" });
 
     const renderer = await createSoundRenderer();
     await renderer.start();
