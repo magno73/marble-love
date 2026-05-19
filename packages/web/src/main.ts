@@ -18,7 +18,7 @@ import {
   render as renderNs,
   wrap,
 } from "@marble-love/engine";
-import { initInput, normalizeKeyboardTrackballStep } from "./input.js";
+import { initInput, normalizeKeyboardTrackballStep, normalizePointerTrackballScale } from "./input.js";
 import {
   buildClassicDemoFrame,
   buildRomBackedDemoFrame,
@@ -65,6 +65,7 @@ const freezeOnImpulse = freezeOnBug && searchParams.get("freezeOnImpulse") !== "
 const freezeImpulseMinDvRaw = Number(searchParams.get("freezeImpulseMinDv") ?? "8");
 const freezeImpulseMinDv = Number.isFinite(freezeImpulseMinDvRaw) ? freezeImpulseMinDvRaw : 8;
 const keyboardTrackballStep = normalizeKeyboardTrackballStep(parseOptionalNumberParam(searchParams.get("keyboardStep")));
+const pointerTrackballScale = normalizePointerTrackballScale(parseOptionalNumberParam(searchParams.get("trackballScale")));
 const forceCoinStart = searchParams.get("coinStart") === "1";
 const preservePlayableDispatcher = searchParams.get("preserveDispatcher") === "1";
 const playableSeedName = searchParams.get("playableSeed");
@@ -299,7 +300,7 @@ function playerPhysicsDebugLine(state: ReturnType<typeof stateNs.emptyGameState>
 
 function trackballInputDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
   const objOff = 0x18;
-  return `trackball input step=${keyboardTrackballStep} ` +
+  return `trackball input step=${keyboardTrackballStep} pointerScale=${pointerTrackballScale} ` +
     `saved=(${state.workRam[objOff + 0xc9] ?? 0},${state.workRam[objOff + 0xc8] ?? 0}) ` +
     `delta=(${signed8(state.workRam[objOff + 0xc7] ?? 0)},${signed8(state.workRam[objOff + 0xc6] ?? 0)})`;
 }
@@ -1156,7 +1157,7 @@ async function startGame(
       }
     });
   }
-  const inputState = initInput({ keyboardTrackballStep });
+  const inputState = initInput({ keyboardTrackballStep, pointerTrackballScale });
   if (warmStateIsPlayableSeed) {
     inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
   }
