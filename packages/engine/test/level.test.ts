@@ -13,6 +13,10 @@ import {
   LEVEL_COUNT,
   LEVEL_HEADER_SIZE,
   HEIGHT_RECORD_SIZE,
+  TERRAIN_COEFFICIENT_COUNT,
+  decodeDirectTerrainByteRecord,
+  decodeTerrainCode,
+  resolveTerrainCodeHeights,
   loadAllLevels,
   loadLevel,
   readLevelPointerTable,
@@ -55,6 +59,71 @@ describe("Level loader (constants)", () => {
   it("HEIGHT_RECORD_SIZE = 8", () => {
     expect(HEIGHT_RECORD_SIZE).toBe(8);
   });
+  it("terrain coefficient table has 32 word entries", () => {
+    expect(TERRAIN_COEFFICIENT_COUNT).toBe(32);
+  });
+});
+
+describe("Level terrain-code decode", () => {
+  it("decodes the five terrain-code classes used by FUN_1CABA", () => {
+    expect(decodeTerrainCode(0x0000)).toEqual({ kind: "empty", raw: 0x0000 });
+    expect(decodeTerrainCode(0x0001)).toEqual({
+      kind: "direct",
+      raw: 0x0001,
+      directRecordOffset: 0x0001,
+    });
+    expect(decodeTerrainCode(0x0812)).toEqual({
+      kind: "indirect",
+      raw: 0x0812,
+      altTableByteOffset: 0x0012,
+      altTableWordIndex: 0x0009,
+    });
+    expect(decodeTerrainCode(0x1245)).toEqual({
+      kind: "quad",
+      raw: 0x1245,
+      baseHeightDelta: 5,
+      coefficientIndex: 4,
+      coefficientTableByteOffset: 8,
+      sampleMask: 1,
+    });
+    expect(decodeTerrainCode(0xf000)).toEqual({
+      kind: "flat",
+      raw: 0xf000,
+      baseHeightDelta: -64,
+    });
+    expect(decodeTerrainCode(0xf07f)).toEqual({
+      kind: "flat",
+      raw: 0xf07f,
+      baseHeightDelta: 63,
+    });
+  });
+
+  it("decodes direct terrain byte records as four byte samples with zero mask", () => {
+    expect(decodeDirectTerrainByteRecord(new Uint8Array([0x00, 0x01, 0x40, 0xff]))).toEqual({
+      raw: new Uint8Array([0x00, 0x01, 0x40, 0xff]),
+      sampleBytes: [0x00, 0x01, 0x40, 0xff],
+      emptySampleMask: 0x01,
+    });
+  });
+
+  it("resolves quad and flat terrain heights with the FUN_1CABA formula", () => {
+    const quad = decodeTerrainCode(0x2245);
+    expect(quad.kind).toBe("quad");
+    expect(resolveTerrainCodeHeights(quad, 0x4000, 0x0008)).toEqual([
+      0x3ffd,
+      0x4005,
+      0x3ffd,
+      0x3ffd,
+    ]);
+
+    const flat = decodeTerrainCode(0xf07f);
+    expect(resolveTerrainCodeHeights(flat, 0x4000)).toEqual([
+      0x403f,
+      0x403f,
+      0x403f,
+      0x403f,
+    ]);
+  });
 });
 
 const rom = loadRomFromBlob();
@@ -86,6 +155,7 @@ describeWithRom("Level loader (with real ROM)", () => {
     for (const lev of levels) {
       expect(lev.byteSize).toBeGreaterThan(LEVEL_HEADER_SIZE);
       expect(lev.header.raw.length).toBe(LEVEL_HEADER_SIZE);
+      expect(lev.postHeader.terrainRowPointers.entries.length).toBeGreaterThan(0);
       expect(lev.records.length).toBeGreaterThan(0);
     }
   });
@@ -103,6 +173,58 @@ describeWithRom("Level loader (with real ROM)", () => {
       0
     );
     expect(totalNonZero).toBeGreaterThan(10);
+  });
+
+  it("decodes post-header row pointer tables and terminators", () => {
+    const levels = loadAllLevels(rom!);
+    expect(levels.map((l) => l.postHeader.terrainRowPointers.entries.length)).toEqual([
+      36, 36, 36, 36, 36, 144,
+    ]);
+    for (const lev of levels) {
+      expect(lev.postHeader.terrainRowPointers.startPtr).toBe(lev.romOffset + LEVEL_HEADER_SIZE);
+      expect(lev.postHeader.terrainRowPointers.endPtr).toBe(lev.header.subPatternTablePtr);
+      expect(lev.postHeader.terrainRowPointers.terminator).toBe(0xffff);
+    }
+  });
+
+  it("decodes sub-pattern and tile-line descriptor table boundaries", () => {
+    const levels = loadAllLevels(rom!);
+    expect(levels.map((l) => l.postHeader.subPatternPointers.entries.length)).toEqual([
+      12, 21, 9, 13, 15, 7,
+    ]);
+    expect(levels.map((l) => l.postHeader.tileLineDescriptors.decodedCount)).toEqual([
+      66, 79, 71, 78, 110, 53,
+    ]);
+    for (const lev of levels) {
+      expect(lev.postHeader.tileLineDescriptors.decodedCount).toBe(lev.header.rowBuildEntryCount);
+      expect(lev.postHeader.tileLineDescriptors.physicalCount).toBeGreaterThanOrEqual(
+        lev.postHeader.tileLineDescriptors.decodedCount,
+      );
+    }
+  });
+
+  it("decodes row-build scripts exactly up to the RLE source pointer", () => {
+    const levels = loadAllLevels(rom!);
+    expect(levels.map((l) => l.postHeader.rowBuildScript.chunks.length)).toEqual([
+      7, 9, 8, 9, 10, 9,
+    ]);
+    expect(levels.map((l) => (
+      l.postHeader.rowBuildScript.chunks.reduce((sum, c) => sum + c.patches.length, 0)
+    ))).toEqual([12, 20, 110, 0, 0, 272]);
+    for (const lev of levels) {
+      expect(lev.postHeader.rowBuildScript.endPtr).toBe(lev.header.rleSourcePtr);
+      expect(lev.postHeader.rowBuildScript.chunks.at(-1)?.terminator).toBe(0xffff);
+    }
+  });
+
+  it("decodes RLE row-offset runs and expands to the max tile bound", () => {
+    const levels = loadAllLevels(rom!);
+    expect(levels.map((l) => l.postHeader.rleRuns.runs.length)).toEqual([
+      3, 6, 5, 5, 11, 4,
+    ]);
+    for (const lev of levels) {
+      expect(lev.postHeader.rleRuns.expandedWordCount).toBe(lev.header.maxTileBound);
+    }
   });
 
   it("rejects out-of-range level index", () => {

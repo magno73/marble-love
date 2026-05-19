@@ -6,18 +6,20 @@
 > `docs/level-header-decode-prd.md`, Phase 2 tap/decode.
 >
 > **Status**: Phase 2 tap/probe/parity completati per i field header
-> consumati; legacy `HeightRecord` resta in "Aperture residue".
+> consumati; follow-up post-header/terrain-code decode completato. Il vecchio
+> `HeightRecord` resta solo come vista legacy compatibile, non come formato
+> geometrico verificato.
 
 ## Sommario
 
 Il **level descriptor** e' una struct in ROM puntata da `*0x400474`
 (level pointer). La pointer table @ ROM `0x2BE00` contiene 6 puntatori
 long BE — uno per livello. La struct ha **header fisso da 0x2E byte**
-seguito da una tabella per-colonna a `+0x2E` (long entries indicizzate
-per col*4) e da strutture terrain/row-builder ROM-specifiche che
-chiudono il blocco. Il vecchio nome `HeightRecord` nel parser TS e'
-legacy: la segmentazione post-header non e' ancora un record geometrico
-uniforme.
+seguito da un corpo post-header composto da piu' strutture distinte:
+terrain row pointer table, sub-pattern pointer table, tile-line descriptors,
+row-build script e RLE row offsets. Il vecchio nome `HeightRecord` nel parser
+TS e' legacy: la segmentazione post-header a blocchi da 8 byte non e' un
+record geometrico uniforme.
 
 Costanti gia' codificate:
 
@@ -27,6 +29,7 @@ Costanti gia' codificate:
 | `LEVEL_COUNT` | `6` | `packages/engine/src/level.ts:32` |
 | `LEVEL_HEADER_SIZE` | `0x2E` | `packages/engine/src/level.ts:34` (aggiornato da `36` = `0x24` errato pre-Phase 1) |
 | `HEIGHT_RECORD_SIZE` | `8` | `packages/engine/src/level.ts:35` |
+| `TERRAIN_COEFFICIENT_TABLE_OFFSET` | `0x1ED62` | `packages/engine/src/level.ts` + `packages/engine/src/sub-1caba-tile-redraw.ts` |
 
 ## Pointer table
 
@@ -112,10 +115,37 @@ I nuovi field del row-builder sono stati osservati sui 6 livelli con
 | L5 | PC `0x01A462` value `0x2E28A` | PC `0x01A45A` value `0x006E` | PC `0x01A4D0` value `0x2DF1A` | PC `0x01A470` value `0x03D6` |
 | L6 | PC `0x01A462` value `0x2EBC4` | PC `0x01A45A` value `0x0035` | PC `0x01A4D0` value `0x2EA1C` | PC `0x01A470` value `0x03D6` |
 
-## Tabella per-colonna a `+0x2E..`
+## Corpo post-header decodato
+
+`packages/engine/src/level.ts` espone ora `LevelData.postHeader`, una vista
+consumer-backed del blocco dopo il fixed header:
+
+| Struct | Range / origine | Layout | Consumer |
+| ------ | --------------- | ------ | -------- |
+| `terrainRowPointers` | `levelPtr + 0x2E .. subPatternTablePtr` | long pointers, terminatore word `0xFFFF` | `FUN_264AA` (`packages/engine/src/fun-264aa.ts`) |
+| `subPatternPointers` | `subPatternTablePtr .. tileLineDescriptorPtr` | long pointer table indicizzata da `subIndex` | `FUN_1AD54` |
+| `tileLineDescriptors` | `tileLineDescriptorPtr .. rowBuildBitListPtr` | descriptor 8-byte; count consumato = `rowBuildEntryCount` | `FUN_1A444` → `FUN_1AD54` |
+| `rowBuildScript` | `rowBuildBitListPtr .. rleSourcePtr` | chunk script: bit words, patch records, terminator `0xFFFE/0xFFFF` | `FUN_1A444` |
+| `rleRuns` | `rleSourcePtr .. terminatore count=0` | `(count,value)` word pairs; expanded words = `maxTileBound` | `FUN_18FD0` |
+
+Conteggi sui 6 livelli reali:
+
+| Level | row ptrs | sub-pattern ptrs | tile descriptors | row-build chunks | row-build patches | RLE runs / words |
+| ----- | -------- | ---------------- | ---------------- | ---------------- | ----------------- | ---------------- |
+| L1 | 36 | 12 | 66 decoded / 67 physical | 7 | 12 | 3 / 160 |
+| L2 | 36 | 21 | 79 / 79 | 9 | 20 | 6 / 216 |
+| L3 | 36 | 9 | 71 / 71 | 8 | 110 | 5 / 192 |
+| L4 | 36 | 13 | 78 / 78 | 9 | 0 | 5 / 216 |
+| L5 | 36 | 15 | 110 / 110 | 10 | 0 | 11 / 238 |
+| L6 | 144 | 7 | 53 / 53 | 9 | 272 | 4 / 200 |
+
+I conteggi sono bloccati da `packages/engine/test/level.test.ts`.
+
+### Terrain row pointer table a `+0x2E..`
 
 Inizia immediatamente dopo il fixed header. Entries long (4 byte
-ciascuna), indicizzate per `startCol << 2`. Usata da `fun-264aa.ts:244`:
+ciascuna) e terminatore word `0xFFFF`. E' usata da `fun-264aa.ts:244`
+con un offset runtime signed in `0x40045C`:
 
 ```ts
 const levelHeader = rlWork(state, WR_LEVEL_HEADER_PTR);
@@ -126,35 +156,98 @@ let levelTablePtr = (
 ) >>> 0;
 ```
 
-Ogni entry e' un long pointer a row-base data per la colonna.
-Numero di colonne effettivo: bound da `+0x18` (max tile bound).
+Ogni entry e' un long pointer a row-base data. Non va interpretata come
+semplice `entry[col]` in ogni path, perche' `0x40045C` puo' spostare la base
+logica del lookup.
 
-## Legacy `HeightRecord` parser (post-header block)
+### Tile-line descriptor 8-byte
+
+Decodato da `packages/engine/src/render-tile-line-1ad54.ts` e ora esposto nel
+parser:
+
+| Byte | Field | Semantica |
+| ---- | ----- | --------- |
+| `0` | `xBase` | signed byte |
+| `1` | `xCount` | unsigned byte |
+| `2` | `yBase` | signed byte |
+| `3` | `yCount` | unsigned byte |
+| `4..5` | `flagsWord` | flags/mode base e valore usato nel dato scritto |
+| `6` | `extraByte` | bit flags + `subIndex = extra & 0x1F` |
+| `7` | `lookupByte` | `directionIndex = lookup & 7`, `subMode = bit 3` |
+
+### Row-build script
+
+`FUN_1A444` legge da `rowBuildBitListPtr` un mini-script per chunk verticali:
+
+1. `ceil(rowBuildEntryCount / 16)` bit words. Ogni bit e' passato come flag
+   a `FUN_1AD54` per il descriptor corrispondente.
+2. Zero o piu' patch records: `cellWord`, `valueWord`.
+   `cellWord` codifica `row = high byte`, `col = low byte`; il consumer scrive
+   `valueWord` nel buffer scratch tilemap.
+3. Terminatore `0xFFFE` per continuare al chunk successivo, `0xFFFF` per fine
+   script. Nei sei livelli reali l'end pointer coincide sempre con
+   `rleSourcePtr`.
+
+### RLE row offsets
+
+`FUN_18FD0` espande `(count,value)` word pairs in `0x400478+` finche'
+`count == 0`. Per ogni livello il totale `sum(count)` coincide con
+`maxTileBound`.
+
+## Terrain code format (`FUN_1CABA`)
+
+La fisica/proiezione terreno live non legge i legacy `HeightRecord`.
+Il path reale e':
+
+```text
+playfield bits -> binsearch table (`+0x26`) -> terrainCode
+terrainCode + directTerrainPtr/alt table/coefficient table -> STRUCT 0x401c28
+STRUCT 0x401c28 -> FUN_1CC62 -> projection/z
+```
+
+`packages/engine/src/level.ts` espone `decodeTerrainCode()` e
+`decodeDirectTerrainByteRecord()` per questa codifica.
+
+| Range | Kind | Semantica |
+| ----- | ---- | --------- |
+| `0x0000` | `empty` | `FUN_1CABA` scrive quattro sample zero. |
+| `0x0001..0x07FF` | `direct` | offset dentro `directTerrainPtr`; record 4 byte. Ogni byte 0 produce sample 0, altrimenti `byte + (columnBaseWord - 0x80)`. |
+| `0x0800..0x0FFF` | `indirect` | `code & 0x7FE` indicizza la alt bsearch table runtime `0x40076E`; il valore letto viene redispatchato. |
+| `0x1000..0xEFFF` | `quad` | `baseHeightDelta = (code & 0x7F) - 0x40`; `coefficientIndex = ((code >>> 6) & 0x3E) / 2`; sample mask = high nibble bits 12..15. Bit set usa base height, bit clear usa alternative height. |
+| `0xF000..0xFFFF` | `flat` | quattro sample uguali a `columnBaseWord + baseHeightDelta`. |
+
+La coefficient table e' ROM `0x1ED62`, 32 word. Il valore speciale
+`0x1000` produce alternative height zero; altrimenti:
+
+```text
+base = columnBaseWord + ((code & 0x7F) - 0x40)
+alt  = base - coefficientWord
+```
+
+## Legacy `HeightRecord` parser (compat only)
 
 Il parser TS storico chiama `records` tutto il blocco dopo `+0x2E` e lo
-segmenta a 8 byte. Phase 2 ha verificato che questa e' una
-semplificazione legacy: nel blocco post-header ci sono almeno column table,
-row-build bit list (`+0x08`), tile-line descriptor table (`+0x1C`) e altre
-strutture puntate dal descriptor. Non e' ancora dimostrato un layout unico
-di "height records" da 8 byte.
+segmenta a 8 byte. Il follow-up post-header ha chiuso il punto: quel blocco
+non e' un array geometrico uniforme. Contiene le strutture elencate sopra e
+la fisica/proiezione live passa da `terrainCode` + `FUN_1CABA`.
 
 Layout legacy ancora esposto da `HeightRecord`:
 
 | Word | Bits | Field | Status |
 | ---- | ---- | ----- | ------ |
-| `w0` | `[15:12]` | `slopeOrient` (0..15) | Legacy guess (da `marble-madness-2026`), non ancora MAME-proven |
-| `w0` | `[11:8]` | `slopeVal` magnitudo (0..15) | Legacy guess (da `marble-madness-2026`), non ancora MAME-proven |
-| `w0` | `[7:0]` | UNKNOWN | — |
-| `w1` | full | UNKNOWN | — |
-| `w2` | full | UNKNOWN | — |
-| `w3` | full | UNKNOWN | — |
+| `w0` | `[15:12]` | legacy `slopeOrient` | Deprecated; artifact della segmentazione a 8 byte |
+| `w0` | `[11:8]` | legacy `slopeVal` | Deprecated; artifact della segmentazione a 8 byte |
+| `w0` | `[7:0]` | raw byte | Non geometria verificata |
+| `w1` | full | raw word | Non geometria verificata |
+| `w2` | full | raw word | Non geometria verificata |
+| `w3` | full | raw word | Non geometria verificata |
 
 Formula fisica supposta legacy:
 `z_cell = z_base + (dx * sdx + dy * sdy) * slopeVal`
 
-Non c'e' parity test attivo sui record (solo smoke su `loadLevel`
-size). La decode dei word 1-3 resta Open e non va usata come proof di
-fisica marble.
+La formula non e' usata come proof di fisica marble. Le correzioni a salite,
+collisioni o floating devono partire dal path `terrainCode`/`FUN_1CABA` e
+dalla struct `0x401c28`, non da `HeightRecord.word1..word3`.
 
 ## Riferimenti consumer (mapping completo)
 
@@ -178,9 +271,9 @@ File engine che usano `*0x400474` (level header ptr):
 - `packages/engine/src/rle-expand.ts` — RLE source read.
 - `packages/engine/src/helper-121b8.ts` — L5 descriptor match (only).
 
-## Aperture residue (richiedono ROM + MAME + Ghidra)
+## Aperture residue
 
-Per chiudere il PRD ai 7 success criteria, restano:
+Stato dopo il follow-up post-header/terrain-code:
 
 1. **MAME Lua tap su 6 livelli** — completato per i field header
    consumati in path bootstrap/playable, incluse le nuove letture
@@ -194,10 +287,9 @@ Per chiudere il PRD ai 7 success criteria, restano:
    (`/tmp/marble-level-header-tap-L1-entities6.log`) ha comunque prodotto
    read solo per `entityInitPos_0..3`. I byte `+0x1C..+0x1F` sono invece
    consumati naturalmente e decodati come `tileLineDescriptorPtr`.
-4. **Decode word 1-3 dei legacy `HeightRecord`**. Richiede una nuova
-   prova MAME/disasm sul formato post-header effettivo; il PRD originale
-   puntava alla fisica marble (`helper-1cd00.ts`, `bbox-hit-test-19d94.ts`),
-   ma questi consumer non leggono direttamente il blocco post-header.
+4. **Legacy `HeightRecord.word1..word3`** — chiuso come non-formato:
+   sono raw words derivati da una segmentazione obsoleta. Il formato
+   verificato e' `LevelData.postHeader` + `terrainCode`.
 5. **Parity test musashi-wasm** — completato con
    `packages/cli/src/test-level-header-decode-parity.ts`:
    `FUN_16EC6`, `FUN_16F6C`, `FUN_259B4` sono 500/500 nei file
@@ -223,9 +315,13 @@ Con la decode Phase 2, un livello custom valido **deve fornire**:
 - `+0x24` (signed word): binsearch end index.
 - `+0x26` (long): pointer a binsearch base (terrain-code LUT).
 - `+0x2A` (long): pointer a extra-byte table.
-- `+0x2E..` (long[]): per-column terrain table.
-- strutture post-header puntate dai field sopra; non assumere un unico
-  array di height record da 8 byte senza proof.
+- `+0x2E..subPatternTablePtr`: terrain row pointer table, long entries,
+  terminatore `0xFFFF`.
+- `subPatternTablePtr..tileLineDescriptorPtr`: sub-pattern pointer table.
+- `tileLineDescriptorPtr..rowBuildBitListPtr`: tile-line descriptors 8-byte.
+- `rowBuildBitListPtr..rleSourcePtr`: row-build script.
+- `rleSourcePtr..count=0`: RLE row offsets.
+- binsearch table (`+0x26`) con terrain codes nei range documentati sopra.
 
 Strategie di iniezione (vedi `docs/level-header-decode-prd.md` "Inserimento"):
 

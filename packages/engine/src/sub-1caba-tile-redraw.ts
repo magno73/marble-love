@@ -106,7 +106,7 @@
  * **ROM tables**:
  *   - `0x1eb3a` (word table, ~340 entries): playfield word offset per row index.
  *   - `0x1ed0a` (byte table, 0x58 entries): 0..0x2b = byte offset, 0x2c..0x57 = shift count.
- *   - `0x1ed62` (word table, 16 entries): terrain coef for big-terrain path.
+ *   - `0x1ed62` (word table, 32 entries): terrain coef for big-terrain path.
  *   - `0x24b3a` (word table, ~12+ entries): loop step values (D6, D4, A5 deltas).
  *
  * **WorkRam reads**:
@@ -171,7 +171,7 @@ const OFF_BSEARCH_ALT = 0x076e; // *0x40076e..  — alt bsearch table (workRam)
 const ROM_TBL_24B3A = 0x24b3a; // loop step table (word entries)
 const ROM_TBL_1EB3A = 0x1eb3a; // playfield word offset table (word entries)
 const ROM_TBL_1ED0A = 0x1ed0a; // byte deltas + shift counts (byte entries, 0x58)
-const ROM_TBL_1ED62 = 0x1ed62; // terrain coef (word entries, 16)
+const ROM_TBL_1ED62 = 0x1ed62; // terrain coef (word entries, 32)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

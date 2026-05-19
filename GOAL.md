@@ -9,9 +9,9 @@
 **Concludere il reverse engineering del Level Descriptor Header** seguendo
 integralmente `docs/level-header-decode-prd.md`.
 
-Owner sessione corrente: agent su branch `claude/marble-1984-analysis-I0AJ0`.
+Owner sessione corrente: Codex su `main`.
 
-Stato: phase-2-validation-done; final review/merge pending.
+Stato: done; post-header-terrain-decode-done.
 
 ## Done when
 
@@ -133,6 +133,48 @@ Status: **phase-2-parity-done** — 2026-05-19 on branch `codex/level-header-dec
 Status: **phase-2-validation-blocked** — 2026-05-19 on branch `codex/level-header-decode`.
 
 Status: **phase-2-validation-done** — 2026-05-19 on branch `codex/level-header-decode`.
+
+Status: **post-header-terrain-decode-done** — 2026-05-19 on `main`.
+
+## Follow-up — post-header / terrain-code decode
+
+User request: decodificare il residuo rimasto dopo la spiegazione del
+level descriptor header. Scope attuale:
+
+- chiudere il falso residuo `HeightRecord.word1..word3` senza inventare
+  semantica;
+- decodare il corpo post-header reale;
+- decodare il `terrainCode` consumato da `FUN_1CABA`, per collegare il
+  descriptor alla projection struct `0x401c28`;
+- aggiornare parser, probe, test e docs.
+
+Risultato implementato:
+
+- `LevelData.postHeader` espone terrain row pointers, sub-pattern pointers,
+  tile-line descriptors, row-build script e RLE row offsets.
+- `decodeTerrainCode`, `decodeDirectTerrainByteRecord` e
+  `resolveTerrainCodeHeights` modellano i 5 range del consumer `FUN_1CABA`:
+  `empty`, `direct`, `indirect`, `quad`, `flat`.
+- `packages/cli/src/probe-level-header.ts` stampa il nuovo layout e la
+  distribuzione dei terrain-code per livello.
+- `packages/engine/test/level.test.ts` copre i conteggi reali dei 6 livelli.
+
+Validazione finale:
+
+- `npx tsc -p packages/engine/tsconfig.json --noEmit` -> PASS.
+- `npx vitest run packages/engine/test/level.test.ts packages/engine/test/level-header-decode.test.ts packages/engine/test/sub-1caba-tile-redraw.test.ts packages/engine/test/sprite-project-1cc62.test.ts --silent`
+  -> PASS, 53 tests.
+- `npx tsx packages/cli/src/probe-level-header.ts` -> PASS.
+- `npm run typecheck` -> PASS.
+- `npm run lint` -> PASS.
+- `npx tsc -b` -> PASS.
+- `npm run test --silent` -> PASS, 255 test files passed, 2214 tests
+  passed, 17 skipped.
+- `npx tsx packages/cli/src/probe-cluster-histogram.ts | head -1` ->
+  `f+99 workRam diff: total=172 | gameplay=0 | stack-residue=172`.
+- `npx tsx packages/cli/src/probe-100f-diff.ts | grep "obj0.x"` -> PASS,
+  TS and MAME `obj0.x` match through `f+99`.
+- `git diff --check` -> PASS.
 
 ## Phase 2 Deliverable 5 — validation done
 

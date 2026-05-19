@@ -48,6 +48,11 @@ Stato post-merge 2026-05-19:
 - Level descriptor header dei sei livelli decodato come header fisso `0x2E`
   byte, con campi consumer-backed e doc finale in
   `docs/level-header-format.md`.
+- Corpo post-header decodato in `LevelData.postHeader`: terrain row pointer
+  table, sub-pattern table, tile-line descriptors, row-build script e RLE row
+  offsets.
+- Terrain-code format di `FUN_1CABA` decodato (`empty`, `direct`, `indirect`,
+  `quad`, `flat`) con helper in `packages/engine/src/level.ts`.
 - Parity musashi-wasm 500/500 per i tre consumer header `FUN_16EC6`,
   `FUN_16F6C`, `FUN_259B4`.
 - Replay/oracle tooling per confronto MAME, seed audit, route search e probe
@@ -118,6 +123,8 @@ legacy post-header:
 - pointer table ROM: `0x2BE00`, 6 puntatori long BE;
 - `LEVEL_HEADER_SIZE = 0x2E`;
 - campi consumati documentati in `docs/level-header-format.md`;
+- post-header/body decodato in `LevelData.postHeader`;
+- terrain-code decode per il path live `FUN_1CABA` -> `0x401c28`;
 - MAME tap esteso in `oracle/mame_level_header_tap.lua`;
 - probe statico in `packages/cli/src/probe-level-header.ts`;
 - parity aggregata in
@@ -144,9 +151,9 @@ f+99 workRam diff: total=172 | gameplay=0 | stack-residue=172
 
 - Il long-run attract/demo completo non e' il riferimento principale per
   playtest; puo' ancora avere residui sprite/workRam/cache.
-- Il parser legacy `HeightRecord` post-header non e' una proof di fisica
-  terreno: `word1..word3` restano UNKNOWN documentati. Non usarli per
-  correggere salite, collisioni o slope senza nuova prova MAME/disasm.
+- Il parser legacy `HeightRecord` post-header resta compat only: il formato
+  verificato e' `LevelData.postHeader` + `terrainCode`. Non usare
+  `word1..word3` per correggere salite, collisioni o slope.
 - Alcuni script oracle, screenshot, capture e seed `candidate_*` sono scratch o
   diagnostici. Non promuoverli senza proof completa.
 - Il sound path ha copertura utile per cue/debug, ma il chip/music path completo
@@ -212,6 +219,7 @@ Per modifiche a descriptor/header o a prove MAME correlate:
 ```sh
 npx tsx packages/cli/src/probe-level-header.ts
 npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
+npx vitest run packages/engine/test/level.test.ts packages/engine/test/level-header-decode.test.ts
 ```
 
 ## File Di Contesto
