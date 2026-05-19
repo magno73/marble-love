@@ -24,6 +24,9 @@ docs/archive/readme-status-2026-05-18/
 - `startLevel=1..6` mappa ai sei true-start seed MAME con banner intro e timer.
 - Il timer di livello mantiene i secondi residui e aggiunge il bonus del livello
   successivo.
+- Il level descriptor header dei 6 livelli e' decodato e documentato in
+  `docs/level-header-format.md`; i consumer `FUN_16EC6`, `FUN_16F6C` e
+  `FUN_259B4` restano parity-locked 500/500.
 - La modalita' demo/attract lunga resta area di lavoro: il percorso warm
   giocabile e i true-start level sono il riferimento operativo per il playtest.
 
@@ -132,6 +135,13 @@ npm test
 npm run typecheck
 ```
 
+Stato post-merge corrente validato:
+
+```text
+Test Files 255 passed | 3 skipped
+Tests      2206 passed | 17 skipped
+```
+
 Build web:
 
 ```sh
@@ -154,6 +164,21 @@ Typecheck mirati:
 ```sh
 npx tsc -p packages/engine/tsconfig.json --noEmit
 npx tsc -p packages/web/tsconfig.json --noEmit
+```
+
+Reverse engineering del level header:
+
+```sh
+npx tsx packages/cli/src/probe-level-header.ts
+npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
+npx tsx packages/cli/src/probe-cluster-histogram.ts
+npx tsx packages/cli/src/probe-100f-diff.ts | grep "obj0.x"
+```
+
+Baseline attuale del drift f+99:
+
+```text
+total=172 | gameplay=0 | stack-residue=172
 ```
 
 Whitespace/diff sanity:
@@ -182,6 +207,12 @@ Prima di modifiche runtime o seed:
 - `STATUS.md`
 - `HANDOFF_CURRENT_CONTEXT.md`
 - `HANDOFF_SIX_LEVELS.md`
+
+Prima di modifiche a descriptor, terreno, collisioni o custom level:
+
+- `docs/level-header-format.md`
+- `docs/level-header-decode-prd.md`
+- `docs/findings/README.md`
 
 Per cronologia dettagliata e vecchie note operative:
 

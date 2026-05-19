@@ -24,6 +24,16 @@ http://localhost:5173/?autoLoad=1&play=1
 Con `play=1` il frontend resta su attract/high-score fino a coin e START; dopo
 START carica il true-start L1 `start_level1_intro_practice_f2479`.
 
+Stato post-merge 2026-05-19:
+
+- `main` include il merge del branch `codex/level-header-decode`.
+- Il level descriptor header e' documentato in
+  `docs/level-header-format.md`.
+- Gate post-merge verdi: `npm run typecheck`, `npm run lint`,
+  `npm run test --silent`.
+- Suite corrente: `255 passed | 3 skipped` test files,
+  `2206 passed | 17 skipped` tests.
+
 ## Funziona
 
 - Web app Vite/PixiJS con ROM loader, rendering playfield/sprite/HUD e input
@@ -35,6 +45,11 @@ START carica il true-start L1 `start_level1_intro_practice_f2479`.
   livello.
 - Marble nemica nera in L2 visibile sia da `startLevel=2` sia da transizione
   runtime L1->L2.
+- Level descriptor header dei sei livelli decodato come header fisso `0x2E`
+  byte, con campi consumer-backed e doc finale in
+  `docs/level-header-format.md`.
+- Parity musashi-wasm 500/500 per i tre consumer header `FUN_16EC6`,
+  `FUN_16F6C`, `FUN_259B4`.
 - Replay/oracle tooling per confronto MAME, seed audit, route search e probe
   mirati.
 - ROM graphics decode e rendering MAME-oriented per warm-state e start-level.
@@ -95,10 +110,43 @@ Aree principali disponibili:
 Le routine replicate non devono essere trattate come API generiche: spesso
 modellano side effect MAME-specifici su indirizzi RAM assoluti.
 
+## Level Descriptor Header
+
+Il formato header dei descriptor ROM e' ora separato dal vecchio parser
+legacy post-header:
+
+- pointer table ROM: `0x2BE00`, 6 puntatori long BE;
+- `LEVEL_HEADER_SIZE = 0x2E`;
+- campi consumati documentati in `docs/level-header-format.md`;
+- MAME tap esteso in `oracle/mame_level_header_tap.lua`;
+- probe statico in `packages/cli/src/probe-level-header.ts`;
+- parity aggregata in
+  `packages/cli/src/test-level-header-decode-parity.ts`.
+
+Il valore storico `LEVEL_HEADER_SIZE = 36` era incompleto: il fixed header
+arriva a `+0x2D`, quindi la size corretta e' `0x2E`.
+
+Validazione associata:
+
+```sh
+npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
+npx tsx packages/cli/src/probe-cluster-histogram.ts
+npx tsx packages/cli/src/probe-100f-diff.ts | grep "obj0.x"
+```
+
+Baseline drift corrente:
+
+```text
+f+99 workRam diff: total=172 | gameplay=0 | stack-residue=172
+```
+
 ## Gap E Rischi
 
 - Il long-run attract/demo completo non e' il riferimento principale per
   playtest; puo' ancora avere residui sprite/workRam/cache.
+- Il parser legacy `HeightRecord` post-header non e' una proof di fisica
+  terreno: `word1..word3` restano UNKNOWN documentati. Non usarli per
+  correggere salite, collisioni o slope senza nuova prova MAME/disasm.
 - Alcuni script oracle, screenshot, capture e seed `candidate_*` sono scratch o
   diagnostici. Non promuoverli senza proof completa.
 - Il sound path ha copertura utile per cue/debug, ma il chip/music path completo
@@ -159,12 +207,20 @@ git diff --check
 git status --short --branch
 ```
 
+Per modifiche a descriptor/header o a prove MAME correlate:
+
+```sh
+npx tsx packages/cli/src/probe-level-header.ts
+npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
+```
+
 ## File Di Contesto
 
 Leggere prima di cambiare comportamento runtime:
 
 - `HANDOFF_CURRENT_CONTEXT.md`
 - `HANDOFF_SIX_LEVELS.md`
+- `docs/level-header-format.md`
 
 Leggere gli archivi solo quando serve ricostruire una decisione storica o un
 vecchio esperimento:
