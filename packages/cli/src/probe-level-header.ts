@@ -66,33 +66,58 @@ function dumpHexLine(bytes: Uint8Array, offset: number, length: number): string 
   return parts.join(" ");
 }
 
-function printLevel(level: LevelData): void {
+function readU16BE(bytes: Uint8Array, offset: number): number {
+  return (((bytes[offset] ?? 0) << 8) | (bytes[offset + 1] ?? 0)) & 0xffff;
+}
+
+function terrainCodeSummary(rom: RomImage, level: LevelData): string {
+  const counts = new Map<string, number>();
+  const total = Math.max(0, level.header.binsearchEndIndex);
+  for (let i = 0; i < total; i++) {
+    const code = readU16BE(rom.program, level.header.binsearchBasePtr + i * 2);
+    const kind = levelNs.decodeTerrainCode(code).kind;
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+  return ["empty", "direct", "indirect", "quad", "flat"]
+    .map((kind) => `${kind}=${counts.get(kind) ?? 0}`)
+    .join(" ");
+}
+
+function printLevel(level: LevelData, rom: RomImage): void {
   const name = LEVEL_NAMES[level.index] ?? `Level${level.index}`;
+  const p = level.postHeader;
   console.log("");
   console.log("====================================================");
   console.log(`Level ${level.index} — ${name}`);
   console.log("====================================================");
   console.log(`  ROM offset:        ${hex(level.romOffset, 6)}`);
   console.log(`  Block size:        ${level.byteSize} bytes`);
-  console.log(`  Records (max):     ${level.records.length}`);
+  console.log(`  Legacy chunks /8:  ${level.records.length}`);
   console.log("");
   console.log("  Decoded header (0x00..0x2D):");
   console.log(`    +0x00  directTerrainPtr:   ${hex(level.header.directTerrainPtr, 8)}`);
   console.log(`    +0x04  tileWordTablePtr:   ${hex(level.header.tileWordTablePtr, 8)}`);
-  console.log(`    +0x08  UNKNOWN (long):     ${dumpHexLine(level.header.raw, 0x08, 4)}`);
+  console.log(`    +0x08  rowBuildBitListPtr: ${hex(level.header.rowBuildBitListPtr, 8)}`);
   console.log(`    +0x0C  rleSourcePtr:       ${hex(level.header.rleSourcePtr, 8)}`);
   console.log(`    +0x10  yScrollBase:        ${level.header.yScrollBase} (${hex(level.header.yScrollBase & 0xffff, 4)})`);
   console.log(`    +0x12  yScrollRange:       ${level.header.yScrollRange} (${hex(level.header.yScrollRange & 0xffff, 4)})`);
   console.log(`    +0x14  entityInitPos[0]:   ${hex(level.header.entityInitPositions[0] ?? 0, 4)}`);
   console.log(`    +0x16  entityInitPos[1]:   ${hex(level.header.entityInitPositions[1] ?? 0, 4)}`);
   console.log(`    +0x18  maxTileBound:       ${level.header.maxTileBound} (= entityInitPos[2] = ${hex(level.header.entityInitPositions[2] ?? 0, 4)})`);
-  console.log(`    +0x1A  entityInitPos[3]:   ${hex(level.header.entityInitPositions[3] ?? 0, 4)}  (UNKNOWN if entity 3 not active)`);
-  console.log(`    +0x1C  entityInitPos[4]:   ${hex(level.header.entityInitPositions[4] ?? 0, 4)}  (UNKNOWN if entity 4 not active)`);
-  console.log(`    +0x1E  entityInitPos[5]:   ${hex(level.header.entityInitPositions[5] ?? 0, 4)}  (UNKNOWN if entity 5 not active)`);
+  console.log(`    +0x1A  rowBuildEntryCount: ${level.header.rowBuildEntryCount} (= entityInitPos[3] overlap ${hex(level.header.entityInitPositions[3] ?? 0, 4)})`);
+  console.log(`    +0x1C  tileLineDescPtr:    ${hex(level.header.tileLineDescriptorPtr, 8)} (= entityInitPos[4..5] overlap)`);
   console.log(`    +0x20  subPatternTablePtr: ${hex(level.header.subPatternTablePtr, 8)}`);
-  console.log(`    +0x24  UNKNOWN (word):     ${dumpHexLine(level.header.raw, 0x24, 2)}`);
+  console.log(`    +0x24  binsearchEndIndex:  ${level.header.binsearchEndIndex} (${hex(level.header.binsearchEndIndex & 0xffff, 4)})`);
   console.log(`    +0x26  binsearchBasePtr:   ${hex(level.header.binsearchBasePtr, 8)}`);
   console.log(`    +0x2A  extByteTablePtr:    ${hex(level.header.extByteTablePtr, 8)}`);
+  console.log("");
+  console.log("  Decoded post-header/body:");
+  console.log(`    row pointer table:   ${hex(p.terrainRowPointers.startPtr, 6)}..${hex(p.terrainRowPointers.endPtr, 6)} entries=${p.terrainRowPointers.entries.length} term=${hex(p.terrainRowPointers.terminator, 4)}`);
+  console.log(`    sub-pattern table:   ${hex(p.subPatternPointers.startPtr, 6)}..${hex(p.subPatternPointers.endPtr, 6)} entries=${p.subPatternPointers.entries.length}`);
+  console.log(`    tile descriptors:    ${hex(p.tileLineDescriptors.startPtr, 6)} decoded=${p.tileLineDescriptors.decodedCount} physical=${p.tileLineDescriptors.physicalCount} unusedTailBytes=${p.tileLineDescriptors.unusedTailBytes}`);
+  console.log(`    row-build script:    ${hex(p.rowBuildScript.startPtr, 6)}..${hex(p.rowBuildScript.endPtr, 6)} chunks=${p.rowBuildScript.chunks.length} patches=${p.rowBuildScript.chunks.reduce((sum, c) => sum + c.patches.length, 0)}`);
+  console.log(`    RLE row offsets:     ${hex(p.rleRuns.startPtr, 6)}..${hex(p.rleRuns.endPtr, 6)} runs=${p.rleRuns.runs.length} expandedWords=${p.rleRuns.expandedWordCount}`);
+  console.log(`    terrain code table:  ${terrainCodeSummary(rom, level)}`);
   console.log("");
   console.log("  Raw hex dump (0x2E byte fixed header):");
   for (let row = 0; row < levelNs.LEVEL_HEADER_SIZE; row += 16) {
@@ -112,9 +137,9 @@ function printLevel(level: LevelData): void {
       if (r.word0 + r.word1 + r.word2 + r.word3 > 0) nonZeroRecords++;
     }
     console.log("");
-    console.log("  Records heuristics:");
-    console.log(`    Total records (block area / 8): ${level.records.length}`);
-    console.log(`    Non-zero records:              ${nonZeroRecords}`);
+    console.log("  Legacy /8 chunk heuristics (not geometry proof):");
+    console.log(`    Total chunks:      ${level.records.length}`);
+    console.log(`    Non-zero chunks:   ${nonZeroRecords}`);
     console.log(`    slopeOrient distribution:`);
     const sortedOrients = Array.from(slopeOrientCounts.keys()).sort((a, b) => a - b);
     for (const orient of sortedOrients) {
@@ -142,12 +167,12 @@ function main(): number {
 
   console.log("");
   console.log(`Level header size: ${levelNs.LEVEL_HEADER_SIZE} (0x${levelNs.LEVEL_HEADER_SIZE.toString(16).toUpperCase()})`);
-  console.log(`Height record size: ${levelNs.HEIGHT_RECORD_SIZE}`);
+  console.log(`Legacy /8 chunk stride: ${levelNs.HEIGHT_RECORD_SIZE}`);
   console.log(`Levels: ${levelNs.LEVEL_COUNT}`);
 
   const levels = levelNs.loadAllLevels(rom);
   for (const lvl of levels) {
-    printLevel(lvl);
+    printLevel(lvl, rom);
   }
 
   console.log("");

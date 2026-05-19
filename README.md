@@ -27,6 +27,9 @@ docs/archive/readme-status-2026-05-18/
 - Il level descriptor header dei 6 livelli e' decodato e documentato in
   `docs/level-header-format.md`; i consumer `FUN_16EC6`, `FUN_16F6C` e
   `FUN_259B4` restano parity-locked 500/500.
+- Il corpo post-header e i terrain codes del path `FUN_1CABA` sono decodati:
+  usare `LevelData.postHeader` e `decodeTerrainCode`, non il vecchio
+  `HeightRecord` compat.
 - La modalita' demo/attract lunga resta area di lavoro: il percorso warm
   giocabile e i true-start level sono il riferimento operativo per il playtest.
 
@@ -171,6 +174,7 @@ Reverse engineering del level header:
 ```sh
 npx tsx packages/cli/src/probe-level-header.ts
 npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
+npx vitest run packages/engine/test/level.test.ts packages/engine/test/level-header-decode.test.ts
 npx tsx packages/cli/src/probe-cluster-histogram.ts
 npx tsx packages/cli/src/probe-100f-diff.ts | grep "obj0.x"
 ```

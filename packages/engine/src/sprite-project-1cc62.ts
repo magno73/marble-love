@@ -93,7 +93,7 @@
  *     (caller @ 0x12250 fa `cmpi.l #0x100000` = 1<<20 contro D0-(0x14,A2)).
  *
  * **JSR esterne**:
- *   - `FUN_0001CABA` (heavy tile-redraw, NON ancora replicato) — chiamato
+ *   - `FUN_0001CABA` (tile-redraw/terrain decode, modulo separato) — chiamato
  *     SOLO se `argByte != 0`. Esposto come sub injection
  *     (`spriteProject1CC62Subs.fun_1CABA`); default no-op.
  *
@@ -151,11 +151,11 @@ function asI32(v: number): number {
 /**
  * Stub injection per `FUN_0001CABA` (heavy tile-redraw). Default: no-op.
  *
- * `FUN_0001CABA` è un renderer che legge `*0x400696/*0x400698` e aggiorna
- * alpha-tilemap + altri buffer. Non ancora replicato bit-perfect: la
- * sub-injection consente al caller di iniettare un'implementazione, oppure
- * di lasciarla no-op. Quando assente, il modulo si limita a aggiornare i
- * globals 0x6A4/0x6A6 e a calcolare il return packed.
+ * `FUN_0001CABA` è un renderer/terrain decoder che legge
+ * `*0x400696/*0x400698` e aggiorna alpha-tilemap + altri buffer. La
+ * sub-injection consente al caller di iniettare l'implementazione separata,
+ * oppure di lasciarla no-op. Quando assente, il modulo si limita a
+ * aggiornare i globals 0x6A4/0x6A6 e a calcolare il return packed.
  *
  * Identica injection a `sprite-pos-update-1bab2.ts`: i due moduli condividono
  * la stessa sub esterna.
