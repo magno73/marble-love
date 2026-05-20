@@ -207,6 +207,10 @@ Next action:
   (8 files, 53 tests); engine/cli/web targeted typechecks; web build (known
   Vite chunk-size warning only); `npm run typecheck`; `npm run lint`;
   `npm run context:audit`; `git diff --check`.
+- High-score save fallback committed and pushed as `00342f9`
+  (`fix: save high score fallback on game over`). Remaining gap: full
+  interactive initials editing in async `FUN_11B18`; the committed fallback
+  saves with the player's current initials.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
