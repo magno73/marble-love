@@ -668,3 +668,13 @@ The task is complete only when:
   tests, web typecheck, web build, and `git diff --check`. Current phase is
   Phase 2: cold boot to stable attract. Next work must compare compact
   cold-boot/early-attract TS vs MAME summaries before changing engine behavior.
+- 2026-05-20: Phase 2 research started. TS probe
+  `/tmp/marble-love/boot-flow/probe-cold-boot-summary.mts` and MAME
+  `mame_state_multidump.lua` summaries are recorded under
+  `/tmp/marble-love/boot-flow/`. Important setup: MAME cold boot summary must
+  use clean cfg/nvram and `-nonvram_save`; otherwise the run can stay in a
+  misleading service/factory-like state. First finding: TS no-seed cold boot is
+  not blank and reaches descriptor-backed attract segments, but main-thread
+  cadence/phase drifts against MAME. Focus next on `mainLoopInit117B2`,
+  `mainLoopInit11452`, `mainLoopInit10504`, and async wait staging, not on
+  terrain/collision/renderer or seed mappings.
