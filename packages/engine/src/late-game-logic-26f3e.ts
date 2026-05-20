@@ -162,13 +162,8 @@ function loadCoords(
   return [d5, d4];
 }
 
-function lowerVisibleBoundForStruct(
-  state: GameState,
-  rom: RomImage,
-  structPtr: number,
-  defaultBound: number,
-): number {
-  return rb(state, rom, structPtr + 0x1f) === 0x0a ? -0x40 : defaultBound;
+function moveqSignedByte(value: number): number {
+  return s8(value & 0xff);
 }
 
 /**
@@ -581,7 +576,7 @@ function dispatchType6(
   const p42 = rl(state, rom, sp + 0x42);
   const p46 = rl(state, rom, sp + 0x46);
   const d6v = (((p42 - p46) >> 2) & 0xffff);
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x140) return;
+  if (s16(d4) <= moveqSignedByte(0xc0) || s16(d4) >= 0x140) return;
   // orMask depends on pointer comparison: movea.l #0x220ee,a0; cmpa.l (a5),a0; bls
   const useLow = (p42 >>> 0) <= 0x220ee;
   const emitOM = useLow ? 0x3800 : 0x2800;
@@ -647,7 +642,7 @@ function dispatchType10(
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
   const d4s = s16(d4);
-  if (d4s < lowerVisibleBoundForStruct(state, rom, sp, 0xc0) || d4s >= 0x120) return;
+  if (d4s <= moveqSignedByte(0xc0) || d4s >= 0x120) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5, d4, 0x3000, subs);
 }
 
@@ -706,7 +701,7 @@ function dispatchType12(
   const sp = romL(rom, (0x1f016 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x4e, 0x18, 0x10);
   const d4s = s16(d4);
-  if (d4s < lowerVisibleBoundForStruct(state, rom, sp, 0xe0) || d4s >= 0x100) return;
+  if (d4s <= moveqSignedByte(0xe0) || d4s >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x42)), d5, d4, 0x3800, subs);
 }
 
@@ -735,7 +730,7 @@ function dispatchType15(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const d2 = romL(rom, (0x1f0ba + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, d2, 0x20, 0x18, 0x10);
-  if (s16(d4) < 0xf0 || s16(d4) >= 0x100) return;
+  if (s16(d4) <= moveqSignedByte(0xf0) || s16(d4) >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, d2 + 0x1c)), d5, d4, 0x3800, subs);
   // Inner loop at d2+0x26 (up to 3 entries, 6 bytes each):
   innerSprites(state, rom, (d2 + 0x26) >>> 0, 3);
@@ -771,7 +766,7 @@ function dispatchType0x2A(
   const base = (0x40098c + stride) >>> 0;
   // Coords at base+6 (not +0x4e):
   const [d5, d4] = loadCoords(state, rom, base, 6, 0x18, 0x10);
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x100) return;
+  if (s16(d4) <= moveqSignedByte(0xc0) || s16(d4) >= 0x100) return;
 
   // d2 = s8(subIdxB) << 11 (sprite rotation bits):
   const d2 = ((s8(subIdxB) & 0xff) << 11) & 0xffff;
