@@ -49,6 +49,23 @@ describe("objectSlotLookup11B18 (FUN_00011B18)", () => {
     expect(afterRegisterCalls).toEqual([[0x00400018, 0, 0x00400018 + 0xbc, -2]]);
   });
 
+  it("starts the initials entry path and returns 1 when wired", () => {
+    const s = emptyGameState();
+    writeU32(s.workRam, 0x18 + 0xbc, 0x00123456);
+    const calls: Array<[number, number, number]> = [];
+
+    const ret = objectSlotLookup11B18(s, 0x00400018, {
+      rankLookup: () => 2,
+      startInitialsEntry: (_state, objectAddr, rank, recordAddr) => {
+        calls.push([objectAddr, rank, recordAddr]);
+        return true;
+      },
+    });
+
+    expect(ret).toBe(1);
+    expect(calls).toEqual([[0x00400018, 2, 0x00400018 + 0xbc]]);
+  });
+
   it("delegates qualifying path and returns 1", () => {
     const s = emptyGameState();
     const calls: Array<[number, number]> = [];

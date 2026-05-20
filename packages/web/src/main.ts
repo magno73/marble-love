@@ -833,6 +833,38 @@ function createBootFlowConflictOverlay(message: string): HTMLDivElement {
   return el;
 }
 
+function createHighScoreInitialsOverlay(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.style.cssText =
+    "position:fixed;left:50%;top:22%;z-index:9999;transform:translate(-50%,-50%);" +
+    "min-width:260px;box-sizing:border-box;padding:14px 18px;" +
+    "background:rgba(0,0,0,.82);border:1px solid rgba(255,210,120,.7);" +
+    "color:#ffd278;font:700 18px/1.35 monospace;text-align:center;" +
+    "text-shadow:0 0 6px rgba(255,210,120,.45);pointer-events:none;white-space:pre;";
+  el.style.display = "none";
+  document.body.appendChild(el);
+  return el;
+}
+
+function updateHighScoreInitialsOverlay(
+  el: HTMLDivElement,
+  state: ReturnType<typeof stateNs.emptyGameState>,
+): void {
+  const entry = state.clock.highScoreInitialsEntry;
+  if (entry === undefined) {
+    el.style.display = "none";
+    return;
+  }
+  const off = entry.recordAddr - 0x00400000 + 4;
+  const chars = [0, 1, 2].map((i) => {
+    const value = state.workRam[off + i] ?? 0x20;
+    const ch = value >= 0x20 && value <= 0x7e ? String.fromCharCode(value) : " ";
+    return i === entry.cursor ? `[${ch}]` : ` ${ch} `;
+  });
+  el.textContent = `HIGH SCORE #${entry.rank + 1}\n${chars.join("")}`;
+  el.style.display = "block";
+}
+
 function updateObjectDebugOverlay(
   el: HTMLPreElement,
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -1268,6 +1300,7 @@ async function startGame(
       }
     });
   }
+  const highScoreInitialsOverlay = createHighScoreInitialsOverlay();
   const inputState = initInput({ keyboardTrackballStep, pointerTrackballScale });
   if (warmStateIsPlayableSeed) {
     inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
@@ -1675,6 +1708,7 @@ async function startGame(
     if (objectDebugEnabled && objectDebugOverlay !== undefined && frameCount % 5 === 0) {
       updateObjectDebugOverlay(objectDebugOverlay, s, frameCount);
     }
+    updateHighScoreInitialsOverlay(highScoreInitialsOverlay, s);
 
     if (renderMode === "diagnostic") {
       renderer.drawFrame(

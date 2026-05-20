@@ -9,6 +9,7 @@ import { mainLoopInit10504 } from "../src/main-loop-init-10504.js";
 import { mainLoopInit1101E } from "../src/main-loop-init-1101e.js";
 import { mainLoopInit11452 } from "../src/main-loop-init-11452.js";
 import { mainLoopInit117B2, mainLoop117B2LoopBody } from "../src/main-loop-init-117b2.js";
+import { mainTick } from "../src/main-tick.js";
 import { advanceMode0Init11452Async } from "../src/mode2-init-11452-async.js";
 import { emptyGameState } from "../src/state.js";
 
@@ -293,7 +294,7 @@ describe("Task A main-loop init modules", () => {
     expect(s.clock.mode2Init11452Stage).toBe(0);
   });
 
-  it("FUN_1101E state 2 does not leave stale terrain when high-score initials flow is unwired", () => {
+  it("FUN_1101E state 2 starts interactive high-score initials entry before reset", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeMarbleDefaultHighScores(rom);
@@ -318,9 +319,52 @@ describe("Task A main-loop init modules", () => {
     expect(w(s, 0x390)).toBe(1);
     expect(w(s, 0x392)).toBe(2);
     expect(w(s, 0x75a)).toBe(0x0096);
-    expect(s.clock.mode2Init11452Stage).toBe(0);
-    expect(highScoreRowHex(s, 0)).toBe("0040000669");
+    expect(s.clock.mode2Init11452Stage).toBeUndefined();
+    expect(s.clock.highScoreInitialsEntry).toMatchObject({
+      objectAddr: 0x00400018,
+      rank: 0,
+      recordAddr: 0x00400018 + 0xbc,
+      cursor: 0,
+    });
+    expect(s.playfieldRam.every((value) => value === 0)).toBe(true);
+    expect(highScoreRowHex(s, 0)).toBe("0038a412d2");
     expect(Buffer.from(s.workRam.slice(0x1f7a, 0x1f81)).toString("hex")).not.toBe("00000000000000");
+  });
+
+  it("mainTick accepts interactive high-score initials and resumes mode2 reset", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    writeMarbleDefaultHighScores(rom);
+    bootInit(s, rom);
+    setW(s, 0x390, 2);
+    setW(s, 0x394, 4);
+    setW(s, 0x396, 1);
+    setL(s, 0x18 + 0xbc, 0x004000);
+    s.workRam[0x18 + 0xc0] = 0x41;
+    s.workRam[0x18 + 0xc1] = 0x41;
+    s.workRam[0x18 + 0xc2] = 0x41;
+    s.workRam[0x18 + 0x18] = 2;
+
+    mainLoopInit1101E(s, rom, {
+      sceneInit11428: () => undefined,
+      gameStateBanner26B2A: () => undefined,
+      helper288F8: () => undefined,
+    });
+    expect(s.clock.highScoreInitialsEntry).not.toBeUndefined();
+
+    s.input.buttons = 0x01 as typeof s.input.buttons;
+    mainTick(s, {
+      rom,
+      inputMmio: 0x6e,
+      p1X: 0xff,
+      p1Y: 0xff,
+      runMainLoopBody: true,
+      skipFrameCounter: true,
+    });
+
+    expect(s.clock.highScoreInitialsEntry).toBeUndefined();
+    expect(highScoreRowHex(s, 0)).toBe("0040000669");
+    expect(s.clock.mode2Init11452Stage).not.toBeUndefined();
   });
 
   it("FUN_10504 deterministic init block and tail writes key globals", () => {

@@ -76,7 +76,11 @@ import { CYCLES_PER_VBLANK } from "./m68k/cycle-table.js";
 import { addCpuCycles, resetCpuCycles } from "./m68k/clock.js";
 import { SUB_CYCLE_ESTIMATE } from "./m68k/sub-cycle-costs.js";
 import { as_u8, as_u16, as_u32, raw } from "./wrap.js";
-import { advanceMode0Init11452Async, advanceMode2Init11452Async } from "./mode2-init-11452-async.js";
+import {
+  advanceMode0Init11452Async,
+  advanceMode2Init11452Async,
+  startMode2Init11452Async,
+} from "./mode2-init-11452-async.js";
 import { levelFractionRender28232Default } from "./level-fraction-render-28232.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { renderString286EE } from "./render-string-286ee.js";
@@ -84,6 +88,11 @@ import { formatNumber3874 } from "./string-format.js";
 import { renderStringChain3520 } from "./render-string-chain-3520.js";
 import { clearAlphaRows } from "./alpha-tilemap.js";
 import { advanceLevelIntroBannerResume } from "./level-intro-banner-resume.js";
+import {
+  advanceHighScoreInitialsEntry,
+  highScoreInitialsEntryActive,
+} from "./high-score-initials-entry.js";
+import { helper11FF8Default } from "./helper-11ff8.js";
 
 export interface MainTickInputs {
   /** Trackball delta player 1 X (signed byte). */
@@ -182,7 +191,8 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mode0Init11452Stage !== undefined ||
-    state.clock.mainThreadWaitDelay !== undefined;
+    state.clock.mainThreadWaitDelay !== undefined ||
+    highScoreInitialsEntryActive(state);
   // Some attract segments hold the mode0 refresh body for an extra staged
   // dwell; MAME keeps the presentation object frozen until the delayed 10504
   // handoff lands.
@@ -207,6 +217,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mainThreadWaitDelay !== undefined ||
+    highScoreInitialsEntryActive(state) ||
     (state.clock.mode0Init11452Stage !== undefined && !mode0AsyncRefreshAtTickStart);
 
   // ─── FUN_28788 prefix (scroll/MMIO setup) ────────────────────────────
@@ -486,6 +497,24 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     readWorkWord(state, 0x394) === 1;
   if (!deferNewPlayableMode0Reset) {
     advanceMode0Init11452Async(state, rom);
+  }
+  if (highScoreInitialsEntryActive(state)) {
+    const initialsEntryOptions: Parameters<typeof advanceHighScoreInitialsEntry>[1] = {
+      buttons: state.input.buttons,
+      afterRegisterScore: (renderState, _objectAddr, _rank, _recordAddr, registerResult) => {
+        if (registerResult === -1) return;
+        helper11FF8Default(renderState, rom);
+        startMode2Init11452Async(renderState);
+      },
+    };
+    if (opts.p1X !== undefined) initialsEntryOptions.p1X = opts.p1X;
+    if (opts.p1Y !== undefined) initialsEntryOptions.p1Y = opts.p1Y;
+    const result = advanceHighScoreInitialsEntry(state, initialsEntryOptions);
+    if (result.changed) {
+      // Keep the visible table/header refreshed while the DOM overlay shows
+      // the editable record.
+      helper11FF8Default(state, rom);
+    }
   }
   advanceMode2Init11452Async(state, rom);
   if (state.clock.mode2BottomHudDelay !== undefined) {

@@ -270,6 +270,16 @@ Phase 7 completion audit:
   `playableSeed=start_level1_intro_practice_f2479` still loads, and
   `bootFlow=1&startLevel=1` still fails loudly without fetching a seed.
   No runtime default-path change has been made.
+- Phase 6.5 interactive high-score initials implementation is in progress.
+  Current local behavior: score-qualified game over starts a runtime initials
+  entry instead of immediately saving fallback initials; vertical trackball or
+  up/down keys cycle the selected letter, horizontal trackball or left/right
+  keys move the cursor, and START accepts/saves. Headless Chrome artifact
+  `/tmp/marble-love/boot-flow/highscore-initials-entry-browser-summary.json`
+  shows overlay `HIGH SCORE #1`, edits `AAA` to `CAA`, saves row
+  `00400012e9`, hides the overlay, and resumes mode-2 reset with no stale
+  playfield. Automated targeted tests and engine/web typechecks/build are
+  passing locally; broad validation still pending before commit.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
