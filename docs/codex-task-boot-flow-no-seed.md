@@ -919,3 +919,5 @@ The task is complete only when:
   `/tmp/marble-love/boot-flow/highscore-refresh-browser.png`. Result: browser
   and automated green for the focused path. This remains an
   automatic-current-initials fallback, not the full interactive initials editor.
+- 2026-05-20: High-score visible refresh follow-up committed and pushed as
+  `0e09ef7` (`fix: refresh high score after fallback save`).
