@@ -43,6 +43,8 @@
 --   MARBLE_PLAYABLE_MAX_FRAME    stop frame for manual/playback capture
 --   MARBLE_PLAYABLE_MANUAL_WINDOW tail snapshots to save in manual/playback mode
 --   MARBLE_PLAYABLE_NAME         base name for manual/playback trace + scenario
+--   MARBLE_PLAYABLE_WARM_SEED    diagnostic seed JSON to write into MAME RAM
+--   MARBLE_PLAYABLE_WARM_FRAME   frame to apply warm seed (default TRACKBALL_START-1)
 
 local OUT_DIR = os.getenv("MARBLE_PLAYABLE_OUT_DIR") or "oracle/scenarios/playable"
 local INPUT_OUT = os.getenv("MARBLE_PLAYABLE_INPUT_OUT") or "oracle/scenarios/input/playable_coin_start.json"
@@ -86,9 +88,12 @@ local FORCE_MANUAL_DISPATCHER =
     FRAME_FORCE_MANUAL_DISPATCHER
     or FORCE_MANUAL_ON_DETECTOR_READY
 local FORCE_SERVICE_MODE = os.getenv("MARBLE_PLAYABLE_SERVICE_MODE") == "1"
+local WARM_SEED_PATH = os.getenv("MARBLE_PLAYABLE_WARM_SEED") or ""
+local WARM_SEED_FRAME = tonumber(os.getenv("MARBLE_PLAYABLE_WARM_FRAME") or "")
 local manual_dispatcher_index = 1
 local detector_rearm_count = 0
 local bootstrap_applied = false
+local warm_seed_loaded = false
 
 if BOOTSTRAP_TARGET_LEVEL ~= nil then
     BOOTSTRAP_TARGET_LEVEL = math.floor(BOOTSTRAP_TARGET_LEVEL)
@@ -152,6 +157,26 @@ local function ensure_dir(path)
     if dir ~= nil and dir ~= "" then
         os.execute(string.format("mkdir -p %q", dir))
     end
+end
+
+local function read_text_file(path)
+    local f = assert(io.open(path, "rb"))
+    local data = f:read("*a")
+    f:close()
+    return data
+end
+
+local function json_hex_field(raw, name)
+    local pattern = '"' .. name .. '"%s*:%s*"([0-9a-fA-F]+)"'
+    local value = raw:match(pattern)
+    if value == nil then
+        error("[mame_playable_input_capture] warm seed missing field: " .. name)
+    end
+    return value
+end
+
+local function hex_byte_at(hex, off)
+    return tonumber(hex:sub(off * 2 + 1, off * 2 + 2), 16) or 0
 end
 
 os.execute(string.format("mkdir -p %q", OUT_DIR))
@@ -240,6 +265,7 @@ local ROUTE_DELTA_UNITS = {
     DL = {-1, 1},
     DR = {1, 1},
     BR = {0.5, -0.75},
+    BL = {-0.5, 0.75},
 }
 
 local function route_delta(name)
@@ -800,6 +826,20 @@ local function write_abs_u8(addr, value)
     end
 end
 
+local function write_hex_region(addr, hex, expected_bytes, label)
+    if #hex < expected_bytes * 2 then
+        error(string.format(
+            "[mame_playable_input_capture] warm seed %s has %d bytes, expected at least %d",
+            label,
+            math.floor(#hex / 2),
+            expected_bytes
+        ))
+    end
+    for i = 0, expected_bytes - 1 do
+        write_abs_u8(addr + i, hex_byte_at(hex, i))
+    end
+end
+
 local function read_abs_u8(addr)
     if mem == nil then return 0 end
     return mem:read_u8(addr) & 0xff
@@ -893,6 +933,52 @@ local function apply_level_bootstrap(frame)
     ))
 end
 
+local function apply_warm_seed(frame)
+    if WARM_SEED_PATH == "" then return end
+    if warm_seed_loaded then return end
+    if mem == nil then return end
+    local target_frame = WARM_SEED_FRAME
+    if target_frame == nil then target_frame = TRACKBALL_START - 1 end
+    if frame < target_frame then return end
+
+    local raw = read_text_file(WARM_SEED_PATH)
+    local work_hex = json_hex_field(raw, "workRam")
+    local playfield_hex = json_hex_field(raw, "playfieldRam")
+    local sprite_hex = json_hex_field(raw, "spriteRam")
+    local alpha_hex = json_hex_field(raw, "alphaRam")
+    local color_hex = json_hex_field(raw, "colorRam")
+
+    write_hex_region(0x400000, work_hex, 0x2000, "workRam")
+    write_hex_region(0xA00000, playfield_hex, 0x2000, "playfieldRam")
+    write_hex_region(0xA02000, sprite_hex, 0x1000, "spriteRam")
+    write_hex_region(0xA03000, alpha_hex, 0x1000, "alphaRam")
+    write_hex_region(0xB00000, color_hex, 0x0800, "colorRam")
+
+    script_trackball_y = hex_byte_at(work_hex, 0x18 + 0xc8)
+    script_trackball_x = hex_byte_at(work_hex, 0x18 + 0xc9)
+    current[0xF20001] = script_trackball_x
+    current[0xF20003] = script_trackball_y
+    current[0xF20005] = 0xff
+    current[0xF20007] = 0xff
+    if ports ~= nil then
+        if ports[":IN0"] and ports[":IN0"].fields["Trackball X"] then
+            ports[":IN0"].fields["Trackball X"]:set_value(script_trackball_x)
+        end
+        if ports[":IN1"] and ports[":IN1"].fields["Trackball Y"] then
+            ports[":IN1"].fields["Trackball Y"]:set_value(script_trackball_y)
+        end
+    end
+
+    warm_seed_loaded = true
+    print(string.format(
+        "[mame_playable_input_capture] loaded warm seed %s at f%d (trackball=%d,%d)",
+        WARM_SEED_PATH,
+        frame,
+        script_trackball_x,
+        script_trackball_y
+    ))
+end
+
 emu.register_frame_done(function()
     if cpu == nil then
         cpu = manager.machine.devices[":maincpu"]
@@ -920,6 +1006,7 @@ emu.register_frame_done(function()
     apply_timer_override(frame_count)
     apply_manual_dispatcher_rearm(frame_count)
     apply_detector_ready_rearm(frame_count)
+    apply_warm_seed(frame_count)
 
     capture_input_frame()
     local hits = capture_by_frame[frame_count]
