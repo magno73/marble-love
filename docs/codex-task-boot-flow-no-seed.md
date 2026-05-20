@@ -733,3 +733,43 @@ The task is complete only when:
   `OUT OF TIME / GAME OVER`. Result: green for Phase 3 coin/start leaving the
   attract/credit gate through runtime without a seed handoff; gray blocker for
   Phase 4 because L1 intro/session timer is not initialized yet.
+- 2026-05-20: Phase 4 fix started in
+  `packages/engine/src/main-loop-init-1101e.ts` and
+  `packages/engine/test/main-loop-init-task-a.test.ts`. Finding: new-game
+  runtime START enters `FUN_1101E` state 5, calls `FUN_10504`, and enables the
+  player timer with outer counter zero without arming the level-intro timer
+  resume already used for level transitions. Fix: after state 5 `init10504`,
+  call `armLevelIntroBannerResume(..., { baseTimer: 0, parkTimer: true })` so
+  Practice adds intro time before the live cascading timer is enabled. Test:
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts --silent`
+  PASS. Full Phase 4 validation and browser confirmation still pending.
+- 2026-05-20: Phase 4 automated validation passed after arming the new-game
+  intro timer resume: `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/engine/test/level-intro-banner-resume.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/main-tick.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`. Manual
+  browser confirmation remains pending before commit.
+- 2026-05-20: Phase 4 manual follow-up received. User confirmed
+  `bootFlow=1` START now loads a timer and is playable, but screenshot
+  `/Users/magnus-bot/Desktop/partenza nuova.png` shows a black center band with
+  debug scroll around `scroll=(0,290)`. Local probe
+  `/tmp/marble-love/boot-flow/phase4-start-scroll-summary.json` shows the L1
+  diagnostic seed starts with `videoScrollY=0`, while the cold runtime state-5
+  path latches `0xff10` as `videoScrollY=272` after `FUN_10504`. Fix in
+  progress: reset new-game state-5 scroll to zero after `FUN_10504`, preserving
+  the intro timer resume. Focused test
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts --silent`
+  PASS.
+- 2026-05-20: Phase 4 validation passed after the new-game scroll reset:
+  `npx tsx /tmp/marble-love/boot-flow/probe-phase4-start-scroll.mts` now shows
+  cold runtime state-5 and the L1 diagnostic seed both start with
+  `scrollTarget=0`, `scrollLatched=0`, and `videoScrollY=0`; also passed
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/engine/test/level-intro-banner-resume.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/main-tick.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`. Manual
+  browser confirmation remains pending before commit.
+- 2026-05-20: Phase 4 manual browser confirmation received from user:
+  bootFlow coin/start now works, the timer loads, the game is playable, and the
+  initial black center band is gone. Phase 4 gate is green. Residual for Phase
+  5: immediately after game over, the browser shows a yellow/red terrain screen;
+  trace whether this is stale level rendering during the game-over/attract
+  transition.

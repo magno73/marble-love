@@ -183,6 +183,46 @@ describe("Task A main-loop init modules", () => {
     expect(calls).toEqual(["15884", "118D2", "28DEA", "121A6", "12186", "28580", "28C7E", "28CA6", "10504"]);
   });
 
+  it("FUN_1101E state 5 arms the new-game level intro before the live timer runs", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const calls: string[] = [];
+    setW(s, 0x390, 5);
+    setW(s, 0x396, 1);
+    rom.program[0x1f1c8] = 0;
+
+    mainLoopInit1101E(s, rom, {
+      sceneInit11428: () => calls.push("11428"),
+      soundCmd: (_st, cmd) => calls.push(`158AC:${cmd}`),
+      gameModePrep10456: () => calls.push("10456"),
+      helper16EC6: () => calls.push("16EC6"),
+      init10504: (st) => {
+        calls.push("10504");
+        setW(st, 0x00, 0xff10);
+        setW(st, 0x02, 0xff10);
+        st.videoScrollX = 0x10;
+        st.videoScrollY = 0x110;
+        st.workRam[0x18 + 0x18] = 1;
+        setW(st, 0x18 + 0x6a, 0);
+        st.workRam[0x18 + 0x6c] = 9;
+        st.workRam[0x18 + 0x6d] = 0;
+        st.workRam[0x18 + 0x6e] = 5;
+      },
+    });
+
+    expect(w(s, 0x390)).toBe(0);
+    expect(w(s, 0x394)).toBe(0);
+    expect(w(s, 0x00)).toBe(0);
+    expect(w(s, 0x02)).toBe(0);
+    expect(s.videoScrollX).toBe(0);
+    expect(s.videoScrollY).toBe(0);
+    expect(w(s, 0x18 + 0x6a)).toBe(0);
+    expect(s.workRam[0x18 + 0x6e]).toBe(0xff);
+    expect(s.clock.levelIntroBannerResumeTick).toBe(0);
+    expect(s.clock.levelIntroBannerBaseTimer).toBe(0);
+    expect(calls).toEqual(["158AC:2", "158AC:0", "11428", "158AC:98", "10456", "16EC6", "10504"]);
+  });
+
   it("FUN_10504 deterministic init block and tail writes key globals", () => {
     const s = emptyGameState();
     setW(s, 0x394, 3);
