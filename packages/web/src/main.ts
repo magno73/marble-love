@@ -25,7 +25,14 @@ import {
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
 import { bootFlowConflictMessage as getBootFlowConflictMessage, shouldUseCoinStartFlow } from "./boot-flow-url.js";
-import { isCoinStartAttractReady, prepareBrowserCoinStartAttract, writeBrowserCreditDigit } from "./coin-start-flow.js";
+import {
+  COIN_START_RUNTIME_PULSE_FRAMES,
+  consumeRuntimeStartCredit,
+  inputMmioWithStartPulse,
+  isCoinStartAttractReady,
+  prepareBrowserCoinStartAttract,
+  writeBrowserCreditDigit,
+} from "./coin-start-flow.js";
 import { applyLevelTimeOverride, parseLevelTimeOverrideParam } from "./level-time-override.js";
 import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-level.js";
 import { initRenderer } from "./renderer.js";
@@ -1209,6 +1216,7 @@ async function startGame(
   if (forceBootFlow) {
     setRomStatus("Cold boot flow active: runtime boot, no gameplay seed loaded.", "ok");
     console.log("[marble-love] bootFlow=1 active: cold boot without playable/startLevel seed");
+    console.log("[marble-love] bootFlow input: press 5 (coin), then Enter/Space (START1 runtime gate)");
   }
   const startLevelPracticeActive = useStartLevelPractice && warmState !== undefined;
   if (warmStateIsPlayableSeed) {
@@ -1235,7 +1243,7 @@ async function startGame(
     // Start from the same staged attract/start gate reached after game over,
     // instead of leaving only the bottom credit alpha over a blank playfield.
     // The full 6502 coin-credit path is not emulated yet, so browser coin
-    // pulses feed the gateCheck callback below.
+    // pulses keep the browser credit bookkeeping used by this seed-backed path.
     prepareBrowserCoinStartAttract(s);
     console.log("[marble-love] coin/start flow enabled: press 5 (coin), then Enter/Space (START1)");
   }
@@ -1266,6 +1274,7 @@ async function startGame(
   }
   let browserCoinCredits = 0;
   let previousInputButtons = 0;
+  let bootFlowStartHoldFrames = 0;
   let manualPlayStarted = false;
   let lastLevelTimeOverrideLevel: number | undefined;
   let demoFrame = 0;
@@ -1505,15 +1514,25 @@ async function startGame(
     const inputButtons = inputState.buttons;
     s.input.buttons = inputButtons as typeof s.input.buttons;
     const coinPulses = inputState.consumeCoinPulses();
-    if (useCoinStartFlow && coinPulses > 0) {
+    if ((useCoinStartFlow || forceBootFlow) && coinPulses > 0) {
       browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
-      console.log(`[marble-love] coin accepted, credits=${browserCoinCredits}`);
+      const flowName = forceBootFlow ? "bootFlow coin" : "coin";
+      console.log(`[marble-love] ${flowName} accepted, credits=${browserCoinCredits}`);
     }
     const startPulses = inputState.consumeStartPulses();
     const startPressedThisFrame =
       startPulses > 0 ||
       ((inputButtons & 0x01) !== 0 && (previousInputButtons & 0x01) === 0);
     previousInputButtons = inputButtons;
+    if (
+      forceBootFlow &&
+      !manualPlayStarted &&
+      startPressedThisFrame &&
+      browserCoinCredits > 0
+    ) {
+      bootFlowStartHoldFrames = Math.max(bootFlowStartHoldFrames, COIN_START_RUNTIME_PULSE_FRAMES);
+      console.log("[marble-love] bootFlow START1 pulse queued for runtime gate");
+    }
     if (
       useCoinStartFlow &&
       manualPlayStarted &&
@@ -1588,15 +1607,33 @@ async function startGame(
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
         bootInit(s, tickRom, { warmState });
       }
+      const runtimeInputMmio = forceBootFlow
+        ? inputMmioWithStartPulse(inputState.inputMmio, bootFlowStartHoldFrames)
+        : inputState.inputMmio;
       const tickOptions: Parameters<typeof tick>[1] = {
         rom: tickRom,
         p1X: p1XAbs, p1Y: p1YAbs,
         p2X: p2XAbs, p2Y: p2YAbs,
-        inputMmio: inputState.inputMmio,
+        inputMmio: runtimeInputMmio,
         runMainLoopBody: mainLoopBody,
       };
+      if (forceBootFlow) {
+        tickOptions.gateCheck = (countValue: number) => {
+          const result = consumeRuntimeStartCredit(browserCoinCredits, countValue);
+          if (!result.accepted) return 0;
+          browserCoinCredits = result.credits;
+          manualPlayStarted = true;
+          lastLevelTimeOverrideLevel = undefined;
+          console.log(
+            `[marble-love] bootFlow START${countValue} accepted through runtime gate, ` +
+            `credits=${browserCoinCredits}; no gameplay seed loaded`,
+          );
+          return 1;
+        };
+      }
       if (debugForceBeforeTick) maybeApplyDebugForcedState(s);
       tick(s, tickOptions);
+      if (bootFlowStartHoldFrames > 0) bootFlowStartHoldFrames -= 1;
       if (!debugForceBeforeTick || !debugForceOnce) maybeApplyDebugForcedState(s);
       maybeApplyLevelTimeOverride("level change");
       // Sound chip tick: the current 6502/YM/POKEY path is diagnostic-heavy
@@ -1624,7 +1661,7 @@ async function startGame(
         }
       }
     }
-    if (useCoinStartFlow && !manualPlayStarted && rom !== undefined) {
+    if ((useCoinStartFlow || forceBootFlow) && !manualPlayStarted && rom !== undefined) {
       writeBrowserCreditDigit(s, rom, browserCoinCredits);
     }
     frameCount += 1;

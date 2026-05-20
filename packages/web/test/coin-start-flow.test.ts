@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { bus as busNs, state as stateNs, alphaTilemap as alphaTilemapNs } from "@marble-love/engine";
 import {
+  COIN_START_RUNTIME_PULSE_FRAMES,
+  consumeRuntimeStartCredit,
+  inputMmioWithStartPulse,
   isCoinStartAttractReady,
   prepareBrowserCoinStartAttract,
   readWorkWordBE,
@@ -25,6 +28,9 @@ describe("coin/start browser flow helpers", () => {
     expect(readWorkWordBE(state, 0x390)).toBe(1);
     expect(readWorkWordBE(state, 0x392)).toBe(2);
     expect(readWorkWordBE(state, 0x75a)).toBe(0x012c);
+    expect(state.workRam[0x3a8]).toBe(0x6f);
+    expect(state.workRam[0x3aa]).toBe(0x6f);
+    expect(state.workRam[0x3ac]).toBe(0x00);
     expect(state.clock.mode0Init11452Stage).toBeUndefined();
     expect(state.clock.mode2BottomHudDelay).toBeUndefined();
     expect(state.clock.mode2Init11452Stage).toBe(0);
@@ -61,5 +67,18 @@ describe("coin/start browser flow helpers", () => {
 
     expect(wrote).toBe(true);
     expect(word).toBe(0x1433);
+  });
+
+  it("holds START1 low in the runtime switch byte for the MAME pulse window", () => {
+    expect(inputMmioWithStartPulse(0x6f, COIN_START_RUNTIME_PULSE_FRAMES)).toBe(0x6e);
+    expect(inputMmioWithStartPulse(0x6f, 0)).toBe(0x6f);
+    expect(inputMmioWithStartPulse(0x6e, COIN_START_RUNTIME_PULSE_FRAMES)).toBe(0x6e);
+  });
+
+  it("consumes one runtime credit only for START1 gate acceptance", () => {
+    expect(consumeRuntimeStartCredit(1, 1)).toEqual({ accepted: true, credits: 0 });
+    expect(consumeRuntimeStartCredit(2, 1)).toEqual({ accepted: true, credits: 1 });
+    expect(consumeRuntimeStartCredit(0, 1)).toEqual({ accepted: false, credits: 0 });
+    expect(consumeRuntimeStartCredit(1, 2)).toEqual({ accepted: false, credits: 1 });
   });
 });

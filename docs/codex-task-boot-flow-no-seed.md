@@ -709,3 +709,27 @@ The task is complete only when:
   without seed/preload use. Residual risk: attract cadence still differs from
   MAME and should stay visible in future Phase 3 coin/start proof instead of
   being hidden by runtime seeds.
+- 2026-05-20: Phase 3 local implementation in progress. Evidence:
+  `oracle/scenarios/input/playable_coin_start.json` records 15-frame Coin 1
+  and START1 pulses; `docs/input-mmio-map.md` maps START1 to active-low bit 0
+  of `0xF60001`, while Coin 1 remains sound CPU `$1820` bookkeeping in the
+  current TS path. Touched `packages/web/src/main.ts`,
+  `packages/web/src/coin-start-flow.ts`,
+  `packages/web/test/coin-start-flow.test.ts`, and `GOAL.md`. Result:
+  `bootFlow=1` credits now accept browser coin pulses, START1 is held low for
+  the MAME pulse window, and runtime `gateCheck` consumes one credit only when
+  `gameMainGate` accepts player 1; no warm seed is loaded on the bootFlow START
+  path. Validation passed:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/input.test.ts packages/web/test/practice-level.test.ts packages/engine/test/game-main-gate.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`. Manual
+  browser confirmation is still pending before commit.
+- 2026-05-20: Phase 3 manual browser confirmation received from user. URL:
+  `http://192.168.85.200:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0`.
+  User confirmed insert coin adds credits and START loads a piece of terrain.
+  Screenshot `/Users/magnus-bot/Desktop/partenza.png` shows runtime state
+  `main=2 mode=2 level=0` with visible terrain/player and `timer=0`, then
+  `OUT OF TIME / GAME OVER`. Result: green for Phase 3 coin/start leaving the
+  attract/credit gate through runtime without a seed handoff; gray blocker for
+  Phase 4 because L1 intro/session timer is not initialized yet.

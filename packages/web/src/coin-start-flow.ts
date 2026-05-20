@@ -27,6 +27,14 @@ const CREDIT_ROW = 28;
 const CREDIT_DIGIT_COL = 34;
 const CREDIT_FALLBACK_ATTR = 0x1400;
 const ATTRACT_SCREEN_MAX_PLAYFIELD_BYTES = 1_000;
+export const COIN_START_RUNTIME_PULSE_FRAMES = 15;
+const START1_MMIO_BIT = 0x01;
+const START1_PLAYER_COUNT = 1;
+
+export interface RuntimeStartCreditResult {
+  accepted: boolean;
+  credits: number;
+}
 
 export function readWorkWordBE(state: Pick<CoinStartState, "workRam">, off: number): number {
   return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
@@ -41,8 +49,8 @@ export function prepareBrowserCoinStartAttract(state: CoinStartState): void {
   writeWorkWordBE(state, MAIN_STATE_OFF, ATTRACT_MAIN_STATE);
   writeWorkWordBE(state, MODE_SELECTOR_OFF, 2);
   writeWorkWordBE(state, ATTRACT_TIMER_OFF, 0x012c);
-  writeWorkWordBE(state, 0x3a8, 0x006f);
-  writeWorkWordBE(state, 0x3aa, 0x006f);
+  state.workRam[0x3a8] = 0x6f;
+  state.workRam[0x3aa] = 0x6f;
   state.workRam[0x3ac] = 0x00;
 
   state.clock.mainThreadWaitDelay = undefined;
@@ -92,4 +100,17 @@ export function writeBrowserCreditDigit(
   state.alphaRam[off] = (word >>> 8) & 0xff;
   state.alphaRam[off + 1] = word & 0xff;
   return true;
+}
+
+export function inputMmioWithStartPulse(inputMmio: number, startHoldFrames: number): number {
+  const value = inputMmio & 0xff;
+  return startHoldFrames > 0 ? (value & ~START1_MMIO_BIT) & 0xff : value;
+}
+
+export function consumeRuntimeStartCredit(credits: number, countValue: number): RuntimeStartCreditResult {
+  const clampedCredits = Math.max(0, Math.min(9, credits | 0));
+  if (countValue !== START1_PLAYER_COUNT || clampedCredits <= 0) {
+    return { accepted: false, credits: clampedCredits };
+  }
+  return { accepted: true, credits: clampedCredits - 1 };
 }
