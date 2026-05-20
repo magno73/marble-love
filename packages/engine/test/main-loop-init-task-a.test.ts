@@ -8,6 +8,7 @@ import { mainLoopInit10504 } from "../src/main-loop-init-10504.js";
 import { mainLoopInit1101E } from "../src/main-loop-init-1101e.js";
 import { mainLoopInit11452 } from "../src/main-loop-init-11452.js";
 import { mainLoopInit117B2, mainLoop117B2LoopBody } from "../src/main-loop-init-117b2.js";
+import { advanceMode0Init11452Async } from "../src/mode2-init-11452-async.js";
 import { emptyGameState } from "../src/state.js";
 
 function w(s: ReturnType<typeof emptyGameState>, off: number): number {
@@ -111,6 +112,51 @@ describe("Task A main-loop init modules", () => {
     expect([...s.workRam.slice(0x1dc, 0x1dc + 2)]).toEqual([0x2c, 0]);
     expect([...s.workRam.slice(0x1dc + 0x0e, 0x1dc + 0x10)]).toEqual([0x2c, 1]);
     expect([...s.workRam.slice(0x1dc + 0x1c, 0x1dc + 0x1e)]).toEqual([0x2c, 2]);
+  });
+
+  it("FUN_11452 state 0 overflow initializes the mode 3 attract summary", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const calls: string[] = [];
+    setW(s, 0x390, 1);
+    setW(s, 0x392, 0);
+    s.workRam[0x3e4] = 7;
+
+    mainLoopInit11452(s, rom, {
+      soundCmd: (_st, cmd) => calls.push(`158AC:${cmd}`),
+      sceneInit11428: () => calls.push("11428"),
+      gameStateBanner26B2A: (_st, mode) => calls.push(`26B2A:${mode}`),
+      renderString0142: (_st, ptr, tile) => calls.push(`0142:${ptr.toString(16)}:${tile.toString(16)}`),
+      finalize11654: () => calls.push("11654"),
+    });
+
+    expect(w(s, 0x392)).toBe(3);
+    expect(s.workRam[0x3e4]).toBe(0);
+    expect(w(s, 0x75a)).toBe(0x00c8);
+    expect(calls).toEqual([
+      "158AC:1",
+      "11428",
+      "26B2A:0",
+      "0142:22d26:3000",
+      "0142:22d32:3400",
+      "11654",
+    ]);
+  });
+
+  it("staged FUN_11452 state 0 overflow also arms the mode 3 timer", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    setW(s, 0x390, 1);
+    setW(s, 0x392, 0);
+    s.workRam[0x3e4] = 7;
+    s.clock.mode0Init11452Stage = 5;
+
+    advanceMode0Init11452Async(s, rom);
+
+    expect(w(s, 0x392)).toBe(3);
+    expect(s.workRam[0x3e4]).toBe(0);
+    expect(w(s, 0x75a)).toBe(0x00c8);
+    expect(s.clock.mode0Init11452Stage).toBeUndefined();
   });
 
   it("FUN_1101E state 3 performs level increment init path", () => {

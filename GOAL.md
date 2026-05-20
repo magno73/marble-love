@@ -20,7 +20,7 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 2: cold boot to stable attract.
+- Phase 3: original coin and START path.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
@@ -30,16 +30,41 @@ Current phase:
 
 Next action:
 
-1. Start Phase 2 with targeted cold-boot/early-attract research.
-2. Compare TS `bootFlow=1` frame windows against a compact MAME/ROM-backed
-   summary before changing engine behavior.
-3. Fill only proven missing boot/main-thread side effects.
-4. Keep `bootFlow=1` gated and do not change default `?autoLoad=1&play=1`.
+1. Start Phase 3 with MAME-backed coin/start runtime input proof.
+2. Make browser coin/start input feed runtime-visible inputs for `bootFlow=1`.
+3. Keep the observed rapid attract level cycling as a cadence note for future
+   Phase 2/3 comparison, but do not hide it with seed/preload behavior.
 
 ## Current Evidence
 
 - Phase 0 research note:
   `/tmp/marble-love/boot-flow/research.md`.
+- Phase 2 cold-boot comparison artifacts:
+  `/tmp/marble-love/boot-flow/phase2-mame-cold-boot-nonvram-summary.json`;
+  `/tmp/marble-love/boot-flow/phase2-ts-cold-boot-summary.json`.
+- Phase 2 finding: current `bootInit(...,{}) + runMainLoopBody=true` does not
+  load seeds and reaches descriptor-backed attract states, but its main-thread
+  cadence is ahead of MAME. Reproduced TS f12000 is `main=1 mode=3 level=0`
+  with empty playfield while MAME f12000 is visible attract
+  `main=1 mode=0 level=1 b3e4=1`.
+- Phase 2 fix in progress: initialized the `mode=3` attract summary when mode0
+  segment overflow wraps `b3e4 > 7` in both sync and staged `FUN_11452` paths.
+  Reproduced TS f12000 now has timer `0x0091` and alpha summary content, then
+  returns to visible mode0 attract by f12400 without a seed.
+- Phase 2 automated validation PASS:
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/main-tick.test.ts packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`;
+  `git diff --check`.
+- Phase 2 browser gate is pending user/manual confirmation. The existing Vite
+  server on `http://192.168.85.200:5173/` responds, but this session has no
+  available Browser Node REPL or local Playwright package for visual automation.
+- Phase 2 manual browser confirmation received from user:
+  `http://192.168.85.200:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0`
+  rapidly cycles through levels, then settles on a high-score screen with
+  `credits 0` and moving marbles. This confirms the cold boot path is visibly
+  alive; rapid level cycling remains a documented cadence gap.
 - Baseline validation PASS:
   `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;

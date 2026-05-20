@@ -130,6 +130,7 @@ function state11452Case0(
     }
     ww(state, 0x00400392, 3);
     wb(state, 0x004003e4, 0);
+    state11452Case3(state, subs, rom);
     return;
   }
 
