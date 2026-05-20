@@ -404,6 +404,61 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     expect(emitCalls[0]?.arg2).toBe((0xe0 + 0x10) & 0xffff); // d4
   });
 
+  it("type 0x29 renders in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x29, 0);
+
+    const base0x29 = 0x401650;
+    ww(state, base0x29 + 0xc, 0x0040);
+    ww(state, base0x29 + 0xe, 0x0080); // d4 = 0x90; old TS 0xc0 lower bound culled this.
+    const innerPtr = 0x00401f00;
+    wl(state, base0x29 + 0x8, innerPtr);
+    wl(state, innerPtr, 0xffffffff);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0xffffffff,
+      arg1: 0x0058,
+      arg2: 0x0090,
+      arg3: 0x2000,
+    }]);
+  });
+
+  it("type 0x29 culls at the binary lower edge -0x40", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x29, 0);
+
+    const base0x29 = 0x401650;
+    ww(state, base0x29 + 0xc, 0x0040);
+    ww(state, base0x29 + 0xe, 0xffb0); // d4 = -0x40, culled by the binary.
+    const innerPtr = 0x00401f00;
+    wl(state, base0x29 + 0x8, innerPtr);
+    wl(state, innerPtr, 0xffffffff);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
   it("type 4 culls at the binary lower edge -0x20", () => {
     const state = makeState();
     const rom = emptyRomImage();
@@ -565,6 +620,63 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     ww(state, structPtr + 0x50, 0xffaf); // d4 = 0xffbf (-65), just below bound.
     wl(state, structPtr + 0x42, celListPtr);
     wl(state, celListPtr, 0x000212e6);
+
+    const emitCalls: number[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+    });
+
+    expect(emitCalls).toEqual([]);
+  });
+
+  it("type 7/8/9 render above the binary lower edge -0x10", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x07, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f096, structPtr);
+    ww(state, structPtr + 0x20, 0x0050);
+    ww(state, structPtr + 0x22, 0x0080); // d4 = 0x90; old TS bound 0xf0 incorrectly culled this.
+    wl(state, structPtr + 0x1c, celListPtr);
+    wl(state, celListPtr, 0x00021f72);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: 0x00021f72,
+      arg1: 0x0068,
+      arg2: 0x0090,
+      arg3: 0x2800,
+    }]);
+  });
+
+  it("type 7/8/9 cull at the binary lower edge -0x10", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x09, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00401f00;
+    romW32(rom, 0x1f096, structPtr);
+    ww(state, structPtr + 0x20, 0x0050);
+    ww(state, structPtr + 0x22, 0xffe0); // d4 = -0x10, culled by the binary.
+    wl(state, structPtr + 0x1c, celListPtr);
+    wl(state, celListPtr, 0x00021f06);
 
     const emitCalls: number[] = [];
     lateGameLogic26F3E(state, rom, {

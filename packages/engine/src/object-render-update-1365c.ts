@@ -63,14 +63,14 @@
  *   - `0x40069c` word  — POS Y tile prev (lettura)
  *   - `0x4003a4` byte  — letto/scritto nel ramo new-state
  *
- * **Sub-jsr esterne (5 diversi)**:
+ * **Sub-jsr esterne (7 diversi)**:
  *   - `0x26b66`  `paletteQueuePush(state, byte)` — replicata, chiamata direttamente.
- *   - `0x285b0`  `FUN_285B0(A2, longArg)` — non replicata; callback `fun285B0`.
+ *   - `0x285b0`  `FUN_285B0(A2, longArg)` — replicata; callback `fun285B0`.
  *   - `0x15884`  `soundPair15884(state, subs)` — replicata, callable direttamente.
- *   - `0x158ac`  `FUN_158AC(longArg)` — non replicata; callback `fun158AC`.
- *   - `0x12f44`  `FUN_12F44(A3, 1, 0)` — non replicata; callback `fun12F44`.
- *   - `0x12896`  `FUN_12896(A3)` — non replicata; callback `fun12896`.
- *   - `0x13966`  `FUN_13966(A2)` — non replicata; callback `fun13966`.
+ *   - `0x158ac`  `FUN_158AC(longArg)` — replicata; callback `fun158AC`.
+ *   - `0x12f44`  `FUN_12F44(A3, 1, 0)` — replicata; callback `fun12F44`.
+ *   - `0x12896`  `FUN_12896(A3)` — replicata; callback `fun12896`.
+ *   - `0x13966`  `FUN_13966(A2)` — replicata; callback `fun13966`.
  *
  * **Verifica bit-perfect** via
  * `packages/cli/src/test-object-render-update-1365c-parity.ts`.
@@ -82,6 +82,9 @@ import { paletteQueuePush } from "./palette-queue.js";
 import { soundPair15884 } from "./sound-pair-15884.js";
 import { helper285B0 } from "./helper-285b0.js";
 import { postStateChange13966 } from "./post-state-change-13966.js";
+import { helper12F44 } from "./helper-12f44.js";
+import { helper12896 } from "./helper-12896.js";
+import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 
 const WORK_RAM_BASE = 0x400000 as const;
 
@@ -212,15 +215,14 @@ function sext16(w: number): number {
 
 /**
  * Bag of sub-jsr callbacks for `objectRenderUpdate1365C`.
- * All non-replicated functions are modelled as optional callbacks (default
- * no-op). Replicated subs (`paletteQueuePush`, `soundPair15884`) are called
- * directly.
+ * Replicated callees use real defaults. Differential tests that patch these
+ * ROM callees to `rts` should pass explicit no-op callbacks.
  */
 export interface ObjectRenderUpdate1365CSubs {
   /**
    * `FUN_000285B0(A2, longArg)` — object fields reset / respawn helper.
    * Called as `FUN_285B0(A2, gameMode<<1 | signBit | 3)`.
-   * Default no-op.
+   * Default delegates to `helper285B0`.
    */
   fun285B0?: (state: GameState, objPtr: number, longArg: number) => void;
 
@@ -228,34 +230,34 @@ export interface ObjectRenderUpdate1365CSubs {
    * `FUN_000158AC(longArg)` — sound command sender.
    * The long arg is the sound ID (loaded from ROM @ `0x1ef72[idx]` or
    * `0x1ef5a[idx]`). Callers read the `A0` ptr and push it via `pea (A0)`.
-   * Default no-op.
+   * Default delegates to `soundCmdSend158AC`.
    */
   fun158AC?: (soundPtr: number) => void;
 
   /**
    * `FUN_00012F44(A3, 1, 0)` — slot "trigger with args" helper.
    * Called as `FUN_12F44(slotPtr, 1, 0)`.
-   * Default no-op.
+   * Default delegates to `helper12F44`.
    */
   fun12F44?: (state: GameState, slotPtr: number, arg1: number, arg2: number) => void;
 
   /**
    * `FUN_00012896(A3)` — slot reinit / state update.
    * Called with `slotPtr` (pointer into 0x400a9c array).
-   * Default no-op.
+   * Default delegates to `helper12896`.
    */
   fun12896?: (state: GameState, slotPtr: number) => void;
 
   /**
    * `FUN_00013966(A2)` — post-state-change hook.
    * Called whenever `A2+0x1b` changed from its pre-call value.
-   * Default no-op.
+   * Default delegates to `postStateChange13966`.
    */
   fun13966?: (state: GameState, objPtr: number) => void;
 
   /**
    * Sound command for `soundPair15884` (passed through to the inner call).
-   * Default no-op.
+   * Default delegates to `soundCmdSend158AC`.
    */
   soundCommand?: (cmd: number) => void;
 }
@@ -271,7 +273,7 @@ export interface ObjectRenderUpdate1365CSubs {
  *                0x1eb34, 0x1ef72, 0x1ef5a).
  * @param objPtr  Puntatore long alla struct oggetto (A2). DEVE essere in
  *                `0x400000..0x401FFF`.
- * @param subs    Callback injection per sub non replicate.
+ * @param subs    Callback injection for callee overrides/parity harnesses.
  */
 export function objectRenderUpdate1365C(
   state: GameState,
@@ -281,6 +283,29 @@ export function objectRenderUpdate1365C(
 ): void {
   const a2 = objPtr >>> 0;
   const w = state.workRam;
+  const sendSound = subs.soundCommand ?? ((cmd: number): void => {
+    soundCmdSend158AC(state, cmd);
+  });
+  const fun158AC = subs.fun158AC ?? ((cmd: number): void => {
+    soundCmdSend158AC(state, cmd);
+  });
+  const fun12F44 = subs.fun12F44 ?? ((
+    st: GameState,
+    slotPtr: number,
+    mode: number,
+    scriptPtr: number,
+  ): void => {
+    helper12F44(st, rom, slotPtr, mode, scriptPtr);
+  });
+  const fun12896 = subs.fun12896 ?? ((st: GameState, slotPtr: number): void => {
+    helper12896(st, rom, slotPtr);
+  });
+  const fun13966 = subs.fun13966 ?? ((st: GameState, objPtr2: number): void => {
+    postStateChange13966(st, rom, objPtr2);
+  });
+  const fun285B0 = subs.fun285B0 ?? ((st: GameState, objPtr2: number, longArg: number): void => {
+    helper285B0(st, objPtr2, longArg, rom);
+  });
 
   // ── 1. Carica game-mode e ottieni A0 (entry-list ptr - 6) ────────────────
   // A3 = 0x400394 (game-mode word)
@@ -520,11 +545,7 @@ export function objectRenderUpdate1365C(
           // D0 = sext_l(gameMode) * 2 + 3
           const d0For285 = ((sext16(gameMode) << 1) + 3) | 0;
           // jsr 0x285b0 — FUN_285B0(A2, D0_long)
-          if (subs.fun285B0 !== undefined) {
-            subs.fun285B0(state, a2, d0For285 >>> 0);
-          } else {
-            helper285B0(state, a2, d0For285 >>> 0, rom);
-          }
+          fun285B0(state, a2, d0For285 >>> 0);
         }
       }
       // 0x137f2 (both paths converge here):
@@ -535,8 +556,7 @@ export function objectRenderUpdate1365C(
       writeU8(w, a2 + A2_SLOT110_OFF, 0xff);
 
       // jsr 0x15884 — soundPair15884(state, subs)
-      const sc = subs.soundCommand;
-      soundPair15884(state, sc !== undefined ? { soundCommand: sc } : {});
+      soundPair15884(state, { soundCommand: sendSound });
 
       // 0x13804: move.b #6, (0x1a,A2)
       writeU8(w, a2 + A2_STATE_BYTE_OFF, 0x06);
@@ -595,7 +615,7 @@ export function objectRenderUpdate1365C(
       const palIdxL = sext8(palIdx2); // ext.w; ext.l
       const tblAddr = (ROM_ANIM_TABLE_1EF72 + (palIdxL << 2)) >>> 0;
       const soundPtr = readU32Rom(rom, tblAddr);
-      subs.fun158AC?.(soundPtr);
+      fun158AC(soundPtr);
 
       // bra.w 0x13938 → post-action
     } else if (curNewState === 0x04) {
@@ -622,7 +642,7 @@ export function objectRenderUpdate1365C(
           if (slotState === 0x04) {
             // 0x138ac: clr.l -(SP); pea (0x1).w; move.l A3,-(SP)
             // jsr 0x12f44 — FUN_12F44(A3, 1, 0)
-            subs.fun12F44?.(state, slotAddr, 1, 0);
+            fun12F44(state, slotAddr, 1, 0);
             // bra 0x1392a
           } else if (slotState === 0x02) {
             // 0x138c8: cmpi.b #2,(0x1a,A3); bne 0x1392a
@@ -651,10 +671,10 @@ export function objectRenderUpdate1365C(
               // movea.l (0x0,A0=0x1ef5a,D0*1),A0
               const soundPtr158 = readU32Rom(rom, tblAddr158);
               // pea (A0); jsr 0x158ac
-              subs.fun158AC?.(soundPtr158);
+              fun158AC(soundPtr158);
 
               // move.l A3,-(SP); jsr 0x12896 — FUN_12896(A3)
-              subs.fun12896?.(state, slotAddr);
+              fun12896(state, slotAddr);
             }
           }
           // 0x1392a: moveq #0x56,D1; adda.l D1,A3 — handled by for-loop
@@ -668,9 +688,7 @@ export function objectRenderUpdate1365C(
     const finalNewState = readU8(w, a2 + A2_NEW_STATE_BYTE_OFF);
     if (finalNewState !== d2b) {
       // 0x1393e: move.l A2,-(SP); jsr 0x13966; addq.l #4,SP
-      (subs.fun13966 ?? ((st, objPtr) => {
-        postStateChange13966(st, rom, objPtr);
-      }))(state, a2);
+      fun13966(state, a2);
     }
 
     // Done — epilogue (0x1395e): restore registers, rts.

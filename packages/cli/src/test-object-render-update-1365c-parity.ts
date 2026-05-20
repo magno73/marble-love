@@ -215,7 +215,13 @@ async function main(): Promise<void> {
 
     callFunction(cpu, FUN_1365C, [objPtr >>> 0]);
     ns.objectRenderUpdate1365C(stateInst as AnyState, tsRom as AnyState, objPtr, {
-      // All non-replicated subs are no-op (stubs applied in binary)
+      // ROM callees are patched to rts in this parity harness.
+      fun285B0: () => undefined,
+      fun158AC: () => undefined,
+      fun12F44: () => undefined,
+      fun12896: () => undefined,
+      fun13966: () => undefined,
+      soundCommand: () => undefined,
     });
 
     const diff = compareAll(objPtr);

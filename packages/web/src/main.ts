@@ -58,6 +58,7 @@ const soundReplayUrl = searchParams.get("soundReplay");
 const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
 const showObjectDebugOverlay =
   searchParams.get("debugObjects") === "1" || searchParams.get("debugState") === "1";
+const compactObjectDebugOverlay = showObjectDebugOverlay && searchParams.get("debugCompact") === "1";
 const freezeOnBug = showObjectDebugOverlay && searchParams.get("freezeOnBug") === "1";
 const freezeOnAir = freezeOnBug && searchParams.get("freezeOnAir") === "1";
 const freezeOnState4 = freezeOnBug && searchParams.get("freezeOnState4") === "1";
@@ -387,7 +388,59 @@ function lastObjectPairCollisionDebugLine(state: ReturnType<typeof stateNs.empty
     `${fixedRawToFloat(hit.selfVxAfter).toFixed(2)},${fixedRawToFloat(hit.selfVyAfter).toFixed(2)}\n` +
     `  target p=(${fixedRawToFloat(hit.targetX).toFixed(1)},${fixedRawToFloat(hit.targetY).toFixed(1)},${fixedRawToFloat(hit.targetZ).toFixed(1)}) ` +
     `v ${fixedRawToFloat(hit.targetVxBefore).toFixed(2)},${fixedRawToFloat(hit.targetVyBefore).toFixed(2)} -> ` +
-    `${fixedRawToFloat(hit.targetVxAfter).toFixed(2)},${fixedRawToFloat(hit.targetVyAfter).toFixed(2)}`;
+    `${fixedRawToFloat(hit.targetVxAfter).toFixed(2)},${fixedRawToFloat(hit.targetVyAfter).toFixed(2)}\n` +
+    `  post z=${hit.zDepthPath ?? "-"} self a/st/k/f36=` +
+    `${hit.selfActiveAfter ?? "-"}/${hit.selfStateAfter ?? "-"}/${hit.selfKindAfter ?? "-"}/` +
+    `${formatDebugByte(hit.selfF36After)} target a/st/k/f36=` +
+    `${hit.targetActiveAfter ?? "-"}/${hit.targetStateAfter ?? "-"}/${hit.targetKindAfter ?? "-"}/` +
+    `${formatDebugByte(hit.targetF36After)}`;
+}
+
+function formatDebugByte(value: number | undefined): string {
+  if (value === undefined) return "-";
+  return value.toString(16).padStart(2, "0");
+}
+
+function objectPairCompactDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const parts = [
+    ["A", 0x09a4],
+    ["B", 0x0a20],
+  ].map(([label, offRaw]) => {
+    const off = offRaw as number;
+    const x = fixedToFloat(readWorkLongBE(state, off + 0x0c)).toFixed(0);
+    const y = fixedToFloat(readWorkLongBE(state, off + 0x10)).toFixed(0);
+    const z = fixedToFloat(readWorkLongBE(state, off + 0x14)).toFixed(0);
+    const f6c = readWorkWordBE(state, off + 0x6c);
+    const f6e = readWorkLongBE(state, off + 0x6e).toString(16).padStart(6, "0");
+    return `${label} a/t/st/k/f36=${state.workRam[off + 0x18] ?? 0}/` +
+      `${state.workRam[off + 0x19] ?? 0}/${state.workRam[off + 0x1a] ?? 0}/` +
+      `${state.workRam[off + 0x1b] ?? 0}/${formatDebugByte(state.workRam[off + 0x36])} ` +
+      `f56=${formatDebugByte(state.workRam[off + 0x56])} f6c=${f6c} f6e=${f6e} p=${x},${y},${z}`;
+  });
+  return `pair slots ${parts.join(" | ")}`;
+}
+
+function terrainPistonCompactDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const parts = Array.from({ length: 6 }, (_, n) => n + 2).map((index) => {
+    const off = 0x0a9c + index * 0x56;
+    const pc = readWorkLongBE(state, off + 0x36).toString(16).padStart(6, "0");
+    return `${index}:${state.workRam[off + 0x18] ?? 0}/` +
+      `${state.workRam[off + 0x1a] ?? 0}/${state.workRam[off + 0x1b] ?? 0}/` +
+      `${formatDebugByte(state.workRam[off + 0x1f])}@${pc}`;
+  });
+  return `pistons 2..7 a/st/k/tag@pc ${parts.join(" ")}`;
+}
+
+function lastObjectPairCollisionCompactLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastObjectPairCollision;
+  if (hit === undefined) return "last pair -";
+  return `last pair f=${hit.frame} loop=${hit.loopIndex} ` +
+    `${objectAddrDebugLabel(hit.selfAddr)}->${objectAddrDebugLabel(hit.targetAddr)} ` +
+    `pre ${hit.selfActiveBefore ?? "-"}/${hit.selfState}/${hit.selfKind}/f${formatDebugByte(hit.selfF36Before)} ` +
+    `=> ${hit.targetActiveBefore ?? "-"}/${hit.targetState}/${hit.targetKind}/f${formatDebugByte(hit.targetF36Before)} ` +
+    `post ${hit.selfActiveAfter ?? "-"}/${hit.selfStateAfter ?? "-"}/${hit.selfKindAfter ?? "-"}/f${formatDebugByte(hit.selfF36After)} ` +
+    `=> ${hit.targetActiveAfter ?? "-"}/${hit.targetStateAfter ?? "-"}/${hit.targetKindAfter ?? "-"}/f${formatDebugByte(hit.targetF36After)} ` +
+    `z=${hit.zDepthPath ?? "-"} d=(${hit.deltaX},${hit.deltaY},${hit.deltaZ})`;
 }
 
 function lastScriptSlotCollisionDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
@@ -690,10 +743,12 @@ function recordPlayerImpulseDebug(
 
 function createObjectDebugOverlay(): HTMLPreElement {
   const el = document.createElement("pre");
+  const maxHeight = compactObjectDebugOverlay ? "28vh" : "44vh";
+  const font = compactObjectDebugOverlay ? "11px/1.25 monospace" : "12px/1.35 monospace";
   el.style.cssText =
     "position:fixed;left:10px;top:10px;z-index:9998;margin:0;padding:8px 10px;" +
-    "max-width:min(1080px,calc(100vw - 20px));max-height:44vh;overflow:auto;background:rgba(0,0,0,.72);" +
-    "color:#b8f7ff;border:1px solid rgba(184,247,255,.45);font:12px/1.35 monospace;" +
+    `max-width:min(1080px,calc(100vw - 20px));max-height:${maxHeight};overflow:auto;background:rgba(0,0,0,.72);` +
+    `color:#b8f7ff;border:1px solid rgba(184,247,255,.45);font:${font};` +
     "pointer-events:none;white-space:pre-wrap;";
   document.body.appendChild(el);
   return el;
@@ -798,7 +853,17 @@ function updateObjectDebugOverlay(
     scriptSlots.push({ index, rank });
   }
   scriptSlots.sort((a, b) => a.rank - b.rank);
-  const lines = [
+  const compactLines = [
+    `f=${frameCount} main=${readWorkWordBE(state, 0x390)} mode=${readWorkWordBE(state, 0x392)} level=${readWorkWordBE(state, 0x394)} ` +
+      `scroll=(${state.videoScrollX},${state.videoScrollY}) timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
+    `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)}`,
+    playerPhysicsDebugLine(state),
+    trackballInputDebugLine(state),
+    lastObjectPairCollisionCompactLine(state),
+    objectPairCompactDebugLine(state),
+    terrainPistonCompactDebugLine(state),
+  ];
+  const lines = compactObjectDebugOverlay ? compactLines : [
     `f=${frameCount} main=${readWorkWordBE(state, 0x390)} mode=${readWorkWordBE(state, 0x392)} level=${readWorkWordBE(state, 0x394)} ` +
       `scroll=(${state.videoScrollX},${state.videoScrollY})`,
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
