@@ -1059,7 +1059,8 @@ The task is complete only when:
   interactive initials-entry state, let the player change and accept initials,
   save the chosen initials into the high-score table, and then resume the clean
   reset/demo flow. No runtime code changed in this checkpoint.
-- 2026-05-20: Phase 6.5 implementation in progress. Files touched:
+- 2026-05-20: Phase 6.5 implementation committed and pushed as `658be42`
+  (`fix: add interactive high score initials entry`). Files touched:
   `packages/engine/src/high-score-initials-entry.ts`,
   `packages/engine/src/state.ts`, `packages/engine/src/object-slot-lookup-11b18.ts`,
   `packages/engine/src/main-loop-init-1101e.ts`,
@@ -1074,6 +1075,9 @@ The task is complete only when:
   smoke starts from `bootFlow=1`, injects a score-qualified game-over state,
   shows overlay `HIGH SCORE #1`, edits `AAA` to `CAA`, saves table row
   `00400012e9`, hides the overlay, and keeps playfield nonzero count at 0
-  during entry. Targeted validation passed: focused high-score/main-loop
-  vitest set, engine typecheck, web typecheck, web URL/input tests, lint, and
-  web build. Broad validation and final commit gate still pending.
+  during entry. Validation passed: focused high-score/main-loop vitest set,
+  engine/web typechecks, web URL/input tests, lint, web build,
+  `npm run typecheck`, full `npm run test -- --silent` (261 passed, 3 skipped
+  test files; 2271 passed, 17 skipped tests), `npm run context:audit`, and
+  `git diff --check`. Result: Phase 6.5 is green; next gate is Phase 7 user
+  approval for the default `play=1` switch.
