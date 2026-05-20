@@ -45,6 +45,10 @@ Stato post-merge 2026-05-19:
   livello.
 - Marble nemica nera in L2 visibile sia da `startLevel=2` sia da transizione
   runtime L1->L2.
+- Sprite dinamici nel percorso gameplay: pistoni L4/Aerial user-confirmed via
+  cull corretto `type0x29`; macchie verdi mobili L3/Intermediate agganciate
+  via replica `FUN_17346` e string-slot `type0x0e` (`0x401482`), in attesa di
+  retest visivo finale.
 - Level descriptor header dei sei livelli decodato come header fisso `0x2E`
   byte, con campi consumer-backed e doc finale in
   `docs/level-header-format.md`.
