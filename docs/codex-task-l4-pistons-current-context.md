@@ -135,3 +135,66 @@ block:
 The desired proof is a single timeline showing the first frame where physics is
 armed and the later frame where visual animation starts, with the missing or late
 state transition identified.
+
+## 2026-05-20 Update: Type0x29 Renderer Cull Was The Missing Visual Gate
+
+Evidence:
+
+- Focused TS route probe on the L4/Aerial screenshot route found active
+  `type0x29` draw-list entries while the pistons should be visible, but every
+  sampled entry failed the old renderer guard `d4 >= 0xc0`. Examples from the
+  route:
+  - route frame around `971`: sub `0/8`, `d4=159/143`;
+  - route frame around `1049`: sub `1/6`, `d4=94/90`;
+  - route frame around `2845..3523`: sub `14/19`, `d4=53/49`.
+- Independent ROM byte check at `ghidra_project/marble_program.bin`
+  `0x27e7c..0x27ed2` shows the original `type0x29` dispatcher uses
+  `70 c0` (`moveq #-0x40,D0`) before the lower-bound compare. In other words,
+  the binary culls only `d4 <= -0x40` and `d4 >= 0x100`, not positive on-screen
+  values below `0xc0`.
+
+Conclusion:
+
+- The physics was already armed through the object/table path, but the visible
+  animated piston family was inserted as `type0x29` and then dropped by an
+  overly strict TS renderer cull. This exactly explains "physics repels the
+  marble, visual pistons seem still/invisible until later scroll/camera state."
+- Do not force `0x400a20+0x18 = 2`; the accepted fix is the original
+  `type0x29` signed vertical band.
+
+Applied fix:
+
+- `packages/engine/src/late-game-logic-26f3e.ts`
+  `dispatchType0x29` now uses the ROM signed lower edge:
+  `if (d4s <= -0x40 || d4s >= 0x100) return`.
+- `packages/engine/test/late-game-logic-26f3e.test.ts` adds regressions for:
+  - `type0x29` rendering an upper visible-band row (`d4=0x90`);
+  - `type0x29` culling exactly at the binary lower edge (`d4=-0x40`).
+- Local commit containing the fix: `0ff49fa` (`fix: wire sprite piston state paths`).
+
+Validation run after re-checking this handoff:
+
+- `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS (`40` tests).
+- `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false` PASS.
+- `npx tsc -b packages/engine --pretty false` PASS.
+- `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false` PASS.
+- `git diff --check -- packages/engine/src/late-game-logic-26f3e.ts packages/engine/test/late-game-logic-26f3e.test.ts oracle/mame_a20_full_tap.lua docs/codex-task-l4-pistons-current-context.md`
+  PASS.
+
+MAME note:
+
+- A composed `mame_a20_full_tap.lua` run with absolute warm frames produced
+  unreliable RAM-zero snapshots because `mame_playable_input_capture.lua` can
+  bootstrap twice under that launch mode. For future MAME warm-seed probes from
+  this seed, prefer local-frame replay (`WARM_FRAME=1`, `TRACKBALL_START=2`) or
+  fix the capture bootstrap before trusting snapshot RAM.
+
+Next user-facing step:
+
+- Ask the user to retest L4/Aerial pistons from:
+  `http://192.168.85.200:5173/?autoLoad=1&play=1&startLevel=4&debugState=1&debugCompact=1&sound=0&loopReset=0`
+- If the pistons now rise at the first block, mark sprite2 pistons green in the
+  sprite PRD. If not, capture the debug lines around `draw29`/`last obj-pair
+  collision`; do not reopen the already-ruled-out overlay theory as the primary
+  cause.

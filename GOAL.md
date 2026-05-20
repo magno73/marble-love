@@ -12,17 +12,19 @@ Resolve the remaining sprite visibility and physics regressions tracked by:
 - `docs/codex-task-sprite-visibility-physics.md`
 - `docs/codex-task-l4-pistons-current-context.md`
 
-Current focus: L4/Aerial pistons. The user clarified that debug overlay
-coverage is not the cause. The pistons are visible enough to judge: they remain
-stationary when physics already repels the marble, and animation starts only
-after the marble moves much farther forward.
+Current focus: L4/Aerial pistons user retest. The user clarified that debug
+overlay coverage is not the cause. The latest code/proof finding is that
+`type0x29` piston animation entries were already being inserted, but TS was
+dropping them with an incorrect `d4 < 0xc0` renderer cull. Local commit
+`0ff49fa` changes `dispatchType0x29` to the ROM signed band
+`d4 <= -0x40 || d4 >= 0x100`.
 
 ## Current Status
 
 - `sprite1`: previous user retest said OK. Do not reopen unless a new
   regression appears.
-- `sprite2`: active focus. L4/Aerial pistons physically repel the marble before
-  the visible piston animation is synchronized.
+- `sprite2`: active focus. L4/Aerial pistons have a code fix for the
+  `type0x29` visual cull; needs user live retest before marking green.
 - `sprite3`: previous user retest said OK. TS visibility is strong; MAME route
   attach was historically gray.
 - `sprite4`: previous pass reported L3 greens as visually present in sampled
@@ -41,17 +43,25 @@ after the marble moves much farther forward.
 - `packages/engine/src/helper-1bc88.ts` and `packages/engine/src/state.ts`
   record post-collision object-pair fields for debugging.
 - `packages/web/src/main.ts` supports `debugCompact=1`.
-- The next proof should identify the first frame physics arms, then compare the
-  matching visual terrain/script slot and object-pair slot on the same frame.
+- Route proof found active `type0x29` draw entries in the first-block zone with
+  `d4` values such as `159/143`, `94/90`, and `53/49`; old TS culled them,
+  while ROM `0x27e7c` uses `moveq #-0x40,D0`.
+- Validation after the `type0x29` fix:
+  `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS, engine/web typechecks PASS, `git diff --check` PASS.
 
 ## Next Concrete Action
 
-Start from `docs/codex-task-l4-pistons-current-context.md`.
+Ask the user to retest L4/Aerial pistons from:
 
-Find the first frame when piston physics arms in L4, then explain why the
-matching terrain/script visual slot remains static and why the animation trigger
-fires late. Prefer a small route/probe and update the continuity file with the
-exact frame, slot, state fields, and command output summary.
+```text
+http://192.168.85.200:5173/?autoLoad=1&play=1&startLevel=4&debugState=1&debugCompact=1&sound=0&loopReset=0
+```
+
+If the first piston block now visibly rises when it repels the marble, mark
+`sprite2` pistons green in the sprite PRD. If it still fails, capture the
+`draw29` and `last obj-pair collision` debug lines and continue from
+`docs/codex-task-l4-pistons-current-context.md`.
 
 ## Files To Read For This Goal
 

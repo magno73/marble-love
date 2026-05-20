@@ -1598,3 +1598,31 @@ Status: **D3-pistons-focused-handoff** — 2026-05-20.
   explain why the matching visual slot does not animate until a later
   player/scroll state. Keep updating that focused handoff after every new
   finding so future compacted runs do not repeat already-ruled-out work.
+
+Status: **D3-pistons-type29-cull-fixed / user-retest-needed** — 2026-05-20.
+
+- Focused route evidence showed the L4 piston animation table was already
+  inserting `type0x29` draw-list entries in the first-block zone, but the TS
+  renderer dropped all sampled entries because `dispatchType0x29` still used
+  the old positive lower bound `d4 < 0xc0`. Sampled rows included `d4=159/143`,
+  `94/90`, and `53/49`: all are on-screen by the original signed-band logic.
+- Independent ROM byte check at `ghidra_project/marble_program.bin`
+  `0x27e7c..0x27ed2` confirms the original dispatcher uses `moveq #-0x40,D0`;
+  the correct lower cull is `d4 <= -0x40`, with upper cull `d4 >= 0x100`.
+- Patch is already in local commit `0ff49fa`:
+  `packages/engine/src/late-game-logic-26f3e.ts` now applies the signed
+  `type0x29` band, and
+  `packages/engine/test/late-game-logic-26f3e.test.ts` has regressions for
+  the upper visible band (`d4=0x90`) and the binary lower edge (`d4=-0x40`).
+- This is not a collision hack, seed rename, or forced object state. It fixes
+  the renderer dropping the already-armed piston animation entries.
+- Validation:
+  `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS (`40` tests);
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false` PASS;
+  `npx tsc -b packages/engine --pretty false` PASS;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false` PASS;
+  `git diff --check` on touched files PASS.
+- User-facing status: needs live retest on L4/Aerial. Suggested URL:
+  `http://192.168.85.200:5173/?autoLoad=1&play=1&startLevel=4&debugState=1&debugCompact=1&sound=0&loopReset=0`.
+  If this passes, `sprite2` pistons can be marked green.
