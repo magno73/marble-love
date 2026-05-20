@@ -234,6 +234,15 @@ Next action:
   table, but it is still the automatic-current-initials fallback, not an
   interactive initials-entry screen. No keyboard/trackball initials controls
   are wired yet.
+- Phase 7 diagnostic preflight retry:
+  `/tmp/marble-love/boot-flow/phase7-preflight-seed-diagnostics-retry.json`.
+  Headless Chrome confirmed the current default `?autoLoad=1&play=1` still uses
+  the seed-backed coin/start path before Phase 7, explicit `startLevel=1..6`
+  each fetch and load their expected true-start seed, `startLevel=3` loaded
+  twice with HTTP 200 after an earlier transient fetch flake, explicit
+  `playableSeed=start_level1_intro_practice_f2479` still loads, and
+  `bootFlow=1&startLevel=1` still fails loudly without fetching a seed.
+  No runtime default-path change has been made.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
