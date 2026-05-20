@@ -48,6 +48,20 @@ Next action:
 3. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
+Phase 7 completion audit:
+
+- Not complete yet. Current `packages/web/src/boot-flow-url.ts` still returns
+  `true` for the default `play=1` seed-backed coin/start route when no explicit
+  seed diagnostic is present, and
+  `packages/web/test/boot-flow-url.test.ts` still asserts that pre-Phase-7
+  behavior.
+- `README.md` and `STATUS.md` still document `play=1` as loading the L1
+  true-start seed after START. These must change in the approved Phase 7 patch,
+  while preserving `startLevel=1..6` and `playableSeed=NAME` as documented seed
+  diagnostics.
+- No default-path runtime code change should be made until the explicit Phase 7
+  approval gate is satisfied.
+
 ## Current Evidence
 
 - Phase 0 research note:
