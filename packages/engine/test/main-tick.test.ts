@@ -30,6 +30,12 @@ function writeU16BE(buf: Uint8Array, off: number, v: number): void {
   buf[off + 1] = v & 0xff;
 }
 
+function nonzero(bytes: Uint8Array): number {
+  let total = 0;
+  for (const b of bytes) if (b !== 0) total++;
+  return total;
+}
+
 describe("mainTick smoke", () => {
   it("non solleva eccezioni con state e ROM vuoti", () => {
     const s = emptyGameState();
@@ -137,5 +143,30 @@ describe("mainTick smoke", () => {
 
     expect(readU16BE(s.workRam, 0x02)).toBe(0x00bc);
     expect(s.clock.pendingPfScrollUpdate).toBeUndefined();
+  });
+
+  it("advances staged mode2 reset and clears stale post-game-over playfield", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    writeU16BE(s.workRam, 0x390, 1);
+    writeU16BE(s.workRam, 0x392, 2);
+    writeU16BE(s.workRam, 0x75a, 0x0096);
+    s.playfieldRam.fill(0xaa);
+    s.clock.mode2Init11452Stage = 0 as typeof s.clock.mode2Init11452Stage;
+
+    mainTick(s, { rom, runMainLoopBody: true });
+
+    expect(readU16BE(s.workRam, 0x390)).toBe(1);
+    expect(readU16BE(s.workRam, 0x392)).toBe(2);
+    expect(s.clock.mode2Init11452Stage).toBe(1);
+    expect(nonzero(s.playfieldRam)).toBe(0x2000);
+
+    mainTick(s, { rom, runMainLoopBody: true });
+
+    expect(readU16BE(s.workRam, 0x390)).toBe(1);
+    expect(readU16BE(s.workRam, 0x392)).toBe(2);
+    expect(s.clock.mode2Init11452Stage).toBe(2);
+    expect(nonzero(s.playfieldRam)).toBe(0);
   });
 });

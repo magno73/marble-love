@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
 import { mainLoopInit10504 } from "../src/main-loop-init-10504.js";
 import { mainLoopInit1101E } from "../src/main-loop-init-1101e.js";
@@ -18,6 +19,46 @@ function w(s: ReturnType<typeof emptyGameState>, off: number): number {
 function setW(s: ReturnType<typeof emptyGameState>, off: number, value: number): void {
   s.workRam[off] = (value >>> 8) & 0xff;
   s.workRam[off + 1] = value & 0xff;
+}
+
+function setL(s: ReturnType<typeof emptyGameState>, off: number, value: number): void {
+  s.workRam[off] = (value >>> 24) & 0xff;
+  s.workRam[off + 1] = (value >>> 16) & 0xff;
+  s.workRam[off + 2] = (value >>> 8) & 0xff;
+  s.workRam[off + 3] = value & 0xff;
+}
+
+function writeRomDefaultHighScore(
+  rom: ReturnType<typeof emptyRomImage>,
+  row: number,
+  score: number,
+  initials: string,
+): void {
+  const off = 0x1eea0 + row * 8;
+  rom.program[off] = (score >>> 24) & 0xff;
+  rom.program[off + 1] = (score >>> 16) & 0xff;
+  rom.program[off + 2] = (score >>> 8) & 0xff;
+  rom.program[off + 3] = score & 0xff;
+  rom.program[off + 4] = initials.charCodeAt(0) & 0xff;
+  rom.program[off + 5] = initials.charCodeAt(1) & 0xff;
+  rom.program[off + 6] = initials.charCodeAt(2) & 0xff;
+  rom.program[off + 7] = 0;
+}
+
+function writeMarbleDefaultHighScores(rom: ReturnType<typeof emptyRomImage>): void {
+  const defaults: ReadonlyArray<readonly [number, string]> = [
+    [0x0038a4, "C R"],
+    [0x0036b0, "UFO"],
+    [0x0034bc, "GJL"],
+    [0x0032c8, "SKP"],
+    [0x0030d4, "PCT"],
+    [0x002ee0, "PTR"],
+    [0x002cec, "JDH"],
+    [0x002af8, "DAT"],
+    [0x002904, "JFS"],
+    [0x002710, "DAR"],
+  ];
+  defaults.forEach(([score, initials], row) => writeRomDefaultHighScore(rom, row, score, initials));
 }
 
 describe("Task A main-loop init modules", () => {
@@ -221,6 +262,54 @@ describe("Task A main-loop init modules", () => {
     expect(s.clock.levelIntroBannerResumeTick).toBe(0);
     expect(s.clock.levelIntroBannerBaseTimer).toBe(0);
     expect(calls).toEqual(["158AC:2", "158AC:0", "11428", "158AC:98", "10456", "16EC6", "10504"]);
+  });
+
+  it("FUN_1101E state 2 starts staged mode2 reset after a non-qualifying cold-boot score", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    writeMarbleDefaultHighScores(rom);
+    bootInit(s, rom);
+    setW(s, 0x390, 2);
+    setW(s, 0x394, 1);
+    setW(s, 0x396, 1);
+    setL(s, 0x18 + 0xbc, 140);
+    s.workRam[0x18 + 0x18] = 2;
+    s.playfieldRam.fill(0xaa);
+
+    mainLoopInit1101E(s, rom, {
+      sceneInit11428: () => undefined,
+      gameStateBanner26B2A: () => undefined,
+      helper288F8: () => undefined,
+    });
+
+    expect(w(s, 0x390)).toBe(1);
+    expect(w(s, 0x392)).toBe(2);
+    expect(w(s, 0x75a)).toBe(0x0096);
+    expect(s.clock.mode2Init11452Stage).toBe(0);
+  });
+
+  it("FUN_1101E state 2 does not leave stale terrain when high-score initials flow is unwired", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    writeMarbleDefaultHighScores(rom);
+    bootInit(s, rom);
+    setW(s, 0x390, 2);
+    setW(s, 0x394, 4);
+    setW(s, 0x396, 1);
+    setL(s, 0x18 + 0xbc, 0x004000);
+    s.workRam[0x18 + 0x18] = 2;
+    s.playfieldRam.fill(0xaa);
+
+    mainLoopInit1101E(s, rom, {
+      sceneInit11428: () => undefined,
+      gameStateBanner26B2A: () => undefined,
+      helper288F8: () => undefined,
+    });
+
+    expect(w(s, 0x390)).toBe(1);
+    expect(w(s, 0x392)).toBe(2);
+    expect(w(s, 0x75a)).toBe(0x0096);
+    expect(s.clock.mode2Init11452Stage).toBe(0);
   });
 
   it("FUN_10504 deterministic init block and tail writes key globals", () => {

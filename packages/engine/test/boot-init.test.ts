@@ -8,11 +8,70 @@
  *  - dopo `bootInit + tick + tick` lo state evolve senza eccezioni
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { bootInit } from "../src/boot-init.js";
 import { tick } from "../src/index.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
+import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
+import {
+  DEFAULT_HIGH_SCORE_STRUCT_ADDR,
+  DEFAULT_HIGH_SCORE_TABLE_ADDR,
+} from "../src/high-score-defaults.js";
+import { keyRankLookup4686 } from "../src/key-rank-lookup-4686.js";
+
+function readLongBE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>> 0
+  );
+}
+
+function writeRomDefaultHighScore(
+  rom: ReturnType<typeof emptyRomImage>,
+  row: number,
+  score: number,
+  initials: string,
+): void {
+  const off = 0x1eea0 + row * 8;
+  rom.program[off] = (score >>> 24) & 0xff;
+  rom.program[off + 1] = (score >>> 16) & 0xff;
+  rom.program[off + 2] = (score >>> 8) & 0xff;
+  rom.program[off + 3] = score & 0xff;
+  rom.program[off + 4] = initials.charCodeAt(0) & 0xff;
+  rom.program[off + 5] = initials.charCodeAt(1) & 0xff;
+  rom.program[off + 6] = initials.charCodeAt(2) & 0xff;
+  rom.program[off + 7] = 0;
+}
+
+function writeMarbleDefaultHighScores(rom: ReturnType<typeof emptyRomImage>): void {
+  const defaults: ReadonlyArray<readonly [number, string]> = [
+    [0x0038a4, "C R"],
+    [0x0036b0, "UFO"],
+    [0x0034bc, "GJL"],
+    [0x0032c8, "SKP"],
+    [0x0030d4, "PCT"],
+    [0x002ee0, "PTR"],
+    [0x002cec, "JDH"],
+    [0x002af8, "DAT"],
+    [0x002904, "JFS"],
+    [0x002710, "DAR"],
+  ];
+  defaults.forEach(([score, initials], row) => writeRomDefaultHighScore(rom, row, score, initials));
+}
+
+function highScoreTableHex(state: ReturnType<typeof emptyGameState>): string {
+  return Buffer.from(
+    state.workRam.slice(
+      DEFAULT_HIGH_SCORE_TABLE_ADDR - 0x400000,
+      DEFAULT_HIGH_SCORE_TABLE_ADDR - 0x400000 + 50,
+    ),
+  ).toString("hex");
+}
 
 describe("bootInit", () => {
   it("non solleva eccezioni con state vuoto + ROM vuota", () => {
@@ -67,6 +126,36 @@ describe("bootInit", () => {
     bootInit(s, rom);
     expect(s.workRam[0x1f42]).toBe(0);
     expect(s.workRam[0x1f43]).toBe(1);
+  });
+
+  it("initializes the cold-boot default high-score table", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    writeMarbleDefaultHighScores(rom);
+
+    bootInit(s, rom);
+
+    expect(readLongBE(s.workRam, 0x1ffc)).toBe(DEFAULT_HIGH_SCORE_STRUCT_ADDR);
+    expect(s.workRam[DEFAULT_HIGH_SCORE_STRUCT_ADDR - 0x400000 + 0x0a]).toBe(0);
+    expect(s.workRam[DEFAULT_HIGH_SCORE_STRUCT_ADDR - 0x400000 + 0x0b]).toBe(0xff);
+    expect(highScoreTableHex(s)).toBe(
+      "0038a412d20036b0843f0034bc2d5c0032c878880030d4648c002ee06732002cec3f28002af8193c0029043f83002710193a",
+    );
+    expect(keyRankLookup4686(s, 140)).toBe(10);
+  });
+
+  it("initializes the same high-score defaults from the real ROM blob", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+    bootInit(s, rom);
+
+    expect(readLongBE(s.workRam, 0x1ffc)).toBe(DEFAULT_HIGH_SCORE_STRUCT_ADDR);
+    expect(highScoreTableHex(s)).toBe(
+      "0038a412d20036b0843f0034bc2d5c0032c878880030d4648c002ee06732002cec3f28002af8193c0029043f83002710193a",
+    );
+    expect(keyRankLookup4686(s, 140)).toBe(10);
   });
 
   it("alpha RAM clear (gameStateMachineInit clears 0xF00 byte)", () => {
