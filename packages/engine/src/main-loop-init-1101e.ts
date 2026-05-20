@@ -29,6 +29,7 @@ import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { clearAlphaTilesFromIndex } from "./alpha-tilemap.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
+import { helper11FF8Default } from "./helper-11ff8.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
@@ -485,8 +486,18 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   const b = subs.helper001C6?.(state, rl(state, 0x004001b6)) ?? 0;
   void a;
   void b;
-  const p0 = (subs.helper11B18 ?? objectSlotLookup11B18)(state, 0x00400018);
-  const p1 = (subs.helper11B18 ?? objectSlotLookup11B18)(state, 0x004000fa);
+  const defaultHelper11B18 = (st: GameState, objectAddr: number): number => {
+    if (rom === undefined) return objectSlotLookup11B18(st, objectAddr);
+    const activeRom = rom;
+    return objectSlotLookup11B18(st, objectAddr, {
+      afterRegisterScore: (renderState, _objectAddr, _rank, _recordAddr, registerResult) => {
+        if (registerResult === -1) return;
+        helper11FF8Default(renderState, activeRom);
+      },
+    });
+  };
+  const p0 = (subs.helper11B18 ?? defaultHelper11B18)(state, 0x00400018);
+  const p1 = (subs.helper11B18 ?? defaultHelper11B18)(state, 0x004000fa);
   ww(state, 0x00400394, 1);
   ww(state, 0x00400390, 1);
   if (rw(state, 0x004003ea) !== 0xffff) {

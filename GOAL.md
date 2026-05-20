@@ -37,9 +37,9 @@ Current phase:
 Next action:
 
 1. Validate the high-score save fallback in browser: score-qualified game-over
-   should register the score with the player's current initials, then reset/demo
-   without stale terrain. Full interactive initials editing remains a later
-   async `FUN_11B18` task.
+   should register the score with the player's current initials, refresh the
+   visible high-score table, then reset/demo without stale terrain. Full
+   interactive initials editing remains a later async `FUN_11B18` task.
 2. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
@@ -211,6 +211,18 @@ Next action:
   (`fix: save high score fallback on game over`). Remaining gap: full
   interactive initials editing in async `FUN_11B18`; the committed fallback
   saves with the player's current initials.
+- High-score visible refresh follow-up is local and not committed yet: after
+  the fallback registers a qualifying score, `FUN_1101E` re-renders the
+  high-score table through the existing `FUN_11FF8` renderer so the saved row
+  is visible before the reset/demo path continues. Automated validation PASS:
+  focused `FUN_11B18`/`FUN_11FF8` tests, bootFlow web URL tests, engine/web
+  typechecks, web build, `npm run typecheck`, `npm run lint`, `npm run
+  context:audit`, full `npm run test -- --silent`, and `git diff --check`.
+  Headless Chrome browser validation PASS:
+  `/tmp/marble-love/boot-flow/highscore-refresh-browser-summary.json` and
+  `/tmp/marble-love/boot-flow/highscore-refresh-browser.png` show row #1
+  refreshed to `AAA 16,384` after a score-qualified game-over injection. This
+  is still not the full interactive initials editor.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
