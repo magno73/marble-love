@@ -928,3 +928,9 @@ The task is complete only when:
   implementation must preserve explicit `startLevel=1..6` and
   `playableSeed=NAME` seed diagnostics, update README/STATUS, and run the full
   Phase 7 validation.
+- 2026-05-20: Manual high-score follow-up from
+  `/Users/magnus-bot/Desktop/Screenshot 2026-05-20 alle 16.00.25.png`: a real
+  browser run reaches the refreshed high-score table after a score-qualified
+  game. The visible screen is the automatic-current-initials fallback, not a
+  wired interactive initials editor. No initials-entry controls are available
+  yet; full async `FUN_11B18` remains a separate gap.

@@ -229,6 +229,11 @@ Next action:
   `/tmp/marble-love/boot-flow/highscore-refresh-browser.png` show row #1
   refreshed to `AAA 16,384` after a score-qualified game-over injection. This
   is still not the full interactive initials editor.
+- Manual screenshot `/Users/magnus-bot/Desktop/Screenshot 2026-05-20 alle 16.00.25.png`
+  confirms a real score-qualified browser game reaches the refreshed high-score
+  table, but it is still the automatic-current-initials fallback, not an
+  interactive initials-entry screen. No keyboard/trackball initials controls
+  are wired yet.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
