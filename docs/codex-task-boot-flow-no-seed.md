@@ -646,3 +646,20 @@ The task is complete only when:
   lines 1489-1512, and runtime body gate lines 1536-1549. Baseline validation
   passed: engine typecheck, web typecheck, web build, and `git diff --check`.
   Next phase: Phase 1 `bootFlow=1` gated switch.
+- 2026-05-20: Phase 1 implemented locally in `packages/web/src/main.ts`, not
+  committed yet. Added `bootFlow=1`, conflict overlay for seed/warm-state URL
+  combinations, disabled `useCoinStartFlow` seed preparation while bootFlow is
+  active, and made bootFlow call `bootInit(..., {})` instead of preloading L1.
+  Validation passed: web typecheck, web build, and `git diff --check`. Pending:
+  user browser confirmation for `?autoLoad=1&bootFlow=1&debugState=1&sound=0`
+  and quick regression confirmation for existing seed URLs before commit.
+- 2026-05-20: Phase 1 strengthened locally with
+  `packages/web/src/boot-flow-url.ts` and
+  `packages/web/test/boot-flow-url.test.ts`. Focused tests prove the default
+  `play=1` path still selects seed-backed coin/start flow, `bootFlow=1`
+  disables that seed preparation, and seed/warm-state URL combinations fail
+  loudly. Validation passed:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`,
+  web typecheck, web build, and `git diff --check`. Browser in-app verification
+  could not run because no active browser pane is available in this session;
+  manual confirmation remains the commit gate.
