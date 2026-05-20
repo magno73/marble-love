@@ -20,7 +20,7 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 3: original coin and START path.
+- Phase 4: runtime level enter and L1 intro.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
@@ -30,10 +30,11 @@ Current phase:
 
 Next action:
 
-1. Start Phase 3 with MAME-backed coin/start runtime input proof.
-2. Make browser coin/start input feed runtime-visible inputs for `bootFlow=1`.
-3. Keep the observed rapid attract level cycling as a cadence note for future
-   Phase 2/3 comparison, but do not hide it with seed/preload behavior.
+1. Commit Phase 3 after recording the user/manual browser confirmation.
+2. Start Phase 4 by tracing why post-START runtime reaches terrain but has
+   `timer=0` and immediately shows game over.
+3. Keep the observed rapid attract level cycling as a cadence note, but do not
+   hide it with seed/preload behavior.
 
 ## Current Evidence
 
@@ -65,6 +66,29 @@ Next action:
   rapidly cycles through levels, then settles on a high-score screen with
   `credits 0` and moving marbles. This confirms the cold boot path is visibly
   alive; rapid level cycling remains a documented cadence gap.
+- Phase 3 input proof: `oracle/scenarios/input/playable_coin_start.json`
+  records a 15-frame Coin 1 pulse at frames 60-74 and a 15-frame START1 pulse
+  at frames 180-194. MAME maps START1 to active-low bit 0 of `0xF60001`, which
+  is already routed to `gameMainGate(... inputMmio ...)`; Coin 1 is read on the
+  sound CPU `$1820`, so Phase 3 should keep the existing browser credit
+  bookkeeping while routing START through the runtime gate instead of swapping
+  in a warm seed.
+- Phase 3 implementation local validation PASS: browser coin pulses now add
+  credits for `bootFlow=1`, START1 is held active-low in `inputMmio` for the
+  15-frame MAME pulse window, and `gateCheck` consumes one credit only when
+  `gameMainGate` accepts player 1. No `bootInit(... warmState ...)` call was
+  added to the bootFlow START path. Commands passed:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/input.test.ts packages/web/test/practice-level.test.ts packages/engine/test/game-main-gate.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`.
+- Phase 3 manual browser confirmation received from user:
+  `bootFlow=1` insert coin adds credits, START loads a piece of terrain through
+  the runtime path, and then immediately shows game over. Screenshot
+  `/Users/magnus-bot/Desktop/partenza.png` shows `main=2 mode=2 level=0`,
+  `timer=0`, terrain/player visible, and `OUT OF TIME / GAME OVER`. Result:
+  Phase 3 gate is green because coin/start changed runtime state without a
+  seed handoff; the immediate out-of-time transition is the Phase 4 blocker.
 - Baseline validation PASS:
   `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
