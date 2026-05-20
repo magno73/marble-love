@@ -20,10 +20,14 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 5 follow-up is committed and pushed as `c6fca62`
-  (`fix: clear cold boot game-over transition`).
-- Current follow-up gap: high-score initials/save after a score-qualified
-  runtime game over.
+- Phase 5 high-score/post-game-over follow-ups are committed and pushed:
+  `c6fca62` (`fix: clear cold boot game-over transition`),
+  `00342f9` (`fix: save high score fallback on game over`),
+  `0e09ef7` (`fix: refresh high score after fallback save`), and
+  `c72fc95` (`docs: record high score refresh checkpoint`).
+- Current gate: Phase 7 default-path switch requires explicit user approval
+  before changing `?autoLoad=1&play=1` from the seed-backed coin/start path to
+  the cold boot no-seed flow.
 - Phase 6 progression has user/manual acceptance for this pass: user completed
   three levels from `bootFlow=1` and asked to treat level-to-level progression
   as closed.
@@ -36,11 +40,12 @@ Current phase:
 
 Next action:
 
-1. Validate the high-score save fallback in browser: score-qualified game-over
-   should register the score with the player's current initials, refresh the
-   visible high-score table, then reset/demo without stale terrain. Full
-   interactive initials editing remains a later async `FUN_11B18` task.
-2. Keep the observed rapid attract level cycling as a cadence note, but do not
+1. Ask for/receive approval to make `?autoLoad=1&play=1` use the cold boot
+   no-seed path by default.
+2. If approved, implement Phase 7: preserve `startLevel=1..6` and
+   `playableSeed=NAME` as seed diagnostics, update README/STATUS, and run the
+   full final validation.
+3. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
 ## Current Evidence
