@@ -20,8 +20,8 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 0: baseline and instrumentation plan.
-- No implementation has started yet.
+- Phase 1: add gated `bootFlow=1` switch.
+- Phase 0 baseline/research is complete.
 - Existing seed diagnostics must remain intact: `startLevel=1..6` and
   `playableSeed=NAME`.
 
@@ -29,9 +29,19 @@ Next action:
 
 1. Read only `AGENTS.md`, `docs/context-map.md`, this file, and
    `docs/codex-task-boot-flow-no-seed.md`.
-2. Execute Phase 0 from the PRD.
-3. Record the research note at `/tmp/marble-love/boot-flow/research.md`.
-4. Update this file and the PRD checkpoint log before any implementation phase.
+2. Implement Phase 1 from the PRD in `packages/web/src/main.ts`.
+3. Validate web typecheck, web build, and `git diff --check`.
+4. Ask for user browser confirmation before committing Phase 1.
+
+## Current Evidence
+
+- Phase 0 research note:
+  `/tmp/marble-love/boot-flow/research.md`.
+- Baseline validation PASS:
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`;
+  `git diff --check`.
 
 ## Active Constraints
 
