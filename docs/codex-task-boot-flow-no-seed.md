@@ -934,3 +934,18 @@ The task is complete only when:
   game. The visible screen is the automatic-current-initials fallback, not a
   wired interactive initials editor. No initials-entry controls are available
   yet; full async `FUN_11B18` remains a separate gap.
+- 2026-05-20: Phase 7 diagnostic preflight retry before any default-path
+  change. Evidence:
+  `/tmp/marble-love/boot-flow/phase7-preflight-seed-diagnostics-retry.json`.
+  Headless Chrome confirmed current `?autoLoad=1&play=1&sound=0` still prepares
+  the seed-backed `start_level1_intro_practice_f2479` coin/start path;
+  `?autoLoad=1&startLevel=1..6&debugState=1&sound=0` each fetched HTTP 200 and
+  logged the expected true-start seed; `startLevel=3` succeeded twice, so the
+  earlier browser fetch failure is treated as a transient flake unless it
+  recurs; explicit
+  `?autoLoad=1&playableSeed=start_level1_intro_practice_f2479&play=1&sound=0`
+  still loads as a diagnostic seed; and
+  `?autoLoad=1&bootFlow=1&startLevel=1&sound=0` still fails loudly with the
+  bootFlow conflict message and no seed fetch. Result: seed diagnostics are
+  green pre-Phase-7; the default switch remains gated by explicit user
+  approval.
