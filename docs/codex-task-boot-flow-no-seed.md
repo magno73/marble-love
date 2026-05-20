@@ -949,3 +949,12 @@ The task is complete only when:
   bootFlow conflict message and no seed fetch. Result: seed diagnostics are
   green pre-Phase-7; the default switch remains gated by explicit user
   approval.
+- 2026-05-20: Phase 7 completion audit. Current code and docs still prove the
+  final objective is incomplete by design: `packages/web/src/boot-flow-url.ts`
+  returns the seed-backed coin/start route for default `play=1`, the matching
+  web test still asserts that pre-Phase-7 behavior, and README/STATUS still say
+  START loads the L1 true-start seed. Approved Phase 7 patch must flip that
+  default path to cold boot no-seed, update those docs, preserve
+  `startLevel=1..6` and `playableSeed=NAME`, then run the full Phase 7
+  validation. No runtime change made because explicit approval is still the
+  commit gate.
