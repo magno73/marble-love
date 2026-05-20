@@ -20,7 +20,10 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 5 follow-up: post-game-over visual cleanup after runtime play.
+- Phase 5 follow-up is committed and pushed as `c6fca62`
+  (`fix: clear cold boot game-over transition`).
+- Current follow-up gap: high-score initials/save after a score-qualified
+  runtime game over.
 - Phase 6 progression has user/manual acceptance for this pass: user completed
   three levels from `bootFlow=1` and asked to treat level-to-level progression
   as closed.
@@ -33,13 +36,11 @@ Current phase:
 
 Next action:
 
-1. Commit the Phase 5 follow-up after rerunning focused gates: user confirmed
-   the seconds-long yellow/red terrain no longer appears after `GAME OVER`.
-2. Treat high-score initials/save as the next material gap: screenshot
-   `/Users/magnus-bot/Desktop/finisce.png` reaches the high-score/default
-   table, but `FUN_11B18` still has no implemented interactive initials flow
-   and falls back to reset/demo.
-3. Keep the observed rapid attract level cycling as a cadence note, but do not
+1. Validate the high-score save fallback in browser: score-qualified game-over
+   should register the score with the player's current initials, then reset/demo
+   without stale terrain. Full interactive initials editing remains a later
+   async `FUN_11B18` task.
+2. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
 ## Current Evidence
@@ -184,6 +185,28 @@ Next action:
   `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`
   (8 files, 64 tests); engine/web targeted typechecks; web build (known Vite
   chunk-size warning only); `git diff --check`.
+- Phase 5 follow-up committed and pushed as `c6fca62`
+  (`fix: clear cold boot game-over transition`).
+- High-score save follow-up finding: original `FUN_11B18` renders the inserted
+  row, blocks on an interactive initials loop, then calls `FUN_428E` to insert
+  the score/initials record into `*0x401FFC + 0x1E`. Added a local
+  `FUN_428E` replica (`packages/engine/src/high-score-register-428e.ts`) and
+  wired the unwired `FUN_11B18` fallback to register the score using the
+  player's current initials before returning 0 to the reset path. This is an
+  incremental save fallback, not the full interactive initials editor. Focused
+  validation PASS:
+  `npx tsx packages/cli/src/test-high-score-register-428e-parity.ts 500`
+  (500/500 against the binary for caller-valid ranks and positive
+  out-of-range ranks);
+  `npx vitest run packages/engine/test/high-score-register-428e.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `git diff --check`. The `FUN_1101E` integration test now asserts a
+  score-qualified game-over inserts row 0 as `0040000669` (`0x4000`, `AAA`)
+  while still starting the staged mode2 reset. Broader validation PASS:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/high-score-register-428e.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts --silent`
+  (8 files, 53 tests); engine/cli/web targeted typechecks; web build (known
+  Vite chunk-size warning only); `npm run typecheck`; `npm run lint`;
+  `npm run context:audit`; `git diff --check`.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`

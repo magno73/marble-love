@@ -27,15 +27,21 @@ describe("objectSlotLookup11B18 (FUN_00011B18)", () => {
     expect(ret).toBe(0);
   });
 
-  it("returns 0 for a qualifying rank when the initials flow is not wired", () => {
+  it("registers the score but returns 0 when the initials flow is not wired", () => {
     const s = emptyGameState();
     writeU32(s.workRam, 0x18 + 0xbc, 0x00123456);
+    const registerCalls: Array<[number, number]> = [];
 
     const ret = objectSlotLookup11B18(s, 0x00400018, {
       rankLookup: () => 0,
+      registerScore: (_state, rank, recordAddr) => {
+        registerCalls.push([rank, recordAddr]);
+        return -2;
+      },
     });
 
     expect(ret).toBe(0);
+    expect(registerCalls).toEqual([[0, 0x00400018 + 0xbc]]);
   });
 
   it("delegates qualifying path and returns 1", () => {

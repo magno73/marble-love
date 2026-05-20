@@ -858,3 +858,30 @@ The task is complete only when:
   `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`
   (8 files, 64 tests); engine/web targeted typechecks; web build (known Vite
   chunk-size warning only); `git diff --check`.
+- 2026-05-20: Phase 5 post-game-over follow-up committed and pushed as
+  `c6fca62` (`fix: clear cold boot game-over transition`). Current next gap is
+  score-qualified high-score initials/save after game over.
+- 2026-05-20: High-score save follow-up started from user report
+  `/Users/magnus-bot/Desktop/finisce.png`: the terrain bug is gone, but a
+  score-qualified game-over reaches the high-score/default table and then
+  resets/demo without saving. Targeted disassembly shows original `FUN_11B18`
+  renders the inserted row, blocks on an interactive initials loop, then calls
+  `FUN_428E` to register a score/initials record into the table at
+  `*0x401FFC + 0x1E`. Added a deterministic `FUN_428E` replica in
+  `packages/engine/src/high-score-register-428e.ts` and wired the unwired
+  `FUN_11B18` fallback to register the score with the current player initials
+  before returning 0 to the staged reset path. This is an incremental save
+  fallback only; full interactive initials editing still needs an async
+  `FUN_11B18` phase. Focused validation passed:
+  `npx tsx packages/cli/src/test-high-score-register-428e-parity.ts 500`
+  (500/500 against the binary for caller-valid ranks and positive
+  out-of-range ranks);
+  `npx vitest run packages/engine/test/high-score-register-428e.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `git diff --check`. The `FUN_1101E` integration test now asserts a
+  score-qualified game-over inserts row 0 as `0040000669` (`0x4000`, `AAA`)
+  while still starting staged mode2 reset. Broader validation also passed:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/high-score-register-428e.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts --silent`
+  (8 files, 53 tests); engine/cli/web targeted typechecks; web build (known
+  Vite chunk-size warning only); `npm run typecheck`; `npm run lint`;
+  `npm run context:audit`; `git diff --check`.

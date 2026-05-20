@@ -61,6 +61,11 @@ function writeMarbleDefaultHighScores(rom: ReturnType<typeof emptyRomImage>): vo
   defaults.forEach(([score, initials], row) => writeRomDefaultHighScore(rom, row, score, initials));
 }
 
+function highScoreRowHex(s: ReturnType<typeof emptyGameState>, row: number): string {
+  const off = (0x00401e74 - 0x00400000) + 0x1e + row * 5;
+  return Buffer.from(s.workRam.slice(off, off + 5)).toString("hex");
+}
+
 describe("Task A main-loop init modules", () => {
   it("FUN_117B2 bootstrap writes globals then invokes 11452 and loop body", () => {
     const s = emptyGameState();
@@ -297,6 +302,9 @@ describe("Task A main-loop init modules", () => {
     setW(s, 0x394, 4);
     setW(s, 0x396, 1);
     setL(s, 0x18 + 0xbc, 0x004000);
+    s.workRam[0x18 + 0xc0] = 0x41;
+    s.workRam[0x18 + 0xc1] = 0x41;
+    s.workRam[0x18 + 0xc2] = 0x41;
     s.workRam[0x18 + 0x18] = 2;
     s.playfieldRam.fill(0xaa);
 
@@ -310,6 +318,7 @@ describe("Task A main-loop init modules", () => {
     expect(w(s, 0x392)).toBe(2);
     expect(w(s, 0x75a)).toBe(0x0096);
     expect(s.clock.mode2Init11452Stage).toBe(0);
+    expect(highScoreRowHex(s, 0)).toBe("0040000669");
   });
 
   it("FUN_10504 deterministic init block and tail writes key globals", () => {
