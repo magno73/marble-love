@@ -20,7 +20,7 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 5: level completion and next-level handoff.
+- Phase 6: runtime level progression L1 through L6.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
@@ -30,11 +30,11 @@ Current phase:
 
 Next action:
 
-1. Commit Phase 4 (`fix: enter level one from cold boot flow`) after recording
-   the user/manual browser confirmation.
-2. Start Phase 5 by tracing the post-game-over yellow/red terrain screen and
-   deciding whether it is an expected attract/game-over transition or stale
-   level rendering.
+1. Treat manual browser confirmation as green for bootFlow progression through
+   at least three completed levels; next proof should target later L4/L5/L6
+   progression or the final end flow.
+2. Investigate only if needed the post-game-over visual sequence: yellow/red
+   terrain for a few seconds, black reset window, then demo mode.
 3. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
@@ -123,6 +123,35 @@ Next action:
   band is gone. Phase 4 gate is green. Residual for Phase 5: immediately after
   game over, the browser shows a yellow/red terrain screen; trace whether this
   is stale level rendering during the game-over/attract transition.
+- Phase 4 committed and pushed as `70baf5a`
+  (`fix: enter level one from cold boot flow`).
+- Phase 5 post-game-over finding: probe
+  `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` reproduces the
+  bootFlow timeout path without seeds. Timeout summary starts around frame 3782
+  at `main=2/mode=0`, then attract returns around frame 3964 at
+  `main=1/mode=2` while the level playfield remains visible, and later clears
+  at frame 4264 before mode0 attract rebuilds. Existing seed-backed guard
+  `npx vitest run packages/engine/test/playable-live-routes.test.ts -t "time-out transition holds" --silent`
+  PASS, so treat the yellow/red post-game-over screen as a documented
+  attract/timeout visual unless future MAME proof shows divergence.
+- Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
+  no-seed runtime L1 state at
+  `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
+  for probe use only. Search
+  `/tmp/marble-love/boot-flow/phase6-l1-l2-route-search-live-f2400-deaths3/manifest.json`
+  did not hit `main=3` or target descriptor L2 `0x0002c54c` within 2400 frames;
+  best candidates stay in `main/mode=0/0`, descriptor L1 `0x0002bee2`, timer
+  near 6, with one death/recovery. This is not a green transition proof; Phase
+  6 still needs a user/manual or MAME route that actually completes Practice.
+- Phase 6 manual browser confirmation received from user: from
+  `bootFlow=1`, the user completed three levels and progression continued well.
+  This supersedes the diagnostic route-search miss for early progression and is
+  green manual proof for at least L1 -> L2 -> L3 -> L4 through runtime without
+  runtime seed loads. Residual visual after game over: yellow/red terrain stays
+  for a few seconds, then a black reset window appears, then demo mode starts.
+  Screenshot `/Users/magnus-bot/Desktop/schermata nera.png` shows that black
+  window at `f=14190 main=1 mode=0 level=0 scroll=(0,340)`, `timer=0`,
+  player `a=3 st=6`.
 - Baseline validation PASS:
   `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
