@@ -3,6 +3,12 @@
 These rules apply to every task in this project unless explicitly overridden.
 Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
 
+## Project Context
+Project layout, commands, large-file guardrails, and done criteria live in
+`AGENTS.md`. Read that file for repo context instead of loading long task
+history. For module routing, read `docs/context-map.md`. For new handoffs, use
+`docs/task-template.md`.
+
 ## Rule 1 — Think Before Coding
 State assumptions explicitly. If uncertain, ask rather than guess.
 Present multiple interpretations when ambiguity exists.

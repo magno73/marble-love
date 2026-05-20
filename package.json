@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "lint": "eslint \"packages/*/src/**/*.ts\" \"oracle/**/*.ts\" \"harness/**/*.ts\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "context:audit": "bash tools/context_audit.sh",
     "marble-runner": "tsx packages/cli/src/marble-runner.ts",
     "oracle": "tsx oracle/run_oracle.ts",
     "compare": "bash harness/run_compare.sh",

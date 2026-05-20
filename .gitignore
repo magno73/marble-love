@@ -56,6 +56,9 @@ Thumbs.db
 logs/
 .tmp/
 scratch/
+tasks/*/artifacts/
+*.seed.tmp.json
+*.probe.tmp.json
 
 # --- Coverage ---
 coverage/
@@ -68,4 +71,8 @@ packages/mobile/android/
 # --- TypeScript ---
 *.tsbuildinfo
 .claude/worktrees/
+.codex/worktrees/
+.cursor/
+.continue/
+screenshots/
 packages/web/public/roms
