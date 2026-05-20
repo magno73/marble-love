@@ -1059,3 +1059,21 @@ The task is complete only when:
   interactive initials-entry state, let the player change and accept initials,
   save the chosen initials into the high-score table, and then resume the clean
   reset/demo flow. No runtime code changed in this checkpoint.
+- 2026-05-20: Phase 6.5 implementation in progress. Files touched:
+  `packages/engine/src/high-score-initials-entry.ts`,
+  `packages/engine/src/state.ts`, `packages/engine/src/object-slot-lookup-11b18.ts`,
+  `packages/engine/src/main-loop-init-1101e.ts`,
+  `packages/engine/src/main-tick.ts`, `packages/web/src/main.ts`, and focused
+  tests. Runtime behavior now starts an async initials-entry state for
+  score-qualified game over, blocks the main-thread reset until START accepts,
+  lets vertical trackball/up-down keys cycle the selected letter and
+  horizontal trackball/left-right keys move the cursor, then calls `FUN_428E`
+  and resumes mode-2 reset. Browser evidence:
+  `/tmp/marble-love/boot-flow/highscore-initials-entry-browser-summary.json`
+  and `/tmp/marble-love/boot-flow/highscore-initials-entry-browser.png`; the
+  smoke starts from `bootFlow=1`, injects a score-qualified game-over state,
+  shows overlay `HIGH SCORE #1`, edits `AAA` to `CAA`, saves table row
+  `00400012e9`, hides the overlay, and keeps playfield nonzero count at 0
+  during entry. Targeted validation passed: focused high-score/main-loop
+  vitest set, engine typecheck, web typecheck, web URL/input tests, lint, and
+  web build. Broad validation and final commit gate still pending.

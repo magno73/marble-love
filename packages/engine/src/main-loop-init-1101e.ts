@@ -29,6 +29,7 @@ import { clearAlphaTiles28C7E } from "./clear-alpha-tiles-28c7e.js";
 import { clearAlphaTilesFromIndex } from "./alpha-tilemap.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
+import { startHighScoreInitialsEntry } from "./high-score-initials-entry.js";
 import { helper11FF8Default } from "./helper-11ff8.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
@@ -494,10 +495,18 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
         if (registerResult === -1) return;
         helper11FF8Default(renderState, activeRom);
       },
+      startInitialsEntry: (renderState, objectAddr, rank, recordAddr) => {
+        const started = startHighScoreInitialsEntry(renderState, objectAddr, rank, recordAddr);
+        if (started) {
+          renderState.playfieldRam.fill(0);
+          helper11FF8Default(renderState, activeRom);
+        }
+        return started;
+      },
     });
   };
   const p0 = (subs.helper11B18 ?? defaultHelper11B18)(state, 0x00400018);
-  const p1 = (subs.helper11B18 ?? defaultHelper11B18)(state, 0x004000fa);
+  const p1 = p0 === 0 ? (subs.helper11B18 ?? defaultHelper11B18)(state, 0x004000fa) : 0;
   ww(state, 0x00400394, 1);
   ww(state, 0x00400390, 1);
   if (rw(state, 0x004003ea) !== 0xffff) {
