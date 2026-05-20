@@ -773,3 +773,32 @@ The task is complete only when:
   5: immediately after game over, the browser shows a yellow/red terrain screen;
   trace whether this is stale level rendering during the game-over/attract
   transition.
+- 2026-05-20: Phase 4 committed and pushed as `70baf5a`
+  (`fix: enter level one from cold boot flow`).
+- 2026-05-20: Phase 5 post-game-over follow-up. Probe
+  `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` reproduces the
+  no-seed bootFlow timeout: timeout summary starts around frame 3782 at
+  `main=2/mode=0`; attract returns around frame 3964 at `main=1/mode=2` with
+  the level playfield still visible; the playfield clears around frame 4264
+  before mode0 attract rebuilds. Existing seed-backed timeout guard passes:
+  `npx vitest run packages/engine/test/playable-live-routes.test.ts -t "time-out transition holds" --silent`.
+  Treat the yellow/red post-game-over screen as a documented attract/timeout
+  visual unless MAME proof shows this no-seed route diverges from hardware.
+- 2026-05-20: Phase 6 L1 -> L2 diagnostic route-search checkpoint. Scratch
+  no-seed runtime L1 state exported to
+  `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
+  for probe use only. Search manifest
+  `/tmp/marble-love/boot-flow/phase6-l1-l2-route-search-live-f2400-deaths3/manifest.json`
+  did not hit `main=3` or target descriptor L2 `0x0002c54c` within 2400 frames;
+  best candidates remain on descriptor L1 `0x0002bee2` with one death/recovery.
+  Not a green proof; L1 -> L2 still needs a user/manual or MAME route that
+  actually completes Practice from the bootFlow runtime path.
+- 2026-05-20: Phase 6 manual browser confirmation received from user:
+  `bootFlow=1` completed three levels and progression continued well. Treat as
+  green manual proof for at least L1 -> L2 -> L3 -> L4 through runtime without
+  runtime seed loads, superseding the diagnostic route-search miss for early
+  progression. Residual post-game-over visual: yellow/red terrain remains for a
+  few seconds, then a black reset window, then demo mode. Screenshot
+  `/Users/magnus-bot/Desktop/schermata nera.png` shows the black window at
+  `f=14190 main=1 mode=0 level=0 scroll=(0,340)`, `timer=0`, player
+  `a=3 st=6`.
