@@ -21,19 +21,16 @@ Authoritative task plan:
 
 Current phase:
 
-- New required phase before the default-path switch: implement the full
-  interactive high-score initials entry after score-qualified game over. The
-  current fallback save (`AAA`/current initials) is not sufficient for
-  completion.
+- Phase 6.5 interactive high-score initials entry is committed and pushed as
+  `658be42` (`fix: add interactive high score initials entry`).
 - Phase 5 high-score/post-game-over follow-ups are committed and pushed:
   `c6fca62` (`fix: clear cold boot game-over transition`),
   `00342f9` (`fix: save high score fallback on game over`),
   `0e09ef7` (`fix: refresh high score after fallback save`), and
   `c72fc95` (`docs: record high score refresh checkpoint`).
-- Current gate: the default-path switch must wait until the interactive
-  high-score initials phase is green, then still requires explicit user
-  approval before changing `?autoLoad=1&play=1` from the seed-backed coin/start
-  path to the cold boot no-seed flow.
+- Current gate: Phase 7 default-path switch requires explicit user approval
+  before changing `?autoLoad=1&play=1` from the seed-backed coin/start path to
+  the cold boot no-seed flow.
 - Phase 6 progression has user/manual acceptance for this pass: user completed
   three levels from `bootFlow=1` and asked to treat level-to-level progression
   as closed.
@@ -46,14 +43,9 @@ Current phase:
 
 Next action:
 
-1. Implement the interactive high-score initials entry for score-qualified game
-   over, replacing the current automatic-current-initials fallback as the normal
-   path.
-2. Preserve the deterministic fallback only as a diagnostic/emergency path if
-   needed, and keep post-game reset/demo behavior clean after save.
-3. After that phase is green, ask for/receive approval to make
-   `?autoLoad=1&play=1` use the cold boot no-seed path by default.
-4. If approved, implement the default switch: preserve `startLevel=1..6` and
+1. Ask for/receive approval to make `?autoLoad=1&play=1` use the cold boot
+   no-seed path by default.
+2. If approved, implement the default switch: preserve `startLevel=1..6` and
    `playableSeed=NAME` as seed diagnostics, update README/STATUS, and run the
    full final validation.
 
@@ -68,10 +60,9 @@ Phase 7 completion audit:
   true-start seed after START. These must change in the approved Phase 7 patch,
   while preserving `startLevel=1..6` and `playableSeed=NAME` as documented seed
   diagnostics.
-- The score-qualified high-score path is also incomplete: current
-  `FUN_11B18` behavior registers the score with current initials and refreshes
-  the table, but does not provide interactive initials entry. This must be
-  implemented before the default-path switch is treated as ready.
+- The score-qualified high-score path is now green for this phase: the
+  committed Phase 6.5 implementation lets the player edit initials and saves
+  the chosen initials before resuming reset/demo.
 - No default-path runtime code change should be made until the explicit Phase 7
   approval gate is satisfied.
 
@@ -270,16 +261,20 @@ Phase 7 completion audit:
   `playableSeed=start_level1_intro_practice_f2479` still loads, and
   `bootFlow=1&startLevel=1` still fails loudly without fetching a seed.
   No runtime default-path change has been made.
-- Phase 6.5 interactive high-score initials implementation is in progress.
-  Current local behavior: score-qualified game over starts a runtime initials
-  entry instead of immediately saving fallback initials; vertical trackball or
-  up/down keys cycle the selected letter, horizontal trackball or left/right
-  keys move the cursor, and START accepts/saves. Headless Chrome artifact
+- Phase 6.5 interactive high-score initials implementation is committed and
+  pushed as `658be42` (`fix: add interactive high score initials entry`).
+  Score-qualified game over starts a runtime initials entry instead of
+  immediately saving fallback initials; vertical trackball or up/down keys
+  cycle the selected letter, horizontal trackball or left/right keys move the
+  cursor, and START accepts/saves. Headless Chrome artifact
   `/tmp/marble-love/boot-flow/highscore-initials-entry-browser-summary.json`
   shows overlay `HIGH SCORE #1`, edits `AAA` to `CAA`, saves row
   `00400012e9`, hides the overlay, and resumes mode-2 reset with no stale
-  playfield. Automated targeted tests and engine/web typechecks/build are
-  passing locally; broad validation still pending before commit.
+  playfield. Validation passed: focused high-score/main-loop vitest set,
+  engine/web typechecks, web URL/input tests, web build, `npm run typecheck`,
+  `npm run lint`, full `npm run test -- --silent` (261 passed, 3 skipped test
+  files; 2271 passed, 17 skipped tests), `npm run context:audit`, and
+  `git diff --check`.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
