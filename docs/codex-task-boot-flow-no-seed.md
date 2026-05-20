@@ -889,3 +889,33 @@ The task is complete only when:
   (`fix: save high score fallback on game over`). Remaining gap: full
   interactive initials editing in async `FUN_11B18`; the committed fallback
   saves with the player's current initials.
+- 2026-05-20: High-score visible refresh follow-up started from the same
+  `finisce.png` report: saving the score in RAM is not enough if the
+  post-game-over screen still shows the pre-insert table. Local change wires
+  the fallback registration path to call the existing `FUN_11FF8` table
+  renderer after `FUN_428E` succeeds, so a score-qualified game over should
+  show the saved row before the reset/demo path continues. Files touched:
+  `packages/engine/src/object-slot-lookup-11b18.ts`,
+  `packages/engine/src/main-loop-init-1101e.ts`,
+  `packages/engine/test/object-slot-lookup-11b18.test.ts`,
+  `packages/engine/test/main-loop-init-task-a.test.ts`, `GOAL.md`, and this
+  PRD. Focused validation so far:
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts --silent` PASS;
+  `npx vitest run packages/engine/test/helper-11ff8.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts --silent`
+  PASS;
+  `npx vitest run packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/high-score-register-428e.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts --silent`
+  PASS; `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`
+  PASS after fixing `exactOptionalPropertyTypes` handling; bootFlow/web
+  focused vitest set PASS; engine/web targeted typechecks PASS; web build PASS
+  with the known Vite chunk-size warning; `npm run typecheck` PASS; `npm run
+  lint` PASS; `npm run context:audit` PASS; full `npm run test -- --silent`
+  PASS (260 passed, 3 skipped; 2267 tests passed, 17 skipped); `git diff
+  --check` PASS. Headless Chrome browser validation also PASS:
+  `/tmp/marble-love/boot-flow/highscore-refresh-browser-summary.json` shows the
+  browser runtime table row 0 changing from `0038a412d2` (`C R 14,500`) to
+  `0040000669` (`AAA 16,384`) after a score-qualified game-over injection, with
+  the previous row shifted to row 1 and staged reset active at
+  `main=1/mode=2`. Screenshot:
+  `/tmp/marble-love/boot-flow/highscore-refresh-browser.png`. Result: browser
+  and automated green for the focused path. This remains an
+  automatic-current-initials fallback, not the full interactive initials editor.

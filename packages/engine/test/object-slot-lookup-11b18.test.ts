@@ -31,6 +31,7 @@ describe("objectSlotLookup11B18 (FUN_00011B18)", () => {
     const s = emptyGameState();
     writeU32(s.workRam, 0x18 + 0xbc, 0x00123456);
     const registerCalls: Array<[number, number]> = [];
+    const afterRegisterCalls: Array<[number, number, number, number]> = [];
 
     const ret = objectSlotLookup11B18(s, 0x00400018, {
       rankLookup: () => 0,
@@ -38,10 +39,14 @@ describe("objectSlotLookup11B18 (FUN_00011B18)", () => {
         registerCalls.push([rank, recordAddr]);
         return -2;
       },
+      afterRegisterScore: (_state, objectAddr, rank, recordAddr, registerResult) => {
+        afterRegisterCalls.push([objectAddr, rank, recordAddr, registerResult]);
+      },
     });
 
     expect(ret).toBe(0);
     expect(registerCalls).toEqual([[0, 0x00400018 + 0xbc]]);
+    expect(afterRegisterCalls).toEqual([[0x00400018, 0, 0x00400018 + 0xbc, -2]]);
   });
 
   it("delegates qualifying path and returns 1", () => {

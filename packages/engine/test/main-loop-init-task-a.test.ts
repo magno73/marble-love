@@ -307,6 +307,7 @@ describe("Task A main-loop init modules", () => {
     s.workRam[0x18 + 0xc2] = 0x41;
     s.workRam[0x18 + 0x18] = 2;
     s.playfieldRam.fill(0xaa);
+    s.workRam.fill(0, 0x1f7a, 0x1f81);
 
     mainLoopInit1101E(s, rom, {
       sceneInit11428: () => undefined,
@@ -319,6 +320,7 @@ describe("Task A main-loop init modules", () => {
     expect(w(s, 0x75a)).toBe(0x0096);
     expect(s.clock.mode2Init11452Stage).toBe(0);
     expect(highScoreRowHex(s, 0)).toBe("0040000669");
+    expect(Buffer.from(s.workRam.slice(0x1f7a, 0x1f81)).toString("hex")).not.toBe("00000000000000");
   });
 
   it("FUN_10504 deterministic init block and tail writes key globals", () => {

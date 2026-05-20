@@ -23,6 +23,13 @@ export const OBJECT_SLOT_LOOKUP_NONQUALIFY_RANK = 10 as const;
 export interface ObjectSlotLookup11B18Subs {
   rankLookup?: (state: GameState, scoreLong: number) => number;
   registerScore?: (state: GameState, rank: number, recordAddr: number) => number;
+  afterRegisterScore?: (
+    state: GameState,
+    objectAddr: number,
+    rank: number,
+    recordAddr: number,
+    registerResult: number,
+  ) => void;
   qualifiedFlow?: (state: GameState, objectAddr: number, rank: number) => void;
 }
 
@@ -51,7 +58,10 @@ export function objectSlotLookup11B18(
   }
 
   if (subs.qualifiedFlow === undefined) {
-    (subs.registerScore ?? highScoreRegister428E)(state, rank & 0xff, objectAddr + 0xbc);
+    const rankByte = rank & 0xff;
+    const recordAddr = objectAddr + 0xbc;
+    const registerResult = (subs.registerScore ?? highScoreRegister428E)(state, rankByte, recordAddr);
+    subs.afterRegisterScore?.(state, objectAddr, rankByte, recordAddr, registerResult);
     return 0;
   }
 
