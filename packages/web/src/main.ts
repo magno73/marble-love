@@ -24,6 +24,7 @@ import {
   buildRomBackedDemoFrame,
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
+import { bootFlowConflictMessage as getBootFlowConflictMessage, shouldUseCoinStartFlow } from "./boot-flow-url.js";
 import { isCoinStartAttractReady, prepareBrowserCoinStartAttract, writeBrowserCreditDigit } from "./coin-start-flow.js";
 import { applyLevelTimeOverride, parseLevelTimeOverrideParam } from "./level-time-override.js";
 import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-level.js";
@@ -46,6 +47,7 @@ const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
+const forceBootFlow = searchParams.get("bootFlow") === "1";
 const enableSound = searchParams.get("sound") !== "0";
 // SoundChip tick default-ON (sessione 4l 2026-05-18): post-fix Timer A
 // edge-trigger + $1820 pull-up + auto-drain, il chip produce audio reale
@@ -112,6 +114,16 @@ const useStartLevelPractice =
   explicitScenarioName === null && playableSeedName === null && startLevelPractice !== undefined;
 const startLevelPracticeUnavailable =
   useStartLevelPractice && startLevelPlayableSeedName === undefined;
+const useMameDump = searchParams.get("mameDump") === "1";
+const useMameLive = searchParams.get("mameLive") === "1";
+const bootFlowConflictMessage = getBootFlowConflictMessage({
+  explicitScenarioName,
+  forceBootFlow,
+  playableSeedName,
+  startLevelPractice,
+  useMameDump,
+  useMameLive,
+});
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
@@ -802,6 +814,18 @@ function createStartLevelUnavailableOverlay(level: number): HTMLDivElement {
   return el;
 }
 
+function createBootFlowConflictOverlay(message: string): HTMLDivElement {
+  const el = document.createElement("div");
+  el.style.cssText =
+    "position:fixed;left:50%;top:50%;z-index:9999;transform:translate(-50%,-50%);" +
+    "width:min(560px,calc(100vw - 48px));box-sizing:border-box;padding:18px 20px;" +
+    "background:rgba(0,0,0,.88);border:1px solid rgba(255,180,120,.65);" +
+    "color:#ffe4cf;font:14px/1.45 system-ui,-apple-system,sans-serif;text-align:left;";
+  el.textContent = `Cold boot flow URL conflict: ${message}`;
+  document.body.appendChild(el);
+  return el;
+}
+
 function updateObjectDebugOverlay(
   el: HTMLPreElement,
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -945,6 +969,12 @@ fileInput.addEventListener("change", async () => {
       `ROM valida: ${rom.validation.fileCount} file verificati CRC32${warningText}.`,
       "ok",
     );
+    if (bootFlowConflictMessage !== undefined) {
+      setRomStatus(bootFlowConflictMessage, "error");
+      createBootFlowConflictOverlay(bootFlowConflictMessage);
+      btn.disabled = false;
+      return;
+    }
     splash.remove();
     if (soundReplayUrl !== null) {
       await runSoundReplay(rom, soundReplayUrl);
@@ -1040,14 +1070,18 @@ async function startGame(
   let warmState: WarmState | undefined;
   let warmStateMainLoopBodyTicks: number | undefined;
   let warmStateIsPlayableSeed = false;
-  const useMameDump = searchParams.get("mameDump") === "1";
-  const useMameLive = searchParams.get("mameLive") === "1";
-  const useCoinStartFlow =
-    warmState === undefined &&
-    rom !== undefined &&
-    scenarioName === null &&
-    !useStartLevelPractice &&
-    (forceCoinStart || (forcePlay && playableSeedName === null && !useMameDump && !useMameLive));
+  const useCoinStartFlow = shouldUseCoinStartFlow({
+    forceBootFlow,
+    forceCoinStart,
+    forcePlay,
+    hasRom: rom !== undefined,
+    playableSeedName,
+    scenarioName,
+    useMameDump,
+    useMameLive,
+    useStartLevelPractice,
+    warmStateReady: warmState !== undefined,
+  });
   let coinStartWarmState: WarmState | undefined;
   let coinStartMainLoopBodyTicks: number | undefined;
   if (playableSeedName !== null) {
@@ -1167,11 +1201,15 @@ async function startGame(
     warmState !== undefined
       ? { warmState }
       : rom !== undefined
-        ? useCoinStartFlow || startLevelPracticeUnavailable
+        ? forceBootFlow || useCoinStartFlow || startLevelPracticeUnavailable
           ? {}
           : { preloadLevel: 0, fullScreenInit: useFullScreenInit }
         : {},
   );
+  if (forceBootFlow) {
+    setRomStatus("Cold boot flow active: runtime boot, no gameplay seed loaded.", "ok");
+    console.log("[marble-love] bootFlow=1 active: cold boot without playable/startLevel seed");
+  }
   const startLevelPracticeActive = useStartLevelPractice && warmState !== undefined;
   if (warmStateIsPlayableSeed) {
     // Playable warm seeds are MAME frame_done snapshots. Most reviewed windows

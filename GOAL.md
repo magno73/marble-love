@@ -22,16 +22,17 @@ Current phase:
 
 - Phase 1: add gated `bootFlow=1` switch.
 - Phase 0 baseline/research is complete.
+- Phase 1 code and focused web routing tests are implemented locally. Browser
+  confirmation is still needed before commit.
 - Existing seed diagnostics must remain intact: `startLevel=1..6` and
   `playableSeed=NAME`.
 
 Next action:
 
-1. Read only `AGENTS.md`, `docs/context-map.md`, this file, and
-   `docs/codex-task-boot-flow-no-seed.md`.
-2. Implement Phase 1 from the PRD in `packages/web/src/main.ts`.
-3. Validate web typecheck, web build, and `git diff --check`.
-4. Ask for user browser confirmation before committing Phase 1.
+1. Ask the user to test `?autoLoad=1&bootFlow=1&debugState=1&sound=0`.
+2. Confirm from browser status/console/debug that no gameplay seed is loaded.
+3. Also confirm existing `?autoLoad=1&play=1` and `?startLevel=1` remain usable.
+4. If confirmed, commit Phase 1.
 
 ## Current Evidence
 
@@ -42,6 +43,13 @@ Next action:
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
   `npm --workspace @marble-love/web run build`;
   `git diff --check`.
+- Phase 1 local validation PASS:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`;
+  `git diff --check`.
+- Browser in-app verification was attempted, but this session has no active
+  browser pane available. Manual browser confirmation is still pending.
 
 ## Active Constraints
 
