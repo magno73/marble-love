@@ -211,10 +211,11 @@ Next action:
   (`fix: save high score fallback on game over`). Remaining gap: full
   interactive initials editing in async `FUN_11B18`; the committed fallback
   saves with the player's current initials.
-- High-score visible refresh follow-up is local and not committed yet: after
-  the fallback registers a qualifying score, `FUN_1101E` re-renders the
-  high-score table through the existing `FUN_11FF8` renderer so the saved row
-  is visible before the reset/demo path continues. Automated validation PASS:
+- High-score visible refresh follow-up is committed and pushed as `0e09ef7`
+  (`fix: refresh high score after fallback save`). After the fallback registers
+  a qualifying score, `FUN_1101E` re-renders the high-score table through the
+  existing `FUN_11FF8` renderer so the saved row is visible before the
+  reset/demo path continues. Automated validation PASS:
   focused `FUN_11B18`/`FUN_11FF8` tests, bootFlow web URL tests, engine/web
   typechecks, web build, `npm run typecheck`, `npm run lint`, `npm run
   context:audit`, full `npm run test -- --silent`, and `git diff --check`.
