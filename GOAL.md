@@ -20,19 +20,20 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 1: add gated `bootFlow=1` switch.
+- Phase 2: cold boot to stable attract.
 - Phase 0 baseline/research is complete.
-- Phase 1 code and focused web routing tests are implemented locally. Browser
-  confirmation is still needed before commit.
+- Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
+  (`feat: add gated cold boot flow flag`).
 - Existing seed diagnostics must remain intact: `startLevel=1..6` and
   `playableSeed=NAME`.
 
 Next action:
 
-1. Ask the user to test `?autoLoad=1&bootFlow=1&debugState=1&sound=0`.
-2. Confirm from browser status/console/debug that no gameplay seed is loaded.
-3. Also confirm existing `?autoLoad=1&play=1` and `?startLevel=1` remain usable.
-4. If confirmed, commit Phase 1.
+1. Start Phase 2 with targeted cold-boot/early-attract research.
+2. Compare TS `bootFlow=1` frame windows against a compact MAME/ROM-backed
+   summary before changing engine behavior.
+3. Fill only proven missing boot/main-thread side effects.
+4. Keep `bootFlow=1` gated and do not change default `?autoLoad=1&play=1`.
 
 ## Current Evidence
 
@@ -48,8 +49,10 @@ Next action:
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
   `npm --workspace @marble-love/web run build`;
   `git diff --check`.
-- Browser in-app verification was attempted, but this session has no active
-  browser pane available. Manual browser confirmation is still pending.
+- Phase 1 was committed and pushed to `origin/main` as `9934721`.
+- Browser in-app verification was attempted before the Phase 1 commit, but this
+  session had no active browser pane available. Manual/user browser checks
+  remain useful during Phase 2.
 
 ## Active Constraints
 

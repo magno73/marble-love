@@ -663,3 +663,8 @@ The task is complete only when:
   web typecheck, web build, and `git diff --check`. Browser in-app verification
   could not run because no active browser pane is available in this session;
   manual confirmation remains the commit gate.
+- 2026-05-20: Phase 1 committed and pushed to `origin/main` as `9934721`
+  (`feat: add gated cold boot flow flag`) after rerunning focused web routing
+  tests, web typecheck, web build, and `git diff --check`. Current phase is
+  Phase 2: cold boot to stable attract. Next work must compare compact
+  cold-boot/early-attract TS vs MAME summaries before changing engine behavior.
