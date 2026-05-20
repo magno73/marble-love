@@ -1,5 +1,11 @@
 # HANDOFF — Six Real Level Identification
 
+> Legacy note: this file records the investigation that led to the six
+> true-start levels. It is not current startup context, and several early
+> "do not wire startLevel=2..6" statements were later superseded. Current
+> start-level status lives in `STATUS.md`; current agent routing lives in
+> `AGENTS.md` and `docs/context-map.md`.
+
 Data: 2026-05-16
 Repo target: `/Users/magnus-bot/Code/marble-love`
 Branch target: `main`

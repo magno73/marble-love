@@ -206,19 +206,26 @@ git diff --check
 
 ## Documenti Da Leggere
 
-Prima di modifiche runtime o seed:
+Per agenti AI, l'entrypoint canonico e' intenzionalmente piccolo:
 
-- `STATUS.md`
-- `HANDOFF_CURRENT_CONTEXT.md`
-- `HANDOFF_SIX_LEVELS.md`
+- `AGENTS.md`
+- `docs/context-map.md`
+- il file task/goal indicato dall'utente, se presente
 
-Prima di modifiche a descriptor, terreno, collisioni o custom level:
+Leggere `STATUS.md` solo quando serve lo stato operativo corrente del prodotto.
+Leggere gli handoff storici solo se il task li nomina esplicitamente o se una
+decisione storica e' necessaria per non cambiare comportamento delicato.
+
+Prima di modifiche a descriptor, terreno, collisioni, seed o custom level:
 
 - `docs/level-header-format.md`
 - `docs/level-header-decode-prd.md`
 - `docs/findings/README.md`
 
-Per cronologia dettagliata e vecchie note operative:
+Per cronologia dettagliata e vecchie note operative, non come lettura di
+startup:
 
+- `HANDOFF_CURRENT_CONTEXT.md`
+- `HANDOFF_SIX_LEVELS.md`
 - `docs/archive/readme-status-2026-05-18/README.full.md`
 - `docs/archive/readme-status-2026-05-18/STATUS.full.md`

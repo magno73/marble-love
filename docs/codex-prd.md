@@ -1,5 +1,11 @@
 # PRD per Codex — Marble Love (porting M68k → TypeScript)
 
+> Legacy PRD: do not read this file by default. It captures an early parallel
+> porting workflow and contains stale progress/task assumptions. Current agent
+> startup context is `AGENTS.md`, `docs/context-map.md`, and the active task
+> file. Do not follow old branch, worktree, or "task in corso" instructions
+> unless a current task explicitly revives them.
+
 > Documento per dare a Codex (OpenAI Codex CLI / Codex agent) un task ben definito, **senza interferire** col lavoro parallelo che Claude Code sta portando avanti su `main`.
 
 ## Contesto in 30 secondi

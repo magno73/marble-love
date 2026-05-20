@@ -10,9 +10,17 @@ State the concrete outcome in one or two paragraphs.
 - `docs/context-map.md`
 - `<task-specific-file>`
 
+Keep the initial read set small. If you need more than about 6 source/docs
+files before forming a hypothesis, first write a short research note with what
+you know and which question requires more context.
+
 ## Do Not Read Unless Needed
 
 - `docs/archive/**`
+- `HANDOFF_*.md`
+- `docs/agent-briefing.md`
+- `docs/codex-brief.md`
+- `docs/codex-prd.md`
 - `screenshots/**`
 - `traces/**`
 - `snap/**`
@@ -36,6 +44,10 @@ State the concrete outcome in one or two paragraphs.
 git status --short --branch
 rg "<symbol-or-term>" packages oracle docs
 ```
+
+For large files, use summary commands such as `rg`, `jq`, `du`, or a focused
+probe. Do not paste full JSON, screenshots, traces, or historical logs into the
+agent context.
 
 ## Implementation Plan
 

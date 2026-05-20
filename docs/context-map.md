@@ -5,11 +5,17 @@ router, not a replacement for targeted source reads.
 
 ## Startup Files
 
+For a cold start, read only:
+
 - `AGENTS.md`: repo-wide agent rules, validation commands, large-file guardrails.
-- `STATUS.md`: current operational product status.
-- `GOAL.md`: current active goal only. Long history should live in archive.
+- this file: module routing and large-file guardrails.
+- the task, PRD, or `GOAL.md` named by the user, if one is active.
+
+Read only when relevant:
+
+- `STATUS.md`: current operational product status, not task history.
 - `docs/task-template.md`: template for future task handoffs.
-- `docs/agent-workflow.md`: recommended workflow for agent sessions.
+- `docs/agent-workflow.md`: recommended workflow for long agent sessions.
 
 ## Packages
 
@@ -81,6 +87,10 @@ Trace diff and reporting utilities. Use for comparing engine and oracle traces.
 - `docs/level-header-decode-prd.md`: level header decode PRD.
 - `docs/codex-task-sprite-visibility-physics.md`: current sprite PRD when that
   task is active.
+- `HANDOFF_*.md`: historical or task-specific handoffs. Read only when a task
+  names one or when a specific historical decision must be reconstructed.
+- `docs/agent-briefing.md`, `docs/codex-brief.md`, `docs/codex-prd.md`: legacy
+  briefings. Do not use as default startup context.
 - `docs/archive/**`: historical context. Do not read by default.
 
 ## Large Or Noisy Areas

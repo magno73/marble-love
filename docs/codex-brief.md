@@ -1,5 +1,11 @@
 # Codex briefing — Marble Love drift residuo (round 4)
 
+> Legacy briefing: do not read this file by default. It describes a May 2026
+> drift investigation snapshot, not current repo status. Use `AGENTS.md`,
+> `docs/context-map.md`, `STATUS.md`, and the active task file for current work.
+> Do not reuse old failure exemptions or drift baselines without rerunning the
+> current proof.
+
 > Brief per agent ChatGPT Codex CLI. Stato sessione 2026-05-12 post-fix #3.
 > Obiettivo: ridurre drift gameplay workRam da **57B** verso 0B.
 

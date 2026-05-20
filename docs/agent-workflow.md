@@ -7,7 +7,7 @@ Use this workflow for non-trivial AI-agent work in this repo.
 1. Start a fresh session for each unrelated task.
 2. Read `AGENTS.md`.
 3. Read `docs/context-map.md`.
-4. Read the task file or `GOAL.md` only for current state.
+4. Read the task file or `GOAL.md` only when a current goal is active.
 5. Read only the source files, tests, and docs named by the task.
 
 ## Explore

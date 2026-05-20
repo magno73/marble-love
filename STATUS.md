@@ -46,9 +46,10 @@ Stato post-merge 2026-05-19:
 - Marble nemica nera in L2 visibile sia da `startLevel=2` sia da transizione
   runtime L1->L2.
 - Sprite dinamici nel percorso gameplay: pistoni L4/Aerial user-confirmed via
-  cull corretto `type0x29`; macchie verdi mobili L3/Intermediate agganciate
-  via replica `FUN_17346` e string-slot `type0x0e` (`0x401482`), in attesa di
-  retest visivo finale.
+  cull corretto `type0x29`; macchie verdi mobili L3/Intermediate
+  user-confirmed via replica `FUN_17346` e string-slot `type0x0e`
+  (`0x401482`); ostacoli dinamici Aerial `type12` visibili dopo fix dei bound
+  signed `moveq`.
 - Level descriptor header dei sei livelli decodato come header fisso `0x2E`
   byte, con campi consumer-backed e doc finale in
   `docs/level-header-format.md`.
@@ -228,11 +229,21 @@ npx vitest run packages/engine/test/level.test.ts packages/engine/test/level-hea
 
 ## File Di Contesto
 
-Leggere prima di cambiare comportamento runtime:
+Per agenti AI, il cold start corrente e':
+
+- `AGENTS.md`
+- `docs/context-map.md`
+- il task/goal attivo, se presente
+
+Leggere prima di cambiare descriptor, terrain-code o level header:
+
+- `docs/level-header-format.md`
+
+Gli handoff root sono storici o task-specifici. Leggerli solo quando un task li
+nomina o quando serve ricostruire una decisione passata:
 
 - `HANDOFF_CURRENT_CONTEXT.md`
 - `HANDOFF_SIX_LEVELS.md`
-- `docs/level-header-format.md`
 
 Leggere gli archivi solo quando serve ricostruire una decisione storica o un
 vecchio esperimento:
