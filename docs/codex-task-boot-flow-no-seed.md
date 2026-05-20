@@ -678,3 +678,34 @@ The task is complete only when:
   cadence/phase drifts against MAME. Focus next on `mainLoopInit117B2`,
   `mainLoopInit11452`, `mainLoopInit10504`, and async wait staging, not on
   terrain/collision/renderer or seed mappings.
+- 2026-05-20: Phase 2 in progress. Verified compact evidence in
+  `/tmp/marble-love/boot-flow/phase2-mame-cold-boot-nonvram-summary.json` and
+  reran `/tmp/marble-love/boot-flow/probe-cold-boot-summary.mts` to refresh
+  `/tmp/marble-love/boot-flow/phase2-ts-cold-boot-summary.json`. Finding:
+  current TS cold boot reaches descriptor-backed attract without seeds but
+  drifted ahead of MAME and reached `mode=3` at f12000 with no summary
+  timer/content. Touched `packages/engine/src/main-loop-init-11452.ts`,
+  `packages/engine/src/mode2-init-11452-async.ts`, and
+  `packages/engine/test/main-loop-init-task-a.test.ts` to initialize the mode 3
+  attract summary on `b3e4 > 7` overflow. Test run:
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts --silent`
+  PASS. Updated TS probe shows f12000 `mode=3` now has timer `0x0091` and
+  alpha summary content, then returns to visible `mode=0` attract by f12400.
+  Result: green for the no-blank/stable-attract fix; full Phase 2 validation
+  still pending.
+- 2026-05-20: Phase 2 automated validation passed after the mode3 summary fix:
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/main-tick.test.ts packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`. Browser
+  automation could not run because Browser Node REPL and local Playwright were
+  unavailable; `curl -I` confirmed the existing Vite server answers 200 on
+  `http://127.0.0.1:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0`.
+  Manual/user browser confirmation remains the Phase 2 commit gate.
+- 2026-05-20: Phase 2 manual browser confirmation received from user for
+  `http://192.168.85.200:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0`:
+  levels pass quickly, then the flow settles on a high-score screen with
+  `credits 0` and moving marbles. Result: green for visible, ticking attract
+  without seed/preload use. Residual risk: attract cadence still differs from
+  MAME and should stay visible in future Phase 3 coin/start proof instead of
+  being hidden by runtime seeds.

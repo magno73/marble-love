@@ -144,6 +144,13 @@ function updateMode0PresentationTimer(state: GameState, rom: RomImage, stage: nu
   renderMode0PresentationTimer(state, rom);
 }
 
+function renderMode3AttractSummary(state: GameState, rom: RomImage): void {
+  gameStateBanner26B2A(state, rom, 0);
+  stateSub2572(state, rom, 0x22d26, 0x3000);
+  stateSub2572(state, rom, 0x22d32, 0x3400);
+  ww(state, 0x0040075a, 0x00c8);
+}
+
 function rebuildMode0LevelPrefix(
   state: GameState,
   rom: RomImage,
@@ -444,6 +451,7 @@ export function advanceMode0Init11452Async(state: GameState, rom: RomImage): voi
       if (rb(state, 0x004003e4) > 7) {
         ww(state, 0x00400392, 3);
         wb(state, 0x004003e4, 0);
+        renderMode3AttractSummary(state, rom);
         finalize11654(state, rom);
         state.clock.mode0Init11452Stage = undefined;
         return;
