@@ -636,3 +636,5 @@ The task is complete only when:
 ## Checkpoint Log
 
 - 2026-05-20: PRD created. No implementation started.
+- 2026-05-20: `/goal` opened and `GOAL.md` updated. Current phase is Phase 0
+  baseline/research; no runtime code touched.
