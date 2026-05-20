@@ -5,13 +5,15 @@
  * routine. The first block is small and deterministic: rank the score at
  * `object+0xBC`; if rank is 10, return 0 immediately. The qualifying path is
  * interactive and render-heavy, so it is exposed through sub-injection. When
- * that path is not implemented, the default returns 0 instead of pretending the
- * initials flow completed; otherwise callers skip the reset/presentation path
- * and leave stale gameplay terrain visible after game over.
+ * that path is not implemented, the default still applies the deterministic
+ * table-registration tail (`FUN_428E`) using the current player initials, then
+ * returns 0 so callers continue through the reset/presentation path instead of
+ * leaving stale gameplay terrain visible after game over.
  */
 
 import type { GameState } from "./state.js";
 import { keyRankLookup4686 } from "./key-rank-lookup-4686.js";
+import { highScoreRegister428E } from "./high-score-register-428e.js";
 
 const WRAM = 0x00400000;
 
@@ -20,6 +22,7 @@ export const OBJECT_SLOT_LOOKUP_NONQUALIFY_RANK = 10 as const;
 
 export interface ObjectSlotLookup11B18Subs {
   rankLookup?: (state: GameState, scoreLong: number) => number;
+  registerScore?: (state: GameState, rank: number, recordAddr: number) => number;
   qualifiedFlow?: (state: GameState, objectAddr: number, rank: number) => void;
 }
 
@@ -48,6 +51,7 @@ export function objectSlotLookup11B18(
   }
 
   if (subs.qualifiedFlow === undefined) {
+    (subs.registerScore ?? highScoreRegister428E)(state, rank & 0xff, objectAddr + 0xbc);
     return 0;
   }
 
