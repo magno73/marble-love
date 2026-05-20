@@ -1626,3 +1626,78 @@ Status: **D3-pistons-type29-cull-fixed / user-retest-needed** — 2026-05-20.
 - User-facing status: needs live retest on L4/Aerial. Suggested URL:
   `http://192.168.85.200:5173/?autoLoad=1&play=1&startLevel=4&debugState=1&debugCompact=1&sound=0&loopReset=0`.
   If this passes, `sprite2` pistons can be marked green.
+
+Status: **D3/D4-user-retest-pistons-green / sprite4-verdi-reopened** — 2026-05-20.
+
+- User live retest confirmed that the L4/Aerial pistons now move/animate after
+  the `type0x29` cull fix. For the current user-facing sprite scope,
+  `sprite2` pistons can be treated as green; keep the older proof notes above
+  as historical context.
+- User reopened the remaining green blob/stain issue with the current TS
+  screenshot `/Users/magnus-bot/Desktop/verdi.png`. The screenshot is
+  L3/Intermediate descriptor `0x02cd9e`, timer `36`, player around
+  `x=555..579`, `y=622..645`, and scrollY about `457`.
+- Reproduced a close TS route state without browser/video testing:
+  `/tmp/marble-sprite-goal/current-run/verdi_user_screenshot_route3_f3130_probe_20260520.json`.
+  Summary: descriptor `0x02cd9e`, timer `36`, player `x=578.78`,
+  `y=622.55`, and the entity draw list contains only `type1/sub0` (marble).
+  Therefore the missing greens in this state are **not** a web renderer,
+  palette, priority, or all-bank decode drop; the visual type4 entries are
+  already absent upstream.
+- Prior green-visible TS proof remains valid but covers an earlier/slower
+  route point:
+  `/tmp/marble-sprite-goal/current-run/l3_sprite4_f2400_step22.seed.json` and
+  `/tmp/marble-sprite-goal/current-run/browser_l3_sprite4_f2400_step22.png`.
+  That state is timer `48`, scrollY about `297`, and has two visible `type4`
+  entries (`sub3` and `sub2`) with `d4=225/217`.
+- Current code/ROM finding for selector `2`: `FUN_14C46` visual type4 entries
+  come from ROM list `0x225ba` and use range `0x01..0x18` for data pointers
+  `0x22696` and `0x226aa`. The collision/rect dispatcher `FUN_12DFA` uses
+  separate selector-2 ranges `0x17..0x32` and `0x29..0x40`. That explains the
+  observed split where later collision/terrain slots can still exist while the
+  earlier visual type4 objects have already been torn down.
+- Do **not** widen the type4 lifecycle range or fabricate green sprites yet.
+  This may be a real original-ROM asymmetry, a route/timing expectation
+  mismatch, or a TS/MAME scroll-lifecycle divergence. Next proof must compare
+  the same late timer/scroll window against MAME/reference before changing
+  `state-sub-14c46.ts`, `sub-14966.ts`, or renderer code.
+
+Status: **D4-sprite4-fun17346-string-slot-spawn-fixed / user-retest-needed** — 2026-05-20.
+
+- Independent code/ROM investigation found the missing owner for the remaining
+  `verdi` green blob/stain sprites: `scrollRange144E4` still had
+  `FUN_17346` as a no-op. The original routine uses selector table `0x23d4a`,
+  arms 7 string slots at `0x401482` stride `0x42`, then inserts draw-list
+  entries as entity type `0x0e`.
+- This explains why the earlier route probe had only the marble in the draw
+  list even though the renderer already knew how to render type `0x0e`:
+  `late-game-logic-26f3e.ts` already dispatches type 14 through ROM table
+  `0x1f07a`, and `buffer-fill-1b12a.ts` already accepts type `0x0e`.
+- Selector `2` in `0x23d4a` has L3/Intermediate ranges `0x0e..0x24` and
+  `0x11..0x2a`. These are the later green-blob windows seen in the user
+  screenshot family; do not widen the older `FUN_14C46` type4 range.
+- Patch:
+  `packages/engine/src/string-range-dispatch-17346.ts` now replicates
+  `FUN_17346`; `packages/engine/src/scroll-range-144e4.ts` wires it with the
+  real RNG, projection, waypoint, coordinate, insert, and teardown callbacks;
+  `packages/cli/src/probe-sprite-cases.ts` now diagnoses entity type 14.
+- Focused regression:
+  `packages/engine/test/string-range-dispatch-17346.test.ts` covers both
+  single-table spawn and outward range teardown for type `0x0e`.
+- After patch proof:
+  `/tmp/marble-sprite-goal/current-run/verdi_user_screenshot_route3_f3130_probe_after_17346_20260520.json`.
+  Same seed/route family reaches descriptor `0x02cd9e` and timer `36`; the
+  draw list now contains `type14` rows backed by string slots
+  `0x401482..0x40160e`, and the linked motion-object frame has `7` sprite
+  entries with palette `256`.
+- Validation:
+  `npm run typecheck` PASS;
+  `npm run lint` PASS;
+  `npx vitest run packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts --silent`
+  PASS (`23` tests);
+  `npx vitest run packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS (`63` tests);
+  `git diff --check` PASS.
+- Current status: likely fixed in code, still user-retest needed for visual
+  confirmation on mobile/browser. Do not close the sprite PRD until this retest
+  and the final D5 audit are recorded.

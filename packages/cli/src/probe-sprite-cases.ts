@@ -360,6 +360,19 @@ function entityList(state: GameState, rom: RomImage): unknown[] {
       row.activeCelPtr = hx(activeCelPtr, 6);
       row.moBlock = motionBlockHeader(state, rom, activeCelPtr);
       row.innerRecords = type4InnerRecords(state, rom, structPtr);
+    } else if (type === 14) {
+      const structPtr = romU32(rom, 0x1f07a + (s8(sub) << 2));
+      const d5 = (rwAbs(state, rom, structPtr + 0x28) + 0x18) & 0xffff;
+      const d4 = (rwAbs(state, rom, structPtr + 0x2a) + 0x10) & 0xffff;
+      const celListPtr = rlAbs(state, rom, structPtr + 0x3a);
+      const activeCelPtr = rlAbs(state, rom, celListPtr);
+      row.struct = hx(structPtr, 6);
+      row.d5 = s16(d5);
+      row.d4 = s16(d4);
+      row.visibleBinary = s16(d4) > -0x30 && s16(d4) < 0x120;
+      row.celListPtr = hx(celListPtr, 6);
+      row.activeCelPtr = hx(activeCelPtr, 6);
+      row.moBlock = motionBlockHeader(state, rom, activeCelPtr);
     } else if (type === 2) {
       Object.assign(row, romType2Diagnostic(state, rom, sub));
     } else if (type === 5) {

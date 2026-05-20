@@ -12,28 +12,32 @@ Resolve the remaining sprite visibility and physics regressions tracked by:
 - `docs/codex-task-sprite-visibility-physics.md`
 - `docs/codex-task-l4-pistons-current-context.md`
 
-Current focus: L4/Aerial pistons user retest. The user clarified that debug
-overlay coverage is not the cause. The latest code/proof finding is that
-`type0x29` piston animation entries were already being inserted, but TS was
-dropping them with an incorrect `d4 < 0xc0` renderer cull. Local commit
-`0ff49fa` changes `dispatchType0x29` to the ROM signed band
-`d4 <= -0x40 || d4 >= 0x100`.
+Current focus: L3/Intermediate green blob/stain sprites from the user screenshot
+`/Users/magnus-bot/Desktop/verdi.png`. L4/Aerial pistons were confirmed by the
+user after the `type0x29` renderer cull fix. The current green-sprite finding is
+that this was not a web renderer/palette drop and should not be fixed by
+widening the `type4` lifecycle. The missing path is original-ROM
+`FUN_17346`: it arms the string-slot array at `0x401482`, inserts entity
+type `0x0e`, and lets the already-existing late-game renderer emit the moving
+green blob/stain sprites.
 
 ## Current Status
 
 - `sprite1`: previous user retest said OK. Do not reopen unless a new
   regression appears.
-- `sprite2`: active focus. L4/Aerial pistons have a code fix for the
-  `type0x29` visual cull; needs user live retest before marking green.
+- `sprite2`: user confirmed L4/Aerial pistons now move/animate; record as
+  user-facing green for the current scope.
 - `sprite3`: previous user retest said OK. TS visibility is strong; MAME route
   attach was historically gray.
-- `sprite4`: previous pass reported L3 greens as visually present in sampled
-  state, but keep proof status tied to the sprite PRD.
+- `sprite4`: active focus. L3 green type4 sprites are visible in the prior
+  frozen/slow-route state at scrollY about `297`, but in the user `verdi`
+  screenshot route at scrollY about `457` the type4 entries are absent from
+  the draw list. Keep this open until the MAME/reference expectation for that
+  later scroll window is separated from route/timing.
 - Compact debug exists via `debugCompact=1`, but overlay coverage is not the
   current suspected cause.
-- The focused continuity file is
-  `docs/codex-task-l4-pistons-current-context.md`; update it after every new
-  finding.
+- Update this file and `docs/codex-task-sprite-visibility-physics.md` after
+  every new green-sprite finding.
 
 ## Known Recent Evidence
 
@@ -49,27 +53,53 @@ dropping them with an incorrect `d4 < 0xc0` renderer cull. Local commit
 - Validation after the `type0x29` fix:
   `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts --silent`
   PASS, engine/web typechecks PASS, `git diff --check` PASS.
+- User confirmed after that patch that the L4 pistons now move.
+- Green-sprite route probe:
+  `/tmp/marble-sprite-goal/current-run/verdi_user_screenshot_route3_f3130_probe_20260520.json`.
+  It matches the user screenshot timer (`36`) and descriptor (`0x02cd9e`) but
+  has only the marble in the entity draw list.
+- Prior green-visible proof remains:
+  `/tmp/marble-sprite-goal/current-run/l3_sprite4_f2400_step22.seed.json` and
+  `/tmp/marble-sprite-goal/current-run/browser_l3_sprite4_f2400_step22.png`.
+  That state is timer `48`, scrollY about `297`, and has two visible type4
+  entries. The user `verdi` screenshot is much later in scroll (`457`).
+- Selector-2 ROM tables are asymmetric: visual type4 entries in
+  `FUN_14C46` cover range `0x01..0x18`, while collision/rect entries in
+  `FUN_12DFA` cover `0x17..0x32` and `0x29..0x40`. Do not "fix" this by
+  widening the type4 range unless MAME proof shows the original visual objects
+  remain active in the later scroll band.
+- Implemented local `FUN_17346` replica in
+  `packages/engine/src/string-range-dispatch-17346.ts` and wired it from
+  `scrollRange144E4`. It reads selector table `0x23d4a`; selector `2`
+  includes the L3/Intermediate ranges `0x0e..0x24` and `0x11..0x2a`, which
+  match the later green-blob window better than the earlier `type4` range.
+- After the patch, probe
+  `/tmp/marble-sprite-goal/current-run/verdi_user_screenshot_route3_f3130_probe_after_17346_20260520.json`
+  reaches descriptor `0x02cd9e`, timer `36`, and the linked frame now contains
+  `7` sprite entries. The draw list includes `type14`/`type0x0e` rows backed by
+  `0x401482..0x40160e`, with active cel pointer `0x02186a`.
+- Validation for the `FUN_17346` patch: `npm run typecheck` PASS,
+  `npm run lint` PASS,
+  `npx vitest run packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS (`63` tests), and `git diff --check` PASS.
 
 ## Next Concrete Action
 
-Ask the user to retest L4/Aerial pistons from:
-
-```text
-http://192.168.85.200:5173/?autoLoad=1&play=1&startLevel=4&debugState=1&debugCompact=1&sound=0&loopReset=0
-```
-
-If the first piston block now visibly rises when it repels the marble, mark
-`sprite2` pistons green in the sprite PRD. If it still fails, capture the
-`draw29` and `last obj-pair collision` debug lines and continue from
-`docs/codex-task-l4-pistons-current-context.md`.
+Run one user visual retest on L3/Intermediate with normal gameplay. If the
+moving green stains are visible, mark `sprite4` as user-facing green with this
+owner classification: missing upstream string-slot spawn (`FUN_17346`) fixed;
+renderer path already existed. Keep the goal open until the final PRD table and
+regression gates are updated.
 
 ## Files To Read For This Goal
 
 - `AGENTS.md`
 - `docs/context-map.md`
-- `docs/codex-task-l4-pistons-current-context.md`
 - `docs/codex-task-sprite-visibility-physics.md` only for acceptance criteria
-- touched source/tests around the piston path
+- `packages/engine/src/state-sub-14c46.ts`
+- `packages/engine/src/script-rect-dispatch-12dfa.ts`
+- `packages/engine/src/sub-14966.ts`
+- `packages/engine/src/late-game-logic-26f3e.ts`
 
 ## Do Not Read Unless Needed
 

@@ -42,12 +42,17 @@ import { scriptRectDispatch12DFA } from "./script-rect-dispatch-12dfa.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
 import { scrollSub15A12 } from "./scroll-sub-15a12.js";
 import { stateSub14C46 } from "./state-sub-14c46.js";
+import { stringRangeDispatch17346 } from "./string-range-dispatch-17346.js";
 import { spriteProject1CC62 } from "./sprite-project-1cc62.js";
 import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
+import { computeSpriteCoords_v3 } from "./sprite-coords.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper18F46 } from "./helper-18f46.js";
 import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { fun264AA } from "./fun-264aa.js";
+import { entityWaypointStep1D1EC } from "./entity-waypoint-step-1d1ec.js";
+import { rngNext } from "./rng.js";
+import { as_u16 } from "./wrap.js";
 
 export const SCROLL_RANGE_144E4_ADDR = 0x000144e4 as const;
 
@@ -113,7 +118,7 @@ export interface ScrollRange144E4Subs {
   fun_15a12?: (state: GameState, d3b: number, d2b: number) => void;
   /** FUN_14C46 — default replica reale quando la ROM e' disponibile. */
   fun_14c46?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_17346 — non replicata; default no-op. */
+  /** FUN_17346 — default replica reale quando la ROM e' disponibile. */
   fun_17346?: (state: GameState, d3b: number, d2b: number) => void;
   /** FUN_18FFA — non replicata; default no-op. */
   fun_18ffa?: (state: GameState) => void;
@@ -193,7 +198,28 @@ export function scrollRange144E4(
       },
     });
   }
-  (subs?.fun_17346 ?? _noop)(state, d3b, d2b);
+  if (subs?.fun_17346 !== undefined) {
+    subs.fun_17346(state, d3b, d2b);
+  } else if (rom !== undefined) {
+    stringRangeDispatch17346(state, rom, d3b, d2b, {
+      fun_13a98: (s, limit) => rngNext(s.rng, as_u16(limit)) as unknown as number,
+      fun_1cc62: (s, arg) => spriteProject1CC62(s, arg, {
+        fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+      }),
+      fun_1d1ec: (s, slotPtr) => {
+        entityWaypointStep1D1EC(s, slotPtr);
+      },
+      fun_1778e: (s, slotPtr) => {
+        computeSpriteCoords_v3(s, slotPtr);
+      },
+      fun_18e6c: (s, typeCode, subIdx) => {
+        slotInsertSorted18E6C(s, rom, typeCode, subIdx);
+      },
+      fun_18f46: (s, typeCode, subIdx) => {
+        helper18F46(s, rom, typeCode, subIdx);
+      },
+    });
+  }
   // FUN_12DFA = scriptRectDispatch12DFA: arg1=d3b (from_scaled), arg2=d2b (to_scaled)
   if (rom !== undefined) {
     scriptRectDispatch12DFA(state, rom, d3b, d2b);
@@ -250,5 +276,4 @@ export function scrollRange144E4(
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function _noop(_state: GameState, _a: number, _b: number): void { /* no-op */ }
 function _noopState(_state: GameState): void { /* no-op */ }
