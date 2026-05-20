@@ -1,8 +1,18 @@
 # Agent briefing — Marble Love
 
+> Legacy briefing: do not read this file by default. It captures an older
+> investigation snapshot and contains stale implementation/status claims. Use
+> `AGENTS.md`, `docs/context-map.md`, `STATUS.md`, and the active task file for
+> current work. Do not follow operational rules below, such as old "NO commit"
+> or `NO_IMPL` notes, without revalidating them on current `main`.
+
 **Repo**: `/Users/magnus-bot/Code/marble-love/` — replica TypeScript bit-perfect di Marble Madness (Atari System 1, 1984, M68010 @ 7.16 MHz + 6502 audio). Ground truth = **MAME** via differential testing 100 frame.
 
-Questo documento e' il **briefing pack** per agent invocati su task complessi. Leggilo INTEGRALMENTE prima di procedere. Aderisci alle Rule 12 (sezione 2). Non re-investigare ipotesi gia' falsificate (sezione 3).
+Questo documento e' un **briefing pack storico** per agent invocati su vecchi
+task complessi. Non usarlo come contesto di startup corrente. Aderisci alle Rule
+12 (sezione 2) solo se stai ricostruendo quel periodo di lavoro. Non
+re-investigare ipotesi gia' falsificate (sezione 3) senza prima verificare che
+siano ancora rilevanti su `main`.
 
 ---
 

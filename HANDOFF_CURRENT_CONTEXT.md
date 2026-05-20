@@ -1,19 +1,27 @@
 # Handoff Current Context
 
+> Legacy note: this handoff is historical and may contain stale baseline
+> references. Do not read it by default. Prefer `AGENTS.md`,
+> `docs/context-map.md`, `STATUS.md`, and the active task/goal file. Use this
+> file only when reconstructing the May 18 seed/runtime safety context.
+
 Repo: `/Users/magnus-bot/Code/marble-love`
 Branch: `main`
 Date: 2026-05-18
 
-This file is intentionally not a roadmap. It is only the minimum context a new
-session needs so it does not make unsafe assumptions.
+This file was originally a minimum session handoff. It is now historical and
+should not replace the current startup docs.
 
 ## Read First
 
-Always read these before changing behavior:
+Current startup docs:
 
-- `README.md`
-- `STATUS.md`
-- `HANDOFF_SIX_LEVELS.md` when present
+- `AGENTS.md`
+- `docs/context-map.md`
+- the active task/goal file, if present
+
+Read `STATUS.md` for current product status. Read `HANDOFF_SIX_LEVELS.md` only
+when reconstructing the historical six-level seed investigation.
 
 Work from `/Users/magnus-bot/Code/marble-love` as the writable root. Do not edit
 the repo from a Codex workspace outside that root.

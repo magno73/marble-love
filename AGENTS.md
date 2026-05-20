@@ -5,6 +5,10 @@ Repository root: `/Users/magnus-bot/Code/marble-love`.
 Use this file as the startup context for AI agents. Keep it short. Do not paste
 long history, trace output, or snapshot JSON into agent prompts.
 
+Cold start rule: read this file, `docs/context-map.md`, and the active
+task/goal file only. Do not read `README.md`, `STATUS.md`, handoffs, or legacy
+briefings unless the task asks for them or the context map routes you there.
+
 ## Layout
 
 - `packages/engine`: core engine, state, runtime logic, renderer model, audio
