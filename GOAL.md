@@ -24,6 +24,7 @@ Current phase:
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
+- Phase 2 research has started with compact TS-vs-MAME cold boot summaries.
 - Existing seed diagnostics must remain intact: `startLevel=1..6` and
   `playableSeed=NAME`.
 
@@ -53,6 +54,15 @@ Next action:
 - Browser in-app verification was attempted before the Phase 1 commit, but this
   session had no active browser pane available. Manual/user browser checks
   remain useful during Phase 2.
+- Phase 2 research artifacts:
+  `/tmp/marble-love/boot-flow/phase2-ts-cold-boot-summary.json` and
+  `/tmp/marble-love/boot-flow/phase2-mame-cold-boot-nonvram-summary.json`.
+- Initial Phase 2 finding: MAME cold boot needs clean cfg/nvram plus
+  `-nonvram_save` for the expected attract path. TS `bootInit(...,{})` reaches
+  descriptor-backed attract-like states without seeds, but cadence drifts:
+  examples include MAME f2400 at `main=1/mode=0/level=1/ptr=0x0002c54c`
+  versus TS f2400 same descriptor with different PF/alpha counts, and MAME
+  f3600 returning to `level=0/mode=0` while TS is still `level=1/mode=2`.
 
 ## Active Constraints
 
