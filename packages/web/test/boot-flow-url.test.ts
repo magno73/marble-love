@@ -28,6 +28,23 @@ describe("boot-flow URL routing", () => {
     expect(shouldUseCoinStartFlow({ ...coinStartBase, forceBootFlow: true })).toBe(false);
   });
 
+  it("keeps explicit diagnostic seed URLs out of the coin/start seed preparation", () => {
+    expect(shouldUseCoinStartFlow({
+      ...coinStartBase,
+      playableSeedName: "start_level1_intro_practice_f2479",
+    })).toBe(false);
+
+    expect(shouldUseCoinStartFlow({
+      ...coinStartBase,
+      useStartLevelPractice: true,
+    })).toBe(false);
+
+    expect(shouldUseCoinStartFlow({
+      ...coinStartBase,
+      warmStateReady: true,
+    })).toBe(false);
+  });
+
   it("keeps explicit seed and scenario modes out of bootFlow", () => {
     expect(bootFlowConflictMessage({
       explicitScenarioName: null,
@@ -54,6 +71,24 @@ describe("boot-flow URL routing", () => {
       startLevelPractice: undefined,
       useMameDump: false,
       useMameLive: false,
+    })).toBe(BOOT_FLOW_CONFLICT_MESSAGE);
+
+    expect(bootFlowConflictMessage({
+      explicitScenarioName: null,
+      forceBootFlow: true,
+      playableSeedName: null,
+      startLevelPractice: undefined,
+      useMameDump: true,
+      useMameLive: false,
+    })).toBe(BOOT_FLOW_CONFLICT_MESSAGE);
+
+    expect(bootFlowConflictMessage({
+      explicitScenarioName: null,
+      forceBootFlow: true,
+      playableSeedName: null,
+      startLevelPractice: undefined,
+      useMameDump: false,
+      useMameLive: true,
     })).toBe(BOOT_FLOW_CONFLICT_MESSAGE);
   });
 

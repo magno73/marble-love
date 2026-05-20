@@ -4,8 +4,10 @@
  * `FUN_11B18` is the per-player high-score qualification / initials-entry
  * routine. The first block is small and deterministic: rank the score at
  * `object+0xBC`; if rank is 10, return 0 immediately. The qualifying path is
- * interactive and render-heavy, so it is exposed through sub-injection while
- * preserving the binary return contract (`1` after the flow completes).
+ * interactive and render-heavy, so it is exposed through sub-injection. When
+ * that path is not implemented, the default returns 0 instead of pretending the
+ * initials flow completed; otherwise callers skip the reset/presentation path
+ * and leave stale gameplay terrain visible after game over.
  */
 
 import type { GameState } from "./state.js";
@@ -45,7 +47,11 @@ export function objectSlotLookup11B18(
     return 0;
   }
 
-  subs.qualifiedFlow?.(state, objectAddr, rank & 0xff);
+  if (subs.qualifiedFlow === undefined) {
+    return 0;
+  }
+
+  subs.qualifiedFlow(state, objectAddr, rank & 0xff);
   return 1;
 }
 

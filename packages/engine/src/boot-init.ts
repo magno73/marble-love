@@ -51,6 +51,7 @@ import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { moScreenInit1A286 } from "./mo-screen-init-1a286.js";
 import { moGridInit2404 } from "./mo-grid-init-2404.js";
 import { levelInit16F6C } from "./level-init-16f6c.js";
+import { initDefaultHighScoreTable } from "./high-score-defaults.js";
 
 function shouldArmLegacyAttractWarmReplay(workRam: Uint8Array): boolean {
   return (
@@ -255,6 +256,7 @@ export function bootInit(
   paletteRamInitFull(state, rom);
   paletteBootstrapInit(state);
   gameStateMachineInit(state, rom);
+  initDefaultHighScoreTable(state, rom);
 
   // 4. Bulk init slot array (FUN_10392, chiamato dal main loop FUN_117B2
   //    via FUN_10504 al primo giro, prima dell'avvio del game state machine).

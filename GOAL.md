@@ -20,7 +20,10 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 6: runtime level progression L1 through L6.
+- Phase 5 follow-up: post-game-over visual cleanup after runtime play.
+- Phase 6 progression has user/manual acceptance for this pass: user completed
+  three levels from `bootFlow=1` and asked to treat level-to-level progression
+  as closed.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
@@ -30,11 +33,12 @@ Current phase:
 
 Next action:
 
-1. Treat manual browser confirmation as green for bootFlow progression through
-   at least three completed levels; next proof should target later L4/L5/L6
-   progression or the final end flow.
-2. Investigate only if needed the post-game-over visual sequence: yellow/red
-   terrain for a few seconds, black reset window, then demo mode.
+1. Commit the Phase 5 follow-up after rerunning focused gates: user confirmed
+   the seconds-long yellow/red terrain no longer appears after `GAME OVER`.
+2. Treat high-score initials/save as the next material gap: screenshot
+   `/Users/magnus-bot/Desktop/finisce.png` reaches the high-score/default
+   table, but `FUN_11B18` still has no implemented interactive initials flow
+   and falls back to reset/demo.
 3. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
@@ -125,15 +129,61 @@ Next action:
   is stale level rendering during the game-over/attract transition.
 - Phase 4 committed and pushed as `70baf5a`
   (`fix: enter level one from cold boot flow`).
-- Phase 5 post-game-over finding: probe
+- Phase 5 post-game-over finding, superseded by the high-score default fix:
+  probe
   `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` reproduces the
   bootFlow timeout path without seeds. Timeout summary starts around frame 3782
   at `main=2/mode=0`, then attract returns around frame 3964 at
   `main=1/mode=2` while the level playfield remains visible, and later clears
   at frame 4264 before mode0 attract rebuilds. Existing seed-backed guard
   `npx vitest run packages/engine/test/playable-live-routes.test.ts -t "time-out transition holds" --silent`
-  PASS, so treat the yellow/red post-game-over screen as a documented
-  attract/timeout visual unless future MAME proof shows divergence.
+  PASS.
+- Phase 5 root cause/fix: cold boot did not initialize the ROM-backed default
+  high-score pointer/table at `*0x401FFC = 0x401E74`, so a normal timeout score
+  such as 140 ranked against an all-zero table and `FUN_1101E` skipped the
+  staged mode2 reset. Added `packages/engine/src/high-score-defaults.ts` and
+  called it from cold `bootInit`; warm seed diagnostics remain untouched.
+  The post-fix probe clears the stale playfield on the next frame after attract
+  handoff (`f3965`), and
+  `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` now shows
+  `t4100` at playfield count 234 instead of the stale 4183 level playfield.
+  `packages/engine/test/boot-init.test.ts` also proves the exact same table is
+  initialized from `ghidra_project/marble_program.bin`.
+- Phase 5 second root cause/fix from user screenshots
+  `/Users/magnus-bot/Desktop/1.png`, `/Users/magnus-bot/Desktop/2.png`, and
+  `/Users/magnus-bot/Desktop/3.png`: after later-level game-over,
+  `main=2/mode=2/level=4` becomes `main=1/mode=2/level=1` while the old
+  playfield remains visible until the black reset window. This is the
+  qualifying-score path: `objectSlotLookup11B18` returned 1 even when the
+  interactive initials/high-score flow was not wired. Changed the default so
+  an unwired qualifying flow returns 0, allowing `FUN_1101E` to start the
+  staged mode2 reset. Probe
+  `/tmp/marble-love/boot-flow/phase5-highscore-gameover-probe.log` now shows a
+  score-qualifying level-4 game-over clears playfield from 8192 to 0 at
+  `advance1`. Added a tick-level guard in
+  `packages/engine/test/main-tick.test.ts` proving staged mode2 reset clears a
+  stale post-game-over playfield through `mainTick`.
+  Automated gates PASS:
+  `npx vitest run packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts --silent`;
+  `npx vitest run packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`
+  (also guards explicit `playableSeed`, `startLevel`, `mameDump`, and
+  `mameLive` diagnostics away from `bootFlow`/coin-start seed prep);
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`; `npm run context:audit`;
+  `npm run typecheck`; `npm run lint`; `npm run test -- --silent` (259 test
+  files passed, 3 skipped; 2260 tests passed, 17 skipped); `git diff --check`.
+  Manual/browser confirmation received from user: the yellow/red later-level
+  terrain no longer appears after `GAME OVER`. Screenshot
+  `/Users/magnus-bot/Desktop/finisce.png` instead shows the high-score/default
+  table with credits 0. Residual: the score-qualified initials/save flow is not
+  implemented yet; the current unwired `FUN_11B18` fallback avoids stale terrain
+  and proceeds to reset/demo rather than accepting initials.
+  Latest pre-commit rerun PASS:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`
+  (8 files, 64 tests); engine/web targeted typechecks; web build (known Vite
+  chunk-size warning only); `git diff --check`.
 - Phase 6 L1 -> L2 diagnostic route-search checkpoint: exported a scratch
   no-seed runtime L1 state at
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`

@@ -775,15 +775,16 @@ The task is complete only when:
   transition.
 - 2026-05-20: Phase 4 committed and pushed as `70baf5a`
   (`fix: enter level one from cold boot flow`).
-- 2026-05-20: Phase 5 post-game-over follow-up. Probe
+- 2026-05-20: Phase 5 post-game-over follow-up, later superseded by the
+  high-score default fix below. Probe
   `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` reproduces the
   no-seed bootFlow timeout: timeout summary starts around frame 3782 at
   `main=2/mode=0`; attract returns around frame 3964 at `main=1/mode=2` with
   the level playfield still visible; the playfield clears around frame 4264
   before mode0 attract rebuilds. Existing seed-backed timeout guard passes:
   `npx vitest run packages/engine/test/playable-live-routes.test.ts -t "time-out transition holds" --silent`.
-  Treat the yellow/red post-game-over screen as a documented attract/timeout
-  visual unless MAME proof shows this no-seed route diverges from hardware.
+  This was initially gray/documented, then traced to missing cold-boot
+  high-score defaults.
 - 2026-05-20: Phase 6 L1 -> L2 diagnostic route-search checkpoint. Scratch
   no-seed runtime L1 state exported to
   `/tmp/marble-love/boot-flow/bootflow_l1_runtime_diagnostic_f1000.seed.json`
@@ -802,3 +803,58 @@ The task is complete only when:
   `/Users/magnus-bot/Desktop/schermata nera.png` shows the black window at
   `f=14190 main=1 mode=0 level=0 scroll=(0,340)`, `timer=0`, player
   `a=3 st=6`.
+- 2026-05-20: User asked to proceed with item 2 and treat level progression as
+  closed for this pass. Phase 5 post-game-over visual fix implemented locally.
+  First root cause: cold boot did not initialize the default high-score struct
+  pointer/table (`*0x401FFC = 0x401E74`, table at `0x401E92`), so a timeout
+  score of 140 ranked against an all-zero table and `FUN_1101E` skipped the
+  staged mode2 reset. User then supplied screenshots
+  `/Users/magnus-bot/Desktop/1.png`, `/Users/magnus-bot/Desktop/2.png`, and
+  `/Users/magnus-bot/Desktop/3.png`, showing a second case after later-level
+  play: `main=2/mode=2/level=4` game-over transitions to
+  `main=1/mode=2/level=1` while old terrain remains visible, then to a black
+  reset window. Second root cause: score-qualified `objectSlotLookup11B18`
+  returned 1 even though the interactive initials/high-score flow was not wired,
+  so `FUN_1101E` skipped the staged reset. The default unwired qualifying flow
+  now returns 0 and lets mode2 reset run. Files touched:
+  `packages/engine/src/high-score-defaults.ts`,
+  `packages/engine/src/boot-init.ts`,
+  `packages/engine/src/object-slot-lookup-11b18.ts`,
+  `packages/engine/test/boot-init.test.ts`,
+  `packages/engine/test/main-loop-init-task-a.test.ts`,
+  `packages/engine/test/object-slot-lookup-11b18.test.ts`, `GOAL.md`, and this
+  PRD. Evidence for the first case:
+  `/tmp/marble-love/boot-flow/phase5-gameover-summary.json` and
+  `/tmp/marble-love/boot-flow/phase5-gameover-probe.log`; stale level playfield
+  now clears on the frame after the attract handoff (`f3965`), and `t4100`
+  reports playfield count 234 instead of 4183. `packages/engine/test/boot-init.test.ts`
+  also proves the exact same default table is initialized from
+  `ghidra_project/marble_program.bin`. Evidence for the score-qualified
+  later-level case:
+  `/tmp/marble-love/boot-flow/phase5-highscore-gameover-probe.log`; a synthetic
+  `level=4` game-over with score `0x004000` starts mode2 reset and clears
+  playfield from 8192 to 0 at `advance1`. Added
+  `packages/engine/test/main-tick.test.ts` coverage proving staged mode2 reset
+  clears stale post-game-over playfield through `mainTick`. Validation passed:
+  `npx vitest run packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts --silent`;
+  `npx vitest run packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`
+  (also guards explicit `playableSeed`, `startLevel`, `mameDump`, and
+  `mameLive` diagnostics away from `bootFlow`/coin-start seed prep);
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build`; `npm run context:audit`;
+  `npm run typecheck`; `npm run lint`; `npm run test -- --silent` (259 test
+  files passed, 3 skipped; 2260 tests passed, 17 skipped); `git diff --check`.
+  Manual URL for commit gate:
+  `http://192.168.85.200:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0`.
+  Result: automated green. Manual browser confirmation received from user: the
+  yellow/red later-level terrain no longer appears after `GAME OVER`. Screenshot
+  `/Users/magnus-bot/Desktop/finisce.png` now shows the high-score/default table
+  with credits 0. Residual for the next phase: score-qualified high-score
+  initials/save is not implemented; the current unwired `FUN_11B18` fallback
+  intentionally proceeds to reset/demo instead of pretending the initials flow
+  completed and leaving stale terrain visible. Latest pre-commit rerun passed:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts packages/engine/test/boot-init.test.ts packages/engine/test/main-tick.test.ts packages/engine/test/object-slot-lookup-11b18.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/playable-live-routes.test.ts --silent`
+  (8 files, 64 tests); engine/web targeted typechecks; web build (known Vite
+  chunk-size warning only); `git diff --check`.
