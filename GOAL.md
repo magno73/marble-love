@@ -12,14 +12,11 @@ Resolve the remaining sprite visibility and physics regressions tracked by:
 - `docs/codex-task-sprite-visibility-physics.md`
 - `docs/codex-task-l4-pistons-current-context.md`
 
-Current focus: L3/Intermediate green blob/stain sprites from the user screenshot
-`/Users/magnus-bot/Desktop/verdi.png`. L4/Aerial pistons were confirmed by the
-user after the `type0x29` renderer cull fix. The current green-sprite finding is
-that this was not a web renderer/palette drop and should not be fixed by
-widening the `type4` lifecycle. The missing path is original-ROM
-`FUN_17346`: it arms the string-slot array at `0x401482`, inserts entity
-type `0x0e`, and lets the already-existing late-game renderer emit the moving
-green blob/stain sprites.
+Current focus: L4/Aerial invisible obstacle reported after the user confirmed
+that L3/Intermediate green blob/stain sprites now appear. The new screenshot
+points at terrain/script slot `0@0x400a9c`, `tag=0x0c`, around
+`(840,864,16228)`. This is an Aerial dynamic obstacle rendered as entity
+`type12`, not the already-fixed L3 green `type0x0e` path.
 
 ## Current Status
 
@@ -29,11 +26,12 @@ green blob/stain sprites.
   user-facing green for the current scope.
 - `sprite3`: previous user retest said OK. TS visibility is strong; MAME route
   attach was historically gray.
-- `sprite4`: active focus. L3 green type4 sprites are visible in the prior
-  frozen/slow-route state at scrollY about `297`, but in the user `verdi`
-  screenshot route at scrollY about `457` the type4 entries are absent from
-  the draw list. Keep this open until the MAME/reference expectation for that
-  later scroll window is separated from route/timing.
+- `sprite4`: user confirmed green blobs/stains now appear after the
+  `FUN_17346` string-slot spawn fix.
+- New Aerial invisible obstacle: active focus. Evidence says the physics slot
+  is valid and active, but `late-game-logic-26f3e` culled the matching `type12`
+  sprite because it treated ROM `moveq #0xe0` as unsigned `+224` instead of
+  signed `-32`.
 - Compact debug exists via `debugCompact=1`, but overlay coverage is not the
   current suspected cause.
 - Update this file and `docs/codex-task-sprite-visibility-physics.md` after
@@ -82,14 +80,20 @@ green blob/stain sprites.
   `npm run lint` PASS,
   `npx vitest run packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts packages/engine/test/late-game-logic-26f3e.test.ts --silent`
   PASS (`63` tests), and `git diff --check` PASS.
+- User confirmed the green blob/stain sprites are visible.
+- New screenshot triage: overlay reports L4/Aerial `last terrain-slot collision`
+  on `slot=0@400a9c tag=0c` with slot coordinates about `(840,864,16228)`.
+  ROM script group `0x1d40c` initializes this as `type12/sub0`; its visible
+  animation uses cel-list `0x22346 -> 0x222da`. Focused reproduction shows the
+  renderer emitted nothing with the old positive `0xe0` lower bound, then emits
+  `{arg0=0x222da,arg1=0x00b8,arg2=0x0088,arg3=0x3800}` after signed `moveq`
+  handling.
 
 ## Next Concrete Action
 
-Run one user visual retest on L3/Intermediate with normal gameplay. If the
-moving green stains are visible, mark `sprite4` as user-facing green with this
-owner classification: missing upstream string-slot spawn (`FUN_17346`) fixed;
-renderer path already existed. Keep the goal open until the final PRD table and
-regression gates are updated.
+Validate and ship the L4/Aerial signed `moveq` renderer-bound fix, then ask the
+user to retest the same Aerial spot where the invisible obstacle was pushing or
+dropping the marble. Keep the goal open until that retest is recorded.
 
 ## Files To Read For This Goal
 

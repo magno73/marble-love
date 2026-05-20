@@ -1701,3 +1701,41 @@ Status: **D4-sprite4-fun17346-string-slot-spawn-fixed / user-retest-needed** —
 - Current status: likely fixed in code, still user-retest needed for visual
   confirmation on mobile/browser. Do not close the sprite PRD until this retest
   and the final D5 audit are recorded.
+
+Status: **D4-aerial-type12-moveq-cull-fixed / user-retest-needed** — 2026-05-20.
+
+- User confirmed the L3/Intermediate green blob/stain sprites are now visible.
+  The next reported issue is a separate L4/Aerial invisible obstacle slightly
+  farther along the path: it pushes or drops the marble while no matching
+  object is visible.
+- Screenshot overlay points at `last terrain-slot collision` on
+  `slot=0@400a9c`, `tag=0x0c`, around slot coordinates `(840,864,16228)`.
+  ROM script `0x1d40c` initializes this as draw-list `type12/sub0`; during the
+  active visual phase its cel-list is `0x22346`, whose first record is
+  `0x222da`.
+- Independent ROM disassembly of `FUN_26F3E` confirmed several renderer lower
+  bounds use `moveq` signed immediates, not unsigned words:
+  `type6/type10/type0x2a` use `moveq #0xc0` (`-0x40`),
+  `type12` uses `moveq #0xe0` (`-0x20`), and `type15` uses
+  `moveq #0xf0` (`-0x10`). The old TS treated these as positive `0xc0`,
+  `0xe0`, and `0xf0`, so active sprites in the upper/middle screen band were
+  culled while physics stayed live.
+- Patch:
+  `packages/engine/src/late-game-logic-26f3e.ts` now sign-extends those
+  `moveq` lower bounds and uses the original inclusive lower-edge cull.
+  `packages/engine/test/late-game-logic-26f3e.test.ts` now covers non-catapult
+  `type10`, non-catapult `type12`, the exact Aerial `tag0c/type12` cel-list
+  (`0x22346 -> 0x222da`), and an upper-band `type0x2a` case.
+- Focused reproduction after patch emits the expected Aerial dynamic obstacle
+  MO call:
+  `{arg0=0x222da,arg1=0x00b8,arg2=0x0088,arg3=0x3800}`.
+- Validation so far:
+  `npx vitest run packages/engine/test/late-game-logic-26f3e.test.ts --silent`
+  PASS (`42` tests);
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false` PASS;
+  `npm run typecheck` PASS;
+  `npm run lint` PASS;
+  `git diff --check` PASS.
+- Current status: code fix is local and should be committed after final
+  `git diff --check`. User retest still needed at the Aerial invisible-obstacle
+  spot before marking this subcase green.

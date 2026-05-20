@@ -721,7 +721,7 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     }]);
   });
 
-  it("type 10 keeps the original lower cull for non-catapult structs", () => {
+  it("type 10 renders non-catapult structs above the signed lower bound", () => {
     const state = makeState();
     const rom = emptyRomImage();
     state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
@@ -737,14 +737,21 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     wl(state, structPtr + 0x42, celListPtr);
     wl(state, celListPtr, 0x0002108e);
 
-    const emitCalls: number[] = [];
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
     lateGameLogic26F3E(state, rom, {
       fun_1b12a: () => {},
       fun_1a7a8: () => {},
-      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
     });
 
-    expect(emitCalls).toEqual([]);
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x3000,
+    }]);
   });
 
   it("type 11 renders catapult accessory sprites in the upper visible band", () => {
@@ -963,7 +970,7 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     }]);
   });
 
-  it("type 12 keeps the original lower cull for non-catapult structs", () => {
+  it("type 12 renders non-catapult structs above the signed lower bound", () => {
     const state = makeState();
     const rom = emptyRomImage();
     state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
@@ -979,14 +986,55 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
     wl(state, structPtr + 0x42, celListPtr);
     wl(state, celListPtr, 0x0002108e);
 
-    const emitCalls: number[] = [];
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
     lateGameLogic26F3E(state, rom, {
       fun_1b12a: () => {},
       fun_1a7a8: () => {},
-      fun_1a8d2_emit: (_s, a0) => { emitCalls.push(a0); },
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
     });
 
-    expect(emitCalls).toEqual([]);
+    expect(emitCalls).toEqual([{
+      arg0: 0x0002108e,
+      arg1: 0x0068,
+      arg2: 0x0059,
+      arg3: 0x3800,
+    }]);
+  });
+
+  it("type 12 renders Aerial tag 0x0c dynamic obstacles in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x0c, 0);
+
+    const structPtr = 0x00401d00;
+    const celListPtr = 0x00022346;
+    const celRecord = 0x000222da;
+    romW32(rom, 0x1f016, structPtr);
+    wb(state, structPtr + 0x1f, 0x0c);
+    ww(state, structPtr + 0x4e, 0x00a0);
+    ww(state, structPtr + 0x50, 0x0078); // d4 = 0x88, old unsigned 0xe0 bound culled this.
+    wl(state, structPtr + 0x42, celListPtr);
+    romW32(rom, celListPtr, celRecord);
+
+    const emitCalls: { arg0: number; arg1: number; arg2: number; arg3: number }[] = [];
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+      fun_1a8d2_emit: (_s, a0, a1, a2, a3, _r) => {
+        emitCalls.push({ arg0: a0, arg1: a1, arg2: a2, arg3: a3 });
+      },
+    });
+
+    expect(emitCalls).toEqual([{
+      arg0: celRecord,
+      arg1: 0x00b8,
+      arg2: 0x0088,
+      arg3: 0x3800,
+    }]);
   });
 
   it("catapult structs are still culled below the expanded visible band", () => {
@@ -1035,6 +1083,25 @@ describe("lateGameLogic26F3E — dispatch types (smoke tests)", () => {
       fun_1a7a8: () => {},
     });
     // Type 0x2A emits 2 direct entries → counter should be 2
+    expect(rw(state, 0x00400406)).toBe(2);
+  });
+
+  it("type 0x2A renders in the upper visible band", () => {
+    const state = makeState();
+    const rom = emptyRomImage();
+    state.workRam[0x3ae] = 0; state.workRam[0x3af] = 0;
+    const rectBufPtr = 0x00401e00;
+    setupEntity(state, rom, 0, rectBufPtr, 0x2a, 0);
+
+    ww(state, 0x40098c + 6, 0x0060);
+    ww(state, 0x40098c + 8, 0x0080); // d4 = 0x90, old unsigned 0xc0 bound culled this.
+    wb(state, 0x40098c + 0xa, 0x00);
+
+    lateGameLogic26F3E(state, rom, {
+      fun_1b12a: () => {},
+      fun_1a7a8: () => {},
+    });
+
     expect(rw(state, 0x00400406)).toBe(2);
   });
 
