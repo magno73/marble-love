@@ -11,13 +11,64 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { refreshFrame10FCE, REFRESH_FRAME_10FCE_ADDR, FRAME_CTR_ADDR } from "../src/refresh-frame-10fce.js";
+import {
+  refreshFrame10FCE,
+  REFRESH_FRAME_10FCE_ADDR,
+  FRAME_CTR_ADDR,
+  fun253ECDispatch,
+} from "../src/refresh-frame-10fce.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 const WRAM = 0x00400000;
 function frameCtrOff(): number {
   return FRAME_CTR_ADDR - WRAM;
+}
+
+function writeU16BE(bytes: Uint8Array, off: number, value: number): void {
+  bytes[off] = (value >>> 8) & 0xff;
+  bytes[off + 1] = value & 0xff;
+}
+
+function readU32BE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function writeU32BE(bytes: Uint8Array, off: number, value: number): void {
+  const v = value >>> 0;
+  bytes[off] = (v >>> 24) & 0xff;
+  bytes[off + 1] = (v >>> 16) & 0xff;
+  bytes[off + 2] = (v >>> 8) & 0xff;
+  bytes[off + 3] = v & 0xff;
+}
+
+function writeRomU32BE(rom: ReturnType<typeof emptyRomImage>, off: number, value: number): void {
+  const v = value >>> 0;
+  rom.program[off] = (v >>> 24) & 0xff;
+  rom.program[off + 1] = (v >>> 16) & 0xff;
+  rom.program[off + 2] = (v >>> 8) & 0xff;
+  rom.program[off + 3] = v & 0xff;
+}
+
+function noOpRefreshFrameSubs(): Parameters<typeof refreshFrame10FCE>[2] {
+  return {
+    fun13EE6: () => undefined,
+    objectScanDispatch251DE: () => undefined,
+    processAllSprites189E2: () => undefined,
+    objectUpdatePair158CC: () => undefined,
+    slotArrayTick1493C: () => undefined,
+    dispatchStrings17230: () => undefined,
+    stateSub19BAA: () => undefined,
+    stateSub1844A: () => undefined,
+    stateDispatch12FD0: () => undefined,
+    objDirtyDispatch28624: () => undefined,
+  };
 }
 
 describe("refreshFrame10FCE (FUN_00010FCE)", () => {
@@ -87,6 +138,29 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     });
 
     expect(state.workRam[frameCtrOff()]).toBe(2);
+  });
+
+  it("wires object-pair state-2 animation transitions through FUN_25FC2", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const slotOff = 0x0a20; // object-pair slot 1 @ 0x400A20.
+
+    state.workRam[slotOff + 0x18] = 0x02; // FUN_158F6 state-2 branch.
+    state.workRam[slotOff + 0x1a] = 0x02; // HELPER_25FC2 state-2 sentinel handler.
+    state.workRam[slotOff + 0x56] = 0x01; // step1 -> objectStateEntry25BAE(code 2).
+    state.workRam[slotOff + 0x60] = 0x00; // advance immediately.
+    writeU32BE(state.workRam, slotOff + 0x5a, 0x00020fde);
+    writeRomU32BE(rom, 0x00020fe2, 0xffffffff); // sentinel after one anim step.
+
+    const subs = noOpRefreshFrameSubs();
+    delete subs.objectUpdatePair158CC; // exercise the real default 158CC -> 158F6 wiring.
+
+    refreshFrame10FCE(state, rom, subs);
+
+    expect(state.workRam[slotOff + 0x1a]).toBe(0x02);
+    expect(state.workRam[slotOff + 0x56]).toBe(0x02);
+    expect(state.workRam[slotOff + 0x60]).toBe(0x02);
+    expect(readU32BE(state.workRam, slotOff + 0x5a)).toBe(0x00020fde);
   });
 
   it("first addq.b #1 happens after 1493C (before 17230)", () => {
@@ -205,6 +279,47 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     }
     expect(changed).toEqual([frameCtrOff()]);
     expect(state.workRam[frameCtrOff()]).toBe(2);
+  });
+
+  it("default FUN_1912C recomputes array-9 sprite coords via FUN_199D6", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    writeU16BE(state.workRam, 0x394, 4);
+    writeU16BE(state.workRam, 0x396, 0);
+
+    const entityOff = 0x1890;
+    state.workRam[entityOff + 0x18] = 1;
+    state.workRam[entityOff + 0x1a] = 0;
+    state.workRam[entityOff + 0x24] = 0;
+    writeU32BE(state.workRam, entityOff + 0x0c, 0x012c0000);
+    writeU32BE(state.workRam, entityOff + 0x10, 0x01f40000);
+    writeU32BE(state.workRam, entityOff + 0x14, 0x3fdc0000);
+    writeU32BE(state.workRam, entityOff + 0x20, 0xdeadbeef);
+
+    refreshFrame10FCE(state, rom, noOpRefreshFrameSubs());
+
+    expect(readU32BE(state.workRam, entityOff + 0x20)).toBe(0x01503ea0);
+  });
+
+  it("default FUN_1912C wires FUN_194BA case 0 through FUN_1953E", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    writeU16BE(state.workRam, 0x394, 4);
+    writeU16BE(state.workRam, 0x396, 0);
+
+    const entityOff = 0x1890;
+    state.workRam[entityOff + 0x18] = 1;
+    state.workRam[entityOff + 0x1a] = 0;
+    state.workRam[entityOff + 0x1b] = 3;
+    state.workRam[entityOff + 0x24] = 2;
+    state.workRam[entityOff + 0x25] = 7;
+    state.workRam[entityOff + 0x26] = 0;
+    writeU32BE(state.workRam, entityOff + 0x1c, 0xdeadbeef);
+
+    refreshFrame10FCE(state, rom, noOpRefreshFrameSubs());
+
+    expect(readU32BE(state.workRam, entityOff + 0x1c)).toBe(0x00021f72);
+    expect(state.workRam[entityOff + 0x1b]).toBe(0);
   });
 
   it("models FUN_253EC state 7 as a settle-only object path", () => {
@@ -412,5 +527,55 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect(state.workRam[obj + 0x57]).toBe(0);
     expect(state.workRam[obj + 0xd1]).toBe(0);
     expect(state.workRam[obj + 0xd8]).toBe(1);
+  });
+
+  it("models FUN_253EC state 10 vacuum countdown while active", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+    const slot = 0x400b48;
+
+    writeU32BE(rom.program, 0x1f016 + 2 * 4, slot);
+
+    state.workRam[obj + 0x1a] = 10;
+    state.workRam[obj + 0x57] = 2;
+    state.workRam[obj + 0x58] = 2;
+
+    fun253ECDispatch(state, rom, player);
+
+    expect(state.workRam[obj + 0x1a]).toBe(10);
+    expect(state.workRam[obj + 0x57]).toBe(1);
+  });
+
+  it("models FUN_253EC state 10 vacuum terminal transition", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+    const slot = 0x400b48;
+    const slotOff = slot - WRAM;
+
+    writeU32BE(rom.program, 0x1f016 + 2 * 4, slot);
+    writeU32BE(rom.program, 0x1ef5a, 0x48);
+    rom.program[0x1d752] = 0xff;
+    rom.program[0x1d753] = 0xff;
+
+    state.workRam[obj + 0x1a] = 10;
+    state.workRam[obj + 0x57] = 1;
+    state.workRam[obj + 0x58] = 2;
+    writeU32BE(state.workRam, obj + 0x5a, 0x12345678);
+    writeU16BE(state.workRam, obj + 0xd2, 7);
+
+    state.workRam[slotOff + 0x1b] = 0x1e;
+    state.workRam[slotOff + 0x1f] = 0x0b;
+
+    fun253ECDispatch(state, rom, player);
+
+    expect(state.workRam[obj + 0x1a]).toBe(4);
+    expect(state.workRam[obj + 0x57]).toBe(0x65);
+    expect(readU32BE(state.workRam, obj + 0x5a)).toBe(0);
+    expect(((state.workRam[obj + 0xd2] ?? 0) << 8) | (state.workRam[obj + 0xd3] ?? 0)).toBe(8);
+    expect(readU32BE(state.workRam, slotOff + 0x36)).toBe(0x0001d754);
   });
 });

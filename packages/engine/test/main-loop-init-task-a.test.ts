@@ -90,6 +90,29 @@ describe("Task A main-loop init modules", () => {
     expect(calls).toEqual(["019C", "158AC:1", "11428", "10456", "16EC6", "10504", "11654"]);
   });
 
+  it("FUN_11452 state 2 default wires FUN_18CD2 particle sprite entries", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    setW(s, 0x392, 2);
+    s.workRam.fill(0xff, 0x3bc, 0x3dc);
+
+    mainLoopInit11452(s, rom, {
+      sceneInit11428: () => undefined,
+      gameStateBanner26B2A: () => undefined,
+      helper26B66: () => undefined,
+      vblankAck: () => undefined,
+      helper11FF8: () => undefined,
+      tilemapBlit17044: () => undefined,
+      finalize11654: () => undefined,
+    });
+
+    expect(s.workRam[0x3e2]).toBe(3);
+    expect([...s.workRam.slice(0x3bc, 0x3c0)]).toEqual([0, 1, 2, 0xff]);
+    expect([...s.workRam.slice(0x1dc, 0x1dc + 2)]).toEqual([0x2c, 0]);
+    expect([...s.workRam.slice(0x1dc + 0x0e, 0x1dc + 0x10)]).toEqual([0x2c, 1]);
+    expect([...s.workRam.slice(0x1dc + 0x1c, 0x1dc + 0x1e)]).toEqual([0x2c, 2]);
+  });
+
   it("FUN_1101E state 3 performs level increment init path", () => {
     const s = emptyGameState();
     setW(s, 0x390, 3);

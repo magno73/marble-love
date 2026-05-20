@@ -20,7 +20,7 @@
  * @see disasm FUN_0001BC88 @ 0x1bc88–0x1c012
  */
 
-import type { GameState } from "./state.js";
+import type { GameState, ObjectPairCollisionDebug } from "./state.js";
 import type { RomImage } from "./bus.js";
 
 import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
@@ -491,7 +491,7 @@ export function helper1BC88(
     // 0x1bf3a: move.l d1, d0; add.l d0, $4(a3)
     w32(state, a3 + 0x04, (s32(r32(state, a3 + 0x04)) + d1_a3) >>> 0);
     state.debug ??= {};
-    state.debug.lastObjectPairCollision = {
+    const pairDebug: ObjectPairCollisionDebug = {
       frame: Number(state.clock.frame),
       selfAddr: a2,
       targetAddr: a3,
@@ -502,6 +502,10 @@ export function helper1BC88(
       deltaX: d1x,
       deltaY: d3y,
       deltaZ: localZ,
+      selfActiveBefore: r8(state, a2 + 0x18),
+      targetActiveBefore: r8(state, a3 + 0x18),
+      selfF36Before: r8(state, a2 + 0x36),
+      targetF36Before: r8(state, a3 + 0x36),
       selfState: r8(state, a2 + 0x1a),
       targetState: r8(state, a3 + 0x1a),
       selfKind: r8(state, a2 + 0x1b),
@@ -521,6 +525,18 @@ export function helper1BC88(
       targetVxAfter: s32(r32(state, a3 + 0x00)),
       targetVyAfter: s32(r32(state, a3 + 0x04)),
     };
+    const finishPairDebug = (zDepthPath: string): void => {
+      pairDebug.zDepthPath = zDepthPath;
+      pairDebug.selfActiveAfter = r8(state, a2 + 0x18);
+      pairDebug.targetActiveAfter = r8(state, a3 + 0x18);
+      pairDebug.selfStateAfter = r8(state, a2 + 0x1a);
+      pairDebug.targetStateAfter = r8(state, a3 + 0x1a);
+      pairDebug.selfKindAfter = r8(state, a2 + 0x1b);
+      pairDebug.targetKindAfter = r8(state, a3 + 0x1b);
+      pairDebug.selfF36After = r8(state, a2 + 0x36);
+      pairDebug.targetF36After = r8(state, a3 + 0x36);
+    };
+    state.debug.lastObjectPairCollision = pairDebug;
 
     // ── Update a2 state/sound if not a player ────────────────────────────
     // 0x1bf3e: tst.b d3; bne → skip_a2_state
@@ -581,12 +597,19 @@ export function helper1BC88(
     // ── Check z-depth flag and trigger enemy logic ───────────────────────
     // 0x1bfba: tst.w -$4(a6)  → localZ (signed word)
     // 0x1bfbe: blt → next (if localZ < 0 skip rest)
-    if (localZ < 0) continue;
+    if (localZ < 0) {
+      finishPairDebug("skip-local-z");
+      continue;
+    }
 
     // 0x1bfc0: tst.b $36(a2); beq → next
-    if (r8(state, a2 + 0x36) === 0) continue;
+    if (r8(state, a2 + 0x36) === 0) {
+      finishPairDebug("skip-self-f36");
+      continue;
+    }
 
     // 0x1bfc6: tst.b d2; bne → skip_clr_branch (a3 is player)
+    let zDepthPath = "";
     if (d2b === 0) {
       // a3 is NOT a player → stateSub15BD0 + set state18=2
       // 0x1bfca: clr.l -(a7)
@@ -597,10 +620,12 @@ export function helper1BC88(
       // 0x1bfde: lea $c(a7), a7
       stateSub15BD0(state, a3, 1, 0);
       w8(state, a3 + 0x18, 2);
+      zDepthPath = "target-active2";
     } else {
       // a3 IS a player → soundPair15884
       // 0x1bfe4: jsr $15884.l
       soundPair15884(state);
+      zDepthPath = "target-player-sound";
     }
 
     // 0x1bfea: pea $2.w
@@ -608,6 +633,7 @@ export function helper1BC88(
     // 0x1bff0: jsr $25bae.l
     // 0x1bff6: addq.l #$8, a7
     objectStateEntry25BAE(state, a3, 2);
+    finishPairDebug(zDepthPath);
   }
   // end loop
 

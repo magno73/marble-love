@@ -222,6 +222,10 @@ export interface ObjectPairCollisionDebug {
   deltaX: number;
   deltaY: number;
   deltaZ: number;
+  selfActiveBefore?: number;
+  targetActiveBefore?: number;
+  selfF36Before?: number;
+  targetF36Before?: number;
   selfState: number;
   targetState: number;
   selfKind: number;
@@ -240,6 +244,15 @@ export interface ObjectPairCollisionDebug {
   selfVyAfter: number;
   targetVxAfter: number;
   targetVyAfter: number;
+  zDepthPath?: string;
+  selfActiveAfter?: number;
+  targetActiveAfter?: number;
+  selfStateAfter?: number;
+  targetStateAfter?: number;
+  selfKindAfter?: number;
+  targetKindAfter?: number;
+  selfF36After?: number;
+  targetF36After?: number;
 }
 
 export interface ScriptSlotCollisionDebug {
@@ -428,6 +441,35 @@ export interface TerrainScanStopDebug {
   entityZ: number;
 }
 
+export interface TerrainGateProbeDebug {
+  frame: number;
+  entityAddr: number;
+  slotIndex: number;
+  slotAddr: number;
+  colorTag: number;
+  result: string;
+  slotState: number;
+  base46: number;
+  d1: number;
+  d2: number;
+  d6: number;
+  a0: number;
+  g694: number;
+  prevD6: number | undefined;
+  prevA0: number | undefined;
+  zRestore: number | undefined;
+  flagX: number;
+  flagY: number;
+  slotX: number;
+  slotY: number;
+  entityX: number;
+  entityY: number;
+  entityVx: number;
+  entityVy: number;
+  entityState: number;
+  entityS58: number;
+}
+
 export interface GameDebugState {
   lastObjectPairCollision?: ObjectPairCollisionDebug;
   lastScriptSlotCollision?: ScriptSlotCollisionDebug;
@@ -435,6 +477,7 @@ export interface GameDebugState {
   lastObjectStateEntry?: ObjectStateEntryDebug;
   lastTubeProbe?: TubeProbeDebug;
   lastTerrainScanStop?: TerrainScanStopDebug;
+  lastTerrainGateProbe?: TerrainGateProbeDebug;
   lastHelper121B8BoundsBounce?: Helper121B8BoundsBounceDebug;
   lastTrackballApply?: TrackballApplyDebug;
   lastTrackballSanitize?: TrackballSanitizeDebug;

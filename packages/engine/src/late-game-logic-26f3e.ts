@@ -631,7 +631,7 @@ function dispatchType7_9(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f096 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x20, 0x18, 0x10);
-  if (s16(d4) < 0xf0 || s16(d4) >= 0x100) return;
+  if (s16(d4) <= -0x10 || s16(d4) >= 0x100) return;
   const om7: Record<number, number> = { 7: 0x2800, 8: 0x3000, 9: 0x2000 };
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x1c)), d5, d4, om7[entityType] ?? 0x2800, subs);
 }
@@ -751,7 +751,9 @@ function dispatchType0x29(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const base = (0x401650 + (s8(subIdxB) << 4)) >>> 0; // *16 = asl.l #4
   const [d5, d4] = loadCoords(state, rom, base, 0xc, 0x18, 0x10);
-  if (s16(d4) < 0xc0 || s16(d4) >= 0x100) return;
+  const d4s = s16(d4);
+  // Disasm 0x27E7C..0x27ED2: moveq #-0x40,d0; cull only d4 <= -0x40 or d4 >= 0x100.
+  if (d4s <= -0x40 || d4s >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, base + 0x8)), d5, d4, 0x2000, subs);
 }
 

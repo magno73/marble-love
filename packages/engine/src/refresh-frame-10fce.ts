@@ -75,6 +75,7 @@ import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { scriptSlotStep13068 } from "./script-slot-step-13068.js";
 import { helper12896 } from "./helper-12896.js";
+import { slotSpawnPattern13D38 } from "./slot-spawn-pattern-13d38.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
 import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
 import { stringHelper17CB8 } from "./string-helper-17cb8.js";
@@ -90,8 +91,15 @@ import { fun264AA } from "./fun-264aa.js";
 import { helper18F46 } from "./helper-18f46.js";
 import { helper285B0 } from "./helper-285b0.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
-import { computeSpriteCoords_v4 } from "./sprite-coords.js";
+import { computeSpriteCoords_v2, computeSpriteCoords_v4 } from "./sprite-coords.js";
 import { postStateChange13966 } from "./post-state-change-13966.js";
+import { objectTypeDispatch194BA } from "./object-type-dispatch-194ba.js";
+import { stateSub1960E } from "./state-sub-1960e.js";
+import { stateSub1953E } from "./state-sub-1953e.js";
+import { stateSub198BC } from "./state-sub-198bc.js";
+import { sub19692 } from "./sub-19692.js";
+import { sub19976 } from "./sub-19976.js";
+import { sub1937C } from "./sub-1937c.js";
 
 const WRAM = 0x00400000;
 
@@ -124,6 +132,37 @@ function s8(value: number): number {
   return b & 0x80 ? b - 0x100 : b;
 }
 
+function runArray9ObjectDispatch194BA(state: GameState, rom: RomImage, entityAddr: number): void {
+  const move = (st: GameState, addr: number): void => {
+    sub19976(st, rom, addr);
+  };
+  const validate = (st: GameState, addr: number): number => {
+    return sub1937C(st, rom, addr);
+  };
+
+  objectTypeDispatch194BA(state, entityAddr, {
+    fun_1960e: (objAddr, st) => {
+      stateSub1960E(st, objAddr, {
+        fun_19692: (st2, addr) => {
+          sub19692(st2, addr, {
+            fun_19976: move,
+            fun_1937c: validate,
+          });
+        },
+      });
+    },
+    fun_1973c: (objAddr, st) => {
+      stateSub198BC(st, objAddr, {
+        fun_19976: move,
+        fun_1937c: validate,
+      });
+    },
+    fun_1953e: (objAddr, st) => {
+      stateSub1953E(st, objAddr);
+    },
+  });
+}
+
 function wb(state: GameState, addr: number, value: number): void {
   state.workRam[off(addr)] = value & 0xff;
 }
@@ -142,6 +181,33 @@ function wl(state: GameState, addr: number, value: number): void {
   state.workRam[o + 1] = (v >>> 16) & 0xff;
   state.workRam[o + 2] = (v >>> 8) & 0xff;
   state.workRam[o + 3] = v & 0xff;
+}
+
+function isWorkRamAddr(state: GameState, addr: number): boolean {
+  return addr >= WRAM && addr < WRAM + state.workRam.length;
+}
+
+function readAbsU8(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (isWorkRamAddr(state, a)) return rb(state, a);
+  if (a < rom.program.length) return rom.program[a] ?? 0;
+  return 0;
+}
+
+function readAbsU32(state: GameState, rom: RomImage, addr: number): number {
+  return (
+    ((readAbsU8(state, rom, addr) << 24) |
+      (readAbsU8(state, rom, addr + 1) << 16) |
+      (readAbsU8(state, rom, addr + 2) << 8) |
+      readAbsU8(state, rom, addr + 3)) >>>
+    0
+  );
+}
+
+function writeAbsU32IfWorkRam(state: GameState, addr: number, value: number): void {
+  if (isWorkRamAddr(state, addr) && isWorkRamAddr(state, addr + 3)) {
+    wl(state, addr, value);
+  }
 }
 
 function addByte(state: GameState, addr: number, delta: number): void {
@@ -190,7 +256,7 @@ export const FRAME_CTR_ADDR = 0x004003f0 as const;
  * fatto che obj0 demo gameplay è invariante su s1a=0/cb=0/d8=0 (verificato
  * vs /tmp/mame_100f.json frame 12000..12099).
  */
-function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
+export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
   const wr = state.workRam;
   const objOff = (a2 - 0x00400000) >>> 0;
   if (objOff + 0xe2 > wr.length) return;
@@ -566,6 +632,35 @@ function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
     return;
   }
 
+  // JT[10] = 0x2563E. Aerial gate/vacuum hit state reached from FUN_29CCE
+  // tag 0x0B inner-hit: run the original fan-pattern countdown, then resume
+  // through state 4 instead of falling into the generic movement fallback.
+  if (s1a === 10) {
+    helper1B9CC(state, a2, 1);
+    const done = slotSpawnPattern13D38(state, rom, a2);
+    if (done === 0) return;
+
+    const selector = s8(rb(state, a2 + 0x58));
+    const slotPtr = readAbsU32(state, rom, 0x0001f016 + ((selector << 2) | 0));
+    const slotTag = readAbsU8(state, rom, slotPtr + 0x1f);
+    writeAbsU32IfWorkRam(state, slotPtr + 0x36, slotTag === 0x0b ? 0x0001d752 : 0x0001d798);
+
+    const soundIndex = (s8(readAbsU8(state, rom, slotPtr + 0x1b)) - 0x1e) | 0;
+    const soundCmd = readAbsU32(state, rom, 0x0001ef5a + ((soundIndex << 2) | 0));
+    soundCmdSend158AC(state, soundCmd);
+
+    if (isWorkRamAddr(state, slotPtr) && isWorkRamAddr(state, slotPtr + 0x55)) {
+      helper12896(state, rom, slotPtr);
+    }
+
+    soundCmdSend158AC(state, 0x3c);
+    wl(state, a2 + 0x5a, 0);
+    wb(state, a2 + 0x1a, 4);
+    ww(state, a2 + 0xd2, rw(state, a2 + 0xd2) + 1);
+    wb(state, a2 + 0x57, 0x65);
+    return;
+  }
+
   // Fallback (path non-modellati): chain conservativa esistente —
   // helper253BC + objectStep17F66 SENZA helper121B8. Equivalente al
   // wiring precedente; mantiene parity per obj non-obj0 finché i path
@@ -701,6 +796,64 @@ export function refreshFrame10FCE(
   const objCount = readObjCount(state);
   // FUN_10FCE overhead (orchestratore, 304 cicli)
   addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_10FCE_OVERHEAD"] ?? as_u32(304));
+  const updateSpritePos = (s: GameState, objAddr: number): void => {
+    spritePosUpdate1BAB2(s, objAddr, {
+      fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+    });
+  };
+  const updateSpriteProject = (s: GameState, argLong: number): number =>
+    spriteProject1CC62(s, argLong, {
+      fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
+    });
+  const helper1B9CC = (s: GameState, objAddr: number, flagLong: number): void => {
+    spriteHelper1B9CC(s, objAddr, flagLong, {
+      fun_1bab2: updateSpritePos,
+    });
+  };
+  const enterObjectState = (s: GameState, objAddr: number, code: number): void => {
+    objectStateEntry25BAE(s, objAddr, code, {
+      soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
+      fun_2591A: (st, initObj) => {
+        objectInit2591A(st, initObj, {
+          fun_262B2: (st2, ptr) => {
+            if ((st2.workRam[0x390] ?? 0) === 0 && (st2.workRam[0x391] ?? 0) === 0) {
+              objectTargetInit262B2(st2, rom, ptr);
+            }
+          },
+          fun_1BAB2: updateSpritePos,
+          fun_1CC62: updateSpriteProject,
+          fun_25B40: (st2, ptr) => { objectArrayInit25B40(st2, rom, ptr); },
+          fun_1B9CC: helper1B9CC,
+          fun_13966: (st2, ptr) => { postStateChange13966(st2, rom, ptr); },
+        });
+      },
+    });
+  };
+  const enterObjectStateFrom = (source: string) =>
+    (s: GameState, objAddr: number, code: number): void => {
+      const existing = s.debug?.lastObjectStateEntry;
+      const alreadyRecorded =
+        existing !== undefined &&
+        existing.frame === Number(s.clock.frame ?? 0) &&
+        existing.entityAddr === (objAddr >>> 0) &&
+        existing.code === (code & 0xff);
+      if (!alreadyRecorded) {
+        recordObjectStateEntryDebug(s, objAddr, code, source);
+      }
+      enterObjectState(s, objAddr, code);
+    };
+  const enterObject1281C = (s: GameState, objAddr: number): number =>
+    objectEnter1281C(s, objAddr, (ptr, mode) => fun264AA(s, rom, ptr, mode));
+  const stepAnimation25FC2 = (s: GameState, objAddr: number): void => {
+    helper25FC2(s, rom, objAddr, {
+      soundCommand: (cmd) => { soundCmdSend158AC(s, cmd); },
+      soundPair15884: (st) => { soundPair15884(st); },
+      objectStateEntry25BAE: enterObjectStateFrom("FUN_25FC2"),
+      helper18F46: (st, r, typeCode, subIdx) => {
+        helper18F46(st, r, typeCode, subIdx);
+      },
+    });
+  };
 
   // 00010FCE: jsr 0x00013EE6
   // Wire fun1344c = slapsticDispatcher1344C: replica esistente che pulisce
@@ -817,12 +970,15 @@ export function refreshFrame10FCE(
             });
           };
           fun158F6(s, slotPtr, rom, {
+            helper25FC2: (st, _r, objAddr) => { stepAnimation25FC2(st, objAddr); },
             spriteHelper1B9CCSubs: {
               fun_1bab2: updateSpritePos,
             },
+            objectEnter1281C: (st, objAddr) => { enterObject1281C(st, objAddr); },
             helper121B8Subs: {
               fun_1bab2: updateSpritePos,
               fun_29cce: (st, objAddr) => { fun29CCE(st, objAddr, rom); },
+              fun_1281c: (st, objAddr) => enterObject1281C(st, objAddr),
             },
           });
         },
@@ -858,7 +1014,16 @@ export function refreshFrame10FCE(
   // Gate: *0x400394.w == 4. Altrimenti fast (rts immediato).
   const fun1912CKey = gameMode === 4 ? "FUN_1912C" : "FUN_1912C_FAST";
   callSub(state, fun1912CKey, () => {
-    (subs.fun1912C ?? ((s) => { refreshHelper1912C(s, rom); }))(state);
+    (subs.fun1912C ?? ((s) => {
+      refreshHelper1912C(s, rom, {
+        fun_194ba: (st, entityAddr) => {
+          runArray9ObjectDispatch194BA(st, rom, entityAddr);
+        },
+        fun_199d6: (st, entityAddr) => {
+          computeSpriteCoords_v2(st, entityAddr);
+        },
+      });
+    }))(state);
   });
 
   // 00010FFE: jsr 0x00019BAA

@@ -31,9 +31,12 @@
  * implementato fully. **BLOCK 0x0a catapult** è implementato con launch,
  * sound-pair e script kick. I **BLOCK 0x12..0x16 e 0x20..0x27** coprono i
  * tubi Beginner con teleport e shape collision `helper1CD00`. I **BLOCK
- * 0x1a..0x1f** implementano le collisioni dinamiche dei tubi/pareti con flag
- * X/Y e sound 0x42. Gli altri **BLOCK complessi con sub-calls** (sound,
- * helper25C74, divs.w bounce) restano fallthrough no-op (= bra 0x2b072).
+ * 0x05** implementa il proximity bumper con flag X/Y e sound 0x42. I
+ * **BLOCK 0x0b/0x0d** implementano le collisioni gate/bumper Aerial osservate
+ * nei collision slot del livello 4. I **BLOCK 0x1a..0x1f** implementano le
+ * collisioni dinamiche dei tubi/pareti con flag X/Y e sound 0x42. Gli altri
+ * **BLOCK complessi con sub-calls** (sound, helper25C74, divs.w bounce)
+ * restano fallthrough no-op (= bra 0x2b072).
  * Questo replica fedelmente l'AVANZAMENTO del loop e i tag-writes di confine,
  * riducendo drift dovuto a tag mancanti.
  *
@@ -86,6 +89,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { helper12896 } from "./helper-12896.js";
 import { helper1CD00 } from "./helper-1cd00.js";
+import { helper25C74 } from "./helper-25c74.js";
 import { copyGlobalsToObj } from "./object-helpers.js";
 import { recordObjectStateEntryDebug } from "./object-state-debug.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
@@ -197,10 +201,33 @@ function romL(rom: RomImage, off: number): number {
   );
 }
 
+function readByteAbs(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + state.workRam.length) {
+    return rB(state, a - WORK_RAM_BASE);
+  }
+  if (a < rom.program.length) return (rom.program[a] ?? 0) & 0xff;
+  return 0;
+}
+
+function readLongAbs(state: GameState, rom: RomImage, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a + 4 <= WORK_RAM_BASE + state.workRam.length) {
+    return rL(state, a - WORK_RAM_BASE);
+  }
+  if (a + 4 <= rom.program.length) return romL(rom, a);
+  return 0;
+}
+
 // sign-extend word (16-bit two's complement) to a JS-signed integer.
 function sextW(w: number): number {
   const u = w & 0xffff;
   return u >= 0x8000 ? u - 0x10000 : u;
+}
+
+function sextB(b: number): number {
+  const u = b & 0xff;
+  return u >= 0x80 ? u - 0x100 : u;
 }
 
 // asr.w by 3 (signed arith shift right, returns 16-bit unsigned)
@@ -327,6 +354,70 @@ function recordTerrainScanStopDebug(
     entityY: rL(state, a2Off + F_Y) | 0,
     entityZ: rL(state, a2Off + F_Z) | 0,
   };
+}
+
+function recordTerrainGateProbeDebug(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  colorTag: number,
+  result: string,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  g694: number,
+  prevD6?: number,
+  prevA0?: number,
+  zRestore?: number,
+): void {
+  const entityPtr = WORK_RAM_BASE + a2Off;
+  if (entityPtr !== PLAYER1_OBJ && entityPtr !== PLAYER2_OBJ) return;
+  state.debug ??= {};
+  const existing = state.debug.lastTerrainGateProbe;
+  if (
+    existing !== undefined &&
+    existing.frame === Number(state.clock.frame) &&
+    gateProbePriority(existing.result) > gateProbePriority(result)
+  ) {
+    return;
+  }
+  state.debug.lastTerrainGateProbe = {
+    frame: Number(state.clock.frame),
+    entityAddr: entityPtr >>> 0,
+    slotIndex: Math.floor((a3Off - (SLOT_TABLE_BASE - WORK_RAM_BASE)) / SLOT_STRIDE),
+    slotAddr: (WORK_RAM_BASE + a3Off) >>> 0,
+    colorTag,
+    result,
+    slotState: rB(state, a3Off + F_STATE_1A),
+    base46: rL(state, a3Off + SF_BASE_46),
+    d1,
+    d2,
+    d6,
+    a0,
+    g694,
+    prevD6,
+    prevA0,
+    zRestore,
+    flagX: rB(state, G_FLAG_X),
+    flagY: rB(state, G_FLAG_Y),
+    slotX: sextW(rWBE(state, a3Off + SF_X)),
+    slotY: sextW(rWBE(state, a3Off + SF_Y)),
+    entityX: rL(state, a2Off + F_X) | 0,
+    entityY: rL(state, a2Off + F_Y) | 0,
+    entityVx: rL(state, a2Off + F_VX) | 0,
+    entityVy: rL(state, a2Off + F_VY) | 0,
+    entityState: rB(state, a2Off + F_STATE_1A),
+    entityS58: rB(state, a2Off + F_S58),
+  };
+}
+
+function gateProbePriority(result: string): number {
+  if (result === "outer-death-state4") return 5;
+  if (result === "inner-hit-state" || result === "inner-impulse" || result === "outer-block-flags") return 4;
+  if (result === "outer-range-x-miss" || result === "outer-range-y-miss" || result === "height-gate-miss") return 2;
+  if (result === "guard-miss") return 1;
+  return 0;
 }
 
 // "WHITE-LIST" boundary-tag values used by both the iter-epilog (0x2b072)
@@ -638,6 +729,273 @@ function runVerticalWallCollision(
   }
   wB(state, G_FLAG_X, 1);
   collisionSound42(state, subs);
+}
+
+function absWordShift4(value: number): number {
+  return (Math.abs(sextW(value)) << 4) & 0xffff;
+}
+
+function divsWord(numerator: number, denominator: number): number {
+  if (denominator === 0) return 0;
+  return (Math.trunc(numerator / denominator) << 16) >> 16;
+}
+
+function weightedVectorDenominator(dx: number, dy: number): number {
+  const xAbs = absWordShift4(dx);
+  const yAbs = absWordShift4(dy);
+  return xAbs > yAbs
+    ? ((((yAbs >>> 3) * 3) + xAbs) & 0xffff)
+    : ((((xAbs >>> 3) * 3) + yAbs) & 0xffff);
+}
+
+function addScaledGateImpulse(
+  state: GameState,
+  a2Off: number,
+  dx: number,
+  dy: number,
+): void {
+  const denom = weightedVectorDenominator(dx, dy);
+  const qx = denom === 0 ? 0 : divsWord(dx << 16, denom);
+  const qy = denom === 0 ? 0 : divsWord(dy << 16, denom);
+  wL(state, a2Off + F_VX, (rL(state, a2Off + F_VX) + ((qx << 2) >>> 0)) >>> 0);
+  wL(state, a2Off + F_VY, (rL(state, a2Off + F_VY) + ((qy << 2) >>> 0)) >>> 0);
+}
+
+function runProximityBumper05(
+  state: GameState,
+  d6: number,
+  a0: number,
+  subs: Sub29CCESubs,
+): void {
+  if (weightedVectorDenominator(d6, a0) >= 0x38) return;
+  wB(state, G_FLAG_Y, 1);
+  wB(state, G_FLAG_X, 1);
+  (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, 0x42);
+}
+
+function slotPreviousDeltas(state: GameState, a3Off: number): [number, number] {
+  return [
+    sextW((rWBE(state, a3Off + SF_X) - rWBE(state, G_X_RESTORE)) & 0xffff),
+    sextW((rWBE(state, a3Off + SF_Y) - rWBE(state, G_Y_RESTORE)) & 0xffff),
+  ];
+}
+
+function enterState4FromGate(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  colorTag: number,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  subs: Sub29CCESubs,
+): void {
+  wB(state, a2Off + 0x57, 0x65);
+  recordObjectStateEntryDebug(state, WORK_RAM_BASE + a2Off, 4, "FUN_29CCE/gate-bumper", {
+    slotIndex: Math.floor((a3Off - (SLOT_TABLE_BASE - WORK_RAM_BASE)) / SLOT_STRIDE),
+    colorTag,
+    d1,
+    d2,
+    d6,
+    a0,
+  });
+  objectStateEntry25BAE(state, WORK_RAM_BASE + a2Off, 4, {
+    soundCommand: (cmd) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, cmd); },
+  });
+}
+
+function runGateOuterBlockOrDeath(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  colorTag: number,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  g694: number,
+  subs: Sub29CCESubs,
+): void {
+  if (d6 < -0x0c || d6 >= 0x1c) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, colorTag, "outer-range-x-miss", d1, d2, d6, a0, g694);
+    return;
+  }
+  if (a0 < -0x08 || a0 >= 0x10) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, colorTag, "outer-range-y-miss", d1, d2, d6, a0, g694);
+    return;
+  }
+  if (g694 >= 0x3fc4) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, colorTag, "height-gate-miss", d1, d2, d6, a0, g694);
+    return;
+  }
+
+  const [prevD6, prevA0] = slotPreviousDeltas(state, a3Off);
+  const zRestore = rWBE(state, G_Z_RESTORE);
+  if (
+    prevD6 >= -0x0c &&
+    prevD6 < 0x1c &&
+    prevA0 >= -0x08 &&
+    prevA0 < 0x10 &&
+    zRestore < 0x3fc4
+  ) {
+    enterState4FromGate(state, a2Off, a3Off, colorTag, d1, d2, d6, a0, subs);
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, colorTag, "outer-death-state4", d1, d2, d6, a0, g694, prevD6, prevA0, zRestore);
+    return;
+  }
+
+  wB(state, G_FLAG_X, 1);
+  wB(state, G_FLAG_Y, 1);
+  recordTerrainGateProbeDebug(state, a2Off, a3Off, colorTag, "outer-block-flags", d1, d2, d6, a0, g694, prevD6, prevA0, zRestore);
+}
+
+function runGate0B(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  g694: number,
+  subs: Sub29CCESubs,
+): void {
+  if (rB(state, a3Off + F_STATE_1A) === 0) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0b, "slot-state-zero", d1, d2, d6, a0, g694);
+    return;
+  }
+  if (rL(state, a3Off + SF_BASE_46) !== 0x00022016) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0b, "guard-miss", d1, d2, d6, a0, g694);
+    return;
+  }
+
+  if (d6 >= -0x0c && d6 < 0x1c && a0 >= -0x20 && a0 < -0x08) {
+    if (d6 >= 0 && d6 < 0x10 && a0 >= -0x0f && a0 < -0x09) {
+      wB(state, a2Off + F_STATE_1A, 0x0a);
+      wB(state, a2Off + 0x57, 0x20);
+      wB(state, a2Off + F_S58, rB(state, a3Off + F_TYPE));
+      recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0b, "inner-hit-state", d1, d2, d6, a0, g694);
+      return;
+    }
+    addScaledGateImpulse(state, a2Off, d6 - 0x08, a0 + 0x0c);
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0b, "inner-impulse", d1, d2, d6, a0, g694);
+    return;
+  }
+
+  runGateOuterBlockOrDeath(state, a2Off, a3Off, 0x0b, d1, d2, d6, a0, g694, subs);
+}
+
+function runGate0D(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+  g694: number,
+  subs: Sub29CCESubs,
+): void {
+  if (rB(state, a3Off + F_STATE_1A) === 0) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0d, "slot-state-zero", d1, d2, d6, a0, g694);
+    return;
+  }
+  if (rL(state, a3Off + SF_BASE_46) !== 0x000220a6) {
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0d, "guard-miss", d1, d2, d6, a0, g694);
+    return;
+  }
+
+  if (d6 >= -0x20 && d6 < -0x08 && a0 >= -0x0c && a0 < 0x1c) {
+    if (d6 >= -0x0f && d6 < -0x09 && a0 >= 0 && a0 < 0x10) {
+      wB(state, a2Off + F_STATE_1A, 0x0a);
+      wB(state, a2Off + 0x57, 0x20);
+      wB(state, a2Off + F_S58, rB(state, a3Off + F_TYPE));
+      recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0d, "inner-hit-state", d1, d2, d6, a0, g694);
+      return;
+    }
+    addScaledGateImpulse(state, a2Off, d6 + 0x0c, a0 - 0x08);
+    recordTerrainGateProbeDebug(state, a2Off, a3Off, 0x0d, "inner-impulse", d1, d2, d6, a0, g694);
+    return;
+  }
+
+  runGateOuterBlockOrDeath(state, a2Off, a3Off, 0x0d, d1, d2, d6, a0, g694, subs);
+}
+
+function runBounce0C(
+  state: GameState,
+  rom: RomImage,
+  a2Off: number,
+  a3Off: number,
+  d6: number,
+  a0: number,
+  subs: Sub29CCESubs,
+): void {
+  if (rB(state, a3Off + F_STATE_1A) === 0) return;
+
+  const bboxPtrTable = rL(state, a3Off + SF_REC_3E);
+  const bboxRec = readLongAbs(state, rom, bboxPtrTable);
+  const minX0 = sextB(readByteAbs(state, rom, bboxRec + 4));
+  const minY0 = sextB(readByteAbs(state, rom, bboxRec + 5));
+  const maxX0 = sextW((minX0 + sextB(readByteAbs(state, rom, bboxRec + 6))) & 0xffff);
+  const maxY0 = sextW((minY0 + sextB(readByteAbs(state, rom, bboxRec + 7))) & 0xffff);
+
+  const minX = sextW((-(maxX0 + 3)) & 0xffff);
+  const maxX = sextW((-(minX0 - 3)) & 0xffff);
+  const minY = sextW((-(maxY0 + 3)) & 0xffff);
+  const maxY = sextW((-(minY0 - 3)) & 0xffff);
+
+  if (d6 < minX || d6 >= maxX || a0 < minY || a0 >= maxY) return;
+
+  const slotX = rWBE(state, a3Off + SF_X);
+  const slotY = rWBE(state, a3Off + SF_Y);
+  const prevD6 = sextW((slotX - rWBE(state, G_X_RESTORE)) & 0xffff);
+  const prevA0 = sextW((slotY - rWBE(state, G_Y_RESTORE)) & 0xffff);
+  if (prevD6 < minX || prevD6 >= maxX || prevA0 < minY || prevA0 >= maxY) {
+    wB(state, G_FLAG_Y, 1);
+    wB(state, G_FLAG_X, 1);
+    return;
+  }
+
+  const dx = sextW((d6 + 4) & 0xffff);
+  const dy = sextW((a0 + 4) & 0xffff);
+  const denom = weightedVectorDenominator(dx, dy);
+  let vxWord: number;
+  let vyWord: number;
+  if (denom === 0) {
+    vxWord = 0x1000;
+    vyWord = 0;
+  } else {
+    vxWord = divsWord((-dx) << 16, denom);
+    vyWord = divsWord((-dy) << 16, denom);
+  }
+  wL(state, a2Off + F_VX, (sextW(vxWord) << 6) >>> 0);
+  wL(state, a2Off + F_VY, (sextW(vyWord) << 6) >>> 0);
+
+  if (rB(state, a2Off + F_STATE_1A) !== 1) {
+    wB(state, a2Off + 0x5f, 0);
+    wB(state, a2Off + 0x60, 2);
+    wL(state, a2Off + 0x5a, 0x00020faa);
+    (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, 0x39);
+  }
+
+  wB(state, a2Off + F_STATE_1A, 1);
+  helper25C74(state, WORK_RAM_BASE + a2Off, 0, {
+    soundCommand: (cmd) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(state, cmd); },
+    soundPair15884: (st) => {
+      soundPair15884(st, {
+        soundCommand: (cmd) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(st, cmd); },
+      });
+    },
+    stateSub15BD0: (st, entityPtr, arg2, arg3) => { stateSub15BD0(st, entityPtr, arg2, arg3); },
+    objectStateEntry25BAE: (st, entityPtr, code) => {
+      recordObjectStateEntryDebug(st, entityPtr, code, "FUN_29CCE/tag0c", {});
+      objectStateEntry25BAE(st, entityPtr, code, {
+        soundCommand: (cmd) => { (subs.soundCmdSend158AC ?? soundCmdSend158AC)(st, cmd); },
+      });
+    },
+  });
+  wB(state, a2Off + 0x57, 0x3c);
+  wB(state, a2Off + 0x56, 0);
 }
 
 function runHorizontalWallCollision(
@@ -1084,14 +1442,11 @@ function runTube26Or27(
  *   0x10, 0x12, 0x32-0x37, 0x2d-0x31, 0x38-0x3b.
  *
  * Complex cases implemented:
+ *   0x05 — proximity bumper, sets X/Y restore flags and sound 0x42.
  *   0x0a — catapult arm launch + script kick.
+ *   0x0b/0x0d — Aerial gate/bumper physical shove, hit state, and death gate.
  *   0x1a..0x1f — dynamic pipe/wall collisions, set X/Y flags + sound 0x42.
  *   0x20..0x27 — Beginner tube ramps/teleports and helper1CD00 wall checks.
- *
- * Le branch SKIP (no-op fallthrough = bra epilog_iter):
- *   0x05 (kick + sound), 0x0b/0x0c/0x0d (BLOCK C bounce),
- *   0x13/0x14/0x15/0x16 (helper1CD00), 0x17/0x18 (range checks D6/A0 invece
- *   di D1/D2 — più complessi).
  */
 function dispatchColor(
   state: GameState,
@@ -1117,10 +1472,27 @@ function dispatchColor(
   //   write tag, -1; bra 0x2b072
 
   switch (colorTag) {
+    // 0x29f40: proximity bumper. Uses viewport deltas D6/A0, sets both
+    // restore flags, then the common epilogue restores XY and negates vx/vy.
+    case 0x05:
+      runProximityBumper05(state, d6, a0, subs);
+      return "continue";
     // 0x29e22: catapult arm. Tight D6/A0 hitbox; on success it snaps and
     // launches the marble, tags +0x58=0x0a, and starts script 0x1DB80.
     case 0x0a:
       runCatapult0A(state, rom, a2Off, a3Off, d6, a0, subs);
+      return "continue";
+    // 0x2ab88: Aerial gate/bumper oriented along the upper-left edge.
+    case 0x0b:
+      runGate0B(state, a2Off, a3Off, d1, d2, d6, a0, g694, subs);
+      return "continue";
+    // 0x2a9a2: dynamic bbox bounce; used by animated obstacle slots.
+    case 0x0c:
+      runBounce0C(state, rom, a2Off, a3Off, d6, a0, subs);
+      return "continue";
+    // 0x2ad20: Aerial gate/bumper oriented along the lower-right edge.
+    case 0x0d:
+      runGate0D(state, a2Off, a3Off, d1, d2, d6, a0, g694, subs);
       return "continue";
     // 0x2a1e4: D1∈[0..0x10), D2∈[0..0xe)
     case 0x10: rangeWrite(state, a2Off, a3Off, d1, d2, 0, 0x10, 0, 0xe); return "continue";

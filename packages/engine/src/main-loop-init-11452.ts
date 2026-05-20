@@ -15,6 +15,8 @@ import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
 import { sceneInit11428 } from "./scene-init-11428.js";
 import { stateSub2572 } from "./state-sub-2572.js";
+import { particleInit18CD2 } from "./particle-init-18cd2.js";
+import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 
 const WRAM = 0x00400000;
 
@@ -153,7 +155,14 @@ function state11452Case2(state: GameState, rom: RomImage | undefined, subs: Main
   wb(state, 0x00400006, 0);
   wb(state, 0x0040000a, 0);
   (subs.vblankAck ?? vblankAck28DEA)(state);
-  subs.helper18CD2?.(state);
+  (subs.helper18CD2 ?? ((s) => {
+    if (rom === undefined) return;
+    particleInit18CD2(s, 3, 0xfe, {
+      fun_18e6c: (st, typeCode, subIdx) => {
+        slotInsertSorted18E6C(st, rom, typeCode, subIdx);
+      },
+    });
+  }))(state);
   (subs.helper11FF8 ?? ((s: GameState) => helper11FF8Default(s, rom)))(state);
   (subs.tilemapBlit17044 ?? ((s) => { if (rom !== undefined) tilemapBlit17044(rom, s.playfieldRam); }))(state);
   ww(state, 0x0040075a, 0x012c);

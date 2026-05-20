@@ -1,6 +1,7 @@
 /**
  * sub-29cce.test.ts — smoke tests per FUN_29CCE replica MINIMAL CHUNK.
  */
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { fun29CCE } from "../src/sub-29cce.js";
 import { emptyGameState } from "../src/state.js";
@@ -8,6 +9,8 @@ import { emptyRomImage } from "../src/bus.js";
 
 const SLOT = 0x004009a4;
 const SLOT_OFF = 0x09a4;
+const PLAYER = 0x00400018;
+const PLAYER_OFF = 0x18;
 const SLOT_TABLE_OFF = 0x0a9c;
 const CATAPULT_SCRIPT = 0x1db80;
 
@@ -35,6 +38,23 @@ function wW(workRam: Uint8Array, off: number, v: number): void {
 function wRomW(program: Uint8Array, off: number, v: number): void {
   program[off] = (v >>> 8) & 0xff;
   program[off + 1] = v & 0xff;
+}
+
+function hexToBytes(hex: string, expected: number): Uint8Array {
+  expect(hex.length).toBeGreaterThanOrEqual(expected * 2);
+  const out = new Uint8Array(expected);
+  for (let i = 0; i < expected; i++) {
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function loadLevel4EarlyWorkRam(): Uint8Array {
+  const path = new URL("../../../oracle/scenarios/gameplay/level4_early.json", import.meta.url);
+  const raw = JSON.parse(readFileSync(path, "utf8")) as {
+    snapshots: Array<{ workRam: string }>;
+  };
+  return hexToBytes(raw.snapshots[0]!.workRam, 0x2000);
 }
 
 function signed32(v: number): number {
@@ -70,6 +90,75 @@ function setupDynamicWallSlot(
   wW(s.workRam, SLOT_TABLE_OFF + 0x0c, (baseX + d6) & 0xffff);
   wW(s.workRam, SLOT_TABLE_OFF + 0x10, (baseY + a0) & 0xffff);
   s.workRam[SLOT_TABLE_OFF + 0x1f] = colorTag & 0xff;
+}
+
+function setupProximity05Slot(
+  s: ReturnType<typeof emptyGameState>,
+  d6: number,
+  a0: number,
+): void {
+  const baseX = 0x0200;
+  const baseY = 0x0300;
+  s.workRam[SLOT_TABLE_OFF + 0x18] = 1;
+  s.workRam[SLOT_TABLE_OFF + 0x1f] = 0x05;
+  wW(s.workRam, 0x690, baseX);
+  wW(s.workRam, 0x692, baseY);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x0c, (baseX + d6) & 0xffff);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x10, (baseY + a0) & 0xffff);
+}
+
+function setupGateSlot(
+  s: ReturnType<typeof emptyGameState>,
+  colorTag: 0x0b | 0x0d,
+  d6: number,
+  a0: number,
+): void {
+  const baseX = 0x0200;
+  const baseY = 0x0300;
+  s.workRam[SLOT_TABLE_OFF + 0x18] = 1;
+  s.workRam[SLOT_TABLE_OFF + 0x19] = 0x07;
+  s.workRam[SLOT_TABLE_OFF + 0x1a] = 4;
+  s.workRam[SLOT_TABLE_OFF + 0x1f] = colorTag;
+  wW(s.workRam, 0x690, baseX);
+  wW(s.workRam, 0x692, baseY);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x0c, (baseX + d6) & 0xffff);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x10, (baseY + a0) & 0xffff);
+  wL(s.workRam, SLOT_TABLE_OFF + 0x46, colorTag === 0x0b ? 0x00022016 : 0x000220a6);
+}
+
+function setupBounce0CSlot(
+  s: ReturnType<typeof emptyGameState>,
+  d6: number,
+  a0: number,
+  previousInside: boolean,
+): void {
+  const baseX = 0x0200;
+  const baseY = 0x0300;
+  const slotX = (baseX + d6) & 0xffff;
+  const slotY = (baseY + a0) & 0xffff;
+
+  s.workRam[SLOT_TABLE_OFF + 0x18] = 1;
+  s.workRam[SLOT_TABLE_OFF + 0x1a] = 1;
+  s.workRam[SLOT_TABLE_OFF + 0x1f] = 0x0c;
+  wW(s.workRam, 0x690, baseX);
+  wW(s.workRam, 0x692, baseY);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x0c, slotX);
+  wW(s.workRam, SLOT_TABLE_OFF + 0x10, slotY);
+
+  // FUN_29CCE tag 0x0c does A5=(slot+0x3e), A1=(A5), then reads bbox
+  // signed bytes A1+4..+7. This record describes [-8,-8] with 16x16 extent,
+  // expanded by the ROM branch to current-delta range [-11, 11).
+  wL(s.workRam, SLOT_TABLE_OFF + 0x3e, 0x00401800);
+  wL(s.workRam, 0x1800, 0x00401810);
+  s.workRam[0x1814] = 0xf8; // -8
+  s.workRam[0x1815] = 0xf8; // -8
+  s.workRam[0x1816] = 0x10; // +16
+  s.workRam[0x1817] = 0x10; // +16
+
+  const prevBaseX = previousInside ? baseX : (slotX + 0x40) & 0xffff;
+  const prevBaseY = previousInside ? baseY : (slotY + 0x40) & 0xffff;
+  wL(s.workRam, 0x684, (prevBaseX << 16) >>> 0);
+  wL(s.workRam, 0x688, (prevBaseY << 16) >>> 0);
 }
 
 describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
@@ -303,6 +392,197 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(rL(s.workRam, SLOT_OFF + 0x14)).toBe(0x003fc000);
     expect(rL(s.workRam, SLOT_OFF + 0x08)).toBe(0);
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0);
+  });
+
+  it("LOOP color 0x05: proximity bumper restores XY, reflects velocity, and plays sound 0x42", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+
+    setupProximity05Slot(s, 1, -1);
+    wL(s.workRam, SLOT_OFF + 0x00, 0x00030000);
+    wL(s.workRam, SLOT_OFF + 0x04, 0xfffd0000);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, SLOT_OFF + 0x10, 0x22222222);
+    wL(s.workRam, 0x684, 0x01020304);
+    wL(s.workRam, 0x688, 0x05060708);
+
+    fun29CCE(s, SLOT, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(s.workRam[0x666]).toBe(1);
+    expect(s.workRam[0x668]).toBe(1);
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x01020304);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x05060708);
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0xfffd0000);
+    expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0x00030000);
+    expect(sounds).toEqual([0x42]);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x05);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("flag");
+  });
+
+  it("LOOP color 0x05: outside ROM proximity radius is a no-op", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+
+    setupProximity05Slot(s, 4, 0);
+    wL(s.workRam, SLOT_OFF + 0x00, 0x00030000);
+    wL(s.workRam, SLOT_OFF + 0x04, 0xfffd0000);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, SLOT_OFF + 0x10, 0x22222222);
+    wL(s.workRam, 0x684, 0x01020304);
+    wL(s.workRam, 0x688, 0x05060708);
+
+    fun29CCE(s, SLOT, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(s.workRam[0x666]).toBe(0);
+    expect(s.workRam[0x668]).toBe(0);
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x11111111);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x22222222);
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0x00030000);
+    expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0xfffd0000);
+    expect(sounds).toEqual([]);
+    expect(s.debug?.lastTerrainSlotCollision).toBeUndefined();
+  });
+
+  it("LOOP color 0x05: tracked level4_early type5 slot applies proximity bumper physics", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+    s.workRam.set(loadLevel4EarlyWorkRam());
+
+    const beforeX = rL(s.workRam, PLAYER_OFF + 0x0c);
+    const beforeY = rL(s.workRam, PLAYER_OFF + 0x10);
+    const beforeVx = rL(s.workRam, PLAYER_OFF + 0x00);
+    const beforeVy = rL(s.workRam, PLAYER_OFF + 0x04);
+
+    fun29CCE(s, PLAYER, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(s.debug?.lastTerrainSlotCollision).toMatchObject({
+      slotIndex: 12,
+      colorTag: 0x05,
+      reason: "flag",
+      d6: 0,
+      a0: 0,
+    });
+    expect(s.workRam[0x666]).toBe(1);
+    expect(s.workRam[0x668]).toBe(1);
+    expect(rL(s.workRam, PLAYER_OFF + 0x0c)).toBe(rL(s.workRam, 0x684));
+    expect(rL(s.workRam, PLAYER_OFF + 0x10)).toBe(rL(s.workRam, 0x688));
+    expect(rL(s.workRam, PLAYER_OFF + 0x00)).toBe(negLong(beforeVx));
+    expect(rL(s.workRam, PLAYER_OFF + 0x04)).toBe(negLong(beforeVy));
+    expect(rL(s.workRam, PLAYER_OFF + 0x0c)).not.toBe(beforeX);
+    expect(rL(s.workRam, PLAYER_OFF + 0x10)).not.toBe(beforeY);
+    expect(sounds).toEqual([0x42]);
+  });
+
+  it("LOOP color 0x0b: Aerial gate hit puts the marble into the ROM hit state", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupGateSlot(s, 0x0b, 8, -12);
+
+    fun29CCE(s, SLOT, rom);
+
+    expect(s.workRam[SLOT_OFF + 0x1a]).toBe(0x0a);
+    expect(s.workRam[SLOT_OFF + 0x57]).toBe(0x20);
+    expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x07);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0b);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("tag");
+  });
+
+  it("LOOP color 0x0d: Aerial gate side applies the signed impulse", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupGateSlot(s, 0x0d, -16, 8);
+
+    fun29CCE(s, SLOT, rom);
+
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0xffffc000);
+    expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0);
+    expect(s.workRam[SLOT_OFF + 0x1a]).toBe(0);
+    expect(s.workRam[SLOT_OFF + 0x58]).toBe(0);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0d);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("motion");
+  });
+
+  it("LOOP color 0x0b: Aerial gate outer block restores XY and reflects velocity", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupGateSlot(s, 0x0b, 0, 0);
+    wL(s.workRam, SLOT_OFF + 0x00, 0x00010000);
+    wL(s.workRam, SLOT_OFF + 0x04, 0x00020000);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, SLOT_OFF + 0x10, 0x22222222);
+    wL(s.workRam, 0x684, 0x0a000000);
+    wL(s.workRam, 0x688, 0x0b000000);
+    wW(s.workRam, 0x694, 0x3f80);
+    wL(s.workRam, 0x68c, 0x3f900000);
+
+    fun29CCE(s, SLOT, rom);
+
+    expect(s.workRam[0x666]).toBe(1);
+    expect(s.workRam[0x668]).toBe(1);
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x0a000000);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x0b000000);
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0xffff0000);
+    expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0xfffe0000);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0b);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("flag");
+  });
+
+  it("LOOP color 0x0c: dynamic obstacle bounce writes ROM vector state", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+
+    setupBounce0CSlot(s, -4, -4, true);
+
+    fun29CCE(s, PLAYER, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(rL(s.workRam, PLAYER_OFF + 0x00)).toBe(0x00040000);
+    expect(rL(s.workRam, PLAYER_OFF + 0x04)).toBe(0);
+    expect(s.workRam[PLAYER_OFF + 0x1a]).toBe(1);
+    expect(s.workRam[PLAYER_OFF + 0x56]).toBe(0);
+    expect(s.workRam[PLAYER_OFF + 0x57]).toBe(0x3c);
+    expect(rL(s.workRam, PLAYER_OFF + 0x5a)).toBe(0x00020faa);
+    expect(s.workRam[PLAYER_OFF + 0x5f]).toBe(0);
+    expect(s.workRam[PLAYER_OFF + 0x60]).toBe(2);
+    expect(sounds).toEqual([0x39]);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0c);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("motion");
+  });
+
+  it("LOOP color 0x0c: entering from outside sets both restore flags", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+
+    setupBounce0CSlot(s, -4, -4, false);
+    wL(s.workRam, PLAYER_OFF + 0x00, 0x00010000);
+    wL(s.workRam, PLAYER_OFF + 0x04, 0x00020000);
+    wL(s.workRam, PLAYER_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, PLAYER_OFF + 0x10, 0x22222222);
+
+    fun29CCE(s, PLAYER, rom);
+
+    expect(s.workRam[0x666]).toBe(1);
+    expect(s.workRam[0x668]).toBe(1);
+    expect(rL(s.workRam, PLAYER_OFF + 0x0c)).toBe(rL(s.workRam, 0x684));
+    expect(rL(s.workRam, PLAYER_OFF + 0x10)).toBe(rL(s.workRam, 0x688));
+    expect(rL(s.workRam, PLAYER_OFF + 0x00)).toBe(0xffff0000);
+    expect(rL(s.workRam, PLAYER_OFF + 0x04)).toBe(0xfffe0000);
+    expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0c);
+    expect(s.debug?.lastTerrainSlotCollision?.reason).toBe("flag");
   });
 
   const wallCases = [
