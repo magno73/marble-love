@@ -20,7 +20,7 @@ Authoritative task plan:
 
 Current phase:
 
-- Phase 4: runtime level enter and L1 intro.
+- Phase 5: level completion and next-level handoff.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
@@ -30,9 +30,11 @@ Current phase:
 
 Next action:
 
-1. Commit Phase 3 after recording the user/manual browser confirmation.
-2. Start Phase 4 by tracing why post-START runtime reaches terrain but has
-   `timer=0` and immediately shows game over.
+1. Commit Phase 4 (`fix: enter level one from cold boot flow`) after recording
+   the user/manual browser confirmation.
+2. Start Phase 5 by tracing the post-game-over yellow/red terrain screen and
+   deciding whether it is an expected attract/game-over transition or stale
+   level rendering.
 3. Keep the observed rapid attract level cycling as a cadence note, but do not
    hide it with seed/preload behavior.
 
@@ -89,6 +91,38 @@ Next action:
   `timer=0`, terrain/player visible, and `OUT OF TIME / GAME OVER`. Result:
   Phase 3 gate is green because coin/start changed runtime state without a
   seed handoff; the immediate out-of-time transition is the Phase 4 blocker.
+- Phase 4 finding/fix in progress: runtime START enters `FUN_1101E` state 5
+  and `FUN_10504` enables the live player timer with a zero outer counter, but
+  the new-game path did not arm the proven level-intro timer resume used by
+  level transitions. Added the resume arm after state 5 `init10504`, with
+  `baseTimer=0` and `parkTimer=true`, so Practice starts by adding intro time
+  instead of letting `gameTickTimers` expire immediately. Focused test
+  `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts --silent`
+  PASS.
+- Phase 4 automated validation PASS:
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/engine/test/level-intro-banner-resume.test.ts packages/engine/test/main-loop-init-task-a.test.ts packages/engine/test/main-tick.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`; `git diff --check`.
+  Manual/browser confirmation is pending before commit.
+- Phase 4 manual follow-up: user confirmed runtime START now loads the timer
+  and is playable, but screenshot `/Users/magnus-bot/Desktop/partenza nuova.png`
+  shows a black center band with debug scroll around `scroll=(0,290)`.
+  Probe `/tmp/marble-love/boot-flow/phase4-start-scroll-summary.json` compares
+  the L1 diagnostic seed (`videoScrollY=0`) with the cold runtime state-5 path
+  (`0xff10` latched as `videoScrollY=272`). Added a state-5 new-game scroll
+  reset to zero after `FUN_10504`, while preserving the timer resume fix.
+  Focused test `npx vitest run packages/engine/test/main-loop-init-task-a.test.ts --silent`
+  PASS.
+- Phase 4 scroll-reset validation PASS: `npx tsx /tmp/marble-love/boot-flow/probe-phase4-start-scroll.mts`
+  now shows cold runtime state-5 and the L1 diagnostic seed both start with
+  `scrollTarget=0`, `scrollLatched=0`, and `videoScrollY=0`; engine typecheck,
+  focused Phase 4 vitest set, web build, and `git diff --check` also pass.
+  Manual/browser confirmation remains pending before commit.
+- Phase 4 manual browser confirmation received from user: bootFlow coin/start
+  now works, the timer loads, the game is playable, and the initial black center
+  band is gone. Phase 4 gate is green. Residual for Phase 5: immediately after
+  game over, the browser shows a yellow/red terrain screen; trace whether this
+  is stale level rendering during the game-over/attract transition.
 - Baseline validation PASS:
   `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;

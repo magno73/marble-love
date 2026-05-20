@@ -365,6 +365,15 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   (subs.gameModePrep10456 ?? gameModePrep10456)(state);
   (subs.helper16EC6 ?? ((s) => { if (rom !== undefined) levelDispatcher16EC6(s, rom); }))(state);
   init10504(state, subs, rom);
+  ww(state, 0x00400000, 0);
+  ww(state, 0x00400002, 0);
+  state.videoScrollX = 0;
+  state.videoScrollY = 0;
+  armLevelIntroBannerResume(state, {
+    baseTimer: 0,
+    parkTimer: true,
+    ...(rom === undefined ? {} : { rom }),
+  });
   ww(state, 0x00400390, 0);
 }
 
