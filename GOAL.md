@@ -6,15 +6,41 @@ the task PRD checkpoint log.
 
 ## Active Goal
 
-No active `/goal` is currently open.
+Boot-flow no-seed implementation.
 
-When a new non-trivial goal starts:
+Objective:
 
-1. Create or update a task file from `docs/task-template.md`.
-2. Keep the startup read set to `AGENTS.md`, `docs/context-map.md`, this file,
-   and the active task file.
-3. Update this file after each material finding, patch, validation, or blocker.
-4. Archive long history before this file grows into a diary.
+Implement Marble Love in phases so the normal live path can start from cold
+ROM-backed boot, accept coin/start through runtime, enter L1, and progress
+level-by-level without loading runtime level seeds.
+
+Authoritative task plan:
+
+- `docs/codex-task-boot-flow-no-seed.md`
+
+Current phase:
+
+- Phase 0: baseline and instrumentation plan.
+- No implementation has started yet.
+- Existing seed diagnostics must remain intact: `startLevel=1..6` and
+  `playableSeed=NAME`.
+
+Next action:
+
+1. Read only `AGENTS.md`, `docs/context-map.md`, this file, and
+   `docs/codex-task-boot-flow-no-seed.md`.
+2. Execute Phase 0 from the PRD.
+3. Record the research note at `/tmp/marble-love/boot-flow/research.md`.
+4. Update this file and the PRD checkpoint log before any implementation phase.
+
+## Active Constraints
+
+- Do not delete, rename, regenerate, or weaken existing true-start seeds.
+- Do not change `?autoLoad=1&play=1` default behavior until the PRD reaches
+  Phase 7 and the user approves the default switch.
+- Keep new behavior behind `bootFlow=1` until all acceptance criteria are green.
+- Commit only after the active phase validation passes and any requested user
+  playtest is confirmed.
 
 ## Last Closed Scope
 
