@@ -536,10 +536,100 @@ fix: progress cold boot flow from l4 to l5
 fix: progress cold boot flow from l5 to l6
 ```
 
+## Phase 6.5 - Interactive High-Score Initials Entry
+
+Purpose: after a score-qualified game over in the boot-flow runtime path, show
+and run the original-style initials entry flow instead of silently saving with
+the current initials fallback.
+
+Why this is required:
+
+- The current `FUN_11B18` implementation ranks the score and calls the
+  deterministic `FUN_428E` register tail with the player's current initials.
+- That fallback is useful to avoid losing scores and to keep reset/demo clean,
+  but it is not the arcade high-score entry behavior.
+- User playtest confirmed the score-qualified table appears, but initials
+  cannot be changed.
+
+Allowed files:
+
+- `packages/engine/src/object-slot-lookup-11b18.ts`
+- `packages/engine/src/high-score-register-428e.ts` only if the register tail
+  contract needs a tighter boundary
+- `packages/engine/src/main-loop-init-1101e.ts`
+- engine state/input modules needed for an async initials cursor
+- `packages/web/src/main.ts` or web input modules only to route existing
+  keyboard/trackball inputs into the initials flow
+- focused engine/web tests
+- this PRD and `GOAL.md`
+
+Implementation approach:
+
+1. Treat `FUN_11B18` as an async/stateful routine for qualifying scores:
+   - render the insert row;
+   - allow the player to choose initials;
+   - call `FUN_428E` only after entry is accepted;
+   - then continue the existing reset/demo path without stale playfield.
+2. Use the fallback current-initials register path only as a diagnostic or
+   emergency path, not as the normal score-qualified browser behavior.
+3. Preserve non-qualifying score behavior and the clean post-game-over reset
+   already fixed in Phase 5.
+4. Keep input mapping consistent with existing controls. Document the manual
+   controls used for initials entry.
+5. Do not change high-score table format, seed files, level progression, or
+   default URL routing as part of this phase.
+
+Suggested validation:
+
+```sh
+npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false
+npx tsc -p packages/web/tsconfig.json --noEmit --pretty false
+npx vitest run \
+  packages/engine/test/high-score-register-428e.test.ts \
+  packages/engine/test/object-slot-lookup-11b18.test.ts \
+  packages/engine/test/main-loop-init-task-a.test.ts \
+  packages/engine/test/main-tick.test.ts \
+  packages/web/test/coin-start-flow.test.ts --silent
+npm --workspace @marble-love/web run build
+git diff --check
+```
+
+Manual/browser check:
+
+- `?autoLoad=1&bootFlow=1&debugState=1&sound=0`
+- Play or inject a score-qualified game over.
+- Confirm the initials entry screen accepts input and updates the selected
+  initials before saving.
+- Confirm the saved row uses the selected initials, not always `AAA`.
+- Confirm reset/demo resumes without stale terrain and without losing credits
+  display integrity.
+
+Acceptance:
+
+- Score-qualified game over enters an interactive initials-entry state.
+- Player can change initials and accept/save them.
+- High-score table stores and displays the chosen initials.
+- Non-qualifying scores still skip initials entry.
+- Existing fallback save remains covered if kept, but is no longer the normal
+  score-qualified path.
+- Existing `startLevel=1..6`, `playableSeed=NAME`, and bootFlow level
+  progression remain untouched.
+
+Commit gate:
+
+- Commit only after automated validation and browser/manual confirmation that
+  initials can be changed and saved.
+
+Suggested commit message:
+
+```text
+fix: add interactive high score initials entry
+```
+
 ## Phase 7 - Make Boot Flow The Default Play Path
 
 Purpose: switch the normal user-facing play URL to the no-seed runtime path only
-after Phases 1-6 are green.
+after Phases 1-6 and the interactive high-score initials phase are green.
 
 Allowed files:
 
@@ -558,6 +648,8 @@ Implementation approach:
    - coin/start works;
    - L1 playable works;
    - level progression through L6 is green;
+   - score-qualified high-score initials entry is interactive and saves chosen
+     initials;
    - user approves the switch.
 3. Update README/STATUS with the new default and the seed fallback URLs.
 
@@ -630,6 +722,8 @@ The task is complete only when:
 - `startLevel=1..6` still works and still uses the proven true-start seeds.
 - `playableSeed=NAME` still works for diagnostics.
 - MAME proof or well-scoped manual/browser evidence exists for every transition.
+- Score-qualified game over supports interactive initials entry and saves the
+  chosen initials.
 - README/STATUS document the default path and seed fallback paths.
 - No phase has an unresolved gray success criterion.
 
@@ -958,3 +1052,10 @@ The task is complete only when:
   `startLevel=1..6` and `playableSeed=NAME`, then run the full Phase 7
   validation. No runtime change made because explicit approval is still the
   commit gate.
+- 2026-05-20: User confirmed the high-score initials editor must be
+  implemented, not left as the automatic-current-initials fallback. Added
+  Phase 6.5 as a required gate before the Phase 7 default-path switch. The
+  updated acceptance requires score-qualified game over to enter an
+  interactive initials-entry state, let the player change and accept initials,
+  save the chosen initials into the high-score table, and then resume the clean
+  reset/demo flow. No runtime code changed in this checkpoint.

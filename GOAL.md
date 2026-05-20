@@ -12,7 +12,8 @@ Objective:
 
 Implement Marble Love in phases so the normal live path can start from cold
 ROM-backed boot, accept coin/start through runtime, enter L1, and progress
-level-by-level without loading runtime level seeds.
+level-by-level without loading runtime level seeds, including the score-qualified
+post-game high-score initials entry flow.
 
 Authoritative task plan:
 
@@ -20,14 +21,19 @@ Authoritative task plan:
 
 Current phase:
 
+- New required phase before the default-path switch: implement the full
+  interactive high-score initials entry after score-qualified game over. The
+  current fallback save (`AAA`/current initials) is not sufficient for
+  completion.
 - Phase 5 high-score/post-game-over follow-ups are committed and pushed:
   `c6fca62` (`fix: clear cold boot game-over transition`),
   `00342f9` (`fix: save high score fallback on game over`),
   `0e09ef7` (`fix: refresh high score after fallback save`), and
   `c72fc95` (`docs: record high score refresh checkpoint`).
-- Current gate: Phase 7 default-path switch requires explicit user approval
-  before changing `?autoLoad=1&play=1` from the seed-backed coin/start path to
-  the cold boot no-seed flow.
+- Current gate: the default-path switch must wait until the interactive
+  high-score initials phase is green, then still requires explicit user
+  approval before changing `?autoLoad=1&play=1` from the seed-backed coin/start
+  path to the cold boot no-seed flow.
 - Phase 6 progression has user/manual acceptance for this pass: user completed
   three levels from `bootFlow=1` and asked to treat level-to-level progression
   as closed.
@@ -40,13 +46,16 @@ Current phase:
 
 Next action:
 
-1. Ask for/receive approval to make `?autoLoad=1&play=1` use the cold boot
-   no-seed path by default.
-2. If approved, implement Phase 7: preserve `startLevel=1..6` and
+1. Implement the interactive high-score initials entry for score-qualified game
+   over, replacing the current automatic-current-initials fallback as the normal
+   path.
+2. Preserve the deterministic fallback only as a diagnostic/emergency path if
+   needed, and keep post-game reset/demo behavior clean after save.
+3. After that phase is green, ask for/receive approval to make
+   `?autoLoad=1&play=1` use the cold boot no-seed path by default.
+4. If approved, implement the default switch: preserve `startLevel=1..6` and
    `playableSeed=NAME` as seed diagnostics, update README/STATUS, and run the
    full final validation.
-3. Keep the observed rapid attract level cycling as a cadence note, but do not
-   hide it with seed/preload behavior.
 
 Phase 7 completion audit:
 
@@ -59,6 +68,10 @@ Phase 7 completion audit:
   true-start seed after START. These must change in the approved Phase 7 patch,
   while preserving `startLevel=1..6` and `playableSeed=NAME` as documented seed
   diagnostics.
+- The score-qualified high-score path is also incomplete: current
+  `FUN_11B18` behavior registers the score with current initials and refreshes
+  the table, but does not provide interactive initials entry. This must be
+  implemented before the default-path switch is treated as ready.
 - No default-path runtime code change should be made until the explicit Phase 7
   approval gate is satisfied.
 
