@@ -87,6 +87,8 @@ Trace diff and reporting utilities. Use for comparing engine and oracle traces.
 - `docs/level-header-decode-prd.md`: level header decode PRD.
 - `docs/codex-task-sprite-visibility-physics.md`: current sprite PRD when that
   task is active.
+- `docs/codex-task-boot-flow-no-seed.md`: phased plan for making live play
+  progress from cold boot without runtime level seeds.
 - `HANDOFF_*.md`: historical or task-specific handoffs. Read only when a task
   names one or when a specific historical decision must be reconstructed.
 - `docs/agent-briefing.md`, `docs/codex-brief.md`, `docs/codex-prd.md`: legacy
