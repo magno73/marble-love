@@ -638,3 +638,11 @@ The task is complete only when:
 - 2026-05-20: PRD created. No implementation started.
 - 2026-05-20: `/goal` opened and `GOAL.md` updated. Current phase is Phase 0
   baseline/research; no runtime code touched.
+- 2026-05-20: Phase 0 complete. Research note:
+  `/tmp/marble-love/boot-flow/research.md`. Current seed handoff is mapped in
+  `packages/web/src/main.ts`: query parsing lines 48/70/72-76, seed fetch
+  helper lines 1011-1039, explicit playable/startLevel/default live seed loads
+  lines 1053-1087, initial `bootInit` lines 1164-1174, START warm-state handoff
+  lines 1489-1512, and runtime body gate lines 1536-1549. Baseline validation
+  passed: engine typecheck, web typecheck, web build, and `git diff --check`.
+  Next phase: Phase 1 `bootFlow=1` gated switch.
