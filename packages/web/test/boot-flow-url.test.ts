@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BOOT_FLOW_CONFLICT_MESSAGE,
   bootFlowConflictMessage,
+  shouldUseBootFlow,
   shouldUseCoinStartFlow,
 } from "../src/boot-flow-url.js";
 
@@ -19,13 +20,62 @@ const coinStartBase = {
   warmStateReady: false,
 } as const;
 
+const bootFlowBase = {
+  explicitScenarioName: null,
+  forceBootFlow: false,
+  forcePlay: true,
+  playableSeedName: null,
+  useMameDump: false,
+  useMameLive: false,
+  useStartLevelPractice: false,
+} as const;
+
 describe("boot-flow URL routing", () => {
-  it("keeps the existing play URL on the seed-backed coin/start flow", () => {
-    expect(shouldUseCoinStartFlow(coinStartBase)).toBe(true);
+  it("routes the default play URL to the cold boot flow instead of seed-backed coin/start", () => {
+    const useBootFlow = shouldUseBootFlow(bootFlowBase);
+
+    expect(useBootFlow).toBe(true);
+    expect(shouldUseCoinStartFlow({ ...coinStartBase, forceBootFlow: useBootFlow })).toBe(false);
   });
 
   it("does not prepare the seed-backed coin/start flow while bootFlow is active", () => {
     expect(shouldUseCoinStartFlow({ ...coinStartBase, forceBootFlow: true })).toBe(false);
+  });
+
+  it("keeps explicit seed diagnostics out of the default boot flow", () => {
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      playableSeedName: "start_level1_intro_practice_f2479",
+    })).toBe(false);
+
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      useStartLevelPractice: true,
+    })).toBe(false);
+
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      useMameDump: true,
+    })).toBe(false);
+
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      useMameLive: true,
+    })).toBe(false);
+
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      explicitScenarioName: "level1_spawn",
+    })).toBe(false);
+  });
+
+  it("keeps explicit coinStart on the seed-backed coin/start flow", () => {
+    expect(shouldUseBootFlow({ ...bootFlowBase, forcePlay: false })).toBe(false);
+    expect(shouldUseCoinStartFlow({
+      ...coinStartBase,
+      forceCoinStart: true,
+      forcePlay: false,
+    })).toBe(true);
   });
 
   it("keeps explicit diagnostic seed URLs out of the coin/start seed preparation", () => {

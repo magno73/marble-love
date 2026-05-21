@@ -37,6 +37,28 @@ export interface CoinStartFlowOptions {
   warmStateReady: boolean;
 }
 
+export interface BootFlowRouteOptions {
+  explicitScenarioName: string | null;
+  forceBootFlow: boolean;
+  forcePlay: boolean;
+  playableSeedName: string | null;
+  useMameDump: boolean;
+  useMameLive: boolean;
+  useStartLevelPractice: boolean;
+}
+
+export function shouldUseBootFlow(options: BootFlowRouteOptions): boolean {
+  if (options.forceBootFlow) return true;
+  return (
+    options.forcePlay &&
+    options.playableSeedName === null &&
+    !options.useStartLevelPractice &&
+    options.explicitScenarioName === null &&
+    !options.useMameDump &&
+    !options.useMameLive
+  );
+}
+
 export function shouldUseCoinStartFlow(options: CoinStartFlowOptions): boolean {
   return (
     !options.warmStateReady &&

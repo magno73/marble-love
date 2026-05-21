@@ -13,7 +13,8 @@ Objective:
 Implement Marble Love in phases so the normal live path can start from cold
 ROM-backed boot, accept coin/start through runtime, enter L1, and progress
 level-by-level without loading runtime level seeds, including the score-qualified
-post-game high-score initials entry flow.
+post-game high-score initials entry flow and runtime object/collision parity for
+progressed levels.
 
 Authoritative task plan:
 
@@ -21,6 +22,12 @@ Authoritative task plan:
 
 Current phase:
 
+- Phase 7 default-path switch is implemented locally and validation is green:
+  `?autoLoad=1&play=1` now uses the cold boot no-seed runtime path instead of
+  the seed-backed coin/start path.
+- Phase 6.6 runtime content parity is manually green. User confirmed the last
+  L3/Intermediate green-blob fix: the blobs kill the marble, respawn works, and
+  the ROM-waypoint path no longer drifts outside the terrain.
 - Phase 6.5 interactive high-score initials entry is committed and pushed as
   `658be42` (`fix: add interactive high score initials entry`).
 - Phase 5 high-score/post-game-over follow-ups are committed and pushed:
@@ -28,43 +35,52 @@ Current phase:
   `00342f9` (`fix: save high score fallback on game over`),
   `0e09ef7` (`fix: refresh high score after fallback save`), and
   `c72fc95` (`docs: record high score refresh checkpoint`).
-- Current gate: Phase 7 default-path switch requires explicit user approval
-  before changing `?autoLoad=1&play=1` from the seed-backed coin/start path to
-  the cold boot no-seed flow.
+- Current gate: commit and push. The user explicitly approved promoting the
+  no-seed path after the Phase 6.6 browser retest.
 - Phase 6 progression has user/manual acceptance for this pass: user completed
   three levels from `bootFlow=1` and asked to treat level-to-level progression
-  as closed.
+  as mechanically closed; `bug1`/`bug2`/`bug3` reopen the content parity gate,
+  not the basic transition proof.
 - Phase 0 baseline/research is complete.
 - Phase 1 gated `bootFlow=1` switch is committed and pushed as `9934721`
   (`feat: add gated cold boot flow flag`).
 - Phase 2 research has started with compact TS-vs-MAME cold boot summaries.
+- Phase 2 attract visual cadence remains a known non-blocking parity gap:
+  MAME also cycles attract presentation/high-score states, but not as rapidly
+  as the current TS/web cold-boot path.
 - Existing seed diagnostics must remain intact: `startLevel=1..6` and
   `playableSeed=NAME`.
 
 Next action:
 
-1. Ask for/receive approval to make `?autoLoad=1&play=1` use the cold boot
-   no-seed path by default.
-2. If approved, implement the default switch: preserve `startLevel=1..6` and
-   `playableSeed=NAME` as seed diagnostics, update README/STATUS, and run the
-   full final validation.
+1. Run final `git diff --check` and status after this documentation checkpoint.
+2. Commit and push.
 
 Phase 7 completion audit:
 
-- Not complete yet. Current `packages/web/src/boot-flow-url.ts` still returns
-  `true` for the default `play=1` seed-backed coin/start route when no explicit
-  seed diagnostic is present, and
-  `packages/web/test/boot-flow-url.test.ts` still asserts that pre-Phase-7
-  behavior.
-- `README.md` and `STATUS.md` still document `play=1` as loading the L1
-  true-start seed after START. These must change in the approved Phase 7 patch,
-  while preserving `startLevel=1..6` and `playableSeed=NAME` as documented seed
-  diagnostics.
+- Complete locally. `packages/web/src/boot-flow-url.ts` now has an explicit
+  `shouldUseBootFlow(...)` route decision, and default `play=1` uses no-seed
+  boot flow while explicit seed diagnostics stay out of boot flow.
+- `README.md` and `STATUS.md` document `play=1` as the no-seed default, with
+  `startLevel=1..6`, `playableSeed=NAME`, and `coinStart=1` preserved as
+  seed-backed diagnostics/fallbacks.
 - The score-qualified high-score path is now green for this phase: the
   committed Phase 6.5 implementation lets the player edit initials and saves
   the chosen initials before resuming reset/demo.
-- No default-path runtime code change should be made until the explicit Phase 7
-  approval gate is satisfied.
+- Phase 7 approval gate is satisfied by the latest user instruction.
+- Phase 7 validation PASS:
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`
+  (`14` tests);
+  focused Phase 6.6 engine set (`143` tests);
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm run typecheck`;
+  `npm run lint`;
+  `npm --workspace @marble-love/web run build` (known Vite chunk-size warning);
+  `npm run context:audit`;
+  `npm run test -- --silent` (`263` files passed, `3` skipped; `2285` tests
+  passed, `17` skipped).
+- HTTP smoke for the Vite dev server returned `200 OK` for default `play=1`,
+  `startLevel=1`, explicit `playableSeed`, and explicit boot-flow conflict URL.
 
 ## Current Evidence
 
@@ -96,6 +112,18 @@ Phase 7 completion audit:
   rapidly cycles through levels, then settles on a high-score screen with
   `credits 0` and moving marbles. This confirms the cold boot path is visibly
   alive; rapid level cycling remains a documented cadence gap.
+- Phase 2 MAME visual cadence recheck:
+  `/tmp/marble-love/boot-flow/mame-visual-cadence-20260520170512/summary.json`
+  samples clean no-input MAME cold boot every 300 frames through f12000. MAME
+  alternates visible level/attract presentation and high-score/table states,
+  but the sequence is measured in hundreds/thousands of frames: e.g. f600-f1200
+  `main=1 mode=0 level=0 b3e4=1`, f1500-f1800 `mode=2`, f2100-f2700
+  `level=1 b3e4=2`, f3000-f3300 `mode=2`, and f11400 `mode=3`. Current TS
+  summary copied to
+  `/tmp/marble-love/boot-flow/mame-visual-cadence-20260520170512/ts-summary-current.json`
+  still reaches level/presentation states in the first 5-30 frames, so the
+  browser's rapid succession is not visually identical to MAME; it is a
+  documented cold-attract cadence gap, not a seed-load regression.
 - Phase 3 input proof: `oracle/scenarios/input/playable_coin_start.json`
   records a 15-frame Coin 1 pulse at frames 60-74 and a 15-frame START1 pulse
   at frames 180-194. MAME maps START1 to active-low bit 0 of `0xF60001`, which
@@ -293,6 +321,134 @@ Phase 7 completion audit:
   Screenshot `/Users/magnus-bot/Desktop/schermata nera.png` shows that black
   window at `f=14190 main=1 mode=0 level=0 scroll=(0,340)`, `timer=0`,
   player `a=3 st=6`.
+- Phase 6.6 runtime content parity checkpoint from user screenshots
+  `/Users/magnus-bot/Desktop/bug1.png`,
+  `/Users/magnus-bot/Desktop/bug2.png`, and
+  `/Users/magnus-bot/Desktop/bug3.png`: `bug1`/`bug2` are in the
+  L3/Intermediate runtime family (`debug level=2`) with visible green objects
+  reported as nonphysical. The overlay evidence records terrain-slot tags
+  `0x10` and `0x20`, so this remains a MAME/reference collision-semantics gap,
+  not a justified physics patch yet. `bug3` is in the L5/Silly runtime family
+  (`debug level=4`) with collision telemetry still alive (`tag=0x0c`) while
+  user reports missing sprites in the brown-square area compared with the seed
+  path. Result: Phase 6 transitions stay mechanically accepted, but Phase 6.6
+  object/collision content parity blocks Phase 7.
+- Phase 6.6 diagnostic patch in progress: `packages/web/src/main.ts` now adds
+  debug-overlay lines for draw-list entity type/sub, active `string14` slots,
+  and L5/Silly `silly7-9` entity table state. This is instrumentation only and
+  does not change gameplay, collisions, renderer output, or seed loading.
+  Validation PASS:
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`;
+  `npm run context:audit`; `git diff --check`.
+- Phase 6.6 retest screenshots
+  `/Users/magnus-bot/Desktop/bug1new.png`,
+  `/Users/magnus-bot/Desktop/bug2new.png`, and
+  `/Users/magnus-bot/Desktop/bug3new.png` confirm the same families but show the
+  new object-census lines were below the visible part of the full debug overlay.
+  Moved `draw-list`, `string14`, and `silly7-9` lines to the top of both
+  compact and full overlays. Validation PASS after the reorder:
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`;
+  `npm run context:audit`; `git diff --check`.
+- Phase 6.6 checkpoint from `/Users/magnus-bot/Desktop/bug1n.png`,
+  `/Users/magnus-bot/Desktop/bug2n.png`, and
+  `/Users/magnus-bot/Desktop/bug3n.png`: `bug1n` has active `string14` green
+  visual slots, so it is not direct proof of terrain collision; `bug2n` has
+  L3 terrain/script slots with tags `0x05` and `0x06`, making that family the
+  next collision-semantics candidate; `bug3n` has `silly7-9 -` and only the
+  player in the draw-list, proving the L5/Silly progressed runtime was missing
+  upstream type7/8/9 array-9 spawn. Disassembly of `FUN_18FFA` shows it is the
+  entry-side array-9 initializer paired with existing `FUN_190EE`; the current
+  patch adds that default runtime path before Phase 7 can be reconsidered.
+- Phase 6.6 L5 array-9 spawn local validation PASS after adding
+  `packages/engine/src/array-9-init-and-dispatch-18ffa.ts` and wiring it from
+  `scrollRange144E4`: focused new test PASS (`5 tests`), focused array-9 /
+  scroll-range / refresh / late-game set PASS (`91 tests`), web boot-flow URL
+  tests PASS (`12 tests`), engine/web/CLI/root typechecks PASS, web build PASS
+  with the known Vite chunk-size warning, `npm run context:audit` PASS, and
+  `git diff --check` PASS. Manual browser confirmation is still pending before
+  Phase 6.6 can be considered green.
+- Phase 6.6 manual retest checkpoint from
+  `/Users/magnus-bot/Desktop/bug3nn.png`,
+  `/Users/magnus-bot/Desktop/bug1nn.png`, and
+  `/Users/magnus-bot/Desktop/bug2nn-x.png`: `bug3nn` confirms the L5/Silly
+  array-9 fix in browser (`silly7-9` populated and draw-list type `7/8/9`
+  entries visible). `bug1nn` remains a real L3 `string14` physical-effect gap:
+  the green visual slots are active and visible, but the runtime call from
+  `helper121B8` was not wiring `FUN_175C8` to `FUN_25BAE`/`FUN_158AC`, so the
+  player did not enter the original hit state. Current patch wires those side
+  effects and records compact overlay `last state ... FUN_121B8/FUN_175C8
+  ... code=9` for the next retest. `bug2nn-x` shows the tag `0x05` side
+  repelling correctly and the tag `0x06` side not repelling; original
+  `FUN_29CCE` evidence still treats tag `0x06` as no-op, so no tag `0x06`
+  physics will be invented without a MAME/runtime-slot-assignment proof.
+  Focused validation for the new `FUN_175C8` wiring is green:
+  `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts --silent`.
+  Broader local validation is also green:
+  engine/web typechecks, `npm run typecheck`, focused engine set including
+  array-9/scroll-range (`64` tests), web boot-flow URL tests (`12` tests),
+  `npm --workspace @marble-love/web run build` (known chunk-size warning),
+  `npm run context:audit`, `npm run lint`, and `git diff --check`.
+- Phase 6.6 retest `/Users/magnus-bot/Desktop/bug1e.png` proves the previous
+  `FUN_175C8` wiring fix was necessary but incomplete. `string14` slots remain
+  active and visible, yet compact overlay still shows only the older
+  `FUN_121B8/bounce-below-target code=4`, not `FUN_121B8/FUN_175C8 code=9`.
+  Root cause found in the hit-test replica: real `slot+0x3a` is a current
+  animation/frame cursor that often points into ROM, and `FUN_175C8` must read
+  `*(slot+0x3a)` and the bbox bytes from ROM/RAM. The active patch adds
+  ROM-aware absolute reads to `stringViewportHit175C8` and passes the current
+  ROM from `helper121B8`. Focused validation is green:
+  `npx vitest run packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`.
+  `/Users/magnus-bot/Desktop/bug2e.png` remains the separate tag `0x06`
+  wave-side issue. Static ROM jump-table check from `/tmp/marble-love/marble_program.bin`
+  maps tag `0x05` to `0x029f40` and tag `0x06` to the common iter-epilog
+  `0x02b072`, so `0x06` is original no-op behavior, not a missing copy of the
+  proximity bumper. Added a focused test locking `0x06` as no-op in
+  `FUN_29CCE`; the focused helper/string/terrain set now passes (`76` tests).
+  Full local validation after this checkpoint is green: web/CLI/engine
+  typechecks, root `npm run typecheck`, focused engine set (`101` tests), web
+  boot-flow tests (`12` tests), web build with the known chunk-size warning,
+  `npm run lint`, `npm run context:audit`, and `git diff --check`.
+- Phase 6.6 retest `/Users/magnus-bot/Desktop/bug1a.png` proves the
+  ROM-bbox hit-test fix made visible green `string14` slots physically affect
+  the player: compact overlay shows
+  `last state ... FUN_121B8/FUN_175C8 ... code=9`. New root cause: `FUN_253EC`
+  did not yet implement ROM jump-table state `9` (`0x2584e`), so the player
+  stayed in `st=9` with the generic fallback and the game appeared frozen.
+  Current patch wires `JT[9]` as
+  `FUN_176D2 -> FUN_25FC2 -> FUN_1B9CC(obj,1) -> FUN_1281C`, and makes
+  `FUN_176D2` ROM-aware for the same `slot+0x3a -> cursor -> bbox` chain as
+  `FUN_175C8`. Focused validation is green:
+  `npx vitest run packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts --silent`;
+  broader focused Phase 6.6 engine validation is green:
+  `npx vitest run packages/engine/test/sub-29cce.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/array-9-init-and-dispatch-18ffa.test.ts packages/engine/test/scroll-range-144e4.test.ts --silent`
+  (`131` tests); engine/web/CLI targeted typechecks are also green. The user
+  also reports that some green blobs move outside the terrain; this remains a
+  separate placement/pathing evidence item pending MAME/reference comparison.
+- Phase 6.6 manual retest after `JT[9]`: user confirmed the green blobs now
+  kill the marble and the game respawns correctly. New screenshot
+  `/Users/magnus-bot/Desktop/bug1b.png` keeps the L3 green-blob pathing issue
+  open: overlay shows active `string14` slots with ROM bases such as
+  `0x23fb2`, `0x23f66`, and `0x23f1a`, while the visible blobs drift off the
+  terrain. Root cause found in waypoint reads: `FUN_1D1EC` and `FUN_1D242`
+  read `entity+0x2c` path bytes from work RAM only, but `FUN_17346` string
+  paths are ROM-resident. A ROM dump confirms those bases contain nonzero
+  waypoint bytes (for example `0x23f66: 43 46 01 00, 4a 46 02 00...`); the
+  previous TS read returned zeros and drove blobs toward `(0,0)`. Current patch
+  makes both waypoint routines ROM-aware and passes the ROM from
+  `FUN_1725A`/`scrollRange144E4`. Focused validation is green:
+  `npx vitest run packages/engine/test/entity-waypoint-step-1d1ec.test.ts packages/engine/test/string-step-1725a.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts --silent`;
+  broader Phase 6.6 focused validation is green:
+  `npx vitest run packages/engine/test/entity-waypoint-step-1d1ec.test.ts packages/engine/test/string-step-1725a.test.ts packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts packages/engine/test/sub-29cce.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/array-9-init-and-dispatch-18ffa.test.ts --silent`
+  (`143` tests); engine/web/CLI targeted typechecks are also green.
+- Phase 6.6 final manual browser retest: user confirmed the ROM-waypoint patch
+  fixes the green-blob drift. L3 green blobs now stay on their intended route,
+  kill the marble, and respawn works. User then approved promoting the no-seed
+  flow to the default `play=1` URL.
 - Baseline validation PASS:
   `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
   `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
@@ -320,9 +476,10 @@ Phase 7 completion audit:
 ## Active Constraints
 
 - Do not delete, rename, regenerate, or weaken existing true-start seeds.
-- Do not change `?autoLoad=1&play=1` default behavior until the PRD reaches
-  Phase 7 and the user approves the default switch.
-- Keep new behavior behind `bootFlow=1` until all acceptance criteria are green.
+- Phase 7 default-route promotion is approved and may change
+  `?autoLoad=1&play=1` to no-seed boot flow.
+- Keep seed diagnostics explicit: `startLevel=1..6`, `playableSeed=NAME`, and
+  `coinStart=1` must remain available.
 - Commit only after the active phase validation passes and any requested user
   playtest is confirmed.
 

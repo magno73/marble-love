@@ -529,6 +529,39 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect(state.workRam[obj + 0xd8]).toBe(1);
   });
 
+  it("models FUN_253EC state 9 as the string-hit death target path", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+    const slot = 0x401482;
+    const slotOff = slot - WRAM;
+    const cursorAddr = 0x23f66;
+    const bboxAddr = 0x24000;
+
+    state.workRam[obj + 0x18] = 1;
+    state.workRam[obj + 0x1a] = 9;
+    state.workRam[obj + 0x58] = 0;
+    writeU16BE(state.workRam, obj + 0x0c, 100);
+    writeU16BE(state.workRam, obj + 0x10, 100);
+    writeU16BE(state.workRam, obj + 0x20, 0x0100); // keep FUN_1281C inner bounded out for this unit test.
+    writeU16BE(state.workRam, slotOff + 0x0c, 120);
+    writeU16BE(state.workRam, slotOff + 0x10, 120);
+    writeU32BE(state.workRam, slotOff + 0x3a, cursorAddr);
+    writeU32BE(rom.program, cursorAddr, bboxAddr);
+    rom.program[bboxAddr + 0x04] = (-30) & 0xff;
+    rom.program[bboxAddr + 0x05] = (-30) & 0xff;
+    rom.program[bboxAddr + 0x06] = 60;
+    rom.program[bboxAddr + 0x07] = 60;
+
+    fun253ECDispatch(state, rom, player);
+
+    expect(readU32BE(state.workRam, obj + 0x0c)).toBe(0x00650000);
+    expect(readU32BE(state.workRam, obj + 0x10)).toBe(0x00650000);
+    expect(state.workRam[obj + 0x1a]).toBe(9);
+    expect(state.workRam[obj + 0x1c]).toBe(0);
+  });
+
   it("models FUN_253EC state 10 vacuum countdown while active", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();

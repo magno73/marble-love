@@ -21,6 +21,9 @@ docs/archive/readme-status-2026-05-18/
 - Rendering web basato su PixiJS 8 con ROM graphics decode, tilemap, sprite/MO,
   HUD alpha e warm-state MAME.
 - Browser giocabile con ROM locali, input live e flusso coin/start.
+- Percorso default no-seed con `play=1`: cold boot ROM-backed, coin/start
+  runtime, ingresso in L1, progressione livello-per-livello, high-score initials
+  e parita' runtime dei contenuti critici confermati in browser.
 - `startLevel=1..6` mappa ai sei true-start seed MAME con banner intro e timer.
 - Il timer di livello mantiene i secondi residui e aggiunge il bonus del livello
   successivo.
@@ -53,6 +56,12 @@ Apri:
 http://localhost:5173/?autoLoad=1&play=1
 ```
 
+Equivalente esplicito del percorso no-seed:
+
+```text
+http://localhost:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0
+```
+
 Controlli principali:
 
 - `5` o `C`: coin
@@ -70,13 +79,20 @@ presente nel workspace.
 ?autoLoad=1&play=1
 ```
 
-Flusso live normale: attract/high-score, coin, START, true-start L1.
+Flusso live normale: cold boot ROM-backed, attract/high-score, coin, START,
+L1 runtime e progressione livelli senza caricare seed a runtime.
+
+```text
+?autoLoad=1&bootFlow=1
+```
+
+Alias esplicito del flusso no-seed default.
 
 ```text
 ?autoLoad=1&coinStart=1
 ```
 
-Gate coin/start esplicito.
+Fallback seed-backed del vecchio gate coin/start.
 
 ```text
 ?autoLoad=1&startLevel=N

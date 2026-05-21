@@ -449,6 +449,33 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.debug?.lastTerrainSlotCollision).toBeUndefined();
   });
 
+  it("LOOP color 0x06: ROM jump-table maps to iter-epilog no-op, not proximity bumper", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const sounds: number[] = [];
+
+    setupDynamicWallSlot(s, 0x06, 1, -1);
+    wL(s.workRam, SLOT_OFF + 0x00, 0x00030000);
+    wL(s.workRam, SLOT_OFF + 0x04, 0xfffd0000);
+    wL(s.workRam, SLOT_OFF + 0x0c, 0x11111111);
+    wL(s.workRam, SLOT_OFF + 0x10, 0x22222222);
+    wL(s.workRam, 0x684, 0x01020304);
+    wL(s.workRam, 0x688, 0x05060708);
+
+    fun29CCE(s, SLOT, rom, {
+      soundCmdSend158AC: (_st, b) => { sounds.push(b); return 1; },
+    });
+
+    expect(s.workRam[0x666]).toBe(0);
+    expect(s.workRam[0x668]).toBe(0);
+    expect(rL(s.workRam, SLOT_OFF + 0x0c)).toBe(0x11111111);
+    expect(rL(s.workRam, SLOT_OFF + 0x10)).toBe(0x22222222);
+    expect(rL(s.workRam, SLOT_OFF + 0x00)).toBe(0x00030000);
+    expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0xfffd0000);
+    expect(sounds).toEqual([]);
+    expect(s.debug?.lastTerrainSlotCollision).toBeUndefined();
+  });
+
   it("LOOP color 0x05: tracked level4_early type5 slot applies proximity bumper physics", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();

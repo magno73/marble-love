@@ -84,6 +84,7 @@
  * Bit-perfect verificato via `cli/src/test-sub-1d242-parity.ts`.
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -130,6 +131,13 @@ const OFF_OTHER_ACTIVE = 0x18; // byte @ A1+0x18 — must be 1 to consider match
 
 function rb(state: GameState, addr: number): number {
   return (state.workRam[(addr - WRAM) >>> 0] ?? 0) & 0xff;
+}
+
+function rbAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WRAM && a < WRAM + state.workRam.length) return rb(state, a);
+  if (rom !== undefined && a < rom.program.length) return rom.program[a] ?? 0;
+  return 0;
 }
 
 function rwBE(state: GameState, addr: number): number {
@@ -191,7 +199,7 @@ function asrL(v: number, count: number): number {
  *                     `*0x400396.w` definisce il loop limit (numero entità da scansionare).
  *                     `0x400018 + i*0xE2` per `i < limit` deve essere readable.
  */
-export function sub1D242(state: GameState, entityPtr: number): void {
+export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): void {
   const a0 = entityPtr >>> 0;
 
   // ── Compute cellX/cellY via asr.l 19 ──────────────────────────────────────
@@ -204,8 +212,8 @@ export function sub1D242(state: GameState, entityPtr: number): void {
 
   // ── Read cursor[0], cursor[1] (sign-extended bytes) ───────────────────────
   const cursor = rlBE(state, a0 + OFF_CURSOR);
-  const targetXs = sextB(rb(state, cursor + 0)); // D1w sext (signed word == signed byte)
-  const targetYs = sextB(rb(state, cursor + 1)); // D0w sext
+  const targetXs = sextB(rbAbs(state, rom, cursor + 0)); // D1w sext (signed word == signed byte)
+  const targetYs = sextB(rbAbs(state, rom, cursor + 1)); // D0w sext
 
   // ── Decide deltas D2 (Y dir) and D3 (X dir) ───────────────────────────────
   // M68k: D3b and D2b initialized to 0 via clr.b D3b/D2b.

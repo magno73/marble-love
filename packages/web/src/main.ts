@@ -10,6 +10,7 @@
  */
 
 import { Application } from "pixi.js";
+import type { RomImage } from "@marble-love/engine";
 import {
   state as stateNs,
   bus as busNs,
@@ -24,7 +25,11 @@ import {
   buildRomBackedDemoFrame,
 } from "./fixtures/classic-demo-frame.js";
 import { buildEngineDiagnosticFrame } from "./fixtures/engine-diagnostic-frame.js";
-import { bootFlowConflictMessage as getBootFlowConflictMessage, shouldUseCoinStartFlow } from "./boot-flow-url.js";
+import {
+  bootFlowConflictMessage as getBootFlowConflictMessage,
+  shouldUseBootFlow,
+  shouldUseCoinStartFlow,
+} from "./boot-flow-url.js";
 import {
   COIN_START_RUNTIME_PULSE_FRAMES,
   consumeRuntimeStartCredit,
@@ -131,6 +136,15 @@ const bootFlowConflictMessage = getBootFlowConflictMessage({
   useMameDump,
   useMameLive,
 });
+const useBootFlow = shouldUseBootFlow({
+  explicitScenarioName,
+  forceBootFlow,
+  forcePlay,
+  playableSeedName,
+  useMameDump,
+  useMameLive,
+  useStartLevelPractice,
+});
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
 // Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
@@ -160,6 +174,30 @@ function readWorkLongBE(state: ReturnType<typeof stateNs.emptyGameState>, off: n
       (state.workRam[off + 3] ?? 0)) >>>
     0
   );
+}
+
+function readRomLongBE(rom: RomImage, off: number): number {
+  return (
+    (((rom.program[off] ?? 0) << 24) |
+      ((rom.program[off + 1] ?? 0) << 16) |
+      ((rom.program[off + 2] ?? 0) << 8) |
+      (rom.program[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
+function readAbsWordBE(state: ReturnType<typeof stateNs.emptyGameState>, rom: RomImage, addr: number): number {
+  if (addr >= 0x00400000 && addr + 2 <= 0x00400000 + state.workRam.length) {
+    return readWorkWordBE(state, addr - 0x00400000);
+  }
+  return (((rom.program[addr] ?? 0) << 8) | (rom.program[addr + 1] ?? 0)) & 0xffff;
+}
+
+function readAbsByte(state: ReturnType<typeof stateNs.emptyGameState>, rom: RomImage, addr: number): number {
+  if (addr >= 0x00400000 && addr < 0x00400000 + state.workRam.length) {
+    return state.workRam[addr - 0x00400000] ?? 0;
+  }
+  return rom.program[addr] ?? 0;
 }
 
 function writeWorkWordBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number, value: number): void {
@@ -246,6 +284,10 @@ function fixedToFloat(value: number): number {
 
 function fixedRawToFloat(value: number): number {
   return (value | 0) / 0x10000;
+}
+
+function hex(value: number, width = 2): string {
+  return value.toString(16).padStart(width, "0");
 }
 
 function projectedFloorDebug(state: ReturnType<typeof stateNs.emptyGameState>): {
@@ -450,6 +492,68 @@ function terrainPistonCompactDebugLine(state: ReturnType<typeof stateNs.emptyGam
   return `pistons 2..7 a/st/k/tag@pc ${parts.join(" ")}`;
 }
 
+function entityDrawListDebugLine(
+  state: ReturnType<typeof stateNs.emptyGameState>,
+  rom: RomImage,
+): string {
+  const parts: string[] = [];
+  for (let off = 0x3bc; off < 0x3dc; off++) {
+    const ent = state.workRam[off] ?? 0xff;
+    if (ent === 0xff) break;
+    const ptr = readRomLongBE(rom, 0x1f0e2 + (signed8(ent) << 2));
+    const type = signed8(readAbsByte(state, rom, ptr));
+    const sub = readAbsByte(state, rom, ptr + 1);
+    let detail = "";
+    if (type === 7 || type === 8 || type === 9) {
+      const struct = readRomLongBE(rom, 0x1f096 + (signed8(sub) << 2));
+      const d5 = signed16((readAbsWordBE(state, rom, struct + 0x20) + 0x18) & 0xffff);
+      const d4 = signed16((readAbsWordBE(state, rom, struct + 0x22) + 0x10) & 0xffff);
+      detail = ` d=${d5},${d4} v=${d4 > -0x10 && d4 < 0x100 ? 1 : 0}`;
+    } else if (type === 14) {
+      const struct = readRomLongBE(rom, 0x1f07a + (signed8(sub) << 2));
+      const d5 = signed16((readAbsWordBE(state, rom, struct + 0x28) + 0x18) & 0xffff);
+      const d4 = signed16((readAbsWordBE(state, rom, struct + 0x2a) + 0x10) & 0xffff);
+      detail = ` d=${d5},${d4} v=${d4 > -0x30 && d4 < 0x120 ? 1 : 0}`;
+    }
+    parts.push(`${ent}:${type}/${sub}${detail}`);
+  }
+  return `draw-list ${parts.length === 0 ? "-" : parts.slice(0, 10).join(" | ")}`;
+}
+
+function stringSlotDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const parts: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const off = 0x1482 + i * 0x42;
+    const active = state.workRam[off + 0x18] ?? 0;
+    if (active === 0) continue;
+    const sub = state.workRam[off + 0x19] ?? 0;
+    const kind = state.workRam[off + 0x1b] ?? 0;
+    const x = fixedToFloat(readWorkLongBE(state, off + 0x0c)).toFixed(0);
+    const y = fixedToFloat(readWorkLongBE(state, off + 0x10)).toFixed(0);
+    const base = readWorkLongBE(state, off + 0x30);
+    parts.push(`${i}:a${active}/sub${sub}/k${kind} p=${x},${y} base=${hex(base, 6)}`);
+  }
+  return `string14 ${parts.length === 0 ? "-" : parts.join(" | ")}`;
+}
+
+function sillyEntityDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const parts: string[] = [];
+  for (let i = 0; i < 9; i++) {
+    const off = 0x1890 + i * 0x28;
+    const active = state.workRam[off + 0x18] ?? 0;
+    if (active === 0) continue;
+    const kind = state.workRam[off + 0x1a] ?? 0;
+    const step = state.workRam[off + 0x1b] ?? 0;
+    const tick24 = state.workRam[off + 0x24] ?? 0;
+    const selector25 = state.workRam[off + 0x25] ?? 0;
+    const x = fixedToFloat(readWorkLongBE(state, off + 0x0c)).toFixed(0);
+    const y = fixedToFloat(readWorkLongBE(state, off + 0x10)).toFixed(0);
+    const script = readWorkLongBE(state, off + 0x1c);
+    parts.push(`${i}:a${active}/k${kind}/s${step}/t${tick24}/q${selector25} p=${x},${y} pc=${hex(script, 6)}`);
+  }
+  return `silly7-9 ${parts.length === 0 ? "-" : parts.join(" | ")}`;
+}
+
 function lastObjectPairCollisionCompactLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
   const hit = state.debug?.lastObjectPairCollision;
   if (hit === undefined) return "last pair -";
@@ -539,6 +643,12 @@ function lastObjectStateEntryDebugLine(state: ReturnType<typeof stateNs.emptyGam
     `  p=(${fixedRawToFloat(hit.prevX).toFixed(1)},${fixedRawToFloat(hit.prevY).toFixed(1)},${fixedRawToFloat(hit.prevZ).toFixed(1)}) ` +
     `targetZ=${fixedRawToFloat(hit.prevTargetZ).toFixed(1)} ` +
     `v=(${fixedRawToFloat(hit.prevVx).toFixed(2)},${fixedRawToFloat(hit.prevVy).toFixed(2)},${fixedRawToFloat(hit.prevVz).toFixed(2)})`;
+}
+
+function lastObjectStateEntryCompactLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastObjectStateEntry;
+  if (hit === undefined) return "last state -";
+  return `last state f=${hit.frame} ${hit.source} ${objectAddrDebugLabel(hit.entityAddr)} code=${hit.code}`;
 }
 
 function lastBoundsBounceDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
@@ -868,6 +978,7 @@ function updateHighScoreInitialsOverlay(
 function updateObjectDebugOverlay(
   el: HTMLPreElement,
   state: ReturnType<typeof stateNs.emptyGameState>,
+  rom: RomImage,
   frameCount: number,
 ): void {
   const playerX = fixedToFloat(readWorkLongBE(state, 0x18 + 0x0c));
@@ -921,8 +1032,12 @@ function updateObjectDebugOverlay(
       `scroll=(${state.videoScrollX},${state.videoScrollY}) timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)}`,
     playerPhysicsDebugLine(state),
+    entityDrawListDebugLine(state, rom),
+    stringSlotDebugLine(state),
+    sillyEntityDebugLine(state),
     trackballInputDebugLine(state),
     lastObjectPairCollisionCompactLine(state),
+    lastObjectStateEntryCompactLine(state),
     objectPairCompactDebugLine(state),
     terrainPistonCompactDebugLine(state),
   ];
@@ -931,6 +1046,9 @@ function updateObjectDebugOverlay(
       `scroll=(${state.videoScrollX},${state.videoScrollY})`,
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
     playerPhysicsDebugLine(state),
+    entityDrawListDebugLine(state, rom),
+    stringSlotDebugLine(state),
+    sillyEntityDebugLine(state),
     trackballInputDebugLine(state),
     lastTrackballApplyDebugLine(state),
     lastTrackballSanitizeDebugLine(state),
@@ -1110,7 +1228,7 @@ async function startGame(
   let warmStateMainLoopBodyTicks: number | undefined;
   let warmStateIsPlayableSeed = false;
   const useCoinStartFlow = shouldUseCoinStartFlow({
-    forceBootFlow,
+    forceBootFlow: useBootFlow,
     forceCoinStart,
     forcePlay,
     hasRom: rom !== undefined,
@@ -1240,14 +1358,15 @@ async function startGame(
     warmState !== undefined
       ? { warmState }
       : rom !== undefined
-        ? forceBootFlow || useCoinStartFlow || startLevelPracticeUnavailable
+        ? useBootFlow || useCoinStartFlow || startLevelPracticeUnavailable
           ? {}
           : { preloadLevel: 0, fullScreenInit: useFullScreenInit }
         : {},
   );
-  if (forceBootFlow) {
+  if (useBootFlow) {
+    const bootFlowLabel = forceBootFlow ? "bootFlow=1" : "play=1 default bootFlow";
     setRomStatus("Cold boot flow active: runtime boot, no gameplay seed loaded.", "ok");
-    console.log("[marble-love] bootFlow=1 active: cold boot without playable/startLevel seed");
+    console.log(`[marble-love] ${bootFlowLabel} active: cold boot without playable/startLevel seed`);
     console.log("[marble-love] bootFlow input: press 5 (coin), then Enter/Space (START1 runtime gate)");
   }
   const startLevelPracticeActive = useStartLevelPractice && warmState !== undefined;
@@ -1547,9 +1666,9 @@ async function startGame(
     const inputButtons = inputState.buttons;
     s.input.buttons = inputButtons as typeof s.input.buttons;
     const coinPulses = inputState.consumeCoinPulses();
-    if ((useCoinStartFlow || forceBootFlow) && coinPulses > 0) {
+    if ((useCoinStartFlow || useBootFlow) && coinPulses > 0) {
       browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
-      const flowName = forceBootFlow ? "bootFlow coin" : "coin";
+      const flowName = useBootFlow ? "bootFlow coin" : "coin";
       console.log(`[marble-love] ${flowName} accepted, credits=${browserCoinCredits}`);
     }
     const startPulses = inputState.consumeStartPulses();
@@ -1558,7 +1677,7 @@ async function startGame(
       ((inputButtons & 0x01) !== 0 && (previousInputButtons & 0x01) === 0);
     previousInputButtons = inputButtons;
     if (
-      forceBootFlow &&
+      useBootFlow &&
       !manualPlayStarted &&
       startPressedThisFrame &&
       browserCoinCredits > 0
@@ -1640,7 +1759,7 @@ async function startGame(
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
         bootInit(s, tickRom, { warmState });
       }
-      const runtimeInputMmio = forceBootFlow
+      const runtimeInputMmio = useBootFlow
         ? inputMmioWithStartPulse(inputState.inputMmio, bootFlowStartHoldFrames)
         : inputState.inputMmio;
       const tickOptions: Parameters<typeof tick>[1] = {
@@ -1650,7 +1769,7 @@ async function startGame(
         inputMmio: runtimeInputMmio,
         runMainLoopBody: mainLoopBody,
       };
-      if (forceBootFlow) {
+      if (useBootFlow) {
         tickOptions.gateCheck = (countValue: number) => {
           const result = consumeRuntimeStartCredit(browserCoinCredits, countValue);
           if (!result.accepted) return 0;
@@ -1694,7 +1813,7 @@ async function startGame(
         }
       }
     }
-    if ((useCoinStartFlow || forceBootFlow) && !manualPlayStarted && rom !== undefined) {
+    if ((useCoinStartFlow || useBootFlow) && !manualPlayStarted && rom !== undefined) {
       writeBrowserCreditDigit(s, rom, browserCoinCredits);
     }
     frameCount += 1;
@@ -1706,7 +1825,7 @@ async function startGame(
       recordPlayerImpulseDebug(s, frameCount);
     }
     if (objectDebugEnabled && objectDebugOverlay !== undefined && frameCount % 5 === 0) {
-      updateObjectDebugOverlay(objectDebugOverlay, s, frameCount);
+      updateObjectDebugOverlay(objectDebugOverlay, s, tickRom, frameCount);
     }
     updateHighScoreInitialsOverlay(highScoreInitialsOverlay, s);
 

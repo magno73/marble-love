@@ -193,6 +193,7 @@
  * `packages/cli/src/test-string-viewport-hit-175c8-parity.ts` (500 casi).
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
 // ─── Globals (offset workRam relativi a 0x400000) ────────────────────────
@@ -337,6 +338,23 @@ function rlU(state: GameState, addr: number): number {
   );
 }
 
+function rbAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_END) return rb(state, a);
+  if (rom !== undefined && a < rom.program.length) return rom.program[a] ?? 0;
+  return 0;
+}
+
+function rlAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  return (
+    (((rbAbs(state, rom, addr) << 24) >>> 0) |
+      (rbAbs(state, rom, addr + 1) << 16) |
+      (rbAbs(state, rom, addr + 2) << 8) |
+      rbAbs(state, rom, addr + 3)) >>>
+    0
+  );
+}
+
 function wb(state: GameState, addr: number, v: number): void {
   const off = (addr >>> 0) - WORK_RAM_BASE;
   if (off < 0 || off >= WORK_RAM_END - WORK_RAM_BASE) return;
@@ -371,7 +389,7 @@ function sextW(w: number): number {
  *
  * @param state         GameState. Letture: `workRam[0x394..0x395]`,
  *                      `workRam[0x690..0x693]`, slot array @ `0x1482..`,
- *                      catena ptr+ptr+bbox in workRam (con bound check).
+ *                      catena ptr+ptr+bbox in workRam/ROM (con bound check).
  *                      Scritture (al primo overlap):
  *                        - `obj[+0x58] = slot[+0x19]`
  *                        - `slot[+0x25] = 0x1c`
@@ -394,6 +412,7 @@ export function stringViewportHit175C8(
   objAddr: number,
   subs?: StringViewportHit175C8Subs,
   initialD2Byte: number = 0,
+  rom?: RomImage,
 ): StringViewportHit175C8Result {
   // ─── Game-mode gate: state ∈ {2, 5} ────────────────────────────────────
   // moveq #2,D0; cmp.w mem.w; beq enter.
@@ -445,7 +464,7 @@ export function stringViewportHit175C8(
     // ─── Resolve bbox via deref doppio ───────────────────────────────────
     // movea.l (0x3a, A3), A0  ; movea.l (A0), A0
     const bboxPtrPtr = rlU(state, slotAddr + SLOT_BBOX_PTRPTR_OFF);
-    const bboxPtr = rlU(state, bboxPtrPtr);
+    const bboxPtr = rlAbs(state, rom, bboxPtrPtr);
 
     let xMin: number;
     let yMin: number;
@@ -460,10 +479,10 @@ export function stringViewportHit175C8(
       height = DEFAULT_HEIGHT;
     } else {
       // 4 byte signed @ bboxPtr+4..+7
-      xMin = sextB(rb(state, bboxPtr + BBOX_XMIN_OFF));
-      yMin = sextB(rb(state, bboxPtr + BBOX_YMIN_OFF));
-      width = sextB(rb(state, bboxPtr + BBOX_WIDTH_OFF));
-      height = sextB(rb(state, bboxPtr + BBOX_HEIGHT_OFF));
+      xMin = sextB(rbAbs(state, rom, bboxPtr + BBOX_XMIN_OFF));
+      yMin = sextB(rbAbs(state, rom, bboxPtr + BBOX_YMIN_OFF));
+      width = sextB(rbAbs(state, rom, bboxPtr + BBOX_WIDTH_OFF));
+      height = sextB(rbAbs(state, rom, bboxPtr + BBOX_HEIGHT_OFF));
     }
 
     // ─── computeBbox (word arithmetic, signed) ───────────────────────────

@@ -32,6 +32,7 @@ import {
   FUN_25BAE_ARG_MODE,
   SOUND_HIT_COMMAND,
 } from "../src/string-viewport-hit-175c8.js";
+import { emptyRomImage } from "../src/bus.js";
 import { emptyGameState, type GameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
@@ -56,6 +57,18 @@ function setLong(s: GameState, addr: number, v: number): void {
   s.workRam[offOf(addr) + 1] = (u >>> 16) & 0xff;
   s.workRam[offOf(addr) + 2] = (u >>> 8) & 0xff;
   s.workRam[offOf(addr) + 3] = u & 0xff;
+}
+
+function setRomByte(rom: ReturnType<typeof emptyRomImage>, addr: number, v: number): void {
+  rom.program[addr] = v & 0xff;
+}
+
+function setRomLong(rom: ReturnType<typeof emptyRomImage>, addr: number, v: number): void {
+  const u = v >>> 0;
+  rom.program[addr] = (u >>> 24) & 0xff;
+  rom.program[addr + 1] = (u >>> 16) & 0xff;
+  rom.program[addr + 2] = (u >>> 8) & 0xff;
+  rom.program[addr + 3] = u & 0xff;
 }
 
 interface SetupArgs {
@@ -316,6 +329,37 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(
       s.workRam[offOf(SLOT_BASE_ADDR + 2 * SLOT_STRIDE + SLOT_NEW_STATE_OFF)],
     ).toBe(0x1c);
+  });
+
+  it("read-bbox path: dereferenzia cursor e bbox anche quando puntano alla ROM", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const objAddr = 0x401c00;
+    const cursorAddr = 0x00023f66;
+    const bboxAddr = 0x00024000;
+
+    setupChain({
+      s,
+      gameMode: REQUIRED_GAME_MODE_A,
+      marbleX: 100,
+      marbleY: 100,
+      activeSlots: [0],
+      slotPos: { 0: { x: 120, y: 120 } },
+      scriptId: { 0: 0x55 },
+    });
+    setLong(s, SLOT_BASE_ADDR + SLOT_BBOX_PTRPTR_OFF, cursorAddr);
+    setRomLong(rom, cursorAddr, bboxAddr);
+    setRomByte(rom, bboxAddr + 4, -30);
+    setRomByte(rom, bboxAddr + 5, -30);
+    setRomByte(rom, bboxAddr + 6, 60);
+    setRomByte(rom, bboxAddr + 7, 60);
+
+    const r = stringViewportHit175C8(s, objAddr, undefined, 0, rom);
+
+    expect(r.hitSlotIndex).toBe(0);
+    expect(r.retVal).toBe(1);
+    expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0x55);
+    expect(s.workRam[offOf(SLOT_BASE_ADDR + SLOT_NEW_STATE_OFF)]).toBe(0x1c);
   });
 
   it("solo il PRIMO slot collidente fa hit (early-exit)", () => {

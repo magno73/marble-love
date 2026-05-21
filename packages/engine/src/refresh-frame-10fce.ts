@@ -79,6 +79,7 @@ import { slotSpawnPattern13D38 } from "./slot-spawn-pattern-13d38.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
 import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
 import { stringHelper17CB8 } from "./string-helper-17cb8.js";
+import { stringTargetStep176D2 } from "./string-target-step-176d2.js";
 import { recordObjectStateEntryDebug } from "./object-state-debug.js";
 import { objectStateEntry25BAE } from "./object-state-entry-25bae.js";
 import { objectInit2591A } from "./object-init-2591a.js";
@@ -628,6 +629,18 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
 
     helper1B9CC(state, a2, 1);
     spriteRotate1C014(state, rom, objOff);
+    enterObject1281C(state, a2);
+    return;
+  }
+
+  // JT[9] = 0x2584E. String hazard death/carry path:
+  //   FUN_176D2(obj); FUN_25FC2(obj); FUN_1B9CC(obj, 1); FUN_1281C(obj).
+  // Without this branch the string collision state entered by FUN_175C8 is
+  // left in the generic fallback and the player freezes in state 9.
+  if (s1a === 9) {
+    stringTargetStep176D2(state, a2, rom);
+    stepAnimation25FC2(state, a2);
+    helper1B9CC(state, a2, 1);
     enterObject1281C(state, a2);
     return;
   }

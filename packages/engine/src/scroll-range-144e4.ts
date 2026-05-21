@@ -48,6 +48,8 @@ import { spriteCoordsJsr150D0 } from "./sprite-coords-jsr-150d0.js";
 import { computeSpriteCoords_v3 } from "./sprite-coords.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 import { helper18F46 } from "./helper-18f46.js";
+import { array9InitAndDispatch18FFA } from "./array-9-init-and-dispatch-18ffa.js";
+import { array9ClearAndDispatch } from "./array-9-clear-and-dispatch.js";
 import { sub1CABATileRedraw } from "./sub-1caba-tile-redraw.js";
 import { fun264AA } from "./fun-264aa.js";
 import { entityWaypointStep1D1EC } from "./entity-waypoint-step-1d1ec.js";
@@ -120,9 +122,9 @@ export interface ScrollRange144E4Subs {
   fun_14c46?: (state: GameState, d3b: number, d2b: number) => void;
   /** FUN_17346 — default replica reale quando la ROM e' disponibile. */
   fun_17346?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_18FFA — non replicata; default no-op. */
+  /** FUN_18FFA — default replica reale quando la ROM e' disponibile. */
   fun_18ffa?: (state: GameState) => void;
-  /** FUN_190EE — non replicata; default no-op. */
+  /** FUN_190EE — default replica reale quando la ROM e' disponibile. */
   fun_190ee?: (state: GameState) => void;
 }
 
@@ -207,7 +209,7 @@ export function scrollRange144E4(
         fun_1CABA: (st) => { sub1CABATileRedraw(st, rom); },
       }),
       fun_1d1ec: (s, slotPtr) => {
-        entityWaypointStep1D1EC(s, slotPtr);
+        entityWaypointStep1D1EC(s, slotPtr, undefined, rom);
       },
       fun_1778e: (s, slotPtr) => {
         computeSpriteCoords_v3(s, slotPtr);
@@ -252,12 +254,24 @@ export function scrollRange144E4(
   const d3in1d38 = d3s >= 0x1d && d3s <= 0x38;
   const d2in1d38 = d2s >= 0x1d && d2s <= 0x38;
   if (!d3in1d38 && d2in1d38) {
-    (subs?.fun_18ffa ?? _noopState)(state);
+    if (subs?.fun_18ffa !== undefined) {
+      subs.fun_18ffa(state);
+    } else if (rom !== undefined) {
+      array9InitAndDispatch18FFA(state, rom);
+    }
   }
 
   // Block 2 @ 0x145E2: FUN_190EE when D3 in [0x1D..0x38] AND D2 NOT in [0x1D..0x38]
   if (d3in1d38 && !d2in1d38) {
-    (subs?.fun_190ee ?? _noopState)(state);
+    if (subs?.fun_190ee !== undefined) {
+      subs.fun_190ee(state);
+    } else if (rom !== undefined) {
+      array9ClearAndDispatch(state, {
+        fun_18f46: (typeCode, subIdx, st) => {
+          helper18F46(st, rom, typeCode, subIdx);
+        },
+      });
+    }
   }
 
   // Block 3 @ 0x14602: write 1 to 0x400762 when D3 NOT in [3..0x1B] AND D2 in [3..0x1B]
@@ -273,7 +287,3 @@ export function scrollRange144E4(
     state.workRam[0x400762 - WORK_RAM_BASE] = 0;
   }
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function _noopState(_state: GameState): void { /* no-op */ }
