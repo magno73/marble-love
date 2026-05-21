@@ -149,6 +149,7 @@
  * la funzione cade nel default (vedi note su sentinel).
  */
 
+import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
 /** Base della work RAM (0x400000..0x401FFF, 8 KB). */
@@ -204,6 +205,23 @@ function rlU(state: GameState, addr: number): number {
       (rb(state, addr + 1) << 16) |
       (rb(state, addr + 2) << 8) |
       rb(state, addr + 3)) >>>
+    0
+  );
+}
+
+function rbAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  const a = addr >>> 0;
+  if (a >= WORK_RAM_BASE && a < WORK_RAM_END) return rb(state, a);
+  if (rom !== undefined && a < rom.program.length) return rom.program[a] ?? 0;
+  return 0;
+}
+
+function rlAbs(state: GameState, rom: RomImage | undefined, addr: number): number {
+  return (
+    (((rbAbs(state, rom, addr) << 24) >>> 0) |
+      (rbAbs(state, rom, addr + 1) << 16) |
+      (rbAbs(state, rom, addr + 2) << 8) |
+      rbAbs(state, rom, addr + 3)) >>>
     0
   );
 }
@@ -266,14 +284,14 @@ export interface BboxResolved {
  *
  * Replica fedelmente il prologo del binario fino al cmp con −1.
  */
-export function resolveBbox(state: GameState, objAddr: number): BboxResolved {
+export function resolveBbox(state: GameState, objAddr: number, rom?: RomImage): BboxResolved {
   // L'index byte è **signed** nel binario: `move.b (0x58,A1),D0b; ext.w D0;
   // ext.l D0`. Quindi 0xD6 → -42 (long), e slotAddr può andare *prima* della
   // base (es. idx=-1 → 0x401482 - 0x42 = 0x401440).
   const idx = sextB(rb(state, objAddr + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
   const bboxPtrPtr = rlU(state, slotAddr + SLOT_BBOX_PTRPTR_OFF);
-  const bboxPtr = rlU(state, bboxPtrPtr);
+  const bboxPtr = rlAbs(state, rom, bboxPtrPtr);
   if (bboxPtr === BBOX_SENTINEL) {
     return {
       isDefault: true,
@@ -286,10 +304,10 @@ export function resolveBbox(state: GameState, objAddr: number): BboxResolved {
   }
   return {
     isDefault: false,
-    xMin: sextB(rb(state, bboxPtr + BBOX_XMIN_OFF)),
-    yMin: sextB(rb(state, bboxPtr + BBOX_YMIN_OFF)),
-    width: sextB(rb(state, bboxPtr + BBOX_WIDTH_OFF)),
-    height: sextB(rb(state, bboxPtr + BBOX_HEIGHT_OFF)),
+    xMin: sextB(rbAbs(state, rom, bboxPtr + BBOX_XMIN_OFF)),
+    yMin: sextB(rbAbs(state, rom, bboxPtr + BBOX_YMIN_OFF)),
+    width: sextB(rbAbs(state, rom, bboxPtr + BBOX_WIDTH_OFF)),
+    height: sextB(rbAbs(state, rom, bboxPtr + BBOX_HEIGHT_OFF)),
     bboxAddr: bboxPtr,
   };
 }
@@ -311,11 +329,12 @@ export function resolveBbox(state: GameState, objAddr: number): BboxResolved {
 export function stringTargetStep176D2(
   state: GameState,
   objAddr: number,
+  rom?: RomImage,
 ): void {
   const obj = objAddr >>> 0;
 
   // Resolve bbox via slot index + double deref.
-  const bbox = resolveBbox(state, obj);
+  const bbox = resolveBbox(state, obj, rom);
   const xMin = bbox.xMin;
   const yMin = bbox.yMin;
   const width = bbox.width;

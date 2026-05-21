@@ -468,6 +468,28 @@ export function helper121B8(
       spritePosUpdate1BAB2(s, objAddr);
     }
   };
+  const sendSoundCommand = (s: GameState, cmd: number): void => {
+    if (subs.fun_158ac !== undefined) {
+      subs.fun_158ac(s, cmd);
+    } else {
+      soundCmdSend158AC(s, cmd);
+    }
+  };
+  const enterObjectState = (
+    s: GameState,
+    targetObjAddr: number,
+    code: number,
+    source: string,
+  ): void => {
+    recordObjectStateEntryDebug(s, targetObjAddr, code, source);
+    if (subs.fun_25bae !== undefined) {
+      subs.fun_25bae(s, targetObjAddr, code);
+    } else {
+      objectStateEntry25BAE(s, targetObjAddr, code, {
+        soundCommand: (cmd) => { sendSoundCommand(s, cmd); },
+      });
+    }
+  };
 
   // L5 post-seed MAME keeps the player live surface struct stable while only
   // the tile fields move; forcing a redraw here clears the floor and creates
@@ -757,13 +779,21 @@ export function helper121B8(
 
       // 0x000123d8 path (POST_14E92):
       // move.l a2,-(a7); jsr $175c8.l; tst.l d0; addq.l #4,a7
-      // beq.b → POST_175C8
-      // Similar situation - stringViewportHit175C8 returns a struct, we use the
-      // function's side effects (written globals) as proxy.
+      // beq.b → POST_175C8. The default TS callee returns the modeled D0, so
+      // keep the original post-hit/post-probe sprite update and wire the
+      // FUN_25BAE/FUN_158AC side effects used by type-14 hazards.
       if (subs.fun_175c8 !== undefined) {
         subs.fun_175c8(state, a2);
       } else {
-        stringViewportHit175C8(state, a2);
+        const d0_175c8 = stringViewportHit175C8(state, a2, {
+          entityStateTransition: (objPtr, mode) => {
+            enterObjectState(state, objPtr, mode, "FUN_121B8/FUN_175C8");
+          },
+          soundCommand: (cmd) => { sendSoundCommand(state, cmd); },
+        }, 0, rom).retVal >>> 0;
+        if (d0_175c8 !== 0) {
+          callSpritePosUpdate(state, a2);
+        }
       }
 
       // 0x000123ec:

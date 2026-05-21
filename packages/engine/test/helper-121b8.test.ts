@@ -21,6 +21,18 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { helper121B8, HELPER_121B8_ADDR } from "../src/helper-121b8.js";
+import {
+  FUN_25BAE_ARG_MODE,
+  HIT_SLOT_NEW_STATE,
+  SLOT_ACTIVE_OFF,
+  SLOT_BASE_ADDR,
+  SLOT_BBOX_PTRPTR_OFF,
+  SLOT_NEW_STATE_OFF,
+  SLOT_SCRIPT_ID_OFF,
+  SLOT_X_OFF,
+  SLOT_Y_OFF,
+  SOUND_HIT_COMMAND,
+} from "../src/string-viewport-hit-175c8.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
@@ -39,6 +51,18 @@ function writeWordBE(ram: Uint8Array, off: number, val: number): void {
   ram[off + 1] =  val        & 0xff;
 }
 
+function writeByteAbs(ram: Uint8Array, abs: number, val: number): void {
+  ram[abs - WORK_RAM_BASE] = val & 0xff;
+}
+
+function writeWordAbs(ram: Uint8Array, abs: number, val: number): void {
+  writeWordBE(ram, abs - WORK_RAM_BASE, val);
+}
+
+function writeLongAbs(ram: Uint8Array, abs: number, val: number): void {
+  writeLongBE(ram, abs - WORK_RAM_BASE, val);
+}
+
 function readLongBE(ram: Uint8Array, off: number): number {
   return (
     (((ram[off]     ?? 0) << 24) |
@@ -53,6 +77,8 @@ function readWordBE(ram: Uint8Array, off: number): number {
 }
 
 /** workRam offset for an object at abs addr 0x401E00 (non-player). */
+const WORK_RAM_BASE = 0x00400000;
+const PLAYER_ABS = 0x00400018;
 const OBJ_ABS  = 0x00401e00;
 const OBJ_OFF  = OBJ_ABS - 0x400000;
 
@@ -475,6 +501,51 @@ describe("helper121B8 (FUN_000121B8)", () => {
     expect(v175).toHaveBeenCalledWith(state, 0x00400018);
     expect(m881).toHaveBeenCalledWith(state, 0x00400018);
     expect(d94).toHaveBeenCalledWith(state, 0x00400018);
+  });
+
+  it("in-range player: default FUN_175C8 wires type-14 hit side effects", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const r = state.workRam;
+
+    writeWordBE(r, 0x394, 2);
+    writeWordBE(r, 0x690, 50);
+    writeWordBE(r, 0x692, 60);
+
+    const slotAddr = SLOT_BASE_ADDR;
+    const bboxPtrPtr = 0x00023f66;
+    const bboxPtr = 0x00024000;
+    writeByteAbs(r, slotAddr + SLOT_ACTIVE_OFF, 1);
+    writeByteAbs(r, slotAddr + SLOT_SCRIPT_ID_OFF, 0x42);
+    writeWordAbs(r, slotAddr + SLOT_X_OFF, 50);
+    writeWordAbs(r, slotAddr + SLOT_Y_OFF, 60);
+    writeLongAbs(r, slotAddr + SLOT_BBOX_PTRPTR_OFF, bboxPtrPtr);
+    rom.program[bboxPtrPtr] = (bboxPtr >>> 24) & 0xff;
+    rom.program[bboxPtrPtr + 1] = (bboxPtr >>> 16) & 0xff;
+    rom.program[bboxPtrPtr + 2] = (bboxPtr >>> 8) & 0xff;
+    rom.program[bboxPtrPtr + 3] = bboxPtr & 0xff;
+    rom.program[bboxPtr + 4] = (-2) & 0xff;
+    rom.program[bboxPtr + 5] = (-2) & 0xff;
+    rom.program[bboxPtr + 6] = 12;
+    rom.program[bboxPtr + 7] = 12;
+
+    const subs = noopSubs();
+    delete subs.fun_175c8;
+    const updateSprite = vi.fn();
+    const enterState = vi.fn();
+    const soundCommand = vi.fn();
+    subs.fun_1bab2 = updateSprite;
+    subs.fun_25bae = enterState;
+    subs.fun_158ac = soundCommand;
+
+    helper121B8(state, rom, PLAYER_ABS, subs);
+
+    expect(enterState).toHaveBeenCalledWith(state, PLAYER_ABS, FUN_25BAE_ARG_MODE);
+    expect(soundCommand).toHaveBeenCalledWith(state, SOUND_HIT_COMMAND);
+    expect(r[PLAYER_ABS - WORK_RAM_BASE + SB]).toBe(0x42);
+    expect(r[SLOT_BASE_ADDR - WORK_RAM_BASE + SLOT_NEW_STATE_OFF]).toBe(HIT_SLOT_NEW_STATE);
+    expect(updateSprite.mock.calls.filter((call) => call[1] === PLAYER_ABS).length)
+      .toBeGreaterThanOrEqual(3);
   });
 
   it("in-range player: calls fun_1b9cc with flagLong=0", () => {

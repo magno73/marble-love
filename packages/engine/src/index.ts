@@ -174,6 +174,7 @@ export * as objectStateEntry25BAE from "./object-state-entry-25bae.js";
 export * as proximityCheck from "./proximity-check.js";
 export * as paletteRngFill26CFA from "./palette-rng-fill-26cfa.js";
 export * as array9ClearAndDispatch from "./array-9-clear-and-dispatch.js";
+export * as array9InitAndDispatch18FFA from "./array-9-init-and-dispatch-18ffa.js";
 export * as objPickLarger from "./obj-pick-larger.js";
 export * as trackballClampFlags28468 from "./trackball-clamp-flags-28468.js";
 export * as hudFormat from "./hud-format.js";

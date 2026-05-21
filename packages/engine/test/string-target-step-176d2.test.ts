@@ -28,6 +28,7 @@ import {
   BBOX_SENTINEL,
 } from "../src/string-target-step-176d2.js";
 import { emptyGameState, type GameState } from "../src/state.js";
+import { emptyRomImage } from "../src/bus.js";
 
 const WORK_RAM_BASE = 0x400000;
 
@@ -51,6 +52,18 @@ function setLong(s: GameState, addr: number, v: number): void {
   s.workRam[offOf(addr) + 1] = (u >>> 16) & 0xff;
   s.workRam[offOf(addr) + 2] = (u >>> 8) & 0xff;
   s.workRam[offOf(addr) + 3] = u & 0xff;
+}
+
+function setRomByte(rom: ReturnType<typeof emptyRomImage>, addr: number, v: number): void {
+  rom.program[addr >>> 0] = v & 0xff;
+}
+
+function setRomLong(rom: ReturnType<typeof emptyRomImage>, addr: number, v: number): void {
+  const u = v >>> 0;
+  rom.program[addr >>> 0] = (u >>> 24) & 0xff;
+  rom.program[(addr + 1) >>> 0] = (u >>> 16) & 0xff;
+  rom.program[(addr + 2) >>> 0] = (u >>> 8) & 0xff;
+  rom.program[(addr + 3) >>> 0] = u & 0xff;
 }
 
 function getLong(s: GameState, addr: number): number {
@@ -343,6 +356,45 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(r.width).toBe(-50);
     expect(r.height).toBe(70);
     expect(r.bboxAddr).toBe(bboxAddr);
+  });
+
+  it("reads ROM-resident bbox chains when a ROM image is supplied", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const objAddr = 0x401c00;
+    const cursorAddr = 0x23f66;
+    const bboxAddr = 0x24000;
+    const slotAddr = setupChain({
+      s,
+      objAddr,
+      idx: 0,
+      p1Addr: 0x401d00,
+      bboxAddr: BBOX_SENTINEL,
+      slotCx: 120,
+      slotCy: 120,
+      curX: 100,
+      curY: 100,
+    });
+
+    setLong(s, slotAddr + SLOT_BBOX_PTRPTR_OFF, cursorAddr);
+    setRomLong(rom, cursorAddr, bboxAddr);
+    setRomByte(rom, bboxAddr + BBOX_XMIN_OFF, -30);
+    setRomByte(rom, bboxAddr + BBOX_YMIN_OFF, -30);
+    setRomByte(rom, bboxAddr + BBOX_WIDTH_OFF, 60);
+    setRomByte(rom, bboxAddr + BBOX_HEIGHT_OFF, 60);
+
+    const r = resolveBbox(s, objAddr, rom);
+    expect(r.isDefault).toBe(false);
+    expect(r.xMin).toBe(-30);
+    expect(r.yMin).toBe(-30);
+    expect(r.width).toBe(60);
+    expect(r.height).toBe(60);
+    expect(r.bboxAddr).toBe(bboxAddr);
+
+    stringTargetStep176D2(s, objAddr, rom);
+
+    expect(getLong(s, objAddr + OBJ_X_LONG_OFF)).toBe(0x00650000);
+    expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x00650000);
   });
 
   it("nessun side-effect fuori obj+0xC..0x13 (8 byte totali)", () => {

@@ -1739,3 +1739,192 @@ Status: **D4-aerial-type12-moveq-cull-fixed / user-retest-needed** — 2026-05-2
 - Current status: code fix is local and should be committed after final
   `git diff --check`. User retest still needed at the Aerial invisible-obstacle
   spot before marking this subcase green.
+
+Status: **Phase6.6-bootflow-runtime-content-parity-open** — 2026-05-20.
+
+- User provided new progressed `bootFlow=1` screenshots:
+  `/Users/magnus-bot/Desktop/bug1.png`,
+  `/Users/magnus-bot/Desktop/bug2.png`, and
+  `/Users/magnus-bot/Desktop/bug3.png`.
+- `bug1`/`bug2` are not the old "green sprites invisible" failure. The green
+  objects are visible in the L3/Intermediate runtime family (`debug level=2`),
+  but user reports no physical effect when touching them. Current overlay
+  evidence only proves terrain-slot telemetry (`tag=0x10` in `bug1`, `tag=0x20`
+  in `bug2`); this is a collision-semantics gap that needs MAME/reference proof
+  before changing `FUN_29CCE` or attaching physics to visual/string sprites.
+- `bug3` is the L5/Silly runtime family (`debug level=4`) and appears to be a
+  progressed-runtime-vs-seed visual parity gap: user reports missing sprites in
+  the brown-square area that are present with the seed diagnostic. The screenshot
+  still has live collision telemetry (`tag=0x0c`), so first owner is whether the
+  type7/8/9 visual entities are absent upstream, outside the active visible
+  band, culled during MO emission, or dropped by the web renderer.
+- Diagnostic-only patch in `packages/web/src/main.ts`: the existing debug
+  overlay now prints draw-list entity type/sub rows, active `string14` slots,
+  and the L5/Silly `silly7-9` entity table. This does not change gameplay,
+  collisions, renderer output, or seed loading; no seed diagnostics were
+  touched. Validation passed:
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`;
+  `npm run context:audit`; `git diff --check`.
+- This reopens sprite/content parity as a blocker for boot-flow Phase 7
+  defaulting; do not mark the sprite work fully closed until these
+  progressed-runtime cases are classified and retested.
+
+Status: **Phase6.6-overlay-priority-retest-needed** — 2026-05-21.
+
+- User saved `/Users/magnus-bot/Desktop/bug1new.png`,
+  `/Users/magnus-bot/Desktop/bug2new.png`, and
+  `/Users/magnus-bot/Desktop/bug3new.png` after retesting with a 300-second
+  timer. They confirm the same split: L3/Intermediate visible green areas with
+  terrain tags `0x10`/`0x20`, and L5/Silly missing brown-square sprites with
+  live `tag=0x0c` collision telemetry.
+- The required object-census lines were below the visible part of the full
+  overlay, so the diagnostic patch was adjusted: `draw-list`, `string14`, and
+  `silly7-9` now render near the top in both full and compact overlays.
+- Validation after reorder:
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`;
+  `npm --workspace @marble-love/web run build`;
+  `npm run context:audit`;
+  `git diff --check`.
+- Next retest should use the same `bootFlow=1` URL; `debugCompact=1` is also
+  acceptable if the full overlay covers too much of the board.
+
+Status: **Phase6.6-array9-spawn-fix-in-progress** — 2026-05-21.
+
+- User saved `/Users/magnus-bot/Desktop/bug1n.png`,
+  `/Users/magnus-bot/Desktop/bug2n.png`, and
+  `/Users/magnus-bot/Desktop/bug3n.png` with the compact overlay visible.
+- `bug1n` proves the visible L3 green blobs are active `string14` slots
+  (`FUN_17346` family), not direct terrain collision entries. Do not attach
+  physics to them without MAME/reference proof.
+- `bug2n` has no `string14`; it shows L3 terrain/script slots with tags `0x05`
+  and `0x06`. Treat this as the current collision-semantics candidate after the
+  L5 spawn fix, especially for tag `0x06`.
+- `bug3n` has `silly7-9 -` and only the player in the draw-list, so the missing
+  L5 brown-square sprites are absent upstream rather than culled by the web
+  renderer. `FUN_18FFA` was still no-op in `scrollRange144E4`; disassembly now
+  identifies it as the array-9 type7/8/9 initializer paired with `FUN_190EE`.
+  The active patch adds the default spawn and clear wiring.
+- Local validation for the L5 spawn patch is green:
+  focused new engine test PASS (`5 tests`), focused array-9 / scroll-range /
+  refresh / late-game set PASS (`91 tests`), web boot-flow URL tests PASS
+  (`12 tests`), engine/web/CLI/root typechecks PASS, web build PASS with the
+  known chunk-size warning, `npm run context:audit` PASS, and
+  `git diff --check` PASS.
+- Manual retest still decides the user-visible case: use the same bootFlow URL
+  with `debugCompact=1` and `levelTime=300`; expected evidence is populated
+  `silly7-9` rows plus type `7/8/9` entries in `draw-list` around the previous
+  `bug3n` area.
+
+Status: **Phase6.6-string14-hit-wiring-in-progress** — 2026-05-21.
+
+- User saved `/Users/magnus-bot/Desktop/bug3nn.png`,
+  `/Users/magnus-bot/Desktop/bug1nn.png`, and
+  `/Users/magnus-bot/Desktop/bug2nn-x.png`.
+- `bug3nn` manually confirms the L5/Silly array-9 spawn fix: monsters are
+  visible, `silly7-9` is populated, and draw-list rows include type `7/8/9`.
+- `bug1nn` shows the remaining L3 issue is not visibility. The green blobs are
+  active `string14` slots, but touching them still has no physical/game-state
+  effect. Root cause found in the runtime caller: `helper121B8` invoked
+  `stringViewportHit175C8` without wiring the original hit side effects
+  `FUN_25BAE(obj,9)` and `FUN_158AC(0x5e)`.
+- Patch in progress: `packages/engine/src/helper-121b8.ts` now passes
+  `FUN_25BAE`/sound callbacks into the default `FUN_175C8` replica, records
+  object-state debug from source `FUN_121B8/FUN_175C8`, and performs the
+  original `D0 != 0` sprite-position update. `packages/web/src/main.ts` adds a
+  compact `last state` overlay line so the next browser retest can prove
+  `code=9` at contact time.
+- Focused validation passed:
+  `npx vitest run packages/engine/test/helper-121b8.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts --silent`.
+- Broader local validation passed:
+  engine/web typechecks, root `npm run typecheck`, focused engine set with
+  helper/string/array-9/scroll-range (`64` tests), web boot-flow URL tests
+  (`12` tests), web build with the known chunk-size warning,
+  `npm run context:audit`, `npm run lint`, and `git diff --check`.
+- `bug2nn-x` remains a separate semantics question. The tag `0x05` side
+  repels, while the tag `0x06` side does not. Current original-branch evidence
+  treats tag `0x06` as a no-op in `FUN_29CCE`, so do not invent tag `0x06`
+  physics without a MAME trace showing a wrong runtime tag assignment or an
+  incomplete owner.
+
+Status: **Phase6.6-string14-rom-bbox-fix-in-progress** — 2026-05-21.
+
+- User saved `/Users/magnus-bot/Desktop/bug1e.png` and
+  `/Users/magnus-bot/Desktop/bug2e.png`.
+- `bug1e` shows active `string14` slots and no `FUN_121B8/FUN_175C8 code=9`
+  state entry. The previous callback wiring was necessary but incomplete.
+- Root cause: `FUN_175C8` resolves the string bbox through `slot+0x3a`, which
+  is the current animation/frame cursor and may point to ROM. The prior TS
+  replica only dereferenced work RAM, so ROM-backed string frames produced
+  missing/zero bbox data and the hit-test missed visible blobs.
+- Patch in progress: `stringViewportHit175C8` now takes optional `RomImage`
+  and reads the cursor/bbox through ROM-or-RAM absolute reads; `helper121B8`
+  passes its current ROM into the default `FUN_175C8` call. Tests now cover
+  direct ROM cursor/bbox resolution and helper integration.
+- Focused validation passed:
+  `npx vitest run packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts --silent`;
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`.
+- `bug2e` is not closed by this patch. It still shows the marble on the
+  `tag=0x06` side of the wave. Static ROM jump-table check now confirms this
+  is original no-op semantics rather than a missing implementation:
+  tag `0x05` maps to `0x029f40` (proximity bumper) and tag `0x06` maps to
+  `0x02b072` (common iter-epilog). Added focused `FUN_29CCE` test coverage so
+  tag `0x06` remains no-op unless future MAME evidence proves the runtime slot
+  assignment is wrong.
+- Broader validation after the ROM-bbox patch and tag `0x06` classification:
+  engine/web/CLI typechecks, root `npm run typecheck`, focused engine set
+  (`101` tests), web boot-flow tests (`12` tests), web build with the known
+  chunk-size warning, `npm run lint`, `npm run context:audit`, and
+  `git diff --check`.
+
+Status: **Phase6.6-string14-state9-dispatch-in-progress** — 2026-05-21.
+
+- User saved `/Users/magnus-bot/Desktop/bug1a.png`.
+- The prior ROM-bbox hit-test patch is now proven useful in browser: the
+  visible green `string14` blobs kill the marble and the overlay records
+  `FUN_121B8/FUN_175C8 code=9`.
+- New blocker: after that state entry the player stays in `st=9`, so the game
+  appears frozen. Code inspection maps this to missing `FUN_253EC` jump-table
+  entry `JT[9] = 0x2584e`.
+- Patch in progress: `FUN_253EC` now models `JT[9]` as
+  `FUN_176D2 -> FUN_25FC2 -> FUN_1B9CC(obj,1) -> FUN_1281C`, and
+  `FUN_176D2` now accepts a `RomImage` for the same ROM-backed
+  `slot+0x3a -> cursor -> bbox` chain already required by `FUN_175C8`.
+- Focused validation passed:
+  `npx vitest run packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts --silent`.
+- Broader Phase 6.6 focused validation passed:
+  `npx vitest run packages/engine/test/sub-29cce.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/array-9-init-and-dispatch-18ffa.test.ts packages/engine/test/scroll-range-144e4.test.ts --silent`
+  (`131` tests), plus engine/web/CLI targeted typechecks.
+- User also reports that green stains sometimes move outside the terrain. This
+  is not closed by the state-9 patch. Current evidence says the sprites are
+  active runtime `string14` slots with original-looking waypoint/cursor state;
+  keep placement/pathing grey until a MAME/reference comparison proves the TS
+  path is wrong. Do not add a renderer offset, terrain clamp, or synthetic
+  collision/path correction from the screenshot alone.
+
+Status: **Phase6.6-string14-rom-waypoint-green** — 2026-05-21.
+
+- User confirmed the state-9 patch fixes death/respawn. Remaining screenshot
+  `/Users/magnus-bot/Desktop/bug1b.png` shows the green blobs still drifting
+  outside the terrain.
+- Root cause found without a renderer/terrain clamp: the `string14` overlay
+  bases (`0x23fb2`, `0x23f66`, `0x23f1a`, etc.) are ROM waypoint streams owned
+  by `FUN_17346`. `FUN_1D1EC` and `FUN_1D242` previously read waypoint bytes
+  from work RAM only, so ROM cursors returned zero and pushed the blobs toward
+  `(0,0)`.
+- ROM inspection confirms the cursor data is nonzero, for example
+  `0x23f66: 43 46 01 00, 4a 46 02 00, 4a 48 03 00...`.
+- Patch in progress: `FUN_1D1EC` and `FUN_1D242` now read waypoint bytes from
+  ROM-or-RAM and the real string callers (`FUN_1725A` and
+  `scrollRange144E4`/`FUN_17346`) pass the current ROM image through.
+- Focused validation passed:
+  `npx vitest run packages/engine/test/entity-waypoint-step-1d1ec.test.ts packages/engine/test/string-step-1725a.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts --silent`.
+- Broader Phase 6.6 focused validation passed:
+  `npx vitest run packages/engine/test/entity-waypoint-step-1d1ec.test.ts packages/engine/test/string-step-1725a.test.ts packages/engine/test/string-range-dispatch-17346.test.ts packages/engine/test/scroll-range-144e4.test.ts packages/engine/test/sub-29cce.test.ts packages/engine/test/string-viewport-hit-175c8.test.ts packages/engine/test/helper-121b8.test.ts packages/engine/test/string-target-step-176d2.test.ts packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/array-9-init-and-dispatch-18ffa.test.ts --silent`
+  (`143` tests), plus engine/web/CLI targeted typechecks.
+- Manual browser retest is now green: user confirmed the green blobs no longer
+  drift outside the terrain, still kill the marble, and respawn works. This
+  closes the reported `bug1` pathing subcase and unblocks the boot-flow Phase 7
+  default-route promotion.

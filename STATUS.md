@@ -9,36 +9,52 @@ docs/archive/readme-status-2026-05-18/
 
 ## Stato Attuale
 
-Marble Love e' giocabile nel browser con ROM locali, true-start seed per i sei
-livelli originali e flusso coin/start compatibile con il percorso live. Il
+Marble Love e' giocabile nel browser con ROM locali. Il percorso default
+`play=1` ora parte da cold boot ROM-backed, accetta coin/start via runtime,
+entra in L1, progredisce livello-per-livello, gestisce high-score initials e
+mantiene i contenuti runtime critici confermati in browser. I true-start seed
+dei sei livelli originali restano disponibili come diagnostica esplicita. Il
 motore resta una reimplementazione TypeScript verificata contro MAME: per le
 aree delicate la causa deve essere provata su routine, RAM o trace MAME prima di
 modificare comportamento.
 
-Il percorso piu' affidabile per playtest e regressioni e':
+Percorso default no-seed:
 
 ```text
 http://localhost:5173/?autoLoad=1&play=1
 ```
 
+Alias esplicito:
+
+```text
+http://localhost:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0
+```
+
 Con `play=1` il frontend resta su attract/high-score fino a coin e START; dopo
-START carica il true-start L1 `start_level1_intro_practice_f2479`.
+START entra in L1 dal dispatcher runtime senza caricare seed. Usare
+`startLevel=1..6`, `playableSeed=NAME` o `coinStart=1` per diagnostica
+seed-backed esplicita.
 
-Stato post-merge 2026-05-19:
+Stato boot-flow 2026-05-21:
 
-- `main` include il merge del branch `codex/level-header-decode`.
-- Il level descriptor header e' documentato in
-  `docs/level-header-format.md`.
-- Gate post-merge verdi: `npm run typecheck`, `npm run lint`,
-  `npm run test --silent`.
-- Suite corrente: `255 passed | 3 skipped` test files,
-  `2206 passed | 17 skipped` tests.
+- Phase 6.6 runtime content parity confermata manualmente: L5/Silly mostra i
+  mostri `type7/8/9`; L3/Intermediate green blobs sono visibili, uccidono la
+  marble, fanno respawn e seguono i waypoint ROM senza drift fuori terreno.
+- High-score initials interattivi gia' implementati e salvati nel percorso
+  score-qualified.
+- Gate locali verdi: focused Phase 6.6 engine tests (`143`), boot-flow web
+  tests (`14`), root typecheck, web build, lint, context audit e suite completa
+  (`263` files passed, `3` skipped; `2285` tests passed, `17` skipped).
+- Phase 7 approvata dall'utente: `play=1` e' promosso al percorso no-seed.
 
 ## Funziona
 
 - Web app Vite/PixiJS con ROM loader, rendering playfield/sprite/HUD e input
   live.
-- `?autoLoad=1&play=1`: gate attract, coin, START, L1 true-start.
+- `?autoLoad=1&play=1`: cold boot no-seed, coin/start runtime, L1 giocabile,
+  progressione livelli e high-score initials.
+- `?autoLoad=1&bootFlow=1`: alias esplicito del cold boot no-seed.
+- `?autoLoad=1&coinStart=1`: fallback seed-backed del vecchio gate coin/start.
 - `?autoLoad=1&startLevel=1..6`: caricamento dei sei true-start seed MAME.
 - Banner intro e timer iniziali dei livelli.
 - Carryover timer su progressione livelli: residuo precedente + bonus nuovo
@@ -90,8 +106,9 @@ Esempi validati nel runtime engine:
 
 Modalita' principali:
 
-- `?autoLoad=1&play=1`: flusso live normale.
-- `?autoLoad=1&coinStart=1`: gate coin/start esplicito.
+- `?autoLoad=1&play=1`: flusso default no-seed.
+- `?autoLoad=1&bootFlow=1`: flusso no-seed esplicito.
+- `?autoLoad=1&coinStart=1`: fallback seed-backed del gate coin/start.
 - `?autoLoad=1&startLevel=N`: true-start diretto di un livello.
 - `?autoLoad=1&playableSeed=NAME&play=1`: diagnostica seed esplicita.
 

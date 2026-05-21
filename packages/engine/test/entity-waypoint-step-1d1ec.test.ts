@@ -15,6 +15,8 @@ import { describe, it, expect, vi } from "vitest";
 import { entityWaypointStep1D1EC } from "../src/entity-waypoint-step-1d1ec.js";
 import { emptyGameState } from "../src/state.js";
 import type { GameState } from "../src/state.js";
+import { emptyRomImage } from "../src/bus.js";
+import type { RomImage } from "../src/bus.js";
 
 const ENTITY_BASE_ABS = 0x401e00;
 const ENTITY_OFF = 0x1e00; // offset in workRam
@@ -29,6 +31,10 @@ function writeLong(s: GameState, off: number, v: number): void {
   s.workRam[off + 1] = (u >>> 16) & 0xff;
   s.workRam[off + 2] = (u >>> 8) & 0xff;
   s.workRam[off + 3] = u & 0xff;
+}
+
+function writeRomByte(rom: RomImage, addr: number, v: number): void {
+  rom.program[addr >>> 0] = v & 0xff;
 }
 
 function readLong(s: GameState, off: number): number {
@@ -147,5 +153,30 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     });
     entityWaypointStep1D1EC(s, ENTITY_BASE_ABS, { fun_1d242: cb });
     expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it("legge waypoint ROM e passa la ROM al follow-up FUN_1D242", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const cursor = 0x23000;
+
+    writeLong(s, ENTITY_OFF + 0x0c, 5 << 19);
+    writeLong(s, ENTITY_OFF + 0x10, 2 << 19);
+    writeLong(s, ENTITY_OFF + 0x2c, cursor);
+    writeLong(s, ENTITY_OFF + 0x30, cursor);
+    writeRomByte(rom, cursor + 0, 5);
+    writeRomByte(rom, cursor + 1, 2);
+    writeRomByte(rom, cursor + 2, 2);
+    writeRomByte(rom, cursor + 8, 7);
+    writeRomByte(rom, cursor + 9, 2);
+
+    entityWaypointStep1D1EC(s, ENTITY_BASE_ABS, undefined, rom);
+
+    expect(readLong(s, ENTITY_OFF + 0x2c)).toBe(cursor + 8);
+    expect(readLong(s, ENTITY_OFF + 0x00)).toBe(0x00080000);
+    expect(readLong(s, ENTITY_OFF + 0x04)).toBe(0x00000000);
+    expect(readLong(s, ENTITY_OFF + 0x3a)).toBe(0x00020ea4);
+    expect(readLong(s, ENTITY_OFF + 0x3e)).toBe(0x00020ea4);
+    expect(s.workRam[ENTITY_OFF + 0x25]).toBe(2);
   });
 });

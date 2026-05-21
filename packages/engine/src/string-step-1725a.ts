@@ -137,7 +137,7 @@ export function stringStep1725A(
   wl(r, off + 0x10, (rl(r, off + 0x10) + sy) >>> 0);
 
   // 0x0172aa: jsr 1D1EC(slotPtr)
-  entityWaypointStep1D1EC(state, slotPtr);
+  entityWaypointStep1D1EC(state, slotPtr, undefined, rom);
 
   // 0x0172b4: jsr 1778E(slotPtr)
   computeSpriteCoords_v3(state, slotPtr);
