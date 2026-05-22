@@ -492,6 +492,38 @@ function terrainPistonCompactDebugLine(state: ReturnType<typeof stateNs.emptyGam
   return `pistons 2..7 a/st/k/tag@pc ${parts.join(" ")}`;
 }
 
+function proximity05Denominator(dx: number, dy: number): number {
+  const xAbs = (Math.abs(signed16(dx)) << 4) & 0xffff;
+  const yAbs = (Math.abs(signed16(dy)) << 4) & 0xffff;
+  return xAbs > yAbs
+    ? ((((yAbs >>> 3) * 3) + xAbs) & 0xffff)
+    : ((((xAbs >>> 3) * 3) + yAbs) & 0xffff);
+}
+
+function waveTerrainCompactDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const g690 = signed16(readWorkWordBE(state, 0x690));
+  const g692 = signed16(readWorkWordBE(state, 0x692));
+  const parts: string[] = [];
+  for (let index = 0; index < 25; index++) {
+    const off = 0x0a9c + index * 0x56;
+    const active = state.workRam[off + 0x18] ?? 0;
+    const tag = state.workRam[off + 0x1f] ?? 0;
+    if (active === 0 || (tag !== 0x05 && tag !== 0x06)) continue;
+    const x = signed16(readWorkWordBE(state, off + 0x0c));
+    const y = signed16(readWorkWordBE(state, off + 0x10));
+    const d6 = signed16((x - g690) & 0xffff);
+    const a0 = signed16((y - g692) & 0xffff);
+    const denom = proximity05Denominator(d6, a0);
+    const visX = signed16(readWorkWordBE(state, off + 0x4e));
+    const visY = signed16(readWorkWordBE(state, off + 0x50));
+    parts.push(
+      `${index}:t${tag.toString(16).padStart(2, "0")} ` +
+      `xy=${x},${y} v=${visX},${visY} d=${d6},${a0} rom05q=${denom}${denom < 0x38 ? "*" : ""}`,
+    );
+  }
+  return `wave terrain ${parts.length === 0 ? "-" : parts.join(" | ")}`;
+}
+
 function entityDrawListDebugLine(
   state: ReturnType<typeof stateNs.emptyGameState>,
   rom: RomImage,
@@ -585,6 +617,18 @@ function lastTerrainSlotCollisionDebugLine(state: ReturnType<typeof stateNs.empt
     `  slot=(${hit.slotX},${hit.slotY},${hit.slotZ}) entity=(` +
     `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)},${fixedRawToFloat(hit.entityZ).toFixed(1)}) ` +
     `vBefore=(${fixedRawToFloat(hit.entityVxBefore).toFixed(2)},${fixedRawToFloat(hit.entityVyBefore).toFixed(2)})`;
+}
+
+function lastTerrainWaveCandidateDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
+  const hit = state.debug?.lastTerrainWaveCandidate;
+  if (hit === undefined) return "last terrain wave candidate: -";
+  return `last terrain wave candidate f=${hit.frame} entity=${objectAddrDebugLabel(hit.entityAddr)} ` +
+    `slot=${hit.slotIndex}@${hit.slotAddr.toString(16)} tag=${hit.colorTag.toString(16).padStart(2, "0")} ` +
+    `d1/d2=(${hit.d1},${hit.d2}) d6/a0=(${hit.d6},${hit.a0}) rom05q=${hit.denominator}` +
+    `${hit.denominator < 0x38 ? "*" : ""} ` +
+    `f58=${hit.f58.toString(16).padStart(2, "0")} ` +
+    `flags=(${hit.flagX},${hit.flagY}) slot=(${hit.slotX},${hit.slotY}) entity=(` +
+    `${fixedRawToFloat(hit.entityX).toFixed(1)},${fixedRawToFloat(hit.entityY).toFixed(1)})`;
 }
 
 function lastTubeProbeDebugLine(state: ReturnType<typeof stateNs.emptyGameState>): string {
@@ -1033,6 +1077,8 @@ function updateObjectDebugOverlay(
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)}`,
     playerPhysicsDebugLine(state),
     entityDrawListDebugLine(state, rom),
+    waveTerrainCompactDebugLine(state),
+    lastTerrainWaveCandidateDebugLine(state),
     stringSlotDebugLine(state),
     sillyEntityDebugLine(state),
     trackballInputDebugLine(state),
@@ -1047,6 +1093,8 @@ function updateObjectDebugOverlay(
     `player ${objectDebugLine(state, 0, playerX, playerY, playerZ)} timer=${readWorkWordBE(state, 0x18 + 0x6a)}`,
     playerPhysicsDebugLine(state),
     entityDrawListDebugLine(state, rom),
+    waveTerrainCompactDebugLine(state),
+    lastTerrainWaveCandidateDebugLine(state),
     stringSlotDebugLine(state),
     sillyEntityDebugLine(state),
     trackballInputDebugLine(state),

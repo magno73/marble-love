@@ -488,10 +488,31 @@ export interface TerrainGateProbeDebug {
   entityS58: number;
 }
 
+export interface TerrainWaveCandidateDebug {
+  frame: number;
+  entityAddr: number;
+  slotIndex: number;
+  slotAddr: number;
+  colorTag: number;
+  d1: number;
+  d2: number;
+  d6: number;
+  a0: number;
+  denominator: number;
+  f58: number;
+  flagX: number;
+  flagY: number;
+  slotX: number;
+  slotY: number;
+  entityX: number;
+  entityY: number;
+}
+
 export interface GameDebugState {
   lastObjectPairCollision?: ObjectPairCollisionDebug;
   lastScriptSlotCollision?: ScriptSlotCollisionDebug;
   lastTerrainSlotCollision?: TerrainSlotCollisionDebug;
+  lastTerrainWaveCandidate?: TerrainWaveCandidateDebug;
   lastObjectStateEntry?: ObjectStateEntryDebug;
   lastTubeProbe?: TubeProbeDebug;
   lastTerrainScanStop?: TerrainScanStopDebug;

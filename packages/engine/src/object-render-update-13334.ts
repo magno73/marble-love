@@ -21,8 +21,8 @@
  *
  *   3. **Two conditional dispatches** (post-compute):
  *      - se `struct[0x1f] == 6`: chiama `FUN_0001D06A(sext_l(struct[0x25]))`,
- *        una sub di scheduling palette anim 6 (~400 byte, non replicata in TS;
- *        modellata via callback `inner1D06A`).
+ *        che aggiorna la tabella terrain indiretta @ `0x40076E` usata dalle
+ *        onde verdi L3; modellata via callback `inner1D06A`.
  *      - se `struct[0x1f] == 3`: indicizza una tabella ROM @ `0x1DF18` con
  *        `((struct[0x3e] - struct[0x46]) >> 3) & 0xFFFF` (più 7 se
  *        `struct[0x46] == 0x21192`), poi chiama `paletteQueuePush(byte)`. Sub
@@ -148,10 +148,11 @@
  *     eseguito (path "final copy").
  *   - palette queue (byte+ptr a `0x400408`/`0x40040C-F`) — solo `1f==3`.
  *
- * **NO INTEGRAZIONE**:
- *   - `FUN_0001D06A` (palette anim 6 scheduler, ~400 byte) non è ancora
- *     replicato in TS. Modellato via callback `inner1D06A` (riceve sext_l del
- *     byte; ritorno ignorato dal caller, quindi `void`).
+ * **Integrazione esterna**:
+ *   - `FUN_0001D06A` è modellato via callback `inner1D06A` (riceve sext_l del
+ *     byte; ritorno ignorato dal caller, quindi `void`). La callback permette
+ *     ai test di isolare `FUN_13334`, mentre il frame loop cabla la replica TS
+ *     che patcha la tabella terrain indiretta.
  *   - `FUN_00026B66` (`paletteQueuePush`) È replicato — chiamato direttamente.
  *
  * Verifica bit-perfect via
@@ -272,7 +273,7 @@ function readU32Anywhere(
  * shim (= `sext_l(struct[0x25])`). Il valore di ritorno è ignorato dal caller
  * di FUN_13334, quindi modelliamo come `void`.
  *
- * La funzione interna ha side effect su work RAM (palette anim 6 scheduling);
+ * La funzione interna ha side effect su work RAM (tabella terrain indiretta);
  * per parity testing in isolamento, patcha `FUN_1D06A` nel binario con un
  * `rts` (`4E 75`) e usa una callback no-op qui.
  */

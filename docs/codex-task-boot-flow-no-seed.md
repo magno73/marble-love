@@ -645,6 +645,22 @@ Current user evidence:
   (`debug level=4`). Collision telemetry still records a live `tag=0x0c` case,
   but user reports missing sprites in the brown-square area compared with the
   seed path.
+- `/Users/magnus-bot/Desktop/onda.png` is a post-Phase-7 L3/Intermediate
+  follow-up. User reports that only the first/left green wave has physics. The
+  screenshot shows visible/moving wave script slots with `tag=0x06` and nearby
+  collision slots with `tag=0x05`; current ROM evidence still treats `tag=0x06`
+  as a no-op in `FUN_29CCE`, so do not add direct `tag=0x06` bumper physics
+  without new MAME proof.
+- `/Users/magnus-bot/Desktop/bugx.png` is the browser rejection of the
+  `FUN_11AC2` hypothesis: after wiring the `0x40075c` path, the user reports
+  that even the previously working first/left wave no longer has physics. Keep
+  `FUN_11AC2` unwired unless a new MAME proof requires it.
+- `/Users/magnus-bot/Desktop/s1.png` and `/Users/magnus-bot/Desktop/s2.png`
+  are the decisive `wave terrain` captures. In both, the marble is on a
+  visible/contacted `tag=0x06` wave slot while the nearest `tag=0x05` slots are
+  far away. The local `tag=0x06` bumper/hitbox hypothesis was falsified by ROM
+  proof and removed. Keep the overlay diagnostic-only: `rom05q` is the original
+  `tag=0x05` proximity denominator and is not evidence of `tag=0x06` physics.
 
 Allowed files:
 
@@ -1359,3 +1375,71 @@ The task is complete only when:
   passed, `17` skipped). Vite dev server HTTP smoke returned `200 OK` for
   default `play=1`, `startLevel=1`, explicit `playableSeed`, and explicit
   `bootFlow=1&startLevel=1` conflict URL.
+- 2026-05-21: Phase 6.6 follow-up reopened from
+  `/Users/magnus-bot/Desktop/onda.png`. User reports the L3/Intermediate green
+  waves still have partial physics: only the first/left wave affects the
+  marble. The screenshot shows mixed script-slot families, with
+  visible/moving wave slots using `tag=0x06` and nearby collision slots using
+  `tag=0x05`. Static ROM jump-table evidence still maps `tag=0x06` to the
+  common iter epilog/no-op, so do not add direct `tag=0x06` collision behavior.
+  A follow-up hypothesis wired `FUN_12FD0 -> FUN_11AC2` when `0x40075c` is
+  nonzero; automated validation passed, but user retest
+  `/Users/magnus-bot/Desktop/bugx.png` rejected it because even the previously
+  working first/left wave lost physics. That code was removed before commit.
+  The local diagnostic patch adds compact `wave terrain` data for active
+  `tag=05/06` slots, with physical center, visual cursor words, deltas from the
+  collision globals, and the `tag=0x05` ROM proximity denominator. This is
+  observability only, not a gameplay fix.
+- 2026-05-21: `bugx` diagnostic overlay validation passed:
+  `npx vitest run packages/engine/test/refresh-frame-10fce.test.ts packages/engine/test/sub-29cce.test.ts --silent`
+  (`55` tests);
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`
+  (`14` tests);
+  engine/web targeted typechecks;
+  `npm --workspace @marble-love/web run build` (known Vite chunk-size warning);
+  `npm run lint`; `npm run context:audit`; `git diff --check`. The Vite dev
+  server on `*:5173` answers the wave-debug URL with `200 OK`.
+- 2026-05-21: User saved `/Users/magnus-bot/Desktop/s1.png` and
+  `/Users/magnus-bot/Desktop/s2.png`. Both captures show visible/contacted
+  `tag=0x06` wave slots while the `tag=0x05` slots are distant. A local
+  compatibility patch that mirrored the `tag=0x05` proximity bumper for
+  `tag=0x06` was explored only as a hypothesis.
+- 2026-05-21: User retest `/Users/magnus-bot/Desktop/s3.png` still did not
+  bounce. The local debug overlay was extended with `last terrain wave
+  candidate`, recorded inside `FUN_29CCE`, to distinguish end-of-frame
+  geometry from physics-time candidates.
+- 2026-05-22: User retests `/Users/magnus-bot/Desktop/bugnew1.png` and
+  `/Users/magnus-bot/Desktop/bugnew2.png` plus the ROM probe changed the
+  classification. Static jump-table proof maps `tag=0x05` to `0x029f40`
+  (proximity bumper) and `tag=0x06` to `0x02b072` (iter epilog/no-op).
+  `npx tsx packages/cli/src/probe-fun29cce-wave-rom.ts` executes original
+  `FUN_29CCE` through the binary ROM oracle: `tag05_center_original_bumper`
+  restores XY, negates vx/vy, sets both flags, and sends sound `0x42`;
+  `tag06_center_original_noop` and `tag06_visible_body_offset_original_noop`
+  leave position, velocity, flags, and sounds unchanged. Therefore direct
+  `tag=0x06` bumper/hitbox semantics are rejected, and the current code keeps
+  only diagnostic overlay/probe support.
+- 2026-05-22: User checked original MAME visually and confirmed every green
+  wave transports/pushes the marble, not only the first/left wave. New ROM proof
+  found the missing upstream path: original `FUN_1D06A`, called from
+  `FUN_13334` for script slots with `kind=6`, is not palette-only. Probe
+  `npx tsx packages/cli/src/probe-fun1d06a-rom.ts` executes the ROM function
+  and shows writes to `0x40076e..` with no color RAM or sound writes; for
+  example args `0/1/2` patch `0x40076e..0x400785`, args `15/16` patch
+  `0x40077a..0x400791`, and args `29/30` patch later entries. This is the
+  original terrain-table lifecycle feeding `FUN_1CABA`/`FUN_25DF6`, so it
+  explains MAME wave transport without inventing direct `tag=0x06` collision.
+  Local patch adds `packages/engine/src/terrain-wave-update-1d06a.ts`, wires it
+  through `refreshFrame10FCE` for `scriptSlotStep13068`/`helper12896`, and keeps
+  `FUN_11AC2` unwired because the earlier browser test rejected that path.
+  Automated gates passed:
+  `npx vitest run packages/engine/test/terrain-wave-update-1d06a.test.ts packages/engine/test/object-render-update-13334.test.ts packages/engine/test/script-slot-step-13068.test.ts packages/engine/test/sub-29cce.test.ts --silent`
+  (`63` tests);
+  `npx vitest run packages/engine/test/refresh-frame-10fce.test.ts --silent`
+  (`19` tests);
+  `npx tsx packages/cli/src/probe-fun1d06a-rom.ts`;
+  `npx tsx packages/cli/src/probe-fun29cce-wave-rom.ts`;
+  engine/CLI/web targeted typechecks;
+  `npm --workspace @marble-love/web run build` (known chunk-size warning).
+  Manual browser retest is green: user confirmed the patch works and the later
+  waves now push/transport the marble.

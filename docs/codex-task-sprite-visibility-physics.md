@@ -1873,11 +1873,46 @@ Status: **Phase6.6-string14-rom-bbox-fix-in-progress** — 2026-05-21.
   `0x02b072` (common iter-epilog). Added focused `FUN_29CCE` test coverage so
   tag `0x06` remains no-op unless future MAME evidence proves the runtime slot
   assignment is wrong.
-- Broader validation after the ROM-bbox patch and tag `0x06` classification:
-  engine/web/CLI typechecks, root `npm run typecheck`, focused engine set
-  (`101` tests), web boot-flow tests (`12` tests), web build with the known
-  chunk-size warning, `npm run lint`, `npm run context:audit`, and
-  `git diff --check`.
+- 2026-05-21 follow-up: later browser captures `s1/s2` show the visible/contact
+  wave sections in TS are `tag=0x06` while `tag=0x05` slots are distant. A
+  local compatibility patch for `tag=0x06` was explored but is no longer the
+  accepted path.
+- Follow-up screenshot `/Users/magnus-bot/Desktop/s3.png` still did not bounce,
+  so the debug overlay was extended with `last terrain wave candidate`, recorded
+  inside `FUN_29CCE`, to separate end-of-frame geometry from physics-time
+  candidates.
+- 2026-05-22 ROM proof rejects the local `tag=0x06` bumper/hitbox hypothesis:
+  static jump-table data maps `tag=0x05` to `0x029f40` (proximity bumper) and
+  `tag=0x06` to `0x02b072` (common iter epilog/no-op). The focused probe
+  `npx tsx packages/cli/src/probe-fun29cce-wave-rom.ts` executes original
+  `FUN_29CCE`: `tag05_center_original_bumper` restores XY, negates vx/vy,
+  sets flags, and sends sound `0x42`, while both `tag06_*_noop` cases leave
+  position, velocity, flags, and sounds unchanged. The engine keeps
+  `tag=0x06` as no-op; the remaining L3 wave issue, if any, must be proven in
+  an upstream original path such as slot/tag assignment or terrain-table
+  lifecycle, not by invented `tag=0x06` physics.
+- 2026-05-22 user/MAME check: all green waves in original MAME push/transport
+  the marble, so TS must reproduce that behavior without treating `tag=0x06` as
+  a bumper. The missing upstream routine is `FUN_1D06A`, called by `FUN_13334`
+  for `kind=6` script slots. Original ROM execution via
+  `npx tsx packages/cli/src/probe-fun1d06a-rom.ts` proves it writes the runtime
+  indirect terrain table at `0x40076e` and does not touch color RAM or sounds.
+  Patch adds a TS replica in `packages/engine/src/terrain-wave-update-1d06a.ts`
+  and wires it through the frame loop so `FUN_1CABA/FUN_25DF6` can observe the
+  moving terrain-table entries. This is the accepted MAME-backed path for wave
+  transport; `FUN_29CCE/tag=0x06` remains no-op, and `FUN_11AC2` remains
+  browser-rejected/unwired.
+- Automated validation for the `FUN_1D06A` patch passed:
+  `npx vitest run packages/engine/test/terrain-wave-update-1d06a.test.ts packages/engine/test/object-render-update-13334.test.ts packages/engine/test/script-slot-step-13068.test.ts packages/engine/test/sub-29cce.test.ts --silent`
+  (`63` tests);
+  `npx vitest run packages/engine/test/refresh-frame-10fce.test.ts --silent`
+  (`19` tests);
+  `npx tsx packages/cli/src/probe-fun1d06a-rom.ts`;
+  `npx tsx packages/cli/src/probe-fun29cce-wave-rom.ts`;
+  engine/CLI/web targeted typechecks;
+  `npm --workspace @marble-love/web run build` (known chunk-size warning).
+  Manual browser retest is green: user confirmed the later waves now
+  push/transport the marble like original MAME.
 
 Status: **Phase6.6-string14-state9-dispatch-in-progress** — 2026-05-21.
 

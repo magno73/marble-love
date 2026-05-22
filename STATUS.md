@@ -37,14 +37,39 @@ seed-backed esplicita.
 
 Stato boot-flow 2026-05-21:
 
-- Phase 6.6 runtime content parity confermata manualmente: L5/Silly mostra i
+- Phase 6.6 runtime content parity era confermata manualmente: L5/Silly mostra i
   mostri `type7/8/9`; L3/Intermediate green blobs sono visibili, uccidono la
   marble, fanno respawn e seguono i waypoint ROM senza drift fuori terreno.
+- Follow-up locale in corso su `/Users/magnus-bot/Desktop/onda.png`,
+  `/Users/magnus-bot/Desktop/s1.png`, `/Users/magnus-bot/Desktop/s2.png`,
+  `/Users/magnus-bot/Desktop/bugnew1.png` e
+  `/Users/magnus-bot/Desktop/bugnew2.png`: una fila L3/Intermediate di onde
+  verdi ha fisica parziale in TS. La prova ROM corrente dice di non inventare
+  una fisica diretta per `tag=06`: la jump table originale manda `tag=05` a
+  `0x029f40` (proximity bumper: restore XY, negate vx/vy, sound `0x42`) e
+  `tag=06` a `0x02b072` (iter epilog/no-op). Il probe
+  `npx tsx packages/cli/src/probe-fun29cce-wave-rom.ts` conferma gli stessi
+  side effect eseguendo `FUN_29CCE` dal binario ROM.
+- Le patch locali di bumper/hitbox `tag=06` sono state respinte dalla prova ROM
+  e rimosse. La patch corrente e' solo diagnostica: overlay `debugState=1` con
+  riga `wave terrain`/`last terrain wave candidate` per slot `tag=05/06`; il
+  campo `rom05q` mostra il denominatore della formula originale `tag=05` anche
+  quando il candidato runtime e' `tag=06`, quindi non implica un hit ROM.
+- Il tentativo `FUN_12FD0 -> FUN_11AC2` resta browser-rejected da
+  `/Users/magnus-bot/Desktop/bugx.png`: dopo il wiring il primo/left wave perse
+  la fisica gia' funzionante. Non riapplicarlo senza una nuova prova MAME/ROM
+  sul lifecycle della tabella terrain `0x40076e`.
 - High-score initials interattivi gia' implementati e salvati nel percorso
   score-qualified.
-- Gate locali verdi: focused Phase 6.6 engine tests (`143`), boot-flow web
-  tests (`14`), root typecheck, web build, lint, context audit e suite completa
-  (`263` files passed, `3` skipped; `2285` tests passed, `17` skipped).
+- Follow-up onde 2026-05-22: il confronto manuale MAME dell'utente conferma
+  che tutte le onde verdi trasportano la marble, non solo la prima. La prova ROM
+  ha spostato la causa da `FUN_29CCE/tag=06` a `FUN_1D06A`: la routine originale
+  scrive la tabella terrain indiretta `0x40076e`, usata poi da
+  `FUN_1CABA/FUN_25DF6` per la spinta conveyor-like. Patch locale: replica TS
+  di `FUN_1D06A` e wiring dal frame loop per slot `kind=6`; `FUN_11AC2` resta
+  non cablata perche' browser-rejected. Gate automatizzati mirati verdi. Retest
+  manuale browser dell'utente verde: ora anche le onde successive spingono e
+  trasportano la marble come nel MAME.
 - Phase 7 approvata dall'utente: `play=1` e' promosso al percorso no-seed.
 
 ## Funziona

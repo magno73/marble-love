@@ -75,6 +75,7 @@ import { slapsticDispatcher1344C } from "./slapstic-dispatcher-1344c.js";
 import { scrollRange144E4 } from "./scroll-range-144e4.js";
 import { scriptSlotStep13068 } from "./script-slot-step-13068.js";
 import { helper12896 } from "./helper-12896.js";
+import { terrainWaveUpdate1D06A } from "./terrain-wave-update-1d06a.js";
 import { slotSpawnPattern13D38 } from "./slot-spawn-pattern-13d38.js";
 import { claimScriptSlot } from "./script-slot-claim.js";
 import { objectOrbitEmit13ADE } from "./object-orbit-emit-13ade.js";
@@ -1080,8 +1081,8 @@ export function refreshFrame10FCE(
   });
 
   // 0001100A: jsr 0x00012FD0
-  // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato: gating *0x40075c == 0
-  // in MAME @ 2400, fix non applicabile per il drift cluster B residuo.)
+  // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato su bug onda: in browser
+  // peggiora la fisica dei tag 0x05; non cablare senza nuova prova MAME.)
   // Wire fun_12d46 = claimScriptSlot (alloca slot @ 0x400a9c per script
   // 0x1d854; gated da gameMode==2 + obj+0x1b∈{9,a} — in demo gameplay
   // gameMode=1, quindi il gate è falso ma il wire è canonical per parity).
@@ -1091,11 +1092,15 @@ export function refreshFrame10FCE(
   const fun12FD0Key = gameMode === 4 ? "FUN_12FD0_HEAVY" : "FUN_12FD0";
   callSub(state, fun12FD0Key, () => {
     (subs.stateDispatch12FD0 ?? ((s) => {
+      const updateWaveTerrain = (paletteByteSigned: number): void => {
+        terrainWaveUpdate1D06A(s, rom, paletteByteSigned);
+      };
       stateDispatch12FD0(s, {
         fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
         fun_13068: (slotPtr) => {
           scriptSlotStep13068(s, rom, slotPtr, {
-            fun12896: (st, sp) => { helper12896(st, rom, sp); },
+            fun12896: (st, sp) => { helper12896(st, rom, sp, { inner1D06A: updateWaveTerrain }); },
+            inner1D06A: updateWaveTerrain,
           });
         },
       });
