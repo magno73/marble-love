@@ -412,6 +412,50 @@ function recordTerrainGateProbeDebug(
   };
 }
 
+function recordTerrainWaveCandidateDebug(
+  state: GameState,
+  a2Off: number,
+  a3Off: number,
+  colorTag: number,
+  d1: number,
+  d2: number,
+  d6: number,
+  a0: number,
+): void {
+  const entityPtr = WORK_RAM_BASE + a2Off;
+  if (entityPtr !== PLAYER1_OBJ && entityPtr !== PLAYER2_OBJ) return;
+  const denominator = weightedVectorDenominator(d6, a0);
+  const existing = state.debug?.lastTerrainWaveCandidate;
+  if (
+    existing !== undefined &&
+    existing.frame === Number(state.clock.frame) &&
+    existing.entityAddr === entityPtr &&
+    existing.denominator <= denominator
+  ) {
+    return;
+  }
+  state.debug ??= {};
+  state.debug.lastTerrainWaveCandidate = {
+    frame: Number(state.clock.frame),
+    entityAddr: entityPtr >>> 0,
+    slotIndex: Math.floor((a3Off - (SLOT_TABLE_BASE - WORK_RAM_BASE)) / SLOT_STRIDE),
+    slotAddr: (WORK_RAM_BASE + a3Off) >>> 0,
+    colorTag,
+    d1,
+    d2,
+    d6,
+    a0,
+    denominator,
+    f58: rB(state, a2Off + F_S58),
+    flagX: rB(state, G_FLAG_X),
+    flagY: rB(state, G_FLAG_Y),
+    slotX: sextW(rWBE(state, a3Off + SF_X)),
+    slotY: sextW(rWBE(state, a3Off + SF_Y)),
+    entityX: rL(state, a2Off + F_X) | 0,
+    entityY: rL(state, a2Off + F_Y) | 0,
+  };
+}
+
 function gateProbePriority(result: string): number {
   if (result === "outer-death-state4") return 5;
   if (result === "inner-hit-state" || result === "inner-impulse" || result === "outer-block-flags") return 4;
@@ -523,6 +567,9 @@ export function fun29CCE(
     const colorTagSx = colorTag >= 0x80 ? colorTag - 0x100 : colorTag;
 
     if (colorTagSx >= 5 && colorTagSx <= 0x3b) {
+      if (colorTag === 0x05 || colorTag === 0x06) {
+        recordTerrainWaveCandidateDebug(state, a2Off, a3Off, colorTag, d1, d2, d6, a0);
+      }
       const tagBefore = rB(state, a2Off + F_S58);
       const flagXBefore = rB(state, G_FLAG_X);
       const flagYBefore = rB(state, G_FLAG_Y);
