@@ -192,6 +192,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mode0Init11452Stage !== undefined ||
     state.clock.mainThreadWaitDelay !== undefined ||
+    state.clock.levelIntroBannerResumeTick !== undefined ||
     highScoreInitialsEntryActive(state);
   // Some attract segments hold the mode0 refresh body for an extra staged
   // dwell; MAME keeps the presentation object frozen until the delayed 10504
@@ -217,6 +218,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mainThreadWaitDelay !== undefined ||
+    state.clock.levelIntroBannerResumeTick !== undefined ||
     highScoreInitialsEntryActive(state) ||
     (state.clock.mode0Init11452Stage !== undefined && !mode0AsyncRefreshAtTickStart);
 
@@ -289,7 +291,8 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     (((r[0x390] ?? 0) << 8) | (r[0x391] ?? 0)) === 1 &&
     (((r[0x392] ?? 0) << 8) | (r[0x393] ?? 0)) === 2 &&
     (r[0x3e4] ?? 0) === 3;
-  if (!asyncInitActiveAtTickStart && !mode2Segment3Dwell) {
+  const pendingNewGameInitAtTickStart = readWorkWord(state, 0x390) === 5;
+  if (!asyncInitActiveAtTickStart && !mode2Segment3Dwell && !pendingNewGameInitAtTickStart) {
     gameTickTimers(
       state,
       opts.hudCallback ?? ((timerPtr, idx) => renderTimerHud286EE(state, rom, timerPtr, idx)),

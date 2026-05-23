@@ -213,7 +213,8 @@ export function armLevelIntroBannerResume(
     state.workRam[PLAYER_TIMER_PAD_OFF] = 5;
     state.workRam[PLAYER_TIMER_INNER_OFF] = 0xff;
   }
-  if (options.rom !== undefined && !hasLevelIntroBanner(state, levelIdx)) {
+  if (options.rom !== undefined) {
+    clearIntroAlphaArea(state);
     renderLevelIntroBannerText(state, options.rom, levelIdx);
   }
   updateBannerRemainingTimer(state, extraTime);

@@ -20,6 +20,8 @@ describe("coin/start browser flow helpers", () => {
   it("arms the initial browser coin/start screen through the staged attract rebuild", () => {
     const state = stateNs.emptyGameState();
     state.playfieldRam.fill(0xff);
+    state.clock.levelIntroBannerBaseTimer = 55;
+    state.clock.levelIntroBannerResumeTick = 9;
     state.clock.mode0Init11452Stage = 7;
     state.clock.mode2BottomHudDelay = 1;
 
@@ -34,6 +36,8 @@ describe("coin/start browser flow helpers", () => {
     expect(state.clock.mode0Init11452Stage).toBeUndefined();
     expect(state.clock.mode2BottomHudDelay).toBeUndefined();
     expect(state.clock.mode2Init11452Stage).toBe(0);
+    expect(state.clock.levelIntroBannerBaseTimer).toBeUndefined();
+    expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
     expect(isCoinStartAttractReady(state)).toBe(false);
   });
 
@@ -52,6 +56,10 @@ describe("coin/start browser flow helpers", () => {
     state.clock.mode2Init11452Stage = undefined;
     writeWordBE(state.workRam, 0x392, 0);
     expect(isCoinStartAttractReady(state)).toBe(true);
+
+    state.clock.levelIntroBannerResumeTick = 1;
+    expect(isCoinStartAttractReady(state)).toBe(false);
+    state.clock.levelIntroBannerResumeTick = undefined;
 
     state.playfieldRam.fill(1, 0, 1_001);
     expect(isCoinStartAttractReady(state)).toBe(false);
