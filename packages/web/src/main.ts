@@ -1413,6 +1413,7 @@ async function startGame(
   );
   if (useBootFlow) {
     const bootFlowLabel = forceBootFlow ? "bootFlow=1" : "play=1 default bootFlow";
+    prepareBrowserCoinStartAttract(s);
     setRomStatus("Cold boot flow active: runtime boot, no gameplay seed loaded.", "ok");
     console.log(`[marble-love] ${bootFlowLabel} active: cold boot without playable/startLevel seed`);
     console.log("[marble-love] bootFlow input: press 5 (coin), then Enter/Space (START1 runtime gate)");
@@ -1803,7 +1804,8 @@ async function startGame(
       const loopResetN = Number.isFinite(parsedLoopResetN) ? parsedLoopResetN : 0;
       const mainLoopBody =
         !startLevelPracticeUnavailable &&
-        (forcePlay || startLevelPracticeActive || (rom !== undefined && warmState === undefined));
+        (forcePlay || startLevelPracticeActive || (rom !== undefined && warmState === undefined)) &&
+        !(useBootFlow && !manualPlayStarted && isCoinStartAttractReady(s));
       if (loopResetN > 0 && warmState !== undefined && (frameCount % loopResetN) === 0 && frameCount > 0) {
         bootInit(s, tickRom, { warmState });
       }

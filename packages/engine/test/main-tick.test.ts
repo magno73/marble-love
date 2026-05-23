@@ -17,9 +17,12 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { mainTick } from "../src/main-tick.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
+import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 
 function readU16BE(buf: Uint8Array, off: number): number {
   return ((buf[off] ?? 0) << 8) | (buf[off + 1] ?? 0);
@@ -34,6 +37,12 @@ function nonzero(bytes: Uint8Array): number {
   let total = 0;
   for (const b of bytes) if (b !== 0) total++;
   return total;
+}
+
+function loadProgramRom(): ReturnType<typeof emptyRomImage> {
+  const rom = emptyRomImage();
+  loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+  return rom;
 }
 
 describe("mainTick smoke", () => {
@@ -168,5 +177,28 @@ describe("mainTick smoke", () => {
     expect(readU16BE(s.workRam, 0x392)).toBe(2);
     expect(s.clock.mode2Init11452Stage).toBe(2);
     expect(nonzero(s.playfieldRam)).toBe(0);
+  });
+
+  it("does not let stale object timers preempt pending new-game init", () => {
+    const s = emptyGameState();
+    const rom = loadProgramRom();
+
+    writeU16BE(s.workRam, 0x390, 5);
+    writeU16BE(s.workRam, 0x396, 1);
+    s.workRam[0x18 + 0x18] = 1;
+    s.workRam[0x18 + 0x1a] = 0;
+    writeU16BE(s.workRam, 0x18 + 0x6a, 0);
+    s.clock.mainLoopBodyTicks = 0 as typeof s.clock.mainLoopBodyTicks;
+
+    mainTick(s, { rom, runMainLoopBody: true, inputMmio: 0x6f });
+
+    expect(readU16BE(s.workRam, 0x390)).toBe(5);
+    expect(s.workRam[0x18 + 0x18]).toBe(1);
+
+    mainTick(s, { rom, runMainLoopBody: true, inputMmio: 0x6f });
+
+    expect(readU16BE(s.workRam, 0x390)).toBe(0);
+    expect(s.clock.levelIntroBannerResumeTick).toBe(1);
+    expect(readU16BE(s.workRam, 0x82)).toBe(5);
   });
 });

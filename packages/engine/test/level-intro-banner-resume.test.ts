@@ -7,6 +7,7 @@ import { emptyRomImage } from "../src/bus.js";
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 import { tick } from "../src/index.js";
 import { emptyGameState } from "../src/state.js";
+import { armLevelIntroBannerResume } from "../src/level-intro-banner-resume.js";
 
 interface PlayableSeed {
   slapsticBank?: number;
@@ -116,6 +117,37 @@ function bootSeed(name: string): { state: ReturnType<typeof emptyGameState>; rom
 }
 
 describe("level intro banner warm-state resume", () => {
+  it("clears stale high-score alpha without erasing MO terrain RAM", () => {
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+    const state = emptyGameState();
+    writeWordBE(state.workRam, 0x394, 0);
+    state.spriteRam[0x404] = 0x3f;
+    state.spriteRam[0x405] = 0x30;
+    writeWordBE(state.alphaRam, (13 * ALPHA_COLS + 22) * 2, 0x3441);
+
+    expect(readAlphaWordBE(state, 13, 22)).toBe(0x3441);
+    expect(armLevelIntroBannerResume(state, { rom, parkTimer: true })).toBe(true);
+
+    expect(readAlphaWordBE(state, 13, 22)).toBe(0);
+    expect(state.spriteRam[0x404]).toBe(0x3f);
+    expect(state.spriteRam[0x405]).toBe(0x30);
+    expect(hasIntroBanner(state)).toBe(true);
+    expect(bannerTimerWords(state)).toEqual([0x3518, 0x3519, 0x3500, 0x3501, 0x351a, 0x351b, 0x3502, 0x3503]);
+  });
+
+  it("parks the main-loop gameplay body while the runtime intro timer is visible", () => {
+    const { state, rom } = bootSeed("start_level1_intro_practice_f2479");
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
+    state.clock.mainLoopBodyTicks = 1 as typeof state.clock.mainLoopBodyTicks;
+
+    tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X: 0x30, p1Y: 0x40, p2X: 0xff, p2Y: 0xff });
+
+    expect(state.clock.mainLoopBodyTicks).toBe(1);
+    expect(state.clock.levelIntroBannerResumeTick).toBe(1);
+    expect(readWordBE(state.workRam, 0x82)).toBe(5);
+  });
+
   it.each([
     ["start_level1_intro_practice_f2479", 121, 60],
     ["start_level2_intro_beginner_f2436", 121, 60],
