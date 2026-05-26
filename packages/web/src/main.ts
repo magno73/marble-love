@@ -43,7 +43,7 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
-  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook, drainYm2151Samples, drainPokeySamples, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE,
+  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook, drainReplyEvents, drainYm2151Samples, drainPokeySamples, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 import { runSoundReplay } from "./sound-replay.js";
@@ -60,11 +60,10 @@ const forceRealRendering = searchParams.get("real") === "1";
 const forceAutoLoad = searchParams.get("autoLoad") === "1";
 const forcePlay = searchParams.get("play") === "1";
 const forceBootFlow = searchParams.get("bootFlow") === "1";
-const enableSound = searchParams.get("sound") !== "0";
-// SoundChip tick default-ON (sessione 4l 2026-05-18): post-fix Timer A
-// edge-trigger + $1820 pull-up + auto-drain, il chip produce audio reale
-// (maxAbs 0.137 + 1098 write YM bit-perfect vs MAME). `?soundChip=0` opt-out.
-const runSoundChip = searchParams.get("soundChip") !== "0";
+// Gameplay audio is explicit: `?sound=1` wires real TS engine sound commands
+// into the SoundChip PCM path. `soundReplay` remains a separate oracle mode.
+const enableSound = searchParams.get("sound") === "1";
+const runSoundChip = enableSound && searchParams.get("soundChip") !== "0";
 // `?soundReplay=<path>` — bypass A0 cmd-flow blocker: invece di startGame
 // completo, esegui solo SoundChip + cmd-tape replay (audio chip-perfect).
 // Path relativo a /public es. `scenarios/sound/cmd-tape-attract.json`.
@@ -1529,50 +1528,65 @@ async function startGame(
     console.log(`[marble-love] levelTime=${levelTimeOverride}s applied for level index ${levelIndex} (${reason})`);
   }
 
-  // ─── Sound chip + Web Audio renderer (?sound != 0) ───────────────────────
-  // V1 MVP audio: SoundChip 6502+YM2151+POKEY in tick parallelo, renderer polla
-  // register shadow → AudioWorklet sintetizza tones (sine + square + noise).
-  // Cherry-pick da feature/sound-chip. AudioContext richiede user gesture →
-  // pulsante UI "Enable Audio".
+  // ─── Sound chip + Web Audio renderer (?sound=1) ──────────────────────────
+  // Gameplay audio path: real engine sound commands -> SoundChip 6502/YM/POKEY
+  // -> PCM streams -> AudioWorklet. Synthetic cues stay behind debug flags.
   let soundChip: ReturnType<typeof createSoundChip> | undefined;
   let soundRenderer: SoundRenderer | undefined;
-  if (enableSound && rom !== undefined) {
+  setSoundCmdHook(undefined);
+  setGlobalSoundCmdHook(undefined);
+  if (runSoundChip && rom !== undefined) {
     const soundRomFull = rom.sound;
     if (soundRomFull !== undefined && soundRomFull.length >= 0x10000) {
       const rom421 = soundRomFull.slice(0x8000, 0xc000);
       const rom422 = soundRomFull.slice(0xc000, 0x10000);
       soundChip = createSoundChip({ roms: { rom421, rom422 } });
-      console.log("[sound] SoundChip ready, click 'Enable Audio' to start");
+      const chip = soundChip;
+      releaseSoundReset(chip);
+      console.log("[sound] SoundChip ready and released; click 'Enable Audio' to hear PCM");
 
-      // 🔔 BEEP TEST — sanity check audio path basic (OscillatorNode standalone,
-      // no AudioWorklet, no SoundChip): se NON senti questo, c'e' un problema
-      // a livello system/browser (volume muted, output device, autoplay
-      // policy). Se senti questo ma non l'audio del game, e' bug nel
-      // worklet/cue path.
-      const btnBeep = document.createElement("button");
-      btnBeep.textContent = "🔔 BEEP TEST 440Hz";
-      btnBeep.style.cssText =
-        "position:fixed;top:10px;right:160px;z-index:9999;padding:8px 12px;" +
-        "background:#2a2a4e;color:#fff;border:1px solid #666;cursor:pointer;";
-      btnBeep.addEventListener("click", async () => {
-        try {
-          const beepCtx = new AudioContext();
-          if (beepCtx.state === "suspended") await beepCtx.resume();
-          const osc = beepCtx.createOscillator();
-          const gain = beepCtx.createGain();
-          osc.frequency.value = 440;
-          gain.gain.value = 0.15;
-          osc.connect(gain).connect(beepCtx.destination);
-          osc.start();
-          setTimeout(() => { osc.stop(); beepCtx.close(); }, 800);
-          btnBeep.textContent = "🔔 BEEP! (440Hz 0.8s)";
-          console.log("[beep] AudioContext state:", beepCtx.state, "sampleRate:", beepCtx.sampleRate);
-        } catch (e) {
-          console.warn("[beep] failed:", e);
-          btnBeep.textContent = "🔔 BEEP FAILED";
+      let cmdCount = 0;
+      const onCmd = (cmd: number): void => {
+        submitSoundCommand(chip, wrap.as_u8(cmd & 0xff));
+        // Optional debug cue. Normal `?sound=1` plays only chip PCM.
+        if (searchParams.get("soundCue") === "1") {
+          soundRenderer?.playCommandCue(cmd);
         }
-      });
-      document.body.appendChild(btnBeep);
+        cmdCount++;
+        if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} -> $${cmd.toString(16)}`);
+      };
+      // `soundCmdSend158AC` also notifies the global hook, so keep the legacy
+      // local hook clear here or 158AC commands would be submitted twice.
+      setSoundCmdHook(undefined);
+      setGlobalSoundCmdHook(onCmd);
+      console.log("[sound] engine->SoundChip cmd hook wired via global hook");
+
+      if (searchParams.get("soundBeepTest") === "1") {
+        const btnBeep = document.createElement("button");
+        btnBeep.textContent = "🔔 BEEP TEST 440Hz";
+        btnBeep.style.cssText =
+          "position:fixed;top:10px;right:160px;z-index:9999;padding:8px 12px;" +
+          "background:#2a2a4e;color:#fff;border:1px solid #666;cursor:pointer;";
+        btnBeep.addEventListener("click", async () => {
+          try {
+            const beepCtx = new AudioContext();
+            if (beepCtx.state === "suspended") await beepCtx.resume();
+            const osc = beepCtx.createOscillator();
+            const gain = beepCtx.createGain();
+            osc.frequency.value = 440;
+            gain.gain.value = 0.15;
+            osc.connect(gain).connect(beepCtx.destination);
+            osc.start();
+            setTimeout(() => { osc.stop(); beepCtx.close(); }, 800);
+            btnBeep.textContent = "🔔 BEEP! (440Hz 0.8s)";
+            console.log("[beep] AudioContext state:", beepCtx.state, "sampleRate:", beepCtx.sampleRate);
+          } catch (e) {
+            console.warn("[beep] failed:", e);
+            btnBeep.textContent = "🔔 BEEP FAILED";
+          }
+        });
+        document.body.appendChild(btnBeep);
+      }
 
       const btnAudio = document.createElement("button");
       btnAudio.textContent = "🔊 Enable Audio";
@@ -1588,49 +1602,17 @@ async function startGame(
           }
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
-          // Chime di "audio enabled" RIMOSSO (era beep stand-in).
-          // Reset worklet già chiamato dentro start().
-          // Release SoundChip dal HOLD reset hardware (main 68K $860001 bit 7=1).
-          // Senza release il 6502 non gira mai → no YM/POKEY write → no audio.
-          // Wire main↔sound mailbox e' debt separato (Codex engine main side);
-          // qui release manuale all'enable per fare partire il sound code.
-          if (soundChip !== undefined) {
-            releaseSoundReset(soundChip);
-            console.log("[sound] SoundChip released from hold reset");
-            // Wire engine soundCmdSend158AC → SoundChip submitCommand: ogni
-            // cmd emit dal main 68K TS verrà inoltrato al sound 6502 TS.
-            let cmdCount = 0;
-            const onCmd = (cmd: number) => {
-              submitSoundCommand(soundChip!, (cmd & 0xff) as never);
-              // playCommandCue stand-in beep RIMOSSO: chip ora produce audio
-              // reale (sessione 4l 2026-05-18). I beep erano placeholder per
-              // quando il chip non ticchettava. `?soundCue=1` per riabilitare.
-              if (searchParams.get("soundCue") === "1") {
-                soundRenderer?.playCommandCue(cmd);
-              }
-              cmdCount++;
-              if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} → $${cmd.toString(16)}`);
-            };
-            setSoundCmdHook(onCmd);
-            setGlobalSoundCmdHook(onCmd);
-            console.log("[sound] engine→SoundChip cmd hook wired (158AC + global)");
-            // ?soundTest=1 — invia cmd test artificiali ogni 2s per validare
-            // che il chain audio produce suono anche senza gameplay cmd reali
-            // (workaround per attract loop che non chiama soundCmdSend158AC).
-            if (searchParams.get("soundTest") === "1") {
-              // Cmd test: ciclo su tutti i byte 0x00-0xFF per identificare quali
-              // attivano write YM/POKEY (= cmd "validi" del sound driver Marble).
-              let testIdx = 0;
-              setInterval(() => {
-                const cmd = testIdx & 0xff;
-                submitSoundCommand(soundChip!, cmd as never);
-                soundRenderer?.playCommandCue(cmd, { force: true });
-                if (testIdx % 16 === 0) console.log(`[soundTest] cmd $${cmd.toString(16)}`);
-                testIdx++;
-              }, 500);  // 1 cmd ogni 500ms = 128s per ciclare tutti
-            }
+          // Reset worklet already happens in start(); no synthetic chime.
+          if (searchParams.get("soundTest") === "1") {
+            let testIdx = 0;
+            setInterval(() => {
+              const cmd = testIdx & 0xff;
+              submitSoundCommand(chip, wrap.as_u8(cmd));
+              soundRenderer?.playCommandCue(cmd, { force: true });
+              if (testIdx % 16 === 0) console.log(`[soundTest] cmd $${cmd.toString(16)}`);
+              testIdx++;
+            }, 500);
           }
-          // Chime delay RIMOSSO (era beep).
           btnAudio.textContent = "🔊 Audio ON";
           soundStarted = true;
           console.log("[sound] Web Audio started");
@@ -1842,6 +1824,9 @@ async function startGame(
       // playable browser loop cannot slow down just because audio cues are on.
       if (runSoundChip && soundChip !== undefined) {
         tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
+        drainReplyEvents(soundChip);
+        const ymSamples = drainYm2151Samples(soundChip);
+        const pkSamples = drainPokeySamples(soundChip);
         if (soundRenderer !== undefined && soundRenderer.isRunning()) {
           // NOTA (2026-05-18): soundRenderer.update() era una RE-SINTESI
           // heuristica (sine/square tones da YM regs) — produceva i beep
@@ -1851,11 +1836,9 @@ async function startGame(
             soundRenderer.update(soundChip);
           }
           // V3 chip-perfect: drain YM2151 + POKEY sample streams e push al worklet.
-          const ymSamples = drainYm2151Samples(soundChip);
           if (ymSamples.length > 0) {
             soundRenderer.pushYm2151Samples(ymSamples, YM2151_NATIVE_SAMPLE_RATE);
           }
-          const pkSamples = drainPokeySamples(soundChip);
           if (pkSamples.length > 0) {
             soundRenderer.pushPokeySamples(pkSamples, POKEY_NATIVE_SAMPLE_RATE);
           }

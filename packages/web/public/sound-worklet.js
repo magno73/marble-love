@@ -33,34 +33,48 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
       env: 0, target: 0, lastNoise: 0, remaining: 0,
     }));
     this.nextCueVoice = 0;
-    // PCM ring buffer per YM2151 chip-perfect sample stream
-    this.pcmL = new Float32Array(48000);  // 1 sec @ 48kHz buffer
-    this.pcmR = new Float32Array(48000);
-    this.pcmReadIdx = 0;
-    this.pcmWriteIdx = 0;
-    this.pcmAvailable = 0;
+    // Separate PCM queues keep YM2151 and POKEY sample streams time-aligned
+    // when both chips are pushed during the same frame.
+    this.ymPcm = this.createPcmQueue();
+    this.pokeyPcm = this.createPcmQueue();
     this.port.onmessage = (e) => this.handleMessage(e.data);
   }
 
-  enqueuePcm(left, right) {
+  createPcmQueue() {
+    return {
+      l: new Float32Array(48000),  // 1 sec @ 48kHz buffer
+      r: new Float32Array(48000),
+      readIdx: 0,
+      writeIdx: 0,
+      available: 0,
+    };
+  }
+
+  enqueuePcm(queue, left, right) {
     const N = left.length;
-    const cap = this.pcmL.length;
+    const cap = queue.l.length;
     for (let i = 0; i < N; i++) {
-      this.pcmL[this.pcmWriteIdx] = left[i];
-      this.pcmR[this.pcmWriteIdx] = right[i];
-      this.pcmWriteIdx = (this.pcmWriteIdx + 1) % cap;
-      if (this.pcmAvailable < cap) this.pcmAvailable++;
-      else this.pcmReadIdx = (this.pcmReadIdx + 1) % cap;  // overflow: drop oldest
+      queue.l[queue.writeIdx] = left[i];
+      queue.r[queue.writeIdx] = right[i];
+      queue.writeIdx = (queue.writeIdx + 1) % cap;
+      if (queue.available < cap) queue.available++;
+      else queue.readIdx = (queue.readIdx + 1) % cap;  // overflow: drop oldest
     }
   }
 
-  dequeuePcm() {
-    if (this.pcmAvailable === 0) return null;
-    const l = this.pcmL[this.pcmReadIdx];
-    const r = this.pcmR[this.pcmReadIdx];
-    this.pcmReadIdx = (this.pcmReadIdx + 1) % this.pcmL.length;
-    this.pcmAvailable--;
+  dequeuePcm(queue) {
+    if (queue.available === 0) return null;
+    const l = queue.l[queue.readIdx];
+    const r = queue.r[queue.readIdx];
+    queue.readIdx = (queue.readIdx + 1) % queue.l.length;
+    queue.available--;
     return [l, r];
+  }
+
+  resetPcm(queue) {
+    queue.readIdx = 0;
+    queue.writeIdx = 0;
+    queue.available = 0;
   }
 
   handleMessage(msg) {
@@ -103,13 +117,22 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
     } else if (msg.type === "ym_pcm") {
       // V3 chip-perfect: stream PCM raw da YM2151 simulator (già resamplato a ctx rate)
       if (msg.left instanceof Float32Array && msg.right instanceof Float32Array) {
-        this.enqueuePcm(msg.left, msg.right);
+        this.enqueuePcm(this.ymPcm, msg.left, msg.right);
+      }
+    } else if (msg.type === "pokey_pcm") {
+      // POKEY has its own queue so it mixes with YM instead of playing after it.
+      if (msg.left instanceof Float32Array && msg.right instanceof Float32Array) {
+        this.enqueuePcm(this.pokeyPcm, msg.left, msg.right);
       }
     } else if (msg.type === "reset") {
       for (const v of this.ymVoices) { v.on = false; v.target = 0; v.env = 0; }
       for (const v of this.pokeyVoices) { v.on = false; v.target = 0; v.env = 0; }
       for (const v of this.cueVoices) { v.target = 0; v.env = 0; v.remaining = 0; }
-      this.pcmReadIdx = 0; this.pcmWriteIdx = 0; this.pcmAvailable = 0;
+      this.resetPcm(this.ymPcm);
+      this.resetPcm(this.pokeyPcm);
+    } else if (msg.type === "reset_pcm") {
+      this.resetPcm(this.ymPcm);
+      this.resetPcm(this.pokeyPcm);
     }
   }
 
@@ -181,15 +204,22 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
         mix += sample;
       }
 
-      // V3 chip-perfect: aggiungi PCM stream da YM2151 simulator (stereo).
-      const pcm = this.dequeuePcm();
-      const pcmL = pcm !== null ? pcm[0] : 0;
-      const pcmR = pcm !== null ? pcm[1] : 0;
+      // V3 chip-perfect: mix YM2151 + POKEY PCM streams sample-aligned.
+      const ymPcm = this.dequeuePcm(this.ymPcm);
+      const pokeyPcm = this.dequeuePcm(this.pokeyPcm);
+      const pcmL = (ymPcm !== null ? ymPcm[0] : 0) + (pokeyPcm !== null ? pokeyPcm[0] : 0);
+      const pcmR = (ymPcm !== null ? ymPcm[1] : 0) + (pokeyPcm !== null ? pokeyPcm[1] : 0);
 
-      // Soft clip mono path
-      mix = Math.tanh(mix * 0.7);
-      left[i] = Math.tanh(mix + pcmL);
-      right[i] = Math.tanh(mix + pcmR);
+      // Keep the bit-perfect replay path linear when only chip PCM is active.
+      // Synthetic fallback voices still use soft clipping when explicitly mixed.
+      if (mix === 0) {
+        left[i] = pcmL;
+        right[i] = pcmR;
+      } else {
+        mix = Math.tanh(mix * 0.7);
+        left[i] = Math.tanh(mix + pcmL);
+        right[i] = Math.tanh(mix + pcmR);
+      }
     }
     return true;
   }

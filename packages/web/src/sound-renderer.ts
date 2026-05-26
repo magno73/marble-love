@@ -37,6 +37,11 @@
  *   renderer.stop();
  */
 
+import {
+  StreamingLinearResampler,
+  StreamingMameLofiResampler,
+} from "@marble-love/engine";
+
 export interface SoundRenderer {
   start: () => Promise<void>;
   stop: () => Promise<void>;
@@ -45,13 +50,23 @@ export interface SoundRenderer {
   /** V3 chip-perfect: stream PCM raw da YM2151 simulator. samples = interleaved
    * L/R Float numeri @ nativeSampleRate Hz (55930 default). Renderer fa
    * resampling a output sampleRate context e post al worklet via postMessage. */
-  pushYm2151Samples: (samples: number[], nativeSampleRate: number) => void;
-  /** V3 chip-perfect POKEY: stream mono PCM. Resamplato + replicato L=R. */
-  pushPokeySamples: (samples: number[], nativeSampleRate: number) => void;
+  pushYm2151Samples: (samples: number[], nativeSampleRate: number, options?: PcmPushOptions) => void;
+  /** V3 chip-perfect POKEY: stream mono PCM. Resampled + duplicated L=R. */
+  pushPokeySamples: (samples: number[], nativeSampleRate: number, options?: PcmPushOptions) => void;
+  /** Clear queued PCM and resampler phase without rebuilding the AudioContext. */
+  resetPcmStreams: () => void;
   isRunning: () => boolean;
   /** Output AudioContext sample rate (per resampling-side ratio compute). */
   getSampleRate: () => number;
 }
+
+export interface PcmPushOptions {
+  readonly resampleOffset?: number;
+  readonly resampler?: PcmResampler;
+  readonly outputSampleOffset?: number;
+}
+
+export type PcmResampler = "linear" | "mame-lofi";
 
 export interface SoundCommandCue {
   freq: number;
@@ -68,6 +83,20 @@ interface PrevState {
 }
 
 type AudioContextConstructor = new () => AudioContext;
+type NativeStreamingResampler = StreamingLinearResampler | StreamingMameLofiResampler;
+
+interface StereoPcmStream {
+  readonly key: string;
+  readonly left: NativeStreamingResampler;
+  readonly right: NativeStreamingResampler;
+  pendingOutputOffset: number;
+}
+
+interface MonoPcmStream {
+  readonly key: string;
+  readonly mono: NativeStreamingResampler;
+  pendingOutputOffset: number;
+}
 
 function getAudioContextConstructor(): AudioContextConstructor | undefined {
   const globalWithWebAudio = globalThis as typeof globalThis & {
@@ -145,6 +174,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   let mediaCueOnly = false;
   let lastCueWallTime = 0;
   let lastCueAudioTime = -1;
+  let ymPcmStream: StereoPcmStream | undefined;
+  let pokeyPcmStream: MonoPcmStream | undefined;
   const mediaCueCache = new Map<string, string>();
   const prev: PrevState = {
     ymOn: new Array(8).fill(false),
@@ -178,6 +209,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
         });
         node.connect(ctx.destination);
         node.port.postMessage({ type: "reset" });
+        ymPcmStream = undefined;
+        pokeyPcmStream = undefined;
         console.log("[sound] AudioWorklet loaded successfully (PCM audio active)");
       } catch (e) {
         directCueOnly = true;
@@ -204,6 +237,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     if (ctx !== null) { await ctx.close(); ctx = null; }
     directCueOnly = false;
     mediaCueOnly = false;
+    ymPcmStream = undefined;
+    pokeyPcmStream = undefined;
     for (let i = 0; i < 8; i++) { prev.ymOn[i] = false; prev.ymFreq[i] = 0; }
     for (let i = 0; i < 4; i++) { prev.pokeyOn[i] = false; prev.pokeyFreq[i] = 0; }
   }
@@ -309,6 +344,12 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     return mediaCueOnly || (ctx !== null && (node !== null || directCueOnly));
   }
 
+  function resetPcmStreams(): void {
+    ymPcmStream = undefined;
+    pokeyPcmStream = undefined;
+    node?.port.postMessage({ type: "reset_pcm" });
+  }
+
   function playMediaCue(cue: SoundCommandCue): void {
     const key = `${Math.round(cue.freq)}:${cue.noise ? 1 : 0}:${cue.durationMs}`;
     let dataUrl = mediaCueCache.get(key);
@@ -328,54 +369,147 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   }
 
   /** V3 chip-perfect: prende samples interleaved L/R @ nativeSampleRate,
-   * resample lineare a output ctx.sampleRate, posta come Float32Array al
-   * worklet. Resample ratio = native/output (es. 55930/44100 ≈ 1.268). */
-  function pushYm2151Samples(samples: number[], nativeSampleRate: number): void {
+   * resample a output ctx.sampleRate, posta come Float32Array al worklet. */
+  function pushYm2151Samples(samples: number[], nativeSampleRate: number, options?: PcmPushOptions): void {
     if (node === null || samples.length === 0) return;
-    const outSr = getSampleRate();
-    const ratio = nativeSampleRate / outSr;
-    const outSamples = Math.floor((samples.length / 2) / ratio);
-    if (outSamples <= 0) return;
-    const left = new Float32Array(outSamples);
-    const right = new Float32Array(outSamples);
-    // Linear interpolation resampling
-    for (let i = 0; i < outSamples; i++) {
-      const srcPos = i * ratio;
-      const srcIdx = Math.floor(srcPos) * 2;
-      const frac = srcPos - Math.floor(srcPos);
-      const l0 = samples[srcIdx] ?? 0;
-      const r0 = samples[srcIdx + 1] ?? 0;
-      const l1 = samples[srcIdx + 2] ?? l0;
-      const r1 = samples[srcIdx + 3] ?? r0;
-      left[i] = l0 * (1 - frac) + l1 * frac;
-      right[i] = r0 * (1 - frac) + r1 * frac;
+    const outputSampleRate = getSampleRate();
+    const key = pcmStreamKey(nativeSampleRate, outputSampleRate, options);
+    if (ymPcmStream?.key !== key) {
+      ymPcmStream = createStereoPcmStream(key, nativeSampleRate, outputSampleRate, options);
     }
+    const { left, right } = resampleInterleavedForRenderer(samples, ymPcmStream);
+    if (left.length === 0) return;
     node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
   }
 
   /** POKEY samples mono → resample + duplicate L=R per stereo output. */
-  function pushPokeySamples(samples: number[], nativeSampleRate: number): void {
+  function pushPokeySamples(samples: number[], nativeSampleRate: number, options?: PcmPushOptions): void {
     if (node === null || samples.length === 0) return;
-    const outSr = getSampleRate();
-    const ratio = nativeSampleRate / outSr;
-    const outSamples = Math.floor(samples.length / ratio);
-    if (outSamples <= 0) return;
-    const left = new Float32Array(outSamples);
-    const right = new Float32Array(outSamples);
-    for (let i = 0; i < outSamples; i++) {
-      const srcPos = i * ratio;
-      const srcIdx = Math.floor(srcPos);
-      const frac = srcPos - srcIdx;
-      const s0 = samples[srcIdx] ?? 0;
-      const s1 = samples[srcIdx + 1] ?? s0;
-      const v = s0 * (1 - frac) + s1 * frac;
-      left[i] = v;
-      right[i] = v;
+    const outputSampleRate = getSampleRate();
+    const key = pcmStreamKey(nativeSampleRate, outputSampleRate, options);
+    if (pokeyPcmStream?.key !== key) {
+      pokeyPcmStream = createMonoPcmStream(key, nativeSampleRate, outputSampleRate, options);
     }
-    node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
+    const { left, right } = resampleMonoForRenderer(samples, pokeyPcmStream);
+    if (left.length === 0) return;
+    node.port.postMessage({ type: "pokey_pcm", left, right }, [left.buffer, right.buffer]);
   }
 
-  return { start, stop, update, playCommandCue, pushYm2151Samples, pushPokeySamples, isRunning, getSampleRate };
+  return {
+    start,
+    stop,
+    update,
+    playCommandCue,
+    pushYm2151Samples,
+    pushPokeySamples,
+    resetPcmStreams,
+    isRunning,
+    getSampleRate,
+  };
+}
+
+function resampleInterleavedForRenderer(
+  samples: readonly number[],
+  stream: StereoPcmStream,
+): { left: Float32Array; right: Float32Array } {
+  const frames = Math.floor(samples.length / 2);
+  const srcLeft = new Float32Array(frames);
+  const srcRight = new Float32Array(frames);
+  for (let i = 0; i < frames; i++) {
+    srcLeft[i] = samples[i * 2] ?? 0;
+    srcRight[i] = samples[i * 2 + 1] ?? 0;
+  }
+  return applyStereoOutputOffset(stream.left.push(srcLeft), stream.right.push(srcRight), stream);
+}
+
+function resampleMonoForRenderer(
+  samples: readonly number[],
+  stream: MonoPcmStream,
+): { left: Float32Array; right: Float32Array } {
+  const mono = applyMonoOutputOffset(stream.mono.push(samples), stream);
+  return { left: mono, right: new Float32Array(mono) };
+}
+
+function createStereoPcmStream(
+  key: string,
+  nativeSampleRate: number,
+  outputSampleRate: number,
+  options?: PcmPushOptions,
+): StereoPcmStream {
+  return {
+    key,
+    left: createNativeStreamingResampler(nativeSampleRate, outputSampleRate, options),
+    right: createNativeStreamingResampler(nativeSampleRate, outputSampleRate, options),
+    pendingOutputOffset: Math.trunc(options?.outputSampleOffset ?? 0),
+  };
+}
+
+function createMonoPcmStream(
+  key: string,
+  nativeSampleRate: number,
+  outputSampleRate: number,
+  options?: PcmPushOptions,
+): MonoPcmStream {
+  return {
+    key,
+    mono: createNativeStreamingResampler(nativeSampleRate, outputSampleRate, options),
+    pendingOutputOffset: Math.trunc(options?.outputSampleOffset ?? 0),
+  };
+}
+
+function createNativeStreamingResampler(
+  nativeSampleRate: number,
+  outputSampleRate: number,
+  options?: PcmPushOptions,
+): NativeStreamingResampler {
+  if ((options?.resampler ?? "linear") === "mame-lofi") {
+    return new StreamingMameLofiResampler(nativeSampleRate, outputSampleRate, options?.resampleOffset ?? 0);
+  }
+  return new StreamingLinearResampler(nativeSampleRate, outputSampleRate, options?.resampleOffset ?? 0);
+}
+
+function pcmStreamKey(nativeSampleRate: number, outputSampleRate: number, options?: PcmPushOptions): string {
+  return [
+    nativeSampleRate,
+    outputSampleRate,
+    options?.resampler ?? "linear",
+    options?.resampleOffset ?? 0,
+    Math.trunc(options?.outputSampleOffset ?? 0),
+  ].join(":");
+}
+
+function applyStereoOutputOffset(
+  left: Float32Array,
+  right: Float32Array,
+  stream: StereoPcmStream,
+): { left: Float32Array; right: Float32Array } {
+  const pending = stream.pendingOutputOffset;
+  if (pending === 0) return { left, right };
+  if (pending > 0) {
+    stream.pendingOutputOffset = 0;
+    const shiftedLeft = new Float32Array(left.length + pending);
+    const shiftedRight = new Float32Array(right.length + pending);
+    shiftedLeft.set(left, pending);
+    shiftedRight.set(right, pending);
+    return { left: shiftedLeft, right: shiftedRight };
+  }
+  const skip = Math.min(left.length, -pending);
+  stream.pendingOutputOffset += skip;
+  return { left: left.subarray(skip), right: right.subarray(skip) };
+}
+
+function applyMonoOutputOffset(samples: Float32Array, stream: MonoPcmStream): Float32Array {
+  const pending = stream.pendingOutputOffset;
+  if (pending === 0) return samples;
+  if (pending > 0) {
+    stream.pendingOutputOffset = 0;
+    const shifted = new Float32Array(samples.length + pending);
+    shifted.set(samples, pending);
+    return shifted;
+  }
+  const skip = Math.min(samples.length, -pending);
+  stream.pendingOutputOffset += skip;
+  return samples.subarray(skip);
 }
 
 function makeCueWavDataUrl(cue: SoundCommandCue): string {

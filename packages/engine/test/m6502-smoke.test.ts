@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  type M6502Cpu, createCpu, reset, step, requestNmi, requestIrq,
+  type M6502Cpu, createCpu, reset, step, requestNmi, requestIrq, setCliIrqDelay, setIrqPrefetchLatch,
 } from "../src/m6502/cpu.js";
 import { FLAG_I, FLAG_Z, FLAG_N, FLAG_C, hasFlag, setFlag } from "../src/m6502/regfile.js";
 import type { MemBus6502 } from "../src/m6502/bus.js";
@@ -97,6 +97,130 @@ describe("m6502 NMI vs IRQ priority", () => {
     requestIrq(cpu);
     step(cpu, bus); // dovrebbe eseguire NOP, non servire IRQ
     expect(raw(cpu.rf.pc)).toBe(0x8001);
+  });
+
+  it("CLI lascia la visibilita' IRQ immediata nel modello default", () => {
+    // Why: il gate audio corrente e il replay runtime usano ancora il modello
+    // storico. La variante Visual6502 va opt-in finche' non preserva i gate.
+    const cpu = createCpu();
+    const bus = makeBus();
+    bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
+    bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
+    loadProgram(bus, 0x8000, [
+      0x58, // CLI
+      0xea, // non deve essere eseguito prima dell'IRQ nel default
+    ]);
+    reset(cpu, bus);
+    requestIrq(cpu);
+
+    step(cpu, bus);
+    expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
+    expect(raw(cpu.rf.pc)).toBe(0x8001);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0xa000);
+  });
+
+  it("CLI puo' ritardare la visibilita' IRQ di una istruzione in diagnostica", () => {
+    // Why: il NMOS 6502 campiona il mask IRQ con pipeline; Visual6502 mostra
+    // che un IRQ gia' pendente durante CLI non interrompe l'opcode subito dopo.
+    const cpu = createCpu();
+    const bus = makeBus();
+    bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
+    bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
+    loadProgram(bus, 0x8000, [
+      0x58, // CLI
+      0xea, // NOP: deve ancora eseguire
+      0xea, // interrotto prima di questo fetch
+    ]);
+    reset(cpu, bus);
+    setCliIrqDelay(cpu, true);
+    requestIrq(cpu);
+
+    step(cpu, bus); // CLI: programmer-visible I=0, ma IRQ ancora mascherato
+    expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
+    expect(raw(cpu.rf.pc)).toBe(0x8001);
+
+    step(cpu, bus); // NOP post-CLI: ancora non serve IRQ
+    expect(raw(cpu.rf.pc)).toBe(0x8002);
+
+    step(cpu, bus); // ora l'IRQ puo' essere servito
+    expect(raw(cpu.rf.pc)).toBe(0xa000);
+  });
+
+  it("il diagnostico CLI ritarda anche un IRQ richiesto subito dopo CLI", () => {
+    // Why: nel modello MAME-like, il prossimo opcode e' gia' stato prefetched
+    // prima che CLI cancelli I; un IRQ arrivato subito dopo non puo' sostituirlo.
+    const cpu = createCpu();
+    const bus = makeBus();
+    bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
+    bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
+    loadProgram(bus, 0x8000, [
+      0x58, // CLI
+      0xea, // NOP: deve ancora eseguire
+      0xea, // interrotto prima di questo fetch
+    ]);
+    reset(cpu, bus);
+    setCliIrqDelay(cpu, true);
+
+    step(cpu, bus);
+    expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
+    expect(raw(cpu.rf.pc)).toBe(0x8001);
+
+    requestIrq(cpu);
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0x8002);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0xa000);
+  });
+
+  it("il diagnostico prefetch latch serve IRQ solo dopo il prefetch precedente", () => {
+    // Why: MAME non controlla il pin IRQ a inizio istruzione; il prefetch della
+    // istruzione precedente decide se il prossimo opcode diventa BRK/IRQ.
+    const cpu = createCpu();
+    const bus = makeBus();
+    bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
+    bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
+    loadProgram(bus, 0x8000, [
+      0xea, // NOP: latchea l'IRQ a fine prefetch
+      0xea, // interrotto prima di questo fetch
+    ]);
+    reset(cpu, bus);
+    cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false);
+    setIrqPrefetchLatch(cpu, true);
+    requestIrq(cpu);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0x8001);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0xa000);
+  });
+
+  it("il diagnostico prefetch latch campiona CLI con il vecchio I flag", () => {
+    const cpu = createCpu();
+    const bus = makeBus();
+    bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
+    bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
+    loadProgram(bus, 0x8000, [
+      0x58, // CLI: prefetch usa ancora I=1
+      0xea, // NOP: qui viene latched l'IRQ
+      0xea, // interrotto prima di questo fetch
+    ]);
+    reset(cpu, bus);
+    setIrqPrefetchLatch(cpu, true);
+    requestIrq(cpu);
+
+    step(cpu, bus);
+    expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
+    expect(raw(cpu.rf.pc)).toBe(0x8001);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0x8002);
+
+    step(cpu, bus);
+    expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 });
 

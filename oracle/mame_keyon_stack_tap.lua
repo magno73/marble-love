@@ -69,7 +69,7 @@ emu.register_frame_done(function()
     end
     frame_count = frame_count + 1
     if ports[":1820"] and ports[":1820"].fields["Coin 1"] then
-        ports[":1820"].fields["Coin 1"]:set_value(in_pulse(frame_count + 1, COIN_FRAME) and 0 or 1)
+        ports[":1820"].fields["Coin 1"]:set_value(in_pulse(frame_count + 1, COIN_FRAME) and 1 or 0)
     end
     if ports[":F60000"] and ports[":F60000"].fields["1 Player Start"] then
         ports[":F60000"].fields["1 Player Start"]:set_value(in_pulse(frame_count + 1, START_FRAME) and 1 or 0)

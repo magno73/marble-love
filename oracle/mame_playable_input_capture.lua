@@ -45,10 +45,14 @@
 --   MARBLE_PLAYABLE_NAME         base name for manual/playback trace + scenario
 --   MARBLE_PLAYABLE_WARM_SEED    diagnostic seed JSON to write into MAME RAM
 --   MARBLE_PLAYABLE_WARM_FRAME   frame to apply warm seed (default TRACKBALL_START-1)
+--   MARBLE_PLAYABLE_SOUND_CMD_OUT optional sound cmd tape output path
+--   MARBLE_PLAYABLE_SOUND_REPLY_OUT optional main $FC0001 read output path
 
 local OUT_DIR = os.getenv("MARBLE_PLAYABLE_OUT_DIR") or "oracle/scenarios/playable"
 local INPUT_OUT = os.getenv("MARBLE_PLAYABLE_INPUT_OUT") or "oracle/scenarios/input/playable_coin_start.json"
 local INPUT_TRACE_REF = os.getenv("MARBLE_PLAYABLE_INPUT_TRACE_REF") or "oracle/scenarios/input/playable_coin_start.json"
+local SOUND_CMD_OUT = os.getenv("MARBLE_PLAYABLE_SOUND_CMD_OUT") or ""
+local SOUND_REPLY_OUT = os.getenv("MARBLE_PLAYABLE_SOUND_REPLY_OUT") or ""
 local ONLY_RAW = os.getenv("MARBLE_PLAYABLE_SCENARIOS") or ""
 local FRAME_LIST_RAW = os.getenv("MARBLE_PLAYABLE_FRAME_LIST") or ""
 local ROUTE_RAW = os.getenv("MARBLE_PLAYABLE_ROUTE") or ""
@@ -207,6 +211,8 @@ local sound_coin_value = 1
 local manual_tail_snapshots = {}
 local route_steps = {}
 local route_total = 0
+local sound_cmds = {}
+local sound_reply_reads = {}
 
 local function parse_pulses(raw, default_frame)
     local pulses = {}
@@ -404,6 +410,17 @@ local function override_read(addr, data)
     if canonical == 0xF60001 and FORCE_SERVICE_MODE then
         value_u8 = value_u8 & ~0x40
     end
+    if SOUND_REPLY_OUT ~= "" and canonical == 0xFC0001 then
+        local t = manager.machine.time
+        local pc = cpu.state["PC"] and cpu.state["PC"].value or -1
+        table.insert(sound_reply_reads, {
+            frame = frame_count,
+            val = value_u8,
+            pc = pc,
+            secs = t.seconds,
+            attos = tostring(t.attoseconds),
+        })
+    end
     current[canonical] = value_u8
     frame_reads[canonical] = (frame_reads[canonical] or 0) + 1
     totals[canonical] = (totals[canonical] or 0) + 1
@@ -418,6 +435,25 @@ end
 local function install_main_read_tap(lo, hi, name)
     local handle = mem:install_read_tap(lo, hi, name, function(offset, data, mask)
         return override_read(normalize_tap_addr(lo, offset), data)
+    end)
+    table.insert(tap_handles, handle)
+end
+
+local function install_sound_cmd_write_tap()
+    if SOUND_CMD_OUT == "" then return end
+    local handle = mem:install_write_tap(0xFE0000, 0xFE0001, "playable_sound_cmd_w", function(offset, data, mask)
+        if (mask & 0xff) ~= 0 then
+            local t = manager.machine.time
+            local pc = cpu.state["PC"] and cpu.state["PC"].value or -1
+            table.insert(sound_cmds, {
+                frame = frame_count,
+                byte = data & 0xff,
+                pc = pc,
+                secs = t.seconds,
+                attos = tostring(t.attoseconds),
+            })
+        end
+        return data
     end)
     table.insert(tap_handles, handle)
 end
@@ -783,6 +819,50 @@ local function write_manual_tail_scenario()
     ))
 end
 
+local function write_sound_cmd_json()
+    if SOUND_CMD_OUT == "" then return end
+    ensure_dir(SOUND_CMD_OUT)
+    local out = assert(io.open(SOUND_CMD_OUT, "w"))
+    out:write("{\n")
+    out:write(string.format('  "frame": %d,\n', frame_count))
+    out:write(string.format('  "count": %d,\n', #sound_cmds))
+    out:write('  "cmds": [\n')
+    for i, c in ipairs(sound_cmds) do
+        local sep = (i < #sound_cmds) and "," or ""
+        out:write(string.format(
+            '    {"frame": %d, "byte": %d, "pc": "0x%04x", "secs": %d, "attos": "%s"}%s\n',
+            c.frame, c.byte, c.pc, c.secs or 0, c.attos or "0", sep))
+    end
+    out:write("  ]\n")
+    out:write("}\n")
+    out:close()
+    print(string.format("[mame_playable_input_capture] saved %d sound cmds to %s", #sound_cmds, SOUND_CMD_OUT))
+end
+
+local function write_sound_reply_json()
+    if SOUND_REPLY_OUT == "" then return end
+    ensure_dir(SOUND_REPLY_OUT)
+    local out = assert(io.open(SOUND_REPLY_OUT, "w"))
+    out:write("{\n")
+    out:write(string.format('  "frame": %d,\n', frame_count))
+    out:write(string.format('  "mainReplyReadCount": %d,\n', #sound_reply_reads))
+    out:write('  "mainReplyReads": [\n')
+    for i, r in ipairs(sound_reply_reads) do
+        local sep = (i < #sound_reply_reads) and "," or ""
+        out:write(string.format(
+            '    {"frame": %d, "val": "0x%02x", "pc": "0x%04x", "secs": %d, "attos": "%s"}%s\n',
+            r.frame, r.val, r.pc, r.secs or 0, r.attos or "0", sep))
+    end
+    out:write("  ]\n")
+    out:write("}\n")
+    out:close()
+    print(string.format(
+        "[mame_playable_input_capture] saved %d sound reply reads to %s",
+        #sound_reply_reads,
+        SOUND_REPLY_OUT
+    ))
+end
+
 local function finish_capture()
     if finished then return end
     finished = true
@@ -791,6 +871,8 @@ local function finish_capture()
         write_scenario(scenario)
     end
     write_manual_tail_scenario()
+    write_sound_cmd_json()
+    write_sound_reply_json()
 end
 
 local function install_taps()
@@ -798,6 +880,7 @@ local function install_taps()
     install_main_read_tap(0xF60000, 0xF60003, "playable_input_switches")
     install_main_read_tap(0xFC0000, 0xFC0001, "playable_sound_response")
     install_main_read_tap(0xFE0000, 0xFE0001, "playable_sound_command")
+    install_sound_cmd_write_tap()
 
     for _, tag in ipairs({":audiocpu", ":soundcpu", ":jsa:cpu"}) do
         local dev = manager.machine.devices[tag]

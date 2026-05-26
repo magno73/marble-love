@@ -64,7 +64,7 @@ local function apply_input(frame)
     local coin_port = ports[":1820"]
     if coin_port then
         if coin_port.fields["Coin 1"] then
-            coin_port.fields["Coin 1"]:set_value(coin_pressed and 0 or 1)
+            coin_port.fields["Coin 1"]:set_value(coin_pressed and 1 or 0)
         end
         if coin_port.fields["Left Coin"] then
             coin_port.fields["Left Coin"]:set_value(1)
