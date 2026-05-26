@@ -1562,6 +1562,7 @@ async function startGame(
     Number.parseInt(searchParams.get("soundMaxCommandsPerFrame") ?? "8", 10) || 8,
   );
   const soundMusicServiceEnabled = searchParams.get("soundMusicService") !== "0";
+  const soundLevelMusicEnabled = searchParams.get("soundLevelMusic") !== "0";
   const soundSpecialDedupeFrames = Math.max(
     0,
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
@@ -1577,7 +1578,9 @@ async function startGame(
       );
   const soundPrewarmTapeUrl =
     searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+  const soundLevelMusicCommands = [0x09, 0x0b, 0x0d, 0x12, 0x17, 0x19] as const;
   let soundServiceFrame = Math.max(245, soundPrewarmFrame);
+  let lastSoundLevelMusicIndex: number | undefined;
   let lastSpecialSoundCmd = -1;
   let lastSpecialSoundFrame = -1000000;
   const soundTraceEntries: Array<Record<string, number | string | boolean>> = [];
@@ -1585,6 +1588,7 @@ async function startGame(
     queued: 0,
     submitted: 0,
     service: 0,
+    levelMusic: 0,
     suppressed: 0,
     stalled: 0,
     maxQueueDepth: 0,
@@ -1624,6 +1628,7 @@ async function startGame(
     soundCommandQueue.push(byte);
     soundTraceSummary.queued++;
     if (source === "service") soundTraceSummary.service++;
+    if (source === "level") soundTraceSummary.levelMusic++;
     soundTraceSummary.maxQueueDepth = Math.max(soundTraceSummary.maxQueueDepth, soundCommandQueue.length);
     bumpSoundHist(soundTraceSummary.hist, byte);
     traceSoundEvent({
@@ -1679,6 +1684,21 @@ async function startGame(
       enqueueSoundCommand(0x07, "service");
     }
     soundServiceFrame++;
+  }
+
+  function enqueueSoundLevelMusicIfNeeded(): void {
+    if (!soundLevelMusicEnabled || soundChip === undefined) return;
+    const levelIndex = readWorkWordBE(s, 0x394);
+    if (levelIndex === lastSoundLevelMusicIndex) return;
+    lastSoundLevelMusicIndex = levelIndex;
+
+    // Level 1 is already covered by the MAME gameplay prewarm tape. Later
+    // levels need an explicit music-ID command when the warm gameplay state
+    // advances without replaying the original MAME level-start command tape.
+    if (levelIndex === 0) return;
+    const cmd = soundLevelMusicCommands[levelIndex];
+    if (cmd === undefined) return;
+    enqueueSoundCommand(cmd, "level");
   }
 
   function tickSoundChipAndDrain(chip: ReturnType<typeof createSoundChip>, cycles: number): void {
@@ -1755,15 +1775,17 @@ async function startGame(
     if (soundRomFull !== undefined && soundRomFull.length >= 0x10000) {
       const rom421 = soundRomFull.slice(0x8000, 0xc000);
       const rom422 = soundRomFull.slice(0xc000, 0x10000);
-      soundChip = createSoundChip({ roms: { rom421, rom422 } });
-      const chip = soundChip;
-      try {
-        await prewarmSoundChipFromTape(chip, soundPrewarmFrame);
-      } catch (e) {
-        console.warn("[sound] prewarm failed, releasing cold SoundChip:", e);
-        releaseSoundReset(chip);
-      }
-      console.log("[sound] SoundChip ready; click 'Enable Audio' to hear PCM");
+      const chip = createSoundChip({ roms: { rom421, rom422 } });
+      void (async () => {
+        try {
+          await prewarmSoundChipFromTape(chip, soundPrewarmFrame);
+        } catch (e) {
+          console.warn("[sound] prewarm failed, releasing cold SoundChip:", e);
+          releaseSoundReset(chip);
+        }
+        soundChip = chip;
+        console.log("[sound] SoundChip ready; click 'Enable Audio' to hear PCM");
+      })();
 
       let cmdCount = 0;
       const onCmd = (cmd: number): void => {
@@ -2052,6 +2074,7 @@ async function startGame(
       if (bootFlowStartHoldFrames > 0) bootFlowStartHoldFrames -= 1;
       if (!debugForceBeforeTick || !debugForceOnce) maybeApplyDebugForcedState(s);
       maybeApplyLevelTimeOverride("level change");
+      enqueueSoundLevelMusicIfNeeded();
       if (runSoundChip && soundChip !== undefined) {
         processSoundFrame(soundChip);
       }
