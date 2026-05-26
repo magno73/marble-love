@@ -43,7 +43,21 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
-  createSoundChip, tickCycles as tickSoundCycles, releaseSoundReset, SOUND_CYCLES_PER_FRAME, submitCommand as submitSoundCommand, setSoundCmdHook, setGlobalSoundCmdHook, drainReplyEvents, drainYm2151Samples, drainPokeySamples, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE,
+  createSoundChip,
+  tickCycles as tickSoundCycles,
+  releaseSoundReset,
+  SOUND_CYCLES_PER_FRAME,
+  submitCommand as submitSoundCommand,
+  setSoundCmdHook,
+  setGlobalSoundCmdHook,
+  drainReplyEvents,
+  drainYm2151Samples,
+  drainPokeySamples,
+  loadCmdTape,
+  tickFrameWithTape,
+  YM2151_NATIVE_SAMPLE_RATE,
+  POKEY_NATIVE_SAMPLE_RATE,
+  type CmdTape,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 import { runSoundReplay } from "./sound-replay.js";
@@ -1239,6 +1253,7 @@ async function startGame(
   };
   interface LoadedPlayableSeed {
     warmState: WarmState;
+    frame: number | undefined;
     mainLoopBodyTicks: number | undefined;
   }
   const loadPlayableSeedWarmState = async (seedName: string): Promise<LoadedPlayableSeed | undefined> => {
@@ -1267,10 +1282,12 @@ async function startGame(
         videoScrollX: 0,
         slapsticBank: typeof seed.slapsticBank === "number" ? seed.slapsticBank & 3 : 1,
       },
+      frame: typeof seed.frame === "number" ? seed.frame : undefined,
       mainLoopBodyTicks: typeof seed.mainLoopBodyTicks === "number" ? seed.mainLoopBodyTicks : undefined,
     };
   };
   let warmState: WarmState | undefined;
+  let warmStateFrame: number | undefined;
   let warmStateMainLoopBodyTicks: number | undefined;
   let warmStateIsPlayableSeed = false;
   const useCoinStartFlow = shouldUseCoinStartFlow({
@@ -1291,6 +1308,7 @@ async function startGame(
     try {
       const loaded = await loadPlayableSeedWarmState(playableSeedName);
       warmState = loaded?.warmState;
+      warmStateFrame = loaded?.frame;
       warmStateMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
       warmStateIsPlayableSeed = true;
       console.log(`[warmState] loaded playable seed ${playableSeedName}`);
@@ -1301,6 +1319,7 @@ async function startGame(
     try {
       const loaded = await loadPlayableSeedWarmState(startLevelPlayableSeedName);
       warmState = loaded?.warmState;
+      warmStateFrame = loaded?.frame;
       warmStateMainLoopBodyTicks = loaded?.mainLoopBodyTicks;
       warmStateIsPlayableSeed = true;
       console.log(`[marble-love] loaded startLevel=${startLevelPractice} seed ${startLevelPlayableSeedName}`);
@@ -1528,11 +1547,207 @@ async function startGame(
     console.log(`[marble-love] levelTime=${levelTimeOverride}s applied for level index ${levelIndex} (${reason})`);
   }
 
+  let frameCount = 0;
+
   // ─── Sound chip + Web Audio renderer (?sound=1) ──────────────────────────
   // Gameplay audio path: real engine sound commands -> SoundChip 6502/YM/POKEY
   // -> PCM streams -> AudioWorklet. Synthetic cues stay behind debug flags.
   let soundChip: ReturnType<typeof createSoundChip> | undefined;
   let soundRenderer: SoundRenderer | undefined;
+  const soundCommandQueue: number[] = [];
+  const soundTraceEnabled = searchParams.get("soundTrace") === "1";
+  const soundTraceLimit = Math.max(100, Number.parseInt(searchParams.get("soundTraceLimit") ?? "4000", 10) || 4000);
+  const soundMaxCommandsPerFrame = Math.max(
+    1,
+    Number.parseInt(searchParams.get("soundMaxCommandsPerFrame") ?? "8", 10) || 8,
+  );
+  const soundMusicServiceEnabled = searchParams.get("soundMusicService") !== "0";
+  const soundSpecialDedupeFrames = Math.max(
+    0,
+    Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
+  );
+  const soundPrewarmDisabled = searchParams.get("soundPrewarm") === "0";
+  const soundPrewarmDefaultFrame = startLevelPracticeActive ? (warmStateFrame ?? 2479) : 0;
+  const soundPrewarmFrame = soundPrewarmDisabled
+    ? 0
+    : Math.max(
+        0,
+        Number.parseInt(searchParams.get("soundPrewarmFrame") ?? String(soundPrewarmDefaultFrame), 10) ||
+          soundPrewarmDefaultFrame,
+      );
+  const soundPrewarmTapeUrl =
+    searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+  let soundServiceFrame = Math.max(245, soundPrewarmFrame);
+  let lastSpecialSoundCmd = -1;
+  let lastSpecialSoundFrame = -1000000;
+  const soundTraceEntries: Array<Record<string, number | string | boolean>> = [];
+  const soundTraceSummary = {
+    queued: 0,
+    submitted: 0,
+    service: 0,
+    suppressed: 0,
+    stalled: 0,
+    maxQueueDepth: 0,
+    hist: {} as Record<string, number>,
+    submittedHist: {} as Record<string, number>,
+    suppressedHist: {} as Record<string, number>,
+  };
+
+  function soundByteKey(byte: number): string {
+    return `0x${(byte & 0xff).toString(16).padStart(2, "0")}`;
+  }
+
+  function bumpSoundHist(hist: Record<string, number>, byte: number): void {
+    const key = soundByteKey(byte);
+    hist[key] = (hist[key] ?? 0) + 1;
+  }
+
+  function traceSoundEvent(entry: Record<string, number | string | boolean>): void {
+    if (!soundTraceEnabled) return;
+    if (soundTraceEntries.length < soundTraceLimit) soundTraceEntries.push(entry);
+  }
+
+  function exposeSoundTrace(): void {
+    if (!soundTraceEnabled) return;
+    const globals = window as unknown as {
+      __soundLiveTrace?: typeof soundTraceEntries;
+      __soundLiveTraceSummary?: typeof soundTraceSummary;
+      __soundCommandQueue?: number[];
+    };
+    globals.__soundLiveTrace = soundTraceEntries;
+    globals.__soundLiveTraceSummary = soundTraceSummary;
+    globals.__soundCommandQueue = soundCommandQueue;
+  }
+
+  function enqueueSoundCommand(cmd: number, source: string): void {
+    const byte = cmd & 0xff;
+    soundCommandQueue.push(byte);
+    soundTraceSummary.queued++;
+    if (source === "service") soundTraceSummary.service++;
+    soundTraceSummary.maxQueueDepth = Math.max(soundTraceSummary.maxQueueDepth, soundCommandQueue.length);
+    bumpSoundHist(soundTraceSummary.hist, byte);
+    traceSoundEvent({
+      kind: "queued",
+      frame: frameCount,
+      byte,
+      source,
+      queueDepth: soundCommandQueue.length,
+    });
+  }
+
+  function shouldSuppressSpecialSound(byte: number): boolean {
+    if (soundSpecialDedupeFrames <= 0) return false;
+    if (byte !== 0x61 && byte !== 0x65 && byte !== 0x67) return false;
+    if (byte !== lastSpecialSoundCmd) {
+      lastSpecialSoundCmd = byte;
+      lastSpecialSoundFrame = frameCount;
+      return false;
+    }
+    if (frameCount - lastSpecialSoundFrame < soundSpecialDedupeFrames) return true;
+    lastSpecialSoundFrame = frameCount;
+    return false;
+  }
+
+  async function prewarmSoundChipFromTape(
+    chip: ReturnType<typeof createSoundChip>,
+    targetFrame: number,
+  ): Promise<void> {
+    if (targetFrame <= 0) {
+      releaseSoundReset(chip);
+      return;
+    }
+    const response = await fetch(soundPrewarmTapeUrl);
+    if (!response.ok) throw new Error(`fetch ${soundPrewarmTapeUrl} failed: ${response.status}`);
+    const tapeJson = await response.json() as CmdTape;
+    const tape = loadCmdTape(tapeJson);
+    const lastFrame = Math.min(targetFrame, tape.totalFrames);
+    console.log(`[sound] prewarming SoundChip from ${soundPrewarmTapeUrl} to frame ${lastFrame}`);
+    for (let f = 0; f < lastFrame; f++) {
+      tickFrameWithTape(chip, tape, f, { autoReleaseReset: true, drainReplies: true });
+      drainYm2151Samples(chip);
+      drainPokeySamples(chip);
+      if ((f & 0xff) === 0xff) await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    soundServiceFrame = Math.max(245, lastFrame);
+    console.log(`[sound] SoundChip prewarm complete at frame ${lastFrame}`);
+  }
+
+  function enqueueSoundMusicService(): void {
+    if (!soundMusicServiceEnabled || soundChip === undefined) return;
+    enqueueSoundCommand(0x03, "service");
+    if (soundServiceFrame >= 385 && ((soundServiceFrame - 385) % 16) === 0) {
+      enqueueSoundCommand(0x07, "service");
+    }
+    soundServiceFrame++;
+  }
+
+  function tickSoundChipAndDrain(chip: ReturnType<typeof createSoundChip>, cycles: number): void {
+    if (cycles <= 0) return;
+    tickSoundCycles(chip, cycles);
+    drainReplyEvents(chip);
+  }
+
+  function pushSoundPcm(chip: ReturnType<typeof createSoundChip>): void {
+    const ymSamples = drainYm2151Samples(chip);
+    const pkSamples = drainPokeySamples(chip);
+    if (soundRenderer !== undefined && soundRenderer.isRunning()) {
+      if (searchParams.get("soundSynthCue") === "1") {
+        soundRenderer.update(chip);
+      }
+      if (ymSamples.length > 0) {
+        soundRenderer.pushYm2151Samples(ymSamples, YM2151_NATIVE_SAMPLE_RATE);
+      }
+      if (pkSamples.length > 0) {
+        soundRenderer.pushPokeySamples(pkSamples, POKEY_NATIVE_SAMPLE_RATE);
+      }
+    }
+  }
+
+  function processSoundFrame(chip: ReturnType<typeof createSoundChip>): void {
+    const commands = soundCommandQueue.splice(0, soundMaxCommandsPerFrame);
+    let remainingCycles = SOUND_CYCLES_PER_FRAME;
+    if (commands.length === 0) {
+      tickSoundChipAndDrain(chip, remainingCycles);
+      pushSoundPcm(chip);
+      exposeSoundTrace();
+      return;
+    }
+
+    const spacing = Math.max(1, Math.floor(SOUND_CYCLES_PER_FRAME / (commands.length + 1)));
+    for (let i = 0; i < commands.length; i++) {
+      const advance = Math.min(spacing, remainingCycles);
+      tickSoundChipAndDrain(chip, advance);
+      remainingCycles -= advance;
+      const byte = commands[i]!;
+      if (chip.mainToSound.pending) {
+        soundTraceSummary.stalled++;
+        soundCommandQueue.unshift(byte, ...commands.slice(i + 1));
+        traceSoundEvent({
+          kind: "stalled",
+          frame: frameCount,
+          byte,
+          queueDepth: soundCommandQueue.length,
+          mailboxValue: chip.mainToSound.value as number,
+        });
+        break;
+      }
+      submitSoundCommand(chip, wrap.as_u8(byte));
+      soundTraceSummary.submitted++;
+      bumpSoundHist(soundTraceSummary.submittedHist, byte);
+      traceSoundEvent({
+        kind: "submitted",
+        frame: frameCount,
+        byte,
+        queueDepth: soundCommandQueue.length,
+        mailboxPending: chip.mainToSound.pending,
+      });
+    }
+
+    tickSoundChipAndDrain(chip, remainingCycles);
+    pushSoundPcm(chip);
+    exposeSoundTrace();
+  }
+
   setSoundCmdHook(undefined);
   setGlobalSoundCmdHook(undefined);
   if (runSoundChip && rom !== undefined) {
@@ -1542,18 +1757,36 @@ async function startGame(
       const rom422 = soundRomFull.slice(0xc000, 0x10000);
       soundChip = createSoundChip({ roms: { rom421, rom422 } });
       const chip = soundChip;
-      releaseSoundReset(chip);
-      console.log("[sound] SoundChip ready and released; click 'Enable Audio' to hear PCM");
+      try {
+        await prewarmSoundChipFromTape(chip, soundPrewarmFrame);
+      } catch (e) {
+        console.warn("[sound] prewarm failed, releasing cold SoundChip:", e);
+        releaseSoundReset(chip);
+      }
+      console.log("[sound] SoundChip ready; click 'Enable Audio' to hear PCM");
 
       let cmdCount = 0;
       const onCmd = (cmd: number): void => {
-        submitSoundCommand(chip, wrap.as_u8(cmd & 0xff));
+        const byte = cmd & 0xff;
+        if (shouldSuppressSpecialSound(byte)) {
+          soundTraceSummary.suppressed++;
+          bumpSoundHist(soundTraceSummary.suppressedHist, byte);
+          traceSoundEvent({
+            kind: "suppressed",
+            frame: frameCount,
+            byte,
+            source: "live",
+            queueDepth: soundCommandQueue.length,
+          });
+          return;
+        }
+        enqueueSoundCommand(byte, "live");
         // Optional debug cue. Normal `?sound=1` plays only chip PCM.
         if (searchParams.get("soundCue") === "1") {
           soundRenderer?.playCommandCue(cmd);
         }
         cmdCount++;
-        if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} -> $${cmd.toString(16)}`);
+        if (cmdCount <= 30) console.log(`[sound] cmd #${cmdCount} -> $${byte.toString(16)}`);
       };
       // `soundCmdSend158AC` also notifies the global hook, so keep the legacy
       // local hook clear here or 158AC commands would be submitted twice.
@@ -1684,7 +1917,6 @@ async function startGame(
     `dev=${import.meta.env.DEV}, query={engine=${forceEngineDiagnosticFrame},demo=${forceDemoFrame},real=${forceRealRendering}})`,
   );
 
-  let frameCount = 0;
   app.ticker.add(() => {
     // Trackball MMIO absolute values (0..255 wrap-around). processAxis
     // engine-side calcola delta = cur - prev (mod 256). Mantenere il valore
@@ -1815,34 +2047,13 @@ async function startGame(
         };
       }
       if (debugForceBeforeTick) maybeApplyDebugForcedState(s);
+      enqueueSoundMusicService();
       tick(s, tickOptions);
       if (bootFlowStartHoldFrames > 0) bootFlowStartHoldFrames -= 1;
       if (!debugForceBeforeTick || !debugForceOnce) maybeApplyDebugForcedState(s);
       maybeApplyLevelTimeOverride("level change");
-      // Sound chip tick: the current 6502/YM/POKEY path is diagnostic-heavy
-      // and does not yet produce full background music. Keep it opt-in so the
-      // playable browser loop cannot slow down just because audio cues are on.
       if (runSoundChip && soundChip !== undefined) {
-        tickSoundCycles(soundChip, SOUND_CYCLES_PER_FRAME);
-        drainReplyEvents(soundChip);
-        const ymSamples = drainYm2151Samples(soundChip);
-        const pkSamples = drainPokeySamples(soundChip);
-        if (soundRenderer !== undefined && soundRenderer.isRunning()) {
-          // NOTA (2026-05-18): soundRenderer.update() era una RE-SINTESI
-          // heuristica (sine/square tones da YM regs) — produceva i beep
-          // che l'utente sentiva. Con PCM stream reale dal chip, e' RUMORE.
-          // `?soundSynthCue=1` per riabilitare debug.
-          if (searchParams.get("soundSynthCue") === "1") {
-            soundRenderer.update(soundChip);
-          }
-          // V3 chip-perfect: drain YM2151 + POKEY sample streams e push al worklet.
-          if (ymSamples.length > 0) {
-            soundRenderer.pushYm2151Samples(ymSamples, YM2151_NATIVE_SAMPLE_RATE);
-          }
-          if (pkSamples.length > 0) {
-            soundRenderer.pushPokeySamples(pkSamples, POKEY_NATIVE_SAMPLE_RATE);
-          }
-        }
+        processSoundFrame(soundChip);
       }
     }
     if ((useCoinStartFlow || useBootFlow) && !manualPlayStarted && rom !== undefined) {
