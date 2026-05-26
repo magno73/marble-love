@@ -1554,6 +1554,8 @@ async function startGame(
   // -> PCM streams -> AudioWorklet. Synthetic cues stay behind debug flags.
   let soundChip: ReturnType<typeof createSoundChip> | undefined;
   let soundRenderer: SoundRenderer | undefined;
+  let soundRomSlices: { rom421: Uint8Array; rom422: Uint8Array } | undefined;
+  let soundChipPrepareGeneration = 0;
   const soundCommandQueue: number[] = [];
   const soundTraceEnabled = searchParams.get("soundTrace") === "1";
   const soundTraceLimit = Math.max(100, Number.parseInt(searchParams.get("soundTraceLimit") ?? "4000", 10) || 4000);
@@ -1563,6 +1565,7 @@ async function startGame(
   );
   const soundMusicServiceEnabled = searchParams.get("soundMusicService") !== "0";
   const soundLevelMusicEnabled = searchParams.get("soundLevelMusic") !== "0";
+  const soundRestartOnLevelChange = searchParams.get("soundRestartOnLevelChange") !== "0";
   const soundSpecialDedupeFrames = Math.max(
     0,
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
@@ -1592,6 +1595,7 @@ async function startGame(
     submitted: 0,
     service: 0,
     levelMusic: 0,
+    restarts: 0,
     suppressed: 0,
     stalled: 0,
     maxQueueDepth: 0,
@@ -1612,6 +1616,11 @@ async function startGame(
   function traceSoundEvent(entry: Record<string, number | string | boolean>): void {
     if (!soundTraceEnabled) return;
     if (soundTraceEntries.length < soundTraceLimit) soundTraceEntries.push(entry);
+  }
+
+  function isSoundGameplayActive(): boolean {
+    if (useBootFlow || useCoinStartFlow) return manualPlayStarted;
+    return startLevelPracticeActive || warmStateIsPlayableSeed;
   }
 
   function exposeSoundTrace(): void {
@@ -1674,14 +1683,38 @@ async function startGame(
       tickFrameWithTape(chip, tape, f, { autoReleaseReset: true, drainReplies: true });
       drainYm2151Samples(chip);
       drainPokeySamples(chip);
-      if ((f & 0xff) === 0xff) await new Promise((resolve) => setTimeout(resolve, 0));
+      if ((f & 0x0f) === 0x0f) await new Promise((resolve) => setTimeout(resolve, 0));
     }
     soundServiceFrame = Math.max(245, lastFrame);
     console.log(`[sound] SoundChip prewarm complete at frame ${lastFrame}`);
   }
 
+  function prepareSoundChipForGameplay(reason: string): void {
+    if (!runSoundChip || soundRomSlices === undefined) return;
+    const generation = ++soundChipPrepareGeneration;
+    soundCommandQueue.length = 0;
+    soundChip = undefined;
+    lastSoundLevelMusicIndex = undefined;
+    lastSpecialSoundCmd = -1;
+    lastSpecialSoundFrame = -1000000;
+    soundTraceSummary.restarts++;
+    const chip = createSoundChip({ roms: soundRomSlices });
+    void (async () => {
+      try {
+        await prewarmSoundChipFromTape(chip, soundPrewarmFrame);
+      } catch (e) {
+        console.warn("[sound] prewarm failed, releasing cold SoundChip:", e);
+        releaseSoundReset(chip);
+      }
+      if (generation !== soundChipPrepareGeneration) return;
+      soundChip = chip;
+      lastSoundLevelMusicIndex = undefined;
+      console.log(`[sound] SoundChip ready for ${reason}; click 'Enable Audio' to hear PCM`);
+    })();
+  }
+
   function enqueueSoundMusicService(): void {
-    if (!soundMusicServiceEnabled || soundChip === undefined) return;
+    if (!soundMusicServiceEnabled || soundChip === undefined || !isSoundGameplayActive()) return;
     enqueueSoundCommand(0x03, "service");
     if (soundServiceFrame >= 385 && ((soundServiceFrame - 385) % 16) === 0) {
       enqueueSoundCommand(0x07, "service");
@@ -1690,15 +1723,20 @@ async function startGame(
   }
 
   function enqueueSoundLevelMusicIfNeeded(): void {
-    if (!soundLevelMusicEnabled || soundChip === undefined) return;
+    if (!soundLevelMusicEnabled || soundChip === undefined || !isSoundGameplayActive()) return;
     const levelIndex = readWorkWordBE(s, 0x394);
     if (levelIndex === lastSoundLevelMusicIndex) return;
+    const previousLevelIndex = lastSoundLevelMusicIndex;
     lastSoundLevelMusicIndex = levelIndex;
 
     // Level 1 is already covered by the MAME gameplay prewarm tape. Later
     // levels need an explicit music-ID command when the warm gameplay state
     // advances without replaying the original MAME level-start command tape.
     if (levelIndex === 0) return;
+    if (previousLevelIndex !== undefined && soundRestartOnLevelChange) {
+      prepareSoundChipForGameplay(`level ${levelIndex + 1}`);
+      return;
+    }
     const cmd = soundLevelMusicCommands[levelIndex - 1];
     if (cmd === undefined) return;
     enqueueSoundCommand(cmd, "level");
@@ -1778,21 +1816,26 @@ async function startGame(
     if (soundRomFull !== undefined && soundRomFull.length >= 0x10000) {
       const rom421 = soundRomFull.slice(0x8000, 0xc000);
       const rom422 = soundRomFull.slice(0xc000, 0x10000);
-      const chip = createSoundChip({ roms: { rom421, rom422 } });
-      void (async () => {
-        try {
-          await prewarmSoundChipFromTape(chip, soundPrewarmFrame);
-        } catch (e) {
-          console.warn("[sound] prewarm failed, releasing cold SoundChip:", e);
-          releaseSoundReset(chip);
-        }
-        soundChip = chip;
-        console.log("[sound] SoundChip ready; click 'Enable Audio' to hear PCM");
-      })();
+      soundRomSlices = { rom421, rom422 };
+      if (isSoundGameplayActive()) {
+        prepareSoundChipForGameplay("initial gameplay");
+      } else {
+        console.log("[sound] SoundChip waiting for gameplay start");
+      }
 
       let cmdCount = 0;
       const onCmd = (cmd: number): void => {
         const byte = cmd & 0xff;
+        if (!isSoundGameplayActive() || soundChip === undefined) {
+          traceSoundEvent({
+            kind: "ignored",
+            frame: frameCount,
+            byte,
+            source: "live",
+            gameplayActive: isSoundGameplayActive(),
+          });
+          return;
+        }
         if (shouldSuppressSpecialSound(byte)) {
           soundTraceSummary.suppressed++;
           bumpSoundHist(soundTraceSummary.suppressedHist, byte);
@@ -1865,7 +1908,7 @@ async function startGame(
             let testIdx = 0;
             setInterval(() => {
               const cmd = testIdx & 0xff;
-              submitSoundCommand(chip, wrap.as_u8(cmd));
+              if (soundChip !== undefined) submitSoundCommand(soundChip, wrap.as_u8(cmd));
               soundRenderer?.playCommandCue(cmd, { force: true });
               if (testIdx % 16 === 0) console.log(`[soundTest] cmd $${cmd.toString(16)}`);
               testIdx++;
@@ -2004,6 +2047,7 @@ async function startGame(
       manualPlayStarted = true;
       lastLevelTimeOverrideLevel = undefined;
       maybeApplyLevelTimeOverride("START1");
+      prepareSoundChipForGameplay("coin start");
       console.log(`[marble-love] START1 accepted, live gameplay seed loaded, credits=${browserCoinCredits}`);
     }
 
@@ -2064,6 +2108,7 @@ async function startGame(
           browserCoinCredits = result.credits;
           manualPlayStarted = true;
           lastLevelTimeOverrideLevel = undefined;
+          prepareSoundChipForGameplay("bootFlow start");
           console.log(
             `[marble-love] bootFlow START${countValue} accepted through runtime gate, ` +
             `credits=${browserCoinCredits}; no gameplay seed loaded`,
