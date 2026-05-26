@@ -138,11 +138,6 @@ export function wrappedPlayfieldDrawPositions(
   return out;
 }
 
-function activeMotionObjectStartEntry(state: GameState): number {
-  const avControl = (((state.workRam[0x3ae] ?? 0) << 8) | (state.workRam[0x3af] ?? 0)) & 0xffff;
-  return ((avControl >>> 3) & 0x07) * 64;
-}
-
 function applyViewportScale(app: Application, viewport: Container, frame: Frame): void {
   const screenWidth = app.renderer.width;
   const screenHeight = app.renderer.height;
@@ -846,7 +841,7 @@ export function initRenderer(
       }
       if (graphics?.lookupTables.motionObjects) {
         opts.motionObjects = "linked-list";
-        opts.motionObjectStartEntry = activeMotionObjectStartEntry(state);
+        opts.motionObjectStartEntry = renderNs.visibleMotionObjectStartEntry(state);
         opts.maxMotionObjectEntries = 64;
         opts.motionObjectLookups = graphics.lookupTables.motionObjects;
       }

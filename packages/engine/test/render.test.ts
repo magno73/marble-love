@@ -10,6 +10,8 @@ import {
   decodePlayfieldWord,
   decodeVideoControlByte,
   irgb4444ToRgba,
+  motionObjectStartEntryFromAvControl,
+  visibleMotionObjectStartEntry,
   walkMotionObjectLinkedList,
 } from "../src/render.js";
 import { emptyGameState } from "../src/state.js";
@@ -194,6 +196,30 @@ describe("buildFrame", () => {
         priority: 1,
       },
     ]);
+  });
+});
+
+describe("visibleMotionObjectStartEntry", () => {
+  it("uses the latched active MO bank during normal rendering", () => {
+    const state = emptyGameState();
+    state.workRam[0x3ae] = 0x00;
+    state.workRam[0x3af] = 0x18;
+    state.workRam[0x3b0] = 0x00;
+    state.workRam[0x3b1] = 0x20;
+
+    expect(motionObjectStartEntryFromAvControl(0x0018)).toBe(3 * 64);
+    expect(visibleMotionObjectStartEntry(state)).toBe(3 * 64);
+  });
+
+  it("uses the pending MO bank during the level-end score hold", () => {
+    const state = emptyGameState();
+    state.workRam[0x3ae] = 0x00;
+    state.workRam[0x3af] = 0x00;
+    state.workRam[0x3b0] = 0x00;
+    state.workRam[0x3b1] = 0x08;
+    state.clock.levelEndScoreResumePending = 1 as typeof state.clock.levelEndScoreResumePending;
+
+    expect(visibleMotionObjectStartEntry(state)).toBe(64);
   });
 });
 

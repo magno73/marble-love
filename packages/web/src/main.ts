@@ -158,8 +158,7 @@ const useSyntheticDemoFrame =
   !forceAutoLoad;
 
 function activeMotionObjectStartEntry(state: ReturnType<typeof stateNs.emptyGameState>): number {
-  const avControl = (((state.workRam[0x3ae] ?? 0) << 8) | (state.workRam[0x3af] ?? 0)) & 0xffff;
-  return ((avControl >>> 3) & 0x07) * 64;
+  return renderNs.visibleMotionObjectStartEntry(state);
 }
 
 function readWorkWordBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number): number {
