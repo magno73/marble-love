@@ -295,6 +295,82 @@ describe("Web Audio startup fallback", () => {
     await renderer.stop();
   });
 
+  it("plays chip PCM through ScriptProcessor fallback when AudioWorklet is unavailable", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    let scriptNode: MockScriptProcessorNode | undefined;
+
+    class MockScriptProcessorNode {
+      onaudioprocess: ((event: AudioProcessingEvent) => void) | null = null;
+      connect = vi.fn();
+      disconnect = vi.fn();
+    }
+
+    class MockAudioContextNoWorklet {
+      readonly audioWorklet = undefined;
+      state: AudioContextState = "suspended";
+      currentTime = 1;
+      sampleRate = 48000;
+      readonly destination = {};
+
+      resume = vi.fn(async () => {
+        this.state = "running";
+      });
+
+      close = vi.fn(async () => {
+        this.state = "closed";
+      });
+
+      createScriptProcessor = vi.fn(() => {
+        scriptNode = new MockScriptProcessorNode();
+        return scriptNode;
+      });
+    }
+
+    vi.stubGlobal("AudioContext", MockAudioContextNoWorklet);
+    vi.stubGlobal("AudioWorkletNode", undefined);
+
+    const renderer = await createSoundRenderer();
+    await renderer.start();
+    expect(renderer.isRunning()).toBe(true);
+
+    renderer.pushYm2151Samples([0.1, 0.2, 0.3, 0.4], 48000);
+    renderer.pushPokeySamples([0.5, 0.6], 48000);
+
+    const left = new Float32Array(4);
+    const right = new Float32Array(4);
+    const event = {
+      outputBuffer: {
+        numberOfChannels: 2,
+        getChannelData: vi.fn((channel: number) => channel === 0 ? left : right),
+      },
+    } as unknown as AudioProcessingEvent;
+    scriptNode?.onaudioprocess?.(event);
+
+    expect(left[0]).toBeCloseTo(0.6, 5);
+    expect(right[0]).toBeCloseTo(0.7, 5);
+    expect(left[1]).toBeCloseTo(0.9, 5);
+    expect(right[1]).toBeCloseTo(1.0, 5);
+    expect(left[2]).toBe(0);
+    expect(right[2]).toBe(0);
+
+    renderer.resetPcmStreams();
+    renderer.pushPokeySamples([0.8], 48000);
+    const resetLeft = new Float32Array(2);
+    const resetRight = new Float32Array(2);
+    scriptNode?.onaudioprocess?.({
+      outputBuffer: {
+        numberOfChannels: 2,
+        getChannelData: vi.fn((channel: number) => channel === 0 ? resetLeft : resetRight),
+      },
+    } as unknown as AudioProcessingEvent);
+    expect(resetLeft[0]).toBeCloseTo(0.8, 5);
+    expect(resetRight[0]).toBeCloseTo(0.8, 5);
+
+    await renderer.stop();
+    expect(scriptNode?.disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps forced direct command cues alive when AudioWorklet is unavailable", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 

@@ -98,6 +98,18 @@ interface MonoPcmStream {
   pendingOutputOffset: number;
 }
 
+interface PcmChunk {
+  readonly left: Float32Array;
+  readonly right: Float32Array;
+  offset: number;
+}
+
+interface PcmChunkQueue {
+  readonly chunks: PcmChunk[];
+  frames: number;
+  readonly maxFrames: number;
+}
+
 function getAudioContextConstructor(): AudioContextConstructor | undefined {
   const globalWithWebAudio = globalThis as typeof globalThis & {
     webkitAudioContext?: AudioContextConstructor;
@@ -170,12 +182,15 @@ export function soundCommandCue(cmd: number): SoundCommandCue {
 export async function createSoundRenderer(): Promise<SoundRenderer> {
   let ctx: AudioContext | null = null;
   let node: AudioWorkletNode | null = null;
+  let scriptNode: ScriptProcessorNode | null = null;
   let directCueOnly = false;
   let mediaCueOnly = false;
   let lastCueWallTime = 0;
   let lastCueAudioTime = -1;
   let ymPcmStream: StereoPcmStream | undefined;
   let pokeyPcmStream: MonoPcmStream | undefined;
+  let scriptYmPcmQueue = createPcmChunkQueue();
+  let scriptPokeyPcmQueue = createPcmChunkQueue();
   const mediaCueCache = new Map<string, string>();
   const prev: PrevState = {
     ymOn: new Array(8).fill(false),
@@ -213,18 +228,16 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
         pokeyPcmStream = undefined;
         console.log("[sound] AudioWorklet loaded successfully (PCM audio active)");
       } catch (e) {
-        directCueOnly = true;
         const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
         console.error("[sound] AudioWorklet FAILED:", msg);
         console.error("[sound] Stack:", e instanceof Error ? e.stack : "n/a");
         console.error("[sound] Browser:", navigator.userAgent);
         console.error("[sound] Page secure context:", window.isSecureContext);
         console.error("[sound] AudioContext state:", ctx.state, "sampleRate:", ctx.sampleRate);
-        console.error("[sound] → Fallback: PCM audio DISABLED, beeps NO-OP. Game audio will be SILENT.");
+        startScriptProcessorFallback("AudioWorklet failed");
       }
     } else {
-      directCueOnly = true;
-      console.warn("[sound] AudioWorklet unavailable, using direct cue fallback");
+      startScriptProcessorFallback("AudioWorklet unavailable");
     }
     // Resume on user gesture if needed
     if (ctx.state === "suspended") {
@@ -234,11 +247,18 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
 
   async function stop(): Promise<void> {
     if (node !== null) { node.disconnect(); node = null; }
+    if (scriptNode !== null) {
+      scriptNode.onaudioprocess = null;
+      scriptNode.disconnect();
+      scriptNode = null;
+    }
     if (ctx !== null) { await ctx.close(); ctx = null; }
     directCueOnly = false;
     mediaCueOnly = false;
     ymPcmStream = undefined;
     pokeyPcmStream = undefined;
+    scriptYmPcmQueue = createPcmChunkQueue();
+    scriptPokeyPcmQueue = createPcmChunkQueue();
     for (let i = 0; i < 8; i++) { prev.ymOn[i] = false; prev.ymFreq[i] = 0; }
     for (let i = 0; i < 4; i++) { prev.pokeyOn[i] = false; prev.pokeyFreq[i] = 0; }
   }
@@ -341,12 +361,14 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   }
 
   function isRunning(): boolean {
-    return mediaCueOnly || (ctx !== null && (node !== null || directCueOnly));
+    return mediaCueOnly || (ctx !== null && (node !== null || scriptNode !== null || directCueOnly));
   }
 
   function resetPcmStreams(): void {
     ymPcmStream = undefined;
     pokeyPcmStream = undefined;
+    clearPcmChunkQueue(scriptYmPcmQueue);
+    clearPcmChunkQueue(scriptPokeyPcmQueue);
     node?.port.postMessage({ type: "reset_pcm" });
   }
 
@@ -371,7 +393,7 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   /** V3 chip-perfect: prende samples interleaved L/R @ nativeSampleRate,
    * resample a output ctx.sampleRate, posta come Float32Array al worklet. */
   function pushYm2151Samples(samples: number[], nativeSampleRate: number, options?: PcmPushOptions): void {
-    if (node === null || samples.length === 0) return;
+    if ((node === null && scriptNode === null) || samples.length === 0) return;
     const outputSampleRate = getSampleRate();
     const key = pcmStreamKey(nativeSampleRate, outputSampleRate, options);
     if (ymPcmStream?.key !== key) {
@@ -379,12 +401,16 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     }
     const { left, right } = resampleInterleavedForRenderer(samples, ymPcmStream);
     if (left.length === 0) return;
-    node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
+    if (node !== null) {
+      node.port.postMessage({ type: "ym_pcm", left, right }, [left.buffer, right.buffer]);
+    } else {
+      enqueuePcmChunk(scriptYmPcmQueue, left, right);
+    }
   }
 
   /** POKEY samples mono → resample + duplicate L=R per stereo output. */
   function pushPokeySamples(samples: number[], nativeSampleRate: number, options?: PcmPushOptions): void {
-    if (node === null || samples.length === 0) return;
+    if ((node === null && scriptNode === null) || samples.length === 0) return;
     const outputSampleRate = getSampleRate();
     const key = pcmStreamKey(nativeSampleRate, outputSampleRate, options);
     if (pokeyPcmStream?.key !== key) {
@@ -392,7 +418,41 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     }
     const { left, right } = resampleMonoForRenderer(samples, pokeyPcmStream);
     if (left.length === 0) return;
-    node.port.postMessage({ type: "pokey_pcm", left, right }, [left.buffer, right.buffer]);
+    if (node !== null) {
+      node.port.postMessage({ type: "pokey_pcm", left, right }, [left.buffer, right.buffer]);
+    } else {
+      enqueuePcmChunk(scriptPokeyPcmQueue, left, right);
+    }
+  }
+
+  function startScriptProcessorFallback(reason: string): void {
+    if (ctx === null) return;
+    if (typeof ctx.createScriptProcessor !== "function") {
+      directCueOnly = true;
+      console.warn(`[sound] ${reason}, ScriptProcessor unavailable; PCM audio disabled`);
+      return;
+    }
+    scriptNode = ctx.createScriptProcessor(2048, 0, 2);
+    scriptNode.onaudioprocess = renderScriptProcessorAudio;
+    scriptNode.connect(ctx.destination);
+    ymPcmStream = undefined;
+    pokeyPcmStream = undefined;
+    clearPcmChunkQueue(scriptYmPcmQueue);
+    clearPcmChunkQueue(scriptPokeyPcmQueue);
+    console.warn(`[sound] ${reason}, using ScriptProcessor PCM fallback`);
+  }
+
+  function renderScriptProcessorAudio(event: AudioProcessingEvent): void {
+    const left = event.outputBuffer.getChannelData(0);
+    const right = event.outputBuffer.numberOfChannels > 1
+      ? event.outputBuffer.getChannelData(1)
+      : left;
+    for (let i = 0; i < left.length; i++) {
+      const ym = dequeuePcmChunkSample(scriptYmPcmQueue);
+      const pokey = dequeuePcmChunkSample(scriptPokeyPcmQueue);
+      left[i] = (ym?.[0] ?? 0) + (pokey?.[0] ?? 0);
+      right[i] = (ym?.[1] ?? 0) + (pokey?.[1] ?? 0);
+    }
   }
 
   return {
@@ -406,6 +466,51 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     isRunning,
     getSampleRate,
   };
+}
+
+function createPcmChunkQueue(maxFrames = 48_000): PcmChunkQueue {
+  return { chunks: [], frames: 0, maxFrames };
+}
+
+function clearPcmChunkQueue(queue: PcmChunkQueue): void {
+  queue.chunks.length = 0;
+  queue.frames = 0;
+}
+
+function enqueuePcmChunk(queue: PcmChunkQueue, left: Float32Array, right: Float32Array): void {
+  const frames = Math.min(left.length, right.length);
+  if (frames <= 0) return;
+  queue.chunks.push({ left, right, offset: 0 });
+  queue.frames += frames;
+  trimPcmChunkQueue(queue);
+}
+
+function trimPcmChunkQueue(queue: PcmChunkQueue): void {
+  while (queue.frames > queue.maxFrames && queue.chunks.length > 0) {
+    const chunk = queue.chunks[0]!;
+    const available = Math.min(chunk.left.length, chunk.right.length) - chunk.offset;
+    const drop = Math.min(available, queue.frames - queue.maxFrames);
+    chunk.offset += drop;
+    queue.frames -= drop;
+    if (chunk.offset >= Math.min(chunk.left.length, chunk.right.length)) queue.chunks.shift();
+  }
+}
+
+function dequeuePcmChunkSample(queue: PcmChunkQueue): readonly [number, number] | undefined {
+  while (queue.chunks.length > 0) {
+    const chunk = queue.chunks[0]!;
+    const length = Math.min(chunk.left.length, chunk.right.length);
+    if (chunk.offset >= length) {
+      queue.chunks.shift();
+      continue;
+    }
+    const out = [chunk.left[chunk.offset] ?? 0, chunk.right[chunk.offset] ?? 0] as const;
+    chunk.offset++;
+    queue.frames = Math.max(0, queue.frames - 1);
+    if (chunk.offset >= length) queue.chunks.shift();
+    return out;
+  }
+  return undefined;
 }
 
 function resampleInterleavedForRenderer(
