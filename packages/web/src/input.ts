@@ -38,6 +38,7 @@ const TRACKBALL_KEYS = new Set([
 ]);
 const START_KEYS = new Set([" ", "enter"]);
 const COIN_KEYS = new Set(["5", "c"]);
+const POINTER_LOCK_UI_SELECTOR = "button,a,input,select,textarea,[role='button'],[data-no-pointer-lock]";
 
 export interface InputState {
   buttons: number;
@@ -96,6 +97,15 @@ export function isStartKey(key: string): boolean {
   return START_KEYS.has(key.toLowerCase());
 }
 
+function isPointerLockUiTarget(target: EventTarget | null): boolean {
+  const closest = (target as { closest?: (selector: string) => unknown } | null)?.closest;
+  return typeof closest === "function" && closest.call(target, POINTER_LOCK_UI_SELECTOR) !== null;
+}
+
+function ignorePointerLockRejection(result: void | Promise<void>): void {
+  if (result !== undefined) void result.catch(() => undefined);
+}
+
 export function initInput(options: InputOptions = {}): InputState {
   const keyboardTrackballStep = normalizeKeyboardTrackballStep(options.keyboardTrackballStep);
   const pointerTrackballScale = normalizePointerTrackballScale(options.pointerTrackballScale);
@@ -144,8 +154,9 @@ export function initInput(options: InputOptions = {}): InputState {
       addP1ScreenDelta(e.movementX | 0, e.movementY | 0, pointerTrackballScale);
     }
   });
-  window.addEventListener("click", () => {
-    if (!document.pointerLockElement) document.body.requestPointerLock?.();
+  window.addEventListener("click", (e) => {
+    if (document.pointerLockElement || isPointerLockUiTarget(e.target)) return;
+    ignorePointerLockRejection(document.body.requestPointerLock?.());
   });
 
   let lastTouch: { x: number; y: number } | null = null;

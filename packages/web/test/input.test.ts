@@ -172,4 +172,35 @@ describe("browser input mapping", () => {
     expect(input.consumeStartPulses()).toBe(1);
     expect(input.consumeStartPulses()).toBe(0);
   });
+
+  it("does not request pointer lock from overlay UI clicks", () => {
+    type ClickHandler = (event: { target: { closest(selector: string): unknown } }) => void;
+    const listeners: Record<string, ClickHandler[]> = {};
+    const requestResult = { catch: vi.fn() };
+    const requestPointerLock = vi.fn(() => requestResult);
+    vi.stubGlobal("window", {
+      addEventListener(type: string, handler: ClickHandler) {
+        listeners[type] ??= [];
+        listeners[type].push(handler);
+      },
+    });
+    vi.stubGlobal("document", {
+      pointerLockElement: null,
+      body: { requestPointerLock },
+    });
+    vi.stubGlobal("navigator", {
+      getGamepads: () => [],
+    });
+
+    initInput();
+    const click = listeners.click?.[0];
+    expect(click).toBeDefined();
+
+    click?.({ target: { closest: () => ({}) } });
+    expect(requestPointerLock).not.toHaveBeenCalled();
+
+    click?.({ target: { closest: () => null } });
+    expect(requestPointerLock).toHaveBeenCalledTimes(1);
+    expect(requestResult.catch).toHaveBeenCalledTimes(1);
+  });
 });
