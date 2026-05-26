@@ -1443,3 +1443,23 @@ The task is complete only when:
   `npm --workspace @marble-love/web run build` (known chunk-size warning).
   Manual browser retest is green: user confirmed the patch works and the later
   waves now push/transport the marble.
+- 2026-05-23: New level-end visual follow-up opened from user screenshot
+  `/Users/magnus-bot/Desktop/Screenshot 2026-05-23 alle 10.45.12.png`: after
+  finishing L2, the score/GOAL summary (`main=3`, `mode=2`, `level=2`) showed
+  a broken purple sprite below the GOAL platform. Root-cause hypothesis: during
+  the blocking level-end score hold, `FUN_26F3E` has emitted the cleaned
+  display list into the pending MO bank at `0x4003B0`, but the web renderer can
+  still select the previous latched bank from `0x4003AE`, exposing stale
+  award/tail objects. Local patch adds `visibleMotionObjectStartEntry` in the
+  engine render model and uses it from the web renderer/debug frame stats only
+  while `levelEndScoreResumePending` is active. Automated gates passed:
+  `npx vitest run packages/engine/test/render.test.ts packages/engine/test/main-loop-level-end-score.test.ts packages/engine/test/level-intro-banner-resume.test.ts --silent`
+  (`40` tests);
+  `npx vitest run packages/web/test/boot-flow-url.test.ts packages/web/test/coin-start-flow.test.ts packages/web/test/practice-level.test.ts --silent`
+  (`14` tests);
+  `npx tsc -p packages/engine/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/engine run build` to refresh ignored composite
+  declarations for the web project;
+  `npx tsc -p packages/web/tsconfig.json --noEmit --pretty false`;
+  `npm --workspace @marble-love/web run build` (known chunk-size warning);
+  `git diff --check`. Manual browser retest is pending.

@@ -523,6 +523,33 @@ export function decodeVideoControlByte(value: number): VideoControlInfo {
   };
 }
 
+function readWorkWordBE(state: GameState, off: number): number {
+  return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
+}
+
+export function motionObjectStartEntryFromAvControl(value: number): number {
+  return ((value >>> 3) & 0x07) * MOTION_OBJECT_ENTRY_COUNT;
+}
+
+export function activeMotionObjectStartEntry(state: GameState): number {
+  return motionObjectStartEntryFromAvControl(readWorkWordBE(state, 0x3ae));
+}
+
+/**
+ * Browser rendering happens after `tick()` has completed the main-thread body.
+ * During the level-end score hold, FUN_26F3E has already emitted the cleaned
+ * score/GOAL display list into *0x4003B0's next MO bank, while *0x4003AE may
+ * still point at the previously latched gameplay bank. Prefer the pending bank
+ * only for that blocking score-summary window, so stale award/tail objects do
+ * not remain visible under the GOAL platform.
+ */
+export function visibleMotionObjectStartEntry(state: GameState): number {
+  if (state.clock.levelEndScoreResumePending !== undefined) {
+    return motionObjectStartEntryFromAvControl(readWorkWordBE(state, 0x3b0));
+  }
+  return activeMotionObjectStartEntry(state);
+}
+
 function buildDebugLabel(options: BuildFrameOptions): string | undefined {
   if (options.videoControlByte === undefined) return undefined;
 
