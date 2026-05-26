@@ -1565,7 +1565,7 @@ async function startGame(
   );
   const soundMusicServiceEnabled = searchParams.get("soundMusicService") !== "0";
   const soundLevelMusicEnabled = searchParams.get("soundLevelMusic") !== "0";
-  const soundRestartOnLevelChange = searchParams.get("soundRestartOnLevelChange") !== "0";
+  const soundRestartOnLevelChange = searchParams.get("soundRestartOnLevelChange") === "1";
   const soundSpecialDedupeFrames = Math.max(
     0,
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
@@ -1573,7 +1573,7 @@ async function startGame(
   const soundPrewarmDisabled = searchParams.get("soundPrewarm") === "0";
   const soundPrewarmDefaultFrame =
     startLevelPracticeActive || forcePlay || useBootFlow || useCoinStartFlow
-      ? (warmStateFrame ?? 2479)
+      ? Math.min(warmStateFrame ?? 1571, 1571)
       : 0;
   const soundPrewarmFrame = soundPrewarmDisabled
     ? 0
