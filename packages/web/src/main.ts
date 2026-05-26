@@ -1584,7 +1584,7 @@ async function startGame(
       );
   const soundPrewarmTapeUrl =
     searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
-  const soundLevelMusicCommands = [0x09, 0x0b, 0x0d, 0x12, 0x17, 0x19] as const;
+  const soundLevelMusicCommands = [0x0b, 0x0d, 0x12, 0x17, 0x19] as const;
   let soundServiceFrame = Math.max(245, soundPrewarmFrame);
   let lastSoundLevelMusicIndex: number | undefined;
   let lastSpecialSoundCmd = -1;
@@ -1729,9 +1729,9 @@ async function startGame(
     const previousLevelIndex = lastSoundLevelMusicIndex;
     lastSoundLevelMusicIndex = levelIndex;
 
-    // Level 1 is already covered by the MAME gameplay prewarm tape. Later
-    // levels need an explicit music-ID command when the warm gameplay state
-    // advances without replaying the original MAME level-start command tape.
+    // The playable seeds expose zero-based level indexes. Level 1 is covered
+    // by the MAME gameplay prewarm tape; later levels need the next table
+    // entries. `$09` is a short/terminating cue here, so level 2 starts at `$0b`.
     if (levelIndex === 0) return;
     if (previousLevelIndex !== undefined && soundRestartOnLevelChange) {
       prepareSoundChipForGameplay(`level ${levelIndex + 1}`);
