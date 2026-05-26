@@ -1568,7 +1568,10 @@ async function startGame(
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
   );
   const soundPrewarmDisabled = searchParams.get("soundPrewarm") === "0";
-  const soundPrewarmDefaultFrame = startLevelPracticeActive ? (warmStateFrame ?? 2479) : 0;
+  const soundPrewarmDefaultFrame =
+    startLevelPracticeActive || forcePlay || useBootFlow || useCoinStartFlow
+      ? (warmStateFrame ?? 2479)
+      : 0;
   const soundPrewarmFrame = soundPrewarmDisabled
     ? 0
     : Math.max(
@@ -1696,7 +1699,7 @@ async function startGame(
     // levels need an explicit music-ID command when the warm gameplay state
     // advances without replaying the original MAME level-start command tape.
     if (levelIndex === 0) return;
-    const cmd = soundLevelMusicCommands[levelIndex];
+    const cmd = soundLevelMusicCommands[levelIndex - 1];
     if (cmd === undefined) return;
     enqueueSoundCommand(cmd, "level");
   }
