@@ -340,19 +340,39 @@ export function mainLoopInit1101E(
 }
 
 function init11452(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
-  (subs.init11452 ?? ((s) => mainLoopInit11452(s, rom, subs.init11452Subs)))(state);
+  const initSubs =
+    subs.init11452Subs === undefined
+      ? subs.soundCmd === undefined ? undefined : { soundCmd: subs.soundCmd }
+      : subs.init11452Subs.soundCmd !== undefined || subs.soundCmd === undefined
+        ? subs.init11452Subs
+        : { ...subs.init11452Subs, soundCmd: subs.soundCmd };
+  (subs.init11452 ?? ((s) => mainLoopInit11452(s, rom, initSubs)))(state);
 }
 
 function init10504(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
-  (subs.init10504 ?? ((s) => mainLoopInit10504(s, subs.init10504Subs, {}, rom)))(state);
+  const initSubs =
+    subs.init10504Subs === undefined
+      ? subs.soundCmd === undefined ? undefined : { soundCmd: subs.soundCmd }
+      : subs.init10504Subs.soundCmd !== undefined || subs.soundCmd === undefined
+        ? subs.init10504Subs
+        : { ...subs.init10504Subs, soundCmd: subs.soundCmd };
+  (subs.init10504 ?? ((s) => mainLoopInit10504(s, initSubs, {}, rom)))(state);
 }
 
 function helper118D2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): void {
   (subs.helper118D2 ?? ((s) => {
     if (rom === undefined) return;
-    playerSlotIter118D2(s, rom, {
-      fun_16ec6: (st) => levelDispatcher16EC6(st, rom),
-    });
+    const slotSubs =
+      subs.soundCmd === undefined
+        ? { fun_16ec6: (st: GameState) => levelDispatcher16EC6(st, rom) }
+        : {
+            fun_158ac: (st: GameState, cmd: number) => {
+              subs.soundCmd?.(st, cmd);
+              return 1;
+            },
+            fun_16ec6: (st: GameState) => levelDispatcher16EC6(st, rom),
+          };
+    playerSlotIter118D2(s, rom, slotSubs);
   }))(state);
 }
 
@@ -458,6 +478,8 @@ function case2(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
             (absAddr) => rom.program[absAddr >>> 0] ?? 0,
           );
         },
+        ...(subs.soundCmd === undefined ? {} : { soundCmd: subs.soundCmd }),
+        soundPair: subs.soundPair15884 ?? soundPair15884,
       });
       timeoutSummaryMatched = result.phase2Matched > 0;
     }
