@@ -18,7 +18,7 @@
  *   9. gameMainGate (FUN_28972) ✅
  *   10. auxTimer (FUN_10146) ✅
  *   11. eepromCommit (FUN_3F78 via thunk 0x160) ✅
- *   12. soundCommand (FUN_158AC) — STUB (chiamata condizionale da altre subs)
+ *   12. soundCommand (FUN_158AC) — emessa dalle subs replicate via hook audio
  *   13. specialAttract (FUN_288F8) ✅
  *   14. particleBounce (FUN_18DCA) ✅ (conditional su *0x4003E2)
  *   15. lateGameLogic (FUN_26F3E) — chiamata dopo mainLoopInit1101E quando
@@ -37,7 +37,7 @@ import type { RomImage } from "./bus.js";
 
 import { mainUpdateScrollSync } from "./main-loop.js";
 import { pfScrollUpdate } from "./pf-scroll.js";
-import { mainLoopInit1101E } from "./main-loop-init-1101e.js";
+import { mainLoopInit1101E, type MainLoopInit1101ESubs } from "./main-loop-init-1101e.js";
 import { refreshFrame10FCE } from "./refresh-frame-10fce.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { fun_FA0_marbleEmit } from "./sub-fa0-marble-emit.js";
@@ -47,6 +47,7 @@ import { runWarmResidualReplayTick } from "./warm-residual-replay.js";
 import { randomMod13A98 } from "./random-mod-13a98.js";
 import { soundTick } from "./sound-tick.js";
 import type { SoundTickSubs } from "./sound-tick.js";
+import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 import { soundDispatchSend } from "./sound-dispatch-send.js";
 import { soundStatusCheck } from "./sound-status-check.js";
 import { auxTimer } from "./aux-timer.js";
@@ -136,6 +137,12 @@ export interface MainTickOptions extends MainTickInputs {
    */
   runMainLoopBody?: boolean;
 }
+
+const MAIN_LOOP_SOUND_SUBS: MainLoopInit1101ESubs = {
+  soundCmd: soundCmdSend158AC,
+  init10504Subs: { soundCmd: soundCmdSend158AC },
+  init11452Subs: { soundCmd: soundCmdSend158AC },
+};
 
 function readWorkWord(state: GameState, off: number): number {
   return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
@@ -330,11 +337,13 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // FUN_3F78 (sound pacing pseudo-eeprom) — REPLICATO
   eepromCommit(state);
 
-  // FUN_158AC (sound cmd send) — STUB nel mainTick (chiamato condizionale
-  // da altre subs replicate; integra quando integriamo le sound subs).
+  // FUN_158AC (sound cmd send) — non è una chiamata diretta qui: viene inviata
+  // dalle subs replicate cablate sotto via `soundCmdSend158AC`.
 
   // FUN_288F8 (special attract / end-screen sound) — REPLICATO
-  specialAttract(state);
+  specialAttract(state, {
+    soundCommand: (cmd) => { soundCmdSend158AC(state, cmd); },
+  });
 
   if ((r[0x3e2] ?? 0) !== 0) {
     r[0x3ae] = r[0x3b0] ?? 0;
@@ -442,7 +451,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
         }
         refreshFrame10FCE(state, rom);
       } else {
-        mainLoopInit1101E(state, rom);
+        mainLoopInit1101E(state, rom, MAIN_LOOP_SOUND_SUBS);
       }
       // FUN_26F3E (lateGameLogic) — chain MAME canonical, post-body.
       // Stima fast in attract (*0x3E2 == 0) vs full in gameplay.

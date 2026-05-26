@@ -16,13 +16,18 @@
  * test parity dei sub-systems). Verifica solo che il wire-up regga.
  */
 
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mainTick } from "../src/main-tick.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
+import { setGlobalSoundCmdHook } from "../src/sound-hook.js";
+
+afterEach(() => {
+  setGlobalSoundCmdHook(undefined);
+});
 
 function readU16BE(buf: Uint8Array, off: number): number {
   return ((buf[off] ?? 0) << 8) | (buf[off + 1] ?? 0);
@@ -90,6 +95,32 @@ describe("mainTick smoke", () => {
     }
     // state.clock.frame ha registrato i 100 tick
     expect(s.clock.frame).toBe(100);
+  });
+
+  it("wires IRQ special-attract sound commands to the global sound hook", () => {
+    const s = emptyGameState();
+    const rom = emptyRomImage();
+    const calls: number[] = [];
+    setGlobalSoundCmdHook((cmd) => calls.push(cmd));
+
+    mainTick(s, { rom });
+
+    expect(calls).toContain(0x61);
+  });
+
+  it("wires main-loop init music commands during live gameplay body ticks", () => {
+    const s = emptyGameState();
+    const rom = loadProgramRom();
+    const calls: number[] = [];
+    setGlobalSoundCmdHook((cmd) => calls.push(cmd));
+    writeU16BE(s.workRam, 0x390, 5);
+    s.clock.mainLoopBodyTicks = 1 as typeof s.clock.mainLoopBodyTicks;
+
+    mainTick(s, { rom, runMainLoopBody: true });
+
+    expect(calls).toContain(0x02);
+    expect(calls).toContain(0x00);
+    expect(calls).toContain(0x63);
   });
 
   it("inputMmio default 0xFC → gameMainGate skip Block C (no spin)", () => {
