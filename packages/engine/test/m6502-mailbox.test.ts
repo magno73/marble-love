@@ -153,6 +153,21 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     // bit 7 + bits 0-2 ($87 pull-up base) + bit3 ($08 main pending) + bit4 ($10 sound pending) = $9F
     expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x9f);
   });
+
+  it("status $1820 supporta un override diagnostico della base coin/self-test", () => {
+    const mainToSound = createMailbox();
+    const soundToMain = createMailbox();
+    const mmu = createSoundMmu({
+      rom: new Uint8Array(0xC000).fill(0xff),
+      mainToSound,
+      soundToMain,
+      statusBase: as_u8(0x86),
+    });
+    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x86);
+    mailboxWrite(mainToSound, as_u8(0x11));
+    mmu.write8(as_u16(0x1810), as_u8(0x22));
+    expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x9e);
+  });
 });
 
 describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
@@ -183,12 +198,62 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     expect(mmu.read8(as_u16(0x1875)) as number).toBe(0);
   });
 
-  it("LS259 $1824/$1825: write salvati in shadow", () => {
+  it("puo' differire le write chip mantenendo i callback diagnostici", () => {
+    const deferred: Array<{ event: { kind: string; reg: number; val: number }; apply: () => void }> = [];
+    const ymWrites: Array<{ reg: number; val: number }> = [];
+    const pokeyWrites: Array<{ reg: number; val: number }> = [];
+    const mmu = createSoundMmu({
+      rom: new Uint8Array(0xC000).fill(0xff),
+      mainToSound: createMailbox(),
+      soundToMain: createMailbox(),
+      onYmWrite: (event) => ymWrites.push(event),
+      onPokeyWrite: (event) => pokeyWrites.push(event),
+      deferChipWrite: (event, apply) => {
+        deferred.push({ event, apply });
+        return true;
+      },
+    });
+
+    mmu.write8(as_u16(0x1800), as_u8(0x20));
+    expect(mmu.ym2151.selectedReg).toBe(0);
+    expect(deferred[0]!.event).toMatchObject({ kind: "ym2151Addr", val: 0x20 });
+    deferred.shift()!.apply();
+    expect(mmu.ym2151.selectedReg).toBe(0x20);
+
+    mmu.write8(as_u16(0x1801), as_u8(0xc0));
+    expect(ymWrites).toEqual([{ reg: 0x20, val: 0xc0 }]);
+    expect(mmu.ym2151.regs[0x20]).toBe(0);
+    deferred.shift()!.apply();
+    expect(mmu.ym2151.regs[0x20]).toBe(0xc0);
+
+    mmu.write8(as_u16(0x1875), as_u8(0xab));
+    expect(pokeyWrites).toEqual([{ reg: 0x05, val: 0xab }]);
+    expect(mmu.pokey.writeRegs[0x05]).toBe(0);
+    expect(deferred[0]!.event).toMatchObject({ kind: "pokey", reg: 0x05, val: 0xab });
+    deferred.shift()!.apply();
+    expect(mmu.pokey.writeRegs[0x05]).toBe(0xab);
+  });
+
+  it("LS259 $1820-$1827: address selects the latched bit and D0 selects state", () => {
     const mmu = buildMmu();
-    mmu.write8(as_u16(0x1824), as_u8(0x01));
-    mmu.write8(as_u16(0x1825), as_u8(0x00));
+    mmu.write8(as_u16(0x1824), as_u8(0x02));
+    mmu.write8(as_u16(0x1825), as_u8(0x01));
+    expect(mmu.ls259Shadow[4]).toBe(0x00);
+    expect(mmu.ls259Shadow[5]).toBe(0x01);
+  });
+
+  it("LS259 bit 0 drives YM2151 reset", () => {
+    const mmu = buildMmu();
+    mmu.write8(as_u16(0x1800), as_u8(0x20));
+    mmu.write8(as_u16(0x1801), as_u8(0xc0));
+    expect(mmu.ym2151.regs[0x20]).toBe(0xc0);
+
+    mmu.write8(as_u16(0x1824), as_u8(0x02));
+    expect(mmu.ym2151.regs[0x20]).toBe(0xc0);
+
+    mmu.write8(as_u16(0x1820), as_u8(0x01));
     expect(mmu.ls259Shadow[0]).toBe(0x01);
-    expect(mmu.ls259Shadow[1]).toBe(0x00);
+    expect(mmu.ym2151.regs[0x20]).toBe(0);
   });
 
   it("Open bus $1830, $1850, $1880, $2000: read=0xff", () => {

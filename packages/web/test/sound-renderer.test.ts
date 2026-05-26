@@ -118,6 +118,131 @@ describe("sound command cue fallback", () => {
 });
 
 describe("Web Audio startup fallback", () => {
+  it("posts YM and POKEY PCM to separate worklet queues", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const messages: unknown[] = [];
+    let createdContext: MockAudioContextWithWorklet | undefined;
+
+    class MockAudioContextWithWorklet {
+      readonly audioWorklet = {
+        addModule: vi.fn(async (path: string) => {
+          expect(path).toBe("/sound-worklet.js");
+        }),
+      };
+      state: AudioContextState = "suspended";
+      currentTime = 1;
+      sampleRate = 48000;
+      readonly destination = {};
+
+      constructor() {
+        createdContext = this;
+      }
+
+      resume = vi.fn(async () => {
+        this.state = "running";
+      });
+
+      close = vi.fn(async () => {
+        this.state = "closed";
+      });
+    }
+
+    class MockAudioWorkletNode {
+      readonly port = {
+        postMessage: vi.fn((msg: unknown) => {
+          messages.push(msg);
+        }),
+      };
+
+      constructor(
+        readonly ctx: MockAudioContextWithWorklet,
+        readonly name: string,
+        readonly options: AudioWorkletNodeOptions,
+      ) {
+        expect(name).toBe("marble-sound");
+        expect(options.outputChannelCount).toEqual([2]);
+      }
+
+      connect = vi.fn();
+      disconnect = vi.fn();
+    }
+
+    vi.stubGlobal("AudioContext", MockAudioContextWithWorklet);
+    vi.stubGlobal("AudioWorkletNode", MockAudioWorkletNode);
+
+    const renderer = await createSoundRenderer();
+    await renderer.start();
+
+    renderer.pushYm2151Samples([0.1, 0.2, 0.3, 0.4], 48000);
+    renderer.pushPokeySamples([0.5, 0.6], 48000);
+
+    expect(createdContext?.audioWorklet.addModule).toHaveBeenCalledTimes(1);
+    expect(messages.map((msg) => (msg as { type?: string }).type)).toEqual(["reset", "ym_pcm", "pokey_pcm"]);
+    const ymLeft = Array.from((messages[1] as { left: Float32Array }).left);
+    const ymRight = Array.from((messages[1] as { right: Float32Array }).right);
+    const pokeyLeft = Array.from((messages[2] as { left: Float32Array }).left);
+    const pokeyRight = Array.from((messages[2] as { right: Float32Array }).right);
+    expect(ymLeft).toHaveLength(2);
+    expect(ymRight).toHaveLength(2);
+    expect(pokeyLeft).toHaveLength(2);
+    expect(pokeyRight).toHaveLength(2);
+    expect(ymLeft[0]).toBeCloseTo(0.1, 5);
+    expect(ymLeft[1]).toBeCloseTo(0.3, 5);
+    expect(ymRight[0]).toBeCloseTo(0.2, 5);
+    expect(ymRight[1]).toBeCloseTo(0.4, 5);
+    expect(pokeyLeft[0]).toBeCloseTo(0.5, 5);
+    expect(pokeyLeft[1]).toBeCloseTo(0.6, 5);
+    expect(pokeyRight[0]).toBeCloseTo(0.5, 5);
+    expect(pokeyRight[1]).toBeCloseTo(0.6, 5);
+
+    renderer.pushYm2151Samples([0, 10, 2, 12], 48000, { resampleOffset: 0.5 });
+    renderer.pushPokeySamples([0, 2], 48000, { resampleOffset: 0.5 });
+    const offsetYmLeft = Array.from((messages[3] as { left: Float32Array }).left);
+    const offsetYmRight = Array.from((messages[3] as { right: Float32Array }).right);
+    const offsetPokeyLeft = Array.from((messages[4] as { left: Float32Array }).left);
+    const offsetPokeyRight = Array.from((messages[4] as { right: Float32Array }).right);
+    expect(offsetYmLeft).toEqual([1]);
+    expect(offsetYmRight).toEqual([11]);
+    expect(offsetPokeyLeft).toEqual([1]);
+    expect(offsetPokeyRight).toEqual([1]);
+
+    renderer.pushPokeySamples([0.5, 0.6], 48000, { outputSampleOffset: 2 });
+    const shiftedPokeyLeft = Array.from((messages[5] as { left: Float32Array }).left);
+    const shiftedPokeyRight = Array.from((messages[5] as { right: Float32Array }).right);
+    expect(shiftedPokeyLeft.slice(0, 2)).toEqual([0, 0]);
+    expect(shiftedPokeyRight.slice(0, 2)).toEqual([0, 0]);
+    expect(shiftedPokeyLeft[2]).toBeCloseTo(0.5, 5);
+    expect(shiftedPokeyLeft[3]).toBeCloseTo(0.6, 5);
+    expect(shiftedPokeyRight[2]).toBeCloseTo(0.5, 5);
+    expect(shiftedPokeyRight[3]).toBeCloseTo(0.6, 5);
+
+    renderer.pushPokeySamples([0.7], 48000, { outputSampleOffset: 2 });
+    const continuedPokeyLeft = Array.from((messages[6] as { left: Float32Array }).left);
+    expect(continuedPokeyLeft[0]).toBeCloseTo(0.7, 5);
+
+    renderer.resetPcmStreams();
+    expect((messages[7] as { type?: string }).type).toBe("reset_pcm");
+    renderer.pushPokeySamples([0.8], 48000, { outputSampleOffset: 2 });
+    const resetPokeyLeft = Array.from((messages[8] as { left: Float32Array }).left);
+    expect(resetPokeyLeft.slice(0, 2)).toEqual([0, 0]);
+    expect(resetPokeyLeft[2]).toBeCloseTo(0.8, 5);
+
+    renderer.pushYm2151Samples(
+      [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+      48000,
+      { resampler: "mame-lofi" },
+    );
+    const lofiYmLeft = Array.from((messages[9] as { left: Float32Array }).left);
+    const lofiYmRight = Array.from((messages[9] as { right: Float32Array }).right);
+    expect(lofiYmLeft).toHaveLength(5);
+    expect(lofiYmRight).toHaveLength(5);
+    expect(lofiYmLeft.every(Number.isFinite)).toBe(true);
+    expect(lofiYmRight.every(Number.isFinite)).toBe(true);
+
+    await renderer.stop();
+  });
+
   it("keeps direct command cue fallback silent by default when AudioWorklet is unavailable", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 

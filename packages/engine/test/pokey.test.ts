@@ -10,7 +10,20 @@
 import { describe, it, expect } from "vitest";
 import { as_u8 } from "../src/wrap.js";
 import {
-  createPOKEY, pokeyWrite, pokeyRead, pokeyReset,
+  POKEY_NATIVE_SAMPLE_RATE,
+  createPOKEY,
+  pokeyDrainDiagnosticChannelSamples,
+  pokeyDrainDiagnosticRawTransitions,
+  pokeyDrainSamples,
+  pokeyRead,
+  pokeyReset,
+  pokeySampleRate,
+  pokeySetDiagnosticChannelSamples,
+  pokeySetDiagnosticRawTransitions,
+  pokeySetSampleAfterClock,
+  pokeySetSampleCycles,
+  pokeyTickCycles,
+  pokeyWrite,
 } from "../src/audio/pokey.js";
 
 describe("POKEY register file", () => {
@@ -59,6 +72,144 @@ describe("POKEY register file", () => {
     pokeyWrite(pk, as_u8(0x10), as_u8(0xAA));
     expect(pk.writeRegs[0x00]).toBe(0xAA);
     expect(pk.writeRegs.length).toBe(16);
+  });
+});
+
+describe("POKEY PCM", () => {
+  it("uses the POKEY clock/28 native sample cadence", () => {
+    expect(POKEY_NATIVE_SAMPLE_RATE).toBeCloseTo(1_789_772 / 28, 5);
+  });
+
+  it("emits unipolar legacy-linear samples for a pure-tone AUDC voice", () => {
+    const pk = createPOKEY();
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x00), as_u8(0x04));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0xaf));
+
+    pokeyTickCycles(pk, 28 * 600);
+    const samples = pokeyDrainSamples(pk);
+    const min = Math.min(...samples);
+    const max = Math.max(...samples);
+
+    expect(samples.length).toBe(600);
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeGreaterThan(0);
+  });
+
+  it("advances channel counters while AUDC volume is zero", () => {
+    const pk = createPOKEY();
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x00), as_u8(0x04));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0xa0));
+
+    pokeyTickCycles(pk, 28 * 6);
+
+    expect(pk.channels[0]!.counter).not.toBe(0);
+  });
+
+  it("uses MAME's default pure-tone AUDC phase before the first AUDC write", () => {
+    const pk = createPOKEY();
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x00), as_u8(0x00));
+
+    pokeyTickCycles(pk, 28 * 256);
+
+    expect(pk.writeRegs[0x01]).toBe(0);
+    expect(pk.channels[0]!.output).toBe(1);
+  });
+
+  it("can drain diagnostics-only per-channel sample buffers", () => {
+    const pk = createPOKEY();
+    pokeySetDiagnosticChannelSamples(pk, true);
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0x1f)); // volume-only channel 1
+
+    pokeyTickCycles(pk, 28 * 3);
+    const mix = pokeyDrainSamples(pk);
+    const channels = pokeyDrainDiagnosticChannelSamples(pk);
+
+    expect(channels).toBeDefined();
+    expect(channels).toHaveLength(4);
+    expect(channels?.[0]).toHaveLength(mix.length);
+    expect(channels?.[1]?.every((v) => v === 0)).toBe(true);
+    for (let i = 0; i < mix.length; i++) {
+      expect(channels?.[0]?.[i]).toBeCloseTo(mix[i] ?? 0, 7);
+    }
+    expect(pokeyDrainDiagnosticChannelSamples(pk)?.[0]).toEqual([]);
+  });
+
+  it("can use a diagnostics-only per-clock sample cadence", () => {
+    const pk = createPOKEY();
+    pokeySetSampleCycles(pk, 1);
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0x1f)); // volume-only channel 1
+
+    pokeyTickCycles(pk, 7);
+
+    expect(pokeySampleRate(pk)).toBeCloseTo(1_789_772, 5);
+    expect(pokeyDrainSamples(pk)).toHaveLength(7);
+  });
+
+  it("latches raw output after the stream catches up", () => {
+    const pk = createPOKEY();
+    pokeySetSampleCycles(pk, 1);
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0x1f)); // volume-only channel 1
+
+    pokeyTickCycles(pk, 2);
+    const samples = pokeyDrainSamples(pk);
+
+    expect(samples[0]).toBe(0);
+    expect(samples[1]).toBeGreaterThan(0);
+  });
+
+  it("can sample after the clock edge for boundary diagnostics", () => {
+    const pk = createPOKEY();
+    pokeySetSampleCycles(pk, 1);
+    pokeySetSampleAfterClock(pk, true);
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0x1f)); // volume-only channel 1
+
+    pokeyTickCycles(pk, 2);
+    const samples = pokeyDrainSamples(pk);
+
+    expect(samples[0]).toBeGreaterThan(0);
+    expect(samples[1]).toBeGreaterThan(0);
+  });
+
+  it("can trace diagnostics-only raw latch transitions", () => {
+    const pk = createPOKEY();
+    pokeySetSampleCycles(pk, 1);
+    pokeySetDiagnosticRawTransitions(pk, true);
+    pokeyWrite(pk, as_u8(0x0f), as_u8(0x03));
+    pokeyWrite(pk, as_u8(0x01), as_u8(0x1f)); // volume-only channel 1
+
+    pokeyTickCycles(pk, 2);
+
+    expect(pokeyDrainDiagnosticRawTransitions(pk)).toEqual([
+      {
+        cycle: 1,
+        nativeSample: 1,
+        cycleInNativeSample: 0,
+        prevRaw: 0,
+        raw: 0x000f,
+        audf: [0, 0, 0, 0],
+        audc: [0x1f, 0xb0, 0xb0, 0xb0],
+        audctl: 0,
+        skctl: 0x03,
+        counters: [0, 0, 0, 0],
+        borrowCnt: [0, 0, 0, 0],
+        outputs: [0, 0, 0, 0],
+        filterSamples: [0, 0, 0, 0],
+        poly4: 1,
+        poly5: 1,
+        poly9: 1,
+        poly17: 1,
+        clockCnt28: 1,
+        clockCnt114: 1,
+      },
+    ]);
+    expect(pokeyDrainDiagnosticRawTransitions(pk)).toEqual([]);
   });
 });
 

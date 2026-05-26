@@ -68,7 +68,7 @@ local function apply_input(frame)
     local start_pressed = in_pulse(frame, START_FRAME)
     local coin_port = ports[":1820"]
     if coin_port and coin_port.fields["Coin 1"] then
-        coin_port.fields["Coin 1"]:set_value(coin_pressed and 0 or 1)
+        coin_port.fields["Coin 1"]:set_value(coin_pressed and 1 or 0)
     end
     local start_port = ports[":F60000"]
     if start_port and start_port.fields["1 Player Start"] then

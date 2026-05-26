@@ -34,10 +34,51 @@ export interface M6502Cpu {
   nmi: boolean;
   /** Cycle accumulator (incremental per step). Resettabile dal caller. */
   cycles: number;
+  /** Diagnostic PC of the opcode currently executing. */
+  lastOpcodePc: number | undefined;
+  /** Diagnostics-only NMOS CLI IRQ sampling delay. Default false. */
+  cliIrqDelayEnabled: boolean;
+  /** Instruction boundaries that must still see the old IRQ mask after CLI. */
+  irqMaskDelayInstructions: number;
+  /** Diagnostics-only MAME-style IRQ recognition latch at opcode prefetch. */
+  irqPrefetchLatchEnabled: boolean;
+  /** IRQ response latched by the previous opcode prefetch. */
+  irqTakenPending: boolean;
+  /** Status byte visible at the most recent opcode prefetch point. */
+  irqPrefetchStatus: number | undefined;
 }
 
 export function createCpu(): M6502Cpu {
-  return { rf: createRegFile(), irq: false, nmi: false, cycles: 0 };
+  return {
+    rf: createRegFile(),
+    irq: false,
+    nmi: false,
+    cycles: 0,
+    lastOpcodePc: undefined,
+    cliIrqDelayEnabled: false,
+    irqMaskDelayInstructions: 0,
+    irqPrefetchLatchEnabled: false,
+    irqTakenPending: false,
+    irqPrefetchStatus: undefined,
+  };
+}
+
+export function setCliIrqDelay(cpu: M6502Cpu, enabled: boolean): void {
+  cpu.cliIrqDelayEnabled = enabled;
+  if (!enabled) cpu.irqMaskDelayInstructions = 0;
+}
+
+export function setIrqPrefetchLatch(cpu: M6502Cpu, enabled: boolean): void {
+  cpu.irqPrefetchLatchEnabled = enabled;
+  if (!enabled) {
+    cpu.irqTakenPending = false;
+    cpu.irqPrefetchStatus = undefined;
+  }
+}
+
+export function sampleIrqPrefetch(cpu: M6502Cpu): void {
+  if (!cpu.irqPrefetchLatchEnabled || cpu.irqPrefetchStatus === undefined) return;
+  cpu.irqTakenPending = cpu.irq && !hasFlag(as_u8(cpu.irqPrefetchStatus), FLAG_I);
 }
 
 // ─── Reset / Interrupts ───────────────────────────────────────────────────
@@ -51,6 +92,10 @@ export function reset(cpu: M6502Cpu, bus: MemBus6502): void {
   cpu.rf.pc = as_u16(lo | (hi << 8));
   cpu.irq = false;
   cpu.nmi = false;
+  cpu.lastOpcodePc = undefined;
+  cpu.irqMaskDelayInstructions = 0;
+  cpu.irqTakenPending = false;
+  cpu.irqPrefetchStatus = undefined;
   cpu.cycles += 7;
 }
 
@@ -99,15 +144,32 @@ export function step(cpu: M6502Cpu, bus: MemBus6502): number {
 
   // Service interrupts prima dell'opcode fetch
   if (cpu.nmi) {
+    cpu.lastOpcodePc = undefined;
+    cpu.irqMaskDelayInstructions = 0;
+    cpu.irqTakenPending = false;
+    cpu.irqPrefetchStatus = undefined;
     serviceNmi(cpu, bus);
     return cpu.cycles - cyclesBefore;
   }
-  if (cpu.irq && !hasFlag(cpu.rf.p, FLAG_I)) {
+  if (
+    cpu.irqPrefetchLatchEnabled
+      ? cpu.irqTakenPending
+      : cpu.irq && !hasFlag(cpu.rf.p, FLAG_I) && cpu.irqMaskDelayInstructions <= 0
+  ) {
+    cpu.lastOpcodePc = undefined;
+    cpu.irqMaskDelayInstructions = 0;
+    cpu.irqTakenPending = false;
+    cpu.irqPrefetchStatus = undefined;
     serviceIrq(cpu, bus);
     return cpu.cycles - cyclesBefore;
   }
+  if (cpu.irqMaskDelayInstructions > 0) {
+    cpu.irqMaskDelayInstructions--;
+  }
 
   // Fetch opcode (avanza PC)
+  cpu.lastOpcodePc = cpu.rf.pc as number;
+  const statusBeforeOpcode = cpu.rf.p;
   const opcode = bus.read8(cpu.rf.pc) as number;
   cpu.rf.pc = as_u16(((cpu.rf.pc as number) + 1) & 0xffff);
 
@@ -121,6 +183,19 @@ export function step(cpu: M6502Cpu, bus: MemBus6502): number {
 
   const base = baseCyclesFor(as_u8(opcode));
   const extra = entry.exec(cpu.rf, bus);
+  if (cpu.cliIrqDelayEnabled && opcode === 0x58) {
+    // NMOS 6502: CLI clears the programmer-visible I flag immediately, but
+    // MAME/real prefetch already sampled the next opcode with the old mask.
+    cpu.irqMaskDelayInstructions = Math.max(cpu.irqMaskDelayInstructions, 1);
+  }
+  if (cpu.irqPrefetchLatchEnabled) {
+    // MAME samples IRQ during opcode prefetch. CLI/SEI/PLP update I after that
+    // prefetch, unlike most status-affecting opcodes.
+    cpu.irqPrefetchStatus = opcode === 0x28 || opcode === 0x58 || opcode === 0x78
+      ? statusBeforeOpcode
+      : cpu.rf.p;
+    sampleIrqPrefetch(cpu);
+  }
   cpu.cycles += base + extra;
   return cpu.cycles - cyclesBefore;
 }

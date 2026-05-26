@@ -12,8 +12,7 @@
  *                 bit 3 = sound→main pending
  *                 bit 4 = main→sound pending (inverso di "input ready")
  *                 altri bit: switch coin/test (stub, ritorna 0)
- *  $1824-$1825  LS259 latch (write_d0 alias). bit 0 = YM2151 reset.           [W]
- *               In stub: write loggata ma nessun side effect attivo.
+ *  $1820-$1827  LS259 latch (write_d0 alias). addr low bits select latch bit. [W]
  *  $1870-$187F  POKEY                                                [R/W] (stub)
  *  $4000-$FFFF  ROM 48KB (marble usa solo $C000-$FFFF in 2 da 16KB)  [R]
  *
@@ -61,9 +60,36 @@ export interface SoundMmuConfig {
   /** Callback: 6502 ha letto la mailbox main→sound (ack). Wiring: rilascia
    * pin NMI 6502. Phase 4: opzionale (se assente, NMI line non modellata). */
   onMainToSoundAck?: () => void;
+  /** Diagnostic callback for 6502 reads of the main→sound command latch. */
+  onMainToSoundRead?: (event: { readonly val: u8 }) => void;
   /** Callback: 6502 ha scritto la mailbox sound→main (post). Wiring:
    * asserisce IRQ6 al 68010. Phase 4: opzionale. */
   onSoundToMainPost?: () => void;
+  /** Diagnostic override for the fixed/self-test/coin bits returned by $1820.
+   * Default is $87 (self-test idle + coin pull-ups high). Bits 3/4 are still
+   * ORed from mailbox pending state. */
+  statusBase?: u8;
+  /** Replay-time provider for input/status base bits. When present, this wins
+   * over `statusBase`; mailbox pending bits are still ORed in below. */
+  statusBaseProvider?: () => u8 | undefined;
+  /** Diagnostics hook to service cross-CPU events before sampling $1820. */
+  beforeStatusRead?: () => void;
+  /** Diagnostics-only experiment: ignore LS259 bit 0 writes that reset the
+   * YM2151. Default false preserves the Atari System 1 latch wiring. */
+  disableYmReset?: boolean;
+  /** Diagnostic callback for YM2151 data-port writes. */
+  onYmWrite?: (event: { readonly reg: number; readonly val: number }) => void;
+  /** Diagnostic callback for POKEY writes. */
+  onPokeyWrite?: (event: { readonly reg: number; readonly val: number }) => void;
+  /** Optional hook used by the sound-chip facade to apply chip I/O stores at
+   * their estimated 6502 bus cycle instead of at opcode start. Returning true
+   * means the caller has queued `apply` and the MMU must not apply it now. */
+  deferChipWrite?: (event: {
+    readonly kind: "ym2151Addr" | "ym2151Data" | "pokey";
+    readonly address: number;
+    readonly reg: number;
+    readonly val: number;
+  }, apply: () => void) => boolean;
 }
 
 export interface SoundMmu extends MemBus6502 {
@@ -75,7 +101,7 @@ export interface SoundMmu extends MemBus6502 {
   readonly ym2151: YM2151;
   /** POKEY device (Phase 6 register-state parity). Esposto per oracle diff. */
   readonly pokey: POKEY;
-  /** Last LS259 byte scritto per ognuno dei 2 indirizzi ($1824/$1825). */
+  /** Last LS259 output state per bit-addressed address ($1820-$1827). */
   readonly ls259Shadow: Uint8Array;
 }
 
@@ -88,7 +114,7 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
   const ram = new Uint8Array(0x1000);          // $0000-$0FFF
   const ym2151 = cfg.ym2151 ?? createYM2151();
   const pokey = cfg.pokey ?? createPOKEY();
-  const ls259Shadow = new Uint8Array(2);
+  const ls259Shadow = new Uint8Array(8);
 
   function read8(addr: u16): u8 {
     const a = addr as number;
@@ -101,9 +127,12 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
       return ym2151ReadStatus(ym2151);
     }
     if (a === 0x1810) {
-      return mailboxRead(cfg.mainToSound, cfg.onMainToSoundAck);
+      const value = mailboxRead(cfg.mainToSound, cfg.onMainToSoundAck);
+      cfg.onMainToSoundRead?.({ val: value });
+      return value;
     }
     if (a === 0x1820) {
+      cfg.beforeStatusRead?.();
       // status: per atarisy1.cpp::switch_6502_r:
       //   bit 7 ($80) = self-test switch (idle = 1; pull-up reale)
       //   bit 3 ($08) = main→sound pending (cmd buffer full, NMI source)
@@ -112,7 +141,8 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
       // Verificato 2026-05-17 via oracle/mame_1820_value_tap.lua: MAME al boot
       // ritorna $8F (= $87 base + bit 3 main pending). Senza i bit di pull-up
       // alti, boot $8018 `LDA $1820 AND #$80 BEQ` prende ramo divergente.
-      const base = 0x87;
+      const base = (cfg.statusBaseProvider?.() as number | undefined) ??
+        (cfg.statusBase as number | undefined) ?? 0x87;
       const b3 = cfg.mainToSound.pending ? 0x08 : 0;
       const b4 = cfg.soundToMain.pending ? 0x10 : 0;
       return as_u8(base | b3 | b4);
@@ -136,30 +166,54 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
       return;
     }
     if (a === 0x1800) {
-      ym2151WriteAddr(ym2151, value);
+      const apply = (): void => ym2151WriteAddr(ym2151, value);
+      if (cfg.deferChipWrite?.({
+        kind: "ym2151Addr",
+        address: a,
+        reg: 0,
+        val: v & 0xff,
+      }, apply) === true) return;
+      apply();
       return;
     }
     if (a === 0x1801) {
-      ym2151WriteData(ym2151, value);
+      const reg = ym2151.selectedReg & 0xff;
+      cfg.onYmWrite?.({ reg: ym2151.selectedReg & 0xff, val: v & 0xff });
+      const apply = (): void => ym2151WriteData(ym2151, value);
+      if (cfg.deferChipWrite?.({
+        kind: "ym2151Data",
+        address: a,
+        reg,
+        val: v & 0xff,
+      }, apply) === true) return;
+      apply();
       return;
     }
     if (a === 0x1810) {
       mailboxWrite(cfg.soundToMain, value, cfg.onSoundToMainPost);
       return;
     }
-    if (a === 0x1824 || a === 0x1825) {
-      // LS259 outlatch alias. write_d0 = scrive solo bit 0 in hardware MAME;
-      // qui salva intero byte per debug shadow. Side effect: bit 0 di $1824
-      // controlla YM2151 reset (active low? convention varia, vedi MAME).
-      ls259Shadow[a - 0x1824] = v;
-      if (a === 0x1824 && (v & 0x01) === 0) {
-        // YM2151 reset (active low). Stub V2: pulisce reg file + flag.
+    if (a >= 0x1820 && a <= 0x1827) {
+      // LS259 outlatch. MAME maps $1820-$1827 to write_d0: the address selects
+      // the output bit, and only data bit 0 is latched. Q0 drives YM reset.
+      const bit = a - 0x1820;
+      const d0 = v & 0x01;
+      ls259Shadow[bit] = d0;
+      if (bit === 0 && d0 !== 0 && cfg.disableYmReset !== true) {
         ym2151Reset(ym2151);
       }
       return;
     }
     if (a >= 0x1870 && a < 0x1880) {
-      pokeyWrite(pokey, as_u8(a - 0x1870), value);
+      cfg.onPokeyWrite?.({ reg: a - 0x1870, val: v & 0xff });
+      const apply = (): void => pokeyWrite(pokey, as_u8(a - 0x1870), value);
+      if (cfg.deferChipWrite?.({
+        kind: "pokey",
+        address: a,
+        reg: a - 0x1870,
+        val: v & 0xff,
+      }, apply) === true) return;
+      apply();
       return;
     }
     // ROM range write: open bus, ignored (mirror MAME).
