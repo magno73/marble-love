@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { bus as busNs, state as stateNs, alphaTilemap as alphaTilemapNs } from "@marble-love/engine";
 import {
   COIN_START_RUNTIME_PULSE_FRAMES,
+  clearBrowserSoundCommandSkip,
   consumeRuntimeStartCredit,
   inputMmioWithStartPulse,
   isCoinStartAttractReady,
@@ -39,6 +40,15 @@ describe("coin/start browser flow helpers", () => {
     expect(state.clock.levelIntroBannerBaseTimer).toBeUndefined();
     expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
     expect(isCoinStartAttractReady(state)).toBe(false);
+  });
+
+  it("clears the boot sound-command skip gate when runtime gameplay starts", () => {
+    const state = stateNs.emptyGameState();
+    writeWordBE(state.workRam, 0x3b8, 0x012c);
+
+    clearBrowserSoundCommandSkip(state);
+
+    expect(readWorkWordBE(state, 0x3b8)).toBe(0);
   });
 
   it("detects the stable attract gate after timeout rebuild", () => {

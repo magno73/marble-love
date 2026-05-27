@@ -32,6 +32,7 @@ import {
 } from "./boot-flow-url.js";
 import {
   COIN_START_RUNTIME_PULSE_FRAMES,
+  clearBrowserSoundCommandSkip,
   consumeRuntimeStartCredit,
   inputMmioWithStartPulse,
   isCoinStartAttractReady,
@@ -63,6 +64,7 @@ import {
   YM2151_NATIVE_SAMPLE_RATE,
   POKEY_NATIVE_SAMPLE_RATE,
   type CmdTape,
+  type LoadedCmdTape,
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 import { runSoundReplay } from "./sound-replay.js";
@@ -1561,6 +1563,8 @@ async function startGame(
   let soundRenderer: SoundRenderer | undefined;
   let soundRomSlices: { rom421: Uint8Array; rom422: Uint8Array } | undefined;
   let soundChipPrepareGeneration = 0;
+  let soundChipMode: "idle" | "attract" | "gameplay" = "idle";
+  let soundChipPrepareKind: "attract" | "gameplay" | undefined;
   const soundCommandQueue: number[] = [];
   const soundTraceEnabled = searchParams.get("soundTrace") === "1";
   const soundTraceLimit = Math.max(100, Number.parseInt(searchParams.get("soundTraceLimit") ?? "4000", 10) || 4000);
@@ -1598,7 +1602,33 @@ async function startGame(
   );
   const soundPrewarmTapeUrl =
     searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+  const soundAttractEnabled = searchParams.get("soundAttract") === "1";
+  const soundAttractTapeUrl =
+    searchParams.get("soundAttractTape") ?? "scenarios/sound/cmd-tape-attract-music.json";
+  const soundAttractStartFrame = Math.max(
+    0,
+    Number.parseInt(searchParams.get("soundAttractStartFrame") ?? "244", 10) || 244,
+  );
+  const soundCoinEnabled = searchParams.get("soundCoin") === "1";
+  const soundCoinTapeUrl =
+    searchParams.get("soundCoinTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+  const soundCoinStartFrame = Math.max(
+    0,
+    Number.parseInt(searchParams.get("soundCoinStartFrame") ?? "1217", 10) || 1217,
+  );
+  const soundCoinPlayFrames = Math.max(
+    1,
+    Number.parseInt(searchParams.get("soundCoinPlayFrames") ?? "100", 10) || 100,
+  );
   let soundServiceFrame = Math.max(245, soundPrewarmFrame);
+  let soundAttractTape: LoadedCmdTape | undefined;
+  let soundAttractFrame = soundAttractStartFrame;
+  let soundCoinChip: ReturnType<typeof createSoundChip> | undefined;
+  let soundCoinTape: LoadedCmdTape | undefined;
+  let soundCoinPreparing = false;
+  let soundCoinRequested = false;
+  let soundCoinFrame = soundCoinStartFrame;
+  let soundCoinFramesRemaining = 0;
   let lastSoundLevelMusicIndex: number | undefined;
   let lastSpecialSoundCmd = -1;
   let lastSpecialSoundFrame = -1000000;
@@ -1635,6 +1665,10 @@ async function startGame(
   function isSoundGameplayActive(): boolean {
     if (useBootFlow || useCoinStartFlow) return manualPlayStarted;
     return startLevelPracticeActive || warmStateIsPlayableSeed;
+  }
+
+  function isSoundAttractActive(): boolean {
+    return soundAttractEnabled && (useBootFlow || useCoinStartFlow) && !manualPlayStarted;
   }
 
   function exposeSoundTrace(): void {
@@ -1703,6 +1737,26 @@ async function startGame(
     console.log(`[sound] SoundChip prewarm complete at frame ${lastFrame}`);
   }
 
+  async function loadSoundAttractTape(): Promise<LoadedCmdTape> {
+    if (soundAttractTape !== undefined) return soundAttractTape;
+    const response = await fetch(soundAttractTapeUrl);
+    if (!response.ok) throw new Error(`fetch ${soundAttractTapeUrl} failed: ${response.status}`);
+    const tapeJson = await response.json() as CmdTape;
+    const tape = loadCmdTape(tapeJson);
+    soundAttractTape = tape;
+    return tape;
+  }
+
+  async function loadSoundCoinTape(): Promise<LoadedCmdTape> {
+    if (soundCoinTape !== undefined) return soundCoinTape;
+    const response = await fetch(soundCoinTapeUrl);
+    if (!response.ok) throw new Error(`fetch ${soundCoinTapeUrl} failed: ${response.status}`);
+    const tapeJson = await response.json() as CmdTape;
+    const tape = loadCmdTape(tapeJson);
+    soundCoinTape = tape;
+    return tape;
+  }
+
   function enqueueSoundLevelMusicCommand(levelIndex: number): boolean {
     if (!soundLevelMusicEnabled) return false;
     const cmd = soundLevelMusicCommandForLevelIndex(levelIndex);
@@ -1715,8 +1769,10 @@ async function startGame(
   function prepareSoundChipForGameplay(reason: string): void {
     if (!runSoundChip || soundRomSlices === undefined) return;
     const generation = ++soundChipPrepareGeneration;
+    soundChipPrepareKind = "gameplay";
     soundCommandQueue.length = 0;
     soundChip = undefined;
+    soundChipMode = "idle";
     lastSoundLevelMusicIndex = undefined;
     lastSpecialSoundCmd = -1;
     lastSpecialSoundFrame = -1000000;
@@ -1731,9 +1787,115 @@ async function startGame(
       }
       if (generation !== soundChipPrepareGeneration) return;
       soundChip = chip;
+      soundChipMode = "gameplay";
+      soundChipPrepareKind = undefined;
       lastSoundLevelMusicIndex = undefined;
       console.log(`[sound] SoundChip ready for ${reason}; click 'Enable Audio' to hear PCM`);
     })();
+  }
+
+  function prepareSoundChipForAttract(reason: string): void {
+    if (!runSoundChip || soundRomSlices === undefined || !soundAttractEnabled) return;
+    const generation = ++soundChipPrepareGeneration;
+    soundChipPrepareKind = "attract";
+    soundCommandQueue.length = 0;
+    soundChip = undefined;
+    soundChipMode = "idle";
+    lastSoundLevelMusicIndex = undefined;
+    lastSpecialSoundCmd = -1;
+    lastSpecialSoundFrame = -1000000;
+    soundTraceSummary.restarts++;
+    soundAttractFrame = soundAttractStartFrame;
+    const chip = createSoundChip({ roms: soundRomSlices });
+    void (async () => {
+      try {
+        await loadSoundAttractTape();
+      } catch (e) {
+        console.warn("[sound] attract tape failed, releasing cold SoundChip:", e);
+        releaseSoundReset(chip);
+      }
+      if (generation !== soundChipPrepareGeneration) return;
+      soundChip = chip;
+      soundChipMode = "attract";
+      soundChipPrepareKind = undefined;
+      console.log(`[sound] SoundChip ready for ${reason} attract`);
+    })();
+  }
+
+  function ensureSoundChipForGameplay(reason: string): void {
+    if (soundChip !== undefined && soundChipMode === "gameplay") return;
+    if (soundChipPrepareKind === "gameplay") return;
+    prepareSoundChipForGameplay(reason);
+  }
+
+  function transitionSoundChipToGameplay(reason: string): void {
+    if (soundChip !== undefined && soundChipMode === "attract") {
+      prepareSoundChipForGameplay(reason);
+      return;
+    }
+    ensureSoundChipForGameplay(reason);
+  }
+
+  function prepareSoundCoinChip(reason: string): void {
+    if (
+      !runSoundChip ||
+      soundRomSlices === undefined ||
+      !soundCoinEnabled ||
+      soundCoinPreparing ||
+      soundCoinChip !== undefined
+    ) {
+      return;
+    }
+    soundCoinPreparing = true;
+    const chip = createSoundChip({ roms: soundRomSlices });
+    void (async () => {
+      try {
+        const tape = await loadSoundCoinTape();
+        const lastFrame = Math.min(soundCoinStartFrame, tape.totalFrames);
+        console.log(`[sound] preparing coin SoundChip from ${soundCoinTapeUrl} to frame ${lastFrame}`);
+        for (let f = 0; f < lastFrame; f++) {
+          tickFrameWithTape(chip, tape, f, { autoReleaseReset: true, drainReplies: true });
+          drainYm2151Samples(chip);
+          drainPokeySamples(chip);
+          if ((f & 0x0f) === 0x0f) await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        if (manualPlayStarted) {
+          soundCoinPreparing = false;
+          return;
+        }
+        soundCoinChip = chip;
+        soundCoinFrame = lastFrame;
+        soundCoinPreparing = false;
+        if (soundCoinRequested) {
+          soundCoinRequested = false;
+          soundCoinFrame = lastFrame;
+          soundCoinFramesRemaining = soundCoinPlayFrames;
+        }
+        console.log(`[sound] coin SoundChip ready for ${reason}`);
+      } catch (e) {
+        soundCoinPreparing = false;
+        console.warn("[sound] coin SoundChip prepare failed:", e);
+      }
+    })();
+  }
+
+  function triggerSoundCoin(): void {
+    if (!soundCoinEnabled) return;
+    soundCoinRequested = true;
+    if (soundCoinChip === undefined || soundCoinFramesRemaining > 0) {
+      prepareSoundCoinChip("coin");
+      return;
+    }
+    soundCoinRequested = false;
+    soundCoinFrame = Math.min(soundCoinStartFrame, soundCoinTape?.totalFrames ?? soundCoinStartFrame);
+    soundCoinFramesRemaining = soundCoinPlayFrames;
+  }
+
+  function stopSoundCoinPlayback(): void {
+    soundCoinRequested = false;
+    soundCoinFramesRemaining = 0;
+    soundCoinChip = undefined;
+    soundCoinFrame = soundCoinStartFrame;
   }
 
   function enqueueSoundMusicService(): void {
@@ -1790,17 +1952,11 @@ async function startGame(
     }
   }
 
-  function processSoundFrame(chip: ReturnType<typeof createSoundChip>): void {
+  function submitQueuedSoundCommands(chip: ReturnType<typeof createSoundChip>): number {
     const commands = soundCommandQueue.splice(0, soundMaxCommandsPerFrame);
-    let remainingCycles = SOUND_CYCLES_PER_FRAME;
-    if (commands.length === 0) {
-      tickSoundChipAndDrain(chip, remainingCycles);
-      pushSoundPcm(chip);
-      exposeSoundTrace();
-      return;
-    }
-
+    if (commands.length === 0) return SOUND_CYCLES_PER_FRAME;
     const spacing = Math.max(1, Math.floor(SOUND_CYCLES_PER_FRAME / (commands.length + 1)));
+    let remainingCycles = SOUND_CYCLES_PER_FRAME;
     for (let i = 0; i < commands.length; i++) {
       const advance = Math.min(spacing, remainingCycles);
       tickSoundChipAndDrain(chip, advance);
@@ -1829,10 +1985,61 @@ async function startGame(
         mailboxPending: chip.mainToSound.pending,
       });
     }
+    return remainingCycles;
+  }
 
+  function processSoundFrame(chip: ReturnType<typeof createSoundChip>): void {
+    const remainingCycles = submitQueuedSoundCommands(chip);
     tickSoundChipAndDrain(chip, remainingCycles);
     pushSoundPcm(chip);
     exposeSoundTrace();
+  }
+
+  function processSoundAttractFrame(chip: ReturnType<typeof createSoundChip>): void {
+    const remainingCycles = submitQueuedSoundCommands(chip);
+    if (soundAttractTape === undefined) {
+      tickSoundChipAndDrain(chip, remainingCycles);
+    } else {
+      tickFrameWithTape(chip, soundAttractTape, soundAttractFrame, {
+        autoReleaseReset: true,
+        drainReplies: true,
+      });
+      soundAttractFrame++;
+      if (soundAttractFrame >= soundAttractTape.totalFrames) {
+        soundAttractFrame = soundAttractStartFrame;
+      }
+    }
+    pushSoundPcm(chip);
+    exposeSoundTrace();
+  }
+
+  function processSoundCoinFrame(): void {
+    if (
+      soundCoinChip === undefined ||
+      soundCoinTape === undefined ||
+      soundCoinFramesRemaining <= 0 ||
+      soundRenderer === undefined ||
+      !soundRenderer.isRunning()
+    ) {
+      return;
+    }
+    if (manualPlayStarted) {
+      stopSoundCoinPlayback();
+      return;
+    }
+    tickFrameWithTape(soundCoinChip, soundCoinTape, soundCoinFrame, {
+      autoReleaseReset: true,
+      drainReplies: true,
+    });
+    soundCoinFrame++;
+    soundCoinFramesRemaining--;
+    pushSoundPcm(soundCoinChip);
+    if (soundCoinFramesRemaining > 0) return;
+    soundCoinChip = undefined;
+    soundCoinFrame = soundCoinStartFrame;
+    if ((useBootFlow || useCoinStartFlow) && !manualPlayStarted) {
+      prepareSoundCoinChip("coin rearm");
+    }
   }
 
   setSoundCmdHook(undefined);
@@ -1845,8 +2052,13 @@ async function startGame(
       soundRomSlices = { rom421, rom422 };
       if (isSoundGameplayActive()) {
         prepareSoundChipForGameplay("initial gameplay");
+      } else if (isSoundAttractActive()) {
+        prepareSoundChipForAttract("initial");
       } else {
         console.log("[sound] SoundChip waiting for gameplay start");
+      }
+      if ((useBootFlow || useCoinStartFlow) && !manualPlayStarted) {
+        prepareSoundCoinChip("initial");
       }
 
       let cmdCount = 0;
@@ -2025,6 +2237,9 @@ async function startGame(
     if ((useCoinStartFlow || useBootFlow) && coinPulses > 0) {
       browserCoinCredits = Math.min(9, browserCoinCredits + coinPulses);
       const flowName = useBootFlow ? "bootFlow coin" : "coin";
+      if (soundCoinEnabled) {
+        triggerSoundCoin();
+      }
       console.log(`[marble-love] ${flowName} accepted, credits=${browserCoinCredits}`);
     }
     const startPulses = inputState.consumeStartPulses();
@@ -2072,8 +2287,10 @@ async function startGame(
       inputState.setP1Absolute(s.workRam[0x18 + 0xc9] ?? 0xff, s.workRam[0x18 + 0xc8] ?? 0xff);
       manualPlayStarted = true;
       lastLevelTimeOverrideLevel = undefined;
+      clearBrowserSoundCommandSkip(s);
+      stopSoundCoinPlayback();
       maybeApplyLevelTimeOverride("START1");
-      prepareSoundChipForGameplay("coin start");
+      ensureSoundChipForGameplay("coin start");
       console.log(`[marble-love] START1 accepted, live gameplay seed loaded, credits=${browserCoinCredits}`);
     }
 
@@ -2134,7 +2351,9 @@ async function startGame(
           browserCoinCredits = result.credits;
           manualPlayStarted = true;
           lastLevelTimeOverrideLevel = undefined;
-          prepareSoundChipForGameplay("bootFlow start");
+          clearBrowserSoundCommandSkip(s);
+          stopSoundCoinPlayback();
+          transitionSoundChipToGameplay("bootFlow start");
           console.log(
             `[marble-love] bootFlow START${countValue} accepted through runtime gate, ` +
             `credits=${browserCoinCredits}; no gameplay seed loaded`,
@@ -2150,7 +2369,14 @@ async function startGame(
       maybeApplyLevelTimeOverride("level change");
       enqueueSoundLevelMusicIfNeeded();
       if (runSoundChip && soundChip !== undefined) {
-        processSoundFrame(soundChip);
+        if (soundChipMode === "attract" && isSoundAttractActive()) {
+          processSoundAttractFrame(soundChip);
+        } else if (soundChipMode === "gameplay" && isSoundGameplayActive()) {
+          processSoundFrame(soundChip);
+        }
+      }
+      if (runSoundChip) {
+        processSoundCoinFrame();
       }
     }
     if ((useCoinStartFlow || useBootFlow) && !manualPlayStarted && rom !== undefined) {

@@ -24,6 +24,7 @@ interface RomProgram {
 const MAIN_STATE_OFF = 0x390;
 const MODE_SELECTOR_OFF = 0x392;
 const ATTRACT_TIMER_OFF = 0x75a;
+const SOUND_CMD_SKIP_WORD_OFF = 0x3b8;
 const ATTRACT_MAIN_STATE = 1;
 const CREDIT_ROW = 28;
 const CREDIT_DIGIT_COL = 34;
@@ -62,6 +63,10 @@ export function prepareBrowserCoinStartAttract(state: CoinStartState): void {
   state.clock.mode2Init11452Stage = 0;
   state.clock.levelIntroBannerBaseTimer = undefined;
   state.clock.levelIntroBannerResumeTick = undefined;
+}
+
+export function clearBrowserSoundCommandSkip(state: Pick<CoinStartState, "workRam">): void {
+  writeWorkWordBE(state, SOUND_CMD_SKIP_WORD_OFF, 0);
 }
 
 export function isCoinStartAttractReady(state: CoinStartState): boolean {
