@@ -43,6 +43,11 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
+  shouldHandoffSoundChipForLevelChange,
+  soundGameplayPrewarmFrameBeforeLevelMusic,
+  soundLevelMusicCommandForLevelIndex,
+} from "./sound-gameplay-profile.js";
+import {
   createSoundChip,
   tickCycles as tickSoundCycles,
   releaseSoundReset,
@@ -1565,7 +1570,11 @@ async function startGame(
   );
   const soundMusicServiceEnabled = searchParams.get("soundMusicService") !== "0";
   const soundLevelMusicEnabled = searchParams.get("soundLevelMusic") !== "0";
-  const soundRestartOnLevelChange = searchParams.get("soundRestartOnLevelChange") === "1";
+  const soundLevelHandoffParam = searchParams.get("soundLevelHandoff");
+  const soundLevelHandoffEnabled =
+    soundLevelHandoffParam === null
+      ? searchParams.get("soundRestartOnLevelChange") !== "0"
+      : soundLevelHandoffParam !== "0";
   const soundSpecialDedupeFrames = Math.max(
     0,
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
@@ -1575,16 +1584,20 @@ async function startGame(
     startLevelPracticeActive || forcePlay || useBootFlow || useCoinStartFlow
       ? Math.min(warmStateFrame ?? 1571, 1571)
       : 0;
-  const soundPrewarmFrame = soundPrewarmDisabled
+  const soundPrewarmFrameParam = searchParams.get("soundPrewarmFrame");
+  const soundRequestedPrewarmFrame = soundPrewarmDisabled
     ? 0
     : Math.max(
         0,
-        Number.parseInt(searchParams.get("soundPrewarmFrame") ?? String(soundPrewarmDefaultFrame), 10) ||
+        Number.parseInt(soundPrewarmFrameParam ?? String(soundPrewarmDefaultFrame), 10) ||
           soundPrewarmDefaultFrame,
       );
+  const soundPrewarmFrame = soundGameplayPrewarmFrameBeforeLevelMusic(
+    soundRequestedPrewarmFrame,
+    soundPrewarmFrameParam !== null,
+  );
   const soundPrewarmTapeUrl =
     searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
-  const soundLevelMusicCommands = [0x0b, 0x0d, 0x12, 0x17, 0x19] as const;
   let soundServiceFrame = Math.max(245, soundPrewarmFrame);
   let lastSoundLevelMusicIndex: number | undefined;
   let lastSpecialSoundCmd = -1;
@@ -1595,6 +1608,7 @@ async function startGame(
     submitted: 0,
     service: 0,
     levelMusic: 0,
+    levelHandoffs: 0,
     restarts: 0,
     suppressed: 0,
     stalled: 0,
@@ -1689,6 +1703,15 @@ async function startGame(
     console.log(`[sound] SoundChip prewarm complete at frame ${lastFrame}`);
   }
 
+  function enqueueSoundLevelMusicCommand(levelIndex: number): boolean {
+    if (!soundLevelMusicEnabled) return false;
+    const cmd = soundLevelMusicCommandForLevelIndex(levelIndex);
+    if (cmd === undefined) return false;
+    enqueueSoundCommand(cmd, "level");
+    lastSoundLevelMusicIndex = levelIndex;
+    return true;
+  }
+
   function prepareSoundChipForGameplay(reason: string): void {
     if (!runSoundChip || soundRomSlices === undefined) return;
     const generation = ++soundChipPrepareGeneration;
@@ -1727,19 +1750,22 @@ async function startGame(
     const levelIndex = readWorkWordBE(s, 0x394);
     if (levelIndex === lastSoundLevelMusicIndex) return;
     const previousLevelIndex = lastSoundLevelMusicIndex;
-    lastSoundLevelMusicIndex = levelIndex;
 
-    // The playable seeds expose zero-based level indexes. Level 1 is covered
-    // by the MAME gameplay prewarm tape; later levels need the next table
-    // entries. `$09` is a short/terminating cue here, so level 2 starts at `$0b`.
-    if (levelIndex === 0) return;
-    if (previousLevelIndex !== undefined && soundRestartOnLevelChange) {
+    if (shouldHandoffSoundChipForLevelChange(previousLevelIndex, levelIndex, soundLevelHandoffEnabled)) {
+      soundTraceSummary.levelHandoffs++;
+      traceSoundEvent({
+        kind: "level-handoff",
+        frame: frameCount,
+        previousLevelIndex: previousLevelIndex ?? -1,
+        levelIndex,
+      });
       prepareSoundChipForGameplay(`level ${levelIndex + 1}`);
       return;
     }
-    const cmd = soundLevelMusicCommands[levelIndex - 1];
-    if (cmd === undefined) return;
-    enqueueSoundCommand(cmd, "level");
+
+    if (!enqueueSoundLevelMusicCommand(levelIndex)) {
+      lastSoundLevelMusicIndex = levelIndex;
+    }
   }
 
   function tickSoundChipAndDrain(chip: ReturnType<typeof createSoundChip>, cycles: number): void {
