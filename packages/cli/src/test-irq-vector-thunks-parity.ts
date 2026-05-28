@@ -1,23 +1,13 @@
 #!/usr/bin/env node
 /**
- * test-irq-vector-thunks-parity.ts — verifica bit-perfect degli IRQ-vector thunks.
  *
  * Strategia:
  *
  * I 23 thunk JMP (0x100..0x254) sono `jmp targetAddr.l` puri: chiamare il
- * thunk produce esattamente lo stesso effetto workRam del target. Per
  * verificare la bit-exactness:
- *   1. Identifica ogni (sourceAddr, targetAddr) dalla THUNK_TABLE.
- *   2. Per 100 casi random-seed, prepara uno snapshot workRam identico.
- *   3. Chiama Musashi su sourceAddr → registra workRam delta.
- *   4. Chiama Musashi su targetAddr con lo stesso snapshot → registra delta.
- *   5. Verifica che i due delta siano identici (jmp = redirect puro).
+ *   1. Identify each (sourceAddr, targetAddr) from THUNK_TABLE.
  *
- * Thunk 0x01010A (`move #0x2000,SR ; rts`) non è un JMP: si verifica solo
- * che esegua in ≤ 500 cicli senza crash e non modifichi workRam.
  *
- * Limiti: alcuni target non hanno `rts` finale (tail-call chain) — per questi
- * callFunction può timeout (maxCycles=200_000). Il test li skippa contando
  * come "timeout_skip" e li riporta a fine run.
  *
  * Uso: npx tsx packages/cli/src/test-irq-vector-thunks-parity.ts [N=100]

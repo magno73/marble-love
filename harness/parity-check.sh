@@ -7,9 +7,6 @@
 # Esempio:
 #   harness/parity-check.sh attract_mode 45 600 0
 #
-# Allineamento: MAME ha una transitoria di boot di N frame prima del primo
-# tick (attract_mode → ~45). reimpl[i] viene confrontato con
-# oracle[i+truth-offset]. Per misurare parità "tick-by-tick".
 
 set -euo pipefail
 

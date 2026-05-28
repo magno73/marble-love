@@ -1,7 +1,6 @@
 /**
  * slapstic-table-store.test.ts — smoke tests di slapsticTableStore (FUN_2FF40).
  *
- * Bit-perfect parity verificata vs binary in
  * `cli/src/test-slapstic-table-store-parity.ts`.
  */
 
@@ -62,7 +61,6 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
 
     slapsticTableStore(buf, SLAPSTIC_BASE, 2);
 
-    // Verifica diretta sui byte: 0x87A4C = SLAPSTIC_BASE + 0x7A4C
     const off = 0x7a4c;
     expect(buf[off]).toBe(0xbe);
     expect(buf[off + 1]).toBe(0xef);
@@ -94,15 +92,12 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
   it("indexWord=0x4000 (overflow add.w): doubled=0x8000 → signExt → -0x8000", () => {
     // add.w 0x4000 + 0x4000 = 0x8000 (16-bit, no overflow nel low word).
     // signExt16(0x8000) = -0x8000 = -32768.
-    // dst = 0x87A48 - 0x8000 = 0x7FA48 — fuori dalla regione slapstic.
-    // → no-op: la funzione non scrive nulla nel buffer slapstic.
     const buf = makeBuf();
     setSrcWord(buf, 0xa5a5);
-    const before = new Uint8Array(buf); // copia di backup
+    const before = new Uint8Array(buf);
 
     slapsticTableStore(buf, SLAPSTIC_BASE, 0x4000);
 
-    // Buffer invariato (eccetto la src che era già settata).
     expect(buf).toEqual(before);
   });
 
@@ -112,8 +107,6 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     const before = new Uint8Array(buf);
 
     // index=0x8000: doubled=0 (16-bit add wraps), signExt=0 → dst=DST_BASE.
-    // Quindi questo NON è no-op, scrive a dst[0]. Per testare no-op uso un index
-    // che porta dst fuori dal buffer più piccolo.
     const smallBuf = new Uint8Array(0x100); // troppo piccolo
     setSrcWord(smallBuf, 0xface); // off-by-bound, ma non fa throw
     expect(() => slapsticTableStore(smallBuf, SLAPSTIC_BASE, 0)).not.toThrow();

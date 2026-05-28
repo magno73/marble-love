@@ -2,12 +2,7 @@
  * refresh-frame-10fce.test.ts — smoke tests for `FUN_00010FCE`
  * (idle/refresh frame handler).
  *
- * Verifica:
- *   1. Tutte le 12 callback vengono invocate nell'ordine esatto del disasm.
  *   2. I due `addq.b #1, (0x4003F0)` avvengono nelle posizioni corrette
- *      (dopo JSR #5 e dopo JSR #10).
- *   3. La funzione è idempotente rispetto al frame-counter (incrementa di 2
- *      per chiamata).
  */
 
 import { describe, it, expect } from "vitest";

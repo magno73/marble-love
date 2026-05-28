@@ -2,12 +2,6 @@
 /**
  * test-or-flags-5248-smoke.ts — smoke tests per `orFlags5248`.
  *
- * Verifica 5 casi deterministici (senza ROM/binary oracle):
- *   1. OR con maschera 0x3 su valore zero → result = 0x3.
- *   2. OR con maschera 0 → no-op, valore preservato.
- *   3. OR cumulativo: due chiamate successive accumulano bit.
- *   4. OR con 0xFFFFFFFF → tutti i bit settati.
- *   5. OR con maschera che sovrappone bit già settati → idempotente.
  */
 
 import { exit } from "node:process";
@@ -49,7 +43,6 @@ function setFlags(s: ReturnType<typeof stateNs.emptyGameState>, v: number): void
   s.workRam[ns.STATUS_FLAGS_OFF + 3] = n & 0xff;
 }
 
-// ─── Test 1: OR 0x3 su valore zero ───────────────────────────────────────────
 console.log("\nTest 1: OR 0x3 su valore zero");
 {
   const s = makeState();
@@ -59,7 +52,7 @@ console.log("\nTest 1: OR 0x3 su valore zero");
   assert(v === 0x3, `flags = 0x${v.toString(16)} (expected 0x3)`);
 }
 
-// ─── Test 2: OR con maschera 0 → no-op ───────────────────────────────────────
+// ─── Test 2: OR with mask 0 -> no-op ─────────────────────────────────────────
 console.log("\nTest 2: OR maschera 0 → no-op");
 {
   const s = makeState();
@@ -80,7 +73,6 @@ console.log("\nTest 3: OR cumulativo (0x1 poi 0x2 poi 0x4)");
   assert(v === 0x7, `flags = 0x${v.toString(16)} (expected 0x7)`);
 }
 
-// ─── Test 4: OR 0xFFFFFFFF → tutti i bit a 1 ─────────────────────────────────
 console.log("\nTest 4: OR 0xFFFFFFFF");
 {
   const s = makeState();
@@ -89,12 +81,11 @@ console.log("\nTest 4: OR 0xFFFFFFFF");
   assert(v === 0xffffffff, `flags = 0x${v.toString(16)} (expected 0xffffffff)`);
 }
 
-// ─── Test 5: OR idempotente (bit già settati) ─────────────────────────────────
 console.log("\nTest 5: OR idempotente");
 {
   const s = makeState();
   setFlags(s, 0x00ff00ff);
-  ns.orFlags5248(s, 0x00ff00ff); // stesso valore
+  ns.orFlags5248(s, 0x00ff00ff);
   const v = getFlags(s);
   assert(v === 0x00ff00ff, `flags = 0x${v.toString(16)} (expected 0x00ff00ff)`);
 }

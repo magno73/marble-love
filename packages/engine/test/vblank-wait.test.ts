@@ -1,7 +1,6 @@
 /**
  * vblank-wait.test.ts — smoke test di `waitVblank` (FUN_000052B8).
  *
- * Bit-perfect parity verificata vs binary in
  * `packages/cli/src/test-vblank-wait-parity.ts`.
  */
 
@@ -29,18 +28,14 @@ describe("waitVblank (FUN_000052B8)", () => {
     const s = emptyGameState();
     // -1 = 0xFFFF, signed → tst.w bgt non scatta
     expect(waitVblank(s, -1)).toBe(0xffff);
-    // 0x8000 = -32768 (signed) → bgt non scatta → ritorna 0x8000
     expect(waitVblank(s, 0x8000)).toBe(0x8000);
     expect(waitVblank(s, -100)).toBe((-100 & 0xffff) >>> 0);
   });
 
   it("count viene troncato a 16 bit (D0w)", () => {
     const s = emptyGameState();
-    // 0x10000 → low word = 0 → bgt non scatta → ritorna 0
     expect(waitVblank(s, 0x10000)).toBe(0);
-    // 0x18000 → low word = 0x8000 (signed -32768) → ritorna 0x8000
     expect(waitVblank(s, 0x18000)).toBe(0x8000);
-    // 0x10001 → low word = 0x0001 (signed +1) → loop esegue → ritorna 0
     expect(waitVblank(s, 0x10001)).toBe(0);
   });
 
@@ -50,7 +45,7 @@ describe("waitVblank (FUN_000052B8)", () => {
 
   it("invariante: workRam non viene mai modificata", () => {
     const s = emptyGameState();
-    // pre-fill con pattern noto
+    // pre-fill with a known pattern.
     for (let i = 0; i < s.workRam.length; i++) {
       s.workRam[i] = (i * 7 + 3) & 0xff;
     }

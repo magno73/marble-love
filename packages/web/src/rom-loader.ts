@@ -271,7 +271,7 @@ function buildGraphicsAssets(
   tiles: Uint8Array,
   proms: Uint8Array,
 ): RomGraphicsAssets {
-  // MAME: `ROM_REGION(0x2000, "alpha", 0)` — niente INVERT (solo tiles ha INVERT).
+  // MAME: `ROM_REGION(0x2000, "alpha", 0)` - no INVERT (only tiles has INVERT).
   const alpha = requireEntry(entries, alphaFile.name);
 
   return {
@@ -319,11 +319,11 @@ export function extractRomZipArchives(
   const sound = assembleLinearRegion(entries, soundFiles, SOUND_REGION_SIZE);
   // MAME `ROM_REGION(... "tiles", ROMREGION_INVERT | ROMREGION_ERASEFF)`.
   //   1. Pre-fill 0xFF (ERASEFF)
-  //   2. ROM_LOAD: i file sovrascrivono
-  //   3. XOR 0xFF su tutto (INVERT)
-  // Net: file_byte → ~file_byte; gap → 0x00. Senza INVERT, file 145+146
-  // (= dummy 0xFF) produrrebbero plane MSB=1 → pen += 16 per ogni pixel
-  // dei tile bank 1 5bpp → palette index "shifted +16" rispetto MAME.
+  //   2. ROM_LOAD: files overwrite
+  //   3. XOR 0xFF over everything (INVERT)
+  // Net: file_byte -> ~file_byte; gap -> 0x00. Without INVERT, files 145+146
+  // (= dummy 0xFF) would produce plane MSB=1 -> pen += 16 for every pixel in
+  // tile bank 1 5bpp -> palette index "shifted +16" versus MAME.
   const tiles = new Uint8Array(TILE_REGION_SIZE).fill(0xff);
   for (const file of tileFiles) {
     copyLinear(tiles, file, requireEntry(entries, file.name));
@@ -331,11 +331,11 @@ export function extractRomZipArchives(
   for (let i = 0; i < tiles.length; i++) tiles[i] = ~tiles[i]! & 0xff;
   const proms = assembleLinearRegion(entries, promFiles, PROM_REGION_SIZE);
 
-  // Slapstic 137412-103 setup: copia 4 bank pristine in `slapsticBanks` e
-  // popola program[0x80000..0x88000) col bank di reset (3) mirrorato 4x.
+  // Slapstic 137412-103 setup: copy 4 pristine banks into `slapsticBanks` and
+  // populate program[0x80000..0x88000) with reset bank (3), mirrored 4x.
   const slapsticBanks = program.subarray(0x80000, 0x88000).slice();
   const slapsticFsm = emptyRomImage().slapsticFsm; // bank=3, IDLE
-  // Mirror bank 3 nelle 4 finestre
+  // Mirror bank 3 into the 4 windows.
   {
     const src = slapsticBanks.subarray(slapsticFsm.bank * 0x2000, (slapsticFsm.bank + 1) * 0x2000);
     for (let i = 0; i < 4; i++) program.set(src, 0x80000 + i * 0x2000);

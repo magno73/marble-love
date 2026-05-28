@@ -4,28 +4,21 @@
  * `scriptRectDispatch12DFA`.
  *
  * `FUN_00012DFA` (330 byte): rect-list spawn + region-bound despawn.
- *   - Risolve rect-list via selector @0x400394 dalla tabella ROM @0x1DEC0.
  *   - Per ogni rect (6 byte: lo.b, hi.b, scriptPtr.l) → testa via FUN_12DAE,
  *     poi D2/D3 vs lo/hi, e o spawn 4 marble (zero-path) o spawn 1 (long-path).
- *   - Post-loop: scansiona 25 slot @0x400A9C, despawn slot fuori range via
  *     FUN_12F44 mode-1.
  *
  * **Strategia parity**:
  *   - `FUN_12DAE` (read-only) live: replicato in TS (slot-match-12dae.ts).
  *   - `FUN_12D6E` (read-only) live: replicato in TS (slot-search.ts).
- *   - `FUN_13A98` (RNG @0x4003A6) live: replicato bit-perfect (rng.ts) con
  *     normalizzazione `r >= limit`.
  *   - `FUN_18F46` (137 byte, side-effect su 0x4003BC + ROM table @0x1F0E2)
- *     **stubbato con RTS** (0x4E75) lato binario; TS non chiama nulla
- *     (consistente con stub-RTS).
+ *     (consistent with stub-RTS).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random selector + random D2/D3 + slot vuoti (test spawn pure).
- *   - B: random selector + slot pre-popolati con FUN_12DAE-match (test skip).
- *   - C: nessuno spawn (selector con rect-list che fallisce subito);
- *        slot pre-popolati con region [0x52,0x54] random per test despawn.
- *   - D: edge cases (selector boundary, D2/D3 estremi, slot tutti pieni,
- *        slot+0x1F=6 trigger contatore, slot+0x1F=0xC alt-match).
+ *   - B: random selector + slots pre-populated with FUN_12DAE-match (skip test).
+ *        slots pre-populated with random region [0x52,0x54] for despawn tests.
  *
  * **Compare** (snapshot completo):
  *   - 25 slot × {byte+0x18, byte+0x1A, long+0x3A, word+0x52, word+0x54}
@@ -201,7 +194,6 @@ interface CaseSetup {
 }
 
 function applyCaseBinary(cpu: CpuSession, c: CaseSetup): void {
-  // Azzera tutti gli slot in entrambi i mondi (precondizione coerente).
   for (let i = 0; i < SLOT_COUNT; i++) {
     const slot = SLOT_TABLE_BASE + i * SLOT_STRIDE;
     const init = c.slots[i]!;
@@ -313,8 +305,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // Mappa selectorWord → rect-list ptr (per scegliere selettori validi).
-  // Selector*4 deve indicizzare un long valido in 0x1DEC0..0x1DEFC (16 entries).
+  // Selector*4 must index a valid long in 0x1DEC0..0x1DEFC (16 entries).
   const validSelectors: number[] = [];
   for (let s = 0; s < 16; s++) {
     const ptr =
@@ -323,7 +314,6 @@ async function main(): Promise<void> {
         (romBuf[ROM_RECT_TABLE + s * 4 + 2]! << 8) |
         romBuf[ROM_RECT_TABLE + s * 4 + 3]!) >>>
       0;
-    // selectorWord = s (poi ASL #2 → s*4 → indirizzo +s*4 in tabella).
     if (ptr !== 0xffffffff && ptr < 0x80000) validSelectors.push(s);
   }
 
@@ -414,7 +404,6 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const region = (): [number, number] => {
-      // word random, ma con qualche caso D2/D3-aligned.
       const lo = ri(0x100); // small positive byte sext (no sign issues)
       const hi = lo + ri(0x40);
       return [lo & 0xffff, hi & 0xffff];
@@ -437,20 +426,18 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: focus despawn (slot occupati con region che matcha D2/D3) ──
+  // ─── Suite C: despawn focus (occupied slots with region matching D2/D3) ──
   console.log(
     `\n=== Suite C: focus despawn (region [lo,hi] matchata da D2/D3) — ${perSuite} casi ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // D2 = un valore in [0..127] (positivo signed byte).
     const d2 = ri(0x80);
-    // D3 può essere < D2 (trigger lower-bound despawn) o > qualcosa.
     const d3 = ri(0xff);
 
     const slots: SlotInit[] = [];
     for (let s = 0; s < SLOT_COUNT; s++) {
-      // 50% slot occupato con lo == d2 (trigger despawn lower if d3<d2).
+      // 50% occupied slot with lo == d2 (trigger lower despawn if d3<d2).
       const r = rng();
       let lo: number, hi: number;
       if (r < 0.4) {
@@ -470,18 +457,18 @@ async function main(): Promise<void> {
         scriptPtr: ri(0x100000000) >>> 0,
         lo: lo & 0xffff,
         hi: hi & 0xffff,
-        kind1e: 1, // gate FUN_18F46-skip così despawn è puro
+        kind1e: 1,
         type1f: rng() < 0.3 ? 0x06 : rng() < 0.3 ? 0x0c : ri(256),
       });
     }
 
     const c: CaseSetup = {
-      // selector con rect-list che fallisce (selector valido ma D2/D3 non match).
+      // selector with failing rect-list (valid selector but D2/D3 do not match).
       selector: validSelectors[ri(validSelectors.length)]!,
       d2,
       d3,
       slots,
-      counter75c: 0x40 + ri(0x40), // counter abbastanza alto da non underflow
+      counter75c: 0x40 + ri(0x40),
       active974: rng() < 0.4
         ? SLOT_TABLE_BASE + ri(SLOT_COUNT) * SLOT_STRIDE
         : 0,
@@ -499,7 +486,6 @@ async function main(): Promise<void> {
     `\n=== Suite D: edge cases — ${sizeD} casi ===`,
   );
   let okD = 0;
-  // Mix di edge cases: tutti slot pieni, slot+0x1F=6, type=0xC, d2/d3=0/0xFF/...
   const d2Edges = [0, 1, 0x7f, 0x80, 0xfe, 0xff];
   const d3Edges = [0, 1, 0x7f, 0x80, 0xfe, 0xff];
   for (let i = 0; i < sizeD; i++) {

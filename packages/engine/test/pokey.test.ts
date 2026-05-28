@@ -1,10 +1,10 @@
 /**
  * pokey.test.ts — Phase 6 register-state parity smoke.
  *
- * Intent: il sound driver Marble scrive sui 4 canali POKEY per produrre il
- * rumble della biglia. In V2 verifichiamo che il byte stored nel writeRegs
- * shadow matcha esattamente il byte scritto dal CPU 6502 (= MAME shadow). La
- * generazione waveform/LFSR vera e' V3.
+ * Intent: the Marble sound driver writes to the 4 POKEY channels to produce the
+ * marble rumble. In V2, verify that the byte stored in writeRegs shadow exactly
+ * matches the byte written by the 6502 CPU (= MAME shadow). Real waveform/LFSR
+ * generation is V3.
  */
 
 import { describe, it, expect } from "vitest";

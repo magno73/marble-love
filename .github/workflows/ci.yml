@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run focused public-path tests
+        run: npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/boot-flow-url.test.ts packages/web/test/sound-gameplay-profile.test.ts --silent
+
+      - name: Build web frontend
+        run: npm --workspace @marble-love/web run build
+
+      - name: Check whitespace
+        run: git diff --check

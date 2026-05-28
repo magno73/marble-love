@@ -32,7 +32,6 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     stateSub1EAA(s, 0xa03100, 5, -3, recordingSubs(log));
     expect(log).toHaveLength(0);
 
-    // 0x80000000 è MIN_INT32 (signed) → tst.l → ble → exit immediato
     log.length = 0;
     stateSub1EAA(s, 0xa03100, 5, 0x80000000, recordingSubs(log));
     expect(log).toHaveLength(0);

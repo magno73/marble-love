@@ -7,7 +7,7 @@
  *   +3:    padding (not touched)
  *   +4:    innerCounter (u8) — 0xFF = disabled
  *
- * Bit-perfect verificato 500/500 vs musashi-wasm.
+ * Bit-perfect verified 500/500 against musashi-wasm.
  */
 
 import { describe, it, expect } from "vitest";

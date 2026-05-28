@@ -1,7 +1,6 @@
 /**
  * state-sub-28ea.test.ts — smoke + corner case di FUN_28EA.
  *
- * La parità bit-perfect col binario è verificata in
  * `packages/cli/src/test-state-sub-28ea-parity.ts`.
  */
 
@@ -37,7 +36,6 @@ describe("stateSub28EA (FUN_28EA)", () => {
   it("scrive 0x401F3E con la target word PRIMA della render (anche se nessun slot libero)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Tutti slot occupati
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = 1;
 
     let renderCalled = 0;
@@ -54,14 +52,13 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(renderCalled).toBe(1);
     expect(renderTargetSeenBeforeJsr).toBe(0x9abc);
     expect(readWord(s, TARGET_OFF)).toBe(0x9abc);
-    // Nessuna registrazione (tutti occupati)
     for (let i = 0; i < 4; i++) expect(s.workRam[STATE_BASE + i]).toBe(1);
   });
 
   it("registra slot 0 con state=7, dataPtr long, word16 word — non tocca THRESHOLD/COUNTER/FLAG34", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Pre-fill THRESHOLD/COUNTER/FLAG34 dello slot 0 con sentinel: NON devono cambiare.
+    // Pre-fill slot 0 THRESHOLD/COUNTER/FLAG34 with sentinels: they must not change.
     s.workRam[THRESHOLD_BASE + 0] = 0xaa;
     s.workRam[THRESHOLD_BASE + 1] = 0xbb;
     s.workRam[COUNTER_BASE + 0] = 0xcc;
@@ -77,7 +74,6 @@ describe("stateSub28EA (FUN_28EA)", () => {
     // target = arg3.w = 0x0042
     expect(readWord(s, TARGET_OFF)).toBe(0x0042);
 
-    // Sentinel preservati (FUN_28EA non li scrive a differenza di state=3)
     expect(s.workRam[THRESHOLD_BASE + 0]).toBe(0xaa);
     expect(s.workRam[THRESHOLD_BASE + 1]).toBe(0xbb);
     expect(s.workRam[COUNTER_BASE + 0]).toBe(0xcc);
@@ -130,7 +126,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => stateSub28EA(s, rom, 0xdeadbeef, 0x1111, 0x2222)).not.toThrow();
-    // Slot 0 comunque allocato (render no-op non blocca la registrazione)
+    // Slot 0 is still allocated; render no-op does not block registration.
     expect(s.workRam[STATE_BASE + 0]).toBe(7);
     expect(readLong(s, DATA_BASE + 0)).toBe(0xdeadbeef);
     expect(readWord(s, WORD16_BASE + 0)).toBe(0x1111);

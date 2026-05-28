@@ -2,11 +2,8 @@
 /**
  * test-thunk-10042-smoke.ts — smoke tests per `thunk10042` (FUN_00010042).
  *
- * FUN_00010042 è un thunk a 6 byte (`jmp.l 0x00028468`) che delega
  * interamente a `trackballClampFlags28468`. I smoke qui verificano:
- *   1. Output identico a trackballClampFlags28468 con stato neutro
  *      (accumulatori a 0, input a 0) → flags = 0xF003 → sext = -4093.
- *   2. Accumulator X/Y clamped a ±0x40 quando il valore in RAM è fuori range
  *      (es. 0x0050 > 0x40 → clamp a 0x40) e il thunk riflette la modifica.
  *
  * Uso: npx tsx packages/cli/src/test-thunk-10042-smoke.ts
@@ -55,7 +52,6 @@ const inputs0 = {
 
 console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
 
-// ── Smoke 1: stato neutro — risultato identico tra thunk e target ──────────────
 {
   const s1 = stateNs.emptyGameState();
   const s2 = stateNs.emptyGameState();
@@ -64,7 +60,7 @@ console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
   const retDirect = cfNs.trackballClampFlags28468(s2, inputs0);
 
   check("smoke1: thunk retval == direct FUN_28468", retThunk, retDirect);
-  // Con accumulatori=0 e input=0: flags=0xF003 invariato → sext16(0xF003) = -4093
+  // With accumulators=0 and input=0: flags=0xF003 unchanged -> sext16(0xF003) = -4093
   // mmioInputByte=0 → debounce clears bits 0 and 1 → flags = 0xF003 & 0xFFFE & 0xFFFD = 0xF000
   // sext16(0xF000) = -4096
   check("smoke1: retval = -4096 (0xF000 sign-extended, input bits cleared)", retThunk, -4096);
@@ -72,17 +68,15 @@ console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
   check("smoke1: accumY non modificato (input zero)", readWord(s1.workRam, cfNs.ACCUM_Y_OFF), 0);
 }
 
-// ── Smoke 2: pre-clamp attivo (accumX = 0x0050 > 0x40) ───────────────────────
 {
   const s = stateNs.emptyGameState();
-  // imposta accumX = 0x0050 (> PRE_CLAMP_LIMIT 0x40)
+  // Set accumX = 0x0050 (> PRE_CLAMP_LIMIT 0x40).
   writeWord(s.workRam, cfNs.ACCUM_X_OFF, 0x0050);
   // accumY = -0x50 < -0x40 → clamp a -0x40
   writeWord(s.workRam, cfNs.ACCUM_Y_OFF, 0xffb0); // -0x50 in u16
 
   const ret = ns.thunk10042(s, inputs0);
 
-  // accumX deve essere clamped a 0x40 (pre-clamp), poi delta=0 → rimane 0x40
   // post-wrap: 0x40 > 0x18 → 0x40 - 0x18 = 0x28, bit12 cleared → flags &= ~0x1000
   const expectedX = 0x28;
   check("smoke2: accumX post-thunk = 0x28 (clamped 0x40 → wrap -0x18)", readWord(s.workRam, cfNs.ACCUM_X_OFF), expectedX);

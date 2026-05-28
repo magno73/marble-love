@@ -1,9 +1,9 @@
 -- mame_eventflag_0006_tap.lua — read+write tap su event-flag word 0x400006..0x400007.
 --
--- Obiettivo: identificare TUTTI i PC che leggono/scrivono il word event-flag
--- usato da refreshHelper13EE6.tst.b @ 0x400006. In particolare interessa il
+-- Goal: identify all PCs that read/write the event-flag word
+-- used by refreshHelper13EE6.tst.b @ 0x400006. The important part is the
 -- CONSUMER (chi fa `lsr.w *0x400006` = FUN_2548 consumeEventFlag) e i SETTER
--- (chi popola il word a 0x0100 — probabile audio CPU ack o IRQ handler).
+-- writer that populates word 0x0100, likely audio CPU ack or IRQ handler.
 --
 -- Env vars (default per la cluster #1 demo window — bug cadenza ogni 8 frame):
 --   MARBLE_TAP_FROM   — first frame to log (default 12001)

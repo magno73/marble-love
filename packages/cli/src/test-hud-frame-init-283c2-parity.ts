@@ -3,27 +3,18 @@
  * test-hud-frame-init-283c2-parity.ts — differential FUN_000283C2 vs
  * `hudFrameInit283C2` TS replica.
  *
- * `FUN_000283C2` (166 byte) inizializza il HUD frame:
- *   1. Loop1 (30 righe): cancella i bordi laterali dell'alpha tilemap con
- *      `0x3400`, scrivendo 6 word per riga (3 a sx + 3 a dx @ off +0x4E).
- *   2. Loop2 (12 o 24 tile in base a 1P/2P): chiama `setAlphaTile` con
- *      coordinate, dato e mask presi da 4 ROM tables a 0x23C2C/0x23C44/
  *      0x23C74/0x23CA4.
  *
- * Il binario chiama `getAlphaTileAddr` (= `FUN_37E4`) e `setAlphaTile`
- * (= `FUN_3784`), entrambi già verificati bit-perfect (vedi
  * `test-get-alpha-tile-addr-parity.ts` e `test-format-and-render-28e00-parity.ts`).
  *
- * **Strategia di parità**: chiamiamo direttamente FUN_283C2 e
  * `hudFrameInit283C2`, confrontiamo l'intero alpha RAM (4 KB) byte-by-byte.
  * Setup random:
  *   - rotation flag @ 0x401F42 ∈ [0..7] (esercita branch rotation in
  *     `getAlphaTileAddr` e `setAlphaTile`)
- *   - player count @ 0x400396 ∈ {1, 2, 0, 3} (1 → 1P branch, altri → 2P)
+ *   - player count @ 0x400396 in {1, 2, 0, 3} (1 -> 1P branch, others -> 2P)
  *   - alpha RAM init: random pattern 0..255 ad ogni byte (per esercitare
  *     write-over)
  *   - workRam[0x1F42] settato esplicitamente; il resto della workRam pure
- *     random ma i due lati sono sincronizzati prima della call.
  *
  * Suite:
  *   A: rotation=0 1P (typical case, layout standard 64×30)
@@ -136,7 +127,6 @@ async function main(): Promise<void> {
     // TS: replica
     hudNs.hudFrameInit283C2(stateInst, tsRom);
 
-    // Confronto: intero alpha RAM (4 KB) byte-by-byte.
     for (let j = 0; j < ALPHA_RAM_SIZE; j++) {
       const b = peekMem(cpu, ALPHA_RAM_BASE + j, 1) & 0xff;
       const t = stateInst.alphaRam[j] ?? 0;

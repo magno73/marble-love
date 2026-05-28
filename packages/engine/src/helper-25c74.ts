@@ -1,154 +1,115 @@
 /**
- * helper-25c74.ts — replica `FUN_00025C74` (0x25C74..0x25DF4).
+ * Bit-perfect port of `FUN_00025C74`.
  *
- * **Semantica**: "object entry-state handler" — aggiorna lo stato di una
- * object struct in work RAM in base al puntatore A2 (se appartiene alla
- * coppia canonica `0x400018`/`0x4000FA` o meno), aggiorna il campo
- * `A2[+0x57]` con un delta clampato a 0x7F, poi dispatcha transizioni
- * di stato verso le sub-jsr `FUN_25BAE`, `FUN_15884`, `FUN_158AC`,
- * `FUN_15BD0`.
+ * Updates the object byte at `A2+0x57` with a clamped delta, then dispatches
+ * the object state transitions and sound hooks used by the paired-object and
+ * unpaired-object paths.
  *
- * **Argomenti** (2 long sullo stack, cdecl-like):
- *   - `objPtr` → A2 = puntatore assoluto alla object struct in work RAM.
  *   - `deltaWord` → D1.w = low 16-bit del secondo arg long (word delta per
  *     A2[+0x57]).
  *
- * **Object struct fields** (offset rispetto ad `objPtr`):
- *   | Off  | Size | Nome           | Uso                                       |
+ * Object struct fields, relative to `objPtr`:
+ *   | Off  | Size | Name           | Use                                       |
  *   |------|------|----------------|-------------------------------------------|
- *   | 0x18 | byte | sec_state      | 0/2/3 — state secondario                 |
- *   | 0x1A | byte | state          | 1/5/6/etc — stato principale              |
- *   | 0x20 | word | field_20       | letto per range-check (signed word)       |
- *   | 0x56 | byte | step_counter   | counter step; incrementato nel path !pair |
- *   | 0x57 | byte | obj_type       | aggiornato con delta clampato a 0x7F      |
- *   | 0x5A | long | anim_ptr       | ptr ROM tabella animazione                |
- *   | 0x5F | byte | frame_ctr      | azzerato in alcuni path                   |
- *   | 0x60 | byte | frames_per_step| impostato in alcuni path                  |
+ *   | 0x18 | byte | sec_state      | 0/2/3 secondary state                    |
+ *   | 0x56 | byte | step_counter   | incremented on the !pair path            |
+ *   | 0x60 | byte | frames_per_step| set by selected paths                    |
  *
- * **Costanti hard-coded**:
+ * Hard-coded constants:
  *   - `A3 = 0x25BAE` — `FUN_25BAE` (objectStateEntry).
- *   - `0x400018` e `0x4000FA` — indirizzi della coppia canonica di object.
+ *   - `0x400018` and `0x4000FA`: canonical object-pair addresses.
  *
- * **Flusso principale**:
+ * Main flow:
  *
- * ### Fase 1 — Is-pair-member check:
+ * ### Phase 1: is-pair-member check
  *   D3b = A2[+0x1A] (save state).
- *   Se A2 == 0x400018 o A2 == 0x4000FA → isPair=1, altrimenti isPair=0.
  *
- * ### Fase 2 — State init:
- *   Se isPair:
- *     - Se A2[+0x1A] == 6 → A2[+0x18] = 3
+ * ### Phase 2: state init
+ *   If isPair:
+ *     - If A2[+0x1A] == 6 → A2[+0x18] = 3
  *     - A2[+0x1A] = 1
- *   Altrimenti:
  *     - A2[+0x1A] = 0x24
  *
- * ### Fase 3 — obj_type delta + clamp:
- *   D4w = sext_b(A2[+0x57]) + D1w; se D4w > 0x7F → D4w = 0x7F.
- *   A2[+0x57] = D4b (low byte di D4).
+ * ### Phase 3: object-type delta plus clamp
+ *   D4w = sext_b(A2[+0x57]) + D1w; if D4w > 0x7F, clamp to 0x7F.
+ *   A2[+0x57] receives D4b.
  *
- * ### Fase 4 — Dispatch basato su isPair:
+ * ### Phase 4: dispatch by pair membership
  *
- * **Se isPair** (D2 != 0):
+ * If isPair (D2 != 0):
  *   D0 = sext_b_to_l(A2[+0x56])
  *   D1 = sext_b_to_l(A2[+0x57])
- *   D2 = sext_b_to_l(A2[+0x56])    (ri-lettura)
  *   D1 -= D2; D1 >>= 1 (asr.l #1, arithmetic)
  *   D0 += D1
  *   Se D0 > 0x1F (signed long, i.e. 0x1F < D0): [advance path]
  *     D2w = A2[+0x20] (signed word)
  *     inRange = (-16 <= D2w < 240)
- *     Se D3b == 1 o D3b == 5:
+ *     If D3b is 1 or 5:
  *       jsr FUN_15884 (soundPair15884)
  *       A2[+0x5F] = 0; A2[+0x56] = 1; A2[+0x60] = 2; A2[+0x5A] = 0x20FD2
- *       Se inRange → FUN_25BAE(A2, 2)
- *       Altrimenti → A2[+0x57] = 0x64; FUN_25BAE(A2, 4)
- *     Altrimenti (D3b != 1, 5):
- *       Se inRange → FUN_25BAE(A2, 2)
- *       Altrimenti → A2[+0x57] = 0x64; FUN_25BAE(A2, 4)
- *   Se D0 <= 0x1F (signed long): [cap path]
- *     Se D3b == 1 → return (epilog)
- *     Altrimenti:
+ *       If inRange → FUN_25BAE(A2, 2)
+ *   If D0 <= 0x1F signed: cap path
+ *     If D3b == 1 → return
  *       A2[+0x5F] = 0; A2[+0x60] = 2; A2[+0x5A] = 0x20FAA
  *       jsr FUN_158AC(0x39)
  *
- * **Se !isPair** (D2 == 0):
+ * If !isPair (D2 == 0):
  *   A2[+0x56] += D1b (byte add, wrapping)
  *   Se A2[+0x56] > 0x50 (signed byte, bgt): [overflow path]
  *     jsr FUN_15BD0(A2, 1, 0)
  *     A2[+0x18] = 2
  *     jsr FUN_25BAE(A2, 2)
- *   Altrimenti:
  *     D0 = 0x1F; cmp.w D1w, D0w
- *     Se D1w > 0x1F (signed word): jsr FUN_15BD0(A2, 1, 0); A2[+0x18]=2; FUN_25BAE(A2,2)
+ *     If D1w > 0x1F signed: call FUN_15BD0(A2, 1, 0), set A2[+0x18]=2, call FUN_25BAE(A2,2)
  *
- * **Note bit-perfect**:
- *   1. `cmp.w D4w, D0w` (D0=0x7F): signed word comparison. bge se D0w >= D4w.
- *      → D4w cappata a 0x7F solo se D4w > 0x7F.
- *   2. `ext.w; ext.l` su byte → sign-extend byte → long (usato per D0, D1, D2).
+ *   1. `cmp.w D4w, D0w` (D0=0x7F): signed word comparison. bge if D0w >= D4w.
+ *      → D4w capped at 0x7F only if D4w > 0x7F.
  *   3. `asr.l #1, D1` → arithmetic shift right long by 1.
- *   4. `cmp.l D0, D1` con D1=0x1F → D1-D0; bge se D1 >= D0 → bge se 0x1F >= D0.
- *      → advance path solo se D0 > 0x1F (= 31) in signed long sense.
- *   5. `cmp.w D2w, D0w` con D0=-16: `D0w - D2w`; bge se -16 >= D2w (signed).
- *      → "fuori range inferiore" se D2w <= -16.
- *   6. `cmpi.w #0xF0, D2w`; bge se D2w >= 0xF0 (signed = 240).
- *      → "fuori range superiore" se D2w >= 240.
- *   7. `cmpi.b #0x50, (0x56,A2)`: byte comparison; bgt se A2[+0x56] > 0x50.
- *      Questo confronta il byte DOPO l'add (post-modify).
- *   8. `cmp.w D1w, D0w` con D0=0x1F: D0w - D1w; bge se 0x1F >= D1w.
- *      → salto a epilog se D1w <= 0x1F (signed word).
- *   9. FUN_15BD0 chiamata con stack: `clr.l; pea 1.w; move.l A2` → (A2, 1, 0).
- *   10. `lea (0x14,SP),SP` dopo FUN_15BD0 + FUN_25BAE = cleanup 20 byte
+ *   4. `cmp.l D0, D1` with D1=0x1F → D1-D0; bge if D1 >= D0 → bge if 0x1F >= D0.
+ *      → advance path only if D0 > 0x1F (= 31) in signed long sense.
+ *   5. `cmp.w D2w, D0w` with D0=-16: `D0w - D2w`; bge if -16 >= D2w (signed).
+ *   6. `cmpi.w #0xF0, D2w`; bge if D2w >= 0xF0 (signed = 240).
+ *   7. `cmpi.b #0x50, (0x56,A2)`: byte comparison; bgt if A2[+0x56] > 0x50.
+ *   8. `cmp.w D1w, D0w` with D0=0x1F: D0w - D1w; bge if 0x1F >= D1w.
+ *      -> jump to epilog if D1w <= 0x1F (signed word).
  *       (12 + 8 pushate in totale).
- *   11. `andi.w #-1,D2w` a 0x25D08 è no-op (D2w &= 0xFFFF su word già word).
  *
- * **Callers** (2 call-site reali):
+ * Callers:
  *   - `FUN_000121B8` @ 0x000124C8 — spinge (long D1, long A2).
  *   - `FUN_00029CCE` @ 0x0002AB64 — spinge (long 0, long A2).
  *
- * Verifica bit-perfect via
- * `cli/src/test-helper-25c74-parity.ts` (500/500 casi vs Musashi).
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Costanti pubbliche ───────────────────────────────────────────────────────
+// Public constants.
 
-/** Indirizzo ROM di `FUN_00025C74`. */
 export const HELPER_25C74_ADDR = 0x00025c74 as const;
 
-/** Base di work RAM (assoluta). */
+/** Absolute work RAM base. */
 const WORK_RAM_BASE = 0x00400000 as const;
 const WORK_RAM_END = 0x00402000 as const;
 
-/** Indirizzo del primo oggetto della coppia canonica. */
 const OBJ_PAIR_FIRST = 0x00400018 as const;
-/** Indirizzo del secondo oggetto della coppia canonica. */
 const OBJ_PAIR_SECOND = 0x004000fa as const;
 
-/** Puntatore ROM della tabella animazione "low" (0x20FD2). */
 const ANIM_PTR_LOW = 0x00020fd2 as const;
-/** Puntatore ROM della tabella animazione "cap" (0x20FAA). */
 const ANIM_PTR_CAP = 0x00020faa as const;
 
-/** Indirizzo della sub-jsr `FUN_25BAE`. */
 export const FUN_25BAE_ADDR = 0x00025bae as const;
-/** Indirizzo della sub-jsr `FUN_15884`. */
 export const FUN_15884_ADDR = 0x00015884 as const;
-/** Indirizzo della sub-jsr `FUN_158AC`. */
 export const FUN_158AC_ADDR = 0x000158ac as const;
-/** Indirizzo della sub-jsr `FUN_15BD0`. */
 export const FUN_15BD0_ADDR = 0x00015bd0 as const;
 
-// ─── Sub-JSR injection interface ─────────────────────────────────────────────
+// Sub-JSR injection interface.
 
 /**
- * Bag delle sub-JSR esterne orchestrate da `FUN_00025C74`.
- * Ogni callback è opzionale (default no-op).
+ * External sub-JSR hooks orchestrated by `FUN_00025C74`.
  */
 export interface Helper25C74Subs {
   /**
    * `FUN_25BAE(objPtr, code)` — object state-transition entry.
-   * Invocata in vari path con `code` ∈ {2, 4}.
+   * Called by several paths with `code` in {2, 4}.
    */
   objectStateEntry25BAE?: (
     state: GameState,
@@ -158,19 +119,19 @@ export interface Helper25C74Subs {
 
   /**
    * `FUN_15884()` — sound pair trigger.
-   * Invocata nel path isPair + advance + D3b ∈ {1, 5}.
+   * Called in the isPair + advance path when D3b is 1 or 5.
    */
   soundPair15884?: (state: GameState) => void;
 
   /**
    * `FUN_158AC(cmd)` — sound command sender.
-   * Invocata nel path isPair + cap + D3b != 1, con `cmd = 0x39`.
+   * Called in the isPair + cap path with `cmd = 0x39` when D3b != 1.
    */
   soundCommand?: (cmd: number) => void;
 
   /**
    * `FUN_15BD0(structPtr, arg2, arg3)` — object reset + broadcast event.
-   * Invocata nel path !isPair con `arg2=1, arg3=0`.
+   * Called in the !isPair path with `arg2=1, arg3=0`.
    */
   stateSub15BD0?: (
     state: GameState,
@@ -180,23 +141,20 @@ export interface Helper25C74Subs {
   ) => void;
 }
 
-// ─── Helpers interni ──────────────────────────────────────────────────────────
+// Internal helpers.
 
-/** Legge byte da workRam a indirizzo assoluto. */
 function readU8(wr: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return 0;
   return (wr[a - WORK_RAM_BASE] ?? 0) & 0xff;
 }
 
-/** Scrive byte in workRam a indirizzo assoluto. */
 function writeU8(wr: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return;
   wr[a - WORK_RAM_BASE] = value & 0xff;
 }
 
-/** Legge word signed (16-bit big-endian) da workRam a indirizzo assoluto. */
 function readS16(wr: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 1 >= WORK_RAM_END) return 0;
@@ -205,7 +163,6 @@ function readS16(wr: Uint8Array, addrAbs: number): number {
   return w >= 0x8000 ? w - 0x10000 : w;
 }
 
-/** Scrive long BE in workRam a indirizzo assoluto. */
 function writeU32BE(wr: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 3 >= WORK_RAM_END) return;
@@ -223,19 +180,14 @@ function sextB(b: number): number {
   return v >= 0x80 ? v - 0x100 : v;
 }
 
-// ─── Funzione principale ──────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00025C74` — object entry-state handler.
  *
- * Vedi disasm e semantica nell'header del file.
+ * Execute `FUN_00025C74`.
  *
- * @param state      GameState corrente (`workRam` mutato in-place).
- * @param objPtr     Puntatore assoluto M68k alla object struct in work RAM
- *                   (es. `0x400018`). Range valido: `[0x400000, 0x401FFF]`.
- * @param deltaRaw   Low 16-bit del secondo arg long (D1.w — delta per
- *                   A2[+0x57]).  Passato come signed 16-bit.
- * @param subs       Bag di callback per le sub-jsr esterne. Default no-op.
+ * @param objPtr Absolute object pointer, for example `0x400018`.
+ * @param deltaRaw Low 16 bits of the second long argument, interpreted as D1.w.
+ * @param subs External sub-JSR callbacks. Defaults are no-ops.
  */
 export function helper25C74(
   state: GameState,
@@ -246,13 +198,10 @@ export function helper25C74(
   const wr = state.workRam;
   const obj = objPtr >>> 0;
 
-  // ── Fase 1: Lettura campi iniziali ─────────────────────────────────────
   // move.b (0x1a,A2),D3b  — save state (D3b)
   const d3b = readU8(wr, obj + 0x1a);
 
-  // D1.w = low 16-bit del deltaRaw (word, signed — usato sia come word che come byte)
   const d1w = deltaRaw & 0xffff;
-  // Signed interpretation per confronto finale (cmp.w D1w, D0w)
   const d1wSigned = d1w >= 0x8000 ? d1w - 0x10000 : d1w;
 
   // ── Fase 2: Is-pair-member check ───────────────────────────────────────
@@ -267,7 +216,6 @@ export function helper25C74(
   // ── Fase 3: State init basata su isPair ────────────────────────────────
   if (isPair !== 0) {
     // D2 != 0 → branch NOT taken (bne passes, beq goes to 0x25CBC)
-    // 0x25CA4: beq 0x25CBC → non saltato (D2 != 0)
     // cmpi.b #0x6, (0x1a,A2) / bne 0x25CB4
     if (readU8(wr, obj + 0x1a) === 0x06) {
       // move.b #0x3, (0x18,A2)
@@ -284,7 +232,7 @@ export function helper25C74(
   // ── Fase 4: obj_type delta + clamp a 0x7F ─────────────────────────────
   // move.b (0x57,A2), D0b  /  ext.w D0w  /  move.w D0w, D4w
   // add.w D1w, D4w
-  // moveq 0x7f, D0; cmp.w D4w, D0w; bge 0x25CD4  (branch se 0x7F >= D4w)
+  // moveq 0x7f, D0; cmp.w D4w, D0w; bge 0x25CD4  (branch if 0x7F >= D4w)
   // moveq 0x7f, D4
   // [0x25CD4]: move.b D4b, (0x57,A2)
   const byte57 = readU8(wr, obj + 0x57);
@@ -318,14 +266,14 @@ export function helper25C74(
 
     if (!overflow) {
       // moveq 0x1f, D0; cmp.w D1w, D0w; bge 0x25DF0
-      // D0w - D1w; bge se D0w >= D1w (signed) → skip if 0x1F >= D1w
+      // D0w - D1w; bge if D0w >= D1w (signed) -> skip if 0x1F >= D1w
       if (d1wSigned <= 0x1f) {
         // Epilog — no-op
         return;
       }
     }
 
-    // [0x25DD0]: Sia overflow che D1w > 0x1F → call FUN_15BD0 + FUN_25BAE
+    // [0x25DD0]: both overflow and D1w > 0x1F -> call FUN_15BD0 + FUN_25BAE
     // clr.l -(SP) / pea (0x1).w / move.l A2,-(SP) / jsr FUN_15BD0
     subs.stateSub15BD0?.(state, obj, 1, 0);
     // move.b #0x2, (0x18,A2)

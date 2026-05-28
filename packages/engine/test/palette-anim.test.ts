@@ -2,7 +2,7 @@
  * Test palette animations 1 + 2 (FUN_00026BEE, FUN_00026C78).
  *
  * **Status**: bit-perfect verificati vs binary (2000/2000 match totali)
- * tramite `packages/cli/src/test-palette-anim-parity.ts`.
+ * via `packages/cli/src/test-palette-anim-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -150,7 +150,7 @@ describe("paletteAnim2Tick (FUN_26C78)", () => {
   }
 
   it("anim 2 NON controlla skip flag (diff vs anim 1)", () => {
-    // skip flag set, ma anim 2 ignora → counter incrementa, palette aggiornata
+    // Skip flag set, but anim 2 ignores it -> counter increments, palette updates.
     const { state, rom } = setup2({ count: 1, type: 0, ctr: 0, skip: 1 });
     rom.program[0x20B74] = 0xCC; rom.program[0x20B75] = 0xDD;
     paletteAnim2Tick(state, rom);

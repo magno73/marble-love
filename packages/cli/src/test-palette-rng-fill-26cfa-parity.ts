@@ -3,14 +3,14 @@
  * test-palette-rng-fill-26cfa-parity.ts — parity differential testing per
  * `FUN_00026CFA` (palette RNG fill).
  *
- * Per ogni caso:
- *   1. Setta seed RNG sia in workRam (binary) che in `state.rng.seed` (TS)
- *   2. Pre-fill palette RAM con sentinel
- *   3. Chiama FUN_00026CFA nel binario via Musashi
+ * For each case:
+ *   1. Set RNG seed in both workRam (binary) and `state.rng.seed` (TS).
+ *   2. Pre-fill palette RAM with sentinel bytes.
+ *   3. Call FUN_00026CFA in the binary via Musashi.
  *   4. Chiama paletteRngFill26CFATick in TS
  *   5. Confronta:
  *      - palette RAM in [0xB00202, 0xB00302) (8 entry × 32 byte)
- *      - seed RNG dopo 8 chiamate
+ *      - RNG seed after 8 calls
  *
  * Uso: npx tsx packages/cli/src/test-palette-rng-fill-26cfa-parity.ts [N]
  */

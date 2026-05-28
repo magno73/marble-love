@@ -1,247 +1,167 @@
 # Marble Love
 
-Reimplementazione TypeScript di **Marble Madness** (Atari, 1984) con verifica
-differenziale contro MAME. Il repository contiene motore, frontend web,
-strumenti CLI e script oracle per confrontare stato, rendering, input e routine
-replicate.
+Marble Love is a TypeScript reimplementation of Atari's *Marble Madness*
+(1984). The project is built from ROM disassembly, Ghidra analysis, and
+differential testing against MAME. It contains a browser frontend, a pure
+TypeScript engine, command-line oracle/probe tools, and validation fixtures used
+to compare reimplemented routines against the original arcade behavior.
 
-Le ROM non sono incluse e non vengono distribuite. Il codice originale del repo
-e' MIT; l'utente deve fornire dump ROM propri in formato MAME.
+No ROMs or copyrighted game assets are included. To run the browser version you
+must provide your own legally obtained MAME ROM ZIPs.
 
-Le versioni storiche complete di `README.md` e `STATUS.md` sono archiviate in:
+## Current Status
 
-```text
-docs/archive/readme-status-2026-05-18/
-```
+Marble Love is a research-grade reimplementation, not a finished commercial
+game. The browser path can boot from user-supplied ROMs, show the high-score /
+insert-coin screen, accept coin/start input, enter live level 1 gameplay, and
+progress through levels. The `startLevel=1..6` practice paths use verified MAME
+start seeds for direct level testing.
 
-## Stato In Breve
+Many low-level routines are parity-tested against MAME or Musashi-based oracle
+runs. Rendering uses decoded ROM graphics in the browser. Gameplay music and
+several event sounds are wired through the reimplemented 6502/YM2151/POKEY audio
+path, but complete audio PCM parity, attract audio, and insert-coin audio remain
+active work.
 
-- Motore TypeScript con molte routine M68010 replicate e testate contro MAME o
-  musashi-wasm.
-- Rendering web basato su PixiJS 8 con ROM graphics decode, tilemap, sprite/MO,
-  HUD alpha e warm-state MAME.
-- Browser giocabile con ROM locali, input live e flusso coin/start.
-- Percorso default no-seed con `play=1`: cold boot ROM-backed, coin/start
-  runtime, ingresso in L1, progressione livello-per-livello, high-score initials
-  e parita' runtime dei contenuti critici confermati in browser.
-- `startLevel=1..6` mappa ai sei true-start seed MAME con banner intro e timer.
-- Il timer di livello mantiene i secondi residui e aggiunge il bonus del livello
-  successivo.
-- Il level descriptor header dei 6 livelli e' decodato e documentato in
-  `docs/level-header-format.md`; i consumer `FUN_16EC6`, `FUN_16F6C` e
-  `FUN_259B4` restano parity-locked 500/500.
-- Il corpo post-header e i terrain codes del path `FUN_1CABA` sono decodati:
-  usare `LevelData.postHeader` e `decodeTerrainCode`, non il vecchio
-  `HeightRecord` compat.
-- La modalita' demo/attract lunga resta area di lavoro: il percorso warm
-  giocabile e i true-start level sono il riferimento operativo per il playtest.
+## What Works
+
+- Browser frontend with PixiJS rendering.
+- Local, in-browser loading of user-supplied MAME ROM ZIPs.
+- ROM validation by expected file names, sizes, and CRC32 values.
+- Cold boot/high-score/coin/start flow in the default `play=1` path.
+- Live gameplay entry and level progression.
+- Direct `startLevel=1..6` practice entry points.
+- ROM-backed graphics decode for playfield, motion objects, alpha/HUD, and
+  lookup tables.
+- Differential/oracle tooling for MAME traces, seeds, rendering, audio events,
+  and many 68010 helper routines.
+
+## Known Limitations
+
+- You must provide ROM ZIPs yourself; this repository does not distribute them.
+- The project is still under heavy reverse-engineering development.
+- Audio is recognizable in gameplay, but not globally bit-perfect.
+- Attract-mode music and insert-coin sound are not enabled by default.
+- Some CLI probes and oracle fixtures are intended for maintainers rather than
+  casual users.
+- Large JSON fixtures are checked in under `oracle/` because they support
+  reproducible comparisons. Heavy gameplay snapshots are not part of the
+  browser public asset path.
 
 ## Quick Start
 
-Installa dipendenze:
+Requirements:
+
+- Node.js 22 or newer.
+- npm.
+- Legally obtained MAME ROM ZIPs for `marble` and the Atari System 1 BIOS files
+  expected by MAME.
+
+Install dependencies:
 
 ```sh
-npm install
+npm ci
 ```
 
-Avvia il frontend:
+Place your local ROM ZIPs where the dev server can serve them:
+
+```text
+packages/web/public/roms/marble.zip
+packages/web/public/roms/atarisy1.zip
+```
+
+Start the web frontend:
 
 ```sh
 npm --workspace @marble-love/web run dev -- --host 0.0.0.0
 ```
 
-Apri:
+Open:
 
 ```text
-http://localhost:5173/?autoLoad=1&play=1
+http://localhost:5173/?autoLoad=1&play=1&bootFlow=1&sound=1
 ```
 
-Equivalente esplicito del percorso no-seed:
+Controls:
+
+- `5` or `C`: insert coin
+- `Enter` or `Space`: start
+- mouse, WASD, arrow keys, or gamepad: marble control
+- browser `Enable Audio` button: start Web Audio
+
+Direct level entry:
 
 ```text
-http://localhost:5173/?autoLoad=1&bootFlow=1&debugState=1&sound=0
+http://localhost:5173/?autoLoad=1&startLevel=1
+http://localhost:5173/?autoLoad=1&startLevel=2
+...
+http://localhost:5173/?autoLoad=1&startLevel=6
 ```
 
-Controlli principali:
+## Validation
 
-- `5` o `C`: coin
-- `Enter` o spazio: START
-- mouse, WASD, frecce o gamepad: controllo marble
-- bottone audio nel browser: abilita AudioContext
-
-Per `autoLoad=1`, le ROM devono essere disponibili al frontend sotto
-`packages/web/public/roms/` oppure attraverso la configurazione locale gia'
-presente nel workspace.
-
-## URL Utili
-
-```text
-?autoLoad=1&play=1
-```
-
-Flusso live normale: cold boot ROM-backed, attract/high-score, coin, START,
-L1 runtime e progressione livelli senza caricare seed a runtime.
-
-```text
-?autoLoad=1&bootFlow=1
-```
-
-Alias esplicito del flusso no-seed default.
-
-```text
-?autoLoad=1&coinStart=1
-```
-
-Fallback seed-backed del vecchio gate coin/start.
-
-```text
-?autoLoad=1&startLevel=N
-```
-
-Carica il true-start seed del livello `N`, con `N` da 1 a 6.
-
-```text
-?autoLoad=1&playableSeed=manual_level1_start&play=1
-```
-
-Seed legacy esplicito per diagnostica. Non e' il default di `play=1`.
-
-Parametri diagnostici frequenti:
-
-- `debugObjects=1`
-- `preserveDispatcher=1`
-- `levelTime=180`
-- `sound=0`
-- `soundChip=1`
-
-## Livelli E Timer
-
-| Level | Nome ROM | Seed web | Bonus |
-| --- | --- | --- | --- |
-| 1 | Practice | `start_level1_intro_practice_f2479` | 60 |
-| 2 | Beginner | `start_level2_intro_beginner_f2436` | 60 |
-| 3 | Intermediate | `start_level3_intro_intermediate_f2435` | 35 |
-| 4 | Aerial | `start_level4_intro_aerial_f2414` | 30 |
-| 5 | Silly | `start_level5_intro_silly_f2472` | 20 |
-| 6 | Ultimate | `start_level6_intro_ultimate_f2429` | 20 |
-
-Quando un livello viene completato, il timer successivo e':
-
-```text
-secondi residui + bonus del nuovo livello
-```
-
-Esempio: finire L2 con 42 secondi porta L3 a 77 secondi dopo il banner intro.
-
-## Layout Repo
-
-| Percorso | Contenuto |
-| --- | --- |
-| `packages/engine` | Core engine, state, main loop, renderer model, audio model, test unitari |
-| `packages/web` | Frontend Vite/PixiJS, ROM loader, input live, renderer browser |
-| `packages/cli` | Probe, audit, route search, confronto seed/scenari |
-| `oracle` | Script Lua MAME e scenari oracle |
-| `harness` | Diff/report tooling |
-| `tools` | Utility Ghidra, ROM prep e support scripts |
-| `docs` | PRD, note tecniche e archivio documentazione storica |
-
-## Comandi Di Validazione
-
-Suite generale:
+Common checks:
 
 ```sh
-npm test
 npm run typecheck
-```
-
-Stato post-merge corrente validato:
-
-```text
-Test Files 255 passed | 3 skipped
-Tests      2206 passed | 17 skipped
-```
-
-Build web:
-
-```sh
+npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/boot-flow-url.test.ts packages/web/test/sound-gameplay-profile.test.ts --silent
 npm --workspace @marble-love/web run build
-```
-
-Controlli mirati usati spesso durante lavoro su play/start/timer:
-
-```sh
-npx vitest run \
-  packages/engine/test/level-intro-banner-resume.test.ts \
-  packages/engine/test/main-loop-init-task-a.test.ts \
-  packages/engine/test/main-tick.test.ts \
-  packages/web/test/practice-level.test.ts \
-  packages/web/test/coin-start-flow.test.ts
-```
-
-Typecheck mirati:
-
-```sh
-npx tsc -p packages/engine/tsconfig.json --noEmit
-npx tsc -p packages/web/tsconfig.json --noEmit
-```
-
-Reverse engineering del level header:
-
-```sh
-npx tsx packages/cli/src/probe-level-header.ts
-npx tsx packages/cli/src/test-level-header-decode-parity.ts 500
-npx vitest run packages/engine/test/level.test.ts packages/engine/test/level-header-decode.test.ts
-npx tsx packages/cli/src/probe-cluster-histogram.ts
-npx tsx packages/cli/src/probe-100f-diff.ts | grep "obj0.x"
-```
-
-Baseline attuale del drift f+99:
-
-```text
-total=172 | gameplay=0 | stack-residue=172
-```
-
-Whitespace/diff sanity:
-
-```sh
 git diff --check
 ```
 
-## Regole Di Lavoro
+Full test suite:
 
-- Lavora da `/Users/magnus-bot/Code/marble-love` come root scrivibile.
-- Non revertare file sporchi o untracked non tuoi.
-- Non cablare o rinominare seed `startLevel` senza proof MAME
-  active-vs-neutral distinta, giocabile e controllabile.
-- Non correggere collisioni, terreno, renderer o route proof con workaround
-  visivi: prima identifica la routine o la lettura memoria divergente.
-- I vecchi smoke live-route possono essere diagnostici storici. Non aggiornare
-  aspettative solo per farli diventare verdi.
-- I file `candidate_*.seed.json`, screenshot, capture e script oracle scratch
-  possono essere lasciati da indagini precedenti.
+```sh
+npm test
+```
 
-## Documenti Da Leggere
+The full suite is larger and includes many reverse-engineering/parity tests. Use
+targeted tests while developing a specific subsystem, then run broader checks
+before publishing changes.
 
-Per agenti AI, l'entrypoint canonico e' intenzionalmente piccolo:
+## Repository Layout
 
-- `AGENTS.md`
-- `docs/context-map.md`
-- il file task/goal indicato dall'utente, se presente
+| Path | Purpose |
+| --- | --- |
+| `packages/engine` | Pure TypeScript engine, state model, runtime logic, renderer model, audio model, and unit tests. |
+| `packages/web` | Vite/PixiJS frontend, local ROM loader, browser input, renderer, sound renderer, and web tests. |
+| `packages/cli` | Probes, audits, route searches, oracle comparison tools, and parity runners. |
+| `oracle` | MAME Lua scripts and oracle scenarios. |
+| `harness` | Trace diff and reporting utilities. |
+| `tools` | ROM prep, Ghidra-oriented utilities, and local support scripts. |
+| `docs` | Public technical notes plus internal development history under `docs/internal`. |
 
-Leggere `STATUS.md` solo quando serve lo stato operativo corrente del prodotto.
-Leggere gli handoff storici solo se il task li nomina esplicitamente o se una
-decisione storica e' necessaria per non cambiare comportamento delicato.
+## Reverse-Engineering Method
 
-Prima di modifiche a descriptor, terreno, collisioni, seed o custom level:
+The project uses several complementary sources of truth:
 
-- `docs/level-header-format.md`
-- `docs/level-header-decode-prd.md`
-- `docs/findings/README.md`
+- Ghidra analysis of the original 68010 program ROM.
+- MAME as the behavioral oracle for runtime state, rendering, input, and sound
+  command traces.
+- Musashi-based binary execution for focused 68010 subroutine comparisons.
+- TypeScript unit tests and CLI probes that compare reimplemented routines to
+  oracle output.
 
-Per cronologia dettagliata e vecchie note operative, non come lettura di
-startup:
+The goal is to build an understandable TypeScript implementation while keeping
+behavior tied to reproducible evidence rather than visual guesswork.
 
-- `HANDOFF_CURRENT_CONTEXT.md`
-- `HANDOFF_SIX_LEVELS.md`
-- `docs/archive/readme-status-2026-05-18/README.full.md`
-- `docs/archive/readme-status-2026-05-18/STATUS.full.md`
+## Legal
+
+This repository contains original Marble Love source code under the MIT license.
+It does not contain Marble Madness ROMs, extracted graphics, extracted audio, or
+other copyrighted game assets.
+
+*Marble Madness*, Atari, and related names/assets are the property of their
+respective rights holders. This project is not affiliated with, sponsored by, or
+endorsed by Atari or any current rights holder.
+
+Users are responsible for obtaining their own legal ROM dumps. The browser ROM
+loader reads ZIP files locally; ROM data is not uploaded by the application.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Third-Party Software And References
+
+See [THIRD_PARTY.md](THIRD_PARTY.md).

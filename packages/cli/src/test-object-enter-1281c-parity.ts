@@ -4,39 +4,24 @@
  * differential FUN_1281C vs `objectEnter1281C`.
  *
  * **Strategia**:
- * `FUN_0001281C` è uno shim "bounded enter / dispatch" che (1) clr.b a
  * `(0x1C,A0)`, (2) gate range -16 < D1w < 256 sul word a `(0x20,A0)`, (3)
- * se in-range scrive `(0x1C,A0) = 1` e chiama `FUN_000264AA(structPtr, mode)`
- * dove `mode = 0` per `A0 ∈ {0x400018, 0x4000FA}`, `mode = 1` altrimenti.
  *
  * Per testare in isolamento la logica dello shim, **patch-iamo
- * `FUN_000264AA` con un mini-stub** che ritorna in `D0` il secondo argomento
- * sullo stack (= `mode` scelto dallo shim):
+ * on the stack (= `mode` chosen by the shim):
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = mode
  *     4E 75          ; rts
  *
- * Così, dopo `FUN_1281C`, abbiamo `D0 = mode` (path in-range) o
  * `D0 = 0xFFFFFFF0` (path out-of-range — `moveq #-0x10,D0` sopravvive).
  *
- * Confronto:
  *   - D0 (long, mode 0/1 oppure 0xFFFFFFF0)
- *   - byte `(0x1C,A0)` post-call (atteso: 0 se out-of-range, 1 se in-range)
- *   - assenza di scritture spurie su altri offset standard del record.
+ *   - absence of spurious writes to other standard record offsets.
  *
  * Pattern coverage (500 iter):
- *   - Pattern 0 : range = -100 (out-of-range basso)
- *   - Pattern 1 : range =  -16 (estremo basso, escluso)
- *   - Pattern 2 : range =  -15 (estremo basso, ammesso)
- *   - Pattern 3 : range =  255 (estremo alto, ammesso)
- *   - Pattern 4 : range =  256 (estremo alto, escluso)
- *   - Pattern 5 : range = 1000 (out-of-range alto)
  *   - Pattern 6 : structPtr = 0x400018 (singleton A, in-range)
  *   - Pattern 7 : structPtr = 0x4000FA (singleton B, in-range)
  *   - Pattern >=8 : random mix (range word random, ptr random)
  *
- * Patch viene scritta in unified memory una volta sola (idempotente perché
- * la regione ROM non viene riscritta dal codice).
  *
  * Uso: npx tsx packages/cli/src/test-object-enter-1281c-parity.ts [N]
  */
@@ -96,8 +81,6 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch FUN_264AA con lo stub. Idempotent: la regione ROM nella mappa di
-  // Musashi non è write-protetta dal backend WASM.
   for (let i = 0; i < STUB_BYTES.length; i++) {
     pokeMem(cpu, FUN_264AA + i, 1, STUB_BYTES[i]!);
   }
@@ -174,7 +157,7 @@ async function main(): Promise<void> {
 
     const rangeWord = rangeSigned & 0xffff;
 
-    // Pre-popola status byte con un sentinel non-zero per dimostrare clr.b.
+    // Pre-populate status byte with a non-zero sentinel to demonstrate clr.b.
     const sentinel = 0xa5;
     pokeMem(cpu, structPtr + 0x1c, 1, sentinel);
     state.workRam[(structPtr - 0x400000) + 0x1c] = sentinel;
@@ -185,7 +168,6 @@ async function main(): Promise<void> {
     state.workRam[(structPtr - 0x400000) + 0x20] = (rangeWord >>> 8) & 0xff;
     state.workRam[(structPtr - 0x400000) + 0x21] = rangeWord & 0xff;
 
-    // ── Run binario ─────────────────────────────────────────────────────
     const r = callFunction(cpu, FUN_1281C, [structPtr >>> 0]);
     const binD0 = r.d0 >>> 0;
     const binStatus = peekMem(cpu, structPtr + 0x1c, 1) & 0xff;
@@ -199,12 +181,10 @@ async function main(): Promise<void> {
         innerCalls++;
         tsCapturedPtr = p >>> 0;
         tsCapturedMode = m >>> 0;
-        // Mirror dello stub asm: ritorna mode come D0.
         return m >>> 0;
       }) >>> 0;
     const tsStatus = state.workRam[(structPtr - 0x400000) + 0x1c] ?? 0;
 
-    // Calcolo expected: TS replica → bin se entrambe corrette.
     const inRange = rangeSigned > -16 && rangeSigned < 256;
     const expectedMode =
       structPtr === 0x00400018 || structPtr === 0x004000fa ? 0 : 1;

@@ -1,9 +1,7 @@
 /**
  * animation-step.ts — `FUN_000132E0` (84 byte): animation pointer step.
  *
- * Avanza il pointer animazione in obj struct, gestisce terminator (-1) +
- * loop count. Returns 1 se l'animazione è davvero "finita" (loop count
- * exhausted), altrimenti 0.
+ * Advances the animation pointer in the object struct and handles terminator (-1) +
  */
 
 import type { GameState } from "./state.js";

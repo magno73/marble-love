@@ -7,13 +7,13 @@
  *   rts
  *
  * Strategia:
- *   - Inizializza workRam con byte random; sync in Musashi e in state.workRam TS.
+ *   - Initialize workRam with random bytes; sync into Musashi and TS state.workRam.
  *   - D1 = random long a 32 bit.
  *   - Lancia `callFunction(cpu, 0x5248, [ignored], {d1: d1val})` e
  *     `orFlags5248(state, d1val)`.
- *   - Confronta workRam[0x1F5E..0x1F61] (long-BE @ 0x401F5E) dopo l'esecuzione.
- *   - Ripete N (default 500) volte con workRam random e D1 random, inclusi
- *     edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (caso tipico callers).
+ *   - Compare workRam[0x1F5E..0x1F61] (long-BE @ 0x401F5E) after execution.
+ *   - Repeat N (default 500) times with random workRam and random D1, including
+ *     edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (typical caller case).
  *
  * Uso: npx tsx packages/cli/src/test-or-flags-5248-parity.ts [N]
  */
@@ -65,17 +65,17 @@ async function main(): Promise<void> {
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
       stateInst.workRam[b] = Math.floor(r() * 256) & 0xff;
     }
-    // Sync verso Musashi
+    // Sync to Musashi.
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
       pokeMem(cpu, WORK_RAM_BASE + b, 1, stateInst.workRam[b]!);
     }
 
-    // D1 = edge case nei primi, poi random
+    // D1 uses edge cases first, then random values.
     const d1 = i < edges.length
       ? edges[i]!
       : (Math.floor(r() * 0x10000) | (Math.floor(r() * 0x10000) << 16)) >>> 0;
 
-    // Valore iniziale flags (per debug)
+    // Initial flags value for debugging.
     const flags0 =
       (((stateInst.workRam[FLAGS_OFF] ?? 0) << 24) |
         ((stateInst.workRam[FLAGS_OFF + 1] ?? 0) << 16) |
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
       fail = { d1, flags0, binResult, tsResult };
     }
 
-    // Sync stato TS dalla workRam Musashi per prossima iterazione
+    // Sync TS state from Musashi workRam for the next iteration.
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
       stateInst.workRam[b] = peekMem(cpu, WORK_RAM_BASE + b, 1);
     }

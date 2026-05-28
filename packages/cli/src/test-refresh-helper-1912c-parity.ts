@@ -6,24 +6,20 @@
  * `FUN_0001912C` (130 byte): "refresh-frame entity ticker with slot-scan flag".
  * Gate su `*0x400394.w == 4`, slot scan @ 0x400018 (stride 0xE2, count
  * `*0x400396`) per il flag D3, poi itera 9 entity @ 0x401890 (stride 0x28)
- * applicando per ogni entity attiva: anim counter tick, kind-byte aggiornato
- * da D3, threshold check, e branch su `entity[0x25]` (state==7 / state!=7) con
- * chiamate a FUN_194BA e FUN_199D6.
+ * by D3, threshold check, and branch on `entity[0x25]` (state==7 / state!=7) with
  *
  * **Strategia parity**:
- *   - `FUN_000194BA` (`objectTypeDispatch194BA`) **stubbato con RTS** (0x4E75).
- *   - `FUN_000199D6` (`computeSpriteCoords_v2`) **stubbato con RTS** (0x4E75).
+ *   - `FUN_000194BA` (`objectTypeDispatch194BA`) **stubbed with RTS** (0x4E75).
+ *   - `FUN_000199D6` (`computeSpriteCoords_v2`) **stubbed with RTS** (0x4E75).
  *   - Entrambi i callee non hanno sub injection attive nel TS (no-op).
  *   - Compare:
  *       * Entity table @ 0x401890 (9 × 0x28 = 0x168 byte)
  *       * Globals: workRam slice @ 0x400394..0x400399 (game-mode word + slot-count word)
- *       * workRam slice @ 0x400018 (slot array; slot-count × 0xE2 byte fino a 2 slot max)
  *   - No RNG consumption (FUN_0001912C non usa RNG).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random entity table, random globals, no slot scan (count=0)
- *   - B: slot scan attivo (count 1..2), vari stati slot per D3 flag
- *   - C: state==7 forzato su entity, vari kind byte e sub-counter
+ *   - C: forced state==7 on entity, varied kind byte and sub-counter
  *   - D: edge cases (entity[0x25]=7/non-7, kind=0/1/2, soglie counter)
  *
  * Uso: npx tsx packages/cli/src/test-refresh-helper-1912c-parity.ts [N]
@@ -86,7 +82,6 @@ function makeRng(seed: number): () => number {
 interface Snapshot {
   /** Entity table: 9 × 0x28 = 0x168 byte. */
   entityTable: number[];
-  /** Slot array: up to 2 slots × 0xE2 byte scanned. */
   slotArea: number[];
   /** Game-mode word @ 0x400394. */
   gameMode: number;
@@ -162,7 +157,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // ROM image per TS (entity[0x1C] può puntare in ROM per il terminator check).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -347,7 +341,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: state==7 forzato su varie entity ────────────────────────────
+  // ─── Suite C: forced state==7 across varied entities ──────────────────────
   console.log(
     `\n=== Suite C: state==7 forzato — ${perSuite} casi ===`,
   );

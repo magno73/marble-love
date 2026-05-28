@@ -71,7 +71,6 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
   });
 
   it("boundary: charCode=0x25 (wide), 0x26 (narrow), 0x2D (narrow), 0x2E (wide)", () => {
-    // start=0x25, count=4 → sequenza: 0x25(wide), 0x26(narrow), 0x27(narrow), 0x28(narrow)
     // step: 4 + 2 + 2 + 2 = 10 byte
     const r1 = renderGlyphLoop1E64(0x00a03000, 0x25, 4);
     expect(r1.endBufPtr).toBe(0x00a03000 + 10);
@@ -119,8 +118,6 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
   });
 
   it("renderGlyph callback assente è no-op (default subs)", () => {
-    // Senza callback: il loop avanza correttamente lo stesso, solo
-    // senza side effect. La firma del modulo accetta `subs` opzionale.
     const r = renderGlyphLoop1E64(0x00a03500, 0x41, 5);
     expect(r.iterations).toBe(5);
     expect(r.endBufPtr).toBe(0x00a03500 + 5 * 4);

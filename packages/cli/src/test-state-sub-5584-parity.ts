@@ -13,14 +13,9 @@
  * Strategia parity test:
  *   - Patch RTS sui 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
  *     impedire l'esecuzione del loro corpo.
- *   - Driver dei return values: PRIMA di ogni jsr, sappiamo che il next-step
- *     sarà l'entry del callee patcheto a RTS. Iniettiamo il valore di "return"
- *     scrivendo D0 nel CPU esattamente prima dell'esecuzione dell'RTS sintetico.
- *   - Cattura args sullo stack al momento di pc == entry callee. Cattura D0
- *     come "return value" subito dopo RTS (= a (0,SP) durante l'entry, ma noi
+ *   - Capture args on the stack when pc == callee entry. Capture D0
  *     lo INIETTIAMO).
- *   - Esegui FUN_5584 step-by-step con vari pattern di return. Confronta col
- *     TS che usa callback playback con stessi return values.
+ *     TS that uses callback playback with the same return values.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5584-parity.ts [N]
  */
@@ -55,7 +50,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patch RTS (0x4E75) all'entry dei tre callee. */
+/** Patch RTS (0x4E75) at the entry of the three callees. */
 function patchCallees(cpu: CpuSession): void {
   // FUN_540A: orig word `movem.l {A2 D3 D2},-(SP)` (0x48E7). Patch a 0x4E75 (rts).
   pokeMem(cpu, FUN_540A + 0, 1, 0x4e);
@@ -98,14 +93,11 @@ interface CapturedSeq {
 
 /**
  * Esegue FUN_5584 step-by-step.
- * Per ogni callee entry, cattura args e inietta `nextReturn` in D0 PRIMA
  * dell'RTS sintetico.
  *
  * @param cpu          CPU session.
  * @param args         5 args (arg0..arg4) come long unsigned.
  * @param ret540A      Return da FUN_540A.
- * @param ret53EA      Sequenza di return da FUN_53EA (1 + N invocazioni, max 6).
- * @param ret5468      Sequenza di return da FUN_5468 (max 5 invocazioni).
  */
 function runAndCapture(
   cpu: CpuSession,
@@ -116,7 +108,6 @@ function runAndCapture(
 ): CapturedSeq {
   const sys = cpu.system;
 
-  // Setup stack: SP iniziale + push 5 args RTL + push sentinel ret addr.
   const sp0 = 0x401f00;
   let sp = sp0;
   // Push args RTL (arg4 first, arg0 last on stack top before ret).
@@ -299,7 +290,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     // Generate args + return values.
@@ -315,13 +305,11 @@ async function main(): Promise<void> {
       ret53EA = [0]; // first 53EA = 0 → early exit
       ret5468 = [];
     } else if (i === 1) {
-      // Loop completo, no match. 53EA sempre != 0; 5468 ritorna ptr != D5.
       args = [0x00401000, 0x0042, 0x000a, 0x0001, 0x0010];
       ret540A = 0x00402000;
       ret53EA = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff]; // 6 invocations
       ret5468 = [0x401001, 0x401002, 0x401003, 0x401004, 0x401005];
     } else if (i === 2) {
-      // Cmp-eq dopo prima iter: 5468 ritorna D5.
       args = [0x00400100, 0x00aa, 0x0005, 0x0001, 0x0010];
       ret540A = 0x00402000;
       ret53EA = [0x42, 0x88]; // post-540A, post-5468-iter1
@@ -333,7 +321,6 @@ async function main(): Promise<void> {
       ret53EA = [0x99, 0]; // post-540A != 0; post-5468 = 0 → restore
       ret5468 = [0x00405555];
     } else if (i === 4) {
-      // 540A ritorna 0 (sentinel "table end"). 53EA(0) → ?
       args = [0x00401000, 0x0001, 0x0001, 0x0001, 0x0001];
       ret540A = 0;
       ret53EA = [0]; // simulate pair=0 → early exit
@@ -385,13 +372,11 @@ async function main(): Promise<void> {
       }
     }
 
-    // Esegue binario.
     const bin = runAndCapture(cpu, args, ret540A, ret53EA, ret5468);
 
     // Esegue TS.
     const ts = runTsAndCapture(state, args, ret540A, ret53EA, ret5468);
 
-    // Confronta.
     const sameOrder =
       bin.order.length === ts.order.length &&
       bin.order.every((v, k) => v === ts.order[k]);

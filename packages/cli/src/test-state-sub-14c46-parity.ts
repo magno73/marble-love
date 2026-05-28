@@ -4,26 +4,26 @@
  * `stateSub14C46`.
  *
  * FUN_00014C46 (422 byte): "range-boundary slot spawn/despawn dispatcher".
- * Itera la entry list `ROM[0x2257A + mode*4]` per spawn-init dei 4 slot
+ * Iterates entry list `ROM[0x2257A + mode*4]` to spawn-init the 4 slots
  * @ 0x401302 (stride 0x60), poi tail walk per teardown su boundary cross.
  *
  * **Strategia parity**:
  *   - `FUN_14BCE` (findFreeSlotInTable), `FUN_14C0C` (slotMatchesPtr) e
  *     `FUN_1BB08` (deriveSpriteFromArg_v1) **lasciati live**: replicati
  *     bit-perfect in `slot-search.ts` / `sprite-derive.ts`.
- *   - `FUN_1CC62` stubbato con `moveq #0, D0; rts` (D0 = 0).
- *   - `FUN_150D0` stubbato con RTS (no return value).
- *   - `FUN_18E6C` stubbato con RTS.
- *   - `FUN_18F46` stubbato con RTS.
+ *   - `FUN_1CC62` stubbed with `moveq #0, D0; rts` (D0 = 0).
+ *   - `FUN_150D0` stubbed with RTS (no return value).
+ *   - `FUN_18E6C` stubbed with RTS.
+ *   - `FUN_18F46` stubbed with RTS.
  *   - Compare:
  *       * `workRam[0x1302..0x14C2]` (4 slot × 0x60 = 384 byte)
- *       * `workRam[0x690..0x6A7]` (sprite-derive globals scritti da FUN_1BB08)
+ *       * `workRam[0x690..0x6A7]` (sprite-derive globals written by FUN_1BB08)
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random everything (mode/D2/D3/slot-prefill/RNG)
- *   - B: forced init (mode con entry list, D3 == entry boundary, D2 fuori range)
+ *   - B: forced init (mode with entry list, D3 == entry boundary, D2 out of range)
  *   - C: forced teardown (slot in uso, D2 == slot[0x52]/[0x54], D3 cross)
- *   - D: edge cases (sentinel diretto, all slots in use, mode out of range)
+ *   - D: edge cases (direct sentinel, all slots in use, mode out of range)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-14c46-parity.ts [N]
  */
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
   }
   const romBytes = readFileSync(romPath);
 
-  // Build TS-side rom image (mirror del binario).
+  // Build TS-side rom image (binary mirror).
   const romImage: RomImage = busNs.emptyRomImage();
   romImage.program.set(romBytes.subarray(0, romImage.program.length));
 
@@ -189,8 +189,8 @@ async function main(): Promise<void> {
     for (let i = 0; i < SPRITE_GLOBALS_LEN; i++) {
       pokeMem(cpu, WORK_RAM_BASE + SPRITE_GLOBALS_OFF + i, 1, 0);
     }
-    // 4. Entry list override (se presente).
-    // ATTENZIONE: pokeMem in ROM area scrive sulla unified memory del CPU
+    // 4. Entry list override (if present).
+    // WARNING: pokeMem in ROM area writes to the CPU unified memory.
     // (la libreria `binary-oracle-lib` usa una RAM array unificata).
     if (input.entryListOverride) {
       const { listAddr, listBytes } = input.entryListOverride;
@@ -416,7 +416,7 @@ async function main(): Promise<void> {
     const variant = i % 5;
     let input: CaseInput;
     if (variant === 0) {
-      // Sentinel diretto (entry list vuota), slot prefill random
+      // Direct sentinel (empty entry list), random slot prefill.
       input = {
         mode: 0,
         d2: rb(),
@@ -425,7 +425,7 @@ async function main(): Promise<void> {
         entryListOverride: { listAddr: 0x00400500, listBytes: [0xff] },
       };
     } else if (variant === 1) {
-      // Tutti slot in use (slot[0x18] != 0) → FUN_14BCE ritorna -1
+      // All slots in use (slot[0x18] != 0) -> FUN_14BCE returns -1.
       const slotAreaPre = new Array(SLOT_AREA_BYTES).fill(0);
       for (let s = 0; s < SLOT_COUNT; s++) {
         slotAreaPre[s * SLOT_STRIDE + 0x18] = 1;

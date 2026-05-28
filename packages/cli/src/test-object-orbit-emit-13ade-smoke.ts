@@ -2,15 +2,11 @@
 /**
  * test-object-orbit-emit-13ade-smoke.ts — smoke tests per `objectOrbitEmit13ADE`.
  *
- * Verifica che la funzione:
  *   1. Esegua il reset trigger 0x64 → counter = 0x30, angle = 0.
  *   2. Esegua il reset trigger 0x65 → counter = 0x18, angle = 0.
  *   3. Esegua il reset trigger 0x66 → counter = 0x24, angle = 0.
- *   4. Decrementi il counter e scriva il ready byte 0x1C = 1.
- *   5. Ritorni 0x01 quando il counter post-decrement è 0.
- *   6. Ritorni 0x00 quando il counter post-decrement != 0.
  *   7. Faccia l'angle advance (0x0A) e il wrap a 0x192.
- *   8. Applichi il mirror se (A0+0x1A).b == 0x0B.
+ *   8. Apply mirroring if (A0+0x1A).b == 0x0B.
  *
  * Uso: npx tsx packages/cli/src/test-object-orbit-emit-13ade-smoke.ts
  */
@@ -33,9 +29,6 @@ function makeState(): ReturnType<typeof stateNs.emptyGameState> {
 }
 
 function makeRom(): RomImage {
-  // ROM tutta zero: la sin/cos table (0x1EDA2) e il delta-stream (0x1EF32)
-  // saranno tutti zero, il che ci permette di testare la logica di stato
-  // indipendentemente dai valori della ROM reale.
   return busNs.emptyRomImage();
 }
 
@@ -66,7 +59,6 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   s.workRam[ARG_OFF + 0x2e] = 0x01; // angle pre != 0
   s.workRam[ARG_OFF + 0x2f] = 0x00;
   ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
-  // counter DOPO trigger reset = 0x30, poi decrementato → 0x2f
   check("trigger 0x64: counter after = 0x2F", s.workRam[ARG_OFF + 0x57], 0x2f);
   // angle: reset a 0, poi avanzato di 0x0A → 0x000A
   check("trigger 0x64: angle after = 0x000A", readU16(s, ARG_OFF + 0x2e), 0x000a);
@@ -97,21 +89,19 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   check("trigger 0x66: angle = 0x000A", readU16(s, ARG_OFF + 0x2e), 0x000a);
 }
 
-// ── Smoke 4: D0 return = 1 quando counter post == 0 ─────────────────────
 {
   const s = makeState();
   const rom = makeRom();
-  s.workRam[ARG_OFF + 0x57] = 0x01; // counter = 1, dopo decrement → 0
+  s.workRam[ARG_OFF + 0x57] = 0x01;
   const d0 = ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
   check("D0 = 1 quando counter post == 0", d0, 0x00000001);
   check("counter post == 0", s.workRam[ARG_OFF + 0x57], 0x00);
 }
 
-// ── Smoke 5: D0 return = 0 quando counter post != 0 ─────────────────────
 {
   const s = makeState();
   const rom = makeRom();
-  s.workRam[ARG_OFF + 0x57] = 0x10; // counter = 16, dopo decrement → 15
+  s.workRam[ARG_OFF + 0x57] = 0x10;
   const d0 = ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
   check("D0 = 0 quando counter post != 0", d0, 0x00000000);
   check("counter post == 0x0F", s.workRam[ARG_OFF + 0x57], 0x0f);
@@ -122,14 +112,12 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   const s = makeState();
   const rom = makeRom();
   s.workRam[ARG_OFF + 0x57] = 0x05;
-  // angle = 0x188 (= 0x192 - 0x0A = 392), dopo advance dovrebbe tornare a 0
   s.workRam[ARG_OFF + 0x2e] = 0x01;
   s.workRam[ARG_OFF + 0x2f] = 0x88;
   ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
   check("angle wrap: 0x188 + 0x0A = 0x192 → 0", readU16(s, ARG_OFF + 0x2e), 0x0000);
 }
 
-// ── Smoke 7: angle avanza normalmente senza wrap ─────────────────────────
 {
   const s = makeState();
   const rom = makeRom();
@@ -141,7 +129,6 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   check("angle advance: 0x0050 + 0x0A = 0x005A", readU16(s, ARG_OFF + 0x2e), 0x005a);
 }
 
-// ── Smoke 8: ready byte sempre 1 ─────────────────────────────────────────
 {
   const s = makeState();
   const rom = makeRom();

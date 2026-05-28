@@ -3,15 +3,15 @@
  * test-script-slot-step-13068-parity.ts —
  * differential FUN_00013068 vs `scriptSlotStep13068`.
  *
- * **Strategia**:
- * `FUN_13068` chiama:
- *   - `FUN_12896` via `jsr (A4)` (A4=0x12896): non replicata → patcha con `rts`.
- *   - `FUN_13334` (0x13334): replicata come `objectRenderUpdate13334`;
- *     chiama a sua volta `FUN_1D06A` (non replicata) → patcha con `rts`.
- *   - `FUN_132E0` (0x132e0): helper embedded, implementata inline in TS.
+ * **Strategy**:
+ * `FUN_13068` calls:
+ *   - `FUN_12896` via `jsr (A4)` (A4=0x12896): not mirrored -> patch with `rts`.
+ *   - `FUN_13334` (0x13334): mirrored as `objectRenderUpdate13334`;
+ *     calls `FUN_1D06A` in turn (not mirrored) -> patch with `rts`.
+ *   - `FUN_132E0` (0x132e0): embedded helper, implemented inline in TS.
  *
- * **Confronto**: tutto il workRam locale al slot (0x56 byte @ slotPtr) +
- * globali osservabili:
+ * **Comparison**: all slot-local workRam (0x56 bytes @ slotPtr) +
+ * observable globals:
  *   - [0x400456] byte timer456
  *   - [0x40044a] long ptr44a
  *   - [0x40044e] long ptr44e
@@ -20,18 +20,18 @@
  *   - [0x40045a] byte timer45a
  *   - [0x40045c] word word45c
  *   - [0x40075e] byte flag75e
- *   - [0x400690..0x400693] POS_X/Y (da FUN_13334)
- *   - [0x400970..0x400977] active-record globals (da FUN_13334)
- *   - [0x400408..0x40040f] palette queue (da FUN_13334 via FUN_26B66)
+ *   - [0x400690..0x400693] POS_X/Y (from FUN_13334)
+ *   - [0x400970..0x400977] active-record globals (from FUN_13334)
+ *   - [0x400408..0x40040f] palette queue (from FUN_13334 via FUN_26B66)
  *
- * **Suite testate (5 × 100 = 500 casi)**:
+ * **Tested suites (5 x 100 = 500 cases)**:
  *   A: slot[0x18]=0 (inactive) — always no-op
- *   B: slot[0x1f]=3 (kind==3) con vari slot[0x1a] (0..4)
+ *   B: slot[0x1f]=3 (kind==3) with varied slot[0x1a] (0..4)
  *   C: slot[0x1a] random 0..4, slot[0x1f] != 3
- *   D: case 1/2 con counter/limit logic + FUN_132E0 wraps
+ *   D: case 1/2 with counter/limit logic + FUN_132E0 wraps
  *   E: edge cases (tombstone, timer wraps, kind 6/0x19)
  *
- * Uso: npx tsx packages/cli/src/test-script-slot-step-13068-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-script-slot-step-13068-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

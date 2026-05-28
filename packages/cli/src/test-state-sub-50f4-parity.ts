@@ -2,9 +2,7 @@
 /**
  * test-state-sub-50f4-parity.ts — differential FUN_50F4 vs stateSub50F4.
  *
- * `FUN_000050F4` (204 byte): Reed-Solomon-like parity decoder. Legge una riga
- * input (codeword 30 byte da A3+D2w*30), calcola 5 syndromi, scrive 10 byte
- * di output verso A2+D3w*10 e (eventualmente) applica correzione single-bit.
+ * of output to A2+D3w*10 and optionally applies single-bit correction.
  *
  * Convenzione caller (registri inheritati da `bsr.w` in FUN_4F38):
  *   - A2 (long ptr) = output buffer
@@ -18,7 +16,6 @@
  *   - Setta A2 (workRam ptr), A3 (ROM o workRam ptr), D2w, D3w
  *   - Spinge sentinel ret addr, poi setRegister(pc, 0x50F4)
  *   - run loop fino a PC == sentinel, capture D0/D2/D3 + workRam delta
- *   - Confronta con stateSub50F4 (state.workRam = mirror + rom = mirror)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
  */
@@ -66,16 +63,13 @@ interface CaptureResult {
 }
 
 /**
- * Esegue FUN_50F4 step-by-step e cattura D0/D2/D3 + workRam region.
+ * Run FUN_50F4 step-by-step and capture D0/D2/D3 + workRam region.
  *
- * Setup registri PRIMA della chiamata:
- *   - sp = 0x401F00 (verrà decrementato per push sentinel)
  *   - pc = FUN_50F4
  *   - a2 = a2Ptr, a3 = a3Ptr
  *   - d2 = d2Word (zero-ext da word), d3 = d3Word
  *
- * Nota: FUN_50F4 NON ha movem prologue all'entry — fa lea immediati che usano
- * D2/D3/A2/A3 PRIMA del movem. Quindi i registri devono essere giusti.
+ * Note: FUN_50F4 has NO movem prologue at entry — it uses immediate lea ops that use
  */
 function runAndCaptureBin(
   cpu: CpuSession,
@@ -100,8 +94,6 @@ function runAndCaptureBin(
   sys.setRegister("d2", (d2Word & 0xffff) >>> 0);
   sys.setRegister("d3", (d3Word & 0xffff) >>> 0);
 
-  // Pollute D0/D1/D4/D5/D6/A0/A1/A4 con valori noti per non confondere coi
-  // valori "garbage" sotto test.
   sys.setRegister("d0", 0xdeadbeef);
   sys.setRegister("d1", 0xcafedab0);
   sys.setRegister("d4", 0xcafe0004);
@@ -189,12 +181,11 @@ async function main(): Promise<void> {
     let setup: CaseSetup;
 
     if (i === 0) {
-      // Caso "tutti zero" + A0[0]=0xFF → syndromi tutte 0 → return 0.
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
       setup = {
         a2: WORK_RAM_BASE + 0x100,
-        a3: 0x00400800, // workRam ptr (lontano da A2 e dal counter)
+        a3: 0x00400800,
         d2Word: 0,
         d3Word: 0,
         inputRowBytes: inputRow,
@@ -206,17 +197,15 @@ async function main(): Promise<void> {
       // Init D6b = ~0 ^ 0 ^ 0 ^ 0 ^ 1 = 0xFE. D2b=1.
       // Iter loop bytes = 0 → no XOR change. Syndromi: D6b=0xFE, D2b=1, others=0.
       // Bit-iter 1: D0w = (0<<4)|0|0|0|1 = 1 (bit 4 NOT set) → uncorrectable!
-      // Hmm, useremo un caso che produca correggibile.
-      // Per correggibile: bit 4 di D0w deve essere set, cioè LSB(D6b) = 1.
       // E table[D0w-0x10] != 0xFF. D0w = 0x13 → table[3] = 0x00 → corregge pos 0.
       // Per D0w = 0x13: bit pattern (lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=1, lsbD2=1)
       // = (1<<4) | (1<<1) | 1 = 0x10 | 2 | 1 = 0x13. ✓
       //
       // Setup: input zero TRANNE A0[0]=0xFE (→ D6b init = 0x01 with LSB=1),
-      // e altri set per get D3b LSB=1 e D2b LSB=1.
+      // and other sets to get D3b LSB=1 and D2b LSB=1.
       // A0[2]=0x01 → D2b=0x01 (LSB=1), D6b ^= 1 → 0x00. Hmm conflicts.
       //
-      // Approccio empirico: usiamo un byte pattern arbitrario e validiamo solo
+      // Empirical approach: use an arbitrary byte pattern and validate only
       // coerenza bin/ts.
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
@@ -244,7 +233,6 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 3) {
-      // Counter pre-existing valore ≠ 0.
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
       inputRow[8] = 0xab; // disturba syndromi
@@ -284,9 +272,8 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 6) {
-      // A3 punta in ROM (lettura ROM byte dal binario).
       const inputRow = new Uint8Array(30);
-      // Riempiamo input con byte ROM esistenti (0x10000..0x1001D).
+      // Fill input with existing ROM bytes (0x10000..0x1001D).
       for (let k = 0; k < 30; k++) inputRow[k] = rom[0x10000 + k]!;
       setup = {
         a2: WORK_RAM_BASE + 0x100,
@@ -322,10 +309,10 @@ async function main(): Promise<void> {
       for (let k = 0; k < 10; k++) {
         initialOutput[k] = Math.floor(rng() * 256) & 0xff;
       }
-      // a2: workRam allineato 4, evitare overlap con A3 e con counter range
+      // a2: 4-byte-aligned workRam, avoid overlap with A3 and counter range.
       // A2[0x11..0x12]. Limitiamo A2 a 0x400000..0x401C00 stride 4.
       const a2OffRaw = (Math.floor(rng() * 0x700) * 4) & 0x1ffc;
-      // d2/d3 piccoli (0..15) per evitare wrap.
+      // Small d2/d3 (0..15) to avoid wraparound.
       const d2Word = Math.floor(rng() * 16);
       const d3Word = Math.floor(rng() * 16);
       const initialCounter = Math.floor(rng() * 0x10000) & 0xffff;
@@ -347,7 +334,6 @@ async function main(): Promise<void> {
       state.workRam[k] = 0;
     }
 
-    // Scrivi input row in workRam (bin + TS) se A3 è in workRam.
     if (setup.a3 >= WORK_RAM_BASE && setup.a3 < WORK_RAM_BASE + WORK_RAM_SIZE) {
       const inputAbsAddr = setup.a3 + setup.d2Word * 30;
       for (let k = 0; k < 30; k++) {
@@ -358,14 +344,11 @@ async function main(): Promise<void> {
         }
       }
     } else {
-      // A3 in ROM: setup.inputRowBytes deve combaciare con la ROM esistente.
-      // Per il caso ROM (i==6), l'input row è già la ROM. Per altri casi
-      // usiamo inputRow patternizzato e scriviamo in ROM via pokeMem (ROM è
+      // A3 in ROM: setup.inputRowBytes must match the existing ROM.
       // unified memory, scrivibile in test).
       const inputAbsAddr = setup.a3 + setup.d2Word * 30;
       for (let k = 0; k < 30; k++) {
         pokeMem(cpu, inputAbsAddr + k, 1, setup.inputRowBytes[k]!);
-        // Mirror in tsRom.program (TS legge da rom.program per A3 in ROM).
         const romOff = inputAbsAddr + k;
         if (romOff < tsRom.program.length) {
           tsRom.program[romOff] = setup.inputRowBytes[k]!;
@@ -373,7 +356,6 @@ async function main(): Promise<void> {
       }
     }
 
-    // Scrivi initial counter @ A2[0x11..0x12] (long-BE, 2 byte).
     const counterHi = (setup.initialCounter >>> 8) & 0xff;
     const counterLo = setup.initialCounter & 0xff;
     pokeMem(cpu, setup.a2 + 0x11, 1, counterHi);
@@ -381,7 +363,6 @@ async function main(): Promise<void> {
     state.workRam[(setup.a2 - WORK_RAM_BASE) + 0x11] = counterHi;
     state.workRam[(setup.a2 - WORK_RAM_BASE) + 0x12] = counterLo;
 
-    // Scrivi initial output bytes @ A2+D3w*10 (per testare correzione XOR).
     const outAbsAddr = setup.a2 + setup.d3Word * 10;
     for (let k = 0; k < 10; k++) {
       pokeMem(cpu, outAbsAddr + k, 1, setup.initialOutputBytes[k]!);
@@ -411,7 +392,6 @@ async function main(): Promise<void> {
       setup.d3Word,
     );
 
-    // ─── Confronto ─────────────────────────────────────────────────────
     let diffField: string | null = null;
     if (!bin.reachedRts) {
       diffField = "reachedRts (bin timeout)";

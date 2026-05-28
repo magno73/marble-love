@@ -2,17 +2,9 @@
 /**
  * test-sound-cmd-send-parity.ts — differential FUN_158AC vs soundCmdSend.
  *
- * `FUN_000158AC` (32 byte) è un wrapper "send" che:
- *   1. legge `tst.w (0x004003B8).l` (word in workRam) come skip flag
- *   2. se != 0 → ritorna D0=0 (skip)
- *   3. altrimenti chiama `FUN_4C6E` (via thunk JMP @ 0x023C) con il byte
- *      sign-extended a long; FUN_4C6E ritra fino a 256 volte se il sound
- *      chip è busy (bit 7 di MMIO 0xF60001) prima di ritornare D0=0;
- *      altrimenti scrive il low word a MMIO 0xFE0000 e ritorna D0=1.
+ *      sign-extended to long; FUN_4C6E retries up to 256 times if the sound
  *
  * Per il differential test forziamo la convergenza:
- *   - Ensure `0xF60001 = 0x00` (chip ready) → FUN_4C6E entra subito nel
- *     path "success" e ritorna D0=1 senza retry.
  *   - Variamo il word @ 0x004003B8 (skip flag) e il byte arg.
  *
  * Pattern coverage:
@@ -22,8 +14,6 @@
  *   pattern 3: skipFlag bytes asimmetrici (low only) → D0=0
  *   pattern >=4: full random
  *
- * Side effect MMIO 0xFE0000: NON è osservabile in workRam — confrontiamo
- * solo D0 (matching workRam comparison: nessun byte di workRam deve
  * cambiare in entrambi i path).
  *
  * Uso: npx tsx packages/cli/src/test-sound-cmd-send-parity.ts [N]
@@ -76,9 +66,6 @@ async function main(): Promise<void> {
     tsD0: number;
   } | null = null;
 
-  // Setup invariante: chip sempre ready (bit 7 = 0). Senza questo, FUN_4C6E
-  // entra nel retry loop infinito (256 cicli) e poi ritorna D0=0; col chip
-  // ready il path è deterministico → D0=1.
   pokeMem(cpu, 0xf60001, 1, 0x00);
 
   for (let i = 0; i < n; i++) {
@@ -103,7 +90,7 @@ async function main(): Promise<void> {
         byteArg = 0x80; // sign-ext negativo
         break;
       case 3:
-        skipFlag = 0x0001; // solo byte basso
+        skipFlag = 0x0001;
         byteArg = Math.floor(rng() * 256);
         break;
       default:
@@ -119,20 +106,14 @@ async function main(): Promise<void> {
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;
 
-    // Re-assert chip ready (qualche test precedente potrebbe non averlo
-    // toccato, ma la write-back di FUN_4C6E al mailbox potrebbe modificare
-    // 0xFE0000; il bit 7 di 0xF60001 resta a 0 perché non viene scritto).
+    // touched, but FUN_4C6E mailbox write-back could modify
     pokeMem(cpu, 0xf60001, 1, 0x00);
 
     // Pulisci 0xFE0000 (mailbox sound CPU); irrilevante per il return value
-    // ma utile per evitare side effects spuri tra iterazioni.
     pokeMem(cpu, 0x00fe0000, 2, 0x0000);
 
-    // Call binary: byteArg è pushato come long (M68k cdecl, sign-extension
-    // implicita non necessaria — FUN_158AC legge `(0x7,SP)` cioè il byte
-    // basso del long; lo passiamo zero-esteso e va bene).
     const r = callFunction(cpu, FUN_158AC, [byteArg & 0xff]);
-    const binD0 = r.d0 & 0xff; // FUN_158AC ritorna 0/1 — guardiamo solo byte basso
+    const binD0 = r.d0 & 0xff;
 
     // Run TS
     const tsD0 = csNs.soundCmdSend(state, byteArg);

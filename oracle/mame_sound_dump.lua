@@ -1,5 +1,5 @@
--- mame_sound_dump.lua — dumpa stato sound chip (6502 + YM2151 + POKEY +
--- mailbox) a un frame specifico. Output: JSON con audiocpu regs, audioRam,
+-- mame_sound_dump.lua - dumps sound chip state (6502 + YM2151 + POKEY +
+-- mailbox) at a specific frame. Output: JSON with audiocpu regs, audioRam,
 -- mailbox, ym2151 e pokey register shadow.
 --
 -- Variabili d'ambiente:
@@ -17,8 +17,8 @@ local soundlatch = nil
 local mainlatch = nil
 local frame_count = 0
 
--- Shadow buffer aggiornato da pre_write_tap (fallback se le device state
--- non espongono nativamente l'array dei registri interni).
+-- Shadow buffer updated by pre_write_tap (fallback if device state
+-- do not natively expose the internal register array).
 local ym_shadow = {}  -- 256 byte, indici 0..255
 local ym_latched_reg = 0  -- ultimo registro selezionato via write a $1800
 local pokey_shadow = {}  -- 16 byte, indici 0..15
@@ -73,8 +73,8 @@ local function reg6502()
 end
 
 local function mailbox_state()
-    -- generic_latch_8 espone m_latched_value (byte) e m_latch_read (true se
-    -- gia' letto = NOT pending; false se pending).
+    -- generic_latch_8 exposes m_latched_value (byte) and m_latch_read (true if
+    -- already read = NOT pending; false if pending).
     local soundlatch_val = state_value(soundlatch, "m_latched_value", 0) & 0xff
     local soundlatch_read = state_value(soundlatch, "m_latch_read", 1)
     local mainlatch_val = state_value(mainlatch, "m_latched_value", 0) & 0xff
@@ -89,7 +89,7 @@ end
 
 local function install_taps()
     if audio_mem == nil then return end
-    -- YM2151: il 6502 scrive $1800 (address latch) e $1801 (data write per
+    -- YM2151: the 6502 writes $1800 (address latch) and $1801 (data write for
     -- il registro selezionato). Tracciamo il flusso per mantenere ym_shadow.
     if audio_mem.install_write_tap ~= nil then
         audio_mem:install_write_tap(0x1800, 0x1800, "ym_addr", function(o, d, m)
@@ -99,7 +99,7 @@ local function install_taps()
             ym_shadow[ym_latched_reg] = d & 0xff
         end)
         -- POKEY: mappa $1870-$187F sul bus 6502. Ogni byte e' un registro
-        -- diretto (no address latch separato).
+        -- direct write; there is no separate address latch.
         audio_mem:install_write_tap(0x1870, 0x187f, "pokey_write", function(o, d, m)
             pokey_shadow[o - 0x1870] = d & 0xff
         end)

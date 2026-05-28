@@ -2,8 +2,6 @@
 /**
  * test-game-mode-prep-10456-parity.ts — differential FUN_10456 vs gameModePrep10456.
  *
- * FUN_00010456 è il "game mode preparation" subroutine: pura RAM manipulation,
- * nessuna JSR interna. Confronta l'intera work RAM dopo l'esecuzione binaria vs TS.
  *
  * Uso:
  *   bun packages/cli/src/test-game-mode-prep-10456-parity.ts [N=500]

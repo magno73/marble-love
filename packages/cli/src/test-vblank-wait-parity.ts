@@ -2,7 +2,6 @@
 /**
  * test-vblank-wait-parity.ts — differential FUN_000052B8 vs waitVblank.
  *
- * `FUN_000052B8` (34 byte) è una busy-wait di N vblank. Convenzione caller
  * (vista ad esempio @ 0x5D02..0x5D0C):
  *
  *   pea     (0xa).w        ; arg long (low word = count)
@@ -18,18 +17,11 @@
  *   subq.w  #1,D0w
  * test:  tst.w D0w; bgt loop
  *
- * Per evitare che il binario rimanga bloccato sul `0x401FF8` (counter che il
- * vero hardware incrementa nella IRQ vblank), registriamo un callback su
- * `onMemoryRead` che, ad ogni lettura di `0x401FF8`, scrive in memoria
- * `counter+1`. La lettura SUCCESSIVA vede il valore mutato → il `cmp + beq`
- * inner esce immediatamente. In media servono 2 letture per iterazione del
  * loop esterno.
  *
  * **Output confrontato**: D0w (low word di D0) e workRam unchanged.
  *
  * **Distribuzione**:
- *   - 50% count signed <= 0 (bgt non scatta, nessuna lettura del counter)
- *   - 50% count signed > 0 in [1..16] (loop esegue, counter injection attiva)
  *
  * Uso: npx tsx packages/cli/src/test-vblank-wait-parity.ts [N]
  */
@@ -99,19 +91,14 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Hook reads to 0x401FF8: ogni lettura, incrementa il counter in memoria.
-  // Così la lettura successiva vede il valore mutato e l'inner loop esce.
   // Usiamo writeRaw8 per bypassare callbacks/MMIO e scrivere direttamente
-  // nella unified memory (così la lettura successiva del CPU vede il
-  // valore aggiornato).
   let injectionsActive = true;
   let injectCount = 0;
-  let injectedValue = 0; // contatore monotono indipendente dalla mem
+  let injectedValue = 0;
   const dispose = cpu.system.onMemoryRead((event) => {
     if (!injectionsActive) return;
     if (event.addr === VBLANK_COUNTER_ADDR && event.size === 4) {
       injectedValue = (injectedValue + 1) >>> 0;
-      // Scrivi big-endian (M68k): byte alto a addr, byte basso a addr+3.
       cpu.system.writeRaw8(VBLANK_COUNTER_ADDR + 0, (injectedValue >>> 24) & 0xff);
       cpu.system.writeRaw8(VBLANK_COUNTER_ADDR + 1, (injectedValue >>> 16) & 0xff);
       cpu.system.writeRaw8(VBLANK_COUNTER_ADDR + 2, (injectedValue >>> 8) & 0xff);
@@ -133,7 +120,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Pattern dei primi casi: corner cases noti.
     let countWord: number;
     if (i === 0) {
       countWord = 0;
@@ -144,23 +130,18 @@ async function main(): Promise<void> {
     } else if (i === 3) {
       countWord = 0x8000; // -32768 signed
     } else if (i === 4) {
-      countWord = 0x7fff; // troppo grande per testare nel binario, lo gestiamo a parte
+      countWord = 0x7fff;
     } else if (i % 2 === 0) {
       // count signed <= 0: range [-32768..0]
       countWord = Math.floor(rng() * 0x8001) | 0; // 0..0x8000
       if (countWord !== 0) countWord = (-countWord) & 0xffff;
     } else {
-      // count signed > 0 in [1..16] per tenere il binario veloce
       countWord = (Math.floor(rng() * 16) + 1) & 0xffff;
     }
 
-    // Caso speciale 0x7fff: nel binario significa 32767 iterazioni →
-    // ~65k letture del counter, troppo lente con la callback. Saltiamo
-    // al binario e verifichiamo solo via TS, ma per coerenza del pattern
-    // scegliamo 0x7fff in TS solo: comparison con il binario clamped a 16.
+    // About 65k counter reads are too slow with the callback. Skip
     let runOnBinary = true;
     if (i === 4) {
-      // Skip: verifichiamo solo TS=0 (count>0 → loop esegue → ritorna 0)
       const tsD0w = vwNs.waitVblank(state, countWord) & 0xffff;
       if (tsD0w === 0) ok++;
       else if (firstFail === null) {
@@ -174,15 +155,10 @@ async function main(): Promise<void> {
     pokeMem(cpu, VBLANK_COUNTER_ADDR, 4, 0);
     injectedValue = 0;
 
-    // Costruiamo l'arg long come il caller reale: pea (0xa).w fa
-    // sext_long(word). Quindi arg = signExtend(countWord) → long.
     const countSigned = (countWord & 0x8000) ? countWord - 0x10000 : countWord;
     const argLong = countSigned >>> 0;
 
     // Setup stack: SP a 0x401E80, push arg long, push sentinel return.
-    // Usiamo step()-based runner (non `callFunction`/`run`) perché
-    // `system.run(burst)` può over-runnare oltre la sentinel e far divergere
-    // il PC su exception handlers se il `rts` esce sotto la fine del burst.
     const initialSp = 0x401e80;
     cpu.system.setRegister("sp", initialSp);
     let sp = initialSp;
@@ -192,11 +168,10 @@ async function main(): Promise<void> {
     cpu.system.write(sp, 4, SENTINEL_RET);
     cpu.system.setRegister("sp", sp);
     cpu.system.setRegister("pc", FUN_VBLANK_WAIT);
-    // Pre-fill D0/D1 con sentinel per accorgerci di clobber non documentati.
+    // Pre-fill D0/D1 with sentinels to detect undocumented clobbering.
     cpu.system.setRegister("d0", 0xdeadbeef);
     cpu.system.setRegister("d1", 0xcafedab0);
 
-    // Snapshot workRam DOPO setup stack (così sentinel/arg già scritti
     // sono nel "before" e non producono falsi mismatch).
     const before = snapshotWorkRam(cpu);
 
@@ -221,9 +196,8 @@ async function main(): Promise<void> {
       );
     }
 
-    // Snapshot DOPO esecuzione e confronto.
     const after = snapshotWorkRam(cpu);
-    // Ignora regione del counter VBLANK @ 0x1FF8..0x1FFB (modificato
+    // Ignore VBLANK counter region @ 0x1FF8..0x1FFB, modified
     // dall'injection durante l'esecuzione del busy-wait).
     const wramMismatch = workRamDiffers(before.bytes, after.bytes, [
       [0x1ff8, 4],

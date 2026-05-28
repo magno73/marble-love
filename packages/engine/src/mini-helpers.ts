@@ -1,8 +1,8 @@
 /**
- * mini-helpers.ts — replica di 3 funzioni leaf/small residue:
- *   - FUN_0001216A: abs(arg) signed-32 (alias di FUN_1B5A6)
+ * mini-helpers.ts - replicas for three leaf/small-residue functions:
+ *   - FUN_0001216A: abs(arg) signed-32 (alias of FUN_1B5A6)
  *   - FUN_0000383A: alpha-tile word write
- *   - FUN_0000565A: palette init (8 word ROM→colorRam + clear @0x400)
+ *   - FUN_0000565A: palette init (8 ROM words -> colorRam + clear @0x400)
  */
 
 import type { GameState } from "./state.js";
@@ -13,15 +13,15 @@ export const ALPHA_TILE_WORD_WRITE_383A_ADDR = 0x0000383a as const;
 export const PALETTE_INIT_565A_ADDR = 0x0000565a as const;
 
 /**
- * Replica `FUN_0001216A` — abs(arg) signed-32.
+ * Replica `FUN_0001216A` - abs(arg) signed-32.
  *
  *   move.l (0x4,SP),D0
- *   bpl skip          ; if D0 >= 0 → exit
+ *   bpl skip          ; if D0 >= 0 -> exit
  *   neg.l D0
  *   skip: rts
  *
- * Identical a `FUN_1B5A6` (in abs-helpers.ts) ma con address diverso.
- * Mantenuto separato per parity completeness.
+ * Identical to `FUN_1B5A6` (in abs-helpers.ts), but at a different address.
+ * Kept separate for parity completeness.
  */
 export function absLong1216A(arg: number): number {
   const a = arg | 0;

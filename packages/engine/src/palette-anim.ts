@@ -1,17 +1,13 @@
 /**
- * palette-anim.ts — sotto-update di MainUpdate per palette animation.
  *
  * Le 4 palette anim (FUN_26BEE, FUN_26C78, FUN_26D4E, FUN_26B88) condividono
- * la stessa struttura di loop ma differiscono per:
- *   - offset del counter dentro l'oggetto
+ * the same loop structure but differ in:
  *   - lookup tables in ROM (per type==0 e type!=0)
  *   - destination addresses in palette RAM (per type==0 e type!=0)
  *   - asr shift (div 2 o div 4 per indice)
  *   - wrap value (signed > N → reset to 0)
  *
- * Quindi una sola funzione generica + 4 parametrizzazioni.
  *
- * **Verificato bit-perfect** vs binary (1000+ casi per ogni anim) tramite
  * `cli/src/test-palette-anim-parity.ts`.
  */
 
@@ -29,13 +25,12 @@ export const PAL_RAM_BASE = 0xb00000 as const;
 
 const ANIM_COUNTER_DISABLED = 0xff as const;
 
-// Backwards-compat label (anim 1 usa offset 0x70).
+// Backwards-compat label (anim 1 uses offset 0x70).
 export const OBJ_FIELD_ANIM = 0x70 as const;
 
-// ─── Parametri per ogni palette anim ──────────────────────────────────────
+// Parameters for each palette animation.
 
 export interface PaletteAnimParams {
-  /** Offset del counter dentro l'object struct. */
   ctrOffset: number;
   /** Lookup table per type == 0 (in ROM program). */
   tableTypeZero: number;
@@ -45,11 +40,9 @@ export interface PaletteAnimParams {
   palDestTypeZero: number;
   /** Palette destination per type != 0. */
   palDestTypeNonZero: number;
-  /** Bits di asr.l prima di moltiplicare per 2 (1 o 2). */
   asrShift: number;
-  /** Valore wrap signed: se ctr_signed > wrapMax, reset a 0. */
   wrapMax: number;
-  /** Se true, controlla anche `field_0xD8` (skip flag) — solo anim 1 lo fa. */
+  /** If true, also checks `field_0xD8` (skip flag) — only anim 1 does this. */
   checkSkipFlag: boolean;
 }
 
@@ -62,7 +55,7 @@ export const ANIM1_PARAMS: PaletteAnimParams = {
   palDestTypeNonZero: 0xb0000e,
   asrShift: 2,
   wrapMax: 0x3f,
-  checkSkipFlag: true,  // unica anim che controlla skip flag
+  checkSkipFlag: true,  // only anim that checks the skip flag
 };
 
 /** FUN_00026C78 — anim 2 (counter +0x71, tables 0x20B74/0x20B94). */
@@ -116,8 +109,6 @@ export function paletteAnimTick(
 ): void {
   const count = workRamReadU16BE(state, OBJ_COUNT_ADDR - 0x400000);
 
-  // Loop counter è byte (D1.b) sext.w → confronto u16 con count.
-  // Il binario itera fino a (sext_w(D1.b) == count). Per count > 127 wrappa.
   for (let i = 0; i < 256; i++) {
     const i_signed_w = sext8_i32(i) & 0xffff;
     if (i_signed_w === count) return;
@@ -143,7 +134,6 @@ export function paletteAnimTick(
     colorRamWriteU16BE(state, palOffset, palWord);
 
     let newCtr = ((animCtr & 0xff) + 1) & 0xff;
-    // Reset solo se SIGNED ctr > wrapMax. Il binario usa `cmpi.b #wrapMax;
     // ble skip; clr.b ctr` → 64..127 (signed pos > wrapMax) reset, ma
     // 128..255 (signed neg) NO.
     const signedCtr = (newCtr & 0x80) !== 0 ? newCtr - 0x100 : newCtr;

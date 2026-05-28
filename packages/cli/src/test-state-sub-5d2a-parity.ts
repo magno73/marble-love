@@ -2,19 +2,12 @@
 /**
  * test-state-sub-5d2a-parity.ts — differential FUN_5D2A vs stateSub5D2A.
  *
- * `FUN_00005D2A` (194 byte): row-render con bit-mask scan. Itera 16 volte
- * (D4 = 15..0) e per ogni iter chiama 2 volte FUN_3784 (cella sinistra +
- * cella destra). Args costanti dal lato FUN_5D2A: 2 long passati dal caller
- * (low word usata: arg0 = bitmap, arg1 = highlight idx).
+ * `FUN_00005D2A` (194 bytes): row-render with bit-mask scan. Iterates 16 times
  *
  * Strategia parity test:
  *   - Patch RTS (0x4E75) all'entry di FUN_3784 per intercettare ogni call.
  *   - Inietta byte ROM @ 0x10072 via pokeMem (Musashi unified memory).
- *   - Spinge 2 long args + sentinel ret addr sullo stack.
- *   - Esegui FUN_5D2A step-by-step: ad ogni PC == FUN_3784, leggi i 4 long
- *     dallo stack come (y, x, attr, extra) e registra la chiamata. Si
- *     attendono 32 chiamate (16 iter × 2 celle).
- *   - Confronta la sequenza catturata col binario vs sequenza catturata dal
+ *   - Pushes 2 long args + sentinel return address on the stack.
  *     callback TS (inner3784).
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5d2a-parity.ts [N]
@@ -54,7 +47,6 @@ function makeRng(seed: number): () => number {
 
 /** Patcha RTS (0x4E75) all'entry di FUN_3784. */
 function patchCallees(cpu: CpuSession): void {
-  // FUN_3784: prima word originale è prologue (es. movem o link). Patch a 0x4E75.
   pokeMem(cpu, FUN_3784 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_3784 + 1, 1, 0x75);
 }
@@ -73,17 +65,13 @@ interface CapturedSeq {
 }
 
 /**
- * Esegue FUN_5D2A step-by-step e cattura args alle entry di FUN_3784.
+ * Run FUN_5D2A step-by-step and capture args at FUN_3784 entries.
  *
- * Patch già applicato: ad entry callee, l'opcode è RTS (0x4E75) → next step
- * ritorna immediatamente al caller. Catturiamo gli args PRIMA di eseguire RTS.
  *
- * Args di FUN_3784 sullo stack (push order RTL = arg4, attr, x, y):
- *   (0,SP)  = ret addr (verso 0x5DB4 o 0x5DD4)
+ * FUN_3784 args on the stack (RTL push order = arg4, attr, x, y):
+ *   (0,SP)  = ret addr (toward 0x5DB4 or 0x5DD4)
  *   (4,SP)  = y (long, sign-ext da D6w)
  *   (8,SP)  = x (long, sign-ext somma A3+A4 oppure (15-A4)+A3)
- *   (12,SP) = attr (0xA0/0x20 per cella sinistra; 0 per cella destra)
- *   (16,SP) = extra (sempre 0)
  */
 function runAndCapture(
   cpu: CpuSession,
@@ -92,7 +80,6 @@ function runAndCapture(
 ): CapturedSeq {
   const sys = cpu.system;
 
-  // Setup: SP iniziale + push 2 long args RTL + sentinel ret addr.
   const sp0 = 0x401f00;
   let sp = sp0;
   // Push arg1 (RTL: arg1 first, arg0 second so arg0 ends on top below ret).
@@ -152,10 +139,7 @@ function runTsAndCapture(
     arg1Long,
     (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
-      return 0; // Match il binario: con FUN_3784 patchato a RTS, D0 non viene
-                 // modificato dal callee. Il D0 prima del jsr resta. Però noi
-                 // qui catturiamo il valore subito DOPO il push args, dove D0
-                 // ha il valore calcolato durante il setup. Per parity finalD0
+      return 0;
                  // non lo confrontiamo (il loop overwrites D0 ad ogni iter).
     },
   );
@@ -182,7 +166,6 @@ async function main(): Promise<void> {
   // Patch RTS sui callee (una sola volta).
   patchCallees(cpu);
 
-  // Mirror ROM in TS (per stateSub5D2A che legge da rom.program).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -200,7 +183,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern di copertura su (arg0, arg1, gate byte).
@@ -208,7 +190,6 @@ async function main(): Promise<void> {
     let arg1: number;
     let gateByte: number;
     if (i === 0) {
-      // Caso "produzione": gate=0, arg1 nel range 0..15.
       arg0 = 0xa5a5;
       arg1 = 0x0007;
       gateByte = 0x00;
@@ -218,12 +199,10 @@ async function main(): Promise<void> {
       arg1 = 0x000f;
       gateByte = 0x01;
     } else if (i === 2) {
-      // arg0 = 0 → tutti A4=8.
       arg0 = 0x00000000;
       arg1 = 0x0000;
       gateByte = 0x00;
     } else if (i === 3) {
-      // arg0 = 0xFFFF → tutti A4=7.
       arg0 = 0x0000ffff;
       arg1 = 0x0010; // > 15 → no highlight
       gateByte = 0x00;
@@ -233,7 +212,6 @@ async function main(): Promise<void> {
       arg1 = 0x0008;
       gateByte = 0xff;
     } else if (i === 5) {
-      // arg0 con high word non-zero (deve essere ignorata: solo low word usata).
       arg0 = 0xdeadbeef;
       arg1 = 0xcafe000a; // arg1 low = 0x000a
       gateByte = 0x00;
@@ -253,7 +231,7 @@ async function main(): Promise<void> {
       arg1 = (i - 8) & 0xf;
       gateByte = 0x00;
     } else if (i < 40) {
-      // Sweep gate byte values con random arg0/arg1.
+      // Sweep gate byte values with random arg0/arg1.
       arg0 = Math.floor(rng() * 0x10000) & 0xffff;
       arg1 = Math.floor(rng() * 0x20) & 0x1f;
       gateByte = (i - 24) & 0xff;
@@ -268,16 +246,11 @@ async function main(): Promise<void> {
     pokeMem(cpu, ROM_GATE_BYTE_ADDR, 1, gateByte);
     tsRom.program[ROM_GATE_BYTE_ADDR] = gateByte & 0xff;
 
-    // Esegue binario e cattura.
     const bin = runAndCapture(cpu, arg0, arg1);
 
-    // Esegue TS e cattura.
+    // Run TS and capture.
     const ts = runTsAndCapture(state, tsRom, arg0, arg1);
 
-    // Confronta: solo le 32 chiamate. finalD0 NON è confrontato (il binario
-    // ha D0 = ultimo valore calcolato durante setup di call #2 dell'iter
-    // finale, mentre TS lo modella diversamente — questo aspetto NON è
-    // osservabile dai caller di FUN_5D2A che non testano D0).
     const sameLen = bin.calls.length === ts.calls.length;
     const sameCalls = sameLen && bin.calls.every((c, k) => eqCall(c, ts.calls[k]!));
     const match = bin.reachedRts && sameCalls;

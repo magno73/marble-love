@@ -1,11 +1,10 @@
 /**
- * sub-261bc.ts — replica bit-perfect di `FUN_000261BC` (92 istr, range
  * 0x261BC..0x262B1, 246 byte).
  *
- * **Caller**: `FUN_00026196` (`flag-scaled-magnitude-dispatch.ts`) che lo
- * invoca via callback `inner` passandogli `(slotPtr, magnitude)`.
+ * **Caller**: `FUN_00026196` (`flag-scaled-magnitude-dispatch.ts`), which
+ * invokes it via callback `inner` with `(slotPtr, magnitude)`.
  *
- * **Disasm 0x261BC..0x262B1** (semantica per blocchi):
+ * **Disasm 0x261BC..0x262B1** (block-level semantics):
  *
  *   PROLOG:
  *     261bc  movem.l {A2 D5 D4 D3 D2}, -(SP)
@@ -116,7 +115,6 @@
  *   - Else: D0 = magnitude (D2 last copy at 0x26282).
  *
  * NOTE: callers (FUN_182BA via FUN_26196) ignorano il return value — l'rts di
- * FUN_182BA è void. Lo restituiamo comunque per fedeltà.
  */
 
 import type { GameState } from "./state.js";
@@ -180,17 +178,14 @@ export interface Sub261BCSubs {
 }
 
 /**
- * Replica bit-perfect di `FUN_000261BC`.
  *
- * @param state      GameState (mutato: workRam slot fields)
- * @param slotPtr    Indirizzo abs M68k del slot (= A2). Tipicamente
- *                   `0x400018` (slot 0) o `0x4000FA` (slot 1) per il branch
- *                   angle-lookup; altri slot saltano direttamente al clamp.
- * @param magnitude  Long unsigned (M68k convention) — `0x40000` o `0x50000`
- *                   da `FUN_26196`.
+ * @param state      GameState (mutated: workRam slot fields)
+ *                   `0x400018` (slot 0) or `0x4000FA` (slot 1) for the
+ *                   angle-lookup branch; other slots jump directly to clamp.
+ * @param magnitude  Long unsigned (M68k convention) — `0x40000` or `0x50000`
+ *                   from `FUN_26196`.
  * @param rom        ROM program (per table 0x1eef8).
  * @param subs       Stub-injection (default = real callees).
- * @returns          Long D0 al ritorno (vedi note in header).
  */
 export function fun261BC(
   state: GameState,

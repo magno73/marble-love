@@ -8,7 +8,7 @@
  *   3. Drain dal counter (counter >= arg1) -> ret 1, counter scalato
  *   4. Drain counter + scarto sull'acc -> ret 1, counter=0, acc scalato
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-counter-pool-subtract-4008-parity.ts` vs Musashi.
  */
 
@@ -32,10 +32,10 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
 }
 
 /**
- * Helper: setup player struct con status byte valido (status & ~status complement).
+ * Helper: set up player struct with valid status byte (status & ~status complement).
  *   - ptr+0xA = status
  *   - ptr+0xB = ~status
- * Cosi' il helper FUN_3F3E ritorna (status & 3) + 1 (range 1..4) per status < 0xE0,
+ * Thus helper FUN_3F3E returns (status & 3) + 1 (range 1..4) for status < 0xE0,
  * oppure 0 per status >= 0xE0.
  */
 function setupPlayer(
@@ -52,16 +52,16 @@ function setupPlayer(
 describe("counterPoolSubtract4008 (FUN_4008)", () => {
   it("path #1: helper status >= 0xE0 -> ret 1, nessuna modifica", () => {
     const s = emptyGameState();
-    // status = 0xE0 -> helper ritorna 0 -> early exit con ret 1.
+    // status = 0xE0 -> helper returns 0 -> early exit with ret 1.
     setupPlayer(s, 0x401a00, 0xe0);
     s.workRam[CTR_OFF] = 0x10;
     s.workRam[ACC_OFF] = 0x05;
     const before = new Uint8Array(s.workRam);
     expect(counterPoolSubtract4008(s, 0x100)).toBe(RET_SUCCESS);
-    // Verifica nessun side effect.
+    // Verify no side effects.
     expect(s.workRam).toEqual(before);
 
-    // Anche con status = 0xFF -> helper = 0.
+    // Even with status = 0xFF -> helper = 0.
     setupPlayer(s, 0x401a00, 0xff);
     expect(counterPoolSubtract4008(s, 0x42)).toBe(RET_SUCCESS);
   });
@@ -90,12 +90,12 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     setupPlayer(s, 0x401a00, 0x10);
     s.workRam[CTR_OFF] = 0x10;
     s.workRam[ACC_OFF] = 0x05;
-    // arg1 = 7. pool = 21 >= 7. counter (16) >= 7 -> drain solo counter.
+    // arg1 = 7. pool = 21 >= 7. counter (16) >= 7 -> drain counter only.
     expect(counterPoolSubtract4008(s, 7)).toBe(RET_SUCCESS);
     expect(s.workRam[CTR_OFF]).toBe(0x10 - 7);
     expect(s.workRam[ACC_OFF]).toBe(0x05); // invariato
 
-    // arg1 = 0 -> ret 1, niente cambiato (D2 <= 0 ble immediato, sub.b 0).
+    // arg1 = 0 -> ret 1, nothing changed (D2 <= 0 immediate ble, sub.b 0).
     s.workRam[CTR_OFF] = 0x42;
     s.workRam[ACC_OFF] = 0x07;
     expect(counterPoolSubtract4008(s, 0)).toBe(RET_SUCCESS);
@@ -113,7 +113,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam[CTR_OFF]).toBe(0);
     expect(s.workRam[ACC_OFF]).toBe(0x10 - 3);
 
-    // Edge: arg1 == counter -> drain esatto, acc invariato.
+    // Edge: arg1 == counter -> exact drain, acc unchanged.
     s.workRam[CTR_OFF] = 0x09;
     s.workRam[ACC_OFF] = 0x20;
     expect(counterPoolSubtract4008(s, 9)).toBe(RET_SUCCESS);
@@ -149,7 +149,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     // status = 0xE0 (status & ~status check vale).
     setupPlayer(s, 0x401a00, 0xe0);
     // pool = 0, arg1 = 100 -> normalmente sarebbe insufficient.
-    // Ma helper = 0 -> early exit con ret 1, no check del pool.
+    // But helper = 0 -> early exit with ret 1, no pool check.
     s.workRam[CTR_OFF] = 0;
     s.workRam[ACC_OFF] = 0;
     expect(counterPoolSubtract4008(s, 100)).toBe(RET_SUCCESS);
@@ -177,13 +177,13 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
 
   it("ptr legato dinamicamente a *0x401FFC (cambiare ptr cambia status target)", () => {
     const s = emptyGameState();
-    // Setup A: ptr = 0x401200 con status = 0xE5 -> helper = 0 -> early exit.
+    // Setup A: ptr = 0x401200 with status = 0xE5 -> helper = 0 -> early exit.
     setupPlayer(s, 0x401200, 0xe5);
     s.workRam[CTR_OFF] = 0;
     s.workRam[ACC_OFF] = 0;
     expect(counterPoolSubtract4008(s, 50)).toBe(RET_SUCCESS); // early exit
 
-    // Setup B: ptr = 0x401800 con status = 0x05 -> helper = (0x05 & 3)+1 = 2.
+    // Setup B: ptr = 0x401800 with status = 0x05 -> helper = (0x05 & 3)+1 = 2.
     setupPlayer(s, 0x401800, 0x05);
     s.workRam[CTR_OFF] = 10;
     s.workRam[ACC_OFF] = 5;

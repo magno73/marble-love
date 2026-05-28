@@ -1,18 +1,12 @@
 /**
- * trackball-input.ts — handler input trackball del binario.
  *
- * **Replica `FUN_00001AC18`** — chiamato da MainUpdate ogni frame.
  *
- * Cosa fa: per ognuno dei 2 game object (slot 0 = P1, slot 1 = P2):
- *   1. Legge MMIO trackball X (byte) da `0xF20001 + p*4`
- *   2. Calcola delta_X = current - obj.prev_X (saved a +0xC9)
- *   3. Clamp anti-wraparound: se |delta| > 0x60 E XOR(prev_delta, delta) >= 0
- *      (= stesso segno), satura a `0x7F` (se delta era negativo) o `-0x80`
- *      (se delta era positivo). Logica anti-glitch per letture errate.
- *   4. Salva delta in obj.+0xC7
- *   5. Stesso per Y (prev a +0xC8, delta a +0xC6).
+ * Behavior: for each of the 2 game objects (slot 0 = P1, slot 1 = P2):
+ *   3. Anti-wraparound clamp: if |delta| > 0x60 and XOR(prev_delta, delta) >= 0
+ *      (when delta was positive). Anti-glitch logic for bad reads.
+ *   4. Save delta in obj.+0xC7.
+ *   5. Same for Y (previous at +0xC8, delta at +0xC6).
  *
- * **Verificato bit-perfect** vs `FUN_00001AC18` tramite differential test.
  *
  * Side effects:
  *   - state.workRam[obj+0xC9] = current trackball X (raw)
@@ -20,11 +14,7 @@
  *   - state.workRam[obj+0xC8] = current trackball Y (raw)
  *   - state.workRam[obj+0xC6] = delta Y (clamped)
  *
- * NB: nel binario originale i valori vengono letti da `0xF20000+p*4` (X)
- * e `0xF20002+p*4` (Y), che per Marble sono **già ruotati 45°** dal
  * hardware Atari (`atarisys1.cpp:281 trakball_r`: cur[0]=posx+posy,
- * cur[1]=posx-posy). Qui prendiamo i 4 byte come argomenti — chi
- * ci chiama ha già fatto la rotazione.
  */
 
 import type { GameState } from "./state.js";
@@ -42,10 +32,9 @@ function sext8(b: number): number {
 }
 
 /**
- * Processa un asse del trackball per un object.
+ * Processes one trackball axis for one object.
  *
- * Replica il blocco `process X` (e `process Y`) di FUN_1AC18:
- *   D0 = current (input byte, già letto da MMIO)
+ * Replicates the `process X` (and `process Y`) block from FUN_1AC18:
  *   D1 = D0
  *   D0 -= obj[savedField]      // delta byte (.b subtract, signed wrap)
  *   D2 = D0
@@ -78,13 +67,12 @@ function processAxis(
   // Disasm flow:
   //   if (D2 > 0x60 OR D2 < -0x60):
   //     D0 = prev_delta XOR D2
-  //     tst.b D0; bge.b skip       ← skip se XOR >= 0 SIGNED (same sign)
+  //     tst.b D0; bge.b skip       ← skip if XOR >= 0 SIGNED (same sign)
   //     tst.b D2; bge.b D2_pos
   //     D2 = 0x7F                  ← (D2 < 0) saturate positive
   //     bra skip
   //     D2_pos: D2 = -0x80         ← (D2 >= 0) saturate to most negative
   //   skip:
-  // Quindi clamp APPLIED solo se sign DIFFERENT (xor < 0): wraparound caso.
   if (delta > 0x60 || delta < -0x60) {
     const prevDelta = sext8(state.workRam[objBase + deltaFieldOffset] ?? 0);
     const xorSigned = sext8((prevDelta ^ delta) & 0xff);

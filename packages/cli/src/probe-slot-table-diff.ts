@@ -1,5 +1,5 @@
-// Probe: identifica i byte divergenti del slot table @ 0x400a9c (25 slot × 0x56 stride) @ f+99
-// e mostra dove sono concentrati i diff per slot/field.
+// Probe: identify divergent bytes in slot table @ 0x400a9c (25 slots x 0x56 stride) @ f+99
+// and show where diffs concentrate by slot/field.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";

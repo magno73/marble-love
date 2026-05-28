@@ -2,26 +2,19 @@
 /**
  * test-state-sub-5200-parity.ts — differential FUN_5200 vs stateSub5200.
  *
- * `FUN_00005200` (14 byte): chiamato con `A2` = base struct in workRam.
- * Effetti collaterali:
  *   1. `workRam[A2-0x400000+0x1e .. +0x31]` = 0  (20 byte)
  *   2. long-BE @ `0x401F5E` |= 0x0000000c  (bits 2,3)
  *
  * Strategia parity:
- *   - Inizializza workRam con random byte; sync sia in Musashi che in
  *     `state.workRam` TS.
- *   - Setta A2 = pointer in workRam (multiplo di 4) tale che il range
- *     clearato `[A2+0x1e, A2+0x31]` non esca da workRam né sovrascriva
+ *   - Set A2 = pointer in workRam (multiple of 4) so the range
  *     le status flags @ 0x1F5E: A2 ≤ 0x401F5E - 0x31 = 0x401F2D →
  *     conservativamente A2 ≤ 0x401E00.
- *   - Pre-popola `*0x401F5E` con random long per verificare path OR cumulativo.
+ *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
  *   - Lancia `callFunction(cpu, 0x5200)` e `stateSub5200(state, a2)`.
- *   - Confronta l'intera workRam (8KB) escludendo zona stack.
  *
  * Smoke cases (primo 3):
- *   0: a2 = 0x400000 (boundary basso)
  *   1: a2 = 0x400800 (mid range)
- *   2: a2 = 0x401E00 (boundary alto sicuro: 0x401E00+0x31 = 0x401E31 < 0x401F5E)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5200-parity.ts [N]
  */
@@ -80,32 +73,28 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", SP_INITIAL);
 
     // A2: pointer in workRam, allineato 4.
-    // Range clearato: A2+0x1e..A2+0x31. Per non toccare 0x401F5E (status flags)
-    // vogliamo A2+0x31 < 0x401F5E, cioè A2 < 0x401F2D. Conservativo: A2 ≤ 0x401E00.
-    // Analogamente, A2+0x1e ≥ 0x400000 (sempre vero per A2 ≥ 0x400000).
+    // Cleared range: A2+0x1e..A2+0x31. To avoid touching 0x401F5E (status flags)
     let a2: number;
     if (i === 0) {
-      a2 = 0x00400000; // boundary basso
+      a2 = 0x00400000;
     } else if (i === 1) {
       a2 = 0x00400800; // mid range
     } else if (i === 2) {
-      a2 = 0x00401e00; // boundary alto sicuro
+      a2 = 0x00401e00;
     } else {
       const maxOff = 0x1e00; // 0x401E00 - 0x400000
       const a2OffRaw = Math.floor(rng() * (maxOff / 4)) * 4;
       a2 = (WORK_RAM_BASE + a2OffRaw) >>> 0;
     }
 
-    // Pre-popola tutta la workRam con random byte.
     const seedBuf = new Uint8Array(WORK_RAM_SIZE);
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       seedBuf[k] = Math.floor(rng() * 0x100) & 0xff;
     }
-    // Pre-popola initial status flags long (test OR cumulativo).
+    // Pre-populate initial status flags long for cumulative OR test.
     const initialFlags = Math.floor(rng() * 0x100000000) >>> 0;
     seedBuf[0x1f5e] = (initialFlags >>> 24) & 0xff;
     seedBuf[0x1f5f] = (initialFlags >>> 16) & 0xff;
@@ -127,10 +116,8 @@ async function main(): Promise<void> {
     // Run TS.
     ssNs.stateSub5200(state, a2);
 
-    // Confronta workRam, esclude zona stack:
     // callFunction (SP=0x401F00) pusha sentinel ret addr a 0x401EFC.
-    // FUN_5200 via bra → FUN_5248 fa `rts` diretto (nessun bsr interno).
-    // Zona toccata: [0x1EFC..0x1EFF] (4 byte sentinel). Escludiamo
+    // Touched zone: [0x1EFC..0x1EFF] (4 sentinel bytes). Exclude
     // conservativamente [0x1EE0..0x1F00).
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;

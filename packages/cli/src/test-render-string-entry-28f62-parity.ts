@@ -2,27 +2,15 @@
 /**
  * test-render-string-entry-28f62-parity.ts — differential FUN_28F62.
  *
- * FUN_28F62 (62 byte): variante a 3 args di FUN_28FDE. Aggiorna i byte testa
  * di una string-chain entry fissa @ 0x40041C (col, tickOff, marker=0), poi
- * chiama renderStringChain @ FUN_2572 con (0x40041C, attr) — attr letto da
  * arg3 del caller (vs 0x3400 cabled in FUN_28FDE).
  *
- * Strategia stub injection (identica a 28FDE):
- *   - FUN_2572 (renderStringChain) viene patchata a `rts` (4E 75) → no-op.
- *     Confronta solo i 3 byte di entry scritti da FUN_255A (inline-replicato
+ * Stub injection strategy, identical to 28FDE:
  *     in TS).
- *   - FUN_255A NON va patchata: è il "core" di FUN_28F62.
- *   - La regione workRam[0x418..0x428] viene confrontata byte per byte; con
- *     renderStringChain patchata a rts, l'unica diff possibile è nei 3 byte
- *     target (entry+0/+1/+6) → quello che vogliamo testare.
+ *     target (entry+0/+1/+6) -> the region under test.
  *
- * Suite testate (4 × 125 = 500 casi):
  *   - A: arg1/arg2/arg3 random long, entry pre-fill random
- *   - B: arg1/arg2 byte forzato a 0 (verifica clear su +0/+1)
- *   - C: arg1/arg2 byte = 0xFF (verifica saturazione su +0/+1)
- *   - D: marker pre-set a tutti i 256 valori ciclati (stress clear @ +6)
  *
- * Confronto: workRam @ 0x400418..0x400427 (16 byte attorno all'entry).
  *
  * Uso: npx tsx packages/cli/src/test-render-string-entry-28f62-parity.ts [N]
  */
@@ -53,7 +41,7 @@ function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2572 + 1, 1, 0x75);
 }
 
-/** Range workRam confrontato (entry @ 0x40041C, 16 byte attorno per safety). */
+/** Compared workRam range (entry @ 0x40041C, 16 bytes around it for safety). */
 const COMPARE_BASE = 0x00400418;
 const COMPARE_SIZE = 0x10; // 0x400418..0x400427
 const COMPARE_BASE_OFF = COMPARE_BASE - 0x00400000; // 0x418
@@ -69,7 +57,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup entry region in entrambi binario e TS state. */
 function setupRegion(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -111,7 +98,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // Stub TS: no-op (la sub-call non viene confrontata).
   const subs: f62Ns.RenderStringEntry28F62Subs = {
     renderStringChain: (_addr: number, _attr: number): void => {},
   };
@@ -181,17 +167,16 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: arg1/arg2 LSB = 0 (verifica scrittura zero) ────────────
   console.log(
     `\n=== Suite B: arg1/arg2 LSB = 0x00 — ${perSuite} casi ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // Pre-fill entry+0/+1 con sentinel non-zero per detect overwrite.
+    // Pre-fill entry+0/+1 with non-zero sentinels to detect overwrites.
     bytes[ENTRY_OFF_IN_REGION + 0] = 0xaa;
     bytes[ENTRY_OFF_IN_REGION + 1] = 0xbb;
-    // arg long con LSB = 0 ma upper bytes random
+    // arg long with LSB = 0 and random upper bytes.
     const arg1 = (rl() & 0xffffff00) >>> 0;
     const arg2 = (rl() & 0xffffff00) >>> 0;
     const arg3 = rl();
@@ -207,7 +192,7 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // arg long con LSB = 0xFF, upper bytes random
+    // arg long with LSB = 0xFF and random upper bytes.
     const arg1 = ((rl() & 0xffffff00) | 0xff) >>> 0;
     const arg2 = ((rl() & 0xffffff00) | 0xff) >>> 0;
     const arg3 = rl();
@@ -224,7 +209,6 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // Forza marker @ entry+6 (ENTRY_OFF_IN_REGION + 6)
     bytes[ENTRY_OFF_IN_REGION + 6] = i & 0xff;
     const arg1 = rl();
     const arg2 = rl();

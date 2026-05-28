@@ -1,8 +1,8 @@
 /**
- * renderer.ts — adapter PixiJS per frame classici astratti.
+ * renderer.ts - PixiJS adapter for the neutral engine frame model.
  *
- * L'engine produce un `Frame` neutro. Questo adapter disegna solo i comandi
- * ricevuti, senza leggere o modificare la logica di gioco.
+ * The engine produces a DOM-free `Frame`. This adapter only draws received
+ * commands and must not read or mutate gameplay logic.
  */
 
 import type { Application } from "pixi.js";
@@ -157,10 +157,9 @@ function applyViewportScale(app: Application, viewport: Container, frame: Frame)
 }
 
 function objectPenColor(frame: Frame, paletteBase: number, pen: number): RgbaColor {
-  // MAME `set_granularity(8)` per Atari System 1: ogni paletteIndex (color)
-  // del tile_info occupa 8 slot consecutivi della palette globale. Il pen
-  // (pixel value 4/5/6 bpp) si somma al base × 8.
-  // Vedi `atarisy1_v.cpp` decode_gfx + `gfxdecode_device::set_granularity(8)`.
+  // MAME `set_granularity(8)` for Atari System 1: each tile_info paletteIndex
+  // occupies eight consecutive global palette slots. The pen value is added to
+  // `paletteBase * 8`; see `atarisy1_v.cpp` and `gfxdecode_device`.
   const idx = paletteBase * 8 + pen;
   return (
     exactPaletteLookup(frame, idx) ??
@@ -201,9 +200,8 @@ function drawObjectTileIntoImageData(
       imageData.data[offset] = color.r;
       imageData.data[offset + 1] = color.g;
       imageData.data[offset + 2] = color.b;
-      // Playfield tilemap in MAME è OPAQUE (tutti i pen disegnati).
-      // Solo motion objects/sprite hanno transparent_pen=0.
-      // Vedi atarisy1_v.cpp s_mob_config:`transparent pen index = 0`.
+      // MAME's playfield tilemap is opaque. Only motion objects use
+      // transparent pen 0; see `atarisy1_v.cpp` `s_mob_config`.
       imageData.data[offset + 3] = pen === 0 && transparentPen0 ? 0 : color.a;
     }
   }
@@ -230,8 +228,8 @@ function textureFromObjectCommand(
   if (context === null) return Texture.EMPTY;
 
   const imageData = context.createImageData(width, height);
-  // Playfield tile (TileCommand ha "tileIndex"): opaque, MAME tilemap default.
-  // Sprite (SpriteCommand ha "spriteIndex"): transparent_pen=0.
+  // Playfield TileCommand values are opaque; SpriteCommand values use
+  // transparent pen 0.
   const isSprite = !("tileIndex" in command);
   for (let tileY = 0; tileY < tilesHigh; tileY += 1) {
     for (let tileX = 0; tileX < tilesWide; tileX += 1) {
@@ -567,10 +565,8 @@ function drawAlpha(
       drawFallbackAlphaGlyph(frame, graphics, command);
       continue;
     }
-    // Disegna direttamente via Graphics.rect — bypass canvas+Texture pipeline
-    // che in Pixi v8 può non rigenerare la texture correttamente per ogni
-    // glyph (cache key collision o canvas not flushed). Rect-per-pixel è
-    // O(64) per glyph, ok per HUD piccolo (max ~300 glyph/frame).
+    // Draw directly with Graphics.rect. This avoids Pixi v8 canvas/Texture cache
+    // collisions observed when regenerating many small glyph textures.
     const colors = [0, 1, 2, 3].map((pen) =>
       exactPaletteLookup(frame, command.paletteIndex * 4 + pen) ??
       paletteLookup(frame, command.paletteIndex),
@@ -590,8 +586,8 @@ function drawAlpha(
 }
 
 function drawChrome(_frame: Frame, graphics: Graphics): void {
-  // Chrome overlay: rimosso debug palette swatches (inquinavano il rendering
-  // reale). Solo il bordo viewport rimane se vuoi tracciare la cliprect.
+  // Chrome overlay intentionally stays empty during normal rendering; debug
+  // palette swatches previously polluted frame captures.
   graphics.clear();
 }
 
@@ -638,22 +634,22 @@ function initLayers(app: Application): ClassicLayers {
 }
 
 /**
- * Indirect renderer: replica MAME atarisy1 screen_update pixel-per-pixel.
+ * Indirect renderer: mirrors MAME `atarisy1` `screen_update` at pixel level.
  *
- *   1. PF bitmap_ind16: per ogni TileCommand, scrive `paletteIndex * 8 + pen`
- *      (= idx palette globale word).
- *   2. MO bitmap_ind16: init 0xFFFF, per ogni SpriteCommand scrive
+ *   1. PF bitmap_ind16: for each TileCommand, writes `paletteIndex * 8 + pen`
+ *      (= global palette word index).
+ *   2. MO bitmap_ind16: init 0xFFFF, then for each SpriteCommand writes
  *      `(color * 8) + pen | (priority << 12)`. transpen=0 → skip pixel.
- *   3. Merge: per ogni pixel del viewport applica logic MAME:
+ *   3. Merge: for each viewport pixel, applies MAME logic:
  *        if (mo[x] != 0xFFFF):
  *          if (mo[x] & PRIORITY_MASK): // bit 12+ set
  *            if ((mo[x] & 0x0f) != 1): // pen != transparent
  *              pf[x] = 0x300 + ((pf[x] & 0x0f) << 4) + (mo[x] & 0x0f)
  *          else:
  *            pf[x] = mo[x]
- *   4. Convert pfBitmap → ImageData ARGB tramite frame.palette lookup.
+ *   4. Convert pfBitmap to ImageData RGBA via `frame.palette`.
  */
-const PF_PRIORITY_PENS = 0x00; // semplificato: nessuna pen ha priority sopra MO
+const PF_PRIORITY_PENS = 0x00; // Simplified: no playfield pen currently outranks MO.
 
 function renderIndirectViewport(
   frame: Frame,
@@ -664,17 +660,15 @@ function renderIndirectViewport(
   const H = frame.nativeSize.height; // 240
   const tilesRom = graphics.tiles ?? new Uint8Array();
 
-  // Alloca buffers PF e MO. PF init a 0x200 = palette index 0 della PF region
-  // (color RAM byte 0x400 → word $0000 = nero in MAME). Senza questo init le
-  // aree fuori dai tile playfield (es. title screen, off-bound dei livelli)
-  // mostrerebbero palette[0] = Alpha region index 0 = $afff = grigio chiaro,
-  // perche' Uint16Array defaults a zero. MO resta 0xFFFF (sentinel transparent).
+  // Allocate PF and MO buffers. PF starts at 0x200, the first playfield palette
+  // entry; otherwise Uint16Array's zero default would select alpha palette 0 in
+  // areas outside playfield tiles. MO stays 0xFFFF as the transparent sentinel.
   const pf = new Uint16Array(W * H);
   pf.fill(0x200);
   const mo = new Uint16Array(W * H);
   mo.fill(0xffff);
 
-  // ─── PF bitmap: render i TileCommand del playfield ─────────────────────
+  // PF bitmap: render playfield TileCommand values.
   for (const tile of frame.playfield) {
     if (tile.gfxBank === undefined || tile.bitsPerPixel === undefined) continue;
     const w = tile.width ?? 8;
@@ -705,7 +699,7 @@ function renderIndirectViewport(
     }
   }
 
-  // ─── MO bitmap: render gli SpriteCommand ────────────────────────────────
+  // MO bitmap: render SpriteCommand values.
   for (const sprite of frame.sprites) {
     if (sprite.gfxBank === undefined || sprite.bitsPerPixel === undefined) continue;
     const w = sprite.width ?? 8;
@@ -715,13 +709,12 @@ function renderIndirectViewport(
     const drawY = pos.y;
     if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
 
-    // sprite.paletteIndex contiene il color macro già normalizzato dal motore:
-    // normal MO usa 0x20+color*2, high-priority mantiene il workaround 0x40+color.
-    // baseIdx = paletteIndex * 8 (= word idx in palette globale)
+    // sprite.paletteIndex is already normalized by the engine: normal MO uses
+    // 0x20 + color * 2, while high-priority MO keeps the 0x40 + color path.
     const baseIdx = sprite.paletteIndex * 8;
     const priorityBit = (sprite.priority ?? 0) > 0 ? 0x1000 : 0;
 
-    // Decode tile-by-tile (sprite può essere multi-tile)
+    // Decode tile-by-tile; motion objects can be multi-tile.
     const tilesWide = Math.max(1, Math.ceil(w / 8));
     const tilesHigh = Math.max(1, Math.ceil(h / 8));
     for (let ty = 0; ty < tilesHigh; ty++) {
@@ -746,7 +739,7 @@ function renderIndirectViewport(
     }
   }
 
-  // ─── Merge MO over PF (MAME atarisy1 screen_update) ─────────────────────
+  // Merge MO over PF, matching MAME `atarisy1` `screen_update`.
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const idx = y * W + x;
@@ -756,8 +749,8 @@ function renderIndirectViewport(
       if (mox & 0x1000) {
         // High priority: translucency layer
         // MAME: if ((mo & 0x0f) != 1): pf = 0x300 + ((pf & 0x0f) << 4) + (mo & 0x0f)
-        // SEMPLIFICAZIONE: translucency region @ frame 2400 è zero → marble
-        // sarebbe nero. Usiamo invece direct mo[x] (= mantieni colore sphere).
+        // Current simplification: the translucency region is zero in the
+        // captured window, so direct MO color keeps the marble visible.
         if ((mox & 0x0f) !== 1) {
           pf[idx] = mox & 0x0fff;
         }
@@ -771,7 +764,7 @@ function renderIndirectViewport(
     }
   }
 
-  // ─── Convert ind16 → RGBA via palette lookup ────────────────────────────
+  // Convert indexed color to RGBA via palette lookup.
   const data = imageData.data;
   for (let i = 0; i < W * H; i++) {
     const palIdx = pf[i]!;

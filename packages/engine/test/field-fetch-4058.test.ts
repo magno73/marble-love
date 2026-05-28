@@ -4,7 +4,7 @@
  * Verifica i 4 path di ritorno + invarianti chiave + bit-perfectness della
  * sign-ext della costante ROM e dell'addressing record.
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-field-fetch-4058-parity.ts` vs Musashi.
  */
 
@@ -35,7 +35,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     const s = emptyGameState();
     // Pointer dentro workRam, struct base = 0x401D00 + 0x50 = 0x401D50.
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
-    // Anche con arg1 valido, arg2 > 0x12 -> sempre ret -1.
+    // Even with valid arg1, arg2 > 0x12 always returns -1.
     expect(fieldFetch4058(s, 0, 0x13, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
     expect(fieldFetch4058(s, 0, 0xff, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
     expect(fieldFetch4058(s, 0, 0x12345, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
@@ -83,8 +83,8 @@ describe("fieldFetch4058 (FUN_4058)", () => {
   });
 
   it("priorita' check: arg2 > 0x12 vince anche se arg1 e' fuori range", () => {
-    // Il binario controlla PRIMA arg2 > 0x12 (set D3=1), POI arg1 vs D4
-    // (skipped by bne). Quindi arg2 > 0x12 forza sempre ret -1 anche se
+    // The binary checks arg2 > 0x12 first (set D3=1), then arg1 vs D4
+    // (skipped by bne). Therefore arg2 > 0x12 always forces ret -1 even if
     // arg1 e' anche lui invalido.
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
@@ -95,8 +95,8 @@ describe("fieldFetch4058 (FUN_4058)", () => {
   });
 
   it("ROM byte sign-ext: solo i 3 bit bassi contano (0xE3 -> D4=3, 0xFF -> D4=7)", () => {
-    // Verifica che byte ROM diversi che condividono i 3 bit bassi producano
-    // lo stesso comportamento (D4 e' calcolato come (byte sign-ext-long) & 7).
+    // Verify that different ROM bytes sharing the low 3 bits produce
+    // same behavior: D4 is computed as (byte sign-ext-long) & 7.
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -106,9 +106,9 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 3, 0, 0xe3)).toBe(RET_INDEX_OOR);
     expect(fieldFetch4058(s, 3, 0, 0xeb)).toBe(RET_INDEX_OOR);
 
-    // 0xFF & 7 = 7 -> arg1=6 valido -> legge il byte.
+    // 0xFF & 7 = 7 -> arg1=6 valid -> reads the byte.
     expect(fieldFetch4058(s, 6, 0, 0xff)).toBe(0x9c);
-    // 0x07 & 7 = 7 (stesso comportamento, bit alti irrilevanti).
+    // 0x07 & 7 = 7 (same behavior, high bits irrelevant).
     expect(fieldFetch4058(s, 6, 0, 0x07)).toBe(0x9c);
   });
 

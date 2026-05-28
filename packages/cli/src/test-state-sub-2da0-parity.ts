@@ -2,12 +2,10 @@
 /**
  * test-state-sub-2da0-parity.ts — differential FUN_2DA0 vs stateSub2DA0.
  *
- * FUN_2DA0 (120 byte): legge byte da una stringa, e se non zero clear-a la
  * word corrispondente nell'alpha tilemap (formula rotation/shift/stride).
  *
  *   - Args:
  *     - long arg1 @ SP+0x10  (struct: col@+0, tickOff@+1, stringPtr_long@+2)
- *     - long arg2 @ SP+0x14  (byte counter, solo LSB usato)
  *   - Letture:
  *     - byte @ A0+0 (col, signed)
  *     - byte @ A0+1 (tickOff, signed)
@@ -16,14 +14,10 @@
  *     - word @ 0x401F42 (rotation)
  *     - byte @ 0x72a5 + rotation*2 (ROM shift table)
  *   - Scritture:
- *     - se string_byte != 0: alphaRam_word @ posizione calcolata = 0
- *   - Return: D0.b = 0 se string_byte == 0, altrimenti 4.
  *
- * **Strategia**: nessun jsr in FUN_2DA0 → niente patch da applicare.
  * Confrontiamo:
  *   - D0 byte ritornato (0 vs 4)
  *   - alpha RAM @ 0xa03000..0xa03FFF (4 KB)
- *   - work RAM @ 0x401F00..0x401F7F (per safety, anche se 2DA0 non scrive lì)
  *
  * Suite testate:
  *   - A: rotation=0, struct random + string random, alphaRam pre-fill 0
@@ -75,11 +69,9 @@ interface TestCase {
   col: number;
   tickOff: number;
   argByte: number;
-  /** stringa di N byte + terminator a posizione `forceTermAt` o > argByte. */
   stringBytes: number[];
 }
 
-/** Setup struct + string + rotation in entrambi binario e TS state. */
 function setupCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -91,7 +83,6 @@ function setupCase(
     state.alphaRam[i] = 0xcc;
   }
 
-  // Reset workRam @ 0x401F00..0x401F7F (zone "stato globale")
   for (let i = 0; i < STRUCT_SIZE_WR; i++) {
     pokeMem(cpu, STRUCT_BASE_BIN + i, 1, 0);
     state.workRam[(STRUCT_BASE_BIN - 0x400000) + i] = 0;
@@ -173,7 +164,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  // RomImage TS (carico ROM reale per ROM_SHIFT_TABLE @ 0x72a4)
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -190,7 +180,6 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
     setupCase(stateInst, cpu, tc);
 
-    // arg1 = STRUCT_ADDR (long), arg2 = argByte (long, solo LSB usato)
     const r = callFunction(cpu, FUN_2DA0, [STRUCT_ADDR, tc.argByte & 0xff]);
     const d0Bin = r.d0 & 0xff;
 
@@ -244,7 +233,6 @@ async function main(): Promise<void> {
   function makeRandomString(rngFn: () => number, lenIfNoTerm: number): number[] {
     const arr: number[] = [];
     for (let i = 0; i < lenIfNoTerm; i++) {
-      // Niente zeri (per evitare terminator non controllato in suite A/B)
       arr.push(1 + Math.floor(rngFn() * 255));
     }
     return arr;
@@ -256,7 +244,7 @@ async function main(): Promise<void> {
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    const argByte = rb() & 0x1f; // 0..31 (offset stringa ragionevole)
+    const argByte = rb() & 0x1f;
     const tc: TestCase = {
       rotation: 0,
       col: rb(),
@@ -295,7 +283,6 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const argByte = rb() & 0x1f;
-    // String filled with non-zero, ma posizione argByte = 0 (forzato).
     const arr: number[] = [];
     for (let j = 0; j < argByte + 8; j++) {
       arr.push(j === argByte ? 0 : 1 + Math.floor(rng() * 255));
@@ -319,7 +306,7 @@ async function main(): Promise<void> {
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
-    const argByte = rb() & 0x3f; // 0..63 per offset stringa ragionevole
+    const argByte = rb() & 0x3f;
     const tc: TestCase = {
       rotation: Math.floor(rng() * 4),
       col: 0x80 | (rb() & 0x7f), // negativi (-128..-1)

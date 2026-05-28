@@ -2,18 +2,18 @@
 /**
  * test-process-all-sprites-189e2-parity.ts — differential FUN_000189E2.
  *
- * Loop dispatcher gated da `*0x400394`, conta `*0x400396` entry sulla tabella
- * `0x40098C` (stride 0xC) e per ogni entry chiama `FUN_18A1E`.
+ * Loop dispatcher gated by `*0x400394`, counting `*0x400396` entries in table
+ * `0x40098C` (stride 0xC) and calls `FUN_18A1E` for each entry.
  *
  * Setup random:
  *   - `*0x400394` (word) = 0 (run loop, ~70%) | random non-zero (~30%)
  *   - `*0x400396` (word) = 0..7
- *   - tabella `0x40098C` (max 7 entry × 0xC byte) = byte random
- *   - `*0x40097E` (HUD offset, letto da computeSpriteCoords_v1) = random word
+ *   - table `0x40098C` (max 7 entries x 0xC bytes) = random bytes
+ *   - `*0x40097E` (HUD offset, read by computeSpriteCoords_v1) = random word
  *
  * Verifica byte-by-byte:
- *   - tabella `0x40098C..0x40098C + 7*0xC`
- *   - globali `0x400690..0x400693` (POS_X/POS_Y aggiornati dalla callback)
+ *   - table `0x40098C..0x40098C + 7*0xC`
+ *   - globals `0x400690..0x400693` (POS_X/POS_Y updated by callback)
  *
  * Uso: npx tsx packages/cli/src/test-process-all-sprites-189e2-parity.ts [N]
  */
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     tsByte: number;
   } | null = null;
 
-  // Tabella reale max ~7 entry usata dal gioco; usiamo 7 entry per slot di test.
+  // Real table has max about 7 entries in game; use 7 entries for test slots.
   const MAX_ENTRIES = 7;
   const TABLE_BYTES = MAX_ENTRIES * 0xc;
 
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     //   i=1 → gate=0, count=MAX (loop pieno)
     //   i=2 → gate!=0, count=MAX (skip)
     //   i=3 → gate=0, count=1 (single entry)
-    //   i=4 → gate=0, count=MAX, ogni entry con +0xA = 0xFF (skip body)
+    //   i=4 -> gate=0, count=MAX, every entry with +0xA = 0xFF (skip body)
     //   i>=5 → random
     let gate: number;
     let count: number;
@@ -120,19 +120,19 @@ async function main(): Promise<void> {
     state.workRam[0x396] = (count >>> 8) & 0xff;
     state.workRam[0x397] = count & 0xff;
 
-    // Setup HUD offset @ 0x40097E (usato da computeSpriteCoords_v1)
+    // Set up HUD offset @ 0x40097E, used by computeSpriteCoords_v1.
     const hudOff = Math.floor(rng() * 0x10000);
     pokeMem(cpu, 0x0040097e, 2, hudOff);
     state.workRam[0x97e] = (hudOff >>> 8) & 0xff;
     state.workRam[0x97f] = hudOff & 0xff;
 
-    // Reset POS_X/POS_Y globals @ 0x400690-693 (li scrive la callback)
+    // Reset POS_X/POS_Y globals @ 0x400690-693; the callback writes them.
     for (let k = 0; k < 4; k++) {
       pokeMem(cpu, 0x00400690 + k, 1, 0);
       state.workRam[0x690 + k] = 0;
     }
 
-    // Setup tabella 0x40098C..0x40098C + TABLE_BYTES con byte random
+    // Set up table 0x40098C..0x40098C + TABLE_BYTES with random bytes.
     for (let j = 0; j < TABLE_BYTES; j++) {
       let v = Math.floor(rng() * 256);
       if (forceSkipAllEntries && j % 0xc === 0xa) {
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
     // Run TS
     paNs.processAllSprites(state);
 
-    // Compare tabella
+    // Compare table.
     let match = true;
     let diffField = "";
     let diffJ = -1;

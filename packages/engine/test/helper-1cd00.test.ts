@@ -25,7 +25,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
 
   it("non altera entityPtr velocity quando indexByte == 0xFF", () => {
     const s = emptyGameState();
-    // Setup velocity nella entity struct @ 0x400018
+    // Set up velocity in the entity struct @ 0x400018.
     for (let i = 0; i < 12; i++) {
       s.workRam[0x18 + i] = 0xab;
     }

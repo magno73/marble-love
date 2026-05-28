@@ -1,13 +1,13 @@
 /**
- * sub-14966.ts — replica `FUN_00014966` (per-slot ticker, 188 istr originale).
+ * sub-14966.ts - port of `FUN_00014966` (per-slot ticker, 188 original instructions).
  *
- * Sostituisce `sub-14966-stub.ts` (head-only). Path C body resets ticker
- * a 0 quando raggiunge limit, avanza script pointer `+0x58`, e (in stato
- * 0/3 con step > 0) integra pos += velocity. Senza questo body in TS,
- * ticker `+0x24` cresceva monotonicamente fino a quando armed/limit non
- * cambiavano (cluster slot4 drift ~30B).
+ * Replaces the old head-only `sub-14966-stub.ts`. Path C resets ticker to 0
+ * when it reaches the limit, advances script pointer `+0x58`, and in states
+ * 0/3 with step > 0 integrates pos += velocity. Without this body in TS,
+ * ticker `+0x24` grew monotonically until armed/limit changed, causing the
+ * slot4 cluster to drift by about 30 bytes.
  *
- * ## Disasm chiave (Ghidra force-disasm)
+ * ## Key Disasm (Ghidra force-disasm)
  *
  *   00014966  movem.l {A2 D5 D4 D3 D2},-(SP)
  *   0001496a  movea.l (0x18,SP),A2
@@ -45,15 +45,14 @@
  *   00014bbe  jsr FUN_150D0(slotPtr)
  *   00014bc8  epilogue
  *
- * ## Note implementative
+ * ## Implementation Notes
  *
- * - Tutti i jsr FUN_15148 sono invocazioni full di `helper15148` con default subs.
- * - jsr FUN_150D0 invoca `spriteCoordsJsr150D0`.
- * - Il blocco state ∈ {1,5,6} (0x14a28..0x14bba — tile lookup, marble proximity,
- *   pos clamp + jsr 0x1BB08/0x1CC62) NON è ancora portato. Per slot1/2/3 in
- *   attract MAME, lo stato resta 0 in tutte le 99 frame (probe-slot4-state),
- *   quindi questo branch non si attiva. Lo aggiungeremo se compare drift in
- *   altri scenari.
+ * - All `jsr FUN_15148` calls are full `helper15148` calls with default subs.
+ * - `jsr FUN_150D0` invokes `spriteCoordsJsr150D0`.
+ * - The state in {1,5,6} block (0x14a28..0x14bba: tile lookup, marble
+ *   proximity, position clamp, and jsr 0x1BB08/0x1CC62) is not ported yet.
+ *   In attract MAME, slot1/2/3 state stays 0 across the sampled 99 frames, so
+ *   this branch does not activate. Port it when another scenario shows drift.
  */
 
 import type { GameState } from "./state.js";
@@ -108,7 +107,7 @@ function swl(state: GameState, sp: number, off: number, v: number): void {
   wl(state, sp + off, v);
 }
 
-/** Read long da indirizzo M68K (ROM o workRam). */
+/** Read long from an M68k address in ROM or workRam. */
 function readLong(state: GameState, rom: RomImage, addr: number): number {
   const a = addr >>> 0;
   if (a >= WRAM && a + 3 < WRAM + 0x2000) {
@@ -136,25 +135,25 @@ function sextByteSigned(b: number): number {
   return (b & 0x80) ? (b & 0xff) - 0x100 : b & 0xff;
 }
 
-/** Indirizzo originale della sub. */
+/** Original subroutine address. */
 export const SUB_14966_ADDR = 0x00014966 as const;
 
 /**
- * Replica bit-perfect di `FUN_00014966` — per-slot ticker dei 4 slot
- * dello script-array @ 0x401302 (chiamata 4× da FUN_1493C).
+ * Bit-perfect port of `FUN_00014966`: per-slot ticker for the four script-array
+ * slots @ 0x401302, called 4x by FUN_1493C.
  *
- * @param state   GameState (mutato).
- * @param rom     ROM image (per leggere sentinel @ slot[0x58]).
- * @param slotPtr Absolute workRam address dello slot record.
+ * @param state   Mutated GameState.
+ * @param rom     ROM image used to read sentinel @ slot[0x58].
+ * @param slotPtr Absolute workRam address of the slot record.
  *
- * **Side effects principali**:
+ * **Main side effects**:
  *   - `slot[0x24]` ticker++/reset
  *   - `slot[0x58]` advance/reset (state=path C)
- *   - `slot[0x0c]`, `slot[0x10]` pos += velocity (state ∈ {0,3} e step > 0)
- *   - jsr helper15148(slotPtr) in vari path
- *   - jsr spriteCoordsJsr150D0(slotPtr) per state ∉ {1,5,6} (sempre dopo body)
+ *   - `slot[0x0c]`, `slot[0x10]` pos += velocity (state in {0,3} and step > 0)
+ *   - jsr helper15148(slotPtr) in several paths
+ *   - jsr spriteCoordsJsr150D0(slotPtr) for state not in {1,5,6}, always after body
  *
- * **Path armed=0**: pure epilogue, nessun side-effect.
+ * **Path armed=0**: pure epilogue, no side effects.
  */
 export function sub14966(state: GameState, rom: RomImage, slotPtr: number): void {
   const sp = slotPtr >>> 0;
@@ -242,11 +241,9 @@ export function sub14966(state: GameState, rom: RomImage, slotPtr: number): void
   // cmpi.b #6,(0x1a,A2); bne → 0x14bbe; (else fall to 0x14a28)
   const s1a = sb(state, sp, 0x1a);
   if (s1a === 1 || s1a === 5 || s1a === 6) {
-    // ── 0x14a28..0x14bba block ─────────────────────────────────────
-    // NON portato: per slot1/2/3 in attract MAME, s1a resta 0 in 99/99
-    // frame. Se questo branch si attiva, drift compare e va portato.
-    // Per ora, comportamento conservativo: fallback to direct FUN_150D0.
-    // TODO: portare il blocco tile-lookup / marble-proximity / pos-clamp.
+    // 0x14a28..0x14bba block is not ported yet. For slot1/2/3 in attract MAME,
+    // s1a stays 0 in 99/99 frames. Conservative fallback: direct FUN_150D0.
+    // Future work: port tile lookup, marble proximity, and position clamp.
   }
 
   // 0x14bbe  jsr FUN_150D0(slotPtr); 0x14bc8 epilogue.

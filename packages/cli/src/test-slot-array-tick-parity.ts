@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 /**
- * test-slot-array-tick-parity.ts — differential FUN_1493C vs slotArrayTick.
  *
- * `FUN_00001493C` (42 byte) è un fan-out: chiama `FUN_00014966` 4 volte
- * coi puntatori dei 4 slot dell'array @ 0x401302 stride 0x60.
  *
- * **Verifica**: nessun side-effect diretto + sequenza di chiamate bit-perfect.
  *
  * Strategia (analogo a `test-state-sub-2678-parity.ts`):
- *   1. Patch FUN_14966 a un thunk custom che logga l'arg long ricevuto in
- *      una ring-buffer in work-RAM @ 0x401FE0 (4 long), con counter @ 0x401FF8.
- *      Lo stesso thunk fa anche scrivere il low-word di arg per verifica
+ *   1. Patch FUN_14966 to a custom thunk that logs the received long arg into
+ *      a work-RAM ring buffer @ 0x401FE0 (4 longs), with counter @ 0x401FF8.
  *      in 0x401FE0 (long-buffer di 4 entry).
- *   2. Run binario → leggi ring-buffer e compara con [0x401302, 0x401362,
  *      0x4013C2, 0x401422].
- *   3. Run TS con callback che fa lo stesso log → compara workRam
+ *   3. Run TS with a callback that emits the same log -> compare workRam
  *      bit-by-bit (incluso ring-buffer + counter).
  *
  * Il thunk patch (32 byte, < dimensione di FUN_14966) sostituisce l'header:
@@ -26,14 +20,9 @@
  *   rts                           ; 4E75                    (2 byte)
  *  Totale = 26 byte.
  *
- * Suite testate (500 casi totali, 1 suite — il caller non varia inputs):
- *   - randomizziamo lo stato preliminare di workRam ZONA-DI-INTERESSE
  *     (0x401300..0x40142F per coprire i 4 slot + qualche byte di guardia,
- *      e 0x401FE0..0x401FFB per la ring-buffer) per dimostrare che
- *     FUN_1493C NON legge da quei campi (parità invariante alle iterazioni).
- *   - resettiamo il counter @ 0x401FF8 a 0 prima di ogni run.
+ *      and 0x401FE0..0x401FFB for the ring buffer) to prove that
  *
- * Uso: npx tsx packages/cli/src/test-slot-array-tick-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -97,12 +86,10 @@ function setupWorkRam(
   }
 }
 
-/** Reset zona di interesse a 0 (nel binario E nel state TS). */
 function resetWatchedZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): void {
-  // Slot array (0x401300..0x40142F = 0x130 byte)
   for (let a = 0x00401300; a < 0x00401440; a++) {
     pokeMem(cpu, a, 1, 0);
     state.workRam[a - 0x400000] = 0;
@@ -166,8 +153,6 @@ function diffBytes(
 }
 
 /**
- * Callback TS che replica il thunk binario:
- *   - Scrive arg long alla ring-buffer @ workRam[0x1FE0 + counter]
  *   - Incrementa counter di 4 (long) @ workRam[0x1FF8]
  */
 function makeLogger() {
@@ -228,20 +213,17 @@ async function main(): Promise<void> {
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Reset poi randomizza la zona di interesse per dimostrare che
-    // FUN_1493C NON legge da slot data: i 4 slot ptr passati sono costanti
-    // (0x401302, 0x401362, ...) indipendentemente dal contenuto pre-call.
+    // Reset then randomize the region of interest to prove that
+    // (0x401302, 0x401362, ...) regardless of pre-call contents.
     resetWatchedZones(stateInst, cpu);
     const seed = new Map<number, number>();
     // Random fill slot zone (0x401300..0x40142F)
     for (let a = 0x00401300; a < 0x00401440; a++) {
       seed.set(a, rb());
     }
-    // Lascio ring-buffer + counter a 0 (richiesto dal thunk: scrive a base+counter
-    // e increment; counter deve partire a 0 per i 4 write a offset 0,4,8,C).
+    // and increment; counter must start at 0 for the 4 writes at offsets 0,4,8,C.
     setupWorkRam(stateInst, cpu, seed);
 
-    // Run binario
     callFunction(cpu, FUN_1493C, []);
     const binZone = readWatchZone(cpu);
 
@@ -255,8 +237,6 @@ async function main(): Promise<void> {
     const counterMatch = binZone.counter === tsZone.counter;
     if (diffSlot === null && diffRing === null && counterMatch) {
       ok++;
-      // Sanity check su un caso (tc==0): la ring buffer DEVE contenere
-      // i 4 ptr nell'ordine atteso.
       if (tc === 0) {
         const expected = [0x00401302, 0x00401362, 0x004013c2, 0x00401422];
         const got: number[] = [];

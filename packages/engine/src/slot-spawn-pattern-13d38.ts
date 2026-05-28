@@ -1,31 +1,17 @@
 /**
- * slot-spawn-pattern-13d38.ts — replica `FUN_00013D38` (430 byte) bit-perfect.
  *
- * Subroutine "emit fan-pattern di 8 entries" chiamata dal main update loop
  * (xref unico: `FUN_000253ec` @ 0x25648, JSR.L). Riceve un singolo long arg
- * (struct ptr A0) che è uno slot record in work RAM (uno dei 25 slot di
- * stride 0x56 @ `0x400A9C`, lo stesso layout usato da `script-slot-claim` e
  * `script-rect-dispatch-12dfa`).
  *
- * Il record A0 ha un "counter" `(A0+0x57).b` che decrementa ogni call e
- * un "selector" `(A0+0x58).b` che indicizza nella tabella ROM @ `0x1F016`
- * per ottenere un secondo slot ptr (A1) — questo è il pattern source.
+ * The A0 record has a `(A0+0x57).b` counter that decrements on every call and
  * I "tile delta" (A3 = ROM table @ `0x1EF32`) sono coppie di byte signed
- * letti come stream durante il loop.
  *
- * La funzione **emit** una sequenza di 8 record da 6 byte ciascuno:
  *   - i primi 4 in `(A0+0xA4)..(A0+0xBB)`
  *   - i secondi 4 in `(A0+0x38)..(A0+0x4F)`
  *
- * Ogni record è `[charcode.w, x.w, y.w]`:
  *   - charcode = `iter + 0x10B` (iter ∈ 0..7)
- *   - x = sext_byte(`*A3++`) + D3 (X corrente in pattern-space)
- *   - y = sext_byte(`*A3++`) + D1 (Y corrente)
  *
- * Il "salto" del record (skip) avviene quando il D1 corrente cade fuori dal
- * range [-1..8]: in quel caso A3 avanza di 2 byte (skip della coppia delta)
- * E il counter `(-8,A6)` di "record emessi" NON incrementa, quindi i record
- * successivi riempiono comunque la slot stride.
+ * following writes still fill the slot stride.
  *
  * **Disasm 0x13D38..0x13EE6** (430 byte):
  *
@@ -204,39 +190,24 @@
  *   00013eda  seq     D0b
  *   00013edc  neg.b   D0b                         ; D0 = (counter == 0) ? 0xFF : 0
  *
- * **Ritorno (D0)**: il prologo finale fa `moveq #0, D0; tst.b (0x57,A0);
- * seq D0b; neg.b D0b`. Sequenza:
  *   - `moveq #0,D0` → D0 = 0 (intero long).
- *   - `seq D0b` scrive il low byte: 0xFF se Z=1 (counter post == 0), else 0x00.
- *   - `neg.b D0b` calcola `0 - D0.b` modulo 256:
- *       - se D0.b era 0xFF → -0xFF mod 256 = 0x01 → D0.b = 0x01
- *       - se D0.b era 0x00 → 0 → D0.b = 0x00
- * Risultato: `D0 = 0x00000001` se counter post == 0, `D0 = 0` altrimenti.
+ *       - if D0.b was 0xFF -> -0xFF mod 256 = 0x01 -> D0.b = 0x01
+ *       - if D0.b was 0x00 -> 0 -> D0.b = 0x00
  *
  * **Side effects** (`state.workRam`):
  *   - `(A0+0x57).b` decrementato (modulo 256).
  *   - `(A0+0x1C).b` = 1 (mark "pattern emesso").
- *   - 4 word triple @ `(A0+0xA4)..(A0+0xBB)` (4 record da 6 byte).
- *   - 4 word triple @ `(A0+0x38)..(A0+0x4F)` (4 record da 6 byte).
- *   - Tutti i record sono pre-azzerati (clear iniziale dei due word @ `+0x38`/
- *     `+0xA4` con stride 6 per 4 iter); poi se l'emit avviene scrive 3 word
+ *   - 4 word triples @ `(A0+0xA4)..(A0+0xBB)` (four 6-byte records).
+ *   - 4 word triples @ `(A0+0x38)..(A0+0x4F)` (four 6-byte records).
  *     consecutive (charcode, x, y).
- *   - I record "skipped" (D1 fuori range) restano 0 nel charcode.w; gli altri
- *     due word del record skipped possono mantenere la pre-clear o il pattern
- *     già scritto da una iterazione precedente, ma il pre-clear iniziale
- *     azzera il primo word di ciascun record (NON tutti i 3 word) — quindi i
- *     record "skipped" hanno solo charcode=0 ma x/y indefiniti se c'è stato
- *     un write parziale (mai il caso: scrivono in stride 6 sempre).
+ *     the two words in a skipped record can keep the pre-clear or existing pattern.
  *
- * **Letture**:
- *   - ROM @ `0x1EF32` (delta-stream byte signed; 16 byte consumati: 8 coppie).
+ * **Reads**:
+ *   - ROM @ `0x1EF32` (signed-byte delta stream; 16 bytes consumed: 8 pairs).
  *   - ROM @ `0x1F016 + (selector<<2)` (slot-ptr table, 25 entries; out-of-range
- *     selector è teoricamente possibile ma il caller non lo emette in pratica).
- *   - ROM @ pointed slot `A1`: `(A1+0x4E).l` (sprite-coord packed) e
- *     `(A1+0x1F).b` (kind, gating sul branch +/-).
+ *   - ROM @ pointed slot `A1`: `(A1+0x4E).l` (packed sprite coords) and
+ *     `(A1+0x1F).b` (kind, gating +/- branch).
  *
- * **Caller noto**: `FUN_000253ec` @ 0x25648 (chiamata incondizionata, ma il
- * caller probabilmente gating-checks counter prima di chiamare).
  */
 
 import type { GameState } from "./state.js";
@@ -244,34 +215,32 @@ import type { RomImage } from "./bus.js";
 
 const WORK_RAM_BASE = 0x400000 as const;
 
-/** ROM table: stream di byte signed (delta x/y) consumati a coppie nel loop. */
+/** ROM table: signed-byte x/y delta stream consumed as pairs in the loop. */
 const DELTA_STREAM_ROM = 0x1ef32 as const;
 
-/** ROM table: 25 puntatori-slot (stessa table di `findFirstFreeSlot_1F016`). */
+/** ROM table: 25 slot pointers (same table as `findFirstFreeSlot_1F016`). */
 const SLOT_PTR_TABLE_ROM = 0x1f016 as const;
 
-/** Offsets nello slot record A0 (stride 0x56 in work RAM). */
+/** Offsets in slot record A0 (stride 0x56 in work RAM). */
 const ARG_READY_BYTE_OFF = 0x1c; // byte: scritto = 1 in epilogue
-const ARG_COORDS_LONG_OFF = 0x1e; // long: read sole sorgente coords (Y_high|X_low)
-const ARG_OUT_2ND_HALF_OFF = 0x38; // word: 4 record da 6 byte (record 4..7)
-const ARG_OUT_1ST_HALF_OFF = 0xa4; // word: 4 record da 6 byte (record 0..3)
-const ARG_COUNTER_BYTE_OFF = 0x57; // byte: counter decrementato; gate su return D0
-const ARG_SELECTOR_BYTE_OFF = 0x58; // byte: selector per ROM table @0x1F016
+const ARG_COORDS_LONG_OFF = 0x1e; // long: sole source coords (Y_high|X_low)
+const ARG_OUT_2ND_HALF_OFF = 0x38; // word: four 6-byte records (record 4..7)
+const ARG_OUT_1ST_HALF_OFF = 0xa4; // word: four 6-byte records (record 0..3)
+const ARG_COUNTER_BYTE_OFF = 0x57; // byte: decremented counter; gates return D0
+const ARG_SELECTOR_BYTE_OFF = 0x58; // byte: selector for ROM table @0x1F016
 
-/** Offsets nello slot ROM-pointed A1. */
+/** Offsets in ROM-pointed slot A1. */
 const A1_COORDS_LONG_OFF = 0x4e; // long: D5_high = D4 base, D5_low = D3 base
-const A1_KIND_BYTE_OFF = 0x1f; // byte: == 0xD → branch "subtract"
+const A1_KIND_BYTE_OFF = 0x1f; // byte: == 0xD selects the "subtract" branch
 
-/** Stride dei record emessi (6 byte = 3 word). */
+/** Stride of emitted records (6 bytes = 3 words). */
 const RECORD_STRIDE = 6 as const;
 
-/** Numero di iterazioni del main loop (D4 ∈ [0..7]). */
 const ITER_COUNT = 8 as const;
 
-/** Numero di record per "metà" (prima 4 in 0xA4, poi 4 in 0x38). */
 const HALF_RECORDS = 4 as const;
 
-/** Offset charcode base scritto in (A2): `iter + 0x10B`. */
+/** Base charcode offset written to (A2): `iter + 0x10B`. */
 const CHARCODE_BASE = 0x10b as const;
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -305,46 +274,36 @@ function writeU16Ram(state: GameState, off: number, v: number): void {
   state.workRam[off + 1] = v & 0xff;
 }
 
-/** Sign-extend byte → int32 (-128..127). */
+/** Sign-extend byte to int32 (-128..127). */
 function sextByte(v: number): number {
   const b = v & 0xff;
   return b < 0x80 ? b : b - 0x100;
 }
 
-/** Sign-extend word → int32 (-32768..32767). */
+/** Sign-extend word to int32 (-32768..32767). */
 function sextWord(v: number): number {
   const w = v & 0xffff;
   return w < 0x8000 ? w : w - 0x10000;
 }
 
 /**
- * `asr.l #2, D0` su un valore già "muls.w" (long signed). JS `>> 2` su un
- * int32 è esattamente questo (asr aritmetico).
  */
 function asr2(longSigned: number): number {
   return (longSigned | 0) >> 2;
 }
 
 /**
- * Replica bit-perfect di `FUN_00013D38` — emit fan-pattern di 8 record da
- * 6 byte (charcode + x + y) nello slot `argPtr`.
+ * Emit eight 6-byte records (charcode + x + y) into slot `argPtr`.
  *
- * @param state   GameState. Modifica `workRam` su:
+ * @param state   GameState. Mutates `workRam` at:
  *                - `(argPtr+0x57).b` decrement
  *                - `(argPtr+0x1C).b = 1`
- *                - 4 word triple @ `(argPtr+0xA4)..(argPtr+0xBB)`
- *                - 4 word triple @ `(argPtr+0x38)..(argPtr+0x4F)`
- * @param rom     ROM image (per leggere la table @ `0x1F016` e il delta
- *                stream @ `0x1EF32`, e `(A1+0x4E)` / `(A1+0x1F)` dello
- *                slot template che A1 può puntare in ROM o in work RAM).
- * @param argPtr  Long pushato dal caller (`A0` nel binario). DEVE essere
- *                in `0x400000..0x401FFF` perché tutte le scritture su
- *                `(A0, ...)` toccano work RAM.
- * @returns       D0 al ritorno (low byte effettivo, high zero):
- *                - `0x00000001` se dopo il decremento `(argPtr+0x57).b == 0`.
- *                - `0` altrimenti.
- *                Vedi nota nel doc-comment del modulo: `seq` produce 0xFF, poi
- *                `neg.b` lo trasforma in 0x01.
+ *                - 4 word triples @ `(argPtr+0xA4)..(argPtr+0xBB)`
+ *                - 4 word triples @ `(argPtr+0x38)..(argPtr+0x4F)`
+ * @param rom     ROM image used to read the table @ `0x1F016`, delta stream
+ *                @ `0x1EF32`, and `(A1+0x4E)` / `(A1+0x1F)`.
+ *                `(A0, ...)` accesses touch work RAM. `seq` produces 0xFF, then
+ *                `neg.b` turns it into 0x01.
  */
 export function slotSpawnPattern13D38(
   state: GameState,
@@ -359,27 +318,20 @@ export function slotSpawnPattern13D38(
   const counterPre = state.workRam[argOff + ARG_COUNTER_BYTE_OFF] ?? 0;
   const d2w = (0x20 - sextByte(counterPre)) & 0xffff;
 
-  // (A0+0x57).b -= 1 (modulo 256)
+  // (A0+0x57).b -= 1 (modulo 256).
   state.workRam[argOff + ARG_COUNTER_BYTE_OFF] = (counterPre - 1) & 0xff;
 
   // ── Resolve A1 from ROM table indexed by (A0+0x58).b sext.l << 2 ─────
   const selectorByte = state.workRam[argOff + ARG_SELECTOR_BYTE_OFF] ?? 0;
-  // sext.b → ext.w → ext.l: solo sext.b è osservabile (gli ext.w/ext.l già
-  // applicati a un valore sext.b sono no-op).
   const selectorSextL = sextByte(selectorByte);
-  // asl.l #2 (m68k arithmetic shift; su long signed è equivalente a *4 in JS
-  // con (x | 0) << 2 per preservare il segno; il risultato è poi usato come
-  // displacement signed in adda).
+  // Signed displacement used by adda.
   const selectorIdx = ((selectorSextL | 0) << 2) | 0;
-  // movea.l (0x0,A1,D0*1),A1 → A1 = readU32(0x1F016 + selectorIdx).
-  // L'indirizzo di lettura usa addressing modulo 32-bit (m68k ha 24-bit ABI
+  // movea.l (0x0,A1,D0*1),A1 -> A1 = readU32(0x1F016 + selectorIdx).
   // ma full 32-bit indirizzamento; per parity basta `>>>0`).
   const a1Addr = (SLOT_PTR_TABLE_ROM + selectorIdx) >>> 0;
   const a1 = readU32Rom(rom, a1Addr) >>> 0;
 
   // ── Read base coords from A1+0x4E ──────────────────────────────────
-  // A1 può puntare in work RAM (slot canonici @ 0x400A9C+...) o in ROM
-  // (selettori speciali). Distinguiamo in base al range.
   const a1CoordsAddr = (a1 + A1_COORDS_LONG_OFF) >>> 0;
   let a1CoordsLong: number;
   if (a1CoordsAddr >= WORK_RAM_BASE && a1CoordsAddr + 3 < WORK_RAM_BASE + state.workRam.length) {
@@ -396,13 +348,10 @@ export function slotSpawnPattern13D38(
 
   // ── Read coords from A0+0x1E ───────────────────────────────────────
   const argCoordsLong = readU32Ram(state, argOff + ARG_COORDS_LONG_OFF);
-  // frame[-6] = high word (sext implicito ma serve solo il valore word qui)
   const frameMinus6 = (argCoordsLong >>> 16) & 0xffff;
-  // A4w = low word (zero-ext via movea.w; usato in word ops)
   const a4w = argCoordsLong & 0xffff;
 
   // ── Branch su (A1+0x1F).b == 0xD ───────────────────────────────────
-  // Stessa policy di lettura ROM/RAM.
   const a1KindAddr = (a1 + A1_KIND_BYTE_OFF) >>> 0;
   let a1KindByte: number;
   if (a1KindAddr >= WORK_RAM_BASE && a1KindAddr < WORK_RAM_BASE + state.workRam.length) {
@@ -441,9 +390,7 @@ export function slotSpawnPattern13D38(
 
   // ── Pre-clear: 4 record × 2 destinations (charcode word @ +0x38/+0xA4
   //   stride 6) ────────────────────────────────────────────────────────
-  // Solo il primo word di ciascun record (charcode) è azzerato dal binario;
-  // gli altri 2 word del record (x, y) NON sono azzerati e rimangono col
-  // contenuto pre-call. Replichiamo esattamente.
+  // pre-call contents. Mirror exactly.
   for (let k = 0; k < HALF_RECORDS; k++) {
     writeU16Ram(state, argOff + ARG_OUT_2ND_HALF_OFF + k * RECORD_STRIDE, 0);
     writeU16Ram(state, argOff + ARG_OUT_1ST_HALF_OFF + k * RECORD_STRIDE, 0);
@@ -455,15 +402,12 @@ export function slotSpawnPattern13D38(
 
   for (let iter = 0; iter < ITER_COUNT; iter++) {
     // D1.w = D2 - iter*2 (signed word arithmetic).
-    // Disasm: ext.l + asl.l #1 + neg.l → mantiene wraparound long; ma poi
-    // muls.w / add.w usano solo low word, quindi sext.w del risultato low
-    // è quello che conta. Preserviamo come word signed.
     const d1Long = (d2w | 0) - iter * 2; // already in safe int range
     const d1w = d1Long & 0xffff;
     const d1Sext = sextWord(d1w);
 
-    let d3OutW: number; // D3.w finale (passato a write x)
-    let d1OutW: number; // D1.w finale (passato a write y)
+    let d3OutW: number;
+    let d1OutW: number;
     let skip = false;
 
     if (d1Sext < 0) {
@@ -476,7 +420,7 @@ export function slotSpawnPattern13D38(
       d3OutW = 0;
       d1OutW = 0;
     } else if (d1Sext >= 4) {
-      // Range [4..7]: D1 -= 4, then mul/asr2 con frame[-2]/[-4], offset D5/D6.
+      // Range [4..7]: D1 -= 4, then mul/asr2 with frame[-2]/[-4], offset D5/D6.
       const d1Adj = (d1Sext - 4) & 0xffff;
       const d1AdjSext = sextWord(d1Adj);
       const mul1 = (d1AdjSext * sextWord(frameMinus2)) | 0;
@@ -486,7 +430,7 @@ export function slotSpawnPattern13D38(
       const r2 = asr2(mul2);
       d1OutW = (r2 + sextWord(d6w)) & 0xffff;
     } else {
-      // Range [0..3]: mul/asr2 con frame[-A]/[-C], offset frame[-6]/A4.
+      // Range [0..3]: mul/asr2 with frame[-A]/[-C], offset frame[-6]/A4.
       const mul1 = (d1Sext * sextWord(frameMinusA)) | 0;
       const r1 = asr2(mul1);
       d3OutW = (r1 + sextWord(frameMinus6)) & 0xffff;
@@ -505,8 +449,6 @@ export function slotSpawnPattern13D38(
         destOff = argOff + ARG_OUT_1ST_HALF_OFF + emitIndex * RECORD_STRIDE;
       } else {
         // Second half: A0 + 0x38 + (emit-4)*6.
-        // Disasm fa `subq.l #4,D0; mulu.w #6,D0`. Su D0 ext.l prima del subq,
-        // quindi se emit_index >= 4 il risultato è (emit-4)*6.
         destOff =
           argOff + ARG_OUT_2ND_HALF_OFF + (emitIndex - HALF_RECORDS) * RECORD_STRIDE;
       }

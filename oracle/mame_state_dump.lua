@@ -1,5 +1,5 @@
 -- mame_state_dump.lua — dumpa TUTTO il video state di Atari System 1
--- a un frame specifico. Output: JSON con playfieldRam, spriteRam, alphaRam,
+-- at a specific frame. Output: JSON with playfieldRam, spriteRam, alphaRam,
 -- colorRam, workRam, scrollX, scrollY in hex.
 --
 -- Variabili d'ambiente:

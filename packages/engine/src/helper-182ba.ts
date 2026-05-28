@@ -117,18 +117,14 @@ export interface Helper182BASubs {
   /** `FUN_15DB6` stub-injection → default `stateValidateGrid15DB6`. */
   validateGridSubs?: StateValidateGrid15DB6Subs;
   /**
-   * `FUN_261BC` inner (chiamato via FUN_26196). Default no-op (return 0).
-   * NON replicato in TS — wirable per future iter.
+   * Not replicated in TS — wirable in a future iteration.
    */
   fun_261bc?: (structPtr: number, magnitude: number) => number;
 }
 
 /**
- * Replica bit-perfect di `FUN_000182BA`.
  *
- * @param state    GameState (mutato: workRam slot fields)
- * @param slotPtr  Indirizzo abs M68k del slot (= A2)
- * @param rom      ROM image (lettura table 0x1eff6 + bytes via A1)
+ * @param state    GameState (mutated: workRam slot fields)
  * @param subs     stub injection
  */
 export function helper182BA(
@@ -230,8 +226,6 @@ export function helper182BA(
       // divs.w D1w,D0; result = quotient in low 16 bits
       // Result placed in D2 word (high preserved? No, "move.w D0w,D2w").
       // Then D2 long = (D2 high) | (quotient & 0xffff).
-      // Per il flusso (poi `muls D1w,D0` con D2w usato come word), serve solo
-      // la word low di D2 dopo. Sign-extend la word per le moltiplicazioni.
       const q2 = sextW(Math.trunc(s32(d2) / d1Signed) & 0xffff);
       const q3 = sextW(Math.trunc(s32(d3) / d1Signed) & 0xffff);
       d2 = q2;
@@ -292,7 +286,6 @@ export function helper182BA(
   }
 
   // 0x1843a: jsr 0x26196(A2)
-  // Default inner = fun261BC (replicato in sub-261bc.ts). Caller può
   // override via `subs.fun_261bc` per test/stub.
   const innerCb = subs?.fun_261bc
     ?? ((sp: number, mag: number) => fun261BC(state, sp, mag, rom.program));

@@ -2,27 +2,21 @@
 /**
  * test-state-sub-5608-parity.ts — differential FUN_5608 vs stateSub5608.
  *
- * `FUN_00005608` (82 byte): wrapper a 3 callee back-to-back con args costanti
+ * `FUN_00005608` (82 bytes): wrapper around 3 back-to-back callees with constant args
  * derivati da:
  *   - byte ROM @ 0x10072 (gate: D2 ∈ {4, 8})
  *   - long BE ROM @ 0x10074 (argLong → FUN_5334)
  *   - 4 immediate (0x7978, 0x7980, 0x1B, 0x1C)
  *
- * Sequenza di chiamate:
  *   1. FUN_52DA(D2+3, 0x1B,   0x7978)
  *   2. FUN_5334(*ROM[0x10074])
  *   3. FUN_52DA(D2+4, 0x1C,   0x7980)
  *
  * Strategia parity test:
  *   - Patch RTS sui due callee `FUN_52DA` (0x52DA) e `FUN_5334` (0x5334) per
- *     impedire l'esecuzione dei loro corpi (non ci interessano i side-effect:
- *     vogliamo solo confrontare gli ARGOMENTI passati).
- *   - Per ogni caso: imposta byte ROM @ 0x10072 e long ROM @ 0x10074 via
- *     pokeMem (Musashi mappa la ROM come scrivibile in unified memory, ottimo
- *     per fault injection). Sincronizza `tsRom.program` con gli stessi byte.
- *   - Esegui FUN_5608 step-by-step: ogni volta che PC == 0x52DA o PC == 0x5334
- *     leggi gli args sullo stack e registra la chiamata.
- *   - Confronta la sequenza catturata col binario vs la sequenza catturata
+ *     prevent their bodies from executing; their side effects are not relevant:
+ *     for fault injection). Synchronize `tsRom.program` with the same bytes.
+ *   - Run FUN_5608 step-by-step: each time PC == 0x52DA or PC == 0x5334
  *     dagli stub TS (inner52DA / inner5334).
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5608-parity.ts [N]
@@ -62,12 +56,12 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patcha RTS (0x4E75) all'entry dei due callee. */
+/** Patch RTS (0x4E75) at the entry of the two callees. */
 function patchCallees(cpu: CpuSession): void {
-  // FUN_52DA: word originale `link.w A6,-0xC` (0x4E56). Patcha a 0x4E75 (rts).
+  // FUN_52DA: original word `link.w A6,-0xC` (0x4E56). Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_52DA + 0, 1, 0x4e);
   pokeMem(cpu, FUN_52DA + 1, 1, 0x75);
-  // FUN_5334: word originale `move.l (0x4,SP),D0`. Patcha a 0x4E75 (rts).
+  // FUN_5334: original word `move.l (0x4,SP),D0`. Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_5334 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_5334 + 1, 1, 0x75);
 }
@@ -78,29 +72,22 @@ interface Call52DA {
   arg3: number;
 }
 interface CapturedSeq {
-  /** Sequenza di evento: "52DA" oppure "5334" in ordine. */
   order: ("52DA" | "5334")[];
-  /** Args di ciascuna chiamata 52DA, in ordine di occorrenza. */
   calls52DA: Call52DA[];
-  /** Args di ciascuna chiamata 5334, in ordine di occorrenza. */
   calls5334: number[];
   reachedRts: boolean;
 }
 
 /**
- * Esegue FUN_5608 step-by-step e cattura args alle entry di 0x52DA/0x5334.
+ * Run FUN_5608 step-by-step and capture args at the 0x52DA/0x5334 entries.
  *
- * Patch già applicato: ad entry callee, l'opcode è RTS (0x4E75) → il next
- * step ritorna immediatamente al caller. Ma noi catturiamo gli args PRIMA
- * di eseguire RTS (cioè: appena PC == FUN_52DA o FUN_5334, leggiamo lo
  * stack), poi proseguiamo.
  */
 function runAndCapture(cpu: CpuSession): CapturedSeq {
   const sys = cpu.system;
-  // Setup: SP iniziale e sentinel ret addr.
   const sp0 = 0x401f00;
   let sp = sp0;
-  // FUN_5608 non riceve args (void void). Push solo sentinel ret.
+  // FUN_5608 receives no args (void void). Push only sentinel ret.
   sp = (sp - 4) >>> 0;
   sys.write(sp, 4, SENTINEL_RET);
   sys.setRegister("sp", sp);
@@ -110,12 +97,8 @@ function runAndCapture(cpu: CpuSession): CapturedSeq {
   const calls52DA: Call52DA[] = [];
   const calls5334: number[] = [];
 
-  // Step finché PC == SENTINEL_RET (uscita) o limite.
-  // Numero step necessari: ~30 istruzioni in 5608 + 3 RTS callee = ~40.
-  // Nota: il PC NON resta mai sull'entry di un callee per più di un singolo
-  // tick (il prossimo `step()` esegue la prima istruzione del callee, che
-  // dopo la patch è RTS e fa ripartire al caller). Quindi il check `pc ==
-  // ENTRY` cattura UNA volta per ogni call. Catturiamo, poi step.
+  // Required steps: about 30 instructions in 5608 plus 3 callee RTS = about 40.
+  // ENTRY` captures once per call. Capture, then step.
   let safety = 500;
   let reachedRts = false;
   while (safety-- > 0) {
@@ -125,8 +108,7 @@ function runAndCapture(cpu: CpuSession): CapturedSeq {
       break;
     }
     if (pc === FUN_52DA) {
-      // All'entry di 52DA, lo stack è:
-      //   (0,SP)  = ret addr (verso 0x5630 o 0x5652)
+      //   (0,SP)  = ret addr (toward 0x5630 or 0x5652)
       //   (4,SP)  = arg1 (D2+3 oppure D2+4)
       //   (8,SP)  = arg2 (0x1B oppure 0x1C)
       //   (0xC,SP)= arg3 (0x7978 oppure 0x7980)
@@ -137,9 +119,7 @@ function runAndCapture(cpu: CpuSession): CapturedSeq {
       calls52DA.push({ arg1: a1, arg2: a2, arg3: a3 });
       order.push("52DA");
     } else if (pc === FUN_5334) {
-      // All'entry di 5334, lo stack è:
-      //   (0,SP) = ret addr (verso 0x563C)
-      //   (4,SP) = argLong (long letto da ROM @ 0x10074)
+      //   (0,SP) = ret addr (toward 0x563C)
       const spNow = sys.getRegisters().sp >>> 0;
       const argLong = peekMem(cpu, spNow + 4, 4) >>> 0;
       calls5334.push(argLong);
@@ -198,7 +178,6 @@ async function main(): Promise<void> {
   // Patch RTS sui callee (una sola volta — la patch persiste in unified memory).
   patchCallees(cpu);
 
-  // Mirror ROM in TS (per stateSub5608 che legge da rom.program).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -219,14 +198,13 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern di copertura sul gate byte e sull'handle long.
     let gateByte: number;
     let handleLong: number;
     if (i === 0) {
-      gateByte = 0x00; // → D2 = 8 (caso "produzione")
+      gateByte = 0x00;
       handleLong = 0x00000000;
     } else if (i === 1) {
       gateByte = 0x01; // → D2 = 4
@@ -259,13 +237,11 @@ async function main(): Promise<void> {
     tsRom.program[ROM_HANDLE_LONG_ADDR + 2] = (handleLong >>> 8) & 0xff;
     tsRom.program[ROM_HANDLE_LONG_ADDR + 3] = handleLong & 0xff;
 
-    // Esegue binario e cattura
     const bin = runAndCapture(cpu);
 
-    // Esegue TS e cattura
+    // Run TS and capture.
     const ts = runTsAndCapture(state, tsRom);
 
-    // Confronta
     const sameOrder =
       bin.order.length === ts.order.length &&
       bin.order.every((v, k) => v === ts.order[k]);

@@ -1,20 +1,19 @@
 /**
  * slapstic-103.ts — Atari Slapstic 137412-103 (Marble Madness) state machine.
  *
- * Replica bit-perfect di `mame/src/mame/atari/slapstic.cpp`, configurazione
- * `slapstic103`, branca `active_103_110` (3rd revision of the slapstic family).
+ * Bit-perfect replica of `mame/src/mame/atari/slapstic.cpp`, `slapstic103`
+ * configuration, `active_103_110` branch (3rd revision of the slapstic family).
  *
- * Il chip Atari Slapstic e' un IC custom (20-pin DIP) che si frappone tra
- * address bus del 68010 e una ROM di programma, fornendo bank switching +
- * protezione anti-copia. Per Marble Madness occupa la finestra
- * `0x080000-0x087FFF` (8KB visibili), e seleziona uno di 4 bank da 8KB
- * presenti nella ROM image a offset `0x080000 + bank*0x2000`.
+ * Atari's Slapstic is a custom 20-pin IC placed between the 68010 address bus
+ * and program ROM, providing bank switching plus copy protection. Marble
+ * Madness maps it at `0x080000-0x087FFF` (8KB visible) and selects one of four
+ * 8KB banks in the ROM image at `0x080000 + bank*0x2000`.
  *
- * **Parametri chip 103** (`slapstic.cpp:271-297`):
- *   bankstart  = 3 (bank di reset)
+ * **Chip 103 parameters** (`slapstic.cpp:271-297`):
+ *   bankstart  = 3 (reset bank)
  *   bank[]     = { 0x0040, 0x0050, 0x0060, 0x0070 }
- *   alt1       = mask=0x007f, value=0x002d        (test_any → fuori range OK)
- *   alt2       = mask=0x3fff, value=0x3d14        (test_in → dentro range)
+ *   alt1       = mask=0x007f, value=0x002d        (test_any -> out-of-range OK)
+ *   alt2       = mask=0x3fff, value=0x3d14        (test_in -> inside range)
  *   alt3       = mask=0x3ffc, value=0x3d24        (test_in)
  *   alt4       = mask=0x3fcf, value=0x0040        (test_in, commit)
  *   altshift   = 0
@@ -25,19 +24,19 @@
  *   bit3c1     = mask=0x3ff3, value=0x34c2        (clear bit 1)
  *   bit3s1     = mask=0x3ff3, value=0x34c3        (set bit 1)
  *   bit4       = mask=0x3ff8, value=0x34d0        (bitwise commit)
- *   NO additive banking (chip 103 e' rev1, gli additivi sono per chip 111+)
+ *   NO additive banking (chip 103 is rev1; additive banking starts at chip 111)
  *
  * **Bus geometry**:
  *   start         = 0x080000
  *   end           = 0x087FFF
  *   mirror        = 0
- *   data_width    = 16 → shift = 1 (M68K word-addressed bus)
- *   address_lines = 14 (A0-A13 sul chip = A1-A14 sul bus 68000)
+ *   data_width    = 16 -> shift = 1 (M68K word-addressed bus)
+ *   address_lines = 14 (chip A0-A13 = 68000 bus A1-A14)
  *   range_mask    = ~((end - start) | mirror) = ~0x7FFF = 0xFFFF8000
  *   range_value   = 0x080000
  *   input_mask    = ((1 << 14) - 1) << 1 = 0x7FFE
  *
- * **Test helpers** (riprodotti da `slapstic.cpp:838-871`):
+ * **Test helpers** (mirrored from `slapstic.cpp:838-871`):
  *   test_in(mv)     = test(range_mask | (mv.mask << 1), range_value | (mv.value << 1))
  *   test_any(mv)    = test(mv.mask << 1, mv.value << 1)              // ignora range
  *   test_inside()   = test(range_mask, range_value)
@@ -45,31 +44,31 @@
  *                                                                    // (low 15 bit == 0)
  *   test_bank(b)    = test(range_mask | input_mask, range_value | (b << 1))
  *
- * Nota hardware: MAME installa il tap slapstic su tutto l'address space CPU.
- * Quindi `test_any` puo' essere armato anche da prefetch/letture codice fuori
- * dalla window protetta (es. `0x02ff5a` in `FUN_2FF40`), non solo da accessi a
- * `0x080000..0x087FFF`.
+ * Hardware note: MAME installs the slapstic tap over the full CPU address
+ * space. `test_any` can therefore be armed by prefetch/code reads outside the
+ * protected window (for example `0x02ff5a` in `FUN_2FF40`), not only by accesses
+ * to `0x080000..0x087FFF`.
  *
- * **Stati FSM** (per la branca 103-110):
- *   IDLE        - in attesa di un "reset access" (addr a 0x80000, low 15 bit clear)
- *   ACTIVE      - bank scelto + accetta direct/alt/bit transitions
- *   ALT_VALID   - dopo alt1 trigger, attende alt2
- *   ALT_SELECT  - dopo alt2 ok, attende alt3 (carica loaded_bank)
- *   ALT_COMMIT  - dopo alt3, attende alt4 (commit loaded_bank → current_bank)
- *   BIT_LOAD    - dopo bit1 trigger, attende bit2 (carica loaded_bank dal current)
- *   BIT_SET_ODD - bit-set state alternato; accetta bit3* per modificare loaded_bank
- *   BIT_SET_EVEN- come ODD ma alternato (toggle ogni hit di bit3*)
+ * **FSM states** (103-110 branch):
+ *   IDLE        - waiting for a reset access (addr 0x80000, low 15 bits clear)
+ *   ACTIVE      - bank selected; accepts direct/alt/bit transitions
+ *   ALT_VALID   - after alt1 trigger, waiting for alt2
+ *   ALT_SELECT  - after alt2, waiting for alt3 (loads loaded_bank)
+ *   ALT_COMMIT  - after alt3, waiting for alt4 (commits loaded_bank -> current bank)
+ *   BIT_LOAD    - after bit1 trigger, waiting for bit2 (loads loaded_bank from current)
+ *   BIT_SET_ODD - alternating bit-set state; accepts bit3* loaded_bank edits
+ *   BIT_SET_EVEN- same as ODD, with phase toggled on each bit3* hit
  *
- * Bank di reset dopo `slapsticReset()` = 3 (parametro `bankstart`).
- * MAME: `device_reset()` → `change_bank(slapstic_table[chip-101]->bankstart)`.
+ * Reset bank after `slapsticReset()` = 3 (`bankstart` parameter).
+ * MAME: `device_reset()` -> `change_bank(slapstic_table[chip-101]->bankstart)`.
  *
- * **Reset access** (idle → active):
- *   Un qualsiasi accesso ad addr che soddisfa test_reset(): un read/write al
- *   primo word della slapstic window (`0x080000` per data_width=16) — solo
- *   l'A0-A14 sono 0. Questo e' la classica "trigger read" che il binario
- *   ROM esegue prima di ogni sequenza di bank switching (`slapstic-lookup.ts`).
+ * **Reset access** (idle -> active):
+ *   Any access satisfying test_reset(): a read/write to the first word of the
+ *   slapstic window (`0x080000` for data_width=16), where only A0-A14 are 0.
+ *   This is the classic trigger read the ROM performs before each bank-switch
+ *   sequence (`slapstic-lookup.ts`).
  *
- * Bit-perfect verificato vs MAME slapstic device tap (`oracle/mame_slapstic_tap.lua`).
+ * Bit-perfect against the MAME slapstic device tap (`oracle/mame_slapstic_tap.lua`).
  */
 
 // ─── Constants from chip 103 config ──────────────────────────────────────────
@@ -97,9 +96,9 @@ const BIT4_MASK   = 0x3ff8, BIT4_VAL   = 0x34d0;
 
 // ─── Bus geometry constants ──────────────────────────────────────────────────
 
-/** Inizio window slapstic (incluso). */
+/** Slapstic window start, inclusive. */
 const START = 0x080000;
-/** Fine window slapstic (esclusa). 8KB visibili. */
+/** Slapstic window end, exclusive. 8KB visible. */
 const END_EXCL = 0x088000;
 /** Address shift per data_width=16 (un bus word = 2 byte). */
 const SHIFT = 1;
@@ -141,7 +140,7 @@ function testBank(addr: number, b: number): boolean {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-/** Stati FSM esposti per i 9 stati MAME (S_BIT_SET_ODD/EVEN sono distinti). */
+/** FSM states exposed for the 9 MAME states; S_BIT_SET_ODD/EVEN stay distinct. */
 export type SlapsticState =
   | "IDLE"
   | "ACTIVE"
@@ -153,16 +152,16 @@ export type SlapsticState =
   | "BIT_SET_EVEN";
 
 export interface SlapsticFsm {
-  /** Bank correntemente esposto sul bus (0..3). */
+  /** Bank currently exposed on the bus (0..3). */
   bank: number;
-  /** Stato FSM. */
+  /** Current FSM state. */
   state: SlapsticState;
-  /** Bank in costruzione durante ALT_SELECT / BIT_SET (committed solo da alt4/bit4). */
+  /** Bank being built during ALT_SELECT / BIT_SET; committed only by alt4/bit4. */
   loadedBank: number;
 }
 
 /**
- * Crea una FSM in stato di reset (idle, bank = BANKSTART = 3).
+ * Creates an FSM in reset state (idle, bank = BANKSTART = 3).
  *
  * Equivalente a `atari_slapstic_device::device_reset()` di MAME:
  *   m_state = m_s_idle.get();
@@ -173,33 +172,32 @@ export function createSlapsticFsm(): SlapsticFsm {
 }
 
 /**
- * Intercetta un accesso (read O write) al bus alla `addr` indicata.
+ * Feeds one bus access (read or write) at the supplied `addr` into the FSM.
  *
- * **IMPORTANTE**: questa funzione va chiamata per ogni accesso al bus rilevante
- * per lo slapstic. Gli accessi alla window `0x080000-0x087FFF` triggerano
- * sempre la FSM, ma `test_any` richiede anche i prefetch/letture codice noti
- * fuori range che matchano il pattern `alt1`.
+ * This must be called for every slapstic-relevant bus access. Window accesses
+ * at `0x080000-0x087FFF` always trigger the FSM, and `test_any` also requires
+ * known out-of-range prefetch/code reads that match the `alt1` pattern.
  *
- * Ritorna il bank correntemente esposto dopo questo accesso. Il caller usa
- * `bank * 0x2000` come offset all'interno del blob ROM `0x080000`.
+ * Returns the bank exposed after this access. The caller uses `bank * 0x2000`
+ * as the offset inside the `0x080000` ROM blob.
  *
- * Replica esattamente la state machine MAME per chip 103 (branca 103-110).
+ * Exact replica of the MAME state machine for chip 103 (103-110 branch).
  */
 export function slapsticTick(fsm: SlapsticFsm, addr: number): number {
   const a = addr >>> 0;
 
   switch (fsm.state) {
     case "IDLE":
-      // Solo un reset access torna in ACTIVE.
+      // Only a reset access returns to ACTIVE.
       if (testReset(a)) {
         fsm.state = "ACTIVE";
       }
       break;
 
     case "ACTIVE":
-      // 1. Direct bank switch → bank N, torna IDLE
-      // 2. ALT trigger (alt1, test_any) → ALT_VALID
-      // 3. BIT trigger (bit1, test_in) → BIT_LOAD
+      // 1. Direct bank switch -> bank N, then IDLE
+      // 2. ALT trigger (alt1, test_any) -> ALT_VALID
+      // 3. BIT trigger (bit1, test_in) -> BIT_LOAD
       if (testBank(a, BANK_VALUES[0])) {
         fsm.bank = 0;
         fsm.state = "IDLE";
@@ -285,8 +283,8 @@ export function slapsticTick(fsm: SlapsticFsm, addr: number): number {
 
     case "BIT_SET_EVEN":
       // is_odd = false: clear0=bit3s1, set0=bit3c1, clear1=bit3s0, set1=bit3c0
-      // (questo "swap" e' un quirk di MAME: i pattern bit3c*/bit3s* hanno
-      // un significato che dipende dalla fase odd/even della sequenza)
+      // This swap is a MAME quirk: bit3c*/bit3s* patterns change meaning
+      // depending on the odd/even phase of the sequence.
       if (testReset(a)) {
         fsm.state = "ACTIVE";
       } else if (testIn(a, BIT3S1_MASK, BIT3S1_VAL)) {
@@ -313,7 +311,7 @@ export function slapsticTick(fsm: SlapsticFsm, addr: number): number {
 
 // ─── Expose internals for testing ────────────────────────────────────────────
 
-/** Magic constants esposti per testing/debugging — non per consumo runtime. */
+/** Magic constants exposed for tests/debugging, not runtime consumption. */
 export const _SLAPSTIC_103_CONFIG = {
   BANKSTART,
   BANK_VALUES,

@@ -1,30 +1,31 @@
 /**
- * ym2151-channel.ts — Un YM2151 channel (4 operatori + algorithm + connection).
+ * ym2151-channel.ts - one YM2151 channel with four operators and routing state.
  *
- * Hardware: 8 channels totali. Ogni channel:
- *   - 4 operatori (op[0..3])
+ * Hardware: 8 channels total. Each channel has:
+ *   - 4 operators (`op[0..3]`)
  *   - Algorithm 0..7 (FM topology)
- *   - Key code (KC) + key fraction (KF) condivisi tra op (con DT1/MUL per op)
- *   - Feedback (FB) sull'op[0] = self-modulation 0..7 (shift)
+ *   - Shared key code (KC) and key fraction (KF), plus per-operator DT1/MUL
+ *   - Feedback (FB) on op[0], used as self-modulation strength 0..7
  *   - Connection register (CONN) = algorithm 0..7
  *   - L/R output enable (bit 7/6 of $20+ch)
  *   - PMS (LFO phase mod) / AMS (LFO amp mod) sensitivity
  *
- * Algorithm 0: 1 → 2 → 3 → 4 → output (4 op series chain).
- * Algorithm 7: 1+2+3+4 → output (all parallel, no FM).
- * Altri intermedi.
+ * Algorithm 0 is a serial 1 -> 2 -> 3 -> 4 chain; algorithm 7 is all
+ * operators in parallel. The other algorithms are the OPM's intermediate
+ * modulation graphs.
  *
- * Reference: Yamaha OPM application manual § 4.3 + MAME ym2151.cpp:chan_calc.
+ * Reference: Yamaha OPM application manual section 4.3 and MAME
+ * `ym2151.cpp::chan_calc`.
  */
 
 import { type Operator, createOperator, operatorSample, operatorKeyOn, operatorKeyOff } from "./ym2151-operator.js";
 
 export interface Channel {
-  /** 4 operatori (slot 0..3). */
+  /** Four operators, slots 0..3. */
   op: Operator[];
   /** FM algorithm 0..7. */
   alg: number;
-  /** Feedback su op[0]: 0=none, 1..7=progressively stronger self-modulation. */
+  /** Feedback on op[0]: 0=none, 1..7=progressively stronger self-modulation. */
   fb: number;
   /** Left/Right output enable. MAME routes OPM output 0 (bit 6) left and output 1 (bit 7) right. */
   lr: number;
@@ -65,19 +66,19 @@ function outputToPhaseMod(value: number): number {
   return ((value | 0) >> 1) * 1024;
 }
 
-/** Compute 1 sample output del channel. Ritorna [left, right] come somma raw
- * 14-bit YM prima della normalizzazione finale.
- * Implementa tutti gli 8 algoritmi FM dell'OPM.
+/**
+ * Computes one channel sample and returns raw 14-bit left/right sums before
+ * final mixer normalization.
  *
- * Reference algorithm topology (Yamaha datasheet § 4.3):
- *   alg 0: op1 → op2 → op3 → op4 → out (serial chain)
- *   alg 1: (op1 + op2) → op3 → op4 → out
- *   alg 2: op1 → op4; (op2 → op3 → op4) → out
- *   alg 3: (op1 → op2; op3) → op4 → out
- *   alg 4: (op1 → op2) + (op3 → op4) → out
- *   alg 5: op1 → op2; op1 → op3; op1 → op4 (op1 mod all)
- *   alg 6: op1 → op2; op3; op4 (parallel)
- *   alg 7: op1 + op2 + op3 + op4 → out (all parallel)
+ * Reference algorithm topology (Yamaha datasheet section 4.3):
+ *   alg 0: op1 -> op2 -> op3 -> op4 -> out (serial chain)
+ *   alg 1: (op1 + op2) -> op3 -> op4 -> out
+ *   alg 2: op1 -> op4; (op2 -> op3 -> op4) -> out
+ *   alg 3: (op1 -> op2; op3) -> op4 -> out
+ *   alg 4: (op1 -> op2) + (op3 -> op4) -> out
+ *   alg 5: op1 -> op2; op1 -> op3; op1 -> op4
+ *   alg 6: op1 -> op2; op3; op4
+ *   alg 7: op1 + op2 + op3 + op4 -> out
  */
 export function channelSample(
   ch: Channel,
@@ -86,57 +87,56 @@ export function channelSample(
 ): [number, number] {
   const [op1, op2, op3, op4] = ch.op as [Operator, Operator, Operator, Operator];
 
-  // Feedback su op1: media degli ultimi 2 output (hardware OPM uses 2-sample
-  // delay average to reduce DC). Shift by (10 - fb) per scalare.
+  // Feedback on op1: average the two previous outputs, then scale by FB.
   const fbInput = ch.fb === 0
     ? 0
     : ((ch.fbHistory[0]! + ch.fbHistory[1]!) >> (10 - ch.fb));
 
   let s1 = 0, s2 = 0, s3 = 0, s4 = 0;
   switch (ch.alg & 7) {
-    case 0: // op1 → op2 → op3 → op4 → out
+    case 0: // op1 -> op2 -> op3 -> op4 -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, outputToPhaseMod(s2), amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s3), amOffset, advancePhaseBeforeOutput);
       break;
-    case 1: // (op1 + op2) → op3 → op4 → out
+    case 1: // (op1 + op2) -> op3 -> op4 -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, 0, amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, outputToPhaseMod(s1 + s2), amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s3), amOffset, advancePhaseBeforeOutput);
       break;
-    case 2: // op1 → op4; (op2 → op3) → op4 → out
+    case 2: // op1 -> op4; (op2 -> op3) -> op4 -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, 0, amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, outputToPhaseMod(s2), amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s1 + s3), amOffset, advancePhaseBeforeOutput);
       break;
-    case 3: // (op1 → op2; op3) → op4 → out
+    case 3: // (op1 -> op2; op3) -> op4 -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, 0, amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s2 + s3), amOffset, advancePhaseBeforeOutput);
       break;
-    case 4: // (op1 → op2) + (op3 → op4) → out
+    case 4: // (op1 -> op2) + (op3 -> op4) -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, 0, amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s3), amOffset, advancePhaseBeforeOutput);
       break;
-    case 5: // op1 → op2; op1 → op3; op1 → op4 (op1 mods all 3)
+    case 5: // op1 -> op2; op1 -> op3; op1 -> op4
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       break;
-    case 6: // op1 → op2; op3; op4 (parallel)
+    case 6: // op1 -> op2; op3; op4
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, outputToPhaseMod(s1), amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, 0, amOffset, advancePhaseBeforeOutput);
       s4 = operatorSample(op4, 0, amOffset, advancePhaseBeforeOutput);
       break;
-    case 7: // op1 + op2 + op3 + op4 → out (all parallel)
+    case 7: // op1 + op2 + op3 + op4 -> out
       s1 = operatorSample(op1, feedbackToPhaseMod(fbInput), amOffset, advancePhaseBeforeOutput);
       s2 = operatorSample(op2, 0, amOffset, advancePhaseBeforeOutput);
       s3 = operatorSample(op3, 0, amOffset, advancePhaseBeforeOutput);
@@ -148,8 +148,7 @@ export function channelSample(
   ch.fbHistory[1] = ch.fbHistory[0]!;
   ch.fbHistory[0] = s1;
 
-  // Carrier output: depends on algorithm. Per alg 0-3 carrier = op4.
-  // Alg 4: op2 + op4. Alg 5: op2+op3+op4. Alg 6: op2+op3+op4. Alg 7: tutti 4.
+  // Carrier output depends on the algorithm.
   let carrierSum: number;
   switch (ch.alg & 7) {
     case 0: case 1: case 2: case 3:
@@ -174,7 +173,7 @@ export function channelSample(
   return [left, right];
 }
 
-/** Key ON: arma operatori in base al slot mask. */
+/** Key on the operators selected by the slot mask. */
 export function channelKeyOn(ch: Channel, slotMask: number): void {
   if ((slotMask & 0x10) !== 0) operatorKeyOn(ch.op[0]!);
   if ((slotMask & 0x20) !== 0) operatorKeyOn(ch.op[1]!);
@@ -182,7 +181,7 @@ export function channelKeyOn(ch: Channel, slotMask: number): void {
   if ((slotMask & 0x80) !== 0) operatorKeyOn(ch.op[3]!);
 }
 
-/** Key OFF: release operatori non in maschera. */
+/** Key off operators not present in the slot mask. */
 export function channelKeyOff(ch: Channel, slotMask: number): void {
   if ((slotMask & 0x10) === 0) operatorKeyOff(ch.op[0]!);
   if ((slotMask & 0x20) === 0) operatorKeyOff(ch.op[1]!);

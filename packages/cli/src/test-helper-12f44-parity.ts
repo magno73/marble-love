@@ -8,17 +8,10 @@
  * **Strategia parity**:
  *   - Setup: un record di slot @ slot_base (variabile per test case).
  *   - Setup ROM lookup-table @ 0x1F0E2 puntante a 16 rect-slot @ 0x4001DC
- *     (uguale a `test-helper-18f46-parity.ts`) per il path mode-1.
  *   - Per ogni test case:
- *       1. Genera un seed per il record di slot (campi 0x00..0x55 random).
- *       2. Sceglie (slotPtr, mode, scriptPtr) random tra i casi d'interesse.
- *       3. Copia il seed in Musashi RAM e in state.workRam.
  *       4. Esegue `callFunction(0x12F44, [slotPtr, mode, scriptPtr])`.
  *       5. Esegue `helper12F44(state, rom, slotPtr, mode, scriptPtr)`.
- *       6. Confronta le aree rilevanti di workRam:
  *            - Il record di slot (0x56 byte).
- *            - I globali 0x400974, 0x400978, 0x40075C.
- *            - Il byte-array draw-list @ 0x4003BC (32 byte).
  *            - L'area rect-slot @ 0x4001DC (0x1B2 byte).
  *
  * Uso: npx tsx packages/cli/src/test-helper-12f44-parity.ts [N]
@@ -52,12 +45,10 @@ const SLOT_TABLE_BASE = 0x400a9c;
 const SLOT_STRIDE     = 0x56;
 const SLOT_COUNT      = 25;
 
-// Globali toccati dal mode-1.
 const GLOBAL_974      = 0x400974;
 const GLOBAL_978      = 0x400978;
 const GLOBAL_75C      = 0x40075c;
 
-// Byte-array draw-list.
 const BYTE_ARRAY_ABS  = 0x004003bc;
 const BYTE_ARRAY_LEN  = 0x20;
 
@@ -90,14 +81,12 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Legge n byte da Musashi a partire da abs. */
 function readBin(cpu: CpuSession, abs: number, len: number): Uint8Array {
   const out = new Uint8Array(len);
   for (let i = 0; i < len; i++) out[i] = peekMem(cpu, abs + i, 1) & 0xff;
   return out;
 }
 
-/** Legge n byte da state.workRam a partire da abs. */
 function readTs(
   state: ReturnType<typeof stateNs.emptyGameState>,
   abs: number,
@@ -163,20 +152,19 @@ async function main(): Promise<void> {
   }
   let firstFail: FailRec | null = null;
 
-  // Typecodetable/subtable per il byte-array draw-list (per realismo mode-1).
   const typeTable = new Uint8Array(RECT_SLOT_COUNT);
   const subTable  = new Uint8Array(RECT_SLOT_COUNT);
 
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Rigeneora typeTable/subTable ogni test.
+    // Regenerate typeTable/subTable for each test.
     for (let i = 0; i < RECT_SLOT_COUNT; i++) {
       typeTable[i] = Math.floor(rng() * 256) & 0xff;
       subTable[i]  = Math.floor(rng() * 256) & 0xff;
     }
 
-    // Scegli slot index e mode.
+    // Pick slot index and mode.
     let slotIdx: number;
     let mode: number;
     let scriptPtr: number;
@@ -186,10 +174,10 @@ async function main(): Promise<void> {
       // mode-0, slot 0.
       slotIdx = 0; mode = 0; scriptPtr = 0x1d854; numActiveByteArr = 0;
     } else if (tc === 1) {
-      // mode-1 con gate1e=1 (skip FUN_18F46), slot 0.
+      // mode-1 with gate1e=1 (skip FUN_18F46), slot 0.
       slotIdx = 0; mode = 1; scriptPtr = 0; numActiveByteArr = 0;
     } else if (tc === 2) {
-      // mode-1 con gate1e=0, match draw-list.
+      // mode-1 with gate1e=0, matching the draw list.
       slotIdx = 0; mode = 1; scriptPtr = 0; numActiveByteArr = 1;
     } else if (tc === 3) {
       // mode = -1 (0xFF sext) → no-op.
@@ -198,7 +186,7 @@ async function main(): Promise<void> {
       // mode = 2 → no-op.
       slotIdx = 0; mode = 2; scriptPtr = 0; numActiveByteArr = 0;
     } else if (tc === 5) {
-      // mode-0, slot 24 (ultimo).
+      // mode-0, slot 24 (last slot).
       slotIdx = 24; mode = 0; scriptPtr = 0x1e000; numActiveByteArr = 0;
     } else if (tc === 6) {
       // mode-1, A0 == *0x400974 → clear globals.
@@ -213,15 +201,13 @@ async function main(): Promise<void> {
 
     const slotPtr = (SLOT_TABLE_BASE + slotIdx * SLOT_STRIDE) >>> 0;
 
-    // ─── Costruisci seed workRam ────────────────────────────────────────────
+    // ─── Build seed workRam ─────────────────────────────────────────────────
     const seedBuf = new Uint8Array(WORK_RAM_SIZE);
 
-    // Riempi tutto il workRam con byte random (baseline caotica).
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       seedBuf[k] = Math.floor(rng() * 256) & 0xff;
     }
 
-    // Setup byte-array draw-list coerente con typeTable/subTable.
     const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
       if (i < numActiveByteArr) {
@@ -235,38 +221,34 @@ async function main(): Promise<void> {
       }
     }
 
-    // Per mode-1 con gate1e=0 e numActiveByteArr > 0: usa il typeCode del
-    // primo slot draw-list come typeCode del record di script-slot, così
-    // FUN_18F46 trova la entry.
+    // For mode-1 with gate1e=0 and numActiveByteArr > 0: use the typeCode from
+    // FUN_18F46 finds the entry.
     if (mode === 1) {
       const slotOff = slotPtr - WORK_RAM_BASE;
       if (tc === 2 && numActiveByteArr > 0) {
-        // Primo byte del byte-array = idx dello slot draw-list
         const drawIdx = seedBuf[baOff]!;
-        // Imposta typeCode = typeTable[drawIdx], subIdx = subTable[drawIdx]
+        // Set typeCode = typeTable[drawIdx], subIdx = subTable[drawIdx].
         seedBuf[slotOff + 0x1f] = typeTable[drawIdx]!;
         seedBuf[slotOff + 0x19] = subTable[drawIdx]!;
-        seedBuf[slotOff + 0x1e] = 0x00; // gate1e = 0 → chiama FUN_18F46
+        seedBuf[slotOff + 0x1e] = 0x00;
       }
 
-      // tc === 6: forza A0 == *0x400974
       if (tc === 6) {
         const ptr = slotPtr >>> 0;
         seedBuf[GLOBAL_974 - WORK_RAM_BASE]     = (ptr >>> 24) & 0xff;
         seedBuf[GLOBAL_974 - WORK_RAM_BASE + 1] = (ptr >>> 16) & 0xff;
         seedBuf[GLOBAL_974 - WORK_RAM_BASE + 2] = (ptr >>> 8)  & 0xff;
         seedBuf[GLOBAL_974 - WORK_RAM_BASE + 3] =  ptr         & 0xff;
-        seedBuf[slotOff + 0x1e] = 0x01; // gate1e=1 per semplicità
+        seedBuf[slotOff + 0x1e] = 0x01;
       }
     }
 
-    // Applica seed a Musashi e state.
+    // Apply seed to Musashi and state.
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       pokeMem(cpu, WORK_RAM_BASE + k, 1, seedBuf[k]!);
       stateInst.workRam[k] = seedBuf[k]!;
     }
 
-    // ─── Esegui binario ─────────────────────────────────────────────────────
     // callFunction RTL: argsLong[0]=slotPtr (SP+4), argsLong[1]=mode (SP+8),
     // argsLong[2]=scriptPtr (SP+C).
     callFunction(cpu, FUN_12F44, [slotPtr, mode >>> 0, scriptPtr >>> 0]);
@@ -274,20 +256,17 @@ async function main(): Promise<void> {
     // ─── Esegui TS ──────────────────────────────────────────────────────────
     helper12F44Ns.helper12F44(stateInst, romView, slotPtr, mode, scriptPtr);
 
-    // ─── Confronta ──────────────────────────────────────────────────────────
     // 1. Record di slot (0x56 byte).
     const binSlot = readBin(cpu, slotPtr, SLOT_STRIDE);
     const tsSlot  = readTs(stateInst, slotPtr, SLOT_STRIDE);
     const dSlot   = diffBytes(binSlot, tsSlot);
 
-    // 2. Globali (12 byte: 974 long + 978 long + 75C byte, padding a 9 byte).
-    const GLOBALS_START = GLOBAL_75C; // più basso
+    const GLOBALS_START = GLOBAL_75C;
     const GLOBALS_LEN   = (GLOBAL_978 + 4) - GLOBAL_75C; // 0x400974 + 4 - 0x40075C
     const binGlob = readBin(cpu, GLOBALS_START, GLOBALS_LEN);
     const tsGlob  = readTs(stateInst, GLOBALS_START, GLOBALS_LEN);
     const dGlob   = diffBytes(binGlob, tsGlob);
 
-    // 3. Byte-array draw-list (32 byte).
     const binBA   = readBin(cpu, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const tsBA    = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const dBA     = diffBytes(binBA, tsBA);

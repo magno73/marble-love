@@ -1,11 +1,11 @@
 /**
- * sprite-coords.ts — `FUN_00018A1E` (106 byte) e `FUN_000199D6` (106 byte).
+ * sprite-coords.ts - `FUN_00018A1E` (106 byte) and `FUN_000199D6` (106 byte).
  *
- * Calcola coordinate sprite (xy packed in long) per HUD/MO. Le 2 funzioni
- * differiscono solo nel layout dell'arg struct.
+ * Computes sprite coordinates (xy packed in a long) for HUD/MO. The two
+ * functions differ only in the argument struct layout.
  *
- * - **FUN_18A1E — `computeSpriteCoords_v1(arg)`**: arg+0,+2,+4. Skip se +0xA == -1.
- * - **FUN_199D6 — `computeSpriteCoords_v2(arg)`**: arg+0xC,+0x10,+0x14.
+ * - **FUN_18A1E - `computeSpriteCoords_v1(arg)`**: arg+0,+2,+4. Skip if +0xA == -1.
+ * - **FUN_199D6 - `computeSpriteCoords_v2(arg)`**: arg+0xC,+0x10,+0x14.
  */
 
 import type { GameState } from "./state.js";
@@ -73,8 +73,8 @@ export function computeSpriteCoords_v2(state: GameState, argAddr: number): void 
 }
 
 /**
- * Replica `FUN_00018972` — variante con byte inputs (× 8 scaling).
- * Reads byte+4 (×8 → w0), byte+5 (×8 → w2), word+6 (= w4). Writes to +0xC long.
+ * Replica `FUN_00018972` - variant with byte inputs (x8 scaling).
+ * Reads byte+4 (x8 -> w0), byte+5 (x8 -> w2), word+6 (= w4). Writes to +0xC long.
  */
 export function computeSpriteCoords_v4(state: GameState, argAddr: number): void {
   const argOff = argAddr - 0x400000;
@@ -90,7 +90,7 @@ export function computeSpriteCoords_v4(state: GameState, argAddr: number): void 
 }
 
 /**
- * Replica `FUN_000189E2` — `processAllSprites_v1()`.
+ * Replica `FUN_000189E2` - `processAllSprites_v1()`.
  * If *0x400394 != 0: exit. Else: loop D2=0..*0x400396, call computeSpriteCoords_v1
  * on entry @ 0x40098C + D2 * 0xC.
  */
@@ -105,7 +105,7 @@ export function processAllSprites_v1(state: GameState): void {
   }
 }
 
-/** Replica `FUN_0001778E` — variante che scrive a +0x28 invece di +0x20. */
+/** Replica `FUN_0001778E` - variant that writes to +0x28 instead of +0x20. */
 export function computeSpriteCoords_v3(state: GameState, argAddr: number): void {
   const argOff = argAddr - 0x400000;
   const w0 = readU16(state, argOff + 0xC);

@@ -3,38 +3,28 @@
  * test-string-target-step-176d2-parity.ts —
  * differential FUN_176D2 vs `stringTargetStep176D2`.
  *
- * `FUN_000176D2` (188 byte) prende un long arg (objPtr), legge un index byte
  * a `obj+0x58`, dereferenzia due volte la catena `slot[+0x3a]` per ottenere
- * un puntatore a bbox, e poi:
- *   1. legge xMin,yMin,width,height (4 byte signed) dal bbox (o usa default
- *      −2,−2,12,12 se bboxPtr == 0xFFFFFFFF),
- *   2. calcola targetX = (width >> 1) + xMin + slot[+0xC].w (word arithmetic),
- *      targetY analogo con +0x10,
- *   3. fa un passo unitario di curX (= obj[+0xC].w) verso targetX (sign(diff)),
+ *      -2,-2,12,12 if bboxPtr == 0xFFFFFFFF),
+ *      targetY analogous with +0x10,
+ *   3. makes a one-unit step of curX (= obj[+0xC].w) toward targetX (sign(diff)),
  *      idem per Y,
- *   4. scrive obj[+0xC..+0xF] = ((stepX + curX) << 16) >>> 0 (long; low word=0),
  *      obj[+0x10..+0x13] analogo.
  *
- * **Strategia**: la sub è interamente self-contained (no JSR ad altre sub,
- * solo memory access). La piazziamo tutta in work RAM (0x400000..0x401FFF):
  *
  *   - obj      @ 0x401C00 (almeno 0x60 byte, fino a 0x401C5F)
  *   - p1Addr   @ 0x401D00 (4 byte, contiene bboxAddr o sentinel)
  *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 sono i 4 signed byte)
- *   - slot     @ 0x401482 + idx*0x42 (esistente nel layout slot stringa)
  *
- * **Confronto**: l'unico effetto del binario sono 8 byte di scrittura
  * (obj+0xC..+0xF e obj+0x10..+0x13). Confrontiamo l'intero workRam tranne
  * la zona stack scratch [0x401E80..0x401F00).
  *
- * **Suite testate (5 × 100 = 500 casi)**:
  *   - A: path default (bboxPtr == 0xFFFFFFFF), idx random, slotCx/Cy random,
  *        curX/Y random
  *   - B: path read-bbox, bbox bytes random (xMin,yMin,width,height ∈ [-128,127]),
  *        cur, slotC, idx random
  *   - C: edge case sign step (curX == targetX, curY == targetY) → step = 0
  *   - D: edge case overflow word (curX, slotCx, width molto grandi → wrap a 16 bit)
- *   - E: random everything con sentinel pattern alternato sul bbox addr
+ *   - E: random everything with alternating sentinel pattern at bbox addr
  *
  * Uso: npx tsx packages/cli/src/test-string-target-step-176d2-parity.ts [N]
  */
@@ -62,7 +52,7 @@ const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
 // Indirizzi per la catena:
-const OBJ_ADDR = 0x00401c00; // obj base (96+ byte di scrittura disponibile)
+const OBJ_ADDR = 0x00401c00;
 const P1_ADDR = 0x00401d00;  // long pointer-to-pointer storage
 const BBOX_ADDR = 0x00401e00; // bbox struct (8 byte)
 const SLOT_BASE = 0x00401482;
@@ -87,14 +77,13 @@ function captureWorkRam(cpu: CpuSession): Uint8Array {
   return out;
 }
 
-/** Carica un buffer in workRam dal CPU. */
 function loadWorkRam(cpu: CpuSession, src: Uint8Array): void {
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
     pokeMem(cpu, WORK_RAM_BASE + i, 1, src[i] ?? 0);
   }
 }
 
-/** Sync workRam dal Uint8Array nello state TS. */
+/** Sync workRam from a Uint8Array into TS state. */
 function loadStateWorkRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   src: Uint8Array,
@@ -104,7 +93,7 @@ function loadStateWorkRam(
 
 interface CaseSetup {
   idx: number;          // byte 0..255 (= obj+0x58)
-  bboxAddrLong: number; // valore scritto a *p1 (può essere SENTINEL o BBOX_ADDR o random)
+  bboxAddrLong: number;
   slotCxWord: number;
   slotCyWord: number;
   curXWord: number;
@@ -112,10 +101,8 @@ interface CaseSetup {
   bboxBytes: { xMin: number; yMin: number; width: number; height: number };
 }
 
-/** Costruisce un pre-fill workRam per un caso. Restituisce il Uint8Array. */
 function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
   const wr = new Uint8Array(WORK_RAM_SIZE);
-  // riempi tutto con un pattern pseudo-random per rilevare scritture spurious
   for (let i = 0; i < WORK_RAM_SIZE; i++) wr[i] = randomTail() & 0xff;
 
   const setByte = (abs: number, v: number): void => {
@@ -133,17 +120,12 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
     setByte(abs + 3, u & 0xff);
   };
 
-  // idx byte è signed nel binario (move.b + ext.w + ext.l), quindi
-  // 0xD6 → -42; il slotAddr può finire fuori workRam se |idx*0x42| > 0x1A80.
-  // I generatori dei suite vincolano idx a un range che mantiene la catena
-  // dentro workRam.
   const idxSigned = (setup.idx & 0x80) ? setup.idx - 0x100 : setup.idx;
   const slotAddr = (SLOT_BASE + idxSigned * SLOT_STRIDE) >>> 0;
 
   // obj+0x58 = idx (byte)
   setByte(OBJ_ADDR + 0x58, setup.idx);
   // obj+0xC..+0xF: word at +0xC = curXWord, byte +0xE/+0xF irrelevant ma li
-  // settiamo a 0 per disambiguare (la sub li azzera anyway).
   setWord(OBJ_ADDR + 0x0c, setup.curXWord);
   setByte(OBJ_ADDR + 0x0e, 0);
   setByte(OBJ_ADDR + 0x0f, 0);
@@ -172,13 +154,11 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
   return wr;
 }
 
-/** Compara workRam fra binario e TS, escludendo la stack scratch zone. */
 function compareWorkRam(
   postBin: Uint8Array,
   postTs: Uint8Array,
 ): { offset: number; bin: number; ts: number } | null {
   // Stack scratch [0x401E80..0x402000) — i registri salvati da movem,
-  // le sentinel/args di callFunction → bytes residui non parte dell'effetto.
   const STACK_SCRATCH_START = 0x1e80;
   for (let j = 0; j < STACK_SCRATCH_START; j++) {
     if (postBin[j] !== postTs[j]) {
@@ -304,15 +284,13 @@ async function main(): Promise<void> {
   console.log(`\n  Suite C (cur al target → step=0) — ${perSuite} casi`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Per costruire cur == target: scegli xMin, width, slotCx random; calcola
-    // targetX = (width>>1)+xMin+slotCx (word). Poi setta curX = targetX.
+    // targetX = (width>>1)+xMin+slotCx (word). Then set curX = targetX.
     const xMin = rsb();
     const yMin = rsb();
     const width = rsb();
     const height = rsb();
     const slotCx = rsw();
     const slotCy = rsw();
-    // word arithmetic: asr.w #1 (signed) → in TS, su valore signed sextended.
     const wAsr = (width >> 1) & 0xffff;
     const hAsr = (height >> 1) & 0xffff;
     const wAsrS = wAsr & 0x8000 ? wAsr - 0x10000 : wAsr;
@@ -339,7 +317,6 @@ async function main(): Promise<void> {
   console.log(`\n  Suite D (word wrap edge) — ${perSuite} casi`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
-    // valori vicini ai limiti per stressare add.w wrap
     const choices = [-32768, -32767, -1, 0, 1, 32766, 32767];
     const pick = (): number => choices[Math.floor(rng() * choices.length)]!;
     const setup: CaseSetup = {

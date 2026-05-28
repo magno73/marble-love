@@ -1,12 +1,12 @@
 /**
- * string-trim.ts — `FUN_00028F28` (58 byte) + `FUN_000172C2` (74 byte).
+ * string-trim.ts - `FUN_00028F28` (58 bytes) + `FUN_000172C2` (74 bytes).
  *
- * - **FUN_28F28 — `trimTrailingSpace(strPtr, maxLen)`**: walka string fino
- *   a primo space o maxLen. Se trova space prima di maxLen, lo azzera.
+ * - **FUN_28F28 - `trimTrailingSpace(strPtr, maxLen)`**: walks the string until
+ *   the first space or maxLen. If it finds a space before maxLen, it clears it.
  *
- * - **FUN_172C2 — `findLastActiveSlot()`**: scansiona array a 0x401482
- *   con stride 0x42, 7 entries. Returns address dell'ultima entry con
- *   byte +0x18 non-zero, o -1.
+ * - **FUN_172C2 - `findLastActiveSlot()`**: scans the array at 0x401482 with
+ *   stride 0x42, 7 entries. Returns the address of the last entry with
+ *   byte +0x18 non-zero, or -1.
  */
 
 import type { GameState } from "./state.js";

@@ -1,7 +1,7 @@
 /**
  * Test formatHex (FUN_3A08) + setAlphaTile (FUN_3784).
  *
- * Bit-perfect verificati vs binary tramite `cli/src/test-string-format-parity.ts`.
+ * Bit-perfect verified vs binary via `cli/src/test-string-format-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -23,7 +23,7 @@ describe("formatHex (FUN_3A08)", () => {
   it("value=0, digits=4, no spaces: '0\\0' a bufEnd-1", () => {
     const s = emptyGameState();
     formatHex(s, 0, 0x401D00, 4, 0);
-    // bufEnd=0x401D00, digits=4. Funzione scrive: bufEnd+4 = 0 (NUL),
+    // bufEnd=0x401D00, digits=4. Function writes: bufEnd+4 = 0 (NUL),
     // poi siccome value==0: *(--A0) = '0', D0 -= 1.
     // Quindi: bufEnd+3='0' (=0x30), bufEnd+4=0
     expect(s.workRam[0x1D00 + 3]).toBe(0x30); // '0'
@@ -49,7 +49,7 @@ describe("formatHex (FUN_3A08)", () => {
   it("value=0x10, digits=4, showSpaces=1: leading zeros → spaces", () => {
     const s = emptyGameState();
     formatHex(s, 0x10, 0x401D00, 4, 1);
-    // 0x10 = "  10" con spaces leading
+    // 0x10 = "  10" with leading spaces.
     expect(s.workRam[0x1D00 + 0]).toBe(0x20); // ' '
     expect(s.workRam[0x1D00 + 1]).toBe(0x20); // ' '
     expect(s.workRam[0x1D00 + 2]).toBe(0x31); // '1'

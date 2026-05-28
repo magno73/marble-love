@@ -2,17 +2,16 @@
 /**
  * probe-1caba-runtime-state.ts — task #186 step 1+2+3.
  *
- * Goal: catturare lo state TS al momento ESATTO della prima chiamata di
- * `sub1CABATileRedraw` durante tick 2 (= body run f12001), poi confrontare
- * bit-by-bit con la fixture warm `sub-1caba-firstcall.json` (= input usato
- * dal test parity 3/3).
+ * Goal: capture TS state at the exact first call to `sub1CABATileRedraw`
+ * during tick 2 (= body run f12001), then compare it bit-by-bit with the warm
+ * fixture `sub-1caba-firstcall.json` (= input used by parity test 3/3).
  *
- * Strategia:
- *   1. Carica warm state da MAME f12000 (= /tmp/mame_100f.json frame 0).
- *   2. bootInit con warm state.
+ * Strategy:
+ *   1. Load warm state from MAME f12000 (= /tmp/mame_100f.json frame 0).
+ *   2. bootInit with warm state.
  *   3. tick 1 (= WAIT, body skip — mainLoopBodyTicks → 1, tickIsBody=false).
- *   4. Registra setSub1CabaObserver per snapshot al call#1 e tick 2 (= BODY).
- *   5. Carica fixture warm `sub-1caba-firstcall.json`.
+ *   4. Register setSub1CabaObserver for a snapshot at call #1 and tick 2 (= BODY).
+ *   5. Load warm fixture `sub-1caba-firstcall.json`.
  *   6. Diff bit-by-bit:
  *      - workRam[0..0x2000]
  *      - playfieldRam[0..0x2000]
@@ -21,7 +20,7 @@
  *      - struct_pre @ 0x1c28..0x1c47
  *      - colBase @ 0x478..0x677
  *      - bsearchAlt @ 0x76e..0x96d
- *   7. Report la PRIMA byte divergente (offset, valore TS, fixture).
+ *   7. Report the first divergent byte (offset, TS value, fixture value).
  *
  * Usage:
  *   npx tsx packages/cli/src/probe-1caba-runtime-state.ts

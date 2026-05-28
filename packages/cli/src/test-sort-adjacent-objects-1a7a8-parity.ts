@@ -3,22 +3,15 @@
  * test-sort-adjacent-objects-1a7a8-parity.ts — differential FUN_1A7A8 vs
  * `sortAdjacentObjects1A7A8`.
  *
- * `FUN_0001A7A8` (98 byte): single-pass adjacent-pair sweep con stride
- * variabile sopra `workRam[0x3BC..0x3DC]`. Per ogni coppia (A2, A3) con
+ * `FUN_0001A7A8` (98 bytes): single-pass adjacent-pair sweep with stride
  * `A3 = A2 + stride`, lookup ROM @ 0x1F0E2 → due pointer a rect-struct in
- * workRam, chiama `FUN_1A80A` (rect compare → 0/1), se != 0 swap dei due
  * byte-index.
  *
  * Strategia parity:
- *   - Setup workRam con un layout valido di rect-struct @ 0x4001DC.. e
+ *   - Set up workRam with a valid rect-struct layout @ 0x4001DC.. and
  *     ROM lookup pointer corretti (ma random, generati una sola volta come
- *     "configurazione baseline" coerente tra binario e TS).
- *   - Setup workRam[0x3BC..0x3DC] con byte-index random 0..15 (più qualche
- *     0xFF per stoppare il walk a metà) e qualche caso boundary.
- *   - Run binario via `callFunction(0x1A7A8, [strideLong])`.
  *   - Run TS via `sortAdjacentObjects1A7A8(state, rom, stride)`.
- *   - Compara workRam[0x3BC..0x3DC] byte-by-byte tra binario e TS.
- *   - Il restante workRam deve restare INVARIATO (mutation isolata).
+ *   - Remaining workRam must stay unchanged; mutation is isolated.
  *
  * Uso: npx tsx packages/cli/src/test-sort-adjacent-objects-1a7a8-parity.ts [N]
  */
@@ -46,7 +39,7 @@ const WORK_RAM_SIZE = 0x2000;
 const BYTE_ARRAY_ABS = 0x004003bc;
 const BYTE_ARRAY_LEN = 0x20;
 const RECT_BASE_ABS = 0x004001dc;
-const RECT_STRIDE = 0x10; // facciamo struct 16-byte allineata (FUN_1A80A legge solo +0..+0xC)
+const RECT_STRIDE = 0x10;
 const RECT_COUNT = 16;
 
 function makeRng(seed: number): () => number {
@@ -57,14 +50,12 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Genera una word signed in range [-128..+127] (small per evitare overflow). */
+/** Generate a signed word in range [-128..+127] (small to avoid overflow). */
 function randWordSmall(rng: () => number): number {
   return (Math.floor(rng() * 256) - 128) & 0xffff;
 }
 
 /**
- * Genera una "configurazione baseline" coerente: scrive 16 rect-struct in
- * workRam @ 0x4001DC..0x4002DC con campi random small + scrive ROM lookup
  * @ 0x1F0E2 per puntare a quei 16 slot. Restituisce il buffer workRam-base.
  */
 function setupBaseline(
@@ -93,7 +84,6 @@ function setupBaseline(
 }
 
 /**
- * Setup byte-index array @ workRam[0x3BC..0x3DC] con byte 0..15 + qualche
  * 0xFF random. `numActive` indica quanti byte non-sentinel scrivere (0..32).
  */
 function setupByteArray(
@@ -121,15 +111,11 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Build romView TS con program "as-is" (no patching: la ROM è readonly per
   // FUN_1A7A8 e FUN_1A80A — non scrivono).
   // Nota: per il test inseriamo nostre 16 lookup pointer SCRIVENDOLE in romBuf.
-  // Il binario poi le legge da quella zona modificata. Stesso buffer condiviso
-  // con la TS view (rom.program).
+  // with the TS view (rom.program).
 
   const romView = busNs.emptyRomImage();
-  // romView.program ha 0x88000 byte; lo riempiamo con romBuf (può essere più
-  // grande, ma 0x88000 è la taglia attesa per program).
   const programLen = Math.min(romView.program.length, romBuf.length);
   romView.program.set(romBuf.subarray(0, programLen));
 
@@ -159,15 +145,14 @@ async function main(): Promise<void> {
 
     if (i === 0) {
       stride = 1;
-      numActive = 0; // tutti FF → exit immediato
+      numActive = 0;
     } else if (i === 1) {
       stride = 2;
-      numActive = 1; // 1 byte attivo, byte[A3] è FF subito
+      numActive = 1;
     } else if (i === 2) {
       stride = 3;
-      numActive = 32; // tutti attivi
+      numActive = 32;
     } else if (i === 3) {
-      // stride=0 caso edge
       stride = 0;
       numActive = 5;
     } else if (i === 4) {
@@ -179,15 +164,10 @@ async function main(): Promise<void> {
       numActive = Math.floor(rng() * (BYTE_ARRAY_LEN + 1));
     }
 
-    // Genera buffer workRam baseline + byte array.
     const seedBuf = new Uint8Array(WORK_RAM_SIZE);
     setupBaseline(seedBuf, romView.program, rng);
     setupByteArray(seedBuf, numActive, rng);
 
-    // ROM è già stata modificata in-place (romView.program); aggiorniamo
-    // il buffer Musashi anche per le entry lookup table (romBuf è il blob
-    // letto dal disco e passato al sistema; le scritture in `setupBaseline`
-    // hanno toccato romView.program ma NON romBuf, quindi sync esplicita).
     for (let off = 0x1f0e2; off < 0x1f0e2 + RECT_COUNT * 4; off++) {
       pokeMem(cpu, off, 1, romView.program[off]!);
     }
@@ -198,12 +178,11 @@ async function main(): Promise<void> {
       stateInst.workRam[k] = seedBuf[k]!;
     }
 
-    // Snapshot input array per debug.
     const inputArr: number[] = [];
     const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
     for (let k = 0; k < BYTE_ARRAY_LEN; k++) inputArr.push(seedBuf[baOff + k]!);
 
-    // Run binary: callFunction passa stride come long arg.
+    // Run binary: callFunction passes stride as a long arg.
     callFunction(cpu, FUN_1A7A8, [stride >>> 0]);
 
     // Run TS
@@ -250,7 +229,6 @@ async function main(): Promise<void> {
     console.log(`    tsArr  : ${firstFail.tsArr.map((b) => b.toString(16).padStart(2, "0")).join(" ")}`);
   }
 
-  // Verifica accessoria: workRam fuori 0x3BC..0x3DC non viene modificata.
   cpu.system.setRegister("sp", 0x401f00);
   const buf = new Uint8Array(WORK_RAM_SIZE);
   const verifyRng = makeRng(0xdeadbeef);
@@ -263,7 +241,6 @@ async function main(): Promise<void> {
   let modifiedOutside = 0;
   for (let k = 0; k < 0x1e00; k++) {
     if (k >= (BYTE_ARRAY_ABS - WORK_RAM_BASE) && k < (BYTE_ARRAY_ABS - WORK_RAM_BASE + BYTE_ARRAY_LEN)) {
-      // Inside the byte array → swap legitimate.
       continue;
     }
     const got = peekMem(cpu, WORK_RAM_BASE + k, 1) & 0xff;

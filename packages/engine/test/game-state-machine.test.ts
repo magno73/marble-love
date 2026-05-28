@@ -1,8 +1,8 @@
 /**
  * Test gameStateMachineTick (FUN_2E18) — root state-machine dispatcher.
  *
- * Bit-perfect verificato vs binary (9000/9000 casi random in 3 suite)
- * tramite `cli/src/test-game-state-machine-parity.ts`.
+ * Bit-perfect verified against the binary (9000/9000 random cases in 3 suites)
+ * via `cli/src/test-game-state-machine-parity.ts`.
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -176,7 +176,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch A (mode!=0)", () => {
     gameStateMachineTick(s, rom, { fun_295a });
     // Inner incrementato
     expect(s.workRam[SPECIAL_INNER_OFF + 1]).toBe(6);
-    // FUN_295A non chiamato
+    // FUN_295A not called.
     expect(fun_295a).not.toHaveBeenCalled();
   });
 

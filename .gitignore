@@ -1,4 +1,4 @@
-# --- ROMs (utente fornisce le proprie) ---
+# --- ROMs (users provide their own) ---
 *.rom
 *.zip
 *.7z
@@ -20,7 +20,7 @@ traces/
 !oracle/scenarios/*.json
 !**/fixtures/*.jsonl
 
-# --- Build/dipendenze ---
+# --- Build/dependencies ---
 node_modules/
 dist/
 build/
@@ -42,7 +42,7 @@ packages/web/vite.config.d.ts.map
 ghidra_project/
 *.gpr
 *.rep/
-# (i .lock di Ghidra cadono dentro ghidra_project/, già ignored)
+# Ghidra lock files fall under ghidra_project/, which is already ignored.
 
 # --- IDE / OS ---
 .vscode/
@@ -56,6 +56,8 @@ Thumbs.db
 logs/
 .tmp/
 scratch/
+__pycache__/
+*.pyc
 tasks/*/artifacts/
 *.seed.tmp.json
 *.probe.tmp.json

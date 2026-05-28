@@ -1,12 +1,8 @@
 /**
- * audio.ts — sistema audio.
+ * audio.ts - lightweight gameplay audio event facade.
  *
- * **Status: STUB silenzioso.** PRD §10: POKEY/YM2151 chip-perfect rimandato a V2.
- *
- * V1: il 6502 sound CPU emula i comandi del 68010 via mailbox (vedi
- * `docs/sound-system.md`). Qui dentro tracciamo solo la mailbox per il diff
- * (ground-truth vs reimpl), e produciamo eventi astratti (`AudioEvent`) che
- * il pacchetto `web` può rendere via Web Audio API con sample synthesis basic.
+ * The current chip-level path lives under `audio/` and `m6502/sound-chip.ts`.
+ * This module remains as a small abstract-event facade for older callers.
  */
 
 import type { GameState } from "./state.js";
@@ -22,13 +18,13 @@ export type AudioEventKind =
 
 export interface AudioEvent {
   kind: AudioEventKind;
-  /** Frame in cui è stato emesso (per replay deterministico). */
+  /** Frame where the event was emitted, for deterministic replay. */
   frame: number;
-  /** Parametro opzionale (es. velocità roll → pitch). */
+  /** Optional parameter, such as roll speed mapped to pitch. */
   param: number;
 }
 
-/** Drena gli eventi accumulati nel frame e li ritorna. STUB. */
+/** Drains abstract events accumulated for the frame. */
 export function drainAudioEvents(_state: GameState): AudioEvent[] {
   return [];
 }

@@ -1,19 +1,16 @@
 /**
- * helper-3784.ts — replica `FUN_00003784` (38 istruzioni, 0x5E byte).
+ * Bit-perfect port of `FUN_00003784`.
  *
- * **Semantica**: scrive una word nell'alpha tilemap (0xA03000..0xA03FFF)
- * calcolando l'indirizzo di destinazione da (y, x, rotation) e scrivendo
- * `attr | orMask`.
+ * Computes an alpha-tilemap address from `(y, x, rotation)` and writes
+ * `attr | orMask` to that word. Several callers reach it indirectly through
+ * `FUN_22A4`.
  *
- * È la primitiva "draw cell" usata da `FUN_5D2A`, `FUN_5688`, e da 8
- * call point indiretti in `FUN_22A4`.
+ * **Disasm 0x3784..0x37E3** (0x5E byte = 94 bytes, 38 instructions):
  *
- * **Disasm 0x3784..0x37E3** (0x5E byte = 94 byte, 38 istruzioni):
- *
- *   0x3784  movem.l {D3 D2},-(SP)         ; salva D2/D3 (8 byte) → SP-=8
- *   0x3788  move.b  (0xf,SP),D1b          ; D1b = low byte di arg1 (y)
- *   0x378c  move.b  (0x13,SP),D0b         ; D0b = low byte di arg2 (x)
- *   0x3790  move.w  (0x16,SP),D2w         ; D2w = low word di arg3 (attr)
+ *   0x3784  movem.l {D3 D2},-(SP)         ; save D2/D3 (8 bytes) → SP-=8
+ *   0x3788  move.b  (0xf,SP),D1b          ; D1b = low byte of arg1 (y)
+ *   0x378c  move.b  (0x13,SP),D0b         ; D0b = low byte of arg2 (x)
+ *   0x3790  move.w  (0x16,SP),D2w         ; D2w = low word of arg3 (attr)
  *   0x3794  movea.l #0xa03000,A1          ; A1 = ALPHA_BASE
  *   0x379a  tst.w   (0x00401f42).l        ; rotation word == 0?
  *   0x37a0  beq.b   0x37ac                ; → rot0 path
@@ -61,55 +58,36 @@
  *     SP+0x14..0x17 : arg3 long   → SP+0x16 = low word = **attr**
  *     SP+0x18..0x1B : arg4 long   → SP+0x1A = low word = **orMask**
  *
- *   Tutti i caller (FUN_5D2A × 32, FUN_5688 × 2, FUN_22A4 × 8, FUN_5D2A
- *   via FUN_22A4) pushano 4 long con RTL convention (arg4 per primo,
- *   arg1 per ultimo).
+ *   callers, including FUN_22A4, push four longs with RTL convention (arg4
+ *   first, arg1 last).
  *
- *   Return: D0 word = valore scritto in alpha RAM. D0 è lasciato dal binario
- *   al valore dell'ultima `or.w D2w,D0w` sign-extended a long.
  *
- * **Side effects**:
- *   - Lettura: `workRam[0x1F42..0x1F43]` (rotation word @ 0x401F42).
- *   - Lettura: `ROM[0x72A5 + rotation*2]` (shift count table).
- *   - Scrittura: `alphaRam[(A1 - 0xa03000) .. + 1]` — word big-endian.
- *     Se A1 fuori da [0xA03000, 0xA04000), la write è silenziosamente
- *     ignorata (guard identica a `setAlphaWord` in alpha-tilemap.ts).
+ * Side effects:
+ *   - Writes the computed alpha RAM word when the address falls inside the
+ *     modeled alpha tilemap; out-of-range writes are ignored like
+ *     `setAlphaWord` in `alpha-tilemap.ts`.
  *
- * **Modellazione bit-perfect** delle sottiliezze M68k:
  *
- *   1. **`ext.w` + `ext.l`** su byte: equivale a `sextByte` (sign-extend
- *      dal bit 7 al bit 31).
+ *   1. `ext.w` + `ext.l` on a byte is equivalent to `sextByte`.
  *
- *   2. **`asl.l #6, D3`** (rotation==0): shift aritmetico sinistra. Per
- *      valori `sext_l(x)` in range ±127 il risultato long è in ±8128; nessun
- *      overflow di segno per i range usati in produzione.
  *
- *   3. **`asl.l D1,D0`** (count da registro): count = `D1b & 63`. Per count
- *      >= 32 il valore long è azzerato (JS `<<` usa solo 5 bit → serve guard).
+ *   3. `asl.l D1,D0` uses register count `D1b & 63`.
  *
- *   4. **`add.l D0,D0`** = moltiplicazione per 2 (long). Usiamo `| 0` poi
- *      `>>> 0` per mantenere 32-bit unsigned.
+ *   4. `add.l D0,D0` doubles the long. The implementation preserves 32-bit
+ *      unsigned wrapping.
  *
- *   5. **`adda.l D0,A1`**: A1 = 0xa03000 + D0 (long unsigned). D0 è
- *      inteso come signed, quindi A1 può essere < 0xa03000 per D0 < 0
- *      (es. y/x negativi). In quel caso la write è fuori range e ignorata.
  *
- *   6. **`or.w D2w,D0w`**: OR word. D2w = attr (low 16 bit di arg3), D0w
- *      = orMask (low 16 bit di arg4). Il risultato è 16-bit e viene scritto
- *      come word in alpha RAM (big-endian).
+ *   6. `or.w D2w,D0w`: D2w is the low 16 bits of attr; D0w is the word stored
+ *      in alpha RAM.
  *
- *   7. **Return D0**: il valore scritto in alpha RAM (word, zero-ext a long).
- *      Il binario non pulisce D0 high, ma il valore di D0 al `rts` è quello
- *      dell'ultimo `or.w D2w,D0w`. `or.w` opera solo sulla low word; la high
- *      di D0 rimane quella dell'ultimo `move.w (0x1a,SP),D0w` che ha azzerato
- *      la high word (move.w zero-ext in m68k). Quindi D0 = 0x0000xxxx.
+ *      The final D0 keeps the high word from the address calculation because
+ *      `or.w` operates only on the low word.
  *
  * **Xrefs** (12 call site + 1 entry):
  *   - `FUN_00005688` @ 0x5884, 0x58AE (UNCONDITIONAL_CALL × 2)
  *   - `FUN_000022A4` @ 0x233E, 0x2356, 0x236A, 0x2372, 0x237A... (8 COMPUTED_CALL via jsr A2)
  *   - `FUN_00005D2A` @ 0x5DAE, 0x5DCE (UNCONDITIONAL_CALL × 2)
  *
- * Verifica bit-perfect via
  * `packages/cli/src/test-helper-3784-parity.ts` (500/500).
  */
 
@@ -118,54 +96,38 @@ import type { RomImage } from "./bus.js";
 
 // ─── Address constants (M68k absolute) ───────────────────────────────────────
 
-/** Indirizzo di questa funzione (usato per stub injection in callers). */
 export const HELPER_3784_ADDR = 0x00003784 as const;
 
-/** Base dell'alpha tilemap MMIO. */
+/** Alpha tilemap MMIO base. */
 const ALPHA_BASE = 0xa03000 as const;
 
-/** Offset di `rotation` nel workRam (relativo a 0x400000). */
+/** Work RAM offset of `rotation`, relative to `0x400000`. */
 const ROTATION_OFF = 0x1f42 as const;
 
-/** Indirizzo ROM della tabella shift count (byte@off+1 = ROM[0x72a5..] ogni 2). */
 const ROM_SHIFT_TABLE = 0x72a4 as const;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /**
  * Sign-extend byte (8-bit) → 32-bit signed JS number.
- * Equivale a `move.b; ext.w; ext.l` della sequenza M68k.
  */
 function sextByte(b: number): number {
   const v = b & 0xff;
   return v & 0x80 ? v - 0x100 : v;
 }
 
-// ─── Main function: replica FUN_3784 ─────────────────────────────────────────
+// Main function: FUN_3784.
 
 /**
- * Replica bit-perfect di `FUN_00003784` — alpha tilemap cell writer.
  *
- * Calcola l'indirizzo di un tile nell'alpha tilemap (0xA03000) a partire da
- * `(y, x, rotation)` e scrive `attr | orMask` come word big-endian.
  *
- * @param state   GameState. Letto: `workRam[0x1F42..0x1F43]` (rotation).
- *                Scritto: `alphaRam[offset..offset+1]`.
- * @param rom     RomImage. Letto: `ROM[0x72A5 + rotation*2]` (shift count).
- * @param y       Low byte di arg1 (sign-extended a long dal callee).
- *                Corrisponde a `move.b (0xf,SP),D1b`.
- * @param x       Low byte di arg2 (sign-extended a long).
- *                Corrisponde a `move.b (0x13,SP),D0b`.
- * @param attr    Low word di arg3 (tile attribute / char code).
- *                Corrisponde a `move.w (0x16,SP),D2w`.
- * @param orMask  Low word di arg4 (OR mask applicata all'attr).
- *                Corrisponde a `move.w (0x1a,SP),D0w`.
+ * @param y Low byte of arg1, sign-extended by the callee.
+ * @param x Low byte of arg2, sign-extended by the callee.
+ * @param attr Low word of arg3, the tile attribute or char code.
+ * @param orMask Low word of arg4 ORed into `attr`.
  *
- * @returns D0 long al rts = `(orMask & 0xffff) | (attr & 0xffff)` zero-ext
- *          a 32-bit. Corrisponde al valore word scritto in alpha RAM.
+ * @returns D0 at RTS, with the low word equal to `orMask | attr`.
  *
- * **Side effects**: scrive 1 word (2 byte, big-endian) in `state.alphaRam`.
- * Write out-of-range [0xA03000, 0xA04000) viene silenziosamente ignorata.
  */
 export function helper3784(
   state: GameState,

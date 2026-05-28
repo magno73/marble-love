@@ -4,19 +4,19 @@
  * `counterPoolSubtract4008`.
  *
  * `FUN_00004008` (80 byte): tenta di sottrarre `arg1` dal pool combinato
- * `(byte@0x401FF7 + byte@0x401FF5)`, drenando prima il counter@FF7 e poi
- * scalando il resto dall'acc@FF5. Ritorna 1 (success / no-op se status >=
+ * `(byte@0x401FF7 + byte@0x401FF5)`, draining counter@FF7 first and then
+ * scaling the rest from acc@FF5. Returns 1 (success / no-op if status >=
  * 0xE0) o 0 (pool insufficient).
  *
  * Convenzione caller (cdecl push-RTL):
  *   - arg1 = SP+0xC = quantita' da sottrarre (long, sign-ext'd da word)
  *
  * Strategia parity:
- *   - Setup: byte@FF5/FF7 random; ptr struct fissato @ 0x401A00 con bytes
- *     +0xA / +0xB random (~50% volte coerenti come complement);
+ *   - Setup: random byte@FF5/FF7; fixed ptr struct @ 0x401A00 with bytes
+ *     random +0xA / +0xB (~50% coherent as complements);
  *     workRam[0x1FFC..] = ptr (long BE).
- *   - Stesso identico setup tra Musashi e TS (workRam vs unified mem).
- *   - Per ogni caso random: pick arg1 con pattern; chiama il binario;
+ *   - Same setup between Musashi and TS (workRam vs unified mem).
+ *   - For each random case: pick arg1 with pattern; call the binary;
  *     chiama TS; confronta `D0` E i 2 byte modificati (FF5, FF7) E i due
  *     byte del player struct (mai modificati, ma verifichiamo l'invariante).
  *
@@ -24,7 +24,7 @@
  *   - 30% arg1 in [0..pool*1.2] (range realistico)
  *   - 20% arg1 == 0
  *   - 20% arg1 grande (> pool, insufficient path)
- *   - 15% status @ ptr+0xA in [0xE0..0xFF] con complement valido
+ *   - 15% status @ ptr+0xA in [0xE0..0xFF] with valid complement
  *         (early-exit path)
  *   - 15% sign-ext negativo / random long stress
  *
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
 
     if (pick < 0.15) {
       pattern = "early_exit";
-      // status >= 0xE0 con complement valido -> helper = 0 -> early exit.
+      // status >= 0xE0 with valid complement -> helper = 0 -> early exit.
       status = 0xe0 + Math.floor(rng() * 0x20);
       notB = ~status & 0xff;
       ctr0 = Math.floor(rng() * 256);
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
       arg1 = pool === 0 ? 0 : Math.floor(rng() * (pool + 1));
     } else if (pick < 0.93) {
       pattern = "mismatch_complement";
-      // ptr+0xA != ~ptr+0xB -> helper interno azzera D2 -> ritorna 1.
+      // ptr+0xA != ~ptr+0xB -> internal helper clears D2 -> returns 1.
       status = Math.floor(rng() * 256);
       // notB = qualcosa NON pari a ~status.
       do {

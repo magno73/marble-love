@@ -3,36 +3,25 @@
  * test-wait-vblank-state-gated-parity.ts — differential FUN_28DB8 vs
  * waitVblankStateGated.
  *
- * `FUN_00028DB8` (50 byte) è una busy-wait di N "vblank tick" con abort
  * su cambio di game state word (`*0x400390`). Convenzione caller (cfr.
  * `0x10848`, `0x108E8`, ...):
  *   pea     (count).w
  *   jsr     0x00028DB8.l
  *   addq.l  #4, SP
  *
- * Internamente, ad ogni iterazione chiama `FUN_00028DEA` (clr.b
- * *0x400016; spin tst.b/beq; addq.b #1, *0x4003F0). Per evitare che il
- * binario stalli sulla spin, registriamo un `onMemoryRead` su `0x400016`
- * che scrive `1` al primo accesso post-clr (così il `tst.b ; beq` esce
- * subito).
+ * *0x400016; spin tst.b/beq; addq.b #1, *0x4003F0). To avoid the
  *
  * **Branch coverage** (8 corner case + ~492 random):
  *   0: count = 0  → loop non parte
  *   1: count = 1, no abort
  *   2: count = -1 (signed) → loop non parte
  *   3: count = 0x8000 (signed = -32768) → loop non parte
- *   4: count = 5, abort all'iter 3 (modifichiamo *0x400390 dopo k tick)
- *   5: count = 8, no abort, loByte con bit 7 set (sext_w = 0xFF80)
- *   6: count = 1, abort all'iter 1 (state cambia immediatamente dopo
- *      la prima jsr 0x28DEA)
+ *   5: count = 8, no abort, loByte with bit 7 set (sext_w = 0xFF80)
  *   7: count = 4, no abort, counter wrap (prev=0xFD)
- *   8+: random in count [-32..32], state byte random, abort 30% dei casi
  *
  * **Output confrontato**:
  *   - workRam[0x3F0] (counter byte, side effect principale)
- *   - workRam[0x16] (mailbox; mascherato perché injection hook lo modifica)
- *   - D0w finale
- *   - workRam[0x390..0x391] (deve restare invariato salvo abort case)
+ *   - workRam[0x390..0x391] (must stay unchanged except abort case)
  *
  * Uso: npx tsx packages/cli/src/test-wait-vblank-state-gated-parity.ts [N]
  */
@@ -71,12 +60,9 @@ interface Case {
   loByte: number; // initial state low byte (0x400391)
   hiByte: number; // initial state high byte (0x400390)
   /**
-   * Iterazione (1-indexed) alla quale vogliamo cambiare `*0x400390`. Se
-   * <= 0 o > countSigned, nessun cambio. Su quel tick, modifichiamo
-   * direttamente `*0x400391` (low byte) a un valore diverso da `loByte`.
    */
   abortAtIter: number;
-  prevCounter: number; // valore iniziale di workRam[0x3F0]
+  prevCounter: number;
 }
 
 function buildCase(i: number, rng: () => number): Case {
@@ -106,24 +92,19 @@ function buildCase(i: number, rng: () => number): Case {
   }
 
   // Random
-  // Count: range [-32..32] per tenere il binario veloce (ogni tick = ~10
-  // step, e abbiamo MAX_STEPS = 200_000 quindi anche 32 stanno comodi).
   const cMag = Math.floor(rng() * 33);
   const countWord = (rng() < 0.5 ? cMag : (-cMag) & 0xffff) & 0xffff;
 
   const loByte = Math.floor(rng() * 256) & 0xff;
-  // high byte: 0x00 (più comune), 0xFF (sext+ negativo), o random
   const hr = rng();
   const hiByte = hr < 0.5 ? 0x00 : hr < 0.7 ? 0xff : Math.floor(rng() * 256) & 0xff;
 
-  // Abort: 30% dei casi (solo se countSigned > 0)
   const cs = countWord & 0x8000 ? countWord - 0x10000 : countWord;
   let abortAtIter = 0;
   if (cs > 0 && rng() < 0.3) {
     abortAtIter = 1 + Math.floor(rng() * cs);
   }
 
-  // Counter iniziale: 50% random, 50% biased verso 0xFE/0xFF (wrap test)
   const cr = rng();
   const prevCounter =
     cr < 0.2 ? 0xff : cr < 0.4 ? 0xfe : Math.floor(rng() * 256) & 0xff;
@@ -144,10 +125,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Hook: ogni read di *0x400016, scrive 1 in unified memory (sblocca
   // tst.b/beq spin in FUN_28DEA). Manteniamo anche un counter di tick
-  // (mailboxReads) per implementare l'abort logic: quando raggiungiamo
-  // `currentAbortAtIter`, modifichiamo *0x400391 a un valore != loByte.
   let mailboxReads = 0;
   let currentAbortAtIter = 0;
   let currentLoByte = 0;
@@ -155,28 +133,17 @@ async function main(): Promise<void> {
 
   const dispose = cpu.system.onMemoryRead((event) => {
     if (event.addr === VBLANK_MAILBOX_ADDR && event.size === 1) {
-      // Inietta valore 1 → la lettura corrente di tst.b vede != 0 → beq
       // non scatta → fall-through al return della spin.
-      // NB: questo handler viene chiamato PRIMA che la lettura sia
-      // restituita al CPU; usiamo writeRaw8 per forzare il valore in mem
-      // così la `read` ritorna 1.
       cpu.system.writeRaw8(VBLANK_MAILBOX_ADDR, 0x01);
 
       mailboxReads++;
-      // Trigger abort: ogni FUN_28DEA call esegue ESATTAMENTE 2 letture di
-      // 0x400016 (la prima vede 0 dopo clr.b, beq loops; la seconda vede
-      // l'iniezione=1, beq esce). Quindi:
-      //   iterazione k del loop esterno → mailReads in [2k-1, 2k].
-      // Per far abortire DOPO esattamente k iterazioni (ovvero counter
-      // incrementato di k), basta modificare lo state durante l'iterazione
-      // k. La cmp.w post-jsr vedrà il low byte diverso → clr.w D3w → exit.
+      // Trigger abort: each FUN_28DEA call performs exactly 2 reads of
       if (
         !currentAbortFired &&
         currentAbortAtIter > 0 &&
         mailboxReads === 2 * currentAbortAtIter - 1
       ) {
         currentAbortFired = true;
-        // Cambiamo il low byte a `loByte XOR 0x55` (garantito diverso)
         cpu.system.writeRaw8(STATE_WORD_ADDR + 1, currentLoByte ^ 0x55);
       }
     }
@@ -203,7 +170,7 @@ async function main(): Promise<void> {
     const c = buildCase(i, rng);
 
     // ─── Setup binary side ───────────────────────────────────────────
-    pokeMem(cpu, VBLANK_MAILBOX_ADDR, 1, 0); // pre-clear (sarà rezeroed dal clr.b)
+    pokeMem(cpu, VBLANK_MAILBOX_ADDR, 1, 0);
     pokeMem(cpu, VBLANK_COUNTER_ADDR, 1, c.prevCounter);
     pokeMem(cpu, STATE_WORD_ADDR, 1, c.hiByte);
     pokeMem(cpu, STATE_WORD_ADDR + 1, 1, c.loByte);
@@ -215,7 +182,6 @@ async function main(): Promise<void> {
     currentAbortFired = false;
 
     // Setup stack: SP a 0x401E80, push arg long, push sentinel.
-    // pea (count).w pusha sext(word)→long; replicare per parità.
     const countSigned =
       c.countWord & 0x8000 ? c.countWord - 0x10000 : c.countWord;
     const argLong = countSigned >>> 0;
@@ -229,10 +195,8 @@ async function main(): Promise<void> {
     cpu.system.write(sp, 4, SENTINEL_RET);
     cpu.system.setRegister("sp", sp);
     cpu.system.setRegister("pc", FUN_WAIT_GATED);
-    // Pre-fill D0/D2/D3 con sentinel per accorgerci di clobber non
-    // documentati. Attenzione: D0 hi word è preservata dal binario ma il
-    // valore esatto post-call dipende dal path eseguito; controlliamo
-    // solo D0w (low word) per parity.
+    // Pre-fill D0/D2/D3 with sentinels to detect undocumented
+    // Only D0w (low word) for parity.
     cpu.system.setRegister("d0", 0xdeadbeef);
     cpu.system.setRegister("d2", 0x11111111);
     cpu.system.setRegister("d3", 0x22222222);
@@ -277,11 +241,8 @@ async function main(): Promise<void> {
     const tsIters = tsResult.iterations;
 
     // Per il binary: il low byte di *0x400390 dovrebbe essere = c.loByte
-    // (se nessun injection ha modificato) o c.loByte^0x55 (se injection
-    // ha modificato durante la wait). L'injection scatta solo se il loop
-    // arriva al mailRead `2*currentAbortAtIter-1`. Se il binario aborta
-    // PRIMA per "initial mismatch" (sext_w(loByte) != initial state word),
-    // l'injection non scatta → byte invariato.
+    // modified during wait). Injection fires only if the loop
+    // injection does not fire -> byte unchanged.
     const tsStateLoExpected = currentAbortFired
       ? c.loByte ^ 0x55
       : c.loByte;

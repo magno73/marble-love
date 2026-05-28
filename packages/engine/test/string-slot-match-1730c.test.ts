@@ -1,7 +1,6 @@
 /**
  * string-slot-match-1730c.test.ts — smoke test stringSlotMatch1730C (FUN_1730C).
  *
- * Bit-perfect parity verificata vs binary in
  * `cli/src/test-string-slot-match-1730c-parity.ts`.
  */
 
@@ -19,7 +18,6 @@ import { emptyGameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Helper: scrive un long big-endian in workRam all'offset assoluto. */
 function writeU32(s: ReturnType<typeof emptyGameState>, addr: number, v: number): void {
   const off = (addr - WORK_RAM_BASE) >>> 0;
   s.workRam[off] = (v >>> 24) & 0xff;
@@ -28,7 +26,7 @@ function writeU32(s: ReturnType<typeof emptyGameState>, addr: number, v: number)
   s.workRam[off + 3] = v & 0xff;
 }
 
-/** Helper: setta flag active (byte) di slot i. */
+/** Helper: set active flag (byte) for slot i. */
 function setActive(
   s: ReturnType<typeof emptyGameState>,
   slotIdx: number,
@@ -38,7 +36,7 @@ function setActive(
   s.workRam[slotOff + SLOT_ACTIVE_FLAG_OFF] = active & 0xff;
 }
 
-/** Helper: setta ID long di slot i. */
+/** Helper: set ID long for slot i. */
 function setSlotId(
   s: ReturnType<typeof emptyGameState>,
   slotIdx: number,
@@ -60,11 +58,10 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
 
   it("tutti slot inattivi (active=0) → ritorna 0", () => {
     const s = emptyGameState();
-    // argPtr punta a un record con ID 0xDEADBEEF.
+    // argPtr points to a record with ID 0xDEADBEEF.
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0xdeadbeef);
-    // Anche se imposto gli ID degli slot uguali, devono essere ignorati
-    // perché tutti inattivi.
+    // Even if slot IDs are set equal, they must be ignored.
     for (let i = 0; i < SLOT_COUNT; i++) {
       setSlotId(s, i, 0xdeadbeef);
     }
@@ -75,7 +72,6 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0x12345678);
-    // Solo slot 3 attivo, ID matcha.
     setActive(s, 3, 1);
     setSlotId(s, 3, 0x12345678);
     expect(stringSlotMatch1730C(s, argPtr)).toBe(1);
@@ -85,7 +81,6 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0xaabbccdd);
-    // Tutti gli slot attivi ma con ID diversi.
     for (let i = 0; i < SLOT_COUNT; i++) {
       setActive(s, i, 0xff);
       setSlotId(s, i, 0x11000000 + i);
@@ -146,7 +141,6 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0x77777777);
     setActive(s, 2, 1);
     setSlotId(s, 2, 0x77777777);
-    // Slot 5 attivo con ID malformato — non deve influire.
     setActive(s, 5, 1);
     setSlotId(s, 5, 0x99999999);
     expect(stringSlotMatch1730C(s, argPtr)).toBe(1);

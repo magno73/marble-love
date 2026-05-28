@@ -4,23 +4,16 @@
  * differential FUN_26196 vs `flagScaledMagnitudeDispatch`.
  *
  * **Strategia**:
- * `FUN_00026196` è uno shim che (1) seleziona una magnitude da un flag byte,
- * (2) chiama `FUN_000261BC(structPtr, magnitude)`, (3) ritorna D0 dell'inner.
  *
  * Per testare in isolamento la logica di selezione, **patch-iamo
- * `FUN_000261BC` con un mini-stub** che semplicemente ritorna in D0 il
- * secondo argomento sullo stack (= la magnitude scelta dallo shim):
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = magnitude
  *     4E 75          ; rts
  *
- * Così il binario, dopo `FUN_26196`, ha `D0 = magnitude` e possiamo
- * confrontarlo con `magnitude` calcolata da TS via callback.
+ * compare it with `magnitude` computed by TS via callback.
  *
- * Inoltre confrontiamo che **il valore di D0 ritornato sia esattamente
- * preservato** dallo shim (no clobber/no truncation tra il `jsr` e l'`rts`).
+ * preserved** by the shim (no clobber/no truncation between `jsr` and `rts`).
  *
- * Patch viene scritta in unified memory ad ogni iterazione (dopo
  * `pokeMem` a 0x261BC, poi resettiamo lo stack pointer ed eseguiamo).
  *
  * Uso: npx tsx packages/cli/src/test-flag-scaled-magnitude-dispatch-parity.ts [N]
@@ -68,9 +61,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch FUN_261BC con lo stub. Questa zona è ROM nella mappa di Musashi
-  // creata da binary-oracle-lib (regione "rom" 0x000000-0x07FFFF), ma il
-  // backend WASM non protegge dalla scrittura: pokeMem va in write diretta.
+  // created by binary-oracle-lib ("rom" region 0x000000-0x07FFFF), but the
   for (let i = 0; i < STUB_BYTES.length; i++) {
     pokeMem(cpu, FUN_261BC + i, 1, STUB_BYTES[i]!);
   }
@@ -93,8 +84,8 @@ async function main(): Promise<void> {
     tsMagnitudeCaptured: number;
   } | null = null;
 
-  // Pointer choices: alcuni indirizzi rappresentativi nella work RAM
-  // (0x400000..0x401FFF). Mix tra il "canonical" object slot e altri.
+  // Pointer choices: representative addresses in work RAM (0x400000..0x401FFF),
+  // mixing the canonical object slot with other locations.
   const ptrChoices = [
     0x00400018, 0x004000fa, 0x00401e00, 0x00401e80, 0x00401f08,
     0x00401f44, 0x00401f80, 0x00400100, 0x004001a0, 0x00400500,
@@ -111,11 +102,9 @@ async function main(): Promise<void> {
       }
     }
 
-    // Scegli pointer e flag byte. Mix dei pattern:
+    // Choose pointer and flag byte. Pattern mix:
     //   pattern 0 : flag = 0 (path "magnitude piccola")
     //   pattern 1 : flag = 0xFF (path "magnitude grande", saturato)
-    //   pattern 2 : flag = 0x80 (alto bit set, deve dare 0x50000)
-    //   pattern 3 : flag = 0x01 (basso bit set, deve dare 0x50000)
     //   pattern >=4: random
     let flagByte: number;
     const pattern = i < 4 ? i : Math.floor(rng() * 5) + 4;
@@ -130,14 +119,11 @@ async function main(): Promise<void> {
     const ptrIdx = Math.floor(rng() * ptrChoices.length);
     const structPtr = ptrChoices[ptrIdx]!;
 
-    // Setup flag byte sia in unified memory (per il binario) sia in
-    // state.workRam (per TS). Reset prima per non contaminare.
     const offBase = structPtr - 0x400000;
     pokeMem(cpu, structPtr + 0x1a, 1, flagByte);
     state.workRam[offBase + 0x1a] = flagByte;
 
-    // ── Run binario ─────────────────────────────────────────────────────
-    // FUN_26196 prende 1 long arg (structPtr) sullo stack a (4,SP).
+    // FUN_26196 takes one long arg (structPtr) on the stack at (4,SP).
     const r = callFunction(cpu, FUN_26196, [structPtr >>> 0]);
     const binD0 = r.d0 >>> 0;
 
@@ -148,7 +134,6 @@ async function main(): Promise<void> {
       structPtr,
       (_p, m) => {
         tsMagnitudeCaptured = m >>> 0;
-        // Ritorna esattamente la magnitude (mirror dello stub asm).
         return m >>> 0;
       },
     );

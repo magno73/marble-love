@@ -1,10 +1,6 @@
 /**
  * render-string-286ee.ts — replica `FUN_000286EE` (154 byte).
  *
- * Funzione "render-score-slot": formatta il valore word @ `slotAddr` come
- * stringa decimale (2 cifre, max 99) nel buffer della string-chain entry
- * fissa @ `0x400434`, scrive col/tickOff/marker basandosi su `ordinal`,
- * e chiama `FUN_3520` (renderStringChain2) per produrre l'output alpha.
  *
  * **Disasm 0x286EE..0x28786** (154 byte):
  *
@@ -65,23 +61,14 @@
  *
  * **Step semantici**:
  *
- *   1. Legge `score = word @ slotAddr` (big-endian), clamp a max 99 (0x63).
- *   2. Chiama `FUN_3874` (number formatter) con:
  *         value=sext_l(score), bufEnd=*(0x400436), fmtMode='d'(0x64),
  *         width=1, fillExtra=2.
- *      Scrive 2 ASCII digits + null terminator nel buffer puntato da
  *      *(0x400436) (= workRam[0x436..0x439] long-BE, dest ptr).
- *   3. Seleziona `attrWord` da `ordinal`:
  *         ordinal == 2 → 0x2C00
  *         ordinal == 3 → 0x3400
  *         else         → 0x2800
- *   4. Seleziona `tickOff`:
  *         ordinal == 3 → 0
  *         else         → 1
- *   5. Legge `col` da ROM table @ 0x23D3C + ordinal (sext byte → long).
- *   6. Chiama `FUN_255A` (inline-replicato):
- *      scrive workRam[0x434]=col, [0x435]=tickOff, [0x43A]=0.
- *   7. Chiama `FUN_3520` (renderStringChain2) con:
  *         entryPtr=0x400434, attrLong=sext_l(attrWord).
  *
  * **ROM col-table @ 0x23D3C** (8 byte, ordinal 0..7):
@@ -95,22 +82,18 @@
  *   ordinal 7 → col 0x00 (0)
  *
  * **JSR sub injection**:
- *   - `FUN_3874` (numberFormatter): formatta valore come decimal. Stub-injectable.
- *   - `FUN_255A` (struct init): inline-replicato (3 byte writes, deterministico).
+ *   - `FUN_255A` (struct init): replicated inline (3 byte writes, deterministic).
  *   - `FUN_3520` (renderStringChain2): stub-injectable. Default no-op.
  *
  * **Side effects in workRam** (struct @ 0x400434):
- *   1. `*(0x400436)` buffer scritto da `FUN_3874` con ASCII digits + null.
- *   2. `workRam[0x434] = col`        (byte da ROM table)
- *   3. `workRam[0x435] = tickOff`    (0 o 1 da ordinal)
+ *   1. `*(0x400436)` buffer written by `FUN_3874` with ASCII digits + null.
+ *   2. `workRam[0x434] = col`        (byte from ROM table)
+ *   3. `workRam[0x435] = tickOff`    (0 or 1 from ordinal)
  *   4. `workRam[0x43A] = 0`          (marker clear)
- *   5. invocazione `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
+ *   5. call `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
  *
  * **Callers in FUN_10504** (main-loop-init-10504.ts):
- *   - riga 177: `renderString(state, objectSlotAddr(i) + 0x6a, playerCount + i - 1)`
- *   - riga 205: `renderString(state, base + 0x6a, playerCount + i - 1)`
  *
- * Verifica bit-perfect via
  * `packages/cli/src/test-render-string-286ee-parity.ts`.
  */
 
@@ -119,7 +102,6 @@ import type { RomImage } from "./bus.js";
 
 // ─── Address constants (M68k absolute) ───────────────────────────────────
 
-/** Indirizzo assoluto della string-chain entry fissa cabled in FUN_286EE. */
 export const ENTRY_ABS_ADDR = 0x00400434 as const;
 
 /** Offset entry in `state.workRam` (= ENTRY_ABS_ADDR - 0x400000). */
@@ -129,24 +111,21 @@ export const ENTRY_OFF = 0x434 as const;
 export const COL_BYTE_OFF = 0 as const;
 /** Offset workRam: tickOff byte (entry[1]). */
 export const TICKOFF_BYTE_OFF = 1 as const;
-/** Offset workRam: long-BE pointer al buffer destinazione stringa (entry[2..5]). */
 export const BUFEND_PTR_LONG_OFF = 2 as const;
 /** Offset workRam: marker byte (entry[6]). */
 export const MARKER_BYTE_OFF = 6 as const;
 
-/** Indirizzo assoluto ROM della col-lookup table (8 byte). */
 export const COL_TABLE_ROM_ADDR = 0x00023d3c as const;
 
-/** Valore massimo del punteggio (clamped a 99 = 0x63). */
 export const SCORE_MAX = 0x63 as const;
 
-/** Hardcoded byte 'd' = 0x64 passato come fmtMode a FUN_3874 (decimal). */
+/** Hardcoded byte 'd' = 0x64 passed as fmtMode to FUN_3874 (decimal). */
 export const FMT_MODE_D = 0x64 as const;
 
-/** Width (1) passato a FUN_3874. */
+/** Width (1) passed to FUN_3874. */
 export const FMT_WIDTH = 1 as const;
 
-/** FillExtra (2) passato a FUN_3874. */
+/** FillExtra (2) passed to FUN_3874. */
 export const FMT_FILL_EXTRA = 2 as const;
 
 /** Attr word per ordinal == 2. */
@@ -156,10 +135,8 @@ export const ATTR_ORDINAL_3 = 0x3400 as const;
 /** Attr word default (ordinal != 2 e != 3). */
 export const ATTR_DEFAULT = 0x2800 as const;
 
-/** Indirizzo assoluto della funzione (per cross-ref e parity test). */
 export const RENDER_STRING_286EE_ADDR = 0x000286ee as const;
 
-/** Indirizzi delle JSR sub nell'ordine di invocazione. */
 export const RENDER_STRING_286EE_SUB_ADDRS = [
   0x00003874, // FUN_3874 (via trampoline 0x112) — number formatter
   0x0000255a, // FUN_255A (via trampoline 0x13C) — struct init (inline)
@@ -168,15 +145,13 @@ export const RENDER_STRING_286EE_SUB_ADDRS = [
 
 // ─── Memory helpers ──────────────────────────────────────────────────────
 
-/** Base assoluta workRam. */
+/** Absolute workRam base. */
 const WORK_RAM_BASE = 0x00400000 as const;
 
-/** Legge un byte da ROM (programma image). */
 function readRomByte(rom: RomImage, addr: number): number {
   return rom.program[addr >>> 0] ?? 0;
 }
 
-/** Legge un long big-endian da workRam @ offset. */
 function readWorkLongBE(wram: Uint8Array, off: number): number {
   const b0 = wram[off] ?? 0;
   const b1 = wram[off + 1] ?? 0;
@@ -185,7 +160,6 @@ function readWorkLongBE(wram: Uint8Array, off: number): number {
   return ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) >>> 0;
 }
 
-/** Legge un word big-endian da workRam @ offset (assoluto). */
 function readWorkWordBE(state: GameState, absAddr: number): number {
   const off = absAddr - WORK_RAM_BASE;
   const hi = state.workRam[off] ?? 0;
@@ -210,25 +184,20 @@ function sextWordToLong(w: number): number {
 /**
  * Stub injection per le due JSR esterne.
  *
- * `FUN_255A` è inline-replicato (3 byte writes deterministici, niente da
  * iniettare). `FUN_3874` e `FUN_3520` sono sub-call esterne.
  */
 export interface RenderString286EESubs {
   /**
    * `FUN_3874` (via trampoline 0x112) — number formatter.
    *
-   * Formatta `value` (0..99) come stringa decimale nel buffer puntato da
-   * `bufEnd` (il long @ workRam[0x436]), con `fmtMode='d'`, `width=1`,
+   * `bufEnd` (the long @ workRam[0x436]), with `fmtMode='d'`, `width=1`,
    * `fillExtra=2`.
    *
-   * Args (matching binario, 5 long push RTL):
-   *   - `value`      : sext_l(score) — valore score (0..99).
    *   - `bufEnd`     : `*(0x400436)` long-BE — pointer al buffer destinazione.
    *   - `fmtMode`    : 0x64 long ('d', decimal). Hardcoded.
    *   - `width`      : 1 long. Hardcoded.
    *   - `fillExtra`  : 2 long. Hardcoded.
    *
-   * Side effects attesi: scrive ASCII digits + null nel buffer @ bufEnd.
    * Default: no-op.
    */
   numberFormatter?: (
@@ -243,9 +212,7 @@ export interface RenderString286EESubs {
   /**
    * `FUN_3520` (via trampoline 0x200) — renderStringChain2.
    *
-   * Chiama il render engine con l'entry struct @ 0x400434 e `attrLong`.
    *
-   * Args (matching binario, 2 long):
    *   - `entryPtr` : 0x400434 (costante).
    *   - `attrLong` : sext_l(attrWord) — attr word sign-extended.
    *
@@ -257,20 +224,14 @@ export interface RenderString286EESubs {
 // ─── Main function ────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000286EE`.
  *
- * Legge il punteggio (word big-endian) da `slotAddr`, lo clamp a 99, lo
- * formatta come decimale nel buffer della string-chain entry @ 0x400434,
- * scrive col/tickOff/marker basandosi su `ordinal` e ROM table, poi
- * invoca renderStringChain2 via stub.
+ * Invokes renderStringChain2 through a stub.
  *
- * @param state     GameState (mutato in-place: workRam[0x434..0x43A]).
- * @param rom       RomImage (per la col-lookup table @ 0x23D3C).
- * @param slotAddr  arg1 long: indirizzo assoluto M68k in workRam del campo
- *                  word "score" dell'object struct (tipicamente
+ * @param state     GameState (mutated in place: workRam[0x434..0x43A]).
+ * @param rom       RomImage (for the col-lookup table @ 0x23D3C).
+ *                  "score" word of the object struct (typically
  *                  `objectSlotAddr(i) + 0x6a` = `0x400018 + i*0xE2 + 0x6a`).
- * @param ordinal   arg2 long: ordinale player (tipicamente `playerCount + i - 1`);
- *                  solo `ordinal & 0xff` (D2.b) è usato.
+ * @param ordinal   arg2 long: player ordinal (typically `playerCount + i - 1`);
  * @param subs      Stub injection per `numberFormatter` e `renderStringChain2`.
  *                  Default: entrambi no-op.
  *
@@ -278,7 +239,6 @@ export interface RenderString286EESubs {
  *   1. `*(bufEndPtr)..*(bufEndPtr+N)` ← ASCII digits + null (via numberFormatter).
  *      `bufEndPtr = readLongBE(workRam, 0x436)`.
  *   2. `workRam[0x434]` ← col byte (ROM table @ 0x23D3C indexed by ordinal LSB).
- *   3. `workRam[0x435]` ← tickOff (0 se ordinal==3, altrimenti 1).
  *   4. `workRam[0x43A]` ← 0 (marker clear).
  *   5. invocazione `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
  */
@@ -291,7 +251,6 @@ export function renderString286EE(
 ): void {
   const r = state.workRam;
 
-  // Step 1: legge score word @ slotAddr (big-endian, in workRam).
   // move.w (A0), D3 — A0 = slotAddr
   const rawScore = readWorkWordBE(state, slotAddr >>> 0);
 

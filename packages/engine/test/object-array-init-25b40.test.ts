@@ -1,8 +1,8 @@
 /**
- * Test objectArrayInit25B40 (FUN_00025B40) — smoke tests sulla scrittura
+ * Test objectArrayInit25B40 (FUN_00025B40) - smoke tests for writes
  * di 24 word array @ A1+0x74/0x84/0x94 + byte clear @ A1+0xCA.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `cli/src/test-object-array-init-25b40-parity.ts` (500/500 cases).
  */
 
@@ -28,7 +28,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
   return (((wr[off] ?? 0) << 8) | (wr[off + 1] ?? 0)) & 0xffff;
 }
 
-/** Crea ROM con tabelle riempite a piacere. */
+/** Create ROM with tables filled as desired. */
 function makeRomWithTables(
   tableA: readonly number[],
   tableB: readonly number[],
@@ -45,7 +45,7 @@ function makeRomWithTables(
 
 describe("objectArrayInit25B40 (FUN_00025B40)", () => {
   it("scrive 3 array da 8 word + byte clear @ +0xCA con tabelle ROM reali", () => {
-    // Tabelle reali estratte da ROM @ 0x1D3F4 / 0x1D3FC.
+    // Real tables extracted from ROM @ 0x1D3F4 / 0x1D3FC.
     const tableA = [0x02, 0x02, 0x00, 0xfe, 0xfc, 0xfe, 0x00, 0x04];
     const tableB = [0x02, 0xfe, 0xfc, 0xfe, 0x00, 0x02, 0x04, 0x00];
     const rom = makeRomWithTables(tableA, tableB);
@@ -54,7 +54,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill obj con sentinel non-zero per verificare le scritture.
+    // Pre-fill obj with non-zero sentinel to verify writes.
     for (let k = 0; k < 0x100; k++) s.workRam[objOff + k] = 0x55;
 
     objectArrayInit25B40(s, rom, objPtr);
@@ -96,8 +96,8 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     const objPtr = WORK_RAM_BASE + 0x1100;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Sentinel sui vicini (NON toccati dalle scritture).
-    // Range scritti: [0x74, 0xA3] contigui + byte @ 0xCA.
+    // Sentinels on neighbors, which writes must not touch.
+    // Written ranges: contiguous [0x74, 0xA3] + byte @ 0xCA.
     // Vicini: [0x70, 0x73] sotto, [0xA4, 0xC9] tra, [0xCB, 0xCF] sopra.
     const neighborOffs = [
       0x70, 0x71, 0x72, 0x73, // sotto
@@ -129,7 +129,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill con sentinel non-zero per dimostrare che le scritture
+    // Pre-fill with non-zero sentinel to show that writes
     // azzerano i 24 word + 1 byte target.
     for (let k = 0; k < 0x100; k++) s.workRam[objOff + k] = 0xaa;
 

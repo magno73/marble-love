@@ -1,8 +1,6 @@
 /**
  * helper-18f46.test.ts — smoke + corner case di FUN_18F46.
  *
- * Bit-perfect parity vs binario verificata in
- * `cli/src/test-helper-18f46-parity.ts` (500 casi).
  */
 
 import { describe, it, expect } from "vitest";
@@ -40,10 +38,8 @@ function setupRomLookup(rom: ReturnType<typeof emptyRomImage>): void {
 }
 
 /**
- * Crea state e rom con byte-array pre-popolato. Ogni entry è [slotIdx],
  * e il rect-slot indicizzato ha struct[0]=typeCode, struct[1]=subIdx.
  *
- * @param entries  Array di {slotIdx, typeCode, subIdx} da inserire.
  */
 function freshStateWithEntries(
   entries: Array<{ slotIdx: number; typeCode: number; subIdx: number }>,
@@ -52,7 +48,6 @@ function freshStateWithEntries(
   const rom = emptyRomImage();
   setupRomLookup(rom);
 
-  // Riempi byte-array con sentinel.
   for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
     state.workRam[BYTE_OFF + i] = SENTINEL_BYTE;
   }
@@ -60,7 +55,6 @@ function freshStateWithEntries(
   // Inserisci entries.
   for (let i = 0; i < entries.length; i++) {
     const { slotIdx, typeCode, subIdx } = entries[i]!;
-    // byte-array[i] = slotIdx
     state.workRam[BYTE_OFF + i] = slotIdx & 0xff;
     // rect-slot[slotIdx].struct[0] = typeCode, [1] = subIdx
     const sOff = RECT_SLOT_OFF + slotIdx * RECT_SLOT_STRIDE;
@@ -82,7 +76,6 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBeNull();
     expect(r.slotIdx).toBeNull();
 
-    // byte-array invariato
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
       expect(state.workRam[BYTE_OFF + i]).toBe(SENTINEL_BYTE);
     }
@@ -99,9 +92,8 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBe(BYTE_OFF);
     expect(r.slotIdx).toBe(0);
 
-    // byte-array[0] deve essere sentinel dopo la rimozione
     expect(state.workRam[BYTE_OFF]).toBe(SENTINEL_BYTE);
-    // struct[0] del slot 0 deve essere 0 (libero)
+    // slot 0 struct[0] must be 0 (free).
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0);
   });
 
@@ -118,14 +110,13 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBe(BYTE_OFF);
     expect(r.slotIdx).toBe(0);
 
-    // byte-array deve essere [1, 2, 0xFF, ...]
     expect(state.workRam[BYTE_OFF + 0]).toBe(1);
     expect(state.workRam[BYTE_OFF + 1]).toBe(2);
     expect(state.workRam[BYTE_OFF + 2]).toBe(SENTINEL_BYTE);
 
-    // struct[0] dello slot 0 deve essere 0 (liberato)
+    // slot 0 struct[0] must be 0 (freed).
     expect(state.workRam[RECT_SLOT_OFF + 0 * RECT_SLOT_STRIDE]).toBe(0);
-    // struct[0] degli altri slot invariato
+    // struct[0] of other slots unchanged.
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0x02);
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0x03);
   });
@@ -143,12 +134,11 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBe(BYTE_OFF + 1);
     expect(r.slotIdx).toBe(1);
 
-    // byte-array deve essere [0, 2, 0xFF, ...]
     expect(state.workRam[BYTE_OFF + 0]).toBe(0);
     expect(state.workRam[BYTE_OFF + 1]).toBe(2);
     expect(state.workRam[BYTE_OFF + 2]).toBe(SENTINEL_BYTE);
 
-    // struct[0] dello slot 1 deve essere 0 (liberato)
+    // slot 1 struct[0] must be 0 (freed).
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
@@ -165,12 +155,11 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBe(BYTE_OFF + 2);
     expect(r.slotIdx).toBe(2);
 
-    // byte-array deve essere [0, 1, 0xFF, ...] (terzo elemento rimosso)
     expect(state.workRam[BYTE_OFF + 0]).toBe(0);
     expect(state.workRam[BYTE_OFF + 1]).toBe(1);
     expect(state.workRam[BYTE_OFF + 2]).toBe(SENTINEL_BYTE);
 
-    // struct[0] dello slot 2 deve essere 0 (liberato)
+    // slot 2 struct[0] must be 0 (freed).
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
@@ -182,10 +171,8 @@ describe("helper18F46 (FUN_18F46)", () => {
     const r = helper18F46(state, rom, 0x99, 0x20);
 
     expect(r.removed).toBe(false);
-    // byte-array invariato
     expect(state.workRam[BYTE_OFF]).toBe(0);
     expect(state.workRam[BYTE_OFF + 1]).toBe(SENTINEL_BYTE);
-    // struct non azzerato
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x10);
   });
 
@@ -202,7 +189,7 @@ describe("helper18F46 (FUN_18F46)", () => {
   });
 
   it("trova il primo match su typeCode+subIdx esatti (non il secondo slot con stesso type)", () => {
-    // Due slot con stesso typeCode 0x05, subIdx diversi: 0x0A e 0x0B.
+    // Two slots with same typeCode 0x05, different subIdx values: 0x0A and 0x0B.
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x05, subIdx: 0x0a },
       { slotIdx: 1, typeCode: 0x05, subIdx: 0x0b },
@@ -215,11 +202,10 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.foundPos).toBe(BYTE_OFF + 1);
     expect(r.slotIdx).toBe(1);
 
-    // byte-array: [0, FF, ...] (elemento 1 rimosso)
     expect(state.workRam[BYTE_OFF]).toBe(0);
     expect(state.workRam[BYTE_OFF + 1]).toBe(SENTINEL_BYTE);
 
-    // Slot 0 invariato, slot 1 liberato
+    // Slot 0 unchanged, slot 1 freed.
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x05);
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
@@ -252,7 +238,6 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r.removed).toBe(true);
     expect(r.foundPos).toBe(BYTE_OFF + 4);
 
-    // byte-array deve essere [0,1,2,3,FF,FF,...] dopo la rimozione
     expect(state.workRam[BYTE_OFF + 0]).toBe(0);
     expect(state.workRam[BYTE_OFF + 1]).toBe(1);
     expect(state.workRam[BYTE_OFF + 2]).toBe(2);
@@ -267,11 +252,9 @@ describe("helper18F46 (FUN_18F46)", () => {
       { slotIdx: 2, typeCode: 0x03, subIdx: 0x00 },
     ]);
 
-    // Prima rimozione: rimuovi typeCode=0x01
     const r1 = helper18F46(state, rom, 0x01, 0x00);
     expect(r1.removed).toBe(true);
 
-    // byte-array ora: [1, 2, FF, ...]
     expect(state.workRam[BYTE_OFF + 0]).toBe(1);
     expect(state.workRam[BYTE_OFF + 1]).toBe(2);
     expect(state.workRam[BYTE_OFF + 2]).toBe(SENTINEL_BYTE);
@@ -281,7 +264,6 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(r2.removed).toBe(true);
     expect(r2.foundPos).toBe(BYTE_OFF);
 
-    // byte-array ora: [2, FF, ...]
     expect(state.workRam[BYTE_OFF + 0]).toBe(2);
     expect(state.workRam[BYTE_OFF + 1]).toBe(SENTINEL_BYTE);
   });

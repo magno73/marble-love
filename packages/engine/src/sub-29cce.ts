@@ -1,88 +1,52 @@
 /**
- * sub-29cce.ts — replica di `FUN_00029CCE` (collision pipeline,
- *                5364 byte / 1679 istruzioni, range 0x29CCE..0x2B22F).
+ * sub-29cce.ts — `FUN_00029CCE` replica (collision pipeline,
+ *                5364 bytes / 1679 instructions, range 0x29CCE..0x2B22F).
  *
- * **Caller**: `helper121B8` ELSE-branch — invocata 1× per slot durante la
+ * **Caller**: `helper121B8` ELSE-branch — invoked once per slot during the
  * pipeline INTEGRATE_VEL → spritePosUpdate → fun_29cce.
  *
- * **Architettura**:
- *  - PROLOGO (0x29cce..0x29d48): salva globals 0x690/0x692/0x694/0x696/
- *    0x698/0x69a/0x69c, posizioni `(A2)` e `(0x4,A2)`, globali 0x68c.
- *    Cattura D3=`(0x58,A2)`, azzera `(0x58,A2)`. A3=0x400a9c (slot table).
+ * **Architecture**:
+ *  - PROLOGUE (0x29cce..0x29d48): saves globals 0x690/0x692/0x694/0x696/
  *  - LOOP outer su 25 slot a stride 0x56, iter `(-0x1,A6)` da 0..0x18:
  *      tst.b (0x18,A3); beq → iter advance.
  *      D6 = (0xc,A3)w - g690, A0 = (0x10,A3)w - g692
  *      D1 = (0xc,A3)w >> 3 - g696, D2 = (0x10,A3)w >> 3 - g698
  *      Color tag = (0x1f,A3); range-check 5..0x3b; jump table @ 0x29db4.
  *  - 56 BLOCKs per color tag (boundary check, kick, respawn, bounce):
- *      la maggioranza scrive solo `(0x58,A2)=color, (0x59,A2)=-1` e ritorna.
- *      Altri (0x05 0x0a 0x0b 0x0c 0x0d 0x13..0x16 0x1a..0x1f 0x20..0x22
- *      0x23..0x27) eseguono logica complessa (bounce, respawn, sound).
- *  - Ogni branch termina con `bra.w 0x2b072` (iter advance).
- *  - 0x2b072..0x2b108: epilog di iterazione. Controlla se `(0x58,A2)` matcha
- *    una WHITE-LIST di valori: se sì → ADV (avanza alla prossima iter).
- *    Altrimenti → break out del loop.
- *  - 0x2b108..0x2b22e: EPILOGO finale. Dispatch su D0/D3 in base alla
- *    WHITE-LIST → soundCmdSend(0x43 o 0x44). Poi check globali
- *    0x666/0x668: se != 0 → restore x/y + neg.l vx/vy.
+ *      Other tags (0x05 0x0a 0x0b 0x0c 0x0d 0x13..0x16 0x1a..0x1f 0x20..0x22
+ *      0x23..0x27) run complex logic (bounce, respawn, sound).
+ *  - Each branch ends with `bra.w 0x2b072` (iteration advance).
+ *    0x666/0x668: if != 0 -> restore x/y + neg.l vx/vy.
  *
- * **Scope replica**: PROLOGO + LOOP outer + tutte le 25 iter + jump table
- * con dispatch completo. **BLOCK A simple** (range-check + tag-write) è
- * implementato fully. **BLOCK 0x0a catapult** è implementato con launch,
- * sound-pair e script kick. I **BLOCK 0x12..0x16 e 0x20..0x27** coprono i
- * tubi Beginner con teleport e shape collision `helper1CD00`. I **BLOCK
- * 0x05** implementa il proximity bumper con flag X/Y e sound 0x42. I
- * **BLOCK 0x0b/0x0d** implementano le collisioni gate/bumper Aerial osservate
- * nei collision slot del livello 4. I **BLOCK 0x1a..0x1f** implementano le
- * collisioni dinamiche dei tubi/pareti con flag X/Y e sound 0x42. Gli altri
- * **BLOCK complessi con sub-calls** (sound, helper25C74, divs.w bounce)
- * restano fallthrough no-op (= bra 0x2b072).
- * Questo replica fedelmente l'AVANZAMENTO del loop e i tag-writes di confine,
- * riducendo drift dovuto a tag mancanti.
+ * **Replica scope**: PROLOGUE + outer LOOP + all 25 iterations + jump table
+ * sound-pair and script kick. **BLOCK 0x12..0x16 and 0x20..0x27** cover the
+ * Beginner pipes with teleport and `helper1CD00` shape collision. **BLOCK
+ * 0x05** implements the proximity bumper with X/Y flags and sound 0x42.
+ * **BLOCK 0x0b/0x0d** implement the observed Aerial gate/bumper collisions
+ * and dynamic pipe/wall collisions with X/Y flags and sound 0x42. Other
+ * **complex BLOCKs with sub-calls** (sound, helper25C74, divs.w bounce)
+ * remain fallthrough no-ops (= bra 0x2b072), reducing drift from missing tags.
  *
- * **MAME f12000+ analysis (demo gameplay attive)** — `/tmp/mame_100f.json`:
- * Per obj0 (player1 @ 0x400018), durante 100 frame di demo gameplay,
- * i campi di stato osservati sono **invarianti**: s58=0 (collision tag),
+ * **MAME f12000+ analysis (active demo gameplay)** — `/tmp/mame_100f.json`:
+ * For obj0 (player1 @ 0x400018), during 100 demo gameplay frames,
  * s36=0 (bounce mode), s1a=0 (player normal state), s57=0 (sound code).
- * obj0.vx oscilla in un range stretto (0x23339..0x235FE, ±0x1FF) attorno
- * al valore di partenza 0x23447 con cambi piccoli (~0x100/2-frame) dovuti
- * a `helper182BA` (seek dispatcher). vx NON è azzerato in MAME perché:
- *   1. `FUN_29CCE`: il loop su 25 slot @ 0x400a9c salta gli slot non-attivi
- *      via 0x2b0f6 e continua. Per obj0, nessun BLOCK complesso (bounce,
- *      respawn, sound 0x43/0x44) triggera — flussi `neg.l vx/vy` dell'
- *      epilog (gated da `*0x400666`/`*0x400668`) NON eseguiti perché i
- *      flag globali restano 0 frame after frame.
- *   2. Il path OUT_OF_RANGE in `helper121B8` (gate
- *      `spriteProject1CC62(0) - obj.z > 0x100000`) NON triggera per obj0,
- *      quindi `objectStateEntry25BAE(obj0, 4)` NON viene chiamato.
- *      L'azzeramento di obj+0x00/obj+0x04 (vx/vy) nel prologue comune di
- *      25BAE non avviene mai per obj0 in MAME canonical.
+ * obj0.vx oscillates in a narrow range (0x23339..0x235FE, ±0x1FF) around
+ *      respawn, sound 0x43/0x44) triggers — `neg.l vx/vy` flows in the
+ *   2. The OUT_OF_RANGE path in `helper121B8` (gate
+ *      `spriteProject1CC62(0) - obj.z > 0x100000`) does not trigger for obj0.
+ *      Zeroing obj+0x00/obj+0x04 (vx/vy) in the common prologue of
  *
- * Quindi il NETTO MAME-osservato per `fun_29cce(obj0)` a f12000+ è:
- * **nessuna modifica osservabile** su (workRam[0x18..0x5F]) per il loop
- * outer (no tag match), e **nessun neg.l vx/vy** nell'epilog (flag X/Y
- * globali zero). I globali workRam[0x690..0x69C] vengono solo SNAPSHOT
- * letti, non scritti.
  *
- * **NOTE BIT-PERFECT**:
- *   - Slot stride 0x56 (= 86 byte/slot). Il loop avanza A3 += 0x56 dopo ogni
- *     iter. (-0x1,A6) byte è il counter, range 0..0x18.
- *   - signed/unsigned: tutte le coords sono lette come word16 → ext.l.
- *     `(0xc,A3)w` significa lower word del long32 X; M68k è big-endian quindi
- *     `(0xc,A3)w = (workRam[ofs+0]<<8) | workRam[ofs+1]` (= upper word del
- *     fixed-point 16.16). NB il long32 è offset 0xc..0xf, ma `(0xc,A3)w`
- *     legge i 2 byte a 0xc..0xd = upper word.
- *   - `cmpa.w #imm,A0` = sext-w-to-32 prima di confronto.
+ *     `(0xc,A3)w = (workRam[ofs+0]<<8) | workRam[ofs+1]` (= upper word of
  *   - jmp via PC+offset+D0w*1: D0w = jt[index*2], jmp 0x29db4 + D0w (sign-ext).
  *
- * **Sub callees usati**:
- *  - FUN_158AC = `soundCmdSend158AC` (ad arg byte)
- *  - FUN_2648C = `copyGlobalsToObj` (per BLOCK 0x0a catapult two-player wait)
- *  - FUN_15884 = `soundPair15884` (per BLOCK 0x0a catapult launch)
- *  - FUN_12896 = `helper12896` (per script arm catapulta)
- *  - FUN_1CD00 = `helper1CD00` (shape collision dei tubi Beginner).
- *  - altri (helper25C74, etc.) — solo nei BLOCK COMPLESSI che restano
- *    fallthrough no-op in questa implementazione.
+ * **Used sub-callees**:
+ *  - FUN_158AC = `soundCmdSend158AC` (byte argument)
+ *  - FUN_2648C = `copyGlobalsToObj` (for BLOCK 0x0a catapult two-player wait)
+ *  - FUN_15884 = `soundPair15884` (for BLOCK 0x0a catapult launch)
+ *  - FUN_12896 = `helper12896` (for catapult arm script)
+ *  - FUN_1CD00 = `helper1CD00` (Beginner pipe shape collision).
+ *  - others (helper25C74, etc.) — only in complex BLOCKs that remain
  */
 
 import type { GameState } from "./state.js";
@@ -497,7 +461,6 @@ export interface Sub29CCESubs {
   soundCmdSend158AC?: (state: GameState, byteArg: number) => number;
 }
 
-// ─── Funzione principale ────────────────────────────────────────────────
 
 /** ROM address di `FUN_00029CCE`. */
 export const SUB_29CCE_ADDR = 0x00029cce as const;
@@ -505,10 +468,6 @@ export const SUB_29CCE_ADDR = 0x00029cce as const;
 /**
  * Replica di `FUN_00029CCE`.
  *
- * @param state    GameState corrente. `workRam` mutato in-place.
- * @param slotPtr  Indirizzo assoluto M68k del slot A2 (es. 0x4009A4).
- * @param rom      ROM image (usata dai complex cases implementati).
- * @param subs     Stub injection (opzionale).
  */
 export function fun29CCE(
   state: GameState,
@@ -520,13 +479,11 @@ export function fun29CCE(
   const a2Off = (a2 - WORK_RAM_BASE) >>> 0;
 
   // ── PROLOGUE side-effect (0x29d32..0x29d36) ───────────────────────────
-  // move.b (0x58,A2),D3b   ; D3 = vecchio +0x58 (initial collision tag)
   // clr.b  (0x58,A2)       ; reset collision tag
   const d3 = rB(state, a2Off + F_S58);
   wB(state, a2Off + F_S58, 0);
 
   // ── PROLOGUE: snapshot globals (0x29cec..0x29d2a) ─────────────────────
-  // Letti come word, salvati in stack frame locale (-0x1e..-0x24,-0x16,-0x1c).
   // Servono al loop outer (D6/A0/D1/D2 setup).
   const g690 = rWBE(state, G_690);
   const g692 = rWBE(state, G_692);
@@ -1510,11 +1467,11 @@ function dispatchColor(
   initialVy: number,
   subs: Sub29CCESubs,
 ): DispatchResult {
-  // Range checks per ogni color tag, derivati dai disasm 0x29f40..0x2b06c.
+  // Range checks for each color tag, derived from disasm 0x29f40..0x2b06c.
   // Pattern standard:
-  //   tst.w D1w; blt.w 0x2b072         → skip if D1 < 0
-  //   moveq #hi,D0; cmp.w D1,D0; ble    → skip if D1 >= hi
-  //   tst.w D2w; blt.w 0x2b072         → skip if D2 < 0
+  //   tst.w D1w; blt.w 0x2b072         -> skip if D1 < 0
+  //   moveq #hi,D0; cmp.w D1,D0; ble   -> skip if D1 >= hi
+  //   tst.w D2w; blt.w 0x2b072         -> skip if D2 < 0
   //   moveq #hi,D0; cmp.w D2,D0; ble    → skip if D2 >= hi
   //   write tag, -1; bra 0x2b072
 

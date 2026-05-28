@@ -1,20 +1,15 @@
 /**
- * refresh-frame-10fce.ts — replica `FUN_00010FCE` (19 istr, ~80 byte).
+ * refresh-frame-10fce.ts — `FUN_00010FCE` replica (19 instr, ~80 bytes).
  *
- * "Idle/refresh frame handler": orchestratore chiamato da `mainLoopInit1101E`
- * (case 0 e case 1 timer-expiry) che esegue 12 JSR in sequenza e 2 `addq.b`
- * sul frame-counter globale @ 0x4003F0.
  *
- * **Disasm 0x10FCE..0x1001C** (80 byte, 19 istruzioni):
+ * **Disasm 0x10FCE..0x1001C** (80 bytes, 19 instructions):
  *
- *   00010FCE  jsr 0x00013EE6    ; [stub] FUN_13EE6 — non ancora replicata
  *   00010FD4  jsr 0x000251DE    ; objectScanDispatch251DE
  *   00010FDA  jsr 0x000189E2    ; processAllSprites
  *   00010FE0  jsr 0x000158CC    ; objectUpdatePair158CC
  *   00010FE6  jsr 0x0001493C    ; slotArrayTick
  *   00010FEC  addq.b #1, (0x004003F0).l   ; frame-counter++
  *   00010FF2  jsr 0x00017230    ; dispatchStrings17230
- *   00010FF8  jsr 0x0001912C    ; [stub] FUN_1912C — non ancora replicata
  *   00010FFE  jsr 0x00019BAA    ; stateSub19BAA
  *   00011004  jsr 0x0001844A    ; stateSub1844A
  *   0001100A  jsr 0x00012FD0    ; stateDispatch12FD0
@@ -22,13 +17,7 @@
  *   00011016  jsr 0x00028624    ; objDirtyDispatch28624
  *   0001101C  rts
  *
- * FUN_1912C è disponibile come `refresh-helper-1912c.ts` (replica da agente parallelo)
- * ed è wired come default.
- * FUN_13EE6 è disponibile come `refresh-helper-13ee6.ts` (replica da agente parallelo)
- * ed è wired come default.
  *
- * FUN_1493C è già replicata in `slot-array-tick.ts` ma è qui esposta come
- * opzionale stub per override.
  */
 
 import type { GameState } from "./state.js";
@@ -243,19 +232,15 @@ function objDirtyDispatch28624Default(state: GameState, rom: RomImage): void {
 export const FRAME_CTR_ADDR = 0x004003f0 as const;
 
 /**
- * Replica del dispatcher `FUN_253EC` (0x253EC..0x25918) — versione minima
- * focalizzata sui path osservati per obj0 e altri object slot in demo gameplay.
+ * `FUN_253EC` dispatcher replica (0x253EC..0x25918) — minimal version
+ * focused on paths observed for obj0 and other object slots in demo gameplay.
  *
- * Si appoggia al disasm:
- *   - Prologo: tst.b (0xd8,A2). Se !=0 esegue body intermedio (0x25416..),
- *     altrimenti salta a bound-check + JT (0x2548c).
+ * Based on the disassembly:
+ *   - Prologue: tst.b (0xd8,A2). If !=0, execute the intermediate body (0x25416..),
  *   - JT @ 0x254BA dispatcha per s1a (= (0x1a,A2).b ext.w). Bound 0..0xb.
- *   - Per s1a=0 (path NORMAL per obj0): se (0xcb,A2)==0 → chain
+ *   - For s1a=0 (NORMAL path for obj0): if (0xcb,A2)==0 -> chain
  *     helper253BC + objectStep17F66 + helper121B8.
  *
- * Per s1a∉{0} oppure 0xcb!=0 oppure 0xd8!=0 oppure s1a fuori range, cade
- * sul vecchio behavior conservativo (no chain extra) — coerente con il
- * fatto che obj0 demo gameplay è invariante su s1a=0/cb=0/d8=0 (verificato
  * vs /tmp/mame_100f.json frame 12000..12099).
  */
 export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): void {
@@ -376,7 +361,7 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
     }
   }
 
-  // Path NORMAL per s1a=0 con guard 0xd8==0 e cb==0:
+  // NORMAL path for s1a=0 with guard 0xd8==0 and cb==0:
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
   //     jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
   if (s1a === 0 && sd8 === 0 && scb === 0) {
@@ -676,9 +661,6 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
   }
 
   // Fallback (path non-modellati): chain conservativa esistente —
-  // helper253BC + objectStep17F66 SENZA helper121B8. Equivalente al
-  // wiring precedente; mantiene parity per obj non-obj0 finché i path
-  // restanti del JT non vengono modellati.
   helper253BC(state, a2);
   objectStep17F66(state, a2, {
     fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
@@ -695,105 +677,86 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
 
 export interface RefreshFrame10FCESubs {
   /**
-   * FUN_0x00013EE6 — refreshHelper13EE6 (replica disponibile).
-   * Default: chiama la replica reale (richiede rom).
+   * FUN_0x00013EE6 — refreshHelper13EE6 (replica available).
    */
   fun13EE6?: (state: GameState) => void;
 
   /**
    * FUN_0x000251DE — objectScanDispatch251DE.
-   * Default: chiama la replica reale (richiede rom).
    */
   objectScanDispatch251DE?: (state: GameState) => void;
 
   /**
    * FUN_0x000189E2 — processAllSprites.
-   * Default: chiama la replica reale.
    */
   processAllSprites189E2?: (state: GameState) => void;
 
   /**
    * FUN_0x000158CC — objectUpdatePair158CC.
-   * Default: chiama la replica reale.
    */
   objectUpdatePair158CC?: (state: GameState) => void;
 
   /**
    * FUN_0x0001493C — slotArrayTick.
-   * Default: chiama la replica reale.
    */
   slotArrayTick1493C?: (state: GameState) => void;
 
   /**
    * FUN_0x00017230 — dispatchStrings17230.
-   * Default: chiama la replica reale.
    */
   dispatchStrings17230?: (state: GameState) => void;
 
   /**
-   * FUN_0x0001912C — refreshHelper1912C (replica disponibile).
-   * Default: chiama la replica reale (richiede rom).
+   * FUN_0x0001912C — refreshHelper1912C (replica available).
    */
   fun1912C?: (state: GameState) => void;
 
   /**
    * FUN_0x00019BAA — stateSub19BAA.
-   * Default: chiama la replica reale (richiede rom).
    */
   stateSub19BAA?: (state: GameState) => void;
 
   /**
    * FUN_0x0001844A — stateSub1844A.
-   * Default: chiama la replica reale (richiede rom).
    */
   stateSub1844A?: (state: GameState) => void;
 
   /**
    * FUN_0x00012FD0 — stateDispatch12FD0.
-   * Default: chiama la replica reale.
    */
   stateDispatch12FD0?: (state: GameState) => void;
 
   /**
    * FUN_0x00028624 — objDirtyDispatch28624.
-   * Default: chiama la replica reale (richiede rom per ROM table).
    */
   objDirtyDispatch28624?: (state: GameState) => void;
 }
 
 /**
- * Cycle-accumulator decorator: aggiunge i cicli stimati per `key` al
- * counter CPU di `state.clock.cpuTicks`, poi esegue `fn`.
+ * Cycle-accumulator decorator: adds estimated cycles for `key` to
+ * `state.clock.cpuTicks`, then runs `fn`.
  *
- * Il lookup in `SUB_CYCLE_ESTIMATE` cade su 100 cicli (overhead jsr+rts
- * approssimativo) per chiavi non presenti. Usato dal main-tick per
- * decidere se il body ha sforato `CYCLES_PER_VBLANK` (cadenza 60Hz).
+ * Missing estimates fall back to 100 cycles for JSR/RTS overhead, enough for
+ * cadence decisions around `CYCLES_PER_VBLANK`.
  */
 function callSub(state: GameState, key: string, fn: () => void): void {
   addCpuCycles(state, SUB_CYCLE_ESTIMATE[key] ?? as_u32(100));
   fn();
 }
 
-/** Legge `*0x400394.w` (game mode). Word big-endian. */
 function readGameModeWord(state: GameState): number {
   return (((state.workRam[0x394] ?? 0) << 8) | (state.workRam[0x395] ?? 0)) & 0xffff;
 }
 
-/** Legge `*0x400396.w` (obj count attivi). */
 function readObjCount(state: GameState): number {
   return (((state.workRam[0x396] ?? 0) << 8) | (state.workRam[0x397] ?? 0)) & 0xffff;
 }
 
 /**
- * Replica bit-perfect di `FUN_00010FCE`.
  *
- * Esegue 12 JSR in ordine + 2× `addq.b #1, (0x4003F0).l`.
- * Tutte le JSR sono esposte come subs iniettabili; le 3 non ancora replicate
- * (FUN_13EE6, FUN_1912C) hanno default no-op.
+ * Optional subroutine overrides default to no-op unless wired below.
  *
- * @param state  GameState condiviso (modifica in-place).
- * @param rom    ROM image necessaria per alcune sub di default.
- * @param subs   Callback injection (opzionale).
+ * @param state  Shared GameState, mutated in place.
  */
 export function refreshFrame10FCE(
   state: GameState,
@@ -801,14 +764,11 @@ export function refreshFrame10FCE(
   subs: RefreshFrame10FCESubs = {},
 ): void {
   // ─── Cycle accounting (cadence simulation) ────────────────────────────
-  // Per ogni sub "fat" del body sommiamo una stima cicli M68010 (vedi
-  // SUB_CYCLE_ESTIMATE in m68k/sub-cycle-costs.ts), scegliendo fast/heavy
-  // in base ai gate condizionali letti dal workRam (game-mode word
-  // *0x400394 e obj count *0x400396). Il main-tick legge il totale a fine
-  // body per decidere se sforare la mailbox vblank (cadenza 60Hz).
+  // For each expensive body subroutine, add an M68010 cycle estimate from
+  // SUB_CYCLE_ESTIMATE and select fast/heavy variants for 30/60Hz cadence.
   const gameMode = readGameModeWord(state);
   const objCount = readObjCount(state);
-  // FUN_10FCE overhead (orchestratore, 304 cicli)
+  // FUN_10FCE overhead (orchestrator, 304 cycles).
   addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_10FCE_OVERHEAD"] ?? as_u32(304));
   const updateSpritePos = (s: GameState, objAddr: number): void => {
     spritePosUpdate1BAB2(s, objAddr, {
@@ -870,16 +830,9 @@ export function refreshFrame10FCE(
   };
 
   // 00010FCE: jsr 0x00013EE6
-  // Wire fun1344c = slapsticDispatcher1344C: replica esistente che pulisce
+  // Wire fun1344c = slapsticDispatcher1344C: existing replica that clears
   // PENDING_RECORD @ 0x400970 (cluster Misc Sub-A: byte 0x971..0x973).
-  // Wire fun144e4 = scrollRange144E4: dispatcher di scroll-row che chiama
-  // scriptRectDispatch12DFA (FUN_12DFA) → popola gli slot @ 0x400a9c quando
-  // la riga scroll attraversa una rect-list boundary (cluster slot 0 spawn
-  // @ f12056 in MAME ground truth). FUN_144E4 riceve oldTarget e newTarget
-  // come long sullo stack, ma legge solo i low word — passiamo i due long
-  // così come spinti dal binario e scrollRange144E4 fa il sext16 internamente.
-  // FUN_13EE6: gate *0x400006 → fast quando 0 (attract steady-state).
-  // Heavy quando scroll attivo (gameplay).
+  // @ f12056 in MAME ground truth). FUN_144E4 receives oldTarget and newTarget
   const fun13EE6Key = (state.workRam[0x06] ?? 0) === 0 ? "FUN_13EE6_FAST" : "FUN_13EE6_HEAVY";
   callSub(state, fun13EE6Key, () => {
     (subs.fun13EE6 ?? ((s) => {
@@ -898,10 +851,9 @@ export function refreshFrame10FCE(
   //   Prologo (0x253ec): D1 = (0x1a,A2).b ext.w (= s1a).
   //   Guard @ 0x25412: tst.b (0xd8,A2); beq → 0x2548c (skip "body intermedio").
   //   Body intermedio (0x25416..0x25488): per `(0xd8,A2)!=0` AND s1a∉{2,4,7,a,b},
-  //     gestione transizione `(0x68,A2)` con clamp e flag manip su `(0xd8,A2)`.
-  //   Bound-check @ 0x25490: blt/bgt → epilog se A1<0 o A1>0xb.
+  //     handle `(0x68,A2)` transition with clamp and flag manipulation on `(0xd8,A2)`.
+  //   Bound-check @ 0x25490: blt/bgt -> epilog if A1<0 or A1>0xb.
   //   JT dispatch @ 0x254ba (16 word entries):
-  //     JT[0] = 0x256d2  → s1a=0  ← path normale per obj0 demo gameplay
   //     JT[1] = 0x2574c  → s1a=1
   //     JT[2] = 0x25824  → s1a=2
   //     JT[3] = 0x25514  → s1a=3
@@ -916,23 +868,16 @@ export function refreshFrame10FCE(
   //
   //   PATH s1a=0 @ 0x256d2 (player normal — obj0 demo gameplay):
   //     tst.b (0xcb,A2); beq.b → 0x25730 (NORMAL chain).
-  //     [se cb!=0: branch a respawn-block, fuori scope obj0 demo].
   //     0x25730: jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
   //
-  //   helper121B8 fa: INTEGRATE_VEL (obj.x += obj.vx, obj.y += obj.vy, ecc.)
-  //   + scrive globals 0x684/688/68c/690/692/694 + chiama spritePosUpdate1BAB2
-  //   + spriteRotate1C014 + sub interne (29CCE/1BC88/1924E/25C74).
+  //   helper121B8 runs INTEGRATE_VEL (obj.x += obj.vx, obj.y += obj.vy, etc.)
+  //   plus spriteRotate1C014 and internal subs (29CCE/1BC88/1924E/25C74).
   //
   //   MAME f12000+ per obj0 (player1 @ 0x400018): s1a=0, s18=1, 0xcb=0,
   //   0xd8=0 → path NORMAL stabile, no respawn, no out_of_range. FUN_29CCE
-  //   resta quasi sempre no-op, ma il long demo richiede almeno il blocco
-  //   side-wall tag 0x1f per ripristinare X e invertire vx prima di vectorScale.
-  //   Helper121B8 chiamato qui per obj0 è SAFE (non duplicato con sub158F6:
-  //   sub158F6 itera P1/P2 slot pair @ 0x4009A4/0x400A20, MAI 0x400018 = obj0).
-  // FUN_251DE: cost dominato dalla chain per-obj (helper121B8 ~4500/obj).
+  // FUN_251DE: cost dominated by the per-object chain (helper121B8 ~4500/obj).
   // count<=2 = attract (AVG 11180), count>6 = HEAVY (~60000).
-  // Path "skip respawn" (FAST) raro nel codice attuale (TS wira sempre la
-  // chain helper121B8 nel fun253ECDispatch).
+  // helper121B8 chain inside fun253ECDispatch).
   const fun251DEKey =
     objCount > 6 ? "FUN_251DE_HEAVY" : "FUN_251DE";
   callSub(state, fun251DEKey, () => {
@@ -959,15 +904,13 @@ export function refreshFrame10FCE(
 
   // 00010FE0: jsr 0x000158CC
   // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) e 0x400A20 (P2) chiamando
-  // FUN_158F6(slotPtr). FUN_158F6 ora replicato bit-perfect in `sub-158f6.ts`:
   // dispatch su obj+0x18:
   //   - s18==0 → no-op (skip)
   //   - s18==2 → jsr 25FC2 + 1B9CC + 1281C (state-2 branch)
   //   - else  → jsr 253BC + 182BA + 121B8 (ELSE branch)
   // Plus timer @ +0x6C (state 0x21/0x22 → 0x23 via FUN_160D4) e timer @ +0x56
   // (state 0x24 → 0x23 via FUN_160D4).
-  // FUN_158CC: stima conservativa AVG (attract con 2 slot pair attivi).
-  // Variante FAST quando entrambi slot s18=0 (raro in gameplay attract).
+  // FUN_158CC: conservative AVG estimate (attract with 2 active slot pairs).
   const slotP1State = state.workRam[0x9bc] ?? 0; // P1 slot @ 0x4009A4 + 0x18
   const slotP2State = state.workRam[0xa38] ?? 0; // P2 slot @ 0x400A20 + 0x18
   const fun158CCKey = slotP1State === 0 && slotP2State === 0 ? "FUN_158CC_FAST" : "FUN_158CC";
@@ -976,8 +919,8 @@ export function refreshFrame10FCE(
       objectUpdatePair158CC(s, {
         objectUpdate: (slotPtr: number) => {
           // Task #183: wire fun_1bab2 → spritePosUpdate1BAB2(fun_1CABA → sub1CABA)
-          // anche per slot pair P1/P2, sia nel branch state-2 (1B9CC diretto)
-          // sia nel branch ELSE via helper121B8.
+          // Also for P1/P2 slot pairs, both in the state-2 branch (direct 1B9CC)
+          // and in the ELSE branch via helper121B8.
           const updateSpritePos = (st: GameState, objAddr: number): void => {
             spritePosUpdate1BAB2(st, objAddr, {
               fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); },
@@ -1002,7 +945,6 @@ export function refreshFrame10FCE(
 
   // 00010FE6: jsr 0x0001493C
   // FUN_14966 ora full port: vedi `sub-14966.ts`. Body Path C reset ticker
-  // + advance pc + pos+=vel quando state ∈ {0,3} → chiude cluster 0x13c0.
   const fun1493CKey = gameMode === 4 ? "FUN_1493C_HEAVY" : "FUN_1493C";
   callSub(state, fun1493CKey, () => {
     const replayHandled = runWarmSlotArrayReplayTick(state, rom);
@@ -1025,7 +967,6 @@ export function refreshFrame10FCE(
   });
 
   // 00010FF8: jsr 0x0001912C
-  // Gate: *0x400394.w == 4. Altrimenti fast (rts immediato).
   const fun1912CKey = gameMode === 4 ? "FUN_1912C" : "FUN_1912C_FAST";
   callSub(state, fun1912CKey, () => {
     (subs.fun1912C ?? ((s) => {
@@ -1041,9 +982,6 @@ export function refreshFrame10FCE(
   });
 
   // 00010FFE: jsr 0x00019BAA
-  // Wire fun_19e42 = marbleCellDispatch19E42 (replica bit-perfect già
-  // esistente in marble-cell-dispatch-19e42.ts). Senza wire, il callback
-  // è no-op stub e i globals velocity-per-direction @ 0x674..0x683 non
   // si propagano correttamente, causando cluster drift @ 0x674..0x68B
   // (22 byte) + cascade su obj struct screen-Y.
   const fun19BAAKey =
@@ -1081,14 +1019,10 @@ export function refreshFrame10FCE(
   });
 
   // 0001100A: jsr 0x00012FD0
-  // (subs.fun_11ac2 = soundMaybe11AC2 wiring valutato su bug onda: in browser
-  // peggiora la fisica dei tag 0x05; non cablare senza nuova prova MAME.)
-  // Wire fun_12d46 = claimScriptSlot (alloca slot @ 0x400a9c per script
-  // 0x1d854; gated da gameMode==2 + obj+0x1b∈{9,a} — in demo gameplay
-  // gameMode=1, quindi il gate è falso ma il wire è canonical per parity).
-  // Wire fun_13068 = scriptSlotStep13068 (avanza state dei 25 slot @
-  // 0x400a9c — necessario per progredire s1a=3→2→...→0 dopo l'allocazione
-  // via scrollRange144E4 → scriptRectDispatch12DFA chain).
+  // Wire fun_12d46 = claimScriptSlot: allocates slots at 0x400a9c for script
+  // 0x1d854, gated by gameMode==2 + obj+0x1b in {9,a}.
+  // Wire fun_13068 = scriptSlotStep13068: advances the 25 script slots through
+  // scrollRange144E4 -> scriptRectDispatch12DFA.
   const fun12FD0Key = gameMode === 4 ? "FUN_12FD0_HEAVY" : "FUN_12FD0";
   callSub(state, fun12FD0Key, () => {
     (subs.stateDispatch12FD0 ?? ((s) => {

@@ -2,11 +2,11 @@
  * state-sub-18a88.test.ts — smoke test per `FUN_00018A88`.
  *
  * Verifica:
- *   - Skip totale: count == 0 → 1 particleInit + 1 vblank tick, niente else.
- *   - Skip per-entity: entity[0x18] != 3 → niente body invocato per quella.
+ *   - Total skip: count == 0 -> 1 particleInit + 1 vblank tick, nothing else.
+ *   - Per-entity skip: entity[0x18] != 3 -> no body invoked for that entity.
  *   - Path completo: entity matched + count==1 → no renderTag, count-down
- *     fino a D4 <= 0, side-effect counter byte coerenti.
- *   - 2-player: count==2 → renderTag invocato, attr alterna 0x2000/0x2400.
+ *     until D4 <= 0, with coherent side-effect counter bytes.
+ *   - 2-player: count==2 -> renderTag invoked, attr alternates 0x2000/0x2400.
  *   - Counter clamp: counterA > 99 → clamp a 99; counterB > 20 → clamp a 20.
  *   - D5/D6 swap: entity[0x19] == 0 → D5=0x1000, D6=0x1400; != 0 → invertito.
  */
@@ -115,7 +115,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(r.matchedCount).toBe(0);
     expect(r.matched).toHaveLength(0);
 
-    // particleInit chiamato esattamente 1 volta con (0x1C, 0xFF)
+    // particleInit called exactly once with (0x1C, 0xFF).
     expect(trace.particleInit).toEqual([
       { count: PARTICLE_INIT_COUNT, mode: PARTICLE_INIT_MODE },
     ]);
@@ -125,7 +125,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     // Summary counter intatto
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(summaryPre);
 
-    // Nessun altro sub-call
+    // No other sub-call.
     expect(trace.clearAlphaTiles).toHaveLength(0);
     expect(trace.renderStringVia200).toHaveLength(0);
     expect(trace.renderStringVia142).toHaveLength(0);
@@ -151,7 +151,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.renderStringHelper).toHaveLength(0);
     // summary counter intatto
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(0);
-    // vblank counter solo +1 (pre-loop)
+    // vblank counter only +1 (pre-loop).
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(1);
   });
 
@@ -185,7 +185,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.particleInit).toHaveLength(1);
     // clearAlphaTiles 1 volta
     expect(trace.clearAlphaTiles).toEqual([0]);
-    // renderStringVia200 chiamato 4 volte (header1 + 2x BONUS labels = 3,
+    // renderStringVia200 called 4 times (header1 + 2x BONUS labels = 3,
     // wait: header1 (1) + label BONUS (1) + label TIME (1) = 3, NON 4)
     // Verifica entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
     expect(trace.renderStringVia200).toEqual([
@@ -193,20 +193,20 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
       { entryPtr: ROM_LABEL_BONUS, attr: 0x1000 },
       { entryPtr: ROM_LABEL_TIME, attr: 0x1000 },
     ]);
-    // renderStringVia142 chiamato 1 volta (header2 con D6=0x1400)
+    // renderStringVia142 called once (header2 with D6=0x1400).
     expect(trace.renderStringVia142).toEqual([
       { entryPtr: ROM_HEADER_STRING_2, attr: 0x1400 },
     ]);
     // No renderTag (count != 2)
     expect(trace.renderTag).toHaveLength(0);
 
-    // renderStringHelper chiamato 3 + 88 = 91 volte
+    // renderStringHelper called 3 + 88 = 91 times.
     // (counterA, counterA*1000, counterB, counterB*1000, D4-display) +
     // 88 count-down refresh
     // Wait: 5 fissi (a punti i,j,n,o,q) + 88 count-down = 93
     expect(trace.renderStringHelper).toHaveLength(5 + 88);
 
-    // addToObjectAccum 88 volte con (entityAddr, 250)
+    // addToObjectAccum 88 times with (entityAddr, 250).
     expect(trace.addToObjectAccum).toHaveLength(88);
     expect(trace.addToObjectAccum[0]!.value).toBe(D4_STEP);
     expect(trace.addToObjectAccum[0]!.ptr).toBe(OBJ_BASE_ADDR);
@@ -309,7 +309,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     setByte(s, eOff + OBJ_PLAYER_ID_OFF, 0);
     setWordBE(s, eOff + OBJ_COUNTER_A_OFF, 1);
     setWordBE(s, eOff + OBJ_COUNTER_B_OFF, 0);
-    // Pre-popola entity[0xBC..0xBF] = 0xCAFEBABE
+    // Prepopulate entity[0xBC..0xBF] = 0xCAFEBABE.
     setLongBE(s, eOff + 0xbc, 0xcafebabe);
 
     const { subs, trace } = makeTracingSubs();

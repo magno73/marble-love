@@ -1,8 +1,8 @@
 /**
- * audio/index.ts — namespace barrel per chip audio (YM2151, POKEY in Phase 6).
+ * audio/index.ts — namespace barrel for audio chips (YM2151, POKEY in Phase 6).
  *
- * Pattern coerente con `m6502/index.ts`: tutte le API pubbliche del sound
- * subsystem accessibili come `import { createYM2151, ... } from "audio/index"`.
+ * Pattern consistent with `m6502/index.ts`: every public sound subsystem API
+ * can be accessed as `import { createYM2151, ... } from "audio/index"`.
  */
 
 export {

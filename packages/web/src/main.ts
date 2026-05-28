@@ -1,12 +1,10 @@
 /**
- * main.ts — entry point del frontend.
+ * main.ts - browser frontend entry point.
  *
- * 1. Mostra splash con file picker.
- * 2. Utente seleziona marble.zip → leggiamo con FileReader (mai upload server).
- * 3. Inizializziamo l'engine, cre`iamo PixiJS app, attacchiamo input handlers.
- * 4. Ticking: requestAnimationFrame → engine.tick() → render adapter → PixiJS.
- *
- * Phase 7: questo file diventa funzionale. Per ora è skeleton.
+ * 1. Show splash/file picker when needed.
+ * 2. Read user-selected ROM ZIPs with FileReader; never upload ROM data.
+ * 3. Initialize engine, PixiJS, input, rendering, and sound.
+ * 4. Tick via requestAnimationFrame -> engine.tick() -> renderer -> PixiJS.
  */
 
 import { Application } from "pixi.js";
@@ -85,9 +83,9 @@ const forceBootFlow = searchParams.get("bootFlow") === "1";
 // into the SoundChip PCM path. `soundReplay` remains a separate oracle mode.
 const enableSound = searchParams.get("sound") === "1";
 const runSoundChip = enableSound && searchParams.get("soundChip") !== "0";
-// `?soundReplay=<path>` — bypass A0 cmd-flow blocker: invece di startGame
-// completo, esegui solo SoundChip + cmd-tape replay (audio chip-perfect).
-// Path relativo a /public es. `scenarios/sound/cmd-tape-attract.json`.
+// `?soundReplay=<path>` bypasses the A0 command-flow blocker: instead of a full
+// startGame run, execute only SoundChip + cmd-tape replay (audio chip-perfect).
+// Path relative to /public, for example `scenarios/sound/cmd-tape-attract.json`.
 const soundReplayUrl = searchParams.get("soundReplay");
 const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
 const showObjectDebugOverlay =
@@ -128,9 +126,9 @@ for (const [param, off] of [
   const value = parseOptionalNumberParam(searchParams.get(param));
   if (value !== undefined) debugForcedPlayerBytes.set(off, value & 0xff);
 }
-// ?scenario=NAME — gameplay warm-seed (oracle/scenarios/gameplay/NAME.json).
-// Carica snapshots[0] come warmState. Loop reset a 100 frame (oracle window).
-// Cherry-pick da feature/render-fix-bg (15 scenari MAME 101 snapshot ciascuno).
+// ?scenario=NAME loads the first snapshot from a gameplay oracle JSON.
+// The multi-MB public copies were removed; this legacy diagnostic path is kept
+// only for local maintainer builds that provide matching served fixtures.
 const KNOWN_SCENARIOS = new Set([
   "level1_spawn", "level1_early", "level1_midmap", "level1_obstacle",
   "level1_end", "level2_spawn", "level2_early", "intro_overlay",
@@ -167,8 +165,8 @@ const useBootFlow = shouldUseBootFlow({
 });
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
-// Synthetic demo solo in DEV se non forziamo nient'altro AND non c'è ROM picker
-// E NON c'è autoLoad (autoLoad fa partire startGame con ROM dopo fetch async).
+// Synthetic demo only in dev when no explicit runtime path or ROM picker/autoLoad
+// has been requested. autoLoad starts the real ROM path after async fetch.
 const useSyntheticDemoFrame =
   import.meta.env.DEV &&
   !forceRomPicker &&
@@ -1152,7 +1150,7 @@ btn.addEventListener("click", () => fileInput.click());
 
 // ?autoLoad=1 — DEV ONLY: fetcha /roms/marble.zip + /roms/atarisy1.zip
 // (symlinkati in public/roms) e li carica come File-like → extractRomZipFiles.
-// Per screenshot automatici / E2E test senza file picker.
+// For automatic screenshots / E2E tests without a file picker.
 if (searchParams.get("autoLoad") === "1") {
   void (async () => {
     try {
@@ -1234,21 +1232,19 @@ async function startGame(
   document.body.appendChild(app.canvas);
 
   const s = stateNs.emptyGameState();
-  // ROM real (se utente l'ha caricata) → mainTick legge palette tables.
-  // Altrimenti ROM vuota: tick gira ma le palette anim sono no-op.
+  // Real ROM when the user loaded one; otherwise an empty ROM keeps ticks safe
+  // while palette animations become no-ops.
   const tickRom = rom ?? busNs.emptyRomImage();
   // Boot init: pattern color RAM, palette base, state machine globals.
-  // preloadLevel=0 (level 1) per pre-caricare la tilemap via Codex chain
-  // → state.playfieldRam popolata, renderer mostra subito il livello.
-  // Solo se ROM reale è disponibile (i lookup ROM tile servono per dispatcher).
-  // fullScreenInit popola lo spriteRam (visibili 2 sprite a 160,160) ma cancella
-  // l'HUD "SCORE" — opt-in via ?fullScreenInit=1.
+  // preloadLevel=0 (level 1) preloads the tilemap so the renderer can show the
+  // level immediately. This requires a real ROM because the dispatcher needs
+  // ROM tile lookup tables. fullScreenInit fills spriteRam but clears the SCORE
+  // HUD, so it remains opt-in via ?fullScreenInit=1.
   const useFullScreenInit = searchParams.get("fullScreenInit") === "1";
 
   // ─── MAME warm state (snapshot-hybrid mode) ───────────────────────────────
-  // ?mameDump=1 → fetch /mame_state.json e usa come bootInit({warmState}).
-  // L'engine TS parte da quel state e può continuare via tick(N).
-  // ?mameLive=1 → come mameDump ma NON freeza il tick (lascia evolvere).
+  // ?mameDump=1 fetches /mame_state.json and uses it as bootInit({warmState}).
+  // ?mameLive=1 does the same without freezing ticks.
   let mameDumpFrozen = false;
   type WarmState = NonNullable<NonNullable<Parameters<typeof bootInit>[2]>["warmState"]>;
   const hex2bytes = (hex: string, len: number): Uint8Array => {
@@ -1351,7 +1347,7 @@ async function startGame(
       }
     }
   } else if (scenarioName !== null) {
-    // ?scenario=NAME: load gameplay warm-seed (snapshots[0] da 101-snapshot JSON).
+    // ?scenario=NAME: load the first gameplay warm-state snapshot.
     try {
       const r = await fetch(`/scenarios/gameplay/${scenarioName}.json`);
       if (r.ok) {
@@ -1473,7 +1469,7 @@ async function startGame(
   }
 
   // Default ON: indirect renderer = MAME bit-perfect bitmap_ind16 path.
-  // Disable con ?indirect=0 per fallback al renderer Pixi diretto (debug).
+  // Disable with ?indirect=0 to fall back to the direct Pixi renderer (debug).
   const useIndirect = searchParams.get("indirect") !== "0";
   const renderer = initRenderer(app, rom?.graphics, { indirect: useIndirect });
   if (useIndirect) {
@@ -1504,9 +1500,8 @@ async function startGame(
   let lastLevelTimeOverrideLevel: number | undefined;
   let demoFrame = 0;
 
-  // ─── Mobile/touch UI: pulsanti COIN + START on-screen ───────────────────
-  // Da mobile non ci sono tasti "5" / Enter. Chiamo DIRECT le helper di
-  // inputState (più affidabile su iOS Safari che synthetic KeyboardEvent).
+  // Mobile/touch UI: on-screen COIN and START buttons. Calling InputState
+  // helpers directly is more reliable on iOS Safari than synthetic key events.
   const makeMobileButton = (
     label: string,
     action: () => void,
@@ -2174,9 +2169,8 @@ async function startGame(
   // Initial values from URL (?scrollX=N&scrollY=N) for deep-link sharing.
   const hasScrollOverride = searchParams.has("scrollX") || searchParams.has("scrollY");
   if (hasScrollOverride || warmState === undefined) {
-    // Override solo se l'utente ha esplicitato scrollX/scrollY o se non c'è
-    // warmState. In modalità mameDump/mameLive lo scroll è già impostato
-    // dal warmState (workRam[0x00..0x03]) — non vogliamo zerare.
+    // Override only when the user supplied scrollX/scrollY or when there is no
+    // warmState. mameDump/mameLive already carry scroll in workRam[0x00..0x03].
     const initScrollX = Number(searchParams.get("scrollX") ?? "0") | 0;
     const initScrollY = Number(searchParams.get("scrollY") ?? "0") | 0;
     s.videoScrollX = ((initScrollX % 512) + 512) % 512;
@@ -2201,8 +2195,8 @@ async function startGame(
   // Render mode resolution priority:
   //   ?engine=1  → diagnostic frame
   //   ?demo=1    → demo (synthetic o ROM-backed)
-  //   ?real=1    → forza real anche senza ROM (frame quasi vuoto)
-  //   ROM caricata → REAL (default cambiato 2026-05-08)
+  //   ?real=1    -> force real mode even without ROM (nearly empty frame)
+  //   ROM loaded -> REAL (default changed 2026-05-08)
   //   no ROM in DEV → synthetic demo
   //   altrimenti → real (frame potenzialmente vuoto)
   type RenderMode = "diagnostic" | "demo" | "real";
@@ -2225,8 +2219,8 @@ async function startGame(
 
   app.ticker.add(() => {
     // Trackball MMIO absolute values (0..255 wrap-around). processAxis
-    // engine-side calcola delta = cur - prev (mod 256). Mantenere il valore
-    // assoluto integrato evita spurious delta a key-up.
+    // Engine side computes delta = cur - prev (mod 256). Keeping the
+    // integrated absolute value avoids spurious key-up deltas.
     const p1XAbs = inputState.consumeP1X();
     const p1YAbs = inputState.consumeP1Y();
     const p2XAbs = inputState.consumeP2X();
@@ -2303,19 +2297,13 @@ async function startGame(
       if (heldKeys.has("ArrowDown"))  s.videoScrollY = (s.videoScrollY + scrollStep) % 512;
     }
 
-    // Se mameDump attivo, lo state è frozen → no tick (preserve dump bit-perfect).
-    // Se mameLive (warmState ma non frozen): tick con runMainLoopBody=false
-    // (= preserve warm state al 100% — runMainLoopBody=true introduce drift
-    // via refreshHelper13EE6). Vedi commit B2: zero[0x006] block ha portato
-    // pf 93%→100%. Stesso effetto di disabilitare runMainLoopBody.
+    // mameDump freezes state to preserve the captured dump. mameLive keeps the
+    // warm state live but skips the full main-loop body by default; running the
+    // body from a warm snapshot introduces known refreshHelper13EE6 drift.
     if (!mameDumpFrozen && !debugFreezeActive) {
-      // ?play=1 → forza runMainLoopBody=true ANCHE con warmState (= gameplay
-      //          dal warm bootstrap MAME). Default: solo se non c'è warmState.
-      // ?loopReset=N → replay loop: ogni N tick ricarica warmState (= evita
-      //   drift catastrofico cumulativo che spinge marble fuori viewport).
-      //   Per la demo warm live, defaultiamo a 180 frame: il modello runtime
-      //   è validato bit-perfect sui primi 100 frame e resta visivamente sano
-      //   nel segmento iniziale. `loopReset=0` disabilita il guardrail.
+      // ?play=1 forces runMainLoopBody=true even with warmState, enabling play
+      // from a MAME warm bootstrap. ?loopReset=N reloads warmState every N ticks
+      // to bound cumulative drift in warm-live demos; loopReset=0 disables it.
       const loopResetParam = searchParams.get("loopReset");
       const defaultLoopResetN =
         startLevelPracticeActive
@@ -2422,8 +2410,8 @@ async function startGame(
       const sprNz = countNonZero(s.spriteRam);
       const alpNz = countNonZero(s.alphaRam);
       const colNz = countNonZero(s.colorRam);
-      // Frame stats: re-render-only se in real mode (altrimenti i campi
-      // del frame demo non riflettono lo state).
+      // Frame stats: re-render-only in real mode; otherwise demo-frame fields
+      // do not reflect state.
       let frameStats = "";
       if (renderMode === "real") {
         const opts: Parameters<typeof renderNs.buildFrame>[1] = {};

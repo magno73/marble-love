@@ -1,22 +1,23 @@
 /**
- * ai.ts — comportamento dei nemici di Marble Madness.
+ * ai.ts - Marble Madness enemy behavior placeholder.
  *
- * **Status: STUB.** Per ogni `EnemyKind` va replicata la state machine del
- * binario (Phase 4-6 dopo Phase 2 statica).
+ * The current public runtime is still driven mostly by translated ROM routines.
+ * Enemy-specific state machines should be added here only when backed by MAME
+ * traces or direct binary-oracle comparisons.
  *
- * Note dal gioco originale:
- *  - **Marble Eater**: si nasconde nel pavimento, esce, mangia la biglia se a tiro.
- *  - **Slinky**: insegue la biglia con un pattern semi-elastico.
- *  - **Acid Pool**: pozzanghera che cresce/si sposta, dissolve la biglia al contatto.
- *  - **Hammer**: martello che colpisce verticalmente in pattern fissi.
- *  - **Steelie**: biglia di acciaio che insegue/spinge la biglia del giocatore.
+ * Original game notes:
+ *  - Marble Eater hides in the floor and eats the marble when in range.
+ *  - Slinky chases the marble with an elastic movement pattern.
+ *  - Acid Pool grows/moves and dissolves the marble on contact.
+ *  - Hammer strikes vertically in fixed patterns.
+ *  - Steelie chases and pushes the player marble.
  *
- * L'AI è deterministica e usa l'RNG (`rng.ts`) per i tick di "decisione".
- * Replicare l'ordine delle chiamate RNG è critico per parità.
+ * AI is deterministic and can consume RNG ticks. Preserve call order when
+ * adding behavior.
  */
 
 import type { GameState } from "./state.js";
 
 export function aiTick(_state: GameState): void {
-  // TODO Phase 4-6: dispatch per kind di nemico, replicare state machine 68010.
+  // Future work: dispatch per enemy kind and mirror the 68010 state machines.
 }

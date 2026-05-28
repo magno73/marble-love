@@ -11,8 +11,6 @@
  *   - Per ogni snapshot N successivo:
  *     - bootInit({warmState: snapshots[0]})
  *     - tick(N - baseFrame, {runMainLoopBody:true})
- *     - confronta state TS vs snapshots[N] per ogni regione
- *   - Stampa tabella delta% per regione/frame
  *
  * Uso:
  *   MULTI_DUMP=/tmp/mame_state_multi.json npx tsx packages/cli/src/probe-converge-multi.ts
@@ -47,7 +45,6 @@ function pct(a: Uint8Array, b: Uint8Array, skipStack = false): number {
   let m = 0, counted = 0;
   for (let i = 0; i < t; i++) {
     // workRam[0x1d22..0x1eff] = M68K supervisor stack residue (SSP=0x1F00).
-    // TS non ha M68K stack — skip dal confronto.
     if (skipStack && i >= 0x1d22 && i <= 0x1eff) continue;
     counted++;
     if (a[i] === b[i]) m++;
@@ -89,7 +86,6 @@ const header = "frame   Δticks  workRam%  pfRam%   sprRam%  alphaRam% colorRam%
 console.log(header);
 console.log("-".repeat(header.length));
 
-// Frame base = identità (sanity check)
 console.log(
   `${base.frame.toString().padStart(5)}   ${"0".padStart(6)}  ` +
     `${"100.0".padStart(7)}%  ${"100.0".padStart(6)}%  ${"100.0".padStart(6)}%  ` +

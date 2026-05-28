@@ -3,15 +3,9 @@
  * test-alpha-tilemap-parity.ts — differential FUN_383A vs setAlphaWord +
  * FUN_28C7E vs clearAlphaTilesFromIndex.
  *
- * - FUN_383A: 2 long args (index, value). Scrive un word @ alpha[index*2].
- * - FUN_28C7E: 1 long arg (startRow). Cancella tutti i tile da
- *   `startRow*64` a `0x780`. Internamente chiama FUN_021E (= FUN_383A jmp).
  *
- * Per ogni caso:
  *   1. Reset alpha RAM (4 KB) a un sentinel pattern
- *   2. Run binario via callFunction
- *   3. Run TS sullo stesso state
- *   4. Confronta alpha RAM byte-by-byte
+ *   3. Run TS on the same state
  *
  * Uso: npx tsx packages/cli/src/test-alpha-tilemap-parity.ts [N]
  */
@@ -98,7 +92,7 @@ async function main(): Promise<void> {
     const index = Math.floor(rng() * 0x780);
     const value = Math.floor(rng() * 0x10000) & 0xffff;
 
-    // Init alpha RAM con sentinel pattern (0xAA byte)
+    // Init alpha RAM with sentinel pattern (0xAA byte).
     for (let j = 0; j < 0x1000; j++) {
       pokeMem(cpu, 0xa03000 + j, 1, 0xAA);
       state.alphaRam[j] = 0xAA;
@@ -136,9 +130,7 @@ async function main(): Promise<void> {
   }
 
   // ─── clearAlphaTilesFromIndex (FUN_28C7E) ─────────────────────────────
-  // Ogni iterazione del binario chiama FUN_021E che è ~10 istruzioni e
-  // itera fino a 0x780 volte. Worst case startRow=0: 1920 chiamate × ~10
-  // istruzioni = ~20k step. Manteniamo un budget largo.
+  // The routine is roughly 20k instruction steps; keep a wide budget.
   console.log(`\n=== clearAlphaTilesFromIndex (FUN_28C7E) — ${n} casi ===`);
 
   let ok2 = 0;
@@ -147,10 +139,9 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // startRow in [0, 31] — copre tutti i casi pratici incluso il no-op (30)
     const startRow = Math.floor(rng() * 31);
 
-    // Init alpha RAM con sentinel pattern (0xCC)
+    // Init alpha RAM with sentinel pattern (0xCC).
     for (let j = 0; j < 0x1000; j++) {
       pokeMem(cpu, 0xa03000 + j, 1, 0xCC);
       state.alphaRam[j] = 0xCC;

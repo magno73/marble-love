@@ -1,4 +1,4 @@
-// probe-0700-slapstic-bank.ts — verifica stato slapstic bank durante TS body f12002
+// probe-0700-slapstic-bank.ts - checks slapstic bank state during TS body f12002.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -8,7 +8,7 @@ const rom = busNs.emptyRomImage();
 const rawRom = readFileSync(resolve("ghidra_project/marble_program.bin"));
 rom.program.set(rawRom.subarray(0, rom.program.length));
 
-// FIX: popola slapsticBanks dal raw blob (probe-only path).
+// Probe-only path: populate slapsticBanks from the raw blob.
 rom.slapsticBanks.set(rawRom.subarray(0x80000, 0x88000));
 
 const groundTruth = JSON.parse(readFileSync("/tmp/mame_100f.json", "utf-8")) as {

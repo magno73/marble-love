@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 import { specialAttract } from "../src/special-attract.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Helper: scrive un int16 (signed) big-endian @ workRam[0x3EA..0x3EB]. */
+/** Helper: writes a signed big-endian int16 @ workRam[0x3EA..0x3EB]. */
 function setStage(state: ReturnType<typeof emptyGameState>, value: number): void {
   const u16 = (value & 0xffff) >>> 0;
   state.workRam[0x3ea] = (u16 >>> 8) & 0xff;
@@ -65,7 +65,7 @@ describe("specialAttract (FUN_288F8)", () => {
 
   it("S = -1 (signed underflow) → soundCommand(0x61) (low path, signed compare)", () => {
     const s = emptyGameState();
-    // 0xFFFF letto come int16 = -1, signed minore di 0x0C.
+    // 0xFFFF read as int16 = -1, signed less than 0x0C.
     setStage(s, -1);
     const calls: number[] = [];
     specialAttract(s, { soundCommand: (c) => calls.push(c) });

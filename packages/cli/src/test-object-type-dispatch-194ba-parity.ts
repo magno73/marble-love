@@ -13,16 +13,16 @@
  *
  * **Strategia parity**:
  *   - Tutte e 3 le JSR (`FUN_0001960E`, `FUN_0001973C`, `FUN_0001953E`) sono
- *     **stubbate con RTS** (0x4E75): l'unico side-effect osservabile lato
- *     binario rimane la scrittura a `obj+0x1C` (solo case 2).
+ *     **stubbed with RTS** (0x4E75): the only observable side-effect on the
+ *     binary side effect left is the write to `obj+0x1C` (case 2 only).
  *   - TS: `subs.{fun_1960e, fun_1973c, fun_1953e} = no-op` → matching dello
  *     stub.
  *   - Compare workRam @ obj+0..0x2F (48 byte) — copre tutti gli offset
- *     letti/scritti dal dispatcher.
+ *     read/written by the dispatcher.
  *
  * **Suite** (500 totali):
  *   - A: kind ∈ [-2, -1, 0, 1, 2, 3, 4, 0x7F] random — copre tutti i branch.
- *   - B: kind == 2 forzato, sub-type ∈ {7, 8, default random} — copre i 3
+ *   - B: forced kind == 2, sub-type in {7, 8, default random} — covers the 3
  *     rami di case 2.
  *   - C: kind random byte, sub-type random byte, struct random — fuzz puro.
  *   - D: edge cases (kind = 0x80/0xFF/0x7F/0x00/0x01/0x02; sub-type 0x00/
@@ -55,11 +55,10 @@ const FUN_1953E = 0x0001953e;
 
 const OBJ_BASE = 0x00401d00;
 /** Compare range: copre KIND_OFFSET=0x1A, FN_PTR_OFFSET=0x1C..0x1F,
- *  SUBTYPE_OFFSET=0x25 e tutto l'eventuale "padding" attorno per
- *  catturare scritture inattese. */
+ *  SUBTYPE_OFFSET=0x25 and surrounding padding to catch unexpected writes. */
 const COMPARE_SIZE = 0x30;
 
-/** Patch tutti i callee con RTS (0x4E75). */
+/** Patch all callees with RTS (0x4E75). */
 function patchSubs(cpu: CpuSession): void {
   for (const addr of [FUN_1960E, FUN_1973C, FUN_1953E]) {
     pokeMem(cpu, addr + 0, 1, 0x4e);
@@ -161,7 +160,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x194ba);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  // ─── Suite A: kind ∈ campione di 8 valori, struct random ───────────
+  // Suite A: kind in a sample of 8 values, random struct.
   console.log(
     `\n=== objectTypeDispatch194BA (FUN_194BA) — Suite A: kind sampled — ${perSuite} casi ===`,
   );
@@ -175,7 +174,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: kind == 2 forzato, sub-type ∈ {7, 8, default} ────────
+  // ─── Suite B: forced kind == 2, sub-type in {7, 8, default} ────────
   console.log(
     `\n=== Suite B: kind=2 sub-type 7/8/default — ${perSuite} casi ===`,
   );

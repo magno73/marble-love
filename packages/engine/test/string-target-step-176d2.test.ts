@@ -1,7 +1,6 @@
 /**
  * string-target-step-176d2.test.ts — smoke tests per `stringTargetStep176D2`.
  *
- * Bit-perfect parity validata vs binary in
  * `packages/cli/src/test-string-target-step-176d2-parity.ts`.
  */
 
@@ -80,8 +79,8 @@ function setupChain(args: {
   s: GameState;
   objAddr: number;
   idx: number;
-  p1Addr: number; // dove vive il long-pointer di livello 1 (= ptr ptr)
-  bboxAddr: number; // valore puntato da p1 (o BBOX_SENTINEL)
+  p1Addr: number;
+  bboxAddr: number;
   slotCx?: number;
   slotCy?: number;
   curX?: number;
@@ -108,7 +107,6 @@ function setupChain(args: {
   setWord(s, objAddr + OBJ_X_LONG_OFF, args.curX ?? 0);
   setWord(s, objAddr + OBJ_Y_LONG_OFF, args.curY ?? 0);
 
-  // se bbox è in workRam, scrivilo
   if (
     args.bbox !== undefined &&
     bboxAddr !== BBOX_SENTINEL &&
@@ -226,8 +224,6 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
   it("low 16 bit del long sono sempre azzerati", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
-    // pre-fill obj+0xC..+0xF e obj+0x10..+0x13 con valori non-zero per
-    // verificare che la funzione li azzeri.
     setLong(s, objAddr + OBJ_X_LONG_OFF, 0xdeadbeef);
     setLong(s, objAddr + OBJ_Y_LONG_OFF, 0xcafebabe);
 
@@ -240,9 +236,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
       slotCx: 0,
       slotCy: 0,
       // curX deriva da (0xDEAD as i16) = -8531; curY = (0xCAFE as i16) = -13570
-      // ma li sovrascriviamo dopo:
     });
-    // sovrascrivi solo il word alto, lasciando il word basso non-zero
     setWord(s, objAddr + OBJ_X_LONG_OFF, 100);
     s.workRam[offOf(objAddr + OBJ_X_LONG_OFF) + 2] = 0xff;
     s.workRam[offOf(objAddr + OBJ_X_LONG_OFF) + 3] = 0xff;
@@ -400,17 +394,16 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
   it("nessun side-effect fuori obj+0xC..0x13 (8 byte totali)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
-    // Pre-fill workRam con pattern 0xAA per rilevare scritture spurious
+    // Pre-fill workRam with pattern 0xAA to detect spurious writes.
     s.workRam.fill(0xaa);
 
-    // Setup minimo (sovrascrive i byte di setup ma non altri)
     setupChain({
       s,
       objAddr,
       idx: 0,
       p1Addr: 0x401d00,
       bboxAddr: BBOX_SENTINEL,
-      curX: 4, // target è 4 con default → step=0
+      curX: 4,
       curY: 4,
       slotCx: 0,
       slotCy: 0,
@@ -421,14 +414,11 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
 
     stringTargetStep176D2(s, objAddr);
 
-    // Differenza esattamente nei byte obj+0xC..+0x13
     const writtenOffs = new Set<number>();
     for (let i = 0; i < s.workRam.length; i++) {
       if (s.workRam[i] !== pre[i]) writtenOffs.add(i);
     }
     // I 4 byte di obj+0xC..+0xF: pre era 0xAA0000AA + l'high word=4 da setupChain.
-    // Lo store finale = 0x00040000. Quindi cambiati: byte 0, byte 2, byte 3
-    // (byte 1 era già 0x04). Stesso per obj+0x10..+0x13.
     for (const off of writtenOffs) {
       const a = off + WORK_RAM_BASE;
       const inX = a >= objAddr + OBJ_X_LONG_OFF && a < objAddr + OBJ_X_LONG_OFF + 4;

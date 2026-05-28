@@ -308,6 +308,7 @@ describe("Task A main-loop init modules", () => {
     s.workRam[0x18 + 0xc2] = 0x41;
     s.workRam[0x18 + 0x18] = 2;
     s.playfieldRam.fill(0xaa);
+    s.spriteRam.fill(0xbb);
     s.workRam.fill(0, 0x1f7a, 0x1f81);
 
     mainLoopInit1101E(s, rom, {
@@ -327,6 +328,7 @@ describe("Task A main-loop init modules", () => {
       cursor: 0,
     });
     expect(s.playfieldRam.every((value) => value === 0)).toBe(true);
+    expect(s.spriteRam.every((value) => value === 0)).toBe(true);
     expect(highScoreRowHex(s, 0)).toBe("0038a412d2");
     expect(Buffer.from(s.workRam.slice(0x1f7a, 0x1f81)).toString("hex")).not.toBe("00000000000000");
   });

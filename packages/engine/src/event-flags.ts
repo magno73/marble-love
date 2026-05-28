@@ -5,10 +5,8 @@
  *   - I produttori settano bit specifici per signalare eventi
  *     (es. "biglia rotolata", "nemico spawnato", ...)
  *   - I consumatori chiamano `consumeEventFlag` (FUN_2548) per pop il bit
- *     più basso. La funzione fa shift-right del word e ritorna il bit
  *     uscito (in D0).
  *
- * Verificato bit-perfect vs `FUN_00002548` tramite test-event-flags-parity.
  */
 
 import type { GameState } from "./state.js";
@@ -42,9 +40,7 @@ export const OBJ_FIELD_ACCUM = 0xbc as const;      // u32 BE: long accumulator
  *   clr.l D0
  *   rts
  *
- * Side effect: *0x400006 viene shifted right by 1 (consuma il bit).
  *
- * Ritorna: 1 se il bit consumato era 1, altrimenti 0.
  */
 export function consumeEventFlag(state: GameState): number {
   const high = state.workRam[EVENT_FLAGS_OFF] ?? 0;
@@ -57,20 +53,20 @@ export function consumeEventFlag(state: GameState): number {
   return bit0;
 }
 
-/** Offset edge detector previous state (assoluto 0x40017C). */
+/** Previous-state edge detector offset (absolute 0x40017C). */
 export const EDGE_DETECTOR_PREV_OFF = 0x17c as const;
 
 /**
- * Replica `FUN_00000F6A` — rising edge detector + high nibble passthrough.
+ * `FUN_00000F6A` replica — rising edge detector + high nibble passthrough.
  *
- * Disassembly (13 istruzioni):
+ * Disassembly (13 instructions):
  *   D1 = *0x400000.w
  *   D2 = D1 & 0xF000          ; high nibble
  *   D1 = D1 & 0x0003           ; low 2 bits = current state
  *   D3 = D1
  *   D0 = *0x40017C.w           ; previous saved state (also low 2 bits used)
  *   D0 ^= D1                   ; bits that changed
- *   D1 = D0 & D3               ; bits che sono CAMBIATI E sono SET ora = rising edges
+ *   D1 = D0 & D3               ; bits that changed and are set now = rising edges
  *   *0x40017C.w = D3            ; save current state for next call
  *   D0 = sext_l(D2)            ; D0 = high nibble (shifted in word position)
  *   D1 = sext_l(D1)            ; D1 = rising-edge bits
@@ -79,7 +75,6 @@ export const EDGE_DETECTOR_PREV_OFF = 0x17c as const;
  * Use case: detect which bits of `*0x400000.w` low 2 bits transitioned from 0
  * to 1 since last call. Returned together with high nibble of input.
  *
- * **Verificato bit-perfect** vs `FUN_00000F6A` tramite differential test.
  */
 export function detectRisingEdgesAndPass(state: GameState): number {
   const flagWord =
@@ -92,8 +87,8 @@ export function detectRisingEdgesAndPass(state: GameState): number {
     ((state.workRam[EDGE_DETECTOR_PREV_OFF] ?? 0) << 8) |
     (state.workRam[EDGE_DETECTOR_PREV_OFF + 1] ?? 0);
 
-  // Rising edges: bits set NOW that were different from prev = bits che sono
-  // appena diventati 1 (oppure sono cambiati in qualche modo, AND mask current).
+  // Rising edges: bits set now that differed from prev, i.e. bits that just
+  // became 1 (or changed in any way, masked by current).
   const xor = (prevSaved ^ currentLow2) & 0xffff;
   const risingBits = xor & currentLow2;
 
@@ -111,20 +106,19 @@ export function detectRisingEdgesAndPass(state: GameState): number {
 }
 
 /**
- * Replica `FUN_00028608` — addToObjectAccumAndFlag(objPtr, value).
+ * `FUN_00028608` replica — addToObjectAccumAndFlag(objPtr, value).
  *
- * Disassembly (7 istruzioni):
+ * Disassembly (7 instructions):
  *   A0 = obj pointer (arg1 long)
  *   D0 = value (arg2 long)
  *   *(0xBC, A0) += D0           ; obj.accumulator += value (long add BE)
  *   D0 = 1
  *   D1 = obj.+0x19 (byte = type)
  *   D0 = 1 << D1   ; asl.l D1, D0
- *   *0x40039C |= D0.b           ; setta bit `type` in flag byte
+ *   *0x40039C |= D0.b           ; set bit `type` in flag byte
  *   rts
  *
  * Use case: aggiunge contributo (es. score, time bonus) all'accumulator
- * dell'obj e segnala l'evento nella bitmap globale.
  */
 export function addToObjectAccumAndFlag(
   state: GameState,
@@ -148,9 +142,8 @@ export function addToObjectAccumAndFlag(
 
   // Set bit `type` in flag byte at 0x40039C
   const type = state.workRam[objOff + OBJ_FIELD_TYPE] ?? 0;
-  // asl.l D1, D0 — shift count è D1.b (low byte). 68k cap a 64.
-  // shift >= 32 → D0 = 0 (per long shift)
-  // Per byte OR usa solo low 8 bit del result.
+  // shift >= 32 -> D0 = 0 for long shifts.
+  // Byte OR uses only the low 8 result bits.
   let mask = 0;
   if (type < 32) mask = (1 << type) >>> 0;
   // OR in flag byte (low 8 bit only since `or.b D0b, ...`)
@@ -165,23 +158,21 @@ export function addToObjectAccumAndFlag(
  *   D0 = arg long
  *   if D0 >= 2 (unsigned): D0 -= 2     ; (cmpi #2 + bcs poi subq.l 2)
  *   D1 = 1
- *   D1 <<= D0   ; asl.l (D0 capped a 64; per D0 >=32 il behaviour 68k è
- *               ;  D1 = 0 dopo 32 shift)
  *   *0x401F5E |= D1
  *
- * Mappatura del bit:
+ * Bit mapping:
  *   arg = 0 → bit 0
  *   arg = 1 → bit 1
- *   arg = 2 → bit 0 (riusato come "tipo evento 2")
+ *   arg = 2 → bit 0 (reused as "event type 2")
  *   arg = 3 → bit 1
  *   arg = N>=2 → bit (N-2)
  *
- * Side effect: bit settato in u32 BE @ 0x401F5E (status flag bitmap).
+ * Side effect: bit set in BE u32 @ 0x401F5E (status flag bitmap).
  */
 /**
- * Replica `FUN_000052A2` — `anyStatusFlagsSet()`.
+ * `FUN_000052A2` replica — `anyStatusFlagsSet()`.
  *
- * Disassembly (4 istruzioni):
+ * Disassembly (4 instructions):
  *   move.l (0x00401F76).l, D0    ; D0 = secondary flags long
  *   or.l   (0x00401F5E).l, D0    ; D0 |= primary status flags long
  *   beq.b  skip                   ; if D0 == 0: skip (D0 stays 0)
@@ -189,10 +180,8 @@ export function addToObjectAccumAndFlag(
  *   skip:
  *   rts
  *
- * Ritorna 1 se almeno un bit è set in *0x401F5E o *0x401F76, altrimenti 0.
  * Use case: "any pending status event?" check.
  *
- * **Verificato bit-perfect** vs `FUN_000052A2` tramite differential test.
  */
 export function anyStatusFlagsSet(state: GameState): number {
   const primary =
@@ -211,7 +200,7 @@ export function anyStatusFlagsSet(state: GameState): number {
 export function setFlagBit(state: GameState, bitNum: number): void {
   const arg = bitNum >>> 0; // unsigned
   let shift = arg >= 2 ? (arg - 2) : arg;
-  // m68k asl.l con shift count > 31 produce 0 (i bit escono completamente)
+  // m68k asl.l with shift count > 31 produces 0 (all bits shift out).
   shift = shift & 0x3f; // 68k usa low 6 bits per shift count, ma >=32 → 0
   const mask = shift >= 32 ? 0 : ((1 << shift) >>> 0);
 

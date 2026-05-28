@@ -2,14 +2,10 @@
 /**
  * test-sub-1bb08-parity.ts — differential FUN_0001BB08 vs `sub1BB08`.
  *
- * FUN_0001BB08 (8 istr, 0x1E byte): copia X/Y word da entity+0xC/+0x10 ai
- * globals 0x400690/0x400692 + chiama FUN_0001BB50 (sub-cell + cell + dirty).
  *
  * **Strategia parity**:
- *   - FUN_0001BB50 (callee, 19 istr) LASCIATA LIVE: piccola, pura, già
  *     replicata da `updateScrollCoords1BB50`. La replica TS include la
  *     callee inline (cfr. scroll-coord-helpers.ts).
- *   - Confronto workRam @ 0x400690..0x4006A3 (range modificato: X/Y,
  *     sub-cell, cell, dirty flag).
  *
  * Uso: npx tsx packages/cli/src/test-sub-1bb08-parity.ts [N]

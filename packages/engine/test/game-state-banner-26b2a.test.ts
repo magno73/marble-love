@@ -45,7 +45,7 @@ describe("FUN_26B10 paletteCopy26B10", () => {
       const got = (state.colorRam[dst] << 8) | (state.colorRam[dst + 1] ?? 0);
       expect(got).toBe(expected);
     }
-    // colorRam[0x40..] non toccato
+    // colorRam[0x40..] not touched.
     expect(state.colorRam[0x40]).toBe(0);
   });
 });
@@ -63,7 +63,7 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
     for (let i = 0; i < 195; i++) {
       writeRomLong(rom, 0x20534 + i * 4, 0x00400100 + i * 2);
     }
-    // Banner mode 0 src @ 0x1FC10 con valori marker
+    // Banner mode 0 src @ 0x1FC10 with marker values.
     for (let i = 0; i < 195; i++) {
       writeRomWord(rom, 0x1fc10 + i * 2, 0xa000 + i);
     }

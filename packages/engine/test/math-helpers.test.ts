@@ -1,7 +1,7 @@
 /**
  * Test absLong (FUN_1216A / FUN_1B5A6) + negateIfPositive (FUN_1B5B4).
  *
- * Bit-perfect verificati vs binary tramite `cli/src/test-math-helpers-parity.ts`.
+ * Bit-perfect verified vs binary via `cli/src/test-math-helpers-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";

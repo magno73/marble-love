@@ -3,16 +3,16 @@
  * test-object-array-init-25b40-parity.ts — differential FUN_00025B40 vs
  * objectArrayInit25B40.
  *
- * `FUN_00025B40` (110 byte): popola 3 array (A1+0x74, +0x84, +0x94, ciascuno
- * 8 word) leggendo 2 tabelle ROM @ 0x1D3F4 e 0x1D3FC, e azzera A1+0xCA.
+ * `FUN_00025B40` (110 bytes): populates 3 arrays (A1+0x74, +0x84, +0x94, each
+ * 8 words) by reading 2 ROM tables @ 0x1D3F4 and 0x1D3FC, then clears A1+0xCA.
  *
  * Strategia parity (no sub-jsr, modulo puro):
- *   1. Per ogni caso random, randomizziamo:
+ *   1. For each random case, randomize:
  *        - objPtr in {0x401000, ..., 0x401C00} (12 candidati)
  *        - byte di "scratch" su tutti i campi target di A1 (per check write)
  *        - byte vicini ai campi target (per check no-spill)
- *   2. Esegui binario reale @ FUN_00025B40.
- *   3. Esegui TS objectArrayInit25B40 su workRam mirror, con stessa ROM.
+ *   2. Run the real binary @ FUN_00025B40.
+ *   3. Run TS objectArrayInit25B40 on the workRam mirror, with the same ROM.
  *   4. Confronta i 24 word + 1 byte target su A1 + i vicini.
  *
  * Uso: npx tsx packages/cli/src/test-object-array-init-25b40-parity.ts [N]
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // ROM mirror per il TS module (leggiamo solo program 0x1D3F4..0x1D403).
+  // ROM mirror for the TS module; only program 0x1D3F4..0x1D403 is read.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
@@ -101,8 +101,8 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Range scritti: word @ +0x74..+0xA3 (24 word contigue) + byte @ +0xCA.
-  // Vicini (offset NON toccati): +0x70..+0x73, +0xA4, +0xA5, +0xB0, +0xC0,
+  // Written ranges: word @ +0x74..+0xA3 (24 contiguous words) + byte @ +0xCA.
+  // Neighbors (untouched offsets): +0x70..+0x73, +0xA4, +0xA5, +0xB0, +0xC0,
   //   +0xC8, +0xC9, +0xCB, +0xCC, +0xCD.
   const NEIGHBORS = [
     0x70, 0x71, 0x72, 0x73,
@@ -120,11 +120,11 @@ async function main(): Promise<void> {
     const ptr = pickPtr();
     const off = ptr - WORK_RAM_BASE;
 
-    // Random scratch su A1 (per ogni offset target diamo un valore non-zero).
+    // Random scratch on A1; every target offset receives a non-zero value.
     const scratchObj = new Uint8Array(0x100);
     for (let k = 0; k < 0x100; k++) scratchObj[k] = rb();
 
-    // Vicini sentinel (forza valori distintivi)
+    // Neighbor sentinels, forcing distinctive values.
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBORS.length; idx++) {
       const nOff = NEIGHBORS[idx]!;
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     }
 
     // ── Mirror su state.workRam ────────────────────────────────────────
-    // Reset workRam per evitare cross-contaminazione con caso precedente.
+    // Reset workRam to avoid cross-contamination from the previous case.
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Object scratch nel mirror
     for (let k = 0; k < 0x100; k++) {
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // Vicini sentinel: NON devono cambiare
+    // Neighbor sentinels must not change.
     let neighborFail: FailRecord | null = null;
     for (const nOff of NEIGHBORS) {
       const expected = neighborSentinels[nOff]!;

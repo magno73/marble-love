@@ -1,51 +1,28 @@
 /**
- * slapstic-lookup.ts — replica `FUN_0002FFB8` (32 byte): lookup in ROM
- * slapstic-protetta, IRQ-safe.
+ * slapstic-lookup.ts - replica `FUN_0002FFB8` (32 byte): IRQ-safe lookup in
+ * Slapstic-protected ROM.
  *
- * Sub di servizio chiamata da 5 helper diversi (FUN_1344C, FUN_13EE6,
- * FUN_16EC6, FUN_16F6C, FUN_1A444, FUN_1ACE0). Ricevono come arg long
- * un word esteso (`ext.l`); la funzione usa quel word come **indice** per
- * leggere una `move.w` dalla ROM slapstic-protetta `0x080000-0x087FFF`.
+ * Callers such as FUN_16EC6, FUN_16F6C, FUN_1A444, and FUN_1ACE0 pass a long
+ * argument whose low word indexes a `move.w` read from protected ROM
+ * `0x080000-0x087FFF`.
  *
- * **Disasm 0x2FFB8..0x2FFD8** (32 byte, 1 word arg via stack, ritorna word in D0w):
  *
- *   move    SR,D1w                        ; salva interrupt mask
- *   move    #0x2700,SR                    ; disabilita IRQ (level 7 mask)
+ *   move    SR,D1w                        ; save interrupt mask
  *   move.w  (0x080000).l, D0w             ; "trigger" slapstic (low word di D0
- *                                         ;  scartata subito dopo)
- *   move.w  (0x6,SP), D0w                 ; D0w = arg word (caller ha pushato
- *                                         ;  un long ext.l da word)
- *   lea     (0x080080).l, A0              ; A0 = 0x80080 (base tabella)
- *   asl.l   #0x5, D0                      ; D0 (long) <<= 5  ; sul low word
- *                                         ;  l'effetto utile è (arg<<5)&0xFFFF
+ *   move.w  (0x6,SP), D0w                 ; D0w = arg word (caller pushed
+ *                                         ;  a long ext.l from word)
+ *   asl.l   #0x5, D0                      ; D0 (long) <<= 5; low-word index
  *   move.w  (0x0,A0,D0w*0x1), D0w         ; D0w = readWord(A0 + signExt16(D0w))
- *   move    D1w,SR                        ; ripristina IRQ mask
- *   rts                                   ; → D0w = word letta
+ *   move    D1w,SR                        ; restore IRQ mask
  *
- * **Convenzione caller**: `move.l D0,-(SP) ; jsr ; addq.l #4, SP`. L'arg è la
- * low word del long pushato (ext.l da word). I caller di Marble passano valori
- * molto piccoli (tipicamente 0..3 o un word da `0x40066x`), quindi l'indice
- * resta nel range [0..0x60] e l'address letto è dentro la slapstic ROM
  * (`0x80080..0x800E0`).
  *
  * **Slapstic & side effects**:
- *   La prima `move.w (0x80000)` è la classica "trigger" del slapstic chip 103:
- *   il valore letto è scartato subito dopo, ma il chip cambia stato interno
- *   (selezione bank). Nel modello bus.ts attuale (Phase 4d) il chip non è
- *   emulato come state machine: l'area `0x80000-0x87FFF` è ROM piatta
- *   (bank 0 sempre attivo). Il binario oracle (Musashi) si comporta allo stesso
- *   modo, quindi la parità è verificata su lookup byte-per-byte dal blob ROM.
  *
- *   `move #0x2700, SR` mette il CPU in supervisor + maschera IRQ7. È necessario
- *   nel binario perché un IRQ in mezzo al sequenza slapstic perderebbe la
- *   sincronia col chip. Nel modello TS non c'è chip — è no-op.
  *
- * **Return value**: low word di D0 (D0w). Le bit alte di D0 sono lasciate "dirty"
- * dal `asl.l` (entrano i bit alti del'arg + i residui del caller); MA i caller
- * conosciuti **scartano D0** subito dopo (lo sovrascrivono o non lo usano).
- * Esponiamo solo il word lookup come ritorno.
+ * **Return value**: low word of D0 (D0w). High bits of D0 remain dirty after
+ * `asl.l`; callers use the low word.
  *
- * Bit-perfect verificato vs binary tramite `cli/src/test-slapstic-lookup-parity.ts`
  * (500/500 cases).
  */
 
@@ -53,10 +30,8 @@ import type { RomImage } from "./bus.js";
 import { slapsticTick, type SlapsticFsm } from "./m68k/slapstic-103.js";
 import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
 
-/** Base della tabella indicizzata, dentro la slapstic-protected ROM region. */
 export const SLAPSTIC_LOOKUP_BASE = 0x080080 as const;
 
-/** Indirizzo della "trigger read" che il binario fa prima del lookup. */
 export const SLAPSTIC_TRIGGER_ADDR = 0x080000 as const;
 
 type SlapsticRuntimeRom = {
@@ -82,42 +57,30 @@ function hasLoadedSlapsticBanks(rom: RomImage): rom is RomImage & Required<Slaps
 }
 
 /**
- * Replica `FUN_0002FFB8` — lookup IRQ-safe in ROM slapstic.
+ * Replica `FUN_0002FFB8` - IRQ-safe lookup in Slapstic ROM.
  *
- * Calcola `idx = signExt16((arg << 5) & 0xFFFF)` e ritorna la word letta a
- * `0x80080 + idx`, big-endian, dal blob ROM.
+ * Reads a big-endian word from `0x80080 + idx` in the ROM blob.
  *
- * Gli accessi sono modellati come read piatti dalla ROM image:
- *   - `rom.program[address]` per gli offset `0x080000..0x087FFF` (slapstic
- *     bank 0, l'unico modellato attualmente)
- *   - per address < `0x080000` cade nella program ROM principale (fallback
- *     coerente col disasm: con arg con bit 10 set, `(arg<<5)&0xFFFF` può
- *     essere ≥ 0x8000 → signExt16 → negativo → indirizzo prima di 0x80080).
+ * Accesses are modeled as flat reads from the ROM image:
+ *   - `rom.program[address]` for offsets `0x080000..0x087FFF` (Slapstic bank 0)
+ *   - address < `0x080000` falls back to main program ROM
  *
- * @param rom    RomImage (la sola dipendenza esterna).
- * @param argW   Argomento word (16 bit unsigned). Estratto come low word
- *               del long pushato dal caller (`ext.l` da word, quindi
- *               numericamente equivalente al word pre-extension a parte
- *               la sign-extension che la funzione comunque ignora,
- *               sovrascrivendo D0w con `(0x6,SP)`).
- * @returns      Word (16 bit unsigned) letto dalla tabella slapstic.
+ * @param rom    RomImage, the only external dependency.
+ * @param argW   Caller argument word; the routine overwrites D0w from `(0x6,SP)`.
  */
 export function slapsticLookup(rom: RomImage, argW: number): number {
   const arg = argW & 0xffff;
 
-  // asl.l #5, D0 sul low word produce (arg << 5) & 0xFFFF; sign-extend a i32
-  // per il calcolo dell'address effettivo (M68K usa D0w come indice signed
-  // word in `(0x0, A0, D0w*1)`).
+  // asl.l #5 on the low word produces (arg << 5) & 0xFFFF; sign-extend to the
+  // i32 displacement used by `(0x0, A0, D0w*1)`.
   const shifted = (arg << 5) & 0xffff;
-  const idx = (shifted << 16) >> 16; // signExt16 → i32
+  const idx = (shifted << 16) >> 16; // signExt16 to i32.
 
-  // EA = 0x80080 + idx, calcolato come unsigned 32-bit (wrap come sul 68K).
+  // EA = 0x80080 + idx, computed as unsigned 32-bit with 68K-style wrap.
   const addr = (SLAPSTIC_LOOKUP_BASE + idx) >>> 0;
 
-  // Slapstic FSM tick: simula i due accessi al bus del binario, ma solo
-  // quando la ROM ha davvero i bank pristine caricati. I test storici e alcune
-  // fixture sintetiche scrivono direttamente in `program[0x80000..]`; applicare
-  // bank vuoti cancellerebbe quei dati invece di modellare hardware reale.
+  // Synthetic fixtures write directly into `program[0x80000..]`, so only apply
+  // Slapstic banking when a loaded bank set is present.
   if (hasLoadedSlapsticBanks(rom)) {
     const prevBank = rom.slapsticFsm.bank;
     slapsticTick(rom.slapsticFsm, SLAPSTIC_TRIGGER_ADDR);
@@ -131,18 +94,12 @@ export function slapsticLookup(rom: RomImage, argW: number): number {
 }
 
 /**
- * Read 16-bit big-endian dal blob ROM. Non c'è dispatch MMIO qui: il binario
- * accede solo all'area ROM (0x000000-0x087FFF nel layout Marble); per un valore
- * fuori range ritorniamo 0 (coerente col `read16` di bus.ts che ritornerebbe
- * 0xFFFF/0 sull'unmapped, ma per parità con Musashi serve la lettura ROM
- * piatta).
+ * Flat big-endian ROM word read.
  */
 function readRomWordBE(rom: RomImage, addr: number): number {
   const a = addr >>> 0;
-  // Mappa diretta: il blob `program` contiene sia main ROM (0..0x7FFFF) sia
-  // slapstic (0x80000..0x87FFF) come bank 0. Address >= 0x88000 → 0.
+  // Slapstic area (0x80000..0x87FFF) is treated as bank 0. Address >= 0x88000 -> 0.
   if (a >= rom.program.length - 1) {
-    // Tentativo di lettura word con almeno il low byte fuori dal blob → 0.
     if (a >= rom.program.length) return 0;
     return ((rom.program[a] ?? 0) << 8) & 0xffff;
   }

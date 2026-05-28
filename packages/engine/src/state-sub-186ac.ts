@@ -1,44 +1,34 @@
 /**
- * state-sub-186ac.ts — replica `FUN_000186AC` (368 byte).
+ * state-sub-186ac.ts - port of `FUN_000186AC` (368 bytes).
  *
- * "Mode-3 entity-scan + slot-table init/teardown" attorno al sentinel byte
- * @ `0x400760` e al pointer-long @ `0x400764`. Tutta la funzione è gated da
- * `*0x400394 == 3` (mode 3, distinto dal mode-4 di `bbox-hit-test-19d94`).
+ * "Mode-3 entity scan + slot-table init/teardown" around the sentinel byte
+ * `*0x400394 == 3` (mode 3, distinct from the mode-4 path in `bbox-hit-test-19d94`).
  *
- * **Flow di alto livello**:
- *   1. **Entity scan** (gated mode==3): walk dell'array di object struct
- *      stride `0xE2` @ `0x400018` per `*0x400396` slot. D1 (flag boolean)
- *      diventa 1 se ESISTE almeno un object con
+ *      stride `0xE2` @ `0x400018` for `*0x400396` slots. D1 (boolean flag)
+ *      becomes 1 when any object satisfies
  *      `obj[0x18] == 1 && (obj[0x1B] == 4 || obj[0x1B] == 5)`.
- *   2. **Branch sul sentinel** `*0x400760`:
- *      - **(sentinel == 0 && hasArmed)**: **INIT path**. Sceglie variant via
- *        `D3 = rng(4) ∈ [0..3]`; copia un long pointer dalla ROM table
- *        @ `0x243E6 + D3*4` in `*0x400764` (sarà usato come base secondaria
- *        per le entry D2 ≥ 0x18). Poi popola 0x24 entry × 0x10 byte a partire
- *        da `0x401650`:
+ *   2. **Branch on sentinel** `*0x400760`:
+ *      - **(sentinel == 0 && hasArmed)**: **INIT path**. Chooses a variant via
+ *        RNG for entries D2 >= 0x18, then fills 0x24 entries x 0x10 bytes from
+ *        `0x401650`:
  *          entry[0]   = D2 (byte)
- *          entry[2..3]= u16 BE da ROM[0x242C6 + D2*2]   se D2 < 0x18
- *                       u16 BE da ROM[*A4 + (D2-0x18)*2] altrimenti
+ *          entry[2..3]= u16 BE from ROM[0x242C6 + D2*2] when D2 < 0x18
  *          entry[4]   = byte ROM[0x24406 + D2]
  *          entry[5]   = byte ROM[0x2442A + D2]
  *          (call FUN_1BB28(entryAddr))
  *          entry[6..7]= u16 BE da ROM[0x2444E + D2*2]
- *        Al termine: `*0x400764 = ROM[0x243F6 + D3*4]` (sostituisce con tabella
- *        di teardown), `*0x400760 = 1`.
- *      - **(sentinel != 0 && !hasArmed)**: **TEARDOWN path**. Per ciascuna
- *        delle 0x24 entry @ 0x401650, se `entry[2..3] == 0xFFFF` chiama
- *        `FUN_18F46(0x29, sext_l(entry[0]))`. Poi azzera **sempre**:
+ *        The teardown selector is stored and `*0x400760 = 1`.
+ *      - **(sentinel != 0 && !hasArmed)**: **TEARDOWN path**. For each entry:
  *          entry[2..3] = 0   (u16)
  *          entry[4]    = 0   (byte)
  *          entry[5]    = 0   (byte)
  *          entry[6..7] = 0   (u16)
- *        Al termine: `*0x400760 = 0`.
- *      - altri casi (sentinel==0 && !hasArmed) || (sentinel!=0 && hasArmed):
- *        no-op (epilogue diretto).
+ *        At the end, `*0x400760 = 0`.
+ *      - Any other sentinel/armed combination is a no-op that goes to epilogue.
  *
  * **Disasm 0x000186AC..0x0001881A** (368 byte):
  *
- *   movem.l {D2,D3,D4,A2,A3,A4},-(SP)        ; salva regs (24 byte)
+ *   movem.l {D2,D3,D4,A2,A3,A4},-(SP)        ; save regs (24 bytes)
  *   movea.l #0x400760,A3                     ; A3 = sentinel addr
  *   movea.l #0x400764,A4                     ; A4 = pointer-long addr
  *   moveq   #3,D0
@@ -73,7 +63,6 @@
  *   tst.b   (A3)                             ; sentinel != 0?
  *   bne.w   teardown_check                   ; → teardown path
  *   tst.b   D1b                              ; hasArmed?
- *   beq.w   teardown_check                   ; no → epilogue (caso degenere)
  *
  *   ; ─── INIT path ────────────────────────────────────────────────────────
  *   movea.l #0x401650,A2                     ; A2 = slot-table base
@@ -142,9 +131,7 @@
  *
  * teardown_check:                            ; @ 0x187C8
  *   tst.b   D1b
- *   bne.b   epilogue                         ; hasArmed → niente teardown
  *   tst.b   (A3)
- *   beq.b   epilogue                         ; sentinel == 0 → niente teardown
  *
  *   ; ─── TEARDOWN path ───────────────────────────────────────────────────
  *   movea.l #0x401650,A2
@@ -178,14 +165,12 @@
  *   movem.l (SP)+,{A4,A3,A2,D4,D3,D2}
  *   rts
  *
- * **Globals (workRam, offset relativi a 0x400000) toccati**:
+ * **Touched globals (workRam offsets relative to 0x400000)**:
  *   - `*0x394` (word) game_mode (read).
  *   - `*0x396` (word) object count (read).
- *   - `*0x18..` object array stride 0xE2 (read 0x18, 0x1B per slot).
  *   - `*0x760` (byte) sentinel (read/write).
- *   - `*0x764..0x767` (long) selector ptr (write nel INIT path).
+ *   - `*0x764..0x767` (long) selector ptr (written in the INIT path).
  *   - `*0x1650..0x188F` (576 byte) slot-table 0x24 entries × 0x10 byte
- *     (write nei due path; mai entry[0x08..0x0F]).
  *
  * **ROM tables** (read-only, in `RomImage.program`):
  *   - `0x242C6` u16 BE × 0x18 entries — primary table for entry[2..3].
@@ -195,16 +180,13 @@
  *   - `0x243E6` long BE × 4 — selector pointers (init).
  *   - `0x243F6` long BE × 4 — selector pointers (post-init / teardown).
  *
- * **JSR esterne** (via `StateSub186ACSubs`):
- *   - `FUN_00013A98` (RNG, `rng.ts`) **lasciato live**: chiamato 0 o 1 volta
- *     (solo nel INIT path).
- *   - `FUN_0001BB28` invocata 0 o 0x24 volte (una per entry, solo INIT).
- *   - `FUN_00018F46` invocata 0..0x24 volte (solo TEARDOWN, gated da
+ * **External JSRs** (via `StateSub186ACSubs`):
+ *   - `FUN_0001BB28` is called 0 or 0x24 times (once per entry, INIT only).
+ *   - `FUN_00018F46` is called 0..0x24 times (TEARDOWN only, gated by
  *     `entry[2..3] == 0xFFFF`).
  *
- * **Caller noto** (1 xref): `FUN_00013966 @ 0x13A16`.
+ * **Known caller** (1 xref): `FUN_00013966 @ 0x13A16`.
  *
- * Verifica bit-perfect via `cli/src/test-state-sub-186ac-parity.ts` (500 casi).
  */
 
 import type { GameState } from "./state.js";
@@ -212,88 +194,83 @@ import type { RomImage } from "./bus.js";
 import { rngNext } from "./rng.js";
 import { as_u16 } from "./wrap.js";
 
-// ─── Address constants (workRam offsets relativi a 0x400000) ─────────────
+// ─── Address constants (workRam offsets relative to 0x400000) ─────────────
 
-/** WORK RAM base (m68k assoluto). */
+/** WORK RAM base (absolute M68k address). */
 export const WORK_RAM_BASE = 0x00400000 as const;
 
 /** Sentinel byte: `*0x400760` (init-done flag). */
 export const SENTINEL_ADDR = 0x00400760 as const;
-/** Pointer-long: `*0x400764..0x400767` (selector base secondaria). */
+/** Pointer-long: `*0x400764..0x400767` (secondary selector base). */
 export const SELECTOR_PTR_ADDR = 0x00400764 as const;
 /** Word: `*0x400394` game-mode discriminator. */
 export const GAME_MODE_ADDR = 0x00400394 as const;
 /** Word: `*0x400396` object count. */
 export const OBJ_COUNT_ADDR = 0x00400396 as const;
-/** Object array base: `0x400018`. */
 export const OBJ_BASE_ADDR = 0x00400018 as const;
 /** Stride object struct. */
 export const OBJ_STRIDE = 0xe2 as const;
 /** Slot-table base: `0x401650`. */
 export const SLOT_TABLE_ADDR = 0x00401650 as const;
-/** Stride per entry slot-table. */
+/** Slot-table entry stride. */
 export const SLOT_ENTRY_STRIDE = 0x10 as const;
-/** Numero di entry slot-table. */
+/** Number of slot-table entries. */
 export const SLOT_ENTRY_COUNT = 0x24 as const;
-/** Cutoff index per primary/secondary path. */
+/** Cutoff index for the primary/secondary path. */
 export const SECONDARY_PATH_CUTOFF = 0x18 as const;
 
-/** Game-mode richiesto per non short-circuitare. */
+/** Required game mode before the function can continue. */
 export const REQUIRED_GAME_MODE = 0x0003 as const;
 
 /** Object field: `(0x18,A0)`. */
 export const OBJ_STATE_OFF = 0x18 as const;
 /** Object field: `(0x1B,A0)`. */
 export const OBJ_SUBSTATE_OFF = 0x1b as const;
-/** Valore `obj[0x18]` per "armed". */
 export const OBJ_ARMED_STATE = 0x01 as const;
-/** Valori `obj[0x1B]` accettati. */
 export const OBJ_ARMED_SUBSTATE_A = 0x04 as const;
 export const OBJ_ARMED_SUBSTATE_B = 0x05 as const;
 
 // ─── ROM tables ──────────────────────────────────────────────────────────
 
-/** ROM u16 BE × 0x18 — primary table per entry[2..3]. */
+/** ROM u16 BE x 0x18 - primary table for entry[2..3]. */
 export const ROM_TABLE_PRIMARY_W16 = 0x000242c6 as const;
-/** ROM byte × 0x24 — table per entry[4]. */
+/** ROM byte x 0x24 - table for entry[4]. */
 export const ROM_TABLE_BYTE_4 = 0x00024406 as const;
-/** ROM byte × 0x24 — table per entry[5]. */
+/** ROM byte x 0x24 - table for entry[5]. */
 export const ROM_TABLE_BYTE_5 = 0x0002442a as const;
-/** ROM u16 BE × 0x24 — table per entry[6..7]. */
+/** ROM u16 BE x 0x24 - table for entry[6..7]. */
 export const ROM_TABLE_W16_67 = 0x0002444e as const;
-/** ROM long BE × 4 — selector pointers (init). */
+/** ROM long BE x 4 - selector pointers (init). */
 export const ROM_SELECTOR_INIT = 0x000243e6 as const;
-/** ROM long BE × 4 — selector pointers (post-init). */
+/** ROM long BE x 4 - selector pointers (post-init). */
 export const ROM_SELECTOR_POST = 0x000243f6 as const;
 
-// ─── Costanti varianti ───────────────────────────────────────────────────
+// ─── Variant constants ───────────────────────────────────────────────────
 
 /** Variant count = `rng(4)`. */
 export const VARIANT_RNG_LIMIT = 0x4 as const;
 
-/** Sentinel value scritto in init path. */
+/** Sentinel value written in the init path. */
 export const SENTINEL_INIT_VALUE = 0x01 as const;
 
-/** Marker `0xFFFF` su entry[2..3] che gating la call FUN_18F46. */
+/** `0xFFFF` marker in entry[2..3] that gates the FUN_18F46 call. */
 export const TEARDOWN_TRIGGER_WORD = 0xffff as const;
 
-/** Costante arg1 di FUN_18F46 (`pea (0x29).w`). */
+/** FUN_18F46 arg1 constant (`pea (0x29).w`). */
 export const FUN_18F46_ARG1 = 0x29 as const;
 
 // ─── Sub injection types ─────────────────────────────────────────────────
 
 /**
- * Stub injection per le 2 JSR esterne.
+ * Stub injection for the two external JSRs.
  *
- * - `fun_1bb28(entryAddr, state)`: invocata 0 o 0x24 volte (init path,
- *   una per entry). Riceve il long absoluto del current entry slot
+ * - `fun_1bb28(entryAddr, state)`: called 0 or 0x24 times (init path,
+ *   once per entry). Receives the absolute long address of the current entry slot
  *   (`SLOT_TABLE_ADDR + i*SLOT_ENTRY_STRIDE`).
- * - `fun_18f46(arg1Long, arg2Long, state)`: invocata 0..0x24 volte
- *   (teardown path, gated da `entry[2..3] == 0xFFFF`). Riceve
- *   `arg1Long = 0x29` (constante) e `arg2Long = sext_l(entry[0])`.
+ * - `fun_18f46(arg1Long, arg2Long, state)`: called 0..0x24 times
+ *   (teardown path, gated by `entry[2..3] == 0xFFFF`). Receives
+ *   `arg1Long = 0x29` (constant) and `arg2Long = sext_l(entry[0])`.
  *
- * `FUN_00013A98` (RNG) NON è injection: viene eseguito live tramite
- * `rngNext` da `rng.ts` (replicato bit-perfect).
  */
 export interface StateSub186ACSubs {
   /** FUN_1BB28(entryAddrLong, state). */
@@ -302,25 +279,19 @@ export interface StateSub186ACSubs {
   fun_18f46?: (arg1Long: number, arg2Long: number, state: GameState) => void;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────
 
-/** Quale dei tre branch è stato eseguito. */
 export type Branch = "early_exit" | "init" | "teardown" | "noop";
 
 export interface StateSub186ACResult {
-  /** Branch eseguito. */
+  /** Branch that executed. */
   branch: Branch;
-  /** True se `*0x400394 == 3` (gate superato). */
+  /** True when `*0x400394 == 3` (gate passed). */
   modeMatched: boolean;
-  /** True se ESISTE un object con (state==1 && sub∈{4,5}). */
+  /** True when any object has (state==1 && sub in {4,5}). */
   hasArmed: boolean;
-  /** Sentinel byte letto all'inizio (post-scan). */
   sentinelBefore: number;
-  /** Variant index `D3 = rng(4)` se branch=="init", altrimenti -1. */
   variant: number;
-  /** Numero di chiamate effettive a `subs.fun_1bb28` (= 0 o 0x24). */
   fun1BB28Calls: number;
-  /** Numero di chiamate a `subs.fun_18f46` (0..0x24). */
   fun18F46Calls: number;
 }
 
@@ -368,9 +339,8 @@ function romReadLongBE(rom: RomImage, off: number): number {
 }
 
 /**
- * Wrapper attorno a `rngNext` con la stessa normalizzazione adoperata da
- * `state-sub-1960e` / `palette-rng-fill-26cfa`: il binario produce
- * `r ∈ [0, limit)`, mentre `rngNext` di default produce `r ∈ [0, limit]`.
+ * Wrapper around `rngNext` with the same normalization used by the original:
+ * `r` is reduced to [0, limit), while default `rngNext` produces [0, limit].
  */
 function rng(state: GameState, limit: number): number {
   let r = rngNext(state.rng, as_u16(limit)) as unknown as number;
@@ -381,9 +351,6 @@ function rng(state: GameState, limit: number): number {
 }
 
 /**
- * Read u16 BE da workRam o ROM in base all'indirizzo assoluto m68k.
- * Il pointer-long `*A4` può puntare in workRam o in ROM (probabilmente ROM,
- * dato che le tabelle 0x243E6/0x243F6 sono in ROM).
  */
 function readWordAbs(state: GameState, rom: RomImage, addrLong: number): number {
   const a = addrLong >>> 0;
@@ -394,35 +361,25 @@ function readWordAbs(state: GameState, rom: RomImage, addrLong: number): number 
   return romReadWordBE(rom, a);
 }
 
-// ─── Replica ─────────────────────────────────────────────────────────────
+// ─── Port ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000186AC`.
  *
- * @param state  GameState. Letture: `workRam[0x394..0x395]`,
- *               `workRam[0x396..0x397]`, object array @ `0x18..`,
+ * @param state  GameState. Reads `workRam[0x394..0x395]`,
  *               sentinel @ `0x760`, selector ptr @ `0x764..0x767`,
- *               slot-table @ `0x1650..0x188F`. Scritture: vedi sezioni init
- *               e teardown nel JSDoc del modulo.
- * @param rom    RomImage. Letture dalle 6 tabelle ROM (vedi costanti).
- * @param subs   Injection stub. `fun_1bb28` chiamato 0/0x24 volte (init);
- *               `fun_18f46` chiamato 0..0x24 volte (teardown). Default no-op.
+ *               slot-table @ `0x1650..0x188F`. Writes are described in the
+ *               init and teardown sections in this module JSDoc.
  *
- * @returns Dettaglio del branch + counters delle JSR esterne.
+ * @returns Branch detail plus external JSR counters.
  *
- * **Ordine delle scritture per entry (init body)**:
  *   1. `entry[0] = D2`
  *   2. `entry[2..3] = ROM_u16[primary or secondary]`
  *   3. `entry[4] = ROM_byte[0x24406 + D2]`
  *   4. `entry[5] = ROM_byte[0x2442A + D2]`
- *   5. `subs.fun_1bb28(entryAddrLong, state)`  — può modificare l'entry
  *   6. `entry[6..7] = ROM_u16[0x2444E + D2*2]`
  *
- * **Ordine delle scritture per entry (teardown body)**:
- *   - se `entry[2..3] == 0xFFFF`: chiama `subs.fun_18f46(0x29, sext_l(entry[0]))`
- *     PRIMA dei clear (importante per parity: l'injection vede entry[0]
- *     intatto).
- *   - poi: `entry[6..7] = 0`, `entry[5] = 0`, `entry[4] = 0`, `entry[2..3] = 0`.
+ *     unchanged).
+ *   - Then: `entry[6..7] = 0`, `entry[5] = 0`, `entry[4] = 0`, `entry[2..3] = 0`.
  */
 export function stateSub186AC(
   state: GameState,
@@ -450,14 +407,10 @@ export function stateSub186AC(
   }
   result.modeMatched = true;
 
-  // ─── Entity scan: hasArmed = ANY entity con state==1 && sub∈{4,5} ────
+  // ─── Entity scan: hasArmed = any entity with state==1 && sub in {4,5} ────
   const countOff = OBJ_COUNT_ADDR - WORK_RAM_BASE;
   const count = (((r[countOff] ?? 0) << 8) | (r[countOff + 1] ?? 0)) & 0xffff;
-  // Loop terminazione bit-perfect: D2.b cmp.w count.w; bne loop. D2 byte
-  // sext.w → 0..0x7F positivo (count tipicamente piccolo). Per count>127 il
-  // confronto signed potrebbe loopare oltre 127, ma `bne` non `blt`: il loop
-  // termina solo quando D2 == count (mod 0x10000 sext.w). Per bit-perfect su
-  // count piccolo (caso reale), basta un classico for.
+  // sext.w is positive for 0..0x7F; counts are normally small here.
   let hasArmed = false;
   let objAddr = OBJ_BASE_ADDR >>> 0;
   for (let i = 0; i < count; i++) {
@@ -474,7 +427,7 @@ export function stateSub186AC(
   }
   result.hasArmed = hasArmed;
 
-  // ─── Branch sul sentinel ──────────────────────────────────────────────
+  // ─── Branch on sentinel ───────────────────────────────────────────────
   const sentinelOff = SENTINEL_ADDR - WORK_RAM_BASE;
   const sentinel = (r[sentinelOff] ?? 0) & 0xff;
   result.sentinelBefore = sentinel;
@@ -507,8 +460,6 @@ export function stateSub186AC(
         w23 = romReadWordBE(rom, ROM_TABLE_PRIMARY_W16 + d2 * 2);
       } else {
         // secondary: u16 BE @ (*A4 + (D2 - 0x18) * 2)
-        // Re-leggi *A4 da workRam (l'abbiamo appena scritto, ma fedeli al
-        // pattern del binario che fa `adda.l (A4),A0`).
         const selectorPtr =
           (((r[selectorOff] ?? 0) << 24) |
             ((r[selectorOff + 1] ?? 0) << 16) |
@@ -524,7 +475,6 @@ export function stateSub186AC(
       // entry[5] = ROM byte @ (0x2442A + D2)
       writeByte(state, entryOff + 5, romReadByte(rom, ROM_TABLE_BYTE_5 + d2));
 
-      // jsr FUN_1BB28(entryAddr) — nel binario PRIMA del write a entry[6..7]
       subs?.fun_1bb28?.(entryAddr, state);
       result.fun1BB28Calls++;
 
@@ -555,7 +505,7 @@ export function stateSub186AC(
     for (let d2 = 0; d2 < SLOT_ENTRY_COUNT; d2++) {
       const entryOff = entryAddr - WORK_RAM_BASE;
 
-      // gate: cmp.w entry[2..3] con -1 (0xFFFF)
+      // Gate: cmp.w entry[2..3] with -1 (0xFFFF).
       const entryWord = readWordBE(state, entryOff + 2);
       if (entryWord === TEARDOWN_TRIGGER_WORD) {
         // FUN_18F46(0x29, sext_l(entry[0]))
@@ -565,8 +515,6 @@ export function stateSub186AC(
         result.fun18F46Calls++;
       }
 
-      // clear (sempre, indipendentemente dal gate):
-      // ordine binario: word(0x6)=0, byte(0x5)=0, byte(0x4)=0, word(0x2)=0
       writeWordBE(state, entryOff + 6, 0);
       writeByte(state, entryOff + 5, 0);
       writeByte(state, entryOff + 4, 0);

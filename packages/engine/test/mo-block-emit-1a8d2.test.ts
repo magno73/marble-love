@@ -1,9 +1,7 @@
 /**
  * mo-block-emit-1a8d2.test.ts — smoke test di FUN_1A8D2.
  *
- * Bit-perfect parity vs binario in `test-mo-block-emit-1a8d2-parity.ts`.
  * Qui copriamo i path principali del modulo (early-exit, long-branch,
- * short-branch, sign-ext, D5 step, writeback cursor) senza Musashi.
  */
 
 import { describe, it, expect } from "vitest";
@@ -22,7 +20,6 @@ import type { GameState } from "../src/state.js";
 const WORK_RAM_BASE = 0x400000;
 const SPRITE_RAM_BASE = 0xa02000;
 
-/** Scrive 4 byte BE in workRam a un offset assoluto M68k. */
 function writeLongWorkRam(s: GameState, abs: number, val: number): void {
   const off = abs - WORK_RAM_BASE;
   s.workRam[off] = (val >>> 24) & 0xff;
@@ -31,14 +28,12 @@ function writeLongWorkRam(s: GameState, abs: number, val: number): void {
   s.workRam[off + 3] = val & 0xff;
 }
 
-/** Scrive una word BE in workRam a un offset assoluto M68k. */
 function writeWordWorkRam(s: GameState, abs: number, val: number): void {
   const off = abs - WORK_RAM_BASE;
   s.workRam[off] = (val >>> 8) & 0xff;
   s.workRam[off + 1] = val & 0xff;
 }
 
-/** Legge una word BE da spriteRam a un offset assoluto M68k. */
 function readWordSprite(s: GameState, abs: number): number {
   const off = abs - SPRITE_RAM_BASE;
   const hi = s.spriteRam[off] ?? 0;
@@ -46,7 +41,6 @@ function readWordSprite(s: GameState, abs: number): number {
   return ((hi << 8) | lo) & 0xffff;
 }
 
-/** Legge un long BE da workRam a un offset assoluto M68k. */
 function readLongWorkRam(s: GameState, abs: number): number {
   const off = abs - WORK_RAM_BASE;
   const b0 = s.workRam[off] ?? 0;
@@ -56,15 +50,14 @@ function readLongWorkRam(s: GameState, abs: number): number {
   return ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) >>> 0;
 }
 
-/** Legge una word BE da workRam. */
 function readWordWorkRam(s: GameState, abs: number): number {
   const off = abs - WORK_RAM_BASE;
   return (((s.workRam[off] ?? 0) << 8) | (s.workRam[off + 1] ?? 0)) & 0xffff;
 }
 
 /**
- * Setup standard dei 4 cursor + counter D7. Cursor puntano a sprite-RAM
- * a indirizzi distanti (4 buffer separati).
+ * Standard setup for the 4 cursors + D7 counter. Cursors point to sprite RAM
+ * at distant addresses (4 separate buffers).
  */
 function setupCursors(
   s: GameState,
@@ -92,7 +85,6 @@ describe("moBlockEmit1A8D2 — early exit (arg0 == -1)", () => {
     // Sprite RAM intatta.
     expect(s.spriteRam).toEqual(spriteBefore);
 
-    // Cursor immutati (writeback dei valori già caricati).
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02000);
     expect(readLongWorkRam(s, CURSOR_A2_ADDR)).toBe(0xa02080);
     expect(readLongWorkRam(s, CURSOR_A3_ADDR)).toBe(0xa02100);
@@ -262,7 +254,6 @@ describe("moBlockEmit1A8D2 — short branch (triple-stream)", () => {
     //   A2 out = D1 = 0x20
     //   D4 &= 0x8000 → D4 = 0; D4 |= 0xAA → D4 = 0xAA
     //   D0 = D2 + s8(0x01) = 0+1 = 1; D0 = (1<<5) & 0x3FE0 = 0x20; D0 |= D4 = 0xAA
-    //     → 0x20 | 0xAA = 0xAA (bit 5 già set in 0xAA)
     //   A3 out = 0xAA
     //   word = 0x1234; A1 out = 0x1234 | 0x4000 = 0x5234
     //   A4 out = D7 = 0
@@ -366,7 +357,7 @@ describe("moBlockEmit1A8D2 — count = 1 path (single iter)", () => {
 
     moBlockEmit1A8D2(s, headerAbs, 0, 0, 0);
 
-    // Esattamente 1 word scritto in ogni buffer.
+    // Exactly 1 word written in each buffer.
     expect(readWordSprite(s, 0xa02000)).toBe(0xdead);
     // Cursor avanzato di esattamente 2 byte.
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02002);

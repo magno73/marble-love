@@ -5,19 +5,15 @@
  * `FUN_000059D2` (140 byte): scaled-rate via 3 fetch + halve-loop + divu.w.
  *   denom = 2*F(4) + F(3); if 0 → ret 0.
  *   num = F(5).
- *   halve-pair (denom, num) finché entrambi <= 0xFFFF.
- *   ret ((num & 0xFFFF) * 60) / (denom & 0xFFFF) word quoziente (con divu.w
- *   overflow semantics: V flag → D1 invariato).
+ *   ret ((num & 0xFFFF) * 60) / (denom & 0xFFFF) quotient word (with divu.w
+ *   overflow semantics: V flag -> D1 unchanged).
  *
- * `F(n)` = `FUN_000040D8(n)` (config-field fetch). I tre id usati: 3, 4, 5.
+ * `F(n)` = `FUN_000040D8(n)` (config-field fetch). The three ids used: 3, 4, 5.
  *
  * Strategia parity:
  *   - Patch RTS sull'entry di FUN_40D8 (0x40D8) per impedire l'esecuzione.
- *   - Per ogni caso pilotiamo i return di F(4), F(3), F(5) con tre valori
  *     iniettati in D0 a ciascuna entry callee.
- *   - Catturiamo gli args sullo stack alla entry callee (per verificare anche
- *     che gli ID passati siano 4, 3, 5 nell'ordine corretto).
- *   - Confrontiamo D0 finale + ordine + args binario vs TS.
+ *   - Capture args on the stack at callee entry, also checking
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-59d2-parity.ts [N]
  */
@@ -52,7 +48,7 @@ function makeRng(seed: number): () => number {
 
 /** Patcha RTS (0x4E75) all'entry di FUN_40D8. */
 function patchCallees(cpu: CpuSession): void {
-  // FUN_40D8: word originale `movem.l {A2 D6 D5 D4 D3 D2},-(SP)` (0x48E7).
+  // FUN_40D8: original word `movem.l {A2 D6 D5 D4 D3 D2},-(SP)` (0x48E7).
   // Patcha a 0x4E75 (rts).
   pokeMem(cpu, FUN_40D8 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_40D8 + 1, 1, 0x75);
@@ -64,7 +60,6 @@ interface Call40D8 {
 }
 
 interface CapturedSeq {
-  /** Sequenza di chiamate a 40D8 (in ordine). */
   calls: Call40D8[];
   /** D0 al momento del rts di FUN_59D2. */
   finalD0: number;
@@ -73,13 +68,9 @@ interface CapturedSeq {
 
 /**
  * Esegue FUN_59D2 step-by-step.
- * Per ogni entry di FUN_40D8, cattura il fieldId (sullo stack a (4,SP)) e
- * inietta `nextReturn` in D0 PRIMA dell'RTS sintetico.
+ * For each FUN_40D8 entry, capture fieldId (on the stack at (4,SP)) and
  *
  * @param cpu       CPU session.
- * @param ret40D8   Sequenza di return da F(4), F(3), F(5) (3 elementi).
- *                  Se early-exit (denom == 0), F(5) NON viene chiamato — il
- *                  3° elemento è ignorato.
  */
 function runAndCapture(
   cpu: CpuSession,
@@ -87,7 +78,6 @@ function runAndCapture(
 ): CapturedSeq {
   const sys = cpu.system;
 
-  // Setup stack: SP iniziale + sentinel ret addr. FUN_59D2 non ha args.
   const sp0 = 0x401f00;
   let sp = sp0;
   sp = (sp - 4) >>> 0;
@@ -109,7 +99,6 @@ function runAndCapture(
       break;
     }
     if (pc === FUN_40D8) {
-      // All'entry di 40D8, lo stack è:
       //   (0, SP)  = ret addr
       //   (4, SP)  = fieldId (long)
       const spNow = sys.getRegisters().sp >>> 0;
@@ -117,7 +106,6 @@ function runAndCapture(
       const r = (ret40D8[idx] ?? 0) >>> 0;
       idx++;
       calls.push({ fieldId: fid, ret: r });
-      // Inietta D0 = ret. Il prossimo step esegue l'RTS patchato → ritorna al caller.
       sys.setRegister("d0", r);
     }
     sys.step();
@@ -182,7 +170,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern di copertura sui return di F(4), F(3), F(5).
@@ -191,7 +178,6 @@ async function main(): Promise<void> {
       // Early-exit: 2*F(4)+F(3) = 0 → ret 0
       rets = [0, 0, 0];
     } else if (i === 1) {
-      // Caso "produzione tipico": denom piccolo, num piccolo.
       // F(4)=20, F(3)=10 → denom=50. F(5)=30 → 30*60/50 = 36.
       rets = [20, 10, 30];
     } else if (i === 2) {
@@ -206,7 +192,7 @@ async function main(): Promise<void> {
       // F(4)=0x8000, F(3)=0 → denom=0x10000. F(5)=0x10000.
       rets = [0x8000, 0, 0x10000];
     } else if (i === 5) {
-      // halve-loop con LSR step: denom=0x30000, num=0x100.
+      // halve-loop with LSR step: denom=0x30000, num=0x100.
       // F(4)=0x18000, F(3)=0 → 0x30000. F(5)=0x100.
       rets = [0x18000, 0, 0x100];
     } else if (i === 6) {
@@ -221,7 +207,7 @@ async function main(): Promise<void> {
       // mulu: 0x8000*60 = 0x1E0000. divu: 0x1E0000/5 = 0x6000 (24576). > 0xFFFF? No, 0x6000 = 24576 ✓
       rets = [10, 0, 0x20000];
     } else if (i === 8) {
-      // denom solo word-overflow: F(4)=0x8001, F(3)=0 → denom=0x10002. F(5)=10.
+      // denom word-overflow only: F(4)=0x8001, F(3)=0 -> denom=0x10002. F(5)=10.
       // 0x10002 > 0xFFFF → halve. @5A1A: 0x10002 <= 0x1FFFE; 10 <= 0x1FFFE → ROUND.
       // d2 = (0x10002+1)>>1 = 0x8001; d1 = (10+1)>>1 = 5.
       // mulu: 5*60 = 300. divu: 300/0x8001 = 0.
@@ -252,13 +238,11 @@ async function main(): Promise<void> {
       rets = [f4, f3, f5];
     }
 
-    // Esegue binario.
     const bin = runAndCapture(cpu, rets);
 
     // Esegue TS.
     const ts = runTsAndCapture(state, rets);
 
-    // Confronta.
     const sameCalls =
       bin.calls.length === ts.calls.length &&
       bin.calls.every((c, k) => eqCall(c, ts.calls[k]!));

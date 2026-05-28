@@ -1,13 +1,9 @@
 /**
- * sub-14dec.ts — replica bit-perfect di `FUN_00014DEC` (166 byte, 1 caller).
  *
- * **Sorgente**: questa funzione era già implementata come
  * `findNearestNeighborV2` in `nearest-neighbor.ts` (variante della V1
- * `FUN_15D10` con list ptr da `obj+0x4E`, stride 4 byte, write a `obj+0x4A`).
- * Questo file espone la stessa logica sotto il nome canonico richiesto
+ * `FUN_15D10` with list ptr from `obj+0x4E`, 4-byte stride, write to `obj+0x4A`).
  * dall'inventario `docs/missing-subs-inventory.md`.
  *
- * **Disasm** (verificato @ 0x14DEC..0x14E91, 0xA6 byte):
  *
  *   00014dec  movem.l {D6 D5 D4 D3 D2},-(SP)
  *   00014df0  movea.l (0x18,SP),A0           ; A0 = objPtr
@@ -37,19 +33,14 @@
  *   00014e8c  movem.l (SP)+,{D2 D3 D4 D5 D6}
  *   00014e90  rts
  *
- * **Caller identificato** (xref):
+ * **Identified caller** (xref):
  *   - `helper-15148.ts` cases 5/6 (path damping + 14dec, @ 0x1544C):
- *     chiamata come `subs.fun_14dec(state, sp)` con fallback REAL
- *     `findNearestNeighborV2` già wirata di default.
  *
  * **Side effects** in `state.workRam`:
- *   - `*(long*)(obj+0x4A)` = pointer assoluto al best entry, oppure
- *     `0xFFFFFFFF` se nessuna entry ha `dist < 0x400` (D6 register iniziale
- *     non clearato; replicato fedelmente nella replica V2).
+ *   - `*(long*)(obj+0x4A)` = absolute pointer to best entry, or left uncleared;
+ *     faithfully replicated in the V2 port.
  *
- * Bit-perfect verificato vs Musashi WASM via
- * `cli/src/test-nearest-neighbor-parity.ts` (100/100 casi su V2 = FUN_14DEC,
- * vedi seconda suite del test esistente) e via
+ * covered by the second suite of the existing test and by
  * `cli/src/test-sub-14dec-parity.ts` (100 random scenarios dedicati).
  */
 

@@ -1,8 +1,6 @@
 /**
  * slot-insert-sorted-18e6c.test.ts — smoke + corner case di FUN_18E6C.
  *
- * Bit-perfect parity vs binario verificata in
- * `cli/src/test-slot-insert-sorted-18e6c-parity.ts` (500 casi).
  */
 
 import { describe, it, expect } from "vitest";
@@ -22,7 +20,6 @@ const WORK_RAM_BASE = 0x00400000;
 const BYTE_OFF = BYTE_ARRAY_ABS - WORK_RAM_BASE; // 0x3BC
 const SLOT_OFF = RECT_SLOT_ABS - WORK_RAM_BASE; // 0x1DC
 
-/** Setup default: byte-array tutto sentinel (lista vuota); slot tutti vuoti. */
 function freshState() {
   const s = emptyGameState();
   for (let i = 0; i < BYTE_ARRAY_LEN; i++) s.workRam[BYTE_OFF + i] = SENTINEL_BYTE;
@@ -53,7 +50,6 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
 
     // Loop1 termina al primo sentinel a A3 = a2Off+0 ⇒ insertOnSentinel=true,
     // insertPos = 0x3BC.
-    // Loop2 trova slot[0] vuoto ⇒ d1 = 0.
     expect(r.inserted).toBe(true);
     expect(r.insertPos).toBe(BYTE_OFF);
     expect(r.slotIdx).toBe(0);
@@ -79,8 +75,8 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     const rom = setupRom();
 
     // Pre-occupa slot 0 e 1 (byte 0 != 0).
-    s.workRam[SLOT_OFF + 0 * RECT_SLOT_STRIDE] = 0x10; // slot[0] usato
-    s.workRam[SLOT_OFF + 1 * RECT_SLOT_STRIDE] = 0x20; // slot[1] usato
+    s.workRam[SLOT_OFF + 0 * RECT_SLOT_STRIDE] = 0x10;
+    s.workRam[SLOT_OFF + 1 * RECT_SLOT_STRIDE] = 0x20;
 
     const r = slotInsertSorted18E6C(s, rom, 0x40, 0x07);
 
@@ -102,7 +98,6 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     const s = freshState();
     const rom = setupRom();
 
-    // Riempi tutti gli slot (31 slot da A4 ad A4+0x1B2 esclusivo).
     const numSlots = Math.floor(RECT_SLOT_END_OFF / RECT_SLOT_STRIDE); // 31
     for (let i = 0; i < numSlots; i++) {
       s.workRam[SLOT_OFF + i * RECT_SLOT_STRIDE] = 0xff; // (slot)[0] != 0
@@ -112,7 +107,6 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
 
     expect(r.inserted).toBe(false);
     expect(r.slotIdx).toBe(null);
-    // byte-array NON modificato
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
       expect(s.workRam[BYTE_OFF + i]).toBe(SENTINEL_BYTE);
     }
@@ -130,7 +124,6 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
           sub,
           rect: Array.from(local),
         });
-        // Scrive valori non-zero nei campi rect per esercitare il compare.
         local[2] = 0x12;
         local[3] = 0x34;
       },
@@ -139,7 +132,6 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     expect(captured).toHaveLength(1);
     expect(captured[0]!.type).toBe(0x29);
     expect(captured[0]!.sub).toBe(0x42);
-    // localRect entry: bytes 0..1 = (type, sub), resto = 0 prima del callback.
     expect(captured[0]!.rect[0]).toBe(0x29);
     expect(captured[0]!.rect[1]).toBe(0x42);
     expect(captured[0]!.rect.slice(2)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -149,20 +141,12 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     const s = freshState();
     const rom = setupRom();
 
-    // Pre-popola byte-array con valori non-sentinel: [0,1,2,FF,FF,...]
-    // Dopo insert con compare=0 sempre (default zero-rect ⇒ compare può
-    // restituire valori diversi a seconda dello slot), ma uno scenario
-    // semplice: tutti gli slot puntano a strutture con campi che
     // produrranno compare = 0 deterministicamente.
     // Per testare specificamente il sentinel a byte[0x1F], prepopoliamo
-    // l'array con dati validi fino a byte[0x1E], byte[0x1F]=SENTINEL.
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
       s.workRam[BYTE_OFF + i] = i < 16 ? i : SENTINEL_BYTE;
     }
-    // Setup tutti i 16 slot con campi rect = 0 (default).
-    // Il primo compare con local = 0 vs slot[0] = 0 → tutti i sum sono 0.
-    // FUN_1A80A con sums=0: D3<=D2 (0<=0) → return 0. Loop continua.
-    // Quindi loop1 cammina fino al primo SENTINEL a byte[16] = 0xFF.
+    // FUN_1A80A with sums=0: D3<=D2 (0<=0) -> return 0. Loop continues.
 
     slotInsertSorted18E6C(s, rom, 0x29, 0x00);
 

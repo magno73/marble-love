@@ -1,22 +1,22 @@
 /**
- * probe-level-header.ts — dump dei 6 level descriptor header reali con field
- * decoded.
+ * probe-level-header.ts - dumps the six real level descriptor headers with
+ * decoded fields.
  *
- * Scope: PRD `docs/level-header-decode-prd.md` Phase 1, deliverable
- * "probe CLI". Lanciabile in due modi:
+ * Scope: PRD `docs/internal/prds/level-header-decode-prd.md` Phase 1, deliverable
+ * "probe CLI". It can be run in two modes:
  *
  *   - Con blob ROM in path canonico:
  *       `npx tsx packages/cli/src/probe-level-header.ts`
  *   - Con blob ROM via env var:
  *       `MARBLE_LOVE_ROM_BLOB=path/to/marble_program.bin npx tsx ...`
  *
- * Se la ROM non e' disponibile, esce con exit code 2 e messaggio chiaro.
+ * If the ROM is unavailable, exits with code 2 and a clear message.
  *
  * Output:
- *   - Tabella per livello con tutti i field decoded di
+ *   - One table per level with all decoded fields from
  *     `docs/level-header-format.md`.
- *   - Heuristics per i records (count, slope distribution).
- *   - Hex dump del fixed header (0x2E byte) per audit visivo.
+ *   - Heuristics for records (count, slope distribution).
+ *   - Hex dump of the fixed header (0x2E bytes) for visual audit.
  */
 
 import { existsSync, readFileSync } from "node:fs";

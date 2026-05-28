@@ -1,72 +1,53 @@
 /**
- * state-dispatch-160f6.ts — replica `FUN_000160F6` (1378 byte,
- * 0x0160F6–0x016658).
+ * state-dispatch-160f6.ts - `FUN_000160F6` replica (1378 bytes,
+ * 0x0160F6-0x016658).
  *
- * "Trackball navigation dispatcher" — aggiorna lo stato di movimento di un
- * oggetto controllato dal trackball.  Calcola una bitmask D2 di direzioni
- * attive, decide se avviare / proseguire / bloccare il movimento e, quando
- * lo stato è 1 (moving), sceglie la direzione ottimale tra 8 candidati via
- * ROM speed table, aggiornando `(0x14,A2)`.
+ * ROM speed table, updating `(0x14,A2)`.
  *
  * **Calling convention** (cdecl 68k, stack frame):
  *   ```
- *   link.w   A6, #-8               ; locali (-0x2,A6) e (-0x4,A6)
+ *   link.w   A6, #-8               ; locals (-0x2,A6) and (-0x4,A6)
  *   movem.l  {D2-D7/A2-A4}, -(SP)
- *   movea.l  (0x8,A6),  A2         ; arg1: ptr struct oggetto (workRam abs)
  *   move.l   (0xc,A6), D1          ; arg2: long prevTimer
- *   movea.l  #0x4006A0, A4         ; word tile-Y corrente
- *   movea.l  #0x40069E, A3         ; word tile-X corrente
  *   ```
  *   Epilogo: `movem.l (SP)+, {D2-D7/A2-A4}; unlk A6; rts`.
  *
- * **Campi struct A2** (offset da base):
- *   +0x08 (long) : impulso verticale (scritto a -0x6000)
- *   +0x14 (long) : timer/posizione cumulativo
- *   +0x2e (word) : snapshot tile-X al momento dell'avvio del movimento
+ *   +0x08 (long) : vertical impulse (written as -0x6000)
  *   +0x30 (word) : snapshot tile-Y
- *   +0x36 (byte) : stato (0=idle, 1=moving, 2=locked)
- *   +0x37 (byte) : bitmask direzione corrente (8 bit)
- *   +0x58 (byte) : charcode/tipo oggetto (whitelist per abilitare il movimento)
  *
  * **Globals workRam** (offset da WORK_RAM_BASE = 0x400000):
- *   0x696/0x69a (word): snapshot X / corrente → D3 = delta X
- *   0x698/0x69c (word): snapshot Y / corrente → D4 = delta Y
  *   0x66a (byte): bitmask diagonali (bit0=NE,bit1=NW,bit2=SE,bit3=SW)
  *   0x66c/0x66e/0x670/0x672 (byte): input Left/Down/Right/Up
  *   0x674/0x676/0x678/0x67a (word): vel Left/Down/Right/Up
  *   0x67c/0x67e/0x680/0x682 (word): vel NE/NW/SE/SW
  *
  * **Whitelist charcode** `(0x58,A2)`:
- *   0x00,0x10,0x12,0x17,0x18,0x20,0x2d–0x3b (21 valori).
  *
  * **ROM speed table** @ 0x2398c:
- *   `table[idx]` → byte signed → magnitudine; idx = min-distance score 0–4.
+ *   `table[idx]` -> signed byte -> magnitude; idx = min-distance score 0-4.
  *
  * **Caller**: `0x00012434` in `FUN_000121b8`.
  *
- * Verifica bit-perfect: `cli/src/test-state-dispatch-160f6-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Costanti ────────────────────────────────────────────────────────────────
+// Constants.
 
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-/** Entry-point binario. */
 export const FUN_160F6_ADDR = 0x000160f6 as const;
 
-/** Sound command inviato in 2 path (idle→lock e inner-loop miss). */
+/** Sound command sent in 2 paths (idle->lock and inner-loop miss). */
 export const SOUND_CMD = 0x45 as const;
 
-/** Impulso scritto a `(0x8,A2)` nei branch start/lock. */
+/** Impulse written to `(0x8,A2)` in start/lock branches. */
 export const IMPULSE_VALUE = -0x6000 as const;
 
-/** Soglia timer idle→lock (diff > 0x60000). */
+/** Idle->lock timer threshold (diff > 0x60000). */
 export const TIMER_THRESHOLD = 0x60000 as const;
 
-/** Indirizzo ROM speed table. */
 export const ROM_SPEED_TABLE = 0x0002398c as const;
 
 /** Whitelist charcode `(0x58,A2)`. */
@@ -77,7 +58,6 @@ export const CHARCODE_WHITELIST: ReadonlySet<number> = new Set([
   0x38, 0x39, 0x3a, 0x3b,
 ]);
 
-/** Campi struct A2 (offset da ptr base). */
 export const STRUCT_FIELDS = {
   impulse_08:   0x08,
   position_14:  0x14,
@@ -98,16 +78,12 @@ export const GLOBALS = {
   velNE:   0x67c, velNW:   0x67e, velSE:   0x680, velSW: 0x682,
 } as const;
 
-// ─── Sub iniettabili ─────────────────────────────────────────────────────────
 
 export interface StateDispatch160F6Subs {
   /**
-   * `FUN_000158AC(cmd)` — sound command. Arg sempre 0x45. Default no-op.
    */
   soundCommand?: (cmd: number) => void;
   /**
-   * ROM byte reader. `addr` = indirizzo assoluto M68k ROM.
-   * Default ritorna 0.
    */
   romByte?: (addr: number) => number;
 }
@@ -138,13 +114,11 @@ function wL(r: Uint8Array, off: number, v: number): void {
   r[off + 2] = (u >>> 8) & 0xff; r[off + 3] = u & 0xff;
 }
 
-/** Legge word signed da workRam per indirizzo assoluto M68k. */
 function rWabs(state: GameState, abs: number): number {
   const off = abs - WORK_RAM_BASE;
   if (off < 0 || off + 1 >= WORK_RAM_SIZE) return 0;
   return rWs(state.workRam, off);
 }
-/** Legge byte da workRam per indirizzo assoluto M68k. */
 function rBabs(state: GameState, abs: number): number {
   const off = abs - WORK_RAM_BASE;
   if (off < 0 || off >= WORK_RAM_SIZE) return 0;
@@ -153,16 +127,10 @@ function rBabs(state: GameState, abs: number): number {
 function sx8(b: number): number { return ((b & 0xff) << 24) >> 24; }
 function sx16(w: number): number { return ((w & 0xffff) << 16) >> 16; }
 
-// ─── Funzione principale ──────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000160F6` (1378 byte).
  *
- * @param state     GameState — `workRam` mutato.
- * @param structPtr Indirizzo assoluto M68k del struct (A2).
- * @param tileXPtr  Indirizzo assoluto M68k della word tile-X (A3=0x40069E in binary).
- * @param tileYPtr  Indirizzo assoluto M68k della word tile-Y (A4=0x4006A0 in binary).
- * @param prevTimer Long arg D1: timer precedente per il check idle→locked.
+ * @param state     GameState — mutates `workRam`.
  * @param subs      Stub injection (sound + ROM reader).
  */
 export function stateDispatch160F6(
@@ -325,7 +293,6 @@ export function stateDispatch160F6(
   // D6w = |*0x400698 - (0x30,A2)|
   // Replica M68k abs: tst.w; bge skip; moveq 0,D0; move.w,D0b; neg.l D0; bra
   //   else:           moveq 0,D0; move.w,D0b → D0 = zero-ext word → abs.
-  // Note: the binario copies the word into D0 zero-extended, then negates
   // the full long if negative. Result: |signed_word| as 32-bit.
   const rawD5 = sx16((rWabs(state, 0x400696) - rWs(r, a2 + 0x2e)) & 0xffff);
   const D5 = (rawD5 < 0 ? -rawD5 : rawD5) & 0xffff;
@@ -504,5 +471,4 @@ export function stateDispatch160F6(
   // epilog: return
 }
 
-/** Alias binario. */
 export { stateDispatch160F6 as FUN_000160F6 };

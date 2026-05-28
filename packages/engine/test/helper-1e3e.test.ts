@@ -1,7 +1,6 @@
 /**
  * helper-1e3e.test.ts — unit test per `fillSeqWords1E3E` (FUN_00001E3E).
  *
- * Bit-perfect parity verificata in `cli/src/test-helper-1e3e-parity.ts`.
  * Qui copriamo: basic fill, edge cases (count=0, count negativo, wrap word).
  */
 
@@ -68,7 +67,7 @@ describe("fillSeqWords1E3E", () => {
     s.workRam.fill(0x00);
     fillSeqWords1E3E(s, 0x401100, 0x0042, 1);
     expect(readWord(s, 0x401100)).toBe(0x0042);
-    // byte immediatamente successivo non toccato (se c'era un prev all zero)
+    // immediately following byte not touched (if there was a previous all-zero).
     expect(readWord(s, 0x401102)).toBe(0x0000);
   });
 
@@ -81,9 +80,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readWord(s, dest + 2)).toBe(0x0011);
     expect(readWord(s, dest + 4)).toBe(0x0012);
     expect(readWord(s, dest + 6)).toBe(0x0013);
-    // il byte successivo non è toccato
     expect(readWord(s, dest + 8)).toBe(0x0000);
-    // il byte precedente non è toccato
     expect(readByte(s, dest - 1)).toBe(0x00);
   });
 
@@ -112,13 +109,11 @@ describe("fillSeqWords1E3E", () => {
     s.workRam.fill(0xCC);
     const dest = 0x401500;
     fillSeqWords1E3E(s, dest, 0, 3);
-    // 3 word = 6 byte scritti
     expect(readWord(s, dest + 0)).toBe(0x0000);
     expect(readWord(s, dest + 2)).toBe(0x0001);
     expect(readWord(s, dest + 4)).toBe(0x0002);
-    // byte a dest+6 non toccato (rimane 0xCC)
     expect(readByte(s, dest + 6)).toBe(0xCC);
-    // byte a dest-1 non toccato
+    // byte at dest-1 not touched.
     expect(readByte(s, dest - 1)).toBe(0xCC);
   });
 
@@ -152,7 +147,6 @@ describe("fillSeqWords1E3E", () => {
 
   it("indirizzi fuori range sono no-op (non sollevano eccezione)", () => {
     const s = emptyGameState();
-    // Cart RAM 0x900000 → fuori dal mappa TS, no crash
     expect(() => fillSeqWords1E3E(s, 0x900000, 0, 4)).not.toThrow();
     // ROM area 0x000000 → no crash, no write
     expect(() => fillSeqWords1E3E(s, 0x000100, 0, 2)).not.toThrow();

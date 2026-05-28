@@ -1,7 +1,6 @@
 /**
  * boot-spurious-handler.test.ts — smoke + corner cases di bootSpuriousHandler.
  *
- * Bit-perfect parity verificata vs binary tramite
  * `cli/src/test-boot-spurious-handler-parity.ts`.
  */
 
@@ -55,7 +54,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
 
   it("imposta i counter del boot main path: 0x3B6=0x0000 (FFFF+1), 0x3AE=0x0080, 0x3B8=0x012C, 0x3B2=0", () => {
     const s = emptyGameState();
-    // Pre-pop con sentinel pattern per verificare overwrite.
+    // Pre-populate with sentinel pattern to verify overwrite.
     s.workRam[BSH_FRAME_CTR_OFF] = 0x12;
     s.workRam[BSH_FRAME_CTR_OFF + 1] = 0x34;
     s.workRam[BSH_AV_CONTROL_OFF] = 0xde;
@@ -112,10 +111,8 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
       },
     });
     expect(calls).toBe(1);
-    // Senza il default, 0x4003B6 NON viene incrementato → resta 0xFFFF
     // (settato dal main path a step 5).
     expect(getWord(s.workRam, BSH_FRAME_CTR_OFF)).toBe(0xffff);
-    // Anche 0x4003B8 (settato solo dentro FUN_100E0) resta 0.
     expect(getWord(s.workRam, BSH_COUNTDOWN_OFF)).toBe(0x0000);
     // Audio mailbox NON inizializzata.
     expect(s.workRam[BSH_AUDIO_BASE_OFF]).toBe(0);
@@ -129,12 +126,9 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
         resetCalls++;
       },
     });
-    // audioInit80 default chiama audioReset80, quindi 1 call.
     expect(resetCalls).toBe(1);
-    // L'audioInit80 default applica comunque gli effetti counter:
     expect(getWord(s.workRam, BSH_FRAME_CTR_OFF)).toBe(0x0000); // wrap
     expect(getWord(s.workRam, BSH_COUNTDOWN_OFF)).toBe(0x012c);
-    // Ma il reset audio (0x1F44=0x80) NON viene applicato perché override.
     expect(s.workRam[BSH_AUDIO_BASE_OFF]).toBe(0);
   });
 
@@ -142,7 +136,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
     const s = emptyGameState();
     bootSpuriousHandler(s, 0xff, 0x00400000);
 
-    // Scan workRam: solo gli offset previsti devono essere != 0.
+    // Scan workRam: only expected offsets must be != 0.
     const expectedNonZero = new Set<number>([
       BSH_SENTINEL_OFF,
       BSH_SP_SAVE_OFF + 1, // 0x441 = 0x40
@@ -151,18 +145,17 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
       BSH_COUNTDOWN_OFF + 1, // 0x3B9 = 0x2C
       BSH_AUDIO_BASE_OFF, // 0x1F44 = 0x80
     ]);
-    // Sentinel scritto = 0xFF
+    // Written sentinel = 0xFF.
     expect(s.workRam[BSH_SENTINEL_OFF]).toBe(0xff);
-    // SP long = 0x00400000 → MSB=0,0,0x40,0x00 → solo 0x441=0x40
+    // SP long = 0x00400000 -> MSB=0,0,0x40,0x00 -> only 0x441=0x40.
     expect(s.workRam[BSH_SP_SAVE_OFF]).toBe(0);
     expect(s.workRam[BSH_SP_SAVE_OFF + 1]).toBe(0x40);
     expect(s.workRam[BSH_SP_SAVE_OFF + 2]).toBe(0);
     expect(s.workRam[BSH_SP_SAVE_OFF + 3]).toBe(0);
-    // FRAME_CTR (0x3B6/7) finisce a 0x0000 (wrap) → entrambi i byte sono 0
+    // FRAME_CTR (0x3B6/7) ends at 0x0000 (wrap) -> both bytes are 0.
     expect(s.workRam[BSH_FRAME_CTR_OFF]).toBe(0);
     expect(s.workRam[BSH_FRAME_CTR_OFF + 1]).toBe(0);
 
-    // Nessun byte oltre quelli previsti deve essere nonzero.
     let unexpected = 0;
     for (let off = 0; off < s.workRam.length; off++) {
       const v = s.workRam[off] ?? 0;

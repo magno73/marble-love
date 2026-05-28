@@ -2,22 +2,16 @@
 /**
  * test-aux-timer-parity.ts — differential FUN_10146 vs auxTimer.
  *
- * `FUN_00010146` (72 byte) è il "timer secondario" chiamato da mainTick
- * (FUN_28788). Drena 1 byte dalla queue 0x401F44 (via FUN_4D68) e aggiorna
- * tre stati in work RAM:
  *   - 0x4003B2 byte (active flag)
  *   - 0x4003B4 byte (counter)
  *   - 0x4003B8 word (countdown)
  *
- * Setup per ogni caso random:
  *   - queue head/tail in 0..15 (random; ~30% empty)
- *   - 16 byte random nel buffer (con bias verso 0xFF e multipli di 8 per
+ *   - 16 random bytes in the buffer (with bias toward 0xFF and multiples of 8 for
  *     coprire i branch sensibili)
- *   - countdown word random (con bias verso 0)
- *   - active flag byte random (con bias verso 0x00 / 0x40)
- *   - counter byte random (con valori vicini a 0xFF per testare wrap)
+ *   - random countdown word (with bias toward 0)
+ *   - random active flag byte (with bias toward 0x00 / 0x40)
  *
- * Confrontiamo: queue head dopo, *0x4003B2, *0x4003B4, *0x4003B8 word.
  *
  * Uso: npx tsx packages/cli/src/test-aux-timer-parity.ts [N]
  */
@@ -100,7 +94,6 @@ async function main(): Promise<void> {
     //   4: countdown==0, active=0x40, byte 0x09 (counter++)
     //   5: countdown==0, active=0,    byte 0x00 (counter++)
     //   6: counter wrap (0xFF -> 0)
-    //   7: countdown!=0 + active!=0 + 0xFF (countdown clears, attivo intoccato)
     let head: number, tail: number, buf0: number;
     let countdown: number, active: number, counter: number;
 
@@ -134,27 +127,24 @@ async function main(): Promise<void> {
       tail = Math.floor(rng() * 16);
       // ~25% empty
       if (rng() < 0.25) tail = head;
-      // Bias byte verso valori sensibili (0xFF, multipli di 8) ma anche full random.
       const r = rng();
       if (r < 0.2) buf0 = 0xff;
       else if (r < 0.4) buf0 = (Math.floor(rng() * 32) * 8) & 0xff; // multipli di 8
       else buf0 = Math.floor(rng() * 256) & 0xff;
-      // Countdown: 30% zero, altrimenti random word.
       countdown = rng() < 0.3 ? 0 : Math.floor(rng() * 0x10000) & 0xffff;
-      // Active flag: bias verso 0x00 e 0x40.
+      // Active flag: bias toward 0x00 and 0x40.
       const ar = rng();
       if (ar < 0.4) active = 0x00;
       else if (ar < 0.7) active = 0x40;
       else active = Math.floor(rng() * 256) & 0xff;
-      // Counter: bias verso 0xFE/0xFF per wrap.
+      // Counter: bias toward 0xFE/0xFF for wrap.
       const cr = rng();
       if (cr < 0.2) counter = 0xff;
       else if (cr < 0.3) counter = 0xfe;
       else counter = Math.floor(rng() * 256) & 0xff;
     }
 
-    // Random buffer sfondo (i 16 byte) — ma assicuriamo che buffer[head] = buf0
-    // se la queue non è empty (così il byte dequeued è quello scelto).
+    // Random background buffer (the 16 bytes), but ensure buffer[head] = buf0.
     const buffer = new Array(16).fill(0).map(() => Math.floor(rng() * 256) & 0xff);
     if (head !== tail) buffer[head] = buf0;
     const bufHeadValue = buffer[head] ?? 0;

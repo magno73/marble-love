@@ -1,10 +1,10 @@
-// sound-worklet.js — AudioWorklet processor per Marble Madness.
+// sound-worklet.js - AudioWorklet processor for Marble Madness.
 //
-// MVP V1: riceve "voice events" via postMessage dal main thread e sintetizza
-// 8 voci × sine wave (YM2151 channels) + 4 voci × square+noise (POKEY) → mix
-// → output stereo @ sample rate AudioContext default (tipicamente 44100Hz).
+// MVP V1 receives voice events from the main thread via postMessage and
+// synthesizes 8 sine-wave voices (YM2151 channels) plus 4 square/noise voices
+// (POKEY), then mixes them to stereo at the AudioContext sample rate.
 //
-// Eventi accettati (via this.port.onmessage):
+// Accepted events (via this.port.onmessage):
 //   { type: "ym_voice", ch: 0..7, on: true, freq: Hz, vol: 0..1 }
 //   { type: "ym_voice", ch: 0..7, on: false }
 //   { type: "pokey_voice", ch: 0..3, on: true, freq: Hz, vol: 0..1, noise: bool }
@@ -12,9 +12,9 @@
 //   { type: "cue", freq: Hz, vol: 0..1, noise: bool, durationMs: number }
 //   { type: "reset" }
 //
-// Phase 5/6 V3 chip-perfect (deferito): qui useremmo envelope DR/AR/SR/RR
-// per YM2151 e LFSR 17-bit per POKEY. V1 = ADSR fixed snappy + white noise
-// (Math.random) per "rumble" basic.
+// Later chip-accurate work can replace this fallback path with YM2151
+// DR/AR/SR/RR envelopes and the POKEY 17-bit LFSR. This fallback keeps the
+// browser responsive when raw chip PCM is unavailable.
 
 class MarbleSoundProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -115,7 +115,7 @@ class MarbleSoundProcessor extends AudioWorkletProcessor {
       v.remaining = Math.max(1, Math.round((Number(msg.durationMs) || 90) * this.sampleRate_ / 1000));
       v.phase = 0;
     } else if (msg.type === "ym_pcm") {
-      // V3 chip-perfect: stream PCM raw da YM2151 simulator (già resamplato a ctx rate)
+      // Raw YM2151 simulator PCM, already resampled to the AudioContext rate.
       if (msg.left instanceof Float32Array && msg.right instanceof Float32Array) {
         this.enqueuePcm(this.ymPcm, msg.left, msg.right);
       }

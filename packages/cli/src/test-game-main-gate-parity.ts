@@ -2,17 +2,11 @@
 /**
  * test-game-main-gate-parity.ts — differential FUN_28972 vs gameMainGate.
  *
- * FUN_28972 è il root "main gate" del game loop. Chiama 3 sub:
  *   - FUN_2893C (debounce): replicato inline in TS
- *   - FUN_01CC → FUN_472A (gateCheck): patched nel binario a `moveq #1,D0; rts`
  *   - FUN_28D02 (control callback): patched a immediate `rts`
  *
- * Inoltre il binario contiene uno spin loop su MMIO 0xF60001 bit 6 e un
- * potenziale `bra .` infinito. Per evitare hang/spin in test, settiamo:
- *   - MMIO 0xF60001 bit 6 = 1 (early-exit prima di Block C/spin)
- *   - mai lasciare *0x4003AA bit 0 + bit 1 entrambi set (no fatal hang)
+ * potential infinite `bra .`. To avoid hang/spin in tests, set:
  *
- * Confronto state finale (dopo l'esecuzione):
  *   - workRam @ 0x4003A8, 0x4003AA, 0x4003AC (debounce state)
  *   - workRam @ 0x400390 (game state word)
  *   - workRam @ 0x400396 (object count word)
@@ -62,7 +56,6 @@ function patchBinary(cpu: CpuSession): void {
   pokeMem(cpu, FUN_CONTROL + 1, 1, 0x75);
 
   // wait_loop @ 0x28A22: change `bne.b +8` (66 08) → `bra.b +8` (60 08).
-  // Esce immediatamente dallo spin di MMIO bit 6 senza attendere.
   pokeMem(cpu, 0x28a22, 1, 0x60);
 }
 
@@ -85,7 +78,6 @@ async function main(): Promise<void> {
   // gateCheck stub matching the patched binary (always returns 1)
   const gateCheck = (_arg: number): number => 1;
 
-  /** Run UN caso e verifica byte-by-byte. */
   function runOneCase(
     setup: () => { mmioInput: number },
     extraFields: [string, number, number][] = [],
@@ -155,7 +147,6 @@ async function main(): Promise<void> {
 
   // ─── Suite B: MMIO bit 6 = 0 (Block C entry, spin patched) ───────────
   // Setup: ensure obj[0] e obj[1] hanno state non-0 e non-2 per esercitare il
-  // timer increment. *0x4003B2 = 0 prima.
   console.log(`\n=== gameMainGate (FUN_28972) — Suite B: MMIO bit 6 = 0 — ${n} casi ===`);
   let okB = 0;
   let failB: { case: number; field: string; addr: number; bin: number; ts: number } | null = null;
@@ -164,7 +155,6 @@ async function main(): Promise<void> {
     for (let j = 0; j < 2; j++) {
       const objAddr = 0x400018 + j * 0xe2;
       const objOff = objAddr - 0x400000;
-      // state = 0..5 (4 valori test: 0 skip, 2 skip, others enter)
       const stateByte = Math.floor(rng() * 6) & 0xff;
       const outer = Math.floor(rng() * 0x200) & 0xffff; // 0..511 to test clamp at 0x168
       pokeMem(cpu, objAddr + 0x18, 1, stateByte);

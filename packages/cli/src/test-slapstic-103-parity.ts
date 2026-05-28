@@ -6,18 +6,18 @@
  *
  * Per ogni `samples[i]` esegue `slapsticTick(fsm, addr)` e:
  *   - Conta quanti accessi sono "direct bank" (cioe' la FSM era in ACTIVE e
- *     ha cambiato bank immediatamente, o e' uscita dall'IDLE su un reset)
- *   - Stampa per ogni frame: bank atteso da MAME (se disponibile) vs bank TS
- *   - Verifica che il bank dopo l'ultimo accesso di ogni frame combaci con
- *     `bank_per_frame[frame]` se presente (>= 0).
+ *     changed bank immediately, or left IDLE on a reset)
+ *   - Print each frame: expected MAME bank when available vs TS bank
+ *   - Verify that the bank after the last access of each frame matches
+ *     `bank_per_frame[frame]` if present (>= 0).
  *
- * Output stdout. Exit 0 se 100% parity, 1 se mismatch.
+ * Output stdout. Exit 0 on 100% parity, 1 on mismatch.
  *
- * **Limite**: MAME non espone `m_current_bank` via Lua state interface, quindi
- * `bank` nei samples e' -1. La validazione si concentra sulla:
- *   1. coerenza della sequenza FSM (no transizioni illegali)
- *   2. bank finale di ogni frame (se MAME lo esponesse, sarebbe verificabile)
- *   3. pattern atteso: dopo `0x80000` reset, l'accesso successivo deve
+ * **Limit**: MAME does not expose `m_current_bank` through the Lua state
+ * interface, so `bank` in samples is -1. Validation focuses on:
+ *   1. FSM sequence consistency (no illegal transitions)
+ *   2. final bank of each frame (verifiable if MAME exposed it)
+ *   3. expected pattern: after `0x80000` reset, the next access must
  *      mappare ai bank addr 0x80080/0x800A0/0x800C0/0x800E0
  */
 
@@ -121,7 +121,7 @@ for (const sum of summaries) {
   }
 }
 
-// Sanity check: il primo accesso a 0x80000 da IDLE → ACTIVE deve esserci.
+// Sanity check: the first access to 0x80000 from IDLE -> ACTIVE must exist.
 // E un accesso successivo a 0x80080/A0/C0/E0 e' un direct bank switch.
 let directSwitches = 0;
 let bankSwitchHistory: number[] = [];

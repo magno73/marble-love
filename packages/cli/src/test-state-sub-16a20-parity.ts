@@ -8,7 +8,7 @@
  *   1. Scan entity array → D4 (state==3 count), A0 (last state==1/3 entity).
  *      → FUN_1BA(slotArg), sound dispatch (gated D4==0).
  *   2. Display loop: aggiorna entity[0x6D/0x6E], conta mode4/5, chiama sound
- *      pair, render string × 5 (o 7 se count==2) per entity state==2.
+ *      pair, render string x 5 (or 7 if count==2) per entity state==2.
  *      → waitVblankStateGated(0xB4), clearDisplayRows(0x14).
  *   3. Secondary loop: render 5+3 strings + wait × 3 per entity state==1
  *      (gated D4==1). entity[0x6E] restore, *0x400390=0, clearDisplayRows.
@@ -16,7 +16,7 @@
  *      objectStateEntry25BAE o FUN_18F46 per entity state==2.
  *
  * **Strategia parity**:
- *   Tutte le JSR esterne patchate con RTS (0x4E75):
+ *   All external JSRs are patched with RTS (0x4E75):
  *     - FUN_000001BA (trampoline, obj-slot alloc)
  *     - FUN_0000158AC (soundCmd)
  *     - FUN_00015884 (soundPair15884)
@@ -26,13 +26,13 @@
  *     - FUN_00025BAE (objectStateEntry25BAE)
  *     - FUN_00018F46 (fun_18f46)
  *
- *   Con tutte stubbed, i soli side-effect del binario sono le scritture dirette
+ *   With everything stubbed, the binary's only side effects are direct writes
  *   in workRam:
  *     - entity[0x6D], entity[0x6E] (fasi 2, 3)
  *     - entity[0x18] = 0 (fase 4 else-branch)
  *     - *0x400654 (byte, mode==4 fase 2)
  *     - *0x400656 (byte, mode==5 fase 2)
- *     - *0x400390 (word, azzerato fase 3)
+ *     - *0x400390 (word, cleared in phase 3)
  *
  *   Compare: entity array completo + i 5 globali sopra.
  *

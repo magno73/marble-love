@@ -10,13 +10,11 @@
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG) **lasciato live**.
- *   - `FUN_00018E6C` (slotInsertSorted) **patchato RTS** — side effects sulla
- *     byte-array @ 0x4003BC non vengono osservati qui; l'importante è il
- *     corretto triggering del call e le scritture su entry[0x8] e entry[0x2].
+ *   - `FUN_00018E6C` (slotInsertSorted) **patched to RTS**: side effects on
+ *     correct call triggering and writes to entry[0x8] and entry[0x2].
  *   - `FUN_00018F46` (timer-reset callback) **patchato RTS**.
  *   - `FUN_00018972` (computeSpriteCoords_v4) **patchato RTS**.
- *   - `FUN_0001584C` (soundCommand via A3=0x158AC) **patchato con capture**:
- *     scrive il byte MSB del long arg @ 0x401FFE (sentinel area).
+ *   - `FUN_0001584C` (soundCommand via A3=0x158AC) **patched with capture**:
  *
  * **Snapshot comparato**:
  *   - `workRam[0x1650..0x188F]` (slot-table 576 byte — timer, ptr-walk ptr)
@@ -24,9 +22,7 @@
  *   - sound capture @ 0x401FFE
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random globals + tabella casuale
  *   - B: forced early-out (gameMode != 3 o byte760 == 0)
- *   - C: forced timer countdown (timer >= 0 entries, vari valori)
  *   - D: forced ptr-walk path (timer == -1 entries)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-1844a-parity.ts [N]
@@ -70,7 +66,7 @@ const SENTINEL_NOT_CALLED = 0xaa;
 // ─── Patch subs ─────────────────────────────────────────────────────────────
 
 /**
- * Patch 3 JSR targets con RTS, e FUN_158AC con capture thunk:
+ * Patch 3 JSR targets with RTS, and FUN_158AC with capture thunk:
  *   move.b (7,SP), D0   ; 10 2F 00 07  — load LSB of long arg (push via pea)
  *   move.b D0, $401FFE  ; 13 C0 00 40 1F FE
  *   rts                 ; 4E 75

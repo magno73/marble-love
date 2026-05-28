@@ -1,7 +1,6 @@
 /**
  * render-string-entry-286b0.test.ts — smoke per FUN_286B0.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-render-string-entry-286b0-parity.ts` (500/500).
  */
 
@@ -26,7 +25,6 @@ function setDestPtr(s: ReturnType<typeof emptyGameState>, dstAbs: number): void 
   s.workRam[off + 3] = dstAbs & 0xff;
 }
 
-/** Pone in workRam una stringa null-terminated; ritorna offset workRam. */
 function putString(
   s: ReturnType<typeof emptyGameState>,
   off: number,
@@ -39,7 +37,6 @@ function putString(
 }
 
 /**
- * Pone in workRam @ `arg1Off` il long-BE `srcPtrAbs`. Il caller invocherà
  * `renderStringEntry286B0(state, arg1Off + WORK_RAM_BASE, ...)`.
  */
 function setArg1PtrToPtr(
@@ -69,7 +66,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     const DST_OFF = 0x300;
     setDestPtr(s, WORK_RAM_BASE + DST_OFF);
 
-    // Pre-fill marker / col / tickOff con sentinel non-zero
+    // Pre-fill marker / col / tickOff with non-zero sentinel.
     s.workRam[STRUCT_OFF + COL_BYTE_OFF] = 0x99;
     s.workRam[STRUCT_OFF + TICKOFF_BYTE_OFF] = 0x88;
     s.workRam[STRUCT_OFF + MARKER_BYTE_OFF] = 0xaa;
@@ -101,7 +98,6 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     expect(s.workRam[STRUCT_OFF + TICKOFF_BYTE_OFF]).toBe(0x11);
     expect(s.workRam[STRUCT_OFF + MARKER_BYTE_OFF]).toBe(0);
 
-    // Dest pointer NON viene aggiornato persistentemente (solo registro CPU).
     const destPtrPost =
       ((s.workRam[STRUCT_OFF + DEST_PTR_LONG_OFF] ?? 0) << 24) |
       ((s.workRam[STRUCT_OFF + DEST_PTR_LONG_OFF + 1] ?? 0) << 16) |
@@ -109,7 +105,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
       (s.workRam[STRUCT_OFF + DEST_PTR_LONG_OFF + 3] ?? 0);
     expect(destPtrPost >>> 0).toBe((WORK_RAM_BASE + DST_OFF) >>> 0);
 
-    // renderStringChain invocato con (0x400410, 0x3400).
+    // renderStringChain invoked with (0x400410, 0x3400).
     expect(renderArgs).not.toBeNull();
     expect(renderArgs!.addr).toBe(RENDER_STRUCT_ADDR);
     expect(renderArgs!.addr).toBe(0x00400410);
@@ -124,7 +120,6 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     setArg1PtrToPtr(s, ARG1_OFF, WORK_RAM_BASE + SRC_OFF);
     const DST_OFF = 0x300;
     setDestPtr(s, WORK_RAM_BASE + DST_OFF);
-    // Pre-fill dest con sentinel diverso da 0
     s.workRam[DST_OFF] = 0x99;
     s.workRam[DST_OFF + 1] = 0x99;
 
@@ -136,7 +131,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
       0x3400,
     );
 
-    // 1 byte (terminator) scritto → dst[0] = 0, dst[1] invariato.
+    // 1 byte (terminator) written -> dst[0] = 0, dst[1] unchanged.
     expect(s.workRam[DST_OFF]).toBe(0);
     expect(s.workRam[DST_OFF + 1]).toBe(0x99);
     // Struct popolato.
@@ -180,7 +175,6 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     setArg1PtrToPtr(s, ARG1_OFF, WORK_RAM_BASE + SRC_OFF);
     const DST_OFF = 0x300;
     setDestPtr(s, WORK_RAM_BASE + DST_OFF);
-    // Sentinel byte appena PRIMA del dst per detect spillage.
     s.workRam[DST_OFF - 1] = 0xee;
 
     renderStringEntry286B0(s, WORK_RAM_BASE + ARG1_OFF, 1, 2, 0x3400);

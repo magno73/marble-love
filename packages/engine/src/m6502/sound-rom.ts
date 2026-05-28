@@ -1,12 +1,12 @@
 /**
- * sound-rom.ts — Loader sound ROM Marble Madness (136033.421 + 136033.422).
+ * Marble Madness sound ROM loader for `136033.421` and `136033.422`.
  *
- * Da MAME atarisy1.cpp ROM_START(marble), audiocpu region:
+ * MAME `atarisy1.cpp` `ROM_START(marble)`, audiocpu region:
  *   ROM_LOAD( "136033.421",  0x8000, 0x4000 )  // 16KB, mapped $8000-$BFFF
  *   ROM_LOAD( "136033.422",  0xC000, 0x4000 )  // 16KB, mapped $C000-$FFFF
  *
- * Address map sound CPU: ROM region = $4000-$FFFF (48KB). Marble usa solo
- * gli ultimi 32KB ($8000-$FFFF). L'area $4000-$7FFF resta open bus ($FF).
+ * Sound CPU ROM address map: $4000-$FFFF (48KB). Marble uses only the final
+ * 32KB at $8000-$FFFF; $4000-$7FFF remains open bus ($FF).
  *
  * `sound-mmu.ts` accetta un Uint8Array di 0xC000 byte (48KB) e mappa
  * `rom[i]` a addr `$4000 + i`. Layout del buffer prodotto qui:
@@ -15,9 +15,7 @@
  *   buffer[0x4000..0x8000] = rom421      (area $8000-$BFFF: low ROM)
  *   buffer[0x8000..0xC000] = rom422      (area $C000-$FFFF: high ROM)
  *
- * Reset vector ($FFFC/$FFFD) finisce in buffer[0xBFFC/0xBFFD], cioe' negli
- * ultimi byte di rom422. NMI vector ($FFFA/$FFFB) e IRQ vector ($FFFE/$FFFF)
- * idem in rom422.
+ * Reset/NMI/IRQ vectors land in the final bytes of `rom422`.
  */
 
 export const SOUND_ROM_BUFFER_SIZE = 0xC000;  // 48KB, mapped $4000-$FFFF
@@ -26,13 +24,14 @@ const ROM_BANK_SIZE = 0x4000;                 // 16KB per bank
 export interface SoundRomFiles {
   /** 136033.421 — 16KB, mapped $8000-$BFFF. */
   rom421: Uint8Array;
-  /** 136033.422 — 16KB, mapped $C000-$FFFF (contiene reset/NMI/IRQ vector). */
+  /** 136033.422 — 16KB, mapped $C000-$FFFF, with reset/NMI/IRQ vectors. */
   rom422: Uint8Array;
 }
 
-/** Costruisce il buffer ROM 48KB per `createSoundMmu` da 421 + 422.
- * Throw se le dimensioni dei file non sono esattamente 16KB ognuno (Rule 12
- * fail loud: ROM dump corrotto va catturato subito, non silenziato). */
+/**
+ * Build the 48KB `createSoundMmu` ROM buffer from the two 16KB ROM files.
+ * Throws on incorrect file sizes so corrupt dumps fail early.
+ */
 export function buildSoundRom(files: SoundRomFiles): Uint8Array {
   if (files.rom421.length !== ROM_BANK_SIZE) {
     throw new Error(

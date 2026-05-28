@@ -1,8 +1,7 @@
 /**
- * state-sub-5250.ts — replica `FUN_00005250` (12 byte, 0x5250–0x525B).
+ * state-sub-5250.ts - `FUN_00005250` replica (12 bytes, 0x5250-0x525B).
  *
- * Primitive di OR bitmask su entrambe le bitmap di status flags in work RAM.
- * Sequenza esatta delle due istruzioni:
+ * Primitive that ORs a bitmask into both status-flag bitmaps in work RAM.
  *
  * **Disasm 0x5250..0x525B** (12 byte):
  *
@@ -10,41 +9,30 @@
  *   0x5256  or.l  D1,(0x00401F76).l   ; *0x401F76 |= D1  (secondary flags, long-BE)
  *   0x525C  rts
  *
- * `or.l Dn,(abs).l` = 2-byte opcode + 4-byte absolute address = 6 byte per
- * istruzione. Due istruzioni = 12 byte + rts = 14 byte se si include l'rts a
- * 0x525C; ma l'rts a 0x525C è il primo byte di `FUN_0000525C` secondo i range
- * Ghidra (0x525C–0x5283). In M68k il `rts` è sempre l'ultima istruzione della
- * funzione corrente — il byte 0x525C appartiene all'inizio della funzione
- * successiva ma il compilatore non emette un `rts` duplicato; lo share di
- * indirizzo è consentito quando FUN_525C inizia con il medesimo opcode `rts`.
- * Ghidra delimita FUN_5250 a 12 byte escludendo il `rts` condiviso: i 12 byte
- * contengono solo i due `or.l`.
+ * `or.l Dn,(abs).l` = 2-byte opcode + 4-byte absolute address = 6 bytes per
+ * instruction. Two instructions = 12 bytes + rts = 14 bytes if including the
+ * following rts, but the compiler does not emit a duplicate `rts`; Ghidra's
+ * Ghidra delimits FUN_5250 as 12 bytes, excluding the shared `rts`: those
+ * 12 bytes contain only the two `or.l` instructions.
  *
- * **NOTA sul rts condiviso**: il range 0x5250–0x525B (12 byte) è corretto perché
- * 0x525C è il rts che chiude sia FUN_5250 (fall-through) che è la prima istruzione
- * di FUN_525C secondo l'encoding di Ghidra. La replica TS emette l'effetto delle
- * due `or.l` e ritorna (il `rts` è implicito nel return TS).
  *
  * **Xrefs (callers)**:
  *   - 0x50C6 in FUN_00004F38 (UNCONDITIONAL_CALL)
  *   - 0x51F8 in FUN_00004F38 (UNCONDITIONAL_CALL)
  *
- * **Convenzione caller**: D1 è un long bitmask settato dal caller prima del jsr.
- * I due OR sono idempotenti su bit già settati — il caller usa questa sub ogni
- * volta che vuole marcare un set di flag sia nel primary che nel secondary long.
+ * whenever it wants to mark a flag set in both the primary and secondary longs.
  *
- * **Side effects** (workRam, entrambi gli OR sono sempre eseguiti):
  *   - workRam[0x1F5E..0x1F61] (long-BE) |= d1
  *   - workRam[0x1F76..0x1F79] (long-BE) |= d1
  *
- * **Relazione con moduli adiacenti**:
- *   - `FUN_005248` (predecessor immediato): `or.l D1,(0x401F5E).l; rts` — OR solo
- *     primary flags. FUN_5250 aggiunge l'OR anche su secondary, coprendo entrambe
+ * **Relationship with adjacent modules**:
+ *   - `FUN_005248` (immediate predecessor): `or.l D1,(0x401F5E).l; rts` - OR only
+ *     primary flags. FUN_5250 also ORs secondary, covering both
  *     le bitmap controllate da `FUN_52A2` (cfr `state-sub-5284.ts`).
- *   - `FUN_0000525C` (successor): usa `fun523A` per settare bit individuali nel
- *     primary flags; non tocca secondary direttamente.
+ *     bitmaps checked by `FUN_52A2` (see `state-sub-5284.ts`).
+ *   - `FUN_0000525C` (successor): uses `fun523A` to set individual bits in
+ *     primary flags; it does not touch secondary directly.
  *
- * Verifica bit-perfect via `packages/cli/src/test-state-sub-5250-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -57,10 +45,8 @@ export const PRIMARY_FLAGS_OFF = 0x1f5e as const;
 /** Offset workRam del long-BE "secondary status flags" @ 0x401F76. */
 export const SECONDARY_FLAGS_OFF = 0x1f76 as const;
 
-/** Indirizzo assoluto M68k del primary flags long. */
 export const PRIMARY_FLAGS_ADDR = 0x00401f5e as const;
 
-/** Indirizzo assoluto M68k del secondary flags long. */
 export const SECONDARY_FLAGS_ADDR = 0x00401f76 as const;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
@@ -89,27 +75,15 @@ function orLongBE(r: Uint8Array, off: number, mask: number): void {
 // ─── Replica ─────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00005250` — OR bitmask su primary + secondary flags.
  *
- * Esegue nella sequenza esatta del binario:
  *   1. `or.l D1,(0x401F5E).l`  — primary flags
  *   2. `or.l D1,(0x401F76).l`  — secondary flags
  *
- * @param state  GameState. workRam mutata in due posizioni:
- *               `[0x1F5E..0x1F61]` e `[0x1F76..0x1F79]`.
- * @param d1     Bitmask long (unsigned 32-bit). Stessa maschera applicata a
- *               entrambi i long-BE. Il caller la prepara in D1 prima del jsr.
- *               Valore 0 = no-op (OR con 0).
+ * @param state  GameState. workRam mutated in two locations:
+ *               `[0x1F5E..0x1F61]` and `[0x1F76..0x1F79]`.
+ * @param d1     Bitmask long (unsigned 32-bit). Same mask applied to
  *
- * @returns void. Side effects elencati sopra.
  *
- * **Bit-perfect notes**:
- *   - Entrambi gli OR sono **sempre** eseguiti (nessun branch).
- *   - Ordine fisso: primary PRIMA, secondary DOPO (replica sequenza esatta del
- *     binario; in pratica i due long sono indipendenti e l'ordine non è
- *     osservabile dall'esterno, ma la replica è fedele per completezza).
- *   - Il long-BE è letto a 32 bit, OR-ato, riscritto a 32 bit big-endian in
- *     quattro byte separati (la workRam è `Uint8Array`, non big-endian nativa).
  */
 export function stateSub5250(state: GameState, d1: number): void {
   const r = state.workRam;

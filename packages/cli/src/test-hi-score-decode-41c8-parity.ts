@@ -3,7 +3,7 @@
  * test-hi-score-decode-41c8-parity.ts — differential FUN_41C8 vs hiScoreDecode41c8.
  *
  * `FUN_000041C8` (198 byte): high-score entry decoder.
- *   - tabella sorgente = `*0x401FFC + 0x1E` (10 entry × 5 byte)
+ *   - source table = `*0x401FFC + 0x1E` (10 entries x 5 bytes)
  *   - buffer destinazione = 0x401F7A (4 byte score + 3 byte initials)
  *   - arg1 in [0..9] -> ret = 0x401F7A; altrimenti ret = 0
  *
@@ -12,13 +12,13 @@
  *
  * Strategia parity:
  *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
- *     popola 10 record × 5 byte random; replica setup su Musashi e su
+ *     populate 10 records x 5 random bytes; replicate setup on Musashi and on
  *     state.workRam.
- *   - Per ogni caso random: setup arg1; chiama il binario; chiama TS;
+ *   - For each random case: set up arg1; call the binary; call TS;
  *     confronta D0 e i 7 byte del buffer @ 0x401F7A..0x401F80.
  *
  * Pattern coverage:
- *   - 50% arg1 in [0..9]                      -> path valido, scrive buffer
+ *   - 50% arg1 in [0..9]                      -> valid path, writes buffer
  *   - 20% arg1 in [10..0xFF]                  -> path OOR, no write
  *   - 15% arg1 sign-ext negativo (0xFFFFxxxx) -> stress OOR
  *   - 15% full random long                    -> stress generale
@@ -54,7 +54,7 @@ const TABLE_BASE = PTR_VAL + TABLE_OFF; // 0x401A1E
 const OUT_BUF = 0x00401f7a;
 const OUT_BUF_LEN = 7;
 
-/** Dimensione tabella high-score: 10 record × 5 byte. */
+/** High-score table size: 10 records x 5 bytes. */
 const NUM_RECORDS = 10;
 const RECORD_SIZE = 5;
 
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // ── Setup tabella: 10 × 5 byte random. Stesso content su bin e TS. ──
+    // Table setup: 10 x 5 random bytes. Same content on binary and TS.
     for (let r = 0; r < NUM_RECORDS; r++) {
       for (let b = 0; b < RECORD_SIZE; b++) {
         const byte = Math.floor(rng() * 256);
@@ -114,9 +114,9 @@ async function main(): Promise<void> {
       }
     }
 
-    // ── Pre-fill buffer di output con sentinel (per detect overflow). ──
+    // ── Pre-fill output buffer with sentinel bytes to detect overflow. ──
     for (let b = 0; b < OUT_BUF_LEN + 4; b++) {
-      // 4 byte extra prima e dopo per check.
+      // 4 extra bytes before and after for checking.
       const addr = OUT_BUF - 2 + b;
       pokeMem(cpu, addr, 1, 0xa5);
       state.workRam[addr - 0x400000] = 0xa5;
@@ -141,7 +141,7 @@ async function main(): Promise<void> {
       arg1 = 10 + Math.floor(rng() * (0x100 - 10)); // 10..0xFF
     } else if (pick < 0.85) {
       pattern = "neg";
-      // sign-ext di word negativo: 0xFFFFxxxx con xxxx in [0x8000..0xFFFF].
+      // Sign-extension of a negative word: 0xFFFFxxxx with xxxx in [0x8000..0xFFFF].
       const w = 0x8000 + Math.floor(rng() * 0x8000);
       arg1 = (0xffff0000 | w) >>> 0;
     } else {

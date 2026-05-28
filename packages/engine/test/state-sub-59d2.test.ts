@@ -1,8 +1,6 @@
 /**
  * state-sub-59d2.test.ts — smoke test per stateSub59D2 (FUN_59D2).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-59d2-parity.ts`.
- * Qui copriamo i path principali e l'osservabilità del callback inner40D8.
  */
 
 import { describe, it, expect } from "vitest";
@@ -24,7 +22,6 @@ describe("stateSub59D2 (FUN_59D2) — smoke", () => {
       return 0;
     });
     expect(r).toBe(0);
-    // Chiama F(4), F(3), poi early-exit (NON chiama F(5)).
     expect(calls).toEqual([FIELD_ID_F4, FIELD_ID_F3]);
   });
 
@@ -80,7 +77,6 @@ describe("stateSub59D2 (FUN_59D2) — smoke", () => {
       return map[id] ?? 0;
     });
     // denom = 0x10000, num = 0x10000.
-    // bypass test: 0x10000 > 0xFFFF → entra in halve loop.
     // @ 0x5A1A: 0x10000 <= 0x1FFFE → no LSR.
     //          0x10000 <= 0x1FFFE → ROUND-half.
     // d2' = 0x10001 >> 1 = 0x8000; d1' = 0x10001 >> 1 = 0x8000.
@@ -100,7 +96,7 @@ describe("stateSub59D2 (FUN_59D2) — smoke", () => {
     // @ 0x5A1A: 0x30000 > 0x1FFFE → LSR: d2=0x18000, d1=0x80. bra.
     // @ 0x5A1A: 0x18000 <= 0x1FFFE; d1=0x80 <= 0x1FFFE → ROUND.
     // d2 = (0x18000+1)>>1 = 0xC000; d1 = (0x80+1)>>1 = 0x40.
-    // mulu: 0x40 * 60 = 0xF00. divu: 0xF00 / 0xC000 = 0 (con resto 0xF00).
+    // mulu: 0x40 * 60 = 0xF00. divu: 0xF00 / 0xC000 = 0 (with remainder 0xF00).
     expect(r).toBe(0);
   });
 

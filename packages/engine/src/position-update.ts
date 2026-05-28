@@ -1,14 +1,11 @@
 /**
- * position-update.ts — replica del pure leaf `FUN_0001706C` (452 byte).
+ * Pure leaf port of ROM routine `FUN_0001706C`.
  *
- * Funzione di "position update" 2D: dato un struct (x_long, y_long), aggiunge
- * delta di movimento condizionali in base a flag di stato e a una lookup table
  * ROM @ 0x23D40 indicizzata per "rotation index" e "inverse rotation index".
  *
- * Use case probabile: scroll/movimento del playfield in base alla direzione
- * della trackball (4 bit di direzione + 4 condizioni cardinali).
+ * Likely use case: playfield scroll/movement based on trackball direction
+ * (4 direction bits plus 4 cardinal conditions).
  *
- * **Layout workRam state usato**:
  *   0x40066A  byte: bitmap di flag di direzione (bit 0..3)
  *   0x40066C  byte: cardinale +X flag
  *   0x40066E  byte: cardinale +Y flag
@@ -18,34 +15,30 @@
  *   0x400676  word: speed gate per +Y
  *   0x400678  word: speed gate per -X
  *   0x40067A  word: speed gate per -Y
- *   0x40069F  byte: index rotazione corrente (0..7)
- *   0x4006A1  byte: index rotazione speciale (0..7)
  *
- * **ROM lookup table @ 0x23D40**: 8+ word di delta values (signed). Indici
- * 0..7 per le 8 direzioni cardinali/diagonali.
+ * **ROM lookup table @ 0x23D40**: signed delta words. Indices 0..7 represent
+ * the 8 cardinal/diagonal directions.
  *
- * **Logica**:
+ * **Logic**:
  *   D3 = rotIdx; D2 = 7 - rotIdxSpecial; D1 = 7 - rotIdx; D4 = rotIdxSpecial
  *   delta_a =  rom_table[D3*2]      ; positive offset
  *   delta_b = -rom_table[D2*2]      ; negative offset
  *   delta_c = -rom_table[D1*2]      ; negative offset
  *   delta_d =  rom_table[D4*2]      ; positive offset
  *
- *   Per ogni cardinale (4 if): if flag != 0 && flag < 3 && rotIdx < 4 && speed > 0:
- *     aggiungi delta corrispondente a x o y
+ *   For each cardinal flag: if flag != 0 && flag < 3 && rotIdx < 4 && speed > 0,
+ *   add the corresponding delta to x or y.
  *
- *   Per ogni bit del bitmap @ 0x40066A (4 bit): if bit && rotIdx < 4 && speed > 0:
- *     aggiungi delta a entrambi x e y (combinato per diagonali)
+ *   For each bitmap bit at 0x40066A: if bit && rotIdx < 4 && speed > 0, add the
+ *   combined diagonal delta to both x and y.
  *
- *   Scrivi back x = D5 e y = D6 a *A1 e *(A1+4).
  *
- * **Verificato bit-perfect** vs `FUN_0001706C` tramite differential test.
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-// ─── Address constants (workRam offsets, absoluti -0x400000) ──────────────
+// ─── Address constants (workRam offsets, absolute address minus 0x400000) ─
 
 export const POS_BITMAP_OFF = 0x66a as const;     // 0x40066A
 export const POS_FLAG_PX_OFF = 0x66c as const;    // 0x40066C byte
@@ -93,11 +86,10 @@ function readRomWordSigned(rom: RomImage, romAddr: number): number {
 // ─── Main function: replica FUN_1706C ────────────────────────────────────
 
 /**
- * Replica `FUN_0001706C` — position update con delta da ROM table.
+ * Runs `FUN_0001706C`, updating position with deltas from the ROM table.
  *
  * @param state    GameState
- * @param rom      RomImage (per ROM lookup table)
- * @param posAddr  Indirizzo assoluto del struct (x: long, y: long, 8 byte)
+ * @param rom      RomImage used for the ROM lookup table.
  */
 export function positionUpdate(
   state: GameState,
@@ -116,7 +108,7 @@ export function positionUpdate(
   const d1 = (7 - (r[POS_ROT_IDX_OFF] ?? 0)) & 0xff;
   const d4 = (r[POS_ROT_SPEC_OFF] ?? 0) & 0xff;
 
-  // sext.b → sext.w (ext.w D0w after move.b)
+  // sext.b -> sext.w (`ext.w D0w` after `move.b`).
   const d3s = d3 & 0x80 ? d3 - 0x100 : d3;
   const d2s = d2 & 0x80 ? d2 - 0x100 : d2;
   const d1s = d1 & 0x80 ? d1 - 0x100 : d1;
@@ -137,8 +129,6 @@ export function positionUpdate(
   const a0Word = readRomWordSigned(rom, ROM_DELTA_TABLE + d4s * 2);
 
   // Truncate to word (low 16 bit), then sext_l for the addition steps below
-  // (perché disasm fa "move.w D0w,A4 / move.w D0w,(-x,A6)" — store as word,
-  //  poi più sotto "move.w (-x,A6),D0w; ext.l D0; add.l D0,D5")
   const localM4Stored = (localM4 & 0xffff) & 0x8000 ? (localM4 & 0xffff) - 0x10000 : localM4 & 0xffff;
   const localM2Stored = (localM2 & 0xffff) & 0x8000 ? (localM2 & 0xffff) - 0x10000 : localM2 & 0xffff;
   const a4WordStored = (a4Word & 0xffff) & 0x8000 ? (a4Word & 0xffff) - 0x10000 : a4Word & 0xffff;

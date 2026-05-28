@@ -1,6 +1,6 @@
--- mame_keyon_stack_tap.lua — quando si verifica un YM2151 KEY ON write
+-- mame_keyon_stack_tap.lua - when a YM2151 KEY ON write occurs,
 -- ($08 = slot mask != 0), dump il sound 6502 stack per identificare la
--- call chain che ha portato a quella scrittura.
+-- capture the call chain that led to that write.
 
 local OUT_PATH = os.getenv("MARBLE_KEYON_OUT") or "/tmp/mame_keyon_stack.json"
 local TARGET_FRAME = 13000

@@ -4,15 +4,10 @@
  * `formatAndRender28EB2` TS replica.
  *
  * `FUN_00028EB2` (118 byte): orchestratore "format-and-render" a 6 long arg
- * con 3 sub-jsr:
- *   1. FUN_3874 (number formatter) — sempre invocato.
- *   2. FUN_28F28 (trimTrailingSpace) — solo se arg2.w == 2.
- *   3. FUN_28FA0 (renderStringEntry28FA0) — sempre invocato.
+ * with 3 sub-JSRs:
+ *   2. FUN_28F28 (trimTrailingSpace) - only when arg2.w == 2.
  *
- * **Strategia di parità — pattern `scene-init-11428`/`obj-dirty-dispatch-28624`**:
- *   Patch delle 3 entry binarie con `addq.b #1, sentinel.l ; rts` (8 byte).
- *   Tre sentinel byte distinti in workRam (offset noto, fuori dal range usato
- *   dalle sub-call): se il binario chiama N volte ognuna delle tre sub,
+ *   Patch the 3 binary entries with `addq.b #1, sentinel.l ; rts` (8 bytes).
  *   sentinel[k] += N (mod 256).
  *
  *   Sentinel mapping:
@@ -20,20 +15,14 @@
  *     - FUN_28F28  → workRam[0x3E1]  (sentinelTrim)
  *     - FUN_28FA0  → workRam[0x3E2]  (sentinelRender)
  *
- *   In TS, le 3 callback iniettano lo stesso increment.
+ *   In TS, the 3 callbacks inject the same increment.
  *
- * **Confronto**:
- *   1. sentinelFmt   == 1 in entrambi (sempre invocato).
  *   2. sentinelTrim  == (arg2.w == 2 ? 1 : 0) in entrambi.
  *   3. sentinelRender == 1 in entrambi.
- *   4. workRam scratch attorno (0x418..0x428, 16 byte) invariato (le sub
+ *   4. workRam scratch around (0x418..0x428, 16 bytes) unchanged (the subs
  *      sono no-op → no side effects).
  *
- * Suite (4 × 125 = 500 casi, ultimo +0..3 per arrotondamento):
  *   - A: arg2.w random — distribuzione naturale (raramente == 2)
- *   - B: arg2.w forzato a 2 — sempre attiva trim
- *   - C: arg2.w forzato a non-2 — mai attiva trim
- *   - D: tutti gli args random + bufEnd ptr random in 0x40041E
  *
  * Uso: npx tsx packages/cli/src/test-format-and-render-28eb2-parity.ts [N]
  */
@@ -61,12 +50,12 @@ const FUN_28F28 = 0x00028f28;
 const FUN_28FA0 = 0x00028fa0;
 
 const BUFEND_PTR_ADDR = 0x0040041e;
-// Sentinel byte slot in work RAM (counter delle 3 sub).
+// Sentinel byte slot in work RAM (counter for the 3 subs).
 const SENTINEL_FMT = 0x004003e0;
 const SENTINEL_TRIM = 0x004003e1;
 const SENTINEL_RENDER = 0x004003e2;
 
-// Range workRam confrontato per garantire no-spillage (entry @ 0x40041C):
+// Compared workRam range used to guarantee no spillage (entry @ 0x40041C):
 const COMPARE_BASE = 0x00400418;
 const COMPARE_SIZE = 0x10; // 0x418..0x427
 
@@ -117,7 +106,6 @@ interface FailRecord {
   setup: CaseSetup;
 }
 
-/** Setup workRam scratch + sentinel + bufEnd ptr in entrambi binario e TS. */
 function setupCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -162,7 +150,7 @@ function compareCase(
   const rBin = peekMem(cpu, SENTINEL_RENDER, 1) & 0xff;
   const rTs = state.workRam[SENTINEL_RENDER - 0x400000] ?? 0;
   if (rBin !== rTs) return { field: "sentinelRender", bin: rBin, ts: rTs };
-  // Scratch region (entry @ 0x40041C non deve essere toccata: le sub sono stub no-op).
+  // Scratch region; entry @ 0x40041C must not be touched because subs are no-op stubs.
   for (let i = 0; i < COMPARE_SIZE; i++) {
     const b = peekMem(cpu, COMPARE_BASE + i, 1) & 0xff;
     const t = state.workRam[COMPARE_BASE - 0x400000 + i] ?? 0;
@@ -193,7 +181,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Stub TS: incrementa il byte sentinel in workRam (mirror del binario).
   const subs: fa2Ns.FormatAndRender28EB2Subs = {
     numberFormatter: (s) => {
       const off = SENTINEL_FMT - 0x400000;
@@ -276,7 +263,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: arg2.w forzato a 2 (sempre attiva trim) ──────────────
   console.log(`\n=== Suite B: arg2.w == 2 (trim ON) — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -287,7 +273,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: arg2.w forzato a non-2 (skip trim) ───────────────────
+  // Suite C: arg2.w forced to non-2 (skip trim).
   console.log(`\n=== Suite C: arg2.w != 2 (trim OFF) — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {

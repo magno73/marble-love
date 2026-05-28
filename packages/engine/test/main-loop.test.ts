@@ -1,7 +1,7 @@
 /**
  * Test mainUpdateScrollSync (prefix di FUN_28788 0x28788..0x287D8).
  *
- * Bit-perfect verificato vs binary (2000/2000) tramite
+ * Bit-perfect verified against the binary (2000/2000) through
  * `cli/src/test-main-prefix-parity.ts`.
  */
 

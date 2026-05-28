@@ -1,40 +1,29 @@
 /**
  * pf-scroll-emit-26e14.ts — replica `FUN_00026E14` (298 byte).
  *
- * Routine companion di `FUN_00026D8A` (`pf-scroll.ts`): è chiamata dal
- * `FUN_00010504` (main-loop) ogni volta che serve flushare le 4 colonne di
- * sprite-list verso il buffer "next" durante uno scroll/flip di pagina.
+ * Emits the sprite list into the "next" buffer during scroll/page flip.
  *
- * Differenze chiave vs `FUN_00026D8A`:
- *   - Prende **1 long arg signed** (push su stack dal caller); dopo il
- *     `movem.l` il prologo lo carica con `move.l (0x24,SP),D2` perché
- *     8 reg salvati × 4 byte = 32 + 4 byte di return addr = 0x24.
- *   - Toggla bit 3 del campo AV `*0x4003AE` e scrive il risultato in
- *     `*0x4003B0` (page-flip della doppia buffering).
- *   - Usa la versione **toggled** dell'AV per i 4 long-pointer scrive
- *     (`*0x4003F6 / *0x4003FA / *0x4003FE / *0x400402`) — destinano la
- *     pagina inattiva.
- *   - Usa la versione **originale** dell'AV per i 4 puntatori di
- *     lettura (A2 / D3 / A4 / A3) — leggono dalla pagina attiva.
- *   - La maschera del tile word è `0x3FFF` (bit 0..13 sostituiti), non
- *     `0x3FE0` come in 26D8A. I bit 14..15 sono preservati.
+ * Key differences from `FUN_00026D8A`:
+ *   - Toggles `*0x4003B0` for double-buffer page flip.
+ *   - Initializes the four write cursors (`0x4003F6/3FA/3FE/402`) to the
+ *     inactive page.
+ *   - Uses the original AV value for the four read pointers. Tile words are
+ *     merged with `0x3FE0`-style low-bit adjustment while preserving bits 14..15.
  *
  * Strutture in spriteRam (4 sub-buffer × 0x80 byte = 64 word):
  *   0xA02000+  (A2 in source) — tile linee A
  *   0xA02080+  (D3 in source) — tile linee B (passthrough)
  *   0xA02100+  (A4 in source) — tile linee C (passthrough)
  *   0xA02180+  (A3 in source) — comparison column (loop guard)
- * Con bit 3 di AV settato, i base diventano +0x200 / +0x280 / +0x300 / +0x380.
+ * With AV bit 3 set, bases become +0x200 / +0x280 / +0x300 / +0x380.
  *
- * Dopo il calcolo dei 4 puntatori-write (commit in workRam), il loop emette
- * 4 word per iter sui buffer "next" puntati dai 4 long-cursor; ogni cursor
- * post-incrementa di 2. Il loop esce appena `cmpWord(A3)+ == iterIndex`,
- * con un cap a 60 iter.
+ * Each iteration emits four words to the "next" buffers pointed to by the four
+ * long cursors; each cursor post-increments by 2. The loop exits as soon as
+ * `cmpWord(A3)+ == iterIndex`,
+ * with a 60-iteration cap.
  *
- * Il caller spinge come `arg`:
- *   - `*0x400000` (target Y scroll, sign-extended a long), oppure
- *   - costante `2` (sign-extended a long)
- * dopodiché la routine usa `D2 << 5` per derivare l'offset di linea.
+ * The caller pushes either `*0x400000` (target Y scroll, sign-extended long) or
+ * constant `2` as `arg`.
  */
 
 import { WORK_RAM_BASE, SPRITE_RAM_BASE } from "./bus.js";
@@ -82,32 +71,26 @@ function writeU32BE(buf: Uint8Array, off: number, v: number): void {
   buf[off + 3] = u & 0xff;
 }
 
-/** Converte un puntatore assoluto M68k 0xA02xxx in offset spriteRam. */
 function spriteOff(absPtr: number): number {
   return (absPtr >>> 0) - SPRITE_RAM_BASE;
 }
 
 /**
- * Replica `FUN_00026E14` — emit a 4 colonne di sprite-RAM con page-flip.
  *
- * **Side effect** in `workRam`:
+ * **Side effects** in `workRam`:
  *   - `*0x4003B0` = `*0x4003AE` ^ 8`  (toggled AV)
  *   - `*0x4003F6 / *0x4003FA / *0x4003FE / *0x400402` = base-pointer +
- *     2*(MAX_ITER hit). I 4 long-cursor sono inizializzati alla pagina
- *     "next" (toggled AV) e post-incrementati di 2 per ogni word emessa.
+ *     2*(MAX_ITER hit). The four long cursors are initialized to the "next"
+ *     page (toggled AV) and post-incremented by 2 for each emitted word.
  *
- * **Side effect** in `spriteRam`: emissione di fino a 60 word per ognuno
- * dei 4 buffer-target. Buffer A è derivato dal tile-word source con
+ * **Side effect** in `spriteRam`: emits up to 60 words for each buffer.
  * `(src + (arg<<5)) & 0x3FFF | (src & 0xC000)`; B/C/D sono passthrough.
  *
- * **Loop guard**: il loop esce appena `*(A3)+ == iterIndex` (read prima
- * dell'incremento del counter). MAX_ITER = 60.
+ * MAX_ITER = 60.
  *
- * @param state  GameState (mutato: workRam + spriteRam).
- * @param arg    Long signed arg pushato dal caller (=> `D2`). Solo
- *               `(arg << 5) & 0xFFFF` viene usato; se ROM si aspetta valore
- *               negativo, passa il long signed (es. via `>> 0` per unsigned
- *               wrap).
+ * @param state  GameState, mutated in workRam and spriteRam.
+ * @param arg    Signed long pushed by the caller (D2). Pass negative values as
+ *               signed JS numbers.
  */
 export function pfScrollEmit26E14(state: GameState, arg: number): void {
   const r = state.workRam;
@@ -121,7 +104,7 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
   // 0x26e2c..0x26e3a: D1_new = (AV_new & 8) << 5  (= 0 or 0x100)
   // Note ext.l + and.l #8 + asl.l #5 == (av & 8) << 5 in JS.
   const d1New = (avNew & 0x0008) << 5;
-  const offNew = d1New * 2; // == d1New << 1, 0 o 0x200
+  const offNew = d1New * 2; // == d1New << 1, 0 or 0x200
 
   // 0x26e3c..0x26e8a: store 4 long-cursor in workRam (toggled AV).
   // SPRITE_RAM_BASE = 0xA02000.
@@ -131,7 +114,7 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
   writeU32BE(r, WPTR_B_OFF, (SPRITE_RAM_BASE + BANK_B_OFF + offNew) >>> 0);
 
   // 0x26e8c..0x26eda: re-read AV (orig), recompute D1_old, set up 4
-  // read-pointer **locali** (NON salvati in workRam).
+  // local read pointers, not saved in workRam.
   const d1Old = (avOld & 0x0008) << 5;
   const offOld = d1Old * 2; // 0 or 0x200
   let a3 = (BANK_D_OFF + offOld) & 0xffff; // sprite-RAM offset
@@ -145,7 +128,7 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
 
   // 0x26ee4..0x26f36: loop max 60 iter
   for (let d4 = 0; d4 < MAX_ITER; d4++) {
-    // ── Buffer A (0xA02000+, modify): merge linea offset nel tile word ──
+    // Buffer A (0xA02000+, modify): merge line offset into the tile word.
     // Read current write-cursor (long), point in absolute M68k addr.
     {
       const wptr = readU32BE(r, WPTR_A_OFF) >>> 0;
@@ -177,7 +160,6 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
       a4 = (a4 + 2) & 0xffff;
     }
 
-    // ── Buffer D (0xA02180+, passthrough da A3 — A3 NON ancora incr.) ──
     {
       const wptr = readU32BE(r, WPTR_D_OFF) >>> 0;
       const wOff = (wptr - SPRITE_RAM_BASE) >>> 0;
@@ -191,11 +173,10 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
     a3 = (a3 + 2) & 0xffff;
     if (cmpWord === d4) return;
     // 0x26f32..0x26f36: while (D4_new < 60) continue.
-    // D4_new = d4 + 1; loop iter inc handles questo.
   }
 }
 
-// ─── Constants exports (utility per altri moduli/test) ────────────────────
+// ─── Constants exports (utility for other modules/tests) ─────────────────
 export const PF_SCROLL_EMIT_CONSTANTS = {
   AV_CONTROL_ABS: WORK_RAM_BASE + AV_CONTROL_OFF,
   AV_CONTROL_NEW_ABS: WORK_RAM_BASE + AV_CONTROL_NEW_OFF,
@@ -206,5 +187,5 @@ export const PF_SCROLL_EMIT_CONSTANTS = {
   MAX_ITER,
 } as const;
 
-// Silence: spriteOff inutilizzato in produzione (esposto per debug).
+// Silence: spriteOff is unused in production and exposed for debug.
 void spriteOff;

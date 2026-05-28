@@ -4,22 +4,16 @@
  * `stateSub19A40`.
  *
  * FUN_00019A40 (362 byte, 0x19A40-0x19BAA): "entity-table spawn dispatcher".
- * Itera 5 pair `(X.b, Y.b)` letti da ROM @ 0x244F6 in 2 outer pass; per ogni
- * pair conta i match `entity[0x0C..0x0D].w >> 3 == X` con `entity[0x18]==1`,
- * fa proximity-check Y se 1 match, e spawna in primo slot libero. Esce se
- * tutti 10 slot occupati.
+ * pair counts matches `entity[0x0C..0x0D].w >> 3 == X` with `entity[0x18]==1`,
+ * does proximity-check Y if 1 match, and spawns in the first free slot. Exits if
  *
  * **Strategia parity**:
- *   - `FUN_00019E42` (marble-cell-dispatch) **stubbato con RTS**.
- *   - `FUN_00018E6C` (slot-insert-sorted) **stubbato con RTS**.
- *   - `FUN_000158AC` (sound/event dispatch) **stubbato con RTS**.
- *   - Compare: 10 × 0x38 = 0x230 byte della tabella entity @ 0x4019F8.
+ *   - `FUN_00019E42` (marble-cell-dispatch) **stubbed with RTS**.
+ *   - `FUN_00018E6C` (slot-insert-sorted) **stubbed with RTS**.
+ *   - `FUN_000158AC` (sound/event dispatch) **stubbed with RTS**.
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random — entity table tutta random
- *   - B: tutti slot liberi (entity[0x18] != 1) — 0 match → spawna sequenziali
- *   - C: alcuni slot occupati con X = pair-X (forza match D3 == 1 → prox-check)
- *   - D: edge — 9/10 slot occupati, X esatti dalla ROM table
+ *   - D: edge case with 9/10 occupied slots and exact X values from the ROM table
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-19a40-parity.ts [N]
  */
@@ -54,9 +48,6 @@ const ENTITY_COUNT = 10;
 const TABLE_SIZE = ENTITY_STRIDE * ENTITY_COUNT; // 0x230
 
 /**
- * Patch JSR-stub: stuba 3 callee con RTS (0x4E75). I 3 sono già replicati in
- * altri moduli engine, ma per questo test li stubbiamo: il test verifica che
- * `stateSub19A40` esegua la stessa sequenza di scritture in workRam e sub-call,
  * indipendentemente da cosa fanno le sub. Il TS usa `subs.fun_* = noop`.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -122,7 +113,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // ROM image per TS subs (la replica TS legge 3 tabelle ROM).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -197,7 +187,6 @@ async function main(): Promise<void> {
   }
 
   function genTableEmpty(): number[] {
-    // Tutti slot liberi: entity[0x18] != 1 (impostato a 0).
     const t = new Array(TABLE_SIZE).fill(0).map(() => rb());
     for (let i = 0; i < ENTITY_COUNT; i++) {
       t[i * ENTITY_STRIDE + 0x18] = 0;
@@ -244,7 +233,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot liberi (0 match → spawn full chain) ─────────
   console.log(
     `\n=== Suite B: tutti slot liberi (D3==0 sempre) — ${perSuite} casi ===`,
   );
@@ -255,7 +243,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: 1-3 slot occupati con X = pair-X (forza match) ─────────
   console.log(
     `\n=== Suite C: forced match (1-3 slot con X = ROM pair) — ${perSuite} casi ===`,
   );
@@ -280,7 +267,7 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const t = new Array(TABLE_SIZE).fill(0).map(() => rb());
-    // Decide quanti slot occupati: skew verso 8-10 per test early-exit.
+    // Decide occupied slot count: skew toward 8-10 for early-exit testing.
     const numOccupied = 7 + Math.floor(rng() * 4); // 7..10
     const occupied: number[] = [];
     while (occupied.length < numOccupied) {

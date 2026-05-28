@@ -37,18 +37,13 @@ describe("fun261BC (FUN_261BC)", () => {
     s.workRam[off + 0x05] = 0x01;
     s.workRam[off + 0x06] = 0x00;
     s.workRam[off + 0x07] = 0x00;
-    // Slot 0x400A20 — non in {0x400018, 0x4000FA} → niente write a 0xc4
     fun261BC(s, 0x400a20, 0x100, rom);
-    // |VX|=|VY|=0x10000 → |VX| <= |VY| ramo: D3 = |VY| + (|VX|>>3)*3
     // = 0x10000 + (0x2000)*3 = 0x10000 + 0x6000 = 0x16000
-    // magnitude (0x100) < D3 (0x16000) → entra clamp
-    // Verifica che VX e VY siano stati riscritti (≠ valori iniziali)
     const vxAfter = (s.workRam[off + 0x00] ?? 0) << 24
                    | (s.workRam[off + 0x01] ?? 0) << 16
                    | (s.workRam[off + 0x02] ?? 0) << 8
                    | (s.workRam[off + 0x03] ?? 0);
     expect(vxAfter).not.toBe(0x10000);
-    // Nessuna scrittura a (0xc4,A2) per questo slot
     expect(s.workRam[off + 0xc4] ?? 0).toBe(0);
     expect(s.workRam[off + 0xc5] ?? 0).toBe(0);
   });
@@ -73,7 +68,6 @@ describe("fun261BC (FUN_261BC)", () => {
 
   it("slot 0x400018 ramo angle: scrittura a (0xc4,A2)", () => {
     const s = emptyGameState();
-    // ROM con table at 0x1eef8: due word [10, 20] (così delta non zero)
     const rom = new Uint8Array(0x80000);
     rom[0x1eef8] = 0x00; rom[0x1eef9] = 0x10; // word[0] = 16
     rom[0x1eefa] = 0x00; rom[0x1eefb] = 0x20; // word[1] = 32
@@ -84,13 +78,8 @@ describe("fun261BC (FUN_261BC)", () => {
     s.workRam[off + 0x04] = 0; s.workRam[off + 0x05] = 0x01;
     s.workRam[off + 0x06] = 0; s.workRam[off + 0x07] = 0;
     fun261BC(s, 0x400018, 0x40000, rom);
-    // (0xc4, A2) deve essere stato modificato (era 0, ora ~ d5+...)
     // D5 = romW[0x1eef8 + (0)*2] = 0x10 (D4=(D3>>15)&0xf = (0x16000>>15)&0xf = 2*1+? ...
     // D3 = 0x16000 → >>15 = 2 → &0xf = 2 → D4 = 2
-    // off0 = 0x1eef8 + 4 = 0x1eefc → ma è zero per il rom seed → D5 = 0
-    // Quindi il valore di (0xc4) può rimanere 0. Test solo: nessuna eccezione e
-    // se romW table è popolata correttamente (D4 = 2) servono 4 word. Skip
-    // verifica numerica esatta — ROM seed minimal.
     expect(s.workRam[off + 0xc4] ?? 0).toBeGreaterThanOrEqual(0);
   });
 

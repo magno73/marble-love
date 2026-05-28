@@ -1,10 +1,10 @@
 /**
  * object-compare.ts — `FUN_00015FE6` (118 byte): compare 2 obj depth.
  *
- * Returns 1 se obj1 "vince" su obj2 (depth comparison), altrimenti 0.
- * Confronta byte +0x1B (z-order layer):
- *   - Se uguali: confronta sum di (high words >> 19) di +0xC e +0x10 longs
- *   - Se diversi: ritorna 1 se obj2.1B < obj1.1B (obj1 "above")
+ * Returns 1 when obj1 wins over obj2 in depth comparison, otherwise 0.
+ * Compares byte +0x1B (z-order layer):
+ *   - Equal z: compare the sum of `(long >> 19)` for +0xC and +0x10.
+ *   - Different z: return 1 when obj2.1B < obj1.1B, meaning obj1 is above.
  */
 
 import type { GameState } from "./state.js";

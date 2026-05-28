@@ -1,5 +1,5 @@
-// probe-ym-writes.ts — log ogni write YM2151 di TS sulla cmd-tape attract.
-// Output equivalente a oracle/mame_ym2151_write_log.lua per diff diretto.
+// probe-ym-writes.ts - logs each TS YM2151 write on the attract cmd tape.
+// Output is equivalent to oracle/mame_ym2151_write_log.lua for direct diffing.
 import { readFileSync, writeFileSync } from "node:fs";
 import {
   createSoundChip,

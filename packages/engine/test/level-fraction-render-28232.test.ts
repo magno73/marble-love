@@ -1,13 +1,9 @@
 /**
  * Test levelFractionRender28232 (FUN_00028232) — smoke test sui rami principali.
  *
- * `FUN_00028232` (400 byte) è un orchestratore "level/fraction render": legge
  * mode selector, level idx e level number da workRam, dispatcha 5
- * renderStringChain + 1 initStructHeader + 1 renderStringHelper, e scrive
- * una "fraction string" (4 byte: ' ' + 3 char + null) a un puntatore in
  * workRam @ 0x42A.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-level-fraction-render-28232-parity.ts` (500/500).
  */
 
@@ -45,13 +41,11 @@ import { emptyRomImage } from "../src/bus.js";
 import type { GameState } from "../src/state.js";
 import type { RomImage } from "../src/bus.js";
 
-/** Helper: scrive un word big-endian in workRam @ off. */
 function writeWordBE(ram: Uint8Array, off: number, value: number): void {
   ram[off] = (value >>> 8) & 0xff;
   ram[off + 1] = value & 0xff;
 }
 
-/** Helper: scrive un long big-endian in workRam @ off. */
 function writeLongBE(ram: Uint8Array, off: number, value: number): void {
   ram[off] = (value >>> 24) & 0xff;
   ram[off + 1] = (value >>> 16) & 0xff;
@@ -59,7 +53,6 @@ function writeLongBE(ram: Uint8Array, off: number, value: number): void {
   ram[off + 3] = value & 0xff;
 }
 
-/** Helper: scrive un long big-endian in rom @ addr. */
 function writeRomLongBE(rom: RomImage, addr: number, value: number): void {
   rom.program[addr] = (value >>> 24) & 0xff;
   rom.program[addr + 1] = (value >>> 16) & 0xff;
@@ -92,7 +85,6 @@ function makeTracingSubs(trace: SubsTrace): LevelFractionRender28232Subs {
     },
     initStructHeader: (s, structPtr, colLong, tickOffLong) => {
       trace.initStructCalls.push({ structPtr, colLong, tickOffLong });
-      // Esegui anche le byte writes reali (replica del binario reale).
       defaultInitStructHeader(s, structPtr, colLong, tickOffLong);
     },
     renderStringHelper: (_s, a1, a2, a3, a4, a5, a6) => {
@@ -112,9 +104,6 @@ function emptyTrace(): SubsTrace {
 }
 
 /**
- * Setup ROM con valori distintivi nelle 2 tabelle entry-pointer.
- * Inseriamo entry-pointer "marker" basati sull'indice cosicché il test
- * possa verificare l'ordine e il valore letto.
  */
 function setupRom(): RomImage {
   const rom = emptyRomImage();
@@ -129,13 +118,10 @@ function setupRom(): RomImage {
   return rom;
 }
 
-/** Scrive il puntatore "fraction buffer" a workRam[0x42A] long BE.
+/**
  *  Buffer target: workRam[bufOff..bufOff+4]. */
 function setFractionBuffer(s: GameState, bufOff: number): void {
-  // Il binario interpreta il long come absolute address; noi mascheriamo
   // a 0x1FFF (8 KB workRam). Per scrivere effettivamente a workRam[bufOff],
-  // settiamo il long a (0x400000 | bufOff) ma in realtà la maschera & 0x1FFF
-  // funziona indipendentemente dal nibble alto.
   writeLongBE(s.workRam, FRACTION_PTR_OFF, 0x00400000 | bufOff);
 }
 
@@ -157,7 +143,6 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
 
     levelFractionRender28232(s, rom, subs);
 
-    // Verifica 5 chiamate renderStringChain in ordine:
     expect(trace.renderChainCalls).toHaveLength(5);
     // Step B: ROM_TABLE1[idx+1=1] = 0x10000001, attr=0x1800
     expect(trace.renderChainCalls[0]).toEqual({
@@ -185,7 +170,6 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
       attrLong: ATTR_BASE_3400,
     });
 
-    // Verifica 1 chiamata renderStringHelper.
     expect(trace.renderHelperCalls).toHaveLength(1);
     expect(trace.renderHelperCalls[0]).toEqual({
       arg1: 0, // ext_l(D4 = quot = 0)
@@ -196,7 +180,6 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
       arg6: ATTR_BASE_3400,
     });
 
-    // Verifica initStructHeader chiamato 1 volta.
     expect(trace.initStructCalls).toHaveLength(1);
     expect(trace.initStructCalls[0]).toEqual({
       structPtr: 0x00400428,
@@ -204,12 +187,10 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
       tickOffLong: INIT_STRUCT_TICKOFF,
     });
 
-    // Verifica byte writes diretti (initStructHeader inline):
     expect(s.workRam[STRUCT_BASE_OFF]).toBe(INIT_STRUCT_COL);
     expect(s.workRam[STRUCT_BASE_OFF + 1]).toBe(INIT_STRUCT_TICKOFF);
     expect(s.workRam[STRUCT_BASE_OFF + INIT_STRUCT_MARKER_OFF]).toBe(0);
 
-    // Verifica fraction string (D3=0, default "    "): ' ',' ',' ',' ',null
     expect(s.workRam[0x100]).toBe(0x20);
     expect(s.workRam[0x101]).toBe(0x20);
     expect(s.workRam[0x102]).toBe(0x20);
@@ -231,7 +212,6 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
 
     levelFractionRender28232(s, rom, subs);
 
-    // 3 chiamate renderStringChain (skip Step B e Step E).
     expect(trace.renderChainCalls).toHaveLength(3);
     // attr always = 0x3400 - 0x2000 = 0x1400
     const attrAlways = ATTR_BASE_3400 - PALETTE_SHIFT;
@@ -251,7 +231,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
       attrLong: attrAlways,
     });
 
-    // Helper invocato con arg6=0x1400.
+    // Helper invoked with arg6=0x1400.
     expect(trace.renderHelperCalls).toHaveLength(1);
     expect(trace.renderHelperCalls[0]?.arg6).toBe(attrAlways);
   });
@@ -283,13 +263,12 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
       entryPtr: 0xcafebabe,
       attrLong: ATTR_BASE_3400,
     });
-    // Nessun helper, nessun initStruct.
     expect(trace.renderHelperCalls).toHaveLength(0);
     expect(trace.initStructCalls).toHaveLength(0);
 
-    // workRam[0x428] non toccato (resta 0).
+    // workRam[0x428] not touched (remains 0).
     expect(s.workRam[STRUCT_BASE_OFF]).toBe(0);
-    // Fraction buffer @ 0x100 non scritto.
+    // Fraction buffer @ 0x100 not written.
     expect(s.workRam[0x100]).toBe(0);
   });
 
@@ -330,7 +309,6 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
         `quotient for levelNum=${tc.levelNum}`,
       ).toBe(expectedQuot);
 
-      // Bytes scritti a *(0x40042A) = workRam[0x200..0x204].
       expect(s.workRam[0x200], `byte 0 levelNum=${tc.levelNum}`).toBe(tc.expectedBytes[0]);
       expect(s.workRam[0x201], `byte 1 levelNum=${tc.levelNum}`).toBe(tc.expectedBytes[1]);
       expect(s.workRam[0x202], `byte 2 levelNum=${tc.levelNum}`).toBe(tc.expectedBytes[2]);
@@ -349,16 +327,14 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     setFractionBuffer(s, 0x300);
 
     // No subs → renderStringChain e renderStringHelper no-op,
-    // initStructHeader no-op (struct non scritto). Le 5 byte writes
-    // della fraction string sono inline e si applicano comunque.
+    // initStructHeader no-op (struct not written). The 5 byte writes
+    // of the fraction string are inline and still apply.
     expect(() => levelFractionRender28232(s, rom)).not.toThrow();
 
-    // struct @ 0x428 NON è stato scritto (initStructHeader no-op).
     expect(s.workRam[STRUCT_BASE_OFF]).toBe(0);
     expect(s.workRam[STRUCT_BASE_OFF + 1]).toBe(0);
     expect(s.workRam[STRUCT_BASE_OFF + INIT_STRUCT_MARKER_OFF]).toBe(0);
 
-    // Fraction string " 1/2" + null inline (sempre scritto).
     expect(s.workRam[0x300]).toBe(0x20);
     expect(s.workRam[0x301]).toBe(0x31);
     expect(s.workRam[0x302]).toBe(0x2f);
@@ -406,7 +382,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(INIT_STRUCT_COL).toBe(0x23);
     expect(INIT_STRUCT_TICKOFF).toBe(0x1c);
     expect(INIT_STRUCT_MARKER_OFF).toBe(6);
-    // Sub addresses esposte.
+    // Exposed sub addresses.
     expect(FUN_28232_SUB_ADDRS).toEqual([0x00000142, 0x0000013c, 0x00028e3c]);
   });
 });

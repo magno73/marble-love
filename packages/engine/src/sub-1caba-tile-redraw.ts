@@ -1,20 +1,20 @@
 /**
- * sub-1caba-tile-redraw.ts — replica `FUN_0001CABA` (442 byte, 0x1CABA..0x1CC5C).
+ * sub-1caba-tile-redraw.ts — `FUN_0001CABA` replica (442 byte, 0x1CABA..0x1CC5C).
  *
- * "Heavy tile-redraw"/projection helper: scansiona la "diagonal scanline"
- * sotto la corrente posizione tile (`*0x400696`, `*0x400698`), legge il
- * terrain z per 4 sub-tile (= 16 word) dalla level data + binsearch table,
- * e popola STRUCT @ 0x401C28 (16 word = 32 byte). Output usato da
- * `spriteProject1CC62` per il proj-z.
+ * "Heavy tile-redraw"/projection helper: scans the diagonal scanline below
+ * the current tile position (`*0x400696`, `*0x400698`), reads terrain z for
+ * 4 sub-tiles (= 16 words) from level data + binsearch table, and populates
+ * STRUCT @ 0x401C28 (16 words = 32 bytes). `spriteProject1CC62` consumes the
+ * output as projected z.
  *
  * **Calling convention M68k** (no args, RTS):
- *   - Nessun arg sullo stack.
- *   - Side-effect: scrive `workRam[0x1c28..0x1c47]` (16 word) ed eventualmente
- *     legge `workRam[0x40065a].l` come ptr binsearch base.
+ *   - No stack arguments.
+ *   - Side effect: writes `workRam[0x1c28..0x1c47]` (16 words) and may read
+ *     `workRam[0x40065a].l` as the binsearch base pointer.
  *
- * **Disasm 0x1CABA..0x1CC60** (~150 istruzioni, 4 iter di scanline):
+ * **Disasm 0x1CABA..0x1CC60** (~150 instructions, 4 scanline iterations):
  *
- *   ; --- Prologo (0x1CABA..0x1CB12) ---
+ *   ; --- Prologue (0x1CABA..0x1CB12) ---
  *   movem.l {A2..A6, D2..D6}, -(SP)
  *   A5 = #0x401c28              ; A5 = STRUCT base (autoinc per write)
  *   A0 = #0x400474              ; A0 = ptr to level header ptr
@@ -237,14 +237,14 @@ function asrW(v: number, n: number): number {
 // ─── Replica ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001CABA`.
+ * Bit-perfect replica of `FUN_0001CABA`.
  *
- * Esegue 4 iterazioni di scanline: ogni iter calcola 4 word di terrain z
- * leggendo dalla playfield RAM + binsearch tables + ROM coef tables, e
- * scrive 16 word in totale a STRUCT @ 0x401c28.
+ * Runs 4 scanline iterations: each iteration computes 4 terrain-z words by
+ * reading playfield RAM + binsearch tables + ROM coefficient tables, and
+ * writes 16 total words to STRUCT @ 0x401c28.
  *
- * @param state  GameState (modifica `workRam[0x1c28..0x1c47]`).
- * @param rom    RomImage (ROM letture: 0x1eb3a, 0x1ed0a, 0x1ed62, 0x24b3a + lvlPtr).
+ * @param state  GameState (mutates `workRam[0x1c28..0x1c47]`).
+ * @param rom    RomImage (ROM reads: 0x1eb3a, 0x1ed0a, 0x1ed62, 0x24b3a + lvlPtr).
  */
 // ─── Probe hook (registry-gated, OFF by default) ──────────────────────────
 // Callers (e.g. probe-1caba-runtime-state.ts) can register an observer to

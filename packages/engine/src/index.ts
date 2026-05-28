@@ -1,7 +1,7 @@
 /**
  * @marble-love/engine — entry point.
  *
- * Esporta i namespace dei moduli core. Tutto pure-logic, no DOM, no PixiJS.
+ * Exports core module namespaces. Pure logic only: no DOM, no PixiJS.
  *
  * Uso tipico:
  *   import { wrap, state, rng, bus, physics, ai, level, render, audio, trace }
@@ -296,7 +296,7 @@ export * as slapstic103 from "./m68k/slapstic-103.js";
 export * as applySlapsticBank from "./m68k/apply-slapstic-bank.js";
 export * as inputReplay from "./input-replay.js";
 
-// Re-export tipi più usati per ergonomia
+// Re-export commonly used types for ergonomics.
 export type { GameState } from "./state.js";
 export type { Bus, RomImage } from "./bus.js";
 export type { TraceFrame, TraceHeader } from "./trace.js";
@@ -310,13 +310,12 @@ export type {
 } from "./wrap.js";
 
 /**
- * Tick principale. Orchestra le subroutine nell'ordine che il binario
- * originale segue (da identificare in Phase 1-2). Ordine STUB:
+ * Main tick. Orchestrates subroutines in the original ROM order where known.
  *   1. read input MMIO
- *   2. AI tick (può chiamare RNG)
+ *   2. AI tick, which may call RNG
  *   3. physics tick
  *   4. game logic (score, timer, level transition)
- *   5. avanza clock
+ *   5. advance clock
  */
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
@@ -327,10 +326,10 @@ import type { MainTickOptions } from "./main-tick.js";
 /**
  * Tick principale del game engine — 1 frame @ 60 Hz.
  *
- * Orchestrator che chiama 14 root sub-systems replicati bit-perfect dal
- * binario originale (`FUN_00028788`). Aggiorna `state.workRam`,
+ * Orchestrator that calls 14 root sub-systems mirrored bit-perfect from the
+ * original binary (`FUN_00028788`). Updates `state.workRam`,
  * `state.playfieldRam`, `state.colorRam`, `state.alphaRam`, `state.spriteRam`
- * coerentemente col binario.
+ * consistently with the binary.
  *
  * Per integrare col renderer:
  * ```ts
@@ -339,8 +338,8 @@ import type { MainTickOptions } from "./main-tick.js";
  * // → consegna `frame` al renderer PixiJS
  * ```
  *
- * Sub ancora stubbed: FUN_158AC (sound cmd send conditional), FUN_26F3E
- * (lateGameLogic conditional), FUN_4DCC (sound chip writer, richiede YM2151).
+ * Subs still stubbed: FUN_158AC (sound cmd send conditional), FUN_26F3E
+ * (lateGameLogic conditional), FUN_4DCC (sound chip writer, requires YM2151).
  */
 export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTickOptions, "rom">>): void {
   rngClearFrameCounter(s.rng);

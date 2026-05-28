@@ -1,17 +1,11 @@
 /**
- * waypoint-list-step-1815a.ts — replica `FUN_0001815A` (352 byte).
+ * waypoint-list-step-1815a.ts — `FUN_0001815A` replica (352 bytes).
  *
- * "Entity homing-via-waypoint-list step". Walka la **lista globale di
- * waypoint** puntata da `*(0x00400446)` (caricata in `main-loop-init-11452`
- * dalla ROM table @ `0x1d364 + gameMode*4`). Ogni record waypoint occupa
- * **4 byte signed**: `(sx, sy, sm, sound_idx)`. La funzione consuma i
- * record finché l'entity (A2) è "in range" del waypoint corrente, e
- * quando lo trova fuori range applica una **accelerazione proporzionale**
- * verso il waypoint, agg. `[A2+0x0..0x7]` e (se flag `[A2+0x36]` set)
- * `[A2+0x8]` (gravity-like z-accumulation con clamp a -0x50000). In coda
- * chiama `FUN_00026196` (flag-scaled magnitude dispatch).
+ * Reads waypoint records from the ROM table @ `0x1d364 + gameMode*4`.
+ * Each waypoint record occupies one slot. It steers toward the waypoint,
+ * updates `[A2+0x0..0x7]`, and (if flag `[A2+0x36]` is set)
  *
- * **Disasm 0x1815A..0x182BA** (352 byte) — sintesi:
+ * **Disasm 0x1815A..0x182BA** (352 bytes) — summary:
  *
  *   movem.l {D2-D6,A2,A3},-(SP)
  *   movea.l (0x20,SP),A2                 ; A2 = arg long (entity ptr)
@@ -137,26 +131,19 @@
  *
  * ## Semantica
  *
- *   - **Lista globale**: `*(0x400446)` punta a un array di record 4-byte
  *     `(sx_i8, sy_i8, sm_i8, sound_i8)` terminato da byte 0 (`*A3 == 0`).
- *   - **Range check** per record corrente:
  *       dx = (sx<<19) - entity.x + 0x40000
  *       dy = (sy<<19) - entity.y + 0x40000
  *       D4 = abs(dx) >> 12, D6 = abs(dy) >> 12 (low word, signed asr)
  *       in_range ⇔ D4 < 0x20 && D6 < 0x20
  *   - **Se in range**:
- *       1. Se sound_idx (signed) >= 0: dispatch sound via JSR 0x12a passando
- *          (0x5a, 0x3400, table[0x242aa + sound_idx*4]). Sub esterna —
- *          stubbabile.
- *       2. Avanza A3 += 4. Se nuovo record è terminator:
+ *       1. If sound_idx (signed) >= 0: dispatch sound via JSR 0x12a, passing
+ *          (0x5a, 0x3400, table[0x242aa + sound_idx*4]). External sub,
+ *          stub-injectable.
  *          - `*(0x40075a).w = 1`
  *          - `entity[0x6e].b = 0xff`
- *       3. Commit `*(0x400446) = A3`. Loop al prossimo record.
- *   - **Se out-of-range**: applica accelerazione e ritorna senza avanzare:
  *       D1.w = ((min(D4,D6) >> 3) * 3 + max(D4,D6)) & 0xffff
- *       Se D1.w == 0: dx.w = dy.w = 0 (solo low word!)
- *       Altrimenti: dx.w = sext_div(dx, D1.w); dy.w = sext_div(dy, D1.w)
- *       Se D1.w < 0x40: D5 = 0xC000 (override). Altrimenti D5 = sm<<16 originale.
+ *       If D1.w == 0: dx.w = dy.w = 0 (low word only!)
  *       k = signed_asr(D5, 8) & 0xffff
  *       vx = signed_asr(sext16(k) * sext16(dx.w), 4)
  *       vy = signed_asr(sext16(k) * sext16(dy.w), 4)
@@ -165,49 +152,38 @@
  *       entity.x += step_x; entity.y += step_y
  *       Se entity[0x36] != 0:
  *         entity.z -= 0x6000
- *         se entity.z < -0x50000: entity.z = -0x50000
- *       Chiama FUN_26196(entity).
+ *         if entity.z < -0x50000: entity.z = -0x50000
  *
  * ## JSR esterne
  *
- *   - `FUN_0000012a` (sound dispatch) — chiamata 0..N volte (una per record
- *     in-range con sound_idx >= 0). 3 long arg: (0x5a, 0x3400, table_value).
- *     Esposto come `subs.fun_012a`. Default no-op.
- *   - `FUN_00026196` (flag-scaled magnitude dispatch, replicato in
- *     `flag-scaled-magnitude-dispatch.ts`) — chiamata UNA volta in coda nel
- *     branch out-of-range. Esposto come `subs.fun_26196`. Default no-op.
+ *     in-range with sound_idx >= 0). 3 long args: (0x5a, 0x3400, table_value).
+ *     Exposed as `subs.fun_012a`. Default no-op.
+ *   - `FUN_00026196` (flag-scaled magnitude dispatch, replicated in
+ *     branch out-of-range. Exposed as `subs.fun_26196`. Default no-op.
  *
- * ## Tabella ROM
  *
- *   `0x000242aa`: tabella di 32-bit longs indexed da `sound_idx*4`. Letta
- *   solo se sound_idx >= 0. La nostra replica espone una callback
- *   `subs.lookupSoundTable(idx)` che ritorna il long letto dalla ROM
- *   image; per il default leggiamo da `state.rom` se disponibile.
+ *   only if sound_idx >= 0. Our replica exposes a callback
+ *   image; by default we read from `state.rom` if available.
  *
  * ## Side effects in `state.workRam`
  *
- *   - `entity[0x0..0x7]` modificato (32-bit signed add) nel branch out-of-range.
- *   - `entity[0x8..0xb]` modificato se `entity[0x36] != 0`.
- *   - `entity[0x6e] = 0xff` se la lista si esaurisce in questa call.
+ *   - `entity[0x0..0x7]` modified (32-bit signed add) in the out-of-range branch.
+ *   - `entity[0x8..0xb]` modified if `entity[0x36] != 0`.
  *   - `*(0x400446)` (long) avanzato di N*4 byte (N = record consumati in range).
- *   - `*(0x40075a)` (word) = 1 se la lista si esaurisce.
+ *   - `*(0x40075a)` (word) = 1 if the list is exhausted.
  *
  * ## Caller
  *
  *   - `FUN_017F66 @ 0x17f8e`: gate `*(0x400390).w == 1` (homing-mode flag).
  *   - `FUN_000253ec @ 0x254de`: caller secondario.
  *
- * Verifica bit-perfect via
- * `packages/cli/src/test-waypoint-list-step-1815a-parity.ts` (500 casi).
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Globals (assoluti m68k) ─────────────────────────────────────────────
+// ─── Globals (absolute m68k) ─────────────────────────────────────────────
 
-/** Pointer 32-bit alla testa della lista waypoint corrente. */
 export const GLOBAL_LIST_PTR_ADDR = 0x00400446 as const;
-/** Word 16-bit "list-exhausted" flag (1 quando la lista termina). */
 export const GLOBAL_EXHAUSTED_FLAG_ADDR = 0x0040075a as const;
 
 // ─── Entity offsets ──────────────────────────────────────────────────────
@@ -216,13 +192,11 @@ export const GLOBAL_EXHAUSTED_FLAG_ADDR = 0x0040075a as const;
 export const ENTITY_X_OFFSET = 0x00 as const;
 /** Entity Y 32-bit. */
 export const ENTITY_Y_OFFSET = 0x04 as const;
-/** Entity Z 32-bit (modificato se gravity flag set). */
+/** Entity Z 32-bit (modified if gravity flag set). */
 export const ENTITY_Z_OFFSET = 0x08 as const;
-/** Target X (waypoint corrente, scritto altrove) — letto come delta base. */
 export const ENTITY_TARGET_X_OFFSET = 0x0c as const;
 /** Target Y. */
 export const ENTITY_TARGET_Y_OFFSET = 0x10 as const;
-/** Gravity-enable flag byte (se !=0 attiva il decremento Z). */
 export const ENTITY_GRAVITY_FLAG_OFFSET = 0x36 as const;
 /** "List-end-reached" marker byte (settato a 0xFF a list exhausted). */
 export const ENTITY_LIST_END_OFFSET = 0x6e as const;
@@ -233,7 +207,6 @@ export const ENTITY_LIST_END_OFFSET = 0x6e as const;
 export const DELTA_BIAS = 0x40000 as const;
 /** Soglia in-range (asr 12 di abs(delta)). */
 export const RANGE_THRESHOLD = 0x20 as const;
-/** Override D5 quando denom < 0x40. */
 export const D5_OVERRIDE = 0xc000 as const;
 /** Soglia per override D5. */
 export const D5_OVERRIDE_DENOM_LIMIT = 0x40 as const;
@@ -249,7 +222,6 @@ export const SOUND_ARG1 = 0x3400 as const;
 export const SOUND_TABLE_ADDR = 0x000242aa as const;
 /** Tamanho di un record waypoint (4 byte). */
 export const WAYPOINT_RECORD_SIZE = 4 as const;
-/** Iterazioni massime di sicurezza per la list-walk (anti-infinite-loop). */
 export const MAX_LIST_ITERATIONS = 1024 as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
@@ -257,14 +229,9 @@ export const MAX_LIST_ITERATIONS = 1024 as const;
 /**
  * Stub injection per le JSR esterne.
  *
- * - `fun_012a`: sound dispatch chiamato per ogni record in-range con
- *   `sound_idx >= 0`. Riceve i 3 long pushati in ordine RTL→LTR
  *   `(SOUND_ARG0, SOUND_ARG1, tableValue)`.
- * - `fun_26196`: flag-scaled magnitude dispatch chiamato UNA volta nel
- *   branch out-of-range, dopo le scritture entity. Riceve l'entity ptr.
  * - `lookupSoundTable`: lookup `*(SOUND_TABLE_ADDR + idx*4)` 32-bit BE.
  *   Default 0 (matching binary stubbed). Per parity vera, la ROM image
- *   va letta dal caller.
  */
 export interface WaypointListStep1815ASubs {
   fun_012a?: (arg0: number, arg1: number, tableValue: number) => void;
@@ -272,21 +239,17 @@ export interface WaypointListStep1815ASubs {
   lookupSoundTable?: (idx: number) => number;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────
 
 /** Tipo di terminazione della call. */
 export type ExitMode = "out_of_range" | "list_exhausted" | "list_empty";
 
 export interface WaypointListStep1815AResult {
-  /** Quale ramo ha terminato la call. */
   exitMode: ExitMode;
   /** Record consumati (in-range advances). */
   recordsConsumed: number;
   /** Numero di sound dispatch invocati. */
   soundDispatches: number;
-  /** True se entry il fun_26196 è stato chiamato (solo out_of_range). */
   fun26196Called: boolean;
-  /** True se entity[0x6e] è stato settato a 0xFF (list exhausted). */
   listEndMarkerSet: boolean;
 }
 
@@ -357,9 +320,7 @@ function sextB(v: number): number {
  *   - Dn (32-bit signed) / sext16(<ea>) truncated toward zero
  *   - Se il quoziente sta in signed 16-bit [-0x8000..0x7FFF]:
  *       Dn.low_word = quot, Dn.high_word = remainder, V cleared
- *   - Altrimenti (overflow): Dn invariato, V set.
  *
- * Ritorna `null` se overflow (caller deve **non** scrivere il risultato).
  */
 function divsW(dividend32: number, divisor16: number): number | null {
   const dvd = dividend32 | 0;
@@ -375,8 +336,8 @@ function divsW(dividend32: number, divisor16: number): number | null {
 }
 
 /**
- * Replica m68k `add.w src, dst`: l'addizione cambia solo la low word di
- * `dst`; la high word di `dst` resta invariata.
+ * Replica m68k `add.w src, dst`: the addition changes only `dst`'s low word;
+ * `dst`'s high word remains unchanged.
  */
 function addW(dst32: number, src16: number): number {
   const high = dst32 & 0xffff0000;
@@ -407,17 +368,12 @@ function negL(v: number): number {
 // ─── Replica ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001815A`.
  *
- * @param state       GameState (modifica `state.workRam` in più offset:
- *                    entity[+0..+0x6e], globali 0x400446 e 0x40075a).
- * @param entityAddr  long: indirizzo assoluto m68k della struct entity
- *                    (es. `0x401e00`). Convertito a offset workRam tramite
+ *                    (e.g. `0x401e00`). Converted to workRam offset through
  *                    `entityAddr - 0x400000`.
  * @param subs        injection per sound, FUN_26196, sound-table lookup.
  *                    Default no-op / 0.
  *
- * @returns dettaglio dell'esecuzione (exit mode, contatori).
  */
 export function waypointListStep1815A(
   state: GameState,
@@ -425,11 +381,6 @@ export function waypointListStep1815A(
   subs?: WaypointListStep1815ASubs,
   rom?: import("./bus.js").RomImage,
 ): WaypointListStep1815AResult {
-  // Helper: lettura byte da abs M68k addr. Se l'indirizzo cade nella ROM
-  // (< 0x80000) e abbiamo l'image disponibile, legge da rom.program;
-  // altrimenti default a workRam (caso entity-pool internal list).
-  // Il binario M68k usa unified address space — `move.b (A3),D0b` con
-  // A3 in ROM legge la ROM. Replicare quel comportamento qui.
   const readByteAbs = (absAddr: number): number => {
     const a = absAddr >>> 0;
     if (rom !== undefined && a < 0x80000) {
@@ -509,15 +460,12 @@ export function waypointListStep1815A(
         d3 = (d3 & 0xffff0000) >>> 0;
       } else {
         // divs.w D1, D2; move.w D0w, D2w (only low word updated)
-        // Su overflow del 68k, D0 non viene scritto: D0.w resta = D2.w
-        // (perché il `move.l D2,D0` è stato fatto prima del divs).
-        // Quindi `move.w D0w, D2w` ricopia D2.w in D2.w (no-op).
         const q2 = divsW(d2, d1lowWord);
         if (q2 !== null) {
           d2 = ((d2 & 0xffff0000) | (q2 & 0xffff)) >>> 0;
         }
-        // (overflow: D2 invariato — D0.w resta = D2.w originale → re-write
-        // identica)
+        // (overflow: D2 unchanged — D0.w remains the original D2.w → identical
+        // re-write)
         const q3 = divsW(d3, d1lowWord);
         if (q3 !== null) {
           d3 = ((d3 & 0xffff0000) | (q3 & 0xffff)) >>> 0;

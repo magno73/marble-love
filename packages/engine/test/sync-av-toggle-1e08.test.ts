@@ -36,13 +36,12 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     expect(result.iterations).toBe(1);
     // 2 pop totali (consumed entrambi i bit set, in 1 sola pop ciascuno).
     expect(result.flagPops).toBe(2);
-    // 2 scritture MMIO: 0x0000 poi 0x0080.
+    // 2 MMIO writes: 0x0000, then 0x0080.
     expect(writes).toEqual([
       { addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 },
       { addr: MMIO_AV_CONTROL_ADDR, value: 0x0080 },
     ]);
 
-    // *0x40017C aggiornato a low2(*0x400000) = 0x0001 (BE).
     expect(s.workRam[EDGE_PREV_OFF]).toBe(0x00);
     expect(s.workRam[EDGE_PREV_OFF + 1]).toBe(0x01);
     // *0x400006 shifted right 2 volte: 0b11 → 0b00.
@@ -54,7 +53,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     const s = emptyGameState();
     s.workRam[PORT_OFF] = 0x00;
     s.workRam[PORT_OFF + 1] = 0x01;
-    // Queue: bit 0 set, bit 5 set, gli altri 0.
+    // Queue: bit 0 set, bit 5 set, all others 0.
     // Pop sequence (lsr → bit 0 popped first):
     //   pop1 → 1 (bit 0). Queue ora 0b00100000 >> 0 wait: 0b100001 >>1 = 0b10000 → 0b00010000
     //   inner1 done. Then inner2:
@@ -76,11 +75,9 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
   it("loop fino a maxIterations quando bit 0 di rising è 0 (bit 0 cur = 0)", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0002 (bit 0 = 0, bit 1 = 1)
-    // → rising bit 0 = 0 ALWAYS, anche con prev = 0.
+    // -> rising bit 0 = 0 always, even with prev = 0.
     s.workRam[PORT_OFF] = 0x00;
     s.workRam[PORT_OFF + 1] = 0x02;
-    // Queue inizialmente "infinita" di 1 — set tutti bit a 1 (0xFFFF).
-    // Comunque dopo 16 pop la queue è zero, ma noi loop esterno × 8 iter
     // ⇒ 16 pop totali → ok. Limitiamo iterations a 5, flagPops large.
     s.workRam[FLAGS_OFF] = 0xff;
     s.workRam[FLAGS_OFF + 1] = 0xff;
@@ -93,7 +90,6 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
 
     expect(result.terminated).toBe(false);
     expect(result.iterations).toBe(5);
-    // 2 pop / iterazione (perché ogni pop estrae un 1 immediatamente).
     expect(result.flagPops).toBe(10);
     // 5 iter × 2 write = 10 MMIO write
     expect(writes.length).toBe(10);
@@ -126,10 +122,8 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
 
   it("usa cap maxFlagPops difensivo se la queue è tutta zero", () => {
     const s = emptyGameState();
-    // bit0(cur) = 1, bit0(prev) = 0 → terminerebbe alla 1° iter MA
-    // la queue è 0x0000: il primo inner loop loopa per sempre.
+    // bit0(cur) = 1, bit0(prev) = 0 -> would terminate at the 1st iter, but
     s.workRam[PORT_OFF + 1] = 0x01;
-    // Queue tutta zero
     s.workRam[FLAGS_OFF] = 0x00;
     s.workRam[FLAGS_OFF + 1] = 0x00;
 
@@ -138,7 +132,6 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     });
     expect(result.terminated).toBe(false);
     expect(result.flagPops).toBe(50);
-    // Una sola iterazione perché blocca subito sul primo inner loop.
     expect(result.iterations).toBe(1);
   });
 });

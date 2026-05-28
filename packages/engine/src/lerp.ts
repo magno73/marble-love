@@ -1,7 +1,6 @@
 /**
- * lerp.ts — `FUN_0001C61E` (74 byte): linear interpolation tramite ROM table.
+ * lerp.ts - `FUN_0001C61E` (74 bytes): linear interpolation through ROM table.
  *
- * arg.w è interpretato come fixed-point: top bits = table index, low 10 bits = lerp.
  *   D2.w = (arg >> 10).w - 0xC (= table index)
  *   D3.w = arg & 0x3FF (= lerp fraction 0..0x3FF)
  *   v0 = ROM[0x1EE6E + D2*2].w (signed)

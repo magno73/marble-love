@@ -3,24 +3,17 @@
  * test-particle-init-18cd2-parity.ts — differential FUN_00018CD2 vs
  * `particleInit18CD2`.
  *
- * `FUN_00018CD2` (248 byte): particle-array spawn/init. Inizializza
- * `count` slot @ 0x400A9C (stride 0xA) con xpos/ypos/xvel/yvel via RNG e
- * un mode-word in entry[8..9]. In ingresso (se mode==0xFF) chiama
- * `FUN_26CFA`. Per ogni slot chiama `FUN_18E6C(0x2C, i)`. Alla fine scrive
+ * `count` slots @ 0x400A9C (stride 0xA) with xpos/ypos/xvel/yvel via RNG and
  * `*0x4003E2 = count`.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**.
- *   - `FUN_00026CFA` (palette + 8 RNG) **stubbato con RTS** (0x4E75); il TS
- *     usa `subs.fun_26cfa = noop`. Così la sola differenza nel branch mode
- *     == 0xFF è la *non-chiamata* in entrambi i mondi.
- *   - `FUN_00018E6C` (insert-sorted in draw-list) **stubbato con RTS**;
- *     il TS usa `subs.fun_18e6c = noop`. Il TS NON deve toccare 0x4003BC,
- *     0x4001DC, 0x401E80 (campi di FUN_18E6C).
+ *   - `FUN_00026CFA` (palette + 8 RNG) **stubbed with RTS** (0x4E75); TS
+ *   - `FUN_00018E6C` (insert-sorted in draw-list) **stubbed with RTS**;
+ *     TS uses `subs.fun_18e6c = noop`. TS must not touch 0x4003BC,
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random count + random mode
- *   - B: count piccoli (0..3) per varietà di mode positivi
  *   - C: mode == 0xFF (palette refresh path)
  *   - D: edge cases (count=0, count=255, mode boundaries)
  *
@@ -143,7 +136,6 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function setupCase(rngSeed: number): void {
-    // Azzera particle area + count byte (binary + TS).
     for (let i = 0; i < PARTICLE_AREA_LEN; i++) {
       pokeMem(cpu, PARTICLE_BASE + i, 1, 0);
       stateInst.workRam[PARTICLE_BASE - 0x400000 + i] = 0;
@@ -171,14 +163,11 @@ async function main(): Promise<void> {
     // argsLong[0] = closer to SP after push.
     // FUN_18CD2: D3 = LSB(arg1) (count), D2 = LSB(arg2) (mode).
     // ⇒ argsLong = [count, mode].
-    // count=255 può richiedere ~500_000 cicli; usiamo 5_000_000 per
-    // sicurezza (default 100_000 troppo basso per count > ~10).
     callFunction(cpu, FUN_18CD2, [count >>> 0, mode >>> 0], 5_000_000);
     const binSnap = snapshotBinary(cpu);
 
     // TS
     p18cd2Ns.particleInit18CD2(stateInst, count, mode, {
-      // entrambi no-op: matchano i thunk RTS del binario.
       fun_26cfa: () => { /* no-op */ },
       fun_18e6c: () => { /* no-op */ },
     });
@@ -284,7 +273,7 @@ async function main(): Promise<void> {
     console.log(`    count=${f.count} mode=0x${f.mode.toString(16)} rngSeedIn=0x${f.rngSeedIn.toString(16)}`);
     console.log(`    binSeedAfter=0x${f.binSeed.toString(16)} tsSeedAfter=0x${f.tsSeed.toString(16)}`);
     console.log(`    binCountByte=0x${f.binCount.toString(16)} tsCountByte=0x${f.tsCount.toString(16)}`);
-    // Dump first slot (10 byte) per debug
+    // Dump the first 10-byte slot for debugging.
     const bin0 = f.binArea.slice(0, 10).map(b => b.toString(16).padStart(2, "0")).join(" ");
     const ts0 = f.tsArea.slice(0, 10).map(b => b.toString(16).padStart(2, "0")).join(" ");
     console.log(`    bin slot0: ${bin0}`);

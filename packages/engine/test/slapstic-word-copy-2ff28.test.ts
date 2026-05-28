@@ -53,7 +53,7 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
 
   it("word 0x0000: copia zero in dst", () => {
     const buf = makeBuf();
-    // dst pre-caricato con valore diverso
+    // dst pre-loaded with a different value.
     const dstOff = DST_ADDR - SLAPSTIC_BASE;
     buf[dstOff] = 0xff;
     buf[dstOff + 1] = 0xff;

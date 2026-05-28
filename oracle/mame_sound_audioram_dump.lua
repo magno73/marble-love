@@ -1,5 +1,5 @@
 -- mame_sound_audioram_dump.lua — dump RAM del sound 6502 a frame snapshot
--- multipli, con stesso flusso coin/start + cmd tap di mame_sound_cmd_capture.
+-- multiple frames, with the same coin/start flow + cmd tap as mame_sound_cmd_capture.
 -- Permette diff TS vs MAME audioRam frame-by-frame per drill A1.
 --
 -- Output JSON: { dumps: [{frame: N, audioRam: "hex..."}, ...], ymRegs: hex, pokeyRegs: hex }
@@ -48,7 +48,7 @@ local function install_taps()
     sound_mem = audiocpu.spaces["program"]
     ports = manager.machine.ioport.ports
 
-    -- Identici a mame_sound_cmd_capture.lua perche' un setup diverso cambia
+    -- Identical to mame_sound_cmd_capture.lua because different setup changes
     -- la timing del 6502 e l'audioRam.
     table.insert(tap_handles,
         main_mem:install_read_tap(0xF20000, 0xF20007, "dump_trackball", function(o, d, m) return d end))

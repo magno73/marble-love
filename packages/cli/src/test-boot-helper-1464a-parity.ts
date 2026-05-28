@@ -2,17 +2,12 @@
 /**
  * test-boot-helper-1464a-parity.ts — differential FUN_1464A vs bootHelper1464A.
  *
- * `FUN_0001464A` (~370 byte) è il boot helper chiamato da FUN_117B2 al primo
- * passo del main loop init. Inizializza workRam globals e slot oggetti player.
  *
  * **Strategia stub**:
- *   Patch ROM (pre-CPU): ogni sub JSR viene sostituito con:
  *     `addq.b #1,(sentinel_slot).l ; rts`  (8 byte: 52 39 00 40 03 EX 4E 75)
- *   dove sentinel_slot è un byte unico in work RAM 0x4003C0..0x4003D0.
  *   In TS: le stesse subs incrementano il corrispondente sentinel byte.
  *
  * **Subs patchate**:
- *   - FUN_1010A (0x1010a): enable IRQ, no RAM effect → patch RTS senza sentinel
  *   - FUN_10392 (0x10392): slotArrayBulkInit → sentinel 0x4003C0
  *   - FUN_26B2A (0x26b2a): gameStateBanner → sentinel 0x4003C1
  *   - FUN_28580 (0x28580): initFnPointers → sentinel 0x4003C2
@@ -30,7 +25,6 @@
  *   - FUN_158AC (0x158ac): soundCmd → sentinel 0x4003CE
  *   - FUN_14E   (0x14e):   (called by initFnPointers, but patched above)
  *
- * **Pre-state per ogni caso**:
  *   - 0x400000..0x40001F: random
  *   - 0x40000E = 0 (normal mode, bit7=0)
  *   - 0x4003AC = 1 (so vblank loop exits immediately: D0 & 3 = 1 != 0)
@@ -38,7 +32,6 @@
  *   - 0x40039E = random (< 0xFFFF, so the cmp.w #-1 path varies)
  *   - 0x4003F0 = random initial value
  *
- * **Regione confrontata**: tutti i byte workRam 0x400000..0x401FFF.
  *
  * Uso: npx tsx packages/cli/src/test-boot-helper-1464a-parity.ts [N]
  */

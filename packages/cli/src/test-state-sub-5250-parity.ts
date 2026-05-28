@@ -5,12 +5,12 @@
  * `FUN_00005250` (12 byte, 0x5250–0x525B):
  *   or.l D1,(0x00401F5E).l   ; primary flags long-BE
  *   or.l D1,(0x00401F76).l   ; secondary flags long-BE
- *   (rts @ 0x525C condiviso con FUN_525C)
+ *   (rts @ 0x525C shared with FUN_525C)
  *
  * Strategia parity:
- *   - Per ogni caso: setta primary (0x401F5E) e secondary (0x401F76) a valori
- *     controllati; setta D1 al bitmask da ORare.
- *   - Lancia il binario via `callFunction(cpu, 0x5250, [])` con D1 pre-impostato
+ *   - For each case: set primary (0x401F5E) and secondary (0x401F76) to
+ *     controlled values; set D1 to the bitmask to OR.
+ *   - Launch binary via `callFunction(cpu, 0x5250, [])` with D1 pre-set
  *     via `cpu.system.setRegister("d1", d1)`.
  *   - Lancia `stateSub5250(state, d1)`.
  *   - Confronta primary e secondary long-BE post-esecuzione.

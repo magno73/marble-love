@@ -1,11 +1,7 @@
 /**
  * state-sub-198bc.test.ts — smoke tests per `FUN_000198BC`.
  *
- * Verifica:
  *   1. early_marker: entity[0x26] == 0x10 → no-op (no JSR call).
- *   2. first_invalid: 1° validate ritorna 0 → pos restored, no loop.
- *   3. loop_exhausted_stuck: validate sempre 1 → 9 iter, stuck marker.
- *   4. loop_invalid: validate falla a metà loop → pos restored.
  *   5. state==7 step=1 vs state!=7 step=4: numero di apply differente.
  */
 
@@ -68,7 +64,6 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(moveCalled).toBe(0);
     expect(validateCalled).toBe(0);
     expect(r.finalCounter).toBe(0x10);
-    // Posizione invariata.
     expect(readLongBE(s, ENTITY_OFF + 0x0c)).toBe(0xdeadbeef);
     expect(readLongBE(s, ENTITY_OFF + 0x10)).toBe(0xcafebabe);
   });
@@ -81,13 +76,11 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     setLongBE(s, ENTITY_OFF + 0x10, 0x55667788);
 
     const subs: StateSub198BCSubs = {
-      // Move scrive un valore "movente" sulle posizioni.
       fun_19976: (st, addr) => {
         const o = addr - 0x400000;
         st.workRam[o + 0x0c] = 0xff;
         st.workRam[o + 0x10] = 0xff;
       },
-      // Validate ritorna 0 (invalid).
       fun_1937c: () => 0,
     };
     const r = stateSub198BC(s, ENTITY_BASE, subs);
@@ -95,10 +88,9 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(r.outcome).toBe("first_invalid");
     expect(r.moveCalls).toBe(1);
     expect(r.validateCalls).toBe(1);
-    // Posizione ripristinata all'originale.
     expect(readLongBE(s, ENTITY_OFF + 0x0c)).toBe(0x11223344);
     expect(readLongBE(s, ENTITY_OFF + 0x10)).toBe(0x55667788);
-    // entity[0x26] invariato (no decremento eseguito).
+    // entity[0x26] unchanged (no decrement executed).
     expect(readByte(s, ENTITY_OFF + 0x26)).toBe(0x07);
   });
 
@@ -119,7 +111,7 @@ describe("stateSub198BC (FUN_000198BC)", () => {
       },
       fun_1937c: () => {
         validateCalled++;
-        return 1; // sempre valido
+        return 1;
       },
     });
 
@@ -128,18 +120,16 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(r.originalDir).toBe(0x05);
     // entity[0x26] = 0x10.
     expect(readByte(s, ENTITY_OFF + 0x26)).toBe(0x10);
-    // long0, long1 azzerati.
+    // long0, long1 zeroed.
     expect(readLongBE(s, ENTITY_OFF + 0x00)).toBe(0);
     expect(readLongBE(s, ENTITY_OFF + 0x04)).toBe(0);
-    // Posizione ripristinata.
     expect(readLongBE(s, ENTITY_OFF + 0x0c)).toBe(0xdeadbeef);
     expect(readLongBE(s, ENTITY_OFF + 0x10)).toBe(0xcafebabe);
-    // state==7: step=1 → apply ogni iter (9 iter), MA cycle skip quando dir
-    // torna a originale. dir originale=5, predec=5-4=1, poi +1 ogni iter:
+    // returns to original. original dir=5, predec=5-4=1, then +1 each iter:
     // iter 0: 1+1=2 (≠5, apply), iter 1: 2+1=3 (≠5, apply), iter 2: 3+1=4
     // (≠5, apply), iter 3: 4+1=5 (==5 → skip), iter 4: 5+1=6 (≠5, apply),
     // ..., iter 8: 9+1=10&0xF=10 (≠5, apply). Total apply moveCalls = 1
-    // (first) + 8 (loop con 1 cycle skip) = 9.
+    // (first) + 8 (loop with 1 cycle skip) = 9.
     expect(moveCalled).toBe(9);
     expect(validateCalled).toBe(9);
     expect(r.moveCalls).toBe(9);
@@ -168,7 +158,6 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     // = 1 (first) + 2 (loop iter 4 e 8) = 3.
     expect(moveCalled).toBe(3);
     expect(r.moveCalls).toBe(3);
-    // entity[0x26] finale = 0x10 (stuck marker).
     expect(readByte(s, ENTITY_OFF + 0x26)).toBe(0x10);
   });
 
@@ -180,11 +169,10 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     setLongBE(s, ENTITY_OFF + 0x10, 0xbbbbbbbb);
 
     let validateCount = 0;
-    // Sequenza ritorno: [1, 1, 0, ...] → 1° valido, 2° valido, 3° invalido.
     const validateRet = [1, 1, 0];
     const r = stateSub198BC(s, ENTITY_BASE, {
       fun_19976: (st, addr) => {
-        // Simula spostamento (sovrascrive pos).
+        // Simulate movement, overwriting pos.
         const o = addr - 0x400000;
         st.workRam[o + 0x0c] = 0xcc;
         st.workRam[o + 0x10] = 0xdd;
@@ -198,7 +186,6 @@ describe("stateSub198BC (FUN_000198BC)", () => {
 
     expect(r.outcome).toBe("loop_invalid");
     expect(r.validateCalls).toBe(3);
-    // Posizione ripristinata.
     expect(readLongBE(s, ENTITY_OFF + 0x0c)).toBe(0xaaaaaaaa);
     expect(readLongBE(s, ENTITY_OFF + 0x10)).toBe(0xbbbbbbbb);
     // originalDir salvato correttamente.
@@ -212,9 +199,8 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     setLongBE(s, ENTITY_OFF + 0x0c, 0xdeadc0de);
     expect(() => stateSub198BC(s, ENTITY_BASE)).not.toThrow();
     const r = stateSub198BC(s, ENTITY_BASE);
-    // Default fun_1937c ritorna 0 → first_invalid.
     expect(r.outcome).toBe("first_invalid");
-    // Pos invariata (sub default no-op + restore).
+    // Pos unchanged (default no-op sub + restore).
     expect(readLongBE(s, ENTITY_OFF + 0x0c)).toBe(0xdeadc0de);
   });
 });

@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   const r = rng(0xface);
 
-  // FUN_11AC2: 1 caso (deterministic)
+  // FUN_11AC2: 1 deterministic case.
   console.log(`\n=== copyRomToWorkram66Words (FUN_11AC2) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 200; j++) {
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok1 ? 1 : 0}/1`);
 
-  // FUN_26B10: 1 caso (deterministic)
+  // FUN_26B10: 1 deterministic case.
   console.log(`\n=== copyRomToPalette32Words (FUN_26B10) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 100; j++) {

@@ -1,25 +1,17 @@
 /**
- * game-mode-prep-10456.ts — replica di `FUN_00010456`.
+ * Bit-perfect port of `FUN_00010456`.
  *
- * "Game mode preparation" subroutine chiamata da due parent:
  *   - MainLoopInit1101ESubs.gameModePrep10456 (main-loop-init-1101e.ts)
  *   - MainLoopInit11452Subs.gameModePrep10456 (main-loop-init-11452.ts)
  *
- * Nessuna JSR interna: la funzione è pura RAM manipulation (36 istruzioni,
- * 0x10456–0x10502). Niente interfaccia Subs necessaria.
  *
- * Operazioni principali:
- *   1. Per ciascuno dei 2 object slot (0x400018, 0x4000fa):
+ * Main operations:
+ *   1. For each of the two object slots (0x400018, 0x4000fa):
  *      - clr.l slot+0xbc, clr.w slot+0xd2
- *      - scrive l'indice di slot a slot+0x19
- *      - se i < [0x400396].w (signed) → slot+0x18=3, slot+0x1a=6
- *        altrimenti → slot+0x18=0
- *      - scrive 0xff a [0x40098c + i*12 + 0x0a]
- *   2. Scritture globali:
+ *      - if i < [0x400396].w signed, set slot+0x18=3 and slot+0x1a=6
  *      [0x4003a4]=0xff, [0x4003ba]=0, [0x4003e0]=0,
  *      [0x400010].l=0, [0x4003e8]=1
- *   3. Mascheramento: [0x400398] = [0x4003dc] & 0x30
- *   4. Azzera: [0x400658], [0x400656], [0x400654]
+ *   3. Masking: [0x400398] = [0x4003dc] & 0x30
  */
 
 import type { GameState } from "./state.js";
@@ -62,16 +54,11 @@ function objectSlotAddr(index: number): number {
 }
 
 /**
- * gameModePrep10456 — replica di FUN_00010456.
- *
- * Prepara i due object slot e le variabili globali di game-mode.
- * Nessun argomento extra; legge [0x400396].w come "player count / mode".
+ * Port of `FUN_00010456`.
  */
 export function gameModePrep10456(state: GameState): void {
-  // [0x400396].w = numero di giocatori / modalità (0=1P, 1=2P etc.)
-  // Signed comparison: i < mode → slot attivo (team=3/6), altrimenti → inattivo
   const mode = rw(state, 0x00400396);
-  // Interpretiamo come signed 16-bit per la comparazione M68K bge
+  // Interpret as signed 16-bit for the M68k `bge` comparison.
   const modeSigned = mode >= 0x8000 ? mode - 0x10000 : mode;
 
   for (let i = 0; i < 2; i++) {

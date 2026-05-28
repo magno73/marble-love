@@ -2,21 +2,9 @@
 /**
  * test-sound-maybe-11ac2-parity.ts — differential FUN_11AC2 vs soundMaybe11AC2.
  *
- * `FUN_00011AC2` copia 66 word (132 byte) dalla ROM @ `0x1D370` nella work
- * RAM @ `0x40076E`. Non ha argomenti, non ha JSR interni e non legge dallo
- * stato del CPU (solo D0, A0, A1 che sono scratch). Il test è quindi
- * deterministico: stessa ROM → stessa write identica ad ogni chiamata.
  *
  * **Strategia di parity**:
- *   - Per ogni caso randomizzo i 132 byte di work RAM nel range di destinazione
- *     sia nel CPU musashi che nel GameState TS, poi eseguo FUN_11AC2 (binario)
- *     vs `soundMaybe11AC2` (TS) e confronto il range `0x40076E..0x400800`
  *     (132 byte) byte per byte.
- *   - La ROM usata è la stessa (non modificata) in entrambi i casi, quindi il
- *     sorgente dei dati è identico; il test verifica che la logica di copia TS
- *     scriva esattamente gli stessi byte nel range corretto.
- *   - Il range di work RAM fuori `[0x76E, 0x7EF]` viene verificato per
- *     assenza di side effect (nessuna scrittura indesiderata).
  *
  * Uso: npx tsx packages/cli/src/test-sound-maybe-11ac2-parity.ts [N]
  */
@@ -60,7 +48,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Costruiamo anche un RomImage TS dalla stessa ROM.
+  // Also build a TS RomImage from the same ROM.
   const tsRom = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
@@ -89,13 +77,11 @@ async function main(): Promise<void> {
       state.workRam[sNs.WORK_RAM_DEST_OFFSET + b] = v;
     }
 
-    // Esegui binario.
     callFunction(cpu, FUN_11AC2, []);
 
     // Esegui TS.
     sNs.soundMaybe11AC2(state, tsRom);
 
-    // Confronta i 132 byte del range di destinazione.
     let match = true;
     for (let b = 0; b < COPY_BYTES; b++) {
       const binVal = peekMem(cpu, DEST_BASE + b, 1) & 0xff;

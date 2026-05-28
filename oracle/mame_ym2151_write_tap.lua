@@ -1,6 +1,6 @@
 -- mame_ym2151_write_tap.lua — registra ogni write del sound 6502 a $1800/$1801
--- (YM2151 register select + data). Output sequenza completa per confronto vs
--- TS chip che attualmente non scrive voice register.
+-- (YM2151 register select + data). Output the full sequence for comparison
+-- against the TS chip, which currently does not write voice registers.
 --
 -- Sound 6502 $1800 = register address write; $1801 = register data write.
 -- Pattern: STA $1800 (select reg N), STA $1801 (write data D) → reg[N] = D.
@@ -44,10 +44,10 @@ local function install_taps()
     table.insert(tap_handles,
         sound_mem:install_read_tap(0x1820, 0x1820, "ym_coin", function(o, d, m) return d end))
 
-    -- write tap su $1800 (mirror 0x278f → cattura range 0x1000-0x3FFF, filtra)
+    -- write tap on $1800 (mirror 0x278f -> capture range 0x1000-0x3FFF, filter)
     table.insert(tap_handles,
         sound_mem:install_write_tap(0x1000, 0x3FFF, "ym_w", function(o, d, m)
-            -- atarisy1 sound_map: $1800-$1801 con mirror 0x278e (bit 0 distingue
+            -- atarisy1 sound_map: $1800-$1801 with mirror 0x278e (bit 0 distinguishes
             -- select/data). Mask = ~0x278e & 0xFFFF = 0xD871.
             local masked = o & 0xD871
             if masked == 0x1800 then

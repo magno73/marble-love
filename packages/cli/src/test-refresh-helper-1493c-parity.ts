@@ -2,36 +2,21 @@
 /**
  * test-refresh-helper-1493c-parity.ts — differential FUN_1493C vs refreshHelper1493C.
  *
- * `FUN_0001493C` (19 istruzioni) è chiamata da FUN_00010FCE (refresh frame
- * handler) @ 0x10FE6. Itera su 4 slot (base 0x401302, stride 0x60) e chiama
- * FUN_14966 su ciascuno.
+ * FUN_14966 on each one.
  *
- * **Strategia stub per FUN_14966**:
- *   FUN_14966 (unico callee) viene patchata con un semplice stub che:
- *     - incrementa un byte sentinel in workRam (0x4003C0 + slotIndex)
- *     - fa rts
- *   Poiché FUN_14966 riceve il puntatore allo slot come arg on-stack
- *   (move.l D1,-(SP); jsr 14966; addq.l 4,SP), lo slot index si deduce
- *   dall'indirizzo passato: slotIndex = (ptr - 0x401302) / 0x60.
+ * **Stub strategy for FUN_14966**:
+ *     - increments a sentinel byte in workRam (0x4003C0 + slotIndex)
+ *     - returns with `rts`
+ *   `(move.l D1,-(SP); jsr 14966; addq.l 4,SP)`, so the slot index is derived
  *
- *   Per semplicità nel test patch, FUN_14966 viene sostituita con:
- *     addq.b #1,(0x4003C0).l ; rts   (8 byte, contatore unico)
- *   e nel TS la corrispondente fun14966 incrementa lo stesso byte.
+ *   and the corresponding TS fun14966 increments the same byte.
  *
- *   Questa scelta verifica che:
- *     1. FUN_1493C chiama FUN_14966 esattamente 4 volte.
- *     2. Gli argomenti slot-ptr sono corretti (ordine e valori).
- *     3. Nessun altro side effect su workRam.
  *
- * **Pre-state per ogni caso random**:
- *   - La regione slot 0x401302..0x401481 (4 slot × 0x60) viene riempita
- *     con byte random, per verificare che FUN_1493C non tocchi workRam al
- *     di là di ciò che fa FUN_14966 (che in questo test è solo il sentinel).
- *   - Il sentinel 0x4003C0 viene azzerato prima di ogni caso.
+ *     with random bytes, to verify FUN_1493C does not touch workRam on
  *
- * **Regione confrontata**: workRam 0x400000..0x401FFF (escluso stack area).
+ * **Compared region**: workRam 0x400000..0x401FFF, excluding stack area.
  *
- * Uso: npx tsx packages/cli/src/test-refresh-helper-1493c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-refresh-helper-1493c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -104,10 +89,7 @@ function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
 }
 
 /**
- * Chiama una funzione in musashi in modo "pulito".
  *
- * Scrive `bra.b *` (0x60FE) in una zona safe di workRam come indirizzo di
- * ritorno. Quando la funzione fa `rts`, musashi esegue il branch-to-self e
  * il poll-loop lo rileva.
  */
 function callFunctionClean(

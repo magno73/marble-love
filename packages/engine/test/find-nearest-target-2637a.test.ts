@@ -1,13 +1,10 @@
 /**
- * Test findNearestTarget2637A (FUN_0002637A) — smoke tests sullo scanner
- * di nearest-neighbor con filter + line-of-sight.
+ * Test findNearestTarget2637A (FUN_0002637A) - smoke tests for the scanner
+ * for nearest-neighbor with filter + line-of-sight.
  *
- * `FUN_0002637A` (274 byte) itera record candidati 4-byte da una tabella
  * ROM, filtra per byte (≡ A2[+0x1D] sign-ext), valida via `FUN_17CB8` e
- * scrive 3 globals (`*0x400462.l`, `*0x400466.l`, `*0x400472.b`) per il
  * miglior candidato visibile.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-find-nearest-target-2637a-parity.ts` (500/500 cases).
  */
 
@@ -24,7 +21,6 @@ import { emptyGameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Legge long big-endian da workRam. */
 function readU32BE(wr: Uint8Array, off: number): number {
   return (
     (((wr[off] ?? 0) << 24) |
@@ -58,14 +54,11 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     // A2[+0x1D] = filter category = 0x05
     s.workRam[objOff + 0x1d] = 0x05;
     // A2[+0x32].w = objX (grid-space) = 0x20. A2[+0x34].w = objY = 0x20.
-    // (Il binario sottrae direttamente il byte grid del target: la distanza
-    //  è in grid-space; pixel-conversion solo per LOS.)
     s.workRam[objOff + 0x32] = 0x00;
     s.workRam[objOff + 0x33] = 0x20;
     s.workRam[objOff + 0x34] = 0x00;
     s.workRam[objOff + 0x35] = 0x20;
 
-    // Tabella candidati @ ROM 0x20000:
     // record [x, y, filter, _pad]
     //   #0: (0x10, 0x10, 0x05, 0)  → grid-dist da (0x20, 0x20):
     //                                  |dX|=|0x20-0x10|=0x10, |dY|=0x10
@@ -109,9 +102,8 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     s.workRam[objOff + 0x35] = 0x14;
 
     const tableBase = 0x21000;
-    // 3 candidati con filter match e dist < 0x300. LOS blocca #0 e #1.
+    // 3 candidates with filter match and dist < 0x300. LOS blocks #0 and #1.
     //   #0: (0x10, 0x10) → |d|=4 → d2 piccolo, pixelX=0x84
-    //   #1: (0x12, 0x12) → |d|=2 → ancora più piccolo, pixelX=0x94
     //   #2: (0x16, 0x16) → |d|=2 → simile, pixelX=0xB4
     const reader = makeTableReader(tableBase, [
       0x10, 0x10, 0x03, 0x00,
@@ -122,14 +114,13 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
 
     const subs: FindNearestTarget2637ASubs = {
       lineOfSight17CB8: (_s, _o, px) => {
-        // Blocca pixelX < 0xB0 (cioè #0 e #1)
         return px < 0xb0 ? 1 : 0;
       },
     };
 
     findNearestTarget2637A(s, objPtr, tableBase, reader, subs);
 
-    // Solo #2 passa: pixelX = (0x16<<3)+4 = 0xB4
+    // Only #2 passes: pixelX = (0x16<<3)+4 = 0xB4.
     expect(readU32BE(s.workRam, 0x462)).toBe(0xb4);
     expect(readU32BE(s.workRam, 0x466)).toBe(0xb4);
     expect(s.workRam[0x472]).toBe(0x03);
@@ -140,10 +131,9 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Filter = 0x09 (nessun candidato matcha)
     s.workRam[objOff + 0x1d] = 0x09;
 
-    // Pre-fill globals con sentinel distintivi
+    // Pre-fill globals with distinct sentinels.
     s.workRam[0x462] = 0xde;
     s.workRam[0x463] = 0xad;
     s.workRam[0x464] = 0xbe;
@@ -178,11 +168,9 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
 
     // Filter sign-ext: 0xFE (.b) → 0xFFFE (.w sign-ext).
     // Il candidato ha filter byte 0xFE (.b) → 0x00FE (.w zero-ext, moveq #0,D0).
-    // cmp.w 0xFFFE vs 0x00FE → DIVERSI! Il binario fa cmp tra:
     //   D0.w = zero-ext byte from A3[+2] (= 0x00FE)
     // vs
     //   word at (-2,A6) = sign-ext A2[+0x1D] (= 0xFFFE per 0xFE)
-    // → bne → skip. Quindi 0xFE filter NON matcha 0xFE byte.
     s.workRam[objOff + 0x1d] = 0xfe;
     s.workRam[objOff + 0x32] = 0x00;
     s.workRam[objOff + 0x33] = 0x80;
@@ -215,7 +203,6 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     const objOff = objPtr - WORK_RAM_BASE;
 
     s.workRam[objOff + 0x1d] = 0x00;
-    // grid obj coord (0x10, 0x10) — vicino al target a (0x08, 0x08).
     s.workRam[objOff + 0x32] = 0x00;
     s.workRam[objOff + 0x33] = 0x10;
     s.workRam[objOff + 0x34] = 0x00;
@@ -241,7 +228,6 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     const objPtr = WORK_RAM_BASE + 0x1500;
     const objOff = objPtr - WORK_RAM_BASE;
     s.workRam[objOff + 0x1d] = 0x02;
-    // obj grid (0x12, 0x22) — vicino a target (0x10, 0x20)
     s.workRam[objOff + 0x32] = 0x00;
     s.workRam[objOff + 0x33] = 0x12;
     s.workRam[objOff + 0x34] = 0x00;

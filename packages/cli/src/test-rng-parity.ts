@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * test-rng-parity.ts — differential testing del RNG: chiama FUN_13A98 nel
- * binario via Musashi, confronta il delta seed e il return value con la
- * nostra implementazione TS in `@marble-love/engine/rng`.
+ * binary via Musashi, compares the seed delta and return value with the
+ * our TS implementation in `@marble-love/engine/rng`.
  *
- * PRD §6 Phase 4 acceptance: "le prime 10000 chiamate producono la stessa
- * sequenza dell'oracolo".
+ * PRD §6 Phase 4 acceptance: "the first 10000 calls produce the same
+ * oracle sequence".
  *
  * Uso:
  *   npx tsx packages/cli/src/test-rng-parity.ts [N]

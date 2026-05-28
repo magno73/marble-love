@@ -109,7 +109,7 @@ function setupChain(a: SetupArgs): void {
     if (scriptId[i] !== undefined) {
       setByte(s, slotAddr + SLOT_SCRIPT_ID_OFF, scriptId[i]!);
     }
-    // ptrPtr (slot+0x3a) → addr nello scratch area; *addr → bboxAddr
+    // ptrPtr (slot+0x3a) -> addr in scratch area; *addr -> bboxAddr.
     const p1Addr = 0x401e00 + i * 8;
     const bboxAddr = slotBbox[i] ?? BBOX_SENTINEL;
     setLong(s, slotAddr + SLOT_BBOX_PTRPTR_OFF, p1Addr);
@@ -177,7 +177,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r.hitSlotIndex).toBe(-1);
     expect(r.perSlot).toEqual([]);
     expect(stubCalls).toBe(0);
-    // Nessuna scrittura
+    // No writes.
     expect(Array.from(s.workRam)).toEqual(Array.from(pre));
   });
 
@@ -219,7 +219,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     // Side-effects:
     expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0x42);
     expect(s.workRam[offOf(SLOT_BASE_ADDR + SLOT_NEW_STATE_OFF)]).toBe(0x1c);
-    // perSlot: hit @ 0, gli altri 6 sono "skipped_after_hit"
+    // perSlot: hit @ 0, the other 6 are "skipped_after_hit".
     expect(r.perSlot[0]).toBe("hit");
     for (let i = 1; i < 7; i++) expect(r.perSlot[i]).toBe("skipped_after_hit");
   });
@@ -242,7 +242,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r0.hitSlotIndex).toBe(-1);
     expect(r0.retVal).toBe(0);
     expect(r0.perSlot.every((x) => x === "skip_inactive")).toBe(true);
-    // Nessuna scrittura
+    // No writes.
     expect(Array.from(s.workRam)).toEqual(Array.from(pre));
 
     // initialD2Byte = 0xFF (sext_long = -1 = 0xFFFFFFFF)
@@ -285,7 +285,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r.hitSlotIndex).toBe(-1);
     expect(r.perSlot[3]).toBe("miss");
     expect(stubCalls).toBe(0);
-    // Niente scritture sui campi target
+    // No writes to target fields.
     expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(preObj);
     expect(
       s.workRam[offOf(
@@ -413,7 +413,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
       scriptId: { 4: 0x33 },
     });
 
-    // Niente subs passato
+    // No subs passed.
     const r = stringViewportHit175C8(s, objAddr);
 
     expect(r.hitSlotIndex).toBe(4);

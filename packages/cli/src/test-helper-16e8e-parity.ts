@@ -2,18 +2,19 @@
 /**
  * test-helper-16e8e-parity.ts — differential FUN_16E8E vs helper16E8E.
  *
- * FUN_16E8E cancella le righe dell'alpha tilemap da `startRow` (low byte
- * dell'arg long) fino a 0x1E (esclusa). Per ogni riga r chiama
- * getAlphaTileAddr(col=3, row=r) → indirizzo, poi azzera 0x24 word.
+ * FUN_16E8E clears alpha tilemap rows from `startRow` (the low byte of the
+ * long argument) up to, but not including, 0x1E. For each row r,
+ * getAlphaTileAddr(col=3, row=r) returns an address, then the routine clears
+ * 0x24 words.
  *
- * Per ogni caso:
- *   1. Imposta rotation random in workRam + binary memory
- *   2. Riempie alpha RAM con sentinel 0xCC
- *   3. Esegue binario via callFunction(0x16e8e, [startRow])
- *   4. Esegue TS helper16E8E(state, rom, startRow)
- *   5. Confronta alpha RAM byte-by-byte
+ * For each case:
+ *   1. Set random rotation in workRam + binary memory.
+ *   2. Fill alpha RAM with sentinel 0xCC.
+ *   3. Run the binary via callFunction(0x16e8e, [startRow]).
+ *   4. Run TS helper16E8E(state, rom, startRow).
+ *   5. Compare alpha RAM byte-by-byte.
  *
- * Uso: npx tsx packages/cli/src/test-helper-16e8e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-16e8e-parity.ts [N]
  * (default N=500)
  */
 
@@ -36,9 +37,9 @@ const ROTATION_ADDR = 0x00401f42;
 const SENTINEL_ADDR = 0xcafebabe >>> 0;
 
 /**
- * Chiama una funzione M68k via step-by-step (instruction-by-instruction)
- * per evitare l'interferenza degli IRQ che si verificano con sys.run() burst.
- * FUN_16E8E richiede ~5k istruzioni per 29 iterazioni.
+ * Calls an M68k function step-by-step (instruction-by-instruction) to avoid IRQ
+ * interference that can appear with sys.run() bursts. FUN_16E8E requires about
+ * 5k instructions for 29 iterations.
  */
 function callFunctionStep(
   session: CpuSession,

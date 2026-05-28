@@ -2,30 +2,22 @@
 /**
  * test-sync-av-toggle-1e08-parity.ts — differential FUN_1E08 vs syncAvToggle1E08.
  *
- * `FUN_00001E08` (54 byte) è uno spin-loop di sincronizzazione AV: ad ogni
- * iterazione chiama `FUN_F6A` (rising-edge detector @ *0x400000), poi consuma
- * 2 bit "1" dalla queue eventi (*0x400006), scrivendo 0x0000 e 0x0080 a MMIO
- * 0x860000 in mezzo. Termina quando bit 0 dei rising-edges è settato.
+ * 2 "1" bits from the event queue (*0x400006), writing 0x0000 and 0x0080 to MMIO
  *
  * **Strategia parity**:
- *   - Setup: per ogni caso garantiamo che la prima iterazione termini, cioè
  *     `bit0(*0x400000) == 1` e `bit0(*0x40017C) == 0`. Bit 1..15 random.
- *   - Queue iniziale (*0x400006): word random ma con almeno 2 bit "1" set,
- *     per garantire che entrambi gli inner loop terminino.
- *   - Confronto workRam dopo run:
- *       * 0x400000..0x400001 (input port) — invariato (read-only)
- *       * 0x400006..0x400007 (queue, shifted dopo i pop)
+ *     to guarantee that both inner loops terminate.
+ *       * 0x400000..0x400001 (input port) — unchanged (read-only)
  *       * 0x40017C..0x40017D (edge detector prev → low2 di port)
  *
- * Le scritture MMIO 0x860000 sono ignorate da Musashi (regione non mappata)
- * e dalla TS replica (subs.onMmioWrite default no-op), quindi il diff
+ * MMIO writes to 0x860000 are ignored by Musashi because the region is unmapped
  * workRam coincide perfettamente.
  *
  * Suite testate (4 × 125 = 500):
- *   - A: queue con 2 bit 1 sparsi (random positioning)
- *   - B: queue con bit 0 e bit 1 set (pop minimi: 2 totali)
+ *   - A: queue with 2 scattered 1 bits (random positioning)
+ *   - B: queue with bit 0 and bit 1 set (minimum pops: 2 total)
  *   - C: queue full (0xFFFF, pop minimi: 2 totali)
- *   - D: queue con esattamente 2 bit set in posizioni alte (pop alti)
+ *   - D: queue with exactly 2 bits set in high positions (high pops)
  *
  * Uso: npx tsx packages/cli/src/test-sync-av-toggle-1e08-parity.ts [N=500]
  */
@@ -85,7 +77,7 @@ function writeWordToBoth(
   state.workRam[off + 1] = value & 0xff;
 }
 
-/** Genera una word con almeno `minOnes` bit set. */
+/** Generate a word with at least `minOnes` bits set. */
 function genWordWithMinOnes(rng: () => number, minOnes: number): number {
   let w = Math.floor(rng() * 0x10000) & 0xffff;
   // Conta i bit set.
@@ -95,7 +87,6 @@ function genWordWithMinOnes(rng: () => number, minOnes: number): number {
     if ((tmp & 1) !== 0) count++;
     tmp >>>= 1;
   }
-  // Aggiungi bit fino al minimo.
   while (count < minOnes) {
     const pos = Math.floor(rng() * 16);
     const mask = 1 << pos;
@@ -132,7 +123,6 @@ async function main(): Promise<void> {
     prevWord: number,
     flagsWord: number,
   ): boolean {
-    // Reset SP — il binario fa `move.l D2,-(SP)` + jsr → serve stack room.
     cpu.system.setRegister("sp", 0x401efc);
 
     // Setup state in entrambi
@@ -140,7 +130,6 @@ async function main(): Promise<void> {
     writeWordToBoth(stateInst, cpu, PREV_ABS, prevWord);
     writeWordToBoth(stateInst, cpu, FLAGS_ABS, flagsWord);
 
-    // Run binario (max cycles: la prima iterazione + ~10 pop = pochi cicli).
     callFunction(cpu, FUN_1E08, [], 200_000);
 
     // Run TS replica
@@ -202,18 +191,15 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Genera port con bit 0 = 1 (low byte LSB), prev con bit 0 = 0,
-   * altri bit random.
+   * Generate port with bit 0 = 1 (low byte LSB), prev with bit 0 = 0,
+   * other random bits.
    */
   function genTermiantingPair(rngFn: () => number): {
     port: number;
     prev: number;
   } {
-    // port: bit 0 (assoluto: bit 0 della word, che è bit 0 della low-byte
-    // big-endian = workRam[1] & 1) deve essere 1.
+    // big-endian = workRam[1] & 1) must be 1.
     const port = (Math.floor(rngFn() * 0x10000) & 0xfffe) | 0x0001;
-    // prev: bit 0 (low-2 bits of prev, si confronta con low-2 di port) =
-    // 0. Il resto è ininfluente perché FUN_F6A maskera con 0x0003 prima
     // dell'XOR (vedi event-flags.ts).
     const prev = Math.floor(rngFn() * 0x10000) & 0xfffe;
     return { port, prev };
@@ -236,7 +222,6 @@ async function main(): Promise<void> {
   );
   totalOk += okA;
 
-  // ─── Suite B: queue = bit 0 + bit 1 (minimo pop) ─────────────────────
   console.log(
     `\n=== Suite B: queue = bit0+bit1 (2 pop) — ${perSuite} casi ===`,
   );
@@ -270,7 +255,7 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const { port, prev } = genTermiantingPair(rng);
-    // 2 bit set in posizioni 8..15 (richiede 9+ pop totali per arrivarci).
+    // 2 bits set in positions 8..15; requires 9+ total pops to reach them.
     const a = 8 + Math.floor(rng() * 8);
     let b = 8 + Math.floor(rng() * 8);
     while (b === a) b = 8 + Math.floor(rng() * 8);

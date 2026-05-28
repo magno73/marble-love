@@ -1,15 +1,9 @@
 /**
  * state.ts — root del game state. Layout pensato per **rispecchiare** il game
- * state RAM dell'originale (PRD §6 Phase 4): rende il diff 1:1 più semplice
- * quando il differential harness confronta `trace_truth.jsonl` con
  * `trace_reimpl.jsonl`.
  *
- * Tutti i campi numerici sono branded (u8/u16/u32). Mai fare aritmetica diretta:
  * la ESLint rule fallisce. Usa wrap.ts.
  *
- * NOTA SCAFFOLD: questo è uno scheletro. I campi reali andranno popolati in
- * Phase 4 dopo aver letto la memory map (Phase 1) e aver identificato il game
- * state struct nel binario via Ghidra (Phase 2).
  */
 
 import type { u8, u16, u32 } from "./wrap.js";
@@ -23,7 +17,7 @@ export interface Vec2_u16 {
 }
 
 export interface Vec3_i32 {
-  x: u32; // posizione fissa-virgola, segno gestito da wrap helpers
+  x: u32;
   y: u32;
   z: u32;
 }
@@ -31,15 +25,10 @@ export interface Vec3_i32 {
 // ─── Marble (la biglia del giocatore) ─────────────────────────────────────
 
 export interface Marble {
-  /** Posizione nel mondo (formato 16.16 fixed-point, da confermare in Phase 1). */
   pos: Vec3_i32;
-  /** Velocità (sub-pixel per tick). */
   vel: Vec3_i32;
-  /** Stato animazione/colore (TBD). */
   spriteIndex: u8;
-  /** True se la biglia è "viva" (non in caduta/distrutta). */
   alive: boolean;
-  /** Frame counter da quando è iniziato l'eventuale stato di morte. */
   deathTimer: u16;
 }
 
@@ -62,12 +51,10 @@ export interface Enemy {
   active: boolean;
 }
 
-// ─── Livello ──────────────────────────────────────────────────────────────
 
 export interface Level {
   /** Indice 1..6 (Practice, Beginner, Intermediate, Aerobic, Silly, Ultimate). */
   index: u8;
-  /** Pointer/offset al level data caricato dalla ROM. */
   romOffset: u32;
   /** Tile/heightmap loader: popolato in Phase 4. */
   tilesLoaded: boolean;
@@ -76,10 +63,9 @@ export interface Level {
 // ─── RNG ──────────────────────────────────────────────────────────────────
 
 export interface RngState {
-  /** Seme corrente. Layout esatto da identificare in Phase 2.
-   *  Mantenere l'esatto stato del generatore originale è prerequisito per parità. */
+  /**
+    */
   seed: u32;
-  /** Numero di chiamate accumulate nel frame (debug/diff). */
   callsThisFrame: u32;
 }
 
@@ -88,7 +74,6 @@ export interface RngState {
 export interface PlayerStats {
   score: u32;
   lives: u8;
-  /** Timer del livello (decrementa, formato BCD nell'originale — TBD). */
   levelTimer: u16;
   /** Bonus accumulato. */
   bonus: u16;
@@ -96,9 +81,7 @@ export interface PlayerStats {
 
 // ─── Input snapshot ───────────────────────────────────────────────────────
 
-/** Stato letto dall'hardware MMIO ogni frame. Replicato 1:1 dall'I/O del 68010. */
 export interface InputSnapshot {
-  /** Trackball delta X (signed 8-bit nel hardware reale). */
   trackballDx: u8;
   /** Trackball delta Y. */
   trackballDy: u8;
@@ -118,22 +101,17 @@ export interface TickClock {
   /** Sub-frame per IRQ scanline (TBD). */
   scanline: u16;
   /**
-   * Counter incrementato ad ogni invocazione di `tick(runMainLoopBody:true)`.
-   * `mainTick` esegue `mainLoopInit1101E + lateGameLogic26F3E` SOLO quando
-   * `(mainLoopBodyTicks & 1) === 0` (= ogni 2 tick). Replica MAME FUN_117B2
-   * che chiama `FUN_28DEA` (vblank-wait) 2× per iterazione → body ogni 2
+   * Counter incremented on each `tick(runMainLoopBody:true)` invocation.
+   * `(mainLoopBodyTicks & 1) === 0` (= every 2 ticks). Mirrors MAME FUN_117B2
    * vsync = 30Hz game-tick rate.
    */
   mainLoopBodyTicks: u32;
   /**
-   * D6 entry value per la prossima invocazione di `decodeBitstream1A668`.
-   * MAME PRESERVA D6 cross-sub via movem; TS lo passa esplicitamente.
-   * Default 0. Override possibile via probe/tabella indexata da decoder
-   * body count per replay bit-perfect MAME.
+   * MAME preserves D6 across subroutines via movem; TS passes it explicitly.
    */
   decoderD6Init: u16;
-  /** Counter invocazioni del decoder. Incrementato in refresh-helper-13ee6
-   *  ad ogni chiamata. Usato per indicizzare la tabella D6 entry. */
+  /** Decoder invocation counter. Incremented in refresh-helper-13ee6.
+    */
   decoderCallCount: u32;
   /**
    * Warm-state resume for FUN_1493C when an oracle snapshot lands between
@@ -141,7 +119,6 @@ export interface TickClock {
    */
   pendingSlotArray1493C: u8 | undefined;
   /**
-   * Warm-state vblank replay cursor for the slot-array calls observed in the
    * MAME f12000..f12099 oracle window. Undefined during normal boot.
    */
   slotArrayReplayTick: u16 | undefined;
@@ -153,7 +130,6 @@ export interface TickClock {
   warmResidualReplayTick: u16 | undefined;
   /**
    * Async resume cursor for FUN_11452 mode-2 initialization. The original
-   * routine spans several vblanks; TS advances these stages one frame at a time
    * instead of compressing the full scene reset into the caller tick.
    */
   mode2Init11452Stage: u8 | undefined;
@@ -532,7 +508,7 @@ export interface GameState {
   level: Level;
   stats: PlayerStats;
   input: InputSnapshot;
-  /** Region di memoria principale del 68010 (work RAM).
+  /**
    *  Dimensione esatta da Phase 1 (atarisys1.cpp). */
   workRam: Uint8Array;
   /** Playfield tilemap RAM (background tilemap, 0xA00000-0xA01FFF, 8 KB).
@@ -546,8 +522,7 @@ export interface GameState {
   /** Color RAM (palette IRGB-4444, 0xB00000-0xB007FF, 2 KB). */
   colorRam: Uint8Array;
   /** Playfield X scroll register (MMIO 0x800000, 9-bit, write-only).
-   *  Aggiornato da CPU write durante il main loop (es. FUN_2FFB8 pfScrollUpdate).
-   *  Letto dal renderer per posizionare il viewport sulla tilemap 64×64 (512×512 px). */
+    */
   videoScrollX: number;
   /** Playfield Y scroll register (MMIO 0x820000, 9-bit, write-only). */
   videoScrollY: number;
@@ -555,7 +530,6 @@ export interface GameState {
   debug?: GameDebugState | undefined;
 }
 
-// ─── Factory: stato vuoto ─────────────────────────────────────────────────
 
 export function emptyGameState(): GameState {
   return {
@@ -582,7 +556,6 @@ export function emptyGameState(): GameState {
       buttons: as_u8(0),
       dipSwitches: as_u16(0),
     },
-    // Sizing verificato Phase 1 (`docs/hardware-map.md`):
     //   work RAM 8 KB ($400000-$401FFF)
     //   playfield RAM 8 KB ($A00000-$A01FFF, 64x64 tile entries)
     //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banchi × 64 entry × 4 word)
@@ -600,9 +573,7 @@ export function emptyGameState(): GameState {
 }
 
 /**
- * Snapshot deep-copy del GameState. Usato dal differential harness per:
- *  - serializzare lo stato a fine frame (→ trace.jsonl)
- *  - confrontare bit-by-bit con il trace dell'oracolo MAME
+ *  - compare bit-by-bit with the MAME oracle trace
  */
 export function snapshotGameState(s: GameState): GameState {
   return {

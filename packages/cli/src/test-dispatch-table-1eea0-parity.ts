@@ -4,35 +4,19 @@
  * `dispatchTable1EEA0`.
  *
  * `FUN_00011AD8` (64 byte) itera `D2.b` da `argIdx` fino a `0x0A` (cmp byte) e
- * per ogni iter chiama `FUN_0000428E(signExt(D2.b), ptrCorrente)` dove `ptr`
- * parte da `0x1EEA0 + signExt(argIdx)*8` e si incrementa di 8 ad ogni iter.
+ * Starts at `0x1EEA0 + signExt(argIdx)*8` and increments by 8 each iteration.
  *
- * **Verifica**: sequenza degli arg passati alla JSR (signature replicata
  * pattern `array9ClearAndDispatch` — ring buffer + thunk patch).
  *
  * Strategia:
- *   1. Patch `FUN_0000428E` a un mini-thunk che logga `(arg1Long, arg2Long)`
+ *   1. Patch `FUN_0000428E` to a mini-thunk that logs `(arg1Long, arg2Long)`
  *      in una ring-buffer in **cartridge RAM** (0x900000+, 1 MB libera —
- *      fuori da workRam che è solo 8 KB e non basta per 256 entry × 8 byte).
- *      Tale RAM NON è in `state.workRam`: la leggiamo via `peekMem` direttamente
- *      dal Musashi per il binary side, e la TS la simula con un JS array
- *      parallelo che poi serializziamo per il confronto.
  *
- *   2. Per ogni caso: SP fresca, reset ring, run binary @ FUN_11AD8 con
- *      argIdx come long (low byte = byte effettivo del binary), leggi ring
- *      dal Musashi; reset ring TS-side; run TS con stub-logger.
+ *      from Musashi; reset TS-side ring; run TS with stub-logger.
  *
  *   3. Compara byte-by-byte ring binary vs ring TS (entrambi serializzati
  *      come Uint8Array) + counter.
  *
- * Pattern coverage (500 casi):
- *   - tc 0..9   : argIdx = tc                 (1..10 chiamate)
- *   - tc 10     : argIdx = 0x0A               (0 chiamate, sentinel iniziale)
- *   - tc 11     : argIdx = 0x0B               (255 chiamate, max wrap byte)
- *   - tc 12     : argIdx = 0xFF               (11 chiamate, signed -1)
- *   - tc 13     : argIdx = 0x80               (138 chiamate, signed -128)
- *   - tc 14     : argIdx = 0x7F               (139 chiamate)
- *   - tc 15     : argIdx = 0x00               (10 chiamate, dup pattern 0)
  *   - tc ≥16    : argIdx random in [0..0xFF]
  *
  * Uso: npx tsx packages/cli/src/test-dispatch-table-1eea0-parity.ts [N]
@@ -61,11 +45,8 @@ const FUN_428E = 0x0000428e;
 /**
  * Ring buffer in cartridge RAM (0x900000..0x9FFFFF, 1 MB nel layout di Musashi).
  *
- * Capacità = 256 entry (worst case del loop wrap byte) × 8 byte = 2048 byte.
- * Counter long = numero di byte scritti (8 × #call). Posizionato fuori-ring.
  *
- * NB: questi indirizzi non sono mappati nel `state.workRam` TS; la TS
- * mantiene un JS array parallelo che poi confrontiamo come Uint8Array.
+ * Note: these addresses are not mapped into TS `state.workRam`; the TS
  */
 const RING_BASE = 0x00900000;
 const RING_CAPACITY_BYTES = 2048;
@@ -83,7 +64,6 @@ const RING_COUNTER = RING_BASE + RING_CAPACITY_BYTES; // 0x00900800
  *   addq.l  #8, RING_COUNTER.l       ; 50B9 0090 0800              (6 byte)
  *   rts                              ; 4E75                        (2 byte)
  *
- * Totale = 30 byte. FUN_428E è 130+ byte, patch sicura.
  */
 function patchFun428E(cpu: CpuSession): void {
   const bytes = [
@@ -135,8 +115,6 @@ function readRingBin(cpu: CpuSession): { ring: Uint8Array; counter: number } {
 }
 
 /**
- * Ring TS — semplice array di byte (in JS). Non sta in `state.workRam`
- * perché il binary scrive in cartridge RAM (1 MB) per tenere 2048 byte di log.
  */
 class TsRing {
   ring = new Uint8Array(RING_CAPACITY_BYTES);
@@ -206,7 +184,7 @@ async function main(): Promise<void> {
   }
   let firstFail: FailRecord | null = null;
 
-  // Cycles cap deve essere abbastanza grande: 256 iter × ~30 cicli per iter
+  // Cycle cap must be large enough: 256 iters x about 30 cycles per iter.
   // (push args + jsr + 30-byte thunk + pop). Bound prudente: 200_000 cicli.
   const MAX_CYCLES = 200_000;
 

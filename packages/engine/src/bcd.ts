@@ -1,20 +1,12 @@
 /**
- * bcd.ts — replica `FUN_00003A6A` (50 byte): binary-to-BCD via double-dabble.
+ * Replica of `FUN_00003A6A`: binary-to-BCD via double dabble.
  *
- * Converte un long signed in 8-digit BCD packed in long. Algoritmo classico
- * "double dabble" usando ABCD instruction del 68k.
- *
- * Algoritmo:
- *   - 32 iter (D5=31, dbf decrementing)
- *   - Per iter: roxl.l #1 D4 — sposta MSB di D4 in X flag, shifta D4 sinistra
- *   - abcd D, D — 4 volte (D1, D2, D3, D0): BCD double + add X
- *   - Dopo 32 iter, D0..D3 contengono 8 cifre BCD (2 cifre per byte)
- *   - Combina: result.long = (D3 << 24) | (D0_byte << 16) | (D2 << 8) | D1
- *
- * **Pure leaf** — verificato bit-perfect.
+ * The helper converts a 32-bit input into eight packed BCD digits. It mirrors
+ * the 68000 sequence: 32 ROXL iterations feed the X flag into four ABCD
+ * accumulators, then the accumulator bytes are packed into D0.
  */
 
-/** Esegue ABCD: same register (dest = src). Returns {result, newX}. */
+/** Execute `ABCD` with the same register as source and destination. */
 function abcdSame(value: number, x: number): { result: number; newX: number } {
   const low = (value & 0x0f) + (value & 0x0f) + (x & 1);
   let lowOut = low;
@@ -35,7 +27,7 @@ function abcdSame(value: number, x: number): { result: number; newX: number } {
 }
 
 /**
- * Replica `FUN_00003A6A` — binToBcd(value) → BCD long.
+ * Replica of `FUN_00003A6A`: `binToBcd(value) -> BCD long`.
  *
  * @param value Long unsigned (32-bit) input
  * @returns BCD packed long: high word = first 2 BCD bytes (D3<<8 | D0_byte),
@@ -72,12 +64,12 @@ export function binToBcd(value: number): number {
   }
 
   // Final combination:
-  //   asl.w #8, D0w — D0w = D0 << 8 (low word)
-  //   asl.w #8, D2w — D2w = D2 << 8
-  //   or.w D1w, D2w — D2w |= D1 → D2w = (D2 << 8) | D1
-  //   or.w D3w, D0w — D0w |= D3 → D0w = (D0 << 8) | D3
-  //   swap D0 — D0 = (D0_low << 16) | D0_high
-  //   move.w D2w, D0w — D0 low word = D2w
+  //   asl.w #8, D0w: D0w = D0 << 8 (low word)
+  //   asl.w #8, D2w: D2w = D2 << 8
+  //   or.w D1w, D2w: D2w |= D1 -> D2w = (D2 << 8) | D1
+  //   or.w D3w, D0w: D0w |= D3 -> D0w = (D0 << 8) | D3
+  //   swap D0: D0 = (D0_low << 16) | D0_high
+  //   move.w D2w, D0w: D0 low word = D2w
   // Final D0 = (D0_low_after_or << 16) | D2w_value
   // Where D0_low_after_or = (D0_byte << 8) | D3_byte (treating D0 and D3 as bytes)
   const word0 = ((d0 << 8) | d3) & 0xffff;

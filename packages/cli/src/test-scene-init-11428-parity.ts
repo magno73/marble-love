@@ -2,19 +2,12 @@
 /**
  * test-scene-init-11428-parity.ts — differential FUN_00011428 vs sceneInit11428.
  *
- * `FUN_00011428` (42 byte) è puro orchestratore: chiama 6 sub in sequenza,
- * zero side-effect diretti, zero argomenti, zero return. La parità si
- * verifica:
  *
- *   1. Patchando ogni entry-point delle 6 sub con
+ *   1. Patch each entry point of the 6 subs with
  *        `addq.b #1, sentinel.l ; rts`     (8 byte)
- *      dove `sentinel` è un byte unico in work RAM 0x4003E0..0x4003E5.
- *   2. Eseguendo il binario reale (callFunction @ 0x11428) e leggendo
  *      i 6 sentinel post-call.
- *   3. Eseguendo `sceneInit11428()` con 6 callback che incrementano gli
+ *   3. Run `sceneInit11428()` with 6 callbacks that increment the
  *      stessi 6 byte in `state.workRam`.
- *   4. Confrontando i 6 sentinel byte (== 1 ciascuno se l'orchestratore è
- *      bit-perfect, dato che ognuno è chiamato esattamente una volta).
  *
  * Uso: npx tsx packages/cli/src/test-scene-init-11428-parity.ts [N]
  */
@@ -105,7 +98,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch ROM buffer con stub addq+rts a ognuno dei 6 entry point.
+  // Pre-patch ROM buffer with addq+rts stubs at each of the 6 entry points.
   for (const sub of SUBS_LIST) {
     patchStubAddq(romBuf, sub.entry, sub.sentinel);
   }
@@ -116,7 +109,7 @@ async function main(): Promise<void> {
   console.log(`\n=== sceneInit11428 (FUN_00011428) — ${n} casi ===`);
   const rng = makeRng(0x11428);
 
-  // Subs TS che incrementano i sentinel slot in workRam.
+  // TS subs that increment sentinel slots in workRam.
   const incSent = (s: typeof stateInst, off: number): void => {
     const a = off - 0x400000;
     s.workRam[a] = ((s.workRam[a] ?? 0) + 1) & 0xff;
@@ -133,13 +126,11 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Pattern: per ogni case randomizziamo il valore iniziale dei 6 sentinel
-  // (0..255) per esercitare il wrap su +1 e verificare che l'orchestratore
-  // non dipenda dal valore pre-existing.
+  // (0..255) to exercise +1 wraparound and verify that the orchestrator
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Scratch byte iniziali: random per ogni sentinel.
+    // Initial scratch bytes: random for each sentinel.
     const scratch = new Uint8Array(6);
     for (let k = 0; k < 6; k++) {
       const v = Math.floor(rng() * 256) & 0xff;
@@ -148,13 +139,10 @@ async function main(): Promise<void> {
       stateInst.workRam[(SENTINEL_BASE - 0x400000) + k] = v;
     }
 
-    // Esegui binario
     callFunction(cpu, FUN_11428, []);
     // Esegui TS
     sceneNs.sceneInit11428(stateInst, subs);
 
-    // Confronto: 6 sentinel byte. Ognuno deve essere (scratch+1) & 0xFF
-    // SIA in binario che in TS.
     let fail: FailRecord | null = null;
     for (let k = 0; k < 6; k++) {
       const expected = ((scratch[k] ?? 0) + 1) & 0xff;

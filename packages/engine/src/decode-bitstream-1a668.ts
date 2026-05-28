@@ -1,17 +1,15 @@
 /**
  * decode-bitstream-1a668.ts — replica `FUN_0001A668` (304 byte).
  *
- * **Decoder bitstream + byte-stream RLE-style** che produce 36 word (72 byte
- * = 0x48) in un buffer di output. Combina:
- *   - un **control bitstream** letto a long-word (4 byte BE) da `A3`,
- *     consumato a granularita' di 7/9/14 bit per "token"; A3 avanza di 2
- *     byte (1 word) ogni volta che il puntatore-bit attraversa il byte 16.
- *   - un **extra-byte stream** letto da `A1` come coppie alternate
- *     `(count, value)`: il `count` indica quanti token consecutivi
- *     condividono il `value` come "additivo" applicato all'output.
+ * RLE-style bitstream plus byte-stream decoder that emits 36 words (72 bytes)
+ * into an output buffer. It combines:
+ *   - a control bitstream read as overlapping 32-bit BE windows from `A3`.
+ *     A3 advances by one word whenever the bit pointer crosses byte 16.
+ *   - an extra-byte stream read from `A1` as alternating `(count, value)` pairs.
+ *     `count` controls how many consecutive tokens share the additive value.
  *   - due **lookup table ROM**:
- *     * `0x2499A` (32 word — 64 byte) — usata in path C
- *     * `0x249DA` (8 word — 16 byte) — usata in path D
+ *     * `0x2499A` (32 words, 64 bytes), used by path C
+ *     * `0x249DA` (8 words, 16 bytes), used by path D
  *
  * **Disasm 0x1A668..0x1A797** (304 byte):
  *
@@ -158,107 +156,100 @@
  *   0x1A792:  movem.l (SP)+,{D2 D3 D4 D5 D6 A2 A3 A4 A5}
  *   0x1A796:  rts
  *
- * **Modellazione bit-perfect**:
+ * **Bit-perfect model**:
  *
- *   1. **Output buffer** (A2): 0x48 byte = 36 word. Tutte e cinque le path
- *      scrivono 1+ word a `(A2)+`. Il loop continua finche' `A2 < A4` (esclusivo),
- *      quindi puo' produrre PIU' di 36 word (la guard e' "while less-than"
- *      DOPO l'output, non prima). Modellato bit-exact: il loop puo' "sforare"
- *      di 0..7 word se l'ultima path produce piu' di 1 entry (path B/D/E).
- *      Non esiste guard interno alle path-loop.
+ *   1. **Output buffer** (A2): 0x48 bytes = 36 words. All five paths write one
+ *      or more words to `(A2)+`. The loop checks `A2 < A4` after each path, so
+ *      a final multi-word path can overshoot by 0..7 words.
  *
- *   2. **Ctrl stream** (A3): A3 e' una read pointer LONG; legge 4 byte BE da
- *      A3 ad ogni iter. A3 avanza di +2 SOLO se durante l'iter D4 ha attraversato
- *      il byte 16 (bit 4 set dopo `addi.l #N, D4`). Quindi le `move.l (A3),D0`
- *      consecutive sono OVERLAPPATE di 2 byte (16 bit) — sliding window.
+ *   2. **Ctrl stream** (A3): A3 is a long read pointer. It reads 4 BE bytes
+ *      each iteration and advances by +2 only when D4 crosses bit 16. Consecutive
+ *      `move.l (A3),D0` reads therefore overlap by 16 bits.
  *
- *   3. **Bit position D4**: D4 e' uno scalare a 32-bit, accumulato di 7/9/14
- *      ogni iter. `bclr.l #4,D4` clear bit 4 (esattamente). Dopo l'incremento
- *      D4 e' al massimo 14+14 = 28 (se due path A consecutive). Quindi solo
- *      bit 4 (16) puo' essere set, mai bit 5+. `bclr` quindi e' equivalente a
- *      `D4 mod 16` per i valori in gioco. In `D1 = 18 - D4b`: usa solo D4.b
- *      (low byte). Se D4 < 16 (post-bclr) la sub e' 18-D4 in [4..18].
+ *   3. **Bit position D4**: D4 is a 32-bit scalar, accumulated by 7/9/14
+ *      each iteration. `bclr.l #4,D4` clears bit 4 exactly. After incrementing,
+ *      D4 is at most 14+14 = 28 (two consecutive path A tokens), so only
+ *      bit 4 (16) can be set, never bit 5+. `bclr` is therefore equivalent to
+ *      `D4 mod 16` for in-game values. In `D1 = 18 - D4b`, only D4.b is used
+ *      (low byte). If D4 < 16 (post-bclr), the subtract result is 18-D4 in
+ *      [4..18].
  *
- *   4. **Extra-byte cache** (D2, D3): D2 e' un counter byte (8-bit unsigned
- *      via `move.b`), D3.w contiene `value << 8` (high byte = value, low = 0
- *      dopo `asl.w #8`). Quando D2 == 0 al test si ricarica:
- *      D2 = (A1)+, D3 = (A1)+ << 8. Poi D2-- (sempre).
- *      Importante: se D2 era 0 e (A1)+ legge nuovo count == 0, il decrement
- *      lo fa diventare 0xFF (byte underflow); pero' al prossimo `tst.b D2b;
- *      bne` il valore 0xFF e' non-zero → no-reload. Quindi una count == 0
- *      "blocca" il reload per 0xFF iter (255 iter di byte cache). Modellato
- *      bit-exact con D2 a 8-bit unsigned.
+ *   4. **Extra-byte cache** (D2, D3): D2 is an unsigned byte counter and D3.w
+ *      contains `value << 8`. When D2 is zero, the routine reloads
+ *      `D2 = (A1)+, D3 = (A1)+ << 8`, then decrements D2. If the new count was
+ *      zero, byte underflow makes it 0xFF, delaying the next reload for 255
+ *      cache uses.
  *
- *   5. **Path A `move.w D5w,D6w` condizionale**: dopo `asr.w #1, D5w`,
- *      `bcc` skippa se carry CLEAR (LSB era 0); fall-through (carry SET)
- *      esegue `move.w D5w, D6w`. D6 quindi e' aggiornato SOLO quando il bit 0
- *      del 14-bit token (PRIMA dello shift) era 1 (e PRIMA del bclr di bit 13;
- *      ma bclr non tocca bit 0). D6 e' usato in path B come base auto-incrementale.
+ *   5. **Conditional path A `move.w D5w,D6w`**: after `asr.w #1, D5w`, `bcc`
+ *      skips when carry is CLEAR (LSB was 0); fall-through (carry SET) executes
+ *      `move.w D5w, D6w`. D6 is therefore updated only when bit 0 of the
+ *      14-bit token (before the shift and before clearing bit 13) was 1. The
+ *      bit 13 clear does not affect bit 0. Path B uses D6 as an auto-incrementing
+ *      base.
  *
- *   6. **Path B/D/E inner loop**: il count e' (D5 >> 7) & 7 quindi 0..7.
- *      Loop body itera D1+1 volte (loop fa subq+bge: D1 inizia X-1, finisce
- *      a -1). Quindi 1..8 word in output per token.
+ *   6. **Path B/D/E inner loop**: the count is (D5 >> 7) & 7, therefore 0..7.
+ *      The loop body runs D1+1 times (`subq+bge`: D1 starts at X-1 and ends at
+ *      -1), so each token emits 1..8 output words.
  *
- *   7. **Path C ROM lookup index**: `D5 = (D5 >> 4) & 0x3E` ⇒ valori pari 0..62.
- *      `move.w (0,A0,D5*1),D5` legge ROM word @ 0x2499A + D5_byte_offset.
- *      32 word totali (64 byte). L'index D5 in [0..62] e' coerente con la
- *      table-size.
+ *   7. **Path C ROM lookup index**: `D5 = (D5 >> 4) & 0x3E`, even values
+ *      0..62. `move.w (0,A0,D5*1),D5` reads a ROM word from
+ *      `0x2499A + D5_byte_offset`.
  *
- *   8. **Path D ROM lookup index**: `D5 = (D5 >> 9) & 0xE` ⇒ pari 0..14.
- *      8 word totali (16 byte). Coerente.
+ *   8. **Path D ROM lookup index**: `D5 = (D5 >> 9) & 0xE`, even values 0..14.
+ *      8 total words (16 bytes).
  *
- *   9. **Word add `add.w D3w, D5w`**: addizione 16-bit con wrap (mod 0x10000).
- *      Output e' 16-bit BE in workRam.
+ *   9. **Word add `add.w D3w, D5w`**: 16-bit wrapping add (mod 0x10000).
+ *      Output is 16-bit BE in workRam.
  *
- *  10. **Pure mutation**: la funzione modifica SOLO `[outAbs..outAbs+0x48)` in
- *      workRam. A3, A1 sono read-only.
+ *  10. **Pure mutation**: the function mutates only
+ *      `[outAbs..outAbs+0x48)` in workRam. A3 and A1 are read-only.
  *
  * **Side effect bit-perfect**:
- *   - workRam[outAbs..outAbs+0x48) o piu' (overshoot 0..7 word).
- *   - Nessun'altra scrittura.
+ *   - workRam[outAbs..outAbs+0x48) or more (0..7 word overshoot).
+ *   - No other writes.
  *
- * **Caller noti** (4 chiamate):
+ * **Known callers** (4 call sites):
  *   - 0x135A8 in FUN_0001344c
  *   - 0x17008 in FUN_00016f6c
  *   - 0x13F96 / 0x1406C in FUN_00013ee6
  *
- * Verifica bit-perfect via `packages/cli/src/test-decode-bitstream-1a668-parity.ts`.
+ * Bit-perfect verification via `packages/cli/src/test-decode-bitstream-1a668-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-/** Base assoluta workRam M68k. */
+/** Absolute M68k workRam base. */
 const WORK_RAM_BASE = 0x400000;
-/** Limite superiore esclusivo workRam. */
+/** Exclusive workRam upper bound. */
 const WORK_RAM_END = 0x402000;
-/** Base assoluta playfieldRam M68k. */
+/** Absolute M68k playfieldRam base. */
 const PF_RAM_BASE = 0xa00000;
-/** Limite superiore esclusivo playfieldRam. */
+/** Exclusive playfieldRam upper bound. */
 const PF_RAM_END = 0xa02000;
-/** Limite superiore esclusivo ROM program. */
+/** Exclusive program ROM upper bound. */
 const ROM_END = 0x88000;
 
-/** Numero di byte scritti (minimo) nel buffer di output. */
+/** Minimum number of bytes written to the output buffer. */
 export const OUTPUT_LEN_BYTES = 0x48 as const;
-/** Numero di word scritti (minimo) nel buffer di output. */
+/** Minimum number of words written to the output buffer. */
 export const OUTPUT_LEN_WORDS = 0x24 as const; // 36
 
-/** Offset ROM della lookup table 1 (32 word = 64 byte). */
+/** ROM offset for lookup table 1 (32 words = 64 bytes). */
 export const ROM_TABLE1_OFF = 0x2499a as const;
-/** Numero di word in ROM table 1. */
+/** Number of words in ROM table 1. */
 export const ROM_TABLE1_COUNT = 32 as const;
 
-/** Offset ROM della lookup table 2 (8 word = 16 byte). */
+/** ROM offset for lookup table 2 (8 words = 16 bytes). */
 export const ROM_TABLE2_OFF = 0x249da as const;
-/** Numero di word in ROM table 2. */
+/** Number of words in ROM table 2. */
 export const ROM_TABLE2_COUNT = 8 as const;
 
-/** Bit 13 mask: usato per partizionare path A vs B/C/D/E. */
+/** Bit 13 mask: partitions path A vs B/C/D/E. */
 const BIT13_MASK = 0x2000;
-/** 14-bit mask: usato per estrarre il token. */
+/** 14-bit mask used to extract the token. */
 const TOKEN14_MASK = 0x3fff;
-/** Bit 12..10 mask: usato per partizionare B vs C/D/E. */
+/** Bit 12..10 mask: partitions path B vs C/D/E. */
 const PATHGROUP_MASK = 0x1c00;
 /** Path C selector. */
 const PATH_C_VAL = 0x1c00;
@@ -288,8 +279,8 @@ function read8Abs(state: GameState, rom: RomImage, abs: number): number {
 }
 
 /**
- * Legge una word BE (16-bit unsigned) da memoria assoluta M68k.
- * Out-of-range ⇒ 0 (difensivo).
+ * Reads one BE word (16-bit unsigned) from absolute M68k memory.
+ * Out-of-range => 0 as a defensive fallback.
  */
 function read16Abs(state: GameState, rom: RomImage, abs: number): number {
   const b0 = read8Abs(state, rom, abs);
@@ -298,8 +289,8 @@ function read16Abs(state: GameState, rom: RomImage, abs: number): number {
 }
 
 /**
- * Legge un long BE (32-bit unsigned) da memoria assoluta M68k.
- * Out-of-range ⇒ 0 (difensivo).
+ * Reads one BE long (32-bit unsigned) from absolute M68k memory.
+ * Out-of-range => 0 as a defensive fallback.
  */
 function read32Abs(state: GameState, rom: RomImage, abs: number): number {
   const b0 = read8Abs(state, rom, abs);
@@ -310,8 +301,8 @@ function read32Abs(state: GameState, rom: RomImage, abs: number): number {
 }
 
 /**
- * Scrive un byte in memoria assoluta M68k. Il decoder è usato sia per scratch
- * workRam sia per righe playfield durante `levelInit16F6C`.
+ * Writes one byte to absolute M68k memory. The decoder is used for both
+ * scratch workRam and playfield rows during `levelInit16F6C`.
  */
 function write8Abs(state: GameState, abs: number, v: number): void {
   const a = abs >>> 0;
@@ -325,7 +316,7 @@ function write8Abs(state: GameState, abs: number, v: number): void {
 }
 
 /**
- * Scrive una word BE in memoria assoluta M68k.
+ * Writes one BE word to absolute M68k memory.
  */
 function write16Abs(state: GameState, abs: number, v: number): void {
   write8Abs(state, abs, (v >>> 8) & 0xff);
@@ -333,11 +324,11 @@ function write16Abs(state: GameState, abs: number, v: number): void {
 }
 
 /**
- * **Arithmetic shift right su long signed (32-bit) per N bit.**
+ * **Arithmetic shift right on a signed long (32-bit) by N bits.**
  *
- * `asr.l D1, D0` su M68k: shift signed (sign-extend dal bit 31). N e' il
- * count modulo 64 sul 68000, ma per N in [4..18] (range del nostro D1) e'
- * sempre un shift normale.
+ * `asr.l D1, D0` on M68k is a signed shift with sign-extension from bit 31.
+ * N is the count modulo 64 on the 68000, but for N in [4..18] (this routine's
+ * D1 range) it is always a normal shift.
  */
 function asrL32(value: number, n: number): number {
   const s = ((value | 0) >> (n & 31)) | 0; // JS `>>` e' arithmetic su int32
@@ -347,20 +338,17 @@ function asrL32(value: number, n: number): number {
 /**
  * Replica `FUN_0001A668` — bitstream + byte-stream RLE-style decoder.
  *
- * Vedi disasm e semantica bit-exact nell'header del file.
+ * See the module header for the bit-exact disassembly notes.
  *
- * @param state    GameState (workRam scrivibile in [outAbs..outAbs+0x48+overshoot)).
- * @param rom      ROM image (legge `rom.program` per le 2 lookup table; A3/A1
- *                 possono puntare a ROM o workRam — letti via memoria assoluta).
- * @param outAbs   Pointer assoluto M68k al buffer di output (32-bit, in
- *                 workRam tipicamente). 36 word = 72 byte minimi.
- * @param ctrlAbs  Pointer assoluto M68k al control bitstream (long-aligned reads
- *                 con sliding-window di 2 byte).
- * @param extAbs   Pointer assoluto M68k all'extra-byte stream (coppie
- *                 `count, value` consumate on-demand).
+ * @param state    GameState with writable workRam output.
+ * @param rom      ROM image; lookup tables and stream pointers may point to ROM
+ *                 or workRam through absolute-address reads.
+ * @param outAbs   Absolute 68000 pointer to the output buffer.
+ * @param ctrlAbs  Absolute 68000 pointer to the control bitstream.
+ * @param extAbs   Absolute 68000 pointer to the extra-byte stream.
  *
- * **Mutation**: solo workRam @ `[outAbs..outAbs+0x48)` (almeno; possibile overshoot
- * fino a 7 word in piu' se l'ultima path B/D/E produce piu' di 1 entry).
+ * **Mutation**: workRam at `[outAbs..outAbs+0x48)`, possibly overshooting by
+ * up to 7 words when the final B/D/E path emits multiple entries.
  */
 export function decodeBitstream1A668(
   state: GameState,
@@ -370,7 +358,7 @@ export function decodeBitstream1A668(
   extAbs: number,
   d6Init: number = 0,
 ): void {
-  // Stato dei "registri" replicato in JS.
+  // Register state mirrored in JavaScript.
   let a2 = outAbs >>> 0; // output write ptr
   let a3 = ctrlAbs >>> 0; // ctrl long-stream ptr (advances by 2 conditionally)
   let a1 = extAbs >>> 0; // extra-byte stream ptr (advances by 1 on each (A1)+)
@@ -385,39 +373,30 @@ export function decodeBitstream1A668(
   // D5: scratch (14-bit token, indices, lookup result).
   let d5 = 0;
   // D6: auto-increment base for path B (preserved across iters).
-  // MAME PRESERVA D6 cross-sub via movem prologue, quindi D6 entry e' il
-  // valore lasciato dal caller. TS lo accetta come parametro `d6Init`
-  // (default 0). Caller deve passarlo correttamente per bit-perfect.
+  // MAME preserves D6 across the call through the movem prologue, so the entry
+  // value belongs to the caller. TS accepts it as `d6Init`.
   let d6 = d6Init & 0xffff;
 
-  // Helper: ricarica byte cache (D2, D3) se D2 == 0. Identico in tutte e 5 le
-  // sequenze 0x1A6A4, 0x1A6D4, 0x1A6FA, 0x1A736, 0x1A766.
+  // Reload byte cache (D2, D3) when D2 == 0. The same sequence appears in all
+  // five decode paths.
   const maybeReloadCache = (): void => {
     if ((d2 & 0xff) === 0) {
       d2 = read8Abs(state, rom, a1);
       a1 = (a1 + 1) >>> 0;
       const valByte = read8Abs(state, rom, a1);
       a1 = (a1 + 1) >>> 0;
-      // D3.b = valByte; asl.w #8, D3w → D3.w = (D3 << 8) | (D3 << 8 cleared low).
-      // Pre-asl D3.w = (D3.high_byte << 8) | valByte. Ma D3.high_byte e' il valore
-      // pre-`move.b D3b`, indefinito tra le iter (D3.b viene riscritto, ma D3.h
-      // resta dal precedente). Pero' sappiamo che `asl.w #8` shifta TUTTA la word
-      // a sinistra di 8 → high byte ESCE, low byte (valByte) diventa nuovo high.
-      // Risultato: D3.w = valByte << 8 (low byte = 0). I bit 16+ di D3 (long)
-      // restano dalla iter precedente ma non sono mai osservati: tutti gli usi
-      // sono `add.w D3w, X` che opera solo sui low 16 bit. Modello: d3 = 16-bit.
+      // `move.b` writes only D3.b; `asl.w #8` then shifts the whole low word.
+      // The result observed by later `add.w` operations is `valByte << 8`.
       d3 = (valByte << 8) & 0xffff;
     }
-    // D2--; sempre, anche dopo reload (M68k subq.b: byte underflow OK).
+    // D2-- always, even after reload. M68k `subq.b` byte underflow is OK.
     d2 = (d2 - 1) & 0xff;
   };
 
-  // Loop principale @ 0x1A690. Termina quando A2 >= A4.
+  // Main loop at 0x1A690. It ends when A2 >= A4.
   // Safety cap: max OUTPUT_LEN_WORDS (36) iter (path A produce 1 word, path B/D/E
-  // 1..8 word). Ma path overshoot puo' fare piu' loop iter? No: il check e'
-  // `A2 < A4`, quindi appena A2 >= A4 si esce. Worst-case path A solo: 36 iter.
-  // Worst-case path B/D/E con 8 word ognuna: 5 iter (5*8 = 40 ≥ 36).
-  // Cap difensivo: 100 iter.
+  // 1..8 words). The `A2 < A4` check exits as soon as A2 reaches the end.
+  // Defensive cap: 100 iterations.
   let safety = 100;
   while (safety-- > 0) {
     if ((a2 >>> 0) >= a4) break;
@@ -425,8 +404,8 @@ export function decodeBitstream1A668(
     // 0x1A690-0x1A69E: extract 14-bit token from ctrl stream.
     const d0 = read32Abs(state, rom, a3);
     const d1Shift = (0x12 - (d4 & 0xff)) & 0xff; // sub.b D4b,D1b
-    // M68k `asr.l D1, D0` con D1 in [0..63]: shift mod 64. Per D1 in [4..18]
-    // (D4 in [0..14] dopo bclr) shift normale.
+    // M68k `asr.l D1, D0` with D1 in [0..63]: shift mod 64. For D1 in [4..18]
+    // (D4 in [0..14] after bclr), this is the normal shift.
     const shifted = asrL32(d0 | 0, d1Shift) | 0;
     d5 = shifted & 0xffff; // move.w D0w, D5w
     d5 = d5 & TOKEN14_MASK; // andi.w #0x3FFF, D5w

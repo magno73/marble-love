@@ -1,6 +1,6 @@
 /**
  * probe-diff-bytes.ts — diff byte-per-byte tra TS evolution e MAME oracle
- * a un frame target specifico, per identificare esattamente i byte che
+ * at a specific target frame, to identify exactly the bytes that
  * divergono al primo tick di drift.
  *
  * Uso:

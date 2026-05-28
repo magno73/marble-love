@@ -51,11 +51,11 @@ describe("FUN_28DB8 wait28DB8", () => {
     s.workRam[0x390] = 0;
     s.workRam[0x391] = 1;
 
-    // Sub artificiale che cambia state al 3° tick
+    // Artificial sub that changes state on the 3rd tick.
     let calls = 0;
     const originalCounter = s.workRam[0x3f0] ?? 0;
     void originalCounter;
-    // Emula: dopo 3 vblankAck cambio state
+    // Emulate: after 3 vblankAck calls, change state.
     const wrapped = (st: typeof s) => {
       vblankAck28DEA(st);
       calls += 1;
@@ -71,7 +71,7 @@ describe("FUN_28DB8 wait28DB8", () => {
       if (cur !== (initWord & 0xffff)) counter = 0;
       else counter -= 1;
     }
-    // Solo 3 chiamate (1+2 prima del cambio state, poi exit alla 4a iter)
+    // Only 3 calls: 1+2 before state change, then exit at the 4th iteration.
     expect(calls).toBe(3);
   });
 

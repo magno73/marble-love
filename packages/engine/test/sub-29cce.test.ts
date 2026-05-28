@@ -237,7 +237,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     // Slot table (0x400a9c offset 0xa9c) tutta zero → ogni s18=0 salta a 0x2b0f6.
     expect(s.workRam[0xa9c + 0x18]).toBe(0);
     fun29CCE(s, SLOT, rom);
-    // (0x58,A2) deve essere 0 (cleared in prologue); e nessun tag scritto.
+    // (0x58,A2) must be 0 (cleared in prologue); no tag written.
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0);
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0);
   });
@@ -247,8 +247,8 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     const rom = emptyRomImage();
     const slot4 = SLOT_TABLE_OFF + 4 * 0x56;
 
-    // slot0..3 restano inattivi. Il ROM salta ciascun buco via 0x2b0f6 e deve
-    // comunque raggiungere lo slot4, che rappresenta la bocca tubo Beginner.
+    // slot0..3 remain inactive. The ROM skips each hole via 0x2b0f6 and must
+    // still reaches slot4, representing the Beginner tube mouth.
     s.workRam[slot4 + 0x18] = 1;
     s.workRam[slot4 + 0x1f] = 0x14;
     wW(s.workRam, slot4 + 0x0c, 0x0108);
@@ -271,7 +271,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
   it("LOOP color 0x10: D1∈[0..0x10) AND D2∈[0..0xe) → tag-write", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Setup slot 0 attivo con color=0x10.
+    // Setup slot 0 active with color=0x10.
     // D1 = (slotX_w >> 3) - g696, D2 = (slotY_w >> 3) - g698.
     // Con g696=0 g698=0, slotX_w >> 3 = 0..0xf, slotY_w >> 3 = 0..0xd.
     // slotX_w = 8 → asr 3 = 1 → D1=1 (in [0,0x10)).
@@ -283,7 +283,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     s.workRam[0xa9c + 0x11] = 8;          // slotY_w = 8
     s.workRam[0xa9c + 0x1f] = 0x10;       // color tag
     fun29CCE(s, SLOT, rom);
-    // Tag scritto: (0x58,A2)=0x10, (0x59,A2)=-1
+    // Written tag: (0x58,A2)=0x10, (0x59,A2)=-1.
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x10);
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0xff);
   });

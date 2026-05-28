@@ -1,16 +1,16 @@
 /**
- * probe-audioram-diff.ts — TS vs MAME audioRam diff frame-by-frame.
+ * probe-audioram-diff.ts - frame-by-frame TS vs MAME audio RAM diff.
  *
- * Confronta lo stato della RAM del sound 6502 (4KB $0000-$0FFF) fra TS
- * SoundChip e MAME oracle a frame snapshot multipli. Identifica il PRIMO
- * frame con divergenza e i byte coinvolti, per drill A1 cycle-exact.
+ * Compares 6502 sound RAM (4KB $0000-$0FFF) between the TS SoundChip and the
+ * MAME oracle at several snapshot frames. Reports the first divergent frame
+ * and the bytes involved for cycle-exact A1 drill-down.
  *
  * Input:
  *   --mame-dumps <json>   /tmp/mame_audioram_dump.json (output mame_sound_audioram_dump.lua)
  *   --cmd-tape <json>     oracle/scenarios/sound-cmd-tape-attract.json
  *
- * Output: per ogni frame snapshot, num byte diff + range offset + sample dei
- * primi 16 byte divergenti.
+ * Output: for each snapshot frame, diff count, offset range, and the first
+ * 16 divergent byte samples.
  */
 
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
@@ -129,7 +129,7 @@ function main(): void {
       : installSoundStatusReplay(chip, parsedArgs.statusTape, statusReads);
   }
 
-  // Snapshot frames sorted
+  // Sorted snapshot frames.
   const snapFrames = mameDumps.dumps.map((d) => d.frame).sort((a, b) => a - b);
   const mameByFrame = new Map<number, Uint8Array>();
   for (const d of mameDumps.dumps) {

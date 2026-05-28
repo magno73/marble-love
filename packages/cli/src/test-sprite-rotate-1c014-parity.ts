@@ -4,26 +4,16 @@
  * `spriteRotate1C014`.
  *
  * FUN_0001C014 (1546 byte): "sprite rotation matrix builder + vertex
- * transform + sort + slot-fill". Aggiorna la matrice 3×3 dell'oggetto sprite
- * in `A2+0x74..0xA3`, trasforma 8 vertici, li ordina, scrive 4 slot in
  * `A2+0xA4`.
  *
  * **Strategia parity**:
- *   - Argomento: long (indirizzo oggetto) pushato cdecl.
- *   - Oggetto @ 0x401200 in workRam (fisso, lontano da altri globals).
- *   - Sub JSR: nessuna sub da stubbbare (FUN_1C61E = lerpFromRom è replicato
- *     bit-perfect; FUN_0001CABA non è chiamata da C014).
  *   - Compare workRam:
  *       - matrice 3×3 + cols espansi 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
- *       - slot output: A2+0xA4..0xC3 (32 byte = 4 slot × 8 byte, usiamo 4×6=24)
- *         Nota: stride è 6 byte per slot, 4 slot → 24 byte.
+ *       - slot output: A2+0xA4..0xC3 (32 bytes = 4 slots x 8 bytes, use 4x6=24)
  *       - CA counter: A2+0xCA (1 byte).
  *
  * **Suite**:
- *   - A: random tutto (flag@+58, velocity, matrix cols, base coords, gameMode).
  *   - B: force velocity idle (flag@+58=0xA) → slot-only path.
- *   - C: force gameMode=4 con velocità non-nulla → special angle branch.
- *   - D: edge cases (velocità ±max, angoli 0, matrice identità/zero).
  *
  * Uso: npx tsx packages/cli/src/test-sprite-rotate-1c014-parity.ts [N]
  */

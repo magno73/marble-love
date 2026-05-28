@@ -1,11 +1,7 @@
 /**
  * random-mod-13a98.test.ts — unit test per `randomMod13A98` (FUN_00013A98).
  *
- * Verifica:
  *   1. Output range [0, maxExclusive)
- *   2. Determinismo dato lo stesso seed iniziale
- *   3. Caso limite: maxExclusive == 0
- *   4. Coerenza con rngNext (randomMod13A98 è un wrapper)
  *   5. Aggiornamento corretto del seed in state.rng
  */
 

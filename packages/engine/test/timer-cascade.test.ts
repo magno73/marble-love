@@ -1,7 +1,7 @@
 /**
  * Test tickCascadingTimer (FUN_28C38).
  *
- * Bit-perfect verificato vs binary (1000/1000).
+ * Bit-perfect verified against the binary (1000/1000).
  */
 
 import { describe, it, expect } from "vitest";

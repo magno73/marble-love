@@ -1,15 +1,10 @@
 /**
- * object-type-dispatch-194ba.ts — replica `FUN_000194BA` (132 byte).
+ * object-type-dispatch-194ba.ts — `FUN_000194BA` replica (132 bytes).
  *
- * "Object type-dispatch by entry[0x1A]". Carica un byte sign-extended da
- * `obj+0x1A` e branch su {0, 1, 2}. Per case 0/1 chiama 2 JSR consecutivi
- * (helper + finalizer); per case 2 imposta un puntatore funzione nel campo
- * `obj+0x1C` selezionato sulla base di `obj+0x25` (sub-type/state). Per
- * tutti gli altri valori (negativi o >= 3) il dispatcher è no-op.
  *
  * **Disasm 0x194BA..0x1953E** (132 byte):
  *
- *   move.l   A2,-(SP)                    ; salva A2 (callee-saved)
+ *   move.l   A2,-(SP)                    ; save A2 (callee-saved)
  *   movea.l  (0x8,SP),A2                 ; A2 = obj struct ptr (arg long)
  *   move.b   (0x1A,A2),D0b               ; D0.b = obj[0x1A] (kind byte)
  *   ext.w    D0w                         ; sign-extend → word
@@ -60,9 +55,8 @@
  * **Side effects**:
  *   - Solo case 2 modifica `state.workRam` direttamente (4 byte BE @
  *     `obj+0x1C..0x1F`).
- *   - Case 0/1 sono delegati interamente alle JSR (no-op se subs assente).
+ *   - Case 0/1 are delegated entirely to JSRs (no-op if subs are absent).
  *
- * **JSR esterne** (NON ancora replicate, esposte via sub-injection):
  *   - `FUN_0001960E` — case-0 helper (sub-type 0).
  *   - `FUN_0001973C` — case-1 helper (sub-type 1).
  *   - `FUN_0001953E` — finalizer comune a case 0 e 1.
@@ -72,23 +66,16 @@
  *   - `FUN_0001924E @ 0x192F2`
  *   - `FUN_0001912C @ 0x191D6, 0x191FC, 0x19228`
  *
- * Verifica bit-perfect via `cli/src/test-object-type-dispatch-194ba-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-/** Offset del byte "kind" letto come signed (`obj+0x1A`). */
 export const KIND_OFFSET = 0x1a as const;
-/** Offset del byte "sub-type" usato in case 2 (`obj+0x25`). */
 export const SUBTYPE_OFFSET = 0x25 as const;
-/** Offset del campo "function pointer" scritto in case 2 (`obj+0x1C`, long BE). */
 export const FN_PTR_OFFSET = 0x1c as const;
 
-/** Indirizzo (m68k absolute) del FUN_1960E (case-0 helper). */
 export const CALLEE_FUN_1960E = 0x0001960e as const;
-/** Indirizzo (m68k absolute) del FUN_1973C (case-1 helper). */
 export const CALLEE_FUN_1973C = 0x0001973c as const;
-/** Indirizzo (m68k absolute) del FUN_1953E (finalizer case 0+1). */
 export const CALLEE_FUN_1953E = 0x0001953e as const;
 
 /** Long pointer per `obj[0x25] == 7` (case 2). */
@@ -101,36 +88,28 @@ export const FN_PTR_KIND2_DEFAULT = 0x00021efe as const;
 /**
  * Stub injection per le 3 JSR esterne (case 0 e 1).
  *
- * Ogni callback riceve l'indirizzo absolute della struct obj (`objAddr`,
- * u32) e il `state`. Il binario passa l'argomento come long (= ptr 32-bit)
- * sullo stack, quindi `objAddr` riflette esattamente il valore pushato.
  *
  * Default: tutte no-op (matching `rts` patch nel parity test).
  */
 export interface ObjectTypeDispatch194BASubs {
-  /** `FUN_0001960E(obj)` — case 0 helper (chiamato per `kind == 0`). */
   fun_1960e?: (objAddr: number, state: GameState) => void;
-  /** `FUN_0001973C(obj)` — case 1 helper (chiamato per `kind == 1`). */
   fun_1973c?: (objAddr: number, state: GameState) => void;
   /**
    * `FUN_0001953E(obj)` — finalizer comune a case 0 e 1.
-   * Chiamato DOPO `fun_1960e` (case 0) o `fun_1973c` (case 1).
    */
   fun_1953e?: (objAddr: number, state: GameState) => void;
 }
 
 /** Descrittore del branch eseguito (per inspection/test). */
 export type DispatchBranch =
-  | "skip"      // kind < 0 oppure kind >= 3 (tutto il range non gestito)
+  | "skip"
   | "case0"    // kind == 0 → fun_1960e + fun_1953e
   | "case1"    // kind == 1 → fun_1973c + fun_1953e
   | "case2";   // kind == 2 → set obj[0x1C..0x1F] basato su obj[0x25]
 
-/** Risultato della replica. */
 export interface ObjectTypeDispatch194BAResult {
   /** Branch eseguito (vedi `DispatchBranch`). */
   branch: DispatchBranch;
-  /** Valore long scritto a `obj+0x1C` se branch == "case2", altrimenti null. */
   fnPtrWritten: number | null;
 }
 
@@ -143,26 +122,14 @@ function writeU32BE(state: GameState, off: number, v: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_000194BA`.
  *
- * @param state    GameState. Modificato solo in case 2 (4 byte BE @
+ * @param state    GameState. Modified only in case 2 (4 BE bytes @
  *                 `objAddr - 0x400000 + 0x1C`).
- * @param objAddr  indirizzo absolute (m68k) della struct obj. Vengono lette
- *                 2 byte: `obj+0x1A` (kind) e — solo case 2 — `obj+0x25`.
- * @param subs     stub injection per le 3 JSR (case 0/1). Default: no-op.
+ *                 2 bytes: `obj+0x1A` (kind) and, only in case 2, `obj+0x25`.
+ * @param subs     stub injection for the 3 JSRs (case 0/1). Default: no-op.
  *
- * @returns `{ branch, fnPtrWritten }`. Se `branch === "skip"` il dispatcher
- *          è stato no-op (kind negativo o >= 3). `fnPtrWritten` non-null
- *          solo in case 2 e riflette il valore long scritto a `obj+0x1C`.
+ * @returns `{ branch, fnPtrWritten }`. If `branch === "skip"`, the dispatcher
  *
- * **Bit-perfect notes**:
- *   - Il `cmpa.w #N,A0` confronta solo i bit bassi 16 (signed word). Per
- *     kind in [0, 1, 2] la semantica è identica al confronto signed byte;
- *     non esistono valori tale che `byte != kind ma word == kind`.
- *   - Nessun ordine osservabile per i side-effect TS oltre alle 2 callback
- *     consecutive (case 0/1), che vengono chiamate **nell'ordine** del
- *     binario: prima il case-specific helper, poi il finalizer comune.
- *   - In case 2, `obj+0x1C` è scritto come big-endian 32-bit (move.l).
  */
 export function objectTypeDispatch194BA(
   state: GameState,
@@ -172,7 +139,7 @@ export function objectTypeDispatch194BA(
   const objOff = (objAddr - 0x400000) >>> 0;
   const r = state.workRam;
 
-  // move.b (0x1A,A2),D0b ; ext.w ; ext.l → signed-byte interpretato come long.
+  // move.b (0x1A,A2),D0b ; ext.w ; ext.l -> signed byte interpreted as long.
   const kindByte = (r[objOff + KIND_OFFSET] ?? 0) & 0xff;
   const kind = kindByte & 0x80 ? kindByte - 0x100 : kindByte;
 

@@ -3,24 +3,18 @@
  * test-script-slot-bbox-test-14e92-parity.ts — differential FUN_00014E92 vs
  * `scriptSlotBboxTest14E92`.
  *
- * `FUN_00014E92` (574 byte): bbox-overlap dispatch sull'array @0x401302
  * (4 slot stride 0x60). Gated da `*0x400394 ∈ {1,2,5}`.
  *
  * **Strategia parity**:
- *   - `FUN_00015460` (514 byte, dispatcher di direzione) **stubbato con RTS**
- *     (0x4E75) lato binario. Lato TS la callback `fun_15460` è no-op
+ *   - `FUN_00015460` (514 bytes, direction dispatcher) **stubbed with RTS**
  *     (default). Side effects su slot[0x5C/0x58/0x24..0x27] non avvengono in
- *     nessuno dei due mondi → match.
- *   - `FUN_000158AC` (sound command) **stubbato con RTS**. TS no-op. Match.
+ *   - `FUN_000158AC` (sound command) **stubbed with RTS**. TS no-op. Match.
  *
  * **Suite** (4 × 125 = 500):
- *   - A: selettori validi (1/2/5) + slot tutti spenti (test no-op path
  *        post-selector e early exit per non-armed).
- *   - B: 1 slot armato con bbox-default, marble random vicino (test hit
  *        random + miss random).
- *   - C: 1 slot armato con bbox custom, posizioni random.
+ *   - C: 1 armed slot with custom bbox and random positions.
  *   - D: edge cases (selector boundary {0,1,2,3,5,6}, marble@(0,0,0),
- *        slot[0x1A] in tutti i valori critici {0,1,2,3,4,5,6,7}, entity
  *        state in {0,1,2,5,7}).
  *
  * **Compare** (snapshot completo):
@@ -52,9 +46,6 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const SENTINEL = 0xcafebabe >>> 0;
 
 /**
- * Calla una funzione M68K avanzando istruzione-per-istruzione fino al
- * sentinel (più affidabile di `callFunction` con burst, che può overshootare
- * il PC=SENTINEL e continuare in memoria non mappata).
  */
 function callFn(
   cpu: CpuSession,
@@ -240,9 +231,9 @@ interface SlotInit {
   key: number; // word
   /** Pointer P1 (= slot[0x58]). */
   bboxP1: number;
-  /** *(P1) — long. Se 0xFFFFFFFF → bbox default. Else: P2 (record ptr). */
+  /** *(P1) — long. If 0xFFFFFFFF -> default bbox. Else: P2 (record ptr). */
   bboxL1: number;
-  /** Bbox bytes @ P2+4..+7 (se bboxL1 != -1). */
+  /** Bbox bytes @ P2+4..+7 (if bboxL1 != -1). */
   bboxBytes: [number, number, number, number];
 }
 
@@ -305,9 +296,6 @@ function applyCaseBinary(cpu: CpuSession, c: CaseSetup): void {
   pokeMem(cpu, ENTITY_BASE + 0x5f, 1, c.entityF5F & 0xff);
   pokeMem(cpu, ENTITY_BASE + 0x60, 1, c.entityF60 & 0xff);
 
-  // SP in alta memoria (sopra ENTITY_BASE è OK perché ENTITY_BASE è
-  // l'ultima cosa scritta prima del callFn, che pusha args/sentinel BELOW
-  // SP — finché SP > entity[0x60+4] = 0x401F64, lo stack non sovrascrive
   // l'entity).
   cpu.system.setRegister("sp", 0x401fe0);
 }
@@ -488,7 +476,6 @@ async function main(): Promise<void> {
     return false;
   }
 
-  // ─── Suite A: selettori validi, slot tutti spenti ─────────────────────
   console.log(
     `\n=== scriptSlotBboxTest14E92 (FUN_00014E92) — Suite A: slot spenti — ${perSuite} casi ===`,
   );
@@ -523,7 +510,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: 1 slot armato bbox-default, world random vicino ─────────
   console.log(
     `\n=== Suite B: 1 slot bbox-default — ${perSuite} casi ===`,
   );
@@ -533,7 +519,6 @@ async function main(): Promise<void> {
     const slotX = ri(0x100) - 0x80; // small signed
     const slotY = ri(0x100) - 0x80;
     const slotZ = ri(0x100);
-    // World vicino: ±10 da slot, per coprire hit/miss/edge.
     const worldX = slotX + (ri(40) - 20);
     const worldY = slotY + (ri(40) - 20);
     const worldZ = slotZ + (ri(40) - 20);
@@ -647,7 +632,6 @@ async function main(): Promise<void> {
   const allStates = [0, 1, 2, 3, 4, 5, 6, 7];
   const entityStates = [0, 1, 2, 3, 5, 7, 8];
   for (let i = 0; i < sizeD; i++) {
-    // Multipli slot armati con stati diversi per stressare il loop.
     const slots = [0, 1, 2, 3].map((idx) =>
       makeSlotInit(idx, rng, ri, {
         armedRate: 0.7,
@@ -655,7 +639,6 @@ async function main(): Promise<void> {
         states: allStates,
       }),
     );
-    // World in zona "stretta": (0, 0, 0) ± 4 → forza overlap probabilistico.
     const c: CaseSetup = {
       selector: allSelectors[ri(allSelectors.length)]!,
       worldX: (ri(40) - 20) & 0xffff,
@@ -667,13 +650,13 @@ async function main(): Promise<void> {
         s.x = (ri(40) - 20) & 0xffff;
         s.y = (ri(40) - 20) & 0xffff;
         s.z = (ri(40) - 20) & 0xffff;
-        // Anche key piccola per stressare key-match.
+        // Small key as well, to stress key-match.
         s.key = ri(256) & 0xffff;
         return s;
       }),
       entityF0: ri(0x100000000) >>> 0,
       entityF4: ri(0x100000000) >>> 0,
-      // entity key piccola per match con slot.key.
+      // Small entity key for matching slot.key.
       entityKey: ri(256),
       entityState: entityStates[ri(entityStates.length)]!,
       entityF56: ri(256),

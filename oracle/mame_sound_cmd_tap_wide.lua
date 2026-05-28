@@ -1,5 +1,5 @@
--- mame_sound_cmd_tap_wide.lua — debug: capture qualunque write a $FE0000-$FEFFFF
--- per identificare l'address giusto del soundlatch marble.
+-- mame_sound_cmd_tap_wide.lua - debug tap for every write to $FE0000-$FEFFFF.
+-- Used to identify Marble's exact sound-latch address.
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_SOUND_CMD_TARGET_FRAME") or "600")
 local OUT_PATH = os.getenv("MARBLE_SOUND_CMD_OUT") or "/tmp/mame_sound_cmds_wide.json"

@@ -1,13 +1,8 @@
 /**
  * state-sub-5608.test.ts — smoke tests di stateSub5608 (FUN_5608).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-5608-parity.ts`.
- * Qui copriamo la logica osservabile dal lato JS:
  *   - branch su byte ROM @ 0x10072 (D2 = 4 vs 8)
- *   - sequenza/argomenti delle 3 invocazioni inner (52DA #1, 5334, 52DA #2)
- *   - lettura long BE da ROM @ 0x10074 → argLong di 5334
  *   - default callback no-op
- *   - nessun side-effect su workRam
  */
 
 import { describe, it, expect } from "vitest";
@@ -25,7 +20,6 @@ describe("stateSub5608 (FUN_5608)", () => {
   it("byte ROM @ 0x10072 == 0 → D2=8 → arg1 = 11 (52DA #1) e 12 (52DA #2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    // rom.program[0x10072] è già 0 (Uint8Array zero-init).
 
     type Call52DA = { arg1: number; arg2: number; arg3: number };
     const calls52DA: Call52DA[] = [];
@@ -62,7 +56,7 @@ describe("stateSub5608 (FUN_5608)", () => {
   it("byte ROM @ 0x10072 != 0 → D2=4 → arg1 = 7 (52DA #1) e 8 (52DA #2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    rom.program[0x10072] = 0x01; // qualunque valore non-zero
+    rom.program[0x10072] = 0x01;
 
     const calls52DA: { arg1: number; arg2: number; arg3: number }[] = [];
     stateSub5608(state, rom, (arg1, arg2, arg3) => {

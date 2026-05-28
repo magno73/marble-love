@@ -1,4 +1,4 @@
-// ESLint flat config (v9). Carica la custom rule locale per branded numeric types.
+// ESLint flat config (v9). Loads the local custom rule for branded numeric types.
 import tsParser from "@typescript-eslint/parser";
 import marbleLove from "./eslint-rules/index.js";
 
@@ -30,8 +30,8 @@ export default [
       "marble-love/no-raw-arith-on-branded": "error",
     },
   },
-  // Negli altri pacchetti la rule è warning (cli/web possono usare math standard
-  // su valori che NON arrivano dal core). L'engine è il guardiano.
+  // Outside the engine this rule is a warning: CLI/web code can use ordinary
+  // math for values that do not come from the core engine model.
   {
     files: ["packages/cli/src/**/*.ts", "packages/web/src/**/*.ts"],
     languageOptions: tsLanguageOptions,
@@ -40,7 +40,7 @@ export default [
       "marble-love/no-raw-arith-on-branded": "warn",
     },
   },
-  // oracle/ e harness/ sono fuori dai packages — base TS lint senza rule custom.
+  // oracle/ and harness/ sit outside packages; lint them without the custom rule.
   {
     files: ["oracle/**/*.ts", "harness/**/*.ts"],
     languageOptions: tsLanguageOptions,

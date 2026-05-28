@@ -1,5 +1,5 @@
 // probe-0700-decoder-args.ts — log srtgt, lvlPtr, scrollIdx, ctrlStream,
-// extStream prima di ogni call decodeBitstream1A668 nei primi 5 tick.
+// extStream before each decodeBitstream1A668 call in the first 5 ticks.
 //
 // Output console + /tmp/ts_0700_decoder_args.json.
 import { readFileSync, writeFileSync } from "node:fs";

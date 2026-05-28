@@ -1,7 +1,7 @@
 /**
  * Test palette command queue (FUN_26B66 push, FUN_26B88 drain, FUN_26D4E sched3).
  *
- * Bit-perfect verificato vs binary (1500/1500 totali) tramite
+ * Bit-perfect verified against the binary (1500/1500 total) through
  * `cli/src/test-palette-queue-parity.ts`.
  */
 

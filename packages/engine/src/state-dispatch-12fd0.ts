@@ -1,28 +1,17 @@
 /**
  * state-dispatch-12fd0.ts — replica `FUN_00012FD0` (158 byte).
  *
- * Dispatcher a due blocchi principali:
+ * Dispatcher with two main blocks:
  *
- * **Blocco 1 — ricerca oggetto attivo (solo se gameMode == 2)**:
- *   Scansiona il player-object array @ 0x400018 (stride 0xe2) per un numero
- *   di voci pari a `[0x400396].w`. Per ogni oggetto:
- *     - se `obj+0x18 == 1` (attivo) AND `[0x40075e] != 0` (flag globale)
- *       AND `obj+0x1b ∈ {0x09, 0x0a}` (stato di scripting)
- *     → chiama `fun_12d46(0x1d854)` e interrompe la scansione.
  *
- * **Blocco 2 — sound init condizionale**:
- *   Se `[0x40075c] != 0`: chiama `fun_11ac2()`.
+ * **Block 2 - conditional sound init**:
  *
- * **Blocco 3 — loop 25 oggetti script-state**:
- *   Per ogni `i ∈ [0..24]` chiama `fun_13068(0x400a9c + i*0x56)`.
  *
  * **Disasm 0x12FD0..0x13067** (158 byte):
  *
- *   movem.l  d2-d4,-(a7)             ; salva D2-D4
+ *   movem.l  d2-d4,-(a7)             ; save D2-D4
  *   moveq    #$2, d0
  *   cmp.w    $400394.l, d0           ; D0.w == [0x400394].w? (gameMode)
- *   bne.w    $13034                  ; no → salta blocco 1
- *   movea.l  #$400018, a0            ; A0 = base array oggetti
  *   clr.b    d2                      ; D2b = 0 (counter)
  *   bra.b    $13028                  ; → check loop
  *
@@ -32,7 +21,6 @@
  *   tst.b    $40075e.l               ; flag75e != 0?
  *   beq.b    $1301c                  ; no → next
  *   cmpi.b   #$a, $1b(a0)           ; obj+0x1b == 0xa?
- *   beq.w    $1300c                  ; sì → dispatch
  *   cmpi.b   #$9, $1b(a0)           ; obj+0x1b == 0x9?
  *   bne.b    $1301c                  ; no → next
  *
@@ -54,18 +42,14 @@
  *   cmp.w    $400396.l, d0           ; D0.w == [0x400396].w?
  *   bne.b    $12fea                  ; no → loop body
  *
- * ; blocco 2 @ 0x13034:
+ * ; block 2 @ 0x13034:
  *   tst.b    $40075c.l               ; flag75c != 0?
- *   beq.b    $13042                  ; no → salta
  *   jsr      $11ac2.l                ; FUN_11AC2()
  *
  * ; blocco 3 @ 0x13042:
- *   move.l   #$400a9c, d3            ; D3 = base array script-state
  *   clr.b    d2                      ; D2b = 0 (counter loop2)
  * ; loop2 body @ 0x1304A:
- *   move.l   d3, d1                  ; D1 = ptr corrente
  *   moveq    #$56, d0                ; D0 = 0x56 (stride)
- *   add.l    d0, d3                  ; D3 += 0x56 (ptr per prossima iter)
  *   move.l   d1, -(a7)               ; push ptr
  *   jsr      $13068.l                ; FUN_13068(ptr)
  *   addq.l   #$4, a7                 ; pop arg
@@ -76,31 +60,25 @@
  *   movem.l  (a7)+, d2-d4            ; restore D2-D4
  *   rts
  *
- * **Costanti osservabili**:
+ * **Observable constants**:
  *   - 0x400394: game-mode word (2 = enable inner-loop)
- *   - 0x400018: base player/enemy object array
- *   - 0x400396: object count word (numero oggetti da scansionare)
  *   - 0x40075e: flag byte (scripting-trigger enable)
  *   - 0x40075c: flag byte (sound init enable)
- *   - 0x400a9c: base script-state array (25 elementi stride 0x56)
- *   - 0x1d854:  ROM ptr passato a fun_12d46 (script-header)
- *   - obj+0x18: byte "active" (1 = attivo)
- *   - obj+0x1b: byte "state" (0x09 o 0x0a → dispatch)
+ *   - 0x1d854:  ROM ptr passed to fun_12d46 (script header)
+ *   - obj+0x1b: byte "state" (0x09 or 0x0a -> dispatch)
  *
- * **JSR sub injection** (3 sub esposte via `StateDispatch12FD0Subs`):
- *   - `fun_12d46(romScriptPtr)`: `FUN_00012D46` — alloca slot e bind script.
+ * **JSR sub injection** (3 subs exposed through `StateDispatch12FD0Subs`):
+ *   - `fun_12d46(romScriptPtr)`: `FUN_00012D46` allocates a slot and binds script.
  *     Default no-op. Arg: ROM ptr (0x1d854).
- *   - `fun_11ac2()`: `FUN_00011AC2` — copia tabella ROM → workRam.
  *     Default no-op.
- *   - `fun_13068(slotPtr)`: `FUN_00013068` — aggiorna script-state slot.
- *     Default no-op. Arg: ptr assoluto al record script-state (workRam).
+ *     Default no-op. Arg: absolute pointer to the script-state record (work RAM).
  *
  * Parity test: `cli/src/test-state-dispatch-12fd0-parity.ts` (500/500).
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Costanti workRam ─────────────────────────────────────────────────────
+// ─── Work RAM Constants ────────────────────────────────────────────────────
 
 const WRAM = 0x00400000 as const;
 
@@ -153,52 +131,42 @@ function rw(state: GameState, addr: number): number {
 // ─── Subs interface ────────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 3 JSR di `FUN_00012FD0`.
+ * Stub injection for the three JSR calls in `FUN_00012FD0`.
  *
- * Tutte le subs default a no-op quando non iniettate.
  */
 export interface StateDispatch12FD0Subs {
   /**
-   * `FUN_00012D46(romScriptPtr)` — alloca primo slot libero nella tabella
-   * ROM @ 0x1F016 e lo bind al puntatore script `romScriptPtr`.
    *
-   * Arg: `romScriptPtr` = `0x0001D854` (costante dal binario; PEA assoluta).
-   * Implementazione canonica: `claimScriptSlot(state, rom, 0x1d854)`.
+   * Canonical implementation: `claimScriptSlot(state, rom, 0x1d854)`.
    */
   fun_12d46?: (romScriptPtr: number) => void;
 
   /**
-   * `FUN_00011AC2()` — copia 66 word da ROM @ 0x1D370 → workRam @ 0x76E.
-   * Implementazione canonica: `soundMaybe11AC2(state, rom)`.
+   * Canonical implementation: `soundMaybe11AC2(state, rom)`.
    */
   fun_11ac2?: () => void;
 
   /**
-   * `FUN_00013068(slotPtr)` — aggiorna il record di script-state al ptr
-   * assoluto `slotPtr` (workRam).
-   * Chiamata 25 volte, una per ciascun slot @ 0x400a9c + i*0x56.
+   * Absolute `slotPtr` (work RAM).
    */
   fun_13068?: (slotPtr: number) => void;
 }
 
-// ─── Implementazione ───────────────────────────────────────────────────────
+// ─── Implementation ────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00012FD0`.
  *
- * @param state  GameState (workRam letto e non scritto direttamente da questa
- *               funzione — tutti i side-effect sono delegati alle `subs`).
- * @param subs   Stub injection per le 3 JSR interne.
+ * @param subs   Stub injection for the three internal JSR calls.
  */
 export function stateDispatch12FD0(
   state: GameState,
   subs?: StateDispatch12FD0Subs,
 ): void {
-  // ── Blocco 1: inner loop (solo se gameMode == 2) ──────────────────────
+  // ── Block 1: inner loop, only when gameMode == 2 ──────────────────────
   //
   // moveq #2, D0 ; cmp.w $400394, D0 ; bne.w $13034
-  // M68k cmp.w Dn, mem: compara D0.w con [0x400394].w
-  // Sets flags as D0 - [0x400394]. bne se D0 != [0x400394] → skip
+  // M68k cmp.w Dn, mem compares D0.w with [0x400394].w.
+  // Sets flags as D0 - [0x400394]; bne skips when they differ.
   const gameMode = rw(state, 0x400394);
   if (gameMode === GAME_MODE_INNER) {
     // movea.l #$400018, a0 ; clr.b d2 ; bra $13028
@@ -219,7 +187,7 @@ export function stateDispatch12FD0(
           if (objState === OBJ_STATE_DISPATCH_B || objState === OBJ_STATE_DISPATCH_A) {
             // pea $1d854 ; jsr $12d46 ; addq #4, a7
             subs?.fun_12d46?.(ROM_SCRIPT_PTR);
-            // bra.b $13034 — break (skip rest of loop, goto blocco 2)
+            // bra.b $13034: break, skipping the rest of the loop and going to block 2.
             break;
           }
         }
@@ -234,7 +202,7 @@ export function stateDispatch12FD0(
     }
   }
 
-  // ── Blocco 2: sound init condizionale ────────────────────────────────────
+  // ── Block 2: conditional sound init ──────────────────────────────────────
   //
   // tst.b $40075c ; beq $13042 ; jsr $11ac2
   const flag75c = state.workRam[OFF_FLAG_75C] ?? 0;

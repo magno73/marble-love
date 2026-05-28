@@ -1,5 +1,5 @@
 // probe-audioram-snapshot.ts — snapshot TS audioRam a frame target.
-// Output JSON in formato uguale a mame_audioram_snapshot.lua per diff.
+// Output JSON in the same format as mame_audioram_snapshot.lua for diffing.
 import { readFileSync, writeFileSync } from "node:fs";
 import { createSoundChip, releaseSoundReset, submitCommand, loadCmdTape, tickCycles, drainReplyEvents } from "../../engine/src/m6502/sound-chip.js";
 import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";

@@ -2,8 +2,8 @@
 /**
  * test-eeprom-commit-parity.ts — differential FUN_3F78 vs eepromCommit (TS).
  *
- * `FUN_00003F78` (78 byte) e' chiamata via thunk 0x160 dal mainTick. Nonostante
- * il nome "EEPROM commit", NON tocca alcun MMIO ne' EEPROM: legge `*0x401FFC`
+ * `FUN_00003F78` (78 bytes) is called through thunk 0x160 from mainTick. Despite
+ * the name "EEPROM commit", it touches no MMIO and no EEPROM: it reads `*0x401FFC`
  * (player struct ptr), valida lo status byte @ ptr+0xA contro il complement
  * @ ptr+0xB, e droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
  *
@@ -12,14 +12,14 @@
  *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 nel path "work")
  *   - byte @ 0x401FF7 (drain counter)
  *
- * Setup per ogni caso random:
- *   - *0x401FFC = a2Addr (ptr struct) — workRam-safe (0x401D00, NON usato da test in detail)
- *   - bytes @ a2Addr+0xA, +0xB = status + complement (con mix di pattern)
+ * Setup for each random case:
+ *   - *0x401FFC = a2Addr (ptr struct), workRam-safe (0x401D00, not used by detail tests)
+ *   - bytes @ a2Addr+0xA, +0xB = status + complement (with pattern mix)
  *   - *0x401FF5, *0x401FF7 = contatori random
  *
  * Pattern coverage:
  *   - 30% status >= 0xE0       -> early exit 0x18, no workRam delta
- *   - 25% complement mismatch  -> status forzato a 0, D1=1, drain
+ *   - 25% complement mismatch  -> status forced to 0, D1=1, drain
  *   - 35% status < 0xE0 valid  -> D1 in [1..4], drain + scale
  *   - 10% full random          -> stress
  *
@@ -45,7 +45,7 @@ const ACC_FF5 = 0x00401ff5;
 const COUNTER_FF7 = 0x00401ff7;
 
 // Indirizzo della struct A2 in workRam-safe range (0x401D00, lontano dai
-// contatori 0x401FF5..F7 e dal puntatore 0x401FFC, evita collisioni).
+// counters 0x401FF5..F7 and pointer 0x401FFC, avoiding collisions).
 const A2_ADDR = 0x00401d00;
 
 function makeRng(seed: number): () => number {
@@ -106,7 +106,7 @@ async function main(): Promise<void> {
     } else if (pick < 0.55) {
       pattern = "mismatch";
       status = Math.floor(rng() * 256);
-      // Garantisci mismatch: scegli un compl diverso da ~status
+      // Guarantee mismatch: choose compl different from ~status.
       do {
         compl = Math.floor(rng() * 256);
       } while (compl === ((~status) & 0xff));
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
       compl = Math.floor(rng() * 256);
     }
 
-    // Counter values (usiamo range pieno per stress; clamp a 0x19 testato).
+    // Counter values: use full range for stress; clamp at 0x19 is tested.
     const acc0 = Math.floor(rng() * 256);
     const ctr0 = Math.floor(rng() * 256);
 
@@ -136,7 +136,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
 
     // ── Setup TS side (mirror su state.workRam) ─────────────────────────
-    // Pulizia coerente
+    // Consistent cleanup.
     for (let k = 0; k < 0x20; k++) {
       state.workRam[(A2_ADDR - 0x400000) + k] = 0;
     }

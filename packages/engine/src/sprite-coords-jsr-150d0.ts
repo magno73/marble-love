@@ -1,18 +1,13 @@
 /**
  * sprite-coords-jsr-150d0.ts — replica `FUN_000150D0` (120 byte).
  *
- * Variante "compute coords + dispatch" del pattern `compute()` (vedi
- * `sprite-coords.ts`): legge w0/w2/w4 da `(arg+0xC, +0x10, +0x14)`, scrive
- * la coppia long di coordinate a `(arg+0x28)`, poi chiama `FUN_000264AA`
- * con `(structPtr, 2)`.
+ * "Compute coords + dispatch" variant of the `compute()` pattern; calls the
+ * inner routine with `(structPtr, 2)`.
  *
- * Equivale a `computeSpriteCoords_v3` (FUN_1778E) PIÙ una jsr finale a
- * `FUN_264AA(structPtr, 2)`. Differenza chiave rispetto a `FUN_1281C`
- * (gating/mode 0 o 1): qui il `mode` è hard-coded a 2 e non c'è gating.
  *
  * **Disasm 0x150D0..0x15147** (120 byte):
  *
- *   000150d0   movem.l {A3,A2,D3,D2},-(SP)     ; salva 4 long (16 byte)
+ *   000150d0   movem.l {A3,A2,D3,D2},-(SP)     ; save 4 longs (16 byte)
  *   000150d4   movea.l (0x14,SP),A1             ; A1 = arg long (struct ptr)
  *   000150d8   movea.l #0x400692,A3             ; A3 → POS_Y global
  *   000150de   movea.l #0x400690,A2             ; A2 → POS_X global
@@ -58,46 +53,40 @@
  *   - `0x692..0x693` (POS_Y global)  = word @ A1+0x10
  *   - `(A1+0x28)..(A1+0x2B)` (long)  = pack(yMinusX_signed << 16 | adjustedX_word)
  *
- * **Ritorno**: il `D0` lasciato da `FUN_264AA` (passato verbatim al caller).
  *
- * **NO INTEGRAZIONE**: `FUN_264AA` (~object update sub) non è ancora
- * replicato in TS. Modelliamo via callback `inner` (vedi `Inner264AA` in
- * `object-enter-1281c.ts`). Il parity test patcha la `jsr` con uno stub
+ * The inner routine is modeled through callback `inner` (see `Inner264AA` in
+ * `object-enter-1281c.ts`). The parity test patches the `jsr` with a stub
  * `move.l (8,SP),D0; rts` per esporre il `mode=2` come `D0`.
  *
- * Verifica bit-perfect via `cli/src/test-sprite-coords-jsr-150d0-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-/** Base della work RAM. */
+/** Work RAM base. */
 const WORK_RAM_BASE = 0x400000;
 
-/** Globali condivisi col pattern `sprite-coords.ts`. */
 const POS_X_OFF = 0x690; // *0x400690 word
 const POS_Y_OFF = 0x692; // *0x400692 word
 const HUD_OFFSET_OFF = 0x97e; // *0x40097E word
 
-/** Offsets nello struct passato come arg1 (A1). */
-const STRUCT_W0_OFF = 0xc; // word @ A1+0xC  → POS_X
-const STRUCT_W2_OFF = 0x10; // word @ A1+0x10 → POS_Y
-const STRUCT_W4_OFF = 0x14; // word @ A1+0x14 → input per HUD compute
-const STRUCT_DST_OFF = 0x28; // long @ A1+0x28 ← packed coords output
+/** Offsets in the struct passed as arg1 (A1). */
+const STRUCT_W0_OFF = 0xc; // word @ A1+0xC -> POS_X
+const STRUCT_W2_OFF = 0x10; // word @ A1+0x10 -> POS_Y
+const STRUCT_W4_OFF = 0x14; // word @ A1+0x14 -> HUD-compute input
+const STRUCT_DST_OFF = 0x28; // long @ A1+0x28 <- packed coords output
 
-/** Mode hard-coded passato come secondo arg long alla jsr `FUN_264AA`. */
+/** Hard-coded mode passed as the second long arg to `FUN_264AA`. */
 export const INNER_MODE = 2 as const;
 
 /**
- * Callback che modella `FUN_000264AA`. Riceve `(structPtr, mode)` come long
- * pushati dallo shim. Lo shim ritorna verbatim il `D0` della callback. La
- * firma è identica a `Inner264AA` di `object-enter-1281c.ts`.
+ * Callback modeling `FUN_000264AA`. Receives `(structPtr, mode)` as longs.
  *
- * @param structPtr  = `A1` (verbatim, non normalizzato).
- * @param mode       hard-coded a `INNER_MODE = 2`.
+ * @param structPtr  = `A1` verbatim, not normalized.
+ * @param mode       hard-coded to `INNER_MODE = 2`.
  */
 export type Inner264AA = (structPtr: number, mode: number) => number;
 
-/** Interface stub injection per JSR. */
+/** Stub-injection interface for the JSR. */
 export interface SpriteCoordsJsr150D0Subs {
   inner264AA: Inner264AA;
 }
@@ -118,17 +107,12 @@ function writeU32(state: GameState, off: number, v: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_000150D0`.
  *
- * @param state     GameState (modifica `workRam[0x690..0x693]` + `(arg+0x28..arg+0x2B)`).
- * @param structPtr Long pushato dal caller (`A1` nel binario). DEVE essere in
- *                  `0x400000..0x401FFF` perché tutte le letture/scritture su
- *                  `(A1, ...)` toccano work RAM.
- * @param subs      Stub injection per `FUN_264AA`.
- * @returns         Il long che la funzione lascia in `D0` al `rts` =
+ * @param state     GameState; mutates `workRam[0x690..0x693]` and
+ *                  `(arg+0x28..arg+0x2B)`.
+ * @param subs      Stub injection for `FUN_264AA`.
  *                  `subs.inner264AA(structPtr, 2)`.
  *
- * **Side effects in `state.workRam`** (sempre, indipendentemente da `inner`):
  *   - `0x690..0x691` = word @ structPtr+0xC (big-endian)
  *   - `0x692..0x693` = word @ structPtr+0x10 (big-endian)
  *   - `(structPtr+0x28)..(structPtr+0x2B)` = packed long (big-endian)
@@ -141,12 +125,11 @@ export function spriteCoordsJsr150D0(
   const a1 = structPtr >>> 0;
   const argOff = (a1 - WORK_RAM_BASE) >>> 0;
 
-  // Read w0, w2, w4 dalla struct (m68k word, big-endian).
+  // Read w0, w2, w4 from the struct (M68k word, big-endian).
   const w0 = readU16(state, argOff + STRUCT_W0_OFF);
   const w2 = readU16(state, argOff + STRUCT_W2_OFF);
   const w4 = readU16(state, argOff + STRUCT_W4_OFF);
 
-  // Pre-jsr side effects: scrivi i due globals POS_X/POS_Y.
   writeU16(state, POS_X_OFF, w0 & 0xffff);
   writeU16(state, POS_Y_OFF, w2 & 0xffff);
 
@@ -159,18 +142,15 @@ export function spriteCoordsJsr150D0(
   d2w = d2w & 0xffff;
 
   // D0 = sext_l(w2)+sext_l(w0); D0 >>= 1 (asr.l #1, signed shift).
-  // Solo D0w viene poi sub-tratto da D2w → ci serve solo la low word di avg.
   const yS = w2 & 0x8000 ? w2 - 0x10000 : w2;
   const xS = w0 & 0x8000 ? w0 - 0x10000 : w0;
-  const avgLong = (yS + xS) >> 1; // signed >>= preserva il segno
+  const avgLong = (yS + xS) >> 1;
   // D2.w -= avg.w (sub.w D0w,D2w)
   d2w = (d2w - (avgLong & 0xffff)) & 0xffff;
 
-  // ext.l D0 (di D2w sext); andi.l #0xffff,D2 → D2 (long) = D2w (zero high).
-  // Indipendente dal sext perché poi mascherato.
+  // ext.l D0 of D2w; andi.l #0xffff,D2 -> D2 (long) = D2w with high word zero.
   const d2Long = d2w & 0xffff;
 
-  // D1 = sext_l(D3w) << 16  (low 16 bit del prodotto è 0).
   const d3Signed = yMinusX & 0x8000 ? yMinusX - 0x10000 : yMinusX;
   const d1Long = ((d3Signed << 16) | 0) >>> 0;
 
@@ -180,7 +160,6 @@ export function spriteCoordsJsr150D0(
   // *(A1+0x28) = D2 (long, big-endian)
   writeU32(state, argOff + STRUCT_DST_OFF, packed);
 
-  // jsr FUN_264AA(structPtr, 2). Il valore di ritorno (D0 dell'inner)
-  // sopravvive all'`addq.l #8,SP; rts` dello shim → ritornato verbatim.
+  // The shim's return survives `addq.l #8,SP; rts`, so return it verbatim.
   return subs.inner264AA(a1, INNER_MODE) >>> 0;
 }

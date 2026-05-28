@@ -34,10 +34,8 @@ describe("stateSub2678 (FUN_2678)", () => {
 
   it("argLong=0 con DATA_PTR tutti zero → azzera tutti STATE (match all-zero)", () => {
     const s = emptyGameState();
-    // Tutti gli slot sono 0 (default emptyGameState), ma popolo gli STATE
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = i + 1;
     stateSub2678(s, 0);
-    // arg=0 e DATA_PTR=0 ⇒ match per tutti gli slot ⇒ STATE azzerato
     for (let i = 0; i < 4; i++) {
       expect(s.workRam[STATE_BASE + i]).toBe(0);
     }
@@ -45,7 +43,7 @@ describe("stateSub2678 (FUN_2678)", () => {
 
   it("match solo nello slot esatto: deregistra solo quello", () => {
     const s = emptyGameState();
-    // Setup: 4 slot con pointer diversi e state non zero
+    // Setup: 4 slots with different pointers and non-zero state.
     writeLong(s, DATA_BASE + 0, 0xdeadbeef);
     writeLong(s, DATA_BASE + 4, 0xcafe1234);
     writeLong(s, DATA_BASE + 8, 0x12345678);
@@ -57,7 +55,6 @@ describe("stateSub2678 (FUN_2678)", () => {
 
     stateSub2678(s, 0x12345678);
 
-    // Slot 2 azzerato
     expect(readLong(s, DATA_BASE + 8)).toBe(0);
     expect(s.workRam[STATE_BASE + 2]).toBe(0);
     // Altri slot intatti
@@ -109,7 +106,6 @@ describe("stateSub2678 (FUN_2678)", () => {
 
     expect(called).toBe(1);
     expect(receivedArg).toBe(0xffffffff);
-    // Tabella invariata
     expect(readLong(s, DATA_BASE + 0)).toBe(0x10000000);
     expect(readLong(s, DATA_BASE + 4)).toBe(0x20000000);
     expect(readLong(s, DATA_BASE + 8)).toBe(0x30000000);

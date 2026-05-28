@@ -2,45 +2,28 @@
 /**
  * test-helper-1c88-parity.ts — differential FUN_1C88 vs helper1C88.
  *
- * `FUN_00001C88` (34 istruzioni, 10 caller) è una routine di init RAM:
  *
- *   1. Azzera Alpha RAM (0xA03000-0xA03FFE, 2048 word = 4096 byte).
- *   2. Riempie Playfield RAM (0xA00000-0xA01FFE, 4096 word = 8192 byte) con:
+ *   2. Fill Playfield RAM (0xA00000-0xA01FFE, 4096 words = 8192 bytes) with:
  *        fillWord = (workRam16[0x16] != 0) ? 0 : s16(ROM16[0x10060])
- *   3. Azzera word @ 0xA02000 (spriteRam[0x000]).
- *   4. Azzera word @ 0xA02180 (spriteRam[0x180]).
- *   5. Azzera word @ 0xB00400 (colorRam[0x400]).
- *   6. clr.w $860000 (MMIO AV-control; ignorato nel confronto RAM).
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *
- *   Per N casi random:
- *     1. Genera random per: alphaRam (4KB), playfieldRam (8KB),
- *        spriteRam[0..1] e spriteRam[0x180..0x181], colorRam[0x400..0x401],
+ *     1. Generate random data for: alphaRam (4KB), playfieldRam (8KB),
+ *        spriteRam[0..1] and spriteRam[0x180..0x181], colorRam[0x400..0x401],
  *        workRam[0x16..0x17] (vblankFlag word).
- *     2. Esegui binario via callFunctionStep(FUN_1C88, MAX_INSTR=90_000).
- *     3. Esegui TS helper1C88(state, rom).
- *     4. Confronta:
+ *     3. Run TS helper1C88(state, rom).
  *          - alphaRam[0x000..0xFFF]  (4096 byte)
  *          - playfieldRam[0x000..0x1FFF]  (8192 byte)
  *          - spriteRam[0x000..0x001]  (2 byte)
  *          - spriteRam[0x180..0x181]  (2 byte)
  *          - colorRam[0x400..0x401]   (2 byte)
- *        Total per caso: 4096 + 8192 + 2 + 2 + 2 = 12294 byte.
  *
- *   **NOTA**: la funzione richiede ~57_000 istruzioni, quindi usa
- *   callFunctionStep (step-by-step) invece di callFunction (cycle-burst)
- *   per garantire terminazione precisa.
+ *   callFunctionStep (step-by-step) instead of callFunction (cycle-burst)
+ *   to guarantee precise termination.
  *
- *   Nota: clr.w $860000 è MMIO, non riflesso in nessuna RAM. Ignorato.
  *
- * **Varianti casi**:
- *   Caso 0: vblankFlag = 0, tutto RAM = 0xFF → alpha azzerata, pf = fillWord
- *   Caso 1: vblankFlag = 1, tutto RAM = 0xFF → pf riempita con 0
- *   Caso 2: vblankFlag = 0, tutto RAM = 0x55
- *   Caso 3..N: vblankFlag random, RAM random
  *
- * Uso: npx tsx packages/cli/src/test-helper-1c88-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-1c88-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -60,7 +43,7 @@ import {
   type CpuSession,
 } from "./binary-oracle-lib.js";
 
-// ─── Costanti ─────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const FUN_1C88         = 0x00001c88;
 
@@ -73,21 +56,17 @@ const PAL_RAM_BASE     = 0xb00000;
 const ALPHA_RAM_SIZE   = 0x1000;   // 4 KB
 const PF_RAM_SIZE      = 0x2000;   // 8 KB
 
-/** Offset in workRam del vblankFlag word (0x400016 - 0x400000 = 0x16). */
+/** Offset in workRam for the vblankFlag word (0x400016 - 0x400000 = 0x16). */
 const VBLANK_FLAG_OFF  = 0x16;
 
-/** Max istruzioni per step loop. La funzione usa ~57_000 istruz. */
 const MAX_INSTR        = 90_000;
 
-/** Sentinel return address (valore non-eseguibile fuori dalla ROM). */
 const SENTINEL_RET_ADDR = 0xcafebabe >>> 0;
 
 // ─── Step-based call ─────────────────────────────────────────────────────────
 
 /**
- * Chiama `addr` via step loop anziché cycle burst, per garantire terminazione
- * precisa quando il PC torna al sentinel. Necessario per funzioni con molte
- * istruzioni (>57K) che superano il budget cicli di `callFunction`.
+ * instructions (>57K), which exceed the `callFunction` cycle budget.
  */
 function callFunctionStep(
   session: CpuSession,
@@ -162,7 +141,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // ── Genera vblankFlag per questo caso ──────────────────────────────────
     let vblankFlag: number;
     if      (i === 0) vblankFlag = 0x0000;
     else if (i === 1) vblankFlag = 0x0001;
@@ -170,7 +148,6 @@ async function main(): Promise<void> {
     else if (i === 3) vblankFlag = 0x0002;
     else              vblankFlag = (rng() < 0.5) ? 0 : rw();
 
-    // ── Pre-fill RAM binario e TS ──────────────────────────────────────────
 
     // 1. alphaRam (4 KB @ 0xA03000)
     const alphaBytes = new Uint8Array(ALPHA_RAM_SIZE);
@@ -221,16 +198,13 @@ async function main(): Promise<void> {
     stateInst.workRam[VBLANK_FLAG_OFF]     = (vblankFlag >>> 8) & 0xff;
     stateInst.workRam[VBLANK_FLAG_OFF + 1] = vblankFlag & 0xff;
 
-    // ── Esegui binario (step-based per ~57K istruzioni) ───────────────────
     callFunctionStep(cpu, FUN_1C88, MAX_INSTR);
 
     // ── Esegui TS ─────────────────────────────────────────────────────────
     ns.helper1C88(stateInst, romImg, {
-      // onAvControl è un MMIO write (0x860000); non testabile via RAM → no-op
       onAvControl: () => {},
     });
 
-    // ── Confronto ─────────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
     // a) alphaRam[0..ALPHA_RAM_SIZE-1]

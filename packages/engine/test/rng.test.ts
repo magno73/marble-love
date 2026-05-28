@@ -1,9 +1,6 @@
 /**
  * Test RNG. Algoritmo identificato in Phase 2 (`docs/static-overview.md`):
- * `FUN_00013A98` legge/scrive `0x4003A6` con LFSR Galois 16-bit + range limit.
  *
- * **🎯 Status: BIT-PERFECT** verificato in Phase 4d via differential testing
- * contro il binario originale (Musashi WASM). PRD §6 Phase 4 acceptance:
  * **10000/10000 match al 100%** (`packages/cli/src/test-rng-parity.ts`).
  *
  * Per ri-verificare:
@@ -21,14 +18,13 @@ describe("RNG step (Galois LFSR 16-bit)", () => {
   });
 
   it("anti-zero attractor: state 0 does NOT stay 0", () => {
-    // L'algoritmo originale ha `if (D0.h ^ D0.l) == 0: feedback = 0x40`,
-    // proprio per evitare che state = 0 sia un attrattore stabile.
+    // The original algorithm has `if (D0.h ^ D0.l) == 0: feedback = 0x40`,
+    // specifically to prevent state = 0 from being a stable attractor.
     const next = rngStepOnce(as_u16(0));
     expect(next).not.toBe(0);
   });
 
   it("step is a permutation (collision-free over 1024 distinct seeds)", () => {
-    // LFSR è una bijezione: stati distinti → output distinti
     const seen = new Set<number>();
     for (let i = 0; i < 1024; i++) {
       const out = rngStepOnce(as_u16(i)) as unknown as number;
@@ -77,13 +73,11 @@ describe("RNG next() with range limit", () => {
       rngNext(state, as_u16(0xff));
       seeds.push(state.seed as unknown as number);
     }
-    // Tutti i seed diversi (no period < 20)
     expect(new Set(seeds).size).toBe(20);
   });
 
   it("bit-perfect snapshot vs binary (verificato 10000 casi Phase 4d)", () => {
-    // Questi valori coincidono col binary FUN_13A98 — verificato bit-perfect
-    // tramite test-rng-parity.ts (Musashi WASM).
+    // via test-rng-parity.ts (Musashi WASM).
     const state = rngInit(as_u16(0));
     const out = [
       rngNext(state, as_u16(100)),

@@ -4,7 +4,7 @@
  *
  * Per N test cases:
  *   1. Setup 5 byte struct in workRam scratch area
- *   2. callFunction(0x28C38, [structPtr])  — binario MAME/musashi-wasm
+ *   2. callFunction(0x28C38, [structPtr])  — MAME/musashi-wasm binary.
  *   3. helper28C38(state, structPtr)       — replica TS
  *   4. Confronta D0.b (return low byte) + 5 byte struct post-call
  *
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
       Math.floor(rng() * 256) & 0xff, // padding (not touched)
       Math.floor(rng() * 256) & 0xff, // inner
     ];
-    // 1/8 dei casi: forza inner = 0xFF (disabled path)
+    // 1/8 of cases: force inner = 0xFF (disabled path).
     if (i % 8 === 0) bytes[4] = 0xff;
 
     for (let j = 0; j < 5; j++) {

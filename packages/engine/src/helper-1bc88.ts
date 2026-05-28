@@ -1,20 +1,10 @@
 /**
- * helper-1bc88.ts — TS reimpl bit-perfect di `FUN_0001BC88` (0x38A byte).
  *
- * "Obj-pair physics interaction": itera su un array di oggetti (4 o 2 slot
- * in base al game-mode @ 0x400394), confronta ogni slot con l'oggetto `a2`
- * passato come argomento, verifica bounding-box overlap e – su collisione –
- * scambia le velocity, applica repulsion via look-up table ROM @ 0x24ad6,
- * aggiorna sound e stato degli oggetti.
  *
- * Calling convention originale (68k, cdecl-like):
+ * Original calling convention (68k, cdecl-like):
  *   `move.l A2, -(SP); jsr $1BC88.l; tst.l D0; addq.l #4, SP`
  *   → 1 arg long su stack (objAddr assoluto M68k).
- *   Ritorna D0.l: 0 se nessuna collisione, 1 se collisione avvenuta.
  *
- * @param state     GameState corrente (workRam r/w in-place).
- * @param entityAddr Indirizzo assoluto M68k dell'oggetto "self" (a2 nel 68k).
- * @param rom       ROM image (necessario per la tabella @ 0x24ad6).
  * @returns         D0.l (0 = no collision, 1 = collision).
  *
  * @see disasm FUN_0001BC88 @ 0x1bc88–0x1c012
@@ -143,9 +133,6 @@ function romL(rom: RomImage, addr: number): number {
 /**
  * FUN_0001BC88 — obj-pair physics interaction.
  *
- * Chiamata da `helper121B8` (linea 654) con `move.l A2,-(SP); jsr $1BC88.l`.
- * Ritorna D0.l = 1 se almeno una collisione è avvenuta (la flag word
- * locale -$2(a6) era 1), altrimenti D0.l = 0.
  */
 export function helper1BC88(
   state: GameState,

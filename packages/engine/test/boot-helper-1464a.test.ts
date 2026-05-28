@@ -1,7 +1,6 @@
 /**
  * Test bootHelper1464A (FUN_1464A) — smoke tests per side effects su workRam.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-boot-helper-1464a-parity.ts`.
  */
 

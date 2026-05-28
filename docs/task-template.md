@@ -18,9 +18,9 @@ you know and which question requires more context.
 
 - `docs/archive/**`
 - `HANDOFF_*.md`
-- `docs/agent-briefing.md`
-- `docs/codex-brief.md`
-- `docs/codex-prd.md`
+- `docs/internal/ai/agent-briefing.md`
+- `docs/internal/ai/codex-brief.md`
+- `docs/internal/ai/codex-prd.md`
 - `screenshots/**`
 - `traces/**`
 - `snap/**`

@@ -1,17 +1,17 @@
 /**
  * m6502-smoke.test.ts — Smoke test del core 6502.
  *
- * Verifica i comportamenti chiave che facilmente sfuggono in un porting:
- *  - RESET fetcha PC da $FFFC/$FFFD e setta SP=$FD.
- *  - JMP indirect NMOS bug ($xxFF wrap nello stesso byte alto).
+ * Verify key behaviors that are easy to miss in a port:
+ *  - RESET fetches PC from $FFFC/$FFFD and sets SP=$FD.
+ *  - JMP indirect NMOS bug ($xxFF wraps within the same high byte).
  *  - NMI prevale su IRQ; IRQ e' masked da FLAG_I.
  *  - Page-cross penalty su LDA abs,X (READ ops).
- *  - Stack push/pop coerente con SP wrap.
+ *  - Stack push/pop coherent with SP wrap.
  *  - Branch taken / not-taken / page-cross cycle delta.
  *
- * Intent (CLAUDE Rule 9): ogni test descrive WHY non solo WHAT. Se la
- * business logic cambia (es. tolgo il JMP indirect bug perche' qualcuno
- * decide di portare il 65C02), questi test devono fallire.
+ * Intent (CLAUDE Rule 9): every test describes WHY, not only WHAT. If the
+ * business logic changes (for example, removing the JMP indirect bug because
+ * someone decides to port the 65C02), these tests must fail.
  */
 
 import { describe, it, expect } from "vitest";
@@ -37,7 +37,7 @@ function loadProgram(bus: { mem: Uint8Array }, addr: number, bytes: number[]): v
 
 describe("m6502 reset", () => {
   it("fetcha PC dal vector $FFFC/$FFFD e setta SP=$FD", () => {
-    // Why: RESET sequence corretta e' essenziale prima di qualunque altro
+    // Why: the correct RESET sequence is essential before any other
     // test; un bug qui rompe tutto.
     const cpu = createCpu();
     const bus = makeBus();
@@ -56,7 +56,7 @@ describe("m6502 JMP indirect NMOS bug", () => {
     // accidentalmente porta 65C02 behavior questo test fallisce.
     const cpu = createCpu();
     const bus = makeBus();
-    // Setup: JMP ($02FF). target word legge $02FF (lo) + $0200 (hi, BUG)
+    // Setup: JMP ($02FF). Target word reads $02FF (lo) + $0200 (hi, BUG).
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     loadProgram(bus, 0x8000, [0x6c, 0xff, 0x02]); // JMP ($02FF)
     bus.mem[0x02ff] = 0x78; // lo target
@@ -85,7 +85,7 @@ describe("m6502 NMI vs IRQ priority", () => {
   });
 
   it("IRQ masked da FLAG_I (default post-reset)", () => {
-    // Why: dopo reset I=1, IRQ ignorato; un bug nel masking farebbe partire
+    // Why: after reset I=1, IRQ is ignored; a masking bug would start
     // l'IRQ handler invece dell'opcode di programma.
     const cpu = createCpu();
     const bus = makeBus();
@@ -122,8 +122,8 @@ describe("m6502 NMI vs IRQ priority", () => {
   });
 
   it("CLI puo' ritardare la visibilita' IRQ di una istruzione in diagnostica", () => {
-    // Why: il NMOS 6502 campiona il mask IRQ con pipeline; Visual6502 mostra
-    // che un IRQ gia' pendente durante CLI non interrompe l'opcode subito dopo.
+    // Why: the NMOS 6502 samples the IRQ mask with a pipeline; Visual6502 shows
+    // an IRQ already pending during CLI from interrupting the opcode immediately after.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -149,8 +149,8 @@ describe("m6502 NMI vs IRQ priority", () => {
   });
 
   it("il diagnostico CLI ritarda anche un IRQ richiesto subito dopo CLI", () => {
-    // Why: nel modello MAME-like, il prossimo opcode e' gia' stato prefetched
-    // prima che CLI cancelli I; un IRQ arrivato subito dopo non puo' sostituirlo.
+    // Why: in the MAME-like model, the next opcode has already been prefetched
+    // before CLI clears I; an IRQ arriving immediately after cannot replace it.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -176,8 +176,8 @@ describe("m6502 NMI vs IRQ priority", () => {
   });
 
   it("il diagnostico prefetch latch serve IRQ solo dopo il prefetch precedente", () => {
-    // Why: MAME non controlla il pin IRQ a inizio istruzione; il prefetch della
-    // istruzione precedente decide se il prossimo opcode diventa BRK/IRQ.
+    // Why: MAME does not check the IRQ pin at instruction start; the prefetch of
+    // previous instruction decides whether the next opcode becomes BRK/IRQ.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -227,11 +227,11 @@ describe("m6502 NMI vs IRQ priority", () => {
 describe("m6502 LDA page-cross", () => {
   it("LDA abs,X paga +1 cycle se page cross", () => {
     // Why: cycle-accuracy e' necessaria per Tom Harte + per la sincronia
-    // con MAME (29830 cycle/frame = 1.789 MHz / 60).
+    // with MAME (29830 cycles/frame = 1.789 MHz / 60).
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
-    // LDA $80FF,X  (X=1 -> indirizzo $8100, page cross)
+    // LDA $80FF,X  (X=1 -> address $8100, page cross)
     loadProgram(bus, 0x8000, [0xbd, 0xff, 0x80]);
     bus.mem[0x8100] = 0x42;
     reset(cpu, bus);
@@ -259,8 +259,8 @@ describe("m6502 LDA page-cross", () => {
 
 describe("m6502 stack push/pop", () => {
   it("PHA/PLA round-trip preserva A e tocca P solo su PLA", () => {
-    // Why: il push wrap su SP=$00 -> $FF e' un edge case che facilmente
-    // sfugge se l'implementazione usa un buffer Array nativo invece di
+    // Why: push wrap on SP=$00 -> $FF is an edge case that is easy to miss
+    // if the implementation uses a native Array buffer instead of
     // memoria mappata.
     const cpu = createCpu();
     const bus = makeBus();
@@ -285,8 +285,8 @@ describe("m6502 stack push/pop", () => {
 
 describe("m6502 branch", () => {
   it("BNE taken same page = +1 cycle, page cross = +2", () => {
-    // Why: cycle accounting su branch e' una delle source piu' comuni di
-    // drift di sync con MAME.
+    // Why: branch cycle accounting is one of the most common sources of
+    // sync drift with MAME.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0xfa; bus.mem[0xfffd] = 0x80;

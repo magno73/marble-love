@@ -1,9 +1,9 @@
 /**
  * helper-3a54.test.ts — smoke test per helper3A54 (FUN_3A54).
  *
- * `FUN_00003A54` (27 istr): formatta un valore 32-bit come stringa decimale
+ * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal string
  * ASCII in memoria, usando BCD packed come intermediario (via FUN_3A6A) e
- * poi scrivendo con FUN_3A08.
+ * then writing with FUN_3A08.
  *
  * Bit-perfect parity verificata vs binary in
  * `packages/cli/src/test-helper-3a54-parity.ts` (500/500).
@@ -42,7 +42,7 @@ function readStr(
   return parts.join("");
 }
 
-// ─── costanti ─────────────────────────────────────────────────────────────────
+// ─── constants ────────────────────────────────────────────────────────────────
 
 describe("helper3A54 costanti", () => {
   it("HELPER_3A54_ADDR ha il valore corretto", () => {
@@ -50,7 +50,7 @@ describe("helper3A54 costanti", () => {
   });
 });
 
-// ─── valori base ─────────────────────────────────────────────────────────────
+// Base values.
 
 describe("helper3A54 — valori decimali base", () => {
   it("value=0, digits=4, showSpaces=0: '0000' + NUL", () => {

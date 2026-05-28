@@ -3,9 +3,6 @@
  * test-object-init-2591a-parity.ts — differential FUN_0002591A vs
  * objectInit2591A.
  *
- * `FUN_0002591A` (154 byte) è un object initializer: orchestra 6 sub-jsr e
- * scrive 12 campi diretti su A2 + 2 globals @ 0x400696/0x400698. Tutte e
- * 6 le sub vengono patchate a stub deterministico in ROM:
  *
  *   - FUN_262B2  → `rts`                           (no-op)
  *   - FUN_1BAB2  → `rts`                           (no-op)
@@ -14,17 +11,11 @@
  *   - FUN_1B9CC  → `rts`                           (no-op)
  *   - FUN_13966  → `rts`                           (no-op)
  *
- * In TS le sub vengono lasciate al default (no-op + fun_1CC62 ritorna 0).
  *
  * Strategia parity:
- *   1. Per ogni caso random, randomizziamo:
  *        - objPtr in {0x401000, 0x401100, ..., 0x401C00} (12 candidati)
  *        - globals @ 0x400462 (long), 0x400466 (long), 0x400472 (byte)
- *        - byte di "scratch" su tutti i campi target di A2 (per check clear)
- *        - byte vicini ai campi target (per check no-spill)
- *   2. Esegui binario reale @ FUN_0002591A.
  *   3. Esegui TS objectInit2591A su workRam mirror.
- *   4. Confronta i 12 campi target su A2 + i 2 globals + i vicini.
  *
  * Uso: npx tsx packages/cli/src/test-object-init-2591a-parity.ts [N]
  */
@@ -65,8 +56,7 @@ const PTR_CANDIDATES = [
 ] as const;
 
 /**
- * Patch un singolo entry-point ROM con il pattern bytes specificato (in
- * ROM buffer prima di passarlo a createCpu).
+ * Patch a single ROM entry point with the specified byte pattern (in
  */
 function patchRomBytes(
   rom: Buffer,
@@ -90,7 +80,6 @@ function patchSubsRom(rom: Buffer): void {
   patchRomBytes(rom, FUN_13966, rtsOnly);
 
   // FUN_1CC62: `moveq #0, D0; rts` = 70 00 4E 75 (4 byte). D0 = 0 →
-  // FUN_2591A scriverà 0 in A2[+0x14].
   patchRomBytes(rom, FUN_1CC62, [0x70, 0x00, 0x4e, 0x75]);
 }
 
@@ -120,7 +109,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch ROM con stub a tutte le 6 sub.
+  // Pre-patch ROM with stubs for all 6 subs.
   patchSubsRom(romBuf);
 
   const stateInst = stateNs.emptyGameState();
@@ -145,7 +134,7 @@ async function main(): Promise<void> {
   const FIELDS_LONG_ZERO = [0x00, 0x04, 0x08, 0x22, 0x26] as const;
   const FIELDS_BYTE_ZERO = [0x36, 0x56, 0x58] as const;
 
-  // Vicini: offset NON toccati dalle scritture dirette (per no-spill check).
+  // Neighbors: offsets not touched by direct writes, for no-spill checks.
   const NEIGHBORS = [
     0x18, 0x19, 0x1a, 0x1c, 0x1d, 0x21, 0x2a, 0x35, 0x37, 0x55, 0x57, 0x59,
   ] as const;
@@ -161,10 +150,8 @@ async function main(): Promise<void> {
     const g466 = rl();
     const g472 = rb();
 
-    // Random scratch su A2 (per ogni offset target diamo un valore non-zero).
     const scratchObj = new Uint8Array(0x80);
     for (let k = 0; k < 0x80; k++) scratchObj[k] = rb();
-    // Vicini sentinel (forza valori distintivi)
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBORS.length; idx++) {
       const nOff = NEIGHBORS[idx]!;
@@ -190,7 +177,6 @@ async function main(): Promise<void> {
     }
 
     // ── Mirror su state.workRam ────────────────────────────────────────
-    // Reset workRam (per evitare cross-contaminazione con caso precedente)
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Globals nel mirror
     stateInst.workRam[0x462] = (g462 >>> 24) & 0xff;
@@ -202,7 +188,7 @@ async function main(): Promise<void> {
     stateInst.workRam[0x468] = (g466 >>> 8) & 0xff;
     stateInst.workRam[0x469] = g466 & 0xff;
     stateInst.workRam[0x472] = g472;
-    // Mirror pre-existing 0x400696/0x400698 (ma li sovrascrive il TS)
+    // Mirror pre-existing 0x400696/0x400698, though TS overwrites them.
     stateInst.workRam[0x696] = peekMem(cpu, WORK_RAM_BASE + 0x696, 1) & 0xff;
     stateInst.workRam[0x697] = peekMem(cpu, WORK_RAM_BASE + 0x697, 1) & 0xff;
     stateInst.workRam[0x698] = peekMem(cpu, WORK_RAM_BASE + 0x698, 1) & 0xff;
@@ -222,7 +208,6 @@ async function main(): Promise<void> {
       },
     });
 
-    // ── Confronto ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
     // Long zero fields
@@ -363,7 +348,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // Vicini sentinel: NON devono cambiare
+    // Neighbor sentinels must not change.
     let neighborFail: FailRecord | null = null;
     for (const nOff of NEIGHBORS) {
       const expected = neighborSentinels[nOff]!;

@@ -3,42 +3,35 @@
  * test-object-scan-dispatch-251de-parity.ts — differential FUN_000251DE vs
  * objectScanDispatch251DE.
  *
- * `FUN_000251DE` (478 byte) è uno scanner sull'array obj @ 0x400018
- * (stride 0xE2, count = `*0x400396`) che:
- *   - chiama `FUN_1BBAA` (charcode broadcast) pre-loop;
- *   - per ogni obj: skip se +0x18==0 (D2++), gate +0x6A.w > 400 → FUN_2822E,
+ * (stride 0xE2, count = `*0x400396`) that:
+ *   - for each obj: skip if +0x18==0 (D2++), gate +0x6A.w > 400 -> FUN_2822E,
  *     `FUN_253EC(obj)` (object-step), poi raggruppa state==2/3 (counters);
- *   - se count==2 e filtri passano (X-coord, +0x36, +0x1A): "respawn block"
- *     (12 scritture su obj + 5 jsr + sound 0x3C + FUN_285B0(obj, 0xF));
- *   - post-loop: se D3==count o D2==count-1 (+ D3!=0) → set
- *     `*0x400390.w = 3` (se != 1).
+ *   - if count==2 and filters pass (X-coord, +0x36, +0x1A): "respawn block"
+ *     (12 writes to obj + 5 jsr + sound 0x3C + FUN_285B0(obj, 0xF));
+ *   - post-loop: if D3==count or D2==count-1 (+ D3!=0) -> set
+ *     `*0x400390.w = 3` (when != 1).
  *
- * Tutte e 9 le sub vengono patchate a stub deterministico:
  *
- *   - FUN_1BBAA  → `rts`                    (no-op, isola scritture proprie)
+ *   - FUN_1BBAA  -> `rts`                    (no-op, isolates local writes)
  *   - FUN_2822E  → `rts`                    (no-op)
  *   - FUN_253EC  → `rts`                    (no-op, NON modifica obj+0x18)
  *   - FUN_17934  → `rts`                    (no-op)
  *   - FUN_1BAB2  → `rts`                    (no-op)
  *   - FUN_1CC62  → `moveq #0,D0; rts`       (return 0)
  *   - FUN_1B9CC  → `rts`                    (no-op)
- *   - FUN_158AC  → append-byte-to-buffer    (cattura sound calls)
+ *   - FUN_158AC  -> append-byte-to-buffer    (capture sound calls)
  *   - FUN_285B0  → `rts`                    (no-op)
  *
  * Strategia parity:
- *   1. Per ogni caso random, randomizziamo:
- *        - count ∈ {0..6} (con bias 30% verso 2 per coverage del respawn)
- *        - level ∈ {0,1,2,4,7,random} con bias 30% verso 4
- *        - per ogni obj nel range [0..count): byte random sul tratto 0..0xE2
+ *        - count in {0..6} (30% bias toward 2 for respawn coverage)
+ *        - level in {0,1,2,4,7,random} with 30% bias toward 4
+ *        - for each obj in range [0..count): random bytes across span 0..0xE2
  *        - globals @ 0x400390/0x400394/0x400396/0x400462/0x400466/0x400472
  *        - per coverage: occasionalmente forziamo state=2/3 e respawn-eligible
- *   2. Esegui binario reale @ FUN_000251DE.
- *   3. Esegui TS objectScanDispatch251DE su workRam mirror (cattura sound
+ *   3. Run TS objectScanDispatch251DE on the workRam mirror (capture sound
  *      calls; tutte le altre subs no-op).
- *   4. Confronta:
- *        - byte-by-byte la regione [0x400018, 0x400018 + count*0xE2)
+ *        - byte-by-byte over [0x400018, 0x400018 + count*0xE2)
  *        - globals @ 0x400390 (word), 0x400696 / 0x400698 (word)
- *        - sequenza sound calls
  *
  * Uso: npx tsx packages/cli/src/test-object-scan-dispatch-251de-parity.ts [N]
  */
@@ -76,17 +69,15 @@ const WORK_RAM_SIZE = 0x2000;
 const OBJ_BASE = 0x00400018;
 const OBJ_STRIDE = 0xe2;
 // Max count = 3 → obj region [0x400018, 0x400018 + 3*0xE2) =
-// [0x400018, 0x4002BE). Lascia margine prima dei globals @ 0x400390+.
 // (count=4 obj[3] occupa 0x4002BE..0x4003A0, invadendo 0x400390 (level/count).
 //  Evitare per non auto-modificare lo state-machine durante il loop.)
 const MAX_OBJS = 3;
 
-// Sound buffer (cattura FUN_158AC calls) — fuori dal range dell'obj array.
 const SOUND_BUF_BASE = 0x00401ff0; // 16 byte di buffer
 const SOUND_CUR_PTR = 0x00401fec; // long ptr to next slot
 
 /**
- * Patch un singolo entry-point ROM con il pattern bytes specificato.
+ * Patch a single ROM entry point with the specified byte pattern.
  */
 function patchRomBytes(
   rom: Buffer,
@@ -190,7 +181,6 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Stub rom per il modulo TS (le subs sono no-op, quindi non importa).
   const stubRom = busNs.emptyRomImage();
 
   for (let i = 0; i < n; i++) {
@@ -204,13 +194,11 @@ async function main(): Promise<void> {
     if (r0 < 0.5) count = 2;
     else count = Math.floor(rng() * (MAX_OBJS + 1));
 
-    // Level: 30% bias verso 4, altrimenti random in 0..7.
     const level = rng() < 0.3 ? 4 : Math.floor(rng() * 8);
 
-    // *0x400390 pre — varia: 30% = 1 (per check no-overwrite), altrimenti random.
     const pre390 = rng() < 0.3 ? 1 : Math.floor(rng() * 0x10000);
 
-    // Globals usate dal respawn block.
+    // Globals used by the respawn block.
     const g462 = rl();
     const g466 = rl();
     const g472 = rb();
@@ -220,8 +208,6 @@ async function main(): Promise<void> {
     const g698 = rl();
 
     // ── Setup binary side ──────────────────────────────────────────────
-    // Reset workRam: zero la regione obj array (più ampia di MAX_OBJS) +
-    // tutti i globals usati.
     const objRegionEnd = OBJ_BASE + MAX_OBJS * OBJ_STRIDE;
     for (let a = OBJ_BASE; a < objRegionEnd; a++) {
       pokeMem(cpu, a, 1, 0);
@@ -241,16 +227,13 @@ async function main(): Promise<void> {
     pokeMem(cpu, 0x00400696, 4, g696);
     pokeMem(cpu, 0x00400698, 4, g698);
 
-    // Per ogni obj nel range [0, count): byte random su tutto il tratto.
     // Per coverage del filtro: occasionalmente forziamo state=2/3 e
-    // X/0x36/0x1A in valori "interessanti".
     const objBytes: Uint8Array[] = [];
     for (let k = 0; k < count; k++) {
       const buf = new Uint8Array(OBJ_STRIDE);
       for (let j = 0; j < OBJ_STRIDE; j++) buf[j] = rb();
 
       // Coverage di +0x18 (state):
-      //   30% → 0 (slot vuoto)
       //   25% → 2 (state-2)
       //   25% → 3 (state-3)
       //   20% → random (incluso 1, ecc. → potenzialmente respawn)
@@ -336,8 +319,6 @@ async function main(): Promise<void> {
     stateInst.workRam[0x699] = (g698 >>> 16) & 0xff;
     stateInst.workRam[0x69a] = (g698 >>> 8) & 0xff;
     stateInst.workRam[0x69b] = g698 & 0xff;
-    // (Per evitare ambiguità, il binario è autorevole; rispecchiamo
-    //  esattamente i byte come il binario li ha: peek dopo i 2 pokeMem.)
     for (let kk = 0; kk < 6; kk++) {
       stateInst.workRam[0x696 + kk] =
         peekMem(cpu, 0x00400696 + kk, 1) & 0xff;
@@ -355,7 +336,6 @@ async function main(): Promise<void> {
     // ── Run binary ─────────────────────────────────────────────────────
     callFunction(cpu, FUN_251DE, []);
 
-    // Leggi sequenza sound calls.
     const binCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;
     const binSoundCount = (binCurEnd - SOUND_BUF_BASE) >>> 0;
     const binSounds: number[] = [];
@@ -392,10 +372,8 @@ async function main(): Promise<void> {
       },
     });
 
-    // ── Confronto ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
-    // 1) Sequenza sound calls
     if (binSounds.length !== tsSounds.length) {
       fail = {
         i,
@@ -425,7 +403,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // 2) byte-by-byte la regione obj [OBJ_BASE, OBJ_BASE + count*OBJ_STRIDE)
+    // 2) byte-by-byte over obj region [OBJ_BASE, OBJ_BASE + count*OBJ_STRIDE)
     for (let k = 0; k < count && !fail; k++) {
       const objAddr = OBJ_BASE + k * OBJ_STRIDE;
       const off = (OBJ_BASE - WORK_RAM_BASE) + k * OBJ_STRIDE;

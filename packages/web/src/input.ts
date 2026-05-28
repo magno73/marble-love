@@ -1,24 +1,23 @@
 /**
- * input.ts — input mapping browser → engine MMIO trackball values.
+ * input.ts - input mapping from browser events to engine MMIO trackball values.
  *
- * Modello MMIO MAME: il trackball P1/P2 è un encoder relativo che
- * `processAxis` (engine/trackball-input.ts) legge come BYTE assoluto 0..255
- * con wrap-around. Il delta è ricavato 68k-side via `cur - prev` (mod 256).
+ * MAME MMIO model: the P1/P2 trackball is a relative encoder, but
+ * `processAxis` reads it as an absolute byte in the 0..255 range with
+ * wrap-around. The 68010 side derives the delta with `cur - prev` modulo 256.
  *
- * MAME ruota i due assi fisici Marble a 45 gradi (`trakball_r`):
+ * MAME rotates Marble Madness' two physical axes by 45 degrees in
+ * `trakball_r`:
  *   F20000 = rawX + rawY
  *   F20002 = rawX - rawY
  *
- * Il replay/oracle usa questa rotazione per restare fedele al trackball MAME.
- * Per il controllo umano live invece frecce/mouse sono screen-space: destra
- * deve muovere un solo asse orizzontale, non diventare diagonale. Il browser
- * quindi integra i delta live gia' nello spazio MMIO ruotato, con X invertito
- * rispetto al DOM e Y DOM invertito, mantenendo comunque valori ABSOLUTE
- * 0..255. Questo evita il bug "primo frame": cur=0 vs prev=0xff
- * (seed MAME) → delta=1 → write spurious. Mantenendo cur=0xff stabile quando
- * nessun input → delta=0.
+ * Replay/oracle input uses that rotation to match MAME. Live human control is
+ * screen-space instead: right should move horizontally, not diagonally. The
+ * browser therefore integrates live deltas directly in the rotated MMIO space,
+ * with X inverted from DOM coordinates and DOM Y inverted, while still keeping
+ * absolute 0..255 values. Keeping the idle value at 0xff also avoids the
+ * first-frame `cur=0` vs `prev=0xff` spurious delta.
  *
- * Phase 7: implementare anche pulsanti virtuali e accelerometro mobile.
+ * Future mobile work can add virtual buttons and accelerometer input here.
  */
 
 const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 32;
@@ -50,9 +49,9 @@ export interface InputState {
   consumeP1Y(): number;
   consumeP2X(): number;
   consumeP2Y(): number;
-  /** Touch/UI helper: simula 1 pulse coin (= keydown "5"). */
+  /** Touch/UI helper: simulates one coin pulse (= keydown "5"). */
   triggerCoinPulse(): void;
-  /** Touch/UI helper: simula 1 pulse start (= keydown "Enter"). */
+  /** Touch/UI helper: simulates one start pulse (= keydown "Enter"). */
   triggerStartPulse(): void;
 }
 
@@ -110,8 +109,8 @@ export function initInput(options: InputOptions = {}): InputState {
   const keyboardTrackballStep = normalizeKeyboardTrackballStep(options.keyboardTrackballStep);
   const pointerTrackballScale = normalizePointerTrackballScale(options.pointerTrackballScale);
 
-  // Stato assoluto trackball (= valore MMIO 0xF20001 etc.). Inizializzato a
-  // 0xff (= MMIO stable in MAME attract mode con processAxis seed prev=0xff).
+  // Absolute trackball state (= MMIO value 0xF20001 etc.). Start at 0xff to
+  // match MAME attract-mode stability when processAxis also seeds prev=0xff.
   let p1X = 0xff;
   let p1Y = 0xff;
   let p2X = 0xff;
@@ -222,9 +221,8 @@ export function initInput(options: InputOptions = {}): InputState {
     triggerCoinPulse() {
       coinPulses += 1;
       buttons |= 0x04;
-      // Auto-release dopo 1 frame: buttons clear via consumeP1X poll? No,
-      // poll non resetta. Lascio buttons bit set; ricomincia da clear su
-      // keydown/keyup. Per browser coin pulse, basta pulse counter.
+      // Auto-release outside the keyboard path; the pulse counter is the
+      // authoritative signal for browser UI coin buttons.
       setTimeout(() => { buttons &= ~0x04; }, 50);
     },
     triggerStartPulse() {

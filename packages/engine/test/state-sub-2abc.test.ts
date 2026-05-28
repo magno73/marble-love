@@ -39,7 +39,6 @@ function setupStruct(
 function setupRomTables(
   rom: ReturnType<typeof emptyRomImage>,
 ): void {
-  // Replica i valori reali della ROM (estratti dal binario):
   // 0x72A0..0x72AB
   rom.program[0x72a0] = 0x00; rom.program[0x72a1] = 0x01; // stride[0]=1
   rom.program[0x72a2] = 0x00; rom.program[0x72a3] = 0x40; // stride[1]=64
@@ -54,7 +53,6 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
-    // String vuota (terminator immediato), marker=0, VAL_F00=0
     s.workRam[STRING_OFF] = 0; // empty string
     setupStruct(s, 0, 0, STRING_ADDR, 0, 0);
     s.workRam[VAL_F00_OFF] = 0;
@@ -107,8 +105,6 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     const rom = emptyRomImage();
     setupRomTables(rom);
 
-    // Entry 1 @ STRUCT_ADDR: stringa "X"+0, marker=2 → continua catena
-    // Entry 2 @ STRUCT2: stringa "Y"+0, marker=0 → termina
     const STRUCT2_OFF = 0x1d20;
     const STRUCT2_ADDR = 0x400000 + STRUCT2_OFF;
     const STRING2_OFF = 0x1d60;
@@ -137,13 +133,10 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     s.alphaRam.fill(0xcc);
 
     // entry 1: D2=0, shift=0, D0=0, *2=0 → a3=0xA03000+0 → alpha[0..1]=0
-    // entry 2: stesso calcolo (col=0, tickOff=0) → alpha[0..1] (già 0)
     stateSub2ABC(s, rom, STRUCT_ADDR);
     expect(s.alphaRam[0]).toBe(0);
     expect(s.alphaRam[1]).toBe(0);
-    // Verifica che la catena sia stata seguita (entry 2 elabora una posizione,
-    // la stessa qui — quindi non distinguibile, ma il fatto che NON sia in
-    // loop infinito significa che il chain-walk + termination funziona)
+    // infinite loop means the chain-walk + termination works).
   });
 
   it("rotation != 0 → D2 = 0x29 - sext(tickOff), formula path alternativa", () => {
@@ -189,7 +182,6 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     s.alphaRam.fill(0xcc);
 
     // rot=0: D2 = 0 << 6 = 0, shift=0, D0 = -1 << 0 = -1, +0=-1, *2=-2
-    // a3 = 0xA03000 + (-2) = 0xA02FFE → fuori alpha → no clear
     stateSub2ABC(s, rom, STRUCT_ADDR);
     for (let i = 0; i < 16; i++) {
       expect(s.alphaRam[i]).toBe(0xcc);
@@ -200,7 +192,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
-    // Struct con marker=2 + nextPtr = STRUCT_ADDR (catena ciclica)
+    // Struct with marker=2 + nextPtr = STRUCT_ADDR (cyclic chain).
     setupStruct(s, 0, 0, STRING_ADDR, 2, STRUCT_ADDR);
     s.workRam[STRING_OFF + 0] = 0x41;
     s.workRam[STRING_OFF + 1] = 0;
@@ -209,7 +201,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     s.workRam[ROTATION_OFF] = 0;
     s.workRam[ROTATION_OFF + 1] = 0;
 
-    // Non deve hang: il safety cap interno (1024) interrompe il loop
+    // Must not hang: the internal safety cap (1024) interrupts the loop.
     expect(() => stateSub2ABC(s, rom, STRUCT_ADDR)).not.toThrow();
   });
 });

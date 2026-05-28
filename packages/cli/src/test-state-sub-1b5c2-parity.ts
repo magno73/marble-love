@@ -9,19 +9,19 @@
  *
  * **Strategia parity**:
  *   - FUN_0001B5B4 (negateIfPositive, A4) e FUN_0001B5A6 (absLong) sono
- *     sub ROM **non stubbed** (lasciate live nel binario).
- *   - FUN_000158AC (sound cmd) **stubbata con RTS** (side-effect-only).
- *   - Chiamiamo il corpo della funzione da 0x1B5F6 (prima istr nota) dopo
+ *     **non-stubbed** ROM subs (left live in the binary).
+ *   - FUN_000158AC (sound cmd) **stubbed with RTS** (side-effect-only).
+ *   - Call the function body from 0x1B5F6 (first known instruction) after
  *     aver fakato il frame salvato sul stack (8 long dummy per soddisfare il
  *     `movem.l (SP)+,...` dell'epilogo) e pre-settato i registri D2/D3/A2/A3/A4.
- *   - A4 = 0x1B5B4 (indirizzo fisso di negateIfPositive nella ROM).
+ *   - A4 = 0x1B5B4 (fixed address of negateIfPositive in ROM).
  *   - Compare: intera workRam [0x400000..0x402000) eccl. stack area.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random — random globals + random struct + random bitmap
- *   B: all direction flags off — nessun blocco attivo
+ *   B: all direction flags off - no active block
  *   C: forced gate active + all cardinals active — massima copertura
- *   D: edge — valori estremi (0x80000000, 0, -1, vel pivot)
+ *   D: edge - extreme values (0x80000000, 0, -1, velocity pivot)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-1b5c2-parity.ts [N]
  */
@@ -107,12 +107,12 @@ const SENTINEL = 0xcafebabe >>> 0;
 const SAVE_FRAME_REGS = 8;
 
 /**
- * Esegui il corpo di FUN_0001B5C2 a partire da 0x1B5F6, con:
+ * Run the body of FUN_0001B5C2 starting at 0x1B5F6, with:
  *   - stack frame fake (8 long per `movem.l (SP)+` dell'epilogo)
  *   - D2 = d2Addr, D3 = d3Val, A2 = a2Addr, A3 = a3Addr, A4 = FUN_1B5B4
  *   - sentinel return address sopra il frame fake
  *
- * Riusa il pattern di `callFunction` ma senza args su stack.
+ * Reuse the `callFunction` pattern but without stack args.
  */
 function callBody(
   cpu: CpuSession,

@@ -4,26 +4,26 @@
  * `keyRankLookup4686`.
  *
  * `FUN_00004686` (164 byte) e' un lookup table-driven self-contained:
- * niente JSR, niente MMIO, niente scritture su workRam. Estrae una key
- * 24-bit dal long arg e ritorna l'indice della prima riga della tabella
+ * no JSR, no MMIO, and no writes to workRam. Extracts a 24-bit key from the
+ * long arg and returns the index of the first row in the table
  * (10 righe × 5 byte) puntata da `*0x401FFC + 0x1E` la cui chiave-prefix
  * (3 byte) e' strettamente maggiore della key.
  *
  * Confronto:
  *   - return D0 (long signed): -1, 0..9, oppure 10
  *
- * Setup per ogni caso random:
+ * Setup for each random case:
  *   - *0x401FFC = a2Addr (struct base, range workRam-safe @ 0x401D00)
  *   - 50 byte @ a2Addr+0x1E .. a2Addr+0x4F (10 righe da 5 byte)
- *     organizzati come tabella sorted strict per i primi 3 byte
+ *     organized as a strictly sorted table for the first 3 bytes
  *   - arg = long random
  *
- * Pattern coverage (5 suite × 100 = 500 casi). Tabella DESC sorted strict.
- *   A. high byte != 0                → atteso D0 = -1
- *   B. key > tutti i prefix          → atteso D0 = 0 (prima row gia' < key)
- *   C. key fra row r-1 e r prefix    → atteso D0 = r (DESC: r > 0)
- *   D. key < tutti i prefix          → atteso D0 = 10
- *   E. fully random                  → stress, atteso match a qualunque rank
+ * Pattern coverage (5 suites x 100 = 500 cases). Strict DESC-sorted table.
+ *   A. high byte != 0                -> expected D0 = -1
+ *   B. key > every prefix            -> expected D0 = 0 (first row already < key)
+ *   C. key between row r-1 and r     -> expected D0 = r (DESC: r > 0)
+ *   D. key < every prefix            -> expected D0 = 10
+ *   E. fully random                  -> stress, expected match at any rank
  *
  * Strategia stub injection: NESSUNA. FUN_4686 non chiama JSR.
  *
@@ -60,7 +60,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Scrive un long-BE in entrambi binario+TS. */
+/** Write a long-BE to both binary and TS. */
 function pokeLong(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -81,7 +81,7 @@ function pokeLong(
   }
 }
 
-/** Scrive un singolo byte sia binario che TS. */
+/** Write a single byte to both binary and TS. */
 function pokeByte(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -94,9 +94,9 @@ function pokeByte(
 }
 
 /**
- * Setup tabella 10×5 dato un array di 10 chiavi 24-bit. Le chiavi sono
- * scritte cosi' come date; il caller fornisce ordinamento DESCENDENTE
- * per la convenzione attesa da FUN_4686. Le 2 colonne payload (col 3,4)
+ * Set up a 10x5 table from an array of 10 24-bit keys. The keys are
+ * written as provided; the caller supplies DESCENDING order
+ * for the convention expected by FUN_4686. The 2 payload columns (col 3,4)
  * sono random.
  */
 function setupTable(
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
 
   function runOne(suite: string, tc: number, arg: number): boolean {
     cpu.system.setRegister("sp", 0x401f00);
-    // *0x401FFC = A2_ADDR (gia' settato all'inizio, ma re-confermiamo)
+    // *0x401FFC = A2_ADDR (already set at startup; reconfirm it here).
     pokeLong(state, cpu, PTR_FFC, A2_ADDR);
 
     const r = callFunction(cpu, FUN_4686, [arg >>> 0]);
@@ -180,8 +180,8 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Genera 10 chiavi 24-bit sorted strict DESCENDENTE, con gap
-   * "ragionevoli" cosi' i casi "in-between" sono espressivi.
+   * Generate 10 strict DESC-sorted 24-bit keys with enough gap for expressive
+   * "in-between" cases.
    * keys[0] = piu' grande, keys[9] = piu' piccolo.
    */
   function genSortedKeysDesc(): number[] {
@@ -192,7 +192,7 @@ async function main(): Promise<void> {
       const gap = 0x1000 + ri(0xff00);
       cur = Math.min(cur + gap, 0xfffffe);
     }
-    // Sort ASC poi inverti per garantire DESC strict
+    // Sort ASC, then reverse to guarantee strict DESC order.
     asc.sort((a, b) => a - b);
     // Forza unicita' (piccolo aggiustamento)
     for (let i = 1; i < asc.length; i++) {
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const keys = genSortedKeysDesc();
     setupTable(state, cpu, keys, rng);
-    // forza high byte non-zero
+    // Force non-zero high byte.
     const hi = 1 + ri(0xff); // 1..0xFF
     const lo24 = ri(0x1000000);
     const arg = ((hi << 24) | lo24) >>> 0;
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
   console.log(`\n=== Suite B: key > tutti i prefix → 0 — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Tabella DESC con keys[0] = piu' grande della tabella, ma lascia
+    // DESC table with keys[0] greater than the table, while leaving
     // spazio sopra. arg key strictly > keys[0].
     const keys = genSortedKeysDesc();
     setupTable(state, cpu, keys, rng);
@@ -230,7 +230,7 @@ async function main(): Promise<void> {
     const top = keys[0]!;
     if (top >= 0xfffffe) {
       // fallback: provoca high-byte fail (non possibile nel pattern B,
-      // skip this iter conta come ok solo se TS == bin)
+      // skipping this iteration counts as OK only if TS == bin).
       if (runOne("B", i, 0)) okB++;
       continue;
     }
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const keys = genSortedKeysDesc();
     setupTable(state, cpu, keys, rng);
-    // Pick target row r in [1..9]: keys[r-1] > keys[r], genera key in
+    // Pick target row r in [1..9]: keys[r-1] > keys[r], generate key in
     // (keys[r], keys[r-1]).
     const r = 1 + ri(9);
     const hi = keys[r - 1]!;
@@ -265,11 +265,11 @@ async function main(): Promise<void> {
   console.log(`\n=== Suite D: key < tutti i prefix → 10 — ${perSuite} casi ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Tabella DESC con keys[9] grande abbastanza per lasciare spazio sotto.
+    // DESC table with keys[9] large enough to leave room below.
     const keys = genSortedKeysDesc();
-    // Forza keys[9] ≥ 2 cosi' 0..keys[9]-1 e' un range valido
+    // Force keys[9] >= 2 so 0..keys[9]-1 is a valid range.
     if (keys[9]! < 2) {
-      // shift la tabella verso valori piu' grandi
+      // Shift the table toward larger values.
       for (let k = 0; k < 10; k++) keys[k] = (keys[k]! + 0x10000) & 0xffffff;
     }
     setupTable(state, cpu, keys, rng);

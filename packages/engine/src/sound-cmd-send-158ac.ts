@@ -1,38 +1,32 @@
 /**
- * sound-cmd-send-158ac.ts — replica `FUN_000158AC` (32 byte, ~16 istruzioni).
+ * sound-cmd-send-158ac.ts - replica of `FUN_000158AC` (32 bytes).
  *
  * **Disasm 0x158AC..0x158CB** (confermato via ghidra_disasm_at.py):
  *
- *   000158ac  move.b (0x7,SP),D0b        ; D0.b = byte arg (low byte di pushed long)
+ *   000158ac  move.b (0x7,SP),D0b        ; D0.b = low byte of pushed long
  *   000158b0  tst.w  (0x004003b8).l      ; flag "skip" word @ workRam+0x3B8
- *   000158b6  beq.b  0x000158bc          ; se 0 → procedi (continue)
- *   000158b8  moveq  0x0,D0              ; altrimenti D0=0
- *   000158ba  bra.b  0x000158ca          ; → rts (done)
- *   000158bc  ext.w  D0w                 ; sign-extend byte → word
- *   000158be  ext.l  D0                  ; sign-extend word → long
+ *   000158b6  beq.b  0x000158bc          ; if zero, proceed
+ *   000158b8  moveq  0x0,D0              ; otherwise D0=0
+ *   000158ba  bra.b  0x000158ca
+ *   000158bc  ext.w  D0w                 ; sign-extend byte to word
+ *   000158be  ext.l  D0                  ; sign-extend word to long
  *   000158c0  move.l D0,-(SP)            ; push long arg
  *   000158c2  jsr    0x0000023c.l        ; thunk → JMP 0x4C6E (sound dispatcher)
  *   000158c8  addq.l 0x4,SP              ; pop arg
  *   000158ca  rts
  *
- * **Comportamento**:
- *   - `tst.w (0x004003B8).l` legge una WORD big-endian da workRam[0x3B8..0x3B9].
- *     Se != 0 il flag "skip" è attivo: D0 = 0, ritorno immediato.
- *   - Se skip = 0: sign-extend del byte a long, JSR al sound dispatcher
- *     (FUN_4C6E via thunk @ 0x023C). FUN_4C6E scrive la word sign-extended
- *     al mailbox sound CPU @ MMIO 0xFE0000 dopo aver verificato che il chip
- *     sia ready (bit 7 di 0xF60001 = 0). Se il chip è busy, retra 256 volte
- *     e ritorna D0=0. Se il chip è ready, scrive e ritorna D0=1.
- *   - In questo modulo: la scrittura MMIO è side-effect-only — modelliamo
- *     solo D0 (0 = non inviato, 1 = inviato). L'MMIO è delegato al layer
- *     audio esterno (`audio.ts`/Bus).
+ * Behavior:
+ *   - `tst.w (0x004003B8).l` reads a big-endian word from workRam[0x3B8..0x3B9].
+ *     If non-zero, the skip flag is active and D0 returns 0 immediately.
+ *   - If skip is zero, the byte is sign-extended to long and passed to
+ *     FUN_4C6E, which writes the sound mailbox when the chip is ready.
+ *   - This module models D0 and emits optional hooks; bus/chip code owns MMIO.
  *
- * **Ritorno**:
- *   0 = non inviato (skip flag set, oppure chip mai ready dopo 256 retry)
- *   1 = inviato (chip ready, mailbox scritto — quando `chipPending=false`)
+ * Return:
+ *   0 = not sent, because skip flag is set or chip never became ready.
+ *   1 = sent, when `chipPending=false`.
  *
- * **Callers**: 98 callsite nel binario — questa è la funzione centrale
- *   attraverso cui tutti i comandi sonori transitano.
+ * Callers: 98 ROM call sites; this is the central sound-command path.
  */
 
 import type { GameState } from "./state.js";
@@ -40,29 +34,21 @@ import type { GameState } from "./state.js";
 /** ROM address of FUN_158AC. */
 export const SOUND_CMD_SEND_158AC_ADDR = 0x000158ac as const;
 
-/** workRam offset (relativo a 0x400000) del flag "skip cmd" (word BE). */
+/** workRam offset relative to 0x400000 for the "skip command" BE word. */
 const SKIP_FLAG_WORD_OFF = 0x3b8 as const;
 
 /**
- * Replica bit-perfect di `FUN_000158AC` — sound command send wrapper.
+ * Bit-exact replica of `FUN_000158AC`, the sound command send wrapper.
  *
- * @param state        GameState — legge `workRam[0x3B8..0x3B9]` come word BE
- *                     per il flag skip. Nessun side effect su workRam.
- * @param cmd          Byte (0..0xFF) — comando logico da spedire al chip.
- *                     Viene sign-extended a long prima della call a FUN_4C6E;
- *                     il low byte è invariante, quindi cmd == byte basso inviato.
- * @param chipPending  Modella bit 7 di MMIO `0xF60001` (chip busy). Default
- *                     `false` (chip ready) → D0=1. `true` → FUN_4C6E
- *                     esaurisce 256 retry → D0=0. Usare `false` nel
- *                     differential test per convergenza deterministica.
- * @returns            0 = skip flag attivo o chip mai ready; 1 = inviato.
+ * @param state        Reads `workRam[0x3B8..0x3B9]` as a BE skip word.
+ * @param cmd          Logical command byte to send to the chip.
+ * @param chipPending  Models MMIO `0xF60001` bit 7. Default false means ready.
+ * @returns            0 = skipped/not ready; 1 = sent.
  */
 import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
 
-/** Hook side-effect opzionale: chiamato quando soundCmdSend158AC manda un
- * cmd al chip (ritorno 1). Usato dal web frontend per wirare al SoundChip
- * TS (`submitCommand`). NON ha side effect sul state TS: solo emit esterno.
- * Default `undefined` (no-op, parity test invariato). */
+/** Optional external hook called when soundCmdSend158AC sends a command. Used by
+ * the web frontend to wire SoundChip.submitCommand without mutating GameState. */
 let onSoundCmdHook: ((cmd: number) => void) | undefined = undefined;
 
 export function setSoundCmdHook(hook: ((cmd: number) => void) | undefined): void {
@@ -74,8 +60,7 @@ export function soundCmdSend158AC(
   cmd: number,
   chipPending: boolean = false,
 ): number {
-  // tst.w (0x004003B8).l — legge WORD big-endian.
-  // Skip se word != 0.
+  // tst.w (0x004003B8).l reads a big-endian word; skip when non-zero.
   const skipWord =
     (((state.workRam[SKIP_FLAG_WORD_OFF] ?? 0) << 8) |
       (state.workRam[SKIP_FLAG_WORD_OFF + 1] ?? 0)) &
@@ -86,29 +71,21 @@ export function soundCmdSend158AC(
     return 0;
   }
 
-  // ext.w D0; ext.l D0: sign-extend byte → long.
-  // La low byte del risultato è identica a `cmd & 0xFF`, quindi il payload
-  // al sound CPU è invariato rispetto al byte passato.
-  void ((cmd << 24) >> 24); // sign-extend — documentazione; non serve in TS
+  // ext.w D0; ext.l D0 sign-extends byte to long. The low byte remains cmd.
+  void ((cmd << 24) >> 24);
 
   // JSR 0x023C → FUN_4C6E (sound dispatcher).
-  // Modellato con chipPending: se busy → D0=0, altrimenti → D0=1.
+  // Modeled with chipPending: busy -> D0=0, ready -> D0=1.
   if (chipPending) {
-    // FUN_4C6E retra 256 volte, non trova il chip ready → D0=0.
+    // FUN_4C6E retries 256 times and returns D0=0 when never ready.
     return 0;
   }
 
-  // Chip ready: FUN_4C6E scrive MMIO 0xFE0000, ritorna D0=1.
-  // Side-effect opzionale: notifica il sound chip TS (web frontend wire).
+  // Chip ready: FUN_4C6E writes MMIO 0xFE0000 and returns D0=1.
   if (onSoundCmdHook !== undefined) {
     onSoundCmdHook(cmd & 0xff);
   }
-  // Notifica anche il global hook (fallback per altre sub-emit).
+  // Notify the global hook as a fallback for other sub emitters.
   notifyGlobalSoundCmd(cmd & 0xff);
-  // DEBUG: count calls
-  if (typeof globalThis !== "undefined") {
-    const g = globalThis as { __sound158ACCount?: number };
-    g.__sound158ACCount = (g.__sound158ACCount ?? 0) + 1;
-  }
   return 1;
 }

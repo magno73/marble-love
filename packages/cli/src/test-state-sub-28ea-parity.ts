@@ -2,29 +2,20 @@
 /**
  * test-state-sub-28ea-parity.ts — differential FUN_28EA vs stateSub28EA.
  *
- * FUN_28EA (112 byte) è la sub "set-target-and-register-state-7" del
- * state-machine scheduler. Args: 3 long sullo stack (`arg1Long`, `arg2Long`,
- * `arg3Long`), dove arg2/arg3 sono usati come word.
+ * state-machine scheduler. Args: 3 longs on the stack (`arg1Long`, `arg2Long`,
+ * `arg3Long`), where arg2/arg3 are used as words.
  *
  * Logica:
- *   - *(0x401F3E) = arg3.w (target globale)
  *   - jsr FUN_2572(arg1Long, sext.l(arg2.w))   ← STUB injection
- *   - Per ogni i in [0..3]: se STATE[i] == 0 → registra slot:
+ *   - For each i in [0..3]: if STATE[i] == 0 -> register slot:
  *       DATA_PTR[i] = arg1Long (long)
  *       STATE[i]    = 7 (byte)
  *       WORD16[i]   = arg2.w (word)
- *       (NIENTE THRESHOLD/COUNTER/FLAG34 — diff vs state=3)
  *
  * Strategia:
- *   - Patch FUN_2572 a `rts` (4E 75) → no-op nel binario
  *   - In TS: callback `fun_2572` no-op (default)
- *   - Confronto: workRam @ 0x401F00..0x401F3F (struct gameSM + target globale)
  *
- * Suite testate (500 casi, 4 suite × 125):
  *   - A: random struct + random args (mix di slot liberi/occupati)
- *   - B: tutti slot liberi (state==0) → match slot 0 sempre
- *   - C: tutti slot occupati → solo *(0x401F3E) viene scritto
- *   - D: solo uno slot libero a posizione random
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-28ea-parity.ts [N]
  */
@@ -168,7 +159,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot liberi ──────────────────────────────────────
   console.log(`\n=== Suite B: all slots free → register slot 0 — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -183,7 +173,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: tutti slot occupati → solo target word scritta ─────────
   console.log(`\n=== Suite C: all slots busy → only target write — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -199,7 +188,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: solo uno slot libero a posizione random ────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: only one free slot at random position — ${sizeD} casi ===`);
   let okD = 0;

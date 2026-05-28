@@ -1,65 +1,54 @@
 /**
- * state-sub-19baa.ts — replica `FUN_00019BAA` (490 byte, 0x019BAA-0x019D94).
+ * state-sub-19baa.ts — `FUN_00019BAA` replica (490 bytes, 0x019BAA-0x019D94).
  *
- * "Per-frame entity tick": gate sul global `*0x400394 == 4`, opzionalmente
- * triggera lo spawn dispatcher (`FUN_00019A40`) ogni 8 frame, poi itera la
- * tabella entity @ `0x4019F8` (10 entity × 0x38 byte) e applica per ogni
- * entity attiva (`entity[0x18] != 0`) la sequenza:
+ * "Per-frame entity tick": gates on global `*0x400394 == 4`, optionally
+ * triggers the spawn dispatcher (`FUN_00019A40`) every 8 frames, then iterates.
  *   1. tick anim counter `entity[0x24]++`
- *   2. se anim counter ha raggiunto threshold `entity[0x25]`: avanza
- *      script ptr `entity[0x1C] += 4`. Se il long `*entity[0x1C] == -1`
- *      (terminator) e `entity[0x1A] != 2`: **scan-other-entities** per
- *      determinare se siamo "sotto" un'altra entity attiva con stessa X
- *      (D4 flag), poi reset `entity[0x1C] = 0x000224D6`, clear
- *      `entity[0x1A]`, decrement `entity[0x1B]` (se non zero), e — se
- *      `entity[0x1B]` arriva a 0 — branch su `entity[0x4]`:
- *        - se `entity[0x4] == 0xFFFE0000` AND D4 != 0:
+ *   2. if anim counter reaches threshold `entity[0x25]`: advance
+ *      script ptr `entity[0x1C] += 4`. If long `*entity[0x1C] == -1`
+ *      (terminator) and `entity[0x1A] != 2`: **scan-other-entities** for
+ *      the D4 flag, then reset `entity[0x1C] = 0x000224D6`, clear
+ *      `entity[0x1A]`, decrement `entity[0x1B]` (if nonzero), and — if
+ *      `entity[0x1B]` reaches 0 — branch on `entity[0x4]`:
+ *        - if `entity[0x4] == 0xFFFE0000` AND D4 != 0:
  *            entity[0x25] = 1
  *            entity[0x4]  = 0xFFFC0000
  *            entity[0x1B] = (rng(2) + 4) & 0xFF
- *        - altrimenti:
  *            entity[0x25] = 4
  *            entity[0x4]  = 0xFFFE0000
  *            entity[0x1B] = (rng(2) + 1) & 0xFF
- *      Inoltre se sul re-check `*entity[0x1C] == -1` E `entity[0x1A] == 2`:
- *      clear `entity[0x18]` e jsr `FUN_18F46(0xF, sext_l(entity[0x19]))`.
- *   3. movement-block: se `entity[0x1A] == 0`, sposta Y di entity[0x4]
- *      (`entity[0x10] += entity[0x4]`), chiama `FUN_1BB08(entityAddr)` e
- *      `FUN_1CC62(1)` → D0; se `D0 > entity[0x14]`:
- *        ripristina entity[0x10] = (oldY & 0xFFFC0000)
+ *      Also, if on the re-check `*entity[0x1C] == -1` and `entity[0x1A] == 2`:
+ *      clear `entity[0x18]` and jsr `FUN_18F46(0xF, sext_l(entity[0x19]))`.
+ *   3. movement block: if `entity[0x1A] == 0`, move Y by entity[0x4].
+ *      `FUN_1CC62(1)` → D0; if `D0 > entity[0x14]`:
+ *        restore entity[0x10] = (oldY & 0xFFFC0000)
  *        entity[0x1C] = 0x000224E2
  *        entity[0x24] = 0
  *        entity[0x25] = 1
  *        entity[0x1A] = 2
  *        D3 = 1     (= flag "spawn sound trigger")
- *   4. AI-block: jsr `FUN_19E42(entityAddr)`. Se D3 != 0 (sound trigger
- *      armato dal punto 3) E `(entity[0x0C..0x0D].w >> 3) > 0x35` (signed
- *      compare D1=0x35, D0=shifted) -- nota: il `ble` salta SE 0x35 <=
- *      D0, quindi prosegue solo se 0x35 > D0 (= D0 < 0x35). Wait, ricorrekt:
- *      l'asm è `cmp.w D0,D1; ble`: `ble` salta se `D1 <= D0` signed, cioè
- *      se `D0 >= 0x35`. Quindi prosegue solo se `D0 < 0x35` (= shifted X
- *      strettamente minore di 0x35). Inoltre `entity[0x22..0x23].w` deve
- *      essere `>= 0` AND `< 0xF0`. Tutto OK → jsr `FUN_158AC(0x59)`.
+ *   4. AI block: jsr `FUN_19E42(entityAddr)`. If D3 != 0 (sound trigger
+ *      armed by step 3) and `(entity[0x0C..0x0D].w >> 3) > 0x35` (signed
  *
- * **Disasm 0x19BAA..0x19D94** (decoded da raw bytes):
+ * **Disasm 0x19BAA..0x19D94** (decoded from raw bytes):
  *
- *   movem.l {A2,D4,D3,D2}, -(SP)        ; salva 4 reg (16 byte)
+ *   movem.l {A2,D4,D3,D2}, -(SP)        ; save 4 regs (16 bytes)
  *   moveq   #4, D0
  *   cmp.w   (0x00400394).l, D0w
- *   bne.w   epilogue                    ; gate: se *0x394 != 4 → return
+ *   bne.w   epilogue                    ; gate: if *0x394 != 4 → return
  *   tst.b   (0x00400762).l
  *   beq.b   skip_spawn
  *   move.l  (0x00400010).l, D0
  *   moveq   #7, D1
  *   and.l   D1, D0
- *   bne.b   skip_spawn                  ; spawn ogni 8 frame
+ *   bne.b   skip_spawn                  ; spawn every 8 frames
  *   jsr     0x00019A40.l                ; FUN_19A40 spawn dispatcher
  * skip_spawn:
  *   movea.l #0x4019F8, A2               ; A2 = entity table base
  *   clr.b   D2                          ; D2 = entity index (0..9)
  *   clr.b   D3                          ; D3 = sound-trigger flag
  *
- * outer_loop @ 0x19BDC:                  (D2 = 0..9; A2 += 0x38 ogni iter)
+ * outer_loop @ 0x19BDC:                  (D2 = 0..9; A2 += 0x38 each iter)
  *   tst.b   (0x18, A2)
  *   beq.w   next_entity                 ; entity[0x18] == 0 → skip
  *   addq.b  #1, (0x24, A2)
@@ -75,7 +64,7 @@
  *   cmpi.b  #2, (0x1A, A2)
  *   beq.w   recheck_terminator
  *
- *   ; --- scan altri 9 entity per "below-other-with-same-X" check ---
+ *   ; --- scan the other 9 entities for "below-other-with-same-X" check ---
  *   movea.l #0x4019F8, A1
  *   moveq   #1, D4                      ; D4 = 1 (init "no other entity above")
  *   clr.b   D1                          ; D1 = scan iter (0..9)
@@ -107,7 +96,6 @@
  *   subq.b  #1, (0x1B, A2)
  *  skip_dec:
  *   tst.b   (0x1B, A2)
- *   bne.w   movement_block              ; counter ancora attivo → skip state branch
  *   cmpi.l  #0xFFFE0000, (0x4, A2)
  *   bne.b   else_branch
  *   tst.b   D4
@@ -199,42 +187,26 @@
  *   adda.l  D0, A2
  *   addq.b  #1, D2
  *   cmpi.b  #10, D2
- *   bne.w   outer_loop                  ; (NB: D3 NON è clearato → flag persistente
  *                                       ; tra entity diverse, intenzionale)
  *
  *  epilogue @ 0x19D8E:
  *   movem.l (SP)+, {D2,D3,D4,A2}
  *   rts
  *
- * **Quirk importante** sulla persistenza di D3:
- *   D3 è clearato SOLO una volta a 0x19BDC, **prima** del loop. Tra le
- *   iterazioni successive D3 NON viene resettato, quindi se l'entity i-esima
- *   arma il flag (D3=1), tutte le entity successive nel loop avranno D3=1
- *   anche se il loro path non lo armerebbe. Questo significa che il sound
- *   trigger `FUN_158AC(0x59)` può sparare per entity che non ha clampato Y,
- *   purché un'entity precedente nel loop l'abbia armato e le condizioni
- *   X<0x35 e 0<=Y<0xF0 siano soddisfatte. Replicato fedelmente.
+ * **Important D3 persistence quirk**:
+ *   Once the flag is armed (D3=1), every later entity in the loop sees D3=1
+ *   as long as the X<0x35 and 0<=Y<0xF0 gates pass. This is replicated exactly.
  *
- * **JSR esterne** (sub injections + RNG live):
- *   - `FUN_00019A40` = spawn dispatcher (`stateSub19A40`) — chiamata 0/1 volte
- *     in cima alla funzione, gated. **Sub injection**.
- *   - `FUN_00018F46` = `slotInsertSorted18E6C` parente — già replicato. **Sub
- *     injection** (default no-op). Argomenti long: arg1=0xF, arg2=sext_l(byte).
+ * **External JSRs** (sub injections plus live RNG):
  *   - `FUN_00013A98` = RNG — **live** via `rngNext(rng, 2)` (cfr `rng.ts`).
  *   - `FUN_0001BB08` = `spriteSetXY` (sprite-derive wrapper) — **sub
  *     injection**. Default no-op.
- *   - `FUN_0001CC62` = `spriteProject1CC62` — già replicato. **Sub injection**.
- *     Default ritorna 0.
- *   - `FUN_00019E42` = `marbleCellDispatch19E42` — già replicato. **Sub
  *     injection**. Default no-op.
  *   - `FUN_000158AC` = sound command sender — **sub injection**. Default no-op.
  *
- * Tutti tranne RNG sono iniettabili (default no-op / 0). Per il parity test
- * questi vengono stubbati con RTS nel binario per matching.
  *
- * **Caller noto**: `FUN_00010FCE` @ 0x10FFE (UNCONDITIONAL_CALL).
+ * **Known caller**: `FUN_00010FCE` @ 0x10FFE (UNCONDITIONAL_CALL).
  *
- * Verifica bit-perfect via `packages/cli/src/test-state-sub-19baa-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -331,10 +303,8 @@ export const SOUND_Y_UPPER = 0x00f0 as const;
 // ─── Sub injections ──────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 6 callee. Tutte default no-op (matching del binario
- * stubbed con RTS in parity testing).
+ * stubbed with RTS in parity testing).
  *
- * `FUN_00013A98` (RNG) NON è iniettabile: viene chiamata live via
  * `rngNext(state.rng, 2)`.
  */
 export interface StateSub19BAASubs {
@@ -344,7 +314,6 @@ export interface StateSub19BAASubs {
   fun_18f46?: (state: GameState, arg1Long: number, arg2Long: number) => void;
   /** `FUN_0001BB08(state, entityAddr)` — sprite-set-XY wrapper. */
   fun_1bb08?: (state: GameState, entityAddr: number) => void;
-  /** `FUN_0001CC62(state, arg)` — sprite-project; ritorna long u32. */
   fun_1cc62?: (state: GameState, arg: number) => number;
   /** `FUN_00019E42(state, entityAddr)` — marble-cell-dispatch. */
   fun_19e42?: (state: GameState, entityAddr: number) => void;
@@ -354,34 +323,26 @@ export interface StateSub19BAASubs {
 
 // ─── Result ──────────────────────────────────────────────────────────────
 
-/** Per-entity esito del tick. */
 export interface EntityTickRecord {
-  /** Index dell'entity nella tabella (0..9). */
   slot: number;
-  /** True se l'entity era attiva al call (entity[0x18] != 0). */
   wasActive: boolean;
-  /** True se ha eseguito il branch "script-advance" (anim counter raggiunto). */
+  /** True if it executed the "script-advance" branch (anim counter reached). */
   scriptAdvanced: boolean;
-  /** True se entrato nel "scan-other-entities" block (terminator hit). */
+  /** True if it entered the "scan-other-entities" block (terminator hit). */
   enteredScanBlock: boolean;
-  /** True se entrato nel branch state-update (entity[0x1B] arrivato a 0). */
+  /** True if it entered the state-update branch (entity[0x1B] reached 0). */
   enteredStateBranch: boolean;
-  /** True = ramo "if" (D4 != 0); false = ramo "else"; null = non entrato. */
   ifBranchTaken: boolean | null;
-  /** True se il movement-block è entrato (entity[0x1A] == 0). */
   enteredMovement: boolean;
-  /** True se il movement-block ha clampato Y. */
+  /** True if the movement block clamped Y. */
   yClamped: boolean;
-  /** True se ha invocato `FUN_158AC` (sound trigger). */
+  /** True if it invoked `FUN_158AC` (sound trigger). */
   soundFired: boolean;
 }
 
 export interface StateSub19BAAResult {
-  /** True se la funzione è uscita early per gate `*0x394 != 4`. */
   gatedOut: boolean;
-  /** True se la chiamata a `FUN_00019A40` è stata fatta (gate match). */
   spawnDispatched: boolean;
-  /** Esito dettagliato delle 10 entity (vuoto se gatedOut). */
   perEntity: EntityTickRecord[];
 }
 
@@ -427,8 +388,6 @@ function addrToOff(addr: number): number {
 /**
  * Read a long (32-bit BE) from m68k absolute addr, dispatching by region.
  *
- * Per il binario, `entity[0x1C]` può puntare in ROM (script @ 0x000224CA,
- * 0x000224D6, 0x000224E2 + advance) oppure in workRam dopo `addq.l #4`. La
  * dispatch fa:
  *   - addr < 0x400000 → ROM (rom.program)
  *   - 0x400000 ≤ addr < 0x402000 → workRam
@@ -477,14 +436,10 @@ function sextWord(w: number): number {
 // ─── Replica ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00019BAA`.
  *
  * @param state GameState (modifica `state.workRam` per le entity attive +
  *              consuma RNG via `state.rng` per i path "state-branch").
- * @param rom   RomImage — usata per leggere i long puntati da
- *              `entity[0x1C]` quando il puntatore è in ROM (< 0x400000).
  * @param subs  injection stub per le 6 sub esterne. Default tutte no-op (e
- *              `fun_1cc62` ritorna 0).
  *
  * @returns dettaglio del gate, dello spawn-dispatch e del per-entity tick.
  */
@@ -495,7 +450,6 @@ export function stateSub19BAA(
 ): StateSub19BAAResult {
   // ─── Gate: *0x400394.w == 4 ────────────────────────────────────────────
   // moveq 4,D0 ; cmp.w (0x394).l, D0w ; bne → exit
-  // cmp.w D0,(mem) confronta word; D0.w = 4 (zero-ext da byte non rilevante).
   // beq path: word(0x394) == 4.
   const gameMode = readWordBE(state, GAME_MODE_WORD_OFF);
   if (gameMode !== GAME_MODE_REQUIRED) {
@@ -516,8 +470,6 @@ export function stateSub19BAA(
   }
 
   // ─── Outer loop: D2 = 0..9 ─────────────────────────────────────────────
-  // NB: D3 (sound-trigger flag) è clearato UNA volta prima del loop e
-  // persiste tra le iterazioni (replicato fedelmente).
   let d3SoundFlag = 0;
   const perEntity: EntityTickRecord[] = [];
 
@@ -572,7 +524,6 @@ export function stateSub19BAA(
       writeLongBE(state, off + ENTITY_SCRIPT_PTR_OFFSET, scriptPtr);
 
       // movea.l (0x1C,A2),A0 ; moveq -1,D0 ; cmp.l (A0),D0 ; bne → recheck
-      // (A0) reads a long from the addr — può essere ROM o workRam.
       const scriptVal = readLongFromAddr(state, rom, scriptPtr);
       const minusOne = 0xffffffff;
 
@@ -615,7 +566,6 @@ export function stateSub19BAA(
         }
         const newTimer = readByte(state, off + ENTITY_TIMER_OFFSET);
         if (newTimer !== 0) {
-          // Timer ancora attivo → movement_block.
           goToMovementBlock = true;
         } else {
           // Timer arrivato a 0: state branch.
@@ -626,11 +576,8 @@ export function stateSub19BAA(
             rec.ifBranchTaken = true;
             writeByte(state, off + ENTITY_STATE_OFFSET, STATE_IF);
             writeLongBE(state, off + ENTITY_VEL_OFFSET, VEL_IF_SET);
-            // FUN_13A98 binary semantica: il loop interno è
             //   while (limit <= D0): D0 -= limit
-            // mentre `rngNext` upstream usa `<` invece di `<=`. Per limit=2
-            // questo diverge quando state.w & 0x3 == 0x2 (bin: 0, TS: 2).
-            // Applico `% limit` per allineare al binario.
+            // Upstream `rngNext` uses `<` instead of `<=`. For limit=2,
             const rngRaw = rngNext(state.rng, as_u16(RNG_LIMIT)) as unknown as number;
             const rngVal = rngRaw % RNG_LIMIT;
             const newTimerVal = (rngVal + TIMER_IF_OFFSET) & 0xff;
@@ -640,11 +587,8 @@ export function stateSub19BAA(
             rec.ifBranchTaken = false;
             writeByte(state, off + ENTITY_STATE_OFFSET, STATE_ELSE);
             writeLongBE(state, off + ENTITY_VEL_OFFSET, VEL_ELSE_SET);
-            // FUN_13A98 binary semantica: il loop interno è
             //   while (limit <= D0): D0 -= limit
-            // mentre `rngNext` upstream usa `<` invece di `<=`. Per limit=2
-            // questo diverge quando state.w & 0x3 == 0x2 (bin: 0, TS: 2).
-            // Applico `% limit` per allineare al binario.
+            // Upstream `rngNext` uses `<` instead of `<=`. For limit=2,
             const rngRaw = rngNext(state.rng, as_u16(RNG_LIMIT)) as unknown as number;
             const rngVal = rngRaw % RNG_LIMIT;
             const newTimerVal = (rngVal + TIMER_ELSE_OFFSET) & 0xff;
@@ -678,16 +622,14 @@ export function stateSub19BAA(
     // tst.b (0x1A,A2) ; bne → ai_block
     if (readByte(state, off + ENTITY_SUBSTATE_OFFSET) === 0) {
       rec.enteredMovement = true;
-      // D4 = entity[0x10..0x13] (saved Y) — qui D4 è il register, NON il
-      // d4Flag dello scan-block. Sono separati nella semantica m68k ma
-      // condividono il register fisico; in TS uso variabili distinte.
+      // d4Flag from the scan block. The M68k code shares the physical register,
+      // but the TS port keeps separate variables for readability.
       const savedY = readLongBE(state, off + ENTITY_POS_Y_OFFSET);
       const vel = readLongBE(state, off + ENTITY_VEL_OFFSET);
       // entity[0x10] += entity[0x4] (32-bit wrap).
       const newY = (savedY + vel) >>> 0;
       writeLongBE(state, off + ENTITY_POS_Y_OFFSET, newY);
 
-      // jsr FUN_1BB08(entityAddr). Default REAL = sub1BB08 (bit-perfect).
       if (subs?.fun_1bb08 !== undefined) {
         subs.fun_1bb08(state, entityAddr);
       } else {

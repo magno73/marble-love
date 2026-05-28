@@ -2,19 +2,12 @@
 /**
  * test-sound-cmd-gate-parity.ts — differential FUN_4420 vs soundCmdGate.
  *
- * `FUN_00004420` è il sound command gate validator: prende `(cmdIndex, data)`
- * sullo stack, azzera `data` se `cmdIndex < 0x0B` (unsigned), poi delega a
  * `FUN_00004442`.
  *
  * Strategia di parity test:
- *   - Per ogni caso settiamo `cmdIndex` (arg1) e `data` (arg2) sullo stack
- *     prima della jsr, poi confrontiamo i 2 valori che il binario passa allo
- *     stack-frame di `FUN_00004442` quando vi entra.
- *   - Cattura: settiamo PC = 0x4420, eseguiamo finché PC == 0x4442 (entry
- *     point del dispatcher), poi leggiamo i 2 long sullo stack `(0x4,SP)` e
- *     `(0x8,SP)` (stack visto dal callee con ret addr in (0,SP)).
- *   - Confrontiamo (cmdIndexSeen, dataSeen) con il valore TS via stub inner
- *     che cattura gli stessi parametri.
+ *     point), then read the 2 longs on the stack `(0x4,SP)` and
+ *     `(0x8,SP)` (stack as seen by the callee with ret addr at (0,SP)).
+ *     that captures the same parameters.
  *
  * Uso: npx tsx packages/cli/src/test-sound-cmd-gate-parity.ts [N]
  */
@@ -54,15 +47,10 @@ function captureEnter4442Args(
 ): Captured {
   const sys = cpu.system;
 
-  // Stack iniziale: SP = 0x401F00. Push args RTL: data first (arg2), then
-  // cmdIdx (arg1). FUN_4420 vede (0x8,SP)=cmdIdx (perché c'è anche move.l
-  // D2,-(SP) prima → +4 e ret_addr +4 = 8 byte di offset).
   const sp0 = 0x401f00;
   let sp = sp0;
-  // Push arg2 (data) — sarà a (0xC, SP) dopo prologo (4 push D2 + 4 ret + 4 arg1)
   sp = (sp - 4) >>> 0;
   sys.write(sp, 4, data >>> 0);
-  // Push arg1 (cmdIdx) — sarà a (0x8, SP) dopo prologo
   sp = (sp - 4) >>> 0;
   sys.write(sp, 4, cmdIdx >>> 0);
   // Push sentinel return address
@@ -72,8 +60,6 @@ function captureEnter4442Args(
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_4420);
 
-  // Step instruction-by-instruction finché PC == 0x4442 (entrato nel dispatcher).
-  // Limite generoso (la gate è 8 istruzioni → < 30 step richiesti).
   let reached = false;
   for (let i = 0; i < 200; i++) {
     if (sys.getRegisters().pc === FUN_4442) {
@@ -88,7 +74,6 @@ function captureEnter4442Args(
     return { cmdIdx: -1, data: -1 };
   }
 
-  // FUN_4442 entry: stack è [ret_addr_to_4420_post_jsr, arg1, arg2, ...]
   // (4,SP)=arg1, (8,SP)=arg2.
   const spNow = sys.getRegisters().sp;
   const seenCmdIdx = peekMem(cpu, spNow + 4, 4) >>> 0;
@@ -138,7 +123,7 @@ async function main(): Promise<void> {
     } else if (i === 4) {
       cmdIdx = 0xffffffff >>> 0; data = 0x42;  // huge unsigned, no clear
     } else if (i < 30) {
-      // Sweep di cmdIdx ∈ [0, 0x14] (copre il bordo 0x0B con margine)
+      // Sweep cmdIdx in [0, 0x14] (covers the 0x0B edge with margin).
       cmdIdx = (i - 5) & 0x1f;
       data = Math.floor(rng() * 0x100000000) >>> 0;
     } else {
@@ -150,10 +135,10 @@ async function main(): Promise<void> {
       data = Math.floor(rng() * 0x100000000) >>> 0;
     }
 
-    // Run binary: cattura args che 4442 riceve
+    // Run binary: capture args received by 4442.
     const bin = captureEnter4442Args(cpu, cmdIdx, data);
 
-    // Run TS: cattura args che l'inner riceve
+    // Run TS: capture args received by inner.
     let tsCmd = -1;
     let tsData = -1;
     gateNs.soundCmdGate(cmdIdx, data, (cidx: number, d: number) => {

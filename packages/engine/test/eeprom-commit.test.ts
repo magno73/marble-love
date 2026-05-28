@@ -1,10 +1,10 @@
 /**
  * eeprom-commit.test.ts — smoke tests di `eepromCommit` (FUN_3F78).
  *
- * Verifica i tre rami principali (early exit, drain con zero iter, drain con
- * iter > 0 + clamp) e l'invariante "nel path early-exit la workRam non cambia".
+ * Verify the three main branches (early exit, drain with zero iters, drain with
+ * iter > 0 + clamp) and the invariant "in the early-exit path workRam does not change".
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-eeprom-commit-parity.ts` vs l'oracle Musashi.
  */
 
@@ -16,7 +16,7 @@ const PTR_OFF = 0x1ffc;
 const FF5_OFF = 0x1ff5;
 const FF7_OFF = 0x1ff7;
 
-/** Helper: scrive un long big-endian in workRam. */
+/** Helper: writes a big-endian long into workRam. */
 function writeLongBE(ram: Uint8Array, off: number, val: number): void {
   ram[off] = (val >>> 24) & 0xff;
   ram[off + 1] = (val >>> 16) & 0xff;
@@ -24,7 +24,7 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
   ram[off + 3] = val & 0xff;
 }
 
-/** Helper: setta status byte + complement byte alla struct A2 puntata. */
+/** Helper: sets status byte + complement byte on the struct pointed to by A2. */
 function setStatus(ram: Uint8Array, ptrOff: number, status: number): void {
   ram[ptrOff + 0xa] = status & 0xff;
   ram[ptrOff + 0xb] = ~status & 0xff;
@@ -41,7 +41,7 @@ describe("eepromCommit (FUN_3F78)", () => {
 
     const r = eepromCommit(s);
     expect(r).toBe(0x18);
-    // Path early-exit: nessun touch.
+    // Early-exit path: no touch.
     expect(s.workRam[FF5_OFF]).toBe(0x42);
     expect(s.workRam[FF7_OFF]).toBe(0x77);
   });

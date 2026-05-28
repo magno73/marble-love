@@ -1,17 +1,10 @@
 /**
- * wrap.ts — aritmetica bit-perfect per emulare il bus 16/32-bit del 68010.
  *
  * Branded types: u8, u16, u32, i8, i16, i32 (alias di number, ma incompatibili
- * tra loro per impedire mix accidentale). Tutti gli helper qui ritornano
- * sempre il branded type giusto e non producono mai NaN/Infinity.
  *
  * Regole:
- *  - Mai usare `+`, `-`, `*`, `/`, `>>`, `<<`, `>>>`, `&`, `|`, `^` direttamente
- *    su questi valori. La ESLint rule `marble-love/no-raw-arith-on-branded`
  *    fallisce in `packages/engine/src`.
- *  - Usa `Math.imul` per moltiplicazioni 32-bit (è 32×32→32 con wrap nativo).
  *  - Per >>= preferisci `u32_shr` (zero-fill) o `i32_sar` (arithmetic).
- *  - Tutti i valori "raw" letti da memoria devono essere passati attraverso
  *    `as_u8/as_u16/as_u32` per essere brandizzati.
  */
 
@@ -44,7 +37,6 @@ export const as_i16 = (n: number): i16 => {
 };
 export const as_i32 = (n: number): i32 => (n | 0) as i32;
 
-/** Estrai il valore numerico raw (senza brand) per logging/diff. */
 export const raw = (n: u8 | u16 | u32 | i8 | i16 | i32): number => n as unknown as number;
 
 // ─── u8 ───────────────────────────────────────────────────────────────────
@@ -71,7 +63,6 @@ export const u16_shl = (a: u16, n: number): u16 => as_u16((a as number) << n);
 export const u16_shr = (a: u16, n: number): u16 => as_u16((a as number) >>> n);
 export const u16_not = (a: u16): u16 => as_u16(~(a as number));
 
-/** Rotazione a sinistra a 16 bit (utile per RNG e math 68010). */
 export const u16_rotl = (a: u16, n: number): u16 => {
   const v = a as number;
   const k = n & 15;
@@ -87,7 +78,6 @@ export const u16_rotr = (a: u16, n: number): u16 => {
 
 export const u32_add = (a: u32, b: u32): u32 => as_u32((a as number) + (b as number));
 export const u32_sub = (a: u32, b: u32): u32 => as_u32((a as number) - (b as number));
-/** Math.imul è 32×32→32 con wrap. */
 export const u32_mul = (a: u32, b: u32): u32 => as_u32(Math.imul(a as number, b as number));
 export const u32_and = (a: u32, b: u32): u32 => as_u32((a as number) & (b as number));
 export const u32_or = (a: u32, b: u32): u32 => as_u32((a as number) | (b as number));
@@ -121,7 +111,6 @@ export const i32_sub = (a: i32, b: i32): i32 => as_i32((a as number) - (b as num
 export const i32_mul = (a: i32, b: i32): i32 => as_i32(Math.imul(a as number, b as number));
 export const i32_sar = (a: i32, n: number): i32 => as_i32((a as number) >> n);
 
-// ─── Conversioni di larghezza ─────────────────────────────────────────────
 
 export const u8_to_u16 = (a: u8): u16 => as_u16(a as number);
 export const u16_to_u32 = (a: u16): u32 => as_u32(a as number);
@@ -148,7 +137,7 @@ export const sext_16_32 = (a: u16): i32 => as_i32(((a as number) << 16) >> 16);
 
 // ─── Flag helpers (CCR del 68010) ─────────────────────────────────────────
 
-/** Maschera "unsigned" per N bit. Per 32 ritorna 0xFFFFFFFF come number positivo
+/**
  *  (JS bitwise tornerebbe -1, inutile per confronti unsigned). */
 const umask = (bits: 8 | 16 | 32): number =>
   bits === 32 ? 0xffffffff : (1 << bits) - 1;
@@ -158,8 +147,6 @@ const uval = (n: number, bits: 8 | 16 | 32): number =>
 
 /** Carry per add a N bit. */
 export const carry_add = (a: number, b: number, bits: 8 | 16 | 32): boolean => {
-  // Confronto in dominio "double" perché 0xFFFFFFFF + 1 = 2^32 è esattamente
-  // rappresentabile in float64 (≤ 2^53), nessuna perdita.
   return uval(a, bits) + uval(b, bits) > umask(bits);
 };
 /** Borrow per sub a N bit. */
@@ -171,6 +158,6 @@ export const overflow_add = (a: number, b: number, bits: 8 | 16 | 32): boolean =
   const sign = 1 << (bits - 1);
   const ua = uval(a, bits);
   const ub = uval(b, bits);
-  const r = (ua + ub) & umask(bits) | 0; // bitwise OK: dopo mask siamo ≤ 32 bit
+  const r = (ua + ub) & umask(bits) | 0;
   return ((ua ^ r) & (ub ^ r) & sign) !== 0;
 };

@@ -3,15 +3,10 @@
  *
  * Replica `FUN_00026D8A` (PF scroll setup, sub conditional di FUN_28788).
  *
- * Funzione chiamata se:
  *   *0x400008 != 0 AND *0x40000A >= 2 AND *0x400014 == 1
  *
  * Side effect:
- *   - aggiorna *0x400002 (latched scroll Y) con +=delta
- *   - aggiorna fino a 60 word in spriteRam @ 0xA02000+/0xA02200+ (tile scroll
- *     bits 5..13 di ogni word, in funzione del rotation flag in *0x4003AE)
  *
- * MMIO 0x820000 write skipped (responsabilità del renderer).
  */
 
 import type { GameState } from "./state.js";
@@ -43,7 +38,6 @@ function sext16(w: number): number {
 /**
  * Replica `FUN_00026D8A` — playfield horizontal scroll update.
  *
- * Va chiamato solo quando il caller (FUN_28788) ha verificato che
  * *0x400008 != 0 AND *0x40000A >= 2 AND *0x400014 == 1.
  */
 export function pfScrollUpdate(state: GameState): void {

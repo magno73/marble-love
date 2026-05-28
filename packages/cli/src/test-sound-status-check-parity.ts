@@ -2,15 +2,9 @@
 /**
  * test-sound-status-check-parity.ts — differential FUN_4C3E vs soundStatusCheck.
  *
- * `FUN_00004C3E` è il sound command sender chiamato da FUN_4CA0 con
- * D0 (long), A0 (ptr), A1 (== A0). Ritorna 0 (retry) o 1 (ok). Side effects
- * sulla work RAM `(0x14, A1)` byte e `(0x16, A1)` long quando ok.
  *
- * Setup per ogni caso random:
- *   - A0 = A1 = puntatore in work RAM (default 0x00401F44, ma variamo offset
- *     per coprire diversi slot)
+ *     to cover several slots)
  *   - 0xF60001 = 0x00 oppure 0x80 (modella bit 7 sound pending)
- *   - workRam[A0+0x16..0x19] = random long (slot già occupato o 0)
  *   - D0 = random long
  *
  * Uso: npx tsx packages/cli/src/test-sound-status-check-parity.ts [N]
@@ -74,9 +68,7 @@ async function main(): Promise<void> {
     // SP reset (callFunction usa lo stack per pushare il sentinel return).
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Mix dei pattern per coprire ogni branch:
-    //   pattern 0 : pending=0, slot vuoto → ok path
-    //   pattern 1 : pending=1, slot vuoto → fail (pending)
+    // Mix patterns to cover every branch:
     //   pattern 2 : pending=0, slot occupato → fail (slot)
     //   pattern 3 : pending=1, slot occupato → fail (entrambi)
     //   pattern >=4: full random
@@ -85,27 +77,23 @@ async function main(): Promise<void> {
     const slotOccupied = pattern === 2 || pattern === 3 ? true : pattern === 0 || pattern === 1 ? false : rng() < 0.5;
     const initialOwner = slotOccupied ? (Math.floor(rng() * 0xfffffffe) + 1) >>> 0 : 0;
 
-    // Pointer A0/A1: usiamo 0x401F44 per la maggior parte, altrove offset
-    // alternativi (multipli di 4 in [0x401E00..0x401F80]) per testare invarianza.
+    // Pointer A0/A1: use 0x401F44 for most cases, otherwise alternative
+    // offsets (multiples of 4 in [0x401E00..0x401F80]) to test invariance.
     const ptrChoices = [0x00401f44, 0x00401e00, 0x00401f80, 0x00401e80, 0x00401f08];
     const ptrChoiceIdx = Math.floor(rng() * ptrChoices.length);
     const a0 = ptrChoices[ptrChoiceIdx]!;
 
     const d0 = Math.floor(rng() * 0x100000000) >>> 0;
 
-    // Setup MMIO: 0xF60001 byte (bit 7 = sound pending). pokeMem nella unified
-    // memory di Musashi, e nessuna copia su state (TS riceve `pending` come arg).
+    // MMIO setup: 0xF60001 byte (bit 7 = sound pending). pokeMem in unified
     pokeMem(cpu, 0xf60001, 1, pending & 0xff);
 
-    // Setup work RAM: pulisce tutti i campi rilevanti per il pointer scelto +
-    // imposta lo slot iniziale.
     const offBase = a0 - 0x400000;
-    // Reset tutta la zona di interesse per non contaminare il caso precedente
     for (let k = 0; k < 8; k++) {
       pokeMem(cpu, a0 + 0x14 + k, 1, 0);
       state.workRam[offBase + 0x14 + k] = 0;
     }
-    // Pre-fill type byte con un sentinel (0xAA) per verificare che il path
+    // Pre-fill type byte with a sentinel (0xAA) to verify that the path
     // "fail" NON lo modifichi
     const sentinelType = 0xaa;
     pokeMem(cpu, a0 + 0x14, 1, sentinelType);
@@ -117,7 +105,7 @@ async function main(): Promise<void> {
     state.workRam[offBase + 0x18] = (initialOwner >>> 8) & 0xff;
     state.workRam[offBase + 0x19] = initialOwner & 0xff;
 
-    // Setup registers: D0=long, A0=ptr, A1=ptr (caller setta A1=A0)
+    // Set up registers: D0=long, A0=ptr, A1=ptr; caller sets A1=A0.
     cpu.system.setRegister("d0", d0);
     cpu.system.setRegister("a0", a0 >>> 0);
     cpu.system.setRegister("a1", a0 >>> 0);

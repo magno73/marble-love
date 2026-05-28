@@ -1,10 +1,10 @@
 /**
- * finalize-11654.ts — replica `FUN_00011654` (92 byte, 0 args, 0 ret).
+ * Bit-perfect port of `FUN_00011654`.
  *
- * "Finalize / attract-sequence renderer": legge il mode word @ `0x400392` e
- * il counter @ `0x4003EA`, poi renderizza fino a tre string-chain entry via
- * `textRender100` (trampoline 0x100 → FUN_2A24 → FUN_2572) intervallate da
- * `waitVblankStateGated` (trampoline 0x28DB8), e scrive `0x4003EE`.
+ * Finalize/attract-sequence renderer. It reads the mode word at `0x400392`
+ * and the counter at `0x4003EA`, renders one or more string-chain entries via
+ * the text trampolines, optionally waits between them, and writes `0x4003EE`
+ * to mark which attract text path was emitted.
  *
  * **Disasm 0x11654..0x117B1** (92 byte, no args, no return value):
  *
@@ -65,9 +65,9 @@
  *   000117AC  movem.l (SP)+,{D2 A2 A3 A4}
  *   000117B0  rts
  *
- * **Subs iniettabili** (per parity test):
- *   - `renderString0142` (0x142 → FUN_2572): 2 arg (textPtr, tileBase)
- *   - `textRender100` (0x100 → FUN_2A24 → FUN_2572): 3 arg (textPtr, tileBase, flags)
+ * Injectable subs used by parity tests:
+ *   - `renderString0142` (0x142 -> FUN_2572): 2 args (textPtr, tileBase)
+ *   - `textRender100` (0x100 -> FUN_2A24 -> FUN_2572): 3 args (textPtr, tileBase, flags)
  *   - `waitVblankStateGated` (0x28DB8): 1 arg (frames)
  */
 
@@ -112,16 +112,11 @@ export interface Finalize11654Subs {
 }
 
 /**
- * Replica `FUN_00011654` — attract-sequence string renderer / finalizer.
+ * Port of `FUN_00011654`, the attract-sequence string renderer/finalizer.
  *
- * Legge `workRam[0x400392]` (mode) e `workRam[0x4003EA]` (counter), poi:
- *  - Se mode == 2: palette selector D2 = 0x2000 (skip first string), else D2 = 0.
- *  - Se mode != 2: chiama renderString0142(0x22A26, 0x1800).
- *  - Sempre: chiama renderString0142(0x22A32, 0x3000 - D2).
- *  - Se mode == 3: ritorno anticipato.
- *  - Se counter == 0xFFFF o counter >= 24: renderizza 3 stringhe "attract A" e scrive 0x4003EE = 2.
- *  - Se 12 <= counter <= 23: renderizza 3 stringhe "attract B" e scrive 0x4003EE = 1.
- *  - Altrimenti: nessuna azione aggiuntiva.
+ * The two main branches match the ROM counter windows: `0xffff` or `>= 24`
+ * renders attract path A and writes 2; `12..23` renders attract path B and
+ * writes 1. Mode 3 returns after the common header strings.
  */
 export function finalize11654(
   state: GameState,

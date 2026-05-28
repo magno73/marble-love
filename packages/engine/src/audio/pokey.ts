@@ -1,20 +1,20 @@
 /**
  * pokey.ts — Atari POKEY (custom co-processor), Phase 6 register-state parity.
  *
- * Scope V2 (vedi plan):
- *   - Register file 16 byte read + 16 byte write (address space distinto per
- *     read/write, mirror MAME pokey.cpp).
+ * Scope V2:
+ *   - 16-byte read register file and 16-byte write register file, matching
+ *     MAME's distinct read/write address spaces.
  *   - Decoder write a $00-$0F (AUDF1/AUDC1..AUDF4/AUDC4, AUDCTL, IRQEN, SKCTL).
- *   - Reg shadow esposto per oracle diff (Phase 8).
- *   - **NON** implementato V2: 4-tone channel waveform, LFSR poly 4/5/9/17 bit,
- *     pot scan, serial I/O, KBCODE, IRQ generation. V3 sample-level audio.
+ *   - Register shadow exposed for oracle diffs.
+ *   - V2 did not model waveform generation, pot scan, serial I/O, keyboard
+ *     scan, or IRQ generation; later passes added sample-level audio.
  *
  * Hardware ref (MAME pokey.cpp + Atari Hardware Manual):
- *   - 4 tone channels indipendenti
+ *   - 4 independent tone channels
  *   - 17-bit poly LFSR (noise source) + 9-bit + 5-bit + 4-bit poly
  *   - Clock 1.789773 MHz (Atari System 1 sound CPU clock)
- *   - 8 paddle pot inputs (marble: probabilmente non usati)
- *   - Serial I/O + keyboard scan (marble: non usati)
+ *   - 8 paddle pot inputs, not expected to be used by Marble Madness
+ *   - Serial I/O and keyboard scan, also not expected to be used here
  *
  * Register map WRITE ($1870-$187F):
  *   $00 AUDF1   Frequency channel 1 (low byte)
@@ -42,17 +42,18 @@
  *   $0D IRQST   IRQ status (stub V2: 0xFF = no IRQ pending, active-low)
  *   $0F SKSTAT  Serial status (stub V2: 0xFF)
  *
- * Marble usage (da V1 mailbox tracing `docs/sound-system.md`): POKEY genera
- * il "rumble" della biglia durante il rotolamento (4 tone channel + noise
- * LFSR mod). Sample-level fedele richiede poly accurato (V3).
+ * Marble usage from mailbox tracing: POKEY supplies the marble rolling rumble,
+ * using four tone channels plus noise LFSR modulation.
  */
 
 import type { u8 } from "../wrap.js";
 import { as_u8 } from "../wrap.js";
 
-/** POKEY clock as exposed by MAME `marble -listxml`.
- * Default sample output rate: clock / 28 = ~63920 Hz (28-cycle base divider).
- * Resamplato a output context rate via renderer. */
+/**
+ * POKEY clock as exposed by MAME `marble -listxml`.
+ *
+ * Default native sample output is clock / 28, resampled later by the renderer.
+ */
 export const POKEY_CLOCK_HZ = 1_789_772;
 export const POKEY_NATIVE_SAMPLE_RATE = POKEY_CLOCK_HZ / 28;
 const POKEY_CYCLES_PER_SAMPLE = 28;
@@ -120,19 +121,19 @@ export interface PokeyWriteSnapshot {
 }
 
 export interface POKEY {
-  /** 16-byte WRITE register shadow. Esposto per oracle diff. */
+  /** 16-byte write-register shadow, exposed for oracle diffs. */
   readonly writeRegs: Uint8Array;
-  /** 4 tone channels indipendenti. */
+  /** Four independent tone channels. */
   readonly channels: PokeyChannel[];
-  /** 17-bit LFSR (default poly). MAME seed canonico verificato. */
+  /** 17-bit LFSR, the default polynomial source. */
   poly17: number;
   /** 9-bit LFSR. */
   poly9: number;
-  /** 5-bit LFSR (filtra le altre poly). */
+  /** 5-bit LFSR used to gate other polynomial sources. */
   poly5: number;
   /** 4-bit LFSR (high-tones). */
   poly4: number;
-  /** Cycle accumulator (cycle 6502 → POKEY base clock). */
+  /** Cycle accumulator from 6502 cycles to POKEY base clocks. */
   cycleAccumulator: number;
   /** Accumulator used to average high-clock output into the /28 native stream. */
   sampleAccumulator: number;
@@ -162,7 +163,7 @@ export interface POKEY {
   clockCnt28: number;
   /** CLK_114 prescaler counter. */
   clockCnt114: number;
-  /** Sample buffer (mono Float32, drainabile). */
+  /** Drainable mono Float32 sample buffer. */
   sampleBuffer: number[];
 }
 
@@ -310,11 +311,13 @@ function processChannel(pk: POKEY, ch: number): void {
   }
 }
 
-/** Sample output mono. AUDCTL routing (Phase A5):
- *   bit 4 (0x10): CH1+CH2 join → 16-bit period counter (CH2 audf << 8 | CH1 audf)
+/**
+ * Mono sample output. AUDCTL routing:
+ *   bit 4 (0x10): CH1+CH2 join -> 16-bit period counter (CH2 audf << 8 | CH1 audf)
  *   bit 3 (0x08): CH3+CH4 join
- *   bit 7 (0x80): poly9 noise mode (invece di poly17)
- *   bit 6/5 (0x40/0x20): clock 1.79MHz per CH1/CH3 (vs 64KHz default) — TODO scale period
+ *   bit 7 (0x80): poly9 noise mode instead of poly17
+ *   bit 6/5 (0x40/0x20): 1.79MHz clock for CH1/CH3 vs the default 64KHz
+ *     clock. Period scaling still belongs to the next accuracy pass.
  */
 function computeRawSum(pk: POKEY): number {
   let sum = 0;
@@ -493,7 +496,7 @@ function accumulateOutputSample(pk: POKEY): void {
   }
 }
 
-/** Avanza POKEY per N cycle 6502, produce sample @ POKEY_NATIVE_SAMPLE_RATE. */
+/** Advance POKEY by N 6502 cycles and produce native-rate samples. */
 export function pokeyTickCycles(pk: POKEY, cycles6502: number): void {
   for (let i = 0; i < cycles6502; i++) {
     const effectiveCycle = pk.elapsedCycles + 1;
@@ -585,7 +588,7 @@ export function pokeyDrainDiagnosticChannelSamples(pk: POKEY): number[][] | unde
   return out;
 }
 
-/** Write a $1870..$187F: stora il byte nel reg corrispondente. */
+/** Write to `$1870..$187F`: store the byte in the corresponding write register. */
 export function pokeyWrite(pk: POKEY, addr: u8, data: u8): void {
   const idx = (addr as number) & 0x0f;
   const prev = pk.writeRegs[idx] ?? 0;
@@ -632,8 +635,10 @@ export function pokeyWrite(pk: POKEY, addr: u8, data: u8): void {
   }
 }
 
-/** Read da $1870..$187F: dispatch sui READ register (address space distinto).
- * Phase 6 stub: pot/keyboard/serial = sentinel, RANDOM = 0. */
+/**
+ * Read from `$1870..$187F`: dispatch through the distinct POKEY read-register
+ * address space. Pot, keyboard, and serial inputs return sentinel values.
+ */
 export function pokeyRead(_pk: POKEY, addr: u8): u8 {
   const idx = (addr as number) & 0x0f;
   switch (idx) {
@@ -650,7 +655,7 @@ export function pokeyRead(_pk: POKEY, addr: u8): u8 {
   }
 }
 
-/** Hard reset: pulisce write reg file + poly + channel state. */
+/** Hard reset the write register file, polynomial state, and channels. */
 export function pokeyReset(pk: POKEY): void {
   pk.writeRegs.fill(0);
   pk.poly17 = 0;

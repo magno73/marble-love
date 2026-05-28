@@ -1,16 +1,11 @@
 /**
- * helper-25e7c.ts — replica `FUN_00025E7C` (51 istr, 0x25E7C–0x25FC0).
+ * helper-25e7c.ts - `FUN_00025E7C` replica (51 instructions, 0x25E7C-0x25FC0).
  *
- * **Semantica**: "velocity friction / damping" — applica un fattore di
- * attrito a due componenti di velocità memorizzati come long signed in
- * work RAM, usando una tabella ROM a 16 entry per interpolare il fattore
- * in funzione della magnitudine risultante.
+ * **Semantics**: "velocity friction / damping" — applies a factor of
  *
  * **Calling convention M68k** (RTL, 2 arg long):
- *   - `SP+4`  → `objPtr` → A0 (puntatore a struct con due long: vx @ +0, vy @ +4)
- *   - `SP+8`  → `mode`   → D1b (solo il byte basso conta)
  *
- * **Disasm 0x25E7C..0x25FC0** (51 istruzioni):
+ * **Disasm 0x25E7C..0x25FC0** (51 instructions):
  *
  *   00025e7c  movem.l {D5 D4 D3 D2},-(SP)
  *   00025e80  movea.l (0x14,SP),A0       ; A0 = objPtr
@@ -123,7 +118,7 @@
  *   00025f80  lsl.l   #6,D0              ; D0 <<= 6
  *   00025f82  move.l  D0,D2
  *   00025f84  move.l  D3,D0; lsr.l #8,D0 ; D0 = D3 >> 8
- *   00025f88  divu.w  D0w,D2             ; D2 = D2 / D0w (unsigned), quotient → D2.w
+ *   00025f88  divu.w  D0w,D2             ; D2 = D2 / D0w (unsigned), quotient -> D2.w
  *   00025f8a  move.w  D2w,D5w            ; D5 = ratio_primary
  *   ; for mode 3 only: also compute ratio_secondary from D4
  *   00025f8c  cmpi.b  #3,D1b; bne.b 0x25fa2
@@ -141,51 +136,42 @@
  *   00025fbc  movem.l (SP)+,{D2 D3 D4 D5}
  *   00025fc0  rts
  *
- * **Tabella ROM** (`FRICTION_TABLE @ 0x1eef8`, 16 word, BE):
  *   [0]=0x0200, [1]=0x0400, [2]=0x0700, [3]=0x0C00,
  *   [4]=0x1000, [5]=0x2000, [6]=0x3000, [7]=0x4000,
  *   [8..15]=0x5000
  *
- * **Argomenti** (2 long sullo stack, cdecl-like):
- *   - `objPtr` → indirizzo assoluto workRam di una struct con:
  *       - `+0`: vx (long signed, fixed-point)
  *       - `+4`: vy (long signed, fixed-point)
- *   - `mode`   → byte 0..4 (solo il nibble basso conta praticamente):
  *       - 0,1: default: scale_primary = max(0, D3 - friction)
  *       - 2: scale_primary = max(0, D3 - friction*4); secondary=same
  *       - 3: scale_primary = max(0, D3 - friction*5); secondary = max(0, D3 - friction)
  *       - 4: scale_primary = D3 + friction/4; secondary=same
  *
- * **Side effects** (workRam — indirizzi assoluti):
- *   - `*(objPtr+0).l` ← `((vx >> 8).w * ratio_primary.w) >> 6`
- *   - `*(objPtr+4).l` ← `((vy >> 8).w * ratio_secondary.w) >> 6`
+ * **Side effects** (absolute workRam addresses):
+ *   - `*(objPtr+0).l` <- `((vx >> 8).w * ratio_primary.w) >> 6`
+ *   - `*(objPtr+4).l` <- `((vy >> 8).w * ratio_secondary.w) >> 6`
  *
- * **Callers** (2 reali + entry-point esterno = 3 refs totali):
+ * **Callers** (2 real call sites + external entry point = 3 total refs):
  *   - `FUN_000121B8` @ 0x000127F6  (object physics-update)
  *   - `FUN_00015148` @ 0x00015282  (object-state machine)
  *
- * Parity bit-perfect verificata in
  * `packages/cli/src/test-helper-25e7c-parity.ts` (500/500 vs Musashi).
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Costanti pubbliche ───────────────────────────────────────────────────────
+// Public constants.
 
-/** Indirizzo ROM di `FUN_00025E7C`. */
 export const HELPER_25E7C_ADDR = 0x00025e7c as const;
 
-/** Indirizzo ROM della tabella di attrito (`FRICTION_TABLE`). */
 export const FRICTION_TABLE_ADDR = 0x0001eef8 as const;
 
-// ─── Costanti interne ─────────────────────────────────────────────────────────
+// Internal constants.
 
 const WORK_RAM_BASE = 0x00400000 as const;
 const WORK_RAM_END = 0x00402000 as const;
 
 /**
- * Tabella di attrito (16 word, harcodata in ROM @ 0x1eef8).
- * Valori in formato 16-bit unsigned; rappresentano frazioni di scala.
  */
 const FRICTION_TABLE: readonly number[] = [
   0x0200, // [0]  0.0078
@@ -208,7 +194,6 @@ const FRICTION_TABLE: readonly number[] = [
 
 // ─── Helpers interni ──────────────────────────────────────────────────────────
 
-/** Legge long unsigned big-endian da workRam a indirizzo assoluto. */
 function readU32(wr: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 3 >= WORK_RAM_END) return 0;
@@ -222,7 +207,6 @@ function readU32(wr: Uint8Array, addrAbs: number): number {
   );
 }
 
-/** Scrive long unsigned big-endian in workRam a indirizzo assoluto. */
 function writeU32(wr: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 3 >= WORK_RAM_END) return;
@@ -285,30 +269,16 @@ function divuW(dividend32: number, divisor16: number): number {
   return q & 0xffff;
 }
 
-// ─── Funzione principale ──────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00025E7C` — velocity friction/damping.
+ * Apply the `FUN_00025E7C` vector scaling/friction update.
  *
- * Applica un fattore di attrito (calcolato via tabella ROM) a due componenti
- * di velocità `vx = A0[+0]` e `vy = A0[+4]` memorizzati come long signed in
- * work RAM all'indirizzo assoluto `objPtr`.
- *
- * Il fattore di attrito è determinato dalla magnitudine approssimata della
- * velocità (blend pesato di |vx| e |vy|), interpolato linearmente nella
- * tabella `FRICTION_TABLE`. Il parametro `mode` seleziona la curva di
- * risposta applicata prima del calcolo del ratio finale.
- *
- * Vedi header del file per descrizione completa di disasm + semantica.
- *
- * @param state   GameState: `state.workRam` mutato in-place.
- * @param objPtr  Indirizzo assoluto M68k della struct velocità in work RAM.
- *                Campi: `+0` = vx (long signed), `+4` = vy (long signed).
- * @param mode    Modalità di damping (0..4; solo il byte basso conta):
- *                0/1/default → scale = max(0, mag - friction);
- *                2 → scale = max(0, mag - friction×4);
- *                3 → vx: max(0, mag - friction×5), vy: max(0, mag - friction);
- *                4 → scale = mag + friction÷4.
+ * @param state Game state mutated in-place through work RAM.
+ * @param mode Scaling mode:
+ *             0/1/default -> scale = max(0, mag - friction);
+ *             2 -> scale = max(0, mag - friction*4);
+ *             3 -> vx: max(0, mag - friction*5), vy: max(0, mag - friction);
+ *             4 -> scale = mag + friction/4.
  */
 export function helper25E7C(
   state: GameState,

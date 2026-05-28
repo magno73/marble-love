@@ -1,10 +1,10 @@
 /**
  * format-and-render-28eb2.test.ts — smoke per FUN_28EB2.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `cli/src/test-format-and-render-28eb2-parity.ts` (500/500).
  *
- * Smoke locali: verificano dispatch ordinato delle 3 sub, condizione del
+ * Local smoke tests verify ordered dispatch of the 3 subs, condition of the
  * trim path (arg2.w==2), e propagazione args sign-extended.
  */
 

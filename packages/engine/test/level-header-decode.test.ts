@@ -1,12 +1,12 @@
 /**
- * Unit test per `decodeLevelHeader` — verifica che la decode statica dei
+ * Unit test for `decodeLevelHeader` - verifies that static decoding of
  * campi noti corrisponda al layout documentato in
  * `docs/level-header-format.md`.
  *
  * Test sono ROM-free: costruiscono header sintetici byte-per-byte e
- * verificano che ogni campo sia letto al giusto offset, size, signedness.
+ * verify that every field is read at the right offset, size, and signedness.
  *
- * Il test cross-ROM (lettura dei 6 header reali) sta in `level.test.ts`
+ * The cross-ROM test that reads the 6 real headers lives in `level.test.ts`
  * sotto `describeWithRom`.
  */
 
@@ -18,8 +18,8 @@ import {
 } from "../src/level.js";
 
 function makeRawHeader(): Uint8Array {
-  // Header con byte-pattern distintivo a ogni offset, per verificare
-  // mapping offset->field senza ambiguita'.
+  // Header with a distinctive byte pattern at each offset, to verify
+  // offset->field mapping without ambiguity.
   const raw = new Uint8Array(LEVEL_HEADER_SIZE);
   // +0x00..0x03 = 0xDE 0xAD 0xBE 0xEF → directTerrainPtr = 0xDEADBEEF
   raw[0x00] = 0xde;

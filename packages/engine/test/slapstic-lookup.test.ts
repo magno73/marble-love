@@ -3,8 +3,8 @@
  *
  * Bit-perfect parity verificata vs binary in `test-slapstic-lookup-parity.ts`.
  *
- * Smoke tests con ROM sintetica (Uint8Array): scriviamo manualmente le word
- * BE attese a `0x80080 + idx` e verifichiamo che la funzione le ritorni.
+ * Smoke tests with synthetic ROM (Uint8Array): manually write the words
+ * expected BE values at `0x80080 + idx` and verify the function returns them.
  */
 
 import { describe, it, expect } from "vitest";
@@ -60,7 +60,7 @@ describe("slapsticLookup (FUN_2FFB8)", () => {
   it("arg=0x800: (arg<<5)&0xFFFF = 0 → wrap, idx=0, address=0x80080", () => {
     const rom = makeRom();
     writeBE16(rom, SLAPSTIC_LOOKUP_BASE, 0xa5a5);
-    // arg con bit 11 set: (0x800 << 5) = 0x10000 → low word = 0
+    // arg with bit 11 set: (0x800 << 5) = 0x10000 -> low word = 0.
     expect(slapsticLookup(rom, 0x800)).toBe(0xa5a5);
   });
 

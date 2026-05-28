@@ -1,24 +1,21 @@
 /**
- * state-sub-1b5c2.ts — replica `FUN_0001B5C2` (838 byte, 0x1B5C2-0x1B908).
+ * state-sub-1b5c2.ts - `FUN_0001B5C2` replica (838 bytes, 0x1B5C2-0x1B908).
  *
- * "Position-steering applicator": legge i delta X/Y calcolati dai globali
- * trackball/steering (`0x40069a-0x40069c` vs `0x400696-0x400698`), poi
- * applica `absLong` / `negateIfPositive` su D3 (coord X long) e D4 (coord Y
- * long) del struct A2 in base a 8 blocchi condizionali che testano:
+ * trackball/steering (`0x40069a-0x40069c` vs `0x400696-0x400698`), then
+ * applies `absLong` / `negateIfPositive` to D3 (coord X long) and D4 (coord Y
+ * long) of struct A2 based on 8 conditional blocks that test:
  *
  *   - flag cardinali @ `0x40066c/0x40066e/0x400670/0x400672` (byte)
  *   - gate word `0x400674/0x400676/0x400678/0x40067a`
  *   - gate word `0x40067c/0x40067e/0x400680/0x400682`
- *   - gate word `0x4006a0` (word diretto)
- *   - gate word `*d2Addr` (word indirizzato via registro D2, address arg)
- *   - bit 0..7 di `(A3)` (direction bitmap)
- *   - D5.w (delta X signed) e D6.w (delta Y signed)
+ *   - gate word `0x4006a0` (direct word)
+ *   - gate word `*d2Addr` (word addressed through D2 register, address arg)
+ *   - bit 0..7 of `(A3)` (direction bitmap)
+ *   - D5.w (signed delta X) and D6.w (signed delta Y)
  *
- * Se il valore di D3 (x) o D4 (y) è cambiato, scrive i nuovi valori nel
- * struct A2 + setta i flag changed `*0x400666` / `*0x400668`, e se almeno
- * uno dei due flag è settato chiama `FUN_000158AC(0x34)`.
+ * struct A2 and sets changed flags `*0x400666` / `*0x400668`; if at least
  *
- * **Prologue ricostruito** (0x1B5C2..0x1B5F5, ~52 byte):
+ * **Reconstructed prologue** (0x1B5C2..0x1B5F5, ~52 bytes):
  *   movem.l {D2-D6, A2-A4}, -(SP)
  *   movea.l ... A2           ; struct ptr (arg)
  *   movea.l ... A3           ; bitmap ptr (arg)
@@ -28,10 +25,6 @@
  *
  * **Xref**: unico caller `FUN_000121b8 @ 0x12338` (UNCONDITIONAL_CALL).
  *
- * **Sub calls** (tutte call ROM fisse, non iniettabili tranne sound):
- *   - `FUN_0001B5A6` (= absLong)          → già in `math-helpers.ts`
- *   - `FUN_0001B5B4` (= negateIfPositive) → già in `math-helpers.ts`
- *   - `FUN_000158AC(0x34)` (sound cmd)    → iniettabile (default no-op)
  *
  * **Disasm 0x1B5F6..0x1B908**:
  *
@@ -304,14 +297,9 @@ function sextB(b: number): number {
 // ─── Replica ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001B5C2` (838 byte).
  *
- * @param state   GameState — legge/scrive `state.workRam`
- * @param a2Addr  Indirizzo assoluto del struct (A2): campi @ +0 (x long),
  *                +4 (y long), +0xC (dest x long), +0x10 (dest y long)
- * @param a3Addr  Indirizzo assoluto del byte di direction bitmap (A3):
  *                `btst.b #N,(A3)` per N=0..7
- * @param d2Addr  Indirizzo assoluto del word usato nelle comparazioni via
  *                `exg D2,A0; cmp.w (A0),D0w` (tipicamente offset rotazione)
  * @param subs    Injection per `FUN_000158AC` (default no-op)
  */

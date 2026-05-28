@@ -1,35 +1,28 @@
 /**
- * state-sub-1881c.ts — replica `FUN_0001881C` (342 byte).
+ * state-sub-1881c.ts - port of `FUN_0001881C` (342 bytes).
  *
- * "Entity-vs-table proximity reactor". Riceve sullo stack un pointer ad una
- * struct entity (A2 = arg long). Itera la tabella di 36 entry × 16 byte @
- * `0x401650` (work RAM offset 0x1650) e — per ogni entry il cui slot è
- * "attivo" (`entry[0x2..0x3] == 0xFFFF` word) e i cui byte `entry[0x4]` /
- * `entry[0x5]` matchano i globals "current spawn pair"
- * `*0x400697 / *0x400699` — esegue uno dei due rami:
+ * "Entity-vs-table proximity reactor". Receives an entity pointer on the stack.
+ * When `entry[0x4]` and `entry[0x5]` match the "current spawn pair" globals
+ * `*0x400697 / *0x400699`, it executes one of two branches:
  *
- *   1. **Math/sound branch**: se `entry[0x4]/[0x5]/[0x6]` matchano anche
- *      `byte((long@0x400684)>>19)`, `byte((long@0x400688)>>19)` e la word
- *      `entity[0x14]`. Aggiorna `entity[0x8]=0x70000`,
- *      `entity[0x14]+=0xc0000`, attenua entity[0..3] e [4..7] con `(x>>1)±0x6000`
- *      via 2 estrazioni RNG(2), setta `entity[0x36]=2`, suona 0x45.
+ *   1. **Math/sound branch**: when `entry[0x4]/[0x5]/[0x6]` also match
+ *      `byte((long@0x400684)>>19)`, `byte((long@0x400688)>>19)`, and the word
+ *      at `entity[0x14]`, then `entity[0x14]+=0xc0000`, both entity long pairs
+ *      are damped with `(x>>1)+/-0x6000` via two RNG(2) draws, `entity[0x36]=2`,
+ *      and sound 0x45 is played.
  *
- *   2. **Reflect branch**: se la distanza word(`entity[0x14] - entry[0x6]`)
- *      < 12 (signed), nega entity[0..3] e entity[4..7].
+ *   2. **Reflect branch**: when signed word distance
+ *      `entity[0x14] - entry[0x6]` is less than 12, negate entity[0..3] and
+ *      entity[4..7].
  *
- * Inoltre **prima di ogni iterazione** che matcha i primi 3 campi, scrive
- * `entity[0xc]=*0x400684` e `entity[0x10]=*0x400688` (long).
+ * `entity[0xc]=*0x400684` and `entity[0x10]=*0x400688` (long).
  *
- * **Early-out**: se `(*0x400394).w != 3` AND `*0x400760 == 0` → ritorna 0
- * immediatamente. Se `(*0x400394).w == 3` OR (`(*0x400394).w == 3` AND
- * `*0x400760 != 0`) il loop si esegue. (La logica esatta del binario è
- * `if (gameMode != 3) goto check760; check760: if (byte760==0) goto exit0;
- * else fallthrough` — vedi disasm sotto.)
+ * Returns immediately unless mode 3 and the secondary gate are both active:
+ * `if (gameMode != 3) goto exit0; if (byte760==0) goto exit0;`.
  *
- * Restituisce 1 (sext.w / sext.l) se almeno un'entry ha matchato i primi 3
- * campi durante il loop, 0 altrimenti (incluso il caso early-out).
+ * Returns 1 (sext.w / sext.l) when at least one entry matched the first gates.
  *
- * **Disasm 0x1881C..0x18972** (342 byte):
+ * **Disasm 0x1881C..0x18972** (342 bytes):
  *
  *   movem.l {A4 A3 A2 D7 D6 D5 D4 D3 D2}, -(SP)
  *   movea.l (0x28,SP), A2                 ; A2 = entity ptr
@@ -66,10 +59,8 @@
  *   cmp.b   (0x5,A3), D7b                 ; entry[0x5] vs *0x400699 (D7 == A4)
  *   exg     D7, A4
  *   bne.w   next_entry
- *   ; ─── primi 3 match: scrivi entity[0xc/0x10] ─────────────────────
  *   move.l  (0x00400684).l, (0xc, A2)
  *   move.l  (0x00400688).l, (0x10, A2)
- *   ; ─── secondo livello check ───────────────────────────────────────
  *   cmp.b   (0x4,A3), D3b                 ; entry[0x4] vs byte((long@684)>>19)
  *   bne.w   reflect_block
  *   cmp.b   (0x5,A3), D2b
@@ -145,29 +136,21 @@
  *   movem.l (SP)+, {D2 D3 D4 D5 D6 D7 A2 A3 A4}
  *   rts
  *
- * **JSR esterne**:
- *   - `FUN_00013A98` (RNG): chiamata 0/1/2 volte per ogni entry che matcha i
- *     primi 3 campi E i secondi 3 campi → cioè 2 chiamate per entry
- *     "math/sound branch". 0 chiamate altrimenti. Replicata bit-perfect in
- *     `rng.ts`; lasciata live in parity.
- *   - `FUN_000158AC` (soundCommand): chiamata 1 volta per ogni entry che
- *     entra nel math/sound branch. Stubbabile via `subs.soundCommand`;
- *     argomento = 0x45 (long pushato via `pea (0x45).l`, FUN_158AC legge LSB).
+ * **External JSRs**:
+ *   - RNG uses `rng.ts` and stays live for parity.
  *
  * **Side effects** in workRam (entity @ argAddr):
- *   - `entity[0xc..0xf]`   ← `*0x400684` (per ogni primo-match)
- *   - `entity[0x10..0x13]` ← `*0x400688` (per ogni primo-match)
+ *   - `entity[0xc..0xf]`   <- `*0x400684` (for each first match)
+ *   - `entity[0x10..0x13]` <- `*0x400688` (for each first match)
  *   - math branch: `entity[0x8..0xb]=0x70000`, `entity[0x14..0x17]+=0xc0000`,
- *     `entity[0..3] = (entity[0..3] >> 1) ± 0x6000`,
- *     `entity[0x4..0x7] = (entity[0x4..0x7] >> 1) ± 0x6000`,
+ *     `entity[0..3] = (entity[0..3] >> 1) +/- 0x6000`,
+ *     `entity[0x4..0x7] = (entity[0x4..0x7] >> 1) +/- 0x6000`,
  *     `entity[0x36] = 2`.
  *   - reflect branch: `entity[0..3] = -entity[0..3]`,
  *     `entity[0x4..0x7] = -entity[0x4..0x7]`.
  *
- * **Caller noto** (1 xref): `FUN_000121b8 @ 0x123ee` (UNCONDITIONAL_CALL).
+ * **Known caller** (1 xref): `FUN_000121b8 @ 0x123ee` (UNCONDITIONAL_CALL).
  *
- * Verifica bit-perfect via
- * `packages/cli/src/test-state-sub-1881c-parity.ts` (500 casi).
  */
 
 import type { GameState } from "./state.js";
@@ -176,41 +159,33 @@ import { as_u16 } from "./wrap.js";
 
 // ─── Address constants (work RAM, base 0x400000) ─────────────────────────
 
-/** Word: game-mode discriminator. Loop entra solo se valore == 3. */
 export const GAME_MODE_OFFSET = 0x394 as const;
-/** Byte: "secondary gate" — se gameMode==3 e questo è zero, early-out. */
 export const SECONDARY_GATE_OFFSET = 0x760 as const;
-/** Byte: current spawn pair byte 1 (cmp con entry[0x4]). */
+/** Byte: current spawn pair byte 1 (compared with entry[0x4]). */
 export const SPAWN_BYTE0_OFFSET = 0x697 as const;
-/** Byte: current spawn pair byte 2 (cmp con entry[0x5]). */
+/** Byte: current spawn pair byte 2 (compared with entry[0x5]). */
 export const SPAWN_BYTE1_OFFSET = 0x699 as const;
-/** Long: world position X (?), letto e propagato a entity[0xc]. */
 export const WORLD_X_OFFSET = 0x684 as const;
-/** Long: world position Y (?), letto e propagato a entity[0x10]. */
 export const WORLD_Y_OFFSET = 0x688 as const;
-/** Base della tabella (36 × 16 byte = 0x240 byte). */
 export const TABLE_BASE_OFFSET = 0x1650 as const;
 
-/** Numero entries della tabella @ 0x401650. */
 export const TABLE_ENTRY_COUNT = 0x24 as const; // 36
-/** Stride (byte) di una entry. */
+/** Byte stride of one entry. */
 export const TABLE_ENTRY_STRIDE = 0x10 as const; // 16
 
 // ─── Entity offsets ──────────────────────────────────────────────────────
 
-/** Long: entity[0x0..0x3] — velocità/posizione X (32-bit signed). */
 export const ENTITY_LONG0_OFFSET = 0x00 as const;
-/** Long: entity[0x4..0x7] — velocità/posizione Y. */
 export const ENTITY_LONG1_OFFSET = 0x04 as const;
-/** Long: entity[0x8..0xb] — set a 0x70000 nel math branch. */
+/** Long: entity[0x8..0xb], set to 0x70000 in the math branch. */
 export const ENTITY_LONG2_OFFSET = 0x08 as const;
-/** Long: entity[0xc..0xf] — overwritten con `*0x400684`. */
+/** Long: entity[0xc..0xf], overwritten with `*0x400684`. */
 export const ENTITY_LONG3_OFFSET = 0x0c as const;
-/** Long: entity[0x10..0x13] — overwritten con `*0x400688`. */
+/** Long: entity[0x10..0x13], overwritten with `*0x400688`. */
 export const ENTITY_LONG4_OFFSET = 0x10 as const;
-/** Long: entity[0x14..0x17] — incrementato di 0xc0000 (read word in cmp). */
+/** Long: entity[0x14..0x17], incremented by 0xc0000 (read as word in compare). */
 export const ENTITY_LONG5_OFFSET = 0x14 as const;
-/** Byte: entity[0x36] — set a 2 nel math branch. */
+/** Byte: entity[0x36], set to 2 in the math branch. */
 export const ENTITY_FLAG36_OFFSET = 0x36 as const;
 
 // ─── Entry offsets (table @ 0x401650, stride 16) ─────────────────────────
@@ -226,68 +201,41 @@ export const ENTRY_KEY_WORD_OFFSET = 0x06 as const;
 
 // ─── Magic constants ─────────────────────────────────────────────────────
 
-/** Valore di gameMode che abilita il loop. */
 export const GAME_MODE_ACTIVE = 0x0003 as const;
-/** Valore "active" del flag entry[0x2..0x3]. */
 export const ACTIVE_SENTINEL = 0xffff as const;
-/** Shift signed applicato a long@684 e long@688 prima di byte-cast. */
 export const KEY_SHIFT = 0x13 as const; // 19 bit
-/** Valore costante scritto in entity[0x8] nel math branch. */
 export const MATH_LONG2_VALUE = 0x00070000 as const;
-/** Incremento applicato a entity[0x14..0x17] nel math branch. */
+/** Increment applied to entity[0x14..0x17] in the math branch. */
 export const MATH_LONG5_INCREMENT = 0x000c0000 as const;
-/** Magnitude di D1 (±0x6000) sommato a (entity[0..3]>>1) e (entity[4..7]>>1). */
+/** D1 magnitude (+/-0x6000) added to both damped entity long pairs. */
 export const MATH_DAMP_MAGNITUDE = 0x6000 as const;
-/** Limit RNG usato per scegliere il segno di D1. */
 export const MATH_RNG_LIMIT = 0x0002 as const;
-/** Valore byte scritto in entity[0x36]. */
 export const MATH_FLAG36_VALUE = 0x02 as const;
-/** Sound id pushato come `pea (0x45).l; jsr 0x158ac`. */
+/** Sound id pushed as `pea (0x45).l; jsr 0x158ac`. */
 export const MATH_SOUND_ID = 0x45 as const;
-/** Soglia signed per il reflect block (`entity[0x14] - entry[0x6] < 12`). */
+/** Signed threshold for the reflect block (`entity[0x14] - entry[0x6] < 12`). */
 export const REFLECT_DISTANCE_THRESHOLD = 0x0c as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
 
-/**
- * Stub injection. `FUN_158AC` (sound command sender) non è ancora replicata
- * bit-perfect; default no-op (matching del binario stubbato con RTS).
- * `FUN_13A98` (RNG) NON è iniettabile: è già replicata in `rng.ts`.
- */
 export interface StateSub1881CSubs {
-  /**
-   * `FUN_000158AC`: invia un sound command. Argomento = byte LSB del long
-   * pushato (sempre `MATH_SOUND_ID = 0x45`). Default no-op.
-   */
   soundCommand?: (cmd: number) => void;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────
 
-/** Quale dei due rami è stato eseguito per una specifica entry matched. */
 export type EntryBranch = "math" | "reflect_neg" | "reflect_skip";
 
 export interface EntryHit {
-  /** Indice della entry (0..35). */
+  /** Entry index (0..35). */
   index: number;
-  /** Branch eseguito dopo che i primi 3 campi hanno matchato. */
   branch: EntryBranch;
-  /** RNG(2) per il segno di D1 sul long0. `null` se branch != "math". */
   rngSignA: number | null;
-  /** RNG(2) per il segno di D1 sul long1. `null` se branch != "math". */
   rngSignB: number | null;
 }
 
 export interface StateSub1881CResult {
-  /** True se è stata presa la early-out (gameMode != 3 e/o byte760 == 0). */
   earlyOut: boolean;
-  /**
-   * D5 finale (sign-extended a long): 0 se nessuna entry ha matchato i
-   * primi 3 campi (o earlyOut), 1 altrimenti. Replica esatta del valore
-   * di ritorno del binario (D0 dopo `move.b D5b,D0b; ext.w D0w; ext.l D0`).
-   */
   result: number;
-  /** Lista delle entry matched (in ordine di scansione). */
   hits: EntryHit[];
 }
 
@@ -328,7 +276,7 @@ function sext16(u: number): number {
   return ((u & 0xffff) << 16) >> 16;
 }
 
-/** Wrapper RNG con normalizzazione `r mod limit`, identico a state-sub-1960e. */
+/** RNG wrapper with `r mod limit` normalization, same as state-sub-1960e. */
 function rng(state: GameState, limit: number): number {
   let r = rngNext(state.rng, as_u16(limit)) as unknown as number;
   if (limit > 0) {
@@ -337,30 +285,19 @@ function rng(state: GameState, limit: number): number {
   return r & 0xffff;
 }
 
-// ─── Replica ─────────────────────────────────────────────────────────────
+// ─── Port ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001881C`.
  *
- * @param state       GameState (legge globals @ 0x394/0x760/0x697/0x699/0x684/
- *                    0x688 e tabella @ 0x1650; modifica entity @ argAddr e
  *                    `state.rng.seed`).
- * @param entityAddr  indirizzo m68k della struct entity. Convertito a offset
- *                    workRam come `entityAddr - 0x400000`.
- * @param subs        injection (default no-op). `subs.soundCommand(0x45)`
- *                    chiamato 1 volta per ogni math/sound branch.
+ *                    work RAM as `entityAddr - 0x400000`.
+ * @param subs        Injection callbacks (default no-op). `subs.soundCommand(0x45)`
  *
- * @returns dettaglio dei match + valore di ritorno (= D0 finale del binario).
  *
- * **Ordine delle scritture** (rilevante per parity vs binario):
- *   1. Per ogni entry che matcha i primi 3 campi: scrive `entity[0xc]` e
- *      `entity[0x10]` PRIMA del secondo check.
- *   2. Math branch: writes nell'ordine del disasm (entity[0x8], entity[0x14] +=,
  *      RNG(2)#1, entity[0..3] update, RNG(2)#2, entity[4..7] update,
  *      entity[0x36], soundCommand).
- *   3. Reflect branch: solo se distanza word < 12 signed; nega entity[0..3]
- *      e poi entity[0x4..0x7].
- *   4. D5 sticky: una volta entrato nel "match path", D5=1 fino al ritorno.
+ *   3. Reflect branch: only if signed word distance is less than 12; negate
+ *      entity[0..3], then entity[0x4..0x7].
  */
 export function stateSub1881C(
   state: GameState,
@@ -375,11 +312,7 @@ export function stateSub1881C(
   //   tst.b (0x400760).l; bne enter_loop
   //  check760: moveq #0, D0; bra exit
   //
-  // bne con cmp.w D0=3 vs mem: branch if D0 != mem (nei flag ZX dopo cmp).
-  // Quindi se gameMode != 3 → check760. Se gameMode == 3 → tst byte760, se
-  // byte760 != 0 → enter_loop, altrimenti fallthrough a check760 → exit 0.
   //
-  // Risultato netto:
   //   enter loop iff (gameMode == 3 AND byte760 != 0).
   const gameMode = readWordBE(state, GAME_MODE_OFFSET);
   const byte760 = readByte(state, SECONDARY_GATE_OFFSET);
@@ -415,15 +348,12 @@ export function stateSub1881C(
     if (entryB0 !== d6) continue;
 
     // Third gate: entry[0x5] == d7 (= *0x400699)
-    // (binary fa exg D7,A4 ma A4 == D7 sempre, quindi nessun cambio.)
     const entryB1 = readByte(state, entryOff + ENTRY_KEY_BYTE1_OFFSET);
     if (entryB1 !== d7) continue;
 
-    // ─── Primi 3 match: scrivi entity[0xc] = long684, entity[0x10] = long688
     writeLongBE(state, off + ENTITY_LONG3_OFFSET, long684);
     writeLongBE(state, off + ENTITY_LONG4_OFFSET, long688);
 
-    // ─── Secondo livello check ──────────────────────────────────────
     let branch: EntryBranch;
     let rngSignA: number | null = null;
     let rngSignB: number | null = null;
@@ -443,25 +373,17 @@ export function stateSub1881C(
       const long5New = (long5Old + MATH_LONG5_INCREMENT) >>> 0;
       writeLongBE(state, off + ENTITY_LONG5_OFFSET, long5New);
 
-      // ── RNG(2) #1 ──────────────────────────────────────────────────
-      // ATTENZIONE: il binario fa `tst.l D0` post-JSR. Ma `FUN_13A98`
-      // preserva D0.high (`move.w` → solo .w; `and.w` → solo .w). All'entry
-      // della prima JSR, D0 è composto da:
-      //   - D0.high = 0xFFFF (set da `moveq -0x1, D0` al top del loop)
-      //   - D0.low  = entry[0x6].w (set da `move.w (0x6,A3),D0w` poco prima)
-      // Dopo JSR: D0 = (0xFFFF << 16) | rngResult. tst.l è SEMPRE non-zero
-      // (alta = 0xFFFF != 0). Quindi `beq` NON è mai presa → D1 = +0x6000.
+      // RNG(2) #1.
+      // Preserves D0.high (`move.w` -> only .w; `and.w` -> only .w). On entry:
+      //   - D0.high = 0xFFFF (set by `moveq -0x1, D0` at the top of the loop)
       rngSignA = rng(state, MATH_RNG_LIMIT);
-      // D0 effettivo per tst.l: (0xFFFF << 16) | rngSignA  → SEMPRE != 0
       const d0AfterRngA = ((0xffff << 16) | (rngSignA & 0xffff)) | 0;
       const d1a = d0AfterRngA === 0 ? -MATH_DAMP_MAGNITUDE : MATH_DAMP_MAGNITUDE;
 
       // entity[0..3] = (entity[0..3] >> 1 signed) + d1  (i32 wrap)
-      // Importante: il valore i32 di `(entity[0..3]>>1) + d1a` finisce in D0
-      // (via `add.l D1,D0; move.l D0,(A2)`) e questo è il D0 entrante alla
       // SECONDA JSR rng — la sua HIGH word determina il check `tst.l`.
       const long0 = readLongBE(state, off + ENTITY_LONG0_OFFSET);
-      const long0New = (((long0 | 0) >> 1) + d1a) | 0; // D0 dopo l'add
+      const long0New = (((long0 | 0) >> 1) + d1a) | 0;
       writeLongBE(state, off + ENTITY_LONG0_OFFSET, long0New >>> 0);
 
       // ── RNG(2) #2 ──────────────────────────────────────────────────

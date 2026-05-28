@@ -3,22 +3,11 @@
  * test-string-slot-match-1730c-parity.ts — differential FUN_1730C vs
  * stringSlotMatch1730C.
  *
- * `FUN_00017310` (alias FUN_1730C, 58 byte) è una sub di lookup pura: data
- * un argPtr, scansiona i 7 slot stringa @ 0x401482 (stride 0x42); ritorna
- * 1 al primo slot **attivo** (`byte+0x18 != 0`) il cui `long+0x30` matcha
  * `*(argPtr+0x2)` long. Else 0.
  *
  * Suite testate:
- *   - A: random tabella + random argPtr+2 (mix di hit/miss)
- *   - B: tutti slot inattivi (active=0) → return 0 indipendentemente dagli ID
- *   - C: tutti slot attivi con ID coordinato → match a posizione random
- *   - D: solo uno slot attivo a posizione random + ID matchante / non
  *
  * Strategia:
- *   - FUN_1730C non chiama JSR → nessun stub injection necessario
- *   - Patch difensivo all'inizio della funzione: NON serve (no JSR nel range).
- *   - Confronto: solo return value D0 (la funzione è puro lookup, no side
- *     effect su workRam). In più verifichiamo che workRam non sia mutata.
  *
  * Uso: npx tsx packages/cli/src/test-string-slot-match-1730c-parity.ts [N]
  */
@@ -49,9 +38,7 @@ const SLOT_ACTIVE_OFF = 0x18;
 const SLOT_ID_OFF = 0x30;
 const ARG_ID_OFF = 0x2;
 
-/** Patch JSR-stubs. FUN_1730C NON chiama JSR; placeholder per simmetria. */
 function patchSubs(_cpu: CpuSession): void {
-  // No JSR in FUN_1730C → niente da patchare.
 }
 
 function makeRng(seed: number): () => number {
@@ -67,10 +54,8 @@ const TABLE_SIZE = SLOT_COUNT * SLOT_STRIDE;
 
 /** Region argPtr buffer: ARG_ID_OFF + 4 = almeno 6 byte. Usiamo 0x10. */
 const ARG_BUF_SIZE = 0x10;
-/** Indirizzo del buffer argPtr. Lo mettiamo lontano dalla table per sicurezza. */
 const ARG_PTR = 0x401e00;
 
-/** Setup table @ 0x401482 e arg @ ARG_PTR su entrambi binario e TS state. */
 function setupTable(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -89,7 +74,6 @@ function setupTable(
   }
 }
 
-/** Verifica nessuna mutazione su table/arg dopo il run. */
 function compareNoMutation(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -171,7 +155,6 @@ async function main(): Promise<void> {
   const rng = makeRng(0x1730c);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  /** Costruisce una table random; ritorna [bytes, slotIds]. */
   function randTable(): number[] {
     return new Array(TABLE_SIZE).fill(0).map(() => rb());
   }
@@ -187,7 +170,7 @@ async function main(): Promise<void> {
   function setTableActive(table: number[], slotIdx: number, active: number): void {
     table[slotIdx * SLOT_STRIDE + SLOT_ACTIVE_OFF] = active & 0xff;
   }
-  /** Costruisce un argBuf con l'ID a offset 0x2 (big-endian). */
+  /** Build an argBuf with the ID at offset 0x2 (big-endian). */
   function randArg(id: number): number[] {
     const arr = new Array(ARG_BUF_SIZE).fill(0).map(() => rb());
     arr[ARG_ID_OFF] = (id >>> 24) & 0xff;
@@ -210,7 +193,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot inattivi → return 0 ─────────────────────────
   console.log(
     `\n=== Suite B: all slots inactive (active=0) → return 0 — ${perSuite} casi ===`,
   );
@@ -218,7 +200,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const table = randTable();
     for (let j = 0; j < SLOT_COUNT; j++) setTableActive(table, j, 0);
-    // Anche se l'ID matcha, deve restituire 0.
+    // Even if the ID matches, it must return 0.
     const argId = rl();
     for (let j = 0; j < SLOT_COUNT; j++) setTableId(table, j, argId);
     if (runOneCase("B", i, table, randArg(argId))) okB++;
@@ -226,7 +208,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: tutti slot attivi con ID coordinato (match a posizione k) ──
   console.log(
     `\n=== Suite C: all active, match at random slot — ${perSuite} casi ===`,
   );
@@ -239,10 +220,8 @@ async function main(): Promise<void> {
       if (active === 0) active = 1;
       setTableActive(table, j, active);
     }
-    // Match in slot k: il primo che matcha in iterazione 0..6 vince.
     const matchSlot = Math.floor(rng() * SLOT_COUNT);
     const argId = rl();
-    // Slot precedenti devono avere ID diverso da argId.
     for (let j = 0; j < SLOT_COUNT; j++) {
       if (j === matchSlot) {
         setTableId(table, j, argId);
@@ -257,7 +236,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: solo uno slot attivo a posizione random + ID match/no ──
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: only one active slot at random position — ${sizeD} casi ===`,
@@ -271,12 +249,11 @@ async function main(): Promise<void> {
     }
     const argId = rl();
     const shouldMatch = rng() < 0.5;
-    // Set slotIds: l'unico slot attivo ha ID matchante o no.
     for (let j = 0; j < SLOT_COUNT; j++) {
       if (j === activeSlot) {
         setTableId(table, j, shouldMatch ? argId : (argId ^ 0xa5a5a5a5) >>> 0);
       } else {
-        // Anche slot inattivi: lasciamo l'ID random (deve essere ignorato).
+        // Even inactive slots keep random ID; it must be ignored.
         setTableId(table, j, rl());
       }
     }

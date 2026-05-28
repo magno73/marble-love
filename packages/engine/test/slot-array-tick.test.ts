@@ -1,7 +1,5 @@
 /**
- * slot-array-tick.test.ts — smoke + corner case di FUN_1493C.
  *
- * Bit-perfect parity verificata vs binary in `test-slot-array-tick-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -28,7 +26,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
       0x004013c2, // slot 2
       0x00401422, // slot 3
     ]);
-    // Sanity: derivati dalle costanti
+    // Sanity: derived from constants.
     expect(SLOT_ARRAY_COUNT).toBe(4);
     expect(SLOT_ARRAY_STRIDE).toBe(0x60);
     expect(SLOT_ARRAY_BASE).toBe(0x00401302);
@@ -63,10 +61,6 @@ describe("slotArrayTick (FUN_1493C)", () => {
   });
 
   it("le mutazioni della callback ai workRam degli slot persistono fra chiamate", () => {
-    // Verifica il pattern d'uso reale: la callback può modificare workRam
-    // tramite il puntatore dello slot, e la chiamata successiva vede il nuovo
-    // stato. (Non ci sono read da parte di FUN_1493C stessa sui campi slot,
-    // quindi la replica non dovrebbe interferire con l'ordine delle write.)
     const s = emptyGameState();
     slotArrayTick(s, {
       fun_14966: (ptr, state) => {
@@ -79,7 +73,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
     expect(s.workRam[0x1362 + 0x18]).toBe(0xab);
     expect(s.workRam[0x13c2 + 0x18]).toBe(0xab);
     expect(s.workRam[0x1422 + 0x18]).toBe(0xab);
-    // Ma byte di altri offset non toccati
+    // Other offset bytes are untouched.
     expect(s.workRam[0x1302 + 0x00]).toBe(0);
     expect(s.workRam[0x1422 + 0x5f]).toBe(0);
   });

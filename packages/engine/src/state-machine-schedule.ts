@@ -1,12 +1,12 @@
 /**
- * state-machine-schedule.ts — `FUN_00002BDA` (134 byte) e `FUN_00002C60` (116 byte).
+ * state-machine-schedule.ts — `FUN_00002BDA` (134 bytes) and `FUN_00002C60` (116 bytes).
  *
- * Sub di FUN_2E18: schedule un nuovo job nel state machine slot array.
+ * FUN_2E18 sub: schedule a new job in the state-machine slot array.
  *
  * - **FUN_2BDA — `scheduleStateMachine3(dataPtr, word16, threshold)`**:
- *   trova primo slot con state==0 e lo riempie con state=3.
+ *   finds the first slot with state==0 and fills it with state=3.
  * - **FUN_2C60 — `scheduleStateMachine4(dataPtr, threshold)`**:
- *   come sopra ma state=4, no word16.
+ *   same as above but state=4, no word16.
  *
  * Returns: 1 = scheduled OK, 0 = no free slot.
  */

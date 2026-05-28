@@ -81,7 +81,7 @@ describe("stateSub2C60 (FUN_2C60)", () => {
     expect(out.claimed).toBe(0);
     expect(out.slot).toBe(-1);
 
-    // Tabella invariata
+    // Table unchanged.
     for (let i = 0; i < 4; i++) {
       expect(readLong(s, DATA_BASE + i * 4)).toBe(dataBefore[i]);
       expect(s.workRam[STATE_BASE + i]).toBe(i + 1);

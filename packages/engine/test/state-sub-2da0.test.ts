@@ -41,7 +41,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
 
     const ret = stateSub2DA0(s, rom, STRUCT_ADDR, 0);
     expect(ret).toBe(0);
-    // alphaRam invariata
+    // alphaRam unchanged.
     for (let i = 0; i < s.alphaRam.length; i++) {
       expect(s.alphaRam[i]).toBe(0xcc);
     }
@@ -109,11 +109,11 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     s.workRam[ROTATION_OFF] = 0;
     s.workRam[ROTATION_OFF + 1] = 0;
 
-    // arg2=0: legge string[0]=0x41 → return 4
+    // arg2=0: reads string[0]=0x41 -> return 4.
     expect(stateSub2DA0(s, rom, STRUCT_ADDR, 0)).toBe(4);
-    // arg2=1: legge string[1]=0x42 → return 4
+    // arg2=1: reads string[1]=0x42 -> return 4.
     expect(stateSub2DA0(s, rom, STRUCT_ADDR, 1)).toBe(4);
-    // arg2=2: legge string[2]=0 → return 0
+    // arg2=2: reads string[2]=0 -> return 0.
     expect(stateSub2DA0(s, rom, STRUCT_ADDR, 2)).toBe(0);
   });
 
@@ -133,7 +133,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     // D0 += 0 = -1
     // D0 *= 2 = -2
     // alpha_addr = 0xa03000 + (-2 wraps via >>> 0) → 0xa02ffe (NOT in alpha RAM)
-    // → clearAlphaWord no-op (out-of-bounds), alphaRam invariata
+    // -> clearAlphaWord no-op (out-of-bounds), alphaRam unchanged.
     const ret = stateSub2DA0(s, rom, STRUCT_ADDR, 0);
     expect(ret).toBe(4);
     for (let i = 0; i < 16; i++) {

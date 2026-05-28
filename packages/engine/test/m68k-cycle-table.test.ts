@@ -1,12 +1,10 @@
 /**
  * m68k-cycle-table.test.ts — smoke + snapshot della cycle table 68010.
  *
- * "Verifica intent" (CLAUDE.md Rule 9): la tabella esiste per replicare la
- * cadenza dinamica 30/60 Hz del main loop di Marble Madness. Se uno dei
- * costi cambia, MAME e TS divergeranno sul branch mailbox=1 → questi test
- * proteggono dalla regressione silenziosa.
+ * dynamic 30/60 Hz cadence of the Marble Madness main loop. If one of the
+ * costs change, MAME and TS diverge on the mailbox=1 branch -> these tests
+ * protect against silent regressions.
  *
- * I valori cardine vengono ricontrollati esplicitamente vs Musashi
  * @ 313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd (cfr. cycle-table.ts).
  */
 
@@ -33,7 +31,7 @@ import {
 import { raw } from "../src/wrap.js";
 
 describe("m68010 cycle table — constants", () => {
-  // Smoke: i tipi branded u32 sono ottenibili come number reali.
+  // Smoke: branded u32 types are obtainable as real numbers.
   it("CYC_NOP = 4 (Musashi nop row, col 010)", () => {
     expect(raw(CYC_NOP)).toBe(4);
   });
@@ -167,7 +165,6 @@ describe("estimateCycles — pattern singoli", () => {
 
 describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
   /**
-   * Disasm verificata in `src/object-update-pair-158cc.ts`:
    *
    *   movem.l  {D2 D3}, -(SP)           ; 8 + 3*2 = 14
    *   move.l   #0x004009A4, D3          ; moveDstBase[Dn].l + eaCycles[Imm].l = 4 + 8 = 12
@@ -181,18 +178,11 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
    *   addq.l   #0x4, SP                 ; addq An = 8
    *   addq.b   #0x1, D2                 ; addq.b Dn = 4
    *   cmpi.b   #0x2, D2                 ; cmpi Dn b: CYC_CMPI_D(8) + 0 + immFetch(b_w=4) = 12  ❗
-   *                                       (Musashi m68k_in.c L543: cmpi 8 d = 8, MA quello include già imm)
    *   bne.b    loop                     ; iter 1: taken=10, iter 2: notake=6
    *   movem.l  (SP)+, {D2 D3}           ; 12 + 0 + 6 = 18
    *   rts                               ; 16
    *
-   * **Importante** sul `cmpi`: Musashi nelle righe `cmpi N . d` (L543/547/551)
-   * NON aggiunge `eaCycles[Imm]` — il valore 8 è già il totale (cmpi.b d = 8
-   * cicli). La mia `estimateCycles` somma immFetch perché il path della tabella
-   * passa per `g_ea_cycle_table[Imm]`; questo significa che il valore TS sarà
-   * 12 mentre Musashi è 8 → **delta noto**, accettabile entro ±10%.
    *
-   * Verifico il totale con i miei valori e dichiaro il delta.
    */
   it("totale stimato in linea con calcolo manuale (esclusa la sub interna)", () => {
     const movemSave = estimateCycles({
@@ -288,8 +278,7 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
       raw(movemRestore) +
       raw(rts);
 
-    // Calcolo manuale con i valori Musashi diretti (eccetto cmpi che TS
-    // gonfia di +4 per ogni iter, totale +8):
+    // inflates by +4 for each iter, total +8):
     //   14 + 12 + 4 + (68+10) + (68+6) + 18 + 16 = 216
     // TS sovrastima il cmpi di 4 cicli per iter: +8 → 224.
     expect(total).toBe(224);

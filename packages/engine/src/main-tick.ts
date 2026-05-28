@@ -1,35 +1,32 @@
 /**
- * main-tick.ts — orchestrator del game tick principale.
+ * main-tick.ts - main game tick orchestrator.
  *
- * Replica la struttura di chiamata di `FUN_00028788` (= IRQ4 vblank handler
- * che il binario invoca ogni frame @ 60 Hz). Ordine identico al binario;
- * le sub-functions ancora non replicate sono stubbed come no-op (con flag
- * opzionali per iniettare callback in futuro).
+ * Mirrors the call structure of `FUN_00028788`, the IRQ4 vblank handler the ROM
+ * invokes every frame at 60 Hz. Unported sub-functions remain no-op or injectable
+ * callbacks until they have oracle-backed implementations.
  *
- * Sub chiamate dal binario (in ordine):
+ * Subs called by the binary (in order):
  *   1. paletteAnim1Tick (FUN_26BEE) ✅
  *   2. paletteAnim2Tick (FUN_26C78) ✅
  *   3. paletteAnim3Tick (FUN_26D4E) ✅
  *   4. paletteQueueDrain (FUN_26B88) ✅
- *   5. gameStateMachineTick (FUN_2E18 via thunk 0x148) ✅ tutti 10 subs wirati
- *   6. soundTick (FUN_4CA0 via thunk 0x15A) ✅ (FUN_4DCC chip ancora minimal-stub)
+ *   5. gameStateMachineTick (FUN_2E18 via thunk 0x148)
+ *   6. soundTick (FUN_4CA0 via thunk 0x15A)
  *   7. gameTickTimers (FUN_28A96) ✅
  *   8. trackballInputTick (FUN_1AC18) ✅
  *   9. gameMainGate (FUN_28972) ✅
  *   10. auxTimer (FUN_10146) ✅
  *   11. eepromCommit (FUN_3F78 via thunk 0x160) ✅
- *   12. soundCommand (FUN_158AC) — emessa dalle subs replicate via hook audio
+ *   12. soundCommand (FUN_158AC), emitted by replicated subs through audio hook
  *   13. specialAttract (FUN_288F8) ✅
- *   14. particleBounce (FUN_18DCA) ✅ (conditional su *0x4003E2)
- *   15. lateGameLogic (FUN_26F3E) — chiamata dopo mainLoopInit1101E quando
- *       runMainLoopBody=true. Pipeline sprite RAM emit (workRam obj → spriteRam
- *       MO entry per-frame). Replica struttura di mainLoop117B2LoopBody.
+ *   14. particleBounce (FUN_18DCA), conditional on *0x4003E2
+ *   15. lateGameLogic (FUN_26F3E), called after mainLoopInit1101E when
+ *       runMainLoopBody=true. It emits sprite RAM entries from work RAM objects.
  *
- * Più condizionale FUN_26D8A (PF scroll setup) all'inizio.
+ * Also includes the conditional FUN_26D8A playfield-scroll setup at the start.
  *
- * **Side effect**: aggiorna workRam, colorRam, alphaRam, spriteRam coerentemente
- * col binario. `render.buildFrame(state)` può poi consumare lo state per
- * produrre un Frame valido.
+ * Side effect: updates workRam, colorRam, alphaRam, and spriteRam in ROM order.
+ * `render.buildFrame(state)` can then consume the state.
  */
 
 import type { GameState } from "./state.js";
@@ -105,7 +102,7 @@ export interface MainTickInputs {
   /** Trackball delta player 2 Y (signed byte). */
   p2Y?: number;
   /**
-   * MMIO byte @ 0xF60001 letto da gameMainGate (default 0x6F = attract
+   * MMIO byte @ 0xF60001 read by gameMainGate (default 0x6F = attract
    * mode steady-state: DIP switches + coin status, no buttons pressed,
    * bit 6 set per skip Block C). Verificato vs MAME multi-frame dump
    * (frame 2400-2460 stabile a 0x6F).
@@ -124,16 +121,16 @@ export interface MainTickOptions extends MainTickInputs {
   gateCheck?: GameMainGateOptions["gateCheck"];
   /** gameMainGate controlCallback stub (= FUN_28D02). */
   controlCallback?: GameMainGateOptions["controlCallback"];
-  /** Skip frame counter increment (utile per test deterministici). */
+  /** Skip frame counter increment, useful for deterministic tests. */
   skipFrameCounter?: boolean;
-  /** Sub-functions stub di FUN_4CA0 sound dispatcher (FUN_3E1A, FUN_4DCC, FUN_4C3E). */
+  /** Sub-function stubs for the FUN_4CA0 sound dispatcher (FUN_3E1A, FUN_4DCC, FUN_4C3E). */
   soundSubs?: SoundTickSubs;
   /**
-   * Se true, dopo mainTick chiama anche `mainLoopInit1101E(state, rom)` per
-   * far avanzare il dispatcher state machine `*0x400390`. Nel binario questo
-   * gira sul main thread (FUN_117B2 loop), separato dall'IRQ4 vblank.
-   * Approssima il game-loop body run per gameplay simulation. Default OFF
-   * (preserva parity vs MAME oracle).
+   * If true, after mainTick also call `mainLoopInit1101E(state, rom)` to advance
+   * dispatcher state machine `*0x400390`. In the binary this runs on the main
+   * thread (FUN_117B2 loop), separate from IRQ4 vblank. It approximates the
+   * game-loop body run for gameplay simulation. Default OFF, preserving parity
+   * with the MAME oracle.
    */
   runMainLoopBody?: boolean;
 }
@@ -169,28 +166,29 @@ function renderTimerHud286EE(state: GameState, rom: RomImage, timerPtr: number, 
 }
 
 /**
- * Esegue un tick di gioco completo (= 1 frame @ 60 Hz).
+ * Runs one complete game tick (= 1 frame @ 60 Hz).
  *
- * Replica l'ordine di chiamata del binario `FUN_00028788`. Le funzioni
- * non ancora replicate sono no-op: i loro side effect (sound, eeprom)
- * non avvengono ma il game state core si aggiorna correttamente.
+ * Mirrors the call order in ROM routine `FUN_00028788`. Routines not yet
+ * replicated are no-ops: their side effects (sound, eeprom) do not run, but the
+ * core game state still advances correctly.
  *
- * Per renderer hookup: chiamare `mainTick(state, {rom})` ogni frame, poi
- * `buildFrame(state, options)` dal modulo `render.ts` per ottenere un Frame
- * consumabile dal renderer PixiJS.
+ * Renderer hookup: call `mainTick(state, {rom})` each frame, then
+ * `buildFrame(state, options)` from `render.ts` to obtain a Frame consumable by
+ * the PixiJS renderer.
  */
 export function mainTick(state: GameState, opts: MainTickOptions): void {
   const r = state.workRam;
   const rom = opts.rom;
 
-  // ─── Preambolo IRQ4 (replica FUN_00010116) ───────────────────────────────
-  // Nota: l'IRQ4 handler fa ADDQ.B #1 su 0x400016 (mailbox vblank) e 0x400014.
-  // Tuttavia entrambi vengono *sovrascritti* durante il body:
-  //   - 0x400016 azzerato da FUN_28DEA (vblankAck) ad ogni invocazione
-  //   - 0x400014 sovrascritto da subs a 0x17aa/0x1b82 (move.w 0x400010 → 0x400014)
-  // Il valore finale al frame_done MAME riflette quei sovrascrivimenti, non
-  // l'incremento IRQ. Replicare l'incremento qui produce drift cumulativo →
-  // skip e lascia che le sub corrette gestiscano i due offset.
+  // IRQ4 preamble (replica of FUN_00010116).
+  // The IRQ4 handler ADDQ.B #1 on 0x400016 (vblank mailbox) and 0x400014, but
+  // both are overwritten during the body:
+  //   - 0x400016 is cleared by FUN_28DEA (vblankAck) on every invocation.
+  //   - 0x400014 is overwritten by subs at 0x17aa/0x1b82
+  //     (move.w 0x400010 -> 0x400014).
+  // MAME's final frame_done value reflects those overwrites, not the IRQ
+  // increment. Replicating the increment here creates cumulative drift, so the
+  // correct subroutines own those offsets.
   if (!opts.skipFrameCounter) {
     state.clock.frame = ((state.clock.frame + 1) >>> 0) as typeof state.clock.frame;
   }
@@ -284,9 +282,9 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   };
   gameStateMachineTick(state, rom, stateMachineSubs);
 
-  // FUN_4CA0 (sound dispatcher wrapper, replicato).
-  // Sub FUN_3E1A e FUN_4C3E ora replicate bit-perfect; FUN_4DCC ancora STUB
-  // (richiede emulare YM2151). Default subs: chiama le replicate.
+  // FUN_4CA0 (sound dispatcher wrapper, replicated).
+  // Subs FUN_3E1A and FUN_4C3E are now bit-perfect replicas; FUN_4DCC remains
+  // stubbed (requires YM2151 emulation). Default subs call the replicas.
   const soundSubs: SoundTickSubs = opts.soundSubs ?? {
     fun_3e1a: (argLong) => soundDispatchSend(state, rom, argLong),
     fun_4c3e: (st, d0, a0) => soundStatusCheck(st, d0, a0),
@@ -306,7 +304,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     );
   }
 
-  // Default = 0xff (= MMIO trackball stable @ no-input in MAME) per evitare
+  // Default = 0xff (= stable no-input MMIO trackball in MAME) to avoid
   // delta spurious al primo tick: cur=0 vs prev=0xff produrrebbe delta=1
   // e scriverebbe 01 01 00 00 a obj1[+0xc6..0xc9] (= workRam[0x1c0..0x1c3]
   // per slot 7 / obj P2). Verificato vs MAME oracle frame 2401.
@@ -337,8 +335,8 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // FUN_3F78 (sound pacing pseudo-eeprom) — REPLICATO
   eepromCommit(state);
 
-  // FUN_158AC (sound cmd send) — non è una chiamata diretta qui: viene inviata
-  // dalle subs replicate cablate sotto via `soundCmdSend158AC`.
+  // FUN_158AC is not a direct call here; replicated subs emit it through
+  // `soundCmdSend158AC`.
 
   // FUN_288F8 (special attract / end-screen sound) — REPLICATO
   specialAttract(state, {
@@ -365,61 +363,30 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   // Optional: run main-loop body iter (FUN_117B2 main thread approximation).
   // Default OFF — opt-in for renderer demo / game flow advancement.
   //
-  // ─── Game-tick gating dinamico 30/60Hz ────────────────────────────────
-  // Il main thread (`FUN_117B2`, ROM 0x117B2..0x118CE) NON gira ogni vsync.
-  // Dopo `jsr 0x26f3e` (lateGameLogic, 0x118AA) il loop body fa:
+  // Dynamic 30/60Hz game-tick gating. The main thread (`FUN_117B2`, ROM
+  // 0x117B2..0x118CE) does not run every vsync. After lateGameLogic it does:
   //   0x118B0  tst.b *0x400016        ; vblank mailbox set by IRQ4
   //   0x118B8  bne  0x118C0
-  //   0x118BA  jsr  0x28DEA           ; spin-wait #1 (saltato se mailbox!=0)
+  //   0x118BA  jsr  0x28DEA           ; spin-wait #1 (skipped if mailbox!=0)
   //   0x118C0  move.b #1, *0x40039A
-  //   0x118C8  jsr  0x28DEA           ; spin-wait #2 (sempre)
+  //   0x118C8  jsr  0x28DEA           ; spin-wait #2 (always)
   //   0x118CE  bra  0x11804           ; loop top
   //
-  // Path 30Hz (body veloce, *0x400016 == 0 a fine body):
-  //   - entra in ENTRAMBE le `jsr 0x28DEA` → 2 vsync di wait → body ogni 2
-  //     vsync. Cadenza 30Hz.
-  // Path 60Hz (body lento, IRQ4 ha settato *0x400016 = 1 durante il body):
-  //   - skip prima `jsr 0x28DEA` → solo 1 vsync di wait → body extra dopo
-  //     1 vsync invece di 2 → cadenza 60Hz transitoria.
-  //
-  // Replica: per ogni tick (= 1 vsync simulato a 60Hz):
-  //   - `mainLoopBodyTicks` dispari → tick "wait", skip body, increment.
-  //   - `mainLoopBodyTicks` pari → tick "body candidate". Reset cpuTicks,
-  //     run body, accumula stime cicli sub. Se cpuTicks > CYCLES_PER_VBLANK:
-  //     setta mailbox (workRam[0x16]) = 1, e NON incrementa
-  //     mainLoopBodyTicks (resta pari → next tick è ancora body).
-  //     Altrimenti incrementa (next tick = wait).
-  //
-  // Phase warm-state f12000: body già eseguito a f12000, quindi f12001
-  // (= primo tick TS) = wait, f12002 = body, ecc. Inizializzazione
-  // mainLoopBodyTicks=0 → primo tick è "body" e poi alterna.
-  //
-  // **Nota cambio convenzione:** prima il gate era `mainLoopBodyTicks & 1 == 0`
-  // dopo l'increment (= run a 0, 2, 4...). Ora controlliamo PRIMA del run:
-  // even = body, odd = wait. Stessa sequenza di body run (ticks 0,2,4...
-  // diventano body), ma il counter è ora 0,1,2,3... lineare con il tick.
+  // Fast 30Hz path waits for two vsyncs; slow bodies whose cycle count crosses
+  // a vblank skip one wait and can run at a transient 60Hz cadence. The TS
+  // model simulates one vsync per tick and uses `mainLoopBodyTicks` plus the
+  // accumulated cycle estimate to decide whether the next tick is body or wait.
   const OFF_VBLANK_MAILBOX = 0x16;
   let mainLoopWaitSnapshot: boolean | undefined;
   if (opts.runMainLoopBody === true && !mainThreadBlockedAtTickStart) {
-    // Increment first (matches previous TS convention: warm-state assumed
-    // mainLoopBodyTicks=0 → first tick post-warm gets value 1 → ODD = wait,
-    // second tick gets 2 → EVEN = body candidate). Phase verificata vs
-    // MAME warm-state f12000: body già stato eseguito a f12000, quindi
-    // primo TS tick (= f12001) = WAIT, secondo (= f12002) = BODY.
-    //
-    // NOTA (Rule 12): tentativo di phase-flip a "tick 1 = BODY" basato su
-    // osservazione "rect bbox cambia tra MAME f+0 e f+1" e' stato rolled
-    // back. Dati: 50 body in 99 tick vs MAME 49 in 100 frame (= TS avanti
-    // di 1 step). Drift gameplay 215 → 270, obj0.x diverge a f+99.
-    // MAME aggiorna sub di tipi diversi in frame diversi (rect a dispari,
-    // obj0.x a pari) — non e' phase mismatch unico, e' artefatto di
-    // timing snapshot intra-frame.
+    // Increment first to match the warm-state convention: after MAME f12000 the
+    // first TS tick is WAIT and the second is BODY. A previous phase-flip
+    // experiment made TS advance one body step ahead of MAME and was reverted.
     state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks + 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
     const tickIsBody = (state.clock.mainLoopBodyTicks & 1) === 0;
     mainLoopWaitSnapshot = !tickIsBody;
     if (!tickIsBody) {
-      // tick "wait" (corrisponde a uno dei due spin-wait MAME).
-      // No-op: nessun body, mainLoopBodyTicks già incrementato sopra.
+      // WAIT tick: corresponds to one of MAME's spin-waits. No main body runs.
       r[0x3f0] = ((r[0x3f0] ?? 0) + 2) & 0xff;
       randomMod13A98(state, 0x100);
       const replayHandled = runWarmSlotArrayReplayTick(state, rom);
@@ -436,13 +403,12 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
         lateGameLogic26F3E(state, rom);
       }
     } else {
-      // tick "body candidate": replica della sequenza FUN_117B2.
-      // clr.b (mailbox) — IRQ4 simulato la setterà se cpuTicks > vblank.
+      // BODY candidate: mirror FUN_117B2 sequence.
       r[OFF_VBLANK_MAILBOX] = 0;
       resetCpuCycles(state);
 
       // Body run: mainLoopInit1101E (dispatcher) + lateGameLogic26F3E.
-      // Accumula overhead noti; il body delle sub è contato in refreshFrame10FCE.
+      // Accumulate known overhead; refreshFrame10FCE accounts for sub bodies.
       addCpuCycles(state, SUB_CYCLE_ESTIMATE["FUN_1101E_OVERHEAD"] ?? as_u32(40));
       if (mode0AsyncRefreshAtTickStart) {
         if (mode0AsyncLevelFractionAtTickStart) {
@@ -453,48 +419,40 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
       } else {
         mainLoopInit1101E(state, rom, MAIN_LOOP_SOUND_SUBS);
       }
-      // FUN_26F3E (lateGameLogic) — chain MAME canonical, post-body.
-      // Stima fast in attract (*0x3E2 == 0) vs full in gameplay.
+      // FUN_26F3E lateGameLogic, canonical post-body chain. Use the fast
+      // attract estimate when *0x3E2 == 0.
       const fun26F3EKey = (r[0x3e2] ?? 0) === 0 ? "FUN_26F3E_FAST" : "FUN_26F3E";
       addCpuCycles(state, SUB_CYCLE_ESTIMATE[fun26F3EKey] ?? as_u32(2200));
       lateGameLogic26F3E(state, rom);
 
-      // tst.b *0x400016: IRQ4 mailbox set durante body? Settata se cpuTicks
-      // ha sforato un vblank intero (body lento → IRQ4 firato durante body).
-      // In quel caso, MAME esegue un body extra (skip primo spin-wait).
-      // Per replicare: decrementiamo il counter così il prossimo tick
-      // sarà di nuovo "even" → body extra.
+      // If cycle count overruns a vblank, set the IRQ4 mailbox and force the
+      // next simulated tick back to BODY, matching MAME's skipped spin-wait.
       if (raw(state.clock.cpuTicks) > raw(CYCLES_PER_VBLANK)) {
         r[OFF_VBLANK_MAILBOX] = 1;
-        // Riporta il counter PRIMA dell'increment → prossimo tick: counter
-        // viene riportato a "even" (body) invece di "odd" (wait).
+        // Bring the counter back so the next tick is BODY instead of WAIT.
         state.clock.mainLoopBodyTicks = ((state.clock.mainLoopBodyTicks - 1) >>> 0) as typeof state.clock.mainLoopBodyTicks;
       }
     }
-    // NB: fun_FA0_marbleEmit (= surrogate empirico) RIMOSSO. Il marble si
-    // muoverà bit-perfect quando wirate le sub MAME mancanti (helper1BC88
-    // per slot_pair update, helper121B8 chain completa per spritePos /
-    // spriteRotate, camera projection FUN_FA0 reale). Senza quelle, il
-    // marble resta in posizione warm-state (= invisibilmente "fermo")
-    // ma niente sprite rotti che girano a caso.
+    // fun_FA0_marbleEmit remains disabled. The marble should move through the
+    // real MAME-backed helper chain, not through empirical sprite surrogates.
     void fun_FA0_marbleEmit;
   }
 
-  // ─── Main-thread vblank-counter snapshot ────────────────────────────────
-  // FUN_FA0 (entry-point main-thread loop) gira asincrono all'IRQ4. Ad ogni
-  // sync-vblank esegue:
-  //     btst.b #7, *0x400013     ; aspetta vblank
+  // Main-thread vblank-counter snapshot.
+  // FUN_FA0 (main-thread loop entry point) runs asynchronously to IRQ4. At each
+  // sync-vblank it executes:
+  //     btst.b #7, *0x400013     ; wait for vblank
   //     beq    skip
-  //     tst.w  (A3); bne loop    ; con timeout
-  //     move.w *0x400010, D0     ; legge HIGH-word del long counter @ 0x400010
+  //     tst.w  (A3); bne loop    ; with timeout
+  //     move.w *0x400010, D0     ; reads HIGH word of long counter @ 0x400010
   //     andi.w #0xff, D0
   //     move.w D0,    *0x400014  ; snapshot low-byte
-  // Sovrascrive l'increment-by-1 di IRQ4 (FUN_10116 @ 0x10126). Steady-state
-  // attract: `*0x400010` long < 0x10000 → high-word == 0 → *0x400014 = 0x00.
-  // Replica come stub minimo (= byte assignment a workRam[0x14]). Verificato
-  // vs MAME multi-frame dump (frame 2401..2460: workRam[0x14] alternates
-  // 0x00/0x01 in funzione di interleaving IRQ4↔main-thread).
-  // Riferimenti binario: writers @ 0x17aa, 0x1b82 (entrambi in FUN_FA0).
+  // This overwrites IRQ4's increment-by-1 (FUN_10116 @ 0x10126). In steady-state
+  // attract, `*0x400010` long < 0x10000, so high-word == 0 and *0x400014 = 0x00.
+  // Replicate it as a minimal stub (= byte assignment to workRam[0x14]).
+  // Verified against MAME multi-frame dumps: frames 2401..2460 alternate
+  // workRam[0x14] between 0x00/0x01 depending on IRQ4/main-thread interleaving.
+  // Binary references: writers @ 0x17aa, 0x1b82 (both in FUN_FA0).
   r[0x14] = mainLoopWaitSnapshot === true ? 1 : r[0x11] ?? 0;
   if (mainLoopWaitSnapshot !== undefined) {
     r[0x39a] = mainLoopWaitSnapshot ? 1 : 0;

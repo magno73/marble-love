@@ -10,7 +10,7 @@
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: piccolo, replicato
  *     bit-perfect in `rng.ts`.
- *   - `FUN_00019692` (heavy entity update) **stubbato con RTS** (0x4E75) per
+ *   - `FUN_00019692` (heavy entity update) **stubbed with RTS** (0x4E75) for
  *     neutralizzare side effects. Il TS usa `subs.fun_19692 = noop`.
  *   - Compare:
  *       * `entity[0x00..0x27]` (0x28 byte = 1 entity stride completa)
@@ -18,7 +18,7 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random state + random entity
- *   - B: state==7 forzato (branch jitter ±2)
+ *   - B: forced state==7 (branch jitter +/-2)
  *   - C: state==9 + entity[0..3]==0 (long0_zero + chance clear-block)
  *   - D: edge cases (state byte boundaries, counter sat 0xF, long0=0/!=0 mix)
  *
@@ -53,7 +53,7 @@ const ENTITY_SIZE = 0x28;
 /**
  * Patch JSR-stub:
  *   - FUN_19692 → RTS (0x4E75) per neutralizzare il heavy entity-update.
- *     FUN_13A98 (RNG) viene **lasciato live**.
+ *     FUN_13A98 (RNG) is left live.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_19692 + 0, 1, 0x4e);
@@ -151,7 +151,7 @@ async function main(): Promise<void> {
 
     sub1960ENs.stateSub1960E(stateInst, ENTITY_BASE, {
       fun_19692: () => {
-        // no-op (matching del binario stubbato con RTS)
+        // no-op matching the binary stubbed with RTS.
       },
     });
     const tsSnap = snapshotTs(stateInst);
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const entity = new Array(ENTITY_SIZE).fill(0).map(() => rb());
     entity[0x25] = 0x09;
-    // long0 == 0 in alcuni casi, != 0 in altri (50/50) per coprire entrambi
+    // long0 == 0 in some cases and != 0 in others (50/50) to cover both.
     if ((i & 1) === 0) {
       entity[0] = entity[1] = entity[2] = entity[3] = 0;
     } else {

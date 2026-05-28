@@ -1,29 +1,21 @@
 /**
- * timer-cascade.ts — gestione di timer cascading a 3 livelli.
  *
- * Replica `FUN_00028C38`. Struct timer di 5 byte:
+ * Replica `FUN_00028C38`. 5-byte timer struct:
  *   +0..1: outerCounter (u16 BE)
  *   +2:    mediumCounter (u8)
- *   +3:    (padding o altro field, non toccato)
+ *   +3:    (padding or another field, untouched)
  *   +4:    innerCounter (u8)
  *
- * Logica per chiamata:
- *   1. Se innerCounter == 0xFF (disabled): no-op, ritorna 0.
  *   2. innerCounter -= 1 (signed)
- *   3. Se innerCounter >= 0 SIGNED: ritorna 0 (no cascade).
  *   4. innerCounter = 5 (reset)
  *   5. mediumCounter -= 1 (signed)
- *   6. Se mediumCounter >= 0 SIGNED: ritorna bit 1 set (cascade triggered).
  *   7. mediumCounter = 9 (reset)
  *   8. outerCounter -= 1 (word, signed)
- *   9. Se outerCounter è ora -1 (= 0xFFFF, wrapped from 0): bit 0 set.
- *  10. Bit 1 sempre set (cascade was triggered).
  *
  * Return value flags:
  *   bit 0: outer word wrapped to 0xFFFF this call
  *   bit 1: timer expired (mediumCounter wrapped this call)
  *
- * **Verificato bit-perfect** vs `FUN_00028C38`.
  */
 
 import type { GameState } from "./state.js";
@@ -74,7 +66,6 @@ function writeMemoryU8(state: GameState, addr: number, v: number): void {
  * Replica `FUN_00028C38` — tick di un timer cascading.
  *
  * @param state    GameState
- * @param timerAddr Indirizzo assoluto della struct timer (5 byte)
  * @returns        Flags: bit 0 = outer wrapped, bit 1 = cascade triggered
  */
 export function tickCascadingTimer(state: GameState, timerAddr: number): number {
@@ -82,14 +73,13 @@ export function tickCascadingTimer(state: GameState, timerAddr: number): number 
   const mediumAddr = (timerAddr + TIMER_OFFSET_MEDIUM) >>> 0;
 
   const inner = readMemoryU8(state, innerAddr);
-  // Disabled: ritorna 0 (no cascade)
   if (inner === TIMER_DISABLED) return 0;
 
   // Decrement inner (byte)
   let newInner = (inner - 1) & 0xff;
   writeMemoryU8(state, innerAddr, newInner);
 
-  // tst.b inner; bge skip — skip se signed >= 0
+  // tst.b inner; bge skip — skip if signed >= 0
   if (sext8(newInner) >= 0) return 0;
 
   // Reset inner
@@ -100,8 +90,7 @@ export function tickCascadingTimer(state: GameState, timerAddr: number): number 
   medium = (medium - 1) & 0xff;
   writeMemoryU8(state, mediumAddr, medium);
 
-  // tst.b medium; bge.b end — skip se signed >= 0 (return D1=0).
-  // Bit 1 viene settato SOLO quando medium ha pure cascated (outer decremented).
+  // tst.b medium; bge.b end — skip if signed >= 0 (return D1=0).
   if (sext8(medium) >= 0) {
     return 0;
   }

@@ -93,7 +93,7 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
 
     dispatchTable1EEA0(s, 0x80, { fun_428e: rec.cb });
 
-    // D2.b: 0x80, 0x81, ..., 0xFF (128 valori), 0x00..0x09 (10 valori) = 138.
+    // D2.b: 0x80, 0x81, ..., 0xFF (128 values), 0x00..0x09 (10 values) = 138.
     expect(rec.calls).toHaveLength(138);
 
     // Iter 0: D2.b=0x80 → arg1 = signExt(0x80) = 0xFFFFFF80
@@ -103,10 +103,10 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
     const expectedBase = (TABLE_BASE + ((0xffffff80 << 3) >>> 0)) >>> 0;
     expect(rec.calls[0]!.arg2Long).toBe(expectedBase);
 
-    // Iter 128: D2.b dovrebbe essere 0x00 (dopo 0x80..0xFF wrap → 0x00)
+    // Iter 128: D2.b should be 0x00 (after 0x80..0xFF wrap -> 0x00).
     expect(rec.calls[128]!.arg1Long).toBe(0);
 
-    // Iter 137: D2.b = 0x09 (ultimo prima di 0x0A che ferma il loop)
+    // Iter 137: D2.b = 0x09 (last before 0x0A stops the loop).
     expect(rec.calls[137]!.arg1Long).toBe(9);
   });
 

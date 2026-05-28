@@ -1,11 +1,8 @@
 /**
  * Test sceneInit11428 (FUN_00011428) — smoke tests sull'orchestratore.
  *
- * `FUN_00011428` (42 byte) è puro orchestratore: 6 jsr in sequenza, zero
- * side-effect diretti. I test verificano che l'ordine di chiamata sia
- * preservato e che le default no-op non sollevino.
+ * is preserved and default no-ops do not throw.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-scene-init-11428-parity.ts` (500/500 cases).
  */
 
@@ -18,7 +15,6 @@ import {
 } from "../src/scene-init-11428.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Bag che traccia l'ordine di chiamata delle 6 subs. */
 function makeTrackedSubs(): { calls: string[]; subs: SceneInit11428Subs } {
   const calls: string[] = [];
   return {

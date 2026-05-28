@@ -3,36 +3,22 @@
  * test-render-glyph-loop-1e64-parity.ts — differential FUN_1E64 vs
  * `renderGlyphLoop1E64`.
  *
- * `FUN_00001E64` (70 byte) è un loop di rendering glifi: itera `count`
- * volte chiamando `FUN_32BA(bufPtr, charCode, 0)` per ogni iterazione e
  * avanzando `bufPtr` di 2 (`charCode ∈ [0x26, 0x2D]` signed) o 4
- * altrimenti. `charCode` viene incrementato di 1 ad ogni iterazione.
  *
  * **Strategia parity**: la replica TS NON modifica alphaRam (FUN_32BA
- * non è ancora replicata). Confronto invece la **sequenza di chiamate**
- * a FUN_32BA tra binario e TS:
  *
- *   - **Binario**: setto PC=0x1E64 con args sullo stack (cdecl-RTL),
  *     poi step instruction-by-instruction. Ad ogni visita di PC=0x32BA
- *     leggo dallo stack `(bufPtr, charCode_long, mask_long)` (i 3 long
- *     pushati da FUN_1E64 immediatamente prima del JSR), salvo come
+ *     read from the stack `(bufPtr, charCode_long, mask_long)` (the 3 longs
  *     `BinaryCall`, poi continuo lo step (FUN_32BA esegue normalmente,
- *     RTS torna a FUN_1E64 next instr). Stop quando PC=SENTINEL_RET.
  *
- *   - **Replica TS**: chiamo `renderGlyphLoop1E64` con un callback
- *     `renderGlyph` che append a un array. Confronto le due sequenze
+ *   - **TS replica**: call `renderGlyphLoop1E64` with a callback
  *     `(bufPtr, charCode_low_word)` 1:1.
  *
- * **Setup state**: alphaRam (`0xA03000..0xA03FFF`) viene scritta da
- * FUN_32BA. Pre-init a sentinel pattern; il binario la modifica ma noi
- * non confrontiamo alphaRam (è un side-effect di FUN_32BA, fuori scope).
  *
- * **Cap iterazioni**: `count ≤ 16` per garantire run veloce (ogni
- * FUN_32BA è ~30 step). 500 casi totali, ~25k step max → veloce.
  *
  * Suite testate (4 × 125 = 500):
  *   - A: count piccolo (1..4) random, charCode random low (0x00..0x80)
- *   - B: charCode che attraversa il boundary narrow [0x26, 0x2D]
+ *   - B: charCode that crosses the narrow boundary [0x26, 0x2D]
  *   - C: count medio (5..12), charCode wide-only (0x30..0x7F)
  *   - D: edge cases — count=0/1, charCode = boundary esatti
  *         (0x25/0x26/0x2D/0x2E), charCode signed-negative (0xFF80..0xFFFF)
@@ -84,19 +70,11 @@ function makeRng(seed: number): () => number {
 }
 
 /**
- * Esegue `FUN_1E64(bufPtr, charCode, count)` nel binario, capturando
- * la sequenza di chiamate a FUN_32BA via step-and-hook su PC=0x32BA.
  *
- * Stack layout iniziale: SENTINEL_RET, count_long, charCode_long,
- * bufPtr_long (top → bottom). Il prologo di FUN_1E64 fa
+ * bufPtr_long (top -> bottom). The FUN_1E64 prologue does
  * `movem.l {D4 D3 D2}, -(SP)` (12 byte), portando i 3 args a (0x10, 0x14, 0x18).
- * Il word read di charCode/count è da (0x16) e (0x1A) (low word del long).
  *
  * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 al momento dell'RTS
- *          finale (catturato all'ultima visita di PC = next-after-rts).
- *          Strategia: catturiamo D4 prima di ogni JSR (ultimo D4 prima
- *          dell'exit = endBufPtr) — ma qui ci interessa il valore POST-loop,
- *          che è bufPtr_iniziale + Σ stride. Lo derivo dalle calls + width.
  */
 function runBinary(
   cpu: CpuSession,
@@ -107,11 +85,9 @@ function runBinary(
 ): { calls: BinaryCall[]; reachedSentinel: boolean } {
   const sys = cpu.system;
 
-  // Reset SP a una zona sicura in workRam (non vicino a 0x401F00 sentinel
   // del 1E08 test ma simile). Allochiamo room per molti push.
   let sp = 0x401e80 >>> 0;
 
-  // Push args RTL: count, charCode, bufPtr. Tutti come long.
   sp = (sp - 4) >>> 0; sys.write(sp, 4, count >>> 0);
   sp = (sp - 4) >>> 0; sys.write(sp, 4, charCode >>> 0);
   sp = (sp - 4) >>> 0; sys.write(sp, 4, bufPtr >>> 0);
@@ -130,9 +106,6 @@ function runBinary(
       break;
     }
     if (pc === FUN_32BA) {
-      // Stack a questo punto: il JSR ha pushato il PC di ritorno
-      // (0x1e88) a -(SP). Sopra ci sono i 3 long pushati da FUN_1E64
-      // immediatamente prima:
       //   SP+0  = ret addr (0x1e88)
       //   SP+4  = bufPtr long (D4 al momento del push)
       //   SP+8  = charCode long (sext_l(D3.w))
@@ -143,8 +116,7 @@ function runBinary(
       const callMaskLong = sys.read(spNow + 12, 4) >>> 0;
       // charCode word = low 16 bits (= D3.w pre sign-extension).
       // sext_l(d3w) preserva la rappresentazione: per charCode ∈ [0, 0x7FFF]
-      // è uguale; per charCode ∈ [0x8000, 0xFFFF] callCharLong = 0xFFFFxxxx.
-      // Estraggo `& 0xFFFF` per ottenere la word originale.
+      // Extract `& 0xFFFF` to recover the original word.
       calls.push({
         bufPtr: callBufPtr,
         charCode: callCharLong & 0xffff,
@@ -169,8 +141,7 @@ async function main(): Promise<void> {
   }
   const rom = readFileSync(romPath);
 
-  // Stato GameState non strettamente usato (FUN_1E64 non tocca workRam),
-  // ma createCpu lo richiede. Usiamo emptyGameState.
+  // but createCpu requires it. Use emptyGameState.
   const stateNs = await import("@marble-love/engine");
   const stateInst = stateNs.state.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
@@ -185,7 +156,6 @@ async function main(): Promise<void> {
     charCode: number,
     count: number,
   ): boolean {
-    // Pre-init alpha RAM con sentinel (FUN_32BA scriverà sopra; non
     // confrontiamo alphaRam ma azzeriamo per non confondere repeated-runs).
     for (let j = 0; j < 0x1000; j++) {
       pokeMem(cpu, 0xa03000 + j, 1, 0x00);
@@ -273,8 +243,6 @@ async function main(): Promise<void> {
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    // bufPtr in alpha tilemap, allineato a 2 (ma il binario non richiede
-    // allineamento — D4 è solo additionato, mai dereferenced qui).
     const bufPtr = (0x00a03000 + (Math.floor(rng() * 0x700) & ~1)) >>> 0;
     const charCode = Math.floor(rng() * 0x80) & 0xffff;
     const count = 1 + Math.floor(rng() * 4);
@@ -285,7 +253,7 @@ async function main(): Promise<void> {
   );
   totalOk += okA;
 
-  // ─── Suite B: charCode che cross-a il narrow boundary ────────────────
+  // ─── Suite B: charCode crosses the narrow boundary ───────────────────
   console.log(
     `\n=== Suite B: charCode cross narrow boundary [0x26, 0x2D] — ${perSuite} casi ===`,
   );
@@ -309,7 +277,6 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bufPtr = (0x00a03000 + (Math.floor(rng() * 0x600) & ~1)) >>> 0;
-    // charCode in 0x30..0x7E (sicuramente wide, fuori da [0x26, 0x2D])
     const charCode = 0x30 + Math.floor(rng() * 0x4f);
     const count = 5 + Math.floor(rng() * 8); // 5..12
     if (runOneCase("C", i, bufPtr, charCode, count)) okC++;
@@ -345,7 +312,6 @@ async function main(): Promise<void> {
       charCode = (0xff80 + Math.floor(rng() * 0x80)) & 0xffff;
       count = 1;
     } else if (sub === 3) {
-      // charCode che wrap a 16-bit (start vicino a 0xFFFF)
       charCode = (0xfff0 + Math.floor(rng() * 0x10)) & 0xffff;
       count = 2 + Math.floor(rng() * 4);
     } else {

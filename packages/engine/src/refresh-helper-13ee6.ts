@@ -1,21 +1,10 @@
 /**
- * refresh-helper-13ee6.ts — replica `FUN_00013EE6` bit-perfect.
  *
- * **Semantica**: aggiornamento scroll orizzontale + decodifica tilemap per
- * il frame corrente. Unico chiamante: `FUN_10FCE` (refresh-frame handler).
+ * **Semantics**: horizontal scroll update + tilemap decode for
  *
- * La funzione:
- *   1. Chiama `FUN_1344C` (init scroll decode, stub).
- *   2. Se `*0x400006 == 0` salta al ramo finale (0x1411c).
- *   3. Chiama `levelHelper2FFB8(*0x400664)` (slapstic lookup).
- *   4. Calcola `scrollIdx = (((*0x40097c - sext(*ptr+0x10)) >> 3) & 0x7fff) - 1`.
- *   5. Se `*0x400004 == 1`: scrollIdx += 0x20.
- *   6. Decodifica bitstream e scrive buffer @ 0x400706.
- *   7. Eventuale blit del buffer in PF RAM.
- *   8. Ramo finale (0x1411c): loop slot → trova candidato scroll D3.
- *   9. Aggiorna velocità scroll, posizione, flag.
+ *   5. If `*0x400004 == 1`: scrollIdx += 0x20.
+ *   7. Optional buffer blit into PF RAM.
  *
- * **JSR non ancora replicati** (stubbati no-op):
  *   - `0x1344c` (`FUN_1344C`): init scroll decode.
  *   - `0x144e4` (`FUN_144E4`): scroll row transition.
  *
@@ -25,7 +14,6 @@
  *   0x40097c (target long).
  *
  * **Side effects** in playfieldRam:
- *   Fino a 0x24 word nella riga di scroll target (0xA00000-area).
  */
 
 import type { GameState } from "./state.js";
@@ -33,14 +21,13 @@ import type { RomImage } from "./bus.js";
 import { levelHelper2FFB8 } from "./level-helper-2ffb8.js";
 import { decodeBitstream1A668 } from "./decode-bitstream-1a668.js";
 
-// ─── Export principale ────────────────────────────────────────────────────────
+// Primary export.
 
-/** Indirizzo assoluto M68k di `FUN_00013EE6`. */
 export const REFRESH_HELPER_13EE6_ADDR = 0x00013ee6 as const;
 
-// ─── Costanti ROM ─────────────────────────────────────────────────────────────
+// ROM constants.
 
-/** Base della scroll-range table ROM @ 0x1F1CA. */
+/** Base of the scroll-range ROM table @ 0x1F1CA. */
 const ROM_RANGE_BASE = 0x1f1ca as const;
 // 0x1f1ca  step_small  (word, 0x0100)
 // 0x1f1cc  step_large  (word, 0x0200)
@@ -50,14 +37,14 @@ const ROM_RANGE_BASE = 0x1f1ca as const;
 // 0x1f1d4  delta_near  (word, 0x0010)
 // 0x1f1d6  delta_far   (word, 0x0030)
 
-/** Base-ptr del ctrl stream: D1 += 0x800e4. */
+/** Ctrl-stream base pointer: D1 += 0x800e4. */
 const CTRL_BASE = 0x800e4 as const;
-/** Base-ptr dell'extra-byte stream: D1 += 0x2be18. */
+/** Extra-byte-stream base pointer: D1 += 0x2be18. */
 const EXT_BASE = 0x2be18 as const;
-/** Numero di word nel decode output buffer. */
+/** Number of words in the decode output buffer. */
 const BUF_WORDS = 0x24 as const;
 
-// ─── Offsets workRam ─────────────────────────────────────────────────────────
+// WorkRam offsets.
 
 const OFF_XSCROLL  = 0x0000; // *0x400000 word   PF X scroll target
 const OFF_DIR      = 0x0004; // *0x400004 byte   direction: 1=fwd, -1=rev, 0=none
@@ -79,15 +66,14 @@ const OFF_DECNEXT  = 0x0978; // *0x400978 long   decode next ptr
 const OFF_HUDOFF   = 0x097e; // *0x40097e word   HUD offset
 const OFF_SRTGT    = 0x097c; // *0x40097c long   scroll row target
 
-// ─── Offsets header livello (puntato da *0x400474) ───────────────────────────
 
-const LV_OFF_XBASE  = 0x10; // word — base X scroll position
-const LV_OFF_XRANGE = 0x12; // word — X scroll range
-const LV_OFF_TILETB = 0x04; // long — tile word table ptr
-const LV_OFF_EXTTB  = 0x2a; // long — extra-byte table ptr
+const LV_OFF_XBASE  = 0x10; // word - base X scroll position
+const LV_OFF_XRANGE = 0x12; // word - X scroll range
+const LV_OFF_TILETB = 0x04; // long - tile word table ptr
+const LV_OFF_EXTTB  = 0x2a; // long - extra-byte table ptr
 // LV_OFF_SL28 / LV_OFF_SL26 accessed via SL_OFF_W28 / SL_OFF_W26 from slotPtr directly
 
-// ─── Stride slot e offset interni ────────────────────────────────────────────
+// Slot stride and internal offsets.
 
 const SLOT_STRIDE   = 0xe2;
 const SL_OFF_LONG8  = 0x08;
@@ -99,13 +85,12 @@ const SL_OFF_W26    = 0x26;
 const SL_OFF_W28    = 0x28;
 const SL_OFF_FLAG36 = 0x36;
 
-// ─── Basi memoria ────────────────────────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x400000 as const;
 const PF_RAM_BASE   = 0xa00000 as const;
 const PF_RAM_END    = 0xa02000 as const;
 
-// ─── BE I/O helpers ──────────────────────────────────────────────────────────
+// BE I/O helpers.
 
 function rb(a: Uint8Array, o: number): number { return (a[o] ?? 0) & 0xff; }
 function rw(a: Uint8Array, o: number): number {
@@ -131,21 +116,18 @@ function wl(a: Uint8Array, o: number, v: number): void {
 function sx16(v: number): number { return (v & 0x8000) ? (v | 0xffff0000) | 0 : v & 0xffff; }
 function sx8(v: number): number  { return (v & 0x80) ? (v | 0xffffff00) | 0 : v & 0xff; }
 
-/** Legge word BE da ROM program (o workRam se in range). */
 function readW(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
   if (a < 0x88000) return (((rom.program[a] ?? 0) << 8) | (rom.program[a + 1] ?? 0)) & 0xffff;
   if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + 0x2000) return rw(state.workRam, a - WORK_RAM_BASE);
   return 0;
 }
-/** Legge byte BE da ROM program (o workRam se in range). */
 function readB(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
   if (a < 0x88000) return (rom.program[a] ?? 0) & 0xff;
   if (a >= WORK_RAM_BASE && a < WORK_RAM_BASE + 0x2000) return rb(state.workRam, a - WORK_RAM_BASE);
   return 0;
 }
-/** Legge long BE da ROM program (o workRam se in range). */
 function readL(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
   if (a < 0x88000) {
@@ -158,42 +140,35 @@ function readL(state: GameState, rom: RomImage, abs: number): number {
   return 0;
 }
 
-/** Scrive word in playfieldRam (assoluto 0xA00000-0xA01FFF, con wrap). */
 function pfww(state: GameState, absAddr: number, v: number): void {
   const off = ((absAddr - PF_RAM_BASE) >>> 0) & (PF_RAM_END - PF_RAM_BASE - 1);
   ww(state.playfieldRam, off, v);
 }
 
-// ─── Interfaccia subs ─────────────────────────────────────────────────────────
+// Sub-call interface.
 
 /**
- * Subs iniettabili per dependency injection nei test.
- * I JSR non ancora replicati sono stub no-op per default.
  */
 export interface RefreshHelper13EE6Subs {
   /**
-   * `FUN_1344C` — init scroll decode.
-   * Stub default: no-op. Il test deve iniettare `*0x400974` / `*0x400978`
-   * direttamente prima della chiamata.
+   * `FUN_1344C` - init scroll decode.
+   * Default stub: no-op. Tests must inject `*0x400974` / `*0x400978`.
    */
   fun1344c?: (state: GameState, rom: RomImage) => void;
   /**
-   * `FUN_144E4` — scroll row transition.
-   * Riceve gli stessi 2 long che il binario spinge sullo stack:
-   *   arg1 = vecchio target (long), arg2 = nuovo target (long).
+   * `FUN_144E4` - scroll row transition.
    * Stub default: no-op.
    */
   fun144e4?: (state: GameState, rom: RomImage, oldTarget: number, newTarget: number) => void;
 }
 
-// ─── Implementazione ──────────────────────────────────────────────────────────
+// Implementation.
 
 /**
- * Replica bit-perfect di `FUN_00013EE6`.
  *
- * @param state  GameState (mutato in-place).
+ * @param state  GameState (mutated in place).
  * @param rom    ROM image.
- * @param subs   Override opzionali per JSR stub (default: no-op).
+ * @param subs   Optional overrides for JSR stubs (default: no-op).
  */
 export function refreshHelper13EE6(
   state: GameState,
@@ -266,9 +241,6 @@ export function refreshHelper13EE6(
   // 0x13f8a: A0 = 0x400706 (output buffer)
   // 0x13f90: push A1=extStream, D2=ctrlStream, A0=0x400706
   // 0x13f96: jsr decodeBitstream1A668
-  // D6 entry: MAME preserva D6 cross-sub via movem; valore da state.clock.decoderD6Init
-  // (tabella o brute-force per replay bit-perfect attract). Counter
-  // decoderCallCount incrementato per indicizzare future tabelle.
   const outBufAbs = (WORK_RAM_BASE + OFF_DECBUF) >>> 0;
   const d6Init = state.clock.decoderD6Init;
   decodeBitstream1A668(state, rom, outBufAbs, d2ctrl, extStream, d6Init);
@@ -281,7 +253,7 @@ export function refreshHelper13EE6(
     return;
   }
 
-  // === Sezione 0x13faa: blit con decode-next ===
+  // === Section 0x13faa: blit with decode-next ===
   // A1 = *0x400974 (slot ptr)
   // A0 = *0x400978 (decode-next ptr)
   // D3 = *(A0) (long) — tile data ptr

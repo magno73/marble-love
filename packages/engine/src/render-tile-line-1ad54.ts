@@ -2,53 +2,39 @@
  * render-tile-line-1ad54.ts — replica `FUN_0001AD54` (982 byte,
  * 0x01AD54-0x01B12A).
  *
- * **Tile-line renderer.** Disegna una "linea" di tile in un buffer di celle
- * a 8 byte ciascuna (@0x400A9C in workRam) su una griglia di 0x16 (22)
- * colonne. Per ogni cella (row, col) scrive D1.w in 1..4 slot word (offset
- * 0/2/4/6 dentro la cella da 8 byte) in base alla posizione della cella
- * rispetto ai bordi del rettangolo di rendering.
+ * **Tile-line renderer.** Draws a line of tiles into an 8-byte-per-cell buffer
+ * at work RAM `0x400A9C`, on a 0x16-column grid relative to the render bounds.
  *
- * **Argomenti** (convenzione M68k cdecl push-RTL, ogni arg è un long, reads
- * sul low word):
- *   - `ptrAbs`  (A6+0x8, long)  : pointer assoluto M68k a un descrittore di
- *                                  8 byte (struct 8-byte, vedi sotto).
- *   - `d5`      (A6+0xE, word)  : offset "D5" per il calcolo della colonna.
- *   - `d4`      (A6+0x12, word) : offset "D4" per il calcolo della riga.
- *   - `limit`   (A6+0x16, word) : limite sup. esclusivo della colonna (clip).
- *   - `flag`    (A6+0x1A, word) : se zero → early-exit (solo A4 flag).
+ * Arguments use the caller stack low word where noted:
+ *   - `ptrAbs`  (A6+0x8, long)  : absolute M68k pointer to an 8-byte descriptor
+ *   - `flag`    (A6+0x1A, word) : zero returns early after computing A4 flags
  *
- * **Struct descrittore** (8 byte @ ptrAbs):
- *   byte[0]  : x_base (signed, esteso a word)
+ * **Descriptor struct** (8 bytes @ ptrAbs):
+ *   byte[0]  : x_base (signed, extended to word)
  *   byte[1]  : x_count (unsigned)
- *   byte[2]  : y_base (signed, esteso a word)
+ *   byte[2]  : y_base (signed, extended to word)
  *   byte[3]  : y_count (unsigned)
- *   byte[4..5]: flags_word — bit 1 del high byte attiva mask A4; bit[3:2]
- *               + 0x10 vengono OR-ati in A4.
- *   byte[6]  : extra — bit 7 → A4 |= 0x80; bit[6:5] → A4 |= (bit[6:5]);
- *               bit[4:0] → sub-index nella pointer-table.
- *   byte[7]  : lookup_byte — bit 3 → "sub mode"; bit[2:0] → indice nella
- *               direction table ROM @0x1ECEA (8 coppie dx/dy word).
+ *   byte[6]  : extra; bit 7 sets A4 |= 0x80, bit[6:5] contributes to A4,
+ *               bit[4:0] is the pointer-table sub-index.
+ *   byte[7]  : lookup_byte; bit 3 selects "sub mode", bit[2:0] indexes the
+ *               direction table ROM @0x1ECEA (8 dx/dy word pairs).
  *
- * **Direction table ROM @0x1ECEA**: 8 coppie di word signed (dx, dy) di
- * 2 word ciascuna (4 byte per coppia) per indici 0..7. `dx = local[-12]`,
+ * **Direction table ROM @0x1ECEA**: 8 pairs of signed words (dx, dy), two
+ * words per pair, for indices 0..7. `dx = local[-12]`,
  * `dy = local[-14]`.
- *   - dx < 0 → outer var = y (local[-4]), end = local[-2] - 1
- *   - dx >= 0 → outer var = local[-2], end = local[-4] + 1
- *   - dy < 0 → inner start = local[-6], end = local[-8] - 1
- *   - dy >= 0 → inner start = local[-8], end = local[-6] + 1
+ *   - dx < 0: outer var = y (local[-4]), end = local[-2] - 1
+ *   - dx >= 0: outer var = local[-2], end = local[-4] + 1
+ *   - dy < 0: inner start = local[-6], end = local[-8] - 1
+ *   - dy >= 0: inner start = local[-8], end = local[-6] + 1
  *
- * **Pointer-table** (letta in workRam via `*(0x400474)` + `*(A1+0x20)`):
- *   Entry = long @ base + sub_index*4. Legge la entry come "data pointer"
- *   A2 (scan ptr). Ogni byte di A2 è un valore signed; se il byte è 0x80
- *   A2 viene resettato al puntatore originale (loop del dato).
  *
- * **Buffer output** @0x400A9C in workRam (base assoluta 0x400000):
+ * **Output buffer** @0x400A9C in work RAM (absolute base 0x400000):
  *   cellAddr = (row * 0x16 + col) * 8 + 0x400A9C
- *   dove `row = A0w`, `col = A1w >> 1` (con clip).
+ *   where `row = A0w`, `col = A1w >> 1` after clipping.
  *
  * **Return** (D0): A4 flag word (sign-extended a long).
  *
- * **Caller noto**: FUN_0001A444 @ 0x1A53A (UNCONDITIONAL_CALL).
+ * **Known caller**: FUN_0001A444 @ 0x1A53A (UNCONDITIONAL_CALL).
  */
 
 import type { GameState } from "./state.js";
@@ -56,24 +42,22 @@ import type { RomImage } from "./bus.js";
 import { applySlapsticBank } from "./m68k/apply-slapstic-bank.js";
 import { slapsticTick } from "./m68k/slapstic-103.js";
 
-// ─── Costanti ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x400000 as const;
 const WORK_RAM_END  = 0x402000 as const;
 const ROM_END       = 0x88000  as const;
 const SLAPSTIC_BASE = 0x80000 as const;
 
-/** Offset assoluto nel workRam del buffer di celle output. */
+/** Absolute work RAM address of the output cell buffer. */
 export const CELL_BUF_ABS  = 0x400a9c as const;
-/** Numero di colonne nella griglia (stride). */
 export const GRID_COLS     = 0x16     as const;
-/** Dimensione in byte di ogni cella. */
+/** Byte size of each output cell. */
 export const CELL_BYTES    = 8        as const;
 
-/** Indirizzo assoluto del puntatore-radice della pointer-table. */
 export const PTR_TABLE_ROOT = 0x400474 as const;
 
-/** Base assoluta della direction table ROM. */
+/** Absolute base of the ROM direction table. */
 export const DIR_TABLE_ROM  = 0x1ecea  as const;
 
 // ─── Helpers mem ─────────────────────────────────────────────────────────────
@@ -139,16 +123,9 @@ function wr16(state: GameState, abs: number, v: number): void {
 // ─── Main function ────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect `FUN_0001AD54`.
  *
- * @param state    GameState — workRam letto/scritto.
- * @param rom      ROM image — letto per le lookup table.
- * @param ptrAbs   Pointer M68k assoluto al descrittore 8-byte.
- * @param d5       Valore D5 (word signed) — offset colonna.
- * @param d4       Valore D4 (word signed) — offset riga.
- * @param limit    Limite sup. esclusivo colonna (arg @ A6+0x16).
- * @param flag     Se != 0, esegue il rendering completo; se 0 early-exit.
- * @returns        Valore A4 (flag bitmask) sign-extended a 32-bit (D0).
+ * @param ptrAbs   Absolute M68k pointer to the 8-byte descriptor.
+ * @param flag     Nonzero runs the full renderer; zero returns after the flag pass.
  */
 export function renderTileLine1AD54(
   state: GameState,
@@ -159,9 +136,9 @@ export function renderTileLine1AD54(
   limit: number,
   flag: number,
 ): number {
-  // ── Inizializzazione ──────────────────────────────────────────────────────
+  // ── Initialization ────────────────────────────────────────────────────────
 
-  // D5 e D4 sono word signed
+  // D5 and D4 are signed words.
   d5 = (d5 << 16) >> 16; // sign-extend to int32
   d4 = (d4 << 16) >> 16;
   limit = limit & 0xffff;
@@ -170,25 +147,21 @@ export function renderTileLine1AD54(
   // A4 = 0 (flag accumulator)
   let a4 = 0;
 
-  // Leggi byte[0] = x_base (signed)
   const byte0 = rd8(state, rom, ptrAbs);
-  // sign-extend byte → word
-  const loc_neg2 = ((byte0 & 0xff) << 24) >> 24; // signed int8 → int32
+  // Sign-extend byte to word.
+  const loc_neg2 = ((byte0 & 0xff) << 24) >> 24; // signed int8 to int32
 
-  // btst.b #0, byte0: se bit 0 == 0 → A4 |= 1
+  // btst.b #0, byte0: if bit 0 == 0, A4 |= 1.
   if ((byte0 & 0x01) === 0) {
     a4 |= 1;
   }
 
-  // Leggi word at ptrAbs (A0), advance by 2; AND 0xFF → x_count (unsigned byte)
   const loc_neg8 = rd16(state, rom, ptrAbs) & 0xff; // byte[1]
   const ptrAbs2  = (ptrAbs + 2) >>> 0;
 
-  // Leggi byte[2] = y_base (signed)
   const byte2    = rd8(state, rom, ptrAbs2);
-  const loc_neg4_init = ((byte2 & 0xff) << 24) >> 24; // signed int8 → int32
+  const loc_neg4_init = ((byte2 & 0xff) << 24) >> 24; // signed int8 to int32
 
-  // Leggi word at ptrAbs+2, advance 2; AND 0xFF → y_count (unsigned byte)
   const loc_neg6_init = rd16(state, rom, ptrAbs2) & 0xff; // byte[3]
   const ptrAbs4  = (ptrAbs2 + 2) >>> 0;
 
@@ -204,7 +177,6 @@ export function renderTileLine1AD54(
   let loc_neg4 = ((loc_neg4_init + loc_neg2 - 1) << 16) >> 16; // keep as word
   let loc_neg6 = ((loc_neg6_init + loc_neg8 - 1) << 16) >> 16;
 
-  // Leggi flags_word = word at ptrAbs+4
   const flags_word = rd16(state, rom, ptrAbs4); // byte[4..5]
   const ptrAbs6    = (ptrAbs4 + 2) >>> 0;
   // btst.b #1, low byte of flags_word (byte[5]).
@@ -213,9 +185,8 @@ export function renderTileLine1AD54(
     a4 = (a4 | bits) & 0xffff;
   }
 
-  // Leggi byte[6] = extra flags (read as byte, sign-extend to word)
   const byte6 = rd8(state, rom, ptrAbs6);
-  let d1 = ((byte6 & 0xff) << 24) >> 24; // signed int8 → int32
+  let d1 = ((byte6 & 0xff) << 24) >> 24; // signed int8 to int32
 
   // btst.l #7, D1
   if ((d1 & 0x80) !== 0) {
@@ -223,18 +194,16 @@ export function renderTileLine1AD54(
   }
   a4 = (a4 | (d1 & 0x60)) & 0xffff;
 
-  // ── Early exit se flag == 0 ───────────────────────────────────────────────
+  // ── Early exit when flag == 0 ─────────────────────────────────────────────
   if (flag === 0) {
     // move.w A4w, D0w; ext.l D0 → return sign-ext(A4 low word) as int32
     slapsticEvent2BC5C(rom, a4);
     return ((a4 & 0xffff) << 16) >> 16;
   }
 
-  // ── Lettura sub-index + lookup_byte ──────────────────────────────────────
 
-  d1 &= 0x1f; // sub-index nella pointer-table (5 bit)
+  d1 &= 0x1f; // 5-bit pointer-table sub-index.
 
-  // Leggi word at ptrAbs+6; AND 0xFF → D3 = byte[7]
   const d3_raw = rd16(state, rom, ptrAbs6) & 0xff;
 
   // ── Pointer-table dereference ─────────────────────────────────────────────
@@ -450,24 +419,12 @@ export function renderTileLine1AD54(
 // ─── Write dispatch ──────────────────────────────────────────────────────────
 
 /**
- * Scrive `value` in 1..4 slot (word) nella cella `cellBase` in base alla
- * posizione (a3, d6) rispetto ai bordi del rettangolo.
  *
  * Corrisponde alle sequenze 0x1AF5A-0x1AFC6 (row-major) e
- * 0x1B07C-0x1B0E8 (column-major) che sono identiche strutturalmente.
+ * 0x1B07C-0x1B0E8 (column-major), which are structurally identical.
  *
- * Legenda offsets dentro la cella da 8 byte:
  *   +0, +2, +4, +6 (word offsets)
  *
- * - prima riga (a3 == first_row), prima col (d6 == first_col):   write +4
- * - prima riga, ultima col (d6 == last_col):                     write +6
- * - prima riga, col media:                                       write +4, +6
- * - ultima riga (a3 == last_row), prima col:                     write +2
- * - ultima riga, ultima col:                                     write +0
- * - ultima riga, col media:                                      write +0, +2
- * - riga media, prima col:                                       write +2, +4
- * - riga media, ultima col:                                      write +0, +6
- * - riga media, col media:                                       write +0, +2, +4, +6
  */
 function writeDispatch(
   state: GameState,

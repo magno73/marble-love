@@ -5,12 +5,10 @@
  * Per N test cases:
  *   1. Setup workRam fields:
  *      - 0x4003AE (AV control word, random)
- *      - 0x4003B0 (toggled cache, init random — verrà overwritten)
  *      - 0x4003F6/FA/FE/402 (long pointers — random ma forniti per coerenza)
  *   2. Setup spriteRam[0..0x400] random (entrambe le pagine 0 / +0x200).
  *   3. callFunction(0x26E14, [arg]) — push 1 long arg.
  *   4. pfScrollEmit26E14(state, arg)
- *   5. Confronta:
  *      - workRam[0x3AE..0x3B1] (AV new word)
  *      - workRam[0x3F6..0x405] (4 long pointers)
  *      - spriteRam[0..0x400]
@@ -65,17 +63,12 @@ async function main(): Promise<void> {
     state.workRam[0x3ae] = (av >>> 8) & 0xff;
     state.workRam[0x3af] = av & 0xff;
 
-    // Random init dei 4 long pointers (verranno comunque overwritten dalla
-    // routine prima del loop, ma il binario li legge — quindi inizializzarli
-    // a valori coerenti con la routine).
-    // 0x4003B0: random pre-existing (sarà overwritten)
+    // Random init for the 4 long pointers; the function overwrites them anyway.
     const pre3b0 = Math.floor(rng() * 0x10000) & 0xffff;
     pokeMem(cpu, 0x004003b0, 2, pre3b0);
     state.workRam[0x3b0] = (pre3b0 >>> 8) & 0xff;
     state.workRam[0x3b1] = pre3b0 & 0xff;
 
-    // Random init dei 4 long ptr (saranno overwritten dal binario prima del
-    // loop perché la routine memorizza in workRam i nuovi base poi le usa).
     for (const off of [0x3f6, 0x3fa, 0x3fe, 0x402]) {
       const v = Math.floor(rng() * 0x100000000) >>> 0;
       pokeMem(cpu, 0x00400000 + off, 4, v);

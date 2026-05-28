@@ -1,48 +1,40 @@
 /**
- * state-sub-1844a.ts — replica `FUN_0001844A` (610 byte, 0x1844A..0x186AA).
+ * state-sub-1844a.ts - port of `FUN_0001844A` (610 bytes, 0x1844A..0x186AA).
  *
  * "Slot-table tick: timer decrement, insert-sorted trigger, sprite-coord
- * update, and 3-bucket sound dispatch". Gated da `(*0x400394).w == 3` e
- * `*0x400760 != 0`. Itera la slot-table di 36 entry × 16 byte @ 0x401650.
+ * update, and 3-bucket sound dispatch". Gated by `(*0x400394).w == 3` and
+ * `*0x400760 != 0`. Walks the 36-entry x 16-byte slot table @ 0x401650.
  *
- * **Flow per ogni entry** (D2 = 0..0x23, A2 avanza di 0x10):
+ * **Flow for each entry** (D2 = 0..0x23, A2 advances by 0x10):
  *
  *   1. `w = sext16(entry[0x2..0x3])`:
  *      - **w >= 0 (decrement path, @0x18490..0x184FE)**:
  *          * `entry[0x2]--`
- *          * Se nuovo valore == 0:
  *              - `entry[0x8..0xB] = 0x21342`
  *              - `entry[0x2..0x3] = 0xFFFF` (= -1)
  *              - `slotInsertSorted(typeCode=0x29, subIdx=sext_l(entry[0]))`
- *              - Track min-address nei 3 bucket (D2<0xC → local-0xC,
- *                D2<0x18 → local-0x8, else → local-0x4) per le entry inserite
- *              - `bra → sprite_check`
- *          * Se nuovo valore > 0: `bra → sprite_check`
+ *              - Track the minimum address in three buckets (D2<0xC -> local-0xC,
+ *                D2<0x18 -> local-0x8, else -> local-0x4) for inserted entries.
+ *              - `bra -> sprite_check`
  *      - **w < 0 (pointer-walk path, @0x18500..0x1855A)**:
- *          * Se `entry[0x2..0x3].w != -1`: skip entry (→ sprite_check)
+ *          * If `entry[0x2..0x3].w != -1`, skip entry (-> sprite_check)
  *          * `entry[0x8..0xB] += 4`
- *          * A0 = `entry[0x8..0xB]`; se `*(A0) != -1` (long in ROM): skip
- *          * `fun_18f46(0x29, sext_l(entry[0]))` (callback iniettabile)
- *          * Ricarica timer da ROM:
- *              - Se `entry[0].b < 0x18`: `entry[0x2..0x3] = ROM_u16[0x242F6 + entry[0]*2]`
- *              - Altrimenti: `entry[0x2..0x3] = u16 @ (*0x400764 + (entry[0]-0x18)*2)`
+ *          * A0 = `entry[0x8..0xB]`; if `*(A0) != -1` (long in ROM), skip.
+ *          * Reload timer from ROM:
+ *              - If `entry[0].b < 0x18`: `entry[0x2..0x3] = ROM_u16[0x242F6 + entry[0]*2]`
  *
- *   2. **sprite_check (@0x1855C)**: se `entry[0x2..0x3] == -1` →
- *      `computeSpriteCoords_v4(entryAddr)` (FUN_18972 iniettabile)
+ *   2. **sprite_check (@0x1855C)**: if `entry[0x2..0x3] == -1`,
  *
- *   3. Avanza A2 += 0x10, D2++, loop finché D2 != 0x24.
  *
  * **Post-loop (3-bucket sound dispatch)**:
- *   Per ciascuno dei 3 bucket local (−0xC, −0x8, −0x4), se il valore != 0x402000:
  *     * `D1.b = rng(2)` (FUN_13A98, live)
  *     * A0 = bucket_entry; `D2.w = entry[0xE..0xF] andi 0xFFFF`
- *     * Se `−0x17 > D2.w` (signed) **OPPURE** `D2.w > 0xE0`:
+ *     * If `-0x17 > D2.w` (signed) **OR** `D2.w > 0xE0`:
  *       `D0 = sext_l(D1.b) + bucket_offset; A0 = ROM[0x1EFD6 + D0*4]; call soundCommand(A0)`
- *     * Altrimenti (`−0x17 <= D2.w <= 0xE0`):
  *       `D0 = sext_l(D1.b) + bucket_offset; A0 = RAM[0x1EFB6 + D0*4]; call soundCommand(A0)`
- *   (bucket_offset: 0 per −0xC, +2 per −0x8, +4 per −0x4)
+ *   (bucket_offset: 0 for -0xC, +2 for -0x8, +4 for -0x4)
  *
- * **Disasm 0x1844A..0x186AA** (610 byte):
+ * **Disasm 0x1844A..0x186AA** (610 bytes):
  *
  *   0x1844a  link.w A6,-0xc
  *   0x1844e  movem.l {A4,A3,A2,D2},-(SP)
@@ -67,31 +59,24 @@
  *
  * [loop body @ 0x18490 — see module body for detail]
  *
- * **Globals (workRam offsets relativo a 0x400000)**:
+ * **Globals (workRam offsets relative to 0x400000)**:
  *   - `0x394` (word) game_mode (read)
  *   - `0x760` (byte) secondary gate (read)
- *   - `0x764..0x767` (long) selector ptr (read nel timer-reload secondary path)
- *   - `0x1650..0x188F` (576 byte) slot-table 0x24 × 0x10 (r/w)
+ *   - `0x764..0x767` (long) selector ptr (read in the secondary timer-reload path)
+ *   - `0x1650..0x188F` (576 bytes) slot-table 0x24 x 0x10 (r/w)
  *
  * **ROM reads**:
- *   - `0x242F6` u16 BE × 0x18 — primary timer table per entry[0]<0x18
- *   - `0x1EFD6` long BE × N — function ptr table (high D2 range)
+ *   - `0x242F6` u16 BE x 0x18 - primary timer table for entry[0]<0x18
+ *   - `0x1EFD6` long BE x N - function ptr table (high D2 range)
  *   - long reads at `entry[0x8..0xB]` (pointer-walk sentinels; starts 0x21342)
  *   - pointer read at `(entry[0x8..0xB])` for ROM long sentinel check
- *   - `0x1EFB6` — base per la tabella RAM? (A4 = 0x1EFB6 è in ROM per questo
- *     binario: 0x1EFXX < 0x402000 quindi è ROM; stride = 4 byte/slot)
  *
- * **JSR esterne** (via `StateSub1844ASubs`):
- *   - `FUN_00013A98` (RNG): live via `rngNext` di `rng.ts`.
- *   - `FUN_00018E6C` (slotInsertSorted): iniettabile via `subs.fun_18e6c`.
- *   - `FUN_00018F46` (teardown/timer-reset): iniettabile via `subs.fun_18f46`.
- *   - `FUN_00018972` (computeSpriteCoords_v4): iniettabile via `subs.fun_18972`.
- *   - `FUN_0001584C` (soundCommand, via A3=0x158AC): iniettabile via
+ * **External JSRs** (via `StateSub1844ASubs`):
+ *   - `FUN_00013A98` (RNG): live via `rngNext` from `rng.ts`.
  *     `subs.soundCommand(ptrArg)`.
  *
- * **Caller noto** (1 xref): `FUN_00010FCE @ 0x11004` (UNCONDITIONAL_CALL).
+ * **Known caller** (1 xref): `FUN_00010FCE @ 0x11004` (UNCONDITIONAL_CALL).
  *
- * Verifica bit-perfect via `packages/cli/src/test-state-sub-1844a-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -99,37 +84,35 @@ import type { RomImage } from "./bus.js";
 import { rngNext } from "./rng.js";
 import { as_u16 } from "./wrap.js";
 
-// ─── Address constants (workRam offsets relativi a 0x400000) ─────────────
+// ─── Address constants (workRam offsets relative to 0x400000) ─────────────
 
 const WORK_RAM_BASE = 0x00400000 as const;
 
-/** Word: game-mode discriminator (== 3 per abilitare il loop). */
+/** Word: game-mode discriminator (== 3 enables the loop). */
 export const GAME_MODE_OFFSET = 0x394 as const;
-/** Byte: secondary gate (non-zero per abilitare). */
+/** Byte: secondary gate (non-zero enables the loop). */
 export const SECONDARY_GATE_OFFSET = 0x760 as const;
-/** Long: selector pointer letto nel timer-reload secondary path. */
 export const SELECTOR_PTR_OFFSET = 0x764 as const;
 /** Base slot-table (0x24 × 0x10 byte = 0x240 byte). */
 export const SLOT_TABLE_OFFSET = 0x1650 as const;
 
-/** Numero di entry nella slot-table. */
+/** Number of entries in the slot table. */
 export const SLOT_ENTRY_COUNT = 0x24 as const;
-/** Stride (byte) per entry. */
+/** Byte stride for each entry. */
 export const SLOT_ENTRY_STRIDE = 0x10 as const;
 
-/** Game-mode richiesto. */
+/** Required game mode. */
 export const GAME_MODE_REQUIRED = 0x0003 as const;
 
-/** Sentinel long addr che inizializza i 3 bucket (0x402000, fuori workRam). */
 export const BUCKET_SENTINEL_ADDR = 0x00402000 as const;
 
 // ─── ROM constants ──────────────────────────────────────────────────────────
 
-/** Valore iniziale del pointer-walk pointer (ROM), scritto in entry[0x8..0xB]
- *  quando il timer tocca 0. */
+/**
+  */
 export const PTR_WALK_INIT = 0x00021342 as const;
 
-/** ROM u16 BE × 0x18 — primary timer-reload table per entry[0].b < 0x18. */
+/** ROM u16 BE x 0x18 - primary timer-reload table for entry[0].b < 0x18. */
 export const ROM_TIMER_TABLE_PRIMARY = 0x000242f6 as const;
 
 /** ROM ptr-table "high range" (D2.w > 0xE0 or D2.w < -0x17). Stride 4. */
@@ -140,13 +123,11 @@ export const ROM_PTR_TABLE_LO = 0x0001efb6 as const;
 
 // ─── Entry field offsets ────────────────────────────────────────────────────
 
-/** Byte entry[0]: subIndex usato come arg per slotInsertSorted / fun_18f46. */
 export const ENTRY_SUB_IDX_OFF = 0x00 as const;
 /** Word entry[0x2..0x3]: countdown timer (signed; -1 == active/walking). */
 export const ENTRY_TIMER_OFF = 0x02 as const;
 /** Long entry[0x8..0xB]: pointer-walk current ptr (ROM). */
 export const ENTRY_PTR_WALK_OFF = 0x08 as const;
-/** Word entry[0xE..0xF]: D2.w field usato nel bucket sound dispatch. */
 export const ENTRY_DISPATCH_WORD_OFF = 0x0e as const;
 
 // ─── Magic constants ─────────────────────────────────────────────────────────
@@ -156,54 +137,41 @@ export const TIMER_ACTIVE_SENTINEL = 0xffff as const;
 /** Long sentinel in ROM that terminates pointer-walk. */
 export const PTR_WALK_ROM_SENTINEL = 0xffffffff as const;
 
-/** typeCode per slotInsertSorted (sempre 0x29, da `pea (0x29).w`). */
 export const INSERT_TYPE_CODE = 0x29 as const;
-/** arg1 di fun_18f46 (sempre 0x29, da `pea (0x29).w`). */
 export const FUN_18F46_ARG1 = 0x29 as const;
 
-/** Cutoff per bucket D2 < 0x0C → bucket[0]. */
+/** Cutoff for bucket D2 < 0x0C -> bucket[0]. */
 export const BUCKET0_CUTOFF = 0x0c as const;
-/** Cutoff per bucket D2 < 0x18 → bucket[1]. */
+/** Cutoff for bucket D2 < 0x18 -> bucket[1]. */
 export const BUCKET1_CUTOFF = 0x18 as const;
 
-/** Limite RNG post-loop. */
+/** Post-loop RNG limit. */
 export const POST_LOOP_RNG_LIMIT = 0x0002 as const;
 
-/** Soglia bassa per dispatch (signed): se D2.w < -0x17 → HI table. */
+/** Low dispatch threshold (signed): D2.w < -0x17 -> HI table. */
 export const DISPATCH_LO_THRESHOLD = -0x17 as const; // -23
-/** Soglia alta per dispatch: se D2.w > 0xE0 → HI table. */
+/** High dispatch threshold: D2.w > 0xE0 -> HI table. */
 export const DISPATCH_HI_THRESHOLD = 0x00e0 as const; // 224
 
-/** Bucket offsets aggiunti a D0 prima di *4 nell'accesso alle ptr-table. */
 export const BUCKET_OFFSET: readonly [number, number, number] = [0, 2, 4] as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────────
 
 /**
- * Stub injection per le JSR esterne.
+ * Stub injection for the external JSRs.
  *
  * - `fun_18e6c(typeCode, subIdx, state, rom)`:
- *     Replica di `FUN_00018E6C` (slotInsertSorted). Chiamata 0..0x24 volte
- *     (solo quando il timer di una entry tocca 0). Default no-op.
  * - `fun_18f46(arg1Long, arg2Long, state)`:
- *     Replica di `FUN_00018F46`. Chiamata quando la pointer-walk raggiunge un
  *     long == 0xFFFFFFFF in ROM. Default no-op.
  * - `fun_18972(entryAddr, state)`:
- *     Replica di `FUN_00018972` (computeSpriteCoords_v4). Chiamata ogni
- *     iterazione in cui `entry[0x2..0x3] == -1`. Default no-op.
  * - `soundCommand(ptrArg)`:
- *     Replica di `FUN_0001584C` (via A3). Riceve il long ptr (da ROM) passato
- *     come unico argomento. Chiamato 0..3 volte (una per bucket != sentinel).
+ *     Port of `FUN_0001584C` (via A3). Receives the long pointer read from ROM.
  *     Default no-op.
  * - `readRomLong(romAddr)`:
- *     Legge un long BE dalla ROM all'indirizzo assoluto dato. Usato per:
- *       1. Il pointer-walk sentinel check: `*(entry[0x8..0xB])` in ROM.
- *       2. La ptr-table HI/LO dispatch: `ROM[0x1EFD6 + D0*4]` o
+ *       1. The pointer-walk sentinel check: `*(entry[0x8..0xB])` in ROM.
+ *       2. The HI/LO pointer-table dispatch: `ROM[0x1EFD6 + D0*4]` or
  *          `ROM[0x1EFB6 + D0*4]`.
- *     Con `RomImage` disponibile usa `rom.program[addr]`. Se non si dispone
- *     di ROM, iniettare questa callback.
- *
- * `FUN_00013A98` (RNG) è sempre live tramite `rngNext` (non iniettabile).
+ *     With `RomImage` available, use `rom.program[addr]`.
  */
 export interface StateSub1844ASubs {
   /** FUN_18E6C(typeCode=0x29, subIdx=sext_l(entry[0]), state, rom). */
@@ -217,25 +185,17 @@ export interface StateSub1844ASubs {
   fun_18f46?: (arg1Long: number, arg2Long: number, state: GameState) => void;
   /** FUN_18972(entryAbsAddr, state). */
   fun_18972?: (entryAbsAddr: number, state: GameState) => void;
-  /** FUN_0001584C via jsr (A3); ptrArg = long pushato prima del jsr. */
   soundCommand?: (ptrArg: number) => void;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────────
 
-/** Dettaglio di una entry processata nel loop principale. */
+/** Details for one entry processed in the main loop. */
 export interface EntryResult {
-  /** Indice entry (0..35). */
+  /** Entry index (0..35). */
   index: number;
   /**
-   * Quale percorso è stato preso:
-   * - `"skip"` — entry non processata (timer == -1 ma != -1 check fallisce,
-   *   oppure timer > 0 e non ha toccato 0)
-   * - `"decrement"` — timer decrementato, non ancora zero
-   * - `"insert"` — timer toccato 0: insert sorted + ptr reset
-   * - `"ptr_walk_no_sentinel"` — ptr-walk: pointer avanzato ma sentinel non trovato
-   * - `"ptr_walk_sentinel"` — ptr-walk: sentinel trovato, fun_18f46 chiamato +
-   *   timer ricaricato
+   * - `"skip"`: entry not processed because the timer is inactive or still above zero.
+   * - `"insert"`: timer reached zero; insert sorted, reset pointer, and reload timer.
    */
   path:
     | "skip"
@@ -243,22 +203,16 @@ export interface EntryResult {
     | "insert"
     | "ptr_walk_no_sentinel"
     | "ptr_walk_sentinel";
-  /** True se computeSpriteCoords_v4 è stata chiamata su questa entry. */
   spriteUpdated: boolean;
-  /** True se questa entry è stata scelta come bucket[0] min. */
   bucket0: boolean;
-  /** True se questa entry è stata scelta come bucket[1] min. */
   bucket1: boolean;
-  /** True se questa entry è stata scelta come bucket[2] min. */
   bucket2: boolean;
 }
 
 export interface StateSub1844AResult {
-  /** True se il gate ha fallito (gameMode != 3 o byte760 == 0). */
+  /** True when the gate failed (gameMode != 3 or byte760 == 0). */
   earlyOut: boolean;
-  /** Risultati per-entry (vuoto se earlyOut). */
   entries: EntryResult[];
-  /** Quante chiamate a soundCommand sono state effettuate (0..3). */
   soundCalls: number;
 }
 
@@ -333,27 +287,16 @@ function rng(state: GameState, limit: number): number {
   return r & 0xffff;
 }
 
-// ─── Replica ─────────────────────────────────────────────────────────────────
+// ─── Port ────────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001844A`.
  *
- * @param state  GameState. Letture: workRam @ 0x394, 0x760, 0x764, slot-table
- *               @ 0x1650. Scritture: slot-table (timer, ptr-walk ptr).
- * @param rom    RomImage. Letture: 0x242F6 (timer), 0x21342..
+ * @param state  GameState. Reads workRam @ 0x394, 0x760, 0x764, and the
+ *               slot table @ 0x1650. Writes slot-table timers and ptr-walk ptrs.
+ * @param rom    RomImage. Reads 0x242F6 (timer), 0x21342..
  *               (ptr-walk sentinel), 0x1EFD6/0x1EFB6 (sound dispatch).
- * @param subs   Stub injection (default: tutti no-op).
  *
- * @returns Risultato con entries per-iter e contatore soundCalls.
  *
- * **Ordine scritture critico**:
- *   - Insert path: prima `entry[0x8..0xB] = 0x21342`, poi `entry[0x2..0x3] =
- *     0xFFFF`, poi `fun_18e6c`. Il bucket tracking avviene DOPO l'insert (min
- *     tracking dei ptr A2 aggiornato prima di chiamare fun_18e6c).
- *   - Ptr-walk path: `entry[0x8..0xB] += 4` PRIMA del sentinel check.
- *   - Timer-reload: avviene DOPO la call a fun_18f46.
- *   - sprite_check (@0x1855C): avviene DOPO tutti i path (incluso skip) se
- *     `entry[0x2..0x3] == -1` al termine dell'iterazione.
  */
 export function stateSub1844A(
   state: GameState,

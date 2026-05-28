@@ -1,10 +1,8 @@
 /**
  * helper-5236.test.ts — smoke test per helper5236 (FUN_5236).
  *
- * Bit-perfect parity verificata vs binary in
  * `packages/cli/src/test-helper-5236-parity.ts`.
  * Qui copriamo i path principali: arg < 2, arg >= 2, shift=0 → mask=1,
- * shift >= 32 → no-op, OR cumulativo, idempotenza, no-side-effect fuori
  * dal long target.
  */
 
@@ -112,7 +110,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
   it("non tocca byte fuori dal long @ STATUS_FLAGS_OFF (no side-effect collaterali)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
-    // Zero out solo i 4 byte target
+    // Zero out only the 4 target bytes.
     for (let i = 0; i < 4; i++) s.workRam[STATUS_FLAGS_OFF + i] = 0;
 
     helper5236(s, 0); // mask=1
@@ -121,20 +119,16 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     // Byte adiacenti intatti
     expect(s.workRam[STATUS_FLAGS_OFF - 1]).toBe(0xa5);
     expect(s.workRam[STATUS_FLAGS_OFF + 4]).toBe(0xa5);
-    // Byte arbitrario lontano
     expect(s.workRam[0x0100]).toBe(0xa5);
   });
 
   it("arg=2 (boundary esatto): shift=0 → mask=1 (non 2 e non no-op)", () => {
-    // Verifica il boundary cmpi.l #2: BCS salta se D0 < 2 (unsigned).
-    // D0=2 NON salta, quindi subq.l #2 → D0=0 → shift=0 → mask=1.
     const s = emptyGameState();
     helper5236(s, 2);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000001);
   });
 
   it("arg=1 (boundary inferiore): shift=1 → mask=2 (bcs salta, no subq)", () => {
-    // D0=1 < 2 → BCS salta → no subq → shift=1 → mask=2.
     const s = emptyGameState();
     helper5236(s, 1);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000002);

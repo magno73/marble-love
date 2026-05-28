@@ -51,7 +51,7 @@ function readByteAbs(s: GameState, addr: number, rom?: RomImage): number {
 }
 
 /**
- * Replica `FUN_00014DEC` — variante con list ptr da obj+0x4E, stride 4 byte,
+ * Mirror `FUN_00014DEC` — variant with list ptr from obj+0x4E, 4-byte stride,
  * write a obj+0x4A. Stesso algoritmo di findNearestNeighbor.
  */
 export function findNearestNeighborV2(state: GameState, objAddr: number, rom?: RomImage): void {

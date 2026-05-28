@@ -2,23 +2,12 @@
 /**
  * test-game-tick-timers-parity.ts — differential FUN_28A96 vs gameTickTimers.
  *
- * Test del root game-logic che ticka tutti i timer di gioco. Chiama
- * internamente `tickCascadingTimer` (FUN_28C38, già replicato bit-perfect)
  * e `FUN_286EE` (HUD updater).
  *
- * Strategia per testare bit-perfect senza replicare anche FUN_286EE
- * (che chiama altre 3 funzioni HUD-related):
- *   - **Patch del binario**: scrivere `rts` (0x4E75) all'entry di
- *     FUN_286EE @ 0x286EE. Il binario chiamerà la funzione, che farà
- *     subito ritorno senza side effect.
- *   - In TS, `gameTickTimers` viene chiamato senza `hudCallback` →
  *     no-op equivalente.
- *   - Confronto: tutta la work RAM + le 4 byte specifici di colorRam
- *     dove FUN_28A96 scrive le palette FX.
  *
- * Setup random per caso:
  *   - count word @ 0x400396 (1..6)
- *   - per ogni obj: random state, flag, type, timer struct (5 byte)
+ *   - for each obj: random state, flag, type, timer struct (5 bytes)
  *   - global timer @ 0x40039E (5 byte random)
  *   - game state word @ 0x400390 random
  *
@@ -107,7 +96,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  // PATCH: FUN_286EE → rts. Persistente per tutta la sessione.
   patchHudToRts(cpu);
 
   console.log(`\n=== gameTickTimers (FUN_28A96) — ${n} casi ===`);
@@ -194,7 +182,6 @@ async function main(): Promise<void> {
     for (let j = 0; j < count && matched; j++) {
       const objBase = OBJECTS_BASE_ADDR + j * OBJECT_STRIDE;
       const objBaseOff = objBase - 0x400000;
-      // Confronta solo i campi che ci interessano (state, flag, type, timer 5b, flag71).
       const fieldsToCheck: [string, number][] = [
         ["state", 0x18], ["flag", 0x19], ["type", 0x1A],
         ["timerHi", 0x6A], ["timerLo", 0x6B],

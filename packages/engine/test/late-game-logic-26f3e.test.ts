@@ -1,11 +1,9 @@
 /**
  * late-game-logic-26f3e.test.ts — unit tests per `lateGameLogic26F3E`.
  *
- * Bit-perfect parity verificata in `cli/src/test-late-game-logic-26f3e-parity.ts`.
  * Qui copriamo:
  *   - struttura del flusso principale (phase 1 / 2 / 3 / 4 / exit)
  *   - cursor setup corretto
- *   - dispatch per tipo entità (smoke test per ogni tipo)
  *   - early-exit condizioni (counter >= 0x3C, SENTINEL, bounds)
  */
 

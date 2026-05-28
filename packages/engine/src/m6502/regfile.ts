@@ -1,21 +1,20 @@
 /**
- * regfile.ts — Register file MOS 6502 NMOS.
+ * regfile.ts - MOS 6502 NMOS register file.
  *
- * Scope: emulazione bit-perfect del sound CPU di Atari System 1 (Marble
- * Madness). NON modella il 65C02 (no BBR/BBS/SMB/RMB/WAI/STP), NON modella
- * gli undocumented opcode dell'NMOS (KIL/SLO/RLA/...). Se il sound ROM
- * `136033.421/.422` ne usa, `cpu.step` lancia errore (fail loud, CLAUDE Rule
- * 12). Mode decimale BCD: implementato per completezza Tom Harte; il sound
- * ROM Marble non lo usa.
+ * Scope: bit-accurate emulation of the Atari System 1 sound CPU path used by
+ * Marble Madness. This does not model 65C02 instructions or NMOS undocumented
+ * opcodes; if the sound ROM reaches one, `cpu.step` throws. Decimal BCD mode is
+ * implemented for Tom Harte coverage even though the Marble sound ROM does not
+ * use it.
  *
- * Pattern mirror di `m68k/regfile.ts`: tipi branded da `wrap.ts`, factory
- * `createRegFile`, helper come funzioni pure che mutano stato.
+ * Pattern mirrors `m68k/regfile.ts`: branded types from `wrap.ts`, a factory,
+ * and pure helper functions that mutate explicit state.
  *
  * Status flag P (NV-BDIZC):
- *  - bit 7 N  : negative   (bit 7 dell'ultimo result ALU)
+ *  - bit 7 N  : negative   (bit 7 of the last ALU result)
  *  - bit 6 V  : overflow   (signed overflow ADC/SBC)
- *  - bit 5 -  : sempre 1 quando pushato (hardware quirk)
- *  - bit 4 B  : break      (set quando pushato da BRK/PHP; clear da IRQ/NMI)
+ *  - bit 5 -  : always 1 when pushed (hardware quirk)
+ *  - bit 4 B  : break      (set when pushed by BRK/PHP; clear for IRQ/NMI)
  *  - bit 3 D  : decimal
  *  - bit 2 I  : irq disable
  *  - bit 1 Z  : zero
@@ -32,7 +31,7 @@ export const FLAG_Z = 0x02 as const;
 export const FLAG_I = 0x04 as const;
 export const FLAG_D = 0x08 as const;
 export const FLAG_B = 0x10 as const;
-export const FLAG_U = 0x20 as const; // unused, sempre 1 in hardware
+export const FLAG_U = 0x20 as const; // unused, always 1 in hardware
 export const FLAG_V = 0x40 as const;
 export const FLAG_N = 0x80 as const;
 
@@ -45,7 +44,7 @@ export interface M6502RegFile {
   x: u8;
   /** Index register Y (8-bit). */
   y: u8;
-  /** Stack pointer (8-bit; stack vive su page 1: `0x0100 + sp`). */
+  /** Stack pointer (8-bit; stack lives on page 1: `0x0100 + sp`). */
   sp: u8;
   /** Processor status (NV-BDIZC). */
   p: u8;
@@ -53,12 +52,11 @@ export interface M6502RegFile {
   pc: u16;
 }
 
-/** Crea un regfile in stato post-RESET pre-vector-fetch.
+/** Creates a register file in post-RESET, pre-vector-fetch state.
  *
- * Lo stato reale post-RESET in MOS 6502: A/X/Y indefiniti, SP=0xFD (dopo 3
- * decrement che NON scrivono memoria, sequence del reset interrupt), P con
- * I=1 e U=1, PC letto dal vector $FFFC/$FFFD. Il caller di `cpu.reset()`
- * popola PC dal vector. */
+ * Real MOS 6502 reset leaves A/X/Y undefined, SP=0xFD after three non-writing
+ * stack decrements, P with I=1 and U=1, and PC fetched from $FFFC/$FFFD. The
+ * caller of `cpu.reset()` fills PC from that vector. */
 export function createRegFile(): M6502RegFile {
   return {
     a: as_u8(0),
@@ -72,17 +70,17 @@ export function createRegFile(): M6502RegFile {
 
 // ─── Status flag helpers ──────────────────────────────────────────────────
 
-/** Set bit di `p` se `cond`, clear altrimenti. Ritorna nuovo P. */
+/** Sets `flag` in `p` when `cond` is true, clears it otherwise. */
 export function setFlag(p: u8, flag: number, cond: boolean): u8 {
   return as_u8(cond ? ((p as number) | flag) : ((p as number) & ~flag));
 }
 
-/** Ritorna true se `flag` è set in `p`. */
+/** Returns true when `flag` is set in `p`. */
 export function hasFlag(p: u8, flag: number): boolean {
   return ((p as number) & flag) !== 0;
 }
 
-/** Aggiorna Z e N in base al valore 8-bit. Ritorna nuovo P. */
+/** Updates Z and N based on an 8-bit value. */
 export function updateNZ(p: u8, value: u8): u8 {
   const v = value as number;
   let np = (p as number) & ~(FLAG_Z | FLAG_N);

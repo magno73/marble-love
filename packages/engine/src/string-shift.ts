@@ -1,19 +1,19 @@
 /**
- * string-shift.ts — replica `FUN_00002766` (178 byte) e `FUN_00002818` (210 byte).
+ * string-shift.ts - ports of `FUN_00002766` (178 bytes) and `FUN_00002818` (210 bytes).
  *
- * - **FUN_2766 — `shiftStringChainForward(structAddr)`**: shifta i tile alpha
- *   nella chain di 1 posizione "in avanti" (cell[i] = cell[i+1]). L'ultima
- *   cella riceve il valore originale della prima.
+ * - **FUN_2766 - `shiftStringChainForward(structAddr)`**: shifts alpha tiles in
+ *   the chain one position forward (cell[i] = cell[i+1]). The last cell receives
+ *   the original value of the first cell.
  *
- * - **FUN_2818 — `shiftStringChainBackward(structAddr)`**: shifta i tile
- *   alpha "indietro" (cell[i+1] = cell[i]). La prima cella riceve l'ultimo.
+ * - **FUN_2818 - `shiftStringChainBackward(structAddr)`**: shifts alpha tiles
+ *   backward (cell[i+1] = cell[i]). The first cell receives the last value.
  *
- * Entrambe walkano la stessa linked-list di FUN_2572/2ABC e usano la stessa
- * marker check per chain end.
+ * Both walk the same linked list as FUN_2572/2ABC and use the same marker check
+ * for chain end.
  *
- * **Nuova ROM table**: 0x7298 (count limit per rotation, parallela a 0x7294).
+ * **Additional ROM table**: 0x7298 (count limit by rotation, parallel to 0x7294).
  *
- * **Verificato bit-perfect** vs binary tramite `cli/src/test-string-shift-parity.ts`.
+ * **Bit-perfect verified** against the binary via `cli/src/test-string-shift-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -82,11 +82,11 @@ function chainAdvance(state: GameState, rom: RomImage, a1: number): number | nul
 }
 
 /**
- * Replica `FUN_00002766` — shift forward.
+ * Port of `FUN_00002766` - shift forward.
  *
- * Per ogni entry della chain: legge limit dal ROM, A3 = ALPHA + d3*2 (NO
- * col offset). Salva first cell. Loop fino a limit-1: cell[i] = cell[i+1].
- * Alla fine scrive saved value alla posizione finale.
+ * For each chain entry, reads the limit from ROM, sets A3 = ALPHA + d3*2
+ * without col offset, saves the first cell, loops until limit-1 with
+ * cell[i] = cell[i+1], then writes the saved value to the final position.
  */
 export function shiftStringChainForward(state: GameState, rom: RomImage, structAddr: number): void {
   let a1 = structAddr >>> 0;

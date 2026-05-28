@@ -13,7 +13,7 @@
  * 456 * 262 / 4 = 29,868 sound-CPU cycles.
  *
  * Caller `soundChip.tickCycles(cyclesElapsed)`. `cyclesElapsed` e' espresso
- * in cycle 6502 (1.789 MHz). Il chip avanza il 6502 e a derived sub-domains
+ * in 6502 cycles (1.789 MHz). The chip advances the 6502 and derived sub-domains
  * per i chip audio (Phase 5-6 V3) via fractional accumulator.
  *
  * Pattern mirror di `m68k/clock.ts` esistente nel main worktree.
@@ -26,5 +26,5 @@ export const SOUND_CYCLES_PER_FRAME = 29868;
  * envelope generator + operator phase accumulator. */
 export const YM2151_CYCLES_PER_6502_CYCLE = 2;
 
-/** Rapporto clock POKEY / 6502: 1:1 (stessa frequenza). */
+/** POKEY / 6502 clock ratio: 1:1 (same frequency). */
 export const POKEY_CYCLES_PER_6502_CYCLE = 1;

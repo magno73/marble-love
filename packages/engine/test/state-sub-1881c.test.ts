@@ -3,7 +3,7 @@
  *
  * Verifica:
  *   - early-out (gameMode != 3 OR byte760 == 0)
- *   - loop con tabella vuota → result = 0, hits = []
+ *   - loop with empty table -> result = 0, hits = []
  *   - reflect-neg branch (primi 3 match, secondo check fallisce, dist < 12)
  *   - reflect-skip branch (primi 3 match, secondo check fallisce, dist >= 12)
  *   - math/sound branch (tutti 6 match) + soundCommand callback
@@ -73,7 +73,7 @@ function readByte(s: ReturnType<typeof emptyGameState>, off: number): number {
   return (s.workRam[off] ?? 0) & 0xff;
 }
 
-/** Setup minimal: gameMode=3, byte760!=0, tabella vuota. */
+/** Minimal setup: gameMode=3, byte760!=0, empty table. */
 function setupActive(s: ReturnType<typeof emptyGameState>): void {
   setWordBE(s, GAME_MODE_OFFSET, GAME_MODE_ACTIVE);
   setByte(s, SECONDARY_GATE_OFFSET, 0xff);
@@ -84,7 +84,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     const s = emptyGameState();
     setWordBE(s, GAME_MODE_OFFSET, 0x0002); // != 3
     setByte(s, SECONDARY_GATE_OFFSET, 0xff);
-    // Pre-popola entity per verificare che NON venga toccata
+    // Prepopulate entity to verify it is not touched.
     setLongBE(s, ENTITY_OFF + ENTITY_LONG0_OFFSET, 0xdeadbeef);
     let soundCalls = 0;
     const r = stateSub1881C(s, ENTITY_BASE, {
@@ -109,13 +109,13 @@ describe("stateSub1881C (FUN_0001881C)", () => {
   it("loop con tabella vuota (tutti entry inattivi) → result=0", () => {
     const s = emptyGameState();
     setupActive(s);
-    // Pre-popola entity per verificare che NON venga toccata
+    // Prepopulate entity to verify it is not touched.
     setLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET, 0x12345678);
     const r = stateSub1881C(s, ENTITY_BASE);
     expect(r.earlyOut).toBe(false);
     expect(r.result).toBe(0);
     expect(r.hits).toHaveLength(0);
-    // entity[0xc] non riscritto (nessun first-3 match)
+    // entity[0xc] not rewritten (no first-3 match).
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET)).toBe(0x12345678);
   });
 
@@ -124,7 +124,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0xaa);
     setByte(s, SPAWN_BYTE1_OFFSET, 0xbb);
-    // long684/688: i loro byte((>>19)) NON devono matchare 0xaa/0xbb (per
+    // long684/688: their byte((>>19)) values must not match 0xaa/0xbb (for
     // forzare reflect path). Lasciali a 0 → byte((0>>19))=0 != 0xaa.
     setLongBE(s, WORLD_X_OFFSET, 0);
     setLongBE(s, WORLD_Y_OFFSET, 0);
@@ -152,7 +152,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG0_OFFSET)).toBe(0xffff0000);
     // entity[4..7] negato: 0xFFFE0000 (signed -0x20000) → +0x20000 = 0x00020000
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG1_OFFSET)).toBe(0x00020000);
-    // entity[0xc] / [0x10] sempre scritti su first-3 match
+    // entity[0xc] / [0x10] always written on first-3 match.
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET)).toBe(0); // = long684
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG4_OFFSET)).toBe(0); // = long688
   });
@@ -180,7 +180,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(r.result).toBe(1);
     expect(r.hits).toHaveLength(1);
     expect(r.hits[0]!.branch).toBe("reflect_skip");
-    // entity[0..3] e [4..7] NON toccati
+    // entity[0..3] and [4..7] not touched.
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG0_OFFSET)).toBe(0x12345678);
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG1_OFFSET)).toBe(0xabcdef01);
   });

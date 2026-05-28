@@ -1,20 +1,13 @@
 /**
- * helper-15fe6.ts — replica bit-perfect di `FUN_00015FE6` (44 istr, 118 byte).
+ * Bit-perfect port of `FUN_00015FE6`.
  *
- * **Semantica**: confronta la profondità di due oggetti (obj1=A1, obj2=A0).
- * Ritorna 1 se obj1 è "davanti" (sopra) obj2, 0 altrimenti.
+ * Compares two active object structs and returns 1 when obj1 should sort after
+ * obj2. Equal z-order falls back to a signed comparison of coarse `(x+y)`
+ * cell sums; different z-order uses signed byte order.
  *
- * Due rami:
- *   1. **z-order uguale** (byte `+0x1B` di entrambi gli oggetti identico):
- *      Calcola per ciascuno la somma `(y >> 19).w + (x >> 19).w` (16-bit add
- *      con wrap). Ritorna 1 se `sum1 > sum2` (confronto signed 16-bit via
- *      `cmp.w D4w,D3w; ble → 0`).
- *   2. **z-order diverso**: ritorna 1 se `obj2.zorder < obj1.zorder` (signed
- *      byte), cioè obj1 è su un layer "più alto" (valore byte più grande).
- *
- * **Prologue/epilogue M68k** (3 istr):
- *   `movem.l {D4 D3 D2}, -(SP)` — salva D4,D3,D2 (12 byte)
- *   `movea.l (0x10,SP), A1` — A1 = arg1 (primo long pusciato dallo stack)
+ * M68k prologue/epilogue:
+ *   `movem.l {D4 D3 D2}, -(SP)` saves D4,D3,D2 (12 bytes)
+ *   `movea.l (0x10,SP), A1` gives arg1 (first pushed long)
  *   `movea.l (0x14,SP), A0` — A0 = arg2
  *   …
  *   `movem.l (SP)+, {D2 D3 D4}` + `rts`
@@ -65,52 +58,37 @@
  *   00016056  movem.l (SP)+,{D2 D3 D4}
  *   0001605a  rts
  *
- * **Return**: `D0 = signExt_l(D2.b)` = 0 o 1 (mai negativo poiché D2.b ∈ {0,1}).
  *
- * **Callers noti** (2 siti):
+ * Known callers:
  *   - `0x1577C` in `FUN_00015670` (replica in `state-sub-15670.ts`):
- *     `jsr 0x15FE6.l` con args A3=obj0Abs e A3+0xE2=obj1Abs.
- *   - `0x15EB6` in `FUN_00015E24`: `jsr 0x15FE6.l` con due obj ptrs.
+ *     `jsr 0x15FE6.l` with args A3=obj0Abs and A3+0xE2=obj1Abs.
+ *   - `0x15EB6` in `FUN_00015E24`: `jsr 0x15FE6.l` with two obj ptrs.
  *
- * **Memory model**: legge solo `workRam` tramite indirizzi assoluti M68k.
- *   Se un ptr cade fuori da `[0x400000, 0x402000)`, il byte/long restituito
- *   è 0 → state != 1 → ritorna subito 0.
  *
- * Verifica bit-perfect via `cli/src/test-helper-15fe6-parity.ts` (500/500).
  */
 
 import type { GameState } from "./state.js";
 
-/** Indirizzo di `FUN_00015FE6` nello spazio M68k. */
 export const HELPER_15FE6_ADDR = 0x00015fe6 as const;
 
-// ── Costanti di layout oggetto ────────────────────────────────────────────────
 
-/** Offset del byte "state" dentro un oggetto. */
 const OBJ_STATE_OFF = 0x18 as const;
-/** Offset del long "x" (fixed-point) dentro un oggetto. */
 const OBJ_X_OFF = 0x0c as const;
-/** Offset del long "y" (fixed-point) dentro un oggetto. */
 const OBJ_Y_OFF = 0x10 as const;
-/** Offset del byte "z-order layer" dentro un oggetto. */
 const OBJ_ZORDER_OFF = 0x1b as const;
 
-/** Quantità di shift asr.l per ridurre le coordinate fixed-point. */
 const POS_SHIFT = 0x13 as const; // 19
 
-// ── Helpers memoria ────────────────────────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x00400000 as const;
 const WORK_RAM_SIZE = 0x2000 as const;
 
-/** Legge un byte unsigned da un indirizzo assoluto M68k (0 se fuori range). */
 function readByteAbs(state: GameState, addr: number): number {
   const a = addr >>> 0;
   if (a < WORK_RAM_BASE || a >= WORK_RAM_BASE + WORK_RAM_SIZE) return 0;
   return state.workRam[a - WORK_RAM_BASE] ?? 0;
 }
 
-/** Legge un long signed da un indirizzo assoluto M68k (0 se fuori range). */
 function readLongSignedAbs(state: GameState, addr: number): number {
   const a = addr >>> 0;
   if (a + 4 > WORK_RAM_BASE + WORK_RAM_SIZE || a < WORK_RAM_BASE) return 0;
@@ -125,25 +103,12 @@ function readLongSignedAbs(state: GameState, addr: number): number {
   );
 }
 
-/** `asr.l` M68k: shift aritmetico a destra su 32 bit (signed). */
 function asrL(value: number, count: number): number {
   return (value | 0) >> (count & 0x1f);
 }
 
-// ── Funzione principale ────────────────────────────────────────────────────────
 
-/**
- * Replica bit-perfect di `FUN_00015FE6`.
- *
- * Confronta la profondità di `obj1` (puntato da `obj1Abs`) con `obj2`
- * (puntato da `obj2Abs`) e ritorna 1 se `obj1` è "davanti" a `obj2`,
- * 0 altrimenti.
- *
- * @param state    GameState — accesso a `workRam`.
- * @param obj1Abs  Pointer assoluto M68k all'oggetto 1 (arg1, A1 nel binario).
- * @param obj2Abs  Pointer assoluto M68k all'oggetto 2 (arg2, A0 nel binario).
- * @returns        0 o 1 (long signed, mai negativo).
- */
+/** Execute the object comparison port. */
 export function helper15FE6(
   state: GameState,
   obj1Abs: number,
@@ -163,14 +128,12 @@ export function helper15FE6(
   const z2 = readByteAbs(state, a0 + OBJ_ZORDER_OFF); // obj2.zorder
 
   if (z1 === z2) {
-    // ── Ramo z-order uguale ──────────────────────────────────────────────
     //
     // D3.w = (asr_l(obj1.y, 19)).w + (asr_l(obj1.x, 19)).w  (16-bit add)
     // D4.w = (asr_l(obj2.y, 19)).w + (asr_l(obj2.x, 19)).w
     // cmp.w D4w,D3w; ble → return 0; else return 1
     //
-    // Nota: `move.w D1w, D3w` trasferisce solo i 16 bit bassi del long
-    // risultante dall'asr.l. Il `add.w` è 16-bit con wrap.
+    // `move.w D1w,D3w` copies only the low 16 bits of the long.
 
     const obj1Y = readLongSignedAbs(state, a1 + OBJ_Y_OFF);
     const obj1X = readLongSignedAbs(state, a1 + OBJ_X_OFF);
@@ -193,7 +156,6 @@ export function helper15FE6(
     const d4s = d4w & 0x8000 ? d4w - 0x10000 : d4w;
     return d3s > d4s ? 1 : 0;
   } else {
-    // ── Ramo z-order diverso ─────────────────────────────────────────────
     //
     // move.b (0x1B,A0),D0b; cmp.b (0x1B,A1),D0b
     // → flags on (obj2.zorder - obj1.zorder) as signed byte

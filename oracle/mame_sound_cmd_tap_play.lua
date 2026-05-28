@@ -1,12 +1,12 @@
--- mame_sound_cmd_tap_play.lua — capture cmd 68K → 6502 con coin+start scriptati.
+-- mame_sound_cmd_tap_play.lua - capture 68K -> 6502 cmd with scripted coin+start.
 --
--- Differenza con mame_sound_cmd_tap.lua: questo tap inietta coin+start dopo il
--- boot, cosi' la main 68K esce dall'attract loop e inizia ad emettere cmd reali
+-- Difference from mame_sound_cmd_tap.lua: this tap injects coin+start after
+-- boot, so main 68K exits the attract loop and starts emitting real commands.
 -- al sound 6502 via soundlatch $FE0001. L'attract loop puro non emette cmd
--- (verificato con tap wide $FE0000-$FEFFFF in 600 frame attract = 0 writes).
+-- Verified with wide tap $FE0000-$FEFFFF over 600 attract frames = 0 writes.
 --
 -- Sequenza scriptata (default, override via env): segue il pattern di
--- oracle/mame_playable_input_capture.lua, che funziona deterministicamente:
+-- oracle/mame_playable_input_capture.lua, which works deterministically:
 --   f1200..1214 → Coin 1 pressed (port :1820 bit 0 active low)
 --   f1500..1514 → 1 Player Start pressed (port :F60000)
 --   capture continua fino a MARBLE_SOUND_CMD_TARGET_FRAME (default 2400)
@@ -67,7 +67,7 @@ local function apply_input(frame)
     local start_pressed = in_pulse(frame, START_FRAME)
 
     -- Coin 1 (port :1820) e 1 Player Start (port :F60000) sono entrambi
-    -- IP_ACTIVE_LOW in atarisy1.cpp: set_value(1) = "field attivo/pressed",
+    -- IP_ACTIVE_LOW in atarisy1.cpp: set_value(1) = "field active/pressed",
     -- MAME inverte internamente per ACTIVE_LOW.
     local coin_port = ports[":1820"]
     if coin_port and coin_port.fields["Coin 1"] then

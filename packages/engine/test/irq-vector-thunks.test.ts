@@ -1,10 +1,7 @@
 /**
  * irq-vector-thunks.test.ts — smoke test per THUNK_TABLE.
  *
- * Verifica che ogni entry abbia il targetAddr corretto estratto dal ROM
- * (confronto con i valori hard-coded dalla disasm cache /tmp/marble-cand/).
  *
- * Nota: 23 thunks sono `jmp targetAddr.l` puri; 0x01010A è
  * `move #0x2000,SR ; rts` (enable-interrupts, targetAddr=null).
  */
 
@@ -16,7 +13,6 @@ import {
   type ThunkEntry,
 } from "../src/irq-vector-thunks.js";
 
-/** Ground truth estratta dalla disasm cache e dal ROM binario. */
 const EXPECTED: Array<{ sourceAddr: number; targetAddr: number | null }> = [
   { sourceAddr: 0x000100, targetAddr: 0x00002a24 },
   { sourceAddr: 0x00010c, targetAddr: 0x00003a08 },
@@ -53,7 +49,6 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
     for (const entry of THUNK_TABLE) {
       expect(typeof entry.sourceAddr).toBe("number");
       expect(entry.romBytes).toMatch(/^[0-9A-F]{12}$/);
-      // targetAddr è number | null
       if (entry.targetAddr !== null) {
         expect(typeof entry.targetAddr).toBe("number");
       }
@@ -91,7 +86,7 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
   });
 
   it("sourceAddr di ogni JMP thunk codificato correttamente in romBytes (byte 2-5)", () => {
-    // Per ogni JMP: romBytes[4..11] deve corrispondere a targetAddr big-endian
+    // For each JMP: romBytes[4..11] must match targetAddr big-endian.
     const jmpEntries = THUNK_TABLE.filter((e) => e.targetAddr !== null);
     for (const entry of jmpEntries) {
       const targetFromBytes = parseInt(entry.romBytes.slice(4), 16);

@@ -2,24 +2,16 @@
 /**
  * test-state-sub-15bd0-parity.ts — differential FUN_15BD0 vs `stateSub15BD0`.
  *
- * `FUN_00015BD0` (118 byte) è una sub "object reset + broadcast event":
- *   - Block A (gate `arg3.b != 0`): clear `structPtr+0x18`, chiama
  *     FUN_18F46(2, sext_l(byte @ structPtr+0x19)).
  *   - Block B (gate `arg2.b != 0`): per i in [0..*0x400396) itera
- *     `obj = 0x400018 + i*0xE2`, e se `obj+0x18 ∉ {0,2}` chiama
  *     FUN_285B0(obj, 3).
  *
  * **Strategia stub**:
  *
- *   1. **FUN_18F46** patchata a thunk-logger che scrive `(arg1Long, arg2Long)`
- *      nel ring @ 0x401E00 (counter @ 0x401E40). 30 byte (FUN_18F46 reale è
  *      ~132 byte → spazio sufficiente).
  *
- *   2. **FUN_285B0** patchata a thunk-logger che scrive `(objAddr, eventByte)`
- *      nel ring @ 0x401E80 (counter @ 0x401EC0). 30 byte (FUN_285B0 reale è
  *      88 byte → spazio sufficiente).
  *
- *   Layout thunk (uguale per entrambi, solo indirizzi cambiano):
  *     movea.l #RING_BASE, A0           ; 207C addr32          (6 byte)
  *     move.l  RING_COUNTER.l, D1       ; 2239 addr32          (6 byte)
  *     adda.l  D1, A0                   ; D1C1                 (2 byte)
@@ -28,17 +20,12 @@
  *     addq.l  #8, RING_COUNTER.l       ; 50B9 addr32          (6 byte)
  *     rts                              ; 4E75                 (2 byte)
  *
- * **Suite testate (4 × 125 = 500 casi)**:
  *   - A: random everything (count, struct bytes, obj states, args)
- *   - B: `arg3.b != 0, arg2.b == 0` → solo Block A
- *   - C: `arg3.b == 0, arg2.b != 0` → solo Block B (ampia variazione count
+ *   - B: `arg3.b != 0, arg2.b == 0` -> Block A only
+ *   - C: `arg3.b == 0, arg2.b != 0` -> Block B only (wide count variation
  *        e obj states per coprire skip/no-skip)
  *   - D: entrambi i block attivi + edge cases (count=0, count=20, byte19
- *        signed con bit 7 set, structPtr fuori dal range objects)
  *
- * **Confronto**: workRam @ ring18f46 + ring285b0 + counter18f46 + counter285b0
- * + struct bytes + obj state bytes (solo i count attivi). Tutti i bytes sono
- * confrontati 1:1 fra binario e TS.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-15bd0-parity.ts [N]
  */
@@ -65,18 +52,10 @@ const FUN_18F46 = 0x00018f46;
 const FUN_285B0 = 0x000285b0;
 
 // **Layout workRam scelto** (8 KB totali da 0x400000 a 0x402000):
-//   0x400018..0x4011A0  : object array (MAX_COUNT=20 × stride 0xE2 = 0x11A0 byte)
-//   0x400396             : count word (DENTRO l'object array — layout originale)
 //   0x401200..0x401240  : STRUCT_BASE (struct arg1 di test, 0x40 byte)
 //   0x401240..0x401400  : RING_285B0 (192 byte) + counter
 //   0x401400..0x401440  : RING_18F46 (64 byte) + counter
-//   0x401F00              : SP iniziale del test (cresce verso il basso fino a ~0x401ED0)
 //
-// Le aree del ring sono dichiaratamente AL DI FUORI di [0x401E80..0x401F00]
-// che è la zona dello stack dei test (callFunction pusha sentinel + 3 args =
-// 16 byte → SP minimo ≈ 0x401EE0; FUN_15BD0 prologo pusha altri 12 → 0x401ED4;
-// inner FUN_285B0 chiamata pusha altri 12 → 0x401EC8; thunk no push →
-// minima SP usata ≈ 0x401EC4. Margine ≥ 0xC4 byte da RING_18F46 end @
 // 0x401440 — ampio).
 const RING_285B0 = 0x00401240;
 const RING_285B0_SIZE = 192;
@@ -86,18 +65,15 @@ const RING_18F46 = 0x00401320;
 const RING_18F46_SIZE = 64;
 const RING_18F46_COUNTER = 0x00401360;
 
-// Struct passata come arg1 (structPtr).
+// Struct passed as arg1 (structPtr).
 const STRUCT_BASE = 0x00401200;
 const STRUCT_SIZE = 0x40;
 
-// Object array @ 0x400018 stride 0xE2. Massimo count testato = 20.
 const OBJ_BASE = 0x00400018;
 const OBJ_STRIDE = 0xe2;
 const OBJ_COUNT_ADDR = 0x00400396;
 const MAX_COUNT = 20;
 // obj_array end = 0x400018 + 20*0xE2 = 0x4011B8 → strict less than STRUCT_BASE
-// (0x401200), 0x48 byte gap. count addr (0x400396) cade DENTRO obj 3
-// (offset 0xD8 in obj 3) — layout binario originale.
 
 function makeThunk(ringBase: number, counterAddr: number): number[] {
   const r = ringBase >>> 0;
@@ -141,7 +117,6 @@ function makeRng(seed: number): () => number {
 
 const WORK_RAM_BASE = 0x00400000;
 
-/** Reset di tutte le zone osservate, sia nel binario che in state.workRam. */
 function resetZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -169,7 +144,6 @@ function resetZones(
     pokeMem(cpu, STRUCT_BASE + i, 1, 0);
     state.workRam[(STRUCT_BASE - WORK_RAM_BASE) + i] = 0;
   }
-  // Object array (MAX_COUNT entry)
   for (let i = 0; i < MAX_COUNT * OBJ_STRIDE; i++) {
     pokeMem(cpu, OBJ_BASE + i, 1, 0);
     state.workRam[(OBJ_BASE - WORK_RAM_BASE) + i] = 0;
@@ -181,7 +155,6 @@ function resetZones(
   state.workRam[(OBJ_COUNT_ADDR - WORK_RAM_BASE) + 1] = 0;
 }
 
-/** Setup uniforme: scrive byte sia nel binario che nello state TS. */
 function pokeByteBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -202,7 +175,6 @@ function pokeWordBoth(
   pokeByteBoth(state, cpu, abs + 1, v & 0xff);
 }
 
-/** Confronta byte-by-byte la zona [base..base+size) tra binario e TS. */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -220,8 +192,8 @@ function compareZone(
 
 interface CaseSetup {
   count: number;
-  structBytes: number[];        // STRUCT_SIZE byte (verranno scritti @ STRUCT_BASE)
-  objStateBytes: number[];      // count byte (verranno scritti @ OBJ_BASE+i*0xE2+0x18)
+  structBytes: number[];
+  objStateBytes: number[];
   arg2Long: number;
   arg3Long: number;
   structPtrLong: number;
@@ -317,13 +289,12 @@ async function main(): Promise<void> {
     // Setup count word
     pokeWordBoth(state, cpu, OBJ_COUNT_ADDR, setup.count);
     // Setup obj state bytes (only first `count` slots needed by func, ma
-    // settiamo solo `count` per non sporcare il resto).
+    // set only `count` to avoid dirtying the rest).
     for (let i = 0; i < setup.count; i++) {
       const objAddr = OBJ_BASE + i * OBJ_STRIDE;
       pokeByteBoth(state, cpu, objAddr + 0x18, setup.objStateBytes[i] ?? 0);
     }
 
-    // Run binario
     callFunction(cpu, FUN_15BD0, [
       setup.structPtrLong >>> 0,
       setup.arg2Long >>> 0,
@@ -349,8 +320,6 @@ async function main(): Promise<void> {
       { base: STRUCT_BASE, size: STRUCT_SIZE, label: "struct" },
       { base: OBJ_COUNT_ADDR, size: 2, label: "objCount" },
     ];
-    // Aggiungi il byte 0x18 di ogni obj iterata (non c'è side-effect su di
-    // essi nel binario, ma confrontiamo anyway per safety).
     for (let i = 0; i < setup.count; i++) {
       checks.push({
         base: OBJ_BASE + i * OBJ_STRIDE + 0x18,
@@ -381,7 +350,7 @@ async function main(): Promise<void> {
     arg3Long: number;
     count: number;
     structPtrLong: number;
-    forceStateAll?: number; // optional: set tutti gli obj state a un valore fisso
+    forceStateAll?: number;
   }): CaseSetup {
     return {
       count: args.count,
@@ -413,7 +382,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ── Suite B: solo Block A (arg3.b != 0, arg2.b == 0) ──────────────────
+  // Suite B: Block A only (arg3.b != 0, arg2.b == 0).
   console.log(
     `\n=== Suite B: solo Block A (arg3.b≠0, arg2.b==0) — ${perSuite} casi ===`,
   );
@@ -434,7 +403,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ── Suite C: solo Block B (arg3.b == 0, arg2.b != 0) ──────────────────
+  // Suite C: Block B only (arg3.b == 0, arg2.b != 0).
   console.log(
     `\n=== Suite C: solo Block B (arg3.b==0, arg2.b≠0) — ${perSuite} casi ===`,
   );
@@ -473,10 +442,10 @@ async function main(): Promise<void> {
     else if (edge === 1) count = MAX_COUNT; // max count
     else if (edge === 2) {
       count = Math.floor(rng() * (MAX_COUNT + 1));
-      forceStateAll = 0; // tutti state==0 → tutti skip
+      forceStateAll = 0;
     } else if (edge === 3) {
       count = Math.floor(rng() * (MAX_COUNT + 1));
-      forceStateAll = 2; // tutti state==2 → tutti skip
+      forceStateAll = 2;
     } else {
       count = Math.floor(rng() * (MAX_COUNT + 1));
     }
@@ -490,7 +459,7 @@ async function main(): Promise<void> {
       arg3Long: arg3,
       structPtrLong: STRUCT_BASE >>> 0,
     };
-    // Edge: byte19 con bit 7 set (sext_l = 0xFFFFFFxx)
+    // Edge: byte19 with bit 7 set (sext_l = 0xFFFFFFxx).
     if (i % 7 === 0) setup.structBytes[0x19] = 0xff;
     if (i % 11 === 0) setup.structBytes[0x19] = 0x80;
 

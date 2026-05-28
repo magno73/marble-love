@@ -2,29 +2,15 @@
 /**
  * test-init-level-load-1a236-parity.ts — differential FUN_1A236 vs initLevelLoad1A236.
  *
- * `FUN_0001A236` (80 byte) è puro orchestratore: 3 word global writes,
- * 1 long fetch dalla pointer table livelli (ROM 0x2BE00), 4 jsr in
- * sequenza. La parità si verifica:
  *
- *   1. Patchando ogni entry-point delle 4 sub con
+ *   1. Patch each entry point of the 4 subs with
  *        `addq.b #1, sentinel.l ; rts`     (8 byte)
- *      dove `sentinel` è un byte unico in work RAM 0x4003E0..0x4003E3.
- *   2. Eseguendo il binario reale (callFunction @ 0x1A236) e leggendo:
- *        - 3 word globali (0x400394, 0x400662, 0x400664)
- *        - 1 long globale (0x400474, level pointer dst)
  *        - 4 sentinel byte (0x4003E0..0x4003E3)
- *   3. Eseguendo `initLevelLoad1A236()` con 4 callback che incrementano
+ *   3. Run `initLevelLoad1A236()` with 4 callbacks that increment
  *      gli stessi 4 sentinel byte in `state.workRam`.
- *   4. Confrontando: 4 globali (10 byte) + 4 sentinel byte = 14 byte totali.
  *
  * Pattern variation per case:
- *   - Pre-fill randomico dei 3 globali (verifica overwrite completo, no
  *     read-modify-write).
- *   - Pre-fill randomico dei 4 sentinel byte (verifica wrap su +1 e
- *     che ognuno è chiamato esattamente una volta).
- *   - Pre-fill del level pointer dst con dirty bytes (verifica write).
- *   - Pre-fill randomico del workRam[0x394] PRIMA della clr.w: il binario
- *     deve azzerarlo, quindi il level fetch deve sempre indicizzare entry 0.
  *
  * Uso: npx tsx packages/cli/src/test-init-level-load-1a236-parity.ts [N]
  */
@@ -61,7 +47,6 @@ const SENT_CLEAR_MO_ALPHA = SENTINEL_BASE + 1;
 const SENT_FUN_16F6C = SENTINEL_BASE + 2;
 const SENT_PALETTE_INIT_LEVEL = SENTINEL_BASE + 3;
 
-// Globali toccati dal body (assoluti work RAM).
 const GLOB_GAME_MODE = 0x00400394;
 const GLOB_SLAPSTIC_INDEX = 0x00400662;
 const GLOB_COUNTER_FLAG = 0x00400664;
@@ -116,12 +101,11 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch ROM buffer con stub addq+rts a ognuno dei 4 entry point.
+  // Pre-patch ROM buffer with addq+rts stubs at each of the 4 entry points.
   for (const sub of SUBS_LIST) {
     patchStubAddq(romBuf, sub.entry, sub.sentinel);
   }
 
-  // Build romView TS allineata col binario (post-patch).
   const romView = busNs.emptyRomImage();
   romView.program.set(romBuf);
 
@@ -132,7 +116,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x1a236);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  // Subs TS che incrementano i sentinel slot in workRam.
+  // TS subs that increment sentinel slots in workRam.
   const incSent = (s: typeof stateInst, off: number): void => {
     const a = off - 0x400000;
     s.workRam[a] = ((s.workRam[a] ?? 0) + 1) & 0xff;
@@ -150,7 +134,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pre-fill randomico dei 3 globali word (esercita overwrite completo).
     const preGameMode = ((rb() << 8) | rb()) & 0xffff;
     const preSlapstic = ((rb() << 8) | rb()) & 0xffff;
     const preCounter = ((rb() << 8) | rb()) & 0xffff;
@@ -172,7 +155,7 @@ async function main(): Promise<void> {
     stateInst.workRam[GLOB_LEVEL_PTR_DST - 0x400000 + 2] = (preLevelDst >>> 8) & 0xff;
     stateInst.workRam[GLOB_LEVEL_PTR_DST - 0x400000 + 3] = preLevelDst & 0xff;
 
-    // Pre-fill randomico dei 4 sentinel byte (esercita wrap su +1).
+    // Random pre-fill for the 4 sentinel bytes, exercising +1 wrap.
     const scratch = new Uint8Array(4);
     for (let k = 0; k < 4; k++) {
       const v = rb();
@@ -181,15 +164,12 @@ async function main(): Promise<void> {
       stateInst.workRam[(SENTINEL_BASE - 0x400000) + k] = v;
     }
 
-    // Esegui binario
     callFunction(cpu, FUN_1A236, []);
     // Esegui TS
     illNs.initLevelLoad1A236(stateInst, romView, subs);
 
-    // Confronto: 4 globali (3 word + 1 long = 10 byte) + 4 sentinel = 14 byte.
     let fail: FailRecord | null = null;
 
-    // Globali word
     const checks: Array<{ name: string; addr: number; size: 2 | 4 }> = [
       { name: "gameMode", addr: GLOB_GAME_MODE, size: 2 },
       { name: "slapsticIdx", addr: GLOB_SLAPSTIC_INDEX, size: 2 },
@@ -215,7 +195,7 @@ async function main(): Promise<void> {
     }
 
     if (fail === null) {
-      // 4 sentinel byte (ognuno deve essere == (scratch+1) & 0xff)
+      // 4 sentinel bytes; each must be == (scratch+1) & 0xff.
       for (let k = 0; k < 4; k++) {
         const expected = ((scratch[k] ?? 0) + 1) & 0xff;
         const b = peekMem(cpu, SENTINEL_BASE + k, 1) & 0xff;

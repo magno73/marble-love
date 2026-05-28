@@ -4,29 +4,20 @@
  * differential FUN_00019E42 vs `marbleCellDispatch19E42`.
  *
  * **Strategia**:
- * `FUN_19E42` (194 byte) è una variante di `FUN_150D0` ("compute coords +
- * dispatch") con due differenze chiave:
- *   1. Dest del packed long è `(0x20, A1)` invece di `(0x28, A1)`.
- *   2. Dopo il packing, esegue un test su cellX/cellY (asr.w #3 dei word
- *      di posizione) che decide se chiamare `FUN_264AA(entity, 3)` (HIT)
+ * dispatch") with two key differences:
  *      o azzerare 3 word @ `entity[0x26, 0x2C, 0x32]` (MISS).
  *
- * Per testare in isolamento patch-iamo `FUN_000264AA` con uno stub:
+ * To test in isolation, patch `FUN_000264AA` with a stub:
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = mode (= 3)
  *     4E 75          ; rts
  *
- * Dopo `FUN_19E42` il `D0` non è usato dai caller noti, ma il TS specchia
- * con `inner = (_, m) => m`. Confronto:
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - struct @ A1..A1+0x40 (incluso A1+0x20 packed long, A1+0x26..0x33 clear)
- *   - HUD @ 0x40097E (controllo che non sia stato corrotto)
  *
  * Suite testate (4 × 125 = 500):
  *   - A: HUD random + struct random + ptr random (fully random)
- *   - B: cellX forzato in {0x29, 0x31, 0x39} + cellY casuale → mix HIT/MISS
  *   - C: w0/w2/w4/HUD estremi (signed overflow)
- *   - D: cellX forzato fuori dal set + entity con bytes random → MISS path
  *
  * Uso: npx tsx packages/cli/src/test-marble-cell-dispatch-19e42-parity.ts [N]
  */
@@ -66,7 +57,7 @@ const PTR_CHOICES = [
   0x00401d00,
 ] as const;
 
-const STRUCT_SIZE = 0x40; // confronta i primi 64 byte della struct (copre 0x20, 0x26..0x33)
+const STRUCT_SIZE = 0x40;
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -104,7 +95,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  // Patch FUN_264AA con lo stub.
+  // Patch FUN_264AA with the stub.
   for (let i = 0; i < STUB_BYTES.length; i++) {
     pokeMem(cpu, FUN_264AA + i, 1, STUB_BYTES[i]!);
   }
@@ -188,10 +179,8 @@ async function main(): Promise<void> {
       ((stateInst.workRam[off + 0x14] ?? 0) << 8) |
       (stateInst.workRam[off + 0x15] ?? 0);
 
-    // Run binario
     callFunction(cpu, FUN_19E42, [structPtr >>> 0]);
 
-    // Run TS (mirror dello stub: ritorna mode come D0; nessun side effect).
     ns.marbleCellDispatch19E42(stateInst, structPtr, {
       inner264AA: (_p: number, m: number): number => m >>> 0,
     });
@@ -237,7 +226,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: cellX forzato in {0x29, 0x31, 0x39} → triggera HIT path ──
+  // Suite B: cellX forced into {0x29, 0x31, 0x39} to trigger the HIT path.
   console.log(
     `\n=== Suite B: cellX in {0x29, 0x31, 0x39} → mix HIT/MISS (cellY rng) — ${perSuite} casi ===`,
   );
@@ -246,7 +235,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const hud = setHud(rng);
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // Forza entity.x_word = cellX << 3 (low 16 bits).
     const cellX = pickFromArr(cellXSet);
     // Random cellY in [0..0x7F] e [0x80..0xFF] (signed range).
     const cellY = rb() & 0xff;
@@ -289,7 +277,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: cellX fuori dal set → MISS path (clear loop) ──────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: cellX fuori da {0x29, 0x31, 0x39} → MISS path — ${sizeD} casi ===`,
@@ -298,7 +285,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < sizeD; i++) {
     const hud = setHud(rng);
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // cellX scelto fuori dal set HIT
     let cellX = rb();
     while (cellX === 0x29 || cellX === 0x31 || cellX === 0x39) cellX = rb();
     const xWord = ((cellX << 3) & 0xffff) | (Math.floor(rng() * 8) & 0x7);

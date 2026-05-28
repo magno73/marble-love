@@ -3,23 +3,18 @@
  * test-helper-12896-parity.ts — differential parity test:
  * `FUN_00012896` (M68k via musashi-wasm) vs `helper12896` (TS replica).
  *
- * ## Strategia
+ * ## Strategy
  *
- * `FUN_12896` chiama:
- *   - `FUN_00013334` (opcode 0 con slot[0x1e]==1): replicata →
- *     `objectRenderUpdate13334`. Sub `FUN_1D06A` (palette) → patcha con `rts`.
- *   - `FUN_00018E6C` (opcode 0 con slot[0x1e]!=1): replicata →
- *     `slotInsertSorted18E6C`. Sub `FUN_1B12A` → patcha con `rts`.
- *   - `FUN_000158AC` (opcodes 2, 8, 18): stringa/funzione via puntatore →
- *     patcha con `rts` (side-effect è solo l'output di display, ignorato).
- *   - `FUN_00012F44` (opcode 15): replicata → `helper12F44`.
- *     Sub `FUN_00018F46` (helper18F46) → patcha con `rts`.
+ *   - `FUN_00013334` (opcode 0 with slot[0x1e]==1): mirrored by
+ *     `objectRenderUpdate13334`. Subroutine `FUN_1D06A` (palette) is patched
+ *     with `rts`.
+ *   - `FUN_00018E6C` (opcode 0 with slot[0x1e]!=1): mirrored by
+ *     `slotInsertSorted18E6C`. Subroutine `FUN_1B12A` is patched with `rts`.
+ *   - `FUN_00012F44` (opcode 15): mirrored by `helper12F44`.
+ *     Subroutine `FUN_00018F46` (helper18F46) is patched with `rts`.
  *
- * ## Confronto
  *
- * Per ogni caso si confrontano:
  *   - Slot 0x56 byte a `slotPtr`
- *   - Globali rilevanti:
  *     - [0x40044a] ptr44a (opcode 0 kind==3)
  *     - [0x40044e] ptr44e
  *     - [0x400452] ptr452
@@ -28,20 +23,18 @@
  *     - [0x40045a] timer45a
  *     - [0x40075c] byte counter (opcode 0 kind==6)
  *     - [0x40075e] byte flag (opcode 0 kind==6)
- *     - [0x400690..0x400693] posX/Y (da FUN_13334)
- *     - [0x400970..0x400977] active-record globals (da FUN_13334)
+ *     - [0x400690..0x400693] posX/Y (from FUN_13334)
+ *     - [0x400970..0x400977] active-record globals (from FUN_13334)
  *     - [0x400408..0x40040f] palette queue
- *     - [0x4003bc..0x4003db] sorted-slot byte array (da FUN_18E6C)
- *     - [0x4001dc..0x4001e9] rect-slot area (da FUN_18E6C)
+ *     - [0x4001dc..0x4001e9] rect-slot area (from FUN_18E6C)
  *
- * ## Suite (5 × 100 = 500 casi)
- *   A: opcode  0 — opcode 0 con slot[0x1e]==1 (render path)
- *   B: opcode  0 — opcode 0 con slot[0x1e]!=1 (insert-sorted path)
+ *   A: opcode  0 — opcode 0 with slot[0x1e]==1 (render path)
+ *   B: opcode  0 — opcode 0 with slot[0x1e]!=1 (insert-sorted path)
  *   C: opcodes 1..7 — script control flow ops
  *   D: opcodes 8..16 — position / object-list ops
  *   E: opcodes 17..18 — mode-4 dispatch + complex object search
  *
- * Uso: npx tsx packages/cli/src/test-helper-12896-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-12896-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -195,7 +188,6 @@ function compareObservables(
     if (bin !== ts) return { what: label, bin, ts };
   }
 
-  // FUN_18E6C sorted-slot byte array (0x20 bytes @ 0x4003bc)
   const sortedDiff = compareRegion(state, cpu, 0x4003bc, 0x20, "sortedArr");
   if (sortedDiff !== null) return sortedDiff;
 

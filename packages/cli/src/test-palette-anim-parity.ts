@@ -3,7 +3,7 @@
  * test-palette-anim-parity.ts — differential testing per le N palette anim.
  *
  * Uso: npx tsx packages/cli/src/test-palette-anim-parity.ts [N]
- * Testa ogni anim contro l'implementazione TS corrispondente, N casi ciascuna.
+ * Test each animation against the corresponding TS implementation, N cases each.
  */
 
 import { existsSync, readFileSync } from "node:fs";

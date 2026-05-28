@@ -2,33 +2,16 @@
 /**
  * test-mo-grid-init-2404-parity.ts — differential FUN_2404 vs moGridInit2404.
  *
- * `FUN_00002404` (100 byte): inizializzatore di un bank MO RAM. Scrive 56
- * slot sprite con coordinate Y/X dalle tabelle ROM @ 0x2468 / 0x24D8, link
- * 1..56, code = (arg1 + ROM[0x1006A]). Inoltre scrive 1× a MMIO 0x860000.
  *
  * Convenzione caller (cdecl push-RTL):
- *   - arg1 long (push first / SP+0x10 dopo movem 12 + ret 4 = 16)
  *   - return D0 non significativo (caller non usa)
  *
  * Strategia parity:
- *   - Per ogni caso: zero spriteRam in Musashi e in state.spriteRam TS.
- *   - Setta SP, callFunction(0x2404, [arg1]) → esegue il binario.
- *   - Legge spriteRam dal binario (Musashi unified memory) e dal TS.
- *   - Confronta byte-by-byte (4096 byte = tutto il bank set).
  *
- * **Nota MMIO**: la write a 0x860000 non è in spriteRam, non viene catturata
- * qui. Lo smoke test (`engine/test/mo-grid-init-2404.test.ts`) già valida la
- * callback MMIO. La parity verifica solo lo stato spriteRam, che è il side
- * effect "persistente" osservabile.
  *
- * **Nota arg1 range**: per casi `arg1 << 9 >= 0x1000`, gli slot cadono fuori
  * dai 4 KB di SPRITE_RAM. Su Musashi, l'unified memory ha SPRITE_RAM_BASE..
  * SPRITE_RAM_END + ALPHA_RAM_BASE..ALPHA_RAM_END contigui (0xA02000..0xA03FFF).
- * Inoltre il layout aggiunge cart RAM, palette RAM, ecc. Quindi il binario
- * potrebbe scrivere in alpha RAM o oltre. La replica TS scarta i write fuori
- * spriteRam (4 KB). Per evitare divergenze fuori-test, usiamo arg1 ∈ {0..7}
- * per la maggior parte dei casi (esattamente quello che il caller binario
- * fa: incrementa *0x40000C da 0).
+ * does: increment *0x40000C from 0).
  *
  * Uso: npx tsx packages/cli/src/test-mo-grid-init-2404-parity.ts [N]
  */
@@ -76,7 +59,6 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Mirror ROM in TS (per moGridInit2404 che legge tabelle e ROM[0x1006A]).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -94,7 +76,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern di copertura su arg1.
@@ -113,11 +94,10 @@ async function main(): Promise<void> {
       // Sweep deterministico 0..7 ripetuto.
       arg1 = (i - 5) % 8;
     } else {
-      // Random nel range 0..7 (caller binario garantisce questo).
       arg1 = Math.floor(rng() * 8);
     }
 
-    // Zero spriteRam Musashi (regione SPRITE_RAM_BASE..SPRITE_RAM_END).
+    // Zero Musashi spriteRam (SPRITE_RAM_BASE..SPRITE_RAM_END region).
     for (let k = 0; k < SPRITE_RAM_SIZE; k++) {
       pokeMem(cpu, SPRITE_RAM_BASE + k, 1, 0);
     }
@@ -125,13 +105,11 @@ async function main(): Promise<void> {
     // Zero spriteRam TS.
     state.spriteRam.fill(0);
 
-    // Esegui il binario.
     callFunction(cpu, FUN_2404, [arg1]);
 
     // Esegui la replica TS.
     modNs.moGridInit2404(state, tsRom, arg1);
 
-    // Confronta spriteRam byte-by-byte.
     let diffCount = 0;
     let firstDiffOff = -1;
     let firstBinByte = 0;

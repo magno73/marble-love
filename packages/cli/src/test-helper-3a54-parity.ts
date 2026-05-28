@@ -2,25 +2,25 @@
 /**
  * test-helper-3a54-parity.ts — differential FUN_3A54 vs helper3A54.
  *
- * `FUN_00003A54` (27 istr): formatta un valore 32-bit come stringa decimale
- * ASCII in memoria. Converte binary → BCD packed via FUN_3A6A (double-dabble
- * con ABCD/ROXL), poi tail-call FUN_3A08 per scrivere il BCD come hex ASCII
- * (che produce la stringa decimale).
+ * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal string
+ * ASCII in memory. It converts binary -> packed BCD via FUN_3A6A
+ * (double-dabble with ABCD/ROXL), then tail-calls FUN_3A08 to write the BCD as
+ * hex ASCII (which produces the decimal string).
  *
- * **Strategia parity**:
- *   1. Per ogni caso: riempi un buffer scratch con 0x55 in binario e TS.
- *   2. Chiama il binario via `callFunction(cpu, FUN_3A54, [value, bufEnd, numDigits, showSpaces])`.
- *   3. Esegui `helper3A54(state, value, bufEnd, numDigits, showSpaces)` su TS.
- *   4. Confronta tutti i byte dello scratch buffer tra binario e TS.
+ * **Parity strategy**:
+ *   1. For each case: fill a scratch buffer with 0x55 in binary and TS.
+ *   2. Call the binary via `callFunction(cpu, FUN_3A54, [value, bufEnd, numDigits, showSpaces])`.
+ *   3. Run `helper3A54(state, value, bufEnd, numDigits, showSpaces)` on TS.
+ *   4. Compare every scratch buffer byte between binary and TS.
  *
- * **Copertura** (500 casi):
- *   - Casi deterministici edge: 0, 1, 9, 10, 99, 100, 999, 1234, 9999,
- *     12345678, 99999999, valori con leading zeros, showSpaces=0/1.
- *   - Casi random: value in [0..99999999] (range tipico punteggi Marble),
+ * **Coverage** (500 cases):
+ *   - Deterministic edge cases: 0, 1, 9, 10, 99, 100, 999, 1234, 9999,
+ *     12345678, 99999999, values with leading zeros, showSpaces=0/1.
+ *   - Random cases: value in [0..99999999] (typical Marble score range),
  *     numDigits in [1..8], showSpaces in {0, 1}.
- *   - bufEnd variabile in area sicura scratch.
+ *   - Variable bufEnd within the safe scratch area.
  *
- * Uso: npx tsx packages/cli/src/test-helper-3a54-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-helper-3a54-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -42,7 +42,7 @@ import {
 const FUN_3A54 = 0x00003a54;
 const WORK_RAM_BASE = 0x00400000;
 const SCRATCH_ADDR = 0x00401d00;
-const SCRATCH_SIZE = 0x80; // 128 byte di buffer scratch
+const SCRATCH_SIZE = 0x80; // 128 bytes of scratch buffer
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
     ts: number;
   } | null = null;
 
-  // Casi edge deterministici
+  // Deterministic edge cases.
   const specialCases: Array<{
     value: number;
     numDigits: number;
@@ -122,11 +122,10 @@ async function main(): Promise<void> {
       numDigits = sc.numDigits;
       showSpaces = sc.showSpaces;
     } else {
-      // Random: valori tipici di punteggi marble (0..99999999)
-      // ma anche fuori range per stress-test
+      // Random: typical Marble score values (0..99999999), with some out-of-range stress cases.
       const roll = rng();
       if (roll < 0.7) {
-        // Range tipico punteggi
+        // Typical score range.
         value = Math.floor(rng() * 100000000) >>> 0;
       } else {
         // Full 32-bit range
@@ -136,24 +135,24 @@ async function main(): Promise<void> {
       showSpaces = rng() < 0.5 ? 0 : 1;
     }
 
-    // bufEnd: offset variabile nello scratch
+    // bufEnd: variable offset in scratch.
     const maxOffset = SCRATCH_SIZE - numDigits - 2;
     const offset = maxOffset > 0 ? Math.floor(rng() * (maxOffset + 1)) : 0;
     const bufEnd = SCRATCH_ADDR + offset;
 
-    // Riempi scratch con sentinella 0x55
+    // Fill scratch with sentinel 0x55.
     for (let j = 0; j < SCRATCH_SIZE; j++) {
       pokeMem(cpu, SCRATCH_ADDR + j, 1, 0x55);
       state.workRam[(SCRATCH_ADDR - WORK_RAM_BASE) + j] = 0x55;
     }
 
-    // Chiama binario: 4 long args (cdecl, push RTL)
+    // Call binary: 4 long args (cdecl, push RTL).
     callFunction(cpu, FUN_3A54, [value, bufEnd, numDigits, showSpaces]);
 
-    // Esegui TS
+    // Run TS.
     h3A54Ns.helper3A54(state, value, bufEnd, numDigits, showSpaces);
 
-    // Confronta scratch byte-by-byte
+    // Compare scratch byte-by-byte.
     let matched = true;
     let diffOffset = -1;
     let binByte = 0;

@@ -1,9 +1,9 @@
--- mame_spriteproj_return_tap.lua — cattura D0 register al PC 0x1242a (=
+-- mame_spriteproj_return_tap.lua - capture D0 register at PC 0x1242a (=
 -- istruzione successiva a `jsr 0x1CC62; move.l D0,D4` in helper121B8).
 -- A PC 0x1242a, D0 contiene il return value di spriteProject1CC62.
 --
--- Confronta con TS calcolo (= 0x3fdc_0000 con STRUCT warm all-3fdc) per
--- verificare se la replica TS e' bit-perfect.
+-- Compare with TS computation (= 0x3fdc_0000 with STRUCT warm all-3fdc) to
+-- verify whether the TS replica is bit-perfect.
 --
 -- Output: /tmp/mame_spriteproj_return.json
 -- Vars env:

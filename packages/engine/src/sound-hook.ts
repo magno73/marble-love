@@ -1,13 +1,14 @@
 /**
- * sound-hook.ts — fallback global hook per cmd emit da TUTTE le sub sound.
+ * sound-hook.ts - fallback global hook for command emits from all sound subs.
  *
- * Pattern: invece di passare callback in ogni callsite, ogni sub-emit chiama
- * `notifySoundCmd(cmd)`. Se il caller (web frontend) ha registrato hook via
- * `setGlobalSoundCmdHook`, il cmd viene inoltrato. Default no-op.
+ * Pattern: instead of threading callbacks through every call site, each
+ * sub-emitter calls `notifySoundCmd(cmd)`. If the caller (web frontend)
+ * registered a hook via `setGlobalSoundCmdHook`, the command is forwarded.
+ * Default no-op.
  *
- * NON ha side effect sul state TS: solo emit esterno. Parity test invariato.
+ * No side effects on TS state: external emit only. Parity tests are unchanged.
  *
- * Sub che chiamano:
+ * Calling subs:
  *   - soundCmdSend158AC (FUN_000158AC)
  *   - soundCmdSend       (FUN_???)
  *   - soundPair15884     (FUN_00015884)

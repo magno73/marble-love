@@ -1,12 +1,12 @@
 -- mame_1caba_trace.lua — hook entry/exit di FUN_0001CABA via install_read_tap.
--- Cattura stato (workRam, STRUCT, registri tile) prima e dopo ogni call.
+-- Captures state (workRam, STRUCT, tile registers) before and after each call.
 -- Output JSON.
 --
 -- Variabili d'ambiente:
 --   MARBLE_1CABA_FRAMES    — CSV di frame numeri (default 200..210)
 --   MARBLE_1CABA_OUT       — file output (default /tmp/mame_1caba_trace.json)
 --   MARBLE_1CABA_MAXCALLS  — max calls totali (default 200)
---   MARBLE_1CABA_RUN_UNTIL — frame max prima di forzare exit (default = last frame)
+--   MARBLE_1CABA_RUN_UNTIL - max frame before forcing exit (default = last frame)
 
 local FRAMES_RAW = os.getenv("MARBLE_1CABA_FRAMES") or "200,201,202,203,204,205,206,207,208,209"
 local OUT_PATH = os.getenv("MARBLE_1CABA_OUT") or "/tmp/mame_1caba_trace.json"

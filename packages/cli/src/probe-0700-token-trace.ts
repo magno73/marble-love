@@ -1,6 +1,6 @@
 // probe-0700-token-trace.ts — esegue una versione INSTRUMENTATA del decoder
-// FUN_1A668 con gli stessi args che MAME usa al primo body (f12002), e dumpa:
-//   - per ogni iter: token14, path A/B/C/D/E, d4_pre, d6_pre, d6_post,
+// FUN_1A668 with the same args MAME uses at the first body (f12002), and dumps:
+//   - for each iter: token14, path A/B/C/D/E, d4_pre, d6_pre, d6_post,
 //     d3, d2_pre, ext bytes consumati, output words emesse
 //   - tutti gli stream content read (a3 long, a1 byte)
 //
@@ -9,10 +9,10 @@
 //   ctrlAbs  = 0x080650
 //   extAbs   = 0x02BE18
 //
-// L'engine TS dovrebbe calcolarli IDENTICI a MAME se refreshHelper13EE6
-// pre-decoder logic e' bit-perfect. Verifichiamo prima questo.
+// The TS engine should compute them identically to MAME if refreshHelper13EE6
+// pre-decoder logic is bit-perfect. Verify this first.
 //
-// Output: /tmp/ts_decoder_stream.json (formato congruo con mame_decoder_stream.json)
+// Output: /tmp/ts_decoder_stream.json (format aligned with mame_decoder_stream.json)
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -46,12 +46,12 @@ const warm = {
 const s = stateNs.emptyGameState();
 bootInit(s, rom, { warmState: warm });
 
-// Args che vogliamo usare (= valori MAME al body#1):
+// Args to use (= MAME values at body #1):
 const ARG_OUT  = 0x400706;
 const ARG_CTRL = 0x080650;
 const ARG_EXT  = 0x02BE18;
 
-// ─── Decoder instrumentato (copia 1:1 di decodeBitstream1A668 con trace) ─────
+// Instrumented decoder (1:1 copy of decodeBitstream1A668 with trace).
 
 const WORK_RAM_BASE = 0x400000;
 const WORK_RAM_END  = 0x402000;
@@ -263,7 +263,7 @@ function runDecoder(outAbs: number, ctrlAbs: number, extAbs: number): void {
 }
 
 // ─── Driver: warm state @ f12000, run 5 tick, intercetta primo body decoder ────
-// In realta' eseguiamo solo il decoder con args fissi MAME.
+// In practice, run only the decoder with fixed MAME args.
 
 runDecoder(ARG_OUT, ARG_CTRL, ARG_EXT);
 

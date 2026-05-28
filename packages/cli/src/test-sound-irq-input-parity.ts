@@ -2,12 +2,9 @@
 /**
  * test-sound-irq-input-parity.ts — differential FUN_4D1A vs soundIrqInputTick.
  *
- * FUN_4D1A è un IRQ handler che termina con `rte` (0x4E73). Per testarlo
- * via callFunction (che usa sentinel return address + rts) lo patchiamo
- * sostituendo `rte` con `rts` (0x4E75) all'offset 0x4D66 del ROM.
+ * via callFunction (which uses a sentinel return address + rts), patch it by
+ * replacing `rte` with `rts` (0x4E75) at ROM offset 0x4D66.
  *
- * Setup per chiamata: pre-carica MMIO 0xFC0001 con il byte da campionare
- * (è una read MMIO, non un arg stack).
  *
  * Uso: npx tsx packages/cli/src/test-sound-irq-input-parity.ts [N]
  */
@@ -28,7 +25,6 @@ import {
 const FUN = 0x00004d1a;
 const RTE_OFF = 0x4d66; // offset di `rte` in FUN_4D1A
 // Offset dell'absolute long address dell'istruzione `move.b (0xFC0001).l,(A0)` @ 0x4D5C.
-// L'istruzione è 0x10F9 (move.b src=abs.l, dst=(A0)), seguita dal long 0x00FC0001.
 const MMIO_ADDR_PATCH_OFF = 0x4d5e; // bytes 0x4D5E..0x4D61 = 4-byte abs addr
 
 function makeRng(seed: number): () => number {
@@ -47,9 +43,7 @@ async function main(): Promise<void> {
   rom[RTE_OFF] = 0x4e;
   rom[RTE_OFF + 1] = 0x75;
 
-  // Patch source address dell'instr di lettura MMIO (era 0x00FC0001) a
-  // 0x00400440 (stack-water, escluso dal nostro state diff). Così possiamo
-  // controllare il byte sorgente via pokeMem invece che dipendere dall'audio CPU.
+  // Control the source byte through pokeMem instead of depending on the audio CPU.
   rom[MMIO_ADDR_PATCH_OFF] = 0x00;
   rom[MMIO_ADDR_PATCH_OFF + 1] = 0x40;
   rom[MMIO_ADDR_PATCH_OFF + 2] = 0x04;
@@ -87,19 +81,16 @@ async function main(): Promise<void> {
     stateInst.workRam[0x1f5c] = (ackPtr >>> 8) & 0xff;
     stateInst.workRam[0x1f5d] = ackPtr & 0xff;
 
-    // Inizializza buffer 0x401F46-0x401F55 con sentinel pattern
     for (let j = 0; j < 0x10; j++) {
       pokeMem(cpu, 0x00401F46 + j, 1, 0xCC);
       stateInst.workRam[0x1f46 + j] = 0xCC;
     }
 
-    // Pre-carica il source addr patchato (0x00400440) col byte da campionare
     pokeMem(cpu, 0x00400440, 1, mmioByte);
 
     callFunction(cpu, FUN, []);
     soundIrqInput.soundIrqInputTick(stateInst, mmioByte);
 
-    // Confronta workRam @ 0x1F44-0x1F5F (32 byte abbondanti)
     let match = true;
     for (let j = 0x1f44; j <= 0x1f5f; j++) {
       const b = peekMem(cpu, 0x00400000 + j, 1);
@@ -112,7 +103,6 @@ async function main(): Promise<void> {
         break;
       }
     }
-    // Se ackPtr è in workRam range, confronta anche quel byte (target write)
     if (match && ackPtr !== 0 && ackPtr >= 0x00400000 && ackPtr < 0x00402000) {
       const b = peekMem(cpu, ackPtr, 1);
       const t = stateInst.workRam[ackPtr - 0x00400000] ?? 0;

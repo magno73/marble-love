@@ -1,14 +1,15 @@
 /**
- * string-step.ts — `FUN_00002CD4` (204 byte) e `FUN_00002DA0` (120 byte).
+ * string-step.ts - `FUN_00002CD4` (204 bytes) and `FUN_00002DA0` (120 bytes).
  *
- * Sub di FUN_2E18: rendering/clear INCREMENTALE (un char per frame).
+ * FUN_2E18 helpers: incremental render/clear, one char per frame.
  *
- * - **FUN_2CD4 — `stepRenderState3(structAddr, attrWord, charIdx) → byte`**:
- *   Renderizza il char[charIdx] della stringa. Returns 0 se fine string,
- *   3 altrimenti (continue state machine).
+ * - **FUN_2CD4 - `stepRenderState3(structAddr, attrWord, charIdx) -> byte`**:
+ *   Renders char[charIdx] of the string. Returns 0 at end of string, otherwise
+ *   3 to continue the state machine.
  *
- * - **FUN_2DA0 — `stepClearState4(structAddr, charIdx) → byte`**:
- *   Clear (azzera alpha word) del char[charIdx]. Returns 0 se fine, 4 continue.
+ * - **FUN_2DA0 - `stepClearState4(structAddr, charIdx) -> byte`**:
+ *   Clears the alpha word for char[charIdx]. Returns 0 at end of string,
+ *   otherwise 4 to continue.
  */
 
 import type { GameState } from "./state.js";

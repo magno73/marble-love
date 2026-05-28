@@ -1,7 +1,6 @@
 /**
  * helper-1c88.test.ts — unit test di `helper1C88` (FUN_00001C88).
  *
- * Bit-perfect parity (500 casi randomici) verificata in
  * `packages/cli/src/test-helper-1c88-parity.ts` vs Musashi.
  */
 
@@ -45,7 +44,6 @@ describe("helper1C88 (FUN_00001C88)", () => {
     const s = emptyGameState();
     s.alphaRam.fill(0xab);
     helper1C88(s, undefined);
-    // Tutti i byte da offset 0 a 0xFFF devono essere 0
     for (let i = 0; i <= 0x0fff; i++) {
       expect(s.alphaRam[i]).toBe(0);
     }
@@ -86,13 +84,12 @@ describe("helper1C88 (FUN_00001C88)", () => {
   it("riempie playfieldRam con 0 quando vblankFlag != 0 (indipendente da ROM)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Imposta ROM[0x10060] = 0x1234 e vblankFlag = 1 → fillWord deve essere 0
+    // Set ROM[0x10060] = 0x1234 and vblankFlag = 1 -> fillWord must be 0.
     rom.program[0x10060] = 0x12;
     rom.program[0x10061] = 0x34;
     writeWordBE(s.workRam, 0x16, 1); // vblankFlag = 1
     s.playfieldRam.fill(0xab);
     helper1C88(s, rom);
-    // Tutti i word devono essere 0 perché vblankFlag != 0
     for (let off = 0; off <= 0x1ffe; off += 2) {
       expect(readWordBE(s.playfieldRam, off)).toBe(0);
     }
@@ -113,8 +110,6 @@ describe("helper1C88 (FUN_00001C88)", () => {
   });
 
   it("sign-estende il fill word negativo: ROM16[0x10060] = 0x8000 → fillWord = 0x8000", () => {
-    // ext.l d0 sign-estende, poi move.w scrive solo il word basso.
-    // s16(0x8000) = -32768, ma come word è ancora 0x8000.
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10060] = 0x80;
@@ -131,7 +126,6 @@ describe("helper1C88 (FUN_00001C88)", () => {
     const rom = emptyRomImage();
     rom.program[0x10060] = 0x12;
     rom.program[0x10061] = 0x34;
-    // Solo il low byte della word è non-zero
     writeWordBE(s.workRam, 0x16, 0x0001);
     s.playfieldRam.fill(0xab);
     helper1C88(s, rom);
@@ -162,7 +156,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     const s = emptyGameState();
     s.spriteRam.fill(0x55);
     helper1C88(s, undefined);
-    // Solo offset 0x000 e 0x180 azzerati; il resto deve rimanere
+    // Only offsets 0x000 and 0x180 are zeroed; the rest must remain.
     expect(readWordBE(s.spriteRam, 0x002)).toBe(0x5555);
     expect(readWordBE(s.spriteRam, 0x17e)).toBe(0x5555);
     expect(readWordBE(s.spriteRam, 0x182)).toBe(0x5555);
@@ -209,7 +203,6 @@ describe("helper1C88 (FUN_00001C88)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xaa);
     helper1C88(s, undefined);
-    // workRam deve rimanere intatto (la funzione la legge ma non scrive)
     for (let i = 0; i < s.workRam.length; i++) {
       expect(s.workRam[i]).toBe(0xaa);
     }
@@ -218,7 +211,6 @@ describe("helper1C88 (FUN_00001C88)", () => {
   it("sequenza completa: tutte e 4 le regioni RAM modificate correttamente", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Setup: state tutto 0xff, vblankFlag = 0, ROM fill = 0x0055
     s.alphaRam.fill(0xff);
     s.playfieldRam.fill(0xff);
     s.spriteRam.fill(0xff);
@@ -229,17 +221,14 @@ describe("helper1C88 (FUN_00001C88)", () => {
 
     helper1C88(s, rom);
 
-    // alphaRam: tutto 0
     expect(s.alphaRam[0]).toBe(0);
     expect(s.alphaRam[0xffe]).toBe(0);
-    // playfieldRam: tutto 0x0055
     expect(readWordBE(s.playfieldRam, 0)).toBe(0x0055);
     expect(readWordBE(s.playfieldRam, 0x1ffe)).toBe(0x0055);
-    // spriteRam[0] e [0x180] azzerati, resto 0xff
+    // spriteRam[0] and [0x180] zeroed, rest 0xff.
     expect(readWordBE(s.spriteRam, 0x000)).toBe(0);
     expect(readWordBE(s.spriteRam, 0x180)).toBe(0);
     expect(s.spriteRam[2]).toBe(0xff);
-    // colorRam[0x400] azzerato, resto 0xff
     expect(readWordBE(s.colorRam, 0x400)).toBe(0);
     expect(s.colorRam[0]).toBe(0xff);
   });

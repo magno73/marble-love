@@ -1,35 +1,18 @@
 #!/usr/bin/env node
 /**
- * test-array-9-clear-and-dispatch-parity.ts — differential FUN_190EE vs
  * `array9ClearAndDispatch`.
  *
- * `FUN_000190EE` (62 byte) è un fan-out: per i in [0..8] azzera
- * `entry[0x18]` poi chiama `FUN_00018F46` con `entry[0x25]` (low byte
  * di arg1) e `entry[0x19]` (low byte di arg2).
  *
- * **Verifica**: side-effect (clear di 0x18 in 9 entry) + sequenza degli
- * arg passati alla JSR (pattern = `slot-array-tick`).
  *
- * Strategia (analogo a `test-slot-array-tick-parity.ts`):
- *   1. Patch FUN_18F46 a un thunk custom che logga `(arg1Long, arg2Long)`
+ *   1. Patch FUN_18F46 to a custom thunk that logs `(arg1Long, arg2Long)`
  *      in una ring-buffer in work-RAM.
  *      Layout ring-buffer:
  *        - 0x401E00: 9 × 8 byte (arg1 long + arg2 long) = 72 byte slot
- *        - 0x401E48: counter long (numero di byte scritti = 9*8 = 72)
- *      Counter parte da 0; thunk scrive a `base+counter` e fa `+= 8`.
- *      Scelta degli indirizzi: dentro work-RAM (0x400000..0x402000) e fuori
- *      dall'array-9 (0x401890..0x4019F8) per non interferire.
- *   2. Run binario → leggi ring-buffer + zona array-9 (0x401890..+0x168).
- *   3. Run TS con callback che fa lo stesso log + clear → compara workRam
- *      bit-by-bit (zona array + ring + counter).
+ *   3. Run TS with callback that does the same log + clear -> compare workRam
  *
- * Suite testate (500 casi, 1 suite):
- *   - randomizziamo l'intero array-9 (0x401890..+0x168 = 360 byte) per
- *     coprire tutti i pattern di byte 0x19/0x25 (signed/unsigned, edge cases
  *     0x80, 0x7F, 0xFF, 0x00).
- *   - resettiamo il counter @ 0x401FFC a 0 prima di ogni run.
  *
- * Uso: npx tsx packages/cli/src/test-array-9-clear-and-dispatch-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -51,7 +34,6 @@ const FUN_18F46 = 0x00018f46;
 
 /** Base ring-buffer (9 × 8 byte = 72 byte). */
 const RING_BASE = 0x00401e00;
-/** Counter long (numero di byte scritti dalla ring-buffer = 9*8 = 72). */
 const RING_COUNTER = 0x00401e48;
 
 /** Patch FUN_18F46 col thunk-logger (32 byte).
@@ -65,7 +47,6 @@ const RING_COUNTER = 0x00401e48;
  *   addq.l  #8, RING_COUNTER.l       ; 50B9 0040 1E48              (6 byte)
  *   rts                              ; 4E75                        (2 byte)
  *
- * Totale = 30 byte. Entra in FUN_18F46 che è 132 byte (0x18F46..0x18FCA).
  */
 function patchFun18F46(cpu: CpuSession): void {
   const bytes = [
@@ -97,18 +78,15 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Reset zona di interesse a 0 (nel binario E nel state TS). */
 function resetWatchedZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): void {
-  // Array-9 (0x401890 + 9*0x28 = 0x401890..0x4019F8 = 0x168 byte)
   for (let a = 0x00401890; a < 0x004019f8; a++) {
     pokeMem(cpu, a, 1, 0);
     state.workRam[a - 0x400000] = 0;
   }
   // Ring buffer (72 byte) + counter (4 byte) @ 0x401E00..0x401E4C.
-  // Restano in work-RAM (end @ 0x402000) e fuori dall'array-9 (end @ 0x4019F8).
   for (let a = RING_BASE; a < RING_BASE + 72 + 4; a++) {
     pokeMem(cpu, a, 1, 0);
     state.workRam[a - 0x400000] = 0;
@@ -176,9 +154,6 @@ function diffBytes(
 }
 
 /**
- * Callback TS che replica il thunk binario:
- *   - Scrive arg1Long (long, BE) a workRam[ring + counter+0..3]
- *   - Scrive arg2Long (long, BE) a workRam[ring + counter+4..7]
  *   - counter += 8
  */
 function makeLogger() {
@@ -246,8 +221,6 @@ async function main(): Promise<void> {
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Reset poi randomizza l'array-9 con byte casuali (copre tutti i
-    // pattern signed/unsigned per i campi 0x19/0x25).
     resetWatchedZones(stateInst, cpu);
     for (let a = 0x00401890; a < 0x004019f8; a++) {
       const v = rb();
@@ -256,7 +229,6 @@ async function main(): Promise<void> {
     }
     // Ring + counter restano a 0 (richiesto dal thunk: parte da 0).
 
-    // Run binario
     callFunction(cpu, FUN_190EE, []);
     const binArray = readArrayBin(cpu);
     const binRing = readRingBin(cpu);
@@ -273,7 +245,6 @@ async function main(): Promise<void> {
 
     if (diffArr === null && diffRing === null && counterMatch) {
       ok++;
-      // Sanity (tc==0): counter atteso = 9*8 = 72.
       if (tc === 0 && binRing.counter !== 72) {
         console.log(`  ERROR (tc=0): counter atteso 72, got ${binRing.counter}`);
         ok--;

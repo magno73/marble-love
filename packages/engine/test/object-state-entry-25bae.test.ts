@@ -1,13 +1,11 @@
 /**
  * Test objectStateEntry25BAE (FUN_00025BAE) — smoke tests sul dispatcher
- * di transizione di stato oggetto + scritture dirette.
  *
- * `FUN_00025BAE` (198 byte) prende objPtr + subStateCode, fa scritture
- * comuni (clear longs @ +0x0/+0x4 + conditional +0x18 se +0x1A==6), poi
- * dispatcha su 3 case (2/9/4) che chiamano FUN_158AC (sound) e/o
+ * `FUN_00025BAE` (198 bytes) takes objPtr + subStateCode and performs writes
+ * common effects (clear longs @ +0x0/+0x4 + conditional +0x18 if +0x1A==6),
+ * then dispatches on 3 cases (2/9/4) that call FUN_158AC (sound) and/or
  * FUN_2591A (object init).
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-object-state-entry-25bae-parity.ts` (500/500 cases).
  */
 
@@ -27,7 +25,6 @@ import { emptyGameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Legge long big-endian da workRam. */
 function readU32BE(wr: Uint8Array, off: number): number {
   return (
     (((wr[off] ?? 0) << 24) |
@@ -38,12 +35,10 @@ function readU32BE(wr: Uint8Array, off: number): number {
   );
 }
 
-/** Legge word big-endian da workRam. */
 function readU16BE(wr: Uint8Array, off: number): number {
   return (((wr[off] ?? 0) << 8) | (wr[off + 1] ?? 0)) & 0xffff;
 }
 
-/** Scrive word big-endian su workRam. */
 function writeU16BE(wr: Uint8Array, off: number, v: number): void {
   const u = v & 0xffff;
   wr[off] = (u >>> 8) & 0xff;
@@ -56,9 +51,9 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill obj con sentinel non-zero per verificare clear/overwrite.
+    // Pre-fill obj with non-zero sentinel to verify clear/overwrite.
     for (let k = 0; k < 0x80; k++) s.workRam[objOff + k] = 0x55;
-    // A2[+0x1A] != 6 → non triggera la conditional su +0x18.
+    // A2[+0x1A] != 6 -> does not trigger the +0x18 conditional.
     s.workRam[objOff + 0x1a] = 0x00;
     s.workRam[objOff + 0x18] = 0xee;
 
@@ -70,7 +65,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     // Clears comuni: +0x0..3, +0x4..7 ← 0
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
-    // +0x18 NON toccato (pre-state non era 6)
+    // +0x18 not touched (pre-state was not 6).
     expect(s.workRam[objOff + 0x18]).toBe(0xee);
     // Scritture case 2
     expect(s.workRam[objOff + 0x5f]).toBe(0);
@@ -78,7 +73,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU32BE(s.workRam, objOff + 0x5a)).toBe(SPRITE_PTR_CASE2);
     expect(s.workRam[objOff + 0x56]).toBe(0x02);
     expect(s.workRam[objOff + 0x1a]).toBe(0x02);
-    // Sound 0x38 invocato
+    // Sound 0x38 invoked.
     expect(sounds).toEqual([OBJECT_STATE_ENTRY_25BAE_SOUND_IDS.case2]);
   });
 
@@ -101,9 +96,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(s.workRam[objOff + 0x60]).toBe(0x04);
     expect(readU32BE(s.workRam, objOff + 0x5a)).toBe(SPRITE_PTR_CASE9);
     expect(s.workRam[objOff + 0x1a]).toBe(0x09);
-    // +0x56 NON è scritto in case 9 (lasciato a 0 pre-state)
     expect(s.workRam[objOff + 0x56]).toBe(0);
-    // Nessuna sound
     expect(sounds).toEqual([]);
   });
 
@@ -144,7 +137,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objPtr = WORK_RAM_BASE + 0x1300;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    s.workRam[objOff + 0x57] = 0x42; // qualsiasi valore != 0x65
+    s.workRam[objOff + 0x57] = 0x42;
     const sounds: number[] = [];
     objectStateEntry25BAE(s, objPtr, OBJECT_STATE_ENTRY_25BAE_CODES.state4, {
       soundCommand: (cmd) => sounds.push(cmd),
@@ -164,12 +157,10 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     s.workRam[objOff + 0x1a] = 0x06;
     s.workRam[objOff + 0x18] = 0x99;
 
-    // Default code (es. 0): dispatcha all'epilog senza altri write,
-    // ma la conditional su +0x18 va eseguita comunque.
+    // but the +0x18 conditional must still run.
     objectStateEntry25BAE(s, objPtr, 0x00);
 
     expect(s.workRam[objOff + 0x18]).toBe(0x03);
-    // +0x1A NON è cambiato perché il default non scrive nulla
     expect(s.workRam[objOff + 0x1a]).toBe(0x06);
     // Clears comuni
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
@@ -181,7 +172,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objPtr = WORK_RAM_BASE + 0x1500;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill alcuni byte target che NON dovrebbero essere toccati nel default.
+    // Pre-fill some target bytes that should not be touched in the default path.
     s.workRam[objOff + 0x5a] = 0xaa;
     s.workRam[objOff + 0x5b] = 0xbb;
     s.workRam[objOff + 0x5c] = 0xcc;
@@ -202,7 +193,6 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     // Solo clears comuni applicati
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
-    // Tutti gli altri byte preservati
     expect(s.workRam[objOff + 0x5a]).toBe(0xaa);
     expect(s.workRam[objOff + 0x5b]).toBe(0xbb);
     expect(s.workRam[objOff + 0x5c]).toBe(0xcc);
@@ -236,7 +226,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objOff = objPtr - WORK_RAM_BASE;
 
     writeU16BE(s.workRam, objOff + 0xd2, 0xffff);
-    s.workRam[objOff + 0x57] = 0x00; // qualsiasi != 0x65 (path ramo è ininfluente)
+    s.workRam[objOff + 0x57] = 0x00;
 
     objectStateEntry25BAE(s, objPtr, OBJECT_STATE_ENTRY_25BAE_CODES.state4);
 
@@ -248,7 +238,6 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objPtr = WORK_RAM_BASE + 0x1800;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Mappa case 2 writes: +0x0..3, +0x4..7 (clear); +0x5F, +0x60 (byte);
     //   +0x5A..5D (long); +0x56 (byte); +0x1A (byte).
     // Vicini liberi: +0x08, +0x09, +0x55, +0x57, +0x58, +0x59, +0x5E, +0x61.
     const neighbors: Record<number, number> = {

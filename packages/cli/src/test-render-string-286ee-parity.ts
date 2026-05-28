@@ -3,38 +3,25 @@
  * test-render-string-286ee-parity.ts — differential FUN_000286EE vs
  * `renderString286EE` TS replica.
  *
- * `FUN_000286EE` (154 byte): legge score word @ slotAddr, clamp a 99,
- * formatta con FUN_3874, scrive col/tickOff/marker nella struct @ 0x400434
- * (via FUN_255A inline), chiama FUN_3520 (renderStringChain2).
  *
  * **Strategia** — sentinel per le 2 sub esterne:
  *   Patch FUN_3874 e FUN_3520 a `addq.b #1, sentinel.l ; rts` (8 byte).
- *   Due sentinel byte distinti in workRam (offset noto, fuori dalla struct):
  *     - FUN_3874 → workRam[0x3D0]  (sentinelFmt)
  *     - FUN_3520 → workRam[0x3D1]  (sentinelRender)
  *
- *   In TS, le 2 callback iniettabili incrementano gli stessi sentinel.
  *
- *   FUN_255A NON patchato: è inline-replicato e vogliamo verificarne
  *   l'output (3 byte writes in struct @ 0x434/0x435/0x43A).
  *
- * **Confronto** (dopo ogni call):
- *   1. sentinelFmt   (+1 vs init) — FUN_3874 sempre chiamato
- *   2. sentinelRender (+1 vs init) — FUN_3520 sempre chiamato
- *   3. workRam[0x430..0x43F] (16 byte attorno struct @ 0x434):
+ *   3. workRam[0x430..0x43F] (16 bytes around struct @ 0x434):
  *      - [0x434] = col da ROM table @ 0x23D3C[ordinal_sext]
- *      - [0x435] = tickOff (0 se ordinal==3, else 1)
+ *      - [0x435] = tickOff (0 if ordinal==3, else 1)
  *      - [0x43A] = 0 (marker clear)
  *
- * **Nota**: FUN_3874 è stub → non scrive nel buffer puntato da *(0x436).
- * La regione confrontata [0x430..0x43F] non include i byte del buffer
- * stringa (che non vengono scritti con il stub attivo).
+ * The compared region [0x430..0x43F] does not include buffer bytes
  *
- * Suite (4 × 125 = 500 casi):
  *   - A: score random (0..255), ordinal random 0..7
  *   - B: score = 0 e 99 alternati (boundary)
  *   - C: score > 99 (100..200, clamp path)
- *   - D: ordinal ciclato 0..3 (tutti i path attr/tickOff)
  *
  * Uso: npx tsx packages/cli/src/test-render-string-286ee-parity.ts [N]
  */
@@ -62,11 +49,11 @@ const FUN_286EE = 0x000286ee;
 const FUN_3874 = 0x00003874;
 const FUN_3520 = 0x00003520;
 
-// Sentinel byte slot in workRam (counter delle 2 sub).
+// Sentinel byte slot in workRam (counter for the 2 subs).
 const SENTINEL_FMT = 0x004003d0;
 const SENTINEL_RENDER = 0x004003d1;
 
-// Range workRam confrontato (struct @ 0x400434, 16 byte attorno).
+// Compared workRam range (struct @ 0x400434, 16 bytes around it).
 const COMPARE_BASE = 0x00400430;
 const COMPARE_SIZE = 0x10; // 0x430..0x43F
 
@@ -115,7 +102,6 @@ interface FailRecord {
   setup: CaseSetup;
 }
 
-/** Setup workRam state + sentinels in entrambi binario e TS. */
 function setupCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -149,12 +135,10 @@ function compareCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): { field: string; bin: number; ts: number } | null {
-  // Sentinel fmt (+1 atteso)
   const fBin = peekMem(cpu, SENTINEL_FMT, 1) & 0xff;
   const fTs = state.workRam[SENTINEL_FMT - 0x400000] ?? 0;
   if (fBin !== fTs) return { field: "sentinelFmt", bin: fBin, ts: fTs };
 
-  // Sentinel render (+1 atteso)
   const rBin = peekMem(cpu, SENTINEL_RENDER, 1) & 0xff;
   const rTs = state.workRam[SENTINEL_RENDER - 0x400000] ?? 0;
   if (rBin !== rTs) return { field: "sentinelRender", bin: rBin, ts: rTs };
@@ -190,13 +174,10 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Build RomImage TS da romBuf (post-patch) — usata per la col table @ 0x23D3C.
-  // La patch NON tocca 0x23D3C (è ben lontano da FUN_3874 @ 0x3874 e FUN_3520 @ 0x3520),
-  // quindi il rom.program[0x23D3C..0x23D43] rispecchia il binario reale.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // TS subs: incrementano i sentinel in workRam (mirror dei stub binari addq).
+  // TS subs increment sentinels in workRam, mirroring binary addq stubs.
   const subs: rs286Ns.RenderString286EESubs = {
     numberFormatter: (s: ReturnType<typeof stateNs.emptyGameState>) => {
       const off = SENTINEL_FMT - 0x400000;

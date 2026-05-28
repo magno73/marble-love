@@ -2,10 +2,10 @@
  * eeprom-commit-request.test.ts — smoke tests di `eepromCommitRequest`
  * (FUN_3FC6).
  *
- * Verifica i tre rami di ritorno (early-1 senza side effects, fail-0 con 1
- * eepromCommit, success-1 con 1 eepromCommit + decremento) + invarianti.
+ * Verify the three return branches (early-1 without side effects, fail-0 with
+ * 1 eepromCommit, success-1 with 1 eepromCommit + decrement) + invariants.
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-eeprom-commit-request-parity.ts` vs Musashi.
  */
 
@@ -61,9 +61,9 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
   it("path #2 (budget < arg*12 signed) -> ritorna 0, 1 sola jsr a FUN_3F78 (drain), no decremento", () => {
     // status = 0 -> rate = 1. arg = 0x100 -> arg*12 = 0x1200.
-    // eepromCommit con counter=0x10, acc=0, divisor=1: drain 16 iter ->
+    // eepromCommit with counter=0x10, acc=0, divisor=1: drain 16 iters ->
     //   counter=0, acc=16, no clamp. result = 16*12/1 = 192 = 0xC0.
-    // 0xC0 (= 192) < 0x1200 (= 4608) -> path #2: ritorna 0, NO ulteriore
+    // 0xC0 (= 192) < 0x1200 (= 4608) -> path #2: returns 0, no further
     // decremento.
     const s = emptyGameState();
     const ptr = 0x401d00;
@@ -81,7 +81,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
   it("path #3 (budget >= arg*12 signed) -> ritorna 1, decrementa 0x401FF5 di (arg.w*rate.w).b", () => {
     // status = 0 -> rate = 1. arg = 1 -> arg*12 = 12.
-    // eepromCommit con counter=4, acc=0, divisor=1: drain 4 iter ->
+    // eepromCommit with counter=4, acc=0, divisor=1: drain 4 iters ->
     //   counter=0, acc=4, no clamp. result = 4*12/1 = 48 = 0x30.
     // 0x30 (= 48) >= 12 -> path #3.
     // D3.b = (1 * 1) & 0xFF = 0x01. acc' = (4 - 1) & 0xFF = 3.
@@ -99,7 +99,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
   });
 
   it("arg.w = 0xa96a, status=0x55 (rate=2): path #3 con D3.b = 0xD4 (replica caso parity)", () => {
-    // Replica esatta di un caso fail osservato durante lo sviluppo.
+    // Exact replica of a failure case observed during development.
     // arg.w = 0xa96a, status=0x55 -> rate=(0x55&3)+1=2.
     // mulu.w: D3.l = 0xa96a * 2 = 0x152D4. D3.w = 0x52D4 != 0 -> path #2/#3.
     // eepromCommit: counter=9, acc=0xba, divisor=2: drain 4 iter ->
@@ -131,7 +131,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
     const r = eepromCommitRequest(s, 0x12340000);
     expect(r).toBe(1);
-    // Path #1: nessuna chiamata a FUN_3F78 -> contatori invariati.
+    // Path #1: no call to FUN_3F78 -> counters unchanged.
     expect(s.workRam[FF7_OFF]).toBe(0x04);
     expect(s.workRam[FF5_OFF]).toBe(0x10);
   });
@@ -147,7 +147,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
     const r = eepromCommitRequest(s, 0x8000);
     expect(r).toBe(1);
-    // Path #1: nessuna chiamata a eepromCommit.
+    // Path #1: no call to eepromCommit.
     expect(s.workRam[FF5_OFF]).toBe(0x05);
     expect(s.workRam[FF7_OFF]).toBe(0x05);
   });

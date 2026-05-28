@@ -4,16 +4,13 @@
  * `renderStringChain3662`.
  *
  * `FUN_00003662` (290 byte): cammina una linked list di entry-struct
- * (col@+0, tickOff@+1, stringPtr@+2, marker@+6, nextPtr@+8) e per ogni
- * entry itera sui byte della stringa puntata, dispatchando per char a
- * `FUN_32BA` (rotation == 0) o `FUN_33F4` (rotation != 0) con argomenti
- * `(alphaPtr, 0x3c, 0)`. Avanza la chain solo se `marker + valF00 > 1`.
+ * (col@+0, tickOff@+1, stringPtr@+2, marker@+6, nextPtr@+8), and for each
+ * `(alphaPtr, 0x3c, 0)`. Advances the chain only if `marker + valF00 > 1`.
  *
  * **Strategia parity**:
- *   - Patch FUN_32BA e FUN_33F4 con stub-probe che record:
+ *   - Patch FUN_32BA and FUN_33F4 with stub-probes that record:
  *       byte 0 = which (0x32 per FUN_32BA, 0x33 per FUN_33F4)
  *       byte 1..4 = arg1 long (alphaPtr) big-endian
- *     Stub avanza un puntatore globale @ PROBE_PTR_ADDR (long).
  *
  * **Stub layout** (15 byte ciascuno, gestendo entrambi gli alias):
  *
@@ -24,14 +21,11 @@
  *     4E 75                 rts
  *
  *  Tag byte: 0x32 per FUN_32BA, 0x33 per FUN_33F4. Permette di distinguere
- *  quale jsr è stata invocata in ogni call point.
  *
- * Il TS-side espone subs.fun_32ba/fun_33f4: la callback fa lo stesso write
- * (tag + alphaPtr) nello stesso buffer (state.workRam @ probe area).
- * Confronto byte-by-byte sul probe area (incluso il puntatore @
+ * TS side exposes subs.fun_32ba/fun_33f4: the callback performs the same write
+ * (tag + alphaPtr) into the same buffer (state.workRam @ probe area).
  * PROBE_PTR_ADDR per detect call extra/mancanti).
  *
- * **Test counts cap**: limitiamo le stringhe a max ~40 byte ciascuna e la
  * chain a max ~6 entry → max ~240 byte di probe per test. PROBE_DATA_END -
  * PROBE_DATA_BASE = ~3 KB, ampiamente sufficiente.
  *
@@ -39,7 +33,6 @@
  *   - A: rotation = 0, single entry, string 0..30 char
  *   - B: rotation in [1..3], single entry, string varia
  *   - C: chain di 2..4 entry (marker/valF00 forzati per advance)
- *   - D: tickOff > lookup → skip render path; verifica che chain prosegua
  *
  * Uso: npx tsx packages/cli/src/test-render-string-chain-3662-parity.ts [N]
  */
@@ -71,7 +64,7 @@ const WORK_RAM_BASE = 0x00400000;
 
 // Probe area: SP=0x401F00 ⇒ stack scende fino a ~0x401EE0. Probe in zona
 // bassa di workRam.
-const PROBE_PTR_ADDR = 0x00401000; // long: write pointer corrente
+const PROBE_PTR_ADDR = 0x00401000;
 const PROBE_DATA_BASE = 0x00401010; // dati probe
 const PROBE_DATA_END = 0x00401C00; // exclusive (~3 KB → ~600 call max)
 
@@ -80,8 +73,7 @@ const VAL_F00_ADDR = 0x00401f00;
 const TICK_ADDR = 0x00401f3a;
 const ROTATION_ADDR = 0x00401f42;
 
-// Strutture/string area (lontano da probe e da stack):
-const STRING_AREA_BASE = 0x00401d00; // stringhe (zona libera)
+const STRING_AREA_BASE = 0x00401d00;
 const STRUCT_AREA_BASE = 0x00401e00; // entry structs
 
 /** Stub bytes (22 byte) per una sub: records `tag + arg1Long` in probe area. */
@@ -142,14 +134,13 @@ function compareProbe(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): { offset: number; bin: number; ts: number } | null {
-  // Verifica prima il puntatore aggiornato
   for (let i = 0; i < 4; i++) {
     const off = PROBE_PTR_ADDR - WORK_RAM_BASE + i;
     const b = peekMem(cpu, PROBE_PTR_ADDR + i, 1);
     const t = state.workRam[off] ?? 0;
     if (b !== t) return { offset: PROBE_PTR_ADDR + i, bin: b, ts: t };
   }
-  // Poi il contenuto
+  // Then the contents.
   for (let a = PROBE_DATA_BASE; a < PROBE_DATA_END; a++) {
     const b = peekMem(cpu, a, 1);
     const t = state.workRam[a - WORK_RAM_BASE] ?? 0;
@@ -158,7 +149,6 @@ function compareProbe(
   return null;
 }
 
-/** TS-side recorder che mima lo stub binario (tag + alphaPtr). */
 function makeTsSubs(
   state: ReturnType<typeof stateNs.emptyGameState>,
 ): ssNs.RenderStringChain3662Subs {
@@ -196,7 +186,7 @@ interface ChainEntry {
   tickOff: number; // byte
   stringBytes: number[]; // ASCII bytes including 0 terminator
   marker: number; // byte (signed)
-  // nextPtr derivato da entryIdx+1 (last entry: marker che ferma il loop)
+  // nextPtr derived from entryIdx+1 (last entry: marker that stops the loop).
 }
 
 interface TestCase {
@@ -265,7 +255,7 @@ function setupCase(
     pokeMem(cpu, sAddr + 6, 1, e.marker & 0xff);
     pokeMem(cpu, sAddr + 7, 1, 0);
     const nextPtr =
-      i + 1 < tc.entries.length ? structAddrs[i + 1]! : 0; // last: nextPtr=0 (non usato se marker ferma chain)
+      i + 1 < tc.entries.length ? structAddrs[i + 1]! : 0;
     pokeMem(cpu, sAddr + 8, 4, nextPtr);
 
     state.workRam[sAddr - WORK_RAM_BASE + 0] = e.col & 0xff;
@@ -313,7 +303,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchStubs(cpu);
 
-  // RomImage TS (carico ROM reale per ROM tables 0x7294..0x72ac)
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -335,8 +324,6 @@ async function main(): Promise<void> {
     // Run binary
     const binResult = callFunction(cpu, FUN_3662, [structAddr, 0]);
 
-    // Run TS — su un seed identico (il TS è già stato setup nel medesimo
-    // setupCase). Importante: TS pure-read, ma probe area viene scritta dal
     // record subs.
     const tsRet = ssNs.renderStringChain3662(
       stateInst,
@@ -346,7 +333,6 @@ async function main(): Promise<void> {
       tsSubs,
     );
 
-    // Confronta D0 (sempre 1)
     if ((binResult.d0 & 0xffffffff) !== (tsRet & 0xffffffff)) {
       if (failHolder.value === null) {
         failHolder.value = {
@@ -358,7 +344,6 @@ async function main(): Promise<void> {
       return false;
     }
 
-    // Confronta probe area (incluso il puntatore)
     const diff = compareProbe(stateInst, cpu);
     if (diff !== null) {
       if (failHolder.value === null) {
@@ -381,12 +366,11 @@ async function main(): Promise<void> {
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    // tickOff=0 e tick=0 → diff=0 ≤ lookup[0]=30 → render normale.
     const strLen = Math.floor(rng() * 30); // 0..29 char
     const tc: TestCase = {
       rotation: 0,
       tick: 0,
-      valF00: 0, // marker=0+0=0 ≤ 1 → ferma dopo 1ª entry
+      valF00: 0,
       entries: [
         {
           col: Math.floor(rng() * 8), // small col (0..7) per evitare overflow shift
@@ -465,9 +449,8 @@ async function main(): Promise<void> {
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
-    // rotation = 2 → lookup[2] = 0xFFFF (signed -1) → SEMPRE skip se tickOff
     // sext'd > -1, ovvero per qualsiasi tickOff != 0xFF.
-    // Mix: alcuni tickOff alti, altri bassi → mix render/skip.
+    // Mix high and low tickOff values to cover render and skip paths.
     const rot = 2; // skip-friendly
     const numEntries = 2 + Math.floor(rng() * 2); // 2..3
     const entries: ChainEntry[] = [];
@@ -476,7 +459,6 @@ async function main(): Promise<void> {
       entries.push({
         col: Math.floor(rng() * 4),
         // tickOff random: signed [-128..127]. Se >= 0 → diff > -1 → skip render.
-        // Se = 0xFF (-1) → diff = -1 = lookup → bgt false → render normale.
         tickOff: Math.floor(rng() * 256),
         stringBytes: makeRandomString(rng, Math.floor(rng() * 8)),
         marker: isLast ? 0x80 : 0,

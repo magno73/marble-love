@@ -3,8 +3,8 @@
  *
  * Verifica:
  *  - scaling math (boundary/16)
- *  - early exit quando d3 == d2
- *  - dispatch dei 4 sub (iniettabili + default no-op)
+ *  - early exit when d3 == d2
+ *  - dispatch of the 4 subs (injectable + default no-op)
  *  - mode-3 banner dispatch
  *  - mode-4 range checks (FUN_18FFA, FUN_190EE, write 0x400762)
  */
@@ -36,9 +36,9 @@ function readByte(state: GameState, addr: number): number {
 
 /**
  * Aggiunge un sentinel 0xFF all'offset 0 della ROM.
- * Con un empty ROM, rectListPtr = 0 → legge ROM[0].
+ * With an empty ROM, rectListPtr = 0 -> reads ROM[0].
  * Se ROM[0] = 0xFF → sentinel di fine lista → scriptRectDispatch12DFA
- * esce subito senza loop infinito.
+ * exits immediately without an infinite loop.
  */
 function addRomSentinel(rom: RomImage): void {
   rom.program[0] = 0xff;

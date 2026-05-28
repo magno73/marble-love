@@ -11,7 +11,7 @@
  *   - RESTORE (flag=0): copies 4 words from the secondary bank back to the
  *     primary bank.
  *
- * Per ogni caso:
+ * For each case:
  *   1. Random xscroll (masked & 0xfff8) written to workRam[0] and MMIO 0x400000.
  *   2. PF RAM filled with random data (both binary side and TS side).
  *   3. Random flag (0 or 1) passed to both binary and TS.

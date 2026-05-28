@@ -1,17 +1,11 @@
 /**
  * helper-25e7c.test.ts — smoke tests di `helper25E7C` (FUN_00025E7C).
  *
- * Verifica i path principali:
  *   1. Costante `HELPER_25E7C_ADDR`
- *   2. Zero velocità → zero output (tutti i modi)
  *   3. Mode 0/default: scale = max(0, D3 - friction)
  *   4. Mode 2: scale = max(0, D3 - friction*4)
  *   5. Mode 3: vx usa max(0, D3 - friction*5), vy usa max(0, D3 - friction)
- *   6. Mode 4: scale = D3 + friction/4 (può aumentare la velocità)
- *   7. Simmetria segno: neg e pos convergono verso lo stesso abs
- *   8. No-crash con state vuoto e objPtr al limite workRam
  *
- * Parity bit-perfect (500/500 casi random) verificata in
  * `packages/cli/src/test-helper-25e7c-parity.ts` vs Musashi.
  */
 

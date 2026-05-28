@@ -1,18 +1,19 @@
 /**
- * sound-replay.ts — Cmd-tape replay path (bypass A0).
+ * sound-replay.ts - cmd-tape replay path (bypass A0).
  *
- * Quando il main TS engine non emette ancora sound cmd al chip 6502 in
- * runtime browser (blocker A0 nel dominio Codex: gameplay sub non popolano
- * la byte queue $401F44), questo ramo ISOLATO carica una cmd-tape registrata
- * da MAME via `oracle/mame_sound_cmd_capture.lua` e la replica al chip TS al
- * frame esatto. L'audio bit-perfect emerge senza dipendere da gameplay
- * events Codex.
+ * When the main TS engine does not yet emit sound commands to the 6502 chip in
+ * browser runtime (A0 blocker in Codex domain: gameplay subs do not populate
+ * byte queue $401F44), this isolated branch loads a cmd-tape recorded from MAME
+ * via `oracle/mame_sound_cmd_capture.lua` and replays it to the TS chip on the
+ * exact frame. Bit-perfect audio emerges without depending on Codex gameplay
+ * events.
  *
- * Attivato da `?soundReplay=<url>` (path relativo, es. `scenarios/sound/cmd-tape-attract.json`).
- * Non monta engine/render/input: solo audio chip + AudioWorklet.
+ * Enabled by `?soundReplay=<url>` (relative path, for example
+ * `scenarios/sound/cmd-tape-attract.json`).
+ * Does not mount engine/render/input: audio chip + AudioWorklet only.
  *
- * Loop @60fps via setInterval. Loop infinito (riavvolge a frame 0 quando la
- * tape finisce) cosi' l'audio non si interrompe.
+ * Loop @60fps via setInterval. Infinite loop rewinds to frame 0 when the tape
+ * ends, so audio does not stop.
  */
 
 import {
@@ -727,7 +728,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
 
   // `?soundReplayFastForward=N` — pre-ticka N frame del chip al click "Start",
   // saltando il boot silente. Default: 11900 (= ~198s, finestra audibile dell'
-  // attract music inizia subito invece di aspettare 200s real-time).
+  // attract music starts immediately instead of waiting 200s real-time).
   // ?soundReplayFastForward=0 per replay completo da frame 0.
   const ffParam = searchParams.get("soundReplayFastForward");
   const fastForward = ffParam === null ? 11900 : Math.max(0, Number.parseInt(ffParam, 10) || 0);
@@ -749,7 +750,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       return;
     }
 
-    // Fast-forward: tick il chip senza output audio per skippare boot silente.
+    // Fast-forward: tick the chip without audio output to skip silent boot.
     if (fastForward > 0) {
       btn.textContent = `⏩ Fast-forward ${fastForward} frames...`;
       setStatus(`[soundReplay] fast-forwarding ${fastForward} frames (boot silent)`);

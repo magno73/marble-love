@@ -1,9 +1,10 @@
 /**
  * post-state-change-13966.ts — replica `FUN_00013966`.
  *
- * Hook chiamato quando cambia `obj[0x1B]`. In mode 3 arma la slot-table
- * secondaria `0x401650` tramite `FUN_186AC` e rilancia eventuali script slot
- * legati al nuovo stato. Questo e' il caller ROM dei pistoni tipo `0x29`.
+ * Hook called when `obj[0x1B]` changes. In mode 3 it arms the secondary
+ * slot-table at `0x401650` through `FUN_186AC` and relaunches script slots tied
+ * to the new state. This is the ROM caller for piston-type objects such as
+ * `0x29`.
  */
 
 import type { GameState } from "./state.js";

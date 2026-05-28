@@ -1,17 +1,11 @@
 /**
- * opcodes.ts — Tabella dispatch dei 151 opcode documentati MOS 6502 NMOS.
+ * Dispatch table for the 151 documented MOS 6502 NMOS opcodes.
  *
- * Ogni entry e' `{ exec(rf, bus): extraCycles }`. `extraCycles` e' il delta
- * runtime (page-cross penalty per read-ops, branch taken / page-cross per
- * branch). `baseCyclesFor(opcode)` ritorna i base cycles statici. Total
- * cycles per istruzione = `baseCyclesFor + extraCycles`.
- *
- * Undocumented opcodes (105 entries): `null` nella tabella. `cpu.step` lancia
- * errore (CLAUDE Rule 12, fail loud). Se il sound ROM 136033.421/.422 ne usa,
- * aggiungere case-by-case con riferimento al disassembly + commit dedicato.
- *
- * BCD mode: ADC/SBC modellano `D=1` per Tom Harte parity. Il sound ROM di
- * Marble Madness non lo usa (verificare post pre-flight disassembly).
+ * Each entry returns runtime extra cycles. Static base cycles come from
+ * `baseCyclesFor(opcode)`, so total instruction cycles are base plus extra.
+ * Undocumented opcodes are deliberately `null`; `cpu.step` fails loudly if the
+ * sound ROM ever reaches one. Decimal-mode ADC/SBC are modeled for Tom Harte
+ * parity even though Marble Madness sound code does not use them.
  */
 
 import type { u8, u16 } from "../wrap.js";
@@ -53,7 +47,7 @@ function pop16(rf: M6502RegFile, bus: MemBus6502): u16 {
   return as_u16(lo | (hi << 8));
 }
 
-// ─── ALU primitives (mutano rf) ───────────────────────────────────────────
+// ALU primitives, mutating the register file.
 
 function doLDA(rf: M6502RegFile, v: u8): void { rf.a = v; rf.p = updateNZ(rf.p, v); }
 function doLDX(rf: M6502RegFile, v: u8): void { rf.x = v; rf.p = updateNZ(rf.p, v); }
@@ -83,8 +77,8 @@ function doADC(rf: M6502RegFile, m: u8): void {
   const v = m as number;
   const c = hasFlag(rf.p, FLAG_C) ? 1 : 0;
   if (hasFlag(rf.p, FLAG_D)) {
-    // BCD mode (NMOS): N/V/Z stati intermedi non sempre coerenti, ma il
-    // valore decimale e il carry sono ben definiti.
+    // BCD mode (NMOS): intermediate N/V/Z behavior is quirky, but the decimal
+    // value and carry are well-defined for these tests.
     let lo = (a & 0x0f) + (v & 0x0f) + c;
     let hi = (a >>> 4) + (v >>> 4) + (lo > 0x09 ? 1 : 0);
     if (lo > 0x09) lo = (lo + 6) & 0x0f;
@@ -107,8 +101,8 @@ function doSBC(rf: M6502RegFile, m: u8): void {
   const a = rf.a as number;
   const v = m as number;
   const c = hasFlag(rf.p, FLAG_C) ? 1 : 0;
-  // Binario: SBC = ADC con operando complementato. Funziona anche per BCD
-  // su NMOS (con quirk noti per V flag).
+  // Binary SBC is ADC with a complemented operand. This also models NMOS BCD,
+  // including its known V-flag quirks.
   const sum = a + (v ^ 0xff) + c;
   if (hasFlag(rf.p, FLAG_D)) {
     let lo = (a & 0x0f) - (v & 0x0f) - (1 - c);
@@ -195,7 +189,7 @@ function branchIf(rf: M6502RegFile, bus: MemBus6502, cond: boolean): number {
 // ─── Interrupt helper (per BRK) ───────────────────────────────────────────
 
 function doBRK(rf: M6502RegFile, bus: MemBus6502): void {
-  // BRK e' una 2-byte instruction (opcode + padding), il PC e' gia' avanzato
+  // BRK is a 2-byte instruction (opcode + padding), and PC has already advanced.
   // di 1 (opcode fetch in cpu.ts); avanziamolo di 1 in piu' per saltare il
   // padding byte e pushare il return PC corretto.
   rf.pc = as_u16(((rf.pc as number) + 1) & 0xffff);
@@ -244,12 +238,12 @@ function build(): ReadonlyArray<Opcode | null> {
   t[0x20] = {
     exec(rf, bus) {
       // JSR push (PC + 2 - 1) = PC dell'ultimo byte dell'istruzione JSR.
-      // PC qui e' gia' avanzato di 1 (post opcode fetch). Leggiamo il
+      // PC has already advanced by 1 here (post opcode fetch). Read the
       // target word, poi pushiamo (target_addr - 1)? No: pushiamo
       // l'address byte successivo (= addr dell'ultimo byte di operand JSR).
       const targetLo = readPC(rf, bus) as number;
       // PC e' ora al byte hi dell'operand
-      push16(rf, bus, rf.pc); // pusha indirizzo del byte hi
+      push16(rf, bus, rf.pc); // Push address of the high byte.
       const targetHi = bus.read8(rf.pc) as number;
       rf.pc = as_u16(targetLo | (targetHi << 8));
       return 0;

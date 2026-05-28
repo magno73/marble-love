@@ -5,7 +5,7 @@
  * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localizzato a
  * 0x401F7A..0x401F80).
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-hi-score-decode-41c8-parity.ts` vs Musashi.
  */
 
@@ -31,7 +31,7 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
   ram[off + 3] = val & 0xff;
 }
 
-/** Calcola il valore radix-40 packed (16-bit) per 3 char digits (digit2 MSB). */
+/** Computes the packed radix-40 value (16-bit) for 3 char digits (digit2 MSB). */
 function pack3(d2: number, d1: number, d0: number): number {
   return (((d2 * 40 + d1) * 40 + d0) & 0xffff) >>> 0;
 }
@@ -40,7 +40,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
   it("path #1: arg1 > 9 -> ret 0, no buffer write", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401000);
-    // Pre-fill buffer con sentinel per verificare no-write.
+    // Pre-fill buffer with sentinel to verify no-write.
     for (let i = 0; i < OUTPUT_BUFFER_LEN; i++) {
       s.workRam[OUTPUT_BUFFER_OFF + i] = 0xa5;
     }
@@ -51,7 +51,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     // arg1 = 0xFFFFFFFF (sign-ext negativo) -> bit 31 set -> grande unsigned -> OOR.
     expect(hiScoreDecode41c8(s, 0xffffffff)).toBe(RET_INDEX_OOR);
 
-    // Nessuna write su workRam in nessun OOR call.
+    // No workRam writes in any OOR call.
     expect(s.workRam).toEqual(before);
   });
 
@@ -158,7 +158,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    // Pre-fill area circostante con 0x99 per check non-overflow.
+    // Pre-fill surrounding area with 0x99 for non-overflow check.
     for (let i = 0; i < 16; i++) {
       s.workRam[OUTPUT_BUFFER_OFF - 4 + i] = 0x99;
     }
@@ -176,12 +176,12 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF - 3]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 2]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 1]).toBe(0x99);
-    // Buffer (7 byte) modificato.
+    // Buffer (7 bytes) modified.
     expect(s.workRam[OUTPUT_BUFFER_OFF + 0]).toBe(0x00);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 1]).toBe(0x11);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 2]).toBe(0x22);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 3]).toBe(0x33);
-    // Initials con packed=0 -> 3 spazi (digit 0 -> 0x20).
+    // Initials with packed=0 -> 3 spaces (digit 0 -> 0x20).
     expect(s.workRam[OUTPUT_BUFFER_OFF + 4]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 5]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 6]).toBe(0x20);

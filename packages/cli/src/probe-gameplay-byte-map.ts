@@ -1,17 +1,17 @@
-// Probe: mappa per-byte dei 215B gameplay drift @ f+99.
+// Probe: per-byte map of the 215B gameplay drift at f+99.
 //
-// Per ciascun byte divergente:
-//  - offset assoluto workRam
-//  - valore TS vs MAME
-//  - struct field di appartenenza (best-effort via tabelle statiche)
-//  - frame di prima divergenza (binary search da f+1 a f+99)
-//  - candidate writer sub (heuristic da cluster + knowledge repo)
+// For each divergent byte:
+//  - absolute workRam offset
+//  - TS vs MAME value
+//  - owning struct field (best effort through static tables)
+//  - first divergence frame (from f+1 to f+99)
+//  - candidate writer sub (heuristic from cluster and repo knowledge)
 //
 // Output:
-//  - console: top-10 bottleneck "early diverge" + summary cluster
-//  - file: docs/gameplay-drift-byte-map.md (tabella ordinata per cluster)
+//  - console: top-10 "early diverge" bottlenecks plus cluster summary
+//  - file: docs/gameplay-drift-byte-map.md (table ordered by cluster)
 //
-// Vincolo: NO modifiche a sub / state. Drift @ f+99 deve restare 215.
+// Constraint: no sub/state edits. Drift at f+99 must remain 215.
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -49,7 +49,7 @@ const warm = {
   colorRam: hex2bytes(frame0.colorRam, 0x800),
   videoScrollX: 0,
   videoScrollY: 0,
-  // Slapstic 103 bank attivo a MAME f=12000 attract = 1.
+  // Slapstic 103 active bank at MAME f=12000 attract = 1.
   slapsticBank: 1,
 };
 
@@ -57,7 +57,7 @@ const lastIdx = groundTruth.snapshots.length - 1; // = 99
 const lastFrame = groundTruth.snapshots[lastIdx]!;
 const mameW99 = hex2bytes(lastFrame.workRam, 0x2000);
 
-// ─── Stack-residue mask (escluso da invariante) ──────────────────────────────
+// ─── Stack-residue mask (excluded from invariant) ────────────────────────────
 
 function isStackResidue(off: number): boolean {
   return (
@@ -67,7 +67,7 @@ function isStackResidue(off: number): boolean {
   );
 }
 
-// ─── Run TS 99 frame con snapshot per binary search ──────────────────────────
+// ─── Run 99 TS frames with snapshots for first-divergence search ─────────────
 
 function runTs99Snapshots(): Uint8Array[] {
   const s = stateNs.emptyGameState();
@@ -101,10 +101,10 @@ console.log(`f+${lastIdx}: total=${totW} | gameplay=${totGameplay} | stack=${tot
 
 // ─── First-diverge frame (linear sweep over snapshots TS vs MAME @ that frame) ──
 //
-// MAME ha snapshots ai frame 0..99 (snapshots[k] = MAME f12000+k).
-// Per ogni byte: cerca il piu' piccolo k tale che ts[k][off] != mame[k][off].
-// La binary search su array gia' calcolato non e' piu' efficiente di linear su 99
-// — facciamo linear, e' O(99 * 215) = 21k op, trascurabile.
+// MAME has snapshots at frames 0..99 (snapshots[k] = MAME f12000+k).
+// For each byte, find the smallest k where ts[k][off] != mame[k][off].
+// Binary search over precomputed arrays is not more useful than a linear sweep
+// over 99 frames here: O(99 * 215) = 21k operations, which is negligible.
 
 interface MameSnap {
   workRam: Uint8Array;
@@ -123,7 +123,7 @@ function firstDivergeFrame(off: number): number {
     const mame = getMameSnapshot(k);
     if (tsSnapshots[k]![off] !== mame.workRam[off]) return k;
   }
-  return lastIdx; // fallback (non dovrebbe accadere se off e' divergente @ f+99)
+  return lastIdx; // Fallback; should not happen when off diverges at f+99.
 }
 
 // ─── Struct field identification (heuristic) ─────────────────────────────────
@@ -397,7 +397,7 @@ function identifyField(off: number): string {
   // 2) obj0 = 0x018..0x0F0 (216 byte)
   const o0 = objField(off, 0x18, "obj0");
   if (o0) return o0;
-  // 3) obj1 = 0x0F1..0x1C9 ? Skip se vuoto; usiamo 0xF1
+  // 3) obj1 = 0x0F1..0x1C9 ? Skip if empty; use 0xF1.
   // (precedente analysis: obj1 NOT diff). Lasciamo come fallback range.
   if (off >= 0xf1 && off < 0x1ca) {
     return objField(off, 0xf1, "obj1") ?? `obj1.+0x${(off - 0xf1).toString(16)}`;
@@ -447,7 +447,7 @@ function identifyField(off: number): string {
   // 14) STRUCT 0x1C28
   const sc = struct1c28Field(off);
   if (sc) return sc;
-  // 15) Stack (escluso ma identifichiamo per completezza)
+  // 15) Stack, excluded but identified for completeness.
   if (off >= 0x1d40 && off < 0x1e80) return `STACK_RESIDUE_${off.toString(16)}`;
   if (off >= 0x1ee0 && off < 0x1f00) return `STACK_RESIDUE_${off.toString(16)}`;
   return `unknown_+0x${off.toString(16)}`;
@@ -456,7 +456,7 @@ function identifyField(off: number): string {
 // ─── Candidate writer heuristic ──────────────────────────────────────────────
 
 function candidateWriter(off: number): string {
-  // Cluster noti (da STATUS + drift-cluster-analysis)
+  // Known clusters from status notes and drift-cluster-analysis.
   if (off >= 0x700 && off < 0x780) return "decodeBitstream1A668 (via refreshHelper13EE6)";
   if (off >= 0x640 && off < 0x6c0) return "stateDispatch160F6 (cascade da P2 slot drift)";
   if (off >= 0x66c && off < 0x680) return "helper121B8 / stateDispatch160F6 (input bits + vel)";

@@ -1,51 +1,14 @@
 /**
- * boot-helper-1464a.ts — replica bit-perfect di `FUN_0001464A`.
+ * Replica of `FUN_0001464A`, a late boot helper used by the main-loop init.
  *
- * Chiamata da FUN_117B2 (main loop init prefix) @ 0x117DC come primo passo
- * della sequenza di inizializzazione del main loop.
+ * It initializes player object slots, writes a large set of boot globals,
+ * calls injectable subroutines for text, palette, vblank, switch, coin, and
+ * dispatch-table work, then sends sound command `0x61`.
  *
- * **Cosa fa**:
- *   1. Azzera registri MMIO (scroll, MO, Alpha) — side-effect su hardware,
- *      ignorati nel modello TS.
- *   2. Inizializza 2 player object slot @ 0x400018 e 0x4000FA (stride 0xE2):
- *      - byte 0x18 = 0 (slot active flag)
- *      - byte 0x6E = 0xFF
- *      - byte 0x71 = 0xFF, byte 0x70 = 0xFF
- *      - byte 0xC0..0xC2 = 0x41
- *      - Per ciascun slot i (0..1): workRam[0x4009A4 + i*0x7C + 0x18] = 0
- *        (formula: D0 = D2*4*32 - D2*4 = D2*0x7C)
- *   3. Scrive globals workRam: 0x4003A2=0xFF, 0x400008=0, 0x400006=0,
- *      0x40000A=0, 0x400396=1, 0x40039C=0, 0x4003A8=0xFF, 0x4003AA=0xFF,
- *      0x4003AC=0, 0x40045C=0, 0x4003E2=0, 0x40045E=0, 0x400460=0xFF,
- *      0x4003B4=0, 0x4003B2=0, 0x4003EE=0, 0x4003EA=0x0000, 0x4003E6=0,
- *      0x400408=0x40040C (long pointer)
- *   4. JSR subs (injectable): enableIrq1010A, slotArrayBulkInit10392,
- *      gameStateBanner26B2A, initFnPointers28580, textPrint0118, textRender100,
- *      vblankAck28DEA, clearPaletteRam121A6, wait28DB8, softReset100E0,
- *      readSwitches1A8, coinRead1C0, coinWrite1B4, gameDispatch1AE,
- *      dispatchTable11AD8, soundCmd158AC.
- *   5. addq.b 1,(0x4003F0) × 2 durante l'esecuzione.
- *   6. Imposta 0x40039E=0x001E, 0x4003A0=0, 0x4003A2=0 (via A3 = 0x40039E).
- *   7. Imposta 0x4003DE (da readSwitches1A8 result), 0x4003EA (se result >=
- *      0xE0), 0x4003DC (da secondo readSwitches1A8 result).
- *
- * **Indirizzi sub** (tutti injectable come stubs per test parità):
- *   0x1010A = enableIrq1010A (move SR=0x2000 + rts; no RAM effect)
- *   0x10392 = slotArrayBulkInit
- *   0x26B2A = gameStateBanner26B2A
- *   0x28580 = initFnPointers28580
- *   0x28DEA = vblankAck28DEA
- *   0x121A6 = clearPaletteRam121A6
- *   0x100E0 = softReset100E0
- *   0x100   = textRender100
- *   0x118   = textPrint0118
- *   0x28DB8 = wait28DB8
- *   0x1A8   = readSwitches1A8   (→ jmp 0x40D8)
- *   0x1C0   = coinRead1C0       (→ jmp 0x4420)
- *   0x1B4   = coinWrite1B4      (→ jmp 0x428E)
- *   0x1AE   = gameDispatch1AE   (→ jmp 0x41C8)
- *   0x11AD8 = dispatchTable11AD8
- *   0x158AC = soundCmd158AC
+ * The routine also increments `0x4003F0` twice and updates:
+ *   - `0x40039E`, `0x4003A0`, `0x4003A2` through the A3 boot-timer struct.
+ *   - `0x4003DE`, `0x4003EA`, `0x4003DC` from switch reads.
+ *   - `0x400408` as a long pointer to `0x40040C`.
  */
 
 import type { GameState } from "./state.js";
@@ -88,72 +51,46 @@ function addByte(state: GameState, addr: number, delta: number): void {
   wb(state, addr, rb(state, addr) + delta);
 }
 
-/**
- * Subs iniettabili. Tutte opzionali — il default è no-op per la maggior parte,
- * oppure l'implementazione canonica per slotArrayBulkInit.
- *
- * `readSwitches1A8` ritorna il valore raw 8-bit dal dipswitch selezionato
- * (slot passato come arg). Nel binario legge da MMIO F20000+.
- *
- * `gameDispatch1AE` ritorna un puntatore long (D0) che viene dereferenziato
- * per decidere il path di dispatchTable11AD8. Default = 0 → null pointer →
- * path che chiama dispatchTable11AD8(0).
- */
+/** Injectable subroutines called by `FUN_0001464A`. */
 export interface BootHelper1464ASubs {
   /** FUN_1010A: enable interrupts (SR=0x2000). No RAM side effects. */
   enableIrq1010A?: (state: GameState) => void;
-  /** FUN_10392: bulk init delle slot array di oggetti. */
   slotArrayBulkInit10392?: (state: GameState) => void;
-  /** FUN_26B2A: mostra banner stato gioco. */
   gameStateBanner26B2A?: (state: GameState, mode: number) => void;
-  /** FUN_28580: inizializza puntatori funzione @ 0x400412 etc. */
   initFnPointers28580?: (state: GameState) => void;
-  /** FUN_28DEA: vblank acknowledge (write 0 a 0x400016, aspetta che torni 1). */
+  /** FUN_28DEA: vblank acknowledge. */
   vblankAck28DEA?: (state: GameState) => void;
-  /** FUN_121A6: azzera palette RAM (0xB00000, 0x200 long). */
   clearPaletteRam121A6?: (state: GameState) => void;
-  /** FUN_100E0: soft reset (incrementa 0x4003B6, imposta 0x4003B8=0x12C, ecc.). */
+  /** FUN_100E0: soft reset. */
   softReset100E0?: (state: GameState) => void;
-  /** FUN_100: text render con tilebase+ptr+flags. */
+  /** FUN_100: text render with tile base, pointer, and flags. */
   textRender100?: (state: GameState, textPtr: number, tileBase: number, flags: number) => void;
-  /** FUN_118: text print con ptr. */
+  /** FUN_118: text print with pointer. */
   textPrint0118?: (state: GameState, textPtr: number) => void;
-  /** FUN_28DB8: attende N frame. */
+  /** FUN_28DB8: wait N frames. */
   wait28DB8?: (state: GameState, frames: number) => void;
   /**
-   * FUN_1A8 (→ jmp 0x40D8): legge dipswitch/coin slot selezionato dal arg.
-   * Arg 0xb = numero di monete P1, 0xc = ?? .
+   * Arg 0xb is the P1 coin count path; arg 0xc is the second switch path.
    * Returns raw byte value.
    */
   readSwitches1A8?: (state: GameState, slot: number) => number;
-  /** FUN_1C0 (→ jmp 0x4420): coin counter write. */
+  /** FUN_1C0 -> jmp 0x4420: coin counter write. */
   coinRead1C0?: (state: GameState, slot: number, value: number) => void;
-  /** FUN_1B4 (→ jmp 0x428E): coin/io write con puntatore e arg. */
   coinWrite1B4?: (state: GameState, ptr: number, zero: number) => void;
   /**
-   * FUN_1AE (→ jmp 0x41C8): game dispatch con arg slot.
+   * FUN_1AE -> jmp 0x41C8: game dispatch with slot argument.
    *
-   * Nel binario ritorna D0 = puntatore a un long. Il caller verifica
-   * `*(D0) == 0` per decidere se chiamare dispatchTable11AD8.
-   * In questa astrazione, la callback restituisce direttamente il valore
-   * dereferenziato (0 = "non inizializzato → chiama dispatchTable",
-   * non-zero = "già inizializzato → salta dispatchTable").
-   *
-   * Default: ritorna non-zero (simula oggetto già inizializzato → skip).
+   * The return value is treated as the dereferenced dispatch slot: 0 means
+   * `dispatchTable11AD8` should be called.
    */
   gameDispatch1AE?: (state: GameState, slot: number) => number;
-  /** FUN_11AD8: imposta dispatch table entry per slot. */
+  /** FUN_11AD8: set the dispatch table entry for a slot. */
   dispatchTable11AD8?: (state: GameState, slot: number) => void;
-  /** FUN_158AC: invia sound command. */
+  /** FUN_158AC: send sound command. */
   soundCmd158AC?: (state: GameState, cmd: number) => void;
 }
 
-/**
- * Replica bit-perfect di `FUN_0001464A` — boot helper per il main loop init.
- *
- * Inizializza workRam globals e slot oggetti player durante il transiente di
- * boot (prima che il game state machine entri nel loop principale).
- */
+/** Run the `FUN_0001464A` boot helper. */
 export function bootHelper1464A(
   state: GameState,
   subs: BootHelper1464ASubs = {},
@@ -161,24 +98,22 @@ export function bootHelper1464A(
   // A3 = 0x40039E, A2 = 0x4003B8, A4 = 0x4003DE (saved registers for use below)
 
   // --- MMIO clears (hardware only, no workRam effect) ---
-  // clr.w (0x400000).l  ; workRam[0] = 0  ← questi sono workRam + MMIO scroll
+  // clr.w (0x400000).l  ; workRam[0] = 0
   // clr.w (0x400002).l  ; workRam[2] = 0
-  // clr.w (0x800000).l  ; MMIO scroll → ignored
-  // clr.w (0x820000).l  ; MMIO MO    → ignored
-  // clr.w (0x880000).l  ; MMIO alpha → ignored
-  // Note: 0x400000 e 0x400002 sono workRam reale in questo contesto
+  // clr.w (0x800000).l  ; MMIO scroll ignored
+  // clr.w (0x820000).l  ; MMIO MO ignored
+  // clr.w (0x880000).l  ; MMIO alpha ignored
   ww(state, 0x00400000, 0);
   ww(state, 0x00400002, 0);
-  // 0x800000, 0x820000, 0x880000 sono MMIO puri → no workRam
+  // 0x800000, 0x820000, and 0x880000 are pure MMIO, so no workRam write.
 
   // --- Loop D2=0..1: init player object slots ---
   // A1 base = 0x400018, stride = 0xE2
   // Slot i has base at 0x400018 + i*0xE2
-  // A0 = 0x4009A4 (separate array), index D0 = D2*(4*32 - 4) = D2*0x7C
   for (let d2 = 0; d2 < 2; d2++) {
     const a1 = 0x400018 + d2 * 0xe2;
 
-    // clr.b (0x18,A1) — slot active flag = 0
+    // clr.b (0x18,A1): slot active flag = 0.
     wb(state, a1 + 0x18, 0);
     // move.b #-1,(0x6E,A1)
     wb(state, a1 + 0x6e, 0xff);
@@ -191,16 +126,16 @@ export function bootHelper1464A(
     wb(state, a1 + 0xc0, 0x41);
 
     // D0 = D2 (ext.l) * 4 * 32 - D2 * 4 = D2 * 0x7C
-    // Disasm: D0=D2, ext.l, asl.l #2 → D0=D2*4, D1=D2*4, asl.l #5 → D0=D2*128,
-    //         sub.l D1,D0 → D0 = D2*128 - D2*4 = D2*124 = D2*0x7C
+    // Disassembly: D0=D2, ext.l, asl.l #2 -> D0=D2*4, D1=D2*4,
+    // asl.l #5 -> D0=D2*128, then sub.l D1,D0 -> D2*0x7C.
     const d0 = (d2 * 0x7c) >>> 0;
     // clr.b (0x18, A0, D0*1) where A0=0x4009A4
     wb(state, 0x4009a4 + 0x18 + d0, 0);
   }
 
   // --- After loop: MMIO clear (again) + workRam globals ---
-  // clr.w (0x880000).l → MMIO, ignore
-  // move.b #-1,(0x4,A3) where A3=0x40039E → (0x4003A2) = 0xFF
+  // clr.w (0x880000).l: MMIO, ignored.
+  // move.b #-1,(0x4,A3) where A3=0x40039E -> 0x4003A2 = 0xFF.
   wb(state, 0x004003a2, 0xff);
 
   // clr.b D0; move.b to (0x400008), (0x400006), (0x40000A)
@@ -237,7 +172,7 @@ export function bootHelper1464A(
   // move.l #0x40040C,(0x400408).l
   wl(state, 0x00400408, 0x0040040c);
 
-  // JSR 0x1010A — enable interrupts (SR=0x2000), no workRam effect
+  // JSR 0x1010A: enable interrupts (SR=0x2000), no workRam effect.
   (subs.enableIrq1010A ?? (() => undefined))(state);
 
   // addq.b 1,(0x4003F0)
@@ -260,7 +195,7 @@ export function bootHelper1464A(
     // tst.b (0x40000E); bne skip-print
     const svcByte2 = rb(state, 0x0040000e);
     if ((svcByte2 & 0xff) === 0) {
-      // JSR 0x28580 — initFnPointers28580
+      // JSR 0x28580: initFnPointers28580.
       subs.initFnPointers28580?.(state);
       // pea 0x28, pea 0x3400, pea 0x22A1A; jsr 0x100
       subs.textRender100?.(state, 0x00022a1a, 0x3400, 0x28);
@@ -303,13 +238,13 @@ export function bootHelper1464A(
       subs.textPrint0118?.(state, 0x00022a1a);
     }
 
-    // JSR 0x121A6 — clearPaletteRam
+    // JSR 0x121A6: clearPaletteRam.
     subs.clearPaletteRam121A6?.(state);
   }
 
   // --- Common path (both service and normal) ---
   // 0x14800:
-  // JSR 0x28580 — initFnPointers28580
+  // JSR 0x28580: initFnPointers28580.
   subs.initFnPointers28580?.(state);
   // pea 0x3C; jsr 0x28DB8 (wait 60 frames)
   subs.wait28DB8?.(state, 0x3c);
@@ -333,12 +268,12 @@ export function bootHelper1464A(
       subs.vblankAck28DEA?.(state);
       const bval2 = rw(state, 0x004003b8);
       if (bval2 === 0) break;
-      // subq.w 1,(A2) — decrement
+      // subq.w 1,(A2): decrement.
       ww(state, 0x004003b8, (rw(state, 0x004003b8) - 1) & 0xffff);
       if (rw(state, 0x004003b8) !== 0) continue;
-      // Counter reached 0 → soft reset + loop back to tst.w (0x14836)
+      // Counter reached 0: soft reset, then loop back to `tst.w` at 0x14836.
       subs.softReset100E0?.(state);
-      // bra 0x14836: loop continues (tst.w again will be 0 → exit)
+      // bra 0x14836: loop continues; if 0x4003B8 remains 0 it exits.
       // Actually after softReset the counter may change, but in the binary
       // it goes bra 0x14836 which retests. If 0x4003B8 is still 0 it exits.
       continue;
@@ -347,7 +282,7 @@ export function bootHelper1464A(
     // 0x14852:
     // pea 0x228E2; jsr 0x118 (textPrint)
     subs.textPrint0118?.(state, 0x000228e2);
-    // JSR 0x121A6 — clearPaletteRam
+    // JSR 0x121A6: clearPaletteRam.
     subs.clearPaletteRam121A6?.(state);
     // addq.l 4,SP (implicit, no workRam effect)
   }
@@ -363,7 +298,7 @@ export function bootHelper1464A(
     ww(state, 0x004003de, 0xffff);
     // bra 0x1488E
   } else {
-    // andi.w #3,(A4) — 0x4003DE &= 3
+    // andi.w #3,(A4): 0x4003DE &= 3.
     ww(state, 0x004003de, sw0b & 3);
   }
 
@@ -381,7 +316,7 @@ export function bootHelper1464A(
   const dcSigned = (dc & 0xffff) | 0;
   const bit15 = ((dcSigned << 16) >>> 16) & 0x8000;
   if (bit15 !== 0) {
-    // andi.w #0x7FFF,(0x4003DC) — clear bit 15
+    // andi.w #0x7FFF,(0x4003DC): clear bit 15.
     ww(state, 0x004003dc, dc & 0x7fff);
     // move.w (0x4003DC),D1; ext.l D1
     const d1 = dc & 0x7fff;
@@ -391,29 +326,29 @@ export function bootHelper1464A(
     // lea (-8,A6),A0; clr.l (A0); push A0; push 0; jsr 0x1B4 (coinWrite)
     // In TS context: A6 is frame pointer; we don't have a frame pointer.
     // The binary pushes a local var pointer and 0.
-    // Effect on workRam: the local var is at stack, not workRam — no workRam write.
+    // Effect on workRam: the local var is on the stack, so no workRam write.
     subs.coinWrite1B4?.(state, 0, 0);
   }
 
   // --- 0x148E6 ---
   // clr.l -(SP); jsr 0x1AE (gameDispatch with arg 0)
   // D0 = return value; A0 = D0; test *(A0): if 0, call dispatchTable
-  // The callback returns the DEREFERENCED value (0 = uninit → call dispatchTable;
-  // non-zero = already init → skip). Default non-zero = skip (safe default for boot).
+  // The callback returns the dereferenced value. Zero means uninitialized and
+  // calls the dispatch table; non-zero skips it.
   const deref0 = subs.gameDispatch1AE?.(state, 0) ?? 1;
   if (deref0 === 0) {
-    // *(D0) == 0 → call dispatchTable(0)
+    // *(D0) == 0: call dispatchTable(0).
     subs.dispatchTable11AD8?.(state, 0);
     // bra 0x14920
   } else {
-    // *(D0) != 0 → check arg 4 path
+    // *(D0) != 0: check arg 4 path.
     // pea 4; jsr 0x1AE (gameDispatch with arg 4)
     const deref4 = subs.gameDispatch1AE?.(state, 4) ?? 1;
-    // if *(ptr4) == 0 → dispatchTable11AD8(4)
+    // If *(ptr4) == 0, call dispatchTable11AD8(4).
     if (deref4 === 0) {
       subs.dispatchTable11AD8?.(state, 4);
     }
-    // else: both non-zero → skip dispatchTable entirely
+    // Otherwise both entries are non-zero, so skip dispatchTable entirely.
   }
 
   // --- 0x14920 ---
@@ -425,10 +360,9 @@ export function bootHelper1464A(
 }
 
 /**
- * Default implementation per il wiring in mainLoopInit117B2.
+ * Default implementation for the `mainLoopInit117B2` wiring.
  *
- * Usa slotArrayBulkInit canonico; tutte le altre subs sono no-op (appropriato
- * per boot transient prima che i sub-system siano completamente inizializzati).
+ * Uses canonical `slotArrayBulkInit`; all other subroutines are no-ops.
  */
 export function bootHelper1464ADefault(state: GameState): void {
   bootHelper1464A(state, {

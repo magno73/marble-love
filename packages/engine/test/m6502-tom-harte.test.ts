@@ -1,24 +1,24 @@
 /**
  * m6502-tom-harte.test.ts — Runner per oracle/tom_harte_m6502/*.json.
  *
- * Pattern mirror del runner M68000. Per ogni file `<hex>.json` nella
+ * Mirror pattern of the M68000 runner. For each `<hex>.json` file in
  * directory oracle, esegue tutti i test:
  *  1. Inizializza Uint8Array(0x10000) zero, applica sparse `initial.ram`.
- *  2. Crea CPU con regs da `initial`.
+ *  2. Create CPU with regs from `initial`.
  *  3. step() una singola istruzione.
  *  4. Confronta regs (A,X,Y,SP,P,PC) e cycle count.
- *  5. Confronta RAM solo su byte che `final.ram` lista (sparse comparison).
+ *  5. Compare RAM only on bytes listed by `final.ram` (sparse comparison).
  *
  * Se la directory oracle e' vuota (dataset non fetched), il file usa
  * `it.skip` → run e' un no-op, NON falla.
  *
- * Status flag mask: NV-DIZC (escludiamo B e U dal compare perche' sono
- * "soft flags" che dipendono solo da PHP/BRK; il datasheet upstream non
- * sempre li include in modo consistente).
+ * Status flag mask: NV-DIZC (exclude B and U from the compare because they are
+ * "soft flags" that depend only on PHP/BRK; the upstream datasheet does not
+ * always includes them consistently).
  *
- * Intent (CLAUDE Rule 9): se un opcode si rompe (es. PHA che dimentica
- * di decrementare SP), questi test devono fallire. Validano WHY: ogni
- * opcode deve comportarsi come l'hardware reale.
+ * Intent (CLAUDE Rule 9): if an opcode breaks (for example PHA forgetting
+ * to decrement SP), these tests must fail. They validate WHY: every opcode
+ * must behave like the real hardware.
  */
 
 import { describe, it, expect } from "vitest";
@@ -100,7 +100,7 @@ function runOpcodeFile(file: string): void {
         // Cycle count: lunghezza array cycles upstream
         expect(cyclesUsed).toBe(t.cycles.length);
 
-        // RAM: confronta sparse — ogni byte che final.ram lista
+        // RAM: sparse compare; every byte listed by final.ram.
         for (const [addr, expected] of t.final.ram) {
           expect(bus.mem[addr & 0xffff]).toBe(expected & 0xff);
         }

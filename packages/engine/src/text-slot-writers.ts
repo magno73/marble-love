@@ -2,7 +2,6 @@
  * text-slot-writers.ts — replica `FUN_0000255A` + `FUN_00028F28` + `FUN_00028F62`.
  *
  * 3 helper text-slot related, callees indiretti di `FUN_28E3C` (render-score
- * orchestrator). Replicate insieme perché correlate semanticamente.
  *
  * **`FUN_255A`** (8 instr, 6 callers): write 2 byte + clear byte at +0x6 a
  *   un buffer pointed by A0 (arg long stack):
@@ -12,17 +11,15 @@
  *     *(A0)   = D1.b
  *     *(1,A0) = D0.b
  *     *(6,A0) = 0
- *   Equivale a init di un "text descriptor" 7-byte struct (slot[0]=type,
- *   slot[1]=color/flags, slot[2..5] presumibilmente ROM ptr, slot[6]=enable=0).
+ *   Equivalent to initializing a 7-byte "text descriptor" struct
+ *   (slot[0]=type, slot[1]=color/flags, slot[2..5] likely ROM ptr, slot[6]=enable=0).
  *
- * **`FUN_28F28`** (27 instr, 2 callers): scan stringa cercando primo byte
- *   0x20 (space ASCII) entro `maxLen`, e lo azzera. Equivale a "trim
- *   trailing first space" (sostituisce con null terminator).
+ *   trailing first space" (replaces it with null terminator).
  *
- * **`FUN_28F62`** (21 instr, 2 callers): orchestrator che invoca 2 thunks
- *   con stesso buffer A0=0x40041C:
+ * **`FUN_28F62`** (21 instr, 2 callers): orchestrator that invokes 2 thunks
+ *   with the same buffer A0=0x40041C:
  *     - jsr 0x013C → FUN_255A (write 2 byte tuple)
- *     - jsr 0x0142 → FUN_2572 (state-sub render string chain, replicato)
+ *     - jsr 0x0142 → FUN_2572 (state-sub render string chain, replicated)
  */
 
 import type { GameState } from "./state.js";
@@ -93,9 +90,6 @@ export function textSlotInit255A(
  *     bra loop
  *   if D2 < D1 AND *(A0) == 0x20: *(A0) = 0  (clear space → null terminator)
  *
- * @param ptrAbs    Pointer assoluto stringa (workRam preferred)
- * @param maxLen    Massimo offset da scansionare
- * @returns         Posizione del primo space trovato (o maxLen se nessuno)
  */
 export function trimTrailingSpace28F28(
   state: GameState,

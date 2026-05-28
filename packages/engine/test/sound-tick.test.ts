@@ -1,8 +1,8 @@
 /**
  * sound-tick.test.ts — smoke + corner case di soundTick (wrapper FUN_4CA0).
  *
- * Bit-perfect parity verificata vs binary tramite test-sound-tick-parity.ts
- * (richiede stub deterministici per FUN_4DCC, FUN_3E1A, FUN_4C3E).
+ * Bit-perfect parity verified vs binary via test-sound-tick-parity.ts
+ * (requires deterministic stubs for FUN_4DCC, FUN_3E1A, FUN_4C3E).
  */
 
 import { describe, it, expect } from "vitest";
@@ -27,8 +27,8 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0); // retry reset
     expect(calls).toEqual([(0x10 << 8) | 0x02]); // dispatch
     expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // last_sent updated + flag
-    // 0x1f44 azzerato dal sound-CPU ack simulato nel default fun_4dcc
-    // (M6502 legge mailbox e ack; senza emulare sound CPU si simula ack
+    // 0x1f44 cleared by simulated sound-CPU ack in default fun_4dcc
+    // (M6502 reads mailbox and acks; without sound CPU emulation, simulate ack
     // immediato per matchare frame-done dump MAME). Pre-fix era 0x10|0x80.
     expect(s.workRam[0x1f44]).toBe(0); // cmd ack-cleared dal sound CPU sim
   });
@@ -45,7 +45,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(calls.length).toBe(0); // no dispatch
     expect(s.workRam[0x1ff4]).toBe(0x33); // retry NOT reset
     expect(s.workRam[0x1f45]).toBe(0x12); // last_sent unchanged
-    // 0x1f44 azzerato da sound-CPU ack simulato (default fun_4dcc).
+    // 0x1f44 cleared by simulated sound-CPU ack (default fun_4dcc).
     expect(s.workRam[0x1f44]).toBe(0); // ack-cleared
   });
 

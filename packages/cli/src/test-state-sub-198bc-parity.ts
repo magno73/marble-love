@@ -4,18 +4,18 @@
  * `stateSub198BC`.
  *
  * FUN_000198BC (186 byte): "entity move-and-validate retry loop". Tenta di
- * muovere l'entity tramite `FUN_19976` (applyMoveVelocity) + `FUN_1937C`
- * (validatePosition); se invalido al primo tentativo → restore. Se valido,
- * loop fino a 9 iter ruotando `entity[0x26]` di step (1 se state==7, altrimenti
- * 4) e ri-validando. Esce con marker stuck (`entity[0x26]=0x10`,
- * `entity[0..7]=0`) se loop esaurito.
+ * move the entity through `FUN_19976` (applyMoveVelocity) + `FUN_1937C`
+ * (validatePosition); if invalid on first attempt -> restore. If valid, loop
+ * for up to 9 iterations by rotating `entity[0x26]` by step (1 if state==7,
+ * otherwise 4) and re-validating. Exit with stuck marker (`entity[0x26]=0x10`,
+ * `entity[0..7]=0`) if the loop is exhausted.
  *
  * **Strategia parity**:
  *   - `FUN_00019976` (move-velocity) **lasciato live**: replicato bit-perfect
- *     in `move-velocity.ts:applyMoveVelocity`, gia validato @ 100% (cf.
+ *     in `move-velocity.ts:applyMoveVelocity`, already 100% validated (cf.
  *     test-move-velocity-parity).
  *   - `FUN_0001937C` (validate-position) **lasciato live**: replicato in
- *     `proximity-check.ts:validatePosition`, gia validato @ 100% (cf.
+ *     `proximity-check.ts:validatePosition`, already 100% validated (cf.
  *     test-proximity-check-parity).
  *   - Compare:
  *       * `entity[0x00..0x27]` (0x28 byte = 1 entity stride)
@@ -23,8 +23,8 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — entity + 9 proximity entries random
- *   - B: state==7 forzato (step=1, apply ogni iter)
- *   - C: position vicina alla griglia ROM (testGridBitmap probabilmente true)
+ *   - B: forced state==7 (step=1, apply every iteration)
+ *   - C: position near the ROM grid (testGridBitmap likely true)
  *   - D: edge cases — counter saturation, state boundaries, marker 0x10
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-198bc-parity.ts [N]
@@ -64,7 +64,7 @@ const PROX_ENTRY_SIZE = 0x28;
 const PROX_ARRAY_END = PROX_ARRAY_BASE + PROX_ARRAY_COUNT * PROX_ENTRY_SIZE;
 
 /**
- * Patch JSR-stub: nessuno. Sia `FUN_19976` che `FUN_1937C` sono lasciati
+ * Patch JSR-stub: none. Both `FUN_19976` and `FUN_1937C` are left
  * **live** e replicati 1:1 in TS.
  */
 function patchSubs(_cpu: CpuSession): void {
@@ -135,8 +135,8 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // ROM image per TS subs (move-velocity legge ROM dx/dy tables; grid-bitmap
-  // legge ROM grid table).
+  // ROM image for TS subs: move-velocity reads ROM dx/dy tables, and grid-bitmap
+  // reads the ROM grid table.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const entity = genEntity();
     entity[0x25] = 0x07;
-    // counter ∈ [0..0x0F] per evitare early-out marker e dare range valido.
+    // counter in [0..0x0F] to avoid early-out marker and provide valid range.
     entity[0x26] = Math.floor(rng() * 0x10);
     if (runOneCase("B", i, entity, genProx())) okB++;
   }
@@ -265,7 +265,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const entity = genEntity();
     // Pos x,y in zona grid-mappata: x ∈ [0x100..0x300], y ∈ [0x100..0x300]
-    // (proximityCheck legge byte+0xC..+0xD come word x).
+    // proximityCheck reads byte+0xC..+0xD as word x.
     const x = 0x100 + Math.floor(rng() * 0x200);
     const y = 0x100 + Math.floor(rng() * 0x200);
     entity[0x0c] = (x >>> 8) & 0xff;

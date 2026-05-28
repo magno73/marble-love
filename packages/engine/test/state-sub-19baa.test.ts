@@ -82,7 +82,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
   it("gate-out: word @ 0x394 != 4 → no-op (return early)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Pre-popola un'entity attiva: deve restare invariata.
+    // Prepopulate an active entity: it must remain unchanged.
     s.workRam[ENTITY_OFF(0) + ENTITY_ACTIVE_OFFSET] = 1;
     s.workRam[ENTITY_OFF(0) + ENTITY_ANIM_COUNTER_OFFSET] = 0xaa;
     writeWord(s, GAME_MODE_WORD_OFF, 3);
@@ -91,7 +91,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(result.gatedOut).toBe(true);
     expect(result.spawnDispatched).toBe(false);
     expect(result.perEntity).toEqual([]);
-    // Entity invariata.
+    // Entity unchanged.
     expect(s.workRam[ENTITY_OFF(0) + ENTITY_ANIM_COUNTER_OFFSET]).toBe(0xaa);
   });
 
@@ -137,7 +137,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     const result = stateSub19BAA(s, rom);
     expect(result.gatedOut).toBe(false);
     expect(result.perEntity[0]?.wasActive).toBe(false);
-    // Counter invariato.
+    // Counter unchanged.
     expect(s.workRam[ENTITY_OFF(0) + ENTITY_ANIM_COUNTER_OFFSET]).toBe(0xaa);
   });
 

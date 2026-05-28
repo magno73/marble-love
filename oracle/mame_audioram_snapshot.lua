@@ -1,6 +1,6 @@
 -- mame_audioram_snapshot.lua — snapshot audioRam $0000-$0FFF a frame
--- target. Confronto byte-by-byte con TS audioRam allo stesso frame
--- identifica divergenza che spiega il music dispatch trigger lag.
+-- target. Byte-by-byte compare with TS audioRam at the same frame identifies
+-- divergence that explains music dispatch trigger lag.
 local OUT_PATH = "/tmp/mame_audioram.json"
 local SNAPSHOT_FRAMES = {350, 360, 370, 374, 375, 380, 400}
 local audiocpu, sound_mem

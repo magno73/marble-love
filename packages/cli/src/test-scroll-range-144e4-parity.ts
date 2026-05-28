@@ -3,27 +3,27 @@
  * test-scroll-range-144e4-parity.ts — differential FUN_000144E4 vs
  * `scrollRange144E4`.
  *
- * **FUN_000144E4** (364 byte): scala from/to per /16 con boundary da state
- * struct, dispatcha a 4 sub e (condizionalmente su mode 3/4) ad altre sub.
+ * **FUN_000144E4** (364 bytes): scales from/to by /16 with a state-struct
+ * boundary, dispatches to 4 subs, and conditionally calls more subs in mode 3/4.
  *
- * **Strategia parity**:
- *   - FUN_15A12, FUN_14C46, FUN_17346, FUN_18FFA, FUN_190EE → patched a RTS
- *     (0x4E75) lato binario; TS usa default no-op via subs.
- *   - FUN_12DFA (scriptRectDispatch12DFA) → live da entrambe le parti.
- *     FUN_18F46 (chiamata interna) → patched a RTS.
- *   - FUN_26B66 (bannerHelper26B66) → live da entrambe le parti.
+ * **Parity strategy**:
+ *   - FUN_15A12, FUN_14C46, FUN_17346, FUN_18FFA, FUN_190EE -> patched to RTS
+ *     (0x4E75) on the binary side; TS uses the default no-op via subs.
+ *   - FUN_12DFA (scriptRectDispatch12DFA) -> live on both sides.
+ *     FUN_18F46 (internal call) -> patched to RTS.
+ *   - FUN_26B66 (bannerHelper26B66) -> live on both sides.
  *
  * **Suite** (4 × 125 = 500):
- *   A. mode 0/1/2/5 random: solo scaling + FUN_12DFA dispatch
- *   B. mode 3: boundary crossing rispetto a 0x29
- *   C. mode 4: boundary crossing rispetto a [0x1D..0x38] e [0x03..0x1B]
- *   D. edge cases: from == to (early exit), boundary estremi, statePtr in ROM
+ *   A. random mode 0/1/2/5: only scaling + FUN_12DFA dispatch
+ *   B. mode 3: boundary crossing relative to 0x29
+ *   C. mode 4: boundary crossing relative to [0x1D..0x38] and [0x03..0x1B]
+ *   D. edge cases: from == to (early exit), extreme boundaries, statePtr in ROM
  *
  * **Snapshot**:
- *   - workRam completo (0x400000..0x401FFF, 8192 byte)
+ *   - complete workRam (0x400000..0x401FFF, 8192 bytes)
  *   - RNG seed @0x4003A6
  *
- * Uso: npx tsx packages/cli/src/test-scroll-range-144e4-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-scroll-range-144e4-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -73,7 +73,7 @@ const SLOT_TABLE_BASE = 0x00400a9c;
 const SLOT_STRIDE = 0x56;
 const SLOT_COUNT = 0x19;
 
-/** Patch JSR-target → RTS (0x4E75). */
+/** Patch JSR target -> RTS (0x4E75). */
 function patchRts(cpu: CpuSession, addr: number): void {
   pokeMem(cpu, addr, 1, 0x4e);
   pokeMem(cpu, addr + 1, 1, 0x75);
@@ -103,15 +103,15 @@ function sext16(v: number): number {
 }
 
 /**
- * Snapshot di stato compatto. Confrontiamo solo i byte modificabili da FUN_144E4:
+ * Compact state snapshot. Compare only bytes that FUN_144E4 may modify:
  *  - Slot table (25 slot @ 0x400A9C stride 0x56): byte+0x18,+0x1A,long+0x3A,word+0x52,+0x54
- *  - Globali: 0x400762, 0x40075C, 0x400974, 0x400978
+ *  - Globals: 0x400762, 0x40075C, 0x400974, 0x400978
  *  - Palette queue: 0x400408..0x40040F
- *  - Palette RAM (colorRam): toccata da bannerHelper26B66
+ *  - Palette RAM (colorRam): touched by bannerHelper26B66
  *  - RNG seed (via state.rng.seed, non in workRam TS)
  *
- * NON confrontiamo il workRam raw: il binary scrive sullo stack (workRam upper)
- * durante la call e quei valori restano come "garbage" visibile nella snapshot.
+ * Do not compare raw workRam: the binary writes to the stack (upper workRam)
+ * during the call, leaving visible garbage in the snapshot.
  */
 interface Snapshot {
   /** 25 slot × (occ.b, st.b, scriptPtr.l, lo.w, hi.w) */
@@ -203,7 +203,7 @@ function snapshotTs(state: ReturnType<typeof stateNs.emptyGameState>): Snapshot 
   };
 }
 
-/** Confronta le due snapshot e ritorna la prima differenza trovata, o null. */
+/** Compares two snapshots and returns the first difference found, or null. */
 function compareSnapshots(bin: Snapshot, ts: Snapshot): string | null {
   if (bin.rngSeed !== ts.rngSeed) {
     return `rngSeed bin=0x${bin.rngSeed.toString(16)} ts=0x${ts.rngSeed.toString(16)}`;

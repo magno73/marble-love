@@ -1,33 +1,24 @@
 /**
- * state-dispatch-15460.ts — replica `FUN_00015460` (528 byte).
+ * state-dispatch-15460.ts - `FUN_00015460` replica (528 bytes).
  *
- * Dispatcher 7-way su `kind = byte @ structPtr+0x1A` (con bounds check
- * signed `0 <= kind <= 6`; out-of-range → solo l'epilog comune). Usa una
- * jump-table di 7 word-offsets @ 0x1549A; per ogni `kind` sceglie un
- * "case" e infine applica un epilog comune che:
- *   - copia `(0x5c,A0) → (0x58,A0)` (snapshot anim ptr corrente come "prev")
- *   - azzera `(0x24,A0)`
- *   - scrive `(0x25,A0) = 0x02` se `kind ∈ {0, 4}`, altrimenti `0x01`
+ * 7-way dispatcher on `kind = byte @ structPtr+0x1A` (with signed bounds check
+ * `0 <= kind <= 6`; out-of-range runs only the common epilog). It uses a
+ * 7-word-offset jump table @ 0x1549A; for each `kind`, it selects a case and
+ * finally applies a common epilog:
  *
- * **Jump table** (letta dal binario @ 0x1549A, word-offsets da 0x1549A):
- *   - kind 0 → 0x154A8 (case track-marble)
- *   - kind 1 → 0x1561C (case anim 0x20CD8 + clr +0x27)
- *   - kind 2 → 0x15578 (case anim 0x20D64 / delta-asr-2 dispatch)
- *   - kind 3 → 0x154A8 (alias del case 0)
- *   - kind 4 → 0x155C2 (case velocity-magnitude → 4-way anim)
- *   - kind 5 → 0x15630 (case anim 0x20E28, no scrittura +0x26)
- *   - kind 6 → 0x1563A (case anim 0x20D6C, no scrittura +0x26)
+ *   - kind 0 -> 0x154A8 (case track-marble)
+ *   - kind 1 -> 0x1561C (case anim 0x20CD8 + clr +0x27)
+ *   - kind 2 -> 0x15578 (case anim 0x20D64 / delta-asr-2 dispatch)
+ *   - kind 3 -> 0x154A8 (alias of case 0)
+ *   - kind 4 -> 0x155C2 (case velocity-magnitude -> 4-way anim)
  *
- * **Caller noti** (find_xrefs, 8 sites tutti UNCONDITIONAL_CALL o
  *  COMPUTED_CALL):
  *   - `0x14fc6` in `FUN_00014e92`
  *   - `0x15876` in `FUN_00015670`
  *   - `0x15456`, `0x1530e`, `0x1529c`, `0x152fe`, `0x153e2`, `0x1525a`,
- *     `0x15262` in `FUN_00015148` (computed dispatch interno)
- * Tutti passano `structPtr` come arg1 long sullo stack (cdecl-like).
+ *     `0x15262` in `FUN_00015148` (internal computed dispatch)
  *
- * **Disasm 0x15460..0x1566F** (528 byte; il prompt cita 514 byte ma il
- * size effettivo è 0x210 = 528 byte fino al rts incluso):
+ * **Disasm 0x15460..0x1566F** (528 bytes; the prompt cites 514 bytes but the
  *
  *   movem.l {D5,D4,D3,D2},-(SP)            ; prologue (16 byte)
  *   movea.l (0x14,SP),A0                   ; A0 = structPtr (arg1)
@@ -202,7 +193,6 @@
  *
  *   ; ============ CASE 5 (anim 0x20E28) @ 0x15630 ============
  *   move.l  #0x20E28,(0x5C,A0)
- *   bra.b   0x15642                          ; nessuna scrittura +0x26
  *
  *   ; ============ CASE 6 (anim 0x20D6C) @ 0x1563A ============
  *   move.l  #0x20D6C,(0x5C,A0)
@@ -212,34 +202,22 @@
  *   move.l  (0x5C,A0),(0x58,A0)             ; prevAnim = currentAnim
  *   clr.b   (0x24,A0)
  *   tst.b   (0x1A,A0)
- *   beq.w   0x1565C                         ; kind == 0 → write 0x02
+ *   beq.w   0x1565C                         ; kind == 0 -> write 0x02
  *   cmpi.b  #0x4,(0x1A,A0)
- *   bne.b   0x15664                         ; kind != 4 → write 0x01
- *   move.b  #0x2,(0x25,A0)                  ; @ 0x1565C: kind ∈ {0,4} → 0x02
+ *   bne.b   0x15664                         ; kind != 4 -> write 0x01
+ *   move.b  #0x2,(0x25,A0)                  ; @ 0x1565C: kind in {0,4} -> 0x02
  *   bra.b   0x1566A
- *   move.b  #0x1,(0x25,A0)                  ; @ 0x15664: altrimenti 0x01
  *   movem.l (SP)+,{D2,D3,D4,D5}             ; @ 0x1566A: restore
  *   rts
  *
- * **Side effects** (tutti diretti su workRam, 0 JSR):
- *   - `(0x00,A0..0x03,A0)`: writes vel_x (long, 16.16) — solo case 0/3
- *   - `(0x04,A0..0x07,A0)`: writes vel_y (long, 16.16) — solo case 0/3
- *   - `(0x24,A0)`: cleared in epilog (sempre)
- *   - `(0x25,A0)`: 0x02 se kind ∈ {0,4}, 0x01 altrimenti — sempre in epilog
- *   - `(0x26,A0)`: 0x01 nei case 0/3/1/4; ±1 in case 2 (delta-based);
- *                 NON scritto in case 5/6 e nei rami out-of-range
- *   - `(0x27,A0)`: cleared solo nel case 1
- *   - `(0x58..0x5B,A0)`: copia di `(0x5C..0x5F,A0)` (sempre in epilog)
- *   - `(0x5C..0x5F,A0)`: anim ptr — scritto in case 0/1/2/3/4/5/6
+ *   - `(0x00,A0..0x03,A0)`: writes vel_x (long, 16.16) - only case 0/3
+ *   - `(0x04,A0..0x07,A0)`: writes vel_y (long, 16.16) - only case 0/3
+ *   - `(0x26,A0)`: 0x01 in cases 0/3/1/4; +/-1 in case 2 (delta-based);
+ *                 not written in case 5/6 or out-of-range branches
+ *   - `(0x27,A0)`: cleared only in case 1
+ *   - `(0x5C..0x5F,A0)`: anim ptr - written in cases 0/1/2/3/4/5/6
  *
- * **Out-of-range kinds** (kind < 0 oppure kind > 6 signed): saltano tutti
- * i case e finiscono diretti nell'epilog. (0x5C,A0) NON viene toccato,
- * quindi `(0x58,A0) ← (0x5C,A0)` propaga il vecchio valore. (0x26,A0) e
- * `(0x27,A0)` rimangono intatti. (0x25,A0) viene comunque scritto in base
- * al test `kind == 0 || kind == 4` (per byte fuori range il byte letto
- * dalla mem è > 6 o ha bit alto, quindi != 0 e != 4 → 0x01).
  *
- * Verifica bit-perfect via `cli/src/test-state-dispatch-15460-parity.ts`.
  */
 
 import type { RomImage } from "./bus.js";
@@ -250,7 +228,6 @@ const WORK_RAM_BASE = 0x00400000;
 /** Dimensione workRam (8 KB). */
 const WORK_RAM_SIZE = 0x2000;
 
-/** Offset campo `kind` (byte) dentro lo struct. */
 export const KIND_BYTE_OFF = 0x1a as const;
 
 /** Pos X (long, 16.16 fixed-point) @ structPtr+0x0C. */
@@ -267,13 +244,13 @@ export const VEL_X_OFF = 0x00 as const;
 export const VEL_Y_OFF = 0x04 as const;
 /** Byte flag @ structPtr+0x24 (cleared in epilog). */
 export const FLAG_24_OFF = 0x24 as const;
-/** Byte flag @ structPtr+0x25 (1 o 2 in epilog). */
+/** Byte flag @ structPtr+0x25 (1 or 2 in epilog). */
 export const FLAG_25_OFF = 0x25 as const;
-/** Byte flag @ structPtr+0x26 (1 o ±1 nei case). */
+/** Byte flag @ structPtr+0x26 (1 or +/-1 in cases). */
 export const FLAG_26_OFF = 0x26 as const;
-/** Byte @ structPtr+0x27 (cleared solo in case 1). */
+/** Byte @ structPtr+0x27 (cleared only in case 1). */
 export const FLAG_27_OFF = 0x27 as const;
-/** Long ptr @ structPtr+0x4A → target cell ptr (case 0/3). */
+/** Long ptr @ structPtr+0x4A -> target cell ptr (case 0/3). */
 export const TARGET_PTR_OFF = 0x4a as const;
 /** Long anim ptr "previous" @ structPtr+0x58. */
 export const PREV_ANIM_OFF = 0x58 as const;
@@ -371,18 +348,15 @@ function writeByteAbs(state: GameState, addr: number, value: number): void {
 }
 
 /**
- * Case 0/3 — track marble verso target cell.
+ * Case 0/3 — track marble toward target cell.
  *
- * Calcola direzioni D2 (Y) e D3 (X) di velocità in {-8, 0, +8} basate
- * sul confronto fra `(pos>>19)` corrente e `(target.x, target.y)`.
- * Sceglie l'animazione in base a quale direzione è impostata, scrive
  * vel_x = D3<<16, vel_y = D2<<16, flag (0x26)=1.
  */
 function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
   // Cell coords (>>19 di pos)
   const posX = readLongAbs(state, a0 + POS_X_OFF);
   const posY = readLongAbs(state, a0 + POS_Y_OFF);
-  // D4w/D5w sono word; ma nei cmp.w usiamo word signed.
+  // D4w/D5w are words; in cmp.w we use signed words.
   const cellX = sextWordL(asrL(posX, 0x13));
   const cellY = sextWordL(asrL(posY, 0x13));
 
@@ -432,7 +406,6 @@ function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
   // tst.b D2b: ble (D2 <= 0) → if D2 > 0 → DOWN
   // tst.b D2b: bge (D2 >= 0) → if D2 < 0 → UP
   // (NB: the compare is on D2.b, but per come scriviamo d2 (-8/0/+8),
-  // il segno del byte coincide col segno del long.)
   let animPtr: number;
   if (d2 > 0) {
     animPtr = ANIM_DOWN;
@@ -468,17 +441,14 @@ function caseAnim20CD8(state: GameState, a0: number): void {
 /**
  * Case 2 — anim 0x20D64 / delta-based ±1 dispatch.
  *
- * - Se `(0x5C,A0) == 0x20D64` → no-op (esce diretto in epilog).
- * - Altrimenti se `(0x5C,A0) == (0x58,A0)` (corrente == prev) →
+ * - If `(0x5C,A0) == 0x20D64` → no-op (exits directly in epilogue).
  *   `(0x5C,A0) = 0x20D64`, `(0x26,A0) = 1`.
- * - Altrimenti calcola `delta = ((prev - curr) >> 2)` (asr signed long),
- *   prende low word signed, scrive `(0x26,A0) = (4 > delta) ? -1 : 1`
  *   (cmp signed word).
  */
 function caseAnim20D64(state: GameState, a0: number): void {
   const curr = readLongAbs(state, a0 + CURR_ANIM_OFF) | 0;
   if ((curr >>> 0) === ANIM_CASE2_FINAL) {
-    return; // no scrittura +0x26; epilog only
+    return;
   }
   const prev = readLongAbs(state, a0 + PREV_ANIM_OFF) | 0;
   if ((curr >>> 0) === (prev >>> 0)) {
@@ -486,7 +456,7 @@ function caseAnim20D64(state: GameState, a0: number): void {
     writeByteAbs(state, a0 + FLAG_26_OFF, 0x01);
     return;
   }
-  // Delta path: ((prev - curr) >> 2) low word signed; cmp con 4.
+  // Delta path: ((prev - curr) >> 2) low word signed; compare with 4.
   const delta32 = (prev - curr) | 0;
   const delta = asrL(delta32, 0x02);
   const deltaW = sextWordL(delta & 0xffff);
@@ -498,16 +468,12 @@ function caseAnim20D64(state: GameState, a0: number): void {
 /**
  * Case 4 — velocity magnitude → 4-way anim.
  *
- * Confronta `|D1| = |(0x1C,A0)|` con `|D0| = |(0x20,A0)|` (cmp.l signed
- * post-abs). Se `|D1| > |D0|` → asse X; altrimenti asse Y. Sceglie
- * l'animazione in base al segno del field originale.
  */
 function caseVelocityMagnitude(state: GameState, a0: number): void {
   const d1Orig = readLongAbs(state, a0 + FIELD_1C_OFF) | 0;
   const d0Orig = readLongAbs(state, a0 + FIELD_20_OFF) | 0;
 
   // tst.l + neg.l: if signed neg → negate, else identity.
-  // bge è ">= 0" → se >= 0, identità; se < 0 → neg.
   const d3 = (d1Orig >= 0 ? d1Orig : -d1Orig) | 0;
   const d2 = (d0Orig >= 0 ? d0Orig : -d0Orig) | 0;
 
@@ -527,21 +493,18 @@ function caseVelocityMagnitude(state: GameState, a0: number): void {
 }
 
 /**
- * Case 5 — anim 0x20E28 (NO scrittura +0x26).
  */
 function caseAnim20E28(state: GameState, a0: number): void {
   writeLongAbs(state, a0 + CURR_ANIM_OFF, ANIM_CASE5);
 }
 
 /**
- * Case 6 — anim 0x20D6C (NO scrittura +0x26).
  */
 function caseAnim20D6C(state: GameState, a0: number): void {
   writeLongAbs(state, a0 + CURR_ANIM_OFF, ANIM_CASE6);
 }
 
 /**
- * Common epilog @ 0x15642 — applicato sempre, anche per kind out-of-range.
  *
  *   - `(0x58,A0) ← (0x5C,A0)` (snapshot anim ptr come "prev")
  *   - `(0x24,A0) ← 0`
@@ -560,26 +523,22 @@ function commonEpilog(state: GameState, a0: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_00015460` — dispatcher 7-way su `kind`
- * byte @ structPtr+0x1A, con epilog comune.
+ * byte @ structPtr+0x1A, with common epilog.
  *
- * @param state          GameState. Letto/scritto su `workRam` agli offset
  *                       relativi a `structPtrLong - 0x400000`. Vedi sezione
  *                       "Side effects" del docstring del modulo.
  * @param structPtrLong  long (A0): pointer assoluto allo struct (workRam).
- * @returns void. Tutti i side effects sono scritture dirette su workRam;
- *          la funzione originale non chiama altre subroutine.
  *
  * **Comportamento per kind**:
  *   - kind 0 → `caseTrackMarble`, poi epilog (write 0x25=2)
  *   - kind 1 → `caseAnim20CD8`, poi epilog (write 0x25=1)
- *   - kind 2 → `caseAnim20D64`, poi epilog (write 0x25=1)
- *   - kind 3 → `caseTrackMarble`, poi epilog (write 0x25=1) — **NB: kind 3
- *               usa lo stesso case 0 ma 0x25 finisce a 0x01 (kind != 0/4)**
- *   - kind 4 → `caseVelocityMagnitude`, poi epilog (write 0x25=2)
- *   - kind 5 → `caseAnim20E28`, poi epilog (write 0x25=1; +0x26 NON toccato)
- *   - kind 6 → `caseAnim20D6C`, poi epilog (write 0x25=1; +0x26 NON toccato)
- *   - kind <0 (signed, byte 0x80..0xFF) o kind > 6: skip case body, solo epilog.
+ *   - kind 2 -> `caseAnim20D64`, then epilog (write 0x25=1)
+ *   - kind 3 -> `caseTrackMarble`, then epilog (write 0x25=1). Note: kind 3
+ *               uses the same case 0 body but 0x25 ends as 0x01 (kind != 0/4).
+ *   - kind 4 -> `caseVelocityMagnitude`, then epilog (write 0x25=2)
+ *   - kind 5 -> `caseAnim20E28`, then epilog (write 0x25=1; +0x26 untouched)
+ *   - kind 6 -> `caseAnim20D6C`, then epilog (write 0x25=1; +0x26 untouched)
+ *   - kind <0 (signed, byte 0x80..0xFF) or kind > 6: skip case body, epilog only.
  */
 export function stateDispatch15460(
   state: GameState,

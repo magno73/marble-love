@@ -1,7 +1,6 @@
 /**
  * Test tilemapBlit17044 (FUN_17044) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-tilemap-blit-17044-parity.ts`.
  */
 
@@ -53,7 +52,6 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     // Pre-DEST byte = 0xCC preservati
     for (let i = 0; i < DEST_OFF; i++) expect(pf[i]).toBe(0xcc);
 
-    // Per ogni riga: prima 40 byte = ROM[i*40..(i+1)*40), poi 88 byte = 0xCC
     for (let row = 0; row < ROW_COUNT; row++) {
       const base = DEST_OFF + row * ROW_STRIDE_BYTES;
       for (let j = 0; j < BYTES_PER_ROW; j++) {
@@ -65,12 +63,9 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
       }
     }
 
-    // Dopo l'ultima riga (oltre 0xA003BD = offset 0x3BE) il buffer è preservato.
     const afterLast = DEST_OFF + (ROW_COUNT - 1) * ROW_STRIDE_BYTES + BYTES_PER_ROW;
     expect(afterLast).toBe(0x3be);
     for (let i = afterLast; i < PF_SIZE; i++) {
-      // a partire da afterLast, i byte successivi sono "skip" della riga 5
-      // (88 byte) e oltre. Tutti devono restare 0xCC.
       expect(pf[i]).toBe(0xcc);
     }
   });
@@ -79,7 +74,6 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     const rom = emptyRomImage();
     fillRomSource(rom, () => 0x42);
     const pf = new Uint8Array(PF_SIZE);
-    // Sentinel pattern in tutto il buffer
     for (let i = 0; i < PF_SIZE; i++) pf[i] = (i * 7) & 0xff;
     const before = new Uint8Array(pf);
 
@@ -88,7 +82,6 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     // [0..0x115] preservati
     for (let i = 0; i < DEST_OFF; i++) expect(pf[i]).toBe(before[i]);
 
-    // Per ogni riga 0..5, i 40 byte iniziali = 0x42, i restanti 88 byte = before
     for (let row = 0; row < ROW_COUNT; row++) {
       const base = DEST_OFF + row * ROW_STRIDE_BYTES;
       for (let j = 0; j < BYTES_PER_ROW; j++) expect(pf[base + j]).toBe(0x42);
@@ -97,7 +90,6 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
       }
     }
 
-    // Dopo riga 5 (offset 0x3BE..0x3FFF circa di skip della riga 5) preservato
     const lastBlitEnd = DEST_OFF + (ROW_COUNT - 1) * ROW_STRIDE_BYTES + BYTES_PER_ROW;
     for (let i = lastBlitEnd; i < PF_SIZE; i++) {
       expect(pf[i]).toBe(before[i]);
@@ -110,7 +102,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
 
     tilemapBlit17044(rom, pf);
 
-    // Conta i byte azzerati: devono essere esattamente 6×40 = 240
+    // Count zeroed bytes: must be exactly 6x40 = 240.
     let zeros = 0;
     for (let i = 0; i < PF_SIZE; i++) if (pf[i] === 0) zeros++;
     expect(zeros).toBe(TOTAL_BYTES_COPIED);
@@ -152,20 +144,16 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
   it("buffer più corto: bound-safe, no overflow", () => {
     const rom = emptyRomImage();
     fillRomSource(rom, (i) => (i + 1) & 0xff);
-    // Buffer da 0x200 byte: copre solo riga 0 e parzialmente riga 1.
     const small = new Uint8Array(0x200).fill(0xee);
     tilemapBlit17044(rom, small);
     // [0..0x115] preservati
     for (let i = 0; i < DEST_OFF; i++) expect(small[i]).toBe(0xee);
-    // Riga 0: 0x116..0x13D = ROM[0..39]+1
     for (let j = 0; j < BYTES_PER_ROW; j++) {
       expect(small[DEST_OFF + j]).toBe((j + 1) & 0xff);
     }
-    // Skip riga 0: 0x13E..0x195 preservati
     for (let j = BYTES_PER_ROW; j < ROW_STRIDE_BYTES; j++) {
       expect(small[DEST_OFF + j]).toBe(0xee);
     }
-    // Riga 1: parziale fino alla fine del buffer (0x196..0x1FF = 0x6A byte)
     const row1Base = DEST_OFF + ROW_STRIDE_BYTES;
     const row1Available = small.length - row1Base; // 0x200 - 0x196 = 0x6A
     for (let j = 0; j < Math.min(BYTES_PER_ROW, row1Available); j++) {
@@ -174,21 +162,14 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
   });
 
   it("non legge ROM oltre 0x19F04 + 240 byte (no over-read da rom.program)", () => {
-    // Costruiamo ROM in cui solo gli esatti 240 byte richiesti hanno valore
-    // distintivo, e oltre c'è 0xFF. Verifichiamo che NESSUN 0xFF compaia in
-    // PF RAM nelle 6 finestre da 40 byte (= la funzione non sfora la sorgente).
     const rom = emptyRomImage();
-    // Dapprima riempiamo TUTTA la ROM con 0xFF.
     rom.program.fill(0xff);
-    // Poi sovrascriviamo i 240 byte sorgenti con un pattern non-FF.
+    // Then overwrite the 240 source bytes with a non-FF pattern.
     for (let i = 0; i < TOTAL_BYTES_COPIED; i++) {
       rom.program[ROM_SOURCE_ADDR + i] = (i + 1) & 0xff;
     }
-    // (Il byte successivo a 0x19F04+240 = 0x19FF4 è 0xFF.)
     const pf = new Uint8Array(PF_SIZE);
     tilemapBlit17044(rom, pf);
-    // I 240 byte scritti in PF nei 6 blocchi devono essere tutti != 0xFF
-    // (nessuno dei pattern 1..240 mod 256 è 0xFF tranne i==254 → ma 240 max < 254).
     for (let row = 0; row < ROW_COUNT; row++) {
       const base = DEST_OFF + row * ROW_STRIDE_BYTES;
       for (let j = 0; j < BYTES_PER_ROW; j++) {

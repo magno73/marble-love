@@ -1,13 +1,8 @@
 /**
  * state-sub-5d2a.test.ts — smoke tests di stateSub5D2A (FUN_5D2A).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-5d2a-parity.ts`.
- * Qui copriamo la logica osservabile dal lato JS:
- *   - 16 iter loop (D4 = 15..0), 32 chiamate a inner3784
  *   - bitmap scan MSB→LSB (mask = 0x8000..0x0001)
  *   - branch su byte ROM @ 0x10072 (gate) a iter D4=7
- *   - attr 0xA0 quando D4 == arg1_word, altrimenti 0x20 (cella sinistra)
- *   - cella destra ha SEMPRE attr 0
  *   - default callback no-op
  */
 
@@ -50,13 +45,11 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
 
-    // arg1 = 5 → cella sinistra a iter D4=5 ha attr 0xA0
     stateSub5D2A(state, rom, 0xa5a5, 0x0005, (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
       return 0;
     });
 
-    // Cella destra è ogni call con index 1, 3, 5, ... 31.
     for (let i = 1; i < calls.length; i += CALLS_PER_ITER) {
       expect(calls[i]!.attr).toBe(ATTR_RIGHT);
     }
@@ -67,7 +60,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
 
-    // arg1 = 10 → solo iter index 5 (D4=15-5=10) ha attr 0xA0
+    // arg1 = 10 -> only iter index 5 (D4=15-5=10) has attr 0xA0.
     // Iter 0: D4=15, iter 1: D4=14, ..., iter k: D4=15-k.
     // D4=10 → iter index 5.
     stateSub5D2A(state, rom, 0x0000, 0x000a, (_st, y, x, attr) => {
@@ -75,8 +68,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
       return 0;
     });
 
-    // Cella sinistra (even indices): index 0 = D4=15, ..., index 30 = D4=0.
-    // 0xA0 al iter dove D4=10 → call index 2*5 = 10.
+    // 0xA0 at the iter where D4=10 -> call index 2*5 = 10.
     for (let iter = 0; iter < LOOP_ITER_COUNT; iter++) {
       const d4 = 15 - iter;
       const leftCallIdx = iter * CALLS_PER_ITER;
@@ -111,7 +103,6 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
       return 0;
     });
 
-    // Iter D4=7 è iter index 8 (15-8=7). Cella sinistra a call index 16.
     // x_left a D4=7 = sign-ext(A3w=4) + sign-ext(A4w).
     // A4w dipende da bit 8 di mask (mask shiftata 8 volte = 0x0080).
     // arg0=0x8000, mask=0x0080 → bit clear → A4=8.
@@ -121,7 +112,6 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[16]!.x).toBe(12);
     expect(calls[16]!.y).toBe(5);
 
-    // Iter D4=6 è iter index 9. Cella sinistra call index 18.
     // mask = 0x0040 (after 9 shifts). arg0=0x8000 & 0x0040 = 0 → A4=8.
     // y = (15-6)*2 + 0xFFF5 = 18 + 0xFFF5 = 0x10007 → word 0x0007.
     //  Sign-ext word 0x0007 → 7.
@@ -162,7 +152,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
 
-    // arg0 = 0x0001 → solo bit 0 set → solo mask=0x0001 (iter ultima D4=0) match.
+    // arg0 = 0x0001 -> only bit 0 set -> only mask=0x0001 (last iter D4=0) matches.
     stateSub5D2A(state, rom, 0x0001, 0xffff, (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
       return 0;
@@ -197,7 +187,6 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
 
-    // arg0 = 0x0000 → tutti bit clear → A4=8 sempre.
     // x_right = (15 - 8) + 0 = 7.
     stateSub5D2A(state, rom, 0x0000, 0xffff, (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
@@ -207,7 +196,6 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     for (let iter = 0; iter < LOOP_ITER_COUNT; iter++) {
       const rightIdx = iter * CALLS_PER_ITER + 1;
       expect(calls[rightIdx]!.x).toBe(7);
-      // y stesso di cella sinistra.
       expect(calls[rightIdx]!.y).toBe(calls[iter * CALLS_PER_ITER]!.y);
     }
   });
@@ -243,7 +231,6 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     const order: ("L" | "R")[] = [];
     let toggle = false;
     stateSub5D2A(state, rom, 0xffff, 0xffff, (_st, _y, _x, attr) => {
-      // attr=0xA0 o 0x20 → cella sinistra; attr=0 → cella destra.
       order.push(attr === ATTR_RIGHT ? "R" : "L");
       toggle = !toggle;
       return 0;

@@ -2,25 +2,18 @@
 /**
  * test-sound-cmd-send-158ac-parity.ts — differential FUN_158AC vs soundCmdSend158AC.
  *
- * `FUN_000158AC` (32 byte, ~16 istr) è il wrapper centrale per l'invio di
  * comandi al sound CPU (6502 via mailbox MMIO 0xFE0000). 98 callsite nel ROM.
  *
  * Logica:
- *   1. Legge `tst.w (0x004003B8).l` (word BE in workRam) come skip flag.
  *   2. Se != 0 → skip, D0=0.
- *   3. Altrimenti sign-extend byte → long, JSR FUN_4C6E (thunk @ 0x023C).
- *      FUN_4C6E legge bit 7 di MMIO 0xF60001 (chip busy); se clear → scrive
- *      0xFE0000 e ritorna D0=1; se sempre set dopo 256 retry → D0=0.
  *
  * Setup invariante per convergenza deterministica:
  *   - MMIO 0xF60001 = 0x00 (bit 7 clear = chip ready) → FUN_4C6E riesce al
- *     primo tentativo → D0=1 quando skip=0.
  *
- * Pattern coverage (500 casi):
  *   case 0: skipFlag=0, byteArg random → bin D0=1, ts D0=1
  *   case 1: skipFlag!=0, byteArg random → bin D0=0, ts D0=0
  *   case 2: skipFlag=0, byteArg=0x80 (sign-ext negativo) → D0=1
- *   case 3: skipFlag=0x0001 (solo low byte) → D0=0
+ *   case 3: skipFlag=0x0001 (low byte only) -> D0=0
  *   case >=4: full random (50/50 skip vs send)
  *
  * Uso: npx tsx packages/cli/src/test-sound-cmd-send-158ac-parity.ts [N]
@@ -79,9 +72,6 @@ async function main(): Promise<void> {
     tsD0: number;
   } | null = null;
 
-  // Invariante: chip sempre ready (bit 7 di 0xF60001 = 0).
-  // Questo garantisce che FUN_4C6E esca con D0=1 al primo tentativo
-  // quando lo skip flag è 0 — path deterministico.
   pokeMem(cpu, CHIP_STATUS_ADDR, 1, 0x00);
 
   for (let i = 0; i < n; i++) {
@@ -121,15 +111,10 @@ async function main(): Promise<void> {
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;
 
-    // Re-assert chip ready (invariante per ogni iterazione).
     pokeMem(cpu, CHIP_STATUS_ADDR, 1, 0x00);
 
-    // Pulisci mailbox (side effect non osservabile per D0, ma utile per
-    // evitare interferenze tra iterazioni consecutive).
     pokeMem(cpu, MAILBOX_ADDR, 2, 0x0000);
 
-    // Esegui binario: byteArg pushato come long (M68k cdecl).
-    // FUN_158AC legge `(0x7,SP)` = byte basso del long pushato.
     const r = callFunction(cpu, FUN_158AC, [byteArg & 0xff]);
     const binD0 = r.d0 & 0xff; // 0 o 1
 

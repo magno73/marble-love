@@ -1,6 +1,5 @@
-// probe-d6-bruteforce.ts — brute-force D6 entry per ogni invocazione decoder.
-// Strategia: avanza TS fino al body N (= snapshot pre-body), prova D6 = 0..0xFFFF,
-// trova il valore che produce match con MAME workRam[0x700..0x73F] post-body.
+// probe-d6-bruteforce.ts - brute-force D6 entry for each decoder invocation.
+// Strategy: advance TS to body N (= pre-body snapshot), try D6 = 0..0xFFFF,
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
@@ -66,14 +65,12 @@ bootInit(sBase, rom, { warmState: warm });
 const d6Table: number[] = [];
 
 for (const targetFrame of decoderFrames) {
-  // Run sBase fino a 1 tick prima del body (pre-state)
   const preFrame = targetFrame - 1;
-  // Reset state e avanza fino preFrame
+  // Reset state and advance to preFrame.
   const sFresh = stateNs.emptyGameState();
   bootInit(sFresh, rom, { warmState: warm });
   // Applica D6 trovati per body precedenti
   for (let i = 1; i <= preFrame; i++) {
-    // Imposto d6 dalla tabella se è il frame di un body precedente
     const bodyIdx = decoderFrames.indexOf(i);
     if (bodyIdx >= 0 && bodyIdx < d6Table.length) {
       (sFresh.clock as { decoderD6Init: number }).decoderD6Init = d6Table[bodyIdx]!;

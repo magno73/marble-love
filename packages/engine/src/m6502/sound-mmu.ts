@@ -1,29 +1,23 @@
 /**
- * sound-mmu.ts — Memory map del sound chip Atari System 1 (Marble Madness).
+ * Atari System 1 sound-chip memory map for Marble Madness.
  *
  * Address space 64KB visto dal 6502:
  *
  *  $0000-$0FFF  RAM 4KB                                              [R/W]
  *  $1800-$1801  YM2151 register select / data                        [R/W] (stub)
- *  $1810        mailbox bidirezionale:
- *                 read  = main→sound latch (ack pending, rilascia NMI)
- *                 write = sound→main latch (set pending, asserisce IRQ6 al 68010)
+ *  $1810        bidirectional mailbox:
+ *                 read  = main-to-sound latch (ack pending, release NMI)
+ *                 write = sound-to-main latch (set pending, assert IRQ6 to 68010)
  *  $1820        status register read:
  *                 bit 3 = sound→main pending
- *                 bit 4 = main→sound pending (inverso di "input ready")
- *                 altri bit: switch coin/test (stub, ritorna 0)
+ *                 bit 4 = main-to-sound pending (inverse of "input ready")
+ *                 other bits: coin/test switches
  *  $1820-$1827  LS259 latch (write_d0 alias). addr low bits select latch bit. [W]
  *  $1870-$187F  POKEY                                                [R/W] (stub)
- *  $4000-$FFFF  ROM 48KB (marble usa solo $C000-$FFFF in 2 da 16KB)  [R]
+ *  $4000-$FFFF  ROM 48KB (Marble uses the final 32KB as two 16KB ROMs) [R]
  *
- * Ogni address fuori da queste regioni: read=0xFF, write=ignored (open bus).
- *
- * Pattern stub YM2151/POKEY/LS259: write ignorate, read=0. Phase 5/6 li
- * sostituiranno con device emulator full. La mailbox e' invece full real
- * gia' in Phase 4 (e' la pre-condizione per scambio cmd 68K↔6502).
- *
- * Pin assertions (NMI 6502, IRQ6 68010): le mailbox callback (vedi
- * `mailbox.ts`) ricevono i callback come parametri di factory.
+ * Addresses outside these regions read as 0xFF and ignore writes. Mailbox pin
+ * assertions are supplied through callbacks from `mailbox.ts`.
  */
 
 import type { u8, u16 } from "../wrap.js";
@@ -45,25 +39,24 @@ import {
 } from "../audio/pokey.js";
 
 export interface SoundMmuConfig {
-  /** ROM bytes mapped a $4000-$FFFF (48KB). Marble usa solo gli ultimi 32KB.
-   * Caller deve fornire un Uint8Array di esattamente 0xC000 byte (48KB);
-   * gli unused leading bytes restano 0xFF (open bus convention). */
+  /**
+   * ROM bytes mapped at $4000-$FFFF (48KB). Marble uses only the final 32KB;
+   * unused leading bytes remain 0xFF for open-bus convention.
+   */
   rom: Uint8Array;
   /** Mailbox main→sound (write 68K $FE0001, read 6502 $1810). */
   mainToSound: Mailbox8;
   /** Mailbox sound→main (write 6502 $1810, read 68K $FC0001). */
   soundToMain: Mailbox8;
-  /** YM2151 FM device. Default: createYM2151() se omesso. */
+  /** YM2151 FM device. Default: `createYM2151()` when omitted. */
   ym2151?: YM2151;
-  /** POKEY device. Default: createPOKEY() se omesso. */
+  /** POKEY device. Default: `createPOKEY()` when omitted. */
   pokey?: POKEY;
-  /** Callback: 6502 ha letto la mailbox main→sound (ack). Wiring: rilascia
-   * pin NMI 6502. Phase 4: opzionale (se assente, NMI line non modellata). */
+  /** Callback when the 6502 reads and acknowledges the main-to-sound mailbox. */
   onMainToSoundAck?: () => void;
   /** Diagnostic callback for 6502 reads of the main→sound command latch. */
   onMainToSoundRead?: (event: { readonly val: u8 }) => void;
-  /** Callback: 6502 ha scritto la mailbox sound→main (post). Wiring:
-   * asserisce IRQ6 al 68010. Phase 4: opzionale. */
+  /** Callback when the 6502 posts a sound-to-main mailbox byte. */
   onSoundToMainPost?: () => void;
   /** Diagnostic override for the fixed/self-test/coin bits returned by $1820.
    * Default is $87 (self-test idle + coin pull-ups high). Bits 3/4 are still
@@ -93,13 +86,13 @@ export interface SoundMmuConfig {
 }
 
 export interface SoundMmu extends MemBus6502 {
-  readonly ram: Uint8Array;       // 4KB, ispezionabile per oracle diff
-  readonly rom: Uint8Array;       // 48KB, immutabile post-construct
-  readonly mainToSound: Mailbox8; // ref a quella passata in config
+  readonly ram: Uint8Array;       // 4KB, inspectable for oracle diffs
+  readonly rom: Uint8Array;       // 48KB, immutable after construction
+  readonly mainToSound: Mailbox8; // Reference from config
   readonly soundToMain: Mailbox8;
-  /** YM2151 device (Phase 5 register-state parity). Esposto per oracle diff. */
+  /** YM2151 device, exposed for oracle diffs. */
   readonly ym2151: YM2151;
-  /** POKEY device (Phase 6 register-state parity). Esposto per oracle diff. */
+  /** POKEY device, exposed for oracle diffs. */
   readonly pokey: POKEY;
   /** Last LS259 output state per bit-addressed address ($1820-$1827). */
   readonly ls259Shadow: Uint8Array;
@@ -123,7 +116,7 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
     }
     if (a === 0x1800 || a === 0x1801) {
       // YM2151 status (Phase 5): bit 0 timer A overflow, bit 1 timer B
-      // overflow, bit 7 busy. Stub V2 sempre 0. Stesso byte da $1800 e $1801.
+      // overflow, bit 7 busy. Same status byte is visible at $1800 and $1801.
       return ym2151ReadStatus(ym2151);
     }
     if (a === 0x1810) {
@@ -133,14 +126,14 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
     }
     if (a === 0x1820) {
       cfg.beforeStatusRead?.();
-      // status: per atarisy1.cpp::switch_6502_r:
-      //   bit 7 ($80) = self-test switch (idle = 1; pull-up reale)
+      // status per atarisy1.cpp::switch_6502_r:
+      //   bit 7 ($80) = self-test switch (idle = 1; real pull-up)
       //   bit 3 ($08) = main→sound pending (cmd buffer full, NMI source)
       //   bit 4 ($10) = sound→main pending (response buffer full)
       //   bit 0-2 = coin inputs (idle = 1, pressed = 0)
-      // Verificato 2026-05-17 via oracle/mame_1820_value_tap.lua: MAME al boot
-      // ritorna $8F (= $87 base + bit 3 main pending). Senza i bit di pull-up
-      // alti, boot $8018 `LDA $1820 AND #$80 BEQ` prende ramo divergente.
+      // Verified 2026-05-17 via oracle/mame_1820_value_tap.lua: MAME returns
+      // $8F at boot ($87 base + bit 3 main pending). Without high pull-up bits,
+      // boot address $8018 takes the wrong branch.
       const base = (cfg.statusBaseProvider?.() as number | undefined) ??
         (cfg.statusBase as number | undefined) ?? 0x87;
       const b3 = cfg.mainToSound.pending ? 0x08 : 0;

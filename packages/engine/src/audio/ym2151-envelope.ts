@@ -1,11 +1,11 @@
 /**
- * ym2151-envelope.ts — Envelope generator per YM2151 operator (4-stage ADSR).
+ * ym2151-envelope.ts - Envelope generator for a YM2151 operator (4-stage ADSR).
  *
  * Hardware state machine OPM:
- *   ATTACK (AR)    → counter sale rapidamente verso 0 (= max volume)
- *   DECAY 1 (D1R)  → counter scende fino a D1L (sustain level)
- *   DECAY 2 (D2R)  → counter continua a scendere lentamente verso silence
- *   RELEASE (RR)   → su KEY OFF, counter scende verso silence con RR rate
+ *   ATTACK (AR)    -> counter rises quickly toward 0 (= max volume)
+ *   DECAY 1 (D1R)  -> counter falls to D1L (sustain level)
+ *   DECAY 2 (D2R)  -> counter keeps falling slowly toward silence
+ *   RELEASE (RR)   -> on KEY OFF, counter falls toward silence at the RR rate
  *
  * Envelope counter: 10-bit, 0=max volume, 0x3FF=silence.
  * Final attenuation: counter + TL (total level, 0..127).
@@ -13,8 +13,8 @@
  * Reference: Yamaha OPM application manual + MAME ym2151.cpp:envelope_update.
  */
 
-/** Envelope clock counter (shared tra tutti gli operator).
- * Incrementa ogni sample, usato come "tempo" globale del envelope generator. */
+/** Envelope clock counter, shared by all operators.
+ * Increments every sample and acts as the global envelope-generator timebase. */
 let globalEnvClock = 0;
 let globalEnvDivider = 0;
 let globalEnvClockAdvanced = false;
@@ -52,7 +52,7 @@ const ATTENUATION_INCREMENT: ReadonlyArray<number> = [
   0x88888888, 0x88888888, 0x88888888, 0x88888888,
 ];
 
-/** Compute step amount per il rate corrente + env clock corrente.
+/** Compute step amount for the current rate and envelope clock.
  * ymfm-faithful: env_counter is a divided EG clock, then rate controls both
  * the fractional clock gate and the 3-bit nibble selected from the increment
  * table. */
@@ -88,10 +88,10 @@ export interface EnvelopeState {
   /** Phase corrente: OFF / ATTACK / DECAY / SUSTAIN / RELEASE. */
   state: number;
   /** Envelope counter 0..1023 (0 = max volume, 1023 = silence).
-   * In ATTACK: scende verso 0 partendo dall'attenuazione corrente.
-   * In DECAY: parte da 0, sale verso D1L (sustain level).
-   * In SUSTAIN: continua a salire verso 1023 col D2R rate.
-   * In RELEASE: sale verso 1023 col RR rate. */
+   * In ATTACK: falls toward 0 from the current attenuation.
+   * In DECAY: starts at 0, rises toward D1L (sustain level).
+   * In SUSTAIN: keeps rising toward 1023 at the D2R rate.
+   * In RELEASE: rises toward 1023 at the RR rate. */
   counter: number;
   /** Sub-counter per gestire i 8 step di ENV_RATE_TABLE. */
   subCounter: number;
@@ -129,7 +129,7 @@ export function envelopeAdvance(
       }
       const step = rateStep(rate);
       if (step > 0) {
-        // Attack: exponential curve verso 0. ymfm applies a negative delta:
+        // Attack: exponential curve toward 0. ymfm applies a negative delta:
         // attenuation += (~attenuation * step) >> 4.
         env.counter += ((~env.counter * step) >> 4);
         if (env.counter <= 0) {

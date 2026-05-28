@@ -2,31 +2,21 @@
 /**
  * test-state-sub-2abc-parity.ts — differential FUN_2ABC vs stateSub2ABC.
  *
- * FUN_2ABC (148 byte) è la sub "clear-string-chain" del state-machine
- * scheduler. Args: 1 long sullo stack (`arg1Long` = pointer a struct entry).
+ * scheduler. Args: 1 long on the stack (`arg1Long` = pointer to struct entry).
  *
- * La funzione:
- *   - Walk linked list di entry "string" via `*(A0+8)` finché
  *     `sext(byte@A0+6) + sext(*0x401F00) > 1`.
- *   - Per ogni entry, walk byte-by-byte la stringa @ `*(A0+2)` e azzera
  *     la corrispondente word nel alpha tilemap @ 0xA03000.
  *
  * Strategia:
- *   - FUN_2ABC NON ha jsr/bsr → no patch necessaria, no stub injection.
- *   - Il setup deve garantire un setup valido di:
- *       a) `*0x401F42` (rotation, in [0..3] per cover ROM table reali)
+ *   - Setup must guarantee valid setup for:
+ *       a) `*0x401F42` (rotation, in [0..3] to cover real ROM tables)
  *       b) `*0x401F00` (VAL_F00, signed)
  *       c) struct @ STRUCT_ADDR: col, tickOff, stringPtr (long), marker,
  *          nextPtr (long)
- *       d) stringa @ STRING_ADDR: bytes random + terminatore
  *       e) catena di entry (per cover chain-walk)
- *   - Confronto: alpha RAM @ 0xA03000..0xA03FFF (4 KB) deve combaciare bit-bit.
- *   - Bonus: workRam @ 0x401F00..0x401F3F invariata (FUN_2ABC non scrive).
  *
  * Suite testate:
- *   - A: rot=0, single entry, stringhe random
- *   - B: rot=1, single entry, stringhe random
- *   - C: rot=0..3, single entry con col/tickOff signed (negativi inclusi)
+ *   - C: rot=0..3, single entry with signed col/tickOff (including negatives)
  *   - D: chain walk: 2-3 entry collegate via marker + nextPtr
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2abc-parity.ts [N]
@@ -67,7 +57,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Pre-fill alpha in entrambi binario e TS state. */
 function fillAlpha(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -79,7 +68,6 @@ function fillAlpha(
   }
 }
 
-/** Setup struct entry in entrambi binario e TS state. */
 function setupEntry(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -116,7 +104,6 @@ function setupEntry(
   state.workRam[wOff + 11] = nextPtr & 0xff;
 }
 
-/** Setup string in entrambi binario e TS state. */
 function setupString(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -172,7 +159,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  // ROM image per TS (stessa ROM del binario)
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -218,7 +204,6 @@ async function main(): Promise<void> {
   const rng = makeRng(0x2abc);
   const ri = (max: number): number => Math.floor(rng() * max);
 
-  // ─── Suite A: rot=0, single entry, stringhe random ───────────────────
   console.log(`\n=== stateSub2ABC (FUN_2ABC) — Suite A: rot=0, single entry — ${perSuite} casi ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -239,7 +224,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: rot=1, single entry, stringhe random ───────────────────
   console.log(`\n=== Suite B: rot=1, single entry — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -265,7 +249,6 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("C", i, () => {
-      // Limit rot a valori validi per cui le ROM table non producano stride 0
       // (stride 0 per rot=2 → infinite loop). Usiamo rot in {0, 1, 3}.
       const rotChoices = [0, 1, 3];
       const rot = rotChoices[ri(3)] ?? 0;
@@ -295,7 +278,7 @@ async function main(): Promise<void> {
       const rotChoices = [0, 1, 3];
       const rot = rotChoices[ri(3)] ?? 0;
       // VAL_F00: condition `marker + valF00 > 1` → continua. `<=1` → stop.
-      // Usiamo VAL_F00 = -2 con marker random in [0..7]:
+      // Use VAL_F00 = -2 with random marker in [0..7]:
       //   marker=0 → -2 → stop
       //   marker=1 → -1 → stop
       //   marker=2 → 0 → stop

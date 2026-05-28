@@ -1,37 +1,26 @@
 /**
- * refresh-helper-1912c.ts — replica `FUN_0001912C` (130 byte).
+ * refresh-helper-1912c.ts - `FUN_0001912C` replica (130 bytes).
  *
- * "Refresh-frame entity ticker with slot-scan flag". Chiamato ogni frame dal
- * refresh-frame handler `FUN_00010FCE`. Gated su `*0x400394.w == 4`.
+ * refresh-frame handler `FUN_00010FCE`. Gated on `*0x400394.w == 4`.
  *
- * **Struttura**:
- *   1. Gate: `*0x400394.w == 4` — se != 4 → rts immediato.
+ * **Structure**:
+ *   1. Gate: `*0x400394.w == 4`; if not 4, return immediately.
  *   2. Slot scan (`A1 = 0x400018`, stride `0xE2`, count `= *0x400396.w`):
- *      per ogni slot con `slot[0x18]==1 && slot[0x14..0x15].w == 0x3F6E &&
- *      slot[0x1b]==1` → D3 = 1. D3 inizia a 0.
+ *      for each slot with `slot[0x18]==1 && slot[0x14..0x15].w == 0x3F6E &&
+ *      slot[0x1b]==1`, set D3 = 1. D3 starts at 0.
  *   3. Entity loop (`A2 = 0x401890`, stride `0x28`, count 9):
- *      per ogni entity con `entity[0x18] != 0`:
+ *      for each entity with `entity[0x18] != 0`:
  *        a. `entity[0x24]++`
- *        b. Se `entity[0x1A] != 2`: `entity[0x1A] = D3`
- *        c. threshold D0: `entity[0x1A]==1` → 1, altrimenti → 3
- *        d. Se `D0 > entity[0x24]` (signed byte): chiama solo FUN_199D6(entity)
- *        e. Altrimenti: `entity[0x24] = 0`; branch su `entity[0x25]`:
+ *        b. If `entity[0x1A] != 2`: `entity[0x1A] = D3`
  *             - `== 7` AND `entity[0x1A]==2`:
  *                 `entity[0x1C] += 4`; A0 = entity[0x1C];
- *                 se `[A0] == 0xFFFFFFFF`: chiama FUN_194BA(entity);
- *                 chiama FUN_199D6(entity)
  *             - `== 7` AND `entity[0x1A] != 2`:
  *                 `entity[0x0C] += entity[0x00]`; `entity[0x10] += entity[0x04]`;
  *                 `entity[0x1B]++`;
- *                 se `entity[0x1B] < 4`: chiama FUN_199D6(entity)
- *                 altrimenti: chiama FUN_194BA(entity); `entity[0x1B] = 0`;
- *                 chiama FUN_199D6(entity)
  *             - `!= 7`:
  *                 `entity[0x1C] += 4`; A0 = entity[0x1C];
- *                 se `[A0] == 0xFFFFFFFF`:
+ *                 if `[A0] == 0xFFFFFFFF`:
  *                   `entity[0x0C] += entity[0x00]`; `entity[0x10] += entity[0x04]`;
- *                   chiama FUN_194BA(entity);
- *                 chiama FUN_199D6(entity)
  *
  * **Disasm 0x1912C..0x1924D** (130 byte, ricostruito forzando branch target
  * nascosti da padding/dati):
@@ -41,7 +30,6 @@
  *   0x19132  cmp.w   (0x400394).l,D0w        ; gate: game-mode word == 4?
  *   0x19138  bne.w   epilog
  *   0x1913c  clr.b   D3b                     ; D3 = 0 (slot-scan flag)
- *   0x1913e  movea.l #0x400018,A1            ; A1 = slot-array base
  *   0x19144  clr.b   D2b                     ; D2 = 0 (scan index)
  *   0x19146  bra.b   check_slot              ; → 0x19170
  *
@@ -146,7 +134,6 @@
  * **Addresses/memory layout**:
  *   - `0x400394`: game-mode word (gate == 4).
  *   - `0x400396`: slot-scan count word (how many slots to scan).
- *   - `0x400018`: slot-array base; each slot is 0xE2 bytes.
  *   - `0x401890`: entity table base; 9 entities × 0x28 bytes.
  *
  * **Slot struct offsets** (scanned for D3 flag):
@@ -167,15 +154,9 @@
  *   - `+0x25` (byte): animation threshold / state selector.
  *
  * **JSR esterne** (via sub-injection):
- *   - `FUN_000194BA` (`objectTypeDispatch194BA`) — già replicato in
- *     `object-type-dispatch-194ba.ts`. Iniettabile come `subs.fun_194ba`.
- *   - `FUN_000199D6` (`computeSpriteCoords_v2`) — già replicato in
- *     `sprite-coords.ts`. Iniettabile come `subs.fun_199d6`.
  *
  * **Caller noto** (1 xref): `FUN_00010FCE` @ 0x10FF8.
  *
- * Verifica bit-perfect via
- * `packages/cli/src/test-refresh-helper-1912c-parity.ts` (500 casi).
  */
 
 import type { GameState } from "./state.js";
@@ -187,9 +168,7 @@ import type { RomImage } from "./bus.js";
 export const GAME_MODE_WORD_OFF = 0x394 as const;
 /** Word at 0x400396: how many slots to scan in slot-scan phase. */
 export const SLOT_COUNT_WORD_OFF = 0x396 as const;
-/** m68k base addr of slot array scanned for D3 flag. */
 export const SLOT_ARRAY_BASE = 0x00400018 as const;
-/** Stride (bytes) between consecutive slots in the slot array. */
 export const SLOT_STRIDE = 0xe2 as const;
 /** Sentinel word value at slot+0x14 that contributes to D3 flag. */
 export const SLOT_TYPE_SENTINEL = 0x3f6e as const;
@@ -244,25 +223,19 @@ export const SUB_COUNTER_LIMIT = 4 as const;
 
 /**
  * Stub injection per le 2 JSR esterne. Default: tutte no-op (matching del
- * binario stubbato con RTS nel parity test).
  */
 export interface RefreshHelper1912CSubs {
   /**
-   * `FUN_000194BA` (`objectTypeDispatch194BA`) — chiamato nei path
-   * "state==7/kind==2 con terminator" e "state==7/kind!=2 quando counter>=4"
-   * e "state!=7 con terminator".
+   * and "state!=7 with terminator".
    */
   fun_194ba?: (state: GameState, entityAddr: number) => void;
   /**
-   * `FUN_000199D6` (`computeSpriteCoords_v2`) — chiamato per ogni entity
-   * attiva che supera il guard `entity[0x18]!=0`.
    */
   fun_199d6?: (state: GameState, entityAddr: number) => void;
 }
 
 // ─── Result ──────────────────────────────────────────────────────────────────
 
-/** Quale branch della dispatch state/kind è stato preso. */
 export type EntityBranch =
   | "threshold_only"    // D0 > entity[0x24]: solo FUN_199D6
   | "state7_kind2_term" // state==7 AND kind==2 AND [ptr]==0xFFFF_FFFF
@@ -276,22 +249,16 @@ export type EntityBranch =
 export interface EntityTickRecord {
   /** Index entity (0..8). */
   slot: number;
-  /** True se l'entity era attiva (entity[0x18] != 0). */
   wasActive: boolean;
-  /** Branch preso (null se entity non attiva). */
   branch: EntityBranch | null;
 }
 
-/** Risultato aggregato di `refreshHelper1912C`. */
 export interface RefreshHelper1912CResult {
-  /** True se la funzione è uscita early (gate != 4). */
   gatedOut: boolean;
   /**
-   * True se D3 flag è stato alzato durante lo slot scan (almeno uno slot con
    * slot[0x18]==1 && slot[0x14..0x15]==0x3F6E && slot[0x1b]==1).
    */
   slotFlagSet: boolean;
-  /** Dettaglio per-entity. Vuoto se gatedOut. */
   perEntity: EntityTickRecord[];
 }
 
@@ -330,8 +297,6 @@ function writeLongBE(state: GameState, off: number, v: number): void {
 /**
  * Read a 32-bit BE long from m68k absolute address, dispatching by region.
  *
- * `entity[0x1C]` (script ptr) può puntare in ROM (valori iniziali) oppure in
- * workRam dopo i `addq.l #4`. La funzione dispatch:
  *   - addr < 0x400000 → ROM (rom.program)
  *   - 0x400000 ≤ addr < 0x402000 → workRam
  *   - altrove → 0 (safe default)
@@ -369,11 +334,8 @@ function sextByte(b: number): number {
 // ─── Replica ─────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001912C`.
  *
  * @param state  GameState. Modifica `state.workRam` per le entity attive.
- * @param rom    RomImage — usata per leggere i long puntati da
- *               `entity[0x1C]` quando il puntatore è in ROM (< 0x400000).
  * @param subs   Stub injection per le 2 JSR esterne. Default: tutte no-op.
  *
  * @returns dettaglio del gate, del slot-scan flag e del per-entity tick.
@@ -395,7 +357,6 @@ export function refreshHelper1912C(
   let d3Flag = 0;
   const slotCount = readWordBE(state, SLOT_COUNT_WORD_OFF);
 
-  // Compute initial slot array offset in workRam (0x400018 → 0x18).
   let a1Off = SLOT_ARRAY_BASE - 0x400000; // 0x18
 
   for (let d2 = 0; d2 !== (slotCount & 0xffff); ) {

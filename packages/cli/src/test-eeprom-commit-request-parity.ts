@@ -3,22 +3,22 @@
  * test-eeprom-commit-request-parity.ts — differential FUN_3FC6 vs
  * eepromCommitRequest (TS).
  *
- * `FUN_00003FC6` (66 byte) e' chiamata UNA volta da `FUN_472A` (call site
- * @ 0x4748). E' un wrapper "consume / pace-check" attorno a `FUN_3F78`:
- *   - prende un long arg dal caller (ma legge solo la low word)
+ * `FUN_00003FC6` (66 bytes) is called once by `FUN_472A` (call site
+ * @ 0x4748). It is a "consume / pace-check" wrapper around `FUN_3F78`:
+ *   - takes one long arg from the caller but reads only the low word
  *   - chiama `FUN_3F78` due volte (entrambe modificano workRam @ 0x401FF5/F7)
- *   - se passano i check, decrementa byte @ 0x401FF5 di `(arg.w * result1.w).b`
+ *   - if checks pass, decrement byte @ 0x401FF5 by `(arg.w * result1.w).b`
  *
  * Confronto:
  *   - return D0 (long): 0 oppure 1
- *   - byte @ 0x401FF5 (acc, modificato da eepromCommit interno + decremento)
- *   - byte @ 0x401FF7 (drain counter, modificato da eepromCommit interno)
+ *   - byte @ 0x401FF5 (acc, modified by internal eepromCommit + decrement)
+ *   - byte @ 0x401FF7 (drain counter, modified by internal eepromCommit)
  *
- * Setup per ogni caso random:
+ * Setup for each random case:
  *   - *0x401FFC = a2Addr (ptr struct, in workRam-safe range 0x401D00)
  *   - bytes @ a2Addr+0xA, +0xB = status + complement
  *   - *0x401FF5, *0x401FF7 = contatori random
- *   - arg = long random (high word ignorato dalla funzione, low word usata)
+ *   - arg = random long (high word ignored by the function, low word used)
  *
  * Pattern coverage:
  *   - 25% status >= 0xE0       -> entrambe le call interne early-exit (0x18)
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     const acc0 = Math.floor(rng() * 256);
     const ctr0 = Math.floor(rng() * 256);
 
-    // arg: long con high word random, low word random; pattern "argzero" forza low word = 0
+    // arg: long with random high word, random low word; pattern "argzero" forces low word = 0.
     let argLow: number;
     if (pattern === "argzero") {
       argLow = 0x0000;

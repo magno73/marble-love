@@ -1,8 +1,6 @@
 /**
  * scroll-coord-helpers.ts — replica `FUN_0001BB08` + `FUN_0001BB50`.
  *
- * Due helper accoppiati per aggiornare le coordinate di scroll/cell
- * di un'entità (tipicamente marble world position).
  *
  * **`FUN_1BB50` updateScrollCoords1BB50** (19 instr, 5 callers):
  *   ricalcola cell-coords + dirty-flag basato su `*0x400690` (world X) e
@@ -18,13 +16,11 @@
  *
  * **`FUN_1BB08` setScrollCoordsFromEntity1BB08** (8 instr, 7 callers):
  *   trasferisce `entity[0xC..0xF]` (X word) e `entity[0x10..0x13]` (Y word)
- *   da una struct entity verso `*0x400690/0x400692`, poi chiama
  *   `updateScrollCoords1BB50`.
  *
  *   Side effects:
  *     *0x400690.w = entity+0xC.w
  *     *0x400692.w = entity+0x10.w
- *     + tutto FUN_1BB50
  */
 
 import type { GameState } from "./state.js";
@@ -75,8 +71,7 @@ export function updateScrollCoords1BB50(state: GameState): void {
   // Dirty flag: default = 1
   writeU16(state, 0x6a2, 1);
 
-  // Reset dirty se sub-cell Y < sub-cell X (signed compare).
-  // bge.b done → exit if subY >= subX. Quindi clear se subY < subX.
+  // Reset dirty if sub-cell Y < sub-cell X (signed compare).
   const subX = readU16(state, 0x69e);
   const subY = readU16(state, 0x6a0);
   if (s16(subY) < s16(subX)) {
@@ -85,7 +80,6 @@ export function updateScrollCoords1BB50(state: GameState): void {
 }
 
 /**
- * Replica `FUN_0001BB08` — copia world XY da entity struct e chiama
  * `updateScrollCoords1BB50`.
  *
  * @param entityPtr  Pointer assoluto M68k all'entity struct (workRam).

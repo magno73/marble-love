@@ -7,8 +7,8 @@
  *   - FUN_4DCC (sound chip writer, GROSSA, NON replicata)
  *   - FUN_4C3E (status check)
  *
- * Per testare il wrapper isolato, patchiamo nel binario tutte e 3 le sub
- * con `rts` immediato (0x4E75). Poi confrontiamo lo stato workRam.
+ * To test the wrapper in isolation, patch all 3 binary subs
+ * with an immediate `rts` (0x4E75). Then compare workRam state.
  *
  * Uso: npx tsx packages/cli/src/test-sound-tick-parity.ts [N]
  */
@@ -43,8 +43,8 @@ async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "200");
   const rom = Buffer.from(readFileSync(resolve("ghidra_project/marble_program.bin")));
 
-  // Patch ROM: stub sub-functions con `rts` (0x4E75) per isolare il wrapper.
-  // Per FUN_4C3E vogliamo ritornare D0=1 (status ok). Patchiamo prologo:
+  // Patch ROM: stub sub-functions with `rts` (0x4E75) to isolate the wrapper.
+  // For FUN_4C3E we want D0=1 (status ok). Patch the prologue:
   //   moveq #1,D0  → 0x7001 (2 byte)
   //   rts          → 0x4E75 (2 byte)
   // 4 byte totali. Allineato a entry FUN_4C3E.

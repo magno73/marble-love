@@ -1,4 +1,4 @@
--- mame_slapstic_tap.lua — log accessi alla slapstic window (0x080000-0x087FFF)
+-- mame_slapstic_tap.lua - logs slapstic window accesses (0x080000-0x087FFF).
 -- e bank corrente del chip 137412-103 di Marble Madness, per validare la
 -- state-machine replicata in `packages/engine/src/m68k/slapstic-103.ts`.
 --
@@ -16,12 +16,12 @@
 --
 -- Note:
 --  * Il tap installato e' read/write su tutta la window. MAME chiama il
---    callback DOPO che il device slapstic (installato come tap a priorita'
---    pari) ha gia' aggiornato il proprio bank → leggendo il "bank" del
---    device a callback time otteniamo il bank usato per QUESTO accesso.
+--    callback after the slapstic device (installed as a same-priority tap) has
+--    already updated its bank -> reading the device "bank"
+--    device at callback time gives the bank used for this access.
 --    Pero' MAME stampa "current bank N" via logerror DOPO il transition;
 --    per affidabilita' leggiamo il device.state["m_current_bank"] post-test.
---  * Se m_current_bank non e' esposto, fallback: ricaviamo il bank dal
+--  * If m_current_bank is not exposed, fall back to deriving the bank from
 --    pattern di accesso analizzandolo offline.
 --
 -- Env vars:

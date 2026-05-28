@@ -2,13 +2,13 @@
 /**
  * test-sprite-rotate-1c014-smoke.ts — smoke test FUN_0001C014 / spriteRotate1C014.
  *
- * 3 scenari deterministici senza ROM binaria:
- *   1. velocity-idle (flag@+0x58=0xA) con gameMode!=4 → early exit, solo slot output.
- *   2. single-axis X velocity (D2!=0, D6==0) con gameMode==4 → path 0x1c0a4.
+ * 3 deterministic scenarios without a binary ROM:
+ *   1. velocity-idle (flag@+0x58=0xA) with gameMode!=4 -> early exit, only slot output.
+ *   2. single-axis X velocity (D2!=0, D6==0) with gameMode==4 -> path 0x1c0a4.
  *   3. dual-axis velocity (D2!=0, D6!=0) → full atan path.
  *
- * Verifica che la funzione non lanci e modifichi le zone attese di workRam
- * senza dipendere dal binario MAME.
+ * Verifies the function does not throw and modifies the expected workRam areas.
+ * without depending on the MAME binary.
  *
  * Uso: npx tsx packages/cli/src/test-sprite-rotate-1c014-smoke.ts
  */
@@ -25,7 +25,7 @@ import type { RomImage } from "@marble-love/engine";
 const OBJ_ADDR = 0x401200; // raw address of object struct
 const OBJ_OFF = OBJ_ADDR - 0x400000; // workRam offset
 
-/** Crea uno stato pulito con ROM vuota e imposta il frame locale */
+/** Creates a clean state with empty ROM and sets the local frame. */
 function makeState(): { s: ReturnType<typeof stateNs.emptyGameState>; rom: RomImage } {
   const s = stateNs.emptyGameState();
   const rom = busNs.emptyRomImage();

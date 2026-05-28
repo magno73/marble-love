@@ -2,27 +2,17 @@
 /**
  * test-state-sub-15670-parity.ts — differential FUN_15670 vs `stateSub15670`.
  *
- * `FUN_00015670` (532 byte) scansiona l'array oggetti @ 0x400018 (count word
- * @ 0x400396, stride 0xE2), filtra "candidati attivi", per ognuno controlla
- * collision con marble-slot @ 0x401302 (4 × 0x60), e se almeno un candidato
- * resta, calcola la distanza octant-approx tra arg (A2) e candidato. Se
- * `0x180 < dist < 0x280` chiama `FUN_00015460(A2)` e setta `(0x1A,A2)=1`.
+ * @ 0x400396, stride 0xE2), filters active candidates, and checks each one
+ * collision with marble-slot @ 0x401302 (4 x 0x60), and if at least one candidate
  *
  * **Strategia stub injection**:
  *
- *   1. **FUN_15FE6**: chiamata SOLO nel ramo `count==2 && D2==0`. Patchata
- *      con thunk-loader che ritorna in D0 il long letto da `0x401E40`
- *      (slot "fun_15fe6_ret"). Il test pre-popola questo slot con un long
  *      controllato. Il TS reimpl usa `compareObjDepth` di default ma noi
- *      iniettiamo `fun_15fe6` per restituire lo stesso valore "patchato".
  *
  *      Layout stub (8 byte):
  *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)
  *        rts                         ; 4E75            (2 byte)
  *
- *   2. **FUN_15460**: chiamata nel ramo "trigger". Patchata con thunk-logger
- *      che scrive `structPtr` in un ring-buffer @ `0x401E00`, avanzando un
- *      counter @ `0x401E48` di +4 ad ogni chiamata.
  *
  *      Layout stub (26 byte):
  *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 byte)
@@ -34,18 +24,11 @@
  *                                       ;  vs addq.l #8: ddd=0 → opcode 50B9)
  *        rts                           ; 4E75             (2 byte)
  *
- *   FUN_15FE6 è 118 byte (0x15FE6..0x1605B), e FUN_15460 è la prima nello
- *   spazio prima di FUN_15670 (la sua dim non importa qui — patchiamo solo
- *   l'opcode iniziale fino a 22 byte).
  *
- * **Suite testate (4 × 125 = 500 casi)**:
- *   - A: count = 0 (no-op puro, controlla che non scriva nulla)
- *   - B: count = 1 con candidato che TRIGGERA (distanza random in
- *        [0x181..0x27F], tutti i filtri OK)
- *   - C: count = 1 con candidato BLOCCATO da almeno 1 collision marble-slot
- *   - D: count = 2 con entrambi candidati validi → triggera FUN_15FE6
+ *   - B: count = 1 with a candidate that TRIGGERS (random distance in
+ *   - C: count = 1 with a candidate BLOCKED by at least 1 marble-slot collision
+ *   - D: count = 2 with both candidates valid -> triggers FUN_15FE6
  *
- * **Confronto**: workRam[arg+0x56] (word), workRam[arg+0x1A] (byte),
  *   ring buffer FUN_15460, counter, e fun_15fe6_ret slot.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-15670-parity.ts [N]
@@ -83,7 +66,6 @@ const RING_BASE_OFF = RING_BASE - 0x400000;
 const RING_COUNTER_OFF = RING_COUNTER - 0x400000;
 const FUN15FE6_RET_OFF = FUN15FE6_RET - 0x400000;
 
-/** Arg struct ptr (in workRam, lontano da array oggetti e marble-slot). */
 const ARG_BASE = 0x00401a00;
 
 /** Patch FUN_15FE6 col thunk-loader (8 byte). */
@@ -167,10 +149,8 @@ function resetAll(
   for (let i = 0; i < 0x2000; i += 4) {
     pokeMem(cpu, 0x400000 + i, 4, 0);
   }
-  // Verifica: rilegge un campione a riprova del wipe.
 }
 
-/** Confronta byte-by-byte la zona [base..base+size) tra binario e TS. */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -202,10 +182,8 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // TS subs: replicano lo stub binario.
   const subs: ns.StateSub15670Subs = {
     fun_15fe6: (_p0, _p1) => {
-      // Legge long-BE @ 0x401E40 dal state.workRam.
       const r = state.workRam;
       return (
         (((r[FUN15FE6_RET_OFF] ?? 0) << 24) |
@@ -216,7 +194,6 @@ async function main(): Promise<void> {
       );
     },
     fun_15460: (structPtr) => {
-      // Replica esatta dello stub binario: scrive structPtr nel ring @ counter,
       // poi counter += 4.
       const r = state.workRam;
       const counter =
@@ -360,7 +337,6 @@ async function main(): Promise<void> {
         i,
         (st, cp) => {
           pokeBoth(st, cp, OBJ_COUNT_ADDR, 2, 0);
-          // arg con valori random (devono restare invariati)
           setupArg(st, cp, {
             zorder: rb(),
             fx: rl() | 0,
@@ -386,7 +362,6 @@ async function main(): Promise<void> {
     const zorder = rb();
     // Distanza target: dx random in [0x181..0x27F], dy = 0
     const distTarget = 0x181 + (Math.floor(rng() * (0x280 - 0x181)) | 0);
-    // a1.fx - arg.fx = distTarget << 12 (segno random); a1.fy = arg.fy
     const argFx = 0;
     const argFy = 0;
     const sign = rng() < 0.5 ? -1 : 1;
@@ -404,7 +379,7 @@ async function main(): Promise<void> {
             kind: [0, 1, 5][Math.floor(rng() * 3)]!,
             zorder,
             field36: 0,
-            // |x|+|y| > 0xC000: usiamo 0x10000 + 0x10000 = 0x20000
+            // |x|+|y| > 0xC000: use 0x10000 + 0x10000 = 0x20000.
             x: 0x10000,
             y: 0x10000,
             fx: objFx,
@@ -449,7 +424,7 @@ async function main(): Promise<void> {
             fx: rl() | 0,
             fy: rl() | 0,
           });
-          // Almeno 1 marble-slot con state=1, kind=1, field56=signExt(flag19)
+          // At least 1 marble-slot with state=1, kind=1, field56=signExt(flag19).
           const slotIdx = Math.floor(rng() * 4);
           const slotAbs = SLOT_ARRAY_BASE + slotIdx * SLOT_STRIDE;
           pokeBoth(st, cp, slotAbs + 0x18, 1, 1);

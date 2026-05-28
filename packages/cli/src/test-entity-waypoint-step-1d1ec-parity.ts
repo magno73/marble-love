@@ -3,32 +3,24 @@
  * test-entity-waypoint-step-1d1ec-parity.ts — differential FUN_1D1EC
  * vs entityWaypointStep1D1EC.
  *
- * FUN_1D1EC (86 byte) è la sub "advance-script-cursor-when-at-waypoint"
- * del subsystem entity. Args: 1 long sullo stack (entityPtr).
+ * of the entity subsystem. Args: one long on the stack (entityPtr).
  *
  * Logica:
  *   - cellX = signed_asr(*(long*)(ptr+0x0c), 19) & 0xffff
  *   - cellY = signed_asr(*(long*)(ptr+0x10), 19) & 0xffff
  *   - cursor = *(long*)(ptr+0x2c)
- *   - se ext.w(cursor[0]) == cellX e ext.w(cursor[1]) == cellY:
+ *   - if ext.w(cursor[0]) == cellX and ext.w(cursor[1]) == cellY:
  *       *(long*)(ptr+0x2c) = *(long*)(ptr+0x30) + ext.l(signed cursor[2]) * 4
  *   - jsr FUN_1D242(entityPtr) ← STUB injection (rts no-op)
  *
  * Strategia:
- *   - Patch FUN_1D242 a `rts` (4E 75) → no-op nel binario
  *   - In TS, callback `fun_1d242` no-op
- *   - Confronto: workRam @ struct entity (0x401E00..0x401E3F) e cursor
- *     range (0x401E80..0x401EFF) + verifica che il return value (D0)
- *     matcha (la funzione non setta esplicitamente D0 → confronto solo
- *     della memoria scritta da entityWaypointStep1D1EC)
  *
  * Layout test:
  *   - Entity struct @ 0x401E00 (offset 0x1E00 in workRam)
  *   - Cursor table @ 0x401E80 (offset 0x1E80 in workRam) — 8 byte slot
- *   - Array base @ 0x401E90
  *
  * Suite testate:
- *   - A: random struct & cursor & cell match casuale
  *   - B: forced match (cursor[0..1] == cellX/Y derivati da pos)
  *   - C: forced mismatch X (no-op write)
  *   - D: cursor[2] = signed byte random (incluso negativi e bordi)
@@ -95,7 +87,6 @@ interface CaseSetup {
   cursor: number[];
 }
 
-/** Scrive entity struct e cursor area in entrambi binario e TS state. */
 function setupBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -113,7 +104,6 @@ function setupBoth(
   }
 }
 
-/** Confronta entity+cursor area in workRam vs binario. */
 function compareBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -131,8 +121,8 @@ function compareBoth(
   return null;
 }
 
-/** Costruisce un setup random "puro" — struct random ma con cursor/base
- *  pointer puntati nei range alloccati per evitare write fuori. */
+/** Build a "pure" random setup: random struct but with cursor/base
+  */
 function buildRandomCase(rng: () => number, opts?: {
   forcePosToCursorMatch?: boolean;
   forceCursorMismatchX?: boolean;
@@ -156,8 +146,7 @@ function buildRandomCase(rng: () => number, opts?: {
   // Base pointer (off 0x30) → ARRAY_BASE_ABS
   writeLongBytes(entity, 0x30, ARRAY_BASE_ABS);
 
-  // Calcola cellX/cellY (asr signed)
-  const cellX = ((posX | 0) >> 0x13) & 0xff; // signed asr poi maschera byte (basso)
+  const cellX = ((posX | 0) >> 0x13) & 0xff;
   const cellY = ((posY | 0) >> 0x13) & 0xff;
 
   if (opts?.forcePosToCursorMatch === true) {
@@ -167,10 +156,8 @@ function buildRandomCase(rng: () => number, opts?: {
     // Imposta cursor[0] != cellX (semplice + 1)
     cursor[0] = (cellX + 1) & 0xff;
   }
-  // else: cursor[0..1] random già
 
   if (opts?.signedStep === true) {
-    // step può essere negativo (full signed range)
     cursor[2] = rb();
   }
 
@@ -261,7 +248,6 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const c = buildRandomCase(rng, { forcePosToCursorMatch: true, signedStep: true });
-    // bordi: 0, 0x7f, 0x80, 0xff per i primi 4 casi
     if (i < 4) {
       const edges = [0, 0x7f, 0x80, 0xff];
       c.cursor[2] = edges[i] ?? 0;

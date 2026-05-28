@@ -2,28 +2,13 @@
 /**
  * test-render-string-entry-28fa0-parity.ts — differential FUN_28FA0.
  *
- * FUN_28FA0 (62 byte): aggiorna i byte testa di una string-chain entry fissa
- * @ 0x40041C (col, tickOff, marker=0), poi chiama `renderStringChain2` @
- * `FUN_3520` (jsr 0x200) con (0x40041C, ext.l(arg3.w)).
+ * `FUN_3520` (jsr 0x200) with (0x40041C, ext.l(arg3.w)).
  *
  * Strategia stub injection:
- *   - FUN_3520 (renderStringChain2) viene patchata a `rts` (4E 75) → no-op.
- *     Confronta solo i 3 byte di entry scritti da FUN_255A (inline-replicato
- *     in TS) — quel che fa il bin tra una jsr e l'altra è esattamente quello
- *     che renderStringEntry28FA0 deve replicare.
- *   - FUN_255A NON va patchata: è il "core" di FUN_28FA0 (3 byte writes) e
- *     vogliamo verificarne l'output bit-perfect.
- *   - Conferma: la regione workRam[0x418..0x428] viene confrontata byte per
- *     byte; se renderStringChain2 (patchata) non scrive nulla, l'unica diff
- *     possibile è nei 3 byte target → quello che vogliamo testare.
+ *     that renderStringEntry28FA0 must replicate.
  *
- * Suite testate (4 × 125 = 500 casi):
  *   - A: arg1/arg2/arg3 random long, entry pre-fill random
- *   - B: arg1/arg2 byte forzati a 0 (verifica clear su +0/+1)
- *   - C: arg1/arg2 byte = 0xFF (verifica saturazione su +0/+1)
- *   - D: marker pre-set a tutti i 256 valori ciclati (stress clear @ +6)
  *
- * Confronto: workRam @ 0x400418..0x400427 (16 byte attorno all'entry).
  *
  * Uso: npx tsx packages/cli/src/test-render-string-entry-28fa0-parity.ts [N]
  */
@@ -54,7 +39,7 @@ function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_3520 + 1, 1, 0x75);
 }
 
-/** Range workRam confrontato (entry @ 0x40041C, 16 byte attorno per safety). */
+/** Compared workRam range (entry @ 0x40041C, 16 bytes around it for safety). */
 const COMPARE_BASE = 0x00400418;
 const COMPARE_SIZE = 0x10; // 0x400418..0x400427
 const COMPARE_BASE_OFF = COMPARE_BASE - 0x00400000; // 0x418
@@ -67,7 +52,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup entry region in entrambi binario e TS state. */
 function setupRegion(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -109,7 +93,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // Stub TS: no-op (la sub-call non viene confrontata).
   const subs: fa0Ns.RenderStringEntry28FA0Subs = {
     renderStringChain2: (_addr: number, _arg3: number): void => {},
   };
@@ -179,17 +162,16 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: arg LSB = 0 (verifica scrittura zero) ──────────────────
   console.log(
     `\n=== Suite B: arg1/arg2 LSB = 0x00 — ${perSuite} casi ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // Pre-fill entry+0/+1 (region offset 0x4 + 0/1) con sentinel non-zero
+    // Pre-fill entry+0/+1 (region offset 0x4 + 0/1) with non-zero sentinels.
     bytes[0x4 + 0] = 0xaa;
     bytes[0x4 + 1] = 0xbb;
-    // arg long con LSB = 0 ma upper bytes random
+    // arg long with LSB = 0 and random upper bytes.
     const arg1 = (rl() & 0xffffff00) >>> 0;
     const arg2 = (rl() & 0xffffff00) >>> 0;
     const arg3 = rl();
@@ -205,7 +187,7 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // arg long con LSB = 0xFF, upper bytes random
+    // arg long with LSB = 0xFF and random upper bytes.
     const arg1 = ((rl() & 0xffffff00) | 0xff) >>> 0;
     const arg2 = ((rl() & 0xffffff00) | 0xff) >>> 0;
     const arg3 = rl();
@@ -222,7 +204,6 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // Forza marker @ +6 (region offset 0x4 + 6 = 0xA)
     bytes[0x4 + 6] = i & 0xff;
     const arg1 = rl();
     const arg2 = rl();

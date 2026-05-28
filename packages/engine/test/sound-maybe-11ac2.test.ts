@@ -1,7 +1,6 @@
 /**
  * sound-maybe-11ac2.test.ts — unit test per soundMaybe11AC2 (FUN_11AC2).
  *
- * Bit-perfect parity verificata vs binary in
  * `packages/cli/src/test-sound-maybe-11ac2-parity.ts`.
  */
 
@@ -10,7 +9,6 @@ import { soundMaybe11AC2, COPY_WORD_COUNT, ROM_TABLE_OFFSET, WORK_RAM_DEST_OFFSE
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
-/** Costruisce un RomImage con pattern noto nella tabella a ROM_TABLE_OFFSET. */
 function makeRomWithTable(words: readonly number[]): ReturnType<typeof emptyRomImage> {
   const rom = emptyRomImage();
   for (let i = 0; i < words.length; i++) {
@@ -27,12 +25,10 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     const words = Array.from({ length: COPY_WORD_COUNT }, (_, i) => i + 1);
     const rom = makeRomWithTable(words);
 
-    // Pre-condizione: workRam è tutto zero (emptyGameState).
     expect(state.workRam[WORK_RAM_DEST_OFFSET]).toBe(0);
 
     soundMaybe11AC2(state, rom);
 
-    // Verifica tutte e 66 word.
     for (let i = 0; i < COPY_WORD_COUNT; i++) {
       const expected = (i + 1) & 0xffff;
       const hi = state.workRam[WORK_RAM_DEST_OFFSET + i * 2] ?? 0;
@@ -44,7 +40,6 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
 
   it("non tocca i byte immediatamente prima del range di destinazione", () => {
     const state = emptyGameState();
-    // Poni un marcatore subito prima.
     if (WORK_RAM_DEST_OFFSET > 0) {
       state.workRam[WORK_RAM_DEST_OFFSET - 1] = 0xAB;
     }
@@ -69,7 +64,6 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     const rom = makeRomWithTable([0xDEAD, 0xBEEF]);
     soundMaybe11AC2(state, rom);
 
-    // Prima word: 0xDEAD → byte 0 = 0xDE, byte 1 = 0xAD.
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 0]).toBe(0xDE);
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 1]).toBe(0xAD);
     // Seconda word: 0xBEEF → byte 2 = 0xBE, byte 3 = 0xEF.
@@ -79,7 +73,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
 
   it("sovrascrive il contenuto precedente di workRam nel range", () => {
     const state = emptyGameState();
-    // Pre-riempi il range con 0xFF.
+    // Pre-fill the range with 0xFF.
     for (let i = 0; i < COPY_WORD_COUNT * 2; i++) {
       state.workRam[WORK_RAM_DEST_OFFSET + i] = 0xFF;
     }
@@ -96,7 +90,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     for (let i = 0; i < COPY_WORD_COUNT * 2; i++) {
       state.workRam[WORK_RAM_DEST_OFFSET + i] = 0xAA;
     }
-    const rom = emptyRomImage(); // ROM tutta zero.
+    const rom = emptyRomImage();
     soundMaybe11AC2(state, rom);
     for (let i = 0; i < COPY_WORD_COUNT * 2; i++) {
       expect(state.workRam[WORK_RAM_DEST_OFFSET + i], `byte[${i}]`).toBe(0);

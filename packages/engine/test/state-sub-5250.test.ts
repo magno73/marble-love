@@ -1,9 +1,7 @@
 /**
  * state-sub-5250.test.ts — smoke test per stateSub5250 (FUN_5250).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-5250-parity.ts`.
  * Qui copriamo i path principali: OR su primary e secondary flags, idempotenza,
- * d1=0 no-op, valori boundary.
  */
 
 import { describe, it, expect } from "vitest";
@@ -120,7 +118,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
   it("OR non tocca altri byte della workRam (no side-effect fuori dai due long)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x5a);
-    // Zero out solo le 8 byte dei due long target
+    // Zero out only the 8 bytes of the two long targets.
     for (let i = 0; i < 4; i++) {
       s.workRam[PRIMARY_FLAGS_OFF + i]   = 0;
       s.workRam[SECONDARY_FLAGS_OFF + i] = 0;
@@ -137,7 +135,6 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(s.workRam[PRIMARY_FLAGS_OFF + 4]).toBe(0x5a);
     expect(s.workRam[SECONDARY_FLAGS_OFF - 1]).toBe(0x5a);
     expect(s.workRam[SECONDARY_FLAGS_OFF + 4]).toBe(0x5a);
-    // Byte arbitrario lontano
     expect(s.workRam[0x0100]).toBe(0x5a);
   });
 

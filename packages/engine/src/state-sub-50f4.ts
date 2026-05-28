@@ -1,41 +1,27 @@
 /**
- * state-sub-50f4.ts — replica `FUN_000050F4` (204 byte = 0xCC).
+ * state-sub-50f4.ts - `FUN_000050F4` replica (204 bytes = 0xCC).
  *
- * Decoder Reed-Solomon-like / parity check su righe di codeword. La sub legge
- * 10 byte da una riga input (puntatore A3 + offset D2w*30) corrispondenti ai
- * coefficienti di un codice corrector a 5 syndromi {S0..S4}. Calcola le 5
- * syndromi via XOR pesato, poi:
+ * syndromes through weighted XOR, then:
  *
- *   - se tutte zero → return D0 = 0 (no error)
- *   - altrimenti tenta correzione single-bit: itera 8 bit-positions sui 5
- *     syndromi LSB→MSB, costruisce un valore 5-bit; se bit 4 set, look-up
- *     tabella @ 0x51B0 indicizzata dal valore 5-bit per ottenere la posizione
- *     da correggere; se invece bit 4 unset, marca uncorrectable (set bit 31
- *     di D1). Inoltre incrementa un counter long-BE @ A2+0x11 (con rollback
- *     se overflow). Return D0 = D1 (positivo se correzione, 0x80000001 se
+ *   - if all zero -> return D0 = 0 (no error)
+ *     to correct; if bit 4 is unset, mark uncorrectable (set bit 31
+ *     of D1). Also increment a long-BE counter @ A2+0x11 (with rollback
+ *     on overflow). Return D0 = D1 (positive if corrected, 0x80000001 if
  *     uncorrectable).
  *
- * Inoltre la sub COPIA i 10 byte letti dalla riga input verso una riga output
- * (A2 + D3w*10), step-by-step durante il calcolo delle syndromi (write-while-
- * compute pattern). Il puntatore A1 viene usato sia per lo store sia, dopo,
- * come base per il toggle `eor.b D1b, A1[bVar14 - 9]` durante la correzione.
+ * as the base for toggle `eor.b D1b, A1[bVar14 - 9]` during correction.
  *
- * **Convenzione caller (registri inheritati da `bsr.w`)**:
- *   - `A2` (long): output buffer base. Deve essere in workRam (0x400000+).
- *                  Anche A2[0x11..0x12] è il counter long-BE incrementato.
- *   - `A3` (long): input buffer base (codeword rows, 30 byte ciascuna).
- *   - `D2w` (signed word): row index input → A0 = A3 + D2w*30.
- *   - `D3w` (signed word): row index output → A1 = A2 + D3w*10.
+ * **Caller convention (registers inherited from `bsr.w`)**:
+ *   - `A2` (long): output buffer base. Must be in workRam (0x400000+).
+ *   - `A3` (long): input buffer base (codeword rows, 30 bytes each).
+ *   - `D2w` (signed word): input row index -> A0 = A3 + D2w*30.
+ *   - `D3w` (signed word): output row index -> A1 = A2 + D3w*10.
  *
- * **Side effects su epilogue**:
- *   - `addq.l #1, D2` e `addq.l #1, D3` PRIMA del rts: i caller (FUN_4F38)
- *     usano questa sub come avanzamento iteratore.
- *   - `D0 = D1` al rts (D1 contiene il return value).
- *   - movem epilogue restora {D4, D5, D6, A1, A4} ma D2/D3 sono stati
- *     ripristinati via movem e POI incrementati. Quindi caller vede:
+ * **Side effects at epilogue**:
+ *   - `D0 = D1` at rts (D1 contains the return value).
  *       D2 = D2_in + 1, D3 = D3_in + 1.
  *
- * **Disasm 0x50F4..0x51BE** (204 byte):
+ * **Disasm 0x50F4..0x51BE** (204 bytes):
  *
  *   0x50F4  moveq   #0xa, D0                ; D0 = 10
  *   0x50F6  mulu.w  D3w, D0                 ; D0 = (D3w as unsigned) * 10
@@ -85,7 +71,6 @@
  *
  *   ; Table @ 0x4F2C: word(0x0003), bytes(0x05,0x06,0x07,0x09,0x0A,0x0B,
  *   ;                 0x0C,0x0D,0x0E), 0xFF (terminator)
- *   ; → 10 iterazioni totali, 10 byte copiati a *(A1++) (offsets 0..9)
  *
  *   0x5154  moveq   #0x0, D1                ; D1 = 0 (default return)
  *   0x5156  move.b  D6b, D0b                ; D0b = D6b
@@ -148,84 +133,51 @@
  *   0x51BC  move.l  D1, D0                  ; D0 = D1 (return value)
  *   0x51BE  rts
  *
- * **Tabelle ROM**:
  *   - `0x4F2C..0x4F37`: iter table (12 byte, terminata da 0xFF):
  *       `[0x00, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0xFF]`
- *     I primi 2 byte sono letti come word (0x0003) all'inizio del loop, poi
- *     i restanti 10 byte uno alla volta (9 iterazioni utili più 0xFF terminator).
  *   - `0x51C0..0x51CF`: correction lookup (16 byte, entries 0x10..0x1F):
  *       `[0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x01, 0x02, 0x03, 0xFF, 0x04, 0x05,
  *         0x06, 0x07, 0x08, 0x09, 0xFF]`
  *     Entry 0xFF (negative byte) significa "no correction at this syndrome"
  *     (skip-correct via `bmi`).
  *
- * **Side effects (workRam tramite A2)**:
- *   1. `A2[D3w*10..D3w*10+9]` = copia di `A3[D2w*30 + offset]` con
+ * **Side effects (workRam through A2)**:
  *      offset table = `[0x06, 0x0A, 0x0C, 0x0E, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C]`
  *      (= `[3*2, 5*2, 6*2, 7*2, 9*2, 10*2, 11*2, 12*2, 13*2, 14*2]`).
- *      Più correzione XOR opzionale single-byte se errore correggibile.
  *   2. `A2[0x11..0x12]` = counter long-BE: incrementato di 1 per syndrome
- *      non-zero (con rollback saturante se entrambi i byte overflow).
+ *      non-zero (with saturating rollback if both bytes overflow).
  *
  * **Note di low-level fidelity**:
  *
  *  1. **`mulu.w D3w, D0`**: M68k unsigned 16x16→32. Decomp lo riduce a `(short)
- *     (D3w * 10)`: il risultato low word viene poi sign-extended dal `lea`
  *     index. Per `D3w` in range piccolo (es. 0..16) D0 = D3w*10 < 256, no
  *     wrap. Per `D3w` grande (es. 0xFFFF) D0w = (-1 * 10) & 0xFFFF = 0xFFF6 =
  *     -10 signed. Il sign-ext rende A1 = A2 - 10. Dipende dal caller: in
- *     produzione `D3w` è sempre piccolo (i caller bumpano da 0).
  *
- *  2. **`asl.w #4, D0w; sub.w D2w, D0w; add.w D0w, D0w`**: calcola D2w * 30
  *     mod 65536 (= 16*D2w - D2w = 15*D2w, poi *2 = 30*D2w). Solo low word
- *     usata per indexing. Per D2w piccolo no wrap.
  *
- *  3. **`(A1)+` durante l'inner loop**: A1 viene incrementato 10 volte
- *     (= 10 byte scritti a `output[0..9]`). Dopo il loop A1 punta a
  *     `original_A1 + 10`. Nella correction phase l'expression `(-0xa, A1, D0w)`
- *     diventa `original_A1 + 10 - 10 + D0w` = `original_A1 + D0w` con D0w ∈
- *     `{0..9}` (dopo lookup table). Quindi correzione ricade su output[0..9].
+ *     becomes `original_A1 + 10 - 10 + D0w` = `original_A1 + D0w` with D0w in
  *
  *  4. **`btst.l #4, D0` e `move.b (-0x10,A4,D0w),D0b`**: la lookup table
- *     copre solo indici 0x10..0x1F (16 entries) perché il branch di btst
- *     filtra i casi con bit 4 unset (D0 ∈ 0x00..0x0F segnano uncorrectable
  *     direttamente).
  *
- *  5. **`add.b D1b, D1b; bcc.b loop`**: D1b raddoppia ad ogni iterazione.
  *     Inizio: D1 = 1 (`moveq #1, D1`). Iter 1: D1b = 2. Iter 2: D1b = 4. ...
  *     Iter 7: D1b = 0x80. Iter 8: 0x80 + 0x80 = 0x100 → D1b = 0, X=1, carry
- *     set → `bcc` fails, esce dal loop. Quindi 8 iterazioni totali.
- *     Dopo `bcc` fail: `move.b #0x1, D1b` → D1b = 1. D1 long = (high bits)|0x01.
- *     Se uncorrectable: D1 prima del move.b ha bit 31 set; D1b restored a 1
  *     ma high bits intatti → D1 = 0x80000001.
  *
  *  6. **Counter A2[0x11..0x12]**: 16-bit big-endian saturating-on-overflow.
- *     Increment di low byte; se carry, increment high byte; se anche
- *     quello carry, rollback entrambi. Effetto: contatore satura a 0xFFFF.
+ *     Increment low byte; if carry, increment high byte; if that also
  *
  *  7. **`D2/D3 += 1` epilogue**: I caller (FUN_4F38) usano queste sub come
- *     iteratori incrementali. Importante per la parità di D2/D3 al return.
  *
- *  8. **`move.l D1, D0` epilogue**: D0 = D1 (long). Ritorna 0/1/0x80000001.
  *
- *  9. **Iter table read modes**: La prima iter usa `move.w (A4)+, D1w` (legge
  *     2 byte come word BE = 0x0003). Le iter successive usano `move.b
- *     (A4)+, D1b` (legge 1 byte). La high byte di D1w resta 0 (era 0x00 dal
- *     primo word read). Questo significa che dopo la prima iter, `add.w D1w,
- *     D1w` raddoppia un valore in 0..255 → max 0x1FE. L'index `(0,A0,D1w*1)`
- *     accede A0[0..510]. La struttura input deve avere ≥ 30 byte per riga
- *     (D2 stride) — table valori max = 0xE → 0xE*2 = 0x1C = 28 < 30. ✓
  *
  * 10. **`bpl` after `move.b (A4)+, D1b`**: byte signed test. D1b in 0..0x7F
  *     (positive) → loop. D1b 0x80..0xFF → exit. Il terminator 0xFF (= -1)
- *     fa uscire. Tutti gli altri valori 0x05..0x0E sono < 0x80 → loop.
  *
- * **Xrefs** (5 ref, 1 caller funzione FUN_4F38):
- *   - `0x4FAE`, `0x4FD6`, `0x508A`, `0x5090`, `0x50BA` — tutti BSR.W in
- *     FUN_00004F38. La sub è chiamata in fasi diverse del decoder con
- *     valori D2w/D3w incrementati da call a call.
  *
- * Verifica bit-perfect via `packages/cli/src/test-state-sub-50f4-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -241,19 +193,14 @@ export const CORRECTION_TABLE_ADDR = 0x000051c0 as const;
 
 // ─── Costanti derivate dal disasm ─────────────────────────────────────────
 
-/** Stride della riga input (D2w * 30). */
 export const INPUT_ROW_STRIDE = 30 as const;
 
-/** Stride della riga output (D3w * 10). */
 export const OUTPUT_ROW_STRIDE = 10 as const;
 
-/** Numero di byte copiati output per chiamata (= numero iterazioni inner loop). */
 export const OUTPUT_BYTE_COUNT = 10 as const;
 
-/** Iter loop count (1 word + 9 byte = 10 valori usati prima del terminator). */
 export const ITER_COUNT = 10 as const;
 
-/** Numero di bit-iterazioni nel correction loop (`add.b D1b, D1b` carry-out). */
 export const CORRECTION_BIT_COUNT = 8 as const;
 
 /** Offset del counter long-BE in A2 (byte high). */
@@ -271,10 +218,8 @@ export const CORRECTION_TABLE_OFFSET = 0x10 as const;
 /** Numero di entries della correction table. */
 export const CORRECTION_TABLE_SIZE = 16 as const;
 
-/** Offset del primo byte input letto da A0 nel prologue parità init. */
 export const SYNDROME_INIT_OFFSETS = [0x00, 0x10, 0x08, 0x04, 0x02] as const;
 
-/** Offsets letti durante l'inner loop (= valori_table * 2). */
 export const ITER_BYTE_OFFSETS = [
   0x06, // 0x03 * 2 — primo word read
   0x0a, // 0x05 * 2
@@ -288,12 +233,10 @@ export const ITER_BYTE_OFFSETS = [
   0x1c, // 0x0E * 2
 ] as const;
 
-/** Valori di D1b per ogni iter (= valore table letto, NON raddoppiato). */
 export const ITER_TABLE_VALUES = [
   0x03, 0x05, 0x06, 0x07, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
 ] as const;
 
-/** Tabella correction lookup @ 0x51C0..0x51CF. */
 export const CORRECTION_TABLE = [
   0xff, 0xff, 0xff, 0x00, 0xff, 0x01, 0x02, 0x03,
   0xff, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0xff,
@@ -312,8 +255,6 @@ function addLong(a: number, b: number): number {
 }
 
 /**
- * Legge un byte da `state.workRam` (workRam-base = 0x400000) o ritorna 0 se
- * fuori range. M68k `move.b (offset,An)` legge byte BE.
  */
 function readByteFromWorkRam(state: GameState, addr: number): number {
   const off = (addr - 0x400000) >>> 0;
@@ -323,7 +264,6 @@ function readByteFromWorkRam(state: GameState, addr: number): number {
   return 0;
 }
 
-/** Scrive un byte in workRam a `addr` (assoluto). */
 function writeByteToWorkRam(state: GameState, addr: number, value: number): void {
   const off = (addr - 0x400000) >>> 0;
   if (off < state.workRam.length) {
@@ -332,11 +272,7 @@ function writeByteToWorkRam(state: GameState, addr: number, value: number): void
 }
 
 /**
- * Legge un byte da una memoria astratta (workRam o ROM o buffer abstract)
- * a partire dal puntatore `base + offset` long-unsigned32.
  *
- * Se il puntatore cade in workRam, legge da `state.workRam`; altrimenti
- * legge da `rom.program` (se in range ROM) o ritorna 0.
  */
 function readByteAt(state: GameState, rom: RomImage, addr: number): number {
   const a = addr >>> 0;
@@ -353,7 +289,6 @@ function readByteAt(state: GameState, rom: RomImage, addr: number): number {
 
 // ─── Replica ───────────────────────────────────────────────────────────────
 
-/** Risultato di `stateSub50F4`. */
 export interface Sub50F4Result {
   /** Return value in D0 (long): 0 / 1 / 0x80000001 (uncorrectable). */
   d0: number;
@@ -361,86 +296,60 @@ export interface Sub50F4Result {
   d2Out: number;
   /** D3 al rts (= D3_in + 1). */
   d3Out: number;
-  /** Bytes scritti in output buffer, post-correzione (10 byte). */
   outputBytes: Uint8Array;
   /** Counter A2[0x11..0x12] post-call (long-BE 16-bit, range 0..0xFFFF). */
   counterAfter: number;
-  /** True se la correzione è stata applicata (D0 == 1). */
   corrected: boolean;
-  /** True se uncorrectable (D0 == 0x80000001 con bit 31 set). */
+  /** True if uncorrectable (D0 == 0x80000001 with bit 31 set). */
   uncorrectable: boolean;
-  /** True se nessun errore (D0 == 0). */
   noError: boolean;
 }
 
 /**
- * Replica bit-perfect di `FUN_000050F4` — Reed-Solomon-like decoder/parity check.
  *
- * **Convenzione**:
- *   - Inputs sono i registri caller: `a2`, `a3` (long pointers), `d2Word`,
- *     `d3Word` (signed words usati come row indices).
- *   - Side effects su workRam: scrittura output bytes e counter.
+ * **Convention**:
+ *   - Inputs are caller registers: `a2`, `a3` (long pointers), `d2Word`,
+ *     `d3Word` (signed words used as row indices).
  *
- * @param state    GameState. workRam letto/scritto (anche per il counter).
- * @param rom      RomImage. Letto per A3 puntatore al codeword input se
- *                 a3 punta in ROM (es. 0x000000..0x80000). In produzione A3
- *                 può puntare anche a workRam.
+ *                 a3 points into ROM (for example 0x000000..0x80000). In production A3
  * @param a2       Long unsigned32. Output buffer base (workRam ptr).
- * @param a3       Long unsigned32. Input codeword base (ROM o workRam ptr).
+ * @param a3       Long unsigned32. Input codeword base (ROM or workRam ptr).
  * @param d2Word   Word (0..0xFFFF). Row index input → A0 = a3 + signExtW(d2Word*30).
  * @param d3Word   Word (0..0xFFFF). Row index output → A1 = a2 + signExtW(d3Word*10).
  *
- * @returns `Sub50F4Result` con D0, D2', D3' e altri campi diagnostici.
  *
- * **Modellazione bit-perfect**:
  *
- * 1. Pre-prologue calcola A0 = a3 + signExtW((d2Word*30) & 0xFFFF), A1 =
  *    a2 + signExtW((d3Word*10) & 0xFFFF). I caller in produzione passano
- *    valori piccoli, no wrap.
  *
- * 2. Lettura iniziale 5 byte (offsets 0, 16, 8, 4, 2 in quest'ordine):
  *    - D6b = ~A0[0]
  *    - D5b = A0[16], D6b ^= D5b
  *    - D4b = A0[8],  D6b ^= D4b
  *    - D3b = A0[4],  D6b ^= D3b
  *    - D2b = A0[2],  D6b ^= D2b
  *
- * 3. Inner loop sui 10 valori della tabella `[3, 5, 6, 7, 9, 10, 11, 12, 13, 14]`:
  *    - byte = A0[v * 2]
  *    - *(A1++) = byte
- *    - se (v_doubled >> 1) & 1 → D2b ^= byte    (bit 1 di v*2 = bit 0 di v)
- *    - se (v_doubled >> 2) & 1 → D3b ^= byte    (bit 2 = bit 1 di v)
- *    - se (v_doubled >> 3) & 1 → D4b ^= byte    (bit 3 = bit 2 di v)
- *    - se (v_doubled >> 4) & 1 → D5b ^= byte    (bit 4 = bit 3 di v)
- *    - sempre: D6b ^= byte
+ *    - if (v_doubled >> 1) & 1 -> D2b ^= byte    (bit 1 of v*2 = bit 0 of v)
+ *    - if (v_doubled >> 2) & 1 -> D3b ^= byte    (bit 2 = bit 1 of v)
+ *    - if (v_doubled >> 3) & 1 -> D4b ^= byte    (bit 3 = bit 2 of v)
+ *    - if (v_doubled >> 4) & 1 -> D5b ^= byte    (bit 4 = bit 3 of v)
  *
- *    NOTA: la prima iter usa `move.w (A4)+, D1w` che legge la word 0x0003.
- *    Quindi D1 = 0x0003, doppiato → 0x0006. Le iter successive usano `move.b
- *    (A4)+, D1b` che lascia high byte di D1w intatto (= 0). Quindi D1b è
  *    0x05, 0x06, 0x07, 0x09, ... e doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
- *    (sempre < 256 perché tutti i valori sono < 0x80).
  *
- * 4. Test: if (D2b | D3b | D4b | D5b | D6b) == 0 → nessun errore, return D1=0.
  *
- * 5. Correction loop: 8 iterazioni LSB-first:
- *    - per ogni syndrome (D6b, D5b, D4b, D3b, D2b in ordine), shift LSB out
  *      e build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
  *                       | (LSB(D3b) << 1) | LSB(D2b)`
- *    - se D0w != 0:
- *        - increment counter A2[0x12] byte; se carry, A2[0x11] byte; se entrambi
- *          carry, decrement entrambi (rollback saturating)
- *        - se D0 bit 4 set: lookup table[D0w & 0xF] (offset 0x10..0x1F → entry
- *          della correction table). Se != 0xFF: A1[entry - 10] ^= D1b
- *          (correzione single-bit). NB: A1 = original_A1 + 10 dopo l'inner
+ *    - if D0w != 0:
+ *        - increment counter A2[0x12] byte; if carry, A2[0x11] byte; if both
+ *          carry, decrement both (rollback saturating)
+ *        - if D0 bit 4 set: lookup table[D0w & 0xF] (offset 0x10..0x1F → entry
+ *          of the correction table). If != 0xFF: A1[entry - 10] ^= D1b
  *          loop.
- *        - se D0 bit 4 clear: D1 |= 0x80000000 (uncorrectable).
- *    - shift sx D1b: `D1b = (D1b * 2) & 0xFF`. Carry-out (= MSB precedente)
- *      controlla loop exit. 8 iter totali.
- *    - dopo exit, D1b = 1 (riassegnato).
+ *        - if D0 bit 4 clear: D1 |= 0x80000000 (uncorrectable).
+ *      controls loop exit. 8 total iterations.
  *
  * 6. Epilogue: D2 += 1, D3 += 1 (long), D0 = D1.
  *
- * **Safety**: 10 iterazioni inner + 8 iterazioni correzione, no runaway.
  */
 export function stateSub50F4(
   state: GameState,
@@ -455,7 +364,6 @@ export function stateSub50F4(
   const d2u = d2Word & 0xffff;
   const d3u = d3Word & 0xffff;
 
-  // ─── Calcolo A0, A1 (pre-prologue) ─────────────────────────────────────
   // D0 = mulu.w D3w, 10 → low word = (D3w * 10) & 0xFFFF, sign-extended for lea.
   const d3times10w = (d3u * 10) & 0xffff;
   const a1Initial = addLong(a2u, signExtWord(d3times10w));
@@ -482,17 +390,13 @@ export function stateSub50F4(
   let d2b = a0Byte2 & 0xff;
   d6b = (d6b ^ d2b) & 0xff;
 
-  // ─── Inner loop: 10 iterazioni (table values doppiati come offset) ─────
-  // Buffer per output (10 byte). A1 avanza durante il loop.
+  // Output buffer (10 bytes). A1 advances during the loop.
   const outputBytes = new Uint8Array(OUTPUT_BYTE_COUNT);
   let a1 = a1Initial;
 
   for (let iter = 0; iter < ITER_COUNT; iter++) {
     const tableValue = ITER_TABLE_VALUES[iter]!; // 0x03, 0x05, ..., 0x0E
-    // add.w D1w, D1w → doppiato. Se prima iter D1w = 0x0003 (word read),
-    // diventa 0x0006. Iter successive D1b è il singolo byte (high byte 0 da
-    // word read iniziale, mai overwritten), quindi D1w = byte & 0xFF, doppiato.
-    const offset = (tableValue * 2) & 0xff; // sempre < 256
+    const offset = (tableValue * 2) & 0xff;
 
     // byte = A0[offset]
     const byte = readByteAt(state, rom, addLong(a0, offset));
@@ -502,10 +406,6 @@ export function stateSub50F4(
     outputBytes[iter] = byte;
     a1 = addLong(a1, 1);
 
-    // bit-mask conditional XOR. Il D1b dopo i lsr.b è progressivamente shift-
-    // ato, ma quello che conta è il valore PRIMA di ogni `lsr.b`:
-    //   `lsr.b #2, D1b; bcc → eor D2b`  testa il bit shifted out (bit 0 dopo
-    //                                   un lsr di 1, prima del 2nd shift).
     // Specifically: `lsr.b #2, D1b` shifts 2 bits in one op. The C flag is
     // set to the LAST bit shifted out (= bit 1 of original).
     //   D1 (offset) = tableValue * 2.
@@ -627,23 +527,20 @@ export function stateSub50F4(
     }
   }
 
-  // ─── Read counter post-correction (per result struct) ──────────────────
+  // ─── Read counter after correction (for result struct) ─────────────────
   const counterHi = readByteFromWorkRam(state, addLong(a2u, COUNTER_HI_OFFSET));
   const counterLo = readByteFromWorkRam(state, addLong(a2u, COUNTER_LO_OFFSET));
   const counterAfter = ((counterHi << 8) | counterLo) & 0xffff;
 
-  // ─── Re-sync outputBytes da workRam (per catturare aliasing tra output e
-  //     counter quando A2+D3w*10+offset overlap con A2+0x11/0x12) ─────────
+  // ─── Re-sync outputBytes from workRam to capture output/input aliasing ──
   for (let i = 0; i < OUTPUT_BYTE_COUNT; i++) {
     outputBytes[i] = readByteFromWorkRam(state, addLong(a1Initial, i));
   }
 
   // ─── Epilogue: D2 += 1, D3 += 1 (long), D0 = D1 ───────────────────────
-  // L'addq.l opera sul long completo. Caller tipicamente passa solo word, ma
-  // l'incremento usa addq.l: D2 = (D2 + 1). Per simulare con "long input" ci
-  // serve assumere che D2/D3 long siano sign-ext della word. In pratica i caller
-  // mantengono D2/D3 come long con high word zero (il prologue al 0x4F38 usa
-  // moveq, che zero-ext word a long).
+  // addq.l operates on the full long. Callers usually pass only a word, but the
+  // increment is long-sized: D2 = (D2 + 1). To simulate "long input", keep D2/D3
+  // as longs with high word zero; the 0x4F38 prologue uses moveq, which zero-extends.
   const d2Long = signExtWord(d2u);
   const d3Long = signExtWord(d3u);
   const d2Out = addLong(d2Long, 1);

@@ -4,7 +4,6 @@
  *
  * Testa 3 funzioni:
  *   1. paletteQueuePush vs FUN_26B66 (push byte to queue)
- *   2. paletteAnim3Tick vs FUN_26D4E (scheduler 3, chiama push)
  *   3. paletteQueueDrain vs FUN_26B88 (drain + lookup tables → palette write)
  *
  * Uso: npx tsx packages/cli/src/test-palette-queue-parity.ts [N]
@@ -181,7 +180,6 @@ async function testDrain(cpu: CpuSession, state: GameState, rom: RomImage, n: nu
     }
 
     // Snapshot palette RAM before (to compute diff)
-    // Per semplicità, dump intero color RAM
     const palBefore = new Uint8Array(0x800);
     for (let j = 0; j < 0x800; j += 2) {
       const v = peekMem(cpu, 0xb00000 + j, 2);

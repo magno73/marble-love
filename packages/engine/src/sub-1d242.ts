@@ -1,40 +1,34 @@
 /**
- * sub-1d242.ts — replica bit-perfect di `FUN_0001D242` (286 byte, 0x1D242-0x1D35E).
  *
- * **Ruolo**: "decide-direction + anim-set + table-scan" follow-up. Chiamata
- * dalla sub `entityWaypointStep1D1EC` (`FUN_0001D1EC`) come ultima JSR del
- * suo body. Riceve `entityPtr` (long) sullo stack.
+ * Called by `entityWaypointStep1D1EC` (`FUN_0001D1EC`) as the final JSR in
+ * its body. Receives `entityPtr` (long) on the stack.
  *
- * **Semantica**:
+ * **Semantics**:
  *
- *   1. Calcola `cellX = signed_asr(entity.posX, 19)`, `cellY = ...posY...`.
- *   2. Legge `(targetX, targetY) = ext.w(cursor[0..1])` con `cursor = entity[0x2c]`.
- *   3. Setta `(D2, D3)` (delta Y direction byte / delta X direction byte):
- *      - se `entity[0..3].l != 0` (Y-first path):
- *          se `cellY > targetY`:   D2 = -8
+ *   3. Sets `(D2, D3)` (delta Y direction byte / delta X direction byte):
+ *      - if `entity[0..3].l != 0` (Y-first path):
+ *          if `cellY > targetY`:   D2 = -8
  *          elif `cellY < targetY`: D2 =  8
- *          else (cellY == targetY): controlla X:
+ *          else (cellY == targetY): checks X:
  *               cellX > targetX → D3 = -8
  *               cellX < targetX → D3 =  8
  *               cellX == targetX → both 0
  *      - else (X-first path):
- *          se `cellX > targetX`:   D3 = -8
+ *          if `cellX > targetX`:   D3 = -8
  *          elif `cellX < targetX`: D3 =  8
- *          else (cellX == targetX): controlla Y:
+ *          else (cellX == targetX): checks Y:
  *               cellY > targetY → D2 = -8
  *               cellY < targetY → D2 =  8
  *               cellY == targetY → both 0
- *   4. Sceglie anim ptr per `entity[0x3E..0x41]` (long):
+ *   4. Chooses the animation pointer for `entity[0x3E..0x41]` (long):
  *      - D2 > 0 (south)  → 0x00020EC4
  *      - D2 < 0 (north)  → 0x00020EE4
  *      - D2 == 0:
  *          D3 > 0 (east) → 0x00020EA4
- *          D3 <= 0       → 0x00020F24  (anche per (0,0)!)
- *   5. Scrive velocità: `entity[0..3].l = sext_l(D3) << 16`,
+ *          D3 <= 0       → 0x00020F24  (also for (0,0)!)
  *                       `entity[4..7].l = sext_l(D2) << 16`.
- *   6. Copia `entity[0x3E..0x41] → entity[0x3A..0x3D]`. Clear `entity[0x24]`.
  *      Set `entity[0x25] = 2`.
- *   7. Scan loop @ `0x400018` con stride 0xE2 (226) byte:
+ *   7. Scan loop @ `0x400018` with 0xE2 (226)-byte stride:
  *      For `i = 0..(*0x400396.w - 1)`:
  *          A1 = 0x400018 + i*0xE2
  *          if A1[0x18] == 1 AND entity[0x1B] == A1[0x1B] AND A1[0x1B] == 6:
@@ -59,29 +53,19 @@
  *   movem.l (SP)+,{D2 D3 D4 D5 D6}
  *   rts
  *
- * **Callers identificati** (xref via grep):
+ * **Identified callers** (xref via grep):
  *   - `entity-waypoint-step-1d1ec.ts` (1 callsite, `subs?.fun_1d242?.(a0)`).
- *     Default attualmente no-op; dopo wiring → chiamata reale.
  *
  * **Side effects** in `state.workRam`:
  *   - `entity[0..3]`     = vx (long, signed_byte * 0x10000)
  *   - `entity[4..7]`     = vy (long)
  *   - `entity[0x24]`     = 0  (counter reset)
- *   - `entity[0x25]`     = 2 default, 1 se scan match
- *   - `entity[0x3A..0x3D]` = anim ptr copia
- *   - `entity[0x3E..0x41]` = anim ptr scelto
+ *   - `entity[0x25]`     = 2 default, 1 if scan match
+ *   - `entity[0x3E..0x41]` = chosen animation pointer
  *
- * **NOTA importante** sul caso `(D2==0, D3==0)` (= cellX == targetX AND
- * cellY == targetY): nel disasm il fallthrough finale del decide-block
- * porta a `move.l #0x20f24,(0x3e,A0)` con `D3 <= 0` → 0x20F24. Velocità
- * scritte = 0 (D3=D2=0). Replicato fedelmente.
  *
- * **Quirk D6 scan**: nel disasm `move.l A1,D6 ; addi.l #0xe2,D6 ;
- * movea.l D6,A1` — D6 è usato come temp register prima del restore movem.
- * NON è il D6 saved register: il register fisico D6 viene poi restored a
- * 0x1D35A. Replica: variabile locale TS (no side effect su register).
+ * **D6 scan quirk**: in the disassembly `move.l A1,D6 ; addi.l #0xe2,D6 ;
  *
- * Bit-perfect verificato via `cli/src/test-sub-1d242-parity.ts`.
  */
 
 import type { RomImage } from "./bus.js";
@@ -189,15 +173,13 @@ function asrL(v: number, count: number): number {
 // ─── Replica ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001D242` (decide-direction + anim-set + scan).
  *
- * @param state      GameState — workRam modificato (entity struct + scan tab).
- * @param entityPtr  Pointer assoluto (m68k addr) della struct entity.
+ * @param state      GameState - workRam mutated (entity struct + scan tab).
+ * @param entityPtr  Absolute pointer (m68k addr) of the entity struct.
  *
- * **Pre-condizioni**: `entityPtr` deve essere in workRam (`0x400000..0x402000`).
- *                     `entity[0x2C]` (cursor ptr) deve essere readable.
- *                     `*0x400396.w` definisce il loop limit (numero entità da scansionare).
- *                     `0x400018 + i*0xE2` per `i < limit` deve essere readable.
+ * **Preconditions**: `entityPtr` must be in workRam (`0x400000..0x402000`).
+ *                    `entity[0x2C]` (cursor ptr) must be readable.
+ *                    `0x400018 + i*0xE2` must be readable for `i < limit`.
  */
 export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): void {
   const a0 = entityPtr >>> 0;
@@ -290,11 +272,9 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
   // ── Set anim ptrs + reset counters ────────────────────────────────────────
   // move.l #anim,(0x3e,A0)
   wlBE(state, a0 + OFF_ANIM_NEXT, animPtr);
-  // move.l (0x3e,A0),(0x3a,A0)  (copia)
   wlBE(state, a0 + OFF_ANIM_PREV, animPtr);
   // clr.b (0x24,A0)
   wb(state, a0 + OFF_COUNTER24, 0);
-  // movea.l #0x400018,A1  (poi usato nello scan)
   // move.b #2,(0x25,A0)
   wb(state, a0 + OFF_STATE25, 2);
 
@@ -304,26 +284,17 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
   // 0x1D320: cmpi.b #1,(0x18,A1); bne → next; ...; addi.l #0xE2,A1; D1++; loop
   //
   // Semantica: for (d1 = 0; d1 < limit; d1++) { if (match) { state25=1; break; } a1 += 0xE2; }
-  // Edge case: se limit == 0 al primo check (D1=0, mem=0): cmp.w 0,0 → eq → SKIP loop entry → fallthrough a 0x1D35A (rts).
-  // Quindi loop esegue solo se limit != 0.
+  // Edge case: if limit == 0 at first check (D1=0, mem=0): cmp.w 0,0 -> eq -> SKIP loop entry -> fall through to 0x1D35A (rts).
   const loopLimit = rwBE(state, LOOP_LIMIT_ADDR);
-  const limitSigned = sextW(loopLimit); // cmp.w è signed (cmp.w mem,D0w)
+  const limitSigned = sextW(loopLimit);
   let a1 = SCAN_BASE;
-  // m68k il loop usa cmp.w (mem),D0w che computa D0w - (mem) (signed).
-  // bne salta se D0w != (mem). Termina quando D0w == (mem).
-  // Quindi D1 va da 0 a limit-1 (limit iterazioni totali), poi quando D1 == limit → rts.
-  // Replicato come for-loop con confronto su low word.
+  // m68k loop uses cmp.w (mem),D0w, which computes D0w - mem (signed).
   for (let d1 = 0; ; d1++) {
     // Loop check: D0w = sext_w(D1b); cmp.w (0x400396), D0w; bne → enter loop body
     const d1AsByte = d1 & 0xff;
     const d0AsWord = sextB(d1AsByte) & 0xffff; // ext.w di byte D1b
-    // confronto: word compare con limit. Se uguale → exit.
     if (d0AsWord === loopLimit) break;
-    // Safety per evitare loop infiniti: il binario usa byte counter D1b che
     // wrappa a 256. Se limit > 256 il loop diventa effettivamente infinito
-    // (D1b cicla, mai eguale a limit > 255 OR signed-extended diversi).
-    // Per safety in test rigorosi, limito a 4096 (sufficiente per il caso
-    // reale entity table size ≤ 10).
     if (d1 > 4096) break;
     void limitSigned;
 
@@ -331,7 +302,6 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
     // cmpi.b #1,(0x18,A1); bne → next
     if (rb(state, a1 + OFF_OTHER_ACTIVE) === 1) {
       // move.b (0x1B,A0),D0b; cmp.b (0x1B,A1),D0b; bne → next
-      // cmp.b è signed-byte compare. uguaglianza = bytes uguali.
       const selfKey = rb(state, a0 + OFF_SCAN_KEY);
       const otherKey = rb(state, a1 + OFF_SCAN_KEY);
       if (selfKey === otherKey) {

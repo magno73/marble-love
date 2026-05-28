@@ -1,5 +1,5 @@
--- mame_1820_value_tap.lua — registra valore esatto restituito da $1820 al boot
--- del sound 6502. Trova bit pattern atteso per allineare TS sound-mmu.
+-- mame_1820_value_tap.lua - records the exact value returned by $1820 at boot.
+-- from the sound 6502. Finds the expected bit pattern to align TS sound-mmu.
 local OUT_PATH = "/tmp/mame_1820_reads.json"
 local TARGET_FRAME = 500
 local audiocpu, sound_mem

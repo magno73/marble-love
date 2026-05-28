@@ -3,41 +3,31 @@
  * test-level-fraction-render-28232-parity.ts — differential FUN_00028232 vs
  * `levelFractionRender28232` TS replica.
  *
- * `FUN_00028232` (400 byte): orchestratore "level/fraction render" con 7
+ * `FUN_00028232` (400 bytes): "level/fraction render" orchestrator with 7
  * sub-jsr (5 renderStringChain via 0x142 + 1 initStructHeader via 0x13C +
  * 1 renderStringHelper FUN_28E3C). Side effects diretti del modulo:
  *   - 3 byte writes a workRam[0x428/0x429/0x42E] (da initStructHeader).
  *   - 4+1 byte writes a `*(0x40042A)` (fraction string + null).
  *
- * **Strategia di parità — pattern `scene-init-11428`**:
- *   Patch delle 3 entry binarie con `addq.b #1, sentinel.l ; rts` (8 byte).
+ *   Patch the 3 binary entries with `addq.b #1, sentinel.l ; rts` (8 bytes).
  *   Tre sentinel byte distinti in workRam:
  *     - FUN_2572  (renderStringChain, jsr 0x142)  → sentinel 0x4003E0 ("chain")
  *     - FUN_255A  (initStructHeader,   jsr 0x13C) → sentinel 0x4003E1 ("init")
  *     - FUN_28E3C (renderStringHelper, jsr 0x28E3C) → sentinel 0x4003E2 ("helper")
  *
- *   In TS, le 3 callback iniettano lo stesso increment.
+ *   In TS, the 3 callbacks inject the same increment.
  *
- * **NB sul patching dei trampolini** (0x142, 0x13C):
+ * **Note on trampoline patching** (0x142, 0x13C):
  *   I trampolini sono `jmp 0x2572` / `jmp 0x255A`. Patchamo l'entry destinazione
- *   (FUN_2572 @ 0x2572 e FUN_255A @ 0x255A) — non il trampoline stesso, perché
- *   il trampolin è 4 byte (jmp xxxx.l) e l'entry destinazione è quella in cui
- *   atterra il PC dopo il jmp.
  *
- * **Confronto per ogni case**:
- *   1. sentinelChain   == (D2==0 ? 5 : 3) chiamate in entrambi (D2 mode flag
- *      controlla 2 jsr condizionali; più 3 sempre + 0 se early-out).
- *      Per cases con `idx=-1` early-out: == (D2==0 ? 2 : 1).
- *   2. sentinelInit    == 1 in entrambi (sempre eseguito se no early-out)
- *      o == 0 se early-out.
- *   3. sentinelHelper  == 1 in entrambi (idem) o == 0 se early-out.
+ *      For cases with `idx=-1` early-out: == (D2==0 ? 2 : 1).
+ *      or == 0 on early-out.
+ *   3. sentinelHelper == 1 in both (same rule) or == 0 on early-out.
  *   4. workRam[0x428..0x42E] e i 5 byte @ *(0x40042A) byte-by-byte.
  *
- * Suite (4 × 125 = 500 casi):
  *   - A: idx random ∈ [0..7], levelNum random, mode != 2, no early-out.
  *   - B: idx random, levelNum random, mode == 2 (D2!=0 path, skip cond jsr).
  *   - C: idx == -1 (early-out path), mode random.
- *   - D: random everything (mix di tutti i path).
  *
  * Uso: npx tsx packages/cli/src/test-level-fraction-render-28232-parity.ts [N]
  */
@@ -61,27 +51,26 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_28232 = 0x00028232;
 
-// Sub-function entry points (target di trampolini 0x142/0x13C, e diretto 28E3C).
+// Sub-function entry points (targets of trampolines 0x142/0x13C, and direct 28E3C).
 const FUN_2572 = 0x00002572; // renderStringChain (target di jmp 0x142)
 const FUN_255A = 0x0000255a; // initStructHeader  (target di jmp 0x13C)
 const FUN_28E3C = 0x00028e3c; // renderStringHelper
 
-// Sentinel byte slot in work RAM (counter delle 3 sub).
+// Sentinel byte slot in work RAM (counter for the 3 subs).
 const SENTINEL_CHAIN = 0x004003e0;
 const SENTINEL_INIT = 0x004003e1;
 const SENTINEL_HELPER = 0x004003e2;
 
-// Indirizzi mapping per le costanti del modulo (workRam offsets).
+// Address mappings for module constants (workRam offsets).
 const MODE_SELECTOR_ADDR = 0x00400392;
 const LEVEL_IDX_ADDR = 0x004003de;
 const LEVEL_NUM_ADDR = 0x004003ea;
 const FRACTION_PTR_ADDR = 0x0040042a;
 
-// Buffer fraction string scritto da entrambi i lati (workRam offset).
-// Lo posizioniamo a 0x500..0x504 (5 byte) per non collidere con altri offset.
+// Fraction-string buffer written by both sides (workRam offset).
+// Place it at 0x500..0x504 (5 bytes) to avoid colliding with other offsets.
 const FRAC_BUFFER_ADDR = 0x00400500;
 
-// Range workRam confrontato per assicurare nessuno spillage.
 // 0x428..0x42E = 7 byte (struct), 0x500..0x504 = 5 byte (fraction).
 const STRUCT_COMPARE_BASE = 0x00400428;
 const STRUCT_COMPARE_SIZE = 8; // 0x428..0x42F (7 byte usati + 1 di margine)
@@ -121,7 +110,6 @@ interface CaseSetup {
   sentInitChain: number;
   sentInitInit: number;
   sentInitHelper: number;
-  // ROM table seed (16 byte per ogni table) — random per esercitare la lettura.
   romTable1: number[]; // 8 long
   romTable2: number[]; // 8 long
 }
@@ -135,7 +123,6 @@ interface FailRecord {
   setup: CaseSetup;
 }
 
-/** Setup workRam scratch + sentinel + ROM tables in entrambi binario e TS. */
 function setupCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -164,13 +151,11 @@ function setupCase(
   state.workRam[FRACTION_PTR_ADDR - 0x400000 + 2] = (setup.fracPtr >>> 8) & 0xff;
   state.workRam[FRACTION_PTR_ADDR - 0x400000 + 3] = setup.fracPtr & 0xff;
 
-  // 5. struct base 0x428..0x42F: clear (initStructHeader li scriverà).
   for (let i = 0; i < STRUCT_COMPARE_SIZE; i++) {
     pokeMem(cpu, STRUCT_COMPARE_BASE + i, 1, 0);
     state.workRam[STRUCT_COMPARE_BASE - 0x400000 + i] = 0;
   }
 
-  // 6. fraction buffer 0x500..0x504: clear (verrà riscritto se non early-out).
   for (let i = 0; i < FRAC_COMPARE_SIZE; i++) {
     pokeMem(cpu, FRAC_COMPARE_BASE + i, 1, 0);
     state.workRam[FRAC_COMPARE_BASE - 0x400000 + i] = 0;
@@ -185,13 +170,7 @@ function setupCase(
   state.workRam[SENTINEL_HELPER - 0x400000] = setup.sentInitHelper;
 
   // 8. ROM table 1 @ 0x23C04 e table 2 @ 0x23C18: scriviamo 8 long (32 byte ciascuna).
-  // Questi byte fanno parte del ROM blob → vanno scritti in `romBuf` PRIMA che
-  // il CPU lo carichi. Ma `romBuf` è già caricato — riscriviamo via pokeMem
-  // (assume rom region writable; in test è OK perché Musashi usa region "rom"
   // come read-only normalmente). Per essere sicuri, NON ri-scriviamo le ROM
-  // tables — usiamo i valori già nel ROM blob (sono dati reali). La TS replica
-  // legge gli stessi byte, quindi la parità tiene anche con valori "reali".
-  // Quindi ignoriamo `setup.romTable1/2` e usiamo i valori reali del ROM.
   void romBuf;
 }
 
@@ -259,7 +238,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Stub TS: incrementa il byte sentinel in workRam (mirror del binario).
   const subs: lfrNs.LevelFractionRender28232Subs = {
     renderStringChain: (s) => {
       const off = SENTINEL_CHAIN - 0x400000;
@@ -305,9 +283,7 @@ async function main(): Promise<void> {
       modeSel: opts.modeOverride !== undefined ? opts.modeOverride : rw(),
       levelIdx: opts.idxOverride !== undefined ? opts.idxOverride : rw(),
       levelNum: rw(),
-      // Puntatore fraction buffer: setta in modo che `& 0x1FFF` ricada @ 0x500.
-      // Per il binario, FRAC_BUFFER_ADDR (= 0x400500) è in workRam → write
-      // diretto. Per la TS replica, usa la stessa maschera.
+      // direct. For the TS replica, use the same mask.
       fracPtr: FRAC_BUFFER_ADDR,
       sentInitChain: rb(),
       sentInitInit: rb(),

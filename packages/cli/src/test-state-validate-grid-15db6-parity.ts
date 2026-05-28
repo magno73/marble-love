@@ -6,12 +6,9 @@
  * `FUN_00015DB6` (110 byte) valida la match-cell del currentPtr vs
  * field_x/field_y >> 19 dello struct, eventualmente muta `kind` 0x23 → 0x20,
  * poi dispatcha a una di:
- *   - `FUN_15D10(structPtr)` — solo ramo (mismatch, kind originale 0x23)
- *   - `FUN_15E24(structPtr, flag)` — tutti gli altri rami; flag ∈ {0,1}
  *
  * **Strategia stub injection**:
  *
- *   1. **FUN_15D10** patchata a thunk-logger (stub-A): scrive in workRam
  *      uno slot @ `0x401E00` (4 byte structPtr + 4 byte counter @ 0x401E04).
  *
  *      Layout stub (22 byte):
@@ -21,20 +18,15 @@
  *        move.l  (4,SP), (A0)         ; 20AF 0004          (4 byte)
  *        addq.l  #1, 0x00401E04.l     ; 52B9 0040 1E04     (6 byte)
  *        rts                           ; 4E75               (2 byte)
- *        TOTAL: 24 byte (sotto i ~150 byte di FUN_15D10).
  *
- *      Wait — più semplice: salviamo solo IL counter (= numero chiamate
- *      a 15D10) in un long. Non serve sapere structPtr (è sempre lo stesso
  *      del case). Stub minimale (8 byte):
  *
  *        addq.l  #1, 0x00401E00.l     ; 52B9 0040 1E00     (6 byte)
  *        rts                           ; 4E75               (2 byte)
  *
- *   2. **FUN_15E24** patchata a thunk-logger (stub-B): scrive in workRam
  *      slot @ `0x401E10`:
  *        - `0x401E10` (long): structPtr ricevuto come arg1
  *        - `0x401E14` (long): flagLong ricevuto come arg2
- *        - `0x401E18` (long): counter (numero chiamate a 15E24)
  *
  *      Stack al momento del JSR a FUN_15E24 dal caller (FUN_15DB6):
  *        (0,SP)  = ret addr
@@ -42,7 +34,7 @@
  *        (8,SP)  = arg2 (flagLong)  — long
  *
  *      Layout stub:
- *        ; salva arg1, arg2 in slot
+ *        ; save arg1, arg2 in slot
  *        move.l  (4,SP), 0x00401E10.l    ; 23EF 0004 0040 1E10  (8 byte)
  *        move.l  (8,SP), 0x00401E14.l    ; 23EF 0008 0040 1E14  (8 byte)
  *        addq.l  #1, 0x00401E18.l        ; 52B9 0040 1E18       (6 byte)
@@ -50,18 +42,14 @@
  *        TOTAL: 24 byte.
  *
  *      `move.l (offset,SP), abs.L` opcode = 23EF (move.l (d16,An), abs.L
- *      con An=A7=SP). Encoding: 23EF dddd LLLL (16-bit displacement,
+ *      with An=A7=SP). Encoding: 23EF dddd LLLL (16-bit displacement,
  *      32-bit absolute address) — 8 byte.
  *
- * **Confronto**: workRam @ slot logger zone (0x401E00..0x401E1F) +
  * struct kind byte (per verificare la mutazione 0x23→0x20).
  *
- * **Suite testate (4 × 125 = 500 casi)**:
  *   - A: setup random byte-by-byte (struct + currentPtr + kind random).
  *        Cattura mismatch generico.
- *   - B: forced match (currentPtr[0..1] = field_x/y >> 19) con kind random.
- *   - C: forced match con kind = 0x23 (verifica mutazione).
- *   - D: forced mismatch + kind = 0x23 (cattura ramo fun_15d10).
+ *   - B: forced match (currentPtr[0..1] = field_x/y >> 19) with random kind.
  *
  * Uso: npx tsx packages/cli/src/test-state-validate-grid-15db6-parity.ts [N]
  */
@@ -90,15 +78,12 @@ const FUN_15E24 = 0x00015e24;
 const WORK_RAM_BASE = 0x00400000;
 
 // ─── Logger zones ──────────────────────────────────────────────────────────
-/** Counter chiamate fun_15d10 (long, big-endian). */
 const SLOT_15D10_CNT = 0x00401e00;
 /** Slot fun_15e24: structPtr (long). */
 const SLOT_15E24_PTR = 0x00401e10;
 /** Slot fun_15e24: flagLong (long). */
 const SLOT_15E24_FLAG = 0x00401e14;
-/** Slot fun_15e24: counter chiamate (long). */
 const SLOT_15E24_CNT = 0x00401e18;
-/** Tutta la logger zone: 0x401E00..0x401E1F (32 byte). */
 const LOGGER_BASE = 0x00401e00;
 const LOGGER_SIZE = 0x20;
 
@@ -114,7 +99,7 @@ const KIND_OFF = 0x1a;
 const CURRENT_PTR_OFF = 0x6e;
 const ASR_COUNT = 0x13;
 
-/** Patch FUN_15D10 a thunk-logger (8 byte): incrementa counter @ 0x401E00. */
+/** Patch FUN_15D10 to a thunk logger (8 bytes): increments counter @ 0x401E00. */
 function patchFun15D10(cpu: CpuSession): void {
   const bytes = [
     // addq.l #1, 0x00401E00.l        (52B9 0040 1E00)
@@ -176,7 +161,6 @@ function resetZones(
   }
 }
 
-/** Scrive long-BE in workRam binario+TS. */
 function pokeLongBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -197,7 +181,6 @@ function pokeLongBoth(
   }
 }
 
-/** Scrive byte in workRam binario+TS. */
 function pokeByteBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -208,7 +191,6 @@ function pokeByteBoth(
   state.workRam[abs - WORK_RAM_BASE] = v & 0xff;
 }
 
-/** Confronta byte-by-byte la zona [base..base+size). */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -268,8 +250,6 @@ function buildCase(
 
   if (opts.forceMatch === true) {
     // currentPtr[0..1] = byte signed-ext-equal a (field >> 19)
-    // Nota: deve essere bit-perfect equivalent: signExt_l(byte) == asr_l(field, 19).
-    // Per forzare il match con valori arbitrari, scegliamo prima un targetX/Y
     // signed byte (-128..127), poi field = target << 19, byte = target & 0xFF.
     const targetX = (Math.floor(rng() * 256) - 128) | 0; // -128..127
     const targetY = (Math.floor(rng() * 256) - 128) | 0;
@@ -303,7 +283,6 @@ function applyCase(
   for (let i = 0; i < CURRENT_PTR_SIZE; i++) {
     pokeByteBoth(state, cpu, CURRENT_PTR_BASE + i, c.currentBytes[i] ?? 0);
   }
-  // Logger zone già azzerata da resetZones (dummy: pokeLongBoth no-op).
   void pokeLongBoth;
 }
 
@@ -323,7 +302,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // TS subs replicano il side-effect dello stub binario sul workRam.
   const subs: ns.StateValidateGrid15DB6Subs = {
     fun_15d10: (_structPtr) => {
       const r = state.workRam;
@@ -383,7 +361,6 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN_15DB6, [STRUCT_BASE >>> 0]);
     ns.stateValidateGrid15DB6(state, STRUCT_BASE >>> 0, subs);
 
-    // Confronta logger zone (counter + slot 15e24).
     const loggerDiff = compareZone(
       state,
       cpu,
@@ -397,7 +374,6 @@ async function main(): Promise<void> {
       }
       return false;
     }
-    // Confronta struct (per la mutazione 0x23→0x20).
     const structDiff = compareZone(
       state,
       cpu,
@@ -411,7 +387,7 @@ async function main(): Promise<void> {
       }
       return false;
     }
-    // currentPtr area (deve essere intatta).
+    // currentPtr area must remain intact.
     const cpDiff = compareZone(
       state,
       cpu,
@@ -444,7 +420,7 @@ async function main(): Promise<void> {
   );
   totalOk += okA;
 
-  // ─── Suite B: forced match (cell ↔ field) con kind random ──────────────
+  // ─── Suite B: forced match (cell ↔ field) with random kind ─────────────
   console.log(
     `\n=== Suite B: forced match (cell ↔ field>>19) con kind random — ${perSuite} casi ===`,
   );
@@ -458,7 +434,6 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: forced match con kind = 0x23 (verifica mutazione) ────────
   console.log(
     `\n=== Suite C: forced match + kind = 0x23 → mutazione — ${perSuite} casi ===`,
   );
@@ -472,7 +447,7 @@ async function main(): Promise<void> {
   );
   totalOk += okC;
 
-  // ─── Suite D: forced mismatch + kind = 0x23 (cattura fun_15d10) ────────
+  // ─── Suite D: forced mismatch + kind = 0x23 (capture fun_15d10) ────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: forced mismatch + kind = 0x23 → fun_15d10 — ${sizeD} casi ===`,

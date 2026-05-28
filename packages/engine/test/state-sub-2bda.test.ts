@@ -32,7 +32,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     const s = emptyGameState();
     const ret = stateSub2BDA(s, 0, 0, 0);
     expect(ret).toBe(1);
-    // Slot 0 occupato in stato 3
+    // Slot 0 occupied in state 3.
     expect(s.workRam[STATE_BASE + 0]).toBe(3);
   });
 
@@ -49,7 +49,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     const ret = stateSub2BDA(s, arg1, arg2, arg3);
     expect(ret).toBe(1);
 
-    // Slot 2 deve essere quello allocato
+    // Slot 2 must be the allocated one.
     expect(readLong(s, DATA_BASE + 2 * 4)).toBe(arg1);
     expect(s.workRam[STATE_BASE + 2]).toBe(3);
     expect(readWord(s, THRESHOLD_BASE + 2 * 2)).toBe(0x0042);
@@ -76,7 +76,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     const ret = stateSub2BDA(s, 0x12345678, 0x9abc, 0xdef0);
     expect(ret).toBe(0);
 
-    // Tutto invariato
+    // Everything unchanged.
     for (let i = 0; i < 4; i++) expect(s.workRam[STATE_BASE + i]).toBe(1);
     expect(s.workRam[DATA_BASE + 0]).toBe(0xaa);
     expect(s.workRam[THRESHOLD_BASE + 0]).toBe(0xbb);
@@ -87,7 +87,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
 
   it("usa solo la low-word di arg2 e arg3 (mask 0xFFFF)", () => {
     const s = emptyGameState();
-    // arg2 e arg3 sono "long" passati sullo stack ma il binario li legge
+    // arg2 and arg3 are "longs" passed on the stack, but the binary reads them
     // come word: i top 16 bit sono ignorati.
     const ret = stateSub2BDA(s, 0xcafe1234, 0xdead5678, 0xbeef9abc);
     expect(ret).toBe(1);
@@ -98,7 +98,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
 
   it("azzera COUNTER e FLAG34 dello slot allocato anche se erano sporchi", () => {
     const s = emptyGameState();
-    // Slot 0 vuoto ma con COUNTER e FLAG34 sporchi (residui)
+    // Slot 0 empty but with dirty COUNTER and FLAG34 (residue).
     s.workRam[COUNTER_BASE + 0] = 0xff;
     s.workRam[COUNTER_BASE + 1] = 0xff;
     s.workRam[FLAG34_BASE + 0] = 0x42;

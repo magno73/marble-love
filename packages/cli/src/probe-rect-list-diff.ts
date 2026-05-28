@@ -4,16 +4,16 @@
 //  - slot index (= (off - 0x1DC) / 14)
 //  - field name (type/sub/xMin/yMin/zMin/xMax/yMax/zMax)
 //  - TS value vs MAME value
-//  - frame di prima divergenza
+//  - first divergence frame
 //
-// Inoltre per ogni slot divergente:
+// Also, for each divergent slot:
 //  - quale entity byte (= entityList[idx]) si mappa al slot
 //  - quale typeCode/subIdx ha
-//  - dove vengono lette le coords (ROM o workRam obj struct)
+//  - where coords are read from (ROM or workRam obj struct)
 //
 // Output: console + opzionale markdown report.
 //
-// Vincolo: NO modifiche a state. Drift @ f+99 deve restare invariato.
+// Constraint: no state edits. Drift at f+99 must remain unchanged.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -57,7 +57,7 @@ const warm = {
 
 const lastIdx = groundTruth.snapshots.length - 1; // = 99
 
-// ─── Run TS with snapshots per ogni frame ────────────────────────────────────
+// ─── Run TS with snapshots for each frame ────────────────────────────────────
 
 function runTs99Snapshots(): Uint8Array[] {
   const s = stateNs.emptyGameState();

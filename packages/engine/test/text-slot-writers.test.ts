@@ -16,7 +16,7 @@ describe("FUN_255A textSlotInit255A", () => {
 
   it("scrive 2 byte + clear byte at +0x6", () => {
     const s = emptyGameState();
-    // Pre-fill con noise per verificare il clear
+    // Pre-fill with noise to verify clear.
     for (let i = 0; i < 8; i++) s.workRam[0x100 + i] = 0xab;
 
     textSlotInit255A(s, 0x00400100, 0x42, 0x73);
@@ -100,9 +100,9 @@ describe("FUN_28F62 renderTextSlot28F62 (orchestrator)", () => {
     expect(RENDER_TEXT_SLOT_28F62_ADDR).toBe(0x28f62);
   });
 
-  // Test orchestrator delegate a stateSub2572 — solo verifico che
+  // Test orchestrator delegates to stateSub2572; verify only that
   // textSlotInit255A side effect avvenga (workRam[0x40041C]=byte1, etc.)
-  // Per parity completa servirebbe musashi-wasm con state-sub-2572 attivato.
+  // Full parity would need musashi-wasm with state-sub-2572 enabled.
   it("scrive in workRam[0x40041C] tramite textSlotInit255A inline", () => {
     const s = emptyGameState();
     const rom = { program: new Uint8Array(0x88000) };

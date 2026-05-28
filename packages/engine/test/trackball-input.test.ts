@@ -1,7 +1,7 @@
 /**
  * Test trackballInputTick (FUN_1AC18).
  *
- * Bit-perfect verificato vs binary (2000/2000) tramite
+ * Bit-perfect verified against the binary (2000/2000) through
  * `cli/src/test-trackball-input-parity.ts`.
  */
 

@@ -85,7 +85,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     // Entry @ 0x40098C: marca byte+0xA = 0xFF → computeSpriteCoords_v1 skip
     const entryOff = 0x98c;
     s.workRam[entryOff + 0xa] = 0xff;
-    // pre-fill output zone (entry+0x6..0x9) per verificare che resti invariata
+    // Pre-fill output zone (entry+0x6..0x9) to verify it remains unchanged.
     s.workRam[entryOff + 0x6] = 0xde;
     s.workRam[entryOff + 0x7] = 0xad;
     s.workRam[entryOff + 0x8] = 0xbe;

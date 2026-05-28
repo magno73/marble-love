@@ -1,8 +1,6 @@
 /**
  * game-mode-prep-10456.test.ts — unit test di FUN_00010456.
  *
- * Verifica gli effetti osservabili sulla workRam: regioni toccate,
- * valori scritti, logica condizionale sul mode word [0x400396].
  */
 
 import { describe, it, expect } from "vitest";

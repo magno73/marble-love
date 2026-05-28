@@ -26,7 +26,6 @@ describe("FUN_1B5A6 absLong1B5A6", () => {
   });
 
   it("INT32_MIN edge case → invariato (M68k neg.l overflow)", () => {
-    // 0x80000000 = -2147483648. neg.l su questo dà overflow → invariato.
     expect(absLong1B5A6(-2147483648)).toBe(-2147483648);
   });
 

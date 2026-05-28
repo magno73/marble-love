@@ -2,17 +2,11 @@
 /**
  * test-late-game-logic-26f3e-parity.ts — differential FUN_26F3E vs lateGameLogic26F3E.
  *
- * **Strategia**: test con inputs controllati per confronto bit-perfect.
- *   - Usa entity list con indici validi (0x00..0x1E) che puntano a struct
+ *   - Use an entity list with valid indices (0x00..0x1E) that point to structs
  *     workRam noti (da ROM lookup table).
- *   - Randomizza i CONTENUTI delle struct entity (rect buffers in workRam).
- *   - Randomizza le coordinate delle entità usate nelle dispatch (type 0x2C etc).
- *   - Disabilita la sort (0x4003E2=1) per isolare il dispatch loop.
- *   - Confronta workRam[0x18..0x1DFF] + spriteRam dopo la call.
+ *   - Randomize the contents of entity structs (rect buffers in workRam).
  *
  * **Scope**: copre phase 1 (bufferFill), phase 3 (cursor setup), phase 4
- * (entity dispatch per tutti i tipi presenti nei test cases). Phase 2 (sort)
- * è testata separatamente via test-sort-adjacent-objects-1a7a8-parity.ts.
  *
  * Uso: npx tsx packages/cli/src/test-late-game-logic-26f3e-parity.ts [N]
  *      default N=500

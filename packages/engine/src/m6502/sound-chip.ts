@@ -1,25 +1,25 @@
 /**
- * sound-chip.ts — Facade del sound subsystem Atari System 1.
+ * sound-chip.ts - facade for the Atari System 1 sound subsystem.
  *
- * Aggrega:
+ * Aggregates:
  *   - M6502 CPU (sound CPU, 1.789 MHz)
  *   - Sound MMU (memory map + mailbox + device wiring)
  *   - YM2151 device (Phase 5: register-state parity, V3 audio sample-level)
  *   - POKEY device (Phase 6: register-state parity, V3 audio sample-level)
- *   - Mailbox 68K↔6502 con NMI/IRQ pin
+ *   - 68K <-> 6502 mailbox with NMI/IRQ pins
  *
- * API pubblica (Phase 7 V2):
- *   - createSoundChip({ rom421, rom422 })  factory che istanzia tutto
- *   - tickCycles(chip, cycles6502)         avanza il 6502 per N cycle, processa NMI/IRQ
+ * Public API (Phase 7 V2):
+ *   - createSoundChip({ rom421, rom422 })  factory that instantiates everything
+ *   - tickCycles(chip, cycles6502)         advances the 6502 by N cycles and processes NMI/IRQ
  *   - submitCommand(chip, byte)            simula write 68K $FE0001 (cmd to sound)
- *   - drainReplyEvents(chip)               estrae byte scritti 6502→68K (cmd reply)
- *   - getRegisterShadow(chip)              snapshot YM2151+POKEY reg per oracle diff
- *   - reset(chip)                          reset hardware completo
+ *   - drainReplyEvents(chip)               extracts bytes written 6502 -> 68K (cmd reply)
+ *   - getRegisterShadow(chip)              snapshots YM2151+POKEY registers for oracle diff
+ *   - reset(chip)                          full hardware reset
  *
  * Wire NMI/IRQ:
- *   - main→sound mailbox write asserisce NMI al 6502 (edge-triggered).
- *   - 6502 read $1810 → NMI rilasciato.
- *   - sound→main mailbox write asserisce IRQ6 al 68010 (qui: replyQueue).
+ *   - main -> sound mailbox write asserts NMI on the 6502 (edge-triggered).
+ *   - 6502 read $1810 releases NMI.
+ *   - sound -> main mailbox write asserts IRQ6 on the 68010 (here: replyQueue).
  *   - 68010 read $FC0001 simula via drainReplyEvents (pop).
  *
  * Phase 8 (differential testing) usera' getRegisterShadow per probe-sound-diff
@@ -396,13 +396,15 @@ export interface SoundChip {
   pokey: POKEY;
   mainToSound: Mailbox8;
   soundToMain: Mailbox8;
-  /** Coda dei byte scritti dal 6502 al main (drain via drainReplyEvents).
-   * Pattern: ogni write $1810 da 6502 push qui; main pop in ordine FIFO. */
+  /**
+   * Queue of bytes written by the 6502 to the main CPU, drained through
+   * `drainReplyEvents`. Each 6502 write to $1810 appends here; main drains FIFO.
+   */
   replyQueue: number[];
-  /** Reset hold: il sound 6502 e' tenuto in reset dal main CPU finche' main
-   * non scrive `$860001` bit 7 = 1 (atarisy1.cpp bankselect_w). Mentre in
-   * hold, RAM resta 0, PC stuck a reset vector, no cycle consumed. Default
-   * true (= hardware power-on behaviour). Release via `releaseSoundReset()`. */
+  /**
+   * Reset hold: the main CPU holds the sound 6502 in reset until `$860001`
+   * bit 7 is set, matching `atarisy1.cpp bankselect_w`.
+   */
   inReset: boolean;
   /** Diagnostic frame context, used only for write-event logging. */
   diagnosticFrame: number | undefined;
@@ -837,19 +839,16 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
     ym2151,
     pokey,
     onMainToSoundAck: () => {
-      // 6502 ha letto cmd via $1810: rilascia NMI line.
+      // The 6502 read the command via $1810; release the NMI line.
       cpu.nmi = false;
     },
     onMainToSoundRead: recordMainToSoundRead,
     onSoundToMainPost: () => {
-      // 6502 ha scritto reply via $1810: push in queue per main drain.
-      // CRITICAL: auto-clear pending immediatamente (simula 68K IRQ6 che
-      // legge $FC0001 in microsecondi). Senza auto-clear, l'NMI handler
-      // del sound 6502 stalla nel polling loop a $9569 (BIT $1820 BNE -7)
-      // finche' drainReplyEvents a fine frame non chiama mailboxRead.
-      // Stall mid-frame su NMI causa drift di 1 frame nel music dispatcher
-      // (verificato 2026-05-18 via ym_writes diff: TS lagga 4 IRQ = 1 frame
-      // sul cmd $08 a frame 375).
+      // The 6502 wrote a reply via $1810; push it for main-side draining.
+      // Auto-clear pending immediately to model the 68010 IRQ6 service reading
+      // $FC0001 within microseconds. Delaying this until frame end stalls the
+      // NMI handler in its $1820 polling loop and shifts music dispatch by a
+      // frame.
       replyQueue.push(soundToMain.value as number);
       const frameStart = chipRef?.diagnosticFrameStartCycle;
       const ackCycle = cfg.mainReplyAckCycle?.({
@@ -941,16 +940,14 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
   return chip;
 }
 
-/** Main CPU rilascia il 6502 dal reset hold. Equivale a write `$860001` bit
- * 7 = 1 (atarisy1.cpp bankselect_w). Re-esegue reset sequence per fresh PC.
+/**
+ * Release the sound 6502 from reset hold. Equivalent to writing `$860001`
+ * bit 7 = 1 (`atarisy1.cpp bankselect_w`) and re-running the reset sequence.
  *
- * NON re-asserisce NMI sui cmd pending: il boot code del sound 6502 marble
- * legge esplicitamente `$1810` a `$80DF LDA $1810` per consumare il cmd in
- * arrivo durante il reset hold. NMI durante reset non e' latched dal CPU
- * (matching ymfm/hardware), quindi non c'e' edge "in arrivo" da
- * ri-asserire. Una versione precedente firava NMI qui ma causava NMI
- * service prima del boot init → 6502 saltava setup stack/zp → infinito
- * loop nel handler. Restituita no-op per matching hardware corretto. */
+ * Pending commands do not reassert NMI here. The boot code explicitly polls
+ * `$1810` at `$80DF`; an NMI edge that happened while the CPU was held in reset
+ * is not latched by the hardware.
+ */
 export function releaseSoundReset(chip: SoundChip): void {
   tapeReplayScheduleCycles.delete(chip);
   chip.inReset = false;
@@ -963,11 +960,11 @@ export function releaseSoundReset(chip: SoundChip): void {
   chip.pendingYmIrqAssertionDelayCycles = undefined;
 }
 
-/** Main CPU mette il 6502 in reset hold. Equivale a $860001 bit 7 = 0. */
+/** Put the sound 6502 back into reset hold, equivalent to `$860001` bit 7 = 0. */
 export function holdSoundReset(chip: SoundChip): void {
   tapeReplayScheduleCycles.delete(chip);
   chip.inReset = true;
-  // Pulisci stato volatile: RAM, mailbox, chip shadow (hardware behaviour).
+  // Clear volatile state: RAM, mailboxes, and chip shadows.
   chip.mmu.ram.fill(0);
   chip.cpu.cycles = 0;
   chip.soundDeviceCycle = 0;
@@ -1223,22 +1220,22 @@ function stepSoundCpuInstruction(chip: SoundChip): void {
   });
 }
 
-/** Avanza il 6502 per `cycles` cycle. Processa NMI/IRQ pendenti prima del
- * prossimo opcode. V3: avanza anche Timer A/B YM2151 e asserisce IRQ 6502
- * su overflow se IRQA/B enable.
+/** Advance the 6502 by `cycles` cycles. Process pending NMI/IRQ before the
+ * next opcode. V3: also advance YM2151 Timer A/B and assert 6502 IRQ
+ * on overflow when IRQA/B is enabled.
  *
- * IRQ wiring: il pin IRQ del 6502 e' "wire OR" con multiple sources
- * (YM2151 timer, POKEY IRQ). V3 minimal: solo YM2151 Timer A/B. POKEY IRQ
- * deferito. */
+ * IRQ wiring: the 6502 IRQ pin is a wired OR across multiple sources
+ * (YM2151 timer, POKEY IRQ). V3 minimal: only YM2151 Timer A/B. POKEY IRQ
+ * is deferred. */
 export function tickCycles(chip: SoundChip, cycles: number): number {
-  // Reset hold: no cycle consumed. RAM resta 0, chip resta a fresh state.
+  // Reset hold: no cycles consumed. RAM stays 0 and the chip stays fresh.
   if (chip.inReset) return 0;
   // Interleave CPU step + chip tick + IRQ pin update per matching hardware
-  // real-time IRQ line behavior. Senza questo, cpu.irq restava settato per
-  // tutto il frame anche dopo che l'handler IRQ aveva clearato il timer flag
-  // → CPU rientrava nell'handler ad ogni istruzione (infinite IRQ loop).
-  // Chunk size 32 cycle 6502 = 1 Timer A tick (64 cycle YM) → granularity OK
-  // per Timer A IRQ semantics.
+  // real-time IRQ line behavior. Without this, cpu.irq stayed asserted for the
+  // whole frame even after the IRQ handler cleared the timer flag, causing the
+  // CPU to re-enter the handler every instruction (infinite IRQ loop).
+  // Chunk size 32 6502 cycles = 1 Timer A tick (64 YM cycles), which is enough
+  // granularity for Timer A IRQ semantics.
   const start = chip.cpu.cycles;
   while (chip.cpu.cycles - start < cycles) {
     servicePendingCommandNmi(chip);
@@ -1251,23 +1248,18 @@ export function tickCycles(chip: SoundChip, cycles: number): number {
   return chip.cpu.cycles - start;
 }
 
-/** Main CPU scrive cmd al sound: equivale a write $FE0001 (68K side).
- * Asserisce NMI al 6502 sulla transizione false→true del pending.
+/**
+ * Main CPU writes a command to sound, equivalent to 68K-side write `$FE0001`.
+ * NMI is asserted on the 6502 when pending transitions false -> true.
  *
- * Sopprime NMI durante reset hold: real hardware il sound 6502 e' in reset
- * quando il main scrive $FE0001 prima di rilasciare $860001 bit7=1 (verificato
- * via MAME write taps a f244 nel marble attract: ordering e' $FE0001=cmd →
- * $860001=$80 release). NMI e' edge-triggered, ma con CPU in reset l'edge
- * negativo non viene latched internamente. Quando il reset si rilascia, NMI
- * line resta LOW (pending) ma senza un nuovo edge il 6502 non lo serve mai.
- * Il sound code legge $1810 esplicitamente via polling del status bit a $1820
- * durante boot init.
+ * NMI is suppressed while the sound CPU is held in reset. Real hardware sees
+ * commands before reset release; the low NMI line is not latched as an edge
+ * while the CPU is reset, and boot code consumes the command by polling $1820
+ * and reading $1810.
  *
- * Bug fix: senza questa guardia, TS asseriva NMI durante reset hold, e quando
- * `releaseSoundReset` veniva chiamato (con `cpuReset` che NON azzera
- * `cpu.nmi`), il primo opcode dopo reset era SKIPPED in favore di NMI service
- * → il NMI handler partiva con stato non-init (boot $8002 mai eseguito) →
- * loop infinito in PC=$9569. */
+ * Without this guard, the first opcode after reset can be skipped for NMI
+ * service before the boot init path sets up stack and zero page.
+ */
 export function submitCommand(chip: SoundChip, byte: u8): void {
   mailboxWrite(chip.mainToSound, byte, () => {
     if (!chip.inReset) {
@@ -1280,12 +1272,14 @@ export function submitCommand(chip: SoundChip, byte: u8): void {
   });
 }
 
-/** Main CPU drain dei byte reply dal sound. Equivale a read $FC0001 ripetute
- * finche' coda vuota. Ritorna array dei byte in ordine FIFO. */
+/**
+ * Drain sound-to-main reply bytes, equivalent to repeated `$FC0001` reads until
+ * the queue is empty. Returns FIFO-ordered bytes.
+ */
 export function drainReplyEvents(chip: SoundChip): u8[] {
   const out: u8[] = chip.replyQueue.map((b) => as_u8(b));
   chip.replyQueue.length = 0;
-  // Pending bit reset: simula multipli read da $FC0001 ognuno con ack.
+  // Pending bit reset: model repeated `$FC0001` reads, each with ack.
   if (chip.soundToMain.pending && chip.pendingMainReplyAckCycle === undefined) {
     mailboxRead(chip.soundToMain);
   }
@@ -1398,8 +1392,8 @@ export function drainPokeyDiagnosticWrites(chip: SoundChip): PokeyWriteSnapshot[
 export { YM2151_MAME_STREAM_SAMPLE_RATE, YM2151_NATIVE_SAMPLE_RATE, POKEY_NATIVE_SAMPLE_RATE };
 export type { PokeyRawTransition, PokeyWriteSnapshot };
 
-/** Snapshot register shadow per oracle diff (Phase 8). Ritorna riferimenti
- * shallow ai Uint8Array — caller non deve mutarli. */
+/** Snapshot register shadow for oracle diff (Phase 8). Returns shallow
+ * Uint8Array references — callers must not mutate them. */
 export function getRegisterShadow(chip: SoundChip): {
   audioRam: Uint8Array;
   ym2151Regs: Uint8Array;
@@ -1412,20 +1406,18 @@ export function getRegisterShadow(chip: SoundChip): {
   };
 }
 
-/** Cmd-tape replay API (Phase A7 bypass A0).
+/**
+ * Cmd-tape replay API.
  *
- * Quando il main TS engine non emette cmd al sound 6502 (blocker A0 nel
- * dominio Codex), possiamo bypassare il main e iniettare direttamente i cmd
- * registrati da MAME via `oracle/mame_sound_cmd_capture.lua`. Il chip TS
- * riceve gli stessi byte in input agli stessi frame e produce gli stessi
- * sample stream — audio bit-perfect senza dipendere da gameplay events.
+ * Replay injects commands recorded from MAME so the TS sound chip receives the
+ * same input bytes on the same frames, independent of gameplay wiring.
  *
  * Formato tape:
  *   { cmds: [{frame: N, byte: B}, ...] }
  *
- * `loadCmdTape` raggruppa i cmd per frame in O(1) lookup, conserva gli offset
- * sub-frame quando il tape contiene timestamp, e deriva il budget cicli tra
- * frame consecutivi dai timestamp MAME. */
+ * `loadCmdTape` groups commands by frame, preserves sub-frame offsets when the
+ * tape has timestamps, and derives frame cycle budgets from MAME timestamps.
+ */
 export interface CmdTape {
   readonly coinFrame?: number;
   readonly coinPulseFrames?: number;
@@ -1875,11 +1867,11 @@ export interface CommandSubmitPreAdvanceContext {
   };
 }
 
-/** Avanza il sound chip per un frame di replay, iniettando i cmd registrati
- * per quel frame. Con tape cycle-precise, il budget cicli del frame e gli
- * offset dei comandi derivano dai timestamp MAME; con tape legacy senza
- * timestamp, resta il fallback a `SOUND_CYCLES_PER_FRAME` e a uno spread
- * uniforme per i comandi multipli nello stesso frame. */
+/**
+ * Advance the sound chip for one replay frame, injecting recorded commands.
+ * Cycle-precise tapes provide both frame cycle budget and command offsets;
+ * legacy tapes fall back to a fixed frame budget and evenly spread commands.
+ */
 export interface TickFrameWithTapeOptions {
   readonly autoReleaseReset?: boolean;
   readonly drainReplies?: boolean;
@@ -2602,7 +2594,7 @@ export function tickFrameWithTape(
   return emitFrameAdvance();
 }
 
-/** Hard reset: pulisce tutto, ritorna a hold. */
+/** Hard reset: clear all state and return to reset hold. */
 export function resetSoundChip(chip: SoundChip): void {
   tapeReplayScheduleCycles.delete(chip);
   tapeReplayBoundaryPreemptions.delete(chip);

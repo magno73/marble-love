@@ -2,12 +2,12 @@
 /**
  * test-sound-pair-15884-parity.ts — differential FUN_15884 vs soundPair15884.
  *
- * `FUN_00015884` invia il sound id `0x3A` via `FUN_00158AC` (sound command
- * sender), poi — se la word @ `0x400394` non vale `2` — invia anche `0x3B`.
+ * `FUN_00015884` sends sound id `0x3A` through `FUN_00158AC` (sound command
+ * sender), then — if the word @ `0x400394` is not `2` — also sends `0x3B`.
  *
- * Strategia di parity test (gemella `test-special-attract-parity.ts`):
- * patchamo `FUN_158AC` con un payload che appende il byte arg a un buffer
- * crescente in work RAM, gestendo un cursore indiretto.
+ * Parity-test strategy, matching `test-special-attract-parity.ts`:
+ * patch `FUN_158AC` with a payload that appends the byte arg to a buffer
+ * growing work RAM buffer through an indirect cursor.
  *
  *   move.b   (0x7,SP), D0          ; 102F 0007                (4 byte)  arg byte
  *   movea.l  (0x00401FFC).l, A1    ; 2279 0040 1FFC           (6 byte)  cur
@@ -15,16 +15,12 @@
  *   move.l   A1, (0x00401FFC).l    ; 23C9 0040 1FFC           (6 byte)  store cur
  *   rts                            ; 4E75                     (2 byte)
  *
- * Totale 20 byte (FUN_158AC originale 0x20 byte: spazio sufficiente).
+ * Total 20 bytes (original FUN_158AC is 0x20 bytes: enough space).
  *
- * Buffer cattura:
+ * Capture buffer:
  *   - 0x401FF0..0x401FF3 : 4 slot byte (init sentinel 0xFF, max 4 writes)
- *   - 0x401FFC..0x401FFF : long puntatore "cur" (init 0x00401FF0)
  *
- * Dopo ogni run leggiamo il numero di scritture come `cur - 0x401FF0` e i
- * primi N byte del buffer come sequenza di sound id triggerati.
  *
- * Per la TS replication: cattureremo le chiamate di `soundCommand` callback.
  *
  * Uso: npx tsx packages/cli/src/test-sound-pair-15884-parity.ts [N]
  */
@@ -70,7 +66,6 @@ async function main(): Promise<void> {
   const rom = Buffer.from(readFileSync(romPath));
 
   // Patch ROM @ FUN_158AC: append byte arg to (*0x401FFC)++ buffer.
-  // 20 byte di codice; FUN_158AC originale è 0x20 byte (sicuro).
   // move.b   (0x7,SP), D0           : 10 2F 00 07
   // movea.l  ($00401FFC).l, A1      : 22 79 00 40 1F FC
   // move.b   D0, (A1)+              : 12 C0
@@ -107,14 +102,12 @@ async function main(): Promise<void> {
     // Pattern di copertura:
     //   0  : mode = 0x0000 (default, full pair)
     //   1  : mode = 0x0001 (full pair)
-    //   2  : mode = 0x0002 (gate: solo 0x3A)
+    //   2  : mode = 0x0002 (gate: only 0x3A)
     //   3  : mode = 0x0003 (full pair, just above gate)
-    //   4  : mode = 0x0004 (full pair, parità con trackball ADD path)
-    //   5  : mode = 0xFFFF (full pair, cmp.w è word, no sign issue)
     //   6  : mode = 0x0102 (high byte non-zero)
     //   7  : mode = 0x8002 (high byte set + low == 2 → low non basta!)
     //   8  : mode = 0x0200 (low == 0 ma high == 2: cmp.w == 0x0200 ≠ 2 → pair)
-    //   pattern 9..32: clustering ±5 attorno a 0x0002
+    //   pattern 9..32: cluster plus/minus 5 around 0x0002
     //   pattern >= 32: random uint16
     let mode: number;
     if (i === 0) mode = 0x0000;
@@ -134,7 +127,6 @@ async function main(): Promise<void> {
       mode = Math.floor(rng() * 0x10000) & 0xffff;
     }
 
-    // Setup state binario + TS
     pokeMem(cpu, MODE_ADDR, 2, mode);
     state.workRam[0x394] = (mode >>> 8) & 0xff;
     state.workRam[0x395] = mode & 0xff;

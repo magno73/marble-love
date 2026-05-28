@@ -3,19 +3,13 @@
  *
  * Tre helper di synchronization vblank, chiamati da molte sub:
  *
- * **FUN_28DEA** (`vblankAck28DEA`, 5 instr, 15 callers): busy-wait che
- *   azzera `*0x400016` (flag vblank) e attende che diventi non-zero
- *   (settato dall'IRQ4 al vblank). Quindi incrementa `*0x4003F0`.
- *   In TS non c'è IRQ async: simuliamo "vblank è arrivato" istantaneamente
- *   (non azzeriamo il flag perché il caller imposta lo state successivo).
+ * **FUN_28DEA** (`vblankAck28DEA`, 5 instr, 15 callers): busy-wait that
  *
  * **FUN_28DB8** (`wait28DB8`, 18 instr, 19 callers): frame countdown
- *   "gated by state". Aspetta N frame (arg word) ma se `*0x400390`
- *   cambia rispetto al valore catturato all'inizio, resetta il countdown
+ *   "gated by state". Waits N frames (arg word), but if `*0x400390`
  *   a 0 (= early exit).
  *
  * **FUN_121A6** (`clearPaletteRam121A6`, 5 instr, 4 callers): clear di
- *   tutta la colorRam (`0xB00000..0xB007FF`, 2 KB) con `clr.l` loop.
  */
 
 import type { GameState } from "./state.js";
@@ -33,12 +27,10 @@ export const CLEAR_PALETTE_RAM_121A6_ADDR = 0x000121a6 as const;
  *         beq loop             ; wait until non-zero
  *   addq.b  #1, *0x4003F0      ; counter++
  *
- * In TS simuliamo "vblank già arrivato": settiamo `workRam[0x16] = 1`
  * (= flag set come post-IRQ) e incrementiamo `*0x3F0`. Il busy-wait
  * non ha equivalente nel modello synchronous TS.
  */
 export function vblankAck28DEA(state: GameState): void {
-  // In MAME: clr → wait → IRQ → set. In TS: salta direttamente al post-IRQ.
   state.workRam[0x16] = 1;
   state.workRam[0x3f0] = ((state.workRam[0x3f0] ?? 0) + 1) & 0xff;
 }
@@ -52,15 +44,12 @@ export function vblankAck28DEA(state: GameState): void {
  *   D3 = D0 (counter)
  *   loop check: if D3 <= 0 done
  *     jsr FUN_28DEA              ; vblank ack
- *     if D2.w == *0x400390: D3 stays  (= state non cambiato)
- *     else: D3 = 0  (= state cambiato → exit early)
+ *     if D2.w == *0x400390: D3 stays  (= state unchanged)
+ *     else: D3 = 0  (= state changed -> exit early)
  *     D3--
  *   rts
  *
  * Logica: aspetta `frames` frame (incrementando *0x3F0), early exit
- * se state machine state cambia. Loop body è eseguito `frames` volte
- * (assumendo state stabile). In TS non c'è "wait async": eseguiamo le
- * `frames` chiamate a `vblankAck28DEA` in sequenza.
  */
 export function wait28DB8(state: GameState, frames: number): void {
   // Cattura state byte all'inizio (low byte of word @ 0x390).
@@ -68,8 +57,6 @@ export function wait28DB8(state: GameState, frames: number): void {
   let counter = frames & 0xffff;
   while (counter > 0) {
     vblankAck28DEA(state);
-    // Confronta state byte attuale con quello catturato.
-    // Logica binario: se *0x400390 (word, sign-ext) != saved D2.w → D3 = 0.
     // D2 = saved state byte LOW. cmp.w D0 (= D2 ext.w), *0x400390.w.
     // Sign-ext byte → word. Se equal → preserva counter, else zero counter.
     const initialStateWord = initialStateByte & 0x80

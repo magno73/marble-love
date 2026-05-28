@@ -2,15 +2,9 @@
 /**
  * test-helper-1e3e-parity.ts — differential FUN_00001E3E vs `fillSeqWords1E3E`.
  *
- * **Strategia** (500 casi):
- *   Per ogni caso:
  *   1. Genera `count` (0..64), `startValue` (0..0xFFFF), `destOffset` random.
  *   2. Imposta scratch area (256 byte in workRam) a 0x55 in entrambi (binary + TS).
- *   3. Chiama il binario (FUN_1E3E) con (dest, startValue, count).
- *   4. Chiama `fillSeqWords1E3E(state, dest, startValue, count)`.
- *   5. Confronta byte per byte la scratch area.
  *
- * **Calling convention FUN_1E3E** (stack layout dopo prologue movem di 8 byte):
  *   SP+0x0C  arg1 = dest (long)
  *   SP+0x12  arg2 = startValue (low word di un long — high word ignorato)
  *   SP+0x14  arg3 = count (long, signed)
@@ -49,12 +43,10 @@ function makeRng(seed: number): () => number {
 }
 
 /**
- * Chiama FUN_1E3E con calling convention M68k:
  *   push count   (long)
  *   push start   (long — low word = startValue)
  *   push dest    (long)
  *   push sentinel (ret addr)
- *   set PC = FUN_1E3E; step finché PC == sentinel
  *   pop 4 + 12 bytes
  */
 function callFun1E3E(
@@ -86,7 +78,6 @@ function callFun1E3E(
     sys.step();
   }
 
-  // Pop sentinel + 12 byte di argomenti (3 × long)
   sys.setRegister("sp", (sys.getRegisters().sp + 4 + 12) >>> 0);
 }
 
@@ -142,7 +133,6 @@ async function main(): Promise<void> {
     // Run TS
     helperNs.fillSeqWords1E3E(tsState, dest, startValue, count);
 
-    // Confronta scratch byte per byte
     let match = true;
     for (let j = 0; j < SCRATCH_SIZE; j++) {
       const binByte = peekMem(cpu, SCRATCH_ADDR + j, 1);

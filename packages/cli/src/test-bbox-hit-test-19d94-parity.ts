@@ -4,26 +4,26 @@
  * `bboxHitTest19D94`.
  *
  * FUN_00019D94 (174 byte): "mode-4 AABB hit-test sull'array @ 0x4019F8".
- * Itera 10 slot stride 0x38; per ciascuna slot armata e libera, verifica
- * bbox-overlap con (marble.x, marble.y) e su hit scrive slot fields, entity
- * fields, e triggera sound 0x3E via `FUN_158AC`.
+ * Iterates 10 slots with stride 0x38. For each armed/free slot, checks bbox
+ * overlap with (marble.x, marble.y), then writes slot fields, entity fields,
+ * and triggers sound 0x3E through `FUN_158AC` on hit.
  *
  * **Strategia parity**:
- *   - `FUN_00158AC` (sound command sender) **stubbato con RTS** (0x4E75) per
+ *   - `FUN_00158AC` (sound command sender) **stubbed with RTS** (0x4E75) to
  *     neutralizzare side effects su MMIO sound. Il TS usa
  *     `subs.soundCommand = noop` per matchare.
  *   - Compare:
- *       * Per ciascuna delle 10 slot: i 0x38 byte completi a partire da
+ *       * For each of the 10 slots: the full 0x38 bytes starting at
  *         `0x4019F8 + i*0x38`.
  *       * I 0x60 byte dell'entity @ ENTITY_BASE (copre 0x1A e 0x57).
- *       * Il flag word @ 0x400394 (game-mode), non scritto ma verifichiamo
- *         non sia stato corrotto.
+ *       * Flag word @ 0x400394 (game-mode), not written but verified
+ *         was not corrupted.
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random everything
  *   - B: forced game-mode = 4 + slot 0 armata + bbox centrato → guaranteed hit
- *   - C: game-mode = 4, slot armate con vari edge-case bbox boundaries
- *   - D: game-mode != 4 → early-exit (entity/slot non toccati)
+ *   - C: game-mode = 4, armed slots with various bbox boundary edge cases
+ *   - D: game-mode != 4 -> early-exit (entity/slot not touched)
  *
  * Uso: npx tsx packages/cli/src/test-bbox-hit-test-19d94-parity.ts [N]
  */
@@ -61,8 +61,8 @@ const MARBLE_Y_ADDR = 0x00400692;
  * Patch JSR-stub:
  *   - FUN_158AC → RTS (0x4E75) per neutralizzare il sound command sender.
  *
- * NB: `pea (cmd).l; jsr FUN_158AC; addq.l #4, SP` — il binario del caller
- * pusha il long e dopo il RTS dello stub fa addq.l #4, SP per pulire lo
+ * Note: `pea (cmd).l; jsr FUN_158AC; addq.l #4, SP` - caller binary
+ * pushes the long and, after the stub RTS, does addq.l #4,SP to clean the
  * stack. Quindi RTS-only va bene.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
 
     bboxNs.bboxHitTest19D94(stateInst, ENTITY_BASE, {
       soundCommand: () => {
-        // no-op (matching del binario stubbato con RTS)
+        // no-op, matching the binary stubbed with RTS.
       },
     });
     const tsSnap = snapshotTs(stateInst);
@@ -322,7 +322,7 @@ async function main(): Promise<void> {
       slots[s * SLOT_STRIDE + 0x10] = (sy >>> 8) & 0xff;
       slots[s * SLOT_STRIDE + 0x11] = sy & 0xff;
     }
-    // Marble pos = una delle slot ± 0..7 (per testare boundary)
+    // Marble pos = one of the slots plus/minus 0..7 to test boundaries.
     const targetSlot = i % SLOT_COUNT;
     const baseSx =
       ((slots[targetSlot * SLOT_STRIDE + 0x0c]! << 8) |

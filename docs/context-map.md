@@ -83,16 +83,22 @@ Trace diff and reporting utilities. Use for comparing engine and oracle traces.
 
 ## Documentation
 
-- `docs/level-header-format.md`: verified level descriptor header format.
-- `docs/level-header-decode-prd.md`: level header decode PRD.
-- `docs/codex-task-sprite-visibility-physics.md`: current sprite PRD when that
-  task is active.
-- `docs/codex-task-boot-flow-no-seed.md`: phased plan for making live play
-  progress from cold boot without runtime level seeds.
+- `docs/level-header-format.md`: public summary of the verified level descriptor
+  header format.
+- `docs/internal/technical/level-header-format.md`: detailed level descriptor
+  evidence and historical tap notes.
+- `docs/internal/prds/level-header-decode-prd.md`: level header decode PRD.
+- `docs/internal/tasks/codex-task-sprite-visibility-physics.md`: sprite PRD when
+  that task is active.
+- `docs/internal/tasks/codex-task-boot-flow-no-seed.md`: phased plan for making
+  live play progress from cold boot without runtime level seeds.
 - `HANDOFF_*.md`: historical or task-specific handoffs. Read only when a task
   names one or when a specific historical decision must be reconstructed.
-- `docs/agent-briefing.md`, `docs/codex-brief.md`, `docs/codex-prd.md`: legacy
-  briefings. Do not use as default startup context.
+- `docs/internal/ai/agent-briefing.md`, `docs/internal/ai/codex-brief.md`,
+  `docs/internal/ai/codex-prd.md`: legacy briefings. Do not use as default
+  startup context.
+- `docs/internal/**`: development history, AI task files, old PRDs, handoffs,
+  and detailed technical notes. Read only when routed there by a task.
 - `docs/archive/**`: historical context. Do not read by default.
 
 ## Large Or Noisy Areas

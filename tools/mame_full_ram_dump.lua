@@ -1,7 +1,5 @@
 -- mame_full_ram_dump.lua — dumpa l'intera Work RAM (8 KB) ad intervalli.
 --
--- Output: file binario `MARBLE_LOVE_RAM_DUMP_PATH` con sequenza di snapshot.
--- Ogni snapshot è 8194 byte: 2 byte frame number (BE u16) + 8192 byte di RAM.
 --
 -- Uso:
 --   MARBLE_LOVE_RAM_DUMP_PATH=/tmp/ram.bin \

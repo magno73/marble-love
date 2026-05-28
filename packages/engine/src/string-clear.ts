@@ -1,19 +1,18 @@
 /**
- * string-clear.ts — replica di `FUN_00002678` (74 byte) e `FUN_00002ABC` (148 byte).
+ * string-clear.ts - ports of `FUN_00002678` (74 bytes) and `FUN_00002ABC` (148 bytes).
  *
- * Sub-functions di `FUN_2E18` (state-machine dispatcher).
+ * Sub-functions of `FUN_2E18` (state-machine dispatcher).
  *
- * - **FUN_2678 — `removeFromSlots(dataPtr)`**: cerca `dataPtr` nei 4
- *   slot del state machine (data[0..3] @ 0x401F04). Per ogni match: clear
- *   state[D2] (@ 0x401F1C) e clear data[D2]. Poi chiama FUN_2ABC.
+ * - **FUN_2678 - `removeFromSlots(dataPtr)`**: searches for `dataPtr` in the
+ *   four state-machine slots (data[0..3] @ 0x401F04). For each match, clears
+ *   state[D2] (@ 0x401F1C) and data[D2], then calls FUN_2ABC.
  *   Returns: D0 = 1.
  *
- * - **FUN_2ABC — `clearStringChain(dataPtr)`**: walk linked list di entry
- *   string, per ogni char (non-null) scrive 0 nell'alpha tilemap. Stessa
- *   logica di rotation/stride/marker di FUN_2572 (renderStringChain), ma
- *   senza char-specific logic — clear-only.
+ * - **FUN_2ABC - `clearStringChain(dataPtr)`**: walks the linked list of string
+ *   entries. For each non-null char, writes 0 to the alpha tilemap. It shares
+ *   FUN_2572's rotation/stride/marker logic without char-specific rendering.
  *
- * **Verificato bit-perfect** vs binary tramite `cli/src/test-string-clear-parity.ts`.
+ * **Bit-perfect verified** against the binary via `cli/src/test-string-clear-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -75,7 +74,7 @@ function clearAlphaWord(state: GameState, addr: number): void {
 }
 
 /**
- * Replica `FUN_00002ABC` — clear string chain (azzera alpha tiles).
+ * Port of `FUN_00002ABC` - clear string chain by zeroing alpha tiles.
  */
 export function clearStringChain(state: GameState, rom: RomImage, structAddr: number): void {
   let a0 = structAddr >>> 0;
@@ -140,9 +139,9 @@ export function clearStringChain(state: GameState, rom: RomImage, structAddr: nu
 }
 
 /**
- * Replica `FUN_00002678` — `removeFromSlots(dataPtr)` + chiama clearStringChain.
+ * Port of `FUN_00002678` - `removeFromSlots(dataPtr)` plus clearStringChain.
  *
- * @returns sempre 1
+ * @returns Always 1.
  */
 export function removeFromSlots(state: GameState, rom: RomImage, dataPtr: number): number {
   const r = state.workRam;

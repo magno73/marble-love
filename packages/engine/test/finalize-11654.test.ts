@@ -1,7 +1,7 @@
 /**
  * finalize-11654.test.ts — unit test for `finalize11654`.
  *
- * Verifica i side effects su workRam e l'ordine di invocazione dei subs.
+ * Verifies workRam side effects and sub invocation order.
  */
 
 import { describe, expect, it } from "vitest";

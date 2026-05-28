@@ -1,10 +1,10 @@
 /**
  * array-9-init-and-dispatch-18ffa.ts — replica `FUN_00018FFA`.
  *
- * Inizializza l'array-9 (`0x401890`, 9 entry × 0x28) quando nessuna entry è
- * già attiva. È il complemento di `FUN_190EE`: crea gli oggetti type 7/8/9,
- * sceglie posizioni casuali valide, aggiorna il loro script/render state e li
- * inserisce nella draw-list tramite `FUN_18E6C`.
+ * Initializes array-9 (`0x401890`, 9 entries x 0x28) when no entry is already
+ * active. This complements `FUN_190EE`: it creates type 7/8/9 objects, chooses
+ * valid random positions, updates their script/render state, and inserts them
+ * into the draw list via `FUN_18E6C`.
  */
 
 import type { GameState } from "./state.js";

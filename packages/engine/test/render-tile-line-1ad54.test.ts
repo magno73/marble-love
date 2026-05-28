@@ -1,17 +1,12 @@
 /**
  * render-tile-line-1ad54.test.ts — smoke test di `FUN_0001AD54`.
  *
- * Bit-perfect parity vs binario in
  * `packages/cli/src/test-render-tile-line-1ad54-parity.ts`.
- * Qui copriamo i path principali senza Musashi.
  *
- * Setup usato in tutti i test:
  *   - Struct 8-byte @ workRam off 0x1000 (abs 0x401000).
  *   - Pointer-table root @ workRam off 0x0474 (abs 0x400474): punta a un
- *     "root struct" @ 0x401100. Il campo +0x20 del root struct punta a una
- *     "pointer-table" @ 0x401200, dove ogni entry è un long → "data ptr".
  *   - Data ptr @ 0x401300: stream di byte; 0x80 = sentinel (reset A2).
- *   - Direction table fake nella ROM @ 0x1ECEA.
+ *   - Fake direction table in ROM @ 0x1ECEA.
  *   - Buffer output @ 0x400A9C (workRam off 0x0A9C).
  */
 
@@ -33,9 +28,9 @@ import type { RomImage } from "../src/bus.js";
 
 const WR_BASE   = 0x400000;
 const DESC_ABS  = 0x401000;  // struct 8-byte
-const ROOT_ABS  = 0x401100;  // "root struct" puntato da PTR_TABLE_ROOT
-const PTRTBL_ABS = 0x401200; // pointer-table (array di long)
-const DATA_ABS  = 0x401300;  // data stream (byte per valore A2)
+const ROOT_ABS  = 0x401100;
+const PTRTBL_ABS = 0x401200;
+const DATA_ABS  = 0x401300;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -64,11 +59,8 @@ function wr16rom(r: RomImage, abs: number, v: number): void {
 }
 
 /**
- * Inizializza workRam + ROM per i test:
  *   - PTR_TABLE_ROOT → ROOT_ABS (long)
- *   - *(ROOT_ABS+0x20) → PTRTBL_ABS (long, puntatore alla pointer-table)
  *   - PTRTBL_ABS + subIdx*4 → DATA_ABS (long, data ptr)
- *   - DATA_ABS: array di byte specificati dall'array `data`
  *   - ROM direction table @DIR_TABLE_ROM + dirIdx*4: (dx, dy) come word signed
  */
 function setupEnv(
@@ -109,7 +101,6 @@ function setupEnv(
 /**
  * Costruisce la struct descrittore a 8 byte @ DESC_ABS.
  *
- * Campi:
  *   byte[0] = x_base (int8)
  *   byte[1] = x_count (uint8)
  *   byte[2] = y_base (int8)
@@ -150,7 +141,6 @@ function makeDesc(
   s.workRam[o + 7] = lookup  & 0xff;
 }
 
-/** Legge word da cell buffer (workRam @ cellBase). */
 function readCell(s: GameState, row: number, col: number, wordOff: number): number {
   const idx  = col * GRID_COLS + row;
   const abs  = CELL_BUF_ABS + idx * CELL_BYTES + wordOff * 2;
@@ -172,7 +162,6 @@ describe("renderTileLine1AD54 — flag == 0 early exit", () => {
     // sign-ext 0x0081 → 129 (bit 15 not set)
     expect(ret).toBe(129);
 
-    // Il workRam non deve essere cambiato (early exit prima di qualsiasi setup)
     expect(s.workRam).toEqual(before);
   });
 
@@ -351,8 +340,6 @@ describe("renderTileLine1AD54 — row-major (dirIdx=0, dx=1, dy=1)", () => {
   });
 
   it("A2 reset su sentinella 0x80", () => {
-    // Usa data stream con sentinella 0x80 dopo 2 byte → A2 si resetta.
-    // Struttura: 1 iter visibile + sentinella → D1 deve essere lo stesso valore.
     const s = emptyGameState();
     const r = emptyRomImage();
 
@@ -371,7 +358,6 @@ describe("renderTileLine1AD54 — row-major (dirIdx=0, dx=1, dy=1)", () => {
       extra: 0x00,
       lookup: 0x00,
     });
-    // Forza A3 singolo a outer_start=5, outer_end=6; D6 singolo inner_start=1, inner_end=2
     // A3=5, D6=1: A1=6, A0=(6>>1)+(d4-5); d4=5: A0=3+0=3
     // cellIdx=6*22+3=135, d2=3 < 22 ✓
     // data[0]=0x0A → D1 = 0x0A + 1 = 0x0B (subMode=0, flagsWord=1)

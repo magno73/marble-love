@@ -1,31 +1,25 @@
--- mame_dumper.lua — dumpa lo stato di Atari System 1 / Marble Madness frame-by-frame.
 --
--- Schema JSONL deve restare in sync con `packages/engine/src/trace.ts`
--- (TRACE_SCHEMA_VERSION). La prima riga è l'header, ognuna successiva un frame.
+-- JSONL schema must stay in sync with `packages/engine/src/trace.ts`.
 --
--- Uso (dal wrapper run_oracle.ts):
+-- Usage from the run_oracle.ts wrapper:
 --   mame marble -window -nothrottle -skip_gameinfo -seconds_to_run <N> \
 --        -rompath roms \
 --        -autoboot_script oracle/mame_dumper.lua
 --
--- Variabili d'ambiente lette:
---   MARBLE_LOVE_TRACE_PATH   — file di output (default stdout)
---   MARBLE_LOVE_SCENARIO     — nome scenario (per header)
---   MARBLE_LOVE_INPUT_JSON   — path al file JSON con scripted input
---   MARBLE_LOVE_MAX_FRAMES   — stop dopo N frame (default 600)
+--   MARBLE_LOVE_TRACE_PATH   - output file (default stdout)
+--   MARBLE_LOVE_SCENARIO     - scenario name for the header
+--   MARBLE_LOVE_INPUT_JSON   - path to JSON file with scripted input
 --
--- Indirizzi RAM da Phase 2 (Ghidra static analysis), vedi docs/static-overview.md:
---   0x400014  u8   frame counter mid (incrementato per VBLANK)
+-- RAM addresses from static Ghidra analysis; see docs/static-overview.md:
+--   0x400014  u8   frame counter mid, incremented on VBLANK
 --   0x400016  u8   frame counter low
---   0x400018  N×226 game object array (slot 0 = marble?)
 --   0x400390  u16  game state flag
---   0x400396  u16  numero oggetti attivi
 --   0x4003AE  u16  cache AV-control register
 --   0x4003E2  u8   flag scroll/AV update
 --   0x4003F0  u8   coin pulse current
 --   0x4003F2  u8   coin pulse last
 --   0x4003F4  u8   coin counter
---   0x400440  u32  stack low water mark (debug, escluso dal hash)
+--   0x400440  u32  stack low-water mark, debug-only and excluded from hash
 --   0x401F40  u16  vblank skip flag
 
 local SCHEMA_VERSION = 2
@@ -43,9 +37,10 @@ local SCENARIO      = getenv("MARBLE_LOVE_SCENARIO", "unknown")
 local INPUT_JSON    = getenv("MARBLE_LOVE_INPUT_JSON", "")
 local MAX_FRAMES    = tonumber(getenv("MARBLE_LOVE_MAX_FRAMES", "600"))
 
--- Lista di indici (offset workRam) di regioni da dumpare in hex.
--- Es. MARBLE_DUMP_REGIONS=0x100,0x300 → dumpa workRam[0x100..0x1FF] e [0x300..0x3FF].
--- Solo per debug puntuale (cresce dimensione trace).
+-- List of workRam region indices to dump as hex.
+-- Example: MARBLE_DUMP_REGIONS=0x100,0x300 dumps workRam[0x100..0x1FF]
+-- and workRam[0x300..0x3FF]. Use only for focused debugging because it
+-- increases trace size.
 local DUMP_REGIONS = {}
 do
     local s = getenv("MARBLE_DUMP_REGIONS", "")
@@ -69,10 +64,9 @@ local active_buttons = 0       -- bitmask currently asserted
 local active_dx = 0
 local active_dy = 0
 
--- ─── Utility: CRC32 (per work RAM hash) ──────────────────────────────────
--- Implementazione tabellare standard. Used to fingerprint work RAM in the
--- trace; consente al diff harness di accorgersi di QUALUNQUE divergenza in
--- 8 KB senza dovere dumpare 8 KB per frame.
+-- ─── Utility: CRC32 for work RAM hashes ──────────────────────────────────
+-- Standard table implementation. Used to fingerprint work RAM in the trace so
+-- the diff harness can detect any divergence in
 
 local crc_table = nil
 local function crc32_init()
@@ -91,7 +85,6 @@ local function crc32_init()
     end
 end
 
--- Calcola CRC32 leggendo `n` byte dalla program space a partire da `addr`.
 local function crc32_mem(addr, n)
     crc32_init()
     local c = 0xFFFFFFFF
@@ -105,7 +98,7 @@ end
 -- ─── Input schedule loader ───────────────────────────────────────────────
 -- Format scenario JSON:
 --   { "inputs": { "60": { "buttons": 4 }, "120": { "dx": 5, "dy": -3 }, ... } }
--- Parser minimale (no JSON library disponibile in MAME Lua di default).
+-- Minimal parser; MAME Lua has no JSON library by default.
 
 local function parse_inputs_json(path)
     local fh = io.open(path, "r")
@@ -116,7 +109,7 @@ local function parse_inputs_json(path)
     -- Trova "inputs": { e poi balance le graffe per estrarre fino al chiusura
     local i_start = s:find('"inputs"%s*:%s*{')
     if not i_start then return {} end
-    -- avanza fino alla `{` di apertura della sezione inputs
+    -- Advance to the opening `{` of the inputs section.
     local open_brace = s:find("{", i_start)
     if not open_brace then return {} end
     -- balance braces
@@ -130,13 +123,12 @@ local function parse_inputs_json(path)
     if depth ~= 0 then return {} end
     local body = s:sub(open_brace, j - 1)  -- include both braces
     -- Per ogni "frame_num": { ... }
-    -- Lua patterns non supportano nested {}: facciamo iterativo.
+    -- Lua patterns do not support nested {}: use an iterative scan.
     local p = 1
     local count = 0
     while true do
         local k_a, k_b, fr_str = body:find('"(%d+)"%s*:%s*{', p)
         if not k_a then break end
-        -- Trova la chiusura del valore-oggetto
         local d, k = 1, k_b + 1
         while k <= #body and d > 0 do
             local c = body:sub(k, k)
@@ -158,8 +150,6 @@ end
 
 -- ─── Input application ───────────────────────────────────────────────────
 -- Marble usa trackball (IN0/IN1 P1, IN2/IN3 P2) + button COIN/START.
--- Trackball field "mask=0xFF" è 8-bit signed delta. set_value imposta il
--- campo letto al prossimo polling.
 
 local function apply_input_at_frame(frame)
     local entry = input_schedule[frame]
@@ -203,7 +193,6 @@ local function read_state()
         av_control  = mem:read_u16(0x4003AE),
         coin_ctr    = mem:read_u8(0x4003F4),
         vblank_skip = mem:read_u16(0x401F40),
-        -- Marble = slot 0 dell'object array (tentativo): 226 byte
         marble_x    = mem:read_u32(0x400018 + 0x00),
         marble_y    = mem:read_u32(0x400018 + 0x04),
         marble_z    = mem:read_u32(0x400018 + 0x08),
@@ -215,18 +204,16 @@ local function read_state()
         marble_st   = mem:read_u8(0x400018 + 0xD8),
         -- Hash dell'intera Work RAM 8 KB. Esclude zone stack 68k:
         --   0x440-0x447   (stack low water debug)
-        --   0x1D40-0x1E7F (stack scratch chain attiva, ~430 PC distinte)
         --   0x1EE0-0x1EFF (stack low water + sentinel bsr)
         work_ram_hash = crc32_mem(0x400000, 0x440)
                       ~ crc32_mem(0x400448, 0x1D40 - 0x448)
                       ~ crc32_mem(0x401E80, 0x1EE0 - 0x1E80)
                       ~ crc32_mem(0x401F00, 0x2000 - 0x1F00),
-        -- Hash per regione (32 regioni di 0x100 byte). Vedi work_ram_regional_hashes.
+        -- Hash by region (32 regions of 0x100 bytes). See work_ram_regional_hashes.
         work_ram_hashes = work_ram_regional_hashes(),
     }
 end
 
--- Calcola CRC32 per 32 regioni di 0x100 byte.
 -- Esclusioni (stack-residue 68K):
 --   Region 4 (0x400-0x4FF): esclude 0x440-0x447 (8 byte stack water)
 --   Region 29 (0x1D00-0x1DFF): esclude 0x1D40-0x1DFF (192 byte stack scratch)
@@ -243,7 +230,6 @@ function work_ram_regional_hashes()
             h[i + 1] = crc32_mem(0x401D00, 0x40)
         elseif i == 30 then
             -- 0x1E00-0x1EFF esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
-            -- (rimane solo 0x1E80-0x1EDF = 96 byte)
             h[i + 1] = crc32_mem(0x401E80, 0x60)
         else
             h[i + 1] = crc32_mem(start, 0x100)
@@ -269,7 +255,7 @@ local function write_header()
     out:flush()
 end
 
--- Hex-encode una regione di workRam: 256 byte → 512 char hex.
+-- Hex-encode one workRam region: 256 bytes -> 512 hex chars.
 local function dump_region_hex(off)
     local parts = {}
     for i = 0, 0xFF do
@@ -279,14 +265,12 @@ local function dump_region_hex(off)
 end
 
 local function write_frame(s)
-    -- Build "workRamHashes" array literal
     local parts = {}
     for i = 1, 32 do
         parts[i] = tostring(s.work_ram_hashes[i])
     end
     local hashes_json = "[" .. table.concat(parts, ",") .. "]"
 
-    -- Build "workRamDumps" object (only if MARBLE_DUMP_REGIONS attivo)
     local dumps_json = ""
     if #DUMP_REGIONS > 0 then
         local entries = {}

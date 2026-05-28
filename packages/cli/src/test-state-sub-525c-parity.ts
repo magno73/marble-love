@@ -2,23 +2,18 @@
 /**
  * test-state-sub-525c-parity.ts — differential FUN_525C vs stateSub525C.
  *
- * `FUN_0000525C` (40 byte): chiamato con `D0` = count e `A2` = base struct
- * in workRam. Effetti collaterali:
  *   1. `workRam[A2-0x400000+0x50 .. +0x50+D0*20-1]` = 0
  *   2. long-BE @ `0x401F5E` |= bitmask `bit 4..3+D0*2`
  *
  * Strategia parity:
- *   - Inizializza workRam con random byte; sync sia in Musashi che in
  *     `state.workRam` TS.
- *   - Setta D0 = random count in `[1..14]` (range che produce side-effect
- *     osservabile e termina rapidamente; copre anche bit 31 boundary).
+ *   - Set D0 = random count in `[1..14]` (range that produces side-effect
  *   - Setta A2 = pointer random in `[0x400600..0x401E00]` (multiplo di 4)
- *     per stressare offset diversi e non sovrascrivere status flags
+ *     to stress different offsets and avoid overwriting status flags
  *     @ 0x401F5E.
- *   - Pre-popola `*0x401F5E` con random long per verificare che il path
+ *   - Pre-populate `*0x401F5E` with a random long to verify that the path
  *     OR sia cumulativo (e non un assignment).
  *   - Lancia `callFunction(cpu, 0x525C)` e `stateSub525C(state, d0, a2)`.
- *   - Confronta: l'intera workRam (8KB) deve essere bit-perfect identica.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-525c-parity.ts [N]
  */
@@ -77,7 +72,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per ogni caso (callFunction usa lo stack).
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern: cover boundary cases + random.
@@ -87,40 +81,37 @@ async function main(): Promise<void> {
     } else if (i === 1) {
       d0 = 2; // 4 bit settati
     } else if (i === 2) {
-      d0 = 14; // boundary alto: bits 4..31 (top bit incluso)
+      d0 = 14;
     } else if (i === 3) {
       d0 = 15; // 30 bit, ma bits 32..33 sono no-op (asl.l ≥32 → 0)
     } else if (i === 4) {
-      d0 = 7; // metà range
+      d0 = 7;
     } else {
       // Random in [1..14] per termine rapido del loop fase 2 (max 28 bsr).
       d0 = (Math.floor(rng() * 14) + 1) >>> 0;
     }
 
-    // A2: pointer random in workRam, offset allineato 4, scelto in modo che
-    // il range clearato `[A2+0x50, A2+0x50+D0*20)` non sconfini sopra la
-    // fine workRam (0x402000) né tocchi la status-flags long @ 0x1F5E.
-    // Range sicuro: A2 ∈ [0x400000..0x401E00], stride 4. La regione clearata
+    // A2: random workRam pointer, 4-byte-aligned offset, chosen so
+    // Safe range: A2 in [0x400000..0x401E00], stride 4. The cleared region
     // potrebbe sovrapporsi a 0x1F5E per A2 alti; lo evitiamo limitando.
     // d0 max = 15 → 300 byte clearati. Limit sup = 0x401F5E - 0x50 - 300 = 0x401D6E.
     const maxA2Off = 0x1d00; // safe per d0 fino a ~22
     const a2OffRaw = Math.floor(rng() * (maxA2Off / 4)) * 4;
     const a2 = (WORK_RAM_BASE + a2OffRaw) >>> 0;
 
-    // Pre-popola tutta la workRam con random byte (cosi vediamo se
-    // qualcosa di non previsto cambia).
+    // any unexpected change is caught).
     const seedBuf = new Uint8Array(WORK_RAM_SIZE);
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       seedBuf[k] = Math.floor(rng() * 0x100) & 0xff;
     }
-    // Pre-popola initial status flags long (cumulative OR test).
+    // Pre-populate initial status flags long for cumulative OR test.
     const initialFlags = Math.floor(rng() * 0x100000000) >>> 0;
     seedBuf[0x1f5e] = (initialFlags >>> 24) & 0xff;
     seedBuf[0x1f5f] = (initialFlags >>> 16) & 0xff;
     seedBuf[0x1f60] = (initialFlags >>> 8) & 0xff;
     seedBuf[0x1f61] = initialFlags & 0xff;
 
-    // Sync seed in Musashi memory + state.workRam (devono partire identici).
+    // Sync seed in Musashi memory + state.workRam; both must start identical.
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       pokeMem(cpu, WORK_RAM_BASE + k, 1, seedBuf[k]!);
       state.workRam[k] = seedBuf[k]!;
@@ -136,11 +127,7 @@ async function main(): Promise<void> {
     // Run TS
     ssNs.stateSub525C(state, d0, a2);
 
-    // Confronta workRam, MA esclude la zona stack del binario:
-    // `callFunction` pusha sentinel ret + lavora con SP=0x401F00, quindi
-    // gli indirizzi `[SP-12..SP-1] = [0x1EF4..0x1EFF]` vengono scritti dal
-    // CPU (saved D2, ret addr, push D0). Il TS NON modella lo stack, quindi
-    // quei byte restano col seed random originale. Escludiamo `[0x1EE0..
+    // those bytes keep the original random seed. Exclude `[0x1EE0..
     // 0x1EFF]` per safety (margine extra). Anche `0x1F00` (stack pointer
     // initial) e oltre dovrebbero essere intatti, ma escludiamo conservativi
     // fino a 0x1F00.

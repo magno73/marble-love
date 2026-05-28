@@ -1,22 +1,12 @@
 /**
- * string-target-step-176d2.ts — replica `FUN_000176D2` (188 byte).
+ * string-target-step-176d2.ts — `FUN_000176D2` replica (188 bytes).
  *
- * Sub di "step verso target" per un'entità (object/sprite) che è agganciata
- * ad uno **slot stringa** (array @ `0x401482`, stride `0x42`, 7 slot — vedi
- * `dispatch-strings-17230.ts` e `slot-array-init.ts`). Chiamata da
- * `FUN_000253ec` (1 xref @ `0x25850`, JSR.L) come parte della update-pipeline
- * di un object: subito dopo `FUN_1281C(obj)` e prima di `FUN_25FC2(obj)`.
+ * `FUN_000253ec` (1 xref @ `0x25850`, JSR.L) as part of the update pipeline.
  *
- * **Concetto**: l'entità ha una posizione corrente `(curX, curY)` (word a
- * `obj+0xC`, `obj+0x10`). La sub calcola un `target (tx, ty)` derivato dallo
- * slot stringa indicato dall'index byte a `obj+0x58`, e fa **un passo di
- * unità** (`+1 / 0 / -1`) di `curX` verso `tx` e `curY` verso `ty`. Il nuovo
- * valore viene scritto come **long** a `obj+0xC` e `obj+0x10` (upper word =
- * stepped pos, lower word = 0 → la frazione/sub-pixel viene azzerata).
  *
  * **Disasm 0x176D2..0x1778E** (188 byte, 1 arg long, 0 ret):
  *
- *   000176d2   movem.l { D2 D3 D4 D5 A2 }, -(SP)   ; salva 5 reg (20 byte)
+ *   000176d2   movem.l { D2 D3 D4 D5 A2 }, -(SP)   ; save 5 regs (20 bytes)
  *   000176d6   movea.l (0x18, SP), A1               ; A1 = arg long (objPtr)
  *   000176da   move.b  (0x58, A1), D0b              ; D0b = obj[+0x58] (slot index byte)
  *   000176de   ext.w   D0w
@@ -36,7 +26,7 @@
  *
  *   ;-- elseDefault (bboxPtr == 0xFFFFFFFF) --
  *   00017700   moveq   #-2, D1                      ; D1 = 0xFFFFFFFE
- *   00017702   move.w  D1w, D4w                     ; D4w = 0xFFFE  (D4 upper word = saved/old, hi non toccato)
+ *   00017702   move.w  D1w, D4w                     ; D4w = 0xFFFE  (D4 upper word = saved/old, hi untouched)
  *   00017704   moveq   #0xC, D0                     ; D0 = 0x0000000C
  *   00017706   move.w  D0w, D2w                     ; D2w = 0x000C
  *   00017708   bra.b   computeTarget
@@ -116,7 +106,6 @@
  *      bboxPtr    = workRam.long_at(bboxPtrPtr)
  *   4. Se bboxPtr == 0xFFFFFFFF:
  *        xMin = -2, yMin = -2, width = 12, height = 12  (default)
- *      Altrimenti, se bboxPtr punta a una struttura raggiungibile in workRam:
  *        xMin   = sext(byte @ bboxPtr+4)
  *        yMin   = sext(byte @ bboxPtr+5)
  *        width  = sext(byte @ bboxPtr+6)
@@ -127,26 +116,15 @@
  *      curY    = obj[+0x10].w  (word, signed)
  *   7. stepX   = sign(targetX − curX) ∈ {−1, 0, +1}
  *      stepY   = sign(targetY − curY) ∈ {−1, 0, +1}
- *   8. obj[+0xC..+0xF]  = ((stepX + curX) << 16) >>> 0  (low 16 bit azzerati)
+ *   8. obj[+0xC..+0xF]  = ((stepX + curX) << 16) >>> 0  (low 16 bits cleared)
  *      obj[+0x10..+0x13] = ((stepY + curY) << 16) >>> 0
  *
  * **Side effects**:
- *   - SOLO 8 byte di scrittura: `obj[+0xC..+0xF]` (long) e `obj[+0x10..+0x13]` (long).
- *   - Nessuna scrittura in slot, in bbox, o altrove.
- *   - Nessun MMIO, nessun palette/sprite/alpha RAM.
- *   - Lettura: 1 byte (obj+0x58), 4 byte (slot+0x3A long), 4 byte
  *     (bboxPtrPtr long), 0 o 4 byte (bbox+4..+7), 4 byte (slot+0xC..+0xF
  *     word + word "tail"), 4 byte (obj+0xC..+0xF word + word tail), 4 byte
  *     (obj+0x10..+0x13 word + word tail).
  *
- * **Modello TS**: l'entità, lo slot e il bbox sono tutti in `state.workRam`
- * (8 KB @ 0x400000..0x401FFF) — il caller `FUN_253EC` passa A2 = puntatore
- * ad un object della tabella @ `0x400018` (stride `0xE2`), e i bbox finali
- * sono entry di una tabella di "shape templates". Per indipendenza dalle
- * tabelle ROM-resident (non ancora replicate), questa funzione TS prende
- * `state` come solita reference e accede direttamente al workRam tramite
- * gli indirizzi assoluti. Se la catena di puntatori porta fuori dal workRam,
- * la funzione cade nel default (vedi note su sentinel).
+ * `state` as the usual reference and accesses workRam directly through
  */
 
 import type { RomImage } from "./bus.js";
@@ -157,33 +135,27 @@ const WORK_RAM_BASE = 0x400000;
 /** End della work RAM (esclusivo). */
 const WORK_RAM_END = 0x402000;
 
-/** Base degli slot stringa (immediato `movea.l #0x401482, A0`). */
 export const SLOT_BASE_ADDR = 0x401482 as const;
-/** Stride byte tra slot consecutivi (= idx*2 + idx*64 = idx*66 = idx*0x42). */
+/** Byte stride between consecutive slots (= idx*2 + idx*64 = idx*66 = idx*0x42). */
 export const SLOT_STRIDE = 0x42 as const;
-/** Offset dell'index byte nello struct entità (`move.b (0x58, A1), D0b`). */
 export const OBJ_INDEX_BYTE_OFF = 0x58 as const;
-/** Offset del long pointer-to-pointer al bbox nello slot (`movea.l (0x3a, A2), A0`). */
+/** Offset of the bbox pointer-to-pointer long in the slot (`movea.l (0x3a, A2), A0`). */
 export const SLOT_BBOX_PTRPTR_OFF = 0x3a as const;
-/** Offset word del centro X "extra" nello slot (`lea (0xc, A2), A0; add.w (A0), D3w`). */
+/** Offset of the slot's "extra" center-X word (`lea (0xc, A2), A0; add.w (A0), D3w`). */
 export const SLOT_CENTER_X_WORD_OFF = 0x0c as const;
-/** Offset word del centro Y "extra" nello slot (`lea (0x10, A2), A0; add.w (A0), D1w`). */
+/** Offset of the slot's "extra" center-Y word (`lea (0x10, A2), A0; add.w (A0), D1w`). */
 export const SLOT_CENTER_Y_WORD_OFF = 0x10 as const;
-/** Offset long della posizione X corrente dell'entità (read word, write long). */
 export const OBJ_X_LONG_OFF = 0x0c as const;
-/** Offset long della posizione Y corrente dell'entità (read word, write long). */
 export const OBJ_Y_LONG_OFF = 0x10 as const;
-/** Offset byte dentro il bbox: xMin, yMin, width, height. */
 export const BBOX_XMIN_OFF = 4 as const;
 export const BBOX_YMIN_OFF = 5 as const;
 export const BBOX_WIDTH_OFF = 6 as const;
 export const BBOX_HEIGHT_OFF = 7 as const;
-/** Default usati se `*(*slot+0x3a) == 0xFFFFFFFF`: xMin=-2, yMin=-2, width=12, height=12. */
+/** Defaults used when `*(*slot+0x3a) == 0xFFFFFFFF`: xMin=-2, yMin=-2, width=12, height=12. */
 export const DEFAULT_XMIN = -2 as const;
 export const DEFAULT_YMIN = -2 as const;
 export const DEFAULT_WIDTH = 12 as const;
 export const DEFAULT_HEIGHT = 12 as const;
-/** Sentinel a confronto con `cmp.l A0, D0` dove `D0 = moveq #-1`. */
 export const BBOX_SENTINEL = 0xffffffff as const;
 
 /** Read byte from workRam (returns 0 if out-of-range). */
@@ -261,32 +233,22 @@ function wlU(state: GameState, addr: number, v: number): void {
 }
 
 /**
- * Risultato della risoluzione del bounding box per uno slot.
  *
- * Esposto per testing/introspezione. Non usato in flow di produzione.
  */
 export interface BboxResolved {
-  /** True se il path "default" è stato preso (bboxPtr == 0xFFFFFFFF). */
   isDefault: boolean;
   xMin: number;
   yMin: number;
   width: number;
   height: number;
-  /** Indirizzo del bbox effettivamente usato (o 0xFFFFFFFF se default). */
   bboxAddr: number;
 }
 
 /**
- * Risolve il bbox per l'entità: legge `obj+0x58` come slot index, calcola
  * `slot = SLOT_BASE_ADDR + idx*SLOT_STRIDE`, dereferenzia due volte
- * `slot+0x3a` per ottenere `bboxPtr`. Se `bboxPtr == 0xFFFFFFFF` ritorna i
- * default, altrimenti legge i 4 byte signed @ bboxPtr+4..+7.
  *
- * Replica fedelmente il prologo del binario fino al cmp con −1.
  */
 export function resolveBbox(state: GameState, objAddr: number, rom?: RomImage): BboxResolved {
-  // L'index byte è **signed** nel binario: `move.b (0x58,A1),D0b; ext.w D0;
-  // ext.l D0`. Quindi 0xD6 → -42 (long), e slotAddr può andare *prima* della
   // base (es. idx=-1 → 0x401482 - 0x42 = 0x401440).
   const idx = sextB(rb(state, objAddr + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
@@ -315,16 +277,8 @@ export function resolveBbox(state: GameState, objAddr: number, rom?: RomImage): 
 /**
  * Replica `FUN_000176D2` — `stringTargetStep176D2(state, objAddr)`.
  *
- * Aggiorna la posizione corrente (`obj+0xC` long, `obj+0x10` long) di una
- * unità verso il target derivato dallo slot stringa indicato da
- * `obj[+0x58]`. La low-word del long viene azzerata (la frazione/sub-pixel
- * è "snappata"). Vedi header per il flow completo.
  *
- * @param state    GameState (work RAM modificato in-place).
- * @param objAddr  Indirizzo assoluto 68k dell'entità (puntatore A1 nel
- *                 binario). Tipicamente uno slot della object table @
- *                 `0x400018` (stride `0xE2`), ma la sub è agnostica e
- *                 lavora su qualsiasi indirizzo dentro la work RAM.
+ * @param state    GameState (work RAM modified in-place).
  */
 export function stringTargetStep176D2(
   state: GameState,
@@ -341,17 +295,13 @@ export function stringTargetStep176D2(
   const height = bbox.height;
 
   // slot per leggere i word (xCenter, yCenter "extra"): ricaviamo l'addr una
-  // sola volta — è coerente con resolveBbox (stesso obj+0x58 sign-extended).
   const idx = sextB(rb(state, obj + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
 
-  // targetX = (width >> 1) + xMin + slot[+0xC].w  — tutto word-arithmetic
   // (asr.w #1 = signed >> 1; add.w wrap a 16 bit).
   const slotCx = sextW(rwU(state, slotAddr + SLOT_CENTER_X_WORD_OFF));
   const slotCy = sextW(rwU(state, slotAddr + SLOT_CENTER_Y_WORD_OFF));
 
-  // asr.w #1 sui valori signed: equivalente a (v >> 1) in TS perché il
-  // valore è già signed 32-bit dopo sextB; il risultato word è poi narrowed.
   const widthAsr = sextW((width >> 1) & 0xffff);
   const heightAsr = sextW((height >> 1) & 0xffff);
 

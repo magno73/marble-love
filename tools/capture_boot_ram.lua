@@ -1,8 +1,8 @@
--- capture_boot_ram.lua — dumpa la Work RAM 8KB al frame 0 come fixture.
+-- capture_boot_ram.lua - dump the 8KB Work RAM at frame 0 as a fixture.
 --
--- Output: file binario `MARBLE_LOVE_BOOT_RAM_PATH` contenente esattamente
--- 0x2000 byte (8 KB) — il contenuto di 0x400000-0x401FFF dopo il primo
--- ciclo di main loop di MAME.
+-- Output: binary file at `MARBLE_LOVE_BOOT_RAM_PATH` containing exactly
+-- 0x2000 bytes (8 KB), the contents of 0x400000-0x401FFF after MAME's first
+-- main-loop cycle.
 --
 -- Uso:
 --   MARBLE_LOVE_BOOT_RAM_PATH=traces/boot_ram_frame0.bin \

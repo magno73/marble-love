@@ -4,30 +4,15 @@
  * `objDirtyDispatch28624` TS replica.
  *
  * `FUN_00028624` (140 byte) itera D2 = 0..count-1 (count = word @ 0x400396),
- * testa `1<<D2` nella bitmap byte @ 0x40039C, e — se set — chiama
- * `FUN_00028E3C` con 6 long arg derivati. A loop completo: clear bitmap.
+ * `FUN_00028E3C` with 6 derived long args. On loop completion: clear bitmap.
  *
- * **Strategia di parità**:
- *   - **Patch del binario**: FUN_28E3C entry → `addq.b #1, sentinel.l ; rts`
- *     (8 byte). Sentinel byte @ 0x4003E0. Il binario, ad ogni jsr 28E3C,
- *     incrementa il sentinel e rts senza side-effect.
- *   - In TS, `objDirtyDispatch28624` riceve un sub `renderStringHelper` che
- *     incrementa lo stesso byte in `state.workRam[0x3E0]`.
- *   - Confronto:
- *       1. sentinel post-call (== popcount della bitmap mascherata su
- *          [0..count-1] bit, modulo 256 perché è un byte).
+ *   - In TS, `objDirtyDispatch28624` receives a `renderStringHelper` sub that
+ *     increments the same byte in `state.workRam[0x3E0]`.
  *       2. bitmap byte @ 0x40039C (DEVE essere 0 in entrambi i lati).
- *       3. count word @ 0x400396 invariato.
- *       4. 64 byte di workRam scratch attorno a 0x39C (bitmap + sentinel +
- *          obj struct primi 8 byte) per assicurare nessuno side-effect
- *          fuori dal target.
+ *       3. count word @ 0x400396 unchanged.
+ *       4. 64 bytes of workRam scratch around 0x39C (bitmap + sentinel +
  *
- * Setup random per caso:
- *   - count word @ 0x400396 ∈ [0..8] (entrambi i casi: count=0, count>0).
  *   - bitmap byte @ 0x40039C random (0..255).
- *   - per ogni obj 0..count-1: long random a (0xBC, A2) (valore non
- *     osservabile, ma forzato in entrambi i lati per consistenza).
- *   - sentinel iniziale random 0..255 (per esercitare il wrap +1).
  *
  * Uso: npx tsx packages/cli/src/test-obj-dirty-dispatch-28624-parity.ts [N]
  */
@@ -56,10 +41,9 @@ const OBJECT_STRIDE = 0xe2;
 const COUNT_ADDR = 0x00400396;
 const BITMAP_ADDR = 0x0040039c;
 
-// Sentinel byte slot in work RAM (= conta delle jsr 28E3C eseguite).
+// Sentinel byte slot in work RAM (= count of executed jsr 28E3C calls).
 const SENTINEL_ADDR = 0x004003e0;
 
-// Indirizzo della ROM byte table indexed by D2.
 const ROM_TABLE_ADDR = 0x00023d3a;
 
 /**
@@ -117,7 +101,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Carica la ROM byte table @ 0x23D3A in un Uint8Array per la TS replica.
   // Leggiamo 16 byte (count max nei test = 8, ma teniamo margine).
   const romTab = new Uint8Array(16);
   for (let k = 0; k < 16; k++) {
@@ -127,7 +110,6 @@ async function main(): Promise<void> {
   console.log(`\n=== objDirtyDispatch28624 (FUN_00028624) — ${n} casi ===`);
   const rng = makeRng(0x28624);
 
-  // Sub TS: incrementa il byte sentinel in workRam (mirror del binario).
   const subs: dispatchNs.ObjDirtyDispatch28624Subs = {
     renderStringHelper: (s) => {
       const off = SENTINEL_ADDR - 0x400000;
@@ -142,7 +124,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Setup setup random
-    const count = Math.floor(rng() * 9); // 0..8 (entrambi i casi count=0 e count>0)
+    const count = Math.floor(rng() * 9);
     const bitmap = Math.floor(rng() * 256) & 0xff;
     const sentinelInit = Math.floor(rng() * 256) & 0xff;
     const objArg1: number[] = [];
@@ -151,7 +133,6 @@ async function main(): Promise<void> {
     }
     const setup: CaseSetup = { count, bitmap, sentinelInit, objArg1 };
 
-    // ── Inizializza memoria su entrambi i lati ─────────────────────────
     // count word
     pokeMem(cpu, COUNT_ADDR, 2, count & 0xffff);
     stateInst.workRam[COUNT_ADDR - 0x400000] = (count >>> 8) & 0xff;
@@ -163,7 +144,6 @@ async function main(): Promise<void> {
     pokeMem(cpu, SENTINEL_ADDR, 1, sentinelInit);
     stateInst.workRam[SENTINEL_ADDR - 0x400000] = sentinelInit;
 
-    // Per ogni obj, scrivi long @ obj+0xBC
     for (let k = 0; k < count; k++) {
       const objAddr = OBJECTS_BASE_ADDR + k * OBJECT_STRIDE;
       const arg1 = objArg1[k] ?? 0;
@@ -175,13 +155,11 @@ async function main(): Promise<void> {
       stateInst.workRam[off + 3] = arg1 & 0xff;
     }
 
-    // ── Esegui binario ─────────────────────────────────────────────────
     callFunction(cpu, FUN_28624, []);
 
     // ── Esegui TS ──────────────────────────────────────────────────────
     dispatchNs.objDirtyDispatch28624(stateInst, romTab, subs);
 
-    // ── Confronto ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
     // 1) sentinel byte (popcount + sentinelInit, mod 256)
@@ -197,7 +175,7 @@ async function main(): Promise<void> {
       };
     }
 
-    // 2) bitmap byte deve essere 0 da entrambe le parti
+    // 2) bitmap byte must be 0 on both sides.
     if (fail === null) {
       const bmBin = peekMem(cpu, BITMAP_ADDR, 1) & 0xff;
       const bmTs = stateInst.workRam[BITMAP_ADDR - 0x400000] ?? 0;
@@ -212,7 +190,6 @@ async function main(): Promise<void> {
       }
     }
 
-    // 3) count word invariato (deve essere ancora `count`)
     if (fail === null) {
       const cBin = peekMem(cpu, COUNT_ADDR, 2) & 0xffff;
       const cTs =
@@ -223,11 +200,7 @@ async function main(): Promise<void> {
       }
     }
 
-    // 4) Sentinel atteso: sentinelInit + popcount(bitmap masked) mod 256.
-    // Il loop testa bit `1<<D2` per D2=0..count-1. Quindi conta i bit set
-    // di bitmap nella sotto-finestra [0..count-1]. Per count > 8, i bit
-    // > 7 sono sempre 0 (asl.l con shift > 7 fa wrap a long ma il byte
-    // bitmap ha solo 8 bit set).
+    // bitmap has only 8 bits set.
     if (fail === null) {
       let popcount = 0;
       const limit = Math.min(count, 8);

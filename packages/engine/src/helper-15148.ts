@@ -1,13 +1,10 @@
 /**
- * helper-15148.ts — replica `FUN_00015148` (41 istr, 3 callers).
+ * Bit-perfect port of `FUN_00015148`.
  *
- * ## Ruolo
- *
- * Dispatcher di "marble state machine" a 7 casi. Argomento: `structPtr`
- * (long stack, A2 = `(0x1c,SP)`). Legge `byte @ (0x1a, A2)` come opcode
- * (0..6); out-of-range → ritorna subito. Per ogni caso gestisce le
- * transizioni di stato della struttura e chiama il dispatcher 15460 (A3)
- * o le sub 15670, 14dec, 1bb08, 1cc62, 25e7c, 25bae, 158ac, 15884.
+ * Seven-case marble state-machine dispatcher. The stack argument is the
+ * struct pointer loaded into A2. The byte at `(0x1A,A2)` selects case 0..6;
+ * out-of-range values return immediately. Each case updates the struct and
+ * calls the required follow-up dispatcher or helper routines.
  *
  * ## Prologue / Epilogue
  *
@@ -99,8 +96,7 @@
  *   0x149da, 0x149ee, 0x14a02 — all in `FUN_00014966`
  *   All push structPtr (A2) before jsr and clean up with addq.l 4,SP.
  *
- * Bit-perfect verificato vs Musashi WASM tramite
- * `cli/src/test-helper-15148-parity.ts` (500/500 casi).
+ * Bit-perfect parity is covered by `cli/src/test-helper-15148-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -311,15 +307,12 @@ export interface Helper15148Subs {
 // ─── Main function ────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00015148`.
+ * Execute the `FUN_00015148` marble FSM dispatcher.
  *
- * **Marble FSM dispatcher**: legge `byte @ (0x1A, structPtr)` come indice
- * (0..6), dispatcha su uno dei 7 casi. Modifica lo struct via workRam.
- *
- * @param state     GameState — workRam modificato.
- * @param rom       ROM image — per leggere tabella ptr @ 0x1eff6.
+ * @param state Game state mutated through work RAM.
+ * @param rom ROM image used to read the pointer table at `0x1eff6`.
  * @param structPtr Absolute workRam address of the struct record.
- * @param subs      Injectable stubs; default usa le implementazioni reali.
+ * @param subs Injectable stubs; defaults use the real implementations.
  */
 export function helper15148(
   state: GameState,
