@@ -156,7 +156,9 @@ const bootFlowConflictMessage = getBootFlowConflictMessage({
 });
 const useBootFlow = shouldUseBootFlow({
   explicitScenarioName,
+  forceAutoLoad,
   forceBootFlow,
+  forceCoinStart,
   forcePlay,
   playableSeedName,
   useMameDump,

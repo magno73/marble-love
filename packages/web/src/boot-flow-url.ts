@@ -39,7 +39,9 @@ export interface CoinStartFlowOptions {
 
 export interface BootFlowRouteOptions {
   explicitScenarioName: string | null;
+  forceAutoLoad: boolean;
   forceBootFlow: boolean;
+  forceCoinStart: boolean;
   forcePlay: boolean;
   playableSeedName: string | null;
   useMameDump: boolean;
@@ -50,7 +52,8 @@ export interface BootFlowRouteOptions {
 export function shouldUseBootFlow(options: BootFlowRouteOptions): boolean {
   if (options.forceBootFlow) return true;
   return (
-    options.forcePlay &&
+    !options.forceCoinStart &&
+    (options.forcePlay || options.forceAutoLoad) &&
     options.playableSeedName === null &&
     !options.useStartLevelPractice &&
     options.explicitScenarioName === null &&

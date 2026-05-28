@@ -22,7 +22,9 @@ const coinStartBase = {
 
 const bootFlowBase = {
   explicitScenarioName: null,
+  forceAutoLoad: false,
   forceBootFlow: false,
+  forceCoinStart: false,
   forcePlay: true,
   playableSeedName: null,
   useMameDump: false,
@@ -66,6 +68,21 @@ describe("boot-flow URL routing", () => {
     expect(shouldUseBootFlow({
       ...bootFlowBase,
       explicitScenarioName: "level1_spawn",
+    })).toBe(false);
+  });
+
+  it("routes autoLoad to cold boot unless coinStart explicitly requests the seed-backed path", () => {
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      forceAutoLoad: true,
+      forcePlay: false,
+    })).toBe(true);
+
+    expect(shouldUseBootFlow({
+      ...bootFlowBase,
+      forceAutoLoad: true,
+      forceCoinStart: true,
+      forcePlay: false,
     })).toBe(false);
   });
 
