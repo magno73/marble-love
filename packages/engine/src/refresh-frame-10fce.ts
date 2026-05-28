@@ -660,6 +660,19 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
     return;
   }
 
+  // JT[11] = 0x25876. Silly Race mini-enemy hit state reached from FUN_19D94:
+  // keep emitting the orbit sprite records until FUN_13ADE's countdown ends,
+  // then re-enter the normal state-4 recovery path through FUN_25BAE.
+  if (s1a === 11) {
+    helper1B9CC(state, a2, 1);
+    const done = objectOrbitEmit13ADE(state, rom, a2);
+    if (done !== 0) {
+      wb(state, a2 + 0x57, 0x65);
+      enterObjectStateFrom("refresh/JT11-mini-enemy")(state, a2, 4);
+    }
+    return;
+  }
+
   // Fallback (path non-modellati): chain conservativa esistente —
   helper253BC(state, a2);
   objectStep17F66(state, a2, {

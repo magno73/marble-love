@@ -606,4 +606,56 @@ describe("refreshFrame10FCE (FUN_00010FCE)", () => {
     expect(((state.workRam[obj + 0xd2] ?? 0) << 8) | (state.workRam[obj + 0xd3] ?? 0)).toBe(8);
     expect(readU32BE(state.workRam, slotOff + 0x36)).toBe(0x0001d754);
   });
+
+  it("models FUN_253EC state 11 mini-enemy orbit countdown while active", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+
+    state.workRam[obj + 0x1a] = 11;
+    state.workRam[obj + 0x57] = 0x66;
+
+    fun253ECDispatch(state, rom, player);
+
+    expect(state.workRam[obj + 0x1a]).toBe(11);
+    expect(state.workRam[obj + 0x57]).toBe(0x23);
+    expect(state.workRam[obj + 0x1c]).toBe(1);
+  });
+
+  it("models FUN_253EC state 11 mini-enemy terminal recovery transition", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+
+    state.workRam[obj + 0x1a] = 11;
+    state.workRam[obj + 0x57] = 1;
+    writeU32BE(state.workRam, obj + 0x5a, 0x12345678);
+    writeU16BE(state.workRam, obj + 0xd2, 7);
+
+    fun253ECDispatch(state, rom, player);
+
+    expect(state.workRam[obj + 0x1a]).toBe(4);
+    expect(state.workRam[obj + 0x57]).toBe(0x65);
+    expect(readU32BE(state.workRam, obj + 0x5a)).toBe(0);
+    expect(((state.workRam[obj + 0xd2] ?? 0) << 8) | (state.workRam[obj + 0xd3] ?? 0)).toBe(8);
+  });
+
+  it("releases FUN_253EC state 11 after the mini-enemy orbit countdown", () => {
+    const state = emptyGameState();
+    const rom = emptyRomImage();
+    const player = 0x400018;
+    const obj = player - WRAM;
+
+    state.workRam[obj + 0x1a] = 11;
+    state.workRam[obj + 0x57] = 0x66;
+
+    for (let i = 0; i < 36; i++) {
+      fun253ECDispatch(state, rom, player);
+    }
+
+    expect(state.workRam[obj + 0x1a]).toBe(4);
+    expect(state.workRam[obj + 0x57]).toBe(0x65);
+  });
 });
