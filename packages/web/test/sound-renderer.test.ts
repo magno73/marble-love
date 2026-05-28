@@ -7,7 +7,7 @@
  *   - POKEY AUDF/AUDC -> freq + noise + volume
  *
  * Il flow Web Audio (AudioContext.createWorklet → postMessage → synth) e'
- * testato manualmente nel browser. Vedi `?sound=1` query param wire-up.
+ * Browser startup and AudioContext unlock are tested manually in the app.
  */
 
 import { afterEach, describe, it, expect, vi } from "vitest";
