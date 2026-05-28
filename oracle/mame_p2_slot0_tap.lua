@@ -8,7 +8,7 @@
 --   3) 0x40097C..0x40097F  (4B)  — `srtgt` / xscroll target
 --
 -- Output: JSON with writers_by_pc + samples by frame, identical in format to
--- mame_cluster_0640_writers.lua per riusare il parser.
+-- mame_cluster_0640_writers.lua so the parser can be reused.
 --
 -- Env vars (default = window 12060..12080):
 --   MARBLE_TRACE_FROM — first frame to log (default 12059)

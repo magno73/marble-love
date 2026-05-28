@@ -2,9 +2,9 @@
 -- to identify PC + parent sub for the M68K writer that TS does not simulate.
 --
 -- Background: probe-z-override-experiment.ts showed that fixing
--- obj0.z_long chiude 97B di drift gameplay (-47.5%). TS non aggiorna mai
+-- obj0.z_long closes 97B of gameplay drift (-47.5%). TS never updates
 -- z_long (verified zero writes). This tap identifies who updates it in
--- MAME, per replicarne il behavior.
+-- MAME, so the behavior can be replicated.
 --
 -- Output: /tmp/mame_z_long_trace.json
 -- Vars env:

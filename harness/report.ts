@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * report.ts — produce un report human/LLM-friendly partendo da
+ * report.ts - produce a human/LLM-friendly report from
  * `traces/divergence_<scen>.json`.
  *
  * Output: markdown on stdout. Intended to be read both by Marco and by
- * Claude Code nel loop di hill-climbing (Phase 6).
+ * Claude Code in the hill-climbing loop (Phase 6).
  *
- * Uso: node --experimental-strip-types harness/report.ts <divergence.json>
+ * Usage: node --experimental-strip-types harness/report.ts <divergence.json>
  */
 
 import { readFileSync } from "node:fs";

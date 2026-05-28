@@ -3,10 +3,7 @@
 > Status: PRD scope complete for the classic renderer/web pipeline. This is a
 > safe visual pipeline branch, not a full ROM-accurate gameplay renderer.
 
-Related branch documents:
-
-- Product requirements: `docs/internal/prds/classic-renderer-prd.md`
-- Implementation plan: `docs/internal/prds/classic-renderer-plan.md`
+Historical branch PRDs are archived outside the public tree.
 
 ## What is implemented
 
@@ -191,7 +188,6 @@ The loader was also smoke-tested locally against user-provided `marble.zip` +
 `atarisy1.zip` outside the repository with CRC32 validation enabled. No ROM
 bytes or derived assets are copied into this branch.
 
-The PRD also asks for root `npm run typecheck`, `npm run lint`, and
-`npm run build`. At PRD close, those root commands still have pre-existing
-failures outside the renderer scope. See
-`docs/internal/prds/classic-renderer-plan.md` for the historical list.
+At PRD close, the renderer branch still had validation failures outside the
+renderer scope. Current validation status should come from CI and the commands
+in `AGENTS.md`, not from the archived branch notes.

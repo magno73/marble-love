@@ -1,12 +1,12 @@
--- mame_cluster_0640_writers.lua — write-tap su workRam region 0x400640..0x4006bf
+-- mame_cluster_0640_writers.lua - write tap on workRam region 0x400640..0x4006bf.
 -- Identifies writer PCs for the drift cluster @ 0x0640..0x06bf in the demo.
--- window f12000..12099 (matchando /tmp/mame_100f.json).
+-- window f12000..12099 (matching /tmp/mame_100f.json).
 --
 -- Target: 27 byte drift (cluster #8 0x0680..0x06bf 15B + #10 0x0640..0x067f 12B)
--- al f+99 in workRam, totale TS vs MAME = 387 byte. Histogram in
+-- at f+99 in workRam, total TS vs MAME = 387 byte. Histogram in
 -- packages/cli/src/probe-cluster-histogram.ts.
 --
--- Env vars (default valgono per la window di test f11998-12099):
+-- Env vars (defaults target the f11998-12099 test window):
 --   MARBLE_TRACE_LO   — region low (default 0x400640)
 --   MARBLE_TRACE_HI   — region high inclusive (default 0x4006bf)
 --   MARBLE_TRACE_FROM — first frame to log (default 11998)
@@ -15,7 +15,7 @@
 --
 -- Output:
 --   - writers_by_pc[]: PC, count, unique_addrs, top_addr, top_addr_count, sizes
---   - samples[]: { f, pc, addr, data, mask, size } per i primi MAX_SAMPLES
+--   - samples[]: { f, pc, addr, data, mask, size } for the first MAX_SAMPLES
 
 local function getenv(name, fallback)
     local v = os.getenv(name)

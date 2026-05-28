@@ -1,7 +1,7 @@
--- mame_full_ram_dump.lua — dumpa l'intera Work RAM (8 KB) ad intervalli.
+-- mame_full_ram_dump.lua - dump the full 8 KB Work RAM at intervals.
 --
 --
--- Uso:
+-- Usage:
 --   MARBLE_LOVE_RAM_DUMP_PATH=/tmp/ram.bin \
 --   MARBLE_LOVE_RAM_DUMP_INTERVAL=30 \
 --   MARBLE_LOVE_MAX_FRAMES=600 \
@@ -33,9 +33,9 @@ emu.register_frame_done(function()
     end
 
     if frame % INTERVAL == 0 then
-        -- header per snapshot: frame number BE u16
+        -- Snapshot header: frame number as BE u16.
         out:write(string.char((frame >> 8) & 0xFF, frame & 0xFF))
-        -- 8 KB di RAM
+        -- 8 KB RAM.
         for offset = 0, 0x1FFF do
             out:write(string.char(mem:read_u8(0x400000 + offset)))
         end

@@ -9,13 +9,7 @@ For a cold start, read only:
 
 - `AGENTS.md`: repo-wide agent rules, validation commands, large-file guardrails.
 - this file: module routing and large-file guardrails.
-- the task, PRD, or `GOAL.md` named by the user, if one is active.
-
-Read only when relevant:
-
-- `STATUS.md`: current operational product status, not task history.
-- `docs/task-template.md`: template for future task handoffs.
-- `docs/agent-workflow.md`: recommended workflow for long agent sessions.
+- the task file named by the user, if one is active.
 
 ## Packages
 
@@ -83,23 +77,14 @@ Trace diff and reporting utilities. Use for comparing engine and oracle traces.
 
 ## Documentation
 
-- `docs/level-header-format.md`: public summary of the verified level descriptor
-  header format.
-- `docs/internal/technical/level-header-format.md`: detailed level descriptor
-  evidence and historical tap notes.
-- `docs/internal/prds/level-header-decode-prd.md`: level header decode PRD.
-- `docs/internal/tasks/codex-task-sprite-visibility-physics.md`: sprite PRD when
-  that task is active.
-- `docs/internal/tasks/codex-task-boot-flow-no-seed.md`: phased plan for making
-  live play progress from cold boot without runtime level seeds.
-- `HANDOFF_*.md`: historical or task-specific handoffs. Read only when a task
-  names one or when a specific historical decision must be reconstructed.
-- `docs/internal/ai/agent-briefing.md`, `docs/internal/ai/codex-brief.md`,
-  `docs/internal/ai/codex-prd.md`: legacy briefings. Do not use as default
-  startup context.
-- `docs/internal/**`: development history, AI task files, old PRDs, handoffs,
-  and detailed technical notes. Read only when routed there by a task.
-- `docs/archive/**`: historical context. Do not read by default.
+- `docs/README.md`: index of public technical notes.
+- `docs/level-header-format.md`: verified level descriptor header format.
+- `docs/rom-layout.md`: ROM ZIP expectations and region layout.
+- `docs/hardware-map.md`: concise Atari System 1 hardware map.
+- `docs/input-mmio-map.md`: input register notes.
+- `docs/video-system.md`: renderer and video hardware notes.
+- `docs/sound-system.md`: sound CPU/chip architecture and current status.
+- `docs/fixture-inventory.md`: tracked fixture-size rationale.
 
 ## Large Or Noisy Areas
 
@@ -116,7 +101,6 @@ Do not read these broadly:
 - `traces/**`
 - `snap/**`
 - `ghidra_project/**`
-- `docs/archive/**`
 
 Use `jq`, `du`, `rg --files`, `git ls-files`, or targeted scripts to summarize
 these areas.
@@ -132,8 +116,7 @@ these areas.
 - Repo hygiene: `npm run context:audit`, `git diff --check`,
   `git status --short --branch`.
 
-## Handoff Pattern
+## Task Notes
 
-For new non-trivial work, create a task file from `docs/task-template.md`.
-Keep task context small: goal, files to read, files not to read, commands, done
-criteria, and a short handoff note.
+For new non-trivial work, keep task notes small and focused: goal, files to
+read, files not to read, commands, done criteria, and a short handoff note.

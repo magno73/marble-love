@@ -2,7 +2,7 @@
  * probe-level-header.ts - dumps the six real level descriptor headers with
  * decoded fields.
  *
- * Scope: PRD `docs/internal/prds/level-header-decode-prd.md` Phase 1, deliverable
+ * Scope: level header decoding evidence for `docs/level-header-format.md`.
  * "probe CLI". It can be run in two modes:
  *
  *   - Con blob ROM in path canonico:

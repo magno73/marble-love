@@ -1,11 +1,11 @@
--- mame_0700_first_body_tap.lua — write-tap MAME su 0x400700..0x40077F per la
--- finestra del primo body post-warm (default f12000..f12005).
+-- mame_0700_first_body_tap.lua - MAME write tap on 0x400700..0x40077F for the
+-- first post-warm body window (default f12000..f12005).
 --
--- Differenza vs mame_cluster_0706_trace.lua:
---  * window stretta (5 frame)
+-- Difference vs mame_cluster_0706_trace.lua:
+--  * narrow window (5 frames)
 --  * capture registers A0-A7, D0-D7 at write time to reconstruct the
---    parametri passati al decoder
---  * region copre l'intero cluster 0x700..0x77F
+--    parameters passed to the decoder
+--  * region covers the full 0x700..0x77F cluster
 --
 -- Env vars:
 --   MARBLE_TRACE_FROM — first frame to log (default 12000)

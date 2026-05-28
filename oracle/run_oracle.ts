@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * e produce traces/oracle_<scenario>.jsonl.
+ * and writes traces/oracle_<scenario>.jsonl.
  *
- * Uso:
+ * Usage:
  *   node --experimental-strip-types oracle/run_oracle.ts \
  *       --scenario level1_no_input [--frames 600] [--rom-path ./roms]
  *

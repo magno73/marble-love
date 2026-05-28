@@ -1,11 +1,11 @@
--- mame_level_header_tap.lua — installa read taps su tutti i campi noti del
--- level descriptor header per i 6 livelli.
+-- mame_level_header_tap.lua - install read taps on all known level descriptor
+-- header fields for the six levels.
 --
--- Scope: PRD `docs/internal/prds/level-header-decode-prd.md` Phase 1 deliverable (script
+-- Scope: level header decoding evidence for `docs/level-header-format.md` (script
 -- ready-to-run). Empirically verify that TS decoded fields match the
 -- values actually read by the 68010 on the original binary.
 --
--- Lancio (path locale ROMS, MAME 0.286+):
+-- Launch (local ROM path, MAME 0.286+):
 --   mame marble -nothrottle -nowindow -seconds_to_run 600 \
 --     -plugin marble_level_header \
 --     -plugin_path oracle/ \
@@ -15,9 +15,9 @@
 --   MARBLE_LEVEL_TAP_INDICES="0,1,2,3,4,5"  (default: all)
 --   MARBLE_LEVEL_TAP_OUTPUT="/tmp/level_header_taps.log"  (default stdout)
 --   MARBLE_LEVEL_TAP_PLAYABLE_CAPTURE=1 composes with
---     oracle/mame_playable_input_capture.lua per il bootstrap
+--     oracle/mame_playable_input_capture.lua for bootstrap
 --     MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1..6.
---   MARBLE_LEVEL_TAP_RAW_ADDRESS_TAPS=1 abilita anche i raw address tap
+--   MARBLE_LEVEL_TAP_RAW_ADDRESS_TAPS=1 also enables raw address taps
 --     original values. Default off: MAME can invoke those taps on accesses
 --     partial, so values are not suitable for field-level comparison.
 --   MARBLE_LEVEL_TAP_FORCE_ENTITY_INIT_COUNT=N forces diagnostic RAM
@@ -116,7 +116,7 @@ local function log(line)
   end
 end
 
--- Install read taps per (level_index, field)
+-- Install read taps for (level_index, field).
 local installed_taps = {}
 local pc_tap_last_key = nil
 
@@ -359,9 +359,9 @@ end
 -- 1. Boot MAME with this tap. Levels 0-5 read taps are installed at ROM
 --    boot time (before any level transition).
 -- 2. Use `oracle/mame_playable_input_capture.lua` workflow to drive MAME
---    through coin/start sequences that load each level (vedi
---    `docs/archive/readme-status-2026-05-18/README.full.md:166-176` per
---    `MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1..6`).
+--    through coin/start sequences that load each level. Use earlier route
+--    notes when reconstructing the original candidate captures
+--    (`MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1..6`).
 -- 3. Capture the log file. Expected pattern: each field of each loaded
 --    level produces one or more FRAME=... entries from PC=0x16EC6 (level
 --    dispatcher), 0x16F6C (level init), 0x259B4 (object init), etc.

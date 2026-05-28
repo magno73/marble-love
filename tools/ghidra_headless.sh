@@ -11,13 +11,13 @@ JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Content
 GHIDRA_HOME="${GHIDRA_HOME:-/opt/homebrew/Cellar/ghidra/12.0.4/libexec}"
 
 if [[ ! -x "$GHIDRA_HOME/support/analyzeHeadless" ]]; then
-    echo "❌ Ghidra non trovato a $GHIDRA_HOME"                >&2
-    echo "   Imposta GHIDRA_HOME oppure: brew install ghidra"  >&2
+    echo "Ghidra not found at $GHIDRA_HOME"                   >&2
+    echo "Set GHIDRA_HOME or run: brew install ghidra"        >&2
     exit 2
 fi
 if [[ ! -d "$JAVA_HOME" ]]; then
-    echo "❌ JDK 21 non trovato a $JAVA_HOME"                            >&2
-    echo "   Imposta JAVA_HOME oppure: brew install openjdk@21"          >&2
+    echo "JDK 21 not found at $JAVA_HOME"                      >&2
+    echo "Set JAVA_HOME or run: brew install openjdk@21"        >&2
     exit 2
 fi
 

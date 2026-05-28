@@ -803,9 +803,9 @@ export function initRenderer(
   const layers = initLayers(app);
   const assets = rendererAssetsFromRom(graphics);
 
-  // Indirect renderer: bitmap_ind16 PF + MO buffers, screen merge MAME-correct
-  // (cfr atarisy1_v.cpp screen_update). Convert ind16 → RGBA via palette.
-  // Single Pixi Sprite per il viewport. Activated via ?indirect=1 query param.
+  // Indirect renderer: bitmap_ind16 PF + MO buffers, screen merge matching
+  // atarisy1_v.cpp screen_update. Convert ind16 -> RGBA through the palette.
+  // One Pixi Sprite for the viewport. Activated via ?indirect=1.
   let indirectSprite: Sprite | undefined;
   let indirectCanvas: HTMLCanvasElement | undefined;
   let indirectImageData: ImageData | undefined;

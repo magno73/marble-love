@@ -2,22 +2,22 @@
 --
 -- Difference from mame_sound_cmd_tap.lua: this tap injects coin+start after
 -- boot, so main 68K exits the attract loop and starts emitting real commands.
--- al sound 6502 via soundlatch $FE0001. L'attract loop puro non emette cmd
+-- to the 6502 through soundlatch $FE0001. The pure attract loop emits no commands.
 -- Verified with wide tap $FE0000-$FEFFFF over 600 attract frames = 0 writes.
 --
--- Sequenza scriptata (default, override via env): segue il pattern di
+-- Scripted sequence (default, override via env): follows the pattern from
 -- oracle/mame_playable_input_capture.lua, which works deterministically:
 --   f1200..1214 → Coin 1 pressed (port :1820 bit 0 active low)
 --   f1500..1514 → 1 Player Start pressed (port :F60000)
---   capture continua fino a MARBLE_SOUND_CMD_TARGET_FRAME (default 2400)
+--   capture continues until MARBLE_SOUND_CMD_TARGET_FRAME (default 2400)
 --
 -- Output JSON: { frame, count, cmds: [{frame, byte}, ...] }
 --
 -- Env:
---   MARBLE_SOUND_CMD_TARGET_FRAME — frame totali (default 2400)
+--   MARBLE_SOUND_CMD_TARGET_FRAME - total frames (default 2400)
 --   MARBLE_SOUND_CMD_OUT          — output file (default /tmp/mame_sound_cmds.json)
---   MARBLE_SOUND_COIN_FRAME       — primo frame coin pulse (default 1200)
---   MARBLE_SOUND_START_FRAME      — primo frame start pulse (default 1500)
+--   MARBLE_SOUND_COIN_FRAME       - first coin pulse frame (default 1200)
+--   MARBLE_SOUND_START_FRAME      - first start pulse frame (default 1500)
 --
 -- Usage:
 --   mame marble -rompath roms -nothrottle -skip_gameinfo -video none -sound none \
@@ -66,9 +66,9 @@ local function apply_input(frame)
     local coin_pressed = in_pulse(frame, COIN_FRAME)
     local start_pressed = in_pulse(frame, START_FRAME)
 
-    -- Coin 1 (port :1820) e 1 Player Start (port :F60000) sono entrambi
+    -- Coin 1 (port :1820) and 1 Player Start (port :F60000) are both
     -- IP_ACTIVE_LOW in atarisy1.cpp: set_value(1) = "field active/pressed",
-    -- MAME inverte internamente per ACTIVE_LOW.
+    -- MAME inverts internally for ACTIVE_LOW.
     local coin_port = ports[":1820"]
     if coin_port and coin_port.fields["Coin 1"] then
         coin_port.fields["Coin 1"]:set_value(coin_pressed and 1 or 0)

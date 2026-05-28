@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # run_compare.sh — pipeline differential testing end-to-end.
 #
-# Uso: ./harness/run_compare.sh <scenario>
+# Usage: ./harness/run_compare.sh <scenario>
 #
 # Step:
-#   1. Lancia oracle MAME → traces/oracle_<scen>.jsonl
-#   2. Lancia reimpl CLI  → traces/reimpl_<scen>.jsonl
-#   3. Diff                → traces/divergence_<scen>.json
+#   1. Run MAME oracle -> traces/oracle_<scen>.jsonl
+#   2. Run reimpl CLI  -> traces/reimpl_<scen>.jsonl
+#   3. Diff            -> traces/divergence_<scen>.json
 #   4. Report markdown    → stdout
 set -euo pipefail
 

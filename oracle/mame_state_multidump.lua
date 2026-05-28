@@ -1,12 +1,12 @@
--- mame_state_multidump.lua — dumpa video state di Atari System 1 a una serie
--- di frame consecutivi/spaziati. Output: JSON array di snapshot per validare
--- evoluzione TS frame-per-frame contro MAME oracle.
+-- mame_state_multidump.lua - dump Atari System 1 video state at consecutive or
+-- spaced frames. Output is a JSON array of snapshots for validating TS
+-- frame-by-frame evolution against the MAME oracle.
 --
--- Variabili d'ambiente:
---   MARBLE_DUMP_FRAMES — lista CSV di frame da catturare (default 2400,2410,2420,2430,2440,2450,2460)
---   MARBLE_DUMP_OUT    — file output (default /tmp/mame_state_multi.json)
+-- Env vars:
+--   MARBLE_DUMP_FRAMES - CSV list of frames to capture (default 2400,2410,2420,2430,2440,2450,2460)
+--   MARBLE_DUMP_OUT    - output file (default /tmp/mame_state_multi.json)
 --
--- Esempio:
+-- Example:
 --   MARBLE_DUMP_FRAMES=2400,2401,2402,2403,2404,2405 \
 --   MARBLE_DUMP_OUT=/tmp/mame_state_multi.json \
 --   mame marble -plugin lua -script oracle/mame_state_multidump.lua

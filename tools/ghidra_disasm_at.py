@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ghidra_disasm_at.py — forza disassembly su una lista di indirizzi e dumpa il risultato.
+ghidra_disasm_at.py - force disassembly at a list of addresses and dump the result.
 
-Uso:
+Usage:
   uv run --with pyghidra python3 tools/ghidra_disasm_at.py 0x34A 0x36C [more...]
 """
 

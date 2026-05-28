@@ -1,11 +1,11 @@
--- mame_sound_cmd_tap.lua — capture cmd 68K → 6502 via write tap su $FE0001.
+-- mame_sound_cmd_tap.lua - capture 68K -> 6502 commands through a $FE0001 write tap.
 --
 -- Output JSON: { frame: int, cmds: [{frame: N, byte: B}, ...] }
 -- Allows the TS probe-sound-diff to replay exactly the same sequence.
--- di submitCommand chiamati dal main CPU MAME.
+-- Those commands are equivalent to submitCommand calls emitted by the MAME main CPU.
 --
 -- Env:
---   MARBLE_SOUND_CMD_TARGET_FRAME — capture fino a (default 600)
+--   MARBLE_SOUND_CMD_TARGET_FRAME - capture through this frame (default 600)
 --   MARBLE_SOUND_CMD_OUT          — output file (default /tmp/mame_sound_cmds.json)
 --
 -- Usage:

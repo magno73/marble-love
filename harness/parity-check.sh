@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# parity-check.sh — esegue la pipeline reimpl-trace → diff vs oracle.
+# parity-check.sh - run the reimplementation trace -> oracle diff pipeline.
 #
-# Uso:
+# Usage:
 #   harness/parity-check.sh <scenario> [<truth-offset>] [<ticks>] [<from-frame>]
 #
-# Esempio:
+# Example:
 #   harness/parity-check.sh attract_mode 45 600 0
 #
 
@@ -20,8 +20,8 @@ REIMPL=traces/reimpl_${SCEN}.jsonl
 REPORT=traces/divergence_${SCEN}.json
 
 if [ ! -f "$ORACLE" ]; then
-  echo "error: oracle trace mancante a $ORACLE" >&2
-  echo "  generala con: node --experimental-strip-types oracle/run_oracle.ts -s $SCEN" >&2
+  echo "error: oracle trace missing at $ORACLE" >&2
+  echo "  generate it with: node --experimental-strip-types oracle/run_oracle.ts -s $SCEN" >&2
   exit 1
 fi
 

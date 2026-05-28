@@ -1,6 +1,5 @@
-// render-ts-wav.ts — render TS SoundChip output to WAV file for listening.
-// Usa cmd-tape replay (attract music) e produce /tmp/ts_marble_audio.wav
-// ascoltabile direttamente.
+// render-ts-wav.ts - render TS SoundChip output to a WAV file for listening.
+// Uses the attract-music cmd-tape replay and writes /tmp/ts_marble_audio.wav.
 import { readFileSync, writeFileSync } from "node:fs";
 import { createSoundChip, releaseSoundReset, submitCommand, loadCmdTape, tickCycles, drainReplyEvents, drainYm2151Samples, drainPokeySamples, YM2151_NATIVE_SAMPLE_RATE } from "../../engine/src/m6502/sound-chip.js";
 import { SOUND_CYCLES_PER_FRAME } from "../../engine/src/m6502/sound-clock.js";

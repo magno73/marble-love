@@ -39,7 +39,7 @@ pyghidra.start()
 
 
 def setup_memory_and_entries(program, monitor):
-    """Aggiunge memory blocks per RAM/MMIO e seedingha entry points."""
+    """Add memory blocks for RAM/MMIO and seed useful entry points."""
     from ghidra.program.flatapi import FlatProgramAPI
     from ghidra.program.model.symbol import SourceType
 

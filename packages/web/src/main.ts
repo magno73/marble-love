@@ -985,9 +985,9 @@ function createStartLevelUnavailableOverlay(level: number): HTMLDivElement {
     "background:rgba(0,0,0,.86);border:1px solid rgba(184,247,255,.55);" +
     "color:#d9f7ff;font:14px/1.45 system-ui,-apple-system,sans-serif;text-align:left;";
   el.textContent =
-    `startLevel=${level} non ha ancora un seed giocabile verificato. ` +
-    "Il mapping practice resta bloccato finche' il candidato non passa il gate " +
-    "descriptor, MAME active-vs-neutral e smoke browser.";
+    `startLevel=${level} does not have a verified playable seed yet. ` +
+    "The practice mapping stays locked until the candidate passes descriptor, " +
+    "MAME active-vs-neutral, and browser smoke gates.";
   document.body.appendChild(el);
   return el;
 }
@@ -2157,7 +2157,7 @@ async function startGame(
       });
       document.body.appendChild(btnAudio);
     } else {
-      console.warn("[sound] rom.sound non disponibile, audio disabilitato");
+      console.warn("[sound] rom.sound is unavailable, audio disabled");
     }
   }
 

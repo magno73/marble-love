@@ -5,9 +5,9 @@ Repository root: `/Users/magnus-bot/Code/marble-love`.
 Use this file as the startup context for AI agents. Keep it short. Do not paste
 long history, trace output, or snapshot JSON into agent prompts.
 
-Cold start rule: read this file, `docs/context-map.md`, and the active
-task/goal file only. Do not read `README.md`, `STATUS.md`, handoffs, or legacy
-briefings unless the task asks for them or the context map routes you there.
+Cold start rule: read this file and `docs/context-map.md` before exploring the
+repo. Do not paste long history, trace output, or snapshot JSON into agent
+prompts.
 
 ## Layout
 
@@ -18,11 +18,9 @@ briefings unless the task asks for them or the context map routes you there.
 - `oracle`: MAME Lua scripts and oracle scenarios.
 - `harness`: trace diff/report tooling.
 - `tools`: Ghidra, ROM prep, and local utility scripts.
-- `docs`: PRDs, technical notes, context map, workflow docs, archive.
+- `docs`: public technical notes and the compact context map.
 
-Read `docs/context-map.md` for a compact module map. Use
-`docs/agent-workflow.md` for session workflow and `docs/task-template.md` for
-new task handoffs.
+Read `docs/context-map.md` for a compact module map.
 
 ## Working Rules
 
@@ -32,9 +30,9 @@ new task handoffs.
   reads.
 - Do not read large JSON snapshots in full. Inspect them with `jq`, scripts, or
   summaries.
-- Do not read `docs/archive/**`, `screenshots/**`, `traces/**`, `snap/**`,
-  `packages/web/dist/**`, `node_modules/**`, `.claude/worktrees/**`, or
-  `oracle/tom_harte_m68000/*.json` unless a task explicitly requires it.
+- Do not read `screenshots/**`, `traces/**`, `snap/**`, `packages/web/dist/**`,
+  `node_modules/**`, `.claude/worktrees/**`, or `oracle/tom_harte_m68000/*.json`
+  unless a task explicitly requires it.
 - Keep investigation output in `/tmp/marble-love/<task>/` or a task artifact
   directory. Summarize findings in small markdown notes.
 - Separate MAME proof, seed export, web wiring, and browser smoke checks.

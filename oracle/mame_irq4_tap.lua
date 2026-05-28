@@ -13,12 +13,12 @@
 -- E aggregati:
 --   - writes_by_off  (workRam offset -> count, top-PC, sample)
 --   - writes_by_pc   (PC -> count, top-off)
---   - bodies_per_frame (n. IRQ4 firings per frame)
+--   - bodies_per_frame (number of IRQ4 firings per frame)
 --   - cycles_in_irq_per_frame
 --
 -- Env vars:
---   MARBLE_TRACE_FROM = primo frame (default 12001)
---   MARBLE_TRACE_TO   = ultimo frame (default 12005)
+--   MARBLE_TRACE_FROM = first frame (default 12001)
+--   MARBLE_TRACE_TO   = last frame (default 12005)
 --   MARBLE_TRACE_OUT  = path JSON (default /tmp/mame_irq4_trace.json)
 
 local function getenv(name, fallback)

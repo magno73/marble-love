@@ -40,15 +40,15 @@ local PC_PATH = {
 -- Ctrl long-read @ 0x1a690 (move.l (A3),D0)
 -- Ext byte-read @ 0x1a6a8 + 0x1a6aa (path A), 0x1a6d8 + 0x1a6da (B),
 --                0x1a6fe + 0x1a700 (C), 0x1a73a + 0x1a73c (D), 0x1a76a + 0x1a76c (E)
--- NOTA: pre-fetch instruction reads sono complicate da intercettare per PC esatto;
--- piu' utile registrare D0 SUBITO DOPO move.l (A3),D0 — cioe' al passaggio @ 0x1a692
--- (next instruction). Usiamo emu.debugger or hook on PC? In MAME Lua semplice: register
+-- NOTE: prefetch instruction reads are hard to intercept at an exact PC.
+-- More useful: record D0 immediately after move.l (A3),D0, at the transition
+-- through 0x1a692 (next instruction). In simple MAME Lua, use a register
 -- Register snapshot at each decoder write. Reconstruct D0/D1/D5/D6 from write sequence.
 
 -- To read stream content: snapshot BEGIN body (PC enters 0x1a668) using
 -- emu.register_periodic with PC check. Better: install_passthrough_tap
--- su READ range 0x800e4..0x9ffff (ctrl stream area) e 0x2be18..0x2cfff (ext stream),
--- filtrato per cpu_pc nel range decoder.
+-- on READ range 0x800e4..0x9ffff (ctrl stream area) and 0x2be18..0x2cfff
+-- (ext stream), filtered by cpu_pc in the decoder range.
 
 local DECODER_LO = 0x1a668
 local DECODER_HI = 0x1a797
@@ -75,10 +75,10 @@ local body_exits = {}    -- {f, idx, pc=0x1a796, a={}, d={}, sp}
 
 -- Ctrl/Ext stream snapshot READS: use taps on all reads from program space.
 -- and filter by PC inside decoder range. To limit overhead, tag only
--- il range [0x80000..0x90000] U [0x2be18..0x2c800].
+-- the range [0x80000..0x90000] U [0x2be18..0x2c800].
 -- In practice, the decoder reads from addr = ctrlBase+offset. ctrlBase = 0x800e4 +
 -- sext(tileWord) can be anywhere. To stay safe, tag everything until
--- a 0x88000 (ROM end) per la window mirata.
+-- 0x88000 (ROM end) for the targeted window.
 
 local function snapshot_regs()
     local a, d = {}, {}
