@@ -71,7 +71,7 @@ describe("FUN_1BB08 setScrollCoordsFromEntity1BB08", () => {
     setScrollCoordsFromEntity1BB08(s, 0x00400100);
     expect(r16(s, 0x690)).toBe(0x42);
     expect(r16(s, 0x692)).toBe(0x35);
-    // Verifica che updateScrollCoords sia stato chiamato
+    // Verify updateScrollCoords was called.
     expect(r16(s, 0x69e)).toBe(2); // subX = 0x42 & 7
     expect(r16(s, 0x696)).toBe(8); // cellX = 0x42 >> 3
   });

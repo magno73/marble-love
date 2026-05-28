@@ -3,12 +3,8 @@
  * test-sub-14dec-parity.ts — differential FUN_00014DEC vs `sub14DEC`.
  *
  * FUN_00014DEC (166 byte, 0xA6 byte): "nearest-neighbor V2" — itera list
- * @ obj+0x4E (stride 4 byte) cercando l'entry più vicino (distance < 0x400).
- * Scrive ptr migliore in obj+0x4A (o 0xFFFFFFFF se nessuno).
  *
  * **Strategia parity**:
- *   - Nessuna callee (loop puro su list bytes).
- *   - Confronto workRam @ obj (32 byte: in particolare obj+0x4A) e list area.
  *
  * Layout:
  *   - Obj @ 0x401D00 (size 0x60)
@@ -114,10 +110,7 @@ async function main(): Promise<void> {
 
   function runOneCase(tc: number, objBytes: number[], listBytes: number[]): boolean {
     cpu.system.setRegister("sp", 0x401f00);
-    // D6 register: matching della replica TS che usa bestPtr = 0xFFFFFFFF
-    // come "non aggiornato". Il binario legge D6 register all'entry (non lo
-    // clearizza prima del primo update). Forziamo D6 == 0xFFFFFFFF coerente
-    // col valore TS default.
+    // D6 register: match the TS replica, which uses bestPtr = 0xFFFFFFFF.
     cpu.system.setRegister("d6", 0xffffffff);
     setupBoth(stateInst, cpu, objBytes, listBytes);
     callFunction(cpu, FUN_14DEC, [OBJ_ABS]);
@@ -141,14 +134,10 @@ async function main(): Promise<void> {
     // Obj+0x4E (list ptr) → LIST_ABS.
     writeLongBytes(objBytes, 0x4e, LIST_ABS);
 
-    // List entries: prima genera N entry random (4 byte ognuna), poi sentinel 0xFF.
     const listBytes = new Array(LIST_SIZE).fill(0).map(() => rb());
-    // Numero entry valide: 1..15 (random) — sentinel piazzato dopo.
     const nEntries = 1 + Math.floor(rng() * 15);
-    // Garantiamo che la prima sentinel-able byte sia 0xFF a entry index nEntries.
     listBytes[nEntries * 4] = 0xff;
     listBytes[nEntries * 4 + 1] = 0xff; // doppia per robustezza
-    // Forziamo le prime entry ad avere byte[0|1] != 0xFF (per evitare early break casuale).
     for (let e = 0; e < nEntries; e++) {
       if (listBytes[e * 4] === 0xff) listBytes[e * 4] = (rb() & 0x7f);
       if (listBytes[e * 4 + 1] === 0xff) listBytes[e * 4 + 1] = (rb() & 0x7f);

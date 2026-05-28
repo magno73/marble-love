@@ -4,7 +4,7 @@
  *
  * 452 byte pure leaf, 0 jsr. Differential test su 8 byte di output (x, y long).
  *
- * Setup randomizzato per caso:
+ * Randomized setup per case:
  *   - Struct 8 byte (x, y) random
  *   - workRam state (4 byte flag, 4 word gate, 2 byte rotation, 1 byte bitmap)
  *
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     stateInst.workRam[(STRUCT_ADDR - 0x400000) + 7] = y & 0xff;
 
     // Random workRam state
-    // Tutti byte/word @ 0x40066A..0x4006A1 usati
+    // All byte/word values @ 0x40066A..0x4006A1 are used.
     const stateBytes: { addr: number; size: number; value: number }[] = [
       { addr: 0x40066A, size: 1, value: Math.floor(rng() * 256) & 0xff },         // bitmap
       { addr: 0x40066C, size: 1, value: Math.floor(rng() * 4) & 0xff },           // flag PX (0..3)

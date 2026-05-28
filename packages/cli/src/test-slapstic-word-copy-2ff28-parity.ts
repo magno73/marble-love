@@ -3,17 +3,10 @@
  * test-slapstic-word-copy-2ff28-parity.ts — differential FUN_02FF28
  * vs slapsticWordCopy2FF28.
  *
- * `FUN_0002FF28` (24 byte) copia il word a `0x87A28` verso `0x87A48`
- * incondizionatamente (nessun indice). L'argomento word passato sullo
- * stack viene caricato in D0w ma non è mai usato.
  *
  * **Strategia**:
- *   - Randomizziamo il word sorgente a `0x87A28` e i 2 byte destinazione
- *     a `0x87A48` prima di ogni call.
- *   - Verifichiamo che dopo la call i 2 byte a `0x87A48` nel binario
- *     coincidano con quelli nel buffer TS.
- *   - Passiamo anche un argomento `indexWord` random per accertare che
- *     la funzione lo ignori (come il disasm conferma).
+ *   - Randomize the source word at `0x87A28` and the 2 destination bytes
+ *     match the bytes in the TS buffer.
  *
  * Uso: npx tsx packages/cli/src/test-slapstic-word-copy-2ff28-parity.ts [N]
  */
@@ -57,7 +50,6 @@ async function main(): Promise<void> {
   }
   const rom = readFileSync(romPath);
 
-  // state non necessario per questa funzione: usiamo solo il bus
   const { state: stateNs } = await import("@marble-love/engine");
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
@@ -83,10 +75,8 @@ async function main(): Promise<void> {
 
     const srcWord = Math.floor(rng() * 0x10000) & 0xffff;
     const dstBefore = Math.floor(rng() * 0x10000) & 0xffff;
-    // indexWord random — deve essere ignorato dalla funzione
     const indexWord = Math.floor(rng() * 0x10000) & 0xffff;
 
-    // Setup binario
     pokeMem(cpu, SRC_ADDR, 1, (srcWord >>> 8) & 0xff);
     pokeMem(cpu, SRC_ADDR + 1, 1, srcWord & 0xff);
     pokeMem(cpu, DST_ADDR, 1, (dstBefore >>> 8) & 0xff);

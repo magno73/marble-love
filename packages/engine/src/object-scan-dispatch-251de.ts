@@ -1,30 +1,22 @@
 /**
- * object-scan-dispatch-251de.ts — replica `FUN_000251DE` (478 byte,
+ * object-scan-dispatch-251de.ts — `FUN_000251DE` replica (478 bytes,
  * 0x251DE..0x253BC).
  *
- * "Object scan + step + endgame detector + state-2 respawn" wrapper chiamato
- * dal main-loop dispatcher (xref 0x10FD4 in FUN_00010FCE). Itera sull'array
- * di object struct (`0x400018`, stride `0xE2`, count = `*0x400396`), per ogni
- * obj:
+ * over object structs (`0x400018`, stride `0xE2`, count = `*0x400396`), for
+ * each obj:
  *
- *   1. Skip se `obj+0x18.b == 0` (slot vuoto). Conta come state-2 (D2++).
- *   2. Se `obj+0x6A.w > 400 (0x190)` (signed-irrelevant, cmpi.w) chiama
  *      `FUN_2822E` (no arg, callback `fun_2822E`).
- *   3. Esegui `FUN_253EC(obj)` (object-step inner).
- *   4. Re-leggi `obj+0x18.b`:
- *        - se `== 2` → D2++, skip
- *        - se `== 3` → D3++, skip
- *        - altrimenti, gate: count == 2 (i.e. `*0x400396 == 2`).
- *          Se NO: skip.
- *          Se SÌ: ulteriori filtri sulla coord X = `obj+0x20.w` (segnato),
- *          su `obj+0x36.b` e su `obj+0x1A.b`. Se passano:
- *            → "respawn block" (vedi sotto).
+ *   3. Execute `FUN_253EC(obj)` (object-step inner).
+ *        - if `== 2` → D2++, skip
+ *        - if `== 3` → D3++, skip
+ *          If no: skip.
+ *          on `obj+0x36.b` and `obj+0x1A.b`. If they pass:
  *
- * Il "respawn block" (0x252A2..0x2536C) replica fedelmente le scritture
- * dirette di `FUN_2591A` (object-init) inline + 4 jsr addizionali e altre
- * scritture, terminato da:
+ * The "respawn block" (0x252A2..0x2536C) faithfully replicates the direct
+ * writes from `FUN_2591A` (object-init) inline + 4 additional jsrs and other
+ * writes, ending with:
  *   - `obj+0x6A.w -= 5` (signed)
- *   - se `< 0`: `obj+0x6A.w = 1`, `obj+0x6C.b = 0`, `obj+0x6E.b = 0`
+ *   - if `< 0`: `obj+0x6A.w = 1`, `obj+0x6C.b = 0`, `obj+0x6E.b = 0`
  *   - `soundCommand(0x3C)`
  *   - `obj+0x5A long = 0`
  *   - `obj+0x1A.b = 4`
@@ -35,81 +27,60 @@
  * **Endgame detector** (post-loop):
  *   - Se `D3 == count`  → all-state-3.
  *   - Else if `D3 != 0 && D2 == count - 1` → near-all-state-2/3.
- *   - In entrambi i casi: se `*0x400390.w != 1` → set `*0x400390.w = 3`.
  *
- * **Disasm 0x251DE..0x253BC** (vedi `/tmp/marble-cand/0251DE.txt`).
+ * **Disasm 0x251DE..0x253BC** (see `/tmp/marble-cand/0251DE.txt`).
  *
- * **Sub-jsr esterne (5)**:
- *   - 0x1BBAA  `objectCharcodeBroadcast1BBAA(state, rom)` — chiamato 1 volta
- *              prima del loop (no arg via stack, ma il modulo usa
+ * **External sub-jsrs (5)**:
  *              `*0x400394`, `*0x400396`, ecc.).
- *   - 0x2822E  `FUN_2822E()` — chiamato per gate `obj+0x6A.w > 400` (non
  *              modellato, default no-op).
- *   - 0x253EC  `FUN_253EC(obj)` — object-step inner per ogni obj. Callback
- *              obbligatoria (ma default no-op).
- *   - 0x17934  `FUN_17934(obj)` — chiamato dentro respawn block (default
+ *   - 0x253EC  `FUN_253EC(obj)` — object-step inner for each obj. Callback
+ *              required (but default no-op).
  *              no-op).
- *   - 0x1BAB2  `spritePosUpdate1BAB2(obj)` — chiamato dentro respawn block.
  *   - 0x1CC62  `spriteProject1CC62(0)` — long ret in D0 → obj+0x14.
- *   - 0x1B9CC  `FUN_1B9CC(obj, 0)` — chiamato dentro respawn block.
- *   - 0x158AC  `soundCommand(0x3C)` — chiamato dentro respawn block.
- *   - 0x285B0  `FUN_285B0(obj, 0x0F)` — chiamato dentro respawn block.
  *
- * **Modellazione bit-perfect** delle sottigliezze M68k:
  *
- *   1. **`addq.b #1` su D2/D3**: incrementa solo low byte. Per count ≤ 127
- *      (caso reale: max ~22 obj data layout workRam) il byte non wrappa,
- *      ma replichiamo `& 0xFF` per safety.
+ *   1. **`addq.b #1` on D2/D3**: increments only the low byte. For count ≤ 127
+ *      but we replicate `& 0xFF` for safety.
  *
- *   2. **`ext.w; ext.l` su byte D2/D3**: sign-extend byte → word → long.
- *      Per byte ≤ 0x7F equivalente a unsigned. Replichiamo via guardia
+ *   2. **`ext.w; ext.l` on D2/D3 byte**: sign-extend byte → word → long.
+ *      For byte ≤ 0x7F it is equivalent to unsigned. Replicate via guard
  *      `(b & 0x80) ? b - 0x100 : b`.
  *
- *   3. **`cmpi.w #0x190`** su `obj+0x6A`: confronto signed word. Word in
- *      memoria letto big-endian, sign-ext per branch.
  *
- *   4. **`andi.w #-1, D0w`** dopo `move.w (0x20,A2),D0w`: AND con 0xFFFF
- *      (no-op valore, set CCR). Replichiamo solo per documentazione.
  *
  *   5. **`cmpi.w #0xEC; ble`** seguito da level-check (`*0x400394 == 4`).
- *      Logica: skip respawn se X (signed) > 0xEC AND level != 4. Poi se X
+ *      Logic: skip respawn if signed X > 0xEC AND level != 4. Then if X
  *      (signed) >= -8 AND level != 4: skip respawn. Equivalente:
- *      respawn richiede `(-8 < X <= 0xEC) OR level == 4`.
- *      Implementiamo testualmente le 2 branch separate per fedeltà.
+ *      respawn requires `(-8 < X <= 0xEC) OR level == 4`.
  *
- *   6. **`asl.l #16, D1` con globals @ 0x400462/0x400466**: replicato come
+ *   6. **`asl.l #16, D1` with globals @ 0x400462/0x400466**: replicated as
  *      `(g << 16) >>> 0` (big-endian long). Identico a `objectInit2591A`.
  *
  *   7. **`pea (0x3C).l`** vs **`pea (0xF).w`**: il primo pusha long 0x3C,
- *      il secondo pusha 0xF sign-extended a long. Per 0x0F bit alto = 0,
  *      sign-ext = 0x0000000F. Replicato come int32.
  *
- *   8. **`subq.w #5,(0x6A,A2)` con `bge`**: il flag N è settato sul risultato
  *      signed word. Replichiamo via sign-extension.
  *
  *   9. **`addq.w #1,(0xD2,A2)`**: 16-bit wrap.
  *
- *  10. **State machine global @ 0x400390**: `cmp.w (0x00400390).l, D0w` con
- *      D0=1 → confronto solo word low. Set `*0x400390.w = 3` (write word).
+ *  10. **State machine global @ 0x400390**: `cmp.w (0x00400390).l, D0w` with
  *
  * **Caller noto**: `FUN_00010FCE` @ 0x10FD4 (UNCONDITIONAL_CALL).
  *
- * Verifica bit-perfect via `cli/src/test-object-scan-dispatch-251de-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { spriteHelper1B9CC } from "./sprite-helper-1b9cc.js";
 
-/** Base assoluta della work RAM (0x400000 nel bus M68k). */
+/** Absolute work RAM base (0x400000 on the M68k bus). */
 const WORK_RAM_BASE = 0x00400000;
-/** Limite superiore esclusivo workRam (0x400000 + 0x2000). */
+/** Exclusive workRam upper bound (0x400000 + 0x2000). */
 const WORK_RAM_END = 0x00402000;
 
-/** Indirizzo entry-point del binario (per parity tests / cross-ref). */
 export const OBJECT_SCAN_DISPATCH_251DE_ADDR = 0x000251de as const;
 
-/** Globals usati. */
+/** Globals used by the routine. */
 export const GLOBAL_OBJ_BASE_ADDR = 0x00400018 as const;
 export const GLOBAL_OBJ_COUNT_ADDR = 0x00400396 as const;
 export const GLOBAL_LEVEL_IDX_ADDR = 0x00400394 as const;
@@ -123,7 +94,6 @@ export const GLOBAL_TILE_Y_ADDR = 0x00400698 as const;
 /** Stride tra object struct adiacenti. */
 export const OBJ_STRIDE = 0xe2 as const;
 
-/** Indirizzi delle 9 sub-jsr nell'ordine di chiamata possibile. */
 export const OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS = [
   0x0001bbaa, // objectCharcodeBroadcast1BBAA — pre-loop
   0x0002822e, // FUN_2822E — gate obj+0x6A.w > 400
@@ -136,7 +106,6 @@ export const OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS = [
   0x000285b0, // FUN_285B0(obj, 0x0F)
 ] as const;
 
-/** Bag delle sub-jsr (default: tutti no-op tranne `fun_1CC62` ritorna 0). */
 export interface ObjectScanDispatch251DESubs {
   /**
    * `FUN_1BBAA(state, rom)` — object-charcode broadcast (pre-loop, 1 volta).
@@ -144,12 +113,10 @@ export interface ObjectScanDispatch251DESubs {
    */
   fun_1BBAA?: (state: GameState, rom: RomImage) => void;
   /**
-   * `FUN_2822E()` — chiamato per ogni obj con `obj+0x6A.w > 400`. No arg.
    * Default no-op.
    */
   fun_2822E?: (state: GameState) => void;
   /**
-   * `FUN_253EC(objPtr)` — object-step inner, chiamato per ogni obj non-vuoto.
    * Default no-op.
    */
   fun_253EC?: (state: GameState, objPtr: number) => void;
@@ -162,20 +129,16 @@ export interface ObjectScanDispatch251DESubs {
    */
   fun_1BAB2?: (state: GameState, objPtr: number) => void;
   /**
-   * `FUN_1CC62(zero)` — sprite project: ritorna long → obj+0x14. Default 0.
    */
   fun_1CC62?: (state: GameState, argZero: number) => number;
   /**
-   * `FUN_1B9CC(objPtr, flagLong)` — chiamato con flagLong=0. Default no-op.
    */
   fun_1B9CC?: (state: GameState, objPtr: number, flagLong: number) => void;
   /**
-   * `FUN_158AC(cmd)` — sound command sender. Chiamato 1 volta nel respawn
-   * block con `cmd=0x3C`. Default no-op.
+   * block with `cmd=0x3C`. Default no-op.
    */
   soundCommand?: (state: GameState, cmd: number) => void;
   /**
-   * `FUN_285B0(objPtr, modeLong)` — chiamato nel respawn block con
    * `modeLong=0x0000000F`. Default no-op.
    */
   fun_285B0?: (state: GameState, objPtr: number, modeLong: number) => void;
@@ -183,7 +146,6 @@ export interface ObjectScanDispatch251DESubs {
 
 // ─── Helper interni: read/write su workRam (BE M68k) ─────────────────────
 
-/** Read big-endian long da workRam (assoluto M68k). 0 se fuori range. */
 function readU32BE(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 3 >= WORK_RAM_END) return 0;
@@ -197,7 +159,6 @@ function readU32BE(workRam: Uint8Array, addrAbs: number): number {
   );
 }
 
-/** Read big-endian word da workRam. 0 se fuori range. */
 function readU16BE(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 1 >= WORK_RAM_END) return 0;
@@ -205,14 +166,12 @@ function readU16BE(workRam: Uint8Array, addrAbs: number): number {
   return (((workRam[off] ?? 0) << 8) | (workRam[off + 1] ?? 0)) & 0xffff;
 }
 
-/** Read byte da workRam. 0 se fuori range. */
 function readU8(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return 0;
   return (workRam[a - WORK_RAM_BASE] ?? 0) & 0xff;
 }
 
-/** Write big-endian long su workRam. No-op se fuori range. */
 function writeU32BE(workRam: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 3 >= WORK_RAM_END) return;
@@ -224,7 +183,6 @@ function writeU32BE(workRam: Uint8Array, addrAbs: number, value: number): void {
   workRam[off + 3] = v & 0xff;
 }
 
-/** Write big-endian word su workRam. No-op se fuori range. */
 function writeU16BE(workRam: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a + 1 >= WORK_RAM_END) return;
@@ -234,7 +192,6 @@ function writeU16BE(workRam: Uint8Array, addrAbs: number, value: number): void {
   workRam[off + 1] = v & 0xff;
 }
 
-/** Write byte su workRam. No-op se fuori range. */
 function writeU8(workRam: Uint8Array, addrAbs: number, value: number): void {
   const a = addrAbs >>> 0;
   if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return;
@@ -252,13 +209,9 @@ function sext16(w: number): number {
 /**
  * Replica `FUN_000251DE` — object scan + step + endgame detector.
  *
- * @param state  GameState (`workRam` mutato in-place; varie scritture su
+ * @param state  GameState (`workRam` mutated in place; several writes to
  *               obj struct + globals @ 0x400390/0x400696/0x400698).
- * @param rom    RomImage richiesta da `fun_1BBAA` (può essere stub se la
- *               callback è no-op).
- * @param subs   Bag delle 9 sub-jsr; default: tutte no-op tranne `fun_1CC62`
- *               che ritorna 0 (compatibile con stub `moveq #0,D0;rts` lato
- *               binario).
+ * @param subs   Bag of 9 subroutine callbacks; all default to no-op except `fun_1CC62`.
  */
 export function objectScanDispatch251DE(
   state: GameState,
@@ -287,7 +240,6 @@ export function objectScanDispatch251DE(
     const countW = readU16BE(wr, GLOBAL_OBJ_COUNT_ADDR);
     const countS = sext16(countW);
     if (d4w === countS) break; // loop end (bne to body, fall-through to post)
-    // (NB: bne in binario = exit loop quando equal. Fall-through = post-loop.)
 
     // ─── 0x251FE..0x25204: tst.b (0x18,A2); if 0: D2++; bra next ──────
     const state18 = readU8(wr, a2 + 0x18);
@@ -298,7 +250,7 @@ export function objectScanDispatch251DE(
       // 0x2520A: cmpi.w #0x190, (0x6a,A2); ble skip; else FUN_2822E()
       const w6a = readU16BE(wr, a2 + 0x6a);
       const w6aS = sext16(w6a);
-      // cmpi.w #0x190 con dst (0x6a,A2): set CCR su (dst - 0x190).
+      // cmpi.w #0x190 with dst (0x6a,A2): set CCR on (dst - 0x190).
       // ble = N|Z|V branch — equivalente a `dst <= 0x190` signed.
       // bne (skip jsr) when ble fails → dst > 0x190 (signed).
       if (w6aS > 0x190) {
@@ -380,7 +332,7 @@ export function objectScanDispatch251DE(
     // move.b D2b, D0b; ext.w; ext.l; D1 = count word ext.l; D1 -= 1;
     // cmp.l D1, D0; bne epilogue. else: fall through SET_FLAG.
     const d2W = (d2 & 0x80) !== 0 ? (d2 & 0xff) - 0x100 : d2 & 0xff;
-    const d2Long = d2W; // ext.l su signed word identico a signed int
+    const d2Long = d2W; // ext.l on a signed word is identical to a signed int here.
     const d1Long = countFinalS - 1;
     if (d2Long === d1Long) {
       setFlag = true;
@@ -398,10 +350,6 @@ export function objectScanDispatch251DE(
 }
 
 /**
- * Replica del "respawn block" 0x252A2..0x2536C — inline bit-perfect
- * dell'inizializzatore oggetto + tail ad hoc (sub 5 e sound). Mantenuto
- * separato per leggibilità e perché ricalca scritture identiche a
- * `objectInit2591A` (vedi `object-init-2591a.ts`) con l'ordine binario.
  */
 function respawnBlock(
   state: GameState,

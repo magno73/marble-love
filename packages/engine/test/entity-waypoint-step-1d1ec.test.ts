@@ -3,12 +3,12 @@
  *
  * Test in-WORK_RAM: alloca struct entity in 0x401E00 (offset 0x1E00 in
  * workRam) e cursor array in 0x401E80 (offset 0x1E80). Verifica:
- *   1. Match X+Y → cursor avanza di step*4
- *   2. Mismatch X → cursor invariato (early-exit)
- *   3. Mismatch Y (ma X match) → cursor invariato
+ *   1. Match X+Y -> cursor advances by step*4
+ *   2. Mismatch X -> cursor unchanged (early-exit)
+ *   3. Mismatch Y (but X matches) -> cursor unchanged
  *   4. Step negativo (signed byte) → cursor decrementa
  *   5. Coordinate negative → asr.l 19 mantiene segno
- *   6. fun_1d242 sempre chiamato (anche quando skip)
+ *   6. fun_1d242 always called, even on skip
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -48,8 +48,8 @@ function readLong(s: GameState, off: number): number {
 }
 
 /**
- * Setup: posiziona entity in workRam con pos.X/pos.Y (long) e
- * cursor/base pointer; popola cursor[0..2] (X, Y, step signed byte).
+ * Setup: place entity in workRam with pos.X/pos.Y (long) and
+ * cursor/base pointer; populates cursor[0..2] (X, Y, step signed byte).
  */
 function setup(opts: {
   posX: number;
@@ -114,7 +114,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
       cursor: [5, 2, -3 & 0xff],
     });
     entityWaypointStep1D1EC(s, ENTITY_BASE_ABS);
-    // base + (-3)*4 = base - 12 (con wrap >>>0)
+    // base + (-3)*4 = base - 12 (with wrap >>>0).
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe((ARRAY_BASE - 12) >>> 0);
   });
 

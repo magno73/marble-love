@@ -1,11 +1,8 @@
 /**
  * Test objectInit2591A (FUN_0002591A) — smoke tests sull'orchestratore
- * di inizializzazione oggetto + scritture dirette.
  *
- * `FUN_0002591A` (154 byte) scrive 12 campi della struct A2 + 2 globals
  * @ 0x400696/0x400698, e orchestra 6 sub-jsr (default no-op qui).
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-object-init-2591a-parity.ts` (500/500 cases).
  */
 
@@ -21,7 +18,6 @@ import { emptyGameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Scrive long big-endian in workRam. */
 function writeU32BE(wr: Uint8Array, off: number, v: number): void {
   const u = v >>> 0;
   wr[off + 0] = (u >>> 24) & 0xff;
@@ -30,7 +26,6 @@ function writeU32BE(wr: Uint8Array, off: number, v: number): void {
   wr[off + 3] = u & 0xff;
 }
 
-/** Legge long big-endian da workRam. */
 function readU32BE(wr: Uint8Array, off: number): number {
   return (
     (((wr[off] ?? 0) << 24) |
@@ -41,7 +36,6 @@ function readU32BE(wr: Uint8Array, off: number): number {
   );
 }
 
-/** Legge word big-endian da workRam. */
 function readU16BE(wr: Uint8Array, off: number): number {
   return (((wr[off] ?? 0) << 8) | (wr[off + 1] ?? 0)) & 0xffff;
 }
@@ -52,13 +46,12 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill globals @ 0x400462, 0x400466 (long), 0x400472 (byte) con valori
-    // distintivi per verificare le letture.
+    // distinctive values to verify reads.
     writeU32BE(s.workRam, 0x462, 0xaabbccdd);
     writeU32BE(s.workRam, 0x466, 0x11223344);
     s.workRam[0x472] = 0x77;
 
-    // Pre-fill obj con sentinel non-zero per verificare clear.
+    // Pre-fill obj with non-zero sentinel to verify clear.
     for (let k = 0; k < 0x60; k++) s.workRam[objOff + k] = 0x55;
 
     objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined });
@@ -116,7 +109,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
       "fun_1B9CC",
       "fun_13966",
     ]);
-    // objPtr propagato a tutte le sub che lo richiedono
+    // objPtr propagated to all subs that require it.
     expect(calls[0]!.args).toEqual([objPtr]);
     expect(calls[1]!.args).toEqual([objPtr]);
     expect(calls[2]!.args).toEqual([0]); // arg long zero
@@ -124,7 +117,6 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(calls[4]!.args).toEqual([objPtr, 0]);
     expect(calls[5]!.args).toEqual([objPtr]);
 
-    // FUN_1CC62 ret è scritto in A2[+0x14]
     const objOff = objPtr - WORK_RAM_BASE;
     expect(readU32BE(s.workRam, objOff + 0x14)).toBe(0xdeadbeef);
   });
@@ -133,7 +125,6 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1200;
     expect(() => objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined })).not.toThrow();
-    // Globals comunque scritti
     expect(readU16BE(s.workRam, 0x696)).toBe(0xffff);
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
@@ -143,9 +134,8 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     const objPtr = WORK_RAM_BASE + 0x1300;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Sentinel sui vicini (offset NON toccati dai writes diretti).
+    // Sentinels on neighbors (offsets not touched by direct writes).
     //
-    // Mappa scritture: +0x00..03, +0x04..07, +0x08..0B, +0x0C..0F, +0x10..13,
     //   +0x14..17 (long), +0x1B (byte), +0x22..25, +0x26..29 (long),
     //   +0x36, +0x56, +0x58 (byte).
     // Liberi adiacenti: +0x18, +0x19, +0x1A, +0x1C, +0x1D, +0x21, +0x2A,
@@ -179,8 +169,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1400;
 
-    // Pre-imposta global che FUN_2591A scrive PRIMA di FUN_1BAB2
-    // (sentinel 0xFFFF @ 0x400696/0x400698) — la callback FUN_1BAB2 li deve
+    // (sentinel 0xFFFF @ 0x400696/0x400698) - callback FUN_1BAB2 must
     // vedere = 0xFFFF.
     let observedTileX = -1;
     let observedTileY = -1;

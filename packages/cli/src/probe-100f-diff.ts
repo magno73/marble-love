@@ -27,8 +27,8 @@ const warm = {
   colorRam: hex2bytes((groundTruth.snapshots[0]! as unknown as { colorRam: string }).colorRam, 0x800),
   videoScrollX: 0,
   videoScrollY: 0,
-  // Slapstic chip 103: a MAME f=12000 attract il bank attivo e' 1 (verified
-  // tramite `oracle/mame_slapstic_tap.lua` + data-match analysis).
+  // Slapstic chip 103: at MAME f=12000 attract, active bank is 1 (verified
+  // through `oracle/mame_slapstic_tap.lua` plus data-match analysis).
   slapsticBank: 1,
 };
 

@@ -12,7 +12,7 @@ const s = stateNs.emptyGameState();
 bootInit(s, rom, { warmState: warm });
 for (let i = 1; i <= 99; i++) tick(s, { rom, runMainLoopBody: true, p1X: 0xff, p1Y: 0xff, p2X: 0xff, p2Y: 0xff });
 const mw = hex2bytes(gt.snapshots[99]!.workRam, 0x2000);
-// per ogni 16-byte chunk in 0x700..0x77F mostra TS vs MAME
+// For each 16-byte chunk in 0x700..0x77F, show TS vs MAME.
 for (let base = 0x700; base < 0x780; base += 0x10) {
   const ts = Array.from(s.workRam.slice(base, base+0x10)).map(b=>b.toString(16).padStart(2,"0")).join(" ");
   const m = Array.from(mw.slice(base, base+0x10)).map(b=>b.toString(16).padStart(2,"0")).join(" ");

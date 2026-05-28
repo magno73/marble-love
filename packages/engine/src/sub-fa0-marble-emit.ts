@@ -1,71 +1,54 @@
 /**
- * sub-fa0-marble-emit.ts — patch chunk del main thread (FUN_FA0) che converte
- * i campi `obj0` / `slot pair @ 0x400A20` in coords MO (motion-object)
- * encoded nello spriteRAM per il marble player.
+ * sub-fa0-marble-emit.ts — main-thread patch chunk (FUN_FA0) that adjusts
+ * the marble player's encoded sprite-RAM coordinates.
  *
- * **Contesto**: `lateGameLogic26F3E` (FUN_26F3E) replica già il dispatcher
- * principale dei tipi entità (1/2/4/etc.), ma NON copre il path "marble player
- * 5-tile mosaic" che MAME emette in entries 4..8 dello sprite RAM. In MAME
- * frame 12000 → 12010 (demo gameplay attivo, marble in moto):
+ * MAME emits the marble as a 5-tile mosaic in sprite RAM entries 4..8. In MAME:
  *
  *   - obj0 @ 0x400018+0x24 (X long): `0x015aa6d5 → 0x01662b65` (Δ +0xb8490)
  *   - slot pair @ 0x400A20+0xC (X long): `0x0099e4d2 → 0x00a141fc` (Δ +0x75d2a)
  *   - slot pair @ 0x400A20+0x10 (Y long): `0x0107e17a → 0x010b5a24` (Δ +0x378aa)
  *
- * Risultato spriteRAM (MAME): le entries 4..8 (multi-tile marble body)
- * shiftano X di -15 px e Y di +/-1..3 px, mantenendo i tile codes (0x07,
- * 0x0f, 0x16, 0x19, 0x26 — animazione rotazione marble).
+ * Those values shift X by -15 px and Y by +/-1..3 px while preserving tile
+ * codes (0x07, 0x0f, 0x16, 0x19, 0x26 — marble rotation animation).
  *
- * **Strategia di replica**: invece di proiettare le coords assolute (che
- * richiederebbe la formula precisa MAME, non disponibile senza disasm completa
- * della camera projection), questo modulo applica un **delta-based shift**:
+ * **Replica strategy**: instead of projecting absolute coords,
  *
- *   1. Mantiene un "previous" snapshot di `slot pair x/y high-word` in scratch
- *      workRam @ `0x4007F0..0x4007F3` (regione zeroed riservata).
- *   2. Calcola `Δslot_x = slot_x_now - slot_x_prev` e analogamente per Y.
- *   3. Le entries 4..8 in spriteRAM hanno il loro coord field bit 5..13.
- *      Il delta espresso in pixel = `(Δslot_high) / scale`. Empiricamente
- *      MAME usa `scale = 2` (1 px screen ≈ 2 high-word units di slot pair).
- *   4. Per ogni entry in {4,5,6,7,8} (in entrambi i banchi A/B):
- *      a. Decodifica X corrente (`(word >> 5) & 0x1ff`).
- *      b. Aggiunge `-Δslot_x_pixel` (X invertito, marble si muove rispetto
- *         allo scrolling).
- *      c. Re-encode il bit 5..13, preserva flags (bit 15) e tile-count (bit 0..4).
- *      d. Stesso per Y con `+Δslot_y_pixel`.
+ *      workRam @ `0x4007F0..0x4007F3` (reserved zeroed region).
+ *   3. Entries 4..8 in spriteRAM store their coord field in bits 5..13.
+ *      Pixel delta = `(Δslot_high) / scale`. Empirically MAME uses
+ *      `scale = 2` (1 screen px ≈ 2 slot-pair high-word units).
+ *   4. For each entry in {4,5,6,7,8} across both A/B banks:
+ *      b. Add `-Δslot_x_pixel` (inverted X: marble moves relative to scroll).
+ *      c. Re-encode bits 5..13, preserving flags (bit 15) and tile count (bits 0..4).
+ *      d. Do the same for Y with `+Δslot_y_pixel`.
  *
  * **Side effect**:
- *   - `state.spriteRam`: bank A entries 4..8 word 0/2 (Y/X), bank B idem.
+ *   - `state.spriteRam`: bank A entries 4..8 word 0/2 (Y/X), same for bank B.
  *     Offsets: 0x008..0x011 (Y), 0x108..0x111 (X), 0x208..0x211 (Y B),
  *     0x308..0x311 (X B).
  *   - `state.workRam[0x7F0..0x7F3]`: cache previous slot_x/slot_y high-word.
- *     Questa regione è zeroed in MAME f12000+ (verificato in dump),
- *     unused da altri replicas.
+ *     unused by other replicas.
  *
- * **Wiring**: chiamata in `main-tick.ts` dopo `lateGameLogic26F3E` quando
  * `runMainLoopBody=true`.
  *
- * **Limitazioni**:
- *   - Non bit-perfect (non ricava dalla disasm precisa di FUN_FA0).
- *   - Approssima `scale = 2` (empirico da delta MAME f12000 → f12010).
- *   - Non gestisce per-tile offset (= rotazione/animazione del marble).
- *   - First call (slot_prev = 0) produce delta enorme; mitigato dal "skip
- *     se prev == 0" guard al primo tick.
+ * **Limitations**:
+ *   - Approximates `scale = 2` (empirical from MAME f12000 → f12010 delta).
+ *   - Does not handle per-tile offset (= marble rotation/animation).
+ *   - First call (slot_prev = 0) produces a huge delta; mitigated by the
+ *     "skip if prev == 0" guard on the first tick.
  *
- * **Riferimenti**:
+ * **References**:
  *   - `docs/video-system.md:76..94` — MO entry layout (Y=word0 bit5-13,
  *     X=word2 bit5-13).
  *   - `tools/disasm/fa0_disasm.txt` — main thread loop FUN_FA0 (3.3KB).
- *   - `late-game-logic-26f3e.ts` — dispatcher type 1/2/4 (gestisce ent[0,1]
- *     ma NON le tile interne del marble).
+ *   - `late-game-logic-26f3e.ts` — dispatcher type 1/2/4 (handles ent[0,1]
+ *     but not the marble's internal tiles).
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-// Slot pair @ 0x400A20 mantenuta come riferimento storico in commento sotto:
-// in MAME f12000+ slot.x_high @ 0xa2c viene aggiornata bit-perfect da
-// helper1BC88 (sub di helper121B8). Senza wire di quella chain, slot resta
-// statica → usiamo obj0.x/y direttamente come source per il delta.
+// Static camera fallback: use obj0.x/y directly as the delta source.
 
 /**
  * Scratch workRam offsets for previous-frame snapshot.
@@ -76,13 +59,11 @@ const PREV_SLOT_X_OFF = 0x7f0;
 const PREV_SLOT_Y_OFF = 0x7f2;
 const PREV_VALID_OFF  = 0x7f4;  // byte: 0=invalid (first tick), 1=valid
 
-/** Marble player MO entry slot indices (7 entries: 2 sfera + 5 ombra). */
-// Verificato su MAME f12000 (stride 2 byte / 1 word per field):
-//   entries 2,3: sfera principale (tile 5 + tile 3, ognuno 1x2 = 8x16 px,
-//                affiancati → sfera 16x16 visibile bianca/cromata)
-//   entries 4..8: ombra/shadow del marble (5 sub-tile codes 0x16/0x26/
-//                 0x0f/0x19/0x07, color=0 = nero/grigio)
-//   Tutti e 7 muovono insieme in MAME demo gameplay come unico marble.
+/** Marble player MO entry slot indices (7 entries: 2 sphere + 5 shadow). */
+//   entries 2,3: main sphere (tile 5 + tile 3, each 1x2 = 8x16 px,
+//                side-by-side → visible white/chrome 16x16 sphere)
+//   entries 4..8: marble shadow (5 sub-tile codes 0x16/0x26/
+//                 0x0f/0x19/0x07, color=0 = black/gray)
 const MARBLE_ENTRY_FIRST = 2;
 const MARBLE_ENTRY_COUNT = 7;
 
@@ -118,63 +99,40 @@ function wwBE_spriteram(state: GameState, off: number, val: number): void {
 }
 
 /**
- * Replica del chunk FUN_FA0 che proietta `slot pair` (marble world position)
+ * Replica of FUN_FA0 chunk that projects `slot pair` (marble world position)
  * nel display-list MO sprite del marble player.
  *
  * **Algoritmo (delta-based)**:
- *   1. Legge `slot pair x/y high-word` correnti.
- *   2. Compara con snapshot precedente in `workRam[0x7F0..0x7F3]`.
- *   3. Se prev valid: calcola `Δx_px = -ΔslotX / 2`, `Δy_px = ΔslotY / 2`.
  *   4. Applica delta a entries marble (slot 4..8) in entrambi i banchi.
- *   5. Aggiorna snapshot prev.
  *
- * Il segno di Δx è invertito perché il marble si muove rispetto al
- * playfield che scrolla in direzione opposta (camera follows marble:
- * camera_x ↑ → marble_screen_x ↓ se viewport-fixed).
+ * playfield that scrolls in the opposite direction (camera follows marble:
+ * camera_x up -> marble_screen_x down if viewport-fixed).
  *
- * **Idempotency**: se chiamato due volte nello stesso frame senza tick
- * intermedio, la seconda chiamata avrà `Δ = 0` e nessun side effect.
  *
- * @param state  GameState (legge workRam, modifica workRam[0x7F0..0x7F4]
  *               + spriteRam in-place).
  * @param rom    RomImage (riservato a future extensions ROM-driven).
  */
 export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
   void rom;  // future: ROM-driven per-tile offsets
 
-  // Gate rimosso: gameMode=1 sia in title sia in demo gameplay (verificato
-  // su MAME dump multi-frame). Priorità movement visibile attivata sempre
-  // quando runMainLoopBody=true.
 
-  // 1. Legge coords sorgente correnti.
-  // FALLBACK: la slot pair @ 0x400A20 viene aggiornata bit-perfect da
-  // helper1BC88 (chiamata da helper121B8) che attualmente non wireremo
-  // per evitare drift secondario. Quando slot_x è statica nei multi-frame
   // dump MAME, leggiamo direttamente obj0.x/y come fonte del delta.
-  // Risultato visivo: il marble segue l'integrazione di velocity
-  // dell'engine, anche se la projection camera-relative non è bit-perfect.
   //
-  // Decision rule: la slot_pair viene aggiornata bit-perfect SOLO se
-  // helper121B8 è wirato. Senza wire (= scenario attuale), slot_pair resta
-  // statica → usiamo SEMPRE obj0 come source per il delta.
   // POSITION-ABSOLUTE projection (replica MAME FUN_FA0 camera transform).
   //
-  // Derivata empiricamente dal warmstate f12000:
+  // Derived empirically from warm state f12000:
   //   obj0.x_long = 0x015aa6d5 → cluster screen-x ≈ 95
   //   obj0.y_long = 0x011b4bd0 → cluster screen-y ≈ 68
   //
   //   0x015aa6d5 >> 18 = 0x56 = 86 → screen_x = 86 - (-9) = 95 ✓
   //   0x011b4bd0 >> 18 = 0x46 = 70 → screen_y = 70 - 2 = 68 ✓
   //
-  // Sign inverted su X: in MAME il marble world-x cresce → camera segue →
-  // su display, oggetti scenari escono a sinistra e marble visivamente
-  // si sposta DESTRA→SINISTRA (per breve tratto) → poi reset al spawn.
-  // Nostra empirical (warm f12000→f12010 +10 frame):
-  //   obj.x_long 0x015aa6d5 → 0x01662b65 (Δ+0xb8490, ~+45/f via >>18)
-  //   marble cluster x 95 → 80 (Δ-15)
-  //   → ratio ≈ -1/3 px / +1 unit (>>18)
+  // X sign is inverted: in MAME, marble world-x increases as the camera follows.
+  // Empirical sample from warm f12000 to f12010 (+10 frames):
+  //   obj.x_long 0x015aa6d5 -> 0x01662b65 (+0xb8490, ~+45/f via >>18)
+  //   marble cluster x 95 -> 80 (-15)
+  //   ratio ~= -1/3 px per +1 unit (>>18)
   //
-  // Quindi: screen_x = -(obj.x_long >> 18) + offset, clamped to 9-bit.
   const objXLong = (((state.workRam[0x24] ?? 0) << 24) |
                     ((state.workRam[0x25] ?? 0) << 16) |
                     ((state.workRam[0x26] ?? 0) << 8) |
@@ -196,26 +154,22 @@ export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
   const centerX = (SCREEN_X_BIAS - objXProj) & 0x1ff;
   const centerY = (objYProj + SCREEN_Y_BIAS) & 0x1ff;
 
-  // Per-entry offset relativi al centro cluster (95, 68) — preservati dal
+  // Per-entry offsets relative to cluster center (95, 68), preserved from the
   // warmstate MAME f12000 (entries 2..8):
-  //   entry 2 (91, 65) → (-4, -3)   ← sfera sinistra
-  //   entry 3 (99, 65) → (+4, -3)   ← sfera destra
-  //   entry 4 (95, 69) → ( 0, +1)   ← ombra tile #0x16
-  //   entry 5 (95, 68) → ( 0,  0)   ← ombra tile #0x26
-  //   entry 6 (99, 62) → (+4, -6)   ← ombra tile #0x0f
-  //   entry 7 (102,69) → (+7, +1)   ← ombra tile #0x19
-  //   entry 8 (91, 70) → (-4, +2)   ← ombra tile #0x07
+  //   entry 4 (95, 69) → ( 0, +1)   ← shadow tile #0x16
+  //   entry 5 (95, 68) → ( 0,  0)   ← shadow tile #0x26
+  //   entry 6 (99, 62) → (+4, -6)   ← shadow tile #0x0f
+  //   entry 7 (102,69) → (+7, +1)   ← shadow tile #0x19
+  //   entry 8 (91, 70) → (-4, +2)   ← shadow tile #0x07
   const ENTRY_OFFSETS: ReadonlyArray<readonly [number, number]> = [
-    [-4, -3], [4, -3],            // sfera (entries 2-3)
-    [0, 1], [0, 0], [4, -6], [7, 1], [-4, 2],  // ombra (entries 4-8)
+    [-4, -3], [4, -3],            // sphere (entries 2-3)
+    [0, 1], [0, 0], [4, -6], [7, 1], [-4, 2],  // shadow (entries 4-8)
   ];
 
-  // Update cache for compatibility (vecchio delta-based code path).
   wwBE_workram(state, PREV_SLOT_X_OFF, objXProj);
   wwBE_workram(state, PREV_SLOT_Y_OFF, objYProj);
   state.workRam[PREV_VALID_OFF] = 1;
 
-  // 5. Scrive POSITION ABSOLUTE alle 5 entries marble nei 2 banchi.
   for (let bank = 0; bank < 2; bank++) {
     const bankBase = bank * MO_BANK_B_OFFSET;
     for (let i = 0; i < MARBLE_ENTRY_COUNT; i++) {
@@ -224,7 +178,6 @@ export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
       const xOff = bankBase + MO_BANK_X_OFF + slot * 2;
       const codeOff = bankBase + MO_BANK_CODE_OFF + slot * 2;
 
-      // Skip slots vuoti (non ancora popolati da dispatch).
       if (rwBE_spriteram(state, codeOff) === 0) continue;
 
       const [dx, dy] = ENTRY_OFFSETS[i] ?? [0, 0];

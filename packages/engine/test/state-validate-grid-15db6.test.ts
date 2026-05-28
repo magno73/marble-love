@@ -1,7 +1,7 @@
 /**
  * state-validate-grid-15db6.test.ts — smoke per FUN_15DB6.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `cli/src/test-state-validate-grid-15db6-parity.ts` (500/500).
  */
 
@@ -172,7 +172,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     const currentPtr = 0x00401500;
     const so = structPtr - WORK_RAM_BASE;
 
-    // field_x = -3 << 19 (signed); asr.l 19 = -3 long → byte sign-ext deve = -3 (0xFD)
+    // field_x = -3 << 19 (signed); asr.l 19 = -3 long -> byte sign-ext must be -3 (0xFD).
     const fx = (-3 << ASR_COUNT) | 0;
     const fy = (-1 << ASR_COUNT) | 0;
     writeLong(s, structPtr + FIELD_X_OFF, fx >>> 0);
@@ -194,7 +194,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(f15e24Args!.p).toBe(structPtr);
     expect(f15e24Args!.f).toBe(1);
 
-    // Sanity check: i nostri valori di asr matchano
+    // Sanity check: our asr values match.
     expect(asrL(fx, ASR_COUNT)).toBe(-3);
     expect(asrL(fy, ASR_COUNT)).toBe(-1);
   });

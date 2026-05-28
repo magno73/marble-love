@@ -1,10 +1,10 @@
 /**
- * slot-array-init.ts — bulk init delle slot array di oggetti.
+ * slot-array-init.ts - bulk init for object slot arrays.
  *
- * Replica `FUN_00010392` — chiamato una volta dal main loop (FUN_117B2)
- * via FUN_10504 al boot, prima dell'inizio del game state machine.
+ * Replica `FUN_00010392`; called once by the main loop (FUN_117B2) through
+ * FUN_10504 at boot, before the game-state machine starts.
  *
- * Inizializza 6 slot array a indirizzi diversi:
+ * Initializes six slot arrays at different addresses:
  *
  *   array  base       count  stride  bytes_per_slot_init
  *   1      0x4019F8     10    0x38   2 (offset 0x18, 0x19)
@@ -14,15 +14,15 @@
  *   5      0x4009A4      2    0x7C   2
  *   6      0x400A9C     25    0x56   12 (offset 0x18, 0x19, 0x0C..0xF, 0x10..0x13, 0x1F)
  *
- * Per ogni slot, scrive:
+ * For each slot, writes:
  *   - byte 0x18 = 0
  *   - byte 0x19 = index (0..count-1)
- *   - (solo array 6) clr.l offset 0x10 e 0x0C, clr.b offset 0x1F
+ *   - (array 6 only) clr.l offsets 0x10 and 0x0C, clr.b offset 0x1F
  */
 
 import type { GameState } from "./state.js";
 
-/** Sub-init di una slot array: clear byte 0x18, set byte 0x19 = index. */
+/** Sub-init for one slot array: clear byte 0x18, set byte 0x19 = index. */
 function initSlotsBasic(
   state: GameState,
   baseAddr: number,
@@ -37,7 +37,7 @@ function initSlotsBasic(
   }
 }
 
-/** Sub-init di array 6 (0x400A9C): basic + clr longs 0x10/0x0C + clr byte 0x1F. */
+/** Sub-init for array 6 (0x400A9C): basic + clr longs 0x10/0x0C + clr byte 0x1F. */
 function initSlotsExtended(state: GameState): void {
   const baseOff = 0x400a9c - 0x400000;
   const COUNT = 25;
@@ -58,16 +58,16 @@ function initSlotsExtended(state: GameState): void {
     state.workRam[slotOff + 0x0f] = 0;
     // clr.b (0x1F, A1)
     state.workRam[slotOff + 0x1f] = 0;
-    // move.b D1b, (0x19, A0) — A0 = pre-incremento di A1
+    // move.b D1b, (0x19, A0) - A0 is the pre-increment value of A1.
     state.workRam[slotOff + 0x19] = i;
   }
 }
 
 /**
- * Replica `FUN_00010392` — bulk init di 6 slot array.
+ * Replica `FUN_00010392` - bulk init for six slot arrays.
  *
- * Va chiamato una volta al boot (parte di `bootInit`) per allinearsi al
- * comportamento del binario, che esegue questa init prima del primo IRQ4.
+ * Call once at boot (part of `bootInit`) to match the binary, which runs this
+ * init before the first IRQ4.
  */
 export function slotArrayBulkInit(state: GameState): void {
   initSlotsBasic(state, 0x4019f8, 10, 0x38);

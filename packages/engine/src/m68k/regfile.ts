@@ -1,39 +1,34 @@
 /**
- * regfile.ts — Mini register file M68010 + helper per le 8 istruzioni di
- * stack ABI usate dal body del main loop di Marble Madness:
- *   LINK, UNLK, MOVEM.L reg→-(An), MOVEM.L (An)+→reg,
- *   MOVE.L/W (d16,An)↔reg, JSR <ea>, RTS, ADDQ.L #n,SP.
+ * regfile.ts - small M68010 register file plus helpers for the stack ABI
+ * instructions used by the Marble Madness main-loop body:
+ *   LINK, UNLK, MOVEM.L reg -> -(An), MOVEM.L (An)+ -> reg,
+ *   MOVE.L/W (d16,An) <-> reg, JSR <ea>, RTS, ADDQ.L #n,SP.
  *
- * Scopo: chiudere il drift "stack residue" di ~172B nel cluster
- * 0x1D40..0x1E7F del workRam, dove le sub TS-port leggono/scrivono il
- * frame di stack a offset coerenti con il prologo/epilogo emesso da GCC
- * per il body ROM. Le istruzioni qui replicano la semantica architectural
- * Motorola 68010 quando A7 è allineato (caso reale del gioco — l'address
- * error path NON ci serve, lo gestiamo come no-op a livello validation).
+ * Purpose: close the "stack residue" drift in the 0x1D40..0x1E7F work RAM
+ * cluster. TS ports read/write stack-frame offsets that must match the
+ * prologue/epilogue emitted by GCC in the ROM body. These helpers replicate
+ * Motorola 68010 architectural semantics for aligned A7, which is the real
+ * Marble Madness path.
  *
- * Architettura:
- *  - `M68kRegFile`: data/address registers + PC + SR + USP/SSP. A7 attivo
- *    è memorizzato in `a[7]`; al cambio supervisor/user lo swap è
- *    responsabilità del caller (per Marble Madness body siamo sempre in
- *    user mode "stabile" → swap non richiesto qui).
- *  - `MemBus`: interface minimale read/write 8/16/32 bit. Tom Harte test
- *    bus = Map<u32, u8> con address mask 24-bit (m68k bus reale).
- *  - Le 8 istruzioni sono funzioni pure (rf, bus, params) → mutano stato.
- *    CCR/SR NON viene toccato (le 8 istruzioni stack ABI non scrivono
- *    flags). Il PC viene mantenuto coerente con la convenzione Tom Harte
- *    "next prefetch address" = start_pc + length_in_bytes.
+ * Architecture:
+ *  - `M68kRegFile`: data/address registers + PC + SR + USP/SSP. Active A7 is
+ *    stored in `a[7]`; supervisor/user stack swapping is the caller's job.
+ *  - `MemBus`: minimal 8/16/32-bit bus. Tom Harte tests use a Map<u32, u8>
+ *    with a 24-bit address mask, matching the real m68k bus.
+ *  - Helpers are pure functions over explicit state. CCR/SR is untouched
+ *    because these stack ABI instructions do not write flags.
  *
- * Riferimenti Musashi (MIT) `m68k_in.c` / `m68kcpu.c`:
- *  - link 16: cicli 16 (M68010 = M68000), m68k_op_link_16.
- *  - unlk:    12 cicli, m68k_op_unlk_32.
- *  - movem.l (predec):  8 + 8 × regCount, mask reversed.
- *  - movem.l (postinc): 12 + 8 × regCount, mask normale.
- *  - jsr (mem):  base 12 + EA extra (vedi cycle-table.ts).
- *  - rts:        16 cicli.
- *  - addq.l #n,An: 8 cicli (special-case: niente flag update con dst=An).
+ * Musashi references (MIT) `m68k_in.c` / `m68kcpu.c`:
+ *  - link 16: 16 cycles (M68010 = M68000), m68k_op_link_16.
+ *  - unlk:    12 cycles, m68k_op_unlk_32.
+ *  - movem.l (predec):  8 + 8 x regCount, reversed mask.
+ *  - movem.l (postinc): 12 + 8 x regCount, normal mask.
+ *  - jsr (mem):  base 12 + EA extra (see cycle-table.ts).
+ *  - rts:        16 cycles.
+ *  - addq.l #n,An: 8 cycles; An destinations do not update flags.
  *
- * NOTA: PC final per LINK/MOVEM/MOVE è `start_pc + bytes_consumed`
- * (allineato all'opcode + ext words). Per JSR/RTS è il target.
+ * Final PC for LINK/MOVEM/MOVE is `start_pc + bytes_consumed`. For JSR/RTS it
+ * is the target.
  */
 
 import type { u32, u16, i16 } from "../wrap.js";
@@ -42,25 +37,24 @@ import {
   sext_16_32, as_u16, raw,
 } from "../wrap.js";
 
-// ─── Register file ────────────────────────────────────────────────────────
+// Register file.
 
 export interface M68kRegFile {
-  /** D0..D7 (8 × u32). */
+  /** D0..D7 (8 x u32). */
   readonly d: Uint32Array;
-  /** A0..A6 + A7 (SP attivo). A7 viene swappato con USP/SSP al cambio modo. */
+  /** A0..A6 + active A7. A7 is swapped with USP/SSP on mode changes. */
   readonly a: Uint32Array;
-  /** Program counter (32-bit; il bus mask a 24-bit). */
+  /** Program counter (32-bit; the bus masks addresses to 24 bits). */
   pc: u32;
-  /** Status register (T1 S — IPM • • • X N Z V C). Le 8 istruzioni stack
-   * ABI non lo modificano. */
+  /** Status register (T1 S - IPM X N Z V C). Stack ABI helpers do not modify it. */
   sr: u16;
-  /** User stack pointer "shadow" (= A7 quando SR.S=0). */
+  /** User stack pointer shadow (= A7 when SR.S=0). */
   usp: u32;
-  /** Supervisor stack pointer "shadow" (= A7 quando SR.S=1). */
+  /** Supervisor stack pointer shadow (= A7 when SR.S=1). */
   ssp: u32;
 }
 
-/** Crea un regfile zeroed. */
+/** Creates a zeroed register file. */
 export function createRegFile(): M68kRegFile {
   return {
     d: new Uint32Array(8),
@@ -92,7 +86,7 @@ function push_l(rf: M68kRegFile, bus: MemBus, value: u32): void {
   bus.write32(sp, value);
 }
 
-/** pop.l: read32(A7), A7 += 4 → ritorna il valore. */
+/** pop.l: read32(A7), then A7 += 4 and return the value. */
 function pop_l(rf: M68kRegFile, bus: MemBus): u32 {
   const sp = as_u32(rf.a[7] ?? 0);
   const v = bus.read32(sp);
@@ -108,12 +102,11 @@ function pop_l(rf: M68kRegFile, bus: MemBus): u32 {
  * Sequenza Motorola PRM:
  *   1. SP -= 4; M[SP] := An       (push An)
  *   2. An := SP
- *   3. SP += sext_16_32(disp)     (disp solitamente negativo → frame locale)
+ *   3. SP += sext_16_32(disp)     (disp is usually negative for a local frame)
  *
- * NB: se `an == 7`, il valore di An *pushato* è quello PRIMA del decrement,
- * cioè SP originale. Musashi `m68k_op_link_16` riflette esattamente questa
- * sequenza (`PUSH_32(AY); AY = REG_A[7]; REG_A[7] += MAKE_INT_16(...)`).
- * Cicli: 16. CCR: invariato.
+ * If `an == 7`, the pushed An value is the original SP before decrement.
+ * Musashi `m68k_op_link_16` follows the same sequence.
+ * Cycles: 16. CCR: unchanged.
  */
 export function link_w(
   rf: M68kRegFile,
@@ -121,10 +114,10 @@ export function link_w(
   an: number,
   disp: i16,
 ): void {
-  // Push An (valore corrente, incluso il caso an=7 dove pushiamo SP-pre-decrement)
+  // Push current An, including the an=7 case where this is pre-decrement SP.
   const anVal = as_u32(rf.a[an] ?? 0);
   push_l(rf, bus, anVal);
-  // An := SP (SP è già decrementato di 4)
+  // An := SP, after the 4-byte decrement.
   rf.a[an] = rf.a[7] ?? 0;
   // SP += sext(disp)
   const newSp = u32_add(as_u32(rf.a[7] ?? 0), as_u32(raw(sext_16_32(as_u16(raw(disp) & 0xffff)))));
@@ -140,10 +133,10 @@ export function link_w(
  *   1. SP := An
  *   2. An := M[SP]; SP += 4
  *
- * Se `an == 7`, il primo assegnamento è no-op (SP=SP), poi An (=A7) viene
- * sovrascritto dal valore poppato → SP finale = popped_value, NON +4.
+ * If `an == 7`, the first assignment is a no-op, then A7 is overwritten by the
+ * popped value. Final SP is popped_value, not popped_value + 4.
  * Musashi `m68k_op_unlk_32`: `REG_A[7] = AY; AY = m68ki_pull_32();`.
- * Cicli: 12. CCR: invariato.
+ * Cycles: 12. CCR: unchanged.
  */
 export function unlk(rf: M68kRegFile, bus: MemBus, an: number): void {
   rf.a[7] = rf.a[an] ?? 0;
@@ -156,7 +149,7 @@ export function unlk(rf: M68kRegFile, bus: MemBus, an: number): void {
 /**
  * MOVEM.L <list>,-(An): predecrement mode.
  *
- * CONVENZIONE MASK (predec mode): la mask è "reversed".
+ * Predecrement mask convention: the mask is reversed.
  *   bit 0  = A7 (write first, at highest address)
  *   bit 1  = A6
  *   ...
@@ -166,21 +159,18 @@ export function unlk(rf: M68kRegFile, bus: MemBus, an: number): void {
  *   ...
  *   bit 15 = D0 (write last, at lowest address)
  *
- * Algoritmo:
+ * Algorithm:
  *   for i in 0..15:
  *     if mask & (1 << i):
  *       An -= 4
  *       reg = (i < 8) ? A[7-i] : D[15-i]
  *       M[An] := reg
  *
- * EDGE CASE M68000: se `an` è uno dei registri inclusi nella lista (es.
- * `movem.l d0-a7,-(a7)`), il valore di An *scritto* è quello INIZIALE (prima
- * del decrement). Sul 68010 questa quirk è stata "fixata": viene scritto il
- * valore *decrementato*. Tom Harte testa M68000 (decoder dice "m68000.json"),
- * quindi seguiamo la semantica M68000. Per Marble Love (M68010) usiamo
- * comunque questa funzione perché i compilatori GCC m68k non emettono mai
- * `movem.l ax,-(ax)` con ax in lista — il path quirk non si manifesta.
- * Cicli M68010: 8 + 8 × regCount.
+ * M68000 edge case: if `an` is included in the register list, the written An
+ * value is the initial value before decrement. The 68010 fixed this quirk, but
+ * Tom Harte's fixture is M68000-named, so this helper follows that behavior.
+ * Marble's GCC output does not emit the affected `movem.l ax,-(ax)` form.
+ * M68010 cycles: 8 + 8 x regCount.
  */
 export function movem_l_pd(
   rf: M68kRegFile,
@@ -189,7 +179,7 @@ export function movem_l_pd(
   an: number,
 ): void {
   const m = raw(mask);
-  // Salva il valore iniziale di An per la quirk M68000 (vedi sopra).
+  // Preserve initial An for the M68000 quirk above.
   const anInitial = as_u32(rf.a[an] ?? 0);
   let addr = as_u32(rf.a[an] ?? 0);
   for (let i = 0; i < 16; i++) {
@@ -199,8 +189,7 @@ export function movem_l_pd(
       if (i < 8) {
         // Address registers, reverse order: i=0→A7, i=1→A6, ..., i=7→A0
         const aIdx = 7 - i;
-        // M68000 quirk: se aIdx == an (stiamo scrivendo An stesso),
-        // usa il valore INIZIALE (pre-decrement).
+        // M68000 quirk: when writing An itself, use the initial value.
         regVal = (aIdx === an) ? anInitial : as_u32(rf.a[aIdx] ?? 0);
       } else {
         // Data registers, reverse: i=8→D7, i=9→D6, ..., i=15→D0
@@ -234,8 +223,9 @@ export function movem_l_pd(
  *       reg := M[An]
  *       An += 4
  *
- * EDGE CASE: se An è in lista, il register file dopo è dominato dal pop
- * (l'ultimo valore caricato). Cicli M68010: 12 + 8 × regCount.
+ * Edge case: if An is in the list, the register file after the instruction is
+ * dominated by the pop, i.e. the last loaded value. M68010 cycles: 12 + 8 x
+ * regCount.
  */
 export function movem_l_postinc(
   rf: M68kRegFile,
@@ -259,7 +249,7 @@ export function movem_l_postinc(
   rf.a[an] = raw(addr);
 }
 
-// ─── MOVE.L/W con (d16,An) ────────────────────────────────────────────────
+// ─── MOVE.L/W with (d16,An) ───────────────────────────────────────────────
 
 /** move.l (d16,An),Dn */
 export function move_l_disp_to_reg(
@@ -279,19 +269,19 @@ export function move_l_reg_to_disp(
   bus.write32(addr, as_u32(rf.d[dn] ?? 0));
 }
 
-/** move.w (d16,An),Dn — solo low word di Dn viene scritta. */
+/** move.w (d16,An),Dn - only the low word of Dn is written. */
 export function move_w_disp_to_reg(
   rf: M68kRegFile, bus: MemBus,
   disp: i16, an: number, dn: number,
 ): void {
   const addr = u32_add(as_u32(rf.a[an] ?? 0), as_u32(raw(sext_16_32(as_u16(raw(disp) & 0xffff)))));
   const w = bus.read16(addr);
-  // MOVE.W (mode src=mem, dst=Dn): low word aggiornata, high word INVARIATA.
+  // MOVE.W (src=mem, dst=Dn): low word updated, high word unchanged.
   const hi = u32_and(as_u32(rf.d[dn] ?? 0), as_u32(0xffff0000));
   rf.d[dn] = raw(u32_or(hi, as_u32(raw(w) & 0xffff)));
 }
 
-/** move.w Dn,(d16,An) — scrive la low word di Dn. */
+/** move.w Dn,(d16,An) - writes the low word of Dn. */
 export function move_w_reg_to_disp(
   rf: M68kRegFile, bus: MemBus,
   dn: number, disp: i16, an: number,
@@ -305,16 +295,11 @@ export function move_w_reg_to_disp(
 /**
  * JSR target: push PC (= start_pc + length_of_instruction), PC := target.
  *
- * NOTA: per la validation Tom Harte, il "PC pushato" è `start_pc + 2 +
- * ea_extension_words`. Tom Harte stores il "next prefetch address" come
- * PC final → coincide con `target` (più exactly, target — anche se Musashi
- * ha un quirk: il PC final dopo JSR è `target + 2` perché c'è un prefetch
- * already done. Da test JSR_PC sample: PC final = 3356502262 = 0xC8126D F6
- * = qualcosa. Non importante per la nostra validation perché filtreremo
- * tests con address error. Per regfile pulito: PC := target.
+ * Tom Harte validation treats the pushed PC as
+ * `start_pc + 2 + ea_extension_words`. For the clean register model here,
+ * PC becomes `target`; address-error fixtures are filtered elsewhere.
  *
- * Qui passiamo `pushedPc` esplicito (il caller calcola in base alle ext
- * words consumate dall'EA).
+ * `pushedPc` is explicit so the caller can account for EA extension words.
  */
 export function jsr_abs(
   rf: M68kRegFile, bus: MemBus,
@@ -326,7 +311,7 @@ export function jsr_abs(
 
 /**
  * RTS: PC := pop.l().
- * Cicli: 16. CCR: invariato.
+ * Cycles: 16. CCR: unchanged.
  */
 export function rts(rf: M68kRegFile, bus: MemBus): void {
   const newPc = pop_l(rf, bus);
@@ -334,12 +319,11 @@ export function rts(rf: M68kRegFile, bus: MemBus): void {
 }
 
 /**
- * ADDQ.L #n,An: An += n. NON setta flag (quirk: ADDQ con dst=An ignora CCR).
- * Per SP (An = A7) usiamo direttamente A7.
- * n ∈ {1..8} (encoded come 0 = 8).
- * Cicli: 8.
+ * ADDQ.L #n,An: An += n. Does not set flags (ADDQ with An destination ignores CCR).
+ * For SP (An = A7), use A7 directly.
+ * n in {1..8} (encoded as 0 = 8).
+ * Cycles: 8.
  */
 export function addq_l_sp(rf: M68kRegFile, n: number): void {
   rf.a[7] = raw(u32_add(as_u32(rf.a[7] ?? 0), as_u32(n)));
 }
-

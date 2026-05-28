@@ -3,9 +3,6 @@
  * test-alpha-ram-boot-init-ed6-parity.ts — differential FUN_ED6 vs
  * `alphaRamBootInitED6`.
  *
- * `FUN_00000ED6` (148 byte) inizializza la alpha RAM (0xA03000..0xA03FFF)
- * leggendo solo da una tabella ROM @ 0x6928 (3 × 0x54 = 252 byte). La
- * funzione NON legge la alpha RAM, ma sovrascrive in modo selettivo:
  *   - 30 row × 84 byte (loop 1, ROM-driven)
  *   - 34 word a offset 0x008..0x04B (loop 2, costante 0x2000)
  *   - 34 word a offset 0xE88..0xECB (loop 3, costante 0x2000)
@@ -13,15 +10,9 @@
  * resta com'era.
  *
  * Strategia di test:
- *   Per ogni caso N:
- *     1. Pre-fill alpha RAM [0xA03000..0xA04000) con un pattern random
+ *     1. Pre-fill alpha RAM [0xA03000..0xA04000) with a random pattern
  *        (sincronizzato fra binary e TS).
- *     2. callFunction(0xED6, [])     ; binario scrive in-place
- *     3. alphaRamBootInitED6(state)  ; TS scrive in-place
- *     4. Compara byte-by-byte tutti i 0x1000 byte.
  *
- * Se la funzione TS è bit-perfect, ogni byte deve combaciare (incluso il
- * "skip range" che dipende dal pattern iniziale).
  *
  * Uso: npx tsx packages/cli/src/test-alpha-ram-boot-init-ed6-parity.ts [N]
  */
@@ -80,16 +71,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Genera pattern di pre-fill, deterministico per ogni caso.
-    // Pattern-driven primi casi per coprire bordi:
-    //   0: tutti 0xFF
-    //   1: tutti 0x55
-    //   2: tutti 0xAA
-    //   3: tutti 0x01
-    //   4: tutti 0x00 (no-op input → output dipende solo dalla ROM)
     //   5: incrementing pattern (j & 0xFF)
-    //   6: tutti 0xFE
-    //   7: tutti 0xCC
     //   8..N: random uniforme
     const pattern = new Uint8Array(ALPHA_RAM_SIZE);
     if (i === 0) pattern.fill(0xff);

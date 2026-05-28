@@ -2,7 +2,7 @@
   "name": "marble-love",
   "private": true,
   "version": "0.0.1",
-  "description": "Reimplementazione TypeScript di Marble Madness (Atari 1984), differential testing vs MAME.",
+  "description": "TypeScript reimplementation of Marble Madness (Atari 1984), differentially tested against MAME.",
   "license": "MIT",
   "type": "module",
   "workspaces": [
@@ -31,7 +31,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.59.1",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.7"
   },
   "engines": {
     "node": ">=22"

@@ -2,8 +2,6 @@
 /**
  * test-thunk-10042-parity.ts — differential FUN_00010042 vs thunk10042.
  *
- * Chiama il trampolino a 0x10042 nel binario (`jsr 0x10042` → `jmp.l 0x28468`)
- * e confronta l'output con `thunk10042` (TS). Verifica le stesse grandezze
  * di test-trackball-clamp-flags-28468-parity ma entrando dal thunk address.
  *
  * Uso: npx tsx packages/cli/src/test-thunk-10042-parity.ts [N]
@@ -26,7 +24,6 @@ import {
 } from "./binary-oracle-lib.js";
 import type { CpuSession } from "./binary-oracle-lib.js";
 
-/** Indirizzo del thunk nel binario — ciò che si testa qui. */
 const FUN_ADDR = 0x00010042;
 
 interface Inputs {
@@ -231,7 +228,6 @@ async function main(): Promise<void> {
     applyToBinary(cpu, tc);
     applyToTs(state, tc);
 
-    // Chiama il thunk address nel binario (0x10042), non direttamente 0x28468
     const r = callFunction(cpu, FUN_ADDR, []);
     const retSigned = r.d0 | 0;
     const bin = snapshotBinary(cpu, retSigned);

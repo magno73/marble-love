@@ -1,10 +1,10 @@
 /**
  * mo-grid-init-2404.test.ts — smoke + corner case di FUN_2404.
  *
- * Validano il comportamento bit-perfect senza richiedere il binario originale:
- *   1. Un caso "produzione" (arg1 = 0): scrive 56 slot al bank 0, MMIO = 0x0000.
- *   2. Un caso non-zero (arg1 = 3): bank offset = 0x600, MMIO = 0x18, code wrap.
- *   3. Un caso edge (arg1 = 0x10000): MMIO long shift wrap.
+ * Validate bit-perfect behavior without requiring the original binary:
+ *   1. A production-style case (arg1 = 0): writes 56 slots to bank 0, MMIO = 0x0000.
+ *   2. A non-zero case (arg1 = 3): bank offset = 0x600, MMIO = 0x18, code wrap.
+ *   3. An edge case (arg1 = 0x10000): MMIO long shift wrap.
  */
 
 import { describe, it, expect } from "vitest";
@@ -24,11 +24,11 @@ import {
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
-/** Fabbrica una ROM "minima" coi soli campi che FUN_2404 legge:
- *   - tabella Y @ 0x2468 (56 word BE)
- *   - tabella X @ 0x24D8 (56 word BE)
+/** Builds a minimal ROM with only the fields FUN_2404 reads:
+ *   - Y table @ 0x2468 (56 BE words)
+ *   - X table @ 0x24D8 (56 BE words)
  *   - word code-bias @ 0x1006A
- * Tutti i restanti byte = 0. Le tabelle sono quelle reali dalla ROM marble. */
+ * All remaining bytes are zero. The tables are real values from the Marble ROM. */
 function makeRomFixture() {
   const rom = emptyRomImage();
 
@@ -43,7 +43,7 @@ function makeRomFixture() {
     rom.program[TABLE_Y_ROM_ADDR + i * 2 + 1] = yTable[i]! & 0xff;
   }
 
-  // Tabella X reale: 4× sequenza [0x008,0x018,...,0x100] (16 elem, ultima troncata a 8).
+  // Real X table: 4x sequence [0x008,0x018,...,0x100] (16 elems, last truncated to 8).
   const xRow = [
     0x008, 0x018, 0x028, 0x038, 0x048, 0x058, 0x068, 0x078,
     0x090, 0x0a0, 0x0b0, 0x0c0, 0x0d0, 0x0e0, 0x0f0, 0x100,
@@ -56,7 +56,7 @@ function makeRomFixture() {
     rom.program[TABLE_X_ROM_ADDR + i * 2 + 1] = xTable[i]! & 0xff;
   }
 
-  // Code bias word @ 0x1006A = 0x0002 (valore reale ROM marble).
+  // Code bias word @ 0x1006A = 0x0002 (real Marble ROM value).
   rom.program[ROM_CODE_BIAS_ADDR] = 0x00;
   rom.program[ROM_CODE_BIAS_ADDR + 1] = 0x02;
 
@@ -77,7 +77,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
       onMmioWrite: (addr, value) => writes.push({ addr, value }),
     });
 
-    // Una sola scrittura MMIO, valore = arg1<<3 = 0.
+    // A single MMIO write, value = arg1<<3 = 0.
     expect(writes).toEqual([{ addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 }]);
 
     // Bank offset = arg1<<9 = 0. Tutti gli slot in spriteRam[0..0x1EF].
@@ -121,7 +121,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // Bank offset = 3 << 9 = 0x600.
     const bankOff = 0x600;
 
-    // Bank precedente (0..0x5FF) NON toccato.
+    // Previous bank (0..0x5FF) not touched.
     for (let off = 0; off < bankOff; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
@@ -129,7 +129,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // Slot in bank 3:
     //   code = (3 + 2) & 0xFFFF = 0x0005
     //   link = i+1
-    //   Y/X come prima ma a offset bankOff
+    //   Y/X as before, but at bankOff offset.
     for (let i = 0; i < NUM_SLOTS; i++) {
       const slotPos = bankOff + i * 2;
       const tableIdx = NUM_SLOTS - 1 - i;
@@ -157,7 +157,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     const writes: Array<{ addr: number; value: number }> = [];
     // arg1 = 0x10000 → arg1<<3 = 0x80000 → low word = 0x0000 (i 16 bit alti escono).
     // arg1<<9 = 0x2000000 → bank offset assoluto enorme: cade fuori dai 4KB di
-    // spriteRam. La replica TS deve essere no-op sui write fuori bound (non
+    // spriteRam. The TS replica must no-op out-of-bounds writes (not
     // crash).
     moGridInit2404(s, rom, 0x10000, {
       onMmioWrite: (addr, value) => writes.push({ addr, value }),
@@ -181,7 +181,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // arg1<<9 = 0x1FFFC00 → fuori dai 4KB. spriteRam non scritta.
     // Ma proviamo arg1=0 per code wrap:
     // (0 + 0x0002) & 0xFFFF = 0x0002.
-    // Per testare wrap proviamo a iniettare un bias diverso.
+    // To test wrap, inject a different bias.
     rom.program[ROM_CODE_BIAS_ADDR] = 0xff;
     rom.program[ROM_CODE_BIAS_ADDR + 1] = 0xff; // bias = 0xFFFF
 
@@ -206,7 +206,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
 
     expect(() => moGridInit2404(s, rom, 0)).not.toThrow();
 
-    // Verifica che spriteRam sia stata comunque scritta correttamente
+    // Verify spriteRam was still written correctly.
     // (almeno il primo slot).
     expect(readWordBE(s.spriteRam, MO_FIELD_LINK_OFF)).toBe(1);
     // L'ultimo slot link = 56.

@@ -1,7 +1,7 @@
 /**
  * state-dispatch-1605c.test.ts — smoke per FUN_1605C.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `cli/src/test-state-dispatch-1605c-parity.ts` (500/500).
  */
 

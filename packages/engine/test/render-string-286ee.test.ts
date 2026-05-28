@@ -2,7 +2,7 @@
  * render-string-286ee.test.ts — smoke + corner case di `renderString286EE`
  * (FUN_000286EE).
  *
- * Bit-perfect parity (500 casi randomici) verificata separatamente in
+ * Bit-perfect parity (500 random cases) verified separately in
  * `packages/cli/src/test-render-string-286ee-parity.ts` vs Musashi.
  */
 

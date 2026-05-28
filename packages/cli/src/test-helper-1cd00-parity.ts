@@ -2,35 +2,23 @@
 /**
  * test-helper-1cd00-parity.ts — differential FUN_0001CD00 vs `helper1CD00`.
  *
- * `FUN_0001CD00` (874 byte): "Marble-vs-wall 3D bbox collision + velocity
- * response". Dato puntatore entity (A2), puntatore shape-source (A1), e
- * indice shape (D1.b 0..6 o 0xFF), effettua hit-test 3D e risponde con
- * rimbalzo / kill o no-op.
+ * `FUN_0001CD00` (874 bytes): "Marble-vs-wall 3D bbox collision + velocity"
+ * consumes a shape index (D1.b 0..6 or 0xFF), performs a 3D hit-test, and
+ * resolves with bounce / kill / no-op behavior.
  *
- * **Strategia stub** (sub callee stubbed a RTS per parity deterministica):
- *   - `FUN_0001216A` (absLong): stub → RTS; TS: usa `defaultAbsLong` interno.
- *     NOTE: con RTS stub D0 non viene aggiornato da absLong, quindi il check
- *     cmpi.l #$100000 confronta il vecchio D0 (= indice*4 dal lookup tabella
- *     nella maggior parte dei casi, o altro residuo). Per semplicità, questo
- *     test evita i casi dove mode36==2, lasciando absLong no-stubbed (le due
- *     implementazioni sono equivalenti purché absLong non abbia side effects,
- *     il che è corretto).
- *   - `FUN_00015884` (soundPair): stub → RTS; TS: no-op.
- *   - `FUN_000158AC` (soundCmdSend): stub → RTS; TS: no-op.
- *   - `FUN_00015BD0` (stateSub15BD0): stub → RTS; TS: no-op.
- *   - `FUN_00025BAE` (objectStateEntry25BAE): stub → RTS; TS: no-op.
+ * **Stub strategy** (sub-callees stubbed to RTS for deterministic parity):
+ *   - `FUN_0001216A` (absLong): stub -> RTS; TS: uses internal `defaultAbsLong`.
+ *   - `FUN_00015884` (soundPair): stub -> RTS; TS: no-op.
+ *   - `FUN_000158AC` (soundCmdSend): stub -> RTS; TS: no-op.
+ *   - `FUN_00015BD0` (stateSub15BD0): stub -> RTS; TS: no-op.
+ *   - `FUN_00025BAE` (objectStateEntry25BAE): stub -> RTS; TS: no-op.
  *
- * **Compare range** per ogni test:
- *   - `entity[0..0x5F]` (96 byte): velocità + copia globali + flag kill
+ * **Compare range** for each test:
  *   - return value `D0` (long)
  *
- * **Suite** (500 casi, 4 × 125):
- *   - A: random globali/entity/shape-source, index 0..6 casuale.
- *   - B: index = 0xFF → sempre early-exit return 0.
- *   - C: forzato per essere in-bbox (hit garantito set 1) con index 0..6.
- *   - D: entity speciali (0x400018, 0x4000FA) + varie configurazioni edge.
+ *   - C: forced in-bbox (guaranteed hit bit 1) with index 0..6.
  *
- * Uso: npx tsx packages/cli/src/test-helper-1cd00-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-1cd00-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -285,7 +273,6 @@ async function main(): Promise<void> {
     return b;
   }
 
-  // ── Suite A: random globali/entity/shape-source, index 0..6 casuale ────
   console.log(`\n=== helper1CD00 (FUN_1CD00) — Suite A: random — ${perSuite} casi ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -318,7 +305,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ── Suite C: in-bbox forzato (hit garantito set 1), index casuale ──────
   // Shape[0] bbox: x=[-8,8], y=[-4,36], z=[-16,32]
   // x1 = (A1[0xC]+8) - worldX = 0 if worldX = (A1[0xC]+8)
   // Place worldX = (A1[0xC]+8) so x1=0 which is in [-8,8]
@@ -351,7 +337,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: edge cases (entità speciali, mode36=2) ───────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
   let okD = 0;

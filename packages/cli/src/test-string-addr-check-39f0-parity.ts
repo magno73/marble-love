@@ -2,18 +2,10 @@
 /**
  * test-string-addr-check-39f0-parity.ts — differential FUN_0039F0 vs isKnownStringAddr.
  *
- * Per N indirizzi (inclusi i 3 noti e valori random):
- *   1. callFunction(0x39F0, [addr]) — legge il flag Z da CCR via D0 trick:
- *      il binario non scrive D0, quindi usiamo il fatto che cmpa imposta CCR.
- *      Usiamo invece un wrapper: push addr in A1, call, legge CCR Z bit.
  *   2. isKnownStringAddr(addr) — TS
- *   3. Confronta: binary Z == ts result
  *
- * Nota: callFunction non espone CCR. Usiamo un micro-wrapper in-memory che
- * dopo il JSR fa `sne D0` (sne = set if not equal → D0=0xFF se Z=0, D0=0 se Z=1)
- * poi rts. Oppure più semplice: usiamo step() e leggiamo CCR direttamente.
+ * Note: callFunction does not expose CCR. Use an in-memory micro-wrapper that
  *
- * Alternativa semplice: settiamo A1 via setRegister prima del call, e dopo
  * controlliamo il flag Z da getRegisters().ccr (bit 2).
  *
  * Uso: npx tsx packages/cli/src/test-string-addr-check-39f0-parity.ts [N]
@@ -30,7 +22,6 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN = 0x000039f0;
 const SENTINEL = 0xcafebabe >>> 0;
 
-/** Chiama FUN_0039F0 con A1=addr e restituisce il bit Z del CCR dopo il rts. */
 function callWithA1(cpu: CpuSession, addr: number): boolean {
   const sys = cpu.system;
   // Setup stack: push sentinel return address
@@ -41,13 +32,11 @@ function callWithA1(cpu: CpuSession, addr: number): boolean {
   sys.setRegister("pc", FUN);
   sys.setRegister("a1", addr >>> 0);
 
-  // Esegui step-by-step finché PC == SENTINEL (rts raggiunto)
   for (let i = 0; i < 20; i++) {
     if (sys.getRegisters().pc === SENTINEL) break;
     sys.step();
   }
 
-  // Leggi Z bit dal SR (status register, bit 2 = zero flag)
   const sr: number = sys.getRegisters().sr;
   return (sr & 0x4) !== 0;
 }
@@ -71,9 +60,8 @@ async function main(): Promise<void> {
 
   const rng = makeRng(0x39f039f0);
 
-  // Indirizzi fissi noti (devono tutti tornare true)
   const knownAddrs: number[] = [0x3850, 0x385c, 0x3868];
-  // Indirizzi noti che devono restituire false (adiacenti e altri)
+  // Known addresses that must return false (adjacent and others).
   const negAddrs: number[] = [0x384e, 0x3852, 0x385a, 0x385e, 0x3866, 0x386a, 0x0000, 0xffffffff >>> 0];
 
   let ok = 0;
@@ -94,10 +82,9 @@ async function main(): Promise<void> {
   for (const a of knownAddrs) testAddr(a);
   for (const a of negAddrs) testAddr(a);
 
-  // Random (il grosso dei 500)
+  // Random cases: the bulk of the 500 samples.
   const remaining = n - knownAddrs.length - negAddrs.length;
   for (let i = 0; i < remaining; i++) {
-    // Mix: valori vicini ai 3 target + completamente random
     let addr: number;
     if (rng() < 0.3) {
       const bases = [0x3850, 0x385c, 0x3868];

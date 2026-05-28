@@ -1,17 +1,17 @@
 /**
- * dispatch-strings-17230.ts — replica `FUN_00017230` (42 byte).
+ * dispatch-strings-17230.ts - mirror of `FUN_00017230` (42 bytes).
  *
- * Sub di servizio chiamata da `FUN_00010fce` (1 xref @ 0x10FF2, JSR.L) come
- * sesto step del frame-tick di alto livello (subito dopo `addq.b #1, (0x4003F0)`,
- * il "frame counter" globale). È un **dispatcher**: itera 7 volte un puntatore
- * sull'array di slot stringa @ `0x401482` (stride `0x42`) e per ognuno chiama
- * `FUN_0001725a(slotPtr)` (string animation step) passando il pointer come
- * unico arg long sullo stack (cdecl-like).
+ * Service subroutine called by `FUN_00010fce` (1 xref @ 0x10FF2, JSR.L) as the
+ * sixth step of the high-level frame tick, immediately after `addq.b #1,
+ * (0x4003F0)` increments the global frame counter. It is a **dispatcher**: it
+ * iterates 7 times over the string-slot array @ `0x401482` (stride `0x42`) and
+ * calls `FUN_0001725a(slotPtr)` (string animation step) for each slot, passing
+ * the pointer as the only long argument on the stack (cdecl-like).
  *
  * **Disasm 0x17230..0x17258** (42 byte, 0 args, 0 ret):
  *
- *   movem.l { D3 D2 }, -(SP)        ; salva D2/D3 (callee-saved)
- *   move.l  #0x401482, D3            ; D3 = pointer al primo slot
+ *   movem.l { D3 D2 }, -(SP)        ; save D2/D3 (callee-saved)
+ *   move.l  #0x401482, D3            ; D3 = pointer to first slot
  *   clr.b   D2b                      ; D2 = counter byte = 0
  *   loop:
  *     move.l  D3, D1                 ; D1 = current slot ptr
@@ -22,81 +22,78 @@
  *     addq.l  #4, SP                 ; pop arg
  *     addq.b  #1, D2b                ; D2++
  *     cmpi.b  #0x7, D2b              ; D2 == 7?
- *     bne.b   loop                   ; ripeti finché D2 != 7
+ *     bne.b   loop                   ; repeat until D2 == 7
  *   movem.l (SP)+, { D2 D3 }         ; restore D2/D3
  *   rts
  *
- * **Geometria**:
- *   - Array: 7 slot da 0x42 byte ciascuno @ `0x401482..0x401482+7*0x42-1`
- *     = `0x401482..0x4015D3` (294 byte di workRam).
- *   - Pointer chiamati al callee, in ordine:
+ * **Geometry**:
+ *   - Array: 7 slots, each 0x42 bytes, @ `0x401482..0x401482+7*0x42-1`
+ *     = `0x401482..0x4015D3` (294 workRam bytes).
+ *   - Pointers passed to the callee, in order:
  *     `0x401482, 0x4014C4, 0x401506, 0x401548, 0x40158A, 0x4015CC, 0x40160E`.
- *     **Notabene**: il loop pre-incrementa D3 *prima* del jsr per la prossima
- *     iterazione, ma D1 (= D3 originale di quella iterazione) è ciò che viene
- *     pushato. Quindi i 7 pointer pushati sono `0x401482 + i*0x42` per
- *     `i ∈ 0..6`. Il valore finale "unused" di D3 dopo l'ultimo `add.l` è
- *     `0x401650` (= base + 7*0x42), ma il `cmpi.b` chiude il loop prima
- *     di un eventuale ottavo `jsr`.
+ *     **Note**: the loop pre-increments D3 before the jsr for the next
+ *     iteration, but D1 (= D3's original value for that iteration) is what gets
+ *     pushed. Therefore the 7 pushed pointers are `0x401482 + i*0x42` for
+ *     `i in 0..6`. The final unused D3 value after the last `add.l` is
+ *     `0x401650` (= base + 7*0x42), but `cmpi.b` closes the loop before any
+ *     eighth `jsr`.
  *
- * **Dispatcher puro**: questa funzione **non** scrive in workRam, non legge
- * MMIO, non tocca palette/sprite/alpha RAM. Tutti gli effetti collaterali
- * sono delegati al callee `FUN_0001725a` (vedi `string-step.ts` per la
- * famiglia di sub correlate, sebbene `0x1725a` sia distinto da
- * `FUN_00002CD4`/`FUN_00002DA0`).
+ * **Pure dispatcher**: this function does not write workRam, read MMIO, or
+ * touch palette/sprite/alpha RAM. All side effects are delegated to callee
+ * `FUN_0001725a` (see `string-step.ts` for related subroutines, although
+ * `0x1725a` is distinct from `FUN_00002CD4`/`FUN_00002DA0`).
  *
- * **Modello TS**: poiché `FUN_0001725a` non è ancora replicato in TS, il
- * dispatcher è esposto come **higher-order** che riceve il callee come
- * callback `(slotAddr) => void`. Questo permette:
- *   1. parità isolata vs il binario (callee patchato con uno stub di
- *      bookkeeping in `cli/src/test-dispatch-strings-17230-parity.ts`),
- *   2. integrazione futura senza breaking change (basta passare la TS-port
- *      di `FUN_0001725a` come callback quando sarà disponibile).
+ * **TS model**: because `FUN_0001725a` is not mirrored in TS yet, the
+ * dispatcher is exposed as a higher-order function that receives the callee as
+ * callback `(slotAddr) => void`. This enables isolated parity against the
+ * binary, with the callee patched to a bookkeeping stub in
+ * `cli/src/test-dispatch-strings-17230-parity.ts`, and future integration by
+ * passing the TS port of `FUN_0001725a` when it exists.
  *
- * Nessuna modifica a `state.workRam` qui: il dispatcher è "trasparente"
- * dal punto di vista dello state, e si limita a calcolare i 7 indirizzi e
- * invocare la callback nell'ordine 68k esatto.
+ * No `state.workRam` mutation happens here. The dispatcher is transparent from
+ * the state's perspective: it only computes 7 addresses and invokes the
+ * callback in exact 68k order.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verification against the binary:
  * `cli/src/test-dispatch-strings-17230-parity.ts` (500/500 cases).
  */
 
-/** Indirizzo workRam del primo slot stringa (immediato `move.l #0x401482, D3`). */
+/** workRam address of the first string slot (immediate `move.l #0x401482, D3`). */
 export const SLOT_BASE_ADDR = 0x401482 as const;
-/** Stride in byte tra slot consecutivi (immediato `moveq #0x42, D0`). */
+/** Byte stride between consecutive slots (immediate `moveq #0x42, D0`). */
 export const SLOT_STRIDE = 0x42 as const;
-/** Numero di slot iterati dal loop (`cmpi.b #0x7, D2b`). */
+/** Number of slots iterated by the loop (`cmpi.b #0x7, D2b`). */
 export const SLOT_COUNT = 7 as const;
-/** Indirizzo (assoluto 68010) della funzione callee: `jsr 0x0001725a.l`. */
+/** Absolute 68010 address of the callee function: `jsr 0x0001725a.l`. */
 export const CALLEE_ADDR = 0x0001725a as const;
 
 /**
- * Replica `FUN_00017230` — `dispatchStrings17230(callee)`.
+ * Mirrors `FUN_00017230` - `dispatchStrings17230(callee)`.
  *
- * Itera 7 slot stringa (`SLOT_BASE_ADDR + i * SLOT_STRIDE` per `i ∈ 0..6`)
- * invocando `callee(slotAddr)` per ciascuno, **nell'ordine esatto** del loop
- * 68k (i = 0, 1, …, 6). I `slotAddr` sono valori long unsigned (32-bit
- * 68010 address), nello spazio workRam.
+ * Iterates 7 string slots (`SLOT_BASE_ADDR + i * SLOT_STRIDE` for `i in 0..6`)
+ * and invokes `callee(slotAddr)` for each one in the exact 68k loop order
+ * (i = 0, 1, ..., 6). `slotAddr` values are unsigned long 32-bit 68010
+ * addresses in workRam space.
  *
- * @param callee Funzione invocata 7 volte. Riceve il pointer assoluto
- *               (`number` u32) al slot corrente. Il valore di ritorno è
- *               ignorato (D0 del callee viene poi clobbered dal `move.l`
- *               della prossima iterazione comunque).
+ * @param callee Function invoked 7 times. Receives the absolute pointer
+ *               (`number` u32) to the current slot. The return value is
+ *               ignored; the callee's D0 would be clobbered by the next
+ *               iteration's `move.l` anyway.
  *
  * NOTE bit-perfect:
- *   - Nessun side-effect TS oltre alle 7 invocazioni del callee.
- *   - Il dispatcher non legge/scrive `state.workRam` direttamente: è
- *     interamente pure rispetto a state.
- *   - L'ordine di invocazione (ascending `i`) coincide col binario (D2 va
- *     da 0 a 6).
- *   - Il `SP` push/pop di D2/D3 è internal al binario e non osservabile
- *     dall'esterno: TS non ha un equivalente.
+ *   - No TS side effect beyond the 7 callee invocations.
+ *   - The dispatcher does not directly read/write `state.workRam`; it is pure
+ *     with respect to state.
+ *   - Invocation order (ascending `i`) matches the binary (D2 goes from 0 to 6).
+ *   - The D2/D3 `SP` push/pop is internal to the binary and not externally
+ *     observable, so TS has no equivalent.
  */
 export function dispatchStrings17230(
   callee: (slotAddr: number) => void,
 ): void {
-  // Replica fedelmente il loop: D3 inizia a SLOT_BASE_ADDR, D2 a 0.
-  // Ad ogni iter: salva D1=D3, incrementa D3 += 0x42, chiama callee(D1),
-  // incrementa D2, esci se D2 == 7.
+  // Faithful loop shape: D3 starts at SLOT_BASE_ADDR, D2 at 0. Each iteration
+  // saves D1=D3, increments D3 += 0x42, calls callee(D1), increments D2, and
+  // exits when D2 == 7.
   let d3 = SLOT_BASE_ADDR >>> 0;
   for (let i = 0; i < SLOT_COUNT; i++) {
     const slotPtr = d3 >>> 0;

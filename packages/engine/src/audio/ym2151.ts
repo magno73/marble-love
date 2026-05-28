@@ -1,20 +1,22 @@
 /**
- * ym2151.ts — Yamaha YM2151 OPM FM synthesis chip, Phase 5 register-state parity.
+ * ym2151.ts - Yamaha YM2151 OPM FM synthesis chip model.
  *
- * Scope V2 (vedi plan):
- *   - Register file 256 byte, scrivibile via address/data port ($1800/$1801).
+ * Early scope:
+ *   - 256-byte register file written through the address/data ports
+ *     `$1800`/`$1801`.
  *   - Read status register: bit 0=Timer A overflow, bit 1=Timer B overflow.
- *   - Reg shadow esposto per diff vs MAME oracle (Phase 8 differential testing).
- *   - **NON** implementato in V2: envelope generator, operator FM synthesis, LFO,
- *     audio sample output. Quelli sono V3 (sample-level audio parity).
+ *   - Register shadow exposed for MAME oracle diffs.
  *
- * Hardware ref (per MAME ym2151.cpp + Yamaha datasheet OPM):
- *   - 8 channels × 4 operators (32 operatori totali)
+ * Later passes added envelope, operator FM synthesis, LFO, timers, and sample
+ * output for sample-level audio parity.
+ *
+ * Hardware reference: MAME `ym2151.cpp` and the Yamaha OPM datasheet.
+ *   - 8 channels x 4 operators (32 total operators)
  *   - Clock 3.579545 MHz (Atari System 1)
- *   - 256-byte register file, indirizzato 2 step: WR_ADDR($1800) + WR_DATA($1801)
- *   - Status read da $1800 o $1801 (stessa risposta): Timer flags + busy bit
+ *   - 256-byte register file selected in two steps: address then data
+ *   - Status reads at `$1800` or `$1801` return timer flags plus busy bit
  *
- * Register map (riferimento, non decodificato in V2):
+ * Register map:
  *   0x01     TEST / LFO reset
  *   0x08     Key ON (operator slot mask + channel select)
  *   0x0F     Noise enable + freq
@@ -25,23 +27,17 @@
  *   0x28-2F  Channel: KC (key code)
  *   0x30-37  Channel: KF (key fraction)
  *   0x38-3F  Channel: PMS/AMS
- *   0x40-5F  Operator: DT1/MUL (32 reg, 4 op × 8 ch)
+ *   0x40-5F  Operator: DT1/MUL (32 reg, 4 op x 8 ch)
  *   0x60-7F  Operator: TL (total level)
  *   0x80-9F  Operator: KS/AR (key scale + attack rate)
  *   0xA0-BF  Operator: AMS-EN/D1R (decay 1 rate)
  *   0xC0-DF  Operator: DT2/D2R (decay 2 rate)
  *   0xE0-FF  Operator: D1L/RR (decay 1 level + release rate)
  *
- * Pattern d'uso (dal 6502 boot code Marble):
+ * Marble 6502 boot-code pattern:
  *   STA $1800   ; write reg select (byte addr 0x00..0xFF)
  *   STA $1801   ; write reg data
- *   LDA $1800   ; read status → bit 0/1 timer overflow
- *
- * Phase 5 V2 stesso comportamento di MAME register file: scrittura a $1800
- * imposta `selectedReg`, scrittura a $1801 stora `regs[selectedReg] = data`.
- * Lo "status" non e' un registro nel file: e' calcolato da timerA/B internal
- * counters (stub V2: sempre 0, no overflow → boot code che attende busy clear
- * passa al primo poll).
+ *   LDA $1800   ; read status bit 0/1 timer overflow
  */
 
 import type { u8 } from "../wrap.js";
@@ -65,10 +61,14 @@ const YM2151_MAME_ROUTE_GAIN = 0.48;
 const YM2151_PCM_SCALE = YM2151_MAME_ROUTE_GAIN / 32768;
 
 export interface YM2151 {
-  /** 256-byte register shadow. Esposto per oracle diff. NON mutare manualmente:
-   * usa writeData() per simulare il path MAME (selectedReg → regs). */
+  /**
+   * 256-byte register shadow exposed for oracle diffs.
+   *
+   * Do not mutate manually; use `writeData()` to preserve the selected-register
+   * path used by MAME.
+   */
   readonly regs: Uint8Array;
-  /** Reg index selezionato dall'ultima writeAddr(). Default 0 a reset. */
+  /** Register index selected by the latest `writeAddr()`. */
   selectedReg: number;
   /** Timer A overflow flag (status bit 0). Latched on counter overflow only
    * when Timer A enable is set, cleared via write $14 bit 4. */
@@ -76,7 +76,7 @@ export interface YM2151 {
   /** Timer B overflow flag (status bit 1). Latched on counter overflow only
    * when Timer B enable is set. */
   timerBOverflow: boolean;
-  /** Timer A active (count-down running). Armato via $14 bit 0. */
+  /** Timer A active, armed via register $14 bit 0. */
   timerAActive: boolean;
   /** Timer A countdown counter in tick units (1 tick = 64 cycle YM2151). */
   timerACounter: number;
@@ -92,7 +92,7 @@ export interface YM2151 {
   timerAHoldWhileOverflow: boolean;
   /** Timer A IRQ enable (write $14 bit 4). */
   timerAIrqEnable: boolean;
-  /** Timer B active (count-down running). Armato via $14 bit 1. */
+  /** Timer B active, armed via register $14 bit 1. */
   timerBActive: boolean;
   /** Timer B countdown counter in tick units (1 tick = 1024 cycle YM2151). */
   timerBCounter: number;
@@ -100,12 +100,11 @@ export interface YM2151 {
   timerBAccumulator: number;
   /** Timer B IRQ enable. */
   timerBIrqEnable: boolean;
-  /** YM2151 cycle accumulator (modulo 64 / 1024 per scattare Timer A/B tick).
-   * tickCycles converte cycle 6502 in cycle YM (×2 ratio). */
+  /** YM2151 cycle accumulator, modulo 64/1024 for Timer A/B ticks. */
   ymCycleAccumulator: number;
-  /** 8 channels FM (V3 chip-perfect). Ogni channel ha 4 operatori. */
+  /** Eight FM channels, each with four operators. */
   readonly channels: Channel[];
-  /** Sample accumulator: cycle 6502 → sample stream YM (1 sample ogni 64 YM cycle = 32 cycle 6502). */
+  /** Sample accumulator from 6502 cycles to the native YM sample stream. */
   sampleAccumulator: number;
   /** Diagnostics/replay mode: external sound-stream scheduler owns audio sample generation. */
   externalSampleClock: boolean;
@@ -121,7 +120,7 @@ export interface YM2151 {
   /** Bitmask of channels whose register-derived audio params need sample-clock prepare. */
   modifiedChannels: number;
   // ─── LFO state (Phase A2) ───────────────────────────────────────────────
-  /** LFO frequency (LFRQ, reg $18). Bassa = lenta, alta = veloce. */
+  /** LFO frequency (`LFRQ`, reg $18). */
   lfoFreq: number;
   /** LFO waveform: 0=saw, 1=square, 2=triangle, 3=random (reg $1B bit 1-0). */
   lfoWaveform: number;
@@ -131,7 +130,7 @@ export interface YM2151 {
   lfoPmd: number;
   /** LFO phase accumulator 0..1 (normalized). */
   lfoPhase: number;
-  /** LFO output corrente: -1..+1 (saw/triangle) o 0..1 (square/random). */
+  /** Current LFO output: -1..+1 for saw/triangle or 0..1 for square/random. */
   lfoOutput: number;
   /** OPM LFO counter; bits 22..29 select the waveform index. */
   lfoCounter: number;
@@ -147,10 +146,14 @@ export interface YM2151 {
   lfoNoiseState: number;
   /** Dynamic LFO noise waveform table. AM in low 8 bits, signed PM in high 8. */
   readonly lfoNoiseWaveform: Int16Array;
-  /** Busy flag remaining in YM master cycles. Real hardware: 64 master clock
-   * dopo write a $1801 (data); $1800 (addr) NON triggera busy. Verificato
-   * 2026-05-18 via oracle/mame_1801_busy_tap.lua; riconfermato sul tap PC
-   * cycle-precise 2026-05-22. Boot $8FED polla bit 7. */
+  /**
+   * Busy flag remaining in YM master cycles.
+   *
+   * Real hardware stays busy for 64 master clocks after a `$1801` data write;
+   * `$1800` address writes do not trigger busy. Verified against
+   * `oracle/mame_1801_busy_tap.lua` on 2026-05-18 and the cycle-precise PC tap
+   * on 2026-05-22.
+   */
   busyCycles: number;
 }
 
@@ -312,7 +315,9 @@ function prepareModifiedChannels(ym: YM2151): void {
   ym.modifiedChannels = 0;
 }
 
-/** Avanza LFO per 1 sample @ YM native rate.
+/**
+ * Advance the LFO by one native YM sample.
+ *
  * Hardware OPM: LFRQ is a 4.4 floating-point step into 256-entry waveforms. */
 function toSigned16(value: number): number {
   return (value << 16) >> 16;
@@ -433,7 +438,7 @@ function snapshotChannelState(
   };
 }
 
-/** Apply reg shadow → channel/operator params. Chiamato da writeData. */
+/** Apply the register shadow to channel/operator parameters. Called by `writeData`. */
 function applyReg(ym: YM2151, reg: number, val: number): void {
   // LFO control (Phase A2): $18 LFRQ, $19 AMD/PMD, $1B waveform
   if (reg === 0x18) { ym.lfoFreq = val & 0xff; return; }
@@ -471,7 +476,7 @@ function applyReg(ym: YM2151, reg: number, val: number): void {
     if (ch !== undefined) {
       // Slot mask convention: bit3=SM1=op1, bit4=SM2=op3, bit5=C1=op2, bit6=C2=op4
       // (OPM mapping: cmp Yamaha datasheet § 4.4.1)
-      // V3 minimal: tutto bit set → keyOn, bit clear → keyOff
+      // Bit set means key on; bit clear means key off.
       const keyMask =
         ((val & 0x08) !== 0 ? 0x10 : 0) |  // op1
         ((val & 0x10) !== 0 ? 0x20 : 0) |  // op2
@@ -483,7 +488,7 @@ function applyReg(ym: YM2151, reg: number, val: number): void {
   }
 }
 
-/** Produce 1 sample stereo da tutti 8 channel attivi. Output [-1..+1] L+R.
+/** Produces one stereo sample from all eight active channels. Output is [-1..+1] L/R.
  * Phase A2: LFO advance. Phase A4: PM (phase modulation) + AM scale. */
 export function ym2151Sample(ym: YM2151): [number, number] {
   prepareModifiedChannels(ym);
@@ -579,8 +584,11 @@ export function ym2151DrainDiagnosticChannelStateTrace(
   return out;
 }
 
-/** Carica il Timer A counter dal valore corrente di reg $10/$11 (10-bit:
- * high8 = $10, low2 = $11 bit 1-0). Period = 1024 - val tick. */
+/**
+ * Reload Timer A from registers $10/$11.
+ *
+ * Timer A is a 10-bit value: high 8 bits in $10 and low 2 bits in $11.
+ */
 function timerALoadValue(ym: YM2151): number {
   const high8 = ym.regs[0x10] ?? 0;
   const low2 = (ym.regs[0x11] ?? 0) & 0x03;
@@ -588,19 +596,19 @@ function timerALoadValue(ym: YM2151): number {
   return 1024 - val10;
 }
 
-/** Carica il Timer B counter dal valore di reg $12 (8-bit). Period = 256 -
- * val tick. */
+/** Reload Timer B from register $12; period is `256 - value`. */
 function timerBLoadValue(ym: YM2151): number {
   return 256 - (ym.regs[0x12] ?? 0);
 }
 
-/** Write a $1800: imposta il register address per la prossima writeData. */
+/** Write to `$1800`: select the register address for the next data write. */
 export function ym2151WriteAddr(ym: YM2151, addr: u8): void {
   ym.selectedReg = (addr as number) & 0xff;
 }
 
-/** Write a $1801: stora il byte nel reg selezionato + processa side effects
- * Timer A/B (V3) + apply al channel/operator params (V3 chip-perfect). */
+/**
+ * Write to `$1801`: store the selected register byte and process side effects.
+ */
 export function ym2151WriteData(ym: YM2151, data: u8): void {
   const reg = ym.selectedReg;
   const v = data as number;
@@ -609,27 +617,23 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
   // ymfm marks all channels modified for every engine write, then prepares
   // their cached operator data on the next sample clock.
   markAllChannelsModified(ym);
-  // V3 chip-perfect: applica il reg ai parametri channel/operator.
+  // Apply the write to cached channel/operator parameters.
   applyReg(ym, reg, v);
   // Side effects V3 Timer A/B (reg $14 = control register).
   //
-  // Bit mapping CORRETTO (verificato 2026-05-17 contro ymfm_opm.h + ymfm_fm.ipp
-  // → handler ymfm::set_reset_status):
+  // Timer-control bit mapping, verified against `ymfm_opm.h` and
+  // `ymfm_fm.ipp::ymfm::set_reset_status` on 2026-05-17:
   //   bit 0 = load_timer_a  (arm Timer A counter from regs $10/$11)
   //   bit 1 = load_timer_b
-  //   bit 2 = enable_timer_a (= IRQ "enable" semantica MAME: quando timer overflows
-  //                            E enable_timer_a=1, status TIMERA = 1 → IRQ asserito)
+  //   bit 2 = enable_timer_a, MAME's IRQ-enable semantic for Timer A overflow
   //   bit 3 = enable_timer_b
   //   bit 4 = reset_timer_a (= clear status TIMERA = clear overflow flag)
   //   bit 5 = reset_timer_b
   //   bit 6 = unused
   //   bit 7 = CSM (key-on-with-timer, V3 deferito)
-  //
-  // ❌ Era SBAGLIATO prima (commit 7671a9d): bit 2/3 trattati come "clear flag",
-  // bit 4/5 come "IRQA/B enable". Esattamente l'opposto del bit layout MAME ymfm.
-  // Conseguenza: boot init scrive $14=$05 = LOAD A + bit 2 → in MAME = abilita
-  // Timer A IRQ → IRQ fires su overflow. In TS interpretava bit 2 come "clear
-  // flag" → Timer A IRQ MAI abilitato → chicken-and-egg con $14=$11 mai scritto.
+  // Boot init writes $14=$05, meaning LOAD A plus Timer A IRQ enable. Treating
+  // bit 2 as a clear flag prevents the IRQ handler from ever writing the later
+  // $14=$11 control byte.
   if (reg === 0x14) {
     // Reset overflow flag (bit 4/5 = reset_timer_a/b)
     if ((v & 0x10) !== 0) ym.timerAOverflow = false;
@@ -637,13 +641,9 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
     // Enable bits (bit 2/3 = enable_timer_a/b: gates IRQ assertion on overflow)
     ym.timerAIrqEnable = (v & 0x04) !== 0;
     ym.timerBIrqEnable = (v & 0x08) !== 0;
-    // Arm Timer A: load from regs $10/$11 (bit 0 = load_timer_a). Per ymfm
-    // semantics: il reload e' EDGE-TRIGGERED su inactive→active. Se il timer
-    // e' gia' attivo e bit 0 ancora set, NON resetta il counter (il timer
-    // continua il count corrente). Verificato 2026-05-18 via ym_writes diff
-    // MAME vs TS: senza edge-trigger, l'IRQ handler che scrive $14=$11 e
-    // $14=$05 con bit 0 set ENTRAMBI causava 2 reset counter per IRQ →
-    // ~103 cyc drift per IRQ cycle vs MAME.
+    // Timer A reload is edge-triggered from inactive to active. Rewriting $14
+    // while the timer is active leaves the current count running. Verified by
+    // MAME vs TS `ym_writes` diffs on 2026-05-18.
     if ((v & 0x01) !== 0) {
       if (!ym.timerAActive) {
         ym.timerACounter = timerALoadValue(ym);
@@ -667,24 +667,25 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
   }
 }
 
-/** Avanza i Timer A/B per N cycle 6502 (clock 1.789 MHz). Internamente
- * converte a cycle YM2151 (×2 ratio = 3.579 MHz). Timer A tick = 64 cycle YM,
- * Timer B tick = 1024 cycle YM.
+/**
+ * Advances timers by N 6502 cycles and converts to YM2151 cycles internally.
+ *
+ * Timer A ticks every 64 YM cycles; Timer B ticks every 1024 YM cycles.
  *
  * On overflow: set flag bit only when the corresponding enable bit is set.
- * IRQ wire al 6502 e' lasciato al chiamante (SoundChip facade chiama
- * requestIrq se timer*IrqEnable e overflow set). */
+ * The 6502 IRQ wire is handled by the SoundChip facade.
+ */
 export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
-  // 2× ratio: 6502 @ 1.789 MHz, YM2151 @ 3.579 MHz
+  // 2x ratio: 6502 @ 1.789 MHz, YM2151 @ 3.579 MHz.
   const ymCycles = cycles6502 * 2;
   if (ym.busyCycles > 0) {
     ym.busyCycles = Math.max(0, ym.busyCycles - ymCycles);
   }
   if (!ym.externalSampleClock) {
     ym.ymCycleAccumulator += ymCycles;
-    // Timer A: 1 tick ogni 64 cycle YM
-    // Timer B: 1 tick ogni 1024 cycle YM (= 16× Timer A)
-    // Sample: 1 stereo sample ogni 64 cycle YM.
+    // Timer A: one tick every 64 YM cycles.
+    // Timer B: one tick every 1024 YM cycles (= 16x Timer A).
+    // Sample: one stereo sample every 64 YM cycles.
     while (ym.ymCycleAccumulator >= 64) {
       ym.ymCycleAccumulator -= 64;
       ym2151GenerateSamples(ym, 1);
@@ -719,20 +720,17 @@ export function ym2151TickCycles(ym: YM2151, cycles6502: number): void {
   }
 }
 
-/** Read da $1800/$1801: ritorna status byte. Phase 5 stub timer flags=false. */
+/** Read from `$1800` or `$1801`: return the YM status byte. */
 export function ym2151ReadStatus(ym: YM2151): u8 {
   const b0 = ym.timerAOverflow ? 0x01 : 0;
   const b1 = ym.timerBOverflow ? 0x02 : 0;
-  // bit 7 = BUSY: rimane high per 64 master clock dopo write a $1801 (data).
-  // Verificato via oracle/mame_1801_busy_tap.lua 2026-05-18: read $1801 a
-  // Δ=24..30 cyc post-write = busy; Δ=38..44 cyc post-write = clear. Write
-  // a $1800 (addr) NON triggera busy.
+  // Bit 7 is BUSY: high for 64 master clocks after a `$1801` data write.
+  // Verified by `oracle/mame_1801_busy_tap.lua` on 2026-05-18.
   const b7 = ym.busyCycles > 0 ? 0x80 : 0;
   return as_u8(b0 | b1 | b7);
 }
 
-/** Hard reset: pulisce reg file e flag. Chiamato da LS259 outlatch bit 0
- * (vedi `sound-mmu.ts` $1820). */
+/** Hard reset from the LS259 outlatch bit 0 path in `sound-mmu.ts` (`$1820`). */
 export function ym2151Reset(ym: YM2151): void {
   resetEnvClock();
   ym.regs.fill(0);

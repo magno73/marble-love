@@ -1,45 +1,44 @@
 /**
- * sub-158f6.ts — replica `FUN_000158F6` (46 istr, range 0x158F6..0x15999).
+ * sub-158f6.ts - port of `FUN_000158F6` (46 instructions, range 0x158F6..0x15999).
  *
- * **Caller**: `FUN_000158CC` (`objectUpdatePair158CC`) — invoca FUN_158F6 due
- * volte, una per slot della coppia @ 0x4009A4 / 0x400A20 (stride 0x7C).
+ * **Caller**: `FUN_000158CC` (`objectUpdatePair158CC`) calls FUN_158F6 twice,
+ * once per pair slot @ 0x4009A4 / 0x400A20 (stride 0x7C).
  *
- * **Disasm 0x158F6..0x15999** (46 istruzioni, 1 arg long sullo stack = `slotPtr`):
+ * **Disasm 0x158F6..0x15999** (46 instructions, one long arg on stack = `slotPtr`):
  *
  *   move.l   A2,-(SP)
  *   movea.l  (0x8,SP),A2                  ; A2 = slotPtr
  *   tst.b    (0x18,A2)
- *   beq.w    0x15996                      ; se 0 → epilog
+ *   beq.w    0x15996                      ; if 0 -> epilogue
  *   ; --- timer @ +0x6C ---
  *   tst.w    (0x6c,A2)
  *   ble.b    0x15930                      ; <= 0 → skip
  *   subq.w   #1, (0x6c,A2)
  *   tst.w    (0x6c,A2)
- *   bne.b    0x15930                      ; ancora > 0 → skip
  *   cmpi.b   #0x21, (0x1a,A2)
  *   beq.w    0x15926
  *   cmpi.b   #0x22, (0x1a,A2)
- *   bne.b    0x15930                      ; non 0x21/0x22 → skip
- *   move.l   A2,-(SP); jsr 0x160D4.l; addq.l #4,SP    ; → enter state 0x23
+ *   bne.b    0x15930                      ; not 0x21/0x22 -> skip
+ *   move.l   A2,-(SP); jsr 0x160D4.l; addq.l #4,SP    ; -> enter state 0x23
  *   ; --- 0x15930: state 0x24 timer @ +0x56 ---
  *   cmpi.b   #0x24, (0x1a,A2)
- *   bne.b    0x15954                      ; non 0x24 → goto state-2 dispatch
+ *   bne.b    0x15954                      ; not 0x24 -> goto state-2 dispatch
  *   tst.b    (0x56,A2)
- *   beq.b    0x15942                      ; == 0 → skip subq, vai a tst
+ *   beq.b    0x15942                      ; == 0 -> skip subq, go to tst
  *   subq.b   #1, (0x56,A2)
  *   tst.b    (0x56,A2)
- *   bne.b    0x1597a                      ; != 0 → ELSE branch
- *   move.l   A2,-(SP); jsr 0x160D4.l; addq.l #4,SP    ; → enter state 0x23
+ *   bne.b    0x1597a                      ; != 0 -> ELSE branch
+ *   move.l   A2,-(SP); jsr 0x160D4.l; addq.l #4,SP    ; -> enter state 0x23
  *   bra.b    0x1597a                      ; ELSE branch
  *   ; --- 0x15954: dispatch su (0x18,A2) ---
  *   cmpi.b   #2, (0x18,A2)
- *   bne.b    0x1597a                      ; != 2 → ELSE branch
+ *   bne.b    0x1597a                      ; != 2 -> ELSE branch
  *   ; --- 0x1595c: branch state-2 (s18==2) ---
  *   move.l   A2,-(SP); jsr 0x25FC2.l       ; helper25FC2
  *   move.l   A2,-(SP); jsr 0x1B9CC.l       ; spriteHelper1B9CC
  *   move.l   A2,-(SP); jsr 0x1281C.l       ; objectEnter1281C
  *   lea      (0xc,SP),SP
- *   bra.b    0x15996                      ; → epilog
+ *   bra.b    0x15996                      ; -> epilogue
  *   ; --- 0x1597a: ELSE branch ---
  *   move.l   A2,-(SP); jsr 0x253BC.l       ; helper253BC
  *   move.l   A2,-(SP); jsr 0x182BA.l       ; helper182BA
@@ -49,7 +48,6 @@
  *   movea.l  (SP)+, A2
  *   rts
  *
- * **Sub-callees** (tutti già replicati in TS):
  *   - `FUN_160D4` → `objectEnterState23` (object-enter-state-23.ts)
  *   - `FUN_25FC2` → `helper25FC2` (helper-25fc2.ts)
  *   - `FUN_1B9CC` → `spriteHelper1B9CC` (sprite-helper-1b9cc.ts)
@@ -58,12 +56,9 @@
  *   - `FUN_182BA` → `helper182BA` (helper-182ba.ts)
  *   - `FUN_121B8` → `helper121B8` (helper-121b8.ts)
  *
- * **Side effects** (sul slot puntato da `slotPtr`):
- *   - decremento word @ +0x6C (se inizialmente > 0)
- *   - decremento byte @ +0x56 (se state==0x24 e !=0)
- *   - in caso di trigger: scrittura byte @ +0x1A = 0x23 (via FUN_160D4) +
+ *   - decrement word @ +0x6C if initially > 0
+ *   - decrement byte @ +0x56 if state==0x24 and non-zero
  *     long @ +0x68 = 0x70000
- *   - tutti gli altri side-effect provengono dalle sub-callee.
  */
 
 import type { GameState } from "./state.js";
@@ -83,12 +78,11 @@ import { findNearestNeighbor } from "./nearest-neighbor.js";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
-/** Indirizzo ROM di `FUN_000158F6`. */
 export const SUB_158F6_ADDR = 0x000158f6 as const;
 
 const WORK_RAM_BASE = 0x00400000 as const;
 
-// Slot field offsets toccati direttamente da FUN_158F6.
+// Slot field offsets touched directly by FUN_158F6.
 const F_S18 = 0x18; // active flag (byte)
 const F_S1A = 0x1a; // state byte
 const F_S56 = 0x56; // sub-timer byte
@@ -123,16 +117,13 @@ function enterState23Default(state: GameState, slotPtr: number, rom: RomImage): 
 // ─── Sub-injection interface ─────────────────────────────────────────────────
 
 /**
- * Bag delle 7 sub-jsr orchestrate da `FUN_000158F6`. Tutti i campi sono
  * opzionali; i default usano le replice TS importate.
  */
 export interface Sub158F6Subs {
   /**
    * `FUN_160D4` — `objectEnterState23(state, slotPtr)`.
-   * Invocata in 2 path: state 0x21/0x22 con timer @ +0x6C esaurito,
-   * e state 0x24 con sub-timer @ +0x56 esaurito.
-   * Default: import TS bit-perfect (NB: la patch `FUN_15D10` → rts del
-   * differential test resta valida — la replica TS non chiama 15D10).
+   * Invoked on 2 paths: state 0x21/0x22 with timer @ +0x6C expired,
+   * and state 0x24 with sub-timer @ +0x56 expired.
    */
   objectEnterState23?: (state: GameState, slotPtr: number) => void;
 
@@ -148,8 +139,6 @@ export interface Sub158F6Subs {
   /**
    * `FUN_1B9CC` — `spriteHelper1B9CC(state, slotPtr, flagLong, subs)`.
    * Invocata nel branch state-2. Il caller pusha `A2` come long → flagLong
-   * = slotPtr (low byte sempre 0 in workRam slot allineati 4 → flag=0
-   * praticamente sempre, ma è il valore canonico passato).
    * Default: import TS.
    */
   spriteHelper1B9CC?: (state: GameState, slotPtr: number, flagLong: number) => void;
@@ -159,8 +148,8 @@ export interface Sub158F6Subs {
 
   /**
    * `FUN_1281C` — `objectEnter1281C(state, slotPtr, inner)`.
-   * Invocata nel branch state-2. Default: import TS con inner no-op (=> 0).
-   * NB: FUN_1281C richiede un `inner` callback (`FUN_264AA`); default no-op.
+   * Invoked in the state-2 branch. Default: TS import with no-op inner (=> 0).
+   * NB: FUN_1281C requires an `inner` callback (`FUN_264AA`); default no-op.
    */
   objectEnter1281C?: (state: GameState, slotPtr: number) => void;
 
@@ -185,23 +174,16 @@ export interface Sub158F6Subs {
    */
   helper121B8?: (state: GameState, rom: RomImage, slotPtr: number) => void;
 
-  /** Pass-through subs per `helper121B8`. */
+  /** Pass-through subs for `helper121B8`. */
   helper121B8Subs?: Helper121B8Subs;
 }
 
-// ─── Funzione principale ──────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000158F6` — object update sub.
  *
- * Decrementa i timer del slot e dispatcha il branch di update appropriato in
- * base ai byte di stato @ +0x18 / +0x1A. Vedi disasm in header.
+ * Decrements slot timers and dispatches the appropriate update branch.
  *
- * @param state    GameState corrente. `workRam` mutato in-place.
- * @param slotPtr  Indirizzo assoluto M68k del slot (es. `0x4009A4` o
- *                 `0x400A20`). Deve cadere nella work RAM.
- * @param rom      ROM image (necessaria ai sub-callee state-2 e ELSE).
- * @param subs     Stub injection per i 7 sub-callee. Tutti i campi opzionali.
+ *                 `0x400A20`). Must fall inside work RAM.
  */
 export function fun158F6(
   state: GameState,
@@ -236,8 +218,6 @@ export function fun158F6(
 
   // ── BLOCCO 2: state 0x24 timer @ +0x56 ──────────────────────────────────
   // 0x15930: cmpi.b #0x24, (0x1a,A2); bne.b → 0x15954 (skip a state-2 dispatch)
-  // NB: il byte @ +0x1A può essere stato modificato in BLOCCO 1 (FUN_160D4
-  // scrive 0x23). Rileggi.
   const s1aAfter = rB(state, a2Off + F_S1A);
   if (s1aAfter === 0x24) {
     // 0x15938: tst.b (0x56,A2); beq.b → 0x15942 (skip subq)
@@ -269,9 +249,6 @@ export function fun158F6(
       helper25FC2(state, rom, a2, subs.helper25FC2Subs);
     }
     // jsr FUN_1B9CC(A2) — caller pusha A2 long; FUN_1B9CC interpreta come
-    // (objAbs, flagLong). flagLong è il SAME long pushato (= a2). Il check
-    // `(flagLong & 0xff) !== 0` su slotPtr allineato 4 sarà sempre 0, ma
-    // replica esattamente il push del binario.
     if (subs.spriteHelper1B9CC) {
       subs.spriteHelper1B9CC(state, a2, a2);
     } else {
@@ -281,11 +258,10 @@ export function fun158F6(
     if (subs.objectEnter1281C) {
       subs.objectEnter1281C(state, a2);
     } else {
-      // FUN_1281C richiede un inner callback (FUN_264AA). Default no-op (→ 0).
+      // FUN_1281C requires an inner callback (FUN_264AA). Default no-op (→ 0).
       objectEnter1281C(state, a2, () => 0);
     }
     // 0x15974: lea (0xc,SP),SP — pop 3 args (no-op in TS)
-    // 0x15978: bra.b → 0x15996 (epilog, salta ELSE branch)
     return;
   }
 

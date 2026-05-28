@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 /**
- * marble-runner — esegue il **reimpl TS** su uno scenario e dumpa trace JSONL.
+ * marble-runner - runs the TS reimplementation on a scenario and dumps JSONL.
  *
- * Questo è il "vero" runner del progetto: usa l'engine `@marble-love/engine`
- * (codice TypeScript idiomatic, niente WASM, niente CPU emulator).
  *
- * Uso:
+ * Usage:
  *   marble-runner --scenario <name> [--ticks N] [--out path.jsonl]
  *
- * Per un trace dell'**oracolo** dalla ROM via Musashi WASM, vedi `binary-runner`.
- * Per un trace dall'oracolo MAME, vedi `oracle/run_oracle.ts`.
+ * For an oracle trace from the ROM through Musashi WASM, see `binary-runner`.
+ * For a MAME oracle trace, see `oracle/run_oracle.ts`.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -66,16 +64,16 @@ function parseArgs(): CliArgs {
 }
 
 function printHelp(): void {
-  console.log(`marble-runner — esegue il reimpl TS su uno scenario
+  console.log(`marble-runner - runs the TS reimplementation on a scenario
 
-Uso:
+Usage:
   marble-runner --scenario <name> [--ticks N] [--out path]
 
-Opzioni:
-  -s, --scenario   nome scenario (file in oracle/scenarios/<name>.json)
-  -t, --ticks      numero di frame da eseguire (default: 600 = 10s @ 60fps)
+Options:
+  -s, --scenario   scenario name (file in oracle/scenarios/<name>.json)
+  -t, --ticks      number of frames to run (default: 600 = 10s @ 60fps)
   -o, --out        output JSONL (default: traces/reimpl_<scenario>.jsonl)
-  -h, --help       mostra questo testo
+  -h, --help       show this help text
 `);
 }
 
@@ -98,22 +96,15 @@ function main(): void {
 
   const state = stateNs.emptyGameState();
 
-  // ROM: caricata se disponibile (path standard o $MARBLE_ROM).
   const romPath = process.env["MARBLE_ROM"] ?? resolve("ghidra_project/marble_program.bin");
   const rom: RomImage = busNs.emptyRomImage();
   try {
     const romBuf = readFileSync(romPath);
     rom.program.set(romBuf.subarray(0, rom.program.length));
   } catch {
-    // ROM mancante: tick userà ROM vuota; le palette anim leggono 0 → no-op.
     console.warn(`warning: ROM not found at ${romPath} (continuing with empty ROM)`);
   }
 
-  // NB: bootInit NON viene chiamato di default. MAME al frame 0 cattura
-  // lo stato PRIMA che il RESET handler completi (workRam ancora 0).
-  // Il nostro marble-runner serve a diff vs oracle MAME, quindi vogliamo
-  // lo stesso allineamento. Per il frontend (main.ts) bootInit è invece
-  // chiamato perché vogliamo lo stato post-boot già al primo frame.
   // Usa `--with-boot-init` per saltare la transitoria di boot in test.
   if (args.withBootInit) {
     bootInit(state, rom);
@@ -131,7 +122,6 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
   const lines: string[] = [traceNs.serializeHeader(header)];
 
-  // Allineamento col Lua dumper MAME: dumpiamo PRIMA, poi tick.
   for (let i = 0; i < ticks; i++) {
     // Apply scripted input at this frame
     const input = scenario.inputs[String(i)];

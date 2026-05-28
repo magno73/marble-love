@@ -8,7 +8,7 @@
  *   - Globals @ 0x401F00, 0x401F3A, 0x401F42 random
  *   - attr word random
  *
- * Output: 4 KB di alpha RAM scritta + verifica.
+ * Output: 4 KB of written alpha RAM plus verification.
  *
  * Uso: npx tsx packages/cli/src/test-string-render-parity.ts [N]
  */
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // valF00 = 0 per garantire chain end immediato (marker=0 + valF00=0 = sum 0 ≤ 1).
+    // valF00 = 0 guarantees immediate chain end (marker=0 + valF00=0 = sum 0 <= 1).
     // Senza questo, la chain advance walka memoria random.
     const valF00 = 0;
     const tick = Math.floor(rng() * 0x10000) & 0xffff;

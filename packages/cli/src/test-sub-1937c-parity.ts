@@ -2,10 +2,6 @@
 /**
  * test-sub-1937c-parity.ts — differential FUN_0001937C vs `sub1937C`.
  *
- * FUN_0001937C (90 byte): "Entity position validator". Legge x = entity[0xC..0xD]
- * (word) e y = entity[0x10..0x11] (word), chiama FUN_193D8 (proximity check su
- * array @ 0x401890, 9 × 0x28) e FUN_19460 (grid bitmap ROM @ 0x24496). Ritorna
- * 1 se OR è non-zero (= "bloccata"), 0 se entrambi 0 (= "libera").
  *
  * **Strategia parity**:
  *   - FUN_193D8 (proximity) **lasciato live**: implementato in `sub-1937c.ts`
@@ -15,14 +11,12 @@
  *
  * Compare:
  *   - Return value D0 (signed long da call binary)
- *   - `entity[0x0..0x40]` (no scritture attese dalla funzione, ma controlla che
  *     non ci siano side-effect indesiderati su workRam).
- *   - `proxArray @ 0x401890..0x401A28` (9 entry × 0x28; no scritture attese).
+ *   - `proxArray @ 0x401890..0x401A28` (9 entries x 0x28; no writes expected).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — entity + 9 prox entries random
  *   - B: pos in range grid valido (x,y >> 3 - bias in [0..0xF])
- *   - C: entity con prox-array vicino (forzato match)
  *   - D: edge cases (entity self-pointer, status 0/non-0, kind 2)
  *
  * Uso: npx tsx packages/cli/src/test-sub-1937c-parity.ts [N]
@@ -166,7 +160,7 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
-    // x,y tale che (x >> 3) - 0x59 in [0..0xF] e (y >> 3) - 0x5A in [0..0xF].
+    // x,y such that (x >> 3) - 0x59 is in [0..0xF] and (y >> 3) - 0x5A is in [0..0xF].
     // → x_byte in [0x59..0x68] → x_word in [0x59*8 .. 0x68*8] = [0x2c8..0x340].
     const xw = (0x59 + Math.floor(rng() * 0x10)) * 8 + Math.floor(rng() * 8);
     const yw = (0x5a + Math.floor(rng() * 0x10)) * 8 + Math.floor(rng() * 8);
@@ -185,7 +179,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
     const prox = genProx();
-    // Posiziona entity e prox entry 0 a coordinate vicine.
     const baseX = 0x100 + Math.floor(rng() * 0x200);
     const baseY = 0x100 + Math.floor(rng() * 0x200);
     e[0x0c] = (baseX >> 8) & 0xff;
@@ -211,7 +204,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < sizeD; i++) {
     const e = genEntity();
     const prox = genProx();
-    // Random per ogni entry: forza kind=2 o status=0 in alcuni slot.
     for (let j = 0; j < PROX_ARRAY_COUNT; j++) {
       const r = Math.floor(rng() * 4);
       if (r === 0) prox[j * PROX_ENTRY_SIZE + 0x18] = 0; // status=0 (skip)

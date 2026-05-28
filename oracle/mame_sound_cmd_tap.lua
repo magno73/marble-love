@@ -1,7 +1,7 @@
 -- mame_sound_cmd_tap.lua — capture cmd 68K → 6502 via write tap su $FE0001.
 --
 -- Output JSON: { frame: int, cmds: [{frame: N, byte: B}, ...] }
--- Permette al probe-sound-diff TS di replay esattamente la stessa sequenza
+-- Allows the TS probe-sound-diff to replay exactly the same sequence.
 -- di submitCommand chiamati dal main CPU MAME.
 --
 -- Env:
@@ -34,8 +34,8 @@ local function install_tap()
     -- $FE0001 = m_soundlatch.write (atarisy1.cpp main_map). 8-bit lane (odd
     -- byte: bus 68010 high byte → low byte on 8-bit device).
     -- Bus 16-bit del 68010: $FE0001 (odd byte) e' accessibile via $FE0000
-    -- con mask basso. Filtro: tieni solo write con mask & 0xff != 0 (= low
-    -- byte = sound latch). MAME passa byte intero in `d`; il byte effettivo
+    -- with low mask. Filter: keep only writes with mask & 0xff != 0 (= low
+    -- byte = sound latch). MAME passes the full byte in `d`; the effective byte
     -- e' (d & 0xff).
     main_mem:install_write_tap(0xFE0000, 0xFE0001, "sound_cmd", function(o, d, m)
         if (m & 0xff) ~= 0 then

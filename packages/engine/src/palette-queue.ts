@@ -1,29 +1,21 @@
 /**
- * palette-queue.ts — sistema "palette command queue" del binario.
+ * Three helpers for scripted multi-step palette swaps:
  *
- * Insieme di 3 funzioni che gestiscono palette swap multipli scriptati:
+ *   - **`paletteQueuePush(state, value)`** <-> `FUN_00026B66`
+ *     Pushes one command byte into a 4-slot circular queue at
+ *     `0x40040C-0x40040F` with u32 pointer `0x400408`.
  *
- *   - **`paletteQueuePush(state, value)`** ↔ `FUN_00026B66`
- *     Push di un byte di comando in una queue circolare (4 slot a
- *     `0x40040C-0x40040F`, pointer u32 a `0x400408`). Clamp al 4° slot
- *     se la queue è piena.
- *
- *   - **`paletteQueueDrain(state, rom)`** ↔ `FUN_00026B88`
- *     Drena la queue (LIFO: legge l'ultimo byte e lo decrementa). Per ogni
- *     byte poppato:
+ *   - **`paletteQueueDrain(state, rom)`** <-> `FUN_00026B88`
+ *     For each popped byte:
  *       1. Index in u32 lookup table @ ROM `0x20AE4` → command descriptor ptr
  *       2. Read descriptor: count (byte 0), pal-table-offset (byte 1), data (bytes 2..)
  *       3. Per i in 0..count-1: deref u32 in palette pointer table
  *          @ ROM `0x20840 + pal_offset + i*4` → palette destination addr.
  *          Write u16 BE data[i] a quella destination.
- *     Continua finché la queue è vuota.
  *
- *   - **`paletteQueueScheduler3(state)`** ↔ `FUN_00026D4E` (palette anim 3)
- *     Counter a 2 livelli (0x400460, 0x40045E): incrementa primo, se overflow
- *     (signed > 6) reset + incrementa secondo (mod 6). Dopo overflow, push
- *     comando `*0x40045E + 12` nella queue.
+ *   - **`paletteQueueScheduler3(state)`** <-> `FUN_00026D4E` (palette anim 3)
+ *     Pushes command `*0x40045E + 12` into the queue.
  *
- * **Verificato bit-perfect** vs binary tramite `cli/src/test-palette-queue-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -34,7 +26,6 @@ import type { RomImage } from "./bus.js";
 /** Pointer u32 BE to next-free slot in palette queue. */
 export const PAL_QUEUE_PTR_ADDR = 0x400408 as const;
 
-/** Queue head (i byte vengono scritti qui). */
 export const PAL_QUEUE_HEAD = 0x40040C as const;
 
 /** Queue tail (clamp upper bound). */
@@ -107,9 +98,6 @@ export function paletteQueuePush(state: GameState, value: number): void {
   const ptrOff = PAL_QUEUE_PTR_ADDR - 0x400000;
   let nextFree = readU32BE(state.workRam, ptrOff);
 
-  // Write byte at *(nextFree). NB: il binario fa anche `clr.l (A0)` PRIMA del
-  // write byte, ma è overwritten alla fine quando salviamo il nuovo ptr.
-  // Per la replica deterministica skippiamo questo intermediate state.
   const slotOff = nextFree - 0x400000;
   if (slotOff >= 0 && slotOff < state.workRam.length) {
     state.workRam[slotOff] = value & 0xff;
@@ -126,7 +114,6 @@ export function paletteQueuePush(state: GameState, value: number): void {
 /**
  * Drain palette queue. Replica `FUN_00026B88`.
  *
- * Per ogni byte nella queue (in ordine LIFO, da ptr-1 a 0x40040C):
  *   1. cmd_byte = *(--ptr)
  *   2. descriptor_ptr = *(rom + 0x20AE4 + sext_w(cmd_byte) * 4)
  *   3. count = sext_w(*descriptor_ptr)        (byte 0 of descriptor)
@@ -144,8 +131,8 @@ export function paletteQueueDrain(state: GameState, rom: RomImage): void {
     const ptr = readU32BE(state.workRam, ptrOff);
     if (ptr === 0) return; // empty
 
-    // `cmpa.l (A2), A1; bcc skip` = skip se A1 >= *A2 (unsigned).
-    // A1 = 0x40040C (head), *A2 = ptr. Skip se head >= ptr.
+    // `cmpa.l (A2), A1; bcc skip` = skip if A1 >= *A2 (unsigned).
+    // A1 = 0x40040C (head), *A2 = ptr. Skip if head >= ptr.
     if (PAL_QUEUE_HEAD >= ptr) return;
 
     // *A2 -= 1 (decrement)
@@ -179,7 +166,6 @@ export function paletteQueueDrain(state: GameState, rom: RomImage): void {
     if (descriptorPtr + 2 > rom.program.length) continue;
     const count = sext8_i32(rom.program[descriptorPtr] ?? 0);
     const palOffsetByte = rom.program[descriptorPtr + 1] ?? 0;
-    // sext.l(palOffsetByte) << 2 — il binario fa ext.w + ext.l + asl.l #2
     const palOffset = (sext8_i32(palOffsetByte) << 2) >>> 0;
 
     let dataPtr = descriptorPtr + 2;
@@ -215,7 +201,6 @@ export function paletteQueueDrain(state: GameState, rom: RomImage): void {
  *     if signed(*0x40045E) > 5: *0x40045E = 0
  *     paletteQueuePush(sext_l(*0x40045E) + 12)
  *
- * Quindi ogni 7 frame, push del comando 12+(*0x40045E mod 6) nella queue.
  */
 export function paletteAnim3Tick(state: GameState): void {
   const lowOff = SCHED3_LOW_CTR - 0x400000;
@@ -230,7 +215,7 @@ export function paletteAnim3Tick(state: GameState): void {
   // *0x400460 += 1
   let newLow = (lowVal + 1) & 0xff;
 
-  // cmpi.b #0x6, *; ble skip — skip se signed *0x400460 <= 6
+  // cmpi.b #0x6, *; ble skip — skip if signed *0x400460 <= 6
   const newLowSigned = sext8_i32(newLow);
   if (newLowSigned <= 6) {
     state.workRam[lowOff] = newLow;
@@ -243,7 +228,7 @@ export function paletteAnim3Tick(state: GameState): void {
 
   // Increment high
   let newHigh = ((state.workRam[highOff] ?? 0) + 1) & 0xff;
-  // cmpi.b #0x5, *; ble skip — clear se signed > 5
+  // cmpi.b #0x5, *; ble skip — clear if signed > 5
   if (sext8_i32(newHigh) > 5) newHigh = 0;
   state.workRam[highOff] = newHigh;
 

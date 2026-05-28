@@ -8,16 +8,16 @@ const rom422 = new Uint8Array(readFileSync("/tmp/sound-roms/136033.422"));
 const tape = loadCmdTape(JSON.parse(readFileSync("oracle/scenarios/sound-cmd-tape-attract.json", "utf8")));
 
 const chip = createSoundChip({ roms: { rom421, rom422 } });
-// CRITICAL: in MAME il main 68K tiene il sound 6502 in reset fino al primo
-// cmd (~f244 nella tape attract). Se TS rilascia il reset a f0, il 6502 gira
-// 244 frame in idle accumulando state divergente. Fix: rilascia solo al
-// primo frame in cui arriva un cmd.
+// CRITICAL: in MAME the main 68K keeps the sound 6502 in reset until the first
+// command (~f244 in the attract tape). If TS releases reset at f0, the 6502 runs
+// 244 idle frames and accumulates divergent state. Release only when a command
+// arrives.
 const firstCmdFrame = Math.min(...Array.from(tape.byFrame.keys()));
-// MAME hardware ordering a f244: $FE0001 write (cmd, sound CPU in reset) →
-// $860001 bit7=1 (release). Cmd va in soundlatch SENZA NMI (CPU in reset
-// non latch l'edge), poi 6502 esce dal reset e legge $1810 via polling.
-// Per replicarlo: a firstCmdFrame, sottometti i cmd PRIMA di rilasciare il
-// reset (submitCommand sopprime NMI quando inReset=true).
+// MAME hardware ordering at f244: $FE0001 write (cmd, sound CPU in reset),
+// then $860001 bit7=1 (release). The command reaches the sound latch without
+// NMI because the CPU in reset does not latch the edge; the 6502 then leaves
+// reset and polls $1810. To mirror that, submit commands before release at
+// firstCmdFrame; submitCommand suppresses NMI while inReset=true.
 const RESET_RELEASE_OFFSET = Number(process.env.RESET_OFFSET ?? "0");
 const releaseFrame = Math.max(0, firstCmdFrame - RESET_RELEASE_OFFSET);
 console.log(`First cmd frame: ${firstCmdFrame}, release at: ${releaseFrame}`);
@@ -25,22 +25,22 @@ console.log(`First cmd frame: ${firstCmdFrame}, release at: ${releaseFrame}`);
 let totalYm = 0, totalPk = 0, maxAbsYm = 0, maxAbsPk = 0;
 let released = false;
 for (let f = 0; f < 600; f++) {
-  // STEP 1: submit cmd di questo frame. submitCommand sopprime NMI se inReset.
+  // STEP 1: submit this frame's commands. submitCommand suppresses NMI in reset.
   const frameCmds = tape.byFrame.get(f);
   if (frameCmds !== undefined) {
     for (const b of frameCmds) submitCommand(chip, as_u8(b));
   }
-  // STEP 2: release del reset al frame target (DOPO submit per matching MAME)
+  // STEP 2: release reset at the target frame, after submit to match MAME.
   if (!released && f >= releaseFrame) {
     releaseSoundReset(chip);
     released = true;
     console.log(`Released sound reset at f${f}`);
   }
-  // STEP 3: tick cycle del frame.
+  // STEP 3: tick one frame worth of cycles.
   tickCycles(chip, SOUND_CYCLES_PER_FRAME);
-  // STEP 4: drain reply queue. Simula main 68K che legge $FC0001 (IRQ6
-  // handler). Senza drain, soundToMain.pending resta true e il sound 6502
-  // si blocca nel NMI handler waiting for response buffer clear.
+  // STEP 4: drain reply queue, simulating the main 68K reading $FC0001 in the
+  // IRQ6 handler. Without draining, soundToMain.pending stays true and the
+  // sound 6502 stalls in the NMI handler waiting for the response buffer.
   drainReplyEvents(chip);
   const ym = drainYm2151Samples(chip);
   const pk = drainPokeySamples(chip);

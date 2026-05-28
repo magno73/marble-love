@@ -7,7 +7,7 @@
  * Output al `dst` ptr (post-incrementing).
  *
  * Le rotazioni `ror.l` mescolano nibbles cross-word, quindi va replicato
- * con cura.
+ * carefully.
  */
 
 import type { GameState } from "./state.js";

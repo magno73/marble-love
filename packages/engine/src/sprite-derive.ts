@@ -1,5 +1,5 @@
 /**
- * sprite-derive.ts — `FUN_0001BB50` (90 byte): derive 5 fields from xy.
+ * sprite-derive.ts - `FUN_0001BB50` (90 bytes): derive 5 fields from xy.
  *
  * Reads *0x400690 (x word) and *0x400692 (y word). Writes:
  *   - *0x40069E = x & 7
@@ -19,7 +19,7 @@ function writeU16(s: GameState, off: number, v: number): void {
   s.workRam[off + 1] = v & 0xff;
 }
 
-/** Replica `FUN_0001BB08` — wrapper: setta xy globals da arg+0xC/+0x10 word + jsr derive. */
+/** Replica `FUN_0001BB08` - wrapper that sets xy globals from arg+0xC/+0x10 word and JSRs derive. */
 export function deriveSpriteFromArg_v1(state: GameState, argAddr: number): void {
   const argOff = argAddr - 0x400000;
   writeU16(state, 0x690, readU16(state, argOff + 0xC));

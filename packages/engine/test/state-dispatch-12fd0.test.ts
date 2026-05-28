@@ -1,7 +1,6 @@
 /**
  * state-dispatch-12fd0.test.ts — smoke per FUN_12FD0.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-state-dispatch-12fd0-parity.ts` (500/500).
  */
 
@@ -72,7 +71,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
       fun_13068: () => { calls13068++; },
     });
     expect(calls12d46).toBe(0);
-    expect(calls13068).toBe(SLOT_COUNT); // blocco 3 sempre eseguito
+    expect(calls13068).toBe(SLOT_COUNT);
   });
 
   it("gameMode == 2, active obj with state 0x09 → fun_12d46(ROM_SCRIPT_PTR) chiamata", () => {

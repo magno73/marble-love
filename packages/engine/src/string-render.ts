@@ -1,47 +1,47 @@
 /**
- * string-render.ts — replica del pure leaf `FUN_00002572` (262 byte).
+ * string-render.ts - port of pure leaf `FUN_00002572` (262 bytes).
  *
- * Funzione "render string chain": cammina una linked list di entry e per
- * ognuna scrive una stringa nell'alpha tilemap @ 0xA03000 con supporto a
- * rotazione (orientation 0..7) e case shifting per i caratteri 'A'..'Z'.
+ * "Render string chain": walks a linked list of entries and writes each string
+ * to the alpha tilemap @ 0xA03000, with rotation support (orientation 0..7) and
+ * case shifting for 'A'..'Z'.
  *
  * **Layout entry struct (8+ bytes)**:
- *   +0  byte  : col (colonna in tile units)
- *   +1  byte  : tick offset (entry diventa "due" quando offset - tick <= lookup)
- *   +2  long  : pointer alla stringa (terminata da 0)
- *   +6  byte  : marker (per chain end check)
- *   +8  long  : pointer alla next entry
+ *   +0  byte  : col (column in tile units)
+ *   +1  byte  : tick offset (entry becomes due when offset - tick <= lookup)
+ *   +2  long  : pointer to the zero-terminated string
+ *   +6  byte  : marker for chain end check
+ *   +8  long  : pointer to the next entry
  *
  * **Globals workRam**:
- *   0x401F00  word: VALUE_F00 (additivo per marker check)
+ *   0x401F00  word: VALUE_F00 (additive for marker check)
  *   0x401F3A  word: tick counter
  *   0x401F42  word: rotation flag (0..7)
  *
- * **ROM tables** (stesse di setAlphaTile):
+ * **ROM tables** (same as setAlphaTile):
  *   0x7294  word table: max-display-row per rotation
  *   0x72A0  word table: stride between consecutive chars per rotation
- *   0x72A4  byte table @ +1: shift count per rotation (replica setAlphaTile pattern)
- *   0x72A8  word table: XOR mask per rotation
+ *   0x72A4  byte table @ +1: shift count per rotation (matches setAlphaTile pattern)
+ *   0x72A8  word table: XOR mask by rotation
  *
  * **Algorithm**:
  *   1. Read tick offset, compute D1 = offset - tick
  *   2. If D1 > lookup7294[rotation]: skip render
  *   3. Else compute alpha base: ALPHA + 2 * (col << shift + d3)
- *      con d3 = (rotation != 0) ? (0x29 - D1) : (D1 * 64)
+ *      with d3 = (rotation != 0) ? (0x29 - D1) : (D1 * 64)
  *   4. For each char in string:
  *      - if char == 0: end string
  *      - if char == 0x20 (space): write attr only
  *      - else if char in 'A'..'Z' AND attr & 0xC000 != 0:
- *        case shift: char ± 0x40 in base a attr & 0x8000
+ *        case shift: char +/- 0x40 based on attr & 0x8000
  *        write (attr | char_shifted) ^ XOR mask
  *      - else: write (attr | char) ^ XOR mask
  *      - alpha += 2 * stride
- *   5. After string: marker check. Se marker + *0x401F00 > 1: avanza
- *      a A1 = *(A1+8) e ricomincia. Altrimenti exit.
+ *   5. After string: marker check. If marker + *0x401F00 > 1, advance to
+ *      A1 = *(A1+8) and restart. Otherwise exit.
  *
- * Returns: D0 = 1 (sempre).
+ * Returns: D0 = 1 (always).
  *
- * **Verificato bit-perfect** vs `FUN_00002572` tramite differential test.
+ * **Bit-perfect verified** against `FUN_00002572` through differential tests.
  */
 
 import type { GameState } from "./state.js";
@@ -100,17 +100,17 @@ function writeAlphaWord(state: GameState, addr: number, value: number): void {
   // Out-of-range writes silently ignored (bin would still write but to non-modeled regions)
 }
 
-// ─── Main function: replica FUN_2572 ─────────────────────────────────────
+// ─── Main function: port of FUN_2572 ─────────────────────────────────────
 
 /**
- * Replica `FUN_00002572` — render string chain con rotation support.
+ * Port of `FUN_00002572` - render string chain with rotation support.
  *
  * @param state      GameState
- * @param rom        RomImage (per ROM tables 0x7294/0x72A0/0x72A4/0x72A8)
- * @param structAddr Indirizzo assoluto della prima entry (linked list)
- * @param attrWord   Word di attributi (passato come arg2; usato come
- *                    bitmap palette + flags per case shift)
- * @returns          Sempre 1 (D0 dal disasm)
+ * @param rom        RomImage for ROM tables 0x7294/0x72A0/0x72A4/0x72A8.
+ * @param structAddr Absolute address of the first linked-list entry.
+ * @param attrWord   Attribute word passed as arg2; used as palette bitmap and
+ *                    case-shift flags.
+ * @returns          Always 1 (D0 from disasm).
  */
 export function renderStringChain(
   state: GameState,
@@ -119,7 +119,7 @@ export function renderStringChain(
   attrWord: number,
 ): number {
   let a1 = structAddr >>> 0;
-  // Safety bound: chain depth limit per evitare loop in caso di dati malformati
+  // Safety bound: chain depth limit to avoid loops on malformed data.
   let chainSafety = 1024;
   const attrW = attrWord & 0xffff;
 
@@ -161,7 +161,7 @@ export function renderStringChain(
       const shiftCount = shiftByte & 0x80 ? shiftByte - 0x100 : shiftByte;
 
       let d0 = colSigned;
-      // asl.l con shift count fuori range: 68k cap a 64; >= 32 → 0
+      // asl.l with out-of-range shift count: 68k caps at 64; >= 32 -> 0
       if (shiftCount >= 32 || shiftCount < 0) {
         d0 = shiftCount < 0 ? d0 : 0;
       } else {

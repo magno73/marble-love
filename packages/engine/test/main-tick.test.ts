@@ -1,19 +1,11 @@
 /**
  * main-tick.test.ts — smoke test dell'orchestrator.
  *
- * Verifica che `mainTick(state, {rom})`:
- *  1. Non lanci eccezioni con state vuoto + ROM vuota
  *  2. Incrementi `state.clock.frame` (counter canonico interno)
- *  3. Esegua mainUpdateScrollSync (prefix FUN_28788) quando il flag 0x39A è set
- *  4. Sia idempotente: 100 tick consecutivi senza errori, state coerente
  *
  * **Nota**: workRam[0x14] e workRam[0x16] NON sono frame counter monotonic.
- * MAME li sovrascrive con altri valori durante il body del tick (vblank
  * mailbox @ 0x16, sound-timer mirror @ 0x14). Vedi commit B6: il preambolo
- * IRQ4 incrementa, ma il body azzera/sovrascrive — quindi qui non si testa.
  *
- * Non testa parità byte-perfect col binario (responsabilità dei singoli
- * test parity dei sub-systems). Verifica solo che il wire-up regga.
  */
 
 import { afterEach, describe, it, expect } from "vitest";
@@ -126,20 +118,15 @@ describe("mainTick smoke", () => {
   it("inputMmio default 0xFC → gameMainGate skip Block C (no spin)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Senza eccezioni anche con inputMmio bit 6 set (default no-buttons)
     expect(() => mainTick(s, { rom, inputMmio: 0xfc })).not.toThrow();
   });
 
   it("trackball deltas si propagano a gameTickTimers + trackball state", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Prima tick: nessun delta → trackball state stabile
     mainTick(s, { rom });
     const stableState = Array.from(s.workRam.slice(0x1c00, 0x1c20));
-    // Seconda tick: con delta dx=8 — non ci aspettiamo bit-perfect parity
-    // qui (test smoke), solo che lo stato evolva senza throw
     expect(() => mainTick(s, { rom, p1X: 8, p1Y: -4 })).not.toThrow();
-    // Sanity: il frame counter è continuato
     expect(s.clock.frame).toBe(2);
     void stableState;
   });

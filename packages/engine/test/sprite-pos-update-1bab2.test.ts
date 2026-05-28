@@ -37,10 +37,8 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     expect(readWord(s, POS_X_OFF)).toBe(0x1234);
     expect(readWord(s, POS_Y_OFF)).toBe(0x5678);
     expect(readWord(s, POS_Z_OFF)).toBe(0xabcd);
-    // deriveSpriteFields ha aggiornato 696/698: 0x1234>>3 = 0x246, 0x5678>>3 = 0xACF
     expect(readWord(s, TILE_X_OFF)).toBe(0x1234 >> 3);
     expect(readWord(s, TILE_Y_OFF)).toBe(0x5678 >> 3);
-    // tile è cambiato (era 0,0): redrawNeeded true
     expect(r.redrawNeeded).toBe(true);
     expect(r.prevTileX).toBe(0);
     expect(r.prevTileY).toBe(0);
@@ -134,7 +132,6 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     writeWord(s, argOff + 0xc, 0x40);
     writeWord(s, argOff + 0x10, 0x80);
     writeWord(s, argOff + 0x14, 0);
-    // Nessun subs → non deve crashare.
     const r = spritePosUpdate1BAB2(s, ARG);
     expect(r.redrawNeeded).toBe(true);
   });

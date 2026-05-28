@@ -4,27 +4,27 @@
  * `decodeBitstream1A668`.
  *
  * `FUN_0001A668` (304 byte) e' un decoder bitstream + byte-stream RLE-style
- * che produce 36 word (= 0x48 byte = piu' eventuale overshoot fino a 7 word
- * extra) in un buffer di output. Il bitstream e' letto a granularita' di
- * 7/9/14 bit con sliding-window di 2 byte; consulta 2 lookup table ROM
+ * that produces 36 words (= 0x48 bytes plus possible overshoot up to 7 extra
+ * words) in an output buffer. The bitstream is read at 7/9/14-bit granularity
+ * with a 2-byte sliding window; it consults 2 ROM lookup tables
  * (@0x2499A 32 word, @0x249DA 8 word). Vedi header del file engine module
  * per il disasm completo.
  *
  * Strategia parity:
- *   - Setup workRam con un buffer di output zeroed @ 0x401000, un control
+ *   - Set up workRam with a zeroed output buffer @ 0x401000, a control
  *     bitstream random @ 0x401200 (~256 byte → margine), e un byte stream
  *     random @ 0x401400 (~512 byte di copertura cache).
- *   - ROM lookup tables sono il contenuto effettivo del binario originale
- *     (lette via romBuf) — non patchate.
- *   - Run binario via callFunction(0x1A668, [outAbs, ctrlAbs, extAbs]).
+ *   - ROM lookup tables are the actual original binary contents
+ *     (read via romBuf), not patched.
+ *   - Run binary via callFunction(0x1A668, [outAbs, ctrlAbs, extAbs]).
  *   - Run TS via decodeBitstream1A668(state, rom, outAbs, ctrlAbs, extAbs).
  *   - Compara tutta la zona output (0x48 byte + overshoot 14 byte = 0x56 byte)
- *     byte-per-byte tra binario e TS.
+ *     byte-for-byte between binary and TS.
  *
- * Suite testate (3 × 167 + 1 = 500 casi):
+ * Tested suites (3 x 167 + 1 = 500 cases):
  *   - A: ctrl bitstream uniformemente random (mix di tutti 5 path)
- *   - B: ctrl bitstream con bias verso path B (token piccoli, < 0x400)
- *   - C: ctrl bitstream con bias verso path A (bit 13 set)
+ *   - B: ctrl bitstream with bias toward path B (small tokens, < 0x400)
+ *   - C: ctrl bitstream with bias toward path A (bit 13 set)
  *
  * Confronto: workRam[outOff..outOff + 0x56) byte-per-byte.
  *
@@ -105,7 +105,7 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   /**
-   * Sync una zona di workRam @ off..off+len in entrambi binario e TS.
+   * Sync a workRam zone @ off..off+len in both binary and TS.
    */
   function syncWorkRam(off: number, len: number, src: Uint8Array): void {
     for (let k = 0; k < len; k++) {
@@ -143,16 +143,16 @@ async function main(): Promise<void> {
     const ctrlAbs = WORK_RAM_BASE + CTRL_OFF;
     const extAbs = WORK_RAM_BASE + EXT_OFF;
 
-    // Run binario
+    // Run binary.
     callFunction(cpu, FUN_1A668, [outAbs >>> 0, ctrlAbs >>> 0, extAbs >>> 0]);
 
-    // Snapshot output binario
+    // Snapshot binary output.
     const binOut: number[] = [];
     for (let k = 0; k < COMPARE_BYTES; k++) {
       binOut.push(peekMem(cpu, WORK_RAM_BASE + OUT_OFF + k, 1) & 0xff);
     }
 
-    // Reset solo lo state TS output (gia' zero ma la TS scrivera' dentro).
+    // Reset only TS output state; already zero, but TS will write into it.
     // Run TS
     decNs.decodeBitstream1A668(stateInst, romView, outAbs, ctrlAbs, extAbs);
 
@@ -185,21 +185,21 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Genera un ctrl byte stream con bias verso un path specifico.
+   * Generate a ctrl byte stream biased toward a specific path.
    *
    * @param mode  "uniform" | "pathB" (token piccoli) | "pathA" (bit 13 set)
    */
   function genCtrlStream(mode: string, rng: () => number): Uint8Array {
     const buf = new Uint8Array(CTRL_BYTES);
     if (mode === "pathB") {
-      // Path B: 14-bit token con bit 13 = 0 e bits 12..10 = 0. So token < 0x400.
+      // Path B: 14-bit token with bit 13 = 0 and bits 12..10 = 0. So token < 0x400.
       // Bias: ogni byte e' "small" (< 0x40 nel high nibble).
       for (let i = 0; i < CTRL_BYTES; i++) {
         // Per assicurare path B serve il top 14 bit del long < 0x400.
         // I top 14 bit sono i top 14 bit del primo byte + 6 bit del secondo.
         // Top 14 bit < 0x400 ⇔ top byte e' 0..0xF (high 4 bit di byte0 = 0..0x0F)
         // e basso byte ha bit 7..2 small. Approssimazione: scriviamo byte
-        // random ma con 50% MSB 0 → mix path A/B.
+        // random but with 50% MSB 0 -> mix path A/B.
         buf[i] = Math.floor(rng() * 0x40); // small bytes for mix of B/C/D
       }
     } else if (mode === "pathA") {
@@ -220,8 +220,8 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Genera un byte stream "extra" random con count diversi (no zero per
-   * evitare underflow weird).
+   * Generate a random "extra" byte stream with different counts (no zero to
+   * avoid weird underflow).
    */
   function genExtStream(rng: () => number): Uint8Array {
     const buf = new Uint8Array(EXT_BYTES);

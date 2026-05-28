@@ -1,7 +1,6 @@
 /**
  * Test auxTimer (FUN_10146) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite `cli/src/test-aux-timer-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -38,7 +37,6 @@ describe("auxTimer (FUN_10146)", () => {
 
     auxTimer(s);
 
-    // Tutti gli stati invariati.
     expect(s.workRam[COUNTDOWN_HI_OFF]).toBe(0x01);
     expect(s.workRam[COUNTDOWN_LO_OFF]).toBe(0x2c);
     expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40);
@@ -65,13 +63,12 @@ describe("auxTimer (FUN_10146)", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0x01;
     s.workRam[COUNTDOWN_LO_OFF] = 0x2c;
-    s.workRam[ACTIVE_FLAG_OFF] = 0; // così salta anche il branch attivo
+    s.workRam[ACTIVE_FLAG_OFF] = 0;
     s.workRam[COUNTER_OFF] = 0x10;
     setQueue(s, 0, 1, [0x42]);
 
     auxTimer(s);
 
-    // Countdown invariato, attivo non si attiva, counter incrementa.
     expect(s.workRam[COUNTDOWN_HI_OFF]).toBe(0x01);
     expect(s.workRam[COUNTDOWN_LO_OFF]).toBe(0x2c);
     expect(s.workRam[COUNTER_OFF]).toBe(0x11);
@@ -122,7 +119,7 @@ describe("auxTimer (FUN_10146)", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0x00;
     s.workRam[COUNTDOWN_LO_OFF] = 0x10;
-    s.workRam[ACTIVE_FLAG_OFF] = 0x40; // sarebbe attivo
+    s.workRam[ACTIVE_FLAG_OFF] = 0x40;
     s.workRam[COUNTER_OFF] = 0x20;
     setQueue(s, 0, 1, [0xff]);
 

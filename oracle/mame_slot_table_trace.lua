@@ -1,6 +1,6 @@
 -- mame_slot_table_trace.lua — tap su audioRam $0248-$0267 (music slot
--- table). Cattura la prima write con valore $CC al hi byte ($0258-$0267)
--- per identificare il momento in cui MAME setta l'attract music track.
+-- table). Captures the first write with value $CC to the high byte ($0258-$0267).
+-- to identify when MAME sets the attract music track.
 -- Salva PC, stack call chain e zp state per identificare il caller.
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_TRACE_TARGET") or "13000")
@@ -32,7 +32,7 @@ emu.register_frame_done(function()
             function(o,d,m) return d end))
 
         -- Write tap su slot table $0248-$0267 (16 LO bytes + 16 HI bytes)
-        -- Filter: solo write HI ($0258-$0267) con valore $CC/$CD (= attract
+        -- Filter: only HI writes ($0258-$0267) with value $CC/$CD (= attract
         -- music tracks). Skip noise di slot copy/update routine.
         table.insert(tap_handles, sound_mem:install_write_tap(0x0258, 0x0267, "st_w",
             function(o, d, m)

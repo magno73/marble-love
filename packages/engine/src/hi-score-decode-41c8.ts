@@ -1,29 +1,19 @@
 /**
- * hi-score-decode-41c8.ts — replica `FUN_000041C8` (198 byte) bit-perfect.
+ * Bit-perfect port of `FUN_000041C8`.
  *
- * Decodifica una entry della high-score table (10 righe da 5 byte) in un
- * buffer di lavoro a 0x401F7A:
- *   - 4 byte long: punteggio (24 bit BE, high byte = 0)
- *   - 3 byte ASCII: iniziali del giocatore (radix-40 unpack)
+ * Decodes one 5-byte high-score table entry into the 7-byte work buffer at
+ * `0x401F7A`: a 24-bit big-endian score stored as a long, followed by three
+ * ASCII initials unpacked from a radix-40 word.
  *
- * Tabella sorgente: `*0x401FFC + 0x1E` (stessa zona usata da
- * `key-rank-lookup-4686` / FUN_4686 per il rank-search). Layout di una
- * entry da 5 byte:
- *   +0..+2  -> 24-bit BE score (byte[+0] = high)
- *   +3..+4  -> 16-bit BE word, packing radix-40 di 3 chars
+ * Source table: `*0x401FFC + 0x1E`, shared with the rank-search helper. Each
+ * record is laid out as three score bytes followed by a 16-bit big-endian
+ * radix-40 initials word. Digits are extracted from least significant to most
+ * significant, then written back in display order at buffer bytes +4..+6.
  *
- * Il 16-bit word viene interpretato come `c0 * 1600 + c1 * 40 + c2` con
- * estrazione modulo 40 da LSB a MSB. I tre digit estratti vengono mappati a
- * ASCII e scritti in ordine BIG-ENDIAN nel buffer (digit "low" in byte +6,
- * digit "high" in byte +4 — vedi nota loop counter qui sotto).
- *
- * **Mapping radix-40 -> ASCII** (dal binario):
- *   - `digit == 0`     -> 0x20 (' ' space)
- *   - `1 <= digit <= 26`  -> digit + 0x40 (= 'A'..'Z')
- *   - `27 <= digit <= 39` -> digit + 0x15 (= '0'..'<')
- *
- * Il range "tail" (27..39) include numeri 0-9 e poi tre simboli (':' ';' '<'),
- * coerente con l'encoding radix-40 ATARI standard ma senza branch difensivo.
+ * Radix-40 mapping from the binary:
+ * - 0 -> space
+ * - 1..26 -> 'A'..'Z'
+ * - 27..39 -> '0'..'<'
  *
  * **Disasm 0x41C8..0x428C** (198 byte / 0xC6):
  *
@@ -84,7 +74,7 @@
  *   0x4238  lsl.w   #0x8,D0w                    ; D0.w = byte[+3] << 8
  *   0x423A  add.w   D0w,D3w                     ; D3.w = (b3<<8) | b4 (BE word)
  *
- *   ; --- Loop 3 iter: estrai 3 digit base-40, scrivi ASCII a A1+4..A1+6 ---
+ *   ; --- Loop 3 iterations: extract base-40 digits, write ASCII to A1+4..A1+6 ---
  *   0x423C  moveq   #0x2,D2                     ; D2 = 2 (loop counter, also write idx)
  *   0x423E: moveq   #0,D0
  *   0x4240  move.w  D3w,D0w                     ; D0 = D3.w (zero-ext)
@@ -117,110 +107,64 @@
  *   0x4288  movem.l (SP)+,{D2 D3 D4 D5}
  *   0x428C  rts
  *
- * **Modellazione bit-perfect**:
+ * Bit-perfect notes:
+ * - the range check is unsigned, so sign-extended negative indices are out of
+ *   range and return 0 without writing the output buffer;
+ * - the record offset is `arg1 * 5`;
+ * - `divu.w #40` yields quotient in the low word and remainder in the high
+ *   word, matching the `swap`/`andi` extraction pattern;
+ * - valid inputs write exactly seven bytes at `0x401F7A..0x401F80`, invalid
+ *   inputs write nothing.
  *
- *   1. **Range check `bcc.b` su `cmp.l D2,D0` con D0=9**: il flag carry dopo
- *      `cmp` rappresenta `D0 < D2` unsigned. `bcc` = "branch if carry clear"
- *      = D0 >= D2 unsigned = 9 >= arg1 unsigned. Quindi arg1 in [0..9]
- *      unsigned passa al work-path; arg1 >= 10 (incluso negative sign-ext)
- *      -> early exit `D0 = 0`.
- *
- *   2. **`asl.l #2, D2; add.l A0, D2`**: D2 = (arg1 << 2) + arg1 = arg1 * 5
- *      (long, wrap a 32 bit ma per arg1 in [0..9] no overflow).
- *
- *   3. **24-bit BE score**: byte[+0] e' high (alti 16 bit), byte[+1] e' mid,
- *      byte[+2] e' low. Composizione: `(b0<<16) | (b1<<8) | b2` (long, high
- *      byte = 0 perche' b0 al massimo 0xFF e shift di 16 lascia bit 24..31
- *      a 0). Store come `move.l` BE @ A1 (4 byte: 0x00, b0, b1, b2).
- *
- *   4. **16-bit BE word @ +3**: `(b3<<8) | b4`, interpretato come radix-40
- *      packed: digit2 * 1600 + digit1 * 40 + digit0 (digit0 = LSB). Il loop
- *      estrae con divu.w #40 da basso (digit0 -> A1+6) ad alto (digit2 -> A1+4).
- *
- *   5. **`divu.w #0x28`**: divu.w divide D0 (32-bit) per word imm. Result
- *      basso 16 bit = quoziente, alto 16 bit = resto. Il pattern `swap +
- *      andi.l #0xFFFF` estrae il resto (high word -> low word), il pattern
- *      `andi.l #0xFFFF` direttamente estrae il quoziente. Per D3.w in
- *      [0..0xFFFF] e divisore 0x28 (40), quoziente max = 0xFFFF/40 = 1638
- *      (non overflowa la word: trap V su divu.w avviene solo per quotient
- *      > 0xFFFF, qui irrilevante).
- *
- *   6. **Loop counter D2.w**: parte da 2 long (sign-ext da byte 0x02 via
- *      moveq, high word = 0). `subq.w #1` decrementa solo la word,
- *      eventualmente a 0xFFFF (= -1 signed) terminando il `bge.b` (signed
- *      compare). Il store usa D0.w come index (`*(A0+D0w*1)`), quindi
- *      l'indice scritto e' 2, 1, 0. Il digit0 (LSB radix-40) finisce a +6,
- *      digit1 a +5, digit2 (MSB) a +4: ordine "BE-text" naturale.
- *
- *   7. **Mapping char**: rem == 0 -> 0x20 (space). Altrimenti, rem in
- *      [1..0x1A] -> rem + 0x40 (= 'A'..'Z'). rem in [0x1B..0x27] (27..39)
- *      -> rem + 0x15 (= 0x30..0x3C, cioe' '0'..'<'; 0..9 sono i primi 10).
- *      Per rem >= 40 il dividendo D3.w sarebbe > 0xFFFF (impossibile via
- *      divu.w #40), quindi unreachable. Il binario non ha clamp.
- *
- *   8. **Side effect su workRam**: writes 7 byte a 0x401F7A..0x401F80 in
- *      caso di arg1 valido (in [0..9]). Per arg1 invalido (>= 10): nessuna
- *      write (early exit prima del primo `move.l D0,(A1)`).
- *
- *   9. **Return value**: long unsigned 32-bit:
- *      - `0x00000000` se arg1 >= 10 (out-of-range, no write).
- *      - `0x00401F7A` se arg1 in [0..9] (puntatore al buffer scritto).
- *
- * **JSR interne**: nessuna. Funzione leaf, no stub injection necessaria.
- * **MMIO**: nessuna lettura/scrittura.
- *
- * **Stack layout** all'ingresso del corpo (dopo `movem.l` di 16 byte):
+ * **Stack layout** at body entry, after the 16-byte `movem.l`:
  *   SP+0x00..0x0F  saved D2,D3,D4,D5
  *   SP+0x10..0x13  return PC
  *   SP+0x14..0x17  arg1 long (record index)
  *
- * **Caller**: `thunk_FUN_000041C8` @ 0x1AE (jmp.l), chiamato 3 volte da
- * `FUN_00011FF8` (0x120C8, 0x120DC, 0x12018). Il caller passa un long
- * sign-ext'd da word.
- *
- * **Verifica bit-perfect** via `test-hi-score-decode-41c8-parity.ts` (500 casi).
+ * Caller: `thunk_FUN_000041C8` @ 0x1AE (jmp.l), reached from `FUN_00011FF8`.
+ * Parity is covered by `test-hi-score-decode-41c8-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-/** WorkRam offset del long pointer @ 0x401FFC. */
+/** Work RAM offset of the long pointer at `0x401FFC`. */
 const PTR_FFC_OFF = 0x1ffc;
 
-/** Offset (byte) dal long-ptr alla testa della tabella high-score. */
+/** Byte offset from the long pointer to the high-score table head. */
 export const TABLE_OFF_FROM_PTR = 0x1e as const;
 
-/** Numero massimo di record validi (arg1 <= 9 -> 10 entry). */
+/** Maximum valid record index. */
 export const MAX_INDEX = 9 as const;
 
-/** Stride di un record (byte). */
+/** Record stride in bytes. */
 export const RECORD_STRIDE = 5 as const;
 
-/** Indirizzo M68k del buffer di output (workRam). */
+/** Absolute 68k address of the work RAM output buffer. */
 export const OUTPUT_BUFFER_ADDR = 0x00401f7a as const;
 
-/** Offset workRam del buffer di output. */
+/** Work RAM offset of the output buffer. */
 export const OUTPUT_BUFFER_OFF = OUTPUT_BUFFER_ADDR - 0x00400000;
 
-/** Byte size totale del buffer scritto (4 byte score + 3 byte initials). */
+/** Output byte count: 4 score bytes plus 3 initials bytes. */
 export const OUTPUT_BUFFER_LEN = 7 as const;
 
-/** Base radix-40 (numero di simboli supportati). */
+/** Radix-40 alphabet size. */
 const RADIX = 0x28; // 40
 
-/** Numero di iterazioni del loop di unpack (= numero di chars in initials). */
+/** Number of unpack loop iterations, one per initial. */
 const NUM_DIGITS = 3;
 
-/** RAM base assoluta M68k. */
+/** Absolute 68k work RAM base. */
 const WORK_RAM_BASE = 0x400000;
 
-/** Limite superiore esclusivo workRam. */
+/** Exclusive upper bound of work RAM. */
 const WORK_RAM_END = 0x402000;
 
 /** Return code "index out of range" (`arg1 > 9` unsigned). M68k = 0x00000000. */
 export const RET_INDEX_OOR = 0x00000000 as const;
 
 /**
- * Read big-endian long da workRam @ offset (4 byte).
+ * Read a big-endian long from work RAM at an offset.
  */
 function readLongBE(workRam: Uint8Array, off: number): number {
   return (
@@ -233,9 +177,8 @@ function readLongBE(workRam: Uint8Array, off: number): number {
 }
 
 /**
- * Read byte assoluto M68k da workRam. Indirizzi fuori workRam leggono 0
- * (semantica difensiva; il binario reale farebbe un bus access verso area
- * non mappata).
+ * Read an absolute 68k work RAM byte. Out-of-range addresses read as 0 because
+ * the modeled bus only covers work RAM here.
  */
 function read8(workRam: Uint8Array, addr: number): number {
   const a = addr >>> 0;
@@ -244,18 +187,17 @@ function read8(workRam: Uint8Array, addr: number): number {
 }
 
 /**
- * Mapping radix-40 digit -> ASCII char (replica esatta del branch del binario).
+ * Map a radix-40 digit to ASCII using the exact binary branch structure.
  *
  *   digit == 0           -> 0x20 (' ')
  *   1 <= digit <= 0x1A   -> digit + 0x40 ('A'..'Z')
  *   0x1B <= digit <= 0x27 -> digit + 0x15 ('0'..'<')
  *
- * Per digit >= 40 il comportamento e' undefined nel binario (impossibile via
- * divu.w #40 con dividendo word valido); qui non clampiamo per evitare di
- * mascherare bug futuri.
+ * Digits >= 40 are unreachable after `divu.w #40`; this helper intentionally
+ * does not clamp them.
  */
 function radix40ToAscii(digit: number): number {
-  // Replica bit-perfect del branch:
+  // Bit-perfect branch structure:
   //   bne.b 0x4256       (rem != 0 -> non-space)
   //   moveq #0x20,D1     (rem == 0 -> space)
   //   ...
@@ -263,7 +205,7 @@ function radix40ToAscii(digit: number): number {
   if (digit === 0) {
     return 0x20;
   }
-  // bcc su `cmp.w D1w,D0w` con D0 = 0x1A: branch se 0x1A >= rem unsigned.
+  // bcc on `cmp.w D1w,D0w` with D0 = 0x1A: branch if 0x1A >= rem unsigned.
   // bcc -> letter path (+0x40). bcs (rem > 0x1A) -> digit/symbol path (+0x15).
   if (digit <= 0x1a) {
     return (digit + 0x40) & 0xff;
@@ -272,68 +214,49 @@ function radix40ToAscii(digit: number): number {
 }
 
 /**
- * Replica bit-perfect di `FUN_000041C8` — high-score entry decode.
+ * Decode one high-score entry into the `0x401F7A` output buffer.
  *
- * Decodifica la i-esima entry della tabella high-score (10 × 5 byte) puntata
- * da `*0x401FFC + 0x1E` in un buffer a 7 byte all'indirizzo M68k 0x401F7A:
- *   - 4 byte long BE: score (24-bit, high byte = 0)
- *   - 3 byte ASCII: iniziali del giocatore (radix-40 unpack, MSB-first)
- *
- * @param state  GameState. Letture: workRam[0x1FFC..0x1FFF] (long ptr) +
- *               5 byte della entry @ ptrOff + 0x1E + arg1*5.
- *               Scritture: workRam[0x1F7A..0x1F80] (7 byte) se arg1 in [0..9].
- *
- * @param arg1   Record index (long M68k, sign-ext'd da word dal caller).
- *               Range valido [0..9] unsigned. Per `arg1 > 9` (incluso valori
- *               sign-ext negativi, che hanno bit 31 = 1 -> grandi unsigned)
- *               la funzione esce subito senza modificare workRam.
- *
- * @returns      D0 long unsigned 32-bit:
- *               - `0x00000000` se arg1 > 9 (out-of-range, no write).
- *               - `0x00401F7A` se arg1 in [0..9] (puntatore al buffer scritto).
- *
- * **Bit-perfect notes**: vedi disasm completo nell'header del file.
+ * @param state Game state; valid indices mutate work RAM output bytes.
+ * @param arg1 Record index compared as an unsigned 32-bit value.
+ * @returns D0: 0 for out-of-range, otherwise `0x00401F7A`.
  */
 export function hiScoreDecode41c8(state: GameState, arg1: number): number {
   const arg1l = arg1 >>> 0;
 
-  // ── Range check: 9 >= arg1 unsigned (bcc su cmp.l). ──
-  // arg1 negativo sign-ext -> bit 31 set -> grande unsigned -> > 9 -> OOR.
+  // Range check: `9 >= arg1` unsigned (`bcc` after `cmp.l`).
   if (arg1l > MAX_INDEX) {
     return RET_INDEX_OOR;
   }
 
-  // ── A0 = *0x401FFC; D5 = A0 + 0x1E (table base). ──
+  // A0 = *0x401FFC; D5 = A0 + 0x1E (table base).
   const ptr = readLongBE(state.workRam, PTR_FFC_OFF);
   const tableBase = (ptr + TABLE_OFF_FROM_PTR) >>> 0;
 
-  // ── D2 = arg1 * 5 (record byte offset). ──
+  // D2 = arg1 * 5 (record byte offset).
   // M68k: asl.l #2 (= *4), add A0 (= *5). arg1 in [0..9] -> D2 in [0..45].
   const recordOff = ((arg1l * RECORD_STRIDE) >>> 0);
 
-  // ── Read 24-bit BE score @ base + recordOff..+2 ──
+  // Read 24-bit BE score @ base + recordOff..+2.
   const b0 = read8(state.workRam, (tableBase + recordOff) >>> 0);
   const b1 = read8(state.workRam, (tableBase + recordOff + 1) >>> 0);
   const b2 = read8(state.workRam, (tableBase + recordOff + 2) >>> 0);
   // M68k: D0 = b2 + (b1<<8) + (b0<<16). High byte = 0 (b0 max 0xFF).
   const scoreLong = (((b0 << 16) | (b1 << 8) | b2) >>> 0) & 0xffffff;
 
-  // ── Read 16-bit BE word @ base + recordOff + 3 ──
+  // Read 16-bit BE word @ base + recordOff + 3.
   // M68k: D3.w = (byte[+3] << 8) | byte[+4]. High word D3 = 0.
   const b3 = read8(state.workRam, (tableBase + recordOff + 3) >>> 0);
   const b4 = read8(state.workRam, (tableBase + recordOff + 4) >>> 0);
   let packed = ((b3 << 8) | b4) & 0xffff;
 
-  // ── Write score long BE @ A1 (= 0x401F7A..0x401F7D) ──
-  // M68k: move.l D0,(A1) scrive 4 byte BE: high, mid-hi, mid-lo, lo.
-  // High byte e' 0 (24-bit score), poi b0, b1, b2.
+  // Write score long BE @ A1 (= 0x401F7A..0x401F7D).
   state.workRam[OUTPUT_BUFFER_OFF + 0] = (scoreLong >>> 24) & 0xff;
   state.workRam[OUTPUT_BUFFER_OFF + 1] = (scoreLong >>> 16) & 0xff;
   state.workRam[OUTPUT_BUFFER_OFF + 2] = (scoreLong >>> 8) & 0xff;
   state.workRam[OUTPUT_BUFFER_OFF + 3] = scoreLong & 0xff;
 
-  // ── Loop unpack radix-40: 3 digit, scritti BE (digit0 -> +6, digit2 -> +4) ──
-  // M68k: D2 = 2 (loop counter / write index). Decremento word fino a -1.
+  // Unpack 3 radix-40 digits in display order (digit0 -> +6, digit2 -> +4).
+  // M68k: D2 = 2 (loop counter / write index), decremented as a word to -1.
   // Iter k (k = 2, 1, 0):
   //   rem = packed % 40       -> digit corrente (LSB)
   //   chr = ascii(rem)

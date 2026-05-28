@@ -1,10 +1,10 @@
 /**
- * helper-1924e.ts — replica `FUN_0001924E` (~80 istruzioni).
+ * Bit-perfect port of `FUN_0001924E`.
  *
- * "Collision/proximity dispatcher": chiamato da helper121B8 per gli obj che
- * passano il filtro game-mode. Itera 9 obj @ workRam[0x401890] (stride 0x28),
- * per ognuno calcola la distanza Manhattan vs il marble (*0x400690/0x400692),
- * e se sotto soglia attiva una sequenza di event:
+ * Collision/proximity dispatcher called by `helper121B8` after the game-mode
+ * filter. It iterates nine objects at `0x401890` with stride `0x28`, computes
+ * Manhattan distance against the marble coordinates at `0x400690/0x400692`,
+ * and triggers the event sequence when the object is inside the threshold:
  *   - obj.state = 2
  *   - obj.vx = obj.vy = 0
  *   - jsr objectTypeDispatch194BA(obj)
@@ -14,11 +14,10 @@
  *   - jsr addToObjectAccumAndFlag28608(entity, 0x1F4)
  *
  * **Pre-conditions**:
- *   - Skip se *0x400394 != 4 (game mode)
- *   - Skip se entity+0x1B != 1
+ *   - Skip if *0x400394 != 4 (game mode)
+ *   - Skip if entity+0x1B != 1
  *
- * Verifica: il binario ha 80 istruzioni totali. Replica testata via parity test
- * scenari mirati (cli/src/test-helper-1924e-parity.ts) — TBD.
+ * Covered by targeted parity scenarios in `cli/src/test-helper-1924e-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -66,8 +65,8 @@ function sx16(v: number): number {
  *   type = obj+0x19
  *   if (type < 32) *0x40039C |= (1 << type)
  *
- * Inlinata in object-helpers.ts:triggerObjectEvent — qui esposta come
- * standalone per uso da helper-1924e.
+ * This mirrors the inline helper used by `object-helpers.ts:triggerObjectEvent`
+ * but is kept local for this port.
  */
 function addToObjectAccumAndFlag28608(
   state: GameState,
@@ -93,10 +92,10 @@ function addToObjectAccumAndFlag28608(
 }
 
 /**
- * Replica bit-perfect di `FUN_0001924E`.
+ * Execute `FUN_0001924E`.
  *
- * @param state    GameState (`workRam` mutato).
- * @param entityAddr  Indirizzo abs M68k della entity (parametro stack arg).
+ * @param state Game state mutated through work RAM.
+ * @param entityAddr Absolute 68k entity pointer from the stack argument.
  */
 export function helper1924E(
   state: GameState,

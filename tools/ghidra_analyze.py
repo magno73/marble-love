@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ghidra_analyze.py — apri progetto Ghidra esistente, aggiungi memory blocks +
-entry points, ri-analizza, dumpa function list/strings/disassembly/xrefs.
+ghidra_analyze.py — opens an existing Ghidra project, adds memory blocks +
+entry points, re-analyzes, and dumps function list/strings/disassembly/xrefs.
 
-Pre-requisito: avere già importato il binario via analyzeHeadless:
+Prerequisite: the binary has already been imported via analyzeHeadless:
 
     ./tools/ghidra_headless.sh "$(pwd)/ghidra_project" marble \\
         -import "$(pwd)/ghidra_project/marble_program.bin" \\

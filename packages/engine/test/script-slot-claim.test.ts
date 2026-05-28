@@ -14,7 +14,7 @@ import type { RomImage } from "../src/bus.js";
 const WORK_RAM_BASE = 0x400000;
 const TABLE_BASE = 0x1f016;
 
-/** Helper: setta nella ROM table @0x1F016 i 25 puntatori canonici (slot @0x400A9C stride 0x56). */
+/** Helper: sets the 25 canonical pointers in ROM table @0x1F016 (slot @0x400A9C stride 0x56). */
 function setupCanonicalRomTable(rom: RomImage): void {
   for (let i = 0; i < 25; i++) {
     const slotAddr = 0x400a9c + i * 0x56;
@@ -52,7 +52,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     const r = claimScriptSlot(s, rom, 0x0001d854);
     expect(r).toBe(0);
 
-    // Slot atteso: il PRIMO con +0x18 == 0. Tutti vuoti → idx 0 = 0x400A9C.
+    // Expected slot: the first with +0x18 == 0. All empty -> idx 0 = 0x400A9C.
     const slotOff = 0x400a9c - WORK_RAM_BASE;
     expect(s.workRam[slotOff + 0x18]).toBe(0x01);
     expect(s.workRam[slotOff + 0x1a]).toBe(0x03);
@@ -76,7 +76,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     const r = claimScriptSlot(s, rom, 0xdeadbeef);
     expect(r).toBe(0);
 
-    // Slot atteso: idx 3 → 0x400A9C + 3*0x56 = 0x400BF6... no aspetta, stride 0x56 → 0x400A9C + 0x102 = 0x400B9E.
+    // Expected slot: idx 3 -> 0x400A9C + 3*0x56 = 0x400BF6... wait, stride 0x56 -> 0x400A9C + 0x102 = 0x400B9E.
     const slotAddr = 0x400a9c + 3 * 0x56;
     const slotOff = slotAddr - WORK_RAM_BASE;
     expect(s.workRam[slotOff + 0x18]).toBe(0x01);
@@ -113,8 +113,8 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
 
-    // Tutti vuoti tranne forziamo un valore non-zero in slot 1 +0x18 (per
-    // dimostrare che NON viene toccato — early exit prende slot 0).
+    // All empty except for a forced non-zero value in slot 1 +0x18, to
+    // prove it is not touched; early exit takes slot 0).
     const slot1 = 0x400a9c + 1 * 0x56;
     s.workRam[(slot1 - WORK_RAM_BASE) + 0x18] = 0x99;
 
@@ -128,7 +128,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam[slot0Off + 0x3c]).toBe(0x56);
     expect(s.workRam[slot0Off + 0x3d]).toBe(0x78);
 
-    // slot1 +0x18 invariato (early exit di findFirstFreeSlot)
+    // slot1 +0x18 unchanged (findFirstFreeSlot early exit).
     expect(s.workRam[(slot1 - WORK_RAM_BASE) + 0x18]).toBe(0x99);
   });
 });

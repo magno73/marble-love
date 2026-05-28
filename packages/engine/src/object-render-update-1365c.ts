@@ -1,78 +1,50 @@
 /**
- * object-render-update-1365c.ts — replica `FUN_0001365C` (778 byte,
+ * object-render-update-1365c.ts — `FUN_0001365C` replica (778 bytes,
  * 0x01365C-0x013966).
  *
- * "Scroll-position change detector + object state dispatcher" chiamato da
- * `FUN_000121b8` @ `0x1241e` (xref unico, UNCONDITIONAL_CALL). Riceve un
- * singolo long arg (`A2` = object struct ptr in work RAM).
+ * `FUN_000121b8` @ `0x1241e` (single xref, UNCONDITIONAL_CALL). Receives one
+ * long arg (`A2` = object struct ptr in work RAM).
  *
- * La funzione:
  *
- *   1. **Carica il cursore della ROM table**: legge `*0x400394.w` (game mode),
- *      lo shift-left di 2 (word×4), indicizza la ROM long-table @ `0x1eb16`
- *      → ottiene un puntatore P. `A0 = P - 6` (punta 6 byte prima dell'entry).
+ *      shift-left by 2 (word x 4), indexes the ROM long-table @ `0x1eb16`
  *
- *   2. **Legge 4 glob POS**: `A1.w = *(0x400696)`, `A4.w = *(0x400698)`,
  *      `frame[-c].w = *(0x40069a)`, `frame[-a].w = *(0x40069c)`.
  *
- *   3. **Early-exit se POS invariato**: se `A1 == frame[-c] && A4 == frame[-a]`
- *      → epilogue.
+ *   3. **Early-exit if POS unchanged**: if `A1 == frame[-c] && A4 == frame[-a]`
+ *      -> epilogue.
  *
- *   4. **Legge tripla dalla ROM-entry** (A0+6): D5b = byte 0, D6b = byte 1,
- *      D1b = byte 2 (sign-extended a word). D3b = 0 (flag "vertical").
+ *      D1b = byte 2 (sign-extended to word). D3b = 0 ("vertical" flag).
  *
- *   5. **Abs D6**: abs del word signed. Poi: se D5 < 0 → D3b=1 (flag vertical)
- *      + abs D5; altrimenti abs D5. In entrambi i casi aggiorna `frame[-8].w`.
+ *   5. **Abs D6**: abs of signed word. Then: if D5 < 0 -> D3b=1 (vertical flag)
  *
- *   6. **Match-check**: (se D3b==1) D6w vs A4w e frame[-a]; (se D3b==0) D5w
- *      vs A1w e frame[-c]. Se nessuno dei due globali corrisponde → skip alla
- *      prossima entry (`0x1394a`).
+ *   6. **Match-check**: (if D3b==1) D6w vs A4w and frame[-a]; (if D3b==0) D5w
  *
- *   7. **Inner scan loop** (`0x1371c`..`0x13762`): scansiona le posizioni da
- *      `frame[-8]` (start) fino a `D1w` (count); testa A1/A4 e frame[-c]/[-a]
- *      per trovare le flag D4b (dest) e D0b (src).
+ *   7. **Inner scan loop** (`0x1371c`..`0x13762`): scans positions from
+ *      `frame[-8]` (start) through `D1w` (count); tests A1/A4 and frame[-c]/[-a]
+ *      to find D4b (dest) and D0b (src) flags.
  *
- *   8. **Gate final**: `(D4==0 → seq → 0xFF) AND D0` == 0 → jump alla prossima
- *      entry. Altrimenti aggiorna `A2+0x1b.b`.
  *
- *   9. **Ramo `0x1379a` (`A2+0x1b == -1`)**: entry "new state" — aggiorna
- *      `*0x4003a4`, chiama `FUN_26b66` (paletteQueuePush) + `FUN_285b0`,
- *      chiama `FUN_15884`, imposta `A2+0x1a.b = 6`, setta velocity/pos,
- *      chiama `FUN_158ac` con tabella ROM @ `0x1ef72`.
  *
- *  10. **Ramo `0x13880` (`A2+0x1b == 4`, game mode == 3)**: iterazione su 25
- *      slot @ `0x400a9c` (stride 0x56), cerca slot con `+0x18.b==1` e
- *      `+0x1a.b==4` o `+0x1a.b==2` + `+0x1f.b∈{0xb,0xd}` e gestisce
+ *      slot @ `0x400a9c` (stride 0x56), finds slots with `+0x18.b==1` and
+ *      `+0x1a.b==4` or `+0x1a.b==2` + `+0x1f.b∈{0xb,0xd}`, then handles
  *      `+0x36.l`, `FUN_158ac`, `FUN_12896`.
  *
- *  11. **Finale** (`0x13938`): se `A2+0x1b` è cambiato rispetto a D2b pre-call
- *      → chiama `FUN_13966(A2)`.
  *
- * **ROM tables lette**:
  *   - `0x1eb16` — long-table per-game-mode (entry-list ptr).
  *   - `0x1eb2e` — byte-table 6 entry (velocity X per game mode).
  *   - `0x1eb34` — byte-table 6 entry (velocity Y per game mode).
  *   - `0x1ef72` — long-table ptr (indicizzata da `A2+0x19.b`).
  *   - `0x1ef5a` — long-table ptr (indicizzata da `A3+0x1b.b - 0x1e`).
  *
- * **Globals work RAM letti/scritti**:
- *   - `0x400394` word  — game mode (lettura)
- *   - `0x400696` word  — POS X tile (lettura)
- *   - `0x400698` word  — POS Y tile (lettura)
- *   - `0x40069a` word  — POS X tile prev (lettura)
- *   - `0x40069c` word  — POS Y tile prev (lettura)
- *   - `0x4003a4` byte  — letto/scritto nel ramo new-state
  *
- * **Sub-jsr esterne (7 diversi)**:
- *   - `0x26b66`  `paletteQueuePush(state, byte)` — replicata, chiamata direttamente.
- *   - `0x285b0`  `FUN_285B0(A2, longArg)` — replicata; callback `fun285B0`.
- *   - `0x15884`  `soundPair15884(state, subs)` — replicata, callable direttamente.
- *   - `0x158ac`  `FUN_158AC(longArg)` — replicata; callback `fun158AC`.
- *   - `0x12f44`  `FUN_12F44(A3, 1, 0)` — replicata; callback `fun12F44`.
- *   - `0x12896`  `FUN_12896(A3)` — replicata; callback `fun12896`.
- *   - `0x13966`  `FUN_13966(A2)` — replicata; callback `fun13966`.
+ * **External sub-jsrs (7 distinct)**:
+ *   - `0x285b0`  `FUN_285B0(A2, longArg)` — mirrored; callback `fun285B0`.
+ *   - `0x15884`  `soundPair15884(state, subs)` — mirrored, directly callable.
+ *   - `0x158ac`  `FUN_158AC(longArg)` — mirrored; callback `fun158AC`.
+ *   - `0x12f44`  `FUN_12F44(A3, 1, 0)` — mirrored; callback `fun12F44`.
+ *   - `0x12896`  `FUN_12896(A3)` — mirrored; callback `fun12896`.
+ *   - `0x13966`  `FUN_13966(A2)` — mirrored; callback `fun13966`.
  *
- * **Verifica bit-perfect** via
  * `packages/cli/src/test-object-render-update-1365c-parity.ts`.
  */
 
@@ -89,7 +61,7 @@ import { soundCmdSend158AC } from "./sound-cmd-send-158ac.js";
 const WORK_RAM_BASE = 0x400000 as const;
 
 // ─── ROM table addresses ────────────────────────────────────────────────────
-/** Long-table per game-mode → entry-list ptr. */
+/** Long-table per game-mode -> entry-list ptr. */
 const ROM_ENTRY_LIST_TABLE = 0x1eb16 as const;
 /** Byte-table velocity-X (6 entries). */
 const ROM_VEL_X_TABLE = 0x1eb2e as const;
@@ -119,12 +91,10 @@ const A2_TIMER_BYTE_OFF = 0x57; // byte (timer written = 0x1e)
 const A2_SLOT109_OFF = 0x6d; // byte
 const A2_SLOT110_OFF = 0x6e; // byte
 
-// ─── 25-slot array ───────────────────────────────────────────────────────────
 const SLOT_ARRAY_BASE = 0x400a9c as const;
 const SLOT_STRIDE = 0x56 as const;
 const SLOT_COUNT = 0x19 as const; // 25 decimal
 
-// Slot offsets (A3 within the 25-slot array)
 const S_TILE_TYPE_OFF = 0x18; // byte
 const S_STATE_OFF = 0x1a; // byte
 const S_NEW_STATE_OFF = 0x1b; // byte
@@ -243,7 +213,6 @@ export interface ObjectRenderUpdate1365CSubs {
 
   /**
    * `FUN_00012896(A3)` — slot reinit / state update.
-   * Called with `slotPtr` (pointer into 0x400a9c array).
    * Default delegates to `helper12896`.
    */
   fun12896?: (state: GameState, slotPtr: number) => void;
@@ -265,13 +234,8 @@ export interface ObjectRenderUpdate1365CSubs {
 // ─── Core replica ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001365C` (778 byte).
  *
- * @param state   GameState. Scrive su `workRam` in più punti (A2 struct, slot
- *                array 0x400a9c, globals 0x4003a4).
- * @param rom     ROM image (per leggere le tabelle @ 0x1eb16, 0x1eb2e,
  *                0x1eb34, 0x1ef72, 0x1ef5a).
- * @param objPtr  Puntatore long alla struct oggetto (A2). DEVE essere in
  *                `0x400000..0x401FFF`.
  * @param subs    Callback injection for callee overrides/parity harnesses.
  */
@@ -307,7 +271,6 @@ export function objectRenderUpdate1365C(
     helper285B0(st, objPtr2, longArg, rom);
   });
 
-  // ── 1. Carica game-mode e ottieni A0 (entry-list ptr - 6) ────────────────
   // A3 = 0x400394 (game-mode word)
   const gameMode = readU16(w, GAME_MODE_ADDR); // *A3.w
   // asl.w #2, D0w → D0w = gameMode << 2 (word arithmetic; mask to 16 bit)
@@ -317,24 +280,22 @@ export function objectRenderUpdate1365C(
   // subq.l #6, D0; movea.l D0, A0
   const a0Base = (entryListBase - 6) >>> 0;
 
-  // ── 2. Leggi 4 globali POS ─────────────────────────────────────────────────
   // movea.w (0x400696).l, A1 → A1w (zero-ext from word)
   const a1w = readU16(w, POS_X_ADDR); // POS_X curr
-  // movea.w (0x400698).l, A4 → A4w
+  // movea.w (0x400698).l, A4 -> A4w
   const a4w = readU16(w, POS_Y_ADDR); // POS_Y curr
-  // move.w (0x40069a).l, frame[-c] → saved prev X
+  // move.w (0x40069a).l, frame[-c] -> saved prev X
   const frameMinusC = readU16(w, POS_X_PREV_ADDR); // prev POS_X
-  // move.w (0x40069c).l, frame[-a] → saved prev Y
+  // move.w (0x40069c).l, frame[-a] -> saved prev Y
   const frameMinusA = readU16(w, POS_Y_PREV_ADDR); // prev POS_Y
 
-  // ── 3. Early-exit se POS invariato ────────────────────────────────────────
-  // cmpa.w (-0xc,A6),A1 → compare A1w with frame[-c]
-  // cmpa.w (-0xa,A6),A4 → compare A4w with frame[-a]
+  // ── 3. Early-exit if POS unchanged ────────────────────────────────────────
+  // cmpa.w (-0xc,A6),A1 -> compare A1w with frame[-c]
+  // cmpa.w (-0xa,A6),A4 -> compare A4w with frame[-a]
   if (a1w === frameMinusC && a4w === frameMinusA) {
     return; // beq.w epilogue
   }
 
-  // ── 4. Salva D2b = A2+0x1b (stato corrente, pre-call) ─────────────────────
   const d2b = readU8(w, a2 + A2_NEW_STATE_BYTE_OFF);
 
   // ── 5-8. Inner scan loop over ROM entries ─────────────────────────────────
@@ -513,7 +474,6 @@ export function objectRenderUpdate1365C(
     const curNewState = readU8(w, a2 + A2_NEW_STATE_BYTE_OFF);
 
     if (curNewState === 0xff) {
-      // ── Ramo new-state (0x137a4..0x1387c) ─────────────────────────────
       // 0x137a4: cmpi.b #-1, (0x4003a4).l; bne 0x137f2
       const global3a4 = readU8(w, GLOBAL_4003A4_ADDR);
 
@@ -619,7 +579,6 @@ export function objectRenderUpdate1365C(
 
       // bra.w 0x13938 → post-action
     } else if (curNewState === 0x04) {
-      // ── 10. Ramo 0x13880: A2+0x1b == 4 ────────────────────────────────
       // 0x13886: cmpi.b #4,(0x1b,A2); bne.w 0x13938
       // 0x1388a: moveq #3,D1; cmp.w (A3),D1w; bne.w 0x13938
       if (gameMode !== 3) {

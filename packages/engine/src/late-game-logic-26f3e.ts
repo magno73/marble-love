@@ -1,14 +1,11 @@
 /**
  * late-game-logic-26f3e.ts — replica `FUN_00026F3E` (4848 byte, 6 callers).
  *
- * **Semantica**: orchestratore principale del rendering degli sprite di gioco.
  * Tre fasi principali:
  *
- *   1. **bufferFill1B12A** per ogni entità in workRam[0x3BC..0x3DB]
- *   2. **sortAdjacentObjects** 3× con stride 1/2/3 (se workRam[0x3E2]==0)
+ *   2. **sortAdjacentObjects** 3x with stride 1/2/3 (if workRam[0x3E2]==0)
  *   3. **Setup cursors** + **entity sprite dispatch** via switch per tipo
  *
- * Verifica bit-perfect via `packages/cli/src/test-late-game-logic-26f3e-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -128,7 +125,6 @@ function emitSprite(
 
 /**
  * Substitution callbacks for differential testing.
- * Default: real bit-perfect implementations.
  */
 export interface LateGameLogic26F3ESubs {
   fun_1b12a?:     (state: GameState, rom: RomImage, rectBuf: Uint8Array) => void;
@@ -180,7 +176,6 @@ function moveqSignedByte(value: number): number {
  *   - `obj+0x20` (= `HUD_OFFSET + Z_high + 0x54 - (X_high+Y_high)/2`) diverges
  *     additionally because obj.z_long itself isn't updated by our chain.
  *
- * Verified formula (bit-perfect vs MAME on 100/100 frames f12000..12099):
  *   D3w = (Y_high - X_high + 0x88) & 0xFFFF              ← stored at +0x1e
  *   D2w = (HUD_OFFSET + Z_high + 0x54 - (X_high+Y_high)/2) & 0xFFFF ← stored at +0x20
  *
@@ -250,17 +245,11 @@ function innerSprites(
  *   1. tst.b (0x1c, A5) → if 0, return (entity not active).
  *   2. Compute locals: animState=(0x1a,A5).b, subCode=(0x19,A5).b,
  *      frameNeg10=subCode<<11, d5/d4 from loadCoords(0x1e, +0x18/+0x10).
- *      localE=5 (long, M68k local @ -$e(A6)).
  *   3. If animState in {4,10,11,9,2,1,5}: skip first/second direct emits.
  *   4. Else: animState==8 special handling for *(0xcc,A5)→pCC, *pCC long.
- *   5. localE |= sign_ext_long(frameNeg10).
- *   6. FIRST direct emit: code = low_word(localE) (NOT orMask!),
  *      X=((a1w-8)*32)&0x3fe0, Y=(d2*32)&0x3fe0 | 1, A4=D7.
  *      Disasm 0x27376-0x2737E: `move.w (-0xc,A6),D0w; andi.w #-0x1,D0w;`
  *      reads LOW WORD of -$e(A6) long.
- *   7. SECOND direct emit: if animState==8 && frameNeg1!=0: localE+=2.
- *      Else: localE = ext_long(frameNeg10) | 3.
- *      code=low_word(localE), X=(a1w*32)&0x3fe0, Y=(d2*32)&0x3fe0 | 1.
  *   8. At 0x27442: if animState in {2,9,1,5} → goto 0x2750a (skip inner loop).
  *      But that path falls through to 0x275d8 where animState in {2,9,1,5} →
  *      moEmit `rl(rl(objPtr+0x5a))` doSubEmit, then exit.
@@ -273,9 +262,7 @@ function innerSprites(
  *  10. At 0x2750a: if animState in {4,10,11} → skip 3rd direct emit (animStates
  *      2/9/1/5 already exited at step 8; this branch covers 4/10/11). Else:
  *      animState==8 && locals[-1]!=0 → skip; else: THIRD direct emit.
- *      localE = ext_long(frameNeg10) | 7. D6 = HIGH word of localE long
  *      (= sign-extension of frameNeg10; 0 if frameNeg10 < 0x8000).
- *      code = low_word(localE) = frameNeg10 | 7.
  *      X = ((d5-8)*32) & 0x3fe0.  Y = ((d4+5)*32) & 0x3fe0 | D6.
  *  11. INNER LOOP 2 at objPtr+0x38, max 5 iters (TODO: not modeled yet —
  *      complex encoding with 0x4000 bit check). For obj0 demo gameplay,
@@ -335,7 +322,6 @@ function dispatchType1(
     }
     localE = (localE | extL(frameNeg10)) >>> 0;
 
-    // FIRST direct emit: code = low_word(localE)
     {
       const xv = ((s16(a1w) - 8) * 32) & 0x3fe0;
       const yv = (s16(d2) * 32) & 0x3fe0 | 1;
@@ -396,7 +382,7 @@ function dispatchType1(
       // THIRD direct emit
       const localE3 = (extL(frameNeg10) | 7) >>> 0;
       const codeOut = localE3 & 0xffff;
-      const d6_3 = (localE3 >>> 16) & 0xffff;  // HIGH word of localE long (disasm 0x2758e)
+      const d6_3 = (localE3 >>> 16) & 0xffff;
       const xv3 = ((s16(d5) - 8) * 32) & 0x3fe0;
       const yv3 = (((s16(d4) + 5) * 32) & 0x3fe0) | d6_3;
       const d7v3 = rw(state, rom, CNT_ADDR);
@@ -522,7 +508,6 @@ function dispatchType4(
   if (d4s <= -0x20 || d4s >= 0x100) return;
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x58)), d5, d4, 0x2000, subs);
 
-  // Inner loop at sp+0x2c using a word-stride array (tst.w (a1) / addq.l #1,a2):
   // The inner entries here are 6-byte records (3 words). Up to 5 entries.
   // Each entry: word(code | 0x8000?), word(x), word(y) for direct buffer writes.
   // Disasm 0x27b20: `lea (0x2c,A5),A0` → A0 = sp + 0x2c DIRECTLY (NOT deref).
@@ -972,27 +957,22 @@ export function lateGameLogic26F3E(
     ww(state, rl(state, rom, CUR_A3_ADDR), 0);
   }
 
-  // ── Post-body flag set (replica disasm 0x118C0 main-loop wrapper) ─────────
-  // Dopo `jsr 0x26F3E` (lateGameLogic), il main thread esegue
+  // Post-body flag set, mirroring disasm 0x118C0 in the main-loop wrapper.
+  // After `jsr 0x26F3E` (lateGameLogic), the main thread executes
   //   move.b #1, *0x40039A
-  // (`SCROLL_DIRTY_FLAG` in main-loop.ts). Il prossimo IRQ4 vblank handler
-  // (= mainTick → mainUpdateScrollSync) legge il flag, latcha
+  // (`SCROLL_DIRTY_FLAG` in main-loop.ts). The next IRQ4/vblank handler
+  // (`mainTick` -> `mainUpdateScrollSync`) reads the flag, latches
   //   *0x4003AE = *0x4003B0  (AV-control word, sprite-bank toggler)
-  // e clear flag. Senza questo set TS-side, `0x4003AE` resta stale al valore
-  // warm (0x0080) per sempre, e Phase 3 di lateGameLogic computa sempre lo
-  // stesso `d3t2` ⇒ scriviamo nello stesso bank ogni frame anziché toggle
-  // bit-perfect tra bank 0 e bank 1 in lockstep con MAME.
+  // and clears the flag. Without this TS-side set, `0x4003AE` stays at the
+  // warm value forever and lateGameLogic keeps writing the same sprite bank.
   //
   // Disasm relevante (main-thread loop body 0x118A8..0x118CE):
   //   0x118A8 jsr  0x26F3E      ; lateGameLogic
   //   0x118AE tst.b *0x400016
   //   ...
-  //   0x118C0 move.b #1, *0x40039A  ← QUESTO
+  //   0x118C0 move.b #1, *0x40039A
   //   0x118C6 jsr  0x28DEA      ; spin-wait next IRQ4
   //
-  // Lo metto qui (fine di lateGameLogic) anziché in main-tick.ts perché il
-  // wrapper main-loop-body è tightly coupled a questa funzione ed è bit-perfect
-  // equivalente: l'effetto osservabile è identico (flag visto dal prossimo
   // mainTick run).
   state.workRam[0x39a] = 1;
 }

@@ -2,22 +2,11 @@
 /**
  * test-tilemap-blit-17044-parity.ts — differential FUN_17044 vs tilemapBlit17044.
  *
- * `FUN_00017044` (40 byte) copia 6 finestre da 20 word ciascuna (240 byte
- * totali) dalla ROM @ 0x19F04 alla PF RAM @ 0xA00116, con stride 0x80 byte
- * tra finestre consecutive (88 byte di skip non scritti). Nessun input dai
- * registri: la sorgente è una tabella ROM fissa.
+ * total) from ROM @ 0x19F04 to PF RAM @ 0xA00116, with 0x80-byte stride
  *
- * Il risultato dipende solo da:
- *   - il contenuto **iniziale** della PF RAM (per i 88 byte preservati per
- *     riga + i byte fuori dalle 6 finestre)
  *   - i 240 byte di ROM @ 0x19F04..0x19FF3 (uguali in binary e TS — la ROM
- *     è la stessa per costruzione)
  *
- * Per ogni caso N (con pre-fill PF RAM diverso):
- *   1. Pre-fill PF RAM [0xA00000..0xA02000) con un pattern deterministico.
- *   2. callFunction(0x17044, [])  ; binario copia in-place
- *   3. tilemapBlit17044(rom, buf) ; TS copia in-place sul buffer parallelo
- *   4. Compara byte-by-byte tutti i 0x2000 byte.
+ *   1. Pre-fill PF RAM [0xA00000..0xA02000) with a deterministic pattern.
  *
  * Uso: npx tsx packages/cli/src/test-tilemap-blit-17044-parity.ts [N]
  */
@@ -65,7 +54,6 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // RomImage parallelo per la chiamata TS.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -78,16 +66,9 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Genera pattern di pre-fill, deterministico per ogni caso.
-    // Pattern-driven primi casi per coprire bordi:
-    //   0: tutti 0xFF
-    //   1: tutti 0x00 (no-op effective per i 88 byte skip — mostra solo la copia)
-    //   2: tutti 0x55
-    //   3: tutti 0xAA
     //   4: incrementing pattern (j & 0xFF)
     //   5: pattern 0xFE
     //   6: pattern 0xCC marker
-    //   7: pattern (j*7) & 0xFF (sentinel verifica per "preservato")
     //   8..N: random uniforme
     const pf = new Uint8Array(PF_RAM_SIZE);
     if (i === 0) pf.fill(0xff);

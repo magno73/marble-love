@@ -43,7 +43,7 @@
  * **Callers** (2):
  *   FUN_00028A96 @ 0x00028BF8  (main game-state update loop)
  *
- * Bit-perfect verificato 500/500 vs MAME/musashi-wasm.
+ * Bit-perfect parity is verified against MAME/musashi-wasm.
  * (Parity: packages/cli/src/test-helper-28c38-parity.ts)
  */
 
@@ -72,26 +72,23 @@ export { TIMER_OFFSET_INNER as HELPER_28C38_OFFSET_INNER };
 // ─── Main function ─────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00028C38`.
+ * Bit-perfect port of `FUN_00028C38`.
  *
- * Tick di un timer cascading a 3 livelli. La struct puntata da `timerPtr`
- * (5 byte in workRam o spriteRam) viene modificata in-place.
+ * Tick a three-level cascading timer. The 5-byte struct pointed to by
+ * `timerPtr` is mutated in-place.
  *
- * Sequenza logica:
- *   1. Se `inner == 0xFF` (disabled): no-op, ritorna 0.
- *   2. `inner -= 1`; se `inner >= 0` (signed): ritorna 0.
- *   3. `inner = 5` (reset); `medium -= 1`; se `medium >= 0` (signed): ritorna 0.
+ * Logical sequence:
+ *   1. If `inner == 0xFF` (disabled): no-op, return 0.
+ *   2. `inner -= 1`; if `inner >= 0` signed, return 0.
+ *   3. `inner = 5`; `medium -= 1`; if `medium >= 0` signed, return 0.
  *   4. `medium = 9` (reset); `outer -= 1` (word).
- *   5. Se `outer == 0xFFFF` (wrapped from 0): imposta bit 0 nel risultato.
- *   6. Imposta bit 1 nel risultato (cascade fired).
- *   7. Ritorna i flag sign-extended a i32.
+ *   5. If `outer == 0xFFFF`, set bit 0 in the result.
+ *   6. Set bit 1 in the result.
+ *   7. Return the flags sign-extended to i32.
  *
- * @param state     GameState corrente (workRam / spriteRam mutati in-place).
- * @param timerPtr  Indirizzo assoluto della struct timer (5 byte).
- *                  Supporta workRam (0x400000..0x401FFF), spriteRam
- *                  (0xA02000..0xA02FFF), alphaRam (0xA03000..0xA03FFF),
- *                  colorRam (0xB00000..0xB007FF).
- * @returns         Flag i32 sign-extended: bit 0 = outer wrapped, bit 1 = cascade.
+ * @param state Current game state.
+ * @param timerPtr Absolute address of the 5-byte timer struct.
+ * @returns Sign-extended flags: bit 0 = outer wrapped, bit 1 = cascade.
  */
 export function helper28C38(state: GameState, timerPtr: number): number {
   return tickCascadingTimer(state, timerPtr);

@@ -1,7 +1,6 @@
 /**
  * state-dispatch-15460.test.ts — smoke per FUN_15460.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-state-dispatch-15460-parity.ts` (500/500).
  */
 
@@ -159,11 +158,11 @@ describe("stateDispatch15460 (FUN_15460)", () => {
 
     stateDispatch15460(s, structPtr);
 
-    // Anim invariato
+    // Anim unchanged.
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_CASE2_FINAL);
     // Prev = curr (epilog)
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(ANIM_CASE2_FINAL);
-    // (0x26) NON toccato dal case → 0x77
+    // (0x26) not touched by the case -> 0x77.
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0x77);
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
@@ -181,7 +180,6 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     stateDispatch15460(s, structPtr);
 
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0xff);
-    // Anim non cambia in questo path
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(0x00021000);
   });
 
@@ -202,7 +200,6 @@ describe("stateDispatch15460 (FUN_15460)", () => {
 
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_RIGHT);
     expect(readLong(s, structPtr + VEL_X_OFF)).toBe(0x80000); // 8 << 16
-    // 0x25 = 1 perché kind=3 ≠ {0,4}
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
@@ -247,9 +244,9 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     stateDispatch15460(s, structPtr);
 
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_CASE5);
-    // (0x26) NON scritto dal case 5 → invariato
+    // (0x26) not written by case 5 -> unchanged.
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0x42);
-    // (0x27) NON scritto → invariato
+    // (0x27) not written -> unchanged.
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_27_OFF]).toBe(0x99);
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
@@ -295,7 +292,6 @@ describe("stateDispatch15460 (FUN_15460)", () => {
 
     stateDispatch15460(s, structPtr);
 
-    // Anim invariato (kind out-of-range salta tutti i case)
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(0x11223344);
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(0x11223344);
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0x55);
@@ -313,12 +309,10 @@ describe("stateDispatch15460 (FUN_15460)", () => {
 
     stateDispatch15460(s, structPtr);
 
-    // case 5 sovrascrive curr con ANIM_CASE5; epilog poi copia curr → prev
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_CASE5);
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(ANIM_CASE5);
   });
 
-  // Ergonomia: import senza errori
   it("namespace exports compilano: tutte le costanti accessibili", () => {
     expect(KIND_BYTE_OFF).toBe(0x1a);
     expect(POS_X_OFF).toBe(0x0c);

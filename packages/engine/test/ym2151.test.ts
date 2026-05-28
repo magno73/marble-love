@@ -2,8 +2,8 @@
  * ym2151.test.ts — Phase 5 register-state parity smoke + protocol.
  *
  * Intent: in V2 il bit-perfect target e' il REGISTER FILE, non il sample audio.
- * I test verificano che il pattern WR_ADDR + WR_DATA stori il byte corretto nel
- * reg slot atteso (mirror MAME ym2151.cpp register_w). Una violazione qui fa
+ * Tests verify that the WR_ADDR + WR_DATA pattern stores the correct byte in
+ * expected reg slot (MAME ym2151.cpp register_w mirror). A violation here makes
  * diverge il shadow vs MAME oracle in Phase 8, mascherando il debug del sound
  * driver dal 6502 side.
  */
@@ -49,7 +49,7 @@ describe("YM2151 register file", () => {
     ym2151WriteData(ym, as_u8(0xC0));  // L=R=1, FB=0, CONN=0
     expect(ym.regs[0x20]).toBe(0xC0);
     expect(ym.selectedReg).toBe(0x20);
-    // Altri reg non toccati
+    // Other regs not touched.
     expect(ym.regs[0x21]).toBe(0);
     expect(ym.regs[0xFF]).toBe(0);
   });
@@ -206,9 +206,9 @@ describe("YM2151 Timer A counter (V3)", () => {
 
   it("Timer A enable bit 2: arm + enable → overflow asserts IRQ gate", async () => {
     // Bit mapping ymfm-faithful: bit 0 = load_timer_a, bit 2 = enable_timer_a
-    // (= IRQ enable nella semantica MAME). $14=$05 = bit 0 + bit 2 = "load
-    // timer + enable IRQ assertion on overflow". E' il valore che Marble
-    // sound ROM scrive a boot init a $819F-$81A2.
+    // (= IRQ enable in MAME semantics). $14=$05 = bit 0 + bit 2 = "load timer
+    // + enable IRQ assertion on overflow". Marble sound ROM writes this value
+    // during boot init at $819F-$81A2.
     const { ym2151TickCycles, ym2151ReadStatus } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0x00));

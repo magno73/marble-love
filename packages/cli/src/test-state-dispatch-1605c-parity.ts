@@ -3,7 +3,6 @@
  * test-state-dispatch-1605c-parity.ts — differential FUN_1605C vs
  * `stateDispatch1605C`.
  *
- * `FUN_0001605C` (82 byte) è un mini-dispatcher a 3 vie sul byte
  * @ A2+0x1A (kind):
  *   - 0x20         → fun_160ae(A2, 0)
  *   - 0x21         → no-op
@@ -14,19 +13,13 @@
  *
  * **Strategia stub injection**:
  *
- *   1. **FUN_15C46** patchata a thunk-loader che ritorna in D0 il long
- *      letto da `0x401E40` (slot "fun_15c46_ret"). Il test pre-popola
- *      questo slot con un long random per ogni caso.
  *
  *      Layout stub (8 byte):
  *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)
  *        rts                         ; 4E75            (2 byte)
  *
- *   2. **FUN_160AE** patchata a thunk-logger che scrive
  *      `(structPtrLong, byteIdxLong)` in un ring-buffer @ `0x401E00`,
- *      avanzando un counter @ `0x401E48` di +8 ad ogni chiamata.
- *      Il dispatcher chiama fun_160ae al massimo 1 volta per invocazione,
- *      ma usiamo un ring per coerenza col pattern di altre parity-test.
+ *      but use a ring for consistency with other parity-test patterns.
  *
  *      Layout stub (30 byte):
  *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 byte)
@@ -38,17 +31,10 @@
  *        rts                           ; 4E75             (2 byte)
  *
  *   FUN_160AE (38 byte: 0x160AE..0x160D3) e FUN_15C46 (~250 byte) sono
- *   abbondantemente più grandi degli stub.
  *
- * **Suite testate (4 × 125 = 500 casi)**:
- *   - A: kind random in {0x20, 0x21, 0x22} (i 3 valori di branch attivi)
  *   - B: kind random in [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0)
  *   - C: kind random in [0x80..0xFF] (no-op signed<0 via blt)
- *   - D: kind = 0x22 con valori f15c46_ret pathologici (0, 0xFFFFFFFF,
- *        0x80000000, 0x7FFFFFFF, valori random)
  *
- * **Confronto**: workRam @ ring buffer + counter + struct kind byte.
- * Ring + counter sono i "log" identici tra binario e TS (TS callback scrive
  * negli stessi offset).
  *
  * Uso: npx tsx packages/cli/src/test-state-dispatch-1605c-parity.ts [N]
@@ -75,7 +61,6 @@ const FUN_1605C = 0x0001605c;
 const FUN_15C46 = 0x00015c46;
 const FUN_160AE = 0x000160ae;
 
-/** Ring buffer per fun_160ae args (max 16 chiamate × 8 byte = 128 byte). */
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
 /** Slot per la "return value" di fun_15c46 (long BE). */
@@ -130,7 +115,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-const STRUCT_BASE = 0x00400500; // ptr struct in workRam (lontano dal ring)
+const STRUCT_BASE = 0x00400500;
 const STRUCT_KIND_OFF = 0x1a;
 
 const RING_SIZE_BYTES = 128;
@@ -153,14 +138,13 @@ function resetZones(
     pokeMem(cpu, RING_COUNTER + i, 1, 0);
     state.workRam[RING_COUNTER_OFF + i] = 0;
   }
-  // Struct kind byte (e qualche byte attorno per safety)
+  // Struct kind byte plus neighboring bytes for safety.
   for (let i = 0; i < 0x40; i++) {
     pokeMem(cpu, STRUCT_BASE + i, 1, 0);
     state.workRam[STRUCT_BASE_OFF + i] = 0;
   }
 }
 
-/** Scrive long-BE in workRam binario+TS. */
 function pokeLongBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -181,7 +165,6 @@ function pokeLongBoth(
   }
 }
 
-/** Scrive byte in workRam binario+TS. */
 function pokeByteBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -192,7 +175,6 @@ function pokeByteBoth(
   state.workRam[abs - 0x400000] = v & 0xff;
 }
 
-/** Confronta byte-by-byte la zona [base..base+size) tra binario e TS. */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -224,12 +206,9 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // TS subs: replicano il side-effect dello stub binario sul workRam.
   // Nota: lavoriamo direttamente su `state.workRam` (gli stub binari
-  // scrivono in memoria assoluta che corrisponde ad offset workRam).
   const subs: ns.StateDispatch1605CSubs = {
     fun_15c46: (_structPtr) => {
-      // Legge long-BE @ 0x401E40 dal state.workRam.
       const r = state.workRam;
       const v =
         (((r[FUN15C46_RET_OFF] ?? 0) << 24) |
@@ -240,7 +219,6 @@ async function main(): Promise<void> {
       return v;
     },
     fun_160ae: (structPtr, byteIdx) => {
-      // Replica esatta dello stub binario: scrive (structPtr, byteIdx) nel
       // ring @ counter, poi counter += 8.
       const r = state.workRam;
       const counter =
@@ -293,7 +271,6 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN_1605C, [STRUCT_BASE >>> 0]);
     ns.stateDispatch1605C(state, STRUCT_BASE >>> 0, subs);
 
-    // Confronta ring + counter.
     const ringDiff = compareZone(state, cpu, RING_BASE, RING_SIZE_BYTES, "ring");
     if (ringDiff !== null) {
       if (failHolder.value === null) {
@@ -320,7 +297,6 @@ async function main(): Promise<void> {
       }
       return false;
     }
-    // Confronta anche kind byte (deve essere intatto).
     const kbDiff = compareZone(state, cpu, STRUCT_BASE, 0x40, "struct");
     if (kbDiff !== null) {
       if (failHolder.value === null) {
@@ -384,7 +360,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: kind = 0x22 con valori f15c46_ret pathologici ───────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: kind=0x22 + retVal pathologici — ${sizeD} casi ===`,

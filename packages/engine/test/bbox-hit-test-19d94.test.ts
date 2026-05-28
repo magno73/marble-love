@@ -1,15 +1,11 @@
 /**
  * bbox-hit-test-19d94.test.ts — smoke tests per `FUN_00019D94`.
  *
- * Verifica:
- *   1. Early-exit con `*0x400394 != 4`.
- *   2. Hit su una slot armata + bbox-overlap → tutti i campi scritti
+ *   1. Early-exit with `*0x400394 != 4`.
  *      (slot[0x1A]=2, slot[0x1C..1F]=0x22546, slot[0x25]=4, slot[0x24]=0,
  *      entity[0x1A]=0x0B, entity[0x57]=0x66) + sound 0x3E.
  *   3. Slot non armate (byte 0x18 == 0) ignorate.
- *   4. Slot già occupate (byte 0x1A != 0) ignorate.
  *   5. Bbox edge: x=slot.x+6 (right) → ble → miss; y=slot.y+8 (bottom) → ble.
- *   6. Multiple hits su slot diverse → soundCommand chiamato N volte.
  */
 
 import { describe, it, expect } from "vitest";
@@ -61,7 +57,6 @@ function slotOff(i: number): number {
   return SLOT_ARRAY_BASE_ADDR - 0x400000 + i * SLOT_STRIDE;
 }
 
-/** Configura una slot in stato "armata + bbox centrato su (cx, cy)". */
 function armSlot(s: State, i: number, cx: number, cy: number): void {
   const off = slotOff(i);
   setByte(s, off + 0x18, 1); // armed
@@ -93,7 +88,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(r.hitCount).toBe(0);
     expect(r.soundTriggers).toBe(0);
     expect(soundCalls).toBe(0);
-    // Slot 0 NON deve essere stata toccata.
+    // Slot 0 must not have been touched.
     expect(readByte(s, slotOff(0) + 0x1a)).toBe(0);
   });
 
@@ -121,7 +116,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(readByte(s, ENTITY_OFF + 0x1a)).toBe(HIT_ENTITY_STATE);
     expect(readByte(s, ENTITY_OFF + 0x57)).toBe(HIT_ENTITY_FIELD_57);
 
-    // Le altre slot (non armate) non devono essere state toccate.
+    // The other unarmed slots must not have been touched.
     for (let i = 0; i < 10; i++) {
       if (i === 3) continue;
       expect(r.perSlot[i]).toBe("skip_armed");
@@ -145,17 +140,17 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 7, 100, 50);
-    setByte(s, slotOff(7) + 0x1a, 5); // già occupata
+    setByte(s, slotOff(7) + 0x1a, 5);
     const r = bboxHitTest19D94(s, ENTITY_BASE);
     expect(r.hitCount).toBe(0);
     expect(r.perSlot[7]).toBe("skip_state");
-    // Il byte 0x1A non deve essere riscritto a 2.
+    // Byte 0x1A must not be rewritten to 2.
     expect(readByte(s, slotOff(7) + 0x1a)).toBe(5);
   });
 
   it("bbox edge: marble.x == slot.x + 6 (right boundary, ble) → miss", () => {
     const s = emptyGameState();
-    // bbox right = 100+6 = 106, ble fa miss se right <= marble.x → marble.x=106 → miss
+    // bbox right = 100+6 = 106, ble misses if right <= marble.x -> marble.x=106 -> miss.
     configureCommon(s, 106, 50);
     armSlot(s, 0, 100, 50);
     const r = bboxHitTest19D94(s, ENTITY_BASE);
@@ -172,8 +167,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
   });
 
   it("bbox edge: marble.x == slot.x - 6 (left boundary, bgt) → hit", () => {
-    // bgt = strict greater. left = 94. miss se left > marble.x.
-    // marble.x = 94 → 94 > 94 falso → NON miss → continua check.
+    // bgt = strict greater. left = 94. miss if left > marble.x.
     const s = emptyGameState();
     configureCommon(s, 94, 50);
     armSlot(s, 0, 100, 50);
@@ -214,7 +208,6 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     configureCommon(s, 100, 50);
     armSlot(s, 2, 100, 50);
     expect(() => bboxHitTest19D94(s, ENTITY_BASE)).not.toThrow();
-    // L'hit avviene comunque (i campi vengono scritti).
     expect(readByte(s, slotOff(2) + 0x1a)).toBe(HIT_SLOT_STATE);
   });
 

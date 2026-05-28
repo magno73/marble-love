@@ -1,7 +1,6 @@
 /**
  * Test `alphaRamBootInitED6` (FUN_ED6) — smoke + side-effect coverage.
  *
- * Bit-perfect verificato vs binary tramite
  * `packages/cli/src/test-alpha-ram-boot-init-ed6-parity.ts` (500/500 cases).
  */
 
@@ -43,25 +42,24 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
   it("copia il pattern ROM[0x6928 + D4*0x54] in 10 row consecutivi per ciascun quadrante", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    // Fill ROM table @ 0x6928 con valori distinguibili: byte = (offset - 0x6928) | 0x80.
     for (let i = 0; i < QUADRANT_COUNT * SOURCE_QUADRANT_STRIDE_BYTES; i++) {
       rom.program[SOURCE_TABLE_ROM_ADDR + i] = (i | 0x80) & 0xff;
     }
-    // Pre-fill alphaRam con sentinel 0xCC.
+    // Pre-fill alphaRam with sentinel 0xCC.
     state.alphaRam.fill(0xcc);
 
     alphaRamBootInitED6(state, rom);
 
-    // Per ogni quadrante D4, ogni row D5 deve contenere ROM[0x6928 + D4*0x54..]
+    // For each D4 quadrant, every D5 row must contain ROM[0x6928 + D4*0x54..].
     // ai byte [row .. row + WORDS_PER_ROW*2 - 1] = [row .. row+0x53].
     for (let d4 = 0; d4 < QUADRANT_COUNT; d4++) {
       const srcBase = SOURCE_TABLE_ROM_ADDR + d4 * SOURCE_QUADRANT_STRIDE_BYTES;
       for (let d5 = 0; d5 < ROW_PER_QUADRANT; d5++) {
         const rowOff = (d4 * ROW_PER_QUADRANT + d5) * ROW_STRIDE_BYTES;
         for (let b = 0; b < WORDS_PER_ROW * 2; b++) {
-          // Eccezione per i loop 2 e 3 che sovrascrivono parte di alcuni row.
-          // Loop 2 sovrascrive offset [0x008..0x04B] (row 0 quadrante 0).
-          // Loop 3 sovrascrive offset [0xE88..0xECB] (row 9 quadrante 2).
+          // Exception for loops 2 and 3, which overwrite part of some rows.
+          // Loop 2 overwrites offsets [0x008..0x04B] (row 0, quadrant 0).
+          // Loop 3 overwrites offsets [0xE88..0xECB] (row 9, quadrant 2).
           const absOff = rowOff + b;
           if (absOff >= 0x008 && absOff <= 0x04b) continue;
           if (absOff >= 0xe88 && absOff <= 0xecb) continue;
@@ -80,7 +78,6 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
   it("scrive 0x2000 word a alphaRam[0x008..0x04B] (loop 2, 34 word)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    // ROM source table azzerata → loop 1 scriverà 0 nei range coperti.
     state.alphaRam.fill(0xcc);
     alphaRamBootInitED6(state, rom);
 
@@ -90,12 +87,10 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
       expect(state.alphaRam[off]).toBe(0x20);
       expect(state.alphaRam[off + 1]).toBe(0x00);
     }
-    // I byte 0x000..0x007 (row 0 quadrante 0, prima di loop 2) restano dal loop 1
     // (qui ROM = 0 → alphaRam[0..7] = 0).
     for (let i = 0; i < 8; i++) {
       expect(state.alphaRam[i]).toBe(0x00);
     }
-    // Il byte 0x04C in poi appartiene ancora al row 0 (loop 1 lo ha azzerato).
     for (let i = 0x4c; i < 0x54; i++) {
       expect(state.alphaRam[i]).toBe(0x00);
     }
@@ -120,8 +115,8 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     state.alphaRam.fill(0xcc);
     alphaRamBootInitED6(state, rom);
 
-    // L'ultimo row scritto da loop 1 inizia a 0xE80 e copre 42 word fino a 0xED3.
-    // Loop 3 sovrascrive 0xE88..0xECB. I byte 0xED4..0xEFF (44 byte di "skip" del row 9)
+    // The last row written by loop 1 starts at 0xE80 and covers 42 words through 0xED3.
+    // Loop 3 overwrites 0xE88..0xECB. Bytes 0xED4..0xEFF (44 skipped row-9 bytes)
     // e 0xF00..0xFFF (oltre il range del loop 1) restano sentinel.
     for (let i = 0xed4; i < 0xf00; i++) {
       expect(state.alphaRam[i]).toBe(0xcc);
@@ -135,7 +130,6 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     const stateA = emptyGameState();
     const stateB = emptyGameState();
     const rom = emptyRomImage();
-    // Inietto un pattern deterministico nella tabella sorgente.
     for (let i = 0; i < QUADRANT_COUNT * SOURCE_QUADRANT_STRIDE_BYTES; i++) {
       rom.program[SOURCE_TABLE_ROM_ADDR + i] = (i * 7 + 3) & 0xff;
     }

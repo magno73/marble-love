@@ -1,13 +1,12 @@
-// probe-p2-slot0-writers.ts — Proxy-wrap di workRam per loggare ogni write
-// nelle regioni:
+// probe-p2-slot0-writers.ts - proxy-wraps workRam and logs each write in:
 //   1) 0x97c..0x97f   (= 0x40097c..0x40097f, srtgt)
 //   2) 0xa00..0xa1f   (= 0x400a00..0x400a1f, P2 slot pair header)
 //   3) 0xa20..0xa3f   (= 0x400a20..0x400a3f, P2.slot0 struct)
-// Logga: frame, offset, value, stack-trace (per identificare sub TS chiamante).
-// Output: /tmp/ts_p2_slot0_writers.json (struct compatibile col MAME tap).
+// Logs frame, offset, value, and stack trace to identify the calling TS sub.
+// Output: /tmp/ts_p2_slot0_writers.json (structure compatible with the MAME tap).
 //
-// Window: tick by tick da f12000 fino f+80 (= f12080 absolute), warm-start
-// dal MAME ground truth.
+// Window: tick by tick from f12000 through f+80 (= absolute f12080), warm-started
+// from the MAME ground truth.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
@@ -40,8 +39,8 @@ const warm = {
 const s = stateNs.emptyGameState();
 bootInit(s, rom, { warmState: warm });
 
-// ─── Setup Proxy su workRam ─────────────────────────────────────────────────
-// Regioni di interesse (relative a workRam base 0x400000):
+// ─── workRam proxy setup ────────────────────────────────────────────────────
+// Regions of interest relative to workRam base 0x400000:
 function inRegion(offset: number): string | null {
   if (offset >= 0x97c && offset <= 0x97f) return "srtgt";
   if (offset >= 0xa00 && offset <= 0xa1f) return "p2hdr";
@@ -115,7 +114,7 @@ const proxy = new Proxy(origWorkRam, {
 (s as { workRam: Uint8Array }).workRam = proxy as unknown as Uint8Array;
 
 // ─── Drive ticks ────────────────────────────────────────────────────────────
-// Per ogni frame TS tick(), poi se siamo in window logghiamo gli writes.
+// For each frame, TS tick(); if inside the window, log writes.
 // Window MAME tap: f12059..f12080 (TS f+59..f+80).
 const WINDOW_LO = 1;
 const WINDOW_HI = 80;

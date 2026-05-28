@@ -1,15 +1,15 @@
 /**
- * sound-renderer.ts — Bridge SoundChip ↔ Web Audio (AudioWorklet).
+ * sound-renderer.ts - bridge SoundChip <-> Web Audio (AudioWorklet).
  *
- * MVP V1: poll register shadow YM2151+POKEY, interpreta pattern key-on/key-off
- * + frequency + volume, posta eventi all'AudioWorklet che sintetizza sample.
+ * MVP V1: poll YM2151+POKEY register shadow, interpret key-on/key-off pattern
+ * + frequency + volume, and post events to the AudioWorklet that synthesizes samples.
  *
- * Niente bit-perfect chip simulation: solo "audio sentibile in browser" per
- * dare feedback acustico al gameplay. V2 V3 (sample-level chip-perfect) sara'
- * full envelope generator + operator FM + LFSR poly via AudioWorklet che
- * riceve register writes diretti.
+ * No bit-perfect chip simulation here: only "audible browser audio" for
+ * gameplay feedback. V2/V3 sample-level chip-perfect work will be the full
+ * envelope generator + operator FM + LFSR poly via an AudioWorklet that receives
+ * direct register writes.
  *
- * Pattern di decode (basato su Yamaha OPM datasheet):
+ * Decode pattern (based on the Yamaha OPM datasheet):
  *
  * YM2151 channel N (N=0..7):
  *   - Reg $20+N bit 7-6 = RL (right/left enable)
@@ -147,8 +147,8 @@ export function pokeyAudfToFreq(audf: number, audc: number): { freq: number; noi
   return { freq, noise };
 }
 
-/** YM2151 channel volume da TL min su 4 operatori. TL: 0=loud, 127=silent.
- * V1 stub: usa solo op0 TL ($60+N) come volume globale del canale.
+/** YM2151 channel volume from min TL across 4 operators. TL: 0=loud, 127=silent.
+ * V1 stub: uses only op0 TL ($60+N) as the channel's global volume.
  * Linear mapping vol = (127 - tl) / 127. */
 export function ymTlToVol(tl: number): number {
   return Math.max(0, 1 - (tl & 0x7f) / 127);
@@ -276,9 +276,9 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       const freq = ymKcToFreq(kc, kf);
       const vol = ymTlToVol(tl);
       // KEY ON: reg $08 = bit 6-3 mask + bit 2-0 channel. Pattern Marble usa
-      // mask=0x78 (tutti op on) o 0 (off). Simplification: ANY non-zero key
+      // mask=0x78 (all operators on) or 0 (off). Simplification: ANY non-zero key
       // on byte sull'ultimo ch select.
-      // V1 heuristic: channel on if TL < 127 (= non muto). Real OPM needs
+      // V1 heuristic: channel on if TL < 127 (= not muted). Real OPM needs
       // KEY ON tracking, V2 si.
       const isOn = vol > 0.01 && freq > 0;
       const wasOn = prev.ymOn[ch];
@@ -316,11 +316,11 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
   }
 
   function playCommandCue(cmd: number, options?: { force?: boolean }): void {
-    // OscillatorNode beep stand-in DISABILITATO (2026-05-18): era il source
-    // dei beep continui che user reportava. Il chip ora produce audio reale
-    // via PCM stream. Se AudioWorklet fallisce, playCommandCue diventa no-op
-    // (utente preferisce silenzio a beep). Per debug usare `?soundCue=1` con
-    // `soundCueForce=1` per riabilitare.
+    // OscillatorNode beep stand-in disabled (2026-05-18): it was the source
+    // of continuous beeps reported by users. The chip now produces real audio
+    // through the PCM stream. If AudioWorklet fails, playCommandCue becomes
+    // a no-op; silence is preferred to synthetic beeps. For debugging, use
+    // `?soundCue=1` with `soundCueForce=1` to re-enable it.
     const cue = soundCommandCue(cmd);
     if (options?.force !== true && shouldDropCommandCue()) return;
     const forceBeep = new URLSearchParams(globalThis.location?.search ?? "").get("soundCueForce") === "1";
@@ -342,8 +342,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       osc.start(now);
       osc.stop(now + cue.durationMs / 1000 + 0.03);
     }
-    // node.port message: invia cue al worklet (suoneranno tramite cueVoices
-    // se worklet caricato; no-op altrimenti).
+    // node.port message: send cue to the worklet. It plays through cueVoices if
+    // the worklet is loaded; otherwise this is a no-op.
     if (node !== null) node.port.postMessage({ type: "cue", ...cue });
   }
 

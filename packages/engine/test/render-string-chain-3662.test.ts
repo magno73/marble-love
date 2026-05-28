@@ -1,12 +1,10 @@
 /**
  * render-string-chain-3662.test.ts — smoke + corner case di FUN_3662.
  *
- * Bit-perfect parity verificata vs binary in
  * `packages/cli/src/test-render-string-chain-3662-parity.ts`.
  *
  * Qui copriamo i path principali (rotation 0 vs !=0, narrow vs wide,
- * tickOff oltre lookup, marker che termina/continua chain) e l'edge case
- * "stringa vuota" (primo byte == 0).
+ * tickOff beyond lookup, marker that terminates/continues chain) and the edge case
  */
 
 import { describe, it, expect } from "vitest";
@@ -29,7 +27,6 @@ const ALPHA_BASE = 0xa03000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-/** Scrive un long big-endian a `off` in workRam. */
 function writeLongWR(workRam: Uint8Array, off: number, val: number): void {
   workRam[off] = (val >>> 24) & 0xff;
   workRam[off + 1] = (val >>> 16) & 0xff;
@@ -37,28 +34,24 @@ function writeLongWR(workRam: Uint8Array, off: number, val: number): void {
   workRam[off + 3] = val & 0xff;
 }
 
-/** Scrive una word big-endian a `off` in workRam. */
 function writeWordWR(workRam: Uint8Array, off: number, val: number): void {
   workRam[off] = (val >>> 8) & 0xff;
   workRam[off + 1] = val & 0xff;
 }
 
 /**
- * Costruisce un RomImage popolato con le ROM tables minime per i test:
+ * Builds a RomImage populated with the minimal ROM tables for tests:
  *   - 0x7294 (lookup limit, words)
  *   - 0x72a0 (stride, words)
  *   - 0x72a4+1 (shift count byte per rotation*2)
  *   - 0x72ac (glyph index long per char)
  *
- * Usa valori sintetici per controllare il flow ma compatibili coi range
- * effettivi del binario (rotation 0..7).
  */
 function makeTestRom(): RomImage {
   const rom = emptyRomImage();
   const p = rom.program;
 
   // 0x7294 lookup limit per rotation:
-  //   rot=0 → 0x100 (large, così tickOff diff è quasi sempre <= lookup)
   //   rot=1 → 0x100
   //   rot=2 → -1 (0xFFFF, signed -1) per testare path bgt → skip render
   for (let r = 0; r < 8; r++) {
@@ -67,7 +60,6 @@ function makeTestRom(): RomImage {
     p[0x7294 + r * 2 + 1] = v & 0xff;
   }
 
-  // 0x72a0 stride per rotation: tutti = 1 (semplifica reasoning sui pos).
   for (let r = 0; r < 8; r++) {
     p[0x72a0 + r * 2] = 0;
     p[0x72a0 + r * 2 + 1] = 0x01;
@@ -81,11 +73,8 @@ function makeTestRom(): RomImage {
   }
 
   // 0x72ac glyph index long per char:
-  //   char 'A' (0x41) → idx 0x10  (wide, fuori [0x26..0x2e])
-  //   char "'" (0x27) → idx 0x2a  (narrow, dentro [0x26..0x2e])
   //   char '0' (0x30) → idx 0x00  (wide, < 0x26)
-  //   altri          → idx 0x00  (wide)
-  // Cleariamo prima l'intera area
+  //   others         -> idx 0x00  (wide)
   for (let i = 0; i < 0x100; i++) {
     p[0x72ac + i * 4] = 0;
     p[0x72ac + i * 4 + 1] = 0;
@@ -133,7 +122,6 @@ function setupEntry(
   return WORK_RAM_BASE + off;
 }
 
-/** Scrive una stringa null-terminated in workRam @ off. */
 function writeStr(workRam: Uint8Array, off: number, s: string): void {
   for (let i = 0; i < s.length; i++) {
     workRam[off + i] = s.charCodeAt(i) & 0xff;
@@ -187,7 +175,6 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
     const state = emptyGameState();
     const rom = makeTestRom();
     // rotation = 0 (workRam[0x1f42..0x1f43] = 0)
-    // tick = 0, valF00 = 0, marker = 0 → chain ferma dopo 1ª entry
 
     const stringOff = 0x100;
     writeStr(state.workRam, stringOff, "AB"); // 2 char + 0 terminator
@@ -247,7 +234,6 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
     expect(ptrs[0]).toBe(ALPHA_BASE);
     // 'A' wide → +stride*4 = +4
     expect(ptrs[1]).toBe(ALPHA_BASE + 4);
-    // 'B' è il SECONDO char e nessun terzo: solo 2 ptr.
   });
 });
 
@@ -325,8 +311,6 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
     writeStr(state.workRam, 0x180, "B");
 
     // Entry 2 @ 0x300: marker = 0 → sum = 0+5 = 5 > 1 → continua...
-    //   ma poi arriva a entry 3 (nextPtr = 0) che è degenerata.
-    // Per evitare loop, usiamo marker della entry 2 NEGATIVO grande così
     // sum = -100 + 5 = -95 ≤ 1 → exit.
     const entry2Addr = setupEntry(
       state,
@@ -335,7 +319,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
       0,
       WORK_RAM_BASE + 0x180, // string "B"
       0x80, // marker = -128 signed → sum = -128+5 = -123 ≤ 1 → exit
-      0, // nextPtr = 0 (non usato)
+      0,
     );
 
     // Entry 1 @ 0x200: marker = 0 → sum = 0+5 = 5 > 1 → advance to entry 2
@@ -370,7 +354,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
       0,
       0,
       WORK_RAM_BASE + 0x100,
-      0, // marker = 0, valF00 = 0 → sum = 0 ≤ 1 → exit dopo 1ª entry
+      0,
       0xdeadbeef, // nextPtr — NON deve essere seguito
     );
 
@@ -378,7 +362,6 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
     renderStringChain3662(state, rom, structAddr, 0, {
       fun_32ba: (c) => calls.push(c),
     });
-    // 2 char processati ma niente chain advance
     expect(calls).toHaveLength(2);
   });
 });
@@ -402,7 +385,6 @@ describe("renderStringChain3662 (FUN_3662) — pure read", () => {
     const alphaBefore = new Uint8Array(state.alphaRam);
 
     renderStringChain3662(state, rom, structAddr, 0, {
-      // subs vuote → nessuna call modifica state
     });
 
     expect(state.workRam).toEqual(wrBefore);
@@ -412,10 +394,8 @@ describe("renderStringChain3662 (FUN_3662) — pure read", () => {
   it("ritorna SEMPRE 1 (anche su input degenerati)", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
-    // structAddr = 0 (out-of-range): readByteAbs ritorna 0, quindi tickOff=0,
     // stringPtr=0, primo byte=0 → exit. marker=0 → sum=0 → return 1.
     expect(renderStringChain3662(state, rom, 0, 0)).toBe(1);
-    // structAddr punta a una zona non popolata: stesso percorso.
     expect(renderStringChain3662(state, rom, 0x401d00, 0)).toBe(1);
   });
 });

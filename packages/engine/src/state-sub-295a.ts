@@ -2,7 +2,7 @@
  * state-sub-295a.ts — replica `FUN_0000295A`.
  *
  * Branch-A one-shot helper del root game-state machine. Non chiama JSR: copia
- * parole dentro alpha RAM usando le stesse tabelle ROM di rotazione del
+ * words inside alpha RAM using the same ROM rotation tables as the
  * renderer stringhe.
  */
 

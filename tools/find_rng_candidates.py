@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-find_rng_candidates.py — analizza il dump Work RAM multi-snapshot per trovare
+find_rng_candidates.py — analyzes a multi-snapshot Work RAM dump to find
 candidate RNG state cells.
 
-Heuristica:
-  - Per ogni cella della Work RAM, calcola:
-    * cambio_count: quanti snapshot consecutivi differiscono
-    * unique_values: quanti valori distinti la cella assume
-    * runs: lunghezza media delle "stesso valore" run (più corte = più caotiche)
-    * delta_bits_set: average # di bit che cambiano tra snapshot consecutivi
-  - Filtra: cambio_count >= 50% degli snap pairs, unique_values >= 5
-  - Ordina per (unique_values descending, runs ascending)
-  - Top candidate = RNG state probabilmente
+Heuristic:
+  - For each Work RAM cell, compute:
+    * change_count: how many consecutive snapshots differ
+    * unique_values: how many distinct values the cell takes
+    * runs: average length of "same value" runs (shorter = more chaotic)
+    * delta_bits_set: average number of bits that change between snapshots
+  - Filter: change_count >= 50% of snapshot pairs, unique_values >= 5
+  - Sort by (unique_values descending, runs ascending)
+  - Top candidate is probably RNG state
 
-Le posizioni di oggetti game state (marble.x/y, score, timer) sono FILTRATE
-fuori dal candidate set perché:
-  - score: monotono, troppo poco unique
-  - timer: monotono
-  - marble pos: cambia in modo CONTIGUO (cluster di celle adiacenti — è
-    un Vec3) — il filtro "cella isolata" lo esclude
+Game-state object positions (marble.x/y, score, timer) are filtered out of the
+candidate set because:
+  - score: monotonic, with too few unique values
+  - timer: monotonic
+  - marble position: changes contiguously across adjacent cells because it is
+    a Vec3, so the isolated-cell filter excludes it
 
-Uso:
+Usage:
     python3 tools/find_rng_candidates.py /tmp/ram_dump.bin
 """
 

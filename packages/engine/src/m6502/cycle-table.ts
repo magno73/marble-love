@@ -1,14 +1,12 @@
 /**
- * cycle-table.ts — Cycle counts MOS 6502 NMOS (base) + page-cross penalty.
+ * cycle-table.ts - MOS 6502 NMOS base cycle counts plus page-cross penalties.
  *
- * Riferimento: NMOS 6502 datasheet (Rockwell R6500 + Western Design Center
- * W65C02 NMOS subset). Cross-check vs MAME `cpu/m6502/m6502.cpp` opcode
- * micro-ops e Tom Harte 65x02 dataset (`cycles` field per test).
+ * References: NMOS 6502 datasheets, MAME `cpu/m6502/m6502.cpp` micro-ops, and
+ * Tom Harte's 65x02 test dataset (`cycles` field).
  *
- * I cycle qui sono "base instruction cycles": il costo extra di branch
- * taken / branch page-cross / index page-cross è applicato runtime in
- * `addressing.ts` / `cpu.ts` come delta. Undocumented opcodes: cycle = 0
- * (segnale sentinel; `cpu.step` throwa se incontrato — Rule 12).
+ * These are base instruction cycles. Branch taken, branch page-cross, and index
+ * page-cross deltas are applied at runtime. Undocumented opcodes use cycle 0 as
+ * a sentinel and `cpu.step` fails loudly if one is encountered.
  */
 
 import type { u8 } from "../wrap.js";

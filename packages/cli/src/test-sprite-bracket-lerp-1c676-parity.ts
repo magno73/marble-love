@@ -10,12 +10,12 @@
  *   - 4 byte dircode @ 0x40066C/6E/70/72
  *   - 8 word output @ 0x400674..0x400683
  *
- * Nessun JSR esterno da stubare (funzione pura).
+ * No external JSR to stub; this is a pure function.
  *
  * **Suite**:
  *   - A: random tutto (struct + globals).
- *   - B: forza equality skip bracket-1 (key==hi, tiebreak=eq).
- *   - C: forza dir=1 bracket-1 (key<hi), lerp con factorA stress.
+ *   - B: force equality skip bracket-1 (key==hi, tiebreak=eq).
+ *   - C: force dir=1 bracket-1 (key<hi), lerp with factorA stress.
  *   - D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF nei campi critici).
  *
  * Uso: npx tsx packages/cli/src/test-sprite-bracket-lerp-1c676-parity.ts [N]

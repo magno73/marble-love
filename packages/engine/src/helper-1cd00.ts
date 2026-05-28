@@ -1,67 +1,34 @@
 /**
- * helper-1cd00.ts — replica `FUN_0001CD00` (874 byte, 0x1CD00..0x1D069).
+ * Bit-perfect port of `FUN_0001CD00`.
  *
- * "Marble-vs-wall 3D bounding-box collision + velocity response":
- *   dato il puntatore alla struct marble (`entityPtr`, A2), il puntatore alla
- *   struct sorgente del tile/shape (`shapeBasePtr`, A1), e un indice intero
- *   (`indexByte`), questa routine:
- *
- *   1. Uscita anticipata se `indexByte == 0xFF` → ritorna 0.
- *   2. Salva le velocità `A2[0..11]` (vX, vY, vZ, long each) in variabili
- *      locali.
- *   3. Carica le coordinate mondo dal tile-struct (`A1[0xC]`, `A1[0x10]`,
- *      `A1[0x14]`), aggiunge +8 agli assi X/Y, ed elabora due set di
- *      coordinate relative:
- *        - **Set 1** (`x1, y1, z1`): sottrae la posizione marble-world
+ * Marble-vs-wall 3D bounding-box collision and velocity response. The routine
+ * receives the marble entity pointer, a tile/shape source struct pointer, and
+ * a shape index, then evaluates the shape entry list against two transformed
+ * marble positions.
  *          (`*0x400690`, `*0x400692`, `*0x400694`).
- *        - **Set 2** (`x2, y2, z2`): come Set 1 ma sottrae i vettori
- *          normali/globali pre-calcolati (`*0x400684.w`, `*0x400688.w`,
+ *        - **Set 2** (`x2, y2, z2`): like set 1 but subtracting vectors from
  *          `*0x40068C.w`).
- *   4. Indicizza la tabella di puntatori ROM @ `0x24C5E` (7 entry × 4 byte)
- *      con `indexByte * 4` per ottenere il puntatore alla prima shape-entry.
- *   5. **Loop** su shape-entry a passo 16 byte: per ogni entry legge la
- *      word `entry[0]` come `nx` (normale X scalata). Se `nx > 0x800`:
  *      `nx -= 0x1000`, `wrapFlag = 1` (entry terminale). Se `nx <= 0x800`:
- *      `wrapFlag = 0` (continua al prossimo entry).
- *   6. **Bbox hit-test 1** (`x1/y1/z1` vs `entry[6..B].sext_b`): se tutti
- *      e 6 i confronti passano → `hit1 = 1`.
+ *      and all 6 comparisons pass, `hit1 = 1`.
  *   7. **Bbox hit-test 2** (`x2/y2/z2` vs stessi bounds): → `hit2 = 1`.
- *   8. Se nessun hit → goto loop-next.
- *   9. Calcola i dot product firmati:
  *      - `D5 = nx*(x1-cx) + ny*(y1-cy) + nz*(z1-cz)` (usando set 1)
  *      - `D6 = nx*(x2-cx) + ny*(y2-cy) + nz*(z2-cz)` (usando set 2)
- *      dove `nx = entry[-2]`, `ny = entry[2..3]`, `nz = entry[4..5]`,
+ *      where `nx = entry[-2]`, `ny = entry[2..3]`, `nz = entry[4..5]`,
  *      `cx = entry[0xC]`, `cy = entry[0xD]`, `cz = entry[0xE]`.
- *  10. Se `|D5| >= 0x400 AND |D6| >= 0x400`: se stesso segno → no-collision
- *      (loop-next); se segni diversi → continua.
- *  11. Se `|D6| >= 0x400` → **path riflessione** (`L_01CFEC`): copia i
- *      globali `*0x400684`, `*0x400688`, `*0x40068C` in `A2[0xC..0x14]`,
- *      poi calcola la velocità di rimbalzo sottraendo la proiezione della
- *      velocità sulla normale. Ritorna 0.
- *  12. Altrimenti (`|D6| < 0x400`) → **path collisione diretta**: se
- *      `A2[0x36] == 2` controlla `absLong(A2[0x14] - A2[0x2A])`:
- *        - Se > `0x100000`: suono (`soundPair15884`, `soundCmdSend(0x46)`),
- *          poi se A2 è `0x400018` o `0x4000FA` → imposta `A2[0x57]=100` e
- *          chiama `objectStateEntry25BAE(A2, 4)`; altrimenti chiama
- *          `stateSub15BD0(A2, 1, 1)`. Ritorna 1.
- *        - Altrimenti: inverte velocità (`neg.l vX/vY/vZ`), copia i globali
+ *      loop-next; different signs continue processing.
+ *      `A2[0x36] == 2` checks `absLong(A2[0x14] - A2[0x2A])`:
  *          `*0x400684`, `*0x400688`, `*0x40068C` in `A2[0xC..0x14]`.
- *          Ritorna 0.
- *  13. **Loop-next**: `A0 += 16`, se `wrapFlag == 0` loop a step 5.
- *      Altrimenti ritorna 0.
+ *  13. **Loop-next**: `A0 += 16`; if `wrapFlag == 0`, loop to step 5.
  *
- * **Signature** (argomenti sullo stack, cdecl-like M68K):
  *   ```
  *   jsr FUN_0001CD00(entityPtr, shapeBasePtr, indexLong)
  *   ```
- *   - `entityPtr`   (long) → A2 = absolute workRam address della marble struct.
- *   - `shapeBasePtr`(long) → A1 = absolute workRam address del tile/shape struct
- *     con campi: `[0xC..0xD]` worldX word, `[0x10..0x11]` worldY word,
+ *   - `entityPtr`   (long) -> A2 = absolute work RAM address of the marble struct.
+ *   - `shapeBasePtr`(long) -> A1 = absolute work RAM address of the tile/shape struct
  *     `[0x14..0x15]` worldZ sext-word.
  *   - `indexLong`   (long) → D1.b = low byte = shape index (0..6 o 0xFF).
  *
- * **Return**: `D0` (long, firmato) — 1 se collisione grave (morte/reset marble),
- * 0 altrimenti (sia no-hit che rimbalzo normale).
+ * Return: signed long D0, 1 for the fatal/reset collision path.
  *
  * **Sub injection** (`Helper1CD00Subs`):
  *   - `absLong`              — `FUN_0001216A`, default: replica TS.
@@ -70,22 +37,16 @@
  *   - `stateSub15BD0`        — `FUN_00015BD0`, default: no-op.
  *   - `objectStateEntry25BAE`— `FUN_00025BAE`, default: no-op.
  *
- * **Side effects in `state.workRam`** (esclusi quelli dei sub):
- *   - `A2[0xC..0x17]` (long×3): scritti su rimbalzo o collisione diretta.
- *   - `A2[0..11]` (long×3): velocità negate in path collisione diretta.
- *   - `A2[0x57]` (byte): impostato a 0x64 in path kill speciale.
+ * Side effects in `state.workRam`, excluding injected subcalls:
  *
- * **ROM tables**:
- *   - Pointer table `SHAPE_PTR_TABLE_ADDR = 0x24C5E` (7 long): puntatori
- *     ai blocchi shape. Embeddato come `SHAPE_PTR_TABLE`.
- *   - Shape data: array di entry a 16 byte ciascuna, indirizzate dai puntatori.
- *     Embeddato come `SHAPE_ENTRIES_ROM`.
+ * ROM tables:
+ *   - Pointer table `SHAPE_PTR_TABLE_ADDR = 0x24C5E` (7 longs), embedded as
+ *     `SHAPE_PTR_TABLE`.
+ *   - Shape-entry bytes embedded as `SHAPE_ENTRIES_ROM`.
  *
- * **Callers** (8 xref, tutti in `FUN_0002A32E` area):
  *   `0x02A3B8`, `0x02A550`, `0x02A596`, `0x02A5D2`, `0x02A63E`, `0x02A724`,
  *   `0x02A866`, `0x02A98E`.
  *
- * Verifica bit-perfect via `cli/src/test-helper-1cd00-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -204,15 +165,14 @@ const SHAPE_DATA_ROM: readonly number[] = [
 // ─── Sub injection interface ───────────────────────────────────────────────
 
 /**
- * Sub injection per `FUN_0001CD00`.
+ * Sub injection for `FUN_0001CD00`.
  *
- * Tutte le sub sono facoltative: il default è no-op (o replica TS dove
- * disponibile). Il parity test le patcha con stub che loggano i call.
+ * available). The parity test patches them with stubs that log calls.
  */
 export interface Helper1CD00Subs {
   /**
    * `FUN_0001216A` — `abs(arg: number): number`.
-   * Default: replica TS da `math-helpers.ts`.
+   * Default: TS replica from `math-helpers.ts`.
    */
   absLong?: (arg: number) => number;
 
@@ -318,18 +278,12 @@ function defaultAbsLong(v: number): number {
 // ─── Main function ─────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001CD00`.
  *
  * Marble-vs-wall 3D bounding-box collision + velocity response.
  *
- * @param state         GameState (workRam mutato in-place).
- * @param entityPtr     Indirizzo assoluto workRam della struct marble (A2).
- * @param shapeBasePtr  Indirizzo assoluto workRam della struct tile-source (A1).
- * @param indexLong     Long sullo stack; solo il byte basso (`indexByte`)
- *                      è usato come indice shape (0..6 o 0xFF).
+ * @param state         GameState (mutates workRam in place).
  * @param subs          Sub injection (default: no-op).
  *
- * @returns 1 se collisione grave (marble reset/kill), 0 altrimenti.
  */
 export function helper1CD00(
   state: GameState,
@@ -658,7 +612,7 @@ function processCollision(
     return -1;
   }
 
-  // ── |D6| < 0x400 → path collisione diretta ─────────────────────────────
+  // ── |D6| < 0x400 → direct collision path ───────────────────────────────
   // L_01CF36 + !bge → here: cmpi.b #$2, $36(a2); bne.w $1cfbc
   const mode36 = r[entityOff + 0x36] ?? 0;
   if (mode36 === 2) {

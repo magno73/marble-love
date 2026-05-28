@@ -2,16 +2,13 @@
 /**
  * test-sound-dispatch-send-parity.ts — differential FUN_3E1A vs soundDispatchSend.
  *
- * FUN_3E1A è chiamata da FUN_4CA0 con 1 long arg sullo stack: (D0<<8)|D1.
- * Nessuna sub interna — pura workRam logic + ROM divisor table @ 0x7952.
  *
  * Setup:
- *   - argLong sullo stack
+ *   - argLong on the stack
  *   - *0x401FFC (long) = ackPtr (struct A2 base) — workRam-safe
  *   - *(A2+0xA), *(A2+0xB) = byte status + complement
  *   - *0x401FF5/F6/F7 = accumulator state random
  *
- * Confronto: workRam[0x1FF5..0x1FFF] (8 byte) + bytes pointed by struct A2.
  *
  * Uso: npx tsx packages/cli/src/test-sound-dispatch-send-parity.ts [N]
  */
@@ -53,7 +50,6 @@ async function main(): Promise<void> {
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 
   // Range workRam-safe per la struct A2: scegliamo 0x401D00 (region 29, NON
-  // testata in detail). Il struct ha campi a +0xA, +0xB, +0x14..+0x16, +0x00..+0x02.
   const a2Addr = 0x00401d00;
 
   for (let i = 0; i < n; i++) {
@@ -95,7 +91,6 @@ async function main(): Promise<void> {
       pokeMem(cpu, a2Addr + j, 1, v);
       stateInst.workRam[(a2Addr - 0x400000) + j] = v;
     }
-    // Riapplica status e complement (sopra è stato riscritto)
     pokeMem(cpu, a2Addr + 0x0a, 1, statusByte);
     pokeMem(cpu, a2Addr + 0x0b, 1, complByte);
     stateInst.workRam[(a2Addr - 0x400000) + 0x0a] = statusByte;
@@ -115,7 +110,6 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN, [arg]);
     soundDispatchSendNs.soundDispatchSend(stateInst, tsRom, arg);
 
-    // Confronta workRam: accumulator state + struct A2 (0x18 byte)
     let match = true;
     const ranges: ReadonlyArray<readonly [number, number]> = [
       [0x1ff5, 0x1fff], // accumulator + ackPtr (0x1FFC) area

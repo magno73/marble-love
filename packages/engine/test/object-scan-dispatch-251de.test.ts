@@ -1,15 +1,12 @@
 /**
  * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests sull'orchestratore
- * di scan oggetti + step + endgame detector + state-2 respawn.
  *
- * `FUN_000251DE` (478 byte) itera sull'array obj @ 0x400018 (stride 0xE2,
- * count = `*0x400396`), per ogni obj: skip se +0x18==0 (D2++), gate
- * +0x6A.w > 400 → FUN_2822E, esegui FUN_253EC, poi raggruppa state==2 (D2++)
- * / state==3 (D3++) / respawn-block (state altro + count==2 + filtri X/0x36/
- * 0x1A). Post-loop: se D3==count o D2==count-1 (con D3!=0) → set
- * `*0x400390.w = 3` (se != 1).
+ * count = `*0x400396`), for each obj: skip if +0x18==0 (D2++), gate
+ * +0x6A.w > 400 -> FUN_2822E, run FUN_253EC, then group state==2 (D2++)
+ * / state==3 (D3++) / respawn-block (other state + count==2 + X/0x36 filters/
+ * 0x1A). Post-loop: if D3==count or D2==count-1 (with D3!=0), set
+ * `*0x400390.w = 3` (if != 1).
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-object-scan-dispatch-251de-parity.ts` (500/500 cases).
  */
 
@@ -29,16 +26,13 @@ import { emptyRomImage } from "../src/bus.js";
 
 const WORK_RAM_BASE = 0x00400000;
 
-/** Stub RomImage — non usata da default subs no-op. */
 const STUB_ROM = emptyRomImage();
 
-/** Scrive word big-endian in workRam (offset relativo). */
 function writeU16BE(wr: Uint8Array, off: number, v: number): void {
   wr[off + 0] = (v >>> 8) & 0xff;
   wr[off + 1] = v & 0xff;
 }
 
-/** Legge word big-endian da workRam. */
 function readU16BE(wr: Uint8Array, off: number): number {
   return (((wr[off] ?? 0) << 8) | (wr[off + 1] ?? 0)) & 0xffff;
 }
@@ -50,8 +44,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
 
     // count = 0 @ 0x400396
     writeU16BE(s.workRam, 0x396, 0);
-    // sentinel sul global state machine: 0xAAAA (≠ 1, quindi viene
-    // sovrascritto). NB: con count=0, D3==count==0 → setFlag true.
+    // overwritten). Note: with count=0, D3==count==0 -> setFlag true.
     writeU16BE(s.workRam, 0x390, 0xaaaa);
 
     const subs: ObjectScanDispatch251DESubs = {
@@ -62,7 +55,6 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
 
     objectScanDispatch251DE(s, STUB_ROM, subs);
 
-    // Solo 1BBAA è invocata (loop vuoto, no 253EC, no respawn).
     expect(calls).toEqual(["1BBAA"]);
     // Post-loop: D3=0 == count=0 → setFlag → *0x400390 = 3 (pre era ≠ 1).
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
@@ -76,7 +68,6 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     writeU16BE(s.workRam, 0x394, 0);
     writeU16BE(s.workRam, 0x390, 0);
 
-    // 2 obj con state=3 a +0x18 (DOPO FUN_253EC, ma stub no-op → mantengono
     // pre-state).
     const obj0 = GLOBAL_OBJ_BASE_ADDR - WORK_RAM_BASE; // 0x18
     const obj1 = obj0 + OBJ_STRIDE; // 0xFA
@@ -133,7 +124,6 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     const obj0 = GLOBAL_OBJ_BASE_ADDR - WORK_RAM_BASE;
     const obj1 = obj0 + OBJ_STRIDE;
 
-    // Obj0: state=1 (non-empty, non-2/3) → entra nel filter.
     s.workRam[obj0 + 0x18] = 1;
     // X (+0x20) = 0x00F0 (= 240, signed > 0xEC)
     writeU16BE(s.workRam, obj0 + 0x20, 0x00f0);
@@ -149,7 +139,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     // Obj1: state=3 (skipped in filter, just D3++)
     s.workRam[obj1 + 0x18] = 3;
 
-    // Globals 0x400462, 0x400466 (long), 0x400472 (byte) per scritture obj.
+    // Globals 0x400462, 0x400466 (long), 0x400472 (byte) for obj writes.
     s.workRam[0x462] = 0xaa;
     s.workRam[0x463] = 0xbb;
     s.workRam[0x464] = 0xcc;
@@ -179,7 +169,6 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
 
     objectScanDispatch251DE(s, STUB_ROM, subs);
 
-    // Sequenza calls attesa per obj0 (respawn) — obj1 chiama solo 253EC.
     // Pre-loop: 1BBAA. Iter0 (obj0): 253EC, 17934, 1BAB2, 1CC62, 1B9CC, snd, 285B0.
     // Iter1 (obj1, state=3): 253EC.
     expect(calls.map((c) => c.name)).toEqual([
@@ -232,7 +221,6 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     // A2[+0xD2] += 1 → 0x0010 + 1 = 0x0011
     expect(readU16BE(s.workRam, obj0 + 0xd2)).toBe(0x0011);
 
-    // Sentinel tile globals scritti (0xFFFF/0xFFFF)
     expect(readU16BE(s.workRam, 0x696)).toBe(0xffff);
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });

@@ -2,18 +2,12 @@
 /**
  * test-helper-172c2-parity.ts — differential FUN_000172C2 vs helper172C2.
  *
- * `FUN_000172C2` scansiona 7 slot a `0x401482` con stride `0x42`. Per ogni
- * slot testa il byte a `+0x18`: se è ZERO aggiorna il risultato all'indirizzo
- * dell'entry. Restituisce l'indirizzo dell'ultima entry zero-slot, o −1.
+ * `FUN_000172C2` scans 7 slots at `0x401482` with stride `0x42`. For each
  *
- * Per ogni caso:
- *   1. Riempie casualmente i byte +0x18 dei 7 slot (0 o valore casuale)
- *   2. Sincronizza lo stesso dato in binary memory e TS workRam
- *   3. Esegue il binario via callFunction(0x172C2, []) → D0
- *   4. Esegue la TS helper172C2(state) → result
- *   5. Confronta i due valori uint32
+ *   2. Sync the same data into binary memory and TS workRam.
+ *   4. Run TS helper172C2(state) -> result.
  *
- * Uso: npx tsx packages/cli/src/test-helper-172c2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-172c2-parity.ts [N]
  * (default N=500)
  */
 
@@ -65,10 +59,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Genera valori casuali per i 7 slot (0 o un valore non-zero)
     const slotVals: number[] = [];
     for (let s = 0; s < SLOT_COUNT; s++) {
-      // ~50% probabilità di zero, ~50% di non-zero
       const v = rng() < 0.5 ? 0 : Math.floor(rng() * 255) + 1;
       slotVals.push(v);
       const addr = SLOT_ARRAY_BASE + s * SLOT_STRIDE + SLOT_ACTIVE_OFFSET;
@@ -78,9 +70,8 @@ async function main(): Promise<void> {
       stateInst.workRam[(addr - 0x400000) >>> 0] = v;
     }
 
-    // Esegui binario
     const binResult = callFunction(cpu, FUN_172C2, []);
-    // Esegui TS
+    // Run TS.
     const tsResult = helper172C2Ns.helper172C2(stateInst);
 
     if ((binResult.d0 >>> 0) === (tsResult >>> 0)) {

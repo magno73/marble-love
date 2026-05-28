@@ -1,6 +1,6 @@
-// probe-isolated-cmds.ts — submit specifici cmd byte direttamente al chip per
-// vedere se almeno UNO triggera write a YM2151 voice register o POKEY voice.
-// Bypassa la tape completa per isolare "il chip puo' suonare" vs "tape e' errata".
+// probe-isolated-cmds.ts - submit specific command bytes directly to the chip to
+// see whether any command triggers YM2151 or POKEY voice writes. This bypasses
+// the full tape to separate "the chip can make sound" from "the tape is wrong".
 
 import { readFileSync } from "node:fs";
 import {
@@ -54,7 +54,7 @@ for (const cmd of testBytes) {
   console.log(`  cmd 0x${cmd.toString(16).padStart(2,'0')}: voice regs=${r.voiceWritten}/96, ymInit regs=${r.ymInit}/32, audioRam=${r.nonZeroRam}`);
 }
 
-// Stream of 0x03 ticks + 0x61 + 0x01 paired (simulate music start)
+// Stream of 0x03 ticks plus paired 0x61 + 0x01 commands to simulate music start.
 {
   const chip = createSoundChip({ roms: { rom421, rom422 } });
   submitCommand(chip, as_u8(0x00));

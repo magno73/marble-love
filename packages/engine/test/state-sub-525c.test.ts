@@ -1,7 +1,6 @@
 /**
  * state-sub-525c.test.ts — corner cases di stateSub525C (FUN_525C).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-525c-parity.ts`.
  * Qui copriamo i path principali (count tipici) e gli edge case di forma
  * della status-flags bitmap.
  */
@@ -80,7 +79,6 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     const a2 = 0x401000;
     const off = a2 - 0x400000 + BUFFER_OFFSET_FROM_A2;
 
-    // Pre-riempi la regione che DEVE essere clearata + il byte prima e dopo.
     s.workRam[off - 1] = 0xee; // sentinel pre
     for (let i = 0; i < 20; i++) s.workRam[off + i] = 0xaa;
     s.workRam[off + 20] = 0xff; // sentinel post
@@ -95,7 +93,6 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     expect(s.workRam[off - 1]).toBe(0xee);
     expect(s.workRam[off + 20]).toBe(0xff);
 
-    // Status flags: D0*2=2 chiamate con D0=6,7 → bit 4, 5 → 0x30
     expect(readStatusFlags(s.workRam)).toBe(0x00000030);
   });
 
@@ -140,10 +137,7 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
 
   it("buffer clear è strettamente locale ad A2+0x50, non tocca workRam altrove", () => {
     const s = emptyGameState();
-    // Riempi tutta la workRam con sentinel (eccetto la zona che verrà clearata
-    // e la status-flags long che subirà OR)
     s.workRam.fill(0x5a);
-    // Status flags pre-clear (sappiamo che il test legge dopo; OR con 0 = no-op)
     s.workRam[STATUS_FLAGS_OFF] = 0;
     s.workRam[STATUS_FLAGS_OFF + 1] = 0;
     s.workRam[STATUS_FLAGS_OFF + 2] = 0;
@@ -156,7 +150,6 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
 
     // 20 byte clearati
     for (let i = 0; i < 20; i++) expect(s.workRam[off + i]).toBe(0);
-    // Byte prima e dopo intatti (sentinel 0x5a)
     expect(s.workRam[off - 1]).toBe(0x5a);
     expect(s.workRam[off + 20]).toBe(0x5a);
     // Sample distante intatto

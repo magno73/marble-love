@@ -1,16 +1,8 @@
 /**
  * Test initLevelLoad1A236 (FUN_0001A236) — smoke + side-effect coverage.
  *
- * `FUN_0001A236` (80 byte) è puro orchestratore: 3 word global writes,
- * 1 long fetch dalla pointer table livelli (ROM 0x2BE00), 4 jsr in
- * sequenza. I test verificano:
- *   - i 3 globali assoluti vengono settati ai valori esatti
- *   - il level pointer viene caricato dall'entry 0 della pointer table
- *     (perché *0x400394 viene azzerato un'istruzione prima del read)
- *   - le 4 sub-callback sono chiamate nell'ordine binary
  *   - default no-op non solleva
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-init-level-load-1a236-parity.ts` (500/500 cases).
  */
 
@@ -60,7 +52,6 @@ function makeRomWithLevelPointer(ptr: number): ReturnType<typeof emptyRomImage> 
 describe("initLevelLoad1A236 (FUN_0001A236)", () => {
   it("setta i 3 globali e carica il level pointer dall'entry 0 della tabella", () => {
     const s = emptyGameState();
-    // Sporco i globali per verificare l'overwrite
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE] = 0x12;
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE + 1] = 0x34;
     s.workRam[INIT_LEVEL_LOAD_1A236_SLAPSTIC_INDEX_ADDR - WORK_RAM_BASE] = 0xab;
@@ -68,7 +59,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     s.workRam[INIT_LEVEL_LOAD_1A236_COUNTER_FLAG_ADDR - WORK_RAM_BASE] = 0xff;
     s.workRam[INIT_LEVEL_LOAD_1A236_COUNTER_FLAG_ADDR - WORK_RAM_BASE + 1] = 0xff;
 
-    const rom = makeRomWithLevelPointer(0x0002bee2); // Level 1 reale
+    const rom = makeRomWithLevelPointer(0x0002bee2);
 
     initLevelLoad1A236(s, rom);
 
@@ -120,7 +111,6 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     initLevelLoad1A236(s, rom, subs);
 
     expect(calls).toEqual(["clearAlphaTiles", "fun16F6C"]);
-    // I globali e il level ptr sono comunque scritti
     expect(readLongWorkRam(s, INIT_LEVEL_LOAD_1A236_LEVEL_PTR_DST_ADDR)).toBe(0xdeadbeef);
   });
 

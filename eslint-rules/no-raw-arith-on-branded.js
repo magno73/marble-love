@@ -1,28 +1,28 @@
 /**
  * ESLint custom rule: no-raw-arith-on-branded
  *
- * Vieta operatori aritmetici/bitwise diretti (+ - * / % << >> >>> & | ^) su
- * valori dichiarati come tipi branded `u8 | u16 | u32 | i8 | i16 | i32`.
+ * Rejects direct arithmetic/bitwise operators (+ - * / % << >> >>> & | ^) on
+ * values declared as branded numeric types `u8 | u16 | u32 | i8 | i16 | i32`.
  *
- * Motivazione: TypeScript usa float64 di default. Marble Love deve replicare
- * aritmetica 16/32-bit del 68010 esattamente. Soluzione standard: branded
- * types + helper espliciti in `engine/src/wrap.ts` (`u16_add`, `u32_mul`, etc).
+ * Rationale: TypeScript uses float64 by default. Marble Love needs exact
+ * 68010-style 16/32-bit arithmetic, so engine code should use branded types and
+ * explicit helpers from `engine/src/wrap.ts` (`u16_add`, `u32_mul`, etc.).
  *
- * La rule NON tenta type-inference completa (richiederebbe TypeChecker via
- * @typescript-eslint/parser). Invece riconosce pattern sintattici:
+ * This rule does not attempt full type inference. It recognizes local syntactic
+ * patterns instead:
  *
- *   1. Variabili con annotation esplicita `: u8`/`: u16`/`: u32`/`: i8`/`: i16`/`: i32`
+ *   1. Variables with explicit annotation `: u8`/`: u16`/`: u32`/`: i8`/`: i16`/`: i32`
  *   2. Cast `as u8`/`as u16`/...
- *   3. Parametri di funzione tipizzati come uX/iX
+ *   3. Function parameters typed as uX/iX
  *
- * Quando uno qualunque degli operandi di un BinaryExpression aritmetico/bitwise
- * cade in uno di questi casi, la rule fallisce e suggerisce l'helper di wrap.ts.
+ * When either operand of a relevant expression matches one of those patterns,
+ * the rule reports it and points callers at `wrap.ts`.
  *
  * Esempi:
  *   const a: u16 = 0xFFFF;
  *   const b: u16 = 1;
- *   const c = a + b;        // ❌ usare u16_add(a, b)
- *   const d = u16_add(a, b); // ✅
+ *   const c = a + b;         // use u16_add(a, b)
+ *   const d = u16_add(a, b); // ok
  */
 
 const BRANDED_NUMERIC = new Set(["u8", "u16", "u32", "i8", "i16", "i32"]);
@@ -42,8 +42,8 @@ const BANNED_UPDATE_OPS = new Set(["++", "--"]);
 const BANNED_UNARY_OPS = new Set(["-", "+", "~"]);
 
 /**
- * Estrae il nome semplice di un TSTypeReference.
- * Esempi: "u16" da `: u16`, "u16" da `as u16`, "u16" da `<u16>`.
+ * Extracts the simple name of a TSTypeReference.
+ * Examples: "u16" from `: u16`, "u16" from `as u16`, "u16" from `<u16>`.
  */
 function typeRefName(typeNode) {
   if (!typeNode) return null;
@@ -60,11 +60,11 @@ function isBrandedTypeAnnotation(annotation) {
 }
 
 /**
- * Determina se un'espressione è "branded" tramite analisi sintattica locale.
+ * Determines whether an expression is branded through local syntax only.
  *  - TSAsExpression: as u16
  *  - TSTypeAssertion: <u16>x
- *  - Identifier che risale a una declaration con annotation branded (best-effort
- *    su scope locale del file)
+ *  - Identifier that resolves to a declaration with a branded annotation,
+ *    best-effort within local file scope.
  */
 function isBrandedExpression(node, scopeManager, currentScope) {
   if (!node) return false;
@@ -74,7 +74,7 @@ function isBrandedExpression(node, scopeManager, currentScope) {
     if (name && BRANDED_NUMERIC.has(name)) return true;
     return isBrandedExpression(node.expression, scopeManager, currentScope);
   }
-  // Identifier: risali allo scope per trovare la dichiarazione
+  // Identifier: walk scopes to find the declaration.
   if (node.type === "Identifier" && currentScope) {
     let scope = currentScope;
     while (scope) {
@@ -104,14 +104,14 @@ const rule = {
     type: "problem",
     docs: {
       description:
-        "Vieta aritmetica/bitwise diretta su valori branded u8/u16/u32/i8/i16/i32. Usa gli helper di engine/src/wrap.ts.",
+        "Rejects direct arithmetic/bitwise operations on branded u8/u16/u32/i8/i16/i32 values. Use helpers from engine/src/wrap.ts.",
     },
     schema: [],
     messages: {
       banned:
-        "Operazione `{{op}}` su tipo branded `{{kind}}` vietata. Usa l'helper di wrap.ts (es. `u16_add`, `u32_mul`).",
+        "Operation `{{op}}` on branded type `{{kind}}` is not allowed. Use the wrap.ts helper instead, such as `u16_add` or `u32_mul`.",
       bannedUpdate:
-        "Operatore `{{op}}` su tipo branded vietato. Usa `u16_add(x, 1)` o equivalente.",
+        "Operator `{{op}}` on a branded type is not allowed. Use `u16_add(x, 1)` or an equivalent helper.",
     },
   },
 
@@ -164,7 +164,7 @@ const rule = {
 
       UnaryExpression(node) {
         if (!BANNED_UNARY_OPS.has(node.operator)) return;
-        // Solo - e ~ sono problematici in pratica; + è coercion ma vietiamolo per coerenza
+        // - and ~ are the practical hazards; + is coercion but is banned for consistency.
         checkOperand(node.argument, node.operator);
       },
     };

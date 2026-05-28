@@ -1,19 +1,11 @@
 /**
  * irq-vector-thunks.ts — IRQ vector trampoline table.
  *
- * 23 funzioni da 6 byte ciascuna sono `jmp targetAddr.l` (opcode 4EF9 +
- * indirizzo long). Sono trampolini puri: il loro unico effetto è redirigere
- * il controllo al target. Replicarli come funzioni TS separato non ha valore
- * — aggiungerebbero solo un livello di indirezione identico al target stesso.
+ * 23 six-byte functions are `jmp targetAddr.l` (opcode 4EF9 plus
  *
- * 1 funzione (0x01010A, 6 byte) NON è un JMP: è `move #0x2000,SR ; rts`
- * (abilita interrupt, IPL=0, supervisor mode). È replicata come
  * `enableInterrupts1010A`.
  *
- * Questo modulo esporta:
  *   - `THUNK_TABLE`: metadata immutabile (sourceAddr, targetAddr, bytes ROM)
- *     per tutti e 24 gli indirizzi. I JMP hanno `targetAddr` != null; la
- *     entry 0x01010A ha `targetAddr: null` (non è un redirect).
  *   - `enableInterrupts1010A`: replica TS di FUN_01010A.
  *
  * Funzioni coperte (per discovery script):
@@ -23,22 +15,18 @@
  *   FUN_000224 FUN_000230 FUN_000236 FUN_00023C FUN_000254 FUN_01010A
  */
 
-/** Metadata di un IRQ-vector thunk estratto dal ROM. */
+/** Metadata for an IRQ-vector thunk extracted from ROM. */
 export interface ThunkEntry {
-  /** Indirizzo sorgente nel ROM (parola ROM 68010). */
   readonly sourceAddr: number;
   /**
-   * Indirizzo target del `jmp targetAddr.l`.
-   * `null` per 0x01010A che non è un redirect ma `move #0x2000,SR ; rts`.
    */
   readonly targetAddr: number | null;
-  /** 6 byte ROM raw (big-endian hex string, es. "4EF900002A24"). */
+  /** Six raw ROM bytes as a big-endian hex string, e.g. "4EF900002A24". */
   readonly romBytes: string;
 }
 
 /**
- * Tabella di tutti i 24 IRQ-vector thunk candidates (6 byte ciascuno).
- * Ordinati per sourceAddr crescente.
+ * Sorted by increasing sourceAddr.
  *
  * 23 entry: `jmp targetAddr.l`  (opcode 4EF9 + addr long).
  *  1 entry: `move #0x2000,SR ; rts`  (0x01010A — enable interrupts).
@@ -92,8 +80,6 @@ export const THUNK_TABLE: readonly ThunkEntry[] = [
   { sourceAddr: 0x000254, targetAddr: 0x00004d98, romBytes: "4EF900004D98" },
   /**
    * @sourceAddr 0x01010A  move #0x2000,SR ; rts
-   * NON è un JMP redirect. Abilita interrupt (IPL=0, supervisor mode).
-   * targetAddr è null perché non è un trampolino.
    */
   { sourceAddr: 0x01010a, targetAddr: null, romBytes: "46FC20004E75" },
 ] as const;
@@ -109,16 +95,11 @@ export const THUNK_MAP: ReadonlyMap<number, ThunkEntry> = new Map(
 /**
  * Replica TS di `FUN_01010A` (6 byte: `move #0x2000,SR ; rts`).
  *
- * Imposta il registro di stato 68010 a `0x2000`:
  *   - Supervisor mode (bit 13 = 1).
  *   - IPL = 0: tutte le interrupt hardware abilitate.
  *   - Bit di condizione (C/V/Z/N/X) non alterati (SR load esplicito).
  *
- * Nel modello TS, SR non è direttamente rappresentato in `GameState`; questa
- * funzione è un no-op osservabile a livello workRam ma il suo contratto
- * semantico è "riabilita interrupt". Nessun side-effect su workRam.
  */
 export function enableInterrupts1010A(): void {
   // move #0x2000,SR — supervisor mode + IPL=0.
-  // Nel modello TS nessuno stato workRam viene modificato da questa istruzione.
 }

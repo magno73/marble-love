@@ -1,6 +1,6 @@
--- mame_sound_cmd_debug2.lua — verifica che coin/start arrivino davvero:
+-- mame_sound_cmd_debug2.lua - verifies that coin/start really arrive:
 --  - read tap su :1820 (sound CPU) e $F60001 (main) → logga ogni read durante pulse
---  - input scriptato con pulse LUNGO (60 frame)
+--  - scripted input with a long pulse (60 frames)
 --  - status ogni 200 frame
 
 local TARGET_FRAME = 2400

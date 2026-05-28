@@ -20,7 +20,7 @@ describe("helper182BA (FUN_182BA)", () => {
     s.workRam[off + 0x36] = 0x02; // skip seek branch
     s.workRam[off + 0x18] = 0x01; // active (FUN_15DB6 may run guards)
     expect(() => helper182BA(s, 0x400a20, rom)).not.toThrow();
-    // Nessuno scrive 0x68 nel branch gravity-only
+    // Nothing writes 0x68 in the gravity-only branch.
     expect(s.workRam[off + 0x68]).toBe(0);
   });
 
@@ -37,7 +37,7 @@ describe("helper182BA (FUN_182BA)", () => {
                 (s.workRam[off + 0x0a] ?? 0) << 8  |
                 (s.workRam[off + 0x0b] ?? 0);
     const vz = vzU | 0;
-    // Esito esatto dipende dal seek path (potrebbe aver scritto vy/vx/vz prima)
+    // Exact result depends on the seek path, which may have written vy/vx/vz first.
     // Ma vz dovrebbe esserci una qualche mutazione (≠ seed 0).
     expect(vz).not.toBe(0);
   });

@@ -2,7 +2,6 @@
  * Test paletteRngFill26CFA (FUN_00026CFA).
  *
  * Smoke tests: verifichiamo le invarianti strutturali (header words, stride,
- * branch RNG). La parità bit-perfect col binario è verificata in
  * `packages/cli/src/test-palette-rng-fill-26cfa-parity.ts`.
  */
 
@@ -45,7 +44,7 @@ describe("paletteRngFill26CFATick", () => {
   it("byte tra entry consecutive (offset 10..31) restano invariati", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    // Pre-fill gap region con sentinel 0xA5 per detect any unwanted write
+    // Pre-fill gap region with sentinel 0xA5 to detect any unwanted write.
     for (let i = 0; i < ENTRY_COUNT; i++) {
       const baseOff = (PAL_DEST_BASE - PAL_RAM_BASE) + i * PAL_DEST_STRIDE;
       for (let b = 10; b < 32; b++) {
@@ -80,8 +79,6 @@ describe("paletteRngFill26CFATick", () => {
 
   it("rnd=0 path: usa sub-entry +0 della ROM table (i=0)", () => {
     // Force RNG path: rnd==0 → src = ROM_TABLE_BASE + 0 + 0 = ROM_TABLE_BASE
-    // Trova un seed che produce 0 alla prima chiamata.
-    // rngNext con limit=2 → result < 2. Iteriamo seed finché 1ª chiamata == 0.
     const rom = emptyRomImage();
     rom.program[ROM_TABLE_BASE + 0] = 0x11;
     rom.program[ROM_TABLE_BASE + 1] = 0x22;
@@ -89,7 +86,7 @@ describe("paletteRngFill26CFATick", () => {
     rom.program[ROM_TABLE_BASE + 3] = 0x44;
     rom.program[ROM_TABLE_BASE + 4] = 0x55;
     rom.program[ROM_TABLE_BASE + 5] = 0x66;
-    // Sub-entry alternativa diversa
+    // Different alternative sub-entry.
     rom.program[ROM_TABLE_BASE + 6] = 0xff;
     rom.program[ROM_TABLE_BASE + 7] = 0xee;
 
@@ -125,7 +122,6 @@ describe("paletteRngFill26CFATick", () => {
     rom.program[ROM_TABLE_BASE + 10] = 0xee;
     rom.program[ROM_TABLE_BASE + 11] = 0xff;
 
-    // Cerca seed che produce 1ª chiamata != 0
     let seedFound = -1;
     for (let s = 0; s < 0x10000; s++) {
       const tmpState = emptyGameState();
@@ -162,7 +158,6 @@ describe("paletteRngFill26CFATick", () => {
     rom.program[tableI + 6] = 0x00; // alt
     rom.program[tableI + 7] = 0x00;
 
-    // Forza ENTRY_COUNT chiamate RNG. Cerca seed dove la 4ª chiamata == 0.
     let seedFound = -1;
     outer: for (let s = 1; s < 0x10000; s++) {
       const tmpState = emptyGameState();

@@ -9,14 +9,11 @@
  *   - puntatori-slot @ ROM 0x1F016 indicizzati da `(A0+0x58).b sext.l <<2`
  *   - coords da `(A1+0x4E).l` e branch su `(A1+0x1F).b == 0xD`
  *
- * Setup random per ogni caso:
  *   - `(A0+0x57).b` random (counter)
- *   - `(A0+0x58).b` random nel range [0..24] (selettore valido nella table)
+ *   - random `(A0+0x58).b` in [0..24], a valid table selector
  *   - `(A0+0x1E).l` random (coords source)
- *   - workRam pre-azzerata sui campi rilevanti
  *   - SP fresco
  *
- * Confronto:
  *   - D0 (low byte: 0xFF o 0x00)
  *   - byte `(A0+0x57)` (counter post-decrement)
  *   - byte `(A0+0x1C)` (mark)
@@ -79,11 +76,10 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Mirror ROM nella RomImage TS.
+  // Mirror ROM into the TS RomImage.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // Decodifica i 25 ptrs della tabella @0x1F016 una sola volta (validazione layout).
   const slotPtrs: number[] = [];
   for (let i = 0; i < SLOT_COUNT; i++) {
     slotPtrs.push(readU32BE(romBuf, SLOT_PTR_TABLE + i * 4));
@@ -108,8 +104,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // argPtr: usa uno degli slot canonici (in modo che A1 dopo selector lookup
-    // sia nello stesso layout di slot).
+    // is in the same slot layout).
     const argSlotIdx = Math.floor(rng() * SLOT_COUNT) % SLOT_COUNT;
     const argPtr = slotPtrs[argSlotIdx]!;
     const argOff = argPtr - 0x400000;
@@ -117,7 +112,6 @@ async function main(): Promise<void> {
     // Pattern coverage:
     //   0: counter pre = 1 → post 0 → D0 = 0xFF (success path)
     //   1: counter pre = 0x21 → D2 negative? No: sext(0x21)=33, D2=0x20-33=-1
-    //   2: counter pre = 0xE0 (sext=-32) → D2 = 0x40 → tutti skip
     //   3: counter pre random
     //   default (>=4): random mix
     let counterPre: number;
@@ -126,23 +120,17 @@ async function main(): Promise<void> {
     else if (i === 2) counterPre = 0xe0;
     else counterPre = Math.floor(rng() * 256) & 0xff;
 
-    // Selector byte: range [0..24] per stare nella table.
+    // Selector byte: stay in [0..24] to remain in the table.
     const selectorByte = Math.floor(rng() * SLOT_COUNT) & 0xff;
 
     // Random coords @ A0+0x1E (long).
     const coordsLong = Math.floor(rng() * 0x100000000) >>> 0;
 
     // ── PRE-CLEAR + SETUP ───────────────────────────────────────────
-    // Azzera tutti gli slot (per evitare interference fra casi).
-    // Ma anche manteniamo solo i campi rilevanti del slot in argPtr e dello
-    // slot selezionato (per A1+0x4E e A1+0x1F).
-    // Pulisci tutta la work RAM rilevante (slots).
     for (let s = 0; s < SLOT_COUNT; s++) {
       const slot = slotPtrs[s]!;
       const slotOff = slot - 0x400000;
-      // Azzera campi che il binario legge (4E.l, 1F.b) e che potrebbero
       // essere modificati dal pattern emit (38..4F, A4..BB).
-      // Inoltre azzera 1C, 57, 58, 1E.l per safety.
       const ranges: Array<[number, number]> = [
         [0x18, 1],
         [0x1c, 1],
@@ -176,16 +164,14 @@ async function main(): Promise<void> {
       stateInst.workRam[argOff + 0x1e + k] = b;
     }
 
-    // Setup A1 fields (A1 = slotPtrs[selectorByte] se selectorByte < 25).
+    // Set up A1 fields (A1 = slotPtrs[selectorByte] if selectorByte < 25).
     // Setup random A1+0x4E (long) e A1+0x1F (byte). Con selectorByte ∈ [0..24]
-    // garantiamo che A1 sia un slot canonico (in work RAM).
+    // guarantee that A1 is a canonical slot (in work RAM).
     const a1Idx = selectorByte; // < 25 by construction
     if (a1Idx < SLOT_COUNT) {
       const a1Slot = slotPtrs[a1Idx]!;
       const a1SlotOff = a1Slot - 0x400000;
       const a1CoordsLong = Math.floor(rng() * 0x100000000) >>> 0;
-      // A1 può essere == argPtr (se selectorByte == argSlotIdx). In tal caso
-      // i field 0x4e/0x1f sopra azzerati saranno comunque sovrascritti adesso.
       for (let k = 0; k < 4; k++) {
         const b = (a1CoordsLong >>> ((3 - k) * 8)) & 0xff;
         pokeMem(cpu, a1Slot + 0x4e + k, 1, b);
@@ -209,7 +195,6 @@ async function main(): Promise<void> {
     let binVal: number | undefined;
     let tsVal: number | undefined;
 
-    // Confronta solo low byte di D0 (il binario fa neg.b, high opaqua).
     if ((binD0 & 0xff) !== (tsD0 & 0xff)) {
       match = false;
       diffField = "D0.b";
@@ -239,7 +224,6 @@ async function main(): Promise<void> {
       }
     }
 
-    // Confronta i 24 byte di entrambe le metà.
     if (match) {
       for (const baseOff of [0x38, 0xa4]) {
         if (!match) break;

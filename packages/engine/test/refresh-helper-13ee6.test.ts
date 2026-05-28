@@ -1,7 +1,6 @@
 /**
  * Test refreshHelper13EE6 (FUN_00013EE6) — smoke tests sui rami principali.
  *
- * Verifica bit-perfect completa via:
  *   `cli/src/test-refresh-helper-13ee6-parity.ts`
  */
 
@@ -43,13 +42,11 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
   it("se scroll-active (*0x400006) == 0: non modifica workRam eccetto eventuali side effect del tail", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
-    // *0x400006 = 0 (già zero per default in emptyGameState)
     // *0x400010 & 7 == 0 → anche il tail non fa nulla
     const before = Uint8Array.from(state.workRam);
 
     refreshHelper13EE6(state, rom);
 
-    // workRam deve restare identico (nessun cambio)
     for (let i = 0; i < state.workRam.length; i++) {
       expect(state.workRam[i]).toBe(before[i]);
     }
@@ -61,14 +58,11 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
 
     // Imposta scroll-active
     state.workRam[OFF_ACTIVE] = 1;
-    // *0x400978 = 0 (default — nessun decode ptr)
-    // *0x400474 = 0 (livello ptr nullo → xbase = 0)
     // *0x40097c = 0 (scroll target = 0)
     // *0x400664 = 0 (level counter)
 
     refreshHelper13EE6(state, rom);
 
-    // La funzione chiama _blit104 che esegue clr.b (*0x400006)
     expect(state.workRam[OFF_ACTIVE]).toBe(0);
   });
 

@@ -3,9 +3,9 @@
 -- Tappa:
 --   1) ENTRY IRQ4 @ PC 0x34A (vector dispatch handler).
 --   2) EXIT  IRQ4 @ PC 0x10144 (rte di MainTick @ 0x10116).
---   3) Tutti i write a workRam 0x400000..0x401FFF mentre "in_irq" = true.
+--   3) All writes to workRam 0x400000..0x401FFF while "in_irq" = true.
 --
--- Output JSON con, per ogni IRQ4 firing nei frame [FROM, TO]:
+-- Output JSON with one entry per IRQ4 firing in frames [FROM, TO]:
 --   { frame, idx, entry_pc, entry_t, exit_t, cycles,
 --     pre_irq_pc (PC catturato all'entry, = body main thread before),
 --     writes: [{ pc, addr, data, mask, size, off }] }

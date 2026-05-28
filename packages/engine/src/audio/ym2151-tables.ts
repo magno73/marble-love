@@ -1,10 +1,10 @@
 /**
- * ym2151-tables.ts — Lookup tables hardware-accurate per YM2151 FM synthesis.
+ * ym2151-tables.ts - hardware-oriented lookup tables for YM2151 FM synthesis.
  *
  * Reference: Yamaha YM2151 OPM datasheet + MAME ym2151.cpp + reverse-engineered
  * tables (Jarek Burczynski's documentation).
  *
- * Tutte le tabelle sono compute una sola volta (lazy init module-level).
+ * Tables are computed once at module initialization.
  *
  * Hardware constants:
  *   Clock 3.579545 MHz / 64 (output divisor) = 55930 Hz native sample rate.
@@ -12,8 +12,8 @@
  *   Envelope: log2 attenuation table 0..4095 (12-bit), then exp lookup.
  */
 
-/** Sine LUT: 1024 entries × 14-bit signed (-8192..+8191).
- * Pre-computed sin(2π × i / 1024) × 8191. Phase è indice 10-bit. */
+/** Sine LUT: 1024 entries x 14-bit signed (-8192..+8191).
+ * Pre-computed sin(2*pi*i/1024)*8191. Phase uses a 10-bit index. */
 export const SINE_TABLE: Int16Array = (() => {
   const t = new Int16Array(1024);
   for (let i = 0; i < 1024; i++) {
@@ -22,21 +22,21 @@ export const SINE_TABLE: Int16Array = (() => {
   return t;
 })();
 
-/** YM2151 detune (DT1) table: 4 levels × 32 keycode → freq offset in cents.
- * DT1=0 → no detune. DT1=1..3 progressive sharp. Hardware semplificato. */
+/** YM2151 detune (DT1) table: 4 levels x 32 keycodes -> frequency offset.
+ * DT1=0 is no detune; DT1=1..3 are progressively sharp approximations. */
 export const DT1_TABLE: Int8Array = (() => {
   const t = new Int8Array(4 * 32);
-  // MAME ym2151.cpp dt1_freq[4][32] approximation. Per V3 minimal: stub
-  // costanti per ogni level (perfezionamento V3.1).
+  // Approximation of MAME ym2151.cpp dt1_freq[4][32]. This stays deliberately
+  // simple until the next chip-accuracy pass.
   for (let lev = 0; lev < 4; lev++) {
     for (let kc = 0; kc < 32; kc++) {
-      t[lev * 32 + kc] = (lev * (kc + 8)) >> 2;  // approssimato
+      t[lev * 32 + kc] = (lev * (kc + 8)) >> 2;  // Approximation.
     }
   }
   return t;
 })();
 
-/** Multiplier (MUL 0..15) → fattore frequenza (1/2, 1, 2, 3, ..., 15). */
+/** Multiplier (MUL 0..15) -> frequency factor (1/2, 1, 2, 3, ..., 15). */
 export const MUL_TABLE: Float32Array = (() => {
   const t = new Float32Array(16);
   t[0] = 0.5;
@@ -44,8 +44,8 @@ export const MUL_TABLE: Float32Array = (() => {
   return t;
 })();
 
-/** Key code → frequency Hz table (32 entries × 8 octaves = 256, ma OPM usa
- * 12 note per octave skipping 3,7,11,15). Reference: A4 ($4A) ≈ 277.18Hz
+/** Key code -> frequency Hz table (32 entries x 8 octaves = 256; OPM uses
+ * 12 notes per octave, skipping 3,7,11,15). Reference: A4 ($4A) approx 277.18Hz
  * (D#/Eb in OPM mapping). Hardware uses log2 phase increment lookup. */
 export const KC_TO_FREQ: Float32Array = (() => {
   const t = new Float32Array(256);
@@ -61,18 +61,20 @@ export const KC_TO_FREQ: Float32Array = (() => {
     const noteIdx = kc & 0x0f;
     const semi = noteSemi[noteIdx];
     if (semi === undefined) { t[kc] = 0; continue; }
-    // Reference: KC $4A (octave 4, note 10 = A in mapping) → A4 = ~440Hz
+    // Reference: KC $4A (octave 4, note 10 = A in mapping) -> A4 = ~440Hz.
     // Actually OPM A4 mapping differs; using musical standard A4=440 @ KC=$4A
-    // is approximation. Real OPM: f = 8.1758 × 2^(octave + semi/12).
+    // is an approximation. Real OPM: f = 8.1758 * 2^(octave + semi/12).
     t[kc] = 8.1758 * Math.pow(2, octave + semi / 12);
   }
   return t;
 })();
 
-/** ENV_RATE_SHIFT: per ogni rate (0..63), shift right applicato all'envelope
- * counter prima del check increment. Source: MAME ym2151.cpp eg_rate_shift[].
- * Rate 0..63 = combo (key_scale + base_rate). Pre-shift produce la divisione
- * binaria del clock envelope. */
+/**
+ * ENV_RATE_SHIFT: for each rate (0..63), right shift applied to the envelope
+ * counter before checking whether the envelope increments.
+ *
+ * Source: MAME `ym2151.cpp::eg_rate_shift`.
+ */
 export const ENV_RATE_SHIFT: Uint8Array = new Uint8Array([
   11, 11, 11, 11, 11, 11, 11, 11,  //  0..7
   11, 11, 11, 11, 10, 10, 10, 10,  //  8..15
@@ -84,8 +86,11 @@ export const ENV_RATE_SHIFT: Uint8Array = new Uint8Array([
    0,  0,  0,  0,  0,  0,  0,  0,  // 56..63
 ]);
 
-/** ENV_RATE_SELECT: per ogni rate (0..63), indice in eg_inc[8] pattern.
- * Source: MAME ym2151.cpp eg_rate_select[]. */
+/**
+ * ENV_RATE_SELECT: for each rate (0..63), index into the EG increment pattern.
+ *
+ * Source: MAME `ym2151.cpp::eg_rate_select`.
+ */
 export const ENV_RATE_SELECT: Uint8Array = new Uint8Array([
   18, 18, 18, 18, 18, 18, 18, 18,  //  0..7   (rate <=1: hard-coded zero)
    0,  1,  2,  3,  0,  1,  2,  3,  //  8..15
@@ -98,8 +103,12 @@ export const ENV_RATE_SELECT: Uint8Array = new Uint8Array([
    12, 12, 12, 12, 12, 12, 12, 12,
 ].slice(0, 64));
 
-/** EG_INC: pattern di increment per ognuno dei 19 select × 8 step.
- * Source: MAME ym2151.cpp eg_inc[]. Valori 0/1/2/4/8 = step amount. */
+/**
+ * EG_INC: 19 select rows times 8 steps.
+ *
+ * Source: MAME `ym2151.cpp::eg_inc`. Values 0/1/2/4/8 are envelope step
+ * amounts.
+ */
 export const EG_INC: Uint8Array = new Uint8Array([
   // 0: 0,1, 0,1, 0,1, 0,1   slow rate (1/8)
   0, 1, 0, 1, 0, 1, 0, 1,
@@ -144,14 +153,16 @@ export const EG_INC: Uint8Array = new Uint8Array([
 /** Legacy stub kept for compatibility (unused after envelope refactor). */
 export const ENV_RATE_TABLE: Uint16Array = new Uint16Array(64 * 8);
 
-/** Attenuation table dB-domain: idx 0..1023 → linear amplitude scale 1..0.
- * Hardware OPM: 96dB max attenuation a counter 1023, esponenziale.
- * Curve: amp = 10^(-att/1023 * 4.8) (≈96 dB span con 4.8 = 96/20). */
+/**
+ * Attenuation table in the dB domain: index 0..1023 -> linear amplitude scale.
+ *
+ * Hardware OPM has roughly 96 dB maximum attenuation at counter 1023.
+ */
 export const ATT_TO_LINEAR: Float32Array = (() => {
   const t = new Float32Array(1024);
   for (let i = 0; i < 1024; i++) {
     if (i >= 1023) { t[i] = 0; continue; }
-    // dB curve: 96 dB span, esponenziale
+    // dB curve: 96 dB span.
     t[i] = Math.pow(10, -(i / 1023) * 4.8);
   }
   return t;

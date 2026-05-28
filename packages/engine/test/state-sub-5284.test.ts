@@ -118,7 +118,7 @@ describe("stateSub5284 (FUN_5284)", () => {
     expect(r.flagsCleared).toBe(false);
     expect(f4f38Calls).toBe(0);
     expect(dccCalls).toBe(1);
-    // primary flag NON modificato (FUN_5284 non scrive sui flag).
+    // Primary flag unchanged; FUN_5284 does not write flags.
     expect(s.workRam[0x1f5e]).toBe(0x01);
   });
 
@@ -133,7 +133,7 @@ describe("stateSub5284 (FUN_5284)", () => {
           dccCalls += 1;
         },
         irq: (st, iter) => {
-          // azzera al 3° irq tick (iter==2, 0-based)
+          // Clears at the 3rd IRQ tick (iter==2, 0-based).
           if (iter === 2) {
             st.workRam[0x1f76] = 0x00;
           }

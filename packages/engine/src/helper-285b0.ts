@@ -1,22 +1,7 @@
 /**
  * helper-285b0.ts — replica `FUN_000285B0` (30 istr, 0x58 byte).
  *
- * "Object score-award + state init" helper: dato un puntatore a un object
- * struct (`objPtr`) e un indice di modalità (`modeByte`), questa routine:
- *   1. Legge dalla ROM word table `ROM @ [0x23CD4 + sext_b(modeByte)*2]` → score value.
- *   2. Chiama `FUN_00028608` (objectAccumFlag28608) passando `(objPtr, scoreValue)`.
- *   3. Legge dalla ROM pointer table `ROM @ [0x23CF6 + sext_b(modeByte)*4]` → ROM address.
- *   4. Scrive il ROM address nel campo long a `*(objPtr + 0xD4)`.
- *   5. Azzera i byte `*(objPtr + 0x70)` e `*(objPtr + 0x68)`.
- *   6. Scrive `0xFF` in `*(objPtr + 0x69)`.
- *   7. Scrive `0x01` in `*(objPtr + 0xD8)`.
  *
- * **NOTA IMPORTANTE — signed byte index**: il modeByte viene trattato come
- * un byte con segno (M68k `ext.w` su un registro byte estende il segno a word).
- * Quindi per modeByte = 0xFE (−2 come signed byte), l'offset nella word table è
- * −4 e nella pointer table è −8: si legge prima dell'inizio formale della tabella.
- * Per riprodurre questo comportamento bit-perfect è necessario l'immagine ROM.
- * Senza ROM, il fallback usa le costanti per i valori normalizzati 0..16.
  *
  * **Disasm 0x285B0..0x28606** (30 istr):
  *
@@ -46,7 +31,6 @@
  *   00028602  movem.l (SP)+,{D2 A2}               ; restore
  *   00028606  rts
  *
- * **Argomenti** (2 long sullo stack, cdecl-like):
  *   - `arg1Long` → A2 = `objPtr` (absolute workRam address of object struct).
  *   - `arg2Long` → D2.b = `modeByte` (low byte; normal range 0..16; trattato
  *     come signed byte per l'indexing nelle table ROM).
@@ -146,23 +130,12 @@ function readRomLong(rom: RomImage, addr: number): number {
 // ─── Main function ─────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000285B0`.
  *
- * "Object score-award + state init" helper: aggiorna il puntatore a una struct
- * oggetto con il punteggio tabulato in ROM (tramite `objectAccumFlag28608`) e
- * inizializza 5 campi dello stato oggetto.
  *
- * Richiede `rom` per essere bit-perfect su valori di `modeLong` con byte basso
- * fuori dal range 0..16 (signed-byte indexing nella ROM table). Per i valori
- * nel range normale (0..16) funziona correttamente anche senza ROM.
  *
- * @param state    GameState (workRam mutato in-place).
- * @param objPtr   Indirizzo assoluto della struct oggetto in workRam
- *                 (es. `0x400018 + idx*0xE2`).
- * @param modeLong Long arg dallo stack (solo il byte basso viene usato come
- *                 indice nelle ROM table con sign extension; range normale: 0..16).
- * @param rom      ROM image (necessaria per bit-perfect su modeByte fuori range).
- * @param subs     Sub injection per `objectAccumFlag28608` (default: replica TS).
+ * @param state    GameState (mutates workRam in place).
+ *                 (e.g. `0x400018 + idx*0xE2`).
+ * @param subs     Sub injection for `objectAccumFlag28608` (default: TS replica).
  */
 export function helper285B0(
   state: GameState,
@@ -194,7 +167,6 @@ export function helper285B0(
   // ext.l D0 → sign-extend to long
   let scoreValue: number;
   if (rom !== undefined) {
-    // Bit-perfect: use actual ROM bytes with signed-byte offset
     const wordByteOffset = (modeWordSigned * 2) & 0xffff; // 16-bit signed offset
     const wordAddr = (ROM_SCORE_TABLE_ADDR + ((wordByteOffset << 16) >> 16)) >>> 0;
     scoreValue = readRomSignedWord(rom, wordAddr);
@@ -216,7 +188,6 @@ export function helper285B0(
   // move.l (0x0,A0,D0w*0x1),(0xd4,A2) → *(objPtr+0xD4) = ROM[0x23CF6 + offset]
   let romPtr: number;
   if (rom !== undefined) {
-    // Bit-perfect: use actual ROM bytes with signed-byte offset
     const longByteOffset = (modeWordSigned * 4) & 0xffff; // 16-bit signed offset
     const longAddr = (ROM_PTR_TABLE_ADDR + ((longByteOffset << 16) >> 16)) >>> 0;
     romPtr = readRomLong(rom, longAddr);

@@ -1,12 +1,9 @@
 -- mame_cluster_0706_trace.lua — live write-tap su workRam region 0x400706..0x400751
--- per identificare i PC writer al cluster drift @ 0x0706..0x0751 nella demo window.
+-- Identifies writer PCs for the drift cluster @ 0x0706..0x0751 in the demo window.
 --
 -- Cluster TOP non-stack (74 byte di drift @ f+99). Da STATUS.md:
---   "decodeBitstream1A668 output buffer — decoder è BIT-PERFECT ma alimentato
---    con argomenti driftati (*0x40097c srtgt, *0x400474 lvlPtr, scrollIdx)"
---   Fix richiede chiudere drift upstream nei popolatori.
+--   Fix requires closing upstream drift in the populators.
 --
--- Il tap qui identifica TUTTI i writer per confermare/contraddire.
 --
 -- Env vars (default valgono per la window di test f12000-12099):
 --   MARBLE_TRACE_LO   — region low (default 0x400706)

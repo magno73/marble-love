@@ -1,24 +1,24 @@
 -- mame_0700_ctrl_dump.lua — dump 256 byte da maincpu program space @ 0x7F0FB
--- per validare l'ipotesi B5: TS legge tutto 0xFF perche' la zona 0x70000-0x7FFFF
--- non e' modellata, mentre MAME potrebbe avere mirror/mappature attive.
+-- Validate hypothesis B5: TS reads all 0xFF because 0x70000-0x7FFFF
+-- is not modeled, while MAME may have active mirrors/mappings.
 --
 -- Cattura tre snapshot temporali del cluster 0x7F0FB..0x7F1FA:
 --   * frame 12001 (pre-body f12002 — momento in cui MAME sta per chiamare
---                  decodeBitstream1A668 con ctrlStream=0x7F0FB)
---   * frame 12002 (mid-body — stato durante l'esecuzione del decoder)
+--                  decodeBitstream1A668 with ctrlStream=0x7F0FB)
+--   * frame 12002 (mid-body: state during decoder execution)
 --   * frame 12003 (post-body — eventuale modifica trail)
 --
 -- Output JSON: /tmp/mame_0700_ctrl_dump.json (override via MARBLE_TRACE_OUT).
 --
--- Confronta poi con marble_program.bin[0x7F0FB..0x7F1FA] (atteso tutto 0xFF
--- per ipotesi B5): se uguali → ROM source coerente; se diversi → MAME legge
--- da sorgente alternativa (mirror, ext RAM, slapstic, scratch).
+-- Then compare with marble_program.bin[0x7F0FB..0x7F1FA], expected all 0xFF
+-- for hypothesis B5): if equal, ROM source is coherent; if different, MAME reads
+-- from an alternative source (mirror, ext RAM, slapstic, scratch).
 --
 -- Range catturati = 4 (oltre il cluster):
---   primary  0x07F0FB..0x07F1FA (256B, target diretto)
+--   primary  0x07F0FB..0x07F1FA (256B, direct target)
 --   adj_lo   0x07F000..0x07F0FA (251B, contesto immediato sotto)
 --   adj_hi   0x07F1FB..0x07F2FA (256B, contesto immediato sopra)
---   zone     0x070000..0x07FFFF — solo 16B sample-test ogni 0x1000 (verifica
+--   zone     0x070000..0x07FFFF: only a 16B sample-test every 0x1000 (checks
 --                                 uniformita' della zona "vuota")
 
 local function getenv(name, fallback)

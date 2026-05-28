@@ -1,10 +1,8 @@
 /**
  * Test objDirtyDispatch28624 (FUN_00028624) — smoke tests sui rami principali.
  *
- * `FUN_00028624` (140 byte) è un dispatcher: itera N obj struct, per ogni
- * indice testa il bit corrispondente di una bitmap dirty, e invoca un
- * render-string helper con 6 long arg derivati. Bit-perfect verificato vs
- * binary tramite `cli/src/test-obj-dirty-dispatch-28624-parity.ts` (500/500).
+ * index tests the matching bit in a dirty bitmap and invokes a
+ * binary via `cli/src/test-obj-dirty-dispatch-28624-parity.ts` (500/500).
  */
 
 import { describe, it, expect } from "vitest";
@@ -20,13 +18,11 @@ import {
 } from "../src/obj-dirty-dispatch-28624.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Helper: scrive un word big-endian in workRam @ off. */
 function writeWordBE(ram: Uint8Array, off: number, value: number): void {
   ram[off] = (value >>> 8) & 0xff;
   ram[off + 1] = value & 0xff;
 }
 
-/** Helper: scrive un long big-endian in workRam @ off. */
 function writeLongBE(ram: Uint8Array, off: number, value: number): void {
   ram[off] = (value >>> 24) & 0xff;
   ram[off + 1] = (value >>> 16) & 0xff;
@@ -34,7 +30,7 @@ function writeLongBE(ram: Uint8Array, off: number, value: number): void {
   ram[off + 3] = value & 0xff;
 }
 
-/** Bag che traccia ogni invocazione del render-string helper. */
+/** Bag that tracks each render-string helper invocation. */
 interface CallRecord {
   arg1: number;
   arg2: number;
@@ -62,7 +58,7 @@ function makeTrackedSubs(): {
 describe("objDirtyDispatch28624 (FUN_00028624)", () => {
   it("count=0: nessuna invocazione, ma la bitmap viene comunque azzerata", () => {
     const s = emptyGameState();
-    s.workRam[DIRTY_BITMAP_OFF] = 0xff; // tutti i bit set
+    s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 0); // count = 0
 
     const { calls, subs } = makeTrackedSubs();
@@ -89,21 +85,18 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 4);
 
-    // Setup obj+0xBC long con un valore unico per ogni slot, così la
-    // sequenza arg1 distingue le iterazioni.
     for (let i = 0; i < 4; i++) {
       const objOff = OBJECTS_BASE_OFF + i * OBJECT_STRIDE;
       writeLongBE(s.workRam, objOff + OBJ_ARG1_OFF, 0xcafe0000 | i);
     }
 
-    // ROM table 0x23D3A: usiamo i primi 4 byte reali del ROM.
+    // ROM table 0x23D3A: use the first 4 real ROM bytes.
     const romTab = Uint8Array.from([0x03, 0x20, 0x13, 0x0d]);
 
     const { calls, subs } = makeTrackedSubs();
     objDirtyDispatch28624(s, romTab, subs);
 
     expect(calls).toHaveLength(4);
-    // Ordine D2=0..3
     expect(calls[0]).toEqual({
       arg1: 0xcafe0000,
       arg2: 2,
@@ -156,9 +149,6 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0]?.arg1).toBe(0xdead0001);
     // arg3 di D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) ma nel nostro
-    // wrap usiamo signed JS number → -94. Il binario passa long signed,
-    // FUN_28E3C legge solo low word con move.w che fa truncation.
-    // Il sign-extend a long lo replichiamo per fedeltà al binario.
     expect(calls[0]?.arg3).toBe(0xa2 | 0xffffff00 | 0); // = -94 in JS signed
     expect(calls[0]?.arg6).toBe(0x2400); // D2=1
     expect(calls[1]?.arg1).toBe(0xdead0003);
@@ -201,7 +191,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     const s = emptyGameState();
     // pollute random
     for (let i = 0; i < s.workRam.length; i++) s.workRam[i] = i & 0xff;
-    // Imposta count e bitmap e arg1 dei primi 3 obj
+    // Set count, bitmap, and arg1 for the first 3 objs.
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 3);
     s.workRam[DIRTY_BITMAP_OFF] = 0b00000101; // D2=0, D2=2
     for (let i = 0; i < 3; i++) {
@@ -212,7 +202,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
 
     objDirtyDispatch28624(s, Uint8Array.from([1, 2, 3]));
 
-    // Solo workRam[0x39C] deve essere cambiato (era 0b101=5, ora 0).
+    // Only workRam[0x39C] must have changed (was 0b101=5, now 0).
     for (let i = 0; i < s.workRam.length; i++) {
       if (i === DIRTY_BITMAP_OFF) {
         expect(s.workRam[i]).toBe(0);

@@ -2,9 +2,7 @@
  * Test trackballClampFlags28468 (FUN_00028468) — smoke tests sui rami principali.
  *
  * `FUN_00028468` (280 byte): pre-clamp ±0x40 sui due accumulator
- * (*0x4006A4 / *0x4006A6), debounce input, axis-lock 2:1 dei trackball deltas
- * de-rotated, somma → accumulator, post-step wrap ±0x18, ritorna flag word.
- * Bit-perfect verificato vs binary tramite
+ * (*0x4006A4 / *0x4006A6), debounce input, axis-lock 2:1 for trackball deltas
  * `cli/src/test-trackball-clamp-flags-28468-parity.ts` (500/500).
  */
 
@@ -23,14 +21,12 @@ import {
 } from "../src/trackball-clamp-flags-28468.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Helper: scrive un word big-endian signed in workRam @ off. */
 function writeSWord(ram: Uint8Array, off: number, value: number): void {
   const v = value & 0xffff;
   ram[off] = (v >>> 8) & 0xff;
   ram[off + 1] = v & 0xff;
 }
 
-/** Helper: legge un signed word big-endian da workRam @ off. */
 function readSWord(ram: Uint8Array, off: number): number {
   const w = (((ram[off] ?? 0) << 8) | (ram[off + 1] ?? 0)) & 0xffff;
   return w & 0x8000 ? w - 0x10000 : w;
@@ -39,12 +35,9 @@ function readSWord(ram: Uint8Array, off: number): number {
 describe("trackballClampFlags28468 (FUN_00028468)", () => {
   it("pre-clamp ±0x40: accumulator iniziale > 0x40 viene cap a 0x40 prima di tutto", () => {
     const s = emptyGameState();
-    // Inizializza accumulator X=0x100 (out-of-bounds) e Y=-0x80.
     writeSWord(s.workRam, ACCUM_X_OFF, 0x0100);
     writeSWord(s.workRam, ACCUM_Y_OFF, -0x80);
 
-    // Tutti gli input a 0 — picked delta byte saranno 0,0 → no axis-lock effect,
-    // no add. Ma il pre-clamp è la prima cosa che succede.
     trackballClampFlags28468(s, {
       mmioInputByte: 0,
       p1X: 0,
@@ -53,9 +46,6 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
       p2Y: 0,
     });
 
-    // Dopo pre-clamp + add(0,0) + post-wrap: X cap a +0x40 (>0x18 → wrap),
-    // poi 0x40 - 0x18 = 0x28 ≤ 0x18? no, 0x28 > 0x18, ma il binario fa UN solo
-    // step di wrap (sub.w #0x18), quindi X finale = 0x28. Stesso per Y.
     expect(readSWord(s.workRam, ACCUM_X_OFF)).toBe(0x40 - POST_WRAP_LIMIT);
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(-0x40 + POST_WRAP_LIMIT);
   });
@@ -73,12 +63,9 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
       p2Y: 0,
     });
     // bit 0 stays set. bit 1 was never set → stays cleared.
-    // Other bits depend on wrap. Accumulator iniziali = 0,0 → niente add → wrap non avviene.
-    // D5 finale = 0xF003 con bit 1 cleared (bit 0 stays) e tutti i wrap-bit (12-15) stay set.
     // bit 0: set (stable). bit 1: clear (no stable).
     expect(flags & 0x0001).toBe(0x0001);
     expect(flags & 0x0002).toBe(0x0000);
-    // Wrap bits (12-15) tutti set perché accumulator stay 0.
     expect((flags >>> 12) & 0x0f).toBe(0x0f);
   });
 
@@ -99,7 +86,6 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     // Bit 0 e 1: depend on debounce. Default empty state, prev=0, oldDeb=0,
     // cur=0 → newDeb = 0 → bit 0 e 1 cleared.
     expect(flags & 0x0003).toBe(0x0000);
-    // Wrap bits (12-15) tutti set (no wrap).
     expect((flags >>> 12) & 0x0f).toBe(0x0f);
     // Accumulator invariati (input 0, no axis-lock effect).
     expect(readSWord(s.workRam, ACCUM_X_OFF)).toBe(0x10);
@@ -108,20 +94,12 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
 
   it("axis-lock: con A=0x10, B=0x00 → D1=-0x10, D2=0x10, abs uguali → SKIP", () => {
     // Per ottenere picked deltas controllati, settiamo entrambi obj C6/C7 al
-    // valore desiderato. pickObjLarger sceglierà obj0 (entrambi uguali).
     const s = emptyGameState();
     // obj0 @ 0x18: C6 = 0x10 (pickedY = A), C7 = 0x00 (pickedX = B)
     s.workRam[0x18 + 0xc6] = 0x10;
     s.workRam[0x18 + 0xc7] = 0x00;
-    // obj1 stesso valore (entrambi uguali → pick obj0 path)
     s.workRam[0xfa + 0xc6] = 0x10;
     s.workRam[0xfa + 0xc7] = 0x00;
-    // trackball: lasciamo p1X/p1Y a 0 — trackballInputTick aggiornerà i delta.
-    // Per neutralizzare l'effetto di trackballInputTick, settiamo prev = current
-    // così il delta calcolato è 0... ma poi pickObjLarger leggerebbe 0 invece
-    // del nostro setup. Quindi accettiamo che trackballInputTick re-scriva i delta.
-    // Per test isolato dell'axis-lock, è meglio settare il MMIO trackball al
-    // valore che produce deltaX=0, deltaY=0x10 dopo processamento.
     // trackballInputTick: deltaX = (cur - prev_savedX) & 0xFF, then save cur.
     // Setup: obj0 savedX=0xC9, savedY=0xC8 → set savedX = 0, savedY = 0xF0.
     // p1X = 0 → deltaX = 0 - 0 = 0; p1Y = 0 → deltaY = 0 - 0xF0 = 0x10 (mod 256)
@@ -131,7 +109,6 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     s.workRam[0x18 + 0xc8] = 0xf0; // savedY
     s.workRam[0x18 + 0xc7] = 0x00; // deltaX init (per evitare clamp anti-wrap)
     s.workRam[0x18 + 0xc6] = 0x00; // deltaY init
-    // obj1 anche (pickObjLarger guarda tutti)
     s.workRam[0xfa + 0xc9] = 0x00;
     s.workRam[0xfa + 0xc8] = 0x00;
     s.workRam[0xfa + 0xc7] = 0x00;
@@ -149,7 +126,6 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
       p2Y: 0,
     });
 
-    // Dopo trackballInputTick: obj0.deltaX = 0, obj0.deltaY = 0x10.
     // pickObjLarger: |obj0.C6|+|obj0.C7| = 0x10+0 = 0x10; obj1 = 0+0 = 0.
     // sumA(=obj0)=0x10 >= sumB(=obj1)=0 → uses A: *0x6AA = 0x10 (C6),
     // *0x6A8 = 0 (C7).

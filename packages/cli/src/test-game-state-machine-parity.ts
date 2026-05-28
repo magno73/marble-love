@@ -2,23 +2,18 @@
 /**
  * test-game-state-machine-parity.ts — differential FUN_2E18 vs gameStateMachineTick.
  *
- * FUN_2E18 (930 byte) è uno state-machine dispatcher che gestisce 4 slot
- * paralleli con state in {0..7} e chiama 10 sub-functions. Strategia:
- *   - Patch tutte le 10 sub-functions a stub deterministici:
- *     - rts (4E 75) per quelle che non ritornano valore
- *     - moveq #0,D0; rts (70 00 4E 75) per FUN_2CD4 e FUN_2DA0
- *   - In TS, le callback sono no-op equivalenti
- *   - Confronto: workRam @ 0x401F00..0x401F3F (struct stato)
+ *   - Patch all 10 sub-functions to deterministic stubs:
+ *     - moveq #0,D0; rts (70 00 4E 75) for FUN_2CD4 and FUN_2DA0.
+ *   - TS callbacks are equivalent no-ops.
  *
- * Suite testate (mode=0, Branch B):
- *   - A: tutti slot a state=0 (no dispatch, solo frame counter ++)
- *   - B: state misti 1..6, threshold raggiunto in random slot
- *   - C: state 3 e 4 con result che fa transizione (state→0 + sub call)
+ * Tested suites (mode=0, Branch B):
+ *   - B: mixed states 1..6, threshold reached in a random slot.
+ *   - C: states 3 and 4 with transition-producing result (state -> 0 + sub call).
  *
  * Suite Branch A (mode≠0):
- *   - D: state=7 con linked-list di 1-3 entry, dispatch via FUN_2572
+ *   - D: state=7 with a 1-3 entry linked list, dispatched through FUN_2572.
  *
- * Uso: npx tsx packages/cli/src/test-game-state-machine-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-game-state-machine-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -71,9 +66,8 @@ function makeRng(seed: number): () => number {
 }
 
 const STRUCT_BASE = 0x00401f00;
-const STRUCT_SIZE = 0x44; // 0x401F00..0x401F43 includendo rotation @ 0x401F42
+const STRUCT_SIZE = 0x44; // 0x401F00..0x401F43 including rotation @ 0x401F42
 
-/** Setup struct in entrambi binario e TS state. */
 function setupStruct(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -113,7 +107,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchAllSubs(cpu);
 
-  // Build TS RomImage (per Branch A lookup)
+  // Build TS RomImage for Branch A lookup.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -145,7 +139,6 @@ async function main(): Promise<void> {
   // Random byte generator
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  // ─── Suite A: tutti state=0 (no dispatch, solo frame counter) ─────
   console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite A: tutti state=0 — ${n} casi ===`);
   let okA = 0;
   let failA: { case: number; offset: number; bin: number; ts: number } | null = null;
@@ -171,8 +164,7 @@ async function main(): Promise<void> {
     for (let j = 0; j < 4; j++) {
       bytes[0x1c + j] = Math.floor(rng() * 7) & 0xff; // 0..6
     }
-    // Per slot: data ptr → punta a workRam scratch @ 0x401D00 + j*0x10
-    // Così *(data+8) può essere 0 (next null) o non-zero, controllabile.
+    // Per slot: data ptr points to workRam scratch @ 0x401D00 + j*0x10.
     for (let j = 0; j < 4; j++) {
       const dataAddr = 0x00401d00 + j * 0x10;
       bytes[0x04 + j * 4] = (dataAddr >>> 24) & 0xff;
@@ -180,7 +172,6 @@ async function main(): Promise<void> {
       bytes[0x06 + j * 4] = (dataAddr >>> 8) & 0xff;
       bytes[0x07 + j * 4] = dataAddr & 0xff;
     }
-    // Counter: forziamo "raggiunge soglia" in 50% dei casi
     for (let j = 0; j < 4; j++) {
       if (rng() < 0.5) {
         // counter = threshold - 1 (overflow next tick = match)
@@ -220,17 +211,14 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     bytes[0x02] = 0; bytes[0x03] = 1; // mode = 1 (non-zero)
-    // Per evitare wait infinito: SPECIAL_INNER == SPECIAL_TARGET, così first call entra
     const target = rb();
     bytes[0x3c] = 0; bytes[0x3d] = target;     // SPECIAL_INNER (word, low byte = target)
     bytes[0x3e] = 0; bytes[0x3f] = target;      // SPECIAL_TARGET = same
-    // states: solo slot 0 con state=7, others = 0 per semplicità
     bytes[0x1c] = 7; bytes[0x1d] = 0; bytes[0x1e] = 0; bytes[0x1f] = 0;
-    // ROTATION word @ 0x401F42: 0 (così lookup[0] è il primo word del table)
     bytes[0x42] = 0; bytes[0x43] = 0;
-    // VALUE_F00 @ 0x401F00: piccolo positivo per assicurare path stabili
+    // VALUE_F00 @ 0x401F00: small positive value to keep paths stable.
     bytes[0x00] = 0; bytes[0x01] = 5;
-    // Data ptr per slot 0: punta a struct in workRam
+    // Data ptr for slot 0 points to a workRam struct.
     const dataAddr = 0x00401d00;
     bytes[0x04] = (dataAddr >>> 24) & 0xff;
     bytes[0x05] = (dataAddr >>> 16) & 0xff;
@@ -252,20 +240,17 @@ async function main(): Promise<void> {
       // Actually after entering branch A, *0x401F3A is incremented. So tick += 1 on first call.
       // tick value at the point of d0 calc = old_tick + 1. We set old_tick=0, so tick=1.
       // We want byte[1] - 1 == d1 → byte[1] = d1 + 1.
-      // Per evitare il caso d0 < d1 (loop): set byte[1] = d1 + 1.
-      // Cap byte[1] in [0,255]. If d1+1 out of range, fallback ad altro path.
+      // Cap byte[1] to [0,255]. If d1+1 is out of range, fall back to another path.
       const wantByte1 = (d1 + 1) & 0xff;
-      // Per il marker check (byte[6] + VALUE_F00 < 2 vs >= 2):
-      //   VALUE_F00 = 5, want sum >= 2 → byte[6] >= -3, basta byte[6] = 0 (sum=5).
+      // Marker check (byte[6] + VALUE_F00 < 2 vs >= 2):
+      //   VALUE_F00 = 5, target sum >= 2 -> byte[6] >= -3, so byte[6] = 0 is enough.
       const scratch = new Uint8Array(0x10);
       scratch[1] = wantByte1;
       scratch[6] = 0;  // marker check passes (5+0 >= 2)
-      // bytes[8..11] = 0 (next null) — fine perché if d0==d1 esce subito
       for (let k = 0; k < 0x10; k++) {
         pokeMem(cpu, dataAddr + k, 1, scratch[k] ?? 0);
         stateInst.workRam[(dataAddr - 0x400000) + k] = scratch[k] ?? 0;
       }
-      // Pre-set SPECIAL_TICK to 0 (sarà incrementato a 1 dalla funzione)
       pokeMem(cpu, STRUCT_BASE + 0x3a, 1, 0);
       pokeMem(cpu, STRUCT_BASE + 0x3b, 1, 0);
       stateInst.workRam[(STRUCT_BASE - 0x400000) + 0x3a] = 0;

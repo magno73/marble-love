@@ -1,13 +1,9 @@
 /**
  * Test moScreenInit1A286 (FUN_0001A286) — smoke + side-effect coverage.
  *
- * `FUN_0001A286` (408 byte) è uno screen-init helper che inizializza:
- *   - 2 word globali in workRam @ 0x400008/0x40000A (target degli ISR-write)
  *   - 32 word in MO RAM (sprite RAM banks 0..3, 8 entry each)
  *   - 4 word in PF RAM @ A00A20/A28/A30/A38
- *   - chiama 5 sub-routine (clearAlphaTiles, paletteInitLevel, renderString ×2)
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-mo-screen-init-1a286-parity.ts` (500/500 cases).
  */
 
@@ -48,11 +44,9 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
 
     moScreenInit1A286(s, rom, pfRam);
 
-    // 2 globali word workRam → entrambi 0
     expect(readWordBE(s.workRam, MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE)).toBe(0);
     expect(readWordBE(s.workRam, MO_SCREEN_INIT_1A286_ISR_DST_B_ADDR - WORK_RAM_BASE)).toBe(0);
 
-    // MO RAM bank A (0xA02000 + i*2): sempre 0x1401
     for (let i = 0; i < MO_SCREEN_INIT_1A286_MO_ENTRY_COUNT; i++) {
       expect(readWordBE(s.spriteRam, 0x000 + i * 2)).toBe(0x1401);
     }
@@ -64,7 +58,6 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     for (let i = 0; i < MO_SCREEN_INIT_1A286_MO_ENTRY_COUNT; i++) {
       expect(readWordBE(s.spriteRam, 0x100 + i * 2)).toBe((0x0400 + i * 0x0200) & 0xffff);
     }
-    // Bank D (+0x180): 1,2,3,4,5,6,7,7  (l'ultima entry NON è 8!)
     const bankDExpected = [1, 2, 3, 4, 5, 6, 7, 7];
     for (let i = 0; i < MO_SCREEN_INIT_1A286_MO_ENTRY_COUNT; i++) {
       expect(readWordBE(s.spriteRam, 0x180 + i * 2)).toBe(bankDExpected[i]);
@@ -108,7 +101,6 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     expect(() => moScreenInit1A286(s, rom)).not.toThrow();
     expect(() => moScreenInit1A286(s, rom, null)).not.toThrow();
     expect(() => moScreenInit1A286(s, rom, new Uint8Array(0x2000), {})).not.toThrow();
-    // I 2 globali e i 32 MO writes restano comunque applicati
     expect(readWordBE(s.workRam, MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE)).toBe(0);
     expect(readWordBE(s.spriteRam, 0x000)).toBe(0x1401);
   });

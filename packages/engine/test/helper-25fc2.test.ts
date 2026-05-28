@@ -1,35 +1,24 @@
 /**
  * helper-25fc2.test.ts — unit test di `helper25FC2` (FUN_00025FC2).
  *
- * FUN_00025FC2 (129 istr, 0x25FC2..0x26194) è un animation-sequence stepper:
- * avanza il puntatore animazione di una object struct in work RAM,
- * e dispatcha una transizione di stato quando la sequenza ROM termina
  * (sentinel `0xFFFFFFFF`).
  *
  * Test copertura:
- *   1. Costante indirizzo corretta
  *   2. Early return (frame_ctr < frames_per_step)
  *   3. Main frame advance (frame_ctr == frames_per_step)
  *   4. Sub-frame advance (state==2, anim_ptr in range, index > 9)
  *   5. Sub-frame: sub_frame_ctr == 1 → azz. + advance secondary_ptr
  *   6. Sub-frame: sub_frame_ctr != 1 → no secondary advance
- *   7. Wrap detection (state==2, index==9 dopo advance): sound(0x5F) + setup
- *   8. Sentinel check: no sentinel → return senza dispatch
  *   9. Sentinel + state 1: A2[+0x56] > 6 → anim 0x20FB6
  *  10. Sentinel + state 1: A2[+0x56] <= 6 → anim 0x20FD2
- *  11. Sentinel + state 5: stessa logica
+ *  11. Sentinel + state 5: same logic
  *  12. Sentinel + state 2 / step56==0: reset + mark step56=1
  *  13. Sentinel + state 2 / step56==1: soundPair + objectStateEntry(2)
  *  14. Sentinel + state 2 / step56>=2: clr flag67, step-3 dispatch
- *      a) A2 è primo oggetto coppia → clr word_a4
- *      b) A2 è secondo oggetto coppia → clr word_a4
- *      c) A2 è altro → NO clr word_a4
- *      d) secondary_state==2 → helper18F46 (typeCode 1 se primo, 2 se altro)
+ *      d) secondary_state==2 -> helper18F46 (typeCode 1 if first, 2 otherwise)
  *      e) secondary_state!=2 → objectStateEntry(4) + set obj_type=0x65
- *  15. Sentinel + altri state → set obj_type=0x65 + objectStateEntry(4)
- *  16. No-spill: nessun campo non previsto viene toccato
+ *  15. Sentinel + other states -> set obj_type=0x65 + objectStateEntry(4)
  *
- * Bit-perfect 500/500 verificato via
  * `cli/src/test-helper-25fc2-parity.ts`.
  */
 
@@ -51,7 +40,7 @@ import { emptyRomImage } from "../src/bus.js";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x400000;
-const OBJ_ABS = 0x00401200; // oggetto generico in work RAM
+const OBJ_ABS = 0x00401200;
 const OBJ_OFF = OBJ_ABS - WORK_RAM_BASE;
 
 function readU32BE(r: Uint8Array, off: number): number {
@@ -77,7 +66,6 @@ function readU16BE(r: Uint8Array, off: number): number {
 }
 
 /**
- * Imposta il sentinel 0xFFFFFFFF nella ROM all'indirizzo `romAddr`.
  */
 function setSentinel(rom: ReturnType<typeof emptyRomImage>, romAddr: number): void {
   rom.program[romAddr] = 0xff;
@@ -87,7 +75,6 @@ function setSentinel(rom: ReturnType<typeof emptyRomImage>, romAddr: number): vo
 }
 
 /**
- * Imposta un valore NON-sentinel nella ROM all'indirizzo `romAddr`.
  */
 function clearSentinel(rom: ReturnType<typeof emptyRomImage>, romAddr: number): void {
   rom.program[romAddr] = 0x00;
@@ -122,7 +109,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const rom = emptyRomImage();
     const r = state.workRam;
 
-    // anim_ptr punta a indirizzo ROM non-sentinel
     const animPtr = 0x00020fe2; // A1+4 = ANIM_BASE_ROM+4
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
     clearSentinel(rom, animPtr);
@@ -153,7 +139,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     const animPtr = 0x00020fe2;
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
-    clearSentinel(rom, animPtr + 4); // il prossimo entry non è sentinel
+    clearSentinel(rom, animPtr + 4);
 
     r[OBJ_OFF + 0x1a] = 0x00; // state != 2
     r[OBJ_OFF + 0x5f] = 0x02; // frame_ctr = 2
@@ -178,12 +164,12 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     clearSentinel(rom, animPtr);
 
     r[OBJ_OFF + 0x1a] = 0x00;
-    r[OBJ_OFF + 0x5f] = 0x00; // frame_ctr = 0 → dopo incr = 1
+    r[OBJ_OFF + 0x5f] = 0x00;
     r[OBJ_OFF + 0x60] = 0x03; // fps = 3 > 1 → early return
 
     helper25FC2(state, rom, OBJ_ABS, {});
 
-    expect(r[OBJ_OFF + 0x5f]).toBe(1); // incrementato ma non azzerato
+    expect(r[OBJ_OFF + 0x5f]).toBe(1);
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr); // non avanzato
   });
 
@@ -195,12 +181,12 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     // anim_ptr = A1 + 11*4 = 0x20FDE + 44 = 0x2100A (index 11 > 9)
     const animPtr = ANIM_BASE_ROM + 11 * 4;
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
-    clearSentinel(rom, animPtr + 4); // prossimo non sentinel
+    clearSentinel(rom, animPtr + 4);
 
     r[OBJ_OFF + 0x1a] = 0x02; // state = 2
-    r[OBJ_OFF + 0x66] = 0x03; // sub_frame_ctr = 3 (dopo incr → 4, != 1 → no advance)
+    r[OBJ_OFF + 0x66] = 0x03;
     r[OBJ_OFF + 0x5f] = 0x00; // frame_ctr = 0
-    r[OBJ_OFF + 0x60] = 0x05; // fps = 5 → early return dopo incr frame_ctr=1
+    r[OBJ_OFF + 0x60] = 0x05;
 
     const secPtrBefore = 0x00021000;
     writeU32BE(r, OBJ_OFF + 0x62, secPtrBefore);
@@ -232,7 +218,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     helper25FC2(state, rom, OBJ_ABS, {});
 
-    // sub_frame_ctr azzerato
     expect(r[OBJ_OFF + 0x66]).toBe(0);
     // secondary_ptr avanzato di 4
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr + 4);
@@ -257,7 +242,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     helper25FC2(state, rom, OBJ_ABS, {});
 
-    // sub_frame_ctr NON toccato (state != 2)
+    // sub_frame_ctr not touched (state != 2).
     expect(r[OBJ_OFF + 0x66]).toBe(0);
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr);
   });
@@ -267,15 +252,14 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const rom = emptyRomImage();
     const r = state.workRam;
 
-    // Arrange: dopo advance (frame_ctr == fps), nuovo anim_ptr sarà index 9
     // anim_ptr attuale = A1 + 8*4 = 0x20FFE (index 8), fps=1
     const animPtrBefore = ANIM_BASE_ROM + 8 * 4; // 0x20FFE
     const animPtrAfter = animPtrBefore + 4; // 0x21002 → index 9
     writeU32BE(r, OBJ_OFF + 0x5a, animPtrBefore);
-    clearSentinel(rom, animPtrAfter); // il successivo non è sentinel
+    clearSentinel(rom, animPtrAfter);
 
     r[OBJ_OFF + 0x1a] = 0x02; // state = 2
-    r[OBJ_OFF + 0x5f] = 0x01; // frame_ctr = 1 → dopo incr = 2
+    r[OBJ_OFF + 0x5f] = 0x01;
     r[OBJ_OFF + 0x60] = 0x02; // fps = 2 → 2 > 2? No → advance
 
     r[OBJ_OFF + 0x66] = 0xaa; // sub_frame_ctr pre (non in range sub-frame: index 8 <= 9)
@@ -287,16 +271,13 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       soundCommand: (cmd) => sounds.push(cmd),
     });
 
-    // frame_ctr azzerato, anim_ptr avanzato a index 9
     expect(r[OBJ_OFF + 0x5f]).toBe(0);
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtrAfter);
-    // sound(0x5F) chiamato
     expect(sounds).toEqual([SOUND_WRAP_INDEX9]);
     // secondary_ptr = 0x215F6
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(ANIM_PTRS.secondary);
     // flag67 = 1
     expect(r[OBJ_OFF + 0x67]).toBe(1);
-    // sub_frame_ctr azzerato
     expect(r[OBJ_OFF + 0x66]).toBe(0);
   });
 
@@ -308,7 +289,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const animPtr = 0x00021002;
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
     clearSentinel(rom, animPtr); // NOT sentinel
-    // però dopo l'advance arriverà a animPtr+4
     clearSentinel(rom, animPtr + 4);
 
     r[OBJ_OFF + 0x1a] = 0x01; // state = 1
@@ -320,7 +300,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: (_s, _p, c) => ose25Calls.push({ code: c }),
     });
 
-    // Nessun dispatch
     expect(ose25Calls).toHaveLength(0);
     // anim_ptr avanzato di 4
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr + 4);
@@ -466,11 +445,9 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: (_s, p, c) => ose25Calls.push({ objPtr: p, code: c }),
     });
 
-    // flag67 azzerato
     expect(r[OBJ_OFF + 0x67]).toBe(0);
     // obj_type impostato a 0x65
     expect(r[OBJ_OFF + 0x57]).toBe(0x65);
-    // objectStateEntry(4) chiamato
     expect(ose25Calls).toHaveLength(1);
     expect(ose25Calls[0]).toEqual({ objPtr: OBJ_ABS, code: 0x04 });
   });
@@ -492,7 +469,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     r[objOffFirst + 0x18] = 0x00; // secondary_state != 2
     r[objOffFirst + 0x5f] = 0x01;
     r[objOffFirst + 0x60] = 0x01;
-    // Scrivi valore non-zero in word_a4
     r[objOffFirst + 0xa4] = 0xbe;
     r[objOffFirst + 0xa5] = 0xef;
 
@@ -500,7 +476,6 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: () => { /* noop */ },
     });
 
-    // word_a4 azzerato (A2 == A3 → clr.w)
     expect(readU16BE(r, objOffFirst + 0xa4)).toBe(0);
   });
 
@@ -552,7 +527,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: () => { /* noop */ },
     });
 
-    // word_a4 NON toccata
+    // word_a4 not touched.
     expect(r[OBJ_OFF + 0xa4]).toBe(0xde);
     expect(r[OBJ_OFF + 0xa5]).toBe(0xad);
   });

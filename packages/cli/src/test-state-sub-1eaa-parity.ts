@@ -2,14 +2,11 @@
 /**
  * test-state-sub-1eaa-parity.ts — differential FUN_1EAA vs stateSub1EAA.
  *
- * `FUN_00001EAA` (54 byte) è un fan-out wrapper:
  *   for i in [0..count-1]:
  *     FUN_33F4(ptr + i*4, sext_w_l((tileId + i) & 0xFFFF), 0)
  *
  * **Strategia parity**:
- *   - Patch `FUN_33F4` con uno **stub-probe** che record ogni call:
- *     scrive arg1 (4 byte) + arg2 low word (2 byte) in workRam @ probe area,
- *     usando un puntatore auto-incrementante salvato @ PROBE_PTR_ADDR.
+ *   - Patch `FUN_33F4` with a **stub-probe** that records each call:
  *
  *   Stub bytes (22 byte):
  *     20 79 00 40 1C 00   movea.l (0x401C00).l, A0   ; A0 = current ptr
@@ -18,10 +15,6 @@
  *     23 C8 00 40 1C 00   move.l  A0, (0x401C00).l   ; update ptr
  *     4E 75               rts
  *
- *   - In TS, callback `fun_33f4` scrive nelle stesse 6 byte in `state.workRam`
- *     mantenendo il proprio puntatore corrente.
- *   - Confronto: probe area in workRam (0x1C00..0x1EFF) deve essere
- *     bit-perfect identica tra binario e TS.
  *
  * **Test counts cap**: max 50 call per case → max 300 byte per test in probe.
  *
@@ -54,8 +47,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_1EAA = 0x00001eaa;
 const FUN_33F4 = 0x000033f4;
 
-// Probe area: tenuta lontana dallo stack (SP=0x401F00 ⇒ stack writes
-// scendono fino a ~0x401EE0). Scegliamo una zona bassa nella workRam.
+// can descend to ~0x401EE0). Choose a low region in workRam.
 const PROBE_PTR_ADDR = 0x00401000; // long: current write pointer
 const PROBE_DATA_BASE = 0x00401010; // probe data starts here
 const PROBE_DATA_END = 0x00401400; // exclusive (1008 byte → 168 call max)
@@ -112,14 +104,13 @@ function compareProbe(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): { offset: number; bin: number; ts: number } | null {
-  // Verifica prima il puntatore aggiornato
   for (let i = 0; i < 4; i++) {
     const off = PROBE_PTR_ADDR - 0x400000 + i;
     const b = peekMem(cpu, PROBE_PTR_ADDR + i, 1);
     const t = state.workRam[off] ?? 0;
     if (b !== t) return { offset: PROBE_PTR_ADDR + i, bin: b, ts: t };
   }
-  // Poi il contenuto
+  // Then the contents.
   for (let a = PROBE_DATA_BASE; a < PROBE_DATA_END; a++) {
     const b = peekMem(cpu, a, 1);
     const t = state.workRam[a - 0x400000] ?? 0;
@@ -128,13 +119,11 @@ function compareProbe(
   return null;
 }
 
-/** TS-side recorder che mima lo stub binario. */
 function makeTsSubs(
   state: ReturnType<typeof stateNs.emptyGameState>,
 ): ssNs.StateSub1EAASubs {
   return {
     fun_33f4: (ptr: number, sextWord: number, _zero: number): void => {
-      // Leggi puntatore corrente
       const wOff = PROBE_PTR_ADDR - 0x400000;
       const cur =
         (((state.workRam[wOff] ?? 0) << 24) |
@@ -143,18 +132,14 @@ function makeTsSubs(
           (state.workRam[wOff + 3] ?? 0)) >>>
         0;
       const dst = cur - 0x400000;
-      // Scrivi arg1 long (BE)
       state.workRam[dst + 0] = (ptr >>> 24) & 0xff;
       state.workRam[dst + 1] = (ptr >>> 16) & 0xff;
       state.workRam[dst + 2] = (ptr >>> 8) & 0xff;
       state.workRam[dst + 3] = ptr & 0xff;
-      // Scrivi sextWord low word (BE) — il binario fa `move.w (10,SP),(A0)+`
-      // che scrive la **low word** della long arg2 (sext_w_l preserva la
-      // low word identica all'originale d3w → coincide).
+      // low word identical to the original d3w -> matches).
       const w = sextWord & 0xffff;
       state.workRam[dst + 4] = (w >>> 8) & 0xff;
       state.workRam[dst + 5] = w & 0xff;
-      // Aggiorna puntatore (cur += 6)
       const next = (cur + 6) >>> 0;
       state.workRam[wOff + 0] = (next >>> 24) & 0xff;
       state.workRam[wOff + 1] = (next >>> 16) & 0xff;

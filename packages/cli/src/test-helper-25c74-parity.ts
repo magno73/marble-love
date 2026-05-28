@@ -2,28 +2,19 @@
 /**
  * test-helper-25c74-parity.ts — differential FUN_00025C74 vs helper25C74.
  *
- * `FUN_00025C74` (0x25C74..0x25DF4) è un "object entry-state handler":
- * aggiorna lo stato di una object struct in work RAM, aggiorna il campo
- * A2[+0x57] con delta clampato, poi dispatcha transizioni di stato.
  *
- * **Argomenti**: 2 long sullo stack = (objPtr, deltaLong).
- * **Costanti interne**: A3 = 0x25BAE, coppia canonica 0x400018/0x4000FA.
+ * **Internal constants**: A3 = 0x25BAE, canonical pair 0x400018/0x4000FA.
  *
  * **Sub-JSR** patchate per isolamento:
  *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, code) a buffer.
- *   - `FUN_15884` (@ 0x15884): incrementa count.
+ *   - `FUN_15884` (@ 0x15884): increments count.
  *   - `FUN_158AC` (@ 0x158AC): append sound cmd a buffer.
  *   - `FUN_15BD0` (@ 0x15BD0): append (structPtr, arg2, arg3) a buffer.
  *
  * **Strategia parity**:
- *   1. ROM patch: intercetta le 4 sub-jsr con stub che scrivono i loro arg
+ *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
  *      in zone fisse di work RAM (0x401F00+).
- *   2. Per ogni caso random: randomizza objPtr tra la coppia canonica e
- *      indirizzi arbitrari; randomizza i campi rilevanti della struct.
- *   3. Esegui binario reale @ FUN_25C74 + TS helper25C74 su mirror.
- *   4. Confronta tutti i campi scritti + le sequenze di chiamate sub-jsr.
  *
- * **Buffer cattura** (tutti in work RAM range 0x401F00-0x401FF0):
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
  *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 byte)
@@ -62,7 +53,7 @@ const FUN_15BD0 = 0x00015bd0;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// ─── Buffer cattura in work RAM ───────────────────────────────────────────────
+// ─── Capture buffer in work RAM ───────────────────────────────────────────────
 const SOUND_BUF_BASE  = 0x00401f00 as const;
 const SOUND_CUR_PTR   = 0x00401f0c as const;
 const OSE25_BUF_BASE  = 0x00401f10 as const;
@@ -123,7 +114,7 @@ function patchSoundSink(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_15884: incrementa count @ 0x401F30 + rts.
+ * Patch FUN_15884: increment count @ 0x401F30 + rts.
  *   addq.b  #1, ($401F30).l    : 52 39 00 40 1F 30
  *   rts                         : 4E 75
  */
@@ -137,10 +128,7 @@ function patchSoundPair(rom: Buffer): void {
 /**
  * Patch FUN_25BAE: append (objPtr, code) al buffer + rts.
  *
- * Al momento di ingresso in FUN_25BAE:
  *   SP+0 = return addr
- *   SP+4 = objPtr (ultima push = più vicina allo SP)
- *   SP+8 = subStateCode long (prima push = più lontana)
  *
  * Stub (48 byte):
  *   moveq #0, D0
@@ -181,7 +169,6 @@ function patchOSE25BAE(rom: Buffer): void {
 /**
  * Patch FUN_15BD0: append (structPtr, arg2, arg3) al buffer + rts.
  *
- * Al momento di ingresso in FUN_15BD0:
  *   SP+0  = return addr
  *   SP+4  = structPtr (arg1 long)
  *   SP+8  = arg2 long
@@ -297,12 +284,11 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Tutti i field offset scritti dalla funzione
   const SCRATCH_FIELDS = [
     0x18, 0x1a, 0x56, 0x57, 0x5a, 0x5b, 0x5c, 0x5d, 0x5f, 0x60,
   ] as const;
 
-  // Offset NON toccati (sentinelle per no-spill)
+  // Untouched offsets (no-spill sentinels).
   const NEIGHBORS = [
     0x00, 0x01, 0x17, 0x19, 0x1b, 0x1c, 0x1d,
     0x1e, 0x1f, 0x55, 0x58, 0x59,
@@ -401,7 +387,6 @@ async function main(): Promise<void> {
     // ── Run binary ───────────────────────────────────────────────────────
     callFunction(cpu, FUN_25C74, [actualPtr, deltaChoice]);
 
-    // Leggi catture binarie
     const binSoundCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;
     const binSoundCount = (binSoundCurEnd - SOUND_BUF_BASE) >>> 0;
     const binSounds: number[] = [];
@@ -427,7 +412,6 @@ async function main(): Promise<void> {
       binBD0Calls.push({ structPtr: sp_, arg2: a2_ & 0xff, arg3: a3_ & 0xff });
     }
 
-    // Leggi campi scritti nel binario
     const binFields: Record<number, number> = {};
     for (const foff of SCRATCH_FIELDS) {
       binFields[foff] = peekMem(cpu, actualPtr + foff, 1) & 0xff;
@@ -468,10 +452,8 @@ async function main(): Promise<void> {
       tsNeighbors[nOff] = stateInst.workRam[off + nOff] ?? 0;
     }
 
-    // ── Confronto ────────────────────────────────────────────────────────
     let pass = true;
 
-    // Campi scritti
     for (const foff of SCRATCH_FIELDS) {
       if ((binFields[foff] ?? 0) !== (tsFields[foff] ?? 0)) {
         if (!firstFail) firstFail = {

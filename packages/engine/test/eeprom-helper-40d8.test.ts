@@ -1,7 +1,7 @@
 /**
  * eeprom-helper-40d8.test.ts — smoke tests di `eepromHelper40D8`.
  *
- * Bit-perfect parity (500 casi randomici) verificata in
+ * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-eeprom-helper-40d8-parity.ts` vs Musashi.
  */
 

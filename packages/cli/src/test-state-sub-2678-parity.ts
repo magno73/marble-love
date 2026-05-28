@@ -2,8 +2,7 @@
 /**
  * test-state-sub-2678-parity.ts — differential FUN_2678 vs stateSub2678.
  *
- * FUN_2678 (74 byte) è la sub "deregister-by-pointer" del state-machine
- * scheduler. Args: 1 long sullo stack (`argLong`).
+ * scheduler. Args: 1 long on the stack (`argLong`).
  *
  * Logica:
  *   - Per ogni slot D2 in [0..3]:
@@ -11,16 +10,13 @@
  *   - jsr FUN_2ABC(argLong)  ← STUB injection
  *
  * Strategia:
- *   - Patch FUN_2ABC a `rts` (4E 75) → no-op nel binario
  *   - In TS, callback `fun_2abc` no-op
- *   - Confronto: workRam @ 0x401F00..0x401F3F (struct stato gameSM) +
- *     verifica che il return value (D0=1) sia 1 nel binario
  *
  * Suite testate:
  *   - A: random argLong + random table (most slot non-match)
  *   - B: argLong = DATA_PTR[D2] di un slot random (sicuro match)
- *   - C: argLong = DATA_PTR di multipli slot (match multipli)
- *   - D: argLong = 0 con DATA_PTR misti a 0 (match per slot 0)
+ *   - C: argLong = DATA_PTR for multiple slots (multiple matches)
+ *   - D: argLong = 0 with mixed DATA_PTR values at 0 (match for slot 0)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2678-parity.ts [N]
  */
@@ -59,7 +55,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup struct in entrambi binario e TS state. */
 function setupStruct(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -129,7 +124,6 @@ async function main(): Promise<void> {
     const r = callFunction(cpu, FUN_2678, [arg]);
     sub2678Ns.stateSub2678(stateInst, arg, subs);
     const fail = compareStruct(stateInst, cpu);
-    // Verifica anche return D0=1
     const d0Ok = (r.d0 & 0xff) === 1;
     if (fail === null && d0Ok) return true;
     if (failHolder.value === null) {
@@ -163,7 +157,6 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // Forza DATA_PTR[slot] in 0x1F04..0x1F13 con valori distinti
     const ptrs: number[] = [rl(), rl(), rl(), rl()];
     for (let j = 0; j < 4; j++) {
       const off = 0x04 + j * 4;
@@ -179,13 +172,13 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: arg coincide con multipli slot ──────────────────────────
+  // ─── Suite C: arg matches multiple slots ──────────────────────────────
   console.log(`\n=== Suite C: arg matches multiple slots — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const arg = rl();
-    // Pick 2-4 slot a cui assegnare lo stesso ptr
+    // Pick 2-4 slots and assign them the same ptr.
     const numMatch = 2 + Math.floor(rng() * 3); // 2,3,4
     const slotIdx = [0, 1, 2, 3];
     // Shuffle (Fisher-Yates corto)

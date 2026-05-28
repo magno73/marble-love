@@ -4,39 +4,24 @@
  * `stateSub1881C`.
  *
  * FUN_0001881C (342 byte): "entity-vs-table proximity reactor". Itera 36
- * entry × 16 byte @ 0x401650 e — per ogni entry il cui slot è attivo e
- * matcha i byte spawn @ 0x400697/0x400699 — esegue uno dei due rami:
+ * matches spawn bytes @ 0x400697/0x400699 and runs one of two branches:
  *
- *   - **math/sound**: se anche `byte((long@684>>19))`, `byte((long@688>>19))`
+ *   - **math/sound**: if both `byte((long@684>>19))`, `byte((long@688>>19))`
  *     e `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
- *     via 2 RNG(2), aggiorna entity[0x8/0x14/0x36] e suona 0x45.
- *   - **reflect**: se distanza word(`entity[0x14] - entry[0x6]`) < 12 signed,
- *     nega entity[0..3] e [4..7]. Altrimenti no-op.
+ *   - **reflect**: if signed word distance (`entity[0x14] - entry[0x6]`) < 12,
  *
- * Inoltre prima di ogni iterazione che matcha i primi 3 campi: scrive
  * entity[0xc]=long@684 e entity[0x10]=long@688.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
- *     bit-perfect in `rng.ts`.
- *   - `FUN_000158AC` (sound) **patchato** con un payload "capture sentinel"
- *     che scrive il byte LSB del long pushato a `(0x401FFE)` — esattamente
- *     come `test-special-attract-parity.ts`. Il TS confronta con il ledger
- *     dei comandi catturati via `subs.soundCommand`.
+ *   - `FUN_000158AC` (sound) **patched** with a "capture sentinel" payload
+ *     of commands captured through `subs.soundCommand`.
  *   - Compare:
- *       * `entity[0x00..0x3F]` (0x40 byte di entity, copre tutti gli offset
- *         scritti: 0..0x17 per long0..long5 + 0x36 per il flag).
  *       * `*0x004003A6` (RNG seed) post-call.
  *       * D0 return value (0 / 1 a seconda di match).
- *       * Sound capture: ledger di byte scritti @ 0x401FFE durante le
- *         eventuali chiamate a FUN_158AC.
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random globals + tabella casuale + entity casuale (caso generico)
- *   - B: forced gameMode != 3 → early-out ramo (verifica D0=0, no scritture)
- *   - C: forced match-first-3 (alcune entry attive con key bytes che
- *        matchano spawn) → varia secondo livello
- *   - D: forced match-all-6 (math branch) → verifica RNG side effects
+ *   - C: forced match-first-3 (some active entries with key bytes that
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-1881c-parity.ts [N]
  */
@@ -64,12 +49,11 @@ const FUN_158AC = 0x000158ac;
 const RNG_SEED_ADDR = 0x004003a6;
 
 const ENTITY_BASE = 0x00401e00;
-const ENTITY_SIZE = 0x40; // confronto su 0x40 byte (offsets toccati: 0..0x17 + 0x36)
+const ENTITY_SIZE = 0x40;
 
 const TABLE_BASE = 0x00401650;
 const TABLE_SIZE = 0x240; // 36 × 16
 
-/** Globals letti dal binario. */
 const GAME_MODE_ADDR = 0x00400394; // word
 const SECONDARY_GATE_ADDR = 0x00400760; // byte
 const SPAWN_BYTE0_ADDR = 0x00400697; // byte
@@ -85,7 +69,6 @@ const SENTINEL_NOT_CALLED = 0xff;
  *   move.b (0x7,SP), D0   ; 10 2F 00 07
  *   move.b D0, $00401FFE  ; 13 C0 00 40 1F FE
  *   rts                   ; 4E 75
- * Totale 12 byte (FUN_158AC originale è 0x20). FUN_13A98 left live.
  */
 function patchSubs(rom: Uint8Array): void {
   rom[FUN_158AC + 0x0] = 0x10; rom[FUN_158AC + 0x1] = 0x2f;
@@ -107,8 +90,8 @@ function makeRng(seed: number): () => number {
 interface Snapshot {
   entity: number[]; // 0x40 byte
   rngSeed: number;  // u16 @ 0x4003A6
-  retD0: number;    // return value (low 16 bit conta; ext.l → tutto 0/1)
-  capture: number;  // byte @ 0x401FFE (sentinel se non chiamato)
+  retD0: number;
+  capture: number;
 }
 
 function snapshotBinary(cpu: CpuSession, retD0: number): Snapshot {
@@ -189,7 +172,6 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function setupCase(inp: CaseInput): void {
-    // BINARY: write entity, tabella, globals, RNG seed, capture sentinel
     for (let i = 0; i < ENTITY_SIZE; i++) {
       pokeMem(cpu, ENTITY_BASE + i, 1, inp.entity[i] ?? 0);
     }
@@ -206,7 +188,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, CAPTURE_ADDR, 1, SENTINEL_NOT_CALLED);
     cpu.system.setRegister("sp", 0x401f00);
 
-    // TS: stesso setup
+    // TS: same setup.
     const offE = ENTITY_BASE - 0x400000;
     for (let i = 0; i < ENTITY_SIZE; i++) {
       stateInst.workRam[offE + i] = inp.entity[i] ?? 0;
@@ -238,8 +220,6 @@ async function main(): Promise<void> {
       stateInst.workRam[off + 1] = inp.gameMode & 0xff;
     }
     stateInst.workRam[SECONDARY_GATE_ADDR - 0x400000] = inp.byte760 & 0xff;
-    // capture sentinel pre-call (TS non scrive direttamente il sentinel,
-    // ma teniamo il byte coerente per il diff finale)
     stateInst.workRam[CAPTURE_ADDR - 0x400000] = SENTINEL_NOT_CALLED;
 
     stateInst.rng.seed = wrap.as_u32(inp.rngSeed & 0xffff);
@@ -252,16 +232,12 @@ async function main(): Promise<void> {
     const binResult = callFunction(cpu, FUN_1881C, [ENTITY_BASE]);
     const binSnap = snapshotBinary(cpu, binResult.d0);
 
-    // TS: capture sound via callback, poi scrivi sentinel @ 0x401FFE per matchare
     let tsCapture = SENTINEL_NOT_CALLED;
     const tsRet = sub1881CNs.stateSub1881C(stateInst, ENTITY_BASE, {
       soundCommand: cmd => {
-        // FUN_158AC patchato scrive solo l'ULTIMO comando (overwrite ad ogni
-        // chiamata). Replichiamo lo stesso comportamento.
         tsCapture = cmd & 0xff;
       },
     }).result;
-    // Scrivi capture nel workRam TS per simmetria del confronto
     stateInst.workRam[CAPTURE_ADDR - 0x400000] = tsCapture;
 
     const tsSnap = snapshotTs(stateInst, tsRet, tsCapture);
@@ -311,11 +287,9 @@ async function main(): Promise<void> {
     const t = new Array(TABLE_SIZE).fill(0).map(() => rb());
     for (let i = 0; i < 36; i++) {
       const e = i * 16;
-      // entry[0x2..0x3]: con probabilità activeProb metti 0xFFFF, altrimenti random
       if (rng() < activeProb) {
         t[e + 2] = 0xff; t[e + 3] = 0xff;
       } else {
-        // forza diverso da 0xFFFF random: leggi e clamp
         if (t[e + 2] === 0xff && t[e + 3] === 0xff) t[e + 2] = 0x00;
       }
       if (fixed?.spawnB0 !== undefined) t[e + 4] = fixed.spawnB0 & 0xff;
@@ -370,7 +344,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: forced match-first-3 (alcune entry attive con key bytes spawn) ──
+  // ─── Suite C: forced match-first-3 (some active entries with key bytes spawn) ──
   console.log(
     `\n=== Suite C: forced match-first-3 (varia secondo livello) — ${perSuite} casi ===`,
   );
@@ -381,11 +355,9 @@ async function main(): Promise<void> {
     inp.byte760 = 0xff;
     inp.spawnB0 = rb();
     inp.spawnB1 = rb();
-    // Tabella: ~30% entry attive con key bytes che matchano spawn
     inp.table = genTable(0.3, {
       spawnB0: inp.spawnB0,
       spawnB1: inp.spawnB1,
-      // word casuale → secondo check fallisce nella maggior parte
       word: rw(),
     });
     if (runOneCase("C", i, inp)) okC++;
@@ -403,7 +375,6 @@ async function main(): Promise<void> {
     const inp = baseInput();
     inp.gameMode = 3;
     inp.byte760 = 0xff;
-    // Forza spawn = byte((long@684>>19)) e byte((long@688>>19))
     const k0 = rb();
     const k1 = rb();
     // long684 = k0 << 19 (puro), shift 19 = byte k0 in low byte

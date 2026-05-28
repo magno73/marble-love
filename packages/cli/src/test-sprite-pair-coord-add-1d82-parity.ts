@@ -5,22 +5,17 @@
  *
  * `FUN_00001D82` (134 byte) estrae la coord-9-bit signed da DUE word di
  * sprite-RAM (banchi 0xA02000 e 0xA02100, separati di 0x100), somma due
- * delta, ripack e write-back con clear di bit 14,15.
+ * delta, repacks, and writes back with bits 14 and 15 cleared.
  *
  * **Strategia parity**:
- *   - Setup: per ogni caso seed-randomizziamo le 2 word target in spriteRam
- *     (con anche bit 14,15 e bit 4 set per testare i mask).
- *   - Args: 4 longword (col, bank, deltaA, deltaB). Solo low word usata.
- *   - Confronto: 4 byte (le due word target) + 8 byte attorno per vigilare
- *     write fuori range. La spriteRam attorno ai target è inizializzata a
+ *     (also with bits 14,15 and bit 4 set to test masks).
  *     un pattern noto per detectare write spurii.
  *
  * Suite testate (4 × 125 = 500):
  *   - A: bank=0, col random ∈ [0..0x7F] — base case, low addr.
  *   - B: bank random ∈ [0..7], col random ∈ [0..0x7F] — full sweep.
  *   - C: bank=7, col=0..0x7F — high addr (max range).
- *   - D: delta random + word target con bit 14,15 e low nibble set —
- *     verifica clear bit 14,15 e preserve low nibble.
+ *   - D: random delta + target word with bits 14,15 and low nibble set —
  *
  * Uso: npx tsx packages/cli/src/test-sprite-pair-coord-add-1d82-parity.ts [N=500]
  */
@@ -31,15 +26,12 @@ import { exit } from "node:process";
 
 import { state as stateNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
-// NOTA: `spritePairCoordAdd1D82` non è ancora pushed nel main package
 // (`@marble-love/engine` linka via npm workspace al main repo, NON al worktree).
-// Importiamo via path relativo dalla src del worktree per testare la versione
-// locale prima dell'integrazione.
+// Import via relative path from the worktree src to test the version
 import * as sub1D82WorktreeNs from "../../engine/src/sprite-pair-coord-add-1d82.js";
 
-// Bridge: la TS replica accetta `GameState` del worktree, ma stateNs viene
-// dal main package. Sono strutturalmente identici (stesso layout di
-// Uint8Array/u8/u32) ma TypeScript li tratta come tipi distinti per via dei
+// from the main package. They are structurally identical (same layout of
+// Uint8Array/u8/u32), but TypeScript treats them as distinct types because of
 // tag nominal `__u32`. Cast esplicito per il typechecker.
 const sub1D82Ns = sub1D82WorktreeNs as unknown as {
   spritePairCoordAdd1D82: (
@@ -140,8 +132,6 @@ async function main(): Promise<void> {
     offA: number,
     offB: number,
   ): void {
-    // Pattern guards (pre/post) per detectare write fuori target.
-    // 4 byte prima e dopo offA, e prima/dopo offB.
     const guards: Array<[number, number]> = [
       [offA - 4, 0xdead],
       [offA - 2, 0xbeef],
@@ -170,13 +160,11 @@ async function main(): Promise<void> {
     oldA: number,
     oldB: number,
   ): boolean {
-    // Reset SP — il binario fa `movem.l {D2,D3},-(SP)` + 4 long args.
     cpu.system.setRegister("sp", 0x401efc);
 
     const { offA, offB } = setupCaseInBoth(col, bank, oldA, oldB);
     clearSpriteRamGuards(offA, offB);
 
-    // Run binario (cdecl: 4 long args, push RTL gestito da callFunction).
     callFunction(
       cpu,
       FUN_1D82,
@@ -226,15 +214,11 @@ async function main(): Promise<void> {
       return false;
     }
 
-    // Verifica guards (pre/post target): non devono essere stati toccati.
     const guardOffsets = [-4, -2, 2, 4];
     for (const targetOff of [offA, offB]) {
       for (const dg of guardOffsets) {
         const g = targetOff + dg;
         if (g < 0 || g + 1 >= 0x1000) continue;
-        // Se il guard cade sull'altro target (offA + 4 può intersecare se
-        // bank molto piccolo + col specifico), salta. Ma offA e offB
-        // distano 0x100 = 256, mai entro ±4.
         const binG = peekMem(cpu, SPRITE_BANK_A_ADDR + g, 2);
         const tsG = readWord(stateInst.spriteRam, g);
         if (binG !== tsG) {
@@ -327,7 +311,6 @@ async function main(): Promise<void> {
     // delta in [0x8000..0xFFFF] (negative-ish) per testare wrapping.
     const deltaA = 0x8000 | randWord(rng);
     const deltaB = 0x8000 | randWord(rng);
-    // Forza bit 14,15 e low nibble set.
     const oldA = randWord(rng) | 0xc00f;
     const oldB = randWord(rng) | 0xc00f;
     if (runOneCase("D", i, col, bank, deltaA, deltaB, oldA, oldB)) okD++;

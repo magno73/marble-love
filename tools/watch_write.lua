@@ -1,9 +1,9 @@
--- watch_write.lua — installa un write-tap su una regione di workRam e
--- logga ogni write (PC, addr, value, mask, frame).
+-- watch_write.lua — installs a write tap on a workRam region and logs each
+-- write (PC, addr, value, mask, frame).
 --
--- Configurazione via env:
---   MARBLE_WATCH_LO   indirizzo basso (default 0x401EE0)
---   MARBLE_WATCH_HI   indirizzo alto inclusivo (default 0x401EFF)
+-- Configuration via env:
+--   MARBLE_WATCH_LO   low address (default 0x401EE0)
+--   MARBLE_WATCH_HI   inclusive high address (default 0x401EFF)
 --   MARBLE_WATCH_OUT  path file output (default /tmp/marble_writes.log)
 --   MARBLE_WATCH_MAX  massimo numero di eventi loggati (default 5000)
 --   MARBLE_LOVE_MAX_FRAMES  numero di frame da emulare (default 100)

@@ -1,6 +1,6 @@
 -- mame_sound_reset_tap.lua — capture write a $860001 dal main (bankselect_w).
 -- Bit 7 = sound CPU reset (1 = run/release, 0 = hold). Aim: identificare il
--- frame esatto in cui MAME passa il sound 6502 da hold a run.
+-- Exact frame where MAME moves the sound 6502 from hold to run.
 --
 -- Output JSON: { events: [{frame, byte, soundRun: bool}], firstReleaseFrame: N }
 --
@@ -25,7 +25,7 @@ local function install_tap()
     main_mem = maincpu.spaces["program"]
     if main_mem == nil or main_mem.install_write_tap == nil then return end
     -- $860001 = bankselect_w. 16-bit bus, low byte; usa range $860000-$860001
-    -- con mask filter.
+    -- with mask filter.
     main_mem:install_write_tap(0x860000, 0x860001, "sound_reset_ctrl", function(o, d, m)
         if (m & 0xff) ~= 0 then
             local byte = d & 0xff

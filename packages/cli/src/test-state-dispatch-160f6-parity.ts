@@ -4,20 +4,20 @@
  * `stateDispatch160F6`.
  *
  * `FUN_000160F6` (1378 byte, 0x0160F6–0x016658): trackball navigation
- * dispatcher. Aggiorna il movimento di un oggetto in base a trackball delta
+ * dispatcher. Updates object movement based on trackball delta
  * e input direzionali.
  *
  * **Stub injection**:
- *   `FUN_000158AC` (sound command) viene patchata a un thunk-logger che
- *   scrive il long arg in `0x401E00` e incrementa il counter a `0x401E04`.
- *   La ROM speed table @ 0x2398c viene letta direttamente dal ROM blob
- *   tramite `romByte`.
+ *   `FUN_000158AC` (sound command) is patched to a thunk logger that
+ *   writes the long arg to `0x401E00` and increments the counter at `0x401E04`.
+ *   The ROM speed table @ 0x2398c is read directly from the ROM blob
+ *   through `romByte`.
  *
  *   Layout stub FUN_158AC (20 byte):
  *     movea.l #0x00401E00, A0    ; 207C 0040 1E00  (6 byte)
  *     move.l  0x00401E04.l, D1   ; 2239 0040 1E04  (6 byte)
  *     move.l  (4,SP), (0,A0,D1) ; nope: usa addq e move sequenziale
- *   Semplifichiamo con un log a slot fisso (max 4 chiamate):
+ *   Simplify with a fixed-slot log (max 4 calls):
  *     movea.l #0x00401E00, A0         ; 207C 0040 1E00  (6 byte)
  *     move.l  0x00401E04.l, D1        ; 2239 0040 1E04  (6 byte)
  *     move.l  (4,SP), (0,A0,D1.l*1)  ; 20B1 1804       (4 byte)
@@ -27,11 +27,11 @@
  *
  * FUN_158AC @ 0x000158AC: size reale ~40 byte → ampiamente abbastanza.
  *
- * **Suite** (4 × 125 = 500 casi):
- *   A: D2 generato casuale (input randomizzati con vari tile/vel in range)
+ * **Suites** (4 x 125 = 500 cases):
+ *   A: randomly generated D2 (randomized input with varied in-range tile/vel)
  *   B: idle→lock path (D2=0, diff > 0x60000, charcode vari)
- *   C: stato 1 (moving) con dirMask e romByte vari
- *   D: edge cases (stato 2 lock, charcode fuori whitelist, tile boundary)
+ *   C: state 1 (moving) with various dirMask and romByte values
+ *   D: edge cases (state 2 lock, charcode outside whitelist, tile boundary)
  *
  * **Zone confrontate**: struct + globals 0x66a–0x682 + sound log
  *   (0x401E00..0x401E07) + counter (0x401E04).
@@ -74,8 +74,8 @@ const WR_BASE = 0x400000;
 
 /**
  * Patch FUN_158AC a un thunk-logger (24 byte).
- * Il thunk scrive l'arg long (4,SP) nel ring @ SOUND_LOG_BASE + counter,
- * poi incrementa il counter di 4.
+ * The thunk writes arg long (4,SP) into ring @ SOUND_LOG_BASE + counter,
+ * then increments the counter by 4.
  */
 function patchFun158AC(cpu: CpuSession): void {
   const bytes = [
@@ -182,7 +182,7 @@ function resetZones(
   }
 }
 
-/** Confronta zona [abs..abs+size) tra binario e workRam TS. */
+/** Compare zone [abs..abs+size) between binary and TS workRam. */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom: romBuf, state });
   patchFun158AC(cpu);
 
-  // TS subs: replica esatta dei stub binari.
+  // TS subs: exact replica of the binary stubs.
   const subs: ns.StateDispatch160F6Subs = {
     soundCommand: (cmd) => {
       // Scrive cmd (long = cmd & 0xFF) nel ring @ SOUND_LOG_BASE + counter
@@ -345,7 +345,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ── Suite C: stato 1 (moving), D5/D6 ∈ {0,1}, dirMask random ──────────
+  // Suite C: state 1 (moving), D5/D6 in {0,1}, random dirMask.
   console.log(`\n=== Suite C: stato 1 moving, inner loop — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -385,7 +385,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: edge cases (stato 2, charcode fuori whitelist, ecc.) ──────
+  // Suite D: edge cases (state 2, charcode outside whitelist, etc.).
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
   let okD = 0;
@@ -393,7 +393,7 @@ async function main(): Promise<void> {
     resetZones(state, cpu);
     const scenario = i % 4;
     if (scenario === 0) {
-      // stato 2 (locked), D2=0 → no-op
+      // state 2 (locked), D2=0 -> no-op.
       pokeByteBoth(state, cpu, STRUCT_PTR + 0x36, 0x02);
       pokeLongBoth(state, cpu, STRUCT_PTR + 0x08, rl(rng));
     } else if (scenario === 1) {
@@ -404,7 +404,7 @@ async function main(): Promise<void> {
       pokeWordBoth(state, cpu, WR_BASE + 0x674, 2);
       pokeWordBoth(state, cpu, TILE_X_PTR, 2);
     } else if (scenario === 2) {
-      // stato 1, D5=0, dirMask=0 → lock
+      // state 1, D5=0, dirMask=0 -> lock.
       pokeByteBoth(state, cpu, STRUCT_PTR + 0x36, 0x01);
       pokeByteBoth(state, cpu, STRUCT_PTR + 0x37, 0x00);
       pokeByteBoth(state, cpu, STRUCT_PTR + 0x58, 0x17);

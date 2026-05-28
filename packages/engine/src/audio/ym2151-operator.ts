@@ -1,8 +1,8 @@
 /**
- * ym2151-operator.ts — Un singolo operatore FM YM2151.
+ * ym2151-operator.ts - one YM2151 FM operator.
  *
- * Hardware: 32 operatori totali = 8 channel × 4 operator per channel.
- * Ogni operatore: phase accumulator + sine LUT + envelope generator + TL.
+ * Hardware: 32 operators total = 8 channels x 4 operators per channel. Each
+ * operator owns a phase accumulator, sine lookup, envelope generator, and TL.
  *
  * Output sample = SINE[phase] × envelope_attenuation × TL_attenuation
  *
@@ -15,7 +15,7 @@ import { MUL_TABLE } from "./ym2151-tables.js";
 export interface Operator {
   /** Phase accumulator 20-bit (top 10 bit = sine LUT index). */
   phase: number;
-  /** Phase increment per sample, calcolato da KC+KF+DT1+MUL. */
+  /** Phase increment per sample, derived from KC+KF+DT1+MUL. */
   phaseInc: number;
   /** Envelope generator state. */
   env: EnvelopeState;
@@ -270,7 +270,7 @@ export function operatorSetOpmBlockFreq(
 }
 
 /** Aggiorna phaseInc dato il key code base (Hz) e MUL.
- * phaseInc è in unità di phase per sample nel dominio 20-bit. */
+ * phaseInc is measured in phase units per sample in the 20-bit domain. */
 export function operatorSetFreq(op: Operator, baseFreqHz: number, sampleRate: number): void {
   const mul = MUL_TABLE[op.mul] ?? 1;
   // Phase increment per sample in the 20-bit phase domain.

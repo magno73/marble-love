@@ -1,21 +1,19 @@
 /**
- * cpu.ts — Core driver del MOS 6502 NMOS (step, runForCycles, RESET/NMI/IRQ).
+ * cpu.ts - MOS 6502 NMOS core driver (step, runForCycles, RESET/NMI/IRQ).
  *
  * Public API:
  *  - `createCpu()` -> `{ rf, irq, nmi, resetPending }`
- *  - `reset(cpu, bus)`        — esegue reset sequence, fetcha vector $FFFC/$FFFD
- *  - `step(cpu, bus)`         — esegue una singola istruzione, ritorna cycle count
- *  - `runForCycles(cpu, bus, budget)` — itera step finche' cycle accumulato >= budget
- *  - `requestIrq(cpu)`        — pin IRQ asserito (level-sensitive, masked da FLAG_I)
- *  - `requestNmi(cpu)`        — pin NMI asserito (edge-triggered)
+ *  - `reset(cpu, bus)`        - runs reset and fetches vector $FFFC/$FFFD
+ *  - `step(cpu, bus)`         - executes one instruction and returns cycle count
+ *  - `runForCycles(cpu, bus, budget)` - steps until accumulated cycles >= budget
+ *  - `requestIrq(cpu)`        - asserts level-sensitive IRQ, masked by FLAG_I
+ *  - `requestNmi(cpu)`        - asserts edge-triggered NMI
  *
- * Interrupt priority: RESET > NMI > IRQ. Tutti sono modellati come pending
- * flag che cpu.step processa prima dell'opcode fetch. IRQ e' level-sensitive
- * (resta asserito finche' il chip esterno non lo rilascia); nel nostro caso
- * il chip esterno (YM2151 in Phase 5) controllera' la pin.
+ * Interrupt priority: RESET > NMI > IRQ. All are modeled as pending flags that
+ * `cpu.step` processes before opcode fetch. IRQ is level-sensitive and remains
+ * asserted until the external chip releases it.
  *
- * Undocumented opcode -> throw (Rule 12 fail loud). Caller deve catchare e
- * loggare per debug.
+ * Undocumented opcodes throw. Callers should catch and log with enough context.
  */
 
 import { as_u8, as_u16 } from "../wrap.js";
@@ -32,7 +30,7 @@ export interface M6502Cpu {
   rf: M6502RegFile;
   irq: boolean;
   nmi: boolean;
-  /** Cycle accumulator (incremental per step). Resettabile dal caller. */
+  /** Cycle accumulator, incremental per step and resettable by the caller. */
   cycles: number;
   /** Diagnostic PC of the opcode currently executing. */
   lastOpcodePc: number | undefined;
@@ -83,8 +81,7 @@ export function sampleIrqPrefetch(cpu: M6502Cpu): void {
 
 // ─── Reset / Interrupts ───────────────────────────────────────────────────
 
-/** Esegue reset sequence: 7 cycle, fetcha PC da $FFFC/$FFFD. Pulisce flag
- * NMI/IRQ pending. */
+/** Runs the reset sequence: 7 cycles, fetch PC from $FFFC/$FFFD, clear IRQ/NMI. */
 export function reset(cpu: M6502Cpu, bus: MemBus6502): void {
   cpu.rf = createRegFile();
   const lo = bus.read8(as_u16(0xfffc)) as number;
@@ -127,7 +124,7 @@ function serviceIrq(cpu: M6502Cpu, bus: MemBus6502): void {
   const hi = bus.read8(as_u16(0xffff)) as number;
   cpu.rf.pc = as_u16(lo | (hi << 8));
   // IRQ e' level-sensitive: lasciamo cpu.irq al caller (chip esterno deciders
-  // se rilasciarlo). Nessun reset automatico qui.
+  // whether to release it). No automatic reset here.
   cpu.cycles += 7;
 }
 
@@ -137,12 +134,12 @@ export function requestNmi(cpu: M6502Cpu): void { cpu.nmi = true; }
 
 // ─── Step / Run ───────────────────────────────────────────────────────────
 
-/** Esegue una singola istruzione (o serve interrupt pending). Ritorna i
- * cycle consumati. Throws su undocumented opcode. */
+/** Execute one instruction or service a pending interrupt.
+ * Returns consumed cycles and throws on undocumented opcodes. */
 export function step(cpu: M6502Cpu, bus: MemBus6502): number {
   const cyclesBefore = cpu.cycles;
 
-  // Service interrupts prima dell'opcode fetch
+  // Service interrupts before opcode fetch.
   if (cpu.nmi) {
     cpu.lastOpcodePc = undefined;
     cpu.irqMaskDelayInstructions = 0;
@@ -167,7 +164,7 @@ export function step(cpu: M6502Cpu, bus: MemBus6502): number {
     cpu.irqMaskDelayInstructions--;
   }
 
-  // Fetch opcode (avanza PC)
+  // Fetch opcode (advances PC).
   cpu.lastOpcodePc = cpu.rf.pc as number;
   const statusBeforeOpcode = cpu.rf.p;
   const opcode = bus.read8(cpu.rf.pc) as number;

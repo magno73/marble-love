@@ -76,7 +76,7 @@ describe("levelDispatcher16EC6 (FUN_16EC6)", () => {
     writeRomWord(rom, statePtr + 0x10, 0x0010);
     writeRomWord(rom, statePtr + 0x12, 0xfff0);
 
-    levelDispatcher16EC6(s, rom);
+    levelDispatcher16EC6(s, rom, { fun_1a444: () => undefined });
 
     expect(readLong(s.workRam, 0x097c)).toBe(0);
   });

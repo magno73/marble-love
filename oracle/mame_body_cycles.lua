@@ -1,18 +1,14 @@
 -- mame_body_cycles.lua — misura cicli REALI di FUN_10FCE (body) per frame
 -- in attract gameplay (frame 12000..12099).
 --
--- ⚠ LIMITAZIONE MAME 0.286: l'API Lua non espone un cycle counter diretto
+-- MAME 0.286 limitation: the Lua API does not expose a direct cycle counter.
 -- (`cpu.total_cycles`, `cpu.state["CYCLES"]` ritornano nil). Inoltre chiamare
--- metodi su `manager.machine.time` da dentro un read-tap callback CAUSA
--- SIGSEGV se si installano più di 2-3 tap simultanei (verificato MAME 0.286
--- macOS arm64). Per questo motivo questo script misura SOLO il body totale
--- (FUN_10FCE entry → exit), con 2 tap che leggono `manager.machine.time`.
--- Il breakdown per-sub non è ottenibile in modo affidabile in questo setup.
+-- (FUN_10FCE entry -> exit), with 2 taps that read `manager.machine.time`.
 --
 -- Tecnica:
 --   - Tap entry @ 0x10FCE: registra t_entry = machine.time.as_double()
 --   - Tap exit  @ 0x1101C: t_exit - t_entry → cicli @ 7,159,090 Hz
---   - Output: JSON con cicli per frame in [FROM_FR, TO_FR].
+--   - Output: JSON with cycles per frame in [FROM_FR, TO_FR].
 --
 -- Env vars:
 --   MARBLE_TRACE_FROM        = primo frame (default 12000)

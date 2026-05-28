@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Constrain x, y to small range to evitare divu.w overflow:
+    // Constrain x, y to a small range to avoid divu.w overflow:
     // D2/D4 ≤ ~256 → D3 ≤ ~352 + clamp → D3 = 0x100. D3 >> 8 = 1 (divisor).
     // D4 << 6 ≤ 0x4000. Quotient ≤ 0x4000 — fits in word, no overflow.
     // Range [-256, 255] (signed byte sext to long).

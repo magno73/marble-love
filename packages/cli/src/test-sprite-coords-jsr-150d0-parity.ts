@@ -4,20 +4,12 @@
  * differential FUN_000150D0 vs `spriteCoordsJsr150D0`.
  *
  * **Strategia**:
- * `FUN_150D0` è una variante "compute coords + dispatch":
- *   1. legge w0 = word(A1+0xC), w2 = word(A1+0x10), w4 = word(A1+0x14)
- *   2. scrive i globals POS_X/POS_Y @ 0x400690/0x400692
- *   3. calcola packed_long = (sext(w2-w0+0x88)<<16) | ((HUD+w4+0x54-((w2_s+w0_s)>>1)) & 0xFFFF)
- *   4. scrive packed_long @ A1+0x28
- *   5. chiama FUN_264AA(structPtr, 2)  ; mode = 2 hard-coded
  *
- * Per testare in isolamento patch-iamo `FUN_000264AA` con uno stub:
+ * To test in isolation, patch `FUN_000264AA` with a stub:
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = mode (= 2)
  *     4E 75          ; rts
  *
- * Dopo `FUN_150D0`, D0 = 2 sempre (stub ritorna mode); il TS specchia con
- * inner = (_,m) => m. Confronto:
  *   - D0 long
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - struct @ A1..A1+0x40 (incluso A1+0x28 packed long)
@@ -66,7 +58,7 @@ const PTR_CHOICES = [
   0x00401d00,
 ] as const;
 
-const STRUCT_SIZE = 0x40; // confronta i primi 64 byte della struct
+const STRUCT_SIZE = 0x40;
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -104,7 +96,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  // Patch FUN_264AA con lo stub.
+  // Patch FUN_264AA with the stub.
   for (let i = 0; i < STUB_BYTES.length; i++) {
     pokeMem(cpu, FUN_264AA + i, 1, STUB_BYTES[i]!);
   }
@@ -181,11 +173,9 @@ async function main(): Promise<void> {
       ((stateInst.workRam[off + 0x14] ?? 0) << 8) |
       (stateInst.workRam[off + 0x15] ?? 0);
 
-    // Run binario
     const r = callFunction(cpu, FUN_150D0, [structPtr >>> 0]);
     const binD0 = r.d0 >>> 0;
 
-    // Run TS (mirror dello stub: ritorna mode come D0)
     const tsD0 =
       ns.spriteCoordsJsr150D0(stateInst, structPtr, {
         inner264AA: (_p: number, m: number): number => m >>> 0,
@@ -238,7 +228,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const hud = setHud(rng);
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // Forza w0 e w2 su valori che generano overflow signed sul calcolo.
     const extremes = [0x0000, 0x7fff, 0x8000, 0xffff, 0x8001, 0x7ffe];
     const w0 = extremes[Math.floor(rng() * extremes.length)]!;
     const w2 = extremes[Math.floor(rng() * extremes.length)]!;

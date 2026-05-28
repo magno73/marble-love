@@ -2,18 +2,11 @@
 /**
  * test-state-sub-5334-parity.ts — differential FUN_5334 vs stateSub5334.
  *
- * `FUN_00005334` è un trampoline 1-arg che legge due byte da work RAM
- * (`0x00401F98` e `0x00401F99`), li sign-extend a long, e chiama
- * `FUN_000052DA` con `(byte98_signExt32, byte99_signExt32, argLong)`.
+ * `FUN_000052DA` with `(byte98_signExt32, byte99_signExt32, argLong)`.
  *
  * Strategia di parity test:
- *   - Per ogni caso settiamo `argLong` (arg1) sullo stack prima della jsr,
  *     scriviamo i due byte in work RAM (sia in unified memory di Musashi
- *     via `pokeMem` sia nello state TS), poi confrontiamo i 3 valori che
- *     il binario passa allo stack-frame di `FUN_52DA` quando vi entra.
- *   - Cattura: settiamo PC = 0x5334, eseguiamo step finché PC == 0x52DA
- *     (entry di FUN_52DA, prima del `link.w`), poi leggiamo i 3 long sullo
- *     stack `(0x4,SP)`, `(0x8,SP)`, `(0xC,SP)` (vista del callee con ret
+ *     stack `(0x4,SP)`, `(0x8,SP)`, `(0xC,SP)` (callee view with ret
  *     addr in `(0,SP)`).
  *   - Confrontiamo `(arg1, arg2, arg3)` osservati vs. quelli passati allo
  *     stub `inner` di TS.
@@ -63,17 +56,14 @@ function captureEnter52DAArgs(
 ): Captured {
   const sys = cpu.system;
 
-  // Setup work RAM (i due byte letti dal trampoline). Scriviamo in unified
   // memory di Musashi a 0x00401F98 / 0x00401F99 (MMIO non interessato qui:
   // sono in work RAM 0x400000+).
   pokeMem(cpu, 0x00401f98, 1, byte98 & 0xff);
   pokeMem(cpu, 0x00401f99, 1, byte99 & 0xff);
 
-  // Stack iniziale: SP base in workRam alta (sotto 0x401F98 per non clobber).
   // Usiamo 0x401F00 (pattern di sound-cmd-gate parity).
   const sp0 = 0x401f00;
   let sp = sp0;
-  // Push argLong (1 long) — sarà a (0x4, SP) dal punto di vista di FUN_5334
   sp = (sp - 4) >>> 0;
   sys.write(sp, 4, argLong >>> 0);
   // Push sentinel return address
@@ -83,8 +73,7 @@ function captureEnter52DAArgs(
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_5334);
 
-  // Step instruction-by-instruction finché PC == 0x52DA. Il trampoline
-  // ha 11 istruzioni (~ < 30 step richiesti).
+  // has 11 instructions, requiring fewer than about 30 steps.
   let reached = false;
   for (let i = 0; i < 200; i++) {
     const pc = sys.getRegisters().pc;
@@ -100,7 +89,6 @@ function captureEnter52DAArgs(
     return { arg1: 0, arg2: 0, arg3: 0, reached: false };
   }
 
-  // FUN_52DA entry: stack è
   //   [ret_addr_to_5334_post_jsr (4,SP=0)]
   //   [arg1 long                 (4,SP)]
   //   [arg2 long                 (8,SP)]
@@ -161,7 +149,6 @@ async function main(): Promise<void> {
     } else if (i === 5) {
       byte98 = 0x80; byte99 = 0x7f; argLong = 0; // mix
     } else if (i < 20) {
-      // Sweep di byte98 sui valori cardinal (multipli di 0x11)
       byte98 = ((i - 6) * 0x11) & 0xff;
       byte99 = (~byte98) & 0xff;
       argLong = Math.floor(rng() * 0x100000000) >>> 0;
@@ -179,11 +166,11 @@ async function main(): Promise<void> {
       argLong = Math.floor(rng() * 0x100000000) >>> 0;
     }
 
-    // Run binary: cattura args che FUN_52DA riceve
+    // Run binary: capture args received by FUN_52DA.
     const bin = captureEnter52DAArgs(cpu, argLong, byte98, byte99);
 
-    // Run TS: stub inner cattura (arg1, arg2, arg3). Sincronizza il workRam
-    // dello state TS con i due byte impostati.
+    // Run TS: inner stub captures (arg1, arg2, arg3). Sync TS state workRam
+    // with the two configured bytes.
     state.workRam[0x1f98] = byte98 & 0xff;
     state.workRam[0x1f99] = byte99 & 0xff;
     let tsArg1 = -1;

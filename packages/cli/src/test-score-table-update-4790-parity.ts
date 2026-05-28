@@ -6,30 +6,30 @@
  * `FUN_00004790` (1178 byte): score table updater.
  *
  * **Strategia stub**:
- *   - FUN_43D6 (timerDeltaAccumulate) patched con stub:
+ *   - FUN_43D6 (timerDeltaAccumulate) patched with stub:
  *       `move.l #0x00401F86, D0` ; `rts`
- *     Il valore ritornato (A2) e' 0x401F86, dove abbiamo gia' scritto i due
- *     long accumulatori. La funzione non riscrive nulla, cosi' TS e binario
- *     vedono gli stessi valori.
- *   - FUN_5236 (setFlagBit) patched con: `rts`
- *   - FUN_4442 (sound dispatcher) patched con: `moveq #0, D0` ; `rts`
+ *     The returned value (A2) is 0x401F86, where the two long accumulators were
+ *     already written. The function does not rewrite anything, so TS and binary
+ *     see the same values.
+ *   - FUN_5236 (setFlagBit) patched with: `rts`
+ *   - FUN_4442 (sound dispatcher) patched with: `moveq #0, D0` ; `rts`
  *
  * **Confronto**:
- *   - Tutti i byte @ base..base+numRec*20-1 (tabella score, 60 byte)
+ *   - All bytes @ base..base+numRec*20-1 (score table, 60 bytes)
  *   - Long @ 0x401F92 (score accumulatore)
  *
- * **Setup per ogni caso random**:
+ * **Setup for each random case**:
  *   - *0x401FFC = PTR_ABS (0x401A00, struct base)
  *   - 60 byte random @ base+0..+59 (score table 3 record × 20 byte)
  *   - Long @ 0x401F86 = delta1 random (timer accumulator 1)
  *   - Long @ 0x401F8A = delta2 random (timer accumulator 2)
  *   - Long @ 0x401F92 = scoreAccum random
- *   - 7 long args sullo stack (arg1..arg7)
+ *   - 7 long args on the stack (arg1..arg7)
  *
- * **Pattern coverage** (5 suite × 100 = 500 casi):
- *   A. delta1=0, delta2=0 → nessuna modifica tabella
- *   B. delta1>0, delta2=0 → solo prima entry
- *   C. delta1=0, delta2>0 → solo seconda entry
+ * **Pattern coverage** (5 suites x 100 = 500 cases):
+ *   A. delta1=0, delta2=0 -> no table changes
+ *   B. delta1>0, delta2=0 -> first entry only
+ *   C. delta1=0, delta2>0 -> second entry only
  *   D. entrambi >0        → entrambe le entry
  *   E. fully random       → stress generale
  *
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < STUB_5236.length; i++) pokeMem(cpu, FUN_5236 + i, 1, STUB_5236[i]!);
   for (let i = 0; i < STUB_4442.length; i++) pokeMem(cpu, FUN_4442 + i, 1, STUB_4442[i]!);
 
-  // Leggi ROM bytes usati dalla funzione
+  // Read ROM bytes used by the function.
   const romByte1006F = peekMem(cpu, 0x0001006f, 1) & 0xff;
   const romTable7974: [number, number, number, number] = [
     peekMem(cpu, 0x00007974 + 0, 1) & 0xff,
@@ -236,11 +236,11 @@ async function main(): Promise<void> {
     for (let i = 0; i < TABLE_LEN; i++) binTable.push(peekMem(cpu, BASE_ABS + i, 1) & 0xff);
     const binSc = peekMem(cpu, SC_ABS, 4) >>> 0;
 
-    // ── Ripristina workRam per TS (setup di nuovo con stessi valori) ─────
+    // Restore workRam for TS, setting up again with the same values.
     setupState(cpu, state.workRam, tableBytes, delta1, delta2, scoreAccum0);
-    // (pokeLong4 scrive sia cpu che state.workRam tramite setupState;
-    //  ma le scritture del binario su cpu sono gia' avvenute — riscriviamo
-    //  solo state.workRam manualmente)
+    // pokeLong4 writes both cpu and state.workRam through setupState, but binary
+    // writes to cpu have already happened; rewrite the TS-side mirror.
+    // only state.workRam manually).
     const r = state.workRam;
     writeLong4(r, PTR_FFC - 0x400000, PTR_ABS);
     for (let i = 0; i < TABLE_LEN; i++) r[BASE_OFF + i] = (tableBytes[i] ?? 0) & 0xff;

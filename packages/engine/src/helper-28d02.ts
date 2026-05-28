@@ -1,9 +1,8 @@
 /**
- * helper-28d02.ts — replica `FUN_00028D02` (46 istr, 0xB6 byte).
+ * Bit-perfect port of `FUN_00028D02`.
  *
- * "PF-RAM scroll-buffer swap" helper: dato un flag byte `flag`, scambia (o
- * ripristina) le 4 word di scroll-offset in cima a ogni riga del playfield RAM
- * tra due banchi circolari a distanza 0x1000 byte.
+ * Saves or restores four playfield words per row between two circular banks
+ * separated by 0x1000 bytes.
  *
  * **Disasm 0x28D02..0x28DB7** (46 istr, body range [0x28D02, 0x28DB7]):
  *
@@ -78,28 +77,17 @@
  *   00028db2  movem.l (SP)+,{D2 D3}       ; restore
  *   00028db6  rts
  *
- * **Semantica**:
- *   - Il PF RAM è circolare a 0x2000 byte (0xA00000–0xA01FFF).
- *   - `xscroll` (word a 0x400000, signed-extended) indica la riga corrente.
- *   - A0 = 0xa00440 + (xscroll & 0xfff8) * 16: prima entry nella riga.
- *   - A1 = A0 + 0x1000 (bank opposto, con wrap circolare).
- *   - Ogni iterazione processa 4 word consecutive, poi salta 0x78 byte
- *     (= salto alla riga successiva nel tilemap a 128-byte/row: 8 byte letti +
- *      120 byte skippati = 128 byte/riga).
- *   - `flag != 0` (=1): SAVE mode — copia 4 word da A0 a A1, scrive al loro
- *     posto in A0: D2w, D2w+0x10, D2w+0x20, D2w+0x30 (D2w = indice riga 0..15).
- *   - `flag == 0`: RESTORE mode — copia 4 word da A1 a A0 (ripristina).
+ * Semantics:
+ *   - A1 = A0 + 0x1000, wrapping through the opposite circular bank.
  *
- * **Callers** (`FUN_00028972` = `gameMainGate`):
- *   - `jsr FUN_28D02` con arg long `(0x1).w` (= 1) se bit0 of `*0x4003AA` clear.
- *   - `jsr FUN_28D02` con arg long `clr.l` (= 0) alla fine del Block C.
+ * Callers (`FUN_00028972` = `gameMainGate`):
+ *   - `jsr FUN_28D02` with long arg `(0x1).w` when bit 0 of `*0x4003AA` is clear.
+ *   - `jsr FUN_28D02` with long arg `clr.l` (= 0) at the end of block C.
  *
- * **Side effects**:
- *   - `state.playfieldRam` nella regione
- *     `[A0_base .. A0_base + 16*0x80]` con wrap circolare a 0x2000.
- *   - `state.workRam[0..1]` letto (xscroll word), non scritto.
+ * Side effects:
+ *   - Mutates `state.playfieldRam` in the covered row region with 0x2000-byte
+ *     circular wrapping.
  *
- * Verificato bit-perfect via `packages/cli/src/test-helper-28d02-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -163,17 +151,12 @@ function pfWrap(addr: number): number {
 // ─── Main function ───────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00028D02`.
  *
- * @param state   GameState (legge `workRam[0..1]`, scrive `playfieldRam`).
- * @param flag    Byte arg spinto sullo stack dal caller (low byte del long):
- *                - `!= 0` (SAVE):    copia 4 word da A0 bank a A1 bank,
- *                                    sostituisce le 4 word a A0 con D2w, D2w+0x10,
- *                                    D2w+0x20, D2w+0x30 (D2w = indice riga 0..15).
- *                - `== 0` (RESTORE): copia 4 word da A1 bank a A0 bank.
+ * @param flag Low byte of the caller's long stack argument. Nonzero saves the
+ *             current A0 words into A1 and writes generated row markers into
+ *             A0; zero restores the four words from A1 to A0.
  */
 export function helper28D02(state: GameState, flag: number): void {
-  // Legge xscroll word @ 0x400000, sign-extend a long.
   const xscrollRaw =
     (((state.workRam[XSCROLL_OFF] ?? 0) << 8) | (state.workRam[XSCROLL_OFF + 1] ?? 0)) & 0xffff;
   // ext.l: sign-extend 16-bit → 32-bit (then mask with 0xfff8).

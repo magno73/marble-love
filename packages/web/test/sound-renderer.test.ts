@@ -1,10 +1,10 @@
 /**
- * sound-renderer.test.ts — Pure logic tests (AudioContext non testable in jsdom).
+ * sound-renderer.test.ts - pure logic tests (AudioContext is not testable in jsdom).
  *
- * Verifichiamo solo il decoder register → audio params:
- *   - YM2151 KC byte → frequenza Hz (OPM frequency formula)
- *   - YM2151 TL byte → volume linear
- *   - POKEY AUDF/AUDC → freq + noise + volume
+ * Verify only register decoder -> audio params:
+ *   - YM2151 KC byte -> frequency Hz (OPM frequency formula)
+ *   - YM2151 TL byte -> linear volume
+ *   - POKEY AUDF/AUDC -> freq + noise + volume
  *
  * Il flow Web Audio (AudioContext.createWorklet → postMessage → synth) e'
  * testato manualmente nel browser. Vedi `?sound=1` query param wire-up.

@@ -1,16 +1,11 @@
 /**
- * helper-121b8.ts — replica `FUN_000121B8` (1634 byte, 0x121B8–0x1281A).
+ * helper-121b8.ts — `FUN_000121B8` replica (1634 bytes, 0x121B8–0x1281A).
  *
- * "Object physics-update + collision + state-dispatch" — il dispatcher
- * principale per l'aggiornamento di un singolo oggetto/sprite dinamico.
- * Prende un puntatore all'object struct in work RAM, integra la posizione,
- * esegue collision detection, dispatcha lo stato via una catena di sotto-
- * funzioni specializzate, e aggiorna i globali di sprite.
+ * "Object physics-update + collision + state-dispatch" dispatcher.
  *
  * **Calling convention M68k** (RTL, 1 arg long):
- *   - `SP+4` → oggetto struct ptr (A2 nel frame della funzione).
  *
- * **Disasm 0x121B8..0x1281A** (466 istruzioni, 1634 byte):
+ * **Disasm 0x121B8..0x1281A** (466 instructions, 1634 bytes):
  *
  *   movem.l {D2–D5,A2–A4}, -(SP)
  *   movea.l (0x20,SP), A2         ; A2 = objPtr (arg)
@@ -60,7 +55,7 @@
  *   - `HELPER_121B8_ADDR = 0x000121b8`
  *
  * **Sub injection** (`Helper121B8Subs`):
- *   - `fun_1bab2` — spritePosUpdate1BAB2. Default: usa import diretto.
+ *   - `fun_1bab2` — spritePosUpdate1BAB2. Default: uses direct import.
  *   - `fun_1cc62` — spriteProject1CC62(state, 0). Default: usa import.
  *   - `fun_1c676` — spriteBracketLerp1C676. Default: usa import.
  *   - `fun_12886` — swapLongPair(state, a2). Default: usa import.
@@ -89,13 +84,8 @@
  *   - `fun_25e7c` — vectorScale. Default: usa import.
  *   - `fun_285b0` — helper285B0. Default: usa import.
  *
- * **Parity**: bit-perfect vs MAME/musashi-wasm verificata in
  *   `packages/cli/src/test-helper-121b8-parity.ts` (500/500).
  *
- * **Stub noti** (per parity test): i callee non ancora replicati
- * (FUN_29CCE, FUN_1BC88, FUN_1924E, FUN_25C74) vengono patchati con
- * RTS nel binario Musashi, e nei subs TS è usato il default no-op /
- * returns-0, garantendo parità sulle side-effects dei campi struct.
  */
 
 import type { GameState } from "./state.js";
@@ -134,13 +124,11 @@ import { helper1BC88 } from "./helper-1bc88.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/** Indirizzo assoluto M68k di `FUN_000121B8`. */
 export const HELPER_121B8_ADDR = 0x000121b8 as const;
 
 /** Base assoluta workRam M68k. */
 const WORK_RAM_BASE = 0x00400000 as const;
 
-// Globals toccati / letti da FUN_121B8 (offset relativi a WORK_RAM_BASE):
 const OFF_GLOBAL_X = 0x684; // 0x400684 long (obj.x snapshot)
 const OFF_GLOBAL_Y = 0x688; // 0x400688 long (obj.y snapshot)
 const OFF_GLOBAL_Z = 0x68c; // 0x40068C long (obj.z snapshot)
@@ -235,7 +223,6 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001CC62` — spriteProject1CC62(state, 0).
-   * Ritorna D0 (long unsigned). Default: usa import.
    */
   fun_1cc62?: (state: GameState, argLong: number) => number;
 
@@ -253,13 +240,12 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001B5C2` — stateSub1B5C2(state, a2Addr, a3Addr, d2Addr).
-   * Default: chiama `stateSub1B5C2(state, a2Addr, 0x40066a, 0x40069e)`.
    */
   fun_1b5c2?: (state: GameState, a2Addr: number) => void;
 
   /**
    * `FUN_00029CCE` — NOT YET IMPLEMENTED. Default: no-op.
-   * Arg: objAddr (long sullo stack).
+   * Arg: objAddr (long on the stack).
    */
   fun_29cce?: (state: GameState, objAddr: number) => void;
 
@@ -331,7 +317,7 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001281C` — objectEnter1281C(state, objAddr).
-   * Default: usa import con Inner264AA → no-op (returns 0).
+   * Default: use injected Inner264AA -> no-op (returns 0).
    */
   fun_1281c?: (state: GameState, objAddr: number) => number;
 
@@ -405,15 +391,9 @@ export interface Helper121B8Subs {
 // ─── Replica ─────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000121B8`.
  *
  * @param state   GameState.
- * @param rom     RomImage (necessario per sub-callee che leggono la ROM).
- * @param objAddr Indirizzo assoluto M68k dell'object struct in work RAM.
- *                Corrisponde al valore pushato sullo stack prima di JSR.
- * @param subs    Injection per i callee. Tutti i campi sono opzionali;
  *                i default usano i moduli importati (o no-op per i non
- *                ancora replicati).
  */
 export function helper121B8(
   state: GameState,

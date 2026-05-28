@@ -2,19 +2,9 @@
 /**
  * test-clear-pf-stride-parity.ts — differential FUN_12186 vs clearPlayfieldStride.
  *
- * `FUN_00012186` (32 byte) azzera 64 finestre da 72 byte (con stride 0x80)
- * nella playfield RAM @ 0xA00000-0xA01FFF, partendo da 0xA00006. La funzione
- * non legge nulla dalla PF RAM: il risultato dipende solo dal contenuto
- * **iniziale** del range. Per coprire bene il ramo "preserve":
  *
- *   Per ogni caso N:
- *     1. Pre-fill PF RAM [0xA00000..0xA02000) con un pattern random
- *        (ROM mirror della stessa sequenza nel buffer TS).
- *     2. callFunction(0x12186, [])  ; binario azzera in-place
- *     3. clearPlayfieldStride(buf)  ; TS azzera in-place sul buffer parallelo
- *     4. Compara byte-by-byte tutti i 0x2000 byte.
+ *     1. Pre-fill PF RAM [0xA00000..0xA02000) with a random pattern
  *
- * Se la funzione TS è bit-perfect, ogni byte deve combaciare.
  *
  * Uso: npx tsx packages/cli/src/test-clear-pf-stride-parity.ts [N]
  */
@@ -66,13 +56,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Genera pattern di pre-fill, deterministico per ogni caso.
-    // Pattern-driven primi casi per coprire bordi:
-    //   0: tutti 0xFF
-    //   1: tutti 0x55 (alternato bit)
-    //   2: tutti 0xAA
-    //   3: tutti 0x01
-    //   4: tutti 0x00 (no-op atteso)
     //   5: incrementing pattern (i & 0xFF)
     //   6: pattern 0xFE per beccare endian sui long
     //   7: pattern di "marker" 0xCC
@@ -93,7 +76,7 @@ async function main(): Promise<void> {
     }
 
     // ─── Setup binary side ───────────────────────────────────────────────
-    // Pre-fill PF RAM con il pattern via pokeMem (a byte).
+    // Pre-fill PF RAM with the pattern via pokeMem (byte-wise).
     for (let j = 0; j < PF_RAM_SIZE; j++) {
       pokeMem(cpu, PF_RAM_BASE + j, 1, pf[j] ?? 0);
     }

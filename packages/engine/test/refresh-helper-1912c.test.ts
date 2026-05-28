@@ -1,12 +1,12 @@
 /**
- * refresh-helper-1912c.test.ts — smoke tests per `FUN_0001912C`.
+ * refresh-helper-1912c.test.ts - smoke tests for `FUN_0001912C`.
  *
- * Verifica:
- *   - Gate: *0x400394.w != 4 → gatedOut senza side effects.
- *   - Slot scan: D3 flag alzato quando slot[0x18]==1 && slot[0x14..0x15]==0x3F6E && slot[0x1b]==1.
- *   - Entity loop con tutti i branch principali (threshold_only, state7_kind2_*,
+ * Verifies:
+ *   - Gate: *0x400394.w != 4 -> gatedOut with no side effects.
+ *   - Slot scan: D3 flag raised when slot[0x18]==1 && slot[0x14..0x15]==0x3F6E && slot[0x1b]==1.
+ *   - Entity loop with all main branches (threshold_only, state7_kind2_*,
  *     state7_kindx_*, not7_*).
- *   - Chiamata a fun_194ba e fun_199d6 corretta per ogni path.
+ *   - Correct calls to fun_194ba and fun_199d6 for each path.
  */
 
 import { describe, it, expect } from "vitest";

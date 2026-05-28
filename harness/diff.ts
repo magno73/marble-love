@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * diff.ts — confronta due trace JSONL field-by-field e identifica il **primo
- * frame** e il **primo campo** che divergono.
+ * diff.ts - compares two JSONL traces field-by-field and identifies the first
+ * divergent frame and field set.
  *
- * Uso:
+ * Usage:
  *   node --experimental-strip-types harness/diff.ts \
  *       --truth traces/oracle_<scen>.jsonl \
  *       --reimpl traces/reimpl_<scen>.jsonl \
  *       --out traces/divergence_<scen>.json [--context 5]
  *
- * Output `divergence_<scen>.json` ha schema:
+ * Output `divergence_<scen>.json` schema:
  *   {
  *     "scenario": "level1_no_input",
  *     "parity": 0.973,
@@ -24,9 +24,8 @@
  *     "suspectedSubsystem": "physics" | "ai" | "rng" | "input" | "io" | "unknown"
  *   }
  *
- * Heuristica di sospetto: se prima divergenza è in `rng.seed` → "rng".
- * Se in `marble.vx/vy/vz` o `pos` → "physics". Se in `enemies.*` → "ai".
- * Se in `input.*` → "input/io".
+ * Subsystem heuristic: `rng.seed` suggests RNG drift, marble velocity/position
+ * suggests physics, `enemies.*` suggests AI, and `input.*` suggests input/I/O.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -73,18 +72,18 @@ function readJsonl(path: string): { header: any; frames: any[] } {
   return { header, frames };
 }
 
-/** Campi escludidi dal diff: metadata, non parte del game state.
- *  - cpuTicks: PC del 68010 / tick CPU; dipende dall'emulator, non dal game state
- *  - f: frame counter, metadata di trace (allineamento gestito da --truth-offset)
- *  - workRamHash: ridondante quando workRamHashes (regionale) è presente */
+/** Fields excluded from diffing because they are metadata, not game state.
+ *  - cpuTicks: 68010 PC/tick metadata; emulator dependent.
+ *  - f: trace frame counter; alignment is handled by --truth-offset.
+ *  - workRamHash: redundant when regional workRamHashes are present. */
 const EXCLUDED_FIELDS = new Set<string>(["cpuTicks", "f"]);
 
-/** Confronta due valori e ritorna il path puntato (es. "marble.vx") se diversi. */
+/** Compares two values and appends divergent paths such as "marble.vx". */
 function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   if (a === b) return;
   if (EXCLUDED_FIELDS.has(path)) return;
-  // Schema mismatch v1/v2: se un lato manca un campo che l'altro ha,
-  // saltalo (l'altro lato semplicemente non lo dumpa).
+  // Schema mismatch v1/v2: if one side lacks a field, skip it. The other side
+  // simply did not dump that value.
   if (a === undefined || b === undefined) return;
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
     out.push(path);
@@ -92,8 +91,8 @@ function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   }
   const ao = a as Record<string, unknown>;
   const bo = b as Record<string, unknown>;
-  // Schema v2: se workRamHashes è presente su ENTRAMBI i lati, salta il
-  // workRamHash globale (il regional dà più info; tenerli entrambi è rumore).
+  // Schema v2: if both sides have regional workRamHashes, skip the global
+  // workRamHash. Keeping both is noise.
   const bothHaveRegional =
     Array.isArray(ao["workRamHashes"]) && Array.isArray(bo["workRamHashes"]);
   const keys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
@@ -105,7 +104,7 @@ function deepDiff(a: unknown, b: unknown, path: string, out: string[]): void {
   }
 }
 
-/** Traduce "workRamHashes.5" in "workRam[0x500..0x5FF]" per leggibilità. */
+/** Formats "workRamHashes.5" as "workRam[0x500..0x5FF]" for readability. */
 function annotateField(field: string): string {
   const m = field.match(/^workRamHashes\.(\d+)$/);
   if (!m) return field;
@@ -136,17 +135,17 @@ function main(): void {
   const r = readJsonl(args.reimpl);
 
   if (t.header.schemaVersion !== r.header.schemaVersion) {
-    // v2 introduce workRamHashes regional. Una mismatch v1/v2 è OK
-    // (i campi mancanti vengono saltati nel deepDiff) ma avvisa.
+    // v2 adds regional workRamHashes. A v1/v2 mismatch is acceptable because
+    // missing fields are skipped in deepDiff, but warn anyway.
     console.warn(
       `warning: schema mismatch truth=${t.header.schemaVersion} reimpl=${r.header.schemaVersion} ` +
-      `(continuo, ma campi solo-v2 come workRamHashes saranno saltati)`
+      `(continuing; v2-only fields such as workRamHashes will be skipped)`
     );
   }
 
-  // Allineamento: reimpl[i] ↔ truth[i + truthOffset]. Comune se MAME ha
-  // un boot transient di N frame prima del primo tick, mentre reimpl ha
-  // bootInit istantaneo (es. attract_mode → truthOffset=45).
+  // Alignment: reimpl[i] maps to truth[i + truthOffset]. This is common when
+  // MAME has a boot transient before the first tick while the TS path applies
+  // bootInit immediately.
   const n = Math.min(r.frames.length, t.frames.length - args.truthOffset);
   let firstDivIdx = -1;
   let firstDivFields: string[] = [];
@@ -175,7 +174,7 @@ function main(): void {
     result.parity = compared === Math.max(t.frames.length, r.frames.length) - args.fromFrame ? 1 : compared / (Math.max(t.frames.length, r.frames.length) - args.fromFrame);
     result.firstDivergence = null;
     result.suspectedSubsystem = "none";
-    console.log(`✅ parità raggiunta su ${compared} frame (da ${args.fromFrame}).`);
+    console.log(`parity reached across ${compared} frames from ${args.fromFrame}.`);
   } else {
     result.parity = (firstDivIdx - args.fromFrame) / compared;
     const truthIdx = firstDivIdx + args.truthOffset;
@@ -192,15 +191,15 @@ function main(): void {
     );
     result.suspectedSubsystem = suspectedSubsystem(firstDivFields);
     console.log(
-      `❌ divergenza al frame ${firstDivIdx} (${firstDivFields.length} campi). Sospettato: ${result.suspectedSubsystem}`
+      `divergence at frame ${firstDivIdx} (${firstDivFields.length} fields). Suspected subsystem: ${result.suspectedSubsystem}`
     );
-    console.log("   campi:", firstDivFields.slice(0, 8).map(annotateField).join(", "));
+    console.log("   fields:", firstDivFields.slice(0, 8).map(annotateField).join(", "));
   }
 
   const outPath = resolve(args.out);
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(result, null, 2), "utf8");
-  console.log(`report → ${outPath}`);
+  console.log(`report: ${outPath}`);
 }
 
 main();

@@ -5,8 +5,8 @@
 
 Related branch documents:
 
-- Product requirements: `docs/classic-renderer-prd.md`
-- Implementation plan: `docs/classic-renderer-plan.md`
+- Product requirements: `docs/internal/prds/classic-renderer-prd.md`
+- Implementation plan: `docs/internal/prds/classic-renderer-plan.md`
 
 ## What is implemented
 
@@ -193,5 +193,5 @@ bytes or derived assets are copied into this branch.
 
 The PRD also asks for root `npm run typecheck`, `npm run lint`, and
 `npm run build`. At PRD close, those root commands still have pre-existing
-failures outside the renderer scope. See `docs/classic-renderer-plan.md` for
-the current list.
+failures outside the renderer scope. See
+`docs/internal/prds/classic-renderer-plan.md` for the historical list.

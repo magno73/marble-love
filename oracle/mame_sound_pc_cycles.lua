@@ -1,13 +1,13 @@
--- mame_sound_pc_cycles.lua — log cycle count del sound 6502 a specifici
--- checkpoint PC. Permette confronto cycle-exact TS vs MAME.
+-- mame_sound_pc_cycles.lua - log the sound 6502 cycle count at specific PC
+-- checkpoints. Allows cycle-exact TS vs MAME comparison.
 --
--- Checkpoint: lista di PC + cycle count alla prima volta che ognuno viene
--- raggiunto. Confronto col TS via probe-cycles-checkpoint.ts.
+-- Checkpoints: list PC + cycle count the first time each one is
+-- reached. Compare with TS through probe-cycles-checkpoint.ts.
 --
--- TODO: cycle count via manager.machine.time × clock ha precision issues
--- (Lua int overflow su 1e18). Per drill A1 cycle-exact serve approccio
--- diverso: contare istruzioni (= read fetches ROM) o usare attoseconds
--- come grandezza relativa fra checkpoint.
+-- TODO: cycle count via manager.machine.time x clock has precision issues
+-- from Lua integer overflow around 1e18. For A1 cycle-exact drills, use a
+-- different approach: count instructions through ROM fetches or compare
+-- attoseconds as a relative quantity between checkpoints.
 
 local OUT_PATH = os.getenv("MARBLE_PC_CYC_OUT") or "/tmp/mame_pc_cycles.json"
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_PC_CYC_TARGET") or "500")
@@ -15,7 +15,7 @@ local COIN_FRAME = 1200
 local START_FRAME = 1500
 local PULSE_LEN = 15
 
--- Checkpoint PCs interessanti del boot path
+-- Interesting boot-path checkpoint PCs.
 local CHECKPOINTS = {
     0x8002, 0x8016, 0x802C, 0x808F, 0x80A3, 0x80A6, 0x80AD, 0x80AE,
     0x80B5, 0x80C3, 0x80C8, 0x80E7, 0x80EA, 0x80EE,

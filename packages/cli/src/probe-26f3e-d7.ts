@@ -1,6 +1,6 @@
 // Probe: confronta entity list @ 0x4003BC..0x4003DC e D7 (CNT_ADDR @ 0x406)
 // TS vs MAME per indagine lateGameLogic26F3E.
-// Output: per ogni frame chiave, dump entity bytes + D7 + cursor pointers.
+// Output: for each key frame, dump entity bytes + D7 + cursor pointers.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";

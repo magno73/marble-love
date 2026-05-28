@@ -1,25 +1,14 @@
 /**
- * sub-1937c.ts — replica `FUN_0001937C` (90 byte): valida posizione entity.
  *
- * "Entity position validator". Legge `entity[0xC..0xD]` (x word) e
- * `entity[0x10..0x11]` (y word) dell'entity e chiama due check successivi:
  *
- *   1. `FUN_000193D8(entity, x, y)` — *proximity check*: scansiona l'array
- *      di 9 entity @ 0x401890 (stride 0x28) e ritorna 1 se trova un altro
- *      entity (≠ self, status != 0, kind != 2) con |Δx| < 0xC e |Δy| < 0xC.
- *      Ritorna 0 altrimenti.
+ *      entity (not self, status != 0, kind != 2) with |dx| < 0xC and |dy| < 0xC.
  *
- *   2. `FUN_00019460(x, y)` — *grid bitmap check*: testa un bit nella tabella
- *      ROM @ 0x24496 a partire da `(x>>3)-0x59` e `(y>>3)-0x5A`. Ritorna 1 se
- *      fuori range o se il bit corrispondente è settato; 0 altrimenti.
  *
- * **Semantica**: la funzione ritorna 1 ("valid") se ENTRAMBI ritornano 0
- * (nessuna proximity collision **e** non su grid solido). Altrimenti ritorna 0.
  *
  *
  * **Disasm 0x1937C..0x193D8** (90 byte):
  *
- *   movem.l  {D4,D3,D2},-(SP)               ; salva D2..D4
+ *   movem.l  {D4,D3,D2},-(SP)               ; save D2..D4
  *   movea.l  (0x10,SP),A1                   ; A1 = arg (entity ptr)
  *   lea      (0xc,A1),A0
  *   move.w   (A0),D3w                       ; D3w = entity[0xC..0xD] (x word)
@@ -38,7 +27,6 @@
  *   jsr      0x000193d8.l
  *   tst.l    D0
  *   lea      (0xc,SP),SP                    ; pop 3 long args
- *   bne.w    0x193cc                        ; if D0 != 0 → invalid, salta
  *
  *   ; second: FUN_19460(x_long, y_long)
  *   move.w   D4w,D0w
@@ -60,25 +48,13 @@
  *   movem.l  (SP)+,{D2,D3,D4}
  *   rts
  *
- * **Quirk**: il flow è invertito rispetto al naming "validate":
- *   - D2 inizia a 1 (default).
- *   - se proximity (FUN_193D8) ritorna NON-zero → resta 1 → return 1.
- *   - se grid (FUN_19460) ritorna NON-zero → resta 1 → return 1.
- *   - solo se entrambi ritornano 0 → `clr.b D2b` → return 0.
+ *   - D2 starts at 1 (default).
+ *   - only if both return 0 → `clr.b D2b` → return 0.
  *
- * Quindi **ritorna 1 quando la posizione è "bloccata/invalida"** e 0 quando
- * è "libera/valida". Il caller (`FUN_19692`/`FUN_198BC`) usa
- * `tst.l D0; beq.w return_pos_restore`, cioè:
- *   - D0 == 0 (libera) → restore pos e return (la entity NON può muoversi qui!)
- *   - D0 != 0 (occupata) → fall-through (apply move comunque)
+ *   - D0 != 0 (occupied) → fall-through (apply move anyway)
  *
- * NB: questa è la stessa semantica replicata in `proximity-check.ts` come
- * `validatePosition`, che ritorna 1 se "blocked" e 0 se "free". Il caller
- * 198BC/19692 documenta erroneamente "0 = invalid" nei commenti: in realtà
- * "0 = pos libera → restore (entity non si muove)", "1 = pos occupata →
- * tenta direzione". È il convenzionale "test cell occupied" del binario.
+ * "0 = free position → restore (entity does not move)", "1 = occupied position →
  *
- * Verifica bit-perfect via `packages/cli/src/test-sub-1937c-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -86,13 +62,9 @@ import type { RomImage } from "./bus.js";
 
 // ─── Costanti ────────────────────────────────────────────────────────────
 
-/** Base della tabella ROM grid bitmap (`FUN_19460`). */
 export const ROM_GRID_BASE = 0x24496 as const;
-/** Base dell'array proximity (9 entry, stride 0x28). */
 export const PROX_ARRAY_BASE = 0x401890 as const;
-/** Numero di entry nell'array proximity. */
 export const PROX_ARRAY_COUNT = 9 as const;
-/** Stride dell'array proximity (byte). */
 export const PROX_ARRAY_STRIDE = 0x28 as const;
 /** Distanza massima (esclusa) per match proximity. */
 export const PROX_THRESHOLD = 0x0c as const;
@@ -104,7 +76,7 @@ export const ENTITY_POS_Y_OFFSET = 0x10 as const;
 export const ENTITY_STATUS_OFFSET = 0x18 as const;
 /** Offset entity[0x1A] (kind byte: 2 = skip). */
 export const ENTITY_KIND_OFFSET = 0x1a as const;
-/** Kind che fa skip in proximity (`kind == 2`). */
+/** Kind skipped in proximity checks (`kind == 2`). */
 export const KIND_SKIP = 0x02 as const;
 /** Soglia di shift per il grid bitmap (`x >> 3`). */
 export const GRID_SHIFT = 0x03 as const;
@@ -132,17 +104,9 @@ function absSigned(v: number): number {
 // ─── FUN_193D8: proximity check ──────────────────────────────────────────
 
 /**
- * Replica `FUN_000193D8`: scansiona l'array proximity @ 0x401890 (9 × 0x28).
  *
- * Ritorna 1 se trova un'entry diversa da `excludePtr`, con `status != 0` e
- * `kind != 2`, e con `|entry.x - x| < 0xC && |entry.y - y| < 0xC`. Ritorna 0
- * altrimenti.
  *
- * NB: il binario fa la sottrazione **word-wide** (`sub.w D2w,D5w`) e poi
- * controlla `tst.w D5w; bge ... neg.l D0` per ottenere il modulo word. La
- * `neg.l` su un valore con high-word a 0 e low-word negativo ribalta il bit
- * di segno della word. Ma per il check `bls #0xC, D6w` si guarda solo la word
- * bassa, quindi l'abs word funziona come `abs(signed_word(dx))`.
+ * checks `tst.w D5w; bge ... neg.l D0` to obtain the word magnitude.
  */
 export function sub193D8ProximityCheck(
   state: GameState,
@@ -175,13 +139,9 @@ export function sub193D8ProximityCheck(
  * Replica `FUN_00019460`: test bit nel grid bitmap ROM @ 0x24496.
  *
  * Computa `x_idx = (x_word >> 3) - 0x59` (byte) e `y_idx = (y_word >> 3) - 0x5A`
- * (byte). Se uno dei due è fuori range `[0, 0xF]` → ritorna 1. Altrimenti
- * legge `word_val = ROM[0x24496 + y_idx*2]` (signed word) e ritorna
  * `(word_val & (1 << x_idx)) != 0 ? 1 : 0`.
  *
  * Per matchare i flag M68K l'address mode `(0,A0,D0w*1)` usa D0 come word,
- * sext-extended dalla mossa precedente (byte → word). In pratica per x_idx
- * in [0, 0xF] è equivalente a un index lineare in ROM[0x24496..0x244B6].
  */
 export function sub19460GridBitmap(
   rom: RomImage,
@@ -215,15 +175,10 @@ export function sub19460GridBitmap(
 // ─── FUN_1937C: validate position (orchestrator) ─────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001937C`.
  *
- * @param state       GameState (legge `entity[0xC..0xD]` e `entity[0x10..0x11]`).
  * @param rom         RomImage per `FUN_19460` (grid bitmap @ ROM[0x24496]).
- * @param entityAddr  indirizzo assoluto m68k della struct entity.
  *
- * @returns 1 se posizione "bloccata" (proximity hit o grid solido), 0 se
  *          "libera". NB: il caller `FUN_19692`/`FUN_198BC` usa `tst.l D0;
- *          beq` → 0 (libera) significa "non si può muovere, restore pos".
  */
 export function sub1937C(
   state: GameState,
@@ -243,7 +198,6 @@ export function sub1937C(
 }
 
 /**
- * Adatta `sub1937C` alla firma `(state, addr) => number` usata da sub-injection
  * (`StateSub198BCSubs.fun_1937c`, `Sub19692Subs.fun_1937c`).
  *
  * @param rom  RomImage da iniettare (catturato in closure).

@@ -1,7 +1,7 @@
 /**
  * Test renderStringChain (FUN_2572) — 262 byte pure leaf.
  *
- * Bit-perfect verificato vs binary (2000/2000) tramite
+ * Bit-perfect verified against the binary (2000/2000) through
  * `cli/src/test-string-render-parity.ts`.
  */
 

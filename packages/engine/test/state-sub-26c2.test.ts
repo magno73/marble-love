@@ -2,7 +2,7 @@
  * state-sub-26c2.test.ts — smoke + corner case di FUN_26C2.
  *
  * FUN_26C2 esegue: (1) renderStringChain(arg1, sext(arg2.w)) via stub;
- * (2) registra primo slot vuoto in state 5/6 con threshold = abs(arg3.w).
+ * (2) registers first empty slot in state 5/6 with threshold = abs(arg3.w).
  */
 
 import { describe, it, expect } from "vitest";
@@ -38,7 +38,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
       fun_2572: (a, b) => calls.push([a >>> 0, b | 0]),
     });
     expect(ret).toBe(1);
-    // renderStringChain chiamata con (arg1, sext(arg2.w))
+    // renderStringChain called with (arg1, sext(arg2.w)).
     expect(calls).toEqual([[0xdeadbeef, 0xffffabcd | 0]]);
     // Slot 0
     expect(readLong(s, DATA_BASE + 0)).toBe(0xdeadbeef);
@@ -84,7 +84,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
       fun_2572: (a, b) => calls.push([a >>> 0, b | 0]),
     });
     expect(ret).toBe(0);
-    // renderStringChain chiamata: (arg1, sext(0x9abc) = 0xffff9abc signed)
+    // renderStringChain called with (arg1, sext(0x9abc) = 0xffff9abc signed).
     expect(calls.length).toBe(1);
     expect(calls[0][0]).toBe(0x12345678);
     expect(calls[0][1] | 0).toBe(0xffff9abc | 0);
@@ -108,7 +108,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     const ret = stateSub26C2(s, 0x11111111, 0x2222, 0x3333);
     expect(ret).toBe(1);
     expect(s.workRam[STATE_BASE + 0]).toBe(5);
-    // FLAG34 invariato
+    // FLAG34 unchanged.
     expect(s.workRam[FLAG34_BASE + 0]).toBe(0x77);
   });
 

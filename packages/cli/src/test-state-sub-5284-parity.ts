@@ -2,7 +2,6 @@
 /**
  * test-state-sub-5284-parity.ts — differential FUN_5284 vs stateSub5284.
  *
- * `FUN_00005284` (30 byte) è un busy-wait loop:
  *   1. jsr FUN_4DCC (sound chip writer; 1ª istr = `addq.l #1,(0x401FF8).l`)
  *   2. delay loop M68k 6666 iter (no RAM effect)
  *   3. write watchdog (0x880000) — MMIO no-op
@@ -11,23 +10,14 @@
  *
  * Strategia parity:
  *   - Patch ROM: FUN_4DCC ridotta a `addq.l #1,(0x401FF8).l; rts` (8 byte)
- *     per matchare il comportamento del default `defaultFun4DCC` TS.
+ *     to match default TS `defaultFun4DCC` behavior.
  *   - Patch ROM: FUN_4F38 ridotta a `rts` (2 byte) — neutralizza il
  *     tail-call e fa rts pulito al sentinel via stack.
- *   - Per ogni caso: setta `0x401F5E` long e `0x401F76` long. Per il path
- *     "loop esce subito" entrambi devono essere zero. Per il path "loop"
- *     usiamo un approccio diverso (vedi sotto).
  *   - Pattern test:
- *     * pattern 0..3: flags entry zero → 1 iter, loop esce, counter +1.
- *     * pattern 4..7: pre-set 0x401FF8 a valori boundary (0, 0xFFFFFFFE,
+ *     * pattern 0..3: zero flags entry -> 1 iter, loop exits, counter +1.
  *       0xFFFFFFFF, ecc) per testare wrap del counter.
  *     * pattern 8..N: random flags = 0, random counter init.
- *   - Nota: NON testiamo casi con flags entry non-zero perché il binario
- *     loop'erebbe forever. La replica TS modella questo path con `irq` hook
- *     ma il binario non ha hook → non comparabile.
  *
- * Snapshot di confronto: `state.workRam[0x1FF8..0x1FFB]` (counter long-BE)
- * più i due flag long che NON devono essere modificati (FUN_5284 è read-only
  * sui flag).
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5284-parity.ts [N]
@@ -79,7 +69,6 @@ async function main(): Promise<void> {
   // FUN_4DCC ridotta a `addq.l #1,(0x00401FF8).l; rts`.
   //   addq.l #1,abs.l : opcode 0x52B9, then 4-byte abs addr (0x00401FF8) → 6 byte
   //   rts             : 0x4E75 → 2 byte
-  // Total 8 byte (FUN_4DCC originale è ~204 byte, abbondante spazio).
   rom[FUN_4DCC + 0] = 0x52;
   rom[FUN_4DCC + 1] = 0xb9;
   rom[FUN_4DCC + 2] = 0x00;
@@ -117,8 +106,6 @@ async function main(): Promise<void> {
 
     // Boundary + random:
     //   0: counter=0
-    //   1: counter=0xFFFFFFFE (verifica +1 = 0xFFFFFFFF, niente wrap)
-    //   2: counter=0xFFFFFFFF (verifica wrap mod 2^32 a 0)
     //   3: counter=0x80000000 (sign bit boundary)
     //   4: counter=0x12345678 (random fixed)
     //   >=5: random
@@ -130,7 +117,6 @@ async function main(): Promise<void> {
     else if (i === 4) initCounter = 0x12345678 >>> 0;
     else initCounter = Math.floor(rng() * 0x100000000) >>> 0;
 
-    // Flags entry = 0 (necessario per uscita loop).
     pokeMem(cpu, PRIMARY_ADDR, 4, 0);
     pokeMem(cpu, SECONDARY_ADDR, 4, 0);
     state.workRam[0x1f5e] = 0;

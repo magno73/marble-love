@@ -19,7 +19,7 @@ import { emptyGameState } from "../src/state.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Helper: scrive un word signed (big-endian) in workRam[off..off+1]. */
+/** Helper: writes a signed big-endian word into workRam[off..off+1]. */
 function writeWordBE(ram: Uint8Array, off: number, signed: number): void {
   const u = signed & 0xffff;
   ram[off] = (u >>> 8) & 0xff;
@@ -32,7 +32,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
 
-    // Pre-popola status+0x1C con 0xAA per dimostrare clr.b.
+    // Prepopulate status+0x1C with 0xAA to prove clr.b.
     s.workRam[slotOff + 0x1c] = 0xaa;
     writeWordBE(s.workRam, slotOff + 0x20, -16);
 
@@ -144,7 +144,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
-    // workRam dice "out of range" ma override forza in-range
+    // workRam says "out of range", but override forces in-range.
     writeWordBE(s.workRam, slotOff + 0x20, 1000);
 
     let called = 0;

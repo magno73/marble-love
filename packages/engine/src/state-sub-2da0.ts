@@ -1,22 +1,17 @@
 /**
- * state-sub-2da0.ts — replica `FUN_00002DA0` (120 byte).
+ * state-sub-2da0.ts - port of `FUN_00002DA0` (120 bytes).
  *
- * Sub-function "alpha-tile clear-or-noop" del state-machine scheduler.
- * Chiamata dal dispatcher root `FUN_00002E18` (vedi `game-state-machine.ts`,
- * `GameStateMachineSubs.fun_2da0`) quando lo slot è in `state == 4`.
+ * State-machine helper "alpha-tile clear-or-noop".
  *
- * **Argomenti (long sullo stack)**:
- *   - `arg1Long` (A0): pointer a struct (col_byte @ +0, tickOff_byte @ +1,
- *     stringPtr_long @ +2). Stesso layout delle entry processate da
+ *   - `arg1Long` (A0): pointer to a struct (col_byte @ +0, tickOff_byte @ +1,
+ *     stringPtr_long @ +2). Same layout as entries processed by
  *     `FUN_2ABC` (clearStringChain) e `FUN_2572` (renderStringChain).
- *   - `arg2Long` (D2.b): byte counter usato come offset nella stringa e
- *     additive nella formula di posizione tile. Tipicamente `flag34Old`.
  *
  * **Disasm 0x2DA0..0x2E16** (120 byte):
  *
- *   movem.l {A2 D3 D2}, -(SP)         ; salva A2,D3,D2 (12 byte)
+ *   movem.l {A2 D3 D2}, -(SP)         ; save A2,D3,D2 (12 bytes)
  *   movea.l (0x10, SP), A0            ; A0 = arg1 long
- *   move.b  (0x17, SP), D2b           ; D2.b = LSB di arg2 long
+ *   move.b  (0x17, SP), D2b           ; D2.b = LSB of arg2 long
  *   movea.l #0xa03000, A1             ; A1 = ALPHA_RAM_BASE
  *   moveq   #0, D1
  *   move.b  D2b, D1b                  ; D1 = arg2_byte (zero-ext)
@@ -64,14 +59,11 @@
  *     movem.l (SP)+, {D2 D3 A2}
  *     rts
  *
- * **Semantica**: legge il byte della stringa @ stringPtr + arg2_byte:
- *   - se 0 (string terminator): return 0 → caller resetta state a 0
- *     (terminazione stringa, fine processing).
- *   - altrimenti: azzera la word nell'alpha tilemap alla posizione calcolata
- *     dalla formula di rotation/stride/shift (stessa di FUN_2ABC), e
- *     return 4 (state rimane 4 = in-progress).
+ *   - If the selected string byte is 0 (string terminator), return 0 and the
+ *     caller resets state to 0.
+ *   - Otherwise clear the alpha word computed by the rotation/stride/shift
+ *     formula, shared with FUN_2ABC.
  *
- * **Formula posizione tile** (rotation r, col c=byte@A0, tickOff t=byte@A0+1,
  * counter k=arg2_byte):
  *   if r == 0: D3 = sext_l(t) << 6
  *   else:      D3 = 0x29 - sext_l(t)
@@ -79,8 +71,8 @@
  *   pos = (((sext_l(c) + k) << shift) + D3) * 2
  *   alpha_addr = 0xa03000 + pos
  *
- * **Verifica bit-perfect** vs `FUN_00002DA0` con tutte sub-functions
- * patched a stub deterministico) tramite `cli/src/test-state-sub-2da0-parity.ts`.
+ * Verified against a deterministic MAME stub through
+ * `cli/src/test-state-sub-2da0-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -91,13 +83,9 @@ const ALPHA_BASE = 0xa03000 as const;
 const ROM_SHIFT_TABLE = 0x72a4 as const;
 
 /**
- * Stub injection (placeholder). FUN_2DA0 NON chiama altre funzioni
- * tramite jsr — è completamente self-contained. La interface è
- * mantenuta per simmetria col pattern altrui (state-sub-2678).
+ * Kept for symmetry with neighboring state-machine helper patterns.
  */
-export interface StateSub2DA0Subs {
-  // Nessun jsr in FUN_2DA0 — la struttura è mantenuta per simmetria.
-}
+export interface StateSub2DA0Subs {}
 
 // ─── Memory helpers ──────────────────────────────────────────────────────
 
@@ -137,18 +125,11 @@ function clearAlphaWord(state: GameState, addr: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_00002DA0`.
  *
- * @param state    GameState (può modificare alphaRam @ 0xa03000..0xa03FFF).
- * @param rom      RomImage (lettura tabella shift @ 0x72a4 + lettura A0/A2 se A0 punta a ROM).
  * @param arg1Long pointer a struct (long): col@+0, tickOff@+1, stringPtr_long@+2.
- * @param arg2Long byte counter (solo LSB usato).
  * @param _subs    placeholder (FUN_2DA0 non ha jsr).
- * @returns        D0 byte: 0 se string-byte è 0 (terminator), 4 altrimenti.
  *
  * **Side effects** in `state.alphaRam`:
- *   - Se string_byte != 0: clear word @ alpha pos (vedi formula sopra).
- *   - Se string_byte == 0: nessuno (return 0 → caller termina state machine).
  */
 export function stateSub2DA0(
   state: GameState,
@@ -177,7 +158,6 @@ export function stateSub2DA0(
     d3 = (0x29 - tickOffSigned) | 0;
   } else {
     // D3 = sext_l(byte @ A0+1) << 6 (asl.l #6 — arithmetic shift,
-    // ma su valori in range tickOff coincide con left-shift logico)
     d3 = (tickOffSigned << 6) | 0;
   }
 
@@ -198,7 +178,6 @@ export function stateSub2DA0(
   const shiftByte = rom.program[(ROM_SHIFT_TABLE + 1 + d1Word) >>> 0] ?? 0;
 
   // lsl.l D1, D0 — m68k masks shift count to bottom 6 bits (mod 64).
-  // Se count >= 32, result è 0 (logical shift out tutti i bit).
   const shiftCount = shiftByte & 0x3f;
   if (shiftCount >= 32) {
     d0 = 0;

@@ -2,19 +2,13 @@
 /**
  * test-special-attract-parity.ts — differential FUN_288F8 vs specialAttract.
  *
- * `FUN_000288F8` legge `(0x4003EA).w` signed e chiama `FUN_158AC` con uno
- * dei tre sound id (0x67 / 0x65 / 0x61). FUN_158AC è una sub-funzione
- * non replicata; per isolare il path di FUN_288F8 patchamo FUN_158AC con
+ * not mirrored; to isolate the FUN_288F8 path, patch FUN_158AC with
  * un payload "capture":
  *
  *   move.b   (0x7,SP), D0      ; 102F 0007        (4 byte)
  *   move.b   D0, ($00401FFE)   ; 13C0 0040 1FFE   (6 byte)
  *   rts                        ; 4E75             (2 byte)
  *
- * Totale 12 byte (FUN_158AC originale è 0x20 byte, abbondante).
- * Prima di ogni call settiamo workRam[0x401FFE]=0xFF (sentinel "non chiamata").
- * Dopo la call leggiamo il byte: vale 0x67/0x65/0x61 ⇒ corrisponde al sound
- * id chiamato; vale 0xFF ⇒ FUN_288F8 non ha invocato FUN_158AC.
  *
  * Per la TS replication: cattureremo l'arg di `soundCommand` callback
  * iniettato in `specialAttract`.
@@ -39,7 +33,7 @@ const FUN_288F8 = 0x000288f8;
 const FUN_158AC = 0x000158ac;
 const STAGE_ADDR = 0x004003ea; // word signed, work RAM 0x3EA
 const CAPTURE_ADDR = 0x00401ffe; // sentinel where patched FUN_158AC writes byte arg
-const SENTINEL_NOT_CALLED = 0xff; // valore distinto da 0x67/0x65/0x61
+const SENTINEL_NOT_CALLED = 0xff;
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -60,7 +54,6 @@ async function main(): Promise<void> {
   const rom = Buffer.from(readFileSync(romPath));
 
   // Patch ROM @ FUN_158AC: capture il byte arg (0x7,SP) → ($00401FFE), rts.
-  // 12 byte di codice; FUN_158AC originale è 0x20 byte (sicuro).
   // move.b (0x7,SP), D0    : 10 2F 00 07
   // move.b D0, $00401FFE.l : 13 C0 00 40 1F FE
   // rts                    : 4E 75
@@ -116,7 +109,6 @@ async function main(): Promise<void> {
       stage = Math.floor(rng() * 0x10000) & 0xffff;
     }
 
-    // Setup state binario + TS
     pokeMem(cpu, STAGE_ADDR, 2, stage);
     state.workRam[0x3ea] = (stage >>> 8) & 0xff;
     state.workRam[0x3eb] = stage & 0xff;

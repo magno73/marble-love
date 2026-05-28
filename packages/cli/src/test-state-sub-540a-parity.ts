@@ -2,19 +2,13 @@
 /**
  * test-state-sub-540a-parity.ts — differential FUN_540A vs stateSub540A.
  *
- * `FUN_0000540A` (94 byte): walker di tabella di record `[hdr, str0\0, str1\0, ...]`.
  *
  * Convenzione caller (cdecl push-RTL):
- *   - arg1 long  = A2 (pointer assoluto M68k, M68k stack SP+4 dopo sentinel)
- *   - arg2 long  = D3 (sign-extended dalla word originale)
+ *   - arg2 long  = D3 (sign-extended from the original word)
  *   - return D0 long = 0 oppure A2 post-walk
  *
  * Strategia parity:
- *   - Genera tabelle di record validi in workRam con header e stringhe
- *     casuali (controllate per evitare runaway e fuori-bound).
  *   - Setta SP, poi callFunction(0x540A, [a2, d3]).
- *   - Verifica che il D0 ritornato dal binario combaci con il return TS.
- *   - Verifica anche che workRam non sia stata modificata (FUN_540A è
  *     pure-read).
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-540a-parity.ts [N]
@@ -68,7 +62,6 @@ function numStringsForHeader(hdr: number): number {
 
 /** Pick a header that produces a small number of strings (1..5). */
 function pickSafeHeader(rng: () => number): number {
-  // Headers che producono 1..5 stringhe, evitando runaway:
   //   shift=0 → count=1 → 2 strings (e.g. hdr=0x12, hi=1 lo=2 → (2)-2=0)
   //              wait: (1+1)-2=0. Yes shift_byte=0.
   //   shift=1 → count=2 → 3 strings (hdr=0x00 → (1)-0=1)
@@ -206,27 +199,22 @@ async function main(): Promise<void> {
     let terminate: boolean;
 
     if (i === 0) {
-      // D3=0, pair non-zero → ritorna A2.
       d3 = 0;
       numRecordsToWrite = 0;
       terminate = false;
     } else if (i === 1) {
-      // D3=0, pair zero → ritorna 0.
       d3 = 0;
       numRecordsToWrite = 0;
       terminate = true;
     } else if (i === 2) {
-      // D3=1, terminato → ritorna 0.
       d3 = 1;
       numRecordsToWrite = 1;
       terminate = true;
     } else if (i === 3) {
-      // D3=1, non terminato → ritorna A2.
       d3 = 1;
       numRecordsToWrite = 1;
       terminate = false;
     } else if (i === 4) {
-      // Early-exit subito: D3 grande, ma table inizia con 00 00.
       d3 = 5;
       numRecordsToWrite = 0;
       terminate = true; // 00 00 in testa
@@ -237,7 +225,6 @@ async function main(): Promise<void> {
       terminate = rng() < 0.5;
     }
 
-    // Pre-fill workRam con random byte (così cattura modifiche inattese).
     const seedBuf = new Uint8Array(WORK_RAM_SIZE);
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       seedBuf[k] = Math.floor(rng() * 0x100) & 0xff;
@@ -245,7 +232,6 @@ async function main(): Promise<void> {
 
     // Place table at a known offset, riservando spazio per ~50 byte.
     const tableStartOff = 0x100;
-    // Clear la zona della tabella prima di scriverci sopra.
     const TABLE_REGION = 0x300; // 768 byte
     for (let k = tableStartOff; k < tableStartOff + TABLE_REGION; k++) {
       seedBuf[k] = 0;
@@ -268,7 +254,7 @@ async function main(): Promise<void> {
 
     const a2 = (WORK_RAM_BASE + tableStartOff) >>> 0;
 
-    // Run binary: callFunction passa args via stack RTL.
+    // Run binary: callFunction passes args through stack RTL.
     // Args: [a2, d3].
     const result = callFunction(cpu, FUN_540A, [a2, d3]);
     const binD0 = result.d0 >>> 0;
@@ -301,21 +287,18 @@ async function main(): Promise<void> {
     );
   }
 
-  // Verifica accessoria che la workRam non venga modificata dal binario
-  // (FUN_540A è pure-read). Faccio un singolo caso di controllo.
   cpu.system.setRegister("sp", 0x401f00);
   const buf = new Uint8Array(WORK_RAM_SIZE);
   for (let k = 0; k < WORK_RAM_SIZE; k++) {
     buf[k] = (k * 7 + 13) & 0xff;
   }
-  // Override la zona tabella per averla ben formata.
   for (let k = 0x100; k < 0x200; k++) buf[k] = 0;
   buildTable(buf, 0x100, 2, makeRng(0xdeadbeef), false);
   for (let k = 0; k < WORK_RAM_SIZE; k++) {
     pokeMem(cpu, WORK_RAM_BASE + k, 1, buf[k]!);
   }
   callFunction(cpu, FUN_540A, [WORK_RAM_BASE + 0x100, 2]);
-  // Riconferma byte distanti dalla zona stack non alterati
+  // Reconfirm distant bytes outside the stack zone stayed unchanged.
   let modified = 0;
   for (let k = 0; k < 0x1e00; k++) {
     const got = peekMem(cpu, WORK_RAM_BASE + k, 1) & 0xff;

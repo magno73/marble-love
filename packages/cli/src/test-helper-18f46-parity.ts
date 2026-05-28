@@ -2,30 +2,20 @@
 /**
  * test-helper-18f46-parity.ts — differential FUN_18F46 vs `helper18F46`.
  *
- * `FUN_00018F46` (51 istr, ~137 byte): rimuove dal byte-array draw-list
- * (@ 0x4003BC) la prima entry con (typeCode, subIdx) corrispondente,
- * liberando il rect-slot e compattando il byte-array.
  *
  * **Strategia parity**:
  *   1. Setup ROM lookup-table @ 0x1F0E2 puntando ai 16 slot @ 0x4001DC
- *      (stride 14 byte) — identica a `test-slot-insert-sorted-18e6c-parity.ts`.
+ *      (14-byte stride) - identical to `test-slot-insert-sorted-18e6c-parity.ts`.
  *
  *   2. Setup workRam:
  *      - Rect-slot (16 × 14 byte) @ 0x4001DC: primo byte per slot = 0 (libero)
- *        oppure (typeCode, subIdx) se in uso. Campi rect [2..C] random.
- *      - Byte-array (32 byte) @ 0x4003BC: random byte 0..15 + 0xFF sentinel.
- *        Per garantire coerenza: ogni byte nell'array è un indice 0..15 e
  *        il corrispondente slot ha struct[0]=typeCode_del_slot,
  *        struct[1]=subIdx_del_slot.
  *
- *   3. Run binario via `callFunction(0x18F46, [typeCode, subIdx])`.
- *      Ordine RTL: argsLong[0] è più vicino a SP → D1b = typeCode,
- *                  argsLong[1] è più lontano → D2b = subIdx.
  *      → argsLong = [typeCode, subIdx].
  *
  *   4. Run TS via `helper18F46(state, rom, typeCode, subIdx)`.
  *
- *   5. Compara byte-array (32 byte) e rect-slot-area (0x1B2 byte) bit-by-bit.
  *
  * Uso: npx tsx packages/cli/src/test-helper-18f46-parity.ts [N]
  */
@@ -90,14 +80,9 @@ function randWordSmall(rng: () => number): number {
 
 /**
  * Setup workRam baseline:
- *   - byte-array[0..numActive-1]: slot indices (0..15 random).
- *   - byte-array[numActive..0x1F]: 0xFF sentinel.
- *   - Per ogni slot index byte nell'array: rect-slot[idx].struct[0] =
  *     typeCode_table[idx], struct[1] = subIdx_table[idx].
  *   - rect-slot[i].fields[2..C]: random small words.
  *
- * Anche i slot non riferiti nell'array vengono inizializzati (struct[0]=0
- * = libero, struct[1]=0, campi random) per realismo.
  */
 function setupBaseline(
   workRam: Uint8Array,
@@ -111,7 +96,6 @@ function setupBaseline(
     const base = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) - WORK_RAM_BASE;
     workRam[base] = 0;     // struct[0] = 0 (libero by default)
     workRam[base + 1] = 0; // struct[1] = 0
-    // Campi rect: random small words.
     for (const off of [2, 4, 6, 8, 0xa, 0xc]) {
       const w = randWordSmall(rng);
       workRam[base + off] = (w >>> 8) & 0xff;
@@ -119,7 +103,6 @@ function setupBaseline(
     }
   }
 
-  // Byte-array @ 0x3BC.
   const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
   for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
     if (i < numActive) {
@@ -212,7 +195,7 @@ async function main(): Promise<void> {
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Per ogni test case: genera typeTable e subTable (un type/sub per slot).
+    // For each test case, generate typeTable and subTable (one type/sub per slot).
     const typeTable = new Uint8Array(RECT_SLOT_COUNT);
     const subTable = new Uint8Array(RECT_SLOT_COUNT);
     for (let i = 0; i < RECT_SLOT_COUNT; i++) {
@@ -225,24 +208,21 @@ async function main(): Promise<void> {
     let numActive: number;
 
     if (tc === 0) {
-      // Lista vuota.
       typeCode = 0x01; subIdx = 0x00; numActive = 0;
     } else if (tc === 1) {
-      // Lista con 1 elemento, search match.
+      // One-entry list, search match.
       numActive = 1;
-      // Il byte-array[0] punterà a slot 0; usa il suo type/sub.
       typeCode = typeTable[0]!; subIdx = subTable[0]!;
     } else if (tc === 2) {
-      // Lista con 1 elemento, no match.
+      // One-entry list, no match.
       numActive = 1;
-      typeCode = 0xff; subIdx = 0xff; // probabilmente no match
+      typeCode = 0xff; subIdx = 0xff;
     } else if (tc === 3) {
-      // Lista piena (16 elementi), match al centro.
+      // Full list (16 entries), center match.
       numActive = 8;
       typeCode = typeTable[Math.floor(rng() * RECT_SLOT_COUNT)]!;
       subIdx = typeCode;
     } else if (tc === 4) {
-      // Lista a 31 elementi (massimo), ricerca senza match.
       numActive = 31;
       typeCode = 0x00; subIdx = 0x00;
     } else {
@@ -261,20 +241,15 @@ async function main(): Promise<void> {
       stateInst.workRam[k] = seedBuf[k]!;
     }
 
-    // Snapshot input byte-array per debug.
     const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
     const inputBytes: number[] = [];
     for (let k = 0; k < BYTE_ARRAY_LEN; k++) inputBytes.push(seedBuf[baOff + k]!);
 
-    // Run binario.
-    // argsLong = [typeCode, subIdx] → typeCode è arg1 (più vicino a SP = D1b),
-    // subIdx è arg2 (più lontano = D2b).
     callFunction(cpu, FUN_18F46, [typeCode >>> 0, subIdx >>> 0]);
 
     // Run TS.
     helper18F46Ns.helper18F46(stateInst, romView, typeCode, subIdx);
 
-    // Compara byte-array (32 byte).
     const binByteArray = readBin(cpu, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);

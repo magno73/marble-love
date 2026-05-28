@@ -2,9 +2,9 @@
 /**
  * test-state-sub-1844a-smoke.ts — smoke tests per `stateSub1844A`.
  *
- * Esegue 5 casi deterministici senza ROM (no binary oracle) per verificare:
- *   1. Early-out quando gameMode != 3.
- *   2. Early-out quando byte760 == 0.
+ * Run 5 deterministic cases without ROM (no binary oracle) to verify:
+ *   1. Early-out when gameMode != 3.
+ *   2. Early-out when byte760 == 0.
  *   3. Decrement path: timer > 1 → decrementato, no insert.
  *   4. Insert path: timer == 1 → decrementato a 0 → insert triggered, timer
  *      risettato a 0xFFFF, entry[0x8..0xB] = 0x21342.

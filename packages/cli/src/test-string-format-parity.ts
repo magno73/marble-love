@@ -5,7 +5,7 @@
  * Per N (value, bufEnd, numDigits, showSpaces) random:
  *   1. Reset 64 byte di scratch
  *   2. callFunction(0x3A08, [value, bufEnd, numDigits, showSpaces])
- *   3. formatHex TS sullo stesso state
+ *   3. Run TS formatHex on the same state
  *   4. Confronta scratch byte-by-byte
  *
  * Uso: npx tsx packages/cli/src/test-string-format-parity.ts [N]
@@ -39,7 +39,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Call FUN_3A08 con 4 long args (cdecl 68k). */
+/** Call FUN_3A08 with 4 long args (cdecl 68k). */
 function callFormatHex(
   cpu: CpuSession,
   value: number,

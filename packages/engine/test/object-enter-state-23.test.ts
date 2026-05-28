@@ -1,11 +1,8 @@
 /**
- * Test objectEnterState23 (FUN_160D4) — smoke tests sulle scritture dirette.
+ * Test objectEnterState23 (FUN_160D4) - smoke tests for direct writes.
  *
- * FUN_160D4 (34 byte) imposta `obj[0x1A] = 0x23` e
- * `obj[0x68..0x6B] = 0x00070000` (big-endian). La chiamata interna a
- * FUN_15D10 NON è modellata in questo modulo (vedi header del modulo).
+ * FUN_160D4 (34 bytes) sets `obj[0x1A] = 0x23` and
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-object-enter-state-23-parity.ts`.
  */
 
@@ -29,7 +26,6 @@ describe("objectEnterState23 (FUN_160D4)", () => {
 
     objectEnterState23(s, ptr);
 
-    // byte di stato @ +0x1A
     expect(s.workRam[off + OBJECT_STATE_BYTE_OFF]).toBe(STATE_VALUE_23);
     expect(STATE_VALUE_23).toBe(0x23);
 
@@ -46,21 +42,18 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     const ptr = 0x00401c00;
     const off = ptr - WORK_RAM_BASE;
 
-    // Pre-fill con sentinel "0xAA" tutta la zona dell'oggetto (0..0x80)
     for (let i = 0; i < 0x80; i++) {
       s.workRam[off + i] = 0xaa;
     }
 
     objectEnterState23(s, ptr);
 
-    // I campi toccati sono cambiati ai valori attesi
     expect(s.workRam[off + 0x1a]).toBe(0x23);
     expect(s.workRam[off + 0x68]).toBe(0x00);
     expect(s.workRam[off + 0x69]).toBe(0x07);
     expect(s.workRam[off + 0x6a]).toBe(0x00);
     expect(s.workRam[off + 0x6b]).toBe(0x00);
 
-    // Tutti gli altri byte restano 0xAA (in particolare +0x1B, +0x67, +0x6C)
     for (let i = 0; i < 0x80; i++) {
       if (i === 0x1a) continue;
       if (i >= 0x68 && i <= 0x6b) continue;
@@ -83,7 +76,6 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     expect(after2).toEqual(after1);
     expect(after3).toEqual(after1);
 
-    // Sanity: i campi sono ancora corretti
     expect(s.workRam[off + 0x1a]).toBe(0x23);
     expect(s.workRam[off + 0x68]).toBe(0x00);
     expect(s.workRam[off + 0x69]).toBe(0x07);
@@ -95,12 +87,10 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     const ptrB = 0x00401d00; // 0x100 = 256 byte, ben oltre i 0x6C usati
 
     objectEnterState23(s, ptrA);
-    // L'oggetto B non deve avere stato 0x23 ancora
     expect(s.workRam[ptrB - WORK_RAM_BASE + 0x1a]).toBe(0x00);
     expect(s.workRam[ptrB - WORK_RAM_BASE + 0x69]).toBe(0x00);
 
     objectEnterState23(s, ptrB);
-    // Entrambi gli oggetti hanno stato 0x23 e timer settato
     expect(s.workRam[ptrA - WORK_RAM_BASE + 0x1a]).toBe(0x23);
     expect(s.workRam[ptrA - WORK_RAM_BASE + 0x69]).toBe(0x07);
     expect(s.workRam[ptrB - WORK_RAM_BASE + 0x1a]).toBe(0x23);
@@ -112,9 +102,7 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     const ptr = 0x00401e80;
     const off = ptr - WORK_RAM_BASE;
 
-    // Stato precedente: 0x21 (uno dei due predecessori noti, vedi FUN_158F6)
     s.workRam[off + 0x1a] = 0x21;
-    // Timer precedente: arbitrario
     s.workRam[off + 0x68] = 0xff;
     s.workRam[off + 0x69] = 0xff;
     s.workRam[off + 0x6a] = 0xff;

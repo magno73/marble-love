@@ -3,12 +3,8 @@
  * test-dispatch-strings-17230-parity.ts —
  * differential FUN_17230 vs `dispatchStrings17230`.
  *
- * **Strategia**: `FUN_00017230` (42 byte) è un dispatcher puro che chiama 7
- * volte `FUN_0001725a(slotPtr)` con `slotPtr = 0x401482 + i*0x42` per
+ * times `FUN_0001725a(slotPtr)` with `slotPtr = 0x401482 + i*0x42` for
  * `i ∈ 0..6`. Per testare in isolamento la *sola* logica di dispatch
- * (ordine, addressing, count) **patchiamo `FUN_1725a` con uno stub** che
- * scrive il pointer ricevuto in una coda FIFO in workRam, così l'effetto
- * del dispatcher è interamente osservabile via memoria.
  *
  * **Stub layout** (20 byte) iniettato @ `0x0001725a`:
  *
@@ -18,27 +14,18 @@
  *   23C8 0040 1BF8     ; move.l  A0, (0x401BF8).l    ; save head back
  *   4E75               ; rts
  *
- * (la zona `0x401BF8..0x401BFB` è il "head pointer" della coda; la coda
- * stessa parte a `0x401C00` e ha 7×4=28 byte di scritture utili, quindi
  * `0x401C00..0x401C1B`.)
  *
- * Per ogni caso:
- *   1. Pre-fill workRam con un pattern deterministico.
- *   2. **Side binary**: setta head=0x401C00, run callFunction(0x17230). Il
- *      binario chiama lo stub 7× → workRam finale_bin.
- *   3. Snapshot workRam_post_bin, ripristina workRam pre-call.
- *   4. **Side TS**: setta head=0x401C00 (in pokeMem), run TS dispatcher con
- *      callback che invoca `callFunction(0x1725a, [slot])` (stesso stub).
+ *   1. Pre-fill workRam with a deterministic pattern.
+ *   2. **Binary side**: set head=0x401C00, run callFunction(0x17230). The
+ *   3. Snapshot workRam_post_bin, then restore pre-call workRam.
+ *   4. **TS side**: set head=0x401C00 (in pokeMem), run TS dispatcher with
+ *      callback that invokes `callFunction(0x1725a, [slot])` (same stub).
  *   5. Snapshot workRam_post_ts.
  *   6. Compara byte-per-byte 0x400000..0x402000.
  *
- * Se il dispatcher TS è bit-perfect (stessa sequenza di 7 chiamate, stessi
- * argomenti, stesso ordine), workRam_post_ts == workRam_post_bin.
  *
- * Variabili randomizzate per 500 casi:
  *   - pre-fill workRam (pattern + random tail)
- *   - head iniziale (0x401C00 ± piccoli offset multipli di 4)
- *   - byte sentinel sparsi al di fuori della coda per assicurarsi che il
  *     dispatcher non clobberi nulla.
  *
  * Uso: npx tsx packages/cli/src/test-dispatch-strings-17230-parity.ts [N]
@@ -64,7 +51,7 @@ const FUN_DISPATCH = 0x00017230;
 const FUN_CALLEE = 0x0001725a;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
-const QUEUE_HEAD_PTR = 0x00401bf8; // long: pointer corrente di scrittura
+const QUEUE_HEAD_PTR = 0x00401bf8;
 const QUEUE_BASE = 0x00401c00; // base FIFO
 
 /** Stub bytes: vedi disasm in header. */
@@ -93,7 +80,6 @@ function captureWorkRam(cpu: ReturnType<typeof createCpuSync>): Uint8Array {
   return out;
 }
 
-/** Carica un buffer in workRam dal CPU. */
 function loadWorkRam(cpu: ReturnType<typeof createCpuSync>, src: Uint8Array): void {
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
     pokeMem(cpu, WORK_RAM_BASE + i, 1, src[i] ?? 0);
@@ -117,8 +103,8 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch FUN_1725a con lo stub (zona ROM-mapped 0x000000-0x07FFFF;
-  // pokeMem va in write diretta, vedi pattern in test-flag-scaled-magnitude).
+  // Patch FUN_1725a with the stub (ROM-mapped zone 0x000000-0x07FFFF;
+  // pokeMem uses a direct write; see the pattern in test-flag-scaled-magnitude.
   for (let i = 0; i < STUB_BYTES.length; i++) {
     pokeMem(cpu, FUN_CALLEE + i, 1, STUB_BYTES[i]!);
   }
@@ -138,7 +124,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Riapplica la patch ogni 100 iter per safety (Musashi non scrive su ROM
     // ma alcuni harness paranoid riapplicano).
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
@@ -165,20 +150,14 @@ async function main(): Promise<void> {
       }
     }
 
-    // Setta un head pointer iniziale ben-allineato (multiplo di 4). Per
-    // i primi 8 casi usa esattamente 0x401C00; poi varia leggermente in
-    // multipli di 4 ben dentro al range workRam (per dare pattern-coverage
-    // alle scritture FIFO).
+    // the FIFO writes).
     let headInit: number;
     if (i < 8) {
       headInit = QUEUE_BASE;
     } else {
-      // multipli di 4 in [0x401C00 .. 0x401D80) — abbondantemente prima di SP
       const slot = Math.floor(rng() * 0x60); // 0..95
       headInit = (QUEUE_BASE + slot * 4) >>> 0;
     }
-    // Scrive head pointer (long BE) nel pre-fill, così binary e TS partono
-    // dallo stesso stato esatto.
     pre[QUEUE_HEAD_PTR + 0 - WORK_RAM_BASE] = (headInit >>> 24) & 0xff;
     pre[QUEUE_HEAD_PTR + 1 - WORK_RAM_BASE] = (headInit >>> 16) & 0xff;
     pre[QUEUE_HEAD_PTR + 2 - WORK_RAM_BASE] = (headInit >>> 8) & 0xff;
@@ -191,28 +170,18 @@ async function main(): Promise<void> {
     const postBin = captureWorkRam(cpu);
 
     // ── Side TS ─────────────────────────────────────────────────────────
-    // Reset cpu workRam allo stesso pre-state.
+    // Reset CPU workRam to the same pre-state.
     cpu.system.setRegister("sp", 0x401f00);
     loadWorkRam(cpu, pre);
-    // TS dispatcher: per ogni slot pushed dal nostro modulo, invoca lo
-    // stesso stub via callFunction. SP è gestito da callFunction stesso.
+    // TS dispatcher: for each slot pushed by this module, invoke the
     dsNs.dispatchStrings17230((slotAddr: number) => {
       callFunction(cpu, FUN_CALLEE, [slotAddr >>> 0]);
     });
     const postTs = captureWorkRam(cpu);
 
     // ── Compare ─────────────────────────────────────────────────────────
-    // Compariamo TUTTO il workRam tranne la **stack scratch zone**
-    // [0x401E80..0x402000). Sia il binario che la TS-orchestrazione
-    // lasciano bytes residui sotto SP (push/pop di sentinel/args/movem),
-    // ma con pattern di scrittura diversi (binario: movem.l + jsr 7×;
     // TS: 7× callFunction sentinel/arg). Questi byte sono "tombstone"
-    // di esecuzione, non parte dell'effetto del dispatcher, quindi li
-    // escludiamo dalla parità.
     //
-    // Bytes confrontati: [0x000..0x1E80) = 0x1E80 byte = tutto workRam
-    // eccetto i 0x180 byte di scratch stack (più che ampio: SP=0x401F00
-    // scende al massimo a ~0x401EE0 nelle nostre call).
     const STACK_SCRATCH_START = 0x1e80;
     let match = true;
     for (let j = 0; j < STACK_SCRATCH_START; j++) {

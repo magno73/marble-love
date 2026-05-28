@@ -1,9 +1,6 @@
 /**
  * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests sui rami principali.
  *
- * `FUN_000283C2` (166 byte) è un init HUD frame: cancella i bordi laterali di
- * 30 righe alpha tilemap + disegna un frame attorno alla score area
- * (12 tile in 1P, 24 in 2P). Bit-perfect verificato vs binary tramite
  * `cli/src/test-hud-frame-init-283c2-parity.ts` (500/500).
  */
 
@@ -28,33 +25,26 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 import type { RomImage } from "../src/bus.js";
 
-/** Helper: scrive un word big-endian in workRam @ off. */
 function writeWordBE(ram: Uint8Array, off: number, value: number): void {
   ram[off] = (value >>> 8) & 0xff;
   ram[off + 1] = value & 0xff;
 }
 
-/** Helper: scrive un word big-endian in rom.program @ addr. */
 function writeRomWordBE(rom: RomImage, addr: number, value: number): void {
   rom.program[addr] = (value >>> 8) & 0xff;
   rom.program[addr + 1] = value & 0xff;
 }
 
-/** Helper: legge un word big-endian da alphaRam @ off. */
 function readAlphaWordBE(alpha: Uint8Array, off: number): number {
   return (((alpha[off] ?? 0) << 8) | (alpha[off + 1] ?? 0)) & 0xffff;
 }
 
 /**
- * Setup ROM con tabelle reali di Marble Madness ai loro offset binari.
- * Tabelle ricostruite dalle prime 16 entry (24 word ciascuna per cols 2P,
  * rows e data; 12 word per cols 1P).
  */
 function setupRom(): RomImage {
   const rom = emptyRomImage();
   // ROM lookup table @ 0x72A4 (alpha-pointer shift count). Per rotation=0,
-  // viene letto byte @ 0x72A5 = sext(byte). Il valore reale del ROM Marble
-  // è 0x00 (shift 0 sul col). Layout: addr = (col + row*64) * 2.
   rom.program[0x72a5] = 0x00;
 
   // ROM cols 1P @ 0x23C2C (12 word).
@@ -106,15 +96,11 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
   it("Loop1 (rotation=0): cancella 30 righe × 6 word = 360 byte di bordo con 0x3400", () => {
     const s = emptyGameState();
     const rom = setupRom();
-    // rotation flag @ workRam[0x1F42] = 0 (default emptyGameState già 0).
-    // player count @ 0x396 = 0 (→ 2P branch, ma testiamo solo Loop1 qui:
-    // verifichiamo i bordi e ignoriamo l'effetto di Loop2 sui bordi —
-    // il frame disegna alle col 13..23 / 25..29, fuori dai bordi 0..2/39..41).
+    // player count @ 0x396 = 0 (-> 2P branch, but this tests only Loop1:
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1); // 1P (Loop2 mette 12 frame tile
 
     hudFrameInit283C2(s, rom);
 
-    // Verifica Loop1: per ogni riga 0..29 in non-rotated layout
     //   alpha[row*128 + 0..1, +2..3, +4..5] = 0x3400
     //   alpha[row*128 + 0x4E..0x4F, +0x50..0x51, +0x52..0x53] = 0x3400
     for (let row = 0; row < LOOP1_ROW_COUNT; row++) {
@@ -139,15 +125,11 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
 
     hudFrameInit283C2(s, rom);
 
-    // Verifica 12 tile: cols da 1P table, rows da rows table, data da data table.
-    // Posizione alpha = (col, row) → alpha[row*128 + col*2] = data | mask (0x1C00).
     // **Overlap handling**: alcune tuple (col,row) si ripetono — l'ultima
-    // scrittura vince, esattamente come il binario via setAlphaTile.
     const cols1P = [0x13, 0x14, 0x15, 0x16, 0x17, 0x17, 0x17, 0x17, 0x16, 0x15, 0x14, 0x13];
     const rows = [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3];
     const data = [0x5f, 0x5f, 0x5f, 0x5f, 0xff, 0xdf, 0xdf, 0x1b, 0x5e, 0x5e, 0x5e, 0x5e];
 
-    // Computa il valore finale atteso per ogni cella (last-write-wins).
     const finalVal = new Map<number, number>();
     for (let i = 0; i < LOOP2_COUNT_1P; i++) {
       const off = rows[i]! * 128 + cols1P[i]! * 2;
@@ -178,7 +160,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
       0x5f, 0x5f, 0x5f, 0x5f, 0xff, 0xdf, 0xdf, 0x1b, 0x5e, 0x5e, 0x5e, 0x5e,
     ];
 
-    // Last-write-wins (alcune tuple (col,row) si ripetono nella table 2P).
+    // Last-write-wins: some (col,row) tuples repeat in the 2P table.
     const finalVal = new Map<number, number>();
     for (let i = 0; i < LOOP2_COUNT_2P; i++) {
       const off = rows[i]! * 128 + cols2P[i]! * 2;
@@ -192,14 +174,12 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
   it("count=0 (caso non-1P, default emptyGameState): prende il branch 2P (24 tile)", () => {
     const s = emptyGameState();
     const rom = setupRom();
-    // PLAYER_COUNT_OFF già 0 → bne dal cmp.w D0(=1) → 2P branch.
 
     hudFrameInit283C2(s, rom);
 
-    // Verifica almeno il primo tile 2P @ (col=0x0d, row=0).
     const off0 = 0 * 128 + 0x0d * 2;
     expect(readAlphaWordBE(s.alphaRam, off0)).toBe((0x5f | LOOP2_MASK) & 0xffff);
-    // E un tile dell'area che 1P non avrebbe scritto: row=0, col=0x19.
+    // And one tile in the area that 1P would not have written: row=0, col=0x19.
     const off12 = 0 * 128 + 0x19 * 2;
     expect(readAlphaWordBE(s.alphaRam, off12)).toBe((0x5f | LOOP2_MASK) & 0xffff);
   });
@@ -207,7 +187,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
   it("non muta state.workRam (la funzione è solo lettore di workRam)", () => {
     const s = emptyGameState();
     const rom = setupRom();
-    // Pollute workRam con pattern noto.
+    // Pollute workRam with a known pattern.
     for (let i = 0; i < s.workRam.length; i++) s.workRam[i] = (i * 7) & 0xff;
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1);
     s.workRam[0x1f42] = 0; // rotation off
@@ -216,7 +196,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
 
     hudFrameInit283C2(s, rom);
 
-    // workRam invariato byte-by-byte
+    // workRam unchanged byte-by-byte.
     for (let i = 0; i < s.workRam.length; i++) {
       expect(s.workRam[i], `workRam byte 0x${i.toString(16)}`).toBe(before[i]);
     }
@@ -225,15 +205,11 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
   it("non muta state.alphaRam fuori dalle 30 righe HUD (byte 0xF00..0xFFF intatti)", () => {
     const s = emptyGameState();
     const rom = setupRom();
-    // Pollute alphaRam con sentinel 0xAA fuori del range 0..0xEFF (rows 30+).
     for (let i = 0xf00; i < s.alphaRam.length; i++) s.alphaRam[i] = 0xaa;
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1);
 
     hudFrameInit283C2(s, rom);
 
-    // Loop1 scrive solo a row*128+i (i < 0x54). Con row max=29, off max = 29*128+0x53 = 0xEd3.
-    // Loop2 scrive a (row*128 + col*2) con row<=3, col<=0x1d → off max = 3*128+0x3a = 0x1ba.
-    // Quindi range [0xF00, 0x1000) deve restare 0xAA.
     for (let i = 0xf00; i < s.alphaRam.length; i++) {
       expect(s.alphaRam[i], `alphaRam byte 0x${i.toString(16)}`).toBe(0xaa);
     }

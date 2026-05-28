@@ -65,7 +65,7 @@ async function main(): Promise<void> {
       Math.floor(rng() * 256) & 0xff, // padding
       Math.floor(rng() * 256) & 0xff, // inner
     ];
-    // 1/8 dei casi: forza inner = 0xFF (disabled path)
+    // 1/8 of cases: force inner = 0xFF (disabled path).
     if ((i % 8) === 0) bytes[4] = 0xff;
 
     for (let j = 0; j < 5; j++) {

@@ -1,7 +1,7 @@
 /**
  * Test fillIncrementingU16 (FUN_1E3E).
  *
- * Bit-perfect verificato vs binary (500/500) tramite
+ * Bit-perfect verified against the binary (500/500) through
  * `cli/src/test-array-helpers-parity.ts`.
  */
 

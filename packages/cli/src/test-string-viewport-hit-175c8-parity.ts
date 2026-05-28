@@ -4,40 +4,25 @@
  * differential FUN_175C8 vs `stringViewportHit175C8`.
  *
  * `FUN_000175C8` (266 byte) prende un long arg (objPtr), e:
- *   1. Se *0x400394 (word) ∉ {2, 5} → ritorna 0, nessuna scrittura.
  *   2. Else: itera 7 string-slot @ 0x401482 (stride 0x42); per slot armata
  *      (slot[+0x18] != 0), risolve un bbox via deref doppio
  *      (slot[+0x3a] → ptrPtr → bboxPtr; sentinel 0xFFFFFFFF → default
- *      (-2,-2,12,12)) e testa overlap con un viewport word
- *      (marble ± 3 word, marble ± 3 word) attorno alle coord @ 0x400690/692.
+ *      (-2,-2,12,12)) and tests overlap with a viewport word
+ *      (marble +/- 3 words, marble +/- 3 words) around coords @ 0x400690/692.
  *      Sul **primo** overlap:
- *        - chiama FUN_25BAE(objPtr, 9)  — entity state-transition
- *        - chiama FUN_158AC(0x5e)        — sound trigger
  *        - obj[+0x58] = slot[+0x19]
  *        - slot[+0x25] = 0x1c
- *        - retVal = 1 (bra-out, salta gli slot rimanenti).
- *      Se nessuno overlap dopo 7 iter: retVal = sext_long(D2.b) con D2.b
- *      = ultimo "rightEdge.b" o initialD2 se tutti gli slot inattivi.
  *
  * **Strategia parity**:
- *   - `FUN_00025BAE` (entity state-transition) **stubbato con RTS** (0x4E75)
+ *   - `FUN_00025BAE` (entity state-transition) **stubbed with RTS** (0x4E75)
  *     per neutralizzare i side effects su obj. TS usa
  *     `subs.entityStateTransition = noop` per matchare.
- *   - `FUN_000158AC` (sound command sender) stubbato con RTS, TS no-op.
- *   - **D2 register init**: `cpu.system.setRegister("d2", 0)` prima di ogni
- *     call sul binario; TS riceve `initialD2Byte = 0`. Questo neutralizza
- *     il behavior "callee-saved" non-replicabile su tutti-inattivi.
+ *   - `FUN_000158AC` (sound command sender) stubbed with RTS, TS no-op.
  *
  * **Compare**:
  *   - Return value (D0 long).
  *   - Workram completa (8 KB) pre vs post, eccetto stack scratch zone
- *     [0x1F00..0x2000) (i 36 byte di movem più SP scratch della call).
  *
- * **Suite (5 × 100 = 500 casi)**:
- *   - A: gameMode ∈ {0,1,3,4,6,7,...} → early-exit, niente scritture, retVal=0
- *   - B: gameMode=2, slot 0 attivo + posizione coincidente → guaranteed HIT
- *   - C: gameMode=5, tutti slot armati con bbox boundary edges (random ±8)
- *   - D: gameMode=2, tutti slot inattivi → loop-no-hit, retVal = sext D2 = 0
  *   - E: random everything (gameMode random, slot/bbox random)
  *
  * Uso: npx tsx packages/cli/src/test-string-viewport-hit-175c8-parity.ts [N]
@@ -85,8 +70,8 @@ const BBOX_SENTINEL = 0xffffffff >>> 0;
 /**
  * Patch JSR-stubs:
  *   - FUN_25BAE → RTS (0x4E75) per neutralizzare entity state-transition.
- *     Caller pusha 2 long (objPtr, 9). Stub NOP-RTS pop solo PC, lascia
- *     gli arg sullo stack; il caller del FUN_175C8 li pulisce con
+ *     Caller pushes 2 longs (objPtr, 9). NOP-RTS stub pops only PC, leaving
+ *     args on the stack; FUN_175C8's caller clears them with
  *     `lea (0xc, SP), SP` (12 byte = 3 long).
  *   - FUN_158AC → RTS (0x4E75).
  */
@@ -133,7 +118,7 @@ interface SlotSpec {
   newState: number;        // byte (slot+0x25)
   x: number;               // word (slot+0xC)
   y: number;               // word (slot+0x10)
-  bboxAddrLong: number;    // valore scritto a *p1 (BBOX_SENTINEL o bboxAddr)
+  bboxAddrLong: number;
   bbox: { xMin: number; yMin: number; w: number; h: number };
 }
 
@@ -142,10 +127,9 @@ interface CaseInput {
   marbleX: number;         // word @ 0x400690
   marbleY: number;         // word @ 0x400692
   slots: SlotSpec[];       // 7 slots
-  /** byte iniziale per obj+0x58 (per rilevare scritture). */
   objScriptIdInit: number;
-  /** valore D2 iniziale (low byte) — settato via setRegister sul binario,
-   *  passato come `initialD2Byte` al TS. Default 0 per evitare ambiguità. */
+  /**
+    */
   initialD2Byte: number;
 }
 
@@ -202,10 +186,6 @@ function buildPreState(input: CaseInput, randomTail: () => number): Uint8Array {
 
 /** Compare workRam, escludendo la zona stack scratch [0x1E80..0x2000).
  *
- *  Il binario usa `link.w A6,-2` + `movem.l 9 longs` = 40 byte di stack +
- *  3 long arg (25BAE/158AC) = 12 byte; con SP iniziale 0x401F00, lo stack
- *  scende fino a circa 0x401EBC. Conservativo: skippiamo da 0x401E80 in giù
- *  (BBOX_BASE..BBOX_BASE+0x38 = 0x401E00..0x401E38 sono comunque scritti
  *  identici su entrambi i lati).
  */
 function compareWorkRam(
@@ -258,7 +238,6 @@ async function main(): Promise<void> {
 
     // BINARY side
     cpu.system.setRegister("sp", 0x401f00);
-    // Forza D2 al valore iniziale (callee-saved → conserva durante la call)
     cpu.system.setRegister("d2", input.initialD2Byte & 0xff);
     loadWorkRam(cpu, pre);
     const callRes = callFunction(cpu, FUN_175C8, [OBJ_ADDR >>> 0]);
@@ -271,7 +250,6 @@ async function main(): Promise<void> {
       stateInst,
       OBJ_ADDR,
       {
-        // Stubbed RTS sul binario → TS no-op identico
         entityStateTransition: () => {
           /* matching stub */
         },
@@ -284,7 +262,6 @@ async function main(): Promise<void> {
     const postTs = new Uint8Array(stateInst.workRam);
     const tsRet = tsResult.retVal >>> 0;
 
-    // Confronto
     let reason = "";
     let diff: { offset: number; bin: number; ts: number } | null = null;
     if (binRet !== tsRet) {
@@ -363,13 +340,11 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okA}/${perSuite}`);
   totalOk += okA;
 
-  // ─── Suite B: gameMode=2, slot 0 attivo + posizione coincidente ──────
   console.log(`\n  Suite B (gameMode=2 + slot 0 hit) — ${perSuite} casi`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const mx = rsw();
     const my = rsw();
-    // slot 0 attivo, x=marbleX, y=marbleY (default bbox copre +- 6 → hit garantito)
     const slot0: SlotSpec = {
       active: true,
       scriptId: rb(),
@@ -394,7 +369,7 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okB}/${perSuite}`);
   totalOk += okB;
 
-  // ─── Suite C: gameMode=5, slot armati con bbox boundary edges ────────
+  // ─── Suite C: gameMode=5, armed slots with bbox boundary edges ───────
   console.log(`\n  Suite C (gameMode=5 + boundary bbox edges) — ${perSuite} casi`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -431,7 +406,6 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okC}/${perSuite}`);
   totalOk += okC;
 
-  // ─── Suite D: gameMode=2, tutti slot inattivi → loop-no-hit ──────────
   console.log(`\n  Suite D (gameMode=2 + all inactive) — ${perSuite} casi`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {

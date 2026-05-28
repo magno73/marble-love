@@ -67,8 +67,7 @@ function objBroadcastFlag(s: GameState, i: number): number {
 }
 
 /**
- * Crea una ROM minima con ptr-table e byte-table piazzate ai loro indirizzi
- * canonici (0x24aae, 0x24a94). `listBytes` è la char-list 0xFF-terminated
+ * Create a minimal ROM with ptr-table and byte-table placed at their addresses
  * pian piano scritta in ROM @ `listAddr` (di default 0x24a9a, in zona table).
  */
 function makeRom(
@@ -104,7 +103,6 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     setupObj(s, 1, { state: 1, charcode: 0x42, signedRange: 4, broadcastFlag: 0 });
     const rom = makeRom([0x42, 0xff], 0x10, 0);
     objectCharcodeBroadcast1BBAA(s, rom);
-    // gate ancora 0; nessun broadcast sui +0xCB.
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(0);
     expect(objBroadcastFlag(s, 0)).toBe(0);
     expect(objBroadcastFlag(s, 1)).toBe(0);
@@ -114,12 +112,11 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
-    writeByte(s, PROGRESS_ADDR, 0x80); // progress alto
+    writeByte(s, PROGRESS_ADDR, 0x80);
     writeWord(s, OBJ_COUNT_ADDR, 1);
     setupObj(s, 0, { state: 1, charcode: 0x42, signedRange: 4, broadcastFlag: 0 });
     const rom = makeRom([0x42, 0xff], 0x10, 0); // threshold 0x10 < progress 0x80
     objectCharcodeBroadcast1BBAA(s, rom);
-    // gate non azzerato.
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(1);
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
@@ -131,7 +128,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     writeByte(s, PROGRESS_ADDR, 0x10);
     writeWord(s, OBJ_COUNT_ADDR, 1);
     setupObj(s, 0, { state: 1, charcode: 0x42, signedRange: 4, broadcastFlag: 0 });
-    const rom = makeRom([0xff], 0x80, 0); // lista vuota
+    const rom = makeRom([0xff], 0x80, 0);
     objectCharcodeBroadcast1BBAA(s, rom);
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(1);
     expect(objBroadcastFlag(s, 0)).toBe(0);
@@ -145,9 +142,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     writeWord(s, OBJ_COUNT_ADDR, 4);
     // obj0: state=1, charcode=0x42 (in lista), 0x6a=4 (in [3,6]), filter=0 → MATCH outer
     setupObj(s, 0, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 4 });
-    // obj1: state=1 (riceverà broadcast +0xCB=1)
     setupObj(s, 1, { state: 1, filterFlag: 0, charcode: 0x99, signedRange: 0 });
-    // obj2: state=2 (NON riceverà)
     setupObj(s, 2, { state: 2, filterFlag: 0, charcode: 0x42, signedRange: 4 });
     // obj3: state=1
     setupObj(s, 3, { state: 1, filterFlag: 0, charcode: 0x55, signedRange: 0 });
@@ -186,9 +181,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     setupObj(s, 3, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 7 });
     const rom = makeRom([0x42, 0xff], 0x80, 0);
     objectCharcodeBroadcast1BBAA(s, rom);
-    // obj1 (range 3) o obj2 (range 6) → match → broadcast su tutti gli state=1
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(0);
-    // tutti hanno state=1 → tutti settati a 1
     expect(objBroadcastFlag(s, 0)).toBe(1);
     expect(objBroadcastFlag(s, 1)).toBe(1);
     expect(objBroadcastFlag(s, 2)).toBe(1);
@@ -219,8 +212,6 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     setupObj(s, 0, { state: 1, charcode: 0x42, signedRange: 4 });
     const rom = makeRom([0x42, 0xff], 0x80, 0);
     objectCharcodeBroadcast1BBAA(s, rom);
-    // tutti gli early-exit sono passati (gate=1, threshold>progress, list non vuota),
-    // ma count=0 → outer loop salta. Nessuno scrive sul gate (è dentro il body).
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(1);
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
@@ -232,7 +223,6 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     writeByte(s, PROGRESS_ADDR, 0x10);
     writeWord(s, OBJ_COUNT_ADDR, 1);
     setupObj(s, 0, { state: 1, filterFlag: 0, charcode: 0x77, signedRange: 5 });
-    // listAddr=0x024aaa per level 3 (zona libera fuori dalle altre liste)
     const rom = makeRom([0x77, 0xff], 0x80, 3, 0x024ab0);
     objectCharcodeBroadcast1BBAA(s, rom);
     expect(readByte(s, GATE_FLAG_ADDR)).toBe(0);

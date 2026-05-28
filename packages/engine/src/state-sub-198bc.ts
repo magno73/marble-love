@@ -1,16 +1,13 @@
 /**
- * state-sub-198bc.ts — replica `FUN_000198BC` (186 byte).
+ * state-sub-198bc.ts - port of `FUN_000198BC` (186 bytes).
  *
- * "Entity move-and-validate retry loop". Caller dispatcher di
- * `FUN_0001973C` (single xref @ 0x000198AE). Tenta di muovere l'entity nella
- * sua direzione corrente (`entity[0x26]`); se la nuova posizione è invalida,
- * ripristina; se valida, ruota la direzione fino a 9 iterazioni cercando
- * direzioni alternative, e marca "stuck" (entity[0x26]=0x10, entity[0..7]=0)
- * se nessuna alternativa è valida o se cicla.
+ * "Entity move-and-validate retry loop". Called by the `FUN_0001973C` dispatcher
+ * (single xref @ 0x000198AE). Tries alternate movement directions and marks the
+ * entity as stuck (entity[0x26]=0x10, entity[0..7]=0) when all retries fail.
  *
  * **Disasm 0x198BC..0x19975** (186 byte):
  *
- *   movem.l {A2,D2..D6},-(SP)             ; salva A2,D2..D6 (24 byte)
+ *   movem.l {A2,D2..D6},-(SP)             ; save A2,D2..D6 (24 bytes)
  *   movea.l (0x1c,SP),A2                  ; A2 = arg (entity ptr)
  *   cmpi.b  #0x10,(0x26,A2)
  *   beq.w   end_restore_regs              ; if entity[0x26] == 0x10 → return
@@ -35,7 +32,6 @@
  *   clr.b   D2b                           ; D2b = iter counter (0..8)
  * loop:                                   ; @ 0x19906
  *   cmpi.b  #0x7,(0x25,A2)
- *   beq.b   apply                         ; state==7 → sempre apply
  *   move.b  D2b,D0b
  *   ext.w   D0w
  *   ext.l   D0
@@ -75,143 +71,105 @@
  *   movem.l (SP)+,{D2..D6,A2}
  *   rts
  *
- * **Semantica** (riassunto):
- *   - if entity[0x26] == 0x10 → no-op (return).
- *   - salva position originale (D6=long@0xC, D5=long@0x10).
+ * **Semantics** (summary):
+ *   - if entity[0x26] == 0x10 -> no-op (return).
+ *   - save the original position (D6=long@0xC, D5=long@0x10).
  *   - step = (state==7) ? 1 : 4.
- *   - 1° tentativo: move + validate. Se invalido → ripristina pos, return.
- *   - 2°..9° tentativo (D2=0..8): in state==7 ogni iter; altrimenti solo
- *     iter con (D2 & 3) == 0 (= 0, 4, 8). Per ogni apply:
- *       - ripristina pos (D6/D5)
+ *   - First attempt: move + validate. If invalid, restore pos and return.
+ *     Iterations with (D2 & 3) == 0 (= 0, 4, 8) apply movement:
+ *       - restore pos (D6/D5)
  *       - entity[0x26] = (entity[0x26] + step) & 0xF
- *       - se cycle (entity[0x26] == orig) → skip
- *       - else: move + validate. Se invalido → ripristina pos, return.
- *       - se valido: continua il loop (NB: la pos del move VALIDO viene
- *         **lasciata** in entity[0xC..0x13]; il loop continua a sovrascrivere)
- *   - se loop esaurisce (D2 == 9): stuck — entity[0x26]=0x10, entity[0..7]=0.
- *   - in TUTTI i path che escono dal loop (eccetto early return D0==0 1°
- *     tentativo): la posizione viene infine ripristinata a (D6,D5) prima del
+ *       - if the direction cycles back to the original, skip
+ *       - else: move + validate. If invalid, restore pos and return.
+ *         A valid move is left in entity[0xC..0x13] until the loop overwrites it.
+ *   - if the loop exhausts (D2 == 9): stuck; entity[0x26]=0x10, entity[0..7]=0.
  *     return.
  *
- * **JSR esterne** (sub injection):
- *   - `FUN_00019976` = `applyMoveVelocity` (move-velocity.ts) — replicato.
- *   - `FUN_0001937C` = `validatePosition` (proximity-check.ts) — replicato.
+ * **External JSRs** (sub injection):
+ *   - `FUN_00019976` = `applyMoveVelocity` (move-velocity.ts), replicated.
+ *   - `FUN_0001937C` = `validatePosition` (proximity-check.ts), replicated.
  *
- * **Caller noto** (1 xref): `FUN_0001973C` @ 0x000198AE.
+ * **Known caller** (1 xref): `FUN_0001973C` @ 0x000198AE.
  *
  * **Side effects** in `state.workRam` (entity @ argAddr):
- *   - `entity[0x26]`: scritto in molti path (counter wrap 4-bit, oppure 0x10).
- *   - `entity[0xC..0x13]`: scritto (move) e ripristinato a fine call salvo
- *     casi specifici (invalid first try restituisce con pos restored).
- *   - `entity[0x0..0x7]`: azzerati nel branch stuck (D2 == 9).
+ *   - `entity[0x26]`: written in several paths (4-bit counter wrap or 0x10).
+ *   - `entity[0xC..0x13]`: written by moves and restored at the end except
+ *     during intermediate valid retries.
+ *   - `entity[0x0..0x7]`: cleared in the stuck branch (D2 == 9).
  *
- * **Quirk importante**: il branch `D2 == 9 → stuck` cade *attraverso* a
- * `end_pos_restore`, quindi anche nel caso stuck la posizione finale è quella
- * originale (D6,D5). NON resta la posizione "valida" dell'ultimo apply.
+ * **Important quirk**: the `D2 == 9 -> stuck` branch falls through to the same
+ * position-restore epilogue as invalid movement.
  *
- * Verifica bit-perfect via `packages/cli/src/test-state-sub-198bc-parity.ts`
- * (500 casi).
  */
 
 import type { GameState } from "./state.js";
 
 // ─── Entity offsets ──────────────────────────────────────────────────────
 
-/** Long @ entity[0x00..0x03] (azzerato in branch stuck D2==9). */
 export const ENTITY_LONG0_OFFSET = 0x00 as const;
-/** Long @ entity[0x04..0x07] (azzerato in branch stuck D2==9). */
 export const ENTITY_LONG1_OFFSET = 0x04 as const;
-/** Long @ entity[0x0C..0x0F] (x position; salvato in D6, scritto da FUN_19976). */
+/** Long @ entity[0x0C..0x0F] (x position; saved in D6, written by FUN_19976). */
 export const ENTITY_POS_X_OFFSET = 0x0c as const;
-/** Long @ entity[0x10..0x13] (y position; salvato in D5, scritto da FUN_19976). */
+/** Long @ entity[0x10..0x13] (y position; saved in D5, written by FUN_19976). */
 export const ENTITY_POS_Y_OFFSET = 0x10 as const;
-/** Byte @ entity[0x25] (state byte; selettore step=1 vs step=4). */
+/** Byte @ entity[0x25] (state byte; selector for step=1 vs step=4). */
 export const ENTITY_STATE_OFFSET = 0x25 as const;
-/** Byte @ entity[0x26] (direction/counter; rotato dal loop, marker 0x10 = stuck). */
+/** Byte @ entity[0x26] (direction/counter; rotated by the loop, marker 0x10 = stuck). */
 export const ENTITY_COUNTER_OFFSET = 0x26 as const;
 
-// ─── Costanti ────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────
 
-/** Marker "stuck": se entity[0x26] == 0x10 al call → no-op. */
+/** "Stuck" marker: entity[0x26] == 0x10 at call entry means no-op. */
 export const STUCK_MARKER = 0x10 as const;
-/** State-byte che abilita step=1 (jitter fine). Altri stati → step=4. */
 export const STATE_FINE_STEP = 0x07 as const;
-/** Step di rotazione direzione per state==7 (jitter ±1 per iter). */
+/** Direction rotation step for state==7 (jitter +/-1 per iter). */
 export const STEP_FINE = 0x01 as const;
-/** Step di rotazione direzione per state!=7 (jitter ±4). */
+/** Direction rotation step for state!=7 (jitter +/-4). */
 export const STEP_COARSE = 0x04 as const;
-/** Pre-decrement applicato a entity[0x26] prima del loop. */
 export const COUNTER_PREDEC = 0x04 as const;
-/** Massimo numero di iterazioni del loop (0..8 → 9 valori). */
 export const MAX_ITER = 0x09 as const;
-/** Maschera per il check "skippa apply" in state!=7: apply solo se (D2 & MASK) == 0. */
+/** Mask for the state!=7 "skip apply" check: apply only when (D2 & MASK) == 0. */
 export const ITER_MASK = 0x03 as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 2 JSR interne.
+ * Stub injection for the two internal JSRs.
  *
- * `FUN_00019976` = `applyMoveVelocity` (move-velocity.ts): applica la velocità
- * corrispondente a `entity[0x26]` (direzione 0..15) sulla posizione
- * `entity[0xC..0x13]`. Side-effect su `entity[0x00..0x07]` (velocity cache).
+ * `entity[0xC..0x13]`. Side effects touch `entity[0x00..0x07]` (velocity cache).
  *
- * `FUN_0001937C` = `validatePosition` (proximity-check.ts): controlla se la
- * nuova posizione è libera; ritorna 1 se valida, 0 altrimenti.
+ * `FUN_0001937C` = `validatePosition` (proximity-check.ts): checks whether the
  *
- * Default: `fun_19976` = no-op; `fun_1937c` = ritorna 0 (= invalid → early
- * return). Il caller deve iniettare implementazioni reali per behavior reale.
  */
 export interface StateSub198BCSubs {
-  /** Callback per `FUN_00019976` (move). Default: no-op. */
+  /** Callback for `FUN_00019976` (move). Default: no-op. */
   fun_19976?: (state: GameState, entityAddr: number) => void;
-  /**
-   * Callback per `FUN_0001937C` (validate). Default: ritorna 0 (invalid).
-   * Ritorna long u32; il binario fa `tst.l D0; beq` quindi 0 = invalid.
-   */
   fun_1937c?: (state: GameState, entityAddr: number) => number;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────
 
-/** Esito globale del retry loop. */
 export type Outcome =
-  /** entity[0x26] == 0x10 al call: no-op completo (no JSR). */
+  /** entity[0x26] == 0x10 at call entry: complete no-op (no JSR). */
   | "early_marker"
-  /** 1° validate ritorna 0 (invalid): pos ripristinata, no loop, return. */
   | "first_invalid"
-  /** Apply successivo invalida la pos: pos ripristinata, return. */
+  /** A later apply invalidates the position: position restored, return. */
   | "loop_invalid"
-  /** Loop esaurito (D2 raggiunge 9): stuck — pos ripristinata, marker set. */
+  /** Loop exhausted (D2 reaches 9): stuck; position restored, marker set. */
   | "loop_exhausted_stuck"
-  /**
-   * Branch teorico mai raggiungibile in pratica: il loop **non può** uscire
-   * con D2 < 9 senza entrare in un branch invalid (il fall-through dopo apply
-   * va sempre a inc_iter). Incluso per completezza tipo.
-   */
   | "loop_exited";
 
 export interface StateSub198BCResult {
-  /** Esito del retry loop. */
   outcome: Outcome;
   /**
-   * Numero di iterazioni del loop completate (D2 finale, 0..9).
-   * `0` per `early_marker`/`first_invalid`. `9` per `loop_exhausted_stuck`.
+   * `0` for `early_marker`/`first_invalid`. `9` for `loop_exhausted_stuck`.
    */
   iters: number;
   /**
-   * Numero di chiamate a `fun_19976` durante l'esecuzione (incluso il primo
-   * tentativo). `0` per `early_marker`.
+   * attempt). `0` for `early_marker`.
    */
   moveCalls: number;
-  /**
-   * Numero di chiamate a `fun_1937c` durante l'esecuzione (= moveCalls;
-   * sempre paired). `0` per `early_marker`.
-   */
   validateCalls: number;
-  /** Valore originale di entity[0x26] al call (saved D4b). `null` per `early_marker`. */
   originalDir: number | null;
-  /** Valore finale di entity[0x26] post-call. */
   finalCounter: number;
 }
 
@@ -241,35 +199,31 @@ function writeLongBE(state: GameState, off: number, v: number): void {
   state.workRam[off + 3] = v & 0xff;
 }
 
-// ─── Replica ─────────────────────────────────────────────────────────────
+// ─── Port ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_000198BC`.
  *
- * @param state       GameState (modifica `state.workRam[entity..entity+0x27]`).
- * @param entityAddr  indirizzo assoluto m68k della struct entity (es.
- *                    `0x401e00`). Convertito a offset `entityAddr - 0x400000`.
- * @param subs        injection. `subs.fun_19976` (move) e `subs.fun_1937c`
+ * @param state       GameState. Mutates `state.workRam[entity..entity+0x27]`.
+ *                    Converts `entityAddr - 0x400000` to access work RAM.
+ * @param subs        Injection callbacks. `subs.fun_19976` (move) and `subs.fun_1937c`
  *                    (validate). Default: no-op + return 0.
  *
- * @returns dettaglio dell'esecuzione (outcome, iter count, JSR count, dir).
+ * @returns Execution detail (outcome, iteration count, JSR counts, direction).
  *
- * **Ordine delle scritture** (rilevante per parity vs binario):
- *   1. Test `entity[0x26] == 0x10` → early return.
+ *   1. Test `entity[0x26] == 0x10` -> early return.
  *   2. Save D6 = entity[0xC..0xF], D5 = entity[0x10..0x13].
  *   3. step = (entity[0x25] == 7) ? 1 : 4.
- *   4. Call `fun_19976(state, addr)` → `fun_1937c(state, addr)`.
- *   5. Se `fun_1937c` ritorna 0: scrivi D6→entity[0xC..0xF], D5→entity[0x10..0x13]; return.
+ *   4. Call `fun_19976(state, addr)` -> `fun_1937c(state, addr)`.
  *   6. D4 = entity[0x26]; entity[0x26] -= 4 (mod 256); D2 = 0.
- *   7. Loop: per D2 = 0..8:
- *      - Se state==7 OR (D2 & 3)==0: apply
+ *   7. Loop for D2 = 0..8:
+ *      - If state==7 OR (D2 & 3)==0: apply
  *        - entity[0xC..0xF] = D6, entity[0x10..0x13] = D5
  *        - entity[0x26] = (entity[0x26] + step) & 0xF
- *        - Se entity[0x26] == D4: skip (continue)
- *        - Else: call fun_19976, fun_1937c. Se 0: restore D6/D5, return.
- *      - D2++.
- *   8. Se D2 == 9 (loop esaurito): entity[0x26] = 0x10, entity[0..7] = 0;
- *      poi restore D6→entity[0xC..0xF], D5→entity[0x10..0x13].
+ *        - If entity[0x26] == D4: skip (continue)
+ *        - Else: call fun_19976, fun_1937c. If it returns 0, restore D6/D5 and return.
+ *      - Increment D2.
+ *   8. If D2 == 9 (loop exhausted): entity[0x26] = 0x10, entity[0..7] = 0;
+ *      then restore D6 -> entity[0xC..0xF], D5 -> entity[0x10..0x13].
  */
 export function stateSub198BC(
   state: GameState,
@@ -326,7 +280,6 @@ export function stateSub198BC(
   }
 
   // ─── First valid: setup loop ────────────────────────────────────────────
-  // D4b = entity[0x26]: salva direzione originale (PRIMA del subq).
   const d4 = readByte(state, off + ENTITY_COUNTER_OFFSET);
   // entity[0x26] -= 4 (byte sub mod 256).
   writeByte(

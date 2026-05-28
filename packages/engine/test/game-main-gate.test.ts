@@ -1,7 +1,7 @@
 /**
  * Test gameMainGate (FUN_28972) — root main-gate del game loop.
  *
- * Bit-perfect verificato vs binary (1000+1000 casi random) tramite
+ * Bit-perfect verified against the binary (1000+1000 random cases) through
  * `cli/src/test-game-main-gate-parity.ts`.
  */
 
@@ -107,7 +107,7 @@ describe("gameMainGate (FUN_28972)", () => {
 
   it("Hang: bit 0 + bit 1 di *0x4003AA set (preservati dal debounce) + MMIO bit 6 = 0 → hangRequested", () => {
     const s = emptyGameState() as GameStateWithHang;
-    // Per preservare bit 0+1 dopo debounce: prev=0x03, mmio=0x03 (entrambi set)
+    // To preserve bits 0+1 after debounce: prev=0x03, mmio=0x03 (both set).
     s.workRam[PREV_INPUT_OFF] = 0x03;
     s.workRam[DEBOUNCED_INPUT_OFF] = 0x03;
     gameMainGate(s, { mmioInput: 0x03 });

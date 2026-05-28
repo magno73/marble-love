@@ -1,9 +1,7 @@
 /**
  * state-sub-186ac.test.ts — smoke tests per `FUN_000186AC`.
  *
- * Verifica i 4 branch principali: early_exit (mode != 3), init (sentinel==0
- * && hasArmed), teardown (sentinel!=0 && !hasArmed), noop (gli altri due).
- * La parità bit-perfect col binario è verificata in
+ * && hasArmed), teardown (sentinel!=0 && !hasArmed), noop (the other two).
  * `packages/cli/src/test-state-sub-186ac-parity.ts`.
  */
 
@@ -72,7 +70,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     const r = stateSub186AC(state, rom);
     expect(r.branch).toBe("early_exit");
     expect(r.modeMatched).toBe(false);
-    // sentinel non toccato
+    // sentinel not touched.
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0xab);
     expect(r.fun1BB28Calls).toBe(0);
     expect(r.fun18F46Calls).toBe(0);
@@ -83,7 +81,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
     setWordBE(state.workRam, OBJ_COUNT_ADDR - WORK_RAM_BASE, 2);
-    // 2 oggetti, nessuno con state==1 && sub∈{4,5}
     for (let i = 0; i < 2; i++) {
       const objOff = (OBJ_BASE_ADDR - WORK_RAM_BASE) + i * OBJ_STRIDE;
       state.workRam[objOff + 0x18] = 2; // state != 1
@@ -105,7 +102,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
     setWordBE(state.workRam, OBJ_COUNT_ADDR - WORK_RAM_BASE, 1);
-    // 1 oggetto armato
     const objOff = OBJ_BASE_ADDR - WORK_RAM_BASE;
     state.workRam[objOff + 0x18] = 1;
     state.workRam[objOff + 0x1b] = 5;
@@ -128,7 +124,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     state.workRam[objOff + 0x1b] = 4;
     state.workRam[SENTINEL_ADDR - WORK_RAM_BASE] = 0;
 
-    // Pre-popola le ROM tables con valori sentinella distinguibili.
     for (let d2 = 0; d2 < SECONDARY_PATH_CUTOFF; d2++) {
       // primary u16 BE per entry[2..3]
       rom.program[ROM_TABLE_PRIMARY_W16 + d2 * 2 + 0] = 0xa0;
@@ -143,13 +138,12 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     // ROM_SELECTOR_INIT[0] e ROM_SELECTOR_POST[0]: long BE distinct
     setLongBE(rom.program, ROM_SELECTOR_INIT + 0, 0x00012000);
     setLongBE(rom.program, ROM_SELECTOR_POST + 0, 0x00013000);
-    // Pre-popola anche le 4 variant per evitare panic se rng != 0
+    // Prepopulate the 4 variants too to avoid panic if rng != 0.
     for (let v = 1; v < 4; v++) {
       setLongBE(rom.program, ROM_SELECTOR_INIT + v * 4, 0x00012000 + v * 0x100);
       setLongBE(rom.program, ROM_SELECTOR_POST + v * 4, 0x00013000 + v * 0x100);
     }
-    // Per la secondary path (D2 ∈ [0x18..0x23]) la base è *A4 (varia per
-    // variant); piazza dei dati ROM in tutte le 4 variant a partire dai
+    // variant); place ROM data in all 4 variants starting from
     // selector init.
     for (let v = 0; v < 4; v++) {
       const base = 0x00012000 + v * 0x100;
@@ -177,7 +171,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(r.fun18F46Calls).toBe(0);
     // sentinel diventato 1
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(1);
-    // calledFor: 0x24 chiamate, una per ogni entry (in ordine)
     expect(calledFor).toHaveLength(SLOT_ENTRY_COUNT);
     for (let i = 0; i < SLOT_ENTRY_COUNT; i++) {
       expect(calledFor[i]).toBe(SLOT_TABLE_ADDR + i * SLOT_ENTRY_STRIDE);
@@ -203,8 +196,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     setWordBE(state.workRam, OBJ_COUNT_ADDR - WORK_RAM_BASE, 0); // count=0 → no scan body
     state.workRam[SENTINEL_ADDR - WORK_RAM_BASE] = 1;
 
-    // Pre-popola la slot-table: entry 0 e 5 hanno entry[2..3]==0xFFFF (trigger),
-    // gli altri valori arbitrari.
+    // Prepopulate the slot table: entries 0 and 5 have entry[2..3]==0xFFFF (trigger),
     const tableOff = SLOT_TABLE_ADDR - WORK_RAM_BASE;
     for (let i = 0; i < SLOT_ENTRY_COUNT; i++) {
       const entryOff = tableOff + i * SLOT_ENTRY_STRIDE;
@@ -232,7 +224,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(calls[0]).toEqual({ arg1: 0x29, arg2: 0 }); // sext_l(0) = 0
     expect(calls[1]).toEqual({ arg1: 0x29, arg2: 5 }); // sext_l(5) = 5
 
-    // Sentinel azzerato
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0);
 
     // Tutte le entry hanno entry[2..3]=0, entry[4]=0, entry[5]=0, entry[6..7]=0
@@ -242,7 +233,6 @@ describe("stateSub186AC (FUN_000186AC)", () => {
       expect(state.workRam[entryOff + 4]).toBe(0);
       expect(state.workRam[entryOff + 5]).toBe(0);
       expect(readWordBE(state.workRam, entryOff + 6)).toBe(0);
-      // entry[0] NON viene azzerato in teardown
       expect(state.workRam[entryOff + 0]).toBe(i & 0xff);
     }
   });

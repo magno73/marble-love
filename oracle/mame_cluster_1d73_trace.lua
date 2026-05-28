@@ -1,8 +1,8 @@
 -- mame_cluster_1d73_trace.lua — live write-tap su workRam region 0x401d70..0x401e6f
--- per identificare i PC writer al cluster drift @ 0x1d73..0x1e67 nella demo window.
+-- Identifies writer PCs for the drift cluster @ 0x1d73..0x1e67 in the demo window.
 --
--- NOTA MAME 0.286 bug: install_write_tap si auto-disabilita silenziosamente dopo
--- ~200 frame se installato all'avvio. Workaround: installare il tap UNA volta a
+-- MAME 0.286 bug: install_write_tap silently disables itself after
+-- ~200 frames if installed at startup. Workaround: install the tap once at
 -- ridosso della window (qui a fc = FROM_FR - 1).
 --
 -- Env vars:

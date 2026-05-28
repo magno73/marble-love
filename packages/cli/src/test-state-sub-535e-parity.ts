@@ -2,20 +2,13 @@
 /**
  * test-state-sub-535e-parity.ts — differential FUN_535E vs stateSub535E.
  *
- * `FUN_0000535E` è una trampoline a 3 argomenti che legge i due byte globali
- * `0x401F98` e `0x401F99`, li sign-extende a long M68k, e li passa con
- * l'argomento del caller a `FUN_00005388`.
+ * `0x401F98` and `0x401F99`, sign-extends them to M68k longs, and passes them with
  *
  * Strategia del parity test:
- *   - Per ogni caso settiamo `arg` (long) sullo stack come unico parametro
- *     del caller, prima della jsr a 0x535E.
- *   - Settiamo `(0x401F98).b` e `(0x401F99).b` con valori variabili (boundary
  *     0x00/0x7F/0x80/0xFF + random).
- *   - Cattura: settiamo PC = 0x535E, eseguiamo finché PC == 0x5388 (entry
- *     point del callee), poi leggiamo i 3 long sullo stack `(0x4..0xC,SP)`
+ *     point), then read the 3 longs on the stack `(0x4..0xC,SP)`
  *     visti dal callee.
- *   - Confrontiamo `(byte98_seen, byte99_seen, arg_seen)` col valore TS via
- *     stub `inner` che cattura gli stessi 3 parametri.
+ *     `inner` stub that captures the same 3 parameters.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-535e-parity.ts [N]
  */
@@ -65,7 +58,6 @@ function captureEnter5388Args(
   pokeMem(cpu, 0x00401f98, 1, byte98 & 0xff);
   pokeMem(cpu, 0x00401f99, 1, byte99 & 0xff);
 
-  // Stack: SP iniziale → push arg long → push sentinel ret addr.
   const sp0 = 0x401f00;
   let sp = sp0;
   sp = (sp - 4) >>> 0;
@@ -76,8 +68,6 @@ function captureEnter5388Args(
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_535E);
 
-  // Step finché PC == 0x5388 (entrato nel callee). Limite generoso (la
-  // trampoline è ~12 istruzioni → < 50 step).
   let reached = false;
   for (let i = 0; i < 200; i++) {
     if (sys.getRegisters().pc === FUN_5388) {
@@ -131,8 +121,6 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Boundary cases prima del random fuzz:
-    //   0: tutti zero
     //   1: byte 0x7F (positivo max)
     //   2: byte 0x80 (negativo min, sign-extend critico)
     //   3: byte 0xFF (sign-extend → 0xFFFFFFFF)
@@ -166,14 +154,13 @@ async function main(): Promise<void> {
       b99 = Math.floor(rng() * 0x100) & 0xff;
     }
 
-    // Sync TS state con i byte globali in workRam.
     state.workRam[0x1f98] = b98 & 0xff;
     state.workRam[0x1f99] = b99 & 0xff;
 
-    // Cattura args che FUN_5388 riceve.
+    // Capture args received by FUN_5388.
     const bin = captureEnter5388Args(cpu, arg, b98, b99);
 
-    // Cattura args che l'inner TS riceve.
+    // Capture args received by TS inner.
     let tsB98 = -1;
     let tsB99 = -1;
     let tsArg = -1;

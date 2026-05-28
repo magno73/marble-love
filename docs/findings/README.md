@@ -1,28 +1,37 @@
 # Findings
 
-Documenti dei finding tecnici significativi durante il porting bit-perfect.
-Ognuno descrive un comportamento hardware/software non ovvio scoperto via
-differential debugging, con riferimenti a commit e test di regressione.
+These notes capture significant technical findings from the bit-faithful
+reimplementation work. Each document should describe a non-obvious hardware or
+software behavior discovered through differential debugging, with links to the
+relevant evidence, tests, and commits.
 
-Questi documenti sono pensati anche come **asset pubblicabili** (blog post,
-HN, technical writeup post-launch).
+The findings are written as public technical material for future blog posts,
+Hacker News discussions, or post-launch writeups.
 
-## Findings index
+## Findings Index
 
 - [Slapstic FSM observes 68010 CPU prefetch outside protected window](slapstic-prefetch-side-channel.md)
-  — *2026-05-13*. Hardware quirk del chip slapstic 137412-103. Prefetch CPU
-  fuori dal range protetto può armare la FSM se matcha pattern `alt1`.
-  Impact: chiuso 126B PF diff a f12950.
+  - 2026-05-13. Hardware quirk in the slapstic 137412-103 chip. CPU prefetch
+    outside the protected range can arm the FSM when it matches the `alt1`
+    pattern. Impact: closed a 126-byte playfield diff at f12950.
 - [Level descriptor header format](../level-header-format.md)
-  — *2026-05-19*. Layout byte-per-byte del descriptor dei 6 livelli Marble
-  con consumer M68010, tap MAME, parity artifacts e UNKNOWN verificati.
+  - 2026-05-19. Byte-level layout of the six Marble Madness level descriptors,
+    with M68010 consumers, MAME taps, parity artifacts, and verified unknowns.
 
-## Aggiungere nuovi finding
+## Adding Findings
 
-Quando scopri qualcosa di non ovvio (bug subtle, quirk hardware non
-documentato, side effect emergente):
+When you discover a non-obvious behavior, create
+`docs/findings/<topic>-<short-desc>.md` with:
 
-1. Crea `docs/findings/<topic>-<short-desc>.md`
-2. Struttura: TL;DR + Background + Anomaly + Discovery + Fix + Verification + Reflections + References + Commits
-3. Aggiungi voce a questo README
-4. Linka dal STATUS.md se rilevante per il flusso del progetto
+1. TL;DR
+2. Background
+3. Anomaly
+4. Discovery
+5. Fix
+6. Verification
+7. Reflections
+8. References
+9. Commits
+
+Then add the note to this index and link it from a relevant public or internal
+status document when needed.

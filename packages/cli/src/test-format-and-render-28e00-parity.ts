@@ -7,9 +7,6 @@
  * da:
  *   1. `formatHex(arg1Long, *0x400436, sext_l(arg2Word), showSpaces)` via
  *      `jsr 0x10C` (=`jmp 0x3A08`).
- *      `showSpaces` è stack garbage = low word del **D2 caller** (D2 saved
- *      al prologo di FUN_28E00 → stack-area letta da FUN_3A08 come
- *      `(0x16,SP)` word). Per parity testing, settiamo D2 prima della
  *      callFunction.
  *   2. `FUN_00028FDE(arg3Word, arg4Word)` =
  *      `initStructHeader(0x400434, arg3.lowByte, arg4.lowByte)` (FUN_255A)
@@ -22,12 +19,9 @@
  *   - C: rotation random 0..7
  *   - D: numDigits piccolo (1..3) — tipico HUD score
  *
- * Tutti i casi forzano `valF00 = 0` e `marker = 0` per chain-end immediato
- * (altrimenti renderStringChain walka memoria random; coerente con il
  * pattern del parity test di FUN_2572).
  *
- * Confronto: 64 byte di workRam scratch attorno alla struct (0x400434..) +
- * 4 KB alpha RAM (0xA03000..0xA03FFF) + buffer formatHex (16 byte attorno
+ * 4 KB alpha RAM (0xA03000..0xA03FFF) + formatHex buffer (16 bytes around
  * al bufEnd ptr).
  *
  * Uso: npx tsx packages/cli/src/test-format-and-render-28e00-parity.ts [N]
@@ -56,10 +50,7 @@ const FUN_28E00 = 0x00028e00;
 const STRUCT_ADDR = 0x00400434;
 const STRUCT_BUFEND_PTR = 0x00400436; // = STRUCT_ADDR + 2 (struct's string-ptr field)
 
-// Buffer bufEnd dove formatHex scrive le cifre. Lo posizioniamo lontano
-// dalla struct e da "scratch" usate da renderStringChain. workRam range
-// utile: 0x400000..0x401FFF = 8 KB. Struct @ 0x400434..0x40043B (12 byte).
-// Globals @ 0x401F00, 0x401F3A, 0x401F42. SP @ 0x401F00. Quindi useremo
+// from the struct and scratch areas used by renderStringChain. workRam range
 // bufEnd in 0x401D00..0x401D40 (sicuro).
 const BUFEND_BASE = 0x00401d00; // bufEnd random in [BUFEND_BASE..BUFEND_BASE+0x10]
 
@@ -115,7 +106,6 @@ async function main(): Promise<void> {
   function setupCase(setup: CaseSetup): void {
     const { bufEnd, attrGlobals } = setup;
 
-    // Reset workRam scratch areas in entrambi i side (parità iniziale).
     // 1) Struct area 0x400434..0x400440 (12 byte)
     // 2) bufEnd buffer area 0x401D00..0x401D40 (64 byte)
     // 3) Globals 0x401F00, 0x401F3A, 0x401F42
@@ -179,12 +169,10 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
     setupCase(setup);
 
-    // Set D2 BEFORE calling FUN_28E00 — la low word di D2 caller è
     // showSpaces in formatHex (via stack-garbage `(0x16,SP)`).
     cpu.system.setRegister("d2", setup.callerD2 >>> 0);
 
-    // Pollute D0/D1 con valori noti per non confondere con caller-saved
-    // "garbage" diversi.
+    // different "garbage".
     cpu.system.setRegister("d0", 0xdeadbeef);
     cpu.system.setRegister("d1", 0xcafedab0);
 
@@ -208,7 +196,6 @@ async function main(): Promise<void> {
     );
 
     // Compare struct region 0x400434..0x40043F (12 byte: copre +0/+1/+6 +
-    // string ptr che NON viene mutato da FUN_28E00).
     let fail = compareRegion(STRUCT_ADDR, 12, "struct");
     if (fail !== null) {
       if (failHolder.value === null) {
@@ -217,7 +204,7 @@ async function main(): Promise<void> {
       return false;
     }
 
-    // Compare bufEnd buffer area (64 byte attorno al bufEnd)
+    // Compare bufEnd buffer area (64 bytes around bufEnd).
     fail = compareRegion(BUFEND_BASE, 64, "bufEnd");
     if (fail !== null) {
       if (failHolder.value === null) {

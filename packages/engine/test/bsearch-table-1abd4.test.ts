@@ -1,10 +1,10 @@
 /**
  * bsearch-table-1abd4.test.ts — smoke tests per `FUN_0001ABD4`.
  *
- * La funzione fa una bisezione su un array di word ordinato, le cui
+ * The function bisects a sorted word array whose
  * estremita' sono nei due slot long `*(0x40065A)` e `*(0x40065E)`.
  * Step iniziale = 0x400 byte, halvato ogni iter, probe clampato a
- * `[base, end]`. Termina solo all'equality.
+ * `[base, end]`. Terminates only on equality.
  */
 
 import { describe, it, expect } from "vitest";
@@ -29,7 +29,7 @@ function writeWordBE(s: ReturnType<typeof emptyGameState>, off: number, v: numbe
 }
 
 /**
- * Helper: setup di una tabella di word @ workRam offset `tableOff`.
+ * Helper: set up a word table at workRam offset `tableOff`.
  * Configura *(0x40065A) e *(0x40065E) puntando in absolute addressing
  * (workRam = 0x400000+).
  */
@@ -52,7 +52,7 @@ describe("bsearchTable1ABD4 (FUN_0001ABD4)", () => {
     const s = emptyGameState();
     // Tabella di 5 word @ workRam off 0x800: [0x10, 0x20, 0x30, 0x40, 0x50]
     // Stride 2 byte; step iniziale 0x400 → primo step va FUORI range, ma il
-    // clamp riporta dentro. Garantito dal test che il match esiste.
+    // clamp brings it back inside. The test guarantees that the match exists.
     const tableOff = 0x800;
     setupTable(s, tableOff, [0x10, 0x20, 0x30, 0x40, 0x50]);
 
@@ -64,7 +64,7 @@ describe("bsearchTable1ABD4 (FUN_0001ABD4)", () => {
   it("ritorna 0 quando target == base.word (no iter di bisezione)", () => {
     const s = emptyGameState();
     const tableOff = 0x1000;
-    // Tabella con base.word = 0xABCD; un altro a +0x400 byte (= word 0x200)
+    // Table with base.word = 0xABCD; another at +0x400 bytes (= word 0x200).
     setupTable(s, tableOff, [0xabcd]);
     // Forza end-pointer 1024 byte oltre base, riempi un terminator
     writeLongBE(s, END_PTR_OFF, WORK_RAM_BASE_ADDR + tableOff + 0x400);
@@ -78,11 +78,11 @@ describe("bsearchTable1ABD4 (FUN_0001ABD4)", () => {
     const tableOff = 0x900;
     setupTable(s, tableOff, [0x1234, 0x5678, 0x9abc]);
 
-    // arg long = 0xCAFE5678 → low word 0x5678 deve matchare entry 1.
-    // Pero' attenzione: il loop bisezione cerca con step iniziale 0x400 byte
-    // = 512 word. Con tabella di 3 word, il primo probe avanza/indietreggia
+    // arg long = 0xCAFE5678 -> low word 0x5678 must match entry 1.
+    // Careful: the bisection loop searches with initial step 0x400 bytes.
+    // = 512 words. With a 3-word table, the first probe moves forward/backward
     // di 512 word e va fuori range; il clamp lo riporta a [base, end].
-    // Per un test semplice, usiamo una tabella piu' grande "sintetica":
+    // For a simple test, use a larger synthetic table:
     const tableOff2 = 0xc00;
     const words: number[] = [];
     for (let i = 0; i < 0x201; i++) words.push(0xffff); // riempitivo

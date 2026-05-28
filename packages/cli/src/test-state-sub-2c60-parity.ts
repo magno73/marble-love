@@ -2,9 +2,7 @@
 /**
  * test-state-sub-2c60-parity.ts — differential FUN_2C60 vs stateSub2C60.
  *
- * FUN_2C60 (116 byte) è la sub "claim-free-slot-state-4" del state-machine
- * scheduler. Args: 2 long sullo stack (`arg1Long` = data ptr, `arg2Long` =
- * threshold; solo low word di arg2 viene usata via `move.w`).
+ * scheduler. Args: 2 longs on the stack (`arg1Long` = data ptr, `arg2Long` =
  *
  * Logica:
  *   - Scan slot D3 in [0..3]:
@@ -15,15 +13,11 @@
  *           COUNTER[D3]   = 0                  (word)
  *           FLAG34[D3]    = 0                  (byte)
  *           return D0=1
- *   - se nessuno: return D0=0
  *
- * **Nessuna JSR esterna** → nessuno stub injection necessario.
  *
  * Suite testate:
  *   - A: random everything (mix slot busy/free)
- *   - B: tutti slot liberi (claim slot 0 sempre)
- *   - C: solo slot N libero (N random in [0..3])
- *   - D: tutti slot busy (claimed=0)
+ *   - C: only slot N free (random N in [0..3])
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2c60-parity.ts [N]
  */
@@ -122,8 +116,7 @@ async function main(): Promise<void> {
     const tsResult = sub2C60Ns.stateSub2C60(stateInst, arg1, arg2);
 
     const fail = compareStruct(stateInst, cpu);
-    // Verifica D0: il binario torna 1 se claim, 0 altrimenti.
-    // tsResult.claimed deve coincidere col low byte di r.d0.
+    // tsResult.claimed must match the low byte of r.d0.
     const binD0 = r.d0 & 0xff;
     const tsD0 = tsResult.claimed & 0xff;
     const d0Ok = binD0 === tsD0;
@@ -175,7 +168,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot liberi (claim slot 0) ──────────────────────
   console.log(`\n=== Suite B: all slots free → claim slot 0 — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -189,7 +181,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: solo slot N libero (N random) ─────────────────────────
+  // Suite C: only slot N free (random N).
   console.log(`\n=== Suite C: only one specific slot free — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -212,7 +204,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: tutti slot busy → no claim ────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: all slots busy → claimed=0 — ${sizeD} casi ===`);
   let okD = 0;

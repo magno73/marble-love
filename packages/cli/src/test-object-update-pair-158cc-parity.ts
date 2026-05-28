@@ -3,11 +3,8 @@
  * test-object-update-pair-158cc-parity.ts — differential FUN_158CC vs
  * objectUpdatePair158CC.
  *
- * `FUN_000158CC` (42 byte) itera 2 slot @ `0x4009A4` stride `0x7C` e chiama
- * `FUN_000158F6` su ciascuna. FUN_158F6 è una sub di update oggetto
- * complessa (timer, transizioni di stato, sub-call a FUN_160D4 / FUN_25FC2 /
  * FUN_1B9CC / FUN_1281C); per isolare il path di FUN_158CC patchamo
- * FUN_158F6 con un payload "capture":
+ * FUN_158F6 with a "capture" payload:
  *
  *   move.l   (0x4,SP), D0          ; 20 2F 00 04        (4 byte)  arg long
  *   movea.l  (0x00401FF8).l, A1    ; 22 79 00 40 1F F8  (6 byte)  cur
@@ -15,30 +12,20 @@
  *   move.l   A1, (0x00401FF8).l    ; 23 C9 00 40 1F F8  (6 byte)  store cur
  *   rts                            ; 4E 75              (2 byte)
  *
- * Totale 20 byte. FUN_158F6 originale è ben oltre 20 byte (la disasm si
  * estende sino a 0x15974+), patch sicura.
  *
- * Buffer cattura:
+ * Capture buffer:
  *   - 0x401FE0..0x401FF7 : 6 slot long (init sentinel 0xDEADBEEF, max 6
  *                          writes — ne aspettiamo 2)
- *   - 0x401FF8..0x401FFB : long puntatore "cur" (init 0x00401FE0)
  *
- * Nota: usiamo l'offset `0x401FE0` (non `0x401FF0` come gli altri parity
- * test) perché `0x401FFC` è già usato da `test-sound-pair-15884-parity` e
- * scrivere 4×4=16 byte rischia di sovrapporsi se SP scendesse troppo. Lo
- * stack di Musashi viene reset a `0x401F00` prima di ogni iterazione.
+ * Note: use offset `0x401FE0`, not `0x401FF0` like the other parity tests
+ * writing 4x4=16 bytes can overlap if SP drops too far. The
  *
- * Atteso (sempre, indipendentemente da workRam):
- *   - exactly 2 longs scritti
  *   - long[0] = 0x004009A4
  *   - long[1] = 0x00400A20
  *
- * Per la TS replication: cattureremo le chiamate `objectUpdate` callback.
  *
- * Pattern coverage (500 iter): la funzione è deterministica (no input,
- * non legge work RAM); le 500 iter servono come stress-test contro
- * memory side-effect accumulati e patterns di workRam diversi (verifichiamo
- * che la sequenza catturata sia identica a prescindere dallo stato della
+ * accumulated memory side effects and different workRam patterns (we verify
  * work RAM).
  *
  * Uso: npx tsx packages/cli/src/test-object-update-pair-158cc-parity.ts [N]
@@ -84,7 +71,6 @@ async function main(): Promise<void> {
   const rom = Buffer.from(readFileSync(romPath));
 
   // Patch ROM @ FUN_158F6: append arg long to (*0x401FF8)++ buffer.
-  // 20 byte di codice; FUN_158F6 originale è >>20 byte (sicuro).
   // move.l   (0x4,SP), D0          : 20 2F 00 04
   // movea.l  ($00401FF8).l, A1     : 22 79 00 40 1F F8
   // move.l   D0, (A1)+             : 22 C0
@@ -117,16 +103,13 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Variazione del workRam: pattern diversi per ogni iter, per stressare
-    // l'invariante "FUN_158CC non legge la work RAM". Riempiamo le 2 slot
-    // (0x9A4, 0xA20) con pattern variabili: la sequenza di puntatori
-    // catturati DEVE restare invariata.
+    // workRam variation: different patterns for each iter to stress
+    // captured bytes MUST remain unchanged.
     //
     // Pattern:
     //   i=0..3: pattern statici (zero / 0xFF / mix)
     //   i>=4 : random
     if (i === 0) {
-      // tutto zero (default)
     } else if (i === 1) {
       pokeMem(cpu, 0x004009a4, 4, 0xdeadbeef);
       pokeMem(cpu, 0x00400a20, 4, 0xcafebabe);
@@ -139,14 +122,11 @@ async function main(): Promise<void> {
       state.workRam[0xa22] = 0xba;
       state.workRam[0xa23] = 0xbe;
     } else if (i === 2) {
-      // 0xFF in tutta la work RAM lato TS; lato bin patchiamo bytes mirati
       state.workRam.fill(0xff);
-      // Spari pattern in posizioni "interessanti" del binario
       pokeMem(cpu, 0x00400000, 4, 0xffffffff);
       pokeMem(cpu, 0x004003b8, 2, 0xffff); // skip flag
       pokeMem(cpu, 0x004003ea, 2, 0xffff); // stage
     } else if (i === 3) {
-      // Reset: zero tutto
       state.workRam.fill(0x00);
       // Anche su Musashi azzeriamo le slot
       pokeMem(cpu, 0x004009a4, 4, 0x00000000);
@@ -168,7 +148,6 @@ async function main(): Promise<void> {
     }
 
     // Reset capture buffer (6 longs = 24 byte) + cursor pointer.
-    // Sentinel 0xDEADBEEF distinto dai due valori attesi.
     for (let k = 0; k < 6; k++) {
       pokeMem(cpu, BUF_BASE + k * 4, 4, 0xdeadbeef);
     }

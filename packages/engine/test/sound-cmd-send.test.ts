@@ -1,7 +1,6 @@
 /**
  * sound-cmd-send.test.ts — corner cases di soundCmdSend (FUN_158AC).
  *
- * Bit-perfect parity verificata vs binary in `test-sound-cmd-send-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -12,7 +11,7 @@ describe("soundCmdSend (FUN_158AC)", () => {
   it("skip flag (workRam[0x3B8..9] word != 0) → ritorna 0", () => {
     const s = emptyGameState();
     s.workRam[0x3b8] = 0x01;
-    s.workRam[0x3b9] = 0x2c; // word = 0x012C (countdown attivo)
+    s.workRam[0x3b9] = 0x2c;
     const r = soundCmdSend(s, 0x42);
     expect(r).toBe(0);
   });

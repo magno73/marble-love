@@ -3,17 +3,10 @@
  * test-state-dispatch-12fd0-parity.ts — differential FUN_12FD0 vs
  * `stateDispatch12FD0`.
  *
- * `FUN_00012FD0` (158 byte) è un dispatcher a 3 blocchi:
- *   1. Se gameMode==2: scansiona oggetti @ 0x400018 stride 0xe2; se trova
- *      un oggetto attivo (+0x18==1) con flag75e (0x40075e)!=0 e stato
- *      (+0x1b) ∈ {9,10} → chiama FUN_12D46(0x1d854) e break.
- *   2. Se flag75c (0x40075c)!=0 → chiama FUN_11AC2().
- *   3. Sempre: chiama FUN_13068 per ognuno dei 25 slot @ 0x400a9c stride 0x56.
  *
  * **Strategia stub injection**:
  *
- *   1. **FUN_12D46** (40 byte @ 0x12D46): sostituita con uno stub (26 byte)
- *      che scrive `(4,SP)` (arg = 0x1d854) nella cella 0x401900 e incrementa
+ *   1. **FUN_12D46** (40 bytes @ 0x12D46): replaced with a stub (26 bytes)
  *      il counter @ 0x401904 di +4.
  *
  *      Layout stub (26 byte):
@@ -24,16 +17,14 @@
  *        addq.l   #4, $401904.l        ; 54B9 0040 1904   (6 byte)
  *        rts                           ; 4E75             (2 byte)
  *
- *   2. **FUN_11AC2** (22 byte @ 0x11AC2): sostituita con uno stub (8 byte)
- *      che incrementa il byte-counter @ 0x401908 di +1.
+ *   2. **FUN_11AC2** (22 bytes @ 0x11AC2): replaced with a stub (8 bytes)
+ *      that increments byte counter @ 0x401908 by 1.
  *
  *      Layout stub (8 byte):
  *        addq.b   #1, $401908.l        ; 5439 0040 1908   (6 byte)
  *        rts                           ; 4E75             (2 byte)
  *
- *   3. **FUN_13068** (molto grande @ 0x13068): sostituita con uno stub (26 byte)
- *      che scrive `(4,SP)` (arg = slot ptr) nel ring buffer @ 0x401910 (avanza
- *      counter @ 0x40194c di +4 per chiamata).
+ *   3. **FUN_13068** (very large @ 0x13068): replaced with a stub (26 bytes)
  *
  *      Layout stub (26 byte):
  *        movea.l  #$401910, A0         ; 207C 0040 1910   (6 byte)
@@ -43,21 +34,11 @@
  *        addq.l   #4, $401974.l        ; 58B9 0040 1974   (6 byte)
  *        rts                           ; 4E75             (2 byte)
  *
- * **Layout memoria logging** (tutto in workRam, offset da 0x400000):
  *   0x401900..0x401903  — last arg a fun_12d46 (long BE)
- *   0x401904..0x401907  — counter chiama fun_12d46 × 4 (long BE)
- *   0x401908            — counter chiama fun_11ac2 (byte)
- *   0x401910..0x401973  — ring buffer argomenti fun_13068 (25×4=100 byte)
  *   0x401974..0x401977  — counter ring fun_13068 (long BE)
  *
- * **Suite testate (5 × 100 = 500 casi)**:
- *   - A: gameMode=2, 1+ oggetti con dispatch state 9 o 10, flag75e on
- *   - B: gameMode=2, nessun oggetto che dispatcherebbe (active=0 o state wrong o flag off)
  *   - C: gameMode!=2 (varie combinazioni di flag75c/75e)
- *   - D: flag75c vari, 25 slot calls verificati
- *   - E: edge cases (objCount=0, tutti gli oggetti inattivi, mixed)
  *
- * **Confronto**: intero blocco workRam 0x401900..0x40194f (80 byte).
  *
  * Uso: npx tsx packages/cli/src/test-state-dispatch-12fd0-parity.ts [N]
  */

@@ -1,18 +1,14 @@
 #!/usr/bin/env node
 /**
- * binary-runner — esegue il **binario originale** via Musashi WASM e dumpa
- * un trace JSONL nello **stesso formato** di `oracle/mame_dumper.lua`.
+ * Emits a JSONL trace in the same format as `oracle/mame_dumper.lua`.
  *
- * Usa `binary-oracle-lib.ts`. Pensato come oracolo locale alternativo quando
- * MAME non è disponibile (CI, dev offline, regressioni rapide).
  *
- * Confronto ground-truth (a parte schemaVersion+timestamp+source):
  *   binary-runner output ≡ oracle/mame_dumper.lua output
  *
- * Uso:
+ * Usage:
  *   binary-runner --scenario <name> [--ticks N] [--out path] [--rom-blob path]
  *
- * Pre-requisito: ROM blob a `ghidra_project/marble_program.bin` (genera con
+ * Prerequisite: ROM blob at `ghidra_project/marble_program.bin` (generated with
  * `python3 tools/rom_prep.py`).
  */
 
@@ -46,9 +42,9 @@ function parseArgs(): CliArgs {
     else if (a === "--out" || a === "-o") out = args[++i];
     else if (a === "--rom-blob") romBlob = args[++i];
     else if (a === "--help" || a === "-h") {
-      console.log(`binary-runner — oracolo Musashi WASM, formato trace come MAME
+      console.log(`binary-runner - Musashi WASM oracle, MAME-compatible trace format
 
-Uso:
+Usage:
   binary-runner --scenario <name> [--ticks N] [--out path] [--rom-blob path]
 `);
       exit(0);
@@ -97,7 +93,7 @@ async function main(): Promise<void> {
 
   const header: TraceHeader = {
     schemaVersion: traceNs.TRACE_SCHEMA_VERSION,
-    source: "mame", // intenzionale: vogliamo che sia drop-in vs MAME oracle
+    source: "mame", // Intentional: this stays drop-in compatible with the MAME oracle.
     scenario: scenario.name,
     romCrc32: "",
     startedAt: new Date().toISOString(),

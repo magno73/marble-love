@@ -1,11 +1,8 @@
 /**
  * grid-bitmap-test.ts — `FUN_00019460` (90 byte): test bit in ROM grid bitmap.
  *
- * Returns 1 se (arg1>>3 - 0x59) o (arg2>>3 - 0x5A) sono fuori range [0, 0xF],
- * oppure se bit (arg1>>3 - 0x59) di ROM[0x24496 + (arg2>>3 - 0x5A)*2] è set.
- * Returns 0 altrimenti.
  *
- * Use case probabile: collision check con grid bitmap.
+ * Likely use case: collision check with grid bitmap.
  */
 
 import type { RomImage } from "./bus.js";

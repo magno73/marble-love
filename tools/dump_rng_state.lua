@@ -1,5 +1,5 @@
--- dump_rng_state.lua — log dello stato RNG (0x4003A6) ad ogni frame.
--- Permette di validare il reimpl TS contro l'oracolo MAME.
+-- dump_rng_state.lua — logs RNG state (0x4003A6) every frame.
+-- Allows validating the TS reimplementation against the MAME oracle.
 
 local function getenv(n, fb) local v=os.getenv(n); return (v==nil or v=="") and fb or v end
 local OUT_PATH    = getenv("MARBLE_LOVE_RNG_OUT", "/tmp/rng_state.txt")

@@ -3,7 +3,7 @@
 --
 -- Differenza vs mame_cluster_0706_trace.lua:
 --  * window stretta (5 frame)
---  * cattura registri A0-A7, D0-D7 al momento del write per ricostruire i
+--  * capture registers A0-A7, D0-D7 at write time to reconstruct the
 --    parametri passati al decoder
 --  * region copre l'intero cluster 0x700..0x77F
 --

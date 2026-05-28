@@ -22,7 +22,7 @@ function writeU32(s: ReturnType<typeof emptyGameState>, off: number, v: number):
   s.workRam[off + 3] = v & 0xff;
 }
 
-/** Setup arg in work RAM: scrive il long target a *(argPtr+2). */
+/** Set up arg in work RAM: writes the long target to *(argPtr+2). */
 function setArgTarget(s: ReturnType<typeof emptyGameState>, argPtr: number, target: number): void {
   writeU32(s, (argPtr - WORK_RAM_BASE) + 2, target);
 }
@@ -56,7 +56,7 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
     const slotAddr = SLOT_TABLE_BASE + 7 * SLOT_STRIDE;
     const slotOff = slotAddr - WORK_RAM_BASE;
     s.workRam[slotOff + 0x18] = 1;
-    // slot+0x3A != 0 (deve fallire la prima check, va alla alt)
+    // slot+0x3A != 0, so it must fail the first check and go to alt.
     writeU32(s, slotOff + 0x3a, 0xcafef00d);
     s.workRam[slotOff + 0x1f] = 0x0c;
 
@@ -67,7 +67,7 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
     const s = emptyGameState();
     const argPtr = 0x401d00;
     setArgTarget(s, argPtr, 0);
-    // Tutti gli slot occupati ma con type byte != 0xC e key != 0.
+    // All slots occupied but with type byte != 0xC and key != 0.
     for (let i = 0; i < SLOT_COUNT; i++) {
       const slotOff = (SLOT_TABLE_BASE + i * SLOT_STRIDE) - WORK_RAM_BASE;
       s.workRam[slotOff + 0x18] = 1;
@@ -92,8 +92,8 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
   });
 
   it("early-exit al primo match: il binario non scansiona oltre", () => {
-    // Primo slot occupato con type 0xC (target=0 attiva alt-path), tutti i
-    // successivi pure → ritorna 1 indipendentemente. Verifichiamo che nessun
+    // First slot occupied with type 0xC (target=0 activates alt-path), all
+    // later slots too -> returns 1 regardless. Verify that no
     // side effect ci sia (read-only).
     const s = emptyGameState();
     const argPtr = 0x401d00;

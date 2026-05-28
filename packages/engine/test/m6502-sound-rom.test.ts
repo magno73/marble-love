@@ -1,7 +1,7 @@
 /**
  * m6502-sound-rom.test.ts — loader buffer 48KB da 136033.421 + .422.
  *
- * Intent: il sound chip 6502 fetcha reset vector da $FFFC/$FFFD, che fisicamente
+ * Intent: the 6502 sound chip fetches reset vector from $FFFC/$FFFD, which physically
  * vivono negli ultimi 4 byte di rom422 (offset $3FFC/$3FFD nel file). Se il
  * loader sbaglia bank order o offset di base, il CPU resetta a un PC arbitrario
  * e crasha al primo step. Questi test sigillano il mapping vs MAME atarisy1.cpp.

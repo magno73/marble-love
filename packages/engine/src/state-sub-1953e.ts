@@ -1,5 +1,5 @@
 /**
- * state-sub-1953e.ts — replica `FUN_0001953E` (48 byte).
+ * state-sub-1953e.ts - port of `FUN_0001953E` (48 bytes).
  *
  * Common finalizer for `FUN_194BA` case 0/1 entity dispatch. It selects the
  * animation/script pointer in `entity+0x1C` from the entity subtype byte
@@ -30,11 +30,11 @@ function writeU32BE(state: GameState, off: number, value: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_0001953E`.
+ * Bit-exact port of `FUN_0001953E`.
  *
  * @param state       GameState.
- * @param entityAddr  indirizzo assoluto m68k della struct entity.
- * @returns pointer scritto, oppure `null` se il subtype non modifica il campo.
+ * @param entityAddr  Absolute M68k address of the entity struct.
+ * @returns Written pointer, or `null` when the subtype leaves the field unchanged.
  */
 export function stateSub1953E(
   state: GameState,

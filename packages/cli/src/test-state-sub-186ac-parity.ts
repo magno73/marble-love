@@ -4,24 +4,22 @@
  * `stateSub186AC`.
  *
  * FUN_000186AC (368 byte): "mode-3 entity-scan + slot-table init/teardown".
- * Gated da `*0x400394 == 3`, scansiona l'array di object @ 0x400018 stride
  * 0xE2; in base al sentinel `*0x400760` e al flag `hasArmed`, esegue init
  * (rng-driven popolamento di 0x24 entry × 0x10 byte @ 0x401650), teardown
- * (clear delle 0x24 entry + call FUN_18F46 per quelle con entry[2..3]==0xFFFF),
+ * (clear 0x24 entries + call FUN_18F46 for entries with entry[2..3]==0xFFFF),
  * o no-op.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
- *     bit-perfect in `rng.ts`.
- *   - `FUN_0001BB28` (entry-init callback) **stubbato con RTS** (0x4E75) per
+ *   - `FUN_0001BB28` (entry-init callback) **stubbed with RTS** (0x4E75) for
  *     neutralizzare side effects. Il TS usa `subs.fun_1bb28 = noop`.
- *   - `FUN_00018F46` (teardown callback) **stubbato con RTS**.
+ *   - `FUN_00018F46` (teardown callback) **stubbed with RTS**.
  *   - Compare:
  *       * `workRam[0x760]` (sentinel byte)
  *       * `workRam[0x764..0x767]` (selector ptr long)
  *       * `workRam[0x1650..0x188F]` (slot-table 0x24 × 0x10 byte = 576 byte)
- *       * `workRam[0x394..0x395]` (game_mode, non scritto)
- *       * `workRam[0x396..0x397]` (count, non scritto)
+ *       * `workRam[0x394..0x395]` (game_mode, not written)
+ *       * `workRam[0x396..0x397]` (count, not written)
  *       * `*0x4003A6` (RNG seed) post-call
  *
  * **Suite** (4 × 125 = 500):
@@ -151,12 +149,10 @@ interface CaseInput {
   count: number; // u16
   sentinel: number; // u8
   selectorPtr: number; // u32
-  /** array di byte (objs flat: count × OBJ_STRIDE bytes). Solo offset 0x18 e 0x1B contano. */
   objStateBytes: number[]; // length count, byte at obj[0x18]
   objSubBytes: number[]; // length count, byte at obj[0x1B]
   /** pre-fill della slot-table (576 byte). */
   slotTablePre: number[];
-  /** RNG seed iniziale. */
   rngSeed: number;
 }
 
@@ -182,15 +178,11 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function setupCase(input: CaseInput): void {
-    // IMPORTANTE: l'object array @ 0x400018 stride 0xE2 si SOVRAPPONE alle
     // word @ 0x400394 (game_mode) e 0x400396 (count) per count >= 4 (obj4
     // copre 0x400018+4*0xE2 = 0x4003A0..0x400481 → include count word e
-    // RNG seed @ 0x4003A6). Per evitare collisioni nel setup, scriviamo gli
-    // obj PRIMA, poi le word/byte globali.
+    // RNG seed @ 0x4003A6). To avoid setup collisions, write
 
     // ── BINARY setup ──────────────────────────────────────────────────
-    // 1. Object array (zero + state/sub) — può sovrapporsi alle globals,
-    //    quindi facciamolo PRIMA.
     for (let i = 0; i < input.count; i++) {
       const objAddr = OBJ_BASE_ADDR + i * OBJ_STRIDE;
       for (let b = 0; b < OBJ_STRIDE; b++) {
@@ -199,20 +191,17 @@ async function main(): Promise<void> {
       pokeMem(cpu, objAddr + 0x18, 1, input.objStateBytes[i] ?? 0);
       pokeMem(cpu, objAddr + 0x1b, 1, input.objSubBytes[i] ?? 0);
     }
-    // 2. Globals (sovrascrivono eventuali byte appena scritti dall'obj array)
     pokeMem(cpu, GAME_MODE_ADDR, 2, input.mode & 0xffff);
     pokeMem(cpu, OBJ_COUNT_ADDR, 2, input.count & 0xffff);
     pokeMem(cpu, SENTINEL_ADDR, 1, input.sentinel & 0xff);
     pokeMem(cpu, SELECTOR_PTR_ADDR, 4, input.selectorPtr >>> 0);
     pokeMem(cpu, RNG_SEED_ADDR, 2, input.rngSeed & 0xffff);
-    // 3. Pre-fill slot-table (NON si sovrappone agli obj, è a 0x401650)
     for (let i = 0; i < SLOT_TABLE_BYTES; i++) {
       pokeMem(cpu, SLOT_TABLE_ADDR + i, 1, input.slotTablePre[i] ?? 0);
     }
     // SP setup
     cpu.system.setRegister("sp", 0x401f00);
 
-    // ── TS setup (stesso ordine) ──────────────────────────────────────
     const wr = stateInst.workRam;
     for (let i = 0; i < input.count; i++) {
       const objOff = (OBJ_BASE_ADDR - WORK_RAM_BASE) + i * OBJ_STRIDE;
@@ -295,9 +284,9 @@ async function main(): Promise<void> {
   const rs = (): number => Math.floor(rng() * 0x10000) & 0xffff;
 
   function makeRandomInput(forceMode?: number, forceSentinel?: number, forceCount?: number): CaseInput {
-    // count limitato a 0..3 per evitare sovrapposizione con globals @ 0x400394/96
-    // (obj4 inizia a 0x4003A0 e copre il selector ptr 0x400764 a count=8).
-    const count = forceCount ?? Math.floor(rng() * 4); // 0..3 oggetti
+    // count limited to 0..3 to avoid overlap with globals @ 0x400394/96
+    // (obj4 starts at 0x4003A0 and covers selector ptr 0x400764 at count=8).
+    const count = forceCount ?? Math.floor(rng() * 4);
     const objStateBytes: number[] = [];
     const objSubBytes: number[] = [];
     for (let i = 0; i < count; i++) {
@@ -339,7 +328,6 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const input = makeRandomInput(3, 0);
-    // forza almeno un oggetto armato: state==1 && sub∈{4,5}
     if (input.count === 0) {
       input.count = 1;
       input.objStateBytes = [1];
@@ -360,11 +348,9 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const input = makeRandomInput(3, 1 + Math.floor(rng() * 255));
-    // Tutti gli oggetti hanno state != 1 (NON armati)
     for (let j = 0; j < input.count; j++) {
-      input.objStateBytes[j] = 2 + Math.floor(rng() * 254); // mai 1
+      input.objStateBytes[j] = 2 + Math.floor(rng() * 254);
     }
-    // Mix entry[2..3]: alcune con 0xFFFF (trigger), altre con valori arbitrari
     for (let e = 0; e < SLOT_ENTRY_COUNT; e++) {
       const eOff = e * SLOT_ENTRY_STRIDE;
       if (rng() < 0.3) {

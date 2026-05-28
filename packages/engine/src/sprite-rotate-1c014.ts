@@ -2,39 +2,22 @@
  * sprite-rotate-1c014.ts — replica `FUN_0001C014` (1546 byte, 0x01C014–0x01C61E).
  *
  * "Sprite rotation matrix builder + vertex transform + bubble-sort + slot-fill".
- * Aggiorna la matrice 3×3 dell'oggetto sprite in `(A2+0x74..0xA3)` (9 word
- * signed, 3 colonne × 3 componenti), normalizza ogni vettore-colonna se
- * necessario, espande le colonne 3..7 per simmetria, calcola 8 vertici
- * trasformati, li ordina per X, e scrive i 4 slot sprite finali in
  * `A2+0xA4` (stride 6: word angle @ +0, word X @ +2, word Y @ +4).
  *
- * ## Struct A2 (offsets rilevanti)
+ * ## Struct A2 (relevant offsets)
  *
- * | offset | tipo  | descrizione                                            |
+ * | offset | type  | description                                            |
  * |--------|-------|--------------------------------------------------------|
- * | +0x00  | long  | velocity.x Q4.12 (se byte@+0x58 != 0xA)               |
- * | +0x04  | long  | velocity.y Q4.12 (se byte@+0x58 != 0xA)               |
- * | +0x1A  | byte  | type-flag: se == 8 → controlla ptr @ +0xCC             |
- * | +0x1E  | word  | base-X per slot output (letto come signed word)        |
- * | +0x20  | word  | base-Y raw → +7 usato nel calcolo coordinata Y slot    |
- * | +0x58  | byte  | flag "idle" (0xA → forza velocità = 0)                 |
- * | +0x74  | word[8]| colonna-0 matrice rot (stride 2, solo [0..2] usate)  |
- * | +0x84  | word[8]| colonna-1 matrice rot                                 |
- * | +0x94  | word[8]| colonna-2 matrice rot                                 |
+ * | +0x00  | long  | velocity.x Q4.12 (if byte@+0x58 != 0xA)               |
+ * | +0x04  | long  | velocity.y Q4.12 (if byte@+0x58 != 0xA)               |
+ * | +0x1A  | byte  | type-flag: if == 8 → check ptr @ +0xCC                 |
  * | +0xA4  | slot×6 | 4 slot sprite output (4 × 6 byte, stride 6)          |
- * | +0xCA  | byte  | sub-step counter (0..7, incrementato ogni chiamata)    |
- * | +0xCC  | ptr32 | puntatore a entità per type-check (ROM address)        |
  *
  * ## ROM tables
  *   - `0x1EDA2` — word seno/coseno, indice (D2.l*2) o ((D2+1).l*2).
- *   - `0x24ADE` — word tabella angoli-tile, offset `(D5*4+(D3-D5))*2`.
- *   - `0x24B2C` — byte tabella offset-Y slot, indice D5.
  *
  * ## JSR esterne
- *   - `FUN_0001C61E` (`lerpFromRom`) — chiamato ×2 nel corpo principale,
- *     ×1 nel loop di normalizzazione per colonna.
  *
- * Verifica bit-perfect via `cli/src/test-sprite-rotate-1c014-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -53,23 +36,18 @@ const ROM_ANGLE_BASE = 0x24ade;
 /** ROM: offset-Y slot table (byte, signed via ext.w). */
 const ROM_OFFY_BASE = 0x24b2c;
 
-/** Valore-puntatore tipo A (ROM address 0x00215C6). */
 const PTR_TYPE_A = 0x00215c6;
-/** Valore-puntatore tipo B (ROM address 0x00215EA). */
 const PTR_TYPE_B = 0x00215ea;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-/** Legge word unsigned big-endian da workRam. */
 function ru16(s: GameState, off: number): number {
   return (((s.workRam[off] ?? 0) << 8) | (s.workRam[off + 1] ?? 0)) & 0xffff;
 }
-/** Scrive word big-endian in workRam. */
 function wu16(s: GameState, off: number, v: number): void {
   s.workRam[off] = (v >>> 8) & 0xff;
   s.workRam[off + 1] = v & 0xff;
 }
-/** Legge long unsigned big-endian da workRam. */
 function ru32(s: GameState, off: number): number {
   return (
     (((s.workRam[off] ?? 0) << 24) |
@@ -104,22 +82,18 @@ function lsr14w(v: number): number {
 function asr14w(v: number): number {
   return (i32(v) >> 14) & 0xffff;
 }
-/** Legge word signed da ROM. */
 function romS16(rom: RomImage, addr: number): number {
   const a = addr >>> 0;
   const r = (((rom.program[a] ?? 0) << 8) | (rom.program[a + 1] ?? 0)) & 0xffff;
   return r & 0x8000 ? r - 0x10000 : r;
 }
-/** Legge word unsigned da ROM. */
 function romU16(rom: RomImage, addr: number): number {
   const a = addr >>> 0;
   return (((rom.program[a] ?? 0) << 8) | (rom.program[a + 1] ?? 0)) & 0xffff;
 }
-/** Legge byte da ROM. */
 function romU8(rom: RomImage, addr: number): number {
   return (rom.program[addr >>> 0] ?? 0) & 0xff;
 }
-/** Legge long unsigned da ROM (big-endian). */
 function romU32(rom: RomImage, addr: number): number {
   const a = addr >>> 0;
   return (
@@ -132,8 +106,6 @@ function romU32(rom: RomImage, addr: number): number {
 }
 
 /**
- * Interpolazione dalla tabella seno @ ROM 0x1EDA2.
- * Replica la sequenza a 0x1c1da:
  *   D2 = D6 >> 6 (signed word, = integer index)
  *   D3 = D6 & 0x3F (fraction 0..63)
  *   v1 = ROM[base + (D2+1)*2]  (signed word)
@@ -171,18 +143,14 @@ function sineInterp(rom: RomImage, d6: number): { a1: number; d6cos: number } {
 // ─── Public API ────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001C014`.
  *
- * @param state   GameState — legge/scrive `workRam`.
  * @param rom     ROM image — per `lerpFromRom` e lookup tables.
- * @param objOff  Offset dell'oggetto-sprite in `workRam` (= addr − 0x400000).
  */
 export function spriteRotate1C014(
   state: GameState,
   rom: RomImage,
   objOff: number,
 ): void {
-  // ─── 0x1c014: carica velocità ──────────────────────────────────────────
 
   // cmpi.b #0xA,(0x58,A2); beq 0x1c040
   const flagByte = (state.workRam[objOff + 0x58] ?? 0) & 0xff;

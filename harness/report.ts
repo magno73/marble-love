@@ -3,7 +3,7 @@
  * report.ts — produce un report human/LLM-friendly partendo da
  * `traces/divergence_<scen>.json`.
  *
- * Output: markdown su stdout. Pensato per essere letto sia da Marco che da
+ * Output: markdown on stdout. Intended to be read both by Marco and by
  * Claude Code nel loop di hill-climbing (Phase 6).
  *
  * Uso: node --experimental-strip-types harness/report.ts <divergence.json>

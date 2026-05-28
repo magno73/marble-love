@@ -33,7 +33,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     });
     expect(calls[0]).toBe(0x004009a4);
     expect(calls[1]).toBe(0x00400a20);
-    // verifica simbolica delle costanti
+    // Symbolic verification of constants.
     expect(SLOT_PAIR_BASE_ADDR).toBe(0x004009a4);
     expect(SLOT_PAIR_STRIDE).toBe(0x7c);
     expect(SLOT_PAIR_COUNT).toBe(2);
@@ -49,8 +49,8 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
 
   it("nessun side effect su workRam (FUN_158CC pura: solo push/pop su stack)", () => {
     const s = emptyGameState();
-    // Mette pattern arbitrari nelle slot 0 e 1 + altro: FUN_158CC stessa
-    // non scrive (delega tutto a FUN_158F6 → qui no-op).
+    // Put arbitrary patterns in slots 0 and 1 plus another one: FUN_158CC itself
+    // Does not write; delegates everything to FUN_158F6, a no-op here.
     s.workRam[0x9a4] = 0xab;
     s.workRam[0xa20] = 0xcd;
     s.workRam[0x100] = 0xef;
@@ -65,15 +65,15 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     objectUpdatePair158CC(s, {
       objectUpdate: (p) => calls.push(p),
     });
-    // Sono indirizzi assoluti (work-RAM-mapped, base 0x400000), non offset.
+    // They are absolute addresses (work-RAM-mapped, base 0x400000), not offsets.
     expect(calls[0]! & 0xff000000).toBe(0); // M68k 24-bit usable
     expect(calls[0]! >>> 16).toBe(0x0040);
     expect(calls[1]! >>> 16).toBe(0x0040);
   });
 
   it("non legge alcun campo dalla work RAM (state immutabile in input)", () => {
-    // Anche con tutta la work RAM piena di pattern strani, le call sequence
-    // resta identica.
+    // Even with all work RAM full of unusual patterns, the call sequence
+    // Remains identical.
     const s1 = emptyGameState();
     const calls1: number[] = [];
     objectUpdatePair158CC(s1, { objectUpdate: (p) => calls1.push(p) });

@@ -1,16 +1,12 @@
 /**
  * slot-insert-sorted-18e6c.ts — replica `FUN_00018E6C` (218 byte).
  *
- * **Insert-sorted di un nuovo "rect entry" nella draw-list ordinata** dei
- * 16 slot rect @ `0x004001DC`, con indirezione attraverso il byte-array
- * @ `0x004003BC` (32 byte, sentinel `0xFF`). Stessa lookup-table ROM @
- * `0x0001F0E2` usata da `FUN_0001A7A8` (`sort-adjacent-objects-1a7a8.ts`)
- * e stesso comparator `FUN_0001A80A` (rect z-order/overlap → 0/1).
+ * Insert a new rect entry into the ordered draw-list at `0x004003BC`
+ * (32 bytes, sentinel `0xFF`). Uses the same ROM lookup table and comparator
+ * `FUN_0001A80A` (rect z-order/overlap -> 0/1).
  *
- * **Calling convention**: 2 arg long pushati RTL dal caller.
- *   - `arg1` (LSB byte → D2): "type code" della nuova entry (es. 0x2C, 0x4,
- *     0x29, 0x2A...). Letto a `(0xB, A6)` dopo `link.w A6,-0xE`.
- *   - `arg2` (LSB byte → D3): "subindex" associato al type code. Letto a
+ * **Calling convention**: two long args pushed RTL by the caller.
+ *   - `arg1` (LSB byte -> D2): type code for the new entry
  *     `(0xF, A6)`. (D2/D3 sono SOLO i low byte; il modello accetta byte.)
  *
  * **Disasm 0x18E6C..0x18F46** (218 byte):
@@ -19,7 +15,6 @@
  *   0x18E70: movem.l {A4,A3,A2,D3,D2},-(SP) ; preserve
  *   0x18E74: move.b  (0xB,A6),D2b           ; D2 = arg1 LSB (type code)
  *   0x18E78: move.b  (0xF,A6),D3b           ; D3 = arg2 LSB (subindex)
- *   0x18E7C: movea.l #0x4003BC,A2           ; A2 = byte-array base
  *   0x18E82: movea.l #0x4001DC,A4           ; A4 = rect-slot base (16×14)
  *   0x18E88: move.b  D2b,(-0xE,A6)          ; local[0] = D2
  *   0x18E8C: move.b  D3b,(-0xD,A6)          ; local[1] = D3
@@ -29,7 +24,6 @@
  *   0x18E9A: movea.l A2,A3                  ; A3 = A2 (walk pointer)
  *   0x18E9C: addq.l  #4,SP                  ; pop arg
  *
- *   ; ─── Loop 1: find insert position in byte-array ─────────────────────
  *   0x18E9E: cmpi.b  #-1,(A3)               ; if byte == 0xFF (sentinel)
  *   0x18EA2: beq.b   0x18ED4                ;   → exit-loop1 (insert here)
  *   0x18EA4: lea     (0x1F,A2),A0           ; A0 = A2 + 0x1F (last index)
@@ -50,7 +44,7 @@
  *   0x18ED0: addq.l  #1,A3                  ; A3++
  *   0x18ED2: bra.b   0x18E9E
  *
- *   ; ─── Loop 2: find first free 14-byte rect slot ─────────────────────
+ *   ; --- Loop 2: find first free 14-byte rect slot ---------------------
  *   0x18ED4: lea     (0x1F,A2),A0
  *   0x18ED8: cmpa.l  A0,A3
  *   0x18EDA: bcc.w   0x18F3E                ; if A3 >= A2+0x1F → exit (no slot)
@@ -70,11 +64,10 @@
  *   0x18EFA: cmpa.l  A0,A1
  *   0x18EFC: bcc.w   0x18F3E                ; if A1 >= end → exit (no slot)
  *
- *   ; ─── Slot found: write [D2, D3] in slot ────────────────────────────
+ *   ; --- Slot found: write [D2, D3] in slot ----------------------------
  *   0x18F00: move.b  D2b,(A1)               ; slot[0] = D2 (type)
  *   0x18F02: move.b  D3b,(0x1,A1)           ; slot[1] = D3 (subindex)
  *
- *   ; ─── Shift byte-array right from A3 ────────────────────────────────
  *   0x18F06: cmpi.b  #-1,(A3)               ; if byte[A3] == 0xFF
  *   0x18F0A: beq.b   0x18F3C                ;   → skip shift, write D1 at A3
  *
@@ -108,48 +101,25 @@
  *   0x18F42: unlk    A6
  *   0x18F44: rts
  *
- * **Semantica** (high level):
- *   1. Costruisce il "rect" della nuova entry da (typeCode, subIdx) via
+ * **Semantics** (high level):
+ *   1. Builds the new entry rect from (typeCode, subIdx) via
  *      `FUN_1B12A` (sub-injection).
- *   2. Trova in `byteArray[0..0x1F]` la posizione di insert: prima byte `0xFF`
- *      o prima posizione dove `compare(slot[byte], newRect)` non è zero.
- *   3. Trova il primo slot libero in `rectArray[0..16]` (slot vuoto = `(slot)
- *      == 0`). Slot index = D1 ∈ [0..30].
- *   4. Scrive `[typeCode, subIdx]` nei primi 2 byte dello slot — gli altri
- *      12 byte (offset 2..0xD) NON vengono toccati (rimangono dati stantii;
- *      probabilmente popolati on-demand da chiamate successive a `FUN_1B12A`).
- *   5. Shifta byteArray right da `insertPos` in poi, copia `(byte[i]) →
- *      byte[i+1]` da end down a insertPos. Clamp finale: byte[0x1F] non
- *      viene mai sovrascritto (l'ultimo move possibile è `byte[0x1E] →
- *      byte[0x1F]` — anzi NO, il clamp `if A1 >= A2+0x1E skip` previene
- *      proprio quel move; quindi byte[0x1E] e byte[0x1F] non si toccano).
- *   6. Scrive `D1` (slot index) in `byte[insertPos]`.
+ *      == 0`). Slot index = D1 in [0..30].
+ *      byte[0x1F]`; the clamp `if A1 >= A2+0x1E skip` prevents that.
  *
  * **Edge cases**:
- *   - Loop 1 termina al primo `0xFF` ⇒ insertPos punta a quel byte. Il check
- *     a 0x18F06 lo riconosce (byte[A3]==0xFF) e SALTA lo shift, scrivendo
- *     direttamente D1 in A3. Il sentinel originale viene SOVRASCRITTO, ma
- *     se gli altri byte oltre A3 sono già 0xFF (array fresh-cleared) la
- *     "lista" mantiene comunque un terminator a A3+1.
- *   - Loop 1 termina con A3 == A2+0x1F (no sentinel trovato e nessun cmp
+ *   - Loop 1 stops at the first `0xFF`, so insertPos points to that byte.
  *     non-zero): insertPos al limite ⇒ exit a 0x18F3E (no insert).
  *   - Loop 2 esaurisce gli slot (D1 == 31, A1 >= A2+0x1B2): no insert.
- *   - Lo shift NON tocca byte[0x1F]: importante per preservare il sentinel
- *     finale anche dopo molti insert.
+ *   - The shift does not touch byte[0x1F], preserving the sentinel.
  *
- * **Effetti collaterali** in `state.workRam`:
- *   - `slot[D1*0xE+0] = typeCode`, `slot[D1*0xE+1] = subIdx` (se slot trovato).
  *   - Bytes shifted-right in `byteArray[A3..0x1E]` (1 byte → 2 byte → ...).
- *   - `byte[A3] = D1` (se slot trovato).
- *   - **Side-effect di FUN_1B12A** sul local stack frame (NON osservabile
- *     dopo il return — il local è dealloca­to da `unlk`).
  *
- * **Caller noti** (14 xref): `FUN_14C46`, `FUN_15A12`, `FUN_17346` (×2),
+ * **Known callers** (14 xrefs): `FUN_14C46`, `FUN_15A12`, `FUN_17346` (x2),
  * `FUN_18FFA`, `FUN_259B4`, `FUN_18CD2`, `FUN_121B8` (×3), `FUN_1844A`,
  * `FUN_19A40`, `FUN_12896`. Tipico pattern call: `pea (typeCode).w; move.l
  * D0,-(SP); jsr 0x18E6C; addq.l #8, SP`.
  *
- * Verifica bit-perfect via `packages/cli/src/test-slot-insert-sorted-18e6c-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -158,53 +128,38 @@ import { fun1A80A, lookupRectPtr } from "./sort-adjacent-objects-1a7a8.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────
 
-/** Base assoluta workRam M68k. */
+/** Absolute M68k work RAM base. */
 const WORK_RAM_BASE = 0x00400000;
 
-/** Base byte-array (32 byte, sentinel 0xFF). */
 export const BYTE_ARRAY_ABS = 0x004003bc as const;
-/** Lunghezza byte-array (esclusiva). */
 export const BYTE_ARRAY_LEN = 0x20 as const;
-/** Sentinel byte: termina walk e flag per "skip shift". */
+/** Sentinel byte: ends the walk and flags "skip shift". */
 export const SENTINEL_BYTE = 0xff as const;
 
-/** Base rect-slot array (16 slot × 14 byte). */
 export const RECT_SLOT_ABS = 0x004001dc as const;
-/** Stride per slot (14 byte). */
+/** Stride per slot (14 bytes). */
 export const RECT_SLOT_STRIDE = 0x0e as const;
-/** Limite (esclusivo) dell'area slot: A4 + 0x1B2 = 31 slot indicizzati 0..30
- *  (l'ultimo slot teoricamente partirebbe a A4+0x1B4, fuori range). */
+/** Exclusive slot-area limit: A4 + 0x1B2 = 31 slots indexed 0..30.
+  */
 export const RECT_SLOT_END_OFF = 0x1b2 as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
 
 /**
- * Stub injection per `FUN_0001B12A` (rect-builder).
+ * Stub injection for `FUN_0001B12A` (rect-builder).
  *
- * `FUN_1B12A` riceve un puntatore a un local 14-byte. Legge `local[0]` (=
- * type code) e `local[1]` (= subindex), poi popola `local[2..0xD]` (6 word
- * BE) coi campi di un "rect" (x_lo, x_mid, x_hi, y_lo, y_mid, y_hi). Le
- * coordinate dipendono da type/subindex tramite tabelle ROM e slapstic
- * lookup — la replica completa sarebbe ~1.2 KB di codice.
+ * The caller seeds `local[0]` (type code) and `local[1]` (subindex), then the
+ * subroutine fills `local[2..0xD]` (six words).
  *
- * Per parity bit-perfect col binario:
- *   - Il binario può essere **patched** con un thunk deterministico (vedi
- *     parity test) che fa la stessa scrittura di questa callback.
- *   - Default: scrive zeri in `local[2..0xD]` (12 byte). FUN_1A80A sui zeri
- *     produce risultati prevedibili in funzione SOLO degli slot esistenti.
  */
 export interface SlotInsertSorted18E6CSubs {
   /**
-   * Replica di `FUN_0001B12A`. Riceve `state` per modificare workRam (ma
-   * il local nel binario è sullo stack, NON in workRam — questa callback
-   * scrive in un buffer **logico** (vedi `localRect` parametro).
+   * Replica of `FUN_0001B12A`. Receives `state` for work RAM side effects.
    *
-   * @param state     GameState (potenzialmente modificato per side-effects).
-   * @param typeCode  byte = `local[0]` (D2 LSB del primo arg).
-   * @param subIdx    byte = `local[1]` (D3 LSB del secondo arg).
-   * @param localRect Buffer 14-byte (logico). Default-init a zero. La
-   *                  callback scrive `localRect[2..0xD]` con i word BE
-   *                  del rect (offset 2,4,6,8,A,C — 6 word).
+   * @param state     GameState, potentially mutated for side effects.
+   * @param typeCode  byte = `local[0]` (D2 LSB of first arg).
+   * @param subIdx    byte = `local[1]` (D3 LSB of second arg).
+   * @param localRect Logical 14-byte buffer. Default-initialized to zero.
    */
   fun_1b12a?: (
     state: GameState,
@@ -216,28 +171,24 @@ export interface SlotInsertSorted18E6CSubs {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-/** Read byte da workRam offset (0 se OOB). */
+/** Read byte from work RAM offset (0 if OOB). */
 function r8(state: GameState, off: number): number {
   return (state.workRam[off] ?? 0) & 0xff;
 }
 
-/** Write byte in workRam offset. */
+/** Write byte to work RAM offset. */
 function w8(state: GameState, off: number, v: number): void {
   state.workRam[off] = v & 0xff;
 }
 
 /**
- * Confronta il "local rect" con uno slot indicizzato dalla byte-array.
  *
- * Replica `jsr 0x0001A80A` con stack frame:
- *   pea  (-0xE,A6)            → arg2 = local ptr (→ A0 in 1A80A)
- *   move.l lookup[byte],-(SP) → arg1 = slot ptr (→ A1 in 1A80A)
+ * Mirror `jsr 0x0001A80A` with stack frame:
+ *   pea  (-0xE,A6)            -> arg2 = local ptr (A0 in 1A80A)
+ *   move.l lookup[byte],-(SP) -> arg1 = slot ptr (A1 in 1A80A)
  *
- * Quindi `fun1A80A(state, ptrA1=lookupRectPtr(byteIdx), ptrA0=local)`.
  *
- * Per il "local" buffer, fun1A80A legge da workRam — ma il local è sullo
- * stack del binario, NON in workRam. Replichiamo i word reads del local
- * direttamente dal `localRect` Uint8Array (in-memory, no workRam).
+ * directly from the in-memory `localRect` Uint8Array, not work RAM.
  */
 function compareWithSlot(
   state: GameState,
@@ -245,13 +196,11 @@ function compareWithSlot(
   localRect: Uint8Array,
   byteIdx: number,
 ): number {
-  // Risolvi pointer slot via ROM lookup-table (stessa di FUN_1A7A8).
+  // Resolve slot pointer via ROM lookup table (same table as FUN_1A7A8).
   const slotPtr = lookupRectPtr(rom, byteIdx);
 
-  // FUN_1A80A legge 6 word da A1 e 6 word da A0. Implementiamo inline lo
-  // stesso compare ma con A0 letto da `localRect` (Uint8Array fuori workRam).
 
-  // Word reads da slot (A1) via workRam.
+  // Word reads from slot (A1) via work RAM.
   const slotReadWord = (off: number): number => {
     const abs = (slotPtr + off) >>> 0;
     if (abs < WORK_RAM_BASE || abs + 1 >= WORK_RAM_BASE + 0x2000) return 0;
@@ -259,7 +208,7 @@ function compareWithSlot(
     return (((state.workRam[o] ?? 0) << 8) | (state.workRam[o + 1] ?? 0)) & 0xffff;
   };
 
-  // Word reads da local (A0) via Uint8Array.
+  // Word reads from local (A0) via Uint8Array.
   const localReadWord = (off: number): number => {
     const b0 = (localRect[off] ?? 0) & 0xff;
     const b1 = (localRect[off + 1] ?? 0) & 0xff;
@@ -301,48 +250,36 @@ function compareWithSlot(
   return 1;
 }
 
-// Soppressione warning: fun1A80A è importato per documentazione/uso esterno.
 void fun1A80A;
 
 // ─── Replica ─────────────────────────────────────────────────────────────
 
 /**
- * Risultato dell'insert.
  */
 export interface SlotInsertSorted18E6CResult {
-  /** Posizione di insert nel byte-array (offset assoluto 0..0x1F). `null` se
-   *  insert abortito (loop1 ha esaurito senza trovare insert o A3 == limit). */
+  /**
+    */
   insertPos: number | null;
-  /** Slot index (0..30) trovato per la nuova entry. `null` se nessuno libero. */
   slotIdx: number | null;
-  /** True se l'insert è andato a buon fine (slot scritto + byte-array updated). */
   inserted: boolean;
-  /** True se la posizione di insert era un sentinel (skip shift). */
   insertOnSentinel: boolean;
 }
 
 /**
- * Replica bit-perfect di `FUN_00018E6C` — insert-sorted di un nuovo rect
- * entry nella draw-list ordinata.
+ * Insert an entry into the ordered draw-list.
  *
- * @param state     GameState (workRam mutato: byte-array + slot scelto).
- * @param rom       ROM image (lookup-table @ 0x1F0E2 letta).
- * @param typeCode  Byte (0..255). LSB del primo arg pushato dal caller.
- * @param subIdx    Byte (0..255). LSB del secondo arg pushato dal caller.
- * @param subs      Sub injection per `FUN_1B12A` (rect-builder).
- * @returns         Dettaglio dell'insert (insertPos, slotIdx, inserted).
+ * @param typeCode  Byte (0..255). LSB of the first caller-pushed arg.
+ * @param subIdx    Byte (0..255). LSB of the second caller-pushed arg.
+ * @param subs      Sub injection for `FUN_1B12A` (rect-builder).
+ * @returns         Insert details (insertPos, slotIdx, inserted).
  *
- * **Mutation**: `workRam[0x3BC..0x3DC)` (byte-array, shift) e
- * `workRam[0x1DC + slot*0xE..+0xE]` (slot — solo i primi 2 byte, NOT i
- * campi 2..0xD).
+ * `workRam[0x1DC + slot*0xE..+0xE]` (slot; only the first 2 bytes).
  *
- * **Note bit-perfect**:
- *   - Il binario alloca un local 14-byte `(-0xE,A6)` e chiama `FUN_1B12A`
- *     per popolarlo. Replichiamo allocando `localRect = new Uint8Array(14)`
- *     e invocando `subs.fun_1b12a` (default: zero-fill di local[2..0xD]).
- *   - Il primo `cmpa.l A0,A3` con `A3 = A2 + 0x20 - 1 = A2 + 0x1F` usa
+ *     to populate it. The TS replica allocates `localRect = new Uint8Array(14)`
+ *     and invokes `subs.fun_1b12a` (default: zero-filled local[2..0xD]).
+ *   - The first `cmpa.l A0,A3` with `A3 = A2 + 0x20 - 1 = A2 + 0x1F` uses
  *     `bcc` (branch carry clear = unsigned >=). Modello: `>=`.
- *   - Lo shift right termina lasciando `byte[0x1F]` invariato (clamp).
+ *   - The right shift ends with `byte[0x1F]` unchanged (clamp).
  */
 export function slotInsertSorted18E6C(
   state: GameState,
@@ -359,12 +296,9 @@ export function slotInsertSorted18E6C(
   localRect[0] = d2;
   localRect[1] = d3;
 
-  // 0x18E90..0x18E94: jsr FUN_1B12A(local) — popola local[2..0xD].
-  // Default: zero-fill (no-op, già a zero da `new Uint8Array`).
+  // 0x18E90..0x18E94: jsr FUN_1B12A(local), filling local[2..0xD].
   subs.fun_1b12a?.(state, d2, d3, localRect);
 
-  // ─── Loop 1: find insert position in byte-array ──────────────────────
-  // A2 = byte-array base (offset workRam = BYTE_ARRAY_ABS - WORK_RAM_BASE).
   const a2Off = BYTE_ARRAY_ABS - WORK_RAM_BASE; // 0x3BC
   let a3Off = a2Off; // start at A2
   const a2EndExclusiveOff = a2Off + (BYTE_ARRAY_LEN - 1); // A2 + 0x1F
@@ -397,7 +331,6 @@ export function slotInsertSorted18E6C(
   }
 
   // 0x18ED4..0x18EDA: lea (0x1F,A2),A0; cmpa.l A0,A3; bcc exit (no insert).
-  // Se loop1 è uscito con A3 >= A2+0x1F → no insert.
   if (insertPos === null) {
     return {
       insertPos: null,
@@ -406,7 +339,6 @@ export function slotInsertSorted18E6C(
       insertOnSentinel: false,
     };
   }
-  // Defensive double-check (binary re-checks la condizione dopo il break):
   if (insertPos >= a2EndExclusiveOff) {
     return {
       insertPos: null,
@@ -447,7 +379,6 @@ export function slotInsertSorted18E6C(
   w8(state, a1Off, d2);
   w8(state, a1Off + 1, d3);
 
-  // ─── Shift byte-array right from insertPos ───────────────────────────
   // 0x18F06: cmpi.b #-1,(A3); beq → write D1 at A3 (skip shift)
   if (r8(state, insertPos) === SENTINEL_BYTE) {
     // Skip shift, just write D1 at A3.

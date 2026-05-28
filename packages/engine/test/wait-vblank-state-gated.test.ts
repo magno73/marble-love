@@ -1,7 +1,7 @@
 /**
  * Test waitVblankStateGated (FUN_28DB8) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `cli/src/test-wait-vblank-state-gated-parity.ts`.
  */
 

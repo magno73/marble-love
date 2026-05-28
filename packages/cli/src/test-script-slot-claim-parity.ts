@@ -2,18 +2,18 @@
 /**
  * test-script-slot-claim-parity.ts — differential FUN_12D46 vs claimScriptSlot.
  *
- * `FUN_00012D46` cerca uno slot libero nella tabella ROM @ 0x1F016 (delegando
- * a `FUN_12D6E`) e, se trovato, popola tre campi del record (long @ +0x3A,
+ * `FUN_00012D46` searches for a free slot in the ROM table @ 0x1F016, delegating
+ * to `FUN_12D6E`) and, if found, populates three record fields (long @ +0x3A,
  * byte @ +0x1A, byte @ +0x18) inlinando il path mode-0 di `FUN_12F44`.
  *
- * Setup random per ogni caso:
+ * Random setup for each case:
  *   - 25 slot @0x400A9C stride 0x56 → byte +0x18 random (70% occupato, 30% libero)
  *   - argPtr long random
  *   - SP fresco e workRam azzerata sui campi rilevanti
  *
  * Confronto:
  *   - D0 (long, 0 o 0xFFFFFFFF)
- *   - byte slot+0x18 di TUTTI gli slot (per catturare scritture spurie)
+ *   - slot+0x18 byte for every slot, to catch spurious writes
  *   - byte slot+0x1A di TUTTI gli slot
  *   - long slot+0x3A di TUTTI gli slot
  *
@@ -73,11 +73,11 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Mirror ROM nella RomImage TS.
+  // Mirror ROM into the TS RomImage.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // Decodifica i 25 ptrs della tabella @0x1F016 una sola volta.
+  // Decode the 25 table pointers at 0x1F016 once.
   const slotPtrs: number[] = [];
   for (let i = 0; i < SLOT_COUNT; i++) {
     slotPtrs.push(readU32BE(romBuf, ROM_TABLE + i * 4));
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     // Pattern coverage:
     //   0 : tutti liberi → success su slot 0
     //   1 : tutti occupati → fail (NOT_FOUND)
-    //   2 : solo slot[24] libero → success su ultimo
+    //   2 : only slot[24] free -> success on last slot
     //   3 : random mix
     //   default >=4: random mix
     const pattern = i < 4 ? i : 3;
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, slot + 0x18, 1, v);
       stateInst.workRam[(slot - 0x400000) + 0x18] = v;
 
-      // Pre-azzera i campi che FUN_12F44 mode-0 scrive, per detect spurious writes.
+      // Pre-clear fields written by FUN_12F44 mode 0 to detect spurious writes.
       pokeMem(cpu, slot + 0x1a, 1, 0);
       stateInst.workRam[(slot - 0x400000) + 0x1a] = 0;
       for (let k = 0; k < 4; k++) {
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     // Run TS
     const tsD0 = ssNs.claimScriptSlot(stateInst, tsRom, argPtr) >>> 0;
 
-    // Compare D0 + tutti i field per ogni slot.
+    // Compare D0 plus all fields for every slot.
     let match = binD0 === tsD0;
     let diffSlot: number | undefined;
     let diffField: string | undefined;

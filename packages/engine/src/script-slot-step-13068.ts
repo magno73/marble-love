@@ -2,52 +2,29 @@
  * script-slot-step-13068.ts — replica `FUN_00013068` (~400 byte,
  * 0x13068..0x132DE).
  *
- * "Script-slot stepper" chiamato 25 volte per frame da `stateDispatch12FD0`
- * (una per slot @ 0x400a9c + i*0x56).
+ * Runs once per slot at `0x400a9c + i*0x56`.
  *
- * Ogni slot ha una struttura di 0x56 byte in workRam. La funzione:
  *
- *   1. **Gate attivo**: se `slot[0x18] == 0` → epilogue (slot inattivo).
  *
- *   2. **Block kind==3 (slot[0x1f]==3)**: gestisce tre timer/pointer globali
- *      in sequenza (`[0x400456]`, `[0x400458]`, `[0x40045a]`) — decrementa,
- *      resetta e avanza i puntatori `[0x40044a]`, `[0x40044e]`, `[0x400452]`
- *      quando il timer raggiunge 0. Controlla la sentinel `0xFFFFFFFF` per
- *      decidere quale valore di reset assegnare ai puntatori.
+ *      Resets and advances pointers `[0x40044a]`, `[0x40044e]`, `[0x400452]`.
  *
- *   3. **Dispatch su `slot[0x1a]` (0..4)**:
+ *   3. **Dispatch on `slot[0x1a]` (0..4)**:
  *      - **case 3**: reset slot `[0x3e]=0x20c14`, `[0x46]=0x20c14`,
- *        `[0x4a]=0x20c14`, copia `[0x3a]→[0x36]`, chiama `fun12896(slotPtr)`.
  *      - **case 4**: `slot[0x3e] = 0x20c14`; D2=1.
- *      - **case 0**: decrementa `slot[0x1c].w`; se raggiunge 0 AND
- *        `slot[0x18]==1` → `fun12896(slotPtr)`; poi D2=1.
- *      - **case 1**: incrementa `slot[0x20]` se `slot[0x21]!=0`; se
- *        `slot[0x21]==slot[0x20]` → avanza slot[0xC]/[0x10] e chiama
- *        `FUN_13334` + FUN_132e0; se FUN_132e0 ritorna !=0 → `fun12896`;
- *        altrimenti D2=1.
- *      - **case 2**: simile al case 1 ma usa `slot[0x22]/[0x23]` e aggiunge
- *        logica per `slot[0x1f]∈{6,0x19}` (contatore `slot[0x25]`,
- *        scrittura `[0x40075e]`, calcolo `[0x40045c]`).
+ *      - **case 0**: decrements `slot[0x1c].w`; if it reaches 0 and
+ *        `slot[0x18]==1`, calls `fun12896(slotPtr)`; then D2=1.
+ *      - **case 1**: increments `slot[0x20]` when `slot[0x21]!=0`.
+ *      - **case 2**: similar to case 1, but uses `slot[0x22]/[0x23]`.
  *
- *   4. **Post-dispatch loop**: se `slot[0x1a]` è cambiato dal valore iniziale
- *      E il nuovo valore è 1 E `slot[0x21]==0`, ripete il dispatch con il
- *      nuovo valore di `slot[0x1a]`.
  *
- *   5. **Chiusura**: se `slot[0x1e]!=1` E D2!=0 → `FUN_13334(slotPtr)`.
+ *   5. **Closeout**: if `slot[0x1e]!=1` and D2!=0, calls `FUN_13334(slotPtr)`.
  *
  * **Helper interno `FUN_132E0`** (0x132e0..0x13332 = 82 byte):
- *   Avanza `slot[0x3e]` di +4 (e un extra +4 se `slot[0x1e]!=0`). Se il
- *   nuovo valore puntato è `0xFFFFFFFF` (tombstone): resetta `slot[0x3e]` a
- *   `slot[0x46]` (se `slot[0x1a]==2`) o `slot[0x4a]` altrimenti; gestisce
- *   `slot[0x1c].w` (decremento/reset). Ritorna 1 se è avvenuto il wrap a
- *   tombstone con slot[0x1c] == 0, 0 altrimenti.
+ *   Advances `slot[0x3e]` by +4, with an extra +4 when `slot[0x1e]!=0`.
  *
  * **Sub esterne**:
- *   - `fun12896`: `FUN_00012896` — non ancora replicata in TS; callback.
  *     Riceve (state, slotPtr).
  *   - `FUN_13334`: replicata come `objectRenderUpdate13334` in
- *     `object-render-update-13334.ts`; chiamata direttamente.
- *   - `FUN_132E0`: helper embedded; implementata come funzione privata
  *     `advanceAndWrap132E0`.
  *
  * **Disasm** (estratto chiave da 0x13068..0x132DE):
@@ -80,7 +57,7 @@ import { objectRenderUpdate13334 } from "./object-render-update-13334.js";
 const WRAM = 0x00400000 as const;
 const WRAM_END = 0x00402000 as const;
 
-// ─── Costanti indirizzi assoluti ──────────────────────────────────────────
+// ─── Absolute Address Constants ────────────────────────────────────────────
 
 /** Absolute address of this function in ROM. */
 export const SCRIPT_SLOT_STEP_13068_ADDR = 0x00013068 as const;
@@ -119,7 +96,7 @@ const SLOT_3E_INIT = 0x00020c14 as const; // initial ROM ptr loaded in case 3 / 
 // Tombstone sentinel
 const TOMBSTONE = 0xffffffff as const;
 
-// ─── Offsets nello slot (relativi a slotPtr) ──────────────────────────────
+// ─── Slot Offsets (relative to slotPtr) ────────────────────────────────────
 
 const OFF_W0 = 0x00; // long @ +0x00 (velocity X or anim step)
 const OFF_W2 = 0x04; // long @ +0x04 (velocity Y or anim step)
@@ -142,7 +119,6 @@ const OFF_REC_PTR = 0x3e; // long @ +0x3e (current ROM record ptr)
 const OFF_BASE_PTR = 0x46; // long @ +0x46 (base ROM ptr, reset target for 1a==2)
 const OFF_ALT_PTR = 0x4a; // long @ +0x4a (alt ROM ptr, reset target otherwise)
 
-// ─── Memoria helpers ──────────────────────────────────────────────────────
 
 function rb(state: GameState, addr: number): number {
   const off = (addr - WRAM) >>> 0;
@@ -260,20 +236,12 @@ export interface ScriptSlotStep13068Subs {
 // ─── Helper: FUN_132E0 ────────────────────────────────────────────────────
 
 /**
- * Replica di `FUN_132E0` (0x132e0..0x13332, 82 byte).
+ * Replica of `FUN_132E0` (0x132e0..0x13332, 82 bytes).
  *
- * "Advance-and-wrap" per il puntatore `slot[0x3e]`:
- *   1. Avanza `slot[0x3e]` di +4 (più un altro +4 se `slot[0x1e] != 0`).
- *   2. Se `*slot[0x3e] == 0xFFFFFFFF` (tombstone):
- *      - Resetta `slot[0x3e]` a `slot[0x46]` (se `slot[0x1a]==2`) o
- *        `slot[0x4a]` altrimenti.
- *      - Gestisce `slot[0x1c].w`: se 0 → rimane 0; se >0 → decrementa; se
- *        diventa 0 dopo il decremento → ritorna 1.
- *   3. Ritorna 1 se tombstone incontrato E `slot[0x1c]` era già 0 O è
- *      diventato 0 → la chiamata ritorna D0=1 (chiama FUN_12896 caller-side).
- *      Ritorna 0 altrimenti.
+ *   2. If `*slot[0x3e] == 0xFFFFFFFF` (tombstone):
+ *      - Reset `slot[0x3e]` to `slot[0x46]` (if `slot[0x1a]==2`) or
  *
- * @returns  1 se tombstone hit con slot[0x1c] == 0 post-decrement, 0 otherwise.
+ * @returns  1 if tombstone hit with slot[0x1c] == 0 post-decrement, 0 otherwise.
  */
 function advanceAndWrap132E0(
   state: GameState,
@@ -340,7 +308,6 @@ function advanceAndWrap132E0(
 // ─── Main implementation ──────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00013068`.
  *
  * @param state    GameState. Modifica workRam (slot fields, globals 0x400456 etc.).
  * @param rom      ROM image (per dereferenziare record ptr ROM-side).
@@ -356,7 +323,6 @@ export function scriptSlotStep13068(
 ): void {
   const sp = slotPtr >>> 0;
 
-  // ── Gate: slot attivo? ─────────────────────────────────────────────────
   //
   // tst.b (0x18,A2) ; beq.w epilogue
   if (sb(state, sp, OFF_ACTIVE) === 0) {
@@ -644,7 +610,6 @@ export function scriptSlotStep13068(
       d3b = newState;
       // Re-run case 1 inline (loop back to dispatch):
       // We just re-call the entire dispatch section with the new caseVal=1.
-      // The binario loops back to 0x13142 which re-reads slot[0x1a]=1.
       // This is equivalent to re-running case 1 once.
 
       // Case 1 re-run:
@@ -666,7 +631,6 @@ export function scriptSlotStep13068(
         }
       }
 
-      // After the re-dispatch, the binario falls through to 0x132a8 again.
       // But the re-dispatch path itself ends at 0x132a8 as well.
       // The post-dispatch loop check at 0x132a8 compares the CURRENT slot[0x1a]
       // (which may have changed again) with d3b (now updated).
@@ -680,7 +644,6 @@ export function scriptSlotStep13068(
     }
   }
 
-  // ── Finale: call FUN_13334 if slot[0x1e] != 1 AND D2b != 0 ───────────
   //
   // 0x132c4: cmpi.b #1,(0x1e,A2) ; beq 0x132da (epilogue)
   //          tst.b D2b ; beq 0x132da

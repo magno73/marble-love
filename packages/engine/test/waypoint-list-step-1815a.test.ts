@@ -1,12 +1,6 @@
 /**
  * waypoint-list-step-1815a.test.ts — smoke tests per `FUN_0001815A`.
  *
- * Verifica i 3 path principali:
- *   1. lista vuota (terminator immediato) → exitMode=list_empty.
- *   2. record in-range: avanza cursore + chiama sound dispatch.
- *   3. record in-range con next=terminator: setta flag globale + entity[0x6e].
- *   4. record out-of-range: applica accelerazione e ritorna.
- *   5. gravity flag attivo: aggiorna entity[0x8] (clamp).
  */
 
 import { describe, it, expect } from "vitest";
@@ -66,7 +60,7 @@ function setRecord(
 describe("waypointListStep1815A (FUN_0001815A)", () => {
   it("list_empty: pointer punta a terminator (byte 0) → exitMode=list_empty, no side effects", () => {
     const s = emptyGameState();
-    // Lista: solo terminator
+    // List: terminator only.
     s.workRam[LIST_OFF] = 0;
     setLongBE(s, PTR_OFF, LIST_BASE);
 
@@ -77,7 +71,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.fun26196Called).toBe(false);
     // pointer non avanzato
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
-    // exhausted flag non toccato
+    // exhausted flag not touched.
     expect(s.workRam[FLAG_OFF]).toBe(0);
   });
 
@@ -163,13 +157,11 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.fun26196Called).toBe(true);
     // pointer NON avanzato
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
-    // entity.x è stato aggiornato (delta non zero attesa)
     expect(getLongBE(s, ENTITY_OFF + ENTITY_X_OFFSET)).not.toBe(0);
   });
 
   it("out_of_range + gravity flag: entity[0x8] decrementato e clampato a -0x50000", () => {
     const s = emptyGameState();
-    // Stesso setup out-of-range del test precedente
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_Y_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_X_OFFSET, 0);

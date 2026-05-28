@@ -1,5 +1,4 @@
-// Probe: istogramma drift workRam @ f+99 in cluster da 64 byte.
-// Output: top-30 cluster ordinati per # byte diff, per guidare il prossimo wire.
+// Probe: workRam drift histogram at f+99 in 64-byte clusters.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
@@ -27,7 +26,6 @@ const warm = {
   colorRam: hex2bytes(frame0.colorRam, 0x800),
   videoScrollX: 0,
   videoScrollY: 0,
-  // Slapstic 103 bank attivo a MAME f=12000 attract = 1.
   slapsticBank: 1,
 };
 
@@ -46,9 +44,7 @@ const mameW = hex2bytes(lastFrame.workRam, 0x2000);
 const BUCKET = 0x40;
 const N = 0x2000 / BUCKET;
 const counts: number[] = Array(N).fill(0);
-// Zone stack 68k escluse dall'invariante di parità (vedi trace.ts /
-// mame_dumper.lua). Stack residue effetto compilatore C originale,
-// TS non emula register file M68K → divergenza spuria, non gameplay.
+// TS does not emulate the M68K register file, so this is non-gameplay residue.
 const isStackResidue = (off: number) =>
   (off >= 0x440 && off < 0x448) ||
   (off >= 0x1D40 && off < 0x1E80) ||

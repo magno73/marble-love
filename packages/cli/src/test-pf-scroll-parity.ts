@@ -6,7 +6,7 @@
  *   1. Setup workRam fields: 0x02 (scroll Y), 0x04 (flip flag),
  *      0x0A (speed byte), 0x3AE (AV control).
  *   2. Setup spriteRam: tile words @ 0xA02000+, cmp words @ 0xA02180+
- *      (con eventualmente cmpWord = D3 ad un certo indice → exit loop).
+ *      (optionally with cmpWord = D3 at some index -> exit loop).
  *   3. callFunction(0x26D8A) — no args, no return.
  *   4. pfScrollUpdate(state)
  *   5. Confronta workRam[0x02..0x03] e spriteRam[0..0x300] byte-by-byte.

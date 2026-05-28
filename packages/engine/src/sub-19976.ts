@@ -1,19 +1,14 @@
 /**
- * sub-19976.ts — replica `FUN_00019976` (96 byte): apply velocity to entity.
+ * sub-19976.ts — `FUN_00019976` replica (96 bytes): apply velocity to entity.
  *
- * "Entity move-velocity step". Legge `entity[0x26]` come **signed byte**
- * (direzione 0..127 / -128..-1 in pratica usata come index 0..15) e usa la
- * direzione per leggere 2 word signed dalle ROM table @ 0x244B6 (dX) e
- * @ 0x244D6 (dY). Ogni word viene poi scalata `<<8` per produrre il delta
- * long, sommato a `entity[0x0C..0x0F]` (x) e `entity[0x10..0x13]` (y).
+ * Uses direction to read 2 signed words from ROM table @ 0x244B6 (dX) and
+ * adds the resulting long to `entity[0x0C..0x0F]` (x) and `entity[0x10..0x13]` (y).
  *
- * Se `entity[0x25] == 7`, il delta scalato viene ulteriormente diviso /4
- * (`asr.l #2`) prima di essere scritto a `entity[0x00..0x07]` (velocity cache
- * per ulteriori sub).
+ * for further subs).
  *
  * **Disasm 0x19976..0x199D4** (96 byte):
  *
- *   move.l   D2,-(SP)                       ; salva D2
+ *   move.l   D2,-(SP)                       ; save D2
  *   movea.l  (0x8,SP),A0                    ; A0 = arg (entity ptr)
  *   move.b   (0x26,A0),D0b                  ; D0.b = entity[0x26] (dir)
  *   ext.w    D0w                            ; sign-extend → word
@@ -48,20 +43,19 @@
  *   move.l   (SP)+,D2
  *   rts
  *
- * **Side effects** (su `state.workRam`):
- *   - `entity[0x00..0x07]`: velocity long X,Y (sempre riscritti).
- *   - `entity[0x0C..0x13]`: posizione long X,Y (sempre incrementati).
+ * **Side effects** on `state.workRam`:
+ *   - `entity[0x00..0x07]`: velocity long X,Y, always rewritten.
+ *   - `entity[0x0C..0x13]`: position long X,Y, always incremented.
  *
- * **Note**: questa replica è la stessa identica di `move-velocity.ts` (FUN_19976
- * = `applyMoveVelocity`) esposta sotto il nome convenzionale `sub-XXXXX.ts`.
- * La firma `(state, rom, addr) => void` corrisponde all'invocazione `jsr` del
- * binario con `entity` come unico argomento long sullo stack.
+ * **Note**: this is the same replica as `move-velocity.ts` (FUN_19976 =
+ * `applyMoveVelocity`) exposed under the conventional `sub-XXXXX.ts` name. The
+ * `(state, rom, addr) => void` signature matches the ROM `jsr` call with
+ * `entity` as the only long argument on the stack.
  *
  * **Wrapper helper** (`sub19976AsInjection`): produce una closure compatibile
- * con la sub-injection `fun_19976` di `state-sub-198bc.ts` / `sub-19692.ts`,
+ * with the `fun_19976` sub-injection from `state-sub-198bc.ts` / `sub-19692.ts`,
  * applicando la `RomImage` once al setup.
  *
- * Verifica bit-perfect via `packages/cli/src/test-sub-19976-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -76,15 +70,12 @@ export const ROM_DY_TABLE = 0x244d6 as const;
 export const ENTITY_VEL_X_OFFSET = 0x00 as const;
 /** Offset velocity cache long Y (`entity[4..7]`). */
 export const ENTITY_VEL_Y_OFFSET = 0x04 as const;
-/** Offset posizione long X (`entity[0xC..0xF]`). */
 export const ENTITY_POS_X_OFFSET = 0x0c as const;
-/** Offset posizione long Y (`entity[0x10..0x13]`). */
 export const ENTITY_POS_Y_OFFSET = 0x10 as const;
 /** Offset state-byte (`entity[0x25]`). */
 export const ENTITY_STATE_OFFSET = 0x25 as const;
 /** Offset direction-byte (`entity[0x26]`, signed). */
 export const ENTITY_DIR_OFFSET = 0x26 as const;
-/** State-byte che attiva la divisione /4 della velocity. */
 export const STATE_FINE_SCALE = 0x07 as const;
 
 function readU32(s: GameState, off: number): number {
@@ -111,11 +102,9 @@ function readSignedWordRom(rom: RomImage, addr: number): number {
 }
 
 /**
- * Replica bit-perfect di `FUN_00019976`.
  *
  * @param state       GameState (modifica `entity[0x00..0x07]` e `entity[0x0C..0x13]`).
  * @param rom         RomImage per leggere le table ROM 0x244B6 (dX) e 0x244D6 (dY).
- * @param entityAddr  indirizzo assoluto m68k della struct entity (es. 0x401E00).
  */
 export function sub19976(state: GameState, rom: RomImage, entityAddr: number): void {
   const off = (entityAddr - 0x400000) >>> 0;
@@ -126,8 +115,6 @@ export function sub19976(state: GameState, rom: RomImage, entityAddr: number): v
   const dirSigned = dirByte & 0x80 ? dirByte - 0x100 : dirByte;
 
   const dxRaw = readSignedWordRom(rom, (ROM_DX_TABLE + dirSigned * 2) >>> 0);
-  // asl.l #8 su long signed: equivale a <<8 in JS (mantiene segno per shift di <32).
-  // Ma cast a u32 finale dato che workRam è byte-array.
   const d2 = (dxRaw << 8) | 0; // signed shift in 32-bit int
 
   const dyRaw = readSignedWordRom(rom, (ROM_DY_TABLE + dirSigned * 2) >>> 0);
@@ -151,7 +138,6 @@ export function sub19976(state: GameState, rom: RomImage, entityAddr: number): v
 }
 
 /**
- * Adatta `sub19976` alla firma `(state, addr) => void` usata da sub-injection
  * (`StateSub198BCSubs.fun_19976`, `Sub19692Subs.fun_19976`).
  *
  * @param rom  RomImage da iniettare (catturato in closure).

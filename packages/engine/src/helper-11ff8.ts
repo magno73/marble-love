@@ -1,145 +1,15 @@
 /**
- * helper-11ff8.ts — replica `FUN_00011FF8` (hiscore table renderer, ~0x172 byte).
+ * Bit-perfect port of `FUN_00011FF8`, the high-score table renderer.
  *
- * **Funzione**: confronta le 10 entry della hi-score table con i default ROM
- * (`0x1EEA0`), poi rende la lista completa dei 10 punteggi sul display alfanumerico.
+ * The routine scans the 10 decoded high-score entries against the ROM default
+ * table at `0x1EEA0`, renders the appropriate table header, then renders all
+ * rows with rank, initials, and numeric score. The stack argument is observed
+ * only through its low byte (`D2b`).
  *
- * **Argomento stack**: `arg1Long` (long BE a `SP+0x1C` dopo movem, low byte =
- * `D2b`). Dai caller noti:
- *   - `FUN_11452 case 2` @ `0x115C4`: puscia `move.l #-0x1,-(SP)` → `D2b = 0xFF`
- *   - `FUN_11B18` @ `0x11B86`: puscia `ext.l(D4b)` → `D2b = low byte del D4b`
- *
- * **Logica generale** (tre fasi):
- *
- * ### Fase 1 — match-scan (D3b = 0..9)
- * Confronta la hi-score entry `D3b` (decodificata da workRam via `FUN_41C8`)
- * con l'entry ROM default `0x1EEA0 + D3b*8`:
- *   - Confronto di 3 byte iniziali (offset +4,+5,+6 sia del decoded che del ROM)
- *   - Confronto del long score (offset +0)
- *   - `D4b` parte a 1: qualsiasi mismatch lo azzera definitivamente.
- *   - Se `D4b` rimane 1 → match trovato → esci anticipatamente con `D3b` = indice.
- *   - Se `D4b` diventa 0 → loop esaurisce (D3b=10), nessun match.
- *
- * ### Fase 2 — render header
- * - `D4b == 1 AND mode != 2`: `renderString(0x228fa, 0x1400)` (titolo "default" table)
- * - Altrimenti: `renderStringEntry286B0(0x22ea2, 0xf, D0, 0x1400)`
- *   dove `D0 = 3` se mode==2, `D0 = 9` altrimenti.
- *
- * ### Fase 3 — render entries (D3b = 0..9)
- * Per ogni D3b:
- *   - Se `D3b < D2b AND D2b != 0xFF`: decodifica entry `D3b - 1`; altrimenti `D3b`.
- *   - Costruisce stringa in `*(0x40041E)`: `[space] "#" rank_str " " initials_null_term`
- *     (spazio iniziale omesso per D3b==9; rank: "10" per D3b==9, "1".."9" per D3b==0..8)
- *   - Chiama `renderStringEntry28F62(0xd, D4b, 0x1000)` per la riga
- *   - Chiama `fun_28e3c(score, 0, 0x14, D4b, 7, 0x1000)` per il punteggio
- *   - `D4b++`
- *
- * **Disasm FUN_00011FF8 completo**:
- *
- *   00011ff8  movem.l {A3 A2 D5 D4 D3 D2},-(SP)   ; save 6 reg (24 byte)
- *   00011ffc  move.b  (0x1f,SP),D2b               ; D2b = low byte of arg1
- *   00012000  movea.l #0x400390,A3                ; A3 = &workRam[0x390] (mode word)
- *   00012006  moveq   0x1,D4                      ; D4 = 1 (match flag)
- *   00012008  movea.l #0x1eea0,A2                 ; A2 = ROM default table
- *   0001200e  clr.b   D3b                         ; D3 = 0 (entry index)
- *
- *   ; ── OUTER LOOP (match scan) ──────────────────────────────────────────────
- *   00012010  [ext.l(D3b)] move.l D0,-(SP)        ; push arg = ext_l(D3b)
- *   00012018  jsr     0x1ae.l                     ; → hiScoreDecode41c8: A1 = result
- *   0001201e  movea.l D0,A1
- *   00012020  clr.b   D5b                         ; D5 = 0 (inner index 0..2)
- *   00012022  addq.l  0x4,SP
- *   ; ── INNER LOOP (compare 3 initials bytes) ──────────────────────────────
- *   00012024  [ext.w(D5b)] lea (0x4,A1),A0
- *   0001202c  move.b  (0x0,A0,D0w*1),D0b         ; D0b = A1[4+D5]
- *   00012030  [ext.w(D5b)] lea (0x4,A2),A0
- *   00012038  cmp.b   (0x0,A0,D1w*1),D0b         ; cmp D0b vs A2[4+D5]
- *   0001203c  beq.b   0x12040                    ; equal → skip clear
- *   0001203e  clr.b   D4b                        ; mismatch → D4b = 0
- *   00012040  addq.b  0x1,D5b
- *   00012042  cmpi.b  #0x3,D5b
- *   00012046  bne.b   0x12024
- *   ; ── Compare score long ──────────────────────────────────────────────────
- *   00012048  move.l  (A1),D0
- *   0001204a  cmp.l   (A2),D0                    ; compare score long
- *   0001204c  beq.b   0x12050
- *   0001204e  clr.b   D4b
- *   00012050  tst.b   D4b
- *   00012052  bne.w   0x12060                    ; D4b=1 → match found, exit
- *   00012056  addq.l  0x8,A2                     ; A2 += 8 (next ROM entry)
- *   00012058  addq.b  0x1,D3b
- *   0001205a  cmpi.b  #0xa,D3b
- *   0001205e  bne.b   0x12010
- *
- *   ; ── POST-LOOP ────────────────────────────────────────────────────────────
- *   00012060  tst.b   D4b
- *   00012062  beq.b   0x1207e                    ; D4b=0 → no match
- *   00012064  moveq   0x2,D0; cmp.w (A3),D0w
- *   00012068  beq.b   0x1207e                    ; mode==2 → skip "default" title
- *   0001206a  pea     (0x1400).w
- *   0001206e  pea     (0x228fa).l
- *   00012074  jsr     0x142.l                    ; renderString(0x228fa, 0x1400)
- *   0001207a  addq.l  0x8,SP
- *   0001207c  bra.b   0x120a4
- *
- *   0001207e  moveq   0x2,D0; cmp.w (A3),D0w
- *   00012082  bne.b   0x12088; moveq 0x3,D0; bra 0x1208a
- *   00012088  moveq   0x9,D0
- *   0001208a  pea     (0x1400).w; move.l D0,-(SP); pea (0xf).w; pea (0x22ea2).l
- *   0001209a  jsr     0x286b0.l
- *   000120a0  lea     (0x10,SP),SP               ; pop 4 args
- *
- *   ; ── RENDER LOOP setup ────────────────────────────────────────────────────
- *   000120a4  moveq 0x2,D0; cmp.w (A3),D0w; bne 120ae; moveq 0xd,D0; bra 120b0
- *   000120ae  moveq 0xb,D0
- *   000120b0  move.b D0b,D4b                     ; D4b = 0xd (mode=2) or 0xb
- *   000120b2  clr.b  D3b                         ; D3b = 0 (render loop counter)
- *
- *   ; ── RENDER LOOP (D3b = 0..9) ─────────────────────────────────────────────
- *   000120b4  cmp.b D2b,D3b; ble.b 120d4; cmpi.b #-1,D2b; beq.b 120d4
- *   000120be  [ext.l(D3b-1)] jsr 0x1ae → A2   ; decode entry D3b-1
- *   000120d2  bra.b 0x120e6
- *   000120d4  [ext.l(D3b)] jsr 0x1ae → A2     ; decode entry D3b
- *
- *   000120e6  movea.l (0x0040041e).l,A1         ; A1 = *(0x40041e) (string buf ptr)
- *   000120ec  cmpi.b  #0x9,D3b
- *   000120f0  beq.b   0x120f6                   ; D3b==9 → no leading space
- *   000120f2  move.b  #0x20,(A1)+               ; write space
- *   000120f6  move.b  #0x23,(A1)+               ; write '#'
- *   000120fa  cmpi.b  #0x9,D3b
- *   000120fe  bne.b   0x1210a
- *   00012100  move.b #0x31,(A1)+; move.b #0x30,(A1)+; bra 0x12114 ; "10"
- *   0001210a  [D3b+0x31] move.b D0b,(A1)+      ; "1".."9"
- *   00012114  move.b  #0x20,(A1)+               ; write trailing space
- *   00012118  lea (0x4,A2),A0
- *   0001211c  move.b (A0)+,(A1)+; bne 0x1211c  ; copy initials (null-term)
- *
- *   00012120  pea (0x1000).w; [D4b ext.l push]; pea (0xd).w
- *   00012130  jsr 0x28f62.l                     ; renderStringEntry28F62(0xd, D4b, 0x1000)
- *   00012136  pea(0x1000); pea(7); [D4b ext.l]; pea(0x14); clr.l; (A2)long
- *   0001214e  jsr 0x28e3c.l                     ; fun_28e3c(score, 0, 0x14, D4b, 7, 0x1000)
- *   00012154  addq.b 0x1,D4b
- *   00012156  lea (0x24,SP),SP                  ; pop 9 longs (jsr 28f62: 3 + jsr 28e3c: 6)
- *   0001215a  addq.b 0x1,D3b
- *   0001215c  cmpi.b #0xa,D3b
- *   00012160  bne.w  0x120b4
- *   00012164  movem.l (SP)+,{D2 D3 D4 D5 A2 A3}
- *   00012168  rts
- *
- * **Side effects** (workRam):
- *   - `workRam[0x41C..0x41E]` — string-chain entry col/tickOff/marker (via renderStringEntry28F62)
- *   - `workRam[0x41E..0x421]` — string buf pointer (read) and string written there
- *   - `workRam[0x1F7A..0x1F80]` — hi-score decode buffer (via hiScoreDecode41c8 calls)
- *
- * **JSR sub-calls injectable**:
- *   - `renderString0142` — `FUN_2572` via thunk 0x142 (renders 0x228fa)
- *   - `renderStringEntry286B0` — renders table header string
- *   - `hiScoreDecode41c8` — decodes hi-score entry from workRam
- *   - `renderStringEntry28F62` — renders hi-score row label
- *   - `fun_28e3c` — renders numeric score value
- *
- * **Caller**: `mainLoopInit11452 case2` → wired as default sub via
- * `MainLoopInit11452Subs.helper11FF8`.
+ * The implementation keeps the original three phases explicit because each
+ * phase has externally visible side effects through the string buffer,
+ * high-score decode scratch area, and injected render subcalls. The default
+ * wiring is used by `MainLoopInit11452Subs.helper11FF8`.
  */
 
 import type { GameState } from "./state.js";
@@ -318,19 +188,13 @@ export interface Helper11FF8Subs {
 // ── Main function ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00011FF8`.
+ * Render the high-score table exactly as `FUN_00011FF8` does.
  *
- * Hi-score table renderer: scansiona le 10 entry della hi-score table
- * (confrontandole con i default ROM @ `0x1EEA0`), poi rende ognuna sul display
- * alfanumerico con rank number, iniziali e punteggio.
- *
- * @param state  GameState. Lettura: `workRam[0x390]` (mode), `workRam[0x41e]`
- *               (string buf ptr), `workRam[0x1F7A..]` (decode buf).
- *               Scrittura: `workRam[0x41C..0x41E]` (entry), `workRam[0x1F7A..]`.
- * @param rom    ROM image (richiesta per leggere la tabella default `0x1EEA0`
- *               e i puntatori string `0x22EA2`).
- * @param arg1   Long arg dallo stack (`D2b = arg1 & 0xFF`). Default: 0xFF.
- * @param subs   Sub injection per le JSR non replicate (default no-op).
+ * @param state Game state mutated through the string entry, string buffer, and
+ *              decode scratch work RAM.
+ * @param rom ROM image for the default table and string pointer table.
+ * @param arg1 Long stack argument; the binary reads only `arg1 & 0xff`.
+ * @param subs Optional injections for the ROM JSR targets.
  */
 export function helper11FF8(
   state: GameState,

@@ -1,27 +1,27 @@
 /**
  * sound-tick.ts — sound dispatcher wrapper.
  *
- * Replica `FUN_00004CA0` (sound dispatcher, chiamato da FUN_28788 via thunk
- * 0x15A). Si tratta del wrapper che gestisce il buffer di comandi sound
- * a 0x401F44 e dispatcha al motore sonoro vero e proprio (FUN_4DCC).
+ * Replica `FUN_00004CA0` (sound dispatcher, called by FUN_28788 via thunk
+ * 0x15A). This wrapper manages the sound-command buffer at 0x401F44 and
+ * dispatches to the sound engine proper (FUN_4DCC).
  *
  * **Wrapper logic** (4CA0..4D18):
- *   1. Legge byte cmd a 0x401F44 (D0)
- *   2. Se D0 < 0x40 (cmd valido pendente):
+ *   1. Reads command byte at 0x401F44 (D0)
+ *   2. If D0 < 0x40 (valid pending command):
  *      a. Reset retry counter 0x401FF4 = 0
  *      b. Se 0x401F45 ha bit 7 set (last sent was pending):
- *           - Se cmd ≠ last sent: chiama FUN_3E1A((D0<<8)|D1) — STUB
+ *           - If cmd != last sent: call FUN_3E1A((D0<<8)|D1)
  *      c. *0x401F45 = *0x401F44 | 0x80 (mark as sent)
  *   3. *0x401F44 |= 0x80 (mark as sent)
  *   4. Chiama FUN_4DCC (sound chip ops) — STUB
- *   5. Chiama FUN_4C3E con D0=0x10003, A0=0x401F44 — STUB
- *      Se ritorna 0:
- *        *0x401FF4++; se overflow (==0): *0x401FF4-- (saturate)
+ *   5. Call FUN_4C3E with D0=0x10003, A0=0x401F44 — STUB
+ *      If it returns 0:
+ *        *0x401FF4++; if it overflows to 0, decrement back to saturate
  *
- * Le sub-functions `fun_3e1a`, `fun_4dcc`, `fun_4c3e` sono stub iniettabili
- * via opts. Default no-op (FUN_4C3E ritorna 1 = "skip retry").
+ * Sub-functions `fun_3e1a`, `fun_4dcc`, and `fun_4c3e` are injectable via
+ * opts. Default no-op/status-ok behavior makes FUN_4C3E return 1 ("skip retry").
  *
- * **Side effect** sul wrapper: aggiorna 0x401F44, 0x401F45, 0x401FF4.
+ * **Wrapper side effects**: updates 0x401F44, 0x401F45, 0x401FF4.
  */
 
 import type { GameState } from "./state.js";
@@ -39,15 +39,15 @@ export interface SoundTickSubs {
   fun_4dcc?: (state: GameState) => void;
   /**
    * FUN_4C3E: status check. Args D0=long, A0=ptr. Returns Z flag (0 = retry,
-   * 1 = ok). Default ritorna 1 (no retry → skip retry counter).
+   * 1 = ok). Default returns 1 (no retry -> skip retry counter).
    */
   fun_4c3e?: (state: GameState, d0: number, a0: number) => number;
 }
 
 /**
- * Replica `FUN_00004CA0` — sound dispatcher wrapper.
+ * Replica `FUN_00004CA0` - sound dispatcher wrapper.
  *
- * Va chiamato dal mainTick al posto del vecchio STUB `// FUN_4CA0 (sound) — STUB`.
+ * Called by mainTick in place of the old `FUN_4CA0 (sound)` stub.
  */
 export function soundTick(state: GameState, subs?: SoundTickSubs): void {
   const r = state.workRam;
@@ -68,13 +68,9 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
       if (d0 !== d1) {
         const arg = ((d0 << 8) | d1) >>> 0;
         subs?.fun_3e1a?.(arg);
-        // V3 chip-perfect wire: notify global hook con il cmd byte (D0 = current cmd)
-        // così il SoundChip TS riceve il cmd via mailbox.
+        // Chip path: notify the global hook with the current command byte so
+        // SoundChip receives it through the mailbox.
         notifyGlobalSoundCmd(d0 & 0xff);
-        if (typeof globalThis !== "undefined") {
-          const g = globalThis as { __soundTickDispatchCount?: number };
-          g.__soundTickDispatchCount = (g.__soundTickDispatchCount ?? 0) + 1;
-        }
       }
     }
 
@@ -85,11 +81,10 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
   // *0x401F44 |= 0x80
   r[SND_CMD_OFF] = (r[SND_CMD_OFF] ?? 0) | 0x80;
 
-  // FUN_4DCC (sound chip writer) — sub.
-  // Default impl: incrementa il long counter @ 0x401FF8 (`addq.l 0x1, (0x401FF8)`,
-  // prima istruzione deterministica di FUN_4DCC). Resto STUB perché il vero
-  // FUN_4DCC interagisce col chip YM2151 via MMIO 0xF00001 — fuori scope
-  // finché non emuliamo il sound CPU. Subs custom override.
+  // FUN_4DCC sound-chip writer. Default behavior increments the long counter at
+  // 0x401FF8, the first deterministic instruction in FUN_4DCC. The real chip
+  // interaction is handled by the dedicated sound CPU/chip path or by custom
+  // subs in tests.
   if (subs?.fun_4dcc !== undefined) {
     subs.fun_4dcc(state);
   } else {
@@ -103,14 +98,14 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
     r[SND_TICK_COUNTER_OFF + 1] = (cnt >>> 16) & 0xff;
     r[SND_TICK_COUNTER_OFF + 2] = (cnt >>> 8) & 0xff;
     r[SND_TICK_COUNTER_OFF + 3] = cnt & 0xff;
-    // Simula sound-CPU M6502 ack: in MAME il sound CPU legge la mailbox
-    // *0x401F44 entro lo stesso frame e scrive 0x00 → frame-done dump vede 0.
-    // Senza questo, il bset #7 del 68k lascia 0x80 e diverge dall'oracle.
+    // Simulate the sound-CPU M6502 ack: in MAME the sound CPU reads mailbox
+    // *0x401F44 within the same frame and writes 0x00, so frame-done dumps see 0.
+    // Without this, the 68k bset #7 leaves 0x80 and diverges from the oracle.
     r[SND_CMD_OFF] = 0;
   }
 
   // FUN_4C3E(D0=0x10003, A0=0x401F44) — sub
-  // Default ritorna 1 (= ok, skip retry); se 0 incrementa retry counter saturato
+  // Default returns 1 (= ok, skip retry); 0 increments the saturated retry counter.
   const status = subs?.fun_4c3e?.(state, 0x10003, 0x1f44) ?? 1;
   if (status === 0) {
     const retry = ((r[SND_RETRY_OFF] ?? 0) + 1) & 0xff;

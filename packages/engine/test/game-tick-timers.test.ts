@@ -1,10 +1,8 @@
 /**
  * Test gameTickTimers (FUN_28A96) — root game-logic timer dispatcher.
  *
- * Bit-perfect verificato vs binary (2000/2000 casi random) tramite
  * `cli/src/test-game-tick-timers-parity.ts`.
  *
- * Qui testiamo solo casi puliti che verificano la logica di dispatch.
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -54,9 +52,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     const hud = vi.fn();
     gameTickTimers(s, hud);
 
-    // Inner non decrementato perché type=8 skippa la chiamata
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6E]).toBe(5);
-    // HUD chiamato comunque
     expect(hud).toHaveBeenCalledOnce();
   });
 
@@ -64,14 +60,13 @@ describe("gameTickTimers (FUN_28A96)", () => {
     const s = emptyGameState();
     setCount(s, 1);
     // Setup timer: outer=0, medium=0, inner=0 → tick decrementa inner a 0xFF →
-    // cascade attiva, medium da 0 a 0xFF → cascade, outer da 0 a 0xFFFF (bit 0).
     setupTimer(s, OBJECTS_BASE_OFF + 0x6A, 0, 0, 0);
     s.workRam[OBJECTS_BASE_OFF + 0x19] = 1; // flag != 0 → palette FX A
     s.workRam[GLOBAL_TIMER_OFF + 4] = 0xFF;
 
     gameTickTimers(s);
 
-    // obj +0x18 deve essere 2
+    // obj +0x18 must be 2.
     expect(s.workRam[OBJECTS_BASE_OFF + 0x18]).toBe(2);
     // Timer struct resettata
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6A]).toBe(0);
@@ -79,7 +74,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6C]).toBe(0);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6E]).toBe(0xFF);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x71]).toBe(0xFF);
-    // Palette FX A scritto @ 0xB0001E
+    // Palette FX A written @ 0xB0001E.
     expect(s.colorRam[0x1E]).toBe(0xAF);
     expect(s.colorRam[0x1F]).toBe(0x00);
     // Game state word @ 0x400390 = 4 (anyExpired triggers Block 2)
@@ -111,14 +106,13 @@ describe("gameTickTimers (FUN_28A96)", () => {
 
     // inner decrementato a 4
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6E]).toBe(4);
-    // HUD non chiamato (no flag bits set)
     expect(hud).not.toHaveBeenCalled();
   });
 
   it("global timer bit 0: scrive 0xFF a +0x4", () => {
     const s = emptyGameState();
     setCount(s, 0);
-    setupTimer(s, GLOBAL_TIMER_OFF, 0, 0, 0); // tick → cascade tutto
+    setupTimer(s, GLOBAL_TIMER_OFF, 0, 0, 0);
     gameTickTimers(s);
     expect(s.workRam[GLOBAL_TIMER_OFF + 4]).toBe(0xFF);
   });

@@ -3,26 +3,20 @@
  * test-state-sub-26c2-parity.ts — differential FUN_26C2 vs stateSub26C2.
  *
  * FUN_26C2 (164 byte) esegue:
- *   1. JSR FUN_2572 (renderStringChain) con (arg1, sext(arg2.w))
- *   2. Slot search [0..3]: primo con STATE[i] == 0:
+ *   1. JSR FUN_2572 (renderStringChain) with (arg1, sext(arg2.w))
+ *   2. Slot search [0..3]: first with STATE[i] == 0:
  *        DATA_PTR[i] = arg1 (long)
- *        STATE[i]    = 5 se arg3.w >= 0, altrimenti 6 (byte)
  *        THRESHOLD[i]= |sext(arg3.w)| & 0xFFFF (word)
  *        WORD16[i]   = arg2.w (word)
  *        COUNTER[i]  = 0 (word)
- *        ; FLAG34[i] NON toccato
+ *        ; FLAG34[i] NOT touched
  *        return D0 = 1
- *   3. Se nessuno: return D0 = 0
  *
- * Strategia: patch FUN_2572 a `rts` (0x4E75) → renderStringChain è no-op
- * sia nel binario sia nello stub TS (default no-op). Le scritture in
  * workRam @ 0x401F00..0x401F3F sono perfettamente osservabili.
  *
  * Suite testate:
  *   - A: random everything (mix di slot busy/free)
- *   - B: tutti slot liberi (claim slot 0 sempre)
- *   - C: solo slot N libero (N random in [0..3])
- *   - D: tutti slot busy → return 0
+ *   - C: only slot N free (random N in [0..3])
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-26c2-parity.ts [N]
  */
@@ -126,7 +120,6 @@ async function main(): Promise<void> {
     const bytes = bytesSetup();
     setupStruct(stateInst, cpu, bytes);
     const r = callFunction(cpu, FUN_26C2, [args[0], args[1], args[2]]);
-    // Stub TS: fun_2572 default no-op (matching rts patch nel binario).
     const tsRet = sub26C2Ns.stateSub26C2(stateInst, args[0], args[1], args[2]);
     const fail = compareStruct(stateInst, cpu);
     const d0Bin = r.d0 & 0xff;
@@ -181,7 +174,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot liberi → register slot 0 ─────────────────────
   console.log(
     `\n=== Suite B: all slots free → register slot 0 — ${perSuite} casi ===`,
   );
@@ -195,7 +187,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: solo slot N libero ─────────────────────────────────────
+  // Suite C: only slot N free.
   console.log(
     `\n=== Suite C: only one specific slot free — ${perSuite} casi ===`,
   );
@@ -218,7 +210,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: tutti slot busy → return 0 ─────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: all slots busy → return 0 — ${sizeD} casi ===`);
   let okD = 0;

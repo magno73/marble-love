@@ -8,15 +8,15 @@
  * entity[0xC..0x13]. Se state==7 → velocity cache /4 in entity[0..7]. Altrimenti
  * cache = delta non scalato.
  *
- * **Strategia parity**: nessun sub interno; replica diretta. Compara
+ * **Parity strategy**: no internal sub; direct replica. Compare
  * `entity[0..0x40]` (1 stride entity completa).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random (dir 0..15, state random)
- *   - B: state==7 forzato (path /4 attivo)
+ *   - B: forced state==7 (/4 path active)
  *   - C: dir negativa (signed byte boundary, dir = 0x80..0xFF) — la direzione
- *     viene sext-letta come signed e usata come index in ROM. Per matchare il
- *     binario serve testare i valori "alti" del byte come signed neg.
+ *     is sign-extended as signed and used as a ROM index. To match the binary,
+ *     high byte values must be tested as signed negatives.
  *   - D: edge cases (dir = 0, 0x7F, 0x80, 0xFF; state byte = 0x07/0x08)
  *
  * Uso: npx tsx packages/cli/src/test-sub-19976-parity.ts [N]
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // Suite B: state==7 forzato
+  // Suite B: forced state==7.
   console.log(`\n=== Suite B: state==7 (/4 path) — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -157,8 +157,8 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
-    // Dir negative ma ROM table is at 0x244B6: a `dir = -1` legge 0x244B4..0x244B5.
-    // Restringe a [-4..-1] e [0..3] per evitare letture troppo lontane.
+    // Negative dir with ROM table at 0x244B6: `dir = -1` reads 0x244B4..0x244B5.
+    // Restrict to [-4..-1] and [0..3] to avoid reads too far away.
     const dir = (Math.floor(rng() * 8) - 4) & 0xff;
     e[0x26] = dir;
     if (runOneCase("C", i, e)) okC++;

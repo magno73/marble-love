@@ -3,37 +3,25 @@
  * test-find-nearest-target-2637a-parity.ts — differential FUN_0002637A vs
  * findNearestTarget2637A.
  *
- * `FUN_0002637A` (274 byte) è uno scanner di nearest-neighbor con filter +
- * line-of-sight. Itera record candidati 4-byte da una tabella ROM
  * (terminata da 0xFF), filtra per byte (≡ A2[+0x1D] sign-ext), valida via
- * `FUN_17CB8` e scrive 3 globals (`*0x400462.l`, `*0x400466.l`,
  * `*0x400472.b`) per il miglior candidato visibile.
  *
  * Strategia parity:
  *
  * 1. Patcha in ROM:
- *    - `FUN_17CB8` → `moveq #0,D0; rts` (sempre ritorna 0 = path libero).
- *    - Una `tableAddr` deterministica (puntatore in ROM da
  *      `0x1EF1A + (*0x400394.w * 4)`): scriviamo *0x400394 = K e
- *      mettiamo a `(0x1EF1A + K*4)` un long che punta al nostro buffer
+ *      place at `(0x1EF1A + K*4)` a long that points to our buffer
  *      di candidati (anch'esso in ROM, in zona libera).
  *
- *    NB: la tabella di candidati DEVE vivere in spazio readable dalla
  *    CPU. Usiamo zona ROM libera (es. `0x3F000`) e iniettiamo un set
- *    deterministico di record ad ogni iterazione.
  *
- * 2. Per ogni caso random:
- *    - Genera obj con A2[+0x1D]=filter, A2[+0x32].w=objX, A2[+0x34].w=objY.
- *    - Genera tabella di candidati (1..16 record + sentinel 0xFF).
- *    - Mette tabella in ROM scratch zone (e fa puntare il pointer-table).
- *    - Pre-fill globals 0x400462/466/472 con sentinel.
+ *    - Generate obj with A2[+0x1D]=filter, A2[+0x32].w=objX, A2[+0x34].w=objY.
+ *    - Pre-fill globals 0x400462/466/472 with sentinels.
  *
- * 3. Esegui binario reale @ FUN_0002637A.
  *
- * 4. Esegui TS findNearestTarget2637A su workRam mirror, con
+ * 4. Run TS findNearestTarget2637A on workRam mirror, with
  *    `tableReader = (a) => romBuf[a]` e `lineOfSight17CB8 = () => 0`.
  *
- * 5. Confronta i 3 globals + neighbors.
  *
  * Uso: npx tsx packages/cli/src/test-find-nearest-target-2637a-parity.ts [N]
  */
@@ -65,12 +53,10 @@ const GLOBAL_400472 = 0x00400472;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Indirizzo ROM libero per la tabella candidati. Scegliamo una zona oltre
-// 0x40000 (fuori dal codice noto) e non oltre il fine ROM. La ROM marble
 // ha size ≈ 0x80000 (quad ROM 128KB x 4).
 const SCRATCH_TABLE_ROM = 0x0007ff00;
 // Slot dispatch table: scegliamo K=0x40 (= 0x100 byte offset). Verifichiamo
-// che 0x1EF1A + 0x100 sia in ROM e non confligga.
+// so that 0x1EF1A + 0x100 is in ROM and does not conflict.
 const DISPATCH_K = 0x40;
 const DISPATCH_SLOT_ADDR = DISPATCH_TABLE_1EF1A + DISPATCH_K * 4; // = 0x1F01A
 
@@ -146,16 +132,12 @@ async function main(): Promise<void> {
   const pickPtr = (): number =>
     PTR_CANDIDATES[Math.floor(rng() * PTR_CANDIDATES.length)]!;
 
-  // tableReader per il TS: legge da romBuf sui byte SCRATCH_TABLE_ROM..+0x80.
-  // (romBuf viene mutato ad ogni iter qui sotto.)
   const tableReader = (addr: number): number => romBuf[addr] ?? 0xff;
 
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
   // Vicini ai 3 globals (per no-spill check).
-  // Globals scritti: 0x462..0x465 (long), 0x466..0x469 (long), 0x472 (byte).
-  // Quindi i vicini sicuri sono fuori da [0x462..0x469] e [0x472..0x472].
   const NEIGHBOR_GLOBALS = [
     0x460, 0x461, 0x46a, 0x46b, 0x46c, 0x46d, 0x46e, 0x46f, 0x470, 0x471,
     0x473, 0x474, 0x475, 0x476,
@@ -167,21 +149,17 @@ async function main(): Promise<void> {
     const ptr = pickPtr();
     const off = ptr - WORK_RAM_BASE;
 
-    // Random filter byte. Scegliamo da [0..0x7F] per evitare ambiguità
-    // sign-ext (byte negativo .b → 0xFFxx .w → mai matcha .b zero-ext).
-    const filterByte = (rb() & 0x7f) | 0x01; // 1..0x7F (no zero per varietà)
+    const filterByte = (rb() & 0x7f) | 0x01;
 
-    // Random objX/objY (word in grid-space, valori piccoli per stare in
     // range della metric: max diff fino a 0xFE). Sceglie 0..0xFF.
     const objX = rb() & 0xff;
     const objY = rb() & 0xff;
 
-    // Random tabella candidati: 1..12 record + sentinel.
     const numRecs = 1 + Math.floor(rng() * 12);
     const tableBytes: number[] = [];
     for (let r = 0; r < numRecs; r++) {
-      // X grid: scegli da [0, 0xFE] per evitare collisione con sentinel.
-      const x = rb() & 0xfe; // 0..0xFE (mai 0xFF)
+      // X grid: choose from [0, 0xFE] to avoid collision with sentinel.
+      const x = rb() & 0xfe;
       const y = rb() & 0xfe;
       // Filter: 50% match, 50% mismatch random.
       const recFilter =
@@ -193,18 +171,13 @@ async function main(): Promise<void> {
     tableBytes.push(0xff, 0x00, 0x00, 0x00);
 
     // ── Setup binary side ──────────────────────────────────────────────
-    // Scrivi tabella in ROM scratch zone tramite romBuf.
     for (let k = 0; k < tableBytes.length; k++) {
       romBuf[SCRATCH_TABLE_ROM + k] = tableBytes[k]! & 0xff;
     }
-    // Re-create CPU se abbiamo modificato ROM? createCpu copia il buffer?
-    // Verifichiamo: se la CPU ha snapshot del ROM, dobbiamo ricreare.
-    // Per sicurezza: usa pokeMem per scrivere in ROM space (verifica se la
-    // memory è writable).
+    // Verify: if the CPU snapshots ROM, we must recreate it.
     for (let k = 0; k < tableBytes.length; k++) {
       pokeMem(cpu, SCRATCH_TABLE_ROM + k, 1, tableBytes[k]!);
     }
-    // Idem per il dispatch slot (caso la CPU abbia copiato ROM al setup).
     pokeMem(cpu, DISPATCH_SLOT_ADDR, 4, SCRATCH_TABLE_ROM);
     // E patch FUN_17CB8 (per sicurezza)
     pokeMem(cpu, FUN_17CB8, 4, 0x70004e75);
@@ -233,7 +206,6 @@ async function main(): Promise<void> {
     pokeMem(cpu, ptr + 0x1d, 1, filterByte);
     pokeMem(cpu, ptr + 0x32, 2, objX & 0xffff);
     pokeMem(cpu, ptr + 0x34, 2, objY & 0xffff);
-    // Random scratch su altri offset (per check nessuno spill)
     for (let k = 0; k < 0x40; k++) {
       if (k !== 0x1d && k !== 0x32 && k !== 0x33 && k !== 0x34 && k !== 0x35) {
         pokeMem(cpu, ptr + k, 1, rb());
@@ -280,7 +252,6 @@ async function main(): Promise<void> {
       },
     );
 
-    // ── Confronto ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
     // *0x400462 (long)
@@ -332,7 +303,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // Vicini globals: NON devono cambiare
+    // Neighbor globals must not change.
     let neighborFail: FailRecord | null = null;
     for (const nOff of NEIGHBOR_GLOBALS) {
       const expected = neighborSentinels[nOff]!;

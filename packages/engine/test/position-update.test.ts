@@ -1,7 +1,7 @@
 /**
  * Test positionUpdate (FUN_1706C) — 452 byte pure leaf.
  *
- * Bit-perfect verificato vs binary (2000/2000) tramite
+ * Bit-perfect verified against the binary (2000/2000) through
  * `cli/src/test-position-update-parity.ts`.
  */
 
@@ -92,7 +92,7 @@ describe("positionUpdate (FUN_1706C)", () => {
     const rom = emptyRomImage();
     // table[0] = +5 (per d3=0), table[7] = +3 (per d2=7-7=0... aspetta)
     // d3 = rotIdx = 0, d2 = 7 - rotSpec = 7 - 7 = 0
-    // Quindi sia localM4 che -localM2 usano table[0]
+    // Therefore both localM4 and -localM2 use table[0].
     rom.program[0x23D41] = 5; // table[0] = 5
     s.workRam[0x1D03] = 100;
     s.workRam[0x1D07] = 50;

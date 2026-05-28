@@ -1,7 +1,6 @@
 /**
  * render-string-entry-28fa0.test.ts — smoke per FUN_28FA0.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-render-string-entry-28fa0-parity.ts` (500/500).
  */
 
@@ -19,9 +18,9 @@ import { emptyGameState } from "../src/state.js";
 describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
   it("scrive col, tickOff, marker=0 nei 3 byte attesi e invoca renderStringChain2 con (0x40041C, ext.l(arg3.w))", () => {
     const s = emptyGameState();
-    // Pre-fill marker con sentinel non-zero per verificare clear.
+    // Pre-fill marker with non-zero sentinel to verify clear.
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xaa;
-    // Pre-fill stringPtr (offset +2..+5) per verificare che NON venga toccato.
+    // Pre-fill stringPtr (offset +2..+5) to verify it is not touched.
     s.workRam[ENTRY_OFF + 2] = 0xde;
     s.workRam[ENTRY_OFF + 3] = 0xad;
     s.workRam[ENTRY_OFF + 4] = 0xbe;
@@ -35,11 +34,8 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
       },
     });
 
-    // Bit basso 0x78 di arg1Long → col
     expect(s.workRam[ENTRY_OFF + COL_BYTE_OFF]).toBe(0x78);
-    // Bit basso 0x42 di arg2Long → tickOff
     expect(s.workRam[ENTRY_OFF + TICKOFF_BYTE_OFF]).toBe(0x42);
-    // Marker azzerato
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
     // stringPtr intatto (offset +2..+5)
     expect(s.workRam[ENTRY_OFF + 2]).toBe(0xde);
@@ -47,7 +43,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + 4]).toBe(0xbe);
     expect(s.workRam[ENTRY_OFF + 5]).toBe(0xef);
 
-    // renderStringChain2 invocato con structAddr cabled.
+    // renderStringChain2 invoked with cabled structAddr.
     expect(renderArgs).not.toBeNull();
     expect(renderArgs!.addr).toBe(RENDER_STRUCT_ADDR);
     expect(renderArgs!.addr).toBe(0x0040041c);
@@ -66,7 +62,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
 
   it("solo i 3 byte target sono modificati (no spillage in [0x41A..0x428] al di fuori di +0/+1/+6)", () => {
     const s = emptyGameState();
-    // Pre-fill l'intera fascia con sentinel.
+    // Pre-fill the entire span with sentinel.
     for (let i = ENTRY_OFF - 2; i < ENTRY_OFF + 0xc; i++) {
       s.workRam[i] = 0x99;
     }
@@ -77,7 +73,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + 0]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 1]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 6]).toBe(0x00);
-    // Il resto della fascia deve restare 0x99 (no spillage).
+    // The rest of the span must remain 0x99 (no spillage).
     for (const off of [-2, -1, 2, 3, 4, 5, 7, 8, 9, 10, 11]) {
       expect(s.workRam[ENTRY_OFF + off]).toBe(0x99);
     }
@@ -122,7 +118,6 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
       },
     });
     expect(calls).toBe(1);
-    // E i byte rimangono uguali (idempotenti).
     expect(s.workRam[ENTRY_OFF + 0]).toBe(0x42);
     expect(s.workRam[ENTRY_OFF + 1]).toBe(0x42);
     expect(s.workRam[ENTRY_OFF + 6]).toBe(0x00);

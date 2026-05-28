@@ -3,24 +3,13 @@
  * test-sprite-project-1cc62-parity.ts — differential FUN_0001CC62 vs
  * `spriteProject1CC62`.
  *
- * FUN_0001CC62 (158 byte): "sprite projection step". Legge una struct globale
- * @ 0x401C28 (28 byte) e i tile-fields set dal precedente deriveSpriteFields
- * (`*0x40069E`, `*0x4006A0`, `*0x4006A2`), scrive `*0x4006A4` e `*0x4006A6`,
- * e ritorna un long packed Q16.16-like.
  *
  * **Strategia parity**:
- *   - JSR a FUN_0001CABA (heavy renderer) **stubbed con RTS**: la funzione
- *     chiama 1CABA solo se argByte != 0; lo stubbiamo per mantenere parity
  *     deterministica.
- *   - TS: `subs.fun_1CABA = () => {}` (no-op) → matching del binario stubbato.
  *   - Compare:
- *       - workRam @ 0x4006A4..0x4006A7 (range scritto dalla funzione)
- *       - return value (D0 long) — confronto bit-perfect i32
  *
  * **Suite**:
  *   - A: random struct + random globals (mix bge-flag) + argByte random.
- *   - B: forza bge-flag = 1 (if-branch) per concentrare la copertura.
- *   - C: forza bge-flag = 0 (else-branch).
  *   - D: edge cases: 0x0000 / 0xFFFF / 0x7FFF / 0x8000 / sign-bit boundary.
  *
  * Uso: npx tsx packages/cli/src/test-sprite-project-1cc62-parity.ts [N]
@@ -48,21 +37,19 @@ const FUN_1CABA = 0x0001caba;
 
 /**
  * Patch JSR-stubs: FUN_0001CABA → RTS (0x4E75) per neutralizzare il heavy
- * renderer. La nostra TS injection è anche no-op → parity esatta.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
   pokeMem(cpu, FUN_1CABA + 1, 1, 0x75);
 }
 
-const STRUCT_BASE = 0x00401c28; // struct globale
+const STRUCT_BASE = 0x00401c28;
 const STRUCT_SIZE = 0x1c; // 0x401C28..0x401C43
 
 const GLOBALS_BASE = 0x00400690; // include 0x69E/0x6A0/0x6A2/0x6A4/0x6A6
 const GLOBALS_SIZE = 0x18; // 0x690..0x6A7 (24 byte)
 
-// Compare range: SOLO i write che CC62 produce + return.
-// CC62 scrive *0x6A4 e *0x6A6 (4 byte total). Compariamo l'intero range
+// Compare range: only writes produced by CC62 + return value.
 // 0x6A4..0x6A7 (= 4 byte) e il return.
 const COMPARE_BASE = 0x004006a4;
 const COMPARE_SIZE = 4;
@@ -155,11 +142,9 @@ async function main(): Promise<void> {
     const binResult = callFunction(cpu, FUN_1CC62, [argLong >>> 0]);
     const tsResult = projectNs.spriteProject1CC62(stateInst, argLong, {
       fun_1CABA: () => {
-        // no-op (matching del binario stubbato con RTS)
       },
     });
 
-    // Confronta workRam (offset 0x6A4..0x6A7).
     const memFail = compareGlobals(stateInst, cpu);
     if (memFail !== null) {
       if (failHolder.value === null) {
@@ -178,7 +163,6 @@ async function main(): Promise<void> {
       return false;
     }
 
-    // Confronta return value (D0 long signed).
     const binRet = binResult.d0 | 0; // i32
     const tsRet = tsResult | 0;
     if (binRet !== tsRet) {
@@ -261,7 +245,6 @@ async function main(): Promise<void> {
     const argLong = rb();
     const structBytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const globBytes = new Array(GLOBALS_SIZE).fill(0).map(() => rb());
-    // Forza i 4 campi struct usati (cx0@+4, cx1@+E, cy0@+10, cz@+1A) a edge.
     const wcx0 = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const wcx1 = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const wcy0 = edgeWords[Math.floor(rng() * edgeWords.length)]!;
@@ -270,7 +253,6 @@ async function main(): Promise<void> {
     structBytes[0x0e] = (wcx1 >>> 8) & 0xff; structBytes[0x0f] = wcx1 & 0xff;
     structBytes[0x10] = (wcy0 >>> 8) & 0xff; structBytes[0x11] = wcy0 & 0xff;
     structBytes[0x1a] = (wcz >>> 8) & 0xff; structBytes[0x1b] = wcz & 0xff;
-    // Forza fracX (*0x69E → off 0x0E..0x0F) e fracY (*0x6A0 → 0x10..0x11)
     // a edge per stress su muls.
     const wfx = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const wfy = edgeWords[Math.floor(rng() * edgeWords.length)]!;

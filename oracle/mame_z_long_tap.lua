@@ -1,9 +1,9 @@
 -- mame_z_long_tap.lua — log writes a obj0.z_long (workRam 0x40002c..0x40002f)
--- per identificare PC + sub madre del writer M68K che TS non simula.
+-- to identify PC + parent sub for the M68K writer that TS does not simulate.
 --
--- Background: probe-z-override-experiment.ts ha mostrato che fixare
+-- Background: probe-z-override-experiment.ts showed that fixing
 -- obj0.z_long chiude 97B di drift gameplay (-47.5%). TS non aggiorna mai
--- z_long (verified zero writes). Questo tap identifica chi lo aggiorna in
+-- z_long (verified zero writes). This tap identifies who updates it in
 -- MAME, per replicarne il behavior.
 --
 -- Output: /tmp/mame_z_long_trace.json

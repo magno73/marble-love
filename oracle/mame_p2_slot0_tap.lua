@@ -1,4 +1,4 @@
--- mame_p2_slot0_tap.lua — write-tap su tre regioni chiave per diagnosticare
+-- mame_p2_slot0_tap.lua - write-tap over three key regions to diagnose
 -- la divergenza P2.slot0 (cluster 0x0640/0x0a00) nel range f12060..f12080.
 --
 -- Tappa:
@@ -7,7 +7,7 @@
 --                                  z_long+0x14, vx/vy/vz, ecc.)
 --   3) 0x40097C..0x40097F  (4B)  — `srtgt` / xscroll target
 --
--- Output: JSON con writers_by_pc + samples per frame, identico in formato a
+-- Output: JSON with writers_by_pc + samples by frame, identical in format to
 -- mame_cluster_0640_writers.lua per riusare il parser.
 --
 -- Env vars (default = window 12060..12080):

@@ -1,41 +1,37 @@
 /**
- * level.ts — parser dei livelli Marble Madness dalla ROM.
+ * Marble Madness level parser for the program ROM.
  *
- * **Verificato in Phase 4b** sul blob `ghidra_project/marble_program.bin`:
+ * **Verified in Phase 4b** against `ghidra_project/marble_program.bin`:
  *
- * Pointer table @ ROM 0x2BE00 (6 × 32-bit big-endian):
- *   0x2BE00 → 0x0002BEE2  (Level 1: Practice)
- *   0x2BE04 → 0x0002C54C  (Level 2: Beginner)
- *   0x2BE08 → 0x0002CD9E  (Level 3: Intermediate)
- *   0x2BE0C → 0x0002D648  (Level 4: Aerial)
- *   0x2BE10 → 0x0002DE1E  (Level 5: Silly)
- *   0x2BE14 → 0x0002E790  (Level 6: Ultimate)
+ * Pointer table @ ROM 0x2BE00 (6 x 32-bit big-endian):
+ *   0x2BE00 -> 0x0002BEE2  (Level 1: Practice)
+ *   0x2BE04 -> 0x0002C54C  (Level 2: Beginner)
+ *   0x2BE08 -> 0x0002CD9E  (Level 3: Intermediate)
+ *   0x2BE0C -> 0x0002D648  (Level 4: Aerial)
+ *   0x2BE10 -> 0x0002DE1E  (Level 5: Silly)
+ *   0x2BE14 -> 0x0002E790  (Level 6: Ultimate)
  *
- * **Header fisso da 0x2E byte** verificato in Phase 1 statica
- * (`docs/level-header-format.md`) leggendo i consumer engine TS gia'
- * verificati bit-perfect contro il binario originale. Il valore precedente
- * `LEVEL_HEADER_SIZE = 36` era preso dal progetto `marble-madness-2026`
- * senza verifica per Marble Love; provabilmente sbagliato perche' `+0x2A`
- * (extByteTablePtr long) finisce a byte `+0x2D`.
+ * The fixed 0x2E-byte header is documented in `docs/level-header-format.md`
+ * and was verified against bit-perfect engine consumers. The older
+ * `LEVEL_HEADER_SIZE = 36` value does not cover the `+0x2A` long field.
  *
- * Dopo l'header fisso, alla posizione `+0x2E`, inizia il corpo post-header:
+ * After the fixed header, at `+0x2E`, the post-header body begins:
  * terrain row pointer table, sub-pattern pointer table, tile-line descriptors,
- * row-build script e RLE row offsets. Il vecchio nome "height records" resta
- * solo per compatibilita' del parser legacy; vedi
- * `docs/level-header-format.md` "Corpo post-header decodato".
+ * row-build script, and RLE row offsets. The older "height records" name is
+ * kept only for legacy parser compatibility.
  */
 
 import type { RomImage } from "./bus.js";
 
-/** Offset assoluto della pointer table dei livelli (verificato Phase 4b). */
+/** Absolute offset of the level pointer table. */
 export const LEVEL_POINTER_TABLE_OFFSET = 0x2BE00 as const;
 export const LEVEL_COUNT = 6 as const;
-/** Dimensione header fisso in byte (verificato Phase 1 statica). */
+/** Fixed header size in bytes. */
 export const LEVEL_HEADER_SIZE = 0x2E as const;
 export const HEIGHT_RECORD_SIZE = 8 as const;
-/** Offset dell'inizio della column table (= dimensione header fisso). */
+/** Offset where the column table starts (= fixed header size). */
 export const LEVEL_COLUMN_TABLE_OFFSET = 0x2E as const;
-/** ROM table usata da `FUN_1CABA` per convertire terrain-code quad in altezze. */
+/** ROM table used by `FUN_1CABA` to convert terrain-code quads into heights. */
 export const TERRAIN_COEFFICIENT_TABLE_OFFSET = 0x1ED62 as const;
 export const TERRAIN_COEFFICIENT_COUNT = 32 as const;
 
@@ -49,19 +45,18 @@ export const TERRAIN_CODE_QUAD_MAX = 0xefff as const;
 export const TERRAIN_CODE_FLAT_MIN = 0xf000 as const;
 
 /**
- * Decoded view del descriptor header. Tutti i field sono read da almeno
- * un consumer engine bit-perfect contro il binario originale (vedi
- * `docs/level-header-format.md` per la mappa file:line).
+ * Decoded view of the descriptor header. Each field is consumed by at least
+ * one bit-perfect engine path; see `docs/level-header-format.md`.
  *
- * I field sovrapposti del header originale restano accessibili anche via
- * `raw`, oltre ai nomi semantici verificati.
+ * Overlapping original header fields remain accessible through `raw` as well
+ * as through the verified semantic names below.
  */
 export interface LevelHeader {
-  /** Bytes raw del header (0x2E byte). */
+  /** Raw header bytes (0x2E bytes). */
   raw: Uint8Array;
   /**
    * `+0x00` (long): Direct terrain record base pointer.
-   * Pointer a byte-records di terrain consumati dal `PATH_DIRECT` del
+   * Pointer to terrain byte records consumed by the `PATH_DIRECT`
    * tile-redraw (`sub-1caba-tile-redraw.ts:464`).
    */
   directTerrainPtr: number;
@@ -73,8 +68,8 @@ export interface LevelHeader {
   tileWordTablePtr: number;
   /**
    * `+0x08` (long): Row-build bit-list pointer.
-   * Puntatore consumato da `FUN_1A444`: ogni 16 tile-line descriptor legge una
-   * word di bit flag da questa lista e la passa a `FUN_1AD54`.
+   * Pointer consumed by `FUN_1A444`: every 16 tile-line descriptors it reads a
+   * bit-flag word from this list and passes it to `FUN_1AD54`.
    */
   rowBuildBitListPtr: number;
   /**
@@ -91,47 +86,47 @@ export interface LevelHeader {
   yScrollBase: number;
   /**
    * `+0x12` (signed word): Y scroll range / aerial delta.
-   * Aggiunto a `yScrollBase` solo su `levelIndex==4` (Aerial)
+   * Added to `yScrollBase` only for `levelIndex==4` (Aerial)
    * (`level-dispatcher-16ec6.ts:139`).
    */
   yScrollRange: number;
   /**
    * `+0x14..+0x1F` (6 packed word): Entity initial position array.
-   * `[i]` = packed `hi=vx>>8, lo=vy>>8` per entity i (0..5). In
-   * attract/playable solo i=0 (P1) e i=1 (P2) sono attivi (`obj+0x18==3`).
-   * Gli slot i=2..5 sono sovrapposti a field consumati da altri subsystem.
+   * `[i]` = packed `hi=vx>>8, lo=vy>>8` for entity i (0..5). In
+   * attract/playable only i=0 (P1) and i=1 (P2) are active (`obj+0x18==3`).
+   * Slots i=2..5 overlap fields consumed by other subsystems.
    */
   entityInitPositions: readonly number[];
   /**
-   * `+0x18` (signed word): Max tile bound. Column-index limit per il
-   * tile-redraw loop e boundary per `string-dispatch-table-177f8`.
+   * `+0x18` (signed word): Max tile bound. Column-index limit for the
+   * tile-redraw loop and boundary for `string-dispatch-table-177f8`.
    * **Nota**: byte fisicamente sovrapposto a `entityInitPositions[2]`.
-   * I due semantici non collidono nei path naturali perche' entity 2
-   * non e' attiva in stato 3.
+   * The two semantics do not collide in natural paths because entity 2
+   * is not active in state 3.
    */
   maxTileBound: number;
   /**
    * `+0x1A` (signed word): Tile-line descriptor count per chunk.
-   * Consumato da `FUN_1A444` come limite del loop che chiama `FUN_1AD54`.
+   * Consumed by `FUN_1A444` as the loop limit for calls to `FUN_1AD54`.
    * Sovrapposto fisicamente a `entityInitPositions[3]`.
    */
   rowBuildEntryCount: number;
   /**
    * `+0x1C` (long): Tile-line descriptor table pointer.
-   * Base passata da `FUN_1A444` a `FUN_1AD54` con stride 8 byte.
+   * Base passed from `FUN_1A444` to `FUN_1AD54` with 8-byte stride.
    * Sovrapposta fisicamente a `entityInitPositions[4..5]`.
    */
   tileLineDescriptorPtr: number;
   /**
    * `+0x20` (long): Sub-pattern pointer table.
-   * Pointer a una tabella di long entries indicizzate per
-   * `sub_index << 2` (`render-tile-line-1ad54.ts:246`). Ogni entry e' un
-   * "data ptr" interpretato byte-by-byte; valore `0x80` resetta il ptr.
+   * Pointer to a table of long entries indexed by
+   * `sub_index << 2` (`render-tile-line-1ad54.ts:246`). Each entry is a
+   * data pointer interpreted byte-by-byte; value `0x80` resets the pointer.
    */
   subPatternTablePtr: number;
   /**
    * `+0x24` (signed word): Binsearch end index.
-   * `FUN_1A444` calcola `0x40065e = binsearchBasePtr + value*2 - 2`.
+   * `FUN_1A444` computes `0x40065e = binsearchBasePtr + value*2 - 2`.
    */
   binsearchEndIndex: number;
   /**
@@ -152,10 +147,10 @@ export interface LevelHeader {
 /**
  * Height record decoded.
  *
- * **Legacy parser**: il blocco post-header non e' un array uniforme di
- * record geometria 8-byte. I field sotto restano una vista compatibile della
- * vecchia segmentazione, non una proof di fisica/slope. Per il formato
- * verificato usare `LevelData.postHeader` e `decodeTerrainCode`.
+ * Legacy parser: the post-header block is not a uniform array of 8-byte
+ * geometry records. These fields remain a compatibility view of the old
+ * segmentation, not a physics/slope proof. Verified consumers should use
+ * `LevelData.postHeader` and `decodeTerrainCode`.
  */
 export interface HeightRecord {
   /** word a offset 0 (16-bit BE). */
@@ -166,7 +161,7 @@ export interface HeightRecord {
   word2: number;
   /** word a offset 6 — UNKNOWN. */
   word3: number;
-  /** Estratti da word0 bits 12-15: orientazione slope (0..15). */
+  /** Extracted from word0 bits 12-15: slope orientation (0..15). */
   slopeOrient: number;
   /** Estratti da word0 bits 8-11: magnitudine slope (0..15). */
   slopeVal: number;
@@ -282,11 +277,11 @@ export interface LevelPostHeaderLayout {
 }
 
 export interface LevelData {
-  /** Indice 0..5 (livello 1..6). */
+  /** Index 0..5, corresponding to levels 1..6. */
   index: number;
-  /** Offset assoluto del livello in ROM. */
+  /** Absolute level offset in ROM. */
   romOffset: number;
-  /** Dimensione totale (header + records, calcolata dalla differenza al livello successivo). */
+  /** Total byte size, derived from the next level pointer. */
   byteSize: number;
   header: LevelHeader;
   postHeader: LevelPostHeaderLayout;
@@ -297,7 +292,7 @@ export interface LevelData {
   records: HeightRecord[];
 }
 
-/** Legge un long-word big-endian dalla ROM. */
+/** Read a big-endian long-word from ROM. */
 function readU32BE(rom: Uint8Array, offset: number): number {
   return (
     ((rom[offset] ?? 0) << 24) |
@@ -307,12 +302,12 @@ function readU32BE(rom: Uint8Array, offset: number): number {
   ) >>> 0;
 }
 
-/** Legge un word big-endian dalla ROM. */
+/** Read a big-endian word from ROM. */
 function readU16BE(rom: Uint8Array, offset: number): number {
   return (((rom[offset] ?? 0) << 8) | (rom[offset + 1] ?? 0)) & 0xffff;
 }
 
-/** Sign-extend di una M68K word (0..0xFFFF) → 32-bit signed. */
+/** Sign-extend a M68k word to a signed 32-bit value. */
 function signExtendWord(w: number): number {
   return (w & 0x8000) !== 0 ? (w | 0xffff0000) | 0 : w & 0xffff;
 }
@@ -323,7 +318,7 @@ function signExtendByte(b: number): number {
 }
 
 /**
- * Legge la pointer table dei livelli. Ritorna 6 offset assoluti.
+ * Read the level pointer table and return six absolute ROM offsets.
  */
 export function readLevelPointerTable(rom: RomImage): readonly number[] {
   const ptrs: number[] = [];
@@ -335,14 +330,14 @@ export function readLevelPointerTable(rom: RomImage): readonly number[] {
 }
 
 /**
- * Decodifica un descriptor header dai 0x2E byte raw.
+ * Decode a descriptor header from the raw 0x2E bytes.
  *
- * Tutti i field decoded corrispondono a read osservati nei consumer engine
- * TS gia' bit-perfect contro il binario originale (vedi
- * `docs/level-header-format.md`). I pointer non sono dereferenziati qui —
- * vengono restituiti come long unsigned, da risolvere al caller.
+ * All decoded fields match reads observed in the TS engine consumers that are
+ * already bit-perfect against the original binary (see
+ * `docs/level-header-format.md`). Pointers are not dereferenced here; they are
+ * returned as unsigned longs for the caller to resolve.
  *
- * @param raw Bytes raw del header. Deve essere lungo almeno `LEVEL_HEADER_SIZE`.
+ * @param raw Raw header bytes. Must be at least `LEVEL_HEADER_SIZE` bytes long.
  */
 export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
   if (raw.length < LEVEL_HEADER_SIZE) {
@@ -359,13 +354,13 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
   const yScrollRange = signExtendWord(readU16BE(raw, 0x12));
 
   // Entity init positions: 6 packed words @ +0x14, +0x16, ..., +0x1E.
-  // In attract/playable solo i=0,1 sono attivi (vedi level-header-format.md).
+  // In attract/playable only i=0,1 are active (see level-header-format.md).
   const entityInitPositions: number[] = [];
   for (let i = 0; i < 6; i++) {
     entityInitPositions.push(readU16BE(raw, 0x14 + i * 2));
   }
 
-  // Max tile bound: stessa locazione fisica di entityInitPositions[2] (+0x18).
+  // Max tile bound: same physical location as entityInitPositions[2] (+0x18).
   // Semantica indipendente — non collide in path testati.
   const maxTileBound = signExtendWord(readU16BE(raw, 0x18));
   const rowBuildEntryCount = signExtendWord(readU16BE(raw, 0x1a));
@@ -701,10 +696,10 @@ function decodeLevelPostHeaderLayout(
 }
 
 /**
- * Carica un livello (0-indexed: 0=L1, 5=L6).
+ * Load a level (0-indexed: 0=L1, 5=L6).
  *
- * Parser base che legge header, post-header verificato e la vista legacy
- * compatibile fino al puntatore del livello successivo.
+ * Reads the header, verified post-header layout, and legacy compatibility view
+ * up to the next level pointer.
  */
 export function loadLevel(rom: RomImage, index: number): LevelData {
   if (index < 0 || index >= LEVEL_COUNT) {
@@ -712,7 +707,7 @@ export function loadLevel(rom: RomImage, index: number): LevelData {
   }
   const ptrs = readLevelPointerTable(rom);
   const startOffset = ptrs[index]!;
-  // Per dimensione, usiamo il next pointer; per L6 (ultimo) usiamo + 0xA00 di
+  // For size, use the next pointer; for L6 (last), use + 0xA00 from
   // safety margin (tipico size).
   const endOffset = (index < LEVEL_COUNT - 1) ? ptrs[index + 1]! : startOffset + 0xA00;
   const byteSize = endOffset - startOffset;

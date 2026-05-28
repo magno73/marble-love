@@ -1,29 +1,22 @@
 #!/usr/bin/env node
 /**
- * test-array-helpers-parity.ts — differential FUN_1E3E vs fillIncrementingU16.
  *
  * Per N (dest, start, count) random:
  *   1. Reset 256 byte di scratch in workRam @ 0x401E00
  *   2. callFunction(0x1E3E, [dest, start, count])  // 3 args: long, word, long
  *   3. fillIncrementingU16(state, dest, start, count)
- *   4. Confronta byte 0x401E00..0x401EFF tra binary e TS.
  *
- * Note sul calling convention: il binario fa
  *   move.l (0xC,SP), A0   ; arg1 long  (dest)
  *   move.w (0x12,SP), D0w ; arg2 word  (start)
  *   move.l (0x14,SP), D2  ; arg3 long  (count)
  * Stack offsets: 12, 18, 20 (= 0xC, 0x12, 0x14). Considerando il movem.l
- * push iniziale di 8 byte + return addr 4 byte = 12 byte fissi, gli args
- * iniziano a SP+12. Quindi:
  *   arg1 (long) @ SP+12..15
  *   arg2 (word) @ SP+16..17 (NB: padding)
  *   arg3 (long) @ SP+18..21
  *
  * Wait — 0x12 = 18, 0x14 = 20. SP+12=arg1.l, SP+18=arg2.w, SP+20=arg3.l.
- * Quindi arg1 è 4 byte, arg2 è 2 byte (no padding), arg3 è 4 byte.
  * Total: 10 byte di args. Push order RTL: count(4), start(2), dest(4).
  *
- * Uso: npx tsx packages/cli/src/test-array-helpers-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -55,11 +48,7 @@ function makeRng(seed: number): () => number {
 }
 
 /**
- * Calling FUN_1E3E. Convention 68k C-like: tutti gli args sono LONG (4 byte
- * ognuno), anche se la funzione li legge come word.
- *   `move.w (0x12, SP), D0w` legge il LOW word del long a SP+16..19.
  *
- * Push ordine RTL: count (long), start (long, low word = valore), dest (long).
  */
 function callFill(cpu: CpuSession, dest: number, start: number, count: number): number {
   const sys = cpu.system;
@@ -111,8 +100,6 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: { dest: number; start: number; count: number; binByte: number; tsByte: number; offset: number } | null = null;
 
-  // Scratch area in workRam, lontano da stack (SP=0x401F00 scende a ~0x401EE0)
-  // Usiamo 0x401D00..0x401DFF — 256 byte, distanti da stack/obj array
   const SCRATCH_ADDR = 0x401d00;
   const SCRATCH_SIZE = 0x100;
 
@@ -206,10 +193,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
 
   // ─── clearPaletteRam (FUN_121A6) ─────────────────────────────────────
-  // Una sola call: pre-fill palette RAM con sentinel, run, verifica.
   console.log(`\n=== clearPaletteRam (FUN_121A6) — 1 caso ===`);
   cpu.system.setRegister("sp", 0x401f00);
-  // Pre-fill palette RAM con sentinel pattern
+  // Pre-fill palette RAM with sentinel pattern.
   for (let j = 0; j < 0x800; j++) {
     pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
     state.colorRam[j] = 0xCC;

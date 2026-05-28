@@ -2,13 +2,13 @@
  * key-rank-lookup-4686.test.ts — smoke tests di `keyRankLookup4686`
  * (FUN_4686).
  *
- * La tabella in `*0x401FFC + 0x1E` (10 righe × 5 byte, primi 3 byte usati
- * come prefix) e' attesa sorted DESCENDENTE. Il match avviene alla prima
- * riga con prefix strettamente < key. Se key < prefix di tutte le righe
- * → return 10. Se key esattamente uguale a row r (3 byte) → return r+1
- * (oppure 10 se r=9), per la fedelta' al `bcc` post-bhi-filter.
+ * The table at `*0x401FFC + 0x1E` (10 rows x 5 bytes, first 3 bytes used as
+ * prefix) is expected to be sorted descending. Match happens at the first
+ * row with prefix strictly < key. If key < every row prefix, return 10. If key
+ * exactly equals row r (3 bytes), return r+1 (or 10 if r=9), matching the `bcc`
+ * after the bhi filter.
  *
- * Bit-perfect parity (500 casi) verificata in
+ * Bit-perfect parity (500 cases) verified in
  * `packages/cli/src/test-key-rank-lookup-4686-parity.ts` vs Musashi.
  */
 
@@ -28,7 +28,7 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
 }
 
 /**
- * Setup di una tabella 10×5 byte. Le righe sono passate come array di 5 byte;
+ * Set up a 10x5-byte table. Rows are passed as 5-byte arrays;
  * i byte non specificati sono lasciati a 0.
  */
 function setupTable(ram: Uint8Array, rows: ReadonlyArray<readonly number[]>): void {
@@ -143,7 +143,7 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
   it("low 24 bit estratti correttamente (high == 0, key=0)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, PTR_ABS);
-    // DESC table con row 9 prefix 00:00:00
+    // DESC table with row 9 prefix 00:00:00.
     setupTable(s.workRam, [
       [0x00, 0xa0, 0x00, 0, 0],
       [0x00, 0x80, 0x00, 0, 0],

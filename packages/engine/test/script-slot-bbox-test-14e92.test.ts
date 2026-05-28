@@ -2,7 +2,6 @@
  * script-slot-bbox-test-14e92.test.ts — smoke per `scriptSlotBboxTest14E92`
  * (`FUN_00014E92`).
  *
- * Bit-perfect parity validata vs binary in
  * `packages/cli/src/test-script-slot-bbox-test-14e92-parity.ts`.
  */
 
@@ -64,7 +63,7 @@ function slotOff(i: number): number {
   return SLOT_ARRAY_BASE_ADDR - WORK_RAM_BASE + i * SLOT_STRIDE;
 }
 
-/** Imposta il selettore @0x400394 (word). */
+/** Sets selector @0x400394 (word). */
 function setSelector(s: State, v: number): void {
   setWordBE(s, SELECTOR_WORD_OFF, v);
 }
@@ -77,7 +76,7 @@ function setWorld(s: State, x: number, y: number, z: number): void {
 }
 
 /** Configura uno slot armato + bbox-default (slot[0x58] punta a un long
- *  con valore -1 sentinel). Il record sentinel è allocato a `recAddr`. */
+  */
 function armSlotWithDefaultBbox(
   s: State,
   i: number,
@@ -96,7 +95,7 @@ function armSlotWithDefaultBbox(
   setLongBE(s, recAddr - WORK_RAM_BASE, 0xffffffff);
 }
 
-/** Configura uno slot con bbox custom (4 byte signed @ recordPtr+4..+7). */
+/** Configure a slot with custom bbox (4 signed bytes @ recordPtr+4..+7). */
 function armSlotWithCustomBbox(
   s: State,
   i: number,
@@ -143,7 +142,6 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
-    // 4 slot tutti non armati (default 0).
     const before = new Uint8Array(s.workRam);
     scriptSlotBboxTest14E92(s, ENTITY_BASE);
     expect(s.workRam).toEqual(before);
@@ -154,7 +152,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     setSelector(s, 1);
     // World @ (10, 10, 5). Marble bbox: X[7..13], Y[7..13], Z[5..19].
     setWorld(s, 10, 10, 5);
-    // Slot 0 @ (10, 10, 0) con default bbox → X[6..14], Y[6..14], Z[0..16].
+    // Slot 0 @ (10, 10, 0) with default bbox -> X[6..14], Y[6..14], Z[0..16].
     // Overlap: X ✓, Y ✓, Z [5..16] vs [0..16] → marbleZNear=5 in [0,16] ✓.
     armSlotWithDefaultBbox(
       s,
@@ -163,7 +161,6 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
       0x00,
       0x401f00,
     );
-    // Setup entity per copia long.
     setLongBE(s, ENTITY_OFF + 0x00, 0xdeadbeef);
     setLongBE(s, ENTITY_OFF + 0x04, 0xcafebabe);
     setByte(s, ENTITY_OFF + 0x1a, 0x05); // entity state=5 → skip "default state" block
@@ -171,7 +168,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     scriptSlotBboxTest14E92(s, ENTITY_BASE);
 
     const off = slotOff(0);
-    // Slot state passato a 2.
+    // Slot state changed to 2.
     expect(readByte(s, off + 0x1a)).toBe(0x02);
     // entity[0..3] = 0 (clear post-copy nel block 1503A).
     expect(readLongBE(s, ENTITY_OFF + 0x00)).toBe(0);
@@ -189,7 +186,6 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     setSelector(s, 2);
     // World @ (100, 0, 0). Marble bbox X [97..103].
     setWorld(s, 100, 0, 0);
-    // Slot 0 @ (0, 0, 0) bbox-default X [-4..4]. Niente overlap.
     armSlotWithDefaultBbox(
       s,
       0,
@@ -218,7 +214,6 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     const off = slotOff(0);
     // slot[0x56] = 0xAAAA (sentinel pre-test).
     setWordBE(s, off + 0x56, 0xaaaa);
-    // entity[0x19] = 0x42 → sext.w = 0x0042. Diverso da 0xAAAA → no match.
     setByte(s, ENTITY_OFF + 0x19, 0x42);
     // entity[0x1A] = 1 → branch state-1 nel dispatch.
     setByte(s, ENTITY_OFF + 0x1a, 0x01);
@@ -253,7 +248,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     setWordBE(s, off + 0x56, 0x0042);
     setByte(s, ENTITY_OFF + 0x19, 0x42);
     setByte(s, ENTITY_OFF + 0x1a, 0x01);
-    setByte(s, ENTITY_OFF + 0x56, 0xff); // pre-set per verificare no scrittura.
+    setByte(s, ENTITY_OFF + 0x56, 0xff);
 
     scriptSlotBboxTest14E92(s, ENTITY_BASE);
 
@@ -262,7 +257,6 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readByte(s, ENTITY_OFF + 0x56)).toBe(0xff);
     // slot[0x56] non riscritto.
     expect(readWordBE(s, off + 0x56)).toBe(0x0042);
-    // slot state non cambia (era già 1, non 0 o 3).
     expect(readByte(s, off + 0x1a)).toBe(0x01);
   });
 
@@ -300,7 +294,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
 
     const off0 = slotOff(0);
     const off1 = slotOff(1);
-    // Slot 0: state non cambiata (mancato).
+    // Slot 0: state unchanged (missed).
     expect(readByte(s, off0 + 0x1a)).toBe(0x03);
     // Slot 1: state=2 (era 3, hit + bind).
     expect(readByte(s, off1 + 0x1a)).toBe(0x02);
@@ -390,9 +384,8 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
       },
     });
 
-    // No bind chiamato.
     expect(bindCalls).toBe(0);
-    // slot state invariato.
+    // slot state unchanged.
     expect(readByte(s, off + 0x1a)).toBe(0x02);
     // slot[0x56] sovrascritto: entity[0x1A]=5 → SKIP write.
     expect(readWordBE(s, off + 0x56)).toBe(0xaaaa);

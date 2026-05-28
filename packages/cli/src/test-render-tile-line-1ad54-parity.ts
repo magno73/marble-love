@@ -4,32 +4,25 @@
  * `renderTileLine1AD54`.
  *
  * `FUN_0001AD54` (982 byte, 0x01AD54-0x01B12A): tile-line renderer.
- * Scrive word in celle a 8 byte dentro il buffer @ 0x400A9C in workRam
- * su una griglia 22 colonne. Legge un descrittore 8-byte puntato da arg0,
  * una direction table ROM @0x1ECEA, e uno stream dati via pointer-table
  * ancorata a *(0x400474).
  *
  * Strategia parity:
- *   - Setup workRam con:
+ *   - Set up workRam with:
  *       * Struct 8-byte @ 0x401000 (arg0).
  *       * PTR_TABLE_ROOT (0x400474) → root-struct @ 0x401080.
  *       * *(0x401080+0x20) → pointer-table @ 0x401100.
  *       * pointer-table[subIdx] → data-stream @ 0x401200 (64 byte, no 0x80).
  *       * Cell buffer zeroed @ 0x400A9C (0x400 byte).
- *   - Run binario via callFunction(0x1AD54,
  *       [ptrAbs, d5, d4, limit, flag]).
  *   - Run TS via renderTileLine1AD54(...).
  *   - Compara workRam[0xA9C..0xEA0) (1024 byte) byte-by-byte.
  *   - Compara anche return D0 (low word).
  *
- * Suite (3 × 167 + 1 = 500 casi):
- *   A: flag=0 (early exit, solo return A4)
+ *   A: flag=0 (early exit, returns only A4)
  *   B: dirIdx 0..3 (row-major), small coordinates, random subMode
  *   C: dirIdx 4..7 (column-major), random params
  *
- * Nota: FUN_0001AD54 alla fine chiama `jsr 0x2bc5c` (un dispatcher A4);
- * quel JSR è stubbato (RTS immediato) tramite il medesimo meccanismo degli
- * altri parity test. Il return D0 viene confrontato sui low 16 bit.
  *
  * Uso: npx tsx packages/cli/src/test-render-tile-line-1ad54-parity.ts [N]
  */
@@ -59,7 +52,7 @@ const WORK_RAM_BASE = 0x00400000;
 // Layout in workRam
 const STRUCT_ABS   = 0x00401000; // struct 8-byte
 const ROOT_ABS     = 0x00401080; // root struct (needs +0x20 field)
-const PTRTBL_ABS   = 0x00401100; // pointer-table (array of longs)
+const PTRTBL_ABS   = 0x00401100;
 const DATA_ABS     = 0x00401200; // data stream (64 byte)
 
 const CELL_BUF_OFF = 0x0a9c;
@@ -120,7 +113,6 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   /**
-   * Scrive un long BE a `abs` sia in Musashi che in stateInst.workRam.
    */
   function pokeLong(abs: number, v: number): void {
     pokeMem(cpu, abs,     1, (v >>> 24) & 0xff);
@@ -147,7 +139,7 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Genera un Uint8Array per i parametri del test e lo sincronizza
+   * Generate a Uint8Array for the test parameters and synchronize it
    * su Musashi + stateInst.
    */
   function setupCase(
@@ -222,7 +214,6 @@ async function main(): Promise<void> {
               flagsWord, extraByte, lookupByte, dataBytes,
               d5, d4, limit, flag);
 
-    // Run binario (5 long args: ptrAbs, d5, d4, limit, flag)
     const { d0: d0Bin } = callFunction(cpu, FUN_1AD54, [
       STRUCT_ABS >>> 0,
       d5 & 0xffff,
@@ -232,13 +223,11 @@ async function main(): Promise<void> {
     ]);
     const retBin = d0Bin & 0xffff;
 
-    // Snapshot cell buffer dal binario
     const binSnap: number[] = [];
     for (let k = 0; k < CELL_BUF_LEN; k++) {
       binSnap.push(peekMem(cpu, WORK_RAM_BASE + CELL_BUF_OFF + k, 1) & 0xff);
     }
 
-    // Resync workRam TS con lo stato Musashi (solo cell buffer; resto già coerente).
     for (let k = 0; k < CELL_BUF_LEN; k++) {
       stateInst.workRam[CELL_BUF_OFF + k] = 0;
     }
@@ -280,12 +269,10 @@ async function main(): Promise<void> {
     return false;
   }
 
-  // ─── Generatori di casi ──────────────────────────────────────────────────
 
   function genDataStream(rng: () => number, noSentinel = false): Uint8Array {
     const buf = new Uint8Array(64);
     for (let i = 0; i < buf.length; i++) {
-      // Evita 0x80 per semplificare la parity (A2 reset complicherebbe il confronto)
       let b = randByte(rng);
       if (noSentinel && b === 0x80) b = 0x7f;
       buf[i] = b;

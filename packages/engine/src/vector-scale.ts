@@ -1,29 +1,29 @@
 /**
- * vector-scale.ts — replica del pure leaf `FUN_00025E7C` (326 byte).
+ * vector-scale.ts — pure-leaf `FUN_00025E7C` replica (326 bytes).
  *
- * Funzione di "vector scaling/normalization 2D" con 4 modes:
- *   - mode 2: scaling con D2 *= 4 prima del divide
- *   - mode 3: due divides (uno per x, uno per y)
+ * 2D vector scaling/normalization function with 4 modes:
+ *   - mode 2: scaling with D2 *= 4 before divide
+ *   - mode 3: two divides (one for x, one for y)
  *   - mode 4: D4 = (D2 >> 2) + D3
  *   - default: D4 = max(0, D3 - D2)
  *
- * Output: scrive (x: long, y: long) a `*A0` modificando il vettore in place.
+ * Output: writes (x: long, y: long) to `*A0`, mutating the vector in place.
  *
- * **Algoritmo**:
- *   1. Computa D2 = abs(x), D4 = abs(y)
+ * **Algorithm**:
+ *   1. Compute D2 = abs(x), D4 = abs(y)
  *   2. D3 = approx Manhattan distance: max(|x|,|y|) + min/8 * 3
  *   3. Lookup ROM @ 0x1EEF8 per interpolazione (D4*2, D4*2+2)
  *   4. D2 = sext(D5) + ((ROM[D4+1]-ROM[D4]) * D2_mid_bits) >> 3
  *   5. D3 clamp a 0x100 unsigned
- *   6. Switch on mode → calcola D4
+ *   6. Switch on mode → compute D4
  *   7. D5 = (D4 << 6) / (D3 >> 8) — divu.w
  *   8. D1 = D5 (mode != 3) o secondo divide (mode 3)
  *   9. *A0 = (*A0 >> 8) * D5 >> 6 (signed mul, asr)
  *   10. *(A0+4) = (*(A0+4) >> 8) * D1 >> 6
  *
- * **Pure leaf**: 0 jsr, 0 globali workRam.
+ * **Pure leaf**: 0 jsr, 0 workRam globals.
  *
- * **Verificato bit-perfect** vs `FUN_00025E7C` tramite differential test.
+ * **Verified bit-perfect** against `FUN_00025E7C` via differential test.
  */
 
 import type { GameState } from "./state.js";
@@ -87,7 +87,7 @@ export function vectorScale(
   // D3 = approx distance
   // if D2 > D4 (unsigned): D3 = (D4 >> 3) * 3 + D2
   // else:                   D3 = (D2 >> 3) * 3 + D4
-  // bls = branch low or same (unsigned <=). Quindi se D2 <= D4: branch (else path).
+  // bls = branch low or same (unsigned <=). Therefore if D2 <= D4: branch (else path).
   let d3: number;
   if ((d2abs >>> 0) > (d4abs >>> 0)) {
     // D0 = D4 >> 3 (unsigned, lsr.l), then D3 = sext_w(D0.w) (= move.w D0w,D3w; ext.l D3),
@@ -222,7 +222,7 @@ export function vectorScale(
       d1final = Math.floor(dividend2 / divisor1) & 0xffff;
     }
   } else {
-    // Mode 3 senza second path? In disasm, "if mode != 3: D1 = D5"
+    // Mode 3 without second path? In disasm, "if mode != 3: D1 = D5"
     d1final = d5final;
   }
 

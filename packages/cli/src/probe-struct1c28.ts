@@ -1,5 +1,5 @@
 // Probe: dump STRUCT @ 0x401C28 from MAME snapshots f12000..12099.
-// Output: 32-byte struct + tileX/tileY + obj0.x/y/z per ogni frame.
+// Output: 32-byte struct + tileX/tileY + obj0.x/y/z for each frame.
 import { readFileSync } from "node:fs";
 
 const groundTruth = JSON.parse(readFileSync("/tmp/mame_100f.json", "utf-8")) as {

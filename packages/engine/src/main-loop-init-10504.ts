@@ -1,10 +1,6 @@
 /**
- * main-loop-init-10504.ts — replica parziale, stub-injectable, di `FUN_00010504`.
+ * main-loop-init-10504.ts — partial, stub-injectable `FUN_00010504` replica.
  *
- * `FUN_10504` è il grosso init per game-state/level-start chiamato dalla
- * chain `117B2 -> 1101E/11452 -> 10504 -> 10392`. Questa prima slice copre
- * il blocco deterministico iniziale e la coda di normalizzazione oggetti,
- * lasciando le JSR non replicate come callback iniettabili.
  */
 
 import type { GameState } from "./state.js";

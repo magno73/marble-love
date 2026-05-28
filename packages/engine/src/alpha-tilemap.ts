@@ -1,41 +1,44 @@
 /**
- * alpha-tilemap.ts — utility per scrivere/cancellare tile nell'alpha tilemap
- * @ 0xA03000 (4 KB).
+ * alpha-tilemap.ts - utilities for writing and clearing tiles in the
+ * alpha tilemap @ 0xA03000 (4 KB).
  *
- * L'alpha tilemap è organizzata come 64 colonne × 30 righe = 1920 (0x780)
- * tile da 1 word ciascuno. È usata per HUD overlay (score, time, ecc.).
+ * The alpha tilemap is organized as 64 columns x 30 rows = 1920 (0x780)
+ * one-word tiles. It is used for the HUD overlay: score, time, and similar
+ * text layers.
  *
- * **Verificate bit-perfect** vs binary tramite `cli/src/test-alpha-tilemap-parity.ts`.
+ * Verified bit-perfect against the binary via
+ * `cli/src/test-alpha-tilemap-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-/** Numero totale di tile nell'alpha tilemap (64 col × 30 row). */
+/** Total number of tiles in the alpha tilemap (64 columns x 30 rows). */
 export const ALPHA_TILE_COUNT = 0x780 as const;
 
-/** Numero di tile per riga (= colonne). */
+/** Tiles per row (= columns). */
 export const ALPHA_TILES_PER_ROW = 64 as const;
 
 // ─── setAlphaWord (FUN_383A) ──────────────────────────────────────────────
 
 /**
- * Replica `FUN_0000383A` — `setAlphaWord(index, value)`.
+ * `FUN_0000383A` replica — `setAlphaWord(index, value)`.
  *
- * Disassembly (5 istruzioni):
+ * Disassembly (5 instructions):
  *   move.l (0x4,SP),D0      ; D0 = arg1 long (tile index)
- *   move.w (0xa,SP),D1w      ; D1w = low word di arg2 long (tile value)
+ *   move.w (0xa,SP),D1w      ; D1w = low word of arg2 long (tile value)
  *   movea.l #0xA03000,A0
  *   add.l   D0,D0            ; D0 *= 2 (word stride)
  *   adda.l  D0,A0
  *   move.w  D1w,(A0)         ; *(alpha + index*2) = D1.w
  *   rts
  *
- * **Nota:** `add.l D0,D0` fa shift signed: per index in [0, 0x780) il calcolo
- * è naturale. Per index negativi o > 0x800 l'indirizzo wrappa (32-bit).
+ * **Note:** `add.l D0,D0` is a signed shift; for indexes in [0, 0x780) the
+ * calculation is natural. Negative indexes or indexes > 0x800 wrap the
+ * address at 32 bits.
  *
  * @param state Game state (alpha RAM)
- * @param index Tile index (long; per uso normale 0..0x77F)
- * @param value Tile value (word, scritto BE)
+ * @param index Tile index (long; normally 0..0x77F)
+ * @param value Tile value (word, written big-endian)
  */
 export function setAlphaWord(state: GameState, index: number, value: number): void {
   const v = value & 0xffff;
@@ -46,18 +49,19 @@ export function setAlphaWord(state: GameState, index: number, value: number): vo
     state.alphaRam[off] = (v >>> 8) & 0xff;
     state.alphaRam[off + 1] = v & 0xff;
   }
-  // Out-of-range writes vanno in altre regioni (PF/MO RAM): per ora ignored,
-  // come fa array-helpers.writeMemoryU16. In gioco normale non succede.
+  // Out-of-range writes target other regions (PF/MO RAM). They are ignored for
+  // now, matching array-helpers.writeMemoryU16. Normal gameplay should not hit
+  // this path.
 }
 
 // ─── clearAlphaTilesFromIndex (FUN_28C7E) ─────────────────────────────────
 
 /**
- * Replica `FUN_00028C7E` — clearAlphaTilesFromIndex(startRow).
+ * `FUN_00028C7E` replica — clearAlphaTilesFromIndex(startRow).
  *
- * Disassembly (10 istruzioni):
+ * Disassembly (10 instructions):
  *   move.l  D2,-(SP)             ; save D2
- *   move.w  (0xa,SP),D0w          ; D0w = low word di arg1 long
+ *   move.w  (0xa,SP),D0w          ; D0w = low word of arg1 long
  *   asl.w   #0x6,D0w              ; D0w <<= 6 (= startRow * 64)
  *   move.w  D0w,D2w               ; D2w = counter
  *   bra.b   loop_check
@@ -75,22 +79,22 @@ export function setAlphaWord(state: GameState, index: number, value: number): vo
  *   move.l  (SP)+,D2
  *   rts
  *
- * Logica: cancella i tile dell'alpha tilemap dall'indice `startRow * 64`
- * fino a 0x780 (esclusivo). Quando `startRow * 64 >= 0x780` la funzione è
- * un no-op (loop esce immediatamente al primo check).
+ * Logic: clear alpha tilemap tiles from index `startRow * 64` up to 0x780
+ * exclusive. When `startRow * 64 >= 0x780`, the function is a no-op because
+ * the first loop check exits immediately.
  *
- * **Edge case 68k**: il counter è word-wide. Se `startRow * 64 (& 0xFFFF)`
- * non raggiunge mai 0x780 contando in avanti modulo 0x10000, il loop
- * itera fino al wrap completo. Per uso normale (startRow in [0, 30]),
- * il counter parte in [0, 0x780] e il caso degenere non si presenta.
+ * **68k edge case**: the counter is word-wide. If `startRow * 64 (& 0xFFFF)`
+ * never reaches 0x780 while counting forward modulo 0x10000, the loop iterates
+ * until a full wrap. In normal use (startRow in [0, 30]) the counter starts in
+ * [0, 0x780], so the degenerate case does not occur.
  *
  * @param state    Game state
- * @param startRow Riga di partenza (0..30 per uso normale)
+ * @param startRow Starting row (0..30 in normal use)
  */
 /**
- * Replica `FUN_000037E4` — `getAlphaTileAddr(col, row)` — calcola indirizzo
- * tile alpha tilemap dato (col, row) byte. Stessa formula di setAlphaTile
- * ma RETURN ONLY (no write). Returns long address.
+ * Mirrors `FUN_000037E4` - `getAlphaTileAddr(col, row)`. Computes the alpha
+ * tilemap address for `(col, row)` bytes. Same formula as setAlphaTile, but
+ * return-only with no write. Returns a long address.
  */
 export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array }, colByte: number, rowByte: number): number {
   const ROTATION_OFF = 0x1f42;
@@ -124,7 +128,7 @@ export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array },
 /**
  * Replica `FUN_00016E8E` — clear alpha tile rows.
  *
- * Per ogni riga r in [arg1.b .. 0x1E):
+ * For each row r in [arg1.b .. 0x1E):
  *   Call getAlphaTileAddr(col=3, row=r) → addr
  *   Clear 0x24 words from addr
  */
@@ -150,15 +154,15 @@ export function clearAlphaRows(
 }
 
 export function clearAlphaTilesFromIndex(state: GameState, startRow: number): void {
-  // Replica del calcolo binario: D0w = arg1.w; D0w <<= 6 (word shift, wraps mod 0x10000)
+  // Binary calculation: D0w = arg1.w; D0w <<= 6 (word shift, wraps mod 0x10000).
   let counter = ((startRow & 0xffff) << 6) & 0xffff;
 
-  // Loop fino a counter == 0x780. addq.w wraps modulo 0x10000.
-  // Per startRow in [0, 0x1E], counter raggiunge 0x780 senza wrap.
-  // Limite di sicurezza per il caso degenere (startRow grande): max 0x10000 iter.
+  // Loop until counter == 0x780. addq.w wraps modulo 0x10000.
+  // For startRow in [0, 0x1E], counter reaches 0x780 without wrapping.
+  // Safety limit for the degenerate large-startRow case: max 0x10000 iters.
   let safety = 0x10000;
   while (counter !== 0x780 && safety-- > 0) {
-    // sext_l(counter) — per counter in [0, 0x8000) è positivo
+    // sext_l(counter): for counter in [0, 0x8000), the value is positive.
     const idxSigned = counter & 0x8000 ? counter - 0x10000 : counter;
     setAlphaWord(state, idxSigned, 0);
     counter = (counter + 1) & 0xffff;

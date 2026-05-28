@@ -3,36 +3,20 @@
  * test-state-dispatch-15460-parity.ts — differential FUN_15460 vs
  * `stateDispatch15460`.
  *
- * `FUN_00015460` (528 byte effettivi: 0x15460..0x15670 escluso) è un
- * dispatcher 7-way su `kind = byte @ structPtr+0x1A` con bounds check
- * signed `0 <= kind <= 6`. Out-of-range salta tutti i case ed esegue
- * solo l'epilog comune.
+ * 7-way dispatcher on `kind = byte @ structPtr+0x1A` with bounds check
+ * only the common epilogue.
  *
- * **Side effects** (tutti diretti su workRam — la funzione NON chiama
- * altre subroutine, quindi NON serve stub injection):
- *   - case 0/3 (track marble): scrive `(0x00,A0)` (vel_x), `(0x04,A0)`
  *     (vel_y), `(0x5C,A0)` (anim ptr), `(0x26,A0)=1`.
- *   - case 1: scrive `(0x5C,A0) = 0x20CD8`, clear `(0x27,A0)`,
  *     `(0x26,A0) = 1`.
- *   - case 2: branch su `(0x5C,A0)` corrente vs `(0x58,A0)` previous;
- *     può scrivere `(0x5C,A0) = 0x20D64` o lasciare invariato + scrivere
  *     `(0x26,A0) ∈ {-1, +1}` in delta path.
- *   - case 4: scrive `(0x5C,A0)` con uno di 4 anim ptr basato su segno e
- *     magnitudo dei field +0x1C/+0x20; `(0x26,A0) = 1`.
- *   - case 5/6: scrive solo `(0x5C,A0)`; `(0x26,A0)` invariato.
+ *     magnitude of fields +0x1C/+0x20; `(0x26,A0) = 1`.
  *   - epilog: `(0x58,A0) ← (0x5C,A0)`, `(0x24,A0) = 0`,
- *     `(0x25,A0) = 0x02 se kind ∈ {0,4} else 0x01`.
+ *     `(0x25,A0) = 0x02 if kind in {0,4} else 0x01`.
  *
- * **Suite testate (4 × 125 = 500 casi)**:
- *   - A: kind random ∈ [0..6] con struct casuale → cattura tutti i case.
- *   - B: kind random ∈ [7..0x7F] (out-of-range positivo) → solo epilog.
+ *   - B: random kind in [7..0x7F] (positive out-of-range) -> epilogue only.
  *   - C: kind random ∈ [0x80..0xFF] (out-of-range negativo signed) →
- *        solo epilog (blt branch).
- *   - D: focus case 4 (kind=4) con vel_x/vel_y di segno/magnitudo
- *        pathologici per coprire tutti i 4 sub-rami.
+ *        epilogue only (blt branch).
  *
- * **Confronto**: byte-by-byte sull'intera struct `[STRUCT_BASE, +0x80)`
- * dopo l'invocazione, plus la `target_cell` area (16 byte).
  *
  * Uso: npx tsx packages/cli/src/test-state-dispatch-15460-parity.ts [N]
  */
@@ -58,12 +42,10 @@ const FUN_15460 = 0x00015460;
 
 const WORK_RAM_BASE = 0x00400000;
 
-// Struct under test: 0x80 byte, ben dentro workRam, lontano dal SP.
 const STRUCT_BASE = 0x00400500;
 const STRUCT_SIZE = 0x80;
 
-// Target cell ptr (per case 0/3): 16 byte di area che contiene 2 byte
-// "target.x", "target.y" letti dal case track-marble.
+// Target cell ptr (for cases 0/3): 16-byte area containing 2 bytes
 const TARGET_BASE = 0x00401000;
 const TARGET_SIZE = 0x10;
 
@@ -95,7 +77,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Scrive byte in workRam binario+TS. */
 function pokeByteBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -106,7 +87,6 @@ function pokeByteBoth(
   state.workRam[abs - WORK_RAM_BASE] = v & 0xff;
 }
 
-/** Scrive long-BE in workRam binario+TS. */
 function pokeLongBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -127,7 +107,6 @@ function pokeLongBoth(
   }
 }
 
-/** Confronta byte-by-byte la zona [base..base+size). */
 function compareZone(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -151,8 +130,6 @@ interface CaseSetup {
 }
 
 /**
- * Costruisce un caso di test con struct random e target ptr che punta
- * a `TARGET_BASE` (così case 0/3 può leggere senza out-of-range).
  */
 function buildCase(
   rng: () => number,
@@ -240,7 +217,6 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN_15460, [STRUCT_BASE >>> 0]);
     ns.stateDispatch15460(state, STRUCT_BASE >>> 0);
 
-    // Confronta struct.
     const structDiff = compareZone(
       state,
       cpu,
@@ -259,7 +235,6 @@ async function main(): Promise<void> {
       }
       return false;
     }
-    // Target cell area: deve essere intatta (case 0/3 legge ma non scrive).
     const tDiff = compareZone(state, cpu, TARGET_BASE, TARGET_SIZE, "target");
     if (tDiff !== null) {
       if (failHolder.value === null) {
@@ -336,7 +311,7 @@ async function main(): Promise<void> {
     [0x00000005, 0x000000c8], // |5| < |200|, D0 > 0   → Y_POS
     [0x00000005, 0xffffff38], // |5| < |200|, D0 < 0   → Y_NEG
     [0x00000000, 0x00000000], // entrambi 0 → Y axis (D3<=D2), D0=0 (≤0) → Y_NEG
-    [0x80000000, 0x80000000], // overflow neg.l (intn) — caso edge
+    [0x80000000, 0x80000000],
     [0x7fffffff, 0x80000001], // |D1|=max, |D0|=max-1 → X_POS
     [0x00000001, 0x00000001], // |D1|=|D0|, both pos  → Y axis (≤), D0>0 → Y_POS
     [0xffffffff, 0xffffffff], // |D1|=|D0|=1, both neg→ Y axis, D0<0 → Y_NEG

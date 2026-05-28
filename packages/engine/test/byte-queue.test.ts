@@ -1,7 +1,6 @@
 /**
  * Test dequeueByte (FUN_4D68) + orPairBytes (FUN_53EA).
  *
- * Bit-perfect verificati vs binary tramite `cli/src/test-byte-queue-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";

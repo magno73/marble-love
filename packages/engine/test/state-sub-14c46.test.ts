@@ -1,12 +1,7 @@
 /**
  * state-sub-14c46.test.ts — smoke tests per `FUN_00014C46`.
  *
- * Verifica:
- *  1. Empty entry list (sentinel 0xFF) → early exit, nessuna init/teardown.
- *  2. Init slot quando `D3 == entry[0]` AND `D2 < entry[0]`.
- *  3. Tail walk teardown quando `D2 == slot[0x52]` AND `D3 < slot[0x52]`.
- *  4. Tail walk no-op se slot[0x18] == 0 (slot libero).
- *  5. Match-skip: `slotMatchesPtr` ritorna 1 → entry skippato senza init.
+ *  4. Tail walk no-op if slot[0x18] == 0 (free slot).
  *  6. Sub-injection invocate corret-volte (fun_1cc62/150d0/18e6c/18f46).
  */
 
@@ -20,18 +15,15 @@ const WORK_RAM_BASE = 0x400000;
 const SLOT0_PTR = 0x401302;
 const SLOT0_OFF = SLOT0_PTR - WORK_RAM_BASE;
 
-/** Helper: scrivi un byte. */
 function setByte(s: ReturnType<typeof emptyGameState>, off: number, v: number): void {
   s.workRam[off] = v & 0xff;
 }
 
-/** Helper: scrivi una word BE. */
 function setWordBE(s: ReturnType<typeof emptyGameState>, off: number, v: number): void {
   s.workRam[off] = (v >>> 8) & 0xff;
   s.workRam[off + 1] = v & 0xff;
 }
 
-/** Helper: scrivi un long BE. */
 function setLongBE(s: ReturnType<typeof emptyGameState>, off: number, v: number): void {
   const u = v >>> 0;
   s.workRam[off] = (u >>> 24) & 0xff;
@@ -40,12 +32,10 @@ function setLongBE(s: ReturnType<typeof emptyGameState>, off: number, v: number)
   s.workRam[off + 3] = u & 0xff;
 }
 
-/** Helper: legge byte. */
 function readByte(s: ReturnType<typeof emptyGameState>, off: number): number {
   return (s.workRam[off] ?? 0) & 0xff;
 }
 
-/** Helper: legge long BE. */
 function readLongBE(s: ReturnType<typeof emptyGameState>, off: number): number {
   return (
     ((s.workRam[off] ?? 0) << 24) |
@@ -55,7 +45,6 @@ function readLongBE(s: ReturnType<typeof emptyGameState>, off: number): number {
   ) >>> 0;
 }
 
-/** Helper: legge word BE (signed). */
 function readWordBESigned(
   s: ReturnType<typeof emptyGameState>,
   off: number,
@@ -66,9 +55,7 @@ function readWordBESigned(
 }
 
 /**
- * Costruisce una RomImage di test con:
- *   - sentinel 0xFF a `0x2257A` (entry list slot 0 = vuota di default)
- *   - opzionale: scrivi tabella ROM[0x2257A + mode*4] e l'entry list.
+ * Builds a test RomImage with:
  */
 function makeRom(): RomImage {
   return emptyRomImage();
@@ -104,7 +91,6 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(r.fun150D0Calls).toBe(0);
     expect(r.fun18E6CCalls).toBe(0);
     expect(r.fun18F46Calls).toBe(0);
-    // Tail walk fa 4 noop (tutti slot[0x18] == 0 di default).
     expect(r.slots).toHaveLength(4);
     expect(r.slots.every(sl => sl.action === "noop")).toBe(true);
   });
@@ -114,7 +100,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     const rom = makeRom();
     // Setup: mode = 0. ROM[0x2257A] → ROM[0x10000] = entry list.
     // entry: [10, 20, dataPtr_b3, dataPtr_b2, dataPtr_b1, dataPtr_b0, 0x33, 0x00], poi sentinel.
-    // dataPtr punta a ROM[0x10100] dove byte 0 = 5, byte 1 = -3.
+    // dataPtr points to ROM[0x10100] where byte 0 = 5, byte 1 = -3.
     setRomLongBE(rom, 0x2257a, 0x00010000);
     // entry[0]=10, entry[1]=20
     setRomByte(rom, 0x10000, 10);
@@ -131,9 +117,6 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     setRomByte(rom, 0x10100, 5);
     setRomByte(rom, 0x10101, 0xfd); // = -3 signed
 
-    // Importante: tutti gli slot @ 0x401302 stride 0x60 hanno byte+0x18 = 0
-    // (free), così FUN_14BCE ritorna l'ultimo slot iterato (= slot 3).
-    // FUN_14BCE legge ROM[0x1F006 + i*4] (4 entries) → questi devono puntare
     // a slot validi (0x401302, 0x401362, 0x4013C2, 0x401422).
     setRomLongBE(rom, 0x1f006, 0x00401302);
     setRomLongBE(rom, 0x1f006 + 4, 0x00401362);
@@ -144,7 +127,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     let d150Calls = 0;
     let e6cCalls = 0;
 
-    // D2 = 5 (< 10 = entry[0]), D3 = 10 (== entry[0]) → gate passato.
+    // D2 = 5 (< 10 = entry[0]), D3 = 10 (== entry[0]) -> gate passes.
     const r = stateSub14C46(s, rom, 5, 10, {
       fun_1cc62: () => {
         cc62Calls++;
@@ -167,13 +150,11 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(d150Calls).toBe(1);
     expect(e6cCalls).toBe(1);
 
-    // Slot scritto = ultimo iterato (slot 3 = 0x401422). FUN_14BCE itera 4
-    // entries e salva l'ULTIMO che ha byte+0x18 == 0, quindi slot 3.
+    // Written slot = last iterated (slot 3 = 0x401422). FUN_14BCE iterates 4
     const slotPtr = r.entries[0]!.initSlotPtr!;
     expect(slotPtr).toBe(0x00401422);
     const slotOff = slotPtr - WORK_RAM_BASE;
 
-    // Verifica scritture:
     expect(readLongBE(s, slotOff + 0x4a)).toBe(0x00010100);
     expect(readLongBE(s, slotOff + 0x4e)).toBe(0x00010100);
     expect(readByte(s, slotOff + 0x1b)).toBe(0x33);
@@ -268,7 +249,6 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     setWordBE(s, SLOT0_OFF + 0x52, 15);
     setWordBE(s, SLOT0_OFF + 0x54, 25);
 
-    // D2 = 15 (== slot52), D3 = 20 (>= slot52, dentro range) → no teardown
     // dal lower-cross. Poi D2 != slot54 → skip upper.
     const r = stateSub14C46(s, rom, 15, 20);
     expect(r.slots[0]!.action).toBe("noop");
@@ -278,7 +258,6 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
   it("entry skip se slotMatchesPtr ritorna 1 (entry duplicato)", () => {
     const s = emptyGameState();
     const rom = makeRom();
-    // Setup di entry valida ma con un slot già occupato che fa match.
     setRomLongBE(rom, 0x2257a, 0x00010000);
     // entry[0..7] di test.
     setRomByte(rom, 0x10000, 10);
@@ -297,20 +276,14 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     // → slotMatchesPtr = 1 (duplicato).
     setByte(s, SLOT0_OFF + 0x18, 1);
     setLongBE(s, SLOT0_OFF + 0x4e, 0x00010100);
-    // Note: slotMatchesPtr legge `*(arg+2)` come long → arg+2 punta a
-    // entry[2..5] in ROM = 0x00010100. Match con slot[0x4E].
-    // Però arg punta in ROM, e slotMatchesPtr fa `argOff = argPtr - 0x400000`,
-    // quindi `argOff = 0x10000 - 0x400000` (negativo!) → readU32Workram legge
-    // garbage. Per evitare questo, mettiamo l'entry in workRam, non in ROM.
+    // entry[2..5] in ROM = 0x00010100. Match with slot[0x4E].
 
-    // STRATEGIA ALT: scrivi entry list in workRam, poi punta ROM[0x2257A] al
     // workRam address.
     // Reset
     s.workRam.fill(0);
     setByte(s, SLOT0_OFF + 0x18, 1);
     setLongBE(s, SLOT0_OFF + 0x4e, 0x00010100);
 
-    // Scrivi entry list a workRam @ 0x400500.
     const entryWorkRamOff = 0x500;
     setByte(s, entryWorkRamOff + 0, 10);
     setByte(s, entryWorkRamOff + 1, 20);
@@ -332,14 +305,12 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
   it("findFreeSlotInTable ritorna -1 → break entry walk + tail walk parte da 0x401302", () => {
     const s = emptyGameState();
     const rom = makeRom();
-    // Setup entry list non-vuota (1 entry + sentinel).
     setRomLongBE(rom, 0x2257a, 0x00010000);
     setRomByte(rom, 0x10000, 10);
     setRomByte(rom, 0x10001, 20);
     setRomLongBE(rom, 0x10002, 0x00010100);
     setRomByte(rom, 0x10008, 0xff);
 
-    // ROM table FUN_14BCE: ALL slots in uso → ritorna -1.
     setRomLongBE(rom, 0x1f006, 0x00401302);
     setRomLongBE(rom, 0x1f006 + 4, 0x00401362);
     setRomLongBE(rom, 0x1f006 + 8, 0x004013c2);

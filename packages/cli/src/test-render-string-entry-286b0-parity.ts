@@ -2,30 +2,13 @@
 /**
  * test-render-string-entry-286b0-parity.ts — differential FUN_286B0.
  *
- * FUN_286B0 (62 byte): copy-string + struct-init + render. Variante più
- * ricca di FUN_28FDE: copia attivamente una stringa null-terminated da
- * `**arg1` al buffer destinazione `*(0x400412)`, scrive col/tickOff/marker
- * @ 0x400410+0/+1/+6, poi chiama renderStringChain @ FUN_2572 con
  * `(0x400410, attr_word)` (attr da arg4).
  *
  * Strategia stub injection:
  *   - FUN_2572 (renderStringChain) → patched a `rts` (4E 75) → no-op.
- *     Il binario tra il loop di copia e la jsr esegue tutte le scritture
- *     osservabili che vogliamo verificare; quel che fa FUN_2572 è
- *     "downstream" e non rilevante per la parity di 286B0.
  *
- *   - L'arg1 deve puntare a un long-BE che a sua volta punta a una stringa
- *     null-terminated valida. La sorgente è in workRam (per controllo
- *     totale del byte stream); la dest è in workRam (così il diff è
- *     osservabile via peekMem/state.workRam).
  *
- * Suite testate (4 × 125 = 500 casi):
- *   - A: stringhe random, lunghezza random in [0..63]
- *   - B: stringa di 1 byte (solo terminator) — verifica scrittura singola
- *   - C: stringa lunga (60..120 byte) — stress copy loop
- *   - D: byte LSB di arg2/arg3 in {0x00, 0xff} ciclato — verifica byte writes
  *
- * Confronto: workRam @ 0x400400..0x4007FF (1 KB; struct + dest buffer).
  *
  * Uso: npx tsx packages/cli/src/test-render-string-entry-286b0-parity.ts [N]
  */
@@ -65,7 +48,6 @@ const ARG1_PTR_ABS = 0x00400600 as const; // long ptr-to-ptr (4 byte)
 const SRC_BUFFER_ABS = 0x00400700 as const; // 256 byte buffer per source string
 const DEST_BUFFER_ABS = 0x00400500 as const; // 256 byte buffer per dest string
 
-/** Inizializza la struct @ 0x400410 con dest pointer = `DEST_BUFFER_ABS`. */
 function setupStructDestPtr(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -85,7 +67,6 @@ function setupStructDestPtr(
   }
 }
 
-/** Scrive il long-BE `srcAbs` @ ARG1_PTR_ABS (4 byte), in entrambi binario+TS. */
 function setupArg1PtrToPtr(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -105,22 +86,18 @@ function setupArg1PtrToPtr(
   }
 }
 
-/** Scrive una stringa null-terminated @ SRC_BUFFER_ABS in entrambi binario+TS. */
 function setupSourceString(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
   bytes: number[],
 ): void {
   const off = SRC_BUFFER_ABS - 0x400000;
-  // Garantisco terminator: l'ultimo byte è 0 (anche se il chiamante non lo
-  // include) per evitare loop infinito nel binario.
   for (let i = 0; i < bytes.length; i++) {
     pokeMem(cpu, SRC_BUFFER_ABS + i, 1, bytes[i]! & 0xff);
     state.workRam[off + i] = bytes[i]! & 0xff;
   }
 }
 
-/** Pre-fill (stesso valore) della region confrontata. */
 function setupCompareRegion(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -170,7 +147,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // Stub TS: no-op (la sub-call non viene confrontata).
   const subs: fdeNs.RenderStringEntry286B0Subs = {
     renderStringChain: (_addr: number, _attr: number): void => {},
   };
@@ -261,7 +237,6 @@ async function main(): Promise<void> {
     return out;
   }
 
-  // ─── Suite A: stringhe random len [0..63] ────────────────────────────
   console.log(
     `\n=== renderStringEntry286B0 (FUN_286B0) — Suite A: random strings & args — ${perSuite} casi ===`,
   );
@@ -277,7 +252,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: stringa solo terminator (1 byte = 0) ────────────────────
   console.log(
     `\n=== Suite B: stringa vuota (terminator only) — ${perSuite} casi ===`,
   );
@@ -293,7 +267,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: stringhe lunghe (60..120 byte) ──────────────────────────
   console.log(
     `\n=== Suite C: stringhe lunghe (60..120 byte) — ${perSuite} casi ===`,
   );

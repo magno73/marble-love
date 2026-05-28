@@ -2,11 +2,11 @@
  * particle-init-18cd2.test.ts — smoke tests per `FUN_00018CD2`.
  *
  * Verifica:
- *   - count = 0 → no slot, byte count scritto comunque
+ *   - count = 0 -> no slot, byte count still written
  *   - mode in [0..0x7F] → entry[8..9] determinato (no RNG step extra)
- *   - mode == 0xFF → palette refresh callback invocata + rng(8) per slot
- *   - count > 0 → fun_18e6c callback invocata `count` volte con (0x2C, i)
- *   - byte @ 0x4003E2 scritto con count
+ *   - mode == 0xFF -> palette refresh callback invoked + rng(8) per slot
+ *   - count > 0 -> fun_18e6c callback invoked `count` times with (0x2C, i)
+ *   - byte @ 0x4003E2 written with count
  */
 
 import { describe, it, expect } from "vitest";
@@ -58,7 +58,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     expect(e6cArgs).toEqual([[0x2c, 0], [0x2c, 1], [0x2c, 2]]);
     expect(s.workRam[COUNT_BYTE_OFF]).toBe(3);
     expect(r.slots.length).toBe(3);
-    // Ogni slot deve avere modeWord ∈ {0..7} << 11
+    // Every slot must have modeWord in {0..7} << 11.
     for (const slot of r.slots) {
       const top = (slot.modeWord >>> 11) & 0xffff;
       expect(top).toBeGreaterThanOrEqual(0);
@@ -96,7 +96,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
   });
 
   it("xvel/yvel: entry[4..5] e [6..7] sempre adjusted ±0x10 (no zero center)", () => {
-    // L'output ha sempre un offset ±0x10 dal centro. Per `count=10` slot
+    // Output always has a +/-0x10 offset from center. For `count=10` slots
     // dovremmo avere ALL i 4 byte (xvel + yvel) ben definiti.
     const s = emptyGameState();
     s.rng.seed = as_u32(0xabcd);
@@ -105,9 +105,9 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
       // xvel, yvel sono u16; convertiamo in signed per check.
       const xs = slot.xvel >= 0x8000 ? slot.xvel - 0x10000 : slot.xvel;
       const ys = slot.yvel >= 0x8000 ? slot.yvel - 0x10000 : slot.yvel;
-      // xvel: r2 in [0..0x5F] ⇒ raw in [-0x30..0x2F]; adj +-0x10 ⇒ esce di
+      // xvel: r2 in [0..0x5F] => raw in [-0x30..0x2F]; adj +-0x10 => exits by
       // ±0x10 dal range raw. Range finale: [-0x40..-0x11] ∪ [0x10..0x3F].
-      // Quindi |xvel| ≥ 0x10 sempre.
+      // Therefore |xvel| is always >= 0x10.
       expect(Math.abs(xs)).toBeGreaterThanOrEqual(0x10);
       expect(Math.abs(ys)).toBeGreaterThanOrEqual(0x10);
     }

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * test-random-mod-13a98-parity.ts — differential testing di FUN_00013A98
- * (randomMod13A98) vs il binario originale via Musashi WASM.
+ * (randomMod13A98) vs the original binary via Musashi WASM.
  *
- * Per ogni caso di test:
- *   1. Imposta il seed RNG in Work RAM (0x004003A6) tramite pokeMem
- *   2. Chiama FUN_13A98 nel binario con maxExclusive come argomento
- *   3. Chiama randomMod13A98(state, maxExclusive) nella TS impl
+ * For each test case:
+ *   1. Set RNG seed in Work RAM (0x004003A6) through pokeMem
+ *   2. Call FUN_13A98 in the binary with maxExclusive as argument
+ *   3. Call randomMod13A98(state, maxExclusive) in the TS implementation
  *   4. Confronta: return value (D0.w) e seed aggiornato (0x004003A6)
  *
  * Uso:
@@ -49,7 +49,7 @@ function findRomBlobPath(): string {
   );
 }
 
-/** Piccolo LCG deterministico per generare casi di test riproducibili. */
+/** Small deterministic LCG for reproducible test cases. */
 function makeDetRng(seed: number): () => number {
   let s = seed >>> 0;
   return () => {

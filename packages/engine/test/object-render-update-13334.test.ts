@@ -86,7 +86,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
-    // Mode = 1, record ptr punta a una posizione in workRam con tombstone.
+    // Mode = 1, record ptr points to a workRam position with tombstone.
     const recordPtr = 0x401800;
     s.workRam[STRUCT_OFF + 0x1e] = 1;
     s.workRam[STRUCT_OFF + 0x3e] = (recordPtr >>> 24) & 0xff;
@@ -99,7 +99,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     s.workRam[recOff + 1] = 0xff;
     s.workRam[recOff + 2] = 0xff;
     s.workRam[recOff + 3] = 0xff;
-    // Dirty marker per detectare scritture spurie.
+    // Dirty marker for detecting spurious writes.
     s.workRam[STRUCT_OFF + 0x4e] = 0x55;
     s.workRam[STRUCT_OFF + 0x42] = 0x55;
 
@@ -109,7 +109,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     });
     expect(r).toBe(0);
 
-    // Niente side effect: workRam invariata.
+    // No side effects: workRam unchanged.
     expect(s.workRam).toEqual(before);
   });
 
@@ -249,7 +249,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
-    // Setup: scrivi un byte noto a `0x1DF18 + 5` nella ROM.
+    // Setup: write a known byte at `0x1DF18 + 5` in ROM.
     rom.program[PALETTE_INDEX_TABLE_ROM + 5] = 0x42;
     rom.program[PALETTE_INDEX_TABLE_ROM + 12] = 0x99; // 5+7=12 (path magic).
 
@@ -309,7 +309,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
         inner1D06A: noopInner1D06A,
       });
       expect(r).toBe(0);
-      // sext_l(0x99) low byte = 0x99 (paletteQueuePush mascher con 0xff).
+      // sext_l(0x99) low byte = 0x99 (paletteQueuePush masks with 0xff).
       expect(s2.workRam[0x40c]).toBe(0x99);
     }
   });

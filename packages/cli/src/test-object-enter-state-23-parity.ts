@@ -3,30 +3,20 @@
  * test-object-enter-state-23-parity.ts — differential FUN_160D4 vs
  * objectEnterState23.
  *
- * `FUN_000160D4` (34 byte) è il wrapper "enter state 0x23" chiamato da
- * FUN_158F6, FUN_15E24 e FUN_1BC88 con un puntatore oggetto pushato come
- * long sullo stack. La sub:
+ * long on the stack. The sub:
  *   1. Imposta `obj[0x1A] = 0x23`
- *   2. Chiama FUN_15D10 (helper non modellato qui)
  *   3. Imposta `obj[0x68..0x6B] = 0x00070000` (long big-endian)
  *
  * **Strategia parity**: patchamo FUN_15D10 a `rts` (4E 75) per isolare le
- * scritture dirette di FUN_160D4. Confrontiamo SOLO i byte effettivamente
- * scritti dalla sub stessa: `obj[0x1A]` e `obj[0x68..0x6B]`.
+ * direct writes from FUN_160D4. Compare only bytes actually
  *
- * Setup per ogni caso random:
  *   - `objPtr` random in {0x401C00, 0x401D00, 0x401D80, 0x401E00, 0x401E80}
- *   - byte di stato pre-chiamata @ +0x1A: random (incluso 0x21, 0x22, 0x24
- *     che sono i tre stati "pre-23" attestati nei caller)
- *   - long timer pre-chiamata @ +0x68: random
- *   - bytes "vicini" (0x19, 0x1B, 0x67, 0x6C) random per verificare che
+ *   - random "neighbor" bytes (0x19, 0x1B, 0x67, 0x6C) to verify that
  *     non vengano sporcati
  *
  * Suite testate:
  *   - A: random everything
- *   - B: stato pre = 0x21 / 0x22 / 0x24 (transizioni note dei caller)
  *   - C: timer pre = 0x00070000 (idempotenza)
- *   - D: byte di stato pre = 0x23 (chiamata su oggetto già in stato target)
  *
  * Uso: npx tsx packages/cli/src/test-object-enter-state-23-parity.ts [N]
  */
@@ -51,9 +41,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_160D4 = 0x000160d4;
 const FUN_15D10 = 0x00015d10;
 
-// Pointer candidates: tutti `>= 0x401000` (in work RAM 8 KB) e tali che
-// `ptr + 0x80 <= 0x401E80` per non overlappare con la zona di stack che
-// va da SP=0x401F00 verso il basso (push di sentinel + arg + saved A2 +
+// `ptr + 0x80 <= 0x401E80` to avoid overlapping the stack area that
 // arg di FUN_15D10 ≈ 16 byte, ma teniamo margine generoso).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401400, 0x00401800, 0x00401c00,
@@ -82,7 +70,7 @@ interface FailRecord {
 
 async function main(): Promise<void> {
   const total = Number(process.argv[2] ?? "500");
-  // 4 suite, dividiamo equamente con resto in suite D.
+  // 4 suites, split evenly with the remainder in suite D.
   const perSuite = Math.floor(total / 4);
   const remainder = total - perSuite * 4;
 
@@ -114,7 +102,6 @@ async function main(): Promise<void> {
     neighborByte67: number,
     neighborByte6C: number,
   ): boolean {
-    // Reset SP per ogni caso.
     cpu.system.setRegister("sp", 0x401f00);
 
     const off = ptr - 0x400000;
@@ -125,7 +112,6 @@ async function main(): Promise<void> {
       pokeMem(cpu, ptr + k, 1, 0);
       stateInst.workRam[off + k] = 0;
     }
-    // Stato byte pre @ +0x1A
     pokeMem(cpu, ptr + 0x1a, 1, preStateByte);
     stateInst.workRam[off + 0x1a] = preStateByte;
     // Timer long pre @ +0x68 (big-endian)
@@ -134,7 +120,7 @@ async function main(): Promise<void> {
     stateInst.workRam[off + 0x69] = (preTimerLong >>> 16) & 0xff;
     stateInst.workRam[off + 0x6a] = (preTimerLong >>> 8) & 0xff;
     stateInst.workRam[off + 0x6b] = preTimerLong & 0xff;
-    // Vicini "non toccati": +0x19, +0x1B, +0x67, +0x6C
+    // Untouched neighbors: +0x19, +0x1B, +0x67, +0x6C.
     pokeMem(cpu, ptr + 0x19, 1, neighborByte19);
     stateInst.workRam[off + 0x19] = neighborByte19;
     pokeMem(cpu, ptr + 0x1b, 1, neighborByte1B);
@@ -212,7 +198,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: stato pre ∈ {0x21, 0x22, 0x24} ─────────────────────────
   console.log(`\n--- Suite B: pre-state in {0x21,0x22,0x24} — ${perSuite} casi ---`);
   const preStates = [0x21, 0x22, 0x24] as const;
   let okB = 0;
@@ -224,7 +209,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: timer pre = 0x00070000 (idempotenza valore atteso) ──────
   console.log(`\n--- Suite C: pre-timer = 0x00070000 — ${perSuite} casi ---`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -234,7 +218,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: stato pre = 0x23 (già in stato target) ─────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n--- Suite D: pre-state = 0x23 (already-in-state) — ${sizeD} casi ---`);
   let okD = 0;

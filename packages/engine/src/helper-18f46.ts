@@ -1,21 +1,12 @@
 /**
- * helper-18f46.ts — replica `FUN_00018F46` (51 instr, ~137 byte).
+ * helper-18f46.ts — `FUN_00018F46` replica (51 instr, ~137 bytes).
  *
- * **Funzione**: **remove-from-draw-list** — rimuove dal byte-array ordinato
- * @ `0x004003BC` (31 slot + terminatore `0xFF`) la prima entry il cui rect
- * (`workRam[lookup_table[slot_idx]]`) ha `struct[0] == typeCode` e
- * `struct[1] == subIdx`. Se trovata:
- *   1. Azzera `struct[0]` del rect puntato (marca lo slot come "libero").
- *   2. Sposta a sinistra (`compact`) i byte del byte-array dal found_pos+1
- *      fino all'ultimo byte valido, cancellando il found_pos.
- *   3. Scrive `0xFF` al termine compattato.
+ * (`workRam[lookup_table[slot_idx]]`) has `struct[0] == typeCode` and
+ * `struct[1] == subIdx`. If found, it shifts entries up to the last valid
+ * byte, clearing the found position.
  *
- * È la **controparte simmetrica** di `FUN_00018E6C`
  * (`slot-insert-sorted-18e6c.ts`).
  *
- * **Calling convention** (RTL, 2 arg long pushati prima del `jsr`):
- *   - arg1 (più vicino a SP) → `D1b` = `typeCode` (LSB del long).
- *   - arg2 (più lontano da SP) → `D2b` = `subIdx` (LSB del long).
  *
  *   Tipico pattern caller:
  *   ```
@@ -34,12 +25,11 @@
  *     addq.l  #8,SP
  *   ```
  *
- * **Disasm FUN_00018F46** (51 istruzioni, 0x88 byte: 0x18F46–0x18FCF):
+ * **Disasm FUN_00018F46** (51 instructions, 0x88 bytes: 0x18F46–0x18FCF):
  *
  *   00018f46  movem.l {A3 A2 D2},-(SP)       ; save 3 regs (12 byte push)
  *   00018f4a  move.b  (0x13,SP),D1b          ; D1b = arg1[LSB] = typeCode
  *   00018f4e  move.b  (0x17,SP),D2b          ; D2b = arg2[LSB] = subIdx
- *   00018f52  movea.l #0x4003BC,A2           ; A2 = byte-array base
  *   00018f58  movea.l A2,A1                  ; A1 = walk ptr = A2
  *
  *   ; ── Phase 1: search loop ─────────────────────────────────────────────
@@ -55,7 +45,6 @@
  *                                            ;   UNLESS the byte has bit7 set,
  *                                            ;   in which case ext.w sign-extends
  *                                            ;   to 0xFFFFFF80..0xFFFFFFFF — but
- *                                            ;   in practice the byte-array holds
  *                                            ;   slot indices 0..30 which are all
  *                                            ;   < 0x80, so D0 is effectively
  *                                            ;   unsigned 0..30.)
@@ -110,14 +99,13 @@
  *   00018fca  movem.l (SP)+,{D2 A2 A3}       ; restore
  *   00018fce  rts
  *
- * **Memory layout** (shared con `slot-insert-sorted-18e6c.ts`):
- *   - byte-array @ `0x4003BC` (32 byte, 31 slot + last sentinel @ +0x1F).
+ * **Memory layout** (shared with `slot-insert-sorted-18e6c.ts`):
  *     Elemento i: byte = "rect slot index" (0..30) indicizzando la
  *     lookup-table ROM @ `0x1F0E2`.
  *   - Rect-slot i: `workRam[0x4001DC + i * 0xE]` (14 byte ciascuno).
  *     `slot[0]` = type-code / "occupato flag". Se 0 → slot libero.
  *     `slot[1]` = sub-index.
- *   - ROM lookup-table @ `0x1F0E2` (32 × 4 byte): pointer assoluti M68k ai
+ *   - ROM lookup-table @ `0x1F0E2` (32 x 4 bytes): absolute M68k pointers to
  *     rect-slot in workRam. Entry i → `workRam[lookup[i]]`.
  *
  * **Callers noti** (10 + 1 entry-point):
@@ -132,14 +120,10 @@
  *   - `FUN_00025FC2` @ 0x2615C
  *   - `FUN_00019BAA` @ 0x19CEA
  *
- * **Effetti collaterali** su `state.workRam`:
  *   1. Se trovata la entry: `workRam[structOff]` = 0 (free-slot mark su rect).
- *   2. `workRam[0x3BC + foundPos .. 0x3BC + endPos - 1]` shiftati sinistra
  *      di 1 (compattati).
  *   3. `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo terminatore).
- *   (No mutation se la entry non è trovata.)
  *
- * Verifica bit-perfect via `packages/cli/src/test-helper-18f46-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -150,35 +134,29 @@ import type { RomImage } from "./bus.js";
 /** Base assoluta workRam M68k. */
 const WORK_RAM_BASE = 0x00400000 as const;
 
-/** Base byte-array (32 byte, sentinel 0xFF). Offset assoluto M68k. */
 export const BYTE_ARRAY_ABS = 0x004003bc as const;
 
-/** Lunghezza byte-array (32 byte, slot usabili 0..0x1E, ultimo slot 0x1F = sentinel fisso). */
 export const BYTE_ARRAY_LEN = 0x20 as const;
 
 /** Sentinel byte (0xFF) — interrompe la ricerca e segna la fine della lista. */
 export const SENTINEL_BYTE = 0xff as const;
 
-/** Offset ROM della lookup table (pointer assoluti M68k ai rect-slot). */
+/** ROM offset of the lookup table (absolute M68k pointers to rect slots). */
 export const ROM_LOOKUP_OFF = 0x1f0e2 as const;
 
-/** Indirizzo assoluto M68k di `FUN_00018F46`. */
 export const HELPER_18F46_ADDR = 0x00018f46 as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Legge un byte da `state.workRam` all'offset relativo (0 se OOB). */
 function r8(state: GameState, off: number): number {
   return (state.workRam[off] ?? 0) & 0xff;
 }
 
-/** Scrive un byte in `state.workRam` all'offset relativo. */
 function w8(state: GameState, off: number, v: number): void {
   state.workRam[off] = v & 0xff;
 }
 
 /**
- * Legge un long BE (unsigned) da `rom.program` all'offset assoluto.
  * Difensivo: byte assenti contano 0.
  */
 function readU32BE(rom: RomImage, absOff: number): number {
@@ -190,24 +168,18 @@ function readU32BE(rom: RomImage, absOff: number): number {
   return ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3) >>> 0;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────────
 
 /**
- * Risultato della remove.
  *
- * Esposto per testabilità. Il binario non ha return value (D0 non significativo).
  */
 export interface Helper18F46Result {
-  /** true se la entry con `(typeCode, subIdx)` è stata trovata e rimossa. */
   removed: boolean;
   /**
-   * Posizione nel byte-array (offset assoluto M68k) dove è stata trovata
-   * l'entry rimossa. `null` se non trovata.
+   * removed entry. `null` if not found.
    */
   foundPos: number | null;
   /**
-   * Indice rect-slot (byte nel byte-array prima della rimozione) che è stato
-   * rimosso. `null` se non trovata.
+   * removed. `null` if not found.
    */
   slotIdx: number | null;
 }
@@ -215,18 +187,13 @@ export interface Helper18F46Result {
 // ─── Replica ─────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00018F46` — rimuove la prima entry dal
- * byte-array draw-list che corrisponde a `(typeCode, subIdx)`.
  *
- * @param state     GameState (workRam mutato se entry trovata).
- * @param rom       ROM image (lookup-table @ 0x1F0E2 letta, non modificata).
- * @param typeCode  Byte (0..255). LSB del primo arg pushato dal caller
- *                  (corrisponde a `D1b` nel binario: `move.b (0x13,SP),D1b`).
- * @param subIdx    Byte (0..255). LSB del secondo arg pushato dal caller
- *                  (corrisponde a `D2b` nel binario: `move.b (0x17,SP),D2b`).
- * @returns         Dettaglio della rimozione.
+ * @param state     GameState (workRam mutated if an entry is found).
+ * @param typeCode  Byte (0..255). LSB of the first caller-pushed arg.
+ * @param subIdx    Byte (0..255). LSB of the second caller-pushed arg.
+ * @returns         Removal details.
  *
- * **Mutation** (solo se entry trovata):
+ * **Mutation** (only if an entry is found):
  *   - `workRam[structOff]` = 0 (rect slot marcato libero).
  *   - `workRam[0x3BC + foundPos .. 0x3BC + endPos - 1]` compattati.
  *   - `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo sentinel).
@@ -240,9 +207,7 @@ export function helper18F46(
   const d1 = typeCode & 0xff;
   const d2 = subIdx & 0xff;
 
-  // A2 = byte-array base (workRam offset).
   const a2Off = BYTE_ARRAY_ABS - WORK_RAM_BASE; // 0x3BC
-  // A2+0x1F (exclusive bound for byte-array positions 0..0x1E).
   const a2EndExclOff = a2Off + (BYTE_ARRAY_LEN - 1); // a2Off + 0x1F
 
   // ─── Phase 1: search loop ─────────────────────────────────────────────────
@@ -250,7 +215,6 @@ export function helper18F46(
   let a1Off = a2Off;
   let a3StructAbsPtr = 0; // A3 = rect struct ptr (absolute M68k addr)
 
-  // Safety cap: max 0x1F iterations (the array has 31 usable slots + 1 sentinel).
   let found = false;
   for (let safety = BYTE_ARRAY_LEN; safety > 0; safety--) {
     // 0x18F5A: cmpi.b #-1,(A1); beq exit-search

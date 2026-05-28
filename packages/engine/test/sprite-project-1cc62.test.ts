@@ -34,7 +34,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     writeWord(s, STRUCT_OFF + 0x0e, 30);
     writeWord(s, STRUCT_OFF + 0x10, 50);
     writeWord(s, STRUCT_OFF + 0x1a, 5);
-    // bge-flag attivo + frac (per return)
+    // active bge-flag + frac (for return).
     writeWord(s, BGE_FLAG_OFF, 1);
     writeWord(s, FRAC_X_OFF, 2);
     writeWord(s, FRAC_Y_OFF, 3);
@@ -95,7 +95,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
 
   it("return packing con cz negativo: high word sext-ext", () => {
     const s = emptyGameState();
-    // cz = 0xFFFF (= -1 sext), tutti gli altri = 0 → frac = 0 → product = 0
+    // cz = 0xFFFF (= -1 sext), all others = 0 -> frac = 0 -> product = 0.
     writeWord(s, STRUCT_OFF + 0x04, 0);
     writeWord(s, STRUCT_OFF + 0x0e, 0);
     writeWord(s, STRUCT_OFF + 0x10, 0);

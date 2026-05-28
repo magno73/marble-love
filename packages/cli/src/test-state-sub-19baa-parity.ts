@@ -5,30 +5,24 @@
  *
  * FUN_00019BAA (490 byte, 0x019BAA-0x019D94): "per-frame entity tick". Gate
  * su `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` ogni 8
- * frame), poi itera entity table @ 0x4019F8 (10 × 0x38) applicando per ogni
- * entity attiva: anim counter, script-advance + scan-other + state branch
+ * frame), then iterates entity table @ 0x4019F8 (10 x 0x38), applying for each
  * (rng-driven), movement-block (Y += vel + depth check), AI-block
  * (FUN_19E42), e sound trigger condizionale (FUN_158AC).
  *
  * **Strategia parity**:
- *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato bit-perfect
  *     in `rng.ts`.
- *   - `FUN_00019A40` (spawn dispatcher) **stubbato con RTS**.
- *   - `FUN_00018F46` **stubbato con RTS**.
- *   - `FUN_0001BB08` (sprite-set-XY) **stubbato con RTS**.
- *   - `FUN_0001CC62` (sprite-project) **stubbato con `moveq #0,D0; rts`**
- *     (= ritorna 0 in D0; necessario per `cmp.l` deterministico).
- *   - `FUN_00019E42` (marble-cell-dispatch) **stubbato con RTS**.
- *   - `FUN_000158AC` (sound) **stubbato con RTS**.
+ *   - `FUN_00019A40` (spawn dispatcher) **stubbed with RTS**.
+ *   - `FUN_00018F46` **stubbed with RTS**.
+ *   - `FUN_0001BB08` (sprite-set-XY) **stubbed with RTS**.
+ *   - `FUN_0001CC62` (sprite-project) **stubbed with `moveq #0,D0; rts`**
+ *   - `FUN_00019E42` (marble-cell-dispatch) **stubbed with RTS**.
+ *   - `FUN_000158AC` (sound) **stubbed with RTS**.
  *   - Compare:
  *       * `*0x004019F8..0x004019F8 + 0x230` (10 entity × 0x38 = 0x230 byte)
  *       * `*0x004003A6` (RNG seed) post-call
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — full random entity table + random globals
- *   - B: tutti slot inattivi — gate-out partial (loop esegue ma skip ogni iter)
- *   - C: forced script-advance + terminator nei dati ROM (legge bytes random
- *     ma forza scriptPtr a un addr ROM con -1 noto)
  *   - D: edge — high state, vel pivot, substate==2, mix per recheck path
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-19baa-parity.ts [N]
@@ -74,7 +68,7 @@ const FRAME_COUNTER_ADDR = 0x00400010;
 
 /**
  * Patch JSR-stub. RTS = 0x4E75 (2 byte). Per FUN_1CC62 servono 4 byte
- * (`moveq #0,D0` 0x7000 + `rts` 0x4E75) per garantire D0 = 0 deterministico.
+ * (`moveq #0,D0` 0x7000 + `rts` 0x4E75) to guarantee deterministic D0 = 0.
  */
 function patchSubs(cpu: CpuSession): void {
   // Plain RTS stubs.
@@ -100,8 +94,8 @@ function makeRng(seed: number): () => number {
 interface Snapshot {
   table: number[]; // 0x230 byte
   rngSeed: number;
-  // Globals che potrebbero essere modificati indirettamente (no-op in stubbed
-  // mode ma controlliamo invarianza dei tre scalari del gate).
+  // Globals that could be modified indirectly (no-op in stubbed
+  // mode, but check invariance of the three gate scalars).
   gameMode: number;
   spawnEnable: number;
   frameCounter: number;
@@ -175,7 +169,6 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  // ROM image per TS (la replica TS legge entity[0x1C] da ROM se < 0x400000).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
@@ -288,7 +281,7 @@ async function main(): Promise<void> {
   const rl = (): number => Math.floor(rng() * 0x100000000) >>> 0;
 
   /**
-   * Genera una entity table. `forceActive` controlla la frequenza di
+   * Generates an entity table. `forceActive` controls the frequency of
    * `entity[0x18]==1`. `safeScriptPtr` usa addr ROM per scriptPtr.
    */
   function genTable(
@@ -301,7 +294,6 @@ async function main(): Promise<void> {
       // entity[0x18]: probabilistic active.
       t[off + 0x18] = rng() < forceActiveProb ? 1 : 0;
       if (safeScriptPtr) {
-        // Forza scriptPtr a addr ROM in [0x10000, 0x40000) — safe range.
         const ptr = (0x10000 + Math.floor(rng() * 0x30000)) & ~3;
         t[off + 0x1c] = (ptr >>> 24) & 0xff;
         t[off + 0x1d] = (ptr >>> 16) & 0xff;
@@ -348,11 +340,10 @@ async function main(): Promise<void> {
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const t = genTable(1.0, true); // tutte attive
-    // Forza state byte basso e counter alto per favorire script-advance.
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
-      t[off + 0x24] = 0xff; // counter alto
-      t[off + 0x25] = Math.floor(rng() * 8); // state basso → bgt false
+      t[off + 0x24] = 0xff;
+      t[off + 0x25] = Math.floor(rng() * 8);
       // entity[0x1A]: random in {0, 1, 2}.
       t[off + 0x1a] = Math.floor(rng() * 3);
       // entity[0x1B]: timer — mix di 0 e 1.
@@ -381,7 +372,6 @@ async function main(): Promise<void> {
     const t = genTable(0.8, true);
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
-      // Forza substate=2 in metà casi (recheck path).
       if (rng() < 0.5) t[off + 0x1a] = 2;
       // entity[0x14] (depth): a volte 0 a volte negativo a volte positivo.
       const d = rng();
@@ -395,7 +385,6 @@ async function main(): Promise<void> {
         // negativo: 0xFF000000
         t[off + 0x14] = 0xff;
       }
-      // entity X: forza cella nel range che attiva sound-gate.
       // X.w >> 3 < 0x35 → X.w < 0x1A8 (≈ 424).
       if (rng() < 0.5) {
         const xw = Math.floor(rng() * 0x180);

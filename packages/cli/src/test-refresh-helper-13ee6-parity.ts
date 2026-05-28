@@ -3,26 +3,16 @@
  * test-refresh-helper-13ee6-parity.ts — differential FUN_00013EE6 vs
  * `refreshHelper13EE6`.
  *
- * `FUN_00013EE6` è il refresh-helper chiamato da `FUN_10FCE` (refresh-frame).
- * La funzione gestisce lo scroll orizzontale + blit dei tile per il frame
- * corrente. Ha 4 JSR interni: FUN_1344C (stub), levelHelper2FFB8 (replicato),
  * decodeBitstream1A668 (replicato), FUN_144E4 (stub).
  *
  * Strategia parity:
- *   - Generiamo stati random in workRam (scroll flags, posizioni, slot structs).
- *   - Eseguiamo il binario tramite callFunction + stub injection per FUN_1344C
  *     e FUN_144E4 (intercettati via patch al volo nel test).
- *   - Eseguiamo la TS con gli stessi valori iniziali.
  *   - Confrontiamo workRam[0..0x1000) e playfieldRam byte-per-byte.
  *
- * I JSR stubbed (FUN_1344C, FUN_144E4) vengono "bypassati" nel binario
- * patchando i byte di codice con RTS (0x4E75) prima della call, in modo
- * che il CPU musashi li tratti come no-op. Nella TS si usa il default stub
- * (no-op). Il confronto è quindi valido per tutti i rami che non dipendono
+ * so the Musashi CPU treats them as no-ops. TS uses the default stub
  * da queste due funzioni.
  *
- * Per i casi in cui *0x400006 (scroll-active) == 0, la funzione salta subito
- * al tail section — che dipende solo da workRam flags e ROM constants.
+ * to the tail section, which depends only on workRam flags and ROM constants.
  *
  * Uso: npx tsx packages/cli/src/test-refresh-helper-13ee6-parity.ts [N]
  */
@@ -97,7 +87,6 @@ function setU32(buf: Uint8Array, off: number, v: number): void {
   buf[off + 3] = u & 0xff;
 }
 
-/** Sync a workRam byte into both binario (pokeMem) e TS (stateInst). */
 function pokeW(
   cpu: Awaited<ReturnType<typeof createCpu>>,
   stateInst: ReturnType<typeof stateNs.emptyGameState>,
@@ -261,27 +250,21 @@ async function main(): Promise<void> {
       pokeW(cpu, stateInst, WORK_RAM_BASE + base + 0x1a, d2);
     }
 
-    // ── Snapshot stato iniziale per il run TS ──
     // Il binary modifica stateInst.workRam via callback MMIO durante l'esecuzione.
-    // Dobbiamo restaurare lo stato iniziale prima di eseguire il TS.
     const initWorkRam = Uint8Array.from(stateInst.workRam);
     const initPfRam   = Uint8Array.from(stateInst.playfieldRam);
 
-    // ── Run binario ──
     callFunction(cpu, FUN_13EE6, [], 200_000);
 
-    // ── Snapshot binario workRam (only the safe comparison region) ──
     const binWorkRam = new Uint8Array(WORK_RAM_COMPARE_END);
     for (let k = 0; k < WORK_RAM_COMPARE_END; k++) {
       binWorkRam[k] = peekMem(cpu, WORK_RAM_BASE + k, 1) & 0xff;
     }
-    // Snapshot binario playfieldRam
     const binPfRam = new Uint8Array(PF_RAM_COMPARE);
     for (let k = 0; k < PF_RAM_COMPARE; k++) {
       binPfRam[k] = peekMem(cpu, PF_RAM_BASE + k, 1) & 0xff;
     }
 
-    // ── Restore stato iniziale per il run TS ──
     stateInst.workRam.set(initWorkRam);
     stateInst.playfieldRam.set(initPfRam);
 

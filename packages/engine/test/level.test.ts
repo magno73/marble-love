@@ -1,8 +1,6 @@
 /**
- * Test level loader. Usa il blob ROM reale a `ghidra_project/marble_program.bin`
- * (cercato sia da CWD package, sia dalla repo root, sia da var env).
+ * looked up from package CWD, repo root, or env var.
  *
- * Se la ROM non è disponibile, skippa i test (non bloccante per CI).
  */
 
 import { describe, it, expect } from "vitest";
@@ -133,7 +131,6 @@ describeWithRom("Level loader (with real ROM)", () => {
   it("pointer table reads expected 6 valid offsets", () => {
     const ptrs = readLevelPointerTable(rom!);
     expect(ptrs.length).toBe(6);
-    // Pointers ascendenti dentro il range del program ROM (0..0x88000)
     for (let i = 0; i < ptrs.length - 1; i++) {
       expect(ptrs[i]!).toBeLessThan(ptrs[i + 1]!);
       expect(ptrs[i]!).toBeGreaterThanOrEqual(0x10000);

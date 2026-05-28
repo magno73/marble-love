@@ -1,9 +1,9 @@
 /**
- * buffer-fill-1b12a.ts — replica `FUN_0001B12A` (~480 byte, 3 callers).
+ * Replica of `FUN_0001B12A`, a bounding-box fill helper.
  *
- * **Semantica**: dato un puntatore a un buffer di 14 byte (`localRect`), legge
- * `localRect[0]` (typeCode) e `localRect[1]` (subIdx) e popola i 6 word BE
- * a offset 2..0xC con le coordinate di un axis-aligned bounding box:
+ * Given a 14-byte `localRect` buffer, it reads `localRect[0]` (`typeCode`) and
+ * `localRect[1]` (`subIdx`), then fills six big-endian words at offsets 2..0xC
+ * with an axis-aligned bounding box:
  *
  *   localRect[2..3]  = xMin  (output = A1[0xc] + xDelta)
  *   localRect[4..5]  = yMin  (output = A1[0x10] + yDelta)
@@ -12,38 +12,38 @@
  *   localRect[A..B]  = yMax  (= yMin + ySize)
  *   localRect[C..D]  = zMax  (= zMin + zSize)
  *
- * Tutti i campi sono M68k word (16-bit, big-endian, signed arithmetic wrapping).
+ * All fields are 68000 words: 16-bit, big-endian, with signed arithmetic
+ * wrapping at writeback.
  *
- * **Epilog canonico** (0x1b554..0x1b5a4): applicato da tutti i path che
- * passano per 0x1b554. I registri in ingresso sono:
- *   D5 → xDelta (aggiunto a A1[0xc])
- *   D4 → yDelta (aggiunto a A1[0x10])
- *   D6 → zDelta (aggiunto a A1[0x14])
- *   D1 → xSize  (offset xMin→xMax)
- *   D2 → ySize  (offset yMin→yMax)
- *   D3 → zSize  (offset zMin→zMax)
+ * Canonical epilogue `0x1b554..0x1b5a4`:
+ *   D5 -> xDelta added to A1[0x0c]
+ *   D4 -> yDelta added to A1[0x10]
+ *   D6 -> zDelta added to A1[0x14]
+ *   D1 -> xSize offset from xMin to xMax
+ *   D2 -> ySize offset from yMin to yMax
+ *   D3 -> zSize offset from zMin to zMax
  *
- * **Epilog 0x1b576** (usato da path tipo 1/2 e tipo 4/0xe): in ingresso
- * `local[-2]`=xMin calcolata inline, D5=yMin, D4=zMin; D1,D2,D3 = size.
+ * Epilogue `0x1b576` is used by type 1/2 and 4/0xe paths with `local[-2]`
+ * as xMin, D5 as yMin, D4 as zMin, and D1/D2/D3 as sizes.
  *
- * **Dispatch su typeCode**:
- *   0x00        → all fields 0x7fff / 0 (sentinel invalido)
- *   0x01        → table 0x1eff6, offsets fissi -3/-3/+1, size 6/6/6
- *   0x02        → table 0x1effe, offsets fissi -3/-3/+1, size 6/6/6
- *   0x04        → table 0x1f006, sub-obj via A2[0x58], a3=0, d3=0x10
- *   0x0e        → table 0x1f07a, sub-obj via A1[0x3a], a3=-8, d3=0
- *   0x07/08/09  → table 0x1f096, sub-obj via A1[0x1c], flip branch
- *   0x0f        → table 0x1f0ba, flip branch (zero or −4/−4/0)
- *   0x29        → 0x401650, byte coords ×8+2
- *   0x2a        → 0x40098c, word coords direct
- *   0x2c        → all zeros
- *   3..0xd      → table 0x1f016 + jump-table per tipo
- *   else        → table 0x1f016, zero deltas
+ * Dispatch by typeCode:
+ *   0x00        -> all fields 0x7fff / 0, invalid sentinel
+ *   0x01        -> table 0x1eff6, fixed offsets -3/-3/+1, size 6/6/6
+ *   0x02        -> table 0x1effe, fixed offsets -3/-3/+1, size 6/6/6
+ *   0x04        -> table 0x1f006, sub-object via A2[0x58], a3=0, d3=0x10
+ *   0x0e        -> table 0x1f07a, sub-object via A1[0x3a], a3=-8, d3=0
+ *   0x07/08/09  -> table 0x1f096, sub-object via A1[0x1c], flip branch
+ *   0x0f        -> table 0x1f0ba, flip branch (zero or -4/-4/0)
+ *   0x29        -> 0x401650, byte coords x8+2
+ *   0x2a        -> 0x40098c, direct word coords
+ *   0x2c        -> all zeros
+ *   3..0xd      -> table 0x1f016 plus type jump table
+ *   else        -> table 0x1f016, zero deltas
  *
  * **Callers**:
  *   FUN_26F3E @ 0x26F92  (lateGameLogic)
  *   FUN_28CA6 @ 0x28CC2  (sceneObjInit)
- *   FUN_18E6C @ 0x18E94  (slotInsertSorted — sub-injection callback)
+ *   FUN_18E6C @ 0x18E94  (slotInsertSorted sub-injection callback)
  *
  * **Disasm range**: 0x1B12A .. 0x1B5A4 (rts).
  */

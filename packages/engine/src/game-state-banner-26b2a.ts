@@ -1,10 +1,9 @@
 /**
- * game-state-banner-26b2a.ts — replica `FUN_00026B10` + `FUN_00026B2A`.
+ * Bit-perfect port of `FUN_00026B10` and `FUN_00026B2A`.
  *
- * Banner display setup. Chiamato da scenarios di transition (case 4 in
- * 1101e, case 2/3 in 11452, etc.). Carica 195 word di banner data dalla
- * ROM via scatter-write (i.e. ogni word va a destinazione differente
- * controllata da una table di pointer in ROM).
+ * Banner display setup used by transition scenarios. It loads 195 banner
+ * words from ROM via scatter-write: each word is written to the destination
+ * pointed to by the corresponding ROM pointer-table entry.
  *
  * **`FUN_26B2A` disasm** (26 instr):
  *
@@ -33,9 +32,9 @@
  *         while D0 < 0x20  ; 32 word = 64 byte
  *   rts
  *
- * Le 195 dest pointer in ROM @ 0x20534 puntano in regions varie:
- * workRam, alphaRam, palette/colorRam, spriteRam. La replica usa un
- * dispatcher `writeAbsU16` che switcha in base al range dell'address.
+ * The 195 destination pointers at ROM address `0x20534` span work RAM,
+ * alpha RAM, color RAM, and sprite RAM. `writeAbsU16` dispatches by address
+ * range and ignores out-of-model regions.
  */
 
 import type { GameState } from "./state.js";
@@ -81,8 +80,8 @@ function readRomU32(rom: RomImage, addr: number): number {
 }
 
 /**
- * Scrive un word (16 bit big-endian) all'indirizzo absolute M68k. Switcha
- * la regione in base al range. Out-of-range → no-op (graceful).
+ * Write a big-endian word to an absolute 68k address. Out-of-range writes are
+ * no-ops because the modeled RAM regions are intentionally bounded.
  */
 function writeAbsU16(state: GameState, addr: number, value: number): void {
   const a = addr >>> 0;
@@ -131,7 +130,7 @@ export function paletteCopy26B10(state: GameState, rom: RomImage): void {
  * Replica `FUN_00026B2A` — banner display setup per il `mode` indicato.
  *
  * Side effects:
- *  - 195 word scatter-write da ROM[BANNER_ROM_BASE + mode*0x186] verso
+ *  - 195-word scatter-write from ROM[BANNER_ROM_BASE + mode*0x186] to
  *    195 destinazioni differenti (workRam, alphaRam, etc.) controllate
  *    da `ROM[DEST_PTR_TABLE + i*4]` per i in 0..194
  *  - Chiamata a `paletteCopy26B10` (32 word in colorRam)

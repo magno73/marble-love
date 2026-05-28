@@ -3,32 +3,23 @@
  * test-slot-insert-sorted-18e6c-parity.ts — differential FUN_18E6C vs
  * `slotInsertSorted18E6C`.
  *
- * `FUN_00018E6C` (218 byte): insert-sorted di un nuovo rect entry nella
- * draw-list ordinata (byte-array @ 0x4003BC + 16 rect-slot @ 0x4001DC).
+ * `FUN_00018E6C` (218 bytes): insert-sort a new rect entry into the
  *
  * **Strategia parity**:
- *   1. Patch `FUN_0001B12A` (rect-builder, ~1244 byte) con un thunk
- *      deterministico (40 byte) che fa ext.w + 6 word writes con valori
+ *   1. Patch `FUN_0001B12A` (rect-builder, ~1244 bytes) with a thunk
  *      derivati da local[0]=D2, local[1]=D3:
  *        - local[2] = local[6] = local[A] = sign-ext word(D2)
  *        - local[4] = local[8] = local[C] = sign-ext word(D3)
- *      Lo stesso schema è replicato dalla callback TS (`subs.fun_1b12a`).
  *
  *   2. Setup ROM lookup-table @ 0x1F0E2 puntando ai 16 slot @ 0x4001DC..
  *      (stride 14 byte). Stesso layout di `test-sort-adjacent-objects-1a7a8`.
  *
  *   3. Setup workRam:
  *      - Slot rect (16 × 14 byte) @ 0x4001DC: random word in offset 2..C.
- *      - Byte-array (32 byte) @ 0x4003BC: random byte 0..15 + qualche FF.
  *
- *   4. Run binario via `callFunction(0x18E6C, [typeCode, subIdx])`.
- *      L'ordine RTL del lib pusha argsLong[N-1] PER PRIMO ⇒ argsLong[0]
- *      è IL PIÙ VICINO a SP dopo i push ⇒ FUN_18E6C lo legge come D2.
- *      → argsLong = [typeCode, subIdx], LSB letti come D2/D3.
  *
  *   5. Run TS via `slotInsertSorted18E6C(state, rom, typeCode, subIdx, subs)`.
  *
- *   6. Compara byte-array (32 byte) e slot-array (16×14=224 byte) bit-by-bit.
  *
  * Uso: npx tsx packages/cli/src/test-slot-insert-sorted-18e6c-parity.ts [N]
  */
@@ -62,7 +53,7 @@ const BYTE_ARRAY_LEN = 0x20;
 const RECT_SLOT_ABS = 0x004001dc;
 const RECT_SLOT_STRIDE = 0x0e; // 14 byte/slot
 const RECT_SLOT_COUNT = 16;
-const RECT_AREA_LEN = 0x1b2; // A4 + 0x1B2 limit (effective ~31 slot ma ROM ne mappa 16).
+const RECT_AREA_LEN = 0x1b2;
 
 /**
  * Patch FUN_1B12A col thunk deterministico.
@@ -82,7 +73,6 @@ const RECT_AREA_LEN = 0x1b2; // A4 + 0x1B2 limit (effective ~31 slot ma ROM ne m
  *   3141 000C     ; move.w D1,(0xC,A0)  local[C..D] = D3_word_BE
  *   4E75          ; rts
  *
- * Totale = 40 byte. FUN_1B12A è 1244 byte (0x1B12A..0x1B606), fits.
  */
 function patchFun1B12A(cpu: CpuSession): void {
   const bytes: number[] = [
@@ -105,7 +95,6 @@ function patchFun1B12A(cpu: CpuSession): void {
 }
 
 /**
- * Replica TS del thunk FUN_1B12A. Scrive sul localRect:
  *   local[2..3]  = sign-ext word(D2) BE
  *   local[4..5]  = sign-ext word(D3) BE
  *   local[6..7]  = sign-ext word(D2) BE
@@ -119,7 +108,7 @@ function tsFun1B12A(
   d3: number,
   local: Uint8Array,
 ): void {
-  // sign-ext byte → word (16-bit signed, ma scritto BE come 2 byte unsigned)
+  // Sign-ext byte -> word (16-bit signed, but written BE as 2 unsigned bytes).
   const w2 = d2 & 0x80 ? (0xff00 | d2) & 0xffff : d2 & 0xff;
   const w3 = d3 & 0x80 ? (0xff00 | d3) & 0xffff : d3 & 0xff;
   const writeWordBE = (off: number, w: number): void => {
@@ -142,7 +131,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Genera una word signed in range [-128..+127] (small per evitare overflow). */
+/** Generate a signed word in range [-128..+127] (small to avoid overflow). */
 function randWordSmall(rng: () => number): number {
   return (Math.floor(rng() * 256) - 128) & 0xffff;
 }
@@ -160,13 +149,8 @@ function setupRomLookup(romView: Uint8Array): void {
 }
 
 /**
- * Setup workRam baseline: byte-array random + slot rect random.
  *
  * - byteArray[0..0x1F]: i primi `numActive` byte sono indici random 0..15;
- *   il resto è 0xFF (sentinel).
- * - slotRect[0..16]: il primo slot è "occupato" se `slotOccupied[i]` è true;
- *   in tal caso scriviamo un byte non-zero a slot[i*14] (es. 0x80 + i).
- *   I campi rect (offsets 2..C) sono SEMPRE random word per esercitare il
  *   compare anche per slot occupati.
  */
 function setupBaseline(
@@ -180,7 +164,6 @@ function setupBaseline(
     const base = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) - WORK_RAM_BASE;
     // Slot[0] = "occupato" flag.
     workRam[base] = slotOccupied[i] ? 0x80 + i : 0;
-    // Slot[1] inalterato (non letto da FUN_1A80A).
     workRam[base + 1] = 0;
     // Slot[2..0xD]: 6 word random small.
     for (const fieldOff of [2, 4, 6, 8, 0xa, 0xc]) {
@@ -190,7 +173,6 @@ function setupBaseline(
     }
   }
 
-  // Byte-array @ 0x3BC.
   const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
   for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
     if (i < numActive) {
@@ -252,8 +234,7 @@ async function main(): Promise<void> {
   patchFun1B12A(cpu);
 
   // Sync ROM lookup-table from romView.program → Musashi memory (because
-  // setupRomLookup ha modificato `romView.program` ma NON `romBuf`; il
-  // binario legge dalla memoria Musashi caricata da `romBuf`).
+  // setupRomLookup modified `romView.program` but NOT `romBuf`; the
   for (let off = 0x1f0e2; off < 0x1f0e2 + RECT_SLOT_COUNT * 4; off++) {
     pokeMem(cpu, off, 1, romView.program[off]!);
   }
@@ -289,24 +270,20 @@ async function main(): Promise<void> {
     let slotOccupied: boolean[];
 
     if (tc === 0) {
-      // Lista vuota, tutti slot liberi.
       typeCode = 0x2c; subIdx = 0; numActive = 0;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(false);
     } else if (tc === 1) {
-      // Lista con un solo elemento.
+      // List with a single element.
       typeCode = 0x04; subIdx = 1; numActive = 1;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(false);
       slotOccupied[0] = true; // slot 0 occupato (corrisponde all'unico byte)
     } else if (tc === 2) {
-      // Lista piena (tutti i 16 slot occupati + byte-array tutto FF).
       typeCode = 0x29; subIdx = 0; numActive = 0;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(true);
     } else if (tc === 3) {
-      // Lista piena di 16 byte attivi, tutti slot occupati.
       typeCode = 0x2a; subIdx = 5; numActive = 16;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(true);
     } else if (tc === 4) {
-      // Boundary: byte-array quasi pieno (31 attivi).
       typeCode = 0x4; subIdx = 8; numActive = 31;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(false);
     } else {
@@ -328,26 +305,21 @@ async function main(): Promise<void> {
       stateInst.workRam[k] = seedBuf[k]!;
     }
 
-    // Snapshot input byte-array per debug.
     const baOff = BYTE_ARRAY_ABS - WORK_RAM_BASE;
     const inputBytes: number[] = [];
     for (let k = 0; k < BYTE_ARRAY_LEN; k++) inputBytes.push(seedBuf[baOff + k]!);
 
-    // Run binario: callFunction pusha argsLong RTL.
-    // argsLong = [typeCode, subIdx] ⇒ subIdx pushed PRIMO (più lontano da SP),
-    // typeCode pushed SECONDO (più vicino a SP) ⇒ D2 = LSB(typeCode), D3 = LSB(subIdx).
     callFunction(cpu, FUN_18E6C, [typeCode >>> 0, subIdx >>> 0]);
 
     // Run TS
     slotNs.slotInsertSorted18E6C(stateInst, romView, typeCode, subIdx, subs);
 
-    // Compara byte-array (32 byte)
     const binByteArray = readBin(cpu, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);
 
     // Compara slot-area (224 byte = 16 × 14, ma anche oltre fino a A4+0x1B2 per
-    // sicurezza; FUN_18E6C scansiona fino a A4+0x1B2 = 0x4001DC + 0x1B2 = 0x40038E).
+    // safety; FUN_18E6C scans up to A4+0x1B2 = 0x4001DC + 0x1B2 = 0x40038E.
     const binSlots = readBin(cpu, RECT_SLOT_ABS, RECT_AREA_LEN);
     const tsSlots = readTs(stateInst, RECT_SLOT_ABS, RECT_AREA_LEN);
     const diffSL = diffBytes(binSlots, tsSlots);

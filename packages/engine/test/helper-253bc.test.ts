@@ -1,17 +1,11 @@
 /**
  * helper-253bc.test.ts — unit test di `helper253BC` (FUN_000253BC).
  *
- * Verifica tutti i path:
- *   1. Costante indirizzo corretta
- *   2. No-op quando freeze flag (offset +0x36) != 0
- *   3. Conversione long X → word @+0x32 tramite asr.l #19
- *   4. Conversione long Y → word @+0x34 tramite asr.l #19
+ *   3. Convert long X -> word @+0x32 via asr.l #19
+ *   4. Convert long Y -> word @+0x34 via asr.l #19
  *   5. Long copy *(A0+0x14) → *(A0+0x2A)
  *   6. Byte copy *(A0+0x1B) → *(A0+0x1D)
- *   7. Segni: valori negativi, boundary (0x80000000, 0x7FFFFFFF)
- *   8. Operazione non tocca byte fuori dai campi attesi
  *
- * Bit-perfect parity (500 casi) verificata nel parity runner
  * `packages/cli/src/test-object-helpers-parity.ts` (sezione objDeriveShorts vs Musashi).
  */
 
@@ -21,7 +15,7 @@ import { emptyGameState } from "../src/state.js";
 
 // ─── Helpers locali ───────────────────────────────────────────────────────────
 
-const OBJ_ABS = 0x00401d00; // indirizzo assoluto struct oggetto in workRam
+const OBJ_ABS = 0x00401d00;
 const OBJ_OFF = OBJ_ABS - 0x400000; // offset in workRam (0x1d00)
 
 function readU32(r: Uint8Array, off: number): number {
@@ -57,12 +51,10 @@ describe("helper253BC (FUN_000253BC)", () => {
     const state = emptyGameState();
     const r = state.workRam;
 
-    // Setup: scrivi valori riconoscibili nei campi output
     writeU32(r, OBJ_OFF + 0x0c, 0x00800000); // longX → positivo
     writeU32(r, OBJ_OFF + 0x10, 0x00400000); // longY
     writeU32(r, OBJ_OFF + 0x14, 0xdeadbeef);
     r[OBJ_OFF + 0x1b] = 0x42;
-    // Sentinel: scrivi 0xAA nei campi output per verificare che non vengano toccati
     r[OBJ_OFF + 0x32] = 0xaa;
     r[OBJ_OFF + 0x33] = 0xaa;
     r[OBJ_OFF + 0x34] = 0xaa;
@@ -75,7 +67,6 @@ describe("helper253BC (FUN_000253BC)", () => {
 
     helper253BC(state, OBJ_ABS);
 
-    // Nessun campo deve essere stato modificato
     expect(r[OBJ_OFF + 0x32]).toBe(0xaa);
     expect(r[OBJ_OFF + 0x33]).toBe(0xaa);
     expect(r[OBJ_OFF + 0x34]).toBe(0xaa);
@@ -105,7 +96,6 @@ describe("helper253BC (FUN_000253BC)", () => {
 
     helper253BC(state, OBJ_ABS);
 
-    // Deve aver scritto qualcosa di diverso dal sentinel
     expect(r[OBJ_OFF + 0x32]).not.toBe(0xaa);
   });
 
@@ -253,17 +243,15 @@ describe("helper253BC (FUN_000253BC)", () => {
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
 
-    // Scrivi 0xCC in tutta la regione dell'oggetto per rilevare write inattese
     for (let i = 0; i < 0x80; i++) r[OBJ_OFF + i] = 0xcc;
 
-    // Imposta i campi necessari per una call normale
     writeU32(r, OBJ_OFF + 0x0c, 0x00100000);
     writeU32(r, OBJ_OFF + 0x10, 0x00080000);
     writeU32(r, OBJ_OFF + 0x14, 0x12345678);
     r[OBJ_OFF + 0x1b] = 0x55;
     r[OBJ_OFF + 0x36] = 0x00; // freeze off
 
-    // Snapshot dei byte che NON devono cambiare
+    // Snapshot of bytes that must not change.
     const unchanged: Record<number, number> = {};
     const changedOffsets = new Set([0x32, 0x33, 0x34, 0x35, 0x2a, 0x2b, 0x2c, 0x2d, 0x1d]);
     for (let i = 0; i < 0x80; i++) {

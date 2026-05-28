@@ -1,20 +1,15 @@
 /**
- * sprite-project-1cc62.ts — replica `FUN_0001CC62` (158 byte).
+ * sprite-project-1cc62.ts — `FUN_0001CC62` replica (158 bytes).
  *
- * "Sprite projection step": legge una struct globale @ `0x00401C28`
- * (`workRam[0x1C28..0x1C43]`, 28 byte) + i 5 globals "tile-fields" set da
- * `deriveSpriteFields` (`*0x40069E`, `*0x4006A0`, `*0x4006A2`), scrive due
- * delta-word in `*0x4006A4` / `*0x4006A6`, e ritorna un long packed Q16.16
- * usato dal caller per calcoli di range/distance.
+ * (`workRam[0x1C28..0x1C43]`, 28 bytes) + the 5 "tile-fields" globals set by
  *
  * **Disasm 0x1CC62..0x1CD00** (158 byte):
  *
- *   0001cc62  movem.l {A5,A4,A3,A2,D4,D3,D2}, -(SP)   ; salva 7 reg (28 byte)
+ *   0001cc62  movem.l {A5,A4,A3,A2,D4,D3,D2}, -(SP)   ; save 7 regs (28 bytes)
  *   0001cc66  move.b  (0x23,SP), D0b                 ; D0.b = arg-byte (LSB
- *                                                     ; del long pushato dal
+ *                                                     ; of the long pushed by
  *                                                     ; caller; 28+4=32=0x20
  *                                                     ; → +0x23 = byte 3 BE)
- *   0001cc6a  movea.l #0x401c28, A1                  ; A1 = struct base globale
  *   0001cc70  movea.l #0x4006a6, A4                  ; A4 = ptr OUT-Y
  *   0001cc76  movea.l #0x4006a4, A3                  ; A3 = ptr OUT-X
  *   0001cc7c  move.l  A1, D2                         ; D2 = base   (+0)
@@ -27,7 +22,7 @@
  *   ; --- if(arg.lsb != 0) call heavy redraw FUN_0001CABA ---
  *   0001cc8e  tst.b   D0b
  *   0001cc90  beq.b   0x1cc98
- *   0001cc92  jsr     0x0001caba.l                   ; heavy renderer (stesso
+ *   0001cc92  jsr     0x0001caba.l                   ; heavy renderer (same
  *                                                     ; sub di sprite-pos-update
  *                                                     ; -1bab2): ridraw del tile
  *   0001cc98  tst.w   (0x4006a2).l                   ; bge-flag dal derive
@@ -78,51 +73,42 @@
  *   0001ccfe  rts
  *
  * **Semantica** (deduzione dai 21 caller):
- *   - struct @ 0x401C28 contiene un'entità "active" con campi 16-bit:
  *     +0x04: cx0   (componente X, "old"?)
  *     +0x0E: cx1   (componente X, "new"?)
  *     +0x10: cy0   (componente Y, "old"?)
  *     +0x1A: cz    (componente Z, sign-extesa nel return high word)
- *     (campi a +0, +8, +18 sono solo usati come offset base per i calc)
- *   - bge-flag (`*0x4006A2`) discrimina se (y&7) >= (x&7), un'iso-projection
+ *   - bge-flag (`*0x4006A2`) distinguishes whether (y&7) >= (x&7), an iso-projection
  *     half-plane. Se SI: `*0x4006A4 = cx1-cx0`, `*0x4006A6 = cx0-cz`.
  *     Se NO: `*0x4006A4 = cy0-cz`,  `*0x4006A6 = cx1-cy0`.
  *   - Return long: `(sext16(cz) << 16) + ((dy*(y&7) + dx*(x&7)) << 13)`,
- *     dove dx = `*0x4006A4` post-write, dy = `*0x4006A6` post-write. Sembra
- *     un fixed-point "altezza + lerp sub-pixel" usato per range tests
- *     (caller @ 0x12250 fa `cmpi.l #0x100000` = 1<<20 contro D0-(0x14,A2)).
+ *     where dx = `*0x4006A4` post-write, dy = `*0x4006A6` post-write. Looks like
+ *     (caller @ 0x12250 does `cmpi.l #0x100000` = 1<<20 against D0-(0x14,A2)).
  *
  * **JSR esterne**:
- *   - `FUN_0001CABA` (tile-redraw/terrain decode, modulo separato) — chiamato
- *     SOLO se `argByte != 0`. Esposto come sub injection
+ *     ONLY if `argByte != 0`. Exposed as sub injection
  *     (`spriteProject1CC62Subs.fun_1CABA`); default no-op.
  *
  * **Side effects** in `state.workRam`:
  *   - `0x6A4..0x6A5` (OUT-X delta word, big-endian)
  *   - `0x6A6..0x6A7` (OUT-Y delta word, big-endian)
- *   - eventuali side-effect di `subs.fun_1CABA` se `argByte != 0`.
+ *   - optional side effects of `subs.fun_1CABA` if `argByte != 0`.
  *
- * Verifica bit-perfect via `cli/src/test-sprite-project-1cc62-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 
-// ─── Indirizzi globali (workRam offsets, base 0x400000) ───────────────────
 
-/** Base struct sorgente `0x00401C28` (28 byte: campi a +0x04, +0x0E, +0x10, +0x1A). */
 export const STRUCT_ADDR = 0x00401c28 as const;
 /** Offset struct in `state.workRam` (= STRUCT_ADDR - 0x400000). */
 const STRUCT_OFF = STRUCT_ADDR - 0x400000;
 
-/** `*0x40069E` = `x & 7` (set da sprite-derive). */
+/** `*0x40069E` = `x & 7` (set by sprite-derive). */
 const FRAC_X_OFF = 0x69e;
-/** `*0x4006A0` = `y & 7` (set da sprite-derive). */
+/** `*0x4006A0` = `y & 7` (set by sprite-derive). */
 const FRAC_Y_OFF = 0x6a0;
-/** `*0x4006A2` = bge-flag (1 se (y&7) >= (x&7), set da sprite-derive). */
+/** `*0x4006A2` = bge-flag (1 if (y&7) >= (x&7), set by sprite-derive). */
 const BGE_FLAG_OFF = 0x6a2;
-/** `*0x4006A4` = OUT delta X (scritto da questa funzione). */
 const OUT_DX_OFF = 0x6a4;
-/** `*0x4006A6` = OUT delta Y (scritto da questa funzione). */
 const OUT_DY_OFF = 0x6a6;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────
@@ -136,12 +122,11 @@ function writeU16(s: GameState, off: number, v: number): void {
   s.workRam[off + 1] = v & 0xff;
 }
 
-/** sext16: cast u16 → int16 (signed). */
+/** sext16: cast u16 -> int16 (signed). */
 function sext16(v: number): number {
   return v & 0x8000 ? v - 0x10000 : v;
 }
 
-/** Forza cast i32 (matching m68k 32-bit register semantics). */
 function asI32(v: number): number {
   return v | 0;
 }
@@ -149,47 +134,37 @@ function asI32(v: number): number {
 // ─── Sub-injection (heavy renderer FUN_0001CABA) ──────────────────────────
 
 /**
- * Stub injection per `FUN_0001CABA` (heavy tile-redraw). Default: no-op.
+ * Stub injection for `FUN_0001CABA` (heavy tile-redraw). Default: no-op.
  *
- * `FUN_0001CABA` è un renderer/terrain decoder che legge
- * `*0x400696/*0x400698` e aggiorna alpha-tilemap + altri buffer. La
- * sub-injection consente al caller di iniettare l'implementazione separata,
- * oppure di lasciarla no-op. Quando assente, il modulo si limita a
- * aggiornare i globals 0x6A4/0x6A6 e a calcolare il return packed.
+ * sub-injection lets the caller inject the separate implementation,
+ * update globals 0x6A4/0x6A6 and calculate the packed return.
  *
- * Identica injection a `sprite-pos-update-1bab2.ts`: i due moduli condividono
- * la stessa sub esterna.
+ * Same injection as `sprite-pos-update-1bab2.ts`: the two modules share
+ * the same external sub.
  */
 export interface SpriteProject1CC62Subs {
-  /** Callback per `FUN_0001CABA` (heavy tile-redraw). Default: no-op. */
+  /** Callback for `FUN_0001CABA` (heavy tile-redraw). Default: no-op. */
   fun_1CABA?: (state: GameState) => void;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001CC62`.
  *
- * Legge la struct globale @ `STRUCT_ADDR` e i tile-fields set dal precedente
- * `deriveSpriteFields`, scrive i due delta-word `*0x6A4`/`*0x6A6` secondo il
- * branch del bge-flag, e ritorna un long packed Q16.16-like.
  *
  * @param state    GameState (modifica `workRam[0x6A4..0x6A7]`).
- * @param argLong  long arg pushato dal caller (cdecl 68k). Solo la LSB è
- *                 testata: se `(argLong & 0xFF) != 0`, viene chiamato
  *                 `subs.fun_1CABA(state)` (heavy redraw).
- * @param subs     stub injection. `subs.fun_1CABA(state)` chiamato solo se
  *                 `(argLong & 0xFF) != 0`. Default: no-op.
  *
  * @returns Long signed (32 bit) — packed result. Layout:
  *          `result = (sext16(cz) << 16) + ((dy*(y&7) + dx*(x&7)) << 13)`,
- *          dove `cz = *(STRUCT+0x1A)`, `dx = *0x6A4` post-write,
+ *          where `cz = *(STRUCT+0x1A)`, `dx = *0x6A4` post-write,
  *          `dy = *0x6A6` post-write. Truncato a 32 bit signed (i32 wrap).
  *
  * **Side effects** in `state.workRam`:
  *   - `0x6A4..0x6A5` (OUT-X delta word, big-endian)
  *   - `0x6A6..0x6A7` (OUT-Y delta word, big-endian)
- *   - eventuali side-effect di `subs.fun_1CABA(state)` se invocato.
+ *   - optional side effects of `subs.fun_1CABA(state)` if invoked.
  */
 export function spriteProject1CC62(
   state: GameState,
@@ -203,14 +178,13 @@ export function spriteProject1CC62(
     subs?.fun_1CABA?.(state);
   }
 
-  // Carica i 4 campi struct usati (word, big-endian, signed in m68k).
   // base+0x04, base+0x0E, base+0x10, base+0x1A.
   const cx0 = readU16(state, STRUCT_OFF + 0x04); // D2+4
   const cx1 = readU16(state, STRUCT_OFF + 0x0e); // D3+6 = base+8+6
   const cy0 = readU16(state, STRUCT_OFF + 0x10); // D4+0 = base+0x10
   const cz = readU16(state, STRUCT_OFF + 0x1a); // A2+2 = base+0x18+2
 
-  // Branch su bge-flag (`*0x4006A2`): tst.w; beq → else-branch.
+  // Branch on bge-flag (`*0x4006A2`): tst.w; beq -> else-branch.
   const bgeFlag = readU16(state, BGE_FLAG_OFF);
 
   let outDx: number;
@@ -233,17 +207,17 @@ export function spriteProject1CC62(
   writeU16(state, OUT_DY_OFF, outDy);
 
   // Common tail (return packing).
-  // D0.w = cz; ext.l D0 → sext-long.
+  // D0.w = cz; ext.l D0 -> sext-long.
   // D2 = sext32(cz); D2 <<= 16 (asl.l #0x10).
   // shift-by-16 of sext-long: high word = cz, low word = 0.
-  // In TS i32 semantics: usa shift left 16 con wrap a 32 bit.
+  // In TS i32 semantics: use left shift 16 with 32-bit wrap.
   let d2 = asI32(sext16(cz) << 16);
 
-  // D0.w = *0x6A6 (outDy); muls.w *0x4006A0, D0 → D0.l = sext16(outDy) * sext16(*0x6A0)
+  // D0.w = *0x6A6 (outDy); muls.w *0x4006A0, D0 -> D0.l = sext16(outDy) * sext16(*0x6A0)
   const fracY = readU16(state, FRAC_Y_OFF);
   const product1 = asI32(sext16(outDy) * sext16(fracY));
 
-  // D0.w = *0x6A4 (outDx); muls.w *0x40069E, D0 → D0.l = sext16(outDx) * sext16(*0x69E)
+  // D0.w = *0x6A4 (outDx); muls.w *0x40069E, D0 -> D0.l = sext16(outDx) * sext16(*0x69E)
   const fracX = readU16(state, FRAC_X_OFF);
   const product2 = asI32(sext16(outDx) * sext16(fracX));
 

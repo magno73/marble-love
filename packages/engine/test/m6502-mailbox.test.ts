@@ -1,11 +1,11 @@
 /**
  * m6502-mailbox.test.ts — protocol test mailbox bidirezionale 68K↔6502.
  *
- * Intent: il pattern hardware Atari System 1 richiede che (1) le mailbox
- * latch byte con pending flag, (2) write side asserisca NMI/IRQ solo sulla
+ * Intent: the Atari System 1 hardware pattern requires that (1) mailboxes latch
+ * bytes with pending flags, and (2) the write side asserts NMI/IRQ only on the
  * transizione false→true (edge-triggered), (3) read side faccia ack al
- * pending e rilasci la pin. I test verificano che il modello TS mantenga
- * questa semantica byte-per-byte, perche' una violazione fa diverge il
+ * pending and releases the pin. The tests verify that the TS model keeps
+ * this semantic byte-for-byte because any violation makes the
  * protocollo cmd 68K→6502 (es. doppio NMI = ISR rientrante).
  */
 
@@ -30,8 +30,8 @@ describe("mailbox base latch", () => {
     expect(mb.pending).toBe(true);
     expect(mb.value as number).toBe(0x42);
     expect(cbCount).toBe(1);
-    // Write multipli senza read intermedio: pending resta true, callback NON
-    // ri-triggera (edge-triggered, non level).
+    // Multiple writes without an intervening read: pending remains true, callback does not
+    // retriggers (edge-triggered, not level-triggered).
     mailboxWrite(mb, as_u8(0x99), () => cbCount++);
     expect(mb.value as number).toBe(0x99);
     expect(cbCount).toBe(1);
@@ -45,8 +45,8 @@ describe("mailbox base latch", () => {
     expect(v as number).toBe(0x42);
     expect(mb.pending).toBe(false);
     expect(ackCount).toBe(1);
-    // Re-read senza nuova write: valore persiste (latch), MA callback non
-    // ri-triggera perche' pending era gia' false.
+    // Re-read without a new write: value persists in the latch, but callback
+    // does not retrigger because pending was already false.
     const v2 = mailboxRead(mb, () => ackCount++);
     expect(v2 as number).toBe(0x42);
     expect(ackCount).toBe(1);
@@ -83,7 +83,7 @@ describe("sound-mmu RAM + ROM regions", () => {
     mmu.write8(as_u16(0x0FFF), as_u8(0x99));
     expect(mmu.read8(as_u16(0x0000)) as number).toBe(0x42);
     expect(mmu.read8(as_u16(0x0FFF)) as number).toBe(0x99);
-    // RAM mirror NON modellato: $1000 NON deve aliasare $0000.
+    // RAM mirror not modeled: $1000 must not alias $0000.
     expect(mmu.read8(as_u16(0x1000)) as number).toBe(0xff);
   });
 
@@ -93,7 +93,7 @@ describe("sound-mmu RAM + ROM regions", () => {
     expect(mmu.read8(as_u16(0xC001)) as number).toBe(0xCD);
     expect(mmu.read8(as_u16(0xFFFC)) as number).toBe(0x00);
     expect(mmu.read8(as_u16(0xFFFD)) as number).toBe(0x80);
-    // Write a ROM: open-bus convention, valore non cambia.
+    // Write to ROM: open-bus convention, value does not change.
     mmu.write8(as_u16(0xC000), as_u8(0x00));
     expect(mmu.read8(as_u16(0xC000)) as number).toBe(0xAB);
   });
@@ -110,12 +110,12 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
       mainToSound, soundToMain,
       onMainToSoundAck: () => nmiReleased++,
     });
-    // 68K simula write a $FE0001 (= mailboxWrite con NMI callback).
+    // 68K simulates write to $FE0001 (= mailboxWrite with NMI callback).
     mailboxWrite(mainToSound, as_u8(0x77), () => nmiAsserted++);
     expect(nmiAsserted).toBe(1);
     // bit 3 ($08) = main→sound pending (NMI source) per atarisy1.cpp::switch_6502_r
     expect((mmu.read8(as_u16(0x1820)) as number) & 0x08).toBe(0x08);
-    // 6502 legge il byte da $1810 → ack
+    // 6502 reads the byte from $1810 -> ack.
     const v = mmu.read8(as_u16(0x1810));
     expect(v as number).toBe(0x77);
     expect(nmiReleased).toBe(1);
@@ -184,8 +184,8 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     mmu.write8(as_u16(0x1800), as_u8(0x20));  // register select
     mmu.write8(as_u16(0x1801), as_u8(0xC0));  // register data
     expect(mmu.ym2151.regs[0x20]).toBe(0xC0);
-    // Read $1801 ritorna status byte. Dopo write busy bit (b7) e' set (~68
-    // master clock). Timer flag bits 0/1 = 0 (no overflow). Mascher solo timer.
+    // Read $1801 returns the status byte. After write, busy bit (b7) is set (~68
+    // master clock). Timer flag bits 0/1 = 0 (no overflow). Mask only timer bits.
     expect((mmu.read8(as_u16(0x1801)) as number) & 0x03).toBe(0);
   });
 

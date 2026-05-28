@@ -49,7 +49,6 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     const s = emptyGameState();
     // Sporca byte struct+0x18 per verificare invarianza.
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0xaa;
-    // Setup count word > 0 e qualche obj con state attivo.
     s.workRam[OBJ_COUNT_OFF] = 0;
     s.workRam[OBJ_COUNT_OFF + 1] = 5;
     s.workRam[(OBJ_BASE_ADDR - WORK_RAM_BASE) + 0x18] = 1; // obj0 state=1
@@ -57,9 +56,8 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     const r = makeRecorder();
     stateSub15BD0(s, STRUCT_PTR_ABS, 0xffffff00, 0xaaaaaa00, r.subs);
 
-    // Block A skipped → struct+0x18 invariato.
+    // Block A skipped -> struct+0x18 unchanged.
     expect(s.workRam[STRUCT_PTR_OFF + 0x18]).toBe(0xaa);
-    // Nessuna chiamata.
     expect(r.calls18f46).toHaveLength(0);
     expect(r.calls285b0).toHaveLength(0);
   });
@@ -102,7 +100,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     const r = makeRecorder();
     stateSub15BD0(s, STRUCT_PTR_ABS, 0x01, 0x00, r.subs);
 
-    // Solo i 2 obj con state ∉ {0,2}
+    // Only the 2 objs with state not in {0,2}.
     expect(r.calls285b0).toHaveLength(2);
     expect(r.calls285b0[0]?.objAddr).toBe(OBJ_BASE_ADDR + 0 * OBJ_STRIDE);
     expect(r.calls285b0[0]?.eventByte).toBe(3);
@@ -115,7 +113,6 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     const s = emptyGameState();
     s.workRam[OBJ_COUNT_OFF] = 0;
     s.workRam[OBJ_COUNT_OFF + 1] = 0;
-    // Obj0 con state attivo: dovrebbe essere ignorato perché count=0.
     s.workRam[(OBJ_BASE_ADDR - WORK_RAM_BASE) + 0x18] = 1;
 
     const r = makeRecorder();

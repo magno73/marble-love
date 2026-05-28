@@ -1,14 +1,12 @@
 /**
  * sound-pair-15884.test.ts — corner cases di soundPair15884 (FUN_15884).
  *
- * Bit-perfect parity verificata vs binary in `test-sound-pair-15884-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
 import { soundPair15884 } from "../src/sound-pair-15884.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Helper: scrive un uint16 big-endian @ workRam[0x394..0x395]. */
 function setMode(state: ReturnType<typeof emptyGameState>, value: number): void {
   const u16 = (value & 0xffff) >>> 0;
   state.workRam[0x394] = (u16 >>> 8) & 0xff;

@@ -1,28 +1,25 @@
 /**
- * state-sub-14c46.ts — replica `FUN_00014C46` (422 byte).
+ * state-sub-14c46.ts - port of `FUN_00014C46` (422 bytes).
  *
- * "Range-boundary slot spawn/despawn dispatcher". Riceve due byte arg via
- * stack (D2 = arg1 LSB, D3 = arg2 LSB) e in due fasi:
+ * "Range-boundary slot spawn/despawn dispatcher". Receives two byte arguments
+ * through the stack (D2 = arg1 LSB, D3 = arg2 LSB) and runs in two phases:
  *
- *   1. **Entry walk** — itera la lista di "entry" 8-byte (terminator
- *      `entry[0] == 0xFF`) puntata da `ROM[0x2257A + mode*4]`, dove
- *      `mode = *0x400394.w`. Per ogni entry:
- *        - chiama `slotMatchesPtr(entryPtr)` (FUN_14C0C). Se match → skip.
+ *   1. **Entry walk** - walks the 8-byte entry list chosen by
+ *      `mode = *0x400394.w`. For each entry:
  *        - else, gate: `D3 ∈ {entry[0], entry[1]}` AND
  *                       (`D2 < entry[0]` OR `D2 > entry[1]`) (signed byte).
- *        - se gated → INIZIALIZZA il primo free slot (FUN_14BCE) col
- *          contenuto dell'entry + chiama `FUN_1BB08(slotPtr)`,
+ *        - when the gate passes, initialize a free slot and call
  *          `FUN_1CC62(1)`, `FUN_150D0(slotPtr)`, `FUN_18E6C(4, sext_l(slot[0x19]))`.
  *
- *   2. **Tail walk** — itera i 4 slot @ `0x401302` stride `0x60`. Per ogni
- *      slot in uso (`slot[0x18] != 0`):
- *        - se `(D2 == slot[0x52] AND D3 < slot[0x52])` OR
+ *   2. **Tail walk** - walks the four slots @ `0x401302`, stride `0x60`.
+ *      For each active slot (`slot[0x18] != 0`):
+ *        - if `(D2 == slot[0x52] AND D3 < slot[0x52])` OR
  *             `(D2 == slot[0x54] AND D3 > slot[0x54])` (signed word):
- *          → TEARDOWN: `slot[0x18] = 0` + `FUN_18F46(4, sext_l(slot[0x19]))`.
+ *          -> TEARDOWN: `slot[0x18] = 0` plus `FUN_18F46(4, sext_l(slot[0x19]))`.
  *
- * **Caller noto** (1 xref): `FUN_000144E4` @ `0x14546`.
+ * **Known caller** (1 xref): `FUN_000144E4` @ `0x14546`.
  *
- * **Disasm 0x14C46..0x14DEC** (422 byte):
+ * **Disasm 0x14C46..0x14DEC** (422 bytes):
  *
  *   00014c46  movem.l {A3,A2,D4,D3,D2},-(SP)
  *   00014c4a  move.b  (0x1B,SP),D2b              ; D2 = arg1 LSB
@@ -179,9 +176,8 @@
  *           movem.l  (SP)+,{D2,D3,D4,A2,A3}
  *           rts
  *
- * **Side effects** in `state.workRam` (off ridotto WORK_RAM_BASE = 0x400000):
- *   - `0x401302..0x4014C2` (4 slot × 0x60). Per ogni slot eventualmente
- *     inizializzato:
+ * **Side effects** in `state.workRam` (offsets subtract WORK_RAM_BASE = 0x400000):
+ *   - `0x401302..0x4014C2` (four slots x 0x60). For each initialized slot:
  *       - `slot[0x00..0x07] = 0`, `slot[0x18] = 1`, `slot[0x1A] = 0`,
  *         `slot[0x1B] = entry[6]`, `slot[0x24] = 0`, `slot[0x25] = 2`,
  *         `slot[0x26] = 1`, `slot[0x28..0x2B] = 0`,
@@ -194,21 +190,18 @@
  *         `slot[0x0C..0x0F] = (sext_l(*entryDataPtr[0]) << 19) + 0x40000`,
  *         `slot[0x10..0x13] = (sext_l(*entryDataPtr[1]) << 19) + 0x40000`,
  *         `slot[0x14..0x17] = D0_from_subs.fun_1cc62`.
- *   - Per ogni slot teardown: `slot[0x18] = 0`.
- *   - Effetti delle 5 sub-callback se invocate (1BB08, 1CC62, 150D0,
+ *   - For each torn-down slot: `slot[0x18] = 0`.
  *     18E6C, 18F46).
  *
- * **JSR esterne** (5):
- *   - `FUN_00014BCE` (`findFreeSlotInTable`) — replicato live (slot-search.ts).
- *   - `FUN_00014C0C` (`slotMatchesPtr`) — replicato live (slot-search.ts).
- *   - `FUN_0001BB08` (deriveSpriteFromArg_v1) — replicato live (sprite-derive.ts).
- *   - `FUN_0001CC62` — sub-injection (`subs.fun_1cc62(slotPtr) → number`).
- *   - `FUN_000150D0` — sub-injection (`subs.fun_150d0(slotPtr)`).
- *   - `FUN_00018E6C` — sub-injection (`subs.fun_18e6c(typeCode, subIdx)`).
- *   - `FUN_00018F46` — sub-injection (`subs.fun_18f46(arg1, arg2)`).
+ * **External JSRs**:
+ *   - `FUN_00014BCE` (`findFreeSlotInTable`) is replicated live (slot-search.ts).
+ *   - `FUN_00014C0C` (`slotMatchesPtr`) is replicated live (slot-search.ts).
+ *   - `FUN_0001BB08` (deriveSpriteFromArg_v1) is replicated live (sprite-derive.ts).
+ *   - `FUN_0001CC62` uses sub-injection (`subs.fun_1cc62(slotPtr) -> number`).
+ *   - `FUN_000150D0` uses sub-injection (`subs.fun_150d0(slotPtr)`).
+ *   - `FUN_00018E6C` uses sub-injection (`subs.fun_18e6c(typeCode, subIdx)`).
+ *   - `FUN_00018F46` uses sub-injection (`subs.fun_18f46(arg1, arg2)`).
  *
- * Verifica bit-perfect via
- * `packages/cli/src/test-state-sub-14c46-parity.ts` (500 casi).
  */
 
 import type { GameState } from "./state.js";
@@ -216,63 +209,58 @@ import type { RomImage } from "./bus.js";
 import { findFreeSlotInTable, slotMatchesPtr } from "./slot-search.js";
 import { deriveSpriteFromArg_v1 } from "./sprite-derive.js";
 
-// ─── Costanti m68k → workRam ─────────────────────────────────────────────
+// ─── M68k-to-workRam constants ───────────────────────────────────────────
 
 const WORK_RAM_BASE = 0x00400000;
 
 /** Address word `*0x400394` = mode discriminator. */
 export const MODE_ADDR = 0x00400394 as const;
 
-/** ROM table (long ptr × N), indicizzata da `mode * 4`. */
+/** ROM table (long ptr x N), indexed by `mode * 4`. */
 export const ROM_ENTRY_TABLE = 0x0002257a as const;
 
-/** Slot array base (4 slot × 0x60, condiviso con FUN_1493C/FUN_14C0C). */
 export const SLOT_ARRAY_ADDR = 0x00401302 as const;
 /** Stride slot. */
 export const SLOT_STRIDE = 0x60 as const;
-/** Numero slot. */
+/** Slot count. */
 export const SLOT_COUNT = 4 as const;
 
 /** Sentinel terminator entry list. */
 export const ENTRY_SENTINEL = 0xff as const;
 /** Stride entry. */
 export const ENTRY_STRIDE = 8 as const;
-/** Massimo numero di entry da iterare (safety cap; il binario è bounded
- *  solo dal sentinel 0xFF — la tabella in ROM termina sempre con 0xFF). */
+/**
+  */
 export const ENTRY_MAX_ITER = 256 as const;
 
-/** Constante `0x20C18` scritta in `slot[0x58]` e `slot[0x5C]` (ROM ptr). */
+/** Constant `0x20C18` written to `slot[0x58]` and `slot[0x5C]` (ROM ptr). */
 export const SLOT_SUB_PTR_INIT = 0x00020c18 as const;
 
-/** Costante usata in init delle longs `slot[0x0C]` e `slot[0x10]`. */
 export const POSITION_BIAS = 0x00040000 as const;
-/** Shift count (0x13 = 19) usato negli `asl.l` di init. */
 export const POSITION_SHIFT = 0x13 as const;
 
-/** Argomento long pushato a `FUN_1CC62` (init path). */
 export const FUN_1CC62_ARG = 0x1 as const;
-/** Type-code passato a `FUN_18E6C` (init path) e `FUN_18F46` (teardown). */
+/** Type code passed to `FUN_18E6C` (init path) and `FUN_18F46` (teardown). */
 export const FUN_18E6C_18F46_ARG1 = 0x4 as const;
 
 // ─── Sub injection ──────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 4 JSR esterne non-trivially-replicate.
+ * Stub injection for the four external JSRs that are not replicated inline.
  *
  * Le 3 sub `findFreeSlotInTable` (`FUN_14BCE`), `slotMatchesPtr`
- * (`FUN_14C0C`) e `deriveSpriteFromArg_v1` (`FUN_1BB08`) sono replicate
- * live nei moduli rispettivi e NON sono injection.
+ * (`FUN_14C0C`) and `deriveSpriteFromArg_v1` (`FUN_1BB08`) are replicated
+ * in their modules and are not injected.
  */
 export interface StateSub14C46Subs {
   /**
-   * `FUN_0001CC62(arg=1)` (sprite-project). Riceve l'arg long pushato (=1) e
-   * lo state. Ritorna il long che il binario lascia in D0 — scritto in
+   * `FUN_0001CC62(arg=1)` (sprite-project). Receives the pushed long arg (=1) and
    * `slot[0x14..0x17]`. Default: 0.
    */
   fun_1cc62?: (state: GameState, arg: number) => number;
   /**
-   * `FUN_000150D0(slotPtr)` (sprite-coords + jsr 264AA). Riceve il pointer
-   * assoluto del slot (= A2). Default: no-op.
+   * `FUN_000150D0(slotPtr)` (sprite-coords + jsr 264AA). Receives the absolute
+   * slot pointer (= A2). Default: no-op.
    */
   fun_150d0?: (state: GameState, slotPtr: number) => void;
   /**
@@ -287,56 +275,44 @@ export interface StateSub14C46Subs {
   fun_18f46?: (state: GameState, arg1: number, arg2: number) => void;
 }
 
-// ─── Risultato ───────────────────────────────────────────────────────────
 
-/** Quale azione è stata fatta su uno specifico slot. */
 export type SlotAction = "init" | "teardown" | "noop";
 
-/** Per-slot action trace (4 elementi, uno per slot). */
+/** Per-slot action trace (four entries, one per slot). */
 export interface SlotTrace {
-  /** Index slot (0..3). */
+  /** Slot index (0..3). */
   slotIdx: number;
-  /** Pointer assoluto del slot (`SLOT_ARRAY_ADDR + slotIdx * 0x60`). */
+  /** Absolute slot pointer (`SLOT_ARRAY_ADDR + slotIdx * 0x60`). */
   slotPtr: number;
-  /** Azione effettuata. */
+  /** Action taken. */
   action: SlotAction;
 }
 
 /** Per-entry action trace (entry-walk). */
 export interface EntryTrace {
-  /** Pointer assoluto dell'entry letta. */
   entryPtr: number;
-  /** Bytes [0..7] dell'entry (oss: per terminator solo entry[0]=0xFF). */
+  /** Entry bytes [0..7]; the terminator only needs `entry[0] == 0xFF`. */
   entryBytes: number[];
-  /** True se `slotMatchesPtr(entry)` ha ritornato non-zero. */
+  /** True when `slotMatchesPtr(entry)` returned non-zero. */
   matched: boolean;
-  /** True se il gate (D3 boundary + D2 fuori range) è passato. */
   gated: boolean;
-  /** True se il init è stato eseguito (gated && !matched && slot found). */
   initialized: boolean;
-  /** Pointer del slot inizializzato (se `initialized`). */
+  /** Initialized slot pointer when `initialized` is true. */
   initSlotPtr: number | null;
 }
 
-/** Risultato finale. */
 export interface StateSub14C46Result {
-  /** Mode word letto a `0x400394` (selettore tabella ROM). */
   mode: number;
-  /** Pointer della entry list (= `ROM[0x2257A + mode*4]`). */
+  /** Entry-list pointer (= `ROM[0x2257A + mode*4]`). */
   entryListPtr: number;
-  /** True se la entry list iniziava già col sentinel (0xFF) — early exit. */
   emptyEntryList: boolean;
-  /** Trace di ogni entry visitata. */
+  /** Trace of each visited entry. */
   entries: EntryTrace[];
-  /** Trace dei 4 slot (tail walk). */
+  /** Trace of the four slots in the tail walk. */
   slots: SlotTrace[];
-  /** Numero di chiamate effettive a `subs.fun_1cc62` (= numero init). */
   fun1CC62Calls: number;
-  /** Numero di chiamate effettive a `subs.fun_150d0` (= numero init). */
   fun150D0Calls: number;
-  /** Numero di chiamate effettive a `subs.fun_18e6c` (= numero init). */
   fun18E6CCalls: number;
-  /** Numero di chiamate effettive a `subs.fun_18f46` (= numero teardown). */
   fun18F46Calls: number;
 }
 
@@ -393,11 +369,9 @@ function sext16(v: number): number {
 }
 
 /**
- * Read u8 da addr m68k assoluto. Supporta sia ROM (program area) che workRam.
+ * Read u8 from an absolute M68k address. Supports both ROM (program area) and work RAM.
  *
- * Nel binario la `move.b (A0)` legge il byte puntato dall'entry's data ptr
- * `entry[2..5]`. Quel pointer punta tipicamente in ROM (tabelle dati). Per
- * sicurezza accettiamo entrambe le aree.
+ * The port accepts both areas because some diagnostics pass already-mapped pointers.
  */
 function readByteAbs(state: GameState, rom: RomImage, addr: number): number {
   const a = addr >>> 0;
@@ -408,36 +382,23 @@ function readByteAbs(state: GameState, rom: RomImage, addr: number): number {
   return romReadByte(rom, a);
 }
 
-// ─── Replica ─────────────────────────────────────────────────────────────
+// ─── Port ────────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00014C46`.
  *
- * @param state  GameState (modifica `workRam[0x1302..0x14C2]` e altri offset
- *               nei singoli slot inizializzati).
- * @param rom    RomImage (legge da ROM la entry-list table).
- * @param arg1   Long arg1 pushato dal caller (`(0x1B,SP)` LSB → D2.b).
- * @param arg2   Long arg2 pushato dal caller (`(0x1F,SP)` LSB → D3.b).
- * @param subs   Stub injection per le 4 JSR esterne.
+ * @param state  GameState. Mutates `workRam[0x1302..0x14C2]` and fields in any
+ *               initialized slots.
+ * @param arg1   Long arg1 pushed by the caller (`(0x1B,SP)` LSB -> D2.b).
+ * @param arg2   Long arg2 pushed by the caller (`(0x1F,SP)` LSB -> D3.b).
+ * @param subs   Stub injection for the four external JSRs.
  *
- * @returns      Trace dettagliato di entry-walk, slot tail-walk e counter
- *               delle JSR esterne.
+ * @returns      Entry-walk trace, slot tail-walk trace, and external JSR counters.
  *
- * **Ordine di esecuzione** (rilevante per parity):
- *   1. Legge `mode = *0x400394` (word).
- *   2. Carica `entryListPtr = ROM[0x2257A + mode*4]`.
- *   3. Per ogni entry (fino a sentinel `entry[0] == 0xFF`):
- *      a. Chiama `findFreeSlotInTable()` (sempre, prima del match check).
- *      b. Se nessun slot free → break (early exit, salta tail walk?
- *         NO — il binario `beq.w 0x14d86` salta al tail walk).
- *      c. Chiama `slotMatchesPtr(entry)`. Se match → skip.
- *      d. Verifica gate `(D3 ∈ {entry[0], entry[1]}) AND (D2 fuori range)`.
- *      e. Se gated → init slot:
- *           - scrive 14 campi del slot
- *           - chiama `subs.fun_1cc62`, `subs.fun_150d0`, `subs.fun_18e6c`
- *      f. Avanza A3 += 8.
+ *   3. For each entry until sentinel `entry[0] == 0xFF`:
+ *      e. If gated, initialize the slot.
+ *      f. Advance A3 += 8.
  *   4. Tail walk sui 4 slot @ 0x401302:
- *      - per ogni slot in uso, se boundary cross → teardown +
+ *      - For each active slot, if the boundary crosses, run teardown plus
  *        `subs.fun_18f46`.
  */
 export function stateSub14C46(
@@ -447,7 +408,7 @@ export function stateSub14C46(
   arg2: number,
   subs?: StateSub14C46Subs,
 ): StateSub14C46Result {
-  // D2/D3 = LSB del long arg (byte 3 BE = LSB).
+  // D2/D3 = long-argument LSB (byte 3 BE = LSB).
   const d2 = arg1 & 0xff;
   const d3 = arg2 & 0xff;
   const d2s = sext8(d2);
@@ -456,9 +417,7 @@ export function stateSub14C46(
   const mode = rWordBE(state, MODE_ADDR - WORK_RAM_BASE);
 
   // entryListPtr = ROM[0x2257A + mode*4] (long BE).
-  // asl.w #2,D0w → D0 = (mode * 4) come word; il binario poi indicizza con
-  // D0w*1 (segno-esteso). Ma `mode * 4` in pratica è sempre piccolo.
-  // Per sicurezza usa il word con sign-extension.
+  // Match the original word-sized indexing with sign extension.
   const tableIdxWord = (mode << 2) & 0xffff;
   const tableIdxSigned = sext16(tableIdxWord);
   const entryListPtr = romReadLongBE(rom, (ROM_ENTRY_TABLE + tableIdxSigned) >>> 0);
@@ -504,9 +463,7 @@ export function stateSub14C46(
     };
 
     if (isMinusOne) {
-      // Binario: `beq.w 0x14d86` (jump to tail walk). NON traccia l'entry
-      // completamente: i check successivi non avvengono. Spingi l'entry
-      // così com'è e BREAK loop.
+      // No free slot: later checks do not run; keep the entry in the trace.
       entries.push(tracedEntry);
       break;
     }
@@ -575,7 +532,6 @@ export function stateSub14C46(
     const dataByte1 = readByteAbs(state, rom, (entryDataLong + 1) >>> 0);
 
     // slot[0x0C..0x0F] = (sext_l(byte0) << 19) + 0x40000.
-    // asl.l #19 di un valore signed: in TS preserva con cast a 32.
     const long0 = (((sext8(dataByte0) << POSITION_SHIFT) + POSITION_BIAS) | 0) >>> 0;
     wLongBE(state, slotOff + 0x0c, long0);
 
@@ -649,14 +605,12 @@ export function stateSub14C46(
       continue;
     }
 
-    // Word reads (BE) di slot[0x52] e slot[0x54].
+    // BE word reads from slot[0x52] and slot[0x54].
     const slot52 = sext16(rWordBE(state, slotOff + 0x52));
     const slot54 = sext16(rWordBE(state, slotOff + 0x54));
 
-    // Test condizione lower-cross: D2 == slot52 (sext_w) AND D3 < slot52.
-    // Il binario fa cmp.w slot52,D0w dove D0 = sext_w(D2.b). slot52 in workRam
-    // è già word (signed quando comparato con bgt/blt). Per il check di
-    // uguaglianza basta confrontare i word values; per `<` usa signed.
+    // Lower-cross condition: D2 == slot52 (sext_w) AND D3 < slot52.
+    // Equality is word-based; the less-than check is signed.
     const d2Word = sext8(d2) & 0xffff; // sext_w(sext_b(D2.b))
     const d3Word = sext8(d3) & 0xffff;
     const d2WordSigned = sext16(d2Word);

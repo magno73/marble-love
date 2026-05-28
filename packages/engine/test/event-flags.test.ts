@@ -1,7 +1,7 @@
 /**
  * Test consumeEventFlag (FUN_2548).
  *
- * Bit-perfect verificato vs binary (1000/1000) tramite
+ * Bit-perfect verified against the binary (1000/1000) through
  * `cli/src/test-event-flags-parity.ts`.
  */
 

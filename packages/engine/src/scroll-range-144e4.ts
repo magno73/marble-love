@@ -1,22 +1,16 @@
 /**
- * scroll-range-144e4.ts — bit-perfect replica di `FUN_000144E4`.
  *
- * Semantica: scala due argomenti word (from, to) relativo al boundary word
- * letto dalla state struct puntata da `*0x400474`, divide per 16 via ASR,
  * poi dispatcha a 4 sub e (condizionalmente su game mode 3 o 4) ad altre sub
  * di bound-check.
  *
  * **Algoritmo** (da disasm 0x144E4..0x14648):
  *
- * 1. `boundary = sext16(*(statePtrAddr + 0x10))` dove
+ * 1. `boundary = sext16(*(statePtrAddr + 0x10))` where
  *    `statePtrAddr = workRam[0x474..0x477]` (deref ROM-or-workRam).
  * 2. `d3b = ((sext32(fromWord) - boundary) >> 4) & 0xFF`  (signed byte)
  * 3. `d2b = ((sext32(toWord)   - boundary) >> 4) & 0xFF`  (signed byte)
  * 4. If `d3b == d2b` → return (no-op).
- * 5. Chiama 4 dispatcher con `(d3b, d2b)`:
  *    - `FUN_15A12(d3b, d2b)` — object-pair slot spawn/despawn.
- *    - `FUN_14C46(d3b, d2b)` — script slot-array spawn/despawn.
- *    - `FUN_17346(d3b, d2b)` — non replicata; iniettabile.
  *    - `FUN_12DFA(d3b, d2b)` — replicata come `scriptRectDispatch12DFA`.
  * 6. Se mode == 3:
  *    - Se `d3b < 0x29 && d2b >= 0x29` → `bannerHelper26B66(9)`.
@@ -27,13 +21,10 @@
  *    - Se `d3b NOT in [0x03..0x1B] AND d2b in [0x03..0x1B]` → `wb(0x400762, 1)`.
  *    - Se `d3b in [0x03..0x1B] AND d2b NOT in [0x03..0x1B]` → `wb(0x400762, 0)`.
  *
- * **Nota argomenti** (arg-order su stack M68K, vedere disasm 0x14520..0x14572):
- *   Il caller pusha prima D2b ext poi D3b ext → callee vede D3b come arg1,
- *   D2b come arg2. `scriptRectDispatch12DFA` prende `(state, rom, arg1, arg2)`
- *   dove `arg1.b = D2` (to_scaled) e `arg2.b = D3` (from_scaled). Nella
- *   chiamata qui: `scriptRectDispatch12DFA(state, rom, d3b, d2b)`.
+ *   D2b as arg2. `scriptRectDispatch12DFA` takes `(state, rom, arg1, arg2)`,
+ *   where `arg1.b = D2` (to_scaled) and `arg2.b = D3` (from_scaled). In the
  *
- * **Disasm sorgente**: 0x144E4..0x14648 (364 byte) — vedi tools/ghidra_disasm_at.py.
+ * **Source disasm**: 0x144E4..0x14648 (364 bytes) — see tools/ghidra_disasm_at.py.
  */
 
 import type { GameState } from "./state.js";
@@ -82,7 +73,6 @@ function readU16Rom(rom: RomImage, addr: number): number {
 }
 
 /**
- * Legge un word (u16) da un indirizzo assoluto m68k che può essere in
  * work RAM o in ROM (pattern `readAbsU16` come in level-dispatcher-16ec6.ts).
  */
 function readAbsU16(state: GameState, rom: RomImage | undefined, addr: number): number {
@@ -105,26 +95,18 @@ function sextByte(v: number): number {
 }
 
 /**
- * ASR.L #4 del M68K su un valore 32-bit, poi estraiamo il byte basso.
- * M68K ASR.L #4 è un aritmetico right-shift di 4, preservando il segno.
  */
 function asrL4byte(v: number): number {
-  // v è già un intero JS; >> 4 è aritmetico su 32 bit in JS.
   return (v >> 4) & 0xff;
 }
 
 // ─── Injection interface ──────────────────────────────────────────────────────
 
 export interface ScrollRange144E4Subs {
-  /** FUN_15A12 — default replica reale quando la ROM e' disponibile. */
   fun_15a12?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_14C46 — default replica reale quando la ROM e' disponibile. */
   fun_14c46?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_17346 — default replica reale quando la ROM e' disponibile. */
   fun_17346?: (state: GameState, d3b: number, d2b: number) => void;
-  /** FUN_18FFA — default replica reale quando la ROM e' disponibile. */
   fun_18ffa?: (state: GameState) => void;
-  /** FUN_190EE — default replica reale quando la ROM e' disponibile. */
   fun_190ee?: (state: GameState) => void;
 }
 
@@ -133,16 +115,7 @@ export interface ScrollRange144E4Subs {
 /**
  * Replica `FUN_000144E4`.
  *
- * @param state     GameState (legge workRam per statePtr e gameMode;
- *                  scrive workRam[0x400762] in mode 4).
- * @param rom       ROM image (usata da `readAbsU16` per il boundary e da
- *                  `scriptRectDispatch12DFA`). Può essere `undefined` se non
- *                  disponibile; in quel caso si legge 0 per dati ROM.
- * @param fromWord  Arg1 word (raw, come valore a 16 bit dal caller).
- * @param toWord    Arg2 word (raw, come valore a 16 bit dal caller).
  * @param subs      Sub-injection: fun_15a12/fun_14c46/fun_17346/fun_18ffa/fun_190ee.
- *                  Le JSR replicate (FUN_12DFA, FUN_26B66) sono sempre wired
- *                  come default; non sovrascrivibili via questa interface.
  */
 export function scrollRange144E4(
   state: GameState,
@@ -151,7 +124,6 @@ export function scrollRange144E4(
   toWord: number,
   subs?: ScrollRange144E4Subs,
 ): void {
-  // ── Leggi boundary da state struct ──────────────────────────────────────
   // movea.l (0x00400474).l, A0 — deref ptr from workRam[0x474]
   const statePtrAddr = readU32Ram(state, 0x474); // offset = 0x400474 - 0x400000
 
@@ -231,13 +203,13 @@ export function scrollRange144E4(
   const mode = readU16Ram(state, 0x394); // *0x400394 word
 
   if (mode === 3) {
-    // cmpi.b #0x29, D3b / bge 0x1459E: se D3 < 0x29 AND D2 >= 0x29 → banner(9)
+    // cmpi.b #0x29, D3b / bge 0x1459E: if D3 < 0x29 AND D2 >= 0x29 -> banner(9)
     const d3s = sextByte(d3b);
     const d2s = sextByte(d2b);
     if (d3s < 0x29 && d2s >= 0x29) {
       bannerHelper26B66(state, 9);
     }
-    // cmpi.b #0x29, D3b / blt 0x145B6: se D3 >= 0x29 AND D2 < 0x29 → banner(8)
+    // cmpi.b #0x29, D3b / blt 0x145B6: if D3 >= 0x29 AND D2 < 0x29 -> banner(8)
     if (d3s >= 0x29 && d2s < 0x29) {
       bannerHelper26B66(state, 8);
     }

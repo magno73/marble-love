@@ -21,12 +21,7 @@
  *   neg.l D0            ; D0 = -D0
  *   done: rts
  *
- *   Returns `-|arg|`. Equivalente a "negate-if-positive": se l'arg è
- *   positivo lo nega, altrimenti lo lascia. Usato dove il binario vuole
- *   un valore garantito non-positivo.
  *
- * Entrambi sono leaf puri (no side effect su workRam, no JSR), quindi
- * la replica TypeScript è una funzione matematica diretta.
  */
 
 export const ABS_LONG_1B5A6_ADDR = 0x0001b5a6 as const;
@@ -42,7 +37,6 @@ function s32(value: number): number {
  *
  * @param arg  Long arg (signed 32-bit).
  * @returns    `|arg|`. Edge case: `0x80000000` (= INT32_MIN) → `0x80000000`
- *             (overflow, M68k `neg.l` su INT32_MIN ritorna INT32_MIN).
  */
 export function absLong1B5A6(arg: number): number {
   const a = s32(arg);

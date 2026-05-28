@@ -1,7 +1,6 @@
 /**
  * Test bootScreenInit (FUN_222E) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-boot-screen-init-parity.ts`.
  */
 
@@ -17,7 +16,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage, type RomImage } from "../src/bus.js";
 
-/** Crea una ROM image con magic word controllato sui due vector slot. */
+/** Create a ROM image with controlled magic words on the two vector slots. */
 function makeRom(slot1Magic: number, slot2Magic: number): RomImage {
   const rom = emptyRomImage();
   rom.program[BOOT_SCREEN_VECTOR_SLOT_1] = (slot1Magic >>> 8) & 0xff;
@@ -27,7 +26,6 @@ function makeRom(slot1Magic: number, slot2Magic: number): RomImage {
   return rom;
 }
 
-/** Bag che traccia l'ordine di chiamata delle subs. */
 function makeTrackedSubs(): { calls: string[]; subs: BootScreenInitSubs } {
   const calls: string[] = [];
   return {
@@ -48,7 +46,7 @@ describe("bootScreenInit (FUN_222E)", () => {
   it("scrive sempre i 6 register video a $B00000-$B0000A", () => {
     const s = emptyGameState();
     const rom = makeRom(0x0000, 0x0000);
-    // workRam[0x16/17] != 0 → warm boot, ma le 6 write avvengono comunque
+    // workRam[0x16/17] != 0 -> warm boot, but the 6 writes still happen.
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF] = 0x42;
     bootScreenInit(s, rom);
 
@@ -75,7 +73,6 @@ describe("bootScreenInit (FUN_222E)", () => {
   });
 
   it("warm boot anche se frame_counter byte 0x16 = 0 ma 0x17 != 0 (tst.w)", () => {
-    // tst.w legge BE word: branch warm se hi!=0 OR lo!=0
     const s = emptyGameState();
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF] = 0x00;
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF + 1] = 0x01;
@@ -84,7 +81,6 @@ describe("bootScreenInit (FUN_222E)", () => {
 
     bootScreenInit(s, rom, subs);
 
-    // coldBootInit non chiamato perché word != 0
     expect(calls).toEqual(["clearScreen", "introSetup"]);
   });
 
@@ -142,7 +138,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => bootScreenInit(s, rom)).not.toThrow();
-    // E le 6 write sono comunque applicate
+    // And the 6 writes are still applied.
     const w6 = ((s.colorRam[0x06] ?? 0) << 8) | (s.colorRam[0x07] ?? 0);
     expect(w6).toBe(0xbfff);
   });

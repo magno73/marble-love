@@ -12,8 +12,13 @@ section "repo"
 printf 'root: %s\n' "$ROOT"
 printf 'size: '
 du -sh .
-printf 'rg files: '
-rg --files | wc -l | tr -d ' '
+if command -v rg >/dev/null 2>&1; then
+  printf 'rg files: '
+  rg --files | wc -l | tr -d ' '
+else
+  printf 'repository files: '
+  find . -path './.git' -prune -o -type f -print | wc -l | tr -d ' '
+fi
 printf '\n'
 printf 'git tracked files: '
 git ls-files | wc -l | tr -d ' '
@@ -27,7 +32,15 @@ find . \
   -path './.git' -prune -o \
   -path './node_modules' -prune -o \
   -path './.claude' -prune -o \
-  -type f -exec stat -f '%z %N' {} + |
+  -type f -exec sh -c '
+    for file do
+      if size=$(stat -f "%z" "$file" 2>/dev/null); then
+        printf "%s %s\n" "$size" "$file"
+      elif size=$(stat -c "%s" "$file" 2>/dev/null); then
+        printf "%s %s\n" "$size" "$file"
+      fi
+    done
+  ' sh {} + |
   sort -nr |
   head -30 || true
 

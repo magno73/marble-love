@@ -6,7 +6,7 @@
 --     Cattura A0..A7 + D0..D7 + PC + sp al momento di OGNI write.
 --  2. Tap READ su 0x000-0xFFFFF program space FILTRATO sui PC del decoder
 --     (specifico: 0x1a690 long-read di A3, 0x1a6a8/0x1a6d8/0x1a6fe/0x1a73a/0x1a76a byte-read di A1).
---     Cattura addr e value letti.
+--     Capture read addr and value.
 --  3. Stack di execution: usa cpu_pc to filter only "inside decoder" reads
 --     (range 0x1a668..0x1a797).
 --
@@ -43,10 +43,10 @@ local PC_PATH = {
 -- NOTA: pre-fetch instruction reads sono complicate da intercettare per PC esatto;
 -- piu' utile registrare D0 SUBITO DOPO move.l (A3),D0 — cioe' al passaggio @ 0x1a692
 -- (next instruction). Usiamo emu.debugger or hook on PC? In MAME Lua semplice: register
--- snapshot dei regs ad ogni write decoder. Ricostruiamo D0/D1/D5/D6 dalla sequenza di write.
+-- Register snapshot at each decoder write. Reconstruct D0/D1/D5/D6 from write sequence.
 
--- Per leggere stream content: facciamo snapshot BEGIN body (PC entra in 0x1a668)
--- usando emu.register_periodic con check PC. Meglio: install_passthrough_tap
+-- To read stream content: snapshot BEGIN body (PC enters 0x1a668) using
+-- emu.register_periodic with PC check. Better: install_passthrough_tap
 -- su READ range 0x800e4..0x9ffff (ctrl stream area) e 0x2be18..0x2cfff (ext stream),
 -- filtrato per cpu_pc nel range decoder.
 
@@ -66,18 +66,18 @@ local writes = {}        -- {f, body_idx, pc, addr, data, mask, sp, a={}, d={}}
 local body_idx = 0       -- inkrementa ad ogni new body entry @ 0x1a668
 local in_decoder = false
 
--- Stream reads (ctrl + ext) dal solo decoder.
+-- Stream reads (ctrl + ext) from the decoder only.
 local stream_reads = {}  -- {f, body_idx, pc, addr, value, kind="ctrl"|"ext"}
 
 -- Body entry/exit snapshots (regs al PC=0x1a668 e al PC=0x1a796).
 local body_entries = {}  -- {f, idx, pc=0x1a668, a={}, d={}, sp}
 local body_exits = {}    -- {f, idx, pc=0x1a796, a={}, d={}, sp}
 
--- Ctrl/Ext stream snapshot READS — usiamo tap su tutti i read da program space
--- e filtriamo per PC dentro range decoder. Per limitare overhead taggiamo solo
+-- Ctrl/Ext stream snapshot READS: use taps on all reads from program space.
+-- and filter by PC inside decoder range. To limit overhead, tag only
 -- il range [0x80000..0x90000] U [0x2be18..0x2c800].
--- In realta' il decoder legge da addr = ctrlBase+offset. ctrlBase = 0x800e4 +
--- sext(tileWord) — puo' essere anywhere. Per essere safe taggiamo tutto fino
+-- In practice, the decoder reads from addr = ctrlBase+offset. ctrlBase = 0x800e4 +
+-- sext(tileWord) can be anywhere. To stay safe, tag everything until
 -- a 0x88000 (ROM end) per la window mirata.
 
 local function snapshot_regs()
@@ -104,14 +104,14 @@ local function install_taps()
     end)
 
     -- Read tap su ROM (ctrl + ext stream range).
-    -- Decoder e' attivo solo se PC e' nel range. Limita overhead.
+    -- Decoder is active only when PC is in range; this limits overhead.
     mem:install_read_tap(0x00000, 0x87FFF, "dec_reads", function(o, data, mask)
         if frame_count < FROM_FR or frame_count > TO_FR then return end
         local pc = cpu_pc.value
         if pc < DECODER_LO or pc > DECODER_HI then return end
-        -- Esclude letture di instruction fetch del decoder stesso (0x1a668..0x1a797).
+        -- Exclude instruction-fetch reads from the decoder itself (0x1a668..0x1a797).
         if o >= DECODER_LO and o <= DECODER_HI then return end
-        -- Esclude letture lookup table ROM (0x2499a..0x249e9).
+        -- Exclude ROM lookup-table reads (0x2499a..0x249e9).
         if o >= 0x24990 and o <= 0x249ea then
             stream_reads[#stream_reads+1] = {
                 f = frame_count, body_idx = body_idx, pc = pc,

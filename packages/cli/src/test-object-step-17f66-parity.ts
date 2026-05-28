@@ -3,7 +3,7 @@
  * test-object-step-17f66-parity.ts —
  * differential FUN_17F66 vs `objectStep17F66`.
  *
- * **Strategia**: `FUN_00017F66` (344 byte) e' una sub di "object step" che
+ * **Strategy**: `FUN_00017F66` (344 bytes) is an "object step" subroutine that
  * decide tra 4 path (skip / special-dispatch / movement / stuck) e chiama
  * fino a 1 sub interna per path:
  *   - special: `FUN_1815A(A2)`
@@ -11,21 +11,21 @@
  *   - movement / stuck (epilogue): `FUN_26196(A2)`
  *
  * Per testare in isolamento la *sola* logica di dispatch / aritmetica
- * (whitelist, scaling, addi.l, clamp, …), **patchiamo le 3 callees con uno
- * stub `rts` puro** in ROM. Cosi' il binario fa solo il side-effect del
- * dispatcher (le scritture in 0x4006A8/AA, 0xC6/C7, gli add.l a +0/+4/+8) e
- * il workRam post-call dipende solo dalla nostra logica.
+ * (whitelist, scaling, addi.l, clamp, ...), **patch the 3 callees with a
+ * pure `rts` stub** in ROM. Thus the binary only performs the side effect of
+ * dispatcher (writes at 0x4006A8/AA, 0xC6/C7, and add.l at +0/+4/+8), so
+ * post-call workRam depends only on our logic.
  *
  * **Stubs** iniettati (2 byte ciascuno = `4E 75` rts):
  *   - `0x0001815A`: `rts`
  *   - `0x000180BE`: `rts`
  *   - `0x00026196`: `rts`
  *
- * Per ogni caso:
- *   1. Pre-fill workRam con un pattern deterministico.
- *   2. Pick A2 (random offset workRam, allineato 4, con bytes struct
+ * For each case:
+ *   1. Pre-fill workRam with a deterministic pattern.
+ *   2. Pick A2 (random workRam offset, 4-byte aligned, with struct bytes
  *      determinati dal pattern).
- *   3. **Side binary**: copia pre-fill in CPU memory, push A2 sullo stack,
+ *   3. **Side binary**: copy pre-fill into CPU memory, push A2 on the stack,
  *      call FUN_17F66, snapshot workRam.
  *   4. **Side TS**: copia pre-fill in `state.workRam`, chiama
  *      `objectStep17F66(state, A2_addr, no-op-callees)`.
@@ -68,8 +68,8 @@ const FUN_26196 = 0x00026196;
 
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
-/** Zona "stack scratch" esclusa dal compare: callFunction lascia residui
- *  tombstone (push args/sentinel) che non sono parte dell'effetto della
+/** "Stack scratch" area excluded from compare: callFunction leaves tombstone
+ *  residue (pushed args/sentinel) that is not part of the
  *  sub. Coverage abbondante: SP=0x401F00 scende al massimo a ~0x401EE0. */
 const STACK_SCRATCH_START = 0x1e80;
 
@@ -105,7 +105,7 @@ function loadWorkRam(cpu: CpuSync, src: Uint8Array): void {
   }
 }
 
-/** Patcha le 3 sub interne con `rts`. */
+/** Patch the 3 internal subs with `rts`. */
 function patchStubs(cpu: CpuSync): void {
   for (const addr of [FUN_1815A, FUN_180BE, FUN_26196]) {
     pokeMem(cpu, addr, 1, RTS_BYTES[0]);
@@ -134,8 +134,8 @@ function genCase(i: number, rng: () => number): CaseSetup {
     }
   }
 
-  // A2 deve puntare a una zona workRam con almeno 0xC8 byte di slack
-  // (struct usa fino a +0xC7) e che non si sovrappone alle globals
+  // A2 must point to a workRam region with at least 0xC8 bytes of slack.
+  // (struct uses up to +0xC7) and does not overlap globals.
   // (0x390..0x6AB) ne' allo stack (>= 0x1E80).
   // Pick: offset multiplo di 4 in [0x800 .. 0x1C00 - 0xC8) ≈ [0x800, 0x1B38].
   const a2Slot = 0x800 + (Math.floor(rng() * ((0x1b38 - 0x800) / 4)) * 4);
@@ -234,7 +234,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
   pre[a2Off + 0xc6] = cmdX & 0xff;
   pre[a2Off + 0xc7] = cmdY & 0xff;
 
-  // Long pos.x / pos.y / stuck-z: random ma a offset multipli di 4 sicuri.
+  // Long pos.x / pos.y / stuck-z: random, but on safe 4-byte-multiple offsets.
   for (const fOff of [0x00, 0x04, 0x08]) {
     const v = Math.floor(rng() * 0x100000000) >>> 0;
     pre[a2Off + fOff] = (v >>> 24) & 0xff;
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
     const postBin = captureWorkRam(cpu);
 
     // ── Side TS ─────────────────────────────────────────────────────────
-    // Reset TS workRam dallo stesso pre.
+    // Reset TS workRam from the same pre-state.
     state.workRam.set(c.pre);
     ostNs.objectStep17F66(state, c.a2Addr, {
       fun1815A: () => {},

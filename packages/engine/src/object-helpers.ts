@@ -1,5 +1,5 @@
 /**
- * object-helpers.ts — piccole utility che operano su object struct.
+ * object-helpers.ts — small utilities that operate on object structs.
  *
  * - **FUN_2648C — `copyGlobalsToObj(objAddr)`**: copia 3 long da globals
  *   @ 0x400684/0x400688/0x40068C a obj+0xC/0x10/0x14.

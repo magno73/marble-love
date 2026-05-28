@@ -1,16 +1,8 @@
 /**
  * marble-cell-dispatch-19e42.test.ts — smoke tests per `FUN_00019E42`.
  *
- * Verifica:
- *   1. Pre-jsr side effects: copia POS_X/POS_Y dall'entity e scrive packed
- *      long a `entity[0x20]`. Sempre, indipendentemente dal ramo.
  *   2. Branch HIT (cellX ∈ {0x29, 0x31, 0x39} AND cellY signed >= 0x34):
- *      chiama `inner264AA(entity, 3)` esattamente 1 volta, NIENTE clear.
- *   3. Branch MISS (cellX non in set OR cellY < 0x34): azzera 3 word a
- *      `entity[0x26], [0x2C], [0x32]`, NESSUNA chiamata a inner.
- *   4. Boundary cellY = 0x34 → HIT (blt è strict less-than).
  *   5. Boundary cellY = 0x33 (signed) → MISS.
- *   6. Subs assente → no crash, ramo HIT non chiama nulla.
  */
 
 import { describe, it, expect } from "vitest";
@@ -52,8 +44,6 @@ function readLongBE(s: State, off: number): number {
 }
 
 /**
- * Setup minimo: hud=0, entity x/y/w4 forniti, resto del workRam vergine.
- * Entity.x = `cellX << 3` per ottenere il cellX desiderato dopo `asr.w #3`.
  * Entity.y = `cellY << 3` analogamente.
  */
 function setupEntity(
@@ -80,7 +70,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     setWordBE(s, ENTITY_OFF + 0x10, 0x0080);
     setWordBE(s, ENTITY_OFF + 0x14, 0x0010);
     setWordBE(s, HUD_OFFSET_WORD_OFF, 0x0040);
-    // Non-zero placeholder a 0x26, 0x2C, 0x32 per verificare che vengano azzerati.
+    // Non-zero placeholders at 0x26, 0x2C, 0x32 to verify they are zeroed.
     setWordBE(s, ENTITY_OFF + 0x26, 0xdead);
     setWordBE(s, ENTITY_OFF + 0x2c, 0xbeef);
     setWordBE(s, ENTITY_OFF + 0x32, 0xface);
@@ -105,7 +95,6 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     expect(r.innerCalls).toBe(0);
     expect(r.cellX).toBe(0x20);
 
-    // I 3 word del clear loop sono stati azzerati.
     for (let i = 0; i < CLEAR_COUNT; i++) {
       expect(readWordBE(s, ENTITY_OFF + ENTITY_CLEAR_BASE_OFF + i * CLEAR_STRIDE)).toBe(
         0,
@@ -116,7 +105,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
   it("HIT: cellX=0x29 + cellY=0x40 → inner264AA chiamato con (entity, 3), niente clear", () => {
     const s = emptyGameState();
     setupEntity(s, 0x29, 0x40);
-    // Placeholder non azzerati pre-call.
+    // Placeholders not zeroed pre-call.
     setWordBE(s, ENTITY_OFF + 0x26, 0xa5a5);
     setWordBE(s, ENTITY_OFF + 0x2c, 0x5a5a);
     setWordBE(s, ENTITY_OFF + 0x32, 0xc3c3);
@@ -136,7 +125,6 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     expect(r.innerReturn).toBe(0xdeadbeef);
     expect(innerArgs).toEqual([{ p: ENTITY_BASE, m: INNER_MODE }]);
 
-    // I 3 word NON devono essere azzerati nel ramo HIT.
     expect(readWordBE(s, ENTITY_OFF + 0x26)).toBe(0xa5a5);
     expect(readWordBE(s, ENTITY_OFF + 0x2c)).toBe(0x5a5a);
     expect(readWordBE(s, ENTITY_OFF + 0x32)).toBe(0xc3c3);

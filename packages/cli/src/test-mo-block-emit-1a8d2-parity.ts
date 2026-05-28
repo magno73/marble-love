@@ -3,33 +3,27 @@
  * test-mo-block-emit-1a8d2-parity.ts — differential FUN_1A8D2 vs
  * `moBlockEmit1A8D2`.
  *
- * `FUN_0001A8D2` (250 byte): sprite/MO "block emit". Legge un header struct
- * (6 byte usati: byte+0, byte+1, long+8) puntato da arg0, deferenzia il
  * body via `header[+8] & ~1`, e itera un body word-stream (long branch) o
  * triple-stream (short branch, attivato da body[0]==0xFF) emettendo 4
  * word per iter su 4 buffer separati i cui cursor pointer-long vivono in
- * workRam @ 0x4003F6/3FA/3FE/402, più un counter D7 @ 0x400406.
  *
  * Strategia parity:
- *   - Setup workRam con 4 cursor pointer puntanti a sprite-RAM regions
+ *   - Set up workRam with 4 cursor pointers to sprite-RAM regions
  *     (4×0x80 byte buffer @ 0xA02000/2080/2100/2180), counter D7 random.
- *   - Setup header @ random workRam offset (con byte fields random e
+ *   - Set up header @ random workRam offset (with random byte fields and
  *     body_ptr → workRam offset random).
- *   - Setup body con count + delta bytes (long-branch) o 0xFF + count +
+ *   - Set up body with count + delta bytes (long-branch) or 0xFF + count +
  *     deltas + N triples (short-branch).
- *   - Run binario via `callFunction(0x1A8D2, [arg0, arg1, arg2, arg3])`.
  *   - Run TS via `moBlockEmit1A8D2(state, arg0, arg1, arg2, arg3, {romRead})`.
  *   - Compara: spriteRam[0xA02000..0xA02200] (i 4 buffer da 0x80 byte
- *     ognuno), workRam[0x3F6..0x408] (cursor + counter), tutto byte-by-byte.
  *
- * Casi:
- *   - i=0: arg0 == -1 (early exit, solo writeback).
+ *   - i=0: arg0 == -1 (early exit, writeback only).
  *   - i=1: long-branch, count=1.
  *   - i=2: long-branch, count=8.
  *   - i=3: short-branch (body[0]=0xFF), count=2.
  *   - i=4: short-branch, count=1.
- *   - i=5: long-branch con bit0=1 in body_ptr (D5=0xFF00 decrement).
- *   - i=6: short-branch con bit0=1.
+ *   - i=5: long-branch with bit0=1 in body_ptr (D5=0xFF00 decrement).
+ *   - i=6: short-branch with bit0=1.
  *   - i=7: header byte negativo (sign-ext test).
  *   - i>=8: random.
  *
@@ -95,7 +89,7 @@ interface TestCase {
   arg1: number;
   arg2: number;
   arg3: number;
-  /** Byte da scrivere a workRam offset, e la stessa cosa va su Musashi. */
+  /** Byte to write at a workRam offset; the same write goes to Musashi. */
   workRamSeed: Uint8Array;
 }
 
@@ -147,7 +141,7 @@ function makeCase(kind: string, rng: () => number): TestCase {
   const bodyPtr = (bodyAbs | bit0) >>> 0;
   writeLong(headerOff + 8, bodyPtr);
 
-  // Random arg words (sign-ext gestita dalla replica).
+  // Random arg words; sign extension is handled by the replica.
   const arg1 = randWord(rng);
   const arg2 = randWord(rng);
   const arg3 = randWord(rng);
@@ -240,7 +234,7 @@ async function main(): Promise<void> {
     else if (i === 3 || i === 4) kind = "short";
     else if (i === 5) kind = "long_hi";
     else if (i === 6) kind = "short_hi";
-    else if (i === 7) kind = "long";  // verifica robustezza
+    else if (i === 7) kind = "long";
     else {
       const r = rng();
       kind = r < 0.05 ? "earlyExit"
@@ -263,7 +257,6 @@ async function main(): Promise<void> {
       stateInst.spriteRam[k] = 0;
     }
 
-    // Call binario: arg0 (long), arg1 (long, only word read), arg2, arg3.
     callFunction(cpu, FUN_1A8D2, [
       tc.arg0 >>> 0,
       tc.arg1 >>> 0,

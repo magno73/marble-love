@@ -1,7 +1,6 @@
 /**
  * pf-scroll.test.ts — smoke + corner case di pfScrollUpdate.
  *
- * Bit-perfect parity verificata vs binary tramite test-pf-scroll-parity.ts.
  */
 
 import { describe, it, expect } from "vitest";
@@ -34,7 +33,6 @@ describe("pfScrollUpdate", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4;
     writeU16(s.workRam, 0x02, 0x1000);
-    // Stop loop subito: cmp[0] = 0
     writeU16(s.spriteRam, 0x180, 0);
     pfScrollUpdate(s);
     expect(readU16(s.workRam, 0x02)).toBe(0x1002);
@@ -66,17 +64,15 @@ describe("pfScrollUpdate", () => {
     // rotation set → base = 0x200 (A0), 0x380 (A1)
     writeU16(s.spriteRam, 0x380, 0); // stop iter 0
     pfScrollUpdate(s);
-    // No exceptions e scrolling andato sulla seconda fascia
+    // No exceptions, and scrolling moved to the second band.
     expect(readU16(s.workRam, 0x02)).toBe(0x0002); // 0 + 2
   });
 
   it("loop limita a 60 iter quando cmp non matcha mai", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 2; // d2 = 1
-    // cmp area tutta 0xFFFF — non matcha mai 0..59
     for (let i = 0; i < 60; i++) writeU16(s.spriteRam, 0x180 + i * 2, 0xFFFF);
     expect(() => pfScrollUpdate(s)).not.toThrow();
-    // Il 60esimo word (offset 0x76 = 118) deve essere stato scritto
     // (60 iter complete: indici 0..59)
     expect(readU16(s.spriteRam, 0x76)).not.toBe(0); // d2<<5 nel masked range
   });
@@ -85,9 +81,8 @@ describe("pfScrollUpdate", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4; // d2 = 2 → lineOffset = 2 << 5 = 0x40
     writeU16(s.spriteRam, 0x180, 0xFFFF); // non matcha
-    writeU16(s.spriteRam, 0x000, 0x0000); // tile word iniziale
+    writeU16(s.spriteRam, 0x000, 0x0000);
     pfScrollUpdate(s);
-    // bit 5..13 = 0x40 (cioè (0 + 0x40) & 0x3FE0 = 0x0040)
     expect(readU16(s.spriteRam, 0x000)).toBe(0x0040);
   });
 

@@ -4,24 +4,15 @@
  * `spritePosUpdate1BAB2`.
  *
  * FUN_0001BAB2 (86 byte): "sprite position-update with redraw-on-tile-change".
- * Carica x/y/z (3 word) da una struct nello stack arg, scrive nei globals
- * 0x400690..0x400695, deriva i 5 tile-fields via FUN_0001BB50, e — se le
- * tile-coords sono cambiate — chiama il heavy renderer FUN_0001CABA.
+ * 0x400690..0x400695, derives the 5 tile fields via FUN_0001BB50, and — if the
  *
  * **Strategia parity**:
  *   - JSR a FUN_0001BB50 (deriveSpriteFields) **lasciato live**: piccolo,
- *     puro, già replicato bit-perfect (sprite-derive.ts).
- *   - JSR a FUN_0001CABA (heavy renderer) **stubbed con RTS**: troppo
- *     grande per replicare in questo task. La parity verifica solo i
- *     globals scritti da FUN_0001BAB2 + deriveSpriteFields, **non** gli
- *     effetti di CABA.
- *   - TS: `subs.fun_1CABA = () => {}` (no-op) → matching del binario stubbato.
- *   - Compare workRam @ 0x400690..0x4006A3 (range scritto da BAB2 + derive).
+ *   - JSR to FUN_0001CABA (heavy renderer) **stubbed with RTS**: too
+ *   - Compare workRam @ 0x400690..0x4006A3 (range written by BAB2 + derive).
  *
  * **Suite**:
  *   - A: random struct + state random → mix tile-change/no-change.
- *   - B: forza no-change (struct x/y == globals correnti, jitter sub-tile).
- *   - C: forza change (struct x/y far away dai globals correnti).
  *   - D: edge cases: sign-bit, 0xFFFF, 0x0000.
  *
  * Uso: npx tsx packages/cli/src/test-sprite-pos-update-1bab2-parity.ts [N]
@@ -50,14 +41,13 @@ const FUN_1CABA = 0x0001caba;
 /**
  * Patch JSR-stubs:
  *   - FUN_0001CABA → RTS (0x4E75) per neutralizzare il heavy renderer.
- *     FUN_0001BB50 (deriveSpriteFields) viene **lasciato live**.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
   pokeMem(cpu, FUN_1CABA + 1, 1, 0x75);
 }
 
-const ARG_BASE = 0x00401d00; // struct posizione (0x18 byte: leggiamo +0xC, +0x10, +0x14)
+const ARG_BASE = 0x00401d00;
 const ARG_SIZE = 0x18;
 const COMPARE_BASE = 0x00400690; // x/y/z + tile fields
 const COMPARE_SIZE = 0x14; // 0x400690..0x4006A3
@@ -146,7 +136,6 @@ async function main(): Promise<void> {
     callFunction(cpu, FUN_1BAB2, [ARG_BASE]);
     posUpdateNs.spritePosUpdate1BAB2(stateInst, ARG_BASE, {
       fun_1CABA: () => {
-        // no-op (matching del binario stubbed con RTS)
       },
     });
     const fail = compareGlobals(stateInst, cpu);
@@ -182,8 +171,6 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: no-change (struct.x == globals_x, jitter sub-tile) ─────
-  // Il binario fa cmp.w (0x400696),D3 con D3 = OLD *0x400696. Per garantire
-  // no-change scriviamo struct.x = globals.x esattamente (tile uguale).
   console.log(
     `\n=== Suite B: forced no-change (sub-tile jitter) — ${perSuite} casi ===`,
   );
@@ -191,8 +178,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const argBytes = new Array(ARG_SIZE).fill(0).map(() => rb());
     const globBytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // struct.x (argBytes[0xC..0xD]) → uguale a globBytes[0..1]+jitter sub-tile
-    // Per forzare same-tile (post asr 3): mantieni i bit alti uguali, jitter low 3 bits.
     argBytes[0xc] = globBytes[0]!;
     argBytes[0xd] = (globBytes[1]! & 0xf8) | (rb() & 0x07);
     argBytes[0x10] = globBytes[2]!;
@@ -210,7 +195,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const argBytes = new Array(ARG_SIZE).fill(0).map(() => rb());
     const globBytes = new Array(COMPARE_SIZE).fill(0).map(() => rb());
-    // struct.x != globals.x (differente big nibble) per garantire tile-change
+    // struct.x != globals.x (different high nibble) to guarantee tile-change.
     argBytes[0xc] = (globBytes[0]! ^ 0x80) & 0xff;
     argBytes[0xd] = rb();
     argBytes[0x10] = (globBytes[2]! ^ 0x80) & 0xff;

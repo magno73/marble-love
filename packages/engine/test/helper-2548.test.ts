@@ -2,10 +2,7 @@
  * helper-2548.test.ts — smoke test per helper2548 (FUN_00002548).
  *
  * **Semantica**: LSR.W su *0x400006 (workRam[0x0006..0x0007]).
- * Ritorna 1 se il vecchio bit 0 era set, 0 altrimenti.
- * Il word viene shiftato a destra di 1 e riscritto.
  *
- * Bit-perfect parity (500 casi randomici) verificata in
  * `packages/cli/src/test-helper-2548-parity.ts` vs Musashi.
  */
 
@@ -98,19 +95,15 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     // word = 0b00000101 = 5: bit0=1, bit1=0, bit2=1
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0005);
 
-    // Prima call: bit 0 = 1 → ritorna 1, word = 0x0002
     expect(helper2548(s)).toBe(1);
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0002);
 
-    // Seconda call: bit 0 di 0x0002 = 0 → ritorna 0, word = 0x0001
     expect(helper2548(s)).toBe(0);
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0001);
 
-    // Terza call: bit 0 di 0x0001 = 1 → ritorna 1, word = 0x0000
     expect(helper2548(s)).toBe(1);
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0000);
 
-    // Quarta call: word = 0 → ritorna 0
     expect(helper2548(s)).toBe(0);
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0000);
   });
@@ -125,7 +118,6 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     // Byte adiacenti intatti
     expect(s.workRam[LSR_FLAG_OFF - 1]).toBe(0xa5);
     expect(s.workRam[LSR_FLAG_OFF + 2]).toBe(0xa5);
-    // Byte arbitrario lontano
     expect(s.workRam[0x0100]).toBe(0xa5);
   });
 
@@ -138,10 +130,8 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     for (let i = 0; i < 8; i++) {
       expect(helper2548(s)).toBe(1);
     }
-    // Dopo 8 shift il word è 0x0000
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0000);
 
-    // 9a call: word = 0 → ritorna 0
     expect(helper2548(s)).toBe(0);
   });
 

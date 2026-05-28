@@ -57,7 +57,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     const a2 = 0x401000;
     const off = a2 - 0x400000;
 
-    // Pre-fill region che DEVE essere clearata + byte @ +9 (NON clearato)
+    // Pre-fill region that must be cleared + byte @ +9 (not cleared).
     for (let i = 0; i <= 8; i++) s.workRam[off + i] = 0xaa;
     s.workRam[off + 9] = 0x06; // byte_at_A2+9 = 6 → fun523A(0xFF06) → bit 4
     for (let i = 0; i <= 0xd; i++) {
@@ -79,7 +79,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
 
     // Phase 1: A2+0..A2+8 cleared
     for (let i = 0; i <= 8; i++) expect(s.workRam[off + i]).toBe(0);
-    // A2+9 NOT cleared (preserva 0x06 originale)
+    // A2+9 not cleared (preserves original 0x06).
     expect(s.workRam[off + 9]).toBe(0x06);
     // A2+0xA..0xD NOT cleared
     expect(s.workRam[off + 0x0a]).toBe(0xbb);

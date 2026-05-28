@@ -81,7 +81,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
   it("flagByteOverride bypassa la lettura da workRam", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
-    // workRam dice "0", ma override forza non-zero → magnitude grande
+    // workRam says "0", but override forces non-zero -> large magnitude
     s.workRam[(ptr - 0x400000) + 0x1a] = 0x00;
     let mag = -1;
     flagScaledMagnitudeDispatch(
@@ -95,7 +95,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     );
     expect(mag).toBe(0x50000);
 
-    // viceversa: override 0 anche se workRam !=0 → magnitude piccola
+    // vice versa: override 0 even if workRam !=0 -> small magnitude.
     s.workRam[(ptr - 0x400000) + 0x1a] = 0xab;
     flagScaledMagnitudeDispatch(
       s,

@@ -1,11 +1,8 @@
 /**
- * boot-init.test.ts — smoke + integration test della sequenza di boot.
  *
- * Verifica:
  *  - colorRam ha il pattern decrescente del RESET handler
  *  - palette base inizializzata via paletteRamInitFull
  *  - workRam globals di state machine inizializzati (0x1F42 rotation flag)
- *  - dopo `bootInit + tick + tick` lo state evolve senza eccezioni
  */
 
 import { readFileSync } from "node:fs";
@@ -84,11 +81,7 @@ describe("bootInit", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
-    // Dopo bootInit ROM-vuota:
-    //   0x000..0x01F: paletteRamInitFull loop2 (zero con ROM vuota)
     //   0x020..0x1FE: hw pattern intatto (paletteRamInitFull loop1 parte da 0x200)
-    //   0x200..0x7FE: paletteRamInitFull loop1 (zero con ROM vuota)
-    // Verifica a 0x100 (centro fascia hw): iter = 0x100/2 + 1 = 0x81 →
     //   d0 = -0x1000 + 0x81*4 = -0xCFC = 0xF304
     const off = 0x100;
     const iter = (off / 2) + 1;
@@ -100,11 +93,7 @@ describe("bootInit", () => {
   it("palette region @ 0x200 inizializzata (paletteRamInitFull loop1)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // ROM vuota: paletteRamInitFull loop1 scrive 0 → ma dopo bootInit
-    // l'indice 0x200 è stato comunque toccato (overwrite del pattern hw)
-    // Verifica: prima bootInit l'area è 0, dopo bootInit ROM-vuota resta 0
     bootInit(s, rom);
-    // Con ROM reale conterrebbe i color values; con ROM vuota = 0
     expect(s.colorRam[0x200]).toBe(0);
   });
 
@@ -112,7 +101,6 @@ describe("bootInit", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
-    // ROM[0x10000] = 0x00 0x00 (vuoto) → rotFlag = 0
     expect(s.workRam[0x1f42]).toBe(0);
     expect(s.workRam[0x1f43]).toBe(0);
   });
@@ -179,9 +167,8 @@ describe("bootInit", () => {
     for (let i = 0; i < 5; i++) {
       expect(() => tick(s, { rom })).not.toThrow();
     }
-    // state.clock.frame avanza (counter canonico interno);
+    // state.clock.frame advances (canonical internal counter);
     // workRam[0x14] e [0x16] sono gestiti dalle sub IRQ4 + body — non sono
-    // più semplici monotonic counter dopo il fix B6.
     expect(s.clock.frame).toBe(5);
   });
 
@@ -248,9 +235,8 @@ describe("bootInit", () => {
   });
 
   it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {
-    // Vedi commento in boot-init.ts: in attract_mode l'oracle non popola
-    // workRam[0x140-0x176] con le HUD strings. Il path cold-boot di
-    // FUN_FA0 non viene eseguito. Quindi bootInit lascia la regione 0.
+    // See comment in boot-init.ts: in attract_mode, the oracle does not populate
+    // workRam[0x140-0x176] with HUD strings. The cold-boot path of
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10074] = 0x00; rom.program[0x10075] = 0x01;

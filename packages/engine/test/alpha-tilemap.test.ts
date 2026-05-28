@@ -1,7 +1,6 @@
 /**
  * Test setAlphaWord (FUN_383A) + clearAlphaTilesFromIndex (FUN_28C7E).
  *
- * Bit-perfect verificati vs binary tramite `cli/src/test-alpha-tilemap-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -51,11 +50,11 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 0);
-    // Ogni byte in [0, 0xF00) deve essere 0
+    // Every byte in [0, 0xF00) must be 0.
     for (let i = 0; i < ALPHA_TILE_COUNT * 2; i++) {
       expect(s.alphaRam[i]).toBe(0);
     }
-    // Bytes da 0xF00 in poi devono restare 0xFF
+    // Bytes from 0xF00 onward must remain 0xFF.
     for (let i = ALPHA_TILE_COUNT * 2; i < s.alphaRam.length; i++) {
       expect(s.alphaRam[i]).toBe(0xFF);
     }
@@ -65,7 +64,6 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 30);
-    // Tutto deve restare 0xFF
     for (let i = 0; i < s.alphaRam.length; i++) {
       expect(s.alphaRam[i]).toBe(0xFF);
     }
@@ -75,15 +73,15 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 29);
-    // Bytes [0, 29*64*2) = [0, 0xE80) devono restare 0xFF
+    // Bytes [0, 29*64*2) = [0, 0xE80) must remain 0xFF.
     for (let i = 0; i < 29 * 64 * 2; i++) {
       expect(s.alphaRam[i]).toBe(0xFF);
     }
-    // Bytes [0xE80, 0xF00) devono essere 0
+    // Bytes [0xE80, 0xF00) must be 0.
     for (let i = 29 * 64 * 2; i < ALPHA_TILE_COUNT * 2; i++) {
       expect(s.alphaRam[i]).toBe(0);
     }
-    // Bytes [0xF00, end) devono restare 0xFF
+    // Bytes [0xF00, end) must remain 0xFF.
     for (let i = ALPHA_TILE_COUNT * 2; i < s.alphaRam.length; i++) {
       expect(s.alphaRam[i]).toBe(0xFF);
     }

@@ -1,7 +1,7 @@
 /**
  * helper-12f44.test.ts — smoke + corner cases di `helper12F44` (FUN_00012F44).
  *
- * Bit-perfect parity vs binario verificata in
+ * Bit-perfect parity vs binary verified in
  * `packages/cli/src/test-helper-12f44-parity.ts` (500/500).
  */
 
@@ -26,17 +26,17 @@ const RECT_SLOT_ABS   = 0x004001dc;
 const RECT_SLOT_STRIDE = 0x0e;
 const RECT_SLOT_COUNT  = 16;
 
-/** Scrive un byte in workRam tramite indirizzo M68k assoluto. */
+/** Writes a byte into workRam through an absolute M68k address. */
 function wb(state: ReturnType<typeof emptyGameState>, addr: number, v: number): void {
   state.workRam[addr - WRAM] = v & 0xff;
 }
 
-/** Legge un byte da workRam tramite indirizzo M68k assoluto. */
+/** Reads a byte from workRam through an absolute M68k address. */
 function rb(state: ReturnType<typeof emptyGameState>, addr: number): number {
   return (state.workRam[addr - WRAM] ?? 0) & 0xff;
 }
 
-/** Scrive un long BE in workRam tramite indirizzo M68k assoluto. */
+/** Writes a BE long into workRam through an absolute M68k address. */
 function wl(state: ReturnType<typeof emptyGameState>, addr: number, v: number): void {
   const u = v >>> 0;
   state.workRam[addr - WRAM]     = (u >>> 24) & 0xff;
@@ -45,7 +45,7 @@ function wl(state: ReturnType<typeof emptyGameState>, addr: number, v: number): 
   state.workRam[addr - WRAM + 3] =  u         & 0xff;
 }
 
-/** Legge un long BE da workRam tramite indirizzo M68k assoluto. */
+/** Reads a BE long from workRam through an absolute M68k address. */
 function rl(state: ReturnType<typeof emptyGameState>, addr: number): number {
   const o = addr - WRAM;
   return (
@@ -207,7 +207,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     setupRomLookup(rom);
-    // Riempi byte-array con un entry a slot 0 (typeCode=0xAB subIdx=0xCD)
+    // Fill byte-array with an entry at slot 0 (typeCode=0xAB subIdx=0xCD).
     const BYTE_ARRAY_OFF = 0x004003bc - WRAM;
     state.workRam[BYTE_ARRAY_OFF]     = 0x00; // slot idx 0
     state.workRam[BYTE_ARRAY_OFF + 1] = 0xff; // sentinel
@@ -225,7 +225,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
 
     helper12F44(state, rom, SLOT0, 1, 0);
 
-    // Il byte-array non deve essere toccato (FUN_18F46 non chiamata)
+    // Byte array must not be touched because FUN_18F46 is not called.
     expect(state.workRam[BYTE_ARRAY_OFF]).toBe(before[0]);
     expect(state.workRam[BYTE_ARRAY_OFF + 1]).toBe(before[1]);
   });
@@ -236,7 +236,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     setupRomLookup(rom);
 
     const BYTE_ARRAY_OFF = 0x004003bc - WRAM;
-    // Inserisci una entry nel byte-array: slot-idx 0 con typeCode=0x05, subIdx=0x02
+    // Insert an entry in the byte-array: slot-idx 0 with typeCode=0x05, subIdx=0x02.
     state.workRam[BYTE_ARRAY_OFF]     = 0x00; // slot idx 0 in draw-list
     state.workRam[BYTE_ARRAY_OFF + 1] = 0xff; // sentinel
     // Rect-slot 0 @ 0x4001DC: struct[0]=typeCode=0x05, struct[1]=subIdx=0x02
@@ -252,9 +252,9 @@ describe("helper12F44 (FUN_00012F44)", () => {
 
     helper12F44(state, rom, SLOT0, 1, 0);
 
-    // FUN_18F46 deve aver rimosso l'entry → byte-array[0] ora sentinel
+    // FUN_18F46 must have removed the entry -> byte-array[0] is now sentinel.
     expect(state.workRam[BYTE_ARRAY_OFF]).toBe(0xff);
-    // Rect-slot 0 struct[0] deve essere 0 (liberato)
+    // Rect-slot 0 struct[0] must be 0 (freed).
     expect(state.workRam[rectOff]).toBe(0x00);
   });
 
@@ -327,7 +327,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rb(state, SLOT5 + 0x18)).toBe(0x01);
     expect(rb(state, SLOT5 + 0x1a)).toBe(0x03);
     expect(rl(state, SLOT5 + 0x3a)).toBe(0xabcdef12 >>> 0);
-    // Slot 0 invariato
+    // Slot 0 unchanged.
     expect(rb(state, SLOT0 + 0x18)).toBe(0x00);
   });
 });

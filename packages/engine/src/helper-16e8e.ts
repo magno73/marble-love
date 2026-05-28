@@ -1,12 +1,11 @@
 /**
- * helper-16e8e.ts — replica bit-perfect di `FUN_00016E8E`.
+ * Bit-perfect port of `FUN_00016E8E`.
  *
- * **Funzione**: cancella le righe dell'alpha tilemap da `arg & 0xFF`
- * (inclusa) fino a `0x1E` (esclusa). Per ogni riga chiama `getAlphaTileAddr`
- * (thunk 0x224 → FUN_37E4) con col=3, row=r, poi azzera 0x24 words (72 byte)
- * a partire dall'indirizzo restituito.
+ * Clears alpha-tilemap rows from `arg & 0xff` inclusive up to `0x1E`
+ * exclusive. Each row asks `getAlphaTileAddr` (thunk 0x224 -> FUN_37E4) for
+ * column 3, then clears 0x24 words starting at the returned address.
  *
- * **Disassembly completo** (FUN_00016E8E, 25 istruzioni):
+ * Full disassembly sketch:
  *
  *   00016e8e    move.l  D2,-(SP)           ; save D2
  *   00016e90    move.w  (0xa,SP),D0w       ; D0w = low word of arg
@@ -39,17 +38,15 @@
  *   00016ec2    move.l  (SP)+,D2           ; restore D2
  *   00016ec4    rts
  *
- * **Argomento stack**: long pushed via `pea` or `move.l`:
+ * Stack argument: long pushed via `pea` or `move.l`:
  *   - `move.w (0xa,SP),D0w` → reads low word of the long at stack offset 10
  *     (= 4 bytes saved D2 + 4 bytes return addr + 2 byte word alignment pad).
- *     Effettivamente: low word → low byte usato come `startRow`.
+ *     The low byte is the effective `startRow`.
  *
- * **Side effects**: azzera parole di `alphaRam` dall'indirizzo calcolato da
- *   `getAlphaTileAddr(col=3, row=r)` per ogni riga r in [startRow, 0x1E).
+ * Side effects: clears words in `alphaRam` starting at the address returned by
+ * `getAlphaTileAddr(col=3, row=r)` for each row in [startRow, 0x1E).
  *
- * **Nota**: l'inner loop esegue `clr.w (A0)+` — scrive 0 a word e avanza A0.
- *   Se A0 punta dentro alphaRam (0xA03000-0xA03FFF), le scritture finiscono in
- *   `state.alphaRam`. Scritture out-of-range vengono silenziate.
+ * Out-of-range writes are ignored because this port models only alpha RAM.
  *
  * **Callers**:
  *   - `FUN_00010504` @ `0x10E9C`: `pea (0x4).w` → startRow=4
@@ -69,11 +66,11 @@ export const GET_ALPHA_TILE_ADDR_THUNK = 0x00000224 as const;
 
 export interface Helper16E8ESubs {
   /**
-   * `FUN_37E4` via thunk `0x224` — calcola l'indirizzo alpha tile per
+   * `FUN_37E4` via thunk `0x224`: compute the alpha-tile address for
    * (col=3, row=r). Default: `getAlphaTileAddr(state, rom, col, row)`.
    *
    * Signature M68K: getAlphaTileAddr(col: number, row: number) → address.
-   * Qui wrapped come TypeScript: (state, rom, col, row) → number.
+   * TypeScript wrapper: (state, rom, col, row) → number.
    */
   getAlphaTileAddr?: (
     state: GameState,
@@ -86,17 +83,16 @@ export interface Helper16E8ESubs {
 // ── Main function ─────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00016E8E`.
+ * Clear alpha-tilemap rows from `arg & 0xff` up to `0x1E` exclusive.
  *
- * Cancella le righe dell'alpha tilemap da `arg & 0xFF` fino a `0x1E` (escl.).
- * Per ogni riga r:
+ * For each row:
  *  1. `addr = getAlphaTileAddr(col=3, row=r)` (via thunk 0x224)
- *  2. Scrive 0x24 word a zero da `addr` (= 72 byte)
+ *  2. Write 0x24 zero words starting at `addr` (72 bytes).
  *
- * @param state   GameState — `alphaRam` viene azzerata nelle righe target.
- * @param rom     ROM image — richiesta da `getAlphaTileAddr` per la shift table @ 0x72A4.
- * @param arg     Long stack arg (il binario usa il low byte come startRow).
- * @param subs    Injection per la JSR non-replicata (default: usa `getAlphaTileAddr`).
+ * @param state Game state; target rows in `alphaRam` are cleared.
+ * @param rom ROM image used by `getAlphaTileAddr`.
+ * @param arg Long stack argument; the binary uses its low byte as startRow.
+ * @param subs Optional injection for the JSR target.
  */
 export function helper16E8E(
   state: GameState,

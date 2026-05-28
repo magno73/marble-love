@@ -4,13 +4,11 @@
  * `waypointListStep1815A`.
  *
  * FUN_0001815A (352 byte): "entity homing-via-waypoint-list step". Walka la
- * lista globale `*(0x400446)` → 4-byte records `(sx,sy,sm,sound)` consumando
- * record in range, applicando velocità verso waypoint quando out-of-range.
  *
  * **Strategia parity**:
- *   - `FUN_0000012a` (sound dispatch) **stubbato con RTS** (0x4E75) per
+ *   - `FUN_0000012a` (sound dispatch) **stubbed with RTS** (0x4E75) for
  *     neutralizzare side effects. TS usa `subs.fun_012a = noop`.
- *   - `FUN_00026196` (flag-scaled magnitude dispatch) **stubbato con RTS**.
+ *   - `FUN_00026196` (flag-scaled magnitude dispatch) **stubbed with RTS**.
  *     TS usa `subs.fun_26196 = noop`.
  *   - Compare:
  *       * `entity[0x00..0x6F]` (0x70 byte = full entity stride, copre 0x6e)
@@ -20,9 +18,6 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — entity + lista random
- *   - B: in-range path forzato (target_x/y vicino a sx<<19+0x40000)
- *   - C: out-of-range path forzato (target lontano)
- *   - D: edge cases (gravity flag, sm boundaries, lista vuota/lunga)
  *
  * Uso: npx tsx packages/cli/src/test-waypoint-list-step-1815a-parity.ts [N]
  */
@@ -208,12 +203,6 @@ async function main(): Promise<void> {
       fun_26196: () => {
         /* RTS = no-op */
       },
-      // Sound table lookup non importa: la sub_012a è no-op, quindi il
-      // valore letto non viene usato dalla side-effect simulation; ma
-      // attenzione: la lettura `*(0x242aa + idx*4)` accade dentro il binary
-      // sul cpu Musashi (legge ROM). Per la nostra TS replica è solo passato
-      // alla callback, che è no-op. Quindi qualunque valore va bene per
-      // parity (mai osservato).
       lookupSoundTable: () => 0,
     });
     const tsSnap = snapshotTs(stateInst);
@@ -264,7 +253,7 @@ async function main(): Promise<void> {
   }
 
   // Genera lista valida: N record (sx != 0 per non-terminator) + terminator.
-  // sx in [-128, -1] ∪ [1, 127] per evitare 0.
+  // sx in [-128, -1] U [1, 127] to avoid 0.
   function genList(nRecords: number): number[] {
     const list = new Array(LIST_SIZE).fill(0);
     for (let i = 0; i < nRecords && i * 4 < LIST_SIZE - 4; i++) {
@@ -278,7 +267,6 @@ async function main(): Promise<void> {
       list[i * 4 + 2] = rb();
       list[i * 4 + 3] = rb();
     }
-    // Il record dopo gli N è già 0 (terminator).
     return list;
   }
 
@@ -296,7 +284,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: in-range forzato ─────────────────────────────────────────
+  // ─── Suite B: forced in-range ─────────────────────────────────────────
   console.log(
     `\n=== Suite B: in-range forzato (target ≈ sx<<19) — ${perSuite} casi ===`,
   );
@@ -313,7 +301,7 @@ async function main(): Promise<void> {
     entity[0x11] = 0x0c;
     entity[0x12] = 0x00;
     entity[0x13] = 0x00;
-    // Costruisci lista con sx=sy=1 (in range)
+    // Build list with sx=sy=1 (in range).
     const list = new Array(LIST_SIZE).fill(0);
     const nRec = 1 + (i % 4);
     for (let j = 0; j < nRec; j++) {
@@ -328,7 +316,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: out-of-range forzato ───────────────────────────────────
+  // ─── Suite C: forced out-of-range ────────────────────────────────────
   console.log(
     `\n=== Suite C: out-of-range forzato (target=0, sx grande) — ${perSuite} casi ===`,
   );
@@ -352,7 +340,7 @@ async function main(): Promise<void> {
     if (list[0] === 0) list[0] = 0x10;
     list[1] = 0x10 + (i & 0x7e);
     list[2] = rb();
-    list[3] = (i & 1) === 0 ? 0x7f : 0xff; // varia segno
+    list[3] = (i & 1) === 0 ? 0x7f : 0xff;
     if (runOneCase("C", i, entity, list, LIST_BASE, 0)) okC++;
   }
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);

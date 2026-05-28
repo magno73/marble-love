@@ -10,7 +10,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
 
     let off = 6;
     for (let outer = 0; outer < 64; outer++) {
-      // 72 byte azzerati
+      // 72 bytes zeroed.
       for (let i = 0; i < 72; i++) {
         expect(s.playfieldRam[off + i]).toBe(0);
       }
@@ -36,7 +36,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     let off = 6;
     for (let outer = 0; outer < 64; outer++) {
       // 56 byte saltati (offset 72..127 relativo all'inizio dell'iterazione),
-      // solo se dentro i limiti dell'array (l'ultima iterazione tocca il fondo)
+      // Only when inside array bounds; the last iteration touches the end.
       for (let i = 72; i < 128; i++) {
         const idx = off + i;
         if (idx < s.playfieldRam.length) {

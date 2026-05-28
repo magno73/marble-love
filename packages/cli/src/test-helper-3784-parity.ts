@@ -2,28 +2,28 @@
 /**
  * test-helper-3784-parity.ts — differential FUN_3784 vs `helper3784`.
  *
- * `FUN_00003784` (38 istr): calcola un indirizzo nell'alpha tilemap
- * (0xA03000) a partire da (y, x, rotation) e scrive `attr | orMask` come
- * word big-endian. Funzione primitiva "draw cell" usata da FUN_5D2A,
+ * `FUN_00003784` (38 instructions): computes an address in the alpha tilemap
+ * (0xA03000) from (y, x, rotation) and writes `attr | orMask` as
+ * big-endian word. Primitive "draw cell" function used by FUN_5D2A,
  * FUN_5688, FUN_22A4.
  *
  * **Strategia parity**:
  *   - Binario: chiamo `FUN_3784(y, x, attr, orMask)` via `callFunction`
- *     con 4 long args. Prima della call azzero alpha RAM. Dopo la call
- *     leggo D0 e confronto alpha RAM byte-by-byte (il binario scrive al
+ *     with 4 long args. Alpha RAM is cleared before the call. After the call
+ *     read D0 and compare alpha RAM byte-by-byte (the binary writes to
  *     massimo 2 byte).
  *   - TS: chiamo `helper3784(state, rom, y, x, attr, orMask)`. Confronto
- *     D0 restituito e lo stesso sottoinsieme di alpha RAM.
+ *     returned D0 and the same alpha RAM subset.
  *
- * **Copertura** (500 casi, 4 suite × 125):
+ * **Coverage** (500 cases, 4 suites x 125):
  *   - A: rotation = 0, x/y random, attr random, orMask=0
  *   - B: rotation in [1..3], x/y random, attr/orMask random
  *   - C: x/y negativi (sign-ext, byte range 0x80..0xFF), rotation=0
  *   - D: rotation=0, test shift count edge: x=±1 al boundary, orMask != 0
  *
  * **Setup**:
- *   - `0x401F42` (rotation word): impostato prima di ogni call.
- *   - Alpha RAM: azzerata prima di ogni call (binario e TS).
+ *   - `0x401F42` (rotation word): set before every call.
+ *   - Alpha RAM: cleared before every call (binary and TS).
  *   - ROM: caricata da ghidra_project/marble_program.bin.
  *
  * Uso: npx tsx packages/cli/src/test-helper-3784-parity.ts [N=500]
@@ -65,7 +65,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Azzera alpha RAM nel binario e nel TS state. */
+/** Clear alpha RAM in the binary and TS state. */
 function clearAlphaRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -76,7 +76,7 @@ function clearAlphaRam(
   }
 }
 
-/** Imposta rotation word (2 byte BE) nel binario e nel TS state. */
+/** Set the rotation word (2 BE bytes) in the binary and TS state. */
 function setRotation(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -95,8 +95,8 @@ interface Diff {
 }
 
 /**
- * Confronta alpha RAM (binario vs TS state) e D0.
- * Ritorna il primo mismatch trovato, o null se tutto ok.
+ * Compare alpha RAM (binary vs TS state) and D0.
+ * Return the first mismatch found, or null if everything matches.
  */
 function compareState(
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -108,7 +108,7 @@ function compareState(
   if ((binD0 >>> 0) !== (tsD0 >>> 0)) {
     return { field: "D0", bin: binD0 >>> 0, ts: tsD0 >>> 0 };
   }
-  // Confronta alpha RAM (solo i bytes effettivamente diversi da 0 in uno dei due)
+  // Compare alpha RAM: only bytes that are non-zero in either side.
   for (let i = 0; i < ALPHA_SIZE; i++) {
     const b = peekMem(cpu, ALPHA_RAM_BASE + i, 1);
     const t = state.alphaRam[i] ?? 0;

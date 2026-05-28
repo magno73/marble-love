@@ -1,24 +1,17 @@
 /**
- * string-step-1725a.ts — replica `FUN_0001725A` (38 byte).
+ * string-step-1725a.ts - `FUN_0001725A` replica (38 bytes).
  *
- * "String animation step": chiamato da `dispatchStrings17230` per ognuno dei
- * 7 slot stringa @ workRam[0x401482..]. Avanza l'animazione di un singolo
  * slot:
  *
- *   1. Skip se slot+0x18 == 0 (slot vuoto).
- *   2. Incrementa frame counter slot+0x24. Se non raggiunge soglia slot+0x25,
- *      dispatcha solo a `computeSpriteCoords_v3` (FUN_1778E) ed esce.
- *   3. Reset slot+0x24, normalizza slot+0x25 a [0,2].
- *   4. Avanza il cursor slot+0x3A di 4 byte. Se la nuova entry punta a 0xFFFFFFFF
- *      (terminator), reload da slot+0x3E (loop start) e applica delta vel→pos
+ *   2. Increment frame counter slot+0x24. If it does not reach threshold
+ *      slot+0x25, dispatch only to `computeSpriteCoords_v3` (FUN_1778E) and exit.
+ *   3. Reset slot+0x24, normalize slot+0x25 to [0,2].
+ *   4. Advance cursor slot+0x3A by 4 bytes. If the new entry points to 0xFFFFFFFF
+ *      (terminator), reload from slot+0x3E (loop start) and apply delta vel->pos
  *      (slot+0x0C += slot+0x00, slot+0x10 += slot+0x04).
- *   5. Se il loop è scattato → chiama `entityWaypointStep1D1EC` (FUN_1D1EC).
- *   6. Sempre: chiama `computeSpriteCoords_v3` (FUN_1778E) come step finale.
  *
- * **Note bit-perfect**:
- *   - L'address del cursor `slot+0x3A` punta a una table ROM (string animation
- *     records 4-byte). La cmp.l (a0) deve leggere da ROM se a0 < 0x80000.
- *   - Il valore `D0=0xFFFFFFFF` (moveq #-1) è il marker terminator.
+ *   - Cursor address `slot+0x3A` points to a ROM table (4-byte string animation
+ *     records). cmp.l (a0) must read from ROM when a0 < 0x80000.
  */
 
 import type { GameState } from "./state.js";
@@ -52,15 +45,10 @@ function wl(buf: Uint8Array, o: number, v: number): void {
 }
 
 /**
- * Replica bit-perfect di `FUN_0001725A`.
  *
- * @param state    GameState (mutato in-place sui byte del slotPtr).
- * @param slotPtr  Indirizzo assoluto M68k del slot (es. 0x401482).
- *                 Range valido: workRam (0x400000..0x401FFF).
- * @param rom      Optional RomImage per leggere il valore @ cursor (slot+0x3A
- *                 può puntare a ROM table). Se omesso e cursor punta a ROM,
- *                 la cmp produce sempre `bne` (= != 0xFFFFFFFF) — comportamento
- *                 conservativo.
+ * @param state    GameState (mutates slotPtr bytes in place).
+ *                 Valid range: workRam (0x400000..0x401FFF).
+ *                 Conservative.
  */
 export function stringStep1725A(
   state: GameState,
@@ -77,7 +65,6 @@ export function stringStep1725A(
   wb(r, off + 0x24, rb(r, off + 0x24) + 1);
 
   // 0x01726c..0x017274: move.b 0x25(a2), D0; cmp.b 0x24(a2), D0; bgt → 172b4
-  // bgt signed: salta se D0 > slot+0x24 (signed byte).
   const sx8 = (v: number): number => (v & 0x80 ? v - 0x100 : v);
   const d0_25 = sx8(rb(r, off + 0x25));
   const c24 = sx8(rb(r, off + 0x24));
@@ -101,7 +88,6 @@ export function stringStep1725A(
   wl(r, off + 0x3a, new3a);
 
   // 0x01728c..0x017294: A0 = *0x3a; cmp.l (A0), 0xFFFFFFFF; bne → 172b4
-  // *A0 può puntare a ROM (string animation records).
   let valAtA0: number;
   if (new3a < 0x80000) {
     if (rom !== undefined) {

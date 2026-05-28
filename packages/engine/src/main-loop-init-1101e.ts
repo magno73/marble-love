@@ -521,6 +521,7 @@ function case3(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
         const started = startHighScoreInitialsEntry(renderState, objectAddr, rank, recordAddr);
         if (started) {
           renderState.playfieldRam.fill(0);
+          renderState.spriteRam.fill(0);
           helper11FF8Default(renderState, activeRom);
         }
         return started;

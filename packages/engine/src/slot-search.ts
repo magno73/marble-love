@@ -1,12 +1,12 @@
 /**
  * slot-search.ts — `FUN_00014BCE` (62 byte) + `FUN_00014C0C` (58 byte).
  *
- * - **FUN_14BCE — `findFreeSlotInTable()`**: scansiona 4 entry struct
- *   pointers da ROM table @ 0x1F006 (stride 4). Per ogni: se byte+0x18==0
- *   (free), salva. Returns last free slot address (o -1).
+ * - **FUN_14BCE — `findFreeSlotInTable()`**: scans 4 entry struct
+ *   pointers from ROM table @ 0x1F006 (stride 4). For each: if byte+0x18==0
+ *   (free), save it. Returns the last free slot address (or -1).
  *
- * - **FUN_14C0C — `slotMatchesPtr(arg)`**: scansiona array @ 0x401302
- *   stride 0x60, 4 entries. Returns 1 se trova match (byte+0x18 != 0 AND
+ * - **FUN_14C0C — `slotMatchesPtr(arg)`**: scans array @ 0x401302
+ *   stride 0x60, 4 entries. Returns 1 if it finds a match (byte+0x18 != 0 AND
  *   *(slot+0x4E) == *(arg+2)), else 0.
  */
 

@@ -1,10 +1,10 @@
 /**
  * decode-bitstream-1a668.test.ts — smoke test di FUN_0001A668.
  *
- * Bit-perfect parity vs binario in
+ * Bit-perfect parity vs binary in
  * `packages/cli/src/test-decode-bitstream-1a668-parity.ts`. Qui copriamo i 5
  * path principali (A, B, C, D, E) e gli edge case (cache reload, A3 advance,
- * output overshoot) senza Musashi.
+ * output overshoot) without Musashi.
  */
 
 import { describe, it, expect } from "vitest";
@@ -46,7 +46,7 @@ function readOutWord(s: GameState, outOff: number, wordIdx: number): number {
   return ((s.workRam[o]! << 8) | s.workRam[o + 1]!) & 0xffff;
 }
 
-/** Setup ROM lookup tables 1 e 2 con valori predicibili. */
+/** Set up ROM lookup tables 1 and 2 with predictable values. */
 function setupRomTables(rom: RomImage, t1: number[], t2: number[]): void {
   for (let i = 0; i < t1.length; i++) {
     const v = t1[i]! & 0xffff;
@@ -68,15 +68,15 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     const outAbs = WORK_RAM_BASE + 0x100;
     const ctrlAbs = WORK_RAM_BASE + 0x200;
     const extAbs = WORK_RAM_BASE + 0x300;
-    // Ctrl region zero → ogni token = 0 → path B con cnt=0 (1 word per token).
-    // Extra stream: count=0xFF, value=0x10 → D2 ricarica solo all'inizio,
-    // poi conta giu' fino a -1 (ma 0xFF iter sono piu' che le 36 attese).
+    // Zero ctrl region -> every token = 0 -> path B with cnt=0 (1 word per token).
+    // Extra stream: count=0xFF, value=0x10 -> D2 reloads only at the start,
+    // then counts down to -1 (but 0xFF iters are more than the expected 36).
     setBytes(s, 0x300, [0xff, 0x10]);
 
     decodeBitstream1A668(s, rom, outAbs, ctrlAbs, extAbs);
 
     // Output: 36 word = 0x1001, 0x1002, ..., 0x1024.
-    // D6 inizia 0, ogni iter D6++ poi out = D6 + 0x1000.
+    // D6 starts at 0; every iter D6++, then out = D6 + 0x1000.
     for (let i = 0; i < OUTPUT_LEN_WORDS; i++) {
       expect(readOutWord(s, 0x100, i)).toBe((0x1001 + i) & 0xffff);
     }
@@ -89,11 +89,11 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     const ctrlAbs = WORK_RAM_BASE + 0x200;
     const extAbs = WORK_RAM_BASE + 0x300;
     // Token1: bit 13 set + low bits 0x010.
-    //   14-bit token = 0x2010. dopo bclr #13 → 0x10. asr.w #1 → 0x8.
+    //   14-bit token = 0x2010. After bclr #13 -> 0x10. asr.w #1 -> 0x8.
     //   bit 0 era 0 → carry CLEAR → D6 NON aggiornato.
     //   add D3 = 0x1500 (da extra stream 0x15) → out = 0x1508.
-    // Token2..onwards: zero → path B (consecutivi). D6 inizia da 0 (mai
-    //   aggiornato in path A perche' bit 0 di token era 0).
+    // Token2..onwards: zero -> path B (consecutive). D6 starts from 0 (never
+    //   updated in path A because token bit 0 was 0).
     // Long ctrl @ +0: bit 31..18 = 10 0000 0001 0000 → 0x80400000.
     //   bit 17..0 = zero. Quindi long = 0x80400000.
     setLongs(s, 0x200, [0x80400000, 0x00000000, 0x00000000]);
@@ -103,7 +103,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
 
     // Out[0] = 0x8 + 0x1500 = 0x1508 (path A, single literal).
     expect(readOutWord(s, 0x100, 0)).toBe(0x1508);
-    // Out[1..35] da path B: D6 era 0, dopo path A NON aggiornato (bit 0 = 0).
+    // Out[1..35] from path B: D6 was 0, not updated after path A (bit 0 = 0).
     //   Ogni path B iter D6++ → 1, 2, 3, ... 35. Output = D6 + 0x1500.
     for (let i = 1; i < OUTPUT_LEN_WORDS; i++) {
       expect(readOutWord(s, 0x100, i)).toBe((i + 0x1500) & 0xffff);
@@ -240,7 +240,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     const ctrlAbs = WORK_RAM_BASE + 0x200;
     const extAbs = WORK_RAM_BASE + 0x300;
     // Token: D5 = 0x1480 → bits 12..10 = 101 (0x1400 path E), bits 9..7 = 001 (cnt=1).
-    // cnt=1 → 2 iter. bit 10 set → D5 inizia 0x4D.
+    // cnt=1 -> 2 iters. bit 10 set -> D5 starts at 0x4D.
     // Iter1: out = 0x4D + 0x3000 = 0x304D. D5 ^= 3 = 0x4E.
     // Iter2: out = 0x4E + 0x3000 = 0x304E. D5 ^= 3 = 0x4D.
     // Long: 0x1480 << 18 = 0x52000000.
@@ -267,8 +267,8 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
 
     decodeBitstream1A668(s, rom, outAbs, ctrlAbs, extAbs);
 
-    // Range scrivibile atteso: [outOff..outOff + 0x48 + overshoot_max).
-    // Overshoot max = 7 word = 14 byte (path B/D/E ultima iter puo' produrre 8 word).
+    // Expected writable range: [outOff..outOff + 0x48 + overshoot_max).
+    // Max overshoot = 7 words = 14 bytes (last path B/D/E iter can produce 8 words).
     const writeStart = 0x100;
     const writeEnd = 0x100 + 0x48 + 14;
     for (let i = 0; i < s.workRam.length; i++) {

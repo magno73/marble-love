@@ -26,7 +26,7 @@ function writeU32Rom(rom: RomImage, off: number, v: number): void {
   rom.program[off + 3] = v & 0xff;
 }
 
-/** Popola la tabella slot-ptr ROM @0x1F016 (25 entries → @0x400A9C stride 0x56). */
+/** Populates ROM slot-ptr table @0x1F016 (25 entries -> @0x400A9C stride 0x56). */
 function setupSlotPtrTable(rom: RomImage): void {
   for (let i = 0; i < 25; i++) {
     writeU32Rom(rom, 0x1f016 + i * 4, 0x400a9c + i * 0x56);
@@ -51,13 +51,13 @@ function writeRectEnd(rom: RomImage, off: number): void {
   rom.program[off] = 0xff;
 }
 
-/** Selector @0x400394 (word). Punta alla rect-list ptr in 0x1DEC0+(sel*4). */
+/** Selector @0x400394 (word). Points to rect-list ptr in 0x1DEC0+(sel*4). */
 function setSelector(s: ReturnType<typeof emptyGameState>, selWord: number): void {
   s.workRam[0x394] = (selWord >>> 8) & 0xff;
   s.workRam[0x395] = selWord & 0xff;
 }
 
-/** Imposta in ROM il puntatore alla rect-list (entry @0x1DEC0+(sel*4)). */
+/** Sets the rect-list pointer in ROM (entry @0x1DEC0+(sel*4)). */
 function setRectListPtr(rom: RomImage, sel: number, ptr: number): void {
   writeU32Rom(rom, 0x1dec0 + (sel & 0xffff) * 4, ptr);
 }
@@ -117,7 +117,7 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     writeRect(rom, 0x20000, 0x05, 0x14, 0xdeadbeef);
     writeRectEnd(rom, 0x20006);
 
-    // D2=0x10 (=16, in [5,20]) → skip. D3=0x05 (passa D3 check).
+    // D2=0x10 (=16, in [5,20]) -> skip. D3=0x05 passes the D3 check.
     const before = new Uint8Array(s.workRam);
     scriptRectDispatch12DFA(s, rom, 0x10, 0x05);
     expect(s.workRam).toEqual(before);
@@ -148,7 +148,7 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     setRectListPtr(rom, 0, 0x20000);
     writeRectEnd(rom, 0x20000); // niente spawn
 
-    // Pre-popola slot 7 come occupato con 0x52=0x000A (=10), 0x54=0x0050 (=80).
+    // Prepopulate slot 7 as occupied with 0x52=0x000A (=10), 0x54=0x0050 (=80).
     const slotIdx = 7;
     const slotOff = (0x400a9c + slotIdx * 0x56) - WORK_RAM_BASE;
     s.workRam[slotOff + 0x18] = 0x01;

@@ -1,8 +1,5 @@
 /**
- * array-9-clear-and-dispatch.test.ts — smoke + corner case di FUN_190EE.
  *
- * Bit-perfect parity verificata vs binary in
- * `cli/src/test-array-9-clear-and-dispatch-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -20,7 +17,6 @@ import { emptyGameState } from "../src/state.js";
 describe("array9ClearAndDispatch (FUN_190EE)", () => {
   it("invoca la callback 9 volte coi pointer entry deterministici e azzera il flag 0x18 di ognuno", () => {
     const s = emptyGameState();
-    // Pre-popola flag = 0xFF e i campi 0x19/0x25 con marker univoci per entry.
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
       s.workRam[off + FLAG_OFFSET] = 0xff;
@@ -34,22 +30,18 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
       },
     });
 
-    // 9 chiamate
     expect(calls).toHaveLength(ARRAY_COUNT);
     // arg1 = sign-ext di entry[0x25], arg2 = sign-ext di entry[0x19]
     for (let i = 0; i < ARRAY_COUNT; i++) {
       expect(calls[i]!.a1).toBe(0x20 + i);
       expect(calls[i]!.a2).toBe(0x10 + i);
     }
-    // Tutti i flag 0x18 azzerati
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
       expect(s.workRam[off + FLAG_OFFSET]).toBe(0);
-      // Campi 0x19 e 0x25 NON toccati
       expect(s.workRam[off + FIELD_19_OFFSET]).toBe(0x10 + i);
       expect(s.workRam[off + FIELD_25_OFFSET]).toBe(0x20 + i);
     }
-    // Sanity: costanti come da binario
     expect(ARRAY_BASE).toBe(0x00401890);
     expect(ARRAY_STRIDE).toBe(0x28);
     expect(ARRAY_COUNT).toBe(9);
@@ -60,7 +52,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
       s.workRam[off + FLAG_OFFSET] = 0xab;
-      // Marker che NON deve cambiare
+      // Marker that must not change.
       s.workRam[off + 0x00] = 0x55 ^ i;
       s.workRam[off + 0x27] = 0xcc ^ i;
     }
@@ -107,7 +99,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
-      // marker univoco nel byte 0x19 (positivo per evitare sign-ext)
+      // Unique marker in byte 0x19 (positive to avoid sign-extension).
       s.workRam[off + FIELD_19_OFFSET] = i + 1;
     }
     const seen: number[] = [];
@@ -137,19 +129,15 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     const s = emptyGameState();
     array9ClearAndDispatch(s, {
       fun_18f46: (_a1, _a2, state) => {
-        // Marker su un offset diverso da 0x18 (non azzerato dal loop)
-        // — scrive su TUTTE le entry per ogni call (overwrite multiplo).
         for (let i = 0; i < ARRAY_COUNT; i++) {
           const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
           state.workRam[off + 0x05] = 0xab;
         }
       },
     });
-    // Tutti i marker presenti
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
       expect(s.workRam[off + 0x05]).toBe(0xab);
-      // E 0x18 azzerato (clear è eseguito anche dopo l'ultima call iter precedente)
       expect(s.workRam[off + FLAG_OFFSET]).toBe(0);
     }
   });

@@ -4,27 +4,15 @@
  *
  * `FUN_00025E7C` (51 istr, 0x25E7C–0x25FC0):
  *   "velocity friction/damping" — applica un fattore di attrito a due
- *   componenti di velocità vx @ A0[+0] e vy @ A0[+4], lette e scritte
- *   come long signed in work RAM. Il fattore è interpolato da una tabella
- *   ROM a 16 word in base alla magnitudine approssimata della velocità,
- *   con 5 curve di risposta selezionabili via parametro `mode`.
+ *   with 5 response curves selected by the `mode` parameter.
  *
  * **Calling convention** (RTL, 2 long):
  *   - arg1 (SP+4) = objPtr → A0
- *   - arg2 (SP+8) = mode   → D1b (solo byte basso)
  *
  * **Strategia parity**:
- *   1. Per ogni caso: randomizza vx, vy (interi long signed), mode (0..4).
- *   2. Scrivi identici valori in Musashi (pokeMem) e in tsState.workRam.
- *   3. Esegui binario via callFunction(cpu, FUN_25E7C, [objPtr, mode]).
  *   4. Esegui TS via helper25E7C(state, objPtr, mode).
- *   5. Confronta long @ objPtr+0 e @ objPtr+4.
  *
  * **Edge cases** inclusi:
- *   - vx=0, vy=0 (tutti i modi)
- *   - velocità positive, negative, miste
- *   - mode fuori range (> 4) → cade nel default
- *   - vx molto grande (vicino a 0x7FFFFFFF)
  *
  * Uso: npx tsx packages/cli/src/test-helper-25e7c-parity.ts [N]
  */

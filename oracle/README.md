@@ -1,62 +1,68 @@
-# Oracle harness — MAME come ground truth
+# Oracle Harness - MAME As Ground Truth
 
-## Cosa fa
+## Purpose
 
-Lancia MAME emulando Atari System 1 / Marble Madness, gli inietta input scriptati da uno scenario, dumpa lo stato del game state ogni frame in `traces/oracle_<scenario>.jsonl`.
+The oracle harness launches MAME for Atari System 1 / Marble Madness, injects
+scripted scenario input, and dumps game state every frame to
+`traces/oracle_<scenario>.jsonl`.
 
-Schema del trace: definito in [`packages/engine/src/trace.ts`](../packages/engine/src/trace.ts) (variabile `TRACE_SCHEMA_VERSION`). **Lo schema deve combaciare al byte tra Lua dumper e CLI runner.**
+The trace schema is defined in
+[`packages/engine/src/trace.ts`](../packages/engine/src/trace.ts) through
+`TRACE_SCHEMA_VERSION`. The Lua dumper and CLI runner must match the schema
+byte-for-byte.
 
-## Prerequisiti
+## Requirements
 
-- MAME ≥ 0.279 (testato con 0.286). Verifica: `mame -version`.
-- ROM `marble.zip` in `roms/` (l'utente la fornisce).
-- Lua scripting abilitato in MAME (di default sì in build standard).
+- MAME 0.279 or newer, tested with 0.286. Check with `mame -version`.
+- User-provided `marble.zip` in `roms/`.
+- Lua scripting enabled in MAME, which is the default for standard builds.
 
-## Uso
+## Usage
 
 ```bash
-# Run base
+# Base run
 node --experimental-strip-types oracle/run_oracle.ts \
     --scenario attract_mode --frames 1800
 
-# Path ROM custom
+# Custom ROM path
 node --experimental-strip-types oracle/run_oracle.ts \
     --scenario level1_no_input --rom-path /path/to/roms
 
-# Output esplicito
+# Explicit output
 node --experimental-strip-types oracle/run_oracle.ts \
     --scenario level1_no_input --out traces/run_001.jsonl
 ```
 
-## Determinismo
+## Determinism
 
-Determinismo MAME è il **prerequisito non-negoziabile** del Phase 3 (PRD §6 acceptance):
+MAME determinism is a hard prerequisite for oracle work:
 
 ```bash
-# Stesso scenario, due volte → diff bit-identico
+# Same scenario twice should produce a bit-identical diff.
 node --experimental-strip-types oracle/run_oracle.ts -s attract_mode -o /tmp/a.jsonl
 node --experimental-strip-types oracle/run_oracle.ts -s attract_mode -o /tmp/b.jsonl
-diff /tmp/a.jsonl /tmp/b.jsonl   # deve essere vuoto
+diff /tmp/a.jsonl /tmp/b.jsonl
 ```
 
-Se il diff non è vuoto, verifica:
-- `-throttle 0` / `-nothrottle` attivo (deve esserlo, lo passa il wrapper)
-- Niente input asincroni (joystick fisico, mouse) durante il run
-- Random seed pinned: TBD in Phase 3 (potrebbe servire patch al Lua dumper per scrivere RAM)
+If the diff is not empty, check:
 
-## Inspect manuale
+- `-throttle 0` / `-nothrottle` is active. The wrapper passes this by default.
+- No asynchronous physical joystick or mouse input is active during the run.
+- Random seed handling is pinned or explicitly documented for the scenario.
+
+## Manual Inspection
 
 ```bash
 node --experimental-strip-types oracle/replay_trace.ts traces/oracle_level1_no_input.jsonl --from 0 --to 300
 ```
 
-## Scenari disponibili
+## Available Scenarios
 
-- `attract_mode` — power-on, niente input
-- `level1_no_input` — coin/start, livello 1, biglia rotola
-- `level1_basic_movement` — coin/start, livello 1, pattern di movimento base
+- `attract_mode`: power-on with no input.
+- `level1_no_input`: coin/start, level 1, marble rolls without input.
+- `level1_basic_movement`: coin/start, level 1, basic scripted movement.
 
-Aggiungere nuovi scenari in `oracle/scenarios/<name>.json`. Format:
+Add new scenarios under `oracle/scenarios/<name>.json`:
 
 ```json
 {

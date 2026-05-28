@@ -3,19 +3,13 @@
  * test-helper-121b8-parity.ts — differential `FUN_000121B8` vs `helper121B8`.
  *
  * `FUN_000121B8` (1634 byte): "object physics-update + collision + state-
- * dispatch". Prende un puntatore all'object struct in work RAM, integra la
- * posizione, esegue collision detection e dispatcha la logica di stato via
- * una catena di sotto-funzioni specializzate.
  *
  * **Strategia parity — stub integrale**:
- *   Tutti i callee di FUN_121B8 vengono stubbati con RTS (0x4E75) nel binario
- *   Musashi. Questo permette di isolare la logica PURA di FUN_121B8:
  *   - velocity integration (add.l)
  *   - bounds checking (swapLongPair via jsr $12886)
- *   - state byte dispatch (vectorScale condizionale → anche stubbato)
+ *   - state byte dispatch (conditional vectorScale, also stubbed)
  *   - write-back ai globals (0x400684/688/68C, 0x40069A/9C, 0x400696/698)
  *
- *   Callee stubbati con RTS nel binario (→ no-op/returns-0 nel TS):
  *     FUN_1BAB2  FUN_1CC62  FUN_1C676  FUN_12886  FUN_1B5C2
  *     FUN_29CCE  FUN_1BC88  FUN_14E92  FUN_175C8  FUN_1881C
  *     FUN_1924E  FUN_19D94  FUN_1365C  FUN_160F6  FUN_1B9CC
@@ -23,28 +17,15 @@
  *     FUN_18E6C  FUN_25BAE  FUN_15884  FUN_158AC  FUN_15BD0
  *     FUN_25DF6  FUN_25E7C  FUN_285B0  FUN_264AA
  *
- *   Con tutti i callee patchati a RTS:
- *   - D0 post-jsr è il valore che D0 aveva PRIMA della chiamata.
- *   - Questo significa che il confronto `d0 <= 0x100000` per scegliere
- *     in/out-of-range dipende dall'ultimo valore di D0, che il binario
- *     porta da prima della sequenza (tipicamente da `moveq #0xFF,D0` →
- *     D0 = 0xFF durante i write delle globals).
- *   - Per garantire parità, dobbiamo seguire la stessa logica nel TS.
- *     Il test usa casi dove il percorso è deterministico.
+ *     D0 = 0xFF during global writes).
  *
  * **Strategia parity alternativa per i sub-callee non stubbabili**:
- *   Per FUN_12886 (swapLongPair) che NON ha side effects su MMIO ed è
- *   bit-perfect, lo lasciamo NON stubbato per testare anche il bounce-path.
- *   Questo richiede che la condizione di bounce sia controllata dai test data.
  *
  * **Compare**:
- *   * `obj[0x00..0x5F]` (0x60 byte, copre tutti i campi dell'object struct)
- *   * globals `[0x400660..0x4006A4]` (0x44 byte, tutti i globali toccati)
  *   * game-mode word `[0x400394]` (2 byte)
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random — tutti i sub stubbati, percorso deterministico
- *   - B: "in-range" forzato — z piccolo, vz=0, bounce NON attivato
+ *   - B: forced "in-range" - small z, vz=0, bounce not active
  *   - C: "out-of-range" non-player — obj.z grande
  *   - D: player edge cases — A2 = 0x400018
  *
@@ -324,10 +305,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: "in-range" forzato (z piccolo, vz=0) ───────────────────────
-  // Con tutti i subs stubbati:
+  // Suite B: forced "in-range" (small z, vz=0).
   // - spriteProject1CC62 returns 0
-  // - D0 = 0 - obj.z; se obj.z piccolo (0x100) → D0 = -0x100 < 0 < 0x100000 → in-range
+  // - D0 = 0 - obj.z; if obj.z is small (0x100) -> D0 = -0x100 < 0 < 0x100000 -> in-range.
   console.log(`\n=== Suite B: in-range + no-bounce — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {

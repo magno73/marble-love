@@ -1,22 +1,16 @@
 /**
  * game-state-machine.ts — replica del root game-logic `FUN_00002E18`.
  *
- * Funzione "state machine dispatcher" da 930 byte, gestisce 4 slot
- * paralleli, ognuno con un proprio state machine (state in {0..7}).
- * Chiama 10 sub-funzioni (FUN_2572/2678/2766/2818/295A/2ABC/2BDA/2C60/2CD4/2DA0)
- * per le azioni specifiche di ogni stato.
+ * parallel slots, each with its own state machine (state in {0..7}).
  *
  * **Layout struct workRam @ 0x401F00..0x401F3F**:
- *   +0x00  word  (`VALUE_F00`)            usato in calcoli "marker check"
  *   +0x02  word  (`MODE`)                  0 = Branch B (state machine), ≠0 = Branch A
  *   +0x04  4 longs (`DATA_PTR[0..3]`)      pointer a struct esterno per slot
  *   +0x14  4 words (`WORD16[0..3]`)        secondary data per slot
  *   +0x1C  4 bytes (`STATE[0..3]`)         state machine state per slot (0..7)
  *   +0x20  4 words (`THRESHOLD[0..3]`)     dispatch threshold per slot
- *   +0x28  4 words (`COUNTER[0..3]`)       contatore frame per slot
  *   +0x30  4 bytes (`FLAG30[0..3]`)        toggle flag per state==2
  *   +0x34  4 bytes (`FLAG34[0..3]`)        byte counter per state==3/4
- *   +0x38  word   (`FRAME_COUNTER`)        contatore master, sempre incrementato
  *   +0x3A  word   (`SPECIAL_TICK`)         tick counter per Branch A
  *   +0x3C  word   (`SPECIAL_INNER`)        inner counter per Branch A
  *   +0x3E  word   (`SPECIAL_TARGET`)       target per Branch A
@@ -41,13 +35,11 @@
  *       5 → FUN_2766(data[D4])
  *       6 → FUN_2818(data[D4])
  *
- * **Branch A (mode != 0)**: TODO. Path complesso con linked-list walk e
- * potenziale infinite loop quando byte_at(D3+6) + *0x401F00 < 2. Per
- * sicurezza, in TS imploding una safety bound e settando state[D4]=0 +
- * break (deviation dal binario in questo edge case).
+ * **Branch A (mode != 0)**: not fully modeled. The ROM path walks a linked list
+ * and can loop indefinitely when `byte_at(D3+6) + *0x401F00 < 2`. The TS port
+ * keeps a safety bound and clears state[D4] before breaking in that edge case.
  *
- * **Verificato bit-perfect** vs `FUN_00002E18` (con tutte le 10 sub-functions
- * patched a stub deterministico) tramite `cli/src/test-game-state-machine-parity.ts`.
+ * patched to a deterministic stub through `cli/src/test-game-state-machine-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
@@ -79,8 +71,6 @@ const ROM_LOOKUP_BASE = 0x7294 as const;
 // ─── Sub-function callbacks ──────────────────────────────────────────────
 
 /**
- * Stub callbacks per le 10 sub-functions. Quando omessi, il default è
- * no-op (matching `rts`). Per `fun_2cd4` e `fun_2da0` il default ritorna
  * 0 (matching `moveq #0, D0; rts`).
  */
 export interface GameStateMachineSubs {
@@ -253,9 +243,6 @@ function branchASpecial(state: GameState, rom: RomImage, subs?: GameStateMachine
     if (stateByte !== 7) continue;
 
     let d3 = readU32(state, DATA_PTR_BASE_OFF + d4 * 4);
-    // Safety bound contro infinite loop documentato (deviation dal binario
-    // quando byte_at(D3+6) + *0x401F00 < 2 nel ramo d0<d1: il binario
-    // farebbe loop infinito — qui usciamo dopo un cap di 1024 iterazioni).
     let safety = 1024;
     while (safety-- > 0) {
       const rotation = readU16(state, ROTATION_OFF);

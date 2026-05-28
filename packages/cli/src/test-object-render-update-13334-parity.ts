@@ -6,34 +6,25 @@
  * **Strategia**:
  * `FUN_13334` ha 5 path osservabili (mode = `struct[0x1e]`):
  *   1. mode ∉ {1,2}: skip globals → compute + dispatch + final copy.
- *   2. mode ∈ {1,2} AND `*struct[0x3e] == 0xFFFFFFFF`: epilogue diretto.
+ *   2. mode in {1,2} and `*struct[0x3e] == 0xFFFFFFFF`: direct epilogue.
  *   3. mode == 1, record valido: store globals → epilogue.
- *   4. mode == 2, record valido, mode_hi ∉ {1,2}: compute SENZA globals.
  *   5. mode == 2, record valido, mode_hi ∈ {1,2}: globals + compute.
  *
- * Inoltre il compute path ha 4 sotto-rami su `struct[0x1f]`:
- *   - 1f == 6: chiama `FUN_1D06A(sext_l(struct[0x25]))`.
- *   - 1f == 3: indicizza tabella ROM @ 0x1DF18 + push palette.
- *   - 1f ∉ {3,6}: solo compute + final copy.
+ *   - 1f not in {3,6}: compute + final copy only.
  *
- * `FUN_1D06A` non è ancora replicato in TS — patcha il binario con `4E75 (rts)`
- * per neutralizzarlo. La TS callback è no-op. `FUN_26B66` (paletteQueuePush) È
- * replicato → chiamato direttamente sia da binario sia da TS, deve dare gli
  * stessi side effect.
  *
- * Confronto:
- *   - D0 long (ignorato dal caller, ma verificato per completezza)
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - workRam @ 0x400970..0x400977 (active record globals)
  *   - workRam @ 0x400408..0x40040F (palette queue ptr + body)
  *   - struct @ A2..A2+0x60 (incluso +0x42, +0x4E)
- *   - record buffer @ struct[0x3E] (per detectare scritture spurie via FUN_1D06A)
+ *   - record buffer @ struct[0x3E] (to detect spurious writes via FUN_1D06A)
  *
  * Suite testate:
  *   - A: random everything (mode random, kind random)
- *   - B: mode==1 forzato (path globals + epilogue)
- *   - C: mode==2 forzato con mode_hi random (4 vs 5)
- *   - D: kind==3 forzato + base==0x21192 random (path palette index)
+ *   - B: forced mode==1 (globals + epilogue path)
+ *   - C: forced mode==2 with random mode_hi (4 vs 5)
+ *   - D: forced kind==3 + random base==0x21192 (palette-index path)
  *
  * Uso: npx tsx packages/cli/src/test-object-render-update-13334-parity.ts [N]
  */
@@ -64,7 +55,6 @@ const ACTIVE_RECORD_ADDR = 0x00400970;
 const PAL_QUEUE_PTR_ADDR = 0x00400408;
 const PAL_QUEUE_HEAD = 0x0040040c;
 
-/** Stub bytes per `FUN_1D06A`: solo `rts` (4E75). Niente side effect. */
 const STUB_1D06A_BYTES = [0x4e, 0x75] as const;
 
 /** Slot pointers candidati per la struct (work RAM, lontani da globals). */
@@ -124,11 +114,11 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Mirror ROM nella RomImage TS (per accedere a 0x1DF18 e altri).
+  // Mirror ROM into the TS RomImage to access 0x1DF18 and related data.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // Patch FUN_1D06A con stub `rts`.
+  // Patch FUN_1D06A with an `rts` stub.
   function applyStub(): void {
     for (let i = 0; i < STUB_1D06A_BYTES.length; i++) {
       pokeMem(cpu, FUN_1D06A + i, 1, STUB_1D06A_BYTES[i]!);
@@ -156,7 +146,6 @@ async function main(): Promise<void> {
   }
 
   function resetGlobals(): void {
-    // Azzera POS_X/Y, active globals, queue ptr (head=0x40040C, vuota).
     for (let a = POS_X_ADDR; a < POS_X_ADDR + 4; a++) {
       pokeMem(cpu, a, 1, 0);
       stateInst.workRam[a - 0x400000] = 0;
@@ -165,7 +154,6 @@ async function main(): Promise<void> {
       pokeMem(cpu, a, 1, 0);
       stateInst.workRam[a - 0x400000] = 0;
     }
-    // Queue ptr = 0x40040C (head, vuoto).
     const head = PAL_QUEUE_HEAD >>> 0;
     pokeMem(cpu, PAL_QUEUE_PTR_ADDR, 4, head);
     stateInst.workRam[PAL_QUEUE_PTR_ADDR - 0x400000] = (head >>> 24) & 0xff;
@@ -188,7 +176,6 @@ async function main(): Promise<void> {
     return v;
   }
 
-  /** Confronta tutti gli observable. Ritorna prima diff o null. */
   function compareAll(
     structPtr: number,
     recPtr: number,
@@ -244,7 +231,7 @@ async function main(): Promise<void> {
         };
       }
     }
-    // Record buffer (8 byte) — per detect scritture spurie.
+    // Record buffer (8 bytes) for detecting spurious writes.
     if (recPtr >= 0x400000 && recPtr < 0x402000) {
       for (let i = 0; i < 8; i++) {
         const b = peekMem(cpu, recPtr + i, 1);
@@ -279,7 +266,6 @@ async function main(): Promise<void> {
     const modeHiByte = stateInst.workRam[off + 0x1a] ?? 0;
     const kindByte = stateInst.workRam[off + 0x1f] ?? 0;
 
-    // Run binario.
     const r = callFunction(cpu, FUN_13334, [structPtr >>> 0]);
     const binD0 = r.d0 >>> 0;
 
@@ -291,7 +277,6 @@ async function main(): Promise<void> {
 
     const diff = compareAll(structPtr, recPtr);
 
-    // D0 al ritorno è opaco e il caller non lo legge → non confrontiamo.
     void binD0;
     void tsD0;
 
@@ -330,7 +315,7 @@ async function main(): Promise<void> {
     return bytes;
   }
 
-  // Record bytes con prob 50% di tombstone (per esercitare il path).
+  // Record bytes with 50% tombstone probability to exercise the path.
   function makeRecBytes(): number[] {
     if (rng() < 0.3) {
       // Tombstone: *recPtr = 0xFFFFFFFF.
@@ -356,7 +341,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: mode==1 forzato ────────────────────────────────────────
+  // ─── Suite B: forced mode==1 ─────────────────────────────────────────
   console.log(`\n=== Suite B: mode==1 (path globals/epilogue) — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -365,7 +350,7 @@ async function main(): Promise<void> {
     const recPtr = pickRec();
     if (structPtr === recPtr) continue;
     const bytes = makeStructBytes(recPtr);
-    bytes[0x1e] = 1; // forza mode == 1.
+    bytes[0x1e] = 1;
     bytes[0x1a] = rb();
     bytes[0x1f] = rb();
     const recBytes = makeRecBytes();
@@ -374,7 +359,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: mode==2 forzato + mode_hi random ──────────────────────
+  // ─── Suite C: forced mode==2 + random mode_hi ────────────────────────
   console.log(`\n=== Suite C: mode==2 — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -394,7 +379,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: kind==3 forzato (path palette index) ──────────────────
+  // ─── Suite D: forced kind==3 (palette-index path) ────────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: kind==3 (palette index path) — ${sizeD} casi ===`);
   let okD = 0;
@@ -415,7 +400,7 @@ async function main(): Promise<void> {
     bytes[0x48] = (basePtr >>> 8) & 0xff;
     bytes[0x49] = basePtr & 0xff;
 
-    // Force record ptr che da' diff piccolo (≤ ~100 byte); >>3 → indice 0..12.
+    // Force record ptr with a small diff (<= ~100 bytes); >>3 -> index 0..12.
     const idx = Math.floor(rng() * 0x10);
     const recordPtrForIdx = (basePtr + (idx << 3)) >>> 0;
     bytes[0x3e] = (recordPtrForIdx >>> 24) & 0xff;
@@ -423,8 +408,6 @@ async function main(): Promise<void> {
     bytes[0x40] = (recordPtrForIdx >>> 8) & 0xff;
     bytes[0x41] = recordPtrForIdx & 0xff;
 
-    // Niente record buffer: bytes[0x3e..] punta in ROM (no-op per il dereferencing
-    // perché mode==0 → non legge il record).
     const recBytes = new Array(8).fill(0);
     if (runOneCase("D", i, structPtr, recordPtrForIdx, bytes, recBytes)) okD++;
   }

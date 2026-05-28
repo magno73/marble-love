@@ -1,19 +1,19 @@
 /**
  * m68k-regfile.test.ts — validation differenziale del register file M68010
- * + 8 istruzioni stack ABI contro il dataset SingleStepTests/m68000 (MIT)
+ * + 8 stack ABI instructions against the SingleStepTests/m68000 dataset (MIT)
  * filtrato in `oracle/tom_harte_m68000/`.
  *
- * "Verifica intent" (CLAUDE.md Rule 9): queste 8 istruzioni sono il sostrato
- * usato dalle sub TS-port per leggere/scrivere il frame di stack del body.
- * Se la semantica diverge da MAME anche di 1 byte, il drift workRam nel
- * cluster 0x1D40..0x1E7F resta aperto. Il differential test garantisce che
- * regfile.ts replichi bit-perfect lo stato post-istruzione di Tom Harte
- * (escluse le path di exception/address-error, che il body GCC non
- * raggiunge mai con SP correttamente allineato).
+ * Intent check (CLAUDE.md Rule 9): these 8 instructions are the substrate
+ * used by TS-port subs to read/write the body stack frame.
+ * If semantics diverge from MAME by even 1 byte, workRam drift in
+ * cluster 0x1D40..0x1E7F stays open. The differential test guarantees that
+ * regfile.ts mirrors Tom Harte post-instruction state bit-perfectly
+ * (excluding exception/address-error paths, which the GCC body never reaches
+ * with a correctly aligned SP).
  *
  * Filtraggio: skippiamo i test in cui le transactions includono `re`/`we`
- * (exception bus cycles) — sono cases di address-error che il register file
- * non gestisce (e per Marble Madness non si presentano).
+ * (exception bus cycles) - these are address-error cases that the register file
+ * does not handle, and Marble Madness does not exercise.
  */
 
 import { describe, it, expect } from "vitest";
@@ -60,7 +60,7 @@ function loadOracle(filename: string): OracleTest[] {
   return JSON.parse(readFileSync(path, "utf-8")) as OracleTest[];
 }
 
-// ─── Test bus: Map<u32, u8> con address mask 24-bit ──────────────────────
+// Test bus: Map<u32, u8> with 24-bit address mask.
 
 /**
  * Crea un MemBus backed da Map. Il 68000 ha bus address 24-bit, quindi
@@ -125,7 +125,7 @@ function setupFromInitial(initial: OracleState): {
   rf.a[2] = initial.a2 >>> 0; rf.a[3] = initial.a3 >>> 0;
   rf.a[4] = initial.a4 >>> 0; rf.a[5] = initial.a5 >>> 0;
   rf.a[6] = initial.a6 >>> 0;
-  // A7 attivo = USP se SR.S=0, SSP se SR.S=1. Bit S = bit 13 = 0x2000.
+  // Active A7 = USP if SR.S=0, SSP if SR.S=1. S bit = bit 13 = 0x2000.
   const supervisor = (initial.sr & 0x2000) !== 0;
   rf.a[7] = (supervisor ? initial.ssp : initial.usp) >>> 0;
   rf.usp = as_u32(initial.usp);
@@ -189,7 +189,7 @@ function compareFinal(
       return { ok: false, reason: `SR: expected ${final.sr & 0xffff}, got ${raw(rf.sr)}` };
     }
   }
-  // RAM: per ogni byte in `final.ram`, deve combaciare nel bus
+  // RAM: each byte in `final.ram` must match the bus.
   for (const [addr, byte] of final.ram) {
     const got = bus.ram.get(addr & 0xffffff) ?? 0;
     if ((got & 0xff) !== (byte & 0xff)) {
@@ -352,7 +352,7 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
   it("MOVE.L (d16,An)↔reg — ≥95% match", () => {
     const res = runCategory("MOVE_L_DISP.json", (rf, bus, opcode, startPc) => {
       // MOVE.L: 0010 ddd MMM mmm sss. size=10.
-      // bits 15-12 = 0010. MOVE.L update CCR (N,Z,V=0,C=0,X invariato)
+      // bits 15-12 = 0010. MOVE.L updates CCR (N,Z,V=0,C=0,X unchanged)
       // → skippato dal compareFinal (checkSr=false sotto).
       if ((opcode & 0xf000) !== 0x2000) return { ok: false, reason: "unsupported" };
       const dstReg = (opcode >>> 9) & 7;
@@ -408,9 +408,9 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
         const disp = readWord(bus, startPc + 2);
         move_w_disp_to_reg(rf, bus, as_i16(signExt16(disp)), srcReg, dstReg);
         rf.pc = as_u32((startPc + 8) >>> 0);
-        // MOVE.W modifica CCR (N, Z, V=0, C=0, X invariato): per la
-        // validation, accettiamo che SR finale possa differire — il register
-        // file qui non implementa CCR per MOVE. Skippiamo confronto SR.
+        // MOVE.W modifies CCR (N, Z, V=0, C=0, X unchanged): for
+        // validation, accept that final SR can differ; the register
+        // This file does not implement CCR for MOVE. Skip SR comparison.
         // (MOVE.W modifica CCR ma compareFinal usa checkSr=false)
         return { ok: true };
       }
@@ -539,4 +539,3 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
     expect(res.pass).toBe(res.total - res.exceptions - res.unsupported);
   });
 });
-

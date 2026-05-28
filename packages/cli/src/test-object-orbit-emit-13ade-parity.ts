@@ -4,13 +4,13 @@
  * `objectOrbitEmit13ADE`.
  *
  * `FUN_00013ADE` (602 byte) emette 9 sprite entries su traiettoria circolare
- * usando una sin/cos table @ 0x1EDA2 e un delta-stream @ 0x1EF32, con:
+ * using a sin/cos table @ 0x1EDA2 and a delta-stream @ 0x1EF32, with:
  *   - reset trigger su counter ∈ {0x64, 0x65, 0x66}
  *   - mirror su (A0+0x1A).b == 0x0B
  *   - angolo advance di 0x0A (modulo 0x192) per call
- *   - emit di record [charcode, x, y] con bounds check
+ *   - emit [charcode, x, y] records with bounds checking
  *
- * Setup random per ogni caso:
+ * Random setup for each case:
  *   - `(A0+0x57).b` random (counter, include trigger values per coprire i path)
  *   - `(A0+0x1a).b` random (mirror gate)
  *   - `(A0+0x2e).w` random (angolo iniziale)
@@ -81,11 +81,11 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Mirror ROM nella RomImage TS.
+  // Mirror ROM into the TS RomImage.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  // Decodifica i 25 ptrs della tabella @0x1F016 una sola volta.
+  // Decode the 25 table pointers at 0x1F016 once.
   const slotPtrs: number[] = [];
   for (let i = 0; i < SLOT_COUNT; i++) {
     slotPtrs.push(readU32BE(romBuf, SLOT_PTR_TABLE + i * 4));
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Usa slot canonici come argPtr (garantisce scritture in work RAM valida).
+    // Use canonical slots as argPtr to guarantee writes land in valid work RAM.
     const argSlotIdx = Math.floor(rng() * SLOT_COUNT) % SLOT_COUNT;
     const argPtr = slotPtrs[argSlotIdx]!;
     const argOff = argPtr - 0x400000;
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     const coordsLong = Math.floor(rng() * 0x100000000) >>> 0;
 
     // ── PRE-CLEAR + SETUP ──────────────────────────────────────────
-    // Azzera i campi output di tutti gli slot per evitare interferenze.
+    // Clear output fields for all slots to avoid interference.
     for (let sIdx = 0; sIdx < SLOT_COUNT; sIdx++) {
       const slot = slotPtrs[sIdx]!;
       const slotOff = slot - 0x400000;

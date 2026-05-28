@@ -1,13 +1,10 @@
 /**
- * helper-12896.ts — replica `FUN_00012896` (script-slot interpreter,
- * 0x12896..0x12d45, ~1200 byte with handler table).
+ * Bit-perfect port of `FUN_00012896`, the script-slot interpreter.
  *
- * ## Ruolo
- *
- * Interprete di bytecode per uno script-slot. Legge opcode (word) dalla
- * sequenza puntata da `slot[0x36]`, avanza il puntatore di 2 e dispatcha
- * su un handler. Se l'handler imposta D1=1, il loop rilegge il prossimo
- * opcode; se D1=0, la funzione torna.
+ * The routine reads a word opcode from the sequence pointed to by `slot[0x36]`,
+ * advances the script pointer by two bytes, and dispatches through the ROM
+ * handler table. A handler that leaves D1=1 causes the interpreter to fetch the
+ * next opcode immediately; D1=0 exits the routine.
  *
  * ## Prologue / epilogue
  *
@@ -78,12 +75,12 @@ import { objectRenderUpdate13334 } from "./object-render-update-13334.js";
 import { helper12F44 } from "./helper-12f44.js";
 import { slotInsertSorted18E6C } from "./slot-insert-sorted-18e6c.js";
 
-// ─── Costante indirizzo ROM ───────────────────────────────────────────────────
+// ROM address constant.
 
 /** Absolute ROM address of this function. */
 export const HELPER_12896_ADDR = 0x00012896 as const;
 
-// ─── Indirizzi work RAM ───────────────────────────────────────────────────────
+// Work RAM addresses.
 
 const WRAM = 0x00400000 as const;
 
@@ -322,19 +319,15 @@ export interface Helper12896Subs {
   inner1D06A?: (paletteByteSigned: number) => void;
 }
 
-// ─── Main function ────────────────────────────────────────────────────────────
+// Main function.
 
 /**
- * Replica bit-perfect di `FUN_00012896`.
+ * Execute the `FUN_00012896` script-slot interpreter.
  *
- * **Script-slot interpreter**: legge opcode dal puntatore `slot[0x36]`,
- * avanza il puntatore, dispatcha. Se D1=1 dopo il handler, rilancia;
- * altrimenti ritorna.
- *
- * @param state   GameState (modifica workRam via script).
- * @param rom     ROM image (per leggere il bytecode in ROM).
+ * @param state Game state mutated by the script.
+ * @param rom ROM image used to read bytecode.
  * @param slotPtr Absolute workRam address of the script-slot record.
- * @param subs    Injectable stubs (opzione); default no-op o forward.
+ * @param subs Optional injectable stubs; defaults either no-op or forward.
  */
 export function helper12896(
   state: GameState,

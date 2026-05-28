@@ -1,8 +1,6 @@
 /**
  * Test objectStep17F66 (FUN_17F66) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
- * `cli/src/test-object-step-17f66-parity.ts` (500 casi).
  */
 
 import { describe, it, expect } from "vitest";
@@ -72,7 +70,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
   it("skip path: state18 == 2 → nessuna jsr, nessuna mutazione", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 2;
-    // Sentinel byte per verificare nessun write.
     s.workRam[A2_OFF + 0x00] = 0xaa;
     s.workRam[A2_OFF + 0x04] = 0xbb;
     s.workRam[A2_OFF + 0x08] = 0xcc;
@@ -98,7 +95,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
 
   it("special-dispatch: *0x400390 word == 1 → fun1815A(a2) e poi return", () => {
     const s = emptyGameState();
-    // Globale @ 0x400390 = word 1 (BE: bytes 0x00, 0x01).
     s.workRam[0x0390] = 0x00;
     s.workRam[0x0391] = 0x01;
     s.workRam[A2_OFF + 0x18] = 0; // not skip
@@ -112,7 +108,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     // global390 != 1 (resta 0)
-    // global396 != 1 (resta 0) → ramo store-bytes
     s.workRam[A2_OFF + 0x58] = 0x2d; // whitelist
     s.workRam[A2_OFF + 0x36] = 0; // not 2
     s.workRam[A2_OFF + 0x1a] = 0; // mode 0, no scaling
@@ -125,7 +120,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     const r = objectStep17F66(s, A2_ADDR, callees);
 
     expect(r.path).toBe("movement");
-    // Globali scritti.
     expect(s.workRam[0x06aa]).toBe(0x10);
     expect(s.workRam[0x06a8]).toBe(0x20);
     // dx = sext(0x20) * 0x160 = 32 * 352 = 11264
@@ -144,10 +138,8 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     s.workRam[A2_OFF + 0x58] = 0x00; // whitelist (== 0)
     s.workRam[A2_OFF + 0x36] = 0;
     s.workRam[A2_OFF + 0x1a] = 0;
-    // pre-set i 2 byte globali per far calcolare un dx/dy noto
     s.workRam[0x06a8] = 0x05; // dy_b
     s.workRam[0x06aa] = 0x03; // dx_b
-    // I byte cmd_x/cmd_y (0xC6/0xC7) NON devono essere usati nel ramo 180BE.
     s.workRam[A2_OFF + 0xc6] = 0x77;
     s.workRam[A2_OFF + 0xc7] = 0x88;
 
@@ -155,7 +147,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     const r = objectStep17F66(s, A2_ADDR, callees);
 
     expect(r.path).toBe("movement");
-    // I byte globali NON devono essere stati sovrascritti (180BE branch).
     expect(s.workRam[0x06a8]).toBe(0x05);
     expect(s.workRam[0x06aa]).toBe(0x03);
     // dx = sext(5)*0x160 = 1760, dy = -sext(3)*0x160 = -1056
@@ -187,7 +178,6 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(r.path).toBe("movement");
     // d3 = 16 * 0x160 = 5632. asr.l #8 = 22 (5632 >> 8). muls.w #4 = 88. asl.l #3 = 704.
     expect(readU32BE(s.workRam, A2_OFF + 0x00)).toBe(704 >>> 0);
-    // d2 iniziale = -16 * 0x160 = -5632. asr.l #8 = -22 (signed). *4 = -88. <<3 = -704.
     expect(readU32BE(s.workRam, A2_OFF + 0x04)).toBe(-704 >>> 0);
   });
 

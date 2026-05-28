@@ -3,15 +3,15 @@
  * test-sub-19692-parity.ts — differential FUN_00019692 vs `sub19692`.
  *
  * FUN_00019692 (164 byte): "Entity move-and-validate retry loop (heavy)".
- * Variante di FUN_198BC chiamata in coda da FUN_1960E (case 0 di dispatcher
- * 194BA). Tenta move via FUN_19976 + validate via FUN_1937C; se il 1° validate
- * fallisce (libera/skip) restore pos & return. Se passa, loop fino a 12 iter
- * ruotando entity[0x26] di step (1 se state==7, altrimenti 4). Esce con
- * marker stuck (entity[0x26]=0x10, entity[0..7]=0) se loop esaurito.
+ * FUN_198BC variant called at the tail of FUN_1960E (case 0 of dispatcher
+ * 194BA). Attempts move via FUN_19976 + validate via FUN_1937C; if the 1st validate
+ * fails (free/skip), restore pos and return. If it passes, loop up to 12 iter
+ * by rotating entity[0x26] by step (1 if state==7, otherwise 4). Exits with
+ * stuck marker (entity[0x26]=0x10, entity[0..7]=0) if the loop is exhausted.
  *
  * **Differenze da FUN_198BC**:
  *   - NO pre-decrement entity[0x26].
- *   - NO save direzione originale (no D4).
+ *   - NO original direction save (no D4).
  *   - NO cycle-back check.
  *   - Max iter = 0xC (12), non 9.
  *
@@ -22,7 +22,7 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random
- *   - B: state==7 forzato
+ *   - B: forced state==7
  *   - C: pos in zona valida grid (validate path varied)
  *   - D: edge cases (counter saturation, state boundaries, marker 0x10)
  *
@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // Suite B: state==7 forzato
+  // Suite B: forced state==7.
   console.log(`\n=== Suite B: forced state==7 (step=1, apply ogni iter) — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {

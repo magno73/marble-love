@@ -2,29 +2,21 @@
 /**
  * test-helper-25fc2-parity.ts — differential FUN_00025FC2 vs helper25FC2.
  *
- * `FUN_00025FC2` (129 istr, 0x25FC2..0x26194) è un animation-sequence
- * stepper: avanza il puntatore animazione di una object struct in work RAM
- * e dispatcha una transizione di stato quando la sequenza ROM termina
  * (sentinel `0xFFFFFFFF`).
  *
- * **Argomento**: 1 long sullo stack = `objPtr` (A2).
  * **Costanti interne**: A1 = 0x20FDE, A3 = 0x400018.
  *
  * **Sub-JSR** patchate per isolamento:
- *   - `FUN_158AC` (@ 0x158AC): append byte arg a buffer (cattura sound calls).
+ *   - `FUN_158AC` (@ 0x158AC): append byte arg to buffer (capture sound calls).
  *   - `FUN_15884` (@ 0x15884): `rts` — no-op (sound pair catturato via 158AC).
  *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, subStateCode) a un buffer.
  *   - `FUN_18F46` (@ 0x18F46): append (typeCode, subIdx) a un buffer.
  *
  * **Strategia parity**:
- *   1. ROM patch: intercetta i 4 sub-jsr con stub che scrivono i loro arg
+ *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
  *      in zone fisse di work RAM (0x401F00+).
- *   2. Per ogni caso random: randomizza objPtr, tutti i campi rilevanti
  *      di A2, e un set di sentinelle vicini.
- *   3. Esegui binario reale @ FUN_00025FC2 + TS helper25FC2 su mirror.
- *   4. Confronta tutti i campi scritti + le sequenze di chiamate sub-jsr.
  *
- * **Buffer cattura** (tutti in work RAM range 0x401F00-0x401FF0):
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
  *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 byte = 24 byte)
@@ -64,7 +56,7 @@ const FUN_18F46 = 0x00018f46;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// ─── Buffer cattura in work RAM ───────────────────────────────────────────────
+// ─── Capture buffer in work RAM ───────────────────────────────────────────────
 // FUN_158AC sound buffer: cur ptr @ 0x401F0C, buffer 4 byte @ 0x401F00-0x401F03
 const SOUND_BUF_BASE  = 0x00401f00 as const;
 const SOUND_CUR_PTR   = 0x00401f0c as const;
@@ -78,7 +70,6 @@ const H18F46_BUF_BASE = 0x00401f34 as const;
 const H18F46_COUNT    = 0x00401f44 as const;
 
 // ─── Object pointer candidates ───────────────────────────────────────────────
-// Tutti >= 0x401000, con almeno 0xC0 byte fino a 0x401EFF
 // (stack @ 0x401F00; buffer @ 0x401F00+)
 const PTR_CANDIDATES: readonly number[] = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
@@ -114,7 +105,6 @@ function makeRng(seed: number): () => number {
  *   move.b  D0, (A1)+          : 12 C0
  *   move.l  A1, ($401F0C).l    : 23 C9 00 40 1F 0C
  *   rts                         : 4E 75
- * 20 byte (FUN_158AC è >= 20 byte → sicuro).
  */
 function patchSoundSink(rom: Buffer): void {
   const a = FUN_158AC;
@@ -128,7 +118,7 @@ function patchSoundSink(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_15884: incrementa count @ 0x401F30 + rts.
+ * Patch FUN_15884: increment count @ 0x401F30 + rts.
  *   addq.b  #1, ($401F30).l    : 52 39 00 40 1F 30  (52 39 = addq.b, NOT 52 B9 = addq.l)
  *   rts                         : 4E 75
  */
@@ -142,15 +132,9 @@ function patchSoundPair(rom: Buffer): void {
 /**
  * Patch FUN_25BAE: append (objPtr, code) al buffer + rts.
  *
- * FUN_25BAE è chiamata da FUN_25FC2 con 2 long sullo stack:
- *   - Prima push (farther from SP): `pea 0x2.w` o `pea 0x4.w` → subStateCode
  *   - Seconda push (closer to SP): `move.l A2, -(A7)` → objPtr
- *   - Return addr al ritorno da jsr
  *
- * Al momento di ingresso in FUN_25BAE:
  *   SP+0 = return addr
- *   SP+4 = objPtr (ultima push = più vicina allo SP)
- *   SP+8 = subStateCode long (prima push = più lontana dallo SP)
  *
  * Stub (36 byte):
  *   move.b  ($401F2C).l, D0     ; D0 = count
@@ -218,10 +202,6 @@ function patchOSE25BAE(rom: Buffer): void {
 /**
  * Patch FUN_18F46: append (typeCode, subIdx) al buffer + rts.
  *
- * FUN_18F46 è chiamata con 2 long sullo stack RTL (arg1 = typeCode @ SP+12,
- * arg2 = subIdx @ SP+8 dopo movem push di 3 regs):
- * Dopo movem.l {A3 A2 D2},-(SP) (12 byte) → arg1 @ SP+0x13 (byte), arg2 @ SP+0x17.
- * Ma noi stiamo patchando FUN_18F46 stesso: prima della movem, gli arg sono:
  *   arg1 (typeCode long) @ SP+4 (pushed first = closer to SP after return addr @ SP)
  *   arg2 (subIdx long)   @ SP+8
  *
@@ -292,7 +272,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Prepara la RomImage TS (copia dal buffer patchato)
   const romImage = busNs.emptyRomImage();
   romBuf.copy(Buffer.from(romImage.program.buffer), 0, 0, Math.min(romBuf.length, romImage.program.length));
 
@@ -310,7 +289,6 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Tutti i field offset scritti dalla funzione (da disasm).
   const SCRATCH_FIELDS = [
     0x18, 0x1a, 0x56, 0x57,
     0x5a, 0x5b, 0x5c, 0x5d,
@@ -319,7 +297,7 @@ async function main(): Promise<void> {
     0xa4, 0xa5,
   ] as const;
 
-  // Offset NON toccati (sentinelle per no-spill)
+  // Untouched offsets (no-spill sentinels).
   const NEIGHBORS = [
     0x00, 0x01, 0x17, 0x19, 0x1b,
     0x55, 0x58, 0x59, 0x5e, 0x61,
@@ -336,7 +314,6 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     const ptr = pickPtr();
-    // Permetti anche ptr uguale ai due oggetti della coppia
     // per coprire la logica di word_a4
     const ptrChoice = rng();
     const actualPtr =
@@ -354,40 +331,22 @@ async function main(): Promise<void> {
       r1a < 0.70 ? 0x05 :
       rb();
 
-    // Scegli anim_ptr coerente con lo scenario:
-    // 20% → dentro range [A1+4, A1+0x7C] index 1..30
+    // Choose anim_ptr consistently with the scenario:
     // 20% → index 9 esatto (per wrap detection)
-    // 20% → fuori range (< A1 o >= A1+0x80)
     // 40% → punta a sentinel in ROM
     let preAnimPtr: number;
     const r5a = rng();
     if (r5a < 0.20) {
-      // Dentro range A1..A1+0x7C (index 0..31), random
       const idx = Math.floor(rng() * 32);
       preAnimPtr = (ANIM_BASE + idx * 4) >>> 0;
     } else if (r5a < 0.40) {
-      // Index 8 (così dopo advance diventa index 9 = wrap)
       preAnimPtr = (ANIM_BASE + 8 * 4) >>> 0;
     } else if (r5a < 0.60) {
-      // Fuori range: prima di A1
       preAnimPtr = ANIM_BASE > 4 ? (ANIM_BASE - 4) >>> 0 : 0x00020fda;
     } else {
-      // Punta a un indirizzo ROM con sentinel (per trigger dispatch)
-      // Usiamo 0x20FDA (= A1-4) che nella ROM non è sentinel → useremo
-      // la strategia: pre-load a uno degli indirizzi reali con sentinel.
-      // Sappiamo che 0x20FDA nella ROM originale = 0xFFFFFFFF (da sopra).
-      // Usiamo 0x20FDA come primo indirizzo sentinel noto.
-      // In realtà usiamo (A1 + fps*4) dopo advance:
-      // Per semplicità usiamo 0x21006 (index 9 avanzato) che sappiamo non sentinel,
-      // oppure 0x20FDA che è sentinel.
-      // Generiamo un anim_ptr che, dopo l'advance di fps step, punterà a sentinel.
-      // Più semplice: impostiamo fps=1, frame_ctr=1, e anim_ptr tale che
-      // anim_ptr+4 sia un indirizzo sentinel in ROM.
-      // Gli indirizzi sentinel noti da analisi ROM: 0x20FDA, 0x20FCE, ...
-      // Per semplicità usiamo approccio diretto: settiamo fps=0 frame_ctr=0
-      // → advance immediato, e usiamo anim_ptr-4 = 0x20FD6 (→ 0x20FDA sentinel)
-      // Oppure: usiamo il campo 0x5A direttamente per puntare già al sentinel
-      // (con fps=1, frame_ctr=1 → avanza di 4, quindi ptr-4 deve puntare al sentinel−4).
+      // Strategy: pre-load one of the real addresses with the sentinel.
+      // Sentinel addresses known from ROM analysis: 0x20FDA, 0x20FCE, ...
+      // -> immediate advance; use anim_ptr-4 = 0x20FD6 (-> 0x20FDA sentinel).
       // Per semplificare: frame_ctr=fps → advance → nuovo ptr = preAnimPtr+4
       // preAnimPtr+4 = 0x20FDA → preAnimPtr = 0x20FD6.
       preAnimPtr = 0x00020fd6; // +4 = 0x20FDA = sentinel
@@ -398,14 +357,12 @@ async function main(): Promise<void> {
     let preFps = rb() & 0x1f;
     // 40% force advance (frame_ctr == fps, advance avviene)
     if (rng() < 0.40) {
-      // Assicuriamo che il frame venga avanzato: frame_ctr = fps
+      // Ensure the frame advances: frame_ctr = fps.
       preFrameCtr = preFps > 0 ? preFps - 1 : 0;
-      preFps = preFrameCtr + 0; // fps = frame_ctr → dopo incr frame_ctr+1 > fps? No
-      // Meglio: dopo incr frame_ctr+1 NOT > fps → non advance;
+      preFps = preFrameCtr + 0;
       // per forzare advance: fps <= frame_ctr+1
-      // settiamo frame_ctr = fps-1 → dopo incr = fps → fps > fps? No (not strictly greater) → advance
       preFps = (rb() & 0x0f) + 1;
-      preFrameCtr = preFps - 1; // dopo incr = preFps → non > fps → advance
+      preFrameCtr = preFps - 1;
     }
 
     // step56
@@ -425,7 +382,6 @@ async function main(): Promise<void> {
     const scratchObj = new Uint8Array(0xc0);
     for (let k = 0; k < 0xc0; k++) scratchObj[k] = rb();
 
-    // Override campi controllati
     scratchObj[0x1a] = pre1A;
     // anim_ptr (0x5A..5D)
     scratchObj[0x5a] = (preAnimPtr >>> 24) & 0xff;
@@ -445,7 +401,7 @@ async function main(): Promise<void> {
     scratchObj[0x57] = preObjType;
     scratchObj[0x67] = preFlag67;
 
-    // Sentinelle vicini (offset non toccati)
+    // Neighbor sentinels (untouched offsets).
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBORS.length; idx++) {
       const nOff = NEIGHBORS[idx]!;
@@ -471,7 +427,6 @@ async function main(): Promise<void> {
     // ── Run binary ───────────────────────────────────────────────────────
     callFunction(cpu, FUN_25FC2, [actualPtr]);
 
-    // Leggi catture binarie
     const binSoundCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;
     const binSoundCount = (binSoundCurEnd - SOUND_BUF_BASE) >>> 0;
     const binSounds: number[] = [];
@@ -509,7 +464,6 @@ async function main(): Promise<void> {
       helper18F46: (_s, _r, tc, si) => tsH18F46Calls.push({ typeCode: tc & 0xff, subIdx: si & 0xff }),
     });
 
-    // ── Confronto ────────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
     // 1) Sound calls

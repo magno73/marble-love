@@ -6,7 +6,7 @@
  *   - struct base = `*0x401FFC + 0x50`
  *   - record size = 20 byte
  *   - max records = `(int8)ROM[0x1006F] sign-ext-long & 7` (per marble = 3)
- *   - ritorna -1 se arg2 > 0x12, -2 se arg1 >= max, byte/word del record
+ *   - returns -1 if arg2 > 0x12, -2 if arg1 >= max, otherwise byte/word record data
  *
  * Convenzione caller (cdecl push-RTL):
  *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word dal caller)
@@ -14,10 +14,10 @@
  *
  * Strategia parity:
  *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
- *     popola alcuni byte random ai vari record_base+offset; scrivi byte ROM
+ *     populate random bytes at several record_base+offset locations; write ROM byte
  *     reale in Musashi (da `ghidra_project/marble_program.bin`); per il TS
- *     usa la stessa ROM letta dallo stesso file (passata come byte param).
- *   - Per ogni caso random: setup arg1, arg2; chiama il binario; chiama TS;
+ *     uses the same ROM read from the same file (passed as byte param).
+ *   - For each random case: set up arg1, arg2; call binary; call TS;
  *     confronta D0.
  *
  * Pattern coverage:
@@ -52,9 +52,9 @@ const PTR_FFC = 0x00401ffc;
 const PTR_VAL = 0x00401a00;
 const STRUCT_BASE = PTR_VAL + 0x50; // 0x401A50
 
-/** Numero di record che popoliamo con dati. Copre arg1 0..7. */
+/** Number of records populated with data. Covers arg1 0..7. */
 const NUM_RECORDS = 8;
-/** Byte per record che popoliamo. Copre arg2 0..0x13 (0x14 byte = 20 byte). */
+/** Bytes per record populated with data. Covers arg2 0..0x13 (0x14 bytes = 20 bytes). */
 const RECORD_BYTES = 20;
 
 function makeRng(seed: number): () => number {
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // ── Setup struct: scrivi NUM_RECORDS record × RECORD_BYTES byte random.
-    // Stesso contenuto su Musashi e su state.workRam.
+    // Same content in Musashi and state.workRam.
     for (let r = 0; r < NUM_RECORDS; r++) {
       for (let b = 0; b < RECORD_BYTES; b++) {
         const byte = Math.floor(rng() * 256);
@@ -141,13 +141,13 @@ async function main(): Promise<void> {
       arg2 = Math.floor(rng() * 0x14);
     } else if (pick < 0.9) {
       pattern = "neg_arg1";
-      // sign-ext di word negativo: 0xFFFFxxxx con xxxx in [0x8000..0xFFFF].
+      // sign-ext of negative word: 0xFFFFxxxx with xxxx in [0x8000..0xFFFF].
       const w = 0x8000 + Math.floor(rng() * 0x8000);
       arg1 = ((w & 0x8000 ? 0xffff0000 : 0) | w) >>> 0;
       arg2 = Math.floor(rng() * 0x14);
     } else {
       pattern = "random";
-      // arg1, arg2 long full random (caller binario passa sempre sign-ext da
+      // arg1 and arg2 are full random longs; the binary caller always passes sign-ext from
       // word, quindi alto = 0 oppure 0xFFFF; qui stress-test allargato a long).
       const a1w = Math.floor(rng() * 0x10000);
       const a1h = rng() < 0.5 ? 0 : a1w & 0x8000 ? 0xffff : 0;

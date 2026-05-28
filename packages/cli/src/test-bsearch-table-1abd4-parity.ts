@@ -5,28 +5,28 @@
  *
  * FUN_0001ABD4 (68 byte) e' un binary-search per word: cerca il low-word
  * di `arg1Long` dentro la table puntata da `*(0x40065A)..*(0x40065E)`,
- * con step iniziale 0x400 byte (halvato ogni iter). Termina solo
+ * with initial 0x400-byte step, halved on every iter. It terminates only
  * all'equality. Ritorna in D0 il word-index `(matchPtr - basePtr) / 2`.
  *
  * Strategia stub injection:
- *   - FUN_0001ABD4 NON chiama JSR → niente da patchare.
- *   - L'unico requisito e' che il target sia presente nella table,
- *     altrimenti il binario entrerebbe in infinite loop. I test
+ *   - FUN_0001ABD4 calls no JSR -> nothing to patch.
+ *   - The only requirement is that the target is present in the table,
+ *     otherwise the binary would enter an infinite loop. Tests
  *     costruiscono table garantite "complete".
  *
- * Setup table: usiamo l'identita' `table[i] = i` per i in [0..0x200)
+ * Setup table: use identity `table[i] = i` for i in [0..0x200)
  * (512 word, 1 KB), stoccata @ workRam off 0x1000. Pointer base = 0x401000,
- * pointer end = 0x4011FE. Convergenza dimostrata per ogni target in
- * [0..0x1FF]: la bisezione raggiunge step=2 in <=10 iter e trova match.
+ * pointer end = 0x4011FE. Convergence is proven for every target in
+ * [0..0x1FF]: bisection reaches step=2 in <=10 iterations and finds a match.
  *
- * Suite testate (4 × 125 = 500 casi):
+ * Tested suites (4 x 125 = 500 cases):
  *   - A: identity table 512 word, target random in [0..0x1FF]
  *   - B: identity table, target random + bit alti random nel long
- *        (verifica mask 0xFFFF)
+ *        (checks mask 0xFFFF)
  *   - C: identity table 256 word (table piu' piccola), target in [0..0xFF]
- *        — verifica clamp al lato top
- *   - D: identity table sloggata @ off 0x800 (base diverso), target random
- *        — verifica indipendenza dal base addr
+ *        - checks top-side clamp
+ *   - D: identity table displaced @ off 0x800 (different base), random target
+ *        - checks independence from base addr
  *
  * Confronto: D0.w (return = word index).
  *
@@ -58,7 +58,7 @@ function patchSubs(_cpu: CpuSession): void {
   // Nessuna JSR nel range.
 }
 
-/** Scrive un long-BE in entrambi binario+TS. */
+/** Write a long-BE in both binary+TS. */
 function pokeLong(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -79,7 +79,7 @@ function pokeLong(
   }
 }
 
-/** Scrive un word-BE in entrambi binario+TS. */
+/** Write a word-BE in both binary+TS. */
 function pokeWord(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
   console.log(
     `\n=== Suite B: identity 512w, target = (rand_high<<16) | low_word — ${perSuite} casi ===`,
   );
-  // Table gia' settata da Suite A.
+  // Table already set by Suite A.
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const lo = ri(0x200);
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: identity 512-word @ off 0x800 (base diverso) ───────────
+  // Suite D: identity 512-word @ off 0x800 (different base).
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: identity 512w @ off 0x800, target in [0..0x1FF] — ${sizeD} casi ===`,
@@ -223,12 +223,12 @@ async function main(): Promise<void> {
   setupIdentityTable(stateInst, cpu, 0x800, 0x200);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
-    // Mix di solo target valido + ext_l style (low word valido)
+    // Mix of valid target only plus ext_l style with a valid low word.
     const lo = ri(0x200);
     const useExt = rng() < 0.5;
     let target: number;
     if (useExt) {
-      // ext.l style: high word = sign-ext del bit15 di lo (sempre 0 in [0..0x1FF])
+      // ext.l style: high word = sign-ext of lo bit 15, always 0 in [0..0x1FF].
       target = lo >>> 0;
     } else {
       target = (((rl() & 0xffff0000) >>> 0) | lo) >>> 0;

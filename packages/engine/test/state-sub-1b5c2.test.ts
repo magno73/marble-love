@@ -5,7 +5,7 @@
  * (coord X/Y di un struct) in base a 8 blocchi condizionali pilotati da flag
  * cardinali, gate word e direction bitmap.
  *
- * Bit-perfect verificato vs binary tramite
+ * Bit-perfect verified against the binary through
  * `packages/cli/src/test-state-sub-1b5c2-parity.ts` (500/500 cases).
  */
 

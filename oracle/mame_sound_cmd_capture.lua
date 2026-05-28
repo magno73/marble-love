@@ -1,6 +1,6 @@
--- mame_sound_cmd_capture.lua — capture cmd 68K → 6502 mentre la main 68K e' in
+-- mame_sound_cmd_capture.lua - captures 68K -> 6502 commands while the main 68K is in
 -- gameplay reale (coin+start scripted). Replica il pattern di install + input
--- injection di oracle/mame_playable_input_capture.lua (che e' verificato
+-- injection from oracle/mame_playable_input_capture.lua, which is verified
 -- generare scenari di gameplay), aggiunge un install_write_tap su $FE0001 per
 -- registrare i sound cmd.
 --
@@ -117,8 +117,8 @@ local script_trackball_y = 0xff
 local route_steps = {}
 local route_total = 0
 -- I tap handle restituiti da install_*_tap MUSCONO essere mantenuti in vita:
--- senza riferimento Lua, il GC li libera e il tap smette di firare (verificato
--- empiricamente). Mame_playable_input_capture.lua applica lo stesso pattern.
+-- without a Lua reference, GC releases them and the tap stops firing (verified
+-- empirically). Mame_playable_input_capture.lua applies the same pattern.
 local tap_handles = {}
 
 local function in_pulse(frame, start)
@@ -247,7 +247,7 @@ local function install_taps()
     sound_mem = audiocpu.spaces["program"]
     ports = manager.machine.ioport.ports
 
-    -- Read taps su main CPU input ports (osservativi, ritornano data invariato)
+    -- Read taps on main CPU input ports (observational, return data unchanged).
     table.insert(tap_handles,
         main_mem:install_read_tap(0xF20000, 0xF20007, "snd_cap_trackball", function(o, d, m) return d end))
     table.insert(tap_handles,
@@ -338,8 +338,8 @@ local function install_taps()
         end))
 
     -- Il tap critico: $FE0001 write da main = soundlatch cmd al sound 6502.
-    -- Bus 16-bit del 68010: write a $FE0000 con mask & 0xff != 0 colpisce
-    -- l'odd byte ($FE0001) che e' il vero soundlatch.
+    -- 68010 16-bit bus: write to $FE0000 with mask & 0xff != 0 hits
+    -- the odd byte ($FE0001), the real soundlatch.
     -- ALSO captures sub-frame cycle offset for cycle-precise replay (sessione 4l).
     table.insert(tap_handles,
         main_mem:install_write_tap(0xFE0000, 0xFE0001, "snd_cap_cmd_w", function(o, d, m)

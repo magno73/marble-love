@@ -1,7 +1,7 @@
 /**
  * sound-irq-input.test.ts — smoke + corner cases di soundIrqInputTick.
  *
- * Bit-perfect parity verificata vs binary tramite
+ * Bit-perfect parity verified vs binary via
  * `cli/src/test-sound-irq-input-parity.ts`.
  */
 
@@ -69,7 +69,7 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
 
     // PRE-increment idx era 15 → buffer[15] (offset 0x401F46+15 = 0x401F55)
     expect(s.workRam[SND_IRQ_BUF_OFF + 15]).toBe(0xcc);
-    // dopo addq.b 1 → 16; bcs (idxPre<0xF) non scatta → clr.b → 0
+    // after addq.b 1 -> 16; bcs (idxPre<0xF) does not branch -> clr.b -> 0.
     expect(s.workRam[SND_IRQ_IDX_OFF]).toBe(0);
   });
 
@@ -81,7 +81,7 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
 
     soundIrqInputTick(s, 0x77);
 
-    // mmioByte scritto a 0x401FE0 (PRE-increment)
+    // mmioByte written to 0x401FE0 (PRE-increment).
     expect(s.workRam[0x1fe0]).toBe(0x77);
     // ackPtr incrementato di 1 (long)
     expect(getLong(s.workRam, SND_IRQ_ACK_PTR_OFF)).toBe(0x00401fe1);
@@ -97,7 +97,7 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
     soundIrqInputTick(s, 0x55);
 
     expect(s.workRam[0x1fe0]).toBe(0x55);
-    // counter dec → 0 → ackPtr azzerato
+    // counter dec -> 0 -> ackPtr cleared.
     expect(getLong(s.workRam, SND_IRQ_ACK_PTR_OFF)).toBe(0);
     expect(s.workRam[SND_IRQ_CNT_OFF]).toBe(0);
   });

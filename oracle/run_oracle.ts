@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 /**
- * run_oracle.ts — wrapper Bun/Node che lancia MAME con il Lua dumper attivo
  * e produce traces/oracle_<scenario>.jsonl.
  *
  * Uso:
  *   node --experimental-strip-types oracle/run_oracle.ts \
  *       --scenario level1_no_input [--frames 600] [--rom-path ./roms]
  *
- * Il determinismo MAME è non-negoziabile (PRD §3 Phase 3 acceptance):
- *  - `-throttle 0` per velocità massima
  *  - `-nothrottle` (legacy alias)
- *  - `-seconds_to_run` per chiudere senza UI
  *  - random seed pinned via env (TBD in Phase 3)
  */
 
@@ -62,12 +58,10 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
 
   const luaPath = resolve("oracle/mame_dumper.lua");
-  // MAME runs ~13× realtime senza throttle; bisogna comunque dare margine init.
-  // Frame count è il limite vero (Lua exits dopo MAX_FRAMES); seconds è solo
   // un timeout di safety.
   const seconds = Math.max(30, Math.ceil(args.frames / 60) + 5);
 
-  // Path scenario JSON per input scriptato (se esiste)
+  // Scenario JSON path for scripted input, if present.
   const scenarioJsonPath = resolve("oracle/scenarios", `${args.scenario}.json`);
 
   const childEnv: Record<string, string> = {

@@ -1,8 +1,6 @@
 /**
  * state-sub-50f4.test.ts — smoke tests di stateSub50F4 (FUN_50F4).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-50f4-parity.ts`.
- * Qui copriamo la logica osservabile dal lato JS:
  *   - 10 byte copiati dall'input ai 10 byte di output (offsets 6,A,C,E,12,...,1C)
  *   - syndromi tutte zero → return 0, no mutazione counter
  *   - syndrome non-zero → return 1 (correzione) o 0x80000001 (uncorrectable)
@@ -31,8 +29,6 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
-    // Setup: A3 punta a ROM. Riga 0 (D2w=0): A0 = A3 + 0.
-    // Patterned bytes per ogni offset letto.
     const inputBytes: number[] = [];
     for (let i = 0; i < 30; i++) {
       const v = (i * 17) & 0xff;
@@ -56,15 +52,10 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
-    // Costruiamo input che produca syndromi tutte 0.
+    // Build input that produces all-zero syndromes.
     // Init: D6b = ~A0[0] ^ A0[16] ^ A0[8] ^ A0[4] ^ A0[2]
-    // Trick semplice: set tutto a 0 → D6b = ~0 ^ 0 ^ 0 ^ 0 ^ 0 = 0xFF (non zero!).
-    // Approccio: usiamo input zero con A0[0] = 0xFF (così ~A0[0] = 0x00).
     // Allora D6b = 0 ^ 0 ^ 0 ^ 0 ^ 0 = 0.
-    // Inner loop: byte = 0 sempre → D2..D6 unchanged dopo loop (XOR con 0).
-    // Quindi syndromi rimangono 0.
     rom.program[A3_ROM_BASE + 0x00] = 0xff;
-    // Tutti gli altri letti (offsets 0x02, 0x04, 0x08, 0x10 e tabella) = 0.
     // Output[i] = 0 ovunque.
 
     const counterAddrLo = (A2_BASE + COUNTER_LO_OFFSET) - 0x400000;
@@ -103,7 +94,6 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
-    // Riga 1 (D2w=1): A0 = A3 + 30. Patternizziamo solo riga 1.
     for (let i = 0; i < 30; i++) {
       rom.program[A3_ROM_BASE + 30 + i] = (i + 1) & 0xff;
     }
@@ -122,29 +112,23 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
-    // Per innescare uncorrectable, dobbiamo avere syndromi LSB tali che il
-    // primo bit-iter produca D0w != 0 con bit 4 (0x10) clear. Bit 4 di D0w
-    // = LSB di D6b. Quindi: serve LSB(D6b)=0, ma uno tra LSB(D5b/D4b/D3b/D2b)
+    // To trigger uncorrectable, syndrome LSBs must make the first bit-iter
+    // produce D0w != 0 with bit 4 (0x10) clear. D0w bit 4
     // = 1.
     //
-    // Setup semplice: tutti gli input zero TRANNE A0[0] = 0xFE (= ~0xFE = 1).
     // Init: D6b = 0x01 ^ 0 ^ 0 ^ 0 ^ 0 = 0x01.
     // Inner loop: byte = 0 ovunque → D2..D6 invariati.
     // D6b = 0x01 (LSB=1), D2b..D5b = 0 (LSB=0).
     // Bit-iter 1: lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=0, lsbD2=0.
     // D0w = (1 << 4) | 0 | 0 | 0 | 0 = 0x10. Bit 4 set → look up table[0].
     //
-    // Hmm questo trigger correzione (bit 4 set), non uncorrectable.
-    // Per uncorrectable: serve LSB(D6b)=0 ma altri non-zero.
     // Setup: D2b LSB = 1, D6b LSB = 0.
     // Init D6b = ~A0[0] ^ A0[16] ^ A0[8] ^ A0[4] ^ A0[2].
-    // D2b = A0[2]. Inner loop: D2b XOR'd con bytes for table values con bit 0 set:
+    // D2b = A0[2]. Inner loop: D2b XOR'd with bytes for table values with bit 0 set:
     //   table = [3,5,6,7,9,10,11,12,13,14], bit 0 set: 3,5,7,9,11,13 (offsets 6,10,14,18,22,26).
     //
-    // Manteniamo tutto a 0 TRANNE A0[2] = 1. Allora:
     //   D2b = 1, D3b=0, D4b=0, D5b=0, D6b = ~0 ^ 0 ^ 0 ^ 0 ^ 1 = 0xFE.
     //   D6b LSB = 0. D2b LSB = 1.
-    //   Inner loop: tutti bytes = 0 → no XOR change. Syndromi finali: D6b=0xFE, D2b=1, others=0.
     //
     // Bit-iter 1: lsbD6=0, lsbD5=0, lsbD4=0, lsbD3=0, lsbD2=1.
     // D0w = (0<<4)|(0<<3)|(0<<2)|(0<<1)|1 = 1. Bit 4 NOT set → UNCORRECTABLE.
@@ -166,13 +150,8 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     // Bit-iter 1: D0w=1 (non-zero) → increment counter.
     // Bit-iter 2..8: i bit di D6b (0xFE = 0b11111110) shifted out:
     //   iter 1 LSB(D6b)=0, iter 2 LSB=1, iter 3 LSB=1, ... iter 8 LSB=1.
-    //   D2b dopo iter 1 = 0 (shift out). Iter 2..8: D2b=0.
     //   D0w iter 2 = (1<<4)|0|0|0|0 = 0x10 → bit 4 set, lookup table[0]=0xFF → no correction.
-    //   D0w iter 3..8 = 0x10 (same) → tutti hanno D0w != 0.
-    // Quindi counter incrementato 8 volte.
     //
-    // In realtà il counter viene incrementato OGNI iter dove D0w != 0. Verifichiamo
-    // solo che sia stato incrementato (≥ 1).
     rom.program[A3_ROM_BASE + 0x02] = 0x01;
 
     const r = stateSub50F4(state, rom, A2_BASE, A3_ROM_BASE, 0, 0);

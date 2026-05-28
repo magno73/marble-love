@@ -1,8 +1,8 @@
--- mame_ym2151_write_pc_tap.lua — registra ogni write YM2151 con il PC del
+-- mame_ym2151_write_pc_tap.lua - records every YM2151 write with the PC of the
 -- sound 6502 al momento del write. Permette di mappare ogni reg write a una
 -- specific code location nel sound ROM.
 --
--- Output: lista degli (addr, data, PC) per primi N writes.
+-- Output: list of (addr, data, PC) for the first N writes.
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_YM_PC_TAP_FRAMES") or "500")
 local OUT_PATH = os.getenv("MARBLE_YM_PC_TAP_OUT") or "/tmp/mame_ym_pc_writes.json"

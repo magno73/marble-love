@@ -1,35 +1,19 @@
 /**
- * mailbox.ts — Latch 8-bit con pending bit, mirror di `generic_latch_8` MAME.
+ * 8-bit latch with a pending bit, mirroring MAME's `generic_latch_8`.
  *
- * Pattern hardware Atari System 1: il sound chip 6502 e la main CPU 68010
- * scambiano byte tramite due mailbox indipendenti, ognuna unidirezionale.
- * Atarisy1.cpp config:
- *
- *  - main→sound: write da 68K $FE0001 ≡ read da 6502 $1810
- *    On write: latch.value=byte, pending=true, NMI asserito al 6502.
- *    On read da 6502: clear pending, NMI rilasciato. Valore resta leggibile.
- *
- *  - sound→main: write da 6502 $1810 ≡ read da 68K $FC0001
- *    On write: latch.value=byte, pending=true, IRQ6 asserito alla main CPU.
- *    On read dal main: clear pending, IRQ rilasciato.
- *
- * Status bit position su $1820 ($1820 bit 4 = main pending,
- * $1820 bit 3 = sound pending). Polling via questo registro evita race
- * sui pending bit (vedi `sound-mmu.ts`).
- *
- * La callback `onWritePending` permette al chiamante di hook su NMI/IRQ
- * pin (fornita dal wiring in `sound-mmu.ts` per la mailbox main→sound, e
- * dal main-tick 68K side per sound→main). Le mailbox stesse non conoscono
- * le CPU: pin assertion sta nel layer di wiring.
+ * Atari System 1 uses two unidirectional mailboxes between the 68010 main CPU
+ * and the 6502 sound CPU. Writes set `pending`; reads acknowledge and clear it
+ * while leaving the latched value readable. Pin assertions are supplied by the
+ * wiring layer through callbacks so the mailbox stays CPU-agnostic.
  */
 
 import type { u8 } from "../wrap.js";
 import { as_u8 } from "../wrap.js";
 
 export interface Mailbox8 {
-  /** Ultimo byte scritto. Default 0 a reset. */
+  /** Last written byte, reset default 0. */
   value: u8;
-  /** True dopo write, false dopo read (ack-on-read). */
+  /** True after write, false after read ack. */
   pending: boolean;
 }
 
@@ -37,9 +21,10 @@ export function createMailbox(): Mailbox8 {
   return { value: as_u8(0), pending: false };
 }
 
-/** Write side: scrive byte, marca pending. Callback (opzionale) per NMI/IRQ
- * pin assertion. Idempotente sul pending (write multipli senza read
- * intermedio: l'ultimo byte vince). */
+/**
+ * Write side: latch byte and mark pending. Multiple writes before a read keep
+ * pending true; the latest byte wins.
+ */
 export function mailboxWrite(
   mb: Mailbox8,
   byte: u8,
@@ -49,13 +34,12 @@ export function mailboxWrite(
   const wasPending = mb.pending;
   mb.pending = true;
   if (!wasPending && onWritePending !== undefined) {
-    // Edge-triggered: callback solo sulla transizione false→true.
+    // Edge-triggered: callback only on the false -> true transition.
     onWritePending();
   }
 }
 
-/** Read side: clear pending (ack), ritorna valore. Il valore resta leggibile
- * anche dopo clear (latch persiste). Callback (opzionale) per pin release. */
+/** Read side: clear pending as an ack and return the still-latched value. */
 export function mailboxRead(mb: Mailbox8, onReadAck?: () => void): u8 {
   const v = mb.value;
   if (mb.pending) {
@@ -65,7 +49,7 @@ export function mailboxRead(mb: Mailbox8, onReadAck?: () => void): u8 {
   return v;
 }
 
-/** Reset hard: pending=false, value=0. Usato da CPU RESET. */
+/** Hard reset: pending=false, value=0. Used by CPU RESET. */
 export function mailboxReset(mb: Mailbox8): void {
   mb.value = as_u8(0);
   mb.pending = false;

@@ -1,48 +1,48 @@
-# Curriculum dei scenari per il loop di hill-climbing autonomo (Phase 6).
-# Ordine: dal più semplice al più complesso. Claude Code attacca uno scenario
-# alla volta, lo chiude (parità 100%), poi passa al successivo.
+# Scenario curriculum for the autonomous hill-climbing loop (Phase 6).
+# Order runs from simplest to most complex. Claude Code tackles one scenario
+# at a time, closes it at 100% parity, then moves to the next one.
 #
 # Format:
-#   - id: nome scenario (file in oracle/scenarios/<id>.json)
-#     gate: subsystem che deve funzionare prima di poter chiudere lo scenario
-#     priority: int (più basso = più prioritario)
+#   - id: scenario name, backed by oracle/scenarios/<id>.json
+#     gate: subsystem that must work before the scenario can close
+#     priority: int (lower = higher priority)
 #
-# Lo scenario "blocca" (gate) i successivi se non chiuso. Marco vede progress
-# in `STATUS.md` (sezione Phase 6).
+# The scenario gates later scenarios until closed. Marco sees progress
+# in `STATUS.md`.
 
 stages:
   - id: attract_mode
-    gate: rng                    # è il primo dove l'RNG viene esercitato
+    gate: rng                    # First scenario that exercises the RNG.
     priority: 10
     notes: |
-      Power-on, niente input. Verifica che ROM bootstrap, vector table,
-      RNG init, tile loader iniziale siano replicati. Se questo non chiude,
-      tutto il resto è inutile.
+      Power-on with no input. Verifies ROM bootstrap, vector table, RNG init,
+      and the initial tile loader. If this does not close, later stages are not
+      meaningful.
 
   - id: level1_no_input
     gate: physics
     priority: 20
     notes: |
-      Coin/start, nessun input dopo lo start. La biglia rotola da sola sul
-      tilt iniziale del livello 1 fino a perdersi. Tutta la fisica (slope
-      attractor) è esercitata; nemici ancora pochi.
+      Coin/start with no input after start. The marble rolls by itself on the
+      initial level-1 tilt until it is lost. This exercises slope physics while
+      keeping enemies sparse.
 
   - id: level1_basic_movement
     gate: input
     priority: 30
     notes: |
-      Pattern di movimento scriptato. Verifica subroutine input (additiva)
-      + slope (attractor) coordinate.
+      Scripted movement pattern. Verifies additive input routines plus slope
+      attractor coordinates.
 
   - id: level1_complete
     gate: ai
     priority: 40
     notes: |
-      Sequenza che porta la biglia al traguardo. Esercita tutti i nemici
-      del livello 1 + transition al livello 2.
+      Sequence that takes the marble to the finish. Exercises all level-1
+      enemies plus the transition to level 2.
 
-  # Phase 6 successiva aggiungerà level2_*..level6_* + scenari edge:
-  # - timer_zero (cosa succede se il timer scade)
-  # - extra_life (al raggiungimento threshold di score)
+  # A later Phase 6 pass will add level2_*..level6_* plus edge scenarios:
+  # - timer_zero (what happens when the timer expires)
+  # - extra_life (when the score threshold is reached)
   # - high_score_entry
   # - service_mode (DIP switch)

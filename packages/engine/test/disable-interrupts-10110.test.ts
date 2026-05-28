@@ -1,7 +1,6 @@
 /**
  * disable-interrupts-10110.test.ts — smoke + parity di FUN_00010110.
  *
- * Bit-perfect parity verificata vs binary in
  * `cli/src/test-disable-interrupts-10110-parity.ts`.
  */
 
@@ -39,7 +38,6 @@ describe("disableInterrupts10110 (FUN_00010110, 6 byte)", () => {
     expect(SR_IPL7_SUPERVISOR & 0x2000).toBe(0x2000);
     // bit 10-8 = 0x0700 (IPL = 7)
     expect(SR_IPL7_SUPERVISOR & 0x0700).toBe(0x0700);
-    // bit di condizione (C/V/Z/N/X = bit 4-0) tutti zero
     expect(SR_IPL7_SUPERVISOR & 0x001f).toBe(0x0000);
   });
 });

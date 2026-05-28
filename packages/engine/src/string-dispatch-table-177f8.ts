@@ -1,40 +1,28 @@
 /**
- * string-dispatch-table-177f8.ts — replica `FUN_000177F8` (316 byte).
+ * string-dispatch-table-177f8.ts - port of `FUN_000177F8` (316 bytes).
  *
- * Sub di "lookup multi-tabella" usata dal viewport-step pipeline degli
- * objects/sprites (chiamata 2× dal `FUN_000264AA` @ `0x26932` e `0x26996`,
- * entrambe `JSR.L`). Prende **3 word args** sullo stack, esegue una catena
- * di lookup attraverso 3 famiglie di tabelle ROM (più una table workRam
- * @ `0x400478` di base-offsets per arg0) e una **PF/sprite RAM read** per
- * la "string image" stessa, e ritorna in `D0.w` un valore (`0..0xFFFF`)
- * che il caller usa come delta/coordinata. Esce con `D0 = 0` per 4 condizioni
- * di "miss" (bound, empty, zero pixel, sentinel `0x1000`).
+ * Takes three word arguments on the stack, walks the terrain/string dispatch
+ * tables, performs a PF/sprite RAM read, and returns the delta/coordinate used
+ * by callers. Exits with `D0 = 0` for four miss conditions: bound, empty, zero
+ * pixel, or sentinel `0x1000`.
  *
- * **Calling convention** (cdecl-like, args sullo stack):
+ * **Calling convention** (cdecl-like, args on stack):
  *
  *   args (relative to callee SP after `movem.l { A3 A2 D3 D2 }, -(SP)`):
- *     +0x14 :  arg0L_hi  (16 bit, dovrebbero essere 0 — non usati)
- *     +0x16 :  arg0L_lo  → D2.w = "char-index byte" (low byte usato come idx
- *                          in tabella `0x400478`; bit 0 → "odd" flag)
- *     +0x18 :  arg1L_hi  (non usato)
- *     +0x1a :  arg1L_lo  → D0.w = "x raw word" (poi `+ word@0x40098a; asr.w #1; +2`)
- *     +0x1c :  arg2L_hi  (non usato)
- *     +0x1e :  arg2L_lo  → D3.w = "y raw word" (poi `ext.l + add.l long@0x400988`)
+ *     +0x14 :  arg0L_hi  (16 bits, expected 0, unused)
+ *     +0x1a :  arg1L_lo  -> D0.w = "x raw word" then `+ word@0x40098a; asr.w #1; +2`
+ *     +0x1e :  arg2L_lo  -> D3.w = "y raw word" then `ext.l + add.l long@0x400988`
  *
- *   Il caller pushia ognuno come long (4 byte) — solo il low-word di ciascun
- *   long è significativo. La replica TS espone l'interfaccia come 3 word
- *   diretti (`arg0w, arg1w, arg2w`) per chiarezza, plus stato + ROM + PF RAM.
+ *   The caller pushes each as a long (4 bytes); only each low word is consumed.
  *
- * **Ritorno** (in `D0.w`):
- *   - `0x0000` per 4 path di "miss" (vedi sotto), oppure
  *   - `(byteValue - 0x80) + word@(0x400478 + 2*arg0w)`, oppure
  *   - `(D0w & 0x7f) - 0x40 + word@(0x400478 + 2*arg0w)` (case `top4 != 0`),
  *   - `(D0w & 0x7f) - 0x40 - lookupBias + word@(0x400478 + 2*arg0w)` (case
- *     `top4 != 0` con search per bias).
+ *     `top4 != 0` with bias search).
  *
  * **Disasm 0x177F8..0x17934** (316 byte, 3 long args):
  *
- *   000177f8  movem.l  { A3 A2 D3 D2 }, -(SP)        ; salva (16 byte) callee-saved
+ *   000177f8  movem.l  { A3 A2 D3 D2 }, -(SP)        ; save 16 callee-saved bytes
  *   000177fc  move.w   (0x16,SP), D2w                 ; D2.w = arg0w (char-index byte)
  *   00017800  movea.l  (0x00400474).l, A0             ; A0 = level header ptr (workRam)
  *   00017806  cmp.w    (0x18,A0), D2w                 ; D2.w vs (A0+0x18).w (signed)
@@ -131,7 +119,7 @@
  *   000178f8  add.w    (0,A1,D2w*1), D0w
  *   000178fc  bra.b    0x0001792e
  *
- *   ;-- top4_search (0x178fe): bias da 0x1ed62, fail se = 0x1000 --
+ *   ;-- top4_search (0x178fe): bias from 0x1ed62, fail if = 0x1000 --
  *   000178fe  move.w   D0w, D1w
  *   00017900  andi.w   #0xf80, D1w                          ; D1 = D0 bits 7..11 (range 0..0xf80)
  *   00017904  asr.w    #6, D1w                                ; D1 >>= 6 (signed; here always non-negative)
@@ -149,69 +137,52 @@
  *   0001792e  movem.l  (SP)+, { D2 D3 A2 A3 }              ; restore
  *   00017932  rts
  *
- * **Memory map** (read-only — la sub non scrive nulla):
  *   - ROM @ 0x1eb3a   : 256 byte (128 word) — pair-table (signed16 → PF offset).
  *   - ROM @ 0x1ed0a   : ≥0x40 byte unsigned — "shift-base" byte index.
  *   - ROM @ 0x1ed36   (= 0x1ed0a + 0x2c)
  *                     : ≥0x40 byte — "shift-amount" (3..15).
  *   - ROM @ 0x1ed62   : 0x80 byte (16 word, 0x10 entry sentinel 0x1000) — bias.
- *   - ROM @ 0x24176   : 8 byte word-mask indexed da `D3.w*2` ∈ [0, 14].
- *   - ROM @ 0x2417e   : table di pair-long con stride 8 byte, indexed da
+ *   - ROM @ 0x24176   : 8-byte word-mask indexed by `D3.w*2` in [0, 14].
+ *   - ROM @ 0x2417e   : pair-long table with 8-byte stride, indexed by
  *                       D3.l (post `asl.l #3`), entry { off0:long, off1:long }.
- *   - workRam @ 0x400474.l   : ptr a level-header (init via FUN_1A236).
- *   - workRam @ 0x400988.l   : long bias additivo Y.
- *   - workRam @ 0x40098a.w   : word bias additivo X (overlaps lo word di 0x988).
- *   - workRam @ 0x40065a.l   : ptr a "string-table" (anche usato da bsearch
- *                              FUN_1ABD4 — `bsearch-table-1abd4.ts`).
- *   - workRam @ 0x400478..  : tabella di base-offset word, indexata da
- *                              `arg0w * 2`. Riempita da rle-expand
+ *   - workRam @ 0x400474.l   : pointer to level header (init via FUN_1A236).
+ *   - workRam @ 0x400988.l   : additive Y long bias.
+ *   - workRam @ 0x40098a.w   : additive X word bias, overlapping low word of 0x988.
+ *                              FUN_1ABD4 - `bsearch-table-1abd4.ts`.
+ *                              `arg0w * 2`. Filled by rle-expand
  *                              (`rle-expand.ts`).
- *   - workRam @ 0x40076e..  : tabella indirect (case bit-11 set) word,
- *                              indexata da `D0.w & 0x7fe` sign-extended.
- *   - PF/sprite RAM @ 0xa00000..0xa02fff o oltre, in funzione di
- *                              `(A0).l + D0_signed` per case_no_bit11, e
- *                              `0xa00000 + tableSigned + (rom_byte - 2)` per
- *                              il primo `move.l (A1)`. Per la replica TS, la
- *                              funzione accetta un `pfRam: Uint8Array` di
- *                              0x4000 byte (copre 0xa00000..0xa04000), con
+ *                              indexed by sign-extended `D0.w & 0x7fe`.
+ *                              `(A0).l + D0_signed` for case_no_bit11, and
+ *                              `0xa00000 + tableSigned + (rom_byte - 2)` for
+ *                              the first `move.l (A1)`. In the TS port, the
+ *                              0x4000 bytes (covers 0xa00000..0xa04000), with
  *                              0xa02000..0xa03000 ↔ `state.spriteRam` e
  *                              0xa03000..0xa04000 ↔ `state.alphaRam` (la
- *                              chiamata reale tocca solo i primi 0x3000 di
- *                              questo range).
  *
- * **Modello TS**: la funzione è esposta come pure function di 3 word arg +
- * snapshot di stato (workRam, ROM, PF RAM). Ritorna un word (`D0 & 0xFFFF`).
- * Verifica bit-perfect via
  * `cli/src/test-string-dispatch-table-177f8-parity.ts` (500/500 cases).
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-// ─── Constants (immediate values dal disasm) ──────────────────────────────
+// ─── Constants (immediate values from disasm) ─────────────────────────────
 
-/** Indirizzo ROM table 1: pair-words (signed16 base offsets nella PF RAM). */
 export const ROM_TABLE_BASE_177F8_TBL1 = 0x0001eb3a as const;
-/** Indirizzo ROM table 2: byte index per shift-base (D1.b = ROM[0x1ed0a + D0]). */
 export const ROM_TABLE_BASE_177F8_TBL2 = 0x0001ed0a as const;
-/** Offset interno alla table 2: shift-amount (`+0x2c` da `0x1ed0a` = `0x1ed36`). */
+/** Internal offset into table 2: shift amount (`+0x2c` from `0x1ed0a` = `0x1ed36`). */
 export const ROM_TABLE_SHIFT_OFFSET = 0x2c as const;
-/** Indirizzo ROM table 3: word bias 0x80 byte (`0x1ed62`). */
 export const ROM_TABLE_BIAS_177F8 = 0x0001ed62 as const;
-/** Indirizzo ROM mask table per `case_top4` (`0x24176`, 8 byte word-mask). */
 export const ROM_TABLE_TOP4_MASK = 0x00024176 as const;
-/** Indirizzo ROM table di pair-long (stride 8 byte) per `case_no_bit11`. */
 export const ROM_TABLE_PAIR_LONG = 0x0002417e as const;
 
-/** workRam ptr long: `*(0x400474)` = level header ptr (vedi init-level-load-1a236). */
+/** workRam ptr long: `*(0x400474)` = level header ptr (see init-level-load-1a236). */
 export const WR_LEVEL_HEADER_PTR_ABS = 0x00400474 as const;
-/** workRam long: bias additivo Y (`*(0x400988).l`). */
+/** workRam long: additive Y bias (`*(0x400988).l`). */
 export const WR_BIAS_Y_LONG_ABS = 0x00400988 as const;
-/** workRam word: bias additivo X (`*(0x40098a).w`). NB overlaps low word di 0x988. */
+/** workRam word: additive X bias (`*(0x40098a).w`). NB overlaps low word of 0x988. */
 export const WR_BIAS_X_WORD_ABS = 0x0040098a as const;
-/** workRam ptr long: string-table base (`*(0x40065a)`). Anche usato da bsearch FUN_1ABD4. */
 export const WR_STRING_TABLE_PTR_ABS = 0x0040065a as const;
-/** workRam table di base-offset word, indexata da `2*arg0w` (`0x400478`). */
+/** workRam base-offset word table, indexed by `2*arg0w` (`0x400478`). */
 export const WR_BASE_OFFSET_TABLE_ABS = 0x00400478 as const;
 /** workRam table indirect "case_bit11_set" (`0x40076e`). */
 export const WR_INDIRECT_TABLE_ABS = 0x0040076e as const;
@@ -222,7 +193,6 @@ export const A1_BASE_PFRAM_177F8 = 0xa00000 as const;
 /** Sentinel "missing" returned by bias table (`cmpi.w #0x1000, D1w`). */
 export const BIAS_SENTINEL_177F8 = 0x1000 as const;
 
-/** Bound check offset `(0x18, A0).w` dentro al level header. */
 export const LEVEL_HEADER_BOUND_OFF = 0x18 as const;
 
 /** Workram base e size. */
@@ -288,44 +258,29 @@ function sextW(w: number): number {
 }
 
 /**
- * Risultato strutturato della replica (utile per debug/trace ma non necessario
- * per l'interfaccia di parity). `d0Word` è il valore di ritorno effettivo.
  */
 export interface DispatchResult177F8 {
-  /** Valore D0.w al ritorno (0..0xFFFF). */
   d0Word: number;
   /** Path "early-exit" preso (return 0): "bound", "fff_zero", "byte_zero",
-   *  "bias_sentinel", o `null` se path normale. */
+    */
   earlyExit:
     | "bound"
     | "fff_zero"
     | "byte_zero"
     | "bias_sentinel"
     | null;
-  /** Path normale: "no_bit11" (full pair-long search), "top4_short", "top4_search",
-   *  o `null` se early-exit. */
+  /**
+   *  or `null` on early-exit. */
   normalPath: "no_bit11" | "top4_short" | "top4_search" | null;
-  /** Numero di iter di re-loop "case_bit11_set" (raro: solo se bit11 di D0 è set). */
   bit11Reloops: number;
 }
 
 /**
  * Replica `FUN_000177F8` — `stringDispatchTable177F8`.
  *
- * Calcola un valore word a partire da 3 word args (low-word di 3 long pushed
- * dal caller), usando una catena di tabelle ROM + workRam + PF/sprite RAM.
- * Vedi header del modulo per il flow completo. Funzione **pure** (no writes).
  *
- * @param state   GameState (legge solo `state.workRam`).
- * @param rom     RomImage (legge solo `rom.program`).
- * @param pfRam   Uint8Array di 0x4000 byte che mappa `0xa00000..0xa04000`.
- *                Il caller deve sincronizzare questo buffer con sprite/alpha
  *                RAM e PF RAM (i primi 0x2000 byte sono PF RAM, poi 0x2000
  *                e 0x3000 = sprite, 0x3000..0x4000 = alpha).
- * @param arg0w   Word arg0 (= D2.w al binario): char-index byte.
- * @param arg1w   Word arg1 (= D0.w iniziale): x raw.
- * @param arg2w   Word arg2 (= D3.w iniziale): y raw.
- * @returns       D0.w del binario (0..0xFFFF, masked).
  */
 export function stringDispatchTable177F8(
   state: GameState,
@@ -340,7 +295,6 @@ export function stringDispatchTable177F8(
 }
 
 /**
- * Variante "detailed" che ritorna anche path-info per debug/test introspettivo.
  */
 export function stringDispatchTable177F8Detailed(
   state: GameState,
@@ -372,7 +326,6 @@ export function stringDispatchTable177F8Detailed(
   // ── D0.w = (arg1w + word@0x40098a).w >> 1 (signed asr) + 2 ────────────
   const globalWord98a = rw(WR_BIAS_X_WORD_ABS);
   let D0_w_init = (arg1w + globalWord98a) & 0xffff;
-  // asr.w #1: signed shift right 1 (preserva segno)
   D0_w_init = sextW(D0_w_init);
   D0_w_init = (D0_w_init >> 1) & 0xffff;
   D0_w_init = (D0_w_init + 2) & 0xffff;
@@ -426,14 +379,10 @@ export function stringDispatchTable177F8Detailed(
   // the higher bits of D0 (bits 8..31) come from before, we need them. But
   // for `Dn mod 64`, only bits 0..5 of D0 matter. Since D0.b is the new value,
   // the bits 0..5 are shift_byte & 0x3f. So shift_count = shift_byte & 0x3f.
-  // Range: [0..63]. Per shift count ≥ 32, il long shifted è interamente 0 (vedi
-  // sotto: handling separato per via di JS shift mod 32).
   const shift_count = shift_byte & 0x3f;
 
   // ── D1 >>>= D0.b (unsigned long shift) ────────────────────────────────
   // 68k `lsr.l Dn,Dy` interpreta lo shift count come `Dn mod 64`. Per shift
-  // ≥ 32, il risultato è 0 (tutti i bit shifted-out). JS `>>>` invece fa mod
-  // 32, quindi `x >>> 38 ≡ x >>> 6` — BUG. Per la replica 68k corretta,
   // dobbiamo gestire separatamente count ≥ 32.
   if (shift_count >= 32) {
     D1_l_loaded = 0;

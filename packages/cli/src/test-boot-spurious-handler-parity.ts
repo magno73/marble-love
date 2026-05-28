@@ -3,16 +3,13 @@
  * test-boot-spurious-handler-parity.ts — differential FUN_100D8 vs
  * bootSpuriousHandler.
  *
- * `FUN_000100D8` (48 byte) è la spurious-IRQ thunk: scrive D0.b a
- * `*0x40000E` e poi fa `bra` a 0x100B0 (boot main path), che culmina con
+ * `*0x40000E` and then branches to 0x100B0 (boot main path), which ends with
  * `jmp 0x117B2` (NO `rts`).
  *
- * Per testare via `callFunction` (che usa sentinel return + rts) patchiamo
+ * To test via `callFunction` (which uses sentinel return + rts), patch
  * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) sostituendo i primi 2
- * byte con `rts` (`4E 75`); i 4 byte residui restano garbage ma non vengono
  * eseguiti.
  *
- * **Effetti workRam comparati** (offset relativi a 0x400000):
  *   - 0x000E         (sentinel byte)
  *   - 0x0440..0443   (SP save long)
  *   - 0x03AE..03AF   (AV control init word = 0x0080)
@@ -22,9 +19,8 @@
  *   - 0x1F44..1F45   (audio mailbox base)
  *   - 0x1F5A..1F5D   (audio ack ptr long)
  *
- * Le scritture a MMIO 0x840000, 0x860000, 0xFE0000 sono ignorate da Musashi
- * (regioni non mappate dal layout di test) e dal nostro TS (che non tocca
- * MMIO). Quindi il diff workRam coincide.
+ * Writes to MMIO 0x840000, 0x860000, and 0xFE0000 are ignored by Musashi
+ * (regions not mapped in the test layout) and by TS (which does not touch
  *
  * Uso: npx tsx packages/cli/src/test-boot-spurious-handler-parity.ts [N=500]
  */
@@ -132,7 +128,6 @@ async function main(): Promise<void> {
   const rom = Buffer.from(readFileSync(romPath));
 
   // Patch `jmp 0x117B2` @ 0x100D2 → `rts` (4E 75) + 4 byte garbage.
-  // Verifica che i 6 byte originali siano `4E F9 00 01 17 B2` prima di patchare
   // (sanity check: evita di patchare la ROM sbagliata).
   const orig = [
     rom[JMP_PATCH_OFF],
@@ -166,24 +161,14 @@ async function main(): Promise<void> {
 
   for (let i = 0; i < n; i++) {
     // Reset SP — la jsr 0x100E0 e la patched rts hanno bisogno di stack room.
-    // Usiamo 0x401EFC come SP iniziale (lascia margine sotto i 0x401F00 dei
-    // counter audio, evita che la jsr scriva sopra i nostri test fields).
     const spInitial = 0x00401efc;
     cpu.system.setRegister("sp", spInitial);
 
-    // Genera input random per ogni watched field + d0In.
+    // Generate random input for each watched field plus d0In.
     const d0In = Math.floor(rng() * 256) & 0xff;
-    // SP che il binario scriverà a *0x400440. Il `move.l SP, ...` scrive
-    // il valore CORRENTE di SP (= spInitial - 4 dopo la sentinel push del
-    // callFunction wrapper). Preciso: callFunction fa push sentinel (-4)
-    // poi setta PC; quindi all'esecuzione di move.l SP, ... SP = spInitial - 4.
-    // Sul lato TS passiamo lo stesso valore.
+    // callFunction wrapper). Specifically, callFunction pushes the sentinel (-4).
     const spAtMoveL = (spInitial - 4) >>> 0;
 
-    // Pre-popola TUTTI i watched field con valori random (tranne 0x3B6 che
-    // viene sovrascritto a 0xFFFF dal binario, ma testiamo comunque che il
-    // pre-stato non leaki). Il binario è un boot path: scrive overwrite,
-    // non legge prima di scrivere.
     for (const f of WATCHED) {
       const max = f.size === 1 ? 256 : f.size === 2 ? 0x10000 : 0x100000000;
       const v = Math.floor(rng() * max);
@@ -191,11 +176,10 @@ async function main(): Promise<void> {
       writeField(stateInst.workRam, f.off, f.size, v);
     }
 
-    // Snapshot pre per debug.
+    // Pre-run debug snapshot.
     const preCtr = readField(stateInst.workRam, 0x03b6, 2);
     const preAck = readField(stateInst.workRam, 0x1f5a, 4);
 
-    // Setta D0 = d0In sul binario (è il primo byte scritto da FUN_100D8).
     cpu.system.setRegister("d0", d0In >>> 0);
 
     // ── Run binary ──────────────────────────────────────────────────────

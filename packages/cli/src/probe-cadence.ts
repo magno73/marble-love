@@ -1,5 +1,4 @@
-// Probe: log frame, mailbox, cpuTicks, mainLoopBodyTicks, didBody per ogni tick
-// in TS warm-state f12000. Confronta col pattern atteso MAME (body @ f12001,
+// Probe: log frame, mailbox, cpuTicks, mainLoopBodyTicks, didBody for each tick.
 // 12003, 12005, 12007, 12008, 12009, 12011, ...). Diagnosi cadenza 30/60Hz.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -45,10 +44,6 @@ for (let i = 1; i <= lastIdx; i++) {
   const newBodyTicks = wrap.raw(s.clock.mainLoopBodyTicks);
   const cpuT = wrap.raw(s.clock.cpuTicks);
   const mb = s.workRam[0x16] ?? 0;
-  // didBody: il body ha girato se mainLoopBodyTicks è andato EVEN (post-inc),
-  // o ha mantenuto valore EVEN dopo rollback (mailbox set).
-  // Equivalente: newBodyTicks era pari quando abbiamo deciso il path.
-  // Caso semplice: newBodyTicks PARI → body è stato eseguito (regular o extra).
   //                newBodyTicks DISPARI → era wait.
   const didBody = (newBodyTicks & 1) === 0;
   if (didBody) {

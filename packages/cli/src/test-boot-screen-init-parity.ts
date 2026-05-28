@@ -2,11 +2,10 @@
 /**
  * test-boot-screen-init-parity.ts — differential FUN_222E vs bootScreenInit.
  *
- * `FUN_0000222E` (118 byte) è un helper boot-screen chiamato da FUN_FA0:
  *   1. clearScreen (FUN_1C88)
  *   2. 6 register init writes a $B00000-$B0000A
  *   3. introSetup (FUN_22A4)
- *   4. se *0x400016 == 0 (cold boot):
+ *   4. if *0x400016 == 0 (cold boot):
  *        4a. coldBootInit (FUN_3A9C)
  *        4b. dispatch slot1 (ROM[0x10048].w == 0x4EF9 ? hook : FUN_5E00)
  *        4c. dispatch slot2 (ROM[0x1004E].w == 0x4EF9 ? hook : FUN_5DEC)
@@ -14,17 +13,13 @@
  * Strategia stub:
  *   - Patch ROM (pre-CPU): ogni sub-jsr destination diventa
  *       `addq.b #1, (sentinel_slot).l ; rts`  (8 byte: 52 39 00 40 03 EX 4E 75)
- *     dove sentinel_slot è un byte unico in work RAM 0x4003E0..0x4003E6.
  *   - In TS: ogni callback fa `state.workRam[off] = (state.workRam[off]+1) & 0xff`.
- *   - Confronto post-call: 12 byte palette RAM + 7 sentinel byte work RAM.
  *
- * Per esercitare tutti i rami varia per case:
  *   - frame counter (0x400016/0x400017): zero (cold) vs random (warm)
  *   - slot1 magic @ ROM[0x10048].w: 0x4EF9 (hook) vs 0x0000 (fallback)
  *   - slot2 magic @ ROM[0x1004E].w: 0x4EF9 (hook) vs 0x0000 (fallback)
  *
- * Il "vector slot magic on" patcha una `JMP.L target_stub.l` in ROM dove
- * target_stub è un'ulteriore RTS-stub a 0x1A798 (slot1) / 0x1A7A0 (slot2).
+ * "vector slot magic on" patches a `JMP.L target_stub.l` in ROM where
  *
  * Uso: npx tsx packages/cli/src/test-boot-screen-init-parity.ts [N]
  */
@@ -55,11 +50,11 @@ const FUN_3A9C = 0x00003a9c;
 const FUN_5E00 = 0x00005e00;
 const FUN_5DEC = 0x00005dec;
 
-// Vector slot dispatch targets (popolati con JMP.L stub per il path "magic on").
-const SLOT1_HOOK_STUB = 0x0001a798; // target reale di Marble Madness
+// Vector slot dispatch targets, populated with JMP.L stubs for the "magic on" path.
+const SLOT1_HOOK_STUB = 0x0001a798;
 const SLOT2_HOOK_STUB = 0x0001a7a0; // libero, riservato dal test
 
-// ROM offset dei due vector slot (magic + jmp target).
+// ROM offsets of the two vector slots (magic + jump target).
 const VECTOR_SLOT_1 = 0x00010048;
 const VECTOR_SLOT_2 = 0x0001004e;
 
@@ -101,9 +96,8 @@ function patchJmpL(rom: Buffer, addr: number, target: number): void {
   rom[addr + 5] = target & 0xff;
 }
 
-/** Patcha lo slot magic via pokeMem (vivo). magic=0x4EF9 abilita hook,
- *  altri valori → fallback. Quando si abilita, il long che segue è già
- *  patchato in ROM-buffer con il target stub (vedi `prepatchRom`). */
+/**
+ *  patched in the ROM buffer with the target stub (see `prepatchRom`). */
 function setSlotMagic(cpu: ReturnType<typeof createCpu> extends Promise<infer T> ? T : never, slotAddr: number, magic: number): void {
   pokeMem(cpu, slotAddr, 2, magic & 0xffff);
 }
@@ -137,8 +131,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch ROM buffer con tutti gli stub e il jmp.l a 0x1004E.
-  // Stub addq+rts a ognuno dei 7 entry point.
+  // Stub addq+rts at each of the 7 entry points.
   patchStubAddq(romBuf, FUN_1C88, SENT_CLEAR_SCREEN);
   patchStubAddq(romBuf, FUN_22A4, SENT_INTRO_SETUP);
   patchStubAddq(romBuf, FUN_3A9C, SENT_COLD_INIT);
@@ -147,9 +140,7 @@ async function main(): Promise<void> {
   patchStubAddq(romBuf, SLOT1_HOOK_STUB, SENT_SLOT1_HOOK);
   patchStubAddq(romBuf, SLOT2_HOOK_STUB, SENT_SLOT2_HOOK);
 
-  // ROM @ 0x10048 originale: già `4E F9 00 01 A7 98` → JMP.L 0x1A798. Conferma.
-  // ROM @ 0x1004E originale: `00 00 00 00 00 00`. Per il path "magic on" del
-  // slot 2 patchamo qui in ROM a `JMP.L 0x1A7A0`. Il magic vero sarà settato
+  // Original ROM @ 0x1004E: `00 00 00 00 00 00`. For the "magic on" path of
   // poi via pokeMem per case (ROM byte 0..1) — i 4 byte target restano fissi.
   patchJmpL(romBuf, VECTOR_SLOT_2, SLOT2_HOOK_STUB);
 
@@ -159,7 +150,7 @@ async function main(): Promise<void> {
   console.log(`\n=== bootScreenInit (FUN_222E) — ${n} casi ===`);
   const rng = makeRng(0x222e);
 
-  // Subs TS che incrementano i sentinel slot in workRam.
+  // TS subs that increment sentinel slots in workRam.
   const incSent = (s: typeof stateInst, off: number): void => {
     const a = off - 0x400000;
     s.workRam[a] = ((s.workRam[a] ?? 0) + 1) & 0xff;
@@ -193,7 +184,7 @@ async function main(): Promise<void> {
     const s1Magic = (pattern & 0x2) === 0;
     const s2Magic = (pattern & 0x1) === 0;
 
-    // Frame counter: word a 0x400016. Cold boot se entrambi i byte == 0.
+    // Frame counter: word at 0x400016. Cold boot if both bytes == 0.
     const fcWord = fcZero ? 0 : 1 + Math.floor(rng() * 0xffff);
     pokeMem(cpu, 0x00400016, 2, fcWord);
     stateInst.workRam[0x16] = (fcWord >>> 8) & 0xff;
@@ -206,7 +197,6 @@ async function main(): Promise<void> {
     setSlotMagic(cpu, VECTOR_SLOT_2, s2MagicVal);
 
     // Sync ROM image vista da TS: bus.ts ha emptyRomImage statica, dobbiamo
-    // ricreare la rom view con i magic correnti ad ogni iterazione.
     const romView = busNs.emptyRomImage();
     romView.program.set(romBuf);
     // Applica i magic correnti
@@ -215,7 +205,7 @@ async function main(): Promise<void> {
     romView.program[VECTOR_SLOT_2] = (s2MagicVal >>> 8) & 0xff;
     romView.program[VECTOR_SLOT_2 + 1] = s2MagicVal & 0xff;
 
-    // Reset palette RAM target (12 byte) + sentinel slot, sia in cpu mem che state.
+    // Reset palette RAM target (12 bytes) + sentinel slot, both in CPU mem and state.
     for (let off = 0; off < 12; off++) {
       pokeMem(cpu, PALETTE_RAM_BASE + off, 1, 0);
       stateInst.colorRam[off] = 0;
@@ -225,12 +215,10 @@ async function main(): Promise<void> {
       stateInst.workRam[(SENTINEL_BASE - 0x400000) + k] = 0;
     }
 
-    // Esegui binario
     callFunction(cpu, FUN_222E, []);
     // Esegui TS
     bsiNs.bootScreenInit(stateInst, romView, subs);
 
-    // Confronto: 12 byte palette + 7 sentinel byte
     let fail: FailRecord | null = null;
     for (let off = 0; off < 12; off++) {
       const b = peekMem(cpu, PALETTE_RAM_BASE + off, 1) & 0xff;

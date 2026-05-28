@@ -1,4 +1,4 @@
-// probe-srtgt-f56.ts — confronta workram regions @ f+55, f+56 per capire perche' srtgt diverge
+// probe-srtgt-f56.ts - compares workRam regions @ f+55 and f+56 to explain srtgt drift.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";

@@ -2,13 +2,11 @@
 /**
  * test-state-sub-2bda-parity.ts — differential FUN_2BDA vs stateSub2BDA.
  *
- * FUN_2BDA (134 byte) è la sub "register-in-first-empty-slot" del
- * state-machine scheduler. Args: 3 long sullo stack (arg1, arg2, arg3),
- * dove arg2/arg3 sono usati solo come low-word.
+ * state-machine scheduler. Args: 3 longs on the stack (arg1, arg2, arg3),
+ * where arg2/arg3 are used only as low words.
  *
  * Logica:
- *   - Trova primo i in [0..3] con STATE[i] == 0
- *   - Se trovato:
+ *   - Find first i in [0..3] with STATE[i] == 0
  *       DATA_PTR[i] = arg1 (long)
  *       STATE[i] = 3 (byte)
  *       THRESHOLD[i] = arg3.w (word)
@@ -16,20 +14,11 @@
  *       COUNTER[i] = 0 (word)
  *       FLAG34[i] = 0 (byte)
  *       return D0 = 1
- *   - Altrimenti: return D0 = 0
  *
  * Strategia:
- *   - FUN_2BDA non chiama JSR → nessun stub injection necessario
- *   - Patch difensivo all'inizio della funzione: NON serve. Pattern di
- *     simmetria: comunque non c'è nulla da patchare (no JSR nel range).
- *   - Confronto: workRam @ 0x401F00..0x401F3F + return value D0 (byte)
  *
  * Suite testate:
- *   - A: tabella random + state random + args random (mix di slot
  *        liberi/occupati)
- *   - B: tutti slot liberi (state==0) → match slot 0 ogni volta
- *   - C: tutti slot occupati → return 0
- *   - D: solo uno slot libero a posizione random
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2bda-parity.ts [N]
  */
@@ -51,11 +40,9 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_2BDA = 0x00002bda;
 
 /**
- * Patch JSR-stubs. FUN_2BDA NON chiama JSR; questo helper è kept come
- * placeholder per il pattern (consistency con altre parity test).
+ * placeholder for the pattern (consistency with other parity tests).
  */
 function patchSubs(_cpu: CpuSession): void {
-  // No JSR in FUN_2BDA → niente da patchare.
 }
 
 const STRUCT_BASE = 0x00401f00;
@@ -69,7 +56,6 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup struct in entrambi binario e TS state. */
 function setupStruct(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -174,7 +160,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: tutti slot liberi (state==0 in 0x1C..0x1F) ─────────────
   console.log(`\n=== Suite B: all slots free → register slot 0 — ${perSuite} casi ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -189,7 +174,6 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: tutti slot occupati (state != 0) ───────────────────────
   console.log(`\n=== Suite C: all slots busy → return 0 — ${perSuite} casi ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {

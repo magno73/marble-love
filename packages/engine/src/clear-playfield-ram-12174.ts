@@ -8,7 +8,7 @@
  *   12180  dbf D0w, 0x1217E
  *   12184  rts
  *
- * Cancella tutta la `playfieldRam` (8 KB @ 0xA00000-0xA01FFF) con un loop
+ * Clear all `playfieldRam` (8 KB @ 0xA00000-0xA01FFF) with a loop
  * `clr.l (A0)+` di 0x800 iter (D0=0x7FF + dbf decrementa fino a -1 → 2048
  * iter × 4 byte = 8192 byte = 8 KB).
  *

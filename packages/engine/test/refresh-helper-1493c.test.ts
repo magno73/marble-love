@@ -1,7 +1,6 @@
 /**
  * Test refreshHelper1493C (FUN_1493C) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-refresh-helper-1493c-parity.ts`.
  */
 
@@ -82,14 +81,12 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
       order.push(slotAddr - SLOT_BASE_ADDR);
     });
 
-    // Devono essere 0, 0x60, 0xC0, 0x120 in ordine crescente
     expect(order).toStrictEqual([0x00, 0x60, 0xc0, 0x120]);
   });
 
   it("fun14966 può mutare workRam — le modifiche sono visibili al chiamante", () => {
     const WRAM_BASE = 0x00400000;
     const state = emptyGameState();
-    // fun14966 scrive un byte nel primo byte dello slot
     const written: number[] = [];
 
     refreshHelper1493C(state, (s, slotAddr) => {

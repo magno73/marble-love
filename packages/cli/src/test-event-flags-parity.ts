@@ -2,9 +2,9 @@
 /**
  * test-event-flags-parity.ts — differential FUN_2548 vs consumeEventFlag.
  *
- * Per N flag word casuali: setto *0x400006, callFunction(0x2548), confronto:
+ * For N random flag words: set *0x400006, callFunction(0x2548), compare:
  *   - D0 (return value, 0 o 1)
- *   - *0x400006 dopo (shifted right by 1)
+ *   - *0x400006 after the call, shifted right by 1
  *
  * Uso: npx tsx packages/cli/src/test-event-flags-parity.ts [N]
  */

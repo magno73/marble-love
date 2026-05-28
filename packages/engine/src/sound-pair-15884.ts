@@ -1,59 +1,52 @@
 /**
- * sound-pair-15884.ts — replica `FUN_00015884` (40 byte).
+ * sound-pair-15884.ts - replica of `FUN_00015884` (40 bytes).
  *
- * Sub helper minimale: invia il sound id `0x3A` via `FUN_00158AC` (sound
- * command sender), poi — se il "game mode" word @ `0x400394` non vale `2` —
- * invia anche il sound id `0x3B`. Tipicamente i due id formano una coppia
- * (probabile stereo / left+right o intro+sustain dello stesso effetto)
- * e in mode `2` il binario sopprime il secondo trigger.
+ * Minimal helper: sends sound id `0x3A` through `FUN_00158AC`, then sends
+ * `0x3B` unless the game-mode word at `0x400394` equals 2. The two ids usually
+ * form a pair, and mode 2 suppresses the second trigger.
  *
  * **Disasm 0x15884..0x158AB** (40 byte):
  *
- *   pea     (0x3A).l                  ; arg long → byte LSB = 0x3A
- *   jsr     0x000158AC.l              ; FUN_158AC(0x3A) — sound trigger
+ *   pea     (0x3A).l                  ; arg long, byte LSB = 0x3A
+ *   jsr     0x000158AC.l              ; FUN_158AC(0x3A)
  *   moveq   #0x2, D0                  ; D0 = 2
  *   cmp.w   (0x00400394).l, D0w       ; D0 - mem (word compare)
  *   addq.l  #0x4, SP                  ; pop arg 0x3A
- *   beq.b   end                       ; if mem == 2 → skip secondo trigger
- *   pea     (0x3B).l                  ; arg long → byte LSB = 0x3B
- *   jsr     0x000158AC.l              ; FUN_158AC(0x3B) — sound trigger
+ *   beq.b   end                       ; if mem == 2, skip second trigger
+ *   pea     (0x3B).l                  ; arg long, byte LSB = 0x3B
+ *   jsr     0x000158AC.l              ; FUN_158AC(0x3B)
  *   addq.l  #0x4, SP                  ; pop arg 0x3B
  * end:
  *   rts
  *
- * **Semantica**: dato `M = uint16(workRam[0x394..0x395])` letto come word:
- *   - sempre: `soundCommand(0x3A)`
- *   - se `M != 2`: `soundCommand(0x3B)` (trigger pair)
- *   - se `M == 2`: skip pair (single trigger)
+ * Semantics for `M = uint16(workRam[0x394..0x395])`:
+ *   - always: `soundCommand(0x3A)`
+ *   - if `M != 2`: `soundCommand(0x3B)`
+ *   - if `M == 2`: single trigger only
  *
- * **0x400394** è il "game mode discriminator" (cfr `trackball-apply.ts`,
- * `sprite-coords.ts`): valori noti `0`, `2`, `4` selezionano sub-state.
+ * `0x400394` is the game-mode discriminator; known values `0`, `2`, and `4`
+ * select sub-states.
  *
- * **Side effect**: solo le 1 o 2 chiamate a FUN_158AC. Nessuna scrittura
- * su workRam/colorRam/etc. da parte di FUN_15884 stessa.
+ * Side effect: only the one or two calls to FUN_158AC. FUN_15884 itself does
+ * not write workRam/colorRam/etc.
  *
- * **Arg passing alla sub**: `pea (imm).l` pusha un long sullo stack e
- * `FUN_00158AC` legge solo il byte LSB via `move.b (0x7,SP), D0b`. La TS
- * espone soltanto il byte (gli alti 24 bit non hanno significato).
+ * Argument passing: `pea (imm).l` pushes a long and FUN_00158AC reads only its
+ * low byte. TS exposes only that byte.
  *
- * **JSR sub injection**: come `special-attract.ts` con `SpecialAttractSubs`,
- * `FUN_158AC` è sub esterna iniettabile via `SoundPair15884Subs.soundCommand`
- * (default no-op). Il caller (mainTick / context futuro) la collegherà al
- * vero sound dispatcher.
+ * JSR injection: like `special-attract.ts`, FUN_158AC is injectable through
+ * `SoundPair15884Subs.soundCommand`.
  *
- * **CMP.W con word zero-extended**: `cmp.w D0w, mem.w` confronta solo i 16
- * bit bassi; il flag `Z` riflette `(D0w - mem.w) == 0`. Quindi è un confronto
- * di word, indifferente al sign-extend (`D0=2`, `mem=0xFFFF` → 2-0xFFFF≠0
- * → Z=0 → secondo trigger eseguito).
+ * CMP.W compares only the low 16 bits; sign extension does not affect the
+ * branch decision.
  */
 
 import type { GameState } from "./state.js";
 import { notifySoundCmd as notifyGlobalSoundCmd } from "./sound-hook.js";
 
-/** Offset (work RAM) della word "game mode" letta da FUN_15884. */
+/** workRam offset of the game-mode word read by FUN_15884. */
 const GAME_MODE_WORD_OFF = 0x394;
 
-/** Valore di game mode che sopprime il secondo sound trigger. */
+/** Game-mode value that suppresses the second sound trigger. */
 const SUPPRESS_SECOND_MODE = 0x0002;
 
 /** Sound IDs cabled in FUN_15884 via `pea (imm).l; jsr FUN_158AC`. */
@@ -61,27 +54,26 @@ const SOUND_FIRST = 0x3a;
 const SOUND_SECOND = 0x3b;
 
 /**
- * Sub-functions stub iniettabili per `soundPair15884`.
+ * Injectable sub-function stubs for `soundPair15884`.
  *
- * `FUN_00158AC` (sound command sender) NON è replicata; default no-op.
+ * `FUN_00158AC` is modeled elsewhere; this hook keeps the helper testable.
  */
 export interface SoundPair15884Subs {
   /**
-   * `FUN_00158AC`: invia un sound command. Arg = byte LSB del long pushato
-   * via `pea (imm).l`. Default no-op (caller futuro connette al sound chip).
+   * `FUN_00158AC`: sends a sound command. Arg is the low byte of the long
+   * pushed via `pea (imm).l`.
    */
   soundCommand?: (cmd: number) => void;
 }
 
 /**
- * Replica `FUN_00015884` — sound pair trigger con game-mode gate.
+ * Mirrors `FUN_00015884`, a sound-pair trigger with game-mode gate.
  *
- * Legge `uint16` @ `workRam[0x394..0x395]` (big-endian). Invia sempre il
- * sound id `0x3A`; se la word non vale `0x0002` invia anche `0x3B`. Nessun
- * side effect su workRam.
+ * Reads BE uint16 at `workRam[0x394..0x395]`. Always sends sound id `0x3A`; if
+ * the word is not `0x0002`, also sends `0x3B`. No workRam side effects.
  *
- * @param state  GameState (legge `workRam[0x394..0x395]`).
- * @param subs   Stub iniettabili (default: soundCommand no-op).
+ * @param state  GameState; reads `workRam[0x394..0x395]`.
+ * @param subs   Injectable stubs.
  */
 export function soundPair15884(
   state: GameState,
@@ -89,17 +81,12 @@ export function soundPair15884(
 ): void {
   const r = state.workRam;
 
-  // First trigger — sempre eseguito (precede la cmp).
+  // First trigger always runs before the compare.
   subs?.soundCommand?.(SOUND_FIRST);
   notifyGlobalSoundCmd(SOUND_FIRST);
-  // DEBUG: count calls
-  if (typeof globalThis !== "undefined") {
-    const g = globalThis as { __soundPair15884Count?: number };
-    g.__soundPair15884Count = (g.__soundPair15884Count ?? 0) + 1;
-  }
 
   // Read uint16 big-endian @ workRam[0x394..0x395].
-  // `cmp.w D0=2, mem.w` → branch se `mem == 2` (word, unsigned).
+  // `cmp.w D0=2, mem.w` branches when `mem == 2` (word, unsigned).
   const hi = r[GAME_MODE_WORD_OFF] ?? 0;
   const lo = r[GAME_MODE_WORD_OFF + 1] ?? 0;
   const mode = ((hi << 8) | lo) & 0xffff;

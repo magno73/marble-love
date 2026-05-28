@@ -2,22 +2,16 @@
 /**
  * test-slot-match-12dae-parity.ts — differential FUN_00012DAE vs slotMatch12DAE.
  *
- * `FUN_00012DAE` scansiona 25 slot @0x400A9C stride 0x56 e ritorna D0=1
- * se trova:
+ * if it finds:
  *   - byte slot+0x18 == 1 AND
  *     ( long slot+0x3A == *(arg+2).l OR
  *       ( *(arg+2).l == 0 AND byte slot+0x1F == 0xC ) )
- * Altrimenti D0=0. Read-only sulla work RAM.
  *
- * Setup random per ogni caso (mix di pattern per coprire tutti i path):
- *   - target *(arg+2): 50% zero (attiva alt-path), 50% random.
  *   - byte slot+0x18: 50% == 1 (occupato match-eligible), 25% == 0, 25% random.
  *   - long slot+0x3A: 30% == target (match key), 70% random.
  *   - byte slot+0x1F: 30% == 0xC, 70% random.
  *
- * Confronto:
  *   - D0 (byte low confrontato come byte → match dell'unico bit out).
- *   - Nessun side effect: snapshot della work RAM prima/dopo.
  *
  * Uso: npx tsx packages/cli/src/test-slot-match-12dae-parity.ts [N]
  */
@@ -43,7 +37,6 @@ const FUN_12DAE = 0x00012dae;
 const SLOT_BASE = 0x00400a9c;
 const SLOT_STRIDE = 0x56;
 const SLOT_COUNT = 0x19;
-/** ARG va in work RAM così che TS può leggerlo via state.workRam. */
 const ARG_PTR = 0x00401d00;
 
 function makeRng(seed: number): () => number {
@@ -67,7 +60,6 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Mirror ROM nella RomImage TS (non strettamente necessario qui ma coerente).
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
   void tsRom;
@@ -88,11 +80,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern coverage:
-    //  0 : tutti slot vuoti (byte+0x18=0) → no-match (D0=0).
-    //  1 : tutti slot occupati con key=target → primo match (D0=1).
-    //  2 : tutti slot occupati con key=0 (=target=0) → primo match alt-path.
-    //  3 : tutti slot occupati con type=0xC, target=0 ma key!=0 → alt-path.
-    //  4 : solo slot[24] match (boundary, ultimo).
+    //  4 : only slot[24] matches (boundary, last slot).
     //  >=5: random mix.
     const pattern = i < 5 ? i : 5;
 
@@ -155,14 +143,13 @@ async function main(): Promise<void> {
 
     // Run binary
     const r = callFunction(cpu, FUN_12DAE, [ARG_PTR]);
-    const binD0 = r.d0 & 0xff; // funzione ritorna byte sign-extended {0,1}
+    const binD0 = r.d0 & 0xff;
 
     // Run TS (read-only)
     const tsD0 = ns.slotMatch12DAE(stateInst, ARG_PTR) & 0xff;
 
     let match = binD0 === tsD0;
 
-    // Verifica nessun side effect lato TS.
     if (match) {
       for (let k = 0; k < tsBefore.length; k++) {
         if ((stateInst.workRam[k] ?? 0) !== (tsBefore[k] ?? 0)) {

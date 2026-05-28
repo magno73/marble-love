@@ -25,7 +25,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     // *(A2+0xA) = 0xE5, *(A2+0xB) = ~0xE5 = 0x1A → D3 valido = 0xE5 >= 0xE0
     s.workRam[0x1d0a] = 0xe5;
     s.workRam[0x1d0b] = 0x1a;
-    // Pre-fill 0x1FF5 con marker
+    // Pre-fill 0x1FF5 with marker.
     s.workRam[0x1ff5] = 0xab;
     soundDispatchSend(s, rom, 0x0000);
     expect(s.workRam[0x1ff5]).toBe(0); // cleared

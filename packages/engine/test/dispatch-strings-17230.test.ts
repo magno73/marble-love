@@ -1,7 +1,6 @@
 /**
  * Test dispatchStrings17230 (FUN_17230) — smoke tests sui rami principali.
  *
- * Bit-perfect verificato vs binary tramite
  * `cli/src/test-dispatch-strings-17230-parity.ts`.
  */
 
@@ -30,7 +29,6 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     for (let i = 0; i < SLOT_COUNT; i++) {
       expect(calls[i]).toBe((SLOT_BASE_ADDR + i * SLOT_STRIDE) >>> 0);
     }
-    // Sequenza specifica:
     expect(calls).toEqual([
       0x401482, 0x4014c4, 0x401506, 0x401548, 0x40158a, 0x4015cc, 0x40160e,
     ]);
@@ -45,26 +43,23 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
   });
 
   it("callee può mutare strutture esterne senza interferire col loop", () => {
-    // Mock workRam come Uint8Array, callback scrive 0x99 al primo byte di ogni slot.
     const wr = new Uint8Array(0x2000);
     dispatchStrings17230((slot) => {
       const off = slot - 0x400000;
       if (off >= 0 && off < wr.length) wr[off] = 0x99;
     });
-    // I 7 slot devono avere 0x99 al loro primo byte.
+    // The 7 slots must have 0x99 in their first byte.
     for (let i = 0; i < SLOT_COUNT; i++) {
       const off = (SLOT_BASE_ADDR + i * SLOT_STRIDE) - 0x400000;
       expect(wr[off]).toBe(0x99);
     }
-    // Tutti gli altri byte = 0.
     let mutated = 0;
     for (let i = 0; i < wr.length; i++) if (wr[i] !== 0) mutated++;
     expect(mutated).toBe(SLOT_COUNT);
   });
 
   it("ordine call deterministico: nessun bit fuori posto col post-incremento di D3", () => {
-    // Il binario fa `move.l D3,D1; add.l D0,D3; jsr` — quindi D1 = D3 PRIMA
-    // dell'add. Verifichiamo che il primo arg sia 0x401482, non 0x4014C4.
+    // from the add. Verify that the first arg is 0x401482, not 0x4014C4.
     const first: number[] = [];
     dispatchStrings17230((slot) => {
       if (first.length === 0) first.push(slot);
@@ -91,9 +86,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
   });
 
   it("ultimo slot pushato è 0x40160E (i=6); D3 post-loop unused è 0x401650 (i=7)", () => {
-    // Il 7° (ultimo) pointer pushato corrisponde a i=6: 0x401482 + 6*0x42 = 0x40160E.
-    // Il valore finale di D3 dopo l'ottavo add.l (= base + 7*0x42 = 0x401650)
-    // NON viene mai pushato: il loop esce prima del jsr successivo.
+    // The 7th (last) pushed pointer corresponds to i=6: 0x401482 + 6*0x42 = 0x40160E.
     const calls: number[] = [];
     dispatchStrings17230((s) => calls.push(s));
     expect(calls[SLOT_COUNT - 1]).toBe(0x40160e);

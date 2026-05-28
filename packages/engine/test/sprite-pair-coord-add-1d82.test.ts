@@ -12,13 +12,11 @@ import {
 } from "../src/sprite-pair-coord-add-1d82.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Convenience: scrive una BE word nell'offset di spriteRam. */
 function writeWord(s: Uint8Array, off: number, v: number): void {
   s[off] = (v >>> 8) & 0xff;
   s[off + 1] = v & 0xff;
 }
 
-/** Convenience: legge una BE word da spriteRam. */
 function readWord(s: Uint8Array, off: number): number {
   return (((s[off] ?? 0) << 8) | (s[off + 1] ?? 0)) & 0xffff;
 }
@@ -36,7 +34,6 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     spritePairCoordAdd1D82(s, /*col*/ 0, /*bank*/ 0, /*deltaA*/ 0, /*deltaB*/ 0);
 
     // bank A: coord = asr 5 di 0xC215 = 0xFE10 sign-ext, & 0x1FF = 0x010
-    // (perché 0xC215 = -16363, >>5 = -512 = 0xFE00, & 0x1FF = 0x000).
     // Aspetta — (-16363) >> 5 in 16-bit signed: 0xC215 unsigned, signed -15851.
     //   -15851 / 32 = -495.34..., floor = -496 = 0xFE10.
     //   0xFE10 & 0x1FF = 0x010.
@@ -84,7 +81,6 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     // bank B: 2 + 7 = 9. << 5 = 0x120. | 0 = 0x120.
     expect(readWord(s.spriteRam, offB)).toBe(0x120);
 
-    // Le altre posizioni rimangono 0.
     expect(readWord(s.spriteRam, offA - 2)).toBe(0);
     expect(readWord(s.spriteRam, offA + 2)).toBe(0);
     expect(readWord(s.spriteRam, offB - 2)).toBe(0);
@@ -109,7 +105,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     const s = emptyGameState();
     // coord estratta = 0x100. delta = 0xFF00 (= -256 signed).
     // 0x100 + 0xFF00 = 0x10000 → word = 0x0000.
-    // pack: 0x0000 << 5 = 0x0000. low nibble di word originale 0x2008
+    // pack: 0x0000 << 5 = 0x0000. low nibble of original word 0x2008.
     //   (0x100 << 5 | 0x8 = 0x2008). low nibble = 0x8. result = 0x0008.
     writeWord(s.spriteRam, 0x000, 0x2008);
     writeWord(s.spriteRam, 0x100, 0x2008);
@@ -122,9 +118,8 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
 
   it("preserve low nibble, perde bit 4: pack mask = 0xF non 0x1F", () => {
     const s = emptyGameState();
-    // word = 0x0010 (solo bit 4 set). Coord estratta = 0. + delta 0 = 0.
+    // word = 0x0010 (only bit 4 set). Extracted coord = 0. + delta 0 = 0.
     // shifted = 0. low nibble (= word & 0xF) = 0x0. result = 0.
-    // → bit 4 originale viene PERSO.
     writeWord(s.spriteRam, 0x000, 0x0010);
     writeWord(s.spriteRam, 0x100, 0x0010);
 

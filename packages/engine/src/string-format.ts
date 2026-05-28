@@ -1,18 +1,15 @@
 /**
- * string-format.ts — funzioni di formattazione stringhe del binario.
  *
- * Le funzioni qui replicate sono usate dal codice HUD/score per scrivere
- * numeri formattati nell'alpha tilemap. Operano write byte-by-byte in
- * memoria.
+ * The functions replicated here are used by HUD/score code to write formatted
+ * numbers into the alpha tilemap. They operate byte-by-byte writes in
  *
- * Verificate bit-perfect vs binary tramite `cli/src/test-string-format-parity.ts`.
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { binToBcd } from "./bcd.js";
 
-// ─── Memory dispatch (subset coerente con bus.ts) ─────────────────────────
+// ─── Memory Dispatch (Subset Consistent With bus.ts) ──────────────────────
 
 function writeMemoryU8(state: GameState, addr: number, value: number): void {
   const v = value & 0xff;
@@ -43,9 +40,9 @@ function readMemoryU8(
 // ─── strcpy (FUN_1D74) ────────────────────────────────────────────────────
 
 /**
- * Replica `FUN_00001D74` — `strcpy(dest, src)`.
+ * `FUN_00001D74` replica — `strcpy(dest, src)`.
  *
- * Disassembly (5 istruzioni):
+ * Disassembly (5 instructions):
  *   movea.l (0x4,SP),A1      ; A1 = arg1 (dest)
  *   movea.l (0x8,SP),A0      ; A0 = arg2 (src)
  *   loop:
@@ -53,13 +50,10 @@ function readMemoryU8(
  *     bne.b loop
  *   rts
  *
- * Copia byte-per-byte da `src` a `dest` finché non viene copiato un byte
- * nullo (incluso il null terminator). Equivalente a C strcpy.
+ * null byte (including the null terminator). Equivalent to C strcpy.
  *
- * Source può essere in ROM (string literals < 0x80000) o RAM. Dest
- * deve essere in RAM scrivibile.
+ * must be in writable RAM.
  *
- * **Verificato bit-perfect** vs `FUN_00001D74` tramite differential test.
  */
 export function strcpy(
   state: GameState,
@@ -69,8 +63,6 @@ export function strcpy(
 ): void {
   let d = destAddr >>> 0;
   let s = srcAddr >>> 0;
-  // Safety cap: 68k strcpy non ha limite, ma in pratica le stringhe sono
-  // < 256 byte. 4096 è abbondante e previene loop infiniti su src senza NUL.
   let safety = 4096;
   while (safety-- > 0) {
     const b = readMemoryU8(state, rom, s);
@@ -86,8 +78,6 @@ export function strcpy(
 /**
  * Replica `FUN_00003784` — `setAlphaTile(arg1, arg2, arg3, arg4)`.
  *
- * Scrive un word in alpha tilemap @ `0xA03000`, con offset calcolato da
- * 2 byte coordinate + lookup ROM table. Use case: print tile/char at
  * (col, row) nel HUD overlay.
  *
  * Disassembly (cdecl 4 long args):
@@ -140,7 +130,6 @@ export function setAlphaTile(
 
   let d0 = arg1Long;
   if (shiftCount >= 32 || shiftCount < 0) {
-    // asl.l con count fuori dal range: m68k cap a 64; >= 32 → 0
     d0 = shiftCount < 0 ? d0 : 0;
   } else {
     d0 = (d0 << shiftCount) | 0;
@@ -162,12 +151,8 @@ export function setAlphaTile(
 /**
  * Replica `FUN_00003A08` — formatHex(value, bufEnd, numDigits, showSpaces).
  *
- * Scrive `value` come stringa hex ASCII in memoria, **backward** a partire
- * da `bufEnd + numDigits` (null terminator). Cifre da 0..9 e A..F.
  *
- * Speciale:
  *   - Se `value == 0` e `showSpaces == 1`: leading zero diventa space (' ').
- *   - Se `value == 0` AND non special: scrive un singolo '0' come trailing.
  *
  * Disassembly:
  *   D1 = value (long, arg1 a SP+8)
@@ -218,8 +203,6 @@ export function formatHex(
   // if D0 < 0 (signed bmi): exit
   if (d0 < 0) return;
 
-  // Loop dbf D0 (do-while semantics: il dbf decrementa POI testa, quindi runna
-  // almeno una volta). dbf esce quando D0 raggiunge -1.
   while (true) {
     let d2 = d1 & 0xf;
     if (d2 >= 10) d2 += 7;
@@ -239,8 +222,6 @@ export function formatHex(
  * Replica `FUN_00003A54` — `formatDecimal(value, bufEnd, numDigits, showSpaces)`.
  *
  * Trampolino: converte value in BCD via FUN_3A6A (binToBcd), poi formatta
- * come hex via FUN_3A08 (formatHex). Risultato: ASCII decimale (perché le
- * cifre BCD sono 0..9, mai > 9, quindi formatHex non aggiunge il +7 gap).
  */
 export function formatDecimal(
   state: GameState,

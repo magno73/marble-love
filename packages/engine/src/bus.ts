@@ -1,12 +1,12 @@
 /**
- * bus.ts — memory map e dispatch MMIO del 68010 (Atari System 1).
+ * bus.ts - 68010 memory map and MMIO dispatch for Atari System 1.
  *
- * Memory map verificata da `docs/hardware-map.md` (estratta da
+ * Memory map verified from `docs/hardware-map.md` and
  * `mame/src/mame/atari/atarisy1.cpp:80-143` + `address_map main_map_noslapstic`
- * `:405-429`):
+ * `:405-429`:
  *
  *   0x000000-0x07FFFF  ROM program (cartridge + motherboard BIOS, 512 KB)
- *   0x080000-0x087FFF  Slapstic-protected ROM (4 banchi × 8 KB)
+ *   0x080000-0x087FFF  Slapstic-protected ROM (4 banks x 8 KB)
  *   0x2E0000-0x2E0001  Sprite IRQ state (read)
  *   0x400000-0x401FFF  Work RAM (8 KB)
  *   0x800000           Playfield X scroll (write, 9 bit)
@@ -18,24 +18,22 @@
  *   0x8C0001           EEPROM unlock (write strobe)
  *   0x900000-0x9FFFFF  Cartridge external RAM/ROM (1 MB)
  *   0xA00000-0xA01FFF  Playfield RAM (8 KB)
- *   0xA02000-0xA02FFF  Motion Object RAM (4 KB, 8 banchi)
+ *   0xA02000-0xA02FFF  Motion Object RAM (4 KB, 8 banks)
  *   0xA03000-0xA03FFF  Alphanumerics RAM (4 KB)
  *   0xB00000-0xB007FF  Palette RAM (2 KB, IRGB-4444)
  *   0xF00000-0xF003FF  EEPROM (1 KB, 8-bit)
- *   0xF20000-0xF20007  Trackball ports (Marble: ruotato 45°)
- *   0xF40000-0xF4001F  Joystick / ADC (Marble non usa)
+ *   0xF20000-0xF20007  Trackball ports (Marble: rotated 45 degrees)
+ *   0xF40000-0xF4001F  Joystick / ADC (unused by Marble)
  *   0xF60000           Switch inputs (start/vblank/coin-pending bits)
  *   0xFC0000           Sound response read
  *   0xFE0000           Sound command write
  *
- * Tutti gli accessi passano da `read8/read16/read32` e `write8/write16/write32`.
- * Il bus è 16 bit big-endian, quindi read32 = due read16 consecutive.
+ * All access goes through `read8/read16/read32` and `write8/write16/write32`.
+ * The bus is 16-bit big-endian, so read32 is two consecutive read16 calls.
  *
- * **NOTA Phase 4b**: questa implementazione **NON emula il CPU 68010**, ma
- * fornisce dispatch corretto per quando un layer superiore (futuro emulator
- * o sotto-update game logic implementati direttamente) accede ai MMIO.
- * Per ora il bus è "passive": le RAM region funzionano (read/write
- * trasparente), gli MMIO loggano l'accesso e ritornano valori sensati.
+ * This does not emulate the 68010 CPU. It provides correct dispatch for higher
+ * layers, direct TS game-logic ports, and future emulator work. RAM regions are
+ * read/write, while MMIO returns stable values or records side effects.
  */
 
 import type { GameState } from "./state.js";
@@ -52,30 +50,28 @@ import {
 
 export interface RomImage {
   /**
-   * Programma 68010 (interleaved even/odd already merged big-endian).
+   * 68010 program ROM, with even/odd chips already merged big-endian.
    *
    * Layout:
    *   0x000000-0x07FFFF  main program ROM (512KB)
    *   0x080000-0x087FFF  slapstic-mapped window (8KB visible, 4-way mirrored).
-   *                      Il contenuto qui presente riflette il **bank attivo**
-   *                      della state machine slapstic-103, mirrorato 4 volte.
-   *                      `slapsticBanks` mantiene la copia pristine dei 4 bank.
+   *                      This region reflects the active slapstic-103 bank,
+   *                      mirrored four times. `slapsticBanks` keeps pristine
+   *                      copies of all four banks.
    *
-   * Quando il bank cambia (`slapsticTick`), chiamare `applySlapsticBank` per
-   * aggiornare questa regione coerentemente.
+   * Call `applySlapsticBank` after a bank change to keep this region coherent.
    */
   program: Uint8Array;
   /**
-   * Backup pristine dei 4 bank slapstic (32 KB = 4 × 8 KB).
-   * Indicizzato come `slapsticBanks[bank*0x2000 + offset]`.
-   * Caricato da `loadSlapsticBanks(rom, source)` durante setup.
+   * Pristine backup of the four slapstic banks (32 KB = 4 x 8 KB), indexed as
+   * `slapsticBanks[bank*0x2000 + offset]`.
    */
   slapsticBanks: Uint8Array;
   /**
    * State machine slapstic 137412-103 — bank-switching tracking.
    * Default state: bank = bankstart (3), state = IDLE.
-   * Mutato da `slapsticLookup` quando il TS chiama una lookup; impatta la
-   * regione `program[0x080000-0x087FFF]` via `applySlapsticBank`.
+   * Mutated by `slapsticLookup`; impacts `program[0x080000-0x087FFF]` through
+   * `applySlapsticBank`.
    */
   slapsticFsm: SlapsticFsm;
   /** Sound CPU 6502. */
@@ -105,7 +101,7 @@ export function emptyRomImage(): RomImage {
 export interface Bus {
   rom: RomImage;
   state: GameState;
-  /** Counter di accessi MMIO non documentati (debug). */
+  /** Count of undocumented MMIO accesses, used only for debugging. */
   unmappedAccesses: number;
 }
 
@@ -150,11 +146,11 @@ export const MMIO_SOUND_RESP  = 0xFC0000 as const;
 export const MMIO_SOUND_CMD   = 0xFE0000 as const;
 export const MMIO_SOUND_CMD_ALT = 0xF80000 as const; // alt write (used by roadbls2)
 
-/** Dimensione del cartridge external RAM (`0x900000-0x9FFFFF`, 1 MB). */
+/** Cartridge external RAM size (`0x900000-0x9FFFFF`, 1 MB). */
 const CART_RAM_SIZE = 0x100000;
 
-// Mappa da Bus instance → Uint8Array (allocato lazy alla prima scrittura).
-// 1 MB è grande, quindi non lo includiamo in Bus per default.
+// Map from Bus instance to lazily allocated cartridge RAM. Keep it out of Bus
+// by default because it is 1 MB per instance.
 const cartRamMap = new WeakMap<Bus, Uint8Array>();
 
 function cartRam(bus: Bus): Uint8Array {
@@ -176,12 +172,12 @@ export function read8(bus: Bus, addr: number): u8 {
     return as_u8(bus.rom.program[a] ?? 0);
   }
 
-  // Slapstic ROM 0x080000-0x087FFF (bank-switched, 4×8KB con mirror).
-  // La regione `rom.program[0x80000..0x88000)` riflette il **bank attivo**
-  // mirrorato 4 volte; viene aggiornata da `applySlapsticBank` quando la
-  // FSM cambia bank. Per accessi tipici di bus (read normali), basta leggere
-  // dal program array. La FSM viene aggiornata solo dalle sub helper che
-  // chiamano esplicitamente `slapsticTick` o `slapsticLookup`.
+  // Slapstic ROM 0x080000-0x087FFF (bank-switched, 4×8KB with mirrors).
+  // The `rom.program[0x80000..0x88000)` region reflects the active bank
+  // mirrored 4 times; `applySlapsticBank` updates it when the FSM changes
+  // banks. For typical bus reads, reading the program array is enough. The
+  // FSM is advanced only by helper subs that explicitly call `slapsticTick`
+  // or `slapsticLookup`.
   if (a >= SLAPSTIC_BASE && a < SLAPSTIC_END) {
     return as_u8(bus.rom.program[a] ?? 0);
   }
@@ -204,7 +200,6 @@ export function read8(bus: Bus, addr: number): u8 {
   // Playfield RAM
   if (a >= PF_RAM_BASE && a < PF_RAM_END) {
     return as_u8(bus.state.workRam[a - PF_RAM_BASE] ?? 0); // PF tilemap RAM
-    // TODO Phase 4c: separare la PF/MO/Alpha RAM dalla work RAM (ora condividono workRam come placeholder)
   }
 
   // Sprite RAM 0xA02000-0xA02FFF
@@ -215,7 +210,6 @@ export function read8(bus: Bus, addr: number): u8 {
   // Alpha RAM 0xA03000-0xA03FFF
   if (a >= ALPHA_RAM_BASE && a < ALPHA_RAM_END) {
     return as_u8(bus.state.spriteRam[a - ALPHA_RAM_BASE] ?? 0);
-    // TODO Phase 4c: separare alpha RAM
   }
 
   // Palette RAM 0xB00000-0xB007FF
@@ -225,11 +219,11 @@ export function read8(bus: Bus, addr: number): u8 {
 
   // EEPROM 0xF00000-0xF003FF
   if (a >= EEPROM_BASE && a < EEPROM_END) {
-    // umask16(0x00ff): solo low byte. Per ora ritorniamo 0xFF (vergine).
+    // umask16(0x00ff): low byte only. Return erased EEPROM value for now.
     return as_u8(0xff);
   }
 
-  // Trackball 0xF20000-0xF20007 (Marble: m_trackball_type=1, ruotato 45°)
+  // Trackball 0xF20000-0xF20007 (Marble: m_trackball_type=1, rotated 45 deg).
   if (a >= MMIO_TRAKBALL_BASE && a < MMIO_TRAKBALL_END) {
     return readTrackball(bus, a);
   }
@@ -241,7 +235,7 @@ export function read8(bus: Bus, addr: number): u8 {
 
   // Sound response
   if (a === MMIO_SOUND_RESP || a === MMIO_SOUND_RESP + 1) {
-    // Per ora: ritorna 0 (no sound response). Phase 4c: implementare mailbox.
+    // No response yet; the sound mailbox path owns future behavior here.
     return as_u8(0);
   }
 
@@ -268,11 +262,9 @@ export function write8(bus: Bus, addr: number, value: u8): void {
   const a = addr >>> 0;
   const v = value as unknown as number;
 
-  // ROM is read-only; ignore writes. Le scritture alla slapstic window
-  // (0x080000-0x087FFF) servono come trigger di state-machine sul chip
-  // reale, ma il TS-side il bank e' guidato da `slapsticLookup` (che e'
-  // l'unico callsite del binario che effettivamente fa una sequenza di
-  // accessi → bank switch). Quindi qui no-op.
+  // ROM is read-only. Slapstic-window writes can trigger hardware state, but
+  // this model drives bank changes through `slapsticLookup`, the binary path
+  // that performs the required access sequence.
   if (a < SLAPSTIC_END) {
     return;
   }
@@ -349,12 +341,12 @@ export function write8(bus: Bus, addr: number, value: u8): void {
 
   // EEPROM (8-bit, low byte only)
   if (a >= EEPROM_BASE && a < EEPROM_END) {
-    return; // TODO: implement EEPROM persistence (Phase 7 web)
+    return; // EEPROM persistence is intentionally not modeled yet.
   }
 
   // Sound command (mailbox 68010 → 6502)
   if (a === MMIO_SOUND_CMD || a === MMIO_SOUND_CMD + 1) {
-    // Phase 4c: AudioEvent dispatcher. Per ora track only.
+    // AudioEvent dispatcher path; currently tracked by higher-level sound code.
     return;
   }
   if (a === MMIO_SOUND_CMD_ALT || a === MMIO_SOUND_CMD_ALT + 1) {
@@ -392,7 +384,7 @@ export function write32(bus: Bus, addr: number, value: u32): void {
  *   F20004 (P2, X read): cur[1][0]
  *   F20006 (P2, Y read): cur[1][1]
  *
- * I valori di posx/posy vengono dal `state.input.trackballDx/Dy`.
+ * posx/posy values come from `state.input.trackballDx/Dy`.
  */
 function readTrackball(bus: Bus, addr: number): u8 {
   const a = addr - MMIO_TRAKBALL_BASE;
@@ -400,7 +392,7 @@ function readTrackball(bus: Bus, addr: number): u8 {
   const which = a & 1; // bit 0 = byte high/low (rotated mapping)
   const port = (a >>> 2) & 1; // word index inside player's pair
 
-  // Marble è P1 only; P2 = 0
+  // Marble is P1-only here; P2 reads as 0.
   if (player !== 0) return as_u8(0);
 
   const dx = (bus.state.input.trackballDx as unknown as number) | 0;
@@ -430,7 +422,7 @@ function readSwitches(bus: Bus, addr: number): u8 {
   const a = addr - MMIO_SWITCHES;
   if (a === 0) {
     // High byte of word
-    return as_u8(0xff); // active-low: tutti i bit not pressed = 1
+    return as_u8(0xff); // active-low: all unpressed bits are 1.
   }
   if (a === 1) {
     // Low byte: bit 0/1 START, bit 4 VBLANK, bit 6 test, bit 7 sound pending
@@ -438,9 +430,7 @@ function readSwitches(bus: Bus, addr: number): u8 {
     const buttons = bus.state.input.buttons as unknown as number;
     if (buttons & 0x1) v &= ~0x01; // START1 pressed = 0
     if (buttons & 0x2) v &= ~0x02; // START2
-    // Bit 4 = VBLANK live: per parità con MAME al frame_done, dovrebbe essere 0
-    // (vblank period). Ma siamo NELLA frame_done callback, quindi VBLANK è alto.
-    // MAME ritorna current vblank state; per semplicità ritorniamo 0 (vblank attivo).
+    // Bit 4 = VBLANK live. At frame_done parity points this should read active.
     v &= ~0x10;
     return as_u8(v);
   }

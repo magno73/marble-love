@@ -3,17 +3,13 @@
  * test-sub-1d242-parity.ts — differential FUN_0001D242 vs `sub1D242`.
  *
  * FUN_0001D242 (286 byte): decide-direction + anim-set + table-scan.
- * - Calcola D2/D3 deltas signed-byte (-8/0/+8) confrontando cellX/Y con
- *   cursor[0]/[1] in due path (Y-first se entity[0..3].l != 0, else X-first).
- * - Scrive anim ptr in entity[0x3E] (one of 4 ROM ptrs), copia in 0x3A.
- * - Scrive entity[0..3] = vx (D3<<16), entity[4..7] = vy (D2<<16).
+ *   cursor[0]/[1] along two paths (Y-first if entity[0..3].l != 0, else X-first).
  * - Set entity[0x25] = 2, clear entity[0x24].
- * - Scan loop @ 0x400018 stride 0xE2, limit *0x400396 (word): se A1[0x18]==1
+ * - Scan loop @ 0x400018 stride 0xE2, limit *0x400396 (word): if A1[0x18]==1
  *   AND entity[0x1B] == A1[0x1B] == 6 → set entity[0x25]=1 (early exit).
  *
  * **Strategia parity**:
- *   - Nessuna callee. Confronto entity bytes (0x60) + scan region first 0x100
- *     byte (per verificare che NON ci siano write spurious).
+ *     byte (to verify there are NO spurious writes).
  *   - Setup: entity @ 0x401D00, cursor @ 0x401E00.
  *
  * Uso: npx tsx packages/cli/src/test-sub-1d242-parity.ts [N]
@@ -48,7 +44,7 @@ const CURSOR_SIZE = 0x10;
 
 const SCAN_BASE = 0x00400018;
 const SCAN_OFF = SCAN_BASE - 0x400000;
-const SCAN_REGION_SIZE = 0xe2 * 3; // copre fino a 3 entry (per safety; limit casuale 0..3)
+const SCAN_REGION_SIZE = 0xe2 * 3;
 
 const LOOP_LIMIT_ADDR = 0x00400396;
 
@@ -138,8 +134,6 @@ function buildRandomCase(rng: () => number): CaseSetup {
   // cursor ptr → CURSOR_ABS
   writeLongBytes(entity, 0x2c, CURSOR_ABS);
 
-  // Randomize entity[0..3] (vel.x: detto tst.l (A0)): metà delle volte 0
-  // (X-first path), metà random (Y-first path).
   if (Math.floor(rng() * 2) === 0) {
     writeLongBytes(entity, 0x00, 0);
   } else {
@@ -149,7 +143,6 @@ function buildRandomCase(rng: () => number): CaseSetup {
   const cursor: number[] = new Array(CURSOR_SIZE).fill(0).map(() => rb());
   const scan: number[] = new Array(SCAN_REGION_SIZE).fill(0).map(() => rb());
 
-  // Limit casuale 0..3 (3 entry max in test setup).
   const limitWord = Math.floor(rng() * 4);
 
   return { entity, cursor, scan, limitWord };

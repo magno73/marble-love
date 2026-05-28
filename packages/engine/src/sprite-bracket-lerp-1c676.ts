@@ -1,19 +1,19 @@
 /**
  * sprite-bracket-lerp-1c676.ts — replica `FUN_0001C676` (1092 byte).
  *
- * "Sprite bracket-lerp": calcola 4 valori di output "bracket+lerp" con
- * segno di direzione, poi 8 check di minimo con flag-bits, infine sottrae
- * il valore globale `*0x400694` da ciascuno degli 8 output.
+ * Sprite bracket-lerp: computes four bracket+lerp outputs with direction
+ * codes, runs eight minimum checks with flag bits, then subtracts global
+ * `*0x400694` from all eight outputs.
  *
- * Struttura di ogni blocco bracket-lerp (x4):
- *   1. Se key==hi E tieP1==tieP2 → skip intero blocco (bra al successivo)
- *   2. dir=1 se (key<hi) OR (key>=hi AND dirProbe<dirLo), altrimenti dir=3
- *   3. OUT = lo (dir=1) oppure hi2 (dir=3)
- *   4. Se bumpPivot==hi: dir += 1  (diventa 2 o 4, nessun lerp)
- *   5. Se dir==1: OUT += ((lerpHi1-lerpLo1) * factor + 4) asr 3
- *      Se dir==3: OUT += ((lerpHi3-lerpLo3) * factor + 4) asr 3
+ * Structure of each bracket-lerp block (x4):
+ *   1. If key==hi and tieP1==tieP2, skip the whole block.
+ *   2. dir=1 when (key<hi) or (key>=hi and dirProbe<dirLo); otherwise dir=3.
+ *   3. OUT = lo (dir=1) or hi2 (dir=3).
+ *   4. If bumpPivot==hi, dir += 1 (becomes 2 or 4; no lerp).
+ *   5. If dir==1: OUT += ((lerpHi1-lerpLo1) * factor + 4) asr 3.
+ *      If dir==3: OUT += ((lerpHi3-lerpLo3) * factor + 4) asr 3.
  *
- * **Indirizzi globali (workRam offsets)**:
+ * **Global addresses (work RAM offsets)**:
  *   - `0x40066A` = byte flags (8 bit OR-accumulate)
  *   - `0x40066C` = byte dircode bracket-1 (D2)
  *   - `0x40066E` = byte dircode bracket-2
@@ -28,10 +28,10 @@
  *   - struct3 @ `0x401C38` (A3): words +0, +2, +4, +6
  *   - struct4 @ `0x401C40` (A0): words +0, +2, +4, +6
  *
- * Nessun argomento, nessun valore di ritorno (side-effects in workRam).
+ * No arguments and no return value; side effects are in work RAM.
  * Caller: `FUN_000121B8` (UNCONDITIONAL_CALL).
  *
- * Verifica bit-perfect via
+ * Bit-perfect coverage via
  * `cli/src/test-sprite-bracket-lerp-1c676-parity.ts`.
  */
 
@@ -80,7 +80,7 @@ function wb(s: GameState, off: number, v: number): void {
   s.workRam[off] = v & 0xff;
 }
 
-/** sext16: u16 → signed int16. */
+/** sext16: u16 to signed int16. */
 function sx16(v: number): number {
   return v & 0x8000 ? v - 0x10000 : v;
 }
@@ -94,14 +94,14 @@ function i32(v: number): number {
  * Common bracket-lerp pattern (4 instances in FUN_0001C676).
  *
  * Parameters directly map to disasm operands:
- *   key, hi         — first cmp.w pair (key vs hi)
- *   tieP1, tieP2    — secondary tiebreak for the equality skip
- *   lo, hi2         — base output values for dir=1 / dir=3
- *   dirProbe, dirLo — second cmp.w pair for dir determination (when key>=hi)
- *   bumpPivot        — compared to hi for the +1 bump on dir
- *   lerpHi1, lerpLo1 — lerp operands for dir=1  (lerpHi1 - lerpLo1)
- *   lerpHi3, lerpLo3 — lerp operands for dir=3  (lerpHi3 - lerpLo3)
- *   factor           — muls.w factor (signed 16-bit word)
+ *   key, hi         - first cmp.w pair (key vs hi)
+ *   tieP1, tieP2    - secondary tiebreak for the equality skip
+ *   lo, hi2         - base output values for dir=1 / dir=3
+ *   dirProbe, dirLo - second cmp.w pair for dir determination (when key>=hi)
+ *   bumpPivot       - compared to hi for the +1 bump on dir
+ *   lerpHi1, lerpLo1 - lerp operands for dir=1  (lerpHi1 - lerpLo1)
+ *   lerpHi3, lerpLo3 - lerp operands for dir=3  (lerpHi3 - lerpLo3)
+ *   factor          - muls.w factor (signed 16-bit word)
  */
 function bracketLerp(
   s: GameState,
@@ -116,7 +116,7 @@ function bracketLerp(
   lerpHi3: number, lerpLo3: number,
   factor: number,
 ): void {
-  // Skip check: if key==hi AND tieP1==tieP2 → skip entire block
+  // Skip check: if key==hi AND tieP1==tieP2, skip entire block.
   if (key === hi && tieP1 === tieP2) return;
 
   let dir: number;
@@ -130,7 +130,7 @@ function bracketLerp(
   }
   ww(s, outOff, out);
 
-  // bump: if bumpPivot == hi → dir += 1 (byte)
+  // bump: if bumpPivot == hi, dir += 1 (byte).
   if (bumpPivot === hi) dir = (dir + 1) & 0xff;
   wb(s, dirOff, dir);
 
@@ -148,13 +148,13 @@ function bracketLerp(
     const d = i32(i32(diff3 * sx16(factor)) + 4);
     ww(s, outOff, (rw(s, outOff) + i32(d >> 3)) & 0xffff);
   }
-  // dir==2 or dir==4 → no lerp
+  // dir==2 or dir==4: no lerp.
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_0001C676`.
+ * Bit-perfect replica of `FUN_0001C676`.
  *
  * Side effects in `state.workRam`:
  *   - byte  @ 0x40066A (flags)

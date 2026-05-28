@@ -2,8 +2,8 @@
 /**
  * test-main-prefix-parity.ts — differential del prefix di MainUpdate.
  *
- * Esegue 0x28788..0x287D8 (prima dei jsr ai sub-update). Confronta delta
- * sulla Work RAM tra binary e TS `mainUpdateScrollSync`.
+ * Runs 0x28788..0x287D8 before the jsr calls to sub-updates. Compares work RAM
+ * deltas between the binary and TS `mainUpdateScrollSync`.
  *
  * Uso: npx tsx packages/cli/src/test-main-prefix-parity.ts [N]
  */
@@ -56,8 +56,8 @@ function generate(rng: () => number): TestCase {
 }
 
 function applyTestCase(cpu: CpuSession, state: GameState, tc: TestCase): void {
-  // Reset SP a SSP iniziale (top di Work RAM) per evitare stack leak tra test.
-  // runUntil non ripristina SP dopo il movem.l del MainUpdate prefix.
+  // Reset SP to initial SSP (top of Work RAM) to avoid stack leaks between tests.
+  // runUntil does not restore SP after the MainUpdate prefix movem.l.
   cpu.system.setRegister("sp", 0x00401f00);
 
   // Set workRam fields in both

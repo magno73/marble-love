@@ -2,7 +2,7 @@
  * state-sub-5334.test.ts — smoke tests di stateSub5334 (FUN_5334).
  *
  * Bit-perfect parity verificata vs binary in `test-state-sub-5334-parity.ts`.
- * Qui copriamo: forward dei 3 args, sign-extension byte→long, return
+ * Covers forwarding 3 args, byte-to-long sign extension, return
  * pass-through, default inner no-op, no side-effects sul GameState.
  */
 

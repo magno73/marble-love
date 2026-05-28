@@ -2,7 +2,7 @@
 /**
  * test-slot-array-init-parity.ts — differential FUN_10392 vs slotArrayBulkInit.
  *
- * FUN_10392 inizializza 6 slot array a indirizzi fissi. Verifichiamo che
+ * FUN_10392 initializes 6 slot arrays at fixed addresses. Verify that
  * tutti i byte modificati combacino byte-byte.
  *
  * Uso: npx tsx packages/cli/src/test-slot-array-init-parity.ts
@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   cpu.system.setRegister("sp", 0x401f00);
 
   // Pre-fill workRam with sentinel pattern, escludendo zona stack
-  // (la chiamata callFunction usa stack 68k che lascia residui).
+  // callFunction uses the 68k stack and leaves residue.
   for (let j = 0; j < 0x1e00; j++) {
     pokeMem(cpu, 0x400000 + j, 1, 0xCC);
     stateInst.workRam[j] = 0xCC;

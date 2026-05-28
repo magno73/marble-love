@@ -6,15 +6,10 @@
  *   movea.l (0x4,SP),A1   ; A1 = dst
  *   movea.l (0x8,SP),A0   ; A0 = src
  *   loop: move.b (A0)+,(A1)+   ; copy byte, set Z if zero
- *         bne loop              ; branch finché src byte != 0
  *   rts
  *
- * Copia bytes da `src` a `dst` fino a (e incluso) il primo byte 0
- * (null terminator). Il binario non ha bound check, ma la nostra replica
- * ne aggiunge uno safety per evitare loop infiniti su input corrotti.
+ * adds a safety cap to avoid infinite loops on corrupted input.
  *
- * Caller noti (3): chiamato da `FUN_FA0` (cold-boot di HUD strings,
- * vedi `boot-init.ts:bootHudStringsInit`) per copiare 3 stringhe ROM
  * in workRam (PLAYER 1/2 START, TRAKBALL).
  */
 
@@ -25,22 +20,17 @@ export const STRCPY_1D74_ADDR = 0x00001d74 as const;
 
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_END = 0x00402000;
-/** Safety bound per evitare loop infiniti (le stringhe ROM sono < 64 byte). */
 const MAX_LEN = 256;
 
 /**
  * Replica `FUN_00001D74` — strcpy null-terminated.
  *
- * Legge byte da `srcAbs` (assoluto M68k, può essere ROM o workRam) e
- * li scrive in `dstAbs` (workRam) finché non incontra `0`. Include il
- * null terminator nel writes.
+ * null terminator in writes.
  *
- * @param state    GameState (mutates `workRam` su `dstAbs`).
- * @param rom      RomImage (sorgente se `srcAbs` è in ROM range).
- * @param dstAbs   Pointer assoluto destinazione (deve essere workRam).
- * @param srcAbs   Pointer assoluto sorgente (workRam o ROM).
- * @returns        Numero di byte scritti (incluso null terminator), o
- *                 `MAX_LEN` se safety bound raggiunto.
+ * @param state    GameState (mutates `workRam` at `dstAbs`).
+ * @param dstAbs   Absolute destination pointer (must be workRam).
+ * @param srcAbs   Absolute source pointer (workRam or ROM).
+ *                 `MAX_LEN` if the safety bound is reached.
  */
 export function strcpy1D74(
   state: GameState,

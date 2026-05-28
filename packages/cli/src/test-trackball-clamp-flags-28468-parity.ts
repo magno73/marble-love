@@ -8,9 +8,6 @@
  *      - workRam[0x3A8] (prev sample), 0x3AA (oldDeb), 0x3AC (falling)
  *      - obj0/obj1 trackball+delta bytes (0xC6/C7/C8/C9)
  *      - MMIO 0xF60001 (input byte) e MMIO 0xF20001/3/5/7 (trackball)
- *   2. callFunction(0x28468) — no args, ritorna long in D0
- *   3. trackballClampFlags28468(state, {...}) → ritorna long
- *   4. Confronta: workRam[0x6A4/6/8/A], 0x3A8/AA/AC, obj0/obj1 byte, ret D0.
  *
  * Uso: npx tsx packages/cli/src/test-trackball-clamp-flags-28468-parity.ts [N]
  */
@@ -93,7 +90,7 @@ function randWord(rng: () => number): number {
 
 function generate(rng: () => number): Inputs {
   return {
-    // accumulator: random word, ma con un bias verso gli estremi per
+    // accumulator: random word, but biased toward extremes to
     // esercitare clamp e wrap
     accumX: randWord(rng),
     accumY: randWord(rng),
@@ -251,7 +248,6 @@ async function main(): Promise<void> {
     applyToTs(state, tc);
 
     const r = callFunction(cpu, FUN_ADDR, []);
-    // Il ritorno è in D0 long signed.
     const retSigned = r.d0 | 0;
     const bin = snapshotBinary(cpu, retSigned);
 

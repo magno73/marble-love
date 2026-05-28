@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 /**
- * visual-smoke-test.ts — verifica programmatica che il bridge produca Frame
  * sensati a video.
  *
  * Pipeline:
- *   1. Carica ROM
  *   2. emptyGameState + bootInit
  *   3. tick(state, {rom}) per N frame
  *   4. buildFrame(state) → Frame
- *   5. Inspect e summary di cosa è popolato
  *
- * Output: stato palette, alpha tilemap (HUD), sprite count, scroll.
  *
  * Uso: npx tsx packages/cli/src/visual-smoke-test.ts [N=300]
  */

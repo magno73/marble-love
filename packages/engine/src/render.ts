@@ -1,13 +1,9 @@
 /**
- * render.ts — adapter di rendering. **NON usa PixiJS direttamente.**
+ * render.ts - rendering adapter. **Does not use PixiJS directly.**
  *
- * Il pacchetto `engine` deve restare puro (no DOM, no WebGL). Qui esponiamo
- * tipi neutri (`SpriteCommand`, `TileCommand`, `Frame`) che il pacchetto
- * `@marble-love/web` (Vite + PixiJS) traduce in draw call.
+ * The `engine` package stays platform-neutral: no DOM and no WebGL. It exposes
+ * renderer commands that `@marble-love/web` translates into PixiJS draw calls.
  *
- * Questa indirezione serve a:
- *  - Eseguire l'engine in CLI/test senza PixiJS in dipendenza (Phase 5 — diff).
- *  - Permettere swap del backend grafico (Canvas2D, WebGPU) senza toccare l'engine.
  */
 
 import type { GameState } from "./state.js";
@@ -30,7 +26,7 @@ export interface PaletteEntry {
 }
 
 export interface TileCommand {
-  /** Indice nel tile bank della ROM o fixture sintetica. */
+  /** Index in the ROM tile bank or synthetic fixture. */
   tileIndex: number;
   gfxBank?: number;
   bitsPerPixel?: 4 | 5 | 6;
@@ -38,7 +34,7 @@ export interface TileCommand {
   y: number;
   width?: number;
   height?: number;
-  /** Codice color/palette del System 1. */
+  /** Atari System 1 color/palette code. */
   paletteIndex: number;
   flipX?: boolean;
   flipY?: boolean;
@@ -46,7 +42,7 @@ export interface TileCommand {
 }
 
 export interface SpriteCommand {
-  /** Indice nello sprite RAM (motion object) o fixture sintetica. */
+  /** Index in sprite RAM (motion object) or synthetic fixture. */
   spriteIndex: number;
   gfxBank?: number;
   bitsPerPixel?: 4 | 5 | 6;
@@ -62,7 +58,7 @@ export interface SpriteCommand {
 }
 
 export interface AlphaCommand {
-  /** Indice nel tile alphanumerics/HUD. */
+  /** Index in the alphanumeric/HUD tile bank. */
   tileIndex: number;
   x: number;
   y: number;
@@ -217,13 +213,11 @@ export function buildPlayfieldFromRam(
   for (let index = 0; index < tileCount; index += 1) {
     const offset = index * 2;
     const word = ((playfieldRam[offset] ?? 0) << 8) | (playfieldRam[offset + 1] ?? 0);
-    // Skip "blank" tiles (word=0): in Atari System 1 il PROM lookup per
-    // lookup_index=0 fa fallback a bank=1 offset=0 color=0 = tile placeholder.
-    // Renderizzarlo riempie lo sfondo con il "tile 0" del bank 1 (pattern
-    // verde nel caso di Marble Madness) → strisce visibili. Skippando la
-    // word=0 il viewport mostra correttamente solo i tile "veri" sopra
-    // sfondo nero (background della console). Match MAME (tilemap transparent
-    // pen 0 fallback). Vedi `atarisy1_v.cpp:get_playfield_tile_info`.
+    // Skip "blank" tiles (word=0): in Atari System 1 the PROM lookup for
+    // lookup_index=0 falls back to bank=1 offset=0 color=0 = tile placeholder.
+    // Rendering it fills the background with bank 1 "tile 0" (black console
+    // background pattern). This matches MAME (tilemap transparent pen 0
+    // fallback). See `atarisy1_v.cpp:get_playfield_tile_info`.
     if (word === 0) continue;
     const fields = decodePlayfieldWord(word);
     const lookup = lookups[fields.lookupIndex];
@@ -562,12 +556,11 @@ function buildDebugLabel(options: BuildFrameOptions): string | undefined {
   ].join(":");
 }
 
-/** Genera la lista draw del frame corrente.
+/**
  *  Default conservativo: palette/alpha soltanto. Gli sprite da motion-object RAM
- *  sono opt-in finché bank/register video e priority merge non sono persistenti. */
+  */
 export function buildFrame(state: GameState, options: BuildFrameOptions = {}): Frame {
   // Playfield RAM: usa state.playfieldRam come default; options.playfieldRam
-  // override (es. demo fixtures). Lookups sempre da options (richiede ROM).
   const pfRam = options.playfieldRam ?? state.playfieldRam;
   const playfield =
     options.playfieldLookups !== undefined && pfRam !== undefined

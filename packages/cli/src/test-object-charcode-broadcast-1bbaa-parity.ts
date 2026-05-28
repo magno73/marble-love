@@ -8,23 +8,12 @@
  * per la spec disasm completa.
  *
  * **Strategia parity**:
- *   - Tutta la logica è in-place (nessuna JSR esterna).
- *   - La funzione legge ROM @ `0x24a94..` e `0x24aae..`. Il binario eseguito
  *     da Musashi ha la ROM mappata in `0x000000..0x07FFFF`. Il TS module
- *     riceve `RomImage` con la stessa ROM caricata.
- *   - Setup pre-call: poke su workRam + ROM (la ROM viene scritta usando
- *     `pokeMem` su Musashi; il TS module legge dalla `RomImage`). Per garantire
- *     che binary e TS leggano gli stessi byte, scriviamo le tabelle in **due
- *     copie**: in `cpu` (via pokeMem) e in `tsRom.program` (Uint8Array).
- *   - Compare workRam @ 0x400018..0x400018+count*0xE2 (intera area object array)
  *     + flag byte @ 0x40076C.
  *
  * **Suite (4×125 + remainder = 500)**:
- *   - A: random gate/progress/list/objs (mix di tutti i path)
- *   - B: forced match (gate=1, progress<threshold, lista non-vuota, almeno 1 obj
- *        con state=1, filter=0, signedRange ∈ [3,6], charcode in lista)
- *   - C: forced no-match (gate=1, ma ogni obj fallisce uno dei filtri)
- *   - D: edge cases (count=0, lista vuota, gate=0, threshold==progress, level
+ *        with state=1, filter=0, signedRange in [3,6], charcode in list)
+ *   - C: forced no-match (gate=1, but every obj fails one filter)
  *        index variabile)
  *
  * Uso: npx tsx packages/cli/src/test-object-charcode-broadcast-1bbaa-parity.ts [N]
@@ -62,7 +51,6 @@ const ROM_BYTE_TABLE_BASE = 0x00024a94;
 
 /** Range di obj iterati nel test (count ≤ MAX_OBJ_COUNT). */
 const MAX_OBJ_COUNT = 8;
-/** Indirizzo di base per la char-list piazzata in ROM (zona libera vicino alle table). */
 const LIST_BASE_ADDR = 0x024b00;
 /** Lunghezza max char-list (incl. terminator). */
 const LIST_MAX_LEN = 8;
@@ -136,7 +124,6 @@ function setupCase(
     rom[listAddr + i] = tc.listBytes[i]! & 0xff;
   }
 
-  // ─── Object array ────────────────────────────────────────
   for (let i = 0; i < tc.objs.length; i++) {
     const base = OBJ_BASE_ADDR + i * OBJ_STRIDE;
     const o = tc.objs[i]!;
@@ -174,10 +161,9 @@ function compareWorkRam(
     const t = state.workRam[GATE_FLAG_ADDR - 0x400000] ?? 0;
     if (b !== t) return { offset: GATE_FLAG_ADDR - 0x400000, bin: b, ts: t };
   }
-  // Object array
   for (let i = 0; i < count; i++) {
     const base = OBJ_BASE_ADDR + i * OBJ_STRIDE;
-    // Solo +0xCB ci interessa per parity (gli altri non sono modificati).
+    // Only +0xCB matters for parity; the others are not modified.
     const off = base + 0xcb;
     const b = peekMem(cpu, off, 1);
     const t = state.workRam[off - 0x400000] ?? 0;
@@ -200,7 +186,6 @@ async function main(): Promise<void> {
 
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state: stateInst });
-  // tsRom: copia mutabile per scrivere ptr/byte table + list bytes.
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBytes.subarray(0, tsRom.program.length));
 
@@ -208,11 +193,9 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function runOneCase(suite: string, tc: number, c: TestCase): boolean {
-    // Reset CPU state + workRam slot regions a 0 prima del setup
-    // (per evitare leakage cross-test).
+    // Avoid cross-test leakage.
     cpu.system.setRegister("sp", 0x401f00);
-    // Zero workRam per le regioni che modificheremo (gate, progress, count,
-    // levelIdx, obj array fino a MAX_OBJ_COUNT).
+    // Zero workRam for the regions we will modify (gate, progress, count,
     pokeMem(cpu, GATE_FLAG_ADDR, 1, 0);
     pokeMem(cpu, PROGRESS_ADDR, 1, 0);
     pokeMem(cpu, OBJ_COUNT_ADDR, 2, 0);
@@ -225,7 +208,6 @@ async function main(): Promise<void> {
     stateInst.workRam[LEVEL_IDX_ADDR - 0x400000 + 1] = 0;
     for (let i = 0; i < MAX_OBJ_COUNT; i++) {
       const base = OBJ_BASE_ADDR + i * OBJ_STRIDE;
-      // Cleariamo i 6 byte rilevanti ridondantemente prima di setup.
       for (const off of [0x18, 0x1a, 0x1b, 0x6a, 0x6b, 0xcb]) {
         pokeMem(cpu, base + off, 1, 0);
         stateInst.workRam[base - 0x400000 + off] = 0;
@@ -308,10 +290,8 @@ async function main(): Promise<void> {
       progressByte: 0x10,
       thresholdByte: 0x80,
     });
-    // Forza primo obj match: state=1, filter=0, range ∈ [3,6], charcode in lista
     c.count = Math.max(2, c.count);
     const cc = c.objs[0]!.charcode & 0xff;
-    // Scrivi la lista come [cc, ..., 0xFF]
     c.listBytes = [cc, 0xff];
     c.objs[0] = {
       state: 1,
@@ -334,9 +314,8 @@ async function main(): Promise<void> {
       progressByte: 0x10,
       thresholdByte: 0x80,
     });
-    // Forza tutti gli obj a fallire: state != 1
     for (let j = 0; j < c.objs.length; j++) {
-      c.objs[j]!.state = j % 3 === 0 ? 0 : 2; // mai 1
+      c.objs[j]!.state = j % 3 === 0 ? 0 : 2;
     }
     c.listBytes = [0xaa, 0xff];
     if (runOneCase("C", i, c)) okC++;
@@ -358,7 +337,6 @@ async function main(): Promise<void> {
       // gate = 0
       c = randomCase({ gateByte: 0 });
     } else if (sub === 2) {
-      // lista vuota: primo byte = 0xFF
       c = randomCase({ gateByte: 1, progressByte: 0x10, thresholdByte: 0x80 });
       c.listBytes = [0xff];
     } else if (sub === 3) {

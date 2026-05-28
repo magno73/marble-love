@@ -2,41 +2,30 @@
 /**
  * test-mo-screen-init-1a286-parity.ts — differential FUN_1A286 vs moScreenInit1A286.
  *
- * `FUN_0001A286` (408 byte) è uno screen-init helper che:
- *   - 2 word globali workRam (0x400008, 0x40000A)
  *   - 32 word in MO RAM (sprite RAM banks 0..3, 8 entry each)
  *   - 4 word in PF RAM (0xA00A20/A28/A30/A38)
  *   - 5 sub-jsr (clearAlphaTiles, paletteInitLevel, renderString trampoline ×2)
  *   - 3 spin-wait su MMIO (F60001 / *A2 frame-counter)
  *
- * Strategia parità:
  *
- *   1. Patch ROM con stub `addq.b #1, sentinel.l ; rts` (8 byte) ai 3 entry
- *      reali delle sub:
+ *   1. Patch ROM with `addq.b #1, sentinel.l ; rts` stubs (8 bytes) at the 3 entries
+ *      of the real subs:
  *        FUN_28C7E      → sentinel byte 0x4003E0
  *        FUN_1A41E      → sentinel byte 0x4003E1
  *        FUN_2572       → sentinel byte 0x4003E2 (bersaglio della JMP.L 0x142)
- *      `0x142` è una `JMP.L 0x2572` trampoline; patchando FUN_2572 catturiamo
- *      entrambe le 2 chiamate a renderString → sentinel +2.
  *
- *   2. Patch ROM con NOP (0x4E71) sui 2 spin-wait `beq.b $-2` interni (offset
- *      0x1A296 e 0x1A2E0). Lo spin finale a 0x1A408 esce naturalmente quando
+ *   2. Patch ROM with NOP (0x4E71) over the 2 internal `beq.b $-2` spin-waits (offset
  *      `*0xF60001 bit 0 == 0` (default zero region in unified memory).
  *
- *   3. Pre-fill randomico delle 4 sentinel byte, dei 2 globali word, dei 32
- *      MO writes (sprite RAM 0..0x18F) e dei 4 PF writes (PF RAM 0xA20..0xA39).
- *      Il binario deve sovrascrivere completamente.
+ *      MO writes (sprite RAM 0..0x18F) and 4 PF writes (PF RAM 0xA20..0xA39).
  *
- *   4. Esegui binario via `callFunction(FUN_1A286)` e leggi:
- *        - 2 word globali workRam
  *        - 32 byte MO RAM (4 banks × 8 entry × 2 byte)
  *        - 8 byte PF RAM (4 word @ A20/A28/A30/A38)
  *        - 3 sentinel byte (clearAlpha, paletteInit, renderString-counter)
  *
- *   5. Esegui `moScreenInit1A286()` con 3 callback che incrementano gli
+ *   5. Run `moScreenInit1A286()` with 3 callbacks that increment the
  *      stessi sentinel slot in `state.workRam`.
  *
- *   6. Confronta: 4 + 32 + 8 + 3 = 47 byte totali per caso.
  *
  * Uso: npx tsx packages/cli/src/test-mo-screen-init-1a286-parity.ts [N]
  */
@@ -61,10 +50,9 @@ import {
 /**
  * Step-based callFunction: come `callFunction()` ma usa `system.step()`
  * invece di `system.run(burst)`. Garantisce terminazione PRECISA non appena
- * `pc == SENTINEL_RET_ADDR`, evitando che un burst esegua istruzioni extra
- * dopo il RTS finale. La 1A286 esce con uno spin-loop su MMIO che potrebbe
- * far convergere il PC su FUN_2572 in modo subdolo se il PC continua a
- * fetchare istruzioni dall'unmapped 0xCAFEBABE post-rts.
+ * `pc == SENTINEL_RET_ADDR`, preventing a burst from executing extra
+ * make the PC converge on FUN_2572 in a misleading way if the PC keeps
+ * instructions from the unmapped 0xCAFEBABE post-rts address.
  */
 const SENTINEL_RET_ADDR_STEP = 0xcafebabe >>> 0;
 function callFunctionStep(
@@ -95,13 +83,13 @@ function callFunctionStep(
 
 const FUN_1A286 = 0x0001a286;
 
-// Sub-function entry points reali (non i trampolini).
+// Real sub-function entry points, not trampolines.
 const SUB_CLEAR_ALPHA_TILES = 0x00028c7e; // FUN_28C7E
 const SUB_PALETTE_INIT_LEVEL = 0x0001a41e; // FUN_1A41E
 const SUB_RENDER_STRING = 0x00002572; // bersaglio di JMP.L @ 0x142
 
-// Spin-wait `beq.b $-2` da NOPpare per evitare loop infiniti.
-const SPIN_WAIT_1_BEQ = 0x0001a296; // dopo btst su 0xF60001
+// Spin-wait `beq.b $-2` patched to NOP to avoid infinite loops.
+const SPIN_WAIT_1_BEQ = 0x0001a296;
 const SPIN_WAIT_2_BEQ = 0x0001a2e0; // cmp.l (A2),D0 ; beq
 
 // Sentinel slot in work RAM (uno per stub).
@@ -110,7 +98,6 @@ const SENT_CLEAR_ALPHA = SENTINEL_BASE + 0;
 const SENT_PALETTE_INIT = SENTINEL_BASE + 1;
 const SENT_RENDER_STRING = SENTINEL_BASE + 2;
 
-// Globali workRam toccati dal body (2 word).
 const GLOB_ISR_DST_A = 0x00400008;
 const GLOB_ISR_DST_B = 0x0040000a;
 
@@ -141,7 +128,7 @@ function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   rom[entry + 7] = 0x75;
 }
 
-/** Patch 2 byte di `beq.b` con NOP `0x4E71`. */
+/** Patch 2 bytes of `beq.b` with NOP `0x4E71`. */
 function patchNop(rom: Buffer, addr: number): void {
   rom[addr + 0] = 0x4e;
   rom[addr + 1] = 0x71;
@@ -180,7 +167,6 @@ async function main(): Promise<void> {
   patchNop(romBuf, SPIN_WAIT_1_BEQ);
   patchNop(romBuf, SPIN_WAIT_2_BEQ);
 
-  // RomImage TS allineata col binario post-patch.
   const romView = busNs.emptyRomImage();
   romView.program.set(romBuf);
 
@@ -191,7 +177,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x1a286);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  // Subs TS: incrementano i 3 sentinel (renderString incrementa lo stesso 2 volte).
+  // TS subs increment the 3 sentinels; renderString increments the same one twice.
   const incSent = (s: typeof stateInst, off: number): void => {
     const a = off - 0x400000;
     s.workRam[a] = ((s.workRam[a] ?? 0) + 1) & 0xff;
@@ -202,7 +188,6 @@ async function main(): Promise<void> {
     renderString: (s: typeof stateInst): void => incSent(s, SENT_RENDER_STRING),
   };
 
-  // PF RAM TS buffer (allineato al region zero del binario; offset 0=0xA00000).
   const pfRamTs = new Uint8Array(0x2000);
 
   let ok = 0;
@@ -211,7 +196,6 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pre-fill workRam globali (2 word).
     const preIsrA = ((rb() << 8) | rb()) & 0xffff;
     const preIsrB = ((rb() << 8) | rb()) & 0xffff;
     pokeMem(cpu, GLOB_ISR_DST_A, 2, preIsrA);
@@ -248,14 +232,12 @@ async function main(): Promise<void> {
       stateInst.workRam[SENTINEL_BASE - 0x400000 + k] = v;
     }
 
-    // Esegui binario (step-based per fermarsi PRECISAMENTE al sentinel RTS)
     callFunctionStep(cpu, FUN_1A286, [], 50_000);
     // Esegui TS
     msNs.moScreenInit1A286(stateInst, romView, pfRamTs, subs);
 
     let fail: FailRecord | null = null;
 
-    // Check 1: 2 globali word workRam (4 byte)
     for (const { name, addr } of [
       { name: "isrDstA", addr: GLOB_ISR_DST_A },
       { name: "isrDstB", addr: GLOB_ISR_DST_B },

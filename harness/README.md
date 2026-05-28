@@ -1,6 +1,6 @@
-# Harness — Differential testing
+# Harness - Differential Testing
 
-## Modello mentale
+## Mental Model
 
 ```
 trace_truth.jsonl  ──┐
@@ -8,7 +8,9 @@ trace_truth.jsonl  ──┐
 trace_reimpl.jsonl ──┘
 ```
 
-Il **primo frame divergente** e il **primo campo divergente** sono il segnale fondamentale del loop di hill-climbing (Phase 6 del PRD). Ogni iterazione di Claude Code dovrebbe ridurre l'indice di quel frame (parità che cresce) o eliminarlo del tutto.
+The **first divergent frame** and **first divergent field** are the main signal
+for parity work. Each iteration should reduce that frame index, increase the
+matching window, or remove the divergence entirely.
 
 ## Pipeline end-to-end
 
@@ -17,23 +19,23 @@ Il **primo frame divergente** e il **primo campo divergente** sono il segnale fo
 ```
 
 Step:
-1. `oracle/run_oracle.ts` lancia MAME con il Lua dumper → `traces/oracle_<scen>.jsonl`
-2. `packages/cli/src/marble-runner.ts` esegue il reimpl → `traces/reimpl_<scen>.jsonl`
-3. `harness/diff.ts` confronta → `traces/divergence_<scen>.json`
-4. `harness/report.ts` produce markdown leggibile da umano e da LLM
+1. `oracle/run_oracle.ts` runs MAME with the Lua dumper -> `traces/oracle_<scen>.jsonl`
+2. `packages/cli/src/marble-runner.ts` runs the reimplementation -> `traces/reimpl_<scen>.jsonl`
+3. `harness/diff.ts` compares the traces -> `traces/divergence_<scen>.json`
+4. `harness/report.ts` emits human- and LLM-readable Markdown
 
-## Output di `diff.ts`
+## `diff.ts` Output
 
 ```jsonc
 {
   "scenario": "level1_no_input",
   "parity": 0.058,                 // 0..1
   "framesCompared": 600,
-  "fromFrame": 0,                  // (opzionale) frame dal quale si confronta
+  "fromFrame": 0,                  // optional comparison start frame
   "firstDivergence": {
     "frame": 35,
     "fields": ["marble.vx", "marble.x"],
-    "annotated": ["marble.vx", "marble.x"],   // campi tradotti per leggibilità
+    "annotated": ["marble.vx", "marble.x"],   // human-friendly field names
     "truth":  { "f": 35, "marble": { "vx": 12, ... }, ... },
     "reimpl": { "f": 35, "marble": { "vx": 0,  ... }, ... }
   },
@@ -42,23 +44,30 @@ Step:
 }
 ```
 
-`suspectedSubsystem` è euristico (mappa nome campo → modulo). Utile per orientare il fix successivo, non vincolante.
+`suspectedSubsystem` is a heuristic from field names to modules. It is useful
+for orienting the next fix, but it is not authoritative.
 
-### Schema v2: `workRamHashes` regional
+### Schema v2: Regional `workRamHashes`
 
-Schema v2 (`TRACE_SCHEMA_VERSION = 2`) aggiunge `workRamHashes`: array di 32 CRC32, uno per regione di 0x100 byte. Quando il diff trova una divergenza in una regione, `annotated` riporta `workRam[0x300..0x3ff]` invece del generico `workRamHash`. Permette di puntare al sub-system specifico molto più velocemente.
+Schema v2 (`TRACE_SCHEMA_VERSION = 2`) adds `workRamHashes`: 32 CRC32 values,
+one per `0x100`-byte region. When the diff finds a regional divergence,
+`annotated` reports ranges such as `workRam[0x300..0x3ff]` instead of the
+generic `workRamHash`, which narrows subsystem triage quickly.
 
-Backward-compat: una oracle trace v1 + reimpl v2 produce un warning ma il diff continua usando il `workRamHash` globale.
+Backward compatibility: an oracle v1 trace plus a reimpl v2 trace emits a
+warning, then continues using the global `workRamHash`.
 
-### Flag utili
+### Useful Flags
 
-- `--from-frame N` salta i primi N frame nella comparazione (utile per ignorare la transitoria di boot MAME, frame 0-5 in attract_mode).
+- `--from-frame N` skips the first N frames during comparison. This is useful
+  for ignoring MAME boot transients, such as frames 0-5 in `attract_mode`.
 
 ## Curriculum
 
-Vedi [`curriculum.yaml`](./curriculum.yaml). Phase 6 attacca uno stage per volta in ordine di priorità.
+See [`curriculum.yaml`](./curriculum.yaml). Work through one stage at a time in
+priority order.
 
-## Loop di hill-climbing (riassunto Phase 6)
+## Parity Loop
 
 ```pseudo
 while curriculum.has_pending():

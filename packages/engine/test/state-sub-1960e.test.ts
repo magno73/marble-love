@@ -3,7 +3,7 @@
  *
  * Verifica i 3 branch principali (state==7, long0==0, long0!=0), il
  * clear-block (state==9 && rng(4)==0) e l'invocazione del sub-stub
- * `fun_19692` che deve avvenire **sempre** in coda.
+ * `fun_19692`, which must always run at the tail.
  */
 
 import { describe, it, expect } from "vitest";
@@ -97,7 +97,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
   });
 
   it("clear-block: state==9 && rng(4)==0 → entity[0x26]=0x10, [0..7]=0", () => {
-    // Cerca un seed che produca rng(2) qualunque + rng(4) == 0.
+    // Search for a seed that produces any rng(2) + rng(4) == 0.
     const s = emptyGameState();
     let foundSeed = -1;
     for (let seed = 0; seed < 0x10000; seed++) {
@@ -158,7 +158,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
 
   it("state==7: la jitter wrap-around 4-bit funziona con counter=0xF, rng=4 → (0xF+4-2)&0xF = 1", () => {
     const s = emptyGameState();
-    // Cerca seed che produca rng(5) = 4
+    // Search for a seed that produces rng(5) = 4.
     let foundSeed = -1;
     for (let seed = 0; seed < 0x10000; seed++) {
       const probe = emptyGameState();

@@ -1,12 +1,9 @@
 /**
- * bsearch-table-1abd4.ts — replica `FUN_0001ABD4` (68 byte).
+ * Replica of `FUN_0001ABD4`, a binary search over a sorted word table.
  *
- * Lookup binary-search dentro un array di word ordinato, le cui
- * estremita' (base / fine) sono a runtime negli slot long
- * `*(0x0040065A)` e `*(0x0040065E)`. Usato dallo scheduler/AI tick
- * (caller `FUN_0001AA38` @ 0x1ABBE) per convertire un offset signed
- * di 16 bit in un indice di campione (D0.w viene scritto in
- * `(-0x8,A2)` dopo il return).
+ * The table base and end pointers are stored in long slots `0x40065A` and
+ * `0x40065E`. The caller (`FUN_0001AA38`) uses the returned word index to map
+ * a signed 16-bit offset into a sample/index slot.
  *
  * **Disasm 0x1ABD4..0x1AC18** (68 byte = 0x44):
  *
@@ -15,15 +12,15 @@
  *   0001abde  movea.l (0x0040065E).l,A1      ; A1 = hi bound (end)
  *   0001abe4  move.l  A2,-(SP)               ; save A2
  *   0001abe6  movea.l A0,A2                  ; A2 = base (probe ptr)
- *   0001abe8  move.l  #0x400,D0              ; D0 = 0x400 (step iniziale)
+ *   0001abe8  move.l  #0x400,D0              ; initial step
  *   ; loop @ 0x1ABEE:
- *   0001abee  cmp.w   (A2),D1w               ; flags da D1.w - (A2).w
- *   0001abf0  bcc.b   0x1ABF6                ; D1>=(A2) unsigned → check eq
+ *   0001abee  cmp.w   (A2),D1w               ; flags from D1.w - (A2).w
+ *   0001abf0  bcc.b   0x1ABF6                ; D1 >= (A2) unsigned, check eq
  *   0001abf2    suba.l D0,A2                 ; D1<(A2): A2 -= step
- *   0001abf4    bra.b  0x1AC06                ; → clamp + halve
- *   0001abf6  beq.b   0x1ABFC                ; D1==(A2) → return
+ *   0001abf4    bra.b  0x1AC06                ; clamp + halve
+ *   0001abf6  beq.b   0x1ABFC                ; D1 == (A2), return
  *   0001abf8    adda.l D0,A2                 ; D1>(A2): A2 += step
- *   0001abfa    bra.b  0x1AC06                ; → clamp + halve
+ *   0001abfa    bra.b  0x1AC06                ; clamp + halve
  *   ; return @ 0x1ABFC:
  *   0001abfc  move.l  A2,D0                  ; D0 = A2
  *   0001abfe  sub.l   A0,D0                  ; D0 = A2 - A0 (byte offset)
@@ -31,42 +28,22 @@
  *   0001ac02  movea.l (SP)+,A2
  *   0001ac04  rts
  *   ; clamp + halve @ 0x1AC06:
- *   0001ac06  cmpa.l  A2,A1                  ; flags da A1 - A2
- *   0001ac08  bcc.b   0x1AC0E                ; A1>=A2 → no clamp top
- *   0001ac0a    movea.l A1,A2                ; A2 > A1 → A2 = A1
+ *   0001ac06  cmpa.l  A2,A1                  ; flags from A1 - A2
+ *   0001ac08  bcc.b   0x1AC0E                ; A1 >= A2, no clamp top
+ *   0001ac0a    movea.l A1,A2                ; A2 > A1, clamp to A1
  *   0001ac0c    bra.b  0x1AC14                ; skip lower clamp
- *   0001ac0e  cmpa.l  A0,A2                  ; flags da A2 - A0
- *   0001ac10  bcc.b   0x1AC14                ; A2>=A0 → no clamp bot
- *   0001ac12    movea.l A0,A2                ; A2 < A0 → A2 = A0
+ *   0001ac0e  cmpa.l  A0,A2                  ; flags from A2 - A0
+ *   0001ac10  bcc.b   0x1AC14                ; A2 >= A0, no lower clamp
+ *   0001ac12    movea.l A0,A2                ; A2 < A0, clamp to A0
  *   0001ac14  lsr.l   #1,D0                  ; step >>= 1
- *   0001ac16  bra.b   0x1ABEE                ; → loop
+ *   0001ac16  bra.b   0x1ABEE                ; loop
  *
- * **Semantica**:
- *   - Bisezione su array di word, partendo dalla base con passo 0x400 byte
- *     (= 0x200 word). Ogni iter dimezza il passo. Probe clampato a [base,
- *     end].
- *   - **Termina solo all'equality** (`beq` @ 0x1ABF6). Se il target non e'
- *     presente nel table, il binario entra in **infinite loop** (passo
- *     scende a 0, A2 non si muove piu', il confronto resta diverso).
- *     L'AI tick costruisce sempre tabelle "complete" → il caso pratico
- *     trova sempre un match. La replica TS aggiunge un **safety cap di
- *     iterazioni** per non hangare i test con dati arbitrari, ma il
- *     comportamento bit-perfect e' identico quando il match esiste.
+ * The ROM only terminates on equality. If the target is absent, the step reaches
+ * zero and the binary spins forever. The TS replica keeps a safety cap so tests
+ * with arbitrary data cannot hang, while matching binary behavior when the table
+ * contains the target.
  *
- * **Ritorno** (D0): word-index del campione = `(matchPtr - base) / 2`
- * (offset byte tra `A2` finale e `A0`, shiftato a destra di 1).
- *
- * **Confronto** `cmp.w (A2),D1w`: in Motorola syntax `cmp.w src,dst` calcola
- * `dst - src`. Qui `D1.w - (A2).w`. Le bandiere usate sono:
- *   - `bcc` (= unsigned >=) → D1.w >= (A2).w in lettura unsigned
- *   - `beq` → D1.w == (A2).w
- * Il binario tratta i word come **unsigned 16 bit** (i bcc sono scelti
- * apposta). La replica TS usa un compare unsigned 16 bit.
- *
- * **Side effects**: nessuno — la funzione e' puro lookup. Non scrive in
- * memoria, restituisce solo D0.
- *
- * **Nessuna JSR**: self-contained, no stub injection.
+ * Comparisons are unsigned 16-bit word comparisons.
  *
  * **Caller** (FUN_0001AA38 @ 0x1ABBE):
  *
@@ -75,43 +52,41 @@
  *   0x1ABBA: ext.l  D1               ; D1 = sign-extended 16-bit offset
  *   0x1ABBC: move.l D1,-(SP)         ; push arg
  *   0x1ABBE: jsr    0x0001ABD4.l
- *   0x1ABC4: move.w D0w,(-0x8,A2)    ; salva word-index in slot AI
+ *   0x1ABC4: move.w D0w,(-0x8,A2)    ; save word index in AI slot
  *
- * Verifica bit-perfect via `cli/src/test-bsearch-table-1abd4-parity.ts`.
+ * Verified by `cli/src/test-bsearch-table-1abd4-parity.ts`.
  */
 
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
-/** Slot long @ `0x0040065A` — pointer alla base della table (in workRam). */
+/** Long slot at `0x0040065A`: table base pointer in work RAM. */
 export const TABLE_BASE_PTR_ABS = 0x0040065a as const;
-/** Slot long @ `0x0040065E` — pointer al fine della table (in workRam). */
+/** Long slot at `0x0040065E`: table end pointer in work RAM. */
 export const TABLE_END_PTR_ABS = 0x0040065e as const;
 
 /** Workram base (used to map absolute addresses to `workRam` offset). */
 const WORK_RAM_BASE_ADDR = 0x00400000 as const;
 const WORK_RAM_SIZE = 0x2000 as const;
 
-/** Step iniziale binary search (in byte). Halvato ad ogni iter. */
+/** Initial binary-search step in bytes; halved each iteration. */
 export const INITIAL_STEP_BYTES = 0x400 as const;
 
 /**
- * Cap difensivo sul numero di iterazioni del loop di bisezione. Il binario
- * non ha questo cap (entra in infinite loop se il target non e' nel table);
- * la replica TS lo include solo per non hangare con dati arbitrari nei
- * test. In pratica il loop converge in <=12 iter (0x400 -> 1 -> 0 dopo ~10
- * shift). Manteniamo 64 come margine generoso.
+ * Defensive cap on the binary-search loop.
+ *
+ * The ROM has no cap and spins forever when the target is absent. We keep a cap
+ * only to protect tests with arbitrary data.
  */
 export const ITERATION_CAP = 64 as const;
 
 /**
- * Stub injection placeholder. FUN_0001ABD4 non chiama JSR, quindi questa
- * interface e' vuota (mantenuta per simmetria col pattern degli altri
- * sub-replicate).
+ * Stub injection placeholder. `FUN_0001ABD4` does not call JSR; this empty
+ * shape keeps the same public pattern as other replicated routines.
  */
 export type BsearchTable1ABD4Subs = Record<string, never>;
 
-/** Helper: legge long big-endian da `workRam` a offset. */
+/** Read a big-endian long from `workRam` at offset. */
 function readLongBE(mem: Uint8Array, off: number): number {
   const a = mem[off] ?? 0;
   const b = mem[off + 1] ?? 0;
@@ -120,7 +95,7 @@ function readLongBE(mem: Uint8Array, off: number): number {
   return ((a << 24) | (b << 16) | (c << 8) | d) >>> 0;
 }
 
-/** Helper: legge word big-endian unsigned (0..0xFFFF) da `workRam` a offset. */
+/** Read an unsigned big-endian word from `workRam` at offset. */
 function readWordBE(mem: Uint8Array, off: number): number {
   const a = mem[off] ?? 0;
   const b = mem[off + 1] ?? 0;
@@ -139,25 +114,12 @@ function readAbsWordBE(state: GameState, rom: RomImage | undefined, abs: number)
 }
 
 /**
- * Replica bit-perfect di `FUN_0001ABD4`.
+ * Bit-perfect replica of `FUN_0001ABD4`.
  *
- * Esegue una ricerca binaria word-aligned dentro la table puntata da
- * `*(0x40065A)..*(0x40065E)`, cercando `targetLong & 0xFFFF` (unsigned
- * word). Restituisce l'indice di word del primo match trovato.
- *
- * **Argomenti**:
- *   @param state       GameState. Letti SOLO i due slot long
- *                      `[0x65A]` e `[0x65E]` e i word a partire da
- *                      `*(0x65A)`. Non scrive nulla.
- *   @param targetLong  long passato sullo stack. Solo `& 0xFFFF` viene
- *                      usato (il binario fa `cmp.w (A2),D1w`).
- *   @param _subs       placeholder (FUN_1ABD4 non ha JSR).
- *   @returns           D0 = `(matchPtr - basePtr) >>> 1` se match trovato;
- *                      se la table non contiene il target, viene
- *                      restituito l'indice del probe finale dopo
- *                      `ITERATION_CAP` iter (NB: in questo caso il binario
- *                      reale entrerebbe in infinite loop — comportamento
- *                      indefinito in TS).
+ * Searches the word-aligned table selected by `0x40065A..0x40065E` for
+ * `targetLong & 0xffff` and returns the matching word index. If the target is
+ * absent, returns the final probe index after `ITERATION_CAP`; the real ROM
+ * would not terminate in that case.
  */
 export function bsearchTable1ABD4(
   state: GameState,
@@ -172,12 +134,7 @@ export function bsearchTable1ABD4(
   const baseAbs = readLongBE(r, TABLE_BASE_PTR_ABS - WORK_RAM_BASE_ADDR);
   const endAbs = readLongBE(r, TABLE_END_PTR_ABS - WORK_RAM_BASE_ADDR);
 
-  // Mappiamo gli indirizzi A2 (probe) come "byte offset rispetto a base"
-  // anziche' come indirizzo assoluto, cosi' la lettura word va in workRam.
-  // L'aritmetica long su A0/A1/A2 nel binario si comporta come modulo
-  // 2^32 — usiamo `>>> 0` per replicarlo. La sub.l in 0x1ABFE produce
-  // un signed long (offset-from-base) che lsr.l #1 tratta come unsigned;
-  // qui modelliamo direttamente come uint32.
+  // Long arithmetic on A0/A1/A2 wraps modulo 2^32; `>>> 0` mirrors that.
 
   let probeAbs = baseAbs >>> 0;
   let step = INITIAL_STEP_BYTES;
@@ -186,11 +143,11 @@ export function bsearchTable1ABD4(
     const word = readAbsWordBE(state, rom, probeAbs);
 
     if (target === word) {
-      // Match: D0 = (A2 - A0) >> 1 (long sub modulo 2^32 → uint).
+      // Match: D0 = (A2 - A0) >> 1 after 32-bit wrapping subtraction.
       return ((probeAbs - baseAbs) >>> 0) >>> 1;
     }
 
-    // Branchless: D1 < word → A2 -= step; D1 > word → A2 += step.
+    // Branches: target < word subtracts step; target > word adds step.
     if (target < word) {
       probeAbs = (probeAbs - step) >>> 0;
     } else {
@@ -200,9 +157,7 @@ export function bsearchTable1ABD4(
     // Clamp (cmpa.l ... bcc):
     //   if (A1 < A2 unsigned)  A2 = A1   (clamp top)
     //   else if (A2 < A0 unsigned) A2 = A0   (clamp bot)
-    // I due rami sono mutuamente esclusivi (il binario fa bra dopo il
-    // primo match), che e' equivalente a "if-else if" perche' un valore
-    // non puo' essere contemporaneamente > A1 e < A0 quando A0 <= A1.
+    // These branches are mutually exclusive when base <= end.
     if (endAbs < probeAbs) {
       probeAbs = endAbs;
     } else if (probeAbs < baseAbs) {
@@ -213,11 +168,9 @@ export function bsearchTable1ABD4(
     step = step >>> 1;
   }
 
-  // Iter cap raggiunto: il binario sarebbe in infinite loop. Restituiamo
-  // comunque l'indice corrente per coerenza (NB: nei test parity questo
-  // path viene evitato costruendo table contenenti il target).
+  // Cap reached: the ROM would be in an infinite loop here.
   return ((probeAbs - baseAbs) >>> 0) >>> 1;
 }
 
-/** Re-export del simbolo come "FUN_0001ABD4" per cross-reference. */
+/** Re-export the symbol under the ROM routine name for cross-reference. */
 export { bsearchTable1ABD4 as FUN_0001ABD4 };

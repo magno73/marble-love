@@ -2,17 +2,8 @@
 /**
  * test-refresh-frame-10fce-parity.ts — differential FUN_10FCE vs refreshFrame10FCE.
  *
- * FUN_10FCE è l'idle/refresh frame handler. È un orchestratore che chiama 12
- * JSR in sequenza + 2× addq.b sul frame-counter @ 0x4003F0.
  *
- * **Strategia**: patchiamo le 3 JSR non ancora replicate (FUN_13EE6,
- * FUN_1912C) con `rts` puri nel binario, e usiamo stub TS no-op per le
- * stesse nel lato TS. Le restanti 9 JSR già replicate vengono patchate come
- * sentinel (`addq.b #1, (addr) ; rts`) nel binario e come callback
- * `incSentinel` nel lato TS, garantendo che l'ordine di chiamata e gli
- * effetti sul workRam siano identici.
  *
- * Confrontiamo tutta la workRam (0x400000..0x402000) dopo l'esecuzione.
  *
  * Uso: npx tsx packages/cli/src/test-refresh-frame-10fce-parity.ts [N]
  */
@@ -41,7 +32,7 @@ const FUN_10FCE = 0x00010fce;
 const SENT_BASE = 0x00401d00;
 
 /**
- * Subs patchati con sentinels (tutte ora replicate in TS).
+ * Subs patched with sentinels (all now mirrored in TS).
  */
 const SENTINEL_SUBS: PatchableSub[] = [
   { name: "fun13EE6",                entry: 0x00013ee6, sentinel: SENT_BASE + 0 },
@@ -60,7 +51,6 @@ const SENTINEL_SUBS: PatchableSub[] = [
 /** No subs need plain rts patching — all 12 JSRs are now replicated. */
 const RTS_SUBS: readonly number[] = [];
 
-/** Regioni watched per il confronto: sentinels + frame-counter. */
 const WATCHED = [
   ...SENTINEL_SUBS.map((s) => ({ name: s.name, addr: s.sentinel, size: 1 as const })),
   { name: "4003F0_frameCtr", addr: 0x004003f0, size: 1 as const },

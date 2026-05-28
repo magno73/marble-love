@@ -1,5 +1,5 @@
 /**
- * Test bus.ts — verifica memory map dispatch.
+ * Test bus.ts - verifies memory map dispatch.
  */
 
 import { describe, it, expect } from "vitest";

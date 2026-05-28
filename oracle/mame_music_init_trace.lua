@@ -1,12 +1,12 @@
--- mame_music_init_trace.lua — quando il sound 6502 scrive zp $0E o $0F
--- (= music pointer LO/HI set), cattura:
+-- mame_music_init_trace.lua - when the sound 6502 writes zp $0E or $0F.
+-- (= music pointer LO/HI set), captures:
 --   1) PC corrente del 6502
 --   2) Stack contents (return addresses della call chain)
 --   3) Music ID dal zp $19
 --   4) Frame number
 --
 -- Permette di identificare il caller di $91A8 (music init routine) e
--- quindi il branch del cmd handler che TS prende diversamente.
+-- therefore the command-handler branch that TS takes differently.
 --
 -- Sound 6502 main routine $91A8 e' UNREACHABLE da JSR/JMP/data table
 -- statici nel ROM. Entry probabile via RTS-trick (push addr-1, RTS) o

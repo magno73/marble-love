@@ -1,28 +1,23 @@
 /**
- * physics.ts — fisica della biglia: gravità, attrito, slope, collisioni.
+ * physics.ts - marble physics placeholder: gravity, friction, slope, collision.
  *
- * **Status: STUB.** L'implementazione corretta richiede di identificare le
- * subroutine fisiche nel binario originale (Phase 2 — Ghidra). Riferimento
- * importante dal lavoro precedente (`marble-madness-2026`):
- *  - Subroutine input fisica @ ROM $28000 (additiva, friction × 352)
- *  - Subroutine slope @ ROM $2815A (waypoint attractor: vel += (target-vel)/8)
- *  - Z_SCALE = 1 (1 z-unit = 1 pixel screen, conferma @ $189A2)
- *  - Proiezione: sx = (wy-wx)*8 + cx ; sy = (wx+wy)*4 - wz - scrollY
+ * Correct implementation requires the original physics subroutines, backed by
+ * Ghidra/MAME evidence. Prior notes identify:
+ *  - input physics at ROM $28000 (additive, friction x 352)
+ *  - slope at ROM $2815A (waypoint attractor: vel += (target-vel)/8)
+ *  - Z_SCALE = 1 (1 z-unit = 1 screen pixel, confirmed near $189A2)
+ *  - projection: sx = (wy-wx)*8 + cx; sy = (wx+wy)*4 - wz - scrollY
  *
- * Nota: il porting precedente è in vanilla JS (non bit-perfect). Qui dobbiamo
- * essere bit-perfect — quindi NON copiare meccanicamente: replicare la
- * subroutine 68010 con le esatte u16/i16 e gli stessi shift.
+ * Do not copy prior vanilla JS ports mechanically; parity requires the exact
+ * 68010 integer widths and shifts.
  */
 
 import type { GameState } from "./state.js";
 import { as_u32, u32_add } from "./wrap.js";
 
-/** Tick fisica della biglia. STUB: avanza solo il frame counter. */
+/** Marble physics tick placeholder: currently advances only the frame counter. */
 export function physicsTick(state: GameState): void {
-  // TODO Phase 4-6: replica subroutine $28000 (input) + $2815A (slope).
-  // Il loop originale chiama prima la subroutine input (additiva sulla
-  // velocità), poi la subroutine slope (attractor verso velocità target del
-  // tile sotto la biglia). Vedi `docs/physics-rom-notes.md` (da scrivere in
-  // Phase 4).
+  // Future work: mirror $28000 input physics and $2815A slope physics. The ROM
+  // loop applies input first, then the slope attractor for the tile below.
   state.clock.frame = u32_add(state.clock.frame, as_u32(1));
 }

@@ -30,7 +30,6 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x00;
-    // Pre-scrivi un sentinel a obj+0x1C per verificare che NON viene toccato.
     s.workRam[objOff + FN_PTR_OFFSET] = 0xde;
     s.workRam[objOff + FN_PTR_OFFSET + 1] = 0xad;
     s.workRam[objOff + FN_PTR_OFFSET + 2] = 0xbe;
@@ -97,7 +96,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x02;
-    s.workRam[objOff + SUBTYPE_OFFSET] = 0x42; // né 7 né 8
+    s.workRam[objOff + SUBTYPE_OFFSET] = 0x42;
     const r = objectTypeDispatch194BA(s, OBJ_BASE);
     expect(r.branch).toBe("case2");
     expect(r.fnPtrWritten).toBe(FN_PTR_KIND2_DEFAULT);

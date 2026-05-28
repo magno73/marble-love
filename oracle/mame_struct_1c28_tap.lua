@@ -1,5 +1,5 @@
 -- mame_struct_1c28_tap.lua — log writes a STRUCT @ workRam 0x401c28..0x401c47
--- per identificare PC + sub madre del writer M68K che TS non simula.
+-- to identify PC + parent sub for the M68K writer that TS does not simulate.
 --
 -- Output: /tmp/mame_struct_1c28_trace.json
 -- Vars env:

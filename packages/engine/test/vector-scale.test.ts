@@ -1,9 +1,9 @@
 /**
  * Test vectorScale (FUN_25E7C) — 326 byte pure leaf.
  *
- * Bit-perfect verificato vs binary (2000/2000) tramite
- * `cli/src/test-vector-scale-parity.ts` con input range [-256, 255]
- * (range piccolo per evitare divu.w overflow del 68k).
+ * Bit-perfect verified against the binary (2000/2000) through
+ * `cli/src/test-vector-scale-parity.ts` with input range [-256, 255]
+ * (small range to avoid 68k divu.w overflow).
  */
 
 import { describe, it, expect } from "vitest";
@@ -46,7 +46,7 @@ describe("vectorScale (FUN_25E7C)", () => {
     writeU32(s, 0x401D00, 100);
     writeU32(s, 0x401D04, 50);
     vectorScale(s, rom, 0x00401D00, 5);
-    // Con ROM zero: D5=0, D2=0 dopo add, default mode 5 → D4 = D3 - 0 = D3
+    // With zero ROM: D5=0, D2=0 after add, default mode 5 -> D4 = D3 - 0 = D3.
     // D5 = (D4 << 6) / (D3 >> 8) = D3*64 / (D3>>8) = clamp triggers, D3 = 0x100
     // D5 = 0x4000 / 1 = 0x4000 (fits in word)
     // x = (100 >> 8) * 0x4000 >> 6 = 0 * ... = 0

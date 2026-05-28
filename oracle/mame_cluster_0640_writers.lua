@@ -1,5 +1,5 @@
 -- mame_cluster_0640_writers.lua — write-tap su workRam region 0x400640..0x4006bf
--- per identificare i PC writer al cluster drift @ 0x0640..0x06bf nella demo
+-- Identifies writer PCs for the drift cluster @ 0x0640..0x06bf in the demo.
 -- window f12000..12099 (matchando /tmp/mame_100f.json).
 --
 -- Target: 27 byte drift (cluster #8 0x0680..0x06bf 15B + #10 0x0640..0x067f 12B)
@@ -16,7 +16,6 @@
 -- Output:
 --   - writers_by_pc[]: PC, count, unique_addrs, top_addr, top_addr_count, sizes
 --   - samples[]: { f, pc, addr, data, mask, size } per i primi MAX_SAMPLES
---   - addr_first_write_frame[addr]: prima frame in cui addr è scritto
 
 local function getenv(name, fallback)
     local v = os.getenv(name)

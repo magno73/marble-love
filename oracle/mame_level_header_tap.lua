@@ -1,9 +1,9 @@
 -- mame_level_header_tap.lua — installa read taps su tutti i campi noti del
 -- level descriptor header per i 6 livelli.
 --
--- Scope: PRD `docs/level-header-decode-prd.md` Phase 1 deliverable (script
--- ready-to-run). Verifica empirica che i field decoded TS coincidano con i
--- valori realmente letti dal 68010 sul binario originale.
+-- Scope: PRD `docs/internal/prds/level-header-decode-prd.md` Phase 1 deliverable (script
+-- ready-to-run). Empirically verify that TS decoded fields match the
+-- values actually read by the 68010 on the original binary.
 --
 -- Lancio (path locale ROMS, MAME 0.286+):
 --   mame marble -nothrottle -nowindow -seconds_to_run 600 \
@@ -14,22 +14,21 @@
 -- Override target levels via env:
 --   MARBLE_LEVEL_TAP_INDICES="0,1,2,3,4,5"  (default: all)
 --   MARBLE_LEVEL_TAP_OUTPUT="/tmp/level_header_taps.log"  (default stdout)
---   MARBLE_LEVEL_TAP_PLAYABLE_CAPTURE=1 compone con
+--   MARBLE_LEVEL_TAP_PLAYABLE_CAPTURE=1 composes with
 --     oracle/mame_playable_input_capture.lua per il bootstrap
 --     MARBLE_PLAYABLE_BOOTSTRAP_TARGET_LEVEL=1..6.
 --   MARBLE_LEVEL_TAP_RAW_ADDRESS_TAPS=1 abilita anche i raw address tap
---     originali. Default off: MAME puo' invocare quei tap su accessi
---     parziali, quindi i valori non sono adatti al confronto field-level.
---   MARBLE_LEVEL_TAP_FORCE_ENTITY_INIT_COUNT=N forza RAM diagnostica
---     objCount=N e obj[i]+0x18=3 durante il bootstrap. Serve solo a
+--     original values. Default off: MAME can invoke those taps on accesses
+--     partial, so values are not suitable for field-level comparison.
+--   MARBLE_LEVEL_TAP_FORCE_ENTITY_INIT_COUNT=N forces diagnostic RAM
+--     objCount=N and obj[i]+0x18=3 during bootstrap. It only serves to
 --     esercitare il consumer ROM `FUN_259B4` sugli slot entity-init.
 --
--- Output formato per ogni read:
+-- Output format for each read:
 --   FRAME=N PC=0xPPPPPP OFFSET=0xOOOO LEVEL=L FIELD=name VALUE=0xVVVV SIZE=word|long
 --
--- NB: questo script richiede MAME, le ROM (`marble.zip` + `atarisy1.zip`)
--- e un blob ROM disassemblabile. NON puo' essere lanciato in container
--- senza tooling.
+-- Note: this script requires MAME plus ROMs (`marble.zip` and `atarisy1.zip`).
+-- and a disassemblable ROM blob. It cannot run in container without tooling.
 
 local cpu = manager.machine.devices[":maincpu"]
 local space = cpu.spaces["program"]

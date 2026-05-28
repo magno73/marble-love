@@ -1,5 +1,4 @@
 -- mame_zp01_tap.lua — log zp[$01] al momento del check $81D5 LDA $01
--- per capire perché TS skip music dispatch per 4 IRQ cycles iniziali.
 local OUT_PATH = "/tmp/mame_zp01.json"
 local TARGET_FRAME = 500
 local audiocpu, sound_mem
@@ -14,7 +13,6 @@ emu.register_frame_done(function()
             if manager.machine.devices[t] then audiocpu = manager.machine.devices[t]; break end
         end
         sound_mem = audiocpu.spaces["program"]
-        -- Tap su read di $01 (zp): catturiamo solo quando il PC e' $81D3
         -- (LDA $01 inside IRQ handler at $81D3)
         table.insert(tap_handles, sound_mem:install_read_tap(0x01, 0x01, "zp01",
             function(o, d, m)

@@ -1,20 +1,19 @@
 /**
- * cycle-table.ts — Cycle counts M68010 per istruzione (subset).
+ * cycle-table.ts - M68010 cycle counts per instruction subset.
  *
- * Estratti da Musashi (MIT, https://github.com/kstenerud/Musashi)
+ * Extracted from Musashi (MIT, https://github.com/kstenerud/Musashi)
  * @ commit `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd` (tip 2026-05-11):
  *   - opcode cycles: `m68k_in.c` colonna `010`
  *   - EA cycle table: `m68kmake.c` `g_ea_cycle_table[..][1][..]`
- *   - JSR/JMP/LEA/PEA/MOVEM EA extras: `m68kmake.c` rispettive tabelle
+ *   - JSR/JMP/LEA/PEA/MOVEM EA extras: matching tables in `m68kmake.c`
  *   - movem per-register / bcc-notake / dbcc-noexp: `m68kcpu.c` `case
  *     M68K_CPU_TYPE_68010`
  *
- * Questi sono "instruction cycles" (somma totale per esecuzione) — non bus-
- * accurate. Sufficienti per la **cadence simulation** del main loop di
- * Marble Madness (30/60 Hz dynamic switching basato su `CYCLES_PER_VBLANK`).
+ * These are instruction cycles, not bus-accurate timings. They are sufficient
+ * for Marble Madness main-loop cadence simulation.
  *
- * Copre solo le istruzioni che dominano il cost del body: MOVEM (prologue/
- * epilogue), JSR/RTS/LINK/UNLK, MOVE/MOVE.L con EA, MULS/MULU/DIVS/DIVU,
+ * Covers only the instructions that dominate body cost: MOVEM (prologue/
+ * epilogue), JSR/RTS/LINK/UNLK, MOVE/MOVE.L with EA, MULS/MULU/DIVS/DIVU,
  * Bcc/DBcc, BCLR/BSET/BTST, e una manciata di ALU comuni.
  *
  * License Musashi: MIT (Karl Stenerud).
@@ -23,40 +22,40 @@
 import type { u32 } from "../wrap.js";
 import { as_u32, u32_add, u32_mul } from "../wrap.js";
 
-// ─── Constants di pacing ──────────────────────────────────────────────────
+// ─── Pacing constants ──────────────────────────────────────────────────────
 
 /**
- * Frequenza clock M68010 di Marble Madness = 7159 MHz (cfr. MAME driver
- * `atarisy1.cpp`). A 60 Hz un vblank dura 7159000/60 ≈ 119316 cicli.
+ * Marble Madness M68010 clock = 7.159 MHz (see MAME `atarisy1.cpp`). At 60 Hz,
+ * one vblank is roughly 7159000/60 = 119316 cycles.
  *
- * Il main loop ROM legge la mailbox a fine body: se i cicli accumulati
- * superano questa soglia, MAME esegue **un** body extra senza attendere
- * vblank → cadenza dinamica 30/60 Hz.
+ * The ROM main loop checks the mailbox after the body. If accumulated cycles
+ * exceed this threshold, MAME executes one extra body without waiting for the
+ * next vblank, giving the observed dynamic 30/60 Hz cadence.
  */
 export const CYCLES_PER_VBLANK = as_u32(Math.floor(7159000 / 60));
 
 // ─── Special cycle constants 68010 (m68kcpu.c L818-833) ───────────────────
 
-/** Costo extra Bcc *non* taken con displacement byte (= 10 base + (-4)). */
+/** Extra cost for Bcc not taken with byte displacement (= 10 base + -4). */
 export const CYC_BCC_NOTAKE_B_DELTA = -4;
-/** Costo extra Bcc *non* taken con displacement word (= 10 base + 0). */
+/** Extra cost for Bcc not taken with word displacement (= 10 base + 0). */
 export const CYC_BCC_NOTAKE_W_DELTA = 0;
-/** DBcc condition true (loop fall-through senza decrement), no expire. */
+/** DBcc condition true, loop fall-through without decrement, no expire. */
 export const CYC_DBCC_F_NOEXP_DELTA = 0;
-/** DBcc condition false con expire (counter==-1 dopo decr): +6. */
+/** DBcc condition false with expire (counter == -1 after decrement): +6. */
 export const CYC_DBCC_F_EXP_DELTA = 6;
 /** Scc condition true, register variant. */
 export const CYC_SCC_R_TRUE_DELTA = 0;
-/** Cicli per registro nel MOVEM.W. */
+/** Cycles per register in MOVEM.W. */
 export const CYC_MOVEM_W_PER_REG = as_u32(2);
-/** Cicli per registro nel MOVEM.L. */
+/** Cycles per register in MOVEM.L. */
 export const CYC_MOVEM_L_PER_REG = as_u32(3);
-/** Costo aggiuntivo dello shift per posizione (ASR/LSR/ROR). */
+/** Additional shift cost per position (ASR/LSR/ROR). */
 export const CYC_SHIFT_PER_BIT = as_u32(1);
-/** Cicli di una RESET. */
+/** Cycles for RESET. */
 export const CYC_RESET = as_u32(130);
 
-// ─── Istruzioni base (no EA / EA implicito) ───────────────────────────────
+// ─── Base instructions (no EA / implicit EA) ──────────────────────────────
 
 export const CYC_NOP = as_u32(4);
 export const CYC_RTS = as_u32(16);
@@ -69,11 +68,11 @@ export const CYC_EXT_L = as_u32(4);
 export const CYC_MOVEQ = as_u32(4);
 export const CYC_TRAP = as_u32(4);
 
-/** Bcc taken (qualunque displacement). 68010. */
+/** Bcc taken for any displacement on 68010. */
 export const CYC_BCC_TAKEN = as_u32(10);
-/** BRA — sempre taken. */
+/** BRA, always taken. */
 export const CYC_BRA = as_u32(10);
-/** BSR — JSR-via-PC. */
+/** BSR, JSR via PC. */
 export const CYC_BSR = as_u32(18);
 /** DBcc base (condition false, decrement, branch taken). */
 export const CYC_DBCC_BASE = as_u32(12);
@@ -85,7 +84,7 @@ export const CYC_JSR_BASE = as_u32(12);
 /** JMP base — sommare `jmpEaExtra[eaMode]`. */
 export const CYC_JMP_BASE = as_u32(4);
 
-/** Modalità EA supportate per il cycle costing. */
+/** EA modes supported by cycle costing. */
 export type EaMode =
   | "Dn"
   | "An"
@@ -170,17 +169,17 @@ export const peaEaExtra: Readonly<Record<EaMode, u32>> = {
 // ─── MOVEM base + EA extras (Musashi g_movem_cycle_table, 68010) ──────────
 
 /**
- * MOVEM base cycles (010, da m68k_in.c L703-714):
- *   - "re" (registers → memory): 8 sia W che L
- *   - "er" (memory → registers): 12 sia W che L
+ * MOVEM base cycles (010, from m68k_in.c L703-714):
+ *   - "re" (registers -> memory): 8 for both W and L
+ *   - "er" (memory -> registers): 12 for both W and L
  *
- * Sommare `movemEaExtra[ea]` per displacement/absolute, e
- * `CYC_MOVEM_{W,L}_PER_REG * regCount` per il banco.
+ * Add `movemEaExtra[ea]` for displacement/absolute addressing and
+ * `CYC_MOVEM_{W,L}_PER_REG * regCount` for the register mask.
  */
 export const CYC_MOVEM_RE_BASE = as_u32(8);
 export const CYC_MOVEM_ER_BASE = as_u32(12);
 
-/** EA extras MOVEM (g_movem_cycle_table, identico 000/010). */
+/** MOVEM EA extras (g_movem_cycle_table, identical on 68000/68010). */
 export const movemEaExtra: Readonly<Record<EaMode, u32>> = {
   Dn: as_u32(0),
   An: as_u32(0),
@@ -196,16 +195,15 @@ export const movemEaExtra: Readonly<Record<EaMode, u32>> = {
   Imm: as_u32(0),
 };
 
-// ─── EA cycle table generica (g_ea_cycle_table, 010, [b/w, l]) ────────────
+// ─── Generic EA cycle table (g_ea_cycle_table, 010, [b/w, l]) ─────────────
 
 /**
- * Cicli aggiuntivi per fetch operand con dato EA, per dimensione
- * (`b_w` = 8/16 bit, `l` = 32 bit).
+ * Additional operand-fetch cycles for EA data by size (`b_w` = 8/16 bit,
+ * `l` = 32 bit).
  *
- * Per la maggior parte delle istruzioni ALU "to register": cycles =
- * baseTable[opcode] + eaCycles[eaMode][size]. La sola EA address-register
- * variants per le istruzioni `... ., a` sono già nelle righe `m68k_in.c`
- * (es. `cmp 32 . a` = 6).
+ * For most "to register" ALU instructions: cycles =
+ * baseTable[opcode] + eaCycles[eaMode][size]. Address-register variants for
+ * `... ., a` instructions are already represented in `m68k_in.c` rows.
  */
 export const eaCycles: Readonly<Record<EaMode, { b_w: u32; l: u32 }>> = {
   Dn: { b_w: as_u32(0), l: as_u32(0) },
@@ -222,22 +220,22 @@ export const eaCycles: Readonly<Record<EaMode, { b_w: u32; l: u32 }>> = {
   Imm: { b_w: as_u32(4), l: as_u32(8) },
 };
 
-// ─── MOVE (Musashi `move <size> <dst> <src>` table colonna 010) ───────────
+// ─── MOVE (Musashi `move <size> <dst> <src>` table, 010 column) ───────────
 
 /**
- * MOVE base cycles per dst EA, indipendente dalla src (la src aggiunge
- * `eaCycles[srcEa].b_w` per W/B o `.l` per L).
+ * MOVE base cycles by destination EA, independent of source. The caller adds
+ * `eaCycles[srcEa].b_w` for W/B or `.l` for L.
  *
- * NB: nella tabella Musashi i MOVE *includono* la totale: per non
- * duplicare, esporremo `moveDstBase[dstEa]` come SE la src fosse `Dn`
- * (=0). Il chiamante aggiunge `eaCycles[srcEa]` per la src.
+ * Musashi's MOVE table includes the total source + destination cost. To avoid
+ * double-counting, `moveDstBase[dstEa]` is exposed as if the source were `Dn`
+ * (=0); the caller adds the source EA cycles separately.
  *
- * Valori da `m68k_in.c` riga 617-684 colonna 010 con `srcEa=d`:
+ * Values from `m68k_in.c` lines 617-684, column 010, with `srcEa=d`:
  *  - 8/16: dst=Dn 4, AI 8, PI 8, PD 8, DI 12, IX 14, AW 12, AL 16
  *  - 32:   dst=Dn 4, AI 12, PI 12, PD 14, DI 16, IX 18, AW 16, AL 20
  *
- * (Il 32-bit PD ha 14 sul 010 vs 12 sul 000 — Musashi corregge una quirk
- * del 010 documentata.)
+ * The 32-bit PD case is 14 on 68010 vs 12 on 68000; Musashi models the
+ * documented 68010 quirk.
  */
 export const moveDstBase: Readonly<
   Record<EaMode, { b_w: u32; l: u32 }>
@@ -259,11 +257,11 @@ export const moveDstBase: Readonly<
 // ─── Moltiplicazione / Divisione 16-bit (peso significativo) ──────────────
 
 /**
- * MULS.W / MULU.W: 68010 li accelera vs 68000.
- *  - MULS.W: 32 cicli + EA (m68k_in.c L724-725)
- *  - MULU.W: 30 cicli + EA (L726-727)
- * Sul 68000 la latenza dipende dal numero di 1-bit nel sorgente; il 68010
- * la fissa al worst case (overhead costante).
+ * MULS.W / MULU.W: 68010 accelerates these vs 68000.
+ *  - MULS.W: 32 cycles + EA (m68k_in.c L724-725)
+ *  - MULU.W: 30 cycles + EA (L726-727)
+ * On the 68000, latency depends on the number of 1 bits in the source; the
+ * 68010 fixes it at worst case (constant overhead).
  */
 export const CYC_MULS_W = as_u32(32);
 export const CYC_MULU_W = as_u32(30);
@@ -279,8 +277,8 @@ export const CYC_DIVU_W = as_u32(108);
 // ─── Bit ops (BCLR/BSET/BTST) ─────────────────────────────────────────────
 
 /**
- * 68010 cycles per BCLR/BSET/BTST. Sul 010 il BCLR ha 10 cicli con dest
- * memoria (Musashi L469), gli altri 8/12 (cfr. tabelle).
+ * 68010 cycles per BCLR/BSET/BTST. On the 010, BCLR takes 10 cycles with a
+ * memory destination (Musashi L469), while the others take 8/12 (see tables).
  *
  * Forme:
  *  - r (Dn source bit number), dest=Dn 32-bit: BCLR=10, BSET=8, BTST=6
@@ -305,39 +303,39 @@ export const CYC_BTST_S_M = as_u32(8);
 // ─── ALU "er" (effective addr → register): ADD/SUB/AND/OR/EOR/CMP ─────────
 
 /**
- * Base cycles per "ALU er" verso Dn, da `m68k_in.c` 010:
+ * Base cycles for "ALU er" to Dn, from `m68k_in.c` 010:
  *  - 8/16 bit: 4
- *  - 32 bit: 6 (richiede 2 word fetch, anche con Dn src)
- * Aggiungere `eaCycles[srcEa]`.
+ *  - 32 bit: 6, requiring two word fetches even with Dn source.
+ * Add `eaCycles[srcEa]`.
  */
 export const CYC_ALU_ER_BW = as_u32(4);
 export const CYC_ALU_ER_L = as_u32(6);
 
-/** ALU "re" (register → memory): più costoso, base 8/8/12 + eaCycles. */
+/** ALU "re" (register to memory): more expensive, base 8/8/12 + eaCycles. */
 export const CYC_ALU_RE_BW = as_u32(8);
 export const CYC_ALU_RE_L = as_u32(12);
 
-/** ADDA/SUBA verso An. 16-bit src costa 8 (sign-extend penalty), 32-bit = 6. */
+/** ADDA/SUBA to An. 16-bit src costs 8 (sign-extend penalty), 32-bit = 6. */
 export const CYC_ADDA_SUBA_W = as_u32(8);
 export const CYC_ADDA_SUBA_L = as_u32(6);
 
-/** ADDQ/SUBQ a registro: 4 b/w/imm Dn, 8 long Dn (più 8 ad An b/w extension). */
+/** ADDQ/SUBQ to register: 4 b/w/imm Dn, 8 long Dn, 8 for An b/w extension. */
 export const CYC_ADDQ_SUBQ_D_BW = as_u32(4);
 export const CYC_ADDQ_SUBQ_D_L = as_u32(8);
 export const CYC_ADDQ_SUBQ_A = as_u32(8);
 
-/** CMP a Dn 8/16 = 4, 32 = 6 (più eaCycles). */
+/** CMP to Dn: 8/16 = 4, 32 = 6, plus eaCycles. */
 export const CYC_CMP_D_BW = as_u32(4);
 export const CYC_CMP_D_L = as_u32(6);
 /** CMPA, CMPI a register (Dn dest): 8 base. */
 export const CYC_CMPA = as_u32(6);
 export const CYC_CMPI_D = as_u32(8);
 
-/** TST register Dn = 4 (b/w/l); a memoria = 4 + eaCycles. */
+/** TST register Dn = 4 (b/w/l); memory = 4 + eaCycles. */
 export const CYC_TST_D = as_u32(4);
 export const CYC_TST_MEM = as_u32(4);
 
-/** CLR Dn = 4 (B/W), 6 (L); a memoria 4/4/6 + eaCycles (010 errata fix). */
+/** CLR Dn = 4 (B/W), 6 (L); memory 4/4/6 + eaCycles (010 errata fix). */
 export const CYC_CLR_D_BW = as_u32(4);
 export const CYC_CLR_D_L = as_u32(6);
 export const CYC_CLR_MEM_BW = as_u32(4);
@@ -346,9 +344,8 @@ export const CYC_CLR_MEM_L = as_u32(6);
 // ─── Helper: estimate cycles for a single instruction kind ────────────────
 
 /**
- * Discriminated union delle "instruction shape" coperte dall'helper.
- * Volutamente NON cover ogni opcode — solo i casi che dominano i body del
- * main loop (cfr. nota in apertura).
+ * Discriminated union of instruction shapes covered by the helper. This is
+ * intentionally limited to cases that dominate main-loop bodies.
  */
 export type InstrEstimate =
   | { kind: "nop" }
@@ -365,14 +362,14 @@ export type InstrEstimate =
   | { kind: "bsr" }
   | {
       kind: "bcc";
-      /** `true` se il branch è preso. */
+      /** True when the branch is taken. */
       taken: boolean;
-      /** Displacement size: byte o word. */
+      /** Displacement size: byte or word. */
       displacement: "b" | "w";
     }
   | {
       kind: "dbcc";
-      /** Cond true (no decr): solo base. False: base + decrement (loop). Expire: condizione false ma counter==-1 dopo decr. */
+      /** Cond true: base only. False: base + decrement. Expire: counter == -1 after decrement. */
       outcome: "cond_true" | "cond_false_loop" | "cond_false_expire";
     }
   | { kind: "jsr"; ea: EaMode }
@@ -381,12 +378,12 @@ export type InstrEstimate =
   | { kind: "pea"; ea: EaMode }
   | {
       kind: "movem";
-      /** Direzione del trasferimento. */
+      /** Transfer direction. */
       dir: "reg_to_mem" | "mem_to_reg";
       size: "w" | "l";
-      /** EA del banco di memoria. */
+      /** Effective address for the memory block. */
       ea: EaMode;
-      /** Numero di registri nella mask. */
+      /** Number of registers selected by the mask. */
       regCount: number;
     }
   | {
@@ -401,11 +398,11 @@ export type InstrEstimate =
   | { kind: "divu_w"; srcEa: EaMode }
   | {
       kind: "bclr" | "bset" | "btst";
-      /** "r": bit number da Dn. "s": bit number immediato. */
+      /** "r": bit number from Dn. "s": immediate bit number. */
       form: "r" | "s";
-      /** Dest Dn (long bit) o memoria (byte). */
+      /** Destination Dn (long bit) or memory (byte). */
       dst: "d" | "m";
-      /** Solo se dst=m. */
+      /** Present only when dst=m. */
       ea?: EaMode;
     }
   | {
@@ -422,7 +419,7 @@ export type InstrEstimate =
   | {
       kind: "addq_subq";
       size: "b" | "w" | "l";
-      /** Dn, An, oppure mem (con EA). */
+      /** Dn, An, or mem (with EA). */
       dst: "d" | "a" | "m";
       ea?: EaMode;
     }
@@ -450,9 +447,9 @@ function bwOrL<T>(pair: { b_w: T; l: T }, size: "b" | "w" | "l"): T {
 }
 
 /**
- * Stima cicli per una singola istruzione.
+ * Estimates cycles for one instruction.
  *
- * Ritorna sempre `u32 ≥ 0`. Per istruzioni non coperte, lancia (fail loud).
+ * Always returns `u32 >= 0`. Unsupported instructions throw loudly.
  */
 export function estimateCycles(instr: InstrEstimate): u32 {
   switch (instr.kind) {
@@ -482,17 +479,16 @@ export function estimateCycles(instr: InstrEstimate): u32 {
       return CYC_BSR;
     case "bcc": {
       if (instr.taken) return CYC_BCC_TAKEN;
-      // Not taken: 10 base + delta (negative for byte, 0 for word). I delta
-      // sono raw `number` (non branded), quindi sommiamo via `as_u32` puro.
+      // Not taken: 10 base + delta (negative for byte, 0 for word). Deltas are
+      // raw numbers, so wrap through as_u32 only at the boundary.
       const delta =
         instr.displacement === "b"
           ? CYC_BCC_NOTAKE_B_DELTA
           : CYC_BCC_NOTAKE_W_DELTA;
-      // CYC_BCC_TAKEN è u32; usiamo u32_add con `as_u32(delta)`. Per delta
-      // negativo (-4) → as_u32 produce 0xFFFFFFFC, sommato a 10 e mascherato
-      // u32 ridarà 6. È bit-perfect ma poco leggibile; preferisco branchless.
+      // Avoid making the negative delta look more clever than it is: 10 + -4
+      // should be 6 for byte not-taken branches.
       if (delta === 0) return CYC_BCC_TAKEN;
-      return as_u32(6); // 10 + (-4) per byte not-taken
+      return as_u32(6); // 10 + (-4) for byte not-taken
     }
     case "dbcc": {
       // Base 12 = "cond false, decrement, branch". Per il cycle counting body:
@@ -595,7 +591,7 @@ export function estimateCycles(instr: InstrEstimate): u32 {
       if (!instr.ea) {
         throw new Error("estimateCycles: addq_subq mem dst requires ea");
       }
-      // 8 b/w, 12 l + eaCycles (already includes write-back).
+      // 8 b/w, 12 l + eaCycles; eaCycles already includes write-back.
       const base = instr.size === "l" ? as_u32(12) : as_u32(8);
       return u32_add(base, bwOrL(eaCycles[instr.ea], instr.size));
     }
@@ -606,7 +602,7 @@ export function estimateCycles(instr: InstrEstimate): u32 {
     case "cmpa":
       return u32_add(CYC_CMPA, bwOrL(eaCycles[instr.srcEa], instr.size));
     case "cmpi": {
-      // Forma immediate src; aggiunge imm fetch (già in eaCycles[Imm]).
+      // Immediate source form; add immediate fetch already represented by Imm.
       const baseDst = instr.dstEa === "Dn" ? CYC_CMPI_D : as_u32(8);
       const dstExtra =
         instr.dstEa === "Dn"

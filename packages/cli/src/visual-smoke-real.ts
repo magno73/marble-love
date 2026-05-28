@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * visual-smoke-real.ts — diagnostic CLI che simula il path browser real-mode.
+ * visual-smoke-real.ts — diagnostic CLI that simulates the browser real-mode path.
  *
- * Pipeline (mirror del web frontend con ROM caricata):
  *   1. Load program ROM (ghidra_project/marble_program.bin)
  *   2. Load PROMs (concat 136033.118 + 136033.119 = 1024 byte)
  *   3. decodeGraphicsLookups(proms) → playfield + motionObject lookups
@@ -13,8 +12,6 @@
  *
  * Uso: npx tsx packages/cli/src/visual-smoke-real.ts [N=300]
  *
- * Diagnosi: identifica se il bottleneck è in playfieldRam, lookup tables,
- * scroll, palette, ecc. — utile prima di lanciare il browser.
  */
 
 import { execFileSync } from "node:child_process";
@@ -446,7 +443,6 @@ function main(): void {
   console.log(`  workRam:      ${wkNz}/${s.workRam.length}`);
   printPlayableState("  final state:", s.workRam, pfNz);
 
-  // 7. buildFrame con tutti i lookup
   const opts: Parameters<typeof renderNs.buildFrame>[1] = {
     playfieldLookups,
     motionObjects: "linked-list",
@@ -523,7 +519,6 @@ function main(): void {
 
   // ASCII art map del playfield (40 col × 30 row = 320×240 viewport / 8x8 tile)
   console.log(`\n  --- ASCII map (60×30, '#'=tile != 0, '.'=tile 0, '@'=sprite) ---`);
-  // Costruisci indice per posizione (X/8, Y/8)
   const tileMap = new Map<string, "#" | "@">();
   for (const t of frame.playfield) {
     if (t.tileIndex !== 0) {
@@ -569,7 +564,6 @@ function main(): void {
     if (line.length > 4) console.log(line);
   }
 
-  // Diagnosi finale
   console.log(`\n=== Diagnosis ===`);
   if (frame.playfield.length === 0 && pfNz > 0) {
     console.log(`  ⚠️  playfieldRam popolata (${pfNz} byte) ma Frame.playfield=0.`);
