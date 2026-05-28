@@ -3,7 +3,7 @@
  * + 8 stack ABI instructions against the SingleStepTests/m68000 dataset (MIT)
  * filtrato in `oracle/tom_harte_m68000/`.
  *
- * Intent check (CLAUDE.md Rule 9): these 8 instructions are the substrate
+ * Intent check: these 8 instructions are the substrate
  * used by TS-port subs to read/write the body stack frame.
  * If semantics diverge from MAME by even 1 byte, workRam drift in
  * cluster 0x1D40..0x1E7F stays open. The differential test guarantees that
@@ -211,7 +211,7 @@ function hasBusException(t: OracleTest): boolean {
   return false;
 }
 
-// ─── Decoder helpers per le ext-word (mask/disp) ─────────────────────────
+// ─── Extension-word decoder helpers (mask/disp) ─────────────────────────
 
 function readWord(bus: MemBus, addr: number): number {
   return raw(bus.read16(as_u32(addr >>> 0))) & 0xffff;
@@ -221,7 +221,7 @@ function signExt16(x: number): number {
   return (x & 0x8000) ? x - 0x10000 : x;
 }
 
-// ─── Test driver per categoria ───────────────────────────────────────────
+// ─── Category test driver ────────────────────────────────────────────────
 
 interface RunResult {
   total: number;
@@ -276,7 +276,7 @@ function fmt(r: RunResult): string {
   return `total=${r.total} considered=${considered} pass=${r.pass} (${pct.toFixed(1)}%) excluded(exc/unsup)=${r.exceptions}/${r.unsupported}`;
 }
 
-// ─── Test suites per istruzione ─────────────────────────────────────────
+// ─── Instruction test suites ─────────────────────────────────────────────
 
 describe("M68010 regfile — Tom Harte differential validation", () => {
   it("LINK An,#disp — 100% match", () => {

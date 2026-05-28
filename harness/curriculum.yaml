@@ -8,7 +8,7 @@
 #     priority: int (lower = higher priority)
 #
 # The scenario gates later scenarios until closed. Marco sees progress
-# in `STATUS.md`.
+# in the public technical notes.
 
 stages:
   - id: attract_mode

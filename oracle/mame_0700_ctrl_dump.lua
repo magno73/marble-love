@@ -1,12 +1,12 @@
--- mame_0700_ctrl_dump.lua — dump 256 byte da maincpu program space @ 0x7F0FB
+-- mame_0700_ctrl_dump.lua - dump 256 bytes from maincpu program space @ 0x7F0FB.
 -- Validate hypothesis B5: TS reads all 0xFF because 0x70000-0x7FFFF
 -- is not modeled, while MAME may have active mirrors/mappings.
 --
--- Cattura tre snapshot temporali del cluster 0x7F0FB..0x7F1FA:
---   * frame 12001 (pre-body f12002 — momento in cui MAME sta per chiamare
+-- Capture three temporal snapshots of cluster 0x7F0FB..0x7F1FA:
+--   * frame 12001 (pre-body f12002, when MAME is about to call
 --                  decodeBitstream1A668 with ctrlStream=0x7F0FB)
 --   * frame 12002 (mid-body: state during decoder execution)
---   * frame 12003 (post-body — eventuale modifica trail)
+--   * frame 12003 (post-body modification trail)
 --
 -- Output JSON: /tmp/mame_0700_ctrl_dump.json (override via MARBLE_TRACE_OUT).
 --

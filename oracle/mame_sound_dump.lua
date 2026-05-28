@@ -20,7 +20,7 @@ local frame_count = 0
 -- Shadow buffer updated by pre_write_tap (fallback if device state
 -- do not natively expose the internal register array).
 local ym_shadow = {}  -- 256 byte, indici 0..255
-local ym_latched_reg = 0  -- ultimo registro selezionato via write a $1800
+local ym_latched_reg = 0  -- last register selected through a $1800 write
 local pokey_shadow = {}  -- 16 byte, indici 0..15
 for i = 0, 255 do ym_shadow[i] = 0 end
 for i = 0, 15 do pokey_shadow[i] = 0 end
@@ -61,7 +61,7 @@ local function state_value(dev, key, default)
 end
 
 local function reg6502()
-    -- Nomi state items canonici per il core m6502 in MAME (cpu/m6502/m6502.cpp).
+    -- Canonical state item names for MAME's m6502 core (cpu/m6502/m6502.cpp).
     return {
         a  = state_value(audiocpu, "A", 0) & 0xff,
         x  = state_value(audiocpu, "X", 0) & 0xff,
@@ -90,7 +90,7 @@ end
 local function install_taps()
     if audio_mem == nil then return end
     -- YM2151: the 6502 writes $1800 (address latch) and $1801 (data write for
-    -- il registro selezionato). Tracciamo il flusso per mantenere ym_shadow.
+    -- the selected register). Track the flow to maintain ym_shadow.
     if audio_mem.install_write_tap ~= nil then
         audio_mem:install_write_tap(0x1800, 0x1800, "ym_addr", function(o, d, m)
             ym_latched_reg = d & 0xff
@@ -105,7 +105,7 @@ local function install_taps()
         end)
         print("[mame_sound_dump] write-tap installati su $1800/$1801 (YM2151) + $1870-$187F (POKEY)")
     else
-        print("[mame_sound_dump] WARN: install_write_tap non disponibile, shadow YM/POKEY rimarranno a 0")
+        print("[mame_sound_dump] WARN: install_write_tap unavailable, YM/POKEY shadow registers remain 0")
     end
 end
 

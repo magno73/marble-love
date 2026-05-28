@@ -28,12 +28,12 @@
  *   - Distortion bit 7=poly off (square), bit 5=poly9 on, bit 4=poly5 on
  *     Combinations: pure tone vs noise variants
  *
- * Poll frequency: 60Hz (1 frame). Sufficiente per gameplay rumble + tones.
+ * Poll frequency: 60Hz (1 frame). Enough for gameplay rumble and tones.
  *
  * Usage:
  *   const renderer = await createSoundRenderer();
  *   await renderer.start();
- *   renderer.update(soundChip);  // chiama ogni frame TS
+ *   renderer.update(soundChip);  // call once per TS frame
  *   renderer.stop();
  */
 
@@ -47,16 +47,16 @@ export interface SoundRenderer {
   stop: () => Promise<void>;
   update: (chip: { ym2151: { regs: Uint8Array }; pokey: { writeRegs: Uint8Array } }) => void;
   playCommandCue: (cmd: number, options?: { force?: boolean }) => void;
-  /** V3 chip-perfect: stream PCM raw da YM2151 simulator. samples = interleaved
-   * L/R Float numeri @ nativeSampleRate Hz (55930 default). Renderer fa
-   * resampling a output sampleRate context e post al worklet via postMessage. */
+  /** V3 chip-perfect: stream raw PCM from the YM2151 simulator. Samples are
+   * interleaved L/R floats at nativeSampleRate Hz (55930 default). The renderer
+   * resamples to the output AudioContext rate and posts them to the worklet. */
   pushYm2151Samples: (samples: number[], nativeSampleRate: number, options?: PcmPushOptions) => void;
   /** V3 chip-perfect POKEY: stream mono PCM. Resampled + duplicated L=R. */
   pushPokeySamples: (samples: number[], nativeSampleRate: number, options?: PcmPushOptions) => void;
   /** Clear queued PCM and resampler phase without rebuilding the AudioContext. */
   resetPcmStreams: () => void;
   isRunning: () => boolean;
-  /** Output AudioContext sample rate (per resampling-side ratio compute). */
+  /** Output AudioContext sample rate for resampling ratio computation. */
   getSampleRate: () => number;
 }
 
@@ -275,11 +275,11 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       const tl = ymRegs[0x60 + ch] ?? 0;
       const freq = ymKcToFreq(kc, kf);
       const vol = ymTlToVol(tl);
-      // KEY ON: reg $08 = bit 6-3 mask + bit 2-0 channel. Pattern Marble usa
+      // KEY ON: reg $08 = bit 6-3 mask + bit 2-0 channel. Marble uses
       // mask=0x78 (all operators on) or 0 (off). Simplification: ANY non-zero key
-      // on byte sull'ultimo ch select.
+      // on byte on the last selected channel.
       // V1 heuristic: channel on if TL < 127 (= not muted). Real OPM needs
-      // KEY ON tracking, V2 si.
+      // KEY ON tracking, V2 does not.
       const isOn = vol > 0.01 && freq > 0;
       const wasOn = prev.ymOn[ch];
       const lastFreq = prev.ymFreq[ch] ?? 0;

@@ -456,7 +456,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
 
   const soundRomFull = rom.sound;
   if (soundRomFull === undefined || soundRomFull.length < 0x10000) {
-    setStatus("[soundReplay] FAIL: rom.sound non disponibile");
+    setStatus("[soundReplay] FAIL: rom.sound is unavailable");
     return;
   }
   const rom421 = soundRomFull.slice(0x8000, 0xc000);
@@ -649,7 +649,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
     commandEdgeStatus +
     commandEdgeContextStatus +
     (replyAckReplay === undefined ? "" : `replyAckReplay=${replyAckReplay.ackCount} acks\n`) +
-    `Click "Start Replay" per avviare AudioContext + loop @60fps.`,
+    `Click "Start Replay" to start AudioContext + the 60fps loop.`,
   );
 
   let chipForCommandEdge: { readonly commandReadEvents: readonly SoundReplayCommandReadEvent[] } | undefined;
@@ -726,10 +726,10 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   let loops = 0;
   let started = false;
 
-  // `?soundReplayFastForward=N` — pre-ticka N frame del chip al click "Start",
-  // saltando il boot silente. Default: 11900 (= ~198s, finestra audibile dell'
-  // attract music starts immediately instead of waiting 200s real-time).
-  // ?soundReplayFastForward=0 per replay completo da frame 0.
+  // `?soundReplayFastForward=N` pre-ticks N chip frames when "Start" is clicked,
+  // skipping the silent boot. Default: 11900, so the audible attract-music window
+  // starts immediately instead of waiting about 200 seconds in real time.
+  // Use ?soundReplayFastForward=0 for a full replay from frame 0.
   const ffParam = searchParams.get("soundReplayFastForward");
   const fastForward = ffParam === null ? 11900 : Math.max(0, Number.parseInt(ffParam, 10) || 0);
 

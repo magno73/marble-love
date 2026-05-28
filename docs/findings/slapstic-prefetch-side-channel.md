@@ -100,9 +100,9 @@ restricted to in-window accesses.
 
 ```typescript
 /*
- * Nota hardware: MAME installa il tap slapstic su tutto l'address space CPU.
- * Quindi `test_any` puo' essere armato anche da prefetch/letture codice fuori
- * dalla window protetta (es. `0x02ff5a` in `FUN_2FF40`), non solo da accessi a
+ * Hardware note: MAME installs the slapstic tap across the full CPU address space.
+ * `test_any` can therefore be armed by code prefetch or reads outside the
+ * protected window, such as `0x02ff5a` in `FUN_2FF40`, not only by accesses to
  * `0x080000..0x087FFF`.
  */
 ```

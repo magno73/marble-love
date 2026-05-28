@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-find_rng_static.py — scan Ghidra project per funzioni piccole con pattern RNG:
-  read RAM[X] → math → write RAM[X] → return
+find_rng_static.py - scan the Ghidra project for small functions with an RNG pattern:
+  read RAM[X] -> math -> write RAM[X] -> return
 
-Output: ranked list di (function_addr, address_touched, num_insts).
+Output: ranked list of (function_addr, address_touched, num_insts).
 
-Uso:
+Usage:
     uv run --with pyghidra python3 tools/find_rng_static.py
 """
 

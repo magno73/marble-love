@@ -1,18 +1,18 @@
--- mame_body_cycles.lua — misura cicli REALI di FUN_10FCE (body) per frame
--- in attract gameplay (frame 12000..12099).
+-- mame_body_cycles.lua - estimate real FUN_10FCE body cycles per frame
+-- in attract gameplay (frames 12000..12099).
 --
--- MAME 0.286 limitation: the Lua API does not expose a direct cycle counter.
--- (`cpu.total_cycles`, `cpu.state["CYCLES"]` ritornano nil). Inoltre chiamare
--- (FUN_10FCE entry -> exit), with 2 taps that read `manager.machine.time`.
+-- MAME 0.286 limitation: the Lua API does not expose a direct cycle counter
+-- (`cpu.total_cycles` and `cpu.state["CYCLES"]` return nil). This probe times
+-- FUN_10FCE entry -> exit with two taps that read `manager.machine.time`.
 --
--- Tecnica:
---   - Tap entry @ 0x10FCE: registra t_entry = machine.time.as_double()
---   - Tap exit  @ 0x1101C: t_exit - t_entry → cicli @ 7,159,090 Hz
+-- Technique:
+--   - Tap entry @ 0x10FCE: record t_entry = machine.time.as_double()
+--   - Tap exit  @ 0x1101C: t_exit - t_entry -> cycles @ 7,159,090 Hz
 --   - Output: JSON with cycles per frame in [FROM_FR, TO_FR].
 --
 -- Env vars:
---   MARBLE_TRACE_FROM        = primo frame (default 12000)
---   MARBLE_TRACE_TO          = ultimo frame (default 12099)
+--   MARBLE_TRACE_FROM        = first frame (default 12000)
+--   MARBLE_TRACE_TO          = last frame (default 12099)
 --   MARBLE_TRACE_OUT         = path JSON (default /tmp/mame_body_cycles.json)
 
 local function getenv(name, fallback)

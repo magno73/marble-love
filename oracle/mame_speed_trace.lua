@@ -1,4 +1,4 @@
--- mame_speed_trace.lua — write tap su *0x40000a (scroll speed byte) per
+-- mame_speed_trace.lua - write tap on *0x40000a (scroll speed byte) to
 -- Identify the writer that moves speed from 1 to 2 around f12056.
 local function getenv(name, fallback)
     local v = os.getenv(name)

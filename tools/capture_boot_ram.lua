@@ -4,7 +4,7 @@
 -- 0x2000 bytes (8 KB), the contents of 0x400000-0x401FFF after MAME's first
 -- main-loop cycle.
 --
--- Uso:
+-- Usage:
 --   MARBLE_LOVE_BOOT_RAM_PATH=traces/boot_ram_frame0.bin \
 --   mame marble -window -nothrottle -skip_gameinfo -seconds_to_run 5 \
 --       -rompath roms \

@@ -1,14 +1,14 @@
--- mame_sound_audioram_dump.lua — dump RAM del sound 6502 a frame snapshot
--- multiple frames, with the same coin/start flow + cmd tap as mame_sound_cmd_capture.
--- Permette diff TS vs MAME audioRam frame-by-frame per drill A1.
+-- mame_sound_audioram_dump.lua - dump 6502 sound RAM at selected frame snapshots
+-- with the same coin/start flow and command tap as mame_sound_cmd_capture.
+-- Enables frame-by-frame TS vs MAME audio RAM diffs for A1 drills.
 --
 -- Output JSON: { dumps: [{frame: N, audioRam: "hex..."}, ...], ymRegs: hex, pokeyRegs: hex }
 --
 -- Env:
 --   MARBLE_SND_DUMP_FRAMES    CSV frame snapshot (default "245,300,400,500,600,800,1000,1500,2000,3000")
 --   MARBLE_SND_DUMP_OUT       output JSON path (default /tmp/mame_audioram_dump.json)
---   MARBLE_SOUND_COIN_FRAME   primo frame coin (default 1200) — must match capture
---   MARBLE_SOUND_START_FRAME  primo frame start (default 1500) — must match capture
+--   MARBLE_SOUND_COIN_FRAME   first coin frame (default 1200) - must match capture
+--   MARBLE_SOUND_START_FRAME  first start frame (default 1500) - must match capture
 
 local FRAMES_RAW = os.getenv("MARBLE_SND_DUMP_FRAMES") or "245,300,400,500,600,800,1000,1500,2000,3000"
 local OUT_PATH = os.getenv("MARBLE_SND_DUMP_OUT") or "/tmp/mame_audioram_dump.json"

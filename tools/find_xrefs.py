@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""find_xrefs.py — lista xref a indirizzi RAM specifici, classificando read/write.
+"""find_xrefs.py - list xrefs to specific RAM addresses, classified read/write.
 
-Uso: uv run --with pyghidra python3 tools/find_xrefs.py 0x4003A6 0x4003A7 0x4003F0
+Usage: uv run --with pyghidra python3 tools/find_xrefs.py 0x4003A6 0x4003A7 0x4003F0
 """
 
 import os

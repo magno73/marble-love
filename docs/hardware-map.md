@@ -41,10 +41,8 @@ trackball axes into the values read by the 68010. Coin inputs are read by the
 
 ## References
 
-This public summary is intentionally short. Detailed address tables, source-line
-citations, and historical notes are kept in:
+This public summary is intentionally short. Related subsystem notes:
 
-- `docs/internal/technical/hardware-map.md`
 - `docs/input-mmio-map.md`
 - `docs/video-system.md`
 - `docs/sound-system.md`

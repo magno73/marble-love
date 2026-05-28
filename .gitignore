@@ -62,6 +62,19 @@ tasks/*/artifacts/
 *.seed.tmp.json
 *.probe.tmp.json
 
+# --- Local-only historical project notes ---
+CLAUDE.md
+GOAL.md
+STATUS.md
+PROMPT.md
+HANDOFF_*.md
+marble-love-prd-v*.md
+prompts/
+docs/internal/
+docs/archive/
+docs/agent-workflow.md
+docs/task-template.md
+
 # --- Coverage ---
 coverage/
 *.lcov

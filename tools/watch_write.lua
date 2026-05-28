@@ -5,10 +5,10 @@
 --   MARBLE_WATCH_LO   low address (default 0x401EE0)
 --   MARBLE_WATCH_HI   inclusive high address (default 0x401EFF)
 --   MARBLE_WATCH_OUT  path file output (default /tmp/marble_writes.log)
---   MARBLE_WATCH_MAX  massimo numero di eventi loggati (default 5000)
---   MARBLE_LOVE_MAX_FRAMES  numero di frame da emulare (default 100)
+--   MARBLE_WATCH_MAX  maximum number of logged events (default 5000)
+--   MARBLE_LOVE_MAX_FRAMES  number of frames to emulate (default 100)
 --
--- Uso:
+-- Usage:
 --   MARBLE_WATCH_LO=0x401EE0 MARBLE_WATCH_HI=0x401EFF \
 --     mame marble -rompath ./roms -window -nothrottle -skip_gameinfo \
 --          -seconds_to_run 30 -autoboot_script tools/watch_write.lua \

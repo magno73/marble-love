@@ -1,11 +1,11 @@
 -- mame_cluster_0706_trace.lua — live write-tap su workRam region 0x400706..0x400751
 -- Identifies writer PCs for the drift cluster @ 0x0706..0x0751 in the demo window.
 --
--- Cluster TOP non-stack (74 byte di drift @ f+99). Da STATUS.md:
+-- Top non-stack drift cluster, kept as a targeted historical probe.
 --   Fix requires closing upstream drift in the populators.
 --
 --
--- Env vars (default valgono per la window di test f12000-12099):
+-- Env vars (defaults target the f12000-12099 test window):
 --   MARBLE_TRACE_LO   — region low (default 0x400706)
 --   MARBLE_TRACE_HI   — region high inclusive (default 0x400751)
 --   MARBLE_TRACE_FROM — first frame to log (default 11998)

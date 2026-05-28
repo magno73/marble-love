@@ -6,9 +6,9 @@ the current TypeScript engine and parity tests.
 
 ## Scope
 
-This public note gives the stable shape of the descriptor. Full field evidence,
-MAME tap details, overlap notes, and post-header tables are kept in
-`docs/internal/technical/level-header-format.md`.
+This public note gives the stable shape of the descriptor and the constraints
+that matter for code review. Detailed capture logs are kept outside the public
+tree.
 
 ## Stable Constants
 

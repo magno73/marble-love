@@ -1,7 +1,7 @@
--- mame_slot_table_trace.lua — tap su audioRam $0248-$0267 (music slot
+-- mame_slot_table_trace.lua - tap audio RAM $0248-$0267 (music slot
 -- table). Captures the first write with value $CC to the high byte ($0258-$0267).
 -- to identify when MAME sets the attract music track.
--- Salva PC, stack call chain e zp state per identificare il caller.
+-- Save PC, stack call chain, and ZP state to identify the caller.
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_TRACE_TARGET") or "13000")
 local OUT_PATH = os.getenv("MARBLE_TRACE_OUT") or "/tmp/mame_slot_table.json"

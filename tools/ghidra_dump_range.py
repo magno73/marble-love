@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-ghidra_dump_range.py — dumpa disassembly di un range arbitrario dal progetto Ghidra.
+ghidra_dump_range.py - dump disassembly for an arbitrary Ghidra project range.
 
-Uso: uv run --with pyghidra python3 tools/ghidra_dump_range.py START_HEX END_HEX OUT_FILE
+Usage: uv run --with pyghidra python3 tools/ghidra_dump_range.py START_HEX END_HEX OUT_FILE
 
-Esempi:
+Examples:
     uv run --with pyghidra python3 tools/ghidra_dump_range.py 0x340 0x400 ghidra_project/dump_isr.txt
 """
 

@@ -30,5 +30,4 @@ it through the existing Lua capture scripts. The generated JSON should stay in
 `oracle/scenarios/` only when it is a deliberate fixture; scratch captures belong
 under `/tmp/marble-love/<task>/`.
 
-Detailed historical capture notes remain in
-`docs/internal/technical/input-mmio-map.md`.
+Historical capture notes are kept outside the public tree.

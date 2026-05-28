@@ -129,7 +129,7 @@ before publishing changes.
 | `oracle` | MAME Lua scripts and oracle scenarios. |
 | `harness` | Trace diff and reporting utilities. |
 | `tools` | ROM prep, Ghidra-oriented utilities, and local support scripts. |
-| `docs` | Public technical notes plus internal development history under `docs/internal`. |
+| `docs` | Public technical notes and the compact context map for maintainers. |
 
 ## Reverse-Engineering Method
 

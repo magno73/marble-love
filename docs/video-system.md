@@ -40,5 +40,4 @@ repository.
 owns the PixiJS adapter. Engine code should not depend on DOM, canvas, or PixiJS
 types.
 
-Detailed historical notes and MAME source references remain in
-`docs/internal/technical/video-system.md`.
+Detailed historical capture notes are kept outside the public tree.

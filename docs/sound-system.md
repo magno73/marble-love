@@ -36,5 +36,5 @@ canonical replay preset, and the PCM comparison is very close on audible
 windows. This should not be marketed as complete game-wide bit-perfect audio:
 live gameplay wiring and strict PCM exactness remain ongoing work.
 
-Detailed diagnostic history, artifact paths, and rejected timing experiments are
-kept in `docs/internal/technical/sound-system.md` and `docs/archive/`.
+Detailed diagnostic logs and rejected timing experiments are kept outside the
+public tree.

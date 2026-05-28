@@ -1,19 +1,18 @@
--- mame_sound_cmd_capture.lua - captures 68K -> 6502 commands while the main 68K is in
--- gameplay reale (coin+start scripted). Replica il pattern di install + input
--- injection from oracle/mame_playable_input_capture.lua, which is verified
--- generare scenari di gameplay), aggiunge un install_write_tap su $FE0001 per
--- registrare i sound cmd.
+-- mame_sound_cmd_capture.lua - capture 68K -> 6502 commands while the main 68K is
+-- in real gameplay (scripted coin+start). Replicates the install + input
+-- injection pattern from oracle/mame_playable_input_capture.lua, then adds an
+-- install_write_tap on $FE0001 to record sound commands.
 --
 -- Output JSON: { frame, count, cmds: [{frame, byte}, ...] }
 --
 -- Env:
---   MARBLE_SOUND_CMD_TARGET_FRAME — frame totali (default 3000)
+--   MARBLE_SOUND_CMD_TARGET_FRAME - total frames (default 3000)
 --   MARBLE_SOUND_CMD_OUT          — output file (default /tmp/mame_sound_cmds.json)
---   MARBLE_SOUND_COIN_FRAME       — primo frame coin pulse (default 1200)
---   MARBLE_SOUND_START_FRAME      — primo frame start pulse (default 1500)
---   MARBLE_SOUND_TRACKBALL_START  — primo frame trackball route (default 2020)
+--   MARBLE_SOUND_COIN_FRAME       - first coin pulse frame (default 1200)
+--   MARBLE_SOUND_START_FRAME      - first start pulse frame (default 1500)
+--   MARBLE_SOUND_TRACKBALL_START  - first trackball-route frame (default 2020)
 --   MARBLE_SOUND_ROUTE            — optional route, e.g. D:171,R:206
---   MARBLE_SOUND_ROUTE_STEP       — route delta per frame (default 8)
+--   MARBLE_SOUND_ROUTE_STEP       - route delta per frame (default 8)
 --   MARBLE_SOUND_STATUS_OUT       — optional output for $1820 reads
 --   MARBLE_SOUND_STATUS_MAX_READS — max $1820 reads to record (default 2000000)
 --   MARBLE_SOUND_STATUS_FULL      — 1 to include every read, not only base runs
@@ -233,9 +232,9 @@ local function scripted_trackball_delta(frame)
 end
 
 local function install_taps()
-    -- Replica esatta del pattern playable_input_capture: install_read_tap su
-    -- main CPU per gli input ports (questi taps forzano MAME a non bypassare
-    -- la bus-decode anche per accessi frequent come $1820 in attract loop).
+    -- Exact replica of the playable_input_capture pattern: install_read_tap on
+    -- main CPU input ports. These taps force MAME to avoid bypassing bus decode
+    -- even for frequent accesses such as $1820 in the attract loop.
     maincpu = manager.machine.devices[":maincpu"]
     main_mem = maincpu.spaces["program"]
     for _, tag in ipairs({":audiocpu", ":soundcpu"}) do

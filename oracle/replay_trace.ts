@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * replay_trace.ts — utility per leggere un trace JSONL e stamparlo
- * human-readable. Utile per ispezionare manualmente cosa il dumper ha
- * registrato.
+ * replay_trace.ts - read a JSONL trace and print it in a human-readable form.
+ * Useful when manually inspecting what the dumper captured.
  *
- * Uso: node --experimental-strip-types oracle/replay_trace.ts <path.jsonl> [--from N] [--to N]
+ * Usage: node --experimental-strip-types oracle/replay_trace.ts <path.jsonl> [--from N] [--to N]
  */
 
 import { readFileSync } from "node:fs";

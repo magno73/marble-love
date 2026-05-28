@@ -106,7 +106,7 @@ local function parse_inputs_json(path)
     local s = fh:read("*a")
     fh:close()
     local schedule = {}
-    -- Trova "inputs": { e poi balance le graffe per estrarre fino al chiusura
+    -- Find "inputs": { and then balance braces through the closing section.
     local i_start = s:find('"inputs"%s*:%s*{')
     if not i_start then return {} end
     -- Advance to the opening `{` of the inputs section.
@@ -188,7 +188,7 @@ local function read_state()
         cpu_pc      = cpu.state["PC"].value,
         frame_mid   = mem:read_u8(0x400014),
         frame_low   = mem:read_u8(0x400016),
-        rng_seed    = mem:read_u32(0x400000),  -- placeholder per ora
+        rng_seed    = mem:read_u32(0x400000),  -- placeholder for now
         obj_count   = mem:read_u16(0x400396),
         av_control  = mem:read_u16(0x4003AE),
         coin_ctr    = mem:read_u8(0x4003F4),
@@ -304,7 +304,7 @@ end
 
 emu.register_frame_done(function()
     if cpu == nil then
-        -- Lazy init al primo frame
+        -- Lazy init on the first frame
         cpu = manager.machine.devices[":maincpu"]
         mem = cpu.spaces["program"]
         ports = manager.machine.ioport.ports

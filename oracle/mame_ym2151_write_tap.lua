@@ -23,7 +23,7 @@ local frame_count = 0
 local installed = false
 local tap_handles = {}
 local ym_writes = {}    -- {frame, addr, reg, data} dove addr = $1800 o $1801
-local current_reg = -1  -- ultimo $1800 write
+local current_reg = -1  -- last $1800 write
 local reg_writes = {}   -- {frame, reg, data} pairs ricostruiti
 
 local function in_pulse(frame, start)

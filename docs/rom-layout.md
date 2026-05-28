@@ -48,8 +48,7 @@ Ghidra analysis or runtime comparison is performed.
 ## Validation
 
 The loader validates expected file names, lengths, and CRC32 values before using
-the ROM data. SHA1 values and exact MAME source references are kept in the
-internal technical history at `docs/internal/technical/rom-layout.md`.
+the ROM data.
 
 No ROM files, extracted graphics, extracted audio, or ROM-derived assets are
 tracked in this repository.
