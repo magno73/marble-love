@@ -107,7 +107,7 @@ export interface VideoControlInfo {
 
 export interface Frame {
   nativeSize: FrameSize;
-  /** Coord di scroll della tilemap (System 1 supporta scroll H/V). */
+  /** Tilemap scroll coordinates; Atari System 1 supports horizontal and vertical scroll. */
   scrollX: number;
   scrollY: number;
   palette: PaletteEntry[];
@@ -120,7 +120,7 @@ export interface Frame {
 export interface BuildFrameOptions {
   playfieldRam?: Uint8Array;
   playfieldLookups?: PlayfieldLookupInfo[];
-  motionObjects?: "none" | "linked-list" | "all-banks";
+  motionObjects?: "none" | "linked-list" | "runtime-counter" | "all-banks";
   motionObjectStartEntry?: number;
   maxMotionObjectEntries?: number;
   motionObjectLookups?: MotionObjectLookupInfo[];
@@ -231,7 +231,7 @@ export function buildPlayfieldFromRam(
     // Atari System 1 palette regions:
     //   0x000-0x0FF Alphanumerics, 0x100-0x1FF Motion Object,
     //   0x200-0x2FF Playfield, 0x300-0x3FF Translucency.
-    // Per cui per playfield uso paletteIndex base 0x40 → 0x40*8 = 0x200 ✓.
+    // The playfield therefore uses paletteIndex base 0x40 => 0x40*8 = 0x200.
     const colorShift = lookup.bpp - 3;
     commands.push({
       tileIndex: lookup.offset * 256 + fields.tileIndexLow,
@@ -475,6 +475,40 @@ export function buildSpritesFromMotionObjectList(
   );
 }
 
+export function runtimeMotionObjectStartEntry(state: GameState): number {
+  if (state.clock.levelEndScoreResumePending !== undefined || (state.workRam[0x39a] ?? 0) !== 0) {
+    return motionObjectStartEntryFromAvControl(readWorkWordBE(state, 0x3b0));
+  }
+  return activeMotionObjectStartEntry(state);
+}
+
+export function runtimeMotionObjectCount(state: GameState): number {
+  return Math.max(0, Math.min(MOTION_OBJECT_ENTRY_COUNT, readWorkWordBE(state, 0x406)));
+}
+
+export function runtimeMotionObjectEntryIndexes(state: GameState): number[] {
+  const count = runtimeMotionObjectCount(state);
+  if (count <= 0) return [];
+  const startEntry = runtimeMotionObjectStartEntry(state);
+  return Array.from({ length: count }, (_, index) => startEntry + index);
+}
+
+export function buildSpritesFromRuntimeMotionObjects(
+  state: GameState,
+  lookups: MotionObjectLookupInfo[] = [],
+): SpriteCommand[] {
+  const entryIndexes = runtimeMotionObjectEntryIndexes(state);
+  if (entryIndexes.length === 0) {
+    return buildSpritesFromMotionObjectList(
+      state.spriteRam,
+      visibleMotionObjectStartEntry(state),
+      MOTION_OBJECT_ENTRY_COUNT,
+      lookups,
+    );
+  }
+  return buildSpritesFromMotionObjectRam(state.spriteRam, entryIndexes, lookups);
+}
+
 /**
  * Walk all 8 Atari System 1 MO banks. Each bank is a 0x200-byte slab with
  * 64 entries whose four words live in four 0x80-byte planes.
@@ -556,11 +590,8 @@ function buildDebugLabel(options: BuildFrameOptions): string | undefined {
   ].join(":");
 }
 
-/**
- *  Default conservativo: palette/alpha soltanto. Gli sprite da motion-object RAM
-  */
 export function buildFrame(state: GameState, options: BuildFrameOptions = {}): Frame {
-  // Playfield RAM: usa state.playfieldRam come default; options.playfieldRam
+  // Playfield RAM defaults to the state's live playfield buffer.
   const pfRam = options.playfieldRam ?? state.playfieldRam;
   const playfield =
     options.playfieldLookups !== undefined && pfRam !== undefined
@@ -578,6 +609,11 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
           state.spriteRam,
           options.motionObjectStartEntry,
           options.maxMotionObjectEntries,
+          options.motionObjectLookups,
+        )
+      : options.motionObjects === "runtime-counter"
+      ? buildSpritesFromRuntimeMotionObjects(
+          state,
           options.motionObjectLookups,
         )
       : options.motionObjects === "all-banks"

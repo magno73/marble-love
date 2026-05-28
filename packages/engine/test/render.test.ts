@@ -4,6 +4,7 @@ import {
   buildFrame,
   buildPaletteFromColorRam,
   buildPlayfieldFromRam,
+  buildSpritesFromRuntimeMotionObjects,
   buildSpritesFromMotionObjectList,
   buildSpritesFromMotionObjectRam,
   decodeMotionObjectWords,
@@ -11,10 +12,31 @@ import {
   decodeVideoControlByte,
   irgb4444ToRgba,
   motionObjectStartEntryFromAvControl,
+  runtimeMotionObjectEntryIndexes,
   visibleMotionObjectStartEntry,
   walkMotionObjectLinkedList,
 } from "../src/render.js";
 import { emptyGameState } from "../src/state.js";
+
+function writeU16BE(bytes: Uint8Array, off: number, value: number): void {
+  const v = value & 0xffff;
+  bytes[off] = (v >>> 8) & 0xff;
+  bytes[off + 1] = v & 0xff;
+}
+
+function writeRuntimeMotionObject(
+  state: ReturnType<typeof emptyGameState>,
+  entryIndex: number,
+  fields: { word0: number; word1: number; word2: number; word3: number },
+): void {
+  const bankIndex = Math.floor(entryIndex / 64);
+  const entry = entryIndex & 0x3f;
+  const bankBase = bankIndex * 0x200;
+  writeU16BE(state.spriteRam, bankBase + entry * 2, fields.word0);
+  writeU16BE(state.spriteRam, bankBase + 0x80 + entry * 2, fields.word1);
+  writeU16BE(state.spriteRam, bankBase + 0x100 + entry * 2, fields.word2);
+  writeU16BE(state.spriteRam, bankBase + 0x180 + entry * 2, fields.word3);
+}
 
 describe("irgb4444ToRgba", () => {
   it("converts black and full-intensity white", () => {
@@ -220,6 +242,88 @@ describe("visibleMotionObjectStartEntry", () => {
     state.clock.levelEndScoreResumePending = 1 as typeof state.clock.levelEndScoreResumePending;
 
     expect(visibleMotionObjectStartEntry(state)).toBe(64);
+  });
+});
+
+describe("runtime motion objects", () => {
+  it("uses the pending bank while a freshly emitted runtime list is dirty", () => {
+    const state = emptyGameState();
+    writeU16BE(state.workRam, 0x3ae, 0x0000);
+    writeU16BE(state.workRam, 0x3b0, 0x0008);
+    writeU16BE(state.workRam, 0x406, 0x0002);
+    state.workRam[0x39a] = 1;
+
+    expect(runtimeMotionObjectEntryIndexes(state)).toEqual([64, 65]);
+  });
+
+  it("draws only the emitted sequential entries and ignores stale linked data", () => {
+    const state = emptyGameState();
+    writeU16BE(state.workRam, 0x3b0, 0x0008);
+    writeU16BE(state.workRam, 0x406, 0x0002);
+    state.workRam[0x39a] = 1;
+    writeRuntimeMotionObject(state, 64, {
+      word0: 0x0021,
+      word1: 0x0110,
+      word2: 0x0041,
+      word3: 0x0001,
+    });
+    writeRuntimeMotionObject(state, 65, {
+      word0: 0x0042,
+      word1: 0x0220,
+      word2: 0x0062,
+      word3: 0x0002,
+    });
+    writeRuntimeMotionObject(state, 66, {
+      word0: 0x0063,
+      word1: 0x0330,
+      word2: 0x0083,
+      word3: 0x0002,
+    });
+
+    const frame = buildFrame(state, { motionObjects: "runtime-counter" });
+
+    expect(frame.sprites).toEqual([
+      {
+        spriteIndex: 0x10,
+        x: 2,
+        y: 1,
+        width: 16,
+        height: 16,
+        paletteIndex: 0x101,
+        flipX: false,
+        priority: 0,
+        translucent: false,
+      },
+      {
+        spriteIndex: 0x20,
+        x: 3,
+        y: 2,
+        width: 24,
+        height: 24,
+        paletteIndex: 0x102,
+        flipX: false,
+        priority: 0,
+        translucent: false,
+      },
+    ]);
+  });
+
+  it("falls back to the linked list before the runtime emitter has written a count", () => {
+    const state = emptyGameState();
+    writeRuntimeMotionObject(state, 0, {
+      word0: 0x0021,
+      word1: 0x0110,
+      word2: 0x0041,
+      word3: 0x0001,
+    });
+    writeRuntimeMotionObject(state, 1, {
+      word0: 0x0042,
+      word1: 0x0220,
+      word2: 0x0062,
+      word3: 0x0001,
+    });
+
+    expect(buildSpritesFromRuntimeMotionObjects(state)).toHaveLength(2);
   });
 });
 

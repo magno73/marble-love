@@ -195,10 +195,6 @@ const useSyntheticDemoFrame =
   !forceRealRendering &&
   !forceAutoLoad;
 
-function activeMotionObjectStartEntry(state: ReturnType<typeof stateNs.emptyGameState>): number {
-  return renderNs.visibleMotionObjectStartEntry(state);
-}
-
 function readWorkWordBE(state: ReturnType<typeof stateNs.emptyGameState>, off: number): number {
   return (((state.workRam[off] ?? 0) << 8) | (state.workRam[off + 1] ?? 0)) & 0xffff;
 }
@@ -2463,9 +2459,7 @@ async function startGame(
           opts.playfieldLookups = rom.graphics.lookupTables.playfield;
         }
         if (rom?.graphics.lookupTables.motionObjects) {
-          opts.motionObjects = "linked-list";
-          opts.motionObjectStartEntry = activeMotionObjectStartEntry(s);
-          opts.maxMotionObjectEntries = 64;
+          opts.motionObjects = "runtime-counter";
           opts.motionObjectLookups = rom.graphics.lookupTables.motionObjects;
         }
         const f = renderNs.buildFrame(s, opts);
