@@ -186,9 +186,9 @@ export interface TickClock {
    */
   levelIntroBannerBaseTimer: u16 | undefined;
   /**
-   * Main-loop dispatcher state restored after the intro banner clears. Warm
-   * oracle seeds default to the captured ROM state, while browser runtime
-   * starts can hand off to the live gameplay dispatcher.
+   * Main-loop dispatcher state restored after the intro banner clears. True
+   * level starts use state 0 so normal gameplay physics resumes after the
+   * presentation.
    */
   levelIntroBannerHandoffState: u16 | undefined;
   /**

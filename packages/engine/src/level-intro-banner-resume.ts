@@ -83,9 +83,9 @@ export interface ArmLevelIntroBannerResumeOptions {
    */
   parkTimer?: boolean;
   /**
-   * Main-loop dispatcher state restored when the banner clears. The default
-   * preserves warm oracle captures; live starts use state 0 so input reaches
-   * the gameplay physics path after the intro.
+   * Main-loop dispatcher state restored when the banner clears. True level
+   * starts return to state 0 so the regular gameplay physics path owns the
+   * post-banner ramp launch and live input.
    */
   handoffState?: number;
 }
@@ -215,7 +215,7 @@ export function armLevelIntroBannerResume(
   writeWordBE(state.workRam, PLAYER_TIMER_OFF, baseTimer);
   state.clock.levelIntroBannerResumeTick = as_u16(0);
   state.clock.levelIntroBannerBaseTimer = as_u16(baseTimer);
-  state.clock.levelIntroBannerHandoffState = as_u16(options.handoffState ?? 1);
+  state.clock.levelIntroBannerHandoffState = as_u16(options.handoffState ?? 0);
   if (options.parkTimer === true) {
     state.workRam[PLAYER_TIMER_MEDIUM_OFF] = 9;
     state.workRam[PLAYER_TIMER_PAD_OFF] = 5;

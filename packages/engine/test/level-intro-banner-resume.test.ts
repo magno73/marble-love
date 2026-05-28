@@ -178,7 +178,7 @@ describe("level intro banner warm-state resume", () => {
     expect(hasIntroBanner(state)).toBe(true);
     tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
 
-    expect(readWordBE(state.workRam, 0x390)).toBe(1);
+    expect(readWordBE(state.workRam, 0x390)).toBe(0);
     expect(readWordBE(state.workRam, 0x82)).toBe(targetTimer);
     expect(state.workRam[0x86]).toBe(5);
     expect(hasIntroBanner(state)).toBe(false);
@@ -206,23 +206,24 @@ describe("level intro banner warm-state resume", () => {
     expect(readLongBE(state.workRam, 0x18 + 0x0c)).not.toBe(xBefore);
   });
 
-  it("hands off to the normal gameplay dispatcher after the banner clear", () => {
+  it("auto-armed warm seeds hand off to the normal gameplay dispatcher after the banner clear", () => {
     const { state, rom } = bootSeed("start_level1_intro_practice_f2479");
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
     const playerXOff = 0x18 + 0x0c;
-    const initialPlayerX = Array.from(state.workRam.slice(playerXOff, playerXOff + 4));
 
     for (let i = 0; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
     expect(state.workRam[0x86]).toBe(5);
-    expect(readWordBE(state.workRam, 0x390)).toBe(1);
+    expect(readWordBE(state.workRam, 0x390)).toBe(0);
+    expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
 
-    tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
-    expect(state.workRam[0x86]).toBe(4);
+    const initialPlayerX = Array.from(state.workRam.slice(playerXOff, playerXOff + 4));
+    for (let i = 0; i < 580; i++) {
+      tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
+    }
 
-    tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     expect(Array.from(state.workRam.slice(playerXOff, playerXOff + 4))).not.toEqual(initialPlayerX);
   });
 
