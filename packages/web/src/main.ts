@@ -48,7 +48,9 @@ import { parseStartLevelParam, playableSeedForStartLevel } from "./practice-leve
 import { initRenderer } from "./renderer.js";
 import { extractRomZipFiles } from "./rom-loader.js";
 import {
+  isSpecialAttractSoundCommand,
   shouldHandoffSoundChipForLevelChange,
+  shouldDropLiveGameplaySpecialAttractCommand,
   soundGameplayPrewarmFrameBeforeLevelMusic,
   soundLevelMusicCommandForLevelIndex,
 } from "./sound-gameplay-profile.js";
@@ -1596,6 +1598,7 @@ async function startGame(
     0,
     Number.parseInt(searchParams.get("soundSpecialDedupeFrames") ?? "45", 10) || 45,
   );
+  const soundLiveAttractCommandsEnabled = searchParams.get("soundLiveAttractCommands") === "1";
   const soundPrewarmDisabled = searchParams.get("soundPrewarm") === "0";
   const soundPrewarmDefaultFrame =
     startLevelPracticeActive || forcePlay || useBootFlow || useCoinStartFlow
@@ -1715,7 +1718,7 @@ async function startGame(
 
   function shouldSuppressSpecialSound(byte: number): boolean {
     if (soundSpecialDedupeFrames <= 0) return false;
-    if (byte !== 0x61 && byte !== 0x65 && byte !== 0x67) return false;
+    if (!isSpecialAttractSoundCommand(byte)) return false;
     if (byte !== lastSpecialSoundCmd) {
       lastSpecialSoundCmd = byte;
       lastSpecialSoundFrame = frameCount;
@@ -2084,6 +2087,18 @@ async function startGame(
             byte,
             source: "live",
             gameplayActive: isSoundGameplayActive(),
+          });
+          return;
+        }
+        if (shouldDropLiveGameplaySpecialAttractCommand(byte, soundLiveAttractCommandsEnabled)) {
+          soundTraceSummary.suppressed++;
+          bumpSoundHist(soundTraceSummary.suppressedHist, byte);
+          traceSoundEvent({
+            kind: "suppressed",
+            frame: frameCount,
+            byte,
+            source: "live-attract",
+            queueDepth: soundCommandQueue.length,
           });
           return;
         }

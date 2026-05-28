@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   SOUND_GAMEPLAY_FIRST_MUSIC_FRAME,
+  isSpecialAttractSoundCommand,
   shouldHandoffSoundChipForLevelChange,
+  shouldDropLiveGameplaySpecialAttractCommand,
   soundGameplayPrewarmFrameBeforeLevelMusic,
   soundLevelMusicCommandForLevelIndex,
 } from "../src/sound-gameplay-profile.js";
@@ -32,5 +34,19 @@ describe("sound gameplay profile", () => {
     expect(soundGameplayPrewarmFrameBeforeLevelMusic(1571, false)).toBe(SOUND_GAMEPLAY_FIRST_MUSIC_FRAME);
     expect(soundGameplayPrewarmFrameBeforeLevelMusic(1200, false)).toBe(1200);
     expect(soundGameplayPrewarmFrameBeforeLevelMusic(2000, true)).toBe(2000);
+  });
+
+  it("identifies attract/end-screen commands that should not replay as live gameplay events", () => {
+    expect(isSpecialAttractSoundCommand(0x61)).toBe(true);
+    expect(isSpecialAttractSoundCommand(0x65)).toBe(true);
+    expect(isSpecialAttractSoundCommand(0x67)).toBe(true);
+    expect(isSpecialAttractSoundCommand(0x3c)).toBe(false);
+    expect(isSpecialAttractSoundCommand(0x10)).toBe(false);
+  });
+
+  it("drops attract/end-screen commands from live gameplay unless explicitly replayed", () => {
+    expect(shouldDropLiveGameplaySpecialAttractCommand(0x61, false)).toBe(true);
+    expect(shouldDropLiveGameplaySpecialAttractCommand(0x61, true)).toBe(false);
+    expect(shouldDropLiveGameplaySpecialAttractCommand(0x3c, false)).toBe(false);
   });
 });
