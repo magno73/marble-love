@@ -44,18 +44,13 @@ active work.
 - Gameplay audio is enabled by default, but the browser still requires a user
   gesture before Web Audio can start.
 - Attract-mode music and insert-coin sound remain active work.
+- The high-score / insert-coin screen still needs visual polish and a final
+  behavior pass.
 - Some CLI probes and oracle fixtures are intended for maintainers rather than
   casual users.
 - Large JSON fixtures are checked in under `oracle/` because they support
   reproducible comparisons. Heavy gameplay snapshots are not part of the
   browser public asset path.
-
-## Known Gameplay Bugs
-
-These are current browser-gameplay issues, not original arcade behavior:
-
-- The high-score / insert-coin screen still needs visual polish and a final
-  behavior pass.
 
 ## Quick Start
 
