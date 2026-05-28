@@ -1,5 +1,7 @@
 export const SOUND_GAMEPLAY_FIRST_MUSIC_FRAME = 1570 as const;
 
+const SPECIAL_ATTRACT_SOUND_COMMANDS = [0x61, 0x65, 0x67] as const;
+
 const SOUND_LEVEL_MUSIC_COMMANDS = [
   0x08, // Practice Race
   0x0a, // Beginner Race
@@ -39,4 +41,16 @@ export function shouldHandoffSoundChipForLevelChange(
   if (!handoffEnabled) return false;
   if (previousLevelIndex === undefined) return false;
   return nextLevelIndex > 0 && nextLevelIndex !== previousLevelIndex;
+}
+
+export function isSpecialAttractSoundCommand(command: number): boolean {
+  const byte = command & 0xff;
+  return SPECIAL_ATTRACT_SOUND_COMMANDS.includes(byte as typeof SPECIAL_ATTRACT_SOUND_COMMANDS[number]);
+}
+
+export function shouldDropLiveGameplaySpecialAttractCommand(
+  command: number,
+  replayAttractCommands: boolean,
+): boolean {
+  return !replayAttractCommands && isSpecialAttractSoundCommand(command);
 }
