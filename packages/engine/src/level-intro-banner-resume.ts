@@ -268,6 +268,7 @@ export function advanceLevelIntroBannerResume(
   const clearTick = 61 + extraTime;
   if (tick >= clearTick) {
     clearIntroAlphaArea(state);
+    writeWordBE(state.workRam, GAME_STATE_OFF, 1);
     state.workRam[PLAYER_TIMER_INNER_OFF] = 5;
     hudCallback?.(PLAYER_TIMER_ABS, 0);
     clearResumeCursor(state);
