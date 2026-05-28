@@ -7,6 +7,7 @@ import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
 import { tick } from "../src/index.js";
 import { emptyGameState } from "../src/state.js";
+import { buildFrame } from "../src/render.js";
 
 interface Seed {
   slapsticBank?: number;
@@ -87,5 +88,69 @@ describe("L5 Silly Race live terrain", () => {
     expect(readLongBE(state.workRam, 0x18 + 0x0c)).toBe(1004 * 0x10000);
     expect(readLongBE(state.workRam, 0x18 + 0x10)).toBe(980 * 0x10000);
     expect(readLongBE(state.workRam, 0x18 + 0x14)).toBe(16168 * 0x10000);
+  });
+
+  it("keeps the Silly Race flying motion objects in the runtime sprite frame", () => {
+    const seed = JSON.parse(
+      readFileSync(
+        resolve("packages/web/public/scenarios/playable/start_level5_intro_silly_f2472.seed.json"),
+        "utf-8",
+      ),
+    ) as Seed;
+
+    const rom = emptyRomImage();
+    loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
+
+    const state = emptyGameState();
+    bootInit(state, rom, {
+      warmState: {
+        workRam: hexToBytes(seed.workRam, 0x2000),
+        playfieldRam: hexToBytes(seed.playfieldRam, 0x2000),
+        spriteRam: hexToBytes(seed.spriteRam, 0x1000),
+        alphaRam: hexToBytes(seed.alphaRam, 0x1000),
+        colorRam: hexToBytes(seed.colorRam, 0x800),
+        slapsticBank: seed.slapsticBank ?? 1,
+      },
+    });
+
+    state.clock.mainLoopBodyTicks = 1;
+
+    let p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    let p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    for (let frame = 1; frame <= 300; frame++) {
+      tick(state, {
+        rom,
+        runMainLoopBody: true,
+        p1X,
+        p1Y,
+        p2X: 0xff,
+        p2Y: 0xff,
+        inputMmio: 0x6f,
+      });
+    }
+
+    const array9Types = Array.from({ length: 9 }, (_, i) => {
+      const entryOff = 0x1890 + i * 0x28;
+      return {
+        active: state.workRam[entryOff + 0x18] ?? 0,
+        type: state.workRam[entryOff + 0x25] ?? 0,
+      };
+    });
+    const frame = buildFrame(state, { motionObjects: "runtime-counter" });
+
+    expect(array9Types).toEqual([
+      { active: 1, type: 7 },
+      { active: 1, type: 7 },
+      { active: 1, type: 7 },
+      { active: 1, type: 8 },
+      { active: 1, type: 8 },
+      { active: 1, type: 8 },
+      { active: 1, type: 9 },
+      { active: 1, type: 9 },
+      { active: 1, type: 9 },
+    ]);
+    expect(frame.sprites.map((sprite) => sprite.spriteIndex)).toEqual([
+      100, 74, 74, 74, 81, 100, 96, 96, 100,
+    ]);
   });
 });
