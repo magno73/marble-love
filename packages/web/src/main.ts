@@ -1448,7 +1448,7 @@ async function startGame(
         : {},
   );
   if (useBootFlow) {
-    const bootFlowLabel = forceBootFlow ? "bootFlow=1" : "play=1 default bootFlow";
+    const bootFlowLabel = forceBootFlow ? "bootFlow=1" : "autoLoad default bootFlow";
     prepareBrowserCoinStartAttract(s);
     setRomStatus("Cold boot flow active: runtime boot, no gameplay seed loaded.", "ok");
     console.log(`[marble-love] ${bootFlowLabel} active: cold boot without playable/startLevel seed`);

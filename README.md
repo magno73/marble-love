@@ -52,6 +52,25 @@ active work.
   reproducible comparisons. Heavy gameplay snapshots are not part of the
   browser public asset path.
 
+## Known Gameplay Bugs
+
+These are current browser-gameplay issues, not original arcade behavior:
+
+- Practice Race: the original start ramp is still missing, so the marble does
+  not roll forward from the small raised ramp at level start.
+- Practice Race: a corrupt motion-object sprite can appear near the end of the
+  level.
+- Silly Race: the flying bird motion objects are not rendered yet.
+- Silly Race: squashing the mini enemies awards bonus time correctly, but the
+  marble can remain frozen for several seconds after the collision.
+- Silly Race: level music can restart or loop immediately, and the browser can
+  become very slow.
+- The vacuum sound effect can loop indefinitely after the vacuum hazard stops.
+- The high-score / insert-coin screen still needs visual polish and a final
+  behavior pass.
+- A brief browser video flicker has been observed intermittently, but is not yet
+  tied to a deterministic engine-state mismatch.
+
 ## Quick Start
 
 Requirements:

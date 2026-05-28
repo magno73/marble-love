@@ -30,6 +30,16 @@ function readWordBE(bytes: Uint8Array, off: number): number {
   return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
 }
 
+function readLongBE(bytes: Uint8Array, off: number): number {
+  return (
+    (((bytes[off] ?? 0) << 24) |
+      ((bytes[off + 1] ?? 0) << 16) |
+      ((bytes[off + 2] ?? 0) << 8) |
+      (bytes[off + 3] ?? 0)) >>>
+    0
+  );
+}
+
 function writeWordBE(bytes: Uint8Array, off: number, value: number): void {
   const v = value & 0xffff;
   bytes[off] = (v >>> 8) & 0xff;
@@ -172,6 +182,28 @@ describe("level intro banner warm-state resume", () => {
     expect(readWordBE(state.workRam, 0x82)).toBe(targetTimer);
     expect(state.workRam[0x86]).toBe(5);
     expect(hasIntroBanner(state)).toBe(false);
+  });
+
+  it("can hand live starts back to the gameplay dispatcher after the banner", () => {
+    const { state, rom } = bootSeed("start_level1_intro_practice_f2479");
+    const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    armLevelIntroBannerResume(state, { rom, parkTimer: true, handoffState: 0 });
+
+    for (let i = 0; i < 121; i++) {
+      tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
+    }
+
+    expect(readWordBE(state.workRam, 0x390)).toBe(0);
+    expect(state.workRam[0x86]).toBe(5);
+    expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
+
+    const xBefore = readLongBE(state.workRam, 0x18 + 0x0c);
+    for (let i = 0; i < 40; i++) {
+      tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X: 0x80, p1Y, p2X: 0xff, p2Y: 0xff });
+    }
+
+    expect(readLongBE(state.workRam, 0x18 + 0x0c)).not.toBe(xBefore);
   });
 
   it("hands off to the normal gameplay dispatcher after the banner clear", () => {

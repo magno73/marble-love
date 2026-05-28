@@ -33,11 +33,11 @@ const bootFlowBase = {
 } as const;
 
 describe("boot-flow URL routing", () => {
-  it("routes the default play URL to the cold boot flow instead of seed-backed coin/start", () => {
+  it("keeps explicit play=1 on the legacy seed-backed coin/start flow", () => {
     const useBootFlow = shouldUseBootFlow(bootFlowBase);
 
-    expect(useBootFlow).toBe(true);
-    expect(shouldUseCoinStartFlow({ ...coinStartBase, forceBootFlow: useBootFlow })).toBe(false);
+    expect(useBootFlow).toBe(false);
+    expect(shouldUseCoinStartFlow({ ...coinStartBase, forceBootFlow: useBootFlow })).toBe(true);
   });
 
   it("does not prepare the seed-backed coin/start flow while bootFlow is active", () => {

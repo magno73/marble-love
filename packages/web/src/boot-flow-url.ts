@@ -53,7 +53,8 @@ export function shouldUseBootFlow(options: BootFlowRouteOptions): boolean {
   if (options.forceBootFlow) return true;
   return (
     !options.forceCoinStart &&
-    (options.forcePlay || options.forceAutoLoad) &&
+    options.forceAutoLoad &&
+    !options.forcePlay &&
     options.playableSeedName === null &&
     !options.useStartLevelPractice &&
     options.explicitScenarioName === null &&
@@ -71,7 +72,12 @@ export function shouldUseCoinStartFlow(options: CoinStartFlowOptions): boolean {
     !options.forceBootFlow &&
     (
       options.forceCoinStart ||
-      (options.forcePlay && options.playableSeedName === null && !options.useMameDump && !options.useMameLive)
+      (
+        options.forcePlay &&
+        options.playableSeedName === null &&
+        !options.useMameDump &&
+        !options.useMameLive
+      )
     )
   );
 }
