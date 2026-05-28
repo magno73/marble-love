@@ -833,9 +833,7 @@ export function initRenderer(
         opts.playfieldLookups = graphics.lookupTables.playfield;
       }
       if (graphics?.lookupTables.motionObjects) {
-        opts.motionObjects = "linked-list";
-        opts.motionObjectStartEntry = renderNs.visibleMotionObjectStartEntry(state);
-        opts.maxMotionObjectEntries = 64;
+        opts.motionObjects = "runtime-counter";
         opts.motionObjectLookups = graphics.lookupTables.motionObjects;
       }
       this.drawFrame(renderNs.buildFrame(state, opts));
