@@ -54,7 +54,6 @@ active work.
 
 These are current browser-gameplay issues, not original arcade behavior:
 
-- The vacuum sound effect can loop indefinitely after the vacuum hazard stops.
 - Practice Race: a corrupt motion-object sprite can appear near the end of the
   level.
 - Practice Race: the original start ramp is still missing, so the marble does
