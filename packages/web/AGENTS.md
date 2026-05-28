@@ -14,7 +14,8 @@ frontend state, web renderer, web tests, and public scenario assets.
 ## Common URLs
 
 ```text
-http://localhost:5173/?autoLoad=1&play=1
+http://localhost:5173/
+http://localhost:5173/?autoLoad=1
 http://localhost:5173/?autoLoad=1&coinStart=1
 http://localhost:5173/?autoLoad=1&startLevel=N
 ```

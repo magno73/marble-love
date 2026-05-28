@@ -177,7 +177,8 @@ npm run dev --workspace @marble-love/web
 ```
 
 In development, open `http://localhost:5173/?rom=1` to keep the ROM picker
-visible instead of auto-starting the synthetic demo.
+visible instead of auto-loading local ROM ZIPs. Use `?demo=1` for the synthetic
+demo frame.
 Open `http://localhost:5173/?engine=1` to render the diagnostic engine-frame
 fixture, which builds a `Frame` through `buildFrame(state, ...)` from synthetic
 palette/alpha/playfield/motion-object RAM. Use `?rom=1&engine=1` to keep the

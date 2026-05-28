@@ -17,7 +17,13 @@ import {
   render as renderNs,
   wrap,
 } from "@marble-love/engine";
-import { initInput, normalizeKeyboardTrackballStep, normalizePointerTrackballScale } from "./input.js";
+import {
+  initInput,
+  isCoinKey,
+  isStartKey,
+  normalizeKeyboardTrackballStep,
+  normalizePointerTrackballScale,
+} from "./input.js";
 import {
   buildClassicDemoFrame,
   buildRomBackedDemoFrame,
@@ -76,12 +82,22 @@ const forceRomPicker = searchParams.get("rom") === "1";
 const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
 const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
-const forceAutoLoad = searchParams.get("autoLoad") === "1";
+const forceAutoLoad =
+  searchParams.get("autoLoad") === "1" ||
+  (
+    searchParams.get("autoLoad") !== "0" &&
+    import.meta.env.DEV &&
+    window.location.search === "" &&
+    !forceRomPicker &&
+    !forceEngineDiagnosticFrame &&
+    !forceDemoFrame &&
+    !forceRealRendering
+  );
 const forcePlay = searchParams.get("play") === "1";
 const forceBootFlow = searchParams.get("bootFlow") === "1";
-// Gameplay audio is explicit: `?sound=1` wires real TS engine sound commands
-// into the SoundChip PCM path. `soundReplay` remains a separate oracle mode.
-const enableSound = searchParams.get("sound") === "1";
+// Gameplay audio is enabled by default. Use `?sound=0` to disable the live
+// SoundChip path. `soundReplay` remains a separate oracle mode.
+const enableSound = searchParams.get("sound") !== "0";
 const runSoundChip = enableSound && searchParams.get("soundChip") !== "0";
 // `?soundReplay=<path>` bypasses the A0 command-flow blocker: instead of a full
 // startGame run, execute only SoundChip + cmd-tape replay (audio chip-perfect).
@@ -167,8 +183,8 @@ const useBootFlow = shouldUseBootFlow({
 });
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
-// Synthetic demo only in dev when no explicit runtime path or ROM picker/autoLoad
-// has been requested. autoLoad starts the real ROM path after async fetch.
+// Synthetic demo only in dev when explicitly requested. The default dev root
+// auto-loads local ROM ZIPs when they are available.
 const useSyntheticDemoFrame =
   import.meta.env.DEV &&
   !forceRomPicker &&
@@ -1150,10 +1166,10 @@ function setRomStatus(message: string, tone: "idle" | "ok" | "error" = "idle"): 
 
 btn.addEventListener("click", () => fileInput.click());
 
-// ?autoLoad=1 — DEV ONLY: fetcha /roms/marble.zip + /roms/atarisy1.zip
-// (symlinkati in public/roms) e li carica come File-like → extractRomZipFiles.
+// ?autoLoad=1 - DEV ONLY: fetch /roms/marble.zip + /roms/atarisy1.zip
+// (symlinked under public/roms) and load them as File-like objects.
 // For automatic screenshots / E2E tests without a file picker.
-if (searchParams.get("autoLoad") === "1") {
+if (forceAutoLoad) {
   void (async () => {
     try {
       setRomStatus("Auto-loading ROMs from /roms/...");
@@ -1215,7 +1231,7 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-if (useSyntheticDemoFrame || (import.meta.env.DEV && forceEngineDiagnosticFrame)) {
+if (useSyntheticDemoFrame || (import.meta.env.DEV && (forceEngineDiagnosticFrame || forceDemoFrame))) {
   splash.remove();
   void startGame();
 }
@@ -1522,7 +1538,7 @@ async function startGame(
       e.preventDefault();
       e.stopPropagation();
       action();
-      // Feedback visivo
+      // Visual feedback.
       b.style.opacity = "0.5";
       setTimeout(() => { b.style.opacity = "1"; }, 100);
     };
@@ -1553,7 +1569,7 @@ async function startGame(
 
   let frameCount = 0;
 
-  // ─── Sound chip + Web Audio renderer (?sound=1) ──────────────────────────
+  // ─── Sound chip + Web Audio renderer (default, disable with ?sound=0) ────
   // Gameplay audio path: real engine sound commands -> SoundChip 6502/YM/POKEY
   // -> PCM streams -> AudioWorklet. Synthetic cues stay behind debug flags.
   let soundChip: ReturnType<typeof createSoundChip> | undefined;
@@ -1787,7 +1803,7 @@ async function startGame(
       soundChipMode = "gameplay";
       soundChipPrepareKind = undefined;
       lastSoundLevelMusicIndex = undefined;
-      console.log(`[sound] SoundChip ready for ${reason}; click 'Enable Audio' to hear PCM`);
+      console.log(`[sound] SoundChip ready for ${reason}; first user gesture starts Web Audio`);
     })();
   }
 
@@ -2084,7 +2100,7 @@ async function startGame(
           return;
         }
         enqueueSoundCommand(byte, "live");
-        // Optional debug cue. Normal `?sound=1` plays only chip PCM.
+        // Optional debug cue. Normal gameplay audio plays only chip PCM.
         if (searchParams.get("soundCue") === "1") {
           soundRenderer?.playCommandCue(cmd);
         }
@@ -2125,17 +2141,16 @@ async function startGame(
       }
 
       const btnAudio = document.createElement("button");
-      btnAudio.textContent = "🔊 Enable Audio";
+      btnAudio.textContent = "🔊 Audio ready";
       btnAudio.style.cssText =
         "position:fixed;top:10px;right:10px;z-index:9999;padding:8px 12px;" +
         "background:#1a1a1a;color:#fff;border:1px solid #444;cursor:pointer;";
       let soundStarted = false;
-      btnAudio.addEventListener("click", async () => {
+      let soundStartInFlight = false;
+      const startSoundRenderer = async (source: string): Promise<void> => {
         try {
-          if (soundStarted) {
-            // Click successivo = no-op (era chime di re-test, ora rumoroso)
-            return;
-          }
+          if (soundStarted || soundStartInFlight) return;
+          soundStartInFlight = true;
           soundRenderer = await createSoundRenderer();
           await soundRenderer.start();
           // Reset worklet already happens in start(); no synthetic chime.
@@ -2151,12 +2166,24 @@ async function startGame(
           }
           btnAudio.textContent = "🔊 Audio ON";
           soundStarted = true;
-          console.log("[sound] Web Audio started");
+          console.log(`[sound] Web Audio started (${source})`);
         } catch (e) {
           console.warn("[sound] start failed:", e);
           btnAudio.textContent = "🔊 Audio failed";
+        } finally {
+          soundStartInFlight = false;
         }
+      };
+      btnAudio.addEventListener("click", () => {
+        void startSoundRenderer("button");
       });
+      if (searchParams.get("soundAutoStart") !== "0") {
+        window.addEventListener("keydown", (e) => {
+          if (isCoinKey(e.key) || isStartKey(e.key)) void startSoundRenderer("keyboard");
+        });
+        window.addEventListener("pointerdown", () => { void startSoundRenderer("pointer"); }, { passive: true });
+        window.addEventListener("touchstart", () => { void startSoundRenderer("touch"); }, { passive: true });
+      }
       document.body.appendChild(btnAudio);
     } else {
       console.warn("[sound] rom.sound is unavailable, audio disabled");
@@ -2196,11 +2223,11 @@ async function startGame(
 
   // Render mode resolution priority:
   //   ?engine=1  → diagnostic frame
-  //   ?demo=1    → demo (synthetic o ROM-backed)
+  //   ?demo=1    -> demo (synthetic or ROM-backed)
   //   ?real=1    -> force real mode even without ROM (nearly empty frame)
   //   ROM loaded -> REAL (default changed 2026-05-08)
-  //   no ROM in DEV → synthetic demo
-  //   altrimenti → real (frame potenzialmente vuoto)
+  //   no ROM in DEV with ?autoLoad=0 -> synthetic demo
+  //   otherwise  -> real (potentially empty frame)
   type RenderMode = "diagnostic" | "demo" | "real";
   const renderMode: RenderMode = forceEngineDiagnosticFrame
     ? "diagnostic"

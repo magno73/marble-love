@@ -20,7 +20,7 @@ start seeds for direct level testing.
 Many low-level routines are parity-tested against MAME or Musashi-based oracle
 runs. Rendering uses decoded ROM graphics in the browser. Gameplay music and
 several event sounds are wired through the reimplemented 6502/YM2151/POKEY audio
-path, but complete audio PCM parity, attract audio, and insert-coin audio remain
+path. Complete audio PCM parity, attract audio, and insert-coin audio remain
 active work.
 
 ## What Works
@@ -41,7 +41,9 @@ active work.
 - You must provide ROM ZIPs yourself; this repository does not distribute them.
 - The project is still under heavy reverse-engineering development.
 - Audio is recognizable in gameplay, but not globally bit-perfect.
-- Attract-mode music and insert-coin sound are not enabled by default.
+- Gameplay audio is enabled by default, but the browser still requires a user
+  gesture before Web Audio can start.
+- Attract-mode music and insert-coin sound remain active work.
 - Some CLI probes and oracle fixtures are intended for maintainers rather than
   casual users.
 - Large JSON fixtures are checked in under `oracle/` because they support
@@ -79,15 +81,19 @@ npm --workspace @marble-love/web run dev -- --host 0.0.0.0
 Open:
 
 ```text
-http://localhost:5173/?autoLoad=1&play=1&bootFlow=1&sound=1
+http://localhost:5173/
 ```
+
+In dev mode, the root URL auto-loads the local ROM ZIPs from
+`packages/web/public/roms/` when they are present. Use `?rom=1` for the manual
+ROM picker, or `?sound=0` to disable gameplay audio.
 
 Controls:
 
 - `5` or `C`: insert coin
 - `Enter` or `Space`: start
 - mouse, WASD, arrow keys, or gamepad: marble control
-- browser `Enable Audio` button: start Web Audio
+- first coin/start/click/touch starts Web Audio; the audio button is a fallback
 
 Direct level entry:
 

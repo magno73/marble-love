@@ -69,7 +69,8 @@ npm --workspace @marble-love/web run build
 ## Common Runtime URLs
 
 ```text
-http://localhost:5173/?autoLoad=1&play=1
+http://localhost:5173/
+http://localhost:5173/?autoLoad=1
 http://localhost:5173/?autoLoad=1&coinStart=1
 http://localhost:5173/?autoLoad=1&startLevel=N
 ```
