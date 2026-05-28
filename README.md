@@ -54,7 +54,6 @@ active work.
 
 These are current browser-gameplay issues, not original arcade behavior:
 
-- Silly Race: the flying bird motion objects are not rendered yet.
 - The high-score / insert-coin screen still needs visual polish and a final
   behavior pass.
 
