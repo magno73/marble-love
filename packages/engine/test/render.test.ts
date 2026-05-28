@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { bootInit } from "../src/boot-init.js";
+import { emptyRomImage } from "../src/bus.js";
 import {
   buildAlphaFromRam,
   buildFrame,
@@ -17,6 +21,43 @@ import {
   walkMotionObjectLinkedList,
 } from "../src/render.js";
 import { emptyGameState } from "../src/state.js";
+
+interface GameplaySnapshot {
+  workRam: string;
+  playfieldRam: string;
+  spriteRam: string;
+  alphaRam: string;
+  colorRam: string;
+  slapsticBank?: number;
+}
+
+interface GameplayScenario {
+  snapshots: GameplaySnapshot[];
+}
+
+function hexToBytes(hex: string, expectedLength: number): Uint8Array {
+  expect(hex.length).toBe(expectedLength * 2);
+  return Uint8Array.from(Buffer.from(hex, "hex"));
+}
+
+function readU16BE(bytes: Uint8Array, off: number): number {
+  return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
+}
+
+function loadGameplaySnapshotState(snapshot: GameplaySnapshot): ReturnType<typeof emptyGameState> {
+  const state = emptyGameState();
+  bootInit(state, emptyRomImage(), {
+    warmState: {
+      workRam: hexToBytes(snapshot.workRam, 0x2000),
+      playfieldRam: hexToBytes(snapshot.playfieldRam, 0x2000),
+      spriteRam: hexToBytes(snapshot.spriteRam, 0x1000),
+      alphaRam: hexToBytes(snapshot.alphaRam, 0x1000),
+      colorRam: hexToBytes(snapshot.colorRam, 0x800),
+      slapsticBank: snapshot.slapsticBank ?? 1,
+    },
+  });
+  return state;
+}
 
 function writeU16BE(bytes: Uint8Array, off: number, value: number): void {
   const v = value & 0xffff;
@@ -324,6 +365,25 @@ describe("runtime motion objects", () => {
     });
 
     expect(buildSpritesFromRuntimeMotionObjects(state)).toHaveLength(2);
+  });
+
+  it("uses the runtime counter to ignore stale Practice Race end-of-level motion-object banks", () => {
+    const scenario = JSON.parse(
+      readFileSync(resolve("oracle/scenarios/gameplay/level1_end.json"), "utf-8"),
+    ) as GameplayScenario;
+    let maxStaleExtra = 0;
+
+    for (const snapshot of scenario.snapshots) {
+      const state = loadGameplaySnapshotState(snapshot);
+      const runtimeFrame = buildFrame(state, { motionObjects: "runtime-counter" });
+      const allBanksFrame = buildFrame(state, { motionObjects: "all-banks" });
+      const runtimeCount = readU16BE(state.workRam, 0x406);
+
+      expect(runtimeFrame.sprites).toHaveLength(runtimeCount);
+      maxStaleExtra = Math.max(maxStaleExtra, allBanksFrame.sprites.length - runtimeFrame.sprites.length);
+    }
+
+    expect(maxStaleExtra).toBeGreaterThan(0);
   });
 });
 
