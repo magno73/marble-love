@@ -13,7 +13,7 @@
  *   5. gameStateMachineTick (FUN_2E18 via thunk 0x148)
  *   6. soundTick (FUN_4CA0 via thunk 0x15A)
  *   7. gameTickTimers (FUN_28A96) ✅
- *   8. trackballInputTick (FUN_1AC18) ✅
+ *   8. trackballClampFlags28468 (FUN_28468 via thunk 0x10042) ✅
  *   9. gameMainGate (FUN_28972) ✅
  *   10. auxTimer (FUN_10146) ✅
  *   11. eepromCommit (FUN_3F78 via thunk 0x160) ✅
@@ -66,7 +66,7 @@ import { gameStateMachineTick } from "./game-state-machine.js";
 import type { GameStateMachineSubs } from "./game-state-machine.js";
 import { gameTickTimers } from "./game-tick-timers.js";
 import type { HudCallback } from "./game-tick-timers.js";
-import { trackballInputTick } from "./trackball-input.js";
+import { trackballClampFlags28468 } from "./trackball-clamp-flags-28468.js";
 import { gameMainGate } from "./game-main-gate.js";
 import type { GameMainGateOptions } from "./game-main-gate.js";
 import { particleBounce } from "./particle-bounce.js";
@@ -93,13 +93,13 @@ import {
 import { helper11FF8Default } from "./helper-11ff8.js";
 
 export interface MainTickInputs {
-  /** Trackball delta player 1 X (signed byte). */
+  /** Trackball MMIO absolute byte player 1 X. */
   p1X?: number;
-  /** Trackball delta player 1 Y (signed byte). */
+  /** Trackball MMIO absolute byte player 1 Y. */
   p1Y?: number;
-  /** Trackball delta player 2 X (signed byte). */
+  /** Trackball MMIO absolute byte player 2 X. */
   p2X?: number;
-  /** Trackball delta player 2 Y (signed byte). */
+  /** Trackball MMIO absolute byte player 2 Y. */
   p2Y?: number;
   /**
    * MMIO byte @ 0xF60001 read by gameMainGate (default 0x6F = attract
@@ -304,17 +304,16 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     );
   }
 
-  // Default = 0xff (= stable no-input MMIO trackball in MAME) to avoid
-  // delta spurious al primo tick: cur=0 vs prev=0xff produrrebbe delta=1
-  // e scriverebbe 01 01 00 00 a obj1[+0xc6..0xc9] (= workRam[0x1c0..0x1c3]
-  // per slot 7 / obj P2). Verificato vs MAME oracle frame 2401.
-  trackballInputTick(
-    state,
-    opts.p1X ?? 0xff,
-    opts.p1Y ?? 0xff,
-    opts.p2X ?? 0xff,
-    opts.p2Y ?? 0xff,
-  );
+  // The IRQ trackball thunk does more than save raw encoder deltas: it also
+  // updates the signed accumulators at 0x4006A4/0x4006A6 consumed by
+  // FUN_25DF6 during player physics.
+  trackballClampFlags28468(state, {
+    mmioInputByte: opts.inputMmio ?? 0x6f,
+    p1X: opts.p1X ?? 0xff,
+    p1Y: opts.p1Y ?? 0xff,
+    p2X: opts.p2X ?? 0xff,
+    p2Y: opts.p2Y ?? 0xff,
+  });
 
   const gateOpts: GameMainGateOptions = { mmioInput: opts.inputMmio ?? 0x6f };
   if (opts.gateCheck !== undefined) gateOpts.gateCheck = opts.gateCheck;

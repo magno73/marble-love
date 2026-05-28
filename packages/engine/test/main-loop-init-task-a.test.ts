@@ -235,6 +235,7 @@ describe("Task A main-loop init modules", () => {
     const rom = emptyRomImage();
     const calls: string[] = [];
     setW(s, 0x390, 5);
+    setW(s, 0x392, 2);
     setW(s, 0x396, 1);
     rom.program[0x1f1c8] = 0;
 
@@ -258,7 +259,9 @@ describe("Task A main-loop init modules", () => {
     });
 
     expect(w(s, 0x390)).toBe(0);
+    expect(w(s, 0x392)).toBe(0);
     expect(w(s, 0x394)).toBe(0);
+    expect(s.workRam[0x3e4]).toBe(2);
     expect(w(s, 0x00)).toBe(0);
     expect(w(s, 0x02)).toBe(0);
     expect(s.videoScrollX).toBe(0);

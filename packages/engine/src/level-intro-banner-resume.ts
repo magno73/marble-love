@@ -82,6 +82,12 @@ export interface ArmLevelIntroBannerResumeOptions {
    * so park the player timer while the presentation adds the bonus time.
    */
   parkTimer?: boolean;
+  /**
+   * Main-loop dispatcher state restored when the banner clears. The default
+   * preserves warm oracle captures; live starts use state 0 so input reaches
+   * the gameplay physics path after the intro.
+   */
+  handoffState?: number;
 }
 
 function readWordBE(bytes: Uint8Array, off: number): number {
@@ -191,6 +197,7 @@ function renderLevelIntroBannerText(state: GameState, rom: RomImage, levelIdx: n
 function clearResumeCursor(state: GameState): void {
   state.clock.levelIntroBannerResumeTick = undefined;
   state.clock.levelIntroBannerBaseTimer = undefined;
+  state.clock.levelIntroBannerHandoffState = undefined;
 }
 
 export function armLevelIntroBannerResume(
@@ -208,6 +215,7 @@ export function armLevelIntroBannerResume(
   writeWordBE(state.workRam, PLAYER_TIMER_OFF, baseTimer);
   state.clock.levelIntroBannerResumeTick = as_u16(0);
   state.clock.levelIntroBannerBaseTimer = as_u16(baseTimer);
+  state.clock.levelIntroBannerHandoffState = as_u16(options.handoffState ?? 1);
   if (options.parkTimer === true) {
     state.workRam[PLAYER_TIMER_MEDIUM_OFF] = 9;
     state.workRam[PLAYER_TIMER_PAD_OFF] = 5;
@@ -268,7 +276,7 @@ export function advanceLevelIntroBannerResume(
   const clearTick = 61 + extraTime;
   if (tick >= clearTick) {
     clearIntroAlphaArea(state);
-    writeWordBE(state.workRam, GAME_STATE_OFF, 1);
+    writeWordBE(state.workRam, GAME_STATE_OFF, state.clock.levelIntroBannerHandoffState ?? as_u16(1));
     state.workRam[PLAYER_TIMER_INNER_OFF] = 5;
     hudCallback?.(PLAYER_TIMER_ABS, 0);
     clearResumeCursor(state);

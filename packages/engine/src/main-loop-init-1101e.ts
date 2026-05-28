@@ -381,6 +381,10 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   subs.soundCmd?.(state, 2);
   subs.soundCmd?.(state, 0);
   wb(state, 0x004003e2, 0);
+  // START enters the playable level intro; do not inherit the attract
+  // mode-2 selector from the high-score screen.
+  ww(state, 0x00400392, 0);
+  wb(state, 0x004003e4, 2);
   (subs.sceneInit11428 ?? ((s) => sceneInit11428(s, {}, rom)))(state);
   subs.soundCmd?.(state, rw(state, 0x00400396) === 1 ? 0x62 : 0x63);
   ww(state, 0x00400394, readRomByte(rom, 0x0001f1c8));
@@ -393,6 +397,7 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   state.videoScrollY = 0;
   armLevelIntroBannerResume(state, {
     baseTimer: 0,
+    handoffState: 0,
     parkTimer: true,
     ...(rom === undefined ? {} : { rom }),
   });
@@ -600,6 +605,7 @@ function finishCase4Transition(state: GameState, rom: RomImage | undefined, subs
     init10504(state, subs, rom);
     armLevelIntroBannerResume(state, {
       baseTimer: carryoverTimer,
+      handoffState: 0,
       parkTimer: true,
       ...(rom === undefined ? {} : { rom }),
     });
