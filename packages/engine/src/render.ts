@@ -597,10 +597,12 @@ export function buildFrame(state: GameState, options: BuildFrameOptions = {}): F
     options.playfieldLookups !== undefined && pfRam !== undefined
       ? buildPlayfieldFromRam(pfRam, options.playfieldLookups)
       : [];
-  // Level intro banners must not show stale attract/game-over motion objects,
-  // but do not clear MO RAM: FUN_1CABA legitimately reads that address space
-  // for some Beginner/L2 terrain rows.
-  const suppressMotionObjects = state.clock.levelIntroBannerResumeTick !== undefined;
+  // Level intro presentation frames must not show stale attract/game-over
+  // motion objects, but do not clear MO RAM: FUN_1CABA legitimately reads that
+  // address space for some Beginner/L2 terrain rows.
+  const suppressMotionObjects =
+    state.clock.levelIntroScrollResumeTick !== undefined ||
+    state.clock.levelIntroBannerResumeTick !== undefined;
   const sprites =
     suppressMotionObjects
       ? []

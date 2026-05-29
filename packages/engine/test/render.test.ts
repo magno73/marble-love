@@ -184,10 +184,10 @@ describe("buildFrame", () => {
     expect(frame.debugLabel).toBe("engine-frame:alpha-bank-1:pf-bank-1:mo-bank-5");
   });
 
-  it("suppresses motion objects during the level intro without clearing MO RAM", () => {
+  it("suppresses motion objects during the level intro presentation without clearing MO RAM", () => {
     const state = emptyGameState();
     state.spriteRam.set([0x00, 0x21, 0x01, 0x10, 0x00, 0x41, 0x00, 0x00], 0);
-    state.clock.levelIntroBannerResumeTick = 1 as typeof state.clock.levelIntroBannerResumeTick;
+    state.clock.levelIntroScrollResumeTick = 1 as typeof state.clock.levelIntroScrollResumeTick;
 
     const frame = buildFrame(state, {
       motionObjects: "linked-list",
@@ -196,6 +196,10 @@ describe("buildFrame", () => {
 
     expect(frame.sprites).toEqual([]);
     expect(Array.from(state.spriteRam.slice(0, 8))).toEqual([0x00, 0x21, 0x01, 0x10, 0x00, 0x41, 0x00, 0x00]);
+
+    state.clock.levelIntroScrollResumeTick = undefined;
+    state.clock.levelIntroBannerResumeTick = 1 as typeof state.clock.levelIntroBannerResumeTick;
+    expect(buildFrame(state, { motionObjects: "linked-list", maxMotionObjectEntries: 1 }).sprites).toEqual([]);
   });
 
   it("passes optional motion-object lookup metadata through buildFrame", () => {

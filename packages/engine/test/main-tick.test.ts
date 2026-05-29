@@ -216,7 +216,8 @@ describe("mainTick smoke", () => {
     mainTick(s, { rom, runMainLoopBody: true, inputMmio: 0x6f });
 
     expect(readU16BE(s.workRam, 0x390)).toBe(0);
-    expect(s.clock.levelIntroBannerResumeTick).toBe(1);
-    expect(readU16BE(s.workRam, 0x82)).toBe(5);
+    expect(s.clock.levelIntroScrollResumeTick).toBe(1);
+    expect(s.clock.levelIntroBannerResumeTick).toBeUndefined();
+    expect(readU16BE(s.workRam, 0x82)).toBe(0);
   });
 });
