@@ -1951,6 +1951,14 @@ async function startGame(
   function pushSoundPcm(chip: ReturnType<typeof createSoundChip>): void {
     const ymSamples = drainYm2151Samples(chip);
     const pkSamples = drainPokeySamples(chip);
+    // The chip appends a diagnostic record on every YM2151/POKEY write and every
+    // command-latch read. Only the CLI probes and the ?soundReplay path consume
+    // those (via their own drains); the live gameplay/attract loops never read
+    // them, so without discarding them they grow without bound for the whole
+    // session — progressively slowing the page and starving audio. This is the
+    // single per-frame chokepoint for both loops, so drop them here each frame.
+    chip.chipWriteEvents.length = 0;
+    chip.commandReadEvents.length = 0;
     if (soundRenderer !== undefined && soundRenderer.isRunning()) {
       if (searchParams.get("soundSynthCue") === "1") {
         soundRenderer.update(chip);
