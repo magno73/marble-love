@@ -106,7 +106,10 @@ export function soundTick(state: GameState, subs?: SoundTickSubs): void {
 
   // FUN_4C3E(D0=0x10003, A0=0x401F44) — sub
   // Default returns 1 (= ok, skip retry); 0 increments the saturated retry counter.
-  const status = subs?.fun_4c3e?.(state, 0x10003, 0x1f44) ?? 1;
+  // A0 must be the ABSOLUTE work-RAM address 0x401F44: soundStatusCheck subtracts
+  // WORK_RAM_BASE (0x400000) to index workRam. Passing the relative 0x1F44 here
+  // underflowed to an out-of-bounds slot, so the slot/retry logic never engaged.
+  const status = subs?.fun_4c3e?.(state, 0x10003, 0x401f44) ?? 1;
   if (status === 0) {
     const retry = ((r[SND_RETRY_OFF] ?? 0) + 1) & 0xff;
     if (retry === 0) {
