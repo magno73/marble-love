@@ -93,19 +93,16 @@ export interface EnvelopeState {
    * In SUSTAIN: keeps rising toward 1023 at the D2R rate.
    * In RELEASE: rises toward 1023 at the RR rate. */
   counter: number;
-  /** Sub-counter per gestire i 8 step di ENV_RATE_TABLE. */
-  subCounter: number;
 }
 
 export function createEnvelope(): EnvelopeState {
-  return { state: ENV_STATE_OFF, counter: 1023, subCounter: 0 };
+  return { state: ENV_STATE_OFF, counter: 1023 };
 }
 
 /** Key ON: transizione → ATTACK fase. OPM non resetta l'attenuazione a
  * silenzio sui retrigger; l'attacco riparte dal counter corrente. */
 export function envelopeKeyOn(env: EnvelopeState): void {
   env.state = ENV_STATE_ATTACK;
-  env.subCounter = 0;
 }
 
 /** Key OFF: transizione → RELEASE fase. */

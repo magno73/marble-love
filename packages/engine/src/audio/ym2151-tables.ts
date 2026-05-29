@@ -150,9 +150,6 @@ export const EG_INC: Uint8Array = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 0,
 ]);
 
-/** Legacy stub kept for compatibility (unused after envelope refactor). */
-export const ENV_RATE_TABLE: Uint16Array = new Uint16Array(64 * 8);
-
 /**
  * Attenuation table in the dB domain: index 0..1023 -> linear amplitude scale.
  *

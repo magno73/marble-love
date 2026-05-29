@@ -56,8 +56,6 @@ active work.
 
 These are current browser-gameplay issues, not original arcade behavior:
 
-- Practice Race: the original start ramp is still missing, so the marble does
-  not roll forward from the small raised ramp at level start.
 - Practice Race: a corrupt motion-object sprite can appear near the end of the
   level.
 - Silly Race: the flying bird motion objects are not rendered yet.
