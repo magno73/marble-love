@@ -4,7 +4,7 @@
  * Address space 64KB visto dal 6502:
  *
  *  $0000-$0FFF  RAM 4KB                                              [R/W]
- *  $1800-$1801  YM2151 register select / data                        [R/W] (stub)
+ *  $1800-$1801  YM2151 register select / data                        [R/W]
  *  $1810        bidirectional mailbox:
  *                 read  = main-to-sound latch (ack pending, release NMI)
  *                 write = sound-to-main latch (set pending, assert IRQ6 to 68010)
@@ -13,7 +13,7 @@
  *                 bit 4 = main-to-sound pending (inverse of "input ready")
  *                 other bits: coin/test switches
  *  $1820-$1827  LS259 latch (write_d0 alias). addr low bits select latch bit. [W]
- *  $1870-$187F  POKEY                                                [R/W] (stub)
+ *  $1870-$187F  POKEY                                                [R/W]
  *  $4000-$FFFF  ROM 48KB (Marble uses the final 32KB as two 16KB ROMs) [R]
  *
  * Addresses outside these regions read as 0xFF and ignore writes. Mailbox pin

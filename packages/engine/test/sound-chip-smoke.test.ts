@@ -194,7 +194,13 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     // registers ($20-$7F = RL/FB/CONN + KC + KF + op params).
     expect(maxAbs).toBeGreaterThan(0.001);
     expect(voiceWritten).toBeGreaterThan(20);
-  });
+    // 14000-frame chip replay is a deliberate long regression lock (~52s on a
+    // dev machine, 417M sound-CPU cycles). It only runs when ROMs are extracted
+    // to /tmp/sound-roms; the explicit timeout keeps it from spuriously tripping
+    // vitest's 5s default. Verified 2026-05-29: assertions pass on their own
+    // merit, and busyCycles=64 vs 0 produce byte-identical audio here (no
+    // hidden busy-flag regression being masked).
+  }, 90_000);
 
   it("chip genera audio quando i voice register sono scritti correttamente", async () => {
     // Regression lock per sessione 4 finding: il YM2151 produce sample
