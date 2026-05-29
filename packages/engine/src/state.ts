@@ -175,6 +175,11 @@ export interface TickClock {
    */
   levelEndScoreResumePending: u8 | undefined;
   /**
+   * Visible FUN_10504 level-entry scroll that brings the playfield up from the
+   * bottom before the timer banner is armed.
+   */
+  levelIntroScrollResumeTick: u16 | undefined;
+  /**
    * Warm-state resume cursor for level-intro seeds captured inside the
    * FUN_10504 HUD/timer presentation loop. Undefined during normal gameplay.
    */
@@ -539,7 +544,7 @@ export interface GameState {
 
 export function emptyGameState(): GameState {
   return {
-    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined, levelEndScoreResumePending: undefined, levelIntroBannerResumeTick: undefined, levelIntroBannerBaseTimer: undefined, levelIntroBannerHandoffState: undefined, highScoreInitialsEntry: undefined },
+    clock: { frame: as_u32(0), cpuTicks: as_u32(0), scanline: as_u16(0), mainLoopBodyTicks: as_u32(0), decoderD6Init: as_u16(0), decoderCallCount: as_u32(0), pendingSlotArray1493C: undefined, slotArrayReplayTick: undefined, warmResidualReplayTick: undefined, mode2Init11452Stage: undefined, mode0Init11452Stage: undefined, mode2BottomHudDelay: undefined, particleLayerDelay: undefined, mode2TilemapBlitDelay: undefined, pendingPfScrollUpdate: undefined, mainThreadWaitDelay: undefined, mainThreadWaitClearRows: undefined, levelEndScoreResumePending: undefined, levelIntroScrollResumeTick: undefined, levelIntroBannerResumeTick: undefined, levelIntroBannerBaseTimer: undefined, levelIntroBannerHandoffState: undefined, highScoreInitialsEntry: undefined },
     rng: { seed: as_u32(0), callsThisFrame: as_u32(0) },
     marble: {
       pos: { x: as_u32(0), y: as_u32(0), z: as_u32(0) },

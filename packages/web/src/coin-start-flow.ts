@@ -3,6 +3,7 @@ import { alphaTilemap as alphaTilemapNs } from "@marble-love/engine";
 interface CoinStartClockState {
   levelIntroBannerBaseTimer: number | undefined;
   levelIntroBannerResumeTick: number | undefined;
+  levelIntroScrollResumeTick?: number | undefined;
   mainThreadWaitDelay: number | undefined;
   mode0Init11452Stage: number | undefined;
   mode2BottomHudDelay: number | undefined;
@@ -63,6 +64,7 @@ export function prepareBrowserCoinStartAttract(state: CoinStartState): void {
   state.clock.mode2Init11452Stage = 0;
   state.clock.levelIntroBannerBaseTimer = undefined;
   state.clock.levelIntroBannerResumeTick = undefined;
+  state.clock.levelIntroScrollResumeTick = undefined;
 }
 
 export function clearBrowserSoundCommandSkip(state: Pick<CoinStartState, "workRam">): void {
@@ -81,6 +83,7 @@ export function isCoinStartAttractReady(state: CoinStartState): boolean {
     state.clock.mode2BottomHudDelay === undefined &&
     state.clock.mode2Init11452Stage === undefined &&
     state.clock.mode2TilemapBlitDelay === undefined &&
+    state.clock.levelIntroScrollResumeTick === undefined &&
     state.clock.levelIntroBannerResumeTick === undefined
   );
 }

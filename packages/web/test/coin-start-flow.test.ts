@@ -23,6 +23,7 @@ describe("coin/start browser flow helpers", () => {
     state.playfieldRam.fill(0xff);
     state.clock.levelIntroBannerBaseTimer = 55;
     state.clock.levelIntroBannerResumeTick = 9;
+    state.clock.levelIntroScrollResumeTick = 3;
     state.clock.mode0Init11452Stage = 7;
     state.clock.mode2BottomHudDelay = 1;
 
@@ -39,6 +40,7 @@ describe("coin/start browser flow helpers", () => {
     expect(state.clock.mode2Init11452Stage).toBe(0);
     expect(state.clock.levelIntroBannerBaseTimer).toBeUndefined();
     expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
+    expect(state.clock.levelIntroScrollResumeTick).toBeUndefined();
     expect(isCoinStartAttractReady(state)).toBe(false);
   });
 
@@ -70,6 +72,10 @@ describe("coin/start browser flow helpers", () => {
     state.clock.levelIntroBannerResumeTick = 1;
     expect(isCoinStartAttractReady(state)).toBe(false);
     state.clock.levelIntroBannerResumeTick = undefined;
+
+    state.clock.levelIntroScrollResumeTick = 1;
+    expect(isCoinStartAttractReady(state)).toBe(false);
+    state.clock.levelIntroScrollResumeTick = undefined;
 
     state.playfieldRam.fill(1, 0, 1_001);
     expect(isCoinStartAttractReady(state)).toBe(false);

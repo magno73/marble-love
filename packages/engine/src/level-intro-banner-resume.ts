@@ -24,6 +24,8 @@ const PLAYER_TIMER_MEDIUM_OFF = PLAYER_TIMER_OFF + 0x02;
 const PLAYER_TIMER_PAD_OFF = PLAYER_TIMER_OFF + 0x03;
 const PLAYER_TIMER_INNER_OFF = PLAYER_TIMER_OFF + 0x04;
 
+const SCROLL_TARGET_OFF = 0x00 as const;
+const SCROLL_LATCHED_OFF = 0x02 as const;
 const GAME_STATE_OFF = 0x390 as const;
 const GAME_MODE_OFF = 0x392 as const;
 const LEVEL_IDX_OFF = 0x394 as const;
@@ -37,6 +39,9 @@ const CLEAR_START_COL = 3;
 const CLEAR_COL_COUNT = 0x24;
 const BANNER_TIMER_ROW = 9;
 const BANNER_TIMER_COL = 29;
+const INTRO_SCROLL_START = 0xff10;
+const INTRO_SCROLL_STEP = 4;
+const INTRO_SCROLL_TICKS = 60;
 const INTRO_HEADER_TIME_CHAIN = 0x0002291e as const;
 const INTRO_HEADER_EXTRA_CHAIN = 0x00022942 as const;
 const INTRO_RACE_NAME_PTR_TABLE = 0x0001f15e as const;
@@ -72,7 +77,7 @@ const LEVEL_BANNER_PHRASES: readonly (readonly [number, string, string])[] = [
 
 export type IntroBannerHudCallback = (timerPtr: number, idx: number) => void;
 
-export interface ArmLevelIntroBannerResumeOptions {
+export interface LevelIntroPresentationOptions {
   /** Carryover timer captured before runtime level init rebuilds obj0. */
   baseTimer?: number;
   /** ROM image used to redraw the level intro strings on runtime transitions. */
@@ -89,6 +94,8 @@ export interface ArmLevelIntroBannerResumeOptions {
    */
   handoffState?: number;
 }
+
+export type ArmLevelIntroBannerResumeOptions = LevelIntroPresentationOptions;
 
 function readWordBE(bytes: Uint8Array, off: number): number {
   return (((bytes[off] ?? 0) << 8) | (bytes[off + 1] ?? 0)) & 0xffff;
@@ -195,9 +202,43 @@ function renderLevelIntroBannerText(state: GameState, rom: RomImage, levelIdx: n
 }
 
 function clearResumeCursor(state: GameState): void {
+  state.clock.levelIntroScrollResumeTick = undefined;
   state.clock.levelIntroBannerResumeTick = undefined;
   state.clock.levelIntroBannerBaseTimer = undefined;
   state.clock.levelIntroBannerHandoffState = undefined;
+}
+
+function writeScrollY(state: GameState, value: number): void {
+  const scroll = value & 0xffff;
+  writeWordBE(state.workRam, SCROLL_TARGET_OFF, scroll);
+  writeWordBE(state.workRam, SCROLL_LATCHED_OFF, scroll);
+  state.videoScrollY = scroll & 0x1ff;
+}
+
+export function armLevelIntroScrollResume(
+  state: GameState,
+  options: LevelIntroPresentationOptions = {},
+): boolean {
+  const levelIdx = readWordBE(state.workRam, LEVEL_IDX_OFF);
+  if (LEVEL_EXTRA_TIME[levelIdx] === undefined) {
+    clearResumeCursor(state);
+    return false;
+  }
+
+  const baseTimer = options.baseTimer ?? readWordBE(state.workRam, PLAYER_TIMER_OFF);
+  writeWordBE(state.workRam, PLAYER_TIMER_OFF, baseTimer);
+  state.clock.levelIntroScrollResumeTick = as_u16(0);
+  state.clock.levelIntroBannerResumeTick = undefined;
+  state.clock.levelIntroBannerBaseTimer = as_u16(baseTimer);
+  state.clock.levelIntroBannerHandoffState = as_u16(options.handoffState ?? 0);
+  writeScrollY(state, INTRO_SCROLL_START);
+  clearIntroAlphaArea(state);
+  if (options.parkTimer === true) {
+    state.workRam[PLAYER_TIMER_MEDIUM_OFF] = 9;
+    state.workRam[PLAYER_TIMER_PAD_OFF] = 5;
+    state.workRam[PLAYER_TIMER_INNER_OFF] = 0xff;
+  }
+  return true;
 }
 
 export function armLevelIntroBannerResume(
@@ -213,9 +254,11 @@ export function armLevelIntroBannerResume(
 
   const baseTimer = options.baseTimer ?? readWordBE(state.workRam, PLAYER_TIMER_OFF);
   writeWordBE(state.workRam, PLAYER_TIMER_OFF, baseTimer);
+  state.clock.levelIntroScrollResumeTick = undefined;
   state.clock.levelIntroBannerResumeTick = as_u16(0);
   state.clock.levelIntroBannerBaseTimer = as_u16(baseTimer);
   state.clock.levelIntroBannerHandoffState = as_u16(options.handoffState ?? 0);
+  writeScrollY(state, 0);
   if (options.parkTimer === true) {
     state.workRam[PLAYER_TIMER_MEDIUM_OFF] = 9;
     state.workRam[PLAYER_TIMER_PAD_OFF] = 5;
@@ -240,15 +283,38 @@ export function armLevelIntroBannerResume(
  */
 export function advanceLevelIntroBannerResume(
   state: GameState,
+  rom?: RomImage,
   hudCallback?: IntroBannerHudCallback,
 ): void {
+  if (state.clock.levelIntroScrollResumeTick !== undefined) {
+    const tick = ((state.clock.levelIntroScrollResumeTick + 1) & 0xffff) as u16;
+    state.clock.levelIntroScrollResumeTick = tick;
+
+    if (tick < INTRO_SCROLL_TICKS) {
+      writeScrollY(state, INTRO_SCROLL_START + tick * INTRO_SCROLL_STEP);
+      return;
+    }
+
+    const baseTimer = state.clock.levelIntroBannerBaseTimer ?? as_u16(readWordBE(state.workRam, PLAYER_TIMER_OFF));
+    const handoffState = state.clock.levelIntroBannerHandoffState ?? as_u16(0);
+    state.clock.levelIntroScrollResumeTick = undefined;
+    armLevelIntroBannerResume(state, {
+      baseTimer,
+      handoffState,
+      parkTimer: true,
+      ...(rom === undefined ? {} : { rom }),
+    });
+    return;
+  }
+
   if (state.clock.levelIntroBannerResumeTick === undefined) {
     // Only auto-arm immediately after a warm-state boot. Live route tests can
     // later pass through visually similar level-start RAM, but those frames
     // are owned by the normal dispatcher rather than a lost warm-state PC.
     if (state.clock.frame > 1) return;
     if (!matchesIntroWarmSeed(state)) return;
-    armLevelIntroBannerResume(state);
+    armLevelIntroScrollResume(state, rom === undefined ? {} : { rom });
+    return;
   }
 
   const levelIdx = readWordBE(state.workRam, LEVEL_IDX_OFF);

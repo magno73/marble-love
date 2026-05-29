@@ -158,6 +158,30 @@ describe("level intro banner warm-state resume", () => {
     expect(readWordBE(state.workRam, 0x82)).toBe(5);
   });
 
+  it("auto-armed warm seeds scroll the playfield in before the timer banner", () => {
+    const { state, rom } = bootSeed("start_level1_intro_practice_f2479");
+    const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
+    const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+
+    tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
+
+    expect(state.clock.levelIntroScrollResumeTick).toBe(0);
+    expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
+    expect(state.videoScrollY).toBe(0x110);
+    expect(hasIntroBanner(state)).toBe(false);
+    expect(readWordBE(state.workRam, 0x82)).toBe(0);
+
+    for (let i = 0; i < 60; i++) {
+      tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
+    }
+
+    expect(state.clock.levelIntroScrollResumeTick).toBeUndefined();
+    expect(state.clock.levelIntroBannerResumeTick).toBe(0);
+    expect(state.videoScrollY).toBe(0);
+    expect(hasIntroBanner(state)).toBe(true);
+    expect(readWordBE(state.workRam, 0x82)).toBe(0);
+  });
+
   it.each([
     ["start_level1_intro_practice_f2479", 121, 60],
     ["start_level2_intro_beginner_f2436", 121, 60],
@@ -169,6 +193,7 @@ describe("level intro banner warm-state resume", () => {
     const { state, rom } = bootSeed(seedName);
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
 
     expect(hasIntroBanner(state)).toBe(true);
     for (let i = 1; i < clearTick; i++) {
@@ -212,7 +237,7 @@ describe("level intro banner warm-state resume", () => {
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
     const playerXOff = 0x18 + 0x0c;
 
-    for (let i = 0; i < 121; i++) {
+    for (let i = 0; i < 182; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
     expect(state.workRam[0x86]).toBe(5);
@@ -231,6 +256,7 @@ describe("level intro banner warm-state resume", () => {
     const { state, rom } = bootSeed("start_level1_intro_practice_f2479");
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
 
     expect(readWordBE(state.workRam, 0x82)).toBe(0);
     expect(bannerTimerWords(state)).toEqual([0x3518, 0x3519, 0x3500, 0x3501, 0x351a, 0x351b, 0x3502, 0x3503]);
@@ -250,6 +276,7 @@ describe("level intro banner warm-state resume", () => {
     const { state, rom } = bootSeed("start_level3_intro_intermediate_f2435");
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
 
     expect(readWordBE(state.workRam, 0x82)).toBe(51);
 
@@ -264,6 +291,7 @@ describe("level intro banner warm-state resume", () => {
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
 
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
     for (let i = 0; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
@@ -278,11 +306,12 @@ describe("level intro banner warm-state resume", () => {
 
     expect(readWordBE(state.workRam, 0x394)).toBe(1);
     expect(readWordBE(state.workRam, 0x390)).toBe(0);
-    expect(readWordBE(state.workRam, 0x82)).toBe(5);
+    expect(readWordBE(state.workRam, 0x82)).toBe(0);
     expect(state.workRam[0x86]).toBe(0xff);
-    expect(state.clock.levelIntroBannerResumeTick).toBe(1);
+    expect(state.clock.levelIntroScrollResumeTick).toBe(1);
+    expect(state.clock.levelIntroBannerResumeTick).toBeUndefined();
 
-    for (let i = 1; i < 121; i++) {
+    for (let i = 1; i < 181; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
 
@@ -296,6 +325,7 @@ describe("level intro banner warm-state resume", () => {
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
 
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
     for (let i = 0; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
@@ -307,11 +337,12 @@ describe("level intro banner warm-state resume", () => {
     tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
 
     expect(readWordBE(state.workRam, 0x394)).toBe(1);
-    expect(readWordBE(state.workRam, 0x82)).toBe(36);
+    expect(readWordBE(state.workRam, 0x82)).toBe(31);
     expect(state.workRam[0x86]).toBe(0xff);
-    expect(hasIntroBanner(state)).toBe(true);
+    expect(state.clock.levelIntroScrollResumeTick).toBe(1);
+    expect(hasIntroBanner(state)).toBe(false);
 
-    for (let i = 1; i < 121; i++) {
+    for (let i = 1; i < 181; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
 
@@ -325,6 +356,7 @@ describe("level intro banner warm-state resume", () => {
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
 
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
     for (let i = 0; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
@@ -336,11 +368,12 @@ describe("level intro banner warm-state resume", () => {
     tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
 
     expect(readWordBE(state.workRam, 0x394)).toBe(2);
-    expect(readWordBE(state.workRam, 0x82)).toBe(47);
+    expect(readWordBE(state.workRam, 0x82)).toBe(42);
     expect(state.workRam[0x86]).toBe(0xff);
-    expect(hasIntroBanner(state)).toBe(true);
+    expect(state.clock.levelIntroScrollResumeTick).toBe(1);
+    expect(hasIntroBanner(state)).toBe(false);
 
-    for (let i = 1; i < 96; i++) {
+    for (let i = 1; i < 156; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }
 
@@ -354,6 +387,7 @@ describe("level intro banner warm-state resume", () => {
     const p1X = state.workRam[0x18 + 0xc9] ?? 0xff;
     const p1Y = state.workRam[0x18 + 0xc8] ?? 0xff;
 
+    armLevelIntroBannerResume(state, { rom, parkTimer: true });
     for (let i = 0; i < 121; i++) {
       tick(state, { rom, runMainLoopBody: true, inputMmio: 0x6f, p1X, p1Y, p2X: 0xff, p2Y: 0xff });
     }

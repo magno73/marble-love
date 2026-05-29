@@ -230,7 +230,7 @@ describe("Task A main-loop init modules", () => {
     expect(calls).toEqual(["15884", "118D2", "28DEA", "121A6", "12186", "28580", "28C7E", "28CA6", "10504"]);
   });
 
-  it("FUN_1101E state 5 arms the new-game level intro before the live timer runs", () => {
+  it("FUN_1101E state 5 arms the new-game level intro scroll before the live timer runs", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const calls: string[] = [];
@@ -262,13 +262,14 @@ describe("Task A main-loop init modules", () => {
     expect(w(s, 0x392)).toBe(0);
     expect(w(s, 0x394)).toBe(0);
     expect(s.workRam[0x3e4]).toBe(2);
-    expect(w(s, 0x00)).toBe(0);
-    expect(w(s, 0x02)).toBe(0);
+    expect(w(s, 0x00)).toBe(0xff10);
+    expect(w(s, 0x02)).toBe(0xff10);
     expect(s.videoScrollX).toBe(0);
-    expect(s.videoScrollY).toBe(0);
+    expect(s.videoScrollY).toBe(0x110);
     expect(w(s, 0x18 + 0x6a)).toBe(0);
     expect(s.workRam[0x18 + 0x6e]).toBe(0xff);
-    expect(s.clock.levelIntroBannerResumeTick).toBe(0);
+    expect(s.clock.levelIntroScrollResumeTick).toBe(0);
+    expect(s.clock.levelIntroBannerResumeTick).toBeUndefined();
     expect(s.clock.levelIntroBannerBaseTimer).toBe(0);
     expect(calls).toEqual(["158AC:2", "158AC:0", "11428", "158AC:98", "10456", "16EC6", "10504"]);
   });

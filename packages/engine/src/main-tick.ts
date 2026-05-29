@@ -197,6 +197,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mode0Init11452Stage !== undefined ||
     state.clock.mainThreadWaitDelay !== undefined ||
+    state.clock.levelIntroScrollResumeTick !== undefined ||
     state.clock.levelIntroBannerResumeTick !== undefined ||
     highScoreInitialsEntryActive(state);
   // Some attract segments hold the mode0 refresh body for an extra staged
@@ -223,6 +224,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     state.clock.mode2Init11452Stage !== undefined ||
     state.clock.mode2BottomHudDelay !== undefined ||
     state.clock.mainThreadWaitDelay !== undefined ||
+    state.clock.levelIntroScrollResumeTick !== undefined ||
     state.clock.levelIntroBannerResumeTick !== undefined ||
     highScoreInitialsEntryActive(state) ||
     (state.clock.mode0Init11452Stage !== undefined && !mode0AsyncRefreshAtTickStart);
@@ -516,5 +518,5 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     }
   }
   runWarmResidualReplayTick(state);
-  advanceLevelIntroBannerResume(state, (timerPtr, idx) => renderTimerHud286EE(state, rom, timerPtr, idx));
+  advanceLevelIntroBannerResume(state, rom, (timerPtr, idx) => renderTimerHud286EE(state, rom, timerPtr, idx));
 }

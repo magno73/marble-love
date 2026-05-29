@@ -35,7 +35,7 @@ import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
 import { startMode0Init11452Async, startMode2Init11452Async } from "./mode2-init-11452-async.js";
-import { armLevelIntroBannerResume } from "./level-intro-banner-resume.js";
+import { armLevelIntroScrollResume } from "./level-intro-banner-resume.js";
 import { renderStringChain3520 } from "./render-string-chain-3520.js";
 import { formatNumber3874 } from "./string-format.js";
 import { trimTrailingSpace } from "./string-trim.js";
@@ -394,8 +394,7 @@ function case5(state: GameState, rom: RomImage | undefined, subs: MainLoopInit11
   ww(state, 0x00400000, 0);
   ww(state, 0x00400002, 0);
   state.videoScrollX = 0;
-  state.videoScrollY = 0;
-  armLevelIntroBannerResume(state, {
+  armLevelIntroScrollResume(state, {
     baseTimer: 0,
     handoffState: 0,
     parkTimer: true,
@@ -603,7 +602,7 @@ function finishCase4Transition(state: GameState, rom: RomImage | undefined, subs
   } else {
     const carryoverTimer = rw(state, 0x00400082);
     init10504(state, subs, rom);
-    armLevelIntroBannerResume(state, {
+    armLevelIntroScrollResume(state, {
       baseTimer: carryoverTimer,
       handoffState: 0,
       parkTimer: true,
