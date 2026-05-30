@@ -10,7 +10,6 @@
     ".": "./src/index.ts",
     "./wrap": "./src/wrap.ts",
     "./bus": "./src/bus.ts",
-    "./physics": "./src/physics.ts",
     "./ai": "./src/ai.ts",
     "./rng": "./src/rng.ts",
     "./level": "./src/level.ts",
