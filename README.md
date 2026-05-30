@@ -63,7 +63,6 @@ These are current browser-gameplay issues, not original arcade behavior:
   marble can remain frozen for several seconds after the collision.
 - Silly Race: level music can restart or loop immediately, and the browser can
   become very slow.
-- The vacuum sound effect can loop indefinitely after the vacuum hazard stops.
 - The high-score / insert-coin screen still needs visual polish and a final
   behavior pass.
 - A brief browser video flicker has been observed intermittently, but is not yet

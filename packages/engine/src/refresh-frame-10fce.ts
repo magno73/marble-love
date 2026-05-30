@@ -1046,7 +1046,17 @@ export function refreshFrame10FCE(
         fun_12d46: (romScriptPtr) => { claimScriptSlot(s, rom, romScriptPtr); },
         fun_13068: (slotPtr) => {
           scriptSlotStep13068(s, rom, slotPtr, {
-            fun12896: (st, sp) => { helper12896(st, rom, sp, { inner1D06A: updateWaveTerrain }); },
+            fun12896: (st, sp) => {
+              helper12896(st, rom, sp, {
+                inner1D06A: updateWaveTerrain,
+                // FUN_12896 opcodes 2/8/18 call FUN_158AC (the real sound sender).
+                // Opcode 18 is the "marble no longer matches → descend + STOP" path:
+                // when a passed vacuum/aspirator sinks, it emits the stop command
+                // (0x1ef5a[kind-0x1e] → $4a/$4c). Without this wiring the stop was
+                // silently dropped, leaving the suction loop stuck (vacuum bug).
+                fun158ac: (st2, cmd) => { soundCmdSend158AC(st2, cmd); },
+              });
+            },
             inner1D06A: updateWaveTerrain,
           });
         },
