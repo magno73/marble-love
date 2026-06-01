@@ -95,6 +95,15 @@ describe("mainTick smoke", () => {
     const calls: number[] = [];
     setGlobalSoundCmdHook((cmd) => calls.push(cmd));
 
+    // FUN_28788 (0x28866..0x288ca) gates FUN_288F8 behind: 0x3EA != -1,
+    // eepromCommit() > (0x3EA), and 0x390 == 1. Empty-state eepromCommit() = 0,
+    // so set 0x3EA negative (≠ -1) and 0x390 = 1 to let the gate reach
+    // special-attract, which emits 0x61 for the 0..0xB progress band. (Without
+    // this gating the prior port emitted 0x61 every frame — the level-5 music
+    // flood; an empty state now correctly stays silent.)
+    writeU16BE(s.workRam, 0x3ea, 0xfffe); // -2
+    writeU16BE(s.workRam, 0x390, 1);
+
     mainTick(s, { rom });
 
     expect(calls).toContain(0x61);

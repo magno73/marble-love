@@ -330,19 +330,52 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3f4] = ((r[0x3f4] ?? 0) + 1) & 0xff;
   }
 
-  // FUN_10146 (aux timer/byte queue drain) — REPLICATO
+  // FUN_10146 (aux timer/byte queue drain) — REPLICATO (0x28860, unconditional)
   auxTimer(state);
 
-  // FUN_3F78 (sound pacing pseudo-eeprom) — REPLICATO
-  eepromCommit(state);
-
-  // FUN_158AC is not a direct call here; replicated subs emit it through
-  // `soundCmdSend158AC`.
-
-  // FUN_288F8 (special attract / end-screen sound) — REPLICATO
-  specialAttract(state, {
-    soundCommand: (cmd) => { soundCmdSend158AC(state, cmd); },
-  });
+  // FUN_28788 sound/attract gate (ROM 0x28866..0x288ca, A2 = 0x4003EA). The ROM
+  // heavily gates the eeprom-commit (FUN_3F78) + special-attract (FUN_288F8)
+  // path. The prior port ran BOTH unconditionally every frame, which flooded the
+  // 68k→6502 sound mailbox with command 0x61 each frame during gameplay — the
+  // level-5 "music loops with two alternating sounds" + browser-slowdown bug.
+  // On the gameplay seeds 0x3EA=0 and eepromCommit()=0, so D2(0) <= (0x3EA)(0)
+  // ⇒ ROM skips FUN_288F8 (no 0x61), which this restores.
+  const sndSext16 = (w: number): number => (w & 0x8000 ? w - 0x10000 : w);
+  const sndWriteWord = (off: number, v: number): void => {
+    r[off] = (v >>> 8) & 0xff;
+    r[off + 1] = v & 0xff;
+  };
+  // 0x28866: moveq #-1,D0; cmp.w (A2),D0w; beq.w 0x288d0 — skip all if 0x3EA==-1.
+  const sndProgress = sndSext16(readWorkWord(state, 0x3ea));
+  if (sndProgress !== -1) {
+    // 0x2886e: FUN_3F78 (eepromCommit) — side-effecting, gated behind 0x3EA!=-1.
+    const sndD2 = sndSext16(eepromCommit(state) & 0xffff);
+    // 0x28876: if D2 == 0 → clr.b *0x4003EE
+    if (sndD2 === 0) r[0x3ee] = 0;
+    if (sndD2 < sndProgress) {
+      // 0x2887e/0x28882: D2 < (0x3EA) → (0x3EA)=D2, skip FUN_288F8.
+      sndWriteWord(0x3ea, sndD2 & 0xffff);
+    } else if (sndD2 === sndProgress) {
+      // 0x28886/0x28888: D2 == (0x3EA) → skip FUN_288F8 (no write).
+    } else {
+      // 0x2888a: D2 > (0x3EA) → FUN_158AC(0x41); (0x3EA)=D2.
+      soundCmdSend158AC(state, 0x41);
+      sndWriteWord(0x3ea, sndD2 & 0xffff);
+      // 0x28898: run FUN_288F8 (+ its 0x75A latch) only when *0x400390 == 1.
+      if (sndSext16(readWorkWord(state, 0x390)) === 1) {
+        // 0x288a4..0x288c2: set *0x40075A=-1 unless (0x75A<=0 && 0x392!=0 && 0x392!=3).
+        const sndV75a = sndSext16(readWorkWord(state, 0x75a));
+        const sndV392 = sndSext16(readWorkWord(state, 0x392));
+        if (sndV75a > 0 || sndV392 === 0 || sndV392 === 3) {
+          sndWriteWord(0x75a, 0xffff);
+        }
+        // 0x288ca: FUN_288F8 (special attract / end-screen sound).
+        specialAttract(state, {
+          soundCommand: (cmd) => { soundCmdSend158AC(state, cmd); },
+        });
+      }
+    }
+  }
 
   if ((r[0x3e2] ?? 0) !== 0) {
     r[0x3ae] = r[0x3b0] ?? 0;
