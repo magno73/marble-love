@@ -61,8 +61,7 @@ These are current browser-gameplay issues, not original arcade behavior:
 - Silly Race: the flying bird motion objects are not rendered yet.
 - Silly Race: squashing the mini enemies awards bonus time correctly, but the
   marble can remain frozen for several seconds after the collision.
-- Silly Race: level music can restart or loop immediately, and the browser can
-  become very slow.
+- Silly Race: the browser can become very slow on this level.
 - The high-score / insert-coin screen still needs visual polish and a final
   behavior pass.
 - A brief browser video flicker has been observed intermittently, but is not yet
