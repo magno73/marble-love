@@ -12,7 +12,6 @@ export * as wrap from "./wrap.js";
 export * as state from "./state.js";
 export * as rng from "./rng.js";
 export * as bus from "./bus.js";
-export * as physics from "./physics.js";
 export * as ai from "./ai.js";
 export * as level from "./level.js";
 export * as paletteAnim from "./palette-anim.js";
