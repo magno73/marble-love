@@ -7,7 +7,8 @@ const SOUND_LEVEL_MUSIC_COMMANDS = [
   0x0a, // Beginner Race
   0x0c, // Intermediate Race
   0x0e, // Aerial Race
-  0x10, // Silly Race
+  0x14, // Silly Race — was mis-set to 0x10 (which selects a non-advancing
+        // chord, heard as a 2-note loop); 0x14 is the real background track.
   0x18, // Ultimate Race
 ] as const;
 

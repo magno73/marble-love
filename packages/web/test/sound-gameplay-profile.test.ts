@@ -14,7 +14,7 @@ describe("sound gameplay profile", () => {
     expect(soundLevelMusicCommandForLevelIndex(1)).toBe(0x0a);
     expect(soundLevelMusicCommandForLevelIndex(2)).toBe(0x0c);
     expect(soundLevelMusicCommandForLevelIndex(3)).toBe(0x0e);
-    expect(soundLevelMusicCommandForLevelIndex(4)).toBe(0x10);
+    expect(soundLevelMusicCommandForLevelIndex(4)).toBe(0x14); // Silly Race (was 0x10, a non-advancing chord)
     expect(soundLevelMusicCommandForLevelIndex(5)).toBe(0x18);
   });
 
