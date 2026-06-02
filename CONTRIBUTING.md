@@ -39,6 +39,12 @@ Then run:
 npm --workspace @marble-love/web run dev -- --host 0.0.0.0
 ```
 
+Some engine parity tests load the original program ROM from
+`ghidra_project/marble_program.bin` (gitignored, not distributed). When that file
+is absent — on a fresh clone or in CI — those suites skip themselves with a
+message, so `npx vitest run packages/engine` stays green. To run the
+ROM-dependent tests, place your own legal dump at that path.
+
 ## Pull Request Checklist
 
 - Describe the behavior change and the evidence used.

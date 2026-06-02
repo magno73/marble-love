@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
@@ -46,7 +48,7 @@ function nonzero(bytes: Uint8Array): number {
   return total;
 }
 
-describe("playable lower-platform respawn", () => {
+describe.skipIf(!ROM_AVAILABLE)("playable lower-platform respawn", () => {
   it("does not leave the marble stuck in the state-1 tumble path", () => {
     const scenario = JSON.parse(
       readFileSync(resolve("oracle/scenarios/playable/coin_start_to_level1.json"), "utf-8"),

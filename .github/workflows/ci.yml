@@ -28,6 +28,12 @@ jobs:
       - name: Run focused public-path tests
         run: npx vitest run packages/web/test/coin-start-flow.test.ts packages/web/test/boot-flow-url.test.ts packages/web/test/sound-gameplay-profile.test.ts --silent
 
+      - name: Run engine test suite
+        # The MAME ROM dump is gitignored and absent in CI; the ROM-dependent
+        # suites skip themselves (see packages/engine/test/_rom-fixture.ts), so
+        # this runs the full ROM-free subset and must stay green.
+        run: npx vitest run packages/engine --silent
+
       - name: Build web frontend
         run: npm --workspace @marble-love/web run build
 

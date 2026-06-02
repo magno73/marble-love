@@ -9,6 +9,8 @@
  */
 
 import { afterEach, describe, it, expect } from "vitest";
+
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mainTick } from "../src/main-tick.js";
@@ -109,7 +111,7 @@ describe("mainTick smoke", () => {
     expect(calls).toContain(0x61);
   });
 
-  it("wires main-loop init music commands during live gameplay body ticks", () => {
+  it.skipIf(!ROM_AVAILABLE)("wires main-loop init music commands during live gameplay body ticks", () => {
     const s = emptyGameState();
     const rom = loadProgramRom();
     const calls: number[] = [];
@@ -206,7 +208,7 @@ describe("mainTick smoke", () => {
     expect(nonzero(s.playfieldRam)).toBe(0);
   });
 
-  it("does not let stale object timers preempt pending new-game init", () => {
+  it.skipIf(!ROM_AVAILABLE)("does not let stale object timers preempt pending new-game init", () => {
     const s = emptyGameState();
     const rom = loadProgramRom();
 

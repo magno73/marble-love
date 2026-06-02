@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
@@ -126,7 +128,7 @@ function bootSeed(name: string): { state: ReturnType<typeof emptyGameState>; rom
   return { state, rom };
 }
 
-describe("level intro banner warm-state resume", () => {
+describe.skipIf(!ROM_AVAILABLE)("level intro banner warm-state resume", () => {
   it("clears stale high-score alpha without erasing MO terrain RAM", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
