@@ -27,13 +27,11 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@typescript-eslint/parser": "^8.59.1",
-    "@typescript-eslint/utils": "^8.59.1",
     "eslint": "^9.18.0",
     "knip": "^6.15.0",
     "prettier": "^3.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
-    "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.7"
   },
   "engines": {
