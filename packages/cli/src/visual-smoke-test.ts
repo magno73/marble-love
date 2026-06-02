@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * sensati a video.
+ * meaningful on screen.
  *
  * Pipeline:
  *   2. emptyGameState + bootInit
- *   3. tick(state, {rom}) per N frame
+ *   3. tick(state, {rom}) for N frames
  *   4. buildFrame(state) → Frame
  *
  *
- * Uso: npx tsx packages/cli/src/visual-smoke-test.ts [N=300]
+ * Usage: npx tsx packages/cli/src/visual-smoke-test.ts [N=300]
  */
 
 import { readFileSync } from "node:fs";

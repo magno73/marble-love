@@ -631,7 +631,7 @@ export function ym2151WriteData(ym: YM2151, data: u8): void {
   //   bit 4 = reset_timer_a (= clear status TIMERA = clear overflow flag)
   //   bit 5 = reset_timer_b
   //   bit 6 = unused
-  //   bit 7 = CSM (key-on-with-timer, V3 deferito)
+  //   bit 7 = CSM (key-on-with-timer, V3 deferred)
   // Boot init writes $14=$05, meaning LOAD A plus Timer A IRQ enable. Treating
   // bit 2 as a clear flag prevents the IRQ handler from ever writing the later
   // $14=$11 control byte.

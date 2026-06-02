@@ -3,7 +3,7 @@
  * test-wait-vblank-state-gated-parity.ts — differential FUN_28DB8 vs
  * waitVblankStateGated.
  *
- * su cambio of game state word (`*0x400390`). Convenzione caller (cfr.
+ * on change of game state word (`*0x400390`). Caller convention (cf.
  * `0x10848`, `0x108E8`, ...):
  *   pea     (count).w
  *   jsr     0x00028DB8.l
@@ -12,18 +12,18 @@
  * *0x400016; spin tst.b/beq; addq.b #1, *0x4003F0). To avoid the
  *
  * **Branch coverage** (8 corner case + ~492 random):
- *   0: count = 0  → loop non parte
+ *   0: count = 0  → loop does not start
  *   1: count = 1, no abort
- *   2: count = -1 (signed) → loop non parte
- *   3: count = 0x8000 (signed = -32768) → loop non parte
+ *   2: count = -1 (signed) → loop does not start
+ *   3: count = 0x8000 (signed = -32768) → loop does not start
  *   5: count = 8, no abort, loByte with bit 7 set (sext_w = 0xFF80)
  *   7: count = 4, no abort, counter wrap (prev=0xFD)
  *
- * **Output confrontato**:
+ * **Output compared**:
  *   - workRam[0x3F0] (counter byte, side effect main)
  *   - workRam[0x390..0x391] (must stay unchanged except abort case)
  *
- * Uso: npx tsx packages/cli/src/test-wait-vblank-state-gated-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-wait-vblank-state-gated-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // tst.b/beq spin in FUN_28DEA). Manteniamo also un counter of tick
+  // tst.b/beq spin in FUN_28DEA). We also keep a tick counter
   let mailboxReads = 0;
   let currentAbortAtIter = 0;
   let currentLoByte = 0;
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     currentLoByte = c.loByte;
     currentAbortFired = false;
 
-    // Setup stack: SP a 0x401E80, push arg long, push sentinel.
+    // Setup stack: SP at 0x401E80, push arg long, push sentinel.
     const countSigned =
       c.countWord & 0x8000 ? c.countWord - 0x10000 : c.countWord;
     const argLong = countSigned >>> 0;
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
     const tsD0w = tsResult.d0w & 0xffff;
     const tsIters = tsResult.iterations;
 
-    // For the binary: il low byte of *0x400390 should be = c.loByte
+    // For the binary: the low byte of *0x400390 should be = c.loByte
     // modified during wait). Injection fires only if the loop
     // injection does not fire -> byte unchanged.
     const tsStateLoExpected = currentAbortFired

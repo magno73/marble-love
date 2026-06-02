@@ -1,7 +1,7 @@
 /**
  * Dispatch table for the 151 documented MOS 6502 NMOS opcodes.
  *
- * Each entry returns runtime extra cycles. Static base cycles as from
+ * Each entry returns runtime extra cycles. Static base cycles come from
  * `baseCyclesFor(opcode)`, so total instruction cycles are base plus extra.
  * Undocumented opcodes are deliberately `null`; `cpu.step` fails loudly if the
  * sound ROM ever reaches one. Decimal-mode ADC/SBC are modeled for Tom Harte

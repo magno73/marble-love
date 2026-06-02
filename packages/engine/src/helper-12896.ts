@@ -60,7 +60,7 @@
  *  17  (0x12c84): slot[0x32]=slot[0x36]-2; slot[0x1a]=4; load slot[0x1b] → D1=0
  *  18  (0x12ca8): search marble-object list (complex match) → D1=1
  *
- * ## Subs injectable
+ * ## Injectable subs
  *   - `objectRenderUpdate13334` (opcode 0 path)
  *   - `fun158ac` (opcodes 2, 8 — address-of-string-function)
  *   - `helper12F44` (opcode 15)
@@ -116,7 +116,7 @@ const OFF_FINAL  = 0x42; // long +0x42 (written 0x20c14 by opcode 0)
 const OFF_BASE   = 0x46; // long +0x46 (base animation pointer)
 const OFF_ALT    = 0x4a; // long +0x4a (alt animation pointer)
 
-// ─── Memoria helpers ─────────────────────────────────────────────────────────
+// ─── Memory helpers ─────────────────────────────────────────────────────────
 
 function rb(state: GameState, addr: number): number {
   return (state.workRam[(addr - WRAM) >>> 0] ?? 0) & 0xff;

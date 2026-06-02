@@ -15,9 +15,9 @@
  * - 1..26 -> 'A'..'Z'
  * - 27..39 -> '0'..'<'
  *
- * **Disasm 0x41C8..0x428C** (198 byte / 0xC6):
+ * **Disasm 0x41C8..0x428C** (198 bytes / 0xC6):
  *
- *   0x41C8  movem.l {D5 D4 D3 D2},-(SP)         ; preserve D2,D3,D4,D5 (16 byte)
+ *   0x41C8  movem.l {D5 D4 D3 D2},-(SP)         ; preserve D2,D3,D4,D5 (16 bytes)
  *   0x41CC  move.l  (0x14,SP),D2                ; D2 = arg1 (record index)
  *   0x41D0  movea.l #0x401F7A,A1                ; A1 = output buffer (workRam)
  *   0x41D6  movea.l (0x00401FFC).l,A0           ; A0 = *0x401FFC (long ptr)
@@ -57,7 +57,7 @@
  *   0x421A  move.l  D4,D1                       ; D1 = byte[+0] << 16
  *   0x421C  add.l   D1,D3                       ; D3 = (b0<<16) | (b1<<8)
  *   0x421E  add.l   D3,D0                       ; D0 = b2 | (b1<<8) | (b0<<16)
- *   0x4220  move.l  D0,(A1)                     ; *A1 = score (4 byte BE, high=0)
+ *   0x4220  move.l  D0,(A1)                     ; *A1 = score (4 bytes BE, high=0)
  *
  *   ; --- Read 16-bit BE word @ +3 (radix-40 packed initials) ---
  *   0x4222  movea.l D2,A0

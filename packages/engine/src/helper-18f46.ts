@@ -8,14 +8,14 @@
  * (`slot-insert-sorted-18e6c.ts`).
  *
  *
- *   Tipico pattern caller:
+ *   Typical caller pattern:
  *   ```
  *     move.l  <val1>,-(SP)   ; arg2 = subIdx long
  *     pea     <val2>.w       ; arg1 = typeCode long (LSB = val2 & 0xFF)
  *     jsr     0x00018F46.l
  *     addq.l  #8,SP
  *   ```
- *   Oppure:
+ *   Or:
  *   ```
  *     ext.l   D0             ; arg2
  *     move.l  D0,-(SP)
@@ -100,15 +100,15 @@
  *   00018fce  rts
  *
  * **Memory layout** (shared with `slot-insert-sorted-18e6c.ts`):
- *     Elemento i: byte = "rect slot index" (0..30) indicizzando la
- *     lookup-tabthe ROMs @ `0x1F0E2`.
+ *     Element i: byte = "rect slot index" (0..30) indexing the
+ *     ROM lookup table @ `0x1F0E2`.
  *   - Rect-slot i: `workRam[0x4001DC + i * 0xE]` (14 byte each).
  *     `slot[0]` = type-code / "occupied flag". If 0 → slot free.
  *     `slot[1]` = sub-index.
  *   - ROM lookup-table @ `0x1F0E2` (32 x 4 bytes): absolute M68k pointers to
  *     rect-slot in workRam. Entry i → `workRam[lookup[i]]`.
  *
- * **Callers noti** (10 + 1 entry-point):
+ * **Known callers** (10 + 1 entry-point):
  *   - `FUN_00014C46` @ 0x14DD2
  *   - `FUN_00017346` @ 0x175AE
  *   - `FUN_000186AC` @ 0x187EC
@@ -122,7 +122,7 @@
  *
  *   1. If the entry is found: `workRam[structOff]` = 0 (free-slot mark on rect).
  *      of 1 (packed).
- *   3. `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo terminatore).
+ *   3. `workRam[0x3BC + endPos - 1]` = 0xFF (new terminator).
  *
  */
 
@@ -157,7 +157,7 @@ function w8(state: GameState, off: number, v: number): void {
 }
 
 /**
- * Difensivo: byte assenti contano 0.
+ * Defensive: missing bytes count as 0.
  */
 function readU32BE(rom: RomImage, absOff: number): number {
   const o = absOff | 0;
@@ -194,9 +194,9 @@ export interface Helper18F46Result {
  * @returns         Removal details.
  *
  * **Mutation** (only if an entry is found):
- *   - `workRam[structOff]` = 0 (rect slot marcato free).
+ *   - `workRam[structOff]` = 0 (rect slot marked free).
  *   - `workRam[0x3BC + foundPos .. 0x3BC + endPos - 1]` packed.
- *   - `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo sentinel).
+ *   - `workRam[0x3BC + endPos - 1]` = 0xFF (new sentinel).
  */
 export function helper18F46(
   state: GameState,

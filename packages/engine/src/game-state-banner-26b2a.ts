@@ -115,7 +115,7 @@ function writeAbsU16(state: GameState, addr: number, value: number): void {
 
 /**
  * Replica `FUN_00026B10` — copies 32 words (64 bytes) from ROM[0x1FBD0]
- * a colorRam[0..0x3F] (= MMIO 0xB00000..0xB003F).
+ * to colorRam[0..0x3F] (= MMIO 0xB00000..0xB003F).
  */
 export function paletteCopy26B10(state: GameState, rom: RomImage): void {
   for (let i = 0; i < PALETTE_COPY_WORD_COUNT; i++) {
@@ -127,13 +127,13 @@ export function paletteCopy26B10(state: GameState, rom: RomImage): void {
 }
 
 /**
- * Replica `FUN_00026B2A` — banner display setup for the `mode` indicato.
+ * Replica `FUN_00026B2A` — banner display setup for the given `mode`.
  *
  * Side effects:
  *  - 195-word scatter-write from ROM[BANNER_ROM_BASE + mode*0x186] to
- *    195 destinazioni differenti (workRam, alphaRam, etc.) controllate
- *    da `ROM[DEST_PTR_TABLE + i*4]` per i in 0..194
- *  - Chiamata a `paletteCopy26B10` (32 word in colorRam)
+ *    195 different destinations (workRam, alphaRam, etc.) controlled
+ *    by `ROM[DEST_PTR_TABLE + i*4]` for i in 0..194
+ *  - Call to `paletteCopy26B10` (32 words into colorRam)
  */
 export function gameStateBanner26B2A(
   state: GameState,

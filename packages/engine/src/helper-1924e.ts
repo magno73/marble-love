@@ -8,7 +8,7 @@
  *   - obj.state = 2
  *   - obj.vx = obj.vy = 0
  *   - jsr objectTypeDispatch194BA(obj)
- *   - dispatch sound (cmd dipende da obj+0x25: 9→0x5C+ROM_PTR, 7→0x5B+PTR, else 0x5A)
+ *   - dispatch sound (cmd depends on obj+0x25: 9→0x5C+ROM_PTR, 7→0x5B+PTR, else 0x5A)
  *   - entity.+0x6a += 3
  *   - jsr helper285B0(entity, 0x0E)
  *   - jsr addToObjectAccumAndFlag28608(entity, 0x1F4)

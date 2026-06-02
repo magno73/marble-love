@@ -4,7 +4,7 @@
  * Three main phases:
  *
  *   2. **sortAdjacentObjects** 3x with stride 1/2/3 (if workRam[0x3E2]==0)
- *   3. **Setup cursors** + **entity sprite dispatch** via switch per tipo
+ *   3. **Setup cursors** + **entity sprite dispatch** via switch by type
  *
  */
 
@@ -849,7 +849,7 @@ export function lateGameLogic26F3E(
   rom: RomImage,
   subs: LateGameLogic26F3ESubs = {},
 ): void {
-  // ── Phase 1: bufferFill1B12A per entity ────────────────────────────────────
+  // ── Phase 1: bufferFill1B12A per entity (one call per entity) ───────────────
   let walkPtr = ENTITY_BASE;
   while (true) {
     if (rb(state, rom, walkPtr) === SENTINEL) break;
@@ -966,7 +966,7 @@ export function lateGameLogic26F3E(
   // and clears the flag. Without this TS-side set, `0x4003AE` stays at the
   // warm value forever and lateGameLogic keeps writing the same sprite bank.
   //
-  // Disasm relevante (main-thread loop body 0x118A8..0x118CE):
+  // Relevant disasm (main-thread loop body 0x118A8..0x118CE):
   //   0x118A8 jsr  0x26F3E      ; lateGameLogic
   //   0x118AE tst.b *0x400016
   //   ...

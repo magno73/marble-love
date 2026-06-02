@@ -376,7 +376,7 @@ export function write32(bus: Bus, addr: number, value: u32): void {
 // ─── MMIO handlers ────────────────────────────────────────────────────────
 
 /**
- * Trackball read per Marble Madness (`m_trackball_type=1`, ruotato 45°).
+ * Trackball read per Marble Madness (`m_trackball_type=1`, rotated 45°).
  *
  * Replica `atarisys1.cpp:281-319 trakball_r`:
  *   F20000 (P1, X read): cur[0][0] = posx + posy  (rotated)

@@ -30,7 +30,7 @@ export function loadRomBlob(rom: RomImage, raw: Uint8Array): void {
   }
   // Main ROM (flat)
   rom.program.set(raw.subarray(0, SLAPSTIC_BASE), 0);
-  // 4 bank pristine in slapsticBanks
+  // 4 pristine banks into slapsticBanks
   rom.slapsticBanks.set(raw.subarray(SLAPSTIC_BASE, SLAPSTIC_END));
   // Mirror active bank (default bankstart = 3) in program[0x80000..0x88000).
   applySlapsticBank(rom, rom.slapsticFsm.bank);

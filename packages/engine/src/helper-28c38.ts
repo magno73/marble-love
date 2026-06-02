@@ -1,5 +1,5 @@
 /**
- * helper-28c38.ts — replica `FUN_00028C38` (23 istr, 0x44 byte).
+ * helper-28c38.ts — replica of `FUN_00028C38` (23 instr, 0x44 bytes).
  *
  * "Cascading timer tick": decrements a 3-level nested counter struct and
  * returns flag bits indicating which cascade levels fired.
@@ -10,7 +10,7 @@
  *   +3:    (unused / padding byte, not touched)
  *   +4:    innerCounter  (u8)  — 0xFF = disabled
  *
- * **Disasm 0x28C38..0x28C7C** (23 istr):
+ * **Disasm 0x28C38..0x28C7C** (23 instr):
  *
  *   00028c38  movea.l (0x4,SP),A0         ; A0 = timerPtr (stack arg)
  *   00028c3c  clr.b   D1b                 ; D1.b = 0 (result flags)

@@ -3,7 +3,7 @@
  *
  * Exports core module namespaces. Pure logic only: no DOM, no PixiJS.
  *
- * Uso typical:
+ * Typical usage:
  *   import { wrap, state, rng, bus, physics, ai, level, render, audio, trace }
  *     from "@marble-love/engine";
  */
@@ -323,18 +323,18 @@ import { mainTick as runMainTick } from "./main-tick.js";
 import type { MainTickOptions } from "./main-tick.js";
 
 /**
- * Tick main of the game engine — 1 frame @ 60 Hz.
+ * Main tick of the game engine — 1 frame @ 60 Hz.
  *
  * Orchestrator that calls 14 root sub-systems mirrored bit-perfect from the
  * original binary (`FUN_00028788`). Updates `state.workRam`,
  * `state.playfieldRam`, `state.colorRam`, `state.alphaRam`, `state.spriteRam`
  * consistently with the binary.
  *
- * Per integrare with the renderer:
+ * To integrate with the renderer:
  * ```ts
  * tick(state, {rom});
  * const frame = render.buildFrame(state);
- * // → consegna `frame` al renderer PixiJS
+ * // → hand `frame` to the PixiJS renderer
  * ```
  *
  * Subs still stubbed: FUN_158AC (sound cmd send conditional), FUN_26F3E
@@ -345,7 +345,7 @@ export function tick(s: GameState, opts: { rom: RomImage } & Partial<Omit<MainTi
   runMainTick(s, opts as MainTickOptions);
 }
 
-// ─── Sound subsystem (cherry-pick da feature/sound-chip C4-C10) ─────────────
+// ─── Sound subsystem (cherry-picked from feature/sound-chip C4-C10) ─────────────
 export {
   type SoundChip,
   type SoundChipConfig,

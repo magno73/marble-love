@@ -1,10 +1,10 @@
 /**
- * init-helpers.ts — piccole utility init/copy/transform.
+ * init-helpers.ts — small init/copy/transform utilities.
  *
  * - **FUN_11AC2 (22 byte)** — `copyRomToWorkram66Words()`: copies 66 words
- *   da ROM 0x1D370 a workRam 0x40076E.
+ *   from ROM 0x1D370 to workRam 0x40076E.
  * - **FUN_26B10 (26 byte)** — `copyRomToPalette32Words()`: copies 32 words
- *   da ROM 0x1FBD0 a palette RAM 0xB00000.
+ *   from ROM 0x1FBD0 to palette RAM 0xB00000.
  * - **FUN_1286E (24 byte)** — `negateXYSwap(ptr)`: swaps (x, y) and negates
  *   both: result.x = -y_old, result.y = -x_old.
  */

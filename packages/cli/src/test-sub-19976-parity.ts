@@ -2,11 +2,11 @@
 /**
  * test-sub-19976-parity.ts — differential FUN_00019976 vs `sub19976`.
  *
- * FUN_00019976 (96 byte): "Entity move-velocity step". Legge entity[0x26] as
- * signed byte (direction); uses the direction to read 2 signed words from the ROMs
- * table @ 0x244B6 (dX) and @ 0x244D6 (dY), scaled `<<8`, and adds a
- * entity[0xC..0x13]. If state==7 → velocity cache /4 in entity[0..7]. Altrimenti
- * cache = delta non scaled.
+ * FUN_00019976 (96 byte): "Entity move-velocity step". Reads entity[0x26] as
+ * signed byte (direction); uses the direction to read 2 signed words from the ROM
+ * table @ 0x244B6 (dX) and @ 0x244D6 (dY), scaled `<<8`, and adds them to
+ * entity[0xC..0x13]. If state==7 → velocity cache /4 in entity[0..7]. Otherwise
+ * cache = unscaled delta.
  *
  * **Parity strategy**: no internal sub; direct replica. Compare
  * `entity[0..0x40]` (1 full entity stride).
@@ -14,12 +14,12 @@
  * **Suite** (4 × 125 = 500):
  *   - A: random (dir 0..15, state random)
  *   - B: forced state==7 (/4 path active)
- *   - C: dir negativa (signed byte boundary, dir = 0x80..0xFF) — la direzione
+ *   - C: negative dir (signed byte boundary, dir = 0x80..0xFF) — the direction
  *     is sign-extended as signed and used as a ROM index. To match the binary,
  *     high byte values must be tested as signed negatives.
  *   - D: edge cases (dir = 0, 0x7F, 0x80, 0xFF; state byte = 0x07/0x08)
  *
- * Uso: npx tsx packages/cli/src/test-sub-19976-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-19976-parity.ts [N]
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);

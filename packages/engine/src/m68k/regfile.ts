@@ -99,7 +99,7 @@ function pop_l(rf: M68kRegFile, bus: MemBus): u32 {
 /**
  * LINK An,#disp (.W): push An, An := SP, SP += sext(disp).
  *
- * Sequenza Motorola PRM:
+ * Motorola PRM sequence:
  *   1. SP -= 4; M[SP] := An       (push An)
  *   2. An := SP
  *   3. SP += sext_16_32(disp)     (disp is usually negative for a local frame)
@@ -129,7 +129,7 @@ export function link_w(
 /**
  * UNLK An: SP := An; An := pop.l().
  *
- * Sequenza:
+ * Sequence:
  *   1. SP := An
  *   2. An := M[SP]; SP += 4
  *
@@ -207,7 +207,7 @@ export function movem_l_pd(
 /**
  * MOVEM.L (An)+,<list>: post-increment mode.
  *
- * CONVENZIONE MASK (postinc mode): "normale".
+ * MASK CONVENTION (postinc mode): "normal".
  *   bit 0  = D0
  *   bit 1  = D1
  *   ...
@@ -217,7 +217,7 @@ export function movem_l_pd(
  *   ...
  *   bit 15 = A7
  *
- * Algoritmo:
+ * Algorithm:
  *   for i in 0..15:
  *     if mask & (1 << i):
  *       reg := M[An]

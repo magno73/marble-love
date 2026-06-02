@@ -40,7 +40,7 @@ export interface M6502Cpu {
   irqMaskDelayInstructions: number;
   /** Diagnostics-only MAME-style IRQ recognition latch at opcode prefetch. */
   irqPrefetchLatchEnabled: boolean;
-  /** IRQ responif thetched by the previous opcode prefetch. */
+  /** IRQ latched by the previous opcode prefetch. */
   irqTakenPending: boolean;
   /** Status byte visible at the most recent opcode prefetch point. */
   irqPrefetchStatus: number | undefined;
@@ -197,7 +197,7 @@ export function step(cpu: M6502Cpu, bus: MemBus6502): number {
   return cpu.cycles - cyclesBefore;
 }
 
-/** Esegue step finche' cpu.cycles >= start + budget. Ritorna cycle consumed. */
+/** Runs step until cpu.cycles >= start + budget. Returns cycles consumed. */
 export function runForCycles(cpu: M6502Cpu, bus: MemBus6502, budget: number): number {
   const start = cpu.cycles;
   while (cpu.cycles - start < budget) {

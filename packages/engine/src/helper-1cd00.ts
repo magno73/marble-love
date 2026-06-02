@@ -8,11 +8,11 @@
  *          (`*0x400690`, `*0x400692`, `*0x400694`).
  *        - **Set 2** (`x2, y2, z2`): like set 1 but subtracting vectors from
  *          `*0x40068C.w`).
- *      `nx -= 0x1000`, `wrapFlag = 1` (entry terminale). If `nx <= 0x800`:
+ *      `nx -= 0x1000`, `wrapFlag = 1` (terminal entry). If `nx <= 0x800`:
  *      and all 6 comparisons pass, `hit1 = 1`.
- *   7. **Bbox hit-test 2** (`x2/y2/z2` vs stessi bounds): → `hit2 = 1`.
- *      - `D5 = nx*(x1-cx) + ny*(y1-cy) + nz*(z1-cz)` (usando set 1)
- *      - `D6 = nx*(x2-cx) + ny*(y2-cy) + nz*(z2-cz)` (usando set 2)
+ *   7. **Bbox hit-test 2** (`x2/y2/z2` vs same bounds): → `hit2 = 1`.
+ *      - `D5 = nx*(x1-cx) + ny*(y1-cy) + nz*(z1-cz)` (using set 1)
+ *      - `D6 = nx*(x2-cx) + ny*(y2-cy) + nz*(z2-cz)` (using set 2)
  *      where `nx = entry[-2]`, `ny = entry[2..3]`, `nz = entry[4..5]`,
  *      `cx = entry[0xC]`, `cy = entry[0xD]`, `cz = entry[0xE]`.
  *      loop-next; different signs continue processing.
@@ -26,7 +26,7 @@
  *   - `entityPtr`   (long) -> A2 = absolute work RAM address of the marble struct.
  *   - `shapeBasePtr`(long) -> A1 = absolute work RAM address of the tile/shape struct
  *     `[0x14..0x15]` worldZ sext-word.
- *   - `indexLong`   (long) → D1.b = low byte = shape index (0..6 o 0xFF).
+ *   - `indexLong`   (long) → D1.b = low byte = shape index (0..6 or 0xFF).
  *
  * Return: signed long D0, 1 for the fatal/reset collision path.
  *

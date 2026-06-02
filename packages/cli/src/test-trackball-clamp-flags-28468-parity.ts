@@ -9,7 +9,7 @@
  *      - obj0/obj1 trackball+delta bytes (0xC6/C7/C8/C9)
  *      - MMIO 0xF60001 (input byte) and MMIO 0xF20001/3/5/7 (trackball)
  *
- * Uso: npx tsx packages/cli/src/test-trackball-clamp-flags-28468-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-trackball-clamp-flags-28468-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -91,7 +91,7 @@ function randWord(rng: () => number): number {
 function generate(rng: () => number): Inputs {
   return {
     // accumulator: random word, but biased toward extremes to
-    // esercitare clamp and wrap
+    // exercise clamp and wrap
     accumX: randWord(rng),
     accumY: randWord(rng),
     prevInput: randByte(rng),

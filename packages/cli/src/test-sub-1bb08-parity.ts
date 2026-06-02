@@ -3,12 +3,12 @@
  * test-sub-1bb08-parity.ts — differential FUN_0001BB08 vs `sub1BB08`.
  *
  *
- * **Strategia parity**:
- *     replicated da `updateScrollCoords1BB50`. La replica TS include la
- *     callee inline (cfr. scroll-coord-helpers.ts).
+ * **Parity strategy**:
+ *     replicated from `updateScrollCoords1BB50`. The TS replica includes the
+ *     callee inline (cf. scroll-coord-helpers.ts).
  *     sub-cell, cell, dirty flag).
  *
- * Uso: npx tsx packages/cli/src/test-sub-1bb08-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-1bb08-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -32,7 +32,7 @@ const FUN_1BB08 = 0x0001bb08;
 
 const ENTITY_ABS = 0x00401d00;
 const ENTITY_OFF = ENTITY_ABS - 0x400000;
-const ENTITY_SIZE = 0x18; // covers 0xC..0x10 + un po' of trailing
+const ENTITY_SIZE = 0x18; // covers 0xC..0x10 + a bit of trailing
 
 const COMPARE_BASE = 0x00400690;
 const COMPARE_SIZE = 0x14; // 0x400690..0x4006A3

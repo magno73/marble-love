@@ -5,15 +5,15 @@
  *
  * **Layout struct workRam @ 0x401F00..0x401F3F**:
  *   +0x02  word  (`MODE`)                  0 = Branch B (state machine), ≠0 = Branch A
- *   +0x04  4 longs (`DATA_PTR[0..3]`)      pointer a struct esterno per slot
+ *   +0x04  4 longs (`DATA_PTR[0..3]`)      pointer to external struct per slot
  *   +0x14  4 words (`WORD16[0..3]`)        secondary data per slot
  *   +0x1C  4 bytes (`STATE[0..3]`)         state machine state per slot (0..7)
  *   +0x20  4 words (`THRESHOLD[0..3]`)     dispatch threshold per slot
- *   +0x30  4 bytes (`FLAG30[0..3]`)        toggle flag per state==2
- *   +0x34  4 bytes (`FLAG34[0..3]`)        byte counter per state==3/4
- *   +0x3A  word   (`SPECIAL_TICK`)         tick counter per Branch A
- *   +0x3C  word   (`SPECIAL_INNER`)        inner counter per Branch A
- *   +0x3E  word   (`SPECIAL_TARGET`)       target per Branch A
+ *   +0x30  4 bytes (`FLAG30[0..3]`)        toggle flag for state==2
+ *   +0x34  4 bytes (`FLAG34[0..3]`)        byte counter for state==3/4
+ *   +0x3A  word   (`SPECIAL_TICK`)         tick counter for Branch A
+ *   +0x3C  word   (`SPECIAL_INNER`)        inner counter for Branch A
+ *   +0x3E  word   (`SPECIAL_TARGET`)       target for Branch A
  *
  * **State dispatch (Branch B, mode==0)**:
  *   For each slot D4 in [0..3]:
@@ -62,10 +62,10 @@ export const SPECIAL_INNER_OFF = 0x1f3c as const;
 export const SPECIAL_TARGET_OFF = 0x1f3e as const;
 export const ROTATION_OFF = 0x1f42 as const;
 
-/** Numero of slot processati. */
+/** Number of slots processed. */
 export const SLOT_COUNT = 4 as const;
 
-/** ROM lookup table address (per Branch A). */
+/** ROM lookup table address (for Branch A). */
 const ROM_LOOKUP_BASE = 0x7294 as const;
 
 // ─── Sub-function callbacks ──────────────────────────────────────────────

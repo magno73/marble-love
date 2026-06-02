@@ -3,23 +3,23 @@
  * test-sub-1937c-parity.ts — differential FUN_0001937C vs `sub1937C`.
  *
  *
- * **Strategia parity**:
- *   - FUN_193D8 (proximity) **lasciato live**: implementato in `sub-1937c.ts`
+ * **Parity strategy**:
+ *   - FUN_193D8 (proximity) **left live**: implemented in `sub-1937c.ts`
  *     as `sub193D8ProximityCheck`.
- *   - FUN_19460 (grid bitmap) **lasciato live**: in `sub-1937c.ts` as
+ *   - FUN_19460 (grid bitmap) **left live**: in `sub-1937c.ts` as
  *     `sub19460GridBitmap`.
  *
  * Compare:
- *   - Return value D0 (signed long da call binary)
- *     non ci siano side-effect indesiderati su workRam).
+ *   - Return value D0 (signed long from the binary call)
+ *     so that there are no unwanted side effects on workRam).
  *   - `proxArray @ 0x401890..0x401A28` (9 entries x 0x28; no writes expected).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — entity + 9 prox entries random
- *   - B: pos in range grid valido (x,y >> 3 - bias in [0..0xF])
+ *   - B: pos in valid grid range (x,y >> 3 - bias in [0..0xF])
  *   - D: edge cases (entity self-pointer, status 0/non-0, kind 2)
  *
- * Uso: npx tsx packages/cli/src/test-sub-1937c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-1937c-parity.ts [N]
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // Suite B: pos in range grid valido (x,y >> 3 in valid grid)
+  // Suite B: pos in valid grid range (x,y >> 3 in valid grid)
   console.log(`\n=== Suite B: pos in grid range — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     console.log(`  First fail (suite ${failHolder.value.suite} tc=${failHolder.value.tc}): ${failHolder.value.reason}`);
   }

@@ -23,12 +23,12 @@
  *   00003a40    move.w #-0x10,D2w        ; D2w = -16 (= ' ' - '0' = 0x20-0x30)
  *   00003a44    addi.w #0x30,D2w         ; D2w += '0'  →  final char
  *   00003a48    move.b D2b,-(A0)         ; *--A0 = D2b
- *   00003a4a    lsr.l  #0x4,D1           ; D1 >>= 4 (logical shift right 4 bit)
+ *   00003a4a    lsr.l  #0x4,D1           ; D1 >>= 4 (logical shift right 4 bits)
  *   00003a4c    dbf    D0w,0x00003a26    ; D0w -= 1; if D0w != -1: continue loop
  *   00003a50    move.l (SP)+,D2          ; restore D2
  *   00003a52    rts
  *
- * **Calling convention** (cdecl, 4 long arg push RTL, D2 saved in prologue):
+ * **Calling convention** (cdecl, 4 long args pushed RTL, D2 saved in prologue):
  *
  *     SP+0x00 : D2 saved (4 byte)
  *     SP+0x04 : return address (4 byte)

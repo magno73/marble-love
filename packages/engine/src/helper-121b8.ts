@@ -51,7 +51,7 @@
  *   D1 = *(D2 as A1) - 0x400690 + 0x88; bounds check...
  *   ... (bounce/bound checks, then stateSub1B5C2, 29CCE, etc.)
  *
- * **Costante**:
+ * **Constant**:
  *   - `HELPER_121B8_ADDR = 0x000121b8`
  *
  * **Sub injection** (`Helper121B8Subs`):
@@ -391,7 +391,8 @@ export interface Helper121B8Subs {
 /**
  *
  * @param state   GameState.
- *                i default usano i moduli importati (o no-op per i non
+ *                The defaults use the imported modules (or no-op for the
+ *                not-yet-implemented subs).
  */
 export function helper121B8(
   state: GameState,
@@ -821,7 +822,7 @@ export function helper121B8(
     }
 
     // FUN_160F6 sets A3=0x40069E and A4=0x4006A0 internally; keep the TS
-    // parameter order aligned with the dispatcher modethe s tileX/tileY reads.
+    // parameter order aligned with the dispatcher's tileX/tileY reads.
     if (subs.fun_160f6 !== undefined) {
       subs.fun_160f6(state, a2, 0x40069e, 0x4006a0, d4_timer);
     } else {

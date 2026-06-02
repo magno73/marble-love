@@ -3,7 +3,7 @@
  *
  * Inserts one score/initials record into the 10-row high-score table at
  * `*0x401FFC + 0x1E`. The caller passes the target rank and a record pointer
- * whoif theyout is a 4-byte score followed by 3 ASCII initials.
+ * whose layout is a 4-byte score followed by 3 ASCII initials.
  */
 
 import type { GameState } from "./state.js";
