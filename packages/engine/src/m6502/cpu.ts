@@ -123,7 +123,7 @@ function serviceIrq(cpu: M6502Cpu, bus: MemBus6502): void {
   const lo = bus.read8(as_u16(0xfffe)) as number;
   const hi = bus.read8(as_u16(0xffff)) as number;
   cpu.rf.pc = as_u16(lo | (hi << 8));
-  // IRQ e' level-sensitive: lasciamo cpu.irq al caller (chip esterno deciders
+  // IRQ is level-sensitive: we leave cpu.irq to the caller (external chip decides
   // whether to release it). No automatic reset here.
   cpu.cycles += 7;
 }

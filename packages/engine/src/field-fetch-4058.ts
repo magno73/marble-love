@@ -102,7 +102,7 @@ export function fieldFetch4058(
 
   // A0 = *0x401FFC (big-endian long pointer in work RAM).
   const ptr = readLongBE(state.workRam, PTR_FFC_OFF);
-  // D5 = ptr + 0x50 (record base, long add wrap a 32-bit).
+  // D5 = ptr + 0x50 (record base, long add wraps at 32-bit).
   const recordBase = (ptr + RECORD_BASE_PLUS) >>> 0;
 
   // D4 = sign-ext-long(byte ROM[0x1006F]) & 7. The sign extension does not

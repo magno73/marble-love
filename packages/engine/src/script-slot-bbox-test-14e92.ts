@@ -326,7 +326,7 @@ export function scriptSlotBboxTest14E92(
 
     // Resolve bbox: `A0 = (0x58, A3); A0 = (A0)`.
     const bboxPtrLong = readLongBE(state, slotOff + SLOT_BBOX_PTR_OFF);
-    const bboxRecPtr = bboxPtrLong; // pointer m68k absoluto (in workRam o ROM).
+    const bboxRecPtr = bboxPtrLong; // absolute m68k pointer (in workRam or ROM).
 
     // Dereference bboxRecPtr for the first long sentinel check. Runtime callers
     // pass `rom`; workRam-only parity tests remain supported.

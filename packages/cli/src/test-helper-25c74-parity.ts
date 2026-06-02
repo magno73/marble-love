@@ -126,7 +126,7 @@ function patchSoundPair(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_25BAE: append (objPtr, code) al buffer + rts.
+ * Patch FUN_25BAE: append (objPtr, code) to the buffer + rts.
  *
  *   SP+0 = return addr
  *
@@ -167,7 +167,7 @@ function patchOSE25BAE(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_15BD0: append (structPtr, arg2, arg3) al buffer + rts.
+ * Patch FUN_15BD0: append (structPtr, arg2, arg3) to the buffer + rts.
  *
  *   SP+0  = return addr
  *   SP+4  = structPtr (arg1 long)
@@ -248,7 +248,7 @@ function patchStateSub15BD0(rom: Buffer): void {
   rom[a+0x36]=0x4e; rom[a+0x37]=0x75;
 }
 
-// ─── Helpers locali ───────────────────────────────────────────────────────────
+// ─── Local helpers ───────────────────────────────────────────────────────────
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 

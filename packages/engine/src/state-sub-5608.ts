@@ -49,7 +49,7 @@
  *   - `beq.b` branches on Z=1 (byte == 0).
  *     `moveq` sign-extends the full long, not only the low byte. 4 and 8 are
  *     positive, so D0 = 0x00000004 or
- *     0x00000008. `move.l D0,D2` propaga il long completo.
+ *     0x00000008. `move.l D0,D2` propagates the full long.
  *   - `pea (0x7978).l` and `pea (0x7980).l`: push effective address as long.
  *   - `move.l (0x00010074).l,-(SP)`: read long BE from ROM, push as-is.
  *   - `lea (0x1C,SP),SP`: equivalent to `addq.l #0x1C,SP` (pop 28 arg bytes).

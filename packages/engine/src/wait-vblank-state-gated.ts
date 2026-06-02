@@ -58,7 +58,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta (the offset workRam of followed are relativi). */
+/** Absolute WORK RAM base (the following workRam offsets are relative). */
 export const WORK_RAM_BASE = 0x400000;
 
 /** byte mailbox vblank ack: clr+spin in FUN_28DEA. */

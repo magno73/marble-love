@@ -12,7 +12,7 @@
  *   …
  *   `movem.l (SP)+, {D2 D3 D4}` + `rts`
  *
- * **Disassembly completo** (0x15FE6..0x1605B, 118 byte, 44 istr):
+ * **Full disassembly** (0x15FE6..0x1605B, 118 bytes, 44 instr):
  *
  *   00015fe6  movem.l {D4 D3 D2},-(SP)
  *   00015fea  movea.l (0x10,SP),A1       ; A1 = arg1 (obj1 ptr)

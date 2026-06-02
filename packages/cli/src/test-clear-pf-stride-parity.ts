@@ -57,7 +57,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     //   5: incrementing pattern (i & 0xFF)
-    //   6: pattern 0xFE per beccare endian sui long
+    //   6: pattern 0xFE to catch endianness on the longs
     //   7: pattern of "marker" 0xCC
     //   8..N: random uniforme
     const pf = new Uint8Array(PF_RAM_SIZE);

@@ -9,7 +9,7 @@
  * Random setup for each case:
  *   - 25 slot @0x400A9C stride 0x56 → byte +0x18 random (70% occupied, 30% free)
  *   - argPtr long random
- *   - SP fresh and workRam zeroed sui fields relevant
+ *   - SP fresh and workRam zeroed on the relevant fields
  *
  * Confronto:
  *   - D0 (long, 0 o 0xFFFFFFFF)

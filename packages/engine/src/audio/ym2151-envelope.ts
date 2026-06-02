@@ -80,8 +80,8 @@ function sustainLevel(d1l: number): number {
 
 export const ENV_STATE_OFF = 0;
 export const ENV_STATE_ATTACK = 1;
-export const ENV_STATE_DECAY = 2;   // D1R fase
-export const ENV_STATE_SUSTAIN = 3; // D2R fase (post D1L reached)
+export const ENV_STATE_DECAY = 2;   // D1R phase
+export const ENV_STATE_SUSTAIN = 3; // D2R phase (post D1L reached)
 export const ENV_STATE_RELEASE = 4;
 
 export interface EnvelopeState {
@@ -99,13 +99,13 @@ export function createEnvelope(): EnvelopeState {
   return { state: ENV_STATE_OFF, counter: 1023 };
 }
 
-/** Key ON: transizione → ATTACK fase. OPM non resetta the attenuazione a
- * silenzio sui retrigger; the attacco riparte from the counter corrente. */
+/** Key ON: transition → ATTACK phase. OPM does not reset the attenuation to
+ * silence on retrigger; the attack restarts from the current counter. */
 export function envelopeKeyOn(env: EnvelopeState): void {
   env.state = ENV_STATE_ATTACK;
 }
 
-/** Key OFF: transizione → RELEASE fase. */
+/** Key OFF: transition → RELEASE phase. */
 export function envelopeKeyOff(env: EnvelopeState): void {
   if (env.state !== ENV_STATE_OFF) env.state = ENV_STATE_RELEASE;
 }

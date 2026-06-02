@@ -79,7 +79,7 @@ async function main(): Promise<void> {
     else if (i === 6) argW = 0x4d;
     else if (i === 7) argW = 0xff;
     else if (i === 8) argW = 0x400; // shift → 0x8000, signExt16 → -0x8000
-    else if (i === 9) argW = 0x800; // shift → wrap a 0
+    else if (i === 9) argW = 0x800; // shift → wrap to 0
     else {
       // Bias of the random:
       //   - 30% piccoli (0..0x7F)

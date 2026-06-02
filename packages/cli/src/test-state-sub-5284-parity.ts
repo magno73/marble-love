@@ -18,7 +18,7 @@
  *       0xFFFFFFFF, etc) per testare wrap of the counter.
  *     * pattern 8..N: random flags = 0, random counter init.
  *
- * sui flag).
+ * on the flags).
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5284-parity.ts [N]
  */
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
   rom[FUN_4DCC + 7] = 0x75;
 
   // FUN_4F38 ridotta a `rts` (0x4E75). Il tail-call `bra.w 0x4F38` of FUN_5284
-  // atterra qui, fa rts immediato → pop sentinel → callFunction completa.
+  // lands here, does an immediate rts → pop sentinel → callFunction completes.
   rom[FUN_4F38 + 0] = 0x4e;
   rom[FUN_4F38 + 1] = 0x75;
 

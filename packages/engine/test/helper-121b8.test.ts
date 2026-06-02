@@ -2,7 +2,7 @@
  * helper-121b8.test.ts — smoke tests of `helper121B8` (FUN_000121B8).
  *
  * Verifies the function's main paths with every sub-callee
- * iniettati as no-op, isolando la logica interna of FUN_000121B8:
+ * injected as no-ops, isolating the internal logic of FUN_000121B8:
  *
  *   1. Costante `HELPER_121B8_ADDR`
  *   2. Prologue: writes globals 0x400684/688/68C, 0x40069A/9C, 0x400696/698

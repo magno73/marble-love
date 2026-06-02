@@ -1,6 +1,6 @@
 {
   "name": "level1_basic_movement",
-  "description": "Coin/start, poi pattern semplice avanti-destra-avanti per testare physics input + slope.",
+  "description": "Coin/start, then a simple forward-right-forward pattern to test physics input + slope.",
   "ticks": 3600,
   "inputs": {
     "60":  { "buttons": 4 },

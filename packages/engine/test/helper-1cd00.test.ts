@@ -35,7 +35,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
     }
   });
 
-  it("returns number (= D0 al ritorno of the binario)", () => {
+  it("returns number (= D0 at the return of the binary)", () => {
     const s = emptyGameState();
     const result = helper1CD00(s, 0x00400018, 0x00400500, 0xff);
     expect(typeof result).toBe("number");

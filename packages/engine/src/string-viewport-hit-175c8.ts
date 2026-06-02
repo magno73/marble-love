@@ -37,7 +37,7 @@
  *   00017602   move.w  A1w, (-0x2, A6)           ; locVar = viewTop
  *   00017606   addq.w  #6, (-0x2, A6)            ; locVar = viewTop + 6 = my + 3 (viewBottom)
  *
- *   ;-- loop sui 7 slot ------------------------------------------------
+ *   ;-- loop over the 7 slots ------------------------------------------------
  *   0001760a   movea.l #0x401482, A3
  *   00017610   clr.b   D1b                        ; counter
  *   ; loop @ 0x17612:
@@ -167,7 +167,7 @@
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
-// ─── Globals (offset workRam relativi a 0x400000) ────────────────────────
+// ─── Globals (workRam offsets relative to 0x400000) ────────────────────────
 
 /** workRam offset of the "game mode" word (absolute = 0x400394). */
 export const GAME_MODE_WORD_OFF = 0x394 as const;
@@ -383,7 +383,7 @@ export function stringViewportHit175C8(
   const viewTop = sextW(viewTop16);
   const viewBottom = sextW((viewTop16 + VIEW_Y_SPAN) & 0xffff);
 
-  // ─── Loop sui 7 slot ────────────────────────────────────────────────────
+  // ─── Loop over the 7 slots ────────────────────────────────────────────────────
   const perSlot: SlotResult[] = [];
   // (low byte of width + leftEdge sext word). Sul hit-path: D2 = 1.
   let d2Byte = initialD2Byte & 0xff;

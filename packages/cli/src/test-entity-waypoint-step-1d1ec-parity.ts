@@ -153,7 +153,7 @@ function buildRandomCase(rng: () => number, opts?: {
     cursor[0] = cellX;
     cursor[1] = cellY;
   } else if (opts?.forceCursorMismatchX === true) {
-    // Sets cursor[0] != cellX (semplice + 1)
+    // Sets cursor[0] != cellX (simple + 1)
     cursor[0] = (cellX + 1) & 0xff;
   }
 

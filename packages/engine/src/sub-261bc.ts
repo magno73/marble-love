@@ -343,7 +343,7 @@ export function fun261BC(
     d0Vy = ((sextW(d0Vy & 0xffff) * sextW(quotientW)) | 0) >> 6;
     wL(state, a2Off + 0x04, d0Vy >>> 0);
 
-    // D0 al rts = scaled VY long
+    // D0 at the rts = scaled VY long
     retVal = d0Vy >>> 0;
   }
 

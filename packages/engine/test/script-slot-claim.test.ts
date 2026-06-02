@@ -92,7 +92,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam[slot0 + 0x3a]).toBe(0);
   });
 
-  it("argPtr = 0 → script ptr scritto as long zero", () => {
+  it("argPtr = 0 → script ptr written as long zero", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);

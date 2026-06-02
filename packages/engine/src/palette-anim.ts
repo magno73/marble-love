@@ -36,7 +36,7 @@ export interface PaletteAnimParams {
   tableTypeZero: number;
   /** Lookup table per type != 0. */
   tableTypeNonZero: number;
-  /** Palette destination per type == 0 (offset assoluto 68010). */
+  /** Palette destination for type == 0 (absolute 68010 offset). */
   palDestTypeZero: number;
   /** Palette destination per type != 0. */
   palDestTypeNonZero: number;

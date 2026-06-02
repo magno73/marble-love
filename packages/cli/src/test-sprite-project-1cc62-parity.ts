@@ -4,8 +4,8 @@
  * `spriteProject1CC62`.
  *
  *
- * **Strategia parity**:
- *     deterministica.
+ * **Parity strategy**:
+ *     deterministic.
  *   - Compare:
  *
  * **Suite**:
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
     const argLong = rb(); // byte → low byte
     const structBytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const globBytes = new Array(GLOBALS_SIZE).fill(0).map(() => rb());
-    // bge-flag = *0x4006A2 → offset 0x12..0x13 in globBytes (relativo a 0x690).
+    // bge-flag = *0x4006A2 → offset 0x12..0x13 in globBytes (relative to 0x690).
     // 0x6A2 - 0x690 = 0x12.
     globBytes[0x12] = 0; globBytes[0x13] = 1; // word 0x0001 → != 0
     if (runOneCase("B", i, argLong, structBytes, globBytes)) okB++;

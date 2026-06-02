@@ -4,7 +4,7 @@
  *
  * 262 byte pure leaf. Setup:
  *   - Linked list of entry in workRam scratch
- *   - String terminata da 0
+ *   - String terminated by 0
  *   - Globals @ 0x401F00, 0x401F3A, 0x401F42 random
  *   - attr word random
  *

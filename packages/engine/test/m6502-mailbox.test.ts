@@ -3,7 +3,7 @@
  *
  * Intent: the Atari System 1 hardware pattern requires that (1) mailboxes latch
  * bytes with pending flags, and (2) the write side asserts NMI/IRQ only on the
- * transizione false→true (edge-triggered), (3) read side faccia ack al
+ * transizione false→true (edge-triggered), (3) read side does ack to the
  * pending and releases the pin. The tests verify that the TS model keeps
  * this semantic byte-for-byte because any violation makes the
  * protocollo cmd 68K→6502 (e.g. doppio NMI = ISR rientrante).

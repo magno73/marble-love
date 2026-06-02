@@ -15,7 +15,7 @@
  *   - `(A0+0x1a).b` random (mirror gate)
  *   - `(A0+0x2e).w` random (angolo iniziale)
  *   - `(A0+0x1e).l` random (coords source)
- *   - workRam/ROM pre-zeroed sui fields output
+ *   - workRam/ROM pre-zeroed on the output fields
  *
  * Confronto:
  *   - D0 (low byte: 0x01 o 0x00)

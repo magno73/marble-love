@@ -159,7 +159,7 @@ const ALPHA_RAM_END = 0x00a04000 as const;
 /** STRUCT @ 0x401c28..0x401c47 (16 word). */
 const STRUCT_OFF = 0x1c28;
 
-/** Globals offset (relativi a workRam base). */
+/** Globals offset (relative to workRam base). */
 const OFF_LVLPTR = 0x0474; // *0x400474.l — level header ptr
 const OFF_TILE_X = 0x0696; // *0x400696.w — tile X (post-derive)
 const OFF_TILE_Y = 0x0698; // *0x400698.w — tile Y (post-derive)

@@ -17,7 +17,7 @@
  *   subq.w  #1,D0w
  * test:  tst.w D0w; bgt loop
  *
- * loop esterno.
+ * outer loop.
  *
  * **Output confrontato**: D0w (low word of D0) and workRam unchanged.
  *

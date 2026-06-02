@@ -13,7 +13,7 @@
  *   - `FUN_00019692` (heavy entity update) **stubbed with RTS** (0x4E75) for
  *     neutralize side effects. The TS uses `subs.fun_19692 = noop`.
  *   - Compare:
- *       * `entity[0x00..0x27]` (0x28 byte = 1 entity stride completa)
+ *       * `entity[0x00..0x27]` (0x28 bytes = 1 full entity stride)
  *       * `*0x004003A6` (RNG seed) post-call
  *
  * **Suite** (4 × 125 = 500):

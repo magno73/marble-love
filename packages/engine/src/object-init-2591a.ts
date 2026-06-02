@@ -24,8 +24,8 @@ const WORK_RAM_END = 0x402000;
 const GLOBAL_400462_OFF = 0x462;
 const GLOBAL_400466_OFF = 0x466;
 const GLOBAL_400472_OFF = 0x472;
-const GLOBAL_400696_OFF = 0x696; // word, scritto = 0xFFFF
-const GLOBAL_400698_OFF = 0x698; // word, scritto = 0xFFFF
+const GLOBAL_400696_OFF = 0x696; // word, written = 0xFFFF
+const GLOBAL_400698_OFF = 0x698; // word, written = 0xFFFF
 
 export const OBJECT_INIT_2591A_ADDR = 0x0002591a as const;
 
@@ -98,7 +98,7 @@ export interface ObjectInit2591ASubs {
   fun_13966?: (state: GameState, objPtr: number) => void;
 }
 
-// ─── Helper interno: read/write namespace su workRam (BE M68k) ────────────
+// ─── Internal helper: read/write namespace on workRam (BE M68k) ────────────
 
 function readU32BE(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;

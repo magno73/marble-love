@@ -222,7 +222,7 @@ const DELTA_STREAM_ROM = 0x1ef32 as const;
 const SLOT_PTR_TABLE_ROM = 0x1f016 as const;
 
 /** Offsets in slot record A0 (stride 0x56 in work RAM). */
-const ARG_READY_BYTE_OFF = 0x1c; // byte: scritto = 1 in epilogue
+const ARG_READY_BYTE_OFF = 0x1c; // byte: written = 1 in epilogue
 const ARG_COORDS_LONG_OFF = 0x1e; // long: sole source coords (Y_high|X_low)
 const ARG_OUT_2ND_HALF_OFF = 0x38; // word: four 6-byte records (record 4..7)
 const ARG_OUT_1ST_HALF_OFF = 0xa4; // word: four 6-byte records (record 0..3)

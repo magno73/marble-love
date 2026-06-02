@@ -9,7 +9,7 @@
  *   12184  rts
  *
  * Clear all `playfieldRam` (8 KB @ 0xA00000-0xA01FFF) with a loop
- * `clr.l (A0)+` of 0x800 iter (D0=0x7FF + dbf decrementa up to -1 → 2048
+ * `clr.l (A0)+` of 0x800 iter (D0=0x7FF + dbf decrements down to -1 → 2048
  * iter × 4 byte = 8192 byte = 8 KB).
  *
  * Caller (4): FUN_1101E@0x113E4, FUN_11428@0x11434, FUN_1A236@0x1A26E,

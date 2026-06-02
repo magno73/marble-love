@@ -5,7 +5,7 @@
  *
  * FUN_0001BBAA (222 byte): "object charcode broadcast under flag-gated,
  * progress-gated dispatch". Vedi engine/src/object-charcode-broadcast-1bbaa.ts
- * per la spec disasm completa.
+ * for the full disasm spec.
  *
  * **Strategia parity**:
  *     da Musashi ha la ROM mappata in `0x000000..0x07FFFF`. Il TS module

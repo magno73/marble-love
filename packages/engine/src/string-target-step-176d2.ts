@@ -298,7 +298,7 @@ export function stringTargetStep176D2(
   const idx = sextB(rb(state, obj + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
 
-  // (asr.w #1 = signed >> 1; add.w wrap a 16 bit).
+  // (asr.w #1 = signed >> 1; add.w wraps at 16 bits).
   const slotCx = sextW(rwU(state, slotAddr + SLOT_CENTER_X_WORD_OFF));
   const slotCy = sextW(rwU(state, slotAddr + SLOT_CENTER_Y_WORD_OFF));
 

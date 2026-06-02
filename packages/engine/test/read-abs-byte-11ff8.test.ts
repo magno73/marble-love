@@ -1,7 +1,7 @@
 /**
  * read-abs-byte-11ff8.test.ts — smoke tests of `helper11FF8` (FUN_11FF8).
  *
- * Verifica i path principali:
+ * Verifies the main paths:
  *   1. Phase 1 match-scan: defaults table vs workRam entries
  *   2. Phase 2 header render: renderString0142 vs renderStringEntry286B0
  *   3. Phase 3 row render: formattazione rank, initials, score

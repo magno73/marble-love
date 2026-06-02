@@ -2,15 +2,15 @@
 /**
  * test-sub-14dec-parity.ts — differential FUN_00014DEC vs `sub14DEC`.
  *
- * FUN_00014DEC (166 byte, 0xA6 byte): "nearest-neighbor V2" — itera list
+ * FUN_00014DEC (166 byte, 0xA6 byte): "nearest-neighbor V2" — iterates a list
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *
  * Layout:
  *   - Obj @ 0x401D00 (size 0x60)
- *   - List @ 0x401E00 (entries 4 byte ognuna, terminator byte[0|1]==0xFF)
+ *   - List @ 0x401E00 (entries 4 byte each, terminator byte[0|1]==0xFF)
  *
- * Uso: npx tsx packages/cli/src/test-sub-14dec-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-14dec-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -38,7 +38,7 @@ const OBJ_SIZE = 0x60;
 
 const LIST_ABS = 0x00401e00;
 const LIST_OFF = LIST_ABS - 0x400000;
-const LIST_SIZE = 0x100; // ampio buffer per entries
+const LIST_SIZE = 0x100; // roomy buffer for entries
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -130,14 +130,14 @@ async function main(): Promise<void> {
 
   for (let i = 0; i < total; i++) {
     const objBytes = new Array(OBJ_SIZE).fill(0).map(() => rb());
-    // Obj posX/posY (0xC, 0x10) lasciati random.
+    // Obj posX/posY (0xC, 0x10) left random.
     // Obj+0x4E (list ptr) → LIST_ABS.
     writeLongBytes(objBytes, 0x4e, LIST_ABS);
 
     const listBytes = new Array(LIST_SIZE).fill(0).map(() => rb());
     const nEntries = 1 + Math.floor(rng() * 15);
     listBytes[nEntries * 4] = 0xff;
-    listBytes[nEntries * 4 + 1] = 0xff; // doppia per robustezza
+    listBytes[nEntries * 4 + 1] = 0xff; // doubled for robustness
     for (let e = 0; e < nEntries; e++) {
       if (listBytes[e * 4] === 0xff) listBytes[e * 4] = (rb() & 0x7f);
       if (listBytes[e * 4 + 1] === 0xff) listBytes[e * 4 + 1] = (rb() & 0x7f);

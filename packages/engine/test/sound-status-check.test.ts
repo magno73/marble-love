@@ -52,7 +52,7 @@ describe("soundStatusCheck (FUN_4C3E)", () => {
     expect(s.workRam[0x1f44 + 0x14]).toBe(0x23);
   });
 
-  it("ptr A0 base diversa (workRam offset free) → owner scritto in big-endian", () => {
+  it("ptr A0 different base (workRam offset free) → owner written in big-endian", () => {
     const s = emptyGameState();
     const ptr = 0x401e00;
     const r = soundStatusCheck(s, 0x00070000, ptr, false);
@@ -83,6 +83,6 @@ describe("soundStatusCheck (FUN_4C3E)", () => {
     s.workRam[0x1f44 + 0x19] = 0x01;
     const r = soundStatusCheck(s, 0x10003, 0x401f44, false);
     expect(r).toBe(0);
-    expect(s.workRam[0x1f44 + 0x14]).toBe(0); // type byte non scritto
+    expect(s.workRam[0x1f44 + 0x14]).toBe(0); // type byte not written
   });
 });

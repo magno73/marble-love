@@ -21,7 +21,7 @@
  * Suite testate:
  *   - A: count random in [1..20], ptr/tileId random
  *   - B: count = 1 (single call), corner edge
- *   - C: tileId base near 0xFFFF (wrap a 16 bit attraverso il loop)
+ *   - C: tileId base near 0xFFFF (wraps at 16 bits through the loop)
  *   - D: count = 0 / count negative (no call expected)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-1eaa-parity.ts [N]
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: tileId base near 0xFFFF (wrap a 16 bit) ────────────────
+  // ─── Suite C: tileId base near 0xFFFF (wrap at 16 bits) ────────────────
   console.log(
     `\n=== Suite C: tileId near wrap, count [3..15] — ${perSuite} cases ===`,
   );

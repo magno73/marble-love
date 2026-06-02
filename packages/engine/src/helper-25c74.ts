@@ -291,7 +291,7 @@ export function helper25C74(
   const d0 = sextB(byte56);          // sign-extend byte → 32-bit (JS number)
 
   // move.b (0x57,A2), D1b / ext.w D1w / ext.l D1
-  // NB: A2[+0x57] was just written in fase 4
+  // NB: A2[+0x57] was just written in phase 4
   const byte57new = readU8(wr, obj + 0x57);
   let d1 = sextB(byte57new);         // sign-extend byte → 32-bit
 

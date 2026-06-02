@@ -12,14 +12,14 @@
  * **Disasm 0x525C..0x5283** (40 byte):
  *
  *   move.l D2,-(SP)              ; preserve D2
- *   move.l D0,D2                 ; D2 = D0_orig (saved per fase 2)
+ *   move.l D0,D2                 ; D2 = D0_orig (saved for phase 2)
  *   moveq  #0x14,D1              ; D1 = 20
  *   mulu.w D1w,D0                ; D0 = (D0_orig & 0xFFFF) * 20  (long)
  *   subq.l #1,D0                 ; D0 = D0*20 - 1 (loop top)
  *   loop1:
  *     clr.b  (0x50,A2,D0w*1)     ; *(A2 + 0x50 + signext_w(D0w)) = 0
  *   add.l  D2,D2                 ; D2 *= 2
- *   subq.l #1,D2                 ; D2 = D2 - 1 (loop top per fase 2)
+ *   subq.l #1,D2                 ; D2 = D2 - 1 (loop top for phase 2)
  *   moveq  #6,D0                 ; D0 = 6 (first bit-arg)
  *   loop2:
  *     move.l D0,-(SP)            ; preserve D0

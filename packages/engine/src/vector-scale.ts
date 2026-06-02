@@ -67,8 +67,8 @@ function readRomWordSigned(rom: RomImage, addr: number): number {
  * Replica `FUN_00025E7C` — vector scale 2D in-place.
  *
  * @param state    GameState
- * @param rom      RomImage (per ROM table @ 0x1EEF8)
- * @param vecAddr  Indirizzo assoluto of the vettore (8 byte: x.l, y.l)
+ * @param rom      RomImage (for the ROM table @ 0x1EEF8)
+ * @param vecAddr  Absolute address of the vector (8 bytes: x.l, y.l)
  * @param mode     Mode byte (2, 3, 4, o default)
  */
 export function vectorScale(

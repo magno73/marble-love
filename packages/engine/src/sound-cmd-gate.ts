@@ -33,7 +33,6 @@
  *
  *
  * The differential test uses a constant inner stub to isolate the gating logic.
- * logica of gating.
  */
 
 /**

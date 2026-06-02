@@ -9,7 +9,7 @@
  * cache = delta non scaled.
  *
  * **Parity strategy**: no internal sub; direct replica. Compare
- * `entity[0..0x40]` (1 stride entity completa).
+ * `entity[0..0x40]` (1 full entity stride).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random (dir 0..15, state random)

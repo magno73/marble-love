@@ -1,5 +1,5 @@
 /**
- * Test formatAndRender28E00 (FUN_28E00) — smoke tests sui branches principali.
+ * Test formatAndRender28E00 (FUN_28E00) — smoke tests on the main branches.
  *
  * `cli/src/test-format-and-render-28e00-parity.ts`.
  */
@@ -22,7 +22,7 @@ function writeWorkLong(ram: Uint8Array, off: number, value: number): void {
 }
 
 describe("formatAndRender28E00 (FUN_28E00)", () => {
-  it("formatHex: writes cifre hex backward from the bufEnd letto da *0x400436, terminato da NUL", () => {
+  it("formatHex: writes hex digits backward from the bufEnd read from *0x400436, terminated by NUL", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 

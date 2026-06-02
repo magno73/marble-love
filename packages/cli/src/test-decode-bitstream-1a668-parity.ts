@@ -8,7 +8,7 @@
  * words) in an output buffer. The bitstream is read at 7/9/14-bit granularity
  * with a 2-byte sliding window; it consults 2 ROM lookup tables
  * (@0x2499A 32 word, @0x249DA 8 word). Vedi header of the file engine module
- * for the disasm completo.
+ * for the full disasm.
  *
  * Strategia parity:
  *   - Set up workRam with a zeroed output buffer @ 0x401000, a control

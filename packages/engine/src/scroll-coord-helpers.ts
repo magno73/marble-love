@@ -82,7 +82,7 @@ export function updateScrollCoords1BB50(state: GameState): void {
 /**
  * `updateScrollCoords1BB50`.
  *
- * @param entityPtr  Pointer assoluto M68k to the entity struct (workRam).
+ * @param entityPtr  Absolute M68k pointer to the entity struct (workRam).
  *                   Deve avere word X @ +0xC and word Y @ +0x10.
  */
 export function setScrollCoordsFromEntity1BB08(

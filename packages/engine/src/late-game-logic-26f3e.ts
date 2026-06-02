@@ -1,7 +1,7 @@
 /**
  * late-game-logic-26f3e.ts — replica `FUN_00026F3E` (4848 byte, 6 callers).
  *
- * Tre fasi principali:
+ * Three main phases:
  *
  *   2. **sortAdjacentObjects** 3x with stride 1/2/3 (if workRam[0x3E2]==0)
  *   3. **Setup cursors** + **entity sprite dispatch** via switch per tipo

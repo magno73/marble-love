@@ -1,6 +1,6 @@
 {
   "name": "level1_no_input",
-  "description": "Coin in, start, livello 1, nessun input dopo lo start. La biglia rotola da sola fino a perdere o cadere.",
+  "description": "Coin in, start, level 1, no input after the start. The marble rolls on its own until it loses or falls.",
   "ticks": 3600,
   "inputs": {
     "60":  { "buttons": 4 },

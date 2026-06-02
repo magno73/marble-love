@@ -161,7 +161,7 @@ export function stateSub540A(
   let a2Cur = a2 >>> 0;
   let d3w = d3 & 0xffff;
 
-  // Helper inline: read byte assoluto M68k → workRam offset.
+  // Inline helper: read absolute M68k byte → workRam offset.
   const read8 = (addr: number): number => {
     const a = addr >>> 0;
     if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return 0;

@@ -46,7 +46,7 @@ const WORK_RAM_BASE = 0x400000;
  * Replica `FUN_00004C3E` — sound command sender.
  *
  * @param d0       D0 (long, 32 bit). Bit 31..16 = "type byte" (in low 8),
- *                 bit 15..0 = parola spedita al chip.
+ *                 bit 15..0 = word sent to the chip.
  *                 also stored as the slot owner (A1 == A0 in the caller).
  *
  */

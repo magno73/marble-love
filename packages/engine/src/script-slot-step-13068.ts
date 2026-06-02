@@ -19,7 +19,7 @@
  *
  *   5. **Closeout**: if `slot[0x1e]!=1` and D2!=0, calls `FUN_13334(slotPtr)`.
  *
- * **Helper interno `FUN_132E0`** (0x132e0..0x13332 = 82 byte):
+ * **Internal helper `FUN_132E0`** (0x132e0..0x13332 = 82 bytes):
  *   Advances `slot[0x3e]` by +4, with an extra +4 when `slot[0x1e]!=0`.
  *
  * **Sub esterne**:

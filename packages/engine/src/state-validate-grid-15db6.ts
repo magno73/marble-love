@@ -79,7 +79,7 @@
  * `StateValidateGrid15DB6Subs`:
  *     callee = low byte of flagLong.)
  *
- *   - `*(long *)(structPtr + 0x6E)` → currentPtr (assoluto)
+ *   - `*(long *)(structPtr + 0x6E)` → currentPtr (absolute)
  *   - `*(long *)(structPtr + 0x0C)` → field_x
  *   - `*(long *)(structPtr + 0x10)` → field_y
  *   - `*(byte *)(currentPtr + 0)`   → cmp byte 0
@@ -91,7 +91,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta M68k. */
+/** Absolute M68k WORK RAM base. */
 const WORK_RAM_BASE = 0x00400000;
 /** Dimensione workRam (8 KB). */
 const WORK_RAM_SIZE = 0x2000;

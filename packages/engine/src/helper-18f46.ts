@@ -120,7 +120,7 @@
  *   - `FUN_00025FC2` @ 0x2615C
  *   - `FUN_00019BAA` @ 0x19CEA
  *
- *   1. If trovata la entry: `workRam[structOff]` = 0 (free-slot mark su rect).
+ *   1. If the entry is found: `workRam[structOff]` = 0 (free-slot mark on rect).
  *      of 1 (packed).
  *   3. `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo terminatore).
  *
@@ -131,7 +131,7 @@ import type { RomImage } from "./bus.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/** Base assoluta workRam M68k. */
+/** Absolute M68k workRam base. */
 const WORK_RAM_BASE = 0x00400000 as const;
 
 export const BYTE_ARRAY_ABS = 0x004003bc as const;

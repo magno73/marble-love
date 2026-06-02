@@ -126,7 +126,7 @@ import { helper1BC88 } from "./helper-1bc88.js";
 
 export const HELPER_121B8_ADDR = 0x000121b8 as const;
 
-/** Base assoluta workRam M68k. */
+/** Absolute M68k workRam base. */
 const WORK_RAM_BASE = 0x00400000 as const;
 
 const OFF_GLOBAL_X = 0x684; // 0x400684 long (obj.x snapshot)

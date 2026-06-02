@@ -29,16 +29,16 @@
  *   With everything stubbed, the binary's only side effects are direct writes
  *   in workRam:
  *     - entity[0x6D], entity[0x6E] (fasthe 2, 3)
- *     - entity[0x18] = 0 (fase 4 else-branch)
- *     - *0x400654 (byte, mode==4 fase 2)
- *     - *0x400656 (byte, mode==5 fase 2)
+ *     - entity[0x18] = 0 (phase 4 else-branch)
+ *     - *0x400654 (byte, mode==4 phase 2)
+ *     - *0x400656 (byte, mode==5 phase 2)
  *     - *0x400390 (word, cleared in phase 3)
  *
- *   Compare: entity array completo + i 5 globali above.
+ *   Compare: full entity array + the 5 globals above.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random entities (state mix), random mode
- *   B: forced count==1, entity state==2 (fase 2 path)
+ *   B: forced count==1, entity state==2 (phase 2 path)
  *   C: forced count==2, entity state∈{1,2} (all le fasi)
  *   D: edge cases (count==0, D4==1 gating, state==3 trigger)
  *
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: count==1, entity state==2 ──────────────────────────────────
-  console.log(`\n=== Suite B: count==1 state==2 (fase 2 path) — ${perSuite} cases ===`);
+  console.log(`\n=== Suite B: count==1 state==2 (phase 2 path) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const entityBytes = [makeEntity({ [0x18]: 0x02 })];

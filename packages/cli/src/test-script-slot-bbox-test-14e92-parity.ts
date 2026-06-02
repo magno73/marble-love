@@ -17,7 +17,7 @@
  *   - D: edge cases (selector boundary {0,1,2,3,5,6}, marble@(0,0,0),
  *        state in {0,1,2,5,7}).
  *
- * **Compare** (snapshot completo):
+ * **Compare** (full snapshot):
  *   - 4 slot × {byte+0x18, byte+0x1A, long+0, long+0x4, long+0x1C, long+0x20,
  *               word+0x56, long+0x58}
  *   - entity × {long+0, long+0x4, long+0xC, long+0x10, byte+0x19, byte+0x1A,

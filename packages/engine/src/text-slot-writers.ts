@@ -60,7 +60,7 @@ function writeU8Abs(state: GameState, addr: number, value: number): void {
  *   *(1,A0) = D0.b         ; slot[1] = color/byte2
  *   *(6,A0) = 0            ; slot[6] = enable flag = 0
  *
- * @param ptrAbs    Pointer assoluto M68k al text slot (workRam o ROM)
+ * @param ptrAbs    Absolute M68k pointer to the text slot (workRam or ROM)
  * @param byte1     Byte 1 (slot[0])
  * @param byte2     Byte 2 (slot[1])
  */

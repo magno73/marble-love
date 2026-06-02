@@ -21,7 +21,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a, 0x3b]);
   });
 
-  it("mode = 1 → coppia completa 0x3A + 0x3B", () => {
+  it("mode = 1 → complete pair 0x3A + 0x3B", () => {
     const s = emptyGameState();
     setMode(s, 1);
     const calls: number[] = [];
@@ -37,7 +37,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a]);
   });
 
-  it("mode = 3 → coppia completa 0x3A + 0x3B (boundary just above gate)", () => {
+  it("mode = 3 → complete pair 0x3A + 0x3B (boundary just above gate)", () => {
     const s = emptyGameState();
     setMode(s, 3);
     const calls: number[] = [];
@@ -45,7 +45,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a, 0x3b]);
   });
 
-  it("mode = 4 → coppia completa (vd. trackball ADD path)", () => {
+  it("mode = 4 → complete pair (see trackball ADD path)", () => {
     const s = emptyGameState();
     setMode(s, 4);
     const calls: number[] = [];
@@ -53,7 +53,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a, 0x3b]);
   });
 
-  it("mode = 0xFFFF → coppia completa (cmp.w is word, non sign-aware)", () => {
+  it("mode = 0xFFFF → complete pair (cmp.w is word, not sign-aware)", () => {
     const s = emptyGameState();
     setMode(s, 0xffff);
     const calls: number[] = [];
@@ -61,7 +61,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a, 0x3b]);
   });
 
-  it("mode = 0x0102 → coppia completa (high byte non-zero)", () => {
+  it("mode = 0x0102 → complete pair (high byte non-zero)", () => {
     const s = emptyGameState();
     setMode(s, 0x0102);
     const calls: number[] = [];

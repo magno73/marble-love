@@ -32,12 +32,12 @@
  *   - FUN_4DCC default: `*0x401FF8 += 1` (long-BE), wrap mod 2^32.
  *   - FUN_52A2: pure read.
  *
- * **Side effects su workRam** (path "loop" = flags non-zero al check):
+ * **Side effects on workRam** (path "loop" = flags non-zero at the check):
  *   - Watchdog: N strobe.
  *
  * FUN_4F38 (entry point of the sound/EEPROM/init state machine). In the replica
  *
- *   3. **`bne.b 0x5284`**: branch al body (loop completo, riparte da jsr 4DCC).
+ *   3. **`bne.b 0x5284`**: branch to the body (full loop, restarts from jsr 4DCC).
  *      Test su Z flag from the D0 returned da FUN_52A2: D0=0 → exit, D0=1 → loop.
  *   4. **`bra.w 0x4F38`**: tail-call (no rts).
  *

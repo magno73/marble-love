@@ -258,7 +258,7 @@ export function hiScoreDecode41c8(state: GameState, arg1: number): number {
   // Unpack 3 radix-40 digits in display order (digit0 -> +6, digit2 -> +4).
   // M68k: D2 = 2 (loop counter / write index), decremented as a word to -1.
   // Iter k (k = 2, 1, 0):
-  //   rem = packed % 40       -> digit corrente (LSB)
+  //   rem = packed % 40       -> current digit (LSB)
   //   chr = ascii(rem)
   //   *(A1 + 4 + k) = chr     -> A1+4 = 0x401F7E. k=2 -> +6, k=1 -> +5, k=0 -> +4.
   //   packed = packed / 40    -> shifts to the next digit
