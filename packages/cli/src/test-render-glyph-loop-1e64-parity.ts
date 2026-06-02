@@ -3,11 +3,11 @@
  * test-render-glyph-loop-1e64-parity.ts — differential FUN_1E64 vs
  * `renderGlyphLoop1E64`.
  *
- * avanzando `bufPtr` di 2 (`charCode ∈ [0x26, 0x2D]` signed) o 4
+ * avanzando `bufPtr` of 2 (`charCode ∈ [0x26, 0x2D]` signed) o 4
  *
- * **Strategia parity**: la replica TS NON modifica alphaRam (FUN_32BA
+ * **Strategia parity**: la replica TS NOT modifies alphaRam (FUN_32BA
  *
- *     poi step instruction-by-instruction. Ad ogni visita di PC=0x32BA
+ *     poi step instruction-by-instruction. On each visita of PC=0x32BA
  *     read from the stack `(bufPtr, charCode_long, mask_long)` (the 3 longs
  *     `BinaryCall`, then continue the step (FUN_32BA runs normally,
  *
@@ -46,7 +46,7 @@ const SENTINEL_RET = 0xcafebabe >>> 0;
 
 interface BinaryCall {
   bufPtr: number;
-  charCode: number; // word (low 16 bits del long pushato)
+  charCode: number; // word (low 16 bits of the long pushato)
   mask: number;
 }
 
@@ -74,7 +74,7 @@ function makeRng(seed: number): () => number {
  * bufPtr_long (top -> bottom). The FUN_1E64 prologue does
  * `movem.l {D4 D3 D2}, -(SP)` (12 byte), portando i 3 args a (0x10, 0x14, 0x18).
  *
- * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 al momento dell'RTS
+ * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 al momento of the RTS
  */
 function runBinary(
   cpu: CpuSession,
@@ -107,7 +107,7 @@ function runBinary(
     }
     if (pc === FUN_32BA) {
       //   SP+0  = ret addr (0x1e88)
-      //   SP+4  = bufPtr long (D4 al momento del push)
+      //   SP+4  = bufPtr long (D4 al momento of the push)
       //   SP+8  = charCode long (sext_l(D3.w))
       //   SP+12 = mask long (clr.l, = 0)
       const spNow = sys.getRegisters().sp >>> 0;
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
     charCode: number,
     count: number,
   ): boolean {
-    // confrontiamo alphaRam ma azzeriamo per non confondere repeated-runs).
+    // confrontiamo alphaRam but azzeriamo per non confondere repeated-runs).
     for (let j = 0; j < 0x1000; j++) {
       pokeMem(cpu, 0xa03000 + j, 1, 0x00);
     }
@@ -239,7 +239,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: count piccolo (1..4), charCode random low ──────────────
   console.log(
-    `\n=== renderGlyphLoop1E64 (FUN_1E64) — Suite A: count 1..4 random — ${perSuite} casi ===`,
+    `\n=== renderGlyphLoop1E64 (FUN_1E64) — Suite A: count 1..4 random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: charCode crosses the narrow boundary ───────────────────
   console.log(
-    `\n=== Suite B: charCode cross narrow boundary [0x26, 0x2D] — ${perSuite} casi ===`,
+    `\n=== Suite B: charCode cross narrow boundary [0x26, 0x2D] — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: count medio, charCode wide-only ────────────────────────
   console.log(
-    `\n=== Suite C: count 5..12, charCode wide-only — ${perSuite} casi ===`,
+    `\n=== Suite C: count 5..12, charCode wide-only — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -289,7 +289,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (count 0/1, boundary, signed-neg) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (count 0/1, boundary, signed-neg) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

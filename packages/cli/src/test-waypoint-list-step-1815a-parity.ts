@@ -11,8 +11,8 @@
  *   - `FUN_00026196` (flag-scaled magnitude dispatch) **stubbed with RTS**.
  *     TS uses `subs.fun_26196 = noop`.
  *   - Compare:
- *       * `entity[0x00..0x6F]` (0x70 byte = full entity stride, copre 0x6e)
- *       * waypoint list bytes (0x40 byte a partire dal LIST_BASE)
+ *       * `entity[0x00..0x6F]` (0x70 byte = full entity stride, covers 0x6e)
+ *       * waypoint list bytes (0x40 byte a partire from the LIST_BASE)
  *       * `*0x00400446` (long pointer)
  *       * `*0x0040075a` (word flag)
  *
@@ -44,7 +44,7 @@ const FUN_012A = 0x0000012a;
 const FUN_26196 = 0x00026196;
 
 const ENTITY_BASE = 0x00401e00;
-const ENTITY_SIZE = 0x70; // copre 0x6e + slack
+const ENTITY_SIZE = 0x70; // covers 0x6e + slack
 const LIST_BASE = 0x00401f80;
 const LIST_SIZE = 0x40;
 const GLOBAL_PTR = 0x00400446;
@@ -257,7 +257,7 @@ async function main(): Promise<void> {
   function genList(nRecords: number): number[] {
     const list = new Array(LIST_SIZE).fill(0);
     for (let i = 0; i < nRecords && i * 4 < LIST_SIZE - 4; i++) {
-      // sx non-zero: pick da [1..127] o [128..255] (negativi); evita 0.
+      // sx non-zero: pick from [1..127] or [128..255] (negative); avoids 0.
       let sx;
       do {
         sx = rb();
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== waypointListStep1815A (FUN_0001815A) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== waypointListStep1815A (FUN_0001815A) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: forced in-range ─────────────────────────────────────────
   console.log(
-    `\n=== Suite B: in-range forzato (target ≈ sx<<19) — ${perSuite} casi ===`,
+    `\n=== Suite B: in-range forzato (target ≈ sx<<19) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -318,7 +318,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced out-of-range ────────────────────────────────────
   console.log(
-    `\n=== Suite C: out-of-range forzato (target=0, sx grande) — ${perSuite} casi ===`,
+    `\n=== Suite C: out-of-range forzato (target=0, sx grande) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -349,7 +349,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ──────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

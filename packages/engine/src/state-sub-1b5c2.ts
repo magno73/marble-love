@@ -23,7 +23,7 @@
  *   move.l  ... D2           ; word address (rotIdx-like, arg)
  *   move.l  (A2), D3         ; D3 = long @ A2+0 (x)
  *
- * **Xref**: unico caller `FUN_000121b8 @ 0x12338` (UNCONDITIONAL_CALL).
+ * **Xref**: single caller `FUN_000121b8 @ 0x12338` (UNCONDITIONAL_CALL).
  *
  *
  * **Disasm 0x1B5F6..0x1B908**:
@@ -300,7 +300,7 @@ function sextB(b: number): number {
  *
  *                +4 (y long), +0xC (dest x long), +0x10 (dest y long)
  *                `btst.b #N,(A3)` per N=0..7
- *                `exg D2,A0; cmp.w (A0),D0w` (tipicamente offset rotazione)
+ *                `exg D2,A0; cmp.w (A0),D0w` (typically offset rotazione)
  * @param subs    Injection per `FUN_000158AC` (default no-op)
  */
 export function stateSub1B5C2(

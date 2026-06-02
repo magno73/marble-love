@@ -4,7 +4,7 @@
  *
  *      sign-extended to long; FUN_4C6E retries up to 256 times if the sound
  *
- * Per il differential test forziamo la convergenza:
+ * For the differential test forziamo la convergenza:
  *   - Variamo il word @ 0x004003B8 (skip flag) e il byte arg.
  *
  * Pattern coverage:
@@ -14,7 +14,7 @@
  *   pattern 3: skipFlag bytes asimmetrici (low only) → D0=0
  *   pattern >=4: full random
  *
- * cambiare in entrambi i path).
+ * cambiare in both i path).
  *
  * Uso: npx tsx packages/cli/src/test-sound-cmd-send-parity.ts [N]
  */
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== soundCmdSend (FUN_158AC) — ${n} casi ===`);
+  console.log(`\n=== soundCmdSend (FUN_158AC) — ${n} cases ===`);
 
   const rng = makeRng(0x158ac);
   let ok = 0;
@@ -100,8 +100,8 @@ async function main(): Promise<void> {
         break;
     }
 
-    // Setup workRam[0x3B8..9] = skipFlag (big-endian word) sia in unified
-    // memory (per Musashi) sia in state.workRam (per TS).
+    // Setup workRam[0x3B8..9] = skipFlag (big-endian word) both in unified
+    // memory (per Musashi) both in state.workRam (per TS).
     pokeMem(cpu, 0x004003b8, 2, skipFlag);
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
     // touched, but FUN_4C6E mailbox write-back could modify
     pokeMem(cpu, 0xf60001, 1, 0x00);
 
-    // Pulisci 0xFE0000 (mailbox sound CPU); irrilevante per il return value
+    // Pulisci 0xFE0000 (mailbox sound CPU); irrilevante for the return value
     pokeMem(cpu, 0x00fe0000, 2, 0x0000);
 
     const r = callFunction(cpu, FUN_158AC, [byteArg & 0xff]);

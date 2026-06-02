@@ -58,7 +58,7 @@ export const STUCK_CLAMP = -0x50000 >>> 0; // 0xFFFB0000 (move.l #-0x50000)
 export const STUCK_DELTA_MIN = -0x50000; // signed i32
 export const VEL_SCALE = 0x160; // muls.w #0x160
 export const DEPTH_BASE = 0x1f; // moveq #0x1F, D1
-export const MODE_5_FLOOR = 4; // clamp D1 a min 4 nel mode==5
+export const MODE_5_FLOOR = 4; // clamp D1 a min 4 in the mode==5
 
 /**
  * Callbacks invoked by this module.
@@ -200,9 +200,9 @@ export function objectStep17F66(
       const depthW = sextW(sextB(depthB) & 0xffff); // sext byte → word (signed)
       let d1 = sextW((DEPTH_BASE - depthW) & 0xffff);
 
-      // Solo nel mode == 5: clamp D1 = max(D1, 4).
+      // Solo in the mode == 5: clamp D1 = max(D1, 4).
       // cmp.w D1w, D0w with D0w = 4 -> ble = D0 <= D1 signed.
-      // Se 4 <= D1: skip. Altrimenti (D1 < 4): D1 = 4.
+      // If 4 <= D1: skip. Altrimenti (D1 < 4): D1 = 4.
       if (mode === 5) {
         if (4 > d1) {
           d1 = 4;
@@ -211,7 +211,7 @@ export function objectStep17F66(
 
       // asr.l #8; muls.w D1w; asl.l #3.
       // asr.l: shift right aritmetico 8 (signed shift in JS via i32).
-      // muls.w: low word di D0 (post-shift) × low word di D1.
+      // muls.w: low word of D0 (post-shift) × low word of D1.
       const d3sh = (d3 >> 8) | 0;
       const d2sh = (d2 >> 8) | 0;
       d3 = (Math.imul(sextW(d3sh & 0xffff), sextW(d1 & 0xffff)) << 3) | 0;

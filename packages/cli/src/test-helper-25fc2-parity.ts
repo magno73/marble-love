@@ -14,17 +14,17 @@
  *
  * **Strategia parity**:
  *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
- *      in zone fisse di work RAM (0x401F00+).
- *      di A2, e un set di sentinelle vicini.
+ *      in zone fixed of work RAM (0x401F00+).
+ *      of A2, e a set of sentinels near.
  *
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
  *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 byte = 24 byte)
- *     ogni entry: [objPtr long BE][code long BE]
+ *     each entry: [objPtr long BE][code long BE]
  *   - 0x401F2C: FUN_25BAE call count byte
  *   - 0x401F30: FUN_15884 call count byte
  *   - 0x401F34: FUN_18F46 call buffer (max 2 × 8 byte = 16 byte)
- *     ogni entry: [typeCode long BE][subIdx long BE]
+ *     each entry: [typeCode long BE][subIdx long BE]
  *   - 0x401F44: FUN_18F46 call count byte
  *
  * Uso: npx tsx packages/cli/src/test-helper-25fc2-parity.ts [N]
@@ -275,7 +275,7 @@ async function main(): Promise<void> {
   const romImage = busNs.emptyRomImage();
   romBuf.copy(Buffer.from(romImage.program.buffer), 0, 0, Math.min(romBuf.length, romImage.program.length));
 
-  console.log(`\n=== helper25FC2 (FUN_00025FC2) — ${n} casi ===`);
+  console.log(`\n=== helper25FC2 (FUN_00025FC2) — ${n} cases ===`);
   console.log(
     `  (FUN_158AC → sound-sink, FUN_15884 → count, FUN_25BAE → call-log, FUN_18F46 → call-log)`,
   );
@@ -307,14 +307,14 @@ async function main(): Promise<void> {
   const ANIM_BASE = h25fc2Ns.ANIM_BASE_ROM;     // 0x20FDE
   const OBJ_PAIR  = h25fc2Ns.OBJECT_PAIR_BASE;  // 0x400018
 
-  // Costruisce uno scenario di test randomizzato.
+  // Costruisce uno scenario of test randomizzato.
   // Variazione chiave: state (0x1A), step56 (0x56), secondary_state (0x18),
-  // anim_ptr (0x5A), frame_ctr (0x5F), fps (0x60), sub_frame_ctr (0x66), ecc.
+  // anim_ptr (0x5A), frame_ctr (0x5F), fps (0x60), sub_frame_ctr (0x66), etc.
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
     const ptr = pickPtr();
-    // per coprire la logica di word_a4
+    // to cover la logica of word_a4
     const ptrChoice = rng();
     const actualPtr =
       ptrChoice < 0.05 ? OBJ_PAIR :

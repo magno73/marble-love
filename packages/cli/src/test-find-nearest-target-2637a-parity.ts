@@ -4,16 +4,16 @@
  * findNearestTarget2637A.
  *
  * (terminata da 0xFF), filtra per byte (≡ A2[+0x1D] sign-ext), valida via
- * `*0x400472.b`) per il miglior candidato visibile.
+ * `*0x400472.b`) for the miglior candidato visibile.
  *
  * Strategia parity:
  *
  * 1. Patcha in ROM:
- *      `0x1EF1A + (*0x400394.w * 4)`): scriviamo *0x400394 = K e
+ *      `0x1EF1A + (*0x400394.w * 4)`): we write *0x400394 = K e
  *      place at `(0x1EF1A + K*4)` a long that points to our buffer
- *      di candidati (anch'esso in ROM, in zona libera).
+ *      of candidates (also in ROM, in area free).
  *
- *    CPU. Usiamo zona ROM libera (es. `0x3F000`) e iniettiamo un set
+ *    CPU. We use area ROM free (e.g. `0x3F000`) e we inject a set
  *
  *    - Generate obj with A2[+0x1D]=filter, A2[+0x32].w=objX, A2[+0x34].w=objY.
  *    - Pre-fill globals 0x400462/466/472 with sentinels.
@@ -60,7 +60,7 @@ const SCRATCH_TABLE_ROM = 0x0007ff00;
 const DISPATCH_K = 0x40;
 const DISPATCH_SLOT_ADDR = DISPATCH_TABLE_1EF1A + DISPATCH_K * 4; // = 0x1F01A
 
-// Pointer candidates (well within workRam, lascia margine per stack a 0x401F00).
+// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -122,9 +122,9 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== findNearestTarget2637A (FUN_0002637A) — ${n} casi ===`);
+  console.log(`\n=== findNearestTarget2637A (FUN_0002637A) — ${n} cases ===`);
   console.log(
-    `  (FUN_17CB8 patched → moveq #0,D0;rts; tabella candidati @ 0x${SCRATCH_TABLE_ROM.toString(16)})`,
+    `  (FUN_17CB8 patched → moveq #0,D0;rts; candidates table @ 0x${SCRATCH_TABLE_ROM.toString(16)})`,
   );
 
   const rng = makeRng(0x2637a);
@@ -179,7 +179,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, SCRATCH_TABLE_ROM + k, 1, tableBytes[k]!);
     }
     pokeMem(cpu, DISPATCH_SLOT_ADDR, 4, SCRATCH_TABLE_ROM);
-    // E patch FUN_17CB8 (per sicurezza)
+    // And patch FUN_17CB8 (for safety)
     pokeMem(cpu, FUN_17CB8, 4, 0x70004e75);
 
     // *0x400394 = DISPATCH_K (.w)
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, GLOBAL_400466, 4, g466Pre);
     pokeMem(cpu, GLOBAL_400472, 1, g472Pre);
 
-    // Random vicini globals (sentinel)
+    // Random near globals (sentinel)
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBOR_GLOBALS.length; idx++) {
       const nOff = NEIGHBOR_GLOBALS[idx]!;

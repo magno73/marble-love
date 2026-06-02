@@ -187,7 +187,7 @@
  *   adda.l  D0, A2
  *   addq.b  #1, D2
  *   cmpi.b  #10, D2
- *                                       ; tra entity diverse, intenzionale)
+ *                                       ; between entity diverse, intenzionale)
  *
  *  epilogue @ 0x19D8E:
  *   movem.l (SP)+, {D2,D3,D4,A2}
@@ -437,9 +437,9 @@ function sextWord(w: number): number {
 
 /**
  *
- * @param state GameState (modifica `state.workRam` per le entity attive +
+ * @param state GameState (modifies `state.workRam` per le entity attive +
  *              consuma RNG via `state.rng` per i path "state-branch").
- * @param subs  injection stub per le 6 sub esterne. Default tutte no-op (e
+ * @param subs  injection stub per le 6 sub esterne. Default all no-op (e
  *
  * @returns detail of the gate, the spawn-dispatch and the per-entity tick.
  */

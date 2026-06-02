@@ -10,7 +10,7 @@
  *   rts                        ; 4E75             (2 byte)
  *
  *
- * Per la TS replication: cattureremo l'arg di `soundCommand` callback
+ * Per la TS replication: cattureremo the arg of `soundCommand` callback
  * iniettato in `specialAttract`.
  *
  * Uso: npx tsx packages/cli/src/test-special-attract-parity.ts [N]
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== specialAttract (FUN_288F8) — ${n} casi ===`);
+  console.log(`\n=== specialAttract (FUN_288F8) — ${n} cases ===`);
 
   const rng = makeRng(0xa11fac7);
   let ok = 0;
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Mix di pattern per coprire tutte le 3 branch + boundary condition:
+    // Mix of pattern to cover all le 3 branch + boundary condition:
     //   pattern 0 : stage = 0x0000 (low, S=0)
     //   pattern 1 : stage = 0x000B (low, S=11, just below mid)
     //   pattern 2 : stage = 0x000C (mid, S=12, exact mid threshold)

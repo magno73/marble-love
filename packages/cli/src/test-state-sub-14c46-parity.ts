@@ -324,7 +324,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub14C46 (FUN_00014C46) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub14C46 (FUN_00014C46) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -337,7 +337,7 @@ async function main(): Promise<void> {
   // ─── Suite B: forced init path ───────────────────────────────────────
   // Override entry list: D3 == entry[0] AND D2 < entry[0] → init.
   console.log(
-    `\n=== Suite B: forced init path (D3 boundary + D2 outside) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced init path (D3 boundary + D2 outside) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -350,9 +350,9 @@ async function main(): Promise<void> {
       mode: 0,
       d2: e0 - 1, // < entry[0] → outside range
       d3: e0, // == entry[0] → boundary match
-      slotAreaPre: new Array(SLOT_AREA_BYTES).fill(0), // tutti slot free
+      slotAreaPre: new Array(SLOT_AREA_BYTES).fill(0), // all slot free
       entryListOverride: {
-        listAddr: 0x00400500, // workRam (entryPtr usato anche da slotMatchesPtr che fa argOff = ptr - 0x400000)
+        listAddr: 0x00400500, // workRam (entryPtr used also da slotMatchesPtr that fa argOff = ptr - 0x400000)
         listBytes: [
           e0,
           e1,
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced teardown path ───────────────────────────────────
   console.log(
-    `\n=== Suite C: forced teardown (slot in use, D boundary cross) — ${perSuite} casi ===`,
+    `\n=== Suite C: forced teardown (slot in use, D boundary cross) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -409,7 +409,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * test-palette-queue-parity.ts — differential testing del palette command queue.
+ * test-palette-queue-parity.ts — differential testing of the palette command queue.
  *
- * Testa 3 funzioni:
+ * Testa 3 functions:
  *   1. paletteQueuePush vs FUN_26B66 (push byte to queue)
  *   3. paletteQueueDrain vs FUN_26B88 (drain + lookup tables → palette write)
  *

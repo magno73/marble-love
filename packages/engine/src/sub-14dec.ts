@@ -2,7 +2,7 @@
  *
  * `findNearestNeighborV2` in `nearest-neighbor.ts` (variant of the V1
  * `FUN_15D10` with list ptr from `obj+0x4E`, 4-byte stride, write to `obj+0x4A`).
- * dall'inventario `docs/missing-subs-inventory.md`.
+ * dto the inventario `docs/missing-subs-inventory.md`.
  *
  *
  *   00014dec  movem.l {D6 D5 D4 D3 D2},-(SP)

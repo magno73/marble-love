@@ -79,12 +79,12 @@ async function main(): Promise<void> {
     return { ok, fail: firstFail };
   }
 
-  console.log(`\n=== shiftStringChainForward (FUN_2766) — ${n} casi ===`);
+  console.log(`\n=== shiftStringChainForward (FUN_2766) — ${n} cases ===`);
   const a = runSuite("forward", FUN_FORWARD, stringShift.shiftStringChainForward);
   console.log(`  Match: ${a.ok}/${n} = ${((a.ok/n)*100).toFixed(1)}%`);
   if (a.fail) console.log(`  First fail: ${JSON.stringify(a.fail)}`);
 
-  console.log(`\n=== shiftStringChainBackward (FUN_2818) — ${n} casi ===`);
+  console.log(`\n=== shiftStringChainBackward (FUN_2818) — ${n} cases ===`);
   const b = runSuite("backward", FUN_BACKWARD, stringShift.shiftStringChainBackward);
   console.log(`  Match: ${b.ok}/${n} = ${((b.ok/n)*100).toFixed(1)}%`);
   if (b.fail) console.log(`  First fail: ${JSON.stringify(b.fail)}`);

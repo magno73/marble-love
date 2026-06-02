@@ -14,7 +14,7 @@
  *     `state.workRam` TS.
  *   - Setta A2 = pointer random allineato 4 in `[0x400000..0x401C00]` (range
  *     chosen to avoid overlap with the status-flags long @ 0x1F5E and the
- *     dell'esecuzione e lo passiamo come `stackD0` al TS replica.
+ *     of the esecuzione e lo passiamo as `stackD0` al TS replica.
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
  *   - Lancia `callFunction(cpu, 0x520E)` e `stateSub520E(state, a2, stackD0)`.
  *
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub520E (FUN_520E) — ${n} casi ===`);
+  console.log(`\n=== stateSub520E (FUN_520E) — ${n} cases ===`);
 
   const rng = makeRng(0x520e520e);
   let ok = 0;
@@ -80,8 +80,8 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", SP_INITIAL);
 
     // A2: pointer random allineato 4 in workRam.
-    // Range sicuro: i clear toccano A2+0..A2+0x1D (30 byte). Per non
-    // sovrapporre la status-flags long @ 0x1F5E (4 byte) e la zona stack
+    // Range sicuro: i clear touch A2+0..A2+0x1D (30 byte). Per non
+    // sovrapporre la status-flags long @ 0x1F5E (4 byte) e la area stack
     // [0x1EE0..0x1F00] (32 byte), limitiamo a A2_off ≤ 0x1C00.
     // Inoltre A2_off ≥ 0 ovviamente.
     let a2: number;
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
     ssNs.stateSub520E(state, a2, stackD0);
 
     // touched = [0x1EF8..0x1EFF] (8 bytes). TS does NOT model the stack.
-    // Escludiamo [0x1EE0..0x1F00) per safety (margine extra).
+    // Escludiamo [0x1EE0..0x1F00) per safety (margin extra).
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;
     const diffOffsets: number[] = [];

@@ -123,5 +123,5 @@ export function dispatchTable1EEA0(
   }
 
   /* c8 ignore next */
-  throw new Error("dispatchTable1EEA0: loop di sicurezza superato");
+  throw new Error("dispatchTable1EEA0: safety loop exceeded");
 }

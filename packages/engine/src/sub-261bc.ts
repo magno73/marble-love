@@ -114,7 +114,7 @@
  *     RTS chain.
  *   - Else: D0 = magnitude (D2 last copy at 0x26282).
  *
- * NOTE: callers (FUN_182BA via FUN_26196) ignorano il return value — l'rts di
+ * NOTE: callers (FUN_182BA via FUN_26196) ignorano il return value — the rts of
  */
 
 import type { GameState } from "./state.js";

@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xab1f);
 
-  console.log(`\n=== timerDeltaAccumulate (FUN_43D6) — ${n} casi ===`);
+  console.log(`\n=== timerDeltaAccumulate (FUN_43D6) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

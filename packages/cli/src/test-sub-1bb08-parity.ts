@@ -32,7 +32,7 @@ const FUN_1BB08 = 0x0001bb08;
 
 const ENTITY_ABS = 0x00401d00;
 const ENTITY_OFF = ENTITY_ABS - 0x400000;
-const ENTITY_SIZE = 0x18; // copre 0xC..0x10 + un po' di trailing
+const ENTITY_SIZE = 0x18; // covers 0xC..0x10 + un po' of trailing
 
 const COMPARE_BASE = 0x00400690;
 const COMPARE_SIZE = 0x14; // 0x400690..0x4006A3
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x1bb08);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  console.log(`\n=== sub1BB08 (FUN_0001BB08) — 100 random scenarios — ${total} casi ===`);
+  console.log(`\n=== sub1BB08 (FUN_0001BB08) — 100 random scenarios — ${total} cases ===`);
 
   for (let i = 0; i < total; i++) {
     const entityBytes = new Array(ENTITY_SIZE).fill(0).map(() => rb());

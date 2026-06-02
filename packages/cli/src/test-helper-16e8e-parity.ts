@@ -4,7 +4,7 @@
  *
  * FUN_16E8E clears alpha tilemap rows from `startRow` (the low byte of the
  * long argument) up to, but not including, 0x1E. For each row r,
- * getAlphaTileAddr(col=3, row=r) returns an address, then the routine clears
+ * getAlphaTileAddr(with the=3, row=r) returns an address, then the routine clears
  * 0x24 words.
  *
  * For each case:
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
   };
   let firstFail: FailInfo | null = null;
 
-  console.log(`\n=== helper16E8E (FUN_16E8E) — ${n} casi ===`);
+  console.log(`\n=== helper16E8E (FUN_16E8E) — ${n} cases ===`);
 
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

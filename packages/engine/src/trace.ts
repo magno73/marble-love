@@ -1,7 +1,7 @@
 /**
- * trace.ts — formato JSONL del trace per differential testing.
+ * trace.ts — formato JSONL of the trace per differential testing.
  *
- *   - `oracle/mame_dumper.lua` (ground truth, ogni frame)
+ *   - `oracle/mame_dumper.lua` (ground truth, each frame)
  *   - `@marble-love/cli` (reimpl, same scenario, same ticks)
  *
  *
@@ -111,7 +111,7 @@ export function frameFromState(s: GameState): TraceFrame {
       alive: s.marble.alive ? 1 : 0,
       spriteIndex: raw(s.marble.spriteIndex),
     },
-    // dal Phase 0; non sono i veri "score/lives" semantici. Tenuti per
+    // from the Phase 0; non sono i veri "score/lives" semantici. Tenuti per
     // sides read from the same addresses.
     stats: {
       score: ((s.workRam[0x396] ?? 0) << 8) | (s.workRam[0x397] ?? 0), // u16 @ 0x400396

@@ -62,7 +62,7 @@ export interface LevelHeader {
   directTerrainPtr: number;
   /**
    * `+0x04` (long): Tile-word table pointer.
-   * Source word stream di `decodeBitstream1A668`
+   * Source word stream of `decodeBitstream1A668`
    * (`level-init-16f6c.ts:84`, `refresh-helper-13ee6.ts:245`).
    */
   tileWordTablePtr: number;
@@ -79,8 +79,8 @@ export interface LevelHeader {
   rleSourcePtr: number;
   /**
    * `+0x10` (signed word): Y scroll base / boundary anchor.
-   * Inizializza `0x40097c` (`OFF_SRTGT`). NON e' un timer (vedi
-   * `docs/level-header-format.md` per la nota sul naming
+   * Inizializza `0x40097c` (`OFF_SRTGT`). NOT e' un timer (vedi
+   * `docs/level-header-format.md` per la nota on the naming
    * `LEVEL_TIMER_OFF`).
    */
   yScrollBase: number;
@@ -131,14 +131,14 @@ export interface LevelHeader {
   binsearchEndIndex: number;
   /**
    * `+0x26` (long): Binsearch base pointer.
-   * Terrain-code lookup table. Stored a `0x40065a` dal `FUN_16EC6`
-   * (`level-dispatcher-16ec6.ts:131`), consumed dal tile-redraw
+   * Terrain-code lookup table. Stored a `0x40065a` from the `FUN_16EC6`
+   * (`level-dispatcher-16ec6.ts:131`), consumed from the tile-redraw
    * (`sub-1caba-tile-redraw.ts:376`).
    */
   binsearchBasePtr: number;
   /**
    * `+0x2A` (long): Extra-byte table pointer.
-   * Source byte stream di `decodeBitstream1A668`
+   * Source byte stream of `decodeBitstream1A668`
    * (`level-init-16f6c.ts:85`, `refresh-helper-13ee6.ts:261`).
    */
   extByteTablePtr: number;
@@ -266,7 +266,7 @@ export interface LevelPostHeaderLayout {
   /**
    * Long pointer table at `levelPtr + 0x2E`, terminated by `0xFFFF`.
    * `FUN_264AA` indexes this table using a runtime signed offset at
-   * `0x40045C`, so consumers must not treat it as simple `col 0 == entry 0`
+   * `0x40045C`, so consumers must not treat it as simple `with the 0 == entry 0`
    * in every path.
    */
   terrainRowPointers: TerrainRowPointerTable;
@@ -708,7 +708,7 @@ export function loadLevel(rom: RomImage, index: number): LevelData {
   const ptrs = readLevelPointerTable(rom);
   const startOffset = ptrs[index]!;
   // For size, use the next pointer; for L6 (last), use + 0xA00 from
-  // safety margin (tipico size).
+  // safety margin (typical size).
   const endOffset = (index < LEVEL_COUNT - 1) ? ptrs[index + 1]! : startOffset + 0xA00;
   const byteSize = endOffset - startOffset;
 
@@ -731,7 +731,7 @@ export function loadLevel(rom: RomImage, index: number): LevelData {
   return { index, romOffset: startOffset, byteSize, header, postHeader, records };
 }
 
-/** Carica tutti i 6 livelli. Comodo per smoke test. */
+/** Carica all i 6 livelli. Comodo per smoke test. */
 export function loadAllLevels(rom: RomImage): readonly LevelData[] {
   return Array.from({ length: LEVEL_COUNT }, (_, i) => loadLevel(rom, i));
 }

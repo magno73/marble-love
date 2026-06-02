@@ -57,7 +57,7 @@ export interface SlotArrayTickSubs {
  * @param state  GameState forwarded to `subs.fun_14966` for each slot.
  * @param subs   Stub injection for the JSR to `FUN_14966`.
  *
- * Side effects come from the `fun_14966` callback.
+ * Side effects as from the `fun_14966` callback.
  *
  *   slot 0 (0x401302) -> slot 1 (0x401362) -> slot 2 (0x4013C2) -> slot 3 (0x401422)
  */

@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   const r = rng(0xface);
 
-  console.log(`\n=== findFreeSlotInTable (FUN_14BCE) — ${n} casi ===`);
+  console.log(`\n=== findFreeSlotInTable (FUN_14BCE) — ${n} cases ===`);
   let ok1 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok1}/${n} = ${((ok1/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== slotMatchesPtr (FUN_14C0C) — ${n} casi ===`);
+  console.log(`\n=== slotMatchesPtr (FUN_14C0C) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
   // Variants
-  console.log(`\n=== slotMatchesPtr_4009A4 (FUN_159D8) — ${n} casi ===`);
+  console.log(`\n=== slotMatchesPtr_4009A4 (FUN_159D8) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -100,7 +100,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== findFreeSlotInTable_1EFFE (FUN_1599A) — ${n} casi ===`);
+  console.log(`\n=== findFreeSlotInTable_1EFFE (FUN_1599A) — ${n} cases ===`);
   let ok4 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -118,7 +118,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok4}/${n} = ${((ok4/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== slotMatchesPtr_401482 (FUN_1730C) — ${n} casi ===`);
+  console.log(`\n=== slotMatchesPtr_401482 (FUN_1730C) — ${n} cases ===`);
   let ok5 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok5}/${n} = ${((ok5/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== slotMatchesPtr_400A9C (FUN_12DAE) — ${n} casi ===`);
+  console.log(`\n=== slotMatchesPtr_400A9C (FUN_12DAE) — ${n} cases ===`);
   let okM = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okM}/${n} = ${((okM/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== findFirstFreeSlot_1F016 (FUN_12D6E) — ${n} casi ===`);
+  console.log(`\n=== findFirstFreeSlot_1F016 (FUN_12D6E) — ${n} cases ===`);
   let ok6 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

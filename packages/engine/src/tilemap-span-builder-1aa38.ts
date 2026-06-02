@@ -3,7 +3,7 @@
  *
  * Builds/normalizes one scratch row used by `FUN_1A444` before the final
  * `FUN_1A9CC` playfield pack. The routine walks 21 or 22 8-byte cells at the
- * supplied scratch address and writes a bsearch-derived word into each cell's
+ * supplied scratch address and writes a bsearch-derived word into each celthe s
  * first slot.
  */
 

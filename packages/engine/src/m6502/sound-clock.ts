@@ -1,5 +1,5 @@
 /**
- * sound-clock.ts — Cross-clock-domain accumulator per il sound subsystem.
+ * sound-clock.ts — Cross-clock-domain accumulator for the sound subsystem.
  *
  * Atari System 1 hardware:
  *   - 6502 sound CPU: 14.318181 MHz / 8 = 1.789772625 MHz
@@ -16,7 +16,7 @@
  * in 6502 cycles (1.789 MHz). The chip advances the 6502 and derived sub-domains
  * per i chip audio (Phase 5-6 V3) via fractional accumulator.
  *
- * Pattern mirror di `m68k/clock.ts` esistente nel main worktree.
+ * Pattern mirror of `m68k/clock.ts` esistente in the main worktree.
  */
 
 /** Sound CPU cycles per video frame, rounded to the nearest whole 6502 cycle. */

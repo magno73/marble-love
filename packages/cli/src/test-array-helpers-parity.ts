@@ -2,7 +2,7 @@
 /**
  *
  * Per N (dest, start, count) random:
- *   1. Reset 256 byte di scratch in workRam @ 0x401E00
+ *   1. Reset 256 byte of scratch in workRam @ 0x401E00
  *   2. callFunction(0x1E3E, [dest, start, count])  // 3 args: long, word, long
  *   3. fillIncrementingU16(state, dest, start, count)
  *
@@ -15,7 +15,7 @@
  *   arg3 (long) @ SP+18..21
  *
  * Wait — 0x12 = 18, 0x14 = 20. SP+12=arg1.l, SP+18=arg2.w, SP+20=arg3.l.
- * Total: 10 byte di args. Push order RTL: count(4), start(2), dest(4).
+ * Total: 10 byte of args. Push order RTL: count(4), start(2), dest(4).
  *
  */
 
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== fillIncrementingU16 (FUN_1E3E) — ${n} casi ===`);
+  console.log(`\n=== fillIncrementingU16 (FUN_1E3E) — ${n} cases ===`);
 
   const rng = makeRng(0xbeef);
   let ok = 0;
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
   const SCRATCH_ADDR = 0x401d00;
   const SCRATCH_SIZE = 0x100;
 
-  /** Generic call helper per funzioni a 3 long args (cdecl 68k). */
+  /** Generic call helper per functions a 3 long args (cdecl 68k). */
   function call3LongArgs(addr: number, a1: number, a2: number, a3: number): void {
     const sys = cpu.system;
     let sp = sys.getRegisters().sp;
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
   }
 
   // ─── initStructHeader (FUN_255A) ─────────────────────────────────────
-  console.log(`\n=== initStructHeader (FUN_255A) — ${n} casi ===`);
+  console.log(`\n=== initStructHeader (FUN_255A) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okClear ? 1 : 0}/1 = ${okClear ? "100.0" : "0.0"}%`);
 
   // ─── swapLongPair (FUN_12886) ────────────────────────────────────────
-  console.log(`\n=== swapLongPair (FUN_12886) — ${n} casi ===`);
+  console.log(`\n=== swapLongPair (FUN_12886) — ${n} cases ===`);
   let okSwap = 0;
   let firstFailSwap: { ptr: number; offset: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {

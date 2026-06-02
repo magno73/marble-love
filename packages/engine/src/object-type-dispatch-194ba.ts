@@ -53,7 +53,7 @@
  *   rts
  *
  * **Side effects**:
- *   - Solo case 2 modifica `state.workRam` direttamente (4 byte BE @
+ *   - Solo case 2 modifies `state.workRam` direttamente (4 byte BE @
  *     `obj+0x1C..0x1F`).
  *   - Case 0/1 are delegated entirely to JSRs (no-op if subs are absent).
  *
@@ -82,14 +82,14 @@ export const CALLEE_FUN_1953E = 0x0001953e as const;
 export const FN_PTR_KIND2_SUB7 = 0x00021f8a as const;
 /** Long pointer per `obj[0x25] == 8` (case 2). */
 export const FN_PTR_KIND2_SUB8 = 0x00021a62 as const;
-/** Long pointer di default per case 2 (sub-type non 7 e non 8). */
+/** Long pointer of default per case 2 (sub-type non 7 e non 8). */
 export const FN_PTR_KIND2_DEFAULT = 0x00021efe as const;
 
 /**
  * Stub injection per le 3 JSR esterne (case 0 e 1).
  *
  *
- * Default: tutte no-op (matching `rts` patch nel parity test).
+ * Default: all no-op (matching `rts` patch in the parity test).
  */
 export interface ObjectTypeDispatch194BASubs {
   fun_1960e?: (objAddr: number, state: GameState) => void;
@@ -100,7 +100,7 @@ export interface ObjectTypeDispatch194BASubs {
   fun_1953e?: (objAddr: number, state: GameState) => void;
 }
 
-/** Descrittore del branch eseguito (per inspection/test). */
+/** Descrittore of the branch eseguito (per inspection/test). */
 export type DispatchBranch =
   | "skip"
   | "case0"    // kind == 0 → fun_1960e + fun_1953e

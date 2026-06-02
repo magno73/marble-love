@@ -5,7 +5,7 @@
  *
  * FUN_000186AC (368 byte): "mode-3 entity-scan + slot-table init/teardown".
  * 0xE2; based on the sentinel `*0x400760` and the `hasArmed` flag, runs init
- * (rng-driven popolamento di 0x24 entry × 0x10 byte @ 0x401650), teardown
+ * (rng-driven popolamento of 0x24 entry × 0x10 byte @ 0x401650), teardown
  * (clear 0x24 entries + call FUN_18F46 for entries with entry[2..3]==0xFFFF),
  * o no-op.
  *
@@ -23,9 +23,9 @@
  *       * `*0x4003A6` (RNG seed) post-call
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random everything (mix di mode, sentinel, hasArmed)
+ *   - A: random everything (mix of mode, sentinel, hasArmed)
  *   - B: forced mode==3 + sentinel==0 + hasArmed (init path)
- *   - C: forced mode==3 + sentinel==1 + !hasArmed (teardown path; mix di
+ *   - C: forced mode==3 + sentinel==1 + !hasArmed (teardown path; mix of
  *        entry[2..3] = 0xFFFF / non-FFFF)
  *   - D: edge cases (mode != 3, count = 0, sentinel saturation)
  *
@@ -71,8 +71,8 @@ const SLOT_TABLE_BYTES = SLOT_ENTRY_COUNT * SLOT_ENTRY_STRIDE; // 576
 
 /**
  * Patch JSR-stub:
- *   - FUN_1BB28 → RTS per neutralizzare entry-init callback.
- *   - FUN_18F46 → RTS per neutralizzare teardown callback.
+ *   - FUN_1BB28 → RTS per neutralize entry-init callback.
+ *   - FUN_18F46 → RTS per neutralize teardown callback.
  *   FUN_13A98 (RNG) lasciato live.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -179,7 +179,7 @@ async function main(): Promise<void> {
 
   function setupCase(input: CaseInput): void {
     // word @ 0x400394 (game_mode) e 0x400396 (count) per count >= 4 (obj4
-    // copre 0x400018+4*0xE2 = 0x4003A0..0x400481 → include count word e
+    // covers 0x400018+4*0xE2 = 0x4003A0..0x400481 → include count word e
     // RNG seed @ 0x4003A6). To avoid setup collisions, write
 
     // ── BINARY setup ──────────────────────────────────────────────────
@@ -311,7 +311,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub186AC (FUN_000186AC) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub186AC (FUN_000186AC) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -323,7 +323,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: mode==3 + sentinel==0 + hasArmed (init path) ───────────
   console.log(
-    `\n=== Suite B: forced init path — ${perSuite} casi ===`,
+    `\n=== Suite B: forced init path — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: mode==3 + sentinel!=0 + !hasArmed (teardown path) ──────
   console.log(
-    `\n=== Suite C: forced teardown path — ${perSuite} casi ===`,
+    `\n=== Suite C: forced teardown path — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (mode != 3 / count=0 / sentinel saturation) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (mode != 3 / count=0 / sentinel saturation) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -393,7 +393,7 @@ async function main(): Promise<void> {
         input.objSubBytes[0] = 4;
       }
     } else {
-      // sentinel==0, hasArmed=false (entrambi trigger no-op)
+      // sentinel==0, hasArmed=false (both trigger no-op)
       input = makeRandomInput(3, 0, 0);
     }
     if (runOneCase("D", i, input)) okD++;

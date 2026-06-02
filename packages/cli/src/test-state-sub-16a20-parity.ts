@@ -34,12 +34,12 @@
  *     - *0x400656 (byte, mode==5 fase 2)
  *     - *0x400390 (word, cleared in phase 3)
  *
- *   Compare: entity array completo + i 5 globali sopra.
+ *   Compare: entity array completo + i 5 globali above.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random entities (state mix), random mode
  *   B: forced count==1, entity state==2 (fase 2 path)
- *   C: forced count==2, entity state∈{1,2} (tutte le fasi)
+ *   C: forced count==2, entity state∈{1,2} (all le fasi)
  *   D: edge cases (count==0, D4==1 gating, state==3 trigger)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-16a20-parity.ts [N]
@@ -287,7 +287,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: random ──────────────────────────────────────────────────────
-  console.log(`\n=== stateSub16A20 — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub16A20 — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const count = 1 + (Math.floor(rng() * MAX_COUNT));
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: count==1, entity state==2 ──────────────────────────────────
-  console.log(`\n=== Suite B: count==1 state==2 (fase 2 path) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: count==1 state==2 (fase 2 path) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const entityBytes = [makeEntity({ [0x18]: 0x02 })];
@@ -320,7 +320,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: count==2, mixed state==1/2 ─────────────────────────────────
-  console.log(`\n=== Suite C: count==2, state∈{1,2} (all phases) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: count==2, state∈{1,2} (all phases) — ${perSuite} cases ===`);
   let okC = 0;
   const statesC = [0x01, 0x02, 0x03];
   for (let i = 0; i < perSuite; i++) {
@@ -342,7 +342,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases ──────────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases (count==0, D4 gating, state==3) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases (count==0, D4 gating, state==3) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     let count: number;

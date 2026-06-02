@@ -23,7 +23,7 @@
  *
  * `slapsticBuf` mirrors that region, using offsets relative to `bufferBase`.
  *
- *      es. D0w=0x4000 → 0x8000 (overflow non in low word).
+ *      e.g. D0w=0x4000 → 0x8000 (overflow non in low word).
  *      0xFFFF8000 = -32768.
  *
  * `cli/src/test-slapstic-table-store-parity.ts` (500/500 cases).

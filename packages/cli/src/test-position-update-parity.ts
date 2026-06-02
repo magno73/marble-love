@@ -2,7 +2,7 @@
 /**
  * test-position-update-parity.ts — differential FUN_1706C vs positionUpdate.
  *
- * 452 byte pure leaf, 0 jsr. Differential test su 8 byte di output (x, y long).
+ * 452 byte pure leaf, 0 jsr. Differential test su 8 byte of output (x, y long).
  *
  * Randomized setup per case:
  *   - Struct 8 byte (x, y) random
@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== positionUpdate (FUN_1706C) — ${n} casi ===`);
+  console.log(`\n=== positionUpdate (FUN_1706C) — ${n} cases ===`);
 
   const rng = makeRng(0xface);
   const STRUCT_ADDR = 0x00401d00;

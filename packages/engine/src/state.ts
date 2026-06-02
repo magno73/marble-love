@@ -1,5 +1,5 @@
 /**
- * state.ts — root del game state. Layout pensato per **rispecchiare** il game
+ * state.ts — root of the game state. Layout pensato per **rispecchiare** il game
  * `trace_reimpl.jsonl`.
  *
  * the ESLint rule fails. Use wrap.ts.
@@ -22,7 +22,7 @@ export interface Vec3_i32 {
   z: u32;
 }
 
-// ─── Marble (la biglia del giocatore) ─────────────────────────────────────
+// ─── Marble (la biglia of the giocatore) ─────────────────────────────────────
 
 export interface Marble {
   pos: Vec3_i32;

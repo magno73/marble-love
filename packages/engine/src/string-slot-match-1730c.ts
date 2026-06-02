@@ -23,7 +23,7 @@
  *   ; epilog:
  *   0001733c   move.b  D2b, D0b
  *   0001733e   ext.w   D0w
- *   00017340   ext.l   D0                     ; D0 = sign-extend di D2.b (0 o 1)
+ *   00017340   ext.l   D0                     ; D0 = sign-extend of D2.b (0 o 1)
  *   00017342   move.l  (SP)+, D2              ; restore D2
  *   00017344   rts
  *
@@ -44,7 +44,7 @@ export const SLOT_BASE_ADDR = 0x401482 as const;
 export const SLOT_STRIDE = 0x42 as const;
 /** Number of slots iterated by the loop (`cmpi.b #0x7, D1b`). */
 export const SLOT_COUNT = 7 as const;
-/** Offset del flag "active" within slot (`tst.b (0x18, A1)`). */
+/** Offset of the flag "active" within slot (`tst.b (0x18, A1)`). */
 export const SLOT_ACTIVE_FLAG_OFF = 0x18 as const;
 export const SLOT_ID_LONG_OFF = 0x30 as const;
 export const ARG_ID_LONG_OFF = 0x2 as const;
@@ -57,7 +57,7 @@ const WORK_RAM_BASE = 0x400000;
 export type StringSlotMatch1730CSubs = Record<string, never>;
 
 /**
- * Replica `move.l (off, Ax), Dx` del 68k (BE memory).
+ * Replica `move.l (off, Ax), Dx` of the 68k (BE memory).
  */
 function readU32BE(state: GameState, off: number): number {
   return (

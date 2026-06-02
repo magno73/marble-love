@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== soundStatusCheck (FUN_4C3E) — ${n} casi ===`);
+  console.log(`\n=== soundStatusCheck (FUN_4C3E) — ${n} cases ===`);
 
   const rng = makeRng(0xc0ffee);
   let ok = 0;
@@ -69,8 +69,8 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Mix patterns to cover every branch:
-    //   pattern 2 : pending=0, slot occupato → fail (slot)
-    //   pattern 3 : pending=1, slot occupato → fail (entrambi)
+    //   pattern 2 : pending=0, slot occupied → fail (slot)
+    //   pattern 3 : pending=1, slot occupied → fail (both)
     //   pattern >=4: full random
     const pattern = i < 4 ? i : Math.floor(rng() * 4) + 4;
     const pending = pattern === 0 || pattern === 2 ? 0 : pattern === 1 || pattern === 3 ? 0x80 : (rng() < 0.5 ? 0x80 : 0);
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
       state.workRam[offBase + 0x14 + k] = 0;
     }
     // Pre-fill type byte with a sentinel (0xAA) to verify that the path
-    // "fail" NON lo modifichi
+    // "fail" NOT lo modifichi
     const sentinelType = 0xaa;
     pokeMem(cpu, a0 + 0x14, 1, sentinelType);
     state.workRam[offBase + 0x14] = sentinelType;

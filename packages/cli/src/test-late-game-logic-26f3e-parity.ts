@@ -6,7 +6,7 @@
  *     workRam noti (da ROM lookup table).
  *   - Randomize the contents of entity structs (rect buffers in workRam).
  *
- * **Scope**: copre phase 1 (bufferFill), phase 3 (cursor setup), phase 4
+ * **Scope**: covers phase 1 (bufferFill), phase 3 (cursor setup), phase 4
  *
  * Uso: npx tsx packages/cli/src/test-late-game-logic-26f3e-parity.ts [N]
  *      default N=500

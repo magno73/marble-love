@@ -254,7 +254,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: kind ∈ [0..6] random ─────────────────────────────────────
   console.log(
-    `\n=== stateDispatch15460 (FUN_15460) — Suite A: kind ∈ [0..6] — ${perSuite} casi ===`,
+    `\n=== stateDispatch15460 (FUN_15460) — Suite A: kind ∈ [0..6] — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -269,7 +269,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: kind ∈ [7..0x7F] (out-of-range positivo) ──────────────────
   console.log(
-    `\n=== Suite B: kind ∈ [7..0x7F] (OOR signed≥0) — ${perSuite} casi ===`,
+    `\n=== Suite B: kind ∈ [7..0x7F] (OOR signed≥0) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -287,7 +287,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: kind ∈ [0x80..0xFF] (out-of-range negativo signed) ───────
   console.log(
-    `\n=== Suite C: kind ∈ [0x80..0xFF] (OOR signed<0 → blt) — ${perSuite} casi ===`,
+    `\n=== Suite C: kind ∈ [0x80..0xFF] (OOR signed<0 → blt) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -303,14 +303,14 @@ async function main(): Promise<void> {
   // ─── Suite D: focus case 4 (velocity magnitude) ────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: kind=4 + (v1C, v20) pathologici — ${sizeD} casi ===`,
+    `\n=== Suite D: kind=4 + (v1C, v20) pathologici — ${sizeD} cases ===`,
   );
   const pathologicalPairs = [
     [0x00000064, 0xffffffce], // |100| > |50|, D1 > 0  → X_POS
     [0xffffff9c, 0x00000032], // |100| > |50|, D1 < 0  → X_NEG
     [0x00000005, 0x000000c8], // |5| < |200|, D0 > 0   → Y_POS
     [0x00000005, 0xffffff38], // |5| < |200|, D0 < 0   → Y_NEG
-    [0x00000000, 0x00000000], // entrambi 0 → Y axis (D3<=D2), D0=0 (≤0) → Y_NEG
+    [0x00000000, 0x00000000], // both 0 → Y axis (D3<=D2), D0=0 (≤0) → Y_NEG
     [0x80000000, 0x80000000],
     [0x7fffffff, 0x80000001], // |D1|=max, |D0|=max-1 → X_POS
     [0x00000001, 0x00000001], // |D1|=|D0|, both pos  → Y axis (≤), D0>0 → Y_POS

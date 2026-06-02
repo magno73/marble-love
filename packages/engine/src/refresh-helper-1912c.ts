@@ -222,7 +222,7 @@ export const SUB_COUNTER_LIMIT = 4 as const;
 // ─── Sub injection ───────────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 2 JSR esterne. Default: tutte no-op (matching del
+ * Stub injection per le 2 JSR esterne. Default: all no-op (matching of the
  */
 export interface RefreshHelper1912CSubs {
   /**
@@ -245,7 +245,7 @@ export type EntityBranch =
   | "not7_term"         // state!=7 AND [ptr]==0xFFFF_FFFF
   | "not7_cont";        // state!=7 AND [ptr]!=0xFFFF_FFFF
 
-/** Dettaglio del tick di una singola entity. */
+/** Dettaglio of the tick of una singola entity. */
 export interface EntityTickRecord {
   /** Index entity (0..8). */
   slot: number;
@@ -336,9 +336,9 @@ function sextByte(b: number): number {
 /**
  *
  * @param state  GameState. Modifica `state.workRam` per le entity attive.
- * @param subs   Stub injection per le 2 JSR esterne. Default: tutte no-op.
+ * @param subs   Stub injection per le 2 JSR esterne. Default: all no-op.
  *
- * @returns dettaglio del gate, del slot-scan flag e del per-entity tick.
+ * @returns dettaglio of the gate, of the slot-scan flag e of the per-entity tick.
  */
 export function refreshHelper1912C(
   state: GameState,

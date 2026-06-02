@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   }
 
   // Test FUN_2CD4
-  console.log(`\n=== stepRenderState3 (FUN_2CD4) — ${n} casi ===`);
+  console.log(`\n=== stepRenderState3 (FUN_2CD4) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   // Test FUN_2DA0
-  console.log(`\n=== stepClearState4 (FUN_2DA0) — ${n} casi ===`);
+  console.log(`\n=== stepClearState4 (FUN_2DA0) — ${n} cases ===`);
   let ok4 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

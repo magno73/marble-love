@@ -170,8 +170,8 @@ export function marbleCellDispatch19E42(
   // ─── Step 4: derive cellX / cellY (asr.w #3 = signed shift right) ─────
   //   cellX_word = sext16(entity.x) >> 3
   //   cellY_word = sext16(entity.y) >> 3
-  //   cellX = low byte di cellX_word
-  //   cellY = low byte di cellY_word
+  //   cellX = low byte of cellX_word
+  //   cellY = low byte of cellY_word
   const cellXWord = xS >> CELL_SHIFT;
   const cellYWord = yS >> CELL_SHIFT;
   const cellX = cellXWord & 0xff;

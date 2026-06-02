@@ -9,7 +9,7 @@
  *
  *   movem.l D2-D3, -(SP)            ; save D2/D3
  *   move.l  (12,SP),D2              ; D2 = arg1Long (long)
- *   move.w  (18,SP),D1              ; D1.w = low word di arg2Long (BE)
+ *   move.w  (18,SP),D1              ; D1.w = low word of arg2Long (BE)
  *   clr.w   D3w                     ; D3 = 0 (loop counter [0..3])
  * loop:
  *   move.w  D3,D0

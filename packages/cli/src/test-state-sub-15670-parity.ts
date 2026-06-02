@@ -58,7 +58,7 @@ const FUN_15460 = 0x00015460;
 /** Ring buffer per fun_15460 args. */
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
-/** Slot per la return value di FUN_15FE6. */
+/** Slot per la return value of FUN_15FE6. */
 const FUN15FE6_RET = 0x00401e40;
 
 const RING_SIZE_BYTES = 64;
@@ -68,7 +68,7 @@ const FUN15FE6_RET_OFF = FUN15FE6_RET - 0x400000;
 
 const ARG_BASE = 0x00401a00;
 
-/** Patch FUN_15FE6 col thunk-loader (8 byte). */
+/** Patch FUN_15FE6 with the thunk-loader (8 byte). */
 function patchFun15FE6(cpu: CpuSession): void {
   const bytes = [
     0x20, 0x39, 0x00, 0x40, 0x1e, 0x40, // move.l 0x00401E40.l, D0
@@ -79,7 +79,7 @@ function patchFun15FE6(cpu: CpuSession): void {
   }
 }
 
-/** Patch FUN_15460 col thunk-logger (22 byte). */
+/** Patch FUN_15460 with the thunk-logger (22 byte). */
 function patchFun15460(cpu: CpuSession): void {
   const bytes = [
     0x20, 0x7c, 0x00, 0x40, 0x1e, 0x00,  // movea.l #0x00401E00, A0
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
 
   // ── Suite A: count = 0 ────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub15670 (FUN_15670) — Suite A: count == 0 — ${perSuite} casi ===`,
+    `\n=== stateSub15670 (FUN_15670) — Suite A: count == 0 — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -355,7 +355,7 @@ async function main(): Promise<void> {
 
   // ── Suite B: count == 1, candidato in range trigger ───────────────────
   console.log(
-    `\n=== Suite B: count==1, candidato → trigger (0x180<dist<0x280) — ${perSuite} casi ===`,
+    `\n=== Suite B: count==1, candidato → trigger (0x180<dist<0x280) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -401,7 +401,7 @@ async function main(): Promise<void> {
 
   // ── Suite C: count == 1, BLOCCATO da collision ────────────────────────
   console.log(
-    `\n=== Suite C: count==1, collision marble-slot → no decrement — ${perSuite} casi ===`,
+    `\n=== Suite C: count==1, collision marble-slot → no decrement — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -446,10 +446,10 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: count == 2, entrambi candidati validi → fun_15fe6 ────────
+  // ── Suite D: count == 2, both candidates validi → fun_15fe6 ────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: count==2, entrambi candidati → fun_15fe6 — ${sizeD} casi ===`,
+    `\n=== Suite D: count==2, both candidates → fun_15fe6 — ${sizeD} cases ===`,
   );
   const pathologicalRets = [
     0x00000000, 0xffffffff, 0x80000000, 0x7fffffff, 0x00000001, 0xdeadbeef,

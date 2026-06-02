@@ -112,7 +112,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== stateSub2818 (FUN_2818) — ${n} casi ===`);
+  console.log(`\n=== stateSub2818 (FUN_2818) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

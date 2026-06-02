@@ -18,7 +18,7 @@
  * **Coverage** (500 cases, 4 suites x 125):
  *   - A: rotation = 0, x/y random, attr random, orMask=0
  *   - B: rotation in [1..3], x/y random, attr/orMask random
- *   - C: x/y negativi (sign-ext, byte range 0x80..0xFF), rotation=0
+ *   - C: x/y negative (sign-ext, byte range 0x80..0xFF), rotation=0
  *   - D: rotation=0, test shift count edge: x=±1 al boundary, orMask != 0
  *
  * **Setup**:
@@ -104,7 +104,7 @@ function compareState(
   binD0: number,
   tsD0: number,
 ): Diff | null {
-  // Confronta D0
+  // Compare D0
   if ((binD0 >>> 0) !== (tsD0 >>> 0)) {
     return { field: "D0", bin: binD0 >>> 0, ts: tsD0 >>> 0 };
   }
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: rotation = 0, x/y random byte, attr random word, orMask=0 ──
   console.log(
-    `\n=== helper3784 (FUN_3784) — Suite A: rot=0, random x/y/attr — ${perSuite} casi ===`,
+    `\n=== helper3784 (FUN_3784) — Suite A: rot=0, random x/y/attr — ${perSuite} cases ===`,
   );
   const okA = runSuite("A", perSuite, () => ({
     rotation: 0,
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: rotation in [1..3], x/y/attr/orMask random ─────────────────
   console.log(
-    `\n=== Suite B: rotation in [1..3], random all — ${perSuite} casi ===`,
+    `\n=== Suite B: rotation in [1..3], random all — ${perSuite} cases ===`,
   );
   const okB = runSuite("B", perSuite, () => ({
     rotation: 1 + Math.floor(rng() * 3), // 1..3
@@ -240,11 +240,11 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: x/y negativi (sign-ext), rotation=0 ────────────────────────
-  // In produzione y = sign-ext di word (D6w), x = sign-ext di long sum.
-  // I byte negativi (0x80..0xFF → sext → -128..−1) sono comuni.
+  // ─── Suite C: x/y negative (sign-ext), rotation=0 ────────────────────────
+  // In produzione y = sign-ext of word (D6w), x = sign-ext of long sum.
+  // I byte negative (0x80..0xFF → sext → -128..−1) sono comuni.
   console.log(
-    `\n=== Suite C: x/y negativi (byte 0x80..0xFF), rotation=0 — ${perSuite} casi ===`,
+    `\n=== Suite C: x/y negative (byte 0x80..0xFF), rotation=0 — ${perSuite} cases ===`,
   );
   const okC = runSuite("C", perSuite, () => ({
     rotation: 0,
@@ -259,10 +259,10 @@ async function main(): Promise<void> {
   );
   totalOk += okC;
 
-  // ─── Suite D: misto — orMask != 0, vari rotation, edge x/y ───────────────
+  // ─── Suite D: misto — orMask != 0, various rotation, edge x/y ───────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: orMask != 0, rotation misto, edge x/y — ${sizeD} casi ===`,
+    `\n=== Suite D: orMask != 0, rotation misto, edge x/y — ${sizeD} cases ===`,
   );
   const okD = runSuite("D", sizeD, () => {
     const rotation = Math.floor(rng() * 4); // 0..3

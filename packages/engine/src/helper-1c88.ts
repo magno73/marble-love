@@ -42,7 +42,7 @@
  *
  * **Caller** (10):
  *   0x1022, 0x1268, 0x1384, 0x14BC, 0x161A, 0x1EF2, 0x2182, 0x222E, 0x3B30
- *   (+ 0x1122 per un totale di 10 JSR $1C88)
+ *   (+ 0x1122 per un totale of 10 JSR $1C88)
  *
  *
  */

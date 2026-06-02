@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xdada);
 
-  console.log(`\n=== findNearestNeighbor (FUN_15D10) — ${n} casi ===`);
+  console.log(`\n=== findNearestNeighbor (FUN_15D10) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
 
   // V2: FUN_14DEC
-  console.log(`\n=== findNearestNeighborV2 (FUN_14DEC) — ${n} casi ===`);
+  console.log(`\n=== findNearestNeighborV2 (FUN_14DEC) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

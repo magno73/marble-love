@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okPL ? 1 : 0}/1`);
 
   // FUN_10456: gameStateInit2Objs
-  console.log(`\n=== gameStateInit2Objs (FUN_10456) — 10 casi ===`);
+  console.log(`\n=== gameStateInit2Objs (FUN_10456) — 10 cases ===`);
   let okGI2 = 0;
   for (let i = 0; i < 10; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okBS ? 1 : 0}/1`);
 
   // FUN_26B2A: palette init enemy
-  console.log(`\n=== paletteInitEnemy (FUN_26B2A) — 5 casi ===`);
+  console.log(`\n=== paletteInitEnemy (FUN_26B2A) — 5 cases ===`);
   let okPE = 0;
   for (let i = 0; i < 5; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okGI ? 1 : 0}/1`);
 
   // FUN_1286E
-  console.log(`\n=== negateXYSwap (FUN_1286E) — ${n} casi ===`);
+  console.log(`\n=== negateXYSwap (FUN_1286E) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

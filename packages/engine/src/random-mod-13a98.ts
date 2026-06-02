@@ -33,7 +33,7 @@
  *   rts                           ; return D0.w
  *
  * Semantica:
- *   N = numero di shift-right per portare `limit` a zero (= bit_length(limit))
+ *   N = number of shift-right per portare `limit` a zero (= bit_length(limit))
  *   The LFSR advances by N steps.
  *   result = newSeed & mask
  *   Riduzione: while (result >= limit) result -= limit  ← bgt = "if D1>D0 skip"
@@ -69,9 +69,9 @@ export function randomMod13A98(state: GameState, maxExclusive: number): number {
   while (d1 !== 0) {
     // LFSR step (rngStepOnce)
     seed = (rngStepOnce(as_u16(seed)) as unknown as number) & 0xffff;
-    // rol.l #1 di d3
+    // rol.l #1 of d3
     d3 = (((d3 << 1) | (d3 >>> 31)) >>> 0);
-    // lsr.w #1 di d1
+    // lsr.w #1 of d1
     d1 = (d1 >>> 1) & 0xffff;
   }
 
@@ -79,7 +79,7 @@ export function randomMod13A98(state: GameState, maxExclusive: number): number {
   state.rng.seed = as_u32(seed);
   state.rng.callsThisFrame = as_u32((state.rng.callsThisFrame as unknown as number) + 1);
 
-  // Maschera: D3.lo = (1 << N) - 1  (after N ROL.L #1 di 0xFFFF0000)
+  // Maschera: D3.lo = (1 << N) - 1  (after N ROL.L #1 of 0xFFFF0000)
   const mask = d3 & 0xffff;
   let result = seed & mask;
 

@@ -3,13 +3,13 @@
  * test-string-viewport-hit-175c8-parity.ts —
  * differential FUN_175C8 vs `stringViewportHit175C8`.
  *
- * `FUN_000175C8` (266 byte) prende un long arg (objPtr), e:
+ * `FUN_000175C8` (266 byte) takes un long arg (objPtr), e:
  *   2. Else: itera 7 string-slot @ 0x401482 (stride 0x42); per slot armata
  *      (slot[+0x18] != 0), risolve un bbox via deref doppio
  *      (slot[+0x3a] → ptrPtr → bboxPtr; sentinel 0xFFFFFFFF → default
  *      (-2,-2,12,12)) and tests overlap with a viewport word
  *      (marble +/- 3 words, marble +/- 3 words) around coords @ 0x400690/692.
- *      Sul **primo** overlap:
+ *      Sul **first** overlap:
  *        - obj[+0x58] = slot[+0x19]
  *        - slot[+0x25] = 0x1c
  *
@@ -60,16 +60,16 @@ const SLOT_BASE = 0x00401482;
 const SLOT_STRIDE = 0x42;
 const SLOT_COUNT = 7;
 
-// Indirizzi di scratch:
+// Indirizzi of scratch:
 const OBJ_ADDR = 0x00401c00;       // obj base (almeno 0x60 byte)
 const PTR_PTR_BASE = 0x00401d00;   // 7 × 4 byte: ptrPtr storage per slot
-const BBOX_BASE = 0x00401e00;      // 7 × 8 byte: bbox struct se non sentinel
+const BBOX_BASE = 0x00401e00;      // 7 × 8 byte: bbox struct if non sentinel
 
 const BBOX_SENTINEL = 0xffffffff >>> 0;
 
 /**
  * Patch JSR-stubs:
- *   - FUN_25BAE → RTS (0x4E75) per neutralizzare entity state-transition.
+ *   - FUN_25BAE → RTS (0x4E75) per neutralize entity state-transition.
  *     Caller pushes 2 longs (objPtr, 9). NOP-RTS stub pops only PC, leaving
  *     args on the stack; FUN_175C8's caller clears them with
  *     `lea (0xc, SP), SP` (12 byte = 3 long).
@@ -90,7 +90,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Capture intero workRam come Uint8Array. */
+/** Capture intero workRam as Uint8Array. */
 function captureWorkRam(cpu: CpuSession): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -184,9 +184,9 @@ function buildPreState(input: CaseInput, randomTail: () => number): Uint8Array {
   return wr;
 }
 
-/** Compare workRam, escludendo la zona stack scratch [0x1E80..0x2000).
+/** Compare workRam, escludendo la area stack scratch [0x1E80..0x2000).
  *
- *  identici su entrambi i lati).
+ *  identici su both i sides).
  */
 function compareWorkRam(
   postBin: Uint8Array,
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  console.log(`\n=== stringViewportHit175C8 (FUN_175C8) — ${total} casi ===`);
+  console.log(`\n=== stringViewportHit175C8 (FUN_175C8) — ${total} cases ===`);
 
   let totalOk = 0;
   const failHolder: { value: FailRecord | null } = { value: null };
@@ -417,7 +417,7 @@ async function main(): Promise<void> {
       marbleY: rw(),
       slots,
       objScriptIdInit: rb(),
-      // varie initialD2Byte per testare sext_long
+      // various initialD2Byte per testare sext_long
       initialD2Byte: [0, 1, 0x7f, 0x80, 0xff, 0x42, 0xc0][i % 7]!,
     };
     if (runOneCase("D", i, input)) okD++;
@@ -425,7 +425,7 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okD}/${perSuite}`);
   totalOk += okD;
 
-  // ─── Suite E: random everything (anche gameMode random) ──────────────
+  // ─── Suite E: random everything (also gameMode random) ──────────────
   const sizeE = perSuite + remainder;
   console.log(`\n  Suite E (random everything) — ${sizeE} casi`);
   let okE = 0;

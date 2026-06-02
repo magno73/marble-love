@@ -234,7 +234,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== trackballClampFlags28468 (FUN_00028468) — ${n} casi ===`);
+  console.log(`\n=== trackballClampFlags28468 (FUN_00028468) — ${n} cases ===`);
 
   const rng = makeRng(0x28468);
   let ok = 0;

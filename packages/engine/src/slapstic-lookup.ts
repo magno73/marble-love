@@ -8,7 +8,7 @@
  *
  *
  *   move    SR,D1w                        ; save interrupt mask
- *   move.w  (0x080000).l, D0w             ; "trigger" slapstic (low word di D0
+ *   move.w  (0x080000).l, D0w             ; "trigger" slapstic (low word of D0
  *   move.w  (0x6,SP), D0w                 ; D0w = arg word (caller pushed
  *                                         ;  a long ext.l from word)
  *   asl.l   #0x5, D0                      ; D0 (long) <<= 5; low-word index

@@ -7,12 +7,12 @@
  *
  * `test-get-alpha-tile-addr-parity.ts` e `test-format-and-render-28e00-parity.ts`).
  *
- * `hudFrameInit283C2`, confrontiamo l'intero alpha RAM (4 KB) byte-by-byte.
+ * `hudFrameInit283C2`, confrontiamo the intero alpha RAM (4 KB) byte-by-byte.
  * Setup random:
  *   - rotation flag @ 0x401F42 ∈ [0..7] (esercita branch rotation in
  *     `getAlphaTileAddr` e `setAlphaTile`)
  *   - player count @ 0x400396 in {1, 2, 0, 3} (1 -> 1P branch, others -> 2P)
- *   - alpha RAM init: random pattern 0..255 ad ogni byte (per esercitare
+ *   - alpha RAM init: random pattern 0..255 on each byte (per esercitare
  *     write-over)
  *   - workRam[0x1F42] set explicitly; the rest of the workRam too
  *
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: rotation=0, 1P ──────────────────────────────────────────
   const sizeA = Math.floor(total / 4);
-  console.log(`\n=== hudFrameInit283C2 (FUN_283C2) — Suite A: rot=0 1P — ${sizeA} casi ===`);
+  console.log(`\n=== hudFrameInit283C2 (FUN_283C2) — Suite A: rot=0 1P — ${sizeA} cases ===`);
   let okA = 0;
   {
     const rng = makeRng(0x283c2a);
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: rotation=0, 2P ──────────────────────────────────────────
   const sizeB = Math.floor(total / 4);
-  console.log(`\n=== Suite B: rot=0 2P — ${sizeB} casi ===`);
+  console.log(`\n=== Suite B: rot=0 2P — ${sizeB} cases ===`);
   let okB = 0;
   {
     const rng = makeRng(0x283c2b);
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: rotation 1..7, count random 0..3 ────────────────────────
   const sizeC = Math.floor(total / 4);
-  console.log(`\n=== Suite C: rot 1..7 random count — ${sizeC} casi ===`);
+  console.log(`\n=== Suite C: rot 1..7 random count — ${sizeC} cases ===`);
   let okC = 0;
   {
     const rng = makeRng(0x283c2c);
@@ -203,7 +203,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases (count 0, 1, 2, 0xFFFF) + rotation random ────
   const sizeD = total - sizeA - sizeB - sizeC;
-  console.log(`\n=== Suite D: edge cases (count 0/1/2/0xFFFF) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases (count 0/1/2/0xFFFF) — ${sizeD} cases ===`);
   let okD = 0;
   {
     const rng = makeRng(0x283c2d);

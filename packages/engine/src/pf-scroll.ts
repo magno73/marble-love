@@ -1,7 +1,7 @@
 /**
  * pf-scroll.ts — playfield scroll update.
  *
- * Replica `FUN_00026D8A` (PF scroll setup, sub conditional di FUN_28788).
+ * Replica `FUN_00026D8A` (PF scroll setup, sub conditional of FUN_28788).
  *
  *   *0x400008 != 0 AND *0x40000A >= 2 AND *0x400014 == 1
  *

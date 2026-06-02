@@ -166,7 +166,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== levelDispatcherHelper18FD0 (FUN_18FD0) — ${n} casi ===`);
+  console.log(`\n=== levelDispatcherHelper18FD0 (FUN_18FD0) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

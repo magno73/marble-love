@@ -3,7 +3,7 @@
  * test-wait-vblank-state-gated-parity.ts — differential FUN_28DB8 vs
  * waitVblankStateGated.
  *
- * su cambio di game state word (`*0x400390`). Convenzione caller (cfr.
+ * su cambio of game state word (`*0x400390`). Convenzione caller (cfr.
  * `0x10848`, `0x108E8`, ...):
  *   pea     (count).w
  *   jsr     0x00028DB8.l
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // tst.b/beq spin in FUN_28DEA). Manteniamo anche un counter di tick
+  // tst.b/beq spin in FUN_28DEA). Manteniamo also un counter of tick
   let mailboxReads = 0;
   let currentAbortAtIter = 0;
   let currentLoByte = 0;
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
     }
   });
 
-  console.log(`\n=== waitVblankStateGated (FUN_28DB8) — ${n} casi ===`);
+  console.log(`\n=== waitVblankStateGated (FUN_28DB8) — ${n} cases ===`);
 
   const rng = makeRng(0xc0ffee42);
   let ok = 0;
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
     const tsD0w = tsResult.d0w & 0xffff;
     const tsIters = tsResult.iterations;
 
-    // Per il binary: il low byte di *0x400390 dovrebbe essere = c.loByte
+    // For the binary: il low byte of *0x400390 should be = c.loByte
     // modified during wait). Injection fires only if the loop
     // injection does not fire -> byte unchanged.
     const tsStateLoExpected = currentAbortFired

@@ -6,7 +6,7 @@
  * Likely use case: playfield scroll/movement based on trackball direction
  * (4 direction bits plus 4 cardinal conditions).
  *
- *   0x40066A  byte: bitmap di flag di direzione (bit 0..3)
+ *   0x40066A  byte: bitmap of flag of direzione (bit 0..3)
  *   0x40066C  byte: cardinale +X flag
  *   0x40066E  byte: cardinale +Y flag
  *   0x400670  byte: cardinale -X flag

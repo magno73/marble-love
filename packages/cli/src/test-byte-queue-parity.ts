@@ -5,7 +5,7 @@
  *
  * - FUN_4D68: 0 args. Legge struct @ 0x401F44 (head, tail, buffer 16 byte),
  *   dequeue il byte corrente. Side effect: head++ (wrap a 16).
- * - FUN_53EA: 1 long arg (ptr). Ritorna ptr[0] | ptr[1] come long.
+ * - FUN_53EA: 1 long arg (ptr). Ritorna ptr[0] | ptr[1] as long.
  *
  * Uso: npx tsx packages/cli/src/test-byte-queue-parity.ts [N]
  */
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
 
   // ─── dequeueByte (FUN_4D68) ───────────────────────────────────────────
-  console.log(`\n=== dequeueByte (FUN_4D68) — ${n} casi ===`);
+  console.log(`\n=== dequeueByte (FUN_4D68) — ${n} cases ===`);
 
   const rng = makeRng(0xb1ff);
   let ok1 = 0;
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   }
 
   // ─── orPairBytes (FUN_53EA) ───────────────────────────────────────────
-  console.log(`\n=== orPairBytes (FUN_53EA) — ${n} casi ===`);
+  console.log(`\n=== orPairBytes (FUN_53EA) — ${n} cases ===`);
 
   let ok2 = 0;
   let firstFail2: { ptr: number; b0: number; b1: number; bin: number; ts: number } | null = null;

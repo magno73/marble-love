@@ -41,7 +41,7 @@
  *   0x37d0  add.l   D3,D0               ; D0 += D3
  *   0x37d2  add.l   D0,D0               ; D0 *= 2
  *   0x37d4  adda.l  D0,A1               ; A1 = 0xa03000 + D0
- *   0x37d6  move.w  (0x1a,SP),D0w        ; D0w = low word di arg4 (orMask)
+ *   0x37d6  move.w  (0x1a,SP),D0w        ; D0w = low word of arg4 (orMask)
  *   0x37da  or.w    D2w,D0w             ; D0w |= attr
  *   0x37dc  move.w  D0w,(A1)            ; write word to alpha RAM
  *   0x37de  movem.l (SP)+,{D2 D3}       ; restore

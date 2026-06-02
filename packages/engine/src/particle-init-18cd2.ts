@@ -69,9 +69,9 @@ function rng(state: GameState, limit: number): number {
  *    0x2C, i, slotInsertSubs)`.
  */
 export interface ParticleInit18CD2Subs {
-  /** Replica di `FUN_00026CFA` (palette refresh + 8 RNG). */
+  /** Replica of `FUN_00026CFA` (palette refresh + 8 RNG). */
   fun_26cfa?: (state: GameState) => void;
-  /** Replica di `FUN_00018E6C` (insert-sorted in draw-list). */
+  /** Replica of `FUN_00018E6C` (insert-sorted in draw-list). */
   fun_18e6c?: (state: GameState, typeCode: number, subIdx: number) => void;
 }
 
@@ -157,7 +157,7 @@ export function particleInit18CD2(
     writeWordBE(state, entryOff + 2, ypos);
 
     // `subi.w #0x30,D0w` operates on word: if r2 in [0..0x2F], D0w in
-    // 0xFFD0..0xFFFF (signed -0x30..-1). Se r2 in [0x30..0x5F] ⇒ D0w in
+    // 0xFFD0..0xFFFF (signed -0x30..-1). If r2 in [0x30..0x5F] ⇒ D0w in
     const r2 = rng(state, 0x60);
     const xvelRawSigned = r2 - 0x30; // -0x30..0x2F
     let xvelOut: number;

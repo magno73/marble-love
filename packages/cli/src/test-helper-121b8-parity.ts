@@ -294,7 +294,7 @@ async function main(): Promise<void> {
   function genGlobals(): number[] { return new Array(GLOBALS_SIZE).fill(0).map(() => rb()); }
 
   // ─── Suite A: random (all subs stubbed) ──────────────────────────────────
-  console.log(`\n=== helper121B8 (FUN_000121B8) — Suite A: random/all-stubbed — ${perSuite} casi ===`);
+  console.log(`\n=== helper121B8 (FUN_000121B8) — Suite A: random/all-stubbed — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const obj = genObj();
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   // Suite B: forced "in-range" (small z, vz=0).
   // - spriteProject1CC62 returns 0
   // - D0 = 0 - obj.z; if obj.z is small (0x100) -> D0 = -0x100 < 0 < 0x100000 -> in-range.
-  console.log(`\n=== Suite B: in-range + no-bounce — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: in-range + no-bounce — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const obj = genObj();
@@ -376,7 +376,7 @@ async function main(): Promise<void> {
   // D0 = 0xFF is always < 0x100000 regardless of obj.z!
   // This means the out-of-range path is NEVER taken with full RTS stubs.
   // Suite C will test the same path as Suite B.
-  console.log(`\n=== Suite C: varied state bytes (0x58 dispatch) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: varied state bytes (0x58 dispatch) — ${perSuite} cases ===`);
   let okC = 0;
   const stateByteSamples = [0x2d, 0x2e, 0x3b, 0x38, 0x39, 0x3a, 0x2f, 0x30, 0x31, 0x10, 0x17, 0x37, 0x00, 0x65, 0x0a];
   for (let i = 0; i < perSuite; i++) {
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: player address edge cases ──────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: player (0x400018) + obj[0x1A] early exits — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: player (0x400018) + obj[0x1A] early exits — ${sizeD} cases ===`);
   let okD = 0;
   const PLAYER_OFF = PLAYER_BASE - 0x400000;
   for (let i = 0; i < sizeD; i++) {

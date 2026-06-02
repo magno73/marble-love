@@ -18,7 +18,7 @@
  * Strategia:
  *
  * Suite testate:
- *        liberi/occupati)
+ *        free/occupied)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2bda-parity.ts [N]
  */
@@ -81,7 +81,7 @@ function compareStruct(
   return null;
 }
 
-const STATE_BASE = 0x1c; // offset rispetto a STRUCT_BASE
+const STATE_BASE = 0x1c; // offset relative a STRUCT_BASE
 
 async function main(): Promise<void> {
   const total = Number(process.argv[2] ?? "500");
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== stateSub2BDA (FUN_2BDA) — Suite A: random struct & args — ${perSuite} casi ===`,
+    `\n=== stateSub2BDA (FUN_2BDA) — Suite A: random struct & args — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -160,7 +160,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  console.log(`\n=== Suite B: all slots free → register slot 0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: all slots free → register slot 0 — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  console.log(`\n=== Suite C: all slots busy → return 0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: all slots busy → return 0 — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -192,7 +192,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: only one free slot at random position ──────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: only one free slot at random position — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: only one free slot at random position — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());

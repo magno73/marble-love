@@ -5,7 +5,7 @@
  *
  * **Strategia**:
  *
- * Per testare in isolamento la logica di selezione, **patch-iamo
+ * Per testare in isolamento la logica of selezione, **patch-iamo
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = magnitude
  *     4E 75          ; rts
@@ -14,7 +14,7 @@
  *
  * preserved** by the shim (no clobber/no truncation between `jsr` and `rts`).
  *
- * `pokeMem` a 0x261BC, poi resettiamo lo stack pointer ed eseguiamo).
+ * `pokeMem` a 0x261BC, poi resettiamo the stack pointer ed eseguiamo).
  *
  * Uso: npx tsx packages/cli/src/test-flag-scaled-magnitude-dispatch-parity.ts [N]
  */
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `\n=== flagScaledMagnitudeDispatch (FUN_26196) — ${n} casi ===`,
+    `\n=== flagScaledMagnitudeDispatch (FUN_26196) — ${n} cases ===`,
   );
   console.log(
     `  (FUN_261BC patched in-memory con stub move.l (8,SP),D0;rts)`,
@@ -94,8 +94,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Ri-applica patch ad ogni iter — Musashi NON dovrebbe modificarla
-    // (ROM zone), ma alcuni test paranoid riapplicano per safety.
+    // Ri-applica patch on each iter — Musashi NOT should modificarla
+    // (ROM zone), but alcuni test paranoid riapplicano per safety.
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_261BC + k, 1, STUB_BYTES[k]!);

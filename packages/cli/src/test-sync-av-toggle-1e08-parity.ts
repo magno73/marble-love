@@ -8,7 +8,7 @@
  *     `bit0(*0x400000) == 1` e `bit0(*0x40017C) == 0`. Bit 1..15 random.
  *     to guarantee that both inner loops terminate.
  *       * 0x400000..0x400001 (input port) — unchanged (read-only)
- *       * 0x40017C..0x40017D (edge detector prev → low2 di port)
+ *       * 0x40017C..0x40017D (edge detector prev → low2 of port)
  *
  * MMIO writes to 0x860000 are ignored by Musashi because the region is unmapped
  * workRam coincide perfettamente.
@@ -80,7 +80,7 @@ function writeWordToBoth(
 /** Generate a word with at least `minOnes` bits set. */
 function genWordWithMinOnes(rng: () => number, minOnes: number): number {
   let w = Math.floor(rng() * 0x10000) & 0xffff;
-  // Conta i bit set.
+  // Counts i bit set.
   let count = 0;
   let tmp = w;
   while (tmp !== 0) {
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
   ): boolean {
     cpu.system.setRegister("sp", 0x401efc);
 
-    // Setup state in entrambi
+    // Setup state in both
     writeWordToBoth(stateInst, cpu, PORT_ABS, portWord);
     writeWordToBoth(stateInst, cpu, PREV_ABS, prevWord);
     writeWordToBoth(stateInst, cpu, FLAGS_ABS, flagsWord);
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
   } {
     // big-endian = workRam[1] & 1) must be 1.
     const port = (Math.floor(rngFn() * 0x10000) & 0xfffe) | 0x0001;
-    // dell'XOR (vedi event-flags.ts).
+    // of the XOR (vedi event-flags.ts).
     const prev = Math.floor(rngFn() * 0x10000) & 0xfffe;
     return { port, prev };
   }
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything (queue ≥ 2 ones) ──────────────────────
   console.log(
-    `\n=== syncAvToggle1E08 (FUN_1E08) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== syncAvToggle1E08 (FUN_1E08) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: queue = bit0+bit1 (2 pop) — ${perSuite} casi ===`,
+    `\n=== Suite B: queue = bit0+bit1 (2 pop) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: queue full 0xFFFF ──────────────────────────────────────
-  console.log(`\n=== Suite C: queue = 0xFFFF — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: queue = 0xFFFF — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const { port, prev } = genTermiantingPair(rng);
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   // ─── Suite D: 2 bit set in posizioni alte (pop massimi) ──────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: 2 bit set in posizioni alte — ${sizeD} casi ===`,
+    `\n=== Suite D: 2 bit set in posizioni alte — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

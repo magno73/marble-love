@@ -5,13 +5,13 @@
  *
  * `FUN_0001912C` (130 byte): "refresh-frame entity ticker with slot-scan flag".
  * Gate su `*0x400394.w == 4`, slot scan @ 0x400018 (stride 0xE2, count
- * `*0x400396`) per il flag D3, poi itera 9 entity @ 0x401890 (stride 0x28)
+ * `*0x400396`) for the flag D3, poi itera 9 entity @ 0x401890 (stride 0x28)
  * by D3, threshold check, and branch on `entity[0x25]` (state==7 / state!=7) with
  *
  * **Strategia parity**:
  *   - `FUN_000194BA` (`objectTypeDispatch194BA`) **stubbed with RTS** (0x4E75).
  *   - `FUN_000199D6` (`computeSpriteCoords_v2`) **stubbed with RTS** (0x4E75).
- *   - Entrambi i callee non hanno sub injection attive nel TS (no-op).
+ *   - Entrambi i callee non hanno sub injection attive in the TS (no-op).
  *   - Compare:
  *       * Entity table @ 0x401890 (9 × 0x28 = 0x168 byte)
  *       * Globals: workRam slice @ 0x400394..0x400399 (game-mode word + slot-count word)
@@ -297,7 +297,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random entities, game-mode=4, slot count=0 ─────────────────
   console.log(
-    `\n=== refreshHelper1912C (FUN_0001912C) — Suite A: random (no slot scan) — ${perSuite} casi ===`,
+    `\n=== refreshHelper1912C (FUN_0001912C) — Suite A: random (no slot scan) — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: slot scan active (count 1..2), various D3 flag states ───────
   console.log(
-    `\n=== Suite B: slot scan active — ${perSuite} casi ===`,
+    `\n=== Suite B: slot scan active — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced state==7 across varied entities ──────────────────────
   console.log(
-    `\n=== Suite C: state==7 forzato — ${perSuite} casi ===`,
+    `\n=== Suite C: state==7 forzato — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ──────────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (game-mode != 4, counter boundaries, all kind/state combos) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (game-mode != 4, counter boundaries, all kind/state combos) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const stateBytesD = [0x00, 0x01, 0x06, 0x07, 0x08, 0x09, 0x0a, 0xff];

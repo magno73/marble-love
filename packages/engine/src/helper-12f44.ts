@@ -46,7 +46,7 @@
  *   ; Mode-0 bind @ 0x12F6C:
  *   00012f6c  move.l  D1,(0x3a,A0)        ; slot+0x3A = scriptPtr (long BE)
  *   00012f70  move.b  #0x3,(0x1a,A0)      ; slot+0x1A = 3 (state init)
- *   00012f76  move.b  #0x1,(0x18,A0)      ; slot+0x18 = 1 (mark occupato)
+ *   00012f76  move.b  #0x1,(0x18,A0)      ; slot+0x18 = 1 (mark occupied)
  *   00012f7c  bra.b   0x12fce             ; return
  *
  *   ; Mode-1 free @ 0x12F7E:
@@ -165,10 +165,10 @@ function sextByte(v: number): number {
  *   - `slot+0x18` = 1.
  *
  * **Mutation (mode-1)**:
- *   - Se `slotPtr == *0x400974`: `*0x400978 = 0`, `*0x400974 = 0`.
+ *   - If `slotPtr == *0x400974`: `*0x400978 = 0`, `*0x400974 = 0`.
  *   - `slot+0x18` = 0.
  *   - `slot+0x1A` = 0.
- *   - Se `slot+0x1F == 6`: `*0x40075C.b -= 1`.
+ *   - If `slot+0x1F == 6`: `*0x40075C.b -= 1`.
  *
  */
 export function helper12F44(

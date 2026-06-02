@@ -9,7 +9,7 @@
  *
  * Confronto:
  *   - return D0 (long)
- *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 nel path "work")
+ *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 in the path "work")
  *   - byte @ 0x401FF7 (drain counter)
  *
  * Setup for each random case:
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== eepromCommit (FUN_3F78) — ${n} casi ===`);
+  console.log(`\n=== eepromCommit (FUN_3F78) — ${n} cases ===`);
 
   const rng = makeRng(0x3f78);
   let ok = 0;

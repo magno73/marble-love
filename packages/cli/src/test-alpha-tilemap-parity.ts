@@ -79,7 +79,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
 
   // ─── setAlphaWord (FUN_383A) ──────────────────────────────────────────
-  console.log(`\n=== setAlphaWord (FUN_383A) — ${n} casi ===`);
+  console.log(`\n=== setAlphaWord (FUN_383A) — ${n} cases ===`);
 
   const rng = makeRng(0xa1f4);
   let ok1 = 0;
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
 
   // ─── clearAlphaTilesFromIndex (FUN_28C7E) ─────────────────────────────
   // The routine is roughly 20k instruction steps; keep a wide budget.
-  console.log(`\n=== clearAlphaTilesFromIndex (FUN_28C7E) — ${n} casi ===`);
+  console.log(`\n=== clearAlphaTilesFromIndex (FUN_28C7E) — ${n} cases ===`);
 
   let ok2 = 0;
   let firstFail2: { startRow: number; addr: number; bin: number; ts: number } | null = null;
@@ -179,7 +179,7 @@ async function main(): Promise<void> {
   }
 
   // FUN_16E8E: clearAlphaRows
-  console.log(`\n=== clearAlphaRows (FUN_16E8E) — 30 casi ===`);
+  console.log(`\n=== clearAlphaRows (FUN_16E8E) — 30 cases ===`);
   const tsRomCAR = (await import("@marble-love/engine")).bus.emptyRomImage();
   tsRomCAR.program.set(rom.subarray(0, tsRomCAR.program.length));
   let okCAR = 0;

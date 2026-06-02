@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   };
   let firstFail: FailInfo | null = null;
 
-  console.log(`\n=== helper172C2 (FUN_000172C2) — ${n} casi ===`);
+  console.log(`\n=== helper172C2 (FUN_000172C2) — ${n} cases ===`);
 
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

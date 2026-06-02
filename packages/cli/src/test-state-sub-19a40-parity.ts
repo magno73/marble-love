@@ -224,7 +224,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub19A40 (FUN_00019A40) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub19A40 (FUN_00019A40) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: tutti slot liberi (D3==0 sempre) — ${perSuite} casi ===`,
+    `\n=== Suite B: all slots free (D3==0 always) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -244,7 +244,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: forced match (1-3 slot con X = ROM pair) — ${perSuite} casi ===`,
+    `\n=== Suite C: forced match (1-3 slot con X = ROM pair) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -259,10 +259,10 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: edge — 9/10 occupati, varie config ─────────────────────
+  // ─── Suite D: edge — 9/10 occupied, various config ─────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (9/10 slot occupati + early-exit) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (9/10 slots occupied + early-exit) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -296,7 +296,7 @@ async function main(): Promise<void> {
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);
-    // Diff-dump primo slot divergente.
+    // Diff-dump first slot divergente.
     for (let i = 0; i < TABLE_SIZE; i++) {
       if (f.binTable[i] !== f.tsTable[i]) {
         const slot = Math.floor(i / ENTITY_STRIDE);

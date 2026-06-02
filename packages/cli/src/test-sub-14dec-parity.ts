@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x14dec);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  console.log(`\n=== sub14DEC (FUN_00014DEC) — 100 random scenarios — ${total} casi ===`);
+  console.log(`\n=== sub14DEC (FUN_00014DEC) — 100 random scenarios — ${total} cases ===`);
 
   for (let i = 0; i < total; i++) {
     const objBytes = new Array(OBJ_SIZE).fill(0).map(() => rb());

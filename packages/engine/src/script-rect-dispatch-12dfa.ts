@@ -32,13 +32,13 @@
  *
  * **Disassembly 0x12DFA..0x12F44**: see `/tmp/marble-cand/012DFA.txt`.
  *
- * **`FUN_12F44` mode-1 path** (free-slot, inlined nel post-loop):
- *   - Se A0 (slot ptr) == `*0x400974`.l:
+ * **`FUN_12F44` mode-1 path** (free-slot, inlined in the post-loop):
+ *   - If A0 (slot ptr) == `*0x400974`.l:
  *       `*0x400978`.l = 0; `*0x400974`.l = 0
  *   - `slot+0x18`.b = 0
  *   - `slot+0x1A`.b = 0
- *   - Se `slot+0x1F`.b == 6: `*0x40075C`.b -= 1
- *   - Se `slot+0x1E`.b == 1: return (no FUN_18F46)
+ *   - If `slot+0x1F`.b == 6: `*0x40075C`.b -= 1
+ *   - If `slot+0x1E`.b == 1: return (no FUN_18F46)
  *
  * **Parity strategy**:
  *   - `FUN_12DAE`, `FUN_12D6E`, and `FUN_13A98` stay live (read-only or RNG).
@@ -360,11 +360,11 @@ export function scriptRectDispatch12DFA(
   arg1: number,
   arg2: number,
 ): void {
-  // D2.b / D3.b sono i byte BASSI (offset +3 nel long) dell'arg sul stack.
+  // D2.b / D3.b sono i byte BASSI (offset +3 in the long) of the arg on the stack.
   const d2 = sextByte(arg1 & 0xff);
   const d3 = sextByte(arg2 & 0xff);
 
-  // Risoluzione rect-list dal selector @ 0x400394.
+  // Risoluzione rect-list from the selector @ 0x400394.
   const selectorWord = readU16Ram(state, SELECTOR_ADDR - WORK_RAM_BASE);
   // asl.w #2: shift modulo 0x10000.
   const d0wAfterAsl = (selectorWord << 2) & 0xffff;

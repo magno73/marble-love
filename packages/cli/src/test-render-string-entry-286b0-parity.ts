@@ -176,7 +176,7 @@ async function main(): Promise<void> {
   ): boolean {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Reset compare region in entrambi
+    // Reset compare region in both
     setupCompareRegion(stateInst, cpu, regionPrefill);
     // Setup struct dest pointer @ 0x412
     setupStructDestPtr(stateInst, cpu);
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   const rl = (): number =>
     ((Math.floor(rng() * 0x10000) << 16) | Math.floor(rng() * 0x10000)) >>> 0;
 
-  /** Genera string null-terminated di lunghezza N (byte 0 incluso). */
+  /** Genera string null-terminated of lunghezza N (byte 0 including). */
   function rndString(maxNonZeroLen: number): number[] {
     const len = Math.max(0, Math.floor(rng() * (maxNonZeroLen + 1)));
     const out: number[] = [];
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `\n=== renderStringEntry286B0 (FUN_286B0) — Suite A: random strings & args — ${perSuite} casi ===`,
+    `\n=== renderStringEntry286B0 (FUN_286B0) — Suite A: random strings & args — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: stringa vuota (terminator only) — ${perSuite} casi ===`,
+    `\n=== Suite B: stringa vuota (terminator only) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -268,7 +268,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: stringhe lunghe (60..120 byte) — ${perSuite} casi ===`,
+    `\n=== Suite C: stringhe lunghe (60..120 byte) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -292,7 +292,7 @@ async function main(): Promise<void> {
   // ─── Suite D: arg LSB ciclati 0x00 / 0xff ────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: arg2/arg3 LSB in {0x00, 0xff} — ${sizeD} casi ===`,
+    `\n=== Suite D: arg2/arg3 LSB in {0x00, 0xff} — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

@@ -15,7 +15,7 @@
  *   - Genera input codeword random in ROM (Musashi unified mem) o workRam
  *   - Setta A2 (workRam ptr), A3 (ROM o workRam ptr), D2w, D3w
  *   - Spinge sentinel ret addr, poi setRegister(pc, 0x50F4)
- *   - run loop fino a PC == sentinel, capture D0/D2/D3 + workRam delta
+ *   - run loop up to PC == sentinel, capture D0/D2/D3 + workRam delta
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
  */
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== stateSub50F4 (FUN_50F4) — ${n} casi ===`);
+  console.log(`\n=== stateSub50F4 (FUN_50F4) — ${n} cases ===`);
 
   const rng = makeRng(0x50f450f4);
   let ok = 0;
@@ -177,7 +177,7 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // ─── Pattern di copertura ─────────────────────────────────────────
+    // ─── Pattern of coverage ─────────────────────────────────────────
     let setup: CaseSetup;
 
     if (i === 0) {
@@ -328,7 +328,7 @@ async function main(): Promise<void> {
     }
 
     // ─── Reset workRam (bin + TS) ─────────────────────────────────────
-    // Zero-out workRam region in entrambi.
+    // Zero-out workRam region in both.
     for (let k = 0; k < WORK_RAM_SIZE; k++) {
       pokeMem(cpu, WORK_RAM_BASE + k, 1, 0);
       state.workRam[k] = 0;
@@ -404,7 +404,7 @@ async function main(): Promise<void> {
     } else if (bin.counterAfter !== ts.counterAfter) {
       diffField = `counter: bin=0x${bin.counterAfter.toString(16)} ts=0x${ts.counterAfter.toString(16)}`;
     } else {
-      // Compara output region.
+      // Compare output region.
       for (let k = 0; k < 10; k++) {
         if (bin.outputBytes[k] !== ts.outputBytes[k]) {
           diffField = `output[${k}]: bin=0x${bin.outputBytes[k]!.toString(16)} ts=0x${ts.outputBytes[k]!.toString(16)}`;

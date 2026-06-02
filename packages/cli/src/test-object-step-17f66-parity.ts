@@ -5,18 +5,18 @@
  *
  * **Strategy**: `FUN_00017F66` (344 bytes) is an "object step" subroutine that
  * decides between 4 paths (skip / special-dispatch / movement / stuck) and calls
- * fino a 1 sub interna per path:
+ * up to 1 sub interna per path:
  *   - special: `FUN_1815A(A2)`
  *   - movement (ramo `*0x400396 == 1`): `FUN_180BE()`
  *   - movement / stuck (epilogue): `FUN_26196(A2)`
  *
- * Per testare in isolamento la *sola* logica di dispatch / aritmetica
+ * Per testare in isolamento la *sola* logica of dispatch / aritmetica
  * (whitelist, scaling, addi.l, clamp, ...), **patch the 3 callees with a
  * pure `rts` stub** in ROM. Thus the binary only performs the side effect of
  * dispatcher (writes at 0x4006A8/AA, 0xC6/C7, and add.l at +0/+4/+8), so
  * post-call workRam depends only on our logic.
  *
- * **Stubs** iniettati (2 byte ciascuno = `4E 75` rts):
+ * **Stubs** iniettati (2 byte each = `4E 75` rts):
  *   - `0x0001815A`: `rts`
  *   - `0x000180BE`: `rts`
  *   - `0x00026196`: `rts`
@@ -24,12 +24,12 @@
  * For each case:
  *   1. Pre-fill workRam with a deterministic pattern.
  *   2. Pick A2 (random workRam offset, 4-byte aligned, with struct bytes
- *      determinati dal pattern).
+ *      determinati from the pattern).
  *   3. **Side binary**: copy pre-fill into CPU memory, push A2 on the stack,
  *      call FUN_17F66, snapshot workRam.
  *   4. **TS side**: copies the pre-fill into `state.workRam`, calls
  *      `objectStep17F66(state, A2_addr, no-op-callees)`.
- *   5. Compara workRam byte-per-byte (escludendo zona stack scratch).
+ *   5. Compare workRam byte-per-byte (escludendo area stack scratch).
  *
  * Patterns coperti:
  *   - skip path (state18 ∈ {2, 3})
@@ -38,7 +38,7 @@
  *   - movement: cmd in whitelist + global396 word == 1 (180BE branch)
  *   - movement: scaling mode 1 / 5 / clamp
  *   - stuck: state36 == 2 (bypass whitelist)
- *   - stuck: state36 != 2 e cmd fuori whitelist
+ *   - stuck: state36 != 2 and cmd outside whitelist
  *   - stuck: state36 == 0 (no addi)
  *   - stuck: cmd bit7 set (clamp -0x50000)
  *
@@ -76,7 +76,7 @@ const STACK_SCRATCH_START = 0x1e80;
 /** RTS: opcode 68k 0x4E75 (2 byte big-endian). */
 const RTS_BYTES = [0x4e, 0x75] as const;
 
-/** Whitelist byte come nel modulo. */
+/** Whitelist byte as in the modulo. */
 const WHITELIST = [0x00, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x38, 0x39, 0x3a, 0x3b];
 
 function makeRng(seed: number): () => number {
@@ -89,7 +89,7 @@ function makeRng(seed: number): () => number {
 
 type CpuSync = Awaited<ReturnType<typeof createCpu>>;
 
-/** Cattura workRam dal CPU in un Uint8Array. */
+/** Cattura workRam from the CPU in un Uint8Array. */
 function captureWorkRam(cpu: CpuSync): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -98,7 +98,7 @@ function captureWorkRam(cpu: CpuSync): Uint8Array {
   return out;
 }
 
-/** Carica un buffer in workRam dal CPU. */
+/** Carica un buffer in workRam from the CPU. */
 function loadWorkRam(cpu: CpuSync, src: Uint8Array): void {
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
     pokeMem(cpu, WORK_RAM_BASE + i, 1, src[i] ?? 0);
@@ -119,7 +119,7 @@ interface CaseSetup {
   pre: Uint8Array;
 }
 
-/** Genera 1 case deterministico secondo `i` e rng. */
+/** Genera 1 case deterministico second `i` e rng. */
 function genCase(i: number, rng: () => number): CaseSetup {
   const pre = new Uint8Array(WORK_RAM_SIZE);
 
@@ -136,13 +136,13 @@ function genCase(i: number, rng: () => number): CaseSetup {
 
   // A2 must point to a workRam region with at least 0xC8 bytes of slack.
   // (struct uses up to +0xC7) and does not overlap globals.
-  // (0x390..0x6AB) ne' allo stack (>= 0x1E80).
-  // Pick: offset multiplo di 4 in [0x800 .. 0x1C00 - 0xC8) ≈ [0x800, 0x1B38].
+  // (0x390..0x6AB) ne' althe stack (>= 0x1E80).
+  // Pick: offset multiplo of 4 in [0x800 .. 0x1C00 - 0xC8) ≈ [0x800, 0x1B38].
   const a2Slot = 0x800 + (Math.floor(rng() * ((0x1b38 - 0x800) / 4)) * 4);
   const a2Off = a2Slot >>> 0;
   const a2Addr = (WORK_RAM_BASE + a2Off) >>> 0;
 
-  // Sovrascrivi i byte struct chiave secondo il pattern.
+  // Sovrascrivi i byte struct chiave second il pattern.
   // Pattern bucket selection (10% ognuno).
   const pick = rng();
   let pattern: string;
@@ -202,7 +202,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
     state18 = 0;
     g390W = (g390W & 0xffff) === 1 ? 2 : g390W;
     state36 = state36 === 2 || state36 === 0 ? 1 : state36;
-    // Pick cmd NON in whitelist.
+    // Pick cmd NOT in whitelist.
     do {
       cmd = Math.floor(rng() * 256);
     } while (WHITELIST.includes(cmd));
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
   // Patch iniziale.
   patchStubs(cpu);
 
-  console.log(`\n=== objectStep17F66 (FUN_17F66) — ${n} casi ===`);
+  console.log(`\n=== objectStep17F66 (FUN_17F66) — ${n} cases ===`);
   console.log(
     `  (FUN_1815A / FUN_180BE / FUN_26196 patchate con stub 'rts')`,
   );

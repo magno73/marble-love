@@ -15,7 +15,7 @@
  *     when `jsr 0x1AE → jsr 0x41C8` is patched to RTS. When 0x1AE returns via
  *     RTS immediately, D0 = 0 (no write). So the TS stub returns 0 too.
  *   - Compare workRam regions touched by FUN_11FF8 ONLY:
- *       - [0x41C..0x41E] (string-chain entry col/tickOff/marker via 28F62)
+ *       - [0x41C..0x41E] (string-chain entry with the/tickOff/marker via 28F62)
  *       - [0x41E..0x421] (string buffer pointer — read only, not modified by 11FF8)
  *       - [0x1F7A..0x1F80] (decode buffer — modified by 41C8, which is patched)
  *         → both should be untouched (since 41C8 is patched to rts)
@@ -118,7 +118,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, addr + 1, 1, RTS_LO);
   }
 
-  console.log(`\n=== helper11FF8 (FUN_11FF8) — ${n} casi ===`);
+  console.log(`\n=== helper11FF8 (FUN_11FF8) — ${n} cases ===`);
 
   const rng = makeRng(0x11ff811ff);
   let ok = 0;

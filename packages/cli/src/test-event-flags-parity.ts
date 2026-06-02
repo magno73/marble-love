@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== consumeEventFlag (FUN_2548) — ${n} casi ===`);
+  console.log(`\n=== consumeEventFlag (FUN_2548) — ${n} cases ===`);
 
   let s = 0xc0ffee;
   const rng = (): number => {
@@ -79,13 +79,13 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
 
   // ─── setFlagBit (FUN_5236) ───────────────────────────────────────────
-  console.log(`\n=== setFlagBit (FUN_5236) — ${n} casi ===`);
+  console.log(`\n=== setFlagBit (FUN_5236) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
     const initial = (Math.floor(rng() * 0x100000000) >>> 0);
-    const bitNum = Math.floor(rng() * 35); // 0..34, copre il caso shift >=32
+    const bitNum = Math.floor(rng() * 35); // 0..34, covers il caso shift >=32
 
     pokeMem(cpu, 0x401f5e, 4, initial);
     state.workRam[0x1f5e] = (initial >>> 24) & 0xff;
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
 
   // ─── addToObjectAccumAndFlag (FUN_28608) ─────────────────────────────
-  console.log(`\n=== addToObjectAccumAndFlag (FUN_28608) — ${n} casi ===`);
+  console.log(`\n=== addToObjectAccumAndFlag (FUN_28608) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     const objAddr = 0x401d00 + Math.floor(rng() * 0x40);
     const initialAccum = Math.floor(rng() * 0x100000000) >>> 0;
     const value = Math.floor(rng() * 0x100000000) >>> 0;
-    const type = Math.floor(rng() * 35); // 0..34, copre shift>=32
+    const type = Math.floor(rng() * 35); // 0..34, covers shift>=32
     const initialFlag = Math.floor(rng() * 256) & 0xff;
 
     // Setup: obj.+0xBC = initialAccum, obj.+0x19 = type, *0x40039C = initialFlag
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3 / n) * 100).toFixed(1)}%`);
 
   // ─── detectRisingEdgesAndPass (FUN_F6A) ──────────────────────────────
-  console.log(`\n=== detectRisingEdgesAndPass (FUN_F6A) — ${n} casi ===`);
+  console.log(`\n=== detectRisingEdgesAndPass (FUN_F6A) — ${n} cases ===`);
   let ok4 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok4}/${n} = ${((ok4 / n) * 100).toFixed(1)}%`);
 
   // ─── anyStatusFlagsSet (FUN_52A2) ────────────────────────────────────
-  console.log(`\n=== anyStatusFlagsSet (FUN_52A2) — ${n} casi ===`);
+  console.log(`\n=== anyStatusFlagsSet (FUN_52A2) — ${n} cases ===`);
   let ok5 = 0;
   let firstFail5: { primary: number; secondary: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {

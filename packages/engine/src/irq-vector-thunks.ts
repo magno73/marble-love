@@ -6,7 +6,7 @@
  * `enableInterrupts1010A`.
  *
  *   - `THUNK_TABLE`: metadata immutabile (sourceAddr, targetAddr, bytes ROM)
- *   - `enableInterrupts1010A`: replica TS di FUN_01010A.
+ *   - `enableInterrupts1010A`: replica TS of FUN_01010A.
  *
  * Funzioni coperte (per discovery script):
  *   FUN_000100 FUN_00010C FUN_000112 FUN_000118 FUN_00012A FUN_00013C
@@ -93,11 +93,11 @@ export const THUNK_MAP: ReadonlyMap<number, ThunkEntry> = new Map(
 );
 
 /**
- * Replica TS di `FUN_01010A` (6 byte: `move #0x2000,SR ; rts`).
+ * Replica TS of `FUN_01010A` (6 byte: `move #0x2000,SR ; rts`).
  *
  *   - Supervisor mode (bit 13 = 1).
- *   - IPL = 0: tutte le interrupt hardware abilitate.
- *   - Bit di condizione (C/V/Z/N/X) non alterati (SR load esplicito).
+ *   - IPL = 0: all le interrupt hardware enabled.
+ *   - Bit of condizione (C/V/Z/N/X) non alterati (SR load esplicito).
  *
  */
 export function enableInterrupts1010A(): void {

@@ -71,7 +71,7 @@ function signExtendByteToLong(b: number): number {
  * @param state  GameState. Reads only `workRam[0x1F98]` and `workRam[0x1F99]`.
  * @param inner  Callback modeling `FUN_00005388`. Default = `() => 0`.
  *
- * Note di low-level fidelity:
+ * Note of low-level fidelity:
  *     The unsigned 32-bit representation matches M68k long semantics.
  *     The globals are read once each and are not mutated between reads.
  *     The caller arg is propagated as an unsigned long; negative inputs wrap

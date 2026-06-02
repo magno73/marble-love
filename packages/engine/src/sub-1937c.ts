@@ -72,17 +72,17 @@ export const PROX_THRESHOLD = 0x0c as const;
 export const ENTITY_POS_X_OFFSET = 0x0c as const;
 /** Offset entity[0x10] (y word). */
 export const ENTITY_POS_Y_OFFSET = 0x10 as const;
-/** Offset entity[0x18] (status byte: 0 = libero/skip). */
+/** Offset entity[0x18] (status byte: 0 = free/skip). */
 export const ENTITY_STATUS_OFFSET = 0x18 as const;
 /** Offset entity[0x1A] (kind byte: 2 = skip). */
 export const ENTITY_KIND_OFFSET = 0x1a as const;
 /** Kind skipped in proximity checks (`kind == 2`). */
 export const KIND_SKIP = 0x02 as const;
-/** Soglia di shift per il grid bitmap (`x >> 3`). */
+/** Soglia of shift for the grid bitmap (`x >> 3`). */
 export const GRID_SHIFT = 0x03 as const;
-/** Offset del primo asse nel grid bitmap (`x_byte - 0x59`). */
+/** Offset of the first asse in the grid bitmap (`x_byte - 0x59`). */
 export const GRID_X_BIAS = 0x59 as const;
-/** Offset del secondo asse nel grid bitmap (`y_byte - 0x5A`). */
+/** Offset of the second asse in the grid bitmap (`y_byte - 0x5A`). */
 export const GRID_Y_BIAS = 0x5a as const;
 /** Valid range for each axis in the grid bitmap (`[0, 0xF]`). */
 export const GRID_RANGE_MAX = 0x0f as const;
@@ -136,7 +136,7 @@ export function sub193D8ProximityCheck(
 // ─── FUN_19460: grid bitmap test ─────────────────────────────────────────
 
 /**
- * Replica `FUN_00019460`: test bit nel grid bitmap ROM @ 0x24496.
+ * Replica `FUN_00019460`: test bit in the grid bitmap ROM @ 0x24496.
  *
  * Computa `x_idx = (x_word >> 3) - 0x59` (byte) e `y_idx = (y_word >> 3) - 0x5A`
  * `(word_val & (1 << x_idx)) != 0 ? 1 : 0`.

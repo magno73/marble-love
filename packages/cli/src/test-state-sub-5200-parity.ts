@@ -13,7 +13,7 @@
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
  *   - Lancia `callFunction(cpu, 0x5200)` e `stateSub5200(state, a2)`.
  *
- * Smoke cases (primo 3):
+ * Smoke cases (first 3):
  *   1: a2 = 0x400800 (mid range)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5200-parity.ts [N]
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub5200 (FUN_5200) — ${n} casi ===`);
+  console.log(`\n=== stateSub5200 (FUN_5200) — ${n} cases ===`);
 
   const rng = makeRng(0x52005200);
   let ok = 0;

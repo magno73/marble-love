@@ -143,7 +143,7 @@ import type { RomImage } from "./bus.js";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-/** Indirizzo assoluto M68k di `FUN_0001CABA`. */
+/** Indirizzo assoluto M68k of `FUN_0001CABA`. */
 export const SUB_1CABA_ADDR = 0x0001caba as const;
 
 /** Base workRam (M68k 0x400000). */

@@ -185,7 +185,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== buildTilemapRows1A444 (FUN_1A444) — ${n} casi ===`);
+  console.log(`\n=== buildTilemapRows1A444 (FUN_1A444) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

@@ -4,7 +4,7 @@
  *
  * interamente a `trackballClampFlags28468`. I smoke qui verificano:
  *      (accumulatori a 0, input a 0) → flags = 0xF003 → sext = -4093.
- *      (es. 0x0050 > 0x40 → clamp a 0x40) e il thunk riflette la modifica.
+ *      (e.g. 0x0050 > 0x40 → clamp a 0x40) e il thunk riflette la modifies.
  *
  * Uso: npx tsx packages/cli/src/test-thunk-10042-smoke.ts
  */

@@ -134,7 +134,7 @@ async function main(): Promise<void> {
     disposeCpu(cpu);
   }
 
-  console.log(`\n=== finalize11654 (FUN_11654) — ${n} casi ===`);
+  console.log(`\n=== finalize11654 (FUN_11654) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${firstFail}`);
   exit(ok === n ? 0 : 1);

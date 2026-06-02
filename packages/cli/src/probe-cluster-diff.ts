@@ -149,7 +149,7 @@ for (let i = 0; i < SCRIPT_N; i++) {
   console.log(`  script[${i}] @ 0x${base.toString(16)}: ${cnt} diff bytes  ${detail.join(" ")}`);
 }
 
-// Globals 0x1500-0x1FFF — sotto-bucket per 256 byte
+// Globals 0x1500-0x1FFF — below-bucket per 256 byte
 console.log("\n=== SUB-BUCKETS 0x1500-0x1FFF (per 256 byte) ===");
 const last = buckets[8]!;
 const subBuckets = new Map<number, number>();

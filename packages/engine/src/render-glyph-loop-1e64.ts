@@ -47,7 +47,7 @@
  *
  *   - `charCode` in `[0x26, 0x2D]` (= `&'()*+,-` ASCII) → step = 2
  *
- * (es. `0xFFFF` = -1 i16) prendono la branch "wide" (D3 < 0x26 signed).
+ * (e.g. `0xFFFF` = -1 i16) prendono la branch "wide" (D3 < 0x26 signed).
  *
  *
  *
@@ -56,17 +56,17 @@
  */
 
 /**
- * eventuali repliche future di FUN_32BA.
+ * eventuali repliche future of FUN_32BA.
  */
 export const RENDER_GLYPH_FN_ADDR = 0x000032ba as const;
 
 /**
- * Inferiore (inclusivo) del range "narrow" per il code-point.
+ * Inferiore (inclusivo) of the range "narrow" for the code-point.
  * `charCode >= NARROW_LO_INCL && charCode <= NARROW_HI_INCL` → step = 2.
  */
 export const NARROW_LO_INCL = 0x26 as const;
 
-/** Superiore (inclusivo) del range "narrow". */
+/** Superiore (inclusivo) of the range "narrow". */
 export const NARROW_HI_INCL = 0x2d as const;
 
 export const NARROW_STEP = 2 as const;
@@ -75,7 +75,7 @@ export const WIDE_STEP = 4 as const;
 
 /**
  *
- * - `bufPtr`: 32-bit pointer (long), di solito in alpha tilemap
+ * - `bufPtr`: 32-bit pointer (long), of solito in alpha tilemap
  *   sign-extended long.
  */
 export interface RenderGlyphCall {
@@ -86,7 +86,7 @@ export interface RenderGlyphCall {
 
 /**
  *
- *   step di `bufPtr`. Default: no-op.
+ *   step of `bufPtr`. Default: no-op.
  *
  */
 export interface RenderGlyphLoop1E64Subs {

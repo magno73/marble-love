@@ -4,10 +4,10 @@
  *
  * passed on the stack by the caller (`move.l D0,-(SP); jsr; addq.l #4,SP`).
  *
- * **Strategia di setup**:
+ * **Strategia of setup**:
  *     e dst. Il buffer in TS rappresenta `0x80000..0x87FFF` (8 KB).
  *
- *   - peekMem 8 byte da 0x87A48 vs slice del buffer TS.
+ *   - peekMem 8 byte da 0x87A48 vs slice of the buffer TS.
  *
  * Uso: npx tsx packages/cli/src/test-slapstic-table-store-parity.ts [N]
  */
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  console.log(`\n=== slapsticTableStore (FUN_2FF40) — ${total} casi ===`);
+  console.log(`\n=== slapsticTableStore (FUN_2FF40) — ${total} cases ===`);
 
   const rng = makeRng(0x2ff40);
   let ok = 0;
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < total; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Randomizziamo i byte rilevanti: src word + dst table 8 byte.
+    // Randomizziamo i byte relevant: src word + dst table 8 byte.
     // To avoid overwriting critical ROM, modify only the bytes
     const srcWord = Math.floor(rng() * 0x10000) & 0xffff;
     const dstSeed = new Array(8).fill(0).map(() => Math.floor(rng() * 256) & 0xff);

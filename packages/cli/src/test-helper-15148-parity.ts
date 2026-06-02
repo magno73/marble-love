@@ -206,7 +206,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: kind=0, waypoint NOT reached ────────────────────────────────
-  console.log(`\n=== Suite A: kind=0 waypoint not reached — ${perSuite} casi ===`);
+  console.log(`\n=== Suite A: kind=0 waypoint not reached — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const sPtr = pickStruct();
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: kind=0, waypoint IS reached ────────────────────────────────
-  console.log(`\n=== Suite B: kind=0 waypoint reached — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: kind=0 waypoint reached — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const sPtr = pickStruct();
@@ -283,7 +283,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: kind=1, velocity computation ───────────────────────────────
-  console.log(`\n=== Suite C: kind=1 velocity toward target — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: kind=1 velocity toward target — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const sPtr = pickStruct();
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ─── Suite D: kind=2, vel=0 → kind=4 path ────────────────────────────────
-  console.log(`\n=== Suite D: kind=2 vel=0 → kind=4 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite D: kind=2 vel=0 → kind=4 — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const sPtr = pickStruct();
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
 
   // ─── Suite E: kinds 3, 4, 5, 6 ────────────────────────────────────────────
   const perE = total - perSuite * 4;
-  console.log(`\n=== Suite E: kinds 3/4/5/6 — ${perE} casi ===`);
+  console.log(`\n=== Suite E: kinds 3/4/5/6 — ${perE} cases ===`);
   let okE = 0;
   for (let i = 0; i < perE; i++) {
     const kindChoices = [3, 4, 5, 6];

@@ -23,7 +23,7 @@ import { eepromCommit } from "./eeprom-commit.js";
 /** Work RAM offset of `0x401FF5` relative to base `0x400000`. */
 const ACC_FF5_OFF = 0x1ff5;
 
-/** WorkRam offset del long pointer @ 0x401FFC. */
+/** WorkRam offset of the long pointer @ 0x401FFC. */
 const PTR_FFC_OFF = 0x1ffc;
 
 /** RAM base. */

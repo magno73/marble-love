@@ -360,7 +360,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: inactive slot (slot[0x18]=0) ────────────────────────────────
-  console.log(`\n=== scriptSlotStep13068 (FUN_13068) — Suite A: inactive slot — ${perSuite} casi ===`);
+  console.log(`\n=== scriptSlotStep13068 (FUN_13068) — Suite A: inactive slot — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -376,7 +376,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: kind==3 (slot[0x1f]=3) global timer block ─────────────────
-  console.log(`\n=== Suite B: kind==3 timer block — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: kind==3 timer block — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -439,7 +439,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: kind != 3, slot[0x1a] ∈ 0..4, various cases ───────────────
-  console.log(`\n=== Suite C: kind!=3, case 0..4 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: kind!=3, case 0..4 — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -491,7 +491,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ─── Suite D: case 1/2 with counter/limit variations + FUN_132E0 ─────────
-  console.log(`\n=== Suite D: case 1/2 counter/limit + FUN_132E0 wrap — ${perSuite} casi ===`);
+  console.log(`\n=== Suite D: case 1/2 counter/limit + FUN_132E0 wrap — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -558,7 +558,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ─── Suite E: edge cases ─────────────────────────────────────────────────
-  console.log(`\n=== Suite E: edge cases — ${extraE} casi ===`);
+  console.log(`\n=== Suite E: edge cases — ${extraE} cases ===`);
   let okE = 0;
   for (let i = 0; i < extraE; i++) {
     const slotPtr = pickSlot();

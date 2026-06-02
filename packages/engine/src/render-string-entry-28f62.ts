@@ -13,7 +13,7 @@
  * **Disasm 0x28F62..0x28FA0** (62 byte):
  *
  *   move.l D2,-(SP)            ; save D2 (scratch for arg3.w)
- *   move.w (0xa,SP),D1w        ; D1.w = arg1.low_word  (col)
+ *   move.w (0xa,SP),D1w        ; D1.w = arg1.low_word  (with the)
  *   move.w (0xe,SP),D0w        ; D0.w = arg2.low_word  (tickOff)
  *   move.w (0x12,SP),D2w       ; D2.w = arg3.low_word  (attr)
  *   ext.l  D0
@@ -22,7 +22,7 @@
  *   ext.l  D0
  *   move.l D0,-(SP)            ; push ext_l(arg1.w)
  *   pea    (0x40041C).l        ; push entry pointer
- *   jsr    0x13C.l             ; FUN_255A: byte writes (col, tickOff, marker=0)
+ *   jsr    0x13C.l             ; FUN_255A: byte writes (with the, tickOff, marker=0)
  *     ; See render-string-entry-28fde.ts for FUN_255A disassembly; this file
  *     ; inlines it as three deterministic byte writes.
  *   move.w D2w,D0w
@@ -47,7 +47,7 @@
  *   - `arg1Long`: low word -> ext.l -> push -> byte read from `(0xb,SP)` in FUN_255A
  *   - `arg3Long`: low word -> ext.l -> push as long -> `attr` argument
  *
- *   1. `state.workRam[0x41C] = arg1Long & 0xff`   (col)
+ *   1. `state.workRam[0x41C] = arg1Long & 0xff`   (with the)
  *   2. `state.workRam[0x41D] = arg2Long & 0xff`   (tickOff)
  *   3. `state.workRam[0x422] = 0`                 (marker)
  *   4. Calls `renderStringChain(0x40041C, arg3Long & 0xffff)` via stub.
@@ -91,7 +91,7 @@ export interface RenderStringEntry28F62Subs {
  * @param subs      stub injection for `renderStringChain` (default no-op).
  *
  * **Side effects** in `state.workRam`:
- *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (col byte)
+ *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (with the byte)
  *   - `[ENTRY_OFF + 1]   = arg2Long & 0xff`   (tickOff byte)
  *   - `[ENTRY_OFF + 6]   = 0`                 (marker clear)
  */

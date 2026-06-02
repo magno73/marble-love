@@ -4,7 +4,7 @@
  *
  *
  * **Strategia parity**:
- *   - Per ogni test case:
+ *   - For each test case:
  *       1. Riempie casualmente 0x20 byte @ O1 e @ O2 (Musashi RAM + workRam).
  *
  * Uso: npx tsx packages/cli/src/test-helper-15fe6-parity.ts [N]
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0x5ee);
 
-  console.log(`\n=== helper15FE6 (FUN_15FE6) — ${n} casi ===`);
+  console.log(`\n=== helper15FE6 (FUN_15FE6) — ${n} cases ===`);
   let ok = 0;
 
   for (let i = 0; i < n; i++) {

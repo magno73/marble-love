@@ -17,8 +17,8 @@
  *
  *   In TS, the 3 callbacks inject the same increment.
  *
- *   2. sentinelTrim  == (arg2.w == 2 ? 1 : 0) in entrambi.
- *   3. sentinelRender == 1 in entrambi.
+ *   2. sentinelTrim  == (arg2.w == 2 ? 1 : 0) in both.
+ *   3. sentinelRender == 1 in both.
  *   4. workRam scratch around (0x418..0x428, 16 bytes) unchanged (the subs
  *      sono no-op → no side effects).
  *
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything (arg2.w distribuzione naturale) ────
   console.log(
-    `\n=== formatAndRender28EB2 (FUN_28EB2) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== formatAndRender28EB2 (FUN_28EB2) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  console.log(`\n=== Suite B: arg2.w == 2 (trim ON) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: arg2.w == 2 (trim ON) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     // arg2 = (high random) | 0x0002
@@ -274,10 +274,10 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // Suite C: arg2.w forced to non-2 (skip trim).
-  console.log(`\n=== Suite C: arg2.w != 2 (trim OFF) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: arg2.w != 2 (trim OFF) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // arg2.w random ma != 2.
+    // arg2.w random but != 2.
     let lo = Math.floor(rng() * 0x10000) & 0xffff;
     if (lo === 0x0002) lo = 0x0003;
     const setup = makeSetup(((rl() & 0xffff0000) | lo) >>> 0);
@@ -288,7 +288,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: random again, bufEnd random LSB-aligned ──────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: random alt seed — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: random alt seed — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     if (runOneCase("D", i, makeSetup())) okD++;

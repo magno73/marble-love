@@ -23,8 +23,8 @@
  *   - A: random everything (count, struct bytes, obj states, args)
  *   - B: `arg3.b != 0, arg2.b == 0` -> Block A only
  *   - C: `arg3.b == 0, arg2.b != 0` -> Block B only (wide count variation
- *        e obj states per coprire skip/no-skip)
- *   - D: entrambi i block attivi + edge cases (count=0, count=20, byte19
+ *        e obj states to cover skip/no-skip)
+ *   - D: both i block attivi + edge cases (count=0, count=20, byte19
  *
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-15bd0-parity.ts [N]
@@ -52,7 +52,7 @@ const FUN_18F46 = 0x00018f46;
 const FUN_285B0 = 0x000285b0;
 
 // **Layout workRam scelto** (8 KB totali da 0x400000 a 0x402000):
-//   0x401200..0x401240  : STRUCT_BASE (struct arg1 di test, 0x40 byte)
+//   0x401200..0x401240  : STRUCT_BASE (struct arg1 of test, 0x40 byte)
 //   0x401240..0x401400  : RING_285B0 (192 byte) + counter
 //   0x401400..0x401440  : RING_18F46 (64 byte) + counter
 //
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // TS subs replicano gli stub binari sul state.workRam.
+  // TS subs replicano the stub binari on the state.workRam.
   const subs: ns.StateSub15BD0Subs = {
     fun_18f46: (arg1Long, arg2Long) => {
       const r = state.workRam;
@@ -288,7 +288,7 @@ async function main(): Promise<void> {
     }
     // Setup count word
     pokeWordBoth(state, cpu, OBJ_COUNT_ADDR, setup.count);
-    // Setup obj state bytes (only first `count` slots needed by func, ma
+    // Setup obj state bytes (only first `count` slots needed by func, but
     // set only `count` to avoid dirtying the rest).
     for (let i = 0; i < setup.count; i++) {
       const objAddr = OBJ_BASE + i * OBJ_STRIDE;
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
       subs,
     );
 
-    // Compara: ring18f46 + counter18f46 + ring285b0 + counter285b0 +
+    // Compare: ring18f46 + counter18f46 + ring285b0 + counter285b0 +
     //          struct bytes + obj state bytes (first count) + count word.
     const checks: { base: number; size: number; label: string }[] = [
       { base: RING_18F46, size: RING_18F46_SIZE, label: "ring18f46" },
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
 
   // ── Suite A: random everything ────────────────────────────────────────
   console.log(
-    `\n=== stateSub15BD0 (FUN_15BD0) — Suite A: random everything — ${perSuite} casi ===`,
+    `\n=== stateSub15BD0 (FUN_15BD0) — Suite A: random everything — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -384,7 +384,7 @@ async function main(): Promise<void> {
 
   // Suite B: Block A only (arg3.b != 0, arg2.b == 0).
   console.log(
-    `\n=== Suite B: solo Block A (arg3.b≠0, arg2.b==0) — ${perSuite} casi ===`,
+    `\n=== Suite B: solo Block A (arg3.b≠0, arg2.b==0) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -405,14 +405,14 @@ async function main(): Promise<void> {
 
   // Suite C: Block B only (arg3.b == 0, arg2.b != 0).
   console.log(
-    `\n=== Suite C: solo Block B (arg3.b==0, arg2.b≠0) — ${perSuite} casi ===`,
+    `\n=== Suite C: solo Block B (arg3.b==0, arg2.b≠0) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const arg3 = rl() & 0xffffff00; // low byte = 0
     let arg2 = rl();
     if ((arg2 & 0xff) === 0) arg2 = (arg2 & 0xffffff00) | 1;
-    // count varia tra 0 e MAX_COUNT.
+    // count varia between 0 e MAX_COUNT.
     const count = Math.floor(rng() * (MAX_COUNT + 1));
     const setup = makeRandomCase({
       arg2Long: arg2,
@@ -425,9 +425,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: entrambi i block + edge cases ────────────────────────────
+  // ── Suite D: both i block + edge cases ────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: entrambi block + edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: both blocks + edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     let arg2 = rl();

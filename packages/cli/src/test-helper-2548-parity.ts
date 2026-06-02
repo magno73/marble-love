@@ -12,7 +12,7 @@
  * Strategia:
  *   - Randomizza workRam[0x0006..0x0007] (word @ 0x400006).
  *   - Lancia `callFunction(cpu, 0x2548)` e `helper2548(state)`.
- *   - Ripete N (default 500) volte, inclusi edge cases:
+ *   - Ripete N (default 500) times, inclusi edge cases:
  *     word=0, word=1, word=0xFFFF, word=0x8000, word=0x0001, word=0xFFFE.
  *
  * Uso: npx tsx packages/cli/src/test-helper-2548-parity.ts [N]
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   // Edge cases: word=0, word=1, word=0xFFFF, word=0x8000, word=0xFFFE, word=0x5555
   const edges = [0, 1, 0xffff, 0x8000, 0xfffe, 0x5555];
 
-  console.log(`\n=== helper2548 (FUN_2548) — ${n} casi ===`);
+  console.log(`\n=== helper2548 (FUN_2548) — ${n} cases ===`);
   let ok = 0;
   let firstFail: FailCase | null = null;
 

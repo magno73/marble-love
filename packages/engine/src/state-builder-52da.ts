@@ -56,7 +56,7 @@ function defaultReadByte(_addr: number): number {
 }
 
 /**
- * Replica bit-perfect di `FUN_000052DA` for observable state and D0.
+ * Replica bit-perfect of `FUN_000052DA` for observable state and D0.
  *
  * Stack args are three longs, but the function reads only the low byte of the
  * first two (`0x0B(A6)` and `0x0F(A6)`) plus the full third long (`0x10(A6)`).

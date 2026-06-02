@@ -110,7 +110,7 @@
  * **Edge cases**:
  *   - Loop 1 stops at the first `0xFF`, so insertPos points to that byte.
  *     non-zero): insertPos al limite ⇒ exit a 0x18F3E (no insert).
- *   - Loop 2 esaurisce gli slot (D1 == 31, A1 >= A2+0x1B2): no insert.
+ *   - Loop 2 esaurisce the slot (D1 == 31, A1 >= A2+0x1B2): no insert.
  *   - The shift does not touch byte[0x1F], preserving the sentinel.
  *
  *   - Bytes shifted-right in `byteArray[A3..0x1E]` (1 byte → 2 byte → ...).
@@ -234,7 +234,7 @@ function compareWithSlot(
   const a0_a = localReadWord(0xa);
   const a0_c = localReadWord(0xc);
 
-  // Stesso algoritmo di fun1A80A.
+  // Same algoritmo of fun1A80A.
   const D4 = s16(a1_6) + s16(a1_4) + s16(a1_2);
   const D3 = s16(a1_c) + s16(a1_a) + s16(a1_8);
   const D2 = s16(a0_6) + s16(a0_4) + s16(a0_2);

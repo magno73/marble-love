@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xab7c);
 
-  console.log(`\n=== rleExpand (FUN_18FD0) — ${n} casi ===`);
+  console.log(`\n=== rleExpand (FUN_18FD0) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

@@ -13,16 +13,16 @@
  *
  * **Strategia parity**:
  *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
- *      in zone fisse di work RAM (0x401F00+).
+ *      in zone fixed of work RAM (0x401F00+).
  *
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
  *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 byte)
- *     ogni entry: [objPtr long BE][code long BE]
+ *     each entry: [objPtr long BE][code long BE]
  *   - 0x401F2C: FUN_25BAE call count byte
  *   - 0x401F30: FUN_15884 call count byte
  *   - 0x401F40: FUN_15BD0 call buffer (max 2 × 12 byte = 24 byte)
- *     ogni entry: [structPtr long BE][arg2 long BE][arg3 long BE]
+ *     each entry: [structPtr long BE][arg2 long BE][arg3 long BE]
  *   - 0x401F58: FUN_15BD0 call count byte
  *
  * Uso: npx tsx packages/cli/src/test-helper-25c74-parity.ts [N]
@@ -271,7 +271,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== helper25C74 (FUN_00025C74) — ${n} casi ===`);
+  console.log(`\n=== helper25C74 (FUN_00025C74) — ${n} cases ===`);
   console.log(
     `  (FUN_158AC → sound-sink, FUN_15884 → count, FUN_25BAE → call-log, FUN_15BD0 → call-log)`,
   );
@@ -298,7 +298,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Scelta dell'objPtr
+    // Scelta of the objPtr
     const ptrChoice = rng();
     const actualPtr: number =
       ptrChoice < 0.20 ? OBJ_PAIR_FIRST :
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
     scratchObj[0x5f] = pre5F;
     scratchObj[0x60] = pre60;
 
-    // Sentinelle vicini
+    // Sentinelle near
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBORS.length; idx++) {
       const nOff = NEIGHBORS[idx]!;

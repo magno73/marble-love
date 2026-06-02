@@ -3,8 +3,8 @@
  * test-render-string-chain-3662-parity.ts — differential FUN_3662 vs
  * `renderStringChain3662`.
  *
- * `FUN_00003662` (290 byte): cammina una linked list di entry-struct
- * (col@+0, tickOff@+1, stringPtr@+2, marker@+6, nextPtr@+8), and for each
+ * `FUN_00003662` (290 byte): cammina una linked list of entry-struct
+ * (with the@+0, tickOff@+1, stringPtr@+2, marker@+6, nextPtr@+8), and for each
  * `(alphaPtr, 0x3c, 0)`. Advances the chain only if `marker + valF00 > 1`.
  *
  * **Strategia parity**:
@@ -12,7 +12,7 @@
  *       byte 0 = which (0x32 per FUN_32BA, 0x33 per FUN_33F4)
  *       byte 1..4 = arg1 long (alphaPtr) big-endian
  *
- * **Stub layout** (15 byte ciascuno, gestendo entrambi gli alias):
+ * **Stub layout** (15 byte each, gestendo both the alias):
  *
  *     20 79 00 40 10 00     movea.l (0x401000).l, A0     ; A0 = current ptr
  *     10 BC 00 XX           move.b  #0x32 (or 0x33), (A0)+ ; tag byte
@@ -20,19 +20,19 @@
  *     23 C8 00 40 10 00     move.l  A0, (0x401000).l     ; update ptr
  *     4E 75                 rts
  *
- *  Tag byte: 0x32 per FUN_32BA, 0x33 per FUN_33F4. Permette di distinguere
+ *  Tag byte: 0x32 per FUN_32BA, 0x33 per FUN_33F4. Permette of distinguere
  *
  * TS side exposes subs.fun_32ba/fun_33f4: the callback performs the same write
  * (tag + alphaPtr) into the same buffer (state.workRam @ probe area).
  * PROBE_PTR_ADDR per detect call extra/mancanti).
  *
- * chain a max ~6 entry → max ~240 byte di probe per test. PROBE_DATA_END -
+ * chain a max ~6 entry → max ~240 byte of probe per test. PROBE_DATA_END -
  * PROBE_DATA_BASE = ~3 KB, ampiamente sufficiente.
  *
  * **Suite testate**:
  *   - A: rotation = 0, single entry, string 0..30 char
  *   - B: rotation in [1..3], single entry, string varia
- *   - C: chain di 2..4 entry (marker/valF00 forzati per advance)
+ *   - C: chain of 2..4 entry (marker/valF00 forzati per advance)
  *
  * Uso: npx tsx packages/cli/src/test-render-string-chain-3662-parity.ts [N]
  */
@@ -62,8 +62,8 @@ const FUN_33F4 = 0x000033f4;
 
 const WORK_RAM_BASE = 0x00400000;
 
-// Probe area: SP=0x401F00 ⇒ stack scende fino a ~0x401EE0. Probe in zona
-// bassa di workRam.
+// Probe area: SP=0x401F00 ⇒ stack scende up to ~0x401EE0. Probe in area
+// bassa of workRam.
 const PROBE_PTR_ADDR = 0x00401000;
 const PROBE_DATA_BASE = 0x00401010; // dati probe
 const PROBE_DATA_END = 0x00401C00; // exclusive (~3 KB → ~600 call max)
@@ -123,7 +123,7 @@ function resetProbe(
     (PROBE_DATA_BASE >>> 8) & 0xff;
   state.workRam[PROBE_PTR_ADDR - WORK_RAM_BASE + 3] = PROBE_DATA_BASE & 0xff;
 
-  // Clear data area (entrambi)
+  // Clear data area (both)
   for (let a = PROBE_DATA_BASE; a < PROBE_DATA_END; a++) {
     pokeMem(cpu, a, 1, 0);
     state.workRam[a - WORK_RAM_BASE] = 0;
@@ -200,8 +200,8 @@ function setupCase(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
   tc: TestCase,
-): number /* structAddr di entry[0] */ {
-  // Reset workRam zona "globals" e zona structs/string
+): number /* structAddr of entry[0] */ {
+  // Reset workRam area "globals" e area structs/string
   for (let a = 0x1f00; a < 0x1f80; a++) {
     pokeMem(cpu, WORK_RAM_BASE + a, 1, 0);
     state.workRam[a] = 0;
@@ -226,7 +226,7 @@ function setupCase(
   state.workRam[0x1f42] = (tc.rotation >>> 8) & 0xff;
   state.workRam[0x1f43] = tc.rotation & 0xff;
 
-  // Place entries: each struct is 12 byte (col@+0, tickOff@+1, stringPtr@+2,
+  // Place entries: each struct is 12 byte (with the@+0, tickOff@+1, stringPtr@+2,
   // marker@+6, [pad@+7], nextPtr@+8). Sequential @ STRUCT_AREA_BASE.
   // Place strings: sequential @ STRING_AREA_BASE.
   let stringCur = STRING_AREA_BASE;
@@ -362,7 +362,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: rotation = 0, single entry ─────────────────────────────
   console.log(
-    `\n=== renderStringChain3662 (FUN_3662) — Suite A: rot=0 single entry — ${perSuite} casi ===`,
+    `\n=== renderStringChain3662 (FUN_3662) — Suite A: rot=0 single entry — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
       valF00: 0,
       entries: [
         {
-          col: Math.floor(rng() * 8), // small col (0..7) per evitare overflow shift
+          col: Math.floor(rng() * 8), // small with the (0..7) per evitare overflow shift
           tickOff: 0, // diff = 0 ≤ lookup → render
           stringBytes: makeRandomString(rng, strLen),
           marker: 0,
@@ -387,7 +387,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: rotation in [1..3], single entry ──────────────────────
   console.log(
-    `\n=== Suite B: rotation in [1..3], single entry — ${perSuite} casi ===`,
+    `\n=== Suite B: rotation in [1..3], single entry — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -411,9 +411,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: chain di 2..4 entry (advance via marker+valF00) ────────
+  // ─── Suite C: chain of 2..4 entry (advance via marker+valF00) ────────
   console.log(
-    `\n=== Suite C: chain 2..4 entry, marker advance — ${perSuite} casi ===`,
+    `\n=== Suite C: chain 2..4 entry, marker advance — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -421,7 +421,7 @@ async function main(): Promise<void> {
     const valF00 = 5; // signed positivo, abbastanza grande per "marker=0+valF00=5>1"
     const entries: ChainEntry[] = [];
     for (let j = 0; j < numEntries; j++) {
-      // Tutte le entry tranne l'ultima hanno marker=0 → sum=valF00=5 > 1 → advance.
+      // Tutte le entry tranne the ultima hanno marker=0 → sum=valF00=5 > 1 → advance.
       // L'ultima ha marker negativo grande → sum ≤ 1 → exit.
       const isLast = j === numEntries - 1;
       entries.push({
@@ -445,11 +445,11 @@ async function main(): Promise<void> {
   // ─── Suite D: tickOff > lookup → skip render path; chain prosegue ───
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: tickOff > lookup (skip render) + chain advance — ${sizeD} casi ===`,
+    `\n=== Suite D: tickOff > lookup (skip render) + chain advance — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
-    // sext'd > -1, ovvero per qualsiasi tickOff != 0xFF.
+    // sext'd > -1, i.e. per qualsiasi tickOff != 0xFF.
     // Mix high and low tickOff values to cover render and skip paths.
     const rot = 2; // skip-friendly
     const numEntries = 2 + Math.floor(rng() * 2); // 2..3
@@ -458,7 +458,7 @@ async function main(): Promise<void> {
       const isLast = j === numEntries - 1;
       entries.push({
         col: Math.floor(rng() * 4),
-        // tickOff random: signed [-128..127]. Se >= 0 → diff > -1 → skip render.
+        // tickOff random: signed [-128..127]. If >= 0 → diff > -1 → skip render.
         tickOff: Math.floor(rng() * 256),
         stringBytes: makeRandomString(rng, Math.floor(rng() * 8)),
         marker: isLast ? 0x80 : 0,

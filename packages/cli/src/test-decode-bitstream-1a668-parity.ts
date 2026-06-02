@@ -7,22 +7,22 @@
  * that produces 36 words (= 0x48 bytes plus possible overshoot up to 7 extra
  * words) in an output buffer. The bitstream is read at 7/9/14-bit granularity
  * with a 2-byte sliding window; it consults 2 ROM lookup tables
- * (@0x2499A 32 word, @0x249DA 8 word). Vedi header del file engine module
- * per il disasm completo.
+ * (@0x2499A 32 word, @0x249DA 8 word). Vedi header of the file engine module
+ * for the disasm completo.
  *
  * Strategia parity:
  *   - Set up workRam with a zeroed output buffer @ 0x401000, a control
- *     bitstream random @ 0x401200 (~256 byte → margine), e un byte stream
- *     random @ 0x401400 (~512 byte di copertura cache).
+ *     bitstream random @ 0x401200 (~256 byte → margin), e un byte stream
+ *     random @ 0x401400 (~512 byte of coverage cache).
  *   - ROM lookup tables are the actual original binary contents
  *     (read via romBuf), not patched.
  *   - Run binary via callFunction(0x1A668, [outAbs, ctrlAbs, extAbs]).
  *   - Run TS via decodeBitstream1A668(state, rom, outAbs, ctrlAbs, extAbs).
- *   - Compara tutta la zona output (0x48 byte + overshoot 14 byte = 0x56 byte)
+ *   - Compare tutta la area output (0x48 byte + overshoot 14 byte = 0x56 byte)
  *     byte-for-byte between binary and TS.
  *
  * Tested suites (3 x 167 + 1 = 500 cases):
- *   - A: ctrl bitstream uniformemente random (mix di tutti 5 path)
+ *   - A: ctrl bitstream uniformly random (mix of all 5 path)
  *   - B: ctrl bitstream with bias toward path B (small tokens, < 0x400)
  *   - C: ctrl bitstream with bias toward path A (bit 13 set)
  *
@@ -59,8 +59,8 @@ const OUT_BYTES = 0x48;
 const OUT_OVERSHOOT_MAX = 14; // 7 word
 const COMPARE_BYTES = OUT_BYTES + OUT_OVERSHOOT_MAX;
 
-const CTRL_BYTES = 0x100; // 256 byte di ctrl-stream (ample for ~36 iter)
-const EXT_BYTES = 0x200; // 512 byte di byte-stream
+const CTRL_BYTES = 0x100; // 256 byte of ctrl-stream (ample for ~36 iter)
+const EXT_BYTES = 0x200; // 512 byte of byte-stream
 
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
   console.log(
-    `\n=== decodeBitstream1A668 (FUN_0001A668) — ${total} casi ===`,
+    `\n=== decodeBitstream1A668 (FUN_0001A668) — ${total} cases ===`,
   );
 
   const failHolder: { value: FailRecord | null } = { value: null };
@@ -115,7 +115,7 @@ async function main(): Promise<void> {
   }
 
   /**
-   * Reset dell'output zone in entrambi (zero-fill).
+   * Reset of the output zone in both (zero-fill).
    */
   function clearOutZone(): void {
     for (let k = 0; k < COMPARE_BYTES; k++) {
@@ -193,12 +193,12 @@ async function main(): Promise<void> {
     const buf = new Uint8Array(CTRL_BYTES);
     if (mode === "pathB") {
       // Path B: 14-bit token with bit 13 = 0 and bits 12..10 = 0. So token < 0x400.
-      // Bias: ogni byte e' "small" (< 0x40 nel high nibble).
+      // Bias: each byte e' "small" (< 0x40 in the high nibble).
       for (let i = 0; i < CTRL_BYTES; i++) {
-        // Per assicurare path B serve il top 14 bit del long < 0x400.
-        // I top 14 bit sono i top 14 bit del primo byte + 6 bit del secondo.
-        // Top 14 bit < 0x400 ⇔ top byte e' 0..0xF (high 4 bit di byte0 = 0..0x0F)
-        // e basso byte ha bit 7..2 small. Approssimazione: scriviamo byte
+        // Per assicurare path B serve il top 14 bit of the long < 0x400.
+        // I top 14 bit sono i top 14 bit of the first byte + 6 bit of the second.
+        // Top 14 bit < 0x400 ⇔ top byte e' 0..0xF (high 4 bit of byte0 = 0..0x0F)
+        // e basso byte ha bit 7..2 small. Approssimazione: we write byte
         // random but with 50% MSB 0 -> mix path A/B.
         buf[i] = Math.floor(rng() * 0x40); // small bytes for mix of B/C/D
       }
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
       // ha bit 5 set. Bias: byte alto ha bit 5 set (0x20 / 0x80 / 0xA0).
       for (let i = 0; i < CTRL_BYTES; i++) {
         // Top byte: bit 7 (= bit 31 of the stream) random, but bit 5 (= bit 29)
-        // alto. Setting top byte = 0x80..0xBF assicura bit 13 di token spesso set.
+        // alto. Setting top byte = 0x80..0xBF assicura bit 13 of token spesso set.
         buf[i] = 0x80 + Math.floor(rng() * 0x40);
       }
     } else {
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: uniform random ───────────────────────────────────────────
   console.log(
-    `\n=== Suite A: ctrl uniform random — ${perSuite} casi ===`,
+    `\n=== Suite A: ctrl uniform random — ${perSuite} cases ===`,
   );
   const rngA = makeRng(0x1a668);
   let okA = 0;
@@ -248,7 +248,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: bias path B (token small) ─────────────────────────────────
   console.log(
-    `\n=== Suite B: ctrl bias path B — ${perSuite} casi ===`,
+    `\n=== Suite B: ctrl bias path B — ${perSuite} cases ===`,
   );
   const rngB = makeRng(0x2a668);
   let okB = 0;
@@ -262,7 +262,7 @@ async function main(): Promise<void> {
   // ─── Suite C: bias path A (bit 13 set) ─────────────────────────────────
   const sizeC = perSuite + remainder;
   console.log(
-    `\n=== Suite C: ctrl bias path A — ${sizeC} casi ===`,
+    `\n=== Suite C: ctrl bias path A — ${sizeC} cases ===`,
   );
   const rngC = makeRng(0x3a668);
   let okC = 0;

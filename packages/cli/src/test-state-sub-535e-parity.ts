@@ -4,10 +4,10 @@
  *
  * `0x401F98` and `0x401F99`, sign-extends them to M68k longs, and passes them with
  *
- * Strategia del parity test:
+ * Strategia of the parity test:
  *     0x00/0x7F/0x80/0xFF + random).
  *     point), then read the 3 longs on the stack `(0x4..0xC,SP)`
- *     visti dal callee.
+ *     visti from the callee.
  *     `inner` stub that captures the same 3 parameters.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-535e-parity.ts [N]
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub535E (FUN_535E) — ${n} casi ===`);
+  console.log(`\n=== stateSub535E (FUN_535E) — ${n} cases ===`);
 
   const rng = makeRng(0xfeedface);
   let ok = 0;

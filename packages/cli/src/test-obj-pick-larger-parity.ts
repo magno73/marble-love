@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xab2);
 
-  console.log(`\n=== pickObjLarger (FUN_180BE) — ${n} casi ===`);
+  console.log(`\n=== pickObjLarger (FUN_180BE) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

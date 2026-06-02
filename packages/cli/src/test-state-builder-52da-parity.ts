@@ -115,7 +115,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchFun2572ToRts(cpu);
 
-  console.log(`\n=== stateBuilder52DA (FUN_52DA) — ${n} casi ===`);
+  console.log(`\n=== stateBuilder52DA (FUN_52DA) — ${n} cases ===`);
 
   const rng = makeRng(0x52da52da);
   let ok = 0;

@@ -35,7 +35,7 @@
  *   - B: kind random in [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0)
  *   - C: kind random in [0x80..0xFF] (no-op signed<0 via blt)
  *
- * negli stessi offset).
+ * in the stessi offset).
  *
  * Uso: npx tsx packages/cli/src/test-state-dispatch-1605c-parity.ts [N]
  */
@@ -63,10 +63,10 @@ const FUN_160AE = 0x000160ae;
 
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
-/** Slot per la "return value" di fun_15c46 (long BE). */
+/** Slot per la "return value" of fun_15c46 (long BE). */
 const FUN15C46_RET = 0x00401e40;
 
-/** Patch FUN_15C46 col thunk-loader (8 byte). */
+/** Patch FUN_15C46 with the thunk-loader (8 byte). */
 function patchFun15C46(cpu: CpuSession): void {
   const bytes = [
     // move.l 0x00401E40.l, D0     (2039 0040 1E40)
@@ -79,7 +79,7 @@ function patchFun15C46(cpu: CpuSession): void {
   }
 }
 
-/** Patch FUN_160AE col thunk-logger (30 byte). */
+/** Patch FUN_160AE with the thunk-logger (30 byte). */
 function patchFun160AE(cpu: CpuSession): void {
   const bytes = [
     // movea.l #0x00401E00, A0           (207C 0040 1E00)
@@ -206,7 +206,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // Nota: lavoriamo direttamente su `state.workRam` (gli stub binari
+  // Nota: lavoriamo direttamente su `state.workRam` (the stub binari
   const subs: ns.StateDispatch1605CSubs = {
     fun_15c46: (_structPtr) => {
       const r = state.workRam;
@@ -320,7 +320,7 @@ async function main(): Promise<void> {
 
   // ── Suite A: kind ∈ {0x20, 0x21, 0x22} ────────────────────────────────
   console.log(
-    `\n=== stateDispatch1605C (FUN_1605C) — Suite A: kind ∈ {0x20,0x21,0x22} — ${perSuite} casi ===`,
+    `\n=== stateDispatch1605C (FUN_1605C) — Suite A: kind ∈ {0x20,0x21,0x22} — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -333,7 +333,7 @@ async function main(): Promise<void> {
 
   // ── Suite B: kind ∈ [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0) ─────
   console.log(
-    `\n=== Suite B: kind no-op signed≥0 ([0..0x1F]∪[0x23..0x7F]) — ${perSuite} casi ===`,
+    `\n=== Suite B: kind no-op signed≥0 ([0..0x1F]∪[0x23..0x7F]) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -349,7 +349,7 @@ async function main(): Promise<void> {
 
   // ── Suite C: kind ∈ [0x80..0xFF] (no-op signed<0) ────────────────────
   console.log(
-    `\n=== Suite C: kind ∈ [0x80..0xFF] (signed<0 → blt no-op) — ${perSuite} casi ===`,
+    `\n=== Suite C: kind ∈ [0x80..0xFF] (signed<0 → blt no-op) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -362,7 +362,7 @@ async function main(): Promise<void> {
 
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: kind=0x22 + retVal pathologici — ${sizeD} casi ===`,
+    `\n=== Suite D: kind=0x22 + retVal pathologici — ${sizeD} cases ===`,
   );
   const pathologicalRets = [
     0x00000000, 0xffffffff, 0x80000000, 0x7fffffff, 0x00000001, 0x00010000,

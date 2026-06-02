@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xdada);
 
-  console.log(`\n=== proximityCheckArray (FUN_193D8) — ${n} casi ===`);
+  console.log(`\n=== proximityCheckArray (FUN_193D8) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
 
   // Validate position
-  console.log(`\n=== validatePosition (FUN_1937C) — ${n} casi ===`);
+  console.log(`\n=== validatePosition (FUN_1937C) — ${n} cases ===`);
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   let okV = 0;

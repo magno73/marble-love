@@ -113,9 +113,9 @@ export interface MainTickInputs {
 export interface MainTickOptions extends MainTickInputs {
   /** ROM image required by gameStateMachineTick + paletteAnim/Queue. */
   rom: RomImage;
-  /** Sub-functions stubs di gameStateMachineTick. */
+  /** Sub-functions stubs of gameStateMachineTick. */
   stateMachineSubs?: GameStateMachineSubs;
-  /** HUD callback di gameTickTimers (no-op default). */
+  /** HUD callback of gameTickTimers (no-op default). */
   hudCallback?: HudCallback;
   /** gameMainGate gateCheck stub (= FUN_01CC). */
   gateCheck?: GameMainGateOptions["gateCheck"];
@@ -267,7 +267,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
 
   // Default state-machine subs: calls the replicated subs. 10/10 subs
   // disponibili: 2abc/2678/2bda/2da0/2c60 (Claude) + 2572/2766/2818/295a/2cd4
-  // (Codex), tutte parity 500/500.
+  // (Codex), all parity 500/500.
   const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
     fun_2abc: (argLong) => stateSub2ABC(state, rom, argLong),
     fun_2678: (argLong) => stateSub2678(state, argLong, {

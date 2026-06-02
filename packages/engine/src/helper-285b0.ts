@@ -33,7 +33,7 @@
  *
  *   - `arg1Long` → A2 = `objPtr` (absolute workRam address of object struct).
  *   - `arg2Long` → D2.b = `modeByte` (low byte; normal range 0..16; trattato
- *     come signed byte per l'indexing nelle table ROM).
+ *     as signed byte per the indexing in the tabthe ROMs).
  *
  * **ROM tables** (read from RomImage @ program[addr]):
  *   - Score word table @ 0x23CD4 — 17 signed words (mode 0..16):

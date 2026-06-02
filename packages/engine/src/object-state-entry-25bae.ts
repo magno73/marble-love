@@ -60,7 +60,7 @@ export const FIELD_57_MATCH_VALUE = 0x65 as const;
  */
 export interface ObjectStateEntry25BAESubs {
   /**
-   * `FUN_158AC(cmd)` — sound command sender. Invocata 1 volta in case 2
+   * `FUN_158AC(cmd)` — sound command sender. Invocata 1 time in case 2
    * passiamo direttamente il byte.
    */
   soundCommand?: (cmd: number) => void;
@@ -73,11 +73,11 @@ export interface ObjectStateEntry25BAESubs {
    */
   fun_2591A?: (state: GameState, objPtr: number) => void;
   /**
-   * **MAME-NET integration flag** (NON parte del disasm grezzo):
+   * **MAME-NET integration flag** (NOT parte of the disasm grezzo):
    *
    * In MAME demo gameplay f12000+, obj0 ha invariantemente s1a=0, s58=0,
    * s36=0 — la chain `helper121B8 → OUT_OF_RANGE | BOUNCE_BELOW_TARGET`
-   * flag dal chiamante (refresh-frame / helper121B8) permette di preservare
+   * flag from the chiamante (refresh-frame / helper121B8) permette of preservare
    *
    * with MAME guaranteed by the test).
    */

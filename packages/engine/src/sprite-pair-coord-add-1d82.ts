@@ -9,7 +9,7 @@
  * **Disasm 0x1D82..0x1E07** (134 byte):
  *
  *   00001d82    movem.l {D3 D2},-(SP)         ; save D2,D3 (8 byte)
- *   00001d86    move.w  (0xe,SP),D1w          ; D1 = arg1.lo (col index)
+ *   00001d86    move.w  (0xe,SP),D1w          ; D1 = arg1.lo (with the index)
  *   00001d8a    move.w  (0x12,SP),D2w         ; D2 = arg2.lo (bank index)
  *   00001d8e    move.w  (0x16,SP),D3w         ; D3 = arg3.lo (delta A1)
  *   00001d92    movea.l #0xa02000,A1          ; A1 base = sprite-bank A
@@ -60,8 +60,8 @@
  *                  coord extracted from `*A0` (sprite-ram bank B).
  *
  * **Side effects**:
- *   - `state.spriteRam[(bank*0x200)+(col*2)..+1]`     (word, BE) — bank A
- *   - `state.spriteRam[0x100+(bank*0x200)+(col*2)..]` (word, BE) — bank B
+ *   - `state.spriteRam[(bank*0x200)+(with the*2)..+1]`     (word, BE) — bank A
+ *   - `state.spriteRam[0x100+(bank*0x200)+(with the*2)..]` (word, BE) — bank B
  *
  * Used by scenes with precomputed delta-x and delta-y tables.
  *
@@ -128,14 +128,14 @@ function repackCoord(oldWord: number, delta: number): number {
 /**
  *
  * Applies `deltaA` to the 9-bit coordinate at bank A and `deltaB` to the
- * 9-bit coordinate at bank B for the given `bank` and `col`.
+ * 9-bit coordinate at bank B for the given `bank` and `with the`.
  *
- *                offset bytes = `col * 2`. Callers typically use 0..0x37.
+ *                offset bytes = `with the * 2`. Callers typically use 0..0x37.
  *                offset bytes = `bank * 0x200`. Callers typically use 0..7.
  * @param deltaA  Delta word (`arg3 & 0xFFFF`) added to the 9-bit coordinate of
- *                bank A (`*0xA02000 + bank*0x200 + col*2`).
+ *                bank A (`*0xA02000 + bank*0x200 + with the*2`).
  * @param deltaB  Delta word (`arg4 & 0xFFFF`) added to the 9-bit coordinate of
- *                bank B (`*0xA02100 + bank*0x200 + col*2`).
+ *                bank B (`*0xA02100 + bank*0x200 + with the*2`).
  *
  * parity tests use only valid input).
  */
@@ -152,7 +152,7 @@ export function spritePairCoordAdd1D82(
   const dA = deltaA & 0xffff;
   const dB = deltaB & 0xffff;
 
-  // A1 = 0xA02000 + (bank << 9) + (col << 1) — long add wrapping a 32 bit.
+  // A1 = 0xA02000 + (bank << 9) + (with the << 1) — long add wrapping a 32 bit.
   const baseOff = (((bankW << 9) >>> 0) + ((colW << 1) >>> 0)) >>> 0;
   // bank A: spriteRam offset 0 + baseOff
   const offA = baseOff;

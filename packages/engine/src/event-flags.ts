@@ -1,9 +1,9 @@
 /**
- * event-flags.ts — gestione di "queue di flag" a 16 bit nel game state.
+ * event-flags.ts — gestione of "queue of flag" a 16 bit in the game state.
  *
  * Marble Madness uses a word at `0x400006` as an **event-flags queue**:
  *   - I produttori settano bit specifici per signalare eventi
- *     (es. "biglia rotolata", "nemico spawnato", ...)
+ *     (e.g. "biglia rotolata", "nemico spawnato", ...)
  *   - I consumatori chiamano `consumeEventFlag` (FUN_2548) per pop il bit
  *     uscito (in D0).
  *
@@ -11,7 +11,7 @@
 
 import type { GameState } from "./state.js";
 
-/** Offset del flag word in workRam (assoluto 0x400006). */
+/** Offset of the flag word in workRam (assoluto 0x400006). */
 export const EVENT_FLAGS_OFF = 0x06 as const;
 
 /** Offset of the status-flags u32 BE bitmap (absolute 0x401F5E). */
@@ -118,7 +118,7 @@ export function detectRisingEdgesAndPass(state: GameState): number {
  *   *0x40039C |= D0.b           ; set bit `type` in flag byte
  *   rts
  *
- * Use case: aggiunge contributo (es. score, time bonus) all'accumulator
+ * Use case: adds contributo (e.g. score, time bonus) to the accumulator
  */
 export function addToObjectAccumAndFlag(
   state: GameState,

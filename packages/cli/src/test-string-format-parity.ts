@@ -3,10 +3,10 @@
  * test-string-format-parity.ts — differential FUN_3A08 vs formatHex.
  *
  * Per N (value, bufEnd, numDigits, showSpaces) random:
- *   1. Reset 64 byte di scratch
+ *   1. Reset 64 byte of scratch
  *   2. callFunction(0x3A08, [value, bufEnd, numDigits, showSpaces])
  *   3. Run TS formatHex on the same state
- *   4. Confronta scratch byte-by-byte
+ *   4. Compare scratch byte-by-byte
  *
  * Uso: npx tsx packages/cli/src/test-string-format-parity.ts [N]
  */
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== formatHex (FUN_3A08) — ${n} casi ===`);
+  console.log(`\n=== formatHex (FUN_3A08) — ${n} cases ===`);
 
   const rng = makeRng(0xface);
   const SCRATCH_ADDR = 0x401d00;
@@ -127,7 +127,7 @@ async function main(): Promise<void> {
   }
 
   // ─── setAlphaTile (FUN_3784) ─────────────────────────────────────────
-  console.log(`\n=== setAlphaTile (FUN_3784) — ${n} casi ===`);
+  console.log(`\n=== setAlphaTile (FUN_3784) — ${n} cases ===`);
   // Build RomImage for TS (need rom.program)
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Random args. arg1 byte (col), arg2 byte (row), arg3 word (attrs), arg4 word (tile).
+    // Random args. arg1 byte (with the), arg2 byte (row), arg3 word (attrs), arg4 word (tile).
     const arg1 = Math.floor(rng() * 256) & 0xff;
     const arg2 = Math.floor(rng() * 0x29) & 0xff; // 0..40 to keep in alpha bounds
     const arg3 = Math.floor(rng() * 0x10000) & 0xffff;
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
   }
 
   // ─── strcpy (FUN_1D74) ────────────────────────────────────────────────
-  console.log(`\n=== strcpy (FUN_1D74) — ${n} casi ===`);
+  console.log(`\n=== strcpy (FUN_1D74) — ${n} cases ===`);
 
   let ok3 = 0;
   let firstFail3: { srcLen: number; offset: number; bin: number; ts: number } | null = null;
@@ -275,7 +275,7 @@ async function main(): Promise<void> {
   }
 
   // ─── formatDecimal (FUN_3A54) ────────────────────────────────────────
-  console.log(`\n=== formatDecimal (FUN_3A54) — ${n} casi ===`);
+  console.log(`\n=== formatDecimal (FUN_3A54) — ${n} cases ===`);
   let ok4 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

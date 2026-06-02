@@ -58,7 +58,7 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
 
   const luaPath = resolve("oracle/mame_dumper.lua");
-  // un timeout di safety.
+  // a safety timeout.
   const seconds = Math.max(30, Math.ceil(args.frames / 60) + 5);
 
   // Scenario JSON path for scripted input, if present.

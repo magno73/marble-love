@@ -24,7 +24,7 @@
  *     Y: [slot[0x10] + D3, slot[0x10] + D3 + D4]    (D0, D3)
  *     Z: [slot[0x14], slot[0x14] + 0x10]            (D2, D4)
  *
- * **Test di overlap** (signed word, 16-bit):
+ * **Test of overlap** (signed word, 16-bit):
  *      marble.minX <= slot.maxX`).
  *   Y: idem.
  *   Z: idem.
@@ -176,7 +176,7 @@ export const SLOT_Z_EXTENT = 0x10 as const;
  *   parity tests that patch FUN_15460 with RTS).
  *
  * - `FUN_000158AC(cmd)`: sound command sender (see `sound-cmd-send.ts`).
- *   Default no-op (matching pattern di `bbox-hit-test-19d94.ts` /
+ *   Default no-op (matching pattern of `bbox-hit-test-19d94.ts` /
  *   `state-sub-186ac.ts`). The caller passes `cmd = 0x39`.
  */
 export interface ScriptSlotBboxTest14E92Subs {

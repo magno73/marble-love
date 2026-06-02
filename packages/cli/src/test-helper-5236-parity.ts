@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== helper5236 (FUN_5236) — ${n} casi ===`);
+  console.log(`\n=== helper5236 (FUN_5236) — ${n} cases ===`);
 
   const rng = makeRng(0x52365236);
   let ok = 0;
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     if (i < specialArgs.length) {
       arg = specialArgs[i]!;
     } else {
-      // Random 32-bit arg per copertura ampia
+      // Random 32-bit arg to coverage ampia
       arg = Math.floor(rng() * 0x100000000) >>> 0;
     }
 

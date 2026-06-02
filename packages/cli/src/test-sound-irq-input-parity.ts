@@ -23,8 +23,8 @@ import {
 } from "./binary-oracle-lib.js";
 
 const FUN = 0x00004d1a;
-const RTE_OFF = 0x4d66; // offset di `rte` in FUN_4D1A
-// Offset dell'absolute long address dell'istruzione `move.b (0xFC0001).l,(A0)` @ 0x4D5C.
+const RTE_OFF = 0x4d66; // offset of `rte` in FUN_4D1A
+// Offset of the absolute long address of the istruzione `move.b (0xFC0001).l,(A0)` @ 0x4D5C.
 const MMIO_ADDR_PATCH_OFF = 0x4d5e; // bytes 0x4D5E..0x4D61 = 4-byte abs addr
 
 function makeRng(seed: number): () => number {
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const rng = makeRng(0x4d1a);
 
-  console.log(`\n=== soundIrqInputTick (FUN_4D1A) — ${n} casi ===`);
+  console.log(`\n=== soundIrqInputTick (FUN_4D1A) — ${n} cases ===`);
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 

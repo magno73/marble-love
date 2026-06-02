@@ -53,7 +53,7 @@ let totW = 0;
 for (let i = 0; i < 0x2000; i++) if (s.workRam[i] !== mameW[i]) totW++;
 console.log(`f+${lastIdx} total workRam diff = ${totW}`);
 
-// 2) Diff nel slot table 0xa9c..0x1306
+// 2) Diff in the slot table 0xa9c..0x1306
 let slotDiffCount = 0;
 const perSlotDiff: number[] = Array(N_SLOTS).fill(0);
 const perFieldDiff: Map<number, number> = new Map();

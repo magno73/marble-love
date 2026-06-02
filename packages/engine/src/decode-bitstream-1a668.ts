@@ -7,7 +7,7 @@
  *     A3 advances by one word whenever the bit pointer crosses byte 16.
  *   - an extra-byte stream read from `A1` as alternating `(count, value)` pairs.
  *     `count` controls how many consecutive tokens share the additive value.
- *   - due **lookup table ROM**:
+ *   - due **lookup tabthe ROMs**:
  *     * `0x2499A` (32 words, 64 bytes), used by path C
  *     * `0x249DA` (8 words, 16 bytes), used by path D
  *
@@ -79,7 +79,7 @@
  *   0x1A6F4:  cmpi.w #0x1C00,D1w
  *   0x1A6F8:  bne.b 0x1A71C                        ; if != 0x1C00 → branch
  *
- *   ── Path C (D1 == 0x1C00; "single ROM-table-1 lookup + offset"):
+ *   ── Path C (D1 == 0x1C00; "singthe ROMs-table-1 lookup + offset"):
  *   0x1A6FA:  tst.b D2b
  *   0x1A6FC:  bne.b 0x1A704
  *   0x1A6FE:  move.b (A1)+,D2b
@@ -450,7 +450,7 @@ export function decodeBitstream1A668(
         } while (cnt >= 0);
         d4 = (d4 + 0x7) | 0; // D4 += 7
       } else if (d1 === PATH_C_VAL) {
-        // ── Path C @ 0x1A6FA: single ROM-table-1 lookup + offset.
+        // ── Path C @ 0x1A6FA: singthe ROMs-table-1 lookup + offset.
         maybeReloadCache();
         // D5 = (D5 >> 4) & 0x3E
         const idx = ((d5 >>> 4) & 0x3e) | 0;

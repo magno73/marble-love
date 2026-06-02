@@ -146,7 +146,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== renderStringEntry28FDE (FUN_28FDE) — Suite A: random region & args — ${perSuite} casi ===`,
+    `\n=== renderStringEntry28FDE (FUN_28FDE) — Suite A: random region & args — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: arg LSB = 0x00 — ${perSuite} casi ===`,
+    `\n=== Suite B: arg LSB = 0x00 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -177,7 +177,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: arg LSB = 0xFF (saturazione) ───────────────────────────
   console.log(
-    `\n=== Suite C: arg LSB = 0xFF — ${perSuite} casi ===`,
+    `\n=== Suite C: arg LSB = 0xFF — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
   // ─── Suite D: marker pre-set ciclato 0..255 ──────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: marker @ +6 ciclato 0..255 — ${sizeD} casi ===`,
+    `\n=== Suite D: marker @ +6 ciclato 0..255 — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

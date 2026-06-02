@@ -3,7 +3,7 @@
  * test-vector-scale-parity.ts — differential FUN_25E7C vs vectorScale.
  *
  * 326 byte pure leaf, 0 jsr, 0 globali. Solo arg pointer + 1 byte mode.
- * Differential test su 8 byte di output (x, y long).
+ * Differential test su 8 byte of output (x, y long).
  *
  * Uso: npx tsx packages/cli/src/test-vector-scale-parity.ts [N]
  */
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== vectorScale (FUN_25E7C) — ${n} casi ===`);
+  console.log(`\n=== vectorScale (FUN_25E7C) — ${n} cases ===`);
 
   const rng = makeRng(0xbaba);
   const VEC_ADDR = 0x00401d00;

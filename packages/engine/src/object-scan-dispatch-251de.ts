@@ -25,13 +25,13 @@
  *   - `FUN_285B0(obj, 0x0000000F)`
  *
  * **Endgame detector** (post-loop):
- *   - Se `D3 == count`  → all-state-3.
+ *   - If `D3 == count`  → all-state-3.
  *   - Else if `D3 != 0 && D2 == count - 1` → near-all-state-2/3.
  *
  * **Disasm 0x251DE..0x253BC** (see `/tmp/marble-cand/0251DE.txt`).
  *
  * **External sub-jsrs (5)**:
- *              `*0x400394`, `*0x400396`, ecc.).
+ *              `*0x400394`, `*0x400396`, etc.).
  *              modellato, default no-op).
  *   - 0x253EC  `FUN_253EC(obj)` — object-step inner for each obj. Callback
  *              required (but default no-op).
@@ -56,8 +56,8 @@
  *   6. **`asl.l #16, D1` with globals @ 0x400462/0x400466**: replicated as
  *      `(g << 16) >>> 0` (big-endian long). Identico a `objectInit2591A`.
  *
- *   7. **`pea (0x3C).l`** vs **`pea (0xF).w`**: il primo pusha long 0x3C,
- *      sign-ext = 0x0000000F. Replicato come int32.
+ *   7. **`pea (0x3C).l`** vs **`pea (0xF).w`**: il first pusha long 0x3C,
+ *      sign-ext = 0x0000000F. Replicato as int32.
  *
  *      signed word. Replichiamo via sign-extension.
  *
@@ -91,7 +91,7 @@ export const GLOBAL_BYTE_472_ADDR = 0x00400472 as const;
 export const GLOBAL_TILE_X_ADDR = 0x00400696 as const;
 export const GLOBAL_TILE_Y_ADDR = 0x00400698 as const;
 
-/** Stride tra object struct adiacenti. */
+/** Stride between object struct adiacenti. */
 export const OBJ_STRIDE = 0xe2 as const;
 
 export const OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS = [
@@ -108,7 +108,7 @@ export const OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS = [
 
 export interface ObjectScanDispatch251DESubs {
   /**
-   * `FUN_1BBAA(state, rom)` — object-charcode broadcast (pre-loop, 1 volta).
+   * `FUN_1BBAA(state, rom)` — object-charcode broadcast (pre-loop, 1 time).
    * Default no-op.
    */
   fun_1BBAA?: (state: GameState, rom: RomImage) => void;
@@ -121,11 +121,11 @@ export interface ObjectScanDispatch251DESubs {
    */
   fun_253EC?: (state: GameState, objPtr: number) => void;
   /**
-   * `FUN_17934(objPtr)` — pre-init helper nel respawn block. Default no-op.
+   * `FUN_17934(objPtr)` — pre-init helper in the respawn block. Default no-op.
    */
   fun_17934?: (state: GameState, objPtr: number) => void;
   /**
-   * `FUN_1BAB2(objPtr)` — sprite pos update nel respawn block. Default no-op.
+   * `FUN_1BAB2(objPtr)` — sprite pos update in the respawn block. Default no-op.
    */
   fun_1BAB2?: (state: GameState, objPtr: number) => void;
   /**
