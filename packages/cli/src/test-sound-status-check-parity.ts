@@ -4,7 +4,7 @@
  *
  *
  *     to cover several slots)
- *   - 0xF60001 = 0x00 oppure 0x80 (modella bit 7 sound pending)
+ *   - 0xF60001 = 0x00 or 0x80 (models sound-pending bit 7)
  *   - D0 = random long
  *
  * Uso: npx tsx packages/cli/src/test-sound-status-check-parity.ts [N]
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // SP reset (callFunction usa lo stack per pushare il sentinel return).
+    // SP reset (callFunction uses the stack to push the sentinel return).
     cpu.system.setRegister("sp", 0x401f00);
 
     // Mix patterns to cover every branch:

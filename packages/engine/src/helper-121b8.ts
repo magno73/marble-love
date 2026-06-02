@@ -56,33 +56,33 @@
  *
  * **Sub injection** (`Helper121B8Subs`):
  *   - `fun_1bab2` — spritePosUpdate1BAB2. Default: uses direct import.
- *   - `fun_1cc62` — spriteProject1CC62(state, 0). Default: usa import.
- *   - `fun_1c676` — spriteBracketLerp1C676. Default: usa import.
- *   - `fun_12886` — swapLongPair(state, a2). Default: usa import.
- *   - `fun_1b5c2` — stateSub1B5C2(state, a2, 0x40066a, 0x40069e). Default: usa import.
+ *   - `fun_1cc62` — spriteProject1CC62(state, 0). Default: uses the import.
+ *   - `fun_1c676` — spriteBracketLerp1C676. Default: uses the import.
+ *   - `fun_12886` — swapLongPair(state, a2). Default: uses the import.
+ *   - `fun_1b5c2` — stateSub1B5C2(state, a2, 0x40066a, 0x40069e). Default: uses the import.
  *   - `fun_29cce` — FUN_29CCE (NOT YET IMPLEMENTED). Default: no-op.
  *   - `fun_1bc88` — FUN_1BC88 (NOT YET IMPLEMENTED). Default: no-op, returns 0.
- *   - `fun_14e92` — scriptSlotBboxTest14E92. Default: usa import.
- *   - `fun_175c8` — stringViewportHit175C8. Default: usa import.
- *   - `fun_1881c` — stateSub1881C. Default: usa import.
+ *   - `fun_14e92` — scriptSlotBboxTest14E92. Default: uses the import.
+ *   - `fun_175c8` — stringViewportHit175C8. Default: uses the import.
+ *   - `fun_1881c` — stateSub1881C. Default: uses the import.
  *   - `fun_1924e` — FUN_1924E (NOT YET IMPLEMENTED). Default: no-op.
- *   - `fun_19d94` — bboxHitTest19D94. Default: usa import.
- *   - `fun_1365c` — objectRenderUpdate1365C. Default: usa import.
- *   - `fun_160f6` — stateDispatch160F6. Default: usa import.
- *   - `fun_1b9cc` — spriteHelper1B9CC. Default: usa import.
- *   - `fun_1c014` — spriteRotate1C014. Default: usa import.
- *   - `fun_1281c` — objectEnter1281C. Default: usa import.
- *   - `fun_1706c` — positionUpdate. Default: usa import.
+ *   - `fun_19d94` — bboxHitTest19D94. Default: uses the import.
+ *   - `fun_1365c` — objectRenderUpdate1365C. Default: uses the import.
+ *   - `fun_160f6` — stateDispatch160F6. Default: uses the import.
+ *   - `fun_1b9cc` — spriteHelper1B9CC. Default: uses the import.
+ *   - `fun_1c014` — spriteRotate1C014. Default: uses the import.
+ *   - `fun_1281c` — objectEnter1281C. Default: uses the import.
+ *   - `fun_1706c` — positionUpdate. Default: uses the import.
  *   - `fun_25c74` — FUN_25C74 (NOT YET IMPLEMENTED). Default: no-op.
- *   - `fun_18a1e` — computeSpriteCoords_v1. Default: usa import.
- *   - `fun_18e6c` — slotInsertSorted18E6C. Default: usa import.
- *   - `fun_25bae` — objectStateEntry25BAE. Default: usa import.
- *   - `fun_15884` — soundPair15884. Default: usa import.
- *   - `fun_158ac` — soundCmdSend158AC. Default: usa import.
- *   - `fun_15bd0` — stateSub15BD0. Default: usa import.
- *   - `fun_25df6` — trackballApplyDelta. Default: usa import.
- *   - `fun_25e7c` — vectorScale. Default: usa import.
- *   - `fun_285b0` — helper285B0. Default: usa import.
+ *   - `fun_18a1e` — computeSpriteCoords_v1. Default: uses the import.
+ *   - `fun_18e6c` — slotInsertSorted18E6C. Default: uses the import.
+ *   - `fun_25bae` — objectStateEntry25BAE. Default: uses the import.
+ *   - `fun_15884` — soundPair15884. Default: uses the import.
+ *   - `fun_158ac` — soundCmdSend158AC. Default: uses the import.
+ *   - `fun_15bd0` — stateSub15BD0. Default: uses the import.
+ *   - `fun_25df6` — trackballApplyDelta. Default: uses the import.
+ *   - `fun_25e7c` — vectorScale. Default: uses the import.
+ *   - `fun_285b0` — helper285B0. Default: uses the import.
  *
  *   `packages/cli/src/test-helper-121b8-parity.ts` (500/500).
  *
@@ -215,7 +215,7 @@ function addL(a: number, b: number): number {
 export interface Helper121B8Subs {
   /**
    * `FUN_0001BAB2` — spritePosUpdate1BAB2(state, objAddr).
-   * Default: usa il modulo `sprite-pos-update-1bab2.ts`.
+   * Default: uses the `sprite-pos-update-1bab2.ts` module.
    */
   fun_1bab2?: (state: GameState, objAddr: number) => void;
 
@@ -226,13 +226,13 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001C676` — spriteBracketLerp1C676(state).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_1c676?: (state: GameState) => void;
 
   /**
    * `FUN_00012886` — swapLongPair(state, ptr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_12886?: (state: GameState, ptr: number) => void;
 
@@ -255,19 +255,19 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_00014E92` — scriptSlotBboxTest14E92(state, objAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_14e92?: (state: GameState, objAddr: number) => void;
 
   /**
    * `FUN_000175C8` — stringViewportHit175C8(state, objAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_175c8?: (state: GameState, objAddr: number) => void;
 
   /**
    * `FUN_0001881C` — stateSub1881C(state, objAddr). Returns D0.
-   * Default: usa import, returns result.d0.
+   * Default: uses the import, returns result.d0.
    */
   fun_1881c?: (state: GameState, objAddr: number) => void;
 
@@ -279,19 +279,19 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_00019D94` — bboxHitTest19D94(state, objAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_19d94?: (state: GameState, objAddr: number) => void;
 
   /**
    * `FUN_0001365C` — objectRenderUpdate1365C(state, rom, objAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_1365c?: (state: GameState, rom: RomImage, objAddr: number) => void;
 
   /**
    * `FUN_000160F6` — stateDispatch160F6(state, objAddr, tileXPtr, tileYPtr, prevTimer).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_160f6?: (
     state: GameState,
@@ -303,13 +303,13 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001B9CC` — spriteHelper1B9CC(state, objAddr, flagLong).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_1b9cc?: (state: GameState, objAddr: number, flagLong: number) => void;
 
   /**
    * `FUN_0001C014` — spriteRotate1C014(state, rom, objOff).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_1c014?: (state: GameState, rom: RomImage, objOff: number) => void;
 
@@ -321,7 +321,7 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_0001706C` — positionUpdate(state, rom, objAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_1706c?: (state: GameState, rom: RomImage, objAddr: number) => void;
 
@@ -339,49 +339,49 @@ export interface Helper121B8Subs {
 
   /**
    * `FUN_00018E6C` — slotInsertSorted18E6C(state, rom, typeCode, subIdx).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_18e6c?: (state: GameState, rom: RomImage, typeCode: number, subIdx: number) => void;
 
   /**
    * `FUN_00025BAE` — objectStateEntry25BAE(state, objAddr, subStateCode).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_25bae?: (state: GameState, objAddr: number, subStateCode: number) => void;
 
   /**
    * `FUN_00015884` — soundPair15884(state).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_15884?: (state: GameState) => void;
 
   /**
    * `FUN_000158AC` — soundCmdSend158AC(state, cmd).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_158ac?: (state: GameState, cmd: number) => void;
 
   /**
    * `FUN_00015BD0` — stateSub15BD0(state, objAddr, arg2, arg3).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_15bd0?: (state: GameState, objAddr: number, arg2: number, arg3: number) => void;
 
   /**
    * `FUN_00025DF6` — trackballApplyDelta(state, posAddr).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_25df6?: (state: GameState, posAddr: number) => void;
 
   /**
    * `FUN_00025E7C` — vectorScale(state, rom, vecAddr, mode).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_25e7c?: (state: GameState, rom: RomImage, vecAddr: number, mode: number) => void;
 
   /**
    * `FUN_000285B0` — helper285B0(state, objAddr, modeLong).
-   * Default: usa import.
+   * Default: uses the import.
    */
   fun_285b0?: (state: GameState, rom: RomImage, objAddr: number, modeLong: number) => void;
 }

@@ -4,7 +4,7 @@
  * `stateSub186AC`.
  *
  * FUN_000186AC (368 byte): "mode-3 entity-scan + slot-table init/teardown".
- * 0xE2; in base al sentinel `*0x400760` e al flag `hasArmed`, esegue init
+ * 0xE2; based on the sentinel `*0x400760` and the `hasArmed` flag, runs init
  * (rng-driven popolamento di 0x24 entry × 0x10 byte @ 0x401650), teardown
  * (clear 0x24 entries + call FUN_18F46 for entries with entry[2..3]==0xFFFF),
  * o no-op.
@@ -12,7 +12,7 @@
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
  *   - `FUN_0001BB28` (entry-init callback) **stubbed with RTS** (0x4E75) for
- *     neutralizzare side effects. Il TS usa `subs.fun_1bb28 = noop`.
+ *     neutralize side effects. The TS uses `subs.fun_1bb28 = noop`.
  *   - `FUN_00018F46` (teardown callback) **stubbed with RTS**.
  *   - Compare:
  *       * `workRam[0x760]` (sentinel byte)
@@ -151,7 +151,7 @@ interface CaseInput {
   selectorPtr: number; // u32
   objStateBytes: number[]; // length count, byte at obj[0x18]
   objSubBytes: number[]; // length count, byte at obj[0x1B]
-  /** pre-fill della slot-table (576 byte). */
+  /** pre-fill of the slot-table (576 bytes). */
   slotTablePre: number[];
   rngSeed: number;
 }

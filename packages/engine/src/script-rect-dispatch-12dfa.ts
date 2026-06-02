@@ -351,7 +351,7 @@ function regionDespawnLoop(
 /**
  * Replica `FUN_00012DFA` — rect-list spawn + region-bound despawn.
  *
- *               e i record della rect-list).
+ *               and the rect-list records).
  *
  */
 export function scriptRectDispatch12DFA(

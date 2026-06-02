@@ -44,7 +44,7 @@ const PTR_FFC = 0x00401ffc;
 const ACC_FF5 = 0x00401ff5;
 const COUNTER_FF7 = 0x00401ff7;
 
-// Indirizzo della struct A2 in workRam-safe range (0x401D00, lontano dai
+// Address of the A2 struct in the workRam-safe range (0x401D00, away from the
 // counters 0x401FF5..F7 and pointer 0x401FFC, avoiding collisions).
 const A2_ADDR = 0x00401d00;
 

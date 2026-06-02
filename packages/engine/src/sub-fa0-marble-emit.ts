@@ -103,7 +103,7 @@ function wwBE_spriteram(state: GameState, off: number, val: number): void {
  * nel display-list MO sprite del marble player.
  *
  * **Algoritmo (delta-based)**:
- *   4. Applica delta a entries marble (slot 4..8) in entrambi i banchi.
+ *   4. Applies delta to the marble entries (slots 4..8) in both banks.
  *
  * playfield that scrolls in the opposite direction (camera follows marble:
  * camera_x up -> marble_screen_x down if viewport-fixed).

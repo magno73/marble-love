@@ -55,7 +55,7 @@ async function main(): Promise<void> {
 
     // Random setup
     const av = Math.floor(rng() * 0x10000) & 0xffff;
-    // Arg long signed: usa range [-0x10000, 0x10000) per coprire negativi
+    // Arg long signed: uses range [-0x10000, 0x10000) to cover negatives
     const argSigned = Math.floor((rng() - 0.5) * 0x20000) | 0;
     const argLong = argSigned >>> 0; // unsigned 32-bit per push
 

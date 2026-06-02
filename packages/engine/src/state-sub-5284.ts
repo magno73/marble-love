@@ -8,7 +8,7 @@
  *
  *   0x5284  jsr    0x00004DCC.l       ; sound chip writer (FUN_4DCC). No args.
  *                                     ;   Side effect: addq.l #1,(0x00401FF8).l
- *                                     ;   Resto della sub interagisce col chip
+ *                                     ;   Rest of the sub interacts with the chip
  *                                     ;   YM2151 via MMIO 0xF00001 — stub-injectabile.
  *   0x528A  move.l #0x1A0A,D0         ; D0 = 0x1A0A = 6666 (delay seed)
  *   0x5290  subq.l #1,D0              ; D0--
@@ -35,7 +35,7 @@
  * **Side effects su workRam** (path "loop" = flags non-zero al check):
  *   - Watchdog: N strobe.
  *
- * FUN_4F38 (entry point della state machine sound/EEPROM/init). Nella replica
+ * FUN_4F38 (entry point of the sound/EEPROM/init state machine). In the replica
  *
  *   3. **`bne.b 0x5284`**: branch al body (loop completo, riparte da jsr 4DCC).
  *      Test su Z flag dal D0 ritornato da FUN_52A2: D0=0 → exit, D0=1 → loop.
@@ -127,7 +127,7 @@ function defaultFun4DCC(state: GameState): void {
 
 /**
  *
- *                    esegue almeno una iter).
+ *                    runs at least one iteration).
  */
 export interface StateSub5284Result {
   iterations: number;
@@ -173,7 +173,7 @@ export function stateSub5284(
       irqHook(state, iter);
     }
 
-    // 4. bsr 0x52A2 — status check. Se entrambi flags zero → exit loop.
+    // 4. bsr 0x52A2 — status check. If both flags are zero → exit the loop.
     if (fun52A2(state) === 0) {
       // 5. bra.w 0x4F38 — tail-call (modellato come callback).
       if (f4f38 !== undefined) {

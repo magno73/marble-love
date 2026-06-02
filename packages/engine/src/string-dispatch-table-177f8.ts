@@ -15,7 +15,7 @@
  *
  *   The caller pushes each as a long (4 bytes); only each low word is consumed.
  *
- *   - `(byteValue - 0x80) + word@(0x400478 + 2*arg0w)`, oppure
+ *   - `(byteValue - 0x80) + word@(0x400478 + 2*arg0w)`, or
  *   - `(D0w & 0x7f) - 0x40 + word@(0x400478 + 2*arg0w)` (case `top4 != 0`),
  *   - `(D0w & 0x7f) - 0x40 - lookupBias + word@(0x400478 + 2*arg0w)` (case
  *     `top4 != 0` with bias search).

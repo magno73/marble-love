@@ -130,9 +130,9 @@
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
-/** Base della work RAM (0x400000..0x401FFF, 8 KB). */
+/** Base of the work RAM (0x400000..0x401FFF, 8 KB). */
 const WORK_RAM_BASE = 0x400000;
-/** End della work RAM (esclusivo). */
+/** End of the work RAM (exclusive). */
 const WORK_RAM_END = 0x402000;
 
 export const SLOT_BASE_ADDR = 0x401482 as const;
@@ -245,7 +245,7 @@ export interface BboxResolved {
 }
 
 /**
- * `slot = SLOT_BASE_ADDR + idx*SLOT_STRIDE`, dereferenzia due volte
+ * `slot = SLOT_BASE_ADDR + idx*SLOT_STRIDE`, dereferences twice
  *
  */
 export function resolveBbox(state: GameState, objAddr: number, rom?: RomImage): BboxResolved {

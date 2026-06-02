@@ -2,7 +2,7 @@
 /**
  * test-vblank-wait-parity.ts — differential FUN_000052B8 vs waitVblank.
  *
- * (vista ad esempio @ 0x5D02..0x5D0C):
+ * (seen for example @ 0x5D02..0x5D0C):
  *
  *   pea     (0xa).w        ; arg long (low word = count)
  *   jsr     0x000052b8.l   ; busy-wait

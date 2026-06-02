@@ -1,6 +1,6 @@
 /**
  *
- * `findNearestNeighborV2` in `nearest-neighbor.ts` (variante della V1
+ * `findNearestNeighborV2` in `nearest-neighbor.ts` (variant of the V1
  * `FUN_15D10` with list ptr from `obj+0x4E`, 4-byte stride, write to `obj+0x4A`).
  * dall'inventario `docs/missing-subs-inventory.md`.
  *

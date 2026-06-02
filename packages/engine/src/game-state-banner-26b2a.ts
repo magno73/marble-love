@@ -114,7 +114,7 @@ function writeAbsU16(state: GameState, addr: number, value: number): void {
 }
 
 /**
- * Replica `FUN_00026B10` — copia 32 word (64 byte) da ROM[0x1FBD0]
+ * Replica `FUN_00026B10` — copies 32 words (64 bytes) from ROM[0x1FBD0]
  * a colorRam[0..0x3F] (= MMIO 0xB00000..0xB003F).
  */
 export function paletteCopy26B10(state: GameState, rom: RomImage): void {

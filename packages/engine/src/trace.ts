@@ -124,7 +124,7 @@ export function frameFromState(s: GameState): TraceFrame {
       dy: raw(s.input.trackballDy),
       buttons: raw(s.input.buttons),
     },
-    /** CRC32 della Work RAM 8 KB (esclude zone stack 68k 0x440-0x447,
+    /** CRC32 of the 8 KB Work RAM (excludes the 68k stack zones 0x440-0x447,
       */
     workRamHash:
       (

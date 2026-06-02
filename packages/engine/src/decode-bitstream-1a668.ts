@@ -263,7 +263,7 @@ const PATH_E_BASE_HIGH = 0x4d;
 const PATH_E_BASE_LOW = 0x4e;
 
 /**
- * Legge un byte da memoria assoluta M68k. Mappa ROM (0..0x88000) e workRam
+ * Reads a byte from M68k absolute memory. Maps ROM (0..0x88000) and workRam
  * (0x400000..0x402000). Out-of-range ⇒ 0 (difensivo).
  */
 function read8Abs(state: GameState, rom: RomImage, abs: number): number {

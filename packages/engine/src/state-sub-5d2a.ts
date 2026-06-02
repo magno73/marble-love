@@ -101,7 +101,7 @@
  *     and `(0x2e, SP)` respectively; offsets count caller_SP_args + 2.
  *   - `arg0` long: bitmap pattern (16 bits used in the low word). `arg0_word_low`
  *   - `arg1` long: highlight index (low word). If `arg1` is in {0..15}, the cell
- *     a `D4 == arg1` riceve attr 0xA0 invece di 0x20.
+ *     at `D4 == arg1` it receives attr 0xA0 instead of 0x20.
  *     at `D4 == arg1` receives attr 0xA0 instead of 0x20.
  *     D0 is the last jsr's return value, but callers do not test it.
  *   - Callee-saved: D2-D7, A2-A4 (preservati via movem prologue/epilogue).

@@ -22,7 +22,7 @@
  * **Suite** (4 × 125 = 500):
  *   - A: random everything (mode/D2/D3/slot-prefill/RNG)
  *   - B: forced init (mode with entry list, D3 == entry boundary, D2 out of range)
- *   - C: forced teardown (slot in uso, D2 == slot[0x52]/[0x54], D3 cross)
+ *   - C: forced teardown (slot in use, D2 == slot[0x52]/[0x54], D3 cross)
  *   - D: edge cases (direct sentinel, all slots in use, mode out of range)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-14c46-parity.ts [N]
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     }
     // 4. Entry list override (if present).
     // WARNING: pokeMem in ROM area writes to the CPU unified memory.
-    // (la libreria `binary-oracle-lib` usa una RAM array unificata).
+    // (the `binary-oracle-lib` library uses a unified RAM array).
     if (input.entryListOverride) {
       const { listAddr, listBytes } = input.entryListOverride;
       // Patch ROM[0x2257A + mode*4] = listAddr

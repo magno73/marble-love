@@ -3,7 +3,7 @@
  * Branded types: u8, u16, u32, i8, i16, i32 (alias di number, ma incompatibili
  *
  * Regole:
- *    fallisce in `packages/engine/src`.
+ *    fails in `packages/engine/src`.
  *  - Per >>= preferisci `u32_shr` (zero-fill) o `i32_sar` (arithmetic).
  *    `as_u8/as_u16/as_u32` per essere brandizzati.
  */

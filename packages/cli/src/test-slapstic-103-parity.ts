@@ -4,7 +4,7 @@
  *
  * Input: `/tmp/mame_slapstic_trace.json` prodotto da `oracle/mame_slapstic_tap.lua`.
  *
- * Per ogni `samples[i]` esegue `slapsticTick(fsm, addr)` e:
+ * For each `samples[i]` it runs `slapsticTick(fsm, addr)` and:
  *   - Conta quanti accessi sono "direct bank" (cioe' la FSM era in ACTIVE e
  *     changed bank immediately, or left IDLE on a reset)
  *   - Print each frame: expected MAME bank when available vs TS bank

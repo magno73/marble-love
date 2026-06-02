@@ -49,7 +49,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Region completa della string-slot table: 7 * 0x42 = 0x1CE byte. */
+/** Full region of the string-slot table: 7 * 0x42 = 0x1CE bytes. */
 const TABLE_SIZE = SLOT_COUNT * SLOT_STRIDE;
 
 /** Region argPtr buffer: ARG_ID_OFF + 4 = almeno 6 byte. Usiamo 0x10. */

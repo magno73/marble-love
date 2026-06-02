@@ -138,7 +138,7 @@ export const BYTE_ARRAY_ABS = 0x004003bc as const;
 
 export const BYTE_ARRAY_LEN = 0x20 as const;
 
-/** Sentinel byte (0xFF) — interrompe la ricerca e segna la fine della lista. */
+/** Sentinel byte (0xFF) — stops the search and marks the end of the list. */
 export const SENTINEL_BYTE = 0xff as const;
 
 /** ROM offset of the lookup table (absolute M68k pointers to rect slots). */

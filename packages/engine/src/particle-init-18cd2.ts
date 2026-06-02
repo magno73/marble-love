@@ -193,7 +193,7 @@ export function particleInit18CD2(
     let modeWordPre: number;
     if (!d2Negative) {
       // mode in [0x00..0x7F]: D0w = sign-ext(D2.b). D2 in [0..0x7F] ⇒ D0w =
-      // 0..0x7F (non-negativi, top byte zero). NO RNG step.
+      // 0..0x7F (non-negative, top byte zero). NO RNG step.
       modeWordPre = d2 & 0xffff;
     } else if (d2 === MODE_RANDOM_8) {
       modeWordPre = rng(state, 0x08);
