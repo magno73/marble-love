@@ -71,7 +71,7 @@ describe("fillIncrementingU16 (FUN_1E3E)", () => {
 });
 
 describe("initStructHeader (FUN_255A)", () => {
-  it("writes byte a offset 0/1, azzera offset 6", () => {
+  it("writes bytes at offset 0/1, clears offset 6", () => {
     const s = emptyGameState();
     // Pre-fill with 0xAA
     for (let i = 0; i < 8; i++) s.workRam[0x100 + i] = 0xAA;

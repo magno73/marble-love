@@ -14,7 +14,7 @@ import {
 } from "../src/render-glyph-loop-1e64.js";
 
 describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
-  it("count <= 0 → no-op (zero iterazioni, no callback)", () => {
+  it("count <= 0 → no-op (zero iterations, no callback)", () => {
     const calls: RenderGlyphCall[] = [];
     const r0 = renderGlyphLoop1E64(0x00a03000, 0x41, 0, {
       renderGlyph: (c) => calls.push(c),
@@ -24,7 +24,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r0.endCharCode).toBe(0x41);
     expect(calls).toHaveLength(0);
 
-    // Negativo (signed): count = 0x8000 = -32768 i16 → exit immediato.
+    // Negative (signed): count = 0x8000 = -32768 i16 → immediate exit.
     const calls2: RenderGlyphCall[] = [];
     const r1 = renderGlyphLoop1E64(0x00a03000, 0x41, 0x8000, {
       renderGlyph: (c) => calls2.push(c),
@@ -32,12 +32,12 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r1.iterations).toBe(0);
     expect(calls2).toHaveLength(0);
 
-    // Negativo small: count = 0xFFFF = -1 → exit.
+    // Small negative: count = 0xFFFF = -1 → exit.
     const r2 = renderGlyphLoop1E64(0x00a03000, 0x41, 0xffff, {});
     expect(r2.iterations).toBe(0);
   });
 
-  it("all wide: 'ABC' (0x41, 0x42, 0x43) → 3 iter, +12 byte, charCode=0x44", () => {
+  it("all wide: 'ABC' (0x41, 0x42, 0x43) → 3 iters, +12 bytes, charCode=0x44", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03000, 0x41, 3, {
       renderGlyph: (c) => calls.push(c),
@@ -53,14 +53,14 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     ]);
   });
 
-  it("all narrow: code-point 0x26..0x2D (8 char, range esatto)", () => {
+  it("all narrow: code-point 0x26..0x2D (8 chars, exact range)", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03100, 0x26, 8, {
       renderGlyph: (c) => calls.push(c),
     });
     expect(r.iterations).toBe(8);
     expect(r.endCharCode).toBe(0x2e);
-    // 8 narrow × 2 = 16 byte → 0x00A03110
+    // 8 narrow × 2 = 16 bytes → 0x00A03110
     expect(r.endBufPtr).toBe(0x00a03110);
     expect(calls).toHaveLength(8);
     for (let i = 0; i < 8; i++) {

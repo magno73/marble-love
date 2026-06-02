@@ -223,7 +223,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr + 4);
   });
 
-  it("8. sub-frame: non attivo se state != 2", () => {
+  it("8. sub-frame: not active if state != 2", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -247,7 +247,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr);
   });
 
-  it("9. wrap detection: state==2, index==9 dopo advance → sound(0x5F) + setup", () => {
+  it("9. wrap detection: state==2, index==9 after advance → sound(0x5F) + setup", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -281,7 +281,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(r[OBJ_OFF + 0x66]).toBe(0);
   });
 
-  it("10. sentinel check: non sentinel → return senza dispatch", () => {
+  it("10. sentinel check: not sentinel → return without dispatch", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -348,7 +348,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(r[OBJ_OFF + 0x60]).toBe(2);
   });
 
-  it("13. sentinel + state 5 + A2[+0x56] > 6 → same logica of state 1", () => {
+  it("13. sentinel + state 5 + A2[+0x56] > 6 → same logic as state 1", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -452,7 +452,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(ose25Calls[0]).toEqual({ objPtr: OBJ_ABS, code: 0x04 });
   });
 
-  it("17. state-3: A2 is first oggetto coppia → clr word_a4", () => {
+  it("17. state-3: A2 is first object of pair → clr word_a4", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -479,7 +479,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU16BE(r, objOffFirst + 0xa4)).toBe(0);
   });
 
-  it("18. state-3: A2 is second oggetto coppia → clr word_a4", () => {
+  it("18. state-3: A2 is second object of pair → clr word_a4", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -506,7 +506,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU16BE(r, objOffSecond + 0xa4)).toBe(0);
   });
 
-  it("19. state-3: A2 altro → NO clr word_a4", () => {
+  it("19. state-3: A2 other → NO clr word_a4", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
