@@ -23,6 +23,18 @@ several event sounds are wired through the reimplemented 6502/YM2151/POKEY audio
 path. Complete audio PCM parity, attract audio, and insert-coin audio remain
 active work.
 
+## Demo
+
+<!-- Generated locally by `tools/record_demo.sh` (needs your own ROMs); see
+     docs/media/README.md. Once produced, embed it here:
+     ![Marble Love gameplay](docs/media/demo.gif) -->
+
+A gameplay capture (`docs/media/demo.gif`) is produced by
+[`tools/record_demo.sh`](tools/record_demo.sh) — a headless-Chromium screencast
+of live gameplay turned into mp4/gif by ffmpeg. The media itself is not checked
+in because recording requires your own legally obtained ROMs; see
+[docs/media/README.md](docs/media/README.md).
+
 ## What Works
 
 - Browser frontend with PixiJS rendering.
