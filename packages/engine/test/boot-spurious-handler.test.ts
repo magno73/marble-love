@@ -111,7 +111,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 bytes)", () => {
       },
     });
     expect(calls).toBe(1);
-    // (set from the main path a step 5).
+    // (set from the main path at step 5).
     expect(getWord(s.workRam, BSH_FRAME_CTR_OFF)).toBe(0xffff);
     expect(getWord(s.workRam, BSH_COUNTDOWN_OFF)).toBe(0x0000);
     // Audio mailbox NOT initialized.

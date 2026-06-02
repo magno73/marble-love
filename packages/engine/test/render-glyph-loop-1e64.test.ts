@@ -146,7 +146,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r.endCharCode).toBe(0x0001);
   });
 
-  it("count = 1, charCode exactly al boundary basso 0x26 → narrow", () => {
+  it("count = 1, charCode exactly at the low boundary 0x26 → narrow", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03000, 0x26, 1, {
       renderGlyph: (c) => calls.push(c),
@@ -155,7 +155,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(calls[0]!.charCode).toBe(0x26);
   });
 
-  it("count = 1, charCode exactly al boundary alto 0x2D → narrow", () => {
+  it("count = 1, charCode exactly at the high boundary 0x2D → narrow", () => {
     const r = renderGlyphLoop1E64(0x00a03000, 0x2d, 1);
     expect(r.endBufPtr).toBe(0x00a03002);
   });

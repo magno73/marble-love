@@ -93,7 +93,7 @@ function setupRom(): RomImage {
 }
 
 describe("hudFrameInit283C2 (FUN_000283C2)", () => {
-  it("Loop1 (rotation=0): clears 30 lines × 6 word = 360 byte of bordo con 0x3400", () => {
+  it("Loop1 (rotation=0): clears 30 lines × 6 words = 360 bytes of border with 0x3400", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // player count @ 0x396 = 0 (-> 2P branch, but this tests only Loop1:
@@ -118,7 +118,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("Loop2 1P: con player count=1 disegna 12 tile usando ROM_COLS_1P", () => {
+  it("Loop2 1P: with player count=1 draws 12 tiles using ROM_COLS_1P", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1);

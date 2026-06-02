@@ -33,7 +33,7 @@ function writeLongBE(workRam: Uint8Array, off: number, val: number): void {
 }
 
 describe("helper5236 (FUN_5236) — smoke", () => {
-  it("costanti esportate corrette", () => {
+  it("exported constants correct", () => {
     expect(HELPER_5236_ADDR).toBe(0x00005236);
     expect(STATUS_FLAGS_OFF).toBe(0x1f5e);
   });
@@ -89,7 +89,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x12345678);
   });
 
-  it("OR cumulativo: chiamate successive OR-ano senza sovrascrivere bit preesistenti", () => {
+  it("cumulative OR: successive calls OR without overwriting preexisting bits", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, STATUS_FLAGS_OFF, 0x00000001); // bit 0 pre-set
     helper5236(s, 3); // arg=3 → shift=1 → mask=2 → OR bit 1
@@ -98,7 +98,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000007); // bits 0+1+2
   });
 
-  it("idempotenza: call twice con same arg dà same risultato of the first", () => {
+  it("idempotence: calling twice with the same arg gives the same result as the first", () => {
     const s = emptyGameState();
     helper5236(s, 5);
     const val1 = readLongBE(s.workRam, STATUS_FLAGS_OFF);
@@ -107,7 +107,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(val2).toBe(val1);
   });
 
-  it("non tocca byte outside from the long @ STATUS_FLAGS_OFF (no side-effect collaterali)", () => {
+  it("does not touch bytes outside the long @ STATUS_FLAGS_OFF (no collateral side-effects)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     // Zero out only the 4 target bytes.
@@ -122,13 +122,13 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(s.workRam[0x0100]).toBe(0xa5);
   });
 
-  it("arg=2 (boundary esatto): shift=0 → mask=1 (non 2 and non no-op)", () => {
+  it("arg=2 (exact boundary): shift=0 → mask=1 (not 2 and not no-op)", () => {
     const s = emptyGameState();
     helper5236(s, 2);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000001);
   });
 
-  it("arg=1 (boundary inferiore): shift=1 → mask=2 (bcs skips, no subq)", () => {
+  it("arg=1 (lower boundary): shift=1 → mask=2 (bcs skips, no subq)", () => {
     const s = emptyGameState();
     helper5236(s, 1);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000002);

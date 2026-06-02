@@ -52,7 +52,7 @@ describe("helper3A54 constants", () => {
 
 // Base values.
 
-describe("helper3A54 — values decimali base", () => {
+describe("helper3A54 — base decimal values", () => {
   it("value=0, digits=4, showSpaces=0: '0000' + NUL", () => {
     const s = emptyGameState();
     const BUF = 0x401d00;
@@ -163,7 +163,7 @@ describe("helper3A54 — showSpaces", () => {
     expect(readByte(s, BUF + 6)).toBe(0x00); // NUL
   });
 
-  it("value=42, digits=4, showSpaces=0: '0042' (leading zeros non convertiti)", () => {
+  it("value=42, digits=4, showSpaces=0: '0042' (leading zeros not converted)", () => {
     const s = emptyGameState();
     const BUF = 0x401d00;
     helper3A54(s, 42, BUF, 4, 0);
@@ -174,7 +174,7 @@ describe("helper3A54 — showSpaces", () => {
 // ─── null-terminator ─────────────────────────────────────────────────────────
 
 describe("helper3A54 — null-terminator", () => {
-  it("writes NUL a bufEnd+numDigits", () => {
+  it("writes NUL at bufEnd+numDigits", () => {
     const s = emptyGameState();
     s.workRam.fill(0x55);
     const BUF = 0x401d00;
@@ -191,10 +191,10 @@ describe("helper3A54 — null-terminator", () => {
   });
 });
 
-// ─── isolamento memory ───────────────────────────────────────────────────────
+// ─── memory isolation ───────────────────────────────────────────────────────
 
-describe("helper3A54 — isolamento memory", () => {
-  it("non tocca byte outside dto the area [bufEnd..bufEnd+numDigits+1]", () => {
+describe("helper3A54 — memory isolation", () => {
+  it("does not touch bytes outside the area [bufEnd..bufEnd+numDigits+1]", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     const BUF = 0x401d00;
