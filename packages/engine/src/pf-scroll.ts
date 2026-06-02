@@ -69,7 +69,7 @@ export function pfScrollUpdate(state: GameState): void {
   const a0Base = TILE_BASE + (rotIndex * 2);
   const a1Base = TILE_CMP_BASE + (rotIndex * 2);
 
-  // Loop: max 60 iter; exit appena D0 (= old D3) == cmpWord
+  // Loop: max 60 iter; exit as soon as D0 (= old D3) == cmpWord
   for (let d3 = 0; d3 < MAX_ITER; d3++) {
     const a0Off = a0Base + d3 * 2;
     const tileWord = readU16BE(sp, a0Off);

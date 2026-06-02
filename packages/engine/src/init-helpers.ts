@@ -5,7 +5,7 @@
  *   da ROM 0x1D370 a workRam 0x40076E.
  * - **FUN_26B10 (26 byte)** — `copyRomToPalette32Words()`: copies 32 words
  *   da ROM 0x1FBD0 a palette RAM 0xB00000.
- * - **FUN_1286E (24 byte)** — `negateXYSwap(ptr)`: scambia (x, y) and nega
+ * - **FUN_1286E (24 byte)** — `negateXYSwap(ptr)`: swaps (x, y) and negates
  *   both: result.x = -y_old, result.y = -x_old.
  */
 

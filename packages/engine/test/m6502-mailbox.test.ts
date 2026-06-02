@@ -77,7 +77,7 @@ describe("sound-mmu RAM + ROM regions", () => {
     });
   }
 
-  it("RAM $0000-$0FFF read-write trasparente, mirror nessuno", () => {
+  it("RAM $0000-$0FFF transparent read-write, no mirror", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x0000), as_u8(0x42));
     mmu.write8(as_u16(0x0FFF), as_u8(0x99));

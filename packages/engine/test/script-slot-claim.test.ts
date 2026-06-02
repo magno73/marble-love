@@ -27,7 +27,7 @@ function setupCanonicalRomTable(rom: RomImage): void {
 }
 
 describe("claimScriptSlot (FUN_00012D46)", () => {
-  it("nessuno slot free (all +0x18 != 0) → returns 0xFFFFFFFF, niente side effect", () => {
+  it("no slot free (all +0x18 != 0) → returns 0xFFFFFFFF, no side effect", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);

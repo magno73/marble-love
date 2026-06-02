@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   let firstFail: FailCase | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Genera il word da testare
+    // Generate the word to test
     const word0: number =
       i < edges.length
         ? edges[i]!

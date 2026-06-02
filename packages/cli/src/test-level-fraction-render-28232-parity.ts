@@ -299,7 +299,7 @@ async function main(): Promise<void> {
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    // mode selector qualsiasi != 2.
+    // any mode selector != 2.
     let mode = rw();
     if (mode === 2) mode = 3;
     const idx = Math.floor(rng() * 8); // 0..7

@@ -87,7 +87,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, offB + 2)).toBe(0);
   });
 
-  it("signed coord: bit 13 (= 0x4000 in the pack) → coord negativa, asr propaga il segno", () => {
+  it("signed coord: bit 13 (= 0x4000 in the pack) → negative coord, asr propagates the sign", () => {
     const s = emptyGameState();
     // word = 0xFFE0: signed16 = -32, >>5 = -1 = 0xFFFF, & 0x1FF = 0x1FF.
     // delta = 1: 0x1FF + 1 = 0x200, & 0xFFFF = 0x200. << 5 = 0x4000.

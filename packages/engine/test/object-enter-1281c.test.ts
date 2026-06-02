@@ -27,7 +27,7 @@ function writeWordBE(ram: Uint8Array, off: number, signed: number): void {
 }
 
 describe("objectEnter1281C (FUN_0001281C)", () => {
-  it("range out-of-bounds (range = -16) → returns 0xFFFFFFF0, status = 0, niente inner", () => {
+  it("range out-of-bounds (range = -16) → returns 0xFFFFFFF0, status = 0, no inner", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;

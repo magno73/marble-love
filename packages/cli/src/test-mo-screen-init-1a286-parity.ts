@@ -49,7 +49,7 @@ import {
 
 /**
  * Step-based callFunction: like `callFunction()` but uses `system.step()`
- * invece of `system.run(burst)`. Garantisce terminazione PRECISA non appena
+ * instead of `system.run(burst)`. Guarantees PRECISE termination as soon as
  * `pc == SENTINEL_RET_ADDR`, preventing a burst from executing extra
  * make the PC converge on FUN_2572 in a misleading way if the PC keeps
  * instructions from the unmapped 0xCAFEBABE post-rts address.
