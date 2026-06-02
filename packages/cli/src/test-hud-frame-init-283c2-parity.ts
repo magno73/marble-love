@@ -14,7 +14,7 @@
  *   - player count @ 0x400396 in {1, 2, 0, 3} (1 -> 1P branch, others -> 2P)
  *   - alpha RAM init: random pattern 0..255 ad ogni byte (per esercitare
  *     write-over)
- *   - workRam[0x1F42] settato esplicitamente; il resto della workRam pure
+ *   - workRam[0x1F42] set explicitly; the rest of the workRam too
  *
  * Suite:
  *   A: rotation=0 1P (typical case, layout standard 64×30)

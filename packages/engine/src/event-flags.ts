@@ -1,7 +1,7 @@
 /**
  * event-flags.ts — gestione di "queue di flag" a 16 bit nel game state.
  *
- * Marble Madness usa un word a `0x400006` come **queue di event flags**:
+ * Marble Madness uses a word at `0x400006` as an **event-flags queue**:
  *   - I produttori settano bit specifici per signalare eventi
  *     (es. "biglia rotolata", "nemico spawnato", ...)
  *   - I consumatori chiamano `consumeEventFlag` (FUN_2548) per pop il bit
@@ -14,13 +14,13 @@ import type { GameState } from "./state.js";
 /** Offset del flag word in workRam (assoluto 0x400006). */
 export const EVENT_FLAGS_OFF = 0x06 as const;
 
-/** Offset della status-flags bitmap u32 BE (assoluto 0x401F5E). */
+/** Offset of the status-flags u32 BE bitmap (absolute 0x401F5E). */
 export const STATUS_FLAGS_OFF = 0x1f5e as const;
 
-/** Offset della "secondary status flags" bitmap u32 BE (assoluto 0x401F76). */
+/** Offset of the "secondary status flags" u32 BE bitmap (absolute 0x401F76). */
 export const SECONDARY_FLAGS_OFF = 0x1f76 as const;
 
-/** Offset della "object trigger flags" bitmap u8 (assoluto 0x40039C). */
+/** Offset of the "object trigger flags" u8 bitmap (absolute 0x40039C). */
 export const OBJECT_TRIGGER_FLAGS_OFF = 0x39c as const;
 
 export const OBJ_BASE_ADDR = 0x400018 as const;
@@ -201,7 +201,7 @@ export function setFlagBit(state: GameState, bitNum: number): void {
   const arg = bitNum >>> 0; // unsigned
   let shift = arg >= 2 ? (arg - 2) : arg;
   // m68k asl.l with shift count > 31 produces 0 (all bits shift out).
-  shift = shift & 0x3f; // 68k usa low 6 bits per shift count, ma >=32 → 0
+  shift = shift & 0x3f; // 68k uses the low 6 bits as the shift count, but >=32 → 0
   const mask = shift >= 32 ? 0 : ((1 << shift) >>> 0);
 
   const off = STATUS_FLAGS_OFF;

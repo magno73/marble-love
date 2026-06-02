@@ -2,7 +2,7 @@
  * state.ts — root del game state. Layout pensato per **rispecchiare** il game
  * `trace_reimpl.jsonl`.
  *
- * la ESLint rule fallisce. Usa wrap.ts.
+ * the ESLint rule fails. Use wrap.ts.
  *
  */
 
@@ -569,7 +569,7 @@ export function emptyGameState(): GameState {
     },
     //   work RAM 8 KB ($400000-$401FFF)
     //   playfield RAM 8 KB ($A00000-$A01FFF, 64x64 tile entries)
-    //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banchi × 64 entry × 4 word)
+    //   motion-object RAM 4 KB ($A02000-$A02FFF, 8 banks × 64 entries × 4 words)
     //   alpha RAM 4 KB ($A03000-$A03FFF, HUD overlay 64×32 tile)
     //   palette RAM 2 KB ($B00000-$B007FF)
     workRam: new Uint8Array(0x2000),     // 8 KB

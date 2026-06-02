@@ -1,6 +1,6 @@
 // Probe: byte-by-byte mapping del rect-list cluster (workRam[0x01DC..0x02BC]).
 //
-// Per ciascun byte divergente:
+// For each divergent byte:
 //  - slot index (= (off - 0x1DC) / 14)
 //  - field name (type/sub/xMin/yMin/zMin/xMax/yMax/zMax)
 //  - TS value vs MAME value

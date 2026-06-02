@@ -105,7 +105,7 @@
  *   00028316  movea.l (0x2,A3),A0                 ; A0 = long @ workRam[0x42A]  (string buffer ptr)
  *   0002831A  move.b  #0x20,(A0)+                 ; *A0++ = ' '
  *
- *   ; ── dispatch su D3 (resto della division per 12) ───────────────
+ *   ; ── dispatch on D3 (remainder of the division by 12) ───────────────
  *   0002831E  moveq   #3,D0
  *   00028320  cmp.w   D3w,D0w
  *   00028322  lea     (0x20,SP),SP                ; cleanup 32 byte = 8 long (= 6 + 8)
@@ -209,7 +209,7 @@ export const LEVEL_IDX_OFF = 0x3de as const;
 /** Workram offset del word "level number" (assoluto 0x4003EA). */
 export const LEVEL_NUM_OFF = 0x3ea as const;
 
-/** Workram offset della struct string-chain entry (assoluto 0x400428). */
+/** workRam offset of the string-chain entry struct (absolute 0x400428). */
 export const STRUCT_BASE_OFF = 0x428 as const;
 
 /**
@@ -255,7 +255,7 @@ export const FUN_28232_SUB_ADDRS = [
 // ─── Sub injection ──────────────────────────────────────────────────────
 
 /**
- * Callback della sub-jsr `renderStringChain` (FUN_2572 via 0x142). Riceve
+ * Callback of the `renderStringChain` sub-jsr (FUN_2572 via 0x142). Receives
  */
 export type RenderStringChainFn = (
   state: GameState,
@@ -279,8 +279,8 @@ export type InitStructHeaderFn = (
 ) => void;
 
 /**
- * Callback della sub-jsr `renderStringHelper` (FUN_28E3C). Riceve i 6
- *   - `arg1Long` : `sext_l(D4.w)` — quotient della division per 12.
+ * Callback of the `renderStringHelper` sub-jsr (FUN_28E3C). Receives the 6
+ *   - `arg1Long` : `sext_l(D4.w)` — quotient of the division by 12.
  *   - `arg2Long` : 0 (costante).
  *   - `arg3Long` : `0x21` (costante).
  *   - `arg4Long` : `0x1C` (costante).
@@ -466,7 +466,7 @@ export function levelFractionRender28232(
   const fracOff = fracPtr & 0x1fff;
   // Byte 0 = ' '
   state.workRam[fracOff] = 0x20;
-  // Byte 1..3 = 3-char fraction code per D3, oppure 3 space.
+  // Byte 1..3 = 3-char fraction code for D3, or 3 spaces.
   let b1 = 0x20;
   let b2 = 0x20;
   let b3 = 0x20;

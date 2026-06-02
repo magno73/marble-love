@@ -133,7 +133,7 @@ async function main(): Promise<void> {
 
   const dispose = cpu.system.onMemoryRead((event) => {
     if (event.addr === VBLANK_MAILBOX_ADDR && event.size === 1) {
-      // non scatta → fall-through al return della spin.
+      // does not fire → fall-through to the spin's return.
       cpu.system.writeRaw8(VBLANK_MAILBOX_ADDR, 0x01);
 
       mailboxReads++;

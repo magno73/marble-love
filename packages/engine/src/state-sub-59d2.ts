@@ -31,7 +31,7 @@
  *   0x5A0C  addq.l  #4,SP                       ; cleanup 1 arg
  *   0x5A0E  bhi.w   0x5A1A                      ; if denom > 0xFFFF → loop top
  *   0x5A12  cmpi.l  #0xFFFF,D1
- *   0x5A18  bls.b   0x5A4A                      ; if num <= 0xFFFF → entrambi fit → divu
+ *   0x5A18  bls.b   0x5A4A                      ; if num <= 0xFFFF → both fit → divu
  *   0x5A1A: cmpi.l  #0x1FFFE,D2                 ; loop top
  *   0x5A20  bhi.w   0x5A2C                      ; if denom > 0x1FFFE → halve via lsr
  *   0x5A24  cmpi.l  #0x1FFFE,D1
@@ -54,7 +54,7 @@
  *
  * **Convenzione caller** (xref unico @ 0x5B8E in FUN_5A5E):
  *   - D2 callee-saved (prologue/epilogue lo preservano).
- *   - Return: long unsigned in D0 (= word quoziente, range 0..0xFFFF, oppure 0
+ *   - Return: long unsigned in D0 (= word quoziente, range 0..0xFFFF, or 0
  *     per il path early-exit).
  *
  * **Side effects**:
@@ -89,8 +89,8 @@
  *          0x5A24: cmpi.l #0x1FFFE, D1
  *          0x5A2A: bls.b 0x5A3A   ; if D1 <= 0x1FFFE → branch a ROUND-half
  *          → fall-through 0x5A2C: D1 > 0x1FFFE → LSR
- *        if (D2 > 0x1FFFE OR D1 > 0x1FFFE) → LSR (entrambi via plain shift)
- *        else (= D2 <= 0x1FFFE AND D1 <= 0x1FFFE) → ROUND-half (entrambi via (x+1)>>1)
+ *        if (D2 > 0x1FFFE OR D1 > 0x1FFFE) → LSR (both via plain shift)
+ *        else (= D2 <= 0x1FFFE AND D1 <= 0x1FFFE) → ROUND-half (both via (x+1)>>1)
  *
  *        - Loop: while (D2 > 0x1FFFE OR D1 > 0x1FFFE): D2 >>= 1; D1 >>= 1
  *        - Single round: if both <= 0x1FFFE (post-shift): D2 = (D2+1)>>1; D1 = (D1+1)>>1
@@ -100,7 +100,7 @@
  *        @0x5A1A: D2=0x10000, 0x10000 <= 0x1FFFE → no LSR
  *                 D1=0x100, 0x100 <= 0x1FFFE → bls → ROUND
  *        @0x5A3A: D2 = 0x10001>>1 = 0x8000; D1 = 0x101>>1 = 0x80
- *        @0x5A4A: divu (entrambi <= 0xFFFF) ✓
+ *        @0x5A4A: divu (both <= 0xFFFF) ✓
  *
  *      Se entry-cond `D2=0x30000, D1=0x100`:
  *        @0x5A1A: 0x30000 > 0x1FFFE → LSR

@@ -363,12 +363,12 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
 
   // NORMAL path for s1a=0, gated ONLY on cb==0 (per the disasm: JT[0]=0x256d2
   // does `tst.b (0xcb,A2); beq → 0x25730 NORMAL chain`). The 0xd8 guard
-  // (0x25412) only controls the "body intermedio" wobble above and then FALLS
+  // (0x25412) only controls the "intermediate body" wobble above and then FALLS
   // THROUGH to the JT — so helper121B8 (physics) runs even while 0xd8!=0. The
   // marble does the squash wobble visually but keeps moving (no freeze), which
   // is why the arcade has no pause on a Silly Race worm squash. (A spurious
   // `sd8===0` here was freezing the marble for the whole ~2.7s wobble.)
-  //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
+  //   0x2548c (skip the intermediate body) → JT[0]=0x256d2 → 0x25730:
   //     jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
   if (s1a === 0 && scb === 0) {
     helper253BC(state, a2);
@@ -868,8 +868,8 @@ export function refreshFrame10FCE(
   // FUN_253EC chain MAME-canonical (disasm 0x253EC..0x25918, JT @ 0x254BA):
   //
   //   Prologo (0x253ec): D1 = (0x1a,A2).b ext.w (= s1a).
-  //   Guard @ 0x25412: tst.b (0xd8,A2); beq → 0x2548c (skip "body intermedio").
-  //   Body intermedio (0x25416..0x25488): per `(0xd8,A2)!=0` AND s1a∉{2,4,7,a,b},
+  //   Guard @ 0x25412: tst.b (0xd8,A2); beq → 0x2548c (skip the "intermediate body").
+  //   Intermediate body (0x25416..0x25488): for `(0xd8,A2)!=0` AND s1a∉{2,4,7,a,b},
   //     handle `(0x68,A2)` transition with clamp and flag manipulation on `(0xd8,A2)`.
   //   Bound-check @ 0x25490: blt/bgt -> epilog if A1<0 or A1>0xb.
   //   JT dispatch @ 0x254ba (16 word entries):

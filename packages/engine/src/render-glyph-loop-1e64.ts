@@ -153,7 +153,7 @@ export function renderGlyphLoop1E64(
     //   bra continue
     // narrow_skip:
     //   addq.l #4, D4   (wide)
-    // Comparisons sono signed-word: usa sext16(d3w).
+    // Comparisons are signed-word: use sext16(d3w).
     const d3signed = sext16(d3w);
     const isNarrow = d3signed >= NARROW_LO_INCL && d3signed <= NARROW_HI_INCL;
     d4 = (d4 + (isNarrow ? NARROW_STEP : WIDE_STEP)) >>> 0;

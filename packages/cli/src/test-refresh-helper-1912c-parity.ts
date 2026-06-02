@@ -15,7 +15,7 @@
  *   - Compare:
  *       * Entity table @ 0x401890 (9 × 0x28 = 0x168 byte)
  *       * Globals: workRam slice @ 0x400394..0x400399 (game-mode word + slot-count word)
- *   - No RNG consumption (FUN_0001912C non usa RNG).
+ *   - No RNG consumption (FUN_0001912C does not use the RNG).
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random entity table, random globals, no slot scan (count=0)

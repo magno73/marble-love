@@ -1,5 +1,5 @@
 // Probe video parity: confronta spriteRam / playfieldRam / alphaRam / colorRam
-// TS vs MAME a vari frame. Output: byte diff per ciascun video buffer.
+// TS vs MAME a vari frame. Output: byte diff for each video buffer.
 // Se tutti i buffer sono == 0 byte diff → output visivo IDENTICO bit-perfect.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

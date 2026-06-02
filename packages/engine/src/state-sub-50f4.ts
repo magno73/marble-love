@@ -169,7 +169,7 @@
  *  6. **Counter A2[0x11..0x12]**: 16-bit big-endian saturating-on-overflow.
  *     Increment low byte; if carry, increment high byte; if that also
  *
- *  7. **`D2/D3 += 1` epilogue**: I caller (FUN_4F38) usano queste sub come
+ *  7. **`D2/D3 += 1` epilogue**: The callers (FUN_4F38) use these subs as
  *
  *
  *     2 byte come word BE = 0x0003). Le iter successive usano `move.b
@@ -212,10 +212,10 @@ export const COUNTER_LO_OFFSET = 0x12 as const;
 /** Mask di "uncorrectable" settato in D1 (bit 31). */
 export const UNCORRECTABLE_FLAG = 0x80000000 as const;
 
-/** Offset (rispetto al base table) per indice 0x10..0x1F. */
+/** Offset (relative to the base table) for index 0x10..0x1F. */
 export const CORRECTION_TABLE_OFFSET = 0x10 as const;
 
-/** Numero di entries della correction table. */
+/** Number of entries in the correction table. */
 export const CORRECTION_TABLE_SIZE = 16 as const;
 
 export const SYNDROME_INIT_OFFSETS = [0x00, 0x10, 0x08, 0x04, 0x02] as const;
@@ -368,7 +368,7 @@ export function stateSub50F4(
   const d3times10w = (d3u * 10) & 0xffff;
   const a1Initial = addLong(a2u, signExtWord(d3times10w));
 
-  // D2w * 30 = (D2w << 4) - D2w, doppiato. M68k usa word arithmetic; mod 65536.
+  // D2w * 30 = (D2w << 4) - D2w, doppiato. M68k uses word arithmetic; mod 65536.
   const d2times15w = ((d2u << 4) - d2u) & 0xffff;
   const d2times30w = (d2times15w << 1) & 0xffff;
   const a0 = addLong(a3u, signExtWord(d2times30w));

@@ -5,7 +5,7 @@
  * `FUN_000041C8` (198 byte): high-score entry decoder.
  *   - source table = `*0x401FFC + 0x1E` (10 entries x 5 bytes)
  *   - buffer destinazione = 0x401F7A (4 byte score + 3 byte initials)
- *   - arg1 in [0..9] -> ret = 0x401F7A; altrimenti ret = 0
+ *   - arg1 in [0..9] -> ret = 0x401F7A; otherwise ret = 0
  *
  * Convenzione caller (cdecl push-RTL):
  *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word dal caller)
@@ -46,7 +46,7 @@ const FUN_41C8 = 0x000041c8;
 const PTR_FFC = 0x00401ffc;
 const TABLE_OFF = 0x1e;
 
-/** Indirizzo fissato della struct base nel test (workRam-safe). */
+/** Fixed address of the base struct in the test (workRam-safe). */
 const PTR_VAL = 0x00401a00;
 const TABLE_BASE = PTR_VAL + TABLE_OFF; // 0x401A1E
 

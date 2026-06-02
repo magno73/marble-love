@@ -4,7 +4,7 @@
  *
  *
  * Convenzione caller (cdecl push-RTL):
- *   - return D0 non significativo (caller non usa)
+ *   - return D0 not meaningful (caller does not use it)
  *
  * Strategia parity:
  *

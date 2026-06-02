@@ -282,7 +282,7 @@ async function main(): Promise<void> {
 
   /**
    * Generates an entity table. `forceActive` controls the frequency of
-   * `entity[0x18]==1`. `safeScriptPtr` usa addr ROM per scriptPtr.
+   * `entity[0x18]==1`. `safeScriptPtr` uses a ROM addr for scriptPtr.
    */
   function genTable(
     forceActiveProb: number,

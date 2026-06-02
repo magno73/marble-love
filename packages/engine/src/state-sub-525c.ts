@@ -123,7 +123,7 @@ export function fun523A(state: GameState, d0: number): void {
  *      is a valid workRam offset.
  *   2. long-BE OR @ `0x401F5E` with bitmask `bit 4..3+d0*2`.
  *
- *   - `mulu.w D1w,D0` usa low word: `(d0 & 0xFFFF) * 20` (no overflow word
+ *   - `mulu.w D1w,D0` uses the low word: `(d0 & 0xFFFF) * 20` (no overflow word
  *   - `(0x50, A2, D0w*1)`: indexing displacement with D0w sign-extended.
  *   - `add.l D2,D2; subq.l #1,D2` su `d0`: D2 = `d0*2 - 1`.
  *     `d0*2 <= 0x10000`).

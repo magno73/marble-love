@@ -81,7 +81,7 @@
  *   4. Chain check: if sext(marker) + sext(VAL_F00) > 1 -> A0 = *(A0+8)
  *
  *
- * **Stub injection**: FUN_2ABC NON ha jsr/bsr a sub-funzioni esterne.
+ * **Stub injection**: FUN_2ABC has NO jsr/bsr to external sub-functions.
  * pattern (state-sub-2678, state-sub-2da0).
  *
  * to itself (`*(A0+8) == A0`) or if it forms a cycle. Limit to 1024

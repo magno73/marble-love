@@ -6,7 +6,7 @@
  *   - 30 row × 84 byte (loop 1, ROM-driven)
  *   - 34 word a offset 0x008..0x04B (loop 2, costante 0x2000)
  *   - 34 word a offset 0xE88..0xECB (loop 3, costante 0x2000)
- * Il resto della alpha RAM (44 byte di "skip" per ciascun row + 0xF00..0xFFF)
+ * The rest of the alpha RAM (44 "skip" bytes per row + 0xF00..0xFFF)
  * resta com'era.
  *
  * Strategia di test:

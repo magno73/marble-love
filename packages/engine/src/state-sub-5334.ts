@@ -46,7 +46,7 @@ import type { GameState } from "./state.js";
 
 // ─── MMIO/work RAM addresses ─────────────────────────────────────────────
 
-/** Base assoluta della work RAM (M68k: 0x400000..0x401FFF, 8 KB). */
+/** Absolute base of the work RAM (M68k: 0x400000..0x401FFF, 8 KB). */
 const WORK_RAM_BASE = 0x00400000;
 
 export const ARG1_BYTE_ADDR = 0x00401f98 as const;

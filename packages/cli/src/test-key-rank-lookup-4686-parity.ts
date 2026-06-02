@@ -7,10 +7,10 @@
  * no JSR, no MMIO, and no writes to workRam. Extracts a 24-bit key from the
  * long arg and returns the index of the first row in the table
  * (10 righe × 5 byte) puntata da `*0x401FFC + 0x1E` la cui chiave-prefix
- * (3 byte) e' strettamente maggiore della key.
+ * (3 byte) is strictly greater than the key.
  *
  * Confronto:
- *   - return D0 (long signed): -1, 0..9, oppure 10
+ *   - return D0 (long signed): -1, 0..9, or 10
  *
  * Setup for each random case:
  *   - *0x401FFC = a2Addr (struct base, range workRam-safe @ 0x401D00)
@@ -25,7 +25,7 @@
  *   D. key < every prefix            -> expected D0 = 10
  *   E. fully random                  -> stress, expected match at any rank
  *
- * Strategia stub injection: NESSUNA. FUN_4686 non chiama JSR.
+ * Stub-injection strategy: NONE. FUN_4686 does not call JSR.
  *
  * Uso: npx tsx packages/cli/src/test-key-rank-lookup-4686-parity.ts [N=500]
  */

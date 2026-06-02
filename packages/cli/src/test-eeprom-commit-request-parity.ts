@@ -6,11 +6,11 @@
  * `FUN_00003FC6` (66 bytes) is called once by `FUN_472A` (call site
  * @ 0x4748). It is a "consume / pace-check" wrapper around `FUN_3F78`:
  *   - takes one long arg from the caller but reads only the low word
- *   - chiama `FUN_3F78` due volte (entrambe modificano workRam @ 0x401FF5/F7)
+ *   - calls `FUN_3F78` twice (both mutate workRam @ 0x401FF5/F7)
  *   - if checks pass, decrement byte @ 0x401FF5 by `(arg.w * result1.w).b`
  *
  * Confronto:
- *   - return D0 (long): 0 oppure 1
+ *   - return D0 (long): 0 or 1
  *   - byte @ 0x401FF5 (acc, modified by internal eepromCommit + decrement)
  *   - byte @ 0x401FF7 (drain counter, modified by internal eepromCommit)
  *

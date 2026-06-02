@@ -1,4 +1,4 @@
-// probe-0700-token-trace.ts — esegue una versione INSTRUMENTATA del decoder
+// probe-0700-token-trace.ts — runs an INSTRUMENTED version of the decoder
 // FUN_1A668 with the same args MAME uses at the first body (f12002), and dumps:
 //   - for each iter: token14, path A/B/C/D/E, d4_pre, d6_pre, d6_post,
 //     d3, d2_pre, ext bytes consumati, output words emesse

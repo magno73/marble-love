@@ -84,7 +84,7 @@ export const GRID_SHIFT = 0x03 as const;
 export const GRID_X_BIAS = 0x59 as const;
 /** Offset del secondo asse nel grid bitmap (`y_byte - 0x5A`). */
 export const GRID_Y_BIAS = 0x5a as const;
-/** Range valido per ciascun asse nel grid bitmap (`[0, 0xF]`). */
+/** Valid range for each axis in the grid bitmap (`[0, 0xF]`). */
 export const GRID_RANGE_MAX = 0x0f as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function sub193D8ProximityCheck(
  * Computa `x_idx = (x_word >> 3) - 0x59` (byte) e `y_idx = (y_word >> 3) - 0x5A`
  * `(word_val & (1 << x_idx)) != 0 ? 1 : 0`.
  *
- * Per matchare i flag M68K l'address mode `(0,A0,D0w*1)` usa D0 come word,
+ * To match the M68K flags the address mode `(0,A0,D0w*1)` uses D0 as a word,
  */
 export function sub19460GridBitmap(
   rom: RomImage,
@@ -178,7 +178,7 @@ export function sub19460GridBitmap(
  *
  * @param rom         RomImage per `FUN_19460` (grid bitmap @ ROM[0x24496]).
  *
- *          "libera". NB: il caller `FUN_19692`/`FUN_198BC` usa `tst.l D0;
+ *          "free". NB: the caller `FUN_19692`/`FUN_198BC` uses `tst.l D0;
  */
 export function sub1937C(
   state: GameState,
