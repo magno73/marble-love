@@ -86,7 +86,7 @@ describe("initStructHeader (FUN_255A)", () => {
     expect(s.workRam[0x107]).toBe(0xAA);
   });
 
-  it("byte values mascherati a 8 bit", () => {
+  it("byte values masked to 8 bits", () => {
     const s = emptyGameState();
     initStructHeader(s, 0x400100, 0x1FF, 0x200);
     expect(s.workRam[0x100]).toBe(0xFF);
@@ -105,7 +105,7 @@ describe("initStructHeader (FUN_255A)", () => {
 });
 
 describe("clearPaletteRam (FUN_121A6)", () => {
-  it("azzera tutta la palette RAM (2 KB)", () => {
+  it("clears the entire palette RAM (2 KB)", () => {
     const s = emptyGameState();
     s.colorRam.fill(0xFF);
     clearPaletteRam(s);

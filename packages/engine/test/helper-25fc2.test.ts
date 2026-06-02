@@ -561,7 +561,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(h18f46Calls[0]).toEqual({ typeCode: 1, subIdx: 0x04 });
   });
 
-  it("21. state-3: secondary_state==2 → typeCode=1 per second oggetto", () => {
+  it("21. state-3: secondary_state==2 → typeCode=1 for second object", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -589,7 +589,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(h18f46Calls[0]).toEqual({ typeCode: 1, subIdx: 0x07 });
   });
 
-  it("22. state-3: secondary_state==2 → typeCode=2 per oggetto non in the coppia", () => {
+  it("22. state-3: secondary_state==2 → typeCode=2 for object not in the pair", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -614,7 +614,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(h18f46Calls[0]).toEqual({ typeCode: 2, subIdx: 0x09 });
   });
 
-  it("23. sentinel + altri state → set obj_type=0x65 + objectStateEntry(4)", () => {
+  it("23. sentinel + other states → set obj_type=0x65 + objectStateEntry(4)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -638,7 +638,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(ose25Calls[0]).toEqual({ objPtr: OBJ_ABS, code: 0x04 });
   });
 
-  it("24. sub-frame: non attivo se ptr <= anim_base (A1)", () => {
+  it("24. sub-frame: not active if ptr <= anim_base (A1)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -657,7 +657,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(r[OBJ_OFF + 0x66]).toBe(0); // sub_frame_ctr untouched
   });
 
-  it("25. sub-frame: non attivo se index <= 9", () => {
+  it("25. sub-frame: not active if index <= 9", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;

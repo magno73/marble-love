@@ -294,7 +294,7 @@ export function objectScanDispatch251DE(
             // 0x2527C: cmpi.b #2, (0x36,A2); beq skip
             const b36 = readU8(wr, a2 + 0x36);
             if (b36 !== 0x02) {
-              // 0x25286..0x2529E: filter su (0x1A,A2):
+              // 0x25286..0x2529E: filter on (0x1A,A2):
               // tst.b (0x1a,A2); beq RESET (0x252a2)
               // cmpi.b #1, (0x1a,A2); beq RESET
               // cmpi.b #5, (0x1a,A2); bne skip

@@ -90,14 +90,14 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r.iterations).toBe(1);
     // -1 signed < 0x26 → wide → +4
     expect(r.endBufPtr).toBe(0x00a03204);
-    // 0xFFFF + 1 wraps a 16-bit → 0x0000
+    // 0xFFFF + 1 wraps to 16-bit → 0x0000
     expect(r.endCharCode).toBe(0x0000);
     expect(calls).toEqual([
       { bufPtr: 0x00a03200, charCode: 0xffff, mask: 0 },
     ]);
   });
 
-  it("charCode signed-positive grande (0x7FFF) → wide; charCode 0x8000 (= -32768 i16) → wide", () => {
+  it("large signed-positive charCode (0x7FFF) → wide; charCode 0x8000 (= -32768 i16) → wide", () => {
     // 0x7FFF = 32767 signed > 0x2D → wide
     const r1 = renderGlyphLoop1E64(0x00a03000, 0x7fff, 1);
     expect(r1.endBufPtr).toBe(0x00a03004);
@@ -109,22 +109,22 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r2.endCharCode).toBe(0x8001);
   });
 
-  it("transizione narrow → wide: 0x2D + 1 = 0x2E (wide), step 2 pothe 4", () => {
-    // count=3 da 0x2C: 0x2C(narrow,+2), 0x2D(narrow,+2), 0x2E(wide,+4)
+  it("narrow → wide transition: 0x2D + 1 = 0x2E (wide), step 2 then 4", () => {
+    // count=3 from 0x2C: 0x2C(narrow,+2), 0x2D(narrow,+2), 0x2E(wide,+4)
     const r = renderGlyphLoop1E64(0x00a03400, 0x2c, 3);
     expect(r.iterations).toBe(3);
     expect(r.endBufPtr).toBe(0x00a03400 + 2 + 2 + 4);
     expect(r.endCharCode).toBe(0x2f);
   });
 
-  it("renderGlyph callback assente is no-op (default subs)", () => {
+  it("absent renderGlyph callback is no-op (default subs)", () => {
     const r = renderGlyphLoop1E64(0x00a03500, 0x41, 5);
     expect(r.iterations).toBe(5);
     expect(r.endBufPtr).toBe(0x00a03500 + 5 * 4);
     expect(r.endCharCode).toBe(0x46);
   });
 
-  it("constanti pubbliche: range narrow and step", () => {
+  it("public constants: narrow range and step", () => {
     expect(NARROW_LO_INCL).toBe(0x26);
     expect(NARROW_HI_INCL).toBe(0x2d);
     expect(NARROW_STEP).toBe(2);
@@ -132,14 +132,14 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(RENDER_GLYPH_FN_ADDR).toBe(0x000032ba);
   });
 
-  it("wrap u32 of bufPtr when close al limit (0xFFFFFFFC + 4 = 0)", () => {
-    // bufPtr a -4 (= 0xFFFFFFFC), 1 wide iter → wrap a 0
+  it("u32 wrap of bufPtr when close to the limit (0xFFFFFFFC + 4 = 0)", () => {
+    // bufPtr at -4 (= 0xFFFFFFFC), 1 wide iter → wrap to 0
     const r = renderGlyphLoop1E64(0xfffffffc, 0x30, 1);
     expect(r.endBufPtr).toBe(0x00000000);
     expect(r.iterations).toBe(1);
   });
 
-  it("wrap u16 of endCharCode (0xFFFE + 3 = 0x0001)", () => {
+  it("u16 wrap of endCharCode (0xFFFE + 3 = 0x0001)", () => {
     const r = renderGlyphLoop1E64(0x00a03000, 0xfffe, 3);
     expect(r.iterations).toBe(3);
     // 0xFFFE → 0xFFFF → 0x0000 → 0x0001

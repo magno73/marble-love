@@ -44,8 +44,8 @@ function readStr(
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-describe("helper3A54 costanti", () => {
-  it("HELPER_3A54_ADDR ha il value correct", () => {
+describe("helper3A54 constants", () => {
+  it("HELPER_3A54_ADDR has the correct value", () => {
     expect(HELPER_3A54_ADDR).toBe(0x00003a54);
   });
 });
