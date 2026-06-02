@@ -28,7 +28,7 @@ function readU32(s: ReturnType<typeof emptyGameState>, addr: number): number {
 }
 
 describe("positionUpdate (FUN_1706C)", () => {
-  it("tutti flag 0: x e y unchanged", () => {
+  it("all flag 0: x and y unchanged", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Setup: struct @ 0x401D00 = (0x12345678, 0xABCDEF01)
@@ -63,7 +63,7 @@ describe("positionUpdate (FUN_1706C)", () => {
     expect(readU32(s, 0x401D04)).toBe(200);
   });
 
-  it("rotIdx >= 4: cardinale skip anche con flag set", () => {
+  it("rotIdx >= 4: cardinale skip also con flag set", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x23D40 + 4 * 2] = 0; rom.program[0x23D40 + 4 * 2 + 1] = 0x20;
@@ -87,7 +87,7 @@ describe("positionUpdate (FUN_1706C)", () => {
     expect(readU32(s, 0x401D00)).toBe(10);
   });
 
-  it("bitmap bit 0 set + condizioni met: x e y entrambi modificati", () => {
+  it("bitmap bit 0 set + condizioni met: x and y both modificati", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // table[0] = +5 (per d3=0), table[7] = +3 (per d2=7-7=0... aspetta)

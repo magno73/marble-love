@@ -211,11 +211,11 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random count + random mode ─────────────────────────────
   console.log(
-    `\n=== particleInit18CD2 (FUN_00018CD2) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== particleInit18CD2 (FUN_00018CD2) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    // count limitato a 0..32 per restare nell'area di compare (32 slot * 0xA)
+    // count limitato a 0..32 per restare in the area of compare (32 slot * 0xA)
     const count = Math.floor(rng() * 33) & 0xff;
     const mode = Math.floor(rng() * 256) & 0xff;
     if (runOneCase("A", i, count, mode, rs())) okA++;
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: count piccoli (0..3), mode positivo ────────────────────
   console.log(
-    `\n=== Suite B: small count + mode ∈ [0..0x7F] — ${perSuite} casi ===`,
+    `\n=== Suite B: small count + mode ∈ [0..0x7F] — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: mode == 0xFF ──────────────────────────────────────────
   console.log(
-    `\n=== Suite C: mode == 0xFF (palette refresh path) — ${perSuite} casi ===`,
+    `\n=== Suite C: mode == 0xFF (palette refresh path) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -251,7 +251,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (count={0,1,32}, mode boundaries) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (count={0,1,32}, mode boundaries) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const counts = [0, 1, 2, 32];

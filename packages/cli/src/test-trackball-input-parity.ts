@@ -3,11 +3,11 @@
  * test-trackball-input-parity.ts — differential FUN_1AC18 vs trackballInputTick.
  *
  * Per N test cases:
- *   1. Setup obj fields (0xC6/C7/C8/C9 per obj 0 e 1)
+ *   1. Setup obj fields (0xC6/C7/C8/C9 per obj 0 and 1)
  *   2. Setup MMIO trackball ports (0xF20001, 0xF20003, 0xF20005, 0xF20007)
  *   3. callFunction(0x1AC18) — no args
  *   4. trackballInputTick(state, p1X, p1Y, p2X, p2Y)
- *   5. Confronta delta + saved per entrambi obj
+ *   5. Compare delta + saved per both obj
  *
  * Uso: npx tsx packages/cli/src/test-trackball-input-parity.ts [N]
  */
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== trackballInputTick (FUN_1AC18) — ${n} casi ===`);
+  console.log(`\n=== trackballInputTick (FUN_1AC18) — ${n} cases ===`);
 
   const rng = makeRng(0xb0a);
   let ok = 0;

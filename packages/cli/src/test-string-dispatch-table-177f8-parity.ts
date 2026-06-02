@@ -7,9 +7,9 @@
  * `D0 & 0xFFFF`. Pre-populate workRam + PF RAM with deterministic patterns
  *   1. Side binary: `callFunction(cpu, 0x177F8, [arg0L, arg1L, arg2L])` →
  *      capture `r.d0 & 0xFFFF`.
- *   2. Side TS: snapshot di workRam → `state.workRam`; snapshot di PF RAM
+ *   2. Side TS: snapshot of workRam → `state.workRam`; snapshot of PF RAM
  *      `stringDispatchTable177F8(state, rom, pfRam, arg0w, arg1w, arg2w)`.
- *   3. Compara D0.w.
+ *   3. Compare D0.w.
  *
  *   - A: forced bound-exit (D2.w >= bound).
  *   - C: top4 != 0 + mask hit (top4_short path).
@@ -17,7 +17,7 @@
  *        / bias_sentinel / bit11_set re-loop).
  *
  *     destinatario in memory address).
- *   - Le high 16 bits di D0 dipendono dal D0 del caller pre-call (la sub
+ *   - Le high 16 bits of D0 dipendono from the D0 of the caller pre-call (la sub
  *     uses only `move.w` and `move.b` on D0). Our TS replica returns
  *     of `callFunction`, but only in the high bits.
  *
@@ -101,9 +101,9 @@ function setWordBE(buf: Uint8Array, off: number, v: number): void {
 }
 
 /**
- * Costruisce un setup "base" comune: workRam pseudo-random + PF RAM
+ * Costruisce a setup "base" comune: workRam pseudo-random + PF RAM
  * pseudo-random + level header @ 0x401000 with generous bound, string-table
- * @ 0x401200 (nel workRam), base-offset table @ 0x400478 sane.
+ * @ 0x401200 (in the workRam), base-offset table @ 0x400478 sane.
  */
 function buildBaseFill(rngSeed: number, args: {
   arg0w: number;
@@ -122,7 +122,7 @@ function buildBaseFill(rngSeed: number, args: {
   setLongBE(wr, WR_LEVEL_HEADER_PTR - WORK_RAM_BASE, 0x401000);
   // bound @ levelHeader + 0x18 (= workRam off 0x1018)
   setWordBE(wr, 0x1000 + 0x18, args.bound & 0xffff);
-  // A0_deref ∈ [0xa00000..0xa04000) per il path no_bit11. Il D0_sext aggiunto
+  // A0_deref ∈ [0xa00000..0xa04000) for the path no_bit11. Il D0_sext aggiunto
   setLongBE(wr, 0x1000, 0xa00800);
 
   // string-table ptr @ 0x40065a -> 0x401200 (workRam)
@@ -167,7 +167,7 @@ async function runCase(
 
   // ── Side TS ─────────────────────────────────────────────────────────────
   state.workRam.set(setup.workRam);
-  // Costruiamo un pfRam separato per TS (snapshot pre-call).
+  // We build a separate pfRam for TS (snapshot pre-call).
   const tsPfRam = new Uint8Array(setup.pfRam);
   const tsD0w =
     ns.stringDispatchTable177F8(
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state });
 
-  console.log(`\n=== stringDispatchTable177F8 (FUN_177F8) — ${total} casi ===`);
+  console.log(`\n=== stringDispatchTable177F8 (FUN_177F8) — ${total} cases ===`);
 
   let totalOk = 0;
   interface FailRecord {
@@ -264,12 +264,12 @@ async function main(): Promise<void> {
 
   // ── Suite B: no_bit11 path (top4 = 0, bit 11 = 0) ──────────────────────
   //   - D3.l = sext(arg2w) + globalLong988. Vogliamo D3.l piccolo (0..0xF).
-  //     Con globalLong988=0 e arg2w piccolo (positive 0..0xF) → D3.l = arg2w.
+  //     Con globalLong988=0 and arg2w piccolo (positive 0..0xF) → D3.l = arg2w.
   //   - A0_deref = 0xa00800 (in PF RAM); D0_sext ∈ [0x40..0x7ff] → A1 ∈
   //   - offset0/offset4 from ROM are small (0..0x12121200, but we inspect
   //     only entries 0..15 = 0..0xF). A3 still = A1 + offset0 and A1 += offset4.
   //     With offset0 in {0..3, 0x12120300...}, this lands in different places. But in
-  //     pratica per le entries 0..7 le offset sono 0..3 (vedi rom dump @ 0x2417e),
+  //     pratica per le entries 0..7 le offset are 0..3 (vedi rom dump @ 0x2417e),
   //     arg2w ∈ [0..7].
   //     in PF RAM if A1_pre >= 0xa00000.
   console.log(`\n  Suite B (no_bit11 path) — ${perSuite} casi`);
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
   // ── Suite C: top4 != 0, mask hit (top4_short) ──────────────────────────
   // top4_short does not re-read PF RAM; only workRam @ 0x400478 + 2*arg0w and
   // ROM @ 0x24176 + D3.w*2). Vincoli:
-  //     (0x24176..0x2417d). Con globalLong988=0 e arg2w ∈ [0..3], D3.w =
+  //     (0x24176..0x2417d). Con globalLong988=0 and arg2w ∈ [0..3], D3.w =
   //     arg2w, D3.w*2 ∈ [0..6]. ✓
   console.log(`\n  Suite C (top4_short path) — ${perSuite} casi`);
   let okC = 0;

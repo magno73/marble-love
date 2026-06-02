@@ -2,12 +2,12 @@
  *
  * quoziente word zero-esteso a long.
  *
- *   - long unsigned valido (0..0xFFFFFFFF tipico, ma nei caller marble-madness
- *     stanno tipicamente nel range word/byte)
- *   - `-1` (= 0xFFFFFFFF) o `-2` (= 0xFFFFFFFE) per errori di OOR
+ *   - long unsigned valido (0..0xFFFFFFFF typical, but in the caller marble-madness
+ *     are typically in the range word/byte)
+ *   - `-1` (= 0xFFFFFFFF) o `-2` (= 0xFFFFFFFE) for errors of OOR
  *
  * and for parity (the binary oracle patches FUN_40D8 entry with synthetic RTS
- * e inietta D0 manualmente).
+ * and inietta D0 manualmente).
  *
  * **Disasm 0x59D2..0x5A5D** (140 byte / 0x8C):
  *
@@ -52,17 +52,17 @@
  *   0x5A5A  move.l  (SP)+,D2                    ; restore D2
  *   0x5A5C  rts                                  ; return D0
  *
- * **Convenzione caller** (xref unico @ 0x5B8E in FUN_5A5E):
+ * **Convenzione caller** (xref single @ 0x5B8E in FUN_5A5E):
  *   - D2 callee-saved (prologue/epilogue lo preservano).
  *   - Return: long unsigned in D0 (= word quoziente, range 0..0xFFFF, or 0
- *     per il path early-exit).
+ *     for the path early-exit).
  *
  * **Side effects**:
  *     and then explicitly cleaned up (`addq.l #8,SP` + `addq.l #4,SP`).
  *
- * **Note di low-level fidelity**:
+ * **Note of low-level fidelity**:
  *
- *   1. **`asl.l #1, D2`**: shift aritmetico left di 1 = moltiplicazione per 2
+ *   1. **`asl.l #1, D2`**: shift aritmetico left of 1 = moltiplicazione per 2
  *      to `add.l D2, D2`. Sets CCR.X, CCR.N, CCR.Z, CCR.V (V on overflow), CCR.C.
  *      wraps mod 2^32 (long arithmetic semantics). Model this as unsigned32.
  *
@@ -73,8 +73,8 @@
  *      so the routine bypasses it directly to epilogue.
  *
  *   4. **`addq.l #8, SP`**: M68k documentation says `addq` on Ax/SP
- *      `cmpi.l #0xFFFF,D2; addq.l #4,SP; bhi`: l'`addq #4,SP` non clobba i
- *      flag del cmpi.
+ *      `cmpi.l #0xFFFF,D2; addq.l #4,SP; bhi`: the `addq #4,SP` non clobba i
+ *      flag of the cmpi.
  *
  *   5. **`cmpi.l #0xFFFF, D2; bhi`**: bhi = unsigned higher = `D2 > 0xFFFF`
  *      "fits in word"). Same for `cmpi.l #0x1FFFE, ...; bhi`.
@@ -102,7 +102,7 @@
  *        @0x5A3A: D2 = 0x10001>>1 = 0x8000; D1 = 0x101>>1 = 0x80
  *        @0x5A4A: divu (both <= 0xFFFF) ✓
  *
- *      Se entry-cond `D2=0x30000, D1=0x100`:
+ *      If entry-cond `D2=0x30000, D1=0x100`:
  *        @0x5A1A: 0x30000 > 0x1FFFE → LSR
  *        @0x5A2C: D2 = 0x18000; D1 = 0x80
  *        @0x5A38: bra 0x5A1A
@@ -110,22 +110,22 @@
  *        @0x5A3A: D2 = 0x18001>>1 = 0xC000; D1 = 0x81>>1 = 0x40
  *        @0x5A4A: divu (0xC000 <= 0xFFFF, 0x40 <= 0xFFFF) ✓
  *
- *      Se entry-cond `D2=0x100000000` (overflow long?) — N/A, F(4) signed long, ma
+ *      If entry-cond `D2=0x100000000` (overflow long?) — N/A, F(4) signed long, but
  *
- *   8. **`mulu.w #0x3C, D0`**: D0w * 60 → long in D0. NON va in overflow long
+ *   8. **`mulu.w #0x3C, D0`**: D0w * 60 → long in D0. NOT va in overflow long
  *      (max 0xFFFF * 60 = 0x3BFFC4 < 2^32). Sicuro.
  *
  *   9. **`divu.w D2, D1`**: D1 (long) / D2w (word, low). Quotient → D1 low word,
- *      remainder → D1 high word. Se quotient > 0xFFFF → CCR.V set (overflow,
+ *      remainder → D1 high word. If quotient > 0xFFFF → CCR.V set (overflow,
  *      In theory possible overflow if D2 = 1: quotient = D1 (max 0x3BFFC4, > 0xFFFF).
  *
  *      Verifichiamo Musashi: `divu.w` su 68k:
  *        - if divisor == 0 -> trap (avoided here by tst.l D2).
  *
  *
- *  10. **`moveq #0,D0; move.w D1w,D0w` (post-divu)**: zero-extend del low word
+ *  10. **`moveq #0,D0; move.w D1w,D0w` (post-divu)**: zero-extend of the low word
  *
- *  11. **`move.l (SP)+, D2`**: pop di 4 byte → D2 ripristinato. SP allineato.
+ *  11. **`move.l (SP)+, D2`**: pop of 4 byte → D2 ripristinato. SP allineato.
  *
  * **Xrefs** (1 ref, 1 caller):
  *   - `0x5B8E` in FUN_5A5E — `jsr 0x000059D2.l` (UNCONDITIONAL_CALL)
@@ -137,7 +137,7 @@ import type { GameState } from "./state.js";
 // ─── Tipi callback ─────────────────────────────────────────────────────────
 
 /**
- * Signature di `FUN_000040D8` — config-field fetch.
+ * Signature of `FUN_000040D8` — config-field fetch.
  *
  *   - id == 0xD → ROM[0x1006F] sign-ext-long (long signed range -128..127)
  *   - id > 0xD  → -1 (= 0xFFFFFFFF) "out-of-range"
@@ -145,7 +145,7 @@ import type { GameState } from "./state.js";
  * For FUN_59D2 the three field ids are `3`, `4`, and `5`. The default here is
  * only for tests.
  *
- * @returns       long unsigned (D0 al rts del callee).
+ * @returns       long unsigned (D0 al rts of the callee).
  */
 export type Sub59D2Inner40D8 = (state: GameState, fieldId: number) => number;
 
@@ -189,7 +189,7 @@ const HALF_THRESHOLD = 0x1fffe as const;
  *
  * 2. Il halving step `(x + 1) >> 1` modella `addq.l #1, D0; lsr.l #1, D0`.
  *
- * 3. Il halve-loop ha entry @ 0x5A1A. Re-check su D2 e D1. Fallthrough a 0x5A4A
+ * 3. Il halve-loop ha entry @ 0x5A1A. Re-check su D2 and D1. Fallthrough a 0x5A4A
  *    through the ROUND-half path (NOT through the LSR path, which has explicit `bra 0x5A1A`).
  *    SOLO round-half ((D2+1)>>1, (D1+1)>>1), poi divu.
  *
@@ -203,18 +203,18 @@ const HALF_THRESHOLD = 0x1fffe as const;
  *    Re-check: 0x10000 <= 0x1FFFE; D1' = 0x80 <= 0x1FFFE → ROUND-half.
  *    D2'' = 0x10001>>1 = 0x8000; D1'' = 0x81>>1 = 0x40. Divu OK.
  *
- * 4. `divu.w D2, D1`: divisione word unsigned. Quotient nel low word di D1,
- *    remainder nel high word. Se quotient > 0xFFFF → V flag, D1 unchanged.
+ * 4. `divu.w D2, D1`: divisione word unsigned. Quotient in the low word of D1,
+ *    remainder in the high word. If quotient > 0xFFFF → V flag, D1 unchanged.
  *    In TS: rilevamento `Math.floor(num / denomW) > 0xFFFF`.
  *
  *    (32-bit copy esatta).
  *
  *    Per overflow detection: `D1_pre_divu = (D1_post_halving & 0xFFFF) * 60`.
- *    Quotient teorico = `Math.floor(D1_pre_divu / (D2 & 0xFFFF))`. Se > 0xFFFF
+ *    Quotient teorico = `Math.floor(D1_pre_divu / (D2 & 0xFFFF))`. If > 0xFFFF
  *    -> V set, D1 unchanged -> low word of D1 = (D1_pre_divu) & 0xFFFF =
  *    `((D1_halved & 0xFFFF) * 60) & 0xFFFF`.
  *
- *    `D1_pre = (D1w_halved * 60) >>> 0`. Se quotient overflow:
+ *    `D1_pre = (D1w_halved * 60) >>> 0`. If quotient overflow:
  *      - V flag set
  *      - move.w D1w → D0 = D1_pre & 0xFFFF
  *
@@ -275,17 +275,17 @@ export function stateSub59D2(
   // moveq #0, D0; move.w D1w,D0w; mulu.w #0x3C,D0; move.l D0,D1.
   const d1Word = d1 & 0xffff;
   const numScaled = (d1Word * SCALE_FACTOR) >>> 0;
-  // Pre-divu: D1 = numScaled (long). D0 anche = numScaled.
+  // Pre-divu: D1 = numScaled (long). D0 also = numScaled.
 
   // ─── Fase 7: divu.w D2, D1 ───────────────────────────────────────────────
   // Quotient = floor(D1 / D2w). If > 0xFFFF -> V flag, D1 unchanged.
   const d2Word = d2 & 0xffff;
   //
-  // direttamente. d2 != 0 garantito dal path early-exit.
+  // direttamente. d2 != 0 garantito from the path early-exit.
   //
   let d1AfterDivu: number;
   if (d2Word === 0) {
-    // Path teoricamente irraggiungibile, ma per safety lo trattiamo come V-flag
+    // Path teoricamente irraggiungibile, but per safety lo trattiamo as V-flag
     d1AfterDivu = numScaled; // D1 unchanged
   } else {
     const quotient = Math.floor(numScaled / d2Word);
@@ -293,7 +293,7 @@ export function stateSub59D2(
       // divu.w overflow: V flag set, D1 NOT modified -> remains = numScaled.
       d1AfterDivu = numScaled;
     } else {
-      // Quotient nel low word, remainder (numScaled mod d2Word) nel high word.
+      // Quotient in the low word, remainder (numScaled mod d2Word) in the high word.
       const remainder = numScaled - quotient * d2Word;
       d1AfterDivu = (((remainder & 0xffff) << 16) | (quotient & 0xffff)) >>> 0;
     }

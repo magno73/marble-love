@@ -193,23 +193,23 @@ function writeLongBE(state: GameState, off: number, v: number): void {
 
 /**
  *
- * @param state       GameState (modifica `state.workRam[entity..entity+0x27]`).
+ * @param state       GameState (modifies `state.workRam[entity..entity+0x27]`).
  *                    Convertito a offset `entityAddr - 0x400000`.
- * @param subs        injection. `subs.fun_19976` (move) e `subs.fun_1937c`
+ * @param subs        injection. `subs.fun_19976` (move) and `subs.fun_1937c`
  *                    (validate). Default: no-op + return 0 (= early exit).
  *
- * @returns dettaglio dell'esecuzione (outcome, iter count, JSR count).
+ * @returns dettaglio of the esecuzione (outcome, iter count, JSR count).
  *
  *   1. Test `entity[0x26] == 0x10` → early return.
  *   2. Save D5 = entity[0xC..0xF], D4 = entity[0x10..0x13].
  *   3. step = (entity[0x25] == 7) ? 1 : 4.
  *   4. Call fun_19976; call fun_1937c.
- *   5. Se fun_1937c == 0: restore D5/D4, return ("first_blocked").
+ *   5. If fun_1937c == 0: restore D5/D4, return ("first_blocked").
  *   6. D2 = 0. Loop:
- *      - Se state==7 OR (D2 & 3) == 0: apply
+ *      - If state==7 OR (D2 & 3) == 0: apply
  *        - entity[0xC..0xF] = D5, entity[0x10..0x13] = D4
  *        - entity[0x26] = (entity[0x26] + step) & 0xF
- *        - Call fun_19976, fun_1937c. Se 0: restore D5/D4, return ("loop_blocked").
+ *        - Call fun_19976, fun_1937c. If 0: restore D5/D4, return ("loop_blocked").
  *      - D2++; if D2 == 0xC -> stuck.
  *   7. Stuck: entity[0x26] = 0x10, entity[0..7] = 0; restore D5/D4.
  */
@@ -254,7 +254,7 @@ export function sub19692(
   let validateCalls = 1;
 
   if (firstD0 === 0) {
-    // "libera" (= D0 == 0): restore pos e return.
+    // "free" (= D0 == 0): restore pos and return.
     writeLongBE(state, off + ENTITY_POS_X_OFFSET, savedX);
     writeLongBE(state, off + ENTITY_POS_Y_OFFSET, savedY);
     return {

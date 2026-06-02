@@ -4,7 +4,7 @@
  * differential FUN_00013334 vs `objectRenderUpdate13334`.
  *
  * **Strategia**:
- * `FUN_13334` ha 5 path osservabili (mode = `struct[0x1e]`):
+ * `FUN_13334` ha 5 path observable (mode = `struct[0x1e]`):
  *   1. mode ∉ {1,2}: skip globals → compute + dispatch + final copy.
  *   2. mode in {1,2} and `*struct[0x3e] == 0xFFFFFFFF`: direct epilogue.
  *   3. mode == 1, record valido: store globals → epilogue.
@@ -17,7 +17,7 @@
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - workRam @ 0x400970..0x400977 (active record globals)
  *   - workRam @ 0x400408..0x40040F (palette queue ptr + body)
- *   - struct @ A2..A2+0x60 (incluso +0x42, +0x4E)
+ *   - struct @ A2..A2+0x60 (including +0x42, +0x4E)
  *   - record buffer @ struct[0x3E] (to detect spurious writes via FUN_1D06A)
  *
  * Suite testate:
@@ -57,7 +57,7 @@ const PAL_QUEUE_HEAD = 0x0040040c;
 
 const STUB_1D06A_BYTES = [0x4e, 0x75] as const;
 
-/** Slot pointers candidati per la struct (work RAM, lontani da globals). */
+/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -67,7 +67,7 @@ const PTR_CHOICES = [
   0x00401d00,
 ] as const;
 
-/** Slot pointers per il record (struct[0x3E]). */
+/** Slot pointers for the record (struct[0x3E]). */
 const REC_CHOICES = [
   0x00401080,
   0x00401320,
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ─────────────────────────────────────
   console.log(
-    `\n=== objectRenderUpdate13334 (FUN_00013334) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== objectRenderUpdate13334 (FUN_00013334) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -342,7 +342,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: forced mode==1 ─────────────────────────────────────────
-  console.log(`\n=== Suite B: mode==1 (path globals/epilogue) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: mode==1 (path globals/epilogue) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     setHud(rng);
@@ -360,7 +360,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: forced mode==2 + random mode_hi ────────────────────────
-  console.log(`\n=== Suite C: mode==2 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: mode==2 — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     setHud(rng);
@@ -369,7 +369,7 @@ async function main(): Promise<void> {
     if (structPtr === recPtr) continue;
     const bytes = makeStructBytes(recPtr);
     bytes[0x1e] = 2;
-    // mode_hi = 1, 2, 3, o random per coprire i 4/5 paths.
+    // mode_hi = 1, 2, 3, o random to cover the 4/5 paths.
     const hiVals = [0, 1, 2, 3, 4];
     bytes[0x1a] = hiVals[Math.floor(rng() * hiVals.length)]!;
     bytes[0x1f] = rb();
@@ -381,7 +381,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: forced kind==3 (palette-index path) ────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: kind==3 (palette index path) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: kind==3 (palette index path) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     setHud(rng);

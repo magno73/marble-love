@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   const r = rng(0xff7);
 
-  console.log(`\n=== lerpFromRom (FUN_1C61E) — ${n} casi ===`);
+  console.log(`\n=== lerpFromRom (FUN_1C61E) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

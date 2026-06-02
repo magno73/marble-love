@@ -40,7 +40,7 @@ const FUN_1CABA = 0x0001caba;
 
 /**
  * Patch JSR-stubs:
- *   - FUN_0001CABA → RTS (0x4E75) per neutralizzare il heavy renderer.
+ *   - FUN_0001CABA → RTS (0x4E75) per neutralize il heavy renderer.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random struct + random globals ────────────────────────
   console.log(
-    `\n=== spritePosUpdate1BAB2 (FUN_0001BAB2) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== spritePosUpdate1BAB2 (FUN_0001BAB2) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: no-change (struct.x == globals_x, jitter sub-tile) ─────
   console.log(
-    `\n=== Suite B: forced no-change (sub-tile jitter) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced no-change (sub-tile jitter) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced change (struct very different from globals) ────
   console.log(
-    `\n=== Suite C: forced tile-change — ${perSuite} casi ===`,
+    `\n=== Suite C: forced tile-change — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases (0x0000 / 0xFFFF / sign-bit boundary) ──────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (0x0000/0xFFFF/sign-bit) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (0x0000/0xFFFF/sign-bit) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const edgeWords = [0x0000, 0x0001, 0x0007, 0x0008, 0x7fff, 0x8000, 0xfff8, 0xffff];
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
     argBytes[0xc] = (wx >>> 8) & 0xff; argBytes[0xd] = wx & 0xff;
     argBytes[0x10] = (wy >>> 8) & 0xff; argBytes[0x11] = wy & 0xff;
     argBytes[0x14] = (wz >>> 8) & 0xff; argBytes[0x15] = wz & 0xff;
-    // Edge-case anche per i globals correnti
+    // Edge-case also per i globals correnti
     const gx = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const gy = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     globBytes[6] = (gx >>> 8) & 0xff; globBytes[7] = gx & 0xff; // 0x400696 (TILE_X)

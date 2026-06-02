@@ -13,7 +13,7 @@
  *     4E 75          ; rts
  *
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
- *   - struct @ A1..A1+0x40 (incluso A1+0x20 packed long, A1+0x26..0x33 clear)
+ *   - struct @ A1..A1+0x40 (including A1+0x20 packed long, A1+0x26..0x33 clear)
  *
  * Suite testate (4 × 125 = 500):
  *   - A: HUD random + struct random + ptr random (fully random)
@@ -47,7 +47,7 @@ const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 const HUD_OFFSET_ADDR = 0x0040097e;
 const POS_X_ADDR = 0x00400690;
 
-/** Slot pointers candidati per la struct (work RAM, lontani da globals). */
+/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
 
     setupStruct(structPtr, bytes);
 
-    // Estrai w0/w2/w4 per il fail report.
+    // Estrai w0/w2/w4 for the fail report.
     const off = (structPtr - 0x400000) >>> 0;
     const w0 =
       ((stateInst.workRam[off + 0xc] ?? 0) << 8) |
@@ -214,7 +214,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ─────────────────────────────────────
   console.log(
-    `\n=== marbleCellDispatch19E42 (FUN_00019E42) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== marbleCellDispatch19E42 (FUN_00019E42) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
 
   // Suite B: cellX forced into {0x29, 0x31, 0x39} to trigger the HIT path.
   console.log(
-    `\n=== Suite B: cellX in {0x29, 0x31, 0x39} → mix HIT/MISS (cellY rng) — ${perSuite} casi ===`,
+    `\n=== Suite B: cellX in {0x29, 0x31, 0x39} → mix HIT/MISS (cellY rng) — ${perSuite} cases ===`,
   );
   let okB = 0;
   const cellXSet = [0x29, 0x31, 0x39] as const;
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
     const hud = setHud(rng);
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const cellX = pickFromArr(cellXSet);
-    // Random cellY in [0..0x7F] e [0x80..0xFF] (signed range).
+    // Random cellY in [0..0x7F] and [0x80..0xFF] (signed range).
     const cellY = rb() & 0xff;
     const xWord = ((cellX << 3) & 0xffff) | (Math.floor(rng() * 8) & 0x7);
     const yWord = ((cellY << 3) & 0xffff) | (Math.floor(rng() * 8) & 0x7);
@@ -251,7 +251,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: w0/w2/w4/HUD estremi ──────────────────────────────────
-  console.log(`\n=== Suite C: w0/w2/w4/HUD estremi — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: w0/w2/w4/HUD estremi — ${perSuite} cases ===`);
   let okC = 0;
   const extremes = [0x0000, 0x7fff, 0x8000, 0xffff, 0x8001, 0x7ffe, 0xfffc, 0x4000];
   for (let i = 0; i < perSuite; i++) {
@@ -279,7 +279,7 @@ async function main(): Promise<void> {
 
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: cellX fuori da {0x29, 0x31, 0x39} → MISS path — ${sizeD} casi ===`,
+    `\n=== Suite D: cellX outside {0x29, 0x31, 0x39} → MISS path — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

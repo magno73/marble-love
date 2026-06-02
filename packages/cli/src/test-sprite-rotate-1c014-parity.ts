@@ -8,7 +8,7 @@
  *
  * **Strategia parity**:
  *   - Compare workRam:
- *       - matrice 3×3 + cols espansi 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
+ *       - matrice 3×3 + cols espansthe 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
  *       - slot output: A2+0xA4..0xC3 (32 bytes = 4 slots x 8 bytes, use 4x6=24)
  *       - CA counter: A2+0xCA (1 byte).
  *
@@ -171,7 +171,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: fully random ─────────────────────────────────────────────
-  console.log(`\n=== spriteRotate1C014 (FUN_0001C014) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== spriteRotate1C014 (FUN_0001C014) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const obj = Array.from({ length: OBJ_SIZE }, () => randByte());
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: force idle (flag@+0x58=0xA) ─────────────────────────────
-  console.log(`\n=== Suite B: idle flag (flag@+58=0xA) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: idle flag (flag@+58=0xA) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const obj = Array.from({ length: OBJ_SIZE }, () => randByte());
@@ -197,7 +197,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: gameMode=4 with nonzero velocity ────────────────────────
-  console.log(`\n=== Suite C: gameMode=4 + nonzero velocity — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: gameMode=4 + nonzero velocity — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const obj = Array.from({ length: OBJ_SIZE }, () => randByte());
@@ -216,7 +216,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases ──────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   const edgeW = [0x0000, 0x0001, 0x0040, 0x4000, 0x7fff, 0x8000, 0xc000, 0xffff];
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

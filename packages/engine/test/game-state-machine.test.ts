@@ -25,7 +25,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
-  it("frame counter sempre incrementato", () => {
+  it("frame counter always incremented", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[FRAME_COUNTER_OFF] = 0;
@@ -35,7 +35,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     expect(fc).toBe(1);
   });
 
-  it("tutti state=0: nessun dispatch, no callback", () => {
+  it("all state=0: no dispatch, no callback", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const fun_2678 = vi.fn();
@@ -65,7 +65,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     expect(s.workRam[COUNTER_BASE_OFF + 1]).toBe(0);
   });
 
-  it("state=2 toggle: prima call → FUN_2572 + flag30=1; seconda call → FUN_2ABC + flag30=0", () => {
+  it("state=2 toggle: first call → FUN_2572 + flag30=1; seconda call → FUN_2ABC + flag30=0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[STATE_BASE_OFF] = 2;
@@ -110,7 +110,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     expect(fun_2cd4).toHaveBeenCalledOnce();
     expect(s.workRam[STATE_BASE_OFF]).toBe(0); // state→0
     expect(fun_2bda).toHaveBeenCalledWith(0x12345678, expect.any(Number), expect.any(Number));
-    // FLAG34 incrementato
+    // FLAG34 incremented
     expect(s.workRam[FLAG34_BASE_OFF]).toBe(1);
   });
 
@@ -159,7 +159,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     const fun_2678 = vi.fn();
     gameStateMachineTick(s, rom, { fun_2678 });
     expect(fun_2678).not.toHaveBeenCalled();
-    // Counter incrementato ma non resettato
+    // Counter incremented but non resettato
     expect(s.workRam[COUNTER_BASE_OFF + 1]).toBe(4);
   });
 });
@@ -174,13 +174,13 @@ describe("gameStateMachineTick (FUN_2E18) — Branch A (mode!=0)", () => {
 
     const fun_295a = vi.fn();
     gameStateMachineTick(s, rom, { fun_295a });
-    // Inner incrementato
+    // Inner incremented
     expect(s.workRam[SPECIAL_INNER_OFF + 1]).toBe(6);
     // FUN_295A not called.
     expect(fun_295a).not.toHaveBeenCalled();
   });
 
-  it("inner == target: chiama FUN_295A, reset inner, tick++", () => {
+  it("inner == target: calls FUN_295A, reset inner, tick++", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[MODE_OFF + 1] = 1;

@@ -120,7 +120,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== levelInit16F6C (FUN_16F6C) — ${n} casi ===`);
+  console.log(`\n=== levelInit16F6C (FUN_16F6C) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

@@ -9,7 +9,7 @@
  *
  * Strategia parity:
  *   - Set up workRam with a valid rect-struct layout @ 0x4001DC.. and
- *     ROM lookup pointer corretti (ma random, generati una sola volta come
+ *     ROM lookup pointer corretti (but random, generati una sola time as
  *   - Run TS via `sortAdjacentObjects1A7A8(state, rom, stride)`.
  *   - Remaining workRam must stay unchanged; mutation is isolated.
  *
@@ -84,7 +84,7 @@ function setupBaseline(
 }
 
 /**
- * 0xFF random. `numActive` indica quanti byte non-sentinel scrivere (0..32).
+ * 0xFF random. `numActive` indica how many byte non-sentinel scrivere (0..32).
  */
 function setupByteArray(
   workRam: Uint8Array,
@@ -111,8 +111,8 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // FUN_1A7A8 e FUN_1A80A — non scrivono).
-  // Nota: per il test inseriamo nostre 16 lookup pointer SCRIVENDOLE in romBuf.
+  // FUN_1A7A8 and FUN_1A80A — non scrivono).
+  // Nota: for the test inseriamo nostre 16 lookup pointer SCRIVENDOLE in romBuf.
   // with the TS view (rom.program).
 
   const romView = busNs.emptyRomImage();
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== sortAdjacentObjects1A7A8 (FUN_1A7A8) — ${n} casi ===`);
+  console.log(`\n=== sortAdjacentObjects1A7A8 (FUN_1A7A8) — ${n} cases ===`);
 
   const rng = makeRng(0x1a7a8);
   let ok = 0;
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     // Reset SP
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: copertura controllata.
+    // Pattern: coverage controllata.
     let stride: number;
     let numActive: number;
 
@@ -248,10 +248,10 @@ async function main(): Promise<void> {
   }
   if (modifiedOutside > 0) {
     console.log(
-      `  WARN: binario ha modificato ${modifiedOutside} byte di workRam fuori dall'array (atteso 0)`,
+      `  WARN: binary modified ${modifiedOutside} bytes of workRam outside the array (expected 0)`,
     );
   } else {
-    console.log(`  OK: workRam fuori dal byte array non modificata.`);
+    console.log(`  OK: workRam outside the byte array unmodified.`);
   }
 
   disposeCpu(cpu);

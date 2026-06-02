@@ -13,7 +13,7 @@
  *   00010FFE  jsr 0x00019BAA    ; stateSub19BAA
  *   00011004  jsr 0x0001844A    ; stateSub1844A
  *   0001100A  jsr 0x00012FD0    ; stateDispatch12FD0
- *   00011010  addq.b #1, (0x004003F0).l   ; frame-counter++ (secondo)
+ *   00011010  addq.b #1, (0x004003F0).l   ; frame-counter++ (second)
  *   00011016  jsr 0x00028624    ; objDirtyDispatch28624
  *   0001101C  rts
  *
@@ -922,12 +922,12 @@ export function refreshFrame10FCE(
   });
 
   // 00010FE0: jsr 0x000158CC
-  // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) e 0x400A20 (P2) chiamando
+  // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) and 0x400A20 (P2) chiamando
   // dispatch su obj+0x18:
   //   - s18==0 → no-op (skip)
   //   - s18==2 → jsr 25FC2 + 1B9CC + 1281C (state-2 branch)
   //   - else  → jsr 253BC + 182BA + 121B8 (ELSE branch)
-  // Plus timer @ +0x6C (state 0x21/0x22 → 0x23 via FUN_160D4) e timer @ +0x56
+  // Plus timer @ +0x6C (state 0x21/0x22 → 0x23 via FUN_160D4) and timer @ +0x56
   // (state 0x24 → 0x23 via FUN_160D4).
   // FUN_158CC: conservative AVG estimate (attract with 2 active slot pairs).
   const slotP1State = state.workRam[0x9bc] ?? 0; // P1 slot @ 0x4009A4 + 0x18

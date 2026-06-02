@@ -2,11 +2,11 @@
 /**
  * test-sub-19976-parity.ts — differential FUN_00019976 vs `sub19976`.
  *
- * FUN_00019976 (96 byte): "Entity move-velocity step". Legge entity[0x26] come
+ * FUN_00019976 (96 byte): "Entity move-velocity step". Legge entity[0x26] as
  * signed byte (direction); uses the direction to read 2 signed words from the ROMs
- * table @ 0x244B6 (dX) e @ 0x244D6 (dY), scalata `<<8`, e aggiunge a
- * entity[0xC..0x13]. Se state==7 → velocity cache /4 in entity[0..7]. Altrimenti
- * cache = delta non scalato.
+ * table @ 0x244B6 (dX) and @ 0x244D6 (dY), scaled `<<8`, and adds a
+ * entity[0xC..0x13]. If state==7 → velocity cache /4 in entity[0..7]. Altrimenti
+ * cache = delta non scaled.
  *
  * **Parity strategy**: no internal sub; direct replica. Compare
  * `entity[0..0x40]` (1 stride entity completa).
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
   const genEntity = (): number[] => new Array(ENTITY_SIZE).fill(0).map(() => rb());
 
   // Suite A: random + dir in [0..15]
-  console.log(`\n=== sub19976 (FUN_19976) — Suite A: random dir [0..15] — ${perSuite} casi ===`);
+  console.log(`\n=== sub19976 (FUN_19976) — Suite A: random dir [0..15] — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // Suite B: forced state==7.
-  console.log(`\n=== Suite B: state==7 (/4 path) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: state==7 (/4 path) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -152,8 +152,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // Suite C: dir signed negativi (0x80..0xFF) — test boundary signed
-  console.log(`\n=== Suite C: dir signed (0x80..0xFF) — ${perSuite} casi ===`);
+  // Suite C: dir signed negative (0x80..0xFF) — test boundary signed
+  console.log(`\n=== Suite C: dir signed (0x80..0xFF) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
 
   // Suite D: edge cases
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   const dirs = [0x00, 0x01, 0x07, 0x08, 0x0f, 0x10, 0x7f, 0x80, 0xff];
   const states = [0x00, 0x06, 0x07, 0x08, 0xff];

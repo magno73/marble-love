@@ -4,18 +4,18 @@
  *
  * `FUN_000041C8` (198 byte): high-score entry decoder.
  *   - source table = `*0x401FFC + 0x1E` (10 entries x 5 bytes)
- *   - buffer destinazione = 0x401F7A (4 byte score + 3 byte initials)
+ *   - buffer destination = 0x401F7A (4 byte score + 3 byte initials)
  *   - arg1 in [0..9] -> ret = 0x401F7A; otherwise ret = 0
  *
  * Convenzione caller (cdecl push-RTL):
- *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word dal caller)
+ *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word from the caller)
  *
  * Strategia parity:
  *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
- *     populate 10 records x 5 random bytes; replicate setup on Musashi and on
+ *     populate 10 records x 5 random bytes; replicated setup on Musashi and on
  *     state.workRam.
  *   - For each random case: set up arg1; call the binary; call TS;
- *     confronta D0 e i 7 byte del buffer @ 0x401F7A..0x401F80.
+ *     compare D0 and i 7 byte of the buffer @ 0x401F7A..0x401F80.
  *
  * Pattern coverage:
  *   - 50% arg1 in [0..9]                      -> valid path, writes buffer
@@ -50,7 +50,7 @@ const TABLE_OFF = 0x1e;
 const PTR_VAL = 0x00401a00;
 const TABLE_BASE = PTR_VAL + TABLE_OFF; // 0x401A1E
 
-/** Buffer di output @ 0x401F7A (workRam, 7 byte). */
+/** Buffer of output @ 0x401F7A (workRam, 7 byte). */
 const OUT_BUF = 0x00401f7a;
 const OUT_BUF_LEN = 7;
 
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
 
   console.log(
-    `\n=== hiScoreDecode41c8 (FUN_41C8) — ${n} casi ===`,
+    `\n=== hiScoreDecode41c8 (FUN_41C8) — ${n} cases ===`,
   );
 
   const rng = makeRng(0x41c841c8);
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
     // ── Run TS. ──
     const tsD0 = hsdNs.hiScoreDecode41c8(state, arg1) >>> 0;
 
-    // ── Confronta D0 + buffer @ 0x401F7A. ──
+    // ── Compare D0 + buffer @ 0x401F7A. ──
     const binBuf: number[] = [];
     const tsBuf: number[] = [];
     for (let b = 0; b < OUT_BUF_LEN; b++) {

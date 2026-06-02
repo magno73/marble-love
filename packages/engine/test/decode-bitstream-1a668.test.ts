@@ -1,9 +1,9 @@
 /**
- * decode-bitstream-1a668.test.ts — smoke test di FUN_0001A668.
+ * decode-bitstream-1a668.test.ts — smoke test of FUN_0001A668.
  *
  * Bit-perfect parity vs binary in
  * `packages/cli/src/test-decode-bitstream-1a668-parity.ts`. Qui copriamo i 5
- * path principali (A, B, C, D, E) e gli edge case (cache reload, A3 advance,
+ * path principali (A, B, C, D, E) and the edge case (cache reload, A3 advance,
  * output overshoot) without Musashi.
  */
 
@@ -29,7 +29,7 @@ function setBytes(s: GameState, off: number, bytes: number[]): void {
   }
 }
 
-/** Setup ctrl stream long-aligned ad un offset, scrivendo `longs` come 32-bit BE. */
+/** Setup ctrl stream long-aligned ad un offset, scrivendo `longs` as 32-bit BE. */
 function setLongs(s: GameState, off: number, longs: number[]): void {
   for (let i = 0; i < longs.length; i++) {
     const v = longs[i]! >>> 0;
@@ -90,7 +90,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     const extAbs = WORK_RAM_BASE + 0x300;
     // Token1: bit 13 set + low bits 0x010.
     //   14-bit token = 0x2010. After bclr #13 -> 0x10. asr.w #1 -> 0x8.
-    //   bit 0 era 0 → carry CLEAR → D6 NON aggiornato.
+    //   bit 0 era 0 → carry CLEAR → D6 NOT aggiornato.
     //   add D3 = 0x1500 (da extra stream 0x15) → out = 0x1508.
     // Token2..onwards: zero -> path B (consecutive). D6 starts from 0 (never
     //   updated in path A because token bit 0 was 0).
@@ -233,7 +233,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 0)).toBe(0x304d);
   });
 
-  it("Path E con count=1 (token=0x1480): toggle D5 ^= 3 fra 2 output", () => {
+  it("Path E con count=1 (token=0x1480): toggle D5 ^= 3 between 2 output", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -253,7 +253,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 1)).toBe(0x304e);
   });
 
-  it("Pure: scrive solo nei 0x48 byte di output (+overshoot)", () => {
+  it("Pure: writes solo in the 0x48 byte of output (+overshoot)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -262,7 +262,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     // Ctrl: zero → path B (1 output per iter). Output: 36 word = 72 byte = 0x48.
     // Ctrl region zeroed (default).
     setBytes(s, 0x300, [0xff, 0x00]);
-    // Snapshot di tutta workRam pre-call.
+    // Snapshot of tutta workRam pre-call.
     const before = new Uint8Array(s.workRam);
 
     decodeBitstream1A668(s, rom, outAbs, ctrlAbs, extAbs);
@@ -277,7 +277,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     }
   });
 
-  it("Output buffer riceve esattamente OUTPUT_LEN_BYTES = 0x48", () => {
+  it("Output buffer receives exactly OUTPUT_LEN_BYTES = 0x48", () => {
     expect(OUTPUT_LEN_BYTES).toBe(0x48);
     expect(OUTPUT_LEN_WORDS).toBe(0x24);
   });

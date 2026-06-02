@@ -1,5 +1,5 @@
 /**
- * sync-av-toggle-1e08.test.ts — smoke + corner case di FUN_1E08.
+ * sync-av-toggle-1e08.test.ts — smoke + corner case of FUN_1E08.
  */
 
 import { describe, it, expect } from "vitest";
@@ -15,7 +15,7 @@ const EDGE_PREV_OFF = 0x17c; // *0x40017C (BE word)
 const FLAGS_OFF = 0x06; // *0x400006 (BE word)
 
 describe("syncAvToggle1E08 (FUN_1E08)", () => {
-  it("termina alla 1° iterazione: bit0(*0x400000)=1 e bit0(prev)=0", () => {
+  it("termina to the 1° iterazione: bit0(*0x400000)=1 and bit0(prev)=0", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0001 (bit 0 set, low2 = 1)
     s.workRam[PORT_OFF] = 0x00;
@@ -23,9 +23,9 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     // *0x40017C.w = 0x0000 (bit 0 == 0 → rising edge bit 0 = 1)
     s.workRam[EDGE_PREV_OFF] = 0x00;
     s.workRam[EDGE_PREV_OFF + 1] = 0x00;
-    // Event flag word: due 1-bit per coprire i 2 inner pop.
+    // Event flag word: due 1-bit per cover the 2 inner pop.
     s.workRam[FLAGS_OFF] = 0x00;
-    s.workRam[FLAGS_OFF + 1] = 0b11; // bit 0 e bit 1 settati
+    s.workRam[FLAGS_OFF + 1] = 0b11; // bit 0 and bit 1 settati
 
     const writes: Array<{ addr: number; value: number }> = [];
     const result = syncAvToggle1E08(s, {
@@ -34,7 +34,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
 
     expect(result.terminated).toBe(true);
     expect(result.iterations).toBe(1);
-    // 2 pop totali (consumed entrambi i bit set, in 1 sola pop ciascuno).
+    // 2 pop totali (consumed both i bit set, in 1 sola pop each).
     expect(result.flagPops).toBe(2);
     // 2 MMIO writes: 0x0000, then 0x0080.
     expect(writes).toEqual([
@@ -44,12 +44,12 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
 
     expect(s.workRam[EDGE_PREV_OFF]).toBe(0x00);
     expect(s.workRam[EDGE_PREV_OFF + 1]).toBe(0x01);
-    // *0x400006 shifted right 2 volte: 0b11 → 0b00.
+    // *0x400006 shifted right 2 times: 0b11 → 0b00.
     expect(s.workRam[FLAGS_OFF]).toBe(0x00);
     expect(s.workRam[FLAGS_OFF + 1]).toBe(0x00);
   });
 
-  it("salta zeri nella queue prima di trovare il bit 1 (bit 0 e bit 5 set)", () => {
+  it("skips zeri in the queue first of trovare il bit 1 (bit 0 and bit 5 set)", () => {
     const s = emptyGameState();
     s.workRam[PORT_OFF] = 0x00;
     s.workRam[PORT_OFF + 1] = 0x01;
@@ -72,7 +72,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     expect(result.flagPops).toBe(6);
   });
 
-  it("loop fino a maxIterations quando bit 0 di rising è 0 (bit 0 cur = 0)", () => {
+  it("loop up to maxIterations when bit 0 of rising is 0 (bit 0 cur = 0)", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0002 (bit 0 = 0, bit 1 = 1)
     // -> rising bit 0 = 0 always, even with prev = 0.
@@ -99,7 +99,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     }
   });
 
-  it("anche con bit 0 cur = 1 non termina se bit 0 prev = 1 (no rising)", () => {
+  it("also con bit 0 cur = 1 non termina se bit 0 prev = 1 (no rising)", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0001
     s.workRam[PORT_OFF] = 0x00;
@@ -107,7 +107,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     // *0x40017C.w = 0x0001 → bit 0 prev = 1 → rising bit 0 = 0 (no transition).
     s.workRam[EDGE_PREV_OFF] = 0x00;
     s.workRam[EDGE_PREV_OFF + 1] = 0x01;
-    // Queue full di 1
+    // Queue full of 1
     s.workRam[FLAGS_OFF] = 0xff;
     s.workRam[FLAGS_OFF + 1] = 0xff;
 
@@ -116,11 +116,11 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     expect(result.iterations).toBe(3);
   });
 
-  it("default maxIterations è 256", () => {
+  it("default maxIterations is 256", () => {
     expect(DEFAULT_MAX_ITERATIONS).toBe(256);
   });
 
-  it("usa cap maxFlagPops difensivo se la queue è tutta zero", () => {
+  it("uses cap maxFlagPops difensivo if the queue is tutta zero", () => {
     const s = emptyGameState();
     // bit0(cur) = 1, bit0(prev) = 0 -> would terminate at the 1st iter, but
     s.workRam[PORT_OFF + 1] = 0x01;

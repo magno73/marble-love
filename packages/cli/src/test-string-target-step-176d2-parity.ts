@@ -3,7 +3,7 @@
  * test-string-target-step-176d2-parity.ts —
  * differential FUN_176D2 vs `stringTargetStep176D2`.
  *
- * a `obj+0x58`, dereferenzia due volte la catena `slot[+0x3a]` per ottenere
+ * a `obj+0x58`, dereferences twice la chain `slot[+0x3a]` per ottenere
  *      -2,-2,12,12 if bboxPtr == 0xFFFFFFFF),
  *      targetY analogous with +0x10,
  *   3. makes a one-unit step of curX (= obj[+0xC].w) toward targetX (sign(diff)),
@@ -11,12 +11,12 @@
  *      obj[+0x10..+0x13] analogo.
  *
  *
- *   - obj      @ 0x401C00 (almeno 0x60 byte, fino a 0x401C5F)
- *   - p1Addr   @ 0x401D00 (4 byte, contiene bboxAddr o sentinel)
- *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 sono i 4 signed byte)
+ *   - obj      @ 0x401C00 (almeno 0x60 byte, up to 0x401C5F)
+ *   - p1Addr   @ 0x401D00 (4 byte, contains bboxAddr o sentinel)
+ *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 are the 4 signed byte)
  *
- * (obj+0xC..+0xF e obj+0x10..+0x13). Confrontiamo l'intero workRam tranne
- * la zona stack scratch [0x401E80..0x401F00).
+ * (obj+0xC..+0xF and obj+0x10..+0x13). We compare the intero workRam tranne
+ * la area stack scratch [0x401E80..0x401F00).
  *
  *   - A: path default (bboxPtr == 0xFFFFFFFF), idx random, slotCx/Cy random,
  *        curX/Y random
@@ -51,7 +51,7 @@ const FUN_176D2 = 0x000176d2;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Indirizzi per la catena:
+// Indirizzi per la chain:
 const OBJ_ADDR = 0x00401c00;
 const P1_ADDR = 0x00401d00;  // long pointer-to-pointer storage
 const BBOX_ADDR = 0x00401e00; // bbox struct (8 byte)
@@ -68,7 +68,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Cattura workRam dal CPU in un Uint8Array. */
+/** Cattura workRam from the CPU in un Uint8Array. */
 function captureWorkRam(cpu: CpuSession): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -125,7 +125,7 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
 
   // obj+0x58 = idx (byte)
   setByte(OBJ_ADDR + 0x58, setup.idx);
-  // obj+0xC..+0xF: word at +0xC = curXWord, byte +0xE/+0xF irrelevant ma li
+  // obj+0xC..+0xF: word at +0xC = curXWord, byte +0xE/+0xF irrelevant but li
   setWord(OBJ_ADDR + 0x0c, setup.curXWord);
   setByte(OBJ_ADDR + 0x0e, 0);
   setByte(OBJ_ADDR + 0x0f, 0);
@@ -136,7 +136,7 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
 
   // slot+0x3a = P1_ADDR (long)
   setLong(slotAddr + 0x3a, P1_ADDR);
-  // slot+0xC e slot+0x10 word
+  // slot+0xC and slot+0x10 word
   setWord(slotAddr + 0x0c, setup.slotCxWord);
   setWord(slotAddr + 0x10, setup.slotCyWord);
 
@@ -183,7 +183,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stringTargetStep176D2 (FUN_176D2) — ${total} casi ===`);
+  console.log(`\n=== stringTargetStep176D2 (FUN_176D2) — ${total} cases ===`);
 
   let totalOk = 0;
   interface FailRecord {

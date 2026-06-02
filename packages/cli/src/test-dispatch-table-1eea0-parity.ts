@@ -3,19 +3,19 @@
  * test-dispatch-table-1eea0-parity.ts — differential FUN_11AD8 vs
  * `dispatchTable1EEA0`.
  *
- * `FUN_00011AD8` (64 byte) itera `D2.b` da `argIdx` fino a `0x0A` (cmp byte) e
+ * `FUN_00011AD8` (64 byte) itera `D2.b` da `argIdx` up to `0x0A` (cmp byte) e
  * Starts at `0x1EEA0 + signExt(argIdx)*8` and increments by 8 each iteration.
  *
  * pattern `array9ClearAndDispatch` — ring buffer + thunk patch).
  *
  * Strategia:
  *   1. Patch `FUN_0000428E` to a mini-thunk that logs `(arg1Long, arg2Long)`
- *      in una ring-buffer in **cartridge RAM** (0x900000+, 1 MB libera —
+ *      in una ring-buffer in **cartridge RAM** (0x900000+, 1 MB free —
  *
  *      from Musashi; reset TS-side ring; run TS with stub-logger.
  *
- *   3. Compara byte-by-byte ring binary vs ring TS (entrambi serializzati
- *      come Uint8Array) + counter.
+ *   3. Compare byte-by-byte ring binary vs ring TS (both serialized
+ *      as Uint8Array) + counter.
  *
  *   - tc ≥16    : argIdx random in [0..0xFF]
  *
@@ -43,7 +43,7 @@ const FUN_11AD8 = 0x00011ad8;
 const FUN_428E = 0x0000428e;
 
 /**
- * Ring buffer in cartridge RAM (0x900000..0x9FFFFF, 1 MB nel layout di Musashi).
+ * Ring buffer in cartridge RAM (0x900000..0x9FFFFF, 1 MB in the layout of Musashi).
  *
  *
  * Note: these addresses are not mapped into TS `state.workRam`; the TS
@@ -53,7 +53,7 @@ const RING_CAPACITY_BYTES = 2048;
 const RING_COUNTER = RING_BASE + RING_CAPACITY_BYTES; // 0x00900800
 
 /**
- * Patch FUN_428E col thunk-logger (30 byte).
+ * Patch FUN_428E with the thunk-logger (30 byte).
  *
  * Layout (RING_BASE = 0x00900000, RING_COUNTER = 0x00900800):
  *   movea.l #RING_BASE, A0           ; 207C 0090 0000              (6 byte)
@@ -170,7 +170,7 @@ async function main(): Promise<void> {
     fun_428e: (a1, a2) => tsRing.log(a1, a2),
   };
 
-  console.log(`\n=== dispatchTable1EEA0 (FUN_11AD8) — ${total} casi ===`);
+  console.log(`\n=== dispatchTable1EEA0 (FUN_11AD8) — ${total} cases ===`);
 
   const rng = makeRng(0x11ad8);
   let ok = 0;
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   let firstFail: FailRecord | null = null;
 
   // Cycle cap must be large enough: 256 iters x about 30 cycles per iter.
-  // (push args + jsr + 30-byte thunk + pop). Bound prudente: 200_000 cicli.
+  // (push args + jsr + 30-byte thunk + pop). Bound prudente: 200_000 cycles.
   const MAX_CYCLES = 200_000;
 
   for (let tc = 0; tc < total; tc++) {
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
     // Run TS
     dt1eea0Ns.dispatchTable1EEA0(stateInst, argIdx, subs);
 
-    // Compara
+    // Compare
     const diffR = diffBytes(binRing.ring, tsRing.ring);
     const counterMatch = binRing.counter === tsRing.counter;
 

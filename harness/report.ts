@@ -31,7 +31,7 @@ console.log("");
 if (!r.firstDivergence) {
   console.log("✅ **Nessuna divergenza trovata.**");
   console.log("");
-  console.log("Sposta lo scenario in `done/` nel curriculum e procedi al successivo.");
+  console.log("Move the scenario to `done/` in the curriculum and proceed to the next one.");
   exit(0);
 }
 

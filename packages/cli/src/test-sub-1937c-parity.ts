@@ -5,8 +5,8 @@
  *
  * **Strategia parity**:
  *   - FUN_193D8 (proximity) **lasciato live**: implementato in `sub-1937c.ts`
- *     come `sub193D8ProximityCheck`.
- *   - FUN_19460 (grid bitmap) **lasciato live**: in `sub-1937c.ts` come
+ *     as `sub193D8ProximityCheck`.
+ *   - FUN_19460 (grid bitmap) **lasciato live**: in `sub-1937c.ts` as
  *     `sub19460GridBitmap`.
  *
  * Compare:
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
   const genProx = (): number[] => new Array(PROX_BYTES).fill(0).map(() => rb());
 
   // Suite A: random
-  console.log(`\n=== sub1937C (FUN_1937C) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== sub1937C (FUN_1937C) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     if (runOneCase("A", i, genEntity(), genProx())) okA++;
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // Suite B: pos in range grid valido (x,y >> 3 in valid grid)
-  console.log(`\n=== Suite B: pos in grid range — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: pos in grid range — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // Suite C: entity close to prox entries
-  console.log(`\n=== Suite C: prox match likely — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: prox match likely — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
 
   // Suite D: edge cases — self-pointer, status edges, kind edges
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const e = genEntity();

@@ -29,12 +29,12 @@ function readWordBE(buf: Uint8Array, off: number): number {
 }
 
 describe("moScreenInit1A286 (FUN_0001A286)", () => {
-  it("scrive i 2 globali workRam, le 32 word MO RAM, le 4 word PF RAM", () => {
+  it("writes the 2 globali workRam, le 32 word MO RAM, le 4 word PF RAM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const pfRam = new Uint8Array(0x2000);
 
-    // Sporco i target per verificare l'overwrite completo.
+    // Sporco i target per verify l'overwrite completo.
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE] = 0xab;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE + 1] = 0xcd;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_B_ADDR - WORK_RAM_BASE] = 0xef;
@@ -69,7 +69,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     }
   });
 
-  it("chiama tutte le sub nell'ordine binary, renderString 2 volte con args giusti", () => {
+  it("calls all le sub in the ordine binary, renderString 2 times con args giusti", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const pfRam = new Uint8Array(0x2000);
@@ -105,7 +105,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     expect(readWordBE(s.spriteRam, 0x000)).toBe(0x1401);
   });
 
-  it("pfRam=null salta le 4 PF writes (gli altri side effect avvengono)", () => {
+  it("pfRam=null skips le 4 PF writes (the altri side effect avvengono)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     moScreenInit1A286(s, rom, null);
@@ -114,7 +114,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     expect(readWordBE(s.spriteRam, 0x18e)).toBe(0x0007);
   });
 
-  it("costanti esposte: ADDR e SUB_ADDRS e args sono bit-exact dal disasm", () => {
+  it("costanti esposte: ADDR and SUB_ADDRS and args are bit-exact from the disasm", () => {
     expect(MO_SCREEN_INIT_1A286_ADDR).toBe(0x0001a286);
     expect(MO_SCREEN_INIT_1A286_SUB_ADDRS).toEqual([
       0x00028c7e,

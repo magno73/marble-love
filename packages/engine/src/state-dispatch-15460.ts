@@ -234,9 +234,9 @@ export const KIND_BYTE_OFF = 0x1a as const;
 export const POS_X_OFF = 0x0c as const;
 /** Pos Y (long, 16.16 fixed-point) @ structPtr+0x10. */
 export const POS_Y_OFF = 0x10 as const;
-/** Field @ structPtr+0x1C (long, used da case 4 come "vel-x magnitude"). */
+/** Field @ structPtr+0x1C (long, used da case 4 as "vel-x magnitude"). */
 export const FIELD_1C_OFF = 0x1c as const;
-/** Field @ structPtr+0x20 (long, used da case 4 come "vel-y magnitude"). */
+/** Field @ structPtr+0x20 (long, used da case 4 as "vel-y magnitude"). */
 export const FIELD_20_OFF = 0x20 as const;
 /** Vel X (long) @ structPtr+0x00. */
 export const VEL_X_OFF = 0x00 as const;
@@ -272,7 +272,7 @@ export const ANIM_CASE4_Y_NEG = 0x00020e00 as const;
 export const ANIM_CASE4_X_NEG = 0x00020e14 as const;
 export const ANIM_CASE5 = 0x00020e28 as const;
 
-/** asr.l signed (count clamp 0..63 come m68k). */
+/** asr.l signed (count clamp 0..63 as m68k). */
 function asrL(value: number, count: number): number {
   const c = count & 0x3f;
   return ((value | 0) >> c) | 0;
@@ -353,7 +353,7 @@ function writeByteAbs(state: GameState, addr: number, value: number): void {
  * vel_x = D3<<16, vel_y = D2<<16, flag (0x26)=1.
  */
 function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
-  // Cell coords (>>19 di pos)
+  // Cell coords (>>19 of pos)
   const posX = readLongAbs(state, a0 + POS_X_OFF);
   const posY = readLongAbs(state, a0 + POS_Y_OFF);
   // D4w/D5w are words; in cmp.w we use signed words.
@@ -405,7 +405,7 @@ function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
   // Animation selection — D2 has priority over D3.
   // tst.b D2b: ble (D2 <= 0) → if D2 > 0 → DOWN
   // tst.b D2b: bge (D2 >= 0) → if D2 < 0 → UP
-  // (NB: the compare is on D2.b, but per come scriviamo d2 (-8/0/+8),
+  // (NB: the compare is on D2.b, but per as we write d2 (-8/0/+8),
   let animPtr: number;
   if (d2 > 0) {
     animPtr = ANIM_DOWN;
@@ -506,7 +506,7 @@ function caseAnim20D6C(state: GameState, a0: number): void {
 
 /**
  *
- *   - `(0x58,A0) ← (0x5C,A0)` (snapshot anim ptr come "prev")
+ *   - `(0x58,A0) ← (0x5C,A0)` (snapshot anim ptr as "prev")
  *   - `(0x24,A0) ← 0`
  *   - `(0x25,A0) ← (kind ∈ {0,4}) ? 0x02 : 0x01`  (read kind from struct)
  */
@@ -526,8 +526,8 @@ function commonEpilog(state: GameState, a0: number): void {
  * byte @ structPtr+0x1A, with common epilog.
  *
  *                       relativi a `structPtrLong - 0x400000`. Vedi sezione
- *                       "Side effects" del docstring del modulo.
- * @param structPtrLong  long (A0): pointer assoluto allo struct (workRam).
+ *                       "Side effects" of the docstring of the modulo.
+ * @param structPtrLong  long (A0): pointer assoluto to the struct (workRam).
  *
  * **Comportamento per kind**:
  *   - kind 0 → `caseTrackMarble`, poi epilog (write 0x25=2)

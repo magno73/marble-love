@@ -5,7 +5,7 @@
  * la word a `0x80080 + signExt16((arg<<5)&0xFFFF)`.
  *
  *
- * Pattern fissi per coprire i rami chiave:
+ * Pattern fissi to cover i branches chiave:
  *   0..3: arg=0..3 (caller FUN_1ACE0)
  *   4..7: arg=0xE4, 0xC9, 0x4D, 0xFF (caller FUN_16F6C-style word)
  *   8: arg=0x400 (signExt → negativo, address < 0x80080)
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state });
 
-  console.log(`\n=== slapsticLookup (FUN_2FFB8) — ${n} casi ===`);
+  console.log(`\n=== slapsticLookup (FUN_2FFB8) — ${n} cases ===`);
 
   const rng = makeRng(0x5ac57c1c);
   let ok = 0;
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
     else if (i === 8) argW = 0x400; // shift → 0x8000, signExt16 → -0x8000
     else if (i === 9) argW = 0x800; // shift → wrap a 0
     else {
-      // Bias del random:
+      // Bias of the random:
       //   - 30% piccoli (0..0x7F)
       //   - 30% in the range that produces idx 0..0x7FE (arg 0..0x3F)
       //   - 10% full random

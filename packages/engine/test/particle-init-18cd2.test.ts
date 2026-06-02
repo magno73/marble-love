@@ -42,7 +42,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     expect(s.workRam[COUNT_BYTE_OFF]).toBe(0);
   });
 
-  it("mode=0xFF + count=3 → fun_26cfa invocata 1 volta + fun_18e6c 3 volte", () => {
+  it("mode=0xFF + count=3 → fun_26cfa invocata 1 time + fun_18e6c 3 times", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0xbeef);
     let cfaCalls = 0;
@@ -95,18 +95,18 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     expect(s.workRam[COUNT_BYTE_OFF]).toBe(4);
   });
 
-  it("xvel/yvel: entry[4..5] e [6..7] sempre adjusted ±0x10 (no zero center)", () => {
+  it("xvel/yvel: entry[4..5] and [6..7] always adjusted ±0x10 (no zero center)", () => {
     // Output always has a +/-0x10 offset from center. For `count=10` slots
-    // dovremmo avere ALL i 4 byte (xvel + yvel) ben definiti.
+    // dovremmo avere ALL the 4 byte (xvel + yvel) ben definiti.
     const s = emptyGameState();
     s.rng.seed = as_u32(0xabcd);
     const r = particleInit18CD2(s, 10, 0x00);
     for (const slot of r.slots) {
-      // xvel, yvel sono u16; convertiamo in signed per check.
+      // xvel, yvel are u16; convertiamo in signed per check.
       const xs = slot.xvel >= 0x8000 ? slot.xvel - 0x10000 : slot.xvel;
       const ys = slot.yvel >= 0x8000 ? slot.yvel - 0x10000 : slot.yvel;
       // xvel: r2 in [0..0x5F] => raw in [-0x30..0x2F]; adj +-0x10 => exits by
-      // ±0x10 dal range raw. Range finale: [-0x40..-0x11] ∪ [0x10..0x3F].
+      // ±0x10 from the range raw. Range finale: [-0x40..-0x11] ∪ [0x10..0x3F].
       // Therefore |xvel| is always >= 0x10.
       expect(Math.abs(xs)).toBeGreaterThanOrEqual(0x10);
       expect(Math.abs(ys)).toBeGreaterThanOrEqual(0x10);

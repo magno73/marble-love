@@ -1,5 +1,5 @@
 /**
- * Test clearPlayfieldStride (FUN_12186) — smoke tests sui rami principali.
+ * Test clearPlayfieldStride (FUN_12186) — smoke tests sui branches principali.
  *
  */
 
@@ -32,7 +32,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(STRIDE_CLEAR_BYTES + STRIDE_SKIP_BYTES).toBe(STRIDE_BYTES);
   });
 
-  it("preserva i primi 6 byte (offset < 0xA00006)", () => {
+  it("preserva i first 6 byte (offset < 0xA00006)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xaa);
     clearPlayfieldStride(pf);
@@ -41,7 +41,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("azzera 72 byte all'inizio di ogni entry, preserva i successivi 56", () => {
+  it("azzera 72 byte to the inizio of each entry, preserva i successivi 56", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xff);
     clearPlayfieldStride(pf);
@@ -64,7 +64,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("non scrive oltre l'ultimo byte cleared (0xA01FCD)", () => {
+  it("non writes beyond l'last byte cleared (0xA01FCD)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0x5a);
     clearPlayfieldStride(pf);
@@ -90,7 +90,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(zeros).toBe(4608);
   });
 
-  it("idempotente: chiamare due volte == una volta", () => {
+  it("idempotente: call twice == una time", () => {
     const a = new Uint8Array(PF_SIZE);
     fillSentinel(a, 0x33);
     clearPlayfieldStride(a);
@@ -123,7 +123,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("buffer già a zero: no-op effective (resta tutto 0)", () => {
+  it("buffer already a zero: no-op effective (stays all 0)", () => {
     const pf = new Uint8Array(PF_SIZE);
     clearPlayfieldStride(pf);
     for (let i = 0; i < PF_SIZE; i++) {

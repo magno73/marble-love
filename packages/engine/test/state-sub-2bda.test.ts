@@ -1,5 +1,5 @@
 /**
- * state-sub-2bda.test.ts — smoke + corner case di FUN_2BDA.
+ * state-sub-2bda.test.ts — smoke + corner case of FUN_2BDA.
  */
 
 import { describe, it, expect } from "vitest";
@@ -28,7 +28,7 @@ function readWord(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("stateSub2BDA (FUN_2BDA)", () => {
-  it("non solleva eccezioni con state vuoto e ritorna 1 (slot 0 libero)", () => {
+  it("non solleva eccezioni con state vuoto and returns 1 (slot 0 free)", () => {
     const s = emptyGameState();
     const ret = stateSub2BDA(s, 0, 0, 0);
     expect(ret).toBe(1);
@@ -36,9 +36,9 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     expect(s.workRam[STATE_BASE + 0]).toBe(3);
   });
 
-  it("registra nel primo slot vuoto saltando quelli occupati", () => {
+  it("registra in the first slot vuoto saltando those occupied", () => {
     const s = emptyGameState();
-    // Slot 0 e 1 occupati (state != 0); slot 2 e 3 vuoti.
+    // Slot 0 and 1 occupied (state != 0); slot 2 and 3 vuoti.
     s.workRam[STATE_BASE + 0] = 1;
     s.workRam[STATE_BASE + 1] = 5;
 
@@ -57,16 +57,16 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     expect(readWord(s, COUNTER_BASE + 2 * 2)).toBe(0);
     expect(s.workRam[FLAG34_BASE + 2]).toBe(0);
 
-    // Altri slot intatti
+    // Altri slot intact
     expect(s.workRam[STATE_BASE + 0]).toBe(1);
     expect(s.workRam[STATE_BASE + 1]).toBe(5);
     expect(s.workRam[STATE_BASE + 3]).toBe(0);
   });
 
-  it("ritorna 0 senza modifiche se tutti gli slot sono occupati", () => {
+  it("returns 0 senza modifiche se all the slot are occupied", () => {
     const s = emptyGameState();
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = 1;
-    // Pre-popolazione struct per verificare invarianza
+    // Pre-popolazione struct per verify invarianza
     s.workRam[DATA_BASE + 0] = 0xaa;
     s.workRam[THRESHOLD_BASE + 0] = 0xbb;
     s.workRam[WORD16_BASE + 0] = 0xcc;
@@ -85,10 +85,10 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     expect(s.workRam[FLAG34_BASE + 0]).toBe(0xee);
   });
 
-  it("usa solo la low-word di arg2 e arg3 (mask 0xFFFF)", () => {
+  it("uses solo la low-word of arg2 and arg3 (mask 0xFFFF)", () => {
     const s = emptyGameState();
     // arg2 and arg3 are "longs" passed on the stack, but the binary reads them
-    // come word: i top 16 bit sono ignorati.
+    // as word: the top 16 bit are ignorati.
     const ret = stateSub2BDA(s, 0xcafe1234, 0xdead5678, 0xbeef9abc);
     expect(ret).toBe(1);
     expect(readWord(s, WORD16_BASE + 0)).toBe(0x5678);
@@ -96,7 +96,7 @@ describe("stateSub2BDA (FUN_2BDA)", () => {
     expect(readLong(s, DATA_BASE + 0)).toBe(0xcafe1234);
   });
 
-  it("azzera COUNTER e FLAG34 dello slot allocato anche se erano sporchi", () => {
+  it("azzera COUNTER and FLAG34 of the slot allocato even if erano sporchi", () => {
     const s = emptyGameState();
     // Slot 0 empty but with dirty COUNTER and FLAG34 (residue).
     s.workRam[COUNTER_BASE + 0] = 0xff;

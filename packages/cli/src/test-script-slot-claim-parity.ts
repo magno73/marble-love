@@ -4,18 +4,18 @@
  *
  * `FUN_00012D46` searches for a free slot in the ROM table @ 0x1F016, delegating
  * to `FUN_12D6E`) and, if found, populates three record fields (long @ +0x3A,
- * byte @ +0x1A, byte @ +0x18) inlinando il path mode-0 di `FUN_12F44`.
+ * byte @ +0x1A, byte @ +0x18) inlinando il path mode-0 of `FUN_12F44`.
  *
  * Random setup for each case:
- *   - 25 slot @0x400A9C stride 0x56 → byte +0x18 random (70% occupato, 30% libero)
+ *   - 25 slot @0x400A9C stride 0x56 → byte +0x18 random (70% occupied, 30% free)
  *   - argPtr long random
- *   - SP fresco e workRam azzerata sui campi rilevanti
+ *   - SP fresh and workRam zeroed sui fields relevant
  *
  * Confronto:
  *   - D0 (long, 0 o 0xFFFFFFFF)
  *   - slot+0x18 byte for every slot, to catch spurious writes
- *   - byte slot+0x1A di TUTTI gli slot
- *   - long slot+0x3A di TUTTI gli slot
+ *   - byte slot+0x1A of TUTTI the slot
+ *   - long slot+0x3A of TUTTI the slot
  *
  * Uso: npx tsx packages/cli/src/test-script-slot-claim-parity.ts [N]
  */
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     slotPtrs.push(readU32BE(romBuf, ROM_TABLE + i * 4));
   }
 
-  console.log(`\n=== claimScriptSlot (FUN_00012D46) — ${n} casi ===`);
+  console.log(`\n=== claimScriptSlot (FUN_00012D46) — ${n} cases ===`);
 
   const rng = makeRng(0xb1ade);
   let ok = 0;
@@ -102,19 +102,19 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern coverage:
-    //   0 : tutti liberi → success su slot 0
-    //   1 : tutti occupati → fail (NOT_FOUND)
+    //   0 : all free → success on slot 0
+    //   1 : all occupied → fail (NOT_FOUND)
     //   2 : only slot[24] free -> success on last slot
     //   3 : random mix
     //   default >=4: random mix
     const pattern = i < 4 ? i : 3;
 
-    // Setup byte+0x18 di ogni slot.
+    // Setup byte+0x18 of each slot.
     for (let s = 0; s < SLOT_COUNT; s++) {
       const slot = slotPtrs[s]!;
       let v: number;
       if (pattern === 0) v = 0;
-      else if (pattern === 1) v = Math.floor(rng() * 255) + 1; // sempre !=0
+      else if (pattern === 1) v = Math.floor(rng() * 255) + 1; // always !=0
       else if (pattern === 2) v = s === SLOT_COUNT - 1 ? 0 : 1;
       else v = rng() < 0.7 ? Math.floor(rng() * 255) + 1 : 0;
 

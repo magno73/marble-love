@@ -1,5 +1,5 @@
 /**
- * render-glyph-loop-1e64.test.ts — smoke + corner case di FUN_1E64.
+ * render-glyph-loop-1e64.test.ts — smoke + corner case of FUN_1E64.
  */
 
 import { describe, it, expect } from "vitest";
@@ -37,14 +37,14 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r2.iterations).toBe(0);
   });
 
-  it("tutti wide: 'ABC' (0x41, 0x42, 0x43) → 3 iter, +12 byte, charCode=0x44", () => {
+  it("all wide: 'ABC' (0x41, 0x42, 0x43) → 3 iter, +12 byte, charCode=0x44", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03000, 0x41, 3, {
       renderGlyph: (c) => calls.push(c),
     });
     expect(r.iterations).toBe(3);
     expect(r.endCharCode).toBe(0x44);
-    // Wide step = 4, 3 volte → 0x00A0300C
+    // Wide step = 4, 3 times → 0x00A0300C
     expect(r.endBufPtr).toBe(0x00a0300c);
     expect(calls).toEqual([
       { bufPtr: 0x00a03000, charCode: 0x41, mask: 0 },
@@ -53,7 +53,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     ]);
   });
 
-  it("tutti narrow: code-point 0x26..0x2D (8 char, range esatto)", () => {
+  it("all narrow: code-point 0x26..0x2D (8 char, range esatto)", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03100, 0x26, 8, {
       renderGlyph: (c) => calls.push(c),
@@ -109,7 +109,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r2.endCharCode).toBe(0x8001);
   });
 
-  it("transizione narrow → wide: 0x2D + 1 = 0x2E (wide), step 2 poi 4", () => {
+  it("transizione narrow → wide: 0x2D + 1 = 0x2E (wide), step 2 pothe 4", () => {
     // count=3 da 0x2C: 0x2C(narrow,+2), 0x2D(narrow,+2), 0x2E(wide,+4)
     const r = renderGlyphLoop1E64(0x00a03400, 0x2c, 3);
     expect(r.iterations).toBe(3);
@@ -117,14 +117,14 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(r.endCharCode).toBe(0x2f);
   });
 
-  it("renderGlyph callback assente è no-op (default subs)", () => {
+  it("renderGlyph callback assente is no-op (default subs)", () => {
     const r = renderGlyphLoop1E64(0x00a03500, 0x41, 5);
     expect(r.iterations).toBe(5);
     expect(r.endBufPtr).toBe(0x00a03500 + 5 * 4);
     expect(r.endCharCode).toBe(0x46);
   });
 
-  it("constanti pubbliche: range narrow e step", () => {
+  it("constanti pubbliche: range narrow and step", () => {
     expect(NARROW_LO_INCL).toBe(0x26);
     expect(NARROW_HI_INCL).toBe(0x2d);
     expect(NARROW_STEP).toBe(2);
@@ -132,21 +132,21 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(RENDER_GLYPH_FN_ADDR).toBe(0x000032ba);
   });
 
-  it("wrap u32 di bufPtr quando close al limite (0xFFFFFFFC + 4 = 0)", () => {
+  it("wrap u32 of bufPtr when close al limit (0xFFFFFFFC + 4 = 0)", () => {
     // bufPtr a -4 (= 0xFFFFFFFC), 1 wide iter → wrap a 0
     const r = renderGlyphLoop1E64(0xfffffffc, 0x30, 1);
     expect(r.endBufPtr).toBe(0x00000000);
     expect(r.iterations).toBe(1);
   });
 
-  it("wrap u16 di endCharCode (0xFFFE + 3 = 0x0001)", () => {
+  it("wrap u16 of endCharCode (0xFFFE + 3 = 0x0001)", () => {
     const r = renderGlyphLoop1E64(0x00a03000, 0xfffe, 3);
     expect(r.iterations).toBe(3);
     // 0xFFFE → 0xFFFF → 0x0000 → 0x0001
     expect(r.endCharCode).toBe(0x0001);
   });
 
-  it("count = 1, charCode esattamente al boundary basso 0x26 → narrow", () => {
+  it("count = 1, charCode exactly al boundary basso 0x26 → narrow", () => {
     const calls: RenderGlyphCall[] = [];
     const r = renderGlyphLoop1E64(0x00a03000, 0x26, 1, {
       renderGlyph: (c) => calls.push(c),
@@ -155,7 +155,7 @@ describe("renderGlyphLoop1E64 (FUN_1E64)", () => {
     expect(calls[0]!.charCode).toBe(0x26);
   });
 
-  it("count = 1, charCode esattamente al boundary alto 0x2D → narrow", () => {
+  it("count = 1, charCode exactly al boundary alto 0x2D → narrow", () => {
     const r = renderGlyphLoop1E64(0x00a03000, 0x2d, 1);
     expect(r.endBufPtr).toBe(0x00a03002);
   });

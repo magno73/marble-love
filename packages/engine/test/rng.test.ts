@@ -3,7 +3,7 @@
  *
  * **10000/10000 match al 100%** (`packages/cli/src/test-rng-parity.ts`).
  *
- * Per ri-verificare:
+ * Per ri-verify:
  *   npx tsx packages/cli/src/test-rng-parity.ts 10000
  */
 

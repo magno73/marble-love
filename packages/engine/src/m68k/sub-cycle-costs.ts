@@ -199,7 +199,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //   - + calcolo scrollIdx: ~80
   //   - + decodeBitstream1A668: ~4500 (see below)
   //   - + blit buffer in PF RAM: ~400
-  //   - + ramo finale loop come sopra: ~2000
+  //   - + ramo finale loop as above: ~2000
   //   Total: ~7200 cycles
   //
   // GATE PROBABILITY:
@@ -241,8 +241,8 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
 
   // ─── FUN_19BAA: stateSub19BAA (490 byte) ────────────────────────────────
   //
-  // Gate: *0x400394 == 4. Se != 4 → rts (~40).
-  // Se == 4:
+  // Gate: *0x400394 == 4. If != 4 → rts (~40).
+  // If == 4:
   //   - tst.b *0x400762; spawn dispatcher gate 1/8: stima ~50 + (occasion.
   //     1/8) FUN_19A40 ~600 = ~125 media
   //   - outer loop entity (10 × 0x38 stride):
@@ -256,7 +256,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //     × 700) = 10 × 22 + 1050 = 1270
   //   - per gameplay (5-6 entity attive): 10 × 22 + 5 × 700 = ~3720
   //
-  // Total full attract (*0x394 == 4 ma 1-2 entity): ~125 + 1270 = ~1400
+  // Total full attract (*0x394 == 4 but 1-2 entity): ~125 + 1270 = ~1400
   // Total full gameplay: ~3850
   "FUN_19BAA_FAST": as_u32(40),
   "FUN_19BAA": as_u32(1400),
@@ -265,7 +265,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // ─── FUN_1844A: stateSub1844A (610 byte) ────────────────────────────────
   //
   // Gate: *0x400394 == 3 AND *0x400760 != 0. In attract: *0x394 == 0 → fast.
-  // In gameplay: *0x394 == 4 → fast. Solo durante boss/transition (mode 3).
+  // In gameplay: *0x394 == 4 → fast. Solo during boss/transition (mode 3).
   //
   // Fast: ~40 cycles (link+movem+gate+epilog)
   //

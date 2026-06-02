@@ -3,7 +3,7 @@
  * test-bbox-hit-test-19d94-parity.ts — differential FUN_00019D94 vs
  * `bboxHitTest19D94`.
  *
- * FUN_00019D94 (174 byte): "mode-4 AABB hit-test sull'array @ 0x4019F8".
+ * FUN_00019D94 (174 byte): "mode-4 AABB hit-test on the array @ 0x4019F8".
  * Iterates 10 slots with stride 0x38. For each armed/free slot, checks bbox
  * overlap with (marble.x, marble.y), then writes slot fields, entity fields,
  * and triggers sound 0x3E through `FUN_158AC` on hit.
@@ -15,7 +15,7 @@
  *   - Compare:
  *       * For each of the 10 slots: the full 0x38 bytes starting at
  *         `0x4019F8 + i*0x38`.
- *       * I 0x60 byte dell'entity @ ENTITY_BASE (copre 0x1A e 0x57).
+ *       * I 0x60 byte of the entity @ ENTITY_BASE (covers 0x1A and 0x57).
  *       * Flag word @ 0x400394 (game-mode), not written but verified
  *         was not corrupted.
  *
@@ -49,7 +49,7 @@ const FUN_19D94 = 0x00019d94;
 const FUN_158AC = 0x000158ac;
 
 const ENTITY_BASE = 0x00401e00;
-const ENTITY_SIZE = 0x60; // copre [0..0x57] inclusive
+const ENTITY_SIZE = 0x60; // covers [0..0x57] inclusive
 const SLOT_BASE = 0x004019f8;
 const SLOT_STRIDE = 0x38;
 const SLOT_COUNT = 10;
@@ -59,7 +59,7 @@ const MARBLE_Y_ADDR = 0x00400692;
 
 /**
  * Patch JSR-stub:
- *   - FUN_158AC → RTS (0x4E75) per neutralizzare il sound command sender.
+ *   - FUN_158AC → RTS (0x4E75) per neutralize il sound command sender.
  *
  * Note: `pea (cmd).l; jsr FUN_158AC; addq.l #4, SP` - caller binary
  * pushes the long and, after the stub RTS, does addq.l #4,SP to clean the
@@ -79,7 +79,7 @@ function makeRng(seed: number): () => number {
 }
 
 interface Snapshot {
-  entity: number[]; // 0x60 byte (copre [0..0x57])
+  entity: number[]; // 0x60 byte (covers [0..0x57])
   slots: number[]; // 10 × 0x38 byte concatenati
   gameMode: number; // word @ 0x400394
   marbleX: number; // word @ 0x400690
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== bboxHitTest19D94 (FUN_00019D94) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== bboxHitTest19D94 (FUN_00019D94) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -273,16 +273,16 @@ async function main(): Promise<void> {
 
   // ─── Suite B: gameMode=4, slot 0 armata centrata su marble → hit ─────
   console.log(
-    `\n=== Suite B: gameMode=4 + slot 0 armata + bbox-centered (guaranteed hit) — ${perSuite} casi ===`,
+    `\n=== Suite B: gameMode=4 + slot 0 armata + bbox-centered (guaranteed hit) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const slots = randomSlots();
-    // Forza tutte le slot a NON armate
+    // Forza all le slot a NOT armate
     for (let s = 0; s < SLOT_COUNT; s++) {
       slots[s * SLOT_STRIDE + 0x18] = 0;
     }
-    // Slot 0 armata + libera + bbox centrato su (mx, my)
+    // Slot 0 armata + free + bbox centrato su (mx, my)
     const mx = (rw() & 0x7fff) - 0x4000; // signed-ish range
     const my = (rw() & 0x7fff) - 0x4000;
     slots[0 * SLOT_STRIDE + 0x18] = 1;
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: gameMode=4, edge cases bbox boundaries ─────────────────
   console.log(
-    `\n=== Suite C: gameMode=4 + slot armate con bbox boundary edges — ${perSuite} casi ===`,
+    `\n=== Suite C: gameMode=4 + slot armate con bbox boundary edges — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -352,7 +352,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge — gameMode != 4 (early exit) + slot states mixed ──
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: gameMode != 4 (early exit) + slot states miscellanei — ${sizeD} casi ===`,
+    `\n=== Suite D: gameMode != 4 (early exit) + slot states miscellanei — ${sizeD} cases ===`,
   );
   let okD = 0;
   const gameModeChoices = [0, 1, 2, 3, 5, 6, 0xff, 0xffff, 0x0400];

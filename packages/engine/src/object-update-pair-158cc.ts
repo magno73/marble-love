@@ -28,10 +28,10 @@
  *
  * **Side effects** (of FUN_158CC itself, excluding the helper):
  *
- * 0x23 via `FUN_160D4`, e altre logiche complesse — cfr. la disasm di
+ * 0x23 via `FUN_160D4`, and altre logiche complesse — cfr. la disasm of
  * `ObjectUpdatePair158CCSubs.objectUpdate`. Il caller (mainTick / la root
  *
- * Pattern speculare a `sound-pair-15884.ts` e `special-attract.ts`.
+ * Pattern speculare a `sound-pair-15884.ts` and `special-attract.ts`.
  *
  * `cli/src/test-object-update-pair-158cc-parity.ts` (500/500 cases).
  */
@@ -43,7 +43,7 @@ export const WORK_RAM_BASE = 0x400000 as const;
 
 export const SLOT_PAIR_BASE_ADDR = 0x004009a4 as const;
 
-/** Stride tra due slot (`moveq #0x7C, D0`). */
+/** Stride between due slot (`moveq #0x7C, D0`). */
 export const SLOT_PAIR_STRIDE = 0x7c as const;
 
 export const SLOT_PAIR_COUNT = 2 as const;
@@ -68,7 +68,7 @@ export function objectUpdatePair158CC(
   state: GameState,
   subs?: ObjectUpdatePair158CCSubs,
 ): void {
-  // injection" (e per consentire al caller di passarne un riferimento
+  // injection" (e per consentire al caller of passarne un riferimento
   // work RAM.
   void state;
 

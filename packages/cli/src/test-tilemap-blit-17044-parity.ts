@@ -4,7 +4,7 @@
  *
  * total) from ROM @ 0x19F04 to PF RAM @ 0xA00116, with 0x80-byte stride
  *
- *   - i 240 byte di ROM @ 0x19F04..0x19FF3 (uguali in binary e TS — la ROM
+ *   - the 240 byte of ROM @ 0x19F04..0x19FF3 (uguali in binary and TS — la ROM
  *
  *   1. Pre-fill PF RAM [0xA00000..0xA02000) with a deterministic pattern.
  *
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== tilemapBlit17044 (FUN_17044) — ${n} casi ===`);
+  console.log(`\n=== tilemapBlit17044 (FUN_17044) — ${n} cases ===`);
 
   const rng = makeRng(0x1704417a);
   let ok = 0;

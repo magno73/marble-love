@@ -10,11 +10,11 @@ import {
 } from "../src/text-slot-writers.js";
 
 describe("FUN_255A textSlotInit255A", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(TEXT_SLOT_INIT_255A_ADDR).toBe(0x255a);
   });
 
-  it("scrive 2 byte + clear byte at +0x6", () => {
+  it("writes 2 byte + clear byte at +0x6", () => {
     const s = emptyGameState();
     // Pre-fill with noise to verify clear.
     for (let i = 0; i < 8; i++) s.workRam[0x100 + i] = 0xab;
@@ -31,14 +31,14 @@ describe("FUN_255A textSlotInit255A", () => {
     expect(s.workRam[0x107]).toBe(0xab);
   });
 
-  it("masking: solo byte LSB di byte1/byte2 viene scritto", () => {
+  it("masking: solo byte LSB of byte1/byte2 is scritto", () => {
     const s = emptyGameState();
     textSlotInit255A(s, 0x00400100, 0x1234, 0xcafe);
     expect(s.workRam[0x100]).toBe(0x34);
     expect(s.workRam[0x101]).toBe(0xfe);
   });
 
-  it("ptr fuori range → no-op (graceful)", () => {
+  it("ptr outside range → no-op (graceful)", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x99;
     textSlotInit255A(s, 0x00500000, 1, 2); // out of workRam
@@ -47,11 +47,11 @@ describe("FUN_255A textSlotInit255A", () => {
 });
 
 describe("FUN_28F28 trimTrailingSpace28F28", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(TRIM_TRAILING_SPACE_28F28_ADDR).toBe(0x28f28);
   });
 
-  it("trova primo 0x20 e lo azzera", () => {
+  it("trova first 0x20 and lo azzera", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x41; // 'A'
     s.workRam[0x101] = 0x42; // 'B'
@@ -66,7 +66,7 @@ describe("FUN_28F28 trimTrailingSpace28F28", () => {
     expect(s.workRam[0x103]).toBe(0x43); // non toccato
   });
 
-  it("nessuno space entro maxLen → no-op + ritorna maxLen", () => {
+  it("nessuno space entro maxLen → no-op + returns maxLen", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x41;
     s.workRam[0x101] = 0x42;
@@ -78,7 +78,7 @@ describe("FUN_28F28 trimTrailingSpace28F28", () => {
     expect(s.workRam[0x100]).toBe(0x41); // non toccato
   });
 
-  it("space al primo byte → pos=0, byte azzerato", () => {
+  it("space al first byte → pos=0, byte azzerato", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x20;
     const pos = trimTrailingSpace28F28(s, 0x00400100, 5);
@@ -96,14 +96,14 @@ describe("FUN_28F28 trimTrailingSpace28F28", () => {
 });
 
 describe("FUN_28F62 renderTextSlot28F62 (orchestrator)", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(RENDER_TEXT_SLOT_28F62_ADDR).toBe(0x28f62);
   });
 
   // Test orchestrator delegates to stateSub2572; verify only that
   // textSlotInit255A side effect avvenga (workRam[0x40041C]=byte1, etc.)
   // Full parity would need musashi-wasm with state-sub-2572 enabled.
-  it("scrive in workRam[0x40041C] tramite textSlotInit255A inline", () => {
+  it("writes in workRam[0x40041C] via textSlotInit255A inline", () => {
     const s = emptyGameState();
     const rom = { program: new Uint8Array(0x88000) };
     renderTextSlot28F62(s, rom, 0x42, 0x73, 0x22a56);

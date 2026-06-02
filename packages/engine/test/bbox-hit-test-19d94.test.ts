@@ -65,7 +65,7 @@ function armSlot(s: State, i: number, cx: number, cy: number): void {
   setWordBE(s, off + 0x10, cy & 0xffff);
 }
 
-/** Setta game-mode = 4 e marble pos = (mx, my). */
+/** Setta game-mode = 4 and marble pos = (mx, my). */
 function configureCommon(s: State, mx: number, my: number): void {
   setWordBE(s, GAME_MODE_WORD_OFF, REQUIRED_GAME_MODE);
   setWordBE(s, MARBLE_X_WORD_OFF, mx & 0xffff);
@@ -92,7 +92,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(readByte(s, slotOff(0) + 0x1a)).toBe(0);
   });
 
-  it("hit semplice: slot armata + marble centrata → tutti i field scritti", () => {
+  it("hit semplice: slot armata + marble centrata → all i field scritti", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 3, 100, 50); // bbox = [94..106) x [46..58)
@@ -123,10 +123,10 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     }
   });
 
-  it("slot non armata (byte 0x18 == 0) → skip; nessuna scrittura", () => {
+  it("slot non armata (byte 0x18 == 0) → skip; no scrittura", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
-    // Slot 5 al centro ma NON armata
+    // Slot 5 al centro but NOT armata
     setByte(s, slotOff(5) + 0x18, 0);
     setWordBE(s, slotOff(5) + 0x0c, 100);
     setWordBE(s, slotOff(5) + 0x10, 50);
@@ -136,7 +136,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(readByte(s, slotOff(5) + 0x1a)).toBe(0);
   });
 
-  it("slot occupata (byte 0x1A != 0) → skip_state; nessuna scrittura", () => {
+  it("slot occupata (byte 0x1A != 0) → skip_state; no scrittura", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 7, 100, 50);
@@ -183,7 +183,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(r2.perSlot[0]).toBe("miss");
   });
 
-  it("multi-hit: 3 slot armate dentro il bbox della stessa marble pos", () => {
+  it("multi-hit: 3 slot armate dentro il bbox of the same marble pos", () => {
     const s = emptyGameState();
     configureCommon(s, 200, 100);
     armSlot(s, 0, 200, 100);

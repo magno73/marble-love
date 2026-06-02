@@ -6,14 +6,14 @@
  *
  *   1) Reset vector $FFFC/$FFFD read correctly -> valid PC (>= $4000)
  *   2) runForCycles(1000): no exception thrown (no undocumented opcode
- *      hit nei primi N cycle del boot code).
+ *      hit in the first N cycle of the boot code).
  *
  * If this smoke fails, the sound ROM has 6502 opcodes outside the documented
  * 151 that `cpu.ts` throws as Error. In that case the fix is in
  * `opcodes.ts` (aggiungere il documented opcode mancante o implementare
- * undocumented stub) — non sopprimere l'errore.
+ * undocumented stub) — non sopprimere l'error.
  *
- * Le ROM file sono estratte una tantum a `/tmp/sound-roms/` (vedi
+ * Le ROM file are estratte una tantum a `/tmp/sound-roms/` (vedi
  * `unzip -o roms/marble.zip 136033.421 136033.422 -d /tmp/sound-roms/`).
  * If they are missing: skip with a clear message, not a silent crash.
  */
@@ -44,7 +44,7 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     });
   }
 
-  it("reset vector $FFFC/$FFFD: PC valido nel rom range", () => {
+  it("reset vector $FFFC/$FFFD: PC valido in the rom range", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);
@@ -53,11 +53,11 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     expect(pc).toBeLessThanOrEqual(0xffff);
   });
 
-  it("runForCycles(1000) post-reset: nessun opcode undocumented hit", () => {
+  it("runForCycles(1000) post-reset: no opcode undocumented hit", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);
-    // 1000 cycle ≈ 0.56 ms di clock 6502 @ 1.789 MHz. Se boot code stalla in
+    // 1000 cycle ≈ 0.56 ms of clock 6502 @ 1.789 MHz. Se boot code stalla in
     // a tight polling loop on mailbox or YM2151 status should still complete
     // because mailbox pending=false and the YM2151 stub returns 0 (= "not busy").
     expect(() => runForCycles(cpu, mmu, 1000)).not.toThrow();
@@ -65,7 +65,7 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     expect(cpu.cycles).toBeGreaterThanOrEqual(1000);
   });
 
-  it("mailbox round-trip via MMU non crasha durante boot", () => {
+  it("mailbox round-trip via MMU non crasha during boot", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);

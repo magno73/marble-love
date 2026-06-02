@@ -62,7 +62,7 @@ describe("tickCascadingTimer (FUN_28C38)", () => {
     expect(readStruct(s, 0x400100)).toEqual([0xff, 0xff, 9, 0, 5]);
   });
 
-  it("inner negative (high bit) ma non 0xFF: cascades", () => {
+  it("inner negative (high bit) but non 0xFF: cascades", () => {
     // inner = 0x80 (signed -128), decrement to 0x7F (signed +127).
     // 0x7F >= 0 signed → no cascade. Return 0.
     const s = emptyGameState();

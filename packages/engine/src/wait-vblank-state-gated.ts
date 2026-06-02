@@ -1,14 +1,14 @@
 /**
  * wait-vblank-state-gated.ts — replica `FUN_00028DB8` (50 byte).
  *
- * Variante "state-gated" di `vblank-wait.ts` (FUN_52B8). Differenze chiave:
+ * Variante "state-gated" of `vblank-wait.ts` (FUN_52B8). Differenze chiave:
  *
  *     FUN_52B8), but the primitive `FUN_00028DEA`, which:
  *       - clr.b *0x400016         (mailbox vblank ack)
  *       - spin: tst.b *0x400016; beq spin    (busy-wait IRQ vblank)
  *       - addq.b #1, *0x4003F0    (counter byte, wrap mod 256)
  *
- *     sign-extension del LOW BYTE `*0x400391.b`. Se i due differiscono,
+ *     sign-extension of the LOW BYTE `*0x400391.b`. If i due differiscono,
  *
  * **Disasm 0x28DB8..0x28DE9** (50 byte, 1 arg long-on-stack, ret void):
  *
@@ -58,7 +58,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta (gli offset workRam di seguito sono relativi). */
+/** WORK RAM base assoluta (the offset workRam of followed are relativi). */
 export const WORK_RAM_BASE = 0x400000;
 
 /** byte mailbox vblank ack: clr+spin in FUN_28DEA. */
@@ -92,12 +92,12 @@ export function waitVblankStateGated(
   abortAtIter: number = 0,
   d0HiPrev: number = 0,
 ): WaitVblankStateGatedResult {
-  // Tronca arg a 16 bit e reinterpreta signed (tst.w + bgt usano flags signed).
+  // Tronca arg a 16 bit and reinterpreta signed (tst.w + bgt usano flags signed).
   const argW = countWord & 0xffff;
   const argSigned = argW & 0x8000 ? argW - 0x10000 : argW;
 
   const initialLoByte = (state.workRam[GAME_STATE_LO_BYTE_OFF] ?? 0) & 0xff;
-  // sext_b -> word: if bit7, hi byte = 0xFF.
+  // sext_b -> word: if bit7, hthe bytes = 0xFF.
   const initialSextW =
     initialLoByte & 0x80 ? 0xff00 | initialLoByte : initialLoByte;
 
@@ -116,8 +116,8 @@ export function waitVblankStateGated(
   // hiByte != 0x00/0xFF consistent with bit 7 of loByte).
   const initialMismatch = initialSextW !== initialStateWord;
 
-  // loop while ma evita lavoro O(count) inutile.
-  // - abortAtIter in [1..argSigned]: abort all'iter k.
+  // loop while but avoids useless O(count) work.
+  // - abortAtIter in [1..argSigned]: abort to the iter k.
   let iterations: number;
   let aborts: boolean;
   if (initialMismatch) {
@@ -149,6 +149,6 @@ export function waitVblankStateGated(
 }
 
 /**
- * Re-export del simbolo come "FUN_00028DB8" per mappatura esplicita
+ * Re-export of the simbolo as "FUN_00028DB8" per mappatura esplicita
  */
 export { waitVblankStateGated as FUN_00028DB8 };

@@ -2,7 +2,7 @@
  * state-sub-14c46.test.ts — smoke tests per `FUN_00014C46`.
  *
  *  4. Tail walk no-op if slot[0x18] == 0 (free slot).
- *  6. Sub-injection invocate corret-volte (fun_1cc62/150d0/18e6c/18f46).
+ *  6. Sub-injection invocate corret-times (fun_1cc62/150d0/18e6c/18f46).
  */
 
 import { describe, it, expect } from "vitest";
@@ -95,7 +95,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(r.slots.every(sl => sl.action === "noop")).toBe(true);
   });
 
-  it("init slot quando D3 == entry[0] AND D2 < entry[0] (gate boundary lower)", () => {
+  it("init slot when D3 == entry[0] AND D2 < entry[0] (gate boundary lower)", () => {
     const s = emptyGameState();
     const rom = makeRom();
     // Setup: mode = 0. ROM[0x2257A] → ROM[0x10000] = entry list.
@@ -179,7 +179,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(readByte(s, slotOff + 0x26)).toBe(1);
   });
 
-  it("teardown slot quando D2 == slot[0x52] AND D3 < slot[0x52] (lower cross)", () => {
+  it("teardown slot when D2 == slot[0x52] AND D3 < slot[0x52] (lower cross)", () => {
     const s = emptyGameState();
     const rom = makeRom();
     // mode = 0, sentinel direct.
@@ -214,7 +214,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(r.fun18F46Calls).toBe(1);
   });
 
-  it("teardown slot quando D2 == slot[0x54] AND D3 > slot[0x54] (upper cross)", () => {
+  it("teardown slot when D2 == slot[0x54] AND D3 > slot[0x54] (upper cross)", () => {
     const s = emptyGameState();
     const rom = makeRom();
     setRomLongBE(rom, 0x2257a, 0x00010000);
@@ -239,7 +239,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(f46Arg2).toBe(-5);
   });
 
-  it("no teardown quando D3 dentro [slot[0x52], slot[0x54]] o D2 mismatch", () => {
+  it("no teardown when D3 dentro [slot[0x52], slot[0x54]] o D2 mismatch", () => {
     const s = emptyGameState();
     const rom = makeRom();
     setRomLongBE(rom, 0x2257a, 0x00010000);
@@ -249,17 +249,17 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     setWordBE(s, SLOT0_OFF + 0x52, 15);
     setWordBE(s, SLOT0_OFF + 0x54, 25);
 
-    // dal lower-cross. Poi D2 != slot54 → skip upper.
+    // from the lower-cross. Poi D2 != slot54 → skip upper.
     const r = stateSub14C46(s, rom, 15, 20);
     expect(r.slots[0]!.action).toBe("noop");
     expect(readByte(s, SLOT0_OFF + 0x18)).toBe(1);
   });
 
-  it("entry skip se slotMatchesPtr ritorna 1 (entry duplicato)", () => {
+  it("entry skip se slotMatchesPtr returns 1 (entry duplicato)", () => {
     const s = emptyGameState();
     const rom = makeRom();
     setRomLongBE(rom, 0x2257a, 0x00010000);
-    // entry[0..7] di test.
+    // entry[0..7] of test.
     setRomByte(rom, 0x10000, 10);
     setRomByte(rom, 0x10001, 20);
     setRomLongBE(rom, 0x10002, 0x00010100);
@@ -294,7 +294,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
 
     setRomLongBE(rom, 0x2257a, 0x00400500); // entryListPtr → workRam
 
-    // D2 = 5 (< 10), D3 = 10 (== entry[0]) → gate ok, ma matched → skip.
+    // D2 = 5 (< 10), D3 = 10 (== entry[0]) → gate ok, but matched → skip.
     const r = stateSub14C46(s, rom, 5, 10);
     expect(r.entries).toHaveLength(1);
     expect(r.entries[0]!.matched).toBe(true);
@@ -302,7 +302,7 @@ describe("stateSub14C46 (FUN_00014C46)", () => {
     expect(r.fun1CC62Calls).toBe(0);
   });
 
-  it("findFreeSlotInTable ritorna -1 → break entry walk + tail walk parte da 0x401302", () => {
+  it("findFreeSlotInTable returns -1 → break entry walk + tail walk parte da 0x401302", () => {
     const s = emptyGameState();
     const rom = makeRom();
     setRomLongBE(rom, 0x2257a, 0x00010000);

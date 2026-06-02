@@ -117,7 +117,7 @@ export function helper3A08(
   // bmi.b: branch if N flag set (d0w >= 0x8000, i.e., d0w as signed < 0)
   if (d0w >= 0x8000) return;
 
-  // showSpaces: low word di arg4
+  // showSpaces: low word of arg4
   const showSp = (showSpaces & 0xffff) === 1;
 
   while (true) {

@@ -1,5 +1,5 @@
 /**
- * object-render-update-13334.test.ts — smoke tests di `objectRenderUpdate13334`
+ * object-render-update-13334.test.ts — smoke tests of `objectRenderUpdate13334`
  * (FUN_00013334).
  *
  * Bit-perfect parity validata vs binary in
@@ -57,7 +57,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[0x692]).toBe(0);
     expect(s.workRam[0x693]).toBe(200);
 
-    // Globals NON aggiornati (mode != 1, != 2).
+    // Globals NOT aggiornati (mode != 1, != 2).
     expect(s.workRam[0x970]).toBe(0);
     expect(s.workRam[0x971]).toBe(0);
     expect(s.workRam[0x972]).toBe(0);
@@ -148,7 +148,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[0x976]).toBe((STRUCT_PTR >>> 8) & 0xff);
     expect(s.workRam[0x977]).toBe(STRUCT_PTR & 0xff);
 
-    // Compute NON eseguito (sentinel byte ancora 0x55).
+    // Compute NOT executed (sentinel byte ancora 0x55).
     expect(s.workRam[STRUCT_OFF + 0x4e]).toBe(0x55);
     expect(s.workRam[STRUCT_OFF + 0x42]).toBe(0x55);
   });
@@ -185,7 +185,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[0x973]).toBe(0x00);
     expect(s.workRam[0x977]).toBe(STRUCT_PTR & 0xff);
 
-    // POS_X/Y aggiornati (compute eseguito).
+    // POS_X/Y aggiornati (compute executed).
     expect(s.workRam[0x691]).toBe(10);
     expect(s.workRam[0x693]).toBe(20);
 
@@ -200,7 +200,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
 
     const recordPtr = 0x401800;
     s.workRam[STRUCT_OFF + 0x1e] = 2;
-    s.workRam[STRUCT_OFF + 0x1a] = 0; // NON 1 e NON 2.
+    s.workRam[STRUCT_OFF + 0x1a] = 0; // NOT 1 and NOT 2.
     s.workRam[STRUCT_OFF + 0x3e] = (recordPtr >>> 24) & 0xff;
     s.workRam[STRUCT_OFF + 0x3f] = (recordPtr >>> 16) & 0xff;
     s.workRam[STRUCT_OFF + 0x40] = (recordPtr >>> 8) & 0xff;
@@ -219,7 +219,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[0x691]).toBe(50);
     expect(s.workRam[0x693]).toBe(60);
 
-    // Globals NON popolati.
+    // Globals NOT popolati.
     expect(s.workRam[0x970]).toBe(0);
     expect(s.workRam[0x974]).toBe(0);
 

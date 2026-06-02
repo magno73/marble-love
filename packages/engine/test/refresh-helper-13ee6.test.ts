@@ -1,5 +1,5 @@
 /**
- * Test refreshHelper13EE6 (FUN_00013EE6) — smoke tests sui rami principali.
+ * Test refreshHelper13EE6 (FUN_00013EE6) — smoke tests sui branches principali.
  *
  *   `cli/src/test-refresh-helper-13ee6-parity.ts`
  */
@@ -35,14 +35,14 @@ function getU16(buf: Uint8Array, off: number): number {
 }
 
 describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
-  it("la costante REFRESH_HELPER_13EE6_ADDR ha il valore atteso", () => {
+  it("la costante REFRESH_HELPER_13EE6_ADDR ha il value expected", () => {
     expect(REFRESH_HELPER_13EE6_ADDR).toBe(0x00013ee6);
   });
 
-  it("se scroll-active (*0x400006) == 0: non modifica workRam eccetto eventuali side effect del tail", () => {
+  it("se scroll-active (*0x400006) == 0: non modifies workRam eccetto eventuali side effect of the tail", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
-    // *0x400010 & 7 == 0 → anche il tail non fa nulla
+    // *0x400010 & 7 == 0 → also il tail non fa nulla
     const before = Uint8Array.from(state.workRam);
 
     refreshHelper13EE6(state, rom);
@@ -52,11 +52,11 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     }
   });
 
-  it("se scroll-active (*0x400006) == 1 ma decodeNext (*0x400978) == 0: clear active flag", () => {
+  it("se scroll-active (*0x400006) == 1 but decodeNext (*0x400978) == 0: clear active flag", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
 
-    // Imposta scroll-active
+    // Sets scroll-active
     state.workRam[OFF_ACTIVE] = 1;
     // *0x40097c = 0 (scroll target = 0)
     // *0x400664 = 0 (level counter)
@@ -66,7 +66,7 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     expect(state.workRam[OFF_ACTIVE]).toBe(0);
   });
 
-  it("fun1344c stub viene chiamato se fornito via subs", () => {
+  it("fun1344c stub is chiamato se fornito via subs", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     let called  = false;
@@ -78,7 +78,7 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     expect(called).toBe(true);
   });
 
-  it("fun144e4 stub viene chiamato se il target scroll cambia", () => {
+  it("fun144e4 stub is chiamato if the target scroll cambia", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
 
@@ -144,7 +144,7 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     expect(fun144e4Calls).toBeGreaterThanOrEqual(0);
   });
 
-  it("playfieldRam non viene modificata se scroll-active == 0", () => {
+  it("playfieldRam non is modified se scroll-active == 0", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     state.workRam[OFF_ACTIVE] = 0;
@@ -157,7 +157,7 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     }
   });
 
-  it("dopo blit104 *0x400006 viene azzerato", () => {
+  it("dopo blit104 *0x400006 is azzerato", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     state.workRam[OFF_ACTIVE] = 1;
@@ -167,7 +167,7 @@ describe("refreshHelper13EE6 (FUN_00013EE6)", () => {
     expect(state.workRam[OFF_ACTIVE]).toBe(0);
   });
 
-  it("se scroll-active==1 e decode-next!=0 ma type==0x19: chiama decodeBitstream due volte (decode buf + alt)", () => {
+  it("se scroll-active==1 and decode-next!=0 but type==0x19: calls decodeBitstream twice (decode buf + alt)", () => {
     // This test verifies the type-0x19 path doesn't crash.
     const state = emptyGameState();
     const rom   = emptyRomImage();

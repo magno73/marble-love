@@ -162,7 +162,7 @@ function setupBounce0CSlot(
 }
 
 describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
-  it("non solleva eccezioni con state vuoto e slot vuoto", () => {
+  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => fun29CCE(s, SLOT, rom)).not.toThrow();
@@ -176,7 +176,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.workRam[SLOT_OFF + 0x58]).toBe(0x00);
   });
 
-  it("EPILOGUE flag *(0x666)==0 e *(0x668)==0 → nessun neg.l su vx/vy", () => {
+  it("EPILOGUE flag *(0x666)==0 and *(0x668)==0 → no neg.l su vx/vy", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // vx = 0x12345678
@@ -217,7 +217,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(rL(s.workRam, SLOT_OFF + 0x04)).toBe(0xfffe0000);
   });
 
-  it("sound dispatch: D3=0x10 (initial +0x58 in arm) e D0=0 (clr) → soundCmdSend(0x44)", () => {
+  it("sound dispatch: D3=0x10 (initial +0x58 in arm) and D0=0 (clr) → soundCmdSend(0x44)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[SLOT_OFF + 0x58] = 0x10;
@@ -231,10 +231,10 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
 
   // ── LOOP outer + jump table dispatch tests ───────────────────────────
 
-  it("LOOP: slot table vuota (s18=0 alla prima iter) → scansiona tutti gli slot senza scrivere", () => {
+  it("LOOP: slot table vuota (s18=0 to the first iter) → scansiona all the slot senza scrivere", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Slot table (0x400a9c offset 0xa9c) tutta zero → ogni s18=0 salta a 0x2b0f6.
+    // Slot table (0x400a9c offset 0xa9c) tutta zero → each s18=0 skips a 0x2b0f6.
     expect(s.workRam[0xa9c + 0x18]).toBe(0);
     fun29CCE(s, SLOT, rom);
     // (0x58,A2) must be 0 (cleared in prologue); no tag written.
@@ -242,7 +242,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0);
   });
 
-  it("LOOP: uno slot inattivo prima del tubo non ferma la scansione ROM", () => {
+  it("LOOP: uno slot inattivo first of the tubo non ferma la scansione ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const slot4 = SLOT_TABLE_OFF + 4 * 0x56;
@@ -288,7 +288,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0xff);
   });
 
-  it("LOOP color 0x10 fuori range D2: tag NON scritto", () => {
+  it("LOOP color 0x10 outside range D2: tag NOT scritto", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0xa9c + 0x18] = 1;
@@ -302,7 +302,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.workRam[SLOT_OFF + 0x59]).toBe(0);
   });
 
-  it("LOOP color out-of-range (0x4): nessun dispatch (skip jump table)", () => {
+  it("LOOP color out-of-range (0x4): no dispatch (skip jump table)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0xa9c + 0x18] = 1;
@@ -357,7 +357,7 @@ describe("fun29CCE (FUN_29CCE minimal chunk)", () => {
     expect(s.debug?.lastTerrainSlotCollision?.colorTag).toBe(0x0a);
   });
 
-  it("LOOP color 0x0a: fuori dal tight hitbox non lancia", () => {
+  it("LOOP color 0x0a: outside from the tight hitbox non lancia", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 

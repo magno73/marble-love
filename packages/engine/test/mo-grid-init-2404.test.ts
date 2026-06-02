@@ -1,5 +1,5 @@
 /**
- * mo-grid-init-2404.test.ts — smoke + corner case di FUN_2404.
+ * mo-grid-init-2404.test.ts — smoke + corner case of FUN_2404.
  *
  * Validate bit-perfect behavior without requiring the original binary:
  *   1. A production-style case (arg1 = 0): writes 56 slots to bank 0, MMIO = 0x0000.
@@ -68,7 +68,7 @@ function readWordBE(buf: Uint8Array, off: number): number {
 }
 
 describe("moGridInit2404 (FUN_2404)", () => {
-  it("arg1=0: bank 0, MMIO=0, scrive 56 slot, code=0x0002, link=1..56", () => {
+  it("arg1=0: bank 0, MMIO=0, writes 56 slot, code=0x0002, link=1..56", () => {
     const s = emptyGameState();
     const { rom, yTable, xTable } = makeRomFixture();
 
@@ -80,7 +80,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // A single MMIO write, value = arg1<<3 = 0.
     expect(writes).toEqual([{ addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 }]);
 
-    // Bank offset = arg1<<9 = 0. Tutti gli slot in spriteRam[0..0x1EF].
+    // Bank offset = arg1<<9 = 0. Tutti the slot in spriteRam[0..0x1EF].
     for (let i = 0; i < NUM_SLOTS; i++) {
       const slotPos = i * 2;
       const tableIdx = NUM_SLOTS - 1 - i; // index decrescente
@@ -100,7 +100,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
       expect(readWordBE(s.spriteRam, slotPos + MO_FIELD_LINK_OFF)).toBe(i + 1);
     }
 
-    // Bytes oltre il bank (0x1F0..0xFFF) restano 0.
+    // Bytes beyond il bank (0x1F0..0xFFF) restano 0.
     for (let off = MO_BANK_SIZE; off < s.spriteRam.length; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
@@ -150,13 +150,13 @@ describe("moGridInit2404 (FUN_2404)", () => {
     }
   });
 
-  it("arg1=0x10000: long shift wrap, MMIO=0x0 (bit 16 esce dal word)", () => {
+  it("arg1=0x10000: long shift wrap, MMIO=0x0 (bit 16 esce from the word)", () => {
     const s = emptyGameState();
     const { rom } = makeRomFixture();
 
     const writes: Array<{ addr: number; value: number }> = [];
     // arg1 = 0x10000 → arg1<<3 = 0x80000 → low word = 0x0000 (i 16 bit alti escono).
-    // arg1<<9 = 0x2000000 → bank offset assoluto enorme: cade fuori dai 4KB di
+    // arg1<<9 = 0x2000000 → bank offset assoluto enorme: cade outside from the 4KB of
     // spriteRam. The TS replica must no-op out-of-bounds writes (not
     // crash).
     moGridInit2404(s, rom, 0x10000, {
@@ -166,7 +166,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // MMIO = 0x80000 & 0xFFFF = 0x0000.
     expect(writes).toEqual([{ addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 }]);
 
-    // SpriteRam intera = 0 (tutti i write cadono fuori bound).
+    // SpriteRam intera = 0 (all i write cadono outside bound).
     for (let off = 0; off < s.spriteRam.length; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
@@ -178,7 +178,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
 
     const writes: Array<{ addr: number; value: number }> = [];
     // arg1 = 0xFFFE → arg1<<3 = 0x7FFF0 → MMIO low word = 0xFFF0
-    // arg1<<9 = 0x1FFFC00 → fuori dai 4KB. spriteRam non scritta.
+    // arg1<<9 = 0x1FFFC00 → outside from the 4KB. spriteRam non scritta.
     // Ma proviamo arg1=0 per code wrap:
     // (0 + 0x0002) & 0xFFFF = 0x0002.
     // To test wrap, inject a different bias.
@@ -207,9 +207,9 @@ describe("moGridInit2404 (FUN_2404)", () => {
     expect(() => moGridInit2404(s, rom, 0)).not.toThrow();
 
     // Verify spriteRam was still written correctly.
-    // (almeno il primo slot).
+    // (almeno il first slot).
     expect(readWordBE(s.spriteRam, MO_FIELD_LINK_OFF)).toBe(1);
-    // L'ultimo slot link = 56.
+    // L'last slot link = 56.
     expect(readWordBE(s.spriteRam, 55 * 2 + MO_FIELD_LINK_OFF)).toBe(56);
   });
 });

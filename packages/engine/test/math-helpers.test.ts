@@ -24,7 +24,7 @@ describe("absLong (FUN_1216A / FUN_1B5A6)", () => {
     expect(absLong(0x80000001)).toBe(0x7FFFFFFF); // -INT_MAX → INT_MAX
   });
 
-  it("INT_MIN (0x80000000) → INT_MIN (overflow del neg, M68k quirk)", () => {
+  it("INT_MIN (0x80000000) → INT_MIN (overflow of the neg, M68k quirk)", () => {
     expect(absLong(0x80000000)).toBe(0x80000000);
   });
 });

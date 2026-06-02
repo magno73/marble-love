@@ -5,7 +5,7 @@
  * MainGameTick -> IRQ4 VBLANK).
  *
  * **Status Phase 4d**: implementati i blocchi:
- *   - `mainUpdateScrollSync`: prefix di MainUpdate (scroll/AV-control sync)
+ *   - `mainUpdateScrollSync`: prefix of MainUpdate (scroll/AV-control sync)
  *
  * Open:
  *   - conditional demo-update block (FUN_26D8A)
@@ -44,7 +44,7 @@ function writeU32BE(buf: Uint8Array, off: number, v: number): void {
   buf[off + 3] = v & 0xff;
 }
 
-// ─── mainUpdateScrollSync (prefix di FUN_28788) ───────────────────────────
+// ─── mainUpdateScrollSync (prefix of FUN_28788) ───────────────────────────
 
 /**
  * Mirrors MainUpdate lines 0x28788..0x287D8:

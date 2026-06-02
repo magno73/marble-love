@@ -12,7 +12,7 @@ const s = stateNs.emptyGameState();
 bootInit(s, rom, { preloadLevel: 0 });
 for (let i = 0; i < 2400; i++) tick(s, { rom, runMainLoopBody: true });
 
-// Per ogni 256 byte chunk, conta quanti byte non match
+// For each 256 byte chunk, counts how many byte non match
 console.log("=== playfieldRam diff per 256-byte regions ===");
 for (let r = 0; r < 32; r++) {
   let mismatch = 0;
@@ -26,7 +26,7 @@ for (let r = 0; r < 32; r++) {
   }
 }
 
-// Quanti byte non zero in MAME ma zero in TS (= MAME ha tile, TS non)
+// Quantthe bytes non zero in MAME but zero in TS (= MAME ha tile, TS non)
 let mameOnly = 0, tsOnly = 0, both = 0;
 for (let i = 0; i < 8192; i++) {
   const m = mamePf[i] !== 0, t = s.playfieldRam[i] !== 0;

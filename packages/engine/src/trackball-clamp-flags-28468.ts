@@ -299,7 +299,7 @@ export function trackballClampFlags28468(
   const A_byte = (state.workRam[PICKED_DELTA_Y_OFF] ?? 0) & 0xff;
   const B_byte = (state.workRam[PICKED_DELTA_X_OFF] ?? 0) & 0xff;
 
-  // D1b = byte( -sext_l(A) ) = (-A) & 0xFF (per via dell'overflow byte).
+  // D1b = byte( -sext_l(A) ) = (-A) & 0xFF (per via of the overflow byte).
   // Poi D1b -= B (mod 256).
   const negA_byte = (-sext8(A_byte)) & 0xff;
   const D1_byte = (negA_byte - B_byte) & 0xff;
@@ -308,7 +308,7 @@ export function trackballClampFlags28468(
   // ─── Step 9: D3 = abs8(D1), D4 = abs8(D2) (byte unsigned) ─────────────
   // - if D1b >= 0 (signed): D3 = D1b (0..127)
   // - if D1b <  0 (signed): D3 = (-D1b)&0xFF = (256 - D1b)&0xFF
-  //   Ma neg.l su long(D1b zero-ext) = -D1b (long), poi byte = -D1b & 0xFF.
+  //   Ma neg.l su long(D1b zero-ext) = -D1b (long), pothe bytes = -D1b & 0xFF.
   //   Per D1b in [-128, -1] (sext range), |D1b| in [1, 128].
   //   Esempi: D1b = 0x80 (=-128), D3 = (-128)&0xFF = 0x80. abs(-128) = 128 ✓
   //   D1b = 0xFF (=-1), D3 = (-(-1))&0xFF = 1. ✓
@@ -342,7 +342,7 @@ export function trackballClampFlags28468(
   }
 
   // ─── Step 11: Add sext(D1b) a *0x6A4, sext(D2b) a *0x6A6 ──────────────
-  // ext.w di un byte zero-esteso → sext_w del byte signed.
+  // ext.w of un byte zero-esteso → sext_w of the byte signed.
   const xCur = readSignedWord(state, ACCUM_X_OFF);
   const xNew = sext16((xCur + sext8(D1_final)) & 0xffff);
   writeWord(state, ACCUM_X_OFF, xNew);

@@ -1,8 +1,8 @@
 /**
  *
- *  - colorRam ha il pattern decrescente del RESET handler
+ *  - colorRam ha il pattern decrescente of the RESET handler
  *  - palette base inizializzata via paletteRamInitFull
- *  - workRam globals di state machine inizializzati (0x1F42 rotation flag)
+ *  - workRam globals of state machine inizializzati (0x1F42 rotation flag)
  */
 
 import { readFileSync } from "node:fs";
@@ -83,7 +83,7 @@ describe("bootInit", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
-    //   0x020..0x1FE: hw pattern intatto (paletteRamInitFull loop1 parte da 0x200)
+    //   0x020..0x1FE: hw pattern intact (paletteRamInitFull loop1 parte da 0x200)
     //   d0 = -0x1000 + 0x81*4 = -0xCFC = 0xF304
     const off = 0x100;
     const iter = (off / 2) + 1;
@@ -170,11 +170,11 @@ describe("bootInit", () => {
       expect(() => tick(s, { rom })).not.toThrow();
     }
     // state.clock.frame advances (canonical internal counter);
-    // workRam[0x14] e [0x16] sono gestiti dalle sub IRQ4 + body — non sono
+    // workRam[0x14] and [0x16] are gestiti dalle sub IRQ4 + body — non are
     expect(s.clock.frame).toBe(5);
   });
 
-  it("warmState restore resetta anche clock e RNG transitori", () => {
+  it("warmState restore resetta also clock and RNG transitori", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const warm = {

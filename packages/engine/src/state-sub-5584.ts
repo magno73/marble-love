@@ -36,7 +36,7 @@
  *   0x55c4:  moveq   #0,D0
  *   0x55c6:  move.w  (0x2a,SP),D0w            ; D0 = arg4 word (re-read; SP shifted)
  *                                              ;   il push appena fatto ha portato
- *   0x55ca:  move.l  D0,-(SP)                 ; push arg4 (di nuovo)
+ *   0x55ca:  move.l  D0,-(SP)                 ; push arg4 (of nuovo)
  *   0x55cc:  moveq   #0,D0
  *   0x55ce:  move.w  D4w,D0w                  ; D0 = D4 (zero-ext)
  *   0x55d0:  move.l  D0,-(SP)                 ; push D4
@@ -68,7 +68,7 @@
  *   - Args: 5 long (4 word ext-l + 1 long ptr).
  *                    records (workRam-resident, range 0x40xxxx).
  *     `arg1` word  = forward-walk parameter, passed to FUN_5468 as arg2 word.
- *     `arg2` word  = numero di record da scansionare in FUN_540A.
+ *     `arg2` word  = number of record da scan in FUN_540A.
  *     `arg4` word  = byte/word parameter passed twice to FUN_5468 (callee arg3
  *                    byte and arg4 word).
  *   - Callee-saved: D2-D6 (preserved by movem.l in prologue/epilogue).
@@ -76,13 +76,13 @@
  *
  * **Low-level fidelity notes**:
  *
- *   1. **Stack offset di `(0x2a, SP)`**: post-movem (5×4 = 20 byte = 0x14) +
+ *   1. **Stack offset of `(0x2a, SP)`**: post-movem (5×4 = 20 byte = 0x14) +
  *      ret addr (4) = 24 = 0x18. Caller_SP_args = SP + 0x18. Args structure:
  *      arg0 @ +0, arg1 @ +4 (word @ +6), arg2 @ +8 (word @ +0xa), arg3 @ +0xc
  *      (caller_SP_args + 0x12) = arg4 low word. Confirmed by the disassembly
  *      (see `0x5fe2: move.w (0x10070).l, D0w; ext.l D0; move.l D0,-(SP)`).
  *
- *      (= arg4 high word + 2 = STILL arg4 low word su BE). NO: + 4 sul SP
+ *      (= arg4 high word + 2 = STILL arg4 low word su BE). NO: + 4 on the SP
  *      means that (0x2a, SP) now points to arg4_low_word - 4.
  *      0x12 - 4 = caller_SP_args + 0xe = arg3 low word`!
  *      Lo stack ora ha:
@@ -114,7 +114,7 @@
  *         (0x24, SP) = arg3 long start             → word @+0xe
  *         (0x28, SP) = arg4 long start             → word @+0x12
  *         (0x2a, SP) = arg4 word (low)
- *      ✓ Confermato. Delta tra caller_SP_args e SP post-movem = 0x18.
+ *      ✓ Confermato. Delta between caller_SP_args and SP post-movem = 0x18.
  *
  *      ora punta a `current_SP + 0x2a = caller_SP_args + 0x2a - 0x1c =
  *
@@ -127,18 +127,18 @@
  *         caller_SP_args + 0x00 = arg0
  *      ✓ Matches (0x2a, SP) = arg4 word, (0x26, SP) = arg3, etc.
  *
- *      (ROM, 1) come gli ultimi due args di FUN_5468.
+ *      (ROM, 1) as the last due args of FUN_5468.
  *
  *
- *   2.5 **Doppia conferma via re-disasm corretta**: a 0x55c2 push abbassa SP
+ *   2.5 **Doppia conferma via re-disasm correct**: a 0x55c2 push abbassa SP
  *      delta 0x18 → caller_SP + (0x2a - 0x18) = caller_SP + 0x12... aspetta,
  *      Riprovo: pre-push delta = 0x18. Post-push delta = 0x1c. (0x2a, SP) @
  *      delta 0x1c → caller_offset = 0x2a - 0x1c = 0x0e → arg3 word. ✓
- *         primo push (0x55c2):  arg4 word (delta 0x18 → caller offset 0x12)
- *         secondo push (0x55ca): arg3 word (delta 0x1c → caller offset 0x0e)
- *         terzo push (0x55d0):   D4 (loop counter)
- *         quarto push (0x55d6):  D3 (arg1 word)
- *         quinto push (0x55d8):  D2 (cur ptr long)
+ *         first push (0x55c2):  arg4 word (delta 0x18 → caller offset 0x12)
+ *         second push (0x55ca): arg3 word (delta 0x1c → caller offset 0x0e)
+ *         third push (0x55d0):   D4 (loop counter)
+ *         fourth push (0x55d6):  D3 (arg1 word)
+ *         fifth push (0x55d8):  D2 (cur ptr long)
  *      arg4 ripetuto.
  *
  *      Verify with FUN_5468's signature (link.w A6,-0xc):
@@ -147,7 +147,7 @@
  *         (0x12, A6) = arg2 word low         → D4 ✓
  *         (0x17, A6) = arg3 byte (low byte of word low) → arg3 ✓ (= 1 in prod)
  *         (0x1a, A6) = arg4 word low         → arg4 ✓ (= ROM[0x10070])
- *      Perfetto: gli args sono (D2, D3w, D4w, arg3w, arg4w).
+ *      Perfetto: the args are (D2, D3w, D4w, arg3w, arg4w).
  *
  *   3. **`movem.l {D6 D5 D4 D3 D2}, -(SP)` push order**: M68k `movem` preserva
  *         (0, SP) = D2  ; (4, SP) = D3  ; (8, SP) = D4  ; (0xc, SP) = D5  ; (0x10, SP) = D6

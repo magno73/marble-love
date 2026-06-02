@@ -32,7 +32,7 @@ function readU32BE(wr: Uint8Array, off: number): number {
 }
 
 /** Costruisce un reader bytewise su un Uint8Array indicizzato da
- *  un base-address fittizio (es. 0x20000 = ROM area).
+ *  un base-address fittizio (e.g. 0x20000 = ROM area).
  */
 function makeTableReader(
   base: number,
@@ -46,7 +46,7 @@ function makeTableReader(
 }
 
 describe("findNearestTarget2637A (FUN_0002637A)", () => {
-  it("seleziona il candidato più vicino con filter match e LOS libero", () => {
+  it("seleziona il candidato più vicino con filter match and LOS free", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -80,7 +80,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     ]);
 
     findNearestTarget2637A(s, objPtr, tableBase, reader, {
-      lineOfSight17CB8: () => 0, // path libero
+      lineOfSight17CB8: () => 0, // path free
     });
 
     // Best = #1 → pixelX = (0x21<<3)+4 = 0x10C, pixelY = 0x10C, filter = 0x05
@@ -89,7 +89,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     expect(s.workRam[0x472]).toBe(0x05);
   });
 
-  it("scarta i candidati con LOS bloccato", () => {
+  it("scarta i candidates con LOS bloccato", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1100;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -104,7 +104,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     const tableBase = 0x21000;
     // 3 candidates with filter match and dist < 0x300. LOS blocks #0 and #1.
     //   #0: (0x10, 0x10) → |d|=4 → d2 piccolo, pixelX=0x84
-    //   #2: (0x16, 0x16) → |d|=2 → simile, pixelX=0xB4
+    //   #2: (0x16, 0x16) → |d|=2 → similar, pixelX=0xB4
     const reader = makeTableReader(tableBase, [
       0x10, 0x10, 0x03, 0x00,
       0x12, 0x12, 0x03, 0x00,
@@ -126,7 +126,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     expect(s.workRam[0x472]).toBe(0x03);
   });
 
-  it("nessun candidato passa: globals 0x400462/466/472 NON modificati", () => {
+  it("no candidato passa: globals 0x400462/466/472 NOT modificati", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -223,7 +223,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     expect(s.workRam[0x472]).toBe(0x00);
   });
 
-  it("invoca lineOfSight17CB8 con pixelX/Y di centro cella e range 0x180", () => {
+  it("invoca lineOfSight17CB8 con pixelX/Y of centro cella and range 0x180", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1500;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -255,13 +255,13 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
       objPtr,
-      px: (0x10 << 3) + 4, // 0x84 — pixel center del target
+      px: (0x10 << 3) + 4, // 0x84 — pixel center of the target
       py: (0x20 << 3) + 4, // 0x104
       range: 0x180,
     });
   });
 
-  it("costanti exposed: indirizzi e offset corretti", () => {
+  it("costanti exposed: indirizzi and offset corretti", () => {
     expect(FIND_NEAREST_TARGET_2637A_ADDR).toBe(0x2637a);
     expect(FIND_NEAREST_TARGET_2637A_GLOBALS.bestPixelX_400462).toBe(0x400462);
     expect(FIND_NEAREST_TARGET_2637A_GLOBALS.bestPixelY_400466).toBe(0x400466);

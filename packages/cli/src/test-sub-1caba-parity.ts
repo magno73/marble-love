@@ -48,7 +48,7 @@
  *   2. For each call:
  *        - Set state.workRam/playfieldRam/spriteRam = snapshot @ fc=SNAP_FRAME
  *        - Override tileX/tileY/lvlPtr/bsearchPtr/struct_pre in workRam from
- *          call's entry data.
+ *          cto the s entry data.
  *        - For first call: also override colBase + bsearchAlt with per-call
  *          values.
  *        - Run sub1CABATileRedraw(state, rom)

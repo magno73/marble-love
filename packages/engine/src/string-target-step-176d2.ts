@@ -104,7 +104,7 @@
  *   2. slot  = 0x401482 + Index * 0x42
  *   3. bboxPtrPtr = workRam.long_at(slot + 0x3A)
  *      bboxPtr    = workRam.long_at(bboxPtrPtr)
- *   4. Se bboxPtr == 0xFFFFFFFF:
+ *   4. If bboxPtr == 0xFFFFFFFF:
  *        xMin = -2, yMin = -2, width = 12, height = 12  (default)
  *        xMin   = sext(byte @ bboxPtr+4)
  *        yMin   = sext(byte @ bboxPtr+5)
@@ -249,7 +249,7 @@ export interface BboxResolved {
  *
  */
 export function resolveBbox(state: GameState, objAddr: number, rom?: RomImage): BboxResolved {
-  // base (es. idx=-1 → 0x401482 - 0x42 = 0x401440).
+  // base (e.g. idx=-1 → 0x401482 - 0x42 = 0x401440).
   const idx = sextB(rb(state, objAddr + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
   const bboxPtrPtr = rlU(state, slotAddr + SLOT_BBOX_PTRPTR_OFF);
@@ -294,7 +294,7 @@ export function stringTargetStep176D2(
   const width = bbox.width;
   const height = bbox.height;
 
-  // slot per leggere i word (xCenter, yCenter "extra"): ricaviamo l'addr una
+  // slot per leggere i word (xCenter, yCenter "extra"): ricaviamo the addr una
   const idx = sextB(rb(state, obj + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
 

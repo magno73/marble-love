@@ -136,7 +136,7 @@
  *       dy = (sy<<19) - entity.y + 0x40000
  *       D4 = abs(dx) >> 12, D6 = abs(dy) >> 12 (low word, signed asr)
  *       in_range ⇔ D4 < 0x20 && D6 < 0x20
- *   - **Se in range**:
+ *   - **If in range**:
  *       1. If sound_idx (signed) >= 0: dispatch sound via JSR 0x12a, passing
  *          (0x5a, 0x3400, table[0x242aa + sound_idx*4]). External sub,
  *          stub-injectable.
@@ -150,7 +150,7 @@
  *       step_x = (vx - entity.x) >> 3 signed
  *       step_y = (vy - entity.y) >> 3 signed
  *       entity.x += step_x; entity.y += step_y
- *       Se entity[0x36] != 0:
+ *       If entity[0x36] != 0:
  *         entity.z -= 0x6000
  *         if entity.z < -0x50000: entity.z = -0x50000
  *
@@ -169,7 +169,7 @@
  *
  *   - `entity[0x0..0x7]` modified (32-bit signed add) in the out-of-range branch.
  *   - `entity[0x8..0xb]` modified if `entity[0x36] != 0`.
- *   - `*(0x400446)` (long) avanzato di N*4 byte (N = record consumati in range).
+ *   - `*(0x400446)` (long) advanced by of N*4 byte (N = record consumed in range).
  *   - `*(0x40075a)` (word) = 1 if the list is exhausted.
  *
  * ## Caller
@@ -198,14 +198,14 @@ export const ENTITY_TARGET_X_OFFSET = 0x0c as const;
 /** Target Y. */
 export const ENTITY_TARGET_Y_OFFSET = 0x10 as const;
 export const ENTITY_GRAVITY_FLAG_OFFSET = 0x36 as const;
-/** "List-end-reached" marker byte (settato a 0xFF a list exhausted). */
+/** "List-end-reached" marker byte (set a 0xFF a list exhausted). */
 export const ENTITY_LIST_END_OFFSET = 0x6e as const;
 
 // ─── Costanti algoritmo ──────────────────────────────────────────────────
 
 /** Bias additivo applicato ai delta: sext(byte) << 19 - entity.field + bias. */
 export const DELTA_BIAS = 0x40000 as const;
-/** Soglia in-range (asr 12 di abs(delta)). */
+/** Soglia in-range (asr 12 of abs(delta)). */
 export const RANGE_THRESHOLD = 0x20 as const;
 export const D5_OVERRIDE = 0xc000 as const;
 /** Soglia per override D5. */
@@ -220,7 +220,7 @@ export const SOUND_ARG0 = 0x5a as const;
 export const SOUND_ARG1 = 0x3400 as const;
 /** Base ROM table address per sound table lookup. */
 export const SOUND_TABLE_ADDR = 0x000242aa as const;
-/** Tamanho di un record waypoint (4 byte). */
+/** Tamanho of un record waypoint (4 byte). */
 export const WAYPOINT_RECORD_SIZE = 4 as const;
 export const MAX_LIST_ITERATIONS = 1024 as const;
 
@@ -245,9 +245,9 @@ export type ExitMode = "out_of_range" | "list_exhausted" | "list_empty";
 
 export interface WaypointListStep1815AResult {
   exitMode: ExitMode;
-  /** Record consumati (in-range advances). */
+  /** Record consumed (in-range advances). */
   recordsConsumed: number;
-  /** Numero di sound dispatch invocati. */
+  /** Numero of sound dispatch invocati. */
   soundDispatches: number;
   fun26196Called: boolean;
   listEndMarkerSet: boolean;
@@ -318,7 +318,7 @@ function sextB(v: number): number {
  *
  * In M68K, divs.w <ea>, Dn:
  *   - Dn (32-bit signed) / sext16(<ea>) truncated toward zero
- *   - Se il quoziente sta in signed 16-bit [-0x8000..0x7FFF]:
+ *   - If il quoziente sta in signed 16-bit [-0x8000..0x7FFF]:
  *       Dn.low_word = quot, Dn.high_word = remainder, V cleared
  *
  */
@@ -346,7 +346,7 @@ function addW(dst32: number, src16: number): number {
 }
 
 /**
- * Replica m68k `mulu.w #imm, Dn`: low word di Dn (unsigned) * imm
+ * Replica m68k `mulu.w #imm, Dn`: low word of Dn (unsigned) * imm
  * (unsigned 16-bit) → 32-bit unsigned in Dn.
  */
 function muluW(dnLow: number, imm16: number): number {

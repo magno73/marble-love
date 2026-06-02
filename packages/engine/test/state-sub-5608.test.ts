@@ -1,5 +1,5 @@
 /**
- * state-sub-5608.test.ts — smoke tests di stateSub5608 (FUN_5608).
+ * state-sub-5608.test.ts — smoke tests of stateSub5608 (FUN_5608).
  *
  *   - branch su byte ROM @ 0x10072 (D2 = 4 vs 8)
  *   - default callback no-op
@@ -17,7 +17,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("stateSub5608 (FUN_5608)", () => {
-  it("byte ROM @ 0x10072 == 0 → D2=8 → arg1 = 11 (52DA #1) e 12 (52DA #2)", () => {
+  it("byte ROM @ 0x10072 == 0 → D2=8 → arg1 = 11 (52DA #1) and 12 (52DA #2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -53,7 +53,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     });
   });
 
-  it("byte ROM @ 0x10072 != 0 → D2=4 → arg1 = 7 (52DA #1) e 8 (52DA #2)", () => {
+  it("byte ROM @ 0x10072 != 0 → D2=4 → arg1 = 7 (52DA #1) and 8 (52DA #2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10072] = 0x01;
@@ -69,7 +69,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     expect(calls52DA[1]!.arg1).toBe(8); // 4+4
   });
 
-  it("legge long BE da ROM @ 0x10074 e lo passa come argLong a 5334", () => {
+  it("reads long BE da ROM @ 0x10074 and lo passa as argLong a 5334", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     // long BE 0xDEADBEEF a ROM[0x10074..0x10077]
@@ -87,7 +87,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     expect(calls5334).toEqual([0xdeadbeef >>> 0]);
   });
 
-  it("ordine di invocazione: 52DA #1 → 5334 → 52DA #2", () => {
+  it("ordine of invocation: 52DA #1 → 5334 → 52DA #2", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10074] = 0x01;
@@ -113,7 +113,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     expect(order).toEqual(["52DA#1", "5334", "52DA#2"]);
   });
 
-  it("default callbacks no-op: ritorna void senza mutare workRam o ROM", () => {
+  it("default callbacks no-op: returns void senza mutare workRam o ROM", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10072] = 0x42;
@@ -127,7 +127,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     expect(rom.program).toEqual(romBefore);
   });
 
-  it("inner52DA è UNA stessa funzione invocata 2 volte (no-cross-pollution con inner5334)", () => {
+  it("inner52DA is UNA same funzione invocata 2 times (no-cross-pollution con inner5334)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -150,7 +150,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     expect(count5334).toBe(1);
   });
 
-  it("rom.program[0x10072] valori boundary: 0xFF → ramo D2=4, 0x80 → ramo D2=4, 0x00 → ramo D2=8", () => {
+  it("rom.program[0x10072] values boundary: 0xFF → ramo D2=4, 0x80 → ramo D2=4, 0x00 → ramo D2=8", () => {
     const state = emptyGameState();
 
     for (const [b, expectedD2] of [
@@ -172,7 +172,7 @@ describe("stateSub5608 (FUN_5608)", () => {
     }
   });
 
-  it("non muta state.workRam con i callback default (gli inner non sono no-op forzati su workRam)", () => {
+  it("non muta state.workRam con i callback default (the inner non are no-op forzati su workRam)", () => {
     const state = emptyGameState();
     state.workRam[0x100] = 0x99;
     state.workRam[0x1f5e] = 0xaa;

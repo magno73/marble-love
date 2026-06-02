@@ -1,5 +1,5 @@
 /**
- * pf-scroll-emit-26e14.test.ts — smoke + corner case di pfScrollEmit26E14.
+ * pf-scroll-emit-26e14.test.ts — smoke + corner case of pfScrollEmit26E14.
  *
  */
 
@@ -36,11 +36,11 @@ function writeU32(buf: Uint8Array, off: number, v: number): void {
 describe("pfScrollEmit26E14", () => {
   it("non solleva eccezioni con state vuoto", () => {
     const s = emptyGameState();
-    // Default cmp word @ 0xA02180 = 0; D4=0 al primo iter → match → exit.
+    // Default cmp word @ 0xA02180 = 0; D4=0 al first iter → match → exit.
     expect(() => pfScrollEmit26E14(s, 0)).not.toThrow();
   });
 
-  it("toggla bit 3 di AV (0x4003AE) e scrive in 0x4003B0", () => {
+  it("toggla bit 3 of AV (0x4003AE) and writes in 0x4003B0", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0000);
     writeU16(s.spriteRam, 0x180, 0);
@@ -53,7 +53,7 @@ describe("pfScrollEmit26E14", () => {
     expect(readU16(s.workRam, 0x3b0)).toBe(0x0000);
   });
 
-  it("inizializza i 4 long-cursor sulla pagina TOGGLED (AV iniziale 0 → next page = +0x100*2)", () => {
+  it("inizializza the 4 long-cursor on the pagina TOGGLED (AV iniziale 0 → next page = +0x100*2)", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0000); // AV bit3 OFF → toggled = 8 → offNew = 0x200
     writeU16(s.spriteRam, 0x180, 0);
@@ -66,7 +66,7 @@ describe("pfScrollEmit26E14", () => {
     expect(readU32(s.workRam, 0x402)).toBe(SPRITE_RAM_BASE + 0x180 + 0x200 + 2);
   });
 
-  it("AV bit3 ON → cursor sulla pagina ALTRA (+0x000); read da +0x200", () => {
+  it("AV bit3 ON → cursor on the pagina ALTRA (+0x000); read da +0x200", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0008); // AV ON → toggled bit3 OFF → offNew = 0
     // I read pointers usano AV ORIGINALE (= 8) → offOld = 0x200, leggono da +0x200/+0x280/+0x300/+0x380
@@ -79,10 +79,10 @@ describe("pfScrollEmit26E14", () => {
     expect(readU32(s.workRam, 0x402)).toBe(SPRITE_RAM_BASE + 0x180 + 2);
   });
 
-  it("emette merge sul buffer A: (src + (arg<<5)) & 0x3FFF | (src & 0xC000)", () => {
+  it("emette merge on the buffer A: (src + (arg<<5)) & 0x3FFF | (src & 0xC000)", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0000); // toggled = 8 → write @ +0x200, read @ +0
-    // Setup: bank A read @ offset 0; cmp NON match (force MAX_ITER limited)
+    // Setup: bank A read @ offset 0; cmp NOT match (force MAX_ITER limited)
     writeU16(s.spriteRam, 0x000, 0xc000); // src = 0xC000 (bit 14 set, low = 0)
     // arg=2 → lineOffset = (2 << 5) = 0x40
     // merged = ((0xC000 + 0x40) & 0x3FFF) | (0xC000 & 0xC000) = 0x40 | 0xC000 = 0xC040
@@ -95,7 +95,7 @@ describe("pfScrollEmit26E14", () => {
     expect(readU16(s.spriteRam, 0x200)).toBe(0xc040);
   });
 
-  it("emette passthrough sui buffer B/C/D", () => {
+  it("emette passthrough suthe buffers B/C/D", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0000);
     writeU16(s.spriteRam, 0x080, 0xbeef); // bank B src
@@ -115,14 +115,14 @@ describe("pfScrollEmit26E14", () => {
     expect(readU16(s.spriteRam, 0x380)).toBe(0xdead);
   });
 
-  it("loop limita a 60 iter quando cmp non matcha mai", () => {
+  it("loop limita a 60 iter when cmp non matcha mai", () => {
     const s = emptyGameState();
     writeU16(s.workRam, 0x3ae, 0x0000);
     for (let i = 0; i < 64; i++) writeU16(s.spriteRam, 0x180 + i * 2, 0xffff);
 
     expect(() => pfScrollEmit26E14(s, 1)).not.toThrow();
 
-    // Cursor avanzati di 2 * 60 = 0x78 byte; base = 0xA02xxx + 0x200.
+    // Cursor avanzati of 2 * 60 = 0x78 byte; base = 0xA02xxx + 0x200.
     expect(readU32(s.workRam, 0x3f6)).toBe(SPRITE_RAM_BASE + 0x000 + 0x200 + 60 * 2);
     expect(readU32(s.workRam, 0x402)).toBe(SPRITE_RAM_BASE + 0x180 + 0x200 + 60 * 2);
   });

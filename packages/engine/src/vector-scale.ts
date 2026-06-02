@@ -17,7 +17,7 @@
  *   5. D3 clamp a 0x100 unsigned
  *   6. Switch on mode → compute D4
  *   7. D5 = (D4 << 6) / (D3 >> 8) — divu.w
- *   8. D1 = D5 (mode != 3) o secondo divide (mode 3)
+ *   8. D1 = D5 (mode != 3) o second divide (mode 3)
  *   9. *A0 = (*A0 >> 8) * D5 >> 6 (signed mul, asr)
  *   10. *(A0+4) = (*(A0+4) >> 8) * D1 >> 6
  *
@@ -68,7 +68,7 @@ function readRomWordSigned(rom: RomImage, addr: number): number {
  *
  * @param state    GameState
  * @param rom      RomImage (per ROM table @ 0x1EEF8)
- * @param vecAddr  Indirizzo assoluto del vettore (8 byte: x.l, y.l)
+ * @param vecAddr  Indirizzo assoluto of the vettore (8 byte: x.l, y.l)
  * @param mode     Mode byte (2, 3, 4, o default)
  */
 export function vectorScale(
@@ -214,7 +214,7 @@ export function vectorScale(
 
   let d1final: number;
   if (mode === 3 && secondDivide) {
-    // mode 3: secondo divide per D1
+    // mode 3: second divide per D1
     const dividend2 = (secondD0Out << 6) >>> 0;
     if (divisor1 === 0) {
       d1final = 0;

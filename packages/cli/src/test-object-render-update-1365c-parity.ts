@@ -4,15 +4,15 @@
  * differential FUN_0001365C vs `objectRenderUpdate1365C`.
  *
  * **Strategia**:
- * FUN_1365C ha 4 path macro osservabili:
+ * FUN_1365C ha 4 path macro observable:
  *   A. Early-exit (unchanged POS: A1==frame[-c] && A4==frame[-a]).
  *   B. Loop-scan without a valid match -> no writes to A2.
  *   C. Match → A2+0x1b aggiornato, poi ramo -1 (new state, palette, sound).
  *   D. Match → A2+0x1b = 4 + gameMode==3 → loop 25 slot @ 0x400a9c.
  *
- * Sub non replicate (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
+ * Sub non replicated (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
  * are patched with `rts` (4E75) in the binary. TS callbacks are no-ops.
- * `paletteQueuePush` e `soundPair15884` sono replicate → side effect osservabili.
+ * `paletteQueuePush` and `soundPair15884` are replicated → side effect observable.
  *
  * Observable comparate:
  *   - workRam @ A2..A2+0x80 (object struct)
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
     OBJ_PTR_CHOICES[Math.floor(rng() * OBJ_PTR_CHOICES.length)]!;
 
   // ─── Suite A: early-exit (unchanged POS) ────────────────────────────────
-  console.log(`\n=== FUN_0001365C — Suite A: early-exit (POS invariato) — ${perSuite} casi ===`);
+  console.log(`\n=== FUN_0001365C — Suite A: early-exit (POS invariato) — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const objPtr = pickPtr();
@@ -270,7 +270,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: changed POS, random scan (no forced match) ────────────────
-  console.log(`\n=== Suite B: POS cambiato, scan random — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: POS cambiato, scan random — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const objPtr = pickPtr();
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: force match -> A2+0x1b == -1 (new-state path) ────────────
-  console.log(`\n=== Suite C: new-state path (A2+0x1b → -1) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: new-state path (A2+0x1b → -1) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const objPtr = pickPtr();
@@ -335,7 +335,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: game mode==3, A2+0x1b==4 → slot loop ─────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: slot-loop path (gameMode==3, A2+0x1b==4) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: slot-loop path (gameMode==3, A2+0x1b==4) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const objPtr = pickPtr();

@@ -8,7 +8,7 @@
  *   eventually 6502 writes reply through $1810 -> drainReplyEvents() returns
  *   il byte al main.
  *
- * Phase 4-6 V2 stub (no envelope, no audio sample): test si concentrano sul
+ * Phase 4-6 V2 stub (no envelope, no audio sample): test si concentrano on the
  * mailbox protocol + facade API, not audio output.
  */
 
@@ -32,7 +32,7 @@ function loadRoms() {
 }
 
 describe.skipIf(!haveRoms)("SoundChip facade", () => {
-  it("createSoundChip: aggrega tutto, PC reset valido", () => {
+  it("createSoundChip: aggrega all, PC reset valido", () => {
     const chip = createSoundChip({ roms: loadRoms() });
     expect(chip.cpu.rf.pc as number).toBeGreaterThanOrEqual(0x4000);
     expect(chip.mmu.ram.length).toBe(0x1000);
@@ -62,7 +62,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect((chip.mmu.read8(0x1820 as never) as number) & 0x08).toBe(0x08);
   });
 
-  it("6502 ack legge $1810 → pending clear, NMI rilasciato", () => {
+  it("6502 ack reads $1810 → pending clear, NMI rilasciato", () => {
     const chip = createSoundChip({ roms: loadRoms() });
     releaseSoundReset(chip);
     submitCommand(chip, as_u8(0x42));
@@ -73,7 +73,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.cpu.nmi).toBe(false);
   });
 
-  it("6502 scrive reply $1810 → byte in replyQueue", () => {
+  it("6502 writes reply $1810 → byte in replyQueue", () => {
     const chip = createSoundChip({ roms: loadRoms() });
     chip.mmu.write8(0x1810 as never, as_u8(0x99));
     expect(chip.replyQueue.length).toBe(1);
@@ -83,13 +83,13 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.soundToMain.pending).toBe(false);
   });
 
-  it("drainReplyEvents: estrae TUTTI i byte (68K auto-drain veloce)", () => {
+  it("drainReplyEvents: estrae TUTTI the bytes (68K auto-drain veloce)", () => {
     // Hardware-faithful: the real 68K IRQ6 handler reads $FC0001 within a few
-    // cycle, quindi ogni write 6502 $1810 produce 1 IRQ6 e tutti i byte
-    // sono processati (NON overwrite). TS simula via onSoundToMainPost
+    // cycle, so each write 6502 $1810 produce 1 IRQ6 and all the bytes
+    // are processati (NOT overwrite). TS simula via onSoundToMainPost
     // which pushes + clears pending = no collision.
     // Verified necessary 2026-05-18: without auto-drain, NMI handler
-    // ($9569 BIT $1820 BNE) stalla nel polling loop, drift di 1 frame.
+    // ($9569 BIT $1820 BNE) stalla in the polling loop, drift of 1 frame.
     const chip = createSoundChip({ roms: loadRoms() });
     chip.mmu.write8(0x1810 as never, as_u8(0x11));
     chip.mmu.write8(0x1810 as never, as_u8(0x22));
@@ -99,7 +99,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(chip.replyQueue.length).toBe(0);
     expect(chip.soundToMain.pending).toBe(false);
 
-    // Pattern: ogni write 6502 → 1 byte in queue.
+    // Pattern: each write 6502 → 1 byte in queue.
     chip.mmu.write8(0x1810 as never, as_u8(0xAA));
     expect(drainReplyEvents(chip).map((b) => b as number)).toEqual([0xAA]);
     chip.mmu.write8(0x1810 as never, as_u8(0xBB));
@@ -114,7 +114,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(shadow.pokeyWriteRegs).toBe(chip.pokey.writeRegs);
   });
 
-  it("resetSoundChip: pulisce stato, PC ri-fetch da reset vector", () => {
+  it("resetSoundChip: pulisce state, PC ri-fetch da reset vector", () => {
     const chip = createSoundChip({ roms: loadRoms() });
     submitCommand(chip, as_u8(0xff));
     chip.mmu.write8(0x1810 as never, as_u8(0xee));
@@ -139,16 +139,16 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     expect(() => tickCycles(chip, 10000)).not.toThrow();
     // After 10000 cycles (~5.6ms), NMI should have been handled.
     // We do not guarantee that the 6502 read within 10000 cycles, but neither
-    // dovrebbe rimanere stuck.
+    // should rimanere stuck.
   });
 
   it("chip genera audio da cmd-tape replay senza workaround (post bit-fix)", async () => {
     // Regression lock 2026-05-17 session 4j: after fixes to
     //   1) $14 bit mapping (bit 2/3 = enable_timer, bit 4/5 = reset_timer)
-    //   2) cpu.irq aggiornato real-time durante tickCycles (no end-of-frame)
+    //   2) cpu.irq aggiornato real-time during tickCycles (no end-of-frame)
     // il SoundChip TS produce audio audibile via tape replay SENZA il
     // workaround `forceSoundIrqHack`. This test guarantees that future
-    // regressioni del bit mapping o dell'interleave IRQ vengano catturate.
+    // regressioni of the bit mapping o of the interleave IRQ vengano catturate.
     const { drainYm2151Samples, drainPokeySamples, drainReplyEvents, loadCmdTape } =
       await import("../src/m6502/sound-chip.js");
     // Use the long tape (14000 frame, covers sec 200 audible window).
@@ -164,7 +164,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     let released = false;
     let maxAbs = 0;
     let voiceWritten = 0;
-    // Run 14000 frame: la tape lunga registra anche l'audible window di MAME
+    // Run 14000 frame: la tape lunga registra also l'audible window of MAME
     // at sec 200+ (f12000+) where the TS chip must produce non-zero samples.
     for (let f = 0; f < 14000; f++) {
       const cmds = tape.byFrame.get(f);
@@ -190,7 +190,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
       if (chip.ym2151.regs[r] !== 0) voiceWritten++;
     }
     // Conservative threshold: chip must produce at least one sample > 0.001
-    // (esiste segnale, non silenzio totale) e popolare almeno 20 voice
+    // (esiste segnale, non silenzio totale) and popolare almeno 20 voice
     // registers ($20-$7F = RL/FB/CONN + KC + KF + op params).
     expect(maxAbs).toBeGreaterThan(0.001);
     expect(voiceWritten).toBeGreaterThan(20);
@@ -202,7 +202,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     // hidden busy-flag regression being masked).
   }, 90_000);
 
-  it("chip genera audio quando i voice register sono scritti correttamente", async () => {
+  it("chip genera audio when i voice register are scritti correttamente", async () => {
     // Regression lock per sessione 4 finding: il YM2151 produce sample
     // audible when KC/KF/operator regs are set. Tests the chip
     // YM2151 in isolation (no 6502 boot) to avoid the boot of the
@@ -210,7 +210,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     const { ym2151WriteAddr, ym2151WriteData, ym2151TickCycles, ym2151DrainSamples } =
       await import("../src/audio/ym2151.js");
     const chip = createSoundChip({ roms: loadRoms() });
-    // NON chiamiamo releaseSoundReset: il 6502 stays held, non interferisce
+    // NOT chiamiamo releaseSoundReset: il 6502 stays held, non interferisce
     // with our direct YM2151 writes.
     function ymWrite(reg: number, val: number) {
       ym2151WriteAddr(chip.ym2151, as_u8(reg));
@@ -225,7 +225,7 @@ describe.skipIf(!haveRoms)("SoundChip facade", () => {
     for (const opOff of [0xE0, 0xE8, 0xF0, 0xF8]) ymWrite(opOff, 0x0F);
     // Key on all slots ch 0
     ymWrite(0x08, 0x78);
-    // Tick 60 frame del YM2151 direttamente, drain samples
+    // Tick 60 frame of the YM2151 direttamente, drain samples
     let maxAbs = 0;
     for (let f = 0; f < 60; f++) {
       ym2151TickCycles(chip.ym2151, 29830);

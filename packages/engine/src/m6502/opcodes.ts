@@ -1,7 +1,7 @@
 /**
  * Dispatch table for the 151 documented MOS 6502 NMOS opcodes.
  *
- * Each entry returns runtime extra cycles. Static base cycles come from
+ * Each entry returns runtime extra cycles. Static base cycles as from
  * `baseCyclesFor(opcode)`, so total instruction cycles are base plus extra.
  * Undocumented opcodes are deliberately `null`; `cpu.step` fails loudly if the
  * sound ROM ever reaches one. Decimal-mode ADC/SBC are modeled for Tom Harte
@@ -190,7 +190,7 @@ function branchIf(rf: M6502RegFile, bus: MemBus6502, cond: boolean): number {
 
 function doBRK(rf: M6502RegFile, bus: MemBus6502): void {
   // BRK is a 2-byte instruction (opcode + padding), and PC has already advanced.
-  // di 1 (opcode fetch in cpu.ts); avanziamolo di 1 in piu' per saltare il
+  // of 1 (opcode fetch in cpu.ts); avanziamolo of 1 in piu' per saltare il
   // padding byte and push the correct return PC.
   rf.pc = as_u16(((rf.pc as number) + 1) & 0xffff);
   push16(rf, bus, rf.pc);
@@ -237,12 +237,12 @@ function build(): ReadonlyArray<Opcode | null> {
 
   t[0x20] = {
     exec(rf, bus) {
-      // JSR push (PC + 2 - 1) = PC dell'ultimo byte dell'istruzione JSR.
+      // JSR push (PC + 2 - 1) = PC of the last byte of the istruzione JSR.
       // PC has already advanced by 1 here (post opcode fetch). Read the
       // target word, poi pushiamo (target_addr - 1)? No: pushiamo
-      // l'address byte successivo (= addr dell'ultimo byte di operand JSR).
+      // the address byte next (= addr of the last byte of operand JSR).
       const targetLo = readPC(rf, bus) as number;
-      // PC e' ora al byte hi dell'operand
+      // PC e' ora al byte hi of the operand
       push16(rf, bus, rf.pc); // Push address of the high byte.
       const targetHi = bus.read8(rf.pc) as number;
       rf.pc = as_u16(targetLo | (targetHi << 8));

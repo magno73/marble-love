@@ -3,7 +3,7 @@
  * test-state-sub-198bc-parity.ts — differential FUN_000198BC vs
  * `stateSub198BC`.
  *
- * FUN_000198BC (186 byte): "entity move-and-validate retry loop". Tenta di
+ * FUN_000198BC (186 byte): "entity move-and-validate retry loop". Tenta of
  * move the entity through `FUN_19976` (applyMoveVelocity) + `FUN_1937C`
  * (validatePosition); if invalid on first attempt -> restore. If valid, loop
  * for up to 9 iterations by rotating `entity[0x26]` by step (1 if state==7,
@@ -65,7 +65,7 @@ const PROX_ARRAY_END = PROX_ARRAY_BASE + PROX_ARRAY_COUNT * PROX_ENTRY_SIZE;
 
 /**
  * Patch JSR-stub: none. Both `FUN_19976` and `FUN_1937C` are left
- * **live** e replicati 1:1 in TS.
+ * **live** and replicati 1:1 in TS.
  */
 function patchSubs(_cpu: CpuSession): void {
   // No-op: live mode.
@@ -232,7 +232,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub198BC (FUN_000198BC) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub198BC (FUN_000198BC) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -242,9 +242,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: state==7 (step=1, apply ogni iter) ───────────────────────
+  // ─── Suite B: state==7 (step=1, apply each iter) ───────────────────────
   console.log(
-    `\n=== Suite B: forced state==7 (fine-step branch) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced state==7 (fine-step branch) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -259,12 +259,12 @@ async function main(): Promise<void> {
 
   // ─── Suite C: pos near grid origin (validate often returns 0) ─────────
   console.log(
-    `\n=== Suite C: pos vicina alla grid (validate path varied) — ${perSuite} casi ===`,
+    `\n=== Suite C: pos vicina alla grid (validate path varied) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const entity = genEntity();
-    // Pos x,y in zona grid-mappata: x ∈ [0x100..0x300], y ∈ [0x100..0x300]
+    // Pos x,y in area grid-mappata: x ∈ [0x100..0x300], y ∈ [0x100..0x300]
     // proximityCheck reads byte+0xC..+0xD as word x.
     const x = 0x100 + Math.floor(rng() * 0x200);
     const y = 0x100 + Math.floor(rng() * 0x200);
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (state/counter boundaries, marker 0x10) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (state/counter boundaries, marker 0x10) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const stateBytes = [0x00, 0x01, 0x06, 0x07, 0x08, 0x09, 0xff];

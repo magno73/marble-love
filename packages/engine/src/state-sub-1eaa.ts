@@ -4,7 +4,7 @@
  * caller `FUN_00001EE0` (3 call sites: 0x20EC, 0x210C, 0x212A) to
  * initialize groups of consecutive alpha-tilemap cells: each step
  * increments the alphaRam pointer by 4 bytes (1 cell = 2 words) and the
- * "tile id" di +1.
+ * "tile id" of +1.
  *
  *   - `arg1Long` (long): alphaRam pointer (D4, incremented by 4 each iter).
  *     (incremented by 1 each iter, **16-bit wrap**).
@@ -38,9 +38,9 @@
  * **Edge cases**:
  *   - Very large `arg3 > 0`: D4 (long) increment by +4 does NOT saturate; use
  *     loop `D2 == 0` (if arg3 > 0) or `D2 == arg3` (if arg3 <= 0).
- *     come return value.
+ *     as return value.
  *
- * **JSR target identificato**: `FUN_000033F4` (alias `fun_33f4` nel
+ * **JSR target identificato**: `FUN_000033F4` (alias `fun_33f4` in the
  *
  * FUN_33F4 patched a stub-probe (record arg1/arg2 in workRam scratch).
  */
@@ -57,8 +57,8 @@ export interface StateSub1EAASubs {
 
 /**
  *
- * @param arg1Long  long: pointer base (incrementato di 4 ogni iter).
- *                  (incrementato di 1 mod 0x10000 ogni iter, poi
+ * @param arg1Long  long: pointer base (incremented of 4 each iter).
+ *                  (incremented of 1 mod 0x10000 each iter, poi
  *                  sign-extended a long per la call).
  * @param subs      stub injection per `fun_33f4` (default no-op).
  *
@@ -70,11 +70,11 @@ export function stateSub1EAA(
   arg3Long: number,
   subs?: StateSub1EAASubs,
 ): void {
-  // D4 = arg1 (long, mantenuto come u32; aritmetica wrap a 32 bit).
+  // D4 = arg1 (long, mantenuto as u32; aritmetica wrap a 32 bit).
   let d4 = arg1Long >>> 0;
-  // D3.w = low word di arg2 (mantenuto in [0, 0xFFFF], wrap a 16 bit).
+  // D3.w = low word of arg2 (mantenuto in [0, 0xFFFF], wrap a 16 bit).
   let d3w = arg2Long & 0xffff;
-  // D2 = arg3 long, trattato come SIGNED 32-bit per il `tst.l D2 / ble`.
+  // D2 = arg3 long, trattato as SIGNED 32-bit for the `tst.l D2 / ble`.
   let d2 = arg3Long | 0;
 
   while (d2 > 0) {

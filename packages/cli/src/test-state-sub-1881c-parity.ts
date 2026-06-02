@@ -7,10 +7,10 @@
  * matches spawn bytes @ 0x400697/0x400699 and runs one of two branches:
  *
  *   - **math/sound**: if both `byte((long@684>>19))`, `byte((long@688>>19))`
- *     e `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
+ *     and `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
  *   - **reflect**: if signed word distance (`entity[0x14] - entry[0x6]`) < 12,
  *
- * entity[0xc]=long@684 e entity[0x10]=long@688.
+ * entity[0xc]=long@684 and entity[0x10]=long@688.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
@@ -18,7 +18,7 @@
  *     of commands captured through `subs.soundCommand`.
  *   - Compare:
  *       * `*0x004003A6` (RNG seed) post-call.
- *       * D0 return value (0 / 1 a seconda di match).
+ *       * D0 return value (0 / 1 depending on match).
  *
  * **Suite** (4 × 125 = 500):
  *   - C: forced match-first-3 (some active entries with key bytes that
@@ -65,7 +65,7 @@ const CAPTURE_ADDR = 0x00401ffe;
 const SENTINEL_NOT_CALLED = 0xff;
 
 /**
- * Patch FUN_158AC: capture il byte LSB del long arg → workRam[0x401FFE].
+ * Patch FUN_158AC: capture il byte LSB of the long arg → workRam[0x401FFE].
  *   move.b (0x7,SP), D0   ; 10 2F 00 07
  *   move.b D0, $00401FFE  ; 13 C0 00 40 1F FE
  *   rts                   ; 4E 75
@@ -318,7 +318,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub1881C (FUN_0001881C) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub1881C (FUN_0001881C) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -330,7 +330,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: early-out (gameMode != 3) ──────────────────────────────
   console.log(
-    `\n=== Suite B: forced early-out (gameMode != 3 OR byte760==0) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced early-out (gameMode != 3 OR byte760==0) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced match-first-3 (some active entries with key bytes spawn) ──
   console.log(
-    `\n=== Suite C: forced match-first-3 (varia secondo livello) — ${perSuite} casi ===`,
+    `\n=== Suite C: forced match-first-3 (varies by level) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -368,7 +368,7 @@ async function main(): Promise<void> {
   // ─── Suite D: forced match-all-6 (math branch) ───────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: forced math branch (RNG side effects) — ${sizeD} casi ===`,
+    `\n=== Suite D: forced math branch (RNG side effects) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -402,7 +402,7 @@ async function main(): Promise<void> {
     console.log(`    binRet=0x${f.binRet.toString(16)} tsRet=0x${f.tsRet.toString(16)}`);
     console.log(`    binSeedAfter=0x${f.binSeed.toString(16)} tsSeedAfter=0x${f.tsSeed.toString(16)}`);
     console.log(`    binCapture=0x${f.binCapture.toString(16)} tsCapture=0x${f.tsCapture.toString(16)}`);
-    // Stampa primi N byte differenti
+    // Stampa first N byte differenti
     let diffs = 0;
     for (let i = 0; i < ENTITY_SIZE && diffs < 8; i++) {
       if (f.binEntity[i] !== f.tsEntity[i]) {

@@ -1,5 +1,5 @@
 /**
- * sprite-pos-update-1bab2.test.ts — smoke + corner case di FUN_0001BAB2.
+ * sprite-pos-update-1bab2.test.ts — smoke + corner case of FUN_0001BAB2.
  */
 
 import { describe, it, expect } from "vitest";
@@ -26,7 +26,7 @@ function writeWord(
 }
 
 describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
-  it("non solleva eccezioni con state vuoto e copia x/y/z dai +0xC/+0x10/+0x14", () => {
+  it("non solleva eccezioni con state vuoto and copies x/y/z from the +0xC/+0x10/+0x14", () => {
     const s = emptyGameState();
     const ARG = 0x401d00;
     const argOff = ARG - 0x400000;
@@ -44,7 +44,7 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     expect(r.prevTileY).toBe(0);
   });
 
-  it("invoca subs.fun_1CABA quando le tile coords cambiano", () => {
+  it("invoca subs.fun_1CABA when le tile coords cambiano", () => {
     const s = emptyGameState();
     let calls = 0;
     const ARG = 0x401d00;
@@ -61,7 +61,7 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     expect(readWord(s, TILE_Y_OFF)).toBe(16);
   });
 
-  it("NON invoca subs.fun_1CABA se le tile coords restano uguali (movimento sub-tile)", () => {
+  it("NOT invoca subs.fun_1CABA se le tile coords restano uguali (movimento sub-tile)", () => {
     const s = emptyGameState();
     // Pre-condizione: tile-coords correnti = (3, 5) → globals 696/698.
     writeWord(s, TILE_X_OFF, 3);
@@ -84,27 +84,27 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     expect(r.prevTileY).toBe(5);
   });
 
-  it("invoca redraw se solo X-tile cambia (Y resta)", () => {
+  it("invoca redraw se solo X-tile cambia (Y stays)", () => {
     const s = emptyGameState();
     writeWord(s, TILE_X_OFF, 1);
     writeWord(s, TILE_Y_OFF, 2);
     const ARG = 0x401d00;
     const argOff = ARG - 0x400000;
     writeWord(s, argOff + 0xc, 0x40);   // tileX = 8 (cambia)
-    writeWord(s, argOff + 0x10, 0x10);  // tileY = 2 (resta)
+    writeWord(s, argOff + 0x10, 0x10);  // tileY = 2 (stays)
     writeWord(s, argOff + 0x14, 0);
     let calls = 0;
     spritePosUpdate1BAB2(s, ARG, { fun_1CABA: () => { calls++; } });
     expect(calls).toBe(1);
   });
 
-  it("invoca redraw se solo Y-tile cambia (X resta)", () => {
+  it("invoca redraw se solo Y-tile cambia (X stays)", () => {
     const s = emptyGameState();
     writeWord(s, TILE_X_OFF, 1);
     writeWord(s, TILE_Y_OFF, 2);
     const ARG = 0x401d00;
     const argOff = ARG - 0x400000;
-    writeWord(s, argOff + 0xc, 0x08);   // tileX = 1 (resta)
+    writeWord(s, argOff + 0xc, 0x08);   // tileX = 1 (stays)
     writeWord(s, argOff + 0x10, 0x80);  // tileY = 16 (cambia)
     writeWord(s, argOff + 0x14, 0);
     let calls = 0;
@@ -125,7 +125,7 @@ describe("spritePosUpdate1BAB2 (FUN_0001BAB2)", () => {
     expect(r.redrawNeeded).toBe(true);
   });
 
-  it("subs assente → no-op silenzioso anche se redrawNeeded", () => {
+  it("subs assente → no-op silenzioso even if redrawNeeded", () => {
     const s = emptyGameState();
     const ARG = 0x401d00;
     const argOff = ARG - 0x400000;

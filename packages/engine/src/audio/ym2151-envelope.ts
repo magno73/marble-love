@@ -99,8 +99,8 @@ export function createEnvelope(): EnvelopeState {
   return { state: ENV_STATE_OFF, counter: 1023 };
 }
 
-/** Key ON: transizione → ATTACK fase. OPM non resetta l'attenuazione a
- * silenzio sui retrigger; l'attacco riparte dal counter corrente. */
+/** Key ON: transizione → ATTACK fase. OPM non resetta the attenuazione a
+ * silenzio sui retrigger; the attacco riparte from the counter corrente. */
 export function envelopeKeyOn(env: EnvelopeState): void {
   env.state = ENV_STATE_ATTACK;
 }

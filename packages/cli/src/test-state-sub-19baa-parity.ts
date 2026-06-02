@@ -4,10 +4,10 @@
  * `stateSub19BAA`.
  *
  * FUN_00019BAA (490 byte, 0x019BAA-0x019D94): "per-frame entity tick". Gate
- * su `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` ogni 8
+ * su `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` each 8
  * frame), then iterates entity table @ 0x4019F8 (10 x 0x38), applying for each
  * (rng-driven), movement-block (Y += vel + depth check), AI-block
- * (FUN_19E42), e sound trigger condizionale (FUN_158AC).
+ * (FUN_19E42), and sound trigger condizionale (FUN_158AC).
  *
  * **Strategia parity**:
  *     in `rng.ts`.
@@ -306,7 +306,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random — gate match (game mode = 4) ────────────────────
   console.log(
-    `\n=== stateSub19BAA (FUN_00019BAA) — Suite A: random (game-mode=4) — ${perSuite} casi ===`,
+    `\n=== stateSub19BAA (FUN_00019BAA) — Suite A: random (game-mode=4) — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: gate-out (game mode != 4) ─────────────────────────────
   console.log(
-    `\n=== Suite B: gate-out (game-mode != 4) — ${perSuite} casi ===`,
+    `\n=== Suite B: gate-out (game-mode != 4) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -335,18 +335,18 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced active + state-advance trigger ─────────────────
   console.log(
-    `\n=== Suite C: tutte attive + bias verso script-advance — ${perSuite} casi ===`,
+    `\n=== Suite C: all active + bias toward script-advance — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    const t = genTable(1.0, true); // tutte attive
+    const t = genTable(1.0, true); // all attive
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
       t[off + 0x24] = 0xff;
       t[off + 0x25] = Math.floor(rng() * 8);
       // entity[0x1A]: random in {0, 1, 2}.
       t[off + 0x1a] = Math.floor(rng() * 3);
-      // entity[0x1B]: timer — mix di 0 e 1.
+      // entity[0x1B]: timer — mix of 0 and 1.
       t[off + 0x1b] = Math.floor(rng() * 4);
       // entity[0x4]: vel pivot vs random.
       if (rng() < 0.3) {
@@ -365,7 +365,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases (substate=2, recheck path, sound trigger) ──
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (recheck path + sound-gate) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (recheck path + sound-gate) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
       if (rng() < 0.5) t[off + 0x1a] = 2;
-      // entity[0x14] (depth): a volte 0 a volte negativo a volte positivo.
+      // entity[0x14] (depth): a times 0 a times negativo a times positivo.
       const d = rng();
       if (d < 0.33) {
         // 0 → cc62 returns 0, cmp 0,0 → ble true → no clamp

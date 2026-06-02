@@ -3,16 +3,16 @@
  * test-slot-spawn-pattern-13d38-parity.ts — differential FUN_00013D38 vs
  * `slotSpawnPattern13D38`.
  *
- * `FUN_00013D38` (430 byte) emette un fan-pattern di 8 record da 6 byte in due
- * range del proprio slot record (A0+0xA4 e A0+0x38), leggendo:
+ * `FUN_00013D38` (430 byte) emette un fan-pattern of 8 record da 6 byte in due
+ * range of the proprio slot record (A0+0xA4 and A0+0x38), leggendo:
  *   - delta-stream byte signed @ ROM 0x1EF32 (16 byte = 8 coppie)
  *   - puntatori-slot @ ROM 0x1F016 indicizzati da `(A0+0x58).b sext.l <<2`
- *   - coords da `(A1+0x4E).l` e branch su `(A1+0x1F).b == 0xD`
+ *   - coords da `(A1+0x4E).l` and branch su `(A1+0x1F).b == 0xD`
  *
  *   - `(A0+0x57).b` random (counter)
  *   - random `(A0+0x58).b` in [0..24], a valid table selector
  *   - `(A0+0x1E).l` random (coords source)
- *   - SP fresco
+ *   - SP fresh
  *
  *   - D0 (low byte: 0xFF o 0x00)
  *   - byte `(A0+0x57)` (counter post-decrement)
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     slotPtrs.push(readU32BE(romBuf, SLOT_PTR_TABLE + i * 4));
   }
 
-  console.log(`\n=== slotSpawnPattern13D38 (FUN_00013D38) — ${n} casi ===`);
+  console.log(`\n=== slotSpawnPattern13D38 (FUN_00013D38) — ${n} cases ===`);
 
   const rng = makeRng(0x13d38);
   let ok = 0;
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
     for (let s = 0; s < SLOT_COUNT; s++) {
       const slot = slotPtrs[s]!;
       const slotOff = slot - 0x400000;
-      // essere modificati dal pattern emit (38..4F, A4..BB).
+      // be modificati from the pattern emit (38..4F, A4..BB).
       const ranges: Array<[number, number]> = [
         [0x18, 1],
         [0x1c, 1],
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
 
     // Set up A1 fields (A1 = slotPtrs[selectorByte] if selectorByte < 25).
-    // Setup random A1+0x4E (long) e A1+0x1F (byte). Con selectorByte ∈ [0..24]
+    // Setup random A1+0x4E (long) and A1+0x1F (byte). Con selectorByte ∈ [0..24]
     // guarantee that A1 is a canonical slot (in work RAM).
     const a1Idx = selectorByte; // < 25 by construction
     if (a1Idx < SLOT_COUNT) {
@@ -177,7 +177,7 @@ async function main(): Promise<void> {
         pokeMem(cpu, a1Slot + 0x4e + k, 1, b);
         stateInst.workRam[a1SlotOff + 0x4e + k] = b;
       }
-      // 50% chance di mettere 0xD per esercitare il branch "subtract".
+      // 50% chance of mettere 0xD per esercitare il branch "subtract".
       const kind1F = rng() < 0.5 ? 0x0d : Math.floor(rng() * 256) & 0xff;
       pokeMem(cpu, a1Slot + 0x1f, 1, kind1F);
       stateInst.workRam[a1SlotOff + 0x1f] = kind1F;

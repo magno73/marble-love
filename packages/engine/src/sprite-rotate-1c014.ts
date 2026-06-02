@@ -144,7 +144,7 @@ function sineInterp(rom: RomImage, d6: number): { a1: number; d6cos: number } {
 
 /**
  *
- * @param rom     ROM image — per `lerpFromRom` e lookup tables.
+ * @param rom     ROM image — per `lerpFromRom` and lookup tables.
  */
 export function spriteRotate1C014(
   state: GameState,
@@ -216,7 +216,7 @@ export function spriteRotate1C014(
     d2 = 0x10;
     a4W = 0x10;
     // bra 0x1c0de → falls into atan block with d2=d6=0x10
-    // We don't set D4/D5 here; they come from the atan block.
+    // We don't set D4/D5 here; they as from the atan block.
     // Fall through to atan block below.
   }
 
@@ -376,7 +376,7 @@ export function spriteRotate1C014(
   for (let lp = 0; lp <= 1; lp++) {
     const off2 = lp * 2;
 
-    // Read current col values
+    // Read current with the values
     const localN4 = ru16(state, objOff + 0x74 + off2); // (-0x4,A6)
     const localN6 = ru16(state, objOff + 0x84 + off2); // (-0x6,A6)
     const localN8 = ru16(state, objOff + 0x94 + off2); // (-0x8,A6)
@@ -445,7 +445,7 @@ export function spriteRotate1C014(
     wu16(state, objOff + 0x94 + off2, newD2);
   }
 
-  // ─── 0x1c402: expand cols 3..7 from D2/D3 pairs at col 0..3 ──────────
+  // ─── 0x1c402: expand cols 3..7 from D2/D3 pairs at with the 0..3 ──────────
 
   // lea (0x74,A2),A0; clr.w D4w; loop D4=0: bgt D4<3 (moveq #3, bgt 0x1c408)
   // Each iteration reads 2 words D2/D3 from A0 and writes 6 derived words.

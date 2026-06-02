@@ -11,7 +11,7 @@
  * `F(n)` = `FUN_000040D8(n)` (config-field fetch). The three ids used: 3, 4, 5.
  *
  * Strategia parity:
- *   - Patch RTS sull'entry di FUN_40D8 (0x40D8) per impedire l'esecuzione.
+ *   - Patch RTS on the entry of FUN_40D8 (0x40D8) per impedire the esecuzione.
  *     iniettati in D0 a ciascuna entry callee.
  *   - Capture args on the stack at callee entry, also checking
  *
@@ -46,7 +46,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patcha RTS (0x4E75) all'entry di FUN_40D8. */
+/** Patcha RTS (0x4E75) to the entry of FUN_40D8. */
 function patchCallees(cpu: CpuSession): void {
   // FUN_40D8: original word `movem.l {A2 D6 D5 D4 D3 D2},-(SP)` (0x48E7).
   // Patcha a 0x4E75 (rts).
@@ -61,7 +61,7 @@ interface Call40D8 {
 
 interface CapturedSeq {
   calls: Call40D8[];
-  /** D0 al momento del rts di FUN_59D2. */
+  /** D0 al momento of the rts of FUN_59D2. */
   finalD0: number;
   reachedRts: boolean;
 }
@@ -153,10 +153,10 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sul callee (una sola volta — la patch persiste).
+  // Patch RTS on the callee (una sola time — la patch persiste).
   patchCallees(cpu);
 
-  console.log(`\n=== stateSub59D2 (FUN_59D2) — ${n} casi ===`);
+  console.log(`\n=== stateSub59D2 (FUN_59D2) — ${n} cases ===`);
 
   const rng = makeRng(0x59d259d2);
   let ok = 0;
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern di copertura sui return di F(4), F(3), F(5).
+    // Pattern of coverage sui return of F(4), F(3), F(5).
     let rets: [number, number, number];
     if (i === 0) {
       // Early-exit: 2*F(4)+F(3) = 0 → ret 0
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
       // → early-exit.
       rets = [0xffffffff >>> 0, 2, 100];
     } else if (i === 7) {
-      // num overflow ma denom OK: F(4)=10, F(3)=0 → denom=20. F(5)=0x20000.
+      // num overflow but denom OK: F(4)=10, F(3)=0 → denom=20. F(5)=0x20000.
       // 0x20000 > 0xFFFF → halve. @5A1A: 0x20000 > 0x1FFFE → LSR.
       // d2 = 10, d1 = 0x10000. bra. @5A1A: 10 <= 0x1FFFE; d1 = 0x10000 <= 0x1FFFE → ROUND.
       // d2 = (10+1)>>1 = 5; d1 = 0x10001>>1 = 0x8000.

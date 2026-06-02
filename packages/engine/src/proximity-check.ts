@@ -1,7 +1,7 @@
 /**
  * proximity-check.ts — `FUN_000193D8` (136 byte): check obj proximity to (x,y).
  *
- * Loop 9 entry @ 0x401890 stride 0x28. Per ogni entry:
+ * Loop 9 entry @ 0x401890 stride 0x28. For each entry:
  *   - if entry == exclude_ptr (D3): skip
  *   - if byte+0x18 == 0: skip
  *   - if byte+0x1A == 2: skip

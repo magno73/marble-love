@@ -3,7 +3,7 @@
  *
  * `packages/cli/src/test-helper-5236-parity.ts`.
  * Qui copriamo i path principali: arg < 2, arg >= 2, shift=0 → mask=1,
- * dal long target.
+ * from the long target.
  */
 
 import { describe, it, expect } from "vitest";
@@ -98,7 +98,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000007); // bits 0+1+2
   });
 
-  it("idempotenza: chiamare due volte con stesso arg dà stesso risultato della prima", () => {
+  it("idempotenza: call twice con same arg dà same risultato of the first", () => {
     const s = emptyGameState();
     helper5236(s, 5);
     const val1 = readLongBE(s.workRam, STATUS_FLAGS_OFF);
@@ -107,7 +107,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     expect(val2).toBe(val1);
   });
 
-  it("non tocca byte fuori dal long @ STATUS_FLAGS_OFF (no side-effect collaterali)", () => {
+  it("non tocca byte outside from the long @ STATUS_FLAGS_OFF (no side-effect collaterali)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     // Zero out only the 4 target bytes.
@@ -116,19 +116,19 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     helper5236(s, 0); // mask=1
 
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000001);
-    // Byte adiacenti intatti
+    // Byte adiacenti intact
     expect(s.workRam[STATUS_FLAGS_OFF - 1]).toBe(0xa5);
     expect(s.workRam[STATUS_FLAGS_OFF + 4]).toBe(0xa5);
     expect(s.workRam[0x0100]).toBe(0xa5);
   });
 
-  it("arg=2 (boundary esatto): shift=0 → mask=1 (non 2 e non no-op)", () => {
+  it("arg=2 (boundary esatto): shift=0 → mask=1 (non 2 and non no-op)", () => {
     const s = emptyGameState();
     helper5236(s, 2);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000001);
   });
 
-  it("arg=1 (boundary inferiore): shift=1 → mask=2 (bcs salta, no subq)", () => {
+  it("arg=1 (boundary inferiore): shift=1 → mask=2 (bcs skips, no subq)", () => {
     const s = emptyGameState();
     helper5236(s, 1);
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000002);

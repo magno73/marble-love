@@ -29,7 +29,7 @@ function setU16(
 }
 
 describe("processAllSprites (FUN_000189E2)", () => {
-  it("gate flag != 0 → ritorna immediato senza chiamare la callback", () => {
+  it("gate flag != 0 → returns immediato senza call la callback", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0x0001); // gate set
     setU16(s, COUNT_OFF, 5);
@@ -51,7 +51,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gate=0, count=N → chiama con base+i*0xC per i in [0..N)", () => {
+  it("gate=0, count=N → calls con base+i*0xC per i in [0..N)", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0);
     setU16(s, COUNT_OFF, 4);
@@ -69,7 +69,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
 
   it("gate flag in upper byte (0x0100) → ancora skip (tst.w word)", () => {
     const s = emptyGameState();
-    setU16(s, GATE_OFF, 0x0100); // bit alto del word
+    setU16(s, GATE_OFF, 0x0100); // bit alto of the word
     setU16(s, COUNT_OFF, 3);
     let calls = 0;
     processAllSpritesWith(s, () => {
@@ -104,9 +104,9 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(COUNT_ADDR).toBe(0x400396);
   });
 
-  it("gate=0, count=2 con gate scritto in big-endian: tst.w solo se entrambi i byte sono 0", () => {
+  it("gate=0, count=2 con gate scritto in big-endian: tst.w only if both the bytes are 0", () => {
     const s = emptyGameState();
-    // Solo byte basso del gate set (0x0001) → gate word = 1 → skip
+    // Solo byte basso of the gate set (0x0001) → gate word = 1 → skip
     s.workRam[GATE_OFF] = 0x00;
     s.workRam[GATE_OFF + 1] = 0x01;
     setU16(s, COUNT_OFF, 2);

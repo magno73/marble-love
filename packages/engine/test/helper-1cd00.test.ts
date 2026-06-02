@@ -6,13 +6,13 @@ import {
 } from "../src/helper-1cd00.js";
 
 describe("helper1CD00 (FUN_1CD00)", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(HELPER_1CD00_ADDR).toBe(0x1cd00);
   });
 
-  it("indexByte == 0xFF → exit early, ritorna 0", () => {
+  it("indexByte == 0xFF → exit early, returns 0", () => {
     const s = emptyGameState();
-    // entityPtr e shapeBasePtr in workRam
+    // entityPtr and shapeBasePtr in workRam
     const result = helper1CD00(s, 0x00400018, 0x00400500, 0xff);
     expect(result).toBe(0);
   });
@@ -23,7 +23,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
     expect(result).toBe(0);
   });
 
-  it("non altera entityPtr velocity quando indexByte == 0xFF", () => {
+  it("non altera entityPtr velocity when indexByte == 0xFF", () => {
     const s = emptyGameState();
     // Set up velocity in the entity struct @ 0x400018.
     for (let i = 0; i < 12; i++) {
@@ -35,7 +35,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
     }
   });
 
-  it("ritorna number (= D0 al ritorno del binario)", () => {
+  it("returns number (= D0 al ritorno of the binario)", () => {
     const s = emptyGameState();
     const result = helper1CD00(s, 0x00400018, 0x00400500, 0xff);
     expect(typeof result).toBe("number");

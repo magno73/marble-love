@@ -4,8 +4,8 @@
  * `scriptRectDispatch12DFA`.
  *
  * `FUN_00012DFA` (330 byte): rect-list spawn + region-bound despawn.
- *   - Per ogni rect (6 byte: lo.b, hi.b, scriptPtr.l) → testa via FUN_12DAE,
- *     poi D2/D3 vs lo/hi, e o spawn 4 marble (zero-path) o spawn 1 (long-path).
+ *   - For each rect (6 byte: lo.b, hi.b, scriptPtr.l) → testa via FUN_12DAE,
+ *     poi D2/D3 vs lo/hi, and o spawn 4 marble (zero-path) o spawn 1 (long-path).
  *     FUN_12F44 mode-1.
  *
  * **Strategia parity**:
@@ -78,7 +78,7 @@ function makeRng(seed: number): () => number {
 }
 
 interface Snapshot {
-  /** byte+0x18 di ogni slot. */
+  /** byte+0x18 of each slot. */
   occ: number[];
   /** byte+0x1A. */
   st: number[];
@@ -358,7 +358,7 @@ async function main(): Promise<void> {
     applyCaseBinary(cpu, c);
     applyCaseTs(stateInst, c);
 
-    // Run binary (FUN_12DFA prende 2 long arg; D2.b = arg1.b, D3.b = arg2.b).
+    // Run binary (FUN_12DFA takes 2 long arg; D2.b = arg1.b, D3.b = arg2.b).
     callFunction(cpu, FUN_12DFA, [c.d2 >>> 0, c.d3 >>> 0], 5_000_000);
     const binSnap = snapshotBinary(cpu);
 
@@ -378,7 +378,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random selector, slot vuoti, random D2/D3 ───────────────
   console.log(
-    `\n=== scriptRectDispatch12DFA (FUN_00012DFA) — Suite A: spawn pure (slot vuoti) — ${perSuite} casi ===`,
+    `\n=== scriptRectDispatch12DFA (FUN_00012DFA) — Suite A: spawn pure (slot vuoti) — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: slot pre-popolati (test FUN_12DAE skip + post-loop) ─────
   console.log(
-    `\n=== Suite B: slot pre-popolati random — ${perSuite} casi ===`,
+    `\n=== Suite B: slot pre-popolati random — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -428,7 +428,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: despawn focus (occupied slots with region matching D2/D3) ──
   console.log(
-    `\n=== Suite C: focus despawn (region [lo,hi] matchata da D2/D3) — ${perSuite} casi ===`,
+    `\n=== Suite C: focus despawn (region [lo,hi] matchata da D2/D3) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -483,7 +483,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases — ${sizeD} cases ===`,
   );
   let okD = 0;
   const d2Edges = [0, 1, 0x7f, 0x80, 0xfe, 0xff];

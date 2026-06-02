@@ -243,7 +243,7 @@ export interface SortAdjacentObjects1A7A8Subs {
  * @param stride   Byte stride between A2 and A3 (caller arg LSB). Known callers
  *                 pass 1, 2, 3 in sequence. Valid range 0..31.
  *                 - `0`: A2 == A3, so swap is no-op, but the loop advances until
- *                   primo 0xFF o fino A2 == A5 (32 iter max).
+ *                   first 0xFF o up to A2 == A5 (32 iter max).
  * @param subs     Callback bag (default = inline).
  *
  * **Mutation**: only `workRam[0x3BC..0x3DC)`. Rect structs at `0x1DC..`
@@ -277,11 +277,11 @@ export function sortAdjacentObjects1A7A8(
     // proceeds. Model exactly the same behavior (raw read).
     if (read8(a3Off) === SENTINEL_BYTE) break;
 
-    // 0x1A7D2..0x1A7E2: lookup ROM e push args (modellati come var locali).
+    // 0x1A7D2..0x1A7E2: lookup ROM and push args (modellati as var locali).
     const idxA2 = read8(a2Off);
     const idxA3 = read8(a3Off);
-    const ptrA1 = lookupRectPtr(rom, idxA2); // arg secondo-pushato → A1 in 1A80A
-    const ptrA0 = lookupRectPtr(rom, idxA3); // arg primo-pushato → A0 in 1A80A
+    const ptrA1 = lookupRectPtr(rom, idxA2); // arg second-pushato → A1 in 1A80A
+    const ptrA0 = lookupRectPtr(rom, idxA3); // arg first-pushato → A0 in 1A80A
 
     // 0x1A7E6: jsr 1A80A
     const cmp = compare(state, ptrA1, ptrA0) | 0;

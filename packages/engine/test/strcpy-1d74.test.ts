@@ -4,11 +4,11 @@ import { emptyRomImage } from "../src/bus.js";
 import { STRCPY_1D74_ADDR, strcpy1D74 } from "../src/strcpy-1d74.js";
 
 describe("FUN_1D74 strcpy1D74", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(STRCPY_1D74_ADDR).toBe(0x1d74);
   });
 
-  it("copia stringa null-terminated da ROM a workRam", () => {
+  it("copies stringa null-terminated da ROM a workRam", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Setup "ABC\0" @ ROM 0x10000
@@ -27,7 +27,7 @@ describe("FUN_1D74 strcpy1D74", () => {
     expect(s.workRam[0x104]).toBe(0x00); // non toccato
   });
 
-  it("copia stringa workRam → workRam (entrambi in workRam range)", () => {
+  it("copies stringa workRam → workRam (both in workRam range)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x500] = 0x48; // 'H'
@@ -42,7 +42,7 @@ describe("FUN_1D74 strcpy1D74", () => {
     expect(s.workRam[0x602]).toBe(0x00);
   });
 
-  it("primo byte zero → copia solo null", () => {
+  it("first byte zero → copies solo null", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x20000] = 0x00;
@@ -56,7 +56,7 @@ describe("FUN_1D74 strcpy1D74", () => {
   it("safety bound (256 byte) per stringhe non-terminated", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Riempi 300 byte non-zero in ROM
+    // Riempthe 300 byte non-zero in ROM
     for (let i = 0; i < 300; i++) rom.program[0x30000 + i] = 0xff;
 
     const written = strcpy1D74(s, rom, 0x00400100, 0x00030000);
@@ -66,7 +66,7 @@ describe("FUN_1D74 strcpy1D74", () => {
     expect(s.workRam[0x100 + 255]).toBe(0xff);
   });
 
-  it("dst fuori workRam → no-op (graceful)", () => {
+  it("dst outside workRam → no-op (graceful)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10000] = 0x41;

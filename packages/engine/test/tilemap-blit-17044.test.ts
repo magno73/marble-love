@@ -1,5 +1,5 @@
 /**
- * Test tilemapBlit17044 (FUN_17044) — smoke tests sui rami principali.
+ * Test tilemapBlit17044 (FUN_17044) — smoke tests sui branches principali.
  *
  * `cli/src/test-tilemap-blit-17044-parity.ts`.
  */
@@ -41,9 +41,9 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     expect(TOTAL_BYTES_COPIED).toBe(240); // 6 × 40
   });
 
-  it("copia 240 byte contigui dalla ROM in 6 finestre da 40 byte (preservando i 88 byte di skip)", () => {
+  it("copies 240 byte contigui from the ROM in 6 finestre da 40 byte (preservando i 88 byte of skip)", () => {
     const rom = emptyRomImage();
-    // Pattern incrementale per beccare ogni byte univocamente.
+    // Pattern incrementale per beccare each byte univocamente.
     fillRomSource(rom, (i) => (i + 1) & 0xff);
     const pf = new Uint8Array(PF_SIZE).fill(0xcc);
 
@@ -70,7 +70,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     }
   });
 
-  it("preserva PF RAM fuori dal range [0x116..0x3BD] in modo bit-perfect", () => {
+  it("preserva PF RAM outside from the range [0x116..0x3BD] in modo bit-perfect", () => {
     const rom = emptyRomImage();
     fillRomSource(rom, () => 0x42);
     const pf = new Uint8Array(PF_SIZE);
@@ -96,7 +96,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     }
   });
 
-  it("ROM all-zero → scrive zero in 6 finestre da 40 byte (ma 0xFF altrove)", () => {
+  it("ROM all-zero → writes zero in 6 finestre da 40 byte (but 0xFF altrove)", () => {
     const rom = emptyRomImage(); // program zero-init
     const pf = new Uint8Array(PF_SIZE).fill(0xff);
 
@@ -108,9 +108,9 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     expect(zeros).toBe(TOTAL_BYTES_COPIED);
   });
 
-  it("BE word preservato: high byte all'offset pari, low byte al dispari", () => {
+  it("BE word preservato: high byte to the offset pari, low byte al dispari", () => {
     const rom = emptyRomImage();
-    // ROM ha pattern 0xAB,0xCD,0xAB,0xCD,... → ogni word = 0xABCD
+    // ROM ha pattern 0xAB,0xCD,0xAB,0xCD,... → each word = 0xABCD
     for (let i = 0; i < TOTAL_BYTES_COPIED; i += 2) {
       rom.program[ROM_SOURCE_ADDR + i] = 0xab;
       rom.program[ROM_SOURCE_ADDR + i + 1] = 0xcd;
@@ -127,7 +127,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     }
   });
 
-  it("idempotente con la stessa ROM: due chiamate == una", () => {
+  it("idempotente con la same ROM: due chiamate == una", () => {
     const rom = emptyRomImage();
     fillRomSource(rom, (i) => (i ^ 0x5a) & 0xff);
 
@@ -161,7 +161,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     }
   });
 
-  it("non legge ROM oltre 0x19F04 + 240 byte (no over-read da rom.program)", () => {
+  it("non reads ROM beyond 0x19F04 + 240 byte (no over-read da rom.program)", () => {
     const rom = emptyRomImage();
     rom.program.fill(0xff);
     // Then overwrite the 240 source bytes with a non-FF pattern.

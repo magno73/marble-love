@@ -71,8 +71,8 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   r[SO + 0x58] = 0x20;
   writeL(r, SO + 0x14, 0);
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0);
-  check("smoke1: stato rimane 0", r[SO + 0x36], 0x00);
-  check("smoke1: impulso rimane 0", readL(r, SO + 0x08), 0);
+  check("smoke1: state stays 0", r[SO + 0x36], 0x00);
+  check("smoke1: impulse stays 0", readL(r, SO + 0x08), 0);
 }
 
 // ── Smoke 2: D2==0, diff > 0x60000 → idle→locked ────────────────────────────
@@ -80,7 +80,7 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   const s = makeState();
   const r = s.workRam;
   r[SO + 0x36] = 0x00;
-  r[SO + 0x58] = 0x17; // in whitelist ma non 0x12/0x20 → sound
+  r[SO + 0x58] = 0x17; // in whitelist but non 0x12/0x20 → sound
   // pos14 = 0x70000, prevTimer = 0 → diff = 0x70000 > 0x60000
   writeL(r, SO + 0x14, 0x70000);
   writeW(r, 0x696, 0x0003); // accumXPrev word
@@ -89,14 +89,14 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0, {
     soundCommand: (cmd) => { soundCalled = cmd === ns.SOUND_CMD; },
   });
-  check("smoke2: stato = 2 (locked)", r[SO + 0x36], 0x02);
-  check("smoke2: impulso = 0xffffa000", readL(r, SO + 0x08), 0xffffa000);
+  check("smoke2: state = 2 (locked)", r[SO + 0x36], 0x02);
+  check("smoke2: impulse = 0xffffa000", readL(r, SO + 0x08), 0xffffa000);
   check("smoke2: snapshotX salvato", readW(r, SO + 0x2e), 0x0003);
   check("smoke2: snapshotY salvato", readW(r, SO + 0x30), 0x0007);
   check("smoke2: sound emesso", soundCalled, true);
 }
 
-// ── Smoke 3: D2 != 0, charcode NON in whitelist → no-op ──────────────────────
+// ── Smoke 3: D2 != 0, charcode NOT in whitelist → no-op ──────────────────────
 {
   const s = makeState();
   const r = s.workRam;
@@ -107,7 +107,7 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   writeW(r, 0x674, 2); // velLeft = 2
   // accumXPrev=accumXCur=0 → D3=0
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0);
-  check("smoke3: stato rimane 0 (charcode non in whitelist)", r[SO + 0x36], 0x00);
+  check("smoke3: state stays 0 (charcode not in whitelist)", r[SO + 0x36], 0x00);
 }
 
 {
@@ -122,9 +122,9 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   writeW(r, 0x696, 0x0010); // accumXPrev snapshot
   writeW(r, 0x698, 0x0020); // accumYPrev snapshot
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0);
-  check("smoke4: stato = 1 (moving)", r[SO + 0x36], 0x01);
+  check("smoke4: state = 1 (moving)", r[SO + 0x36], 0x01);
   check("smoke4: dirMask = 1 (Left)", r[SO + 0x37], 0x01);
-  check("smoke4: impulso = 0xffffa000", readL(r, SO + 0x08), 0xffffa000);
+  check("smoke4: impulse = 0xffffa000", readL(r, SO + 0x08), 0xffffa000);
   check("smoke4: snapshotX = accumXPrev", readW(r, SO + 0x2e), 0x0010);
   check("smoke4: snapshotY = accumYPrev", readW(r, SO + 0x30), 0x0020);
 }
@@ -135,8 +135,8 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   r[SO + 0x36] = 0x02;  // locked
   writeL(r, SO + 0x08, 0xdeadbeef);
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0);
-  check("smoke5: stato rimane 2", r[SO + 0x36], 0x02);
-  check("smoke5: impulso non modificato", readL(r, SO + 0x08), 0xdeadbeef >>> 0);
+  check("smoke5: state stays 2", r[SO + 0x36], 0x02);
+  check("smoke5: impulse not modified", readL(r, SO + 0x08), 0xdeadbeef >>> 0);
 }
 
 {
@@ -201,8 +201,8 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0, {
     soundCommand: (cmd) => { soundCalled = cmd === ns.SOUND_CMD; },
   });
-  check("smoke8: stato = 2 (miss → locked)", r[SO + 0x36], 0x02);
-  check("smoke8: impulso = 0xffffa000 (miss)", readL(r, SO + 0x08), 0xffffa000);
+  check("smoke8: state = 2 (miss → locked)", r[SO + 0x36], 0x02);
+  check("smoke8: impulse = 0xffffa000 (miss)", readL(r, SO + 0x08), 0xffffa000);
   // charcode=0x01 != 0x12/0x20 → sound emesso
   check("smoke8: sound emesso su miss", soundCalled, true);
 }

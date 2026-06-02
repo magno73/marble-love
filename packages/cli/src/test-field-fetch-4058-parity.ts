@@ -9,21 +9,21 @@
  *   - returns -1 if arg2 > 0x12, -2 if arg1 >= max, otherwise byte/word record data
  *
  * Convenzione caller (cdecl push-RTL):
- *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word dal caller)
- *   - arg2 = SP+0x18 = byte offset (long, sign-ext'd da word dal caller)
+ *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word from the caller)
+ *   - arg2 = SP+0x18 = byte offset (long, sign-ext'd da word from the caller)
  *
  * Strategia parity:
  *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
  *     populate random bytes at several record_base+offset locations; write ROM byte
- *     reale in Musashi (da `ghidra_project/marble_program.bin`); per il TS
+ *     reale in Musashi (da `ghidra_project/marble_program.bin`); for the TS
  *     uses the same ROM read from the same file (passed as byte param).
  *   - For each random case: set up arg1, arg2; call binary; call TS;
- *     confronta D0.
+ *     compare D0.
  *
  * Pattern coverage:
  *   - 30% arg1 in [0..7], arg2 in [0..0x12]   -> path #3 (byte) o #4 (word)
  *   - 25% arg2 > 0x12                          -> path #1 (-1)
- *   - 25% arg1 in [0..0xFF]                    -> mix di #2 e #3/#4
+ *   - 25% arg1 in [0..0xFF]                    -> mix of #2 and #3/#4
  *   - 10% arg1 sign-ext negativo               -> stress #2
  *   - 10% full random long                     -> stress generale
  *
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
 
   // Costante ROM @ 0x1006F. Per marble = 0xE3 -> D4 = 3.
-  // La passiamo al TS come byte raw (il modulo applica & 7 internamente).
+  // La passiamo al TS as byte raw (il modulo applica & 7 internamente).
   const romByteReal = rom[0x1006f] ?? 0;
 
   console.log(
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     } else if (pick < 0.55) {
       pattern = "offset_oor";
       arg1 = Math.floor(rng() * 0x100);
-      // arg2 > 0x12 (sign-ext da word -> nel range word valido).
+      // arg2 > 0x12 (sign-ext da word -> in the range word valido).
       arg2 = (0x13 + Math.floor(rng() * 0xeed)) & 0xffff;
     } else if (pick < 0.8) {
       pattern = "mixed";
@@ -158,8 +158,8 @@ async function main(): Promise<void> {
     }
 
     // ── Run binary (2 long args, push-RTL: arg2 first, arg1 second/top).
-    // callFunction prende args in ordine logico (arg1, arg2): l'helper li
-    // pusha right-to-left come da convenzione cdecl.
+    // callFunction takes args in ordine logico (arg1, arg2): the helper li
+    // pusha right-to-left as da convenzione cdecl.
     const r = callFunction(cpu, FUN_4058, [arg1, arg2]);
     const binD0 = r.d0 >>> 0;
 

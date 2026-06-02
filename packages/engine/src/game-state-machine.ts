@@ -1,5 +1,5 @@
 /**
- * game-state-machine.ts — replica del root game-logic `FUN_00002E18`.
+ * game-state-machine.ts — replica of the root game-logic `FUN_00002E18`.
  *
  * parallel slots, each with its own state machine (state in {0..7}).
  *
@@ -16,7 +16,7 @@
  *   +0x3E  word   (`SPECIAL_TARGET`)       target per Branch A
  *
  * **State dispatch (Branch B, mode==0)**:
- *   Per ogni slot D4 in [0..3]:
+ *   For each slot D4 in [0..3]:
  *     if state[D4] == 0: skip
  *     counter[D4] += 1 (word)
  *     if counter[D4] != threshold[D4]: skip  (else: counter[D4] = 0, dispatch)
@@ -62,7 +62,7 @@ export const SPECIAL_INNER_OFF = 0x1f3c as const;
 export const SPECIAL_TARGET_OFF = 0x1f3e as const;
 export const ROTATION_OFF = 0x1f42 as const;
 
-/** Numero di slot processati. */
+/** Numero of slot processati. */
 export const SLOT_COUNT = 4 as const;
 
 /** ROM lookup table address (per Branch A). */

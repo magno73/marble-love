@@ -76,7 +76,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(r.fun18F46Calls).toBe(0);
   });
 
-  it("noop: mode==3 ma sentinel==0 && !hasArmed → branch=noop, sentinel resta 0", () => {
+  it("noop: mode==3 but sentinel==0 && !hasArmed → branch=noop, sentinel stays 0", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
@@ -113,7 +113,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0xff);
   });
 
-  it("init: sentinel==0 && hasArmed → popola 0x24 entry, sentinel→1, fun_1bb28 chiamato 0x24 volte", () => {
+  it("init: sentinel==0 && hasArmed → popola 0x24 entry, sentinel→1, fun_1bb28 chiamato 0x24 times", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
@@ -135,7 +135,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
       rom.program[ROM_TABLE_W16_67 + d2 * 2 + 0] = 0xc0;
       rom.program[ROM_TABLE_W16_67 + d2 * 2 + 1] = d2;
     }
-    // ROM_SELECTOR_INIT[0] e ROM_SELECTOR_POST[0]: long BE distinct
+    // ROM_SELECTOR_INIT[0] and ROM_SELECTOR_POST[0]: long BE distinct
     setLongBE(rom.program, ROM_SELECTOR_INIT + 0, 0x00012000);
     setLongBE(rom.program, ROM_SELECTOR_POST + 0, 0x00013000);
     // Prepopulate the 4 variants too to avoid panic if rng != 0.

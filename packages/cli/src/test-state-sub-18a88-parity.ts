@@ -9,7 +9,7 @@
  *
  * **Strategia parity**:
  *   - All 8 external sub-jsrs are **patched with RTS** (`0x4E75`) to
- *     neutralizzarne i side effects:
+ *     neutralize i side effects:
  *       * FUN_00018CD2 (particleInit) — RTS
  *       * FUN_00028C7E (clearAlphaTiles) — RTS
  *       * FUN_00000142 trampoline — RTS in place
@@ -20,9 +20,9 @@
  *       * FUN_00028EB2 (formatAndRender) — RTS
  *       * FUN_00028DB8 (waitVblankStateGated) — RTS
  *
- *       * `*0x004003F0` (vblank tick): incrementato 1 volta + 3 volte per
+ *       * `*0x004003F0` (vblank tick): incremented 1 time + 3 times per
  *         entity matchata (= summary screens shown).
- *       * `*0x00400658` (summary counter): incrementato 1 volta per entity
+ *       * `*0x00400658` (summary counter): incremented 1 time per entity
  *         matchata.
  *
  *     The only "side-effect-free" observation left is these 2 bytes +
@@ -38,7 +38,7 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - B: forced count == 1, entity[0x18] == 3 (path 1-player)
- *   - C: forced count == 2, entity[0x18] == 3 per entrambe (2-player)
+ *   - C: forced count == 2, entity[0x18] == 3 per both (2-player)
  *   - D: edge cases (count = 0, all entities with entity[0x18] != 3, count
  *        boundary)
  *
@@ -89,9 +89,9 @@ const OBJ_BASE_OFF = OBJ_BASE - WORK_RAM_BASE;
 const OBJ_COUNT_OFF = OBJ_COUNT_ADDR - WORK_RAM_BASE;
 
 /**
- * Patch JSR-stub: tutte le 8 sub-jsr → RTS (0x4E75).
+ * Patch JSR-stub: all le 8 sub-jsr → RTS (0x4E75).
  *
- * Note: TRAMP_142 e TRAMP_200 sono trampolini (jmp.l), patchando i primi 2
+ * Note: TRAMP_142 and TRAMP_200 are trampolines (jmp.l), patching the first 2
  * bytes with 0x4E75 (= rts), turning them into functions that return
  */
 function patchSubs(cpu: CpuSession): void {
@@ -224,7 +224,7 @@ async function main(): Promise<void> {
 
     // maxCycles bumped to 1M: FUN_18A88 count-down loop with D4=99000
     // runs ~396 iter/entity × 30 cycles ≈ 12000 cycles/entity. With count=2
-    // ≈ 24000 cicli; 1M lascia margine.
+    // ≈ 24000 cycles; 1M lascia margin.
     callFunction(cpu, FUN_18A88, [], 1_000_000);
     const binSnap = snapshotBinary(cpu, input.count);
 
@@ -273,7 +273,7 @@ async function main(): Promise<void> {
     if (forceState !== undefined) {
       bytes[0x18] = forceState & 0xff;
     }
-    // Vincoliamo counterA (entity[0x6A].w) e counterB (entity[0xD2].w) a
+    // Vincoliamo counterA (entity[0x6A].w) and counterB (entity[0xD2].w) a
     // the binary would not finish in time. The TS version mirrors the steps
     const cA = Math.floor(rng() * 200); // 0..199
     bytes[0x6a] = (cA >>> 8) & 0xff;
@@ -287,8 +287,8 @@ async function main(): Promise<void> {
   function makeRandomInput(forceCount?: number, forceState?: number): CaseInput {
     // count limited to 0..3 to avoid overlap with globals @ 0x400394/96
     // (obj4 starts at 0x4003A0 and covers vblank tick @ 0x4003F0 and summary
-    //  copre vblank tick @ 0x4003F0 ma NON il summary counter @ 0x400658).
-    // Per safety teniamo count = 0..2 (obj2 copre fino a 0x4001DB).
+    //  covers vblank tick @ 0x4003F0 but NOT il summary counter @ 0x400658).
+    // Per safety teniamo count = 0..2 (obj2 covers up to 0x4001DB).
     const count = forceCount ?? Math.floor(rng() * 3); // 0..2
     const entityBytes: number[][] = [];
     for (let i = 0; i < count; i++) {
@@ -304,7 +304,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random count + random entity ───────────────────────────
   console.log(
-    `\n=== stateSub18A88 (FUN_00018A88) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub18A88 (FUN_00018A88) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -316,7 +316,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: count == 1, entity[0x18] == 3 ─────────────────────────
   console.log(
-    `\n=== Suite B: forced count=1 + entity[0x18]=3 — ${perSuite} casi ===`,
+    `\n=== Suite B: forced count=1 + entity[0x18]=3 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -326,9 +326,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: count == 2, entity[0x18] == 3 per entrambe ─────────────
+  // ─── Suite C: count == 2, entity[0x18] == 3 per both ─────────────
   console.log(
-    `\n=== Suite C: forced count=2 + entity[0x18]=3 per entrambe — ${perSuite} casi ===`,
+    `\n=== Suite C: forced count=2 + entity[0x18]=3 for both — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (count=0 / all-skip / mix) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (count=0 / all-skip / mix) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -358,7 +358,7 @@ async function main(): Promise<void> {
         if (e[0x18] === 3) e[0x18] = 0; // safety
       }
     } else if (variant === 2) {
-      // count==1, mix di state byte
+      // count==1, mix of state byte
       input = makeRandomInput(1);
       input.entityBytes[0]![0x18] = i % 256;
     } else {

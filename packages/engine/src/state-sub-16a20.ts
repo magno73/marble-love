@@ -136,14 +136,14 @@ export const ROM_SOUND_MODE_TABLE = 0x0001ef92 as const;
 // ─── ROM string pointer constants ─────────────────────────────────────────────
 
 export const STR_22E96 = 0x00022e96 as const;
-/** String ptr `0x22E8E` - phase 2, col 0x19. */
+/** String ptr `0x22E8E` - phase 2, with the 0x19. */
 export const STR_22E8E = 0x00022e8e as const;
-/** String ptr `0x22E92` - phase 2, col 0x1B. */
+/** String ptr `0x22E92` - phase 2, with the 0x1B. */
 export const STR_22E92 = 0x00022e92 as const;
 export const STR_22EA6 = 0x00022ea6 as const;
-/** String ptr `0x22EAA` - phase 3, col 0x1B second pass. */
+/** String ptr `0x22EAA` - phase 3, with the 0x1B second pass. */
 export const STR_22EAA = 0x00022eaa as const;
-/** String ptr `0x22EAE` - phase 3, col 0x1B third pass. */
+/** String ptr `0x22EAE` - phase 3, with the 0x1B third pass. */
 export const STR_22EAE = 0x00022eae as const;
 
 // ─── Misc constants ───────────────────────────────────────────────────────────
@@ -212,8 +212,8 @@ export interface StateSub16A20Subs {
 
   /**
    * `FUN_000286B0` (renderStringEntry286B0). Args:
-   *   - `col`        : byte (LSB di arg2, = D5 sext_l).
-   *   - `attr`       : word (LSW di arg4, = D6).
+   *   - `with the`        : byte (LSB of arg2, = D5 sext_l).
+   *   - `attr`       : word (LSW of arg4, = D6).
    * Called N times per entity in loops 2 and 3. Default: no-op.
    */
   renderStr?: (

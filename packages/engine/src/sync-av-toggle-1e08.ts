@@ -23,8 +23,8 @@
  *   00001e3a    move.l  (SP)+,D2             ; restore D2
  *   00001e3c    rts
  *
- *      D2.w prende high-nibble | rising-bits del long ritornato.
- *      dal punto 1.
+ *      D2.w takes high-nibble | rising-bits of the long returned.
+ *      from the punto 1.
  *
  * here we use `iterations` as the safety cap).
  *
@@ -130,7 +130,7 @@ export function syncAvToggle1E08(
     // 3. clr.w (0x00860000).l
     onMmio?.(MMIO_AV_CONTROL_ADDR, 0x0000);
 
-    // 4. inner loop 2: pop fino a ottenere D0 == 1
+    // 4. inner loop 2: pop up to ottenere D0 == 1
     while (true) {
       if (flagPops >= maxPops) {
         return { iterations, terminated: false, flagPops };

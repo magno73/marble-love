@@ -1,12 +1,12 @@
 /**
  * Pure leaf port of ROM routine `FUN_0001706C`.
  *
- * ROM @ 0x23D40 indicizzata per "rotation index" e "inverse rotation index".
+ * ROM @ 0x23D40 indicizzata per "rotation index" and "inverse rotation index".
  *
  * Likely use case: playfield scroll/movement based on trackball direction
  * (4 direction bits plus 4 cardinal conditions).
  *
- *   0x40066A  byte: bitmap di flag di direzione (bit 0..3)
+ *   0x40066A  byte: bitmap of flag of direzione (bit 0..3)
  *   0x40066C  byte: cardinale +X flag
  *   0x40066E  byte: cardinale +Y flag
  *   0x400670  byte: cardinale -X flag

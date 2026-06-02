@@ -186,7 +186,7 @@ async function main(): Promise<void> {
 
   const rng = makeRng(0x1d242);
 
-  console.log(`\n=== sub1D242 (FUN_0001D242) — 100 random scenarios — ${total} casi ===`);
+  console.log(`\n=== sub1D242 (FUN_0001D242) — 100 random scenarios — ${total} cases ===`);
 
   for (let i = 0; i < total; i++) {
     const c = buildRandomCase(rng);

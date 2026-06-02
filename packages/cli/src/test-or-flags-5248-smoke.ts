@@ -43,7 +43,7 @@ function setFlags(s: ReturnType<typeof stateNs.emptyGameState>, v: number): void
   s.workRam[ns.STATUS_FLAGS_OFF + 3] = n & 0xff;
 }
 
-console.log("\nTest 1: OR 0x3 su valore zero");
+console.log("\nTest 1: OR 0x3 on a zero value");
 {
   const s = makeState();
   // workRam parte a zero; flags @ 0x1F5E = 0
@@ -53,7 +53,7 @@ console.log("\nTest 1: OR 0x3 su valore zero");
 }
 
 // ─── Test 2: OR with mask 0 -> no-op ─────────────────────────────────────────
-console.log("\nTest 2: OR maschera 0 → no-op");
+console.log("\nTest 2: OR mask 0 → no-op");
 {
   const s = makeState();
   setFlags(s, 0xdeadbeef);

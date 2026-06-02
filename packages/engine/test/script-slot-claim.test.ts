@@ -1,5 +1,5 @@
 /**
- * script-slot-claim.test.ts — corner cases di `claimScriptSlot` (FUN_12D46).
+ * script-slot-claim.test.ts — corner cases of `claimScriptSlot` (FUN_12D46).
  *
  * Bit-perfect parity validata vs binary in
  * `packages/cli/src/test-script-slot-claim-parity.ts`.
@@ -27,12 +27,12 @@ function setupCanonicalRomTable(rom: RomImage): void {
 }
 
 describe("claimScriptSlot (FUN_00012D46)", () => {
-  it("nessuno slot libero (tutti +0x18 != 0) → ritorna 0xFFFFFFFF, niente side effect", () => {
+  it("nessuno slot free (all +0x18 != 0) → returns 0xFFFFFFFF, niente side effect", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
 
-    // Marca tutti gli slot +0x18 = 1 (occupati).
+    // Marca all the slot +0x18 = 1 (occupied).
     for (let i = 0; i < 25; i++) {
       const slotAddr = 0x400a9c + i * 0x56;
       s.workRam[(slotAddr - WORK_RAM_BASE) + 0x18] = 1;
@@ -44,7 +44,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("primo slot libero (idx 0) → ritorna 0, scrive script ptr + state byte + mark", () => {
+  it("first slot free (idx 0) → returns 0, writes script ptr + state byte + mark", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -63,7 +63,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam[slotOff + 0x3d]).toBe(0x54);
   });
 
-  it("slot[0..2] occupati, slot[3] libero → bind sul terzo slot", () => {
+  it("slot[0..2] occupied, slot[3] free → bind on the third slot", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -86,13 +86,13 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam[slotOff + 0x3c]).toBe(0xbe);
     expect(s.workRam[slotOff + 0x3d]).toBe(0xef);
 
-    // Slot precedenti NON modificati nei field 0x1A/0x3A.
+    // Slot precedenti NOT modificati in the field 0x1A/0x3A.
     const slot0 = 0x400a9c - WORK_RAM_BASE;
     expect(s.workRam[slot0 + 0x1a]).toBe(0);
     expect(s.workRam[slot0 + 0x3a]).toBe(0);
   });
 
-  it("argPtr = 0 → script ptr scritto come long zero", () => {
+  it("argPtr = 0 → script ptr scritto as long zero", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -108,7 +108,7 @@ describe("claimScriptSlot (FUN_00012D46)", () => {
     expect(s.workRam[slotOff + 0x18]).toBe(0x01);
   });
 
-  it("findFirstFreeSlot semantica EARLY-EXIT: se idx 0 libero non scansiona oltre", () => {
+  it("findFirstFreeSlot semantica EARLY-EXIT: se idx 0 free non scansiona beyond", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);

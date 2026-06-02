@@ -1,8 +1,8 @@
 /**
  * slapstic-103.test.ts - verifies chip 137412-103 state machine with scenarios
- * derivati dal MAME source (`mame/src/mame/atari/slapstic.cpp`).
+ * derivati from the MAME source (`mame/src/mame/atari/slapstic.cpp`).
  *
- * I test sono "intent" (Rule 9): codificano cosa la state machine DEVE fare
+ * I test are "intent" (Rule 9): codificano cosa la state machine MUST fare
  * for every branch (idle/active/alt/bit), not only reproduce behavior.
  */
 

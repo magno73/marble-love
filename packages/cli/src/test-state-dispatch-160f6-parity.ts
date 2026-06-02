@@ -5,7 +5,7 @@
  *
  * `FUN_000160F6` (1378 byte, 0x0160F6–0x016658): trackball navigation
  * dispatcher. Updates object movement based on trackball delta
- * e input direzionali.
+ * and input direzionali.
  *
  * **Stub injection**:
  *   `FUN_000158AC` (sound command) is patched to a thunk logger that
@@ -29,7 +29,7 @@
  *
  * **Suites** (4 x 125 = 500 cases):
  *   A: randomly generated D2 (randomized input with varied in-range tile/vel)
- *   B: idle→lock path (D2=0, diff > 0x60000, charcode vari)
+ *   B: idle→lock path (D2=0, diff > 0x60000, charcode various)
  *   C: state 1 (moving) with various dirMask and romByte values
  *   D: edge cases (state 2 lock, charcode outside whitelist, tile boundary)
  *
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   // TS subs: exact replica of the binary stubs.
   const subs: ns.StateDispatch160F6Subs = {
     soundCommand: (cmd) => {
-      // Scrive cmd (long = cmd & 0xFF) nel ring @ SOUND_LOG_BASE + counter
+      // Scrive cmd (long = cmd & 0xFF) in the ring @ SOUND_LOG_BASE + counter
       const r = state.workRam;
       const off = SOUND_LOG_CTR - WR_BASE;
       const ctr =
@@ -281,7 +281,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x160f6);
 
   // ── Suite A: movimento normale (D2 generato da input random) ─────────────
-  console.log(`\n=== Suite A: D2 random (input vari) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite A: D2 random (various inputs) — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     resetZones(state, cpu);
@@ -324,11 +324,11 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: idle→lock (D2=0, diff > 0x60000) ─────────────────────────
-  console.log(`\n=== Suite B: idle→lock (diff > 0x60000) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: idle→lock (diff > 0x60000) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     resetZones(state, cpu);
-    // Tutti gli input = 0 → D2=0
+    // Tutti the input = 0 → D2=0
     // pos14 > prevTimer + 0x60000
     const prevT = rl(rng) & 0x0fffffff;
     const pos14 = (prevT + 0x70000 + (rl(rng) & 0xffff)) >>> 0;
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // Suite C: state 1 (moving), D5/D6 in {0,1}, random dirMask.
-  console.log(`\n=== Suite C: stato 1 moving, inner loop — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: state 1 moving, inner loop — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     resetZones(state, cpu);
@@ -387,7 +387,7 @@ async function main(): Promise<void> {
 
   // Suite D: edge cases (state 2, charcode outside whitelist, etc.).
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     resetZones(state, cpu);

@@ -105,7 +105,7 @@ function main(): void {
     console.warn(`warning: ROM not found at ${romPath} (continuing with empty ROM)`);
   }
 
-  // Usa `--with-boot-init` per saltare la transitoria di boot in test.
+  // Uses `--with-boot-init` per saltare la transitoria of boot in test.
   if (args.withBootInit) {
     bootInit(state, rom);
   }

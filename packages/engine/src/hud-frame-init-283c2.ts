@@ -4,15 +4,15 @@
  * Runs two loops over alpha tilemap RAM at `0xA03000`.
  *
  *      For each `row`:
- *        - `addr = getAlphaTileAddr(col=0, row=row)` (=`FUN_000037E4`)
+ *        - `addr = getAlphaTileAddr(with the=0, row=row)` (=`FUN_000037E4`)
  *            3 words at `addr+0..5`,
  *            3 words at `addr+0x4e..0x53` (= +39 word offset, right side)
  *
  *   2. **Loop2** (D2 byte = 0..D3-1, where D3 = 0x0C in 1-player or
  *      `setAlphaTile` (= `FUN_00003784`):
- *        - col  = ROM word @ A2 (low byte) — A2 base 0x23C2C (1P) or 0x23CA4 (2P)
+ *        - with the  = ROM word @ A2 (low byte) — A2 base 0x23C2C (1P) or 0x23CA4 (2P)
  *        - mask = constant 0x1C00
- *      The (col, row) pattern draws a 5×4 rounded-cell rectangle.
+ *      The (with the, row) pattern draws a 5×4 rounded-cell rectangle.
  *
  * **Disasm 0x283C2..0x28467** (166 byte, 0xA6):
  *
@@ -24,7 +24,7 @@
  *   000283CA  ext.w   D0w
  *   000283CC  ext.l   D0
  *   000283CE  move.l  D0,-(SP)                  ; arg2 (row) = sext_l(D2)
- *   000283D0  clr.l   -(SP)                     ; arg1 (col) = 0
+ *   000283D0  clr.l   -(SP)                     ; arg1 (with the) = 0
  *   000283D2  jsr     0x000037E4.l              ; A2 = getAlphaTileAddr(0, D2)
  *                                                ;     = via jmp 0x224 (long
  *                                                ;       trampoline)
@@ -42,7 +42,7 @@
  *   000283FA  addq.l  0x8,SP                    ; cleanup 2 long arg
  *   000283FC  addq.b  0x1,D2b                   ; D2++
  *   000283FE  cmpi.b  #0x1E,D2b                 ; 30?
- *   00028402  bne.b   L1_BODY                   ; loop fino a D2 == 30
+ *   00028402  bne.b   L1_BODY                   ; loop up to D2 == 30
  *
  *   ; ── Loop2 setup: select 1P vs 2P via word @ 0x400396 ───────────────
  *   00028404  movea.l #0x23C44,A3               ; A3 = ROM "rows" table
@@ -72,17 +72,17 @@
  *   00028444  ext.l   D0
  *   00028446  move.l  D0,-(SP)                  ; push arg2 (row) sext_l
  *   00028448  movea.l A2,A0
- *   0002844A  addq.l  0x2,A2                    ; A2 += 2 (next col word)
- *   0002844C  move.w  (A0),D0w                  ; D0 = col word
+ *   0002844A  addq.l  0x2,A2                    ; A2 += 2 (next with the word)
+ *   0002844C  move.w  (A0),D0w                  ; D0 = with the word
  *   0002844E  ext.l   D0
- *   00028450  move.l  D0,-(SP)                  ; push arg1 (col) sext_l
- *   00028452  jsr     0x00003784.l              ; setAlphaTile(col, row, data, mask)
+ *   00028450  move.l  D0,-(SP)                  ; push arg1 (with the) sext_l
+ *   00028452  jsr     0x00003784.l              ; setAlphaTile(with the, row, data, mask)
  *                                                ;   via jmp 0x218 trampoline
  *   00028458  lea     (0x10,SP),SP              ; cleanup 4 long arg
  *   0002845C  addq.b  0x1,D2b                   ; D2++
  *   L2_CHECK:
  *   0002845E  cmp.b   D3b,D2b                   ; D2 == D3?
- *   00028460  bne.b   L2_BODY                   ; loop fino a D2 == D3
+ *   00028460  bne.b   L2_BODY                   ; loop up to D2 == D3
  *
  *   ; ── Epilogo ────────────────────────────────────────────────────────
  *   00028462  movem.l (SP)+,{D2 D3 D4 A2 A3}    ; restore 20 byte
@@ -136,20 +136,20 @@ export const LOOP1_ROW_COUNT = 0x1e as const;
 /** Clear word used in Loop1 (`0x3400` = blank alpha tile attr). */
 export const LOOP1_CLEAR_WORD = 0x3400 as const;
 
-/** Offset (in BYTE) tra il primo word write e il secondo gruppo di 3 word
+/** Offset (in BYTE) between il first word write and il second gruppo of 3 word
   */
 export const LOOP1_RIGHT_OFF = 0x4e as const;
 
 /** Number of word writes per left/right group in Loop1. */
 export const LOOP1_GROUP_WORDS = 3 as const;
 
-/** ROM address del table "cols" 1-player (12 word). */
+/** ROM address of the table "cols" 1-player (12 word). */
 export const ROM_COLS_1P = 0x00023c2c as const;
 
-/** ROM address del table "rows" (24 word, condiviso 1P/2P). */
+/** ROM address of the table "rows" (24 word, condiviso 1P/2P). */
 export const ROM_ROWS = 0x00023c44 as const;
 
-/** ROM address del table "data" (24 word, condiviso 1P/2P). */
+/** ROM address of the table "data" (24 word, condiviso 1P/2P). */
 export const ROM_DATA = 0x00023c74 as const;
 
 /** ROM address of the 2-player "cols" table (24 words). */
@@ -196,11 +196,11 @@ function writeAlphaWordBE(state: GameState, off: number, value: number): void {
 
 /**
  *
- * (draw frame score area, 12 o 24 tile in base a 1P/2P).
+ * (draw frame score area, 12 o 24 tile based on 1P/2P).
  *
  * **Side effects**:
  *     `getAlphaTileAddr`).
- *     0x23CA4 e lookup ROM 0x72A4 via `getAlphaTileAddr`).
+ *     0x23CA4 and lookup ROM 0x72A4 via `getAlphaTileAddr`).
  *
  * @param rom   ROM image (tables + alpha-pointer lookup).
  */
@@ -231,8 +231,8 @@ export function hudFrameInit283C2(state: GameState, rom: RomImage): void {
     const colWord = readRomWordBE(rom, colsBase + i * 2);
     const rowWord = readRomWordBE(rom, ROM_ROWS + i * 2);
     const dataWord = readRomWordBE(rom, ROM_DATA + i * 2);
-    // setAlphaTile signature: (state, rom, arg1Byte=col, arg2Byte=row,
-    // word). It uses only the low byte for col/row and the full word for
+    // setAlphaTile signature: (state, rom, arg1Byte=with the, arg2Byte=row,
+    // word). It uses only the low byte for with the/row and the full word for
     // data/mask, so this matches the caller contract.
     const colByte = colWord & 0xff;
     const rowByte = rowWord & 0xff;
@@ -241,6 +241,6 @@ export function hudFrameInit283C2(state: GameState, rom: RomImage): void {
 }
 
 /**
- * Re-export del simbolo come "FUN_000283C2" per mappatura esplicita
+ * Re-export of the simbolo as "FUN_000283C2" per mappatura esplicita
  */
 export { hudFrameInit283C2 as FUN_000283C2 };

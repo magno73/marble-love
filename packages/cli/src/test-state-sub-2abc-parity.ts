@@ -5,18 +5,18 @@
  * scheduler. Args: 1 long on the stack (`arg1Long` = pointer to struct entry).
  *
  *     `sext(byte@A0+6) + sext(*0x401F00) > 1`.
- *     la corrispondente word nel alpha tilemap @ 0xA03000.
+ *     la corrispondente word in the alpha tilemap @ 0xA03000.
  *
  * Strategia:
  *   - Setup must guarantee valid setup for:
  *       a) `*0x401F42` (rotation, in [0..3] to cover real ROM tables)
  *       b) `*0x401F00` (VAL_F00, signed)
- *       c) struct @ STRUCT_ADDR: col, tickOff, stringPtr (long), marker,
+ *       c) struct @ STRUCT_ADDR: with the, tickOff, stringPtr (long), marker,
  *          nextPtr (long)
- *       e) catena di entry (per cover chain-walk)
+ *       e) chain of entry (to cover chain-walk)
  *
  * Suite testate:
- *   - C: rot=0..3, single entry with signed col/tickOff (including negatives)
+ *   - C: rot=0..3, single entry with signed with the/tickOff (including negatives)
  *   - D: chain walk: 2-3 entry collegate via marker + nextPtr
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2abc-parity.ts [N]
@@ -116,7 +116,7 @@ function setupString(
   }
 }
 
-/** Set rotation/VAL_F00 in entrambi. */
+/** Set rotation/VAL_F00 in both. */
 function setupGlobals(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x2abc);
   const ri = (max: number): number => Math.floor(rng() * max);
 
-  console.log(`\n=== stateSub2ABC (FUN_2ABC) — Suite A: rot=0, single entry — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub2ABC (FUN_2ABC) — Suite A: rot=0, single entry — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("A", i, () => {
@@ -224,7 +224,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  console.log(`\n=== Suite B: rot=1, single entry — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: rot=1, single entry — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("B", i, () => {
@@ -244,15 +244,15 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: rot=0..3, signed col/tickOff (negativi inclusi) ─────────
-  console.log(`\n=== Suite C: rot mixed, signed col/tickOff — ${perSuite} casi ===`);
+  // ─── Suite C: rot=0..3, signed with the/tickOff (negative inclusi) ─────────
+  console.log(`\n=== Suite C: rot mixed, signed col/tickOff — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("C", i, () => {
-      // (stride 0 per rot=2 → infinite loop). Usiamo rot in {0, 1, 3}.
+      // (stride 0 per rot=2 → infinite loop). We use rot in {0, 1, 3}.
       const rotChoices = [0, 1, 3];
       const rot = rotChoices[ri(3)] ?? 0;
-      // col signed in [-8, 7] per stare in alpha range
+      // with the signed in [-8, 7] per stare in alpha range
       const col = (ri(16) - 8) & 0xff;
       const tickOff = (ri(16) - 8) & 0xff;
       const slen = 1 + ri(4);
@@ -271,7 +271,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: chain walk (2-3 entry) ──────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: chain walk (multi-entry) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: chain walk (multi-entry) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const ok = runOneCase("D", i, () => {
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
       //   marker=3 → 1 → stop
       //   marker=4 → 2 → continua
       //   marker=5 → 3 → continua
-      // Mix vari per coverage.
+      // Mix various to coverage.
       const valF00 = (ri(8) - 4) & 0xffff; // -4..3
       const numEntries = 1 + ri(3); // 1..3
       let info = `rot=${rot} valF00=0x${valF00.toString(16)} entries=${numEntries}`;

@@ -124,16 +124,16 @@ function readLongBE(bytes: Uint8Array, off: number): number {
 
 /**
  *
- *                      `0x10074` (long BE) per `argLong` di FUN_5334.
+ *                      `0x10074` (long BE) per `argLong` of FUN_5334.
  * @param inner52DA     Callback that models `FUN_000052DA`. Invoked 2 times
  *                      with `(D2+3, 0x1B, 0x7978)` and `(D2+4, 0x1C, 0x7980)`.
  *                      Default `() => 0`.
  * @param inner5334     Callback that models `FUN_00005334`. Invoked 1 time
  *                      with `(*ROM[0x10074])`. Default `() => 0`.
  *
- *          e 0x5B7A ignorano D0).
+ *          and 0x5B7A ignorano D0).
  *
- *     `inner52DA` #1 modifica workRam @ `0x401F98/99`, allora `inner5334`
+ *     `inner52DA` #1 modifies workRam @ `0x401F98/99`, then `inner5334`
  */
 export function stateSub5608(
   state: GameState,

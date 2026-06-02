@@ -13,7 +13,7 @@
  *   - Launch binary via `callFunction(cpu, 0x5250, [])` with D1 pre-set
  *     via `cpu.system.setRegister("d1", d1)`.
  *   - Lancia `stateSub5250(state, d1)`.
- *   - Confronta primary e secondary long-BE post-esecuzione.
+ *   - Compare primary and secondary long-BE post-esecuzione.
  *
  * Casi boundary:
  *   0: d1=0, primary=0, secondary=0            → no-op
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub5250 (FUN_5250) — ${n} casi ===`);
+  console.log(`\n=== stateSub5250 (FUN_5250) — ${n} cases ===`);
 
   const rng = makeRng(0x5250_5250);
   let ok = 0;

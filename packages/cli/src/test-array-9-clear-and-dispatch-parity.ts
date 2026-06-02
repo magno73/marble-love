@@ -2,7 +2,7 @@
 /**
  * `array9ClearAndDispatch`.
  *
- * di arg1) e `entry[0x19]` (low byte di arg2).
+ * of arg1) and `entry[0x19]` (low byte of arg2).
  *
  *
  *   1. Patch FUN_18F46 to a custom thunk that logs `(arg1Long, arg2Long)`
@@ -36,7 +36,7 @@ const FUN_18F46 = 0x00018f46;
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
 
-/** Patch FUN_18F46 col thunk-logger (32 byte).
+/** Patch FUN_18F46 with the thunk-logger (32 byte).
  *
  * Layout (RING_BASE = 0x00401E00, RING_COUNTER = 0x00401E48):
  *   movea.l #RING_BASE, A0           ; 207C 0040 1E00              (6 byte)
@@ -93,7 +93,7 @@ function resetWatchedZones(
   }
 }
 
-/** Read ring buffer (72 byte) e counter long. */
+/** Read ring buffer (72 byte) and counter long. */
 function readRingBin(
   cpu: CpuSession,
 ): { ring: Uint8Array; counter: number } {
@@ -203,7 +203,7 @@ async function main(): Promise<void> {
     fun_18f46: makeLogger(),
   };
 
-  console.log(`\n=== array9ClearAndDispatch (FUN_190EE) — ${total} casi ===`);
+  console.log(`\n=== array9ClearAndDispatch (FUN_190EE) — ${total} cases ===`);
 
   const rng = makeRng(0x190ee);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, a, 1, v);
       stateInst.workRam[a - 0x400000] = v;
     }
-    // Ring + counter restano a 0 (richiesto dal thunk: parte da 0).
+    // Ring + counter restano a 0 (richiesto from the thunk: parte da 0).
 
     callFunction(cpu, FUN_190EE, []);
     const binArray = readArrayBin(cpu);
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
     const tsArray = readArrayTs(stateInst);
     const tsRing = readRingTs(stateInst);
 
-    // Compara
+    // Compare
     const diffArr = diffBytes(binArray, tsArray, 0x00401890);
     const diffRing = diffBytes(binRing.ring, tsRing.ring, RING_BASE);
     const counterMatch = binRing.counter === tsRing.counter;
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
     if (diffArr === null && diffRing === null && counterMatch) {
       ok++;
       if (tc === 0 && binRing.counter !== 72) {
-        console.log(`  ERROR (tc=0): counter atteso 72, got ${binRing.counter}`);
+        console.log(`  ERROR (tc=0): counter expected 72, got ${binRing.counter}`);
         ok--;
       }
     } else if (firstFail === null) {

@@ -1,5 +1,5 @@
 /**
- * state-sub-540a.ts — replica `FUN_0000540A` (94 byte, fino al `rts` @ 0x5466).
+ * state-sub-540a.ts — replica `FUN_0000540A` (94 byte, up tol `rts` @ 0x5466).
  *
  *
  * **Disasm 0x540A..0x5466** (94 byte / 0x5C):
@@ -18,7 +18,7 @@
  *   0x5428:    moveq  #1,D2                   ; D2 = 1
  *   0x542A:    move.b (A2),D0b                 ; D0b = byte[A2] (HEADER) — only low byte!
  *                                              ;   D0 high 24 bits restano da FUN_53EA
- *                                              ;   ma sono 0x000000 (output range 0..0xFF)
+ *                                              ;   but are 0x000000 (output range 0..0xFF)
  *   0x542C:    lsr.b  #4,D0b                  ; D0b = header >> 4 (high nibble)
  *   0x542E:    addq.b #1,D0b                  ; D0b += 1
  *   0x5430:    move.b (A2)+,D1b               ; D1b = header; A2++
@@ -26,7 +26,7 @@
  *   0x5436:    sub.b  D1b,D0b                 ; D0b = ((hdr>>4)+1) - (hdr&0xF)  byte sub
  *   0x5438:    asl.l  D0,D2                   ; D2 = 1 << (D0 mod 64)  (M68k asl.l)
  *                                              ;   or 0xF2..0xFF (negative byte sub). The
- *   0x543A:    move.w D2w,D0w                 ; D0w = D2w (low word di D2)
+ *   0x543A:    move.w D2w,D0w                 ; D0w = D2w (low word of D2)
  *   0x543C:    bra.b  0x5444                  ; jump to inner-loop test
  *
  *   0x543E: inner_body:
@@ -68,7 +68,7 @@
  *   move.l D1,D0
  *   move.l (SP)+,D2
  *
- *     di record da scansionare.
+ *     of record da scan.
  *   - D2, D3, A2 callee-saved (preserved/restored da movem.l).
  *
  *
@@ -147,7 +147,7 @@ export type StateSub540AResult = number;
  *   - byte sub wrap: `((hdr>>4)+1 - (hdr&0xF)) & 0xFF` → range
  *     `[0..16] ∪ [0xF2..0xFF]`.
  *   - asl.l count mod 64: per byte 0xF2..0xFF → count 50..63 → result 0.
- *   - asl.l count >= 32: result 0 (i bit "escono" dal long).
+ *   - asl.l count >= 32: result 0 (i bit "escono" from the long).
  *   - tst.w D0w bge: signed-word test; D0w = 0x8000 → negativo → skip body.
  *
  * **Safety guards** for pathological input (large D3, header that produces
@@ -185,7 +185,7 @@ export function stateSub540A(
 
     const hi = (hdr >>> 4) & 0xf;
     const lo = hdr & 0xf;
-    // byte sub: ((hi+1) - lo) modulo 256 (high bits di D0 sono 0).
+    // byte sub: ((hi+1) - lo) modulo 256 (high bits of D0 are 0).
     const shiftByte = ((hi + 1 - lo) & 0xff) >>> 0;
     // D0 long = 0x000000 | shiftByte. asl.l count = D0 & 63 = shiftByte & 63.
     const shiftCount = shiftByte & 0x3f;
@@ -196,7 +196,7 @@ export function stateSub540A(
     } else {
       d2Long = ((1 << shiftCount) >>> 0) >>> 0;
     }
-    // 0x543A: move.w D2w,D0w → D0w = D2 & 0xFFFF (D0 high word resta 0).
+    // 0x543A: move.w D2w,D0w → D0w = D2 & 0xFFFF (D0 high word stays 0).
     let d0w = d2Long & 0xffff; // unsigned word
 
     // 0x543C: bra 0x5444 — first check is tst.w D0w, bge.

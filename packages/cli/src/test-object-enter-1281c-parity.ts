@@ -4,7 +4,7 @@
  * differential FUN_1281C vs `objectEnter1281C`.
  *
  * **Strategia**:
- * `(0x1C,A0)`, (2) gate range -16 < D1w < 256 sul word a `(0x20,A0)`, (3)
+ * `(0x1C,A0)`, (2) gate range -16 < D1w < 256 on the word a `(0x20,A0)`, (3)
  *
  * To test the shim logic in isolation, we **patch
  * on the stack (= `mode` chosen by the shim):
@@ -12,7 +12,7 @@
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = mode
  *     4E 75          ; rts
  *
- * `D0 = 0xFFFFFFF0` (path out-of-range — `moveq #-0x10,D0` sopravvive).
+ * `D0 = 0xFFFFFFF0` (path out-of-range — `moveq #-0x10,D0` survives).
  *
  *   - D0 (long, mode 0/1 or 0xFFFFFFF0)
  *   - absence of spurious writes to other standard record offsets.
@@ -48,7 +48,7 @@ const FUN_264AA = 0x000264aa;
 /** Stub bytes per `FUN_264AA`: `move.l (8,SP),D0` ; `rts`. */
 const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 
-/** Slot pointers candidati (work RAM): mix tra singletons e generici. */
+/** Slot pointers candidates (work RAM): mix between singletons and generici. */
 const PTR_CHOICES = [
   0x00400018, // SINGLETON_SLOT_A
   0x004000fa, // SINGLETON_SLOT_B
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, FUN_264AA + i, 1, STUB_BYTES[i]!);
   }
 
-  console.log(`\n=== objectEnter1281C (FUN_0001281C) — ${n} casi ===`);
+  console.log(`\n=== objectEnter1281C (FUN_0001281C) — ${n} cases ===`);
   console.log(`  (FUN_264AA patched in-memory con stub move.l (8,SP),D0;rts)`);
 
   const rng = makeRng(0x1281c);
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Re-applica patch ogni 100 iter per safety.
+    // Re-applica patch each 100 iter per safety.
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_264AA + k, 1, STUB_BYTES[k]!);

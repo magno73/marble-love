@@ -1,5 +1,5 @@
 /**
- * render-string-286ee.test.ts — smoke + corner case di `renderString286EE`
+ * render-string-286ee.test.ts — smoke + corner case of `renderString286EE`
  * (FUN_000286EE).
  *
  * Bit-perfect parity (500 random cases) verified separately in

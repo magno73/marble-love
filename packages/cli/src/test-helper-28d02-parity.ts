@@ -68,7 +68,7 @@ async function main(): Promise<void> {
   const tsState = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: binState });
 
-  console.log(`\n=== helper28D02 (FUN_28D02) — ${n} casi ===`);
+  console.log(`\n=== helper28D02 (FUN_28D02) — ${n} cases ===`);
 
   const rng = makeRng(0x28d02);
   let ok = 0;

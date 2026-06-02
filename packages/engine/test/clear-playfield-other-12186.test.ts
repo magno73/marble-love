@@ -3,7 +3,7 @@ import { emptyGameState } from "../src/state.js";
 import { clearPlayfieldOther12186 } from "../src/clear-playfield-other-12186.js";
 
 describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
-  it("azzera 72 byte per 64 iterazioni, partendo dall'offset 6", () => {
+  it("azzera 72 byte per 64 iterazioni, partendo dto the offset 6", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xab);
     clearPlayfieldOther12186(s);
@@ -18,7 +18,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     }
   });
 
-  it("non tocca i primi 6 byte di playfieldRam (pre-offset)", () => {
+  it("non tocca i first 6 byte of playfieldRam (pre-offset)", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xcd);
     clearPlayfieldOther12186(s);
@@ -28,14 +28,14 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     }
   });
 
-  it("preserva i 56 byte saltati in ogni iterazione", () => {
+  it("preserva i 56 byte saltati in each iterazione", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xef);
     clearPlayfieldOther12186(s);
 
     let off = 6;
     for (let outer = 0; outer < 64; outer++) {
-      // 56 byte saltati (offset 72..127 relativo all'inizio dell'iterazione),
+      // 56 byte saltati (offset 72..127 relativo to the inizio of the iterazione),
       // Only when inside array bounds; the last iteration touches the end.
       for (let i = 72; i < 128; i++) {
         const idx = off + i;

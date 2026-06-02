@@ -7,7 +7,7 @@
  *        `addq.b #1, sentinel.l ; rts`     (8 byte)
  *        - 4 sentinel byte (0x4003E0..0x4003E3)
  *   3. Run `initLevelLoad1A236()` with 4 callbacks that increment
- *      gli stessi 4 sentinel byte in `state.workRam`.
+ *      the stessthe 4 sentinel byte in `state.workRam`.
  *
  * Pattern variation per case:
  *     read-modify-write).
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== initLevelLoad1A236 (FUN_1A236) — ${n} casi ===`);
+  console.log(`\n=== initLevelLoad1A236 (FUN_1A236) — ${n} cases ===`);
   const rng = makeRng(0x1a236);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
     stateInst.workRam[GLOB_COUNTER_FLAG - 0x400000] = (preCounter >>> 8) & 0xff;
     stateInst.workRam[GLOB_COUNTER_FLAG - 0x400000 + 1] = preCounter & 0xff;
 
-    // Pre-fill dirty del level pointer dst (long).
+    // Pre-fill dirty of the level pointer dst (long).
     const preLevelDst = ((rb() << 24) | (rb() << 16) | (rb() << 8) | rb()) >>> 0;
     pokeMem(cpu, GLOB_LEVEL_PTR_DST, 4, preLevelDst);
     stateInst.workRam[GLOB_LEVEL_PTR_DST - 0x400000 + 0] = (preLevelDst >>> 24) & 0xff;

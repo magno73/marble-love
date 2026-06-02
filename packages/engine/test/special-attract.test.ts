@@ -1,5 +1,5 @@
 /**
- * special-attract.test.ts — corner cases di specialAttract (FUN_288F8).
+ * special-attract.test.ts — corner cases of specialAttract (FUN_288F8).
  *
  * Bit-perfect parity verificata vs binary in `test-special-attract-parity.ts`.
  */
@@ -92,7 +92,7 @@ describe("specialAttract (FUN_288F8)", () => {
     expect(() => specialAttract(s, {})).not.toThrow();
   });
 
-  it("non modifica workRam", () => {
+  it("non modifies workRam", () => {
     const s = emptyGameState();
     setStage(s, 0x18);
     const before = new Uint8Array(s.workRam);
@@ -100,7 +100,7 @@ describe("specialAttract (FUN_288F8)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("una sola chiamata a soundCommand per invocazione", () => {
+  it("una sola chiamata a soundCommand per invocation", () => {
     const s = emptyGameState();
     setStage(s, 0x10);
     const calls: number[] = [];

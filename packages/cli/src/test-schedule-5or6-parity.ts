@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   const r = rng(0xfa2c);
 
-  console.log(`\n=== scheduleStateMachine5or6 (FUN_26C2) — ${n} casi ===`);
+  console.log(`\n=== scheduleStateMachine5or6 (FUN_26C2) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
 
   // FUN_2A24
-  console.log(`\n=== scheduleStateMachine2 (FUN_2A24) — ${n} casi ===`);
+  console.log(`\n=== scheduleStateMachine2 (FUN_2A24) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
   // FUN_2B50
-  console.log(`\n=== scheduleStateMachine1 (FUN_2B50) — ${n} casi ===`);
+  console.log(`\n=== scheduleStateMachine1 (FUN_2B50) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

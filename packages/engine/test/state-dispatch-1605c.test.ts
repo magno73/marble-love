@@ -17,7 +17,7 @@ import type { StateDispatch1605CSubs } from "../src/state-dispatch-1605c.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("stateDispatch1605C (FUN_1605C)", () => {
-  it("kind == 0x20 → chiama fun_160ae(structPtr, 0); fun_15c46 NON chiamato", () => {
+  it("kind == 0x20 → calls fun_160ae(structPtr, 0); fun_15c46 NOT chiamato", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     s.workRam[(structPtr - 0x400000) + KIND_BYTE_OFF] = KIND_CASE_20;
@@ -27,7 +27,7 @@ describe("stateDispatch1605C (FUN_1605C)", () => {
     const subs: StateDispatch1605CSubs = {
       fun_15c46: (ptr) => {
         f15c46Calls++;
-        return ptr; // valore arbitrario (non deve essere usato in questo branch)
+        return ptr; // value arbitrario (non must be used in this branch)
       },
       fun_160ae: (ptr, idx) => {
         f160ae = { ptr, idx };
@@ -42,7 +42,7 @@ describe("stateDispatch1605C (FUN_1605C)", () => {
     expect(f15c46Calls).toBe(0);
   });
 
-  it("kind == 0x22 → chiama fun_15c46 poi fun_160ae con il suo return", () => {
+  it("kind == 0x22 → calls fun_15c46 poi fun_160ae con il suo return", () => {
     const s = emptyGameState();
     const structPtr = 0x00400600;
     s.workRam[(structPtr - 0x400000) + KIND_BYTE_OFF] = KIND_CASE_22;
@@ -66,11 +66,11 @@ describe("stateDispatch1605C (FUN_1605C)", () => {
     expect(seq).toEqual(["15c46", "160ae"]);
     expect(f160aeArgs).not.toBeNull();
     expect(f160aeArgs!.ptr).toBe(structPtr);
-    // ret di fun_15c46 (long) propagato direttamente a fun_160ae.
+    // ret of fun_15c46 (long) propagato direttamente a fun_160ae.
     expect(f160aeArgs!.idx).toBe(0xdeadbeef);
   });
 
-  it("kind == 0x21 → no-op esplicito (nessuna sub chiamata)", () => {
+  it("kind == 0x21 → no-op esplicito (no sub chiamata)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400700;
     s.workRam[(structPtr - 0x400000) + KIND_BYTE_OFF] = KIND_CASE_21;
@@ -91,7 +91,7 @@ describe("stateDispatch1605C (FUN_1605C)", () => {
     expect(f160aeCalls).toBe(0);
   });
 
-  it("kind in [0x00..0x1F] (signed >= 0 ma < 0x20) → no-op", () => {
+  it("kind in [0x00..0x1F] (signed >= 0 but < 0x20) → no-op", () => {
     const s = emptyGameState();
     const structPtr = 0x00400800;
 
@@ -136,14 +136,14 @@ describe("stateDispatch1605C (FUN_1605C)", () => {
     }
   });
 
-  it("subs undefined → non-throw e no side effects", () => {
+  it("subs undefined → non-throw and no side effects", () => {
     const s = emptyGameState();
     const structPtr = 0x00400b00;
     s.workRam[(structPtr - 0x400000) + KIND_BYTE_OFF] = KIND_CASE_22;
     expect(() => stateDispatch1605C(s, structPtr)).not.toThrow();
   });
 
-  it("subs.fun_15c46 undefined ma kind == 0x22 → fun_160ae chiamato con 0", () => {
+  it("subs.fun_15c46 undefined but kind == 0x22 → fun_160ae chiamato con 0", () => {
     const s = emptyGameState();
     const structPtr = 0x00400c00;
     s.workRam[(structPtr - 0x400000) + KIND_BYTE_OFF] = KIND_CASE_22;

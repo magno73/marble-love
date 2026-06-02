@@ -17,11 +17,11 @@ function r16(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("FUN_1BB50 updateScrollCoords1BB50", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(UPDATE_SCROLL_COORDS_1BB50_ADDR).toBe(0x1bb50);
   });
 
-  it("scrive sub-cell X/Y e cell X/Y", () => {
+  it("writes sub-cell X/Y and cell X/Y", () => {
     const s = emptyGameState();
     w16(s, 0x690, 0x42); // worldX = 0x42 = cell 8 + sub 2
     w16(s, 0x692, 0x35); // worldY = 0x35 = cell 6 + sub 5
@@ -32,7 +32,7 @@ describe("FUN_1BB50 updateScrollCoords1BB50", () => {
     expect(r16(s, 0x698)).toBe(6); // cellY = 0x35 >> 3
   });
 
-  it("dirty=1 quando subY >= subX", () => {
+  it("dirty=1 when subY >= subX", () => {
     const s = emptyGameState();
     w16(s, 0x690, 0x42); // subX = 2
     w16(s, 0x692, 0x35); // subY = 5
@@ -40,7 +40,7 @@ describe("FUN_1BB50 updateScrollCoords1BB50", () => {
     expect(r16(s, 0x6a2)).toBe(1);
   });
 
-  it("dirty=0 quando subY < subX", () => {
+  it("dirty=0 when subY < subX", () => {
     const s = emptyGameState();
     w16(s, 0x690, 0x47); // subX = 7
     w16(s, 0x692, 0x32); // subY = 2
@@ -59,11 +59,11 @@ describe("FUN_1BB50 updateScrollCoords1BB50", () => {
 });
 
 describe("FUN_1BB08 setScrollCoordsFromEntity1BB08", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(SET_SCROLL_COORDS_FROM_ENTITY_1BB08_ADDR).toBe(0x1bb08);
   });
 
-  it("copia entity[0xC]/[0x10] in 0x690/0x692 + chiama updateScrollCoords", () => {
+  it("copies entity[0xC]/[0x10] in 0x690/0x692 + calls updateScrollCoords", () => {
     const s = emptyGameState();
     // Entity struct @ 0x400100
     w16(s, 0x100 + 0xc, 0x42); // entity X
@@ -76,7 +76,7 @@ describe("FUN_1BB08 setScrollCoordsFromEntity1BB08", () => {
     expect(r16(s, 0x696)).toBe(8); // cellX = 0x42 >> 3
   });
 
-  it("entityPtr fuori workRam → reads zero, writes zero", () => {
+  it("entityPtr outside workRam → reads zero, writes zero", () => {
     const s = emptyGameState();
     setScrollCoordsFromEntity1BB08(s, 0x00500000);
     expect(r16(s, 0x690)).toBe(0);

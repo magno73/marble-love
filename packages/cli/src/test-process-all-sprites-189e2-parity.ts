@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== processAllSprites (FUN_189E2) — ${n} casi ===`);
+  console.log(`\n=== processAllSprites (FUN_189E2) — ${n} cases ===`);
 
   const rng = makeRng(0x189e2);
   let ok = 0;

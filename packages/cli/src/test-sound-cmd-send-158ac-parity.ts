@@ -2,10 +2,10 @@
 /**
  * test-sound-cmd-send-158ac-parity.ts — differential FUN_158AC vs soundCmdSend158AC.
  *
- * comandi al sound CPU (6502 via mailbox MMIO 0xFE0000). 98 callsite nel ROM.
+ * comandi al sound CPU (6502 via mailbox MMIO 0xFE0000). 98 callsite in the ROM.
  *
  * Logica:
- *   2. Se != 0 → skip, D0=0.
+ *   2. If != 0 → skip, D0=0.
  *
  * Setup invariante per convergenza deterministica:
  *   - MMIO 0xF60001 = 0x00 (bit 7 clear = chip ready) → FUN_4C6E riesce al
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== soundCmdSend158AC (FUN_158AC) — ${n} casi ===`);
+  console.log(`\n=== soundCmdSend158AC (FUN_158AC) — ${n} cases ===`);
 
   const rng = makeRng(0x158ac);
   let ok = 0;
@@ -106,7 +106,7 @@ async function main(): Promise<void> {
         break;
     }
 
-    // Setup workRam skip flag (big-endian word) in Musashi e in state TS.
+    // Setup workRam skip flag (big-endian word) in Musashi and in state TS.
     pokeMem(cpu, SKIP_FLAG_ADDR, 2, skipFlag);
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;

@@ -15,7 +15,7 @@
  *      fraction string based on D3 in {3,4,6,8,9, other}:
  *        3 → " 1/4", 4 → " 1/3", 6 → " 1/2", 8 → " 2/3", 9 → " 3/4",
  *        other → "    " (3 spaces).
- *   9. `jsr 0x13C` (initStructHeader): `workRam[0x428] = 0x23` (col),
+ *   9. `jsr 0x13C` (initStructHeader): `workRam[0x428] = 0x23` (with the),
  *       `workRam[0x429] = 0x1C` (tickOff), `workRam[0x42E] = 0` (marker).
  *      string-chain entry @ 0x400428.
  *
@@ -110,8 +110,8 @@
  *   00028320  cmp.w   D3w,D0w
  *   00028322  lea     (0x20,SP),SP                ; cleanup 32 byte = 8 long (= 6 + 8)
  *                                                  ; (8 = 4 long pre-jsr 28E3C
- *                                                  ;     dal 4° jsr A2: 1 long arg
- *                                                  ; + 6 long del jsr 28E3C
+ *                                                  ;     from the 4° jsr A2: 1 long arg
+ *                                                  ; + 6 long of the jsr 28E3C
  *   00028326  bne.b   0x28338
  *   00028328  move.b  #0x31,(A0)+                 ; "1"
  *   0002832C  move.b  #0x2F,(A0)+                 ; "/"
@@ -152,7 +152,7 @@
  *
  *   ; ── jsr 0x13C (initStructHeader) ───────────────────────────────
  *   00028396  pea     0x1C.w                      ; arg3 = 0x1C (tickOff)
- *   0002839A  pea     0x23.w                      ; arg2 = 0x23 (col)
+ *   0002839A  pea     0x23.w                      ; arg2 = 0x23 (with the)
  *   0002839E  pea     (A3)                        ; arg1 = 0x400428 (struct ptr)
  *   000283A0  jsr     0x13C.l                     ; → initStructHeader
  *
@@ -173,7 +173,7 @@
  * **Caller** (only one): `FUN_0001101E` @ `0x00011170` (UNCONDITIONAL_CALL).
  *
  * **Direct side effects** of the module (assuming no-op sub-calls):
- *   1. `state.workRam[0x428] = 0x23`        (col, from initStructHeader)
+ *   1. `state.workRam[0x428] = 0x23`        (with the, from initStructHeader)
  *   2. `state.workRam[0x429] = 0x1C`        (tickOff, from initStructHeader)
  *   3. `state.workRam[0x42E] = 0`           (marker, from initStructHeader)
  *
@@ -182,9 +182,9 @@
  * to `state.workRam[ptr & 0x1FFF]`. Parity tests set the caller-side
  *
  * `obj-dirty-dispatch-28624`):
- *   - `renderStringChain` (FUN_2572 via 0x142) — 5 invocazioni totali (3
- *   - `initStructHeader`   (FUN_255A via 0x13C) — 1 invocazione.
- *   - `renderStringHelper` (FUN_28E3C)         — 1 invocazione.
+ *   - `renderStringChain` (FUN_2572 via 0x142) — 5 invocations totali (3
+ *   - `initStructHeader`   (FUN_255A via 0x13C) — 1 invocation.
+ *   - `renderStringHelper` (FUN_28E3C)         — 1 invocation.
  *
  * `packages/cli/src/test-level-fraction-render-28232-parity.ts`.
  */
@@ -200,13 +200,13 @@ import { formatNumber3874 } from "./string-format.js";
 
 export const FUN_28232_ADDR = 0x00028232 as const;
 
-/** Workram offset del word "mode selector" (assoluto 0x400392). */
+/** Workram offset of the word "mode selector" (assoluto 0x400392). */
 export const MODE_SELECTOR_OFF = 0x392 as const;
 
-/** Workram offset del word "level index" (assoluto 0x4003DE). */
+/** Workram offset of the word "level index" (assoluto 0x4003DE). */
 export const LEVEL_IDX_OFF = 0x3de as const;
 
-/** Workram offset del word "level number" (assoluto 0x4003EA). */
+/** Workram offset of the word "level number" (assoluto 0x4003EA). */
 export const LEVEL_NUM_OFF = 0x3ea as const;
 
 /** workRam offset of the string-chain entry struct (absolute 0x400428). */
@@ -220,7 +220,7 @@ export const ROM_TABLE1_ADDR = 0x00023c04 as const;
 
 export const ROM_TABLE2_ADDR = 0x00023c18 as const;
 
-/** ROM address dell'entry "label fixed" 1 (D2==0 path). */
+/** ROM address of the entry "label fixed" 1 (D2==0 path). */
 export const ROM_ENTRY_228CA = 0x000228ca as const;
 
 export const ROM_ENTRY_228D6 = 0x000228d6 as const;
@@ -266,7 +266,7 @@ export type RenderStringChainFn = (
 /**
  * Callback for sub-JSR `initStructHeader` (FUN_255A via 0x13C). Receives
  * the three long args:
- *   - `colLong`   : low byte = col written to `*structPtr`.
+ *   - `colLong`   : low byte = with the written to `*structPtr`.
  *   - `tickOffLong`: low byte = tickOff written to `*(structPtr+1)`.
  *
  * Note: `*(structPtr+6) = 0` also clears the marker, replicated here.
@@ -342,7 +342,7 @@ function readRomLongBE(rom: RomImage, addr: number): number {
 }
 
 /**
- * Sign-extend di una word (16 bit) a long (32 bit, two's complement).
+ * Sign-extend of una word (16 bit) a long (32 bit, two's complement).
  * Replica `ext.l Dx` M68k.
  */
 function extLowWordToLong(value: number): number {
@@ -351,7 +351,7 @@ function extLowWordToLong(value: number): number {
 }
 
 /**
- * Sign-extend di un word a int signed (range [-32768..32767]).
+ * Sign-extend of un word a int signed (range [-32768..32767]).
  */
 function sextWord(value: number): number {
   const w = value & 0xffff;
@@ -390,17 +390,17 @@ function divsWord(dividendLong: number, divisor: number): {
  *
  * Orchestratore "level/fraction render" a 7 step (5 renderStringChain + 1
  * initStructHeader + 1 renderStringHelper) with dispatch on mode selector
- * e dispatch ASCII su remainder mod 12.
+ * and dispatch ASCII su remainder mod 12.
  *
- * **Side effects diretti del modulo** (assumendo sub-call no-op):
- *   1. `state.workRam[0x428] = 0x23`     (col, da initStructHeader inline)
+ * **Side effects diretti of the modulo** (assumendo sub-call no-op):
+ *   1. `state.workRam[0x428] = 0x23`     (with the, da initStructHeader inline)
  *   2. `state.workRam[0x429] = 0x1C`     (tickOff)
  *   3. `state.workRam[0x42E] = 0`        (marker)
  *      (fraction string + null terminator)
  *
  * **Early-out note**: if `word(0x4003DE) == 0xFFFF` (sentinel "no
  *
- * @param subs  Bag callback. Default: tutte no-op.
+ * @param subs  Bag callback. Default: all no-op.
  */
 export function levelFractionRender28232(
   state: GameState,
@@ -416,9 +416,9 @@ export function levelFractionRender28232(
 
   // ── Step B (cond, D2==0): jsr A2 with attr=0x1800 and entry from ROM table 1. ─
   const levelIdxWord = readWorkWordBE(state, LEVEL_IDX_OFF);
-  // ext.w + addq.l #1 + asl.w #2 sul low word dell'idx. Per idx in [0..0x3FFF]
+  // ext.w + addq.l #1 + asl.w #2 on the low word of the idx. Per idx in [0..0x3FFF]
   const idxScaled = (((levelIdxWord + 1) << 2) & 0xffff);
-  // Sign-extend la word a int per essere fedeli all'indexed addressing M68k.
+  // Sign-extend la word a int to be fedeli to the indexed addressing M68k.
   const idxScaledSigned = idxScaled & 0x8000 ? idxScaled - 0x10000 : idxScaled;
 
   if (d2Word === 0) {
@@ -442,7 +442,7 @@ export function levelFractionRender28232(
 
   subs.renderStringChain?.(state, ROM_ENTRY_228D6, attrAlways);
 
-  // ── Step G: divs.w del level number / 12 → D4=quotient, D3=remainder. ─
+  // ── Step G: divs.w of the level number / 12 → D4=quotient, D3=remainder. ─
   const levelNumWord = readWorkWordBE(state, LEVEL_NUM_OFF);
   const dividendLong = extLowWordToLong(levelNumWord);
   const div = divsWord(dividendLong, LEVEL_DIVISOR);
@@ -487,7 +487,7 @@ export function levelFractionRender28232(
   state.workRam[(fracOff + 4) & 0x1fff] = 0;
 
   // ── Step J: jsr 0x13C (initStructHeader). ─────────────────────────
-  // The callback writes col @ structPtr, tickOff @ +1, and marker @ +6.
+  // The callback writes with the @ structPtr, tickOff @ +1, and marker @ +6.
   // `defaultInitStructHeader` provides the full inline behavior for parity.
   subs.initStructHeader?.(
     state,
@@ -504,11 +504,11 @@ export function levelFractionRender28232(
 }
 
 /**
- * Implementazione di `initStructHeader` (FUN_255A) — replica inline.
+ * Implementazione of `initStructHeader` (FUN_255A) — replica inline.
  *
  *
- * Esposto come callback default da passare a `subs.initStructHeader` per
- * iniettiamo un sentinel counter).
+ * Esposto as callback default da passare a `subs.initStructHeader` per
+ * we inject un sentinel counter).
  */
 export const defaultInitStructHeader: InitStructHeaderFn = (
   state,
@@ -553,6 +553,6 @@ export function levelFractionRender28232Default(
 }
 
 /**
- * Re-export del simbolo come "FUN_00028232" per mappatura esplicita
+ * Re-export of the simbolo as "FUN_00028232" per mappatura esplicita
  */
 export { levelFractionRender28232 as FUN_00028232 };

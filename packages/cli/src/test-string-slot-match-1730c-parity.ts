@@ -52,7 +52,7 @@ function makeRng(seed: number): () => number {
 /** Full region of the string-slot table: 7 * 0x42 = 0x1CE bytes. */
 const TABLE_SIZE = SLOT_COUNT * SLOT_STRIDE;
 
-/** Region argPtr buffer: ARG_ID_OFF + 4 = almeno 6 byte. Usiamo 0x10. */
+/** Region argPtr buffer: ARG_ID_OFF + 4 = almeno 6 byte. We use 0x10. */
 const ARG_BUF_SIZE = 0x10;
 const ARG_PTR = 0x401e00;
 
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== stringSlotMatch1730C (FUN_1730C) — Suite A: random table & arg — ${perSuite} casi ===`,
+    `\n=== stringSlotMatch1730C (FUN_1730C) — Suite A: random table & arg — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: all slots inactive (active=0) → return 0 — ${perSuite} casi ===`,
+    `\n=== Suite B: all slots inactive (active=0) → return 0 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: all active, match at random slot — ${perSuite} casi ===`,
+    `\n=== Suite C: all active, match at random slot — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -238,7 +238,7 @@ async function main(): Promise<void> {
 
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: only one active slot at random position — ${sizeD} casi ===`,
+    `\n=== Suite D: only one active slot at random position — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

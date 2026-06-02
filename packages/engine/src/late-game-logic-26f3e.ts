@@ -170,7 +170,7 @@ function moveqSignedByte(value: number): number {
  * `FUN_19E42 marble-cell-dispatch`). In MAME canonical, these are kept in sync
  * with `(obj.x_long, obj.y_long, obj.z_long)` via a chain of sub-functions
  * (`spriteProject1CC62` + sub `FUN_1CABA` heavy redraw) that we don't fully
- * replicate. As a result, in TS:
+ * replicated. As a result, in TS:
  *   - `obj+0x1e` (= `Y_high - X_high + 0x88`) drifts because TS doesn't write
  *     it back.
  *   - `obj+0x20` (= `HUD_OFFSET + Z_high + 0x54 - (X_high+Y_high)/2`) diverges
@@ -285,7 +285,7 @@ function dispatchType1(
 
   // The player marble's screen-projection cache @ obj+0x1e/+0x20 is kept in
   // sync with (obj.x, obj.y, obj.z) by MAME via sub-functions we don't fully
-  // replicate (FUN_1CABA heavy tile redraw). Recompute only for the two player
+  // replicated (FUN_1CABA heavy tile redraw). Recompute only for the two player
   // objects. Other type-1 workRam entries (pair/script slots) maintain their
   // own cache and must render from it, otherwise physics and visuals drift.
   const [d5, d4] =

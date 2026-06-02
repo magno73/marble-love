@@ -16,7 +16,7 @@
  *   00028E00  move.l   D2,-(SP)              ; save D2 (4 bytes)
  *   00028E02  move.l   (0x8,SP),D1           ; D1 = arg1Long (long, ptr value)
  *   00028E06  move.w   (0xE,SP),D0w          ; D0w = arg2.lo word (numDigits)
- *   00028E0A  move.w   (0x12,SP),D2w         ; D2w = arg3.lo word (col byte)
+ *   00028E0A  move.w   (0x12,SP),D2w         ; D2w = arg3.lo word (with the byte)
  *   00028E0E  ext.l    D0                    ; D0 = sext_l(numDigits)
  *   00028E10  move.l   D0,-(SP)              ; push numDigits long
  *   00028E12  move.l   (0x00400436).l,-(SP)  ; push *0x400436 (bufEnd ptr long)

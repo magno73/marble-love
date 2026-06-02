@@ -6,7 +6,7 @@
  *
  * Purpose: close the "stack residue" drift in the 0x1D40..0x1E7F work RAM
  * cluster. TS ports read/write stack-frame offsets that must match the
- * prologue/epilogue emitted by GCC in the ROM body. These helpers replicate
+ * prologue/epilogue emitted by GCC in the ROM body. These helpers replicated
  * Motorola 68010 architectural semantics for aligned A7, which is the real
  * Marble Madness path.
  *

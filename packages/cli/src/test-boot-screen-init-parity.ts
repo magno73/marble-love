@@ -11,9 +11,9 @@
  *        4c. dispatch slot2 (ROM[0x1004E].w == 0x4EF9 ? hook : FUN_5DEC)
  *
  * Strategia stub:
- *   - Patch ROM (pre-CPU): ogni sub-jsr destination diventa
+ *   - Patch ROM (pre-CPU): each sub-jsr destination diventa
  *       `addq.b #1, (sentinel_slot).l ; rts`  (8 byte: 52 39 00 40 03 EX 4E 75)
- *   - In TS: ogni callback fa `state.workRam[off] = (state.workRam[off]+1) & 0xff`.
+ *   - In TS: each callback fa `state.workRam[off] = (state.workRam[off]+1) & 0xff`.
  *
  *   - frame counter (0x400016/0x400017): zero (cold) vs random (warm)
  *   - slot1 magic @ ROM[0x10048].w: 0x4EF9 (hook) vs 0x0000 (fallback)
@@ -52,7 +52,7 @@ const FUN_5DEC = 0x00005dec;
 
 // Vector slot dispatch targets, populated with JMP.L stubs for the "magic on" path.
 const SLOT1_HOOK_STUB = 0x0001a798;
-const SLOT2_HOOK_STUB = 0x0001a7a0; // libero, riservato dal test
+const SLOT2_HOOK_STUB = 0x0001a7a0; // free, riservato from the test
 
 // ROM offsets of the two vector slots (magic + jump target).
 const VECTOR_SLOT_1 = 0x00010048;
@@ -141,13 +141,13 @@ async function main(): Promise<void> {
   patchStubAddq(romBuf, SLOT2_HOOK_STUB, SENT_SLOT2_HOOK);
 
   // Original ROM @ 0x1004E: `00 00 00 00 00 00`. For the "magic on" path of
-  // poi via pokeMem per case (ROM byte 0..1) — i 4 byte target restano fissi.
+  // poi via pokeMem per case (ROM byte 0..1) — the 4 byte target restano fissi.
   patchJmpL(romBuf, VECTOR_SLOT_2, SLOT2_HOOK_STUB);
 
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== bootScreenInit (FUN_222E) — ${n} casi ===`);
+  console.log(`\n=== bootScreenInit (FUN_222E) — ${n} cases ===`);
   const rng = makeRng(0x222e);
 
   // TS subs that increment sentinel slots in workRam.
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Pattern per coprire i rami:
+  // Pattern to cover i branches:
   //   0..7 = enumerazione (fc∈{0,nz}, s1∈{magic,fb}, s2∈{magic,fb})
   //   >=8  = random misti
   for (let i = 0; i < n; i++) {
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
     setSlotMagic(cpu, VECTOR_SLOT_1, s1MagicVal);
     setSlotMagic(cpu, VECTOR_SLOT_2, s2MagicVal);
 
-    // Sync ROM image vista da TS: bus.ts ha emptyRomImage statica, dobbiamo
+    // Sync ROM image seen da TS: bus.ts ha emptyRomImage statica, dobbiamo
     const romView = busNs.emptyRomImage();
     romView.program.set(romBuf);
     // Applica i magic correnti

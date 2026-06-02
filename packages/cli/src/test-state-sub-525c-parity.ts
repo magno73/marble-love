@@ -8,12 +8,12 @@
  * Strategia parity:
  *     `state.workRam` TS.
  *   - Set D0 = random count in `[1..14]` (range that produces side-effect
- *   - Setta A2 = pointer random in `[0x400600..0x401E00]` (multiplo di 4)
+ *   - Setta A2 = pointer random in `[0x400600..0x401E00]` (multiplo of 4)
  *     to stress different offsets and avoid overwriting status flags
  *     @ 0x401F5E.
  *   - Pre-populate `*0x401F5E` with a random long to verify that the path
- *     OR sia cumulativo (e non un assignment).
- *   - Lancia `callFunction(cpu, 0x525C)` e `stateSub525C(state, d0, a2)`.
+ *     OR both cumulativo (e non un assignment).
+ *   - Lancia `callFunction(cpu, 0x525C)` and `stateSub525C(state, d0, a2)`.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-525c-parity.ts [N]
  */
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub525C (FUN_525C) — ${n} casi ===`);
+  console.log(`\n=== stateSub525C (FUN_525C) — ${n} cases ===`);
 
   const rng = makeRng(0x525c5a5c);
   let ok = 0;
@@ -83,11 +83,11 @@ async function main(): Promise<void> {
     } else if (i === 2) {
       d0 = 14;
     } else if (i === 3) {
-      d0 = 15; // 30 bit, ma bits 32..33 sono no-op (asl.l ≥32 → 0)
+      d0 = 15; // 30 bit, but bits 32..33 are no-op (asl.l ≥32 → 0)
     } else if (i === 4) {
       d0 = 7;
     } else {
-      // Random in [1..14] per termine rapido del loop fase 2 (max 28 bsr).
+      // Random in [1..14] per termine rapido of the loop fase 2 (max 28 bsr).
       d0 = (Math.floor(rng() * 14) + 1) >>> 0;
     }
 
@@ -95,7 +95,7 @@ async function main(): Promise<void> {
     // Safe range: A2 in [0x400000..0x401E00], stride 4. The cleared region
     // potrebbe sovrapporsi a 0x1F5E per A2 alti; lo evitiamo limitando.
     // d0 max = 15 → 300 byte clearati. Limit sup = 0x401F5E - 0x50 - 300 = 0x401D6E.
-    const maxA2Off = 0x1d00; // safe per d0 fino a ~22
+    const maxA2Off = 0x1d00; // safe per d0 up to ~22
     const a2OffRaw = Math.floor(rng() * (maxA2Off / 4)) * 4;
     const a2 = (WORK_RAM_BASE + a2OffRaw) >>> 0;
 
@@ -128,9 +128,9 @@ async function main(): Promise<void> {
     ssNs.stateSub525C(state, d0, a2);
 
     // those bytes keep the original random seed. Exclude `[0x1EE0..
-    // 0x1EFF]` per safety (margine extra). Anche `0x1F00` (stack pointer
-    // initial) e oltre dovrebbero essere intatti, ma escludiamo conservativi
-    // fino a 0x1F00.
+    // 0x1EFF]` per safety (margin extra). Anche `0x1F00` (stack pointer
+    // initial) and beyond should be intact, but we conservatively exclude them
+    // up to 0x1F00.
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;
     const diffOffsets: number[] = [];

@@ -52,7 +52,7 @@ const ENTITY_SIZE = 0x28;
 
 /**
  * Patch JSR-stub:
- *   - FUN_19692 → RTS (0x4E75) per neutralizzare il heavy entity-update.
+ *   - FUN_19692 → RTS (0x4E75) per neutralize il heavy entity-update.
  *     FUN_13A98 (RNG) is left live.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -190,7 +190,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub1960E (FUN_0001960E) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateSub1960E (FUN_0001960E) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -202,7 +202,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: state==7 (jitter ±2) ───────────────────────────────────
   console.log(
-    `\n=== Suite B: forced state==7 (jitter branch) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced state==7 (jitter branch) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: state==9, long0==0 (clear-block possible) ──────────────
   console.log(
-    `\n=== Suite C: state==9 + long0==0 (clear-block path) — ${perSuite} casi ===`,
+    `\n=== Suite C: state==9 + long0==0 (clear-block path) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (state boundaries, counter saturation) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (state boundaries, counter saturation) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const stateBytes = [0x00, 0x01, 0x06, 0x07, 0x08, 0x09, 0x0a, 0xff];

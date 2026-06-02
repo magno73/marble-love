@@ -1,5 +1,5 @@
 /**
- * state-sub-1eaa.test.ts — smoke + corner case di FUN_1EAA.
+ * state-sub-1eaa.test.ts — smoke + corner case of FUN_1EAA.
  */
 
 import { describe, it, expect } from "vitest";
@@ -22,7 +22,7 @@ function recordingSubs(log: CallArgs[]): StateSub1EAASubs {
 }
 
 describe("stateSub1EAA (FUN_1EAA)", () => {
-  it("count <= 0: nessuna chiamata e nessuna eccezione", () => {
+  it("count <= 0: no chiamata and no eccezione", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     expect(() => stateSub1EAA(s, 0xa03100, 5, 0, recordingSubs(log))).not.toThrow();
@@ -44,7 +44,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     expect(log).toEqual([{ ptr: 0xa03100, word: 10, zero: 0 }]);
   });
 
-  it("count = 4: ptr +=4, tile id +=1 ad ogni iter", () => {
+  it("count = 4: ptr +=4, tile id +=1 on each iter", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0xa03200, 0x0020, 4, recordingSubs(log));
@@ -56,7 +56,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     ]);
   });
 
-  it("usa solo la low word di arg2 (mask 0xFFFF) e la sign-extend per la call", () => {
+  it("uses solo la low word of arg2 (mask 0xFFFF) and la sign-extend per la call", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     // arg2 = 0xCAFE8000 → low word 0x8000 (= -32768 signed) → sext → -32768.
@@ -89,7 +89,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     expect(() => stateSub1EAA(s, 0x400000, 0, 5)).not.toThrow();
   });
 
-  it("zero arg sempre passato come 0 (clr.l -(SP))", () => {
+  it("zero arg always passato as 0 (clr.l -(SP))", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0x400000, 0xffff, 1, recordingSubs(log));

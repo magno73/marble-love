@@ -5,7 +5,7 @@
  * the object state transitions and sound hooks used by the paired-object and
  * unpaired-object paths.
  *
- *   - `deltaWord` → D1.w = low 16-bit del secondo arg long (word delta per
+ *   - `deltaWord` → D1.w = low 16-bit of the second arg long (word delta per
  *     A2[+0x57]).
  *
  * Object struct fields, relative to `objPtr`:
@@ -41,7 +41,7 @@
  *   D1 = sext_b_to_l(A2[+0x57])
  *   D1 -= D2; D1 >>= 1 (asr.l #1, arithmetic)
  *   D0 += D1
- *   Se D0 > 0x1F (signed long, i.e. 0x1F < D0): [advance path]
+ *   If D0 > 0x1F (signed long, i.e. 0x1F < D0): [advance path]
  *     D2w = A2[+0x20] (signed word)
  *     inRange = (-16 <= D2w < 240)
  *     If D3b is 1 or 5:
@@ -55,7 +55,7 @@
  *
  * If !isPair (D2 == 0):
  *   A2[+0x56] += D1b (byte add, wrapping)
- *   Se A2[+0x56] > 0x50 (signed byte, bgt): [overflow path]
+ *   If A2[+0x56] > 0x50 (signed byte, bgt): [overflow path]
  *     jsr FUN_15BD0(A2, 1, 0)
  *     A2[+0x18] = 2
  *     jsr FUN_25BAE(A2, 2)

@@ -157,7 +157,7 @@ export interface Helper11FF8Subs {
   hiScoreDecode41c8?: (state: GameState, arg1: number) => number;
 
   /**
-   * `FUN_28F62` — writes string-chain entry (col, tickOff, marker) and
+   * `FUN_28F62` — writes string-chain entry (with the, tickOff, marker) and
    * triggers `renderStringChain` for the current hi-score row.
    * Called as `(0xd, D4b, 0x1000)` per row.
    * Default: delegates to `renderStringEntry28F62`.
@@ -258,7 +258,7 @@ export function helper11FF8(
 
     // D4b = 0: continue outer loop to D3b=10.
     // (D4b never recovers, but we must still call decodeEntry for each entry
-    // to replicate the workRam side effects of those calls.)
+    // to replicated the workRam side effects of those calls.)
   }
 
   // After loop: d4b = 1 (match) or 0 (no match); d3bScan = matched index or 10.

@@ -3,7 +3,7 @@
  * test-sound-maybe-11ac2-parity.ts — differential FUN_11AC2 vs soundMaybe11AC2.
  *
  *
- * **Strategia di parity**:
+ * **Strategia of parity**:
  *     (132 byte) byte per byte.
  *
  * Uso: npx tsx packages/cli/src/test-sound-maybe-11ac2-parity.ts [N]
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state });
 
-  console.log(`\n=== soundMaybe11AC2 (FUN_11AC2) — ${n} casi ===`);
+  console.log(`\n=== soundMaybe11AC2 (FUN_11AC2) — ${n} cases ===`);
 
   const rng = makeRng(0x11ac2);
   let ok = 0;
@@ -69,8 +69,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Randomizzo il range di destinazione (per verificare sovrascrittura completa)
-    // sia nel CPU (musashi memory) sia nel TS state (GameState.workRam).
+    // Randomizzo il range of destination (per verify sovrascrittura completa)
+    // both in the CPU (musashi memory) both in the TS state (GameState.workRam).
     for (let b = 0; b < COPY_BYTES; b++) {
       const v = Math.floor(rng() * 256) & 0xff;
       pokeMem(cpu, DEST_BASE + b, 1, v);

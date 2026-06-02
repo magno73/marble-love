@@ -78,7 +78,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o.deltaX).toBe(120);
   });
 
-  it("processa entrambi P1 e P2 (slot 0 e 1)", () => {
+  it("processa both P1 and P2 (slot 0 and 1)", () => {
     const s = setup({
       obj0: { trackballX: 0, deltaX: 0, trackballY: 0, deltaY: 0 },
       obj1: { trackballX: 50, deltaX: 0, trackballY: 100, deltaY: 0 },
@@ -92,7 +92,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o1.trackballY).toBe(110); expect(o1.deltaY).toBe(10);
   });
 
-  it("delta zero: stessi valori MMIO", () => {
+  it("delta zero: stessi values MMIO", () => {
     const s = setup({ obj0: { trackballX: 100, deltaX: 50, trackballY: 100, deltaY: 50 } });
     trackballInputTick(s, 100, 100, 0, 0);
     const o = readObj(s, 0);

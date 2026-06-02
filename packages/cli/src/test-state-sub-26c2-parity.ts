@@ -12,10 +12,10 @@
  *        ; FLAG34[i] NOT touched
  *        return D0 = 1
  *
- * workRam @ 0x401F00..0x401F3F sono perfettamente osservabili.
+ * workRam @ 0x401F00..0x401F3F are perfettamente observable.
  *
  * Suite testate:
- *   - A: random everything (mix di slot busy/free)
+ *   - A: random everything (mix of slot busy/free)
  *   - C: only slot N free (random N in [0..3])
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-26c2-parity.ts [N]
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== stateSub26C2 (FUN_26C2) — Suite A: random struct & args — ${perSuite} casi ===`,
+    `\n=== stateSub26C2 (FUN_26C2) — Suite A: random struct & args — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: all slots free → register slot 0 — ${perSuite} casi ===`,
+    `\n=== Suite B: all slots free → register slot 0 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
 
   // Suite C: only slot N free.
   console.log(
-    `\n=== Suite C: only one specific slot free — ${perSuite} casi ===`,
+    `\n=== Suite C: only one specific slot free — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: all slots busy → return 0 — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: all slots busy → return 0 — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());

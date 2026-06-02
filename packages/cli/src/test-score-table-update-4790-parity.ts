@@ -30,7 +30,7 @@
  *   A. delta1=0, delta2=0 -> no table changes
  *   B. delta1>0, delta2=0 -> first entry only
  *   C. delta1=0, delta2>0 -> second entry only
- *   D. entrambi >0        → entrambe le entry
+ *   D. both >0        → both le entry
  *   E. fully random       → stress generale
  *
  * Uso: npx tsx packages/cli/src/test-score-table-update-4790-parity.ts [N=500]
@@ -67,7 +67,7 @@ const A2_OFF   = A2_ABS - 0x400000;        // 0x1F86
 const SC_ABS   = 0x00401f92;               // score accum addr
 const SC_OFF   = SC_ABS - 0x400000;        // 0x1F92
 
-/** Numero di record (romByte 0xE3 → 0xE3 & 7 = 3). */
+/** Numero of record (romByte 0xE3 → 0xE3 & 7 = 3). */
 const NUM_REC = 3;
 const TABLE_LEN = NUM_REC * 20; // 60 byte
 
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
   ): boolean {
     const args = [arg1, arg2, arg3, arg4, arg5, arg6, arg7] as const;
 
-    // Setup entrambi
+    // Setup both
     setupState(cpu, state.workRam, tableBytes, delta1, delta2, scoreAccum0);
 
     // ── Binario ──────────────────────────────────────────────────────────
@@ -262,7 +262,7 @@ async function main(): Promise<void> {
     for (let i = 0; i < TABLE_LEN; i++) tsTable.push((r[BASE_OFF + i] ?? 0) & 0xff);
     const tsSc = readLong4(r, SC_OFF);
 
-    // ── Confronta ────────────────────────────────────────────────────────
+    // ── Compare ────────────────────────────────────────────────────────
     const tableMatch = binTable.every((b, i) => b === tsTable[i]);
     const scMatch = binSc === tsSc;
     const match = tableMatch && scMatch;
@@ -275,7 +275,7 @@ async function main(): Promise<void> {
   }
 
   // ── Suite A: delta1=0, delta2=0 ───────────────────────────────────────
-  console.log(`\n=== Suite A: delta1=0, delta2=0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite A: delta1=0, delta2=0 — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 256));
@@ -287,7 +287,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: delta1>0, delta2=0 ───────────────────────────────────────
-  console.log(`\n=== Suite B: delta1>0, delta2=0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: delta1>0, delta2=0 — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 200));
@@ -300,7 +300,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ── Suite C: delta1=0, delta2>0 ───────────────────────────────────────
-  console.log(`\n=== Suite C: delta1=0, delta2>0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: delta1=0, delta2>0 — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 200));
@@ -313,8 +313,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC/perSuite)*100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: entrambi >0 ──────────────────────────────────────────────
-  console.log(`\n=== Suite D: delta1>0 e delta2>0 — ${perSuite} casi ===`);
+  // ── Suite D: both >0 ──────────────────────────────────────────────
+  console.log(`\n=== Suite D: delta1>0 and delta2>0 — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 200));
@@ -330,7 +330,7 @@ async function main(): Promise<void> {
 
   // ── Suite E: fully random ─────────────────────────────────────────────
   const sizeE = perSuite + remainder;
-  console.log(`\n=== Suite E: fully random — ${sizeE} casi ===`);
+  console.log(`\n=== Suite E: fully random — ${sizeE} cases ===`);
   let okE = 0;
   for (let i = 0; i < sizeE; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 256));

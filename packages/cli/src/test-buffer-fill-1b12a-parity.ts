@@ -4,15 +4,15 @@
  *
  * **Strategia**:
  *   For each test case:
- *   1. Scelgo typeCode e subIdx.
+ *   1. Scelgo typeCode and subIdx.
  *   2. Read pointer tables from ROM to find the A1 object address
- *      (o A2 per tipi 4/0xe).
+ *      (o A2 per tipthe 4/0xe).
  *   3. Write random values into relevant fields of the base object
  *      (A1[0xc], A1[0x10], A1[0x14], A1[0x1a], A1[0x1c]/[0x3a]/[0x3e]/[0x58]).
  *   4. For types with sub-obj pointer, write NULL_PTR (0xffffffff) or
  *      a valid pointer to a work RAM sub-object at a random offset.
  *   5. Run binary and TS with the same configuration and compare the
- *      12 byte di output.
+ *      12 byte of output.
  *
  * This approach ensures that all memory reads stay in valid regions.
  * ben definite (ROM o work-RAM), eliminando le discrepanze da pointer garbage.

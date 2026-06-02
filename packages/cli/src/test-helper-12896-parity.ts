@@ -317,7 +317,7 @@ async function main(): Promise<void> {
   // Produces: slot[0x0c], slot[0x10], slot[0x14], slot[0x1e], slot[0x1f],
   //           slot[0x42], slot[0x26], slot[0x28], slot[0x3e], slot[0x46],
   //           slot[0x36] updated; FUN_13334 side-effects.
-  console.log(`\n=== helper12896 (FUN_12896) — Suite A: opcode 0 render path — ${perSuite} casi ===`);
+  console.log(`\n=== helper12896 (FUN_12896) — Suite A: opcode 0 render path — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: opcode 0 — slot[0x1e]!=1 (insert-sorted path) ──────────────
-  console.log(`\n=== Suite B: opcode 0 insert-sorted path — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: opcode 0 insert-sorted path — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -409,7 +409,7 @@ async function main(): Promise<void> {
   //
   // Tests: timer load (1,2,3), loop-A (4,5), loop-B (6,7)
   // These are pure slot-manipulation ops.
-  console.log(`\n=== Suite C: opcodes 1..7 script control — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: opcodes 1..7 script control — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -481,7 +481,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ─── Suite D: opcodes 9..16 — pointer / position ops ──────────────────────
-  console.log(`\n=== Suite D: opcodes 9..16 pointer/position — ${perSuite} casi ===`);
+  console.log(`\n=== Suite D: opcodes 9..16 pointer/position — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const slotPtr = pickSlot();
@@ -563,7 +563,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ─── Suite E: opcodes 15,17 + edge cases ─────────────────────────────────
-  console.log(`\n=== Suite E: opcodes 15/17 + edge cases — ${extraE} casi ===`);
+  console.log(`\n=== Suite E: opcodes 15/17 + edge cases — ${extraE} cases ===`);
   let okE = 0;
   for (let i = 0; i < extraE; i++) {
     const slotPtr = pickSlot();

@@ -10,16 +10,16 @@
  *      callFunction.
  *   2. `FUN_00028FDE(arg3Word, arg4Word)` =
  *      `initStructHeader(0x400434, arg3.lowByte, arg4.lowByte)` (FUN_255A)
- *      seguito da `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
+ *      followed da `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
  *
  * Suite testate:
- *   - A: full random (value, numDigits 1..8, col, tickOff, callerD2, attr
+ *   - A: full random (value, numDigits 1..8, with the, tickOff, callerD2, attr
  *        globals random)
  *   - B: rotation 0 (lookup7294[0] piccolo, tickOff in range → render OK)
  *   - C: rotation random 0..7
- *   - D: numDigits piccolo (1..3) — tipico HUD score
+ *   - D: numDigits piccolo (1..3) — typical HUD score
  *
- * pattern del parity test di FUN_2572).
+ * pattern of the parity test of FUN_2572).
  *
  * 4 KB alpha RAM (0xA03000..0xA03FFF) + formatHex buffer (16 bytes around
  * al bufEnd ptr).
@@ -195,7 +195,7 @@ async function main(): Promise<void> {
       setup.callerD2 & 0xffff,
     );
 
-    // Compare struct region 0x400434..0x40043F (12 byte: copre +0/+1/+6 +
+    // Compare struct region 0x400434..0x40043F (12 byte: covers +0/+1/+6 +
     let fail = compareRegion(STRUCT_ADDR, 12, "struct");
     if (fail !== null) {
       if (failHolder.value === null) {
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: random everything ─────────────────────────────────────
-  console.log(`\n=== formatAndRender28E00 (FUN_28E00) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== formatAndRender28E00 (FUN_28E00) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   {
     const rng = makeRng(0x28e00a);
@@ -251,7 +251,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite B: rotation = 0 (path "linear") ──────────────────────────
-  console.log(`\n=== Suite B: rotation=0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: rotation=0 — ${perSuite} cases ===`);
   let okB = 0;
   {
     const rng = makeRng(0x28e00b);
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
       const setup: CaseSetup = {
         arg1Long: Math.floor(rng() * 0x100000000) >>> 0,
         arg2Word: 1 + Math.floor(rng() * 8),
-        arg3Word: Math.floor(rng() * 32), // col 0..31
+        arg3Word: Math.floor(rng() * 32), // with the 0..31
         arg4Word: tick & 0xff,            // tickOff likely "due"
         callerD2: rng() < 0.5 ? 0 : 1,    // showSpaces 0 or 1
         bufEnd: BUFEND_BASE + Math.floor(rng() * 16),
@@ -273,7 +273,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite C: rotation random 0..7 ──────────────────────────────────
-  console.log(`\n=== Suite C: rotation 0..7 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: rotation 0..7 — ${perSuite} cases ===`);
   let okC = 0;
   {
     const rng = makeRng(0x28e00c);
@@ -296,7 +296,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: numDigits piccolo (1..3) — HUD score-like ─────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: numDigits 1..3 (HUD-like) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: numDigits 1..3 (HUD-like) — ${sizeD} cases ===`);
   let okD = 0;
   {
     const rng = makeRng(0x28e00d);

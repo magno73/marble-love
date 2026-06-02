@@ -2,7 +2,7 @@
  * helper-3a54.test.ts — smoke test per helper3A54 (FUN_3A54).
  *
  * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal string
- * ASCII in memoria, usando BCD packed come intermediario (via FUN_3A6A) e
+ * ASCII in memory, usando BCD packed as intermediario (via FUN_3A6A) e
  * then writing with FUN_3A08.
  *
  * Bit-perfect parity verificata vs binary in
@@ -24,7 +24,7 @@ function readByte(state: ReturnType<typeof emptyGameState>, addr: number): numbe
   return state.workRam[addr - WR_BASE] ?? 0;
 }
 
-/** Legge `n` byte a partire da `addr` come stringa leggibile. */
+/** Legge `n` byte a partire da `addr` as stringa leggibile. */
 function readStr(
   state: ReturnType<typeof emptyGameState>,
   addr: number,
@@ -45,14 +45,14 @@ function readStr(
 // ─── constants ────────────────────────────────────────────────────────────────
 
 describe("helper3A54 costanti", () => {
-  it("HELPER_3A54_ADDR ha il valore corretto", () => {
+  it("HELPER_3A54_ADDR ha il value correct", () => {
     expect(HELPER_3A54_ADDR).toBe(0x00003a54);
   });
 });
 
 // Base values.
 
-describe("helper3A54 — valori decimali base", () => {
+describe("helper3A54 — values decimali base", () => {
   it("value=0, digits=4, showSpaces=0: '0000' + NUL", () => {
     const s = emptyGameState();
     const BUF = 0x401d00;
@@ -174,7 +174,7 @@ describe("helper3A54 — showSpaces", () => {
 // ─── null-terminator ─────────────────────────────────────────────────────────
 
 describe("helper3A54 — null-terminator", () => {
-  it("scrive NUL a bufEnd+numDigits", () => {
+  it("writes NUL a bufEnd+numDigits", () => {
     const s = emptyGameState();
     s.workRam.fill(0x55);
     const BUF = 0x401d00;
@@ -191,10 +191,10 @@ describe("helper3A54 — null-terminator", () => {
   });
 });
 
-// ─── isolamento memoria ───────────────────────────────────────────────────────
+// ─── isolamento memory ───────────────────────────────────────────────────────
 
-describe("helper3A54 — isolamento memoria", () => {
-  it("non tocca byte fuori dall'area [bufEnd..bufEnd+numDigits+1]", () => {
+describe("helper3A54 — isolamento memory", () => {
+  it("non tocca byte outside dto the area [bufEnd..bufEnd+numDigits+1]", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     const BUF = 0x401d00;

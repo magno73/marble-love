@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  console.log(`\n=== slapsticWordCopy2FF28 (FUN_02FF28) — ${total} casi ===`);
+  console.log(`\n=== slapsticWordCopy2FF28 (FUN_02FF28) — ${total} cases ===`);
 
   const rng = makeRng(0x2ff28);
   let ok = 0;

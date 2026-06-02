@@ -216,7 +216,7 @@ export function stateDispatch160F6(
   }
 
   // ── 0x16228–0x162e7: diagonals ────────────────────────────────────────────
-  // Per ogni diagonal bit: btst → position check (2 bounds) → D3/D4 exact
+  // For each diagonal bit: btst → position check (2 bounds) → D3/D4 exact
   // match → vel < 4 (ble skip if vel >= 4).
   // NE (bit0→D2 bit4): tileX<4, tileY>4, D3==-1, D4==1, velNE<4
   // NW (bit1→D2 bit5): tileX>4, tileY>4, D3==1, D4==1, velNW<4

@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== helper285B0 (FUN_000285B0) — ${n} casi ===`);
+  console.log(`\n=== helper285B0 (FUN_000285B0) — ${n} cases ===`);
   const rng = makeRng(0x285b0);
 
   let ok = 0;

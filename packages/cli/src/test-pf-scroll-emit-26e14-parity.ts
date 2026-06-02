@@ -5,8 +5,8 @@
  * Per N test cases:
  *   1. Setup workRam fields:
  *      - 0x4003AE (AV control word, random)
- *      - 0x4003F6/FA/FE/402 (long pointers — random ma forniti per coerenza)
- *   2. Setup spriteRam[0..0x400] random (entrambe le pagine 0 / +0x200).
+ *      - 0x4003F6/FA/FE/402 (long pointers — random but forniti per coerenza)
+ *   2. Setup spriteRam[0..0x400] random (both le pages 0 / +0x200).
  *   3. callFunction(0x26E14, [arg]) — push 1 long arg.
  *   4. pfScrollEmit26E14(state, arg)
  *      - workRam[0x3AE..0x3B1] (AV new word)
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   const rng = makeRng(0x26e14);
 
-  console.log(`\n=== pfScrollEmit26E14 (FUN_26E14) — ${n} casi ===`);
+  console.log(`\n=== pfScrollEmit26E14 (FUN_26E14) — ${n} cases ===`);
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
       state.workRam[off + 3] = v & 0xff;
     }
 
-    // Setup spriteRam (0xA02000-0xA023FF, 1024 byte = entrambi i layout di
+    // Setup spriteRam (0xA02000-0xA023FF, 1024 byte = both i layout of
     // rotazione). Random.
     for (let j = 0; j < 0x400; j++) {
       const v = Math.floor(rng() * 256);
@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     }
 
     // 30%: stop iter early. Calcoliamo la pagina ORIGINAL (orig AV, non toggled)
-    // e mettiamo cmpWord[k] = k al cmp ptr.
+    // and mettiamo cmpWord[k] = k al cmp ptr.
     if (rng() < 0.3) {
       const stopIter = Math.floor(rng() * 60);
       const offOld = (av & 8) << 6; // (av & 8) << 5 * 2 == << 6  → 0 o 0x200

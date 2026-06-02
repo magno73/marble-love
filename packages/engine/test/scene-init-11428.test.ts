@@ -1,5 +1,5 @@
 /**
- * Test sceneInit11428 (FUN_00011428) — smoke tests sull'orchestratore.
+ * Test sceneInit11428 (FUN_00011428) — smoke tests on the orchestratore.
  *
  * is preserved and default no-ops do not throw.
  *
@@ -31,7 +31,7 @@ function makeTrackedSubs(): { calls: string[]; subs: SceneInit11428Subs } {
 }
 
 describe("sceneInit11428 (FUN_00011428)", () => {
-  it("chiama tutte e 6 le subs nell'ordine binary", () => {
+  it("calls all and 6 le subs in the ordine binary", () => {
     const s = emptyGameState();
     const { calls, subs } = makeTrackedSubs();
 
@@ -53,7 +53,7 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     expect(() => sceneInit11428(s, {})).not.toThrow();
   });
 
-  it("subs parziali: invoca solo quelle definite, salta gli undefined", () => {
+  it("subs parziali: invoca solo quelle definite, skips the undefined", () => {
     const s = emptyGameState();
     const calls: string[] = [];
     sceneInit11428(s, {
@@ -67,7 +67,7 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     expect(calls).toEqual(["vblankAck", "clearMoAlphaRam", "fillLoop"]);
   });
 
-  it("non muta state se tutte le subs sono no-op", () => {
+  it("non muta state se all le subs are no-op", () => {
     const s = emptyGameState();
     const workRamBefore = new Uint8Array(s.workRam);
     const colorRamBefore = new Uint8Array(s.colorRam);

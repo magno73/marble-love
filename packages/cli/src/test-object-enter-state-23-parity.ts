@@ -4,10 +4,10 @@
  * objectEnterState23.
  *
  * long on the stack. The sub:
- *   1. Imposta `obj[0x1A] = 0x23`
- *   3. Imposta `obj[0x68..0x6B] = 0x00070000` (long big-endian)
+ *   1. Sets `obj[0x1A] = 0x23`
+ *   3. Sets `obj[0x68..0x6B] = 0x00070000` (long big-endian)
  *
- * **Strategia parity**: patchamo FUN_15D10 a `rts` (4E 75) per isolare le
+ * **Strategia parity**: we patch FUN_15D10 a `rts` (4E 75) per isolare le
  * direct writes from FUN_160D4. Compare only bytes actually
  *
  *   - `objPtr` random in {0x401C00, 0x401D00, 0x401D80, 0x401E00, 0x401E80}
@@ -42,12 +42,12 @@ const FUN_160D4 = 0x000160d4;
 const FUN_15D10 = 0x00015d10;
 
 // `ptr + 0x80 <= 0x401E80` to avoid overlapping the stack area that
-// arg di FUN_15D10 ≈ 16 byte, ma teniamo margine generoso).
+// arg of FUN_15D10 ≈ 16 byte, but teniamo margin generoso).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401400, 0x00401800, 0x00401c00,
 ] as const;
 
-/** Patch FUN_15D10 a `rts` (4E 75) per neutralizzare l'helper interno. */
+/** Patch FUN_15D10 a `rts` (4E 75) per neutralize the helper interno. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_15D10 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_15D10 + 1, 1, 0x75);
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   patchSubs(cpu);
 
-  console.log(`\n=== objectEnterState23 (FUN_160D4) — ${total} casi ===`);
+  console.log(`\n=== objectEnterState23 (FUN_160D4) — ${total} cases ===`);
   console.log(`  (FUN_15D10 @ 0x${FUN_15D10.toString(16)} patched → rts)`);
 
   let totalOk = 0;
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
     const off = ptr - 0x400000;
 
     // ─── Setup binary side ───────────────────────────────────────────────
-    // Reset zona obj (0x80 byte) per pulizia
+    // Reset area obj (0x80 byte) per pulizia
     for (let k = 0; k < 0x80; k++) {
       pokeMem(cpu, ptr + k, 1, 0);
       stateInst.workRam[off + k] = 0;

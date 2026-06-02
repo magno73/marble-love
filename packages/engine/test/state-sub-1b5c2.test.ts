@@ -2,8 +2,8 @@
  * state-sub-1b5c2.test.ts — smoke tests per `FUN_0001B5C2` (838 byte).
  *
  * "Position-steering applicator": applica absLong / negateIfPositive a D3/D4
- * (coord X/Y di un struct) in base a 8 blocchi condizionali pilotati da flag
- * cardinali, gate word e direction bitmap.
+ * (coord X/Y of un struct) based on 8 blocchi condizionali pilotati da flag
+ * cardinali, gate word and direction bitmap.
  *
  * Bit-perfect verified against the binary through
  * `packages/cli/src/test-state-sub-1b5c2-parity.ts` (500/500 cases).

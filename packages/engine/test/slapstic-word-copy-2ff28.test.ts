@@ -1,5 +1,5 @@
 /**
- * slapstic-word-copy-2ff28.test.ts — smoke tests di slapsticWordCopy2FF28
+ * slapstic-word-copy-2ff28.test.ts — smoke tests of slapsticWordCopy2FF28
  * (FUN_02FF28).
  *
  * Bit-perfect parity verificata vs binary in
@@ -32,7 +32,7 @@ function readWord(buf: Uint8Array, addr: number): number {
 }
 
 describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
-  it("copia src word in dst fisso 0x87A48", () => {
+  it("copies src word in dst fisso 0x87A48", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xdead);
 
@@ -41,7 +41,7 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
     expect(readWord(buf, DST_ADDR)).toBe(0xdead);
   });
 
-  it("src invariato dopo la copia", () => {
+  it("src invariato dopo la copies", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xbeef);
 
@@ -51,7 +51,7 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
     expect(readWord(buf, DST_ADDR)).toBe(0xbeef);
   });
 
-  it("word 0x0000: copia zero in dst", () => {
+  it("word 0x0000: copies zero in dst", () => {
     const buf = makeBuf();
     // dst pre-loaded with a different value.
     const dstOff = DST_ADDR - SLAPSTIC_BASE;
@@ -64,7 +64,7 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
     expect(readWord(buf, DST_ADDR)).toBe(0x0000);
   });
 
-  it("word 0xFFFF: copia tutti i bit set", () => {
+  it("word 0xFFFF: copies all i bit set", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xffff);
 
@@ -73,7 +73,7 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
     expect(readWord(buf, DST_ADDR)).toBe(0xffff);
   });
 
-  it("big-endian: byte alto e basso corretti", () => {
+  it("big-endian: byte alto and basso corretti", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0x12ab);
 
@@ -84,13 +84,13 @@ describe("slapsticWordCopy2FF28 (FUN_02FF28)", () => {
     expect(buf[dstOff + 1]).toBe(0xab);
   });
 
-  it("src troppo vicino al bordo del buffer: no-op, no throw", () => {
+  it("src troppo vicino al bordo of the buffer: no-op, no throw", () => {
     // buffer troppo piccolo per contenere SRC_ADDR
     const smallBuf = new Uint8Array(0x100);
     expect(() => slapsticWordCopy2FF28(smallBuf, SLAPSTIC_BASE)).not.toThrow();
   });
 
-  it("idempotente: seconda chiamata produce stesso risultato", () => {
+  it("idempotente: seconda chiamata produce same risultato", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xa5a5);
 

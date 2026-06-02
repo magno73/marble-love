@@ -92,7 +92,7 @@ function resetProbe(
   state.workRam[PROBE_PTR_ADDR - 0x400000 + 2] = (PROBE_DATA_BASE >>> 8) & 0xff;
   state.workRam[PROBE_PTR_ADDR - 0x400000 + 3] = PROBE_DATA_BASE & 0xff;
 
-  // Clear data area (entrambi)
+  // Clear data area (both)
   for (let a = PROBE_DATA_BASE; a < PROBE_DATA_END; a++) {
     pokeMem(cpu, a, 1, 0);
     state.workRam[a - 0x400000] = 0;
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ────────────────────────────────────────────────
   console.log(
-    `\n=== stateSub1EAA (FUN_1EAA) — Suite A: random count [1..20] — ${perSuite} casi ===`,
+    `\n=== stateSub1EAA (FUN_1EAA) — Suite A: random count [1..20] — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: count = 1 (single call) ───────────────────────────────
   console.log(
-    `\n=== Suite B: count = 1 (single call) — ${perSuite} casi ===`,
+    `\n=== Suite B: count = 1 (single call) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -239,11 +239,11 @@ async function main(): Promise<void> {
 
   // ─── Suite C: tileId base near 0xFFFF (wrap a 16 bit) ────────────────
   console.log(
-    `\n=== Suite C: tileId near wrap, count [3..15] — ${perSuite} casi ===`,
+    `\n=== Suite C: tileId near wrap, count [3..15] — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Low word di arg2 in [0xFFF0, 0xFFFF] → durante il loop wrappa a 0
+    // Low word of arg2 in [0xFFF0, 0xFFFF] → during il loop wrappa a 0
     const lo = (0xfff0 + Math.floor(rng() * 16)) & 0xffff;
     const arg2 = ((Math.floor(rng() * 0x10000) << 16) | lo) >>> 0;
     const tc: TestCase = {
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
   // ─── Suite D: count = 0 / negative (no call) ─────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: count <= 0 (no calls expected) — ${sizeD} casi ===`,
+    `\n=== Suite D: count <= 0 (no calls expected) — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

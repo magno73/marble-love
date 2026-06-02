@@ -5,7 +5,7 @@
  *
  * FUN_0001C676 (1092 byte): "sprite bracket-lerp". Legge 4 struct globali
  * @ 0x401C28/30/38/40 (8 byte ciascuna), 2 muls factor @ 0x40069E/0x4006A0,
- * e il base-word @ 0x400694. Scrive:
+ * and il base-word @ 0x400694. Scrive:
  *   - byte flags @ 0x40066A
  *   - 4 byte dircode @ 0x40066C/6E/70/72
  *   - 8 word output @ 0x400674..0x400683
@@ -13,10 +13,10 @@
  * No external JSR to stub; this is a pure function.
  *
  * **Suite**:
- *   - A: random tutto (struct + globals).
+ *   - A: random all (struct + globals).
  *   - B: force equality skip bracket-1 (key==hi, tiebreak=eq).
  *   - C: force dir=1 bracket-1 (key<hi), lerp with factorA stress.
- *   - D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF nei campi critici).
+ *   - D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF in the fields critical).
  *
  * Uso: npx tsx packages/cli/src/test-sprite-bracket-lerp-1c676-parity.ts [N]
  */
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────────
   console.log(
-    `\n=== spriteBracketLerp1C676 (FUN_0001C676) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== spriteBracketLerp1C676 (FUN_0001C676) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   // ─── Suite B: forced equality-skip bracket-1 ─────────────────────────────
   // s1[4]==s1[6] AND s4[2]==s4[0] → bracket-1 skipped
   console.log(
-    `\n=== Suite B: forced equality-skip bracket-1 — ${perSuite} casi ===`,
+    `\n=== Suite B: forced equality-skip bracket-1 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
   // ─── Suite C: forced dir=1 bracket-1 with lerp stress ────────────────────
   // s1[4] << s1[6] (ensure s1[4] < s1[6] signed), random factorA
   console.log(
-    `\n=== Suite C: forced dir=1 bracket-1 + lerp stress — ${perSuite} casi ===`,
+    `\n=== Suite C: forced dir=1 bracket-1 + lerp stress — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge words in struct fields ────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const edgeWords = [0x0000, 0x0001, 0x0007, 0x7fff, 0x8000, 0xfff8, 0xffff];

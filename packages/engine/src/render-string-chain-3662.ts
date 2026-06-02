@@ -1,5 +1,5 @@
 /**
- * render-string-chain-3662.ts — replica `FUN_00003662` (290 byte, fino al
+ * render-string-chain-3662.ts — replica `FUN_00003662` (290 byte, up tol
  * `rts` @ 0x3782).
  *
  * Per-character dispatch variant of the string-chain renderer. It walks the
@@ -8,7 +8,7 @@
  *   - `FUN_000033F4` (alias `fun_33f4`) if rotation != 0
  *
  * **Entry struct layout** (same as FUN_2572 / FUN_2DA0):
- *   +0  byte  : col (signed)
+ *   +0  byte  : with the (signed)
  *   +1  byte  : tickOff (signed; sub.w uses the sign-extended word)
  *   +6  byte  : marker (added to *0x401F00 for the chain end check)
  *   +8  long  : pointer next entry
@@ -17,7 +17,7 @@
  *   0x401F00  word: VALUE_F00 (signed addend for the marker check)
  *   0x401F3A  word: tick counter (signed; sub.w applies word arithmetic)
  *
- * **ROM tables** (stesse di FUN_2572):
+ * **ROM tables** (stesse of FUN_2572):
  *   0x7294   word table   : max-display-row per rotation (signed cmp.w)
  *   0x72a0   word table   : stride between consecutive chars per rotation
  *   0x72a4+1 byte table   : shift count per rotation (`asl.l Dn,Dm`, mod 64)
@@ -58,9 +58,9 @@
  *   0x36b0    asl.l   #0x6,D2                         ; D2 <<= 6 (arith == logical
  *
  *   ; join: compute alpha base D3
- *   0x36b2    move.b  (A2),D0b                        ; D0b = col (byte @ A2)
+ *   0x36b2    move.b  (A2),D0b                        ; D0b = with the (byte @ A2)
  *   0x36b4    ext.w   D0w
- *   0x36b6    ext.l   D0                              ; D0 = sext_l(col)
+ *   0x36b6    ext.l   D0                              ; D0 = sext_l(with the)
  *   0x36b8    move.w  (A3),D1w                        ; D1w = rotation
  *   0x36ba    ext.l   D1
  *   0x36bc    add.l   D1,D1                           ; D1 = sext(rotation) * 2
@@ -361,7 +361,7 @@ export function renderStringChain3662(
         d2 = (d1Signed << 6) | 0;
       }
 
-      // ── compute D3 = ALPHA_BASE + 2 * (col << shift + d2) ─────────────
+      // ── compute D3 = ALPHA_BASE + 2 * (with the << shift + d2) ─────────────
       // 0x36b2..0x36ce
       const colByte = readByteAbs(state, rom, a2);
       const colSigned = sextByte(colByte); // ext.l after move.b → sext

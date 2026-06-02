@@ -25,7 +25,7 @@
  *   - `count <= 0` (signed-word interpretation): `bgt` is not taken.
  *
  *
- * `requestAnimationFrame` schedulerebbe il tick successivo.
+ * `requestAnimationFrame` schedulerebbe il tick next.
  */
 
 import type { GameState } from "./state.js";
@@ -39,7 +39,7 @@ export const VBLANK_COUNTER_OFF = 0x1ff8;
  * `FUN_000052B8` replica — busy-wait for `count` vblank ticks.
  *
  * @param _state    GameState (unused, but signature matches the other modules).
- * @param countWord Word count, reinterpreted as signed to replicate `tst.w + bgt`.
+ * @param countWord Word count, reinterpreted as signed to replicated `tst.w + bgt`.
  *                    - count signed > 0  → 0
  *                    - count signed <= 0 → count masked to 16 bits (low word)
  */

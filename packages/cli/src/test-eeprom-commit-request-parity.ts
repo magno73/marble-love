@@ -21,10 +21,10 @@
  *   - arg = random long (high word ignored by the function, low word used)
  *
  * Pattern coverage:
- *   - 25% status >= 0xE0       -> entrambe le call interne early-exit (0x18)
+ *   - 25% status >= 0xE0       -> both le call interne early-exit (0x18)
  *   - 20% complement mismatch  -> D1=1, drain
  *   - 35% status valid (<0xE0) -> D1 in [1..4], drain + scale
- *   - 10% arg.w == 0           -> stress early-exit del wrapper
+ *   - 10% arg.w == 0           -> stress early-exit of the wrapper
  *   - 10% full random          -> stress
  *
  * Uso: npx tsx packages/cli/src/test-eeprom-commit-request-parity.ts [N=500]
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== eepromCommitRequest (FUN_3FC6) — ${n} casi ===`);
+  console.log(`\n=== eepromCommitRequest (FUN_3FC6) — ${n} cases ===`);
 
   const rng = makeRng(0x3fc6);
   let ok = 0;

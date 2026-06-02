@@ -55,7 +55,7 @@
  *   - byte 0x80..0xFF (-128..-1 signed)-> no-op (A0 < 0x20)
  *
  * **Note semantiche**:
- *     i confronti sono signed.
+ *     i comparisons are signed.
  *     behaves like a plain "byte == 0x20/0x21/0x22" check for byte <= 0x7F.
  *
  * **JSR sub injection**: two callees exposed through `StateDispatch1605CSubs`:
@@ -128,7 +128,7 @@ export function stateDispatch1605C(
     kindByte = state.workRam[kindAddr - WORK_RAM_BASE] ?? 0;
   }
 
-  // ext.w + ext.l: signed sign-extend del byte a long signed.
+  // ext.w + ext.l: signed sign-extend of the byte a long signed.
   // JS: (b << 24) >> 24 produce int32 signed.
   const a0Signed = ((kindByte & 0xff) << 24) >> 24;
 
@@ -138,14 +138,14 @@ export function stateDispatch1605C(
   }
 
   // bgt.b 0x16076: if A0 > 0x20, fall-through al check 0x21/0x22; else
-  // (A0 == 0x20) cade nel `bra.b 0x16086` → branch_20.
+  // (A0 == 0x20) cade in the `bra.b 0x16086` → branch_20.
   if (a0Signed === 0x20) {
     // branch kind == 0x20: fun_160ae(A2, 0)
     subs?.fun_160ae?.(a2, 0);
     return;
   }
 
-  // A0 > 0x20: check 0x21 e 0x22.
+  // A0 > 0x20: check 0x21 and 0x22.
   if (a0Signed === 0x21) {
     return;
   }

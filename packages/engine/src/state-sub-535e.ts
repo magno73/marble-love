@@ -57,7 +57,7 @@ export type Sub535ECallee = (
  * Sign-extend a byte (0..0xFF) to an M68k long (0..0xFFFFFFFF) with bit 7 as sign.
  *
  * `byte 0x7F → 0x0000007F`, `byte 0x80 → 0xFFFFFF80`, `byte 0xFF →
- * 0xFFFFFFFF`. Equivalente a `(b << 24) >> 24` (signed shift right) seguito
+ * 0xFFFFFFFF`. Equivalente a `(b << 24) >> 24` (signed shift right) followed
  * da `>>> 0`.
  */
 function signExtendByteToLong(b: number): number {
@@ -71,7 +71,7 @@ function signExtendByteToLong(b: number): number {
  * @param state  GameState. Reads only `workRam[0x1F98]` and `workRam[0x1F99]`.
  * @param inner  Callback modeling `FUN_00005388`. Default = `() => 0`.
  *
- * Note di low-level fidelity:
+ * Note of low-level fidelity:
  *     The unsigned 32-bit representation matches M68k long semantics.
  *     The globals are read once each and are not mutated between reads.
  *     The caller arg is propagated as an unsigned long; negative inputs wrap

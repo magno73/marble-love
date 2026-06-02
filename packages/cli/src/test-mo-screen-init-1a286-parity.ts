@@ -49,7 +49,7 @@ import {
 
 /**
  * Step-based callFunction: like `callFunction()` but uses `system.step()`
- * invece di `system.run(burst)`. Garantisce terminazione PRECISA non appena
+ * invece of `system.run(burst)`. Garantisce terminazione PRECISA non appena
  * `pc == SENTINEL_RET_ADDR`, preventing a burst from executing extra
  * make the PC converge on FUN_2572 in a misleading way if the PC keeps
  * instructions from the unmapped 0xCAFEBABE post-rts address.
@@ -86,7 +86,7 @@ const FUN_1A286 = 0x0001a286;
 // Real sub-function entry points, not trampolines.
 const SUB_CLEAR_ALPHA_TILES = 0x00028c7e; // FUN_28C7E
 const SUB_PALETTE_INIT_LEVEL = 0x0001a41e; // FUN_1A41E
-const SUB_RENDER_STRING = 0x00002572; // bersaglio di JMP.L @ 0x142
+const SUB_RENDER_STRING = 0x00002572; // target of JMP.L @ 0x142
 
 // Spin-wait `beq.b $-2` patched to NOP to avoid infinite loops.
 const SPIN_WAIT_1_BEQ = 0x0001a296;
@@ -159,11 +159,11 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch: stub addq+rts ai 3 entry sub.
+  // Pre-patch: stub addq+rts athe 3 entry sub.
   for (const sub of SUBS_LIST) {
     patchStubAddq(romBuf, sub.entry, sub.sentinel);
   }
-  // Pre-patch: NOP sui 2 spin-wait `beq.b $-2`.
+  // Pre-patch: NOP suthe 2 spin-wait `beq.b $-2`.
   patchNop(romBuf, SPIN_WAIT_1_BEQ);
   patchNop(romBuf, SPIN_WAIT_2_BEQ);
 
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== moScreenInit1A286 (FUN_1A286) — ${n} casi ===`);
+  console.log(`\n=== moScreenInit1A286 (FUN_1A286) — ${n} cases ===`);
   const rng = makeRng(0x1a286);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 

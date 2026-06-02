@@ -12,10 +12,10 @@
  *   - Patch ROM: FUN_4DCC ridotta a `addq.l #1,(0x401FF8).l; rts` (8 byte)
  *     to match default TS `defaultFun4DCC` behavior.
  *   - Patch ROM: FUN_4F38 ridotta a `rts` (2 byte) — neutralizza il
- *     tail-call e fa rts pulito al sentinel via stack.
+ *     tail-call and fa rts pulito al sentinel via stack.
  *   - Pattern test:
  *     * pattern 0..3: zero flags entry -> 1 iter, loop exits, counter +1.
- *       0xFFFFFFFF, ecc) per testare wrap del counter.
+ *       0xFFFFFFFF, etc) per testare wrap of the counter.
  *     * pattern 8..N: random flags = 0, random counter init.
  *
  * sui flag).
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
   rom[FUN_4DCC + 6] = 0x4e;
   rom[FUN_4DCC + 7] = 0x75;
 
-  // FUN_4F38 ridotta a `rts` (0x4E75). Il tail-call `bra.w 0x4F38` di FUN_5284
+  // FUN_4F38 ridotta a `rts` (0x4E75). Il tail-call `bra.w 0x4F38` of FUN_5284
   // atterra qui, fa rts immediato → pop sentinel → callFunction completa.
   rom[FUN_4F38 + 0] = 0x4e;
   rom[FUN_4F38 + 1] = 0x75;
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub5284 (FUN_5284) — ${n} casi ===`);
+  console.log(`\n=== stateSub5284 (FUN_5284) — ${n} cases ===`);
 
   const rng = makeRng(0xbabe_face);
   let ok = 0;

@@ -14,7 +14,7 @@
  *
  *   - FUN_1BBAA  -> `rts`                    (no-op, isolates local writes)
  *   - FUN_2822E  → `rts`                    (no-op)
- *   - FUN_253EC  → `rts`                    (no-op, NON modifica obj+0x18)
+ *   - FUN_253EC  → `rts`                    (no-op, NOT modifies obj+0x18)
  *   - FUN_17934  → `rts`                    (no-op)
  *   - FUN_1BAB2  → `rts`                    (no-op)
  *   - FUN_1CC62  → `moveq #0,D0; rts`       (return 0)
@@ -27,9 +27,9 @@
  *        - level in {0,1,2,4,7,random} with 30% bias toward 4
  *        - for each obj in range [0..count): random bytes across span 0..0xE2
  *        - globals @ 0x400390/0x400394/0x400396/0x400462/0x400466/0x400472
- *        - per coverage: occasionalmente forziamo state=2/3 e respawn-eligible
+ *        - to coverage: occasionalmente forziamo state=2/3 and respawn-eligible
  *   3. Run TS objectScanDispatch251DE on the workRam mirror (capture sound
- *      calls; tutte le altre subs no-op).
+ *      calls; all le altre subs no-op).
  *        - byte-by-byte over [0x400018, 0x400018 + count*0xE2)
  *        - globals @ 0x400390 (word), 0x400696 / 0x400698 (word)
  *
@@ -70,14 +70,14 @@ const OBJ_BASE = 0x00400018;
 const OBJ_STRIDE = 0xe2;
 // Max count = 3 → obj region [0x400018, 0x400018 + 3*0xE2) =
 // (count=4 obj[3] occupa 0x4002BE..0x4003A0, invadendo 0x400390 (level/count).
-//  Evitare per non auto-modificare lo state-machine durante il loop.)
+//  Evitare per non auto-modificare lo state-machine during il loop.)
 const MAX_OBJS = 3;
 
-const SOUND_BUF_BASE = 0x00401ff0; // 16 byte di buffer
+const SOUND_BUF_BASE = 0x00401ff0; // 16 byte of buffer
 const SOUND_CUR_PTR = 0x00401fec; // long ptr to next slot
 
 /**
- * Patch a single ROM entry point with the specified byte pattern.
+ * Patch a singthe ROMs entry point with the specified byte pattern.
  */
 function patchRomBytes(
   rom: Buffer,
@@ -117,7 +117,7 @@ function patchSoundSink(rom: Buffer): void {
   ]);
 }
 
-/** Patcha tutte le 7 sub a `rts` (no-op) + FUN_1CC62 a `moveq #0,D0; rts`. */
+/** Patcha all le 7 sub a `rts` (no-op) + FUN_1CC62 a `moveq #0,D0; rts`. */
 function patchAllSubs(rom: Buffer): void {
   const rtsOnly = [0x4e, 0x75];
   patchRomBytes(rom, FUN_1BBAA, rtsOnly);
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== objectScanDispatch251DE (FUN_000251DE) — ${n} casi ===`);
+  console.log(`\n=== objectScanDispatch251DE (FUN_000251DE) — ${n} cases ===`);
   console.log(
     `  (sub-jsrs patched: 1BBAA/2822E/253EC/17934/1BAB2/1B9CC/285B0 → rts;`,
   );
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401e00);
 
     // Pattern coverage:
-    //   - 50% count = 2 (per coverage respawn block, count==2 gate)
+    //   - 50% count = 2 (to coverage respawn block, count==2 gate)
     //   - 50% count random in 0..MAX_OBJS
     let count: number;
     const r0 = rng();
@@ -227,23 +227,23 @@ async function main(): Promise<void> {
     pokeMem(cpu, 0x00400696, 4, g696);
     pokeMem(cpu, 0x00400698, 4, g698);
 
-    // Per coverage del filtro: occasionalmente forziamo state=2/3 e
+    // Per coverage of the filtro: occasionalmente forziamo state=2/3 e
     const objBytes: Uint8Array[] = [];
     for (let k = 0; k < count; k++) {
       const buf = new Uint8Array(OBJ_STRIDE);
       for (let j = 0; j < OBJ_STRIDE; j++) buf[j] = rb();
 
-      // Coverage di +0x18 (state):
+      // Coverage of +0x18 (state):
       //   25% → 2 (state-2)
       //   25% → 3 (state-3)
-      //   20% → random (incluso 1, ecc. → potenzialmente respawn)
+      //   20% → random (including 1, etc. → potenzialmente respawn)
       const rState = rng();
       if (rState < 0.30) buf[0x18] = 0;
       else if (rState < 0.55) buf[0x18] = 2;
       else if (rState < 0.80) buf[0x18] = 3;
       else buf[0x18] = rb();
 
-      // Coverage X (+0x20): 25% > 0xEC, 25% < -8 (signed), 50% nel range.
+      // Coverage X (+0x20): 25% > 0xEC, 25% < -8 (signed), 50% in the range.
       const rX = rng();
       let xWord: number;
       if (rX < 0.25) xWord = (0xed + Math.floor(rng() * 0x100)) & 0xffff; // > 0xEC
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
     stateInst.workRam[0x699] = (g698 >>> 16) & 0xff;
     stateInst.workRam[0x69a] = (g698 >>> 8) & 0xff;
     stateInst.workRam[0x69b] = g698 & 0xff;
-    // 0x698 e 0x69A separately to handle full long correctly:
+    // 0x698 and 0x69A separately to handle full long correctly:
     // wait, *0x400696 long covers offsets 0x696..0x699.
     // *0x400698 long covers 0x698..0x69B → overlap with 696. Replicate exact:
     stateInst.workRam[0x696] = (g696 >>> 24) & 0xff;
@@ -324,7 +324,7 @@ async function main(): Promise<void> {
         peekMem(cpu, 0x00400696 + kk, 1) & 0xff;
     }
 
-    // Object bytes nel mirror.
+    // Object bytes in the mirror.
     for (let k = 0; k < count; k++) {
       const off = (OBJ_BASE - WORK_RAM_BASE) + k * OBJ_STRIDE;
       const buf = objBytes[k]!;
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
     // ── Run TS ─────────────────────────────────────────────────────────
     const tsSounds: number[] = [];
     scanNs.objectScanDispatch251DE(stateInst, stubRom, {
-      // Tutte no-op, eccetto soundCommand (capture) e fun_1CC62 (return 0).
+      // Tutte no-op, eccetto soundCommand (capture) and fun_1CC62 (return 0).
       fun_1BBAA: () => {
         /* no-op */
       },

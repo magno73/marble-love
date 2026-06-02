@@ -1,5 +1,5 @@
 /**
- * Test objDirtyDispatch28624 (FUN_00028624) — smoke tests sui rami principali.
+ * Test objDirtyDispatch28624 (FUN_00028624) — smoke tests sui branches principali.
  *
  * index tests the matching bit in a dirty bitmap and invokes a
  * binary via `cli/src/test-obj-dirty-dispatch-28624-parity.ts` (500/500).
@@ -56,7 +56,7 @@ function makeTrackedSubs(): {
 }
 
 describe("objDirtyDispatch28624 (FUN_00028624)", () => {
-  it("count=0: nessuna invocazione, ma la bitmap viene comunque azzerata", () => {
+  it("count=0: no invocation, but la bitmap is comunque zeroed", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 0); // count = 0
@@ -68,7 +68,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bitmap=0: nessuna invocazione, bitmap già 0 resta 0", () => {
+  it("bitmap=0: no invocation, bitmap already 0 stays 0", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 5);
@@ -80,7 +80,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bitmap=0xFF count=4: chiama 4 volte (D2=0..3), arg6=0x2000 per D2=0, 0x2400 altrimenti", () => {
+  it("bitmap=0xFF count=4: calls 4 times (D2=0..3), arg6=0x2000 per D2=0, 0x2400 otherwise", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 4);
@@ -132,9 +132,9 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bitmap selettiva (0b00001010): chiama solo D2=1 e D2=3", () => {
+  it("bitmap selettiva (0b00001010): calls solo D2=1 and D2=3", () => {
     const s = emptyGameState();
-    s.workRam[DIRTY_BITMAP_OFF] = 0b00001010; // bit 1 e bit 3
+    s.workRam[DIRTY_BITMAP_OFF] = 0b00001010; // bit 1 and bit 3
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 5);
 
     for (let i = 0; i < 5; i++) {
@@ -148,7 +148,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
 
     expect(calls).toHaveLength(2);
     expect(calls[0]?.arg1).toBe(0xdead0001);
-    // arg3 di D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) ma nel nostro
+    // arg3 of D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) but in the nostro
     expect(calls[0]?.arg3).toBe(0xa2 | 0xffffff00 | 0); // = -94 in JS signed
     expect(calls[0]?.arg6).toBe(0x2400); // D2=1
     expect(calls[1]?.arg1).toBe(0xdead0003);
@@ -157,7 +157,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bit oltre count: ignorati. Bitmap=0xFF, count=2 → solo 2 chiamate", () => {
+  it("bit beyond count: ignorati. Bitmap=0xFF, count=2 → solo 2 chiamate", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 2);
@@ -176,7 +176,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("default no-op: non solleva su subs={}, ma azzera comunque la bitmap", () => {
+  it("default no-op: non solleva su subs={}, but azzera comunque la bitmap", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 3);
@@ -187,7 +187,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("non muta workRam fuori dalla bitmap byte (verifica side effect localizzato)", () => {
+  it("non muta workRam outside from the bitmap byte (verifica side effect localizzato)", () => {
     const s = emptyGameState();
     // pollute random
     for (let i = 0; i < s.workRam.length; i++) s.workRam[i] = i & 0xff;

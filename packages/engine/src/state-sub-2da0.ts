@@ -5,7 +5,7 @@
  *
  *   - `arg1Long` (A0): pointer to a struct (col_byte @ +0, tickOff_byte @ +1,
  *     stringPtr_long @ +2). Same layout as entries processed by
- *     `FUN_2ABC` (clearStringChain) e `FUN_2572` (renderStringChain).
+ *     `FUN_2ABC` (clearStringChain) and `FUN_2572` (renderStringChain).
  *
  * **Disasm 0x2DA0..0x2E16** (120 byte):
  *
@@ -126,7 +126,7 @@ function clearAlphaWord(state: GameState, addr: number): void {
 
 /**
  *
- * @param arg1Long pointer a struct (long): col@+0, tickOff@+1, stringPtr_long@+2.
+ * @param arg1Long pointer a struct (long): with the@+0, tickOff@+1, stringPtr_long@+2.
  * @param _subs    placeholder (FUN_2DA0 non ha jsr).
  *
  * **Side effects** in `state.alphaRam`:
@@ -139,7 +139,7 @@ export function stateSub2DA0(
   _subs?: StateSub2DA0Subs,
 ): number {
   const a0 = arg1Long >>> 0;
-  const argByte = arg2Long & 0xff; // LSB di arg2 (D2.b)
+  const argByte = arg2Long & 0xff; // LSB of arg2 (D2.b)
 
   // A2 = (long @ A0+2) + argByte
   const stringPtr = readLongAbs(state, rom, (a0 + 2) >>> 0);
@@ -161,7 +161,7 @@ export function stateSub2DA0(
     d3 = (tickOffSigned << 6) | 0;
   }
 
-  // D0 = sext_l(byte @ A0)  (col, signed)
+  // D0 = sext_l(byte @ A0)  (with the, signed)
   const colByte = readByteAbs(state, rom, a0);
   const colSigned = colByte & 0x80 ? colByte - 0x100 : colByte;
 
@@ -169,7 +169,7 @@ export function stateSub2DA0(
   let d0 = (colSigned + argByte) | 0;
 
   // D1 = rotation, ext to long, *2
-  // Notare: move.w + ext.l → sign-extend del word.
+  // Notare: move.w + ext.l → sign-extend of the word.
   const rotationSigned =
     rotationWord & 0x8000 ? rotationWord - 0x10000 : rotationWord;
   const d1Word = (rotationSigned * 2) | 0;

@@ -177,7 +177,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== slapsticDispatcher1344C (FUN_1344C) — ${n} casi ===`);
+  console.log(`\n=== slapsticDispatcher1344C (FUN_1344C) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

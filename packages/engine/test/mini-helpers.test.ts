@@ -11,7 +11,7 @@ import {
 } from "../src/mini-helpers.js";
 
 describe("FUN_1216A absLong1216A", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(ABS_LONG_1216A_ADDR).toBe(0x1216a);
   });
 
@@ -31,11 +31,11 @@ describe("FUN_1216A absLong1216A", () => {
 });
 
 describe("FUN_383A alphaTileWordWrite383A", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(ALPHA_TILE_WORD_WRITE_383A_ADDR).toBe(0x383a);
   });
 
-  it("scrive word @ alphaRam[tileIndex*2]", () => {
+  it("writes word @ alphaRam[tileIndex*2]", () => {
     const s = emptyGameState();
     alphaTileWordWrite383A(s, 5, 0xcafe);
     expect(s.alphaRam[10]).toBe(0xca);
@@ -49,7 +49,7 @@ describe("FUN_383A alphaTileWordWrite383A", () => {
     expect(s.alphaRam[1]).toBe(0x34);
   });
 
-  it("masking del word arg", () => {
+  it("masking of the word arg", () => {
     const s = emptyGameState();
     alphaTileWordWrite383A(s, 3, 0xfffff5);
     expect(s.alphaRam[6]).toBe(0xff);
@@ -65,11 +65,11 @@ describe("FUN_383A alphaTileWordWrite383A", () => {
 });
 
 describe("FUN_565A paletteInit565A", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(PALETTE_INIT_565A_ADDR).toBe(0x565a);
   });
 
-  it("copia 8 word ROM[0x7B18] → colorRam[0..0xF]", () => {
+  it("copies 8 word ROM[0x7B18] → colorRam[0..0xF]", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < 8; i++) {

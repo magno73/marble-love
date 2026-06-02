@@ -12,13 +12,13 @@
  *   0000524e    rts
  *
  *
- *   4. ORs mask (long) nel long-BE @ workRam offset 0x1F5E (abs 0x401F5E).
+ *   4. ORs mask (long) in the long-BE @ workRam offset 0x1F5E (abs 0x401F5E).
  *
  * **Note M68k**:
  *   - `asl.l D0,D1`: shift count = D0 & 0x3F (mod 64). Per shift count ≥ 32
  *     si applica guard esplicito: `shift < 32 ? (1 << shift) : 0`.
  *
- * **Callers** (13 xref, di cui 2 diretti + 11 computed via A2/A4):
+ * **Callers** (13 xref, of which 2 diretti + 11 computed via A2/A4):
  *   - 0x000043aa in FUN_0000428E  (UNCONDITIONAL_CALL)
  *   - 0x000043bc in FUN_0000428E  (UNCONDITIONAL_CALL)
  *   - 0x000044e4 in FUN_00004442  (COMPUTED_CALL via A2)
@@ -39,11 +39,11 @@ import type { GameState } from "./state.js";
 
 export const HELPER_5236_ADDR = 0x00005236 as const;
 
-/** workRam offset del long-BE di status flags @ 0x401F5E. */
+/** workRam offset of the long-BE of status flags @ 0x401F5E. */
 export const STATUS_FLAGS_OFF = 0x1f5e as const;
 
 /**
- * di status flags.
+ * of status flags.
  *
  *
  * @returns void. Side effect: long-BE @ workRam[0x1F5E] ORed with the mask.

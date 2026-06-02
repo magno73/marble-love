@@ -83,7 +83,7 @@ function patchSoundSink(rom: Buffer): void {
   rom[FUN_158AC + 0x12] = 0x4e; rom[FUN_158AC + 0x13] = 0x75;
 }
 
-/** Patch FUN_2591A a `rts` (4E 75) — neutralizza l'init helper. */
+/** Patch FUN_2591A a `rts` (4E 75) — neutralizza the init helper. */
 function patch2591ARts(rom: Buffer): void {
   rom[FUN_2591A + 0] = 0x4e;
   rom[FUN_2591A + 1] = 0x75;
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== objectStateEntry25BAE (FUN_00025BAE) — ${n} casi ===`);
+  console.log(`\n=== objectStateEntry25BAE (FUN_00025BAE) — ${n} cases ===`);
   console.log(
     `  (FUN_158AC patched → append-byte-to-buffer; FUN_2591A patched → rts)`,
   );
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     if (r < 0.25) return 0x02;
     if (r < 0.5) return 0x09;
     if (r < 0.75) return 0x04;
-    return rb(); // qualsiasi byte (potrebbe random-coincidere con 2/9/4 — ok)
+    return rb(); // qualsiasthe bytes (potrebbe random-coincidere con 2/9/4 — ok)
   };
 
   let ok = 0;
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
     // A2[+0xD2..D3] random word
     const preD2hi = rb();
     const preD2lo = rb();
-    // A2[+0x18] random sentinel (per check conditional)
+    // A2[+0x18] random sentinel (for the check conditional)
     const pre18 = rb();
 
     const scratchObj = new Uint8Array(0xe0);
@@ -212,14 +212,14 @@ async function main(): Promise<void> {
 
     // ── Mirror su state.workRam ────────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
-    // Object scratch nel mirror
+    // Object scratch in the mirror
     for (let k = 0; k < 0xe0; k++) {
       stateInst.workRam[off + k] = scratchObj[k]!;
     }
 
     // ── Run binary ─────────────────────────────────────────────────────
-    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB di un long).
-    // callFunction li pusha entrambi come long RTL → SP+8 = arg1, SP+12..15 = arg2 long
+    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB of un long).
+    // callFunction li pusha both as long RTL → SP+8 = arg1, SP+12..15 = arg2 long
     callFunction(cpu, FUN_25BAE, [ptr, code]);
 
     const binCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;

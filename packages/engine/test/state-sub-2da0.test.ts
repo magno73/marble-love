@@ -1,5 +1,5 @@
 /**
- * state-sub-2da0.test.ts — smoke + corner case di FUN_2DA0.
+ * state-sub-2da0.test.ts — smoke + corner case of FUN_2DA0.
  */
 
 import { describe, it, expect } from "vitest";
@@ -70,7 +70,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     expect(ret).toBe(4);
     expect(s.alphaRam[258]).toBe(0);
     expect(s.alphaRam[259]).toBe(0);
-    // Adjacent bytes intatti
+    // Adjacent bytes intact
     expect(s.alphaRam[257]).toBe(0xcc);
     expect(s.alphaRam[260]).toBe(0xcc);
   });
@@ -97,7 +97,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     expect(s.alphaRam[83]).toBe(0);
   });
 
-  it("arg2 byte avanza nella stringa: stringPtr + arg2", () => {
+  it("arg2 byte avanza in the stringa: stringPtr + arg2", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x72a5] = 0x00; // shift = 0 per rotation=0

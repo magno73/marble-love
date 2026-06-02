@@ -76,7 +76,7 @@ interface SetupArgs {
   gameMode: number;
   marbleX: number;
   marbleY: number;
-  /** index per slot a "armare" (active=1). Lasciato vuoto → tutti inattivi. */
+  /** index per slot a "armare" (active=1). Lasciato vuoto → all inattivi. */
   activeSlots?: number[];
   /** mappa idx → posizione (slotX, slotY). */
   slotPos?: Record<number, { x: number; y: number }>;
@@ -152,7 +152,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(SOUND_HIT_COMMAND).toBe(0x5e);
   });
 
-  it("game-mode != {2,5} → early-exit, ritorna 0, niente scritture", () => {
+  it("game-mode != {2,5} → early-exit, returns 0, niente scritture", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     s.workRam.fill(0xaa); // pattern per rilevare scritture
@@ -181,7 +181,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(Array.from(s.workRam)).toEqual(Array.from(pre));
   });
 
-  it("game-mode == 2 + slot 0 attivo + posizione coincidente → HIT, ritorna 1", () => {
+  it("game-mode == 2 + slot 0 attivo + posizione coincidente → HIT, returns 1", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setByte(s, objAddr + ENTITY_SCRIPT_ID_OFF, 0x99); // pre-fill
@@ -224,7 +224,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     for (let i = 1; i < 7; i++) expect(r.perSlot[i]).toBe("skipped_after_hit");
   });
 
-  it("tutti slot inattivi → loop completo, retVal = sext(initialD2Byte)", () => {
+  it("all slot inattivi → loop completo, retVal = sext(initialD2Byte)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({
@@ -258,7 +258,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r3.retVal).toBe(0x7f);
   });
 
-  it("slot attivo ma bbox lontano → miss, niente scritture", () => {
+  it("slot attivo but bbox far → miss, niente scritture", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({
@@ -297,7 +297,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r.retVal).toBe(0xfffffff2);
   });
 
-  it("read-bbox path: legge xMin/yMin/width/height da bbox struct", () => {
+  it("read-bbox path: reads xMin/yMin/width/height da bbox struct", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     const bboxAddr = 0x401f00;
@@ -331,7 +331,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     ).toBe(0x1c);
   });
 
-  it("read-bbox path: dereferenzia cursor e bbox anche quando puntano alla ROM", () => {
+  it("read-bbox path: dereferences cursor and bbox also when puntano to the ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const objAddr = 0x401c00;
@@ -373,7 +373,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
       activeSlots: [0, 1, 2, 3, 4, 5, 6],
       slotPos: {
         0: { x: 50, y: 50 }, // hit candidato 1
-        1: { x: 50, y: 50 }, // hit candidato 2 (NON visitato)
+        1: { x: 50, y: 50 }, // hit candidato 2 (NOT visitato)
         2: { x: 50, y: 50 },
       },
       slotBboxAddr: {
@@ -389,9 +389,9 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
       entityStateTransition: () => entityCalls++,
     });
 
-    expect(r.hitSlotIndex).toBe(0); // primo
+    expect(r.hitSlotIndex).toBe(0); // first
     expect(entityCalls).toBe(1); // SOLO 1 chiamata
-    expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0xaa); // scriptId del SOLO slot 0
+    expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0xaa); // scriptId of the SOLO slot 0
     // slot 0 ha new_state=0x1c, slot 1/2 inalterati
     expect(s.workRam[offOf(SLOT_BASE_ADDR + 0 * SLOT_STRIDE + SLOT_NEW_STATE_OFF)]).toBe(0x1c);
     expect(s.workRam[offOf(SLOT_BASE_ADDR + 1 * SLOT_STRIDE + SLOT_NEW_STATE_OFF)]).toBe(0);

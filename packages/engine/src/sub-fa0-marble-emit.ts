@@ -100,7 +100,7 @@ function wwBE_spriteram(state: GameState, off: number, val: number): void {
 
 /**
  * Replica of FUN_FA0 chunk that projects `slot pair` (marble world position)
- * nel display-list MO sprite del marble player.
+ * in the display-list MO sprite of the marble player.
  *
  * **Algoritmo (delta-based)**:
  *   4. Applies delta to the marble entries (slots 4..8) in both banks.
@@ -116,7 +116,7 @@ export function fun_FA0_marbleEmit(state: GameState, rom: RomImage): void {
   void rom;  // future: ROM-driven per-tile offsets
 
 
-  // dump MAME, leggiamo direttamente obj0.x/y come fonte del delta.
+  // dump MAME, leggiamo direttamente obj0.x/y as fonte of the delta.
   //
   // POSITION-ABSOLUTE projection (replica MAME FUN_FA0 camera transform).
   //

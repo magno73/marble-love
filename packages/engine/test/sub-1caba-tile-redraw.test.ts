@@ -3,7 +3,7 @@
  * (replica of `FUN_0001CABA`) vs MAME ground truth.
  *
  * MAME captures `FUN_1CABA` is called 66 times during boot/level-init phase
- * (window f173..f257). The first call is the only NON-TRIVIAL case where
+ * (window f173..f257). The first call is the only NOT-TRIVIAL case where
  * `struct_pre` != `struct_post`:
  *   - input: tileX=0x11, tileY=0x11, lvlPtr=0x2bee2, bsearchPtr=0x81874,
  *     workRam (incl. colBase + bsearchAlt populated by the caller right

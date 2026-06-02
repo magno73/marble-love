@@ -37,7 +37,7 @@ import type { GameState } from "./state.js";
 
 /** Offsets relative to A1 used as the sender slot record. */
 const SLOT_TYPE_BYTE_OFF = 0x14; // (0x14, A1) byte
-const SLOT_OWNER_LONG_OFF = 0x16; // (0x16, A1) long (A0 ptr); 0 = libero
+const SLOT_OWNER_LONG_OFF = 0x16; // (0x16, A1) long (A0 ptr); 0 = free
 
 /** Work RAM base for converting absolute A0/A1 addresses to offsets. */
 const WORK_RAM_BASE = 0x400000;

@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   let s = 0xdead0001;
   const r = (): number => { s = (s * 1103515245 + 12345) >>> 0; return ((s >>> 16) & 0xffff) / 0x10000; };
 
-  console.log(`\n=== binToBcd (FUN_3A6A) — ${n} casi ===`);
+  console.log(`\n=== binToBcd (FUN_3A6A) — ${n} cases ===`);
   let ok = 0;
   let fail: any = null;
   // Edge cases first

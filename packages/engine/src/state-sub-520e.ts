@@ -1,9 +1,9 @@
 /**
- * state-sub-520e.ts — replica `FUN_0000520E` (64 byte, fino al `rts` @ 0x524E).
+ * state-sub-520e.ts — replica `FUN_0000520E` (64 byte, up tol `rts` @ 0x524E).
  *
- * Sub di re-init "slot record" parametrica su `A2` (base struct in workRam).
- * Eseguita 3 volte da `FUN_00004F38` (call sites @ 0x5032, 0x5078, 0x51FA) come
- * step di reset di un record di sound/voice channel. Tre fasi distinte di clear
+ * Sub of re-init "slot record" parametrica su `A2` (base struct in workRam).
+ * Eseguita 3 times da `FUN_00004F38` (call sites @ 0x5032, 0x5078, 0x51FA) as
+ * step of reset of un record of sound/voice channel. Tre fasi distinte of clear
  *
  * **Disasm 0x520E..0x524E** (66 byte / 0x42; il prompt cita "40 byte" inteso
  *
@@ -120,10 +120,10 @@ export function fun523AInner(state: GameState, d0: number): void {
  *                   - `[A2+0,    A2+8]`  (9 byte)
  *                   - `[A2+0xE,  A2+0x12]` (5 byte)
  *                   - `[A2+0x14, A2+0x1D]` (10 byte)
- *                 successivo OR derivato).
+ *                 next OR derivato).
  *                 `lea (0xF00001).l, A3`). Default: `PRODUCTION_STACK_D0`.
  *
- * @returns void. Side effects elencati nell'header.
+ * @returns void. Side effects elencati in the header.
  */
 export function stateSub520E(
   state: GameState,
@@ -164,17 +164,17 @@ export function stateSub520E(
     if (off < r.length) r[off] = 0;
   }
 
-  // ── OR derivato dal byte @ A2+9 ───────────────────────────────────────
+  // ── OR derivato from the byte @ A2+9 ───────────────────────────────────────
   const d0FromByte = (0xff00 | byteAtA2Plus9) >>> 0;
   fun523AInner(state, d0FromByte);
 
   // ── Path "dead-code reachable": (4,SP) load + fall-through in 523A ────
-  // (long-BE da SP+4) e POI cade nel body di 523A di nuovo.
+  // (long-BE da SP+4) and POI cade in the body of 523A of nuovo.
   // In produzione SP+4 = saved A3 = 0x00F00001 → shift = 63 → D1 = 0 → no-op.
   fun523AInner(state, stackD0 >>> 0);
 }
 
-/** Helper interno: OR cumulativo di una maschera nel long-BE @ 0x401F5E. */
+/** Helper interno: OR cumulativo of una mask in the long-BE @ 0x401F5E. */
 function applyStatusFlagsOr(r: Uint8Array, mask: number): void {
   const m = mask >>> 0;
   if (m === 0) return;

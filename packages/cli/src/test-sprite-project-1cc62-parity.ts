@@ -36,7 +36,7 @@ const FUN_1CC62 = 0x0001cc62;
 const FUN_1CABA = 0x0001caba;
 
 /**
- * Patch JSR-stubs: FUN_0001CABA → RTS (0x4E75) per neutralizzare il heavy
+ * Patch JSR-stubs: FUN_0001CABA → RTS (0x4E75) per neutralize il heavy
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
@@ -50,7 +50,7 @@ const GLOBALS_BASE = 0x00400690; // include 0x69E/0x6A0/0x6A2/0x6A4/0x6A6
 const GLOBALS_SIZE = 0x18; // 0x690..0x6A7 (24 byte)
 
 // Compare range: only writes produced by CC62 + return value.
-// 0x6A4..0x6A7 (= 4 byte) e il return.
+// 0x6A4..0x6A7 (= 4 byte) and il return.
 const COMPARE_BASE = 0x004006a4;
 const COMPARE_SIZE = 4;
 
@@ -190,7 +190,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ─────────────────────────────────────────────────
   console.log(
-    `\n=== spriteProject1CC62 (FUN_0001CC62) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== spriteProject1CC62 (FUN_0001CC62) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: forced bge-flag != 0 (if-branch) ───────────────────────
   console.log(
-    `\n=== Suite B: forced if-branch (bge-flag != 0) — ${perSuite} casi ===`,
+    `\n=== Suite B: forced if-branch (bge-flag != 0) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced bge-flag == 0 (else-branch) ─────────────────────
   console.log(
-    `\n=== Suite C: forced else-branch (bge-flag == 0) — ${perSuite} casi ===`,
+    `\n=== Suite C: forced else-branch (bge-flag == 0) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF) — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF) — ${sizeD} cases ===`,
   );
   let okD = 0;
   const edgeWords = [0x0000, 0x0001, 0x0007, 0x7fff, 0x8000, 0xfff8, 0xffff];

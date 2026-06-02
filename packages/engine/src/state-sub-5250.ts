@@ -39,10 +39,10 @@ import type { GameState } from "./state.js";
 
 // ─── Costanti ────────────────────────────────────────────────────────────────
 
-/** Offset workRam del long-BE "primary status flags" @ 0x401F5E. */
+/** Offset workRam of the long-BE "primary status flags" @ 0x401F5E. */
 export const PRIMARY_FLAGS_OFF = 0x1f5e as const;
 
-/** Offset workRam del long-BE "secondary status flags" @ 0x401F76. */
+/** Offset workRam of the long-BE "secondary status flags" @ 0x401F76. */
 export const SECONDARY_FLAGS_OFF = 0x1f76 as const;
 
 export const PRIMARY_FLAGS_ADDR = 0x00401f5e as const;
@@ -52,13 +52,13 @@ export const SECONDARY_FLAGS_ADDR = 0x00401f76 as const;
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /**
- * OR cumulativo di una maschera 32-bit su un long-BE in workRam a `off`.
+ * OR cumulativo of una mask 32-bit su un long-BE in workRam a `off`.
  *
  * Implementa `or.l Dn,(abs).l` per un offset workRam dato.
  */
 function orLongBE(r: Uint8Array, off: number, mask: number): void {
   const m = mask >>> 0;
-  if (m === 0) return; // OR con 0 = no-op; evita write inutile.
+  if (m === 0) return; // OR con 0 = no-op; avoids write useless.
   const cur =
     (((r[off] ?? 0) << 24) |
       ((r[off + 1] ?? 0) << 16) |

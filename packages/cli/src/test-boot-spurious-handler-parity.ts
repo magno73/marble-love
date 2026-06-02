@@ -7,7 +7,7 @@
  * `jmp 0x117B2` (NO `rts`).
  *
  * To test via `callFunction` (which uses sentinel return + rts), patch
- * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) sostituendo i primi 2
+ * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) replacing the first 2
  * eseguiti.
  *
  *   - 0x000E         (sentinel byte)
@@ -42,7 +42,7 @@ import {
 } from "./binary-oracle-lib.js";
 
 const FUN_100D8 = 0x000100d8;
-/** Offset ROM dell'`jmp 0x117B2.l` @ 0x100D2 (6 byte: 4EF9 0001 17B2). */
+/** Offset ROM of the `jmp 0x117B2.l` @ 0x100D2 (6 byte: 4EF9 0001 17B2). */
 const JMP_PATCH_OFF = 0x100d2;
 
 /** Offset workRam confrontati (relative a 0x400000). */
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
   const rom = Buffer.from(readFileSync(romPath));
 
   // Patch `jmp 0x117B2` @ 0x100D2 → `rts` (4E 75) + 4 byte garbage.
-  // (sanity check: evita di patchare la ROM sbagliata).
+  // (sanity check: avoids patching the wrong ROM).
   const orig = [
     rom[JMP_PATCH_OFF],
     rom[JMP_PATCH_OFF + 1],
@@ -153,14 +153,14 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  console.log(`\n=== bootSpuriousHandler (FUN_100D8) — ${n} casi ===`);
+  console.log(`\n=== bootSpuriousHandler (FUN_100D8) — ${n} cases ===`);
 
   const rng = makeRng(0x100d8);
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP — la jsr 0x100E0 e la patched rts hanno bisogno di stack room.
+    // Reset SP — la jsr 0x100E0 and la patched rts hanno bisogno of stack room.
     const spInitial = 0x00401efc;
     cpu.system.setRegister("sp", spInitial);
 

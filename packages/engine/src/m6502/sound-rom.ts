@@ -8,8 +8,8 @@
  * Sound CPU ROM address map: $4000-$FFFF (48KB). Marble uses only the final
  * 32KB at $8000-$FFFF; $4000-$7FFF remains open bus ($FF).
  *
- * `sound-mmu.ts` accetta un Uint8Array di 0xC000 byte (48KB) e mappa
- * `rom[i]` a addr `$4000 + i`. Layout del buffer prodotto qui:
+ * `sound-mmu.ts` accetta un Uint8Array of 0xC000 byte (48KB) and mappa
+ * `rom[i]` a addr `$4000 + i`. Layout of the buffer prodotto qui:
  *
  *   buffer[0x0000..0x4000] = 0xFF        (area $4000-$7FFF: open bus)
  *   buffer[0x4000..0x8000] = rom421      (area $8000-$BFFF: low ROM)
@@ -35,12 +35,12 @@ export interface SoundRomFiles {
 export function buildSoundRom(files: SoundRomFiles): Uint8Array {
   if (files.rom421.length !== ROM_BANK_SIZE) {
     throw new Error(
-      `sound-rom: 136033.421 size atteso 0x4000 (16KB), ricevuto 0x${files.rom421.length.toString(16)}`,
+      `sound-rom: 136033.421 size expected 0x4000 (16KB), got 0x${files.rom421.length.toString(16)}`,
     );
   }
   if (files.rom422.length !== ROM_BANK_SIZE) {
     throw new Error(
-      `sound-rom: 136033.422 size atteso 0x4000 (16KB), ricevuto 0x${files.rom422.length.toString(16)}`,
+      `sound-rom: 136033.422 size expected 0x4000 (16KB), got 0x${files.rom422.length.toString(16)}`,
     );
   }
   const buffer = new Uint8Array(SOUND_ROM_BUFFER_SIZE).fill(0xff);

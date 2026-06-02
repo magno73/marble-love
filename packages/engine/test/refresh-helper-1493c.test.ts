@@ -1,5 +1,5 @@
 /**
- * Test refreshHelper1493C (FUN_1493C) — smoke tests sui rami principali.
+ * Test refreshHelper1493C (FUN_1493C) — smoke tests sui branches principali.
  *
  * `cli/src/test-refresh-helper-1493c-parity.ts`.
  */
@@ -15,7 +15,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("refreshHelper1493C (FUN_1493C)", () => {
-  it("chiama fun14966 esattamente 4 volte", () => {
+  it("calls fun14966 exactly 4 times", () => {
     const state = emptyGameState();
     const calls: number[] = [];
 
@@ -26,7 +26,7 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
     expect(calls.length).toBe(SLOT_COUNT);
   });
 
-  it("chiama fun14966 con i 4 indirizzi slot corretti (base + stride*i)", () => {
+  it("calls fun14966 con the 4 indirizzi slot corretti (base + stride*i)", () => {
     const state = emptyGameState();
     const calls: number[] = [];
 
@@ -40,7 +40,7 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
     expect(calls[3]).toBe(SLOT_BASE_ADDR + SLOT_STRIDE * 3);
   });
 
-  it("default stub (no fun14966): nessun side effect su workRam", () => {
+  it("default stub (no fun14966): no side effect su workRam", () => {
     const state = emptyGameState();
     // Snapshot workRam
     const before = Uint8Array.from(state.workRam);
@@ -52,7 +52,7 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
     }
   });
 
-  it("passa lo stesso oggetto state a ogni chiamata", () => {
+  it("passa lo same oggetto state a each chiamata", () => {
     const state = emptyGameState();
     const seenStates: GameState[] = [];
 
@@ -66,14 +66,14 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
     }
   });
 
-  it("le costanti esportate hanno i valori attesi", () => {
+  it("le costanti esportate hanno i values attesi", () => {
     expect(REFRESH_HELPER_1493C_ADDR).toBe(0x0001493c);
     expect(SLOT_BASE_ADDR).toBe(0x00401302);
     expect(SLOT_STRIDE).toBe(0x60);
     expect(SLOT_COUNT).toBe(4);
   });
 
-  it("i side effects di fun14966 sono applicati in ordine (slot 0 prima)", () => {
+  it("i side effects of fun14966 are applicati in ordine (slot 0 first)", () => {
     const state = emptyGameState();
     const order: number[] = [];
 
@@ -84,7 +84,7 @@ describe("refreshHelper1493C (FUN_1493C)", () => {
     expect(order).toStrictEqual([0x00, 0x60, 0xc0, 0x120]);
   });
 
-  it("fun14966 può mutare workRam — le modifiche sono visibili al chiamante", () => {
+  it("fun14966 può mutare workRam — le modifiche are visibili al chiamante", () => {
     const WRAM_BASE = 0x00400000;
     const state = emptyGameState();
     const written: number[] = [];

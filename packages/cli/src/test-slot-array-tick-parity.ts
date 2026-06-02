@@ -6,10 +6,10 @@
  * Strategia (analogo a `test-state-sub-2678-parity.ts`):
  *   1. Patch FUN_14966 to a custom thunk that logs the received long arg into
  *      a work-RAM ring buffer @ 0x401FE0 (4 longs), with counter @ 0x401FF8.
- *      in 0x401FE0 (long-buffer di 4 entry).
+ *      in 0x401FE0 (long-buffer of 4 entry).
  *      0x4013C2, 0x401422].
  *   3. Run TS with a callback that emits the same log -> compare workRam
- *      bit-by-bit (incluso ring-buffer + counter).
+ *      bit-by-bit (including ring-buffer + counter).
  *
  * The thunk patch (32 bytes, < size of FUN_14966) replaces the header:
  *   movea.l #0x00401FE0, A0       ; 207C 0040 1FE0          (6 byte)
@@ -20,7 +20,7 @@
  *   rts                           ; 4E75                    (2 byte)
  *  Totale = 26 byte.
  *
- *     (0x401300..0x40142F per coprire i 4 slot + qualche byte di guardia,
+ *     (0x401300..0x40142F to cover the 4 slot + some guard bytes,
  *      and 0x401FE0..0x401FFB for the ring buffer) to prove that
  *
  */
@@ -45,7 +45,7 @@ const FUN_14966 = 0x00014966;
 /** Addresses of the ring-buffer in work-RAM (offset 0x1FE0..0x1FFB). */
 const RING_COUNTER = 0x00401ff8;
 
-/** Patch FUN_14966 col thunk-logger (26 byte). */
+/** Patch FUN_14966 with the thunk-logger (26 byte). */
 function patchFun14966(cpu: CpuSession): void {
   const bytes = [
     // movea.l #0x00401FE0, A0
@@ -74,7 +74,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup work-RAM zona-di-interesse + ring-buffer. */
+/** Setup work-RAM area-of-interesse + ring-buffer. */
 function setupWorkRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -153,7 +153,7 @@ function diffBytes(
 }
 
 /**
- *   - Incrementa counter di 4 (long) @ workRam[0x1FF8]
+ *   - Incrementa counter of 4 (long) @ workRam[0x1FF8]
  */
 function makeLogger() {
   return (slotPtr: number, state: ReturnType<typeof stateNs.emptyGameState>): void => {
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
     fun_14966: makeLogger(),
   };
 
-  console.log(`\n=== slotArrayTick (FUN_1493C) — ${total} casi ===`);
+  console.log(`\n=== slotArrayTick (FUN_1493C) — ${total} cases ===`);
 
   const rng = makeRng(0x1493c);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
@@ -231,7 +231,7 @@ async function main(): Promise<void> {
     tickNs.slotArrayTick(stateInst, subs);
     const tsZone = readWatchZoneTs(stateInst);
 
-    // Compara
+    // Compare
     const diffSlot = diffBytes(binZone.slotZone, tsZone.slotZone, 0x401300);
     const diffRing = diffBytes(binZone.ringZone, tsZone.ringZone, 0x401fe0);
     const counterMatch = binZone.counter === tsZone.counter;
@@ -265,7 +265,7 @@ async function main(): Promise<void> {
           }
         }
         if (binZone.counter !== 16) {
-          console.log(`  ERROR (tc=0): counter atteso 16 (4*4), got ${binZone.counter}`);
+          console.log(`  ERROR (tc=0): counter expected 16 (4*4), got ${binZone.counter}`);
           ok--;
         }
       }

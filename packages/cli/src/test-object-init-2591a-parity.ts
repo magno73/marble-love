@@ -13,7 +13,7 @@
  *
  *
  * Strategia parity:
- *        - objPtr in {0x401000, 0x401100, ..., 0x401C00} (12 candidati)
+ *        - objPtr in {0x401000, 0x401100, ..., 0x401C00} (12 candidates)
  *        - globals @ 0x400462 (long), 0x400466 (long), 0x400472 (byte)
  *   3. Esegui TS objectInit2591A su workRam mirror.
  *
@@ -47,7 +47,7 @@ const FUN_13966 = 0x00013966;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Pointer candidates (well within workRam, lascia margine per stack a 0x401F00).
+// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -56,7 +56,7 @@ const PTR_CANDIDATES = [
 ] as const;
 
 /**
- * Patch a single ROM entry point with the specified byte pattern (in
+ * Patch a singthe ROMs entry point with the specified byte pattern (in
  */
 function patchRomBytes(
   rom: Buffer,
@@ -68,7 +68,7 @@ function patchRomBytes(
   }
 }
 
-/** Patcha tutte e 6 le sub a stub deterministico. */
+/** Patcha all and 6 le sub a stub deterministico. */
 function patchSubsRom(rom: Buffer): void {
   // `rts` = 4E 75 (2 byte). Per FUN_262B2, FUN_1BAB2, FUN_25B40, FUN_1B9CC,
   // FUN_13966 — non ci interessa il return value.
@@ -115,7 +115,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== objectInit2591A (FUN_0002591A) — ${n} casi ===`);
+  console.log(`\n=== objectInit2591A (FUN_0002591A) — ${n} cases ===`);
   console.log(
     `  (FUN_262B2/1BAB2/25B40/1B9CC/13966 patched → rts; FUN_1CC62 → moveq #0,D0;rts)`,
   );
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Field offsets per il check post-call.
+  // Field offsets for the check post-call.
   const FIELDS_LONG_ZERO = [0x00, 0x04, 0x08, 0x22, 0x26] as const;
   const FIELDS_BYTE_ZERO = [0x36, 0x56, 0x58] as const;
 
@@ -178,7 +178,7 @@ async function main(): Promise<void> {
 
     // ── Mirror su state.workRam ────────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
-    // Globals nel mirror
+    // Globals in the mirror
     stateInst.workRam[0x462] = (g462 >>> 24) & 0xff;
     stateInst.workRam[0x463] = (g462 >>> 16) & 0xff;
     stateInst.workRam[0x464] = (g462 >>> 8) & 0xff;
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     stateInst.workRam[0x697] = peekMem(cpu, WORK_RAM_BASE + 0x697, 1) & 0xff;
     stateInst.workRam[0x698] = peekMem(cpu, WORK_RAM_BASE + 0x698, 1) & 0xff;
     stateInst.workRam[0x699] = peekMem(cpu, WORK_RAM_BASE + 0x699, 1) & 0xff;
-    // Object scratch nel mirror
+    // Object scratch in the mirror
     for (let k = 0; k < 0x80; k++) {
       stateInst.workRam[off + k] = scratchObj[k]!;
     }

@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xa11);
 
-  console.log(`\n=== deriveSpriteFields (FUN_1BB50) — ${n} casi ===`);
+  console.log(`\n=== deriveSpriteFields (FUN_1BB50) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok}/${n} = ${((ok/n)*100).toFixed(1)}%`);
 
   // V1
-  console.log(`\n=== deriveSpriteFromArg_v1 (FUN_1BB08) — ${n} casi ===`);
+  console.log(`\n=== deriveSpriteFromArg_v1 (FUN_1BB08) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
   // V2
-  console.log(`\n=== deriveSpriteFromArg_v2 (FUN_1BB28) — ${n} casi ===`);
+  console.log(`\n=== deriveSpriteFromArg_v2 (FUN_1BB28) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

@@ -1,4 +1,4 @@
-// Probe: confronta entity list @ 0x4003BC..0x4003DC e D7 (CNT_ADDR @ 0x406)
+// Probe: compare entity list @ 0x4003BC..0x4003DC and D7 (CNT_ADDR @ 0x406)
 // TS vs MAME per indagine lateGameLogic26F3E.
 // Output: for each key frame, dump entity bytes + D7 + cursor pointers.
 import { readFileSync } from "node:fs";

@@ -163,7 +163,7 @@ export interface SlapsticFsm {
 /**
  * Creates an FSM in reset state (idle, bank = BANKSTART = 3).
  *
- * Equivalente a `atari_slapstic_device::device_reset()` di MAME:
+ * Equivalente a `atari_slapstic_device::device_reset()` of MAME:
  *   m_state = m_s_idle.get();
  *   change_bank(slapstic_table[m_chipnum - 101]->bankstart);  // = 3 for chip 103
  */

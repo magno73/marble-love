@@ -1,7 +1,7 @@
 /**
  *
- * poi dispatcha a 4 sub e (condizionalmente su game mode 3 o 4) ad altre sub
- * di bound-check.
+ * poi dispatcha a 4 sub and (condizionalmente su game mode 3 o 4) ad altre sub
+ * of bound-check.
  *
  * **Algoritmo** (da disasm 0x144E4..0x14648):
  *
@@ -11,15 +11,15 @@
  * 3. `d2b = ((sext32(toWord)   - boundary) >> 4) & 0xFF`  (signed byte)
  * 4. If `d3b == d2b` → return (no-op).
  *    - `FUN_15A12(d3b, d2b)` — object-pair slot spawn/despawn.
- *    - `FUN_12DFA(d3b, d2b)` — replicata come `scriptRectDispatch12DFA`.
- * 6. Se mode == 3:
- *    - Se `d3b < 0x29 && d2b >= 0x29` → `bannerHelper26B66(9)`.
- *    - Se `d3b >= 0x29 && d2b < 0x29` → `bannerHelper26B66(8)`.
- * 7. Se mode == 4:
- *    - Se `d3b NOT in [0x1D..0x38] AND d2b in [0x1D..0x38]` → `FUN_18FFA`.
- *    - Se `d3b in [0x1D..0x38] AND d2b NOT in [0x1D..0x38]` → `FUN_190EE`.
- *    - Se `d3b NOT in [0x03..0x1B] AND d2b in [0x03..0x1B]` → `wb(0x400762, 1)`.
- *    - Se `d3b in [0x03..0x1B] AND d2b NOT in [0x03..0x1B]` → `wb(0x400762, 0)`.
+ *    - `FUN_12DFA(d3b, d2b)` — replicated as `scriptRectDispatch12DFA`.
+ * 6. If mode == 3:
+ *    - If `d3b < 0x29 && d2b >= 0x29` → `bannerHelper26B66(9)`.
+ *    - If `d3b >= 0x29 && d2b < 0x29` → `bannerHelper26B66(8)`.
+ * 7. If mode == 4:
+ *    - If `d3b NOT in [0x1D..0x38] AND d2b in [0x1D..0x38]` → `FUN_18FFA`.
+ *    - If `d3b in [0x1D..0x38] AND d2b NOT in [0x1D..0x38]` → `FUN_190EE`.
+ *    - If `d3b NOT in [0x03..0x1B] AND d2b in [0x03..0x1B]` → `wb(0x400762, 1)`.
+ *    - If `d3b in [0x03..0x1B] AND d2b NOT in [0x03..0x1B]` → `wb(0x400762, 0)`.
  *
  *   D2b as arg2. `scriptRectDispatch12DFA` takes `(state, rom, arg1, arg2)`,
  *   where `arg1.b = D2` (to_scaled) and `arg2.b = D3` (from_scaled). In the
@@ -73,7 +73,7 @@ function readU16Rom(rom: RomImage, addr: number): number {
 }
 
 /**
- * work RAM o in ROM (pattern `readAbsU16` come in level-dispatcher-16ec6.ts).
+ * work RAM o in ROM (pattern `readAbsU16` as in level-dispatcher-16ec6.ts).
  */
 function readAbsU16(state: GameState, rom: RomImage | undefined, addr: number): number {
   const a = addr >>> 0;

@@ -261,7 +261,7 @@ export function hiScoreDecode41c8(state: GameState, arg1: number): number {
   //   rem = packed % 40       -> digit corrente (LSB)
   //   chr = ascii(rem)
   //   *(A1 + 4 + k) = chr     -> A1+4 = 0x401F7E. k=2 -> +6, k=1 -> +5, k=0 -> +4.
-  //   packed = packed / 40    -> sposta al digit successivo
+  //   packed = packed / 40    -> shifts to the next digit
   for (let k = NUM_DIGITS - 1; k >= 0; k--) {
     const digit = packed % RADIX;
     const chr = radix40ToAscii(digit);

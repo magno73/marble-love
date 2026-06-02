@@ -8,7 +8,7 @@
  * `(*0x400690 ± 3, *0x400692 ± 3)` (a 6×6 square around the "marble" /
  * world cursor). On overlap with the **first** colliding slot:
  *   - `slot[+0x25] = 0x1c`;
- *     e `FUN_158AC(0x5e)` (sound trigger);
+ *     and `FUN_158AC(0x5e)` (sound trigger);
  *
  *
  * **Disasm 0x175C8..0x176D0** (266 byte):
@@ -121,11 +121,11 @@
  *   000176ce   unlk    A6
  *   000176d0   rts
  *
- *     return 0). Stesso "discriminator" word di `bbox-hit-test-19d94.ts`
+ *     return 0). Same "discriminator" word of `bbox-hit-test-19d94.ts`
  *   - `*0x400690` (word)  = marble world x.
  *   - `*0x400692` (word)  = marble world y.
  *
- * di `dispatch-strings-17230.ts`, `string-slot-match-1730c.ts`,
+ * of `dispatch-strings-17230.ts`, `string-slot-match-1730c.ts`,
  *   - `slot[+0x18]` byte: "active" gate (read; skip if 0)
  *   - `slot[+0x25]` byte: state (write `0x1c` su hit)
  *   - `slot[+0xC..+0xD]` word BE: x position (signed 16-bit)
@@ -158,7 +158,7 @@
  *     `subs.soundCommand` default no-op).
  *
  * **Side effects** in `state.workRam`:
- *   - Per il **primo** slot in overlap (early-exit):
+ *   - For the **first** slot in overlap (early-exit):
  *       1. `obj[+0x58] = slot[+0x19]` (byte)
  *       2. `slot[+0x25] = 0x1c` (byte)
  *
@@ -181,9 +181,9 @@ export const REQUIRED_GAME_MODE_B = 0x0005 as const;
 
 
 export const SLOT_BASE_ADDR = 0x00401482 as const;
-/** Stride tra due slot consecutive (`moveq #0x42, D0`). */
+/** Stride between due slot consecutive (`moveq #0x42, D0`). */
 export const SLOT_STRIDE = 0x42 as const;
-/** Numero di slot iterate (`cmpi.b #7, D1b`). */
+/** Numero of slot iterate (`cmpi.b #7, D1b`). */
 export const SLOT_COUNT = 7 as const;
 
 /** Byte: "active" gate (skip if 0). */
@@ -202,7 +202,7 @@ export const SLOT_BBOX_PTRPTR_OFF = 0x3a as const;
 
 /** Sentinel `cmp.l A0, D0` with `D0 = moveq #-1`. */
 export const BBOX_SENTINEL = 0xffffffff as const;
-/** Offset byte signed nel bbox struct. */
+/** Offset byte signed in the bbox struct. */
 export const BBOX_XMIN_OFF = 4 as const;
 export const BBOX_YMIN_OFF = 5 as const;
 export const BBOX_WIDTH_OFF = 6 as const;
@@ -237,9 +237,9 @@ export const SOUND_HIT_COMMAND = 0x5e as const;
 // ─── Sub injection ───────────────────────────────────────────────────────
 
 /**
- *   - `FUN_00025BAE(objPtr, mode=9)` → entity state-transition (modifica
+ *   - `FUN_00025BAE(objPtr, mode=9)` → entity state-transition (modifies
  *   - `FUN_000158AC(cmd=0x5e)` -> sound command sender. Stubbed with RTS
- *     nel parity → TS no-op.
+ *     in the parity → TS no-op.
  *
  */
 export interface StringViewportHit175C8Subs {
@@ -259,7 +259,7 @@ export type SlotResult = "skip_inactive" | "miss" | "hit" | "skipped_after_hit";
 export interface StringViewportHit175C8Result {
   earlyExit: boolean;
   /**
-   *  hit avviene allo slot `i`, gli slot `i+1..6` ricevono `skipped_after_hit`. */
+   *  hit avviene to the slot `i`, the slot `i+1..6` ricevono `skipped_after_hit`. */
   perSlot: SlotResult[];
   hitSlotIndex: number;
   retVal: number;
@@ -385,7 +385,7 @@ export function stringViewportHit175C8(
 
   // ─── Loop sui 7 slot ────────────────────────────────────────────────────
   const perSlot: SlotResult[] = [];
-  // (low byte di width + leftEdge sext word). Sul hit-path: D2 = 1.
+  // (low byte of width + leftEdge sext word). Sul hit-path: D2 = 1.
   let d2Byte = initialD2Byte & 0xff;
   let hitIndex = -1;
 

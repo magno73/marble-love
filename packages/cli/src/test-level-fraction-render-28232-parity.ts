@@ -5,7 +5,7 @@
  *
  * `FUN_00028232` (400 bytes): "level/fraction render" orchestrator with 7
  * sub-jsr (5 renderStringChain via 0x142 + 1 initStructHeader via 0x13C +
- * 1 renderStringHelper FUN_28E3C). Side effects diretti del modulo:
+ * 1 renderStringHelper FUN_28E3C). Side effects diretti of the modulo:
  *   - 3 byte writes a workRam[0x428/0x429/0x42E] (da initStructHeader).
  *   - 4+1 byte writes a `*(0x40042A)` (fraction string + null).
  *
@@ -18,12 +18,12 @@
  *   In TS, the 3 callbacks inject the same increment.
  *
  * **Note on trampoline patching** (0x142, 0x13C):
- *   I trampolini sono `jmp 0x2572` / `jmp 0x255A`. Patchamo l'entry destinazione
+ *   I trampolines are `jmp 0x2572` / `jmp 0x255A`. We patch the entry destination
  *
  *      For cases with `idx=-1` early-out: == (D2==0 ? 2 : 1).
  *      or == 0 on early-out.
  *   3. sentinelHelper == 1 in both (same rule) or == 0 on early-out.
- *   4. workRam[0x428..0x42E] e i 5 byte @ *(0x40042A) byte-by-byte.
+ *   4. workRam[0x428..0x42E] and i 5 byte @ *(0x40042A) byte-by-byte.
  *
  *   - A: idx random ∈ [0..7], levelNum random, mode != 2, no early-out.
  *   - B: idx random, levelNum random, mode == 2 (D2!=0 path, skip cond jsr).
@@ -52,8 +52,8 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_28232 = 0x00028232;
 
 // Sub-function entry points (targets of trampolines 0x142/0x13C, and direct 28E3C).
-const FUN_2572 = 0x00002572; // renderStringChain (target di jmp 0x142)
-const FUN_255A = 0x0000255a; // initStructHeader  (target di jmp 0x13C)
+const FUN_2572 = 0x00002572; // renderStringChain (target of jmp 0x142)
+const FUN_255A = 0x0000255a; // initStructHeader  (target of jmp 0x13C)
 const FUN_28E3C = 0x00028e3c; // renderStringHelper
 
 // Sentinel byte slot in work RAM (counter for the 3 subs).
@@ -73,7 +73,7 @@ const FRAC_BUFFER_ADDR = 0x00400500;
 
 // 0x428..0x42E = 7 byte (struct), 0x500..0x504 = 5 byte (fraction).
 const STRUCT_COMPARE_BASE = 0x00400428;
-const STRUCT_COMPARE_SIZE = 8; // 0x428..0x42F (7 byte usati + 1 di margine)
+const STRUCT_COMPARE_SIZE = 8; // 0x428..0x42F (7 byte used + 1 of margin)
 
 const FRAC_COMPARE_BASE = FRAC_BUFFER_ADDR;
 const FRAC_COMPARE_SIZE = 5;
@@ -169,8 +169,8 @@ function setupCase(
   pokeMem(cpu, SENTINEL_HELPER, 1, setup.sentInitHelper);
   state.workRam[SENTINEL_HELPER - 0x400000] = setup.sentInitHelper;
 
-  // 8. ROM table 1 @ 0x23C04 e table 2 @ 0x23C18: scriviamo 8 long (32 byte ciascuna).
-  // come read-only normalmente). Per essere sicuri, NON ri-scriviamo le ROM
+  // 8. ROM table 1 @ 0x23C04 and table 2 @ 0x23C18: we write 8 long (32 byte ciascuna).
+  // as read-only normally). Per be safe, NOT ri-we write the ROMs
   void romBuf;
 }
 
@@ -228,8 +228,8 @@ async function main(): Promise<void> {
   const romBuf = Buffer.from(readFileSync(romPath));
 
   // Patch le 3 sub-call a `addq.b #1, sentinel ; rts`.
-  // FUN_2572  (target di jmp 0x142) → sentinelChain
-  // FUN_255A  (target di jmp 0x13C) → sentinelInit
+  // FUN_2572  (target of jmp 0x142) → sentinelChain
+  // FUN_255A  (target of jmp 0x13C) → sentinelInit
   // FUN_28E3C                       → sentinelHelper
   patchStubAddq(romBuf, FUN_2572, SENTINEL_CHAIN);
   patchStubAddq(romBuf, FUN_255A, SENTINEL_INIT);
@@ -295,7 +295,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: mode != 2, idx ∈ [0..7] (no early-out, D2=0 path) ─────
   console.log(
-    `\n=== levelFractionRender28232 (FUN_28232) — Suite A: mode!=2, idx∈[0..7] — ${perSuite} casi ===`,
+    `\n=== levelFractionRender28232 (FUN_28232) — Suite A: mode!=2, idx∈[0..7] — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: mode == 2 (D2!=0 path, skip 2 jsr cond) ───────────────
-  console.log(`\n=== Suite B: mode==2 (D2!=0) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: mode==2 (D2!=0) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const idx = Math.floor(rng() * 8);
@@ -321,7 +321,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: idx == 0xFFFF (early-out path) ────────────────────────
-  console.log(`\n=== Suite C: idx==0xFFFF (early-out) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: idx==0xFFFF (early-out) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     if (runOneCase("C", i, makeSetup({ idxOverride: 0xffff }))) okC++;
@@ -331,7 +331,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: random everything ─────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: random everything — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: random everything — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     // Mix: ~25% mode==2, ~12% idx==0xFFFF, resto random.

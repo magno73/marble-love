@@ -1,10 +1,10 @@
 /**
  * state-sub-525c.ts — replica `FUN_0000525C` (40 byte).
  *
- * Sub di init "buffer + status flags" parametrica su un count `D0`. Esegue
+ * Sub of init "buffer + status flags" parametrica su un count `D0`. Esegue
  * due fasi:
  *
- *      semplicemente il clear del range `[A2+0x50 .. A2+0x50+D0*20-1]`.
+ *      semplicemente il clear of the range `[A2+0x50 .. A2+0x50+D0*20-1]`.
  *
  *      bitmap long @ `0x00401F5E` (`STATUS_FLAGS_OFF`). Per `D0_arg >= 2`
  *      `4, 5, 6, ..., 4 + D0*2 - 1` = `4 .. 3 + D0*2`.
@@ -20,7 +20,7 @@
  *     clr.b  (0x50,A2,D0w*1)     ; *(A2 + 0x50 + signext_w(D0w)) = 0
  *   add.l  D2,D2                 ; D2 *= 2
  *   subq.l #1,D2                 ; D2 = D2 - 1 (loop top per fase 2)
- *   moveq  #6,D0                 ; D0 = 6 (primo bit-arg)
+ *   moveq  #6,D0                 ; D0 = 6 (first bit-arg)
  *   loop2:
  *     move.l D0,-(SP)            ; preserve D0
  *     move.l (SP)+,D0            ; restore D0

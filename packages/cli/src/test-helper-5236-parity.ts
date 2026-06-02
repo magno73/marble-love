@@ -11,7 +11,7 @@
  *     return address sentinel). `(4,SP)` = 0x401F00 = workRam[0x1F00..0x1F03].
  *   - Pre-populate workRam with random bytes; sync both Musashi and TS.
  *   - Pre-populate *0x401F5E with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x5236)` e `helper5236(state, arg)`.
+ *   - Lancia `callFunction(cpu, 0x5236)` and `helper5236(state, arg)`.
  *
  *   - 0x401EFC: sentinel return address (4 byte, spinto da callFunction)
  *
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== helper5236 (FUN_5236) — ${n} casi ===`);
+  console.log(`\n=== helper5236 (FUN_5236) — ${n} cases ===`);
 
   const rng = makeRng(0x52365236);
   let ok = 0;
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     if (i < specialArgs.length) {
       arg = specialArgs[i]!;
     } else {
-      // Random 32-bit arg per copertura ampia
+      // Random 32-bit arg to coverage ampia
       arg = Math.floor(rng() * 0x100000000) >>> 0;
     }
 

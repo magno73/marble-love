@@ -5,7 +5,7 @@
  *
  * FUN_0001844A (610 byte): "Slot-table tick — timer decrement, insert-sorted
  * trigger, pointer-walk advance, sprite-coord update, 3-bucket sound dispatch".
- * Gated da `*0x400394 == 3` e `*0x400760 != 0`. Itera 36 entry × 16 byte
+ * Gated da `*0x400394 == 3` and `*0x400760 != 0`. Itera 36 entry × 16 byte
  * @ 0x401650.
  *
  * **Strategia parity**:
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: random ─────────────────────────────────────────────────────
-  console.log(`\n=== stateSub1844A (FUN_0001844A) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub1844A (FUN_0001844A) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const inp: CaseInput = {
@@ -324,7 +324,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: forced early-out ────────────────────────────────────────────
-  console.log(`\n=== Suite B: forced early-out — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: forced early-out — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const useMode = (i & 1) === 0;
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: timer countdown path ────────────────────────────────────────
-  console.log(`\n=== Suite C: timer countdown path — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: timer countdown path — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const inp: CaseInput = {
@@ -360,7 +360,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: ptr-walk path ───────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: ptr-walk path (timer == -1) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: ptr-walk path (timer == -1) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const mode = i % 3;

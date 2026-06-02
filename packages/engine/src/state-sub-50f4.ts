@@ -144,27 +144,27 @@
  * **Side effects (workRam through A2)**:
  *      offset table = `[0x06, 0x0A, 0x0C, 0x0E, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C]`
  *      (= `[3*2, 5*2, 6*2, 7*2, 9*2, 10*2, 11*2, 12*2, 13*2, 14*2]`).
- *   2. `A2[0x11..0x12]` = counter long-BE: incrementato di 1 per syndrome
+ *   2. `A2[0x11..0x12]` = counter long-BE: incremented of 1 per syndrome
  *      non-zero (with saturating rollback if both bytes overflow).
  *
- * **Note di low-level fidelity**:
+ * **Note of low-level fidelity**:
  *
  *  1. **`mulu.w D3w, D0`**: M68k unsigned 16x16→32. Decomp lo riduce a `(short)
- *     index. Per `D3w` in range piccolo (es. 0..16) D0 = D3w*10 < 256, no
- *     wrap. Per `D3w` grande (es. 0xFFFF) D0w = (-1 * 10) & 0xFFFF = 0xFFF6 =
- *     -10 signed. Il sign-ext rende A1 = A2 - 10. Dipende dal caller: in
+ *     index. Per `D3w` in range piccolo (e.g. 0..16) D0 = D3w*10 < 256, no
+ *     wrap. Per `D3w` grande (e.g. 0xFFFF) D0w = (-1 * 10) & 0xFFFF = 0xFFF6 =
+ *     -10 signed. Il sign-ext rende A1 = A2 - 10. Dipende from the caller: in
  *
  *     mod 65536 (= 16*D2w - D2w = 15*D2w, poi *2 = 30*D2w). Solo low word
  *
- *     `original_A1 + 10`. Nella correction phase l'expression `(-0xa, A1, D0w)`
+ *     `original_A1 + 10`. Nella correction phase the expression `(-0xa, A1, D0w)`
  *     becomes `original_A1 + 10 - 10 + D0w` = `original_A1 + D0w` with D0w in
  *
- *  4. **`btst.l #4, D0` e `move.b (-0x10,A4,D0w),D0b`**: la lookup table
+ *  4. **`btst.l #4, D0` and `move.b (-0x10,A4,D0w),D0b`**: la lookup table
  *     direttamente).
  *
  *     Inizio: D1 = 1 (`moveq #1, D1`). Iter 1: D1b = 2. Iter 2: D1b = 4. ...
  *     Iter 7: D1b = 0x80. Iter 8: 0x80 + 0x80 = 0x100 → D1b = 0, X=1, carry
- *     ma high bits intatti → D1 = 0x80000001.
+ *     but high bits intact → D1 = 0x80000001.
  *
  *  6. **Counter A2[0x11..0x12]**: 16-bit big-endian saturating-on-overflow.
  *     Increment low byte; if carry, increment high byte; if that also
@@ -172,7 +172,7 @@
  *  7. **`D2/D3 += 1` epilogue**: The callers (FUN_4F38) use these subs as
  *
  *
- *     2 byte come word BE = 0x0003). Le iter successive usano `move.b
+ *     2 byte as word BE = 0x0003). Le iter successive usano `move.b
  *
  * 10. **`bpl` after `move.b (A4)+, D1b`**: byte signed test. D1b in 0..0x7F
  *     (positive) → loop. D1b 0x80..0xFF → exit. Il terminator 0xFF (= -1)
@@ -191,7 +191,7 @@ export const ITER_TABLE_ADDR = 0x00004f2c as const;
 /** Correction lookup table (PC-relative @ 0x51C0). 16 byte. */
 export const CORRECTION_TABLE_ADDR = 0x000051c0 as const;
 
-// ─── Costanti derivate dal disasm ─────────────────────────────────────────
+// ─── Costanti derivate from the disasm ─────────────────────────────────────────
 
 export const INPUT_ROW_STRIDE = 30 as const;
 
@@ -203,13 +203,13 @@ export const ITER_COUNT = 10 as const;
 
 export const CORRECTION_BIT_COUNT = 8 as const;
 
-/** Offset del counter long-BE in A2 (byte high). */
+/** Offset of the counter long-BE in A2 (byte high). */
 export const COUNTER_HI_OFFSET = 0x11 as const;
 
-/** Offset del counter long-BE in A2 (byte low). */
+/** Offset of the counter long-BE in A2 (byte low). */
 export const COUNTER_LO_OFFSET = 0x12 as const;
 
-/** Mask di "uncorrectable" settato in D1 (bit 31). */
+/** Mask of "uncorrectable" set in D1 (bit 31). */
 export const UNCORRECTABLE_FLAG = 0x80000000 as const;
 
 /** Offset (relative to the base table) for index 0x10..0x1F. */
@@ -221,7 +221,7 @@ export const CORRECTION_TABLE_SIZE = 16 as const;
 export const SYNDROME_INIT_OFFSETS = [0x00, 0x10, 0x08, 0x04, 0x02] as const;
 
 export const ITER_BYTE_OFFSETS = [
-  0x06, // 0x03 * 2 — primo word read
+  0x06, // 0x03 * 2 — first word read
   0x0a, // 0x05 * 2
   0x0c, // 0x06 * 2
   0x0e, // 0x07 * 2
@@ -244,7 +244,7 @@ export const CORRECTION_TABLE = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Sign-extend low word di `v` a long unsigned32. */
+/** Sign-extend low word of `v` a long unsigned32. */
 function signExtWord(v: number): number {
   return ((v & 0x8000) !== 0 ? (v | 0xffff0000) : (v & 0xffff)) >>> 0;
 }
@@ -334,10 +334,10 @@ export interface Sub50F4Result {
  *    - if (v_doubled >> 3) & 1 -> D4b ^= byte    (bit 3 = bit 2 of v)
  *    - if (v_doubled >> 4) & 1 -> D5b ^= byte    (bit 4 = bit 3 of v)
  *
- *    0x05, 0x06, 0x07, 0x09, ... e doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
+ *    0x05, 0x06, 0x07, 0x09, ... and doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
  *
  *
- *      e build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
+ *      and build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
  *                       | (LSB(D3b) << 1) | LSB(D2b)`
  *    - if D0w != 0:
  *        - increment counter A2[0x12] byte; if carry, A2[0x11] byte; if both
@@ -437,7 +437,7 @@ export function stateSub50F4(
     d6b = (d6b ^ byte) & 0xff;
   }
 
-  // ─── Test: tutte zero? Return 0 ────────────────────────────────────────
+  // ─── Test: all zero? Return 0 ────────────────────────────────────────
   let d1: number = 0;
   const orAll = (d6b | d2b | d3b | d4b | d5b) & 0xff;
   if (orAll !== 0) {

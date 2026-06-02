@@ -5,11 +5,11 @@
  * `FUN_00003F78` (78 bytes) is called through thunk 0x160 from mainTick. Despite
  * the name "EEPROM commit", it touches no MMIO and no EEPROM: it reads `*0x401FFC`
  * (player struct ptr), valida lo status byte @ ptr+0xA contro il complement
- * @ ptr+0xB, e droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
+ * @ ptr+0xB, and droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
  *
  * Confronto:
  *   - return D0 (long)
- *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 nel path "work")
+ *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 in the path "work")
  *   - byte @ 0x401FF7 (drain counter)
  *
  * Setup for each random case:
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== eepromCommit (FUN_3F78) — ${n} casi ===`);
+  console.log(`\n=== eepromCommit (FUN_3F78) — ${n} cases ===`);
 
   const rng = makeRng(0x3f78);
   let ok = 0;
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
     const ctr0 = Math.floor(rng() * 256);
 
     // ── Setup binary side (Musashi) ─────────────────────────────────────
-    // Pulizia precedente: 0x401D00..0x401D20 (struct), e contatori.
+    // Pulizia precedente: 0x401D00..0x401D20 (struct), and contatori.
     for (let k = 0; k < 0x20; k++) {
       pokeMem(cpu, A2_ADDR + k, 1, 0);
     }

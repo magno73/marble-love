@@ -462,11 +462,11 @@ export interface Sub29CCESubs {
 }
 
 
-/** ROM address di `FUN_00029CCE`. */
+/** ROM address of `FUN_00029CCE`. */
 export const SUB_29CCE_ADDR = 0x00029cce as const;
 
 /**
- * Replica di `FUN_00029CCE`.
+ * Replica of `FUN_00029CCE`.
  *
  */
 export function fun29CCE(
@@ -1441,7 +1441,7 @@ function runTube26Or27(
 /**
  * Dispatch su color tag (range 5..0x3b).
  *
- * Le branch **BLOCK A simple** (range-check D1/D2 + tag-write) sono
+ * Le branch **BLOCK A simple** (range-check D1/D2 + tag-write) are
  * implementate fully:
  *   0x10, 0x12, 0x32-0x37, 0x2d-0x31, 0x38-0x3b.
  *

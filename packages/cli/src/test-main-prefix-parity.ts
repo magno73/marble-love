@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * test-main-prefix-parity.ts — differential del prefix di MainUpdate.
+ * test-main-prefix-parity.ts — differential of the prefix of MainUpdate.
  *
  * Runs 0x28788..0x287D8 before the jsr calls to sub-updates. Compares work RAM
  * deltas between the binary and TS `mainUpdateScrollSync`.
@@ -25,7 +25,7 @@ import {
 import type { CpuSession } from "./binary-oracle-lib.js";
 
 const MAIN_PREFIX_START = 0x00028788;
-const MAIN_PREFIX_END = 0x000287d8; // subito dopo le scritture MMIO, prima del demo check
+const MAIN_PREFIX_END = 0x000287d8; // subito dopo le scritture MMIO, first of the demo check
 
 interface TestCase {
   scrollDirtyFlag: number;     // u8 @ 0x40039A

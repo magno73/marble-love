@@ -3,7 +3,7 @@
  * test-counter-pool-subtract-4008-parity.ts — differential FUN_4008 vs
  * `counterPoolSubtract4008`.
  *
- * `FUN_00004008` (80 byte): tenta di sottrarre `arg1` dal pool combinato
+ * `FUN_00004008` (80 byte): tenta of sottrarre `arg1` from the pool combinato
  * `(byte@0x401FF7 + byte@0x401FF5)`, draining counter@FF7 first and then
  * scaling the rest from acc@FF5. Returns 1 (success / no-op if status >=
  * 0xE0) o 0 (pool insufficient).
@@ -18,7 +18,7 @@
  *   - Same setup between Musashi and TS (workRam vs unified mem).
  *   - For each random case: pick arg1 with pattern; call the binary;
  *     calls TS; compares `D0` AND the 2 modified bytes (FF5, FF7) AND the two
- *     byte del player struct (mai modificati, ma verifichiamo l'invariante).
+ *     byte of the player struct (mai modificati, but verifichiamo the invariante).
  *
  * Pattern coverage:
  *   - 30% arg1 in [0..pool*1.2] (range realistico)
@@ -52,7 +52,7 @@ const PTR_FFC = 0x00401ffc;
 const ACC_FF5 = 0x00401ff5;
 const COUNTER_FF7 = 0x00401ff7;
 
-/** Indirizzo fissato del player struct nel test (workRam-safe). */
+/** Indirizzo fissato of the player struct in the test (workRam-safe). */
 const PTR_VAL = 0x00401a00;
 
 function makeRng(seed: number): () => number {
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
 
   console.log(
-    `\n=== counterPoolSubtract4008 (FUN_4008) — ${n} casi ===`,
+    `\n=== counterPoolSubtract4008 (FUN_4008) — ${n} cases ===`,
   );
 
   const rng = makeRng(0x40084008);
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
       arg1 = Math.floor(rng() * 0x100);
     } else if (pick < 0.35) {
       pattern = "zero_arg";
-      // status valido + arg1 = 0 (no drain ma sub.b 0 = no-op).
+      // status valido + arg1 = 0 (no drain but sub.b 0 = no-op).
       status = Math.floor(rng() * 0xe0); // < 0xE0 (helper > 0)
       notB = ~status & 0xff;
       ctr0 = Math.floor(rng() * 256);
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
       pattern = "mismatch_complement";
       // ptr+0xA != ~ptr+0xB -> internal helper clears D2 -> returns 1.
       status = Math.floor(rng() * 256);
-      // notB = qualcosa NON pari a ~status.
+      // notB = qualcosa NOT pari a ~status.
       do {
         notB = Math.floor(rng() * 256);
       } while (notB === (~status & 0xff));
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       arg1 = (((hi << 16) >>> 0) | w) >>> 0;
     }
 
-    // ── Scrivi byte@FF5/FF7 e ptr+0xA / +0xB su entrambi i lati. ──
+    // ── Scrivthe bytes@FF5/FF7 and ptr+0xA / +0xB su both i sides. ──
     pokeMem(cpu, ACC_FF5, 1, acc0);
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
     pokeMem(cpu, PTR_VAL + 0xa, 1, status);

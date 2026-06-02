@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
   const r = rng(0xdada);
 
-  console.log(`\n=== hudFormat3Values (FUN_3D62) — ${n} casi ===`);
+  console.log(`\n=== hudFormat3Values (FUN_3D62) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

@@ -2,8 +2,8 @@
  *
  * Le 4 palette anim (FUN_26BEE, FUN_26C78, FUN_26D4E, FUN_26B88) condividono
  * the same loop structure but differ in:
- *   - lookup tables in ROM (per type==0 e type!=0)
- *   - destination addresses in palette RAM (per type==0 e type!=0)
+ *   - lookup tables in ROM (per type==0 and type!=0)
+ *   - destination addresses in palette RAM (per type==0 and type!=0)
  *   - asr shift (div 2 o div 4 per indice)
  *   - wrap value (signed > N → reset to 0)
  *
@@ -14,7 +14,7 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-// ─── Constants comuni ────────────────────────────────────────────────────
+// ─── Constants common ────────────────────────────────────────────────────
 
 export const OBJ_BASE_ADDR = 0x400018 as const;
 export const OBJ_STRIDE = 0xe2 as const;
@@ -134,7 +134,7 @@ export function paletteAnimTick(
     colorRamWriteU16BE(state, palOffset, palWord);
 
     let newCtr = ((animCtr & 0xff) + 1) & 0xff;
-    // ble skip; clr.b ctr` → 64..127 (signed pos > wrapMax) reset, ma
+    // ble skip; clr.b ctr` → 64..127 (signed pos > wrapMax) reset, but
     // 128..255 (signed neg) NO.
     const signedCtr = (newCtr & 0x80) !== 0 ? newCtr - 0x100 : newCtr;
     if (signedCtr > params.wrapMax) {

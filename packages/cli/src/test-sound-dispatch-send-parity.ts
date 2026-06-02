@@ -45,11 +45,11 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const rng = makeRng(0x3e1a);
 
-  console.log(`\n=== soundDispatchSend (FUN_3E1A) — ${n} casi ===`);
+  console.log(`\n=== soundDispatchSend (FUN_3E1A) — ${n} cases ===`);
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 
-  // Range workRam-safe per la struct A2: scegliamo 0x401D00 (region 29, NON
+  // Range workRam-safe per la struct A2: scegliamo 0x401D00 (region 29, NOT
   const a2Addr = 0x00401d00;
 
   for (let i = 0; i < n; i++) {
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     stateInst.workRam[(a2Addr - 0x400000) + 0x0a] = statusByte;
     stateInst.workRam[(a2Addr - 0x400000) + 0x0b] = complByte;
 
-    // Init carry slots (A2+0x00..0x02) e increment slots (A2+0x14..0x16) random
+    // Init carry slots (A2+0x00..0x02) and increment slots (A2+0x14..0x16) random
     for (let j = 0; j < 0x18; j++) {
       const v = Math.floor(rng() * 256);
       pokeMem(cpu, a2Addr + j, 1, v);

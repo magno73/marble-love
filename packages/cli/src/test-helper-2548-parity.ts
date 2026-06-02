@@ -11,8 +11,8 @@
  *
  * Strategia:
  *   - Randomizza workRam[0x0006..0x0007] (word @ 0x400006).
- *   - Lancia `callFunction(cpu, 0x2548)` e `helper2548(state)`.
- *   - Ripete N (default 500) volte, inclusi edge cases:
+ *   - Lancia `callFunction(cpu, 0x2548)` and `helper2548(state)`.
+ *   - Ripete N (default 500) times, inclusi edge cases:
  *     word=0, word=1, word=0xFFFF, word=0x8000, word=0x0001, word=0xFFFE.
  *
  * Uso: npx tsx packages/cli/src/test-helper-2548-parity.ts [N]
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   // Edge cases: word=0, word=1, word=0xFFFF, word=0x8000, word=0xFFFE, word=0x5555
   const edges = [0, 1, 0xffff, 0x8000, 0xfffe, 0x5555];
 
-  console.log(`\n=== helper2548 (FUN_2548) — ${n} casi ===`);
+  console.log(`\n=== helper2548 (FUN_2548) — ${n} cases ===`);
   let ok = 0;
   let firstFail: FailCase | null = null;
 
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     tsState.workRam[LSR_FLAG_OFF] = (word0 >>> 8) & 0xff;
     tsState.workRam[LSR_FLAG_OFF + 1] = word0 & 0xff;
 
-    // Setup SP per callFunction + maschera interrupt (SR=0x2700: supervisor +
+    // Setup SP per callFunction + mask interrupt (SR=0x2700: supervisor +
     // IPL=7) to prevent VBLANK ISR @ 0x0B5E from overwriting 0x400006.
     cpu.system.setRegister("sp", 0x00401f00);
     cpu.system.setRegister("sr", 0x2700);

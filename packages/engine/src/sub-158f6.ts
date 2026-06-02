@@ -129,7 +129,7 @@ export interface Sub158F6Subs {
 
   /**
    * `FUN_25FC2` — `helper25FC2(state, rom, slotPtr, subs)`.
-   * Invocata nel branch state-2 (s18==2). Default: import TS.
+   * Invocata in the branch state-2 (s18==2). Default: import TS.
    */
   helper25FC2?: (state: GameState, rom: RomImage, slotPtr: number) => void;
 
@@ -138,7 +138,7 @@ export interface Sub158F6Subs {
 
   /**
    * `FUN_1B9CC` — `spriteHelper1B9CC(state, slotPtr, flagLong, subs)`.
-   * Invocata nel branch state-2. Il caller pusha `A2` come long → flagLong
+   * Invocata in the branch state-2. Il caller pusha `A2` as long → flagLong
    * Default: import TS.
    */
   spriteHelper1B9CC?: (state: GameState, slotPtr: number, flagLong: number) => void;
@@ -154,13 +154,13 @@ export interface Sub158F6Subs {
   objectEnter1281C?: (state: GameState, slotPtr: number) => void;
 
   /**
-   * `FUN_253BC` — `helper253BC(state, slotPtr)`. Invocata nel branch ELSE.
+   * `FUN_253BC` — `helper253BC(state, slotPtr)`. Invocata in the branch ELSE.
    * Default: import TS.
    */
   helper253BC?: (state: GameState, slotPtr: number) => void;
 
   /**
-   * `FUN_182BA` — `helper182BA(state, slotPtr, rom, subs)`. Invocata nel
+   * `FUN_182BA` — `helper182BA(state, slotPtr, rom, subs)`. Invocata in the
    * branch ELSE. Default: import TS.
    */
   helper182BA?: (state: GameState, slotPtr: number, rom: RomImage) => void;
@@ -169,7 +169,7 @@ export interface Sub158F6Subs {
   helper182BASubs?: Helper182BASubs;
 
   /**
-   * `FUN_121B8` — `helper121B8(state, rom, slotPtr, subs)`. Invocata nel
+   * `FUN_121B8` — `helper121B8(state, rom, slotPtr, subs)`. Invocata in the
    * branch ELSE. Default: import TS.
    */
   helper121B8?: (state: GameState, rom: RomImage, slotPtr: number) => void;
@@ -199,7 +199,7 @@ export function fun158F6(
 
   // ── BLOCCO 1: timer word @ +0x6C ────────────────────────────────────────
   // 0x15904: tst.w (0x6c,A2); ble.b → 0x15930
-  // ble (signed) = branch if D <= 0 → tratta word come signed
+  // ble (signed) = branch if D <= 0 → tratta word as signed
   const t6c = sextW(rW(state, a2Off + F_S6C));
   if (t6c > 0) {
     // 0x1590A: subq.w #1, (0x6c,A2)
@@ -248,7 +248,7 @@ export function fun158F6(
     } else {
       helper25FC2(state, rom, a2, subs.helper25FC2Subs);
     }
-    // jsr FUN_1B9CC(A2) — caller pusha A2 long; FUN_1B9CC interpreta come
+    // jsr FUN_1B9CC(A2) — caller pusha A2 long; FUN_1B9CC interpreta as
     if (subs.spriteHelper1B9CC) {
       subs.spriteHelper1B9CC(state, a2, a2);
     } else {

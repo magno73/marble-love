@@ -65,7 +65,7 @@ function writeWord(state: GameState, addr: number, value: number): void {
  * Replica `FUN_00001E3E` — `fillSeqWords1E3E`.
  *
  *
- * @param count      Numero di word da scrivere (signed long; ≤ 0 → no-op).
+ * @param count      Numero of word da scrivere (signed long; ≤ 0 → no-op).
  */
 export function fillSeqWords1E3E(
   state: GameState,

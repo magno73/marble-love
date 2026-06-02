@@ -2,16 +2,16 @@
  * m6502-sound-rom.test.ts — loader buffer 48KB da 136033.421 + .422.
  *
  * Intent: the 6502 sound chip fetches reset vector from $FFFC/$FFFD, which physically
- * vivono negli ultimi 4 byte di rom422 (offset $3FFC/$3FFD nel file). Se il
- * loader sbaglia bank order o offset di base, il CPU resetta a un PC arbitrario
- * e crasha al primo step. Questi test sigillano il mapping vs MAME atarisy1.cpp.
+ * vivono in the last 4 byte of rom422 (offset $3FFC/$3FFD in the file). Se il
+ * loader sbaglia bank order o offset of base, il CPU resetta a un PC arbitrario
+ * and crasha al first step. Questi test sigillano il mapping vs MAME atarisy1.cpp.
  */
 
 import { describe, it, expect } from "vitest";
 import { buildSoundRom, SOUND_ROM_BUFFER_SIZE } from "../src/m6502/sound-rom.js";
 
 describe("buildSoundRom layout", () => {
-  it("buffer 48KB con 421 a $8000 (offset 0x4000) e 422 a $C000 (offset 0x8000)", () => {
+  it("buffer 48KB con 421 a $8000 (offset 0x4000) and 422 a $C000 (offset 0x8000)", () => {
     const rom421 = new Uint8Array(0x4000);
     const rom422 = new Uint8Array(0x4000);
     rom421[0] = 0xAA;
@@ -37,17 +37,17 @@ describe("buildSoundRom layout", () => {
     rom422[0x3FFC] = 0x00;
     rom422[0x3FFD] = 0x80;  // PC start = $8000
     const buf = buildSoundRom({ rom421, rom422 });
-    // $FFFC nel address space 6502 → buffer offset $FFFC - $4000 = $BFFC
+    // $FFFC in the address space 6502 → buffer offset $FFFC - $4000 = $BFFC
     expect(buf[0xBFFC]).toBe(0x00);
     expect(buf[0xBFFD]).toBe(0x80);
   });
 
-  it("fail loud su size sbagliato (Rule 12)", () => {
+  it("fails loud on a wrong size (Rule 12)", () => {
     const tooSmall = new Uint8Array(0x2000);
     const ok = new Uint8Array(0x4000);
     expect(() => buildSoundRom({ rom421: tooSmall, rom422: ok }))
-      .toThrow(/136033\.421 size atteso 0x4000/);
+      .toThrow(/136033\.421 size expected 0x4000/);
     expect(() => buildSoundRom({ rom421: ok, rom422: tooSmall }))
-      .toThrow(/136033\.422 size atteso 0x4000/);
+      .toThrow(/136033\.422 size expected 0x4000/);
   });
 });

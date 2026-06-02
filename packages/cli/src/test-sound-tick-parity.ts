@@ -4,7 +4,7 @@
  *
  * Limitation: FUN_4CA0 calls 3 sub-functions:
  *   - FUN_3E1A (dispatch send)
- *   - FUN_4DCC (sound chip writer, GROSSA, NON replicata)
+ *   - FUN_4DCC (sound chip writer, GROSSA, NOT replicated)
  *   - FUN_4C3E (status check)
  *
  * To test the wrapper in isolation, patch all 3 binary subs
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const rng = makeRng(0x4ca0);
 
-  console.log(`\n=== soundTick (FUN_4CA0 wrapper, stub subs) — ${n} casi ===`);
+  console.log(`\n=== soundTick (FUN_4CA0 wrapper, stub subs) — ${n} cases ===`);
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 

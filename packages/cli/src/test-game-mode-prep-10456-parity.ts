@@ -160,7 +160,7 @@ async function main(): Promise<void> {
     stateInst.workRam.set(ramSnapshot);
   }
 
-  console.log(`\n=== gameModePrep10456 (FUN_10456) — ${n} casi ===`);
+  console.log(`\n=== gameModePrep10456 (FUN_10456) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) {
     console.log(`  First fail: ${JSON.stringify(firstFail)}`);

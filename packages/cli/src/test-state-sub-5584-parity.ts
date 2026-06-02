@@ -11,8 +11,8 @@
  *        if D2 == D5: exit
  *
  * Strategia parity test:
- *   - Patch RTS sui 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
- *     impedire l'esecuzione del loro corpo.
+ *   - Patch RTS suthe 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
+ *     impedire the esecuzione of the their corpo.
  *   - Capture args on the stack when pc == callee entry. Capture D0
  *     lo INIETTIAMO).
  *     TS that uses callback playback with the same return values.
@@ -93,10 +93,10 @@ interface CapturedSeq {
 
 /**
  * Esegue FUN_5584 step-by-step.
- * dell'RTS sintetico.
+ * of the RTS sintetico.
  *
  * @param cpu          CPU session.
- * @param args         5 args (arg0..arg4) come long unsigned.
+ * @param args         5 args (arg0..arg4) as long unsigned.
  * @param ret540A      Return da FUN_540A.
  */
 function runAndCapture(
@@ -273,10 +273,10 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sui callee (una sola volta — la patch persiste).
+  // Patch RTS sui callee (una sola time — la patch persiste).
   patchCallees(cpu);
 
-  console.log(`\n=== stateSub5584 (FUN_5584) — ${n} casi ===`);
+  console.log(`\n=== stateSub5584 (FUN_5584) — ${n} cases ===`);
 
   const rng = makeRng(0x55845584);
   let ok = 0;
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
       ret53EA = [0]; // simulate pair=0 → early exit
       ret5468 = [];
     } else if (i < 30) {
-      // Sweep deterministico su pattern di return.
+      // Sweep deterministico su pattern of return.
       const seed = i - 5;
       const earlyExit = (seed & 1) === 0;
       args = [

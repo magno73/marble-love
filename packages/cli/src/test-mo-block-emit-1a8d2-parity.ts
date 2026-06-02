@@ -3,9 +3,9 @@
  * test-mo-block-emit-1a8d2-parity.ts — differential FUN_1A8D2 vs
  * `moBlockEmit1A8D2`.
  *
- * body via `header[+8] & ~1`, e itera un body word-stream (long branch) o
+ * body via `header[+8] & ~1`, and itera un body word-stream (long branch) o
  * triple-stream (short branch, attivato da body[0]==0xFF) emettendo 4
- * word per iter su 4 buffer separati i cui cursor pointer-long vivono in
+ * word per iter su 4 buffer separati i which cursor pointer-long vivono in
  *
  * Strategia parity:
  *   - Set up workRam with 4 cursor pointers to sprite-RAM regions
@@ -15,7 +15,7 @@
  *   - Set up body with count + delta bytes (long-branch) or 0xFF + count +
  *     deltas + N triples (short-branch).
  *   - Run TS via `moBlockEmit1A8D2(state, arg0, arg1, arg2, arg3, {romRead})`.
- *   - Compara: spriteRam[0xA02000..0xA02200] (i 4 buffer da 0x80 byte
+ *   - Compare: spriteRam[0xA02000..0xA02200] (the 4 buffer da 0x80 byte
  *
  *   - i=0: arg0 == -1 (early exit, writeback only).
  *   - i=1: long-branch, count=1.
@@ -149,7 +149,7 @@ function makeCase(kind: string, rng: () => number): TestCase {
   // Build body.
   if (kind === "long" || kind === "long_hi") {
     // Long branch: body[0..3] = (count, dx, d4, dy), then N words.
-    // Count clamp: 1..16 (per limitare buffer overflow nei buffer 0x80).
+    // Count clamp: 1..16 (per limitare buffer overflow in the buffer 0x80).
     const count = (Math.floor(rng() * 16) + 1) & 0xff;
     wr[bodyOff] = count;
     wr[bodyOff + 1] = randByte(rng);
@@ -203,7 +203,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== moBlockEmit1A8D2 (FUN_1A8D2) — ${n} casi ===`);
+  console.log(`\n=== moBlockEmit1A8D2 (FUN_1A8D2) — ${n} cases ===`);
 
   const rng = makeRng(0x1a8d2);
   let ok = 0;
@@ -251,7 +251,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, WORK_RAM_BASE + k, 1, tc.workRamSeed[k]!);
       stateInst.workRam[k] = tc.workRamSeed[k]!;
     }
-    // Clear sprite-RAM (entrambi).
+    // Clear sprite-RAM (both).
     for (let k = 0; k < SPRITE_RAM_SIZE; k++) {
       pokeMem(cpu, SPRITE_RAM_BASE + k, 1, 0);
       stateInst.spriteRam[k] = 0;

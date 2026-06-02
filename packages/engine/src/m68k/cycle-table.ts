@@ -14,7 +14,7 @@
  *
  * Covers only the instructions that dominate body cost: MOVEM (prologue/
  * epilogue), JSR/RTS/LINK/UNLK, MOVE/MOVE.L with EA, MULS/MULU/DIVS/DIVU,
- * Bcc/DBcc, BCLR/BSET/BTST, e una manciata di ALU comuni.
+ * Bcc/DBcc, BCLR/BSET/BTST, and una manciata of ALU common.
  *
  * License Musashi: MIT (Karl Stenerud).
  */
@@ -79,9 +79,9 @@ export const CYC_DBCC_BASE = as_u32(12);
 
 // ─── JSR/JMP base + EA extras (Musashi g_jsr_cycle_table) ─────────────────
 
-/** JSR base — sommare `jsrEaExtra[eaMode]`. */
+/** JSR base — add `jsrEaExtra[eaMode]`. */
 export const CYC_JSR_BASE = as_u32(12);
-/** JMP base — sommare `jmpEaExtra[eaMode]`. */
+/** JMP base — add `jmpEaExtra[eaMode]`. */
 export const CYC_JMP_BASE = as_u32(4);
 
 /** EA modes supported by cycle costing. */
@@ -133,7 +133,7 @@ export const jmpEaExtra: Readonly<Record<EaMode, u32>> = {
 
 // ─── LEA / PEA base + EA extras ───────────────────────────────────────────
 
-/** LEA cycles = leaEaExtra[eaMode] (base 0 sul 68010). */
+/** LEA cycles = leaEaExtra[eaMode] (base 0 on the 68010). */
 export const leaEaExtra: Readonly<Record<EaMode, u32>> = {
   Dn: as_u32(0),
   An: as_u32(0),
@@ -285,7 +285,7 @@ export const CYC_DIVU_W = as_u32(108);
  *  - r, dest=mem 8-bit:                        BCLR=10, BSET=8, BTST=4
  *  - s (imm bit number), dest=Dn 32-bit:       BCLR=14, BSET=12, BTST=10
  *  - s, dest=mem 8-bit:                        BCLR=12, BSET=12, BTST=8
- * Si aggiunge `eaCycles[ea].b_w` per dest mem.
+ * Si adds `eaCycles[ea].b_w` per dest mem.
  */
 export const CYC_BCLR_R_D = as_u32(10);
 export const CYC_BCLR_R_M = as_u32(10);
@@ -491,7 +491,7 @@ export function estimateCycles(instr: InstrEstimate): u32 {
       return as_u32(6); // 10 + (-4) for byte not-taken
     }
     case "dbcc": {
-      // Base 12 = "cond false, decrement, branch". Per il cycle counting body:
+      // Base 12 = "cond false, decrement, branch". For the cycle counting body:
       //   cond_false_loop  : 12  (iter normale)
       //   cond_false_expire: 12 + 6 = 18  (counter==-1)
       //   cond_true        : 12 + 0 = 12  (Musashi: cyc_dbcc_f_noexp=0)

@@ -23,7 +23,7 @@
  * Suite testate:
  *   - B: forced match (cursor[0..1] == cellX/Y derivati da pos)
  *   - C: forced mismatch X (no-op write)
- *   - D: cursor[2] = signed byte random (incluso negativi e bordi)
+ *   - D: cursor[2] = signed byte random (including negative and edges)
  *
  * Uso: npx tsx packages/cli/src/test-entity-waypoint-step-1d1ec-parity.ts [N]
  */
@@ -60,7 +60,7 @@ const ENTITY_SIZE = 0x40; // 0x401E00..0x401E3F
 
 const CURSOR_ABS = 0x00401e80;
 const CURSOR_OFF = CURSOR_ABS - 0x400000;
-const CURSOR_SIZE = 0x10; // include cursor + alcuni byte trailing
+const CURSOR_SIZE = 0x10; // include cursor + alcunthe bytes trailing
 
 const ARRAY_BASE_ABS = 0x00401e90;
 
@@ -135,7 +135,7 @@ function buildRandomCase(rng: () => number, opts?: {
   const entity: number[] = new Array(ENTITY_SIZE).fill(0).map(() => rb());
   const cursor: number[] = new Array(CURSOR_SIZE).fill(0).map(() => rb());
 
-  // Imposta pos.X (off 0x0c) e pos.Y (off 0x10) random long
+  // Sets pos.X (off 0x0c) and pos.Y (off 0x10) random long
   const posX = rl();
   const posY = rl();
   writeLongBytes(entity, 0x0c, posX);
@@ -153,7 +153,7 @@ function buildRandomCase(rng: () => number, opts?: {
     cursor[0] = cellX;
     cursor[1] = cellY;
   } else if (opts?.forceCursorMismatchX === true) {
-    // Imposta cursor[0] != cellX (semplice + 1)
+    // Sets cursor[0] != cellX (semplice + 1)
     cursor[0] = (cellX + 1) & 0xff;
   }
 
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== entityWaypointStep1D1EC (FUN_1D1EC) — Suite A: random struct & cursor — ${perSuite} casi ===`,
+    `\n=== entityWaypointStep1D1EC (FUN_1D1EC) — Suite A: random struct & cursor — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: forced cursor X+Y match → step si applica ────────────
-  console.log(`\n=== Suite B: forced cursor match → step apply — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: forced cursor match → step apply — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const c = buildRandomCase(rng, { forcePosToCursorMatch: true, signedStep: true });
@@ -233,7 +233,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: forced cursor[0] mismatch → no apply ─────────────────
-  console.log(`\n=== Suite C: forced cursor X mismatch → no-op write — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: forced cursor X mismatch → no-op write — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const c = buildRandomCase(rng, { forceCursorMismatchX: true });
@@ -242,9 +242,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: signed step (negative/positive bordi) ─────────────────
+  // ─── Suite D: signed step (negative/positive edges) ─────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: random signed step (incl. negativi) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: random signed step (incl. negative) — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const c = buildRandomCase(rng, { forcePosToCursorMatch: true, signedStep: true });

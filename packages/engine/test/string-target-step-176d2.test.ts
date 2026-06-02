@@ -74,7 +74,7 @@ function getLong(s: GameState, addr: number): number {
   );
 }
 
-/** Setup di una catena: obj@objAddr, slot indicizzato da idx, bboxPtrPtr@p1, bboxPtr@p2 (o sentinel). */
+/** Setup of una chain: obj@objAddr, slot indicizzato da idx, bboxPtrPtr@p1, bboxPtr@p2 (o sentinel). */
 function setupChain(args: {
   s: GameState;
   objAddr: number;
@@ -143,7 +143,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(BBOX_SENTINEL).toBe(0xffffffff);
   });
 
-  it("path default (bboxPtr == 0xFFFFFFFF) — usa xMin=-2,yMin=-2,w=12,h=12; cur al target esatto → step=0", () => {
+  it("path default (bboxPtr == 0xFFFFFFFF) — uses xMin=-2,yMin=-2,w=12,h=12; cur al target esatto → step=0", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     // target X = (12 >> 1) + (-2) + slotCx = 6 - 2 + 0 = 4
@@ -162,12 +162,12 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
 
     stringTargetStep176D2(s, objAddr);
 
-    // step = 0 per entrambi → newX = (4 + 0) << 16 = 4 << 16 = 0x40000
+    // step = 0 per both → newX = (4 + 0) << 16 = 4 << 16 = 0x40000
     expect(getLong(s, objAddr + OBJ_X_LONG_OFF)).toBe(0x00040000);
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x00040000);
   });
 
-  it("path read-bbox: cur << target → step = +1 su entrambi gli assi", () => {
+  it("path read-bbox: cur << target → step = +1 su both the assi", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     const bboxAddr = 0x401e00;
@@ -194,7 +194,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x00010000);
   });
 
-  it("path read-bbox: cur >> target → step = -1 su entrambi gli assi", () => {
+  it("path read-bbox: cur >> target → step = -1 su both the assi", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     const bboxAddr = 0x401e00;
@@ -221,7 +221,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x001d0000);
   });
 
-  it("low 16 bit del long sono sempre azzerati", () => {
+  it("low 16 bit of the long are always azzerati", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setLong(s, objAddr + OBJ_X_LONG_OFF, 0xdeadbeef);
@@ -284,7 +284,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe((51 << 16) >>> 0);
   });
 
-  it("byte signed estremi del bbox: width=0x80 (= -128), height=0x7F (= +127)", () => {
+  it("byte signed estremi of the bbox: width=0x80 (= -128), height=0x7F (= +127)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     const bboxAddr = 0x401e00;
@@ -391,7 +391,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x00650000);
   });
 
-  it("nessun side-effect fuori obj+0xC..0x13 (8 byte totali)", () => {
+  it("no side-effect outside obj+0xC..0x13 (8 byte totali)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     // Pre-fill workRam with pattern 0xAA to detect spurious writes.
@@ -418,7 +418,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     for (let i = 0; i < s.workRam.length; i++) {
       if (s.workRam[i] !== pre[i]) writtenOffs.add(i);
     }
-    // I 4 byte di obj+0xC..+0xF: pre era 0xAA0000AA + l'high word=4 da setupChain.
+    // I 4 byte of obj+0xC..+0xF: pre era 0xAA0000AA + l'high word=4 da setupChain.
     for (const off of writtenOffs) {
       const a = off + WORK_RAM_BASE;
       const inX = a >= objAddr + OBJ_X_LONG_OFF && a < objAddr + OBJ_X_LONG_OFF + 4;

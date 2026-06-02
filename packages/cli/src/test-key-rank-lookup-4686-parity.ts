@@ -6,7 +6,7 @@
  * `FUN_00004686` (164 byte) e' un lookup table-driven self-contained:
  * no JSR, no MMIO, and no writes to workRam. Extracts a 24-bit key from the
  * long arg and returns the index of the first row in the table
- * (10 righe × 5 byte) puntata da `*0x401FFC + 0x1E` la cui chiave-prefix
+ * (10 lines × 5 byte) puntata da `*0x401FFC + 0x1E` la which chiave-prefix
  * (3 byte) is strictly greater than the key.
  *
  * Confronto:
@@ -14,7 +14,7 @@
  *
  * Setup for each random case:
  *   - *0x401FFC = a2Addr (struct base, range workRam-safe @ 0x401D00)
- *   - 50 byte @ a2Addr+0x1E .. a2Addr+0x4F (10 righe da 5 byte)
+ *   - 50 byte @ a2Addr+0x1E .. a2Addr+0x4F (10 lines da 5 byte)
  *     organized as a strictly sorted table for the first 3 bytes
  *   - arg = long random
  *
@@ -96,8 +96,8 @@ function pokeByte(
 /**
  * Set up a 10x5 table from an array of 10 24-bit keys. The keys are
  * written as provided; the caller supplies DESCENDING order
- * for the convention expected by FUN_4686. The 2 payload columns (col 3,4)
- * sono random.
+ * for the convention expected by FUN_4686. The 2 payload columns (with the 3,4)
+ * are random.
  */
 function setupTable(
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
    */
   function genSortedKeysDesc(): number[] {
     const asc: number[] = [];
-    let cur = 0x10000 + ri(0x10000); // start sopra zero
+    let cur = 0x10000 + ri(0x10000); // start above zero
     for (let i = 0; i < 10; i++) {
       asc.push(cur);
       const gap = 0x1000 + ri(0xff00);
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: high byte != 0 → -1 ─────────────────────────────────
-  console.log(`\n=== keyRankLookup4686 (FUN_4686) — Suite A: high byte != 0 — ${perSuite} casi ===`);
+  console.log(`\n=== keyRankLookup4686 (FUN_4686) — Suite A: high byte != 0 — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const keys = genSortedKeysDesc();
@@ -218,18 +218,18 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: key > tutti i prefix → 0 ────────────────────────────
-  console.log(`\n=== Suite B: key > tutti i prefix → 0 — ${perSuite} casi ===`);
+  // ─── Suite B: key > all i prefix → 0 ────────────────────────────
+  console.log(`\n=== Suite B: key > all prefixes → 0 — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     // DESC table with keys[0] greater than the table, while leaving
-    // spazio sopra. arg key strictly > keys[0].
+    // spazio above. arg key strictly > keys[0].
     const keys = genSortedKeysDesc();
     setupTable(state, cpu, keys, rng);
     // Genera key in (keys[0], 0xFFFFFF]
     const top = keys[0]!;
     if (top >= 0xfffffe) {
-      // fallback: provoca high-byte fail (non possibile nel pattern B,
+      // fallback: provoca high-byte fail (non possibile in the pattern B,
       // skipping this iteration counts as OK only if TS == bin).
       if (runOne("B", i, 0)) okB++;
       continue;
@@ -240,8 +240,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: key fra row r e r-1 (DESC) → r ──────────────────────
-  console.log(`\n=== Suite C: key fra row r e r-1 (DESC) → r — ${perSuite} casi ===`);
+  // ─── Suite C: key between row r and r-1 (DESC) → r ──────────────────────
+  console.log(`\n=== Suite C: key between row r and r-1 (DESC) → r — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const keys = genSortedKeysDesc();
@@ -261,8 +261,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: key < tutti i prefix → 10 ───────────────────────────
-  console.log(`\n=== Suite D: key < tutti i prefix → 10 — ${perSuite} casi ===`);
+  // ─── Suite D: key < all i prefix → 10 ───────────────────────────
+  console.log(`\n=== Suite D: key < all prefixes → 10 — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     // DESC table with keys[9] large enough to leave room below.
@@ -281,7 +281,7 @@ async function main(): Promise<void> {
 
   // ─── Suite E: fully random ────────────────────────────────────────
   const sizeE = perSuite + remainder;
-  console.log(`\n=== Suite E: fully random arg + tabella DESC — ${sizeE} casi ===`);
+  console.log(`\n=== Suite E: fully random arg + DESC table — ${sizeE} cases ===`);
   let okE = 0;
   for (let i = 0; i < sizeE; i++) {
     const keys = genSortedKeysDesc();

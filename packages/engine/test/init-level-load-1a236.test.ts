@@ -40,7 +40,7 @@ function readLongWorkRam(s: ReturnType<typeof emptyGameState>, abs: number): num
 
 function makeRomWithLevelPointer(ptr: number): ReturnType<typeof emptyRomImage> {
   const rom = emptyRomImage();
-  // Entry 0 (Level 1) della pointer table @ 0x2BE00
+  // Entry 0 (Level 1) of the pointer table @ 0x2BE00
   const off = INIT_LEVEL_LOAD_1A236_POINTER_TABLE_ROM_ADDR;
   rom.program[off] = (ptr >>> 24) & 0xff;
   rom.program[off + 1] = (ptr >>> 16) & 0xff;
@@ -50,7 +50,7 @@ function makeRomWithLevelPointer(ptr: number): ReturnType<typeof emptyRomImage> 
 }
 
 describe("initLevelLoad1A236 (FUN_0001A236)", () => {
-  it("setta i 3 globali e carica il level pointer dall'entry 0 della tabella", () => {
+  it("setta the 3 globali and carica il level pointer dto the entry 0 of the table", () => {
     const s = emptyGameState();
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE] = 0x12;
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE + 1] = 0x34;
@@ -69,7 +69,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     expect(readLongWorkRam(s, INIT_LEVEL_LOAD_1A236_LEVEL_PTR_DST_ADDR)).toBe(0x0002bee2);
   });
 
-  it("chiama tutte e 4 le subs nell'ordine binary", () => {
+  it("calls all and 4 le subs in the ordine binary", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0x12345678);
     const calls: string[] = [];
@@ -97,7 +97,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     expect(() => initLevelLoad1A236(s, rom, {})).not.toThrow();
   });
 
-  it("subs parziali: invoca solo quelle definite, salta gli undefined", () => {
+  it("subs parziali: invoca solo quelle definite, skips the undefined", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0xdeadbeef);
     const calls: string[] = [];
@@ -114,7 +114,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     expect(readLongWorkRam(s, INIT_LEVEL_LOAD_1A236_LEVEL_PTR_DST_ADDR)).toBe(0xdeadbeef);
   });
 
-  it("le sub vedono i globali GIÀ settati e il level ptr GIÀ scritto", () => {
+  it("le sub vedono i globali GIÀ settati and il level ptr GIÀ scritto", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0x00abcdef);
     const snapshots: Record<string, { gameMode: number; counter: number; ptr: number }> = {};
@@ -137,7 +137,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     }
   });
 
-  it("costanti esposte: ADDR e SUB_ADDRS sono bit-exact dal disasm", () => {
+  it("costanti esposte: ADDR and SUB_ADDRS are bit-exact from the disasm", () => {
     expect(INIT_LEVEL_LOAD_1A236_ADDR).toBe(0x0001a236);
     expect(INIT_LEVEL_LOAD_1A236_SUB_ADDRS).toEqual([
       0x00028c7e,
