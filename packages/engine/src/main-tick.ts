@@ -90,7 +90,7 @@ import {
   advanceHighScoreInitialsEntry,
   highScoreInitialsEntryActive,
 } from "./high-score-initials-entry.js";
-import { helper11FF8Default } from "./helper-11ff8.js";
+import { helper11FF8Default } from "./read-abs-byte-11ff8.js";
 
 export interface MainTickInputs {
   /** Trackball MMIO absolute byte player 1 X. */
