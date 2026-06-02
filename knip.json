@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": ["packages/web/public/sound-worklet.js"],
+  "workspaces": {
+    ".": {
+      "entry": ["oracle/**/*.ts", "harness/**/*.ts"],
+      "project": ["oracle/**/*.ts", "harness/**/*.ts"]
+    },
+    "packages/engine": { "entry": ["src/index.ts", "test/**/*.test.ts"] },
+    "packages/web": { "entry": ["src/main.ts", "test/**/*.test.ts"] },
+    "packages/cli": { "entry": ["src/*.ts"] }
+  }
+}
