@@ -1,5 +1,5 @@
 /**
- * helper-11ff8.test.ts — smoke tests di `helper11FF8` (FUN_11FF8).
+ * read-abs-byte-11ff8.test.ts — smoke tests di `helper11FF8` (FUN_11FF8).
  *
  * Verifica i path principali:
  *   1. Phase 1 match-scan: defaults table vs workRam entries
@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { helper11FF8, HELPER_11FF8_ADDR } from "../src/helper-11ff8.js";
+import { helper11FF8, HELPER_11FF8_ADDR } from "../src/read-abs-byte-11ff8.js";
 import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 

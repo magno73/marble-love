@@ -1,5 +1,5 @@
 /**
- * state-sub-1844a.ts - port of `FUN_0001844A` (610 bytes, 0x1844A..0x186AA).
+ * read-abs-long-1844a.ts (FUN_1844A) - port of `FUN_0001844A` (610 bytes, 0x1844A..0x186AA).
  *
  * "Slot-table tick: timer decrement, insert-sorted trigger, sprite-coord
  * update, and 3-bucket sound dispatch". Gated by `(*0x400394).w == 3` and

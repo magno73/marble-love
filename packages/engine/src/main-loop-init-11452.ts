@@ -6,7 +6,7 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { levelDispatcher16EC6 } from "./level-dispatcher-16ec6.js";
 import { mainLoopInit10504, type MainLoopInit10504Subs } from "./main-loop-init-10504.js";
-import { helper11FF8Default } from "./helper-11ff8.js";
+import { helper11FF8Default } from "./read-abs-byte-11ff8.js";
 import { gameModePrep10456 } from "./game-mode-prep-10456.js";
 import { finalize11654 } from "./finalize-11654.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
