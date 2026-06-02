@@ -5,13 +5,13 @@
  *
  * FUN_000186AC (368 byte): "mode-3 entity-scan + slot-table init/teardown".
  * 0xE2; based on the sentinel `*0x400760` and the `hasArmed` flag, runs init
- * (rng-driven popolamento of 0x24 entry × 0x10 byte @ 0x401650), teardown
+ * (rng-driven population of 0x24 entries × 0x10 byte @ 0x401650), teardown
  * (clear 0x24 entries + call FUN_18F46 for entries with entry[2..3]==0xFFFF),
- * o no-op.
+ * or no-op.
  *
- * **Strategia parity**:
- *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
- *   - `FUN_0001BB28` (entry-init callback) **stubbed with RTS** (0x4E75) for
+ * **Parity strategy**:
+ *   - `FUN_00013A98` (RNG @ 0x4003A6) **left live**: replicated
+ *   - `FUN_0001BB28` (entry-init callback) **stubbed with RTS** (0x4E75) to
  *     neutralize side effects. The TS uses `subs.fun_1bb28 = noop`.
  *   - `FUN_00018F46` (teardown callback) **stubbed with RTS**.
  *   - Compare:
@@ -29,7 +29,7 @@
  *        entry[2..3] = 0xFFFF / non-FFFF)
  *   - D: edge cases (mode != 3, count = 0, sentinel saturation)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-186ac-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-186ac-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -71,9 +71,9 @@ const SLOT_TABLE_BYTES = SLOT_ENTRY_COUNT * SLOT_ENTRY_STRIDE; // 576
 
 /**
  * Patch JSR-stub:
- *   - FUN_1BB28 → RTS per neutralize entry-init callback.
- *   - FUN_18F46 → RTS per neutralize teardown callback.
- *   FUN_13A98 (RNG) lasciato live.
+ *   - FUN_1BB28 → RTS to neutralize entry-init callback.
+ *   - FUN_18F46 → RTS to neutralize teardown callback.
+ *   FUN_13A98 (RNG) left live.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1BB28 + 0, 1, 0x4e);
@@ -178,8 +178,8 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function setupCase(input: CaseInput): void {
-    // word @ 0x400394 (game_mode) and 0x400396 (count) per count >= 4 (obj4
-    // covers 0x400018+4*0xE2 = 0x4003A0..0x400481 → include count word e
+    // word @ 0x400394 (game_mode) and 0x400396 (count) for count >= 4 (obj4
+    // covers 0x400018+4*0xE2 = 0x4003A0..0x400481 → includes count word and
     // RNG seed @ 0x4003A6). To avoid setup collisions, write
 
     // ── BINARY setup ──────────────────────────────────────────────────
@@ -402,7 +402,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

@@ -83,7 +83,7 @@ function patchSoundSink(rom: Buffer): void {
   rom[FUN_158AC + 0x12] = 0x4e; rom[FUN_158AC + 0x13] = 0x75;
 }
 
-/** Patch FUN_2591A a `rts` (4E 75) — neutralizza the init helper. */
+/** Patch FUN_2591A to `rts` (4E 75) — neutralizes the init helper. */
 function patch2591ARts(rom: Buffer): void {
   rom[FUN_2591A + 0] = 0x4e;
   rom[FUN_2591A + 1] = 0x75;
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
   const rw = (): number => Math.floor(rng() * 0x10000) & 0xffff;
   const pickPtr = (): number =>
     PTR_CANDIDATES[Math.floor(rng() * PTR_CANDIDATES.length)]!;
-  // Distribuzione subStateCode: 25% case 2, 25% case 9, 25% case 4, 25% default
+  // subStateCode distribution: 25% case 2, 25% case 9, 25% case 4, 25% default
   const pickCode = (): number => {
     const r = rng();
     if (r < 0.25) return 0x02;
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
 
     const scratchObj = new Uint8Array(0xe0);
     for (let k = 0; k < 0xe0; k++) scratchObj[k] = rb();
-    // Override pre-state controllati
+    // Override controlled pre-state
     scratchObj[0x18] = pre18;
     scratchObj[0x1a] = pre1A;
     scratchObj[0x57] = pre57;

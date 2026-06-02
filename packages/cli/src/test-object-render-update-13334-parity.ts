@@ -3,16 +3,16 @@
  * test-object-render-update-13334-parity.ts —
  * differential FUN_00013334 vs `objectRenderUpdate13334`.
  *
- * **Strategia**:
- * `FUN_13334` ha 5 path observable (mode = `struct[0x1e]`):
+ * **Strategy**:
+ * `FUN_13334` has 5 observable paths (mode = `struct[0x1e]`):
  *   1. mode ∉ {1,2}: skip globals → compute + dispatch + final copy.
  *   2. mode in {1,2} and `*struct[0x3e] == 0xFFFFFFFF`: direct epilogue.
- *   3. mode == 1, record valido: store globals → epilogue.
- *   5. mode == 2, record valido, mode_hi ∈ {1,2}: globals + compute.
+ *   3. mode == 1, valid record: store globals → epilogue.
+ *   5. mode == 2, valid record, mode_hi ∈ {1,2}: globals + compute.
  *
  *   - 1f not in {3,6}: compute + final copy only.
  *
- * stessi side effect.
+ * same side effects.
  *
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - workRam @ 0x400970..0x400977 (active record globals)
@@ -20,13 +20,13 @@
  *   - struct @ A2..A2+0x60 (including +0x42, +0x4E)
  *   - record buffer @ struct[0x3E] (to detect spurious writes via FUN_1D06A)
  *
- * Suite testate:
+ * Suites tested:
  *   - A: random everything (mode random, kind random)
  *   - B: forced mode==1 (globals + epilogue path)
  *   - C: forced mode==2 with random mode_hi (4 vs 5)
  *   - D: forced kind==3 + random base==0x21192 (palette-index path)
  *
- * Uso: npx tsx packages/cli/src/test-object-render-update-13334-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-render-update-13334-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -57,7 +57,7 @@ const PAL_QUEUE_HEAD = 0x0040040c;
 
 const STUB_1D06A_BYTES = [0x4e, 0x75] as const;
 
-/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
+/** Candidate slot pointers for the struct (work RAM, far from globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
   ): boolean {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Re-applica stub periodicamente.
+    // Re-apply stub periodically.
     if (i % 100 === 0) applyStub();
 
     resetGlobals();
@@ -269,7 +269,7 @@ async function main(): Promise<void> {
     const r = callFunction(cpu, FUN_13334, [structPtr >>> 0]);
     const binD0 = r.d0 >>> 0;
 
-    // Run TS (callback no-op per inner1D06A).
+    // Run TS (no-op callback for inner1D06A).
     const tsD0 =
       ns.objectRenderUpdate13334(stateInst, tsRom, structPtr, {
         inner1D06A: (_b: number): void => undefined,
@@ -342,7 +342,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: forced mode==1 ─────────────────────────────────────────
-  console.log(`\n=== Suite B: mode==1 (path globals/epilogue) — ${perSuite} cases ===`);
+  console.log(`\n=== Suite B: mode==1 (globals/epilogue path) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     setHud(rng);
@@ -369,7 +369,7 @@ async function main(): Promise<void> {
     if (structPtr === recPtr) continue;
     const bytes = makeStructBytes(recPtr);
     bytes[0x1e] = 2;
-    // mode_hi = 1, 2, 3, o random to cover the 4/5 paths.
+    // mode_hi = 1, 2, 3, or random to cover the 4/5 paths.
     const hiVals = [0, 1, 2, 3, 4];
     bytes[0x1a] = hiVals[Math.floor(rng() * hiVals.length)]!;
     bytes[0x1f] = rb();
@@ -389,8 +389,8 @@ async function main(): Promise<void> {
     const recPtr = pickRec();
     if (structPtr === recPtr) continue;
     const bytes = makeStructBytes(recPtr);
-    bytes[0x1e] = 0; // skip gating, vai dritto al compute.
-    bytes[0x1f] = 3; // kind == 3 → path palette index.
+    bytes[0x1e] = 0; // skip gating, go straight to compute.
+    bytes[0x1f] = 3; // kind == 3 → palette index path.
 
     // basePtr: 50% magic 0x21192, 50% random in ROM range.
     const useMagic = rng() < 0.5;
@@ -415,7 +415,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

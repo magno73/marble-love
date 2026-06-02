@@ -3,17 +3,17 @@
  * test-special-attract-parity.ts — differential FUN_288F8 vs specialAttract.
  *
  * not mirrored; to isolate the FUN_288F8 path, patch FUN_158AC with
- * un payload "capture":
+ * a "capture" payload:
  *
- *   move.b   (0x7,SP), D0      ; 102F 0007        (4 byte)
- *   move.b   D0, ($00401FFE)   ; 13C0 0040 1FFE   (6 byte)
- *   rts                        ; 4E75             (2 byte)
+ *   move.b   (0x7,SP), D0      ; 102F 0007        (4 bytes)
+ *   move.b   D0, ($00401FFE)   ; 13C0 0040 1FFE   (6 bytes)
+ *   rts                        ; 4E75             (2 bytes)
  *
  *
- * Per la TS replication: cattureremo the arg of `soundCommand` callback
- * iniettato in `specialAttract`.
+ * For the TS replication: we capture the arg of the `soundCommand` callback
+ * injected into `specialAttract`.
  *
- * Uso: npx tsx packages/cli/src/test-special-attract-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-special-attract-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   }
   const rom = Buffer.from(readFileSync(romPath));
 
-  // Patch ROM @ FUN_158AC: capture il byte arg (0x7,SP) → ($00401FFE), rts.
+  // Patch ROM @ FUN_158AC: capture the byte arg (0x7,SP) → ($00401FFE), rts.
   // move.b (0x7,SP), D0    : 10 2F 00 07
   // move.b D0, $00401FFE.l : 13 C0 00 40 1F FE
   // rts                    : 4E 75
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Mix of pattern to cover all le 3 branch + boundary condition:
+    // Mix of patterns to cover all 3 branches + boundary conditions:
     //   pattern 0 : stage = 0x0000 (low, S=0)
     //   pattern 1 : stage = 0x000B (low, S=11, just below mid)
     //   pattern 2 : stage = 0x000C (mid, S=12, exact mid threshold)

@@ -4,10 +4,10 @@
  * `renderTileLine1AD54`.
  *
  * `FUN_0001AD54` (982 byte, 0x01AD54-0x01B12A): tile-line renderer.
- * una direction tabthe ROMs @0x1ECEA, and uno stream dati via pointer-table
- * ancorata a *(0x400474).
+ * a direction table in the ROM @0x1ECEA, and a data stream via pointer-table
+ * anchored at *(0x400474).
  *
- * Strategia parity:
+ * Parity strategy:
  *   - Set up workRam with:
  *       * Struct 8-byte @ 0x401000 (arg0).
  *       * PTR_TABLE_ROOT (0x400474) → root-struct @ 0x401080.
@@ -24,7 +24,7 @@
  *   C: dirIdx 4..7 (column-major), random params
  *
  *
- * Uso: npx tsx packages/cli/src/test-render-tile-line-1ad54-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-render-tile-line-1ad54-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
 
   /**
    * Generate a Uint8Array for the test parameters and synchronize it
-   * su Musashi + stateInst.
+   * onto Musashi + stateInst.
    */
   function setupCase(
     dirIdx: number,
@@ -359,7 +359,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${sizeC} = ${((okC/sizeC)*100).toFixed(1)}%`);
 
   const totalOk = okA + okB + okC;
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk/total)*100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk/total)*100).toFixed(1)}% ===`);
 
   if (failHolder.value !== null) {
     const f = failHolder.value;

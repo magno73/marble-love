@@ -3,9 +3,9 @@
  * test-slot-spawn-pattern-13d38-parity.ts — differential FUN_00013D38 vs
  * `slotSpawnPattern13D38`.
  *
- * `FUN_00013D38` (430 byte) emits a fan-pattern of 8 records of 6 byte each into two
+ * `FUN_00013D38` (430 bytes) emits a fan-pattern of 8 records of 6 bytes each into two
  * ranges of its own slot record (A0+0xA4 and A0+0x38), reading:
- *   - signed delta-stream byte @ ROM 0x1EF32 (16 byte = 8 pairs)
+ *   - signed delta-stream byte @ ROM 0x1EF32 (16 bytes = 8 pairs)
  *   - slot pointers @ ROM 0x1F016 indexed by `(A0+0x58).b sext.l <<2`
  *   - coords from `(A1+0x4E).l` and branch on `(A1+0x1F).b == 0xD`
  *
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
 
     // Set up A1 fields (A1 = slotPtrs[selectorByte] if selectorByte < 25).
-    // Setup random A1+0x4E (long) and A1+0x1F (byte). Con selectorByte ∈ [0..24]
+    // Setup random A1+0x4E (long) and A1+0x1F (byte). With selectorByte ∈ [0..24]
     // guarantee that A1 is a canonical slot (in work RAM).
     const a1Idx = selectorByte; // < 25 by construction
     if (a1Idx < SLOT_COUNT) {

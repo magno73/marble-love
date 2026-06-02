@@ -3,14 +3,14 @@
  * test-state-sub-1960e-parity.ts — differential FUN_0001960E vs
  * `stateSub1960E`.
  *
- * FUN_0001960E (132 byte): "entity RNG-driven state-byte resampler". Resampla
- * `entity[0x26]` via PRNG `FUN_13A98` in 3 branch (state==7 jitter ±2,
+ * FUN_0001960E (132 byte): "entity RNG-driven state-byte resampler". Resamples
+ * `entity[0x26]` via PRNG `FUN_13A98` in 3 branches (state==7 jitter ±2,
  * long0==0 → {0,8}, long0!=0 → {4,12}). At the tail it calls `FUN_19692`.
  *
- * **Strategia parity**:
- *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: piccolo, replicato
+ * **Parity strategy**:
+ *   - `FUN_00013A98` (RNG @ 0x4003A6) **left live**: small, replicated
  *     bit-perfect in `rng.ts`.
- *   - `FUN_00019692` (heavy entity update) **stubbed with RTS** (0x4E75) for
+ *   - `FUN_00019692` (heavy entity update) **stubbed with RTS** (0x4E75) to
  *     neutralize side effects. The TS uses `subs.fun_19692 = noop`.
  *   - Compare:
  *       * `entity[0x00..0x27]` (0x28 bytes = 1 full entity stride)
@@ -22,7 +22,7 @@
  *   - C: state==9 + entity[0..3]==0 (long0_zero + chance clear-block)
  *   - D: edge cases (state byte boundaries, counter sat 0xF, long0=0/!=0 mix)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-1960e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-1960e-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,7 +52,7 @@ const ENTITY_SIZE = 0x28;
 
 /**
  * Patch JSR-stub:
- *   - FUN_19692 → RTS (0x4E75) per neutralize il heavy entity-update.
+ *   - FUN_19692 → RTS (0x4E75) to neutralize the heavy entity-update.
  *     FUN_13A98 (RNG) is left live.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const entity = new Array(ENTITY_SIZE).fill(0).map(() => rb());
-    entity[0x25] = 0x07; // forza branch state==7
+    entity[0x25] = 0x07; // force the state==7 branch
     if (runOneCase("B", i, entity, rs())) okB++;
   }
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
     if ((i & 1) === 0) {
       entity[0] = entity[1] = entity[2] = entity[3] = 0;
     } else {
-      // Forza long0 != 0 (almeno un byte)
+      // Force long0 != 0 (at least one byte)
       entity[0] = ((entity[0] ?? 0) | 0x80) & 0xff;
     }
     if (runOneCase("C", i, entity, rs())) okC++;
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

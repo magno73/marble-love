@@ -11,11 +11,11 @@
  *   - table `0x40098C` (max 7 entries x 0xC bytes) = random bytes
  *   - `*0x40097E` (HUD offset, read by computeSpriteCoords_v1) = random word
  *
- * Verifica byte-by-byte:
+ * Byte-by-byte verification:
  *   - table `0x40098C..0x40098C + 7*0xC`
  *   - globals `0x400690..0x400693` (POS_X/POS_Y updated by callback)
  *
- * Uso: npx tsx packages/cli/src/test-process-all-sprites-189e2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-process-all-sprites-189e2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
         break;
       }
     }
-    // Compare globali POS_X/POS_Y
+    // Compare POS_X/POS_Y globals
     if (match) {
       for (let j = 0x690; j <= 0x693; j++) {
         const b = peekMem(cpu, 0x400000 + j, 1) & 0xff;

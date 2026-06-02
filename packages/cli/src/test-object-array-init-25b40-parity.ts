@@ -6,16 +6,16 @@
  * `FUN_00025B40` (110 bytes): populates 3 arrays (A1+0x74, +0x84, +0x94, each
  * 8 words) by reading 2 ROM tables @ 0x1D3F4 and 0x1D3FC, then clears A1+0xCA.
  *
- * Strategia parity (no sub-jsr, modulo puro):
+ * Parity strategy (no sub-jsr, pure module):
  *   1. For each random case, randomize:
  *        - objPtr in {0x401000, ..., 0x401C00} (12 candidates)
- *        - "scratch" bytes su all i fields target of A1 (for the check write)
- *        - byte near ai fields target (for the check no-spill)
+ *        - "scratch" bytes on all the target fields of A1 (for the write check)
+ *        - bytes near the target fields (for the no-spill check)
  *   2. Run the real binary @ FUN_00025B40.
  *   3. Run TS objectArrayInit25B40 on the workRam mirror, with the same ROM.
- *   4. Compare the 24 word + 1 byte target su A1 + i near.
+ *   4. Compare the 24 words + 1 byte target on A1 and the neighbors.
  *
- * Uso: npx tsx packages/cli/src/test-object-array-init-25b40-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-array-init-25b40-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -27,8 +27,8 @@ import {
   bus as busNs,
 } from "@marble-love/engine";
 import type { RomImage } from "@marble-love/engine";
-// Direct import from engine src (modulo nuovo non ancora ri-esportato in
-// node_modules @marble-love/engine up to build/install successive).
+// Direct import from engine src (new module not yet re-exported in
+// node_modules @marble-love/engine until a subsequent build/install).
 import * as oaiNsRaw from "../../engine/src/object-array-init-25b40.js";
 const oaiNs = oaiNsRaw as unknown as {
   objectArrayInit25B40: (
@@ -50,7 +50,7 @@ const FUN_25B40 = 0x00025b40;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
+// Pointer candidates (well within workRam, leaves margin for the stack at 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
     0xcb, 0xcc, 0xcd,
   ] as const;
 
-  // Tabelthe ROMs lette (for the check).
+  // ROM tables read (for the check).
   const TABLE_A_ROM = 0x0001d3f4;
   const TABLE_B_ROM = 0x0001d3fc;
 
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, ptr + k, 1, scratchObj[k]!);
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror to state.workRam ────────────────────────────────────────
     // Reset workRam to avoid cross-contamination from the previous case.
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Object scratch in the mirror
@@ -153,10 +153,10 @@ async function main(): Promise<void> {
     // ── Run TS ─────────────────────────────────────────────────────────
     oaiNs.objectArrayInit25B40(stateInst, tsRom, ptr);
 
-    // ── Confronto ──────────────────────────────────────────────────────
+    // ── Comparison ──────────────────────────────────────────────────────
     let fail: FailRecord | null = null;
 
-    // Helper: read word BE da workRam mirror
+    // Helper: read BE word from workRam mirror
     const tsReadW = (boff: number): number =>
       (((stateInst.workRam[boff] ?? 0) << 8) |
         (stateInst.workRam[boff + 1] ?? 0)) &

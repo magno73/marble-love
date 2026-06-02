@@ -2,11 +2,11 @@
 /**
  * test-palette-queue-parity.ts — differential testing of the palette command queue.
  *
- * Testa 3 functions:
+ * Tests 3 functions:
  *   1. paletteQueuePush vs FUN_26B66 (push byte to queue)
  *   3. paletteQueueDrain vs FUN_26B88 (drain + lookup tables → palette write)
  *
- * Uso: npx tsx packages/cli/src/test-palette-queue-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-palette-queue-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -10,7 +10,7 @@
  *   - *0x401FF5/F6/F7 = accumulator state random
  *
  *
- * Uso: npx tsx packages/cli/src/test-sound-dispatch-send-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-dispatch-send-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 
-  // Range workRam-safe per la struct A2: scegliamo 0x401D00 (region 29, NOT
+  // workRam-safe range for the A2 struct: we pick 0x401D00 (region 29, NOT
   const a2Addr = 0x00401d00;
 
   for (let i = 0; i < n; i++) {

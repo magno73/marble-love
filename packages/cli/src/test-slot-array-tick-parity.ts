@@ -3,22 +3,22 @@
  *
  *
  *
- * Strategia (analogo a `test-state-sub-2678-parity.ts`):
+ * Strategy (analogous to `test-state-sub-2678-parity.ts`):
  *   1. Patch FUN_14966 to a custom thunk that logs the received long arg into
  *      a work-RAM ring buffer @ 0x401FE0 (4 longs), with counter @ 0x401FF8.
- *      in 0x401FE0 (long-buffer of 4 entry).
+ *      in 0x401FE0 (long-buffer of 4 entries).
  *      0x4013C2, 0x401422].
  *   3. Run TS with a callback that emits the same log -> compare workRam
  *      bit-by-bit (including ring-buffer + counter).
  *
  * The thunk patch (32 bytes, < size of FUN_14966) replaces the header:
- *   movea.l #0x00401FE0, A0       ; 207C 0040 1FE0          (6 byte)
- *   move.l  0x00401FF8.l, D1      ; 2239 0040 1FF8          (6 byte)
- *   adda.l  D1, A0                ; D1C1                    (2 byte) ; A0 += D1*1 (long)
- *   move.l  4(SP), (A0)           ; 20EF 0004               (4 byte) ; *(A0) = arg
- *   addq.l  #4, 0x00401FF8.l      ; 58B9 0040 1FF8          (6 byte) ; counter += 4
- *   rts                           ; 4E75                    (2 byte)
- *  Totale = 26 byte.
+ *   movea.l #0x00401FE0, A0       ; 207C 0040 1FE0          (6 bytes)
+ *   move.l  0x00401FF8.l, D1      ; 2239 0040 1FF8          (6 bytes)
+ *   adda.l  D1, A0                ; D1C1                    (2 bytes) ; A0 += D1*1 (long)
+ *   move.l  4(SP), (A0)           ; 20EF 0004               (4 bytes) ; *(A0) = arg
+ *   addq.l  #4, 0x00401FF8.l      ; 58B9 0040 1FF8          (6 bytes) ; counter += 4
+ *   rts                           ; 4E75                    (2 bytes)
+ *  Total = 26 bytes.
  *
  *     (0x401300..0x40142F to cover the 4 slot + some guard bytes,
  *      and 0x401FE0..0x401FFB for the ring buffer) to prove that
@@ -45,7 +45,7 @@ const FUN_14966 = 0x00014966;
 /** Addresses of the ring-buffer in work-RAM (offset 0x1FE0..0x1FFB). */
 const RING_COUNTER = 0x00401ff8;
 
-/** Patch FUN_14966 with the thunk-logger (26 byte). */
+/** Patch FUN_14966 with the thunk-logger (26 bytes). */
 function patchFun14966(cpu: CpuSession): void {
   const bytes = [
     // movea.l #0x00401FE0, A0
@@ -74,7 +74,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Setup work-RAM area-of-interesse + ring-buffer. */
+/** Setup work-RAM area-of-interest + ring-buffer. */
 function setupWorkRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -101,7 +101,7 @@ function resetWatchedZones(
   }
 }
 
-/** Read entire watch zone as concatenated bytes (per facile diff). */
+/** Read entire watch zone as concatenated bytes (for easy diff). */
 function readWatchZone(
   cpu: CpuSession,
 ): { slotZone: Uint8Array; ringZone: Uint8Array; counter: number } {
@@ -153,7 +153,7 @@ function diffBytes(
 }
 
 /**
- *   - Incrementa counter of 4 (long) @ workRam[0x1FF8]
+ *   - Increment counter by 4 (long) @ workRam[0x1FF8]
  */
 function makeLogger() {
   return (slotPtr: number, state: ReturnType<typeof stateNs.emptyGameState>): void => {
@@ -251,7 +251,7 @@ async function main(): Promise<void> {
         }
         const seqOk = expected.every((v, i) => v === got[i]);
         if (!seqOk) {
-          console.log(`  ERROR (tc=0): sequenza ring-buffer non attesa: got=${got.map(g=>g.toString(16))}`);
+          console.log(`  ERROR (tc=0): unexpected ring-buffer sequence: got=${got.map(g=>g.toString(16))}`);
           ok--;
           if (firstFail === null) {
             firstFail = {

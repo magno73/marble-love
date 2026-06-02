@@ -10,7 +10,7 @@
  *
  * Output: 4 KB of written alpha RAM plus verification.
  *
- * Uso: npx tsx packages/cli/src/test-string-render-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-render-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -82,12 +82,12 @@ async function main(): Promise<void> {
     stateInst.workRam[0x1F43] = rotation & 0xff;
 
     // Setup entry struct @ STRUCT_ADDR (single entry, marker forces exit)
-    // +0  byte: with the
+    // +0  byte: col
     // +1  byte: tickOffset
     // +2  long: stringPtr → STRING_ADDR
     // +6  byte: marker (= 0 to force exit immediately, since marker + valF00 <= 1)
     // +8  long: next ptr (irrelevant since we exit)
-    const col = Math.floor(rng() * 32) & 0xff;          // small with the
+    const col = Math.floor(rng() * 32) & 0xff;          // small col
     const tickOff = (tick & 0xff);                       // make it likely "due"
     const marker = 0;                                    // chain end signal (with valF00 logic)
     pokeMem(cpu, STRUCT_ADDR + 0, 1, col);

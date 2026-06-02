@@ -5,7 +5,7 @@
  *
  * `FUN_000160F6` (1378 byte, 0x0160F6–0x016658): trackball navigation
  * dispatcher. Updates object movement based on trackball delta
- * and input direzionali.
+ * and directional inputs.
  *
  * **Stub injection**:
  *   `FUN_000158AC` (sound command) is patched to a thunk logger that
@@ -23,9 +23,9 @@
  *     move.l  (4,SP), (0,A0,D1.l*1)  ; 20B1 1804       (4 byte)
  *     addq.l  #4, 0x00401E04.l        ; 54B9 0040 1E04  (6 byte)
  *     rts                              ; 4E75             (2 byte)
- *     → totale 24 byte
+ *     → total 24 bytes
  *
- * FUN_158AC @ 0x000158AC: size reale ~40 byte → ampiamente abbastanza.
+ * FUN_158AC @ 0x000158AC: actual size ~40 bytes → more than enough.
  *
  * **Suites** (4 x 125 = 500 cases):
  *   A: randomly generated D2 (randomized input with varied in-range tile/vel)
@@ -33,10 +33,10 @@
  *   C: state 1 (moving) with various dirMask and romByte values
  *   D: edge cases (state 2 lock, charcode outside whitelist, tile boundary)
  *
- * **Zone confrontate**: struct + globals 0x66a–0x682 + sound log
+ * **Compared zones**: struct + globals 0x66a–0x682 + sound log
  *   (0x401E00..0x401E07) + counter (0x401E04).
  *
- * Uso: npx tsx packages/cli/src/test-state-dispatch-160f6-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-dispatch-160f6-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -73,7 +73,7 @@ const TILE_Y_PTR = 0x00401200;
 const WR_BASE = 0x400000;
 
 /**
- * Patch FUN_158AC a un thunk-logger (24 byte).
+ * Patch FUN_158AC to a thunk-logger (24 bytes).
  * The thunk writes arg long (4,SP) into ring @ SOUND_LOG_BASE + counter,
  * then increments the counter by 4.
  */
@@ -108,7 +108,7 @@ const rw = (rng: () => number): number => Math.floor(rng() * 0x10000) & 0xffff;
 const rl = (rng: () => number): number =>
   ((Math.floor(rng() * 0x10000) << 16) | Math.floor(rng() * 0x10000)) >>> 0;
 
-/** Scrive word BE in cpu + workRam. */
+/** Writes a BE word to cpu + workRam. */
 function pokeWordBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -123,7 +123,7 @@ function pokeWordBoth(
   state.workRam[off + 1] = u & 0xff;
 }
 
-/** Scrive long BE in cpu + workRam. */
+/** Writes a BE long to cpu + workRam. */
 function pokeLongBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -139,7 +139,7 @@ function pokeLongBoth(
   }
 }
 
-/** Scrive byte in cpu + workRam. */
+/** Writes a byte to cpu + workRam. */
 function pokeByteBoth(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -150,7 +150,7 @@ function pokeByteBoth(
   state.workRam[abs - WR_BASE] = v & 0xff;
 }
 
-/** Reset osservate zones. */
+/** Reset observed zones. */
 function resetZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   // TS subs: exact replica of the binary stubs.
   const subs: ns.StateDispatch160F6Subs = {
     soundCommand: (cmd) => {
-      // Scrive cmd (long = cmd & 0xFF) in the ring @ SOUND_LOG_BASE + counter
+      // Writes cmd (long = cmd & 0xFF) into the ring @ SOUND_LOG_BASE + counter
       const r = state.workRam;
       const off = SOUND_LOG_CTR - WR_BASE;
       const ctr =
@@ -280,7 +280,7 @@ async function main(): Promise<void> {
 
   const rng = makeRng(0x160f6);
 
-  // ── Suite A: movimento normale (D2 generato da input random) ─────────────
+  // ── Suite A: normal movement (D2 generated from random input) ─────────────
   console.log(`\n=== Suite A: D2 random (various inputs) — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -328,7 +328,7 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     resetZones(state, cpu);
-    // Tutti the input = 0 → D2=0
+    // All inputs = 0 → D2=0
     // pos14 > prevTimer + 0x60000
     const prevT = rl(rng) & 0x0fffffff;
     const pos14 = (prevT + 0x70000 + (rl(rng) & 0xffff)) >>> 0;
@@ -425,7 +425,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

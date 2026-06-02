@@ -136,7 +136,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
 
   // A2 must point to a workRam region with at least 0xC8 bytes of slack.
   // (struct uses up to +0xC7) and does not overlap globals.
-  // (0x390..0x6AB) ne' althe stack (>= 0x1E80).
+  // (0x390..0x6AB) nor the stack (>= 0x1E80).
   // Pick: offset multiplo of 4 in [0x800 .. 0x1C00 - 0xC8) ≈ [0x800, 0x1B38].
   const a2Slot = 0x800 + (Math.floor(rng() * ((0x1b38 - 0x800) / 4)) * 4);
   const a2Off = a2Slot >>> 0;

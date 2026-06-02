@@ -12,10 +12,10 @@
  *        - local[4] = local[8] = local[C] = sign-ext word(D3)
  *
  *   2. Setup ROM lookup-table @ 0x1F0E2 pointing to the 16 slots @ 0x4001DC..
- *      (stride 14 byte). Same layout of `test-sort-adjacent-objects-1a7a8`.
+ *      (stride 14 bytes). Same layout as `test-sort-adjacent-objects-1a7a8`.
  *
  *   3. Setup workRam:
- *      - Slot rect (16 × 14 byte) @ 0x4001DC: random word in offset 2..C.
+ *      - Slot rect (16 × 14 bytes) @ 0x4001DC: random word in offset 2..C.
  *
  *
  *   5. Run TS via `slotInsertSorted18E6C(state, rom, typeCode, subIdx, subs)`.
@@ -51,14 +51,14 @@ const WORK_RAM_SIZE = 0x2000;
 const BYTE_ARRAY_ABS = 0x004003bc;
 const BYTE_ARRAY_LEN = 0x20;
 const RECT_SLOT_ABS = 0x004001dc;
-const RECT_SLOT_STRIDE = 0x0e; // 14 byte/slot
+const RECT_SLOT_STRIDE = 0x0e; // 14 bytes/slot
 const RECT_SLOT_COUNT = 16;
 const RECT_AREA_LEN = 0x1b2;
 
 /**
  * Patch FUN_1B12A with the deterministic thunk.
  *
- * Thunk (40 byte):
+ * Thunk (40 bytes):
  *
  *   206F 0004     ; move.l (4,SP),A0    A0 = ptr to local
  *   1010          ; move.b (A0),D0      D0.b = local[0] = D2
@@ -136,7 +136,7 @@ function randWordSmall(rng: () => number): number {
   return (Math.floor(rng() * 256) - 128) & 0xffff;
 }
 
-/** Setup ROM lookup table @ 0x1F0E2 → 16 slot @ 0x4001DC stride 14 byte. */
+/** Setup ROM lookup table @ 0x1F0E2 → 16 slots @ 0x4001DC stride 14 bytes. */
 function setupRomLookup(romView: Uint8Array): void {
   for (let i = 0; i < RECT_SLOT_COUNT; i++) {
     const ptr = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) >>> 0;
@@ -150,7 +150,7 @@ function setupRomLookup(romView: Uint8Array): void {
 
 /**
  *
- * - byteArray[0..0x1F]: the first `numActive` byte are indici random 0..15;
+ * - byteArray[0..0x1F]: the first `numActive` bytes are random indices 0..15;
  *   compare also for occupied slots.
  */
 function setupBaseline(
@@ -159,13 +159,13 @@ function setupBaseline(
   slotOccupied: boolean[],
   rng: () => number,
 ): void {
-  // Slot rect fields (offsets 2,4,6,8,A,C — 6 word per slot).
+  // Slot rect fields (offsets 2,4,6,8,A,C — 6 words per slot).
   for (let i = 0; i < RECT_SLOT_COUNT; i++) {
     const base = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) - WORK_RAM_BASE;
     // Slot[0] = "occupied" flag.
     workRam[base] = slotOccupied[i] ? 0x80 + i : 0;
     workRam[base + 1] = 0;
-    // Slot[2..0xD]: 6 word random small.
+    // Slot[2..0xD]: 6 small random words.
     for (const fieldOff of [2, 4, 6, 8, 0xa, 0xc]) {
       const w = randWordSmall(rng);
       workRam[base + fieldOff] = (w >>> 8) & 0xff;
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: coverage controllata + random.
+    // Pattern: controlled coverage + random.
     let typeCode: number;
     let subIdx: number;
     let numActive: number;
@@ -318,7 +318,7 @@ async function main(): Promise<void> {
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);
 
-    // Compare slot-area (224 byte = 16 × 14, but also beyond up to A4+0x1B2 per
+    // Compare slot-area (224 bytes = 16 × 14, but also beyond up to A4+0x1B2 for
     // safety; FUN_18E6C scans up to A4+0x1B2 = 0x4001DC + 0x1B2 = 0x40038E.
     const binSlots = readBin(cpu, RECT_SLOT_ABS, RECT_AREA_LEN);
     const tsSlots = readTs(stateInst, RECT_SLOT_ABS, RECT_AREA_LEN);

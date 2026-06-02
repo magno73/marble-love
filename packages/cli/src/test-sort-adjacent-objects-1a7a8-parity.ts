@@ -4,16 +4,16 @@
  * `sortAdjacentObjects1A7A8`.
  *
  * `FUN_0001A7A8` (98 bytes): single-pass adjacent-pair sweep with stride
- * `A3 = A2 + stride`, lookup ROM @ 0x1F0E2 → due pointer a rect-struct in
+ * `A3 = A2 + stride`, lookup ROM @ 0x1F0E2 → two pointers to a rect-struct in
  * byte-index.
  *
- * Strategia parity:
+ * Parity strategy:
  *   - Set up workRam with a valid rect-struct layout @ 0x4001DC.. and
- *     ROM lookup pointer corretti (but random, generati una sola time as
+ *     correct ROM lookup pointers (but random, generated only once as
  *   - Run TS via `sortAdjacentObjects1A7A8(state, rom, stride)`.
  *   - Remaining workRam must stay unchanged; mutation is isolated.
  *
- * Uso: npx tsx packages/cli/src/test-sort-adjacent-objects-1a7a8-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sort-adjacent-objects-1a7a8-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -56,14 +56,14 @@ function randWordSmall(rng: () => number): number {
 }
 
 /**
- * @ 0x1F0E2 per puntare a quei 16 slot. Restituisce il buffer workRam-base.
+ * @ 0x1F0E2 to point to those 16 slots. Returns the workRam-base buffer.
  */
 function setupBaseline(
   workRam: Uint8Array,
   romView: Uint8Array,
   rng: () => number,
 ): void {
-  // Setup ROM lookup table: 16 entry × 4 byte (long BE).
+  // Setup ROM lookup table: 16 entries × 4 bytes (long BE).
   for (let i = 0; i < RECT_COUNT; i++) {
     const ptr = (RECT_BASE_ABS + i * RECT_STRIDE) >>> 0;
     const off = 0x1f0e2 + i * 4;
@@ -72,7 +72,7 @@ function setupBaseline(
     romView[off + 2] = (ptr >>> 8) & 0xff;
     romView[off + 3] = ptr & 0xff;
   }
-  // Setup rect struct fields (offsets 2,4,6,8,A,C — 6 word per struct).
+  // Setup rect struct fields (offsets 2,4,6,8,A,C — 6 words per struct).
   for (let i = 0; i < RECT_COUNT; i++) {
     const base = (RECT_BASE_ABS + i * RECT_STRIDE) - WORK_RAM_BASE;
     for (const fieldOff of [2, 4, 6, 8, 0xa, 0xc]) {
@@ -84,7 +84,7 @@ function setupBaseline(
 }
 
 /**
- * 0xFF random. `numActive` indica how many byte non-sentinel scrivere (0..32).
+ * 0xFF random. `numActive` indicates how many non-sentinel bytes to write (0..32).
  */
 function setupByteArray(
   workRam: Uint8Array,
@@ -111,8 +111,8 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // FUN_1A7A8 and FUN_1A80A — non scrivono).
-  // Nota: for the test inseriamo nostre 16 lookup pointer SCRIVENDOLE in romBuf.
+  // FUN_1A7A8 and FUN_1A80A — they do not write).
+  // Note: for the test we insert our own 16 lookup pointers by WRITING THEM in romBuf.
   // with the TS view (rom.program).
 
   const romView = busNs.emptyRomImage();
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     // Reset SP
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: coverage controllata.
+    // Pattern: controlled coverage.
     let stride: number;
     let numActive: number;
 

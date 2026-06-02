@@ -18,11 +18,11 @@
  * Total 20 bytes (original FUN_158AC is 0x20 bytes: enough space).
  *
  * Capture buffer:
- *   - 0x401FF0..0x401FF3 : 4 slot byte (init sentinel 0xFF, max 4 writes)
+ *   - 0x401FF0..0x401FF3 : 4 byte slots (init sentinel 0xFF, max 4 writes)
  *
  *
  *
- * Uso: npx tsx packages/cli/src/test-sound-pair-15884-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-pair-15884-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -105,7 +105,7 @@ async function main(): Promise<void> {
     //   2  : mode = 0x0002 (gate: only 0x3A)
     //   3  : mode = 0x0003 (full pair, just above gate)
     //   6  : mode = 0x0102 (high byte non-zero)
-    //   7  : mode = 0x8002 (high byte set + low == 2 → low non basta!)
+    //   7  : mode = 0x8002 (high byte set + low == 2 → low is not enough!)
     //   8  : mode = 0x0200 (low == 0 but high == 2: cmp.w == 0x0200 ≠ 2 → pair)
     //   pattern 9..32: cluster plus/minus 5 around 0x0002
     //   pattern >= 32: random uint16
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     state.workRam[0x394] = (mode >>> 8) & 0xff;
     state.workRam[0x395] = mode & 0xff;
 
-    // Reset capture buffer (4 byte sentinel) + cursor pointer
+    // Reset capture buffer (4-byte sentinel) + cursor pointer
     pokeMem(cpu, BUF_BASE + 0, 1, 0xff);
     pokeMem(cpu, BUF_BASE + 1, 1, 0xff);
     pokeMem(cpu, BUF_BASE + 2, 1, 0xff);

@@ -4,19 +4,19 @@
  *
  *      sign-extended to long; FUN_4C6E retries up to 256 times if the sound
  *
- * For the differential test forziamo la convergenza:
- *   - Variamo il word @ 0x004003B8 (skip flag) and il byte arg.
+ * For the differential test we force convergence:
+ *   - We vary the word @ 0x004003B8 (skip flag) and the byte arg.
  *
  * Pattern coverage:
  *   pattern 0: skipFlag=0, byte random → expected D0=1
  *   pattern 1: skipFlag!=0, byte random → expected D0=0
  *   pattern 2: skipFlag=0, byte=0x80 (negative sign-ext) → D0=1
- *   pattern 3: skipFlag bytes asimmetrici (low only) → D0=0
+ *   pattern 3: asymmetric skipFlag bytes (low only) → D0=0
  *   pattern >=4: full random
  *
- * cambiare in both i path).
+ * change in both paths).
  *
- * Uso: npx tsx packages/cli/src/test-sound-cmd-send-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-cmd-send-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -87,21 +87,21 @@ async function main(): Promise<void> {
         break;
       case 2:
         skipFlag = 0;
-        byteArg = 0x80; // sign-ext negativo
+        byteArg = 0x80; // negative sign-ext
         break;
       case 3:
         skipFlag = 0x0001;
         byteArg = Math.floor(rng() * 256);
         break;
       default:
-        // Full random; bilanciato 50/50 skip vs send
+        // Full random; balanced 50/50 skip vs send
         skipFlag = rng() < 0.5 ? 0 : Math.floor(rng() * 0x10000);
         byteArg = Math.floor(rng() * 256);
         break;
     }
 
     // Setup workRam[0x3B8..9] = skipFlag (big-endian word) both in unified
-    // memory (per Musashi) both in state.workRam (per TS).
+    // memory (for Musashi) and in state.workRam (for TS).
     pokeMem(cpu, 0x004003b8, 2, skipFlag);
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;
@@ -109,7 +109,7 @@ async function main(): Promise<void> {
     // touched, but FUN_4C6E mailbox write-back could modify
     pokeMem(cpu, 0xf60001, 1, 0x00);
 
-    // Pulisci 0xFE0000 (mailbox sound CPU); irrilevante for the return value
+    // Clear 0xFE0000 (sound CPU mailbox); irrelevant for the return value
     pokeMem(cpu, 0x00fe0000, 2, 0x0000);
 
     const r = callFunction(cpu, FUN_158AC, [byteArg & 0xff]);

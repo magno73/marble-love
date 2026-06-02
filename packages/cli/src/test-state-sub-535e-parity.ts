@@ -4,13 +4,13 @@
  *
  * `0x401F98` and `0x401F99`, sign-extends them to M68k longs, and passes them with
  *
- * Strategia of the parity test:
+ * Parity test strategy:
  *     0x00/0x7F/0x80/0xFF + random).
  *     point), then read the 3 longs on the stack `(0x4..0xC,SP)`
- *     visti from the callee.
+ *     seen from the callee.
  *     `inner` stub that captures the same 3 parameters.
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-535e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-535e-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -61,7 +61,7 @@ function captureEnter5388Args(
   const sp0 = 0x401f00;
   let sp = sp0;
   sp = (sp - 4) >>> 0;
-  sys.write(sp, 4, arg >>> 0); // arg @ (0x4, SP) per FUN_535E
+  sys.write(sp, 4, arg >>> 0); // arg @ (0x4, SP) for FUN_535E
   sp = (sp - 4) >>> 0;
   sys.write(sp, 4, SENTINEL_RET);
 
@@ -121,8 +121,8 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    //   1: byte 0x7F (positivo max)
-    //   2: byte 0x80 (negativo min, sign-extend critico)
+    //   1: byte 0x7F (max positive)
+    //   2: byte 0x80 (min negative, critical sign-extend)
     //   3: byte 0xFF (sign-extend → 0xFFFFFFFF)
     //   4: arg = 0
     //   5: arg = 0xFFFFFFFF (max unsigned)

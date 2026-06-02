@@ -3,10 +3,10 @@
  * test-sound-maybe-11ac2-parity.ts — differential FUN_11AC2 vs soundMaybe11AC2.
  *
  *
- * **Strategia of parity**:
- *     (132 byte) byte per byte.
+ * **Parity strategy**:
+ *     (132 bytes) byte by byte.
  *
- * Uso: npx tsx packages/cli/src/test-sound-maybe-11ac2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-maybe-11ac2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Randomize the destination range (to verify full overwrite)
-    // both in the CPU (musashi memory) both in the TS state (GameState.workRam).
+    // both in the CPU (musashi memory) and in the TS state (GameState.workRam).
     for (let b = 0; b < COPY_BYTES; b++) {
       const v = Math.floor(rng() * 256) & 0xff;
       pokeMem(cpu, DEST_BASE + b, 1, v);
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
 
     callFunction(cpu, FUN_11AC2, []);
 
-    // Esegui TS.
+    // Run TS.
     sNs.soundMaybe11AC2(state, tsRom);
 
     let match = true;

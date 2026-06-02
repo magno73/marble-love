@@ -5,21 +5,21 @@
  * scheduler. Args: 1 long on the stack (`arg1Long` = pointer to struct entry).
  *
  *     `sext(byte@A0+6) + sext(*0x401F00) > 1`.
- *     la corrispondente word in the alpha tilemap @ 0xA03000.
+ *     the corresponding word in the alpha tilemap @ 0xA03000.
  *
- * Strategia:
+ * Strategy:
  *   - Setup must guarantee valid setup for:
  *       a) `*0x401F42` (rotation, in [0..3] to cover real ROM tables)
  *       b) `*0x401F00` (VAL_F00, signed)
- *       c) struct @ STRUCT_ADDR: with the, tickOff, stringPtr (long), marker,
+ *       c) struct @ STRUCT_ADDR: col, tickOff, stringPtr (long), marker,
  *          nextPtr (long)
- *       e) chain of entry (to cover chain-walk)
+ *       e) chain of entries (to cover chain-walk)
  *
- * Suite testate:
- *   - C: rot=0..3, single entry with signed with the/tickOff (including negatives)
- *   - D: chain walk: 2-3 entry collegate via marker + nextPtr
+ * Suites tested:
+ *   - C: rot=0..3, single entry with signed col/tickOff (including negatives)
+ *   - D: chain walk: 2-3 entries linked via marker + nextPtr
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-2abc-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-2abc-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("A", i, () => {
-      const col = ri(32); // small unsigned per evitare overflow alpha
+      const col = ri(32); // small unsigned to avoid alpha overflow
       const tickOff = ri(32);
       const slen = 1 + ri(8);
       const bytes: number[] = [];
@@ -244,15 +244,15 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: rot=0..3, signed with the/tickOff (negative inclusi) ─────────
+  // ─── Suite C: rot=0..3, signed col/tickOff (negatives included) ─────────
   console.log(`\n=== Suite C: rot mixed, signed col/tickOff — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("C", i, () => {
-      // (stride 0 per rot=2 → infinite loop). We use rot in {0, 1, 3}.
+      // (stride 0 for rot=2 → infinite loop). We use rot in {0, 1, 3}.
       const rotChoices = [0, 1, 3];
       const rot = rotChoices[ri(3)] ?? 0;
-      // with the signed in [-8, 7] per stare in alpha range
+      // signed col in [-8, 7] to stay in alpha range
       const col = (ri(16) - 8) & 0xff;
       const tickOff = (ri(16) - 8) & 0xff;
       const slen = 1 + ri(4);
@@ -277,22 +277,22 @@ async function main(): Promise<void> {
     const ok = runOneCase("D", i, () => {
       const rotChoices = [0, 1, 3];
       const rot = rotChoices[ri(3)] ?? 0;
-      // VAL_F00: condition `marker + valF00 > 1` → continua. `<=1` → stop.
+      // VAL_F00: condition `marker + valF00 > 1` → continue. `<=1` → stop.
       // Use VAL_F00 = -2 with random marker in [0..7]:
       //   marker=0 → -2 → stop
       //   marker=1 → -1 → stop
       //   marker=2 → 0 → stop
       //   marker=3 → 1 → stop
-      //   marker=4 → 2 → continua
-      //   marker=5 → 3 → continua
-      // Mix various to coverage.
+      //   marker=4 → 2 → continue
+      //   marker=5 → 3 → continue
+      // Mix various values for coverage.
       const valF00 = (ri(8) - 4) & 0xffff; // -4..3
       const numEntries = 1 + ri(3); // 1..3
       let info = `rot=${rot} valF00=0x${valF00.toString(16)} entries=${numEntries}`;
 
-      // Costruisci numEntries entry collegate.
-      // Marker per entry [0..numEntries-2]: high (per continuare) → marker=10
-      // L'ultima ha marker=0 (per terminare).
+      // Build numEntries linked entries.
+      // Marker for entries [0..numEntries-2]: high (to continue) → marker=10
+      // The last one has marker=0 (to terminate).
       for (let e = 0; e < numEntries; e++) {
         const isLast = e === numEntries - 1;
         const col = ri(16);
@@ -301,7 +301,7 @@ async function main(): Promise<void> {
         const bytes: number[] = [];
         for (let j = 0; j < slen; j++) bytes.push(0x40 + ri(60));
         bytes.push(0);
-        const marker = isLast ? 0 : 10; // marker high per chain walk
+        const marker = isLast ? 0 : 10; // high marker for chain walk
         const nextPtr = isLast ? 0 : (STRUCT_ADDRS[e + 1] ?? 0);
         setupEntry(
           stateInst,
@@ -323,7 +323,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const { suite, tc, offset, bin, ts, info } = failHolder.value;
     console.log(

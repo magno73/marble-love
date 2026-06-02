@@ -3,7 +3,7 @@
  * test-sprite-coords-jsr-150d0-parity.ts —
  * differential FUN_000150D0 vs `spriteCoordsJsr150D0`.
  *
- * **Strategia**:
+ * **Strategy**:
  *
  * To test in isolation, patch `FUN_000264AA` with a stub:
  *
@@ -14,13 +14,13 @@
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - struct @ A1..A1+0x40 (including A1+0x28 packed long)
  *
- * Suite testate:
+ * Tested suites:
  *   - A: HUD random + struct random + ptr random (fully random)
- *   - B: w0/w2 estremi (signed overflow su yMinusX)
- *   - C: w4 estremi (signed overflow su D2w computation)
+ *   - B: w0/w2 extremes (signed overflow on yMinusX)
+ *   - C: w4 extremes (signed overflow on D2w computation)
  *   - D: HUD = 0, struct random (baseline)
  *
- * Uso: npx tsx packages/cli/src/test-sprite-coords-jsr-150d0-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sprite-coords-jsr-150d0-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -42,13 +42,13 @@ import {
 const FUN_150D0 = 0x000150d0;
 const FUN_264AA = 0x000264aa;
 
-/** Stub bytes per `FUN_264AA`: `move.l (8,SP),D0` ; `rts`. */
+/** Stub bytes for `FUN_264AA`: `move.l (8,SP),D0` ; `rts`. */
 const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 
 const HUD_OFFSET_ADDR = 0x0040097e;
 const POS_X_ADDR = 0x00400690;
 
-/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
+/** Candidate slot pointers for the struct (work RAM, far from globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   ): boolean {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Re-applica patch periodicamente (safety).
+    // Re-apply patch periodically (safety).
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_264AA + k, 1, STUB_BYTES[k]!);
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
 
     setupStruct(structPtr, bytes);
 
-    // Estrai w0/w2/w4 for the fail report.
+    // Extract w0/w2/w4 for the fail report.
     const off = (structPtr - 0x400000) >>> 0;
     const w0 =
       ((stateInst.workRam[off + 0xc] ?? 0) << 8) |
@@ -222,8 +222,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: estremi su w0/w2 (signed overflow su yMinusX) ─────────
-  console.log(`\n=== Suite B: w0/w2 estremi — ${perSuite} cases ===`);
+  // ─── Suite B: extremes on w0/w2 (signed overflow on yMinusX) ─────────
+  console.log(`\n=== Suite B: w0/w2 extremes — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const hud = setHud(rng);
@@ -241,11 +241,11 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: estremi su w4 + HUD ───────────────────────────────────
-  console.log(`\n=== Suite C: w4/HUD estremi — ${perSuite} cases ===`);
+  // ─── Suite C: extremes on w4 + HUD ───────────────────────────────────
+  console.log(`\n=== Suite C: w4/HUD extremes — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Force HUD estremo
+    // Force HUD extreme
     const hudVals = [0x0000, 0x7fff, 0x8000, 0xffff, 0xfffc, 0x4000];
     const hud = hudVals[Math.floor(rng() * hudVals.length)]!;
     pokeMem(cpu, HUD_OFFSET_ADDR, 1, (hud >>> 8) & 0xff);
@@ -282,7 +282,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

@@ -48,7 +48,7 @@ const FUN_264AA = 0x000264aa;
 /** Stub bytes per `FUN_264AA`: `move.l (8,SP),D0` ; `rts`. */
 const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 
-/** Slot pointers candidates (work RAM): mix between singletons and generici. */
+/** Slot pointers candidates (work RAM): mix between singletons and generic ones. */
 const PTR_CHOICES = [
   0x00400018, // SINGLETON_SLOT_A
   0x004000fa, // SINGLETON_SLOT_B
@@ -103,14 +103,14 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Re-applica patch each 100 iter per safety.
+    // Re-apply patch every 100 iterations for safety.
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_264AA + k, 1, STUB_BYTES[k]!);
       }
     }
 
-    // Selezione pattern.
+    // Pattern selection.
     let rangeSigned: number;
     let structPtr: number;
     const pattern = i < 8 ? i : Math.floor(rng() * 9) + 8;

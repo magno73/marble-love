@@ -4,20 +4,20 @@
  *
  * `FUN_00012D46` searches for a free slot in the ROM table @ 0x1F016, delegating
  * to `FUN_12D6E`) and, if found, populates three record fields (long @ +0x3A,
- * byte @ +0x1A, byte @ +0x18) inlinando il path mode-0 of `FUN_12F44`.
+ * byte @ +0x1A, byte @ +0x18) inlining the mode-0 path of `FUN_12F44`.
  *
  * Random setup for each case:
  *   - 25 slot @0x400A9C stride 0x56 → byte +0x18 random (70% occupied, 30% free)
  *   - argPtr long random
  *   - SP fresh and workRam zeroed on the relevant fields
  *
- * Confronto:
- *   - D0 (long, 0 o 0xFFFFFFFF)
+ * Comparison:
+ *   - D0 (long, 0 or 0xFFFFFFFF)
  *   - slot+0x18 byte for every slot, to catch spurious writes
- *   - byte slot+0x1A of TUTTI the slot
- *   - long slot+0x3A of TUTTI the slot
+ *   - byte slot+0x1A of all slots
+ *   - long slot+0x3A of all slots
  *
- * Uso: npx tsx packages/cli/src/test-script-slot-claim-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-script-slot-claim-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

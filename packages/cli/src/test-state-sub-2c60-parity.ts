@@ -4,7 +4,7 @@
  *
  * scheduler. Args: 2 longs on the stack (`arg1Long` = data ptr, `arg2Long` =
  *
- * Logica:
+ * Logic:
  *   - Scan slot D3 in [0..3]:
  *       if STATE[D3] == 0 → claim slot:
  *           DATA_PTR[D3]  = arg1Long          (long)
@@ -15,11 +15,11 @@
  *           return D0=1
  *
  *
- * Suite testate:
+ * Suites tested:
  *   - A: random everything (mix slot busy/free)
  *   - C: only slot N free (random N in [0..3])
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-2c60-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-2c60-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
       if (j === freeSlot) {
         bytes[0x1c + j] = 0;
       } else {
-        // Garantisco state != 0
+        // Ensure state != 0
         let v = rb();
         if (v === 0) v = 1;
         bytes[0x1c + j] = v;
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // Garantisco STATE[0..3] != 0
+    // Ensure STATE[0..3] != 0
     for (let j = 0; j < 4; j++) {
       let v = rb();
       if (v === 0) v = 1;
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const { suite, tc, offset, bin, ts, arg1, arg2, detail } = failHolder.value;
     if (detail === "D0") {

@@ -5,27 +5,27 @@
  *
  * FUN_0001844A (610 byte): "Slot-table tick — timer decrement, insert-sorted
  * trigger, pointer-walk advance, sprite-coord update, 3-bucket sound dispatch".
- * Gated da `*0x400394 == 3` and `*0x400760 != 0`. Itera 36 entry × 16 byte
+ * Gated by `*0x400394 == 3` and `*0x400760 != 0`. Iterates 36 entries × 16 bytes
  * @ 0x401650.
  *
- * **Strategia parity**:
- *   - `FUN_00013A98` (RNG) **lasciato live**.
+ * **Parity strategy**:
+ *   - `FUN_00013A98` (RNG) **left live**.
  *   - `FUN_00018E6C` (slotInsertSorted) **patched to RTS**: side effects on
  *     correct call triggering and writes to entry[0x8] and entry[0x2].
- *   - `FUN_00018F46` (timer-reset callback) **patchato RTS**.
- *   - `FUN_00018972` (computeSpriteCoords_v4) **patchato RTS**.
+ *   - `FUN_00018F46` (timer-reset callback) **patched to RTS**.
+ *   - `FUN_00018972` (computeSpriteCoords_v4) **patched to RTS**.
  *   - `FUN_0001584C` (soundCommand via A3=0x158AC) **patched with capture**:
  *
- * **Snapshot comparato**:
+ * **Compared snapshot**:
  *   - `workRam[0x1650..0x188F]` (slot-table 576 byte — timer, ptr-walk ptr)
  *   - `workRam[0x4003A6]` (RNG seed u16)
  *   - sound capture @ 0x401FFE
  *
  * **Suite** (4 × 125 = 500):
- *   - B: forced early-out (gameMode != 3 o byte760 == 0)
+ *   - B: forced early-out (gameMode != 3 or byte760 == 0)
  *   - D: forced ptr-walk path (timer == -1 entries)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-1844a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-1844a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -380,7 +380,7 @@ async function main(): Promise<void> {
 
   // ─── Summary ─────────────────────────────────────────────────────────────
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

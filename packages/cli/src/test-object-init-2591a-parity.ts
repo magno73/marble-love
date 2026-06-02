@@ -47,7 +47,7 @@ const FUN_13966 = 0x00013966;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
+// Pointer candidates (well within workRam, leaves margin for the stack at 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -56,7 +56,7 @@ const PTR_CANDIDATES = [
 ] as const;
 
 /**
- * Patch a singthe ROMs entry point with the specified byte pattern (in
+ * Patch a single ROM entry point with the specified byte pattern.
  */
 function patchRomBytes(
   rom: Buffer,

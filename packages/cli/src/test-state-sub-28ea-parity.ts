@@ -5,19 +5,19 @@
  * state-machine scheduler. Args: 3 longs on the stack (`arg1Long`, `arg2Long`,
  * `arg3Long`), where arg2/arg3 are used as words.
  *
- * Logica:
+ * Logic:
  *   - jsr FUN_2572(arg1Long, sext.l(arg2.w))   ← STUB injection
  *   - For each i in [0..3]: if STATE[i] == 0 -> register slot:
  *       DATA_PTR[i] = arg1Long (long)
  *       STATE[i]    = 7 (byte)
  *       WORD16[i]   = arg2.w (word)
  *
- * Strategia:
+ * Strategy:
  *   - In TS: callback `fun_2572` no-op (default)
  *
  *   - A: random struct + random args (mix of free/occupied slots)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-28ea-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-28ea-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -42,7 +42,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_28EA = 0x000028ea;
 const FUN_2572 = 0x00002572;
 
-/** Patch FUN_2572 a `rts` (4E 75) per stub no-op. */
+/** Patch FUN_2572 to `rts` (4E 75) as a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2572 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_2572 + 1, 1, 0x75);
@@ -83,7 +83,7 @@ function compareStruct(
   return null;
 }
 
-const STATE_BASE = 0x1c; // offset relative a STRUCT_BASE
+const STATE_BASE = 0x1c; // offset relative to STRUCT_BASE
 
 async function main(): Promise<void> {
   const total = Number(process.argv[2] ?? "500");
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(

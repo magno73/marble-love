@@ -2,7 +2,7 @@
 /**
  * test-pf-scroll-parity.ts — differential FUN_26D8A vs pfScrollUpdate.
  *
- * Per N test cases:
+ * For N test cases:
  *   1. Setup workRam fields: 0x02 (scroll Y), 0x04 (flip flag),
  *      0x0A (speed byte), 0x3AE (AV control).
  *   2. Setup spriteRam: tile words @ 0xA02000+, cmp words @ 0xA02180+
@@ -11,7 +11,7 @@
  *   4. pfScrollUpdate(state)
  *   5. Compare workRam[0x02..0x03] and spriteRam[0..0x300] byte-by-byte.
  *
- * Uso: npx tsx packages/cli/src/test-pf-scroll-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-pf-scroll-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -69,16 +69,16 @@ async function main(): Promise<void> {
     state.workRam[0x3AE] = (av >>> 8) & 0xff;
     state.workRam[0x3AF] = av & 0xff;
 
-    // Setup spriteRam (0xA02000-0xA022FF, 768 byte = abbastanza per both
-    // i layout of rotazione). Random tile words.
+    // Setup spriteRam (0xA02000-0xA022FF, 768 byte = enough for both
+    // rotation layouts). Random tile words.
     for (let j = 0; j < 0x300; j++) {
       const v = Math.floor(rng() * 256);
       pokeMem(cpu, 0x00a02000 + j, 1, v);
       state.spriteRam[j] = v;
     }
 
-    // Optional: 30% chance of setting up cmp values per fare exit early
-    // (forziamo cmpWord[k] = k a un indice random k in [0, 60))
+    // Optional: 30% chance of setting up cmp values to exit early
+    // (we force cmpWord[k] = k at a random index k in [0, 60))
     if (rng() < 0.3) {
       const stopIter = Math.floor(rng() * 60);
       const a1Base = 0x180 + ((av & 8) << 5) * 2;

@@ -6,8 +6,8 @@
  * `count` slots @ 0x400A9C (stride 0xA) with xpos/ypos/xvel/yvel via RNG and
  * `*0x4003E2 = count`.
  *
- * **Strategia parity**:
- *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**.
+ * **Parity strategy**:
+ *   - `FUN_00013A98` (RNG @ 0x4003A6) **left live**.
  *   - `FUN_00026CFA` (palette + 8 RNG) **stubbed with RTS** (0x4E75); TS
  *   - `FUN_00018E6C` (insert-sorted in draw-list) **stubbed with RTS**;
  *     TS uses `subs.fun_18e6c = noop`. TS must not touch 0x4003BC,
@@ -19,7 +19,7 @@
  *
  * Compare: 32 byte particle-area + count byte + RNG seed.
  *
- * Uso: npx tsx packages/cli/src/test-particle-init-18cd2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-particle-init-18cd2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,8 +52,8 @@ const COUNT_BYTE_ADDR = 0x004003e2;
 
 /**
  * Patch JSR-stub:
- *   - FUN_26CFA → RTS (0x4E75) — neutralizza palette+8 RNG.
- *   - FUN_18E6C → RTS (0x4E75) — neutralizza insert-sorted draw-list.
+ *   - FUN_26CFA → RTS (0x4E75) — neutralizes palette+8 RNG.
+ *   - FUN_18E6C → RTS (0x4E75) — neutralizes insert-sorted draw-list.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_26CFA + 0, 1, 0x4e);
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    // count limitato a 0..32 per restare in the area of compare (32 slot * 0xA)
+    // count limited to 0..32 to stay within the compare area (32 slots * 0xA)
     const count = Math.floor(rng() * 33) & 0xff;
     const mode = Math.floor(rng() * 256) & 0xff;
     if (runOneCase("A", i, count, mode, rs())) okA++;
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: count piccoli (0..3), mode positivo ────────────────────
+  // ─── Suite B: small count (0..3), positive mode ──────────────────────
   console.log(
     `\n=== Suite B: small count + mode ∈ [0..0x7F] — ${perSuite} cases ===`,
   );
@@ -265,7 +265,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

@@ -5,12 +5,12 @@
  *
  * `FUN_00028232` (400 bytes): "level/fraction render" orchestrator with 7
  * sub-jsr (5 renderStringChain via 0x142 + 1 initStructHeader via 0x13C +
- * 1 renderStringHelper FUN_28E3C). Side effects diretti of the modulo:
- *   - 3 byte writes a workRam[0x428/0x429/0x42E] (da initStructHeader).
- *   - 4+1 byte writes a `*(0x40042A)` (fraction string + null).
+ * 1 renderStringHelper FUN_28E3C). Direct side effects of the module:
+ *   - 3 byte writes to workRam[0x428/0x429/0x42E] (from initStructHeader).
+ *   - 4+1 byte writes to `*(0x40042A)` (fraction string + null).
  *
  *   Patch the 3 binary entries with `addq.b #1, sentinel.l ; rts` (8 bytes).
- *   Tre sentinel byte distinti in workRam:
+ *   Three distinct sentinel bytes in workRam:
  *     - FUN_2572  (renderStringChain, jsr 0x142)  → sentinel 0x4003E0 ("chain")
  *     - FUN_255A  (initStructHeader,   jsr 0x13C) → sentinel 0x4003E1 ("init")
  *     - FUN_28E3C (renderStringHelper, jsr 0x28E3C) → sentinel 0x4003E2 ("helper")
@@ -18,18 +18,18 @@
  *   In TS, the 3 callbacks inject the same increment.
  *
  * **Note on trampoline patching** (0x142, 0x13C):
- *   I trampolines are `jmp 0x2572` / `jmp 0x255A`. We patch the entry destination
+ *   The trampolines are `jmp 0x2572` / `jmp 0x255A`. We patch the entry destination
  *
  *      For cases with `idx=-1` early-out: == (D2==0 ? 2 : 1).
  *      or == 0 on early-out.
  *   3. sentinelHelper == 1 in both (same rule) or == 0 on early-out.
- *   4. workRam[0x428..0x42E] and i 5 byte @ *(0x40042A) byte-by-byte.
+ *   4. workRam[0x428..0x42E] and the 5 bytes @ *(0x40042A) byte-by-byte.
  *
  *   - A: idx random ∈ [0..7], levelNum random, mode != 2, no early-out.
  *   - B: idx random, levelNum random, mode == 2 (D2!=0 path, skip cond jsr).
  *   - C: idx == -1 (early-out path), mode random.
  *
- * Uso: npx tsx packages/cli/src/test-level-fraction-render-28232-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-level-fraction-render-28232-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -79,7 +79,7 @@ const FRAC_COMPARE_BASE = FRAC_BUFFER_ADDR;
 const FRAC_COMPARE_SIZE = 5;
 
 /**
- * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (abs).l ; rts` (8 bytes) in `rom` at `entry`.
  *   addq.b #1, (xxxx).l → 0x52 0x39 + abs long
  *   rts                 → 0x4E 0x75
  */
@@ -169,8 +169,8 @@ function setupCase(
   pokeMem(cpu, SENTINEL_HELPER, 1, setup.sentInitHelper);
   state.workRam[SENTINEL_HELPER - 0x400000] = setup.sentInitHelper;
 
-  // 8. ROM table 1 @ 0x23C04 and table 2 @ 0x23C18: we write 8 long (32 byte ciascuna).
-  // as read-only normally). Per be safe, NOT ri-we write the ROMs
+  // 8. ROM table 1 @ 0x23C04 and table 2 @ 0x23C18: we write 8 longs (32 bytes each).
+  // (read-only normally). To be safe, we do NOT rewrite the ROMs
   void romBuf;
 }
 
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Patch le 3 sub-call a `addq.b #1, sentinel ; rts`.
+  // Patch the 3 sub-calls to `addq.b #1, sentinel ; rts`.
   // FUN_2572  (target of jmp 0x142) → sentinelChain
   // FUN_255A  (target of jmp 0x13C) → sentinelInit
   // FUN_28E3C                       → sentinelHelper
@@ -334,7 +334,7 @@ async function main(): Promise<void> {
   console.log(`\n=== Suite D: random everything — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
-    // Mix: ~25% mode==2, ~12% idx==0xFFFF, resto random.
+    // Mix: ~25% mode==2, ~12% idx==0xFFFF, rest random.
     const r = rng();
     let setup: CaseSetup;
     if (r < 0.25) {
@@ -350,7 +350,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (firstFail !== null) {
     const f: FailRecord = firstFail;

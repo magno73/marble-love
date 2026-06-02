@@ -112,7 +112,7 @@ function patchFun15D10(cpu: CpuSession): void {
   }
 }
 
-/** Patch FUN_15E24 a thunk-logger (24 byte). */
+/** Patch FUN_15E24 to a thunk-logger (24 byte). */
 function patchFun15E24(cpu: CpuSession): void {
   const bytes = [
     // move.l (4,SP), 0x00401E10.l    (23EF 0004 0040 1E10) — 8 byte

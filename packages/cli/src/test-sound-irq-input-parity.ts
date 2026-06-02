@@ -6,7 +6,7 @@
  * replacing `rte` with `rts` (0x4E75) at ROM offset 0x4D66.
  *
  *
- * Uso: npx tsx packages/cli/src/test-sound-irq-input-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-irq-input-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -24,7 +24,7 @@ import {
 
 const FUN = 0x00004d1a;
 const RTE_OFF = 0x4d66; // offset of `rte` in FUN_4D1A
-// Offset of the absolute long address of the istruzione `move.b (0xFC0001).l,(A0)` @ 0x4D5C.
+// Offset of the absolute long address of the instruction `move.b (0xFC0001).l,(A0)` @ 0x4D5C.
 const MMIO_ADDR_PATCH_OFF = 0x4d5e; // bytes 0x4D5E..0x4D61 = 4-byte abs addr
 
 function makeRng(seed: number): () => number {
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const n = Number(process.argv[2] ?? "1000");
   const rom = Buffer.from(readFileSync(resolve("ghidra_project/marble_program.bin")));
 
-  // Patch RTE → RTS per consentire callFunction sentinel-based
+  // Patch RTE → RTS to allow sentinel-based callFunction
   rom[RTE_OFF] = 0x4e;
   rom[RTE_OFF + 1] = 0x75;
 
@@ -61,10 +61,10 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     const mmioByte = Math.floor(rng() * 256);
-    const idx = Math.floor(rng() * 16); // 0..15 idx valido
+    const idx = Math.floor(rng() * 16); // 0..15 valid idx
     const cnt = Math.floor(rng() * 256);
 
-    // 30% chance: ack pending — ackPtr punta in workRam-safe (0x401D00..0x401EFF)
+    // 30% chance: ack pending — ackPtr points into workRam-safe (0x401D00..0x401EFF)
     let ackPtr = 0;
     if (rng() < 0.3) {
       ackPtr = (0x00401d00 + Math.floor(rng() * 0x100)) >>> 0;

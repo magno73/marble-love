@@ -6,9 +6,9 @@
  *
  * Note: callFunction does not expose CCR. Use an in-memory micro-wrapper that
  *
- * controlliamo il flag Z da getRegisters().ccr (bit 2).
+ * we check the Z flag from getRegisters().ccr (bit 2).
  *
- * Uso: npx tsx packages/cli/src/test-string-addr-check-39f0-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-addr-check-39f0-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     return match;
   };
 
-  // Smoke: 3 noti and 8 negative
+  // Smoke: 3 known and 8 negative
   for (const a of knownAddrs) testAddr(a);
   for (const a of negAddrs) testAddr(a);
 

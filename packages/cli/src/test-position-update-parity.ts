@@ -2,13 +2,13 @@
 /**
  * test-position-update-parity.ts — differential FUN_1706C vs positionUpdate.
  *
- * 452 byte pure leaf, 0 jsr. Differential test su 8 byte of output (x, y long).
+ * 452 byte pure leaf, 0 jsr. Differential test on 8 byte of output (x, y long).
  *
  * Randomized setup per case:
  *   - Struct 8 byte (x, y) random
  *   - workRam state (4 byte flag, 4 word gate, 2 byte rotation, 1 byte bitmap)
  *
- * Uso: npx tsx packages/cli/src/test-position-update-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-position-update-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

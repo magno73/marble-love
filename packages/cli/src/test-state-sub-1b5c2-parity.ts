@@ -4,26 +4,26 @@
  * `stateSub1B5C2`.
  *
  * FUN_0001B5C2 (838 byte, 0x1B5C2-0x1B908): "position-steering applicator".
- * Applica absLong / negateIfPositive a D3 (x) and D4 (y) of the struct A2 based on
- * a 8 blocchi condizionali (flag cardinali, gate word, direction bitmap).
+ * Applies absLong / negateIfPositive to D3 (x) and D4 (y) of the struct A2 based on
+ * 8 conditional blocks (cardinal flags, gate word, direction bitmap).
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - FUN_0001B5B4 (negateIfPositive, A4) and FUN_0001B5A6 (absLong) are
  *     **non-stubbed** ROM subs (left live in the binary).
  *   - FUN_000158AC (sound cmd) **stubbed with RTS** (side-effect-only).
  *   - Call the function body from 0x1B5F6 (first known instruction) after
- *     aver fakato il frame salvato on the stack (8 long dummy per soddisfare il
- *     `movem.l (SP)+,...` of the epilogue) and pre-set i registri D2/D3/A2/A3/A4.
+ *     faking the saved frame on the stack (8 dummy longs to satisfy the
+ *     `movem.l (SP)+,...` of the epilogue) and pre-setting the registers D2/D3/A2/A3/A4.
  *   - A4 = 0x1B5B4 (fixed address of negateIfPositive in ROM).
- *   - Compare: intera workRam [0x400000..0x402000) eccl. stack area.
+ *   - Compare: the entire workRam [0x400000..0x402000) excl. stack area.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random — random globals + random struct + random bitmap
  *   B: all direction flags off - no active block
- *   C: forced gate active + all cardinals active — massima coverage
+ *   C: forced gate active + all cardinals active — maximum coverage
  *   D: edge - extreme values (0x80000000, 0, -1, velocity pivot)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-1b5c2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-1b5c2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -110,7 +110,7 @@ const SAVE_FRAME_REGS = 8;
  * Run the body of FUN_0001B5C2 starting at 0x1B5F6, with:
  *   - stack frame fake (8 long per `movem.l (SP)+` of the epilogue)
  *   - D2 = d2Addr, D3 = d3Val, A2 = a2Addr, A3 = a3Addr, A4 = FUN_1B5B4
- *   - sentinel return address above il frame fake
+ *   - sentinel return address above the fake frame
  *
  * Reuse the `callFunction` pattern but without stack args.
  */
@@ -437,7 +437,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (firstFail !== null) {
     const f = firstFail as FailInfo;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}):`);

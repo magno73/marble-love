@@ -32,7 +32,7 @@ async function main(): Promise<void> {
 
   cpu.system.setRegister("sp", 0x401f00);
 
-  // Pre-fill workRam with sentinel pattern, escludendo area stack
+  // Pre-fill workRam with sentinel pattern, excluding the stack area
   // callFunction uses the 68k stack and leaves residue.
   for (let j = 0; j < 0x1e00; j++) {
     pokeMem(cpu, 0x400000 + j, 1, 0xCC);

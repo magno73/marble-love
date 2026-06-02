@@ -397,9 +397,9 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: slot pre-popolati (test FUN_12DAE skip + post-loop) ─────
+  // ─── Suite B: slots pre-populated (test FUN_12DAE skip + post-loop) ───
   console.log(
-    `\n=== Suite B: slot pre-popolati random — ${perSuite} cases ===`,
+    `\n=== Suite B: slots pre-populated random — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * test-state-dispatch-160f6-smoke.ts — smoke tests per `stateDispatch160F6`.
+ * test-state-dispatch-160f6-smoke.ts — smoke tests for `stateDispatch160F6`.
  *
- * ROM binaria:
+ * Binary ROM:
  *      snapshots saved, impulse written, sound emitted).
  *      snapshots updated, impulse written.
  *
@@ -160,9 +160,9 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   r[SO + 0x37] = 0x01;
   r[SO + 0x58] = 0x20;
   r[0x66c] = 0x01;        // inputLeft = 1 (non-zero, < 3)
-  writeW(r, TXO, 2);      // tileX = 2 (< 4 → condizione Left soddisfatta)
+  writeW(r, TXO, 2);      // tileX = 2 (< 4 → Left condition satisfied)
   writeW(r, 0x674, 2);    // velLeft = 2 (in [0,3])
-  // D3 = accumXCur - accumXPrev = 0 != 1 → condizione D3!=1 soddisfatta
+  // D3 = accumXCur - accumXPrev = 0 != 1 → D3!=1 condition satisfied
   writeW(r, 0x696, 5);    // accumXPrev
   writeW(r, 0x69a, 5);    // accumXCur = same → D3=0
   writeW(r, 0x698, 0);

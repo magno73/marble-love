@@ -3,9 +3,9 @@
  * test-math-helpers-parity.ts — differential FUN_1216A/FUN_1B5A6 (abs) +
  * FUN_1B5B4 (negateIfPositive).
  *
- * Tutte le functions: 1 long arg, ritornano long in D0.
+ * All functions: 1 long arg, return a long in D0.
  *
- * Uso: npx tsx packages/cli/src/test-math-helpers-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-math-helpers-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

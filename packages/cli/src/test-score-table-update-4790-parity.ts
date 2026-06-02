@@ -5,7 +5,7 @@
  *
  * `FUN_00004790` (1178 byte): score table updater.
  *
- * **Strategia stub**:
+ * **Stub strategy**:
  *   - FUN_43D6 (timerDeltaAccumulate) patched with stub:
  *       `move.l #0x00401F86, D0` ; `rts`
  *     The returned value (A2) is 0x401F86, where the two long accumulators were
@@ -14,9 +14,9 @@
  *   - FUN_5236 (setFlagBit) patched with: `rts`
  *   - FUN_4442 (sound dispatcher) patched with: `moveq #0, D0` ; `rts`
  *
- * **Confronto**:
+ * **Comparison**:
  *   - All bytes @ base..base+numRec*20-1 (score table, 60 bytes)
- *   - Long @ 0x401F92 (score accumulatore)
+ *   - Long @ 0x401F92 (score accumulator)
  *
  * **Setup for each random case**:
  *   - *0x401FFC = PTR_ABS (0x401A00, struct base)
@@ -30,10 +30,10 @@
  *   A. delta1=0, delta2=0 -> no table changes
  *   B. delta1>0, delta2=0 -> first entry only
  *   C. delta1=0, delta2>0 -> second entry only
- *   D. both >0        → both le entry
- *   E. fully random       → stress generale
+ *   D. both >0        → both entries
+ *   E. fully random       → general stress
  *
- * Uso: npx tsx packages/cli/src/test-score-table-update-4790-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-score-table-update-4790-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -67,7 +67,7 @@ const A2_OFF   = A2_ABS - 0x400000;        // 0x1F86
 const SC_ABS   = 0x00401f92;               // score accum addr
 const SC_OFF   = SC_ABS - 0x400000;        // 0x1F92
 
-/** Numero of record (romByte 0xE3 → 0xE3 & 7 = 3). */
+/** Number of records (romByte 0xE3 → 0xE3 & 7 = 3). */
 const NUM_REC = 3;
 const TABLE_LEN = NUM_REC * 20; // 60 byte
 
@@ -229,7 +229,7 @@ async function main(): Promise<void> {
     // Setup both
     setupState(cpu, state.workRam, tableBytes, delta1, delta2, scoreAccum0);
 
-    // ── Binario ──────────────────────────────────────────────────────────
+    // ── Binary ───────────────────────────────────────────────────────────
     cpu.system.setRegister("sp", 0x401f00);
     callFunction(cpu, FUN_4790, [...args], 300_000);
     const binTable: number[] = [];
@@ -349,7 +349,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okE}/${sizeE} = ${((okE/sizeE)*100).toFixed(1)}%`);
   totalOk += okE;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk/total)*100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk/total)*100).toFixed(1)}% ===`);
 
   if (failHolder.value) {
     const f = failHolder.value;

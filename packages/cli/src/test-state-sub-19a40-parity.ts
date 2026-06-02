@@ -296,7 +296,7 @@ async function main(): Promise<void> {
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);
-    // Diff-dump first slot divergente.
+    // Diff-dump first divergent slot.
     for (let i = 0; i < TABLE_SIZE; i++) {
       if (f.binTable[i] !== f.tsTable[i]) {
         const slot = Math.floor(i / ENTITY_STRIDE);

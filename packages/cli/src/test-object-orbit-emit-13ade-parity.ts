@@ -3,29 +3,29 @@
  * test-object-orbit-emit-13ade-parity.ts — differential FUN_00013ADE vs
  * `objectOrbitEmit13ADE`.
  *
- * `FUN_00013ADE` (602 byte) emette 9 sprite entries su traiettoria circolare
+ * `FUN_00013ADE` (602 byte) emits 9 sprite entries on a circular trajectory
  * using a sin/cos table @ 0x1EDA2 and a delta-stream @ 0x1EF32, with:
- *   - reset trigger su counter ∈ {0x64, 0x65, 0x66}
- *   - mirror su (A0+0x1A).b == 0x0B
- *   - angolo advance of 0x0A (modulo 0x192) per call
+ *   - reset trigger on counter ∈ {0x64, 0x65, 0x66}
+ *   - mirror on (A0+0x1A).b == 0x0B
+ *   - angle advance of 0x0A (modulo 0x192) per call
  *   - emit [charcode, x, y] records with bounds checking
  *
  * Random setup for each case:
- *   - `(A0+0x57).b` random (counter, include trigger values to cover i path)
+ *   - `(A0+0x57).b` random (counter, includes trigger values to cover the paths)
  *   - `(A0+0x1a).b` random (mirror gate)
- *   - `(A0+0x2e).w` random (angolo iniziale)
+ *   - `(A0+0x2e).w` random (initial angle)
  *   - `(A0+0x1e).l` random (coords source)
  *   - workRam/ROM pre-zeroed on the output fields
  *
- * Confronto:
- *   - D0 (low byte: 0x01 o 0x00)
+ * Comparison:
+ *   - D0 (low byte: 0x01 or 0x00)
  *   - byte `(A0+0x57)` (counter post)
- *   - word `(A0+0x2e)` (angolo post)
+ *   - word `(A0+0x2e)` (angle post)
  *   - byte `(A0+0x1c)` (ready mark)
  *   - 4 record × 6 byte @ `(A0+0xA4)..(A0+0xBB)`
  *   - 4 record × 6 byte @ `(A0+0x38)..(A0+0x4F)`
  *
- * Uso: npx tsx packages/cli/src/test-object-orbit-emit-13ade-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-orbit-emit-13ade-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -141,8 +141,8 @@ async function main(): Promise<void> {
       const slotOff = slot - 0x400000;
       const ranges: Array<[number, number]> = [
         [0x1c, 1],
-        [0x38, 24], // 4 record da 6 byte
-        [0xa4, 24], // 4 record da 6 byte
+        [0x38, 24], // 4 records of 6 bytes
+        [0xa4, 24], // 4 records of 6 bytes
       ];
       for (const [off, size] of ranges) {
         for (let k = 0; k < size; k++) {
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, argPtr + 0x1a, 1, mirrorByte);
     stateInst.workRam[argOff + 0x1a] = mirrorByte;
 
-    // Angolo (word).
+    // Angle (word).
     pokeMem(cpu, argPtr + 0x2e, 1, (angleInit >>> 8) & 0xff);
     pokeMem(cpu, argPtr + 0x2f, 1, angleInit & 0xff);
     stateInst.workRam[argOff + 0x2e] = (angleInit >>> 8) & 0xff;
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
       }
     }
 
-    // Angolo post (0x2E word = 2 byte).
+    // Angle post (0x2E word = 2 byte).
     if (match) {
       for (let k = 0; k < 2; k++) {
         const binV = peekMem(cpu, argPtr + 0x2e + k, 1) & 0xff;

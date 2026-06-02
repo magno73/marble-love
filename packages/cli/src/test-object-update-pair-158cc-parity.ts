@@ -3,7 +3,7 @@
  * test-object-update-pair-158cc-parity.ts — differential FUN_158CC vs
  * objectUpdatePair158CC.
  *
- * FUN_1B9CC / FUN_1281C); per isolare il path of FUN_158CC we patch
+ * FUN_1B9CC / FUN_1281C); to isolate the FUN_158CC path we patch
  * FUN_158F6 with a "capture" payload:
  *
  *   move.l   (0x4,SP), D0          ; 20 2F 00 04        (4 byte)  arg long
@@ -12,11 +12,11 @@
  *   move.l   A1, (0x00401FF8).l    ; 23 C9 00 40 1F F8  (6 byte)  store cur
  *   rts                            ; 4E 75              (2 byte)
  *
- * estende sino a 0x15974+), patch sicura.
+ * extends up to 0x15974+), safe patch.
  *
  * Capture buffer:
- *   - 0x401FE0..0x401FF7 : 6 slot long (init sentinel 0xDEADBEEF, max 6
- *                          writes — ne aspettiamo 2)
+ *   - 0x401FE0..0x401FF7 : 6 long slots (init sentinel 0xDEADBEEF, max 6
+ *                          writes — we expect 2)
  *
  * Note: use offset `0x401FE0`, not `0x401FF0` like the other parity tests
  * writing 4x4=16 bytes can overlap if SP drops too far. The
@@ -28,7 +28,7 @@
  * accumulated memory side effects and different workRam patterns (we verify
  * work RAM).
  *
- * Uso: npx tsx packages/cli/src/test-object-update-pair-158cc-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-update-pair-158cc-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
     // captured bytes MUST remain unchanged.
     //
     // Pattern:
-    //   i=0..3: pattern statici (zero / 0xFF / mix)
+    //   i=0..3: static patterns (zero / 0xFF / mix)
     //   i>=4 : random
     if (i === 0) {
     } else if (i === 1) {
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, 0x004003ea, 2, 0xffff); // stage
     } else if (i === 3) {
       state.workRam.fill(0x00);
-      // Anche su Musashi azzeriamo le slot
+      // On Musashi too, zero out the slots
       pokeMem(cpu, 0x004009a4, 4, 0x00000000);
       pokeMem(cpu, 0x00400a20, 4, 0x00000000);
     } else {

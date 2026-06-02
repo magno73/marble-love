@@ -193,20 +193,20 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 1) {
-      // Single-bit error correggibile: input ha A0[2]=0x01, others 0.
+      // Correctable single-bit error: input has A0[2]=0x01, others 0.
       // Init D6b = ~0 ^ 0 ^ 0 ^ 0 ^ 1 = 0xFE. D2b=1.
-      // Iter loop bytes = 0 → no XOR change. Syndromi: D6b=0xFE, D2b=1, others=0.
+      // Iter loop bytes = 0 → no XOR change. Syndromes: D6b=0xFE, D2b=1, others=0.
       // Bit-iter 1: D0w = (0<<4)|0|0|0|1 = 1 (bit 4 NOT set) → uncorrectable!
-      // E table[D0w-0x10] != 0xFF. D0w = 0x13 → table[3] = 0x00 → corregge pos 0.
-      // Per D0w = 0x13: bit pattern (lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=1, lsbD2=1)
+      // And table[D0w-0x10] != 0xFF. D0w = 0x13 → table[3] = 0x00 → corrects pos 0.
+      // For D0w = 0x13: bit pattern (lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=1, lsbD2=1)
       // = (1<<4) | (1<<1) | 1 = 0x10 | 2 | 1 = 0x13. ✓
       //
-      // Setup: input zero TRANNE A0[0]=0xFE (→ D6b init = 0x01 with LSB=1),
+      // Setup: input zero EXCEPT A0[0]=0xFE (→ D6b init = 0x01 with LSB=1),
       // and other sets to get D3b LSB=1 and D2b LSB=1.
       // A0[2]=0x01 → D2b=0x01 (LSB=1), D6b ^= 1 → 0x00. Hmm conflicts.
       //
       // Empirical approach: use an arbitrary byte pattern and validate only
-      // coerenza bin/ts.
+      // bin/ts consistency.
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
       inputRow[2] = 0x01;
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
     } else if (i === 3) {
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
-      inputRow[8] = 0xab; // disturba syndromi
+      inputRow[8] = 0xab; // perturbs syndromes
       setup = {
         a2: WORK_RAM_BASE + 0x100,
         a3: 0x00400800,
@@ -246,9 +246,9 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 4) {
-      // Counter near overflow: 0xFFFE → +1 → 0xFFFF. Multipli increment.
+      // Counter near overflow: 0xFFFE → +1 → 0xFFFF. Multiple increments.
       const inputRow = new Uint8Array(30);
-      inputRow[2] = 0x01; // produce uncorrectable
+      inputRow[2] = 0x01; // produces uncorrectable
       setup = {
         a2: WORK_RAM_BASE + 0x100,
         a3: 0x00400800,
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
         initialOutput[k] = Math.floor(rng() * 256) & 0xff;
       }
       // a2: 4-byte-aligned workRam, avoid overlap with A3 and counter range.
-      // A2[0x11..0x12]. Limitiamo A2 a 0x400000..0x401C00 stride 4.
+      // A2[0x11..0x12]. Limit A2 to 0x400000..0x401C00 stride 4.
       const a2OffRaw = (Math.floor(rng() * 0x700) * 4) & 0x1ffc;
       // Small d2/d3 (0..15) to avoid wraparound.
       const d2Word = Math.floor(rng() * 16);
@@ -345,7 +345,7 @@ async function main(): Promise<void> {
       }
     } else {
       // A3 in ROM: setup.inputRowBytes must match the existing ROM.
-      // unified memory, scrivibile in test).
+      // unified memory, writable in test).
       const inputAbsAddr = setup.a3 + setup.d2Word * 30;
       for (let k = 0; k < 30; k++) {
         pokeMem(cpu, inputAbsAddr + k, 1, setup.inputRowBytes[k]!);

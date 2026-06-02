@@ -4,12 +4,12 @@
  *
  * `FUN_00004442`.
  *
- * Strategia of parity test:
+ * Parity test strategy:
  *     point), then read the 2 longs on the stack `(0x4,SP)` and
  *     `(0x8,SP)` (stack as seen by the callee with ret addr at (0,SP)).
  *     that captures the same parameters.
  *
- * Uso: npx tsx packages/cli/src/test-sound-cmd-gate-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-cmd-gate-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -127,7 +127,7 @@ async function main(): Promise<void> {
       cmdIdx = (i - 5) & 0x1f;
       data = Math.floor(rng() * 0x100000000) >>> 0;
     } else {
-      // Bias: 30% in the range [0,0x14] per stressare il bordo, 70% full random
+      // Bias: 30% in the range [0,0x14] to stress the boundary, 70% full random
       const inBoundary = rng() < 0.3;
       cmdIdx = inBoundary
         ? Math.floor(rng() * 0x15)

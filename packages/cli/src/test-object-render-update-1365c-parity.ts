@@ -270,7 +270,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: changed POS, random scan (no forced match) ────────────────
-  console.log(`\n=== Suite B: POS cambiato, scan random — ${perSuite} cases ===`);
+  console.log(`\n=== Suite B: POS changed, random scan — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const objPtr = pickPtr();

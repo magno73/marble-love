@@ -78,14 +78,14 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern of coverage su arg1.
+    // Pattern of coverage on arg1.
     let arg1: number;
     if (i === 0) {
       arg1 = 0; // bank 0, MMIO=0
     } else if (i === 1) {
       arg1 = 1;
     } else if (i === 2) {
-      arg1 = 7; // bank 7 (last bank valido in 4KB)
+      arg1 = 7; // bank 7 (last valid bank in 4KB)
     } else if (i === 3) {
       arg1 = 3;
     } else if (i === 4) {

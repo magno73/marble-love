@@ -7,15 +7,15 @@
  *   or.l D1,(0x00401F76).l   ; secondary flags long-BE
  *   (rts @ 0x525C shared with FUN_525C)
  *
- * Strategia parity:
+ * Parity strategy:
  *   - For each case: set primary (0x401F5E) and secondary (0x401F76) to
  *     controlled values; set D1 to the bitmask to OR.
  *   - Launch binary via `callFunction(cpu, 0x5250, [])` with D1 pre-set
  *     via `cpu.system.setRegister("d1", d1)`.
- *   - Lancia `stateSub5250(state, d1)`.
- *   - Compare primary and secondary long-BE post-esecuzione.
+ *   - Run `stateSub5250(state, d1)`.
+ *   - Compare primary and secondary long-BE post-run.
  *
- * Casi boundary:
+ * Boundary cases:
  *   0: d1=0, primary=0, secondary=0            → no-op
  *   1: d1=0xFFFFFFFF, primary=0, secondary=0   → all bits set
  *   2: d1=0x00000001, primary=0, secondary=0   → single bit
@@ -24,7 +24,7 @@
  *   5: d1=0x12345678, primary=0x12345678, sec=0x87654321 → already set bits idempotent
  *   >= 6: random d1, random primary, random secondary
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5250-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5250-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

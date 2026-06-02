@@ -14,23 +14,23 @@
  * **Stub injection strategy**:
  *
  *
- *      Stub layout (8 byte):
- *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)
- *        rts                         ; 4E75            (2 byte)
+ *      Stub layout (8 bytes):
+ *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 bytes)
+ *        rts                         ; 4E75            (2 bytes)
  *
  *      `(structPtrLong, byteIdxLong)` in a ring-buffer @ `0x401E00`,
  *      but use a ring for consistency with other parity-test patterns.
  *
- *      Stub layout (30 byte):
- *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 byte)
- *        move.l  0x00401E48.l, D1      ; 2239 0040 1E48   (6 byte)
- *        adda.l  D1, A0                ; D1C1             (2 byte)
- *        move.l  (4,SP), (A0)+         ; 20EF 0004        (4 byte)
- *        move.l  (8,SP), (A0)          ; 20AF 0008        (4 byte)
- *        addq.l  #8, 0x00401E48.l      ; 50B9 0040 1E48   (6 byte)
- *        rts                           ; 4E75             (2 byte)
+ *      Stub layout (30 bytes):
+ *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 bytes)
+ *        move.l  0x00401E48.l, D1      ; 2239 0040 1E48   (6 bytes)
+ *        adda.l  D1, A0                ; D1C1             (2 bytes)
+ *        move.l  (4,SP), (A0)+         ; 20EF 0004        (4 bytes)
+ *        move.l  (8,SP), (A0)          ; 20AF 0008        (4 bytes)
+ *        addq.l  #8, 0x00401E48.l      ; 50B9 0040 1E48   (6 bytes)
+ *        rts                           ; 4E75             (2 bytes)
  *
- *   FUN_160AE (38 byte: 0x160AE..0x160D3) and FUN_15C46 (~250 byte) are
+ *   FUN_160AE (38 bytes: 0x160AE..0x160D3) and FUN_15C46 (~250 bytes) are
  *
  *   - B: kind random in [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0)
  *   - C: kind random in [0x80..0xFF] (no-op signed<0 via blt)
@@ -66,7 +66,7 @@ const RING_COUNTER = 0x00401e48;
 /** Slot for the "return value" of fun_15c46 (long BE). */
 const FUN15C46_RET = 0x00401e40;
 
-/** Patch FUN_15C46 with the thunk-loader (8 byte). */
+/** Patch FUN_15C46 with the thunk-loader (8 bytes). */
 function patchFun15C46(cpu: CpuSession): void {
   const bytes = [
     // move.l 0x00401E40.l, D0     (2039 0040 1E40)

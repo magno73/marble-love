@@ -5,7 +5,7 @@
  * state-machine scheduler. Args: 3 longs on the stack (arg1, arg2, arg3),
  * where arg2/arg3 are used only as low words.
  *
- * Logica:
+ * Logic:
  *   - Find first i in [0..3] with STATE[i] == 0
  *       DATA_PTR[i] = arg1 (long)
  *       STATE[i] = 3 (byte)
@@ -15,12 +15,12 @@
  *       FLAG34[i] = 0 (byte)
  *       return D0 = 1
  *
- * Strategia:
+ * Strategy:
  *
- * Suite testate:
+ * Suites tested:
  *        free/occupied)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-2bda-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-2bda-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -81,7 +81,7 @@ function compareStruct(
   return null;
 }
 
-const STATE_BASE = 0x1c; // offset relative a STRUCT_BASE
+const STATE_BASE = 0x1c; // offset relative to STRUCT_BASE
 
 async function main(): Promise<void> {
   const total = Number(process.argv[2] ?? "500");
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     if (f.offset === -1) {
