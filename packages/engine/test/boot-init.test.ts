@@ -8,6 +8,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
+
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
 import { bootInit } from "../src/boot-init.js";
 import { tick } from "../src/index.js";
 import { emptyGameState } from "../src/state.js";
@@ -132,7 +134,7 @@ describe("bootInit", () => {
     expect(keyRankLookup4686(s, 140)).toBe(10);
   });
 
-  it("initializes the same high-score defaults from the real ROM blob", () => {
+  it.skipIf(!ROM_AVAILABLE)("initializes the same high-score defaults from the real ROM blob", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
