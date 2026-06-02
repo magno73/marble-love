@@ -22,9 +22,9 @@
  *   bra.b    0x1950E                     ; kind == 2 → case 2
  *
  *   ; case 0 @ 0x194E6:
- *   move.l   A2,-(SP)                    ; push obj (arg per FUN_1960E)
+ *   move.l   A2,-(SP)                    ; push obj (arg for FUN_1960E)
  *   jsr      0x0001960E.l                ; FUN_1960E(obj)
- *   move.l   A2,-(SP)                    ; push obj (arg per FUN_1953E)
+ *   move.l   A2,-(SP)                    ; push obj (arg for FUN_1953E)
  *   jsr      0x0001953E.l                ; FUN_1953E(obj)
  *   addq.l   #8,SP                       ; pop both long args
  *   bra.b    0x1953A                     ; epilog
@@ -53,13 +53,13 @@
  *   rts
  *
  * **Side effects**:
- *   - Solo case 2 modifies `state.workRam` direttamente (4 byte BE @
+ *   - Only case 2 modifies `state.workRam` directly (4 byte BE @
  *     `obj+0x1C..0x1F`).
  *   - Case 0/1 are delegated entirely to JSRs (no-op if subs are absent).
  *
  *   - `FUN_0001960E` — case-0 helper (sub-type 0).
  *   - `FUN_0001973C` — case-1 helper (sub-type 1).
- *   - `FUN_0001953E` — finalizer comune a case 0 and 1.
+ *   - `FUN_0001953E` — finalizer common to case 0 and 1.
  *
  * **Caller xrefs (6)**:
  *   - `FUN_00018FFA @ 0x190AE`
@@ -78,15 +78,15 @@ export const CALLEE_FUN_1960E = 0x0001960e as const;
 export const CALLEE_FUN_1973C = 0x0001973c as const;
 export const CALLEE_FUN_1953E = 0x0001953e as const;
 
-/** Long pointer per `obj[0x25] == 7` (case 2). */
+/** Long pointer for `obj[0x25] == 7` (case 2). */
 export const FN_PTR_KIND2_SUB7 = 0x00021f8a as const;
-/** Long pointer per `obj[0x25] == 8` (case 2). */
+/** Long pointer for `obj[0x25] == 8` (case 2). */
 export const FN_PTR_KIND2_SUB8 = 0x00021a62 as const;
-/** Long pointer of default per case 2 (sub-type non 7 and non 8). */
+/** Default long pointer for case 2 (sub-type not 7 and not 8). */
 export const FN_PTR_KIND2_DEFAULT = 0x00021efe as const;
 
 /**
- * Stub injection per le 3 JSR esterne (case 0 and 1).
+ * Stub injection for the 3 external JSRs (case 0 and 1).
  *
  *
  * Default: all no-op (matching `rts` patch in the parity test).
@@ -95,20 +95,20 @@ export interface ObjectTypeDispatch194BASubs {
   fun_1960e?: (objAddr: number, state: GameState) => void;
   fun_1973c?: (objAddr: number, state: GameState) => void;
   /**
-   * `FUN_0001953E(obj)` — finalizer comune a case 0 and 1.
+   * `FUN_0001953E(obj)` — finalizer common to case 0 and 1.
    */
   fun_1953e?: (objAddr: number, state: GameState) => void;
 }
 
-/** Descrittore of the branch eseguito (per inspection/test). */
+/** Descriptor of the branch taken (for inspection/test). */
 export type DispatchBranch =
   | "skip"
   | "case0"    // kind == 0 → fun_1960e + fun_1953e
   | "case1"    // kind == 1 → fun_1973c + fun_1953e
-  | "case2";   // kind == 2 → set obj[0x1C..0x1F] basato su obj[0x25]
+  | "case2";   // kind == 2 → set obj[0x1C..0x1F] based on obj[0x25]
 
 export interface ObjectTypeDispatch194BAResult {
-  /** Branch eseguito (vedi `DispatchBranch`). */
+  /** Branch taken (see `DispatchBranch`). */
   branch: DispatchBranch;
   fnPtrWritten: number | null;
 }
@@ -158,7 +158,7 @@ export function objectTypeDispatch194BA(
   }
 
   if (kind === 2) {
-    // case 2: dispatch su obj[0x25] → write obj[0x1C..0x1F] long BE.
+    // case 2: dispatch on obj[0x25] → write obj[0x1C..0x1F] long BE.
     const subType = (r[objOff + SUBTYPE_OFFSET] ?? 0) & 0xff;
     let fnPtr: number;
     if (subType === 0x07) {

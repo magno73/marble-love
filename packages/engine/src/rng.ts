@@ -1,11 +1,11 @@
 /**
  * rng.ts — replica of the PRNG of Marble Madness.
  *
- * **Identificato in Phase 2 (Ghidra)** — vedi `docs/static-overview.md`:
- *   - State: u16 a `0x004003A6` in Work RAM
+ * **Identified in Phase 2 (Ghidra)** — see `docs/static-overview.md`:
+ *   - State: u16 at `0x004003A6` in Work RAM
  *   - Algorithm: **16-bit Galois LFSR with custom feedback**
  *
- * Algoritmo derivato from the disassembly 68010:
+ * Algorithm derived from the 68010 disassembly:
  *
  *   ```asm
  *   move.w (0x4003A6), D0       ; state
@@ -26,9 +26,9 @@
  *   ; range-limit: D0 = D0 & D3.lo; while D0 > limit: D0 -= limit
  *   ```
  *
- *   - N = number of shift right necessari per portare `limit` a 0
- *   - Avanza state of N step LFSR
- *   - Restituisce `state mod limit` (range-limited)
+ *   - N = number of right shifts needed to bring `limit` to 0
+ *   - Advances state by N LFSR steps
+ *   - Returns `state mod limit` (range-limited)
  *
  */
 
@@ -39,7 +39,7 @@ import type { u16 } from "./wrap.js";
 const FEEDBACK_FALLBACK = 0x40 as const; // if (high ^ low) == 0
 
 /**
- * Avanza lo state RNG of un singolo step LFSR.
+ * Advances the RNG state by a single LFSR step.
  *
  * New state = (state << 1) | feedback_bit, where:
  *   feedback_byte = (state.high ^ state.low) ?: 0x40
@@ -55,7 +55,7 @@ export function rngStepOnce(state: u16): u16 {
 }
 
 /**
- * Avanza state of N step (number of shift-right per portare `limit` a 0).
+ * Advances state by N steps (number of right shifts to bring `limit` to 0).
  */
 export function rngAdvanceForLimit(state: u16, limit: u16): u16 {
   let s = state as unknown as number;
@@ -78,12 +78,12 @@ function maskHelperAfter(n: number): u16 {
 
 /**
  *
- * Mimica `FUN_00013A98`:
- *   1. Avanza state of N=bit_length(limit) step
+ * Mimics `FUN_00013A98`:
+ *   1. Advances state by N=bit_length(limit) steps
  *   3. result = state & mask
  *   4. while result >= limit: result -= limit
  *
- * result <= limit: sub`. Per result == limit: result -= limit → 0 (correct
+ * result <= limit: sub`. For result == limit: result -= limit → 0 (correct
  */
 export function rngNext(rstate: RngState, limit: u16): u16 {
   const limit_n = limit as unknown as number;
@@ -107,7 +107,7 @@ export function rngNext(rstate: RngState, limit: u16): u16 {
   rstate.seed = as_u32(seed_new as unknown as number);
 
   // Range-limit
-  // ritornava limit invece of 0). Vedi disasm @ 0x13AD0.
+  // returned limit instead of 0). See disasm @ 0x13AD0.
   const mask = maskHelperAfter(n);
   let r = (seed_new as unknown as number) & (mask as unknown as number);
   while (r >= limit_n) {

@@ -9,19 +9,19 @@
  *   - 0x22         → fun_160ae(A2, fun_15c46(A2))
  *   - 0..0x1F      → no-op (blt signed)
  *   - 0x23..0x7F   → no-op (cmpa fall-through)
- *   - 0x80..0xFF   → no-op (blt signed; signExt(byte) negativo)
+ *   - 0x80..0xFF   → no-op (blt signed; signExt(byte) negative)
  *
- * **Strategia stub injection**:
+ * **Stub injection strategy**:
  *
  *
- *      Layout stub (8 byte):
+ *      Stub layout (8 byte):
  *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)
  *        rts                         ; 4E75            (2 byte)
  *
- *      `(structPtrLong, byteIdxLong)` in un ring-buffer @ `0x401E00`,
+ *      `(structPtrLong, byteIdxLong)` in a ring-buffer @ `0x401E00`,
  *      but use a ring for consistency with other parity-test patterns.
  *
- *      Layout stub (30 byte):
+ *      Stub layout (30 byte):
  *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 byte)
  *        move.l  0x00401E48.l, D1      ; 2239 0040 1E48   (6 byte)
  *        adda.l  D1, A0                ; D1C1             (2 byte)
@@ -35,9 +35,9 @@
  *   - B: kind random in [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0)
  *   - C: kind random in [0x80..0xFF] (no-op signed<0 via blt)
  *
- * in the stessi offset).
+ * at the same offsets).
  *
- * Uso: npx tsx packages/cli/src/test-state-dispatch-1605c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-dispatch-1605c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -63,7 +63,7 @@ const FUN_160AE = 0x000160ae;
 
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
-/** Slot per la "return value" of fun_15c46 (long BE). */
+/** Slot for the "return value" of fun_15c46 (long BE). */
 const FUN15C46_RET = 0x00401e40;
 
 /** Patch FUN_15C46 with the thunk-loader (8 byte). */
@@ -124,7 +124,7 @@ const RING_COUNTER_OFF = RING_COUNTER - 0x400000;
 const FUN15C46_RET_OFF = FUN15C46_RET - 0x400000;
 const STRUCT_BASE_OFF = STRUCT_BASE - 0x400000;
 
-/** Reset zone osservate (ring + counter + retVal slot + kind byte). */
+/** Reset observed zones (ring + counter + retVal slot + kind byte). */
 function resetZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -206,7 +206,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   patchSubs(cpu);
 
-  // Nota: lavoriamo direttamente su `state.workRam` (the stub binari
+  // Note: we work directly on `state.workRam` (the binary stubs
   const subs: ns.StateDispatch1605CSubs = {
     fun_15c46: (_structPtr) => {
       const r = state.workRam;
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
       return v;
     },
     fun_160ae: (structPtr, byteIdx) => {
-      // ring @ counter, poi counter += 8.
+      // ring @ counter, then counter += 8.
       const r = state.workRam;
       const counter =
         (((r[RING_COUNTER_OFF] ?? 0) << 24) |
@@ -362,7 +362,7 @@ async function main(): Promise<void> {
 
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: kind=0x22 + retVal pathologici — ${sizeD} cases ===`,
+    `\n=== Suite D: kind=0x22 + pathological retVal — ${sizeD} cases ===`,
   );
   const pathologicalRets = [
     0x00000000, 0xffffffff, 0x80000000, 0x7fffffff, 0x00000001, 0x00010000,
@@ -378,7 +378,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

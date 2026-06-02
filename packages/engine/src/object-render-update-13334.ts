@@ -10,7 +10,7 @@
  *      epilogue. For active mode 2, save those same globals with an additional
  *      constraint on `struct[0x1a] ∈ {1,2}`, then continue to compute.
  *
- *      `0x400690/0x400692`, poi packed `(yMinusX_signed << 16) | adjustedX_word`
+ *      `0x400690/0x400692`, then packed `(yMinusX_signed << 16) | adjustedX_word`
  *
  *   3. **Two conditional dispatches** (post-compute):
  *        L3 green waves, modeled through callback `inner1D06A`.
@@ -38,7 +38,7 @@
  *   00013374  beq.b   0x13380                     ;   yes → store_globals
  *   00013376  cmpi.b  #0x1,(0x1a,A2)              ; struct[0x1a] != 1?
  *   0001337c  bne.w   0x13398                     ;   yes → compute (no globals)
- *                                                 ; ammesso: 1e==1 OR (1e==2 AND 1a∈{1,2})
+ *                                                 ; allowed: 1e==1 OR (1e==2 AND 1a∈{1,2})
  *   00013380  move.l  (0x3e,A2),(0x00400970).l    ; *0x400970 = struct[0x3e]
  *   00013388  move.l  A2,(0x00400974).l           ; *0x400974 = structPtr
  *   0001338e  cmpi.b  #0x2,(0x1e,A2)              ; struct[0x1e] == 2?
@@ -87,7 +87,7 @@
  *   0001340a  move.l  (0x3e,A2),D0
  *   0001340e  sub.l   (0x46,A2),D0                ; D0 = struct[0x3e] - struct[0x46]
  *   00013412  lsr.l   #0x2,D0                     ; D0 >>= 2 (unsigned)
- *   00013414  lsr.l   #0x1,D0                     ; D0 >>= 1 → totale (>>3)
+ *   00013414  lsr.l   #0x1,D0                     ; D0 >>= 1 → total (>>3)
  *   00013416  move.w  D0w,D1w                     ; D1w = D0w (low 16)
  *   00013418  move.l  #0x21192,D0
  *   0001341e  cmp.l   (0x46,A2),D0                ; struct[0x46] == 0x21192?
@@ -162,7 +162,7 @@ const STRUCT_FINAL_COPY_OFF = 0x42; // long @ A2+0x42 (← struct[0x3E])
 const STRUCT_BASE_PTR_OFF = 0x46; // long @ A2+0x46 (subtracted base)
 const STRUCT_PACKED_DST_OFF = 0x4e; // long @ A2+0x4E (packed coords)
 
-/** ROM byte table indicizzata on the path `1f == 3`. */
+/** ROM byte table indexed on the path `1f == 3`. */
 export const PALETTE_INDEX_TABLE_ROM = 0x1df18 as const;
 
 /** Magic constant compared with `struct[0x46]` for the +7 bonus. */
@@ -200,7 +200,7 @@ function writeU32(buf: Uint8Array, off: number, v: number): void {
 }
 
 /**
- * sovrascritta dalle ext).
+ * Sign-extend byte to i32 (overwritten by the ext instructions).
  */
 function sext8_i32(byte: number): number {
   return ((byte & 0xff) << 24) >> 24;
@@ -213,8 +213,9 @@ function sext16_i32(word: number): number {
 }
 
 /**
- * (dereferenza `*A0` in the disasm). I record possono vivere both in ROM
- * non distingue (m68k unified addressing). La replica accede ai due buffer
+ * (dereferences `*A0` in the disasm). Records can live both in ROM
+ * and in work RAM; m68k unified addressing does not distinguish. The replica
+ * accesses the two buffers.
  */
 function readU32Anywhere(
   state: GameState,
@@ -228,7 +229,7 @@ function readU32Anywhere(
   if (a < rom.program.length && a + 3 < rom.program.length) {
     return readU32(rom.program, a);
   }
-  // Out-of-range: m68k leggerebbe garbage; ai fini parity il caller non
+  // Out-of-range: m68k would read garbage; for parity purposes the caller does not
   return 0;
 }
 
@@ -247,12 +248,12 @@ export interface ObjectRenderUpdate13334Subs {
 
 /**
  *
- * @param state     GameState. Modifica `workRam` su POS_X/Y, active-record
+ * @param state     GameState. Modifies `workRam` on POS_X/Y, active-record
  *                  globals, struct fields (+0x42, +0x4E), palette queue.
- * @param rom       ROM image (per leggere la table @ `0x1DF18` and per
- *                  dereferencing `struct[0x3e]` if it points into ROM).
+ * @param rom       ROM image (to read the table @ `0x1DF18` and to
+ *                  dereference `struct[0x3e]` if it points into ROM).
  *                  on `(A2, ...)` touch work RAM.
- * @param subs      Stub injection per `FUN_1D06A` (callback no-op in test).
+ * @param subs      Stub injection for `FUN_1D06A` (no-op callback in test).
  */
 export function objectRenderUpdate13334(
   state: GameState,
@@ -303,7 +304,7 @@ export function objectRenderUpdate13334(
     return 0;
   }
 
-  // ─── Compute coords (identical pattern a sprite-coords-jsr-150d0.ts) ───
+  // ─── Compute coords (identical pattern to sprite-coords-jsr-150d0.ts) ───
   const w0 = readU16(state.workRam, argOff + STRUCT_W0_OFF);
   const w2 = readU16(state.workRam, argOff + STRUCT_W2_OFF);
   const w4 = readU16(state.workRam, argOff + STRUCT_W4_OFF);

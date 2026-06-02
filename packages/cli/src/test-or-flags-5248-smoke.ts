@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * test-or-flags-5248-smoke.ts — smoke tests per `orFlags5248`.
+ * test-or-flags-5248-smoke.ts — smoke tests for `orFlags5248`.
  *
  */
 
@@ -46,7 +46,7 @@ function setFlags(s: ReturnType<typeof stateNs.emptyGameState>, v: number): void
 console.log("\nTest 1: OR 0x3 on a zero value");
 {
   const s = makeState();
-  // workRam parte a zero; flags @ 0x1F5E = 0
+  // workRam starts at zero; flags @ 0x1F5E = 0
   ns.orFlags5248(s, 3);
   const v = getFlags(s);
   assert(v === 0x3, `flags = 0x${v.toString(16)} (expected 0x3)`);
@@ -62,8 +62,8 @@ console.log("\nTest 2: OR mask 0 → no-op");
   assert(v === 0xdeadbeef, `flags = 0x${v.toString(16)} (expected 0xdeadbeef)`);
 }
 
-// ─── Test 3: OR cumulativo accumula bit ───────────────────────────────────────
-console.log("\nTest 3: OR cumulativo (0x1 poi 0x2 poi 0x4)");
+// ─── Test 3: cumulative OR accumulates bits ───────────────────────────────────
+console.log("\nTest 3: cumulative OR (0x1 then 0x2 then 0x4)");
 {
   const s = makeState();
   ns.orFlags5248(s, 0x1);
@@ -81,7 +81,7 @@ console.log("\nTest 4: OR 0xFFFFFFFF");
   assert(v === 0xffffffff, `flags = 0x${v.toString(16)} (expected 0xffffffff)`);
 }
 
-console.log("\nTest 5: OR idempotente");
+console.log("\nTest 5: idempotent OR");
 {
   const s = makeState();
   setFlags(s, 0x00ff00ff);

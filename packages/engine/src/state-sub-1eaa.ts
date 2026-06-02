@@ -25,14 +25,14 @@
  *     move.l  D0,-(SP)               ; push (long)
  *     move.l  D4,-(SP)               ; push D4 (long ptr)
  *     jsr     0x000033F4.l           ; FUN_33F4(ptr, sext_w_l(tileId), 0)
- *     addq.w  #1,D3w                 ; D3.w += 1 (word, wraps a 16 bit)
+ *     addq.w  #1,D3w                 ; D3.w += 1 (word, wraps at 16 bits)
  *     subq.l  #1,D2                  ; D2 -= 1
  *     lea     (0xC,SP),SP            ; pop 12 byte (3 long)
  *     bra.b   0x1EBA                 ; → loop
  *   0x1EDA: movem.l (SP)+,{D2,D3,D4}
  *           rts
  *
- * `FUN_33F4(ptr + i*4, sext_w_l((tileId + i) & 0xFFFF), 0)` per
+ * `FUN_33F4(ptr + i*4, sext_w_l((tileId + i) & 0xFFFF), 0)` for
  * `i in [0..count-1]`, with `count = max(0, signed(arg3))`.
  *
  * **Edge cases**:
@@ -40,14 +40,14 @@
  *     loop `D2 == 0` (if arg3 > 0) or `D2 == arg3` (if arg3 <= 0).
  *     as return value.
  *
- * **JSR target identificato**: `FUN_000033F4` (alias `fun_33f4` in the
+ * **JSR target identified**: `FUN_000033F4` (alias `fun_33f4` in the
  *
  * FUN_33F4 patched a stub-probe (record arg1/arg2 in workRam scratch).
  */
 
 import type { GameState } from "./state.js";
 
-/** Stub injection per la JSR a 0x33F4. */
+/** Stub injection for the JSR to 0x33F4. */
 export interface StateSub1EAASubs {
   /**
    * `FUN_33F4(ptrLong, sextWordLong, zeroLong)`. Default no-op (matching
@@ -57,10 +57,10 @@ export interface StateSub1EAASubs {
 
 /**
  *
- * @param arg1Long  long: pointer base (incremented of 4 each iter).
- *                  (incremented of 1 mod 0x10000 each iter, poi
- *                  sign-extended a long per la call).
- * @param subs      stub injection per `fun_33f4` (default no-op).
+ * @param arg1Long  long: pointer base (incremented by 4 each iter).
+ *                  (incremented by 1 mod 0x10000 each iter, then
+ *                  sign-extended to a long for the call).
+ * @param subs      stub injection for `fun_33f4` (default no-op).
  *
  */
 export function stateSub1EAA(
@@ -70,20 +70,20 @@ export function stateSub1EAA(
   arg3Long: number,
   subs?: StateSub1EAASubs,
 ): void {
-  // D4 = arg1 (long, mantenuto as u32; aritmetica wrap a 32 bit).
+  // D4 = arg1 (long, kept as u32; arithmetic wraps at 32 bits).
   let d4 = arg1Long >>> 0;
-  // D3.w = low word of arg2 (mantenuto in [0, 0xFFFF], wrap a 16 bit).
+  // D3.w = low word of arg2 (kept in [0, 0xFFFF], wraps at 16 bits).
   let d3w = arg2Long & 0xffff;
-  // D2 = arg3 long, trattato as SIGNED 32-bit for the `tst.l D2 / ble`.
+  // D2 = arg3 long, treated as SIGNED 32-bit for the `tst.l D2 / ble`.
   let d2 = arg3Long | 0;
 
   while (d2 > 0) {
     const sextWordLong = (d3w << 16) >> 16;
     subs?.fun_33f4?.(d4, sextWordLong, 0);
 
-    // addq.l #4, D4 (wrap a 32 bit)
+    // addq.l #4, D4 (wraps at 32 bits)
     d4 = (d4 + 4) >>> 0;
-    // addq.w #1, D3w (wrap a 16 bit)
+    // addq.w #1, D3w (wraps at 16 bits)
     d3w = (d3w + 1) & 0xffff;
     // subq.l #1, D2 (signed)
     d2 = (d2 - 1) | 0;

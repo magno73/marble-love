@@ -3,18 +3,18 @@
  * test-obj-dirty-dispatch-28624-parity.ts — differential FUN_00028624 vs
  * `objDirtyDispatch28624` TS replica.
  *
- * `FUN_00028624` (140 byte) itera D2 = 0..count-1 (count = word @ 0x400396),
+ * `FUN_00028624` (140 byte) iterates D2 = 0..count-1 (count = word @ 0x400396),
  * `FUN_00028E3C` with 6 derived long args. On loop completion: clear bitmap.
  *
  *   - In TS, `objDirtyDispatch28624` receives a `renderStringHelper` sub that
  *     increments the same byte in `state.workRam[0x3E0]`.
- *       2. bitmap byte @ 0x40039C (MUST be 0 in both i sides).
+ *       2. bitmap byte @ 0x40039C (MUST be 0 on both sides).
  *       3. count word @ 0x400396 unchanged.
  *       4. 64 bytes of workRam scratch around 0x39C (bitmap + sentinel +
  *
  *   - bitmap byte @ 0x40039C random (0..255).
  *
- * Uso: npx tsx packages/cli/src/test-obj-dirty-dispatch-28624-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-obj-dirty-dispatch-28624-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -47,7 +47,7 @@ const SENTINEL_ADDR = 0x004003e0;
 const ROM_TABLE_ADDR = 0x00023d3a;
 
 /**
- * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` at `entry`.
  * - addq.b #1, (xxxx).l → 0x52 0x39 + abs long
  * - rts                 → 0x4E 0x75
  */
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Leggiamo 16 byte (count max in the test = 8, but teniamo margin).
+  // Read 16 byte (count max in the test = 8, but we keep margin).
   const romTab = new Uint8Array(16);
   for (let k = 0; k < 16; k++) {
     romTab[k] = romBuf[ROM_TABLE_ADDR + k] ?? 0;
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Setup setup random
+    // Set up random case
     const count = Math.floor(rng() * 9);
     const bitmap = Math.floor(rng() * 256) & 0xff;
     const sentinelInit = Math.floor(rng() * 256) & 0xff;
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
 
     callFunction(cpu, FUN_28624, []);
 
-    // ── Esegui TS ──────────────────────────────────────────────────────
+    // ── Run TS ─────────────────────────────────────────────────────────
     dispatchNs.objDirtyDispatch28624(stateInst, romTab, subs);
 
     let fail: FailRecord | null = null;

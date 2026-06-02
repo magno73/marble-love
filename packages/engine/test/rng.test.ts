@@ -1,9 +1,9 @@
 /**
- * Test RNG. Algoritmo identificato in Phase 2 (`docs/static-overview.md`):
+ * RNG test. Algorithm identified in Phase 2 (`docs/static-overview.md`):
  *
- * **10000/10000 match al 100%** (`packages/cli/src/test-rng-parity.ts`).
+ * **10000/10000 match at 100%** (`packages/cli/src/test-rng-parity.ts`).
  *
- * Per ri-verify:
+ * To re-verify:
  *   npx tsx packages/cli/src/test-rng-parity.ts 10000
  */
 
@@ -76,7 +76,7 @@ describe("RNG next() with range limit", () => {
     expect(new Set(seeds).size).toBe(20);
   });
 
-  it("bit-perfect snapshot vs binary (verificato 10000 casi Phase 4d)", () => {
+  it("bit-perfect snapshot vs binary (verified 10000 cases Phase 4d)", () => {
     // via test-rng-parity.ts (Musashi WASM).
     const state = rngInit(as_u16(0));
     const out = [

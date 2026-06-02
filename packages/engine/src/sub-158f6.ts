@@ -30,7 +30,7 @@
  *   bne.b    0x1597a                      ; != 0 -> ELSE branch
  *   move.l   A2,-(SP); jsr 0x160D4.l; addq.l #4,SP    ; -> enter state 0x23
  *   bra.b    0x1597a                      ; ELSE branch
- *   ; --- 0x15954: dispatch su (0x18,A2) ---
+ *   ; --- 0x15954: dispatch on (0x18,A2) ---
  *   cmpi.b   #2, (0x18,A2)
  *   bne.b    0x1597a                      ; != 2 -> ELSE branch
  *   ; --- 0x1595c: branch state-2 (s18==2) ---
@@ -89,7 +89,7 @@ const F_S1A = 0x1a; // state byte
 const F_S56 = 0x56; // sub-timer byte
 const F_S6C = 0x6c; // main timer word
 
-// ─── Helpers locali ──────────────────────────────────────────────────────────
+// ─── Local helpers ──────────────────────────────────────────────────────────
 
 function rB(state: GameState, off: number): number {
   return (state.workRam[off] ?? 0) & 0xff;
@@ -118,7 +118,7 @@ function enterState23Default(state: GameState, slotPtr: number, rom: RomImage): 
 // ─── Sub-injection interface ─────────────────────────────────────────────────
 
 /**
- * opzionali; i default usano le replice TS importate.
+ * optional; the defaults use the imported TS replicas.
  */
 export interface Sub158F6Subs {
   /**
@@ -130,21 +130,21 @@ export interface Sub158F6Subs {
 
   /**
    * `FUN_25FC2` — `helper25FC2(state, rom, slotPtr, subs)`.
-   * Invocata in the branch state-2 (s18==2). Default: import TS.
+   * Invoked in the state-2 branch (s18==2). Default: TS import.
    */
   helper25FC2?: (state: GameState, rom: RomImage, slotPtr: number) => void;
 
-  /** Pass-through subs per `helper25FC2`. */
+  /** Pass-through subs for `helper25FC2`. */
   helper25FC2Subs?: Helper25FC2Subs;
 
   /**
    * `FUN_1B9CC` — `spriteHelper1B9CC(state, slotPtr, flagLong, subs)`.
-   * Invocata in the branch state-2. Il caller pusha `A2` as long → flagLong
-   * Default: import TS.
+   * Invoked in the state-2 branch. The caller pushes `A2` as long → flagLong
+   * Default: TS import.
    */
   spriteHelper1B9CC?: (state: GameState, slotPtr: number, flagLong: number) => void;
 
-  /** Pass-through subs per `spriteHelper1B9CC`. */
+  /** Pass-through subs for `spriteHelper1B9CC`. */
   spriteHelper1B9CCSubs?: SpriteHelper1B9CCSubs;
 
   /**
@@ -155,23 +155,23 @@ export interface Sub158F6Subs {
   objectEnter1281C?: (state: GameState, slotPtr: number) => void;
 
   /**
-   * `FUN_253BC` — `helper253BC(state, slotPtr)`. Invocata in the branch ELSE.
-   * Default: import TS.
+   * `FUN_253BC` — `helper253BC(state, slotPtr)`. Invoked in the ELSE branch.
+   * Default: TS import.
    */
   helper253BC?: (state: GameState, slotPtr: number) => void;
 
   /**
-   * `FUN_182BA` — `helper182BA(state, slotPtr, rom, subs)`. Invocata in the
-   * branch ELSE. Default: import TS.
+   * `FUN_182BA` — `helper182BA(state, slotPtr, rom, subs)`. Invoked in the
+   * ELSE branch. Default: TS import.
    */
   helper182BA?: (state: GameState, slotPtr: number, rom: RomImage) => void;
 
-  /** Pass-through subs per `helper182BA`. */
+  /** Pass-through subs for `helper182BA`. */
   helper182BASubs?: Helper182BASubs;
 
   /**
-   * `FUN_121B8` — `helper121B8(state, rom, slotPtr, subs)`. Invocata in the
-   * branch ELSE. Default: import TS.
+   * `FUN_121B8` — `helper121B8(state, rom, slotPtr, subs)`. Invoked in the
+   * ELSE branch. Default: TS import.
    */
   helper121B8?: (state: GameState, rom: RomImage, slotPtr: number) => void;
 
@@ -198,9 +198,9 @@ export function fun158F6(
   // 0x158FC: tst.b (0x18,A2); beq.w → 0x15996 (epilog)
   if (rB(state, a2Off + F_S18) === 0) return;
 
-  // ── BLOCCO 1: timer word @ +0x6C ────────────────────────────────────────
+  // ── BLOCK 1: timer word @ +0x6C ────────────────────────────────────────
   // 0x15904: tst.w (0x6c,A2); ble.b → 0x15930
-  // ble (signed) = branch if D <= 0 → tratta word as signed
+  // ble (signed) = branch if D <= 0 → treats word as signed
   const t6c = sextW(rW(state, a2Off + F_S6C));
   if (t6c > 0) {
     // 0x1590A: subq.w #1, (0x6c,A2)
@@ -217,8 +217,8 @@ export function fun158F6(
     }
   }
 
-  // ── BLOCCO 2: state 0x24 timer @ +0x56 ──────────────────────────────────
-  // 0x15930: cmpi.b #0x24, (0x1a,A2); bne.b → 0x15954 (skip a state-2 dispatch)
+  // ── BLOCK 2: state 0x24 timer @ +0x56 ──────────────────────────────────
+  // 0x15930: cmpi.b #0x24, (0x1a,A2); bne.b → 0x15954 (skip to state-2 dispatch)
   const s1aAfter = rB(state, a2Off + F_S1A);
   if (s1aAfter === 0x24) {
     // 0x15938: tst.b (0x56,A2); beq.b → 0x15942 (skip subq)
@@ -238,7 +238,7 @@ export function fun158F6(
     return;
   }
 
-  // ── BLOCCO 3: dispatch su (0x18,A2) ─────────────────────────────────────
+  // ── BLOCK 3: dispatch on (0x18,A2) ─────────────────────────────────────
   // 0x15954: cmpi.b #2, (0x18,A2); bne.b → 0x1597A (ELSE)
   const s18Now = rB(state, a2Off + F_S18);
   if (s18Now === 0x02) {
@@ -249,7 +249,7 @@ export function fun158F6(
     } else {
       helper25FC2(state, rom, a2, subs.helper25FC2Subs);
     }
-    // jsr FUN_1B9CC(A2) — caller pusha A2 long; FUN_1B9CC interpreta as
+    // jsr FUN_1B9CC(A2) — caller pushes A2 long; FUN_1B9CC interprets it as
     if (subs.spriteHelper1B9CC) {
       subs.spriteHelper1B9CC(state, a2, a2);
     } else {

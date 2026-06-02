@@ -133,36 +133,36 @@
  *   0x51BC  move.l  D1, D0                  ; D0 = D1 (return value)
  *   0x51BE  rts
  *
- *   - `0x4F2C..0x4F37`: iter table (12 byte, terminata da 0xFF):
+ *   - `0x4F2C..0x4F37`: iter table (12 byte, terminated by 0xFF):
  *       `[0x00, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0xFF]`
  *   - `0x51C0..0x51CF`: correction lookup (16 byte, entries 0x10..0x1F):
  *       `[0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x01, 0x02, 0x03, 0xFF, 0x04, 0x05,
  *         0x06, 0x07, 0x08, 0x09, 0xFF]`
- *     Entry 0xFF (negative byte) significa "no correction at this syndrome"
+ *     Entry 0xFF (negative byte) means "no correction at this syndrome"
  *     (skip-correct via `bmi`).
  *
  * **Side effects (workRam through A2)**:
  *      offset table = `[0x06, 0x0A, 0x0C, 0x0E, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C]`
  *      (= `[3*2, 5*2, 6*2, 7*2, 9*2, 10*2, 11*2, 12*2, 13*2, 14*2]`).
- *   2. `A2[0x11..0x12]` = counter long-BE: incremented of 1 per syndrome
- *      non-zero (with saturating rollback if both bytes overflow).
+ *   2. `A2[0x11..0x12]` = counter long-BE: incremented by 1 per non-zero
+ *      syndrome (with saturating rollback if both bytes overflow).
  *
- * **Note of low-level fidelity**:
+ * **Low-level fidelity notes**:
  *
- *  1. **`mulu.w D3w, D0`**: M68k unsigned 16x16→32. Decomp lo riduce a `(short)
- *     index. Per `D3w` in range piccolo (e.g. 0..16) D0 = D3w*10 < 256, no
- *     wrap. Per `D3w` grande (e.g. 0xFFFF) D0w = (-1 * 10) & 0xFFFF = 0xFFF6 =
- *     -10 signed. Il sign-ext rende A1 = A2 - 10. Dipende from the caller: in
+ *  1. **`mulu.w D3w, D0`**: M68k unsigned 16x16→32. The decomp reduces it to a `(short)
+ *     index. For `D3w` in a small range (e.g. 0..16) D0 = D3w*10 < 256, no
+ *     wrap. For `D3w` large (e.g. 0xFFFF) D0w = (-1 * 10) & 0xFFFF = 0xFFF6 =
+ *     -10 signed. The sign-ext makes A1 = A2 - 10. Depends on the caller: in
  *
- *     mod 65536 (= 16*D2w - D2w = 15*D2w, poi *2 = 30*D2w). Solo low word
+ *     mod 65536 (= 16*D2w - D2w = 15*D2w, then *2 = 30*D2w). Only the low word
  *
- *     `original_A1 + 10`. Nella correction phase the expression `(-0xa, A1, D0w)`
+ *     `original_A1 + 10`. In the correction phase the expression `(-0xa, A1, D0w)`
  *     becomes `original_A1 + 10 - 10 + D0w` = `original_A1 + D0w` with D0w in
  *
- *  4. **`btst.l #4, D0` and `move.b (-0x10,A4,D0w),D0b`**: la lookup table
- *     direttamente).
+ *  4. **`btst.l #4, D0` and `move.b (-0x10,A4,D0w),D0b`**: the lookup table
+ *     directly).
  *
- *     Inizio: D1 = 1 (`moveq #1, D1`). Iter 1: D1b = 2. Iter 2: D1b = 4. ...
+ *     Start: D1 = 1 (`moveq #1, D1`). Iter 1: D1b = 2. Iter 2: D1b = 4. ...
  *     Iter 7: D1b = 0x80. Iter 8: 0x80 + 0x80 = 0x100 → D1b = 0, X=1, carry
  *     but high bits intact → D1 = 0x80000001.
  *
@@ -172,10 +172,10 @@
  *  7. **`D2/D3 += 1` epilogue**: The callers (FUN_4F38) use these subs as
  *
  *
- *     2 byte as word BE = 0x0003). Le iter successive usano `move.b
+ *     2 byte as word BE = 0x0003). The following iterations use `move.b
  *
  * 10. **`bpl` after `move.b (A4)+, D1b`**: byte signed test. D1b in 0..0x7F
- *     (positive) → loop. D1b 0x80..0xFF → exit. Il terminator 0xFF (= -1)
+ *     (positive) → loop. D1b 0x80..0xFF → exit. The terminator 0xFF (= -1)
  *
  *
  */
@@ -191,7 +191,7 @@ export const ITER_TABLE_ADDR = 0x00004f2c as const;
 /** Correction lookup table (PC-relative @ 0x51C0). 16 byte. */
 export const CORRECTION_TABLE_ADDR = 0x000051c0 as const;
 
-// ─── Costanti derivate from the disasm ─────────────────────────────────────────
+// ─── Constants derived from the disasm ─────────────────────────────────────────
 
 export const INPUT_ROW_STRIDE = 30 as const;
 
@@ -244,12 +244,12 @@ export const CORRECTION_TABLE = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-/** Sign-extend low word of `v` a long unsigned32. */
+/** Sign-extend low word of `v` to a long unsigned32. */
 function signExtWord(v: number): number {
   return ((v & 0x8000) !== 0 ? (v | 0xffff0000) : (v & 0xffff)) >>> 0;
 }
 
-/** Add long unsigned32 (mod 2^32, equivalente a M68k `add.l`). */
+/** Add long unsigned32 (mod 2^32, equivalent to M68k `add.l`). */
 function addLong(a: number, b: number): number {
   return ((a + b) | 0) >>> 0;
 }
@@ -292,9 +292,9 @@ function readByteAt(state: GameState, rom: RomImage, addr: number): number {
 export interface Sub50F4Result {
   /** Return value in D0 (long): 0 / 1 / 0x80000001 (uncorrectable). */
   d0: number;
-  /** D2 al rts (= D2_in + 1). */
+  /** D2 at rts (= D2_in + 1). */
   d2Out: number;
-  /** D3 al rts (= D3_in + 1). */
+  /** D3 at rts (= D3_in + 1). */
   d3Out: number;
   outputBytes: Uint8Array;
   /** Counter A2[0x11..0x12] post-call (long-BE 16-bit, range 0..0xFFFF). */
@@ -319,7 +319,7 @@ export interface Sub50F4Result {
  *
  *
  *
- *    a2 + signExtW((d3Word*10) & 0xFFFF). I caller in produzione passano
+ *    a2 + signExtW((d3Word*10) & 0xFFFF). Production callers pass
  *
  *    - D6b = ~A0[0]
  *    - D5b = A0[16], D6b ^= D5b
@@ -334,7 +334,7 @@ export interface Sub50F4Result {
  *    - if (v_doubled >> 3) & 1 -> D4b ^= byte    (bit 3 = bit 2 of v)
  *    - if (v_doubled >> 4) & 1 -> D5b ^= byte    (bit 4 = bit 3 of v)
  *
- *    0x05, 0x06, 0x07, 0x09, ... and doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
+ *    0x05, 0x06, 0x07, 0x09, ... and doubled → 0x0A, 0x0C, 0x0E, 0x12, ...
  *
  *
  *      and build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
@@ -368,12 +368,12 @@ export function stateSub50F4(
   const d3times10w = (d3u * 10) & 0xffff;
   const a1Initial = addLong(a2u, signExtWord(d3times10w));
 
-  // D2w * 30 = (D2w << 4) - D2w, doppiato. M68k uses word arithmetic; mod 65536.
+  // D2w * 30 = (D2w << 4) - D2w, doubled. M68k uses word arithmetic; mod 65536.
   const d2times15w = ((d2u << 4) - d2u) & 0xffff;
   const d2times30w = (d2times15w << 1) & 0xffff;
   const a0 = addLong(a3u, signExtWord(d2times30w));
 
-  // ─── Init syndromi (5 byte da A0[0, 16, 8, 4, 2]) ──────────────────────
+  // ─── Init syndromes (5 bytes from A0[0, 16, 8, 4, 2]) ──────────────────────
   const a0Byte0 = readByteAt(state, rom, a0);
   const a0Byte16 = readByteAt(state, rom, addLong(a0, 0x10));
   const a0Byte8 = readByteAt(state, rom, addLong(a0, 0x08));

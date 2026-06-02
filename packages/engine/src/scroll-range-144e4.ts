@@ -1,9 +1,9 @@
 /**
  *
- * poi dispatcha a 4 sub and (condizionalmente su game mode 3 o 4) ad altre sub
+ * then dispatches to 4 subs and (conditionally on game mode 3 or 4) to other subs
  * of bound-check.
  *
- * **Algoritmo** (da disasm 0x144E4..0x14648):
+ * **Algorithm** (from disasm 0x144E4..0x14648):
  *
  * 1. `boundary = sext16(*(statePtrAddr + 0x10))` where
  *    `statePtrAddr = workRam[0x474..0x477]` (deref ROM-or-workRam).
@@ -73,7 +73,7 @@ function readU16Rom(rom: RomImage, addr: number): number {
 }
 
 /**
- * work RAM o in ROM (pattern `readAbsU16` as in level-dispatcher-16ec6.ts).
+ * Read a word from work RAM or from ROM (pattern `readAbsU16` as in level-dispatcher-16ec6.ts).
  */
 function readAbsU16(state: GameState, rom: RomImage | undefined, addr: number): number {
   const a = addr >>> 0;

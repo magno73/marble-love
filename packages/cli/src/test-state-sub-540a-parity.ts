@@ -3,15 +3,15 @@
  * test-state-sub-540a-parity.ts — differential FUN_540A vs stateSub540A.
  *
  *
- * Convenzione caller (cdecl push-RTL):
+ * Caller convention (cdecl push-RTL):
  *   - arg2 long  = D3 (sign-extended from the original word)
  *   - return D0 long = 0 or A2 post-walk
  *
- * Strategia parity:
- *   - Setta SP, poi callFunction(0x540A, [a2, d3]).
+ * Parity strategy:
+ *   - Set SP, then callFunction(0x540A, [a2, d3]).
  *     pure-read).
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-540a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-540a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -69,7 +69,7 @@ function pickSafeHeader(rng: () => number): number {
   //   shift_byte large (negative) → count=0 → 1 string (e.g. hdr=0x05 → (1)-5=-4)
   //   shift_byte=16 → count=0 → 1 string (hdr=0xF0 → (16)-0=16)
   //
-  // Lista of header safe:
+  // List of safe headers:
   const safe = [
     0x12, // shift_byte=0, count=1, 2 strings
     0x00, // shift_byte=1, count=2, 3 strings
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     // Reset SP
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: coverage controllata.
+    // Pattern: controlled coverage.
     let d3: number;
     let numRecordsToWrite: number;
     let terminate: boolean;
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
     } else if (i === 4) {
       d3 = 5;
       numRecordsToWrite = 0;
-      terminate = true; // 00 00 in testa
+      terminate = true; // 00 00 at the head
     } else {
       // Random
       d3 = Math.floor(rng() * 5) + 1; // 1..5
@@ -230,7 +230,7 @@ async function main(): Promise<void> {
       seedBuf[k] = Math.floor(rng() * 0x100) & 0xff;
     }
 
-    // Place table at a known offset, riservando spazio per ~50 byte.
+    // Place table at a known offset, reserving space for ~50 byte.
     const tableStartOff = 0x100;
     const TABLE_REGION = 0x300; // 768 byte
     for (let k = tableStartOff; k < tableStartOff + TABLE_REGION; k++) {

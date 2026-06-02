@@ -3,17 +3,17 @@
  * test-state-sub-1881c-parity.ts — differential FUN_0001881C vs
  * `stateSub1881C`.
  *
- * FUN_0001881C (342 byte): "entity-vs-table proximity reactor". Itera 36
+ * FUN_0001881C (342 byte): "entity-vs-table proximity reactor". Iterates 36
  * matches spawn bytes @ 0x400697/0x400699 and runs one of two branches:
  *
  *   - **math/sound**: if both `byte((long@684>>19))`, `byte((long@688>>19))`
- *     and `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
+ *     and `entity[0x14].w` match, applies damping (entity[0..3]>>1)±0x6000
  *   - **reflect**: if signed word distance (`entity[0x14] - entry[0x6]`) < 12,
  *
  * entity[0xc]=long@684 and entity[0x10]=long@688.
  *
- * **Strategia parity**:
- *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
+ * **Parity strategy**:
+ *   - `FUN_00013A98` (RNG @ 0x4003A6) **left live**: replicated
  *   - `FUN_000158AC` (sound) **patched** with a "capture sentinel" payload
  *     of commands captured through `subs.soundCommand`.
  *   - Compare:
@@ -23,7 +23,7 @@
  * **Suite** (4 × 125 = 500):
  *   - C: forced match-first-3 (some active entries with key bytes that
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-1881c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-1881c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -65,7 +65,7 @@ const CAPTURE_ADDR = 0x00401ffe;
 const SENTINEL_NOT_CALLED = 0xff;
 
 /**
- * Patch FUN_158AC: capture il byte LSB of the long arg → workRam[0x401FFE].
+ * Patch FUN_158AC: capture the LSB byte of the long arg → workRam[0x401FFE].
  *   move.b (0x7,SP), D0   ; 10 2F 00 07
  *   move.b D0, $00401FFE  ; 13 C0 00 40 1F FE
  *   rts                   ; 4E 75
@@ -338,7 +338,7 @@ async function main(): Promise<void> {
     // 50/50: gameMode != 3 OR byte760 == 0
     if ((i & 1) === 0) inp.gameMode = (rw() & 0xffff) === 3 ? 0 : (rw() & 0xffff);
     else inp.byte760 = 0;
-    if (inp.gameMode === 3 && inp.byte760 !== 0) inp.gameMode = 0; // garantisci early-out
+    if (inp.gameMode === 3 && inp.byte760 !== 0) inp.gameMode = 0; // ensure early-out
     if (runOneCase("B", i, inp)) okB++;
   }
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
@@ -377,7 +377,7 @@ async function main(): Promise<void> {
     inp.byte760 = 0xff;
     const k0 = rb();
     const k1 = rb();
-    // long684 = k0 << 19 (puro), shift 19 = byte k0 in low byte
+    // long684 = k0 << 19 (pure), shift 19 = byte k0 in low byte
     inp.long684 = (k0 << 19) >>> 0;
     inp.long688 = (k1 << 19) >>> 0;
     inp.spawnB0 = k0;
@@ -393,7 +393,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;
@@ -402,7 +402,7 @@ async function main(): Promise<void> {
     console.log(`    binRet=0x${f.binRet.toString(16)} tsRet=0x${f.tsRet.toString(16)}`);
     console.log(`    binSeedAfter=0x${f.binSeed.toString(16)} tsSeedAfter=0x${f.tsSeed.toString(16)}`);
     console.log(`    binCapture=0x${f.binCapture.toString(16)} tsCapture=0x${f.tsCapture.toString(16)}`);
-    // Stampa first N byte differenti
+    // Print first N differing byte
     let diffs = 0;
     for (let i = 0; i < ENTITY_SIZE && diffs < 8; i++) {
       if (f.binEntity[i] !== f.tsEntity[i]) {

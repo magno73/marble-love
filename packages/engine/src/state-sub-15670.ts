@@ -119,7 +119,7 @@ export const SLOT_STRIDE = 0x60 as const;
 /** Number of marble slots. */
 export const SLOT_COUNT = 4 as const;
 
-// Per-obj field offsets
+// Per-object field offsets
 const OBJ_X_OFF = 0x00; // long signed
 const OBJ_Y_OFF = 0x04; // long signed
 const OBJ_STATE_OFF = 0x18; // byte
@@ -297,7 +297,7 @@ export function stateSub15670(
 
     if (collision) continue;
 
-    // Candidato valido: D2.b -= 1, A1 = A0 (latest good)
+    // Valid candidate: D2.b -= 1, A1 = A0 (latest good)
     d2Byte = (d2Byte - 1) & 0xff;
     a1 = objAbs;
   }
@@ -320,17 +320,17 @@ export function stateSub15670(
     a1 = ret !== 0 ? obj1Abs : obj0Abs;
   }
 
-  // ─── Riassegna D2 = (0x19, A1) ────────────────────────────────────
+  // ─── Reassign D2 = (0x19, A1) ────────────────────────────────────
   // (0x56,A2).w via signExt.
   d2Byte = readByteAbs(state, a1 + OBJ_FLAG19_OFF);
 
-  // ─── Distanza octant-approx between arg (A2) and candidato (A1) ───────────
+  // ─── Octant-approx distance between arg (A2) and candidate (A1) ───────────
   const argX = readLongSignedAbs(state, a2 + ARG_FX_OFF);
   const argY = readLongSignedAbs(state, a2 + ARG_FY_OFF);
   const a1X = readLongSignedAbs(state, a1 + ARG_FX_OFF);
   const a1Y = readLongSignedAbs(state, a1 + ARG_FY_OFF);
 
-  // dx long signed; |dx| poi asr 12 (signed) → low word
+  // dx long signed; |dx| then asr 12 (signed) → low word
   const dxAbs = absL((a1X - argX) | 0);
   const dyAbs = absL((a1Y - argY) | 0);
   const d3W = asrL(dxAbs, POS_DIFF_SHIFT) & 0xffff;
@@ -350,7 +350,7 @@ export function stateSub15670(
     const minor = d4W; // 0..0xFFFF
     const major = d3W;
     const minorShifted = (minor >>> 3) & 0xffff; // [0..0x1FFF]
-    // muls.w: low word (positivo) × 3 → long signed positivo
+    // muls.w: low word (positive) × 3 → long signed positive
     const muls = ((minorShifted << 16) >> 16) * 3; // safe: max 0x5FFD
     dist = (muls + major) | 0;
   } else {

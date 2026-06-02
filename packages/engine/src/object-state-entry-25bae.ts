@@ -39,7 +39,7 @@ export const OBJECT_STATE_ENTRY_25BAE_CODES = {
   state4: 0x04,
 } as const;
 
-/** Sound command IDs cabled in FUN_25BAE via `pea (imm).l; jsr FUN_158AC`. */
+/** Sound command IDs hardcoded in FUN_25BAE via `pea (imm).l; jsr FUN_158AC`. */
 export const OBJECT_STATE_ENTRY_25BAE_SOUND_IDS = {
   /** Case 2 sound. */
   case2: 0x38,
@@ -60,8 +60,8 @@ export const FIELD_57_MATCH_VALUE = 0x65 as const;
  */
 export interface ObjectStateEntry25BAESubs {
   /**
-   * `FUN_158AC(cmd)` — sound command sender. Invocata 1 time in case 2
-   * passiamo direttamente il byte.
+   * `FUN_158AC(cmd)` — sound command sender. Invoked once in case 2;
+   * we pass the byte directly.
    */
   soundCommand?: (cmd: number) => void;
   /**
@@ -73,18 +73,18 @@ export interface ObjectStateEntry25BAESubs {
    */
   fun_2591A?: (state: GameState, objPtr: number) => void;
   /**
-   * **MAME-NET integration flag** (NOT parte of the disasm grezzo):
+   * **MAME-NET integration flag** (NOT part of the raw disasm):
    *
-   * In MAME demo gameplay f12000+, obj0 ha invariantemente s1a=0, s58=0,
-   * s36=0 — la chain `helper121B8 → OUT_OF_RANGE | BOUNCE_BELOW_TARGET`
-   * flag from the chiamante (refresh-frame / helper121B8) permette of preservare
+   * In MAME demo gameplay f12000+, obj0 invariantly has s1a=0, s58=0,
+   * s36=0 — the chain `helper121B8 → OUT_OF_RANGE | BOUNCE_BELOW_TARGET`
+   * flag from the caller (refresh-frame / helper121B8) allows preserving
    *
    * with MAME guaranteed by the test).
    */
   preserveVelocity?: boolean;
 }
 
-// ─── Helper interni: read/write byte/word/long su workRam (BE M68k) ──────
+// ─── Internal helpers: read/write byte/word/long on workRam (BE M68k) ──────
 
 function readU8(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
@@ -147,8 +147,8 @@ export function objectStateEntry25BAE(
 
   // 0x25BB8..0x25BBE: A2[+0x4] = 0 (long); A2[+0x0] = 0 (long).
   // cross-platform determinism (even though equivalent for pure workRam).
-  // `preserveVelocity` flag (MAME-net integration override, vedi interfaccia
-  // `ObjectStateEntry25BAESubs.preserveVelocity` per motivazione):
+  // `preserveVelocity` flag (MAME-net integration override, see the
+  // `ObjectStateEntry25BAESubs.preserveVelocity` interface for rationale):
   if (subs.preserveVelocity !== true) {
     writeU32BE(wr, objAbs + 0x04, 0);
     writeU32BE(wr, objAbs + 0x00, 0);
@@ -159,7 +159,7 @@ export function objectStateEntry25BAE(
     writeU8(wr, objAbs + 0x18, 0x03);
   }
 
-  // ── Dispatch su subStateCode (byte) ──────────────────────────────────
+  // ── Dispatch on subStateCode (byte) ──────────────────────────────────
 
   if (code === 0x02) {
     // 0x25BD4..0x25BDA: dead-load `move.w (0x20,A2),D0w; andi.w #-1,D0w`.

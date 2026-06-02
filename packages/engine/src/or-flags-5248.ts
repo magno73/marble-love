@@ -10,9 +10,9 @@
  * **Callers**:
  *   - `FUN_00004F38` @ 0x000050a2 (UNCONDITIONAL_CALL): D1 = 3 → OR mask 0x3
  *   - `FUN_0000520E` @ 0x00005224 (UNCONDITIONAL_CALL): D1 = 3 → OR mask 0x3
- *     (vedi `state-sub-520e.ts` for the contesto completo).
+ *     (see `state-sub-520e.ts` for the full context).
  *
- * esclusivamente su `state.workRam`.
+ * exclusively on `state.workRam`.
  */
 
 import type { GameState } from "./state.js";

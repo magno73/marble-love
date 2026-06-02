@@ -89,7 +89,7 @@
  *   000178a8  adda.l   D3, A2                              ; A2 += D3
  *   000178aa  movea.l  A1, A3                              ; A3 = A1
  *   000178ac  adda.l   (A2), A3                            ; A3 += long @ A2 (offset0)
- *   000178ae  move.b   (A3), D0b                           ; D0.b = byte @ A3 (PF/sprite/alpha RAM o ROM)
+ *   000178ae  move.b   (A3), D0b                           ; D0.b = byte @ A3 (PF/sprite/alpha RAM or ROM)
  *   000178b0  lea      (4,A2), A2                          ; A2 += 4
  *   000178b4  adda.l   (A2), A1                            ; A1 += long @ A2 (offset4)
  *   000178b6  move.b   (A1), D1b                           ; D1.b = byte @ A1
@@ -156,8 +156,8 @@
  *                              `0xa00000 + tableSigned + (rom_byte - 2)` for
  *                              the first `move.l (A1)`. In the TS port, the
  *                              0x4000 bytes (covers 0xa00000..0xa04000), with
- *                              0xa02000..0xa03000 ↔ `state.spriteRam` e
- *                              0xa03000..0xa04000 ↔ `state.alphaRam` (la
+ *                              0xa02000..0xa03000 ↔ `state.spriteRam` and
+ *                              0xa03000..0xa04000 ↔ `state.alphaRam` (the
  *
  * `cli/src/test-string-dispatch-table-177f8-parity.ts` (500/500 cases).
  */
@@ -187,7 +187,7 @@ export const WR_BASE_OFFSET_TABLE_ABS = 0x00400478 as const;
 /** workRam table indirect "case_bit11_set" (`0x40076e`). */
 export const WR_INDIRECT_TABLE_ABS = 0x0040076e as const;
 
-/** Constante immediato `movea.l #0xa00000, A1` — base "string image RAM". */
+/** Immediate constant `movea.l #0xa00000, A1` — base "string image RAM". */
 export const A1_BASE_PFRAM_177F8 = 0xa00000 as const;
 
 /** Sentinel "missing" returned by bias table (`cmpi.w #0x1000, D1w`). */
@@ -261,7 +261,7 @@ function sextW(w: number): number {
  */
 export interface DispatchResult177F8 {
   d0Word: number;
-  /** Path "early-exit" preso (return 0): "bound", "fff_zero", "byte_zero",
+  /** "early-exit" path taken (return 0): "bound", "fff_zero", "byte_zero",
     */
   earlyExit:
     | "bound"
@@ -279,7 +279,7 @@ export interface DispatchResult177F8 {
  * Replica `FUN_000177F8` — `stringDispatchTable177F8`.
  *
  *
- *                RAM and PF RAM (the first 0x2000 byte are PF RAM, poi 0x2000
+ *                RAM and PF RAM (the first 0x2000 byte are PF RAM, then 0x2000
  *                and 0x3000 = sprite, 0x3000..0x4000 = alpha).
  */
 export function stringDispatchTable177F8(
@@ -304,12 +304,12 @@ export function stringDispatchTable177F8Detailed(
   arg1w: number,
   arg2w: number,
 ): DispatchResult177F8 {
-  // Helper riassuntivi
+  // Summary helpers
   const rb = (addr: number): number => readByteAbs(state, rom, pfRam, addr);
   const rw = (addr: number): number => readWordAbs(state, rom, pfRam, addr);
   const rl = (addr: number): number => readLongAbs(state, rom, pfRam, addr);
 
-  // ── Prologo: bound check ──────────────────────────────────────────────
+  // ── Prologue: bound check ──────────────────────────────────────────────
   const D2_w = arg0w & 0xffff;
   const A0 = rl(WR_LEVEL_HEADER_PTR_ABS) >>> 0;
   const boundW = sextW(rw((A0 + LEVEL_HEADER_BOUND_OFF) >>> 0));
@@ -382,8 +382,8 @@ export function stringDispatchTable177F8Detailed(
   const shift_count = shift_byte & 0x3f;
 
   // ── D1 >>>= D0.b (unsigned long shift) ────────────────────────────────
-  // 68k `lsr.l Dn,Dy` interpreta lo shift count as `Dn mod 64`. Per shift
-  // dobbiamo gestire separatamente count ≥ 32.
+  // 68k `lsr.l Dn,Dy` interprets the shift count as `Dn mod 64`. For the shift
+  // we must handle count ≥ 32 separately.
   if (shift_count >= 32) {
     D1_l_loaded = 0;
   } else {

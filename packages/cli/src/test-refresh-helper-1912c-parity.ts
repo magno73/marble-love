@@ -4,14 +4,14 @@
  * `refreshHelper1912C`.
  *
  * `FUN_0001912C` (130 byte): "refresh-frame entity ticker with slot-scan flag".
- * Gate su `*0x400394.w == 4`, slot scan @ 0x400018 (stride 0xE2, count
- * `*0x400396`) for the flag D3, poi itera 9 entity @ 0x401890 (stride 0x28)
+ * Gate on `*0x400394.w == 4`, slot scan @ 0x400018 (stride 0xE2, count
+ * `*0x400396`) for the flag D3, then iterates 9 entity @ 0x401890 (stride 0x28)
  * by D3, threshold check, and branch on `entity[0x25]` (state==7 / state!=7) with
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - `FUN_000194BA` (`objectTypeDispatch194BA`) **stubbed with RTS** (0x4E75).
  *   - `FUN_000199D6` (`computeSpriteCoords_v2`) **stubbed with RTS** (0x4E75).
- *   - Entrambi i callee non hanno sub injection attive in the TS (no-op).
+ *   - Both callees have no active sub injection in the TS (no-op).
  *   - Compare:
  *       * Entity table @ 0x401890 (9 × 0x28 = 0x168 byte)
  *       * Globals: workRam slice @ 0x400394..0x400399 (game-mode word + slot-count word)
@@ -20,9 +20,9 @@
  * **Suite** (4 × 125 = 500):
  *   - A: random entity table, random globals, no slot scan (count=0)
  *   - C: forced state==7 on entity, varied kind byte and sub-counter
- *   - D: edge cases (entity[0x25]=7/non-7, kind=0/1/2, soglie counter)
+ *   - D: edge cases (entity[0x25]=7/non-7, kind=0/1/2, counter thresholds)
  *
- * Uso: npx tsx packages/cli/src/test-refresh-helper-1912c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-refresh-helper-1912c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced state==7 across varied entities ──────────────────────
   console.log(
-    `\n=== Suite C: state==7 forzato — ${perSuite} cases ===`,
+    `\n=== Suite C: state==7 forced — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -408,7 +408,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

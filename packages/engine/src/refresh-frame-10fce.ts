@@ -237,7 +237,7 @@ export const FRAME_CTR_ADDR = 0x004003f0 as const;
  *
  * Based on the disassembly:
  *   - Prologue: tst.b (0xd8,A2). If !=0, execute the intermediate body (0x25416..),
- *   - JT @ 0x254BA dispatcha per s1a (= (0x1a,A2).b ext.w). Bound 0..0xb.
+ *   - JT @ 0x254BA dispatches on s1a (= (0x1a,A2).b ext.w). Bound 0..0xb.
  *   - For s1a=0 (NORMAL path for obj0): if (0xcb,A2)==0 -> chain
  *     helper253BC + objectStep17F66 + helper121B8.
  *
@@ -679,7 +679,7 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
     return;
   }
 
-  // Fallback (path non-modellati): chain conservativa esistente —
+  // Fallback (unmodeled paths): existing conservative chain —
   helper253BC(state, a2);
   objectStep17F66(state, a2, {
     fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
@@ -910,7 +910,7 @@ export function refreshFrame10FCE(
   });
 
   // 00010FDA: jsr 0x000189E2
-  // FUN_189E2: gate *0x400394.w == 0 (= attract title). Altrove fast.
+  // FUN_189E2: gate *0x400394.w == 0 (= attract title). Otherwise fast.
   const fun189E2Key =
     gameMode === 0
       ? objCount > 6
@@ -922,8 +922,8 @@ export function refreshFrame10FCE(
   });
 
   // 00010FE0: jsr 0x000158CC
-  // FUN_158CC itera 2 slot pair @ 0x4009A4 (P1) and 0x400A20 (P2) chiamando
-  // dispatch su obj+0x18:
+  // FUN_158CC iterates 2 slot pairs @ 0x4009A4 (P1) and 0x400A20 (P2) calling
+  // dispatch on obj+0x18:
   //   - s18==0 → no-op (skip)
   //   - s18==2 → jsr 25FC2 + 1B9CC + 1281C (state-2 branch)
   //   - else  → jsr 253BC + 182BA + 121B8 (ELSE branch)
@@ -963,7 +963,7 @@ export function refreshFrame10FCE(
   });
 
   // 00010FE6: jsr 0x0001493C
-  // FUN_14966 ora full port: vedi `sub-14966.ts`. Body Path C reset ticker
+  // FUN_14966 now a full port: see `sub-14966.ts`. Body Path C reset ticker
   const fun1493CKey = gameMode === 4 ? "FUN_1493C_HEAVY" : "FUN_1493C";
   callSub(state, fun1493CKey, () => {
     const replayHandled = runWarmSlotArrayReplayTick(state, rom);
@@ -1001,8 +1001,8 @@ export function refreshFrame10FCE(
   });
 
   // 00010FFE: jsr 0x00019BAA
-  // si propagano correttamente, causando cluster drift @ 0x674..0x68B
-  // (22 byte) + cascade su obj struct screen-Y.
+  // propagate correctly, causing cluster drift @ 0x674..0x68B
+  // (22 byte) + cascade on obj struct screen-Y.
   const fun19BAAKey =
     gameMode === 4
       ? objCount > 6

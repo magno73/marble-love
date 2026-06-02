@@ -7,18 +7,18 @@
  *   1. Sets `obj[0x1A] = 0x23`
  *   3. Sets `obj[0x68..0x6B] = 0x00070000` (long big-endian)
  *
- * **Strategia parity**: we patch FUN_15D10 a `rts` (4E 75) per isolare le
+ * **Parity strategy**: we patch FUN_15D10 to `rts` (4E 75) to isolate the
  * direct writes from FUN_160D4. Compare only bytes actually
  *
  *   - `objPtr` random in {0x401C00, 0x401D00, 0x401D80, 0x401E00, 0x401E80}
  *   - random "neighbor" bytes (0x19, 0x1B, 0x67, 0x6C) to verify that
- *     non vengano sporcati
+ *     they are not corrupted
  *
- * Suite testate:
+ * Suites tested:
  *   - A: random everything
- *   - C: timer pre = 0x00070000 (idempotenza)
+ *   - C: timer pre = 0x00070000 (idempotence)
  *
- * Uso: npx tsx packages/cli/src/test-object-enter-state-23-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-enter-state-23-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -42,12 +42,12 @@ const FUN_160D4 = 0x000160d4;
 const FUN_15D10 = 0x00015d10;
 
 // `ptr + 0x80 <= 0x401E80` to avoid overlapping the stack area that
-// arg of FUN_15D10 ≈ 16 byte, but teniamo margin generoso).
+// arg of FUN_15D10 ≈ 16 byte, but we keep a generous margin).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401400, 0x00401800, 0x00401c00,
 ] as const;
 
-/** Patch FUN_15D10 a `rts` (4E 75) per neutralize the helper interno. */
+/** Patch FUN_15D10 to `rts` (4E 75) to neutralize the inner helper. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_15D10 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_15D10 + 1, 1, 0x75);
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
     const off = ptr - 0x400000;
 
     // ─── Setup binary side ───────────────────────────────────────────────
-    // Reset area obj (0x80 byte) per pulizia
+    // Reset obj area (0x80 byte) for cleanup
     for (let k = 0; k < 0x80; k++) {
       pokeMem(cpu, ptr + k, 1, 0);
       stateInst.workRam[off + k] = 0;
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
     PTR_CANDIDATES[Math.floor(rng() * PTR_CANDIDATES.length)]!;
 
   // ─── Suite A: random everything ──────────────────────────────────────
-  console.log(`\n--- Suite A: random ptr/state/timer/neighbors — ${perSuite} casi ---`);
+  console.log(`\n--- Suite A: random ptr/state/timer/neighbors — ${perSuite} cases ---`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("A", i, pickPtr(), rb(), rl(), rb(), rb(), rb(), rb());
@@ -198,7 +198,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  console.log(`\n--- Suite B: pre-state in {0x21,0x22,0x24} — ${perSuite} casi ---`);
+  console.log(`\n--- Suite B: pre-state in {0x21,0x22,0x24} — ${perSuite} cases ---`);
   const preStates = [0x21, 0x22, 0x24] as const;
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -209,7 +209,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  console.log(`\n--- Suite C: pre-timer = 0x00070000 — ${perSuite} casi ---`);
+  console.log(`\n--- Suite C: pre-timer = 0x00070000 — ${perSuite} cases ---`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const ok = runOneCase("C", i, pickPtr(), rb(), 0x00070000, rb(), rb(), rb(), rb());
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   const sizeD = perSuite + remainder;
-  console.log(`\n--- Suite D: pre-state = 0x23 (already-in-state) — ${sizeD} casi ---`);
+  console.log(`\n--- Suite D: pre-state = 0x23 (already-in-state) — ${sizeD} cases ---`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const ok = runOneCase("D", i, pickPtr(), 0x23, rl(), rb(), rb(), rb(), rb());
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  // ─── Sommario ────────────────────────────────────────────────────────
+  // ─── Summary ─────────────────────────────────────────────────────────
   console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value) {
     const f = failHolder.value;

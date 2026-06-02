@@ -17,7 +17,7 @@
  *
  * Suites tested (4 × 125 = 500):
  *   - A: HUD random + struct random + ptr random (fully random)
- *   - C: w0/w2/w4/HUD estremi (signed overflow)
+ *   - C: w0/w2/w4/HUD extremes (signed overflow)
  *
  * Usage: npx tsx packages/cli/src/test-marble-cell-dispatch-19e42-parity.ts [N]
  */
