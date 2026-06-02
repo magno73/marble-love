@@ -1,5 +1,5 @@
 /**
- * state-dispatch-15460.test.ts — smoke per FUN_15460.
+ * state-dispatch-15460.test.ts — smoke for FUN_15460.
  *
  * `cli/src/test-state-dispatch-15460-parity.ts` (500/500).
  */

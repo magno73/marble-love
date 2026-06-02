@@ -201,7 +201,7 @@ export function stateSub2DA0(
     return 0;
   }
 
-  // clr.w (A1) — alpha tilemap word a 0
+  // clr.w (A1) — alpha tilemap word to 0
   clearAlphaWord(state, a1);
   // moveq #4, D0 → return 4 (state machine continues in state 4)
   return 4;

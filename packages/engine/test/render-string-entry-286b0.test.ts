@@ -1,5 +1,5 @@
 /**
- * render-string-entry-286b0.test.ts — smoke per FUN_286B0.
+ * render-string-entry-286b0.test.ts — smoke for FUN_286B0.
  *
  * `cli/src/test-render-string-entry-286b0-parity.ts` (500/500).
  */

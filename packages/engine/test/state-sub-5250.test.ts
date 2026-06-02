@@ -1,5 +1,5 @@
 /**
- * state-sub-5250.test.ts — smoke test per stateSub5250 (FUN_5250).
+ * state-sub-5250.test.ts — smoke test for stateSub5250 (FUN_5250).
  *
  * Here we cover the main paths: OR on primary and secondary flags, idempotence,
  */

@@ -39,7 +39,7 @@
  *   add.l  D1, D1                         ; D1 = 2 * rot (signed)
  *   movea.l #0x72A4, A1
  *   move.b (0x1, A1, D1*0x1), D1b         ; D1.b = byte @ 0x72A5 + 2*rot
- *   asl.l  D1, D0                         ; D0 = with the << (D1 & 0x3f)
+ *   asl.l  D1, D0                         ; D0 = column << (D1 & 0x3f)
  *   add.l  D2, D0                         ; D0 += D2
  *   add.l  D0, D0                         ; D0 *= 2
  *   adda.l D0, A3                         ; A3 = 0xA03000 + D0 (alpha tile addr)

@@ -23,7 +23,7 @@ import type { RomImage } from "../src/bus.js";
 
 const WORK_RAM_BASE = 0x400000;
 
-/** Legge word big-endian da workRam. */
+/** Reads a big-endian word from workRam. */
 function readU16BE(wr: Uint8Array, off: number): number {
   return (((wr[off] ?? 0) << 8) | (wr[off + 1] ?? 0)) & 0xffff;
 }
@@ -98,7 +98,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
 
     // Sentinels on neighbors, which writes must not touch.
     // Written ranges: contiguous [0x74, 0xA3] + byte @ 0xCA.
-    // Vicini: [0x70, 0x73] below, [0xA4, 0xC9] between, [0xCB, 0xCF] above.
+    // Neighbors: [0x70, 0x73] below, [0xA4, 0xC9] between, [0xCB, 0xCF] above.
     const neighborOffs = [
       0x70, 0x71, 0x72, 0x73, // below
       0xa4, 0xa5, 0xb0, 0xc0, 0xc8, 0xc9, // between
@@ -129,8 +129,8 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-fill with non-zero sentinel to show that writes
-    // azzerano the 24 word + 1 byte target.
+    // Pre-fill with non-zero sentinel to show that the writes
+    // zero out the 24 words + 1 target byte.
     for (let k = 0; k < 0x100; k++) s.workRam[objOff + k] = 0xaa;
 
     objectArrayInit25B40(s, rom, objPtr);

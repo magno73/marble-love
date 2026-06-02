@@ -34,7 +34,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     const rom = emptyRomImage();
     const pfRam = new Uint8Array(0x2000);
 
-    // Sporco i target per verify l'overwrite completo.
+    // Dirty the targets to verify the complete overwrite.
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE] = 0xab;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE + 1] = 0xcd;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_B_ADDR - WORK_RAM_BASE] = 0xef;
@@ -109,7 +109,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     moScreenInit1A286(s, rom, null);
-    // MO writes presenti
+    // MO writes present
     expect(readWordBE(s.spriteRam, 0x100)).toBe(0x0400);
     expect(readWordBE(s.spriteRam, 0x18e)).toBe(0x0007);
   });

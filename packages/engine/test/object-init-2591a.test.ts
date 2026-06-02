@@ -1,7 +1,7 @@
 /**
- * Test objectInit2591A (FUN_0002591A) — smoke tests on the orchestratore
+ * Test objectInit2591A (FUN_0002591A) — smoke tests on the orchestrator
  *
- * @ 0x400696/0x400698, and orchestra 6 sub-jsr (default no-op qui).
+ * @ 0x400696/0x400698, and orchestrates 6 sub-jsr (default no-op here).
  *
  * `cli/src/test-object-init-2591a-parity.ts` (500/500 cases).
  */
@@ -138,7 +138,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     //
     //   +0x14..17 (long), +0x1B (byte), +0x22..25, +0x26..29 (long),
     //   +0x36, +0x56, +0x58 (byte).
-    // Liberi adiacenti: +0x18, +0x19, +0x1A, +0x1C, +0x1D, +0x21, +0x2A,
+    // Free neighbors: +0x18, +0x19, +0x1A, +0x1C, +0x1D, +0x21, +0x2A,
     //   +0x35, +0x37, +0x55, +0x57, +0x59.
     const neighbors: Record<number, number> = {
       0x18: 0xa0,
@@ -170,7 +170,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     const objPtr = WORK_RAM_BASE + 0x1400;
 
     // (sentinel 0xFFFF @ 0x400696/0x400698) - callback FUN_1BAB2 must
-    // vedere = 0xFFFF.
+    // see = 0xFFFF.
     let observedTileX = -1;
     let observedTileY = -1;
     objectInit2591A(s, objPtr, {

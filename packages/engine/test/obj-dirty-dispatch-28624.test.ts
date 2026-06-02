@@ -1,5 +1,5 @@
 /**
- * Test objDirtyDispatch28624 (FUN_00028624) — smoke tests sui branches principali.
+ * Test objDirtyDispatch28624 (FUN_00028624) — smoke tests on the main branches.
  *
  * index tests the matching bit in a dirty bitmap and invokes a
  * binary via `cli/src/test-obj-dirty-dispatch-28624-parity.ts` (500/500).
@@ -148,7 +148,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
 
     expect(calls).toHaveLength(2);
     expect(calls[0]?.arg1).toBe(0xdead0001);
-    // arg3 of D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) but in the nostro
+    // arg3 of D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) but in our
     expect(calls[0]?.arg3).toBe(0xa2 | 0xffffff00 | 0); // = -94 in JS signed
     expect(calls[0]?.arg6).toBe(0x2400); // D2=1
     expect(calls[1]?.arg1).toBe(0xdead0003);

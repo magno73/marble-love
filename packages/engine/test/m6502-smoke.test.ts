@@ -95,20 +95,20 @@ describe("m6502 NMI vs IRQ priority", () => {
     reset(cpu, bus);
     expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(true);
     requestIrq(cpu);
-    step(cpu, bus); // should eseguire NOP, non servire IRQ
+    step(cpu, bus); // should execute NOP, not service IRQ
     expect(raw(cpu.rf.pc)).toBe(0x8001);
   });
 
   it("CLI lascia la visibilita' IRQ immediata in the modello default", () => {
-    // Why: il gate audio corrente and il replay runtime usano ancora il modello
-    // storico. La variante Visual6502 va opt-in finche' non preserva i gate.
+    // Why: the current audio gate and the runtime replay still use the historic
+    // model. The Visual6502 variant is opt-in until it preserves the gates.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // non must be executed first of the IRQ in the default
+      0xea, // must not be executed before the IRQ in the default model
     ]);
     reset(cpu, bus);
     requestIrq(cpu);
@@ -130,21 +130,21 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // NOP: must ancora eseguire
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: must still execute
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setCliIrqDelay(cpu, true);
     requestIrq(cpu);
 
-    step(cpu, bus); // CLI: programmer-visible I=0, but IRQ ancora mascherato
+    step(cpu, bus); // CLI: programmer-visible I=0, but IRQ still masked
     expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
     expect(raw(cpu.rf.pc)).toBe(0x8001);
 
-    step(cpu, bus); // NOP post-CLI: ancora non serve IRQ
+    step(cpu, bus); // NOP post-CLI: still does not service IRQ
     expect(raw(cpu.rf.pc)).toBe(0x8002);
 
-    step(cpu, bus); // ora l'IRQ puo' be servito
+    step(cpu, bus); // now the IRQ can be serviced
     expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 
@@ -157,8 +157,8 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // NOP: must ancora eseguire
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: must still execute
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setCliIrqDelay(cpu, true);
@@ -183,8 +183,8 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
-      0xea, // NOP: latchea l'IRQ a fine prefetch
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: latches the IRQ at the end of prefetch
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false);
@@ -204,9 +204,9 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
-      0x58, // CLI: prefetch uses ancora I=1
-      0xea, // NOP: qui is latched l'IRQ
-      0xea, // interrotto first of this fetch
+      0x58, // CLI: prefetch still uses I=1
+      0xea, // NOP: here the IRQ is latched
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setIrqPrefetchLatch(cpu, true);
@@ -226,7 +226,7 @@ describe("m6502 NMI vs IRQ priority", () => {
 
 describe("m6502 LDA page-cross", () => {
   it("LDA abs,X paga +1 cycle se page cross", () => {
-    // Why: cycle-accuracy e' necessaria per Tom Harte + per la sincronia
+    // Why: cycle-accuracy is required for Tom Harte + for sync
     // with MAME (29830 cycles/frame = 1.789 MHz / 60).
     const cpu = createCpu();
     const bus = makeBus();
@@ -261,7 +261,7 @@ describe("m6502 stack push/pop", () => {
   it("PHA/PLA round-trip preserva A and tocca P solo su PLA", () => {
     // Why: push wrap on SP=$00 -> $FF is an edge case that is easy to miss
     // if the implementation uses a native Array buffer instead of
-    // memory mappata.
+    // mapped memory.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -294,12 +294,12 @@ describe("m6502 branch", () => {
     bus.mem[0x80fa] = 0xa9; bus.mem[0x80fb] = 0x01; // LDA #$01
     bus.mem[0x80fc] = 0xd0; bus.mem[0x80fd] = 0x04; // BNE +4 (target $8102, page cross)
     bus.mem[0x80fe] = 0xa9; bus.mem[0x80ff] = 0xff; // dummy
-    bus.mem[0x8102] = 0xea; // NOP to the arrivo
+    bus.mem[0x8102] = 0xea; // NOP at the destination
     reset(cpu, bus);
     step(cpu, bus); // LDA #$01
     const start = cpu.cycles;
     step(cpu, bus); // BNE taken, page cross
-    // base 2 + taken(2 cycles totali extra: +1 taken, +1 cross) = 4
+    // base 2 + taken (2 extra cycles total: +1 taken, +1 cross) = 4
     expect(cpu.cycles - start).toBe(4);
     expect(raw(cpu.rf.pc)).toBe(0x8102);
   });
@@ -317,7 +317,7 @@ describe("m6502 branch", () => {
     const start = cpu.cycles;
     step(cpu, bus);
     expect(cpu.cycles - start).toBe(2);
-    expect(raw(cpu.rf.pc)).toBe(0x8004); // PC avanza solo of the literal
+    expect(raw(cpu.rf.pc)).toBe(0x8004); // PC advances only past the literal
   });
 });
 

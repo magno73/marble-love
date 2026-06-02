@@ -487,7 +487,7 @@ export function levelFractionRender28232(
   state.workRam[(fracOff + 4) & 0x1fff] = 0;
 
   // ── Step J: jsr 0x13C (initStructHeader). ─────────────────────────
-  // The callback writes with the @ structPtr, tickOff @ +1, and marker @ +6.
+  // The callback writes column @ structPtr, tickOff @ +1, and marker @ +6.
   // `defaultInitStructHeader` provides the full inline behavior for parity.
   subs.initStructHeader?.(
     state,

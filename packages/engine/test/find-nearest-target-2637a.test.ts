@@ -170,7 +170,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     // The candidate has filter byte 0xFE (.b) → 0x00FE (.w zero-ext, moveq #0,D0).
     //   D0.w = zero-ext byte from A3[+2] (= 0x00FE)
     // vs
-    //   word at (-2,A6) = sign-ext A2[+0x1D] (= 0xFFFE per 0xFE)
+    //   word at (-2,A6) = sign-ext A2[+0x1D] (= 0xFFFE for 0xFE)
     s.workRam[objOff + 0x1d] = 0xfe;
     s.workRam[objOff + 0x32] = 0x00;
     s.workRam[objOff + 0x33] = 0x80;

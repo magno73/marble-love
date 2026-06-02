@@ -105,7 +105,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-condition per branch match
+    // Pre-condition for branch match
     s.workRam[objOff + 0x57] = FIELD_57_MATCH_VALUE;
     // Counter pre = 0x00FE → +1 = 0x00FF
     writeU16BE(s.workRam, objOff + 0xd2, 0x00fe);

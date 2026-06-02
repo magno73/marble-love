@@ -230,7 +230,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     rom.program[0x2417e + 2] = 0xff;
     rom.program[0x2417e + 3] = 0xfe;
     rom.program[0x3e] = 0x42; // D0.b candidate
-    // offset4 = long @ 0x24182. Setta 0x00000000 → A1 unchanged = 0x40.
+    // offset4 = long @ 0x24182. Set 0x00000000 → A1 unchanged = 0x40.
     rom.program[0x24182] = 0;
     rom.program[0x24183] = 0;
     rom.program[0x24184] = 0;
