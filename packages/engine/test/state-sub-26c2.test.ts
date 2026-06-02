@@ -63,7 +63,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     const s = emptyGameState();
     s.workRam[STATE_BASE + 0] = 1;
     s.workRam[STATE_BASE + 1] = 4;
-    // Slot 2 vuoto
+    // Slot 2 empty
     const ret = stateSub26C2(s, 0xcafebabe, 0x00001234, 0x00000005);
     expect(ret).toBe(1);
     expect(s.workRam[STATE_BASE + 2]).toBe(5);

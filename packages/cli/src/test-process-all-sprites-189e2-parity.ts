@@ -80,8 +80,8 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern coverage:
-    //   i=0 → gate=0, count=0 (loop vuoto)
-    //   i=1 → gate=0, count=MAX (loop pieno)
+    //   i=0 → gate=0, count=0 (empty loop)
+    //   i=1 → gate=0, count=MAX (full loop)
     //   i=2 → gate!=0, count=MAX (skip)
     //   i=3 → gate=0, count=1 (single entry)
     //   i=4 -> gate=0, count=MAX, every entry with +0xA = 0xFF (skip body)
