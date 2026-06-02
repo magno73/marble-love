@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 import { bootInit } from "../src/boot-init.js";
 import { emptyRomImage } from "../src/bus.js";
@@ -285,7 +287,7 @@ function runRoute(
   };
 }
 
-describe("playable live route smoke", () => {
+describe.skipIf(!ROM_AVAILABLE)("playable live route smoke", () => {
   it.each([
     [
       "first ramp death/respawn",

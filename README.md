@@ -140,6 +140,16 @@ The full suite is larger and includes many reverse-engineering/parity tests. Use
 targeted tests while developing a specific subsystem, then run broader checks
 before publishing changes.
 
+### A note on the ROM and tests
+
+Several engine parity tests load the original MAME program ROM. The ROM is
+copyrighted and is **not** distributed with this repository (`ghidra_project/`
+is gitignored), so it is absent on a fresh clone and in CI. Those suites detect
+the missing ROM and **skip themselves** with a message, so `npx vitest run
+packages/engine` is green both on a clean clone (ROM-free subset) and locally
+once you provide a legal dump at `ghidra_project/marble_program.bin`. To run the
+ROM-dependent parity tests, place your own dump there.
+
 ## Repository Layout
 
 | Path | Purpose |

@@ -34,6 +34,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { sub1CABATileRedraw } from "../src/sub-1caba-tile-redraw.js";
 import { spritePosUpdate1BAB2 } from "../src/sprite-pos-update-1bab2.js";
 import { bootInit } from "../src/boot-init.js";
@@ -101,7 +103,7 @@ function writeLongBE(ram: Uint8Array, off: number, v: number): void {
   ram[off + 3] = v & 0xff;
 }
 
-describe("sub1CABATileRedraw (FUN_0001CABA) — bit-perfect parity vs MAME", () => {
+describe.skipIf(!ROM_AVAILABLE)("sub1CABATileRedraw (FUN_0001CABA) — bit-perfect parity vs MAME", () => {
   it("first call @ f173: produces 4000*16 from struct_pre=0", () => {
     const fixture = JSON.parse(readFileSync(FIXTURE_PATH, "utf-8")) as Fixture;
 
