@@ -200,7 +200,7 @@ async function main(): Promise<void> {
 
     callFunctionStep(cpu, FUN_1C88, MAX_INSTR);
 
-    // ── Esegui TS ─────────────────────────────────────────────────────────
+    // ── Run TS ────────────────────────────────────────────────────────────
     ns.helper1C88(stateInst, romImg, {
       onAvControl: () => {},
     });

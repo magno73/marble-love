@@ -2,28 +2,28 @@
 /**
  * test-hi-score-decode-41c8-parity.ts — differential FUN_41C8 vs hiScoreDecode41c8.
  *
- * `FUN_000041C8` (198 byte): high-score entry decoder.
+ * `FUN_000041C8` (198 bytes): high-score entry decoder.
  *   - source table = `*0x401FFC + 0x1E` (10 entries x 5 bytes)
  *   - buffer destination = 0x401F7A (4 byte score + 3 byte initials)
  *   - arg1 in [0..9] -> ret = 0x401F7A; otherwise ret = 0
  *
- * Convenzione caller (cdecl push-RTL):
- *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word from the caller)
+ * Caller convention (cdecl push-RTL):
+ *   - arg1 = SP+0x14 = record index (long, sign-ext'd from a word by the caller)
  *
- * Strategia parity:
- *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
+ * Parity strategy:
+ *   - Setup: workRam[0x1FFC..] = ptr (long BE, within workRam-safe range);
  *     populate 10 records x 5 random bytes; replicated setup on Musashi and on
  *     state.workRam.
  *   - For each random case: set up arg1; call the binary; call TS;
- *     compare D0 and i 7 byte of the buffer @ 0x401F7A..0x401F80.
+ *     compare D0 and the 7 bytes of the buffer @ 0x401F7A..0x401F80.
  *
  * Pattern coverage:
  *   - 50% arg1 in [0..9]                      -> valid path, writes buffer
- *   - 20% arg1 in [10..0xFF]                  -> path OOR, no write
- *   - 15% arg1 sign-ext negativo (0xFFFFxxxx) -> stress OOR
- *   - 15% full random long                    -> stress generale
+ *   - 20% arg1 in [10..0xFF]                  -> out-of-range path, no write
+ *   - 15% arg1 sign-ext negative (0xFFFFxxxx) -> out-of-range stress
+ *   - 15% full random long                    -> general stress
  *
- * Uso: npx tsx packages/cli/src/test-hi-score-decode-41c8-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-hi-score-decode-41c8-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -50,7 +50,7 @@ const TABLE_OFF = 0x1e;
 const PTR_VAL = 0x00401a00;
 const TABLE_BASE = PTR_VAL + TABLE_OFF; // 0x401A1E
 
-/** Buffer of output @ 0x401F7A (workRam, 7 byte). */
+/** Output buffer @ 0x401F7A (workRam, 7 bytes). */
 const OUT_BUF = 0x00401f7a;
 const OUT_BUF_LEN = 7;
 

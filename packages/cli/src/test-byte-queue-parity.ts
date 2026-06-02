@@ -3,11 +3,11 @@
  * test-byte-queue-parity.ts — differential FUN_4D68 vs dequeueByte +
  * FUN_53EA vs orPairBytes.
  *
- * - FUN_4D68: 0 args. Legge struct @ 0x401F44 (head, tail, buffer 16 byte),
+ * - FUN_4D68: 0 args. Reads struct @ 0x401F44 (head, tail, 16-byte buffer),
  *   dequeue the current byte. Side effect: head++ (wrap at 16).
- * - FUN_53EA: 1 long arg (ptr). Ritorna ptr[0] | ptr[1] as long.
+ * - FUN_53EA: 1 long arg (ptr). Returns ptr[0] | ptr[1] as long.
  *
- * Uso: npx tsx packages/cli/src/test-byte-queue-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-byte-queue-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

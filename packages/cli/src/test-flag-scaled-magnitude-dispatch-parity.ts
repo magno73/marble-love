@@ -95,8 +95,8 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Ri-applica patch on each iter — Musashi NOT should modificarla
-    // (ROM zone), but alcuni test paranoid riapplicano per safety.
+    // Re-apply patch on each iter — Musashi should NOT modify it
+    // (ROM zone), but some paranoid tests re-apply it for safety.
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_261BC + k, 1, STUB_BYTES[k]!);
@@ -104,8 +104,8 @@ async function main(): Promise<void> {
     }
 
     // Choose pointer and flag byte. Pattern mix:
-    //   pattern 0 : flag = 0 (path "magnitude piccola")
-    //   pattern 1 : flag = 0xFF (path "magnitude grande", saturato)
+    //   pattern 0 : flag = 0 (path "small magnitude")
+    //   pattern 1 : flag = 0xFF (path "large magnitude", saturated)
     //   pattern >=4: random
     let flagByte: number;
     const pattern = i < 4 ? i : Math.floor(rng() * 5) + 4;

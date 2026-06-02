@@ -53,14 +53,14 @@ const GLOBAL_400472 = 0x00400472;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// ha size ≈ 0x80000 (quad ROM 128KB x 4).
+// has size ≈ 0x80000 (quad ROM 128KB x 4).
 const SCRATCH_TABLE_ROM = 0x0007ff00;
-// Slot dispatch table: scegliamo K=0x40 (= 0x100 byte offset). Verifichiamo
+// Dispatch table slot: we choose K=0x40 (= 0x100 byte offset). We verify
 // so that 0x1EF1A + 0x100 is in ROM and does not conflict.
 const DISPATCH_K = 0x40;
 const DISPATCH_SLOT_ADDR = DISPATCH_TABLE_1EF1A + DISPATCH_K * 4; // = 0x1F01A
 
-// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
+// Pointer candidates (well within workRam, leaves margin for the stack at 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Vicini athe 3 globals (per no-spill check).
+  // Neighbors of the 3 globals (for no-spill check).
   const NEIGHBOR_GLOBALS = [
     0x460, 0x461, 0x46a, 0x46b, 0x46c, 0x46d, 0x46e, 0x46f, 0x470, 0x471,
     0x473, 0x474, 0x475, 0x476,
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
     // *0x400394 = DISPATCH_K (.w)
     pokeMem(cpu, GLOBAL_400394, 2, DISPATCH_K & 0xffff);
 
-    // Random pre-existing globals (sentinel distintivi)
+    // Random pre-existing globals (distinctive sentinels)
     const g462Pre = ((rb() << 24) | (rb() << 16) | (rb() << 8) | rb()) >>> 0;
     const g466Pre = ((rb() << 24) | (rb() << 16) | (rb() << 8) | rb()) >>> 0;
     const g472Pre = rb();
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
     stateInst.workRam[0x468] = (g466Pre >>> 8) & 0xff;
     stateInst.workRam[0x469] = g466Pre & 0xff;
     stateInst.workRam[0x472] = g472Pre;
-    // Vicini
+    // Neighbors
     for (const [nOff, v] of Object.entries(neighborSentinels)) {
       stateInst.workRam[Number(nOff)] = v;
     }

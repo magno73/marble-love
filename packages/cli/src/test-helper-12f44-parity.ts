@@ -2,19 +2,19 @@
 /**
  * test-helper-12f44-parity.ts — differential FUN_12F44 vs `helper12F44`.
  *
- * `FUN_00012F44` (37 istr, 139 byte): dispatcher mode-0/mode-1/no-op su un
- * record of slot in work RAM.
+ * `FUN_00012F44` (37 instr, 139 byte): mode-0/mode-1/no-op dispatcher on a
+ * slot record in work RAM.
  *
- * **Strategia parity**:
- *   - Setup: un record of slot @ slot_base (variabile per test case).
- *   - Setup ROM lookup-table @ 0x1F0E2 puntante a 16 rect-slot @ 0x4001DC
+ * **Parity strategy**:
+ *   - Setup: one slot record @ slot_base (varies per test case).
+ *   - Setup ROM lookup-table @ 0x1F0E2 pointing to 16 rect-slots @ 0x4001DC
  *   - For each test case:
- *       4. Esegue `callFunction(0x12F44, [slotPtr, mode, scriptPtr])`.
- *       5. Esegue `helper12F44(state, rom, slotPtr, mode, scriptPtr)`.
- *            - Il record of slot (0x56 byte).
- *            - L'area rect-slot @ 0x4001DC (0x1B2 byte).
+ *       4. Runs `callFunction(0x12F44, [slotPtr, mode, scriptPtr])`.
+ *       5. Runs `helper12F44(state, rom, slotPtr, mode, scriptPtr)`.
+ *            - The slot record (0x56 byte).
+ *            - The rect-slot area @ 0x4001DC (0x1B2 byte).
  *
- * Uso: npx tsx packages/cli/src/test-helper-12f44-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-12f44-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -98,7 +98,7 @@ function readTs(
   return out;
 }
 
-/** Primo mismatch o null. */
+/** First mismatch or null. */
 function diffBytes(
   a: Uint8Array,
   b: Uint8Array,
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
     // argsLong[2]=scriptPtr (SP+C).
     callFunction(cpu, FUN_12F44, [slotPtr, mode >>> 0, scriptPtr >>> 0]);
 
-    // ─── Esegui TS ──────────────────────────────────────────────────────────
+    // ─── Run TS ──────────────────────────────────────────────────────────
     helper12F44Ns.helper12F44(stateInst, romView, slotPtr, mode, scriptPtr);
 
     // 1. Record of slot (0x56 byte).

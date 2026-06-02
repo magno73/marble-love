@@ -7,15 +7,15 @@
  *   - long-BE @ workRam[0x1F5E..0x1F61] |= mask, where mask = (arg < 2) ?
  *     (1 << arg) : (arg - 2 < 32 ? (1 << (arg - 2)) : 0).
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *     return address sentinel). `(4,SP)` = 0x401F00 = workRam[0x1F00..0x1F03].
  *   - Pre-populate workRam with random bytes; sync both Musashi and TS.
  *   - Pre-populate *0x401F5E with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x5236)` and `helper5236(state, arg)`.
+ *   - Run `callFunction(cpu, 0x5236)` and `helper5236(state, arg)`.
  *
- *   - 0x401EFC: sentinel return address (4 byte, spinto da callFunction)
+ *   - 0x401EFC: sentinel return address (4 bytes, pushed by callFunction)
  *
- * Uso: npx tsx packages/cli/src/test-helper-5236-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-5236-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     if (i < specialArgs.length) {
       arg = specialArgs[i]!;
     } else {
-      // Random 32-bit arg to coverage ampia
+      // Random 32-bit arg for broad coverage
       arg = Math.floor(rng() * 0x100000000) >>> 0;
     }
 
@@ -127,8 +127,8 @@ async function main(): Promise<void> {
     // Run TS.
     h5236Ns.helper5236(state, arg);
 
-    // callFunction (SP=0x401F00) pusha sentinel ret addr a 0x401EFC (4 byte).
-    // Escludiamo conservativamente [0x1EE0..0x1F00).
+    // callFunction (SP=0x401F00) pushes a sentinel ret addr at 0x401EFC (4 bytes).
+    // Conservatively exclude [0x1EE0..0x1F00).
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;
     const diffOffsets: number[] = [];

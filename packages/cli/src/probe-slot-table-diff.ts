@@ -37,18 +37,18 @@ const STRIDE = 0x56;
 const N_SLOTS = 25;
 // Slot table end @ SLOT_BASE + N_SLOTS * STRIDE = 0x1306 (reference only).
 
-// Trova frame index per f+99 (last)
+// Find frame index for f+99 (last)
 const lastIdx = groundTruth.snapshots.length - 1;
 const lastFrame = groundTruth.snapshots[lastIdx]!;
 
-// Avanza TS sino a f+99
+// Advance TS up to f+99
 for (let i = 1; i <= lastIdx; i++) {
   tick(s, { rom, runMainLoopBody: true, p1X: 0xff, p1Y: 0xff, p2X: 0xff, p2Y: 0xff });
 }
 
 const mameW = hex2bytes(lastFrame.workRam, 0x2000);
 
-// 1) Diff totale workRam
+// 1) Total workRam diff
 let totW = 0;
 for (let i = 0; i < 0x2000; i++) if (s.workRam[i] !== mameW[i]) totW++;
 console.log(`f+${lastIdx} total workRam diff = ${totW}`);

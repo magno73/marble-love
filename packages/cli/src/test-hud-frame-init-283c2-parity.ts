@@ -7,23 +7,23 @@
  *
  * `test-get-alpha-tile-addr-parity.ts` and `test-format-and-render-28e00-parity.ts`).
  *
- * `hudFrameInit283C2`, confrontiamo the intero alpha RAM (4 KB) byte-by-byte.
- * Setup random:
- *   - rotation flag @ 0x401F42 ∈ [0..7] (esercita branch rotation in
+ * `hudFrameInit283C2`, comparing the entire alpha RAM (4 KB) byte-by-byte.
+ * Random setup:
+ *   - rotation flag @ 0x401F42 ∈ [0..7] (exercises the rotation branch in
  *     `getAlphaTileAddr` and `setAlphaTile`)
  *   - player count @ 0x400396 in {1, 2, 0, 3} (1 -> 1P branch, others -> 2P)
- *   - alpha RAM init: random pattern 0..255 on each byte (per esercitare
+ *   - alpha RAM init: random pattern 0..255 on each byte (to exercise
  *     write-over)
  *   - workRam[0x1F42] set explicitly; the rest of the workRam too
  *
  * Suite:
- *   A: rotation=0 1P (typical case, layout standard 64×30)
+ *   A: rotation=0 1P (typical case, standard 64×30 layout)
  *   B: rotation=0 2P
- *   C: rotation 1..7, count random 0..3 (esercita rotation branch +
+ *   C: rotation 1..7, count random 0..3 (exercises rotation branch +
  *      bne 1P selector)
  *   D: count edge cases (0, 1, 2, 65535) + rotation random
  *
- * Uso: npx tsx packages/cli/src/test-hud-frame-init-283c2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-hud-frame-init-283c2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
     stateInst.workRam[ROTATION_ADDR - 0x400000 + 1] =
       setup.rotation & 0xff;
 
-    // 3) alpha RAM random init (sincronizzato bin↔TS).
+    // 3) alpha RAM random init (synchronized bin↔TS).
     const r = makeRng(setup.alphaSeed);
     for (let j = 0; j < ALPHA_RAM_SIZE; j++) {
       const b = Math.floor(r() * 256) & 0xff;
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
     totalOk += okD;
   }
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(

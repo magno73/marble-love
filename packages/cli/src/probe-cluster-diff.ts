@@ -1,5 +1,5 @@
 // Cluster diff probe @ f+99: dumps ALL workRam diff offsets grouped by buckets
-// per drift cluster localization analysis.
+// for drift cluster localization analysis.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick } from "@marble-love/engine";
@@ -116,7 +116,7 @@ for (const b of sorted.slice(0, 3)) {
   }
 }
 
-// Per-struct sub-buckets for obj0/obj1 (stride 0x42 per slot tipo workRam 0x18 + objStride)
+// Per-struct sub-buckets for obj0/obj1 (stride 0x42 per slot like workRam 0x18 + objStride)
 console.log("\n=== OBJ0 (0x18-0xF9, stride 0xE2) FIELD-LEVEL ===");
 for (const d of buckets[1]!.diffs) {
   const fieldOff = d.off - 0x18;

@@ -4,10 +4,10 @@
  * FUN_28C7E vs clearAlphaTilesFromIndex.
  *
  *
- *   1. Reset alpha RAM (4 KB) a un sentinel pattern
+ *   1. Reset alpha RAM (4 KB) to a sentinel pattern
  *   3. Run TS on the same state
  *
- * Uso: npx tsx packages/cli/src/test-alpha-tilemap-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-alpha-tilemap-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

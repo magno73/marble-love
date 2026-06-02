@@ -2,7 +2,7 @@
 /**
  * test-helper-285b0-parity.ts — differential FUN_000285B0 vs `helper285B0` TS replica.
  *
- * FUN_000285B0 (30 istr, 0x58 byte):
+ * FUN_000285B0 (30 instr, 0x58 bytes):
  *   1. Looks up score in ROM_SCORE_TABLE[modeByte*2] (signed word at 0x23CD4).
  *   2. Calls objectAccumFlag28608(objPtr, score).
  *   3. Looks up ROM pointer in ROM_PTR_TABLE[modeByte*4] (long at 0x23CF6).

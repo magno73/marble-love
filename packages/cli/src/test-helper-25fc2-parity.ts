@@ -132,7 +132,7 @@ function patchSoundPair(rom: Buffer): void {
 /**
  * Patch FUN_25BAE: append (objPtr, code) to the buffer + rts.
  *
- *   - Seconda push (closer to SP): `move.l A2, -(A7)` → objPtr
+ *   - Second push (closer to SP): `move.l A2, -(A7)` → objPtr
  *
  *   SP+0 = return addr
  *
@@ -347,7 +347,7 @@ async function main(): Promise<void> {
       // Strategy: pre-load one of the real addresses with the sentinel.
       // Sentinel addresses known from ROM analysis: 0x20FDA, 0x20FCE, ...
       // -> immediate advance; use anim_ptr-4 = 0x20FD6 (-> 0x20FDA sentinel).
-      // Per semplificare: frame_ctr=fps → advance → nuovo ptr = preAnimPtr+4
+      // To simplify: frame_ctr=fps → advance → new ptr = preAnimPtr+4
       // preAnimPtr+4 = 0x20FDA → preAnimPtr = 0x20FD6.
       preAnimPtr = 0x00020fd6; // +4 = 0x20FDA = sentinel
     }
@@ -355,12 +355,12 @@ async function main(): Promise<void> {
     // fps and frame_ctr
     let preFrameCtr = rb() & 0x1f;
     let preFps = rb() & 0x1f;
-    // 40% force advance (frame_ctr == fps, advance avviene)
+    // 40% force advance (frame_ctr == fps, advance happens)
     if (rng() < 0.40) {
       // Ensure the frame advances: frame_ctr = fps.
       preFrameCtr = preFps > 0 ? preFps - 1 : 0;
       preFps = preFrameCtr + 0;
-      // per forzare advance: fps <= frame_ctr+1
+      // to force advance: fps <= frame_ctr+1
       preFps = (rb() & 0x0f) + 1;
       preFrameCtr = preFps - 1;
     }
@@ -370,7 +370,7 @@ async function main(): Promise<void> {
     // secondary_state
     const preSecState = rng() < 0.33 ? 0x02 : rb();
     // sub_frame_ctr
-    const preSubFc = rb() & 0x07; // piccolo per evitare troppo noise
+    const preSubFc = rb() & 0x07; // small to avoid too much noise
     // secondary_ptr (0x62..65)
     const preSecPtr = ((0x00020000 + Math.floor(rng() * 0x1000) * 4)) >>> 0;
     // obj_type 0x57

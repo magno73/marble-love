@@ -153,8 +153,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${n} = ${((okA / n) * 100).toFixed(1)}%`);
   if (failA) console.log(`  First fail: case ${failA.case} @ struct+0x${failA.offset.toString(16)}: bin=0x${failA.bin.toString(16)} ts=0x${failA.ts.toString(16)}`);
 
-  // ─── Suite B: state misti 1..6 ────────────────────────────────────
-  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite B: state misti 1..6 — ${n} cases ===`);
+  // ─── Suite B: mixed states 1..6 ────────────────────────────────────
+  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite B: mixed states 1..6 — ${n} cases ===`);
   let okB = 0;
   let failB: { case: number; offset: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {
@@ -227,8 +227,8 @@ async function main(): Promise<void> {
 
     const { matched, firstFail } = runOneCase(() => {
       setupStruct(stateInst, cpu, bytes);
-      // Scratch @ 0x401D00: byte[1] = "due" value, byte[6] = marker check, long[8..11] = next ptr
-      // For "due" path: byte[1] should make d0 == d1 (=lookup[0]-1)
+      // Scratch @ 0x401D00: byte[1] = "two" value, byte[6] = marker check, long[8..11] = next ptr
+      // For "two" path: byte[1] should make d0 == d1 (=lookup[0]-1)
       // lookup[0] = ROM word @ 0x7294. Let's inspect what's there.
       const lookupHi = rom[0x7294] ?? 0;
       const lookupLo = rom[0x7295] ?? 0;

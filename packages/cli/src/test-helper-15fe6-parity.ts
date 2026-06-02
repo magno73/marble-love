@@ -3,11 +3,11 @@
  * test-helper-15fe6-parity.ts — differential `FUN_00015FE6` vs `helper15FE6`.
  *
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - For each test case:
- *       1. Riempie casualmente 0x20 byte @ O1 and @ O2 (Musashi RAM + workRam).
+ *       1. Randomly fills 0x20 byte @ O1 and @ O2 (Musashi RAM + workRam).
  *
- * Uso: npx tsx packages/cli/src/test-helper-15fe6-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-15fe6-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";

@@ -69,7 +69,7 @@ for (const targetFrame of decoderFrames) {
   // Reset state and advance to preFrame.
   const sFresh = stateNs.emptyGameState();
   bootInit(sFresh, rom, { warmState: warm });
-  // Applica D6 trovati per body precedenti
+  // Apply D6 values found for previous bodies
   for (let i = 1; i <= preFrame; i++) {
     const bodyIdx = decoderFrames.indexOf(i);
     if (bodyIdx >= 0 && bodyIdx < d6Table.length) {

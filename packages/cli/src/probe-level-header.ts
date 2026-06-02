@@ -5,9 +5,9 @@
  * Scope: level header decoding evidence for `docs/level-header-format.md`.
  * "probe CLI". It can be run in two modes:
  *
- *   - Con blob ROM in path canonico:
+ *   - With ROM blob at the canonical path:
  *       `npx tsx packages/cli/src/probe-level-header.ts`
- *   - Con blob ROM via env var:
+ *   - With ROM blob via env var:
  *       `MARBLE_LOVE_ROM_BLOB=path/to/marble_program.bin npx tsx ...`
  *
  * If the ROM is unavailable, exits with code 2 and a clear message.
@@ -125,7 +125,7 @@ function printLevel(level: LevelData, rom: RomImage): void {
     console.log(`    +${hex(row, 2).slice(2)}  ${dumpHexLine(level.header.raw, row, length)}`);
   }
 
-  // Heuristics su records
+  // Heuristics on records
   if (level.records.length > 0) {
     const slopeOrientCounts = new Map<number, number>();
     let nonZeroRecords = 0;

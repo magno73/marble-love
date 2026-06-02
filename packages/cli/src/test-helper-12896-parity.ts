@@ -14,7 +14,7 @@
  *     Subroutine `FUN_00018F46` (helper18F46) is patched with `rts`.
  *
  *
- *   - Slot 0x56 byte a `slotPtr`
+ *   - Slot 0x56 bytes at `slotPtr`
  *     - [0x40044a] ptr44a (opcode 0 kind==3)
  *     - [0x40044e] ptr44e
  *     - [0x400452] ptr452

@@ -3,20 +3,20 @@
  * test-key-rank-lookup-4686-parity.ts — differential FUN_4686 vs
  * `keyRankLookup4686`.
  *
- * `FUN_00004686` (164 byte) e' un lookup table-driven self-contained:
+ * `FUN_00004686` (164 bytes) is a self-contained lookup-table-driven routine:
  * no JSR, no MMIO, and no writes to workRam. Extracts a 24-bit key from the
  * long arg and returns the index of the first row in the table
- * (10 lines × 5 byte) puntata da `*0x401FFC + 0x1E` la which chiave-prefix
- * (3 byte) is strictly greater than the key.
+ * (10 rows × 5 bytes) pointed to by `*0x401FFC + 0x1E` whose key-prefix
+ * (3 bytes) is strictly greater than the key.
  *
- * Confronto:
+ * Comparison:
  *   - return D0 (long signed): -1, 0..9, or 10
  *
  * Setup for each random case:
- *   - *0x401FFC = a2Addr (struct base, range workRam-safe @ 0x401D00)
- *   - 50 byte @ a2Addr+0x1E .. a2Addr+0x4F (10 lines da 5 byte)
+ *   - *0x401FFC = a2Addr (struct base, workRam-safe range @ 0x401D00)
+ *   - 50 bytes @ a2Addr+0x1E .. a2Addr+0x4F (10 rows of 5 bytes)
  *     organized as a strictly sorted table for the first 3 bytes
- *   - arg = long random
+ *   - arg = random long
  *
  * Pattern coverage (5 suites x 100 = 500 cases). Strict DESC-sorted table.
  *   A. high byte != 0                -> expected D0 = -1
@@ -27,7 +27,7 @@
  *
  * Stub-injection strategy: NONE. FUN_4686 does not call JSR.
  *
- * Uso: npx tsx packages/cli/src/test-key-rank-lookup-4686-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-key-rank-lookup-4686-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -96,7 +96,7 @@ function pokeByte(
 /**
  * Set up a 10x5 table from an array of 10 24-bit keys. The keys are
  * written as provided; the caller supplies DESCENDING order
- * for the convention expected by FUN_4686. The 2 payload columns (with the 3,4)
+ * for the convention expected by FUN_4686. The 2 payload columns (indices 3,4)
  * are random.
  */
 function setupTable(
@@ -105,7 +105,7 @@ function setupTable(
   keys24: ReadonlyArray<number>,
   rng: () => number,
 ): void {
-  // Pulisce 50 byte
+  // Clear 50 bytes
   for (let i = 0; i < 50; i++) {
     pokeByte(state, cpu, TABLE_ABS + i, 0);
   }
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   /**
    * Generate 10 strict DESC-sorted 24-bit keys with enough gap for expressive
    * "in-between" cases.
-   * keys[0] = piu' grande, keys[9] = piu' piccolo.
+   * keys[0] = largest, keys[9] = smallest.
    */
   function genSortedKeysDesc(): number[] {
     const asc: number[] = [];
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
     }
     // Sort ASC, then reverse to guarantee strict DESC order.
     asc.sort((a, b) => a - b);
-    // Forza unicita' (piccolo aggiustamento)
+    // Force uniqueness (small adjustment)
     for (let i = 1; i < asc.length; i++) {
       if (asc[i]! <= asc[i - 1]!) {
         asc[i] = Math.min(asc[i - 1]! + 1, 0xffffff);
@@ -218,18 +218,18 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: key > all i prefix → 0 ────────────────────────────
+  // ─── Suite B: key > all prefixes → 0 ────────────────────────────
   console.log(`\n=== Suite B: key > all prefixes → 0 — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     // DESC table with keys[0] greater than the table, while leaving
-    // spazio above. arg key strictly > keys[0].
+    // room above. arg key strictly > keys[0].
     const keys = genSortedKeysDesc();
     setupTable(state, cpu, keys, rng);
-    // Genera key in (keys[0], 0xFFFFFF]
+    // Generate key in (keys[0], 0xFFFFFF]
     const top = keys[0]!;
     if (top >= 0xfffffe) {
-      // fallback: provoca high-byte fail (non possibile in the pattern B,
+      // fallback: trigger high-byte fail (not possible in pattern B,
       // skipping this iteration counts as OK only if TS == bin).
       if (runOne("B", i, 0)) okB++;
       continue;
@@ -261,7 +261,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: key < all i prefix → 10 ───────────────────────────
+  // ─── Suite D: key < all prefixes → 10 ───────────────────────────
   console.log(`\n=== Suite D: key < all prefixes → 10 — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -295,7 +295,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okE}/${sizeE} = ${((okE / sizeE) * 100).toFixed(1)}%`);
   totalOk += okE;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
 
   if (failHolder.value) {
     const f = failHolder.value;

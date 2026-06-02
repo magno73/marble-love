@@ -7,26 +7,26 @@
  * big-endian word. Primitive "draw cell" function used by FUN_5D2A,
  * FUN_5688, FUN_22A4.
  *
- * **Strategia parity**:
- *   - Binario: chiamo `FUN_3784(y, x, attr, orMask)` via `callFunction`
+ * **Parity strategy**:
+ *   - Binary: call `FUN_3784(y, x, attr, orMask)` via `callFunction`
  *     with 4 long args. Alpha RAM is cleared before the call. After the call
- *     read D0 and compare alpha RAM byte-by-byte (the binary writes to
- *     massimo 2 byte).
- *   - TS: chiamo `helper3784(state, rom, y, x, attr, orMask)`. Confronto
+ *     read D0 and compare alpha RAM byte-by-byte (the binary writes at
+ *     most 2 bytes).
+ *   - TS: call `helper3784(state, rom, y, x, attr, orMask)`. Compare
  *     returned D0 and the same alpha RAM subset.
  *
  * **Coverage** (500 cases, 4 suites x 125):
  *   - A: rotation = 0, x/y random, attr random, orMask=0
  *   - B: rotation in [1..3], x/y random, attr/orMask random
  *   - C: x/y negative (sign-ext, byte range 0x80..0xFF), rotation=0
- *   - D: rotation=0, test shift count edge: x=±1 al boundary, orMask != 0
+ *   - D: rotation=0, test shift count edge: x=±1 at boundary, orMask != 0
  *
  * **Setup**:
  *   - `0x401F42` (rotation word): set before every call.
  *   - Alpha RAM: cleared before every call (binary and TS).
- *   - ROM: caricata da ghidra_project/marble_program.bin.
+ *   - ROM: loaded from ghidra_project/marble_program.bin.
  *
- * Uso: npx tsx packages/cli/src/test-helper-3784-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-helper-3784-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -241,8 +241,8 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: x/y negative (sign-ext), rotation=0 ────────────────────────
-  // In produzione y = sign-ext of word (D6w), x = sign-ext of long sum.
-  // I byte negative (0x80..0xFF → sext → -128..−1) are common.
+  // In production y = sign-ext of word (D6w), x = sign-ext of long sum.
+  // Negative bytes (0x80..0xFF → sext → -128..−1) are common.
   console.log(
     `\n=== Suite C: x/y negative (byte 0x80..0xFF), rotation=0 — ${perSuite} cases ===`,
   );
@@ -259,10 +259,10 @@ async function main(): Promise<void> {
   );
   totalOk += okC;
 
-  // ─── Suite D: misto — orMask != 0, various rotation, edge x/y ───────────────
+  // ─── Suite D: mixed — orMask != 0, various rotation, edge x/y ───────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: orMask != 0, rotation misto, edge x/y — ${sizeD} cases ===`,
+    `\n=== Suite D: orMask != 0, mixed rotation, edge x/y — ${sizeD} cases ===`,
   );
   const okD = runSuite("D", sizeD, () => {
     const rotation = Math.floor(rng() * 4); // 0..3
@@ -289,7 +289,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const { suite, tc, diff, testCase } = failHolder.value;

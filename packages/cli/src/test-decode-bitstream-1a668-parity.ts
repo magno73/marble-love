@@ -3,32 +3,32 @@
  * test-decode-bitstream-1a668-parity.ts — differential FUN_0001A668 vs
  * `decodeBitstream1A668`.
  *
- * `FUN_0001A668` (304 byte) e' un decoder bitstream + byte-stream RLE-style
+ * `FUN_0001A668` (304 byte) is a bitstream + byte-stream RLE-style decoder
  * that produces 36 words (= 0x48 bytes plus possible overshoot up to 7 extra
  * words) in an output buffer. The bitstream is read at 7/9/14-bit granularity
  * with a 2-byte sliding window; it consults 2 ROM lookup tables
- * (@0x2499A 32 word, @0x249DA 8 word). Vedi header of the file engine module
- * for the full disasm.
+ * (@0x2499A 32 word, @0x249DA 8 word). See the header of the engine module
+ * file for the full disasm.
  *
- * Strategia parity:
- *   - Set up workRam with a zeroed output buffer @ 0x401000, a control
- *     bitstream random @ 0x401200 (~256 byte → margin), and un byte stream
- *     random @ 0x401400 (~512 byte of coverage cache).
+ * Parity strategy:
+ *   - Set up workRam with a zeroed output buffer @ 0x401000, a random control
+ *     bitstream @ 0x401200 (~256 byte → margin), and a random byte stream
+ *     @ 0x401400 (~512 byte of coverage cache).
  *   - ROM lookup tables are the actual original binary contents
  *     (read via romBuf), not patched.
  *   - Run binary via callFunction(0x1A668, [outAbs, ctrlAbs, extAbs]).
  *   - Run TS via decodeBitstream1A668(state, rom, outAbs, ctrlAbs, extAbs).
- *   - Compare tutta la area output (0x48 byte + overshoot 14 byte = 0x56 byte)
+ *   - Compare the whole output area (0x48 byte + overshoot 14 byte = 0x56 byte)
  *     byte-for-byte between binary and TS.
  *
  * Tested suites (3 x 167 + 1 = 500 cases):
- *   - A: ctrl bitstream uniformly random (mix of all 5 path)
+ *   - A: ctrl bitstream uniformly random (mix of all 5 paths)
  *   - B: ctrl bitstream with bias toward path B (small tokens, < 0x400)
  *   - C: ctrl bitstream with bias toward path A (bit 13 set)
  *
- * Confronto: workRam[outOff..outOff + 0x56) byte-per-byte.
+ * Comparison: workRam[outOff..outOff + 0x56) byte-by-byte.
  *
- * Uso: npx tsx packages/cli/src/test-decode-bitstream-1a668-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-decode-bitstream-1a668-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -193,21 +193,21 @@ async function main(): Promise<void> {
     const buf = new Uint8Array(CTRL_BYTES);
     if (mode === "pathB") {
       // Path B: 14-bit token with bit 13 = 0 and bits 12..10 = 0. So token < 0x400.
-      // Bias: each byte e' "small" (< 0x40 in the high nibble).
+      // Bias: each byte is "small" (< 0x40 in the high nibble).
       for (let i = 0; i < CTRL_BYTES; i++) {
-        // Per assicurare path B serve il top 14 bit of the long < 0x400.
-        // I top 14 bit are the top 14 bits of the first byte + 6 bit of the second.
-        // Top 14 bit < 0x400 ⇔ top byte e' 0..0xF (high 4 bit of byte0 = 0..0x0F)
-        // and basso byte ha bit 7..2 small. Approssimazione: we write byte
-        // random but with 50% MSB 0 -> mix path A/B.
+        // To ensure path B, the top 14 bits of the long must be < 0x400.
+        // The top 14 bits are the top 14 bits of the first byte + 6 bits of the second.
+        // Top 14 bits < 0x400 ⇔ top byte is 0..0xF (high 4 bits of byte0 = 0..0x0F)
+        // and the low byte has bits 7..2 small. Approximation: we write a random
+        // byte but with 50% MSB 0 -> mix path A/B.
         buf[i] = Math.floor(rng() * 0x40); // small bytes for mix of B/C/D
       }
     } else if (mode === "pathA") {
-      // Path A: bit 13 set ⇒ top 14 bit ∈ [0x2000, 0x3FFF]. Top byte high nibble
-      // ha bit 5 set. Bias: byte alto ha bit 5 set (0x20 / 0x80 / 0xA0).
+      // Path A: bit 13 set ⇒ top 14 bits ∈ [0x2000, 0x3FFF]. Top byte high nibble
+      // has bit 5 set. Bias: high byte has bit 5 set (0x20 / 0x80 / 0xA0).
       for (let i = 0; i < CTRL_BYTES; i++) {
         // Top byte: bit 7 (= bit 31 of the stream) random, but bit 5 (= bit 29)
-        // alto. Setting top byte = 0x80..0xBF assicura bit 13 of token spesso set.
+        // high. Setting top byte = 0x80..0xBF ensures bit 13 of the token is often set.
         buf[i] = 0x80 + Math.floor(rng() * 0x40);
       }
     } else {
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
    */
   function genExtStream(rng: () => number): Uint8Array {
     const buf = new Uint8Array(EXT_BYTES);
-    // Coppie (count, value): count in [1..255], value in [0..255].
+    // Pairs (count, value): count in [1..255], value in [0..255].
     for (let i = 0; i < EXT_BYTES; i += 2) {
       buf[i] = 1 + Math.floor(rng() * 255); // count 1..255
       buf[i + 1] = Math.floor(rng() * 0x100);
@@ -275,7 +275,7 @@ async function main(): Promise<void> {
 
   const totalOk = okA + okB + okC;
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
 
   if (failHolder.value !== null) {
