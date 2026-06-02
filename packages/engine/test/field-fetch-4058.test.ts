@@ -82,7 +82,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, RECORD_WORD_OFF, ROM_BYTE_REAL)).toBe(0xfedc);
   });
 
-  it("priorita' check: arg2 > 0x12 vince even if arg1 e' outside range", () => {
+  it("priority check: arg2 > 0x12 wins even if arg1 is outside range", () => {
     // The binary checks arg2 > 0x12 first (set D3=1), then arg1 vs D4
     // (skipped by bne). Therefore arg2 > 0x12 always forces ret -1 even if
     // arg1 is also invalid.
@@ -94,7 +94,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     );
   });
 
-  it("ROM byte sign-ext: solo the 3 bit bassi contano (0xE3 -> D4=3, 0xFF -> D4=7)", () => {
+  it("ROM byte sign-ext: only the low 3 bits matter (0xE3 -> D4=3, 0xFF -> D4=7)", () => {
     // Verify that different ROM bytes sharing the low 3 bits produce
     // same behavior: D4 is computed as (byte sign-ext-long) & 7.
     const s = emptyGameState();
@@ -102,7 +102,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     writeLongBE(s.workRam, PTR_OFF, ptr);
     s.workRam[0x1050 + 6 * RECORD_SIZE] = 0x9c; // record 6 byte 0
 
-    // 0xE3 & 7 = 3; 0xEB & 7 = 3 -> both -> arg1=3 e' OOR.
+    // 0xE3 & 7 = 3; 0xEB & 7 = 3 -> both -> arg1=3 is OOR.
     expect(fieldFetch4058(s, 3, 0, 0xe3)).toBe(RET_INDEX_OOR);
     expect(fieldFetch4058(s, 3, 0, 0xeb)).toBe(RET_INDEX_OOR);
 
@@ -112,7 +112,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 6, 0, 0x07)).toBe(0x9c);
   });
 
-  it("ptr legato dinamicamente a *0x401FFC (cambiare ptr cambia base)", () => {
+  it("ptr bound dynamically to *0x401FFC (changing ptr changes base)", () => {
     const s = emptyGameState();
     // Setup A: ptr = 0x401000 -> base = 0x401050. Record 0 byte 0 = 0xAA.
     writeLongBE(s.workRam, PTR_OFF, 0x401000);
@@ -125,7 +125,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, 0, ROM_BYTE_REAL)).toBe(0xbb);
   });
 
-  it("no side effect su workRam (puro read)", () => {
+  it("no side effect on workRam (pure read)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401000);
     s.workRam[0x1050] = 0x77;

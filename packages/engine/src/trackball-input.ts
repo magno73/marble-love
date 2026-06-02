@@ -87,7 +87,7 @@ function processAxis(
 }
 
 /**
- * Processa input trackball per the 2 game object (P1, P2).
+ * Process trackball input for the 2 game objects (P1, P2).
  *
  * @param p1X  byte trackball X player 1 (raw)
  * @param p1Y  byte trackball Y player 1

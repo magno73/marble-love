@@ -123,7 +123,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("buffer already a zero: no-op effective (stays all 0)", () => {
+  it("buffer already zero: effectively a no-op (stays all 0)", () => {
     const pf = new Uint8Array(PF_SIZE);
     clearPlayfieldStride(pf);
     for (let i = 0; i < PF_SIZE; i++) {

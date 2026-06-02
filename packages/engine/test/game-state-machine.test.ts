@@ -43,7 +43,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     expect(fun_2678).not.toHaveBeenCalled();
   });
 
-  it("state=1, counter raggiunge threshold → FUN_2678(data[0])", () => {
+  it("state=1, counter reaches threshold → FUN_2678(data[0])", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[STATE_BASE_OFF] = 1;
@@ -61,11 +61,11 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     gameStateMachineTick(s, rom, { fun_2678 });
 
     expect(fun_2678).toHaveBeenCalledWith(0xDEADBEEF);
-    // Counter resettato a 0
+    // Counter reset to 0
     expect(s.workRam[COUNTER_BASE_OFF + 1]).toBe(0);
   });
 
-  it("state=2 toggle: first call → FUN_2572 + flag30=1; seconda call → FUN_2ABC + flag30=0", () => {
+  it("state=2 toggle: first call → FUN_2572 + flag30=1; second call → FUN_2ABC + flag30=0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[STATE_BASE_OFF] = 2;
@@ -91,7 +91,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     expect(s.workRam[FLAG30_BASE_OFF]).toBe(0);
   });
 
-  it("state=3: result=0 → state→0 + FUN_2BDA se *(data+8) != 0", () => {
+  it("state=3: result=0 → state→0 + FUN_2BDA if *(data+8) != 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[STATE_BASE_OFF] = 3;
@@ -159,7 +159,7 @@ describe("gameStateMachineTick (FUN_2E18) — Branch B (mode=0)", () => {
     const fun_2678 = vi.fn();
     gameStateMachineTick(s, rom, { fun_2678 });
     expect(fun_2678).not.toHaveBeenCalled();
-    // Counter incremented but non resettato
+    // Counter incremented but not reset
     expect(s.workRam[COUNTER_BASE_OFF + 1]).toBe(4);
   });
 });

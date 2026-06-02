@@ -28,7 +28,7 @@ function writeRomLong(
 }
 
 describe("FUN_26B10 paletteCopy26B10", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(PALETTE_COPY_26B10_ADDR).toBe(0x26b10);
   });
 
@@ -51,11 +51,11 @@ describe("FUN_26B10 paletteCopy26B10", () => {
 });
 
 describe("FUN_26B2A gameStateBanner26B2A", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(GAME_STATE_BANNER_26B2A_ADDR).toBe(0x26b2a);
   });
 
-  it("writes 195 word scatter da ROM[banner+mode*0x186] verso destinazioni in workRam", () => {
+  it("writes 195 word scatter from ROM[banner+mode*0x186] to destinations in workRam", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -74,14 +74,14 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
 
     gameStateBanner26B2A(state, rom, 0);
 
-    // 195 word a workRam[0x100..] = ROM banner data
+    // 195 word to workRam[0x100..] = ROM banner data
     for (let i = 0; i < 195; i++) {
       const expected = 0xa000 + i;
       const off = 0x100 + i * 2;
       const got = (state.workRam[off] << 8) | (state.workRam[off + 1] ?? 0);
       expect(got).toBe(expected);
     }
-    // 32 word a colorRam[0..0x3F] = palette copy
+    // 32 word to colorRam[0..0x3F] = palette copy
     for (let i = 0; i < 32; i++) {
       const expected = 0xb000 + i;
       const got = (state.colorRam[i * 2] << 8) | (state.colorRam[i * 2 + 1] ?? 0);
@@ -89,7 +89,7 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
     }
   });
 
-  it("mode != 0 uses offset diverso da BANNER_ROM_BASE", () => {
+  it("mode != 0 uses a different offset from BANNER_ROM_BASE", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -117,6 +117,6 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
     writeRomWord(rom, 0x1fc10, 0xbeef);
     gameStateBanner26B2A(state, rom, 0);
     expect((state.alphaRam[0] << 8) | (state.alphaRam[1] ?? 0)).toBe(0xbeef);
-    expect(state.workRam[0]).toBe(0); // workRam non toccato
+    expect(state.workRam[0]).toBe(0); // workRam untouched
   });
 });

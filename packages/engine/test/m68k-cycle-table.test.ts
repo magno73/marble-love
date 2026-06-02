@@ -1,11 +1,11 @@
 /**
- * m68k-cycle-table.test.ts — smoke + snapshot of the cycle table 68010.
+ * m68k-cycle-table.test.ts — smoke + snapshot of the 68010 cycle table.
  *
  * dynamic 30/60 Hz cadence of the Marble Madness main loop. If one of the
- * costs change, MAME and TS diverge on the mailbox=1 branch -> these tests
+ * costs changes, MAME and TS diverge on the mailbox=1 branch -> these tests
  * protect against silent regressions.
  *
- * @ 313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd (cfr. cycle-table.ts).
+ * @ 313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd (see cycle-table.ts).
  */
 
 import { describe, expect, it } from "vitest";
@@ -102,7 +102,7 @@ describe("estimateCycles — single patterns", () => {
 
   it("movem.l reg→mem, predec, 2 regs = 8 + 0 + 6 = wait, dir matters", () => {
     // MOVEM.L re pd 2 regs: base 8 + per_reg(3)*2 = 14
-    // (movem 32 re pd row m68k_in.c L705: 8 base — l'EA pd ha 0 extra in
+    // (movem 32 re pd row m68k_in.c L705: 8 base — the pd EA has 0 extra in
     // g_movem_cycle_table)
     expect(
       raw(

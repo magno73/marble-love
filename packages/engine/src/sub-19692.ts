@@ -194,11 +194,11 @@ function writeLongBE(state: GameState, off: number, v: number): void {
 /**
  *
  * @param state       GameState (modifies `state.workRam[entity..entity+0x27]`).
- *                    Convertito a offset `entityAddr - 0x400000`.
+ *                    Converted to offset `entityAddr - 0x400000`.
  * @param subs        injection. `subs.fun_19976` (move) and `subs.fun_1937c`
  *                    (validate). Default: no-op + return 0 (= early exit).
  *
- * @returns dettaglio of the esecuzione (outcome, iter count, JSR count).
+ * @returns details of the execution (outcome, iter count, JSR count).
  *
  *   1. Test `entity[0x26] == 0x10` → early return.
  *   2. Save D5 = entity[0xC..0xF], D4 = entity[0x10..0x13].

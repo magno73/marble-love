@@ -65,7 +65,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
   it("pre-jsr side effects: copies POS_X/POS_Y and writes packed @ entity[0x20]", () => {
     const s = emptyGameState();
     // entity.x = 0x100, entity.y = 0x80, w4 = 0x10, hud = 0x40.
-    // cellX = 0x20 (non in set) → MISS branch (clear loop).
+    // cellX = 0x20 (not in set) → MISS branch (clear loop).
     setWordBE(s, ENTITY_OFF + 0x0c, 0x0100);
     setWordBE(s, ENTITY_OFF + 0x10, 0x0080);
     setWordBE(s, ENTITY_OFF + 0x14, 0x0010);

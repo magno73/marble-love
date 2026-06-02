@@ -58,7 +58,7 @@ export function wait28DB8(state: GameState, frames: number): void {
   while (counter > 0) {
     vblankAck28DEA(state);
     // D2 = saved state byte LOW. cmp.w D0 (= D2 ext.w), *0x400390.w.
-    // Sign-ext byte → word. If equal → preserva counter, else zero counter.
+    // Sign-ext byte → word. If equal → preserve counter, else zero counter.
     const initialStateWord = initialStateByte & 0x80
       ? initialStateByte | 0xff00
       : initialStateByte;

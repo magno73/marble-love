@@ -1,12 +1,12 @@
 /**
- * m6502-mailbox.test.ts — protocol test mailbox bidirezionale 68K↔6502.
+ * m6502-mailbox.test.ts — protocol test for the bidirectional 68K↔6502 mailbox.
  *
  * Intent: the Atari System 1 hardware pattern requires that (1) mailboxes latch
  * bytes with pending flags, and (2) the write side asserts NMI/IRQ only on the
- * transizione false→true (edge-triggered), (3) read side does ack to the
+ * false→true transition (edge-triggered), (3) the read side acks the
  * pending and releases the pin. The tests verify that the TS model keeps
- * this semantic byte-for-byte because any violation makes the
- * protocollo cmd 68K→6502 (e.g. doppio NMI = ISR rientrante).
+ * this semantic byte-for-byte because any violation breaks the
+ * 68K→6502 command protocol (e.g. double NMI = reentrant ISR).
  */
 
 import { describe, it, expect } from "vitest";
@@ -16,14 +16,14 @@ import {
 } from "../src/m6502/mailbox.js";
 import { createSoundMmu } from "../src/m6502/sound-mmu.js";
 
-describe("mailbox baif thetch", () => {
-  it("init pulita: pending=false, value=0", () => {
+describe("mailbox basic fetch", () => {
+  it("clean init: pending=false, value=0", () => {
     const mb = createMailbox();
     expect(mb.pending).toBe(false);
     expect(mb.value as number).toBe(0);
   });
 
-  it("write set pending + calls callback edge-triggered una time", () => {
+  it("write sets pending + calls callback edge-triggered once", () => {
     const mb = createMailbox();
     let cbCount = 0;
     mailboxWrite(mb, as_u8(0x42), () => cbCount++);
@@ -37,7 +37,7 @@ describe("mailbox baif thetch", () => {
     expect(cbCount).toBe(1);
   });
 
-  it("read ack pending + calls callback only if era pending", () => {
+  it("read acks pending + calls callback only if it was pending", () => {
     const mb = createMailbox();
     mailboxWrite(mb, as_u8(0x42));
     let ackCount = 0;
@@ -64,10 +64,10 @@ describe("mailbox baif thetch", () => {
 describe("sound-mmu RAM + ROM regions", () => {
   function buildMmu() {
     const rom = new Uint8Array(0xC000).fill(0xff);
-    // Vector RESET a $FFFC/$FFFD (= addr 0xBFFC/0xBFFD in the rom offset).
+    // RESET vector at $FFFC/$FFFD (= addr 0xBFFC/0xBFFD in the rom offset).
     rom[0xBFFC] = 0x00;
     rom[0xBFFD] = 0x80;  // PC start = $8000
-    // ROM marker a $C000 (offset 0x8000 in the rom buffer).
+    // ROM marker at $C000 (offset 0x8000 in the rom buffer).
     rom[0x8000] = 0xAB;
     rom[0x8001] = 0xCD;
     return createSoundMmu({
@@ -87,7 +87,7 @@ describe("sound-mmu RAM + ROM regions", () => {
     expect(mmu.read8(as_u16(0x1000)) as number).toBe(0xff);
   });
 
-  it("ROM $4000-$FFFF read-only: scrittura ignorata, value persiste", () => {
+  it("ROM $4000-$FFFF read-only: write ignored, value persists", () => {
     const mmu = buildMmu();
     expect(mmu.read8(as_u16(0xC000)) as number).toBe(0xAB);
     expect(mmu.read8(as_u16(0xC001)) as number).toBe(0xCD);
@@ -99,8 +99,8 @@ describe("sound-mmu RAM + ROM regions", () => {
   });
 });
 
-describe("sound-mmu mailbox $1810 bidirezionale", () => {
-  it("read $1810 = main→sound latch, ack su read, NMI callback edge-triggered", () => {
+describe("sound-mmu mailbox $1810 bidirectional", () => {
+  it("read $1810 = main→sound latch, ack on read, NMI callback edge-triggered", () => {
     const mainToSound = createMailbox();
     const soundToMain = createMailbox();
     let nmiAsserted = 0;
@@ -135,13 +135,13 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     expect(irq6Asserted).toBe(1);
     // bit 4 ($10) = sound→main pending (response buffer full)
     expect((mmu.read8(as_u16(0x1820)) as number) & 0x10).toBe(0x10);
-    // 68K simula read da $FC0001 → ack
+    // 68K simulates read from $FC0001 → ack
     const v = mailboxRead(soundToMain);
     expect(v as number).toBe(0x55);
     expect((mmu.read8(as_u16(0x1820)) as number) & 0x10).toBe(0); // pending clear
   });
 
-  it("status $1820 combinato: bit3 main-pending + bit4 sound-pending coesistono", () => {
+  it("status $1820 combined: bit3 main-pending + bit4 sound-pending coexist", () => {
     const mainToSound = createMailbox();
     const soundToMain = createMailbox();
     const mmu = createSoundMmu({
@@ -154,7 +154,7 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x9f);
   });
 
-  it("status $1820 supporta un override diagnostico of the base coin/self-test", () => {
+  it("status $1820 supports a diagnostic override of the base coin/self-test", () => {
     const mainToSound = createMailbox();
     const soundToMain = createMailbox();
     const mmu = createSoundMmu({
@@ -179,7 +179,7 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     });
   }
 
-  it("YM2151 $1800/$1801: write salvati in shadow, read returns status", () => {
+  it("YM2151 $1800/$1801: writes saved in shadow, read returns status", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x1800), as_u8(0x20));  // register select
     mmu.write8(as_u16(0x1801), as_u8(0xC0));  // register data
@@ -189,7 +189,7 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     expect((mmu.read8(as_u16(0x1801)) as number) & 0x03).toBe(0);
   });
 
-  it("POKEY $1870-$187F: write salvati in shadow, read returns 0", () => {
+  it("POKEY $1870-$187F: writes saved in shadow, read returns 0", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x1875), as_u8(0xAB));
     mmu.write8(as_u16(0x187F), as_u8(0xCD));
@@ -198,7 +198,7 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     expect(mmu.read8(as_u16(0x1875)) as number).toBe(0);
   });
 
-  it("puo' differire le write chip mantenendo i callback diagnostici", () => {
+  it("can defer chip writes while keeping the diagnostic callbacks", () => {
     const deferred: Array<{ event: { kind: string; reg: number; val: number }; apply: () => void }> = [];
     const ymWrites: Array<{ reg: number; val: number }> = [];
     const pokeyWrites: Array<{ reg: number; val: number }> = [];

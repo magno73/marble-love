@@ -105,7 +105,7 @@ describe("gameMainGate (FUN_28972)", () => {
     expect(s.workRam[FALLING_EDGES_OFF] & 0x01).toBe(0);
   });
 
-  it("Hang: bit 0 + bit 1 of *0x4003AA set (preservati from the debounce) + MMIO bit 6 = 0 → hangRequested", () => {
+  it("Hang: bit 0 + bit 1 of *0x4003AA set (preserved from the debounce) + MMIO bit 6 = 0 → hangRequested", () => {
     const s = emptyGameState() as GameStateWithHang;
     // To preserve bits 0+1 after debounce: prev=0x03, mmio=0x03 (both set).
     s.workRam[PREV_INPUT_OFF] = 0x03;
@@ -125,7 +125,7 @@ describe("gameMainGate (FUN_28972)", () => {
     expect(newOuter).toBe(160); // 100 + 60
   });
 
-  it("Block C timer clamp: state=1, outer > 300, clamps a 360", () => {
+  it("Block C timer clamp: state=1, outer > 300, clamps to 360", () => {
     const s = emptyGameState();
     s.workRam[0x18 + 0x18] = 1;
     s.workRam[0x18 + 0x6a] = 1; // outer = 0x140 = 320

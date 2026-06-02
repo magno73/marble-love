@@ -1,9 +1,9 @@
 /**
  * Unit test for `decodeLevelHeader` - verifies that static decoding of
- * fields noti corrisponda al layout documentato in
+ * known fields matches the layout documented in
  * `docs/level-header-format.md`.
  *
- * Test are ROM-free: costruiscono header sinteticthe bytes-per-byte e
+ * Tests are ROM-free: they build synthetic headers byte-by-byte and
  * verify that every field is read at the right offset, size, and signedness.
  *
  * The cross-ROM test that reads the 6 real headers lives in `level.test.ts`

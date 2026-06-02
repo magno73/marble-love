@@ -283,7 +283,7 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
   // 0x1D34E: move.b D1b,D0b; ext.w D0w; cmp.w (0x400396),D0w; bne → 0x1D320
   // 0x1D320: cmpi.b #1,(0x18,A1); bne → next; ...; addi.l #0xE2,A1; D1++; loop
   //
-  // Semantica: for (d1 = 0; d1 < limit; d1++) { if (match) { state25=1; break; } a1 += 0xE2; }
+  // Semantics: for (d1 = 0; d1 < limit; d1++) { if (match) { state25=1; break; } a1 += 0xE2; }
   // Edge case: if limit == 0 at first check (D1=0, mem=0): cmp.w 0,0 -> eq -> SKIP loop entry -> fall through to 0x1D35A (rts).
   const loopLimit = rwBE(state, LOOP_LIMIT_ADDR);
   const limitSigned = sextW(loopLimit);
@@ -294,7 +294,7 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
     const d1AsByte = d1 & 0xff;
     const d0AsWord = sextB(d1AsByte) & 0xffff; // ext.w of byte D1b
     if (d0AsWord === loopLimit) break;
-    // wrappa a 256. If limit > 256 il loop diventa effettivamente infinito
+    // wraps at 256. If limit > 256 the loop effectively becomes infinite
     if (d1 > 4096) break;
     void limitSigned;
 

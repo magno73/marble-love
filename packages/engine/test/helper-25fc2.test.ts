@@ -252,7 +252,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const rom = emptyRomImage();
     const r = state.workRam;
 
-    // anim_ptr attuale = A1 + 8*4 = 0x20FFE (index 8), fps=1
+    // anim_ptr current = A1 + 8*4 = 0x20FFE (index 8), fps=1
     const animPtrBefore = ANIM_BASE_ROM + 8 * 4; // 0x20FFE
     const animPtrAfter = animPtrBefore + 4; // 0x21002 → index 9
     writeU32BE(r, OBJ_OFF + 0x5a, animPtrBefore);

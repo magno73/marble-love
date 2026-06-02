@@ -279,7 +279,7 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
 }
 
 function sub1CABATileRedrawImpl(state: GameState, rom: RomImage): void {
-  // ── Prologo: setup pointers + initial scan position ───────────────────────
+  // ── Prologue: setup pointers + initial scan position ───────────────────────
   let a5 = STRUCT_OFF;                          // workRam offset for STRUCT writes
   const lvlPtr = r32(state, OFF_LVLPTR) >>> 0;  // *0x400474 = level header ptr (M68k abs)
 

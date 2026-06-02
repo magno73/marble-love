@@ -1,7 +1,7 @@
 /**
  * object-enter-1281c.test.ts — corner cases of `objectEnter1281C` (FUN_1281C).
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated vs binary in
  * `packages/cli/src/test-object-enter-1281c-parity.ts`.
  */
 
@@ -105,7 +105,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     const s = emptyGameState();
     const structPtr = SINGLETON_SLOT_B;
     const slotOff = structPtr - WORK_RAM_BASE;
-    writeWordBE(s.workRam, slotOff + 0x20, -15); // estremo basso ammesso
+    writeWordBE(s.workRam, slotOff + 0x20, -15); // lowest allowed value
 
     let capturedMode = -1;
     objectEnter1281C(s, structPtr, (_p, m) => {
@@ -117,7 +117,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     expect(s.workRam[slotOff + 0x1c]).toBe(1);
   });
 
-  it("estremi ammessi: range = -15 and range = 255 are in-bounds", () => {
+  it("allowed extremes: range = -15 and range = 255 are in-bounds", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
@@ -140,7 +140,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     expect(called).toBe(2);
   });
 
-  it("rangeWordOverride bypassa la lettura da workRam", () => {
+  it("rangeWordOverride bypasses the read from workRam", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
@@ -162,7 +162,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     expect(s.workRam[slotOff + 0x1c]).toBe(1);
   });
 
-  it("selectMode helper: singleton vs altri", () => {
+  it("selectMode helper: singleton vs others", () => {
     expect(selectMode(SINGLETON_SLOT_A)).toBe(0);
     expect(selectMode(SINGLETON_SLOT_B)).toBe(0);
     expect(selectMode(0x00400000)).toBe(1);

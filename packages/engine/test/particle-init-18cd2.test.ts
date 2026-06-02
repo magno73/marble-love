@@ -1,9 +1,9 @@
 /**
- * particle-init-18cd2.test.ts — smoke tests per `FUN_00018CD2`.
+ * particle-init-18cd2.test.ts — smoke tests for `FUN_00018CD2`.
  *
- * Verifica:
+ * Verifies:
  *   - count = 0 -> no slot, byte count still written
- *   - mode in [0..0x7F] → entry[8..9] determinato (no RNG step extra)
+ *   - mode in [0..0x7F] → entry[8..9] determined (no extra RNG step)
  *   - mode == 0xFF -> palette refresh callback invoked + rng(8) per slot
  *   - count > 0 -> fun_18e6c callback invoked `count` times with (0x2C, i)
  *   - byte @ 0x4003E2 written with count
@@ -24,7 +24,7 @@ function readWordBE(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("particleInit18CD2 (FUN_00018CD2)", () => {
-  it("count=0 → no slot, byte 0x3E2 = 0, no callback invocata", () => {
+  it("count=0 → no slot, byte 0x3E2 = 0, no callback invoked", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x1234);
     let cfaCalls = 0;
@@ -42,7 +42,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     expect(s.workRam[COUNT_BYTE_OFF]).toBe(0);
   });
 
-  it("mode=0xFF + count=3 → fun_26cfa invocata 1 time + fun_18e6c 3 times", () => {
+  it("mode=0xFF + count=3 → fun_26cfa invoked 1 time + fun_18e6c 3 times", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0xbeef);
     let cfaCalls = 0;
@@ -67,7 +67,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     }
   });
 
-  it("mode=0x05 (positivo, no RNG extra) → entry[8..9] = (5 << 11) = 0x2800", () => {
+  it("mode=0x05 (positive, no extra RNG) → entry[8..9] = (5 << 11) = 0x2800", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x4242);
     const r = particleInit18CD2(s, 1, 0x05);
@@ -88,7 +88,7 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
     }
   });
 
-  it("subs assenti → no crash, default no-op", () => {
+  it("subs absent → no crash, default no-op", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0xdead);
     expect(() => particleInit18CD2(s, 4, 0xff)).not.toThrow();
@@ -97,16 +97,16 @@ describe("particleInit18CD2 (FUN_00018CD2)", () => {
 
   it("xvel/yvel: entry[4..5] and [6..7] always adjusted ±0x10 (no zero center)", () => {
     // Output always has a +/-0x10 offset from center. For `count=10` slots
-    // dovremmo avere ALL the 4 byte (xvel + yvel) ben definiti.
+    // we should have ALL 4 bytes (xvel + yvel) well defined.
     const s = emptyGameState();
     s.rng.seed = as_u32(0xabcd);
     const r = particleInit18CD2(s, 10, 0x00);
     for (const slot of r.slots) {
-      // xvel, yvel are u16; convertiamo in signed per check.
+      // xvel, yvel are u16; convert to signed for the check.
       const xs = slot.xvel >= 0x8000 ? slot.xvel - 0x10000 : slot.xvel;
       const ys = slot.yvel >= 0x8000 ? slot.yvel - 0x10000 : slot.yvel;
-      // xvel: r2 in [0..0x5F] => raw in [-0x30..0x2F]; adj +-0x10 => exits by
-      // ±0x10 from the range raw. Range finale: [-0x40..-0x11] ∪ [0x10..0x3F].
+      // xvel: r2 in [0..0x5F] => raw in [-0x30..0x2F]; adj +-0x10 => extends by
+      // ±0x10 from the raw range. Final range: [-0x40..-0x11] ∪ [0x10..0x3F].
       // Therefore |xvel| is always >= 0x10.
       expect(Math.abs(xs)).toBeGreaterThanOrEqual(0x10);
       expect(Math.abs(ys)).toBeGreaterThanOrEqual(0x10);

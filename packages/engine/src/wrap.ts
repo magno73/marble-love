@@ -1,11 +1,11 @@
 /**
  *
- * Branded types: u8, u16, u32, i8, i16, i32 (alias of number, but incompatibili
+ * Branded types: u8, u16, u32, i8, i16, i32 (aliases of number, but incompatible
  *
- * Regole:
+ * Rules:
  *    fails in `packages/engine/src`.
- *  - Per >>= preferisci `u32_shr` (zero-fill) o `i32_sar` (arithmetic).
- *    `as_u8/as_u16/as_u32` to be brandizzati.
+ *  - For >>= prefer `u32_shr` (zero-fill) or `i32_sar` (arithmetic).
+ *    `as_u8/as_u16/as_u32` to be branded.
  */
 
 declare const __u8: unique symbol;
@@ -121,11 +121,11 @@ export const u16_lo = (a: u32): u16 => as_u16(a as number);
 export const u8_hi = (a: u16): u8 => as_u8((a as number) >>> 8);
 export const u8_lo = (a: u16): u8 => as_u8(a as number);
 
-/** Compone una u32 da hi:lo u16. */
+/** Composes a u32 from hi:lo u16. */
 export const u32_pack16 = (hi: u16, lo: u16): u32 =>
   as_u32(((hi as number) << 16) | (lo as number));
 
-/** Compone una u16 da hi:lo u8. */
+/** Composes a u16 from hi:lo u8. */
 export const u16_pack8 = (hi: u8, lo: u8): u16 =>
   as_u16(((hi as number) << 8) | (lo as number));
 
@@ -145,15 +145,15 @@ const umask = (bits: 8 | 16 | 32): number =>
 const uval = (n: number, bits: 8 | 16 | 32): number =>
   bits === 32 ? n >>> 0 : n & umask(bits);
 
-/** Carry per add a N bit. */
+/** Carry for an N-bit add. */
 export const carry_add = (a: number, b: number, bits: 8 | 16 | 32): boolean => {
   return uval(a, bits) + uval(b, bits) > umask(bits);
 };
-/** Borrow per sub a N bit. */
+/** Borrow for an N-bit sub. */
 export const borrow_sub = (a: number, b: number, bits: 8 | 16 | 32): boolean => {
   return uval(a, bits) < uval(b, bits);
 };
-/** Overflow (signed) per add a N bit. */
+/** Overflow (signed) for an N-bit add. */
 export const overflow_add = (a: number, b: number, bits: 8 | 16 | 32): boolean => {
   const sign = 1 << (bits - 1);
   const ua = uval(a, bits);

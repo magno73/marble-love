@@ -50,7 +50,7 @@ function setupPlayer(
 }
 
 describe("counterPoolSubtract4008 (FUN_4008)", () => {
-  it("path #1: helper status >= 0xE0 -> ret 1, no modifies", () => {
+  it("path #1: helper status >= 0xE0 -> ret 1, no changes", () => {
     const s = emptyGameState();
     // status = 0xE0 -> helper returns 0 -> early exit with ret 1.
     setupPlayer(s, 0x401a00, 0xe0);
@@ -66,7 +66,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(counterPoolSubtract4008(s, 0x42)).toBe(RET_SUCCESS);
   });
 
-  it("path #2: pool < arg1 -> ret 0, no modifies", () => {
+  it("path #2: pool < arg1 -> ret 0, no changes", () => {
     const s = emptyGameState();
     // status = 0x10 -> helper = (0x10 & 3) + 1 = 1 (proceed).
     setupPlayer(s, 0x401a00, 0x10);

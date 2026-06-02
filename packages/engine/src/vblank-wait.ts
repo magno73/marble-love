@@ -25,7 +25,7 @@
  *   - `count <= 0` (signed-word interpretation): `bgt` is not taken.
  *
  *
- * `requestAnimationFrame` schedulerebbe il tick next.
+ * `requestAnimationFrame` would schedule the next tick.
  */
 
 import type { GameState } from "./state.js";

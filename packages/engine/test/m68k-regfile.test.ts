@@ -1,7 +1,7 @@
 /**
- * m68k-regfile.test.ts — validation differenziale of the register file M68010
+ * m68k-regfile.test.ts — differential validation of the M68010 register file
  * + 8 stack ABI instructions against the SingleStepTests/m68000 dataset (MIT)
- * filtrato in `oracle/tom_harte_m68000/`.
+ * filtered into `oracle/tom_harte_m68000/`.
  *
  * Intent check: these 8 instructions are the substrate
  * used by TS-port subs to read/write the body stack frame.
@@ -11,7 +11,7 @@
  * (excluding exception/address-error paths, which the GCC body never reaches
  * with a correctly aligned SP).
  *
- * Filtraggio: skippiamo i test in which le transactions includono `re`/`we`
+ * Filtering: we skip the tests whose transactions include `re`/`we`
  * (exception bus cycles) - these are address-error cases that the register file
  * does not handle, and Marble Madness does not exercise.
  */
@@ -33,7 +33,7 @@ import {
 
 // ─── Oracle loading ───────────────────────────────────────────────────────
 
-// vitest runs from repo root (cfr. vitest.config.ts include glob).
+// vitest runs from repo root (see vitest.config.ts include glob).
 const ORACLE_DIR = resolve(process.cwd(), "oracle/tom_harte_m68000");
 
 interface OracleState {
@@ -63,8 +63,8 @@ function loadOracle(filename: string): OracleTest[] {
 // Test bus: Map<u32, u8> with 24-bit address mask.
 
 /**
- * Crea un MemBus backed da Map. Il 68000 ha bus address 24-bit, so
- * mascheriamo. read/write 16/32 are big-endian (high byte at lower addr).
+ * Creates a MemBus backed by a Map. The 68000 has a 24-bit address bus, so
+ * we mask it. read/write 16/32 are big-endian (high byte at lower addr).
  */
 function createTestBus(): MemBus & { ram: Map<number, number> } {
   const ram = new Map<number, number>();
@@ -109,7 +109,7 @@ function createTestBus(): MemBus & { ram: Map<number, number> } {
   };
 }
 
-// ─── Setup regfile + bus da OracleState ──────────────────────────────────
+// ─── Setup regfile + bus from OracleState ──────────────────────────────────
 
 function setupFromInitial(initial: OracleState): {
   rf: M68kRegFile;
@@ -140,7 +140,7 @@ function setupFromInitial(initial: OracleState): {
   return { rf, bus, startPc };
 }
 
-// ─── Confronto regfile + ram vs final ────────────────────────────────────
+// ─── Comparison regfile + ram vs final ────────────────────────────────────
 
 interface CompareResult {
   ok: boolean;
@@ -170,7 +170,7 @@ function compareFinal(
       return { ok: false, reason: `A${i}: expected ${exp >>> 0}, got ${got >>> 0}` };
     }
   }
-  // A7 = USP o SSP (based on SR.S finale)
+  // A7 = USP or SSP (based on final SR.S)
   const supervisor = (final.sr & 0x2000) !== 0;
   const expA7 = (supervisor ? final.ssp : final.usp) >>> 0;
   const gotA7 = (rf.a[7] ?? 0) >>> 0;
@@ -353,27 +353,27 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
     const res = runCategory("MOVE_L_DISP.json", (rf, bus, opcode, startPc) => {
       // MOVE.L: 0010 ddd MMM mmm sss. size=10.
       // bits 15-12 = 0010. MOVE.L updates CCR (N,Z,V=0,C=0,X unchanged)
-      // → skippato from the compareFinal (checkSr=false below).
+      // → skipped from the compareFinal (checkSr=false below).
       if ((opcode & 0xf000) !== 0x2000) return { ok: false, reason: "unsupported" };
       const dstReg = (opcode >>> 9) & 7;
       const dstMode = (opcode >>> 6) & 7;
       const srcMode = (opcode >>> 3) & 7;
       const srcReg = opcode & 7;
-      // Caso 1: src = (d16,An), dst = Dn (mode 0)
+      // Case 1: src = (d16,An), dst = Dn (mode 0)
       if (srcMode === 5 && dstMode === 0) {
         const disp = readWord(bus, startPc + 2);
         move_l_disp_to_reg(rf, bus, as_i16(signExt16(disp)), srcReg, dstReg);
         rf.pc = as_u32((startPc + 8) >>> 0);
         return { ok: true };
       }
-      // Caso 2: src = Dn (mode 0), dst = (d16,An) (mode 5)
+      // Case 2: src = Dn (mode 0), dst = (d16,An) (mode 5)
       if (srcMode === 0 && dstMode === 5) {
         const disp = readWord(bus, startPc + 2);
         move_l_reg_to_disp(rf, bus, srcReg, as_i16(signExt16(disp)), dstReg);
         rf.pc = as_u32((startPc + 8) >>> 0);
         return { ok: true };
       }
-      // Caso 3: src=(d16,An), dst=(d16,An) (mem-to-mem). 2 ext words.
+      // Case 3: src=(d16,An), dst=(d16,An) (mem-to-mem). 2 ext words.
       if (srcMode === 5 && dstMode === 5) {
         const srcDisp = readWord(bus, startPc + 2);
         const dstDisp = readWord(bus, startPc + 4);
@@ -491,7 +491,7 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
         default:
           return { ok: false, reason: "unsupported" };
       }
-      // PC pushato = startPc + 2 + 2*extWords
+      // PC pushed = startPc + 2 + 2*extWords
       const pushedPc = (startPc + 2 + 2 * extWords) >>> 0;
       jsr_abs(rf, bus, as_u32(pushedPc), as_u32(target));
       // Tom Harte m_au final = target + 4 (next prefetch after target word).

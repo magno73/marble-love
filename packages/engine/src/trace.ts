@@ -1,5 +1,5 @@
 /**
- * trace.ts — formato JSONL of the trace per differential testing.
+ * trace.ts — JSONL format of the trace for differential testing.
  *
  *   - `oracle/mame_dumper.lua` (ground truth, each frame)
  *   - `@marble-love/cli` (reimpl, same scenario, same ticks)
@@ -87,7 +87,7 @@ function bytesToHex(buf: Uint8Array, start: number, length: number): string {
   return out;
 }
 
-/** Serializza un GameState in TraceFrame. Pure function: no mutation. */
+/** Serialize a GameState into a TraceFrame. Pure function: no mutation. */
 export function frameFromState(s: GameState): TraceFrame {
   const regions = getDumpRegions();
   const dumps: Record<string, string> | undefined = regions.length === 0
@@ -111,8 +111,8 @@ export function frameFromState(s: GameState): TraceFrame {
       alive: s.marble.alive ? 1 : 0,
       spriteIndex: raw(s.marble.spriteIndex),
     },
-    // from the Phase 0; non are i veri "score/lives" semantici. Tenuti per
-    // sides read from the same addresses.
+    // from Phase 0; these are not the true semantic "score/lives". Kept because
+    // they read from the same addresses.
     stats: {
       score: ((s.workRam[0x396] ?? 0) << 8) | (s.workRam[0x397] ?? 0), // u16 @ 0x400396
       lives: s.workRam[0x3F4] ?? 0,                                    // u8 @ 0x4003F4
@@ -157,13 +157,13 @@ function workRamRegionalHashes(buf: Uint8Array): number[] {
   for (let i = 0; i < 32; i++) {
     const start = i * 0x100;
     if (i === 4) {
-      // 0x400-0x4FF esclude 0x440-0x447 (8 byte stack water)
+      // 0x400-0x4FF excludes 0x440-0x447 (8 byte stack water)
       out[i] = (crc32(buf, 0x400, 0x40) ^ crc32(buf, 0x448, 0x100 - 0x48)) >>> 0;
     } else if (i === 29) {
-      // 0x1D00-0x1DFF esclude 0x1D40-0x1DFF (192 byte stack scratch)
+      // 0x1D00-0x1DFF excludes 0x1D40-0x1DFF (192 byte stack scratch)
       out[i] = crc32(buf, 0x1D00, 0x40) >>> 0;
     } else if (i === 30) {
-      // 0x1E00-0x1EFF esclude 0x1E00-0x1E7F + 0x1EE0-0x1EFF
+      // 0x1E00-0x1EFF excludes 0x1E00-0x1E7F + 0x1EE0-0x1EFF
       out[i] = crc32(buf, 0x1E80, 0x60) >>> 0;
     } else {
       out[i] = crc32(buf, start, 0x100) >>> 0;

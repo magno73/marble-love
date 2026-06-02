@@ -19,21 +19,21 @@ describe("setAlphaWord (FUN_383A)", () => {
     expect(s.alphaRam[1]).toBe(0xCD);
   });
 
-  it("indice 1 → offset 2", () => {
+  it("index 1 → offset 2", () => {
     const s = emptyGameState();
     setAlphaWord(s, 1, 0x1234);
     expect(s.alphaRam[2]).toBe(0x12);
     expect(s.alphaRam[3]).toBe(0x34);
   });
 
-  it("indice 0x77F (last tile) → offset 0xEFE", () => {
+  it("index 0x77F (last tile) → offset 0xEFE", () => {
     const s = emptyGameState();
     setAlphaWord(s, 0x77F, 0xBEEF);
     expect(s.alphaRam[0xEFE]).toBe(0xBE);
     expect(s.alphaRam[0xEFF]).toBe(0xEF);
   });
 
-  it("solo low word of value used", () => {
+  it("only the low word of the value is used", () => {
     const s = emptyGameState();
     setAlphaWord(s, 0, 0x12345678);
     expect(s.alphaRam[0]).toBe(0x56);
@@ -46,7 +46,7 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     for (let i = 0; i < s.alphaRam.length; i++) s.alphaRam[i] = 0xFF;
   }
 
-  it("startRow=0: clears all i tile [0, 0x780)", () => {
+  it("startRow=0: clears all tiles [0, 0x780)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 0);
@@ -60,7 +60,7 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     }
   });
 
-  it("startRow=30: no-op (counter parte already a 0x780)", () => {
+  it("startRow=30: no-op (counter already starts at 0x780)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 30);
@@ -69,7 +69,7 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     }
   });
 
-  it("startRow=29: clears solo l'ultima line (64 tile)", () => {
+  it("startRow=29: clears only the last row (64 tiles)", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 29);
@@ -87,7 +87,7 @@ describe("clearAlphaTilesFromIndex (FUN_28C7E)", () => {
     }
   });
 
-  it("startRow=15: clears metà inferiore", () => {
+  it("startRow=15: clears the lower half", () => {
     const s = emptyGameState();
     fillAlpha(s);
     clearAlphaTilesFromIndex(s, 15);

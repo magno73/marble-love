@@ -4,7 +4,7 @@
  * Verifies the main paths:
  *   1. Phase 1 match-scan: defaults table vs workRam entries
  *   2. Phase 2 header render: renderString0142 vs renderStringEntry286B0
- *   3. Phase 3 row render: formattazione rank, initials, score
+ *   3. Phase 3 row render: rank formatting, initials, score
  *   4. D2b threshold logic (arg render offset)
  *
  * Bit-perfect parity (500 random cases) verified in

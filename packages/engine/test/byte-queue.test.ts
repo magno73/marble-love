@@ -37,7 +37,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(5);
   });
 
-  it("dequeue uno: head=0 tail=1 buffer[0]=0xAB → returns 0xAB, head=1", () => {
+  it("dequeue one: head=0 tail=1 buffer[0]=0xAB → returns 0xAB, head=1", () => {
     const s = setupQueue(0, 1, [0xAB]);
     expect(dequeueByte(s)).toBe(0xAB);
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(1);

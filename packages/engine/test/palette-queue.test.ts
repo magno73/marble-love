@@ -56,7 +56,7 @@ describe("paletteQueuePush", () => {
     expect(readU32BE(s.workRam, PTR_OFF)).toBe(PAL_QUEUE_HEAD + 3);
   });
 
-  it("clamp at tail (4° push)", () => {
+  it("clamp at tail (4th push)", () => {
     const s = emptyGameState();
     writeU32BE(s.workRam, PTR_OFF, PAL_QUEUE_HEAD);
     paletteQueuePush(s, 1);
@@ -65,7 +65,7 @@ describe("paletteQueuePush", () => {
     paletteQueuePush(s, 4);
     expect(readU32BE(s.workRam, PTR_OFF)).toBe(PAL_QUEUE_TAIL);
     paletteQueuePush(s, 5);
-    // 5° push: writes at TAIL (overwriting 4), ptr stays at TAIL
+    // 5th push: writes at TAIL (overwriting 4), ptr stays at TAIL
     expect(s.workRam[0x40f]).toBe(5);
     expect(readU32BE(s.workRam, PTR_OFF)).toBe(PAL_QUEUE_TAIL);
   });

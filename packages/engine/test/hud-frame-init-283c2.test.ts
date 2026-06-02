@@ -47,7 +47,7 @@ function setupRom(): RomImage {
   // ROM lookup table @ 0x72A4 (alpha-pointer shift count). For rotation=0,
   rom.program[0x72a5] = 0x00;
 
-  // ROM cols 1P @ 0x23C2C (12 word).
+  // ROM cols 1P @ 0x23C2C (12 words).
   const cols1P = [
     0x0013, 0x0014, 0x0015, 0x0016, 0x0017, 0x0017, 0x0017, 0x0017,
     0x0016, 0x0015, 0x0014, 0x0013,
@@ -56,7 +56,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_COLS_1P + i * 2, cols1P[i]!);
   }
 
-  // ROM rows @ 0x23C44 (24 word).
+  // ROM rows @ 0x23C44 (24 words).
   const rows = [
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003,
     0x0003, 0x0003, 0x0003, 0x0003,
@@ -67,7 +67,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_ROWS + i * 2, rows[i]!);
   }
 
-  // ROM data @ 0x23C74 (24 word).
+  // ROM data @ 0x23C74 (24 words).
   const data = [
     0x005f, 0x005f, 0x005f, 0x005f, 0x00ff, 0x00df, 0x00df, 0x001b,
     0x005e, 0x005e, 0x005e, 0x005e,
@@ -78,7 +78,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_DATA + i * 2, data[i]!);
   }
 
-  // ROM cols 2P @ 0x23CA4 (24 word).
+  // ROM cols 2P @ 0x23CA4 (24 words).
   const cols2P = [
     0x000d, 0x000e, 0x000f, 0x0010, 0x0011, 0x0011, 0x0011, 0x0011,
     0x0010, 0x000f, 0x000e, 0x000d,
@@ -104,7 +104,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     //   alpha[row*128 + 0..1, +2..3, +4..5] = 0x3400
     //   alpha[row*128 + 0x4E..0x4F, +0x50..0x51, +0x52..0x53] = 0x3400
     for (let row = 0; row < LOOP1_ROW_COUNT; row++) {
-      const base = row * 128; // shift 6 (cols=64) × 2 byte/word
+      const base = row * 128; // shift 6 (cols=64) × 2 bytes/word
       // Left: 3 words
       for (let i = 0; i < LOOP1_GROUP_WORDS; i++) {
         const off = base + i * 2;
