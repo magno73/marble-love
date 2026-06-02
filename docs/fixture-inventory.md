@@ -30,10 +30,35 @@ git count-objects -vH
 | `oracle/scenarios/**/*.json` | MAME oracle/reference fixtures for maintainers. | Keep; they are not the primary public onboarding path. |
 | `oracle/tom_harte_m68000/*.json` | CPU validation fixtures. | Keep as third-party test references; do not read them broadly in agent sessions. |
 
-## Recommendation
+## Size, restated (2026-06-02)
 
-The repository is publicable with these fixtures if the README clearly explains
-their purpose and if future large additions are reviewed deliberately. The main
-remaining size is oracle data, not browser-served assets. A later cleanup can
-add a manifest/generation workflow or compressed loader support before adding
-more large public scenarios.
+- `oracle/scenarios/`: ~97 MB. `oracle/tom_harte_m68000/`: ~22 MB.
+  Total tracked oracle JSON ~120 MB.
+- `.git` working directory ~45 MB (the compressed pack is smaller; `git
+  count-objects -vH` reports the pack size).
+- Largest individual fixtures are ~5.2 MB gameplay/playable snapshots.
+
+## Trade-off and options (HN readiness)
+
+The honest concern for a Hacker News clone: ~120 MB of tracked JSON makes the
+pack heavier and the clone slower than a typical TS repo — a near-certain
+comment. Three options were considered:
+
+- **A — Git LFS.** Move the oracle JSON to LFS. Shrinks a fresh working-tree
+  clone, but reclaiming the existing pack requires a **history rewrite**, which
+  an agent does not perform autonomously. If chosen, the agent would prepare
+  `.gitattributes` and document the manual rewrite; it would not rewrite history.
+- **B — Separate `marble-love-fixtures` repo.** Move the heavy oracle fixtures
+  to a companion repo plus a `tools/fetch_fixtures.sh` downloader. Requires the
+  maintainer to create the external repo first; the `git rm` removal commit is
+  prepared on a branch but **not pushed** until that exists.
+- **C — Status quo + documentation (this page).** Keep the fixtures, explain the
+  trade-off, and review future large additions deliberately. The browser public
+  path already avoids the heaviest snapshots; the remaining size is maintainer
+  oracle data. **Safest for the HN launch.**
+
+**Decision (W7 gate).** Option **C is in effect for the launch** and is what this
+PR delivers. Options A and B are deliberate, history- or infrastructure-affecting
+choices reserved for the maintainer (Marco): they are documented here so the
+trade-off is explicit, but not executed without an explicit decision. B is the
+natural post-launch follow-up if clone size becomes a real friction point.
