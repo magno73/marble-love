@@ -2,15 +2,15 @@
  * m6502-tom-harte.test.ts — Runner per oracle/tom_harte_m6502/*.json.
  *
  * Mirror pattern of the M68000 runner. For each `<hex>.json` file in
- * directory oracle, esegue tutti i test:
+ * directory oracle, runs all i test:
  *  1. Inizializza Uint8Array(0x10000) zero, applica sparse `initial.ram`.
  *  2. Create CPU with regs from `initial`.
  *  3. step() una singola istruzione.
- *  4. Confronta regs (A,X,Y,SP,P,PC) e cycle count.
+ *  4. Confronta regs (A,X,Y,SP,P,PC) and cycle count.
  *  5. Compare RAM only on bytes listed by `final.ram` (sparse comparison).
  *
- * Se la directory oracle e' vuota (dataset non fetched), il file usa
- * `it.skip` → run e' un no-op, NON falla.
+ * Se la directory oracle e' vuota (dataset non fetched), il file uses
+ * `it.skip` → run e' un no-op, NOT falla.
  *
  * Status flag mask: NV-DIZC (exclude B and U from the compare because they are
  * "soft flags" that depend only on PHP/BRK; the upstream datasheet does not
@@ -66,7 +66,7 @@ function makeBusFromRam(initRam: Array<[number, number]>): MemBus6502 & { mem: U
   };
 }
 
-// Maschera per comparison flag: esclude B (0x10) e U (0x20) — soft flags.
+// Mask per comparison flag: esclude B (0x10) and U (0x20) — soft flags.
 const FLAG_MASK_COMPARE = 0xcf;
 
 function runOpcodeFile(file: string): void {
@@ -89,13 +89,13 @@ function runOpcodeFile(file: string): void {
 
         const cyclesUsed = step(cpu, bus);
 
-        // Regs: confronta direttamente
+        // Regs: compare direttamente
         expect(raw(cpu.rf.a)).toBe(t.final.a);
         expect(raw(cpu.rf.x)).toBe(t.final.x);
         expect(raw(cpu.rf.y)).toBe(t.final.y);
         expect(raw(cpu.rf.sp)).toBe(t.final.s);
         expect(raw(cpu.rf.pc)).toBe(t.final.pc);
-        // Flag: escludi B/U (vedi commento sopra)
+        // Flag: escludi B/U (vedi commento above)
         expect((cpu.rf.p as number) & FLAG_MASK_COMPARE).toBe(t.final.p & FLAG_MASK_COMPARE);
         // Cycle count: lunghezza array cycles upstream
         expect(cyclesUsed).toBe(t.cycles.length);

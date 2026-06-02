@@ -28,7 +28,7 @@ function readByte(state: ReturnType<typeof emptyGameState>, abs: number): number
 // ─── HELPER_1E3E_ADDR constant ───────────────────────────────────────────────
 
 describe("HELPER_1E3E_ADDR", () => {
-  it("è 0x00001e3e", () => {
+  it("is 0x00001e3e", () => {
     expect(HELPER_1E3E_ADDR).toBe(0x00001e3e);
   });
 });
@@ -36,7 +36,7 @@ describe("HELPER_1E3E_ADDR", () => {
 // ─── FUN_00001E3E alias ───────────────────────────────────────────────────────
 
 describe("FUN_00001E3E alias", () => {
-  it("è identico a fillSeqWords1E3E", () => {
+  it("is identico a fillSeqWords1E3E", () => {
     expect(FUN_00001E3E).toBe(fillSeqWords1E3E);
   });
 });
@@ -62,7 +62,7 @@ describe("fillSeqWords1E3E", () => {
     }
   });
 
-  it("count=1 → scrive un solo word", () => {
+  it("count=1 → writes un solo word", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     fillSeqWords1E3E(s, 0x401100, 0x0042, 1);
@@ -95,7 +95,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readWord(s, dest + 6)).toBe(0x0001);
   });
 
-  it("start viene mascherato a 16 bit (es. 0x10042 → 0x0042)", () => {
+  it("start is mascherato a 16 bit (e.g. 0x10042 → 0x0042)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     const dest = 0x401400;
@@ -104,7 +104,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readWord(s, dest + 2)).toBe(0x0043);
   });
 
-  it("byte adiacenti al buffer non vengono toccati (no overflow write)", () => {
+  it("byte adiacenti al buffer non are toccati (no overflow write)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xCC);
     const dest = 0x401500;
@@ -117,7 +117,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readByte(s, dest - 1)).toBe(0xCC);
   });
 
-  it("scrive anche in alphaRam (0xa03000 range)", () => {
+  it("writes also in alphaRam (0xa03000 range)", () => {
     const s = emptyGameState();
     s.alphaRam.fill(0x00);
     const dest = 0xa03000;
@@ -127,7 +127,7 @@ describe("fillSeqWords1E3E", () => {
     expect((((s.alphaRam[4] ?? 0) << 8) | (s.alphaRam[5] ?? 0)) & 0xffff).toBe(0x0102);
   });
 
-  it("scrive anche in spriteRam (0xa02000 range)", () => {
+  it("writes also in spriteRam (0xa02000 range)", () => {
     const s = emptyGameState();
     s.spriteRam.fill(0x00);
     const dest = 0xa02000;
@@ -136,7 +136,7 @@ describe("fillSeqWords1E3E", () => {
     expect((((s.spriteRam[2] ?? 0) << 8) | (s.spriteRam[3] ?? 0)) & 0xffff).toBe(0x0201);
   });
 
-  it("scrive anche in colorRam (0xb00000 range)", () => {
+  it("writes also in colorRam (0xb00000 range)", () => {
     const s = emptyGameState();
     s.colorRam.fill(0x00);
     const dest = 0xb00000;
@@ -145,14 +145,14 @@ describe("fillSeqWords1E3E", () => {
     expect((((s.colorRam[2] ?? 0) << 8) | (s.colorRam[3] ?? 0)) & 0xffff).toBe(0x0301);
   });
 
-  it("indirizzi fuori range sono no-op (non sollevano eccezione)", () => {
+  it("indirizzi outside range are no-op (non sollevano eccezione)", () => {
     const s = emptyGameState();
     expect(() => fillSeqWords1E3E(s, 0x900000, 0, 4)).not.toThrow();
     // ROM area 0x000000 → no crash, no write
     expect(() => fillSeqWords1E3E(s, 0x000100, 0, 2)).not.toThrow();
   });
 
-  it("count grande (es. 0x400 entry) scrive correttamente", () => {
+  it("count grande (e.g. 0x400 entry) writes correttamente", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     const dest = 0x400000;

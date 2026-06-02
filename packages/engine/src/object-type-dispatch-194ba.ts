@@ -59,7 +59,7 @@
  *
  *   - `FUN_0001960E` — case-0 helper (sub-type 0).
  *   - `FUN_0001973C` — case-1 helper (sub-type 1).
- *   - `FUN_0001953E` — finalizer comune a case 0 e 1.
+ *   - `FUN_0001953E` — finalizer comune a case 0 and 1.
  *
  * **Caller xrefs (6)**:
  *   - `FUN_00018FFA @ 0x190AE`
@@ -82,11 +82,11 @@ export const CALLEE_FUN_1953E = 0x0001953e as const;
 export const FN_PTR_KIND2_SUB7 = 0x00021f8a as const;
 /** Long pointer per `obj[0x25] == 8` (case 2). */
 export const FN_PTR_KIND2_SUB8 = 0x00021a62 as const;
-/** Long pointer of default per case 2 (sub-type non 7 e non 8). */
+/** Long pointer of default per case 2 (sub-type non 7 and non 8). */
 export const FN_PTR_KIND2_DEFAULT = 0x00021efe as const;
 
 /**
- * Stub injection per le 3 JSR esterne (case 0 e 1).
+ * Stub injection per le 3 JSR esterne (case 0 and 1).
  *
  *
  * Default: all no-op (matching `rts` patch in the parity test).
@@ -95,7 +95,7 @@ export interface ObjectTypeDispatch194BASubs {
   fun_1960e?: (objAddr: number, state: GameState) => void;
   fun_1973c?: (objAddr: number, state: GameState) => void;
   /**
-   * `FUN_0001953E(obj)` — finalizer comune a case 0 e 1.
+   * `FUN_0001953E(obj)` — finalizer comune a case 0 and 1.
    */
   fun_1953e?: (objAddr: number, state: GameState) => void;
 }

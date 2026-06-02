@@ -180,7 +180,7 @@ async function main(): Promise<void> {
     const postTs = captureWorkRam(cpu);
 
     // ── Compare ─────────────────────────────────────────────────────────
-    // TS: 7× callFunction sentinel/arg). Questi byte sono "tombstone"
+    // TS: 7× callFunction sentinel/arg). Questthe bytes are "tombstone"
     //
     const STACK_SCRATCH_START = 0x1e80;
     let match = true;

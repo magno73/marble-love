@@ -7,7 +7,7 @@
  *
  * **Calling convention**: two long args pushed RTL by the caller.
  *   - `arg1` (LSB byte -> D2): type code for the new entry
- *     `(0xF, A6)`. (D2/D3 sono SOLO i low byte; il modello accetta byte.)
+ *     `(0xF, A6)`. (D2/D3 are SOLO i low byte; il modello accetta byte.)
  *
  * **Disasm 0x18E6C..0x18F46** (218 byte):
  *
@@ -109,7 +109,7 @@
  *
  * **Edge cases**:
  *   - Loop 1 stops at the first `0xFF`, so insertPos points to that byte.
- *     non-zero): insertPos al limite ⇒ exit a 0x18F3E (no insert).
+ *     non-zero): insertPos al limit ⇒ exit a 0x18F3E (no insert).
  *   - Loop 2 esaurisce the slot (D1 == 31, A1 >= A2+0x1B2): no insert.
  *   - The shift does not touch byte[0x1F], preserving the sentinel.
  *

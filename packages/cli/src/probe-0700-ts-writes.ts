@@ -1,5 +1,5 @@
 // probe-0700-ts-writes.ts — Proxy-wrap of workRam per loggare each write
-// in the cluster 0x400700..0x40077F durante i primi 5 tick post-warm.
+// in the cluster 0x400700..0x40077F during the first 5 tick post-warm.
 //
 // Output: /tmp/ts_0700_writes.json simmetrico al MAME tap
 // (oracle/mame_0700_first_body_tap.lua / mame_cluster_0706.json).

@@ -3,7 +3,7 @@ import { emptyGameState, snapshotGameState } from "../src/state.js";
 import { as_u32 } from "../src/wrap.js";
 
 describe("GameState basics", () => {
-  it("emptyGameState ha sizing RAM atteso (verificato Phase 1)", () => {
+  it("emptyGameState ha sizing RAM expected (verificato Phase 1)", () => {
     const s = emptyGameState();
     expect(s.workRam.byteLength).toBe(0x2000);     // 8 KB work RAM
     expect(s.playfieldRam.byteLength).toBe(0x2000); // 8 KB playfield tilemap
@@ -12,7 +12,7 @@ describe("GameState basics", () => {
     expect(s.colorRam.byteLength).toBe(0x800);     // 2 KB palette RAM
   });
 
-  it("snapshot è deep-copy (incluso playfieldRam)", () => {
+  it("snapshot is deep-copy (including playfieldRam)", () => {
     const a = emptyGameState();
     a.marble.pos.x = as_u32(0x1234);
     a.workRam[0] = 0xab;

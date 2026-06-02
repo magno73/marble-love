@@ -51,7 +51,7 @@ const GLOBAL_PTR = 0x00400446;
 const GLOBAL_FLAG = 0x0040075a;
 
 /**
- * Patch JSR-stub: `FUN_012a` e `FUN_26196` → RTS (0x4E75).
+ * Patch JSR-stub: `FUN_012a` and `FUN_26196` → RTS (0x4E75).
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_012A + 0, 1, 0x4e);
@@ -292,7 +292,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const entity = genEntity();
     // sx=1, target_x = 0xC0000 (= (1<<19) + 0x40000) → delta=0 (in range).
-    // Setta target_x e target_y a 0xC0000.
+    // Setta target_x and target_y a 0xC0000.
     entity[0x0c] = 0x00;
     entity[0x0d] = 0x0c;
     entity[0x0e] = 0x00;

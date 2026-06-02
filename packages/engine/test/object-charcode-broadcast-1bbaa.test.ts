@@ -1,5 +1,5 @@
 /**
- * object-charcode-broadcast-1bbaa.test.ts — smoke + corner case di
+ * object-charcode-broadcast-1bbaa.test.ts — smoke + corner case of
  * `FUN_0001BBAA`.
  */
 
@@ -68,7 +68,7 @@ function objBroadcastFlag(s: GameState, i: number): number {
 
 /**
  * Create a minimal ROM with ptr-table and byte-table placed at their addresses
- * pian piano scritta in ROM @ `listAddr` (di default 0x24a9a, in zona table).
+ * pian piano scritta in ROM @ `listAddr` (of default 0x24a9a, in area table).
  */
 function makeRom(
   listBytes: number[],
@@ -121,7 +121,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("exit immediato se char-list vuota (primo byte = 0xFF)", () => {
+  it("exit immediato se char-list vuota (first byte = 0xFF)", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -134,7 +134,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("nominal: 1 obj match → broadcast su tutti gli obj con state==1", () => {
+  it("nominal: 1 obj match → broadcast su all the obj con state==1", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -168,13 +168,13 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("signedRange (+0x6a) fuori [3,6] → outer skip", () => {
+  it("signedRange (+0x6a) outside [3,6] → outer skip", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
     writeByte(s, PROGRESS_ADDR, 0x10);
     writeWord(s, OBJ_COUNT_ADDR, 4);
-    // bordi: 2 (skip), 3 (ok), 6 (ok), 7 (skip)
+    // edges: 2 (skip), 3 (ok), 6 (ok), 7 (skip)
     setupObj(s, 0, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 2 });
     setupObj(s, 1, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 3 });
     setupObj(s, 2, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 6 });
@@ -188,7 +188,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 3)).toBe(1);
   });
 
-  it("nessun obj con charcode in lista → no broadcast", () => {
+  it("no obj con charcode in lista → no broadcast", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -203,7 +203,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 1)).toBe(0);
   });
 
-  it("count == 0 → no body, no side effects (ma gate/progress/list già passati)", () => {
+  it("count == 0 → no body, no side effects (but gate/progress/list already passed)", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);

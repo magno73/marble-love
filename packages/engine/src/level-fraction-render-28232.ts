@@ -182,9 +182,9 @@
  * to `state.workRam[ptr & 0x1FFF]`. Parity tests set the caller-side
  *
  * `obj-dirty-dispatch-28624`):
- *   - `renderStringChain` (FUN_2572 via 0x142) — 5 invocazioni totali (3
- *   - `initStructHeader`   (FUN_255A via 0x13C) — 1 invocazione.
- *   - `renderStringHelper` (FUN_28E3C)         — 1 invocazione.
+ *   - `renderStringChain` (FUN_2572 via 0x142) — 5 invocations totali (3
+ *   - `initStructHeader`   (FUN_255A via 0x13C) — 1 invocation.
+ *   - `renderStringHelper` (FUN_28E3C)         — 1 invocation.
  *
  * `packages/cli/src/test-level-fraction-render-28232-parity.ts`.
  */
@@ -390,7 +390,7 @@ function divsWord(dividendLong: number, divisor: number): {
  *
  * Orchestratore "level/fraction render" a 7 step (5 renderStringChain + 1
  * initStructHeader + 1 renderStringHelper) with dispatch on mode selector
- * e dispatch ASCII su remainder mod 12.
+ * and dispatch ASCII su remainder mod 12.
  *
  * **Side effects diretti of the modulo** (assumendo sub-call no-op):
  *   1. `state.workRam[0x428] = 0x23`     (with the, da initStructHeader inline)

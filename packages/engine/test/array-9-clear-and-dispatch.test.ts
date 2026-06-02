@@ -15,7 +15,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("array9ClearAndDispatch (FUN_190EE)", () => {
-  it("invoca la callback 9 volte coi pointer entry deterministici e azzera il flag 0x18 di ognuno", () => {
+  it("invoca la callback 9 times coi pointer entry deterministici and azzera il flag 0x18 of ognuno", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -31,7 +31,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     });
 
     expect(calls).toHaveLength(ARRAY_COUNT);
-    // arg1 = sign-ext di entry[0x25], arg2 = sign-ext di entry[0x19]
+    // arg1 = sign-ext of entry[0x25], arg2 = sign-ext of entry[0x19]
     for (let i = 0; i < ARRAY_COUNT; i++) {
       expect(calls[i]!.a1).toBe(0x20 + i);
       expect(calls[i]!.a2).toBe(0x10 + i);
@@ -47,7 +47,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(ARRAY_COUNT).toBe(9);
   });
 
-  it("senza subs azzera comunque tutti i flag 0x18 (clear è incondizionato)", () => {
+  it("senza subs azzera comunque all i flag 0x18 (clear is incondizionato)", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -67,7 +67,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     }
   });
 
-  it("sign-extend dei byte 0x19/0x25 è applicato (0xFF → 0xFFFFFFFF, 0x80 → 0xFFFFFF80, 0x7F → 0x7F)", () => {
+  it("sign-extend of the byte 0x19/0x25 is applicato (0xFF → 0xFFFFFFFF, 0x80 → 0xFFFFFF80, 0x7F → 0x7F)", () => {
     const s = emptyGameState();
     // Setup mirato:
     //   entry 0: 0x19=0xFF, 0x25=0x80   → arg2=0xFFFFFFFF, arg1=0xFFFFFF80
@@ -95,7 +95,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     }
   });
 
-  it("ordine di chiamata strettamente sequenziale (entry 0 → 8, no shuffle)", () => {
+  it("ordine of chiamata strictly sequenziale (entry 0 → 8, no shuffle)", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -111,7 +111,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
-  it("forwarda la state instance al callback (stessa reference)", () => {
+  it("forwarda la state instance al callback (same reference)", () => {
     const s = emptyGameState();
     let seen: ReturnType<typeof emptyGameState> | null = null;
     let count = 0;
@@ -125,7 +125,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(seen).toBe(s);
   });
 
-  it("le mutazioni della callback alle entry persistono fra chiamate (clear non sovrascrive write della callback PRECEDENTE su altre entry)", () => {
+  it("le mutazioni of the callback alle entry persistono between chiamate (clear non sovrascrive write of the callback PRECEDENTE su altre entry)", () => {
     const s = emptyGameState();
     array9ClearAndDispatch(s, {
       fun_18f46: (_a1, _a2, state) => {

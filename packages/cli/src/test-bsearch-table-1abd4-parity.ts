@@ -96,7 +96,7 @@ function pokeWord(
 
 /**
  * Setup identity table @ workRam off `tableOff`, lunghezza `nWords` word.
- * Configura *(0x40065A) e *(0x40065E) puntando a base/end.
+ * Configura *(0x40065A) and *(0x40065E) puntando a base/end.
  */
 function setupIdentityTable(
   state: ReturnType<typeof stateNs.emptyGameState>,

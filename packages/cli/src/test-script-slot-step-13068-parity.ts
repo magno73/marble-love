@@ -473,7 +473,7 @@ async function main(): Promise<void> {
       pokeLong(stateInst, cpu, recPtr + 8, 0xfeedface);
 
       // Case 0: set timer
-      pokeByte(stateInst, cpu, slotPtr + 0x1c, rb()); // hi byte
+      pokeByte(stateInst, cpu, slotPtr + 0x1c, rb()); // hthe bytes
       pokeByte(stateInst, cpu, slotPtr + 0x1d, rb()); // lo byte (but tst.w checks word)
       // Simplify: use a specific value
       pokeWord(stateInst, cpu, slotPtr + 0x1c, 1 + (rb() & 0x0f)); // 1..16

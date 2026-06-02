@@ -4,7 +4,7 @@
  * Coverage target:
  *  - Overflow / underflow espliciti
  *  - Sign extension
- *  - Bit shift edge case (shift di 0, shift > width)
+ *  - Bit shift edge case (shift of 0, shift > width)
  *  - Math.imul vs operatore *
  *  - Round-trip brand/unbrand
  *  - Pack/unpack 8↔16↔32
@@ -109,7 +109,7 @@ describe("u16 arithmetic", () => {
     expect(raw(u16_rotl(as_u16(0xa5a5), 8))).toBe(0xa5a5);
     expect(raw(u16_rotl(as_u16(0x1234), 16))).toBe(0x1234);
   });
-  it("u16_rotr inverso di u16_rotl", () => {
+  it("u16_rotr inverso of u16_rotl", () => {
     const v = as_u16(0xdead);
     expect(raw(u16_rotr(u16_rotl(v, 5), 5))).toBe(0xdead);
   });
@@ -123,7 +123,7 @@ describe("u32 arithmetic — il caso critico per il 68010", () => {
   it("u32_sub wraps", () => {
     expect(raw(u32_sub(as_u32(0), as_u32(1)))).toBe(0xffffffff);
   });
-  it("u32_mul è Math.imul (32×32→32)", () => {
+  it("u32_mul is Math.imul (32×32→32)", () => {
     // imul(0xFFFF, 0xFFFF) = 0xFFFE0001
     expect(raw(u32_mul(as_u32(0xffff), as_u32(0xffff)))).toBe(0xfffe0001);
     // overflow: imul(0x10000, 0x10000) = 0
@@ -133,7 +133,7 @@ describe("u32 arithmetic — il caso critico per il 68010", () => {
     expect(raw(u32_shl(as_u32(1), 31))).toBe(0x80000000);
     expect(raw(u32_shl(as_u32(1), 32))).toBe(1); // JS << modulo 32
   });
-  it("u32_shr è zero-fill (logical)", () => {
+  it("u32_shr is zero-fill (logical)", () => {
     expect(raw(u32_shr(as_u32(0x80000000), 31))).toBe(1);
     expect(raw(u32_shr(as_u32(0xffffffff), 1))).toBe(0x7fffffff);
   });
@@ -205,12 +205,12 @@ describe("signed arithmetic (i16/i32)", () => {
   it("i16_sub wraps", () => {
     expect(raw(i16_sub(as_i16(-0x8000), as_i16(1)))).toBe(0x7fff);
   });
-  it("i16_sar è arithmetic (sign-fill)", () => {
+  it("i16_sar is arithmetic (sign-fill)", () => {
     expect(raw(i16_sar(as_i16(-1), 1))).toBe(-1);
     expect(raw(i16_sar(as_i16(-2), 1))).toBe(-1);
     expect(raw(i16_sar(as_i16(-4), 2))).toBe(-1);
   });
-  it("i32_sar è arithmetic", () => {
+  it("i32_sar is arithmetic", () => {
     expect(raw(i32_sar(as_i32(-1), 5))).toBe(-1);
     expect(raw(i32_sar(as_i32(-1024), 4))).toBe(-64);
   });

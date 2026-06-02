@@ -52,7 +52,7 @@ export const SECONDARY_FLAGS_ADDR = 0x00401f76 as const;
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /**
- * OR cumulativo of una maschera 32-bit su un long-BE in workRam a `off`.
+ * OR cumulativo of una mask 32-bit su un long-BE in workRam a `off`.
  *
  * Implementa `or.l Dn,(abs).l` per un offset workRam dato.
  */

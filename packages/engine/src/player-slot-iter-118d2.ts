@@ -284,7 +284,7 @@ export function playerSlotIter118D2(
     const scoreSigned = sextWord(scoreWord);
     const clamped = scoreSigned > 99 ? 99 : scoreSigned;
     // muls.w #0x64, d0 — d0 = clamped * 100 (signed × word)
-    // The product is a long; we replicate the M68k muls.w semantics:
+    // The product is a long; we replicated the M68k muls.w semantics:
     //   muls.w #100, d0: d0 (long) = sign_extend(d0.word) * sign_extend(#100)
     // clamped is in range -32768..99 but only values 0..99 are reached here.
     const accumVal = (clamped * 100) >> 0; // signed 32-bit long

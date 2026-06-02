@@ -5,7 +5,7 @@
  * passed on the stack by the caller (`move.l D0,-(SP); jsr; addq.l #4,SP`).
  *
  * **Strategia of setup**:
- *     e dst. Il buffer in TS rappresenta `0x80000..0x87FFF` (8 KB).
+ *     and dst. Il buffer in TS rappresenta `0x80000..0x87FFF` (8 KB).
  *
  *   - peekMem 8 byte da 0x87A48 vs slice of the buffer TS.
  *
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < total; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Randomizziamo i byte relevant: src word + dst table 8 byte.
+    // Randomizziamo the bytes relevant: src word + dst table 8 byte.
     // To avoid overwriting critical ROM, modify only the bytes
     const srcWord = Math.floor(rng() * 0x10000) & 0xffff;
     const dstSeed = new Array(8).fill(0).map(() => Math.floor(rng() * 256) & 0xff);

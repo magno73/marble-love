@@ -1,8 +1,8 @@
 /**
- * field-fetch-4058.test.ts — smoke tests di `fieldFetch4058` (FUN_4058).
+ * field-fetch-4058.test.ts — smoke tests of `fieldFetch4058` (FUN_4058).
  *
- * Verifica i 4 path di ritorno + invarianti chiave + bit-perfectness della
- * sign-ext della costante ROM e dell'addressing record.
+ * Verifica the 4 path of ritorno + invarianti chiave + bit-perfectness of the
+ * sign-ext of the costante ROM and of the addressing record.
  *
  * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-field-fetch-4058-parity.ts` vs Musashi.
@@ -41,7 +41,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, 0x12345, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
   });
 
-  it("path #2: arg2 <= 0x12 ma arg1 >= D4 -> ret -2 (RET_INDEX_OOR)", () => {
+  it("path #2: arg2 <= 0x12 but arg1 >= D4 -> ret -2 (RET_INDEX_OOR)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
     // ROM_BYTE_REAL = 0xE3 -> D4 = 3. arg1=3,4,5,... -> ret -2.
@@ -51,11 +51,11 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, 0, 0x00)).toBe(RET_INDEX_OOR);
   });
 
-  it("path #3: arg1 < D4 e arg2 < 0x12 -> ritorna byte @ record_base + arg1*20 + arg2", () => {
+  it("path #3: arg1 < D4 and arg2 < 0x12 -> returns byte @ record_base + arg1*20 + arg2", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    // Struct base = 0x401050. Record 0 = +0..+19, Record 1 = +20..+39, ecc.
+    // Struct base = 0x401050. Record 0 = +0..+19, Record 1 = +20..+39, etc.
     // arg1=1, arg2=5 -> base + 1*20 + 5 = 0x401050 + 25 = 0x401069.
     // workRam offset = 0x401069 - 0x400000 = 0x1069.
     s.workRam[0x1050 + 1 * RECORD_SIZE + 5] = 0xa7;
@@ -66,7 +66,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, 0x11, ROM_BYTE_REAL)).toBe(0x42);
   });
 
-  it("path #4: arg2 == 0x12 -> ritorna word big-endian @ record_base + arg1*20 + 0x12", () => {
+  it("path #4: arg2 == 0x12 -> returns word big-endian @ record_base + arg1*20 + 0x12", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -82,10 +82,10 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, RECORD_WORD_OFF, ROM_BYTE_REAL)).toBe(0xfedc);
   });
 
-  it("priorita' check: arg2 > 0x12 vince anche se arg1 e' fuori range", () => {
+  it("priorita' check: arg2 > 0x12 vince even if arg1 e' outside range", () => {
     // The binary checks arg2 > 0x12 first (set D3=1), then arg1 vs D4
     // (skipped by bne). Therefore arg2 > 0x12 always forces ret -1 even if
-    // arg1 e' anche lui invalido.
+    // arg1 e' also lui invalido.
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
     expect(fieldFetch4058(s, 99, 0x13, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
@@ -94,7 +94,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     );
   });
 
-  it("ROM byte sign-ext: solo i 3 bit bassi contano (0xE3 -> D4=3, 0xFF -> D4=7)", () => {
+  it("ROM byte sign-ext: solo the 3 bit bassi contano (0xE3 -> D4=3, 0xFF -> D4=7)", () => {
     // Verify that different ROM bytes sharing the low 3 bits produce
     // same behavior: D4 is computed as (byte sign-ext-long) & 7.
     const s = emptyGameState();
@@ -102,7 +102,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     writeLongBE(s.workRam, PTR_OFF, ptr);
     s.workRam[0x1050 + 6 * RECORD_SIZE] = 0x9c; // record 6 byte 0
 
-    // 0xE3 & 7 = 3; 0xEB & 7 = 3 -> entrambi -> arg1=3 e' OOR.
+    // 0xE3 & 7 = 3; 0xEB & 7 = 3 -> both -> arg1=3 e' OOR.
     expect(fieldFetch4058(s, 3, 0, 0xe3)).toBe(RET_INDEX_OOR);
     expect(fieldFetch4058(s, 3, 0, 0xeb)).toBe(RET_INDEX_OOR);
 
@@ -125,7 +125,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     expect(fieldFetch4058(s, 0, 0, ROM_BYTE_REAL)).toBe(0xbb);
   });
 
-  it("nessun side effect su workRam (puro read)", () => {
+  it("no side effect su workRam (puro read)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401000);
     s.workRam[0x1050] = 0x77;

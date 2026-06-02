@@ -314,7 +314,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ── Suite D: both >0 ──────────────────────────────────────────────
-  console.log(`\n=== Suite D: delta1>0 e delta2>0 — ${perSuite} cases ===`);
+  console.log(`\n=== Suite D: delta1>0 and delta2>0 — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const tb = Array.from({ length: TABLE_LEN }, () => ri(rng, 200));

@@ -144,7 +144,7 @@ function sineInterp(rom: RomImage, d6: number): { a1: number; d6cos: number } {
 
 /**
  *
- * @param rom     ROM image — per `lerpFromRom` e lookup tables.
+ * @param rom     ROM image — per `lerpFromRom` and lookup tables.
  */
 export function spriteRotate1C014(
   state: GameState,

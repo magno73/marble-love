@@ -75,7 +75,7 @@ function readU32BE(state: GameState, off: number): number {
  *                 il long a `argPtr+0x2`.
  * @param _subs    placeholder (FUN_1730C non ha JSR).
  *
- * palette / sprite / alpha RAM sono invariati.
+ * palette / sprite / alpha RAM are invariati.
  */
 export function stringSlotMatch1730C(
   state: GameState,

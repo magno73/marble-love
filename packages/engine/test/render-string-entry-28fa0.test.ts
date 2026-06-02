@@ -16,7 +16,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
-  it("scrive col, tickOff, marker=0 nei 3 byte attesi e invoca renderStringChain2 con (0x40041C, ext.l(arg3.w))", () => {
+  it("writes col, tickOff, marker=0 in the 3 byte attesi and invoca renderStringChain2 con (0x40041C, ext.l(arg3.w))", () => {
     const s = emptyGameState();
     // Pre-fill marker with non-zero sentinel to verify clear.
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xaa;
@@ -37,7 +37,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + COL_BYTE_OFF]).toBe(0x78);
     expect(s.workRam[ENTRY_OFF + TICKOFF_BYTE_OFF]).toBe(0x42);
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
-    // stringPtr intatto (offset +2..+5)
+    // stringPtr intact (offset +2..+5)
     expect(s.workRam[ENTRY_OFF + 2]).toBe(0xde);
     expect(s.workRam[ENTRY_OFF + 3]).toBe(0xad);
     expect(s.workRam[ENTRY_OFF + 4]).toBe(0xbe);
@@ -49,7 +49,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(renderArgs!.addr).toBe(0x0040041c);
   });
 
-  it("subs undefined → no-op sulla render call, ma byte writes avvengono comunque", () => {
+  it("subs undefined → no-op on the render call, but byte writes avvengono comunque", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xff;
     expect(() => {
@@ -60,7 +60,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
   });
 
-  it("solo i 3 byte target sono modificati (no spillage in [0x41A..0x428] al di fuori di +0/+1/+6)", () => {
+  it("solo the 3 bytes target are modificati (no spillage in [0x41A..0x428] al of outside of +0/+1/+6)", () => {
     const s = emptyGameState();
     // Pre-fill the entire span with sentinel.
     for (let i = ENTRY_OFF - 2; i < ENTRY_OFF + 0xc; i++) {
@@ -79,7 +79,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     }
   });
 
-  it("propaga arg3 sign-extended come secondo arg di renderStringChain2", () => {
+  it("propaga arg3 sign-extended as second arg of renderStringChain2", () => {
     const s = emptyGameState();
     let receivedArg3: number | null = null;
     const subs = {
@@ -105,7 +105,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(receivedArg3).toBe(0xffffffff);
   });
 
-  it("chiama renderStringChain2 anche quando i 3 byte sono già nei valori target", () => {
+  it("calls renderStringChain2 also when the 3 bytes are already in the values target", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + 0] = 0x42;
     s.workRam[ENTRY_OFF + 1] = 0x42;

@@ -147,7 +147,7 @@ function helperFun3F3E(state: GameState): number {
  * counter first and the accumulator second. Returns D0 as 0/1.
  *
  * @param state  GameState. Legge:
- *   - `*0x401FFC` (long ptr) e bytes a ptr+0xA / +0xB (via helper)
+ *   - `*0x401FFC` (long ptr) and bytes a ptr+0xA / +0xB (via helper)
  *   - `0x401FF7` (counter), `0x401FF5` (acc)
  *
  *   Mutates only on the work path:

@@ -13,7 +13,7 @@
  *   - Launch binary via `callFunction(cpu, 0x5250, [])` with D1 pre-set
  *     via `cpu.system.setRegister("d1", d1)`.
  *   - Lancia `stateSub5250(state, d1)`.
- *   - Compare primary e secondary long-BE post-esecuzione.
+ *   - Compare primary and secondary long-BE post-esecuzione.
  *
  * Casi boundary:
  *   0: d1=0, primary=0, secondary=0            → no-op

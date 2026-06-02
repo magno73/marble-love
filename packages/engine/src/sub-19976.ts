@@ -103,8 +103,8 @@ function readSignedWordRom(rom: RomImage, addr: number): number {
 
 /**
  *
- * @param state       GameState (modifies `entity[0x00..0x07]` e `entity[0x0C..0x13]`).
- * @param rom         RomImage per leggere le tabthe ROMs 0x244B6 (dX) e 0x244D6 (dY).
+ * @param state       GameState (modifies `entity[0x00..0x07]` and `entity[0x0C..0x13]`).
+ * @param rom         RomImage per leggere le tabthe ROMs 0x244B6 (dX) and 0x244D6 (dY).
  */
 export function sub19976(state: GameState, rom: RomImage, entityAddr: number): void {
   const off = (entityAddr - 0x400000) >>> 0;
@@ -124,7 +124,7 @@ export function sub19976(state: GameState, rom: RomImage, entityAddr: number): v
   writeU32(state, off + ENTITY_POS_X_OFFSET, ((readU32(state, off + ENTITY_POS_X_OFFSET) + d2) >>> 0));
   writeU32(state, off + ENTITY_POS_Y_OFFSET, ((readU32(state, off + ENTITY_POS_Y_OFFSET) + d1) >>> 0));
 
-  // If state == 7 → asr.l #2 (signed shift right by 2) su d2 e d1.
+  // If state == 7 → asr.l #2 (signed shift right by 2) su d2 and d1.
   let velX = d2;
   let velY = d1;
   if ((r[off + ENTITY_STATE_OFFSET] ?? 0) === STATE_FINE_SCALE) {

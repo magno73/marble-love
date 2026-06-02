@@ -1,5 +1,5 @@
 /**
- * Test waitVblankStateGated (FUN_28DB8) — smoke tests sui rami principali.
+ * Test waitVblankStateGated (FUN_28DB8) — smoke tests sui branches principali.
  *
  * Bit-perfect verified against the binary through
  * `cli/src/test-wait-vblank-state-gated-parity.ts`.
@@ -15,7 +15,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("waitVblankStateGated (FUN_28DB8)", () => {
-  it("count <= 0: nessuna iterazione, no side effects, D0w == arg word", () => {
+  it("count <= 0: no iterazione, no side effects, D0w == arg word", () => {
     const s = emptyGameState();
     s.workRam[VBLANK_TICK_COUNTER_OFF] = 0x42;
     s.workRam[VBLANK_MAILBOX_OFF] = 0x99;
@@ -28,14 +28,14 @@ describe("waitVblankStateGated (FUN_28DB8)", () => {
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // invariato
     expect(s.workRam[VBLANK_MAILBOX_OFF]).toBe(0x99); // invariato
 
-    // count signed negativo (es. 0xFFFF = -1)
+    // count signed negativo (e.g. 0xFFFF = -1)
     const rNeg = waitVblankStateGated(s, 0xffff);
     expect(rNeg.iterations).toBe(0);
-    expect(rNeg.d0w).toBe(0xffff); // count word ritornato as-is
+    expect(rNeg.d0w).toBe(0xffff); // count word returned as-is
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // ancora invariato
   });
 
-  it("count > 0, no abort: incrementa 0x3F0 di N, mailbox cleared, D0w = sext(loByte)", () => {
+  it("count > 0, no abort: increments 0x3F0 of N, mailbox cleared, D0w = sext(loByte)", () => {
     const s = emptyGameState();
     s.workRam[VBLANK_TICK_COUNTER_OFF] = 0x10;
     s.workRam[GAME_STATE_LO_BYTE_OFF] = 0x05; // bit 7 = 0 → sext_w = 0x0005
@@ -71,7 +71,7 @@ describe("waitVblankStateGated (FUN_28DB8)", () => {
     expect(r.d0w).toBe(0xff80); // sext_w(0x80) = 0xFF80
   });
 
-  it("abortAtIter == k esegue esattamente k iterazioni, aborted=true", () => {
+  it("abortAtIter == k runs exactly k iterazioni, aborted=true", () => {
     const s = emptyGameState();
     s.workRam[VBLANK_TICK_COUNTER_OFF] = 0x00;
     s.workRam[GAME_STATE_LO_BYTE_OFF] = 0x07;
@@ -93,7 +93,7 @@ describe("waitVblankStateGated (FUN_28DB8)", () => {
     expect(r.aborted).toBe(false);
   });
 
-  it("abortAtIter == 1: minimo numero di iterazioni eseguite (1)", () => {
+  it("abortAtIter == 1: minimo number of iterazioni eseguite (1)", () => {
     const s = emptyGameState();
     s.workRam[GAME_STATE_LO_BYTE_OFF] = 0x00;
 

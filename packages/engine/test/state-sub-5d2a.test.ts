@@ -1,5 +1,5 @@
 /**
- * state-sub-5d2a.test.ts — smoke tests di stateSub5D2A (FUN_5D2A).
+ * state-sub-5d2a.test.ts — smoke tests of stateSub5D2A (FUN_5D2A).
  *
  *   - bitmap scan MSB→LSB (mask = 0x8000..0x0001)
  *   - branch su byte ROM @ 0x10072 (gate) a iter D4=7
@@ -27,7 +27,7 @@ interface CapturedCall {
 }
 
 describe("stateSub5D2A (FUN_5D2A)", () => {
-  it("invoca inner3784 esattamente 32 volte (16 iter × 2 celle)", () => {
+  it("invoca inner3784 exactly 32 times (16 iter × 2 celle)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -55,7 +55,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("attr cella sinistra: 0xA0 a D4 == arg1_word, altrimenti 0x20", () => {
+  it("attr cella sinistra: 0xA0 a D4 == arg1_word, otherwise 0x20", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -77,7 +77,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("default callback no-op → ritorna 0, non muta state.workRam o ROM", () => {
+  it("default callback no-op → returns 0, non muta state.workRam o ROM", () => {
     const state = emptyGameState();
     state.workRam[0x100] = 0x77;
     const rom = emptyRomImage();
@@ -104,7 +104,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     });
 
     // x_left a D4=7 = sign-ext(A3w=4) + sign-ext(A4w).
-    // A4w dipende da bit 8 di mask (mask shiftata 8 volte = 0x0080).
+    // A4w dipende da bit 8 of mask (mask shiftata 8 times = 0x0080).
     // arg0=0x8000, mask=0x0080 → bit clear → A4=8.
     // x_left = 4 + 8 = 12.
     // y a D4=7 = (15-7)*2 + 0xFFF5 = 16 + 0xFFF5 = 0x10005 → word 0x0005.
@@ -141,7 +141,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[16]!.x).toBe(8);
     expect(calls[16]!.y).toBe(21);
 
-    // Iter ultimo (D4=0): mask=0x0001. arg0=0x8000 & 1 = 0 → A4=8.
+    // Iter last (D4=0): mask=0x0001. arg0=0x8000 & 1 = 0 → A4=8.
     // y = (15-0)*2 + 5 = 35. x_left = 0 + 8 = 8.
     expect(calls[30]!.x).toBe(8);
     expect(calls[30]!.y).toBe(35);
@@ -167,7 +167,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[15 * CALLS_PER_ITER]!.x).toBe(7);
   });
 
-  it("bitmap scan: arg0 = 0xFFFF → tutti gli A4=7 (tutti i bit set)", () => {
+  it("bitmap scan: arg0 = 0xFFFF → all the A4=7 (all i bit set)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -200,7 +200,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("trailing arg (extra) sempre 0 in tutte le 32 chiamate", () => {
+  it("trailing arg (extra) always 0 in all le 32 chiamate", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -214,18 +214,18 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("ritorna l'ultimo D0 di inner3784 (per fedeltà al binario)", () => {
+  it("returns l'last D0 of inner3784 (per fedeltà al binario)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     let counter = 0;
     const r = stateSub5D2A(state, rom, 0x1234, 0x0007, () => {
       counter++;
-      return counter; // ultimo invocato → counter = 32
+      return counter; // last invocato → counter = 32
     });
     expect(r).toBe(32);
   });
 
-  it("ordine chiamate: per iter k, prima cella sinistra (call 2k), poi destra (2k+1)", () => {
+  it("ordine chiamate: per iter k, first cella sinistra (call 2k), poi destra (2k+1)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const order: ("L" | "R")[] = [];

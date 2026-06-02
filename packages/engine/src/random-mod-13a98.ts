@@ -79,7 +79,7 @@ export function randomMod13A98(state: GameState, maxExclusive: number): number {
   state.rng.seed = as_u32(seed);
   state.rng.callsThisFrame = as_u32((state.rng.callsThisFrame as unknown as number) + 1);
 
-  // Maschera: D3.lo = (1 << N) - 1  (after N ROL.L #1 of 0xFFFF0000)
+  // Mask: D3.lo = (1 << N) - 1  (after N ROL.L #1 of 0xFFFF0000)
   const mask = d3 & 0xffff;
   let result = seed & mask;
 

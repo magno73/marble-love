@@ -1,5 +1,5 @@
 /**
- * score-table-update-4790.test.ts — smoke tests di `scoreTableUpdate4790`
+ * score-table-update-4790.test.ts — smoke tests of `scoreTableUpdate4790`
  * (FUN_004790, 1178 byte).
  *
  * `packages/cli/src/test-score-table-update-4790-parity.ts` vs Musashi.
@@ -49,18 +49,18 @@ const SUBS_BASE: ScoreTableUpdate4790Subs = {
 };
 
 describe("scoreTableUpdate4790 (FUN_4790)", () => {
-  it("nessun delta → tabella invariata, flag2 non settato", () => {
+  it("no delta → table invariata, flag2 non set", () => {
     const s = makeState();
-    // Accumulatori = 0 → entrambe le entry saltate
+    // Accumulatori = 0 → both le entry saltate
     const before = Array.from(s.workRam.slice(BASE_OFF, BASE_OFF + 60));
     scoreTableUpdate4790(s, 0x1000, 2, 0x2000, 2, 0, 0, 0, SUBS_BASE);
     const after = Array.from(s.workRam.slice(BASE_OFF, BASE_OFF + 60));
     expect(after).toEqual(before);
   });
 
-  it("prima entry con delta non-zero → cella [row*20+col] incrementata di 1", () => {
+  it("first entry con delta non-zero → cella [row*20+col] incrementata of 1", () => {
     const s = makeState();
-    // Imposta accumulatore A2 (0x401F86) = 600 (> 0, < divisor*colThresh overflow)
+    // Sets accumulatore A2 (0x401F86) = 600 (> 0, < divisor*colThresh overflow)
     writeLongBE(s.workRam, A2_OFF, 600);
     // divisorW = 300, colThresh = 7
     // quotient = 600/300 = 2; A0 = max(0, 2-7)=0 (2 < 7 → A0=0)
@@ -73,7 +73,7 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
 
   it("delta grande → col clamped a 0x11 (17)", () => {
     const s = makeState();
-    // Imposta A2 = 100_000 (grande)
+    // Sets A2 = 100_000 (grande)
     writeLongBE(s.workRam, A2_OFF, 100_000);
     // quotient = 100000/300 = 333; A0 = 333 - 7 = 326 > 17 → clamped a 17
     // row cap arg2=0; numRec=3 (>0); 3>0 → rowD2=0
@@ -82,7 +82,7 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
     expect(s.workRam[BASE_OFF + 17]).toBe(1);
   });
 
-  it("overflow cella 0xFF→0x00 → setta flag2 → decay (lsr.b #1) su tutte le celle", () => {
+  it("overflow cella 0xFF→0x00 → setta flag2 → decay (lsr.b #1) su all le celle", () => {
     const s = makeState();
     s.workRam[BASE_OFF + 0] = 0xff;
     s.workRam[BASE_OFF + 1] = 0x80;
@@ -122,15 +122,15 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
     expect(scoreAccum).toBe(500);
   });
 
-  // ── Smoke 7: score wrap oltre 0xE10 ─────────────────────────────────────
-  it("score accum >= 0xE10 → wrap: dispatch cmd 5 e sottrai multiplo", () => {
+  // ── Smoke 7: score wrap beyond 0xE10 ─────────────────────────────────────
+  it("score accum >= 0xE10 → wrap: dispatch cmd 5 and sottrai multiplo", () => {
     const s = makeState();
     const calls: Array<[number, number]> = [];
     const subs: ScoreTableUpdate4790Subs = {
       ...SUBS_BASE,
       soundDispatch: (cmd, data) => { calls.push([cmd, data]); return 0; },
     };
-    // Imposta A2+4 = 3601 (> 0xE10=3600)
+    // Sets A2+4 = 3601 (> 0xE10=3600)
     writeLongBE(s.workRam, A2_OFF + 4, 3601);
     scoreTableUpdate4790(s, 0, 0, 0, 0, 0, 0, 0, subs);
     // 3601 > 3600 → wrap: wrapDiv = floor(3601/3600) = 1; dispatch (5, ff5+1+1)

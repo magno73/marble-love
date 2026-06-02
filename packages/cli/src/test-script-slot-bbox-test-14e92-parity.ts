@@ -11,7 +11,7 @@
  *   - `FUN_000158AC` (sound command) **stubbed with RTS**. TS no-op. Match.
  *
  * **Suite** (4 × 125 = 500):
- *        post-selector e early exit per non-armed).
+ *        post-selector and early exit per non-armed).
  *        random + miss random).
  *   - C: 1 armed slot with custom bbox and random positions.
  *   - D: edge cases (selector boundary {0,1,2,3,5,6}, marble@(0,0,0),
@@ -413,7 +413,7 @@ function makeSlotInit(
   ri: (n: number) => number,
   cfg: { armedRate: number; useDefault: number; states: number[] },
 ): SlotInit {
-  // Allocazione record area: P1 e P2 per slot i.
+  // Allocazione record area: P1 and P2 per slot i.
   const p1 = REC_AREA_BASE + i * 0x20; // 32 byte per slot.
   const p2 = REC_AREA_BASE + i * 0x20 + 0x10;
   const useDefault = rng() < cfg.useDefault;

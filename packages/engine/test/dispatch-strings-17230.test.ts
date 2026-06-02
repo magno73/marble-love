@@ -1,5 +1,5 @@
 /**
- * Test dispatchStrings17230 (FUN_17230) — smoke tests sui rami principali.
+ * Test dispatchStrings17230 (FUN_17230) — smoke tests sui branches principali.
  *
  * `cli/src/test-dispatch-strings-17230-parity.ts`.
  */
@@ -21,7 +21,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(CALLEE_ADDR).toBe(0x0001725a);
   });
 
-  it("invoca callee esattamente 7 volte, nell'ordine 68k (i=0..6)", () => {
+  it("invoca callee exactly 7 times, in the ordine 68k (i=0..6)", () => {
     const calls: number[] = [];
     dispatchStrings17230((slot) => calls.push(slot >>> 0));
 
@@ -34,7 +34,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     ]);
   });
 
-  it("nessun side-effect del dispatcher: callee no-op → nessuna mutazione osservabile", () => {
+  it("no side-effect of the dispatcher: callee no-op → no mutation osservabile", () => {
     let count = 0;
     dispatchStrings17230(() => {
       count++;
@@ -58,7 +58,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(mutated).toBe(SLOT_COUNT);
   });
 
-  it("ordine call deterministico: nessun bit fuori posto col post-incremento di D3", () => {
+  it("ordine call deterministico: no bit outside posto col post-incremento of D3", () => {
     // from the add. Verify that the first arg is 0x401482, not 0x4014C4.
     const first: number[] = [];
     dispatchStrings17230((slot) => {
@@ -67,7 +67,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(first[0]).toBe(SLOT_BASE_ADDR);
   });
 
-  it("dispatcher è puro: due chiamate con callback identica → identici call sequences", () => {
+  it("dispatcher is puro: due chiamate con callback identica → identici call sequences", () => {
     const a: number[] = [];
     const b: number[] = [];
     dispatchStrings17230((s) => a.push(s));
@@ -75,7 +75,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(b).toEqual(a);
   });
 
-  it("eccezione lanciata dal callee si propaga (no swallowing)", () => {
+  it("eccezione lanciata from the callee si propaga (no swallowing)", () => {
     expect(() => {
       dispatchStrings17230((slot) => {
         if (slot === SLOT_BASE_ADDR + 3 * SLOT_STRIDE) {
@@ -85,7 +85,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     }).toThrow("test");
   });
 
-  it("ultimo slot pushato è 0x40160E (i=6); D3 post-loop unused è 0x401650 (i=7)", () => {
+  it("last slot pushato is 0x40160E (i=6); D3 post-loop unused is 0x401650 (i=7)", () => {
     // The 7th (last) pushed pointer corresponds to i=6: 0x401482 + 6*0x42 = 0x40160E.
     const calls: number[] = [];
     dispatchStrings17230((s) => calls.push(s));

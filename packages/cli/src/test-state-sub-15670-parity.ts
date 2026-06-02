@@ -29,7 +29,7 @@
  *   - C: count = 1 with a candidate BLOCKED by at least 1 marble-slot collision
  *   - D: count = 2 with both candidates valid -> triggers FUN_15FE6
  *
- *   ring buffer FUN_15460, counter, e fun_15fe6_ret slot.
+ *   ring buffer FUN_15460, counter, and fun_15fe6_ret slot.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-15670-parity.ts [N]
  */

@@ -7,10 +7,10 @@
  * matches spawn bytes @ 0x400697/0x400699 and runs one of two branches:
  *
  *   - **math/sound**: if both `byte((long@684>>19))`, `byte((long@688>>19))`
- *     e `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
+ *     and `entity[0x14].w` matchano, applica damping (entity[0..3]>>1)±0x6000
  *   - **reflect**: if signed word distance (`entity[0x14] - entry[0x6]`) < 12,
  *
- * entity[0xc]=long@684 e entity[0x10]=long@688.
+ * entity[0xc]=long@684 and entity[0x10]=long@688.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: replicato
@@ -402,7 +402,7 @@ async function main(): Promise<void> {
     console.log(`    binRet=0x${f.binRet.toString(16)} tsRet=0x${f.tsRet.toString(16)}`);
     console.log(`    binSeedAfter=0x${f.binSeed.toString(16)} tsSeedAfter=0x${f.tsSeed.toString(16)}`);
     console.log(`    binCapture=0x${f.binCapture.toString(16)} tsCapture=0x${f.tsCapture.toString(16)}`);
-    // Stampa primi N byte differenti
+    // Stampa first N byte differenti
     let diffs = 0;
     for (let i = 0; i < ENTITY_SIZE && diffs < 8; i++) {
       if (f.binEntity[i] !== f.tsEntity[i]) {

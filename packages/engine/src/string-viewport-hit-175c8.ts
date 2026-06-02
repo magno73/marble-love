@@ -8,7 +8,7 @@
  * `(*0x400690 ± 3, *0x400692 ± 3)` (a 6×6 square around the "marble" /
  * world cursor). On overlap with the **first** colliding slot:
  *   - `slot[+0x25] = 0x1c`;
- *     e `FUN_158AC(0x5e)` (sound trigger);
+ *     and `FUN_158AC(0x5e)` (sound trigger);
  *
  *
  * **Disasm 0x175C8..0x176D0** (266 byte):

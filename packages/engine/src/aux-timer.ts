@@ -58,7 +58,7 @@ import { dequeueByte } from "./byte-queue.js";
 /** workRam offsets (absolute address = +0x400000). */
 export const ACTIVE_FLAG_OFF = 0x3b2 as const; // byte
 export const COUNTER_OFF = 0x3b4 as const; // byte
-export const COUNTDOWN_HI_OFF = 0x3b8 as const; // word big-endian (hi byte)
+export const COUNTDOWN_HI_OFF = 0x3b8 as const; // word big-endian (hthe bytes)
 export const COUNTDOWN_LO_OFF = 0x3b9 as const; // word big-endian (lo byte)
 
 /**

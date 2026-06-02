@@ -131,7 +131,7 @@ function readLongBE(bytes: Uint8Array, off: number): number {
  * @param inner5334     Callback that models `FUN_00005334`. Invoked 1 time
  *                      with `(*ROM[0x10074])`. Default `() => 0`.
  *
- *          e 0x5B7A ignorano D0).
+ *          and 0x5B7A ignorano D0).
  *
  *     `inner52DA` #1 modifies workRam @ `0x401F98/99`, then `inner5334`
  */

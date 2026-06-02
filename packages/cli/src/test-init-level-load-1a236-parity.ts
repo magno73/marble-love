@@ -7,7 +7,7 @@
  *        `addq.b #1, sentinel.l ; rts`     (8 byte)
  *        - 4 sentinel byte (0x4003E0..0x4003E3)
  *   3. Run `initLevelLoad1A236()` with 4 callbacks that increment
- *      the stessi 4 sentinel byte in `state.workRam`.
+ *      the stessthe 4 sentinel byte in `state.workRam`.
  *
  * Pattern variation per case:
  *     read-modify-write).

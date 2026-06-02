@@ -1,5 +1,5 @@
 /**
- * slot-spawn-pattern-13d38.test.ts — corner cases di `slotSpawnPattern13D38`
+ * slot-spawn-pattern-13d38.test.ts — corner cases of `slotSpawnPattern13D38`
  * (FUN_00013D38).
  *
  * `packages/cli/src/test-slot-spawn-pattern-13d38-parity.ts`.
@@ -27,7 +27,7 @@ function setupCanonicalRomTable(rom: RomImage): void {
   }
 }
 
-/** Setup delta-stream @ 0x1EF32 (16 byte: 8 coppie di delta x/y). */
+/** Setup delta-stream @ 0x1EF32 (16 byte: 8 coppie of delta x/y). */
 function setupDeltaStream(rom: RomImage, bytes: readonly number[]): void {
   for (let i = 0; i < bytes.length; i++) {
     rom.program[DELTA_STREAM + i] = bytes[i]! & 0xff;
@@ -35,7 +35,7 @@ function setupDeltaStream(rom: RomImage, bytes: readonly number[]): void {
 }
 
 describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
-  it("counter pre=1 → decrementa a 0 → ritorna 0x01; mark byte +0x1C = 1", () => {
+  it("counter pre=1 → decrementa a 0 → returns 0x01; mark byte +0x1C = 1", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -53,7 +53,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);
   });
 
-  it("counter pre=2 → decrementa a 1 → ritorna 0; mark byte +0x1C = 1", () => {
+  it("counter pre=2 → decrementa a 1 → returns 0; mark byte +0x1C = 1", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -71,7 +71,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);
   });
 
-  it("counter pre=0 → decrementa a 0xFF → ritorna 0 (counter post != 0)", () => {
+  it("counter pre=0 → decrementa a 0xFF → returns 0 (counter post != 0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -88,7 +88,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x57]).toBe(0xff);
   });
 
-  it("counter pre=0x21 (D2=0x20-0x21=-1) → tutti i record skip (D1<0 base ma D2<0 → primo iter D1=-1<0 OK; ma per D1>=8 deve essere D2>=8+iter*2). Verifica path emit con tutti delta=0 e selettore canonico", () => {
+  it("counter pre=0x21 (D2=0x20-0x21=-1) → all i record skip (D1<0 base but D2<0 → first iter D1=-1<0 OK; but per D1>=8 must be D2>=8+iter*2). Verifica path emit con all delta=0 and selettore canonico", () => {
     // Iter 0: D1 = 0 → range [0..3] → emit @ 0xA4. Iter 1: D1 = -2 → use orig.
     const s = emptyGameState();
     const rom = emptyRomImage();
@@ -101,13 +101,13 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     s.workRam[argOff + 0x57] = 0x20;
     s.workRam[argOff + 0x58] = 0; // selector 0 → A1 = slot[0] = self
 
-    // Imposta (A0+0x1E) come long: high=0x0010, low=0x0020 (Y_orig=0x10, X_orig=0x20).
+    // Sets (A0+0x1E) as long: high=0x0010, low=0x0020 (Y_orig=0x10, X_orig=0x20).
     s.workRam[argOff + 0x1e] = 0x00;
     s.workRam[argOff + 0x1f] = 0x10;
     s.workRam[argOff + 0x20] = 0x00;
     s.workRam[argOff + 0x21] = 0x20;
 
-    // Imposta A1+0x4E (= self+0x4E) come long: high=0x0030, low=0x0040.
+    // Sets A1+0x4E (= self+0x4E) as long: high=0x0030, low=0x0040.
     s.workRam[argOff + 0x4e] = 0x00;
     s.workRam[argOff + 0x4f] = 0x30;
     s.workRam[argOff + 0x50] = 0x00;
@@ -136,7 +136,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect((s.workRam[r7]! << 8) | s.workRam[r7 + 1]!).toBe(0x0112);
   });
 
-  it("counter pre=0xE0 (D2=0x20-(-0x20)=0x40) → tutti gli iter hanno D1>=8 (skip): nessun emit, charcode tutti 0", () => {
+  it("counter pre=0xE0 (D2=0x20-(-0x20)=0x40) → all the iter hanno D1>=8 (skip): no emit, charcode all 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -191,7 +191,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     slotSpawnPattern13D38(s, rom, argPtr);
 
     // Charcodes still determined by the iteration count, which produces emit
-    // 0x10B (iter 0, D1=0 → emit nel range [0..3]).
+    // 0x10B (iter 0, D1=0 → emit in the range [0..3]).
     const r0 = argOff + 0xa4;
     expect((s.workRam[r0]! << 8) | s.workRam[r0 + 1]!).toBe(0x010b);
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);

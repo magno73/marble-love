@@ -195,7 +195,7 @@ export const BIAS_SENTINEL_177F8 = 0x1000 as const;
 
 export const LEVEL_HEADER_BOUND_OFF = 0x18 as const;
 
-/** Workram base e size. */
+/** Workram base and size. */
 const WORK_RAM_BASE_ADDR = 0x00400000 as const;
 const WORK_RAM_SIZE = 0x2000 as const;
 
@@ -279,8 +279,8 @@ export interface DispatchResult177F8 {
  * Replica `FUN_000177F8` — `stringDispatchTable177F8`.
  *
  *
- *                RAM e PF RAM (i primi 0x2000 byte sono PF RAM, poi 0x2000
- *                e 0x3000 = sprite, 0x3000..0x4000 = alpha).
+ *                RAM and PF RAM (the first 0x2000 byte are PF RAM, poi 0x2000
+ *                and 0x3000 = sprite, 0x3000..0x4000 = alpha).
  */
 export function stringDispatchTable177F8(
   state: GameState,

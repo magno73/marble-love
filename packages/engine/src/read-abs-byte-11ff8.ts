@@ -258,7 +258,7 @@ export function helper11FF8(
 
     // D4b = 0: continue outer loop to D3b=10.
     // (D4b never recovers, but we must still call decodeEntry for each entry
-    // to replicate the workRam side effects of those calls.)
+    // to replicated the workRam side effects of those calls.)
   }
 
   // After loop: d4b = 1 (match) or 0 (no match); d3bScan = matched index or 10.

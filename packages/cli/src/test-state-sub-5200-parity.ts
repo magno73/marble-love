@@ -11,7 +11,7 @@
  *     le status flags @ 0x1F5E: A2 ≤ 0x401F5E - 0x31 = 0x401F2D →
  *     conservativamente A2 ≤ 0x401E00.
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x5200)` e `stateSub5200(state, a2)`.
+ *   - Lancia `callFunction(cpu, 0x5200)` and `stateSub5200(state, a2)`.
  *
  * Smoke cases (first 3):
  *   1: a2 = 0x400800 (mid range)

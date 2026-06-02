@@ -253,7 +253,7 @@ function blockFreqToBasePhaseStep(blockFreq: number, delta: number): number {
   return (OPM_PHASE_STEP_TABLE[effFreq] ?? 0) >> (block ^ 7);
 }
 
-/** Aggiorna phaseInc dato il block/frequency OPM (KC+KF), DT1/DT2 e MUL. */
+/** Aggiorna phaseInc dato il block/frequency OPM (KC+KF), DT1/DT2 and MUL. */
 export function operatorSetOpmBlockFreq(
   op: Operator,
   blockFreq: number,
@@ -269,7 +269,7 @@ export function operatorSetOpmBlockFreq(
   op.phaseInc = Math.trunc((detuned * multiple) / 2);
 }
 
-/** Aggiorna phaseInc dato il key code base (Hz) e MUL.
+/** Aggiorna phaseInc dato il key code base (Hz) and MUL.
  * phaseInc is measured in phase units per sample in the 20-bit domain. */
 export function operatorSetFreq(op: Operator, baseFreqHz: number, sampleRate: number): void {
   const mul = MUL_TABLE[op.mul] ?? 1;

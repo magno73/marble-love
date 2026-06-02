@@ -19,7 +19,7 @@ import { emptyGameState } from "../src/state.js";
 const WORK_RAM_BASE = 0x400000;
 
 describe("objectEnterState23 (FUN_160D4)", () => {
-  it("scrive 0x23 al byte di stato e 0x00070000 al timer long (big-endian)", () => {
+  it("writes 0x23 al byte of state and 0x00070000 al timer long (big-endian)", () => {
     const s = emptyGameState();
     const ptr = 0x00401e00;
     const off = ptr - WORK_RAM_BASE;
@@ -37,7 +37,7 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     expect(TIMER_LONG_VALUE).toBe(0x00070000);
   });
 
-  it("non tocca byte fuori dai due campi (1A e 68..6B)", () => {
+  it("non tocca byte outside from the due fields (1A and 68..6B)", () => {
     const s = emptyGameState();
     const ptr = 0x00401c00;
     const off = ptr - WORK_RAM_BASE;
@@ -61,7 +61,7 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     }
   });
 
-  it("idempotente: chiamate ripetute lasciano la stessa scrittura", () => {
+  it("idempotente: chiamate ripetute lasciano la same scrittura", () => {
     const s = emptyGameState();
     const ptr = 0x00401d80;
     const off = ptr - WORK_RAM_BASE;
@@ -84,7 +84,7 @@ describe("objectEnterState23 (FUN_160D4)", () => {
   it("supporta più oggetti distinti senza overlap", () => {
     const s = emptyGameState();
     const ptrA = 0x00401c00;
-    const ptrB = 0x00401d00; // 0x100 = 256 byte, ben oltre i 0x6C usati
+    const ptrB = 0x00401d00; // 0x100 = 256 byte, ben beyond i 0x6C used
 
     objectEnterState23(s, ptrA);
     expect(s.workRam[ptrB - WORK_RAM_BASE + 0x1a]).toBe(0x00);
@@ -97,7 +97,7 @@ describe("objectEnterState23 (FUN_160D4)", () => {
     expect(s.workRam[ptrB - WORK_RAM_BASE + 0x69]).toBe(0x07);
   });
 
-  it("sovrascrive byte di stato precedente (es. 0x21 → 0x23)", () => {
+  it("sovrascrive byte of state precedente (e.g. 0x21 → 0x23)", () => {
     const s = emptyGameState();
     const ptr = 0x00401e80;
     const off = ptr - WORK_RAM_BASE;

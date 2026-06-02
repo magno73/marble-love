@@ -48,7 +48,7 @@ const FUN_264AA = 0x000264aa;
 /** Stub bytes per `FUN_264AA`: `move.l (8,SP),D0` ; `rts`. */
 const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 
-/** Slot pointers candidates (work RAM): mix between singletons e generici. */
+/** Slot pointers candidates (work RAM): mix between singletons and generici. */
 const PTR_CHOICES = [
   0x00400018, // SINGLETON_SLOT_A
   0x004000fa, // SINGLETON_SLOT_B

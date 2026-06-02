@@ -6,13 +6,13 @@ import { fun261BC } from "../src/sub-261bc.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("fun261BC (FUN_261BC)", () => {
-  it("non solleva eccezioni con state vuoto e slot vuoto", () => {
+  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     expect(() => fun261BC(s, 0x400a20, 0x40000, rom)).not.toThrow();
   });
 
-  it("magnitude >= dist (entrambi 0): nessuna mutazione VX/VY", () => {
+  it("magnitude >= dist (both 0): no mutation VX/VY", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     const off = 0xa20;
@@ -83,7 +83,7 @@ describe("fun261BC (FUN_261BC)", () => {
     expect(s.workRam[off + 0xc4] ?? 0).toBeGreaterThanOrEqual(0);
   });
 
-  it("ritorna D0: magnitude se no clamp", () => {
+  it("returns D0: magnitude se no clamp", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     // VX = VY = 0 → dist = 0; magnitude (0x40000) >= 0 → no clamp → ret = magnitude

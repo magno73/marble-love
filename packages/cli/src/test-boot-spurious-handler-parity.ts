@@ -7,7 +7,7 @@
  * `jmp 0x117B2` (NO `rts`).
  *
  * To test via `callFunction` (which uses sentinel return + rts), patch
- * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) sostituendo i primi 2
+ * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) replacing the first 2
  * eseguiti.
  *
  *   - 0x000E         (sentinel byte)
@@ -160,7 +160,7 @@ async function main(): Promise<void> {
   let firstFail: FailRecord | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP — la jsr 0x100E0 e la patched rts hanno bisogno of stack room.
+    // Reset SP — la jsr 0x100E0 and la patched rts hanno bisogno of stack room.
     const spInitial = 0x00401efc;
     cpu.system.setRegister("sp", spInitial);
 

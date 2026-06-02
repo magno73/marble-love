@@ -1,5 +1,5 @@
 /**
- * helper-12f44.test.ts — smoke + corner cases di `helper12F44` (FUN_00012F44).
+ * helper-12f44.test.ts — smoke + corner cases of `helper12F44` (FUN_00012F44).
  *
  * Bit-perfect parity vs binary verified in
  * `packages/cli/src/test-helper-12f44-parity.ts` (500/500).
@@ -78,14 +78,14 @@ describe("helper12F44 (FUN_00012F44)", () => {
 
   // ── Mode-0: bind ─────────────────────────────────────────────────────────
 
-  it("mode-0: scrive scriptPtr in slot+0x3A, slot+0x1A=3, slot+0x18=1", () => {
+  it("mode-0: writes scriptPtr in slot+0x3A, slot+0x1A=3, slot+0x18=1", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     const scriptPtr = 0x1d854;
 
     helper12F44(state, rom, SLOT0, 0, scriptPtr);
 
-    // slot+0x18 = 1 (occupato)
+    // slot+0x18 = 1 (occupied)
     expect(rb(state, SLOT0 + 0x18)).toBe(0x01);
     // slot+0x1A = 3 (state init)
     expect(rb(state, SLOT0 + 0x1a)).toBe(0x03);
@@ -107,7 +107,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rb(state, 0x40075c)).toBe(0x07);
   });
 
-  it("mode-0: non tocca altri offset del record", () => {
+  it("mode-0: non tocca altri offset of the record", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     // Pre-set some fields
@@ -125,7 +125,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
 
   // ── Mode-1: free ─────────────────────────────────────────────────────────
 
-  it("mode-1: azzera slot+0x18 e slot+0x1A", () => {
+  it("mode-1: azzera slot+0x18 and slot+0x1A", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wb(state, SLOT0 + 0x18, 0x01);
@@ -139,7 +139,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rb(state, SLOT0 + 0x1a)).toBe(0x00);
   });
 
-  it("mode-1: A0 == *0x400974 → azzera 0x400974 e 0x400978", () => {
+  it("mode-1: A0 == *0x400974 → azzera 0x400974 and 0x400978", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wl(state, 0x400974, SLOT0 >>> 0);
@@ -167,7 +167,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rl(state, 0x400978)).toBe(0xabcd1234 >>> 0);
   });
 
-  it("mode-1: slot+0x1F == 6 → decrementa *0x40075C di 1", () => {
+  it("mode-1: slot+0x1F == 6 → decrementa *0x40075C of 1", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wb(state, SLOT0 + 0x1f, 0x06);
@@ -191,7 +191,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rb(state, 0x40075c)).toBe(0x05);
   });
 
-  it("mode-1: slot+0x1F == 6 e counter == 0 → wrap-around a 0xFF", () => {
+  it("mode-1: slot+0x1F == 6 and counter == 0 → wrap-around a 0xFF", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wb(state, SLOT0 + 0x1f, 0x06);
@@ -203,7 +203,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rb(state, 0x40075c)).toBe(0xff);
   });
 
-  it("mode-1: gate1e == 1 → FUN_18F46 non chiamata (nessun side effect draw-list)", () => {
+  it("mode-1: gate1e == 1 → FUN_18F46 non chiamata (no side effect draw-list)", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     setupRomLookup(rom);
@@ -212,13 +212,13 @@ describe("helper12F44 (FUN_00012F44)", () => {
     state.workRam[BYTE_ARRAY_OFF]     = 0x00; // slot idx 0
     state.workRam[BYTE_ARRAY_OFF + 1] = 0xff; // sentinel
     const rectOff = (RECT_SLOT_ABS - WRAM);
-    state.workRam[rectOff]     = 0xAB; // typeCode del rect-slot 0
+    state.workRam[rectOff]     = 0xAB; // typeCode of the rect-slot 0
     state.workRam[rectOff + 1] = 0xCD; // subIdx
 
     // slot+0x1F = 0xAB (typeCode), slot+0x19 = 0xCD (subIdx)
     wb(state, SLOT0 + 0x1f, 0xAB);
     wb(state, SLOT0 + 0x19, 0xCD);
-    // gate1e = 1 → NON chiama FUN_18F46
+    // gate1e = 1 → NOT calls FUN_18F46
     wb(state, SLOT0 + 0x1e, 0x01);
 
     const before = new Uint8Array(state.workRam.slice(BYTE_ARRAY_OFF, BYTE_ARRAY_OFF + 2));
@@ -230,7 +230,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(state.workRam[BYTE_ARRAY_OFF + 1]).toBe(before[1]);
   });
 
-  it("mode-1: gate1e != 1 → FUN_18F46 chiamata, entry rimossa dal byte-array", () => {
+  it("mode-1: gate1e != 1 → FUN_18F46 chiamata, entry rimossa from the byte-array", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     setupRomLookup(rom);
@@ -244,10 +244,10 @@ describe("helper12F44 (FUN_00012F44)", () => {
     state.workRam[rectOff]     = 0x05;
     state.workRam[rectOff + 1] = 0x02;
 
-    // slot del nostro script-slot: +0x1F = 0x05 (typeCode), +0x19 = 0x02 (subIdx)
+    // slot of the nostro script-slot: +0x1F = 0x05 (typeCode), +0x19 = 0x02 (subIdx)
     wb(state, SLOT0 + 0x1f, 0x05);
     wb(state, SLOT0 + 0x19, 0x02);
-    // gate1e = 0 → chiama FUN_18F46
+    // gate1e = 0 → calls FUN_18F46
     wb(state, SLOT0 + 0x1e, 0x00);
 
     helper12F44(state, rom, SLOT0, 1, 0);
@@ -260,7 +260,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
 
   // ── No-op modes ──────────────────────────────────────────────────────────
 
-  it("mode < 0 (es. 0xFF = -1 sext) → no-op, nessun side effect", () => {
+  it("mode < 0 (e.g. 0xFF = -1 sext) → no-op, no side effect", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wb(state, SLOT0 + 0x18, 0x55);
@@ -274,7 +274,7 @@ describe("helper12F44 (FUN_00012F44)", () => {
     expect(rl(state, SLOT0 + 0x3a)).toBe(0x12345678 >>> 0);
   });
 
-  it("mode > 1 (es. 0x02) → no-op, nessun side effect", () => {
+  it("mode > 1 (e.g. 0x02) → no-op, no side effect", () => {
     const state = emptyGameState();
     const rom   = emptyRomImage();
     wb(state, SLOT0 + 0x18, 0x55);

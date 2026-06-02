@@ -136,7 +136,7 @@ export const LOOP1_ROW_COUNT = 0x1e as const;
 /** Clear word used in Loop1 (`0x3400` = blank alpha tile attr). */
 export const LOOP1_CLEAR_WORD = 0x3400 as const;
 
-/** Offset (in BYTE) between il first word write e il second gruppo of 3 word
+/** Offset (in BYTE) between il first word write and il second gruppo of 3 word
   */
 export const LOOP1_RIGHT_OFF = 0x4e as const;
 
@@ -200,7 +200,7 @@ function writeAlphaWordBE(state: GameState, off: number, value: number): void {
  *
  * **Side effects**:
  *     `getAlphaTileAddr`).
- *     0x23CA4 e lookup ROM 0x72A4 via `getAlphaTileAddr`).
+ *     0x23CA4 and lookup ROM 0x72A4 via `getAlphaTileAddr`).
  *
  * @param rom   ROM image (tables + alpha-pointer lookup).
  */

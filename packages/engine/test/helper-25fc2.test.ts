@@ -1,9 +1,9 @@
 /**
- * helper-25fc2.test.ts — unit test di `helper25FC2` (FUN_00025FC2).
+ * helper-25fc2.test.ts — unit test of `helper25FC2` (FUN_00025FC2).
  *
  * (sentinel `0xFFFFFFFF`).
  *
- * Test copertura:
+ * Test coverage:
  *   2. Early return (frame_ctr < frames_per_step)
  *   3. Main frame advance (frame_ctr == frames_per_step)
  *   4. Sub-frame advance (state==2, anim_ptr in range, index > 9)
@@ -86,7 +86,7 @@ function clearSentinel(rom: ReturnType<typeof emptyRomImage>, romAddr: number): 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
 describe("helper25FC2 (FUN_00025FC2)", () => {
-  it("1. HELPER_25FC2_ADDR è 0x00025fc2", () => {
+  it("1. HELPER_25FC2_ADDR is 0x00025fc2", () => {
     expect(HELPER_25FC2_ADDR).toBe(0x00025fc2);
   });
 
@@ -104,7 +104,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(HELPER_25FC2_SUB_ADDRS.fun_18F46).toBe(0x00018f46);
   });
 
-  it("3. early return: frame_ctr < frames_per_step → nessun avanzamento", () => {
+  it("3. early return: frame_ctr < frames_per_step → no avanzamento", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -124,9 +124,9 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: (_s, p, c) => ose25Calls.push({ objPtr: p, code: c }),
     });
 
-    // frame_ctr avanzato a 2 (1→2), ma fps=5 > 2 → return early
+    // frame_ctr advanced by a 2 (1→2), but fps=5 > 2 → return early
     expect(r[OBJ_OFF + 0x5f]).toBe(2);
-    // anim_ptr NON avanzato
+    // anim_ptr NOT advanced by
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr);
     expect(sounds).toHaveLength(0);
     expect(ose25Calls).toHaveLength(0);
@@ -154,7 +154,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr + 4); // advanced by 4
   });
 
-  it("5. early return corretto (fps signed > fc signed)", () => {
+  it("5. early return correct (fps signed > fc signed)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -170,7 +170,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     helper25FC2(state, rom, OBJ_ABS, {});
 
     expect(r[OBJ_OFF + 0x5f]).toBe(1);
-    expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr); // non avanzato
+    expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr); // non advanced by
   });
 
   it("6. sub-frame advance: state==2, ptr in range, index > 9 → incr sub_frame_ctr", () => {
@@ -195,7 +195,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     // sub_frame_ctr: 3 → 4
     expect(r[OBJ_OFF + 0x66]).toBe(4);
-    // secondary_ptr NON avanzato (sub_frame_ctr != 1)
+    // secondary_ptr NOT advanced by (sub_frame_ctr != 1)
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtrBefore);
   });
 
@@ -219,7 +219,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     helper25FC2(state, rom, OBJ_ABS, {});
 
     expect(r[OBJ_OFF + 0x66]).toBe(0);
-    // secondary_ptr avanzato di 4
+    // secondary_ptr advanced by of 4
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr + 4);
   });
 
@@ -301,7 +301,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     });
 
     expect(ose25Calls).toHaveLength(0);
-    // anim_ptr avanzato di 4
+    // anim_ptr advanced by of 4
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr + 4);
   });
 
@@ -348,7 +348,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(r[OBJ_OFF + 0x60]).toBe(2);
   });
 
-  it("13. sentinel + state 5 + A2[+0x56] > 6 → stessa logica di state 1", () => {
+  it("13. sentinel + state 5 + A2[+0x56] > 6 → same logica of state 1", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -452,7 +452,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(ose25Calls[0]).toEqual({ objPtr: OBJ_ABS, code: 0x04 });
   });
 
-  it("17. state-3: A2 è primo oggetto coppia → clr word_a4", () => {
+  it("17. state-3: A2 is first oggetto coppia → clr word_a4", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -479,7 +479,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU16BE(r, objOffFirst + 0xa4)).toBe(0);
   });
 
-  it("18. state-3: A2 è secondo oggetto coppia → clr word_a4", () => {
+  it("18. state-3: A2 is second oggetto coppia → clr word_a4", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -532,7 +532,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(r[OBJ_OFF + 0xa5]).toBe(0xad);
   });
 
-  it("20. state-3: secondary_state==2 → clr 0x18 + helper18F46 (typeCode=1 primo)", () => {
+  it("20. state-3: secondary_state==2 → clr 0x18 + helper18F46 (typeCode=1 first)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -561,7 +561,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(h18f46Calls[0]).toEqual({ typeCode: 1, subIdx: 0x04 });
   });
 
-  it("21. state-3: secondary_state==2 → typeCode=1 per secondo oggetto", () => {
+  it("21. state-3: secondary_state==2 → typeCode=1 per second oggetto", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -589,7 +589,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(h18f46Calls[0]).toEqual({ typeCode: 1, subIdx: 0x07 });
   });
 
-  it("22. state-3: secondary_state==2 → typeCode=2 per oggetto non nella coppia", () => {
+  it("22. state-3: secondary_state==2 → typeCode=2 per oggetto non in the coppia", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;

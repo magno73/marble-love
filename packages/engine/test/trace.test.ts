@@ -64,7 +64,7 @@ describe("trace serialization", () => {
     expect(frameFromState(sa).workRamHash).toBe(frameFromState(sb).workRamHash);
   });
 
-  it("workRamHashes ha 32 entry e cambia solo nella regione modificata", () => {
+  it("workRamHashes ha 32 entry and cambia solo in the regione modified", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
     sb.workRam[0x350] = 0xAB; // region 3 (0x300-0x3FF)
@@ -92,11 +92,11 @@ describe("trace serialization", () => {
     expect(a.workRamHashes[30]).toBe(b.workRamHashes[30]);
   });
 
-  it("workRamHashes regione 30 cattura modifiche fuori dalla zona stack", () => {
+  it("workRamHashes regione 30 cattura modifiche outside from the area stack", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
-    sb.workRam[0x1E00] = 0x01; // primo byte regione 30
-    sb.workRam[0x1EDF] = 0x02; // ultimo byte non-stack
+    sb.workRam[0x1E00] = 0x01; // first byte regione 30
+    sb.workRam[0x1EDF] = 0x02; // last byte non-stack
     const a = frameFromState(sa);
     const b = frameFromState(sb);
     expect(a.workRamHashes[30]).not.toBe(b.workRamHashes[30]);
@@ -112,11 +112,11 @@ describe("trace serialization", () => {
     expect(a.workRamHashes[4]).toBe(b.workRamHashes[4]);
   });
 
-  it("workRamHashes localizza correttamente bordi tra regioni", () => {
+  it("workRamHashes localizza correttamente edges between regioni", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
-    sb.workRam[0xFF] = 0x01; // ultimo byte regione 0
-    sb.workRam[0x100] = 0x01; // primo byte regione 1
+    sb.workRam[0xFF] = 0x01; // last byte regione 0
+    sb.workRam[0x100] = 0x01; // first byte regione 1
     const a = frameFromState(sa);
     const b = frameFromState(sb);
     expect(a.workRamHashes[0]).not.toBe(b.workRamHashes[0]);

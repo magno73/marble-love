@@ -1,8 +1,8 @@
 /**
  * state-sub-1960e.test.ts — smoke tests per `FUN_0001960E`.
  *
- * Verifica i 3 branch principali (state==7, long0==0, long0!=0), il
- * clear-block (state==9 && rng(4)==0) e l'invocazione del sub-stub
+ * Verifica the 3 branch principali (state==7, long0==0, long0!=0), il
+ * clear-block (state==9 && rng(4)==0) and l'invocation of the sub-stub
  * `fun_19692`, which must always run at the tail.
  */
 
@@ -39,7 +39,7 @@ function setLongBE(s: ReturnType<typeof emptyGameState>, off: number, v: number)
 }
 
 describe("stateSub1960E (FUN_0001960E)", () => {
-  it("branch state==7: jitter ±2 con 4-bit wrap; chiama fun_19692 sempre", () => {
+  it("branch state==7: jitter ±2 con 4-bit wrap; calls fun_19692 always", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x1234);
     setByte(s, ENTITY_OFF + 0x25, 7);
@@ -55,7 +55,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(r.branch).toBe("state7");
     expect(r.firstRng).toBeGreaterThanOrEqual(0);
     expect(r.firstRng).toBeLessThan(5);
-    expect(r.finalRng).toBeNull(); // state==7 salta il middle
+    expect(r.finalRng).toBeNull(); // state==7 skips il middle
     expect(r.clearBlockExecuted).toBe(false);
     // newCounter = (5 + rng - 2) & 0xF
     expect(r.newCounter).toBe(((5 + r.firstRng - 2) & 0xff) & 0x0f);
@@ -64,7 +64,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(lastAddr).toBe(ENTITY_BASE);
   });
 
-  it("branch long0==0: entity[0x26] = rng(2) << 3 ∈ {0,8}; finalRng eseguito", () => {
+  it("branch long0==0: entity[0x26] = rng(2) << 3 ∈ {0,8}; finalRng executed", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x9abc);
     setByte(s, ENTITY_OFF + 0x25, 1); // != 7, != 9
@@ -77,7 +77,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(r.finalRng).not.toBeNull();
     expect(r.finalRng!).toBeGreaterThanOrEqual(0);
     expect(r.finalRng!).toBeLessThan(4);
-    // newCounter ∈ {0, 8}; clear-block NON triggered (state != 9).
+    // newCounter ∈ {0, 8}; clear-block NOT triggered (state != 9).
     expect(r.clearBlockExecuted).toBe(false);
     expect([0, 8]).toContain(r.newCounter);
   });
@@ -132,7 +132,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(() => stateSub1960E(s, ENTITY_BASE)).not.toThrow();
   });
 
-  it("state byte non-7-non-9: clear-block mai triggered anche se rng(4)==0", () => {
+  it("state byte non-7-non-9: clear-block mai triggered even if rng(4)==0", () => {
     const s = emptyGameState();
     // Forza rng(4) = 0 cercando un seed
     let foundSeed = -1;

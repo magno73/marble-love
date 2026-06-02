@@ -1,8 +1,8 @@
 /**
- * state-sub-525c.test.ts — corner cases di stateSub525C (FUN_525C).
+ * state-sub-525c.test.ts — corner cases of stateSub525C (FUN_525C).
  *
- * Qui copriamo i path principali (count tipici) e gli edge case di forma
- * della status-flags bitmap.
+ * Qui copriamo i path principali (count tipici) and the edge case of forma
+ * of the status-flags bitmap.
  */
 
 import { describe, it, expect } from "vitest";
@@ -65,7 +65,7 @@ describe("fun523A (FUN_523A) — internal bit-set helper", () => {
     expect(readStatusFlags(s.workRam)).toBe(0xabcdef12);
   });
 
-  it("OR è cumulativo (non sovrascrive)", () => {
+  it("OR is cumulativo (non sovrascrive)", () => {
     const s = emptyGameState();
     s.workRam[STATUS_FLAGS_OFF + 3] = 0x80; // bit 7 pre-set
     fun523A(s, 6); // bit 4
@@ -74,7 +74,7 @@ describe("fun523A (FUN_523A) — internal bit-set helper", () => {
 });
 
 describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
-  it("D0=1: clear 20 byte e set bit 4 (1 chiamata 523A) -- pre-fill verifica", () => {
+  it("D0=1: clear 20 byte and set bit 4 (1 chiamata 523A) -- pre-fill verifica", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     const off = a2 - 0x400000 + BUFFER_OFFSET_FROM_A2;
@@ -89,14 +89,14 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     for (let i = 0; i < 20; i++) {
       expect(s.workRam[off + i]).toBe(0);
     }
-    // sentinels intatti
+    // sentinels intact
     expect(s.workRam[off - 1]).toBe(0xee);
     expect(s.workRam[off + 20]).toBe(0xff);
 
     expect(readStatusFlags(s.workRam)).toBe(0x00000030);
   });
 
-  it("D0=2: clear 40 byte e set bit 4..7 (4 chiamate 523A)", () => {
+  it("D0=2: clear 40 byte and set bit 4..7 (4 chiamate 523A)", () => {
     const s = emptyGameState();
     const a2 = 0x401200;
     const off = a2 - 0x400000 + BUFFER_OFFSET_FROM_A2;
@@ -124,9 +124,9 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     expect(readStatusFlags(s.workRam)).toBe(0x00000ff0);
   });
 
-  it("status flags pre-esistenti vengono OR-ed (non sovrascritti)", () => {
+  it("status flags pre-esistenti are OR-ed (non sovrascritti)", () => {
     const s = emptyGameState();
-    // Pre-set bit 0 e bit 31
+    // Pre-set bit 0 and bit 31
     s.workRam[STATUS_FLAGS_OFF] = 0x80;
     s.workRam[STATUS_FLAGS_OFF + 3] = 0x01;
 
@@ -135,7 +135,7 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     expect(readStatusFlags(s.workRam)).toBe(0x80000031);
   });
 
-  it("buffer clear è strettamente locale ad A2+0x50, non tocca workRam altrove", () => {
+  it("buffer clear is strictly locale ad A2+0x50, non tocca workRam altrove", () => {
     const s = emptyGameState();
     s.workRam.fill(0x5a);
     s.workRam[STATUS_FLAGS_OFF] = 0;
@@ -152,7 +152,7 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     for (let i = 0; i < 20; i++) expect(s.workRam[off + i]).toBe(0);
     expect(s.workRam[off - 1]).toBe(0x5a);
     expect(s.workRam[off + 20]).toBe(0x5a);
-    // Sample distante intatto
+    // Sample distante intact
     expect(s.workRam[0x100]).toBe(0x5a);
     // Status flags = bit 4|5
     expect(readStatusFlags(s.workRam)).toBe(0x00000030);
@@ -166,11 +166,11 @@ describe("stateSub525C (FUN_525C) — buffer clear + bits OR", () => {
     expect(readStatusFlags(s.workRam)).toBe(0xfffffff0);
   });
 
-  it("D0=15: copre bits 4..33 ma 32+33 sono no-op (asl.l ≥32 → 0)", () => {
+  it("D0=15: covers bits 4..33 but 32+33 are no-op (asl.l ≥32 → 0)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     stateSub525C(s, 15, a2);
-    // bits 4..31 set; tentativo di settare bit 32, 33 → no-op
+    // bits 4..31 set; tentativo of settare bit 32, 33 → no-op
     expect(readStatusFlags(s.workRam)).toBe(0xfffffff0);
   });
 

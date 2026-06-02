@@ -106,7 +106,7 @@ async function main(): Promise<void> {
         break;
     }
 
-    // Setup workRam skip flag (big-endian word) in Musashi e in state TS.
+    // Setup workRam skip flag (big-endian word) in Musashi and in state TS.
     pokeMem(cpu, SKIP_FLAG_ADDR, 2, skipFlag);
     state.workRam[0x3b8] = (skipFlag >>> 8) & 0xff;
     state.workRam[0x3b9] = skipFlag & 0xff;

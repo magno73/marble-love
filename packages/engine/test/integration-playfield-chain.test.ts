@@ -1,5 +1,5 @@
 /**
- * integration-playfield-chain.test.ts — end-to-end validation della catena
+ * integration-playfield-chain.test.ts — end-to-end validation of the chain
  * tilemap loading scoperta via watch_write MAME (level1):
  *
  *   bootInit
@@ -13,7 +13,7 @@
  *     → renderTileLine1AD54 (FUN_1AD54)
  *     → packTilemapEntries1A9CC (FUN_1A9CC)
  *
- * In MAME al frame 200 di level1 = 4039 byte non-zero.
+ * In MAME al frame 200 of level1 = 4039 byte non-zero.
  */
 
 import { describe, it, expect } from "vitest";
@@ -77,7 +77,7 @@ describe("integration: playfield chain (Codex tilemap loaders)", () => {
     expect(postNonZero).toBeGreaterThan(0);
   });
 
-  it("ogni livello (0..5) popola playfieldRam differentemente", () => {
+  it("each livello (0..5) popola playfieldRam differentemente", () => {
     const counts: number[] = [];
     for (let levelIdx = 0; levelIdx < 6; levelIdx++) {
       const state = emptyGameState();
@@ -94,7 +94,7 @@ describe("integration: playfield chain (Codex tilemap loaders)", () => {
     console.log("    playfieldRam non-zero by level:", counts);
   });
 
-  it("workRam[0x474] (state ptr) popolato dal dispatcher", () => {
+  it("workRam[0x474] (state ptr) popolato from the dispatcher", () => {
     const state = emptyGameState();
     bootInit(state, rom);
     state.workRam[0x394] = 0;

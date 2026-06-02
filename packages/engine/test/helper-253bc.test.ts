@@ -1,5 +1,5 @@
 /**
- * helper-253bc.test.ts — unit test di `helper253BC` (FUN_000253BC).
+ * helper-253bc.test.ts — unit test of `helper253BC` (FUN_000253BC).
  *
  *   3. Convert long X -> word @+0x32 via asr.l #19
  *   4. Convert long Y -> word @+0x34 via asr.l #19
@@ -43,7 +43,7 @@ function readU16(r: Uint8Array, off: number): number {
 // ─── Test suite ───────────────────────────────────────────────────────────────
 
 describe("helper253BC (FUN_000253BC)", () => {
-  it("HELPER_253BC_ADDR è 0x000253bc", () => {
+  it("HELPER_253BC_ADDR is 0x000253bc", () => {
     expect(HELPER_253BC_ADDR).toBe(0x000253bc);
   });
 
@@ -75,7 +75,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x99);
   });
 
-  it("no-op con freeze flag qualsiasi valore != 0", () => {
+  it("no-op con freeze flag qualsiasi value != 0", () => {
     for (const freezeVal of [0x01, 0x02, 0x80, 0xff]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -86,7 +86,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     }
   });
 
-  it("esegue quando freeze flag == 0", () => {
+  it("runs when freeze flag == 0", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0x00; // non frozen
@@ -99,7 +99,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x32]).not.toBe(0xaa);
   });
 
-  it("screen X: asr.l #19 su valore positivo", () => {
+  it("screen X: asr.l #19 su value positivo", () => {
     // asr.l #19: 0x00800000 >> 19 = 16 (0x10)
     const state = emptyGameState();
     const r = state.workRam;
@@ -128,7 +128,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0x0fff);
   });
 
-  it("screen X: asr.l #19 su 0x80000000 → 0xFFFF (-1 come signed)", () => {
+  it("screen X: asr.l #19 su 0x80000000 → 0xFFFF (-1 as signed)", () => {
     // 0x80000000 signed = -2147483648; -2147483648 >> 19 = -4096 = 0xFFFFF000;
     // low word = 0xF000
     const state = emptyGameState();
@@ -150,7 +150,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0xffff);
   });
 
-  it("screen Y: asr.l #19 su valore positivo (0x00200000 → 4)", () => {
+  it("screen Y: asr.l #19 su value positivo (0x00200000 → 4)", () => {
     // 0x00200000 >> 19 = 4
     const state = emptyGameState();
     const r = state.workRam;
@@ -174,14 +174,14 @@ describe("helper253BC (FUN_000253BC)", () => {
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
     writeU32(r, OBJ_OFF + 0x14, 0x12345678);
-    writeU32(r, OBJ_OFF + 0x2a, 0x00000000); // cella destinazione azzerata
+    writeU32(r, OBJ_OFF + 0x2a, 0x00000000); // cella destination zeroed
 
     helper253BC(state, OBJ_ABS);
 
     expect(readU32(r, OBJ_OFF + 0x2a)).toBe(0x12345678);
   });
 
-  it("long copy: valori di confine 0x00000000 e 0xFFFFFFFF", () => {
+  it("long copy: values of confine 0x00000000 and 0xFFFFFFFF", () => {
     for (const v of [0x00000000, 0xffffffff, 0xdeadbeef]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -204,7 +204,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x7e);
   });
 
-  it("byte copy: tutti i valori 0x00 e 0xFF", () => {
+  it("byte copy: all i values 0x00 and 0xFF", () => {
     for (const v of [0x00, 0xff, 0x55, 0xaa]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -216,7 +216,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     }
   });
 
-  it("tutti e 4 i campi aggiornati in una singola call", () => {
+  it("all and 4 i fields aggiornati in una singola call", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -238,7 +238,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x33);
   });
 
-  it("non tocca byte al di fuori dei 4 campi attesi", () => {
+  it("non tocca byte al of outside of the 4 fields attesi", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -266,7 +266,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     }
   });
 
-  it("idempotente: doppia call con freeze=0 dà lo stesso risultato", () => {
+  it("idempotente: doppia call con freeze=0 dà lo same risultato", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;

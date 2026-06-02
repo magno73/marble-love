@@ -2,7 +2,7 @@
  * state-sub-520e.test.ts — smoke test per stateSub520E (FUN_520E).
  *
  * Bit-perfect parity verificata vs binary in `test-state-sub-520e-parity.ts`.
- * Qui copriamo i path principali e le edge case sui side effect di workRam.
+ * Qui copriamo i path principali and le edge case sui side effect of workRam.
  */
 
 import { describe, it, expect } from "vitest";
@@ -26,7 +26,7 @@ function readStatusFlags(workRam: Uint8Array): number {
 }
 
 describe("fun523AInner (FUN_523A inner) — smoke", () => {
-  it("D0 = 0xFF02 (byte=4 dal byte_at_A2_9 path) → bit 2 (shift = 0xFF00 & 0x3F = 0)... wait", () => {
+  it("D0 = 0xFF02 (byte=4 from the byte_at_A2_9 path) → bit 2 (shift = 0xFF00 & 0x3F = 0)... wait", () => {
     // 0xFF02 - 2 = 0xFF00 → & 0x3F = 0 → bit 0
     const s = emptyGameState();
     fun523AInner(s, 0xff02);
@@ -46,7 +46,7 @@ describe("fun523AInner (FUN_523A inner) — smoke", () => {
     s.workRam[STATUS_FLAGS_OFF + 2] = 0xef;
     s.workRam[STATUS_FLAGS_OFF + 3] = 0x12;
     fun523AInner(s, PRODUCTION_STACK_D0);
-    // No-op: status flags intatti (shift ≥ 32 → D1 = 0 → OR no-op)
+    // No-op: status flags intact (shift ≥ 32 → D1 = 0 → OR no-op)
     expect(readStatusFlags(s.workRam)).toBe(0xabcdef12);
   });
 });
@@ -68,13 +68,13 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     s.workRam[off + 0x0c] = 0xdd; // NOT cleared
     s.workRam[off + 0x0d] = 0xee; // NOT cleared
     for (let i = 0; i <= 4; i++) s.workRam[off + 0xe + i] = 0xaa;
-    s.workRam[off + 0x13] = 0xff; // NOT cleared (gap tra phase 2 e phase 3)
+    s.workRam[off + 0x13] = 0xff; // NOT cleared (gap between phase 2 and phase 3)
     for (let i = 0; i <= 9; i++) s.workRam[off + 0x14 + i] = 0xaa;
     // Sentinels:
     s.workRam[off - 1] = 0xee;
     s.workRam[off + 0x1e] = 0xff;
 
-    // stackD0 = produzione default (0x00F00001) → no-op sul secondo OR
+    // stackD0 = produzione default (0x00F00001) → no-op on the second OR
     stateSub520E(s, a2);
 
     // Phase 1: A2+0..A2+8 cleared
@@ -92,7 +92,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(s.workRam[off + 0x13]).toBe(0xff);
     // Phase 3: A2+0x14..A2+0x1D cleared
     for (let i = 0; i <= 9; i++) expect(s.workRam[off + 0x14 + i]).toBe(0);
-    // Sentinels intatti
+    // Sentinels intact
     expect(s.workRam[off - 1]).toBe(0xee);
     expect(s.workRam[off + 0x1e]).toBe(0xff);
 
@@ -115,7 +115,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(readStatusFlags(s.workRam)).toBe(0x80000003);
   });
 
-  it("status flags: byte_at_A2+9 = 0x22 (34) → shift 32 → asl.l no-op (bit oltre 31)", () => {
+  it("status flags: byte_at_A2+9 = 0x22 (34) → shift 32 → asl.l no-op (bit beyond 31)", () => {
     const s = emptyGameState();
     const a2 = 0x401400;
     const off = a2 - 0x400000;
@@ -124,28 +124,28 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
 
     stateSub520E(s, a2);
 
-    // Solo bits 0,1 fissi (no-op sul byte path); production stackD0 = no-op
+    // Solo bits 0,1 fissi (no-op on the byte path); production stackD0 = no-op
     expect(readStatusFlags(s.workRam)).toBe(0x00000003);
   });
 
-  it("OR cumulativo: status flags pre-esistenti vengono OR-ed (non sovrascritti)", () => {
+  it("OR cumulativo: status flags pre-esistenti are OR-ed (non sovrascritti)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     const off = a2 - 0x400000;
 
     s.workRam[off + 9] = 0x06; // bit 4
 
-    // Pre-set bit 7 e bit 30
+    // Pre-set bit 7 and bit 30
     s.workRam[STATUS_FLAGS_OFF + 0] = 0x40; // bit 30
     s.workRam[STATUS_FLAGS_OFF + 3] = 0x80; // bit 7
 
     stateSub520E(s, a2);
 
-    // Pre-set | mask fissa 3 | bit 4 = 0x40000080 | 3 | 0x10 = 0x40000093
+    // Pre-set | mask fixed 3 | bit 4 = 0x40000080 | 3 | 0x10 = 0x40000093
     expect(readStatusFlags(s.workRam)).toBe(0x40000093);
   });
 
-  it("stackD0 esplicito: 0x00000006 → bit 4 OR-ed (oltre ai bits 0,1,4 dal byte path)", () => {
+  it("stackD0 esplicito: 0x00000006 → bit 4 OR-ed (beyond ai bits 0,1,4 from the byte path)", () => {
     const s = emptyGameState();
     const a2 = 0x401600;
     const off = a2 - 0x400000;
@@ -163,7 +163,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(FIXED_OR_MASK).toBe(3);
   });
 
-  it("workRam clear strettamente locale ad A2 (no leak su altre regioni)", () => {
+  it("workRam clear strictly locale ad A2 (no leak su altre regioni)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x5a);
     // Reset status flags long
@@ -171,7 +171,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     s.workRam[STATUS_FLAGS_OFF + 1] = 0;
     s.workRam[STATUS_FLAGS_OFF + 2] = 0;
     s.workRam[STATUS_FLAGS_OFF + 3] = 0;
-    // Imposta byte @ A2+9 sapientemente
+    // Sets byte @ A2+9 sapientemente
     const a2 = 0x401000;
     const off = a2 - 0x400000;
     s.workRam[off + 9] = 0x06;
@@ -182,7 +182,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     for (let i = 0; i <= 8; i++) expect(s.workRam[off + i]).toBe(0);
     for (let i = 0; i <= 4; i++) expect(s.workRam[off + 0xe + i]).toBe(0);
     for (let i = 0; i <= 9; i++) expect(s.workRam[off + 0x14 + i]).toBe(0);
-    // Byte fuori range → intatti
+    // Byte outside range → intact
     expect(s.workRam[0x100]).toBe(0x5a);
     expect(s.workRam[off - 1]).toBe(0x5a);
     expect(s.workRam[off + 0x1e]).toBe(0x5a);

@@ -243,7 +243,7 @@ async function main(): Promise<void> {
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Low word of arg2 in [0xFFF0, 0xFFFF] → durante il loop wrappa a 0
+    // Low word of arg2 in [0xFFF0, 0xFFFF] → during il loop wrappa a 0
     const lo = (0xfff0 + Math.floor(rng() * 16)) & 0xffff;
     const arg2 = ((Math.floor(rng() * 0x10000) << 16) | lo) >>> 0;
     const tc: TestCase = {

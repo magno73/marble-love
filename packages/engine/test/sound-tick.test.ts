@@ -1,5 +1,5 @@
 /**
- * sound-tick.test.ts — smoke + corner case di soundTick (wrapper FUN_4CA0).
+ * sound-tick.test.ts — smoke + corner case of soundTick (wrapper FUN_4CA0).
  *
  * Bit-perfect parity verified vs binary via test-sound-tick-parity.ts
  * (requires deterministic stubs for FUN_4DCC, FUN_3E1A, FUN_4C3E).
@@ -15,7 +15,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(() => soundTick(s)).not.toThrow();
   });
 
-  it("cmd < 0x40 con last_sent bit 7 set: dispatch e mark sent", () => {
+  it("cmd < 0x40 con last_sent bit 7 set: dispatch and mark sent", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x10; // cmd
     s.workRam[0x1f45] = 0x82; // last_sent (bit 7 set, value 0x02)
@@ -30,7 +30,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     // 0x1f44 cleared by simulated sound-CPU ack in default fun_4dcc
     // (M6502 reads mailbox and acks; without sound CPU emulation, simulate ack
     // immediato per matchare frame-done dump MAME). Pre-fix era 0x10|0x80.
-    expect(s.workRam[0x1f44]).toBe(0); // cmd ack-cleared dal sound CPU sim
+    expect(s.workRam[0x1f44]).toBe(0); // cmd ack-cleared from the sound CPU sim
   });
 
   it("cmd >= 0x40: skip queue dispatch, solo mark sent", () => {
@@ -49,7 +49,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1f44]).toBe(0); // ack-cleared
   });
 
-  it("cmd < 0x40 con last_sent bit 7 zero: nessun dispatch ma update last_sent", () => {
+  it("cmd < 0x40 con last_sent bit 7 zero: no dispatch but update last_sent", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x10;
     s.workRam[0x1f45] = 0x05; // bit 7 zero
@@ -73,14 +73,14 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // ancora 0x90
   });
 
-  it("FUN_4DCC sub viene invocata", () => {
+  it("FUN_4DCC sub is invocata", () => {
     const s = emptyGameState();
     let called = false;
     soundTick(s, { fun_4dcc: () => { called = true; } });
     expect(called).toBe(true);
   });
 
-  it("cmd >= 0x40 + FUN_4C3E ritorna 0: incrementa retry counter", () => {
+  it("cmd >= 0x40 + FUN_4C3E returns 0: increments retry counter", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x80; // cmd >= 0x40 → no reset
     s.workRam[0x1ff4] = 0xfe;
@@ -88,7 +88,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0xff); // 0xfe+1 = 0xff
   });
 
-  it("cmd >= 0x40 + FUN_4C3E ritorna 0 con retry overflow: satura a 0xff", () => {
+  it("cmd >= 0x40 + FUN_4C3E returns 0 con retry overflow: satura a 0xff", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x80; // cmd >= 0x40 → no reset
     s.workRam[0x1ff4] = 0xff;
@@ -96,7 +96,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0xff); // saturate (overflow → -1 = 0xff)
   });
 
-  it("cmd >= 0x40 + FUN_4C3E ritorna 1: retry counter unchanged", () => {
+  it("cmd >= 0x40 + FUN_4C3E returns 1: retry counter unchanged", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x80; // cmd >= 0x40 → no reset
     s.workRam[0x1ff4] = 0x42;

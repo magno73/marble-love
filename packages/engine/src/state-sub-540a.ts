@@ -18,7 +18,7 @@
  *   0x5428:    moveq  #1,D2                   ; D2 = 1
  *   0x542A:    move.b (A2),D0b                 ; D0b = byte[A2] (HEADER) — only low byte!
  *                                              ;   D0 high 24 bits restano da FUN_53EA
- *                                              ;   but sono 0x000000 (output range 0..0xFF)
+ *                                              ;   but are 0x000000 (output range 0..0xFF)
  *   0x542C:    lsr.b  #4,D0b                  ; D0b = header >> 4 (high nibble)
  *   0x542E:    addq.b #1,D0b                  ; D0b += 1
  *   0x5430:    move.b (A2)+,D1b               ; D1b = header; A2++
@@ -185,7 +185,7 @@ export function stateSub540A(
 
     const hi = (hdr >>> 4) & 0xf;
     const lo = hdr & 0xf;
-    // byte sub: ((hi+1) - lo) modulo 256 (high bits of D0 sono 0).
+    // byte sub: ((hi+1) - lo) modulo 256 (high bits of D0 are 0).
     const shiftByte = ((hi + 1 - lo) & 0xff) >>> 0;
     // D0 long = 0x000000 | shiftByte. asl.l count = D0 & 63 = shiftByte & 63.
     const shiftCount = shiftByte & 0x3f;
@@ -196,7 +196,7 @@ export function stateSub540A(
     } else {
       d2Long = ((1 << shiftCount) >>> 0) >>> 0;
     }
-    // 0x543A: move.w D2w,D0w → D0w = D2 & 0xFFFF (D0 high word resta 0).
+    // 0x543A: move.w D2w,D0w → D0w = D2 & 0xFFFF (D0 high word stays 0).
     let d0w = d2Long & 0xffff; // unsigned word
 
     // 0x543C: bra 0x5444 — first check is tst.w D0w, bge.

@@ -159,11 +159,11 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch: stub addq+rts ai 3 entry sub.
+  // Pre-patch: stub addq+rts athe 3 entry sub.
   for (const sub of SUBS_LIST) {
     patchStubAddq(romBuf, sub.entry, sub.sentinel);
   }
-  // Pre-patch: NOP sui 2 spin-wait `beq.b $-2`.
+  // Pre-patch: NOP suthe 2 spin-wait `beq.b $-2`.
   patchNop(romBuf, SPIN_WAIT_1_BEQ);
   patchNop(romBuf, SPIN_WAIT_2_BEQ);
 

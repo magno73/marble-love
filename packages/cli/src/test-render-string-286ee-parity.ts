@@ -5,7 +5,7 @@
  *
  *
  * **Strategia** — sentinel per le 2 sub esterne:
- *   Patch FUN_3874 e FUN_3520 a `addq.b #1, sentinel.l ; rts` (8 byte).
+ *   Patch FUN_3874 and FUN_3520 a `addq.b #1, sentinel.l ; rts` (8 byte).
  *     - FUN_3874 → workRam[0x3D0]  (sentinelFmt)
  *     - FUN_3520 → workRam[0x3D1]  (sentinelRender)
  *
@@ -20,7 +20,7 @@
  * The compared region [0x430..0x43F] does not include buffer bytes
  *
  *   - A: score random (0..255), ordinal random 0..7
- *   - B: score = 0 e 99 alternati (boundary)
+ *   - B: score = 0 and 99 alternati (boundary)
  *   - C: score > 99 (100..200, clamp path)
  *
  * Uso: npx tsx packages/cli/src/test-render-string-286ee-parity.ts [N]
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: score boundary 0 / 99 alternati ─────────────────────────
-  console.log(`\n=== Suite B: score=0 e score=99 alternati — ${perSuite} cases ===`);
+  console.log(`\n=== Suite B: score=0 and score=99 alternati — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const score = (i % 2 === 0) ? 0 : 99;

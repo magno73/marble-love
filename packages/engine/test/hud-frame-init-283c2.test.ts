@@ -1,5 +1,5 @@
 /**
- * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests sui rami principali.
+ * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests sui branches principali.
  *
  * `cli/src/test-hud-frame-init-283c2-parity.ts` (500/500).
  */
@@ -40,7 +40,7 @@ function readAlphaWordBE(alpha: Uint8Array, off: number): number {
 }
 
 /**
- * rows e data; 12 word per cols 1P).
+ * rows and data; 12 word per cols 1P).
  */
 function setupRom(): RomImage {
   const rom = emptyRomImage();
@@ -93,7 +93,7 @@ function setupRom(): RomImage {
 }
 
 describe("hudFrameInit283C2 (FUN_000283C2)", () => {
-  it("Loop1 (rotation=0): cancella 30 righe × 6 word = 360 byte di bordo con 0x3400", () => {
+  it("Loop1 (rotation=0): clears 30 lines × 6 word = 360 byte of bordo con 0x3400", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // player count @ 0x396 = 0 (-> 2P branch, but this tests only Loop1:
@@ -171,7 +171,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("count=0 (caso non-1P, default emptyGameState): prende il branch 2P (24 tile)", () => {
+  it("count=0 (caso non-1P, default emptyGameState): takes il branch 2P (24 tile)", () => {
     const s = emptyGameState();
     const rom = setupRom();
 
@@ -184,7 +184,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     expect(readAlphaWordBE(s.alphaRam, off12)).toBe((0x5f | LOOP2_MASK) & 0xffff);
   });
 
-  it("non muta state.workRam (la funzione è solo lettore di workRam)", () => {
+  it("non muta state.workRam (la funzione is solo lettore of workRam)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // Pollute workRam with a known pattern.
@@ -202,7 +202,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("non muta state.alphaRam fuori dalle 30 righe HUD (byte 0xF00..0xFFF intatti)", () => {
+  it("non muta state.alphaRam outside dalle 30 lines HUD (byte 0xF00..0xFFF intact)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     for (let i = 0xf00; i < s.alphaRam.length; i++) s.alphaRam[i] = 0xaa;

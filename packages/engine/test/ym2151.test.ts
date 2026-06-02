@@ -4,8 +4,8 @@
  * Intent: in V2 il bit-perfect target e' il REGISTER FILE, non il sample audio.
  * Tests verify that the WR_ADDR + WR_DATA pattern stores the correct byte in
  * expected reg slot (MAME ym2151.cpp register_w mirror). A violation here makes
- * diverge il shadow vs MAME oracle in Phase 8, mascherando il debug del sound
- * driver dal 6502 side.
+ * diverge il shadow vs MAME oracle in Phase 8, mascherando il debug of the sound
+ * driver from the 6502 side.
  */
 
 import { describe, it, expect } from "vitest";
@@ -44,7 +44,7 @@ describe("YM2151 register file", () => {
 
   it("write addr + write data: byte stora in reg slot selezionato", () => {
     const ym = createYM2151();
-    // Pattern dal 6502: STA $1800 (addr=0x20) + STA $1801 (data=0xC0)
+    // Pattern from the 6502: STA $1800 (addr=0x20) + STA $1801 (data=0xC0)
     ym2151WriteAddr(ym, as_u8(0x20));  // channel 0: RL+FB+CONN
     ym2151WriteData(ym, as_u8(0xC0));  // L=R=1, FB=0, CONN=0
     expect(ym.regs[0x20]).toBe(0xC0);
@@ -54,12 +54,12 @@ describe("YM2151 register file", () => {
     expect(ym.regs[0xFF]).toBe(0);
   });
 
-  it("write multipli aggiornano lo stesso reg finche' addr non cambia", () => {
+  it("write multipli aggiornano lo same reg finche' addr non cambia", () => {
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x08));  // KEY ON
     ym2151WriteData(ym, as_u8(0x01));
     expect(ym.regs[0x08]).toBe(0x01);
-    ym2151WriteData(ym, as_u8(0x78));  // tutti operatori on
+    ym2151WriteData(ym, as_u8(0x78));  // all operatori on
     expect(ym.regs[0x08]).toBe(0x78);
     // Cambio addr: prossima write va al nuovo slot
     ym2151WriteAddr(ym, as_u8(0x40));
@@ -96,7 +96,7 @@ describe("YM2151 status read (Phase 5 stub)", () => {
     expect(ym2151ReadStatus(ym) as number).toBe(0x02);
   });
 
-  it("status con entrambi i timer overflow → bit 0 + bit 1", () => {
+  it("status con both i timer overflow → bit 0 + bit 1", () => {
     const ym = createYM2151();
     ym.timerAOverflow = true;
     ym.timerBOverflow = true;
@@ -376,7 +376,7 @@ describe("YM2151 OPM phase step", () => {
     expect(ym.channels[0]!.op[0]!.phaseInc).toBeGreaterThan(base);
   });
 
-  it("PM delta non modifica il keycode usato dall'envelope", async () => {
+  it("PM delta non modifies il keycode used dto the envelope", async () => {
     const { operatorSetOpmBlockFreq } = await import("../src/audio/ym2151-operator.js");
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
@@ -391,7 +391,7 @@ describe("YM2151 OPM phase step", () => {
     expect(op.keyCode).toBe(keyCode);
   });
 
-  it("MUL scala il passo phase dell'operatore", () => {
+  it("MUL scala il passo phase of the operatore", () => {
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
     writeReg(ym, 0x30, 0x00);

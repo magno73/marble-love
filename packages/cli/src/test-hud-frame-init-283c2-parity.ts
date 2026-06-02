@@ -5,12 +5,12 @@
  *
  *      0x23C74/0x23CA4.
  *
- * `test-get-alpha-tile-addr-parity.ts` e `test-format-and-render-28e00-parity.ts`).
+ * `test-get-alpha-tile-addr-parity.ts` and `test-format-and-render-28e00-parity.ts`).
  *
  * `hudFrameInit283C2`, confrontiamo the intero alpha RAM (4 KB) byte-by-byte.
  * Setup random:
  *   - rotation flag @ 0x401F42 ∈ [0..7] (esercita branch rotation in
- *     `getAlphaTileAddr` e `setAlphaTile`)
+ *     `getAlphaTileAddr` and `setAlphaTile`)
  *   - player count @ 0x400396 in {1, 2, 0, 3} (1 -> 1P branch, others -> 2P)
  *   - alpha RAM init: random pattern 0..255 on each byte (per esercitare
  *     write-over)

@@ -50,7 +50,7 @@ const GLOBALS_BASE = 0x00400690; // include 0x69E/0x6A0/0x6A2/0x6A4/0x6A6
 const GLOBALS_SIZE = 0x18; // 0x690..0x6A7 (24 byte)
 
 // Compare range: only writes produced by CC62 + return value.
-// 0x6A4..0x6A7 (= 4 byte) e il return.
+// 0x6A4..0x6A7 (= 4 byte) and il return.
 const COMPARE_BASE = 0x004006a4;
 const COMPARE_SIZE = 4;
 

@@ -323,7 +323,7 @@ import { mainTick as runMainTick } from "./main-tick.js";
 import type { MainTickOptions } from "./main-tick.js";
 
 /**
- * Tick principale of the game engine — 1 frame @ 60 Hz.
+ * Tick main of the game engine — 1 frame @ 60 Hz.
  *
  * Orchestrator that calls 14 root sub-systems mirrored bit-perfect from the
  * original binary (`FUN_00028788`). Updates `state.workRam`,

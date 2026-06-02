@@ -68,7 +68,7 @@ function setSelector(s: State, v: number): void {
   setWordBE(s, SELECTOR_WORD_OFF, v);
 }
 
-/** Imposta marble world position (X, Y, Z). */
+/** Sets marble world position (X, Y, Z). */
 function setWorld(s: State, x: number, y: number, z: number): void {
   setWordBE(s, WORLD_X_WORD_OFF, x & 0xffff);
   setWordBE(s, WORLD_Y_WORD_OFF, y & 0xffff);
@@ -121,7 +121,7 @@ function armSlotWithCustomBbox(
 }
 
 describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
-  it("selettore fuori range {1,2,5} → no side effect", () => {
+  it("selettore outside range {1,2,5} → no side effect", () => {
     const s = emptyGameState();
     // Selector = 3 (non valido) → early exit.
     setSelector(s, 3);
@@ -138,7 +138,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("selettore valido (=1) ma slot non-armed → no side effect", () => {
+  it("selettore valido (=1) but slot non-armed → no side effect", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -170,7 +170,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     const off = slotOff(0);
     // Slot state changed to 2.
     expect(readByte(s, off + 0x1a)).toBe(0x02);
-    // entity[0..3] = 0 (clear post-copy nel block 1503A).
+    // entity[0..3] = 0 (clear post-copy in the block 1503A).
     expect(readLongBE(s, ENTITY_OFF + 0x00)).toBe(0);
     expect(readLongBE(s, ENTITY_OFF + 0x04)).toBe(0);
     // slot[0..3] = old entity[0..3] = 0xDEADBEEF.
@@ -181,7 +181,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, off + 0x20)).toBe(0xcafebabe);
   });
 
-  it("miss su X (marble fuori range slot) → no scrittura", () => {
+  it("miss su X (marble outside range slot) → no scrittura", () => {
     const s = emptyGameState();
     setSelector(s, 2);
     // World @ (100, 0, 0). Marble bbox X [97..103].
@@ -199,7 +199,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readByte(s, off + 0x1a)).toBe(stateBefore);
   });
 
-  it("hit con state=1 + key NO match → write slot[0x56] e entity dispatch state-1", () => {
+  it("hit con state=1 + key NO match → write slot[0x56] and entity dispatch state-1", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -215,7 +215,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     // slot[0x56] = 0xAAAA (sentinel pre-test).
     setWordBE(s, off + 0x56, 0xaaaa);
     setByte(s, ENTITY_OFF + 0x19, 0x42);
-    // entity[0x1A] = 1 → branch state-1 nel dispatch.
+    // entity[0x1A] = 1 → branch state-1 in the dispatch.
     setByte(s, ENTITY_OFF + 0x1a, 0x01);
 
     scriptSlotBboxTest14E92(s, ENTITY_BASE);
@@ -304,7 +304,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, off1 + 0x20)).toBe(0x22222222);
   });
 
-  it("globali 0x400684/0x400688 copiati in entity[0xC]/[0x10] su hit", () => {
+  it("globali 0x400684/0x400688 copied in entity[0xC]/[0x10] su hit", () => {
     const s = emptyGameState();
     setSelector(s, 2);
     setWorld(s, 0, 0, 0);
@@ -335,7 +335,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, ENTITY_OFF + 0x5a)).toBe(0x00020faa);
   });
 
-  it("FUN_15460 stub viene chiamato solo nel bind path (state ∈ {0,3})", () => {
+  it("FUN_15460 stub is chiamato solo in the bind path (state ∈ {0,3})", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -361,7 +361,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(calledWith).toBe(SLOT_ARRAY_BASE_ADDR);
   });
 
-  it("stato slot=2 (non in {0,3} né in {1,5,6}) → no bind, no early exit, no key write skip", () => {
+  it("state slot=2 (non in {0,3} né in {1,5,6}) → no bind, no early exit, no key write skip", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);

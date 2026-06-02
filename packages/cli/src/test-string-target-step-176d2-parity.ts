@@ -13,9 +13,9 @@
  *
  *   - obj      @ 0x401C00 (almeno 0x60 byte, up to 0x401C5F)
  *   - p1Addr   @ 0x401D00 (4 byte, contains bboxAddr o sentinel)
- *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 sono i 4 signed byte)
+ *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 are the 4 signed byte)
  *
- * (obj+0xC..+0xF e obj+0x10..+0x13). Confrontiamo the intero workRam tranne
+ * (obj+0xC..+0xF and obj+0x10..+0x13). We compare the intero workRam tranne
  * la area stack scratch [0x401E80..0x401F00).
  *
  *   - A: path default (bboxPtr == 0xFFFFFFFF), idx random, slotCx/Cy random,
@@ -136,7 +136,7 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
 
   // slot+0x3a = P1_ADDR (long)
   setLong(slotAddr + 0x3a, P1_ADDR);
-  // slot+0xC e slot+0x10 word
+  // slot+0xC and slot+0x10 word
   setWord(slotAddr + 0x0c, setup.slotCxWord);
   setWord(slotAddr + 0x10, setup.slotCyWord);
 

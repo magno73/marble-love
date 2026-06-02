@@ -5,7 +5,7 @@
  * with (0x400434, 0x3400).
  *
  * Strategia stub injection:
- *     that renderStringEntry28FDE must replicate.
+ *     that renderStringEntry28FDE must replicated.
  *
  *   - A: arg1/arg2 random long, entry pre-fill random
  *

@@ -1,5 +1,5 @@
 /**
- * Test formatAndRender28E00 (FUN_28E00) — smoke tests sui rami principali.
+ * Test formatAndRender28E00 (FUN_28E00) — smoke tests sui branches principali.
  *
  * `cli/src/test-format-and-render-28e00-parity.ts`.
  */
@@ -22,7 +22,7 @@ function writeWorkLong(ram: Uint8Array, off: number, value: number): void {
 }
 
 describe("formatAndRender28E00 (FUN_28E00)", () => {
-  it("formatHex: scrive cifre hex backward dal bufEnd letto da *0x400436, terminato da NUL", () => {
+  it("formatHex: writes cifre hex backward from the bufEnd letto da *0x400436, terminato da NUL", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -33,7 +33,7 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     // arg3Word/arg4Word = 0/0 (col, tickOff). callerD2Word = 0 (no spaces).
     formatAndRender28E00(s, rom, 0xabcd, 4, 0, 0, 0);
 
-    // Backward dal bufEnd+numDigits = 0x401D04: '\0' @ 1D04, 'D' @ 1D03,
+    // Backward from the bufEnd+numDigits = 0x401D04: '\0' @ 1D04, 'D' @ 1D03,
     // 'C' @ 1D02, 'B' @ 1D01, 'A' @ 1D00.
     expect(s.workRam[0x1d00]).toBe(0x41); // 'A'
     expect(s.workRam[0x1d01]).toBe(0x42); // 'B'
@@ -42,14 +42,14 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     expect(s.workRam[0x1d04]).toBe(0x00); // null term
   });
 
-  it("initStructHeader (via FUN_28FDE): scrive arg3.lo @ 0x434, arg4.lo @ 0x435, 0 @ 0x43A", () => {
+  it("initStructHeader (via FUN_28FDE): writes arg3.lo @ 0x434, arg4.lo @ 0x435, 0 @ 0x43A", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
     s.workRam[STRUCT_BASE_OFF] = 0xff;
     s.workRam[STRUCT_BASE_OFF + 1] = 0xff;
     s.workRam[STRUCT_BASE_OFF + 6] = 0xff;
-    // Imposta bufEnd a un'area "scratch" innocua.
+    // Sets bufEnd a un'area "scratch" innocua.
     writeWorkLong(s.workRam, BUFEND_PTR_OFF, 0x00401e00);
 
     formatAndRender28E00(s, rom, 0, 0, 0x12, 0xab, 0);
@@ -59,7 +59,7 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     expect(s.workRam[STRUCT_BASE_OFF + 6]).toBe(0x00);
   });
 
-  it("renderStringChain: il render usa attrWord=0x3400 e struct@0x400434 (smoke render)", () => {
+  it("renderStringChain: il render uses attrWord=0x3400 and struct@0x400434 (smoke render)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -73,30 +73,30 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     expect(s.workRam[0x4ff]).toBe(0x30); // '0'
     expect(s.workRam[0x500]).toBe(0x00); // null
 
-    // intatto.
+    // intact.
     for (let i = 0; i < 16; i++) {
       expect(s.alphaRam[i]).toBe(0x00);
     }
     expect(ATTR_WORD).toBe(0x3400);
   });
 
-  it("callerD2Word usato come showSpaces: value==0 + showSpaces==1 → leading spaces", () => {
+  it("callerD2Word used as showSpaces: value==0 + showSpaces==1 → leading spaces", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
     writeWorkLong(s.workRam, BUFEND_PTR_OFF, 0x00401d00);
 
-    // value=0, numDigits=4, showSpaces=1. formatHex: il primo char (value==0)
+    // value=0, numDigits=4, showSpaces=1. formatHex: il first char (value==0)
     formatAndRender28E00(s, rom, 0, 4, 0, 0, /*callerD2Word*/ 1);
 
-    expect(s.workRam[0x1d03]).toBe(0x30); // '0' (primo digit pre-loop)
+    expect(s.workRam[0x1d03]).toBe(0x30); // '0' (first digit pre-loop)
     expect(s.workRam[0x1d02]).toBe(0x20);
     expect(s.workRam[0x1d01]).toBe(0x20); // ' '
     expect(s.workRam[0x1d00]).toBe(0x20); // ' '
     expect(s.workRam[0x1d04]).toBe(0x00); // null term
   });
 
-  it("arg2Word negativo (signed sext): numDigits ≤ 0 → formatHex no-op (oltre il '0' iniziale)", () => {
+  it("arg2Word negativo (signed sext): numDigits ≤ 0 → formatHex no-op (beyond il '0' iniziale)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 

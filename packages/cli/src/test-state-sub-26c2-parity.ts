@@ -12,7 +12,7 @@
  *        ; FLAG34[i] NOT touched
  *        return D0 = 1
  *
- * workRam @ 0x401F00..0x401F3F sono perfettamente osservabili.
+ * workRam @ 0x401F00..0x401F3F are perfettamente observable.
  *
  * Suite testate:
  *   - A: random everything (mix of slot busy/free)

@@ -6,7 +6,7 @@
  * transizione false→true (edge-triggered), (3) read side faccia ack al
  * pending and releases the pin. The tests verify that the TS model keeps
  * this semantic byte-for-byte because any violation makes the
- * protocollo cmd 68K→6502 (es. doppio NMI = ISR rientrante).
+ * protocollo cmd 68K→6502 (e.g. doppio NMI = ISR rientrante).
  */
 
 import { describe, it, expect } from "vitest";
@@ -16,14 +16,14 @@ import {
 } from "../src/m6502/mailbox.js";
 import { createSoundMmu } from "../src/m6502/sound-mmu.js";
 
-describe("mailbox base latch", () => {
+describe("mailbox baif thetch", () => {
   it("init pulita: pending=false, value=0", () => {
     const mb = createMailbox();
     expect(mb.pending).toBe(false);
     expect(mb.value as number).toBe(0);
   });
 
-  it("write set pending + chiama callback edge-triggered una volta", () => {
+  it("write set pending + calls callback edge-triggered una time", () => {
     const mb = createMailbox();
     let cbCount = 0;
     mailboxWrite(mb, as_u8(0x42), () => cbCount++);
@@ -37,7 +37,7 @@ describe("mailbox base latch", () => {
     expect(cbCount).toBe(1);
   });
 
-  it("read ack pending + chiama callback solo se era pending", () => {
+  it("read ack pending + calls callback only if era pending", () => {
     const mb = createMailbox();
     mailboxWrite(mb, as_u8(0x42));
     let ackCount = 0;
@@ -64,10 +64,10 @@ describe("mailbox base latch", () => {
 describe("sound-mmu RAM + ROM regions", () => {
   function buildMmu() {
     const rom = new Uint8Array(0xC000).fill(0xff);
-    // Vector RESET a $FFFC/$FFFD (= addr 0xBFFC/0xBFFD nel rom offset).
+    // Vector RESET a $FFFC/$FFFD (= addr 0xBFFC/0xBFFD in the rom offset).
     rom[0xBFFC] = 0x00;
     rom[0xBFFD] = 0x80;  // PC start = $8000
-    // ROM marker a $C000 (offset 0x8000 nel rom buffer).
+    // ROM marker a $C000 (offset 0x8000 in the rom buffer).
     rom[0x8000] = 0xAB;
     rom[0x8001] = 0xCD;
     return createSoundMmu({
@@ -87,7 +87,7 @@ describe("sound-mmu RAM + ROM regions", () => {
     expect(mmu.read8(as_u16(0x1000)) as number).toBe(0xff);
   });
 
-  it("ROM $4000-$FFFF read-only: scrittura ignorata, valore persiste", () => {
+  it("ROM $4000-$FFFF read-only: scrittura ignorata, value persiste", () => {
     const mmu = buildMmu();
     expect(mmu.read8(as_u16(0xC000)) as number).toBe(0xAB);
     expect(mmu.read8(as_u16(0xC001)) as number).toBe(0xCD);
@@ -154,7 +154,7 @@ describe("sound-mmu mailbox $1810 bidirezionale", () => {
     expect(mmu.read8(as_u16(0x1820)) as number).toBe(0x9f);
   });
 
-  it("status $1820 supporta un override diagnostico della base coin/self-test", () => {
+  it("status $1820 supporta un override diagnostico of the base coin/self-test", () => {
     const mainToSound = createMailbox();
     const soundToMain = createMailbox();
     const mmu = createSoundMmu({
@@ -179,7 +179,7 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     });
   }
 
-  it("YM2151 $1800/$1801: write salvati in shadow, read ritorna status", () => {
+  it("YM2151 $1800/$1801: write salvati in shadow, read returns status", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x1800), as_u8(0x20));  // register select
     mmu.write8(as_u16(0x1801), as_u8(0xC0));  // register data
@@ -189,7 +189,7 @@ describe("sound-mmu YM2151 / POKEY / LS259 stub", () => {
     expect((mmu.read8(as_u16(0x1801)) as number) & 0x03).toBe(0);
   });
 
-  it("POKEY $1870-$187F: write salvati in shadow, read ritorna 0", () => {
+  it("POKEY $1870-$187F: write salvati in shadow, read returns 0", () => {
     const mmu = buildMmu();
     mmu.write8(as_u16(0x1875), as_u8(0xAB));
     mmu.write8(as_u16(0x187F), as_u8(0xCD));

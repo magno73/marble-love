@@ -25,7 +25,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     return s;
   }
 
-  it("queue vuota (head==tail): ritorna 0xFFFFFFFF", () => {
+  it("queue vuota (head==tail): returns 0xFFFFFFFF", () => {
     const s = setupQueue(0, 0, []);
     expect(dequeueByte(s)).toBe(0xFFFFFFFF);
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(0); // unchanged
@@ -37,7 +37,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(5);
   });
 
-  it("dequeue uno: head=0 tail=1 buffer[0]=0xAB → ritorna 0xAB, head=1", () => {
+  it("dequeue uno: head=0 tail=1 buffer[0]=0xAB → returns 0xAB, head=1", () => {
     const s = setupQueue(0, 1, [0xAB]);
     expect(dequeueByte(s)).toBe(0xAB);
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(1);
@@ -59,12 +59,12 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(15);
   });
 
-  it("byte ritornato è unsigned (0..255)", () => {
+  it("byte returned is unsigned (0..255)", () => {
     const s = setupQueue(0, 1, [0xFF]);
     expect(dequeueByte(s)).toBe(0xFF); // not -1
   });
 
-  it("non modifica tail", () => {
+  it("non modifies tail", () => {
     const s = setupQueue(2, 5, [0,0,0xAA]);
     dequeueByte(s);
     expect(s.workRam[QUEUE_TAIL_OFF]).toBe(5);
@@ -72,35 +72,35 @@ describe("dequeueByte (FUN_4D68)", () => {
 });
 
 describe("orPairBytes (FUN_53EA)", () => {
-  it("entrambi 0 → 0", () => {
+  it("both 0 → 0", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0;
     s.workRam[0x101] = 0;
     expect(orPairBytes(s, 0x400100)).toBe(0);
   });
 
-  it("solo primo set → primo byte", () => {
+  it("solo first set → first byte", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0xAB;
     s.workRam[0x101] = 0;
     expect(orPairBytes(s, 0x400100)).toBe(0xAB);
   });
 
-  it("solo secondo set → secondo byte", () => {
+  it("only ifcondo set → second byte", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0;
     s.workRam[0x101] = 0xCD;
     expect(orPairBytes(s, 0x400100)).toBe(0xCD);
   });
 
-  it("entrambi: OR bitwise", () => {
+  it("both: OR bitwise", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x33;
     s.workRam[0x101] = 0xCC;
     expect(orPairBytes(s, 0x400100)).toBe(0xFF);
   });
 
-  it("ritorna sempre long (high bits 0)", () => {
+  it("returns always long (high bits 0)", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0xFF;
     s.workRam[0x101] = 0xFF;

@@ -5,7 +5,7 @@
  *
  * FUN_0001C676 (1092 byte): "sprite bracket-lerp". Legge 4 struct globali
  * @ 0x401C28/30/38/40 (8 byte ciascuna), 2 muls factor @ 0x40069E/0x4006A0,
- * e il base-word @ 0x400694. Scrive:
+ * and il base-word @ 0x400694. Scrive:
  *   - byte flags @ 0x40066A
  *   - 4 byte dircode @ 0x40066C/6E/70/72
  *   - 8 word output @ 0x400674..0x400683

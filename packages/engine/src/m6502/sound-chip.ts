@@ -883,8 +883,8 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
 
   // Esegue reset sequence: PC = vector $FFFC/$FFFD.
   cpuReset(cpu, mmu);
-  // Sound 6502 parte in HOLD reset (hardware). Main 68K dovra' chiamare
-  // releaseSoundReset() per liberare il 6502 e farlo iniziare a girare.
+  // Sound 6502 parte in HOLD reset (hardware). Main 68K dovra' call
+  // releaseSoundReset() per liberare il 6502 and farlo iniziare a girare.
   const chip: SoundChip = {
     cpu,
     mmu,

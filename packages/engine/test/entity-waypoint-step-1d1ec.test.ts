@@ -1,8 +1,8 @@
 /**
- * entity-waypoint-step-1d1ec.test.ts — smoke + corner case di FUN_1D1EC.
+ * entity-waypoint-step-1d1ec.test.ts — smoke + corner case of FUN_1D1EC.
  *
  * Test in-WORK_RAM: alloca struct entity in 0x401E00 (offset 0x1E00 in
- * workRam) e cursor array in 0x401E80 (offset 0x1E80). Verifica:
+ * workRam) and cursor array in 0x401E80 (offset 0x1E80). Verifica:
  *   1. Match X+Y -> cursor advances by step*4
  *   2. Mismatch X -> cursor unchanged (early-exit)
  *   3. Mismatch Y (but X matches) -> cursor unchanged
@@ -96,7 +96,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe(CURSOR_BASE_ABS);
   });
 
-  it("X match ma mismatch Y → cursor invariato", () => {
+  it("X match but mismatch Y → cursor invariato", () => {
     const s = setup({
       posX: 0x00280000, // cellX=5
       posY: 0x00100000, // cellY=2
@@ -106,7 +106,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe(CURSOR_BASE_ABS);
   });
 
-  it("step negativo (signed byte) → cursor decrementa rispetto a base", () => {
+  it("step negativo (signed byte) → cursor decrementa relative a base", () => {
     // cellX=5, cellY=2 (match), step = -3 (0xFD signed)
     const s = setup({
       posX: 0x00280000,
@@ -132,7 +132,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe((ARRAY_BASE + 4) >>> 0);
   });
 
-  it("subs.fun_1d242 chiamato sempre (anche quando skip per mismatch)", () => {
+  it("subs.fun_1d242 chiamato always (also when skip per mismatch)", () => {
     const cb = vi.fn();
     const s = setup({
       posX: 0,
@@ -144,7 +144,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(cb).toHaveBeenCalledWith(ENTITY_BASE_ABS);
   });
 
-  it("subs.fun_1d242 chiamato anche quando match avviene", () => {
+  it("subs.fun_1d242 chiamato also when match avviene", () => {
     const cb = vi.fn();
     const s = setup({
       posX: 0,
@@ -155,7 +155,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 
-  it("legge waypoint ROM e passa la ROM al follow-up FUN_1D242", () => {
+  it("reads waypoint ROM and passa la ROM al follow-up FUN_1D242", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const cursor = 0x23000;

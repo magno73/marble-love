@@ -264,12 +264,12 @@ async function main(): Promise<void> {
 
   // ── Suite B: no_bit11 path (top4 = 0, bit 11 = 0) ──────────────────────
   //   - D3.l = sext(arg2w) + globalLong988. Vogliamo D3.l piccolo (0..0xF).
-  //     Con globalLong988=0 e arg2w piccolo (positive 0..0xF) → D3.l = arg2w.
+  //     Con globalLong988=0 and arg2w piccolo (positive 0..0xF) → D3.l = arg2w.
   //   - A0_deref = 0xa00800 (in PF RAM); D0_sext ∈ [0x40..0x7ff] → A1 ∈
   //   - offset0/offset4 from ROM are small (0..0x12121200, but we inspect
   //     only entries 0..15 = 0..0xF). A3 still = A1 + offset0 and A1 += offset4.
   //     With offset0 in {0..3, 0x12120300...}, this lands in different places. But in
-  //     pratica per le entries 0..7 le offset sono 0..3 (vedi rom dump @ 0x2417e),
+  //     pratica per le entries 0..7 le offset are 0..3 (vedi rom dump @ 0x2417e),
   //     arg2w ∈ [0..7].
   //     in PF RAM if A1_pre >= 0xa00000.
   console.log(`\n  Suite B (no_bit11 path) — ${perSuite} casi`);
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
   // ── Suite C: top4 != 0, mask hit (top4_short) ──────────────────────────
   // top4_short does not re-read PF RAM; only workRam @ 0x400478 + 2*arg0w and
   // ROM @ 0x24176 + D3.w*2). Vincoli:
-  //     (0x24176..0x2417d). Con globalLong988=0 e arg2w ∈ [0..3], D3.w =
+  //     (0x24176..0x2417d). Con globalLong988=0 and arg2w ∈ [0..3], D3.w =
   //     arg2w, D3.w*2 ∈ [0..6]. ✓
   console.log(`\n  Suite C (top4_short path) — ${perSuite} casi`);
   let okC = 0;

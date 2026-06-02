@@ -252,7 +252,7 @@ export function bootInit(
   state.workRam[0x17c] = 0;
   state.workRam[0x17d] = 0;
 
-  // 3. Sub-init replicate
+  // 3. Sub-init replicated
   paletteRamInitFull(state, rom);
   paletteBootstrapInit(state);
   gameStateMachineInit(state, rom);

@@ -5,7 +5,7 @@
  *
  * `FUN_000160F6` (1378 byte, 0x0160F6–0x016658): trackball navigation
  * dispatcher. Updates object movement based on trackball delta
- * e input direzionali.
+ * and input direzionali.
  *
  * **Stub injection**:
  *   `FUN_000158AC` (sound command) is patched to a thunk logger that

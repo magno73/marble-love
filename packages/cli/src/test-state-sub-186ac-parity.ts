@@ -178,7 +178,7 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
 
   function setupCase(input: CaseInput): void {
-    // word @ 0x400394 (game_mode) e 0x400396 (count) per count >= 4 (obj4
+    // word @ 0x400394 (game_mode) and 0x400396 (count) per count >= 4 (obj4
     // covers 0x400018+4*0xE2 = 0x4003A0..0x400481 → include count word e
     // RNG seed @ 0x4003A6). To avoid setup collisions, write
 

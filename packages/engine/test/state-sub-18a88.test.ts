@@ -122,7 +122,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
 
     // Vblank counter +1 (pre-loop)
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe((tickPre + 1) & 0xff);
-    // Summary counter intatto
+    // Summary counter intact
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(summaryPre);
 
     // No other sub-call.
@@ -149,7 +149,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.particleInit).toHaveLength(1);
     expect(trace.clearAlphaTiles).toHaveLength(0);
     expect(trace.renderStringHelper).toHaveLength(0);
-    // summary counter intatto
+    // summary counter intact
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(0);
     // vblank counter only +1 (pre-loop).
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(1);
@@ -183,10 +183,10 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
 
     // particleInit
     expect(trace.particleInit).toHaveLength(1);
-    // clearAlphaTiles 1 volta
+    // clearAlphaTiles 1 time
     expect(trace.clearAlphaTiles).toEqual([0]);
     // renderStringVia200 called 4 times (header1 + 2x BONUS labels = 3,
-    // wait: header1 (1) + label BONUS (1) + label TIME (1) = 3, NON 4)
+    // wait: header1 (1) + label BONUS (1) + label TIME (1) = 3, NOT 4)
     // Verifica entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
     expect(trace.renderStringVia200).toEqual([
       { entryPtr: ROM_HEADER_STRING_1, attr: 0x1000 },
@@ -211,10 +211,10 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.addToObjectAccum[0]!.value).toBe(D4_STEP);
     expect(trace.addToObjectAccum[0]!.ptr).toBe(OBJ_BASE_ADDR);
 
-    // formatAndRender 88 volte
+    // formatAndRender 88 times
     expect(trace.formatAndRender).toHaveLength(88);
 
-    // waitVblankStateGated 88 + 1 volte (count=2 ×88, count=0x5A ×1)
+    // waitVblankStateGated 88 + 1 times (count=2 ×88, count=0x5A ×1)
     expect(trace.waitVblankStateGated).toHaveLength(89);
     expect(trace.waitVblankStateGated[88]).toBe(0x5a);
     for (let i = 0; i < 88; i++) {
@@ -228,7 +228,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(4);
   });
 
-  it("count == 2: renderTag invocato 2 volte (alternando 0x2000/0x2400)", () => {
+  it("count == 2: renderTag invocato 2 times (alternando 0x2000/0x2400)", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 2);
 

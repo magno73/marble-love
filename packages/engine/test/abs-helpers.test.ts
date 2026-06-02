@@ -7,7 +7,7 @@ import {
 } from "../src/abs-helpers.js";
 
 describe("FUN_1B5A6 absLong1B5A6", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(ABS_LONG_1B5A6_ADDR).toBe(0x1b5a6);
   });
 
@@ -36,7 +36,7 @@ describe("FUN_1B5A6 absLong1B5A6", () => {
 });
 
 describe("FUN_1B5B4 negAbsLong1B5B4", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(NEG_ABS_LONG_1B5B4_ADDR).toBe(0x1b5b4);
   });
 

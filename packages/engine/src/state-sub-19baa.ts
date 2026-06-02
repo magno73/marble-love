@@ -250,7 +250,7 @@ export const ENTITY_POS_Z_OFFSET = 0x14 as const;
 export const ENTITY_ACTIVE_OFFSET = 0x18 as const;
 /** Byte @ entity[0x19]: key for FUN_18F46 arg2. */
 export const ENTITY_KEY19_OFFSET = 0x19 as const;
-/** Byte @ entity[0x1A]: substate (0,1,2 osservati). */
+/** Byte @ entity[0x1A]: substate (0,1,2 observed). */
 export const ENTITY_SUBSTATE_OFFSET = 0x1a as const;
 /** Byte @ entity[0x1B]: timer/counter (decremented). */
 export const ENTITY_TIMER_OFFSET = 0x1b as const;

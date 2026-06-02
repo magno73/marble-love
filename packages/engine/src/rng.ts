@@ -83,7 +83,7 @@ function maskHelperAfter(n: number): u16 {
  *   3. result = state & mask
  *   4. while result >= limit: result -= limit
  *
- * result <= limit: sub`. Per result == limit: result -= limit → 0 (corretto
+ * result <= limit: sub`. Per result == limit: result -= limit → 0 (correct
  */
 export function rngNext(rstate: RngState, limit: u16): u16 {
   const limit_n = limit as unknown as number;

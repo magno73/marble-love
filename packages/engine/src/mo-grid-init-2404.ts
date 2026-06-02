@@ -103,7 +103,7 @@ export function moGridInit2404(
 
   // 2. Bank offset = arg1 << 9 (cumulativo: <<3 poi <<6 = <<9 long).
   const bankOffsetLong = ((arg1Long << 9) >>> 0) >>> 0;
-  // SPRITE_RAM_BASE_ADDR e state.spriteRam parte da 0).
+  // SPRITE_RAM_BASE_ADDR and state.spriteRam parte da 0).
   const bankOff = bankOffsetLong;
 
   const codeBias = readWordBE(rom.program, ROM_CODE_BIAS_ADDR);

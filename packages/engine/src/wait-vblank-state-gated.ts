@@ -58,7 +58,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta (the offset workRam of seguito sono relativi). */
+/** WORK RAM base assoluta (the offset workRam of followed are relativi). */
 export const WORK_RAM_BASE = 0x400000;
 
 /** byte mailbox vblank ack: clr+spin in FUN_28DEA. */
@@ -92,12 +92,12 @@ export function waitVblankStateGated(
   abortAtIter: number = 0,
   d0HiPrev: number = 0,
 ): WaitVblankStateGatedResult {
-  // Tronca arg a 16 bit e reinterpreta signed (tst.w + bgt usano flags signed).
+  // Tronca arg a 16 bit and reinterpreta signed (tst.w + bgt usano flags signed).
   const argW = countWord & 0xffff;
   const argSigned = argW & 0x8000 ? argW - 0x10000 : argW;
 
   const initialLoByte = (state.workRam[GAME_STATE_LO_BYTE_OFF] ?? 0) & 0xff;
-  // sext_b -> word: if bit7, hi byte = 0xFF.
+  // sext_b -> word: if bit7, hthe bytes = 0xFF.
   const initialSextW =
     initialLoByte & 0x80 ? 0xff00 | initialLoByte : initialLoByte;
 

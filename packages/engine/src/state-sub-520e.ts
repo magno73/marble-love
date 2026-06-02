@@ -169,12 +169,12 @@ export function stateSub520E(
   fun523AInner(state, d0FromByte);
 
   // ── Path "dead-code reachable": (4,SP) load + fall-through in 523A ────
-  // (long-BE da SP+4) e POI cade in the body of 523A of nuovo.
+  // (long-BE da SP+4) and POI cade in the body of 523A of nuovo.
   // In produzione SP+4 = saved A3 = 0x00F00001 → shift = 63 → D1 = 0 → no-op.
   fun523AInner(state, stackD0 >>> 0);
 }
 
-/** Helper interno: OR cumulativo of una maschera in the long-BE @ 0x401F5E. */
+/** Helper interno: OR cumulativo of una mask in the long-BE @ 0x401F5E. */
 function applyStatusFlagsOr(r: Uint8Array, mask: number): void {
   const m = mask >>> 0;
   if (m === 0) return;

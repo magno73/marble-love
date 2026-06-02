@@ -1,5 +1,5 @@
 /**
- * probe-diff-bytes.ts — diff byte-per-byte between TS evolution e MAME oracle
+ * probe-diff-bytes.ts — diff byte-per-byte between TS evolution and MAME oracle
  * at a specific target frame, to identify exactly the bytes that
  * divergono al first tick of drift.
  *
@@ -72,7 +72,7 @@ function diff(region: string, ts: Uint8Array, mame: Uint8Array, baseArr: Uint8Ar
   const out: DiffEntry[] = [];
   for (let i = 0; i < ts.length; i++) {
     // workRam[0x1d22..0x1eff] = M68K supervisor stack of MAME (SSP=0x1F00,
-    // low-water 0x1d22). TS non ha M68K stack: differenze qui sono residue
+    // low-water 0x1d22). TS non ha M68K stack: differenze qui are residue
     // of push/pop irrilevanti al game state. Skip.
     if (region === "workRam" && i >= 0x1d22 && i <= 0x1eff) continue;
     if (ts[i] !== mame[i]) {

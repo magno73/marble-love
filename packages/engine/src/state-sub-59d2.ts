@@ -7,7 +7,7 @@
  *   - `-1` (= 0xFFFFFFFF) o `-2` (= 0xFFFFFFFE) for errors of OOR
  *
  * and for parity (the binary oracle patches FUN_40D8 entry with synthetic RTS
- * e inietta D0 manualmente).
+ * and inietta D0 manualmente).
  *
  * **Disasm 0x59D2..0x5A5D** (140 byte / 0x8C):
  *
@@ -189,7 +189,7 @@ const HALF_THRESHOLD = 0x1fffe as const;
  *
  * 2. Il halving step `(x + 1) >> 1` modella `addq.l #1, D0; lsr.l #1, D0`.
  *
- * 3. Il halve-loop ha entry @ 0x5A1A. Re-check su D2 e D1. Fallthrough a 0x5A4A
+ * 3. Il halve-loop ha entry @ 0x5A1A. Re-check su D2 and D1. Fallthrough a 0x5A4A
  *    through the ROUND-half path (NOT through the LSR path, which has explicit `bra 0x5A1A`).
  *    SOLO round-half ((D2+1)>>1, (D1+1)>>1), poi divu.
  *

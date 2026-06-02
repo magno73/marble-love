@@ -5,7 +5,7 @@
  *
  * `FUN_00012DFA` (330 byte): rect-list spawn + region-bound despawn.
  *   - For each rect (6 byte: lo.b, hi.b, scriptPtr.l) → testa via FUN_12DAE,
- *     poi D2/D3 vs lo/hi, e o spawn 4 marble (zero-path) o spawn 1 (long-path).
+ *     poi D2/D3 vs lo/hi, and o spawn 4 marble (zero-path) o spawn 1 (long-path).
  *     FUN_12F44 mode-1.
  *
  * **Strategia parity**:

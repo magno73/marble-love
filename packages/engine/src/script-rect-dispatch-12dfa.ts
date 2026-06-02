@@ -360,7 +360,7 @@ export function scriptRectDispatch12DFA(
   arg1: number,
   arg2: number,
 ): void {
-  // D2.b / D3.b sono i byte BASSI (offset +3 in the long) of the arg on the stack.
+  // D2.b / D3.b are the bytes BASSI (offset +3 in the long) of the arg on the stack.
   const d2 = sextByte(arg1 & 0xff);
   const d3 = sextByte(arg2 & 0xff);
 

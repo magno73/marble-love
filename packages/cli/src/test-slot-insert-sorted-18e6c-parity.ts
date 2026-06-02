@@ -150,7 +150,7 @@ function setupRomLookup(romView: Uint8Array): void {
 
 /**
  *
- * - byteArray[0..0x1F]: i primi `numActive` byte sono indici random 0..15;
+ * - byteArray[0..0x1F]: the first `numActive` byte are indici random 0..15;
  *   compare also for occupied slots.
  */
 function setupBaseline(

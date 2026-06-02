@@ -28,11 +28,11 @@ function writeRomLong(
 }
 
 describe("FUN_26B10 paletteCopy26B10", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(PALETTE_COPY_26B10_ADDR).toBe(0x26b10);
   });
 
-  it("copia 32 word (64 byte) ROM[0x1FBD0] → colorRam[0..0x3F]", () => {
+  it("copies 32 word (64 byte) ROM[0x1FBD0] → colorRam[0..0x3F]", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < 32; i++) {
@@ -51,11 +51,11 @@ describe("FUN_26B10 paletteCopy26B10", () => {
 });
 
 describe("FUN_26B2A gameStateBanner26B2A", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(GAME_STATE_BANNER_26B2A_ADDR).toBe(0x26b2a);
   });
 
-  it("scrive 195 word scatter da ROM[banner+mode*0x186] verso destinazioni in workRam", () => {
+  it("writes 195 word scatter da ROM[banner+mode*0x186] verso destinazioni in workRam", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -89,7 +89,7 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
     }
   });
 
-  it("mode != 0 usa offset diverso da BANNER_ROM_BASE", () => {
+  it("mode != 0 uses offset diverso da BANNER_ROM_BASE", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -107,7 +107,7 @@ describe("FUN_26B2A gameStateBanner26B2A", () => {
     expect((state.workRam[0x200 + 0xc2 * 2] << 8) | (state.workRam[0x200 + 0xc2 * 2 + 1] ?? 0)).toBe(0xface);
   });
 
-  it("dest ptr in alphaRam scrive in state.alphaRam", () => {
+  it("dest ptr in alphaRam writes in state.alphaRam", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 

@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Randomizzo il range of destinazione (per verificare sovrascrittura completa)
+    // Randomizzo il range of destination (per verify sovrascrittura completa)
     // both in the CPU (musashi memory) both in the TS state (GameState.workRam).
     for (let b = 0; b < COPY_BYTES; b++) {
       const v = Math.floor(rng() * 256) & 0xff;

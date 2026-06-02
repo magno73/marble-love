@@ -12,7 +12,7 @@
  *
  * Strategia parity:
  *   - Set up workRam with a zeroed output buffer @ 0x401000, a control
- *     bitstream random @ 0x401200 (~256 byte → margin), e un byte stream
+ *     bitstream random @ 0x401200 (~256 byte → margin), and un byte stream
  *     random @ 0x401400 (~512 byte of coverage cache).
  *   - ROM lookup tables are the actual original binary contents
  *     (read via romBuf), not patched.
@@ -196,9 +196,9 @@ async function main(): Promise<void> {
       // Bias: each byte e' "small" (< 0x40 in the high nibble).
       for (let i = 0; i < CTRL_BYTES; i++) {
         // Per assicurare path B serve il top 14 bit of the long < 0x400.
-        // I top 14 bit sono i top 14 bit of the first byte + 6 bit of the second.
+        // I top 14 bit are the top 14 bits of the first byte + 6 bit of the second.
         // Top 14 bit < 0x400 ⇔ top byte e' 0..0xF (high 4 bit of byte0 = 0..0x0F)
-        // e basso byte ha bit 7..2 small. Approssimazione: we write byte
+        // and basso byte ha bit 7..2 small. Approssimazione: we write byte
         // random but with 50% MSB 0 -> mix path A/B.
         buf[i] = Math.floor(rng() * 0x40); // small bytes for mix of B/C/D
       }

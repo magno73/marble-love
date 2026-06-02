@@ -41,11 +41,11 @@ const EXPECTED: Array<{ sourceAddr: number; targetAddr: number | null }> = [
 ];
 
 describe("THUNK_TABLE (irq-vector-thunks)", () => {
-  it("contiene esattamente 24 entry", () => {
+  it("contains exactly 24 entry", () => {
     expect(THUNK_TABLE.length).toBe(24);
   });
 
-  it("ogni entry ha sourceAddr, targetAddr e romBytes definiti", () => {
+  it("each entry ha sourceAddr, targetAddr and romBytes definiti", () => {
     for (const entry of THUNK_TABLE) {
       expect(typeof entry.sourceAddr).toBe("number");
       expect(entry.romBytes).toMatch(/^[0-9A-F]{12}$/);
@@ -55,7 +55,7 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
     }
   });
 
-  it("tutti i 23 JMP thunk hanno opcode 4EF9 in romBytes", () => {
+  it("all the 23 JMP thunk hanno opcode 4EF9 in romBytes", () => {
     const jmpEntries = THUNK_TABLE.filter((e) => e.targetAddr !== null);
     expect(jmpEntries.length).toBe(23);
     for (const entry of jmpEntries) {
@@ -63,14 +63,14 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
     }
   });
 
-  it("0x01010A ha targetAddr null e romBytes 46FC20004E75", () => {
+  it("0x01010A ha targetAddr null and romBytes 46FC20004E75", () => {
     const e = THUNK_MAP.get(0x01010a);
     expect(e).toBeDefined();
     expect(e!.targetAddr).toBeNull();
     expect(e!.romBytes).toBe("46FC20004E75");
   });
 
-  it("tutti i targetAddr corrispondono ai valori ROM estratti dalla disasm cache", () => {
+  it("all i targetAddr corrispondono ai values ROM estratti from the disasm cache", () => {
     for (const expected of EXPECTED) {
       const entry = THUNK_MAP.get(expected.sourceAddr);
       expect(entry).toBeDefined();
@@ -78,14 +78,14 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
     }
   });
 
-  it("THUNK_MAP ha 24 entry con le stesse chiavi di THUNK_TABLE", () => {
+  it("THUNK_MAP ha 24 entry con le stesse chiavi of THUNK_TABLE", () => {
     expect(THUNK_MAP.size).toBe(THUNK_TABLE.length);
     for (const entry of THUNK_TABLE) {
       expect(THUNK_MAP.get(entry.sourceAddr)).toBe(entry);
     }
   });
 
-  it("sourceAddr di ogni JMP thunk codificato correttamente in romBytes (byte 2-5)", () => {
+  it("sourceAddr of each JMP thunk codificato correttamente in romBytes (byte 2-5)", () => {
     // For each JMP: romBytes[4..11] must match targetAddr big-endian.
     const jmpEntries = THUNK_TABLE.filter((e) => e.targetAddr !== null);
     for (const entry of jmpEntries) {
@@ -94,7 +94,7 @@ describe("THUNK_TABLE (irq-vector-thunks)", () => {
     }
   });
 
-  it("enableInterrupts1010A è una funzione chiamabile senza side-effect", () => {
+  it("enableInterrupts1010A is una funzione chiamabile senza side-effect", () => {
     expect(typeof enableInterrupts1010A).toBe("function");
     expect(() => enableInterrupts1010A()).not.toThrow();
   });

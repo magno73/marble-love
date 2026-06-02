@@ -7,7 +7,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("helper182BA (FUN_182BA)", () => {
-  it("non solleva eccezioni con state vuoto e slot vuoto", () => {
+  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => helper182BA(s, 0x400a20, rom)).not.toThrow();
@@ -38,7 +38,7 @@ describe("helper182BA (FUN_182BA)", () => {
                 (s.workRam[off + 0x0b] ?? 0);
     const vz = vzU | 0;
     // Exact result depends on the seek path, which may have written vy/vx/vz first.
-    // Ma vz dovrebbe esserci una qualche mutazione (≠ seed 0).
+    // Ma vz should esserci una some mutation (≠ seed 0).
     expect(vz).not.toBe(0);
   });
 

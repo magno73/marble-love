@@ -13,7 +13,7 @@
  *     @ 0x401F5E.
  *   - Pre-populate `*0x401F5E` with a random long to verify that the path
  *     OR both cumulativo (e non un assignment).
- *   - Lancia `callFunction(cpu, 0x525C)` e `stateSub525C(state, d0, a2)`.
+ *   - Lancia `callFunction(cpu, 0x525C)` and `stateSub525C(state, d0, a2)`.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-525c-parity.ts [N]
  */
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
     } else if (i === 2) {
       d0 = 14;
     } else if (i === 3) {
-      d0 = 15; // 30 bit, but bits 32..33 sono no-op (asl.l ≥32 → 0)
+      d0 = 15; // 30 bit, but bits 32..33 are no-op (asl.l ≥32 → 0)
     } else if (i === 4) {
       d0 = 7;
     } else {

@@ -3,7 +3,7 @@
  * test-slot-array-init-parity.ts — differential FUN_10392 vs slotArrayBulkInit.
  *
  * FUN_10392 initializes 6 slot arrays at fixed addresses. Verify that
- * all i byte modificati combacino byte-byte.
+ * all the bytes modificati combacino byte-byte.
  *
  * Uso: npx tsx packages/cli/src/test-slot-array-init-parity.ts
  */

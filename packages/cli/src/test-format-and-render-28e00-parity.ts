@@ -10,7 +10,7 @@
  *      callFunction.
  *   2. `FUN_00028FDE(arg3Word, arg4Word)` =
  *      `initStructHeader(0x400434, arg3.lowByte, arg4.lowByte)` (FUN_255A)
- *      seguito da `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
+ *      followed da `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
  *
  * Suite testate:
  *   - A: full random (value, numDigits 1..8, with the, tickOff, callerD2, attr

@@ -15,7 +15,7 @@
  * **Strategia parity**:
  *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
  *      in zone fixed of work RAM (0x401F00+).
- *      of A2, e a set of sentinels near.
+ *      of A2, and a set of sentinels near.
  *
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
@@ -352,7 +352,7 @@ async function main(): Promise<void> {
       preAnimPtr = 0x00020fd6; // +4 = 0x20FDA = sentinel
     }
 
-    // fps e frame_ctr
+    // fps and frame_ctr
     let preFrameCtr = rb() & 0x1f;
     let preFps = rb() & 0x1f;
     // 40% force advance (frame_ctr == fps, advance avviene)

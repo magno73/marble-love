@@ -18,12 +18,12 @@
  *   In TS, the 3 callbacks inject the same increment.
  *
  * **Note on trampoline patching** (0x142, 0x13C):
- *   I trampolini sono `jmp 0x2572` / `jmp 0x255A`. Patchamo the entry destinazione
+ *   I trampolines are `jmp 0x2572` / `jmp 0x255A`. We patch the entry destination
  *
  *      For cases with `idx=-1` early-out: == (D2==0 ? 2 : 1).
  *      or == 0 on early-out.
  *   3. sentinelHelper == 1 in both (same rule) or == 0 on early-out.
- *   4. workRam[0x428..0x42E] e i 5 byte @ *(0x40042A) byte-by-byte.
+ *   4. workRam[0x428..0x42E] and i 5 byte @ *(0x40042A) byte-by-byte.
  *
  *   - A: idx random ∈ [0..7], levelNum random, mode != 2, no early-out.
  *   - B: idx random, levelNum random, mode == 2 (D2!=0 path, skip cond jsr).
@@ -169,7 +169,7 @@ function setupCase(
   pokeMem(cpu, SENTINEL_HELPER, 1, setup.sentInitHelper);
   state.workRam[SENTINEL_HELPER - 0x400000] = setup.sentInitHelper;
 
-  // 8. ROM table 1 @ 0x23C04 e table 2 @ 0x23C18: we write 8 long (32 byte ciascuna).
+  // 8. ROM table 1 @ 0x23C04 and table 2 @ 0x23C18: we write 8 long (32 byte ciascuna).
   // as read-only normally). Per be safe, NOT ri-we write the ROMs
   void romBuf;
 }

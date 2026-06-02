@@ -5,7 +5,7 @@
  * `FUN_3520` (jsr 0x200) with (0x40041C, ext.l(arg3.w)).
  *
  * Strategia stub injection:
- *     that renderStringEntry28FA0 must replicate.
+ *     that renderStringEntry28FA0 must replicated.
  *
  *   - A: arg1/arg2/arg3 random long, entry pre-fill random
  *

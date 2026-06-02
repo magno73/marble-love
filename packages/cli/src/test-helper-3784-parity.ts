@@ -242,7 +242,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: x/y negative (sign-ext), rotation=0 ────────────────────────
   // In produzione y = sign-ext of word (D6w), x = sign-ext of long sum.
-  // I byte negative (0x80..0xFF → sext → -128..−1) sono comuni.
+  // I byte negative (0x80..0xFF → sext → -128..−1) are common.
   console.log(
     `\n=== Suite C: x/y negative (byte 0x80..0xFF), rotation=0 — ${perSuite} cases ===`,
   );

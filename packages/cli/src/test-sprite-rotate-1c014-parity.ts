@@ -8,7 +8,7 @@
  *
  * **Strategia parity**:
  *   - Compare workRam:
- *       - matrice 3×3 + cols espansi 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
+ *       - matrice 3×3 + cols espansthe 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
  *       - slot output: A2+0xA4..0xC3 (32 bytes = 4 slots x 8 bytes, use 4x6=24)
  *       - CA counter: A2+0xCA (1 byte).
  *

@@ -1,7 +1,7 @@
 /**
- * sort-adjacent-objects-1a7a8.test.ts — smoke test di FUN_1A7A8.
+ * sort-adjacent-objects-1a7a8.test.ts — smoke test of FUN_1A7A8.
  *
- * Qui copriamo i path principali della logica di walk + swap + lookup ROM +
+ * Qui copriamo i path principali of the logica of walk + swap + lookup ROM +
  */
 
 import { describe, it, expect } from "vitest";
@@ -94,10 +94,10 @@ describe("fun1A80A — rect compare (FUN_1A80A)", () => {
     expect(fun1A80A(s, 0x401000, 0x401100)).toBe(1);
   });
 
-  it("Word compare path: tutti uguali → ritorna 1 (last fallthrough)", () => {
+  it("Word compare path: all uguali → returns 1 (last fallthrough)", () => {
     const s = emptyGameState();
     // A1 and A0 with same pattern to skip the 4 initial cmp.w and fall
-    // nel `moveq #1`. Setup: D3 > D2, D5 > D4 (entrambi non scattano).
+    // in the `moveq #1`. Setup: D3 > D2, D5 > D4 (both non scattano).
     // D2 = 0, D3 = 3 → D3 > D2 ok; D4 = 3, D5 = 0 → D5 <= D4 → return 1.
     // A1: x=2,2,2 (D4=6); y=2,2,2 (D3=6). A0: x=0,0,0 (D2=0); y=10,10,10 (D5=30).
     // D3=6 > D2=0 ok. D5=30 > D4=6 ok.
@@ -121,7 +121,7 @@ describe("fun1A80A — rect compare (FUN_1A80A)", () => {
     expect(fun1A80A(s, 0x401000, 0x401100)).toBe(1);
   });
 
-  it("ptr fuori workRam → 0 (defensive)", () => {
+  it("ptr outside workRam → 0 (defensive)", () => {
     const s = emptyGameState();
     expect(fun1A80A(s, 0x500000, 0x501000)).toBe(0);
   });
@@ -140,7 +140,7 @@ describe("lookupRectPtr — ROM table @ 0x1F0E2", () => {
     expect(lookupRectPtr(rom, 5)).toBe(0xdeadbeef);
   });
 
-  it("read pointer @ idx 255 (fuori i 16 entry validi)", () => {
+  it("read pointer @ idx 255 (outside i 16 entry validi)", () => {
     const rom = emptyRomImage();
     writeU32BE(rom.program, ROM_LOOKUP_OFF + 255 * 4, 0x12345678);
     expect(lookupRectPtr(rom, 255)).toBe(0x12345678);
@@ -148,7 +148,7 @@ describe("lookupRectPtr — ROM table @ 0x1F0E2", () => {
 });
 
 describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
-  it("Array tutti 0xFF → exit immediato, no mutation", () => {
+  it("Array all 0xFF → exit immediato, no mutation", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
@@ -173,7 +173,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("Compare sempre 0 (no swap) → walk fino a 0xFF, no mutation", () => {
+  it("Compare always 0 (no swap) → walk up to 0xFF, no mutation", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Setup: 5 entry 0..4, poi 0xFF.
@@ -189,7 +189,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("Compare sempre 1 (always swap) stride=1 → swap di tutte le coppie adiacenti", () => {
+  it("Compare always 1 (always swap) stride=1 → swap of all le coppie adiacenti", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[BYTE_ARRAY_OFF + 0] = 0;
@@ -220,7 +220,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam[BYTE_ARRAY_OFF + 5]).toBe(0xff);
   });
 
-  it("Compare sempre 1 stride=2 → swap su pairs distanti 2", () => {
+  it("Compare always 1 stride=2 → swap su pairs distantthe 2", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[BYTE_ARRAY_OFF + 0] = 0;
@@ -248,7 +248,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam[BYTE_ARRAY_OFF + 5]).toBe(0xff);
   });
 
-  it("compare() callback riceve i pointer ROM-resolved corretti", () => {
+  it("compare() callback receives i pointer ROM-resolved corretti", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[BYTE_ARRAY_OFF + 0] = 3;
@@ -287,7 +287,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("Mutation NON tocca byte fuori 0x3BC..0x3DC", () => {
+  it("Mutation NOT tocca byte outside 0x3BC..0x3DC", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[BYTE_ARRAY_OFF + 0] = 0;
@@ -302,7 +302,7 @@ describe("sortAdjacentObjects1A7A8 — single-pass walk", () => {
     expect(s.workRam[BYTE_ARRAY_OFF + BYTE_ARRAY_LEN]).toBe(0x88);
   });
 
-  it("Pure: rect struct in workRam @ 0x1DC.. non vengono modificate", () => {
+  it("Pure: rect struct in workRam @ 0x1DC.. non are modificate", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[BYTE_ARRAY_OFF + 0] = 0;

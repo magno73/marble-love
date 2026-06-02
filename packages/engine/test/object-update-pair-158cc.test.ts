@@ -1,5 +1,5 @@
 /**
- * object-update-pair-158cc.test.ts — corner cases di objectUpdatePair158CC
+ * object-update-pair-158cc.test.ts — corner cases of objectUpdatePair158CC
  * (FUN_158CC).
  *
  * Bit-perfect parity verificata vs binary in
@@ -16,7 +16,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("objectUpdatePair158CC (FUN_158CC)", () => {
-  it("chiama objectUpdate esattamente 2 volte", () => {
+  it("calls objectUpdate exactly 2 times", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     objectUpdatePair158CC(s, {
@@ -40,14 +40,14 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(SLOT_PAIR_BASE_ADDR + SLOT_PAIR_STRIDE).toBe(0x00400a20);
   });
 
-  it("default subs (no callback) → nessun errore, nessuna mutazione", () => {
+  it("default subs (no callback) → no error, no mutation", () => {
     const s = emptyGameState();
     const before = new Uint8Array(s.workRam);
     expect(() => objectUpdatePair158CC(s)).not.toThrow();
     expect(s.workRam).toEqual(before);
   });
 
-  it("nessun side effect su workRam (FUN_158CC pura: solo push/pop su stack)", () => {
+  it("no side effect su workRam (FUN_158CC pura: solo push/pop su stack)", () => {
     const s = emptyGameState();
     // Put arbitrary patterns in slots 0 and 1 plus another one: FUN_158CC itself
     // Does not write; delegates everything to FUN_158F6, a no-op here.
@@ -59,7 +59,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("subs.objectUpdate vede sempre i due ptr assoluti, non offset", () => {
+  it("subs.objectUpdate vede always i due ptr assoluti, non offset", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     objectUpdatePair158CC(s, {
@@ -71,7 +71,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(calls[1]! >>> 16).toBe(0x0040);
   });
 
-  it("non legge alcun campo dalla work RAM (state immutabile in input)", () => {
+  it("non reads alcun field from the work RAM (state immutabile in input)", () => {
     // Even with all work RAM full of unusual patterns, the call sequence
     // Remains identical.
     const s1 = emptyGameState();

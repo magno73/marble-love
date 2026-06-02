@@ -159,7 +159,7 @@
  *     `original_A1 + 10`. Nella correction phase the expression `(-0xa, A1, D0w)`
  *     becomes `original_A1 + 10 - 10 + D0w` = `original_A1 + D0w` with D0w in
  *
- *  4. **`btst.l #4, D0` e `move.b (-0x10,A4,D0w),D0b`**: la lookup table
+ *  4. **`btst.l #4, D0` and `move.b (-0x10,A4,D0w),D0b`**: la lookup table
  *     direttamente).
  *
  *     Inizio: D1 = 1 (`moveq #1, D1`). Iter 1: D1b = 2. Iter 2: D1b = 4. ...
@@ -334,10 +334,10 @@ export interface Sub50F4Result {
  *    - if (v_doubled >> 3) & 1 -> D4b ^= byte    (bit 3 = bit 2 of v)
  *    - if (v_doubled >> 4) & 1 -> D5b ^= byte    (bit 4 = bit 3 of v)
  *
- *    0x05, 0x06, 0x07, 0x09, ... e doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
+ *    0x05, 0x06, 0x07, 0x09, ... and doppiato → 0x0A, 0x0C, 0x0E, 0x12, ...
  *
  *
- *      e build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
+ *      and build D0w: `D0w = (LSB(D6b) << 4) | (LSB(D5b) << 3) | (LSB(D4b) << 2)
  *                       | (LSB(D3b) << 1) | LSB(D2b)`
  *    - if D0w != 0:
  *        - increment counter A2[0x12] byte; if carry, A2[0x11] byte; if both

@@ -11,7 +11,7 @@
  *
  * Strategia:
  *   - Randomizza workRam[0x0006..0x0007] (word @ 0x400006).
- *   - Lancia `callFunction(cpu, 0x2548)` e `helper2548(state)`.
+ *   - Lancia `callFunction(cpu, 0x2548)` and `helper2548(state)`.
  *   - Ripete N (default 500) times, inclusi edge cases:
  *     word=0, word=1, word=0xFFFF, word=0x8000, word=0x0001, word=0xFFFE.
  *
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     tsState.workRam[LSR_FLAG_OFF] = (word0 >>> 8) & 0xff;
     tsState.workRam[LSR_FLAG_OFF + 1] = word0 & 0xff;
 
-    // Setup SP per callFunction + maschera interrupt (SR=0x2700: supervisor +
+    // Setup SP per callFunction + mask interrupt (SR=0x2700: supervisor +
     // IPL=7) to prevent VBLANK ISR @ 0x0B5E from overwriting 0x400006.
     cpu.system.setRegister("sp", 0x00401f00);
     cpu.system.setRegister("sr", 0x2700);

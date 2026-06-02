@@ -20,7 +20,7 @@
  *   7: count = 4, no abort, counter wrap (prev=0xFD)
  *
  * **Output confrontato**:
- *   - workRam[0x3F0] (counter byte, side effect principale)
+ *   - workRam[0x3F0] (counter byte, side effect main)
  *   - workRam[0x390..0x391] (must stay unchanged except abort case)
  *
  * Uso: npx tsx packages/cli/src/test-wait-vblank-state-gated-parity.ts [N]

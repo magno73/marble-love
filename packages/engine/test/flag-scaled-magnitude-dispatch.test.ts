@@ -1,5 +1,5 @@
 /**
- * flag-scaled-magnitude-dispatch.test.ts — corner cases di
+ * flag-scaled-magnitude-dispatch.test.ts — corner cases of
  * `flagScaledMagnitudeDispatch` (FUN_26196).
  *
  * Bit-perfect parity vs binary in `test-flag-scaled-magnitude-dispatch-parity.ts`.
@@ -55,7 +55,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(mag).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("flag byte == 0x80 (alto bit set) → magnitude 0x50000 (solo zero/non-zero conta)", () => {
+  it("flag byte == 0x80 (alto bit set) → magnitude 0x50000 (solo zero/non-zero counts)", () => {
     const s = emptyGameState();
     const ptr = 0x401080;
     s.workRam[(ptr - 0x400000) + 0x1a] = 0x80;
@@ -67,7 +67,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(mag).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("ritorna esattamente quello che inner ritorna (long unsigned)", () => {
+  it("returns exactly that that inner returns (long unsigned)", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
     expect(
@@ -129,7 +129,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(selectMagnitude(0x1ff)).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("costanti esposte hanno i valori giusti", () => {
+  it("costanti esposte hanno i values giusti", () => {
     expect(MAGNITUDE_FLAG_CLEAR).toBe(0x40000);
     expect(MAGNITUDE_FLAG_SET).toBe(0x50000);
   });

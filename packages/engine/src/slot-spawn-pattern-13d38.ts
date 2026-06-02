@@ -4,10 +4,10 @@
  * `script-rect-dispatch-12dfa`).
  *
  * The A0 record has a `(A0+0x57).b` counter that decrements on every call and
- * I "tile delta" (A3 = ROM table @ `0x1EF32`) sono coppie of byte signed
+ * I "tile delta" (A3 = ROM table @ `0x1EF32`) are coppie of byte signed
  *
- *   - i primi 4 in `(A0+0xA4)..(A0+0xBB)`
- *   - i secondi 4 in `(A0+0x38)..(A0+0x4F)`
+ *   - the first 4 in `(A0+0xA4)..(A0+0xBB)`
+ *   - i secondthe 4 in `(A0+0x38)..(A0+0x4F)`
  *
  *   - charcode = `iter + 0x10B` (iter ∈ 0..7)
  *

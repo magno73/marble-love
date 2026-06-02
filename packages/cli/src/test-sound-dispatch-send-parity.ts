@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     stateInst.workRam[(a2Addr - 0x400000) + 0x0a] = statusByte;
     stateInst.workRam[(a2Addr - 0x400000) + 0x0b] = complByte;
 
-    // Init carry slots (A2+0x00..0x02) e increment slots (A2+0x14..0x16) random
+    // Init carry slots (A2+0x00..0x02) and increment slots (A2+0x14..0x16) random
     for (let j = 0; j < 0x18; j++) {
       const v = Math.floor(rng() * 256);
       pokeMem(cpu, a2Addr + j, 1, v);

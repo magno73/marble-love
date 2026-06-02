@@ -1,10 +1,10 @@
 /**
- * helper-25e7c.test.ts — smoke tests di `helper25E7C` (FUN_00025E7C).
+ * helper-25e7c.test.ts — smoke tests of `helper25E7C` (FUN_00025E7C).
  *
  *   1. Costante `HELPER_25E7C_ADDR`
  *   3. Mode 0/default: scale = max(0, D3 - friction)
  *   4. Mode 2: scale = max(0, D3 - friction*4)
- *   5. Mode 3: vx usa max(0, D3 - friction*5), vy usa max(0, D3 - friction)
+ *   5. Mode 3: vx uses max(0, D3 - friction*5), vy uses max(0, D3 - friction)
  *
  * `packages/cli/src/test-helper-25e7c-parity.ts` vs Musashi.
  */

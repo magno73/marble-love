@@ -4,7 +4,7 @@
  * differential FUN_00013334 vs `objectRenderUpdate13334`.
  *
  * **Strategia**:
- * `FUN_13334` ha 5 path osservabili (mode = `struct[0x1e]`):
+ * `FUN_13334` ha 5 path observable (mode = `struct[0x1e]`):
  *   1. mode ∉ {1,2}: skip globals → compute + dispatch + final copy.
  *   2. mode in {1,2} and `*struct[0x3e] == 0xFFFFFFFF`: direct epilogue.
  *   3. mode == 1, record valido: store globals → epilogue.
@@ -369,7 +369,7 @@ async function main(): Promise<void> {
     if (structPtr === recPtr) continue;
     const bytes = makeStructBytes(recPtr);
     bytes[0x1e] = 2;
-    // mode_hi = 1, 2, 3, o random to cover i 4/5 paths.
+    // mode_hi = 1, 2, 3, o random to cover the 4/5 paths.
     const hiVals = [0, 1, 2, 3, 4];
     bytes[0x1a] = hiVals[Math.floor(rng() * hiVals.length)]!;
     bytes[0x1f] = rb();

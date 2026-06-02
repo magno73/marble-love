@@ -14,7 +14,7 @@
  *
  * Covers only the instructions that dominate body cost: MOVEM (prologue/
  * epilogue), JSR/RTS/LINK/UNLK, MOVE/MOVE.L with EA, MULS/MULU/DIVS/DIVU,
- * Bcc/DBcc, BCLR/BSET/BTST, e una manciata of ALU comuni.
+ * Bcc/DBcc, BCLR/BSET/BTST, and una manciata of ALU common.
  *
  * License Musashi: MIT (Karl Stenerud).
  */

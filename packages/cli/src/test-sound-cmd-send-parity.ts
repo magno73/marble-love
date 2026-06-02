@@ -5,7 +5,7 @@
  *      sign-extended to long; FUN_4C6E retries up to 256 times if the sound
  *
  * For the differential test forziamo la convergenza:
- *   - Variamo il word @ 0x004003B8 (skip flag) e il byte arg.
+ *   - Variamo il word @ 0x004003B8 (skip flag) and il byte arg.
  *
  * Pattern coverage:
  *   pattern 0: skipFlag=0, byte random → expected D0=1

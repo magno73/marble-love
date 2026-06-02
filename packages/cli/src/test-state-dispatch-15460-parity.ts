@@ -161,7 +161,7 @@ function buildCase(
     writeLong(structBytes, 0x20, opts.case4FieldsOverride.v20);
   }
 
-  // touch unused: rl() per consumare RNG e mantenere determinismo
+  // touch unused: rl() per consumare RNG and mantenere determinismo
   void rl;
 
   return { structBytes, targetBytes };

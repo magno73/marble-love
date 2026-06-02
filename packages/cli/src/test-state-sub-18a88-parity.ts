@@ -91,7 +91,7 @@ const OBJ_COUNT_OFF = OBJ_COUNT_ADDR - WORK_RAM_BASE;
 /**
  * Patch JSR-stub: all le 8 sub-jsr → RTS (0x4E75).
  *
- * Note: TRAMP_142 e TRAMP_200 sono trampolini (jmp.l), patchando i primi 2
+ * Note: TRAMP_142 and TRAMP_200 are trampolines (jmp.l), patching the first 2
  * bytes with 0x4E75 (= rts), turning them into functions that return
  */
 function patchSubs(cpu: CpuSession): void {
@@ -273,7 +273,7 @@ async function main(): Promise<void> {
     if (forceState !== undefined) {
       bytes[0x18] = forceState & 0xff;
     }
-    // Vincoliamo counterA (entity[0x6A].w) e counterB (entity[0xD2].w) a
+    // Vincoliamo counterA (entity[0x6A].w) and counterB (entity[0xD2].w) a
     // the binary would not finish in time. The TS version mirrors the steps
     const cA = Math.floor(rng() * 200); // 0..199
     bytes[0x6a] = (cA >>> 8) & 0xff;

@@ -1,5 +1,5 @@
 /**
- * object-enter-1281c.test.ts — corner cases di `objectEnter1281C` (FUN_1281C).
+ * object-enter-1281c.test.ts — corner cases of `objectEnter1281C` (FUN_1281C).
  *
  * Bit-perfect parity validata vs binary in
  * `packages/cli/src/test-object-enter-1281c-parity.ts`.
@@ -27,7 +27,7 @@ function writeWordBE(ram: Uint8Array, off: number, signed: number): void {
 }
 
 describe("objectEnter1281C (FUN_0001281C)", () => {
-  it("range out-of-bounds (range = -16) → ritorna 0xFFFFFFF0, status = 0, niente inner", () => {
+  it("range out-of-bounds (range = -16) → returns 0xFFFFFFF0, status = 0, niente inner", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
@@ -43,11 +43,11 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     });
 
     expect(r >>> 0).toBe(OUT_OF_RANGE_D0 >>> 0);
-    expect(s.workRam[slotOff + 0x1c]).toBe(0); // clr.b eseguito
+    expect(s.workRam[slotOff + 0x1c]).toBe(0); // clr.b executed
     expect(innerCalled).toBe(false); // body skipped
   });
 
-  it("range out-of-bounds (range = 256) → ritorna 0xFFFFFFF0", () => {
+  it("range out-of-bounds (range = 256) → returns 0xFFFFFFF0", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;
@@ -66,7 +66,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
 
   it("range in-bounds (range = 0) per slot non-singleton → mode = 1", () => {
     const s = emptyGameState();
-    const structPtr = 0x00400500; // NON ∈ {0x400018, 0x4000FA}
+    const structPtr = 0x00400500; // NOT ∈ {0x400018, 0x4000FA}
     const slotOff = structPtr - WORK_RAM_BASE;
     writeWordBE(s.workRam, slotOff + 0x20, 0);
 
@@ -117,7 +117,7 @@ describe("objectEnter1281C (FUN_0001281C)", () => {
     expect(s.workRam[slotOff + 0x1c]).toBe(1);
   });
 
-  it("estremi ammessi: range = -15 e range = 255 sono in-bounds", () => {
+  it("estremi ammessi: range = -15 and range = 255 are in-bounds", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const slotOff = structPtr - WORK_RAM_BASE;

@@ -236,7 +236,7 @@ async function main(): Promise<void> {
     const hud = setHud(rng);
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const cellX = pickFromArr(cellXSet);
-    // Random cellY in [0..0x7F] e [0x80..0xFF] (signed range).
+    // Random cellY in [0..0x7F] and [0x80..0xFF] (signed range).
     const cellY = rb() & 0xff;
     const xWord = ((cellX << 3) & 0xffff) | (Math.floor(rng() * 8) & 0x7);
     const yWord = ((cellY << 3) & 0xffff) | (Math.floor(rng() * 8) & 0x7);

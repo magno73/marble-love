@@ -195,7 +195,7 @@ function writeLongBE(state: GameState, off: number, v: number): void {
  *
  * @param state       GameState (modifies `state.workRam[entity..entity+0x27]`).
  *                    Convertito a offset `entityAddr - 0x400000`.
- * @param subs        injection. `subs.fun_19976` (move) e `subs.fun_1937c`
+ * @param subs        injection. `subs.fun_19976` (move) and `subs.fun_1937c`
  *                    (validate). Default: no-op + return 0 (= early exit).
  *
  * @returns dettaglio of the esecuzione (outcome, iter count, JSR count).
@@ -254,7 +254,7 @@ export function sub19692(
   let validateCalls = 1;
 
   if (firstD0 === 0) {
-    // "free" (= D0 == 0): restore pos e return.
+    // "free" (= D0 == 0): restore pos and return.
     writeLongBE(state, off + ENTITY_POS_X_OFFSET, savedX);
     writeLongBE(state, off + ENTITY_POS_Y_OFFSET, savedY);
     return {

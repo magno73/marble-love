@@ -7,11 +7,11 @@
  *   - 34 word a offset 0x008..0x04B (loop 2, costante 0x2000)
  *   - 34 word a offset 0xE88..0xECB (loop 3, costante 0x2000)
  * The rest of the alpha RAM (44 "skip" bytes per row + 0xF00..0xFFF)
- * resta com'era.
+ * stays com'era.
  *
  * Strategia of test:
  *     1. Pre-fill alpha RAM [0xA03000..0xA04000) with a random pattern
- *        (sincronizzato between binary e TS).
+ *        (sincronizzato between binary and TS).
  *
  *
  * Uso: npx tsx packages/cli/src/test-alpha-ram-boot-init-ed6-parity.ts [N]

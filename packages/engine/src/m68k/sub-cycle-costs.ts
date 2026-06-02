@@ -265,7 +265,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // ─── FUN_1844A: stateSub1844A (610 byte) ────────────────────────────────
   //
   // Gate: *0x400394 == 3 AND *0x400760 != 0. In attract: *0x394 == 0 → fast.
-  // In gameplay: *0x394 == 4 → fast. Solo durante boss/transition (mode 3).
+  // In gameplay: *0x394 == 4 → fast. Solo during boss/transition (mode 3).
   //
   // Fast: ~40 cycles (link+movem+gate+epilog)
   //

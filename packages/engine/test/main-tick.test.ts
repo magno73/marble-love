@@ -1,9 +1,9 @@
 /**
- * main-tick.test.ts — smoke test dell'orchestrator.
+ * main-tick.test.ts — smoke test of the orchestrator.
  *
  *  2. Incrementi `state.clock.frame` (counter canonico interno)
  *
- * **Nota**: workRam[0x14] e workRam[0x16] NON sono frame counter monotonic.
+ * **Nota**: workRam[0x14] and workRam[0x16] NOT are frame counter monotonic.
  * mailbox @ 0x16, sound-timer mirror @ 0x14). Vedi commit B6: il preambolo
  *
  */
@@ -45,13 +45,13 @@ function loadProgramRom(): ReturnType<typeof emptyRomImage> {
 }
 
 describe("mainTick smoke", () => {
-  it("non solleva eccezioni con state e ROM vuoti", () => {
+  it("non solleva eccezioni con state and ROM vuoti", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => mainTick(s, { rom })).not.toThrow();
   });
 
-  it("incrementa state.clock.frame (counter canonico interno)", () => {
+  it("increments state.clock.frame (counter canonico interno)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const start = s.clock.frame;
@@ -61,7 +61,7 @@ describe("mainTick smoke", () => {
     expect(s.clock.frame).toBe(start + 2);
   });
 
-  it("skipFrameCounter: non incrementa state.clock.frame", () => {
+  it("skipFrameCounter: non increments state.clock.frame", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const start = s.clock.frame;
@@ -69,7 +69,7 @@ describe("mainTick smoke", () => {
     expect(s.clock.frame).toBe(start);
   });
 
-  it("flag 0x39A set → esegue prefix scroll sync (latcha y, clear flag)", () => {
+  it("flag 0x39A set → runs prefix scroll sync (latcha y, clear flag)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x39a] = 1;

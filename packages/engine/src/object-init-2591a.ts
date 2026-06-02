@@ -195,7 +195,7 @@ export function objectInit2591A(
     wr[objOff + 0x10 + 3] = shifted466 & 0xff;
   }
 
-  // 0x25944..0x2594C: globals @ 0x400696 e 0x400698 ← 0xFFFF (word).
+  // 0x25944..0x2594C: globals @ 0x400696 and 0x400698 ← 0xFFFF (word).
   // moveq #-1, D0 → D0=0xFFFFFFFF; move.w D0w → low word = 0xFFFF.
   writeU16BE(wr, WORK_RAM_BASE + GLOBAL_400698_OFF, 0xffff);
   writeU16BE(wr, WORK_RAM_BASE + GLOBAL_400696_OFF, 0xffff);

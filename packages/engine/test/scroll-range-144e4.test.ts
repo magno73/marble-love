@@ -35,9 +35,9 @@ function readByte(state: GameState, addr: number): number {
 }
 
 /**
- * Aggiunge un sentinel 0xFF all'offset 0 della ROM.
+ * Aggiunge un sentinel 0xFF to the offset 0 of the ROM.
  * With an empty ROM, rectListPtr = 0 -> reads ROM[0].
- * Se ROM[0] = 0xFF → sentinel di fine lista → scriptRectDispatch12DFA
+ * Se ROM[0] = 0xFF → sentinel of fine lista → scriptRectDispatch12DFA
  * exits immediately without an infinite loop.
  */
 function addRomSentinel(rom: RomImage): void {

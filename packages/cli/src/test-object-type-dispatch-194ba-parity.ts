@@ -9,10 +9,10 @@
  *   - kind == 1: jsr FUN_1973C(obj) ; jsr FUN_1953E(obj)
  *   - kind == 2: dispatch su obj[0x25] → write long a obj+0x1C
  *       0x07 → 0x21F8A,  0x08 → 0x21A62,  otherwise → 0x21EFE
- *   - everything else (negative e >= 3): no-op.
+ *   - everything else (negative and >= 3): no-op.
  *
  * **Strategia parity**:
- *   - Tutte e 3 le JSR (`FUN_0001960E`, `FUN_0001973C`, `FUN_0001953E`) sono
+ *   - All three of the JSR (`FUN_0001960E`, `FUN_0001973C`, `FUN_0001953E`) are
  *     **stubbed with RTS** (0x4E75): the only observable side-effect on the
  *     binary side effect left is the write to `obj+0x1C` (case 2 only).
  *   - TS: `subs.{fun_1960e, fun_1973c, fun_1953e} = no-op` → matching of the

@@ -119,7 +119,7 @@ interface CaseSetup {
   pre: Uint8Array;
 }
 
-/** Genera 1 case deterministico second `i` e rng. */
+/** Genera 1 case deterministico second `i` and rng. */
 function genCase(i: number, rng: () => number): CaseSetup {
   const pre = new Uint8Array(WORK_RAM_SIZE);
 
@@ -142,7 +142,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
   const a2Off = a2Slot >>> 0;
   const a2Addr = (WORK_RAM_BASE + a2Off) >>> 0;
 
-  // Sovrascrivi i byte struct chiave second il pattern.
+  // Sovrascrivi the bytes struct chiave second il pattern.
   // Pattern bucket selection (10% ognuno).
   const pick = rng();
   let pattern: string;
@@ -225,7 +225,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
     }
   }
 
-  // Scrivi i byte struct.
+  // Scrivi the bytes struct.
   pre[a2Off + 0x18] = state18 & 0xff;
   pre[a2Off + 0x1a] = mode & 0xff;
   pre[a2Off + 0x36] = state36 & 0xff;

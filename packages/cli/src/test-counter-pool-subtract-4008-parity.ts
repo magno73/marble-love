@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       arg1 = (((hi << 16) >>> 0) | w) >>> 0;
     }
 
-    // ── Scrivi byte@FF5/FF7 e ptr+0xA / +0xB su both i sides. ──
+    // ── Scrivthe bytes@FF5/FF7 and ptr+0xA / +0xB su both i sides. ──
     pokeMem(cpu, ACC_FF5, 1, acc0);
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
     pokeMem(cpu, PTR_VAL + 0xa, 1, status);

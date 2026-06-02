@@ -57,7 +57,7 @@ export type Sub535ECallee = (
  * Sign-extend a byte (0..0xFF) to an M68k long (0..0xFFFFFFFF) with bit 7 as sign.
  *
  * `byte 0x7F → 0x0000007F`, `byte 0x80 → 0xFFFFFF80`, `byte 0xFF →
- * 0xFFFFFFFF`. Equivalente a `(b << 24) >> 24` (signed shift right) seguito
+ * 0xFFFFFFFF`. Equivalente a `(b << 24) >> 24` (signed shift right) followed
  * da `>>> 0`.
  */
 function signExtendByteToLong(b: number): number {

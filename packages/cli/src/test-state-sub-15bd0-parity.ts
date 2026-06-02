@@ -23,7 +23,7 @@
  *   - A: random everything (count, struct bytes, obj states, args)
  *   - B: `arg3.b != 0, arg2.b == 0` -> Block A only
  *   - C: `arg3.b == 0, arg2.b != 0` -> Block B only (wide count variation
- *        e obj states to cover skip/no-skip)
+ *        and obj states to cover skip/no-skip)
  *   - D: both i block attivi + edge cases (count=0, count=20, byte19
  *
  *
@@ -412,7 +412,7 @@ async function main(): Promise<void> {
     const arg3 = rl() & 0xffffff00; // low byte = 0
     let arg2 = rl();
     if ((arg2 & 0xff) === 0) arg2 = (arg2 & 0xffffff00) | 1;
-    // count varia between 0 e MAX_COUNT.
+    // count varia between 0 and MAX_COUNT.
     const count = Math.floor(rng() * (MAX_COUNT + 1));
     const setup = makeRandomCase({
       arg2Long: arg2,

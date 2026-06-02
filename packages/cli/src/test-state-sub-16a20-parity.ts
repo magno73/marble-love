@@ -28,7 +28,7 @@
  *
  *   With everything stubbed, the binary's only side effects are direct writes
  *   in workRam:
- *     - entity[0x6D], entity[0x6E] (fasi 2, 3)
+ *     - entity[0x6D], entity[0x6E] (fasthe 2, 3)
  *     - entity[0x18] = 0 (fase 4 else-branch)
  *     - *0x400654 (byte, mode==4 fase 2)
  *     - *0x400656 (byte, mode==5 fase 2)

@@ -1,5 +1,5 @@
 /**
- * state-sub-19baa.test.ts — smoke + corner case di `FUN_00019BAA`
+ * state-sub-19baa.test.ts — smoke + corner case of `FUN_00019BAA`
  * (per-frame entity tick).
  */
 
@@ -164,7 +164,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
       fun_19e42: () => { e42Calls++; },
     });
 
-    // Counter incrementato a 6.
+    // Counter incremented a 6.
     expect(s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET]).toBe(6);
     expect(result.perEntity[0]?.scriptAdvanced).toBe(false);
     expect(result.perEntity[0]?.enteredMovement).toBe(true);
@@ -189,7 +189,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     writeLong(s, off + ENTITY_POS_Y_OFFSET, savedY);
     writeLong(s, off + ENTITY_POS_Z_OFFSET, 0x100); // small depth
 
-    // Slot screen-Y nel range [0, 0xF0). X.w >> 3 < 0x35.
+    // Slot screen-Y in the range [0, 0xF0). X.w >> 3 < 0x35.
     // X.w = 0x0008 → asr 3 = 0x0001 < 0x35 OK.
     writeWord(s, off + ENTITY_POS_X_OFFSET, 0x0008);
     writeWord(s, off + ENTITY_SCREEN_Y_OFFSET, 0x0040); // 0 ≤ 0x40 < 0xF0
@@ -225,7 +225,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     const off = ENTITY_OFF(0);
     s.workRam[off + ENTITY_ACTIVE_OFFSET] = 1;
     s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET] = 5;
-    // state == 5 → counter incrementato a 6, cmp.b: 5 - 6 = -1 (< 0) → bgt false → script-advance
+    // state == 5 → counter incremented a 6, cmp.b: 5 - 6 = -1 (< 0) → bgt false → script-advance
     s.workRam[off + ENTITY_STATE_OFFSET] = 5;
     s.workRam[off + ENTITY_SUBSTATE_OFFSET] = 0; // != 2 → entra scan-block
     s.workRam[off + ENTITY_TIMER_OFFSET] = 1; // dec → 0 → state branch

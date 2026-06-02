@@ -1,6 +1,6 @@
 /**
  * Test objectArrayInit25B40 (FUN_00025B40) - smoke tests for writes
- * di 24 word array @ A1+0x74/0x84/0x94 + byte clear @ A1+0xCA.
+ * of 24 word array @ A1+0x74/0x84/0x94 + byte clear @ A1+0xCA.
  *
  * Bit-perfect verified against the binary through
  * `cli/src/test-object-array-init-25b40-parity.ts` (500/500 cases).
@@ -44,7 +44,7 @@ function makeRomWithTables(
 }
 
 describe("objectArrayInit25B40 (FUN_00025B40)", () => {
-  it("scrive 3 array da 8 word + byte clear @ +0xCA con tabelle ROM reali", () => {
+  it("writes 3 array da 8 word + byte clear @ +0xCA con tabelle ROM reali", () => {
     // Real tables extracted from ROM @ 0x1D3F4 / 0x1D3FC.
     const tableA = [0x02, 0x02, 0x00, 0xfe, 0xfc, 0xfe, 0x00, 0x04];
     const tableB = [0x02, 0xfe, 0xfc, 0xfe, 0x00, 0x02, 0x04, 0x00];
@@ -62,7 +62,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     // A1[+0xCA].b = 0
     expect(s.workRam[objOff + 0xca]).toBe(0);
 
-    // Per ogni i in 0..7:
+    // For each i in 0..7:
     //   array A @ +0x74 + i*2 = sext_b(tableA[i]) << 11 (16 bit wrap)
     //   array B @ +0x84 + i*2 = sext_b(tableB[i]) << 11
     //   array Z @ +0x94 + i*2 = 0
@@ -86,7 +86,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     expect(readU16BE(s.workRam, objOff + 0x74 + 7 * 2)).toBe(0x2000);
   });
 
-  it("non muta byte vicini ai range scritti (0x70..0x73, 0xA4..0xC9, 0xCB..0xCF)", () => {
+  it("non muta byte near ai range scritti (0x70..0x73, 0xA4..0xC9, 0xCB..0xCF)", () => {
     const rom = makeRomWithTables(
       [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08],
       [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18],
@@ -98,11 +98,11 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
 
     // Sentinels on neighbors, which writes must not touch.
     // Written ranges: contiguous [0x74, 0xA3] + byte @ 0xCA.
-    // Vicini: [0x70, 0x73] sotto, [0xA4, 0xC9] tra, [0xCB, 0xCF] sopra.
+    // Vicini: [0x70, 0x73] below, [0xA4, 0xC9] between, [0xCB, 0xCF] above.
     const neighborOffs = [
-      0x70, 0x71, 0x72, 0x73, // sotto
-      0xa4, 0xa5, 0xb0, 0xc0, 0xc8, 0xc9, // tra
-      0xcb, 0xcc, 0xcf, // sopra
+      0x70, 0x71, 0x72, 0x73, // below
+      0xa4, 0xa5, 0xb0, 0xc0, 0xc8, 0xc9, // between
+      0xcb, 0xcc, 0xcf, // above
     ];
     const sentinels: Record<number, number> = {};
     for (let idx = 0; idx < neighborOffs.length; idx++) {
@@ -119,7 +119,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     }
   });
 
-  it("ROM con tabelle tutte zero → tutti gli array a zero, byte +0xCA a zero", () => {
+  it("ROM con tabelle all zero → all the array a zero, byte +0xCA a zero", () => {
     const rom = makeRomWithTables(
       [0, 0, 0, 0, 0, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0, 0],
@@ -130,7 +130,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     const objOff = objPtr - WORK_RAM_BASE;
 
     // Pre-fill with non-zero sentinel to show that writes
-    // azzerano i 24 word + 1 byte target.
+    // azzerano the 24 word + 1 byte target.
     for (let k = 0; k < 0x100; k++) s.workRam[objOff + k] = 0xaa;
 
     objectArrayInit25B40(s, rom, objPtr);
@@ -143,7 +143,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     expect(s.workRam[objOff + 0xca]).toBe(0);
   });
 
-  it("tabelle con tutti byte 0xFF (sext=-1) → array A/B = 0xF800 << 11 wrap", () => {
+  it("tabelle con all byte 0xFF (sext=-1) → array A/B = 0xF800 << 11 wrap", () => {
     // 0xFF sext_w = 0xFFFF. asl.w #11 → (0xFFFF << 11) & 0xFFFF = 0xF800.
     const rom = makeRomWithTables(
       [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
@@ -163,7 +163,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary e ROM corretti", () => {
+  it("costanti exposed: indirizzi binary and ROM corretti", () => {
     expect(OBJECT_ARRAY_INIT_25B40_ADDR).toBe(0x25b40);
     expect(OBJECT_ARRAY_INIT_25B40_TABLE_A_ROM).toBe(0x1d3f4);
     expect(OBJECT_ARRAY_INIT_25B40_TABLE_B_ROM).toBe(0x1d3fc);

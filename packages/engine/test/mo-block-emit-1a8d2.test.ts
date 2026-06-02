@@ -1,7 +1,7 @@
 /**
- * mo-block-emit-1a8d2.test.ts — smoke test di FUN_1A8D2.
+ * mo-block-emit-1a8d2.test.ts — smoke test of FUN_1A8D2.
  *
- * Qui copriamo i path principali del modulo (early-exit, long-branch,
+ * Qui copriamo i path principali of the modulo (early-exit, long-branch,
  */
 
 import { describe, it, expect } from "vitest";
@@ -75,7 +75,7 @@ function setupCursors(
 }
 
 describe("moBlockEmit1A8D2 — early exit (arg0 == -1)", () => {
-  it("arg0 == 0xFFFFFFFF → solo writeback, nessuna scrittura sprite-RAM", () => {
+  it("arg0 == 0xFFFFFFFF → solo writeback, no scrittura sprite-RAM", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0x1234);
     const spriteBefore = new Uint8Array(s.spriteRam);
@@ -94,7 +94,7 @@ describe("moBlockEmit1A8D2 — early exit (arg0 == -1)", () => {
 });
 
 describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
-  it("body con count=2 → 2 iter, 4 output ognuna, D7 incrementa di 2", () => {
+  it("body con count=2 → 2 iter, 4 output ognuna, D7 increments of 2", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -161,7 +161,7 @@ describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
     expect(readWordSprite(s, 0xa02180)).toBe(0x0000);
     expect(readWordSprite(s, 0xa02182)).toBe(0x0001);
 
-    // Cursor writeback: avanzati di 4 byte (2 iter × 2 byte/iter).
+    // Cursor writeback: avanzati of 4 byte (2 iter × 2 byte/iter).
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02004);
     expect(readLongWorkRam(s, CURSOR_A2_ADDR)).toBe(0xa02084);
     expect(readLongWorkRam(s, CURSOR_A3_ADDR)).toBe(0xa02104);
@@ -339,7 +339,7 @@ describe("moBlockEmit1A8D2 — sign-ext byte arithmetic", () => {
 });
 
 describe("moBlockEmit1A8D2 — count = 1 path (single iter)", () => {
-  it("body count = 1 ⇒ esattamente 1 iter (subq.b/bne ⇒ do/while)", () => {
+  it("body count = 1 ⇒ exactly 1 iter (subq.b/bne ⇒ do/while)", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -348,7 +348,7 @@ describe("moBlockEmit1A8D2 — count = 1 path (single iter)", () => {
     s.workRam[headerAbs - WORK_RAM_BASE + 1] = 0;
     writeLongWorkRam(s, headerAbs + 8, 0x00401040);
 
-    s.workRam[0x1040] = 0x01; // count = 1 (esattamente 1 iter)
+    s.workRam[0x1040] = 0x01; // count = 1 (exactly 1 iter)
     s.workRam[0x1041] = 0x00;
     s.workRam[0x1042] = 0x00;
     s.workRam[0x1043] = 0x00;
@@ -359,7 +359,7 @@ describe("moBlockEmit1A8D2 — count = 1 path (single iter)", () => {
 
     // Exactly 1 word written in each buffer.
     expect(readWordSprite(s, 0xa02000)).toBe(0xdead);
-    // Cursor avanzato di esattamente 2 byte.
+    // Cursor advanced by of exactly 2 byte.
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02002);
     expect(readWordWorkRam(s, COUNTER_D7_ADDR)).toBe(1);
   });

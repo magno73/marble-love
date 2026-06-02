@@ -4,7 +4,7 @@
  *
  * total) from ROM @ 0x19F04 to PF RAM @ 0xA00116, with 0x80-byte stride
  *
- *   - i 240 byte of ROM @ 0x19F04..0x19FF3 (uguali in binary e TS — la ROM
+ *   - the 240 byte of ROM @ 0x19F04..0x19FF3 (uguali in binary and TS — la ROM
  *
  *   1. Pre-fill PF RAM [0xA00000..0xA02000) with a deterministic pattern.
  *

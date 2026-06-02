@@ -338,7 +338,7 @@ function sextByte(b: number): number {
  * @param state  GameState. Modifica `state.workRam` per le entity attive.
  * @param subs   Stub injection per le 2 JSR esterne. Default: all no-op.
  *
- * @returns dettaglio of the gate, of the slot-scan flag e of the per-entity tick.
+ * @returns dettaglio of the gate, of the slot-scan flag and of the per-entity tick.
  */
 export function refreshHelper1912C(
   state: GameState,

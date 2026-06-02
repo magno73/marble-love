@@ -1,5 +1,5 @@
 /**
- * eeprom-commit.test.ts — smoke tests di `eepromCommit` (FUN_3F78).
+ * eeprom-commit.test.ts — smoke tests of `eepromCommit` (FUN_3F78).
  *
  * Verify the three main branches (early exit, drain with zero iters, drain with
  * iter > 0 + clamp) and the invariant "in the early-exit path workRam does not change".
@@ -31,7 +31,7 @@ function setStatus(ram: Uint8Array, ptrOff: number, status: number): void {
 }
 
 describe("eepromCommit (FUN_3F78)", () => {
-  it("status >= 0xE0 -> early exit, ritorna 0x18 e NON modifica 0x401FF5/F7", () => {
+  it("status >= 0xE0 -> early exit, returns 0x18 and NOT modifies 0x401FF5/F7", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -81,7 +81,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(24);
   });
 
-  it("clamp a 0x19: acc che supera 0x19 viene clampato e poi scalato", () => {
+  it("clamp a 0x19: acc that supera 0x19 is clampato and poi scaled", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -113,7 +113,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(15);
   });
 
-  it("status = 0xDF (sotto soglia per 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
+  it("status = 0xDF (below soglia per 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -127,7 +127,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0);
   });
 
-  it("status = 0xE0 esatto: helper ritorna 0 -> early exit 0x18", () => {
+  it("status = 0xE0 esatto: helper returns 0 -> early exit 0x18", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;

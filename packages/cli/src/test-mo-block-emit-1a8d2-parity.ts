@@ -3,7 +3,7 @@
  * test-mo-block-emit-1a8d2-parity.ts — differential FUN_1A8D2 vs
  * `moBlockEmit1A8D2`.
  *
- * body via `header[+8] & ~1`, e itera un body word-stream (long branch) o
+ * body via `header[+8] & ~1`, and itera un body word-stream (long branch) o
  * triple-stream (short branch, attivato da body[0]==0xFF) emettendo 4
  * word per iter su 4 buffer separati i which cursor pointer-long vivono in
  *
@@ -15,7 +15,7 @@
  *   - Set up body with count + delta bytes (long-branch) or 0xFF + count +
  *     deltas + N triples (short-branch).
  *   - Run TS via `moBlockEmit1A8D2(state, arg0, arg1, arg2, arg3, {romRead})`.
- *   - Compare: spriteRam[0xA02000..0xA02200] (i 4 buffer da 0x80 byte
+ *   - Compare: spriteRam[0xA02000..0xA02200] (the 4 buffer da 0x80 byte
  *
  *   - i=0: arg0 == -1 (early exit, writeback only).
  *   - i=1: long-branch, count=1.

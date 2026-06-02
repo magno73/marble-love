@@ -114,7 +114,7 @@
  *         (0x24, SP) = arg3 long start             → word @+0xe
  *         (0x28, SP) = arg4 long start             → word @+0x12
  *         (0x2a, SP) = arg4 word (low)
- *      ✓ Confermato. Delta between caller_SP_args e SP post-movem = 0x18.
+ *      ✓ Confermato. Delta between caller_SP_args and SP post-movem = 0x18.
  *
  *      ora punta a `current_SP + 0x2a = caller_SP_args + 0x2a - 0x1c =
  *
@@ -130,7 +130,7 @@
  *      (ROM, 1) as the last due args of FUN_5468.
  *
  *
- *   2.5 **Doppia conferma via re-disasm corretta**: a 0x55c2 push abbassa SP
+ *   2.5 **Doppia conferma via re-disasm correct**: a 0x55c2 push abbassa SP
  *      delta 0x18 → caller_SP + (0x2a - 0x18) = caller_SP + 0x12... aspetta,
  *      Riprovo: pre-push delta = 0x18. Post-push delta = 0x1c. (0x2a, SP) @
  *      delta 0x1c → caller_offset = 0x2a - 0x1c = 0x0e → arg3 word. ✓
@@ -147,7 +147,7 @@
  *         (0x12, A6) = arg2 word low         → D4 ✓
  *         (0x17, A6) = arg3 byte (low byte of word low) → arg3 ✓ (= 1 in prod)
  *         (0x1a, A6) = arg4 word low         → arg4 ✓ (= ROM[0x10070])
- *      Perfetto: the args sono (D2, D3w, D4w, arg3w, arg4w).
+ *      Perfetto: the args are (D2, D3w, D4w, arg3w, arg4w).
  *
  *   3. **`movem.l {D6 D5 D4 D3 D2}, -(SP)` push order**: M68k `movem` preserva
  *         (0, SP) = D2  ; (4, SP) = D3  ; (8, SP) = D4  ; (0xc, SP) = D5  ; (0x10, SP) = D6

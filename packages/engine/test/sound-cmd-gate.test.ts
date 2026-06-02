@@ -1,5 +1,5 @@
 /**
- * sound-cmd-gate.test.ts — corner cases di soundCmdGate (FUN_4420).
+ * sound-cmd-gate.test.ts — corner cases of soundCmdGate (FUN_4420).
  *
  * Bit-perfect parity verificata vs binary in `test-sound-cmd-gate-parity.ts`.
  */
@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 import { soundCmdGate, CLAMP_THRESHOLD } from "../src/sound-cmd-gate.js";
 
 describe("soundCmdGate (FUN_4420)", () => {
-  it("cmdIndex < 0x0B → data forzato a 0 prima del dispatch", () => {
+  it("cmdIndex < 0x0B → data forzato a 0 first of the dispatch", () => {
     const seen: Array<{ idx: number; data: number }> = [];
     const inner = (idx: number, data: number): number => {
       seen.push({ idx, data });
@@ -61,17 +61,17 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(receivedData).toBe(0x1234_5678);
   });
 
-  it("default inner = () => 0: ritorna 0 senza side effects", () => {
+  it("default inner = () => 0: returns 0 senza side effects", () => {
     expect(soundCmdGate(0x0c, 0x42)).toBe(0);
     expect(soundCmdGate(0x05, 0x42)).toBe(0);
   });
 
-  it("D0 pass-through: ritorna ESATTAMENTE il return dell'inner", () => {
+  it("D0 pass-through: returns ESATTAMENTE il return of the inner", () => {
     const inner = (): number => 0x12345678;
     expect(soundCmdGate(0x10, 0x99, inner)).toBe(0x12345678);
   });
 
-  it("inner riceve cmdIndex come unsigned long (input negativo normalizzato)", () => {
+  it("inner receives cmdIndex as unsigned long (input negativo normalizzato)", () => {
     let receivedIdx = -1;
     const inner = (idx: number, _data: number): number => {
       receivedIdx = idx;

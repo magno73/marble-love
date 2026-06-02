@@ -6,7 +6,7 @@
  *
  *   - Trailing arg   : 0 (immediate `clr.l -(SP)`)
  *
- * Iter principale: `D4 = 15 → 0` (`bge.w` in word signed → 16 iter). Maschera
+ * Iter main: `D4 = 15 → 0` (`bge.w` in word signed → 16 iter). Mask
  *
  *
  * **Disasm 0x5D2A..0x5DEC** (194 byte):
@@ -284,7 +284,7 @@ export function stateSub5D2A(
   // D0 al rts: si propaga dto the last `inner3784`. Default 0.
   let lastD0 = 0;
 
-  // ─── Loop principale: D4 = 15 → 0 (16 iter, signed bge.w on D4w) ───────
+  // ─── Loop main: D4 = 15 → 0 (16 iter, signed bge.w on D4w) ───────
   for (let d4 = 15; d4 >= 0; d4--) {
     // ─── Special @ D4 == 7: gate-byte override ─────────────────────────
     if (d4 === SPECIAL_ITER_D4) {
