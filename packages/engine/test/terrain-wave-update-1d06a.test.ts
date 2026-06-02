@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { emptyRomImage } from "../src/bus.js";
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 import { emptyGameState } from "../src/state.js";
@@ -132,7 +134,7 @@ function expectedMap(words: ExpectedWords): Map<number, number> {
   return new Map(words.map(([off, value]) => [off, value]));
 }
 
-describe("terrainWaveUpdate1D06A", () => {
+describe.skipIf(!ROM_AVAILABLE)("terrainWaveUpdate1D06A", () => {
   it("matches original FUN_1D06A terrain-table writes for green wave phases", () => {
     const rom = loadRom();
 

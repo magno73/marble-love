@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { ROM_AVAILABLE } from "./_rom-fixture.js";
+
 import { emptyRomImage } from "../src/bus.js";
 import { loadRomBlob } from "../src/m68k/apply-slapstic-bank.js";
 import { mainLoopInit1101E } from "../src/main-loop-init-1101e.js";
@@ -22,7 +24,7 @@ function nonzero(bytes: Uint8Array): number {
   return count;
 }
 
-describe("level-end score summary runtime wiring", () => {
+describe.skipIf(!ROM_AVAILABLE)("level-end score summary runtime wiring", () => {
   it("renders the level-complete score text and holds before the next level rebuild", () => {
     const rom = emptyRomImage();
     loadRomBlob(rom, readFileSync(resolve("ghidra_project/marble_program.bin")));
