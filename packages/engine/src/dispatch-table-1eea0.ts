@@ -38,7 +38,7 @@
  *     starts at 0x1EEA0 + signExt(0x0B)*8 = 0x1EEF8 and advances by 8 each
  *     iteration. The pointer does not use the sign extension of later D2 bytes;
  *     only arg1 does.
- *   - argIdx = 0xFF (signed -1): D3 parte 0x1EEA0 - 8 = 0x1EE98, e ASL preserva
+ *   - argIdx = 0xFF (signed -1): D3 parte 0x1EEA0 - 8 = 0x1EE98, and ASL preserva
  *     (D2.b: 0xFF,0x00,...,0x09).
  *
  * **Known callers**: `FUN_0001464A` with two `jsr 0x11AD8.l` sites at 0x148F8 and 0x14918,

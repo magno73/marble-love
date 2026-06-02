@@ -27,7 +27,7 @@
  *        - level in {0,1,2,4,7,random} with 30% bias toward 4
  *        - for each obj in range [0..count): random bytes across span 0..0xE2
  *        - globals @ 0x400390/0x400394/0x400396/0x400462/0x400466/0x400472
- *        - to coverage: occasionalmente forziamo state=2/3 e respawn-eligible
+ *        - to coverage: occasionalmente forziamo state=2/3 and respawn-eligible
  *   3. Run TS objectScanDispatch251DE on the workRam mirror (capture sound
  *      calls; all le altre subs no-op).
  *        - byte-by-byte over [0x400018, 0x400018 + count*0xE2)
@@ -70,7 +70,7 @@ const OBJ_BASE = 0x00400018;
 const OBJ_STRIDE = 0xe2;
 // Max count = 3 → obj region [0x400018, 0x400018 + 3*0xE2) =
 // (count=4 obj[3] occupa 0x4002BE..0x4003A0, invadendo 0x400390 (level/count).
-//  Evitare per non auto-modificare lo state-machine durante il loop.)
+//  Evitare per non auto-modificare lo state-machine during il loop.)
 const MAX_OBJS = 3;
 
 const SOUND_BUF_BASE = 0x00401ff0; // 16 byte of buffer
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
     stateInst.workRam[0x699] = (g698 >>> 16) & 0xff;
     stateInst.workRam[0x69a] = (g698 >>> 8) & 0xff;
     stateInst.workRam[0x69b] = g698 & 0xff;
-    // 0x698 e 0x69A separately to handle full long correctly:
+    // 0x698 and 0x69A separately to handle full long correctly:
     // wait, *0x400696 long covers offsets 0x696..0x699.
     // *0x400698 long covers 0x698..0x69B → overlap with 696. Replicate exact:
     stateInst.workRam[0x696] = (g696 >>> 24) & 0xff;
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
     // ── Run TS ─────────────────────────────────────────────────────────
     const tsSounds: number[] = [];
     scanNs.objectScanDispatch251DE(stateInst, stubRom, {
-      // Tutte no-op, eccetto soundCommand (capture) e fun_1CC62 (return 0).
+      // Tutte no-op, eccetto soundCommand (capture) and fun_1CC62 (return 0).
       fun_1BBAA: () => {
         /* no-op */
       },

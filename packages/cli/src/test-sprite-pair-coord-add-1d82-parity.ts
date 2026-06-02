@@ -4,7 +4,7 @@
  * `spritePairCoordAdd1D82` TS replica.
  *
  * `FUN_00001D82` (134 byte) estrae la coord-9-bit signed da DUE word of
- * sprite-RAM (banks 0xA02000 e 0xA02100, separati of 0x100), somma due
+ * sprite-RAM (banks 0xA02000 and 0xA02100, separati of 0x100), somma due
  * delta, repacks, and writes back with bits 14 and 15 cleared.
  *
  * **Strategia parity**:

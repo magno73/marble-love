@@ -161,7 +161,7 @@ const KEY_LEN = 3;
 export function keyRankLookup4686(state: GameState, argLong: number): number {
   const r = state.workRam;
 
-  // ─── Estrai key bytes (BE) e high byte ───────────────────────────────
+  // ─── Estrai key bytes (BE) and high byte ───────────────────────────────
   // Equivalente al loop @ 0x46a0..0x46ba.
   const arg = argLong >>> 0;
   const argB0 = (arg >>> 24) & 0xff; // testato a 0x46bc

@@ -9,7 +9,7 @@
  *      (optionally with cmpWord = D3 at some index -> exit loop).
  *   3. callFunction(0x26D8A) — no args, no return.
  *   4. pfScrollUpdate(state)
- *   5. Compare workRam[0x02..0x03] e spriteRam[0..0x300] byte-by-byte.
+ *   5. Compare workRam[0x02..0x03] and spriteRam[0..0x300] byte-by-byte.
  *
  * Uso: npx tsx packages/cli/src/test-pf-scroll-parity.ts [N]
  */

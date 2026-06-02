@@ -13,14 +13,14 @@
  *      place at `(0x1EF1A + K*4)` a long that points to our buffer
  *      of candidates (also in ROM, in area free).
  *
- *    CPU. We use area ROM free (e.g. `0x3F000`) e we inject a set
+ *    CPU. We use area ROM free (e.g. `0x3F000`) and we inject a set
  *
  *    - Generate obj with A2[+0x1D]=filter, A2[+0x32].w=objX, A2[+0x34].w=objY.
  *    - Pre-fill globals 0x400462/466/472 with sentinels.
  *
  *
  * 4. Run TS findNearestTarget2637A on workRam mirror, with
- *    `tableReader = (a) => romBuf[a]` e `lineOfSight17CB8 = () => 0`.
+ *    `tableReader = (a) => romBuf[a]` and `lineOfSight17CB8 = () => 0`.
  *
  *
  * Uso: npx tsx packages/cli/src/test-find-nearest-target-2637a-parity.ts [N]
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Vicini ai 3 globals (per no-spill check).
+  // Vicini athe 3 globals (per no-spill check).
   const NEIGHBOR_GLOBALS = [
     0x460, 0x461, 0x46a, 0x46b, 0x46c, 0x46d, 0x46e, 0x46f, 0x470, 0x471,
     0x473, 0x474, 0x475, 0x476,

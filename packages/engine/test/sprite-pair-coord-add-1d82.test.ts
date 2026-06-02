@@ -1,5 +1,5 @@
 /**
- * sprite-pair-coord-add-1d82.test.ts — smoke + corner-case di FUN_1D82.
+ * sprite-pair-coord-add-1d82.test.ts — smoke + corner-case of FUN_1D82.
  */
 
 import { describe, it, expect } from "vitest";
@@ -22,23 +22,23 @@ function readWord(s: Uint8Array, off: number): number {
 }
 
 describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
-  it("base case: bank=0, col=0, delta=0 → preserva word ma clear bit 14,15 e bit 4", () => {
+  it("base case: bank=0, col=0, delta=0 → preserva word but clear bit 14,15 and bit 4", () => {
     const s = emptyGameState();
     // bank A @ offset 0: pack coord=0x10 (bit 5..13 = 0x10), low nibble 0x5.
-    // Layout: coord<<5 | nibble = 0x10*0x20 + 0x5 = 0x205. Settiamo anche
-    // bit 14,15 e bit 4 per testare il clear.
+    // Layout: coord<<5 | nibble = 0x10*0x20 + 0x5 = 0x205. Settiamo also
+    // bit 14,15 and bit 4 per testare il clear.
     writeWord(s.spriteRam, 0x000, 0xc215); // 0b1100_0010_0001_0101
     // bank B @ offset 0x100:
     writeWord(s.spriteRam, 0x100, 0x4123); // bit 14 clear, bit 15 set, etc
 
     spritePairCoordAdd1D82(s, /*col*/ 0, /*bank*/ 0, /*deltaA*/ 0, /*deltaB*/ 0);
 
-    // bank A: coord = asr 5 di 0xC215 = 0xFE10 sign-ext, & 0x1FF = 0x010
+    // bank A: coord = asr 5 of 0xC215 = 0xFE10 sign-ext, & 0x1FF = 0x010
     // Aspetta — (-16363) >> 5 in 16-bit signed: 0xC215 unsigned, signed -15851.
     //   -15851 / 32 = -495.34..., floor = -496 = 0xFE10.
     //   0xFE10 & 0x1FF = 0x010.
     // delta=0, shifted = 0x010 << 5 = 0x200.
-    // low nibble di 0xC215 = 0x5.
+    // low nibble of 0xC215 = 0x5.
     // result = (0x200 | 0x5) & 0x3FFF = 0x205.
     expect(readWord(s.spriteRam, 0x000)).toBe(0x205);
 
@@ -47,7 +47,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0x123);
   });
 
-  it("posivite delta: incrementa la coord (signed-9)", () => {
+  it("posivite delta: increments la coord (signed-9)", () => {
     const s = emptyGameState();
     // pack coord = 0x050 (= 80), low nibble = 0x7.
     // word = 0x050 << 5 | 0x7 = 0x0A07.
@@ -64,7 +64,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0xe07);
   });
 
-  it("bank/col addressing: scrive nei giusti offset spriteRam", () => {
+  it("bank/col addressing: writes in the giusti offset spriteRam", () => {
     const s = emptyGameState();
     // bank=3, col=0x12 → offset = 3*0x200 + 0x12*2 = 0x600 + 0x24 = 0x624.
     const offA = 3 * BANK_STRIDE_BYTES + 0x12 * 2;
@@ -87,7 +87,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, offB + 2)).toBe(0);
   });
 
-  it("signed coord: bit 13 (= 0x4000 nel pack) → coord negativa, asr propaga il segno", () => {
+  it("signed coord: bit 13 (= 0x4000 in the pack) → coord negativa, asr propaga il segno", () => {
     const s = emptyGameState();
     // word = 0xFFE0: signed16 = -32, >>5 = -1 = 0xFFFF, & 0x1FF = 0x1FF.
     // delta = 1: 0x1FF + 1 = 0x200, & 0xFFFF = 0x200. << 5 = 0x4000.

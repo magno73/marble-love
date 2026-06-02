@@ -1,6 +1,6 @@
 // Probe video parity: compare spriteRam / playfieldRam / alphaRam / colorRam
 // TS vs MAME a various frame. Output: byte diff for each video buffer.
-// If all i buffer sono == 0 byte diff → output visivo IDENTICO bit-perfect.
+// If all the buffers are == 0 byte diff → output visual IDENTICO bit-perfect.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";

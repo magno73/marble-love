@@ -103,7 +103,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(1);
   });
 
-  it("gameMode == 2, fun_12d46 chiamata SOLO una volta (break dopo primo match)", () => {
+  it("gameMode == 2, fun_12d46 chiamata SOLO una time (break dopo first match)", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 5);
@@ -119,7 +119,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(1); // only first match
   });
 
-  it("gameMode == 2, flag75e == 0 → fun_12d46 non chiamata anche se obj è attivo", () => {
+  it("gameMode == 2, flag75e == 0 → fun_12d46 non chiamata even if obj is attivo", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -147,7 +147,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gameMode == 2, obj state != 9 e != 10 → non dispatchato", () => {
+  it("gameMode == 2, obj state != 9 and != 10 → non dispatchato", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -197,7 +197,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("fun_13068 chiamata 25 volte con ptr corretti", () => {
+  it("fun_13068 chiamata 25 times con ptr corretti", () => {
     const s = emptyGameState();
     const ptrs: number[] = [];
     stateDispatch12FD0(s, {
@@ -223,7 +223,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(ptrs).toHaveLength(25);
   });
 
-  it("blocco 3 sempre eseguito indipendentemente dai blocchi precedenti", () => {
+  it("blocco 3 always executed indipendentemente from the blocchi precedenti", () => {
     const s = emptyGameState();
     setGameMode(s, 0); // gameMode != 2, blocco 1 skipped
     setFlag75c(s, 0); // flag off, blocco 2 skipped
@@ -245,7 +245,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(() => stateDispatch12FD0(s)).not.toThrow();
   });
 
-  it("blocco 1 + blocco 2 + blocco 3: tutti chiamati con valori corretti", () => {
+  it("blocco 1 + blocco 2 + blocco 3: all chiamati con values corretti", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);

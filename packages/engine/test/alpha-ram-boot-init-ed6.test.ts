@@ -39,7 +39,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     expect(FILL_LOOP_3_BASE_OFFSET).toBe(0xe80); // 0xA03E80 - 0xA03000
   });
 
-  it("copia il pattern ROM[0x6928 + D4*0x54] in 10 row consecutivi per ciascun quadrante", () => {
+  it("copies il pattern ROM[0x6928 + D4*0x54] in 10 row consecutivi per each quadrante", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < QUADRANT_COUNT * SOURCE_QUADRANT_STRIDE_BYTES; i++) {
@@ -51,7 +51,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     alphaRamBootInitED6(state, rom);
 
     // For each D4 quadrant, every D5 row must contain ROM[0x6928 + D4*0x54..].
-    // ai byte [row .. row + WORDS_PER_ROW*2 - 1] = [row .. row+0x53].
+    // athe bytes [row .. row + WORDS_PER_ROW*2 - 1] = [row .. row+0x53].
     for (let d4 = 0; d4 < QUADRANT_COUNT; d4++) {
       const srcBase = SOURCE_TABLE_ROM_ADDR + d4 * SOURCE_QUADRANT_STRIDE_BYTES;
       for (let d5 = 0; d5 < ROW_PER_QUADRANT; d5++) {
@@ -75,7 +75,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("scrive 0x2000 word a alphaRam[0x008..0x04B] (loop 2, 34 word)", () => {
+  it("writes 0x2000 word a alphaRam[0x008..0x04B] (loop 2, 34 word)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -96,7 +96,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("scrive 0x2000 word a alphaRam[0xE88..0xECB] (loop 3, 34 word)", () => {
+  it("writes 0x2000 word a alphaRam[0xE88..0xECB] (loop 3, 34 word)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -109,7 +109,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("non tocca alphaRam[0xF00..0xFFF] (oltre l'ultimo row)", () => {
+  it("non tocca alphaRam[0xF00..0xFFF] (beyond l'last row)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -117,7 +117,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
 
     // The last row written by loop 1 starts at 0xE80 and covers 42 words through 0xED3.
     // Loop 3 overwrites 0xE88..0xECB. Bytes 0xED4..0xEFF (44 skipped row-9 bytes)
-    // e 0xF00..0xFFF (oltre il range del loop 1) restano sentinel.
+    // and 0xF00..0xFFF (beyond il range of the loop 1) restano sentinel.
     for (let i = 0xed4; i < 0xf00; i++) {
       expect(state.alphaRam[i]).toBe(0xcc);
     }
@@ -126,7 +126,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("è idempotente: invocazioni multiple producono lo stesso stato", () => {
+  it("is idempotente: invocations multiple producono lo same state", () => {
     const stateA = emptyGameState();
     const stateB = emptyGameState();
     const rom = emptyRomImage();

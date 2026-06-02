@@ -249,7 +249,7 @@ export interface ObjectRenderUpdate13334Subs {
  *
  * @param state     GameState. Modifica `workRam` su POS_X/Y, active-record
  *                  globals, struct fields (+0x42, +0x4E), palette queue.
- * @param rom       ROM image (per leggere la table @ `0x1DF18` e per
+ * @param rom       ROM image (per leggere la table @ `0x1DF18` and per
  *                  dereferencing `struct[0x3e]` if it points into ROM).
  *                  on `(A2, ...)` touch work RAM.
  * @param subs      Stub injection per `FUN_1D06A` (callback no-op in test).

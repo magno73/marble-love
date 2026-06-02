@@ -53,7 +53,7 @@ console.log("\nTest 1: OR 0x3 on a zero value");
 }
 
 // ─── Test 2: OR with mask 0 -> no-op ─────────────────────────────────────────
-console.log("\nTest 2: OR maschera 0 → no-op");
+console.log("\nTest 2: OR mask 0 → no-op");
 {
   const s = makeState();
   setFlags(s, 0xdeadbeef);

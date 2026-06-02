@@ -1,5 +1,5 @@
 /**
- * state-sub-2678.test.ts — smoke + corner case di FUN_2678.
+ * state-sub-2678.test.ts — smoke + corner case of FUN_2678.
  */
 
 import { describe, it, expect } from "vitest";
@@ -32,7 +32,7 @@ describe("stateSub2678 (FUN_2678)", () => {
     expect(() => stateSub2678(s, 0)).not.toThrow();
   });
 
-  it("argLong=0 con DATA_PTR tutti zero → azzera tutti STATE (match all-zero)", () => {
+  it("argLong=0 con DATA_PTR all zero → azzera all STATE (match all-zero)", () => {
     const s = emptyGameState();
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = i + 1;
     stateSub2678(s, 0);
@@ -41,7 +41,7 @@ describe("stateSub2678 (FUN_2678)", () => {
     }
   });
 
-  it("match solo nello slot esatto: deregistra solo quello", () => {
+  it("match solo in the slot esatto: deregistra solo that", () => {
     const s = emptyGameState();
     // Setup: 4 slots with different pointers and non-zero state.
     writeLong(s, DATA_BASE + 0, 0xdeadbeef);
@@ -57,7 +57,7 @@ describe("stateSub2678 (FUN_2678)", () => {
 
     expect(readLong(s, DATA_BASE + 8)).toBe(0);
     expect(s.workRam[STATE_BASE + 2]).toBe(0);
-    // Altri slot intatti
+    // Altri slot intact
     expect(readLong(s, DATA_BASE + 0)).toBe(0xdeadbeef);
     expect(s.workRam[STATE_BASE + 0]).toBe(1);
     expect(readLong(s, DATA_BASE + 4)).toBe(0xcafe1234);
@@ -66,7 +66,7 @@ describe("stateSub2678 (FUN_2678)", () => {
     expect(s.workRam[STATE_BASE + 3]).toBe(4);
   });
 
-  it("match in più slot: tutti deregistrati", () => {
+  it("match in più slot: all deregistrati", () => {
     const s = emptyGameState();
     const target = 0xaabbccdd;
     writeLong(s, DATA_BASE + 0, target);
@@ -87,7 +87,7 @@ describe("stateSub2678 (FUN_2678)", () => {
     expect(s.workRam[STATE_BASE + 3]).toBe(0);
   });
 
-  it("nessun match: nessun cambiamento (eccetto stub fun_2abc invocato)", () => {
+  it("no match: no cambiamento (eccetto stub fun_2abc invocato)", () => {
     const s = emptyGameState();
     writeLong(s, DATA_BASE + 0, 0x10000000);
     writeLong(s, DATA_BASE + 4, 0x20000000);
@@ -115,7 +115,7 @@ describe("stateSub2678 (FUN_2678)", () => {
     }
   });
 
-  it("stub fun_2abc riceve esattamente argLong (anche dopo match)", () => {
+  it("stub fun_2abc receives exactly argLong (also dopo match)", () => {
     const s = emptyGameState();
     const arg = 0xfeedface;
     writeLong(s, DATA_BASE + 0, arg);

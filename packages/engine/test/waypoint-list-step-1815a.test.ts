@@ -69,7 +69,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.recordsConsumed).toBe(0);
     expect(r.soundDispatches).toBe(0);
     expect(r.fun26196Called).toBe(false);
-    // pointer non avanzato
+    // pointer non advanced by
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
     // exhausted flag not touched.
     expect(s.workRam[FLAG_OFF]).toBe(0);
@@ -78,7 +78,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
   it("in_range advance: target sufficientemente vicino al record → consume + sound + loop", () => {
     const s = emptyGameState();
     // sx=1 → delta = (1<<19) - target_x + 0x40000. Per delta=0x40000 (in range
-    // come abs(0x40000)>>12 = 0x40, NOT in range). Dobbiamo |delta|<(0x20<<12)=0x20000.
+    // as abs(0x40000)>>12 = 0x40, NOT in range). Dobbiamo |delta|<(0x20<<12)=0x20000.
     // Scegliamo target_x = (1<<19) + 0x40000 = 0xC0000 → delta = 0x80000 - 0xC0000 + 0x40000 = 0
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0xc0000);
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_Y_OFFSET, 0xc0000);
@@ -108,7 +108,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(s.workRam[ENTITY_OFF + ENTITY_LIST_END_OFFSET]).toBe(0xff);
     // exhausted flag word = 1
     expect(((s.workRam[FLAG_OFF]! << 8) | s.workRam[FLAG_OFF + 1]!) & 0xffff).toBe(1);
-    // pointer avanzato di 4
+    // pointer advanced by of 4
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE + 4);
   });
 
@@ -132,7 +132,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.exitMode).toBe("list_exhausted");
   });
 
-  it("out_of_range: target lontano → applica accelerazione e chiama fun_26196", () => {
+  it("out_of_range: target far → applica accelerazione and calls fun_26196", () => {
     const s = emptyGameState();
     // sx=1, target_x=0 → delta = 0x80000 - 0 + 0x40000 = 0xC0000.
     // asr 12 = 0xC0 ≥ 0x20 → out of range.
@@ -155,12 +155,12 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.soundDispatches).toBe(0);
     expect(fun26196Calls).toBe(1);
     expect(r.fun26196Called).toBe(true);
-    // pointer NON avanzato
+    // pointer NOT advanced by
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
     expect(getLongBE(s, ENTITY_OFF + ENTITY_X_OFFSET)).not.toBe(0);
   });
 
-  it("out_of_range + gravity flag: entity[0x8] decrementato e clampato a -0x50000", () => {
+  it("out_of_range + gravity flag: entity[0x8] decrementato and clampato a -0x50000", () => {
     const s = emptyGameState();
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_Y_OFFSET, 0);

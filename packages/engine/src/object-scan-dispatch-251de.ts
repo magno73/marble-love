@@ -40,7 +40,7 @@
  *
  *
  *   1. **`addq.b #1` on D2/D3**: increments only the low byte. For count ≤ 127
- *      but we replicate `& 0xFF` for safety.
+ *      but we replicated `& 0xFF` for safety.
  *
  *   2. **`ext.w; ext.l` on D2/D3 byte**: sign-extend byte → word → long.
  *      For byte ≤ 0x7F it is equivalent to unsigned. Replicate via guard
@@ -48,7 +48,7 @@
  *
  *
  *
- *   5. **`cmpi.w #0xEC; ble`** seguito da level-check (`*0x400394 == 4`).
+ *   5. **`cmpi.w #0xEC; ble`** followed da level-check (`*0x400394 == 4`).
  *      Logic: skip respawn if signed X > 0xEC AND level != 4. Then if X
  *      (signed) >= -8 AND level != 4: skip respawn. Equivalente:
  *      respawn requires `(-8 < X <= 0xEC) OR level == 4`.

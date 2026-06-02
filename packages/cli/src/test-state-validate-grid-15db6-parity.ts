@@ -45,7 +45,7 @@
  *      with An=A7=SP). Encoding: 23EF dddd LLLL (16-bit displacement,
  *      32-bit absolute address) — 8 byte.
  *
- * struct kind byte (per verificare la mutazione 0x23→0x20).
+ * struct kind byte (per verify la mutation 0x23→0x20).
  *
  *   - A: setup random byte-by-byte (struct + currentPtr + kind random).
  *        Cattura mismatch generico.
@@ -435,7 +435,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: forced match + kind = 0x23 → mutazione — ${perSuite} cases ===`,
+    `\n=== Suite C: forced match + kind = 0x23 → mutation — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {

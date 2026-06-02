@@ -242,7 +242,7 @@ async function main(): Promise<void> {
       gateByte = Math.floor(rng() * 0x100) & 0xff;
     }
 
-    // Inietta gate byte in ROM (Musashi unified memory) e mirror TS.
+    // Inietta gate byte in ROM (Musashi unified memory) and mirror TS.
     pokeMem(cpu, ROM_GATE_BYTE_ADDR, 1, gateByte);
     tsRom.program[ROM_GATE_BYTE_ADDR] = gateByte & 0xff;
 

@@ -1,6 +1,6 @@
 /**
  *
- * poi dispatcha a 4 sub e (condizionalmente su game mode 3 o 4) ad altre sub
+ * poi dispatcha a 4 sub and (condizionalmente su game mode 3 o 4) ad altre sub
  * of bound-check.
  *
  * **Algoritmo** (da disasm 0x144E4..0x14648):
@@ -11,7 +11,7 @@
  * 3. `d2b = ((sext32(toWord)   - boundary) >> 4) & 0xFF`  (signed byte)
  * 4. If `d3b == d2b` → return (no-op).
  *    - `FUN_15A12(d3b, d2b)` — object-pair slot spawn/despawn.
- *    - `FUN_12DFA(d3b, d2b)` — replicata as `scriptRectDispatch12DFA`.
+ *    - `FUN_12DFA(d3b, d2b)` — replicated as `scriptRectDispatch12DFA`.
  * 6. If mode == 3:
  *    - If `d3b < 0x29 && d2b >= 0x29` → `bannerHelper26B66(9)`.
  *    - If `d3b >= 0x29 && d2b < 0x29` → `bannerHelper26B66(8)`.

@@ -30,7 +30,7 @@
  *        addq.l  #8, 0x00401E48.l      ; 50B9 0040 1E48   (6 byte)
  *        rts                           ; 4E75             (2 byte)
  *
- *   FUN_160AE (38 byte: 0x160AE..0x160D3) e FUN_15C46 (~250 byte) sono
+ *   FUN_160AE (38 byte: 0x160AE..0x160D3) and FUN_15C46 (~250 byte) are
  *
  *   - B: kind random in [0x00..0x1F] ∪ [0x23..0x7F] (no-op signed≥0)
  *   - C: kind random in [0x80..0xFF] (no-op signed<0 via blt)

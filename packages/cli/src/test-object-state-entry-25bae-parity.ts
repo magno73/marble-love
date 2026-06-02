@@ -139,7 +139,7 @@ async function main(): Promise<void> {
     if (r < 0.25) return 0x02;
     if (r < 0.5) return 0x09;
     if (r < 0.75) return 0x04;
-    return rb(); // qualsiasi byte (potrebbe random-coincidere con 2/9/4 — ok)
+    return rb(); // qualsiasthe bytes (potrebbe random-coincidere con 2/9/4 — ok)
   };
 
   let ok = 0;

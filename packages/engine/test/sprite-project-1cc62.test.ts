@@ -1,5 +1,5 @@
 /**
- * sprite-project-1cc62.test.ts — smoke + corner case di FUN_0001CC62.
+ * sprite-project-1cc62.test.ts — smoke + corner case of FUN_0001CC62.
  */
 
 import { describe, it, expect } from "vitest";
@@ -27,7 +27,7 @@ function writeWord(
 }
 
 describe("spriteProject1CC62 (FUN_0001CC62)", () => {
-  it("if-branch (bge-flag != 0): scrive *0x6A4 = cx1-cx0, *0x6A6 = cx0-cz", () => {
+  it("if-branch (bge-flag != 0): writes *0x6A4 = cx1-cx0, *0x6A6 = cx0-cz", () => {
     const s = emptyGameState();
     // Setup struct: cx0=10, cx1=30, cy0=50, cz=5.
     writeWord(s, STRUCT_OFF + 0x04, 10);
@@ -49,7 +49,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(r).toBe(0x50000 + (55 << 13));
   });
 
-  it("else-branch (bge-flag == 0): scrive *0x6A4 = cy0-cz, *0x6A6 = cx1-cy0", () => {
+  it("else-branch (bge-flag == 0): writes *0x6A4 = cy0-cz, *0x6A6 = cx1-cy0", () => {
     const s = emptyGameState();
     writeWord(s, STRUCT_OFF + 0x04, 10);
     writeWord(s, STRUCT_OFF + 0x0e, 30);
@@ -69,7 +69,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(r).toBe(0x50000 + (40 << 13));
   });
 
-  it("invoca subs.fun_1CABA solo se argLong LSB != 0", () => {
+  it("invoca subs.fun_1CABA only if argLong LSB != 0", () => {
     const s = emptyGameState();
     writeWord(s, BGE_FLAG_OFF, 1);
     let calls = 0;
@@ -87,7 +87,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(calls).toBe(2);
   });
 
-  it("subs assente non crasha anche con argLong != 0 (no-op silenzioso)", () => {
+  it("subs assente non crasha also con argLong != 0 (no-op silenzioso)", () => {
     const s = emptyGameState();
     writeWord(s, BGE_FLAG_OFF, 1);
     expect(() => spriteProject1CC62(s, 1)).not.toThrow();

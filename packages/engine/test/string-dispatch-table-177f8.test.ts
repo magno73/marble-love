@@ -1,5 +1,5 @@
 /**
- * Test stringDispatchTable177F8 (FUN_177F8) — smoke tests sui rami principali.
+ * Test stringDispatchTable177F8 (FUN_177F8) — smoke tests sui branches principali.
  *
  * `cli/src/test-string-dispatch-table-177f8-parity.ts`.
  */
@@ -68,7 +68,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(LEVEL_HEADER_BOUND_OFF).toBe(0x18);
   });
 
-  it("early-exit 'bound': D2.w >= bound (signed) → ritorna 0", () => {
+  it("early-exit 'bound': D2.w >= bound (signed) → returns 0", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     // Setta level header @ 0x401000 (in workRam), bound @ +0x18 = 5.
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
@@ -85,7 +85,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0);
     expect(res.earlyExit).toBe("bound");
 
-    // NON sia bound).
+    // NOT both bound).
     const res2 = stringDispatchTable177F8Detailed(
       state,
       rom,
@@ -97,13 +97,13 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res2.earlyExit).not.toBe("bound");
   });
 
-  it("early-exit 'fff_zero': se A2-lookup ritorna 0 → ritorna 0", () => {
+  it("early-exit 'fff_zero': se A2-lookup returns 0 → returns 0", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     //   - bound check: bound = 0; arg0w = 0 → 0 NOT < 0 → SAREBBE bound exit.
     // Forziamo bound > 0 per arrivare al lookup centrale.
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
-    // *(0x40065a) = some valid ptr (workRam), e (A2 + D1).w = 0 → fff_zero.
+    // *(0x40065a) = some valid ptr (workRam), and (A2 + D1).w = 0 → fff_zero.
     setLong(state.workRam, WR_STRING_TABLE_PTR_ABS - WORK_RAM_BASE, 0x401200);
     // workRam @ 0x401200..0x401400 default 0 → lookup yields 0 → top4 = 0
     // → fff = 0 → fff_zero.
@@ -119,7 +119,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.earlyExit).toBe("fff_zero");
   });
 
-  it("early-exit 'bias_sentinel': lookup bias = 0x1000 → ritorna 0", () => {
+  it("early-exit 'bias_sentinel': lookup bias = 0x1000 → returns 0", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
@@ -145,7 +145,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.earlyExit).toBe("bias_sentinel");
   });
 
-  it("early-exit 'byte_zero': nel case_no_bit11, byte image = 0 → ritorna 0", () => {
+  it("early-exit 'byte_zero': in the case_no_bit11, byte image = 0 → returns 0", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
@@ -170,12 +170,12 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.earlyExit).toBe("byte_zero");
   });
 
-  it("path 'top4_short': top4!=0 e mask hit → calcolo D0 dal short-form", () => {
+  it("path 'top4_short': top4!=0 and mask hit → calcolo D0 from the short-form", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
     setLong(state.workRam, WR_STRING_TABLE_PTR_ABS - WORK_RAM_BASE, 0x401200);
-    // D0.w lookup → vogliamo top4 != 0 e mask hit.
+    // D0.w lookup → vogliamo top4 != 0 and mask hit.
     setWord(state.workRam, 0x1200, 0x2000); // top4 = 0x2000
     rom.program[0x24176 + 0] = 0x20;
     rom.program[0x24176 + 1] = 0x00;
@@ -196,7 +196,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c0);
   });
 
-  it("legge anche la finestra ROM slapstic quando la string table punta sopra 0x80000", () => {
+  it("reads also la finestra ROM slapstic when la string table punta above 0x80000", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);
@@ -252,7 +252,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c2);
   });
 
-  it("ritorna sempre 0..0xFFFF (mask di output)", () => {
+  it("returns always 0..0xFFFF (mask of output)", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 0x7fff); // big bound
@@ -264,7 +264,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     }
   });
 
-  it("dispatcher è puro: non scrive in state.workRam, rom.program, pfRam", () => {
+  it("dispatcher is puro: non writes in state.workRam, rom.program, pfRam", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);
@@ -282,7 +282,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(pfRam).toEqual(pfCopy);
   });
 
-  it("API a 3 word args: arg0/1/2 sono trattati come 16-bit (mask)", () => {
+  it("API a 3 word args: arg0/1/2 are trattati as 16-bit (mask)", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);

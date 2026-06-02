@@ -55,7 +55,7 @@
  *   - byte 0x80..0xFF (-128..-1 signed)-> no-op (A0 < 0x20)
  *
  * **Note semantiche**:
- *     i comparisons sono signed.
+ *     i comparisons are signed.
  *     behaves like a plain "byte == 0x20/0x21/0x22" check for byte <= 0x7F.
  *
  * **JSR sub injection**: two callees exposed through `StateDispatch1605CSubs`:
@@ -145,7 +145,7 @@ export function stateDispatch1605C(
     return;
   }
 
-  // A0 > 0x20: check 0x21 e 0x22.
+  // A0 > 0x20: check 0x21 and 0x22.
   if (a0Signed === 0x21) {
     return;
   }

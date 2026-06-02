@@ -120,7 +120,7 @@ export function renderGlyphLoop1E64(
   count: number,
   subs: RenderGlyphLoop1E64Subs = {},
 ): RenderGlyphLoop1E64Result {
-  // D4 = bufPtr (long). Tutte le aritmetiche sono su 32-bit unsigned in JS:
+  // D4 = bufPtr (long). Tutte le aritmetiche are su 32-bit unsigned in JS:
   let d4 = bufPtr >>> 0;
 
   // sign-extended ((d3w << 16) >> 16).

@@ -2,8 +2,8 @@
  * late-game-logic-26f3e.test.ts — unit tests per `lateGameLogic26F3E`.
  *
  * Qui copriamo:
- *   - struttura del flusso principale (phase 1 / 2 / 3 / 4 / exit)
- *   - cursor setup corretto
+ *   - structure of the flow main (phase 1 / 2 / 3 / 4 / exit)
+ *   - cursor setup correct
  *   - early-exit condizioni (counter >= 0x3C, SENTINEL, bounds)
  */
 

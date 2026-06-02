@@ -23,7 +23,7 @@
  * Pattern coverage:
  *   - 30% arg1 in [0..7], arg2 in [0..0x12]   -> path #3 (byte) o #4 (word)
  *   - 25% arg2 > 0x12                          -> path #1 (-1)
- *   - 25% arg1 in [0..0xFF]                    -> mix of #2 e #3/#4
+ *   - 25% arg1 in [0..0xFF]                    -> mix of #2 and #3/#4
  *   - 10% arg1 sign-ext negativo               -> stress #2
  *   - 10% full random long                     -> stress generale
  *

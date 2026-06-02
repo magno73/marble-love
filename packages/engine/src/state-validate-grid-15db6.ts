@@ -115,7 +115,7 @@ export interface StateValidateGrid15DB6Subs {
    */
   fun_15d10?: (structPtrLong: number) => void;
   /**
-   * `FUN_00015E24(structPtr, flagLong) → void`. Handler "principale";
+   * `FUN_00015E24(structPtr, flagLong) → void`. Handler "main";
    */
   fun_15e24?: (structPtrLong: number, flagLong: number) => void;
   /**

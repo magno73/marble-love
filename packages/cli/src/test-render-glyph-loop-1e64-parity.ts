@@ -72,7 +72,7 @@ function makeRng(seed: number): () => number {
 /**
  *
  * bufPtr_long (top -> bottom). The FUN_1E64 prologue does
- * `movem.l {D4 D3 D2}, -(SP)` (12 byte), portando i 3 args a (0x10, 0x14, 0x18).
+ * `movem.l {D4 D3 D2}, -(SP)` (12 byte), portando the 3 args a (0x10, 0x14, 0x18).
  *
  * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 al momento of the RTS
  */

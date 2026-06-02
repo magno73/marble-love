@@ -5,7 +5,7 @@
  *
  *   - `arg1Long` (A0): pointer to a struct (col_byte @ +0, tickOff_byte @ +1,
  *     stringPtr_long @ +2). Same layout as entries processed by
- *     `FUN_2ABC` (clearStringChain) e `FUN_2572` (renderStringChain).
+ *     `FUN_2ABC` (clearStringChain) and `FUN_2572` (renderStringChain).
  *
  * **Disasm 0x2DA0..0x2E16** (120 byte):
  *

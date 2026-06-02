@@ -4,10 +4,10 @@
  * `slotSpawnPattern13D38`.
  *
  * `FUN_00013D38` (430 byte) emette un fan-pattern of 8 record da 6 byte in due
- * range of the proprio slot record (A0+0xA4 e A0+0x38), leggendo:
+ * range of the proprio slot record (A0+0xA4 and A0+0x38), leggendo:
  *   - delta-stream byte signed @ ROM 0x1EF32 (16 byte = 8 coppie)
  *   - puntatori-slot @ ROM 0x1F016 indicizzati da `(A0+0x58).b sext.l <<2`
- *   - coords da `(A1+0x4E).l` e branch su `(A1+0x1F).b == 0xD`
+ *   - coords da `(A1+0x4E).l` and branch su `(A1+0x1F).b == 0xD`
  *
  *   - `(A0+0x57).b` random (counter)
  *   - random `(A0+0x58).b` in [0..24], a valid table selector
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
 
     // Set up A1 fields (A1 = slotPtrs[selectorByte] if selectorByte < 25).
-    // Setup random A1+0x4E (long) e A1+0x1F (byte). Con selectorByte ∈ [0..24]
+    // Setup random A1+0x4E (long) and A1+0x1F (byte). Con selectorByte ∈ [0..24]
     // guarantee that A1 is a canonical slot (in work RAM).
     const a1Idx = selectorByte; // < 25 by construction
     if (a1Idx < SLOT_COUNT) {

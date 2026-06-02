@@ -1,5 +1,5 @@
 /**
- * m68k-regfile.test.ts — validation differenziale del register file M68010
+ * m68k-regfile.test.ts — validation differenziale of the register file M68010
  * + 8 stack ABI instructions against the SingleStepTests/m68000 dataset (MIT)
  * filtrato in `oracle/tom_harte_m68000/`.
  *
@@ -11,7 +11,7 @@
  * (excluding exception/address-error paths, which the GCC body never reaches
  * with a correctly aligned SP).
  *
- * Filtraggio: skippiamo i test in cui le transactions includono `re`/`we`
+ * Filtraggio: skippiamo i test in which le transactions includono `re`/`we`
  * (exception bus cycles) - these are address-error cases that the register file
  * does not handle, and Marble Madness does not exercise.
  */
@@ -63,8 +63,8 @@ function loadOracle(filename: string): OracleTest[] {
 // Test bus: Map<u32, u8> with 24-bit address mask.
 
 /**
- * Crea un MemBus backed da Map. Il 68000 ha bus address 24-bit, quindi
- * mascheriamo. read/write 16/32 sono big-endian (high byte at lower addr).
+ * Crea un MemBus backed da Map. Il 68000 ha bus address 24-bit, so
+ * mascheriamo. read/write 16/32 are big-endian (high byte at lower addr).
  */
 function createTestBus(): MemBus & { ram: Map<number, number> } {
   const ram = new Map<number, number>();
@@ -170,7 +170,7 @@ function compareFinal(
       return { ok: false, reason: `A${i}: expected ${exp >>> 0}, got ${got >>> 0}` };
     }
   }
-  // A7 = USP o SSP (in base a SR.S finale)
+  // A7 = USP o SSP (based on SR.S finale)
   const supervisor = (final.sr & 0x2000) !== 0;
   const expA7 = (supervisor ? final.ssp : final.usp) >>> 0;
   const gotA7 = (rf.a[7] ?? 0) >>> 0;
@@ -353,7 +353,7 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
     const res = runCategory("MOVE_L_DISP.json", (rf, bus, opcode, startPc) => {
       // MOVE.L: 0010 ddd MMM mmm sss. size=10.
       // bits 15-12 = 0010. MOVE.L updates CCR (N,Z,V=0,C=0,X unchanged)
-      // → skippato dal compareFinal (checkSr=false sotto).
+      // → skippato from the compareFinal (checkSr=false below).
       if ((opcode & 0xf000) !== 0x2000) return { ok: false, reason: "unsupported" };
       const dstReg = (opcode >>> 9) & 7;
       const dstMode = (opcode >>> 6) & 7;
@@ -411,7 +411,7 @@ describe("M68010 regfile — Tom Harte differential validation", () => {
         // MOVE.W modifies CCR (N, Z, V=0, C=0, X unchanged): for
         // validation, accept that final SR can differ; the register
         // This file does not implement CCR for MOVE. Skip SR comparison.
-        // (MOVE.W modifica CCR ma compareFinal usa checkSr=false)
+        // (MOVE.W modifies CCR but compareFinal uses checkSr=false)
         return { ok: true };
       }
       // Dn→Mem

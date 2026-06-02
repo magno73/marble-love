@@ -1,5 +1,5 @@
 /**
- * sprite-coords-jsr-150d0.test.ts — smoke + corner case di FUN_000150D0.
+ * sprite-coords-jsr-150d0.test.ts — smoke + corner case of FUN_000150D0.
  */
 
 import { describe, it, expect } from "vitest";
@@ -36,7 +36,7 @@ function writeU16(
 }
 
 describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
-  it("scrive POS_X/POS_Y globals + packed long @ struct+0x28 e chiama inner(structPtr, 2)", () => {
+  it("writes POS_X/POS_Y globals + packed long @ struct+0x28 and calls inner(structPtr, 2)", () => {
     const s = emptyGameState();
     const STRUCT = 0x00401000;
     const off = STRUCT - 0x400000;
@@ -71,7 +71,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU32(s, off + 0x28)).toBe(0x0098006c);
   });
 
-  it("gestisce overflow word su D3w (yMinusX) come signed << 16 nel packed", () => {
+  it("handles overflow word su D3w (yMinusX) as signed << 16 in the packed", () => {
     const s = emptyGameState();
     const STRUCT = 0x00401000;
     const off = STRUCT - 0x400000;
@@ -95,7 +95,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU32(s, off + 0x28)).toBe(0x80884054);
   });
 
-  it("usa HUD_OFFSET globale @ 0x40097E nel calcolo di D2w", () => {
+  it("uses HUD_OFFSET globale @ 0x40097E in the calcolo of D2w", () => {
     const s = emptyGameState();
     const STRUCT = 0x00401000;
     const off = STRUCT - 0x400000;
@@ -119,7 +119,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU16(s, POS_Y_OFF)).toBe(0);
   });
 
-  it("ritorna verbatim il D0 della callback inner264AA (non lo modifica)", () => {
+  it("returns verbatim il D0 of the callback inner264AA (non lo modifies)", () => {
     const s = emptyGameState();
     const STRUCT = 0x004015c0;
     const off = STRUCT - 0x400000;
@@ -137,7 +137,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     }
   });
 
-  it("la callback riceve esattamente (structPtr, 2) — mode hard-coded", () => {
+  it("la callback receives exactly (structPtr, 2) — mode hard-coded", () => {
     const s = emptyGameState();
     const STRUCT_LIST = [0x00400018, 0x004000fa, 0x00400500, 0x00401e00];
     for (const STRUCT of STRUCT_LIST) {

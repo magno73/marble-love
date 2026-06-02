@@ -15,7 +15,7 @@
  *     if (*0x4006A0 < *0x40069E) → *0x4006A2 = 0 (clear dirty)
  *
  * **`FUN_1BB08` setScrollCoordsFromEntity1BB08** (8 instr, 7 callers):
- *   trasferisce `entity[0xC..0xF]` (X word) e `entity[0x10..0x13]` (Y word)
+ *   trasferisce `entity[0xC..0xF]` (X word) and `entity[0x10..0x13]` (Y word)
  *   `updateScrollCoords1BB50`.
  *
  *   Side effects:
@@ -83,7 +83,7 @@ export function updateScrollCoords1BB50(state: GameState): void {
  * `updateScrollCoords1BB50`.
  *
  * @param entityPtr  Pointer assoluto M68k to the entity struct (workRam).
- *                   Deve avere word X @ +0xC e word Y @ +0x10.
+ *                   Deve avere word X @ +0xC and word Y @ +0x10.
  */
 export function setScrollCoordsFromEntity1BB08(
   state: GameState,

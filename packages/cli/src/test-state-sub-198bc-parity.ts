@@ -65,7 +65,7 @@ const PROX_ARRAY_END = PROX_ARRAY_BASE + PROX_ARRAY_COUNT * PROX_ENTRY_SIZE;
 
 /**
  * Patch JSR-stub: none. Both `FUN_19976` and `FUN_1937C` are left
- * **live** e replicati 1:1 in TS.
+ * **live** and replicati 1:1 in TS.
  */
 function patchSubs(_cpu: CpuSession): void {
   // No-op: live mode.

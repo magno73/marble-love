@@ -1,5 +1,5 @@
 /**
- * helper-3784.test.ts — smoke tests di `helper3784` (FUN_3784).
+ * helper-3784.test.ts — smoke tests of `helper3784` (FUN_3784).
  *
  * Bit-perfect parity (500 cases) verified in
  * `packages/cli/src/test-helper-3784-parity.ts` vs Musashi.

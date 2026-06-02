@@ -29,7 +29,7 @@ function writeU32(s: ReturnType<typeof emptyGameState>, addr: number, v: number)
 }
 
 describe("vectorScale (FUN_25E7C)", () => {
-  it("zero vector: scrive (0,0) con clamp D3=0x100", () => {
+  it("zero vector: writes (0,0) con clamp D3=0x100", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeU32(s, 0x401D00, 0);
@@ -42,7 +42,7 @@ describe("vectorScale (FUN_25E7C)", () => {
 
   it("non-zero vector: produce risultato deterministic con ROM zero", () => {
     const s = emptyGameState();
-    const rom = emptyRomImage(); // ROM zero — D5 e V_next entrambi 0
+    const rom = emptyRomImage(); // ROM zero — D5 and V_next both 0
     writeU32(s, 0x401D00, 100);
     writeU32(s, 0x401D04, 50);
     vectorScale(s, rom, 0x00401D00, 5);

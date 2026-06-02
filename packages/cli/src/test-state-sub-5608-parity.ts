@@ -13,7 +13,7 @@
  *   3. FUN_52DA(D2+4, 0x1C,   0x7980)
  *
  * Strategia parity test:
- *   - Patch RTS sui due callee `FUN_52DA` (0x52DA) e `FUN_5334` (0x5334) per
+ *   - Patch RTS sui due callee `FUN_52DA` (0x52DA) and `FUN_5334` (0x5334) per
  *     prevent their bodies from executing; their side effects are not relevant:
  *     for fault injection). Synchronize `tsRom.program` with the same bytes.
  *   - Run FUN_5608 step-by-step: each time PC == 0x52DA or PC == 0x5334
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern of coverage on the gate byte e on the handle long.
+    // Pattern of coverage on the gate byte and on the handle long.
     let gateByte: number;
     let handleLong: number;
     if (i === 0) {
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
       handleLong = Math.floor(rng() * 0x100000000) >>> 0;
     }
 
-    // Inietta byte e long in ROM (Musashi unified memory) e in the mirror TS.
+    // Inietta byte and long in ROM (Musashi unified memory) and in the mirror TS.
     pokeMem(cpu, ROM_GATE_BYTE_ADDR, 1, gateByte);
     tsRom.program[ROM_GATE_BYTE_ADDR] = gateByte & 0xff;
     pokeMem(cpu, ROM_HANDLE_LONG_ADDR, 4, handleLong >>> 0);

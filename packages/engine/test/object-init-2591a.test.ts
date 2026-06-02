@@ -1,7 +1,7 @@
 /**
- * Test objectInit2591A (FUN_0002591A) — smoke tests sull'orchestratore
+ * Test objectInit2591A (FUN_0002591A) — smoke tests on the orchestratore
  *
- * @ 0x400696/0x400698, e orchestra 6 sub-jsr (default no-op qui).
+ * @ 0x400696/0x400698, and orchestra 6 sub-jsr (default no-op qui).
  *
  * `cli/src/test-object-init-2591a-parity.ts` (500/500 cases).
  */
@@ -41,7 +41,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
 }
 
 describe("objectInit2591A (FUN_0002591A)", () => {
-  it("scrive i 12 campi diretti su A2 + i 2 globals con FUN_1B9CC isolata", () => {
+  it("writes i 12 fields diretti su A2 + the 2 globals con FUN_1B9CC isolata", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -81,7 +81,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
 
-  it("chiama tutte e 6 le subs nell'ordine binary, con args corretti", () => {
+  it("calls all and 6 le subs in the ordine binary, con args corretti", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1100;
     const calls: Array<{ name: string; args: readonly number[] }> = [];
@@ -129,7 +129,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
 
-  it("non muta byte vicini ai campi scritti (0x19, 0x1A, 0x1C, 0x35, 0x37, 0x55, 0x57, 0x59)", () => {
+  it("non muta byte near ai fields scritti (0x19, 0x1A, 0x1C, 0x35, 0x37, 0x55, 0x57, 0x59)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1300;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -165,7 +165,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     }
   });
 
-  it("propaga il GameState alle callback con stato osservabile", () => {
+  it("propaga il GameState alle callback con state osservabile", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1400;
 

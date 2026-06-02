@@ -231,7 +231,7 @@ async function main(): Promise<void> {
       }
     }
 
-    // Record output: 24 byte @ +0x38 e 24 byte @ +0xA4.
+    // Record output: 24 byte @ +0x38 and 24 byte @ +0xA4.
     if (match) {
       for (const baseOff of [0x38, 0xa4]) {
         if (!match) break;

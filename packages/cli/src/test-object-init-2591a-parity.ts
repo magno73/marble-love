@@ -68,7 +68,7 @@ function patchRomBytes(
   }
 }
 
-/** Patcha all e 6 le sub a stub deterministico. */
+/** Patcha all and 6 le sub a stub deterministico. */
 function patchSubsRom(rom: Buffer): void {
   // `rts` = 4E 75 (2 byte). Per FUN_262B2, FUN_1BAB2, FUN_25B40, FUN_1B9CC,
   // FUN_13966 — non ci interessa il return value.

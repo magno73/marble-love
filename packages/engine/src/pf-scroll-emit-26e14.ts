@@ -84,7 +84,7 @@ function spriteOff(absPtr: number): number {
  *     page (toggled AV) and post-incremented by 2 for each emitted word.
  *
  * **Side effect** in `spriteRam`: emits up to 60 words for each buffer.
- * `(src + (arg<<5)) & 0x3FFF | (src & 0xC000)`; B/C/D sono passthrough.
+ * `(src + (arg<<5)) & 0x3FFF | (src & 0xC000)`; B/C/D are passthrough.
  *
  * MAX_ITER = 60.
  *

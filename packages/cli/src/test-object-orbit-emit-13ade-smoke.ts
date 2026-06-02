@@ -5,7 +5,7 @@
  *   1. Esegua il reset trigger 0x64 → counter = 0x30, angle = 0.
  *   2. Esegua il reset trigger 0x65 → counter = 0x18, angle = 0.
  *   3. Esegua il reset trigger 0x66 → counter = 0x24, angle = 0.
- *   7. Faccia the angle advance (0x0A) e il wrap a 0x192.
+ *   7. Faccia the angle advance (0x0A) and il wrap a 0x192.
  *   8. Apply mirroring if (A0+0x1A).b == 0x0B.
  *
  * Uso: npx tsx packages/cli/src/test-object-orbit-emit-13ade-smoke.ts
@@ -107,7 +107,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   check("counter post == 0x0F", s.workRam[ARG_OFF + 0x57], 0x0f);
 }
 
-// ── Smoke 6: angle advance e wrap ────────────────────────────────────────
+// ── Smoke 6: angle advance and wrap ────────────────────────────────────────
 {
   const s = makeState();
   const rom = makeRom();

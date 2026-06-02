@@ -15,7 +15,7 @@
  *   - Compare:
  *       * For each of the 10 slots: the full 0x38 bytes starting at
  *         `0x4019F8 + i*0x38`.
- *       * I 0x60 byte of the entity @ ENTITY_BASE (covers 0x1A e 0x57).
+ *       * I 0x60 byte of the entity @ ENTITY_BASE (covers 0x1A and 0x57).
  *       * Flag word @ 0x400394 (game-mode), not written but verified
  *         was not corrupted.
  *

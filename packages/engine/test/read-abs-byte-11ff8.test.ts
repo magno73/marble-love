@@ -1,5 +1,5 @@
 /**
- * read-abs-byte-11ff8.test.ts — smoke tests di `helper11FF8` (FUN_11FF8).
+ * read-abs-byte-11ff8.test.ts — smoke tests of `helper11FF8` (FUN_11FF8).
  *
  * Verifica i path principali:
  *   1. Phase 1 match-scan: defaults table vs workRam entries
@@ -354,7 +354,7 @@ describe("helper11FF8 (FUN_11FF8)", () => {
     });
 
     // Phase 1 should call decode for entries 0..9 (all 10)
-    // (even after D4b=0, the binary continues the loop — we replicate faithfully)
+    // (even after D4b=0, the binary continues the loop — we replicated faithfully)
     const phase1Only = phase1Calls.slice(0, 10);
     expect(phase1Only[0]).toBe(0);
     expect(phase1Only.length).toBeGreaterThanOrEqual(1); // at least entry 0 called

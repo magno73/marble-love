@@ -4,7 +4,7 @@
  *
  *
  * **Strategia parity**:
- *     replicata da `updateScrollCoords1BB50`. La replica TS include la
+ *     replicated da `updateScrollCoords1BB50`. La replica TS include la
  *     callee inline (cfr. scroll-coord-helpers.ts).
  *     sub-cell, cell, dirty flag).
  *

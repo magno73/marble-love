@@ -27,7 +27,7 @@ function readPalU16BE(state: ReturnType<typeof emptyGameState>, addr: number): n
 }
 
 describe("paletteRngFill26CFATick", () => {
-  it("scrive 8 entry: ogni header inizia con HEADER_WORD_1 / HEADER_WORD_2", () => {
+  it("writes 8 entry: each header inizia con HEADER_WORD_1 / HEADER_WORD_2", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.rng.seed = as_u16(0x1234);
@@ -41,7 +41,7 @@ describe("paletteRngFill26CFATick", () => {
     }
   });
 
-  it("byte tra entry consecutive (offset 10..31) restano invariati", () => {
+  it("byte between entry consecutive (offset 10..31) restano invariati", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     // Pre-fill gap region with sentinel 0xA5 to detect any unwanted write.
@@ -65,7 +65,7 @@ describe("paletteRngFill26CFATick", () => {
     }
   });
 
-  it("avanza RNG di 8 step (8 chiamate a rngNext con limit=2)", () => {
+  it("avanza RNG of 8 step (8 chiamate a rngNext con limit=2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.rng.seed = as_u16(0x4321);
@@ -77,7 +77,7 @@ describe("paletteRngFill26CFATick", () => {
     expect(callsAfter - callsBefore).toBe(ENTRY_COUNT);
   });
 
-  it("rnd=0 path: usa sub-entry +0 della ROM table (i=0)", () => {
+  it("rnd=0 path: uses sub-entry +0 of the ROM table (i=0)", () => {
     // Force RNG path: rnd==0 → src = ROM_TABLE_BASE + 0 + 0 = ROM_TABLE_BASE
     const rom = emptyRomImage();
     rom.program[ROM_TABLE_BASE + 0] = 0x11;
@@ -111,7 +111,7 @@ describe("paletteRngFill26CFATick", () => {
     expect(readPalU16BE(state, PAL_DEST_BASE + 8)).toBe(0x5566);
   });
 
-  it("rnd!=0 path: usa sub-entry +6 della ROM table", () => {
+  it("rnd!=0 path: uses sub-entry +6 of the ROM table", () => {
     const rom = emptyRomImage();
     rom.program[ROM_TABLE_BASE + 0] = 0x11; // base sub-entry
     rom.program[ROM_TABLE_BASE + 1] = 0x22;
@@ -143,7 +143,7 @@ describe("paletteRngFill26CFATick", () => {
     expect(readPalU16BE(state, PAL_DEST_BASE + 8)).toBe(0xeeff);
   });
 
-  it("ROM table al di fuori della prima entry (i=3): legge offset 0x20BB4 + 36", () => {
+  it("ROM table al of outside of the first entry (i=3): reads offset 0x20BB4 + 36", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     // Entry 3 sub-entry +0 (RNG=0): bytes a 0x20BB4 + 36..41

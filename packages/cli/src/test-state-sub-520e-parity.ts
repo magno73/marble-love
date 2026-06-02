@@ -14,9 +14,9 @@
  *     `state.workRam` TS.
  *   - Setta A2 = pointer random allineato 4 in `[0x400000..0x401C00]` (range
  *     chosen to avoid overlap with the status-flags long @ 0x1F5E and the
- *     of the esecuzione e lo passiamo as `stackD0` al TS replica.
+ *     of the esecuzione and lo passiamo as `stackD0` al TS replica.
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x520E)` e `stateSub520E(state, a2, stackD0)`.
+ *   - Lancia `callFunction(cpu, 0x520E)` and `stateSub520E(state, a2, stackD0)`.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-520e-parity.ts [N]
  */
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
 
     // A2: pointer random allineato 4 in workRam.
     // Range sicuro: i clear touch A2+0..A2+0x1D (30 byte). Per non
-    // sovrapporre la status-flags long @ 0x1F5E (4 byte) e la area stack
+    // sovrapporre la status-flags long @ 0x1F5E (4 byte) and la area stack
     // [0x1EE0..0x1F00] (32 byte), limitiamo a A2_off ≤ 0x1C00.
     // Inoltre A2_off ≥ 0 ovviamente.
     let a2: number;

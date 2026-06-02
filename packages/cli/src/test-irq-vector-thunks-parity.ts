@@ -3,12 +3,12 @@
  *
  * Strategia:
  *
- * I 23 thunk JMP (0x100..0x254) sono `jmp targetAddr.l` puri: chiamare il
- * verificare la bit-exactness:
+ * I 23 thunk JMP (0x100..0x254) are `jmp targetAddr.l` pure: call il
+ * verify la bit-exactness:
  *   1. Identify each (sourceAddr, targetAddr) from THUNK_TABLE.
  *
  *
- * as "timeout_skip" e reports them at the end of the run.
+ * as "timeout_skip" and reports them at the end of the run.
  *
  * Uso: npx tsx packages/cli/src/test-irq-vector-thunks-parity.ts [N=100]
  */

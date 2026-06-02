@@ -4,9 +4,9 @@
  * Verifica:
  *   - early-out (gameMode != 3 OR byte760 == 0)
  *   - loop with empty table -> result = 0, hits = []
- *   - reflect-neg branch (primi 3 match, secondo check fallisce, dist < 12)
- *   - reflect-skip branch (primi 3 match, secondo check fallisce, dist >= 12)
- *   - math/sound branch (tutti 6 match) + soundCommand callback
+ *   - reflect-neg branch (first 3 match, second check fails, dist < 12)
+ *   - reflect-skip branch (first 3 match, second check fails, dist >= 12)
+ *   - math/sound branch (all 6 match) + soundCommand callback
  */
 
 import { describe, it, expect } from "vitest";
@@ -97,7 +97,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(soundCalls).toBe(0);
   });
 
-  it("early-out: gameMode==3 ma byte760==0 → result=0", () => {
+  it("early-out: gameMode==3 but byte760==0 → result=0", () => {
     const s = emptyGameState();
     setWordBE(s, GAME_MODE_OFFSET, GAME_MODE_ACTIVE);
     setByte(s, SECONDARY_GATE_OFFSET, 0); // gate chiuso
@@ -106,7 +106,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(r.result).toBe(0);
   });
 
-  it("loop con tabella vuota (tutti entry inattivi) → result=0", () => {
+  it("loop con table vuota (all entry inattivi) → result=0", () => {
     const s = emptyGameState();
     setupActive(s);
     // Prepopulate entity to verify it is not touched.
@@ -119,7 +119,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET)).toBe(0x12345678);
   });
 
-  it("reflect-neg: primi 3 match, secondo check fallisce, dist < 12 → nega entity[0..3] e [4..7]", () => {
+  it("reflect-neg: first 3 match, second check fails, dist < 12 → nega entity[0..3] and [4..7]", () => {
     const s = emptyGameState();
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0xaa);
@@ -157,7 +157,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG4_OFFSET)).toBe(0); // = long688
   });
 
-  it("reflect-skip: primi 3 match, secondo check fallisce, dist >= 12 → no negate", () => {
+  it("reflect-skip: first 3 match, second check fails, dist >= 12 → no negate", () => {
     const s = emptyGameState();
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0x10);
@@ -185,12 +185,12 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG1_OFFSET)).toBe(0xabcdef01);
   });
 
-  it("math/sound branch: tutti 6 campi match → entity[0x8]=0x70000, [0x14]+=0xc0000, [0x36]=2, soundCommand(0x45)", () => {
+  it("math/sound branch: all 6 fields match → entity[0x8]=0x70000, [0x14]+=0xc0000, [0x36]=2, soundCommand(0x45)", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x1234);
     setupActive(s);
 
-    // Forza byte((long@684)>>19) = 0x10 e byte((long@688)>>19) = 0x20.
+    // Forza byte((long@684)>>19) = 0x10 and byte((long@688)>>19) = 0x20.
     // long684 = 0x10 << 19 = 0x800000 → byte((0x800000 >> 19)) = 0x10 ✓
     // long688 = 0x20 << 19 = 0x1000000
     setLongBE(s, WORLD_X_OFFSET, 0x10 << 19);
@@ -243,7 +243,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect([0x0003a000, 0x00046000]).toContain(long1After);
   });
 
-  it("subs assente → no crash anche su math branch", () => {
+  it("subs assente → no crash also su math branch", () => {
     const s = emptyGameState();
     setupActive(s);
     setLongBE(s, WORLD_X_OFFSET, 0x10 << 19);
@@ -259,7 +259,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(() => stateSub1881C(s, ENTITY_BASE)).not.toThrow();
   });
 
-  it("entity[0xc] / [0x10] sempre scritti su first-3 match (anche se reflect-skip)", () => {
+  it("entity[0xc] / [0x10] always scritti su first-3 match (even if reflect-skip)", () => {
     const s = emptyGameState();
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0x77);

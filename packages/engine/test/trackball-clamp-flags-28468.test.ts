@@ -1,5 +1,5 @@
 /**
- * Test trackballClampFlags28468 (FUN_00028468) — smoke tests sui rami principali.
+ * Test trackballClampFlags28468 (FUN_00028468) — smoke tests sui branches principali.
  *
  * `FUN_00028468` (280 byte): pre-clamp ±0x40 sui due accumulator
  * (*0x4006A4 / *0x4006A6), debounce input, axis-lock 2:1 for trackball deltas
@@ -33,7 +33,7 @@ function readSWord(ram: Uint8Array, off: number): number {
 }
 
 describe("trackballClampFlags28468 (FUN_00028468)", () => {
-  it("pre-clamp ±0x40: accumulator iniziale > 0x40 viene cap a 0x40 prima di tutto", () => {
+  it("pre-clamp ±0x40: accumulator iniziale > 0x40 is cap a 0x40 first of all", () => {
     const s = emptyGameState();
     writeSWord(s.workRam, ACCUM_X_OFF, 0x0100);
     writeSWord(s.workRam, ACCUM_Y_OFF, -0x80);
@@ -69,7 +69,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     expect((flags >>> 12) & 0x0f).toBe(0x0f);
   });
 
-  it("post-wrap: nessun overflow → wrap-bits 12-15 tutti set in D5w", () => {
+  it("post-wrap: no overflow → wrap-bits 12-15 all set in D5w", () => {
     const s = emptyGameState();
     // Input zero, accumulator iniziali entro [-0x18, 0x18] → no wrap.
     writeSWord(s.workRam, ACCUM_X_OFF, 0x10);
@@ -83,8 +83,8 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
       p2Y: 0,
     });
 
-    // Bit 0 e 1: depend on debounce. Default empty state, prev=0, oldDeb=0,
-    // cur=0 → newDeb = 0 → bit 0 e 1 cleared.
+    // Bit 0 and 1: depend on debounce. Default empty state, prev=0, oldDeb=0,
+    // cur=0 → newDeb = 0 → bit 0 and 1 cleared.
     expect(flags & 0x0003).toBe(0x0000);
     expect((flags >>> 12) & 0x0f).toBe(0x0f);
     // Accumulator invariati (input 0, no axis-lock effect).
@@ -93,7 +93,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
   });
 
   it("axis-lock: con A=0x10, B=0x00 → D1=-0x10, D2=0x10, abs uguali → SKIP", () => {
-    // Per ottenere picked deltas controllati, settiamo entrambi obj C6/C7 al
+    // Per ottenere picked deltas controllati, settiamo both obj C6/C7 al
     const s = emptyGameState();
     // obj0 @ 0x18: C6 = 0x10 (pickedY = A), C7 = 0x00 (pickedX = B)
     s.workRam[0x18 + 0xc6] = 0x10;
@@ -140,7 +140,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(16);
   });
 
-  it("debounceInput modifica *0x4003A8/AA/AC come parte della chiamata", () => {
+  it("debounceInput modifies *0x4003A8/AA/AC as parte of the chiamata", () => {
     const s = emptyGameState();
     // Setup: prev=0xFF, oldDeb=0xFF → cur=0xFF → newDeb=0xFF (stable hi).
     s.workRam[0x3a8] = 0xff;

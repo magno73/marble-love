@@ -1,5 +1,5 @@
 /**
- * sprite-bracket-lerp-1c676.test.ts — smoke + corner case di FUN_0001C676.
+ * sprite-bracket-lerp-1c676.test.ts — smoke + corner case of FUN_0001C676.
  */
 
 import { describe, it, expect } from "vitest";
@@ -80,7 +80,7 @@ function lerp(a: number, b: number, factor: number): number {
 }
 
 describe("spriteBracketLerp1C676 (FUN_0001C676)", () => {
-  it("azzera tutti i byte di controllo all'inizio", () => {
+  it("azzera all the bytes of controllo to the inizio", () => {
     const s = emptyGameState();
     // Pre-set dirty values
     s.workRam[FLAGS_OFF] = 0xff;

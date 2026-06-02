@@ -101,7 +101,7 @@ function signExtByteToU32(b: number): number {
  *     of the `ext.w`/`ext.l` M68k.
  *     indipendenti.
  *     exactly that of `inner` (clamped a uint32).
- *     D2..D7 / A2..A6 beyond a quelli of the callee).
+ *     D2..D7 / A2..A6 beyond a those of the callee).
  */
 export function stateSub5334(
   state: GameState,

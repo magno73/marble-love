@@ -138,7 +138,7 @@ export function sub193D8ProximityCheck(
 /**
  * Replica `FUN_00019460`: test bit in the grid bitmap ROM @ 0x24496.
  *
- * Computa `x_idx = (x_word >> 3) - 0x59` (byte) e `y_idx = (y_word >> 3) - 0x5A`
+ * Computa `x_idx = (x_word >> 3) - 0x59` (byte) and `y_idx = (y_word >> 3) - 0x5A`
  * `(word_val & (1 << x_idx)) != 0 ? 1 : 0`.
  *
  * To match the M68K flags the address mode `(0,A0,D0w*1)` uses D0 as a word,

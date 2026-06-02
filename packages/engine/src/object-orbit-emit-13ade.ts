@@ -149,7 +149,7 @@ function lookupSinCos(
  *                - `(argPtr+0x1c).b = 1`
  *                - up to 4 record × 6 byte @ `(argPtr+0xA4)..(argPtr+0xBB)`
  *                - up to 4 record × 6 byte @ `(argPtr+0x38)..(argPtr+0x4F)`
- * @param rom     ROM image (per sin/cos table @ `0x1EDA2` e delta stream
+ * @param rom     ROM image (per sin/cos table @ `0x1EDA2` and delta stream
  *                @ `0x1EF32`).
  * @param argPtr  Long pushato from the caller. MUST be in work RAM
  *                (`0x400000..0x401FFF`).

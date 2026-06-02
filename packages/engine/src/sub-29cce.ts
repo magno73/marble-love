@@ -1441,7 +1441,7 @@ function runTube26Or27(
 /**
  * Dispatch su color tag (range 5..0x3b).
  *
- * Le branch **BLOCK A simple** (range-check D1/D2 + tag-write) sono
+ * Le branch **BLOCK A simple** (range-check D1/D2 + tag-write) are
  * implementate fully:
  *   0x10, 0x12, 0x32-0x37, 0x2d-0x31, 0x38-0x3b.
  *

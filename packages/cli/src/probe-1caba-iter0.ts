@@ -46,7 +46,7 @@ stateInst.workRam.set(hex2bytes(c.struct_pre, 32), 0x1c28);
 stateInst.workRam.set(hex2bytes(c.colBase, 0x200), 0x478);
 stateInst.workRam.set(hex2bytes(c.bsearchAlt, 0x200), 0x76e);
 
-// Now manually replicate prologue + iter0 to find divergence point
+// Now manually replicated prologue + iter0 to find divergence point
 function r16(off: number): number { return (((stateInst.workRam[off] ?? 0) << 8) | (stateInst.workRam[off + 1] ?? 0)) & 0xffff; }
 function r32(off: number): number { return (((stateInst.workRam[off]??0)<<24)|((stateInst.workRam[off+1]??0)<<16)|((stateInst.workRam[off+2]??0)<<8)|(stateInst.workRam[off+3]??0))>>>0; }
 function romW(addr: number): number { return (((rom.program[addr]??0)<<8) | (rom.program[addr+1]??0)) & 0xffff; }

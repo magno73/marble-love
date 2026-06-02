@@ -3,7 +3,7 @@
  * test-object-update-pair-158cc-parity.ts — differential FUN_158CC vs
  * objectUpdatePair158CC.
  *
- * FUN_1B9CC / FUN_1281C); per isolare il path of FUN_158CC patchamo
+ * FUN_1B9CC / FUN_1281C); per isolare il path of FUN_158CC we patch
  * FUN_158F6 with a "capture" payload:
  *
  *   move.l   (0x4,SP), D0          ; 20 2F 00 04        (4 byte)  arg long

@@ -1,5 +1,5 @@
 /**
- * sound-cmd-send-158ac.test.ts — unit test di soundCmdSend158AC (FUN_158AC).
+ * sound-cmd-send-158ac.test.ts — unit test of soundCmdSend158AC (FUN_158AC).
  *
  * Parity bit-perfect verificata separatamente in
  * `packages/cli/src/test-sound-cmd-send-158ac-parity.ts` (500 cases vs musashi).

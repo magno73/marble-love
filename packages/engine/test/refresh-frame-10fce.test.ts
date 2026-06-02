@@ -2,7 +2,7 @@
  * refresh-frame-10fce.test.ts — smoke tests for `FUN_00010FCE`
  * (idle/refresh frame handler).
  *
- *   2. I due `addq.b #1, (0x4003F0)` avvengono nelle posizioni corrette
+ *   2. I due `addq.b #1, (0x4003F0)` avvengono in the posizioni corrette
  */
 
 import { describe, it, expect } from "vitest";

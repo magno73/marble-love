@@ -1,5 +1,5 @@
 /**
- * render-string-chain-3662.test.ts — smoke + corner case di FUN_3662.
+ * render-string-chain-3662.test.ts — smoke + corner case of FUN_3662.
  *
  * `packages/cli/src/test-render-string-chain-3662-parity.ts`.
  *
@@ -98,7 +98,7 @@ function makeTestRom(): RomImage {
 }
 
 /**
- * Setup di una struct entry singola in workRam:
+ * Setup of una struct entry singola in workRam:
  *   col @ off, tickOff @ off+1, stringPtr @ off+2..+5, marker @ off+6,
  *   nextPtr @ off+8..+11.
  *
@@ -132,7 +132,7 @@ function writeStr(workRam: Uint8Array, off: number, s: string): void {
 // ─── Tests ───────────────────────────────────────────────────────────────
 
 describe("renderStringChain3662 (FUN_3662) — exports", () => {
-  it("expone gli indirizzi delle jsr esterne e i bound narrow", () => {
+  it("expone the indirizzi of the jsr esterne and i bound narrow", () => {
     expect(FUN_32BA_ADDR).toBe(0x000032ba);
     expect(FUN_33F4_ADDR).toBe(0x000033f4);
     expect(RENDER_CHAR_ARG2).toBe(0x3c);
@@ -142,14 +142,14 @@ describe("renderStringChain3662 (FUN_3662) — exports", () => {
 });
 
 describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () => {
-  it("string vuota (primo byte = 0) → nessuna call, return 1", () => {
+  it("string vuota (first byte = 0) → no call, return 1", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     // rotation = 0 (default zero)
     // tick = 0, valF00 = 0
     // marker = 0 (sum = 0 ≤ 1 → no chain advance, return 1)
     const stringOff = 0x100;
-    state.workRam[stringOff] = 0; // primo byte = terminator immediato
+    state.workRam[stringOff] = 0; // first byte = terminator immediato
     const structAddr = setupEntry(
       state,
       0x200,
@@ -171,7 +171,7 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
     expect(calls).toHaveLength(0);
   });
 
-  it("rotation == 0 → dispatch a fun_32ba per ogni char (NON fun_33f4)", () => {
+  it("rotation == 0 → dispatch a fun_32ba for each char (NOT fun_33f4)", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     // rotation = 0 (workRam[0x1f42..0x1f43] = 0)
@@ -206,7 +206,7 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
   });
 
   it("rotation == 0, char 'A' (wide) vs char 'B' (narrow) → stride diversi", () => {
-    // Setup: rot=0, stride[0] = 1, shift = 0, col = 0 → primo D3 = ALPHA_BASE.
+    // Setup: rot=0, stride[0] = 1, shift = 0, col = 0 → first D3 = ALPHA_BASE.
     // 'A' wide → step = stride*4 = 4
     // 'B' narrow (idx 0x26 → in [0x26..0x2e]) → step = stride*2 = 2
     const state = emptyGameState();
@@ -230,7 +230,7 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
     });
 
     expect(ptrs).toHaveLength(2);
-    // primo char @ ALPHA_BASE (col=0, tickOff=0, shift=0, stride=1)
+    // first char @ ALPHA_BASE (col=0, tickOff=0, shift=0, stride=1)
     expect(ptrs[0]).toBe(ALPHA_BASE);
     // 'A' wide → +stride*4 = +4
     expect(ptrs[1]).toBe(ALPHA_BASE + 4);
@@ -238,7 +238,7 @@ describe("renderStringChain3662 (FUN_3662) — single entry, rotation == 0", () 
 });
 
 describe("renderStringChain3662 (FUN_3662) — rotation != 0", () => {
-  it("rotation = 1 → dispatch a fun_33f4 (NON fun_32ba)", () => {
+  it("rotation = 1 → dispatch a fun_33f4 (NOT fun_32ba)", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeWordWR(state.workRam, 0x1f42, 1); // rotation = 1
@@ -270,7 +270,7 @@ describe("renderStringChain3662 (FUN_3662) — rotation != 0", () => {
 });
 
 describe("renderStringChain3662 (FUN_3662) — tickOff > lookup → skip render", () => {
-  it("rotation=2 con lookup=-1 (sempre skip) → no call, return 1", () => {
+  it("rotation=2 con lookup=-1 (always skip) → no call, return 1", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeWordWR(state.workRam, 0x1f42, 2); // rotation = 2 → lookup[2] = 0xFFFF (-1 signed)
@@ -298,7 +298,7 @@ describe("renderStringChain3662 (FUN_3662) — tickOff > lookup → skip render"
 });
 
 describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => {
-  it("marker + valF00 > 1 → continua con next entry; entrambe processate", () => {
+  it("marker + valF00 > 1 → continua con next entry; both processate", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
 
@@ -355,7 +355,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
       0,
       WORK_RAM_BASE + 0x100,
       0,
-      0xdeadbeef, // nextPtr — NON deve essere seguito
+      0xdeadbeef, // nextPtr — NOT must be followed
     );
 
     const calls: RenderCharCall[] = [];
@@ -367,7 +367,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
 });
 
 describe("renderStringChain3662 (FUN_3662) — pure read", () => {
-  it("non scrive in alphaRam né workRam", () => {
+  it("non writes in alphaRam né workRam", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeStr(state.workRam, 0x100, "ABC");
@@ -391,10 +391,10 @@ describe("renderStringChain3662 (FUN_3662) — pure read", () => {
     expect(state.alphaRam).toEqual(alphaBefore);
   });
 
-  it("ritorna SEMPRE 1 (anche su input degenerati)", () => {
+  it("returns SEMPRE 1 (also su input degenerati)", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
-    // stringPtr=0, primo byte=0 → exit. marker=0 → sum=0 → return 1.
+    // stringPtr=0, first byte=0 → exit. marker=0 → sum=0 → return 1.
     expect(renderStringChain3662(state, rom, 0, 0)).toBe(1);
     expect(renderStringChain3662(state, rom, 0x401d00, 0)).toBe(1);
   });

@@ -1,5 +1,5 @@
 /**
- * game-mode-prep-10456.test.ts — unit test di FUN_00010456.
+ * game-mode-prep-10456.test.ts — unit test of FUN_00010456.
  *
  */
 
@@ -36,11 +36,11 @@ function rl(state: ReturnType<typeof emptyGameState>, addr: number): number {
 }
 
 describe("gameModePrep10456 (FUN_00010456)", () => {
-  it("GAME_MODE_PREP_10456_ADDR è 0x00010456", () => {
+  it("GAME_MODE_PREP_10456_ADDR is 0x00010456", () => {
     expect(GAME_MODE_PREP_10456_ADDR).toBe(0x00010456);
   });
 
-  it("smoke: esegue senza errori su stato vuoto", () => {
+  it("smoke: runs senza errors su state vuoto", () => {
     const s = emptyGameState();
     expect(() => gameModePrep10456(s)).not.toThrow();
   });
@@ -78,7 +78,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400030)).toBe(0);
     });
 
-    it("mode=1: slot0+0x18=3 e slot0+0x1a=6 (i=0 < mode=1 → attivo)", () => {
+    it("mode=1: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=1 → attivo)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 1);
       gameModePrep10456(s);
@@ -86,7 +86,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400032)).toBe(6);
     });
 
-    it("mode=2: slot0+0x18=3 e slot0+0x1a=6 (i=0 < mode=2 → attivo)", () => {
+    it("mode=2: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=2 → attivo)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 2);
       gameModePrep10456(s);
@@ -127,7 +127,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400112)).toBe(0);
     });
 
-    it("mode=2: slot1+0x18=3 e slot1+0x1a=6 (i=1 < mode=2 → attivo)", () => {
+    it("mode=2: slot1+0x18=3 and slot1+0x1a=6 (i=1 < mode=2 → attivo)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 2);
       gameModePrep10456(s);

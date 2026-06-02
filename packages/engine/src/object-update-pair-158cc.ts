@@ -28,10 +28,10 @@
  *
  * **Side effects** (of FUN_158CC itself, excluding the helper):
  *
- * 0x23 via `FUN_160D4`, e altre logiche complesse — cfr. la disasm of
+ * 0x23 via `FUN_160D4`, and altre logiche complesse — cfr. la disasm of
  * `ObjectUpdatePair158CCSubs.objectUpdate`. Il caller (mainTick / la root
  *
- * Pattern speculare a `sound-pair-15884.ts` e `special-attract.ts`.
+ * Pattern speculare a `sound-pair-15884.ts` and `special-attract.ts`.
  *
  * `cli/src/test-object-update-pair-158cc-parity.ts` (500/500 cases).
  */

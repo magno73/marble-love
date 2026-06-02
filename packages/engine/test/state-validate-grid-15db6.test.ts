@@ -63,7 +63,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x10); // invariato
   });
 
-  it("match con kind originale 0x23 → mutazione kind a 0x20 + fun_15e24(ptr, 1)", () => {
+  it("match con kind originale 0x23 → mutation kind a 0x20 + fun_15e24(ptr, 1)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400600;
     const currentPtr = 0x00401100;
@@ -98,7 +98,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(s.workRam[so + KIND_BYTE_OFF]).toBe(KIND_TO); // 0x20
   });
 
-  it("mismatch X + kind != 0x23 → fun_15e24(ptr, 0); fun_15d10 NON chiamato", () => {
+  it("mismatch X + kind != 0x23 → fun_15e24(ptr, 0); fun_15d10 NOT chiamato", () => {
     const s = emptyGameState();
     const structPtr = 0x00400700;
     const currentPtr = 0x00401200;
@@ -121,7 +121,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x05); // invariato
   });
 
-  it("mismatch + kind 0x23 → fun_15d10(ptr); kind invariato (no mutazione)", () => {
+  it("mismatch + kind 0x23 → fun_15d10(ptr); kind invariato (no mutation)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400800;
     const currentPtr = 0x00401300;
@@ -144,7 +144,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(s.workRam[so + KIND_BYTE_OFF]).toBe(KIND_FROM); // 0x23 invariato
   });
 
-  it("match X ma mismatch Y → mismatch globale → fun_15e24(ptr, 0)", () => {
+  it("match X but mismatch Y → mismatch globale → fun_15e24(ptr, 0)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400900;
     const currentPtr = 0x00401400;
@@ -166,7 +166,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(calls).toEqual([{ fn: "15e24", args: [structPtr, 0] }]);
   });
 
-  it("match con field_x negativo (asr signed) e byte signed", () => {
+  it("match con field_x negativo (asr signed) and byte signed", () => {
     const s = emptyGameState();
     const structPtr = 0x00400a00;
     const currentPtr = 0x00401500;

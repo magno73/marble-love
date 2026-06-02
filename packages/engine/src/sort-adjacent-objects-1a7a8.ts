@@ -277,7 +277,7 @@ export function sortAdjacentObjects1A7A8(
     // proceeds. Model exactly the same behavior (raw read).
     if (read8(a3Off) === SENTINEL_BYTE) break;
 
-    // 0x1A7D2..0x1A7E2: lookup ROM e push args (modellati as var locali).
+    // 0x1A7D2..0x1A7E2: lookup ROM and push args (modellati as var locali).
     const idxA2 = read8(a2Off);
     const idxA3 = read8(a3Off);
     const ptrA1 = lookupRectPtr(rom, idxA2); // arg second-pushato → A1 in 1A80A

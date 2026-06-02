@@ -5,7 +5,7 @@
  * `cli/src/test-format-and-render-28eb2-parity.ts` (500/500).
  *
  * Local smoke tests verify ordered dispatch of the 3 subs, condition of the
- * trim path (arg2.w==2), e propagazione args sign-extended.
+ * trim path (arg2.w==2), and propagazione args sign-extended.
  */
 
 import { describe, it, expect } from "vitest";
@@ -36,9 +36,9 @@ function makeRecorder(log: CallLog[]): FormatAndRender28EB2Subs {
 }
 
 describe("formatAndRender28EB2 (FUN_28EB2)", () => {
-  it("invoca le 3 sub nell'ordine fmt → render quando arg2.w != 2 (skip trim)", () => {
+  it("invoca le 3 sub in the ordine fmt → render when arg2.w != 2 (skip trim)", () => {
     const s = emptyGameState();
-    // Pre-fill *(0x40041E) come long BE = 0x00400500 (arbitrary buf).
+    // Pre-fill *(0x40041E) as long BE = 0x00400500 (arbitrary buf).
     s.workRam[BUFEND_PTR_OFF + 0] = 0x00;
     s.workRam[BUFEND_PTR_OFF + 1] = 0x40;
     s.workRam[BUFEND_PTR_OFF + 2] = 0x05;
@@ -73,7 +73,7 @@ describe("formatAndRender28EB2 (FUN_28EB2)", () => {
     expect(log[1]!.args[2]).toBe(0x00000011);   // render arg
   });
 
-  it("attiva il trim path quando arg2.w == 2 → ordine fmt → trim → render", () => {
+  it("attiva il trim path when arg2.w == 2 → ordine fmt → trim → render", () => {
     const s = emptyGameState();
     // *(0x40041E) = 0x00401000
     s.workRam[BUFEND_PTR_OFF + 0] = 0x00;
@@ -102,15 +102,15 @@ describe("formatAndRender28EB2 (FUN_28EB2)", () => {
     expect(log[1]!.args[0]).toBe(0x00401000);
     expect(log[1]!.args[1]).toBe(0x000000aa);
 
-    // FUN_3874 width = ext_l(arg2.w) = 2 (low word di arg2 == 2)
+    // FUN_3874 width = ext_l(arg2.w) = 2 (low word of arg2 == 2)
     expect(log[0]!.args[3]).toBe(0x00000002);
   });
 
-  it("propaga sign-extension corretto su low word negative (bit15=1)", () => {
+  it("propaga sign-extension correct su low word negative (bit15=1)", () => {
     const s = emptyGameState();
     const log: CallLog[] = [];
 
-    // arg2.w = 0x8000 → ext_l = 0xFFFF8000 (negativo, ma != 2 → skip trim)
+    // arg2.w = 0x8000 → ext_l = 0xFFFF8000 (negativo, but != 2 → skip trim)
     // arg3.w = 0xFFFF → ext_l = 0xFFFFFFFF
     // arg5.w = 0x7FFF → ext_l = 0x00007FFF (positivo)
     formatAndRender28EB2(
@@ -137,7 +137,7 @@ describe("formatAndRender28EB2 (FUN_28EB2)", () => {
     expect(log[1]!.args[2]).toBe(0xffff8000);
   });
 
-  it("subs undefined → no-op completo, nessun crash", () => {
+  it("subs undefined → no-op completo, no crash", () => {
     const s = emptyGameState();
     expect(() => {
       formatAndRender28EB2(s, 0, 2, 0, 0, 0, 0);
@@ -164,7 +164,7 @@ describe("formatAndRender28EB2 (FUN_28EB2)", () => {
     }
   });
 
-  it("legge bufEnd come long BIG-ENDIAN da workRam[0x41E..0x421]", () => {
+  it("reads bufEnd as long BIG-ENDIAN da workRam[0x41E..0x421]", () => {
     const s = emptyGameState();
     // BE pattern: bytes [0xCA, 0xFE, 0xBA, 0xBE] → long 0xCAFEBABE
     s.workRam[BUFEND_PTR_OFF + 0] = 0xca;
@@ -177,7 +177,7 @@ describe("formatAndRender28EB2 (FUN_28EB2)", () => {
     expect(log[0]!.args[1]).toBe(0xcafebabe);
   });
 
-  it("FUN_28EB2_SUB_ADDRS contiene 3874, 28F28, 28FA0 nell'ordine", () => {
+  it("FUN_28EB2_SUB_ADDRS contains 3874, 28F28, 28FA0 in the ordine", () => {
     expect(FUN_28EB2_SUB_ADDRS).toEqual([0x00003874, 0x00028f28, 0x00028fa0]);
   });
 });

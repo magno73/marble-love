@@ -33,7 +33,7 @@ describe("POKEY register file", () => {
     expect(Array.from(pk.writeRegs).every((b) => b === 0)).toBe(true);
   });
 
-  it("write singolo: byte stora nel slot corretto", () => {
+  it("write singolo: byte stora in the slot correct", () => {
     const pk = createPOKEY();
     pokeyWrite(pk, as_u8(0x00), as_u8(0x40));  // AUDF1
     expect(pk.writeRegs[0x00]).toBe(0x40);
@@ -53,7 +53,7 @@ describe("POKEY register file", () => {
       [0x06, 0x20],  // AUDF4
       [0x07, 0xA2],
       [0x08, 0x00],  // AUDCTL: default clock 64KHz
-      [0x0E, 0x00],  // IRQEN: tutto disabilitato
+      [0x0E, 0x00],  // IRQEN: everything disabled
       [0x0F, 0x03],  // SKCTL: enable keyboard scan + 2-tone off
     ];
     for (const [addr, data] of seq) {
@@ -216,13 +216,13 @@ describe("POKEY PCM", () => {
 describe("POKEY read stubs (V2: sentinel constant)", () => {
   function pk() { return createPOKEY(); }
 
-  it("POT0..POT7 = 0 (paddle non usati in marble)", () => {
+  it("POT0..POT7 = 0 (paddle non used in marble)", () => {
     for (let i = 0; i < 8; i++) {
       expect(pokeyRead(pk(), as_u8(i)) as number).toBe(0);
     }
   });
 
-  it("ALLPOT = 0xFF (tutti pot 'done', no scan in corso)", () => {
+  it("ALLPOT = 0xFF (all pot 'done', no scan in corso)", () => {
     expect(pokeyRead(pk(), as_u8(0x08)) as number).toBe(0xff);
   });
 

@@ -5,7 +5,7 @@
  *
  * **Strategia parity**:
  *   - For each test case:
- *       1. Riempie casualmente 0x20 byte @ O1 e @ O2 (Musashi RAM + workRam).
+ *       1. Riempie casualmente 0x20 byte @ O1 and @ O2 (Musashi RAM + workRam).
  *
  * Uso: npx tsx packages/cli/src/test-helper-15fe6-parity.ts [N]
  */

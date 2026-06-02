@@ -97,7 +97,7 @@ function pokeByte(
  * Set up a 10x5 table from an array of 10 24-bit keys. The keys are
  * written as provided; the caller supplies DESCENDING order
  * for the convention expected by FUN_4686. The 2 payload columns (with the 3,4)
- * sono random.
+ * are random.
  */
 function setupTable(
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: key between row r e r-1 (DESC) → r ──────────────────────
+  // ─── Suite C: key between row r and r-1 (DESC) → r ──────────────────────
   console.log(`\n=== Suite C: key between row r and r-1 (DESC) → r — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {

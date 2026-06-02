@@ -13,7 +13,7 @@
  *        - byte near ai fields target (for the check no-spill)
  *   2. Run the real binary @ FUN_00025B40.
  *   3. Run TS objectArrayInit25B40 on the workRam mirror, with the same ROM.
- *   4. Compare i 24 word + 1 byte target su A1 + i near.
+ *   4. Compare the 24 word + 1 byte target su A1 + i near.
  *
  * Uso: npx tsx packages/cli/src/test-object-array-init-25b40-parity.ts [N]
  */

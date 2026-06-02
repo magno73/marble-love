@@ -201,7 +201,7 @@ function setupCase(
   cpu: CpuSession,
   tc: TestCase,
 ): number /* structAddr of entry[0] */ {
-  // Reset workRam area "globals" e area structs/string
+  // Reset workRam area "globals" and area structs/string
   for (let a = 0x1f00; a < 0x1f80; a++) {
     pokeMem(cpu, WORK_RAM_BASE + a, 1, 0);
     state.workRam[a] = 0;

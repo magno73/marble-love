@@ -4,7 +4,7 @@
  * `renderTileLine1AD54`.
  *
  * `FUN_0001AD54` (982 byte, 0x01AD54-0x01B12A): tile-line renderer.
- * una direction tabthe ROMs @0x1ECEA, e uno stream dati via pointer-table
+ * una direction tabthe ROMs @0x1ECEA, and uno stream dati via pointer-table
  * ancorata a *(0x400474).
  *
  * Strategia parity:

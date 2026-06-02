@@ -1,5 +1,5 @@
 /**
- * Test objectStateEntry25BAE (FUN_00025BAE) — smoke tests sul dispatcher
+ * Test objectStateEntry25BAE (FUN_00025BAE) — smoke tests on the dispatcher
  *
  * `FUN_00025BAE` (198 bytes) takes objPtr + subStateCode and performs writes
  * common effects (clear longs @ +0x0/+0x4 + conditional +0x18 if +0x1A==6),
@@ -46,7 +46,7 @@ function writeU16BE(wr: Uint8Array, off: number, v: number): void {
 }
 
 describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
-  it("case 2: scrive sprite/state/sound + clears + invoca soundCommand(0x38)", () => {
+  it("case 2: writes sprite/state/sound + clears + invoca soundCommand(0x38)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -62,7 +62,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
       soundCommand: (cmd) => sounds.push(cmd),
     });
 
-    // Clears comuni: +0x0..3, +0x4..7 ← 0
+    // Clears common: +0x0..3, +0x4..7 ← 0
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
     // +0x18 not touched (pre-state was not 6).
@@ -77,7 +77,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(sounds).toEqual([OBJECT_STATE_ENTRY_25BAE_SOUND_IDS.case2]);
   });
 
-  it("case 9: scrive sprite/state, NESSUNA chiamata soundCommand", () => {
+  it("case 9: writes sprite/state, NESSUNA chiamata soundCommand", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1100;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -88,7 +88,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
       soundCommand: (cmd) => sounds.push(cmd),
     });
 
-    // Clears comuni
+    // Clears common
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
     // Scritture case 9
@@ -128,7 +128,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU32BE(s.workRam, objOff + 0x5a)).toBe(0);
     // +0x1A = 4
     expect(s.workRam[objOff + 0x1a]).toBe(0x04);
-    // counter incrementato
+    // counter incremented
     expect(readU16BE(s.workRam, objOff + 0xd2)).toBe(0x00ff);
   });
 
@@ -149,7 +149,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(sounds).toEqual([OBJECT_STATE_ENTRY_25BAE_SOUND_IDS.case4_otherwise]);
   });
 
-  it("conditional +0x18: A2[+0x1A]==6 → A2[+0x18]=3 (eseguito prima del dispatch)", () => {
+  it("conditional +0x18: A2[+0x1A]==6 → A2[+0x18]=3 (executed first of the dispatch)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1400;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -162,7 +162,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
 
     expect(s.workRam[objOff + 0x18]).toBe(0x03);
     expect(s.workRam[objOff + 0x1a]).toBe(0x06);
-    // Clears comuni
+    // Clears common
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
   });
@@ -190,7 +190,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
 
     expect(soundCalls).toBe(0);
     expect(fun2591ACalls).toBe(0);
-    // Solo clears comuni applicati
+    // Solo clears common applicati
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
     expect(s.workRam[objOff + 0x5a]).toBe(0xaa);
@@ -233,13 +233,13 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU16BE(s.workRam, objOff + 0xd2)).toBe(0x0000);
   });
 
-  it("non muta byte vicini ai campi scritti (case 2 specifico)", () => {
+  it("non muta byte near ai fields scritti (case 2 specifico)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1800;
     const objOff = objPtr - WORK_RAM_BASE;
 
     //   +0x5A..5D (long); +0x56 (byte); +0x1A (byte).
-    // Vicini liberi: +0x08, +0x09, +0x55, +0x57, +0x58, +0x59, +0x5E, +0x61.
+    // Vicini free: +0x08, +0x09, +0x55, +0x57, +0x58, +0x59, +0x5E, +0x61.
     const neighbors: Record<number, number> = {
       0x08: 0xb0,
       0x09: 0xb1,

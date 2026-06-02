@@ -1,5 +1,5 @@
 /**
- * state-sub-5284.test.ts — corner cases di stateSub5284 (FUN_5284).
+ * state-sub-5284.test.ts — corner cases of stateSub5284 (FUN_5284).
  *
  * Bit-perfect parity verificata vs binary in `test-state-sub-5284-parity.ts`.
  */
@@ -15,12 +15,12 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("fun52A2 (FUN_52A2 helper)", () => {
-  it("ritorna 0 quando entrambi i long-BE flags sono zero", () => {
+  it("returns 0 when both i long-BE flags are zero", () => {
     const s = emptyGameState();
     expect(fun52A2(s)).toBe(0);
   });
 
-  it("ritorna 1 quando il primary flag (0x401F5E) ha un bit set", () => {
+  it("returns 1 when il primary flag (0x401F5E) ha un bit set", () => {
     const s = emptyGameState();
     s.workRam[0x1f5e] = 0x00;
     s.workRam[0x1f5f] = 0x00;
@@ -29,7 +29,7 @@ describe("fun52A2 (FUN_52A2 helper)", () => {
     expect(fun52A2(s)).toBe(1);
   });
 
-  it("ritorna 1 quando il secondary flag (0x401F76) ha un bit set (anche solo MSB)", () => {
+  it("returns 1 when il secondary flag (0x401F76) ha un bit set (also solo MSB)", () => {
     const s = emptyGameState();
     s.workRam[0x1f76] = 0x80; // 0x80000000 long-BE
     s.workRam[0x1f77] = 0x00;
@@ -38,7 +38,7 @@ describe("fun52A2 (FUN_52A2 helper)", () => {
     expect(fun52A2(s)).toBe(1);
   });
 
-  it("ritorna 1 con tutti e due i long set su byte sparsi", () => {
+  it("returns 1 con all and due i long set su byte sparsi", () => {
     const s = emptyGameState();
     s.workRam[0x1f5e] = 0x12;
     s.workRam[0x1f76] = 0x34;
@@ -52,7 +52,7 @@ describe("fun52A2 (FUN_52A2 helper)", () => {
 });
 
 describe("stateSub5284 (FUN_5284)", () => {
-  it("flags=0 entry → 1 iter, flagsCleared=true, default fun_4dcc incrementa 0x401FF8", () => {
+  it("flags=0 entry → 1 iter, flagsCleared=true, default fun_4dcc increments 0x401FF8", () => {
     const s = emptyGameState();
     // counter @ 0x401FF8 inizializzato a 0
     const r = stateSub5284(s);
@@ -82,7 +82,7 @@ describe("stateSub5284 (FUN_5284)", () => {
     expect(s.workRam[0x1ffb]).toBe(0xff);
   });
 
-  it("fun_4f38 callback chiamato esattamente una volta quando flags=0", () => {
+  it("fun_4f38 callback chiamato exactly una time when flags=0", () => {
     const s = emptyGameState();
     let calls = 0;
     let stateSeen: object | null = null;
@@ -97,7 +97,7 @@ describe("stateSub5284 (FUN_5284)", () => {
     expect(stateSeen).toBe(s);
   });
 
-  it("flags=non-zero entry, no irq, maxIter=1 → flagsCleared=false, fun_4f38 NON chiamato", () => {
+  it("flags=non-zero entry, no irq, maxIter=1 → flagsCleared=false, fun_4f38 NOT chiamato", () => {
     const s = emptyGameState();
     s.workRam[0x1f5e] = 0x01; // primary flag set
     let f4f38Calls = 0;
@@ -114,7 +114,7 @@ describe("stateSub5284 (FUN_5284)", () => {
       },
       1,
     );
-    expect(r.iterations).toBe(1); // 1 body iter, poi check fallisce
+    expect(r.iterations).toBe(1); // 1 body iter, poi check fails
     expect(r.flagsCleared).toBe(false);
     expect(f4f38Calls).toBe(0);
     expect(dccCalls).toBe(1);
@@ -146,7 +146,7 @@ describe("stateSub5284 (FUN_5284)", () => {
     expect(dccCalls).toBe(3);
   });
 
-  it("maxIter=0 viene clampato a 1 (loop body precede sempre il check)", () => {
+  it("maxIter=0 is clampato a 1 (loop body precede always il check)", () => {
     const s = emptyGameState();
     s.workRam[0x1f5e] = 0xff; // flag set
     const r = stateSub5284(s, undefined, 0);

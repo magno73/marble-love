@@ -1,5 +1,5 @@
 /**
- * Test objectStep17F66 (FUN_17F66) — smoke tests sui rami principali.
+ * Test objectStep17F66 (FUN_17F66) — smoke tests sui branches principali.
  *
  */
 
@@ -56,18 +56,18 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(MODE_5_FLOOR).toBe(4);
     expect(STUCK_DELTA).toBe(-0x6000);
     expect(STUCK_CLAMP).toBe(0xfffb0000);
-    // Whitelist ha esattamente 10 byte ammessi.
+    // Whitelist ha exactly 10 byte ammessi.
     expect(COMMAND_WHITELIST.size).toBe(10);
     for (const v of [0x00, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x38, 0x39, 0x3a, 0x3b]) {
       expect(COMMAND_WHITELIST.has(v)).toBe(true);
     }
-    // Spot-check: byte non in whitelist.
+    // Spot-check: byte not in whitelist.
     for (const v of [0x01, 0x2c, 0x32, 0x37, 0x3c, 0x80, 0xff]) {
       expect(COMMAND_WHITELIST.has(v)).toBe(false);
     }
   });
 
-  it("skip path: state18 == 2 → nessuna jsr, nessuna mutazione", () => {
+  it("skip path: state18 == 2 → no jsr, no mutation", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 2;
     s.workRam[A2_OFF + 0x00] = 0xaa;
@@ -93,7 +93,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toHaveLength(0);
   });
 
-  it("special-dispatch: *0x400390 word == 1 → fun1815A(a2) e poi return", () => {
+  it("special-dispatch: *0x400390 word == 1 → fun1815A(a2) and poi return", () => {
     const s = emptyGameState();
     s.workRam[0x0390] = 0x00;
     s.workRam[0x0391] = 0x01;
@@ -104,10 +104,10 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "1815A", arg: A2_ADDR }]);
   });
 
-  it("movement path: cmd whitelist + mode!=1,5 → store+add e fun26196", () => {
+  it("movement path: cmd whitelist + mode!=1,5 → store+add and fun26196", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    // global390 != 1 (resta 0)
+    // global390 != 1 (stays 0)
     s.workRam[A2_OFF + 0x58] = 0x2d; // whitelist
     s.workRam[A2_OFF + 0x36] = 0; // not 2
     s.workRam[A2_OFF + 0x1a] = 0; // mode 0, no scaling
@@ -129,7 +129,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("movement path: global396 == 1 → fun180BE() invece di store byte", () => {
+  it("movement path: global396 == 1 → fun180BE() invece of store byte", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     // global396 word == 1
@@ -158,7 +158,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     ]);
   });
 
-  it("movement path: mode==5 con D1 < 4 → clamp D1=4 nel scaling", () => {
+  it("movement path: mode==5 con D1 < 4 → clamp D1=4 in the scaling", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[A2_OFF + 0x58] = 0x2e; // whitelist
@@ -181,7 +181,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(readU32BE(s.workRam, A2_OFF + 0x04)).toBe(-704 >>> 0);
   });
 
-  it("movement path: mode==1 senza clamp (D1 può essere < 4 senza clamp)", () => {
+  it("movement path: mode==1 senza clamp (D1 può be < 4 senza clamp)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[A2_OFF + 0x58] = 0x31; // whitelist
@@ -222,7 +222,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
   it("stuck path: post-addi value < -0x50000 signed → clamp 0xFFFB0000", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0x80; // NON in whitelist (irrilevante per clamp ora)
+    s.workRam[A2_OFF + 0x58] = 0x80; // NOT in whitelist (irrilevante per clamp ora)
     s.workRam[A2_OFF + 0x36] = 1;
     // Inizia molto negativo: -0x4FFFF + ulteriore -0x6000 = -0x55FFF < -0x50000 → clamp.
     writeU32BE(s.workRam, A2_OFF + 0x08, (-0x4ffff) >>> 0);
@@ -235,10 +235,10 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("stuck path: post-addi >= -0x50000 → NESSUN clamp (anche con cmd bit7 set)", () => {
+  it("stuck path: post-addi >= -0x50000 → NESSUN clamp (also con cmd bit7 set)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0xff; // bit7 set ma irrilevante (la logica e' cmpi.l)
+    s.workRam[A2_OFF + 0x58] = 0xff; // bit7 set but irrilevante (la logica e' cmpi.l)
     s.workRam[A2_OFF + 0x36] = 1;
     // Inizia 0 → post-addi = -0x6000. -0x6000 >= -0x50000 → no clamp.
     writeU32BE(s.workRam, A2_OFF + 0x08, 0);
@@ -250,10 +250,10 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(readU32BE(s.workRam, A2_OFF + 0x08)).toBe((-0x6000) >>> 0);
   });
 
-  it("stuck path: state36==0 → no addi, no clamp, ma chiama fun26196", () => {
+  it("stuck path: state36==0 → no addi, no clamp, but calls fun26196", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0xff; // NON in whitelist
+    s.workRam[A2_OFF + 0x58] = 0xff; // NOT in whitelist
     s.workRam[A2_OFF + 0x36] = 0; // gate stuck mods
     writeU32BE(s.workRam, A2_OFF + 0x08, 0xcafef00d);
 
@@ -266,7 +266,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("priorita': skip > special > movement/stuck (skip vince anche con global390==1)", () => {
+  it("priorita': skip > special > movement/stuck (skip vince also con global390==1)", () => {
     const s = emptyGameState();
     s.workRam[0x0390] = 0x00;
     s.workRam[0x0391] = 0x01; // would trigger special
@@ -292,7 +292,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(readU32BE(s.workRam, A2_OFF + 0x08)).toBe(0xffffd000);
   });
 
-  it("global390 cmp e' WORD a 0x400390 (BE), non long: byte 0x390=0x00 0x391=0x02 NON triggera", () => {
+  it("global390 cmp e' WORD a 0x400390 (BE), non long: byte 0x390=0x00 0x391=0x02 NOT triggera", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[0x0390] = 0x00;

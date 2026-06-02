@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // FUN_1A7A8 e FUN_1A80A — non scrivono).
+  // FUN_1A7A8 and FUN_1A80A — non scrivono).
   // Nota: for the test inseriamo nostre 16 lookup pointer SCRIVENDOLE in romBuf.
   // with the TS view (rom.program).
 

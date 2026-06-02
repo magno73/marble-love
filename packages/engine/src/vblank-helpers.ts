@@ -27,7 +27,7 @@ export const CLEAR_PALETTE_RAM_121A6_ADDR = 0x000121a6 as const;
  *         beq loop             ; wait until non-zero
  *   addq.b  #1, *0x4003F0      ; counter++
  *
- * (= flag set as post-IRQ) e incrementiamo `*0x3F0`. Il busy-wait
+ * (= flag set as post-IRQ) and incrementiamo `*0x3F0`. Il busy-wait
  * non ha equivalente in the modello synchronous TS.
  */
 export function vblankAck28DEA(state: GameState): void {

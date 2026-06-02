@@ -26,7 +26,7 @@ for (let r = 0; r < 32; r++) {
   }
 }
 
-// Quanti byte non zero in MAME but zero in TS (= MAME ha tile, TS non)
+// Quantthe bytes non zero in MAME but zero in TS (= MAME ha tile, TS non)
 let mameOnly = 0, tsOnly = 0, both = 0;
 for (let i = 0; i < 8192; i++) {
   const m = mamePf[i] !== 0, t = s.playfieldRam[i] !== 0;

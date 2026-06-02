@@ -5,7 +5,7 @@
  *
  * FUN_0001844A (610 byte): "Slot-table tick — timer decrement, insert-sorted
  * trigger, pointer-walk advance, sprite-coord update, 3-bucket sound dispatch".
- * Gated da `*0x400394 == 3` e `*0x400760 != 0`. Itera 36 entry × 16 byte
+ * Gated da `*0x400394 == 3` and `*0x400760 != 0`. Itera 36 entry × 16 byte
  * @ 0x401650.
  *
  * **Strategia parity**:

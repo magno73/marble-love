@@ -7,7 +7,7 @@
  *   1. Sets `obj[0x1A] = 0x23`
  *   3. Sets `obj[0x68..0x6B] = 0x00070000` (long big-endian)
  *
- * **Strategia parity**: patchamo FUN_15D10 a `rts` (4E 75) per isolare le
+ * **Strategia parity**: we patch FUN_15D10 a `rts` (4E 75) per isolare le
  * direct writes from FUN_160D4. Compare only bytes actually
  *
  *   - `objPtr` random in {0x401C00, 0x401D00, 0x401D80, 0x401E00, 0x401E80}

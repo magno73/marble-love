@@ -1,5 +1,5 @@
 /**
- * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests sull'orchestratore
+ * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests on the orchestratore
  *
  * count = `*0x400396`), for each obj: skip if +0x18==0 (D2++), gate
  * +0x6A.w > 400 -> FUN_2822E, run FUN_253EC, then group state==2 (D2++)
@@ -38,7 +38,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
 }
 
 describe("objectScanDispatch251DE (FUN_000251DE)", () => {
-  it("loop vuoto (count=0): chiama solo FUN_1BBAA; il check post-loop scatta (D3==count==0) → setta global=3", () => {
+  it("loop vuoto (count=0): calls solo FUN_1BBAA; il check post-loop scatta (D3==count==0) → setta global=3", () => {
     const s = emptyGameState();
     const calls: string[] = [];
 
@@ -60,7 +60,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
-  it("count=2, entrambi state=3 → setta global *0x400390 = 3", () => {
+  it("count=2, both state=3 → setta global *0x400390 = 3", () => {
     const s = emptyGameState();
 
     // Setup: count=2, level=0 (irrelevant), state machine pre-flag = 0
@@ -97,7 +97,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
-  it("count=2, *0x400390 == 1 (gioco già in stato 1): NON sovrascrive", () => {
+  it("count=2, *0x400390 == 1 (gioco already in state 1): NOT sovrascrive", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 2);
     writeU16BE(s.workRam, 0x390, 1);
@@ -109,11 +109,11 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
 
     objectScanDispatch251DE(s, STUB_ROM);
 
-    // Pre = 1 → beq epilogue → resta 1
+    // Pre = 1 → beq epilogue → stays 1
     expect(readU16BE(s.workRam, 0x390)).toBe(1);
   });
 
-  it("respawn block: chiama 5 sub nell'ordine corretto + scrive 12 campi obj", () => {
+  it("respawn block: calls 5 sub in the ordine correct + writes 12 fields obj", () => {
     const s = emptyGameState();
     const calls: Array<{ name: string; args: readonly number[] }> = [];
 
@@ -190,7 +190,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     const _285b0 = calls.find((c) => c.name === "285B0")!;
     expect(_285b0.args).toEqual([WORK_RAM_BASE + obj0, 0x0000000f]);
 
-    // Scritture chiave nel respawn block:
+    // Scritture chiave in the respawn block:
     // A2[+0xC] = (0xAABBCCDD << 16) >>> 0 = 0xCCDD0000
     expect(
       (((s.workRam[obj0 + 0x0c] ?? 0) << 24) |
@@ -253,7 +253,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(count2822E).toBe(1);
   });
 
-  it("count != 2 NON innesca respawn block (anche con stato 1)", () => {
+  it("count != 2 NOT innesca respawn block (also con state 1)", () => {
     const s = emptyGameState();
     let respawnHits = 0;
 

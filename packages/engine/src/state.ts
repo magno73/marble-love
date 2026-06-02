@@ -524,7 +524,7 @@ export interface GameState {
   workRam: Uint8Array;
   /** Playfield tilemap RAM (background tilemap, 0xA00000-0xA01FFF, 8 KB).
    *  64×64 tile entries (2 byte each) per Atari System 1 hardware spec.
-   *  Popolato da game-side write durante level load + scroll updates. */
+   *  Popolato da game-side write during level load + scroll updates. */
   playfieldRam: Uint8Array;
   /** Motion object RAM (sprite, 0xA02000-0xA02FFF, 4 KB). */
   spriteRam: Uint8Array;

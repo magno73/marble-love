@@ -2,7 +2,7 @@
  * state-sub-198bc.test.ts — smoke tests per `FUN_000198BC`.
  *
  *   1. early_marker: entity[0x26] == 0x10 → no-op (no JSR call).
- *   5. state==7 step=1 vs state!=7 step=4: numero di apply differente.
+ *   5. state==7 step=1 vs state!=7 step=4: number of apply different.
  */
 
 import { describe, it, expect } from "vitest";
@@ -39,7 +39,7 @@ function setLongBE(s: GameState, off: number, v: number): void {
 }
 
 describe("stateSub198BC (FUN_000198BC)", () => {
-  it("early_marker: entity[0x26] == 0x10 → no-op, nessuna JSR", () => {
+  it("early_marker: entity[0x26] == 0x10 → no-op, no JSR", () => {
     const s = emptyGameState();
     setByte(s, ENTITY_OFF + 0x25, 0x05);
     setByte(s, ENTITY_OFF + 0x26, 0x10);
@@ -94,7 +94,7 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(readByte(s, ENTITY_OFF + 0x26)).toBe(0x07);
   });
 
-  it("loop_exhausted_stuck (state==7 → step=1): validate sempre 1 → 9 iter, marker 0x10, long0/1=0", () => {
+  it("loop_exhausted_stuck (state==7 → step=1): validate always 1 → 9 iter, marker 0x10, long0/1=0", () => {
     const s = emptyGameState();
     setByte(s, ENTITY_OFF + 0x25, 0x07); // step = 1
     setByte(s, ENTITY_OFF + 0x26, 0x05); // dir originale
@@ -136,7 +136,7 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(r.validateCalls).toBe(9);
   });
 
-  it("loop_exhausted_stuck (state!=7 → step=4): validate sempre 1 → 9 iter ma solo iter 0,4,8 apply", () => {
+  it("loop_exhausted_stuck (state!=7 → step=4): validate always 1 → 9 iter but solo iter 0,4,8 apply", () => {
     const s = emptyGameState();
     setByte(s, ENTITY_OFF + 0x25, 0x03); // step = 4
     setByte(s, ENTITY_OFF + 0x26, 0x08); // dir originale
@@ -155,7 +155,7 @@ describe("stateSub198BC (FUN_000198BC)", () => {
     expect(r.iters).toBe(9);
     // step=4: predec 8-4=4, poi iter 0: 4+4=8 (==orig 8 → skip), iter 4: 8+4=12
     // (≠8, apply), iter 8: 12+4=16&0xF=0 (≠8, apply). Total apply moveCalls
-    // = 1 (first) + 2 (loop iter 4 e 8) = 3.
+    // = 1 (first) + 2 (loop iter 4 and 8) = 3.
     expect(moveCalled).toBe(3);
     expect(r.moveCalls).toBe(3);
     expect(readByte(s, ENTITY_OFF + 0x26)).toBe(0x10);
@@ -163,7 +163,7 @@ describe("stateSub198BC (FUN_000198BC)", () => {
 
   it("loop_invalid: 1° validate=1, 2° validate (in loop) = 0 → pos restored, return", () => {
     const s = emptyGameState();
-    setByte(s, ENTITY_OFF + 0x25, 0x07); // step=1, apply ogni iter
+    setByte(s, ENTITY_OFF + 0x25, 0x07); // step=1, apply each iter
     setByte(s, ENTITY_OFF + 0x26, 0x09); // dir originale
     setLongBE(s, ENTITY_OFF + 0x0c, 0xaaaaaaaa);
     setLongBE(s, ENTITY_OFF + 0x10, 0xbbbbbbbb);

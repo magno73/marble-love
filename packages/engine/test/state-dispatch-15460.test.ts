@@ -147,7 +147,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("kind == 2 → caseAnim20D64: curr == 0x20D64 → no-op nei case (epilog only); 0x26 intatto", () => {
+  it("kind == 2 → caseAnim20D64: curr == 0x20D64 → no-op in the case (epilog only); 0x26 intact", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -183,7 +183,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(0x00021000);
   });
 
-  it("kind == 3 → alias di kind 0 (track marble) ma 0x25 = 1 (kind != 0/4)", () => {
+  it("kind == 3 → alias of kind 0 (track marble) but 0x25 = 1 (kind != 0/4)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -233,7 +233,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_CASE4_Y_NEG);
   });
 
-  it("kind == 5 → caseAnim20E28: anim 0x20E28, (0x26) NON toccato; (0x25)=1", () => {
+  it("kind == 5 → caseAnim20E28: anim 0x20E28, (0x26) NOT toccato; (0x25)=1", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -251,7 +251,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("kind == 6 → caseAnim20D6C: anim 0x20D6C, (0x26) NON toccato", () => {
+  it("kind == 6 → caseAnim20D6C: anim 0x20D6C, (0x26) NOT toccato", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -295,11 +295,11 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(0x11223344);
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(0x11223344);
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0x55);
-    // 0x25 = 1 (kind 0xFF != 0 e != 4)
+    // 0x25 = 1 (kind 0xFF != 0 and != 4)
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("epilog: prev_anim ← curr_anim (0x58 ← 0x5C) sempre, anche con kind 5/6", () => {
+  it("epilog: prev_anim ← curr_anim (0x58 ← 0x5C) always, also con kind 5/6", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -313,7 +313,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(ANIM_CASE5);
   });
 
-  it("namespace exports compilano: tutte le costanti accessibili", () => {
+  it("namespace exports compilano: all le costanti accessibili", () => {
     expect(KIND_BYTE_OFF).toBe(0x1a);
     expect(POS_X_OFF).toBe(0x0c);
     expect(ANIM_IDLE).toBe(0x00020c18);

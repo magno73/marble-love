@@ -1,7 +1,7 @@
 /**
- * hi-score-decode-41c8.test.ts — smoke tests di `hiScoreDecode41c8` (FUN_41C8).
+ * hi-score-decode-41c8.test.ts — smoke tests of `hiScoreDecode41c8` (FUN_41C8).
  *
- * Verifica i path principali di ritorno + invarianti (range arg1, score
+ * Verifica i path principali of ritorno + invarianti (range arg1, score
  * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localizzato a
  * 0x401F7A..0x401F80).
  *
@@ -55,7 +55,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("path #2: arg1 in [0..9] -> ret 0x401F7A, scrive buffer (4-byte score + 3-byte initials)", () => {
+  it("path #2: arg1 in [0..9] -> ret 0x401F7A, writes buffer (4-byte score + 3-byte initials)", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -154,7 +154,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 1]).toBe(0xbb);
   });
 
-  it("scrive ESATTAMENTE 7 byte a 0x401F7A..0x401F80 (non oltre)", () => {
+  it("writes ESATTAMENTE 7 byte a 0x401F7A..0x401F80 (non beyond)", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -171,7 +171,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
 
     hiScoreDecode41c8(s, 0);
 
-    // Pre-buffer (4 byte) intatto.
+    // Pre-buffer (4 byte) intact.
     expect(s.workRam[OUTPUT_BUFFER_OFF - 4]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 3]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 2]).toBe(0x99);
@@ -185,7 +185,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 4]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 5]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 6]).toBe(0x20);
-    // Post-buffer (5 byte) intatto.
+    // Post-buffer (5 byte) intact.
     expect(s.workRam[OUTPUT_BUFFER_OFF + 7]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 8]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 9]).toBe(0x99);

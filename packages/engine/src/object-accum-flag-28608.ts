@@ -106,7 +106,7 @@ export function objectAccumFlag28608(
   // move.b (0x19,A0),D1b ; asl.l D1,D0 ; or.b D0b,(0x40039C).l
   const flagIdx = (r[objOff + OBJ_FLAG_IDX_OFF] ?? 0) & 0xff;
   // M68k asl.l with count=D1: shift count is taken mod 64. For flagIdx in
-  // 0..7 (expected range), (1 << flagIdx) fits in a byte. We replicate the
+  // 0..7 (expected range), (1 << flagIdx) fits in a byte. We replicated the
   // `or.b D0b` which uses only the low 8 bits of D0 after the shift.
   const shiftCount = flagIdx & 0x3f; // mod 64 per M68k
   const bitMask = ((1 << shiftCount) >>> 0) & 0xff;

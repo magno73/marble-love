@@ -4,9 +4,9 @@
  *
  * FUN_00019976 (96 byte): "Entity move-velocity step". Legge entity[0x26] as
  * signed byte (direction); uses the direction to read 2 signed words from the ROMs
- * table @ 0x244B6 (dX) e @ 0x244D6 (dY), scalata `<<8`, e adds a
+ * table @ 0x244B6 (dX) and @ 0x244D6 (dY), scaled `<<8`, and adds a
  * entity[0xC..0x13]. If state==7 → velocity cache /4 in entity[0..7]. Altrimenti
- * cache = delta non scalato.
+ * cache = delta non scaled.
  *
  * **Parity strategy**: no internal sub; direct replica. Compare
  * `entity[0..0x40]` (1 stride entity completa).

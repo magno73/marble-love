@@ -132,7 +132,7 @@ export const FMT_FILL_EXTRA = 2 as const;
 export const ATTR_ORDINAL_2 = 0x2c00 as const;
 /** Attr word per ordinal == 3. */
 export const ATTR_ORDINAL_3 = 0x3400 as const;
-/** Attr word default (ordinal != 2 e != 3). */
+/** Attr word default (ordinal != 2 and != 3). */
 export const ATTR_DEFAULT = 0x2800 as const;
 
 export const RENDER_STRING_286EE_ADDR = 0x000286ee as const;
@@ -184,7 +184,7 @@ function sextWordToLong(w: number): number {
 /**
  * Stub injection per le due JSR esterne.
  *
- * iniettare). `FUN_3874` e `FUN_3520` sono sub-call esterne.
+ * iniettare). `FUN_3874` and `FUN_3520` are sub-call esterne.
  */
 export interface RenderString286EESubs {
   /**
@@ -193,7 +193,7 @@ export interface RenderString286EESubs {
    * `bufEnd` (the long @ workRam[0x436]), with `fmtMode='d'`, `width=1`,
    * `fillExtra=2`.
    *
-   *   - `bufEnd`     : `*(0x400436)` long-BE — pointer al buffer destinazione.
+   *   - `bufEnd`     : `*(0x400436)` long-BE — pointer al buffer destination.
    *   - `fmtMode`    : 0x64 long ('d', decimal). Hardcoded.
    *   - `width`      : 1 long. Hardcoded.
    *   - `fillExtra`  : 2 long. Hardcoded.
@@ -232,7 +232,7 @@ export interface RenderString286EESubs {
  *                  "score" word of the object struct (typically
  *                  `objectSlotAddr(i) + 0x6a` = `0x400018 + i*0xE2 + 0x6a`).
  * @param ordinal   arg2 long: player ordinal (typically `playerCount + i - 1`);
- * @param subs      Stub injection per `numberFormatter` e `renderStringChain2`.
+ * @param subs      Stub injection per `numberFormatter` and `renderStringChain2`.
  *                  Default: both no-op.
  *
  * **Side effects in `state.workRam`** (struct @ offset 0x434):
@@ -240,7 +240,7 @@ export interface RenderString286EESubs {
  *      `bufEndPtr = readLongBE(workRam, 0x436)`.
  *   2. `workRam[0x434]` ← with the byte (ROM table @ 0x23D3C indexed by ordinal LSB).
  *   4. `workRam[0x43A]` ← 0 (marker clear).
- *   5. invocazione `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
+ *   5. invocation `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
  */
 export function renderString286EE(
   state: GameState,

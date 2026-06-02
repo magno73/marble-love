@@ -16,7 +16,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("renderStringEntry28F62 (FUN_28F62)", () => {
-  it("scrive col, tickOff, marker=0 nei 3 byte attesi e invoca renderStringChain con (0x40041C, arg3.w)", () => {
+  it("writes col, tickOff, marker=0 in the 3 byte attesi and invoca renderStringChain con (0x40041C, arg3.w)", () => {
     const s = emptyGameState();
     // Pre-fill marker with non-zero sentinel to verify clear.
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xaa;
@@ -36,7 +36,7 @@ describe("renderStringEntry28F62 (FUN_28F62)", () => {
     expect(s.workRam[ENTRY_OFF + COL_BYTE_OFF]).toBe(0x78);
     expect(s.workRam[ENTRY_OFF + TICKOFF_BYTE_OFF]).toBe(0x42);
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
-    // stringPtr intatto (offset +2..+5)
+    // stringPtr intact (offset +2..+5)
     expect(s.workRam[ENTRY_OFF + 2]).toBe(0xde);
     expect(s.workRam[ENTRY_OFF + 3]).toBe(0xad);
     expect(s.workRam[ENTRY_OFF + 4]).toBe(0xbe);
@@ -49,7 +49,7 @@ describe("renderStringEntry28F62 (FUN_28F62)", () => {
     expect(renderArgs!.attr).toBe(0x1234);
   });
 
-  it("subs undefined → no-op sulla render call, ma byte writes avvengono comunque", () => {
+  it("subs undefined → no-op on the render call, but byte writes avvengono comunque", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xff;
     expect(() => {
@@ -60,7 +60,7 @@ describe("renderStringEntry28F62 (FUN_28F62)", () => {
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
   });
 
-  it("solo i 3 byte target sono modificati (no spillage in [0x41A..0x428])", () => {
+  it("solo the 3 bytes target are modificati (no spillage in [0x41A..0x428])", () => {
     const s = emptyGameState();
     // Pre-fill the entire span with sentinel.
     for (let i = ENTRY_OFF - 2; i < ENTRY_OFF + 0xc; i++) {
@@ -79,7 +79,7 @@ describe("renderStringEntry28F62 (FUN_28F62)", () => {
     }
   });
 
-  it("attr arg è dinamico (passato esattamente come `& 0xffff` a renderStringChain)", () => {
+  it("attr arg is dinamico (passato exactly as `& 0xffff` a renderStringChain)", () => {
     const s = emptyGameState();
     // Three different attrs (same col/tickOff) -> three distinct call sites.
     const observed: number[] = [];
@@ -88,7 +88,7 @@ describe("renderStringEntry28F62 (FUN_28F62)", () => {
         observed.push(attr);
       },
     };
-    // Caller 0x12130 usa attr=0x1000, caller 0x28EA2 usa l'arg3 del proprio
+    // Caller 0x12130 uses attr=0x1000, caller 0x28EA2 uses l'arg3 of the proprio
     // caller (variable). Caller at 0x12074 (not for 28F62 but same pattern
     renderStringEntry28F62(s, 0x0d, 0x05, 0x1000, sub);
     renderStringEntry28F62(s, 0x0d, 0x05, 0x3400, sub);

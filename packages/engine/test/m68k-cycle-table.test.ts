@@ -1,5 +1,5 @@
 /**
- * m68k-cycle-table.test.ts — smoke + snapshot della cycle table 68010.
+ * m68k-cycle-table.test.ts — smoke + snapshot of the cycle table 68010.
  *
  * dynamic 30/60 Hz cadence of the Marble Madness main loop. If one of the
  * costs change, MAME and TS diverge on the mailbox=1 branch -> these tests
@@ -54,12 +54,12 @@ describe("m68010 cycle table — constants", () => {
     expect(raw(CYC_MOVEM_L_PER_REG)).toBe(3);
   });
 
-  it("CYC_BCC_TAKEN = 10 (qualunque dimensione)", () => {
+  it("CYC_BCC_TAKEN = 10 (qualunque size)", () => {
     expect(raw(CYC_BCC_TAKEN)).toBe(10);
   });
 
   it("MULS/MULU/DIVS/DIVU.W cycles (68010 fixed-cost)", () => {
-    // Sul 010 i mul/div sono dramatically faster del 000.
+    // Sul 010 i mul/div are dramatically faster of the 000.
     expect(raw(CYC_MULS_W)).toBe(32);
     expect(raw(CYC_MULU_W)).toBe(30);
     expect(raw(CYC_DIVS_W)).toBe(122);
@@ -280,7 +280,7 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
 
     // inflates by +4 for each iter, total +8):
     //   14 + 12 + 4 + (68+10) + (68+6) + 18 + 16 = 216
-    // TS sovrastima il cmpi di 4 cicli per iter: +8 → 224.
+    // TS sovrastima il cmpi of 4 cycles per iter: +8 → 224.
     expect(total).toBe(224);
 
     const musashiReference = 216;
@@ -290,7 +290,7 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
 });
 
 describe("cycle-table snapshot (regression guard)", () => {
-  it("riassunto compatto dei valori chiave", () => {
+  it("riassunto compatto of the values chiave", () => {
     const snap = {
       vblank: raw(CYCLES_PER_VBLANK),
       nop: raw(CYC_NOP),

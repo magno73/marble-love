@@ -14,13 +14,13 @@ function rW(workRam: Uint8Array, off: number): number {
 }
 
 describe("fun158F6 (FUN_158F6)", () => {
-  it("non solleva eccezioni con state vuoto e slot vuoto", () => {
+  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => fun158F6(s, SLOT_A, rom)).not.toThrow();
   });
 
-  it("(0x18,A2) == 0 → early return, nessuna scrittura", () => {
+  it("(0x18,A2) == 0 → early return, no scrittura", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // s18 default 0 → epilog immediato
@@ -30,7 +30,7 @@ describe("fun158F6 (FUN_158F6)", () => {
     expect(rW(s.workRam, SLOT_OFF_A + 0x6c)).toBe(5);
   });
 
-  it("timer @ +0x6C decrementato quando attivo (s18 != 0, t6c > 0)", () => {
+  it("timer @ +0x6C decrementato when attivo (s18 != 0, t6c > 0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[SLOT_OFF_A + 0x18] = 0x01;
@@ -47,13 +47,13 @@ describe("fun158F6 (FUN_158F6)", () => {
     expect(elseCalled).toBe(3);
   });
 
-  it("transizione 0x21 → 0x23 quando timer @ +0x6C scade", () => {
+  it("transizione 0x21 → 0x23 when timer @ +0x6C scade", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[SLOT_OFF_A + 0x18] = 0x01;
     s.workRam[SLOT_OFF_A + 0x6c] = 0x00;
     s.workRam[SLOT_OFF_A + 0x6d] = 0x01;
-    s.workRam[SLOT_OFF_A + 0x1a] = 0x21; // state che triggera FUN_160D4
+    s.workRam[SLOT_OFF_A + 0x1a] = 0x21; // state that triggera FUN_160D4
     fun158F6(s, SLOT_A, rom, {
       helper253BC: () => {},
       helper182BA: () => {},

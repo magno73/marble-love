@@ -1,5 +1,5 @@
 /**
- * Test bootScreenInit (FUN_222E) — smoke tests sui rami principali.
+ * Test bootScreenInit (FUN_222E) — smoke tests sui branches principali.
  *
  * `cli/src/test-boot-screen-init-parity.ts`.
  */
@@ -43,7 +43,7 @@ function makeTrackedSubs(): { calls: string[]; subs: BootScreenInitSubs } {
 }
 
 describe("bootScreenInit (FUN_222E)", () => {
-  it("scrive sempre i 6 register video a $B00000-$B0000A", () => {
+  it("writes always i 6 register video a $B00000-$B0000A", () => {
     const s = emptyGameState();
     const rom = makeRom(0x0000, 0x0000);
     // workRam[0x16/17] != 0 -> warm boot, but the 6 writes still happen.
@@ -61,7 +61,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     expect(w(0x0a)).toBe(0x0000);
   });
 
-  it("warm boot (frame_counter != 0): chiama solo clearScreen + introSetup", () => {
+  it("warm boot (frame_counter != 0): calls solo clearScreen + introSetup", () => {
     const s = emptyGameState();
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF] = 0x01;
     const { calls, subs } = makeTrackedSubs();
@@ -72,7 +72,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     expect(calls).toEqual(["clearScreen", "introSetup"]);
   });
 
-  it("warm boot anche se frame_counter byte 0x16 = 0 ma 0x17 != 0 (tst.w)", () => {
+  it("warm boot even if frame_counter byte 0x16 = 0 but 0x17 != 0 (tst.w)", () => {
     const s = emptyGameState();
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF] = 0x00;
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF + 1] = 0x01;
@@ -84,7 +84,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     expect(calls).toEqual(["clearScreen", "introSetup"]);
   });
 
-  it("cold boot + entrambi i magic JMP.L: chiama hook su entrambi gli slot", () => {
+  it("cold boot + both i magic JMP.L: calls hook su both the slot", () => {
     const s = emptyGameState();
     // frame_counter = 0
     const { calls, subs } = makeTrackedSubs();
@@ -101,7 +101,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     ]);
   });
 
-  it("cold boot + entrambi i magic NON JMP.L: chiama i fallback", () => {
+  it("cold boot + both i magic NOT JMP.L: calls i fallback", () => {
     const s = emptyGameState();
     const { calls, subs } = makeTrackedSubs();
     const rom = makeRom(0x0000, 0x0000);

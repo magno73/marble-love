@@ -21,7 +21,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     expect(HELPER_16E8E_ADDR).toBe(0x00016e8e);
   });
 
-  it("arg=0x1e → no-op (startRow già al limite)", () => {
+  it("arg=0x1e → no-op (startRow already al limit)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xff);
@@ -31,8 +31,8 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0x1f → no-op (bne: 0x1F ≠ 0x1E, poi 0x20 ≠ 0x1E, …, ma 0x1F+1=0x20, poi 0x1E a wrap?)", () => {
-    // scorre fino al wrap 0xFF→0x00→...→0x1E. In pratica 0x1F==0x1F ≠ 0x1E
+  it("arg=0x1f → no-op (bne: 0x1F ≠ 0x1E, poi 0x20 ≠ 0x1E, …, but 0x1F+1=0x20, poi 0x1E a wrap?)", () => {
+    // scorre up tol wrap 0xFF→0x00→...→0x1E. In pratica 0x1F==0x1F ≠ 0x1E
     // terms; the implementation must handle wrap correctly.
     // loop condition 0x20 ≠ 0x1e, poi 0x21... → loop infinito!
     // would loop. Verify only the no-op condition.
@@ -45,7 +45,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0x1d → cancella solo riga 29 (0x24 word @ indirizzo riga 29)", () => {
+  it("arg=0x1d → clears solo line 29 (0x24 word @ indirizzo line 29)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xcc);
@@ -65,7 +65,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0 → cancella tutte le righe 0..29 (0x24 word per riga)", () => {
+  it("arg=0 → clears all le lines 0..29 (0x24 word per line)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xbb);
@@ -83,7 +83,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=4 → cancella righe 4..29 (caso caller mainLoopInit10504)", () => {
+  it("arg=4 → clears lines 4..29 (caso caller mainLoopInit10504)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xaa);
@@ -102,7 +102,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     expect(state.alphaRam[row0base]).toBe(0xaa);
   });
 
-  it("subs.getAlphaTileAddr può essere iniettata", () => {
+  it("subs.getAlphaTileAddr può be iniettata", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xdd);
@@ -127,7 +127,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("solo il low byte di arg è usato (M68k move.b)", () => {
+  it("solo il low byte of arg is used (M68k move.b)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xff);

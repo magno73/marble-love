@@ -10,11 +10,11 @@ import {
 } from "../src/vblank-helpers.js";
 
 describe("FUN_28DEA vblankAck28DEA", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(VBLANK_ACK_28DEA_ADDR).toBe(0x28dea);
   });
 
-  it("setta workRam[0x16]=1 e incrementa workRam[0x3F0]", () => {
+  it("setta workRam[0x16]=1 and increments workRam[0x3F0]", () => {
     const s = emptyGameState();
     s.workRam[0x16] = 0;
     s.workRam[0x3f0] = 0x10;
@@ -32,11 +32,11 @@ describe("FUN_28DEA vblankAck28DEA", () => {
 });
 
 describe("FUN_28DB8 wait28DB8", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(WAIT_28DB8_ADDR).toBe(0x28db8);
   });
 
-  it("aspetta N frame e incrementa workRam[0x3F0] N volte", () => {
+  it("aspetta N frame and increments workRam[0x3F0] N times", () => {
     const s = emptyGameState();
     s.workRam[0x3f0] = 0x10;
     s.workRam[0x390] = 0;
@@ -61,7 +61,7 @@ describe("FUN_28DB8 wait28DB8", () => {
       calls += 1;
       if (calls === 3) st.workRam[0x391] = 2; // state changes
     };
-    // Replico inline il loop di wait28DB8 ma usando wrapped invece di vblankAck
+    // Replico inline il loop of wait28DB8 but usando wrapped invece of vblankAck
     const initial = s.workRam[0x391] ?? 0;
     let counter = 10;
     while (counter > 0) {
@@ -84,7 +84,7 @@ describe("FUN_28DB8 wait28DB8", () => {
 });
 
 describe("FUN_121A6 clearPaletteRam121A6", () => {
-  it("expone l'address del binario", () => {
+  it("expone l'address of the binario", () => {
     expect(CLEAR_PALETTE_RAM_121A6_ADDR).toBe(0x121a6);
   });
 

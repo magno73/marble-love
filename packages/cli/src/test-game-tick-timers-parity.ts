@@ -2,7 +2,7 @@
 /**
  * test-game-tick-timers-parity.ts — differential FUN_28A96 vs gameTickTimers.
  *
- * e `FUN_286EE` (HUD updater).
+ * and `FUN_286EE` (HUD updater).
  *
  *     no-op equivalente.
  *

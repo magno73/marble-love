@@ -12,7 +12,7 @@
  *   - Patch ROM: FUN_4DCC ridotta a `addq.l #1,(0x401FF8).l; rts` (8 byte)
  *     to match default TS `defaultFun4DCC` behavior.
  *   - Patch ROM: FUN_4F38 ridotta a `rts` (2 byte) — neutralizza il
- *     tail-call e fa rts pulito al sentinel via stack.
+ *     tail-call and fa rts pulito al sentinel via stack.
  *   - Pattern test:
  *     * pattern 0..3: zero flags entry -> 1 iter, loop exits, counter +1.
  *       0xFFFFFFFF, etc) per testare wrap of the counter.

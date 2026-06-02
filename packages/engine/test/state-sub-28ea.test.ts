@@ -1,5 +1,5 @@
 /**
- * state-sub-28ea.test.ts — smoke + corner case di FUN_28EA.
+ * state-sub-28ea.test.ts — smoke + corner case of FUN_28EA.
  *
  * `packages/cli/src/test-state-sub-28ea-parity.ts`.
  */
@@ -33,7 +33,7 @@ function readWord(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("stateSub28EA (FUN_28EA)", () => {
-  it("scrive 0x401F3E con la target word PRIMA della render (anche se nessun slot libero)", () => {
+  it("writes 0x401F3E con la target word PRIMA of the render (even if no slot free)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = 1;
@@ -69,7 +69,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
 
     expect(readLong(s, DATA_BASE + 0)).toBe(0xcafe1234);
     expect(s.workRam[STATE_BASE + 0]).toBe(7);
-    // arg2.w = 0x1234 (low word di 0x55AA1234)
+    // arg2.w = 0x1234 (low word of 0x55AA1234)
     expect(readWord(s, WORD16_BASE + 0)).toBe(0x1234);
     // target = arg3.w = 0x0042
     expect(readWord(s, TARGET_OFF)).toBe(0x0042);
@@ -81,7 +81,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(s.workRam[FLAG34_BASE + 0]).toBe(0xee);
   });
 
-  it("salta slot occupati e scrive nel primo libero", () => {
+  it("skips slot occupied and writes in the first free", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[STATE_BASE + 0] = 3;
@@ -94,7 +94,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(s.workRam[STATE_BASE + 2]).toBe(7);
     expect(readLong(s, DATA_BASE + 2 * 4)).toBe(0x11223344);
     expect(readWord(s, WORD16_BASE + 2 * 2)).toBe(0xabcd);
-    // Slot 3 intatto
+    // Slot 3 intact
     expect(s.workRam[STATE_BASE + 3]).toBe(0);
     expect(readLong(s, DATA_BASE + 3 * 4)).toBe(0);
   });
@@ -122,7 +122,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(observedAttr).toBe(-1);
   });
 
-  it("default subs: nessuna eccezione se fun_2572 non è iniettato (no-op)", () => {
+  it("default subs: no eccezione se fun_2572 is not iniettato (no-op)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => stateSub28EA(s, rom, 0xdeadbeef, 0x1111, 0x2222)).not.toThrow();
@@ -133,7 +133,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(readWord(s, TARGET_OFF)).toBe(0x2222);
   });
 
-  it("usa solo low word di arg2 e arg3 (mask 0xFFFF; high word ignorato)", () => {
+  it("uses solo low word of arg2 and arg3 (mask 0xFFFF; high word ignorato)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     stateSub28EA(s, rom, 0x00000000, 0xffff5678, 0xdead9abc);

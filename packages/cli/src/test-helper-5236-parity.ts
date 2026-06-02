@@ -11,7 +11,7 @@
  *     return address sentinel). `(4,SP)` = 0x401F00 = workRam[0x1F00..0x1F03].
  *   - Pre-populate workRam with random bytes; sync both Musashi and TS.
  *   - Pre-populate *0x401F5E with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x5236)` e `helper5236(state, arg)`.
+ *   - Lancia `callFunction(cpu, 0x5236)` and `helper5236(state, arg)`.
  *
  *   - 0x401EFC: sentinel return address (4 byte, spinto da callFunction)
  *

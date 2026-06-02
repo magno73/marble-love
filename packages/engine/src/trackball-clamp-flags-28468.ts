@@ -308,7 +308,7 @@ export function trackballClampFlags28468(
   // ─── Step 9: D3 = abs8(D1), D4 = abs8(D2) (byte unsigned) ─────────────
   // - if D1b >= 0 (signed): D3 = D1b (0..127)
   // - if D1b <  0 (signed): D3 = (-D1b)&0xFF = (256 - D1b)&0xFF
-  //   Ma neg.l su long(D1b zero-ext) = -D1b (long), poi byte = -D1b & 0xFF.
+  //   Ma neg.l su long(D1b zero-ext) = -D1b (long), pothe bytes = -D1b & 0xFF.
   //   Per D1b in [-128, -1] (sext range), |D1b| in [1, 128].
   //   Esempi: D1b = 0x80 (=-128), D3 = (-128)&0xFF = 0x80. abs(-128) = 128 ✓
   //   D1b = 0xFF (=-1), D3 = (-(-1))&0xFF = 1. ✓

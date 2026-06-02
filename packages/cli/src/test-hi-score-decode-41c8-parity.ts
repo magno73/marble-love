@@ -4,7 +4,7 @@
  *
  * `FUN_000041C8` (198 byte): high-score entry decoder.
  *   - source table = `*0x401FFC + 0x1E` (10 entries x 5 bytes)
- *   - buffer destinazione = 0x401F7A (4 byte score + 3 byte initials)
+ *   - buffer destination = 0x401F7A (4 byte score + 3 byte initials)
  *   - arg1 in [0..9] -> ret = 0x401F7A; otherwise ret = 0
  *
  * Convenzione caller (cdecl push-RTL):
@@ -12,10 +12,10 @@
  *
  * Strategia parity:
  *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
- *     populate 10 records x 5 random bytes; replicate setup on Musashi and on
+ *     populate 10 records x 5 random bytes; replicated setup on Musashi and on
  *     state.workRam.
  *   - For each random case: set up arg1; call the binary; call TS;
- *     compare D0 e i 7 byte of the buffer @ 0x401F7A..0x401F80.
+ *     compare D0 and i 7 byte of the buffer @ 0x401F7A..0x401F80.
  *
  * Pattern coverage:
  *   - 50% arg1 in [0..9]                      -> valid path, writes buffer

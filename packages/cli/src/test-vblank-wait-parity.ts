@@ -19,7 +19,7 @@
  *
  * loop esterno.
  *
- * **Output confrontato**: D0w (low word of D0) e workRam unchanged.
+ * **Output confrontato**: D0w (low word of D0) and workRam unchanged.
  *
  * **Distribuzione**:
  *
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // We use writeRaw8 per bypassare callbacks/MMIO e scrivere direttamente
+  // We use writeRaw8 per bypassare callbacks/MMIO and scrivere direttamente
   let injectionsActive = true;
   let injectCount = 0;
   let injectedValue = 0;
@@ -151,7 +151,7 @@ async function main(): Promise<void> {
     }
     if (!runOnBinary) continue;
 
-    // Pre-zero of the counter @ 0x401FF8 e reset injectedValue
+    // Pre-zero of the counter @ 0x401FF8 and reset injectedValue
     pokeMem(cpu, VBLANK_COUNTER_ADDR, 4, 0);
     injectedValue = 0;
 
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("d0", 0xdeadbeef);
     cpu.system.setRegister("d1", 0xcafedab0);
 
-    // sono in the "before" e non producono falsi mismatch).
+    // are in the "before" and non producono falsi mismatch).
     const before = snapshotWorkRam(cpu);
 
     const injBefore = injectCount;
@@ -198,7 +198,7 @@ async function main(): Promise<void> {
 
     const after = snapshotWorkRam(cpu);
     // Ignore VBLANK counter region @ 0x1FF8..0x1FFB, modified
-    // dto the injection durante the esecuzione of the busy-wait).
+    // dto the injection during the esecuzione of the busy-wait).
     const wramMismatch = workRamDiffers(before.bytes, after.bytes, [
       [0x1ff8, 4],
     ]);

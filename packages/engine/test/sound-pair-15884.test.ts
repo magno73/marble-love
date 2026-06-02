@@ -1,5 +1,5 @@
 /**
- * sound-pair-15884.test.ts — corner cases di soundPair15884 (FUN_15884).
+ * sound-pair-15884.test.ts — corner cases of soundPair15884 (FUN_15884).
  *
  */
 
@@ -53,7 +53,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls).toEqual([0x3a, 0x3b]);
   });
 
-  it("mode = 0xFFFF → coppia completa (cmp.w è word, non sign-aware)", () => {
+  it("mode = 0xFFFF → coppia completa (cmp.w is word, non sign-aware)", () => {
     const s = emptyGameState();
     setMode(s, 0xffff);
     const calls: number[] = [];
@@ -81,7 +81,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(() => soundPair15884(s, {})).not.toThrow();
   });
 
-  it("non modifica workRam", () => {
+  it("non modifies workRam", () => {
     const s = emptyGameState();
     setMode(s, 2);
     const before = new Uint8Array(s.workRam);
@@ -89,7 +89,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("ordine di trigger: 0x3A precede 0x3B (non viceversa)", () => {
+  it("ordine of trigger: 0x3A precede 0x3B (non viceversa)", () => {
     const s = emptyGameState();
     setMode(s, 0);
     const calls: number[] = [];
@@ -98,7 +98,7 @@ describe("soundPair15884 (FUN_15884)", () => {
     expect(calls[1]).toBe(0x3b);
   });
 
-  it("mode == 2 → esattamente 1 chiamata; altrimenti esattamente 2", () => {
+  it("mode == 2 → exactly 1 chiamata; otherwise exactly 2", () => {
     const s = emptyGameState();
     setMode(s, 2);
     let n = 0;

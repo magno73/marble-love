@@ -20,7 +20,7 @@
  *   2. sentinelTrim  == (arg2.w == 2 ? 1 : 0) in both.
  *   3. sentinelRender == 1 in both.
  *   4. workRam scratch around (0x418..0x428, 16 bytes) unchanged (the subs
- *      sono no-op → no side effects).
+ *      are no-op → no side effects).
  *
  *   - A: arg2.w random — distribuzione naturale (raramente == 2)
  *

@@ -23,7 +23,7 @@
  * Suite testate:
  *   - B: forced match (cursor[0..1] == cellX/Y derivati da pos)
  *   - C: forced mismatch X (no-op write)
- *   - D: cursor[2] = signed byte random (including negative e edges)
+ *   - D: cursor[2] = signed byte random (including negative and edges)
  *
  * Uso: npx tsx packages/cli/src/test-entity-waypoint-step-1d1ec-parity.ts [N]
  */
@@ -60,7 +60,7 @@ const ENTITY_SIZE = 0x40; // 0x401E00..0x401E3F
 
 const CURSOR_ABS = 0x00401e80;
 const CURSOR_OFF = CURSOR_ABS - 0x400000;
-const CURSOR_SIZE = 0x10; // include cursor + alcuni byte trailing
+const CURSOR_SIZE = 0x10; // include cursor + alcunthe bytes trailing
 
 const ARRAY_BASE_ABS = 0x00401e90;
 
@@ -135,7 +135,7 @@ function buildRandomCase(rng: () => number, opts?: {
   const entity: number[] = new Array(ENTITY_SIZE).fill(0).map(() => rb());
   const cursor: number[] = new Array(CURSOR_SIZE).fill(0).map(() => rb());
 
-  // Sets pos.X (off 0x0c) e pos.Y (off 0x10) random long
+  // Sets pos.X (off 0x0c) and pos.Y (off 0x10) random long
   const posX = rl();
   const posY = rl();
   writeLongBytes(entity, 0x0c, posX);

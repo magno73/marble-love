@@ -4,15 +4,15 @@
  * differential FUN_0001365C vs `objectRenderUpdate1365C`.
  *
  * **Strategia**:
- * FUN_1365C ha 4 path macro osservabili:
+ * FUN_1365C ha 4 path macro observable:
  *   A. Early-exit (unchanged POS: A1==frame[-c] && A4==frame[-a]).
  *   B. Loop-scan without a valid match -> no writes to A2.
  *   C. Match → A2+0x1b aggiornato, poi ramo -1 (new state, palette, sound).
  *   D. Match → A2+0x1b = 4 + gameMode==3 → loop 25 slot @ 0x400a9c.
  *
- * Sub non replicate (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
+ * Sub non replicated (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
  * are patched with `rts` (4E75) in the binary. TS callbacks are no-ops.
- * `paletteQueuePush` e `soundPair15884` sono replicate → side effect osservabili.
+ * `paletteQueuePush` and `soundPair15884` are replicated → side effect observable.
  *
  * Observable comparate:
  *   - workRam @ A2..A2+0x80 (object struct)

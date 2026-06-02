@@ -11,7 +11,7 @@
  *        if D2 == D5: exit
  *
  * Strategia parity test:
- *   - Patch RTS sui 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
+ *   - Patch RTS suthe 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
  *     impedire the esecuzione of the their corpo.
  *   - Capture args on the stack when pc == callee entry. Capture D0
  *     lo INIETTIAMO).

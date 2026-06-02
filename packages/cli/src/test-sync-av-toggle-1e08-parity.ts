@@ -5,7 +5,7 @@
  * 2 "1" bits from the event queue (*0x400006), writing 0x0000 and 0x0080 to MMIO
  *
  * **Strategia parity**:
- *     `bit0(*0x400000) == 1` e `bit0(*0x40017C) == 0`. Bit 1..15 random.
+ *     `bit0(*0x400000) == 1` and `bit0(*0x40017C) == 0`. Bit 1..15 random.
  *     to guarantee that both inner loops terminate.
  *       * 0x400000..0x400001 (input port) — unchanged (read-only)
  *       * 0x40017C..0x40017D (edge detector prev → low2 of port)

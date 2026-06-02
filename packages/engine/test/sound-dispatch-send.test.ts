@@ -1,5 +1,5 @@
 /**
- * sound-dispatch-send.test.ts — smoke + corner case di FUN_3E1A.
+ * sound-dispatch-send.test.ts — smoke + corner case of FUN_3E1A.
  */
 
 import { describe, it, expect } from "vitest";
@@ -8,13 +8,13 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("soundDispatchSend (FUN_3E1A)", () => {
-  it("non solleva eccezioni con state e ROM vuoti", () => {
+  it("non solleva eccezioni con state and ROM vuoti", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => soundDispatchSend(s, rom, 0x0000)).not.toThrow();
   });
 
-  it("D3 >= 0xE0 → clear *0x401FF5 e early-return (no outer loop)", () => {
+  it("D3 >= 0xE0 → clear *0x401FF5 and early-return (no outer loop)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Pointer A2 in workRam-safe: 0x401D00
@@ -44,7 +44,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     expect(() => soundDispatchSend(s, rom, 0x0000)).not.toThrow();
   });
 
-  it("argLong=0 con D3=0: nessuna modifica (D2 sempre 0)", () => {
+  it("argLong=0 con D3=0: no modifies (D2 always 0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1ffc] = 0x00;
@@ -61,7 +61,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     expect(s.workRam[0x1ff7]).toBe(0);
   });
 
-  it("non solleva con vari argLong random", () => {
+  it("non solleva con various argLong random", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1ffc] = 0x00;

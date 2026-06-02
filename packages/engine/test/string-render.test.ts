@@ -11,7 +11,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("renderStringChain (FUN_2572)", () => {
-  it("ritorna sempre 1", () => {
+  it("returns always 1", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const r = renderStringChain(s, rom, 0x401D00, 0);
@@ -37,7 +37,7 @@ describe("renderStringChain (FUN_2572)", () => {
     }
   });
 
-  it("space char (0x20): scrive solo attr nel tile", () => {
+  it("space char (0x20): writes solo attr in the tile", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // String = " " (space + null)

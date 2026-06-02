@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     return match;
   };
 
-  // Smoke: 3 noti e 8 negative
+  // Smoke: 3 noti and 8 negative
   for (const a of knownAddrs) testAddr(a);
   for (const a of negAddrs) testAddr(a);
 

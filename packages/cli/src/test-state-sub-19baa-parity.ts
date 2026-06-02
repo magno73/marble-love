@@ -7,7 +7,7 @@
  * su `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` each 8
  * frame), then iterates entity table @ 0x4019F8 (10 x 0x38), applying for each
  * (rng-driven), movement-block (Y += vel + depth check), AI-block
- * (FUN_19E42), e sound trigger condizionale (FUN_158AC).
+ * (FUN_19E42), and sound trigger condizionale (FUN_158AC).
  *
  * **Strategia parity**:
  *     in `rng.ts`.
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
       t[off + 0x25] = Math.floor(rng() * 8);
       // entity[0x1A]: random in {0, 1, 2}.
       t[off + 0x1a] = Math.floor(rng() * 3);
-      // entity[0x1B]: timer — mix of 0 e 1.
+      // entity[0x1B]: timer — mix of 0 and 1.
       t[off + 0x1b] = Math.floor(rng() * 4);
       // entity[0x4]: vel pivot vs random.
       if (rng() < 0.3) {

@@ -1,7 +1,7 @@
 /**
- * Test levelFractionRender28232 (FUN_00028232) — smoke test sui rami principali.
+ * Test levelFractionRender28232 (FUN_00028232) — smoke test sui branches principali.
  *
- * mode selector, level idx e level number da workRam, dispatcha 5
+ * mode selector, level idx and level number da workRam, dispatcha 5
  * workRam @ 0x42A.
  *
  * `cli/src/test-level-fraction-render-28232-parity.ts` (500/500).
@@ -272,7 +272,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[0x100]).toBe(0);
   });
 
-  it("dispatch fraction string: D3==3 → ' 1/4', D3==4 → ' 1/3', ecc.", () => {
+  it("dispatch fraction string: D3==3 → ' 1/4', D3==4 → ' 1/3', etc.", () => {
     // Per ottenere D3 (=remainder) specifici: levelNum % 12 = D3 desiderato.
     const cases: Array<{
       levelNum: number;
@@ -318,7 +318,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     }
   });
 
-  it("default no-op subs: nessuna eccezione; fraction string scritta inline; struct NON scritto (initStructHeader no-op)", () => {
+  it("default no-op subs: no eccezione; fraction string scritta inline; struct NOT scritto (initStructHeader no-op)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0);
@@ -326,7 +326,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     writeWordBE(s.workRam, LEVEL_NUM_OFF, 6); // → " 1/2"
     setFractionBuffer(s, 0x300);
 
-    // No subs → renderStringChain e renderStringHelper no-op,
+    // No subs → renderStringChain and renderStringHelper no-op,
     // initStructHeader no-op (struct not written). The 5 byte writes
     // of the fraction string are inline and still apply.
     expect(() => levelFractionRender28232(s, rom)).not.toThrow();

@@ -2,7 +2,7 @@
 /**
  * `array9ClearAndDispatch`.
  *
- * of arg1) e `entry[0x19]` (low byte of arg2).
+ * of arg1) and `entry[0x19]` (low byte of arg2).
  *
  *
  *   1. Patch FUN_18F46 to a custom thunk that logs `(arg1Long, arg2Long)`
@@ -93,7 +93,7 @@ function resetWatchedZones(
   }
 }
 
-/** Read ring buffer (72 byte) e counter long. */
+/** Read ring buffer (72 byte) and counter long. */
 function readRingBin(
   cpu: CpuSession,
 ): { ring: Uint8Array; counter: number } {

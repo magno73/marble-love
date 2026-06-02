@@ -1,8 +1,8 @@
 /**
- * state-sub-540a.test.ts — corner cases di stateSub540A (FUN_540A).
+ * state-sub-540a.test.ts — corner cases of stateSub540A (FUN_540A).
  *
  * Qui copriamo i path principali (header tipici, D3 boundary, early-exit) e
- * gli edge case M68k (asl.l count >= 32, signed-word negativo, byte sub wrap).
+ * the edge case M68k (asl.l count >= 32, signed-word negativo, byte sub wrap).
  */
 
 import { describe, it, expect } from "vitest";
@@ -41,7 +41,7 @@ function writeRecord(
 }
 
 describe("fun53EA (FUN_53EA) — read byte-pair OR", () => {
-  it("ritorna byte[ptr] | byte[ptr+1]", () => {
+  it("returns byte[ptr] | byte[ptr+1]", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x12;
     s.workRam[0x101] = 0x34;
@@ -69,14 +69,14 @@ describe("fun53EA (FUN_53EA) — read byte-pair OR", () => {
     expect(fun53EA(s, 0x400100)).toBe(0x80);
   });
 
-  it("ptr fuori workRam → 0 (defensive)", () => {
+  it("ptr outside workRam → 0 (defensive)", () => {
     const s = emptyGameState();
     expect(fun53EA(s, 0x500000)).toBe(0);
   });
 });
 
 describe("stateSub540A (FUN_540A) — record walker", () => {
-  it("D3=0 con pair non-zero a A2 → ritorna A2 (no walk)", () => {
+  it("D3=0 con pair non-zero a A2 → returns A2 (no walk)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     const off = a2 - WORK_RAM_BASE;
@@ -85,13 +85,13 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(stateSub540A(s, a2, 0)).toBe(a2);
   });
 
-  it("D3=0 con pair zero a A2 → ritorna 0 (sentinel)", () => {
+  it("D3=0 con pair zero a A2 → returns 0 (sentinel)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     expect(stateSub540A(s, a2, 0)).toBe(0);
   });
 
-  it("Early-exit: pair 00 00 in testa → ritorna 0 senza decrementare D3", () => {
+  it("Early-exit: pair 00 00 in testa → returns 0 senza decrementare D3", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     expect(stateSub540A(s, a2, 5)).toBe(0);
@@ -118,7 +118,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
   });
 
   it("D3=1, hdr=0x00 (hi=0, lo=0 → shift=1, count=2, num strings=3)", () => {
-    // shift_byte = 1. count = 2. D0w = 2 → body 3 volte (D0w=2,1,0).
+    // shift_byte = 1. count = 2. D0w = 2 → body 3 times (D0w=2,1,0).
     const s = emptyGameState();
     const a2 = 0x401100;
     const off = a2 - WORK_RAM_BASE;
@@ -129,7 +129,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(WORK_RAM_BASE + nextOff);
   });
 
-  it("D3=1, hdr con shift negativo (count=0 dopo asl) → body 1 volta", () => {
+  it("D3=1, hdr con shift negativo (count=0 dopo asl) → body 1 time", () => {
     // hdr = 0x05 (hi=0, lo=5). shift_byte = (0+1) - 5 = -4 & 0xFF = 0xFC.
     // count = (1 << (0xFC & 63)) = 1 << 60 = 0 (>= 32 → 0).
     // D0w = 0 -> bge passes (0 >= 0) -> body once, then -1 -> exit.
@@ -143,9 +143,9 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(WORK_RAM_BASE + nextOff);
   });
 
-  it("D3=1, hdr=0xF0 (hi=15, lo=0 → shift=16): count=0 → body 1 volta", () => {
+  it("D3=1, hdr=0xF0 (hi=15, lo=0 → shift=16): count=0 → body 1 time", () => {
     // shift_byte = (15+1) - 0 = 16. count = (1 << 16) & 0xFFFF = 0.
-    // D0w = 0 (signed 0 ≥ 0) → body 1 volta.
+    // D0w = 0 (signed 0 ≥ 0) → body 1 time.
     const s = emptyGameState();
     const a2 = 0x401300;
     const off = a2 - WORK_RAM_BASE;
@@ -169,7 +169,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(WORK_RAM_BASE + cur);
   });
 
-  it("D3=2 ma record 2 ha pair 00 00 → early-exit ritorna 0", () => {
+  it("D3=2 but record 2 ha pair 00 00 → early-exit returns 0", () => {
     const s = emptyGameState();
     const a2 = 0x401500;
     const off = a2 - WORK_RAM_BASE;
@@ -182,7 +182,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(0);
   });
 
-  it("D3=3 walk completo, record finale ha pair non-zero: ritorna A2 finale", () => {
+  it("D3=3 walk completo, record finale ha pair non-zero: returns A2 finale", () => {
     const s = emptyGameState();
     const a2 = 0x401600;
     const off = a2 - WORK_RAM_BASE;
@@ -196,7 +196,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(WORK_RAM_BASE + cur);
   });
 
-  it("Stringa vuota nel record (byte 0 immediatamente, ma hdr non-zero)", () => {
+  it("Stringa vuota in the record (byte 0 immediatamente, but hdr non-zero)", () => {
     const s = emptyGameState();
     const a2 = 0x401700;
     const off = a2 - WORK_RAM_BASE;
@@ -227,7 +227,7 @@ describe("stateSub540A (FUN_540A) — record walker", () => {
     expect(ret).toBe(a2 + 1);
   });
 
-  it("Pure read: workRam non viene mai scritta", () => {
+  it("Pure read: workRam non is mai scritta", () => {
     const s = emptyGameState();
     const a2 = 0x401900;
     const off = a2 - WORK_RAM_BASE;

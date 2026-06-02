@@ -1,7 +1,7 @@
 /**
  * Pure leaf port of ROM routine `FUN_0001706C`.
  *
- * ROM @ 0x23D40 indicizzata per "rotation index" e "inverse rotation index".
+ * ROM @ 0x23D40 indicizzata per "rotation index" and "inverse rotation index".
  *
  * Likely use case: playfield scroll/movement based on trackball direction
  * (4 direction bits plus 4 cardinal conditions).

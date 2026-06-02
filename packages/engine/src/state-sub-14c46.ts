@@ -397,7 +397,7 @@ function readByteAbs(state: GameState, rom: RomImage, addr: number): number {
  *   3. For each entry until sentinel `entry[0] == 0xFF`:
  *      e. If gated, initialize the slot.
  *      f. Advance A3 += 8.
- *   4. Tail walk sui 4 slot @ 0x401302:
+ *   4. Tail walk suthe 4 slot @ 0x401302:
  *      - For each active slot, if the boundary crosses, run teardown plus
  *        `subs.fun_18f46`.
  */

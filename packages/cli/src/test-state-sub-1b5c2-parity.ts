@@ -4,16 +4,16 @@
  * `stateSub1B5C2`.
  *
  * FUN_0001B5C2 (838 byte, 0x1B5C2-0x1B908): "position-steering applicator".
- * Applica absLong / negateIfPositive a D3 (x) e D4 (y) of the struct A2 based on
+ * Applica absLong / negateIfPositive a D3 (x) and D4 (y) of the struct A2 based on
  * a 8 blocchi condizionali (flag cardinali, gate word, direction bitmap).
  *
  * **Strategia parity**:
- *   - FUN_0001B5B4 (negateIfPositive, A4) e FUN_0001B5A6 (absLong) sono
+ *   - FUN_0001B5B4 (negateIfPositive, A4) and FUN_0001B5A6 (absLong) are
  *     **non-stubbed** ROM subs (left live in the binary).
  *   - FUN_000158AC (sound cmd) **stubbed with RTS** (side-effect-only).
  *   - Call the function body from 0x1B5F6 (first known instruction) after
  *     aver fakato il frame salvato on the stack (8 long dummy per soddisfare il
- *     `movem.l (SP)+,...` of the epilogue) e pre-set i registri D2/D3/A2/A3/A4.
+ *     `movem.l (SP)+,...` of the epilogue) and pre-set i registri D2/D3/A2/A3/A4.
  *   - A4 = 0x1B5B4 (fixed address of negateIfPositive in ROM).
  *   - Compare: intera workRam [0x400000..0x402000) eccl. stack area.
  *

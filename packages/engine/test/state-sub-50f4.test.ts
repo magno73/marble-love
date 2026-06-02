@@ -1,10 +1,10 @@
 /**
- * state-sub-50f4.test.ts — smoke tests di stateSub50F4 (FUN_50F4).
+ * state-sub-50f4.test.ts — smoke tests of stateSub50F4 (FUN_50F4).
  *
- *   - 10 byte copiati dall'input ai 10 byte di output (offsets 6,A,C,E,12,...,1C)
- *   - syndromi tutte zero → return 0, no mutazione counter
+ *   - 10 byte copied dto the input ai 10 byte of output (offsets 6,A,C,E,12,...,1C)
+ *   - syndromi all zero → return 0, no mutation counter
  *   - syndrome non-zero → return 1 (correzione) o 0x80000001 (uncorrectable)
- *   - counter long-BE incrementato a A2[0x11..0x12]
+ *   - counter long-BE incremented a A2[0x11..0x12]
  *   - epilogue: D2 += 1, D3 += 1
  */
 
@@ -25,7 +25,7 @@ const A2_BASE = 0x00400100; // workRam offset 0x100
 const A3_ROM_BASE = 0x00010000; // ROM offset 0x10000
 
 describe("stateSub50F4 (FUN_50F4)", () => {
-  it("copia 10 byte dall'input agli output offset corretti", () => {
+  it("copies 10 byte dto the input agli output offset corretti", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -48,7 +48,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     }
   });
 
-  it("syndromi zero → return 0, no mutazione counter", () => {
+  it("syndromi zero → return 0, no mutation counter", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -142,13 +142,13 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     expect(r.d0 >>> 0).toBe(0x80000001 >>> 0);
   });
 
-  it("counter A2[0x11..0x12] incrementato per syndrome non-zero", () => {
+  it("counter A2[0x11..0x12] incremented per syndrome non-zero", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
-    // Setup come uncorrectable test: D6b=0xFE, D2b=1.
+    // Setup as uncorrectable test: D6b=0xFE, D2b=1.
     // Bit-iter 1: D0w=1 (non-zero) → increment counter.
-    // Bit-iter 2..8: i bit di D6b (0xFE = 0b11111110) shifted out:
+    // Bit-iter 2..8: i bit of D6b (0xFE = 0b11111110) shifted out:
     //   iter 1 LSB(D6b)=0, iter 2 LSB=1, iter 3 LSB=1, ... iter 8 LSB=1.
     //   D0w iter 2 = (1<<4)|0|0|0|0 = 0x10 → bit 4 set, lookup table[0]=0xFF → no correction.
     //
@@ -170,7 +170,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     expect(CORRECTION_TABLE[15]).toBe(0xff);
   });
 
-  it("output buffer ha esattamente 10 byte", () => {
+  it("output buffer ha exactly 10 byte", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = stateSub50F4(state, rom, A2_BASE, A3_ROM_BASE, 0, 0);

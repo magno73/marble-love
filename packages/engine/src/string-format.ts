@@ -152,7 +152,7 @@ export function setAlphaTile(
  * Replica `FUN_00003A08` — formatHex(value, bufEnd, numDigits, showSpaces).
  *
  *
- *   - If `value == 0` e `showSpaces == 1`: leading zero diventa space (' ').
+ *   - If `value == 0` and `showSpaces == 1`: leading zero diventa space (' ').
  *
  * Disassembly:
  *   D1 = value (long, arg1 a SP+8)

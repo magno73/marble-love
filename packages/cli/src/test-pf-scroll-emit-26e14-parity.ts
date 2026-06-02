@@ -87,7 +87,7 @@ async function main(): Promise<void> {
     }
 
     // 30%: stop iter early. Calcoliamo la pagina ORIGINAL (orig AV, non toggled)
-    // e mettiamo cmpWord[k] = k al cmp ptr.
+    // and mettiamo cmpWord[k] = k al cmp ptr.
     if (rng() < 0.3) {
       const stopIter = Math.floor(rng() * 60);
       const offOld = (av & 8) << 6; // (av & 8) << 5 * 2 == << 6  → 0 o 0x200

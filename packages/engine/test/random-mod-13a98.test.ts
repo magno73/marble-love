@@ -2,7 +2,7 @@
  * random-mod-13a98.test.ts — unit test per `randomMod13A98` (FUN_00013A98).
  *
  *   1. Output range [0, maxExclusive)
- *   5. Aggiornamento corretto del seed in state.rng
+ *   5. Aggiornamento correct of the seed in state.rng
  */
 
 import { describe, it, expect } from "vitest";

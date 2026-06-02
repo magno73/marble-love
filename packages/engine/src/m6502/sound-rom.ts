@@ -8,7 +8,7 @@
  * Sound CPU ROM address map: $4000-$FFFF (48KB). Marble uses only the final
  * 32KB at $8000-$FFFF; $4000-$7FFF remains open bus ($FF).
  *
- * `sound-mmu.ts` accetta un Uint8Array of 0xC000 byte (48KB) e mappa
+ * `sound-mmu.ts` accetta un Uint8Array of 0xC000 byte (48KB) and mappa
  * `rom[i]` a addr `$4000 + i`. Layout of the buffer prodotto qui:
  *
  *   buffer[0x0000..0x4000] = 0xFF        (area $4000-$7FFF: open bus)

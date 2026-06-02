@@ -15,14 +15,14 @@
  *     - byte @ 0x72a5 + rotation*2 (ROM shift table)
  *   - Scritture:
  *
- * Confrontiamo:
+ * We compare:
  *   - D0 byte returned (0 vs 4)
  *   - alpha RAM @ 0xa03000..0xa03FFF (4 KB)
  *
  * Suite testate:
  *   - A: rotation=0, struct random + string random, alphaRam pre-fill 0
  *   - B: rotation in [1..7], struct random + string random
- *   - C: forzo string_byte=0 (terminator path) per verificare return 0
+ *   - C: forzo string_byte=0 (terminator path) per verify return 0
  *   - D: tickOff/with the negative (sext stress), arg2_byte high values
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-2da0-parity.ts [N]

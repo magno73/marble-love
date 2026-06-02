@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   patchStubAddq(romBuf, SLOT2_HOOK_STUB, SENT_SLOT2_HOOK);
 
   // Original ROM @ 0x1004E: `00 00 00 00 00 00`. For the "magic on" path of
-  // poi via pokeMem per case (ROM byte 0..1) — i 4 byte target restano fissi.
+  // poi via pokeMem per case (ROM byte 0..1) — the 4 byte target restano fissi.
   patchJmpL(romBuf, VECTOR_SLOT_2, SLOT2_HOOK_STUB);
 
   const stateInst = stateNs.emptyGameState();

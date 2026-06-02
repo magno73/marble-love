@@ -1,5 +1,5 @@
 /**
- * state-sub-2abc.test.ts — smoke + corner case di FUN_2ABC.
+ * state-sub-2abc.test.ts — smoke + corner case of FUN_2ABC.
  */
 
 import { describe, it, expect } from "vitest";
@@ -167,7 +167,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     expect(s.alphaRam[81]).toBe(0xcc);
   });
 
-  it("col negativo (signed): sext propaga, addr fuori alpha → no-op", () => {
+  it("col negativo (signed): sext propaga, addr outside alpha → no-op", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);

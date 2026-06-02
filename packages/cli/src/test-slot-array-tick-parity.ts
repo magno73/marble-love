@@ -20,7 +20,7 @@
  *   rts                           ; 4E75                    (2 byte)
  *  Totale = 26 byte.
  *
- *     (0x401300..0x40142F to cover i 4 slot + some guard bytes,
+ *     (0x401300..0x40142F to cover the 4 slot + some guard bytes,
  *      and 0x401FE0..0x401FFB for the ring buffer) to prove that
  *
  */

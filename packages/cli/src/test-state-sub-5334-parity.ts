@@ -8,7 +8,7 @@
  *     we write i due byte in work RAM (both in unified memory of Musashi
  *     stack `(0x4,SP)`, `(0x8,SP)`, `(0xC,SP)` (callee view with ret
  *     addr in `(0,SP)`).
- *   - Confrontiamo `(arg1, arg2, arg3)` osservati vs. quelli passati to the
+ *   - We compare `(arg1, arg2, arg3)` observed vs. those passed to the
  *     stub `inner` of TS.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5334-parity.ts [N]
@@ -57,7 +57,7 @@ function captureEnter52DAArgs(
   const sys = cpu.system;
 
   // memory of Musashi a 0x00401F98 / 0x00401F99 (MMIO non interessato qui:
-  // sono in work RAM 0x400000+).
+  // are in work RAM 0x400000+).
   pokeMem(cpu, 0x00401f98, 1, byte98 & 0xff);
   pokeMem(cpu, 0x00401f99, 1, byte99 & 0xff);
 

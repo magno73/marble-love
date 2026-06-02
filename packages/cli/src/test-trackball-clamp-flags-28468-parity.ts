@@ -7,7 +7,7 @@
  *      - workRam[0x6A4..0x6A7] (accumulator X/Y, signed word, range ±0x100)
  *      - workRam[0x3A8] (prev sample), 0x3AA (oldDeb), 0x3AC (falling)
  *      - obj0/obj1 trackball+delta bytes (0xC6/C7/C8/C9)
- *      - MMIO 0xF60001 (input byte) e MMIO 0xF20001/3/5/7 (trackball)
+ *      - MMIO 0xF60001 (input byte) and MMIO 0xF20001/3/5/7 (trackball)
  *
  * Uso: npx tsx packages/cli/src/test-trackball-clamp-flags-28468-parity.ts [N]
  */
@@ -91,7 +91,7 @@ function randWord(rng: () => number): number {
 function generate(rng: () => number): Inputs {
   return {
     // accumulator: random word, but biased toward extremes to
-    // esercitare clamp e wrap
+    // esercitare clamp and wrap
     accumX: randWord(rng),
     accumY: randWord(rng),
     prevInput: randByte(rng),

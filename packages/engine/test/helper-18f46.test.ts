@@ -1,5 +1,5 @@
 /**
- * helper-18f46.test.ts — smoke + corner case di FUN_18F46.
+ * helper-18f46.test.ts — smoke + corner case of FUN_18F46.
  *
  */
 
@@ -38,7 +38,7 @@ function setupRomLookup(rom: ReturnType<typeof emptyRomImage>): void {
 }
 
 /**
- * e il rect-slot indicizzato ha struct[0]=typeCode, struct[1]=subIdx.
+ * and il rect-slot indicizzato ha struct[0]=typeCode, struct[1]=subIdx.
  *
  */
 function freshStateWithEntries(
@@ -68,7 +68,7 @@ function freshStateWithEntries(
 // ─── Test cases ───────────────────────────────────────────────────────────────
 
 describe("helper18F46 (FUN_18F46)", () => {
-  it("non trova nulla in lista vuota (tutti sentinel)", () => {
+  it("non trova nulla in lista vuota (all sentinel)", () => {
     const { state, rom } = freshStateWithEntries([]);
     const r = helper18F46(state, rom, 0x2c, 0x05);
 
@@ -81,7 +81,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     }
   });
 
-  it("rimuove l'unico elemento della lista", () => {
+  it("rimuove l'single elemento of the lista", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x2c, subIdx: 0x05 },
     ]);
@@ -97,7 +97,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0);
   });
 
-  it("rimuove il primo di tre elementi, altri shiftati a sinistra", () => {
+  it("rimuove il first of tre elementi, altri shiftati a sinistra", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -121,7 +121,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0x03);
   });
 
-  it("rimuove il secondo di tre elementi", () => {
+  it("rimuove il second of tre elementi", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -142,7 +142,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("rimuove l'ultimo di tre elementi", () => {
+  it("rimuove l'last of tre elementi", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -163,7 +163,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("non trova nulla se typeCode non corrisponde", () => {
+  it("non trova nulla se typeCode non corresponds", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x10, subIdx: 0x20 },
     ]);
@@ -176,7 +176,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x10);
   });
 
-  it("non trova nulla se subIdx non corrisponde (typeCode match, subIdx mismatch)", () => {
+  it("non trova nulla se subIdx non corresponds (typeCode match, subIdx mismatch)", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x10, subIdx: 0x20 },
     ]);
@@ -188,7 +188,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x10);
   });
 
-  it("trova il primo match su typeCode+subIdx esatti (non il secondo slot con stesso type)", () => {
+  it("trova il first match su typeCode+subIdx esatti (non il second slot con same type)", () => {
     // Two slots with same typeCode 0x05, different subIdx values: 0x0A and 0x0B.
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x05, subIdx: 0x0a },
@@ -197,7 +197,7 @@ describe("helper18F46 (FUN_18F46)", () => {
 
     const r = helper18F46(state, rom, 0x05, 0x0b);
 
-    // Deve trovare il secondo (slotIdx=1, pos=BYTE_OFF+1)
+    // Deve trovare il second (slotIdx=1, pos=BYTE_OFF+1)
     expect(r.removed).toBe(true);
     expect(r.foundPos).toBe(BYTE_OFF + 1);
     expect(r.slotIdx).toBe(1);
@@ -210,7 +210,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("lista con un solo sentinel immediato (byte[0]=0xFF): no-op", () => {
+  it("lista con un only ifntinel immediato (byte[0]=0xFF): no-op", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setupRomLookup(rom);
@@ -223,7 +223,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[BYTE_OFF]).toBe(SENTINEL_BYTE);
   });
 
-  it("rimozione dal fondo di una lista piena di 5 elementi: sentinel scritto correttamente", () => {
+  it("rimozione from the fondo of una lista piena of 5 elementi: sentinel scritto correttamente", () => {
     const entries = [
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },

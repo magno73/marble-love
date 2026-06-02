@@ -40,7 +40,7 @@ describe("formatHex (FUN_3A08)", () => {
     expect(s.workRam[0x1D00 + 4]).toBe(0); // NUL
   });
 
-  it("value=0x12345678, digits=8: scrive 8 cifre", () => {
+  it("value=0x12345678, digits=8: writes 8 cifre", () => {
     const s = emptyGameState();
     formatHex(s, 0x12345678, 0x401D00, 8, 0);
     expect(readBytes(s, 0x401D00, 9)).toBe("12345678\\x00");
@@ -82,7 +82,7 @@ describe("setAlphaTile (FUN_3784)", () => {
     expect(((s.alphaRam[0x184] ?? 0) << 8) | (s.alphaRam[0x185] ?? 0)).toBe(0xF0BB);
   });
 
-  it("OR di arg3 + arg4 word", () => {
+  it("OR of arg3 + arg4 word", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1f42] = 0; s.workRam[0x1f43] = 0;
@@ -94,7 +94,7 @@ describe("setAlphaTile (FUN_3784)", () => {
 });
 
 describe("strcpy (FUN_1D74)", () => {
-  it("copia stringa con null terminator (workRam → workRam)", () => {
+  it("copies stringa con null terminator (workRam → workRam)", () => {
     const s = emptyGameState();
     const SRC = 0x401D00;
     const DST = 0x401E00;
@@ -114,7 +114,7 @@ describe("strcpy (FUN_1D74)", () => {
     expect(s.workRam[(DST - 0x400000) + msg.length]).toBe(0);
   });
 
-  it("stringa vuota: copia solo il null", () => {
+  it("stringa vuota: copies solo il null", () => {
     const s = emptyGameState();
     const SRC = 0x401D00;
     const DST = 0x401E00;
@@ -126,7 +126,7 @@ describe("strcpy (FUN_1D74)", () => {
     expect(s.workRam[(DST - 0x400000)]).toBe(0);
   });
 
-  it("legge da ROM se src < 0x80000", () => {
+  it("reads da ROM se src < 0x80000", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x1000] = 0x41; // 'A'

@@ -1,5 +1,5 @@
 /**
- * slapstic-lookup.test.ts — corner cases di slapsticLookup (FUN_2FFB8).
+ * slapstic-lookup.test.ts — corner cases of slapsticLookup (FUN_2FFB8).
  *
  * Bit-perfect parity verificata vs binary in `test-slapstic-lookup-parity.ts`.
  *
@@ -27,19 +27,19 @@ function writeBE16(rom: RomImage, addr: number, word: number): void {
 }
 
 describe("slapsticLookup (FUN_2FFB8)", () => {
-  it("arg=0 → ritorna word a 0x80080", () => {
+  it("arg=0 → returns word a 0x80080", () => {
     const rom = makeRom();
     writeBE16(rom, SLAPSTIC_LOOKUP_BASE, 0xdead);
     expect(slapsticLookup(rom, 0)).toBe(0xdead);
   });
 
-  it("arg=1 → ritorna word a 0x80080 + 0x20 (1<<5)", () => {
+  it("arg=1 → returns word a 0x80080 + 0x20 (1<<5)", () => {
     const rom = makeRom();
     writeBE16(rom, SLAPSTIC_LOOKUP_BASE + 0x20, 0xbeef);
     expect(slapsticLookup(rom, 1)).toBe(0xbeef);
   });
 
-  it("arg=3 → ritorna word a 0x80080 + 0x60 (3<<5) — caller FUN_1ACE0", () => {
+  it("arg=3 → returns word a 0x80080 + 0x60 (3<<5) — caller FUN_1ACE0", () => {
     const rom = makeRom();
     writeBE16(rom, SLAPSTIC_LOOKUP_BASE + 0x60, 0x1234);
     expect(slapsticLookup(rom, 3)).toBe(0x1234);
@@ -64,13 +64,13 @@ describe("slapsticLookup (FUN_2FFB8)", () => {
     expect(slapsticLookup(rom, 0x800)).toBe(0xa5a5);
   });
 
-  it("ROM zero-init → ritorna 0", () => {
+  it("ROM zero-init → returns 0", () => {
     const rom = makeRom();
     expect(slapsticLookup(rom, 0)).toBe(0);
     expect(slapsticLookup(rom, 2)).toBe(0);
   });
 
-  it("argW oltre 16 bit viene mascherato a 16 bit", () => {
+  it("argW beyond 16 bit is mascherato a 16 bit", () => {
     const rom = makeRom();
     writeBE16(rom, SLAPSTIC_LOOKUP_BASE + 0x20, 0x55aa);
     // 0x10001 & 0xFFFF = 1 → idx = 0x20

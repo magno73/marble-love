@@ -18,7 +18,7 @@
  * Work RAM = 0x400000..0x401FFF (8 KB); offset 0x76E + 131 = 0x7F1 < 0x2000.
  *
  * **Caller**: `FUN_00010504` @ 0x105BE (hook `soundMaybe11AC2` in
- * `mainLoopInit10504Subs`) e `FUN_00012FD0` @ 0x1303C.
+ * `mainLoopInit10504Subs`) and `FUN_00012FD0` @ 0x1303C.
  *
  * **Name "soundMaybe11AC2"**: assigned from the Ghidra context
  * `MainLoopInit10504Subs`; the name follows the project convention.

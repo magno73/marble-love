@@ -1,5 +1,5 @@
 /**
- * slot-insert-sorted-18e6c.test.ts — smoke + corner case di FUN_18E6C.
+ * slot-insert-sorted-18e6c.test.ts — smoke + corner case of FUN_18E6C.
  *
  */
 
@@ -42,13 +42,13 @@ function setupRom() {
 }
 
 describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
-  it("inserisce nella lista vuota: byte[0] = 0 (slot 0), slot[0] = [type, sub]", () => {
+  it("inserisce in the lista vuota: byte[0] = 0 (slot 0), slot[0] = [type, sub]", () => {
     const s = freshState();
     const rom = setupRom();
 
     const r = slotInsertSorted18E6C(s, rom, 0x2c, 0x05);
 
-    // Loop1 termina al primo sentinel a A3 = a2Off+0 ⇒ insertOnSentinel=true,
+    // Loop1 termina al first sentinel a A3 = a2Off+0 ⇒ insertOnSentinel=true,
     // insertPos = 0x3BC.
     expect(r.inserted).toBe(true);
     expect(r.insertPos).toBe(BYTE_OFF);
@@ -70,17 +70,17 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     }
   });
 
-  it("trova il primo slot libero saltando uno occupato", () => {
+  it("trova il first slot free saltando uno occupied", () => {
     const s = freshState();
     const rom = setupRom();
 
-    // Pre-occupa slot 0 e 1 (byte 0 != 0).
+    // Pre-occupa slot 0 and 1 (byte 0 != 0).
     s.workRam[SLOT_OFF + 0 * RECT_SLOT_STRIDE] = 0x10;
     s.workRam[SLOT_OFF + 1 * RECT_SLOT_STRIDE] = 0x20;
 
     const r = slotInsertSorted18E6C(s, rom, 0x40, 0x07);
 
-    // Slot 0 e 1 pieni → d1 = 2 (slot 2 free).
+    // Slot 0 and 1 pieni → d1 = 2 (slot 2 free).
     expect(r.inserted).toBe(true);
     expect(r.slotIdx).toBe(2);
     // byte[0] = 2 (slot index)
@@ -89,12 +89,12 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     const slot2Off = SLOT_OFF + 2 * RECT_SLOT_STRIDE;
     expect(s.workRam[slot2Off]).toBe(0x40);
     expect(s.workRam[slot2Off + 1]).toBe(0x07);
-    // Slot 0 e 1 inalterati
+    // Slot 0 and 1 inalterati
     expect(s.workRam[SLOT_OFF]).toBe(0x10);
     expect(s.workRam[SLOT_OFF + RECT_SLOT_STRIDE]).toBe(0x20);
   });
 
-  it("ritorna inserted=false se tutti gli slot sono pieni (31 slot)", () => {
+  it("returns inserted=false se all the slot are pieni (31 slot)", () => {
     const s = freshState();
     const rom = setupRom();
 
@@ -112,7 +112,7 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     }
   });
 
-  it("invoca subs.fun_1b12a con (typeCode, subIdx, localRect) e usa il risultato per il compare", () => {
+  it("invoca subs.fun_1b12a con (typeCode, subIdx, localRect) and uses il risultato per il compare", () => {
     const s = freshState();
     const rom = setupRom();
 
@@ -150,7 +150,7 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
 
     slotInsertSorted18E6C(s, rom, 0x29, 0x00);
 
-    // byte[0x1F] DEVE rimanere sentinel (clamp dello shift).
+    // byte[0x1F] MUST rimanere sentinel (clamp of the shift).
     expect(s.workRam[BYTE_OFF + 0x1f]).toBe(SENTINEL_BYTE);
   });
 });

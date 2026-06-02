@@ -5,7 +5,7 @@
  * `FUN_00003F78` (78 bytes) is called through thunk 0x160 from mainTick. Despite
  * the name "EEPROM commit", it touches no MMIO and no EEPROM: it reads `*0x401FFC`
  * (player struct ptr), valida lo status byte @ ptr+0xA contro il complement
- * @ ptr+0xB, e droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
+ * @ ptr+0xB, and droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
  *
  * Confronto:
  *   - return D0 (long)
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
     const ctr0 = Math.floor(rng() * 256);
 
     // ── Setup binary side (Musashi) ─────────────────────────────────────
-    // Pulizia precedente: 0x401D00..0x401D20 (struct), e contatori.
+    // Pulizia precedente: 0x401D00..0x401D20 (struct), and contatori.
     for (let k = 0; k < 0x20; k++) {
       pokeMem(cpu, A2_ADDR + k, 1, 0);
     }
