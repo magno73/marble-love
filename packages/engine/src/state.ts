@@ -1,5 +1,5 @@
 /**
- * state.ts — root of the game state. Layout pensato per **rispecchiare** il game
+ * state.ts — root of the game state. Layout designed to **mirror** the game
  * `trace_reimpl.jsonl`.
  *
  * the ESLint rule fails. Use wrap.ts.
@@ -9,7 +9,7 @@
 import type { u8, u16, u32 } from "./wrap.js";
 import { as_u8, as_u16, as_u32 } from "./wrap.js";
 
-// ─── Primitive geometriche ────────────────────────────────────────────────
+// ─── Geometric primitives ────────────────────────────────────────────────
 
 export interface Vec2_u16 {
   x: u16;
@@ -22,7 +22,7 @@ export interface Vec3_i32 {
   z: u32;
 }
 
-// ─── Marble (la biglia of the giocatore) ─────────────────────────────────────
+// ─── Marble (the player's marble) ─────────────────────────────────────
 
 export interface Marble {
   pos: Vec3_i32;
@@ -32,9 +32,9 @@ export interface Marble {
   deathTimer: u16;
 }
 
-// ─── Nemici ───────────────────────────────────────────────────────────────
+// ─── Enemies ───────────────────────────────────────────────────────────────
 
-/** Tipologie da Phase 1 (TBD da MAME source / ROM analysis). */
+/** Types from Phase 1 (TBD from MAME source / ROM analysis). */
 export type EnemyKind =
   | "marble_eater"
   | "slinky"
@@ -53,10 +53,10 @@ export interface Enemy {
 
 
 export interface Level {
-  /** Indice 1..6 (Practice, Beginner, Intermediate, Aerobic, Silly, Ultimate). */
+  /** Index 1..6 (Practice, Beginner, Intermediate, Aerobic, Silly, Ultimate). */
   index: u8;
   romOffset: u32;
-  /** Tile/heightmap loader: popolato in Phase 4. */
+  /** Tile/heightmap loader: populated in Phase 4. */
   tilesLoaded: boolean;
 }
 
@@ -75,7 +75,7 @@ export interface PlayerStats {
   score: u32;
   lives: u8;
   levelTimer: u16;
-  /** Bonus accumulato. */
+  /** Accumulated bonus. */
   bonus: u16;
 }
 
@@ -85,7 +85,7 @@ export interface InputSnapshot {
   trackballDx: u8;
   /** Trackball delta Y. */
   trackballDy: u8;
-  /** Bitfield bottoni (start, coin, ...). */
+  /** Button bitfield (start, coin, ...). */
   buttons: u8;
   /** DIP switch (bank 1+2). */
   dipSwitches: u16;
@@ -94,11 +94,11 @@ export interface InputSnapshot {
 // ─── Tick clock ───────────────────────────────────────────────────────────
 
 export interface TickClock {
-  /** Frame contati da power-on. */
+  /** Frames counted from power-on. */
   frame: u32;
-  /** Tick CPU 68010 (a 7.159 MHz, da confermare in Phase 1). */
+  /** 68010 CPU ticks (at 7.159 MHz, to be confirmed in Phase 1). */
   cpuTicks: u32;
-  /** Sub-frame per IRQ scanline (TBD). */
+  /** Sub-frame for IRQ scanline (TBD). */
   scanline: u16;
   /**
    * Counter incremented on each `tick(runMainLoopBody:true)` invocation.
@@ -520,11 +520,11 @@ export interface GameState {
   stats: PlayerStats;
   input: InputSnapshot;
   /**
-   *  Dimensione esatta da Phase 1 (atarisys1.cpp). */
+   *  Exact size from Phase 1 (atarisys1.cpp). */
   workRam: Uint8Array;
   /** Playfield tilemap RAM (background tilemap, 0xA00000-0xA01FFF, 8 KB).
    *  64×64 tile entries (2 byte each) per Atari System 1 hardware spec.
-   *  Popolato da game-side write during level load + scroll updates. */
+   *  Populated by game-side writes during level load + scroll updates. */
   playfieldRam: Uint8Array;
   /** Motion object RAM (sprite, 0xA02000-0xA02FFF, 4 KB). */
   spriteRam: Uint8Array;

@@ -77,7 +77,7 @@
  *
  * **Side effects** in `state.workRam` (entity @ argAddr):
  *   - `entity[0x0..0x7]`: cleared only in the (state==9 && rng(4)==0) branch.
- *   - `state.rng.seed` advanced by of 1 o 2 step LFSR.
+ *   - `state.rng.seed` advanced by 1 or 2 LFSR steps.
  *
  */
 

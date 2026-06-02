@@ -38,7 +38,7 @@
  *     starts at 0x1EEA0 + signExt(0x0B)*8 = 0x1EEF8 and advances by 8 each
  *     iteration. The pointer does not use the sign extension of later D2 bytes;
  *     only arg1 does.
- *   - argIdx = 0xFF (signed -1): D3 parte 0x1EEA0 - 8 = 0x1EE98, and ASL preserva
+ *   - argIdx = 0xFF (signed -1): D3 starts at 0x1EEA0 - 8 = 0x1EE98, and ASL preserves
  *     (D2.b: 0xFF,0x00,...,0x09).
  *
  * **Known callers**: `FUN_0001464A` with two `jsr 0x11AD8.l` sites at 0x148F8 and 0x14918,
@@ -105,7 +105,7 @@ export function dispatchTable1EEA0(
 
   let counterByte = argByte;
 
-  // hard-cap a 256 + 1 per safety.
+  // hard-cap at 256 + 1 for safety.
   for (let safety = 0; safety <= 256; safety++) {
     if (counterByte === LOOP_SENTINEL) return;
 

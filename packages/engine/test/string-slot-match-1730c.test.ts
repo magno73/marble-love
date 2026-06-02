@@ -47,7 +47,7 @@ function setSlotId(
 }
 
 describe("stringSlotMatch1730C (FUN_1730C)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(SLOT_BASE_ADDR).toBe(0x401482);
     expect(SLOT_STRIDE).toBe(0x42);
     expect(SLOT_COUNT).toBe(7);
@@ -56,7 +56,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(ARG_ID_LONG_OFF).toBe(0x2);
   });
 
-  it("all slot inattivi (active=0) → returns 0", () => {
+  it("all slots inactive (active=0) → returns 0", () => {
     const s = emptyGameState();
     // argPtr points to a record with ID 0xDEADBEEF.
     const argPtr = 0x401e00;
@@ -68,7 +68,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(stringSlotMatch1730C(s, argPtr)).toBe(0);
   });
 
-  it("slot attivo con ID matchante → returns 1", () => {
+  it("active slot with matching ID → returns 1", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0x12345678);
@@ -77,7 +77,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(stringSlotMatch1730C(s, argPtr)).toBe(1);
   });
 
-  it("slot attivo but ID diverso → returns 0", () => {
+  it("active slot but different ID → returns 0", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0xaabbccdd);
@@ -88,7 +88,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(stringSlotMatch1730C(s, argPtr)).toBe(0);
   });
 
-  it("active flag = 0xFF (byte != 0) ancora considerato attivo", () => {
+  it("active flag = 0xFF (byte != 0) still considered active", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0xcafebabe);
@@ -115,7 +115,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(stringSlotMatch1730C(s, argPtr)).toBe(1);
   });
 
-  it("no side-effect: workRam invariata dopo la chiamata", () => {
+  it("no side-effect: workRam unchanged after the call", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0x12345678);
@@ -126,7 +126,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("ID = 0 con slot attivi that hanno ID 0 → match (no special-casing)", () => {
+  it("ID = 0 with active slots that have ID 0 → match (no special-casing)", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0);
@@ -135,7 +135,7 @@ describe("stringSlotMatch1730C (FUN_1730C)", () => {
     expect(stringSlotMatch1730C(s, argPtr)).toBe(1);
   });
 
-  it("scan termina al first match (slot 2 match → slot 5 con ID diverso non importa)", () => {
+  it("scan stops at the first match (slot 2 match → slot 5 with a different ID does not matter)", () => {
     const s = emptyGameState();
     const argPtr = 0x401e00;
     writeU32(s, argPtr + ARG_ID_LONG_OFF, 0x77777777);

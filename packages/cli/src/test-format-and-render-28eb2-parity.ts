@@ -3,7 +3,7 @@
  * test-format-and-render-28eb2-parity.ts — differential FUN_00028EB2 vs
  * `formatAndRender28EB2` TS replica.
  *
- * `FUN_00028EB2` (118 byte): orchestratore "format-and-render" a 6 long arg
+ * `FUN_00028EB2` (118 byte): "format-and-render" orchestrator with 6 long args
  * with 3 sub-JSRs:
  *   2. FUN_28F28 (trimTrailingSpace) - only when arg2.w == 2.
  *
@@ -22,9 +22,9 @@
  *   4. workRam scratch around (0x418..0x428, 16 bytes) unchanged (the subs
  *      are no-op → no side effects).
  *
- *   - A: arg2.w random — distribuzione naturale (raramente == 2)
+ *   - A: arg2.w random — natural distribution (rarely == 2)
  *
- * Uso: npx tsx packages/cli/src/test-format-and-render-28eb2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-format-and-render-28eb2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -60,7 +60,7 @@ const COMPARE_BASE = 0x00400418;
 const COMPARE_SIZE = 0x10; // 0x418..0x427
 
 /**
- * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` at `entry`.
  *   addq.b #1, (xxxx).l → 0x52 0x39 + abs long
  *   rts                 → 0x4E 0x75
  */
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Patch le 3 sub a `addq.b #1, sentinel ; rts`.
+  // Patch the 3 subs to `addq.b #1, sentinel ; rts`.
   patchStubAddq(romBuf, FUN_3874, SENTINEL_FMT);
   patchStubAddq(romBuf, FUN_28F28, SENTINEL_TRIM);
   patchStubAddq(romBuf, FUN_28FA0, SENTINEL_RENDER);
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     };
   }
 
-  // ─── Suite A: random everything (arg2.w distribuzione naturale) ────
+  // ─── Suite A: random everything (arg2.w natural distribution) ────
   console.log(
     `\n=== formatAndRender28EB2 (FUN_28EB2) — Suite A: random — ${perSuite} cases ===`,
   );
@@ -297,7 +297,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (firstFail !== null) {
     const f: FailRecord = firstFail;

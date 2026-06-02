@@ -1,14 +1,14 @@
 /**
  * sound-cmd-gate.test.ts — corner cases of soundCmdGate (FUN_4420).
  *
- * Bit-perfect parity verificata vs binary in `test-sound-cmd-gate-parity.ts`.
+ * Bit-perfect parity verified vs binary in `test-sound-cmd-gate-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
 import { soundCmdGate, CLAMP_THRESHOLD } from "../src/sound-cmd-gate.js";
 
 describe("soundCmdGate (FUN_4420)", () => {
-  it("cmdIndex < 0x0B → data forzato a 0 first of the dispatch", () => {
+  it("cmdIndex < 0x0B → data forced to 0 before the dispatch", () => {
     const seen: Array<{ idx: number; data: number }> = [];
     const inner = (idx: number, data: number): number => {
       seen.push({ idx, data });
@@ -19,7 +19,7 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(seen).toEqual([{ idx: 0x05, data: 0x00000000 }]);
   });
 
-  it("cmdIndex == 0x0B → data preservato (boundary, no clear)", () => {
+  it("cmdIndex == 0x0B → data preserved (boundary, no clear)", () => {
     const seen: Array<{ idx: number; data: number }> = [];
     const inner = (idx: number, data: number): number => {
       seen.push({ idx, data });
@@ -30,7 +30,7 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(seen).toEqual([{ idx: 0x0b, data: 0xcafebabe }]);
   });
 
-  it("cmdIndex == 0x0A → data clamped (boundary inferiore)", () => {
+  it("cmdIndex == 0x0A → data clamped (lower boundary)", () => {
     const seen: Array<{ idx: number; data: number }> = [];
     const inner = (idx: number, data: number): number => {
       seen.push({ idx, data });
@@ -40,7 +40,7 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(seen).toEqual([{ idx: 0x0a, data: 0 }]);
   });
 
-  it("cmdIndex == 0 → data clamped (caso minimo)", () => {
+  it("cmdIndex == 0 → data clamped (minimal case)", () => {
     let receivedData = -1;
     const inner = (_idx: number, data: number): number => {
       receivedData = data;
@@ -50,7 +50,7 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(receivedData).toBe(0);
   });
 
-  it("cmdIndex molto grande (0xFFFFFFFF) → no clamp (unsigned compare)", () => {
+  it("cmdIndex very large (0xFFFFFFFF) → no clamp (unsigned compare)", () => {
     let receivedData = -1;
     const inner = (_idx: number, data: number): number => {
       receivedData = data;
@@ -61,17 +61,17 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(receivedData).toBe(0x1234_5678);
   });
 
-  it("default inner = () => 0: returns 0 senza side effects", () => {
+  it("default inner = () => 0: returns 0 without side effects", () => {
     expect(soundCmdGate(0x0c, 0x42)).toBe(0);
     expect(soundCmdGate(0x05, 0x42)).toBe(0);
   });
 
-  it("D0 pass-through: returns ESATTAMENTE il return of the inner", () => {
+  it("D0 pass-through: returns EXACTLY the inner's return", () => {
     const inner = (): number => 0x12345678;
     expect(soundCmdGate(0x10, 0x99, inner)).toBe(0x12345678);
   });
 
-  it("inner receives cmdIndex as unsigned long (input negativo normalizzato)", () => {
+  it("inner receives cmdIndex as unsigned long (negative input normalized)", () => {
     let receivedIdx = -1;
     const inner = (idx: number, _data: number): number => {
       receivedIdx = idx;
@@ -82,7 +82,7 @@ describe("soundCmdGate (FUN_4420)", () => {
     expect(receivedIdx).toBe(0xffffffff);
   });
 
-  it("CLAMP_THRESHOLD costante esposta = 0x0B", () => {
+  it("CLAMP_THRESHOLD exposed constant = 0x0B", () => {
     expect(CLAMP_THRESHOLD).toBe(0x0b);
   });
 });

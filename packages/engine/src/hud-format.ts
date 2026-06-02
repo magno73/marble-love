@@ -1,7 +1,7 @@
 /**
  * hud-format.ts - `FUN_00003D62` (136 bytes): HUD format with 3 values.
  *
- * Sequenza:
+ * Sequence:
  *   formatHex(arg1.l, buf=0x40017E, 6 digits, no spaces)
  *   renderStringChain(0x74D6, attr=0x2000)
  *   formatHex(sext_l(arg2.w), buf, 4 digits, no spaces)

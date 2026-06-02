@@ -1,6 +1,6 @@
 -- mame_1801_busy_tap.lua - log all $1801 reads with absolute cycle count
 -- plus log writes to $1800/$1801 with cycle count. This measures the
--- busy duration reale di YM2151 in MAME (BUSY bit 7 timing post-write).
+-- real YM2151 busy duration in MAME (BUSY bit 7 timing post-write).
 local OUT_PATH = "/tmp/mame_1801_busy.json"
 local TARGET_FRAME = 800   -- boot init phase
 local audiocpu, sound_mem

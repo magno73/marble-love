@@ -5,7 +5,7 @@
  * at `0x40076C` is clear, or when the ROM threshold for the current level is
  * <= progress byte `0x400444`. Otherwise it scans active objects; when an object
  * has state 1, filter flag 0, signed field `+0x6A` in `[3,6]`, and charcode
- * `+0x1B` found in the levethe s 0xFF-terminated ROM list, it clears the gate flag
+ * `+0x1B` found in the level's 0xFF-terminated ROM list, it clears the gate flag
  * and sets `+0xCB = 1` on every active inner object.
  *
  * Important parity points:

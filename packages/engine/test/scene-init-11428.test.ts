@@ -1,5 +1,5 @@
 /**
- * Test sceneInit11428 (FUN_00011428) — smoke tests on the orchestratore.
+ * Test sceneInit11428 (FUN_00011428) — smoke tests on the orchestrator.
  *
  * is preserved and default no-ops do not throw.
  *
@@ -31,7 +31,7 @@ function makeTrackedSubs(): { calls: string[]; subs: SceneInit11428Subs } {
 }
 
 describe("sceneInit11428 (FUN_00011428)", () => {
-  it("calls all and 6 le subs in the ordine binary", () => {
+  it("calls all 6 subs in binary order", () => {
     const s = emptyGameState();
     const { calls, subs } = makeTrackedSubs();
 
@@ -47,13 +47,13 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     ]);
   });
 
-  it("default no-op: non solleva su subs={}", () => {
+  it("default no-op: does not throw on subs={}", () => {
     const s = emptyGameState();
     expect(() => sceneInit11428(s)).not.toThrow();
     expect(() => sceneInit11428(s, {})).not.toThrow();
   });
 
-  it("subs parziali: invoca solo quelle definite, skips the undefined", () => {
+  it("partial subs: invokes only the defined ones, skips the undefined", () => {
     const s = emptyGameState();
     const calls: string[] = [];
     sceneInit11428(s, {
@@ -67,7 +67,7 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     expect(calls).toEqual(["vblankAck", "clearMoAlphaRam", "fillLoop"]);
   });
 
-  it("non muta state se all le subs are no-op", () => {
+  it("does not mutate state if all subs are no-op", () => {
     const s = emptyGameState();
     const workRamBefore = new Uint8Array(s.workRam);
     const colorRamBefore = new Uint8Array(s.colorRam);
@@ -80,7 +80,7 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     expect(s.spriteRam).toEqual(spriteRamBefore);
   });
 
-  it("propaga il GameState alle callback (per side-effect bit-perfect)", () => {
+  it("propagates the GameState to callbacks (for bit-perfect side effects)", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0x42;
     let seen: number | undefined;
@@ -92,7 +92,7 @@ describe("sceneInit11428 (FUN_00011428)", () => {
     expect(seen).toBe(0x42);
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("exposed constants: correct binary addresses", () => {
     expect(SCENE_INIT_11428_ADDR).toBe(0x11428);
     expect(SCENE_INIT_11428_SUB_ADDRS).toEqual([
       0x28dea, 0x121a6, 0x12174, 0x28580, 0x28c7e, 0x28ca6,

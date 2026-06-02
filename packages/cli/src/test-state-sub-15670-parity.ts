@@ -5,16 +5,16 @@
  * @ 0x400396, stride 0xE2), filters active candidates, and checks each one
  * collision with marble-slot @ 0x401302 (4 x 0x60), and if at least one candidate
  *
- * **Strategia stub injection**:
+ * **Stub injection strategy**:
  *
  *      controlled. The TS reimpl uses `compareObjDepth` by default but we
  *
- *      Layout stub (8 byte):
+ *      Stub layout (8 byte):
  *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)
  *        rts                         ; 4E75            (2 byte)
  *
  *
- *      Layout stub (26 byte):
+ *      Stub layout (26 byte):
  *        movea.l #0x00401E00, A0       ; 207C 0040 1E00   (6 byte)
  *        move.l  0x00401E48.l, D1      ; 2239 0040 1E48   (6 byte)
  *        adda.l  D1, A0                ; D1C1             (2 byte)
@@ -31,7 +31,7 @@
  *
  *   ring buffer FUN_15460, counter, and fun_15fe6_ret slot.
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-15670-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-15670-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -55,10 +55,10 @@ const FUN_15670 = 0x00015670;
 const FUN_15FE6 = 0x00015fe6;
 const FUN_15460 = 0x00015460;
 
-/** Ring buffer per fun_15460 args. */
+/** Ring buffer for fun_15460 args. */
 const RING_BASE = 0x00401e00;
 const RING_COUNTER = 0x00401e48;
-/** Slot per la return value of FUN_15FE6. */
+/** Slot for the return value of FUN_15FE6. */
 const FUN15FE6_RET = 0x00401e40;
 
 const RING_SIZE_BYTES = 64;
@@ -138,14 +138,14 @@ function pokeBoth(
   }
 }
 
-/** Reset zone osservate + zero workRam range [0x000..0x1FFF]. */
+/** Reset observed zones + zero workRam range [0x000..0x1FFF]. */
 function resetAll(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
 ): void {
-  // Wipe workRam intero (TS)
+  // Wipe the entire workRam (TS)
   state.workRam.fill(0);
-  // Wipe Musashi memory in workRam range. NB: poke long a 4 byte allineati.
+  // Wipe Musashi memory in workRam range. NB: poke long on 4-byte aligned addresses.
   for (let i = 0; i < 0x2000; i += 4) {
     pokeMem(cpu, 0x400000 + i, 4, 0);
   }
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
       );
     },
     fun_15460: (structPtr) => {
-      // poi counter += 4.
+      // then counter += 4.
       const r = state.workRam;
       const counter =
         (((r[RING_COUNTER_OFF] ?? 0) << 24) |
@@ -353,14 +353,14 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ── Suite B: count == 1, candidato in range trigger ───────────────────
+  // ── Suite B: count == 1, candidate in trigger range ───────────────────
   console.log(
-    `\n=== Suite B: count==1, candidato → trigger (0x180<dist<0x280) — ${perSuite} cases ===`,
+    `\n=== Suite B: count==1, candidate → trigger (0x180<dist<0x280) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const zorder = rb();
-    // Distanza target: dx random in [0x181..0x27F], dy = 0
+    // Target distance: dx random in [0x181..0x27F], dy = 0
     const distTarget = 0x181 + (Math.floor(rng() * (0x280 - 0x181)) | 0);
     const argFx = 0;
     const argFy = 0;
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ── Suite C: count == 1, BLOCCATO da collision ────────────────────────
+  // ── Suite C: count == 1, BLOCKED by collision ─────────────────────────
   console.log(
     `\n=== Suite C: count==1, collision marble-slot → no decrement — ${perSuite} cases ===`,
   );
@@ -429,7 +429,7 @@ async function main(): Promise<void> {
           const slotAbs = SLOT_ARRAY_BASE + slotIdx * SLOT_STRIDE;
           pokeBoth(st, cp, slotAbs + 0x18, 1, 1);
           pokeBoth(st, cp, slotAbs + 0x1a, 1, 1);
-          // signExt(byte) su 16 bit:
+          // signExt(byte) to 16 bit:
           const f19SignExt = ((flag19 & 0xff) << 24) >> 24;
           pokeBoth(st, cp, slotAbs + 0x56, 2, f19SignExt & 0xffff);
           setupArg(st, cp, {
@@ -446,7 +446,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ── Suite D: count == 2, both candidates validi → fun_15fe6 ────────
+  // ── Suite D: count == 2, both candidates valid → fun_15fe6 ─────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: count==2, both candidates → fun_15fe6 — ${sizeD} cases ===`,
@@ -493,7 +493,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

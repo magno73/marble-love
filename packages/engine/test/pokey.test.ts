@@ -27,22 +27,22 @@ import {
 } from "../src/audio/pokey.js";
 
 describe("POKEY register file", () => {
-  it("init pulita: writeRegs all 0", () => {
+  it("clean init: writeRegs all 0", () => {
     const pk = createPOKEY();
     expect(pk.writeRegs.length).toBe(16);
     expect(Array.from(pk.writeRegs).every((b) => b === 0)).toBe(true);
   });
 
-  it("write singolo: byte stora in the slot correct", () => {
+  it("single write: byte stored in the correct slot", () => {
     const pk = createPOKEY();
     pokeyWrite(pk, as_u8(0x00), as_u8(0x40));  // AUDF1
     expect(pk.writeRegs[0x00]).toBe(0x40);
     expect(pk.writeRegs[0x01]).toBe(0);
   });
 
-  it("write 4 channels marble rumble (pattern realistico)", () => {
+  it("write 4 channels marble rumble (realistic pattern)", () => {
     const pk = createPOKEY();
-    // Marble sound driver pattern (approssimato per V1 mailbox tracing):
+    // Marble sound driver pattern (approximated for V1 mailbox tracing):
     const seq: Array<[number, number]> = [
       [0x00, 0xA0],  // AUDF1 = freq mid
       [0x01, 0xA8],  // AUDC1 = vol 8 + dist 5 (noise)
@@ -216,13 +216,13 @@ describe("POKEY PCM", () => {
 describe("POKEY read stubs (V2: sentinel constant)", () => {
   function pk() { return createPOKEY(); }
 
-  it("POT0..POT7 = 0 (paddle non used in marble)", () => {
+  it("POT0..POT7 = 0 (paddle not used in marble)", () => {
     for (let i = 0; i < 8; i++) {
       expect(pokeyRead(pk(), as_u8(i)) as number).toBe(0);
     }
   });
 
-  it("ALLPOT = 0xFF (all pot 'done', no scan in corso)", () => {
+  it("ALLPOT = 0xFF (all pot 'done', no scan in progress)", () => {
     expect(pokeyRead(pk(), as_u8(0x08)) as number).toBe(0xff);
   });
 
@@ -246,7 +246,7 @@ describe("POKEY read stubs (V2: sentinel constant)", () => {
 });
 
 describe("POKEY reset", () => {
-  it("reset pulisce writeRegs", () => {
+  it("reset clears writeRegs", () => {
     const pk = createPOKEY();
     pokeyWrite(pk, as_u8(0x05), as_u8(0xFF));
     pokeyWrite(pk, as_u8(0x08), as_u8(0xAB));

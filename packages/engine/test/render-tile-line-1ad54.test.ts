@@ -4,7 +4,7 @@
  * `packages/cli/src/test-render-tile-line-1ad54-parity.ts`.
  *
  *   - Struct 8-byte @ workRam off 0x1000 (abs 0x401000).
- *   - Pointer-table root @ workRam off 0x0474 (abs 0x400474): punta a un
+ *   - Pointer-table root @ workRam off 0x0474 (abs 0x400474): points to a
  *   - Data ptr @ 0x401300: stream of byte; 0x80 = sentinel (reset A2).
  *   - Fake direction table in ROM @ 0x1ECEA.
  *   - Buffer output @ 0x400A9C (workRam off 0x0A9C).
@@ -24,7 +24,7 @@ import { emptyRomImage } from "../src/bus.js";
 import type { GameState } from "../src/state.js";
 import type { RomImage } from "../src/bus.js";
 
-// ─── Costanti test ───────────────────────────────────────────────────────────
+// ─── Test constants ───────────────────────────────────────────────────────────
 
 const WR_BASE   = 0x400000;
 const DESC_ABS  = 0x401000;  // struct 8-byte
@@ -99,7 +99,7 @@ function setupEnv(
 }
 
 /**
- * Costruisce la struct descrittore a 8 byte @ DESC_ABS.
+ * Builds the 8-byte descriptor struct @ DESC_ABS.
  *
  *   byte[0] = x_base (int8)
  *   byte[1] = x_count (uint8)
@@ -150,7 +150,7 @@ function readCell(s: GameState, row: number, col: number, wordOff: number): numb
 // ─── Test ────────────────────────────────────────────────────────────────────
 
 describe("renderTileLine1AD54 — flag == 0 early exit", () => {
-  it("flag=0: returns A4 senza scrivere in cell-buf", () => {
+  it("flag=0: returns A4 without writing to cell-buf", () => {
     const s = emptyGameState();
     const r = emptyRomImage();
     makeDesc(s, { xBase: 0, extra: 0x80 }); // bit 7 → A4 |= 0x80
@@ -165,15 +165,15 @@ describe("renderTileLine1AD54 — flag == 0 early exit", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("flag=0, bit 0 of xBase=1 → A4 NOT ha bit 0", () => {
+  it("flag=0, bit 0 of xBase=1 → A4 does NOT have bit 0", () => {
     const s = emptyGameState();
     const r = emptyRomImage();
-    makeDesc(s, { xBase: 0x01 }); // bit 0 set → NOT si setta A4 bit 0
+    makeDesc(s, { xBase: 0x01 }); // bit 0 set → A4 bit 0 is NOT set
     const ret = renderTileLine1AD54(s, r, DESC_ABS, 0, 0, 0x100, 0);
     expect(ret & 1).toBe(0);
   });
 
-  it("flag=0, bit 0 of xBase=0 → A4 ha bit 0", () => {
+  it("flag=0, bit 0 of xBase=0 → A4 has bit 0", () => {
     const s = emptyGameState();
     const r = emptyRomImage();
     makeDesc(s, { xBase: 0x00 }); // bit 0 clear → A4 |= 1
@@ -183,8 +183,8 @@ describe("renderTileLine1AD54 — flag == 0 early exit", () => {
 });
 
 describe("renderTileLine1AD54 — row-major (dirIdx=0, dx=1, dy=1)", () => {
-  it("single cell (1×1): writes on the cell offset +4 (bordo first+last)", () => {
-    // Con xBase=0, xCount=1, yBase=0, yCount=1:
+  it("single cell (1×1): writes on the cell offset +4 (border first+last)", () => {
+    // With xBase=0, xCount=1, yBase=0, yCount=1:
     //   loc_neg2 = 0, loc_neg8 = 1
     //   loc_neg4 = 0, loc_neg6 = 1
     //   adj: loc_neg4 = 0+0-1 = -1, loc_neg6 = 1+1-1 = 1
@@ -256,7 +256,7 @@ describe("renderTileLine1AD54 — row-major (dirIdx=0, dx=1, dy=1)", () => {
     expect(rd16(s, (cellBase + 4) >>> 0)).toBe(0);
   });
 
-  it("middle cell: writes su all and 4 the slot (offset 0,2,4,6)", () => {
+  it("middle cell: writes to all 4 slots (offset 0,2,4,6)", () => {
     // Setup: 3x3 rectangle. Middle cell (row in (first,last), col in (first,last))
     // xBase=2, xCount=3 → loc_neg2=2, loc_neg8=3
     // yBase=1, yCount=3 → loc_neg4=1, loc_neg6=3
@@ -339,12 +339,12 @@ describe("renderTileLine1AD54 — row-major (dirIdx=0, dx=1, dy=1)", () => {
     expect(rd16(s, (cellBase + 6) >>> 0)).toBe(5);
   });
 
-  it("A2 reset su sentinella 0x80", () => {
+  it("A2 reset on sentinel 0x80", () => {
     const s = emptyGameState();
     const r = emptyRomImage();
 
     // Data: [0x0A, 0x80, 0x0A, 0x80, ...]
-    // byte 0x0A (= 10), poi 0x80 → reset; poi of nuovo 0x0A → 10, 0x80 → reset...
+    // byte 0x0A (= 10), then 0x80 → reset; then again 0x0A → 10, 0x80 → reset...
     const data = [];
     for (let i = 0; i < 32; i++) data.push(i % 2 === 0 ? 0x0A : 0x80);
     setupEnv(s, r, {

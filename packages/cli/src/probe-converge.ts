@@ -49,7 +49,7 @@ function check(label: string, ticks: number, opts: any = {}) {
   console.log(`  CRC32 match: workRam=${wcrc} colorRam=${ccrc}`);
 }
 
-// Test diverse configurazioni
+// Test diverse configurations
 check("BASELINE: bootInit() + tick(0)", 0);
 check("bootInit() + tick(2400)", 2400, { tick: { runMainLoopBody: true } });
 check("bootInit({preloadLevel:0}) + tick(2400)", 2400, { boot: { preloadLevel: 0 }, tick: { runMainLoopBody: true } });

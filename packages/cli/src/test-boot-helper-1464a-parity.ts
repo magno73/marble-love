@@ -3,11 +3,11 @@
  * test-boot-helper-1464a-parity.ts — differential FUN_1464A vs bootHelper1464A.
  *
  *
- * **Strategia stub**:
+ * **Stub strategy**:
  *     `addq.b #1,(sentinel_slot).l ; rts`  (8 byte: 52 39 00 40 03 EX 4E 75)
- *   In TS: le stesse subs incrementano il corrispondente sentinel byte.
+ *   In TS: the same subs increment the corresponding sentinel byte.
  *
- * **Subs patchate**:
+ * **Patched subs**:
  *   - FUN_10392 (0x10392): slotArrayBulkInit → sentinel 0x4003C0
  *   - FUN_26B2A (0x26b2a): gameStateBanner → sentinel 0x4003C1
  *   - FUN_28580 (0x28580): initFnPointers → sentinel 0x4003C2
@@ -33,7 +33,7 @@
  *   - 0x4003F0 = random initial value
  *
  *
- * Uso: npx tsx packages/cli/src/test-boot-helper-1464a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-boot-helper-1464a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

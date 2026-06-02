@@ -10,10 +10,10 @@
  *        4b. dispatch slot1 (ROM[0x10048].w == 0x4EF9 ? hook : FUN_5E00)
  *        4c. dispatch slot2 (ROM[0x1004E].w == 0x4EF9 ? hook : FUN_5DEC)
  *
- * Strategia stub:
- *   - Patch ROM (pre-CPU): each sub-jsr destination diventa
+ * Stub strategy:
+ *   - Patch ROM (pre-CPU): each sub-jsr destination becomes
  *       `addq.b #1, (sentinel_slot).l ; rts`  (8 byte: 52 39 00 40 03 EX 4E 75)
- *   - In TS: each callback fa `state.workRam[off] = (state.workRam[off]+1) & 0xff`.
+ *   - In TS: each callback does `state.workRam[off] = (state.workRam[off]+1) & 0xff`.
  *
  *   - frame counter (0x400016/0x400017): zero (cold) vs random (warm)
  *   - slot1 magic @ ROM[0x10048].w: 0x4EF9 (hook) vs 0x0000 (fallback)
@@ -21,7 +21,7 @@
  *
  * "vector slot magic on" patches a `JMP.L target_stub.l` in ROM where
  *
- * Uso: npx tsx packages/cli/src/test-boot-screen-init-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-boot-screen-init-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -43,7 +43,7 @@ import {
 
 const FUN_222E = 0x0000222e;
 
-// Sub-function entry points patchati a stub.
+// Sub-function entry points patched to stubs.
 const FUN_1C88 = 0x00001c88;
 const FUN_22A4 = 0x000022a4;
 const FUN_3A9C = 0x00003a9c;
@@ -52,13 +52,13 @@ const FUN_5DEC = 0x00005dec;
 
 // Vector slot dispatch targets, populated with JMP.L stubs for the "magic on" path.
 const SLOT1_HOOK_STUB = 0x0001a798;
-const SLOT2_HOOK_STUB = 0x0001a7a0; // free, riservato from the test
+const SLOT2_HOOK_STUB = 0x0001a7a0; // free, reserved by the test
 
 // ROM offsets of the two vector slots (magic + jump target).
 const VECTOR_SLOT_1 = 0x00010048;
 const VECTOR_SLOT_2 = 0x0001004e;
 
-// Sentinel slot in work RAM (uno per stub).
+// Sentinel slot in work RAM (one per stub).
 const SENTINEL_BASE = 0x004003e0;
 const SENT_CLEAR_SCREEN = SENTINEL_BASE + 0; // FUN_1C88
 const SENT_INTRO_SETUP = SENTINEL_BASE + 1; // FUN_22A4
@@ -71,7 +71,7 @@ const SENT_SLOT2_HOOK = SENTINEL_BASE + 6; // 0x1A7A0 jmp target
 const PALETTE_RAM_BASE = busNs.PAL_RAM_BASE;
 
 /**
- * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 byte) in `rom` at `entry`.
  */
 function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   // addq.b #1, abs.l → 0x52 0x39
@@ -86,7 +86,7 @@ function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   rom[entry + 7] = 0x75;
 }
 
-/** Encode `JMP.L target.l` (6 byte) in `rom` a `addr`. */
+/** Encode `JMP.L target.l` (6 byte) in `rom` at `addr`. */
 function patchJmpL(rom: Buffer, addr: number, target: number): void {
   rom[addr + 0] = 0x4e;
   rom[addr + 1] = 0xf9;
@@ -140,8 +140,8 @@ async function main(): Promise<void> {
   patchStubAddq(romBuf, SLOT1_HOOK_STUB, SENT_SLOT1_HOOK);
   patchStubAddq(romBuf, SLOT2_HOOK_STUB, SENT_SLOT2_HOOK);
 
-  // Original ROM @ 0x1004E: `00 00 00 00 00 00`. For the "magic on" path of
-  // poi via pokeMem per case (ROM byte 0..1) — the 4 byte target restano fissi.
+  // Original ROM @ 0x1004E: `00 00 00 00 00 00`. For the "magic on" path the
+  // magic is set later via pokeMem per case (ROM byte 0..1) — the 4 byte target stays fixed.
   patchJmpL(romBuf, VECTOR_SLOT_2, SLOT2_HOOK_STUB);
 
   const stateInst = stateNs.emptyGameState();
@@ -168,9 +168,9 @@ async function main(): Promise<void> {
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
-  // Pattern to cover i branches:
-  //   0..7 = enumerazione (fc∈{0,nz}, s1∈{magic,fb}, s2∈{magic,fb})
-  //   >=8  = random misti
+  // Pattern to cover the branches:
+  //   0..7 = enumeration (fc∈{0,nz}, s1∈{magic,fb}, s2∈{magic,fb})
+  //   >=8  = mixed random
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
@@ -190,16 +190,16 @@ async function main(): Promise<void> {
     stateInst.workRam[0x16] = (fcWord >>> 8) & 0xff;
     stateInst.workRam[0x17] = fcWord & 0xff;
 
-    // Magic word ai due vector slot.
-    const s1MagicVal = s1Magic ? 0x4ef9 : Math.floor(rng() * 0x4ef0); // garantito != 0x4EF9
+    // Magic word at the two vector slots.
+    const s1MagicVal = s1Magic ? 0x4ef9 : Math.floor(rng() * 0x4ef0); // guaranteed != 0x4EF9
     const s2MagicVal = s2Magic ? 0x4ef9 : Math.floor(rng() * 0x4ef0);
     setSlotMagic(cpu, VECTOR_SLOT_1, s1MagicVal);
     setSlotMagic(cpu, VECTOR_SLOT_2, s2MagicVal);
 
-    // Sync ROM image seen da TS: bus.ts ha emptyRomImage statica, dobbiamo
+    // Sync ROM image seen by TS: bus.ts has a static emptyRomImage, so we must
     const romView = busNs.emptyRomImage();
     romView.program.set(romBuf);
-    // Applica i magic correnti
+    // Apply the current magic values
     romView.program[VECTOR_SLOT_1] = (s1MagicVal >>> 8) & 0xff;
     romView.program[VECTOR_SLOT_1 + 1] = s1MagicVal & 0xff;
     romView.program[VECTOR_SLOT_2] = (s2MagicVal >>> 8) & 0xff;
@@ -216,7 +216,7 @@ async function main(): Promise<void> {
     }
 
     callFunction(cpu, FUN_222E, []);
-    // Esegui TS
+    // Run TS
     bsiNs.bootScreenInit(stateInst, romView, subs);
 
     let fail: FailRecord | null = null;

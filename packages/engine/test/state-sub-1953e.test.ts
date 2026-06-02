@@ -1,5 +1,5 @@
 /**
- * state-sub-1953e.test.ts — smoke tests per `FUN_0001953E`.
+ * state-sub-1953e.test.ts — smoke tests for `FUN_0001953E`.
  */
 
 import { describe, it, expect } from "vitest";

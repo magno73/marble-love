@@ -88,13 +88,13 @@ export interface BootSpuriousHandlerSubs {
  *
  *   D0 = 0x0080 (low word of first arg)
  *   bclr #7, D0 -> 0x0000
- *   write 0x0000 a MMIO 0x860000           (skip workRam)
- *   write arg2 (0x0000) a MMIO 0xFE0000    (skip workRam)
+ *   write 0x0000 to MMIO 0x860000          (skip workRam)
+ *   write arg2 (0x0000) to MMIO 0xFE0000   (skip workRam)
  *   bset #7, D0 -> 0x0080
  *   *(A1=0x401F44) = D0.b = 0x80
  *   *(A1+1=0x401F45) = 0
  *   *(A1+0x16=0x401F5A) = 0 (long)
- *   write 0x0080 a MMIO 0x860000           (skip workRam)
+ *   write 0x0080 to MMIO 0x860000          (skip workRam)
  */
 function defaultAudioReset80(state: GameState): void {
   const r = state.workRam;

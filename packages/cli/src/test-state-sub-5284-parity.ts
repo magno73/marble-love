@@ -2,25 +2,25 @@
 /**
  * test-state-sub-5284-parity.ts — differential FUN_5284 vs stateSub5284.
  *
- *   1. jsr FUN_4DCC (sound chip writer; 1ª istr = `addq.l #1,(0x401FF8).l`)
+ *   1. jsr FUN_4DCC (sound chip writer; 1st instr = `addq.l #1,(0x401FF8).l`)
  *   2. delay loop M68k 6666 iter (no RAM effect)
  *   3. write watchdog (0x880000) — MMIO no-op
  *   4. bsr FUN_52A2 (status check: read 0x401F76 long | 0x401F5E long)
  *   5. bne 0x5284 (loop) | bra.w 0x4F38 (tail-call)
  *
- * Strategia parity:
- *   - Patch ROM: FUN_4DCC ridotta a `addq.l #1,(0x401FF8).l; rts` (8 byte)
+ * Parity strategy:
+ *   - Patch ROM: FUN_4DCC reduced to `addq.l #1,(0x401FF8).l; rts` (8 byte)
  *     to match default TS `defaultFun4DCC` behavior.
- *   - Patch ROM: FUN_4F38 ridotta a `rts` (2 byte) — neutralizza il
- *     tail-call and fa rts pulito al sentinel via stack.
- *   - Pattern test:
+ *   - Patch ROM: FUN_4F38 reduced to `rts` (2 byte) — neutralizes the
+ *     tail-call and does a clean rts to the sentinel via stack.
+ *   - Test pattern:
  *     * pattern 0..3: zero flags entry -> 1 iter, loop exits, counter +1.
- *       0xFFFFFFFF, etc) per testare wrap of the counter.
+ *       0xFFFFFFFF, etc) to test counter wrap.
  *     * pattern 8..N: random flags = 0, random counter init.
  *
- * sui flag).
+ * on the flags).
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5284-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5284-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   const rom = new Uint8Array(readFileSync(romPath));
 
   // ── Patch ROM ─────────────────────────────────────────────────────────
-  // FUN_4DCC ridotta a `addq.l #1,(0x00401FF8).l; rts`.
+  // FUN_4DCC reduced to `addq.l #1,(0x00401FF8).l; rts`.
   //   addq.l #1,abs.l : opcode 0x52B9, then 4-byte abs addr (0x00401FF8) → 6 byte
   //   rts             : 0x4E75 → 2 byte
   rom[FUN_4DCC + 0] = 0x52;
@@ -78,8 +78,8 @@ async function main(): Promise<void> {
   rom[FUN_4DCC + 6] = 0x4e;
   rom[FUN_4DCC + 7] = 0x75;
 
-  // FUN_4F38 ridotta a `rts` (0x4E75). Il tail-call `bra.w 0x4F38` of FUN_5284
-  // atterra qui, fa rts immediato → pop sentinel → callFunction completa.
+  // FUN_4F38 reduced to `rts` (0x4E75). The tail-call `bra.w 0x4F38` of FUN_5284
+  // lands here, does an immediate rts → pop sentinel → callFunction completes.
   rom[FUN_4F38 + 0] = 0x4e;
   rom[FUN_4F38 + 1] = 0x75;
 

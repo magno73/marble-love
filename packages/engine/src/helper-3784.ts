@@ -49,7 +49,7 @@
  *
  * **Calling convention** (cdecl-like, 4 long args pushed RTL):
  *
- *   Stack post-prolog (movem ha salvato 2*4=8 byte):
+ *   Stack post-prolog (movem saved 2*4=8 bytes):
  *     SP+0x00..0x03 : D2 saved
  *     SP+0x04..0x07 : D3 saved
  *     SP+0x08..0x0B : return address

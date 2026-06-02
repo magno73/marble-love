@@ -1,5 +1,5 @@
 /**
- * render-string-entry-28fa0.test.ts — smoke per FUN_28FA0.
+ * render-string-entry-28fa0.test.ts — smoke for FUN_28FA0.
  *
  * `cli/src/test-render-string-entry-28fa0-parity.ts` (500/500).
  */
@@ -16,7 +16,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
-  it("writes col, tickOff, marker=0 in the 3 byte attesi and invoca renderStringChain2 con (0x40041C, ext.l(arg3.w))", () => {
+  it("writes col, tickOff, marker=0 in the 3 expected bytes and invokes renderStringChain2 with (0x40041C, ext.l(arg3.w))", () => {
     const s = emptyGameState();
     // Pre-fill marker with non-zero sentinel to verify clear.
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xaa;
@@ -43,13 +43,13 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + 4]).toBe(0xbe);
     expect(s.workRam[ENTRY_OFF + 5]).toBe(0xef);
 
-    // renderStringChain2 invoked with cabled structAddr.
+    // renderStringChain2 invoked with hardcoded structAddr.
     expect(renderArgs).not.toBeNull();
     expect(renderArgs!.addr).toBe(RENDER_STRUCT_ADDR);
     expect(renderArgs!.addr).toBe(0x0040041c);
   });
 
-  it("subs undefined → no-op on the render call, but byte writes avvengono comunque", () => {
+  it("subs undefined → no-op on the render call, but byte writes still happen", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xff;
     expect(() => {
@@ -60,7 +60,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
   });
 
-  it("solo the 3 bytes target are modificati (no spillage in [0x41A..0x428] al of outside of +0/+1/+6)", () => {
+  it("only the 3 target bytes are modified (no spillage in [0x41A..0x428] outside +0/+1/+6)", () => {
     const s = emptyGameState();
     // Pre-fill the entire span with sentinel.
     for (let i = ENTRY_OFF - 2; i < ENTRY_OFF + 0xc; i++) {
@@ -69,7 +69,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
 
     renderStringEntry28FA0(s, 0xff, 0xff, 0x00);
 
-    // I 3 byte target.
+    // The 3 target bytes.
     expect(s.workRam[ENTRY_OFF + 0]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 1]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 6]).toBe(0x00);
@@ -79,7 +79,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     }
   });
 
-  it("propaga arg3 sign-extended as second arg of renderStringChain2", () => {
+  it("propagates arg3 sign-extended as the second arg of renderStringChain2", () => {
     const s = emptyGameState();
     let receivedArg3: number | null = null;
     const subs = {
@@ -92,7 +92,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     renderStringEntry28FA0(s, 0, 0, 0xdead8000, subs);
     expect(receivedArg3).toBe(0xffff8000);
 
-    // arg3 low word = 0x7FFF → ext.l = 0x00007FFF (positivo)
+    // arg3 low word = 0x7FFF → ext.l = 0x00007FFF (positive)
     renderStringEntry28FA0(s, 0, 0, 0xbeef7fff, subs);
     expect(receivedArg3).toBe(0x00007fff);
 
@@ -105,7 +105,7 @@ describe("renderStringEntry28FA0 (FUN_28FA0)", () => {
     expect(receivedArg3).toBe(0xffffffff);
   });
 
-  it("calls renderStringChain2 also when the 3 bytes are already in the values target", () => {
+  it("calls renderStringChain2 even when the 3 bytes already hold the target values", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + 0] = 0x42;
     s.workRam[ENTRY_OFF + 1] = 0x42;

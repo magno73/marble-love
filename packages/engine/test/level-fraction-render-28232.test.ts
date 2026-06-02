@@ -1,7 +1,7 @@
 /**
- * Test levelFractionRender28232 (FUN_00028232) — smoke test sui branches principali.
+ * Test levelFractionRender28232 (FUN_00028232) — smoke test on the main branches.
  *
- * mode selector, level idx and level number da workRam, dispatcha 5
+ * mode selector, level idx and level number from workRam, dispatches 5
  * workRam @ 0x42A.
  *
  * `cli/src/test-level-fraction-render-28232-parity.ts` (500/500).
@@ -60,7 +60,7 @@ function writeRomLongBE(rom: RomImage, addr: number, value: number): void {
   rom.program[addr + 3] = value & 0xff;
 }
 
-/** Trace bag: registra le 3 sub-call per assertion. */
+/** Trace bag: records the 3 sub-calls for assertions. */
 interface SubsTrace {
   renderChainCalls: Array<{ entryPtr: number; attrLong: number }>;
   initStructCalls: Array<{
@@ -121,12 +121,12 @@ function setupRom(): RomImage {
 /**
  *  Buffer target: workRam[bufOff..bufOff+4]. */
 function setFractionBuffer(s: GameState, bufOff: number): void {
-  // a 0x1FFF (8 KB workRam). Per scrivere effettivamente a workRam[bufOff],
+  // up to 0x1FFF (8 KB workRam). To actually write to workRam[bufOff],
   writeLongBE(s.workRam, FRACTION_PTR_OFF, 0x00400000 | bufOff);
 }
 
 describe("levelFractionRender28232 (FUN_00028232)", () => {
-  it("D2==0, idx=0, no early-out: 4 renderStringChain + 1 helper + 1 initStruct + 1 finale (5 chain totali)", () => {
+  it("D2==0, idx=0, no early-out: 4 renderStringChain + 1 helper + 1 initStruct + 1 final (5 chains total)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // mode selector != 2 → D2 = 0.
@@ -198,7 +198,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[0x104]).toBe(0x00);
   });
 
-  it("D2!=0 (mode==2): skip 2 jsr condizionali → 3 renderStringChain (no Step B, no Step E)", () => {
+  it("D2!=0 (mode==2): skip 2 conditional jsr → 3 renderStringChain (no Step B, no Step E)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // mode selector = 2 → D2 = 0x2000.
@@ -236,7 +236,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(trace.renderHelperCalls[0]?.arg6).toBe(attrAlways);
   });
 
-  it("idx=-1 (sentinel): early-out dopo Step C (2 renderStringChain totali, no helper, no initStruct)", () => {
+  it("idx=-1 (sentinel): early-out after Step C (2 renderStringChain total, no helper, no initStruct)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0); // D2 = 0
@@ -253,7 +253,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
 
     levelFractionRender28232(s, rom, subs);
 
-    // 2 renderStringChain (Step B + Step C), poi early-out.
+    // 2 renderStringChain (Step B + Step C), then early-out.
     expect(trace.renderChainCalls).toHaveLength(2);
     expect(trace.renderChainCalls[0]).toEqual({
       entryPtr: 0xdeadbeef,
@@ -273,7 +273,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
   });
 
   it("dispatch fraction string: D3==3 → ' 1/4', D3==4 → ' 1/3', etc.", () => {
-    // Per ottenere D3 (=remainder) specifici: levelNum % 12 = D3 desiderato.
+    // To obtain specific D3 (=remainder) values: levelNum % 12 = desired D3.
     const cases: Array<{
       levelNum: number;
       expectedRemainder: number;
@@ -318,7 +318,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     }
   });
 
-  it("default no-op subs: no eccezione; fraction string scritta inline; struct NOT scritto (initStructHeader no-op)", () => {
+  it("default no-op subs: no exception; fraction string written inline; struct NOT written (initStructHeader no-op)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0);
@@ -342,7 +342,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[0x304]).toBe(0x00);
   });
 
-  it("defaultInitStructHeader: applicare la callback default produce le 3 byte writes attese", () => {
+  it("defaultInitStructHeader: applying the default callback produces the 3 expected byte writes", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0);
@@ -359,7 +359,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[STRUCT_BASE_OFF + INIT_STRUCT_MARKER_OFF]).toBe(0);
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("constants exposed: binary addresses correct", () => {
     expect(FUN_28232_ADDR).toBe(0x00028232);
     expect(MODE_SELECTOR_OFF).toBe(0x392);
     expect(LEVEL_IDX_OFF).toBe(0x3de);

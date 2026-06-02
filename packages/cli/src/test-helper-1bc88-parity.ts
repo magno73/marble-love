@@ -352,7 +352,7 @@ async function main(): Promise<void> {
     const posY = (rw() & 0x7ffe);
     const posZ = (rw() & 0x7ffe);
 
-    // Set word at $c (low word of long) for the with the obj
+    // Set word at $c (low word of long) for the obj
     // Long at $c: high word arbitrary, low word = posX
     setL(colObj, 0x0c, posX & 0xffff);
     setL(colObj, 0x10, posY & 0xffff);

@@ -36,7 +36,7 @@ describe("positionUpdate (FUN_1706C)", () => {
     s.workRam[0x1D02] = 0x56; s.workRam[0x1D03] = 0x78;
     s.workRam[0x1D04] = 0xAB; s.workRam[0x1D05] = 0xCD;
     s.workRam[0x1D06] = 0xEF; s.workRam[0x1D07] = 0x01;
-    // Tutti flag/bitmap = 0
+    // All flags/bitmap = 0
     positionUpdate(s, rom, 0x00401D00);
     expect(readU32(s, 0x401D00)).toBe(0x12345678);
     expect(readU32(s, 0x401D04)).toBe(0xABCDEF01);
@@ -45,7 +45,7 @@ describe("positionUpdate (FUN_1706C)", () => {
   it("flag PX != 0 + gate PX > 0 + rotIdx < 4: x += rom_table[rotIdx]", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Forziamo ROM table[0] = 0x0010 (= +16 signed)
+    // Force ROM table[0] = 0x0010 (= +16 signed)
     rom.program[0x23D40] = 0; rom.program[0x23D41] = 0x10;
     // Struct @ 0x401D00 = (100, 200)
     s.workRam[0x1D00] = 0; s.workRam[0x1D01] = 0;
@@ -63,7 +63,7 @@ describe("positionUpdate (FUN_1706C)", () => {
     expect(readU32(s, 0x401D04)).toBe(200);
   });
 
-  it("rotIdx >= 4: cardinale skip also con flag set", () => {
+  it("rotIdx >= 4: cardinal skip even with flag set", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x23D40 + 4 * 2] = 0; rom.program[0x23D40 + 4 * 2 + 1] = 0x20;
@@ -87,10 +87,10 @@ describe("positionUpdate (FUN_1706C)", () => {
     expect(readU32(s, 0x401D00)).toBe(10);
   });
 
-  it("bitmap bit 0 set + condizioni met: x and y both modificati", () => {
+  it("bitmap bit 0 set + conditions met: x and y both modified", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // table[0] = +5 (per d3=0), table[7] = +3 (per d2=7-7=0... aspetta)
+    // table[0] = +5 (for d3=0), table[7] = +3 (for d2=7-7=0... wait)
     // d3 = rotIdx = 0, d2 = 7 - rotSpec = 7 - 7 = 0
     // Therefore both localM4 and -localM2 use table[0].
     rom.program[0x23D41] = 5; // table[0] = 5

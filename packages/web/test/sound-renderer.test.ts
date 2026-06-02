@@ -6,8 +6,8 @@
  *   - YM2151 TL byte -> linear volume
  *   - POKEY AUDF/AUDC -> freq + noise + volume
  *
- * Il flow Web Audio (AudioContext.createWorklet → postMessage → synth) e'
- * Browser startup and AudioContext unlock are tested manually in the app.
+ * The Web Audio flow (AudioContext.createWorklet → postMessage → synth) and
+ * browser startup and AudioContext unlock are tested manually in the app.
  */
 
 import { afterEach, describe, it, expect, vi } from "vitest";
@@ -35,13 +35,13 @@ describe("YM2151 KC → frequency", () => {
     expect(f).toBeLessThan(1000);
   });
 
-  it("KC con octave +1 → freq doppia (1 octave higher)", () => {
+  it("KC with octave +1 → double freq (1 octave higher)", () => {
     const fLow = ymKcToFreq(0x2a, 0);
     const fHigh = ymKcToFreq(0x3a, 0);
     expect(fHigh / fLow).toBeCloseTo(2, 1);
   });
 
-  it("KC con note code invalido (3/7/11/15) → freq 0", () => {
+  it("KC with invalid note code (3/7/11/15) → freq 0", () => {
     expect(ymKcToFreq(0x03, 0)).toBe(0);
     expect(ymKcToFreq(0x47, 0)).toBe(0);
     expect(ymKcToFreq(0x4b, 0)).toBe(0);

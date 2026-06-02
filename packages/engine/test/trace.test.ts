@@ -64,7 +64,7 @@ describe("trace serialization", () => {
     expect(frameFromState(sa).workRamHash).toBe(frameFromState(sb).workRamHash);
   });
 
-  it("workRamHashes ha 32 entry and cambia solo in the regione modified", () => {
+  it("workRamHashes has 32 entries and changes only in the modified region", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
     sb.workRam[0x350] = 0xAB; // region 3 (0x300-0x3FF)
@@ -81,7 +81,7 @@ describe("trace serialization", () => {
     }
   });
 
-  it("workRamHashes regione 30 ignora stack residue (0x1EE0-0x1EFF)", () => {
+  it("workRamHashes region 30 ignores stack residue (0x1EE0-0x1EFF)", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
     sb.workRam[0x1EE0] = 0xFF;
@@ -92,17 +92,17 @@ describe("trace serialization", () => {
     expect(a.workRamHashes[30]).toBe(b.workRamHashes[30]);
   });
 
-  it("workRamHashes regione 30 cattura modifiche outside from the area stack", () => {
+  it("workRamHashes region 30 captures changes outside the stack area", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
-    sb.workRam[0x1E00] = 0x01; // first byte regione 30
-    sb.workRam[0x1EDF] = 0x02; // last byte non-stack
+    sb.workRam[0x1E00] = 0x01; // first byte of region 30
+    sb.workRam[0x1EDF] = 0x02; // last non-stack byte
     const a = frameFromState(sa);
     const b = frameFromState(sb);
     expect(a.workRamHashes[30]).not.toBe(b.workRamHashes[30]);
   });
 
-  it("workRamHashes regione 4 ignora stack low water (0x440-0x447)", () => {
+  it("workRamHashes region 4 ignores stack low water (0x440-0x447)", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
     sb.workRam[0x440] = 0xFF;
@@ -112,11 +112,11 @@ describe("trace serialization", () => {
     expect(a.workRamHashes[4]).toBe(b.workRamHashes[4]);
   });
 
-  it("workRamHashes localizza correttamente edges between regioni", () => {
+  it("workRamHashes correctly localizes edges between regions", () => {
     const sa = emptyGameState();
     const sb = emptyGameState();
-    sb.workRam[0xFF] = 0x01; // last byte regione 0
-    sb.workRam[0x100] = 0x01; // first byte regione 1
+    sb.workRam[0xFF] = 0x01; // last byte of region 0
+    sb.workRam[0x100] = 0x01; // first byte of region 1
     const a = frameFromState(sa);
     const b = frameFromState(sb);
     expect(a.workRamHashes[0]).not.toBe(b.workRamHashes[0]);

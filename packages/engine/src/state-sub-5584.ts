@@ -1,17 +1,17 @@
 /**
- * state-sub-5584.ts — replica `FUN_00005584` (132 byte).
+ * state-sub-5584.ts — replica `FUN_00005584` (132 bytes).
  *
  * "Scan & match" wrapper that stitches together 3 helpers:
- *   1. `FUN_0000540A`  — table-of-string-records walker (vedi state-sub-540a)
+ *   1. `FUN_0000540A`  — table-of-string-records walker (see state-sub-540a)
  *   2. `FUN_000053EA`  — read-byte-pair OR (`byte[ptr]|byte[ptr+1]`)
  *   3. `FUN_00005468`  — record-step (forward-walk with flag-update)
  *
- * Il wrapper:
- *     `FUN_5468(curPtr, arg1_word, D4, arg4_word, arg4_word)` ottenendo un
+ * The wrapper:
+ *     `FUN_5468(curPtr, arg1_word, D4, arg4_word, arg4_word)` obtaining a
  *
- * **Disasm 0x5584..0x5604** (132 byte):
+ * **Disasm 0x5584..0x5604** (132 bytes):
  *
- *   0x5584:  movem.l {D6 D5 D4 D3 D2},-(SP)   ; preserve D2..D6 (20 byte)
+ *   0x5584:  movem.l {D6 D5 D4 D3 D2},-(SP)   ; preserve D2..D6 (20 bytes)
  *   0x5588:  move.l  (0x18,SP),D2             ; D2 = arg0 (long ptr)
  *   0x558c:  move.w  (0x1e,SP),D3w            ; D3w = arg1 (word)
  *   0x5590:  move.w  (0x22,SP),D1w            ; D1w = arg2 (word)
@@ -26,7 +26,7 @@
  *   0x55a8:  move.l  D2,-(SP)                 ; push D2
  *   0x55aa:  jsr     0x53EA.l                 ; D0 = FUN_53EA(D2)
  *   0x55b0:  tst.l   D0
- *   0x55b2:  lea     (0xc,SP),SP              ; pop 12 byte (cleanup 540A 8 + 53EA 4)
+ *   0x55b2:  lea     (0xc,SP),SP              ; pop 12 bytes (cleanup 540A 8 + 53EA 4)
  *   0x55b6:  beq.w   0x5602                   ; if pair == 0 → exit (D0 = 0)
  *   0x55ba:  moveq   #3,D4                    ; D4 = 3 (loop start)
  *   0x55bc: loop_top:
@@ -35,8 +35,8 @@
  *   0x55c2:  move.l  D0,-(SP)                 ; push arg4
  *   0x55c4:  moveq   #0,D0
  *   0x55c6:  move.w  (0x2a,SP),D0w            ; D0 = arg4 word (re-read; SP shifted)
- *                                              ;   il push appena fatto ha portato
- *   0x55ca:  move.l  D0,-(SP)                 ; push arg4 (of nuovo)
+ *                                              ;   the push just done has shifted
+ *   0x55ca:  move.l  D0,-(SP)                 ; push arg4 (again)
  *   0x55cc:  moveq   #0,D0
  *   0x55ce:  move.w  D4w,D0w                  ; D0 = D4 (zero-ext)
  *   0x55d0:  move.l  D0,-(SP)                 ; push D4
@@ -49,7 +49,7 @@
  *   0x55e2:  move.l  D2,-(SP)                 ; push D2
  *   0x55e4:  jsr     0x53EA.l                 ; D0 = FUN_53EA(D2)
  *   0x55ea:  tst.l   D0
- *   0x55ec:  lea     (0x18,SP),SP             ; pop 24 byte (5468 args 20 + 53EA 4)
+ *   0x55ec:  lea     (0x18,SP),SP             ; pop 24 bytes (5468 args 20 + 53EA 4)
  *   0x55f0:  bne.b   0x55f4                   ; if D0 != 0 skip restore
  *   0x55f2:  move.l  D6,D2                    ; D2 = D6 (restore arg0 original)
  *   0x55f4:  cmp.l   D5,D2
@@ -68,7 +68,7 @@
  *   - Args: 5 long (4 word ext-l + 1 long ptr).
  *                    records (workRam-resident, range 0x40xxxx).
  *     `arg1` word  = forward-walk parameter, passed to FUN_5468 as arg2 word.
- *     `arg2` word  = number of record da scan in FUN_540A.
+ *     `arg2` word  = number of records to scan in FUN_540A.
  *     `arg4` word  = byte/word parameter passed twice to FUN_5468 (callee arg3
  *                    byte and arg4 word).
  *   - Callee-saved: D2-D6 (preserved by movem.l in prologue/epilogue).
@@ -76,16 +76,16 @@
  *
  * **Low-level fidelity notes**:
  *
- *   1. **Stack offset of `(0x2a, SP)`**: post-movem (5×4 = 20 byte = 0x14) +
+ *   1. **Stack offset of `(0x2a, SP)`**: post-movem (5×4 = 20 bytes = 0x14) +
  *      ret addr (4) = 24 = 0x18. Caller_SP_args = SP + 0x18. Args structure:
  *      arg0 @ +0, arg1 @ +4 (word @ +6), arg2 @ +8 (word @ +0xa), arg3 @ +0xc
  *      (caller_SP_args + 0x12) = arg4 low word. Confirmed by the disassembly
  *      (see `0x5fe2: move.w (0x10070).l, D0w; ext.l D0; move.l D0,-(SP)`).
  *
- *      (= arg4 high word + 2 = STILL arg4 low word su BE). NO: + 4 on the SP
+ *      (= arg4 high word + 2 = STILL arg4 low word in BE). NO: + 4 on the SP
  *      means that (0x2a, SP) now points to arg4_low_word - 4.
  *      0x12 - 4 = caller_SP_args + 0xe = arg3 low word`!
- *      Lo stack ora ha:
+ *      The stack now holds:
  *         (0, SP)        = D0 = arg4 long (just pushed)
  *         (4..0x17, SP)  = ret + saved D2..D6
  *         (0x18..., SP)  = caller args
@@ -114,11 +114,11 @@
  *         (0x24, SP) = arg3 long start             → word @+0xe
  *         (0x28, SP) = arg4 long start             → word @+0x12
  *         (0x2a, SP) = arg4 word (low)
- *      ✓ Confermato. Delta between caller_SP_args and SP post-movem = 0x18.
+ *      ✓ Confirmed. Delta between caller_SP_args and SP post-movem = 0x18.
  *
- *      ora punta a `current_SP + 0x2a = caller_SP_args + 0x2a - 0x1c =
+ *      now points to `current_SP + 0x2a = caller_SP_args + 0x2a - 0x1c =
  *
- *      Ma aspetta, il caller @ 0x6002 push args RTL: arg4(@5fea), arg3(@5fec=
+ *      But wait, the caller @ 0x6002 pushes args RTL: arg4(@5fea), arg3(@5fec=
  *      `pea (0x1).w`), arg2(@5ff0..5ff6), arg1(@5ff8..5ffe), arg0(@6000).
  *         caller_SP_args + 0x10 = arg4 → low word @ +0x12
  *         caller_SP_args + 0x0c = arg3 → low word @ +0x0e
@@ -127,19 +127,19 @@
  *         caller_SP_args + 0x00 = arg0
  *      ✓ Matches (0x2a, SP) = arg4 word, (0x26, SP) = arg3, etc.
  *
- *      (ROM, 1) as the last due args of FUN_5468.
+ *      (ROM, 1) as the last two args of FUN_5468.
  *
  *
- *   2.5 **Doppia conferma via re-disasm correct**: a 0x55c2 push abbassa SP
- *      delta 0x18 → caller_SP + (0x2a - 0x18) = caller_SP + 0x12... aspetta,
- *      Riprovo: pre-push delta = 0x18. Post-push delta = 0x1c. (0x2a, SP) @
+ *   2.5 **Double confirmation via correct re-disasm**: at 0x55c2 the push lowers SP
+ *      delta 0x18 → caller_SP + (0x2a - 0x18) = caller_SP + 0x12... wait,
+ *      Retry: pre-push delta = 0x18. Post-push delta = 0x1c. (0x2a, SP) @
  *      delta 0x1c → caller_offset = 0x2a - 0x1c = 0x0e → arg3 word. ✓
  *         first push (0x55c2):  arg4 word (delta 0x18 → caller offset 0x12)
  *         second push (0x55ca): arg3 word (delta 0x1c → caller offset 0x0e)
  *         third push (0x55d0):   D4 (loop counter)
  *         fourth push (0x55d6):  D3 (arg1 word)
  *         fifth push (0x55d8):  D2 (cur ptr long)
- *      arg4 ripetuto.
+ *      arg4 repeated.
  *
  *      Verify with FUN_5468's signature (link.w A6,-0xc):
  *         (0x8, A6)  = arg0 = ptr long       → D2 ✓
@@ -147,12 +147,12 @@
  *         (0x12, A6) = arg2 word low         → D4 ✓
  *         (0x17, A6) = arg3 byte (low byte of word low) → arg3 ✓ (= 1 in prod)
  *         (0x1a, A6) = arg4 word low         → arg4 ✓ (= ROM[0x10070])
- *      Perfetto: the args are (D2, D3w, D4w, arg3w, arg4w).
+ *      Perfect: the args are (D2, D3w, D4w, arg3w, arg4w).
  *
- *   3. **`movem.l {D6 D5 D4 D3 D2}, -(SP)` push order**: M68k `movem` preserva
+ *   3. **`movem.l {D6 D5 D4 D3 D2}, -(SP)` push order**: M68k `movem` preserves
  *         (0, SP) = D2  ; (4, SP) = D3  ; (8, SP) = D4  ; (0xc, SP) = D5  ; (0x10, SP) = D6
  *         (0x18, SP) = arg0 long
- *      Confermato.
+ *      Confirmed.
  *
  *
  *
@@ -225,7 +225,7 @@ export type Sub5584Inner5468 = (
  * @param arg3Word  Word param passed to 5468 as arg3 byte; production uses 1.
  * @param arg4Word  Word param passed to 5468 as arg4 word.
  *
- * @returns  long unsigned (D0 al rts):
+ * @returns  long unsigned (D0 at rts):
  *            - 0 if the loop completes with D2 == D5 and 53EA returned 0.
  *            - non-zero if the loop exits on cmp-eq with 53EA != 0.
  *            - non-zero/zero depending on the last D4=15 iteration if the loop
@@ -253,7 +253,7 @@ export function stateSub5584(
   inner53EA: Sub5584Inner53EA = () => 0,
   inner5468: Sub5584Inner5468 = () => 0,
 ): number {
-  // Normalizzazione args (force unsigned long / word).
+  // Normalize args (force unsigned long / word).
   const a0 = arg0Long >>> 0;
   const a1w = arg1Word & 0xffff;
   const a2w = arg2Word & 0xffff;
@@ -261,7 +261,7 @@ export function stateSub5584(
   const a4w = arg4Word & 0xffff;
 
   // ─── Prologue: D2/D3/D1/D6 = a0/a1w/a2w/a0 ─────────────────────────────
-  // Nota: D3 = arg1, D1 = arg2 (vedi disasm). D2 = arg0 = D6 (save).
+  // Note: D3 = arg1, D1 = arg2 (see disasm). D2 = arg0 = D6 (save).
   const d6 = a0;
 
   // ─── jsr 540A(arg0, arg2_word_zext) → D5 ────────────────────────────────

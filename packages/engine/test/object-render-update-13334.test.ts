@@ -2,7 +2,7 @@
  * object-render-update-13334.test.ts — smoke tests of `objectRenderUpdate13334`
  * (FUN_00013334).
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated against the binary in
  * `packages/cli/src/test-object-render-update-13334-parity.ts`.
  */
 
@@ -28,9 +28,9 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
-    // mode = 0 (struct[0x1e]) → skip gating, vai dritto al compute.
+    // mode = 0 (struct[0x1e]) → skip gating, go straight to the compute.
     s.workRam[STRUCT_OFF + 0x1e] = 0;
-    // struct[0x1f] = 0 → no dispatch interno.
+    // struct[0x1f] = 0 → no inner dispatch.
     s.workRam[STRUCT_OFF + 0x1f] = 0;
     // w0 = 100, w2 = 200, w4 = 0.
     s.workRam[STRUCT_OFF + 0x0c] = 0;
@@ -51,13 +51,13 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     });
     expect(r).toBe(0);
 
-    // POS_X/POS_Y aggiornati.
+    // POS_X/POS_Y updated.
     expect(s.workRam[0x690]).toBe(0);
     expect(s.workRam[0x691]).toBe(100);
     expect(s.workRam[0x692]).toBe(0);
     expect(s.workRam[0x693]).toBe(200);
 
-    // Globals NOT aggiornati (mode != 1, != 2).
+    // Globals NOT updated (mode != 1, != 2).
     expect(s.workRam[0x970]).toBe(0);
     expect(s.workRam[0x971]).toBe(0);
     expect(s.workRam[0x972]).toBe(0);
@@ -82,7 +82,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[STRUCT_OFF + 0x51]).toBe(0xbe);
   });
 
-  it("path mode==1, *struct[0x3e] == -1 → epilogue diretto, niente side effect", () => {
+  it("path mode==1, *struct[0x3e] == -1 → direct epilogue, no side effects", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -113,7 +113,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("path mode==1, record valido → store globals → epilogue (no compute)", () => {
+  it("path mode==1, valid record → store globals → epilogue (no compute)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -123,13 +123,13 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     s.workRam[STRUCT_OFF + 0x3f] = (recordPtr >>> 16) & 0xff;
     s.workRam[STRUCT_OFF + 0x40] = (recordPtr >>> 8) & 0xff;
     s.workRam[STRUCT_OFF + 0x41] = recordPtr & 0xff;
-    // *recordPtr = qualcosa != -1.
+    // *recordPtr = something != -1.
     const recOff = recordPtr - WORK_RAM_BASE;
     s.workRam[recOff + 0] = 0x12;
     s.workRam[recOff + 1] = 0x34;
     s.workRam[recOff + 2] = 0x56;
     s.workRam[recOff + 3] = 0x78;
-    // Sentinel marker per detectare compute.
+    // Sentinel marker to detect compute.
     s.workRam[STRUCT_OFF + 0x4e] = 0x55;
     s.workRam[STRUCT_OFF + 0x42] = 0x55;
 
@@ -138,7 +138,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     });
     expect(r).toBe(0);
 
-    // Globals popolati.
+    // Globals populated.
     expect(s.workRam[0x970]).toBe((recordPtr >>> 24) & 0xff);
     expect(s.workRam[0x971]).toBe((recordPtr >>> 16) & 0xff);
     expect(s.workRam[0x972]).toBe((recordPtr >>> 8) & 0xff);
@@ -148,12 +148,12 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[0x976]).toBe((STRUCT_PTR >>> 8) & 0xff);
     expect(s.workRam[0x977]).toBe(STRUCT_PTR & 0xff);
 
-    // Compute NOT executed (sentinel byte ancora 0x55).
+    // Compute NOT executed (sentinel byte still 0x55).
     expect(s.workRam[STRUCT_OFF + 0x4e]).toBe(0x55);
     expect(s.workRam[STRUCT_OFF + 0x42]).toBe(0x55);
   });
 
-  it("path mode==2, mode_hi=2, record valido → store globals + compute + final copy", () => {
+  it("path mode==2, mode_hi=2, valid record → store globals + compute + final copy", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -178,14 +178,14 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     });
     expect(r).toBe(0);
 
-    // Globals popolati. recordPtr=0x00401800 (BE: 00 40 18 00).
+    // Globals populated. recordPtr=0x00401800 (BE: 00 40 18 00).
     expect(s.workRam[0x970]).toBe(0x00);
     expect(s.workRam[0x971]).toBe(0x40);
     expect(s.workRam[0x972]).toBe(0x18);
     expect(s.workRam[0x973]).toBe(0x00);
     expect(s.workRam[0x977]).toBe(STRUCT_PTR & 0xff);
 
-    // POS_X/Y aggiornati (compute executed).
+    // POS_X/Y updated (compute executed).
     expect(s.workRam[0x691]).toBe(10);
     expect(s.workRam[0x693]).toBe(20);
 
@@ -194,7 +194,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(s.workRam[STRUCT_OFF + 0x45]).toBe(recordPtr & 0xff);
   });
 
-  it("path mode==2, mode_hi=0, record valido → compute SENZA store globals", () => {
+  it("path mode==2, mode_hi=0, valid record → compute WITHOUT storing globals", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -215,19 +215,19 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     });
     expect(r).toBe(0);
 
-    // POS_X/Y aggiornati.
+    // POS_X/Y updated.
     expect(s.workRam[0x691]).toBe(50);
     expect(s.workRam[0x693]).toBe(60);
 
-    // Globals NOT popolati.
+    // Globals NOT populated.
     expect(s.workRam[0x970]).toBe(0);
     expect(s.workRam[0x974]).toBe(0);
 
-    // Final copy fatta.
+    // Final copy done.
     expect(s.workRam[STRUCT_OFF + 0x42]).toBe((recordPtr >>> 24) & 0xff);
   });
 
-  it("path kind==6 → invoca callback inner1D06A con sext_l(struct[0x25])", () => {
+  it("path kind==6 → invokes callback inner1D06A with sext_l(struct[0x25])", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -245,7 +245,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     expect(invoked).toBe(-1);
   });
 
-  it("path kind==3 → indicizza ROM table + paletteQueuePush; +7 se base==0x21192", () => {
+  it("path kind==3 → indexes ROM table + paletteQueuePush; +7 if base==0x21192", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -253,7 +253,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
     rom.program[PALETTE_INDEX_TABLE_ROM + 5] = 0x42;
     rom.program[PALETTE_INDEX_TABLE_ROM + 12] = 0x99; // 5+7=12 (path magic).
 
-    // Caso 1: base != 0x21192 → indice = 5 (no +7).
+    // Case 1: base != 0x21192 → index = 5 (no +7).
     {
       const s1 = emptyGameState();
       s1.workRam[STRUCT_OFF + 0x1e] = 0;
@@ -270,7 +270,7 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
       s1.workRam[STRUCT_OFF + 0x48] = (basePtr >>> 8) & 0xff;
       s1.workRam[STRUCT_OFF + 0x49] = basePtr & 0xff;
 
-      // pre: queue ptr a 0x40040C (head, queue vuota).
+      // pre: queue ptr at 0x40040C (head, empty queue).
       s1.workRam[0x408] = 0x00;
       s1.workRam[0x409] = 0x40;
       s1.workRam[0x40a] = 0x04;
@@ -280,11 +280,11 @@ describe("objectRenderUpdate13334 (FUN_00013334)", () => {
         inner1D06A: noopInner1D06A,
       });
       expect(r).toBe(0);
-      // Byte appena pushato in queue head = 0x42.
+      // Byte just pushed into queue head = 0x42.
       expect(s1.workRam[0x40c]).toBe(0x42);
     }
 
-    // Caso 2: base == 0x21192 → indice = 5 + 7 = 12 → byte 0x99.
+    // Case 2: base == 0x21192 → index = 5 + 7 = 12 → byte 0x99.
     {
       const s2 = emptyGameState();
       s2.workRam[STRUCT_OFF + 0x1e] = 0;

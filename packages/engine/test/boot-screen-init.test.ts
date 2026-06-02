@@ -1,5 +1,5 @@
 /**
- * Test bootScreenInit (FUN_222E) — smoke tests sui branches principali.
+ * Test bootScreenInit (FUN_222E) — smoke tests on the main branches.
  *
  * `cli/src/test-boot-screen-init-parity.ts`.
  */
@@ -43,7 +43,7 @@ function makeTrackedSubs(): { calls: string[]; subs: BootScreenInitSubs } {
 }
 
 describe("bootScreenInit (FUN_222E)", () => {
-  it("writes always i 6 register video a $B00000-$B0000A", () => {
+  it("always writes the 6 video registers to $B00000-$B0000A", () => {
     const s = emptyGameState();
     const rom = makeRom(0x0000, 0x0000);
     // workRam[0x16/17] != 0 -> warm boot, but the 6 writes still happen.
@@ -61,7 +61,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     expect(w(0x0a)).toBe(0x0000);
   });
 
-  it("warm boot (frame_counter != 0): calls solo clearScreen + introSetup", () => {
+  it("warm boot (frame_counter != 0): calls only clearScreen + introSetup", () => {
     const s = emptyGameState();
     s.workRam[BOOT_SCREEN_FRAME_COUNTER_OFF] = 0x01;
     const { calls, subs } = makeTrackedSubs();
@@ -84,7 +84,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     expect(calls).toEqual(["clearScreen", "introSetup"]);
   });
 
-  it("cold boot + both i magic JMP.L: calls hook su both the slot", () => {
+  it("cold boot + both magic JMP.L: calls the hook on both slots", () => {
     const s = emptyGameState();
     // frame_counter = 0
     const { calls, subs } = makeTrackedSubs();
@@ -101,7 +101,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     ]);
   });
 
-  it("cold boot + both i magic NOT JMP.L: calls i fallback", () => {
+  it("cold boot + both magic NOT JMP.L: calls the fallbacks", () => {
     const s = emptyGameState();
     const { calls, subs } = makeTrackedSubs();
     const rom = makeRom(0x0000, 0x0000);
@@ -117,7 +117,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     ]);
   });
 
-  it("cold boot mix: slot1 magic + slot2 NO magic (Marble Madness reale)", () => {
+  it("cold boot mix: slot1 magic + slot2 NO magic (real Marble Madness)", () => {
     const s = emptyGameState();
     const { calls, subs } = makeTrackedSubs();
     // Marble Madness: ROM[0x10048].w == 0x4EF9, ROM[0x1004E].w == 0x0000
@@ -134,7 +134,7 @@ describe("bootScreenInit (FUN_222E)", () => {
     ]);
   });
 
-  it("subs default no-op: non solleva su rom vuota + cold boot", () => {
+  it("subs default no-op: does not raise on empty ROM + cold boot", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => bootScreenInit(s, rom)).not.toThrow();

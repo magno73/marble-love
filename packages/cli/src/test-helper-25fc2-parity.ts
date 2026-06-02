@@ -4,18 +4,18 @@
  *
  * (sentinel `0xFFFFFFFF`).
  *
- * **Costanti interne**: A1 = 0x20FDE, A3 = 0x400018.
+ * **Internal constants**: A1 = 0x20FDE, A3 = 0x400018.
  *
- * **Sub-JSR** patchate per isolamento:
+ * **Sub-JSRs** patched for isolation:
  *   - `FUN_158AC` (@ 0x158AC): append byte arg to buffer (capture sound calls).
- *   - `FUN_15884` (@ 0x15884): `rts` — no-op (sound pair catturato via 158AC).
- *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, subStateCode) a un buffer.
- *   - `FUN_18F46` (@ 0x18F46): append (typeCode, subIdx) a un buffer.
+ *   - `FUN_15884` (@ 0x15884): `rts` — no-op (sound pair captured via 158AC).
+ *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, subStateCode) to a buffer.
+ *   - `FUN_18F46` (@ 0x18F46): append (typeCode, subIdx) to a buffer.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
- *      in zone fixed of work RAM (0x401F00+).
- *      of A2, and a set of sentinels near.
+ *      to a fixed region of work RAM (0x401F00+).
+ *      of A2, and a set of nearby sentinels.
  *
  *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
@@ -27,7 +27,7 @@
  *     each entry: [typeCode long BE][subIdx long BE]
  *   - 0x401F44: FUN_18F46 call count byte
  *
- * Uso: npx tsx packages/cli/src/test-helper-25fc2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-25fc2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -99,7 +99,7 @@ function makeRng(seed: number): () => number {
 // ─── ROM patches ─────────────────────────────────────────────────────────────
 
 /**
- * Patch FUN_158AC: append byte arg (offset 0x7 da SP) a buffer.
+ * Patch FUN_158AC: append byte arg (offset 0x7 from SP) to a buffer.
  *   move.b  (0x7,SP), D0       : 10 2F 00 07
  *   movea.l ($401F0C).l, A1    : 22 79 00 40 1F 0C
  *   move.b  D0, (A1)+          : 12 C0
@@ -130,9 +130,9 @@ function patchSoundPair(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_25BAE: append (objPtr, code) al buffer + rts.
+ * Patch FUN_25BAE: append (objPtr, code) to the buffer + rts.
  *
- *   - Seconda push (closer to SP): `move.l A2, -(A7)` → objPtr
+ *   - Second push (closer to SP): `move.l A2, -(A7)` → objPtr
  *
  *   SP+0 = return addr
  *
@@ -200,7 +200,7 @@ function patchOSE25BAE(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_18F46: append (typeCode, subIdx) al buffer + rts.
+ * Patch FUN_18F46: append (typeCode, subIdx) to the buffer + rts.
  *
  *   arg1 (typeCode long) @ SP+4 (pushed first = closer to SP after return addr @ SP)
  *   arg2 (subIdx long)   @ SP+8
@@ -307,14 +307,14 @@ async function main(): Promise<void> {
   const ANIM_BASE = h25fc2Ns.ANIM_BASE_ROM;     // 0x20FDE
   const OBJ_PAIR  = h25fc2Ns.OBJECT_PAIR_BASE;  // 0x400018
 
-  // Costruisce uno scenario of test randomizzato.
-  // Variazione chiave: state (0x1A), step56 (0x56), secondary_state (0x18),
+  // Build a randomized test scenario.
+  // Key variation: state (0x1A), step56 (0x56), secondary_state (0x18),
   // anim_ptr (0x5A), frame_ctr (0x5F), fps (0x60), sub_frame_ctr (0x66), etc.
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
     const ptr = pickPtr();
-    // to cover la logica of word_a4
+    // to cover the word_a4 logic
     const ptrChoice = rng();
     const actualPtr =
       ptrChoice < 0.05 ? OBJ_PAIR :
@@ -322,8 +322,8 @@ async function main(): Promise<void> {
       ptr;
     const off = actualPtr - WORK_RAM_BASE;
 
-    // ── Pre-state randomizzato ────────────────────────────────────────────
-    // state (0x1A): distribuzione {1,2,5, random}
+    // ── Randomized pre-state ──────────────────────────────────────────────
+    // state (0x1A): distribution {1,2,5, random}
     const r1a = rng();
     const pre1A: number =
       r1a < 0.25 ? 0x01 :
@@ -332,8 +332,8 @@ async function main(): Promise<void> {
       rb();
 
     // Choose anim_ptr consistently with the scenario:
-    // 20% → index 9 esatto (per wrap detection)
-    // 40% → punta a sentinel in ROM
+    // 20% → exact index 9 (for wrap detection)
+    // 40% → points to a sentinel in ROM
     let preAnimPtr: number;
     const r5a = rng();
     if (r5a < 0.20) {
@@ -347,7 +347,7 @@ async function main(): Promise<void> {
       // Strategy: pre-load one of the real addresses with the sentinel.
       // Sentinel addresses known from ROM analysis: 0x20FDA, 0x20FCE, ...
       // -> immediate advance; use anim_ptr-4 = 0x20FD6 (-> 0x20FDA sentinel).
-      // Per semplificare: frame_ctr=fps → advance → nuovo ptr = preAnimPtr+4
+      // To simplify: frame_ctr=fps → advance → new ptr = preAnimPtr+4
       // preAnimPtr+4 = 0x20FDA → preAnimPtr = 0x20FD6.
       preAnimPtr = 0x00020fd6; // +4 = 0x20FDA = sentinel
     }
@@ -355,12 +355,12 @@ async function main(): Promise<void> {
     // fps and frame_ctr
     let preFrameCtr = rb() & 0x1f;
     let preFps = rb() & 0x1f;
-    // 40% force advance (frame_ctr == fps, advance avviene)
+    // 40% force advance (frame_ctr == fps, advance happens)
     if (rng() < 0.40) {
       // Ensure the frame advances: frame_ctr = fps.
       preFrameCtr = preFps > 0 ? preFps - 1 : 0;
       preFps = preFrameCtr + 0;
-      // per forzare advance: fps <= frame_ctr+1
+      // to force advance: fps <= frame_ctr+1
       preFps = (rb() & 0x0f) + 1;
       preFrameCtr = preFps - 1;
     }
@@ -370,7 +370,7 @@ async function main(): Promise<void> {
     // secondary_state
     const preSecState = rng() < 0.33 ? 0x02 : rb();
     // sub_frame_ctr
-    const preSubFc = rb() & 0x07; // piccolo per evitare troppo noise
+    const preSubFc = rb() & 0x07; // small to avoid too much noise
     // secondary_ptr (0x62..65)
     const preSecPtr = ((0x00020000 + Math.floor(rng() * 0x1000) * 4)) >>> 0;
     // obj_type 0x57
@@ -420,7 +420,7 @@ async function main(): Promise<void> {
     // Object scratch
     for (let k = 0; k < 0xc0; k++) pokeMem(cpu, actualPtr + k, 1, scratchObj[k]!);
 
-    // ── Mirror su state.workRam ──────────────────────────────────────────
+    // ── Mirror into state.workRam ─────────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     for (let k = 0; k < 0xc0; k++) stateInst.workRam[off + k] = scratchObj[k]!;
 

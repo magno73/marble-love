@@ -1,11 +1,11 @@
 /**
- * helper-3a54.test.ts — smoke test per helper3A54 (FUN_3A54).
+ * helper-3a54.test.ts — smoke test for helper3A54 (FUN_3A54).
  *
- * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal string
- * ASCII in memory, usando BCD packed as intermediario (via FUN_3A6A) e
+ * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal ASCII
+ * string in memory, using packed BCD as an intermediate (via FUN_3A6A) and
  * then writing with FUN_3A08.
  *
- * Bit-perfect parity verificata vs binary in
+ * Bit-perfect parity verified vs binary in
  * `packages/cli/src/test-helper-3a54-parity.ts` (500/500).
  */
 
@@ -24,7 +24,7 @@ function readByte(state: ReturnType<typeof emptyGameState>, addr: number): numbe
   return state.workRam[addr - WR_BASE] ?? 0;
 }
 
-/** Legge `n` byte a partire da `addr` as stringa leggibile. */
+/** Reads `n` bytes starting at `addr` as a readable string. */
 function readStr(
   state: ReturnType<typeof emptyGameState>,
   addr: number,
@@ -44,15 +44,15 @@ function readStr(
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-describe("helper3A54 costanti", () => {
-  it("HELPER_3A54_ADDR ha il value correct", () => {
+describe("helper3A54 constants", () => {
+  it("HELPER_3A54_ADDR has the correct value", () => {
     expect(HELPER_3A54_ADDR).toBe(0x00003a54);
   });
 });
 
 // Base values.
 
-describe("helper3A54 — values decimali base", () => {
+describe("helper3A54 — base decimal values", () => {
   it("value=0, digits=4, showSpaces=0: '0000' + NUL", () => {
     const s = emptyGameState();
     const BUF = 0x401d00;
@@ -163,7 +163,7 @@ describe("helper3A54 — showSpaces", () => {
     expect(readByte(s, BUF + 6)).toBe(0x00); // NUL
   });
 
-  it("value=42, digits=4, showSpaces=0: '0042' (leading zeros non convertiti)", () => {
+  it("value=42, digits=4, showSpaces=0: '0042' (leading zeros not converted)", () => {
     const s = emptyGameState();
     const BUF = 0x401d00;
     helper3A54(s, 42, BUF, 4, 0);
@@ -174,7 +174,7 @@ describe("helper3A54 — showSpaces", () => {
 // ─── null-terminator ─────────────────────────────────────────────────────────
 
 describe("helper3A54 — null-terminator", () => {
-  it("writes NUL a bufEnd+numDigits", () => {
+  it("writes NUL at bufEnd+numDigits", () => {
     const s = emptyGameState();
     s.workRam.fill(0x55);
     const BUF = 0x401d00;
@@ -191,10 +191,10 @@ describe("helper3A54 — null-terminator", () => {
   });
 });
 
-// ─── isolamento memory ───────────────────────────────────────────────────────
+// ─── memory isolation ───────────────────────────────────────────────────────
 
-describe("helper3A54 — isolamento memory", () => {
-  it("non tocca byte outside dto the area [bufEnd..bufEnd+numDigits+1]", () => {
+describe("helper3A54 — memory isolation", () => {
+  it("does not touch bytes outside the area [bufEnd..bufEnd+numDigits+1]", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     const BUF = 0x401d00;

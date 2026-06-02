@@ -95,7 +95,7 @@ export function eepromCommitRequest(state: GameState, arg: number): number {
   const budget = eepromCommit(state) >>> 0;
 
   // move.l D0,D1: D1 = budget (long).
-  // move.w D2w,D0w: D0.w = arg.w (D0 alto = budget alto post-jsr).
+  // move.w D2w,D0w: D0.w = arg.w (D0 high = budget high post-jsr).
   // ext.l D0: D0.l = signext(D0.w) = signext(arg.w).
   // muls.w #0xC,D0: D0.l = (int16)(arg.w) * 12 (signed long product).
   const argSignedW = (d2w & 0x8000) !== 0 ? d2w - 0x10000 : d2w;

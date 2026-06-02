@@ -1,5 +1,5 @@
 /**
- * state-sub-19a40.test.ts — smoke tests per `FUN_00019A40`.
+ * state-sub-19a40.test.ts — smoke tests for `FUN_00019A40`.
  *
  *     match)
  */
@@ -38,9 +38,9 @@ function readLongBE(s: ReturnType<typeof emptyGameState>, off: number): number {
 
 /**
  *
- * - ROM_PAIR_TABLE @ 0x244F6: 5 pair (X,Y) signed byte.
- *   Useremo: (0x10, 0x20), (0x11, 0x20), (0x12, 0x20), (0x13, 0x20), (0x14, 0x20).
- * - ROM_ENTITY_PTR_TABLE @ 0x1F0BA: 10 long ptr a 0x4019F8 + i*0x38.
+ * - ROM_PAIR_TABLE @ 0x244F6: 5 pairs (X,Y) signed byte.
+ *   We use: (0x10, 0x20), (0x11, 0x20), (0x12, 0x20), (0x13, 0x20), (0x14, 0x20).
+ * - ROM_ENTITY_PTR_TABLE @ 0x1F0BA: 10 long ptrs to 0x4019F8 + i*0x38.
  */
 function buildRom(): ReturnType<typeof emptyRomImage> {
   const rom = emptyRomImage();
@@ -79,7 +79,7 @@ function buildRom(): ReturnType<typeof emptyRomImage> {
 const ENTITY_OFF_BASE = ENTITY_TABLE_BASE - 0x400000;
 
 describe("stateSub19A40 (FUN_00019A40)", () => {
-  it("table tutta free → max 2 spawn (1 per outer pass), no match", () => {
+  it("table all free → max 2 spawns (1 per outer pass), no match", () => {
     const s = emptyGameState();
     const rom = buildRom();
     const r = stateSub19A40(s, rom);
@@ -104,7 +104,7 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
     expect(readLongBE(s, off0 + 0x10)).toBe(((0x20 << 0x13) + POS_BIAS) >>> 0);
   });
 
-  it("all 10 slot occupied → earlyExit true, 0 spawn", () => {
+  it("all 10 slots occupied → earlyExit true, 0 spawns", () => {
     const s = emptyGameState();
     const rom = buildRom();
     for (let i = 0; i < ENTITY_COUNT; i++) {
@@ -120,7 +120,7 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
     expect(r.spawnCount).toBe(0);
   });
 
-  it("3 sub-injection chiamate in ordine correct for each spawn", () => {
+  it("3 sub-injections called in correct order for each spawn", () => {
     const s = emptyGameState();
     const rom = buildRom();
     const calls: string[] = [];
@@ -145,16 +145,16 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
     ]);
   });
 
-  it("subs assente → no crash, spawn comunque executed", () => {
+  it("subs absent → no crash, spawn executed regardless", () => {
     const s = emptyGameState();
     const rom = buildRom();
     expect(() => stateSub19A40(s, rom)).not.toThrow();
   });
 
-  it("9/10 occupied con X non-match → spawn in the slot free, poi early-exit", () => {
+  it("9/10 occupied with X non-match → spawn in the free slot, then early-exit", () => {
     const s = emptyGameState();
     const rom = buildRom();
-    // Occupa slot 0..8, lascia slot 9 free.
+    // Occupy slots 0..8, leave slot 9 free.
     for (let i = 0; i < 9; i++) {
       const off = ENTITY_OFF_BASE + i * ENTITY_STRIDE;
       s.workRam[off + 0x18] = 1;
@@ -168,7 +168,7 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
     expect(r.earlyExit).toBe(true);
   });
 
-  it("eventArg passato a fun_158ac proviene da ROM_EVENT_TABLE indicizzato da D5", () => {
+  it("eventArg passed to fun_158ac comes from ROM_EVENT_TABLE indexed by D5", () => {
     const s = emptyGameState();
     const rom = buildRom();
     const eventArgs: number[] = [];
@@ -177,9 +177,9 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
         eventArgs.push(arg);
       },
     });
-    // Primo spawn (D4=0, D5=0): pair0 = (0x10,0x20), no match → spawn slot 0,
+    // First spawn (D4=0, D5=0): pair0 = (0x10,0x20), no match → spawn slot 0,
     //   eventArg = events[0] = 0x100.
-    // Secondo outer (D4=1): D5=0 → pair0 = (0x10,0x20), entity[0].x = 0x840000.
+    // Second outer (D4=1): D5=0 → pair0 = (0x10,0x20), entity[0].x = 0x840000.
     //   Prox-check Y: entity[0].y = 0x1040000, word = 0x0104, asr.l #3 = 0x20.
     //   diff = 0x20 - 0x20 = 0; 4 > 0 → skip mid-iter, D5=1.
     //   D5=1 → pair1 = (0x11,0x20). asr.w #3 of 0x0084 = 0x0010 ≠ 0x11 → no match.
@@ -187,7 +187,7 @@ describe("stateSub19A40 (FUN_00019A40)", () => {
     expect(eventArgs).toEqual([0x100, 0x101]);
   });
 
-  it("posX/posY are sign-extended from the byte (test con value negativo in the pair)", () => {
+  it("posX/posY are sign-extended from the byte (test with a negative value in the pair)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Setup: only the first pair is valid, negative byte (0xF0 = -16).

@@ -125,7 +125,7 @@
  *   movea.l (0x1C, A2), A0
  *   moveq   #-1, D0
  *   cmp.l   (A0), D0
- *   bne.b   movement_block              ; non terminator → skip
+ *   bne.b   movement_block              ; not a terminator → skip
  *   cmpi.b  #2, (0x1A, A2)
  *   bne.b   movement_block
  *   clr.b   (0x18, A2)                  ; deactivate entity
@@ -187,7 +187,7 @@
  *   adda.l  D0, A2
  *   addq.b  #1, D2
  *   cmpi.b  #10, D2
- *                                       ; between entity diverse, intenzionale)
+ *                                       ; between different entities, intentional)
  *
  *  epilogue @ 0x19D8E:
  *   movem.l (SP)+, {D2,D3,D4,A2}
@@ -310,7 +310,7 @@ export const SOUND_Y_UPPER = 0x00f0 as const;
 export interface StateSub19BAASubs {
   /** `FUN_00019A40(state)` — spawn dispatcher (gated). */
   fun_19a40?: (state: GameState) => void;
-  /** `FUN_00018F46(state, arg1, arg2)` — slot-insert-sorted parente. */
+  /** `FUN_00018F46(state, arg1, arg2)` — slot-insert-sorted relative. */
   fun_18f46?: (state: GameState, arg1Long: number, arg2Long: number) => void;
   /** `FUN_0001BB08(state, entityAddr)` — sprite-set-XY wrapper. */
   fun_1bb08?: (state: GameState, entityAddr: number) => void;
@@ -388,10 +388,10 @@ function addrToOff(addr: number): number {
 /**
  * Read a long (32-bit BE) from m68k absolute addr, dispatching by region.
  *
- * dispatch fa:
+ * dispatch does:
  *   - addr < 0x400000 → ROM (rom.program)
  *   - 0x400000 ≤ addr < 0x402000 → workRam
- *   - altrove → 0 (default safe)
+ *   - elsewhere → 0 (default safe)
  */
 function readLongFromAddr(
   state: GameState,
@@ -437,9 +437,9 @@ function sextWord(w: number): number {
 
 /**
  *
- * @param state GameState (modifies `state.workRam` per le entity attive +
- *              consuma RNG via `state.rng` per i path "state-branch").
- * @param subs  injection stub per le 6 sub esterne. Default all no-op (e
+ * @param state GameState (modifies `state.workRam` for the active entities +
+ *              consumes RNG via `state.rng` for the "state-branch" paths).
+ * @param subs  injection stub for the 6 external subs. Default all no-op (and
  *
  * @returns detail of the gate, the spawn-dispatch and the per-entity tick.
  */
@@ -568,7 +568,7 @@ export function stateSub19BAA(
         if (newTimer !== 0) {
           goToMovementBlock = true;
         } else {
-          // Timer arrivato a 0: state branch.
+          // Timer reached 0: state branch.
           rec.enteredStateBranch = true;
           const vel = readLongBE(state, off + ENTITY_VEL_OFFSET);
           if (vel === VEL_PIVOT_IF && d4Flag !== 0) {

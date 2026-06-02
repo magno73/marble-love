@@ -2,7 +2,7 @@
  * state-sub-5d2a.test.ts — smoke tests of stateSub5D2A (FUN_5D2A).
  *
  *   - bitmap scan MSB→LSB (mask = 0x8000..0x0001)
- *   - branch su byte ROM @ 0x10072 (gate) a iter D4=7
+ *   - branch on ROM byte @ 0x10072 (gate) at iter D4=7
  *   - default callback no-op
  */
 
@@ -27,7 +27,7 @@ interface CapturedCall {
 }
 
 describe("stateSub5D2A (FUN_5D2A)", () => {
-  it("invoca inner3784 exactly 32 times (16 iter × 2 celle)", () => {
+  it("invokes inner3784 exactly 32 times (16 iter × 2 cells)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -40,7 +40,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls).toHaveLength(LOOP_ITER_COUNT * CALLS_PER_ITER); // 32
   });
 
-  it("cella destra (every odd index) ha SEMPRE attr 0", () => {
+  it("right cell (every odd index) ALWAYS has attr 0", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -55,7 +55,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("attr cella sinistra: 0xA0 a D4 == arg1_word, otherwise 0x20", () => {
+  it("left cell attr: 0xA0 at D4 == arg1_word, otherwise 0x20", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -77,7 +77,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("default callback no-op → returns 0, non muta state.workRam o ROM", () => {
+  it("default callback no-op → returns 0, does not mutate state.workRam or ROM", () => {
     const state = emptyGameState();
     state.workRam[0x100] = 0x77;
     const rom = emptyRomImage();
@@ -92,7 +92,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(rom.program).toEqual(romBefore);
   });
 
-  it("gate byte ROM @ 0x10072 != 0 → A3=4, D5w=0xFFF5 a iter D4=7 (e successive)", () => {
+  it("gate byte ROM @ 0x10072 != 0 → A3=4, D5w=0xFFF5 at iter D4=7 (and later)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     rom.program[ROM_GATE_BYTE_ADDR] = 0x01; // gate != 0
@@ -103,11 +103,11 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
       return 0;
     });
 
-    // x_left a D4=7 = sign-ext(A3w=4) + sign-ext(A4w).
-    // A4w dipende da bit 8 of mask (mask shiftata 8 times = 0x0080).
+    // x_left at D4=7 = sign-ext(A3w=4) + sign-ext(A4w).
+    // A4w depends on bit 8 of mask (mask shifted 8 times = 0x0080).
     // arg0=0x8000, mask=0x0080 → bit clear → A4=8.
     // x_left = 4 + 8 = 12.
-    // y a D4=7 = (15-7)*2 + 0xFFF5 = 16 + 0xFFF5 = 0x10005 → word 0x0005.
+    // y at D4=7 = (15-7)*2 + 0xFFF5 = 16 + 0xFFF5 = 0x10005 → word 0x0005.
     //  Sign-ext word 0x0005 → 0x00000005.
     expect(calls[16]!.x).toBe(12);
     expect(calls[16]!.y).toBe(5);
@@ -120,7 +120,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[18]!.y).toBe(7);
   });
 
-  it("gate byte == 0 → D5w=5, A3=0 (default, equivalente a init)", () => {
+  it("gate byte == 0 → D5w=5, A3=0 (default, equivalent to init)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     // rom.program[0x10072] = 0 default
@@ -147,7 +147,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[30]!.y).toBe(35);
   });
 
-  it("bitmap scan MSB→LSB: arg0 = 0x0001 → solo iter D4=0 (ultima) ha A4=7", () => {
+  it("bitmap scan MSB→LSB: arg0 = 0x0001 → only iter D4=0 (last) has A4=7", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -158,7 +158,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
       return 0;
     });
 
-    // gate=0 → A3=0. x_left = A3 + A4. A4=8 (bit clear) o 7 (bit set).
+    // gate=0 → A3=0. x_left = A3 + A4. A4=8 (bit clear) or 7 (bit set).
     // Iter 0..14 (D4=15..1): mask=0x8000..0x0002, arg0=0x0001, AND=0 → A4=8 → x=8.
     // Iter 15 (D4=0): mask=0x0001, arg0=0x0001, AND=1 → A4=7 → x=7.
     for (let iter = 0; iter < 15; iter++) {
@@ -167,7 +167,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     expect(calls[15 * CALLS_PER_ITER]!.x).toBe(7);
   });
 
-  it("bitmap scan: arg0 = 0xFFFF → all the A4=7 (all i bit set)", () => {
+  it("bitmap scan: arg0 = 0xFFFF → all A4=7 (all bits set)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -176,13 +176,13 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
       return 0;
     });
 
-    // Tutte le iter: mask & arg0 != 0 → A4=7. gate=0, A3=0 → x_left = 7.
+    // All iters: mask & arg0 != 0 → A4=7. gate=0, A3=0 → x_left = 7.
     for (let iter = 0; iter < LOOP_ITER_COUNT; iter++) {
       expect(calls[iter * CALLS_PER_ITER]!.x).toBe(7);
     }
   });
 
-  it("cella destra: x_right = (15 - A4) + A3 (gate=0 → A3=0)", () => {
+  it("right cell: x_right = (15 - A4) + A3 (gate=0 → A3=0)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -200,7 +200,7 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("trailing arg (extra) always 0 in all le 32 chiamate", () => {
+  it("trailing arg (extra) always 0 in all 32 calls", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const calls: CapturedCall[] = [];
@@ -214,18 +214,18 @@ describe("stateSub5D2A (FUN_5D2A)", () => {
     }
   });
 
-  it("returns l'last D0 of inner3784 (per fedeltà al binario)", () => {
+  it("returns the last D0 of inner3784 (for fidelity to the binary)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     let counter = 0;
     const r = stateSub5D2A(state, rom, 0x1234, 0x0007, () => {
       counter++;
-      return counter; // last invocato → counter = 32
+      return counter; // last invoked → counter = 32
     });
     expect(r).toBe(32);
   });
 
-  it("ordine chiamate: per iter k, first cella sinistra (call 2k), poi destra (2k+1)", () => {
+  it("call order: per iter k, first left cell (call 2k), then right (2k+1)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const order: ("L" | "R")[] = [];

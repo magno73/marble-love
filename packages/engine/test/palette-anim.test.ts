@@ -1,7 +1,7 @@
 /**
  * Test palette animations 1 + 2 (FUN_00026BEE, FUN_00026C78).
  *
- * **Status**: bit-perfect verificati vs binary (2000/2000 match totali)
+ * **Status**: bit-perfect verified against the binary (2000/2000 total matches)
  * via `packages/cli/src/test-palette-anim-parity.ts`.
  */
 
@@ -56,7 +56,7 @@ describe("paletteAnim1Tick", () => {
   });
 
   it("active obj: counter incremented + palette written", () => {
-    // Sets dati noti in the rom per la lookup table
+    // Set known data in the rom for the lookup table
     const { state, rom } = setup({ count: 1, type: 1, ctr: 10, skip: 0 });
     // type != 0 → table A @ 0x20B54
     // idxSigned = sext8(10) >> 2 = 2
@@ -149,7 +149,7 @@ describe("paletteAnim2Tick (FUN_26C78)", () => {
     return { state, rom };
   }
 
-  it("anim 2 NOT controlla skip flag (diff vs anim 1)", () => {
+  it("anim 2 does NOT check the skip flag (diff vs anim 1)", () => {
     // Skip flag set, but anim 2 ignores it -> counter increments, palette updates.
     const { state, rom } = setup2({ count: 1, type: 0, ctr: 0, skip: 1 });
     rom.program[0x20B74] = 0xCC; rom.program[0x20B75] = 0xDD;
@@ -159,7 +159,7 @@ describe("paletteAnim2Tick (FUN_26C78)", () => {
     expect(state.colorRam[0x17]).toBe(0xDD);
   });
 
-  it("anim 2 wrap signed a 0x1F (vs 0x3F of anim 1)", () => {
+  it("anim 2 signed wrap at 0x1F (vs 0x3F of anim 1)", () => {
     // ctr = 31 → +1 = 32. Signed 32 > 31 → reset.
     const { state, rom } = setup2({ count: 1, type: 0, ctr: 31, skip: 0 });
     paletteAnim2Tick(state, rom);

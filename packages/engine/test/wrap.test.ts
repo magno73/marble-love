@@ -1,11 +1,11 @@
 /**
- * Test aggressivi su wrap.ts. Bug qui = bug ovunque (PRD §10).
+ * Aggressive tests on wrap.ts. A bug here = a bug everywhere (PRD §10).
  *
  * Coverage target:
- *  - Overflow / underflow espliciti
+ *  - Explicit overflow / underflow
  *  - Sign extension
- *  - Bit shift edge case (shift of 0, shift > width)
- *  - Math.imul vs operatore *
+ *  - Bit shift edge cases (shift of 0, shift > width)
+ *  - Math.imul vs the * operator
  *  - Round-trip brand/unbrand
  *  - Pack/unpack 8↔16↔32
  */
@@ -109,14 +109,14 @@ describe("u16 arithmetic", () => {
     expect(raw(u16_rotl(as_u16(0xa5a5), 8))).toBe(0xa5a5);
     expect(raw(u16_rotl(as_u16(0x1234), 16))).toBe(0x1234);
   });
-  it("u16_rotr inverso of u16_rotl", () => {
+  it("u16_rotr is the inverse of u16_rotl", () => {
     const v = as_u16(0xdead);
     expect(raw(u16_rotr(u16_rotl(v, 5), 5))).toBe(0xdead);
   });
 });
 
-describe("u32 arithmetic — il caso critico per il 68010", () => {
-  it("u32_add wraps a 2^32", () => {
+describe("u32 arithmetic — the critical case for the 68010", () => {
+  it("u32_add wraps at 2^32", () => {
     expect(raw(u32_add(as_u32(0xffffffff), as_u32(1)))).toBe(0);
     expect(raw(u32_add(as_u32(0x80000000), as_u32(0x80000000)))).toBe(0);
   });
@@ -129,7 +129,7 @@ describe("u32 arithmetic — il caso critico per il 68010", () => {
     // overflow: imul(0x10000, 0x10000) = 0
     expect(raw(u32_mul(as_u32(0x10000), as_u32(0x10000)))).toBe(0);
   });
-  it("u32_shl rispetta wraparound a 32", () => {
+  it("u32_shl respects wraparound at 32", () => {
     expect(raw(u32_shl(as_u32(1), 31))).toBe(0x80000000);
     expect(raw(u32_shl(as_u32(1), 32))).toBe(1); // JS << modulo 32
   });

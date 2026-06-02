@@ -3,19 +3,19 @@
  * test-sprite-pos-update-1bab2-parity.ts — differential FUN_0001BAB2 vs
  * `spritePosUpdate1BAB2`.
  *
- * FUN_0001BAB2 (86 byte): "sprite position-update with redraw-on-tile-change".
+ * FUN_0001BAB2 (86 bytes): "sprite position-update with redraw-on-tile-change".
  * 0x400690..0x400695, derives the 5 tile fields via FUN_0001BB50, and — if the
  *
- * **Strategia parity**:
- *   - JSR a FUN_0001BB50 (deriveSpriteFields) **lasciato live**: piccolo,
+ * **Parity strategy**:
+ *   - JSR to FUN_0001BB50 (deriveSpriteFields) **left live**: small,
  *   - JSR to FUN_0001CABA (heavy renderer) **stubbed with RTS**: too
  *   - Compare workRam @ 0x400690..0x4006A3 (range written by BAB2 + derive).
  *
- * **Suite**:
- *   - A: random struct + state random → mix tile-change/no-change.
+ * **Suites**:
+ *   - A: random struct + random state → mix tile-change/no-change.
  *   - D: edge cases: sign-bit, 0xFFFF, 0x0000.
  *
- * Uso: npx tsx packages/cli/src/test-sprite-pos-update-1bab2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sprite-pos-update-1bab2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -40,7 +40,7 @@ const FUN_1CABA = 0x0001caba;
 
 /**
  * Patch JSR-stubs:
- *   - FUN_0001CABA → RTS (0x4E75) per neutralize il heavy renderer.
+ *   - FUN_0001CABA → RTS (0x4E75) to neutralize the heavy renderer.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
     argBytes[0xc] = (wx >>> 8) & 0xff; argBytes[0xd] = wx & 0xff;
     argBytes[0x10] = (wy >>> 8) & 0xff; argBytes[0x11] = wy & 0xff;
     argBytes[0x14] = (wz >>> 8) & 0xff; argBytes[0x15] = wz & 0xff;
-    // Edge-case also per i globals correnti
+    // Edge-case also for the current globals
     const gx = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const gy = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     globBytes[6] = (gx >>> 8) & 0xff; globBytes[7] = gx & 0xff; // 0x400696 (TILE_X)
@@ -232,7 +232,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

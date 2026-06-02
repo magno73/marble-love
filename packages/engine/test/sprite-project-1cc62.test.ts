@@ -55,7 +55,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     writeWord(s, STRUCT_OFF + 0x0e, 30);
     writeWord(s, STRUCT_OFF + 0x10, 50);
     writeWord(s, STRUCT_OFF + 0x1a, 5);
-    writeWord(s, BGE_FLAG_OFF, 0); // forza else
+    writeWord(s, BGE_FLAG_OFF, 0); // force else
     writeWord(s, FRAC_X_OFF, 4);
     writeWord(s, FRAC_Y_OFF, 7);
 
@@ -69,7 +69,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(r).toBe(0x50000 + (40 << 13));
   });
 
-  it("invoca subs.fun_1CABA only if argLong LSB != 0", () => {
+  it("invokes subs.fun_1CABA only if argLong LSB != 0", () => {
     const s = emptyGameState();
     writeWord(s, BGE_FLAG_OFF, 1);
     let calls = 0;
@@ -87,13 +87,13 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(calls).toBe(2);
   });
 
-  it("subs assente non crasha also con argLong != 0 (no-op silenzioso)", () => {
+  it("absent subs does not crash even with argLong != 0 (silent no-op)", () => {
     const s = emptyGameState();
     writeWord(s, BGE_FLAG_OFF, 1);
     expect(() => spriteProject1CC62(s, 1)).not.toThrow();
   });
 
-  it("return packing con cz negativo: high word sext-ext", () => {
+  it("return packing with negative cz: high word sext-ext", () => {
     const s = emptyGameState();
     // cz = 0xFFFF (= -1 sext), all others = 0 -> frac = 0 -> product = 0.
     writeWord(s, STRUCT_OFF + 0x04, 0);
@@ -112,7 +112,7 @@ describe("spriteProject1CC62 (FUN_0001CC62)", () => {
     expect(r).toBe(-65536); // i32 signed
   });
 
-  it("wrap-around modulo 2^16 sui delta (cx1=0, cx0=1 → -1 = 0xFFFF)", () => {
+  it("wrap-around modulo 2^16 on the deltas (cx1=0, cx0=1 → -1 = 0xFFFF)", () => {
     const s = emptyGameState();
     writeWord(s, STRUCT_OFF + 0x04, 1); // cx0
     writeWord(s, STRUCT_OFF + 0x0e, 0); // cx1

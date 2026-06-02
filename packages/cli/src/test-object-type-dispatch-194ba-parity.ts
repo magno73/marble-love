@@ -4,31 +4,31 @@
  * `objectTypeDispatch194BA`.
  *
  * `FUN_000194BA` (132 byte): "object type-dispatch by entry[0x1A]". Branch
- * su `obj[0x1A]` signed:
+ * on `obj[0x1A]` signed:
  *   - kind == 0: jsr FUN_1960E(obj) ; jsr FUN_1953E(obj)
  *   - kind == 1: jsr FUN_1973C(obj) ; jsr FUN_1953E(obj)
- *   - kind == 2: dispatch su obj[0x25] → write long a obj+0x1C
+ *   - kind == 2: dispatch on obj[0x25] → write long to obj+0x1C
  *       0x07 → 0x21F8A,  0x08 → 0x21A62,  otherwise → 0x21EFE
  *   - everything else (negative and >= 3): no-op.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - All three of the JSR (`FUN_0001960E`, `FUN_0001973C`, `FUN_0001953E`) are
  *     **stubbed with RTS** (0x4E75): the only observable side-effect on the
  *     binary side effect left is the write to `obj+0x1C` (case 2 only).
  *   - TS: `subs.{fun_1960e, fun_1973c, fun_1953e} = no-op` → matching of the
  *     stub.
- *   - Compare workRam @ obj+0..0x2F (48 byte) — covers all the offset
+ *   - Compare workRam @ obj+0..0x2F (48 byte) — covers all the offsets
  *     read/written by the dispatcher.
  *
- * **Suite** (500 totali):
- *   - A: kind ∈ [-2, -1, 0, 1, 2, 3, 4, 0x7F] random — covers all i branch.
+ * **Suites** (500 total):
+ *   - A: kind ∈ [-2, -1, 0, 1, 2, 3, 4, 0x7F] random — covers all branches.
  *   - B: forced kind == 2, sub-type in {7, 8, default random} — covers the 3
  *     branches of case 2.
- *   - C: kind random byte, sub-type random byte, struct random — fuzz puro.
+ *   - C: kind random byte, sub-type random byte, struct random — pure fuzz.
  *   - D: edge cases (kind = 0x80/0xFF/0x7F/0x00/0x01/0x02; sub-type 0x00/
  *     0x07/0x08/0x09/0xFF).
  *
- * Uso: npx tsx packages/cli/src/test-object-type-dispatch-194ba-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-type-dispatch-194ba-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

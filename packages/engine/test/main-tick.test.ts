@@ -1,10 +1,10 @@
 /**
  * main-tick.test.ts — smoke test of the orchestrator.
  *
- *  2. Incrementi `state.clock.frame` (counter canonico interno)
+ *  2. Increments `state.clock.frame` (internal canonical counter)
  *
- * **Nota**: workRam[0x14] and workRam[0x16] NOT are frame counter monotonic.
- * mailbox @ 0x16, sound-timer mirror @ 0x14). Vedi commit B6: il preambolo
+ * **Note**: workRam[0x14] and workRam[0x16] are NOT a monotonic frame counter.
+ * mailbox @ 0x16, sound-timer mirror @ 0x14). See commit B6: the preamble
  *
  */
 
@@ -45,13 +45,13 @@ function loadProgramRom(): ReturnType<typeof emptyRomImage> {
 }
 
 describe("mainTick smoke", () => {
-  it("non solleva eccezioni con state and ROM vuoti", () => {
+  it("does not throw exceptions with empty state and ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => mainTick(s, { rom })).not.toThrow();
   });
 
-  it("increments state.clock.frame (counter canonico interno)", () => {
+  it("increments state.clock.frame (internal canonical counter)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const start = s.clock.frame;
@@ -61,7 +61,7 @@ describe("mainTick smoke", () => {
     expect(s.clock.frame).toBe(start + 2);
   });
 
-  it("skipFrameCounter: non increments state.clock.frame", () => {
+  it("skipFrameCounter: does not increment state.clock.frame", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const start = s.clock.frame;
@@ -69,7 +69,7 @@ describe("mainTick smoke", () => {
     expect(s.clock.frame).toBe(start);
   });
 
-  it("flag 0x39A set → runs prefix scroll sync (latcha y, clear flag)", () => {
+  it("flag 0x39A set → runs prefix scroll sync (latches y, clear flag)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x39a] = 1;
@@ -81,13 +81,13 @@ describe("mainTick smoke", () => {
     expect(s.workRam[0x03]).toBe(0xcd);
   });
 
-  it("100 tick consecutivi senza eccezioni", () => {
+  it("100 consecutive ticks without exceptions", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < 100; i++) {
       expect(() => mainTick(s, { rom })).not.toThrow();
     }
-    // state.clock.frame ha registrato i 100 tick
+    // state.clock.frame has recorded the 100 ticks
     expect(s.clock.frame).toBe(100);
   });
 
@@ -132,7 +132,7 @@ describe("mainTick smoke", () => {
     expect(() => mainTick(s, { rom, inputMmio: 0xfc })).not.toThrow();
   });
 
-  it("trackball deltas si propagano a gameTickTimers + trackball state", () => {
+  it("trackball deltas propagate to gameTickTimers + trackball state", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     mainTick(s, { rom });

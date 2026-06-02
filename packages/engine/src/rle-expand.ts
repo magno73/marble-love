@@ -1,9 +1,9 @@
 /**
  * rle-expand.ts — replica `FUN_00018FD0` (42 byte): RLE-style expand.
  *
- * Espande una lista (count, value) word pairs in un array of word.
+ * Expands a list of (count, value) word pairs into an array of words.
  *
- * Logica:
+ * Logic:
  *   A0 = *(*0x400474 + 0xC) (long pointer to compressed source)
  *   A1 = 0x400478 (destination)
  *   loop:

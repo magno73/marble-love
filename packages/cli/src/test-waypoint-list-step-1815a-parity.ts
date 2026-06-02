@@ -3,23 +3,23 @@
  * test-waypoint-list-step-1815a-parity.ts — differential FUN_0001815A vs
  * `waypointListStep1815A`.
  *
- * FUN_0001815A (352 byte): "entity homing-via-waypoint-list step". Walka la
+ * FUN_0001815A (352 bytes): "entity homing-via-waypoint-list step". Walks the
  *
- * **Strategia parity**:
- *   - `FUN_0000012a` (sound dispatch) **stubbed with RTS** (0x4E75) for
+ * **Parity strategy**:
+ *   - `FUN_0000012a` (sound dispatch) **stubbed with RTS** (0x4E75) to
  *     neutralize side effects. TS uses `subs.fun_012a = noop`.
  *   - `FUN_00026196` (flag-scaled magnitude dispatch) **stubbed with RTS**.
  *     TS uses `subs.fun_26196 = noop`.
  *   - Compare:
- *       * `entity[0x00..0x6F]` (0x70 byte = full entity stride, covers 0x6e)
- *       * waypoint list bytes (0x40 byte a partire from the LIST_BASE)
+ *       * `entity[0x00..0x6F]` (0x70 bytes = full entity stride, covers 0x6e)
+ *       * waypoint list bytes (0x40 bytes starting from the LIST_BASE)
  *       * `*0x00400446` (long pointer)
  *       * `*0x0040075a` (word flag)
  *
- * **Suite** (4 × 125 = 500):
- *   - A: random — entity + lista random
+ * **Suites** (4 × 125 = 500):
+ *   - A: random — random entity + list
  *
- * Uso: npx tsx packages/cli/src/test-waypoint-list-step-1815a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-waypoint-list-step-1815a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     return new Array(ENTITY_SIZE).fill(0).map(() => rb());
   }
 
-  // Genera lista valida: N record (sx != 0 per non-terminator) + terminator.
+  // Generate a valid list: N records (sx != 0 for non-terminator) + terminator.
   // sx in [-128, -1] U [1, 127] to avoid 0.
   function genList(nRecords: number): number[] {
     const list = new Array(LIST_SIZE).fill(0);
@@ -286,13 +286,13 @@ async function main(): Promise<void> {
 
   // ─── Suite B: forced in-range ─────────────────────────────────────────
   console.log(
-    `\n=== Suite B: in-range forzato (target ≈ sx<<19) — ${perSuite} cases ===`,
+    `\n=== Suite B: forced in-range (target ≈ sx<<19) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const entity = genEntity();
     // sx=1, target_x = 0xC0000 (= (1<<19) + 0x40000) → delta=0 (in range).
-    // Setta target_x and target_y a 0xC0000.
+    // Set target_x and target_y to 0xC0000.
     entity[0x0c] = 0x00;
     entity[0x0d] = 0x0c;
     entity[0x0e] = 0x00;
@@ -318,7 +318,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: forced out-of-range ────────────────────────────────────
   console.log(
-    `\n=== Suite C: out-of-range forzato (target=0, sx grande) — ${perSuite} cases ===`,
+    `\n=== Suite C: forced out-of-range (target=0, large sx) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -329,14 +329,14 @@ async function main(): Promise<void> {
     // entity.x = 0, entity.y = 0
     entity[0x00] = entity[0x01] = entity[0x02] = entity[0x03] = 0;
     entity[0x04] = entity[0x05] = entity[0x06] = entity[0x07] = 0;
-    // entity.z partendo da 0
+    // entity.z starting from 0
     entity[0x08] = entity[0x09] = entity[0x0a] = entity[0x0b] = 0;
     // gravity flag toggle 50/50
     entity[0x36] = (i & 1) === 0 ? 0 : 1;
 
-    // Lista: 1 record, sx grande (out of range)
+    // List: 1 record, large sx (out of range)
     const list = new Array(LIST_SIZE).fill(0);
-    list[0] = 0x10 + (i & 0x7e); // sx in [0x10..0x8f] non zero
+    list[0] = 0x10 + (i & 0x7e); // sx in [0x10..0x8f] non-zero
     if (list[0] === 0) list[0] = 0x10;
     list[1] = 0x10 + (i & 0x7e);
     list[2] = rb();
@@ -399,7 +399,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

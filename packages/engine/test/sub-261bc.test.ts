@@ -1,12 +1,12 @@
 /**
- * sub-261bc.test.ts — smoke tests per FUN_261BC replica.
+ * sub-261bc.test.ts — smoke tests for the FUN_261BC replica.
  */
 import { describe, it, expect } from "vitest";
 import { fun261BC } from "../src/sub-261bc.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("fun261BC (FUN_261BC)", () => {
-  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
+  it("does not raise exceptions with empty state and empty slot", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     expect(() => fun261BC(s, 0x400a20, 0x40000, rom)).not.toThrow();
@@ -17,13 +17,13 @@ describe("fun261BC (FUN_261BC)", () => {
     const rom = new Uint8Array(0x80000);
     const off = 0xa20;
     fun261BC(s, 0x400a20, 0x40000, rom);
-    // VX/VY restano 0
+    // VX/VY remain 0
     for (let i = 0; i < 8; i++) {
       expect(s.workRam[off + i] ?? 0).toBe(0);
     }
   });
 
-  it("magnitude < dist: VX/VY scalati; per slot != 0x400018/0x4000FA niente angle", () => {
+  it("magnitude < dist: VX/VY scaled; for slot != 0x400018/0x4000FA no angle", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     const off = 0xa20;
@@ -48,7 +48,7 @@ describe("fun261BC (FUN_261BC)", () => {
     expect(s.workRam[off + 0xc5] ?? 0).toBe(0);
   });
 
-  it("magnitude >= dist: VX/VY non scalati", () => {
+  it("magnitude >= dist: VX/VY not scaled", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     const off = 0xa20;
@@ -59,14 +59,14 @@ describe("fun261BC (FUN_261BC)", () => {
     s.workRam[off + 0x06] = 0x01; s.workRam[off + 0x07] = 0x00;
     // magnitude 0x40000 >> dist 0x160 → no clamp
     fun261BC(s, 0x400a20, 0x40000, rom);
-    // VX/VY invariati
+    // VX/VY unchanged
     expect(s.workRam[off + 0x02]).toBe(0x01);
     expect(s.workRam[off + 0x03]).toBe(0x00);
     expect(s.workRam[off + 0x06]).toBe(0x01);
     expect(s.workRam[off + 0x07]).toBe(0x00);
   });
 
-  it("slot 0x400018 ramo angle: scrittura a (0xc4,A2)", () => {
+  it("slot 0x400018 angle branch: write to (0xc4,A2)", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     rom[0x1eef8] = 0x00; rom[0x1eef9] = 0x10; // word[0] = 16
@@ -83,7 +83,7 @@ describe("fun261BC (FUN_261BC)", () => {
     expect(s.workRam[off + 0xc4] ?? 0).toBeGreaterThanOrEqual(0);
   });
 
-  it("returns D0: magnitude se no clamp", () => {
+  it("returns D0: magnitude if no clamp", () => {
     const s = emptyGameState();
     const rom = new Uint8Array(0x80000);
     // VX = VY = 0 → dist = 0; magnitude (0x40000) >= 0 → no clamp → ret = magnitude

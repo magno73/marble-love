@@ -119,7 +119,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, 0x00401F42, 2, 0);
     stateInst.workRam[0x1F00] = 0; stateInst.workRam[0x1F01] = 0;
     stateInst.workRam[0x1F42] = 0; stateInst.workRam[0x1F43] = 0;
-    pokeMem(cpu, STRUCT + 0, 1, 0);  // with the=0
+    pokeMem(cpu, STRUCT + 0, 1, 0);  // col=0
     pokeMem(cpu, STRUCT + 1, 1, 0);  // tickOff=0
     pokeMem(cpu, STRUCT + 2, 4, STRING_ADDR);
     pokeMem(cpu, STRUCT + 6, 1, 0); // marker=0

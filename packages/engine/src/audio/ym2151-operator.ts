@@ -253,7 +253,7 @@ function blockFreqToBasePhaseStep(blockFreq: number, delta: number): number {
   return (OPM_PHASE_STEP_TABLE[effFreq] ?? 0) >> (block ^ 7);
 }
 
-/** Aggiorna phaseInc dato il block/frequency OPM (KC+KF), DT1/DT2 and MUL. */
+/** Updates phaseInc given the OPM block/frequency (KC+KF), DT1/DT2 and MUL. */
 export function operatorSetOpmBlockFreq(
   op: Operator,
   blockFreq: number,
@@ -269,16 +269,17 @@ export function operatorSetOpmBlockFreq(
   op.phaseInc = Math.trunc((detuned * multiple) / 2);
 }
 
-/** Aggiorna phaseInc dato il key code base (Hz) and MUL.
- * phaseInc is measured in phase units per sample in the 20-bit domain. */
+/** Updates phaseInc given the key code base (Hz) and MUL.
+ * phaseInc is measured in phase units per sample in the 20-bit domain.
+ * @public */
 export function operatorSetFreq(op: Operator, baseFreqHz: number, sampleRate: number): void {
   const mul = MUL_TABLE[op.mul] ?? 1;
   // Phase increment per sample in the 20-bit phase domain.
   op.phaseInc = (baseFreqHz * mul / sampleRate) * (1 << 20);
 }
 
-/** Avanza phase per 1 sample. Ritorna sine output × envelope attenuation.
- * Input `modulation`: phase offset da modulator operatori (FM). */
+/** Advances the phase by 1 sample. Returns sine output × envelope attenuation.
+ * Input `modulation`: phase offset from modulator operators (FM). */
 export function operatorSample(
   op: Operator,
   modulation: number = 0,
@@ -288,7 +289,7 @@ export function operatorSample(
   // Advance envelope (sub-counter)
   const envAtt = envelopeAdvance(op.env, op.ar, op.d1r, op.d2r, op.rr, op.d1l, op.ks, op.keyCode);
   // Total attenuation = envelope + TL_shift
-  // TL contribution: 0=loud, 127=silent. Linear mapping a 0..1023 (= 10 bit).
+  // TL contribution: 0=loud, 127=silent. Linear mapping to 0..1023 (= 10 bit).
   const tlAtt = op.tl << 3;  // TL × 8 = 0..1016
   const totalAtt = Math.min(1023, envAtt + tlAtt + (op.amEnabled ? amOffset : 0));
   const quiet = envAtt > EG_QUIET;

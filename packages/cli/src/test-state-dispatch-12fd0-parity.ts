@@ -4,43 +4,43 @@
  * `stateDispatch12FD0`.
  *
  *
- * **Strategia stub injection**:
+ * **Stub injection strategy**:
  *
  *   1. **FUN_12D46** (40 bytes @ 0x12D46): replaced with a stub (26 bytes)
- *      il counter @ 0x401904 of +4.
+ *      that advances the counter @ 0x401904 by +4.
  *
- *      Layout stub (26 byte):
- *        movea.l  #$401900, A0         ; 207C 0040 1900   (6 byte)
- *        move.l   $401904.l, D1        ; 2239 0040 1904   (6 byte)
- *        adda.l   D1, A0               ; D1C1             (2 byte)
- *        move.l   (4,SP), (A0)         ; 20AF 0004        (4 byte)
- *        addq.l   #4, $401904.l        ; 54B9 0040 1904   (6 byte)
- *        rts                           ; 4E75             (2 byte)
+ *      Stub layout (26 bytes):
+ *        movea.l  #$401900, A0         ; 207C 0040 1900   (6 bytes)
+ *        move.l   $401904.l, D1        ; 2239 0040 1904   (6 bytes)
+ *        adda.l   D1, A0               ; D1C1             (2 bytes)
+ *        move.l   (4,SP), (A0)         ; 20AF 0004        (4 bytes)
+ *        addq.l   #4, $401904.l        ; 54B9 0040 1904   (6 bytes)
+ *        rts                           ; 4E75             (2 bytes)
  *
  *   2. **FUN_11AC2** (22 bytes @ 0x11AC2): replaced with a stub (8 bytes)
  *      that increments byte counter @ 0x401908 by 1.
  *
- *      Layout stub (8 byte):
- *        addq.b   #1, $401908.l        ; 5439 0040 1908   (6 byte)
- *        rts                           ; 4E75             (2 byte)
+ *      Stub layout (8 bytes):
+ *        addq.b   #1, $401908.l        ; 5439 0040 1908   (6 bytes)
+ *        rts                           ; 4E75             (2 bytes)
  *
  *   3. **FUN_13068** (very large @ 0x13068): replaced with a stub (26 bytes)
  *
- *      Layout stub (26 byte):
- *        movea.l  #$401910, A0         ; 207C 0040 1910   (6 byte)
- *        move.l   $401974.l, D1        ; 2239 0040 1974   (6 byte)
- *        adda.l   D1, A0               ; D1C1             (2 byte)
- *        move.l   (4,SP), (A0)         ; 20AF 0004        (4 byte)
- *        addq.l   #4, $401974.l        ; 58B9 0040 1974   (6 byte)
- *        rts                           ; 4E75             (2 byte)
+ *      Stub layout (26 bytes):
+ *        movea.l  #$401910, A0         ; 207C 0040 1910   (6 bytes)
+ *        move.l   $401974.l, D1        ; 2239 0040 1974   (6 bytes)
+ *        adda.l   D1, A0               ; D1C1             (2 bytes)
+ *        move.l   (4,SP), (A0)         ; 20AF 0004        (4 bytes)
+ *        addq.l   #4, $401974.l        ; 58B9 0040 1974   (6 bytes)
+ *        rts                           ; 4E75             (2 bytes)
  *
- *   0x401900..0x401903  — last arg a fun_12d46 (long BE)
- *   0x401974..0x401977  — counter ring fun_13068 (long BE)
+ *   0x401900..0x401903  — last arg to fun_12d46 (long BE)
+ *   0x401974..0x401977  — ring counter for fun_13068 (long BE)
  *
- *   - C: gameMode!=2 (various combinazioni of flag75c/75e)
+ *   - C: gameMode!=2 (various combinations of flag75c/75e)
  *
  *
- * Uso: npx tsx packages/cli/src/test-state-dispatch-12fd0-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-dispatch-12fd0-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -482,7 +482,7 @@ async function main(): Promise<void> {
   totalOk += okE;
 
   // ── Summary ───────────────────────────────────────────────────────────────
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(

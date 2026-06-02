@@ -4,11 +4,11 @@
  *
  * `FUN_000121B8` (1634 byte): "object physics-update + collision + state-
  *
- * **Strategia parity — stub integrale**:
+ * **Parity strategy — full stubbing**:
  *   - velocity integration (add.l)
  *   - bounds checking (swapLongPair via jsr $12886)
  *   - state byte dispatch (conditional vectorScale, also stubbed)
- *   - write-back ai globals (0x400684/688/68C, 0x40069A/9C, 0x400696/698)
+ *   - write-back to globals (0x400684/688/68C, 0x40069A/9C, 0x400696/698)
  *
  *     FUN_1BAB2  FUN_1CC62  FUN_1C676  FUN_12886  FUN_1B5C2
  *     FUN_29CCE  FUN_1BC88  FUN_14E92  FUN_175C8  FUN_1881C
@@ -19,7 +19,7 @@
  *
  *     D0 = 0xFF during global writes).
  *
- * **Strategia parity alternativa per i sub-callee non stubbabili**:
+ * **Alternative parity strategy for the non-stubbable sub-callees**:
  *
  * **Compare**:
  *   * game-mode word `[0x400394]` (2 byte)
@@ -29,7 +29,7 @@
  *   - C: "out-of-range" non-player — obj.z grande
  *   - D: player edge cases — A2 = 0x400018
  *
- * Uso: npx tsx packages/cli/src/test-helper-121b8-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-121b8-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -478,7 +478,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ─── Summary ─────────────────────────────────────────────────────────────
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);

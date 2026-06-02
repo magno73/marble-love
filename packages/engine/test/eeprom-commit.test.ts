@@ -5,7 +5,7 @@
  * iter > 0 + clamp) and the invariant "in the early-exit path workRam does not change".
  *
  * Bit-perfect parity (500 random cases) verified in
- * `packages/cli/src/test-eeprom-commit-parity.ts` vs l'oracle Musashi.
+ * `packages/cli/src/test-eeprom-commit-parity.ts` vs the Musashi oracle.
  */
 
 import { describe, it, expect } from "vitest";
@@ -35,7 +35,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    setStatus(s.workRam, ptr - 0x400000, 0xe5); // >= 0xE0 -> helper torna 0
+    setStatus(s.workRam, ptr - 0x400000, 0xe5); // >= 0xE0 -> helper returns 0
     s.workRam[FF5_OFF] = 0x42;
     s.workRam[FF7_OFF] = 0x77;
 
@@ -46,16 +46,16 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(s.workRam[FF7_OFF]).toBe(0x77);
   });
 
-  it("complement mismatch (status != ~complByte) -> status forzato a 0; D1=1; computazione normale", () => {
+  it("complement mismatch (status != ~complByte) -> status forced to 0; D1=1; normal computation", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    // status non-complementare -> validato a 0 -> D1 = (0 & 3) + 1 = 1.
+    // non-complementary status -> validated to 0 -> D1 = (0 & 3) + 1 = 1.
     s.workRam[ptrOff + 0xa] = 0x55;
     s.workRam[ptrOff + 0xb] = 0x55; // ~0x55 = 0xAA != 0x55 -> mismatch
     s.workRam[FF5_OFF] = 0x10;
-    s.workRam[FF7_OFF] = 0x05; // 5 iter (sub 1 ciascuna)
+    s.workRam[FF7_OFF] = 0x05; // 5 iters (sub 1 each)
 
     const r = eepromCommit(s);
     // Drain: counter 5 -> 0 (5 iter), acc 0x10 + 5 = 0x15 (<=0x19, no clamp)
@@ -65,14 +65,14 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0xfc);
   });
 
-  it("D1=4, drain finisce con counter < D1 (no underflow byte)", () => {
+  it("D1=4, drain ends with counter < D1 (no byte underflow)", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
     setStatus(s.workRam, ptrOff, 0x07); // (7 & 3) + 1 = 4
     s.workRam[FF5_OFF] = 0x00;
-    s.workRam[FF7_OFF] = 0x0a; // 10/4 = 2 iter, resto 2
+    s.workRam[FF7_OFF] = 0x0a; // 10/4 = 2 iters, remainder 2
 
     const r = eepromCommit(s);
     expect(s.workRam[FF7_OFF]).toBe(2);
@@ -81,14 +81,14 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(24);
   });
 
-  it("clamp a 0x19: acc that supera 0x19 is clampato and poi scaled", () => {
+  it("clamp at 0x19: acc that exceeds 0x19 is clamped and then scaled", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
     setStatus(s.workRam, ptrOff, 0x00); // D1 = 1
     s.workRam[FF5_OFF] = 0x18; // 24
-    s.workRam[FF7_OFF] = 0x05; // drena 5 -> acc=0x18+5=0x1D > 0x19 -> clamp 0x19
+    s.workRam[FF7_OFF] = 0x05; // drains 5 -> acc=0x18+5=0x1D > 0x19 -> clamp 0x19
 
     const r = eepromCommit(s);
     expect(s.workRam[FF7_OFF]).toBe(0);
@@ -97,7 +97,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0x12c);
   });
 
-  it("counter < divisor a inizio loop: zero iter, acc invariato, result = (acc*12)/D1", () => {
+  it("counter < divisor at loop start: zero iters, acc unchanged, result = (acc*12)/D1", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -113,7 +113,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(15);
   });
 
-  it("status = 0xDF (below soglia per 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
+  it("status = 0xDF (below threshold by 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -127,7 +127,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0);
   });
 
-  it("status = 0xE0 esatto: helper returns 0 -> early exit 0x18", () => {
+  it("status = 0xE0 exact: helper returns 0 -> early exit 0x18", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;

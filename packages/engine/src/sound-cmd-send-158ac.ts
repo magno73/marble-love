@@ -1,7 +1,7 @@
 /**
  * sound-cmd-send-158ac.ts - replica of `FUN_000158AC` (32 bytes).
  *
- * **Disasm 0x158AC..0x158CB** (confermato via ghidra_disasm_at.py):
+ * **Disasm 0x158AC..0x158CB** (confirmed via ghidra_disasm_at.py):
  *
  *   000158ac  move.b (0x7,SP),D0b        ; D0.b = low byte of pushed long
  *   000158b0  tst.w  (0x004003b8).l      ; flag "skip" word @ workRam+0x3B8

@@ -8,7 +8,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("soundDispatchSend (FUN_3E1A)", () => {
-  it("non solleva eccezioni con state and ROM vuoti", () => {
+  it("does not throw with empty state and ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => soundDispatchSend(s, rom, 0x0000)).not.toThrow();
@@ -22,7 +22,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     s.workRam[0x1ffd] = 0x40;
     s.workRam[0x1ffe] = 0x1d;
     s.workRam[0x1fff] = 0x00;
-    // *(A2+0xA) = 0xE5, *(A2+0xB) = ~0xE5 = 0x1A → D3 valido = 0xE5 >= 0xE0
+    // *(A2+0xA) = 0xE5, *(A2+0xB) = ~0xE5 = 0x1A → D3 valid = 0xE5 >= 0xE0
     s.workRam[0x1d0a] = 0xe5;
     s.workRam[0x1d0b] = 0x1a;
     // Pre-fill 0x1FF5 with marker.
@@ -31,7 +31,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     expect(s.workRam[0x1ff5]).toBe(0); // cleared
   });
 
-  it("complement byte non match → D3 = 0", () => {
+  it("complement byte does not match → D3 = 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1ffc] = 0x00;
@@ -44,7 +44,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     expect(() => soundDispatchSend(s, rom, 0x0000)).not.toThrow();
   });
 
-  it("argLong=0 con D3=0: no modifies (D2 always 0)", () => {
+  it("argLong=0 with D3=0: no modifications (D2 always 0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1ffc] = 0x00;
@@ -61,7 +61,7 @@ describe("soundDispatchSend (FUN_3E1A)", () => {
     expect(s.workRam[0x1ff7]).toBe(0);
   });
 
-  it("non solleva con various argLong random", () => {
+  it("does not throw with various random argLong values", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.workRam[0x1ffc] = 0x00;

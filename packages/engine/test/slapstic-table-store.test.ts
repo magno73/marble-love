@@ -30,20 +30,20 @@ function readDstWord(buf: Uint8Array, idx: number): number {
 }
 
 describe("slapsticTableStore (FUN_2FF40)", () => {
-  it("indexWord=0: copies src word in dst[0]", () => {
+  it("indexWord=0: copies src word into dst[0]", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xea39);
 
     slapsticTableStore(buf, SLAPSTIC_BASE, 0);
 
     expect(readDstWord(buf, 0)).toBe(0xea39);
-    // Le altre entry restano 0.
+    // The other entries stay 0.
     expect(readDstWord(buf, 1)).toBe(0);
     expect(readDstWord(buf, 2)).toBe(0);
     expect(readDstWord(buf, 3)).toBe(0);
   });
 
-  it("indexWord=3 (max value caller FUN_2BC5C): copies src word in dst[3]", () => {
+  it("indexWord=3 (max value, caller FUN_2BC5C): copies src word into dst[3]", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xdead);
 
@@ -55,7 +55,7 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     expect(readDstWord(buf, 3)).toBe(0xdead);
   });
 
-  it("indexWord=2: writes a dst[2] = 0x87A4C", () => {
+  it("indexWord=2: writes to dst[2] = 0x87A4C", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xbeef);
 
@@ -66,7 +66,7 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     expect(buf[off + 1]).toBe(0xef);
   });
 
-  it("bit alti of indexWord are ignorati (mask a low word)", () => {
+  it("high bits of indexWord are ignored (masked to low word)", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0x1234);
 
@@ -76,7 +76,7 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     expect(readDstWord(buf, 1)).toBe(0x1234);
   });
 
-  it("indexWord negativo (sign-ext): writes a indirizzo first of DST_BASE", () => {
+  it("negative indexWord (sign-ext): writes to an address before DST_BASE", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xc0de);
 
@@ -101,14 +101,14 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     expect(buf).toEqual(before);
   });
 
-  it("dst outside range: graceful no-op (no throw, no scrittura)", () => {
+  it("dst outside range: graceful no-op (no throw, no write)", () => {
     const buf = makeBuf();
     setSrcWord(buf, 0xface);
     const before = new Uint8Array(buf);
 
     // index=0x8000: doubled=0 (16-bit add wraps), signExt=0 → dst=DST_BASE.
-    const smallBuf = new Uint8Array(0x100); // troppo piccolo
-    setSrcWord(smallBuf, 0xface); // off-by-bound, but non fa throw
+    const smallBuf = new Uint8Array(0x100); // too small
+    setSrcWord(smallBuf, 0xface); // off-by-bound, but does not throw
     expect(() => slapsticTableStore(smallBuf, SLAPSTIC_BASE, 0)).not.toThrow();
     void before;
   });

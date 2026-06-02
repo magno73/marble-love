@@ -1,10 +1,10 @@
 /**
- * bbox-hit-test-19d94.test.ts — smoke tests per `FUN_00019D94`.
+ * bbox-hit-test-19d94.test.ts — smoke tests for `FUN_00019D94`.
  *
  *   1. Early-exit with `*0x400394 != 4`.
  *      (slot[0x1A]=2, slot[0x1C..1F]=0x22546, slot[0x25]=4, slot[0x24]=0,
  *      entity[0x1A]=0x0B, entity[0x57]=0x66) + sound 0x3E.
- *   3. Slot non armate (byte 0x18 == 0) ignorate.
+ *   3. Unarmed slots (byte 0x18 == 0) ignored.
  *   5. Bbox edge: x=slot.x+6 (right) → ble → miss; y=slot.y+8 (bottom) → ble.
  */
 
@@ -65,7 +65,7 @@ function armSlot(s: State, i: number, cx: number, cy: number): void {
   setWordBE(s, off + 0x10, cy & 0xffff);
 }
 
-/** Setta game-mode = 4 and marble pos = (mx, my). */
+/** Set game-mode = 4 and marble pos = (mx, my). */
 function configureCommon(s: State, mx: number, my: number): void {
   setWordBE(s, GAME_MODE_WORD_OFF, REQUIRED_GAME_MODE);
   setWordBE(s, MARBLE_X_WORD_OFF, mx & 0xffff);
@@ -73,7 +73,7 @@ function configureCommon(s: State, mx: number, my: number): void {
 }
 
 describe("bboxHitTest19D94 (FUN_00019D94)", () => {
-  it("early-exit: *0x400394 != 4 → niente loop, perSlot vuoto, hitCount=0", () => {
+  it("early-exit: *0x400394 != 4 → no loop, empty perSlot, hitCount=0", () => {
     const s = emptyGameState();
     setWordBE(s, GAME_MODE_WORD_OFF, 0x0002); // != 4
     armSlot(s, 0, 100, 100);
@@ -92,7 +92,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(readByte(s, slotOff(0) + 0x1a)).toBe(0);
   });
 
-  it("hit semplice: slot armata + marble centrata → all i field scritti", () => {
+  it("simple hit: armed slot + centered marble → all fields written", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 3, 100, 50); // bbox = [94..106) x [46..58)
@@ -123,10 +123,10 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     }
   });
 
-  it("slot non armata (byte 0x18 == 0) → skip; no scrittura", () => {
+  it("unarmed slot (byte 0x18 == 0) → skip; no write", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
-    // Slot 5 al centro but NOT armata
+    // Slot 5 at the center but NOT armed
     setByte(s, slotOff(5) + 0x18, 0);
     setWordBE(s, slotOff(5) + 0x0c, 100);
     setWordBE(s, slotOff(5) + 0x10, 50);
@@ -136,7 +136,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(readByte(s, slotOff(5) + 0x1a)).toBe(0);
   });
 
-  it("slot occupata (byte 0x1A != 0) → skip_state; no scrittura", () => {
+  it("occupied slot (byte 0x1A != 0) → skip_state; no write", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 7, 100, 50);
@@ -157,7 +157,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(r.hitCount).toBe(0);
     expect(r.perSlot[0]).toBe("miss");
 
-    // Invece marble.x = 105 → hit
+    // Instead marble.x = 105 → hit
     const s2 = emptyGameState();
     configureCommon(s2, 105, 50);
     armSlot(s2, 0, 100, 50);
@@ -183,7 +183,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(r2.perSlot[0]).toBe("miss");
   });
 
-  it("multi-hit: 3 slot armate dentro il bbox of the same marble pos", () => {
+  it("multi-hit: 3 armed slots inside the bbox of the same marble pos", () => {
     const s = emptyGameState();
     configureCommon(s, 200, 100);
     armSlot(s, 0, 200, 100);
@@ -203,7 +203,7 @@ describe("bboxHitTest19D94 (FUN_00019D94)", () => {
     expect(r.perSlot[9]).toBe("hit");
   });
 
-  it("subs assente → no crash, soundCommand silenziosamente skippato", () => {
+  it("subs absent → no crash, soundCommand silently skipped", () => {
     const s = emptyGameState();
     configureCommon(s, 100, 50);
     armSlot(s, 2, 100, 50);

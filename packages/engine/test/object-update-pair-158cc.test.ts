@@ -2,7 +2,7 @@
  * object-update-pair-158cc.test.ts — corner cases of objectUpdatePair158CC
  * (FUN_158CC).
  *
- * Bit-perfect parity verificata vs binary in
+ * Bit-perfect parity verified against the binary in
  * `test-object-update-pair-158cc-parity.ts`.
  */
 
@@ -25,7 +25,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("ordine deterministico: slot 0 (0x004009A4) → slot 1 (0x00400A20)", () => {
+  it("deterministic order: slot 0 (0x004009A4) → slot 1 (0x00400A20)", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     objectUpdatePair158CC(s, {
@@ -47,7 +47,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("no side effect su workRam (FUN_158CC pura: solo push/pop su stack)", () => {
+  it("no side effect on workRam (FUN_158CC is pure: only push/pop on stack)", () => {
     const s = emptyGameState();
     // Put arbitrary patterns in slots 0 and 1 plus another one: FUN_158CC itself
     // Does not write; delegates everything to FUN_158F6, a no-op here.
@@ -59,7 +59,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("subs.objectUpdate vede always i due ptr assoluti, non offset", () => {
+  it("subs.objectUpdate always sees the two absolute ptrs, not offsets", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     objectUpdatePair158CC(s, {
@@ -71,7 +71,7 @@ describe("objectUpdatePair158CC (FUN_158CC)", () => {
     expect(calls[1]! >>> 16).toBe(0x0040);
   });
 
-  it("non reads alcun field from the work RAM (state immutabile in input)", () => {
+  it("does not read any field from the work RAM (input state is immutable)", () => {
     // Even with all work RAM full of unusual patterns, the call sequence
     // Remains identical.
     const s1 = emptyGameState();

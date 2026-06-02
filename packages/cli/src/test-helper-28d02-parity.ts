@@ -17,7 +17,7 @@
  *   3. Random flag (0 or 1) passed to both binary and TS.
  *   4. Compare entire PF RAM (0xA00000–0xA01FFF, 0x2000 bytes) after the call.
  *
- * Uso: npx tsx packages/cli/src/test-helper-28d02-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-28d02-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -1,5 +1,5 @@
 /**
- * state-dispatch-15460.test.ts — smoke per FUN_15460.
+ * state-dispatch-15460.test.ts — smoke for FUN_15460.
  *
  * `cli/src/test-state-dispatch-15460-parity.ts` (500/500).
  */
@@ -233,7 +233,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + CURR_ANIM_OFF)).toBe(ANIM_CASE4_Y_NEG);
   });
 
-  it("kind == 5 → caseAnim20E28: anim 0x20E28, (0x26) NOT toccato; (0x25)=1", () => {
+  it("kind == 5 → caseAnim20E28: anim 0x20E28, (0x26) NOT touched; (0x25)=1", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -251,7 +251,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("kind == 6 → caseAnim20D6C: anim 0x20D6C, (0x26) NOT toccato", () => {
+  it("kind == 6 → caseAnim20D6C: anim 0x20D6C, (0x26) NOT touched", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -264,7 +264,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_26_OFF]).toBe(0xaa);
   });
 
-  it("kind == 7 (out-of-range > 6) → solo epilog: anim invariato; 0x25=1; prev <- curr", () => {
+  it("kind == 7 (out-of-range > 6) → epilog only: anim unchanged; 0x25=1; prev <- curr", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -282,7 +282,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("kind == 0xFF (signed -1, blt branch) → solo epilog", () => {
+  it("kind == 0xFF (signed -1, blt branch) → epilog only", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -299,7 +299,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(s.workRam[structPtr - WORK_RAM_BASE + FLAG_25_OFF]).toBe(0x01);
   });
 
-  it("epilog: prev_anim ← curr_anim (0x58 ← 0x5C) always, also con kind 5/6", () => {
+  it("epilog: prev_anim ← curr_anim (0x58 ← 0x5C) always, even with kind 5/6", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
 
@@ -313,7 +313,7 @@ describe("stateDispatch15460 (FUN_15460)", () => {
     expect(readLong(s, structPtr + PREV_ANIM_OFF)).toBe(ANIM_CASE5);
   });
 
-  it("namespace exports compilano: all le costanti accessibili", () => {
+  it("namespace exports compile: all constants accessible", () => {
     expect(KIND_BYTE_OFF).toBe(0x1a);
     expect(POS_X_OFF).toBe(0x0c);
     expect(ANIM_IDLE).toBe(0x00020c18);

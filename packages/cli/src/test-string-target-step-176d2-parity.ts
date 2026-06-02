@@ -3,30 +3,30 @@
  * test-string-target-step-176d2-parity.ts —
  * differential FUN_176D2 vs `stringTargetStep176D2`.
  *
- * a `obj+0x58`, dereferences twice la chain `slot[+0x3a]` per ottenere
+ * a `obj+0x58`, dereferences the chain `slot[+0x3a]` twice to obtain
  *      -2,-2,12,12 if bboxPtr == 0xFFFFFFFF),
  *      targetY analogous with +0x10,
  *   3. makes a one-unit step of curX (= obj[+0xC].w) toward targetX (sign(diff)),
- *      idem per Y,
- *      obj[+0x10..+0x13] analogo.
+ *      same for Y,
+ *      obj[+0x10..+0x13] analogous.
  *
  *
- *   - obj      @ 0x401C00 (almeno 0x60 byte, up to 0x401C5F)
- *   - p1Addr   @ 0x401D00 (4 byte, contains bboxAddr o sentinel)
+ *   - obj      @ 0x401C00 (at least 0x60 byte, up to 0x401C5F)
+ *   - p1Addr   @ 0x401D00 (4 byte, contains bboxAddr or sentinel)
  *   - bboxAddr @ 0x401E00 (8 byte, +4..+7 are the 4 signed byte)
  *
- * (obj+0xC..+0xF and obj+0x10..+0x13). We compare the intero workRam tranne
- * la area stack scratch [0x401E80..0x401F00).
+ * (obj+0xC..+0xF and obj+0x10..+0x13). We compare the entire workRam except
+ * the stack scratch area [0x401E80..0x401F00).
  *
  *   - A: path default (bboxPtr == 0xFFFFFFFF), idx random, slotCx/Cy random,
  *        curX/Y random
  *   - B: path read-bbox, bbox bytes random (xMin,yMin,width,height ∈ [-128,127]),
  *        cur, slotC, idx random
  *   - C: edge case sign step (curX == targetX, curY == targetY) → step = 0
- *   - D: edge case overflow word (curX, slotCx, width molto grandi → wrap a 16 bit)
+ *   - D: edge case overflow word (curX, slotCx, width very large → wrap to 16 bit)
  *   - E: random everything with alternating sentinel pattern at bbox addr
  *
- * Uso: npx tsx packages/cli/src/test-string-target-step-176d2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-target-step-176d2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -51,7 +51,7 @@ const FUN_176D2 = 0x000176d2;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Indirizzi per la chain:
+// Addresses for the chain:
 const OBJ_ADDR = 0x00401c00;
 const P1_ADDR = 0x00401d00;  // long pointer-to-pointer storage
 const BBOX_ADDR = 0x00401e00; // bbox struct (8 byte)
@@ -68,7 +68,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Cattura workRam from the CPU in un Uint8Array. */
+/** Capture workRam from the CPU into a Uint8Array. */
 function captureWorkRam(cpu: CpuSession): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -125,7 +125,7 @@ function buildPreState(setup: CaseSetup, randomTail: () => number): Uint8Array {
 
   // obj+0x58 = idx (byte)
   setByte(OBJ_ADDR + 0x58, setup.idx);
-  // obj+0xC..+0xF: word at +0xC = curXWord, byte +0xE/+0xF irrelevant but li
+  // obj+0xC..+0xF: word at +0xC = curXWord, byte +0xE/+0xF irrelevant but cleared
   setWord(OBJ_ADDR + 0x0c, setup.curXWord);
   setByte(OBJ_ADDR + 0x0e, 0);
   setByte(OBJ_ADDR + 0x0f, 0);
@@ -158,7 +158,7 @@ function compareWorkRam(
   postBin: Uint8Array,
   postTs: Uint8Array,
 ): { offset: number; bin: number; ts: number } | null {
-  // Stack scratch [0x401E80..0x402000) — i registri salvati da movem,
+  // Stack scratch [0x401E80..0x402000) — the registers saved by movem,
   const STACK_SCRATCH_START = 0x1e80;
   for (let j = 0; j < STACK_SCRATCH_START; j++) {
     if (postBin[j] !== postTs[j]) {
@@ -231,8 +231,8 @@ async function main(): Promise<void> {
     const v = rw();
     return v & 0x8000 ? v - 0x10000 : v;
   };
-  /** idx byte (signed) constrained: idx ∈ [-32, 32] → slot completamente in
-   *  workRam (slot+0x42 ≤ 0x402000, slot ≥ 0x400000). Converte in byte 0..255.
+  /** idx byte (signed) constrained: idx ∈ [-32, 32] → slot fully within
+   *  workRam (slot+0x42 ≤ 0x402000, slot ≥ 0x400000). Converts to byte 0..255.
    */
   const ridx = (): number => {
     const s = Math.floor(rng() * 65) - 32; // [-32..32]
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
   };
 
   // ── Suite A: path default (bboxPtr == 0xFFFFFFFF) ─────────────────────
-  console.log(`\n  Suite A (default path, sentinel) — ${perSuite} casi`);
+  console.log(`\n  Suite A (default path, sentinel) — ${perSuite} cases`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const setup: CaseSetup = {
@@ -258,7 +258,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: path read-bbox ───────────────────────────────────────────
-  console.log(`\n  Suite B (read-bbox path) — ${perSuite} casi`);
+  console.log(`\n  Suite B (read-bbox path) — ${perSuite} cases`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const setup: CaseSetup = {
@@ -281,7 +281,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ── Suite C: cur == target → step = 0 ────────────────────────────────
-  console.log(`\n  Suite C (cur al target → step=0) — ${perSuite} casi`);
+  console.log(`\n  Suite C (cur at target → step=0) — ${perSuite} cases`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     // targetX = (width>>1)+xMin+slotCx (word). Then set curX = targetX.
@@ -314,7 +314,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ── Suite D: word overflow / wrap edge cases ──────────────────────────
-  console.log(`\n  Suite D (word wrap edge) — ${perSuite} casi`);
+  console.log(`\n  Suite D (word wrap edge) — ${perSuite} cases`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const choices = [-32768, -32767, -1, 0, 1, 32766, 32767];
@@ -338,9 +338,9 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okD}/${perSuite}`);
   totalOk += okD;
 
-  // ── Suite E: random everything (sentinel alternato) ───────────────────
+  // ── Suite E: random everything (alternating sentinel) ─────────────────
   const sizeE = perSuite + remainder;
-  console.log(`\n  Suite E (random everything) — ${sizeE} casi`);
+  console.log(`\n  Suite E (random everything) — ${sizeE} cases`);
   let okE = 0;
   for (let i = 0; i < sizeE; i++) {
     // 50% sentinel, 50% read-bbox
@@ -365,7 +365,7 @@ async function main(): Promise<void> {
   totalOk += okE;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

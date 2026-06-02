@@ -7,7 +7,7 @@
  * and writes four playfield register words. Hardware wait loops and MMIO
  * synchronization are modeled as no-ops; RAM/sprite/PF side effects are kept.
  *
- * Notabthe ROMs quirk: bank D writes `1,2,3,4,5,6,7,7`, so the last entry is
+ * Notable quirk: bank D writes `1,2,3,4,5,6,7,7`, so the last entry is
  * intentionally `0x0007`, not `0x0008`.
  */
 

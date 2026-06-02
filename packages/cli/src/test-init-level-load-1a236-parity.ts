@@ -4,15 +4,15 @@
  *
  *
  *   1. Patch each entry point of the 4 subs with
- *        `addq.b #1, sentinel.l ; rts`     (8 byte)
- *        - 4 sentinel byte (0x4003E0..0x4003E3)
+ *        `addq.b #1, sentinel.l ; rts`     (8 bytes)
+ *        - 4 sentinel bytes (0x4003E0..0x4003E3)
  *   3. Run `initLevelLoad1A236()` with 4 callbacks that increment
- *      the stessthe 4 sentinel byte in `state.workRam`.
+ *      the same 4 sentinel bytes in `state.workRam`.
  *
  * Pattern variation per case:
  *     read-modify-write).
  *
- * Uso: npx tsx packages/cli/src/test-init-level-load-1a236-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-init-level-load-1a236-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -34,13 +34,13 @@ import {
 
 const FUN_1A236 = 0x0001a236;
 
-// Sub-function entry points patchati a stub.
+// Sub-function entry points patched to stubs.
 const SUB_CLEAR_ALPHA_TILES = 0x00028c7e; // FUN_28C7E
 const SUB_CLEAR_MO_ALPHA = 0x00012174; // FUN_12174
 const SUB_FUN_16F6C = 0x00016f6c; // FUN_16F6C
 const SUB_PALETTE_INIT_LEVEL = 0x0001a41e; // FUN_1A41E
 
-// Sentinel slot in work RAM (uno per stub).
+// Sentinel slot in work RAM (one per stub).
 const SENTINEL_BASE = 0x004003e0;
 const SENT_CLEAR_ALPHA_TILES = SENTINEL_BASE + 0;
 const SENT_CLEAR_MO_ALPHA = SENTINEL_BASE + 1;
@@ -60,7 +60,7 @@ const SUBS_LIST = [
 ] as const;
 
 /**
- * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 bytes) in `rom` at `entry`.
  */
 function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   // addq.b #1, abs.l → 0x52 0x39
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
     stateInst.workRam[GLOB_COUNTER_FLAG - 0x400000] = (preCounter >>> 8) & 0xff;
     stateInst.workRam[GLOB_COUNTER_FLAG - 0x400000 + 1] = preCounter & 0xff;
 
-    // Pre-fill dirty of the level pointer dst (long).
+    // Pre-fill the level pointer dst with dirty data (long).
     const preLevelDst = ((rb() << 24) | (rb() << 16) | (rb() << 8) | rb()) >>> 0;
     pokeMem(cpu, GLOB_LEVEL_PTR_DST, 4, preLevelDst);
     stateInst.workRam[GLOB_LEVEL_PTR_DST - 0x400000 + 0] = (preLevelDst >>> 24) & 0xff;
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
 
     callFunction(cpu, FUN_1A236, []);
-    // Esegui TS
+    // Run TS
     illNs.initLevelLoad1A236(stateInst, romView, subs);
 
     let fail: FailRecord | null = null;

@@ -3,14 +3,14 @@
  * visual-smoke-real.ts — diagnostic CLI that simulates the browser real-mode path.
  *
  *   1. Load program ROM (ghidra_project/marble_program.bin)
- *   2. Load PROMs (concat 136033.118 + 136033.119 = 1024 byte)
+ *   2. Load PROMs (concat 136033.118 + 136033.119 = 1024 bytes)
  *   3. decodeGraphicsLookups(proms) → playfield + motionObject lookups
  *   4. bootInit(state, rom, { preloadLevel: 0 })
- *   5. Per N tick: tick(state, { rom, runMainLoopBody: true })
+ *   5. For N ticks: tick(state, { rom, runMainLoopBody: true })
  *   6. buildFrame(state, { playfieldLookups, motionObjectLookups, motionObjects })
- *   7. Dump diagnostico dettagliato
+ *   7. Detailed diagnostic dump
  *
- * Uso: npx tsx packages/cli/src/visual-smoke-real.ts [N=300]
+ * Usage: npx tsx packages/cli/src/visual-smoke-real.ts [N=300]
  *
  */
 
@@ -28,7 +28,7 @@ import {
   render as renderNs,
 } from "@marble-love/engine";
 
-// ─── Inline copy of decodeGraphicsLookups (da packages/web/src/rom-graphics.ts) ─
+// ─── Inline copy of decodeGraphicsLookups (from packages/web/src/rom-graphics.ts) ─
 
 interface GraphicsLookupEntry {
   offset: number;
@@ -362,7 +362,7 @@ function main(): void {
   // 1. Load program ROM
   const romPath = resolve("ghidra_project/marble_program.bin");
   if (!existsSync(romPath)) {
-    console.error(`error: ROM blob non trovata @ ${romPath}`);
+    console.error(`error: ROM blob not found @ ${romPath}`);
     exit(1);
   }
   const romBuf = readFileSync(romPath);
@@ -373,7 +373,7 @@ function main(): void {
   const proms = loadProms();
   if (proms === null) {
     console.error(
-      "error: PROMs non trovati. Estrai prima o aggiungi roms/marble.zip:\n" +
+      "error: PROMs not found. Extract them first or add roms/marble.zip:\n" +
         "  unzip -p roms/marble.zip 136033.118 > /tmp/prom118.bin\n" +
         "  unzip -p roms/marble.zip 136033.119 > /tmp/prom119.bin",
     );
@@ -384,9 +384,9 @@ function main(): void {
   const { playfield: playfieldLookups, motionObjects: motionObjectLookups } =
     decodeGraphicsLookups(proms);
 
-  console.log("=== ROM + PROMs caricati ===");
-  console.log(`  program ROM: ${rom.program.length} byte`);
-  console.log(`  proms: ${proms.length} byte`);
+  console.log("=== ROM + PROMs loaded ===");
+  console.log(`  program ROM: ${rom.program.length} bytes`);
+  console.log(`  proms: ${proms.length} bytes`);
   console.log(`  playfield lookups: ${playfieldLookups.length} entries`);
   console.log(`  motionObject lookups: ${motionObjectLookups.length} entries`);
 
@@ -412,7 +412,7 @@ function main(): void {
   }
 
   // 5. Run ticks
-  console.log(`\n=== run ${args.ticks} tick (runMainLoopBody=true) ===`);
+  console.log(`\n=== run ${args.ticks} ticks (runMainLoopBody=true) ===`);
   for (let i = 0; i < args.ticks; i++) {
     if (seedNeutralP1X !== undefined && seedNeutralP1Y !== undefined) {
       tick(s, {
@@ -471,7 +471,7 @@ function main(): void {
       );
     }
   } else {
-    console.log(`\n  ⚠️  Frame.playfield vuoto (lookup miss?). Dump pf words:`);
+    console.log(`\n  ⚠️  Frame.playfield empty (lookup miss?). Dump pf words:`);
     for (let i = 0; i < 16; i++) {
       const w = ((s.playfieldRam[i * 2] ?? 0) << 8) | (s.playfieldRam[i * 2 + 1] ?? 0);
       const lookupIdx = (w >>> 8) & 0x7f;
@@ -517,7 +517,7 @@ function main(): void {
     }
   }
 
-  // ASCII art map of the playfield (40 with the × 30 row = 320×240 viewport / 8x8 tile)
+  // ASCII art map of the playfield (40 × 30 = 320×240 viewport / 8x8 tile)
   console.log(`\n  --- ASCII map (60×30, '#'=tile != 0, '.'=tile 0, '@'=sprite) ---`);
   const tileMap = new Map<string, "#" | "@">();
   for (const t of frame.playfield) {
@@ -567,23 +567,23 @@ function main(): void {
   console.log(`\n=== Diagnosis ===`);
   if (frame.playfield.length === 0 && pfNz > 0) {
     console.log(`  ⚠️  playfieldRam populated (${pfNz} bytes) but Frame.playfield=0.`);
-    console.log(`      → Lookup miss: i words in pfRam decode a lookupIndex not in the table.`);
+    console.log(`      → Lookup miss: the words in pfRam decode to a lookupIndex not in the table.`);
   } else if (frame.playfield.length > 0) {
-    console.log(`  ✅ Frame.playfield popolato: ${frame.playfield.length} tile.`);
+    console.log(`  ✅ Frame.playfield populated: ${frame.playfield.length} tiles.`);
   } else {
-    console.log(`  ❌ playfieldRam vuota AND Frame.playfield=0.`);
+    console.log(`  ❌ playfieldRam empty AND Frame.playfield=0.`);
   }
 
   if (frame.sprites.length === 0 && sprNz > 0) {
     console.log(`  ⚠️  spriteRam populated (${sprNz} bytes) but Frame.sprites=0.`);
   } else if (frame.sprites.length > 0) {
-    console.log(`  ✅ Frame.sprites popolato: ${frame.sprites.length}.`);
+    console.log(`  ✅ Frame.sprites populated: ${frame.sprites.length}.`);
   }
 
   if (frame.alpha.length === 0 && alpNz > 0) {
     console.log(`  ⚠️  alphaRam populated (${alpNz} bytes) but Frame.alpha=0.`);
   } else if (frame.alpha.length > 0) {
-    console.log(`  ✅ Frame.alpha popolato: ${frame.alpha.length}.`);
+    console.log(`  ✅ Frame.alpha populated: ${frame.alpha.length}.`);
   }
 
   // Optional PPM dump

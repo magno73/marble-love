@@ -2,19 +2,19 @@
 /**
  * test-helper-25e7c-parity.ts — differential FUN_00025E7C vs `helper25E7C` TS replica.
  *
- * `FUN_00025E7C` (51 istr, 0x25E7C–0x25FC0):
- *   "velocity friction/damping" — applica un fattore of attrito a due
+ * `FUN_00025E7C` (51 instr, 0x25E7C–0x25FC0):
+ *   "velocity friction/damping" — applies a friction factor to two
  *   with 5 response curves selected by the `mode` parameter.
  *
  * **Calling convention** (RTL, 2 long):
  *   - arg1 (SP+4) = objPtr → A0
  *
- * **Strategia parity**:
- *   4. Esegui TS via helper25E7C(state, objPtr, mode).
+ * **Parity strategy**:
+ *   4. Run TS via helper25E7C(state, objPtr, mode).
  *
- * **Edge cases** inclusi:
+ * **Edge cases** included:
  *
- * Uso: npx tsx packages/cli/src/test-helper-25e7c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-25e7c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

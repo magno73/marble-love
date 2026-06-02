@@ -1,8 +1,8 @@
 /**
- * probe-converge-multi.ts — valida the evoluzione TS frame-per-frame contro
- * MAME oracle multi-frame.
+ * probe-converge-multi.ts — validates the TS frame-by-frame evolution against
+ * the multi-frame MAME oracle.
  *
- * Input: JSON multi-snapshot prodotto da `oracle/mame_state_multidump.lua`,
+ * Input: multi-snapshot JSON produced by `oracle/mame_state_multidump.lua`,
  *   schema { frames: [N0, N1, ...], snapshots: [{frame, workRam, playfieldRam,
  *   spriteRam, alphaRam, colorRam}, ...] }
  *
@@ -12,7 +12,7 @@
  *     - bootInit({warmState: snapshots[0]})
  *     - tick(N - baseFrame, {runMainLoopBody:true})
  *
- * Uso:
+ * Usage:
  *   MULTI_DUMP=/tmp/mame_state_multi.json npx tsx packages/cli/src/probe-converge-multi.ts
  */
 

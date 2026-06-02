@@ -2,11 +2,11 @@
  * state-sub-5d2a.ts — replica `FUN_00005D2A` (194 byte = 0xC2).
  *
  * "Row-render with bit-mask scan" wrapper that draws 16 cell pairs
- * iterando una bitmap of 16 bit (`arg0` low word) MSB→LSB. For each bit
+ * iterating a 16-bit bitmap (`arg0` low word) MSB→LSB. For each bit
  *
  *   - Trailing arg   : 0 (immediate `clr.l -(SP)`)
  *
- * Iter main: `D4 = 15 → 0` (`bge.w` in word signed → 16 iter). Mask
+ * Main iter: `D4 = 15 → 0` (`bge.w` in signed word → 16 iter). Mask
  *
  *
  * **Disasm 0x5D2A..0x5DEC** (194 byte):
@@ -65,7 +65,7 @@
  *   0x5D9E  ext.l   D0                      ; D0 = sign-ext(A3w)
  *   0x5DA0  move.w  A4w,D1w                 ; D1w = A4w
  *   0x5DA2  ext.l   D1                      ; D1 = sign-ext(A4w)
- *   0x5DA4  add.l   D1,D0                   ; D0 = A3 + A4 (long, sign-ext somma)
+ *   0x5DA4  add.l   D1,D0                   ; D0 = A3 + A4 (long, sign-ext sum)
  *   0x5DA6  move.l  D0,-(SP)                ; push x_left (arg2)
  *   0x5DA8  move.w  D6w,D0w                 ; D0w = D6w
  *   0x5DAA  ext.l   D0                      ; D0 = sign-ext(D6w)
@@ -104,11 +104,11 @@
  *     at `D4 == arg1` it receives attr 0xA0 instead of 0x20.
  *     at `D4 == arg1` receives attr 0xA0 instead of 0x20.
  *     D0 is the last jsr's return value, but callers do not test it.
- *   - Callee-saved: D2-D7, A2-A4 (preservati via movem prologue/epilogue).
+ *   - Callee-saved: D2-D7, A2-A4 (preserved via movem prologue/epilogue).
  *
  *   each invocation with its four args.
  *
- * **Note of low-level fidelity**:
+ * **Low-level fidelity notes**:
  *
  *  1. **Stack offsets `(0x2a, SP)` and `(0x2e, SP)`**: post-movem (9 regs x 4 =
  *     36 = 0x24) + ret addr (4) = 40 = 0x28. Caller_SP_args = SP + 0x28.
@@ -118,14 +118,14 @@
  *     = arg1 low word. ✓
  *
  *     to long -> A2 long = 0xFFFF8000. But `A2w` (low word) = 0x8000. The
- *     successive operazioni leggono `move.w A2w, D0w` (zero-ext) = 0x8000.
+ *     the following operations read `move.w A2w, D0w` (zero-ext) = 0x8000.
  *
  *     then movea.w D0w, A2 -> A2 = 0x00004000. From iter 1 onward A2 high = 0.
  *
- *  4. **`moveq #-0xb, D0`**: long sign-ext = 0xFFFFFFF5 = -11. Poi
- *     `move.w D0w, D5w` = 0xFFF5 (low word). D5 = (D5_hi)|0xFFF5. D5_hi era
+ *  4. **`moveq #-0xb, D0`**: long sign-ext = 0xFFFFFFF5 = -11. Then
+ *     `move.w D0w, D5w` = 0xFFF5 (low word). D5 = (D5_hi)|0xFFF5. D5_hi was
  *
- *  5. **`add.w D5w, D6w`**: word add (mod 65536). Con D5w = 0xFFF5 (= -11
+ *  5. **`add.w D5w, D6w`**: word add (mod 65536). With D5w = 0xFFF5 (= -11
  *     D6w = 0; D6w + 0xFFF5 = 0xFFF5. D4=14, D6w = 2 + 0xFFF5 = 0xFFF7, etc.
  *
  *     D4 != 7. The branch executes once because D4 passes through 7 only once.
@@ -133,15 +133,15 @@
  *     low word (range 0..0xFFFF). If arg1 is in {0..15}, exactly one iteration
  *
  *  8. **`subq.w #1, D4w; tst.w D4w; bge.w 0x5D42`**: word decrement, signed
- *     N=1, bge fails (signed N XOR V = 1). 16 iter totali (D4=15..0).
+ *     N=1, bge fails (signed N XOR V = 1). 16 iterations total (D4=15..0).
  *
  *  9. **Args of FUN_3784 (push order RTL)**:
- *     CALL #1: push (0, attr, x_left, y) → callee vede args al stack as:
- *        (0x4, SP) = y (long, sign-ext da D6w)
- *        (0x8, SP) = x_left (long, sign-ext somma A3+A4)
- *        (0xC, SP) = attr (long, 0x20 o 0xA0)
+ *     CALL #1: push (0, attr, x_left, y) → callee sees args on the stack as:
+ *        (0x4, SP) = y (long, sign-ext from D6w)
+ *        (0x8, SP) = x_left (long, sign-ext sum A3+A4)
+ *        (0xC, SP) = attr (long, 0x20 or 0xA0)
  *        (0x10, SP) = 0 (long)
- *     CALL #2: push (0, 0, x_right, y) → callee vede:
+ *     CALL #2: push (0, 0, x_right, y) → callee sees:
  *        (0x4, SP) = y
  *        (0x8, SP) = x_right
  *        (0xC, SP) = 0  ← ATTR = 0, NOT the attr of CALL #1!
@@ -149,7 +149,7 @@
  *
  *     `x_right` with the same `y`.
  *
- * 11. **D0 al rts**: the epilogue movem NOT tocca D0. D0 conserva il suo
+ * 11. **D0 at rts**: the epilogue movem does NOT touch D0. D0 keeps its
  *
  *   - `0x5C44` in FUN_5BB8 — jsr 0x5D2A (UNCONDITIONAL_CALL)
  *   - `0x5CC4` in FUN_5BB8 — jsr 0x5D2A (UNCONDITIONAL_CALL)
@@ -164,7 +164,7 @@ import type { RomImage } from "./bus.js";
 /** Byte ROM @ 0x10072: gate for the branch `D4 == 7` (D5w/A3w override). */
 export const ROM_GATE_BYTE_ADDR = 0x00010072 as const;
 
-// ─── Costanti derivate from the disasm ─────────────────────────────────────────
+// ─── Constants derived from the disasm ─────────────────────────────────────────
 
 export const LOOP_ITER_COUNT = 16 as const;
 
@@ -194,7 +194,7 @@ export const ATTR_RIGHT = 0 as const;
 
 export const TRAILING_ARG = 0 as const;
 
-// ─── Tipi callback ─────────────────────────────────────────────────────────
+// ─── Callback types ─────────────────────────────────────────────────────────
 
 /**
  * Signature of `FUN_00003784` — "draw cell" callee.
@@ -213,14 +213,14 @@ export type Sub5D2AInner3784 = (
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /**
- * Sign-extend low word of `v` a long unsigned32.
+ * Sign-extend low word of `v` to a long unsigned32.
  *   - if `v & 0x8000` -> hi word = 0xFFFF
  */
 function signExtWord(v: number): number {
   return ((v & 0x8000) !== 0 ? (v | 0xffff0000) : (v & 0xffff)) >>> 0;
 }
 
-/** Add long unsigned32 (mod 2^32, equivalente a M68k `add.l`). */
+/** Add long unsigned32 (mod 2^32, equivalent to M68k `add.l`). */
 function addLong(a: number, b: number): number {
   return ((a + b) | 0) >>> 0;
 }
@@ -242,16 +242,16 @@ function subLong(a: number, b: number): number {
  *   7. CALL #2: `inner3784(y_signExt, ((15-A4)+A3)_signExt, 0, 0)`
  *   8. `mask = (mask >> 1) & 0xFFFF` (word logical shift).
  *
- *                      MSB→LSB). High word ignorata.
- *                      `arg1_low ∈ {0..15}`, la cella a `D4 == arg1_low`
+ *                      MSB→LSB). High word ignored.
+ *                      `arg1_low ∈ {0..15}`, the cell at `D4 == arg1_low`
  *                      iter 0 left, iter 0 right, iter 1 left, ... iter 15 right.
  *
- * @returns long unsigned32 (D0 al rts). In pratica = D0 lasciato dto the ultima
+ * @returns long unsigned32 (D0 at rts). In practice = D0 left by the last
  *          inner3784, or 0 if default no-op).
  *
  *
- *    override partono da D0 long, hi 0).
- * 4. `D6w = (15-D4)*2 + D5w` (word add, mod 65536). Sign-ext a long per `y`.
+ *    overrides start from D0 long, hi 0).
+ * 4. `D6w = (15-D4)*2 + D5w` (word add, mod 65536). Sign-ext to a long for `y`.
  *    NB: D4 in word range 0..15, D2w in range 0..0xFFFF. Match only if D2w
  * 6. `x_left = sign-ext(A3w) + sign-ext(A4w)` (long add).
  *    `x_right = sign-ext(15-A4) + sign-ext(A3w)` — computed as
@@ -277,19 +277,19 @@ export function stateSub5D2A(
   // D5 long = 5 (init `moveq #5,D5`). hi=0, lo=5.
   let d5Word: number = INIT_D5;
   // A3 long = 0 (init `clr.w D7w; movea.w D7w, A3`). hi=0, lo=0.
-  let a3Word: number = INIT_A3; // low word, sign-ext per long ops.
+  let a3Word: number = INIT_A3; // low word, sign-ext for long ops.
 
   const gateByte = rom.program[ROM_GATE_BYTE_ADDR] ?? 0;
 
-  // D0 al rts: si propaga dto the last `inner3784`. Default 0.
+  // D0 at rts: propagated from the last `inner3784`. Default 0.
   let lastD0 = 0;
 
-  // ─── Loop main: D4 = 15 → 0 (16 iter, signed bge.w on D4w) ───────
+  // ─── Main loop: D4 = 15 → 0 (16 iter, signed bge.w on D4w) ───────
   for (let d4 = 15; d4 >= 0; d4--) {
     // ─── Special @ D4 == 7: gate-byte override ─────────────────────────
     if (d4 === SPECIAL_ITER_D4) {
       // tst.b ROM[0x10072]; beq → D5w = 5; bne → D5w = 0xFFF5.
-      // `moveq #-0xb, D0` (D0 = 0xFFFFFFF5), poi D5w = 0xFFF5.
+      // `moveq #-0xb, D0` (D0 = 0xFFFFFFF5), then D5w = 0xFFF5.
       d5Word = gateByte === 0 ? INIT_D5 : OVERRIDE_D5W_GATE_NZ;
 
       a3Word = gateByte === 0 ? INIT_A3 : OVERRIDE_A3_GATE_NZ;
@@ -320,14 +320,14 @@ export function stateSub5D2A(
     // x_right = (15 - sign-ext(A4w)) + sign-ext(A3w).
     // Disasm: `moveq #0xf,D0; move.w A4w,D1w; ext.l D1; sub.l D1,D0;
     //          move.w A3w,D1w; ext.l D1; add.l D1,D0`.
-    // Equivale a `(15 - signExt(A4w)) + signExt(A3w)` (long arithmetic).
+    // Equivalent to `(15 - signExt(A4w)) + signExt(A3w)` (long arithmetic).
     const xRight = addLong(subLong(15, signExtWord(a4Word)), signExtWord(a3Word));
     lastD0 = (inner3784(state, yLong, xRight, ATTR_RIGHT, TRAILING_ARG) >>> 0) >>> 0;
 
     // ─── Shift mask: A2w >>= 1 (logical word shift) ────────────────────
     // move.w A2w, D0w; lsr.w #1, D0w; movea.w D0w, A2.
     // movea.w D0w → A2 = sign-ext(0x4000) = 0x00004000 (hi=0). A2w = 0x4000.
-    // Iter successive: 0x2000, 0x1000, ..., 0x0001, poi 0x0000 a iter 16
+    // Following iterations: 0x2000, 0x1000, ..., 0x0001, then 0x0000 at iter 16
     maskWord = (maskWord >>> 1) & 0xffff;
   }
 

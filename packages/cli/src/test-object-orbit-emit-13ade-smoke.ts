@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * test-object-orbit-emit-13ade-smoke.ts — smoke tests per `objectOrbitEmit13ADE`.
+ * test-object-orbit-emit-13ade-smoke.ts — smoke tests for `objectOrbitEmit13ADE`.
  *
- *   1. Esegua il reset trigger 0x64 → counter = 0x30, angle = 0.
- *   2. Esegua il reset trigger 0x65 → counter = 0x18, angle = 0.
- *   3. Esegua il reset trigger 0x66 → counter = 0x24, angle = 0.
- *   7. Faccia the angle advance (0x0A) and il wrap a 0x192.
+ *   1. Perform the reset trigger 0x64 → counter = 0x30, angle = 0.
+ *   2. Perform the reset trigger 0x65 → counter = 0x18, angle = 0.
+ *   3. Perform the reset trigger 0x66 → counter = 0x24, angle = 0.
+ *   7. Perform the angle advance (0x0A) and the wrap at 0x192.
  *   8. Apply mirroring if (A0+0x1A).b == 0x0B.
  *
- * Uso: npx tsx packages/cli/src/test-object-orbit-emit-13ade-smoke.ts
+ * Usage: npx tsx packages/cli/src/test-object-orbit-emit-13ade-smoke.ts
  */
 
 import { exit } from "node:process";
@@ -21,7 +21,7 @@ import {
 import type { RomImage } from "@marble-love/engine";
 
 const WORK_RAM_BASE = 0x400000;
-const ARG_PTR = 0x401000; // slot fictizio in work RAM
+const ARG_PTR = 0x401000; // dummy slot in work RAM
 const ARG_OFF = ARG_PTR - WORK_RAM_BASE;
 
 function makeState(): ReturnType<typeof stateNs.emptyGameState> {
@@ -60,7 +60,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   s.workRam[ARG_OFF + 0x2f] = 0x00;
   ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
   check("trigger 0x64: counter after = 0x2F", s.workRam[ARG_OFF + 0x57], 0x2f);
-  // angle: reset a 0, poi advanced by of 0x0A → 0x000A
+  // angle: reset to 0, then advanced by 0x0A → 0x000A
   check("trigger 0x64: angle after = 0x000A", readU16(s, ARG_OFF + 0x2e), 0x000a);
   check("trigger 0x64: ready byte = 1", s.workRam[ARG_OFF + 0x1c], 1);
 }

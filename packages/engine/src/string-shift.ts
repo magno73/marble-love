@@ -85,7 +85,7 @@ function chainAdvance(state: GameState, rom: RomImage, a1: number): number | nul
  * Port of `FUN_00002766` - shift forward.
  *
  * For each chain entry, reads the limit from ROM, sets A3 = ALPHA + d3*2
- * without with the offset, saves the first cell, loops until limit-1 with
+ * without col offset, saves the first cell, loops until limit-1 with
  * cell[i] = cell[i+1], then writes the saved value to the final position.
  */
 export function shiftStringChainForward(state: GameState, rom: RomImage, structAddr: number): void {
@@ -135,7 +135,7 @@ export function shiftStringChainForward(state: GameState, rom: RomImage, structA
 /**
  * Replica `FUN_00002818` — shift backward.
  *
- * D3 = ROM[0x7298 + rot*2] - 1 (limit). A3 = ALPHA + with the*shift + d2*2 (with the
+ * D3 = ROM[0x7298 + rot*2] - 1 (limit). A3 = ALPHA + col*shift + d2*2 (col
  * USED here). Saves D2 = current cell. Loop while D3 > 0:
  * cell[i+1] = cell[i] (in reverse), advancing A3 BACKWARD by stride.
  */
@@ -164,7 +164,7 @@ export function shiftStringChainBackward(state: GameState, rom: RomImage, struct
     // a3 = ALPHA + (limit << shift + d2) * 2
     // BUT wait, looking at disasm: `move.w (A2), D0w; ... add.l D0, D0;
     // movea.l #0x7298, A0; move.w (0,A0,D0*1), D0w` — this reads limit AGAIN,
-    // not with the!
+    // not col!
     // Then `asl.l D1, D0` where D1 = shift count → D0 = limit << shift
     // Then `add.l D2, D0; add.l D0, D0; adda.l D0, A3` → A3 += 2 * (limit<<shift + d2)
     const limit = readRomWordSigned(rom, ROM_COUNT_LIMIT + rotSigned * 2);

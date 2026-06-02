@@ -20,8 +20,8 @@
  *   SP+0x12  arg2 = startValue (word, low word of a long push)
  *   SP+0x14  arg3 = count (long, signed)
  *
- * **Comportamento edge case**:
- *   - `startValue` wrappa modulo 0x10000 (addq.w wrappa in 16 bit).
+ * **Edge-case behavior**:
+ *   - `startValue` wraps modulo 0x10000 (addq.w wraps to 16 bits).
  *
  *   0x1FA8, 0x1FC2, 0x1FDC, 0x1FF6, 0x2010, 0x202A, 0x2148, 0x2162
  *   (8 COMPUTED_CALL + 1 Entry Point = 9 xref totali)
@@ -56,7 +56,7 @@ function writeWord(state: GameState, addr: number, value: number): void {
     state.colorRam[o]     = (v >>> 8) & 0xff;
     state.colorRam[o + 1] = v & 0xff;
   }
-  // Altri range (PF RAM 0xa00000-0xa02000, cart RAM 0x900000-…, MMIO): ignored.
+  // Other ranges (PF RAM 0xa00000-0xa02000, cart RAM 0x900000-…, MMIO): ignored.
 }
 
 // ─── Main function ────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ function writeWord(state: GameState, addr: number, value: number): void {
  * Replica `FUN_00001E3E` — `fillSeqWords1E3E`.
  *
  *
- * @param count      Numero of word da scrivere (signed long; ≤ 0 → no-op).
+ * @param count      Number of words to write (signed long; ≤ 0 → no-op).
  */
 export function fillSeqWords1E3E(
   state: GameState,

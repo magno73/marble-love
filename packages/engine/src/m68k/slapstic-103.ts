@@ -38,7 +38,7 @@
  *
  * **Test helpers** (mirrored from `slapstic.cpp:838-871`):
  *   test_in(mv)     = test(range_mask | (mv.mask << 1), range_value | (mv.value << 1))
- *   test_any(mv)    = test(mv.mask << 1, mv.value << 1)              // ignora range
+ *   test_any(mv)    = test(mv.mask << 1, mv.value << 1)              // ignore range
  *   test_inside()   = test(range_mask, range_value)
  *   test_reset()    = test(range_mask | input_mask, range_value)     // any addr 0x80000
  *                                                                    // (low 15 bit == 0)
@@ -100,7 +100,7 @@ const BIT4_MASK   = 0x3ff8, BIT4_VAL   = 0x34d0;
 const START = 0x080000;
 /** Slapstic window end, exclusive. 8KB visible. */
 const END_EXCL = 0x088000;
-/** Address shift per data_width=16 (un bus word = 2 byte). */
+/** Address shift per data_width=16 (one bus word = 2 bytes). */
 const SHIFT = 1;
 
 /** `range_mask = ~((end-1 - start) | mirror)` = ~0x7FFF = 0xFFFF8000. */
@@ -163,7 +163,7 @@ export interface SlapsticFsm {
 /**
  * Creates an FSM in reset state (idle, bank = BANKSTART = 3).
  *
- * Equivalente a `atari_slapstic_device::device_reset()` of MAME:
+ * Equivalent to MAME's `atari_slapstic_device::device_reset()`:
  *   m_state = m_s_idle.get();
  *   change_bank(slapstic_table[m_chipnum - 101]->bankstart);  // = 3 for chip 103
  */

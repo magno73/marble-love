@@ -1,10 +1,10 @@
-// probe-0700-ts-writes.ts — Proxy-wrap of workRam per loggare each write
-// in the cluster 0x400700..0x40077F during the first 5 tick post-warm.
+// probe-0700-ts-writes.ts — Proxy-wrap of workRam to log each write
+// in the cluster 0x400700..0x40077F during the first 5 ticks post-warm.
 //
-// Output: /tmp/ts_0700_writes.json simmetrico al MAME tap
+// Output: /tmp/ts_0700_writes.json symmetric with the MAME tap
 // (oracle/mame_0700_first_body_tap.lua / mame_cluster_0706.json).
 //
-// Warm state da /tmp/mame_100f.json (snapshot[0] = f12000).
+// Warm state from /tmp/mame_100f.json (snapshot[0] = f12000).
 // Window logging: tick 1..5 (= absolute f12001..f12005).
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";

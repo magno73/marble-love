@@ -3,7 +3,7 @@ import { emptyGameState } from "../src/state.js";
 import { clearPlayfieldRam12174 } from "../src/clear-playfield-ram-12174.js";
 
 describe("clearPlayfieldRam12174 (FUN_00012174)", () => {
-  it("azzera tutta la playfieldRam (8 KB)", () => {
+  it("zeroes all of playfieldRam (8 KB)", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xab);
     clearPlayfieldRam12174(s);
@@ -12,7 +12,7 @@ describe("clearPlayfieldRam12174 (FUN_00012174)", () => {
     }
   });
 
-  it("non tocca workRam, alphaRam, spriteRam, colorRam", () => {
+  it("does not touch workRam, alphaRam, spriteRam, colorRam", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xff);
     s.workRam[0x100] = 0x42;

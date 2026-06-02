@@ -29,7 +29,7 @@ console.log(`- **Reimpl frames total:** ${r.reimplFrames}`);
 console.log("");
 
 if (!r.firstDivergence) {
-  console.log("✅ **Nessuna divergenza trovata.**");
+  console.log("✅ **No divergence found.**");
   console.log("");
   console.log("Move the scenario to `done/` in the curriculum and proceed to the next one.");
   exit(0);

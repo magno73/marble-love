@@ -1,11 +1,11 @@
 /**
- * m68k-cycle-table.test.ts — smoke + snapshot of the cycle table 68010.
+ * m68k-cycle-table.test.ts — smoke + snapshot of the 68010 cycle table.
  *
  * dynamic 30/60 Hz cadence of the Marble Madness main loop. If one of the
- * costs change, MAME and TS diverge on the mailbox=1 branch -> these tests
+ * costs changes, MAME and TS diverge on the mailbox=1 branch -> these tests
  * protect against silent regressions.
  *
- * @ 313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd (cfr. cycle-table.ts).
+ * @ 313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd (see cycle-table.ts).
  */
 
 import { describe, expect, it } from "vitest";
@@ -54,12 +54,12 @@ describe("m68010 cycle table — constants", () => {
     expect(raw(CYC_MOVEM_L_PER_REG)).toBe(3);
   });
 
-  it("CYC_BCC_TAKEN = 10 (qualunque size)", () => {
+  it("CYC_BCC_TAKEN = 10 (any size)", () => {
     expect(raw(CYC_BCC_TAKEN)).toBe(10);
   });
 
   it("MULS/MULU/DIVS/DIVU.W cycles (68010 fixed-cost)", () => {
-    // Sul 010 i mul/div are dramatically faster of the 000.
+    // On the 010, mul/div are dramatically faster than on the 000.
     expect(raw(CYC_MULS_W)).toBe(32);
     expect(raw(CYC_MULU_W)).toBe(30);
     expect(raw(CYC_DIVS_W)).toBe(122);
@@ -83,7 +83,7 @@ describe("m68010 cycle table — constants", () => {
   });
 });
 
-describe("estimateCycles — pattern singoli", () => {
+describe("estimateCycles — single patterns", () => {
   it("nop = 4", () => {
     expect(raw(estimateCycles({ kind: "nop" }))).toBe(4);
   });
@@ -102,7 +102,7 @@ describe("estimateCycles — pattern singoli", () => {
 
   it("movem.l reg→mem, predec, 2 regs = 8 + 0 + 6 = wait, dir matters", () => {
     // MOVEM.L re pd 2 regs: base 8 + per_reg(3)*2 = 14
-    // (movem 32 re pd row m68k_in.c L705: 8 base — l'EA pd ha 0 extra in
+    // (movem 32 re pd row m68k_in.c L705: 8 base — the pd EA has 0 extra in
     // g_movem_cycle_table)
     expect(
       raw(
@@ -174,7 +174,7 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
    *   moveq    #0x7C, D0                ; 4
    *   add.l    D0, D3                   ; alu_er l, Dn src = 6 + 0 = 6
    *   move.l   D1, -(SP)                ; moveDstBase[AnPreDec].l + eaCycles[Dn].l = 14
-   *   jsr      0x000158F6.l             ; 12 + 8 = 20 (escluso body interno)
+   *   jsr      0x000158F6.l             ; 12 + 8 = 20 (internal body excluded)
    *   addq.l   #0x4, SP                 ; addq An = 8
    *   addq.b   #0x1, D2                 ; addq.b Dn = 4
    *   cmpi.b   #0x2, D2                 ; cmpi Dn b: CYC_CMPI_D(8) + 0 + immFetch(b_w=4) = 12  ❗
@@ -184,7 +184,7 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
    *
    *
    */
-  it("totale stimato in linea con calcolo manuale (esclusa la sub interna)", () => {
+  it("estimated total in line with manual computation (internal sub excluded)", () => {
     const movemSave = estimateCycles({
       kind: "movem",
       dir: "reg_to_mem",
@@ -280,17 +280,17 @@ describe("estimateCycles — sanity check FUN_158CC (objectUpdatePair)", () => {
 
     // inflates by +4 for each iter, total +8):
     //   14 + 12 + 4 + (68+10) + (68+6) + 18 + 16 = 216
-    // TS sovrastima il cmpi of 4 cycles per iter: +8 → 224.
+    // TS overestimates the cmpi by 4 cycles per iter: +8 → 224.
     expect(total).toBe(224);
 
     const musashiReference = 216;
     const delta = Math.abs(total - musashiReference) / musashiReference;
-    expect(delta).toBeLessThan(0.05); // entro 5% (target spec: ±10%)
+    expect(delta).toBeLessThan(0.05); // within 5% (target spec: ±10%)
   });
 });
 
 describe("cycle-table snapshot (regression guard)", () => {
-  it("riassunto compatto of the values chiave", () => {
+  it("compact summary of the key values", () => {
     const snap = {
       vblank: raw(CYCLES_PER_VBLANK),
       nop: raw(CYC_NOP),

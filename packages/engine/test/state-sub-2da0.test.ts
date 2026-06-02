@@ -28,7 +28,7 @@ function setupStruct(
 }
 
 describe("stateSub2DA0 (FUN_2DA0)", () => {
-  it("string byte == 0 (terminator) → return 0, alphaRam invariata", () => {
+  it("string byte == 0 (terminator) → return 0, alphaRam unchanged", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupStruct(s, 0x10, 0x05, STRING_ADDR);
@@ -47,11 +47,11 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     }
   });
 
-  it("string byte != 0 con rotation=0 → return 4, clear word in alphaRam", () => {
+  it("string byte != 0 with rotation=0 → return 4, clear word in alphaRam", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    // Inject ROM shift table @ 0x72a4..0x72ab (per replicare ROM reale).
-    // Per rotation=0, byte @ 0x72a5 = 0 → shiftCount=0
+    // Inject ROM shift table @ 0x72a4..0x72ab (to replicate the real ROM).
+    // For rotation=0, byte @ 0x72a5 = 0 → shiftCount=0
     rom.program[0x72a5] = 0x00;
     setupStruct(s, 1, 2, STRING_ADDR);
     s.workRam[STRING_OFF] = 0x41; // string[0] = 'A' (non-zero)
@@ -75,7 +75,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     expect(s.alphaRam[260]).toBe(0xcc);
   });
 
-  it("rotation != 0 → D3 = 0x29 - sext(tickOff), formula path alternativa", () => {
+  it("rotation != 0 → D3 = 0x29 - sext(tickOff), alternative formula path", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // rotation=1 → byte @ 0x72a7 = 0x06 → shift count = 6
@@ -97,10 +97,10 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     expect(s.alphaRam[83]).toBe(0);
   });
 
-  it("arg2 byte avanza in the stringa: stringPtr + arg2", () => {
+  it("arg2 byte advances within the string: stringPtr + arg2", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
-    rom.program[0x72a5] = 0x00; // shift = 0 per rotation=0
+    rom.program[0x72a5] = 0x00; // shift = 0 for rotation=0
     setupStruct(s, 0, 0, STRING_ADDR);
     s.workRam[STRING_OFF + 0] = 0x41;
     s.workRam[STRING_OFF + 1] = 0x42;
@@ -117,7 +117,7 @@ describe("stateSub2DA0 (FUN_2DA0)", () => {
     expect(stateSub2DA0(s, rom, STRUCT_ADDR, 2)).toBe(0);
   });
 
-  it("col negativo (signed): sext si propaga correttamente", () => {
+  it("negative col (signed): sext propagates correctly", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x72a5] = 0x00;

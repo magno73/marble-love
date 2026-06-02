@@ -2,7 +2,7 @@
  *
  * `findNearestNeighborV2` in `nearest-neighbor.ts` (variant of the V1
  * `FUN_15D10` with list ptr from `obj+0x4E`, 4-byte stride, write to `obj+0x4A`).
- * dto the inventario `docs/missing-subs-inventory.md`.
+ * Documented in the inventory `docs/missing-subs-inventory.md`.
  *
  *
  *   00014dec  movem.l {D6 D5 D4 D3 D2},-(SP)
@@ -41,7 +41,7 @@
  *     faithfully replicated in the V2 port.
  *
  * covered by the second suite of the existing test and by
- * `cli/src/test-sub-14dec-parity.ts` (100 random scenarios dedicati).
+ * `cli/src/test-sub-14dec-parity.ts` (100 dedicated random scenarios).
  */
 
 export { findNearestNeighborV2 as sub14DEC } from "./nearest-neighbor.js";

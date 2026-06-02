@@ -142,7 +142,7 @@ export function stateSub26C2(
   const arg2W = arg2Long & 0xffff;
   const arg3W = arg3Long & 0xffff;
 
-  // Sign-extended versions (M68k `ext.l Dn` su word).
+  // Sign-extended versions (M68k `ext.l Dn` on a word).
   const arg2Signed = arg2W & 0x8000 ? arg2W - 0x10000 : arg2W;
   const arg3Signed = arg3W & 0x8000 ? arg3W - 0x10000 : arg3W;
 

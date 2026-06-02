@@ -1,7 +1,7 @@
 /**
- * scroll-range-144e4.test.ts — unit tests per `scrollRange144E4` (FUN_000144E4).
+ * scroll-range-144e4.test.ts — unit tests for `scrollRange144E4` (FUN_000144E4).
  *
- * Verifica:
+ * Verifies:
  *  - scaling math (boundary/16)
  *  - early exit when d3 == d2
  *  - dispatch of the 4 subs (injectable + default no-op)
@@ -35,9 +35,9 @@ function readByte(state: GameState, addr: number): number {
 }
 
 /**
- * Aggiunge un sentinel 0xFF to the offset 0 of the ROM.
+ * Adds a 0xFF sentinel at offset 0 of the ROM.
  * With an empty ROM, rectListPtr = 0 -> reads ROM[0].
- * Se ROM[0] = 0xFF → sentinel of fine lista → scriptRectDispatch12DFA
+ * If ROM[0] = 0xFF → end-of-list sentinel → scriptRectDispatch12DFA
  * exits immediately without an infinite loop.
  */
 function addRomSentinel(rom: RomImage): void {

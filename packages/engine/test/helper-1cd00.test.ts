@@ -6,7 +6,7 @@ import {
 } from "../src/helper-1cd00.js";
 
 describe("helper1CD00 (FUN_1CD00)", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(HELPER_1CD00_ADDR).toBe(0x1cd00);
   });
 
@@ -23,7 +23,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
     expect(result).toBe(0);
   });
 
-  it("non altera entityPtr velocity when indexByte == 0xFF", () => {
+  it("does not alter entityPtr velocity when indexByte == 0xFF", () => {
     const s = emptyGameState();
     // Set up velocity in the entity struct @ 0x400018.
     for (let i = 0; i < 12; i++) {
@@ -35,7 +35,7 @@ describe("helper1CD00 (FUN_1CD00)", () => {
     }
   });
 
-  it("returns number (= D0 al ritorno of the binario)", () => {
+  it("returns number (= D0 at the return of the binary)", () => {
     const s = emptyGameState();
     const result = helper1CD00(s, 0x00400018, 0x00400500, 0xff);
     expect(typeof result).toBe("number");

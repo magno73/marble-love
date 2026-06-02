@@ -46,7 +46,7 @@
  *   tst.b    $40075c.l               ; flag75c != 0?
  *   jsr      $11ac2.l                ; FUN_11AC2()
  *
- * ; blocco 3 @ 0x13042:
+ * ; block 3 @ 0x13042:
  *   clr.b    d2                      ; D2b = 0 (counter loop2)
  * ; loop2 body @ 0x1304A:
  *   moveq    #$56, d0                ; D0 = 0x56 (stride)
@@ -210,7 +210,7 @@ export function stateDispatch12FD0(
     subs?.fun_11ac2?.();
   }
 
-  // ── Blocco 3: loop 25 script-state slots ─────────────────────────────────
+  // ── Block 3: loop 25 script-state slots ─────────────────────────────────
   //
   // move.l #$400a9c, d3 ; clr.b d2
   // loop: move.l d3, d1 ; moveq #$56, d0 ; add.l d0, d3 ; push d1 ; jsr $13068

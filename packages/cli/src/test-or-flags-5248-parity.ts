@@ -6,16 +6,16 @@
  *   or.l D1,(0x00401f5e).l
  *   rts
  *
- * Strategia:
+ * Strategy:
  *   - Initialize workRam with random bytes; sync into Musashi and TS state.workRam.
- *   - D1 = random long a 32 bit.
- *   - Lancia `callFunction(cpu, 0x5248, [ignored], {d1: d1val})` e
+ *   - D1 = random 32-bit long.
+ *   - Run `callFunction(cpu, 0x5248, [ignored], {d1: d1val})` and
  *     `orFlags5248(state, d1val)`.
  *   - Compare workRam[0x1F5E..0x1F61] (long-BE @ 0x401F5E) after execution.
  *   - Repeat N (default 500) times with random workRam and random D1, including
  *     edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (typical caller case).
  *
- * Uso: npx tsx packages/cli/src/test-or-flags-5248-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-or-flags-5248-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
 
   const r = makeRng(0xcafe5248);
 
-  // Edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (callers tipici), D1=1, D1=0x80000001
+  // Edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (typical callers), D1=1, D1=0x80000001
   const edges = [0, 0xffffffff, 3, 1, 0x80000001];
 
   console.log(`\n=== orFlags5248 (FUN_5248) — ${n} cases ===`);
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   let fail: { d1: number; flags0: number; binResult: number; tsResult: number } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Randomizza workRam
+    // Randomize workRam
     for (let b = 0; b < WORK_RAM_SIZE; b++) {
       stateInst.workRam[b] = Math.floor(r() * 256) & 0xff;
     }

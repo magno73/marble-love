@@ -16,7 +16,7 @@ function writeU16(buf: Uint8Array, off: number, v: number): void {
 }
 
 describe("pfScrollUpdate", () => {
-  it("non solleva eccezioni con state vuoto", () => {
+  it("does not throw exceptions with empty state", () => {
     const s = emptyGameState();
     expect(() => pfScrollUpdate(s)).not.toThrow();
   });
@@ -47,7 +47,7 @@ describe("pfScrollUpdate", () => {
     expect(readU16(s.workRam, 0x02)).toBe(0x0FFE);
   });
 
-  it("flip flag (*0x400004 == 0xFF) inverte segno", () => {
+  it("flip flag (*0x400004 == 0xFF) inverts the sign", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4; // → d2 = 2
     s.workRam[0x04] = 0xff; // flip
@@ -57,7 +57,7 @@ describe("pfScrollUpdate", () => {
     expect(readU16(s.workRam, 0x02)).toBe(0x0FFE); // 0x1000 + (-2)
   });
 
-  it("rotation bit (AV & 8): cambia base offsets", () => {
+  it("rotation bit (AV & 8): changes base offsets", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4;
     writeU16(s.workRam, 0x3AE, 0x0008); // rotation set
@@ -68,32 +68,32 @@ describe("pfScrollUpdate", () => {
     expect(readU16(s.workRam, 0x02)).toBe(0x0002); // 0 + 2
   });
 
-  it("loop limita a 60 iter when cmp non matcha mai", () => {
+  it("loop limited to 60 iters when cmp never matches", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 2; // d2 = 1
     for (let i = 0; i < 60; i++) writeU16(s.spriteRam, 0x180 + i * 2, 0xFFFF);
     expect(() => pfScrollUpdate(s)).not.toThrow();
-    // (60 iter complete: indici 0..59)
+    // (60 complete iters: indices 0..59)
     expect(readU16(s.spriteRam, 0x76)).not.toBe(0); // d2<<5 in the masked range
   });
 
-  it("updates bit 5..13 of tile word (scroll line bits)", () => {
+  it("updates bits 5..13 of the tile word (scroll line bits)", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4; // d2 = 2 → lineOffset = 2 << 5 = 0x40
-    writeU16(s.spriteRam, 0x180, 0xFFFF); // non matcha
+    writeU16(s.spriteRam, 0x180, 0xFFFF); // does not match
     writeU16(s.spriteRam, 0x000, 0x0000);
     pfScrollUpdate(s);
     expect(readU16(s.spriteRam, 0x000)).toBe(0x0040);
   });
 
-  it("preserva bit 0..4 and 14..15 of tile word", () => {
+  it("preserves bits 0..4 and 14..15 of the tile word", () => {
     const s = emptyGameState();
     s.workRam[0x0A] = 4;
     writeU16(s.spriteRam, 0x180, 0xFFFF);
     writeU16(s.spriteRam, 0x000, 0xC01F); // bit 0..4 + 14..15 set
     pfScrollUpdate(s);
     const result = readU16(s.spriteRam, 0x000);
-    expect(result & 0xC01F).toBe(0xC01F); // bit preservati
-    expect(result & 0x3FE0).toBe(0x0040); // bit aggiornati
+    expect(result & 0xC01F).toBe(0xC01F); // preserved bits
+    expect(result & 0x3FE0).toBe(0x0040); // updated bits
   });
 });

@@ -15,7 +15,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("array9ClearAndDispatch (FUN_190EE)", () => {
-  it("invoca la callback 9 times coi pointer entry deterministici and azzera il flag 0x18 of ognuno", () => {
+  it("invokes the callback 9 times with deterministic entry pointers and clears the 0x18 flag of each", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -47,7 +47,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(ARRAY_COUNT).toBe(9);
   });
 
-  it("senza subs azzera comunque all i flag 0x18 (clear is incondizionato)", () => {
+  it("without subs still clears all the 0x18 flags (clear is unconditional)", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -67,9 +67,9 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     }
   });
 
-  it("sign-extend of the byte 0x19/0x25 is applicato (0xFF → 0xFFFFFFFF, 0x80 → 0xFFFFFF80, 0x7F → 0x7F)", () => {
+  it("sign-extend of the byte 0x19/0x25 is applied (0xFF → 0xFFFFFFFF, 0x80 → 0xFFFFFF80, 0x7F → 0x7F)", () => {
     const s = emptyGameState();
-    // Setup mirato:
+    // Targeted setup:
     //   entry 0: 0x19=0xFF, 0x25=0x80   → arg2=0xFFFFFFFF, arg1=0xFFFFFF80
     //   entry 1: 0x19=0x7F, 0x25=0x00   → arg2=0x7F, arg1=0x00
     //   entry 2: 0x19=0x01, 0x25=0xFE   → arg2=0x01, arg1=0xFFFFFFFE
@@ -95,7 +95,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     }
   });
 
-  it("ordine of chiamata strictly sequenziale (entry 0 → 8, no shuffle)", () => {
+  it("call order strictly sequential (entry 0 → 8, no shuffle)", () => {
     const s = emptyGameState();
     for (let i = 0; i < ARRAY_COUNT; i++) {
       const off = (ARRAY_BASE - 0x400000) + i * ARRAY_STRIDE;
@@ -111,7 +111,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
-  it("forwarda la state instance al callback (same reference)", () => {
+  it("forwards the state instance to the callback (same reference)", () => {
     const s = emptyGameState();
     let seen: ReturnType<typeof emptyGameState> | null = null;
     let count = 0;
@@ -125,7 +125,7 @@ describe("array9ClearAndDispatch (FUN_190EE)", () => {
     expect(seen).toBe(s);
   });
 
-  it("le mutazioni of the callback alle entry persistono between chiamate (clear non sovrascrive write of the callback PRECEDENTE su altre entry)", () => {
+  it("callback mutations on the entries persist across calls (clear does not overwrite the PREVIOUS callback's writes on other entries)", () => {
     const s = emptyGameState();
     array9ClearAndDispatch(s, {
       fun_18f46: (_a1, _a2, state) => {

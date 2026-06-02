@@ -4,13 +4,13 @@
  *
  * with (0x400434, 0x3400).
  *
- * Strategia stub injection:
- *     that renderStringEntry28FDE must replicated.
+ * Stub injection strategy:
+ *     that renderStringEntry28FDE must replicate.
  *
  *   - A: arg1/arg2 random long, entry pre-fill random
  *
  *
- * Uso: npx tsx packages/cli/src/test-render-string-entry-28fde-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-render-string-entry-28fde-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -33,7 +33,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_28FDE = 0x00028fde;
 const FUN_2572 = 0x00002572;
 
-/** Patch FUN_2572 (renderStringChain) a `rts` (0x4E75) per stub no-op. */
+/** Patch FUN_2572 (renderStringChain) to `rts` (0x4E75) for a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2572 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_2572 + 1, 1, 0x75);
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: arg LSB = 0xFF (saturazione) ───────────────────────────
+  // ─── Suite C: arg LSB = 0xFF (saturation) ────────────────────────────
   console.log(
     `\n=== Suite C: arg LSB = 0xFF — ${perSuite} cases ===`,
   );
@@ -190,10 +190,10 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: marker pre-set ciclato 0..255 ──────────────────────────
+  // ─── Suite D: marker pre-set cycled 0..255 ───────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: marker @ +6 ciclato 0..255 — ${sizeD} cases ===`,
+    `\n=== Suite D: marker @ +6 cycled 0..255 — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

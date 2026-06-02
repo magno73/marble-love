@@ -8,7 +8,7 @@
  *   jsr     0x000052b8.l   ; busy-wait
  *   addq.l  0x4,SP         ; pop arg
  *
- * Internamente:
+ * Internally:
  *   move.w  (0xa,SP),D0w
  *   bra     test
  * loop:
@@ -17,13 +17,13 @@
  *   subq.w  #1,D0w
  * test:  tst.w D0w; bgt loop
  *
- * loop esterno.
+ * outer loop.
  *
- * **Output confrontato**: D0w (low word of D0) and workRam unchanged.
+ * **Output compared**: D0w (low word of D0) and workRam unchanged.
  *
- * **Distribuzione**:
+ * **Distribution**:
  *
- * Uso: npx tsx packages/cli/src/test-vblank-wait-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-vblank-wait-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // We use writeRaw8 per bypassare callbacks/MMIO and scrivere direttamente
+  // We use writeRaw8 to bypass callbacks/MMIO and write directly
   let injectionsActive = true;
   let injectCount = 0;
   let injectedValue = 0;
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("d0", 0xdeadbeef);
     cpu.system.setRegister("d1", 0xcafedab0);
 
-    // are in the "before" and non producono falsi mismatch).
+    // are in the "before" and do not produce false mismatches).
     const before = snapshotWorkRam(cpu);
 
     const injBefore = injectCount;
@@ -198,7 +198,7 @@ async function main(): Promise<void> {
 
     const after = snapshotWorkRam(cpu);
     // Ignore VBLANK counter region @ 0x1FF8..0x1FFB, modified
-    // dto the injection during the esecuzione of the busy-wait).
+    // due to the injection during the execution of the busy-wait).
     const wramMismatch = workRamDiffers(before.bytes, after.bytes, [
       [0x1ff8, 4],
     ]);

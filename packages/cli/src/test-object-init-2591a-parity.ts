@@ -12,12 +12,12 @@
  *   - FUN_13966  → `rts`                           (no-op)
  *
  *
- * Strategia parity:
+ * Parity strategy:
  *        - objPtr in {0x401000, 0x401100, ..., 0x401C00} (12 candidates)
  *        - globals @ 0x400462 (long), 0x400466 (long), 0x400472 (byte)
- *   3. Esegui TS objectInit2591A su workRam mirror.
+ *   3. Run TS objectInit2591A on the workRam mirror.
  *
- * Uso: npx tsx packages/cli/src/test-object-init-2591a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-init-2591a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -47,7 +47,7 @@ const FUN_13966 = 0x00013966;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
+// Pointer candidates (well within workRam, leaves margin for the stack at 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -56,7 +56,7 @@ const PTR_CANDIDATES = [
 ] as const;
 
 /**
- * Patch a singthe ROMs entry point with the specified byte pattern (in
+ * Patch a single ROM entry point with the specified byte pattern.
  */
 function patchRomBytes(
   rom: Buffer,
@@ -68,10 +68,10 @@ function patchRomBytes(
   }
 }
 
-/** Patcha all and 6 le sub a stub deterministico. */
+/** Patch all 6 subs to a deterministic stub. */
 function patchSubsRom(rom: Buffer): void {
-  // `rts` = 4E 75 (2 byte). Per FUN_262B2, FUN_1BAB2, FUN_25B40, FUN_1B9CC,
-  // FUN_13966 — non ci interessa il return value.
+  // `rts` = 4E 75 (2 byte). For FUN_262B2, FUN_1BAB2, FUN_25B40, FUN_1B9CC,
+  // FUN_13966 — we don't care about the return value.
   const rtsOnly = [0x4e, 0x75];
   patchRomBytes(rom, FUN_262B2, rtsOnly);
   patchRomBytes(rom, FUN_1BAB2, rtsOnly);
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, ptr + k, 1, scratchObj[k]!);
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror into state.workRam ──────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Globals in the mirror
     stateInst.workRam[0x462] = (g462 >>> 24) & 0xff;

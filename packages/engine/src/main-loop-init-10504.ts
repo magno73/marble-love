@@ -286,7 +286,9 @@ function runPresentationMiddle(
   render0142(state, 0x1f176 + gameMode * 4, 0x3400);
 }
 
+/** @public */
 export const MAIN_LOOP_INIT_10504_ADDR = 0x00010504 as const;
+/** @public */
 export const MAIN_LOOP_INIT_10504_SUB_ADDRS = [
   0x000121a6, 0x000283c2, 0x00010392, 0x00011ac2, 0x000144e4,
   0x00012fd0, 0x00028dea, 0x0001344c, 0x00016f6c, 0x000259b4,

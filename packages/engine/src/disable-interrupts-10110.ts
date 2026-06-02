@@ -13,10 +13,7 @@
  *   - `0x0002bc62` in `FUN_0002bc5c` (UNCONDITIONAL_CALL)
  *   - Entry Point in ? (EXTERNAL)
  *
- *
- * CPU), non la RAM.
- *
- *
+ * This routine only affects the CPU status register, not the RAM.
  */
 
 export const SR_IPL7_SUPERVISOR = 0x2700 as const;

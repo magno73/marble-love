@@ -1,8 +1,8 @@
 /**
- * state-sub-540a.ts — replica `FUN_0000540A` (94 byte, up tol `rts` @ 0x5466).
+ * state-sub-540a.ts — `FUN_0000540A` replica (94 bytes, up to `rts` @ 0x5466).
  *
  *
- * **Disasm 0x540A..0x5466** (94 byte / 0x5C):
+ * **Disasm 0x540A..0x5466** (94 bytes / 0x5C):
  *
  *   0x540A:  movem.l {A2 D3 D2},-(SP)        ; preserve D2,D3,A2
  *   0x540E:  movea.l (0x10,SP),A2            ; A2 = arg1 (long ptr)
@@ -17,7 +17,7 @@
  *   0x5424:    beq.w  0x544E                  ; if pair==00 → exit_path (no decrement)
  *   0x5428:    moveq  #1,D2                   ; D2 = 1
  *   0x542A:    move.b (A2),D0b                 ; D0b = byte[A2] (HEADER) — only low byte!
- *                                              ;   D0 high 24 bits restano da FUN_53EA
+ *                                              ;   D0 high 24 bits remain from FUN_53EA
  *                                              ;   but are 0x000000 (output range 0..0xFF)
  *   0x542C:    lsr.b  #4,D0b                  ; D0b = header >> 4 (high nibble)
  *   0x542E:    addq.b #1,D0b                  ; D0b += 1
@@ -68,13 +68,13 @@
  *   move.l D1,D0
  *   move.l (SP)+,D2
  *
- *     of record da scan.
- *   - D2, D3, A2 callee-saved (preserved/restored da movem.l).
+ *     of records to scan.
+ *   - D2, D3, A2 callee-saved (preserved/restored by movem.l).
  *
  *
  *
  *   1. **`move.b (A2),D0b` with D0 high bits from FUN_53EA**: output of
- *      successivi modificano SOLO il low byte. `lsr.b`, `addq.b`, `sub.b` operano
+ *      subsequent ops modify ONLY the low byte. `lsr.b`, `addq.b`, `sub.b` operate
  *
  *   2. **`asl.l Dn,Dm` semantics**: count = `Dn & 63`. For shift count >= 32,
  *
@@ -88,7 +88,7 @@
  *      D0w becomes -1 and exits.
  *
  *
- *   6. **Outer test `subq.w #1,D3w; tst.w D3w; bne ...`**: equivalente a
+ *   6. **Outer test `subq.w #1,D3w; tst.w D3w; bne ...`**: equivalent to
  *      `tst.w D3w` pre-decrement. D3=0 -> 0 iterations; D3=1 -> 1 iteration
  *      (body, decrement, then test fails and exits). D3=0xFFFF -> 65535
  *      iterations (potentially huge).
@@ -147,8 +147,8 @@ export type StateSub540AResult = number;
  *   - byte sub wrap: `((hdr>>4)+1 - (hdr&0xF)) & 0xFF` → range
  *     `[0..16] ∪ [0xF2..0xFF]`.
  *   - asl.l count mod 64: per byte 0xF2..0xFF → count 50..63 → result 0.
- *   - asl.l count >= 32: result 0 (i bit "escono" from the long).
- *   - tst.w D0w bge: signed-word test; D0w = 0x8000 → negativo → skip body.
+ *   - asl.l count >= 32: result 0 (the bits "shift out" of the long).
+ *   - tst.w D0w bge: signed-word test; D0w = 0x8000 → negative → skip body.
  *
  * **Safety guards** for pathological input (large D3, header that produces
  */
@@ -161,7 +161,7 @@ export function stateSub540A(
   let a2Cur = a2 >>> 0;
   let d3w = d3 & 0xffff;
 
-  // Helper inline: read byte assoluto M68k → workRam offset.
+  // Inline helper: read absolute M68k byte → workRam offset.
   const read8 = (addr: number): number => {
     const a = addr >>> 0;
     if (a < WORK_RAM_BASE || a >= WORK_RAM_END) return 0;
@@ -189,7 +189,7 @@ export function stateSub540A(
     const shiftByte = ((hi + 1 - lo) & 0xff) >>> 0;
     // D0 long = 0x000000 | shiftByte. asl.l count = D0 & 63 = shiftByte & 63.
     const shiftCount = shiftByte & 0x3f;
-    // D2 = 1 << shiftCount. Per shiftCount >= 32 → 0.
+    // D2 = 1 << shiftCount. For shiftCount >= 32 → 0.
     let d2Long: number;
     if (shiftCount >= 32) {
       d2Long = 0;

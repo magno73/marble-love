@@ -11,7 +11,7 @@
  * Public API (Phase 7 V2):
  *   - createSoundChip({ rom421, rom422 })  factory that instantiates everything
  *   - tickCycles(chip, cycles6502)         advances the 6502 by N cycles and processes NMI/IRQ
- *   - submitCommand(chip, byte)            simula write 68K $FE0001 (cmd to sound)
+ *   - submitCommand(chip, byte)            simulates a 68K write to $FE0001 (cmd to sound)
  *   - drainReplyEvents(chip)               extracts bytes written 6502 -> 68K (cmd reply)
  *   - getRegisterShadow(chip)              snapshots YM2151+POKEY registers for oracle diff
  *   - reset(chip)                          full hardware reset
@@ -20,11 +20,11 @@
  *   - main -> sound mailbox write asserts NMI on the 6502 (edge-triggered).
  *   - 6502 read $1810 releases NMI.
  *   - sound -> main mailbox write asserts IRQ6 on the 68010 (here: replyQueue).
- *   - 68010 read $FC0001 simula via drainReplyEvents (pop).
+ *   - 68010 read $FC0001 is simulated via drainReplyEvents (pop).
  *
- * Phase 8 (differential testing) usera' getRegisterShadow per probe-sound-diff
- * vs MAME oracle. Phase 9 (Web Audio) connettera' YM2151/POKEY sample output
- * a un AudioWorklet via ring buffer.
+ * Phase 8 (differential testing) will use getRegisterShadow for probe-sound-diff
+ * vs MAME oracle. Phase 9 (Web Audio) will connect YM2151/POKEY sample output
+ * to an AudioWorklet via ring buffer.
  */
 
 import {
@@ -474,7 +474,7 @@ export interface SoundChip {
 
 export interface SoundChipConfig {
   roms: SoundRomFiles;
-  /** Istanze chip preesistenti (per testing / state restore). Default: create
+  /** Pre-existing chip instances (for testing / state restore). Default: create
    * fresh. */
   ym2151?: YM2151;
   pokey?: POKEY;
@@ -881,10 +881,10 @@ export function createSoundChip(cfg: SoundChipConfig): SoundChip {
     deferChipWrite,
   });
 
-  // Esegue reset sequence: PC = vector $FFFC/$FFFD.
+  // Runs the reset sequence: PC = vector $FFFC/$FFFD.
   cpuReset(cpu, mmu);
-  // Sound 6502 parte in HOLD reset (hardware). Main 68K dovra' call
-  // releaseSoundReset() per liberare il 6502 and farlo iniziare a girare.
+  // The sound 6502 starts in HOLD reset (hardware). The main 68K must call
+  // releaseSoundReset() to free the 6502 and let it start running.
   const chip: SoundChip = {
     cpu,
     mmu,
@@ -1412,7 +1412,7 @@ export function getRegisterShadow(chip: SoundChip): {
  * Replay injects commands recorded from MAME so the TS sound chip receives the
  * same input bytes on the same frames, independent of gameplay wiring.
  *
- * Formato tape:
+ * Tape format:
  *   { cmds: [{frame: N, byte: B}, ...] }
  *
  * `loadCmdTape` groups commands by frame, preserves sub-frame offsets when the

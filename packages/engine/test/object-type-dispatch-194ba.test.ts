@@ -26,7 +26,7 @@ function readU32BE(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
-  it("kind == 0 → invoca fun_1960e poi fun_1953e in the ordine, NO scrittura a obj+0x1C", () => {
+  it("kind == 0 → invokes fun_1960e then fun_1953e in order, NO write to obj+0x1C", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x00;
@@ -55,7 +55,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(readU32BE(s, objOff + FN_PTR_OFFSET)).toBe(0xdeadbeef);
   });
 
-  it("kind == 1 → invoca fun_1973c poi fun_1953e in the ordine", () => {
+  it("kind == 1 → invokes fun_1973c then fun_1953e in order", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x01;
@@ -70,7 +70,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(order).toEqual(["1973C", "1953E"]);
   });
 
-  it("kind == 2, sub-type == 7 → writes 0x21F8A a obj+0x1C (BE)", () => {
+  it("kind == 2, sub-type == 7 → writes 0x21F8A to obj+0x1C (BE)", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x02;
@@ -81,7 +81,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(readU32BE(s, objOff + FN_PTR_OFFSET)).toBe(0x00021f8a);
   });
 
-  it("kind == 2, sub-type == 8 → writes 0x21A62 a obj+0x1C", () => {
+  it("kind == 2, sub-type == 8 → writes 0x21A62 to obj+0x1C", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x02;
@@ -92,7 +92,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(readU32BE(s, objOff + FN_PTR_OFFSET)).toBe(0x00021a62);
   });
 
-  it("kind == 2, sub-type != 7 and != 8 → writes default 0x21EFE a obj+0x1C", () => {
+  it("kind == 2, sub-type != 7 and != 8 → writes default 0x21EFE to obj+0x1C", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x02;
@@ -103,7 +103,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(readU32BE(s, objOff + FN_PTR_OFFSET)).toBe(0x00021efe);
   });
 
-  it("kind == 2 con sub-type 0/9/0xFF → all default", () => {
+  it("kind == 2 with sub-type 0/9/0xFF → all default", () => {
     for (const sub of [0x00, 0x09, 0xff]) {
       const s = emptyGameState();
       const objOff = OBJ_BASE - 0x400000;
@@ -115,7 +115,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     }
   });
 
-  it("kind negativo (0x80, 0xFF) → branch 'skip', no scrittura, no callback", () => {
+  it("negative kind (0x80, 0xFF) → branch 'skip', no write, no callback", () => {
     for (const k of [0x80, 0xc0, 0xff]) {
       const s = emptyGameState();
       const objOff = OBJ_BASE - 0x400000;
@@ -153,7 +153,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     }
   });
 
-  it("subs assente → case 0/1 are no-op silenzioso (no crash)", () => {
+  it("subs absent → case 0/1 are silent no-ops (no crash)", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x00;
@@ -162,7 +162,7 @@ describe("objectTypeDispatch194BA (FUN_000194BA)", () => {
     expect(() => objectTypeDispatch194BA(s, OBJ_BASE)).not.toThrow();
   });
 
-  it("case 2 scrittura strict big-endian (verifica byte-by-byte)", () => {
+  it("case 2 write strict big-endian (byte-by-byte check)", () => {
     const s = emptyGameState();
     const objOff = OBJ_BASE - 0x400000;
     s.workRam[objOff + KIND_OFFSET] = 0x02;

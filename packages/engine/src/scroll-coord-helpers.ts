@@ -3,7 +3,7 @@
  *
  *
  * **`FUN_1BB50` updateScrollCoords1BB50** (19 instr, 5 callers):
- *   ricalcola cell-coords + dirty-flag basato su `*0x400690` (world X) e
+ *   recomputes cell-coords + dirty-flag based on `*0x400690` (world X) and
  *   `*0x400692` (world Y).
  *
  *   Side effects:
@@ -15,7 +15,7 @@
  *     if (*0x4006A0 < *0x40069E) → *0x4006A2 = 0 (clear dirty)
  *
  * **`FUN_1BB08` setScrollCoordsFromEntity1BB08** (8 instr, 7 callers):
- *   trasferisce `entity[0xC..0xF]` (X word) and `entity[0x10..0x13]` (Y word)
+ *   transfers `entity[0xC..0xF]` (X word) and `entity[0x10..0x13]` (Y word)
  *   `updateScrollCoords1BB50`.
  *
  *   Side effects:
@@ -52,7 +52,7 @@ function s16(value: number): number {
 }
 
 /**
- * Replica `FUN_0001BB50` — ricalcola sub-cell + cell coords + dirty flag.
+ * Replica `FUN_0001BB50` — recomputes sub-cell + cell coords + dirty flag.
  */
 export function updateScrollCoords1BB50(state: GameState): void {
   const worldX = readU16(state, 0x690);
@@ -82,8 +82,8 @@ export function updateScrollCoords1BB50(state: GameState): void {
 /**
  * `updateScrollCoords1BB50`.
  *
- * @param entityPtr  Pointer assoluto M68k to the entity struct (workRam).
- *                   Deve avere word X @ +0xC and word Y @ +0x10.
+ * @param entityPtr  Absolute M68k pointer to the entity struct (workRam).
+ *                   Must have word X @ +0xC and word Y @ +0x10.
  */
 export function setScrollCoordsFromEntity1BB08(
   state: GameState,

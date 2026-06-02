@@ -78,7 +78,7 @@ export function strcpy(
 /**
  * Replica `FUN_00003784` — `setAlphaTile(arg1, arg2, arg3, arg4)`.
  *
- * (with the, row) in the HUD overlay.
+ * (col, row) in the HUD overlay.
  *
  * Disassembly (cdecl 4 long args):
  *   D1 = arg1.b (low byte of long arg1 @ SP+12)
@@ -152,13 +152,13 @@ export function setAlphaTile(
  * Replica `FUN_00003A08` — formatHex(value, bufEnd, numDigits, showSpaces).
  *
  *
- *   - If `value == 0` and `showSpaces == 1`: leading zero diventa space (' ').
+ *   - If `value == 0` and `showSpaces == 1`: leading zero becomes a space (' ').
  *
  * Disassembly:
- *   D1 = value (long, arg1 a SP+8)
- *   A0 = bufEnd (arg2 a SP+12)
- *   D0 = numDigits (arg3 a SP+16)
- *   showSpaces = (0x16, SP).w (arg4, word low of un long a SP+20)
+ *   D1 = value (long, arg1 at SP+8)
+ *   A0 = bufEnd (arg2 at SP+12)
+ *   D0 = numDigits (arg3 at SP+16)
+ *   showSpaces = (0x16, SP).w (arg4, low word of a long at SP+20)
  *
  *   A0 += D0
  *   *A0 = 0 (null terminator)
@@ -221,7 +221,7 @@ export function formatHex(
 /**
  * Replica `FUN_00003A54` — `formatDecimal(value, bufEnd, numDigits, showSpaces)`.
  *
- * Trampolino: converte value in BCD via FUN_3A6A (binToBcd), poi formatta
+ * Trampoline: converts value to BCD via FUN_3A6A (binToBcd), then formats
  */
 export function formatDecimal(
   state: GameState,

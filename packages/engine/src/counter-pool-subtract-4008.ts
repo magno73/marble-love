@@ -19,7 +19,7 @@
  *   0x4008  movem.l {A2 D2},-(SP)            ; preserve A2, D2 (8 byte)
  *   0x400C  move.l  (0xC,SP),D2              ; D2 = arg1 (long)
  *   0x4010  movea.l #0x401FF7,A2             ; A2 = counter ptr
- *   0x4016  jsr     FUN_3F3E                 ; helper -> D0 = 0 o 1..4
+ *   0x4016  jsr     FUN_3F3E                 ; helper -> D0 = 0 or 1..4
  *   0x401C  tst.l   D0
  *   0x401E  bne.b   0x4024                   ; D0 != 0 -> work
  *   0x4020  moveq   #1,D0                    ; helper=0 -> ret 1 (no-op)
@@ -146,8 +146,8 @@ function helperFun3F3E(state: GameState): number {
  * Attempts to subtract `arg1` bytes from `counter@FF7 + acc@FF5`, draining the
  * counter first and the accumulator second. Returns D0 as 0/1.
  *
- * @param state  GameState. Legge:
- *   - `*0x401FFC` (long ptr) and bytes a ptr+0xA / +0xB (via helper)
+ * @param state  GameState. Reads:
+ *   - `*0x401FFC` (long ptr) and bytes at ptr+0xA / +0xB (via helper)
  *   - `0x401FF7` (counter), `0x401FF5` (acc)
  *
  *   Mutates only on the work path:
@@ -190,7 +190,7 @@ export function counterPoolSubtract4008(
 
   // ── 0x403A..0x4046: drain loop. ──
   // tst.l D2 (signed); ble after_loop.
-  // tst.b (A2); bls after_loop.  (bls = Z su tst.b, cioe' counter == 0)
+  // tst.b (A2); bls after_loop.  (bls = Z on tst.b, i.e. counter == 0)
   // Loop body: D2 -= 1 (long); counter -= 1 (byte).
   //
   // D2 is a small positive value here, so `tst.l + ble` acts like `while > 0`.

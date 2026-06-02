@@ -1,12 +1,12 @@
 -- mame_spriteproj_return_tap.lua - capture D0 register at PC 0x1242a (=
--- istruzione successiva a `jsr 0x1CC62; move.l D0,D4` in helper121B8).
--- A PC 0x1242a, D0 contiene il return value di spriteProject1CC62.
+-- instruction after `jsr 0x1CC62; move.l D0,D4` in helper121B8).
+-- At PC 0x1242a, D0 contains the return value of spriteProject1CC62.
 --
 -- Compare with TS computation (= 0x3fdc_0000 with STRUCT warm all-3fdc) to
 -- verify whether the TS replica is bit-perfect.
 --
 -- Output: /tmp/mame_spriteproj_return.json
--- Vars env:
+-- Env vars:
 --   MARBLE_TRACE_FROM (default 11998)
 --   MARBLE_TRACE_TO   (default 12100)
 

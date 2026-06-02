@@ -3,7 +3,7 @@
  *
  * Primitive that ORs a bitmask into both status-flag bitmaps in work RAM.
  *
- * **Disasm 0x5250..0x525B** (12 byte):
+ * **Disasm 0x5250..0x525B** (12 bytes):
  *
  *   0x5250  or.l  D1,(0x00401F5E).l   ; *0x401F5E |= D1  (primary flags,  long-BE)
  *   0x5256  or.l  D1,(0x00401F76).l   ; *0x401F76 |= D1  (secondary flags, long-BE)
@@ -28,7 +28,6 @@
  * **Relationship with adjacent modules**:
  *   - `FUN_005248` (immediate predecessor): `or.l D1,(0x401F5E).l; rts` - OR only
  *     primary flags. FUN_5250 also ORs secondary, covering both
- *     le bitmap controllate da `FUN_52A2` (cfr `state-sub-5284.ts`).
  *     bitmaps checked by `FUN_52A2` (see `state-sub-5284.ts`).
  *   - `FUN_0000525C` (successor): uses `fun523A` to set individual bits in
  *     primary flags; it does not touch secondary directly.
@@ -37,7 +36,7 @@
 
 import type { GameState } from "./state.js";
 
-// ─── Costanti ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 /** Offset workRam of the long-BE "primary status flags" @ 0x401F5E. */
 export const PRIMARY_FLAGS_OFF = 0x1f5e as const;
@@ -52,13 +51,13 @@ export const SECONDARY_FLAGS_ADDR = 0x00401f76 as const;
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 /**
- * OR cumulativo of una mask 32-bit su un long-BE in workRam a `off`.
+ * Cumulative OR of a 32-bit mask into a long-BE in workRam at `off`.
  *
- * Implementa `or.l Dn,(abs).l` per un offset workRam dato.
+ * Implements `or.l Dn,(abs).l` for a given workRam offset.
  */
 function orLongBE(r: Uint8Array, off: number, mask: number): void {
   const m = mask >>> 0;
-  if (m === 0) return; // OR con 0 = no-op; avoids write useless.
+  if (m === 0) return; // OR with 0 = no-op; avoids a useless write.
   const cur =
     (((r[off] ?? 0) << 24) |
       ((r[off + 1] ?? 0) << 16) |

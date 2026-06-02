@@ -2,30 +2,30 @@
 /**
  * test-state-sub-2da0-parity.ts — differential FUN_2DA0 vs stateSub2DA0.
  *
- * word corrispondente in the alpha tilemap (formula rotation/shift/stride).
+ * corresponding word in the alpha tilemap (rotation/shift/stride formula).
  *
  *   - Args:
- *     - long arg1 @ SP+0x10  (struct: with the@+0, tickOff@+1, stringPtr_long@+2)
- *   - Letture:
- *     - byte @ A0+0 (with the, signed)
+ *     - long arg1 @ SP+0x10  (struct: col@+0, tickOff@+1, stringPtr_long@+2)
+ *   - Reads:
+ *     - byte @ A0+0 (col, signed)
  *     - byte @ A0+1 (tickOff, signed)
  *     - long @ A0+2 (stringPtr)
  *     - byte @ stringPtr + arg2_byte
  *     - word @ 0x401F42 (rotation)
  *     - byte @ 0x72a5 + rotation*2 (ROM shift table)
- *   - Scritture:
+ *   - Writes:
  *
  * We compare:
  *   - D0 byte returned (0 vs 4)
  *   - alpha RAM @ 0xa03000..0xa03FFF (4 KB)
  *
- * Suite testate:
+ * Suites tested:
  *   - A: rotation=0, struct random + string random, alphaRam pre-fill 0
  *   - B: rotation in [1..7], struct random + string random
- *   - C: forzo string_byte=0 (terminator path) per verify return 0
- *   - D: tickOff/with the negative (sext stress), arg2_byte high values
+ *   - C: force string_byte=0 (terminator path) to verify return 0
+ *   - D: tickOff/col negative (sext stress), arg2_byte high values
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-2da0-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-2da0-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -77,7 +77,7 @@ function setupCase(
   cpu: CpuSession,
   tc: TestCase,
 ): void {
-  // Reset alphaRam in both (pre-fill non-zero per detect clear)
+  // Reset alphaRam in both (pre-fill non-zero to detect clear)
   for (let i = 0; i < ALPHA_SIZE; i++) {
     pokeMem(cpu, ALPHA_BASE + i, 1, 0xcc);
     state.alphaRam[i] = 0xcc;
@@ -93,7 +93,7 @@ function setupCase(
   state.workRam[0x1f42] = (tc.rotation >>> 8) & 0xff;
   state.workRam[0x1f43] = tc.rotation & 0xff;
 
-  // Struct @ STRUCT_ADDR: with the@+0, tickOff@+1, stringPtr@+2
+  // Struct @ STRUCT_ADDR: col@+0, tickOff@+1, stringPtr@+2
   pokeMem(cpu, STRUCT_ADDR + 0, 1, tc.col & 0xff);
   pokeMem(cpu, STRUCT_ADDR + 1, 1, tc.tickOff & 0xff);
   pokeMem(cpu, STRUCT_ADDR + 2, 4, STRING_ADDR);
@@ -248,7 +248,7 @@ async function main(): Promise<void> {
     const tc: TestCase = {
       rotation: 0,
       col: rb(),
-      tickOff: rb() & 0x3f, // tickOff << 6 must restare gestibile
+      tickOff: rb() & 0x3f, // tickOff << 6 must stay manageable
       argByte,
       stringBytes: [...makeRandomString(rng, argByte + 4), 0],
     };
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: edge sext (with the/tickOff negative) ──────────────────────
+  // ─── Suite D: edge sext (col/tickOff negative) ──────────────────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: signed edge cases (col/tickOff/arg2) — ${sizeD} cases ===`,
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
     const tc: TestCase = {
       rotation: Math.floor(rng() * 4),
       col: 0x80 | (rb() & 0x7f), // negative (-128..-1)
-      tickOff: 0x80 | (rb() & 0x3f), // negative parziali (-128..-65)
+      tickOff: 0x80 | (rb() & 0x3f), // partial negatives (-128..-65)
       argByte,
       stringBytes: [...makeRandomString(rng, argByte + 4), 0],
     };
@@ -320,7 +320,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     console.log(

@@ -1,7 +1,7 @@
 /**
- * helper-2548.test.ts — smoke test per helper2548 (FUN_00002548).
+ * helper-2548.test.ts — smoke test for helper2548 (FUN_00002548).
  *
- * **Semantica**: LSR.W su *0x400006 (workRam[0x0006..0x0007]).
+ * **Semantics**: LSR.W on *0x400006 (workRam[0x0006..0x0007]).
  *
  * `packages/cli/src/test-helper-2548-parity.ts` vs Musashi.
  */
@@ -25,16 +25,16 @@ function writeWordBE(workRam: Uint8Array, off: number, val: number): void {
 }
 
 describe("helper2548 (FUN_00002548) — smoke", () => {
-  it("costanti esportate corrette", () => {
+  it("exported constants correct", () => {
     expect(HELPER_2548_ADDR).toBe(0x00002548);
     expect(LSR_FLAG_OFF).toBe(0x0006);
   });
 
-  it("alias FUN_00002548 is identico a helper2548", () => {
+  it("alias FUN_00002548 is identical to helper2548", () => {
     expect(FUN_00002548).toBe(helper2548);
   });
 
-  it("word=0x0001: bit 0 set → returns 1, word diventa 0x0000", () => {
+  it("word=0x0001: bit 0 set → returns 1, word becomes 0x0000", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0001);
     const result = helper2548(s);
@@ -50,7 +50,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0000);
   });
 
-  it("word=0x0002: bit 0 clear → returns 0, word diventa 0x0001", () => {
+  it("word=0x0002: bit 0 clear → returns 0, word becomes 0x0001", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0002);
     const result = helper2548(s);
@@ -58,7 +58,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0001);
   });
 
-  it("word=0xFFFF: bit 0 set → returns 1, word diventa 0x7FFF (MSB becomes 0)", () => {
+  it("word=0xFFFF: bit 0 set → returns 1, word becomes 0x7FFF (MSB becomes 0)", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0xffff);
     const result = helper2548(s);
@@ -66,7 +66,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x7fff);
   });
 
-  it("word=0xFFFE: bit 0 clear → returns 0, word diventa 0x7FFF", () => {
+  it("word=0xFFFE: bit 0 clear → returns 0, word becomes 0x7FFF", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0xfffe);
     const result = helper2548(s);
@@ -74,7 +74,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x7fff);
   });
 
-  it("word=0x8000: bit 0 clear → returns 0, word diventa 0x4000 (LSR is logico, MSB=0)", () => {
+  it("word=0x8000: bit 0 clear → returns 0, word becomes 0x4000 (LSR is logical, MSB=0)", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x8000);
     const result = helper2548(s);
@@ -82,7 +82,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x4000);
   });
 
-  it("word=0x0003: bit 0 set → returns 1, word diventa 0x0001", () => {
+  it("word=0x0003: bit 0 set → returns 1, word becomes 0x0001", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0003);
     const result = helper2548(s);
@@ -90,7 +90,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0001);
   });
 
-  it("shift multipli: consuma bit 0 poi bit 1 (as shift register)", () => {
+  it("multiple shifts: consumes bit 0 then bit 1 (as shift register)", () => {
     const s = emptyGameState();
     // word = 0b00000101 = 5: bit0=1, bit1=0, bit2=1
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0005);
@@ -108,25 +108,25 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(readWordBE(s.workRam, LSR_FLAG_OFF)).toBe(0x0000);
   });
 
-  it("non tocca byte outside da workRam[0x0006..0x0007] (no side-effect collaterali)", () => {
+  it("does not touch bytes outside workRam[0x0006..0x0007] (no collateral side-effects)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xa5);
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x0001);
 
     helper2548(s);
 
-    // Byte adiacenti intact
+    // Adjacent bytes intact
     expect(s.workRam[LSR_FLAG_OFF - 1]).toBe(0xa5);
     expect(s.workRam[LSR_FLAG_OFF + 2]).toBe(0xa5);
     expect(s.workRam[0x0100]).toBe(0xa5);
   });
 
-  it("simulazione spin-wait: 8 bit of 0x00FF consumed correttamente", () => {
+  it("spin-wait simulation: 8 bits of 0x00FF consumed correctly", () => {
     const s = emptyGameState();
-    // 0x00FF = 0b11111111: 8 × bit-1 in posizioni 0..7
+    // 0x00FF = 0b11111111: 8 × bit-1 in positions 0..7
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x00ff);
 
-    // Le prime 8 call alternano: bit0=1, poi shift rivela bit1=1, etc.
+    // The first 8 calls alternate: bit0=1, then shift reveals bit1=1, etc.
     for (let i = 0; i < 8; i++) {
       expect(helper2548(s)).toBe(1);
     }
@@ -135,7 +135,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
     expect(helper2548(s)).toBe(0);
   });
 
-  it("word=0x5555 (0b0101...): alternanza 1,0,1,0 per i first 4 bit", () => {
+  it("word=0x5555 (0b0101...): alternation 1,0,1,0 for the first 4 bits", () => {
     const s = emptyGameState();
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x5555); // 0b0101010101010101
 

@@ -27,7 +27,7 @@ function freshState() {
   return s;
 }
 
-/** Setup ROM lookup table @ 0x1F0E2 puntando a 16 slot in workRam. */
+/** Setup ROM lookup table @ 0x1F0E2 pointing to 16 slots in workRam. */
 function setupRom() {
   const rom = emptyRomImage();
   for (let i = 0; i < 16; i++) {
@@ -42,13 +42,13 @@ function setupRom() {
 }
 
 describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
-  it("inserisce in the lista vuota: byte[0] = 0 (slot 0), slot[0] = [type, sub]", () => {
+  it("inserts into the empty list: byte[0] = 0 (slot 0), slot[0] = [type, sub]", () => {
     const s = freshState();
     const rom = setupRom();
 
     const r = slotInsertSorted18E6C(s, rom, 0x2c, 0x05);
 
-    // Loop1 termina al first sentinel a A3 = a2Off+0 ⇒ insertOnSentinel=true,
+    // Loop1 terminates at the first sentinel at A3 = a2Off+0 ⇒ insertOnSentinel=true,
     // insertPos = 0x3BC.
     expect(r.inserted).toBe(true);
     expect(r.insertPos).toBe(BYTE_OFF);
@@ -57,7 +57,7 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
 
     // byte[0] = 0 (slot index)
     expect(s.workRam[BYTE_OFF]).toBe(0);
-    // byte[1..0x1F] inalterati (sentinel)
+    // byte[1..0x1F] unchanged (sentinel)
     for (let i = 1; i < BYTE_ARRAY_LEN; i++) {
       expect(s.workRam[BYTE_OFF + i]).toBe(SENTINEL_BYTE);
     }
@@ -70,31 +70,31 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     }
   });
 
-  it("trova il first slot free saltando uno occupied", () => {
+  it("finds the first free slot, skipping an occupied one", () => {
     const s = freshState();
     const rom = setupRom();
 
-    // Pre-occupa slot 0 and 1 (byte 0 != 0).
+    // Pre-occupy slots 0 and 1 (byte 0 != 0).
     s.workRam[SLOT_OFF + 0 * RECT_SLOT_STRIDE] = 0x10;
     s.workRam[SLOT_OFF + 1 * RECT_SLOT_STRIDE] = 0x20;
 
     const r = slotInsertSorted18E6C(s, rom, 0x40, 0x07);
 
-    // Slot 0 and 1 pieni → d1 = 2 (slot 2 free).
+    // Slots 0 and 1 full → d1 = 2 (slot 2 free).
     expect(r.inserted).toBe(true);
     expect(r.slotIdx).toBe(2);
     // byte[0] = 2 (slot index)
     expect(s.workRam[BYTE_OFF]).toBe(2);
-    // Slot 2 popolato
+    // Slot 2 populated
     const slot2Off = SLOT_OFF + 2 * RECT_SLOT_STRIDE;
     expect(s.workRam[slot2Off]).toBe(0x40);
     expect(s.workRam[slot2Off + 1]).toBe(0x07);
-    // Slot 0 and 1 inalterati
+    // Slots 0 and 1 unchanged
     expect(s.workRam[SLOT_OFF]).toBe(0x10);
     expect(s.workRam[SLOT_OFF + RECT_SLOT_STRIDE]).toBe(0x20);
   });
 
-  it("returns inserted=false se all the slot are pieni (31 slot)", () => {
+  it("returns inserted=false if all slots are full (31 slots)", () => {
     const s = freshState();
     const rom = setupRom();
 
@@ -112,7 +112,7 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     }
   });
 
-  it("invoca subs.fun_1b12a con (typeCode, subIdx, localRect) and uses il risultato per il compare", () => {
+  it("invokes subs.fun_1b12a with (typeCode, subIdx, localRect) and uses the result for the compare", () => {
     const s = freshState();
     const rom = setupRom();
 
@@ -137,12 +137,12 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
     expect(captured[0]!.rect.slice(2)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("preserva il sentinel a byte[0x1F] dopo lo shift right", () => {
+  it("preserves the sentinel at byte[0x1F] after the right shift", () => {
     const s = freshState();
     const rom = setupRom();
 
-    // produrranno compare = 0 deterministicamente.
-    // Per testare specificamente il sentinel a byte[0x1F], prepopoliamo
+    // will deterministically produce compare = 0.
+    // To specifically test the sentinel at byte[0x1F], prepopulate
     for (let i = 0; i < BYTE_ARRAY_LEN; i++) {
       s.workRam[BYTE_OFF + i] = i < 16 ? i : SENTINEL_BYTE;
     }
@@ -150,7 +150,7 @@ describe("slotInsertSorted18E6C (FUN_18E6C)", () => {
 
     slotInsertSorted18E6C(s, rom, 0x29, 0x00);
 
-    // byte[0x1F] MUST rimanere sentinel (clamp of the shift).
+    // byte[0x1F] MUST remain the sentinel (shift clamp).
     expect(s.workRam[BYTE_OFF + 0x1f]).toBe(SENTINEL_BYTE);
   });
 });

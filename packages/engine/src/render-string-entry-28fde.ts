@@ -17,12 +17,12 @@
  *   ext.l  D0
  *   move.l D0,-(SP)            ; push arg1 ext_l
  *   pea    (0x400434).l        ; push entry pointer
- *   jsr    0x13C.l             ; FUN_255A: byte writes (with the, tickOff, clr marker)
+ *   jsr    0x13C.l             ; FUN_255A: byte writes (col, tickOff, clr marker)
  *     ; FUN_255A:
  *     ;   movea.l (0x4,SP),A0  ; A0 = 0x400434
  *     ;   move.b  (0xb,SP),D1b ; D1.b = arg1 ext_l low byte = arg1.w & 0xff
  *     ;   move.b  (0xf,SP),D0b ; D0.b = arg2 ext_l low byte = arg2.w & 0xff
- *     ;   move.b  D1b,(A0)     ; entry[0] = with the
+ *     ;   move.b  D1b,(A0)     ; entry[0] = col
  *     ;   move.b  D0b,(0x1,A0) ; entry[1] = tickOff
  *     ;   clr.b   (0x6,A0)     ; entry[6] = 0
  *     ;   rts
@@ -43,7 +43,7 @@
  *   The byte read extracts the low byte, equivalent to `arg1Long & 0xff` when
  *   `arg1Long & 0xffff` is the effective word.
  *
- *   1. `state.workRam[0x434] = arg1Long & 0xff`   (with the)
+ *   1. `state.workRam[0x434] = arg1Long & 0xff`   (col)
  *   2. `state.workRam[0x435] = arg2Long & 0xff`   (tickOff)
  *   3. `state.workRam[0x43A] = 0`                 (marker)
  *   4. Calls `renderStringChain(state, rom, 0x400434, 0x3400)` via stub.
@@ -88,7 +88,7 @@ export interface RenderStringEntry28FDESubs {
  * @param subs      stub injection for `renderStringChain` (default no-op).
  *
  * **Side effects** in `state.workRam`:
- *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (with the byte)
+ *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (col byte)
  *   - `[ENTRY_OFF + 1]   = arg2Long & 0xff`   (tickOff byte)
  *   - `[ENTRY_OFF + 6]   = 0`                 (marker clear)
  *

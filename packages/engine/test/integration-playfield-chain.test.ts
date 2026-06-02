@@ -1,6 +1,6 @@
 /**
  * integration-playfield-chain.test.ts — end-to-end validation of the chain
- * tilemap loading scoperta via watch_write MAME (level1):
+ * tilemap loading discovered via watch_write MAME (level1):
  *
  *   bootInit
  *   ↓
@@ -13,7 +13,7 @@
  *     → renderTileLine1AD54 (FUN_1AD54)
  *     → packTilemapEntries1A9CC (FUN_1A9CC)
  *
- * In MAME al frame 200 of level1 = 4039 byte non-zero.
+ * In MAME at frame 200 of level1 = 4039 non-zero bytes.
  */
 
 import { describe, it, expect } from "vitest";
@@ -51,11 +51,11 @@ function loadRomFromBlob(): RomImage | null {
 describe("integration: playfield chain (Codex tilemap loaders)", () => {
   const rom = loadRomFromBlob();
   if (rom === null) {
-    it.skip("ROM blob non disponibile — test skippati", () => {});
+    it.skip("ROM blob not available — tests skipped", () => {});
     return;
   }
 
-  it("levelDispatcher16EC6 popola playfieldRam per level=1", () => {
+  it("levelDispatcher16EC6 populates playfieldRam for level=1", () => {
     const state = emptyGameState();
     bootInit(state, rom);
 
@@ -73,11 +73,11 @@ describe("integration: playfield chain (Codex tilemap loaders)", () => {
 
     // with stub injection some subs may be partially active.
     // but packTilemapEntries1A9CC should still write anyway).
-    // Soglia conservativa: almeno qualcosa.
+    // Conservative threshold: at least something.
     expect(postNonZero).toBeGreaterThan(0);
   });
 
-  it("each livello (0..5) popola playfieldRam differentemente", () => {
+  it("each level (0..5) populates playfieldRam differently", () => {
     const counts: number[] = [];
     for (let levelIdx = 0; levelIdx < 6; levelIdx++) {
       const state = emptyGameState();
@@ -90,11 +90,11 @@ describe("integration: playfield chain (Codex tilemap loaders)", () => {
     }
     const total = counts.reduce((a, b) => a + b, 0);
     expect(total).toBeGreaterThan(0);
-    // Log per debug visibility (vitest mostra console.log)
+    // Log for debug visibility (vitest shows console.log)
     console.log("    playfieldRam non-zero by level:", counts);
   });
 
-  it("workRam[0x474] (state ptr) popolato from the dispatcher", () => {
+  it("workRam[0x474] (state ptr) populated from the dispatcher", () => {
     const state = emptyGameState();
     bootInit(state, rom);
     state.workRam[0x394] = 0;

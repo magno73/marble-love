@@ -4,7 +4,7 @@
  * Progressively mirrors `FUN_00028788` (MainUpdate, called by `0x10116`
  * MainGameTick -> IRQ4 VBLANK).
  *
- * **Status Phase 4d**: implementati i blocchi:
+ * **Status Phase 4d**: implemented blocks:
  *   - `mainUpdateScrollSync`: prefix of MainUpdate (scroll/AV-control sync)
  *
  * Open:

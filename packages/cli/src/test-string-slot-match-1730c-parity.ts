@@ -5,11 +5,11 @@
  *
  * `*(argPtr+0x2)` long. Else 0.
  *
- * Suite testate:
+ * Suites tested:
  *
- * Strategia:
+ * Strategy:
  *
- * Uso: npx tsx packages/cli/src/test-string-slot-match-1730c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-slot-match-1730c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,7 +52,7 @@ function makeRng(seed: number): () => number {
 /** Full region of the string-slot table: 7 * 0x42 = 0x1CE bytes. */
 const TABLE_SIZE = SLOT_COUNT * SLOT_STRIDE;
 
-/** Region argPtr buffer: ARG_ID_OFF + 4 = almeno 6 byte. We use 0x10. */
+/** Region argPtr buffer: ARG_ID_OFF + 4 = at least 6 byte. We use 0x10. */
 const ARG_BUF_SIZE = 0x10;
 const ARG_PTR = 0x401e00;
 
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
   function randTable(): number[] {
     return new Array(TABLE_SIZE).fill(0).map(() => rb());
   }
-  /** Setta il long ID @ slot[slotIdx] + SLOT_ID_OFF (big-endian). */
+  /** Set the long ID @ slot[slotIdx] + SLOT_ID_OFF (big-endian). */
   function setTableId(table: number[], slotIdx: number, id: number): void {
     const base = slotIdx * SLOT_STRIDE + SLOT_ID_OFF;
     table[base] = (id >>> 24) & 0xff;
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
     table[base + 2] = (id >>> 8) & 0xff;
     table[base + 3] = id & 0xff;
   }
-  /** Setta il flag active @ slot[slotIdx] + SLOT_ACTIVE_OFF. */
+  /** Set the active flag @ slot[slotIdx] + SLOT_ACTIVE_OFF. */
   function setTableActive(table: number[], slotIdx: number, active: number): void {
     table[slotIdx * SLOT_STRIDE + SLOT_ACTIVE_OFF] = active & 0xff;
   }
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < perSuite; i++) {
     const table = randTable();
     for (let j = 0; j < SLOT_COUNT; j++) {
-      // Active byte != 0 (forziamo 1..0xFF)
+      // Active byte != 0 (force 1..0xFF)
       let active = rb();
       if (active === 0) active = 1;
       setTableActive(table, j, active);
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

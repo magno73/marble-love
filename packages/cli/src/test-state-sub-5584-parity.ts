@@ -10,14 +10,14 @@
  *        if FUN_53EA(D2) == 0: D2 = arg0_long (D6 restore)
  *        if D2 == D5: exit
  *
- * Strategia parity test:
- *   - Patch RTS suthe 3 callee binari (FUN_540A, FUN_53EA, FUN_5468) per
- *     impedire the esecuzione of the their corpo.
+ * Parity-test strategy:
+ *   - Patch RTS over the 3 binary callees (FUN_540A, FUN_53EA, FUN_5468) to
+ *     prevent their bodies from executing.
  *   - Capture args on the stack when pc == callee entry. Capture D0
- *     lo INIETTIAMO).
+ *     (which we inject).
  *     TS that uses callback playback with the same return values.
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5584-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5584-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,13 +52,13 @@ function makeRng(seed: number): () => number {
 
 /** Patch RTS (0x4E75) at the entry of the three callees. */
 function patchCallees(cpu: CpuSession): void {
-  // FUN_540A: orig word `movem.l {A2 D3 D2},-(SP)` (0x48E7). Patch a 0x4E75 (rts).
+  // FUN_540A: orig word `movem.l {A2 D3 D2},-(SP)` (0x48E7). Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_540A + 0, 1, 0x4e);
   pokeMem(cpu, FUN_540A + 1, 1, 0x75);
-  // FUN_53EA: orig word `move.l D2,-(SP)` (0x2F02). Patch a 0x4E75 (rts).
+  // FUN_53EA: orig word `move.l D2,-(SP)` (0x2F02). Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_53EA + 0, 1, 0x4e);
   pokeMem(cpu, FUN_53EA + 1, 1, 0x75);
-  // FUN_5468: orig word `link.w A6,-0xc` (0x4E56). Patch a 0x4E75 (rts).
+  // FUN_5468: orig word `link.w A6,-0xc` (0x4E56). Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_5468 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_5468 + 1, 1, 0x75);
 }
@@ -92,12 +92,12 @@ interface CapturedSeq {
 }
 
 /**
- * Esegue FUN_5584 step-by-step.
- * of the RTS sintetico.
+ * Run FUN_5584 step-by-step.
+ * of the synthetic RTS.
  *
  * @param cpu          CPU session.
  * @param args         5 args (arg0..arg4) as long unsigned.
- * @param ret540A      Return da FUN_540A.
+ * @param ret540A      Return from FUN_540A.
  */
 function runAndCapture(
   cpu: CpuSession,
@@ -273,7 +273,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sui callee (una sola time — la patch persiste).
+  // Patch RTS over the callees (just once — the patch persists).
   patchCallees(cpu);
 
   console.log(`\n=== stateSub5584 (FUN_5584) — ${n} cases ===`);
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
       ret53EA = [0]; // simulate pair=0 → early exit
       ret5468 = [];
     } else if (i < 30) {
-      // Sweep deterministico su pattern of return.
+      // Deterministic sweep over return patterns.
       const seed = i - 5;
       const earlyExit = (seed & 1) === 0;
       args = [
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
 
     const bin = runAndCapture(cpu, args, ret540A, ret53EA, ret5468);
 
-    // Esegue TS.
+    // Run TS.
     const ts = runTsAndCapture(state, args, ret540A, ret53EA, ret5468);
 
     const sameOrder =

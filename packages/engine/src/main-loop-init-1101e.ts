@@ -637,7 +637,9 @@ function case6(state: GameState, subs: MainLoopInit1101ESubs, rom?: RomImage): v
   ww(state, 0x00400390, 2);
 }
 
+/** @public */
 export const MAIN_LOOP_INIT_1101E_ADDR = 0x0001101e as const;
+/** @public */
 export const MAIN_LOOP_INIT_1101E_SUB_ADDRS = [
   0x000158ac, 0x00000118, 0x00011428, 0x00010504, 0x00010fce, 0x00010456,
   0x00016ec6, 0x00011452, 0x00028dea, 0x00016a20, 0x00028232,

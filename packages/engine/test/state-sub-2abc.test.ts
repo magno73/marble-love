@@ -49,7 +49,7 @@ function setupRomTables(
 }
 
 describe("stateSub2ABC (FUN_2ABC)", () => {
-  it("non solleva eccezioni su struct minima (string vuota, no chain)", () => {
+  it("does not raise exceptions on a minimal struct (empty string, no chain)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
@@ -63,7 +63,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     expect(() => stateSub2ABC(s, rom, STRUCT_ADDR)).not.toThrow();
   });
 
-  it("string non-vuota con rotation=0 → clear word in alphaRam", () => {
+  it("non-empty string with rotation=0 → clear word in alphaRam", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
@@ -100,7 +100,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     expect(s.alphaRam[262]).toBe(0xcc);
   });
 
-  it("chain walk: marker + VAL_F00 > 1 → segue *(A0+8)", () => {
+  it("chain walk: marker + VAL_F00 > 1 → follows *(A0+8)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
@@ -139,7 +139,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     // infinite loop means the chain-walk + termination works).
   });
 
-  it("rotation != 0 → D2 = 0x29 - sext(tickOff), formula path alternativa", () => {
+  it("rotation != 0 → D2 = 0x29 - sext(tickOff), alternative formula path", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
@@ -167,7 +167,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     expect(s.alphaRam[81]).toBe(0xcc);
   });
 
-  it("col negativo (signed): sext propaga, addr outside alpha → no-op", () => {
+  it("negative col (signed): sext propagates, addr outside alpha → no-op", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);
@@ -188,7 +188,7 @@ describe("stateSub2ABC (FUN_2ABC)", () => {
     }
   });
 
-  it("safety bound: chain self-referenziale non causa hang", () => {
+  it("safety bound: self-referential chain does not cause a hang", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupRomTables(rom);

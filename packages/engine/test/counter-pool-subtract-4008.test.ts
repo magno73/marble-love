@@ -2,11 +2,11 @@
  * counter-pool-subtract-4008.test.ts — smoke tests of `counterPoolSubtract4008`
  * (FUN_4008).
  *
- * Verifica the 4 path principali:
- *   1. Helper status >= 0xE0 -> early exit, ret 1, NO modifiche
- *   2. Pool insufficient (counter+acc < arg1) -> ret 0, NO modifiche
+ * Verifies the 4 main paths:
+ *   1. Helper status >= 0xE0 -> early exit, ret 1, NO changes
+ *   2. Pool insufficient (counter+acc < arg1) -> ret 0, NO changes
  *   3. Drain from the counter (counter >= arg1) -> ret 1, counter scaled
- *   4. Drain counter + scarto on the acc -> ret 1, counter=0, acc scaled
+ *   4. Drain counter + remainder on the acc -> ret 1, counter=0, acc scaled
  *
  * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-counter-pool-subtract-4008-parity.ts` vs Musashi.
@@ -36,7 +36,7 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
  *   - ptr+0xA = status
  *   - ptr+0xB = ~status
  * Thus helper FUN_3F3E returns (status & 3) + 1 (range 1..4) for status < 0xE0,
- * or 0 per status >= 0xE0.
+ * or 0 for status >= 0xE0.
  */
 function setupPlayer(
   state: ReturnType<typeof emptyGameState>,
@@ -50,7 +50,7 @@ function setupPlayer(
 }
 
 describe("counterPoolSubtract4008 (FUN_4008)", () => {
-  it("path #1: helper status >= 0xE0 -> ret 1, no modifies", () => {
+  it("path #1: helper status >= 0xE0 -> ret 1, no changes", () => {
     const s = emptyGameState();
     // status = 0xE0 -> helper returns 0 -> early exit with ret 1.
     setupPlayer(s, 0x401a00, 0xe0);
@@ -66,7 +66,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(counterPoolSubtract4008(s, 0x42)).toBe(RET_SUCCESS);
   });
 
-  it("path #2: pool < arg1 -> ret 0, no modifies", () => {
+  it("path #2: pool < arg1 -> ret 0, no changes", () => {
     const s = emptyGameState();
     // status = 0x10 -> helper = (0x10 & 3) + 1 = 1 (proceed).
     setupPlayer(s, 0x401a00, 0x10);
@@ -85,7 +85,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("path #3: drain from the counter (arg1 <= counter) -> counter scaled, acc invariato", () => {
+  it("path #3: drain from the counter (arg1 <= counter) -> counter scaled, acc unchanged", () => {
     const s = emptyGameState();
     setupPlayer(s, 0x401a00, 0x10);
     s.workRam[CTR_OFF] = 0x10;
@@ -93,7 +93,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     // arg1 = 7. pool = 21 >= 7. counter (16) >= 7 -> drain counter only.
     expect(counterPoolSubtract4008(s, 7)).toBe(RET_SUCCESS);
     expect(s.workRam[CTR_OFF]).toBe(0x10 - 7);
-    expect(s.workRam[ACC_OFF]).toBe(0x05); // invariato
+    expect(s.workRam[ACC_OFF]).toBe(0x05); // unchanged
 
     // arg1 = 0 -> ret 1, nothing changed (D2 <= 0 immediate ble, sub.b 0).
     s.workRam[CTR_OFF] = 0x42;
@@ -103,12 +103,12 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam[ACC_OFF]).toBe(0x07);
   });
 
-  it("path #4: drain counter + scarto su acc (arg1 > counter)", () => {
+  it("path #4: drain counter + remainder on acc (arg1 > counter)", () => {
     const s = emptyGameState();
     setupPlayer(s, 0x401a00, 0x10);
     s.workRam[CTR_OFF] = 0x05;
     s.workRam[ACC_OFF] = 0x10;
-    // arg1 = 8. pool = 21 >= 8. counter (5) -> drena all. residuo = 3 -> acc -= 3.
+    // arg1 = 8. pool = 21 >= 8. counter (5) -> drains all. remainder = 3 -> acc -= 3.
     expect(counterPoolSubtract4008(s, 8)).toBe(RET_SUCCESS);
     expect(s.workRam[CTR_OFF]).toBe(0);
     expect(s.workRam[ACC_OFF]).toBe(0x10 - 3);
@@ -118,9 +118,9 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     s.workRam[ACC_OFF] = 0x20;
     expect(counterPoolSubtract4008(s, 9)).toBe(RET_SUCCESS);
     expect(s.workRam[CTR_OFF]).toBe(0);
-    expect(s.workRam[ACC_OFF]).toBe(0x20); // invariato
+    expect(s.workRam[ACC_OFF]).toBe(0x20); // unchanged
 
-    // Edge: arg1 == counter + acc (svuota all).
+    // Edge: arg1 == counter + acc (empties all).
     s.workRam[CTR_OFF] = 0x04;
     s.workRam[ACC_OFF] = 0x07;
     expect(counterPoolSubtract4008(s, 11)).toBe(RET_SUCCESS);
@@ -128,12 +128,12 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam[ACC_OFF]).toBe(0);
   });
 
-  it("status complement check: se ptr+0xA != ~ptr+0xB -> status forzato a 0 -> helper = 1", () => {
+  it("status complement check: if ptr+0xA != ~ptr+0xB -> status forced to 0 -> helper = 1", () => {
     const s = emptyGameState();
     const ptr = 0x401a00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
     // status = 0x55, but complement byte = 0x42 (NOT ~0x55 = 0xAA). Mismatch.
-    // -> helper internamente fa clr.b D2 -> status = 0 -> < 0xE0 -> (0 & 3)+1 = 1.
+    // -> helper internally does clr.b D2 -> status = 0 -> < 0xE0 -> (0 & 3)+1 = 1.
     s.workRam[ptr - 0x400000 + 0xa] = 0x55;
     s.workRam[ptr - 0x400000 + 0xb] = 0x42;
     s.workRam[CTR_OFF] = 0x05;
@@ -144,20 +144,20 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam[ACC_OFF]).toBe(0);
   });
 
-  it("status >= 0xE0 con complement valido: helper = 0 (no-op even if pool insufficient)", () => {
+  it("status >= 0xE0 with valid complement: helper = 0 (no-op even if pool insufficient)", () => {
     const s = emptyGameState();
-    // status = 0xE0 (status & ~status check vale).
+    // status = 0xE0 (status & ~status check holds).
     setupPlayer(s, 0x401a00, 0xe0);
-    // pool = 0, arg1 = 100 -> normalmente sarebbe insufficient.
+    // pool = 0, arg1 = 100 -> normally this would be insufficient.
     // But helper = 0 -> early exit with ret 1, no pool check.
     s.workRam[CTR_OFF] = 0;
     s.workRam[ACC_OFF] = 0;
     expect(counterPoolSubtract4008(s, 100)).toBe(RET_SUCCESS);
-    expect(s.workRam[CTR_OFF]).toBe(0); // invariato
-    expect(s.workRam[ACC_OFF]).toBe(0); // invariato
+    expect(s.workRam[CTR_OFF]).toBe(0); // unchanged
+    expect(s.workRam[ACC_OFF]).toBe(0); // unchanged
   });
 
-  it("byte boundary: pool counter=0xFF, acc=0xFF, arg1=0x1FE -> svuota all", () => {
+  it("byte boundary: pool counter=0xFF, acc=0xFF, arg1=0x1FE -> empties all", () => {
     const s = emptyGameState();
     setupPlayer(s, 0x401a00, 0x10);
     s.workRam[CTR_OFF] = 0xff;
@@ -175,7 +175,7 @@ describe("counterPoolSubtract4008 (FUN_4008)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("ptr legato dinamicamente a *0x401FFC (cambiare ptr cambia status target)", () => {
+  it("ptr bound dynamically to *0x401FFC (changing ptr changes the status target)", () => {
     const s = emptyGameState();
     // Setup A: ptr = 0x401200 with status = 0xE5 -> helper = 0 -> early exit.
     setupPlayer(s, 0x401200, 0xe5);

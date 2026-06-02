@@ -1,14 +1,14 @@
 /**
- * state-sub-18a88.test.ts — smoke test per `FUN_00018A88`.
+ * state-sub-18a88.test.ts — smoke test for `FUN_00018A88`.
  *
- * Verifica:
+ * Verifies:
  *   - Total skip: count == 0 -> 1 particleInit + 1 vblank tick, nothing else.
  *   - Per-entity skip: entity[0x18] != 3 -> no body invoked for that entity.
- *   - Path completo: entity matched + count==1 → no renderTag, count-down
+ *   - Full path: entity matched + count==1 → no renderTag, count-down
  *     until D4 <= 0, with coherent side-effect counter bytes.
  *   - 2-player: count==2 -> renderTag invoked, attr alternates 0x2000/0x2400.
- *   - Counter clamp: counterA > 99 → clamp a 99; counterB > 20 → clamp a 20.
- *   - D5/D6 swap: entity[0x19] == 0 → D5=0x1000, D6=0x1400; != 0 → invertito.
+ *   - Counter clamp: counterA > 99 → clamp to 99; counterB > 20 → clamp to 20.
+ *   - D5/D6 swap: entity[0x19] == 0 → D5=0x1000, D6=0x1400; != 0 → inverted.
  */
 
 import { describe, it, expect } from "vitest";
@@ -102,7 +102,7 @@ function makeTracingSubs(): { subs: StateSub18A88Subs; trace: CallTrace } {
 }
 
 describe("stateSub18A88 (FUN_00018A88)", () => {
-  it("count == 0: solo particleInit + 1 vblank tick, no body", () => {
+  it("count == 0: only particleInit + 1 vblank tick, no body", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 0);
     const tickPre = s.workRam[VBLANK_TICK_COUNTER_OFF] ?? 0;
@@ -136,7 +136,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.waitVblankStateGated).toHaveLength(0);
   });
 
-  it("count == 1, entity[0x18] != 3: skip body, niente render", () => {
+  it("count == 1, entity[0x18] != 3: skip body, no render", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 1);
     const eOff = OBJ_BASE_ADDR - WORK_RAM_BASE;
@@ -155,7 +155,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(1);
   });
 
-  it("count == 1, entity[0x18] == 3, p1 (entity[0x19]==0): D5/D6 swap, no renderTag, count-down completo", () => {
+  it("count == 1, entity[0x18] == 3, p1 (entity[0x19]==0): D5/D6 swap, no renderTag, full count-down", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 1);
     const eOff = OBJ_BASE_ADDR - WORK_RAM_BASE;
@@ -177,7 +177,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(m.counterB).toBe(3);
     // D4_initial = 20000 + 5*1000 - 3*1000 = 22000
     expect(m.d4Initial).toBe(22000);
-    // count-down: 22000 / 250 = 88 (esatto, l'ultima iter porta D4 a 0)
+    // count-down: 22000 / 250 = 88 (exact, the last iter brings D4 to 0)
     expect(m.countdownIterations).toBe(88);
     expect(m.renderTagCalls).toBe(0);
 
@@ -187,7 +187,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.clearAlphaTiles).toEqual([0]);
     // renderStringVia200 called 4 times (header1 + 2x BONUS labels = 3,
     // wait: header1 (1) + label BONUS (1) + label TIME (1) = 3, NOT 4)
-    // Verifica entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
+    // Verify entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
     expect(trace.renderStringVia200).toEqual([
       { entryPtr: ROM_HEADER_STRING_1, attr: 0x1000 },
       { entryPtr: ROM_LABEL_BONUS, attr: 0x1000 },
@@ -203,7 +203,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     // renderStringHelper called 3 + 88 = 91 times.
     // (counterA, counterA*1000, counterB, counterB*1000, D4-display) +
     // 88 count-down refresh
-    // Wait: 5 fissi (a punti i,j,n,o,q) + 88 count-down = 93
+    // Wait: 5 fixed (at points i,j,n,o,q) + 88 count-down = 93
     expect(trace.renderStringHelper).toHaveLength(5 + 88);
 
     // addToObjectAccum 88 times with (entityAddr, 250).
@@ -222,13 +222,13 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     }
 
     // Side effect counter byte:
-    //   summary counter: +1 per entity matchata
+    //   summary counter: +1 per matched entity
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(1);
-    //   vblank counter: 1 (pre-loop) + 3 (per entity matchata: c, l, r) = 4
+    //   vblank counter: 1 (pre-loop) + 3 (per matched entity: c, l, r) = 4
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(4);
   });
 
-  it("count == 2: renderTag invocato 2 times (alternando 0x2000/0x2400)", () => {
+  it("count == 2: renderTag invoked 2 times (alternating 0x2000/0x2400)", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 2);
 
@@ -239,7 +239,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     setWordBE(s, e0Off + OBJ_COUNTER_A_OFF, 0); // minimal
     setWordBE(s, e0Off + OBJ_COUNTER_B_OFF, 0);
 
-    // Entity 1 (a OBJ_BASE_ADDR + 0xE2)
+    // Entity 1 (at OBJ_BASE_ADDR + 0xE2)
     const e1Off = e0Off + OBJ_STRIDE;
     setByte(s, e1Off + OBJ_STATE_OFF, OBJ_TRIGGER_STATE);
     setByte(s, e1Off + OBJ_PLAYER_ID_OFF, 1); // p2
@@ -267,7 +267,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(r.matched[1]!.attrD6).toBe(ATTR_SECONDARY);
   });
 
-  it("counterA > 99 → clamp a 99; counterB > 20 → clamp a 20", () => {
+  it("counterA > 99 → clamp to 99; counterB > 20 → clamp to 20", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 1);
     const eOff = OBJ_BASE_ADDR - WORK_RAM_BASE;
@@ -286,7 +286,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(r.matched[0]!.d4Initial).toBe(D4_INIT + 99 * 1000 - 20 * 1000);
   });
 
-  it("subs assente / parziale: no crash, counters byte aggiornati comunque", () => {
+  it("subs absent / partial: no crash, counter bytes updated regardless", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 1);
     const eOff = OBJ_BASE_ADDR - WORK_RAM_BASE;
@@ -301,7 +301,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(s.workRam[SUMMARY_COUNTER_OFF]).toBe(1);
   });
 
-  it("entity[0xBC..0xBF] passato a formatAndRender bit-perfect", () => {
+  it("entity[0xBC..0xBF] passed to formatAndRender bit-perfect", () => {
     const s = emptyGameState();
     setWordBE(s, OBJ_COUNT_OFF, 1);
     const eOff = OBJ_BASE_ADDR - WORK_RAM_BASE;

@@ -22,8 +22,8 @@
  *                 if `[A0] == 0xFFFFFFFF`:
  *                   `entity[0x0C] += entity[0x00]`; `entity[0x10] += entity[0x04]`;
  *
- * **Disasm 0x1912C..0x1924D** (130 byte, ricostruito forzando branch target
- * nascosti da padding/dati):
+ * **Disasm 0x1912C..0x1924D** (130 bytes, reconstructed by forcing branch
+ * targets hidden by padding/data):
  *
  *   0x1912c  movem.l {D2,D3,D4,A2},-(SP)
  *   0x19130  moveq   0x4,D0
@@ -153,9 +153,9 @@
  *   - `+0x24` (byte): animation counter (incremented every active tick).
  *   - `+0x25` (byte): animation threshold / state selector.
  *
- * **JSR esterne** (via sub-injection):
+ * **External JSRs** (via sub-injection):
  *
- * **Caller noto** (1 xref): `FUN_00010FCE` @ 0x10FF8.
+ * **Known caller** (1 xref): `FUN_00010FCE` @ 0x10FF8.
  *
  */
 
@@ -222,7 +222,7 @@ export const SUB_COUNTER_LIMIT = 4 as const;
 // ─── Sub injection ───────────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 2 JSR esterne. Default: all no-op (matching of the
+ * Stub injection for the 2 external JSRs. Default: all no-op (matching the
  */
 export interface RefreshHelper1912CSubs {
   /**
@@ -237,7 +237,7 @@ export interface RefreshHelper1912CSubs {
 // ─── Result ──────────────────────────────────────────────────────────────────
 
 export type EntityBranch =
-  | "threshold_only"    // D0 > entity[0x24]: solo FUN_199D6
+  | "threshold_only"    // D0 > entity[0x24]: only FUN_199D6
   | "state7_kind2_term" // state==7 AND kind==2 AND [ptr]==0xFFFF_FFFF
   | "state7_kind2_cont" // state==7 AND kind==2 AND [ptr]!=0xFFFF_FFFF
   | "state7_kindx_lt4"  // state==7 AND kind!=2 AND sub_counter < 4
@@ -245,9 +245,9 @@ export type EntityBranch =
   | "not7_term"         // state!=7 AND [ptr]==0xFFFF_FFFF
   | "not7_cont";        // state!=7 AND [ptr]!=0xFFFF_FFFF
 
-/** Dettaglio of the tick of una singola entity. */
+/** Detail of the tick of a single entity. */
 export interface EntityTickRecord {
-  /** Index entity (0..8). */
+  /** Entity index (0..8). */
   slot: number;
   wasActive: boolean;
   branch: EntityBranch | null;
@@ -299,7 +299,7 @@ function writeLongBE(state: GameState, off: number, v: number): void {
  *
  *   - addr < 0x400000 → ROM (rom.program)
  *   - 0x400000 ≤ addr < 0x402000 → workRam
- *   - altrove → 0 (safe default)
+ *   - elsewhere → 0 (safe default)
  */
 function readLongFromAddr(state: GameState, rom: RomImage, addr: number): number {
   const a = addr >>> 0;
@@ -335,10 +335,10 @@ function sextByte(b: number): number {
 
 /**
  *
- * @param state  GameState. Modifica `state.workRam` per le entity attive.
- * @param subs   Stub injection per le 2 JSR esterne. Default: all no-op.
+ * @param state  GameState. Mutates `state.workRam` for the active entities.
+ * @param subs   Stub injection for the 2 external JSRs. Default: all no-op.
  *
- * @returns dettaglio of the gate, of the slot-scan flag and of the per-entity tick.
+ * @returns detail of the gate, the slot-scan flag, and the per-entity tick.
  */
 export function refreshHelper1912C(
   state: GameState,

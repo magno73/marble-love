@@ -3,29 +3,29 @@
  * test-string-viewport-hit-175c8-parity.ts —
  * differential FUN_175C8 vs `stringViewportHit175C8`.
  *
- * `FUN_000175C8` (266 byte) takes un long arg (objPtr), e:
- *   2. Else: itera 7 string-slot @ 0x401482 (stride 0x42); per slot armata
- *      (slot[+0x18] != 0), risolve un bbox via deref doppio
+ * `FUN_000175C8` (266 byte) takes a long arg (objPtr), and:
+ *   2. Else: iterates 7 string-slot @ 0x401482 (stride 0x42); per armed slot
+ *      (slot[+0x18] != 0), resolves a bbox via double deref
  *      (slot[+0x3a] → ptrPtr → bboxPtr; sentinel 0xFFFFFFFF → default
  *      (-2,-2,12,12)) and tests overlap with a viewport word
  *      (marble +/- 3 words, marble +/- 3 words) around coords @ 0x400690/692.
- *      Sul **first** overlap:
+ *      On the **first** overlap:
  *        - obj[+0x58] = slot[+0x19]
  *        - slot[+0x25] = 0x1c
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - `FUN_00025BAE` (entity state-transition) **stubbed with RTS** (0x4E75)
  *     to neutralize the side effects on obj. TS uses
- *     `subs.entityStateTransition = noop` per matchare.
+ *     `subs.entityStateTransition = noop` to match.
  *   - `FUN_000158AC` (sound command sender) stubbed with RTS, TS no-op.
  *
  * **Compare**:
  *   - Return value (D0 long).
- *   - Workram completa (8 KB) pre vs post, eccetto stack scratch zone
+ *   - Entire workRam (8 KB) pre vs post, except the stack scratch zone
  *
  *   - E: random everything (gameMode random, slot/bbox random)
  *
- * Uso: npx tsx packages/cli/src/test-string-viewport-hit-175c8-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-viewport-hit-175c8-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -60,16 +60,16 @@ const SLOT_BASE = 0x00401482;
 const SLOT_STRIDE = 0x42;
 const SLOT_COUNT = 7;
 
-// Indirizzi of scratch:
-const OBJ_ADDR = 0x00401c00;       // obj base (almeno 0x60 byte)
+// Scratch addresses:
+const OBJ_ADDR = 0x00401c00;       // obj base (at least 0x60 byte)
 const PTR_PTR_BASE = 0x00401d00;   // 7 × 4 byte: ptrPtr storage per slot
-const BBOX_BASE = 0x00401e00;      // 7 × 8 byte: bbox struct if non sentinel
+const BBOX_BASE = 0x00401e00;      // 7 × 8 byte: bbox struct if not sentinel
 
 const BBOX_SENTINEL = 0xffffffff >>> 0;
 
 /**
  * Patch JSR-stubs:
- *   - FUN_25BAE → RTS (0x4E75) per neutralize entity state-transition.
+ *   - FUN_25BAE → RTS (0x4E75) to neutralize entity state-transition.
  *     Caller pushes 2 longs (objPtr, 9). NOP-RTS stub pops only PC, leaving
  *     args on the stack; FUN_175C8's caller clears them with
  *     `lea (0xc, SP), SP` (12 byte = 3 long).
@@ -90,7 +90,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Capture intero workRam as Uint8Array. */
+/** Capture the entire workRam as Uint8Array. */
 function captureWorkRam(cpu: CpuSession): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -184,9 +184,9 @@ function buildPreState(input: CaseInput, randomTail: () => number): Uint8Array {
   return wr;
 }
 
-/** Compare workRam, escludendo la area stack scratch [0x1E80..0x2000).
+/** Compare workRam, excluding the stack scratch area [0x1E80..0x2000).
  *
- *  identici su both i sides).
+ *  identical on both sides).
  */
 function compareWorkRam(
   postBin: Uint8Array,
@@ -321,7 +321,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: gameMode ∉ {2,5} → early-exit ─────────────────────────
-  console.log(`\n  Suite A (gameMode ∉ {2,5} → early-exit) — ${perSuite} casi`);
+  console.log(`\n  Suite A (gameMode ∉ {2,5} → early-exit) — ${perSuite} cases`);
   let okA = 0;
   const otherModes = [0, 1, 3, 4, 6, 7, 8, 0xa, 0xff, 0x100, 0xffff];
   for (let i = 0; i < perSuite; i++) {
@@ -340,7 +340,7 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okA}/${perSuite}`);
   totalOk += okA;
 
-  console.log(`\n  Suite B (gameMode=2 + slot 0 hit) — ${perSuite} casi`);
+  console.log(`\n  Suite B (gameMode=2 + slot 0 hit) — ${perSuite} cases`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const mx = rsw();
@@ -370,7 +370,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: gameMode=5, armed slots with bbox boundary edges ───────
-  console.log(`\n  Suite C (gameMode=5 + boundary bbox edges) — ${perSuite} casi`);
+  console.log(`\n  Suite C (gameMode=5 + boundary bbox edges) — ${perSuite} cases`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const mx = rsw();
@@ -406,7 +406,7 @@ async function main(): Promise<void> {
   console.log(`    Match: ${okC}/${perSuite}`);
   totalOk += okC;
 
-  console.log(`\n  Suite D (gameMode=2 + all inactive) — ${perSuite} casi`);
+  console.log(`\n  Suite D (gameMode=2 + all inactive) — ${perSuite} cases`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const slots: SlotSpec[] = [];
@@ -417,7 +417,7 @@ async function main(): Promise<void> {
       marbleY: rw(),
       slots,
       objScriptIdInit: rb(),
-      // various initialD2Byte per testare sext_long
+      // various initialD2Byte to test sext_long
       initialD2Byte: [0, 1, 0x7f, 0x80, 0xff, 0x42, 0xc0][i % 7]!,
     };
     if (runOneCase("D", i, input)) okD++;
@@ -427,7 +427,7 @@ async function main(): Promise<void> {
 
   // ─── Suite E: random everything (also gameMode random) ──────────────
   const sizeE = perSuite + remainder;
-  console.log(`\n  Suite E (random everything) — ${sizeE} casi`);
+  console.log(`\n  Suite E (random everything) — ${sizeE} cases`);
   let okE = 0;
   for (let i = 0; i < sizeE; i++) {
     const slots: SlotSpec[] = [];
@@ -449,7 +449,7 @@ async function main(): Promise<void> {
   totalOk += okE;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

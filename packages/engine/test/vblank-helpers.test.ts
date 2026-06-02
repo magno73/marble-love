@@ -10,11 +10,11 @@ import {
 } from "../src/vblank-helpers.js";
 
 describe("FUN_28DEA vblankAck28DEA", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(VBLANK_ACK_28DEA_ADDR).toBe(0x28dea);
   });
 
-  it("setta workRam[0x16]=1 and increments workRam[0x3F0]", () => {
+  it("sets workRam[0x16]=1 and increments workRam[0x3F0]", () => {
     const s = emptyGameState();
     s.workRam[0x16] = 0;
     s.workRam[0x3f0] = 0x10;
@@ -23,7 +23,7 @@ describe("FUN_28DEA vblankAck28DEA", () => {
     expect(s.workRam[0x3f0]).toBe(0x11);
   });
 
-  it("counter wraps a 0xFF → 0x00", () => {
+  it("counter wraps at 0xFF → 0x00", () => {
     const s = emptyGameState();
     s.workRam[0x3f0] = 0xff;
     vblankAck28DEA(s);
@@ -32,11 +32,11 @@ describe("FUN_28DEA vblankAck28DEA", () => {
 });
 
 describe("FUN_28DB8 wait28DB8", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(WAIT_28DB8_ADDR).toBe(0x28db8);
   });
 
-  it("aspetta N frame and increments workRam[0x3F0] N times", () => {
+  it("waits N frames and increments workRam[0x3F0] N times", () => {
     const s = emptyGameState();
     s.workRam[0x3f0] = 0x10;
     s.workRam[0x390] = 0;
@@ -45,7 +45,7 @@ describe("FUN_28DB8 wait28DB8", () => {
     expect(s.workRam[0x3f0]).toBe(0x15);
   });
 
-  it("early exit se state machine state cambia", () => {
+  it("early exit if the state machine state changes", () => {
     const s = emptyGameState();
     s.workRam[0x3f0] = 0;
     s.workRam[0x390] = 0;
@@ -61,7 +61,7 @@ describe("FUN_28DB8 wait28DB8", () => {
       calls += 1;
       if (calls === 3) st.workRam[0x391] = 2; // state changes
     };
-    // Replico inline il loop of wait28DB8 but usando wrapped invece of vblankAck
+    // Replicate inline the wait28DB8 loop but using wrapped instead of vblankAck
     const initial = s.workRam[0x391] ?? 0;
     let counter = 10;
     while (counter > 0) {
@@ -84,11 +84,11 @@ describe("FUN_28DB8 wait28DB8", () => {
 });
 
 describe("FUN_121A6 clearPaletteRam121A6", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(CLEAR_PALETTE_RAM_121A6_ADDR).toBe(0x121a6);
   });
 
-  it("azzera tutta la colorRam (2 KB)", () => {
+  it("clears the entire colorRam (2 KB)", () => {
     const s = emptyGameState();
     s.colorRam.fill(0xab);
     clearPaletteRam121A6(s);
@@ -97,7 +97,7 @@ describe("FUN_121A6 clearPaletteRam121A6", () => {
     }
   });
 
-  it("non tocca workRam/alphaRam/spriteRam/playfieldRam", () => {
+  it("does not touch workRam/alphaRam/spriteRam/playfieldRam", () => {
     const s = emptyGameState();
     s.colorRam.fill(0xff);
     s.workRam[0x100] = 0x42;

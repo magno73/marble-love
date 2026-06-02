@@ -9,7 +9,7 @@
  *   - calls `FUN_3F78` twice (both mutate workRam @ 0x401FF5/F7)
  *   - if checks pass, decrement byte @ 0x401FF5 by `(arg.w * result1.w).b`
  *
- * Confronto:
+ * Comparison:
  *   - return D0 (long): 0 or 1
  *   - byte @ 0x401FF5 (acc, modified by internal eepromCommit + decrement)
  *   - byte @ 0x401FF7 (drain counter, modified by internal eepromCommit)
@@ -17,17 +17,17 @@
  * Setup for each random case:
  *   - *0x401FFC = a2Addr (ptr struct, in workRam-safe range 0x401D00)
  *   - bytes @ a2Addr+0xA, +0xB = status + complement
- *   - *0x401FF5, *0x401FF7 = contatori random
+ *   - *0x401FF5, *0x401FF7 = random counters
  *   - arg = random long (high word ignored by the function, low word used)
  *
  * Pattern coverage:
- *   - 25% status >= 0xE0       -> both le call interne early-exit (0x18)
+ *   - 25% status >= 0xE0       -> both internal calls early-exit (0x18)
  *   - 20% complement mismatch  -> D1=1, drain
  *   - 35% status valid (<0xE0) -> D1 in [1..4], drain + scale
  *   - 10% arg.w == 0           -> stress early-exit of the wrapper
  *   - 10% full random          -> stress
  *
- * Uso: npx tsx packages/cli/src/test-eeprom-commit-request-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-eeprom-commit-request-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -151,7 +151,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, ACC_FF5, 1, acc0);
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
 
-    // ── Setup TS side (mirror su state.workRam) ─────────────────────────
+    // ── Setup TS side (mirror onto state.workRam) ───────────────────────
     for (let k = 0; k < 0x20; k++) {
       state.workRam[(A2_ADDR - 0x400000) + k] = 0;
     }

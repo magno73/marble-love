@@ -5,11 +5,11 @@
  *
  *   1. Patch each entry point of the 6 subs with
  *        `addq.b #1, sentinel.l ; rts`     (8 byte)
- *      i 6 sentinel post-call.
+ *      the 6 sentinels post-call.
  *   3. Run `sceneInit11428()` with 6 callbacks that increment the
- *      stessi 6 byte in `state.workRam`.
+ *      same 6 byte in `state.workRam`.
  *
- * Uso: npx tsx packages/cli/src/test-scene-init-11428-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-scene-init-11428-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -30,7 +30,7 @@ import {
 
 const FUN_11428 = 0x00011428;
 
-// Sub-function entry points patchati a stub.
+// Sub-function entry points patched to a stub.
 const SUB_VBLANK_ACK = 0x00028dea;
 const SUB_CLEAR_PALETTE = 0x000121a6;
 const SUB_CLEAR_MO_ALPHA = 0x00012174;
@@ -38,7 +38,7 @@ const SUB_INIT_FN_PTRS = 0x00028580;
 const SUB_FILL_LOOP = 0x00028c7e;
 const SUB_SCENE_OBJ_INIT = 0x00028ca6;
 
-// Sentinel byte slot in work RAM (uno per stub, 6 totali).
+// Sentinel byte slot in work RAM (one per stub, 6 total).
 const SENTINEL_BASE = 0x004003e0;
 const SENT_VBLANK_ACK = SENTINEL_BASE + 0;
 const SENT_CLEAR_PALETTE = SENTINEL_BASE + 1;
@@ -57,7 +57,7 @@ const SUBS_LIST = [
 ] as const;
 
 /**
- * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 byte) in `rom` a `entry`.
+ * Encode `addq.b #1, (sentinelAddr).l ; rts` (8 byte) in `rom` at `entry`.
  */
 function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   // addq.b #1, abs.l → 0x52 0x39
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     }
 
     callFunction(cpu, FUN_11428, []);
-    // Esegui TS
+    // Run TS
     sceneNs.sceneInit11428(stateInst, subs);
 
     let fail: FailRecord | null = null;

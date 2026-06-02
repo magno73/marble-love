@@ -7,7 +7,7 @@
  *
  * **Architecture**:
  *  - PROLOGUE (0x29cce..0x29d48): saves globals 0x690/0x692/0x694/0x696/
- *  - LOOP outer su 25 slot a stride 0x56, iter `(-0x1,A6)` da 0..0x18:
+ *  - Outer LOOP over 25 slots at stride 0x56, iter `(-0x1,A6)` from 0..0x18:
  *      tst.b (0x18,A3); beq → iter advance.
  *      D6 = (0xc,A3)w - g690, A0 = (0x10,A3)w - g692
  *      D1 = (0xc,A3)w >> 3 - g696, D2 = (0x10,A3)w >> 3 - g698
@@ -462,7 +462,7 @@ export interface Sub29CCESubs {
 }
 
 
-/** ROM address of `FUN_00029CCE`. */
+/** ROM address of `FUN_00029CCE`. @public */
 export const SUB_29CCE_ADDR = 0x00029cce as const;
 
 /**
@@ -484,7 +484,7 @@ export function fun29CCE(
   wB(state, a2Off + F_S58, 0);
 
   // ── PROLOGUE: snapshot globals (0x29cec..0x29d2a) ─────────────────────
-  // Servono al loop outer (D6/A0/D1/D2 setup).
+  // Needed by the outer loop (D6/A0/D1/D2 setup).
   const g690 = rWBE(state, G_690);
   const g692 = rWBE(state, G_692);
   const g694 = rWBE(state, G_694);
@@ -1439,10 +1439,10 @@ function runTube26Or27(
 }
 
 /**
- * Dispatch su color tag (range 5..0x3b).
+ * Dispatch on color tag (range 5..0x3b).
  *
- * Le branch **BLOCK A simple** (range-check D1/D2 + tag-write) are
- * implementate fully:
+ * The **simple BLOCK A** branches (range-check D1/D2 + tag-write) are
+ * implemented fully:
  *   0x10, 0x12, 0x32-0x37, 0x2d-0x31, 0x38-0x3b.
  *
  * Complex cases implemented:
@@ -1468,7 +1468,7 @@ function dispatchColor(
   subs: Sub29CCESubs,
 ): DispatchResult {
   // Range checks for each color tag, derived from disasm 0x29f40..0x2b06c.
-  // Pattern standard:
+  // Standard pattern:
   //   tst.w D1w; blt.w 0x2b072         -> skip if D1 < 0
   //   moveq #hi,D0; cmp.w D1,D0; ble   -> skip if D1 >= hi
   //   tst.w D2w; blt.w 0x2b072         -> skip if D2 < 0

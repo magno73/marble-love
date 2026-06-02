@@ -5,7 +5,7 @@
  *
  *
  *
- * Uso: npx tsx packages/cli/src/test-refresh-frame-10fce-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-refresh-frame-10fce-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";

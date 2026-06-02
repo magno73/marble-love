@@ -34,25 +34,25 @@ function getLong(buf: Uint8Array, off: number): number {
   );
 }
 
-describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
-  it("smoke: state vuoto + d0=0 non solleva", () => {
+describe("bootSpuriousHandler (FUN_100D8, 48 bytes)", () => {
+  it("smoke: empty state + d0=0 does not raise", () => {
     const s = emptyGameState();
     expect(() => bootSpuriousHandler(s, 0)).not.toThrow();
   });
 
-  it("writes sentinel byte d0 a workRam[0xE]", () => {
+  it("writes sentinel byte d0 to workRam[0xE]", () => {
     const s = emptyGameState();
     bootSpuriousHandler(s, 0xab);
     expect(s.workRam[BSH_SENTINEL_OFF]).toBe(0xab);
   });
 
-  it("writes sentinel maskerato a 8 bit (d0=0x1FF → 0xFF)", () => {
+  it("writes sentinel masked to 8 bits (d0=0x1FF → 0xFF)", () => {
     const s = emptyGameState();
     bootSpuriousHandler(s, 0x1ff);
     expect(s.workRam[BSH_SENTINEL_OFF]).toBe(0xff);
   });
 
-  it("sets i counter of the boot main path: 0x3B6=0x0000 (FFFF+1), 0x3AE=0x0080, 0x3B8=0x012C, 0x3B2=0", () => {
+  it("sets the boot main-path counters: 0x3B6=0x0000 (FFFF+1), 0x3AE=0x0080, 0x3B8=0x012C, 0x3B2=0", () => {
     const s = emptyGameState();
     // Pre-populate with sentinel pattern to verify overwrite.
     s.workRam[BSH_FRAME_CTR_OFF] = 0x12;
@@ -65,7 +65,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
 
     bootSpuriousHandler(s, 0x42);
 
-    // 0x4003B6: FFFF poi addq.w #1 → wrap a 0x0000.
+    // 0x4003B6: FFFF then addq.w #1 → wraps to 0x0000.
     expect(getWord(s.workRam, BSH_FRAME_CTR_OFF)).toBe(0x0000);
     // 0x4003AE: 0x0080
     expect(getWord(s.workRam, BSH_AV_CONTROL_OFF)).toBe(0x0080);
@@ -75,7 +75,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
     expect(s.workRam[BSH_FRAME_FLAG_OFF]).toBe(0);
   });
 
-  it("salva SP (long) a workRam[0x440] only if fornito", () => {
+  it("saves SP (long) to workRam[0x440] only if provided", () => {
     const s1 = emptyGameState();
     bootSpuriousHandler(s1, 0, null);
     expect(getLong(s1.workRam, BSH_SP_SAVE_OFF)).toBe(0); // skip → stays 0
@@ -87,7 +87,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
 
   it("audio mailbox reset (FUN_4D98 effects): 0x1F44=0x80, 0x1F45=0, 0x1F5A=0", () => {
     const s = emptyGameState();
-    // Pre-pop per verify clear esplicito.
+    // Pre-populate to verify an explicit clear.
     s.workRam[BSH_AUDIO_BASE_OFF] = 0x12;
     s.workRam[BSH_AUDIO_FLAG_OFF] = 0x34;
     s.workRam[BSH_AUDIO_ACK_OFF] = 0xab;
@@ -102,7 +102,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
     expect(getLong(s.workRam, BSH_AUDIO_ACK_OFF)).toBe(0);
   });
 
-  it("subs.audioInit80 override: il default non is chiamato", () => {
+  it("subs.audioInit80 override: the default is not called", () => {
     const s = emptyGameState();
     let calls = 0;
     bootSpuriousHandler(s, 0, null, {
@@ -111,14 +111,14 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
       },
     });
     expect(calls).toBe(1);
-    // (set from the main path a step 5).
+    // (set from the main path at step 5).
     expect(getWord(s.workRam, BSH_FRAME_CTR_OFF)).toBe(0xffff);
     expect(getWord(s.workRam, BSH_COUNTDOWN_OFF)).toBe(0x0000);
-    // Audio mailbox NOT inizializzata.
+    // Audio mailbox NOT initialized.
     expect(s.workRam[BSH_AUDIO_BASE_OFF]).toBe(0);
   });
 
-  it("subs.audioReset80 override: chiamato from the default audioInit80", () => {
+  it("subs.audioReset80 override: called by the default audioInit80", () => {
     const s = emptyGameState();
     let resetCalls = 0;
     bootSpuriousHandler(s, 0, null, {
@@ -132,7 +132,7 @@ describe("bootSpuriousHandler (FUN_100D8, 48 byte)", () => {
     expect(s.workRam[BSH_AUDIO_BASE_OFF]).toBe(0);
   });
 
-  it("non writes outside from the range previsti (no spurious workRam writes)", () => {
+  it("does not write outside the expected range (no spurious workRam writes)", () => {
     const s = emptyGameState();
     bootSpuriousHandler(s, 0xff, 0x00400000);
 

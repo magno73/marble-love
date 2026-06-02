@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  *
- * Per N (dest, start, count) random:
+ * For N random (dest, start, count):
  *   1. Reset 256 byte of scratch in workRam @ 0x401E00
  *   2. callFunction(0x1E3E, [dest, start, count])  // 3 args: long, word, long
  *   3. fillIncrementingU16(state, dest, start, count)
@@ -9,7 +9,7 @@
  *   move.l (0xC,SP), A0   ; arg1 long  (dest)
  *   move.w (0x12,SP), D0w ; arg2 word  (start)
  *   move.l (0x14,SP), D2  ; arg3 long  (count)
- * Stack offsets: 12, 18, 20 (= 0xC, 0x12, 0x14). Considerando il movem.l
+ * Stack offsets: 12, 18, 20 (= 0xC, 0x12, 0x14). Accounting for the movem.l:
  *   arg1 (long) @ SP+12..15
  *   arg2 (word) @ SP+16..17 (NB: padding)
  *   arg3 (long) @ SP+18..21
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
   const SCRATCH_ADDR = 0x401d00;
   const SCRATCH_SIZE = 0x100;
 
-  /** Generic call helper per functions a 3 long args (cdecl 68k). */
+  /** Generic call helper for functions with 3 long args (cdecl 68k). */
   function call3LongArgs(addr: number, a1: number, a2: number, a3: number): void {
     const sys = cpu.system;
     let sp = sys.getRegisters().sp;
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2 / n) * 100).toFixed(1)}%`);
 
   // ─── clearPaletteRam (FUN_121A6) ─────────────────────────────────────
-  console.log(`\n=== clearPaletteRam (FUN_121A6) — 1 caso ===`);
+  console.log(`\n=== clearPaletteRam (FUN_121A6) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   // Pre-fill palette RAM with sentinel pattern.
   for (let j = 0; j < 0x800; j++) {

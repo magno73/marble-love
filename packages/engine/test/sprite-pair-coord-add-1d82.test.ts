@@ -22,11 +22,11 @@ function readWord(s: Uint8Array, off: number): number {
 }
 
 describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
-  it("base case: bank=0, col=0, delta=0 → preserva word but clear bit 14,15 and bit 4", () => {
+  it("base case: bank=0, col=0, delta=0 → preserves word but clears bit 14,15 and bit 4", () => {
     const s = emptyGameState();
     // bank A @ offset 0: pack coord=0x10 (bit 5..13 = 0x10), low nibble 0x5.
-    // Layout: coord<<5 | nibble = 0x10*0x20 + 0x5 = 0x205. Settiamo also
-    // bit 14,15 and bit 4 per testare il clear.
+    // Layout: coord<<5 | nibble = 0x10*0x20 + 0x5 = 0x205. Also set
+    // bit 14,15 and bit 4 to test the clear.
     writeWord(s.spriteRam, 0x000, 0xc215); // 0b1100_0010_0001_0101
     // bank B @ offset 0x100:
     writeWord(s.spriteRam, 0x100, 0x4123); // bit 14 clear, bit 15 set, etc
@@ -34,7 +34,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     spritePairCoordAdd1D82(s, /*col*/ 0, /*bank*/ 0, /*deltaA*/ 0, /*deltaB*/ 0);
 
     // bank A: coord = asr 5 of 0xC215 = 0xFE10 sign-ext, & 0x1FF = 0x010
-    // Aspetta — (-16363) >> 5 in 16-bit signed: 0xC215 unsigned, signed -15851.
+    // Wait — (-16363) >> 5 in 16-bit signed: 0xC215 unsigned, signed -15851.
     //   -15851 / 32 = -495.34..., floor = -496 = 0xFE10.
     //   0xFE10 & 0x1FF = 0x010.
     // delta=0, shifted = 0x010 << 5 = 0x200.
@@ -47,7 +47,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0x123);
   });
 
-  it("posivite delta: increments la coord (signed-9)", () => {
+  it("positive delta: increments the coord (signed-9)", () => {
     const s = emptyGameState();
     // pack coord = 0x050 (= 80), low nibble = 0x7.
     // word = 0x050 << 5 | 0x7 = 0x0A07.
@@ -64,7 +64,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0xe07);
   });
 
-  it("bank/col addressing: writes in the giusti offset spriteRam", () => {
+  it("bank/col addressing: writes at the correct spriteRam offsets", () => {
     const s = emptyGameState();
     // bank=3, col=0x12 → offset = 3*0x200 + 0x12*2 = 0x600 + 0x24 = 0x624.
     const offA = 3 * BANK_STRIDE_BYTES + 0x12 * 2;
@@ -87,7 +87,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, offB + 2)).toBe(0);
   });
 
-  it("signed coord: bit 13 (= 0x4000 in the pack) → coord negativa, asr propaga il segno", () => {
+  it("signed coord: bit 13 (= 0x4000 in the pack) → negative coord, asr propagates the sign", () => {
     const s = emptyGameState();
     // word = 0xFFE0: signed16 = -32, >>5 = -1 = 0xFFFF, & 0x1FF = 0x1FF.
     // delta = 1: 0x1FF + 1 = 0x200, & 0xFFFF = 0x200. << 5 = 0x4000.
@@ -101,9 +101,9 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0x0000);
   });
 
-  it("delta wrapping: somma word-wise modulo 2^16", () => {
+  it("delta wrapping: sums word-wise modulo 2^16", () => {
     const s = emptyGameState();
-    // coord estratta = 0x100. delta = 0xFF00 (= -256 signed).
+    // extracted coord = 0x100. delta = 0xFF00 (= -256 signed).
     // 0x100 + 0xFF00 = 0x10000 → word = 0x0000.
     // pack: 0x0000 << 5 = 0x0000. low nibble of original word 0x2008.
     //   (0x100 << 5 | 0x8 = 0x2008). low nibble = 0x8. result = 0x0008.
@@ -116,7 +116,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0x0008);
   });
 
-  it("preserve low nibble, perde bit 4: pack mask = 0xF non 0x1F", () => {
+  it("preserves low nibble, loses bit 4: pack mask = 0xF not 0x1F", () => {
     const s = emptyGameState();
     // word = 0x0010 (only bit 4 set). Extracted coord = 0. + delta 0 = 0.
     // shifted = 0. low nibble (= word & 0xF) = 0x0. result = 0.
@@ -129,7 +129,7 @@ describe("spritePairCoordAdd1D82 (FUN_1D82)", () => {
     expect(readWord(s.spriteRam, 0x100)).toBe(0x0000);
   });
 
-  it("constants exported correttamente", () => {
+  it("constants exported correctly", () => {
     expect(SPRITE_RAM_BANK_A_ADDR).toBe(0x00a02000);
     expect(SPRITE_RAM_BANK_B_ADDR).toBe(0x00a02100);
     expect(BANK_STRIDE_BYTES).toBe(0x200);

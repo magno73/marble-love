@@ -2,13 +2,13 @@
 /**
  * test-late-game-logic-26f3e-parity.ts — differential FUN_26F3E vs lateGameLogic26F3E.
  *
- *   - Use an entity list with valid indices (0x00..0x1E) that point to structs
- *     workRam noti (da ROM lookup table).
+ *   - Use an entity list with valid indices (0x00..0x1E) that point to known
+ *     workRam structs (from a ROM lookup table).
  *   - Randomize the contents of entity structs (rect buffers in workRam).
  *
  * **Scope**: covers phase 1 (bufferFill), phase 3 (cursor setup), phase 4
  *
- * Uso: npx tsx packages/cli/src/test-late-game-logic-26f3e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-late-game-logic-26f3e-parity.ts [N]
  *      default N=500
  */
 

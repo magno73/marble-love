@@ -47,7 +47,7 @@
  *
  *   - `charCode` in `[0x26, 0x2D]` (= `&'()*+,-` ASCII) → step = 2
  *
- * (e.g. `0xFFFF` = -1 i16) prendono la branch "wide" (D3 < 0x26 signed).
+ * (e.g. `0xFFFF` = -1 i16) take the "wide" branch (D3 < 0x26 signed).
  *
  *
  *
@@ -56,17 +56,17 @@
  */
 
 /**
- * eventuali repliche future of FUN_32BA.
+ * Any future replicas of FUN_32BA.
  */
 export const RENDER_GLYPH_FN_ADDR = 0x000032ba as const;
 
 /**
- * Inferiore (inclusivo) of the range "narrow" for the code-point.
+ * Lower bound (inclusive) of the "narrow" range for the code-point.
  * `charCode >= NARROW_LO_INCL && charCode <= NARROW_HI_INCL` → step = 2.
  */
 export const NARROW_LO_INCL = 0x26 as const;
 
-/** Superiore (inclusivo) of the range "narrow". */
+/** Upper bound (inclusive) of the "narrow" range. */
 export const NARROW_HI_INCL = 0x2d as const;
 
 export const NARROW_STEP = 2 as const;
@@ -75,7 +75,7 @@ export const WIDE_STEP = 4 as const;
 
 /**
  *
- * - `bufPtr`: 32-bit pointer (long), of solito in alpha tilemap
+ * - `bufPtr`: 32-bit pointer (long), usually in the alpha tilemap,
  *   sign-extended long.
  */
 export interface RenderGlyphCall {
@@ -120,7 +120,7 @@ export function renderGlyphLoop1E64(
   count: number,
   subs: RenderGlyphLoop1E64Subs = {},
 ): RenderGlyphLoop1E64Result {
-  // D4 = bufPtr (long). Tutte le aritmetiche are su 32-bit unsigned in JS:
+  // D4 = bufPtr (long). All arithmetic is done on 32-bit unsigned values in JS:
   let d4 = bufPtr >>> 0;
 
   // sign-extended ((d3w << 16) >> 16).

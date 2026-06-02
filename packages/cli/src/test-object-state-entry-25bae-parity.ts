@@ -83,7 +83,7 @@ function patchSoundSink(rom: Buffer): void {
   rom[FUN_158AC + 0x12] = 0x4e; rom[FUN_158AC + 0x13] = 0x75;
 }
 
-/** Patch FUN_2591A a `rts` (4E 75) — neutralizza the init helper. */
+/** Patch FUN_2591A to `rts` (4E 75) — neutralizes the init helper. */
 function patch2591ARts(rom: Buffer): void {
   rom[FUN_2591A + 0] = 0x4e;
   rom[FUN_2591A + 1] = 0x75;
@@ -133,20 +133,20 @@ async function main(): Promise<void> {
   const rw = (): number => Math.floor(rng() * 0x10000) & 0xffff;
   const pickPtr = (): number =>
     PTR_CANDIDATES[Math.floor(rng() * PTR_CANDIDATES.length)]!;
-  // Distribuzione subStateCode: 25% case 2, 25% case 9, 25% case 4, 25% default
+  // subStateCode distribution: 25% case 2, 25% case 9, 25% case 4, 25% default
   const pickCode = (): number => {
     const r = rng();
     if (r < 0.25) return 0x02;
     if (r < 0.5) return 0x09;
     if (r < 0.75) return 0x04;
-    return rb(); // qualsiasthe bytes (potrebbe random-coincidere con 2/9/4 — ok)
+    return rb(); // any byte (may randomly coincide with 2/9/4 — ok)
   };
 
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
   // Field offsets potentially touched by writes, used to scrub the mirror.
-  // Scelti da disasm: 0x00..07, 0x18, 0x1A, 0x56, 0x5A..5D, 0x5F, 0x60, 0xD2..D3.
+  // Chosen from disasm: 0x00..07, 0x18, 0x1A, 0x56, 0x5A..5D, 0x5F, 0x60, 0xD2..D3.
   const SCRATCH_FIELDS = [
     0x00, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x06, 0x07,
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
 
     const scratchObj = new Uint8Array(0xe0);
     for (let k = 0; k < 0xe0; k++) scratchObj[k] = rb();
-    // Override pre-state controllati
+    // Override controlled pre-state
     scratchObj[0x18] = pre18;
     scratchObj[0x1a] = pre1A;
     scratchObj[0x57] = pre57;
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, ptr + k, 1, scratchObj[k]!);
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror into state.workRam ──────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Object scratch in the mirror
     for (let k = 0; k < 0xe0; k++) {
@@ -218,8 +218,8 @@ async function main(): Promise<void> {
     }
 
     // ── Run binary ─────────────────────────────────────────────────────
-    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB of un long).
-    // callFunction li pusha both as long RTL → SP+8 = arg1, SP+12..15 = arg2 long
+    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB of a long).
+    // callFunction pushes both as long RTL → SP+8 = arg1, SP+12..15 = arg2 long
     callFunction(cpu, FUN_25BAE, [ptr, code]);
 
     const binCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;

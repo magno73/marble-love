@@ -1,5 +1,5 @@
 /**
- * Test formatAndRender28E00 (FUN_28E00) — smoke tests sui branches principali.
+ * Test formatAndRender28E00 (FUN_28E00) — smoke tests on the main branches.
  *
  * `cli/src/test-format-and-render-28e00-parity.ts`.
  */
@@ -22,7 +22,7 @@ function writeWorkLong(ram: Uint8Array, off: number, value: number): void {
 }
 
 describe("formatAndRender28E00 (FUN_28E00)", () => {
-  it("formatHex: writes cifre hex backward from the bufEnd letto da *0x400436, terminato da NUL", () => {
+  it("formatHex: writes hex digits backward from the bufEnd read from *0x400436, terminated by NUL", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
@@ -49,7 +49,7 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     s.workRam[STRUCT_BASE_OFF] = 0xff;
     s.workRam[STRUCT_BASE_OFF + 1] = 0xff;
     s.workRam[STRUCT_BASE_OFF + 6] = 0xff;
-    // Sets bufEnd a un'area "scratch" innocua.
+    // Sets bufEnd to a harmless "scratch" area.
     writeWorkLong(s.workRam, BUFEND_PTR_OFF, 0x00401e00);
 
     formatAndRender28E00(s, rom, 0, 0, 0x12, 0xab, 0);
@@ -59,11 +59,11 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     expect(s.workRam[STRUCT_BASE_OFF + 6]).toBe(0x00);
   });
 
-  it("renderStringChain: il render uses attrWord=0x3400 and struct@0x400434 (smoke render)", () => {
+  it("renderStringChain: the render uses attrWord=0x3400 and struct@0x400434 (smoke render)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 
-    // renderizzato). Punta a workRam[0x500].
+    // rendered). Points to workRam[0x500].
     writeWorkLong(s.workRam, BUFEND_PTR_OFF, 0x00400500);
 
     // (tickOff) = 0. State machine dummy: rotation 0, tick 0, marker 0.
@@ -86,7 +86,7 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
 
     writeWorkLong(s.workRam, BUFEND_PTR_OFF, 0x00401d00);
 
-    // value=0, numDigits=4, showSpaces=1. formatHex: il first char (value==0)
+    // value=0, numDigits=4, showSpaces=1. formatHex: the first char (value==0)
     formatAndRender28E00(s, rom, 0, 4, 0, 0, /*callerD2Word*/ 1);
 
     expect(s.workRam[0x1d03]).toBe(0x30); // '0' (first digit pre-loop)
@@ -96,7 +96,7 @@ describe("formatAndRender28E00 (FUN_28E00)", () => {
     expect(s.workRam[0x1d04]).toBe(0x00); // null term
   });
 
-  it("arg2Word negativo (signed sext): numDigits ≤ 0 → formatHex no-op (beyond il '0' iniziale)", () => {
+  it("arg2Word negative (signed sext): numDigits ≤ 0 → formatHex no-op (beyond the initial '0')", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
 

@@ -41,7 +41,7 @@
  *           B00010 ← 0xAFFF,  B00018 ← 0xAFFF.
  *    - Clear: B00012 ← 0, B0001A ← 0.
  *
- * **Disasm range**: 0x118D2..0x11AC0 (≈498 byte).
+ * **Disasm range**: 0x118D2..0x11AC0 (≈498 bytes).
  * **Single caller**: `FUN_1101E` @ 0x11380 (case 3 body, via helper118D2).
  */
 
@@ -202,7 +202,7 @@ function sextWord(w: number): number {
 // ─── Main function ────────────────────────────────────────────────────────
 
 /**
- * Replica `FUN_000118D2` — player slot iteration, sound dispatch, level
+ * Replica of `FUN_000118D2` — player slot iteration, sound dispatch, level
  * dispatcher entry.
  *
  * @param state  GameState (mutated in-place: workRam, colorRam).

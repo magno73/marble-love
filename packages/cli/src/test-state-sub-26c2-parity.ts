@@ -12,13 +12,13 @@
  *        ; FLAG34[i] NOT touched
  *        return D0 = 1
  *
- * workRam @ 0x401F00..0x401F3F are perfettamente observable.
+ * workRam @ 0x401F00..0x401F3F are perfectly observable.
  *
- * Suite testate:
+ * Suites tested:
  *   - A: random everything (mix of slot busy/free)
  *   - C: only slot N free (random N in [0..3])
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-26c2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-26c2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -38,7 +38,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_26C2 = 0x000026c2;
 const FUN_2572 = 0x00002572;
 
-/** Patch FUN_2572 (renderStringChain) a `rts` (0x4E75) per stub no-op. */
+/** Patch FUN_2572 (renderStringChain) to `rts` (0x4E75) as a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2572 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_2572 + 1, 1, 0x75);
@@ -226,7 +226,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     if (f.detail === "D0") {

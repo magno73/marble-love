@@ -1,8 +1,8 @@
 /**
- * state-sub-520e.test.ts — smoke test per stateSub520E (FUN_520E).
+ * state-sub-520e.test.ts — smoke test for stateSub520E (FUN_520E).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-520e-parity.ts`.
- * Qui copriamo i path principali and le edge case sui side effect of workRam.
+ * Bit-perfect parity verified vs binary in `test-state-sub-520e-parity.ts`.
+ * Here we cover the main paths and the edge cases on workRam side effects.
  */
 
 import { describe, it, expect } from "vitest";
@@ -52,7 +52,7 @@ describe("fun523AInner (FUN_523A inner) — smoke", () => {
 });
 
 describe("stateSub520E (FUN_520E) — smoke", () => {
-  it("clear basic: A2 fissato, byte_at_A2+9 = 6 → bits {0,1} fissi + bit 4 (da byte=6)", () => {
+  it("clear basic: A2 fixed, byte_at_A2+9 = 6 → bits {0,1} fixed + bit 4 (from byte=6)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     const off = a2 - 0x400000;
@@ -74,7 +74,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     s.workRam[off - 1] = 0xee;
     s.workRam[off + 0x1e] = 0xff;
 
-    // stackD0 = produzione default (0x00F00001) → no-op on the second OR
+    // stackD0 = production default (0x00F00001) → no-op on the second OR
     stateSub520E(s, a2);
 
     // Phase 1: A2+0..A2+8 cleared
@@ -96,7 +96,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(s.workRam[off - 1]).toBe(0xee);
     expect(s.workRam[off + 0x1e]).toBe(0xff);
 
-    // Status flags: bits {0,1} (mask 3) | bit 4 (da byte=6) | no-op (stackD0=prod)
+    // Status flags: bits {0,1} (mask 3) | bit 4 (from byte=6) | no-op (stackD0=prod)
     // = 0x3 | 0x10 = 0x13
     expect(readStatusFlags(s.workRam)).toBe(0x00000013);
   });
@@ -110,7 +110,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
 
     stateSub520E(s, a2);
 
-    // bits 0, 1 (fixed) + bit 31 (top bit, da byte=33)
+    // bits 0, 1 (fixed) + bit 31 (top bit, from byte=33)
     // = 0x80000003
     expect(readStatusFlags(s.workRam)).toBe(0x80000003);
   });
@@ -124,11 +124,11 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
 
     stateSub520E(s, a2);
 
-    // Solo bits 0,1 fissi (no-op on the byte path); production stackD0 = no-op
+    // Only bits 0,1 fixed (no-op on the byte path); production stackD0 = no-op
     expect(readStatusFlags(s.workRam)).toBe(0x00000003);
   });
 
-  it("OR cumulativo: status flags pre-esistenti are OR-ed (non sovrascritti)", () => {
+  it("cumulative OR: pre-existing status flags are OR-ed (not overwritten)", () => {
     const s = emptyGameState();
     const a2 = 0x401000;
     const off = a2 - 0x400000;
@@ -145,7 +145,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(readStatusFlags(s.workRam)).toBe(0x40000093);
   });
 
-  it("stackD0 esplicito: 0x00000006 → bit 4 OR-ed (beyond ai bits 0,1,4 from the byte path)", () => {
+  it("explicit stackD0: 0x00000006 → bit 4 OR-ed (beyond bits 0,1,4 from the byte path)", () => {
     const s = emptyGameState();
     const a2 = 0x401600;
     const off = a2 - 0x400000;
@@ -163,7 +163,7 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     expect(FIXED_OR_MASK).toBe(3);
   });
 
-  it("workRam clear strictly locale ad A2 (no leak su altre regioni)", () => {
+  it("workRam clear strictly local to A2 (no leak into other regions)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x5a);
     // Reset status flags long
@@ -171,14 +171,14 @@ describe("stateSub520E (FUN_520E) — smoke", () => {
     s.workRam[STATUS_FLAGS_OFF + 1] = 0;
     s.workRam[STATUS_FLAGS_OFF + 2] = 0;
     s.workRam[STATUS_FLAGS_OFF + 3] = 0;
-    // Sets byte @ A2+9 sapientemente
+    // Set byte @ A2+9 deliberately
     const a2 = 0x401000;
     const off = a2 - 0x400000;
     s.workRam[off + 9] = 0x06;
 
     stateSub520E(s, a2);
 
-    // Range clearati
+    // Cleared ranges
     for (let i = 0; i <= 8; i++) expect(s.workRam[off + i]).toBe(0);
     for (let i = 0; i <= 4; i++) expect(s.workRam[off + 0xe + i]).toBe(0);
     for (let i = 0; i <= 9; i++) expect(s.workRam[off + 0x14 + i]).toBe(0);

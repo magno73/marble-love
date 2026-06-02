@@ -30,7 +30,7 @@ function setStatus(ram: Uint8Array, ptrOff: number, status: number): void {
 }
 
 describe("eepromCommitRequest (FUN_3FC6)", () => {
-  it("status >= 0xE0 -> rate=0, (arg.w * 0) = 0 -> path #1: returns 1, NESSUN side effect", () => {
+  it("status >= 0xE0 -> rate=0, (arg.w * 0) = 0 -> path #1: returns 1, NO side effect", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -40,12 +40,12 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
     const r = eepromCommitRequest(s, 0x1234);
     expect(r).toBe(1);
-    // Nessuna jsr a FUN_3F78 -> contatori invariati.
+    // No jsr to FUN_3F78 -> counters unchanged.
     expect(s.workRam[FF5_OFF]).toBe(0x42);
     expect(s.workRam[FF7_OFF]).toBe(0x77);
   });
 
-  it("arg.w == 0 -> path #1 indipendentemente from the rate: returns 1, NESSUN side effect", () => {
+  it("arg.w == 0 -> path #1 regardless of the rate: returns 1, NO side effect", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -59,12 +59,12 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
     expect(s.workRam[FF5_OFF]).toBe(0x10);
   });
 
-  it("path #2 (budget < arg*12 signed) -> returns 0, 1 sola jsr a FUN_3F78 (drain), no decremento", () => {
+  it("path #2 (budget < arg*12 signed) -> returns 0, exactly 1 jsr to FUN_3F78 (drain), no decrement", () => {
     // status = 0 -> rate = 1. arg = 0x100 -> arg*12 = 0x1200.
     // eepromCommit with counter=0x10, acc=0, divisor=1: drain 16 iters ->
     //   counter=0, acc=16, no clamp. result = 16*12/1 = 192 = 0xC0.
     // 0xC0 (= 192) < 0x1200 (= 4608) -> path #2: returns 0, no further
-    // decremento.
+    // decrement.
     const s = emptyGameState();
     const ptr = 0x401d00;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -74,12 +74,12 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
 
     const r = eepromCommitRequest(s, 0x100);
     expect(r).toBe(0);
-    // Side effects of the singola eepromCommit:
+    // Side effects of the single eepromCommit:
     expect(s.workRam[FF7_OFF]).toBe(0);
     expect(s.workRam[FF5_OFF]).toBe(16);
   });
 
-  it("path #3 (budget >= arg*12 signed) -> returns 1, decrementa 0x401FF5 of (arg.w*rate.w).b", () => {
+  it("path #3 (budget >= arg*12 signed) -> returns 1, decrements 0x401FF5 by (arg.w*rate.w).b", () => {
     // status = 0 -> rate = 1. arg = 1 -> arg*12 = 12.
     // eepromCommit with counter=4, acc=0, divisor=1: drain 4 iters ->
     //   counter=0, acc=4, no clamp. result = 4*12/1 = 48 = 0x30.
@@ -98,7 +98,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
     expect(s.workRam[FF7_OFF]).toBe(0);
   });
 
-  it("arg.w = 0xa96a, status=0x55 (rate=2): path #3 con D3.b = 0xD4 (replica caso parity)", () => {
+  it("arg.w = 0xa96a, status=0x55 (rate=2): path #3 with D3.b = 0xD4 (replica of a parity case)", () => {
     // Exact replica of a failure case observed during development.
     // arg.w = 0xa96a, status=0x55 -> rate=(0x55&3)+1=2.
     // mulu.w: D3.l = 0xa96a * 2 = 0x152D4. D3.w = 0x52D4 != 0 -> path #2/#3.
@@ -120,7 +120,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
     expect(s.workRam[FF7_OFF]).toBe(0x01);
   });
 
-  it("solo la low word of arg is letta (high word of the long ignorata)", () => {
+  it("only the low word of arg is read (high word of the long ignored)", () => {
     // arg = 0x12340000: low word = 0 -> path #1 (arg.w * rate.w = 0).
     const s = emptyGameState();
     const ptr = 0x401d00;
@@ -136,7 +136,7 @@ describe("eepromCommitRequest (FUN_3FC6)", () => {
     expect(s.workRam[FF5_OFF]).toBe(0x10);
   });
 
-  it("(arg.w * rate.w) low word == 0 con arg.w != 0 -> path #1", () => {
+  it("(arg.w * rate.w) low word == 0 with arg.w != 0 -> path #1", () => {
     // arg.w = 0x8000, rate = 2 (status=0x05): mulu.w = 0x10000. low word 0.
     const s = emptyGameState();
     const ptr = 0x401d00;

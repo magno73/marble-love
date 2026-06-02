@@ -5,27 +5,27 @@
  *
  * **Internal constants**: A3 = 0x25BAE, canonical pair 0x400018/0x4000FA.
  *
- * **Sub-JSR** patchate per isolamento:
- *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, code) a buffer.
+ * **Sub-JSR** patched for isolation:
+ *   - `FUN_25BAE` (@ 0x25BAE): append (objPtr, code) to a buffer.
  *   - `FUN_15884` (@ 0x15884): increments count.
- *   - `FUN_158AC` (@ 0x158AC): append sound cmd a buffer.
- *   - `FUN_15BD0` (@ 0x15BD0): append (structPtr, arg2, arg3) a buffer.
+ *   - `FUN_158AC` (@ 0x158AC): append sound cmd to a buffer.
+ *   - `FUN_15BD0` (@ 0x15BD0): append (structPtr, arg2, arg3) to a buffer.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   1. ROM patch: intercept the 4 sub-jsrs with stubs that write their args
- *      in zone fixed of work RAM (0x401F00+).
+ *      into a fixed zone of work RAM (0x401F00+).
  *
- *   - 0x401F00: FUN_158AC sound buffer (max 4 byte)
+ *   - 0x401F00: FUN_158AC sound buffer (max 4 bytes)
  *   - 0x401F0C: FUN_158AC sound cur ptr (long → next write slot)
- *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 byte)
+ *   - 0x401F10: FUN_25BAE call buffer (max 3 × 8 bytes)
  *     each entry: [objPtr long BE][code long BE]
  *   - 0x401F2C: FUN_25BAE call count byte
  *   - 0x401F30: FUN_15884 call count byte
- *   - 0x401F40: FUN_15BD0 call buffer (max 2 × 12 byte = 24 byte)
+ *   - 0x401F40: FUN_15BD0 call buffer (max 2 × 12 bytes = 24 bytes)
  *     each entry: [structPtr long BE][arg2 long BE][arg3 long BE]
  *   - 0x401F58: FUN_15BD0 call count byte
  *
- * Uso: npx tsx packages/cli/src/test-helper-25c74-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-25c74-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -62,7 +62,7 @@ const SP15884_COUNT   = 0x00401f30 as const;
 const BD0_BUF_BASE    = 0x00401f40 as const;
 const BD0_COUNT_PTR   = 0x00401f58 as const;
 
-// ─── Coppia canonica ──────────────────────────────────────────────────────────
+// ─── Canonical pair ───────────────────────────────────────────────────────────
 const OBJ_PAIR_FIRST  = 0x00400018 as const;
 const OBJ_PAIR_SECOND = 0x004000fa as const;
 
@@ -95,7 +95,7 @@ function makeRng(seed: number): () => number {
 // ─── ROM patches ─────────────────────────────────────────────────────────────
 
 /**
- * Patch FUN_158AC: append byte arg (offset 0x7 da SP) a buffer.
+ * Patch FUN_158AC: append byte arg (offset 0x7 from SP) to a buffer.
  *   move.b  (0x7,SP), D0       : 10 2F 00 07
  *   movea.l ($401F0C).l, A1    : 22 79 00 40 1F 0C
  *   move.b  D0, (A1)+          : 12 C0
@@ -126,7 +126,7 @@ function patchSoundPair(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_25BAE: append (objPtr, code) al buffer + rts.
+ * Patch FUN_25BAE: append (objPtr, code) to the buffer + rts.
  *
  *   SP+0 = return addr
  *
@@ -167,7 +167,7 @@ function patchOSE25BAE(rom: Buffer): void {
 }
 
 /**
- * Patch FUN_15BD0: append (structPtr, arg2, arg3) al buffer + rts.
+ * Patch FUN_15BD0: append (structPtr, arg2, arg3) to the buffer + rts.
  *
  *   SP+0  = return addr
  *   SP+4  = structPtr (arg1 long)
@@ -248,7 +248,7 @@ function patchStateSub15BD0(rom: Buffer): void {
   rom[a+0x36]=0x4e; rom[a+0x37]=0x75;
 }
 
-// ─── Helpers locali ───────────────────────────────────────────────────────────
+// ─── Local helpers ───────────────────────────────────────────────────────────
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 
@@ -298,7 +298,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Scelta of the objPtr
+    // Choice of the objPtr
     const ptrChoice = rng();
     const actualPtr: number =
       ptrChoice < 0.20 ? OBJ_PAIR_FIRST :
@@ -307,7 +307,7 @@ async function main(): Promise<void> {
 
     const off = actualPtr - WORK_RAM_BASE;
 
-    // Delta word (D1.w): distribuzione mista
+    // Delta word (D1.w): mixed distribution
     const deltaLong = Math.floor(rng() * 0x100000000) >>> 0;
     // Prefer interesting values: sign range, zero, 0x7F, 0x10, etc.
     let deltaChoice: number;
@@ -320,7 +320,7 @@ async function main(): Promise<void> {
     else if (dr < 0.4)  deltaChoice = 0x0000ffff; // 0xFFFF word
     else                deltaChoice = deltaLong;
 
-    // State A2[+0x1A]: distribuzione {1,5,6, random}
+    // State A2[+0x1A]: distribution {1,5,6, random}
     const r1a = rng();
     const pre1A: number =
       r1a < 0.20 ? 0x01 :
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
     scratchObj[0x5f] = pre5F;
     scratchObj[0x60] = pre60;
 
-    // Sentinelle near
+    // Nearby sentinels
     const neighborSentinels: Record<number, number> = {};
     for (let idx = 0; idx < NEIGHBORS.length; idx++) {
       const nOff = NEIGHBORS[idx]!;
@@ -380,7 +380,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, BD0_COUNT_PTR, 1, 0);
     for (let k = 0; k < 0x80; k++) pokeMem(cpu, actualPtr + k, 1, scratchObj[k]!);
 
-    // ── Mirror su state.workRam ──────────────────────────────────────────
+    // ── Mirror to state.workRam ──────────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     for (let k = 0; k < 0x80; k++) stateInst.workRam[off + k] = scratchObj[k]!;
 
@@ -467,7 +467,7 @@ async function main(): Promise<void> {
       }
     }
 
-    // Sentinelle (no-spill)
+    // Sentinels (no-spill)
     if (pass) {
       for (const nOff of NEIGHBORS) {
         if (nOff >= 0x80) continue;

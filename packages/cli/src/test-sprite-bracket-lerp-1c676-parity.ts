@@ -3,12 +3,12 @@
  * test-sprite-bracket-lerp-1c676-parity.ts — differential FUN_0001C676 vs
  * `spriteBracketLerp1C676`.
  *
- * FUN_0001C676 (1092 byte): "sprite bracket-lerp". Legge 4 struct globali
- * @ 0x401C28/30/38/40 (8 byte ciascuna), 2 muls factor @ 0x40069E/0x4006A0,
- * and il base-word @ 0x400694. Scrive:
+ * FUN_0001C676 (1092 bytes): "sprite bracket-lerp". Reads 4 global structs
+ * @ 0x401C28/30/38/40 (8 bytes each), 2 muls factors @ 0x40069E/0x4006A0,
+ * and the base-word @ 0x400694. Writes:
  *   - byte flags @ 0x40066A
- *   - 4 byte dircode @ 0x40066C/6E/70/72
- *   - 8 word output @ 0x400674..0x400683
+ *   - 4 byte dircodes @ 0x40066C/6E/70/72
+ *   - 8 word outputs @ 0x400674..0x400683
  *
  * No external JSR to stub; this is a pure function.
  *
@@ -16,9 +16,9 @@
  *   - A: random all (struct + globals).
  *   - B: force equality skip bracket-1 (key==hi, tiebreak=eq).
  *   - C: force dir=1 bracket-1 (key<hi), lerp with factorA stress.
- *   - D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF in the fields critical).
+ *   - D: edge cases (0x0000/0x7FFF/0x8000/0xFFFF in the critical fields).
  *
- * Uso: npx tsx packages/cli/src/test-sprite-bracket-lerp-1c676-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sprite-bracket-lerp-1c676-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -43,20 +43,20 @@ const FUN_1C676 = 0x0001c676;
 // ─── Memory layout ────────────────────────────────────────────────────────────
 
 // Inputs: structs + globals in one contiguous setup range.
-// 4 structs: 0x401C28..0x401C47 (32 byte)
+// 4 structs: 0x401C28..0x401C47 (32 bytes)
 const STRUCT_BASE = 0x00401c28;
-const STRUCT_SIZE = 0x20; // 4 × 8 byte
+const STRUCT_SIZE = 0x20; // 4 × 8 bytes
 
 // Globals: 0x40066A..0x400682 + 0x400694..0x4006A0
-// We cover the full range 0x40066A..0x4006A1 (56 byte)
+// We cover the full range 0x40066A..0x4006A1 (56 bytes)
 const GLOB_BASE = 0x0040066a;
 const GLOB_SIZE = 0x38; // 0x40066A..0x4006A1
 
 // Compare range: all writes:
 //   - 0x40066A (flags) + 0x40066C..0x400672 (4 dircodes) + 0x400674..0x400683 (8 words)
-// Full range: 0x40066A..0x400683 (26 byte)
+// Full range: 0x40066A..0x400683 (26 bytes)
 const COMPARE_BASE = 0x0040066a;
-const COMPARE_SIZE = 0x1a; // 26 byte (0x40066A..0x400683)
+const COMPARE_SIZE = 0x1a; // 26 bytes (0x40066A..0x400683)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

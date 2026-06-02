@@ -90,7 +90,7 @@ function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
 
 /**
  *
- * il poll-loop lo rileva.
+ * the poll-loop detects it.
  */
 function callFunctionClean(
   cpu: Awaited<ReturnType<typeof createCpu>>,

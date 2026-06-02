@@ -1,10 +1,10 @@
 /**
  * sprite-pack.ts — `FUN_0001A9CC` (88 byte): pack 6 sprite records.
  *
- * Loops 6 times. For each record (40 byte da `src`), pack i fields in:
+ * Loops 6 times. For each record (40 bytes from `src`), packs the fields into:
  *   - 1 long (always written)
  *   - 1 long + 1 word (skipped on last iter D2==5)
- * Output al `dst` ptr (post-incrementing).
+ * Output to the `dst` ptr (post-incrementing).
  *
  * The `ror.l` rotations mix nibbles cross-word, so it must be replicated
  * carefully.

@@ -4,22 +4,22 @@
  *
  * 2 "1" bits from the event queue (*0x400006), writing 0x0000 and 0x0080 to MMIO
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *     `bit0(*0x400000) == 1` and `bit0(*0x40017C) == 0`. Bit 1..15 random.
  *     to guarantee that both inner loops terminate.
  *       * 0x400000..0x400001 (input port) — unchanged (read-only)
  *       * 0x40017C..0x40017D (edge detector prev → low2 of port)
  *
  * MMIO writes to 0x860000 are ignored by Musashi because the region is unmapped
- * workRam coincide perfettamente.
+ * workRam matches perfectly.
  *
- * Suite testate (4 × 125 = 500):
+ * Suites tested (4 × 125 = 500):
  *   - A: queue with 2 scattered 1 bits (random positioning)
  *   - B: queue with bit 0 and bit 1 set (minimum pops: 2 total)
- *   - C: queue full (0xFFFF, pop minimi: 2 totali)
+ *   - C: queue full (0xFFFF, minimum pops: 2 total)
  *   - D: queue with exactly 2 bits set in high positions (high pops)
  *
- * Uso: npx tsx packages/cli/src/test-sync-av-toggle-1e08-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-sync-av-toggle-1e08-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -80,7 +80,7 @@ function writeWordToBoth(
 /** Generate a word with at least `minOnes` bits set. */
 function genWordWithMinOnes(rng: () => number, minOnes: number): number {
   let w = Math.floor(rng() * 0x10000) & 0xffff;
-  // Counts i bit set.
+  // Count the bits set.
   let count = 0;
   let tmp = w;
   while (tmp !== 0) {
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
       maxFlagPops: 100_000,
     });
 
-    // Compare workRam delta su 3 word (port, prev, flags).
+    // Compare workRam delta over 3 word (port, prev, flags).
     const binPort = peekMem(cpu, PORT_ABS, 2);
     const tsPort = readWord(stateInst.workRam, 0x00);
     if (binPort !== tsPort) {
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
   } {
     // big-endian = workRam[1] & 1) must be 1.
     const port = (Math.floor(rngFn() * 0x10000) & 0xfffe) | 0x0001;
-    // of the XOR (vedi event-flags.ts).
+    // of the XOR (see event-flags.ts).
     const prev = Math.floor(rngFn() * 0x10000) & 0xfffe;
     return { port, prev };
   }
@@ -247,10 +247,10 @@ async function main(): Promise<void> {
   );
   totalOk += okC;
 
-  // ─── Suite D: 2 bit set in posizioni alte (pop massimi) ──────────────
+  // ─── Suite D: 2 bits set in high positions (max pops) ────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: 2 bit set in posizioni alte — ${sizeD} cases ===`,
+    `\n=== Suite D: 2 bits set in high positions — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
@@ -268,7 +268,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

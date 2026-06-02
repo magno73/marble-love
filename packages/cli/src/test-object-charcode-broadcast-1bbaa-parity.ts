@@ -4,19 +4,19 @@
  * vs `objectCharcodeBroadcast1BBAA`.
  *
  * FUN_0001BBAA (222 byte): "object charcode broadcast under flag-gated,
- * progress-gated dispatch". Vedi engine/src/object-charcode-broadcast-1bbaa.ts
- * per la spec disasm completa.
+ * progress-gated dispatch". See engine/src/object-charcode-broadcast-1bbaa.ts
+ * for the full disasm spec.
  *
- * **Strategia parity**:
- *     da Musashi ha la ROM mappata in `0x000000..0x07FFFF`. Il TS module
+ * **Parity strategy**:
+ *     Musashi has the ROM mapped at `0x000000..0x07FFFF`. The TS module
  *     + flag byte @ 0x40076C.
  *
  * **Suite (4×125 + remainder = 500)**:
  *        with state=1, filter=0, signedRange in [3,6], charcode in list)
  *   - C: forced no-match (gate=1, but every obj fails one filter)
- *        index variabile)
+ *        index varies)
  *
- * Uso: npx tsx packages/cli/src/test-object-charcode-broadcast-1bbaa-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-charcode-broadcast-1bbaa-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -49,10 +49,10 @@ const OBJ_STRIDE = 0xe2;
 const ROM_PTR_TABLE_BASE = 0x00024aae;
 const ROM_BYTE_TABLE_BASE = 0x00024a94;
 
-/** Range of obj iterati in the test (count ≤ MAX_OBJ_COUNT). */
+/** Range of objs iterated in the test (count ≤ MAX_OBJ_COUNT). */
 const MAX_OBJ_COUNT = 8;
 const LIST_BASE_ADDR = 0x024b00;
-/** Lunghezza max char-list (incl. terminator). */
+/** Max char-list length (incl. terminator). */
 const LIST_MAX_LEN = 8;
 
 function makeRng(seed: number): () => number {
@@ -149,7 +149,7 @@ interface FailRecord {
   ts: number;
 }
 
-/** Compare byte-by-byte le aree workRam interessate. */
+/** Compare byte-by-byte the affected workRam regions. */
 function compareWorkRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -259,8 +259,8 @@ async function main(): Promise<void> {
     listBytes.push(0xff);
 
     return {
-      levelIdx: Math.floor(rng() * 6), // 0..5 (range valido ptr-table)
-      gateByte: rng() < 0.7 ? rb() | 0x80 : 0, // bias: spesso non zero
+      levelIdx: Math.floor(rng() * 6), // 0..5 (valid ptr-table range)
+      gateByte: rng() < 0.7 ? rb() | 0x80 : 0, // bias: often non-zero
       progressByte: rb(),
       thresholdByte: rb(),
       listBytes,
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: forced no-match (gate=1 but filtri falliscono) ────────────
+  // ─── Suite C: forced no-match (gate=1 but filters fail) ────────────
   console.log(`\n=== Suite C: forced no-match — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -344,7 +344,7 @@ async function main(): Promise<void> {
       const v = rb();
       c = randomCase({ gateByte: 1, progressByte: v, thresholdByte: v });
     } else if (sub === 4) {
-      // signedRange = 7 / 2 (edges of the filtro)
+      // signedRange = 7 / 2 (edges of the filter)
       c = randomCase({ gateByte: 1, progressByte: 0x10, thresholdByte: 0x80 });
       for (let j = 0; j < c.objs.length; j++) {
         c.objs[j]!.signedRange = j % 2 === 0 ? 2 : 7;
@@ -352,7 +352,7 @@ async function main(): Promise<void> {
         c.objs[j]!.filterFlag = 0;
       }
     } else {
-      // levelIdx variabile + threshold sign-bit edge (0x80)
+      // levelIdx varies + threshold sign-bit edge (0x80)
       c = randomCase({
         levelIdx: Math.floor(rng() * 6),
         gateByte: 1,
@@ -366,7 +366,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

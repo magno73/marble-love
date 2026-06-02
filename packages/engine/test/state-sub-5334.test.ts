@@ -1,7 +1,7 @@
 /**
  * state-sub-5334.test.ts — smoke tests of stateSub5334 (FUN_5334).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-5334-parity.ts`.
+ * Bit-perfect parity verified vs binary in `test-state-sub-5334-parity.ts`.
  * Covers forwarding 3 args, byte-to-long sign extension, return
  * pass-through, default inner no-op, no side-effects on the GameState.
  */
@@ -11,7 +11,7 @@ import { stateSub5334 } from "../src/state-sub-5334.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("stateSub5334 (FUN_5334)", () => {
-  it("forwarda the 3 long a inner: byte98 sign-ext, byte99 sign-ext, argLong", () => {
+  it("forwards the 3 longs to inner: byte98 sign-ext, byte99 sign-ext, argLong", () => {
     const s = emptyGameState();
     s.workRam[0x1f98] = 0x12;
     s.workRam[0x1f99] = 0x34;
@@ -44,7 +44,7 @@ describe("stateSub5334 (FUN_5334)", () => {
     expect(captured!.a2).toBe(0xffffffff >>> 0);
   });
 
-  it("sign-extension: byte 0x7F stays 0x0000007F (positivo signed massimo)", () => {
+  it("sign-extension: byte 0x7F stays 0x0000007F (maximum signed positive)", () => {
     const s = emptyGameState();
     s.workRam[0x1f98] = 0x7f;
     s.workRam[0x1f99] = 0x00;
@@ -59,19 +59,19 @@ describe("stateSub5334 (FUN_5334)", () => {
     expect(captured!.a2).toBe(0x00000000);
   });
 
-  it("return = pass-through of the value of inner (uint32)", () => {
+  it("return = pass-through of the inner value (uint32)", () => {
     const s = emptyGameState();
     const r = stateSub5334(s, 0, () => 0xcafebabe >>> 0);
     expect(r).toBe(0xcafebabe >>> 0);
   });
 
-  it("return = 0 con default inner no-op", () => {
+  it("return = 0 with default inner no-op", () => {
     const s = emptyGameState();
     const r = stateSub5334(s, 0x12345678);
     expect(r).toBe(0);
   });
 
-  it("non altera workRam: i due byte and dintorni restano invariati", () => {
+  it("does not alter workRam: the two bytes and their surroundings stay unchanged", () => {
     const s = emptyGameState();
     s.workRam[0x1f97] = 0xab;
     s.workRam[0x1f98] = 0x55;
@@ -83,7 +83,7 @@ describe("stateSub5334 (FUN_5334)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("argLong is normalizzato a uint32 (negative/overflow)", () => {
+  it("argLong is normalized to uint32 (negative/overflow)", () => {
     const s = emptyGameState();
 
     let captured = -1;
@@ -100,7 +100,7 @@ describe("stateSub5334 (FUN_5334)", () => {
     expect(captured).toBe(0x00000001);
   });
 
-  it("byte init zero → both the arg sign-extended are 0", () => {
+  it("byte init zero → both sign-extended args are 0", () => {
     const s = emptyGameState();
     let captured: { a1: number; a2: number } | null = null;
     stateSub5334(s, 0xa5a5a5a5, (a1, a2) => {

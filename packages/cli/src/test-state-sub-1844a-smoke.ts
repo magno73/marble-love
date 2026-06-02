@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * test-state-sub-1844a-smoke.ts — smoke tests per `stateSub1844A`.
+ * test-state-sub-1844a-smoke.ts — smoke tests for `stateSub1844A`.
  *
  * Run 5 deterministic cases without ROM (no binary oracle) to verify:
  *   1. Early-out when gameMode != 3.
  *   2. Early-out when byte760 == 0.
- *   3. Decrement path: timer > 1 → decrementato, no insert.
- *   4. Insert path: timer == 1 → decrementato a 0 → insert triggered, timer
- *      risettato a 0xFFFF, entry[0x8..0xB] = 0x21342.
- *   5. Ptr-walk path: timer == -1 → ptr advanced by of 4.
+ *   3. Decrement path: timer > 1 → decremented, no insert.
+ *   4. Insert path: timer == 1 → decremented to 0 → insert triggered, timer
+ *      reset to 0xFFFF, entry[0x8..0xB] = 0x21342.
+ *   5. Ptr-walk path: timer == -1 → ptr advanced by 4.
  */
 
 import { exit } from "node:process";

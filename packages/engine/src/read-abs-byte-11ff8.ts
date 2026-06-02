@@ -157,7 +157,7 @@ export interface Helper11FF8Subs {
   hiScoreDecode41c8?: (state: GameState, arg1: number) => number;
 
   /**
-   * `FUN_28F62` — writes string-chain entry (with the, tickOff, marker) and
+   * `FUN_28F62` — writes string-chain entry (col, tickOff, marker) and
    * triggers `renderStringChain` for the current hi-score row.
    * Called as `(0xd, D4b, 0x1000)` per row.
    * Default: delegates to `renderStringEntry28F62`.

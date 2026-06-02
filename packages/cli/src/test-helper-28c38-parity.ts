@@ -3,12 +3,12 @@
  * test-helper-28c38-parity.ts — differential FUN_00028C38 vs helper28C38.
  *
  * Per N test cases:
- *   1. Setup 5 byte struct in workRam scratch area
+ *   1. Set up 5-byte struct in workRam scratch area
  *   2. callFunction(0x28C38, [structPtr])  — MAME/musashi-wasm binary.
- *   3. helper28C38(state, structPtr)       — replica TS
- *   4. Compare D0.b (return low byte) + 5 byte struct post-call
+ *   3. helper28C38(state, structPtr)       — TS replica
+ *   4. Compare D0.b (return low byte) + 5-byte struct post-call
  *
- * Uso: npx tsx packages/cli/src/test-helper-28c38-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-28c38-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

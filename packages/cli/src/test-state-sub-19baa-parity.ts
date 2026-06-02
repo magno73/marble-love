@@ -3,13 +3,13 @@
  * test-state-sub-19baa-parity.ts — differential FUN_00019BAA vs
  * `stateSub19BAA`.
  *
- * FUN_00019BAA (490 byte, 0x019BAA-0x019D94): "per-frame entity tick". Gate
- * su `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` each 8
- * frame), then iterates entity table @ 0x4019F8 (10 x 0x38), applying for each
+ * FUN_00019BAA (490 byte, 0x019BAA-0x019D94): "per-frame entity tick". Gated
+ * on `*0x400394.w == 4`, optional spawn dispatcher (`FUN_00019A40` every 8
+ * frames), then iterates entity table @ 0x4019F8 (10 x 0x38), applying for each
  * (rng-driven), movement-block (Y += vel + depth check), AI-block
- * (FUN_19E42), and sound trigger condizionale (FUN_158AC).
+ * (FUN_19E42), and conditional sound trigger (FUN_158AC).
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *     in `rng.ts`.
  *   - `FUN_00019A40` (spawn dispatcher) **stubbed with RTS**.
  *   - `FUN_00018F46` **stubbed with RTS**.
@@ -23,9 +23,9 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random — full random entity table + random globals
- *   - D: edge — high state, vel pivot, substate==2, mix per recheck path
+ *   - D: edge — high state, vel pivot, substate==2, mix for recheck path
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-19baa-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-19baa-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -67,7 +67,7 @@ const SPAWN_ENABLE_ADDR = 0x00400762;
 const FRAME_COUNTER_ADDR = 0x00400010;
 
 /**
- * Patch JSR-stub. RTS = 0x4E75 (2 byte). Per FUN_1CC62 servono 4 byte
+ * Patch JSR-stub. RTS = 0x4E75 (2 byte). FUN_1CC62 needs 4 bytes
  * (`moveq #0,D0` 0x7000 + `rts` 0x4E75) to guarantee deterministic D0 = 0.
  */
 function patchSubs(cpu: CpuSession): void {
@@ -339,7 +339,7 @@ async function main(): Promise<void> {
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    const t = genTable(1.0, true); // all attive
+    const t = genTable(1.0, true); // all active
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
       t[off + 0x24] = 0xff;
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
     for (let s = 0; s < ENTITY_COUNT; s++) {
       const off = s * ENTITY_STRIDE;
       if (rng() < 0.5) t[off + 0x1a] = 2;
-      // entity[0x14] (depth): a times 0 a times negativo a times positivo.
+      // entity[0x14] (depth): sometimes 0, sometimes negative, sometimes positive.
       const d = rng();
       if (d < 0.33) {
         // 0 → cc62 returns 0, cmp 0,0 → ble true → no clamp
@@ -382,7 +382,7 @@ async function main(): Promise<void> {
         t[off + 0x16] = 0;
         t[off + 0x17] = 0;
       } else if (d < 0.66) {
-        // negativo: 0xFF000000
+        // negative: 0xFF000000
         t[off + 0x14] = 0xff;
       }
       // X.w >> 3 < 0x35 → X.w < 0x1A8 (≈ 424).
@@ -405,7 +405,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

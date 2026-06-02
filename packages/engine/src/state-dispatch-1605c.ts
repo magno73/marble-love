@@ -54,8 +54,8 @@
  *   - byte 0x23..0x7F (35..127)        -> no-op (cmpa fall-through)
  *   - byte 0x80..0xFF (-128..-1 signed)-> no-op (A0 < 0x20)
  *
- * **Note semantiche**:
- *     i comparisons are signed.
+ * **Semantic notes**:
+ *     the comparisons are signed.
  *     behaves like a plain "byte == 0x20/0x21/0x22" check for byte <= 0x7F.
  *
  * **JSR sub injection**: two callees exposed through `StateDispatch1605CSubs`:
@@ -111,7 +111,7 @@ const WORK_RAM_SIZE = 0x2000;
  *
  *
  *   - 0x20: `subs.fun_160ae(structPtrLong, 0)`
- *   - 0x22: `r = subs.fun_15c46(structPtrLong)` poi
+ *   - 0x22: `r = subs.fun_15c46(structPtrLong)` then
  *           `subs.fun_160ae(structPtrLong, r)`
  */
 export function stateDispatch1605C(
@@ -128,8 +128,8 @@ export function stateDispatch1605C(
     kindByte = state.workRam[kindAddr - WORK_RAM_BASE] ?? 0;
   }
 
-  // ext.w + ext.l: signed sign-extend of the byte a long signed.
-  // JS: (b << 24) >> 24 produce int32 signed.
+  // ext.w + ext.l: signed sign-extend of the byte to a signed long.
+  // JS: (b << 24) >> 24 produces a signed int32.
   const a0Signed = ((kindByte & 0xff) << 24) >> 24;
 
   // blt.b: if A0 < 0x20 (signed) → return.
@@ -137,8 +137,8 @@ export function stateDispatch1605C(
     return;
   }
 
-  // bgt.b 0x16076: if A0 > 0x20, fall-through al check 0x21/0x22; else
-  // (A0 == 0x20) cade in the `bra.b 0x16086` → branch_20.
+  // bgt.b 0x16076: if A0 > 0x20, fall-through to the 0x21/0x22 check; else
+  // (A0 == 0x20) falls into the `bra.b 0x16086` → branch_20.
   if (a0Signed === 0x20) {
     // branch kind == 0x20: fun_160ae(A2, 0)
     subs?.fun_160ae?.(a2, 0);

@@ -12,12 +12,12 @@
  * **Algorithm**:
  *   1. Compute D2 = abs(x), D4 = abs(y)
  *   2. D3 = approx Manhattan distance: max(|x|,|y|) + min/8 * 3
- *   3. Lookup ROM @ 0x1EEF8 per interpolazione (D4*2, D4*2+2)
+ *   3. Lookup ROM @ 0x1EEF8 for interpolation (D4*2, D4*2+2)
  *   4. D2 = sext(D5) + ((ROM[D4+1]-ROM[D4]) * D2_mid_bits) >> 3
- *   5. D3 clamp a 0x100 unsigned
+ *   5. D3 clamp to 0x100 unsigned
  *   6. Switch on mode → compute D4
  *   7. D5 = (D4 << 6) / (D3 >> 8) — divu.w
- *   8. D1 = D5 (mode != 3) o second divide (mode 3)
+ *   8. D1 = D5 (mode != 3) or second divide (mode 3)
  *   9. *A0 = (*A0 >> 8) * D5 >> 6 (signed mul, asr)
  *   10. *(A0+4) = (*(A0+4) >> 8) * D1 >> 6
  *
@@ -67,9 +67,9 @@ function readRomWordSigned(rom: RomImage, addr: number): number {
  * Replica `FUN_00025E7C` — vector scale 2D in-place.
  *
  * @param state    GameState
- * @param rom      RomImage (per ROM table @ 0x1EEF8)
- * @param vecAddr  Indirizzo assoluto of the vettore (8 byte: x.l, y.l)
- * @param mode     Mode byte (2, 3, 4, o default)
+ * @param rom      RomImage (for the ROM table @ 0x1EEF8)
+ * @param vecAddr  Absolute address of the vector (8 bytes: x.l, y.l)
+ * @param mode     Mode byte (2, 3, 4, or default)
  */
 export function vectorScale(
   state: GameState,
@@ -214,7 +214,7 @@ export function vectorScale(
 
   let d1final: number;
   if (mode === 3 && secondDivide) {
-    // mode 3: second divide per D1
+    // mode 3: second divide for D1
     const dividend2 = (secondD0Out << 6) >>> 0;
     if (divisor1 === 0) {
       d1final = 0;

@@ -9,7 +9,7 @@
  *   4. trackballInputTick(state, p1X, p1Y, p2X, p2Y)
  *   5. Compare delta + saved per both obj
  *
- * Uso: npx tsx packages/cli/src/test-trackball-input-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-trackball-input-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -37,7 +37,7 @@
  *   00017602   move.w  A1w, (-0x2, A6)           ; locVar = viewTop
  *   00017606   addq.w  #6, (-0x2, A6)            ; locVar = viewTop + 6 = my + 3 (viewBottom)
  *
- *   ;-- loop sui 7 slot ------------------------------------------------
+ *   ;-- loop over the 7 slots ------------------------------------------------
  *   0001760a   movea.l #0x401482, A3
  *   00017610   clr.b   D1b                        ; counter
  *   ; loop @ 0x17612:
@@ -127,12 +127,12 @@
  *
  * of `dispatch-strings-17230.ts`, `string-slot-match-1730c.ts`,
  *   - `slot[+0x18]` byte: "active" gate (read; skip if 0)
- *   - `slot[+0x25]` byte: state (write `0x1c` su hit)
+ *   - `slot[+0x25]` byte: state (write `0x1c` on hit)
  *   - `slot[+0xC..+0xD]` word BE: x position (signed 16-bit)
  *   - `slot[+0x10..+0x11]` word BE: y position (signed 16-bit)
- *   - `slot[+0x3a..+0x3d]` long BE: pointer-to-pointer al bbox struct
+ *   - `slot[+0x3a..+0x3d]` long BE: pointer-to-pointer to the bbox struct
  *
- * **Bbox struct** (raggiunto via `slot[+0x3a] → ptrPtr → bboxPtr`):
+ * **Bbox struct** (reached via `slot[+0x3a] → ptrPtr → bboxPtr`):
  *   - `bboxPtr+0x4` byte signed: xMin
  *   - `bboxPtr+0x5` byte signed: yMin
  *   - `bboxPtr+0x6` byte signed: width
@@ -167,7 +167,7 @@
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
-// ─── Globals (offset workRam relativi a 0x400000) ────────────────────────
+// ─── Globals (workRam offsets relative to 0x400000) ────────────────────────
 
 /** workRam offset of the "game mode" word (absolute = 0x400394). */
 export const GAME_MODE_WORD_OFF = 0x394 as const;
@@ -181,24 +181,24 @@ export const REQUIRED_GAME_MODE_B = 0x0005 as const;
 
 
 export const SLOT_BASE_ADDR = 0x00401482 as const;
-/** Stride between due slot consecutive (`moveq #0x42, D0`). */
+/** Stride between consecutive slots (`moveq #0x42, D0`). */
 export const SLOT_STRIDE = 0x42 as const;
-/** Numero of slot iterate (`cmpi.b #7, D1b`). */
+/** Number of slots iterated (`cmpi.b #7, D1b`). */
 export const SLOT_COUNT = 7 as const;
 
 /** Byte: "active" gate (skip if 0). */
 export const SLOT_ACTIVE_OFF = 0x18 as const;
-/** Byte: scriptId/index (copiato su `obj[+0x58]` su hit). */
+/** Byte: scriptId/index (copied to `obj[+0x58]` on hit). */
 export const SLOT_SCRIPT_ID_OFF = 0x19 as const;
 export const SLOT_NEW_STATE_OFF = 0x25 as const;
 /** Word BE: slot x position (signed 16-bit). */
 export const SLOT_X_OFF = 0x0c as const;
 /** Word BE: slot y position (signed 16-bit). */
 export const SLOT_Y_OFF = 0x10 as const;
-/** Long BE: pointer-to-pointer al bbox struct. */
+/** Long BE: pointer-to-pointer to the bbox struct. */
 export const SLOT_BBOX_PTRPTR_OFF = 0x3a as const;
 
-// ─── Bbox struct (raggiunto via deref doppio) ────────────────────────────
+// ─── Bbox struct (reached via double deref) ────────────────────────────
 
 /** Sentinel `cmp.l A0, D0` with `D0 = moveq #-1`. */
 export const BBOX_SENTINEL = 0xffffffff as const;
@@ -231,7 +231,7 @@ export const ENTITY_SCRIPT_ID_OFF = 0x58 as const;
 
 /** Arg long pushed to `FUN_25BAE` as second arg (`pea (0x9).w`). */
 export const FUN_25BAE_ARG_MODE = 0x9 as const;
-/** Arg long pushato a `FUN_158AC` (`pea (0x5e).l`). */
+/** Arg long pushed to `FUN_158AC` (`pea (0x5e).l`). */
 export const SOUND_HIT_COMMAND = 0x5e as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
@@ -259,7 +259,7 @@ export type SlotResult = "skip_inactive" | "miss" | "hit" | "skipped_after_hit";
 export interface StringViewportHit175C8Result {
   earlyExit: boolean;
   /**
-   *  hit avviene to the slot `i`, the slot `i+1..6` ricevono `skipped_after_hit`. */
+   *  a hit occurs at slot `i`, slots `i+1..6` receive `skipped_after_hit`. */
   perSlot: SlotResult[];
   hitSlotIndex: number;
   retVal: number;
@@ -350,7 +350,7 @@ function sextW(w: number): number {
  *   2. `subs.soundCommand(0x5e)`
  *   3. `obj[+0x58] = slot[+0x19]`
  *   4. `slot[+0x25] = 0x1c`
- *   Poi early-exit (slot successivi non visitati).
+ *   Then early-exit (subsequent slots not visited).
  */
 export function stringViewportHit175C8(
   state: GameState,
@@ -383,9 +383,9 @@ export function stringViewportHit175C8(
   const viewTop = sextW(viewTop16);
   const viewBottom = sextW((viewTop16 + VIEW_Y_SPAN) & 0xffff);
 
-  // ─── Loop sui 7 slot ────────────────────────────────────────────────────
+  // ─── Loop over the 7 slots ────────────────────────────────────────────────────
   const perSlot: SlotResult[] = [];
-  // (low byte of width + leftEdge sext word). Sul hit-path: D2 = 1.
+  // (low byte of width + leftEdge sext word). On the hit-path: D2 = 1.
   let d2Byte = initialD2Byte & 0xff;
   let hitIndex = -1;
 
@@ -402,7 +402,7 @@ export function stringViewportHit175C8(
       continue;
     }
 
-    // ─── Resolve bbox via deref doppio ───────────────────────────────────
+    // ─── Resolve bbox via double deref ───────────────────────────────────
     // movea.l (0x3a, A3), A0  ; movea.l (A0), A0
     const bboxPtrPtr = rlU(state, slotAddr + SLOT_BBOX_PTRPTR_OFF);
     const bboxPtr = rlAbs(state, rom, bboxPtrPtr);
@@ -455,7 +455,7 @@ export function stringViewportHit175C8(
     if (leftEdge <= viewLeft && viewLeft <= rightEdge) {
       xMatch = true;
     } else {
-      // block2: tenta path alternativo
+      // block2: try alternative path
       if (leftEdge > viewRight) { perSlot.push("miss"); continue; }
       if (viewRight > rightEdge) { perSlot.push("miss"); continue; }
       xMatch = true;

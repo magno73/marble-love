@@ -143,7 +143,7 @@ import type { RomImage } from "./bus.js";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-/** Indirizzo assoluto M68k of `FUN_0001CABA`. */
+/** Absolute M68k address of `FUN_0001CABA`. @public */
 export const SUB_1CABA_ADDR = 0x0001caba as const;
 
 /** Base workRam (M68k 0x400000). */
@@ -159,7 +159,7 @@ const ALPHA_RAM_END = 0x00a04000 as const;
 /** STRUCT @ 0x401c28..0x401c47 (16 word). */
 const STRUCT_OFF = 0x1c28;
 
-/** Globals offset (relativi a workRam base). */
+/** Globals offset (relative to workRam base). */
 const OFF_LVLPTR = 0x0474; // *0x400474.l — level header ptr
 const OFF_TILE_X = 0x0696; // *0x400696.w — tile X (post-derive)
 const OFF_TILE_Y = 0x0698; // *0x400698.w — tile Y (post-derive)
@@ -279,7 +279,7 @@ export function sub1CABATileRedraw(state: GameState, rom: RomImage): void {
 }
 
 function sub1CABATileRedrawImpl(state: GameState, rom: RomImage): void {
-  // ── Prologo: setup pointers + initial scan position ───────────────────────
+  // ── Prologue: setup pointers + initial scan position ───────────────────────
   let a5 = STRUCT_OFF;                          // workRam offset for STRUCT writes
   const lvlPtr = r32(state, OFF_LVLPTR) >>> 0;  // *0x400474 = level header ptr (M68k abs)
 

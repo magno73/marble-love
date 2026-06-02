@@ -3,7 +3,7 @@
  *
  * Branch-A one-shot helper of the root game-state machine. Does not call JSR: it copies
  * words inside alpha RAM using the same ROM rotation tables as the
- * renderer stringhe.
+ * string renderer.
  */
 
 import type { RomImage } from "./bus.js";

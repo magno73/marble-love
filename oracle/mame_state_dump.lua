@@ -1,10 +1,10 @@
--- mame_state_dump.lua — dumpa TUTTO il video state di Atari System 1
+-- mame_state_dump.lua — dumps ALL the Atari System 1 video state
 -- at a specific frame. Output: JSON with playfieldRam, spriteRam, alphaRam,
 -- colorRam, workRam, scrollX, scrollY in hex.
 --
--- Variabili d'ambiente:
---   MARBLE_DUMP_TARGET_FRAME — frame al quale salvare (default 600)
---   MARBLE_DUMP_OUT          — file output (default /tmp/mame_state.json)
+-- Environment variables:
+--   MARBLE_DUMP_TARGET_FRAME — frame at which to save (default 600)
+--   MARBLE_DUMP_OUT          — output file (default /tmp/mame_state.json)
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_DUMP_TARGET_FRAME") or "600")
 local OUT_PATH = os.getenv("MARBLE_DUMP_OUT") or "/tmp/mame_state.json"

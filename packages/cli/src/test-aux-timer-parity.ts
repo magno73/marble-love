@@ -7,13 +7,13 @@
  *   - 0x4003B8 word (countdown)
  *
  *   - queue head/tail in 0..15 (random; ~30% empty)
- *   - 16 random bytes in the buffer (with bias toward 0xFF and multiples of 8 for
- *     cover i branch sensitive)
+ *   - 16 random bytes in the buffer (with bias toward 0xFF and multiples of 8 to
+ *     cover the branch-sensitive cases)
  *   - random countdown word (with bias toward 0)
  *   - random active flag byte (with bias toward 0x00 / 0x40)
  *
  *
- * Uso: npx tsx packages/cli/src/test-aux-timer-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-aux-timer-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern-driven first 8 cases to cover i branches chiave:
+    // Pattern-driven first 8 cases to cover the key branches:
     //   0: empty queue
     //   1: countdown!=0, byte 0xFF (clear path)
     //   2: countdown!=0, byte 0x42 (fall-through, counter++)
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
       if (rng() < 0.25) tail = head;
       const r = rng();
       if (r < 0.2) buf0 = 0xff;
-      else if (r < 0.4) buf0 = (Math.floor(rng() * 32) * 8) & 0xff; // multipli of 8
+      else if (r < 0.4) buf0 = (Math.floor(rng() * 32) * 8) & 0xff; // multiples of 8
       else buf0 = Math.floor(rng() * 256) & 0xff;
       countdown = rng() < 0.3 ? 0 : Math.floor(rng() * 0x10000) & 0xffff;
       // Active flag: bias toward 0x00 and 0x40.

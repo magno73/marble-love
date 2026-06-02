@@ -5,18 +5,18 @@
  *   1. `workRam[A2-0x400000+0x1e .. +0x31]` = 0  (20 byte)
  *   2. long-BE @ `0x401F5E` |= 0x0000000c  (bits 2,3)
  *
- * Strategia parity:
+ * Parity strategy:
  *     `state.workRam` TS.
  *   - Set A2 = pointer in workRam (multiple of 4) so the range
- *     le status flags @ 0x1F5E: A2 ≤ 0x401F5E - 0x31 = 0x401F2D →
- *     conservativamente A2 ≤ 0x401E00.
+ *     the status flags @ 0x1F5E: A2 ≤ 0x401F5E - 0x31 = 0x401F2D →
+ *     conservatively A2 ≤ 0x401E00.
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x5200)` and `stateSub5200(state, a2)`.
+ *   - Run `callFunction(cpu, 0x5200)` and `stateSub5200(state, a2)`.
  *
  * Smoke cases (first 3):
  *   1: a2 = 0x400800 (mid range)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5200-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5200-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", SP_INITIAL);
 
-    // A2: pointer in workRam, allineato 4.
+    // A2: pointer in workRam, 4-aligned.
     // Cleared range: A2+0x1e..A2+0x31. To avoid touching 0x401F5E (status flags)
     let a2: number;
     if (i === 0) {
@@ -116,9 +116,9 @@ async function main(): Promise<void> {
     // Run TS.
     ssNs.stateSub5200(state, a2);
 
-    // callFunction (SP=0x401F00) pusha sentinel ret addr a 0x401EFC.
+    // callFunction (SP=0x401F00) pushes sentinel ret addr at 0x401EFC.
     // Touched zone: [0x1EFC..0x1EFF] (4 sentinel bytes). Exclude
-    // conservativamente [0x1EE0..0x1F00).
+    // conservatively [0x1EE0..0x1F00).
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;
     const diffOffsets: number[] = [];

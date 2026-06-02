@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
  *
- * Strategia:
+ * Strategy:
  *
- * I 23 thunk JMP (0x100..0x254) are `jmp targetAddr.l` pure: call il
- * verify la bit-exactness:
+ * The 23 JMP thunks (0x100..0x254) are pure `jmp targetAddr.l`: call the
+ * target and verify the bit-exactness:
  *   1. Identify each (sourceAddr, targetAddr) from THUNK_TABLE.
  *
  *
  * as "timeout_skip" and reports them at the end of the run.
  *
- * Uso: npx tsx packages/cli/src/test-irq-vector-thunks-parity.ts [N=100]
+ * Usage: npx tsx packages/cli/src/test-irq-vector-thunks-parity.ts [N=100]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -78,7 +78,7 @@ function deltaEqual(a: Map<number, [number, number]>, b: Map<number, [number, nu
 
 async function main(): Promise<void> {
   if (!existsSync(ROM_PATH)) {
-    console.error(`ROM non trovato: ${ROM_PATH}`);
+    console.error(`ROM not found: ${ROM_PATH}`);
     exit(1);
   }
   const rom = new Uint8Array(readFileSync(ROM_PATH));
@@ -195,7 +195,7 @@ async function main(): Promise<void> {
   console.log(`\nirq-vector-thunks parity: ${passed} passed, ${failed} failed, ${timeoutSkip} timeout-skipped / ${total} total`);
 
   if (timeoutSkipList.length > 0) {
-    console.log("\nTimeout skips (target funcs senza rts raggiungibile):");
+    console.log("\nTimeout skips (target funcs with no reachable rts):");
     for (const t of timeoutSkipList) {
       console.log(`  ${t}`);
     }

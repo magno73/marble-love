@@ -5,10 +5,10 @@
  *
  * `enableInterrupts1010A`.
  *
- *   - `THUNK_TABLE`: metadata immutabile (sourceAddr, targetAddr, bytes ROM)
- *   - `enableInterrupts1010A`: replica TS of FUN_01010A.
+ *   - `THUNK_TABLE`: immutable metadata (sourceAddr, targetAddr, ROM bytes)
+ *   - `enableInterrupts1010A`: TS replica of FUN_01010A.
  *
- * Funzioni coperte (per discovery script):
+ * Functions covered (for the discovery script):
  *   FUN_000100 FUN_00010C FUN_000112 FUN_000118 FUN_00012A FUN_00013C
  *   FUN_000148 FUN_00014E FUN_00015A FUN_000160 FUN_000178 FUN_00019C
  *   FUN_0001A8 FUN_0001AE FUN_0001B4 FUN_0001C0 FUN_0001C6 FUN_000218
@@ -85,19 +85,19 @@ export const THUNK_TABLE: readonly ThunkEntry[] = [
 ] as const;
 
 /**
- * Lookup O(1) per sourceAddr → ThunkEntry.
- * Chiave: sourceAddr normalizzato (number).
+ * O(1) lookup by sourceAddr → ThunkEntry.
+ * Key: normalized sourceAddr (number).
  */
 export const THUNK_MAP: ReadonlyMap<number, ThunkEntry> = new Map(
   THUNK_TABLE.map((e) => [e.sourceAddr, e]),
 );
 
 /**
- * Replica TS of `FUN_01010A` (6 byte: `move #0x2000,SR ; rts`).
+ * TS replica of `FUN_01010A` (6 bytes: `move #0x2000,SR ; rts`).
  *
  *   - Supervisor mode (bit 13 = 1).
- *   - IPL = 0: all le interrupt hardware enabled.
- *   - Bit of condizione (C/V/Z/N/X) non alterati (SR load esplicito).
+ *   - IPL = 0: all hardware interrupts enabled.
+ *   - Condition bits (C/V/Z/N/X) not altered (explicit SR load).
  *
  */
 export function enableInterrupts1010A(): void {

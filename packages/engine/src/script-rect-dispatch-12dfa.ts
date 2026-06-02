@@ -90,8 +90,8 @@ const SLOT_OCCUPIED_OFF = 0x18; // byte
 const SLOT_STATE_OFF = 0x1a; // byte
 const SLOT_TYPE1F_OFF = 0x1f; // byte (== 0xC alt-match-key, == 6 dec counter)
 const SLOT_SCRIPT_LONG_OFF = 0x3a; // long (script ptr)
-const SLOT_RECT_LO_OFF = 0x52; // word (sext byte da rect[0])
-const SLOT_RECT_HI_OFF = 0x54; // word (sext byte da rect[1])
+const SLOT_RECT_LO_OFF = 0x52; // word (sext byte from rect[0])
+const SLOT_RECT_HI_OFF = 0x54; // word (sext byte from rect[1])
 
 const GLOBAL_LONG_400974 = 0x400974 as const;
 const GLOBAL_LONG_400978 = 0x400978 as const;
@@ -237,7 +237,7 @@ function slotFreeMode1(state: GameState, slotPtr: number): void {
     state.workRam[off75c] = ((state.workRam[off75c] ?? 0) - 1) & 0xff;
   }
 
-  // FUN_18F46(slot+0x1F sext, slot+0x19 sext) — qui no-op (stub-RTS).
+  // FUN_18F46(slot+0x1F sext, slot+0x19 sext) — here a no-op (stub-RTS).
 }
 
 /**
@@ -266,7 +266,7 @@ function rectListSpawnLoop(
     const rect1s = sextByte(rect1);
     const rectLong = readU32Rom(rom, a2 + 2);
 
-    // Test su D3: D3 == rect[0] (signed byte) OR D3 == rect[1].
+    // Test on D3: D3 == rect[0] (signed byte) OR D3 == rect[1].
     if (d3Sext !== rect0s && d3Sext !== rect1s) {
       a2 = (a2 + RECT_STRIDE) >>> 0;
       continue;
@@ -281,7 +281,7 @@ function rectListSpawnLoop(
     }
 
     if (rectLong === 0) {
-      // Zero-path: pesca random group, spawn 4 marble.
+      // Zero-path: pick a random group, spawn 4 marbles.
       const group = rng4(state);
       const groupBase = SCRIPT_GROUP_TABLE_ROM + group * SCRIPT_GROUP_STRIDE;
 
@@ -360,11 +360,11 @@ export function scriptRectDispatch12DFA(
   arg1: number,
   arg2: number,
 ): void {
-  // D2.b / D3.b are the bytes BASSI (offset +3 in the long) of the arg on the stack.
+  // D2.b / D3.b are the low bytes (offset +3 in the long) of the arg on the stack.
   const d2 = sextByte(arg1 & 0xff);
   const d3 = sextByte(arg2 & 0xff);
 
-  // Risoluzione rect-list from the selector @ 0x400394.
+  // Resolve the rect-list from the selector @ 0x400394.
   const selectorWord = readU16Ram(state, SELECTOR_ADDR - WORK_RAM_BASE);
   // asl.w #2: shift modulo 0x10000.
   const d0wAfterAsl = (selectorWord << 2) & 0xffff;

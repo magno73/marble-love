@@ -1,5 +1,5 @@
 /**
- * state-dispatch-12fd0.test.ts — smoke per FUN_12FD0.
+ * state-dispatch-12fd0.test.ts — smoke for FUN_12FD0.
  *
  * `cli/src/test-state-dispatch-12fd0-parity.ts` (500/500).
  */
@@ -56,7 +56,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(STATE_DISPATCH_12FD0_ADDR).toBe(0x00012fd0);
   });
 
-  it("gameMode != 2 → blocco 1 skipped, fun_12d46 non chiamata", () => {
+  it("gameMode != 2 → block 1 skipped, fun_12d46 not called", () => {
     const s = emptyGameState();
     setGameMode(s, 0); // not 2
     setObjCount(s, 3);
@@ -74,7 +74,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls13068).toBe(SLOT_COUNT);
   });
 
-  it("gameMode == 2, active obj with state 0x09 → fun_12d46(ROM_SCRIPT_PTR) chiamata", () => {
+  it("gameMode == 2, active obj with state 0x09 → fun_12d46(ROM_SCRIPT_PTR) called", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -89,7 +89,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(ROM_SCRIPT_PTR).toBe(0x0001d854);
   });
 
-  it("gameMode == 2, active obj with state 0x0a → fun_12d46 chiamata", () => {
+  it("gameMode == 2, active obj with state 0x0a → fun_12d46 called", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 5);
@@ -103,7 +103,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(1);
   });
 
-  it("gameMode == 2, fun_12d46 chiamata SOLO una time (break dopo first match)", () => {
+  it("gameMode == 2, fun_12d46 called ONLY once (break after first match)", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 5);
@@ -119,7 +119,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(1); // only first match
   });
 
-  it("gameMode == 2, flag75e == 0 → fun_12d46 non chiamata even if obj is attivo", () => {
+  it("gameMode == 2, flag75e == 0 → fun_12d46 not called even if obj is active", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -133,7 +133,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gameMode == 2, obj+0x18 == 0 (inactive) → non dispatchato", () => {
+  it("gameMode == 2, obj+0x18 == 0 (inactive) → not dispatched", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -147,7 +147,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gameMode == 2, obj state != 9 and != 10 → non dispatchato", () => {
+  it("gameMode == 2, obj state != 9 and != 10 → not dispatched", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);
@@ -175,7 +175,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("flag75c != 0 → fun_11ac2 chiamata", () => {
+  it("flag75c != 0 → fun_11ac2 called", () => {
     const s = emptyGameState();
     setFlag75c(s, 1);
 
@@ -186,7 +186,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(1);
   });
 
-  it("flag75c == 0 → fun_11ac2 non chiamata", () => {
+  it("flag75c == 0 → fun_11ac2 not called", () => {
     const s = emptyGameState();
     setFlag75c(s, 0);
 
@@ -197,7 +197,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(calls).toBe(0);
   });
 
-  it("fun_13068 chiamata 25 times con ptr corretti", () => {
+  it("fun_13068 called 25 times with correct ptrs", () => {
     const s = emptyGameState();
     const ptrs: number[] = [];
     stateDispatch12FD0(s, {
@@ -210,7 +210,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     }
   });
 
-  it("fun_13068 ptr[0] == 0x400a9c, stride 0x56, 25 elementi", () => {
+  it("fun_13068 ptr[0] == 0x400a9c, stride 0x56, 25 elements", () => {
     const s = emptyGameState();
     const ptrs: number[] = [];
     stateDispatch12FD0(s, {
@@ -223,10 +223,10 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(ptrs).toHaveLength(25);
   });
 
-  it("blocco 3 always executed indipendentemente from the blocchi precedenti", () => {
+  it("block 3 always executed independently of the preceding blocks", () => {
     const s = emptyGameState();
-    setGameMode(s, 0); // gameMode != 2, blocco 1 skipped
-    setFlag75c(s, 0); // flag off, blocco 2 skipped
+    setGameMode(s, 0); // gameMode != 2, block 1 skipped
+    setFlag75c(s, 0); // flag off, block 2 skipped
 
     let calls13068 = 0;
     stateDispatch12FD0(s, {
@@ -245,7 +245,7 @@ describe("stateDispatch12FD0 (FUN_12FD0)", () => {
     expect(() => stateDispatch12FD0(s)).not.toThrow();
   });
 
-  it("blocco 1 + blocco 2 + blocco 3: all chiamati con values corretti", () => {
+  it("block 1 + block 2 + block 3: all called with correct values", () => {
     const s = emptyGameState();
     setGameMode(s, GAME_MODE_INNER);
     setObjCount(s, 3);

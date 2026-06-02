@@ -336,7 +336,7 @@ export function stateSub19A40(
         eventArg,
       });
 
-      // direttamente al D4++.
+      // directly to D4++.
       break;
     }
   }

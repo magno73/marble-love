@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   // Shape[0] bbox: x=[-8,8], y=[-4,36], z=[-16,32]
   // x1 = (A1[0xC]+8) - worldX = 0 if worldX = (A1[0xC]+8)
   // Place worldX = (A1[0xC]+8) so x1=0 which is in [-8,8]
-  console.log(`\n=== Suite C: in-bbox forzato — ${perSuite} cases ===`);
+  console.log(`\n=== Suite C: in-bbox forced — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const wX = randWord(rng);
@@ -377,7 +377,7 @@ async function main(): Promise<void> {
 
   // ── Report ────────────────────────────────────────────────────────────
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

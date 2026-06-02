@@ -80,12 +80,12 @@ function sustainLevel(d1l: number): number {
 
 export const ENV_STATE_OFF = 0;
 export const ENV_STATE_ATTACK = 1;
-export const ENV_STATE_DECAY = 2;   // D1R fase
-export const ENV_STATE_SUSTAIN = 3; // D2R fase (post D1L reached)
+export const ENV_STATE_DECAY = 2;   // D1R phase
+export const ENV_STATE_SUSTAIN = 3; // D2R phase (post D1L reached)
 export const ENV_STATE_RELEASE = 4;
 
 export interface EnvelopeState {
-  /** Phase corrente: OFF / ATTACK / DECAY / SUSTAIN / RELEASE. */
+  /** Current phase: OFF / ATTACK / DECAY / SUSTAIN / RELEASE. */
   state: number;
   /** Envelope counter 0..1023 (0 = max volume, 1023 = silence).
    * In ATTACK: falls toward 0 from the current attenuation.
@@ -99,19 +99,19 @@ export function createEnvelope(): EnvelopeState {
   return { state: ENV_STATE_OFF, counter: 1023 };
 }
 
-/** Key ON: transizione → ATTACK fase. OPM non resetta the attenuazione a
- * silenzio sui retrigger; the attacco riparte from the counter corrente. */
+/** Key ON: transition → ATTACK phase. OPM does not reset the attenuation to
+ * silence on retrigger; the attack restarts from the current counter. */
 export function envelopeKeyOn(env: EnvelopeState): void {
   env.state = ENV_STATE_ATTACK;
 }
 
-/** Key OFF: transizione → RELEASE fase. */
+/** Key OFF: transition → RELEASE phase. */
 export function envelopeKeyOff(env: EnvelopeState): void {
   if (env.state !== ENV_STATE_OFF) env.state = ENV_STATE_RELEASE;
 }
 
-/** Avanza envelope per 1 sample (MAME-faithful rate table + eg_inc pattern).
- * ar/d1r/d2r 0..31, rr 0..15, d1l 0..15. Ritorna attenuation 0..1023. */
+/** Advances the envelope by 1 sample (MAME-faithful rate table + eg_inc pattern).
+ * ar/d1r/d2r 0..31, rr 0..15, d1l 0..15. Returns attenuation 0..1023. */
 export function envelopeAdvance(
   env: EnvelopeState,
   ar: number, d1r: number, d2r: number, rr: number, d1l: number, ks = 0, keyCode = 0,

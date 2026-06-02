@@ -42,7 +42,7 @@
  *   move.l  D6,(0xc,A2)                   ; restore entity[0xC..0xF] = orig x
  *   move.l  D5,(0x10,A2)                  ; restore entity[0x10..0x13] = orig y
  *   move.b  (0x26,A2),D0b
- *   add.b   D3b,D0b                       ; entity[0x26] += step (1 o 4)
+ *   add.b   D3b,D0b                       ; entity[0x26] += step (1 or 4)
  *   andi.b  #0xf,D0b                      ; & 0x0F (mask 4-bit)
  *   move.b  D0b,(0x26,A2)
  *   cmp.b   (0x26,A2),D4b

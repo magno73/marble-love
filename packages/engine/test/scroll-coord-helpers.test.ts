@@ -17,7 +17,7 @@ function r16(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("FUN_1BB50 updateScrollCoords1BB50", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(UPDATE_SCROLL_COORDS_1BB50_ADDR).toBe(0x1bb50);
   });
 
@@ -59,7 +59,7 @@ describe("FUN_1BB50 updateScrollCoords1BB50", () => {
 });
 
 describe("FUN_1BB08 setScrollCoordsFromEntity1BB08", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(SET_SCROLL_COORDS_FROM_ENTITY_1BB08_ADDR).toBe(0x1bb08);
   });
 

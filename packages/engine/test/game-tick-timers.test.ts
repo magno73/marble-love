@@ -33,7 +33,7 @@ function setupTimer(
 }
 
 describe("gameTickTimers (FUN_28A96)", () => {
-  it("count=0: no iterazione, but global timer ticka", () => {
+  it("count=0: no iteration, but global timer ticks", () => {
     const s = emptyGameState();
     setCount(s, 0);
     // Disable global timer (inner = 0xFF) → no-op
@@ -42,7 +42,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(s.workRam[GLOBAL_TIMER_OFF + 4]).toBe(0xFF); // unchanged
   });
 
-  it("obj type=8 is saltato (no tick) but calls HUD", () => {
+  it("obj type=8 is skipped (no tick) but calls HUD", () => {
     const s = emptyGameState();
     setCount(s, 1);
     s.workRam[OBJECTS_BASE_OFF + 0x1A] = 8; // type=8
@@ -59,7 +59,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
   it("timer cascade bit 0 (full wrap) → reset + palette FX", () => {
     const s = emptyGameState();
     setCount(s, 1);
-    // Setup timer: outer=0, medium=0, inner=0 → tick decrementa inner a 0xFF →
+    // Setup timer: outer=0, medium=0, inner=0 → tick decrements inner to 0xFF →
     setupTimer(s, OBJECTS_BASE_OFF + 0x6A, 0, 0, 0);
     s.workRam[OBJECTS_BASE_OFF + 0x19] = 1; // flag != 0 → palette FX A
     s.workRam[GLOBAL_TIMER_OFF + 4] = 0xFF;
@@ -68,7 +68,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
 
     // obj +0x18 must be 2.
     expect(s.workRam[OBJECTS_BASE_OFF + 0x18]).toBe(2);
-    // Timer struct resettata
+    // Timer struct reset
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6A]).toBe(0);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6B]).toBe(0);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6C]).toBe(0);
@@ -95,7 +95,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(s.colorRam[0x17]).toBe(0x0F);
   });
 
-  it("inner=5: no cascade, HUD non chiamato", () => {
+  it("inner=5: no cascade, HUD not called", () => {
     const s = emptyGameState();
     setCount(s, 1);
     setupTimer(s, OBJECTS_BASE_OFF + 0x6A, 0x100, 5, 5);
@@ -104,12 +104,12 @@ describe("gameTickTimers (FUN_28A96)", () => {
     const hud = vi.fn();
     gameTickTimers(s, hud);
 
-    // inner decrementato a 4
+    // inner decremented to 4
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6E]).toBe(4);
     expect(hud).not.toHaveBeenCalled();
   });
 
-  it("global timer bit 0: writes 0xFF a +0x4", () => {
+  it("global timer bit 0: writes 0xFF at +0x4", () => {
     const s = emptyGameState();
     setCount(s, 0);
     setupTimer(s, GLOBAL_TIMER_OFF, 0, 0, 0);

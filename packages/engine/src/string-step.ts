@@ -74,7 +74,7 @@ function computeAlphaBase(state: GameState, rom: RomImage, structAddr: number, c
   const shiftByte = rom.program[(ROM_SHIFT_TABLE + shiftIdx) >>> 0] ?? 0;
   const shiftCount = shiftByte & 0x80 ? shiftByte - 0x100 : shiftByte;
 
-  // d0 = with the + charIdx (charIdx is unsigned byte → just add)
+  // d0 = col + charIdx (charIdx is unsigned byte → just add)
   let d0 = (colSigned + (charIdx & 0xff)) | 0;
   // lsl.l shift count (logical, not arithmetic — for shift purposes same effect on small positive)
   if (shiftCount >= 32 || shiftCount < 0) {

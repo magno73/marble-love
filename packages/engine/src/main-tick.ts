@@ -104,8 +104,8 @@ export interface MainTickInputs {
   /**
    * MMIO byte @ 0xF60001 read by gameMainGate (default 0x6F = attract
    * mode steady-state: DIP switches + coin status, no buttons pressed,
-   * bit 6 set per skip Block C). Verificato vs MAME multi-frame dump
-   * (frame 2400-2460 stabile a 0x6F).
+   * bit 6 set per skip Block C). Verified vs MAME multi-frame dump
+   * (frame 2400-2460 stable at 0x6F).
    */
   inputMmio?: number;
 }
@@ -266,7 +266,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   paletteQueueDrain(state, rom);
 
   // Default state-machine subs: calls the replicated subs. 10/10 subs
-  // disponibili: 2abc/2678/2bda/2da0/2c60 (Claude) + 2572/2766/2818/295a/2cd4
+  // available: 2abc/2678/2bda/2da0/2c60 (Claude) + 2572/2766/2818/295a/2cd4
   // (Codex), all parity 500/500.
   const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
     fun_2abc: (argLong) => stateSub2ABC(state, rom, argLong),
@@ -330,7 +330,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
     r[0x3f4] = ((r[0x3f4] ?? 0) + 1) & 0xff;
   }
 
-  // FUN_10146 (aux timer/byte queue drain) — REPLICATO (0x28860, unconditional)
+  // FUN_10146 (aux timer/byte queue drain) — REPLICATED (0x28860, unconditional)
   auxTimer(state);
 
   // FUN_28788 sound/attract gate (ROM 0x28866..0x288ca, A2 = 0x4003EA). The ROM

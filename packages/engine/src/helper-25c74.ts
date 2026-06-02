@@ -72,11 +72,11 @@
  *   7. `cmpi.b #0x50, (0x56,A2)`: byte comparison; bgt if A2[+0x56] > 0x50.
  *   8. `cmp.w D1w, D0w` with D0=0x1F: D0w - D1w; bge if 0x1F >= D1w.
  *      -> jump to epilog if D1w <= 0x1F (signed word).
- *       (12 + 8 pushate in totale).
+ *       (12 + 8 pushed in total).
  *
  * Callers:
- *   - `FUN_000121B8` @ 0x000124C8 — spinge (long D1, long A2).
- *   - `FUN_00029CCE` @ 0x0002AB64 — spinge (long 0, long A2).
+ *   - `FUN_000121B8` @ 0x000124C8 — pushes (long D1, long A2).
+ *   - `FUN_00029CCE` @ 0x0002AB64 — pushes (long 0, long A2).
  *
  */
 
@@ -204,7 +204,7 @@ export function helper25C74(
   const d1w = deltaRaw & 0xffff;
   const d1wSigned = d1w >= 0x8000 ? d1w - 0x10000 : d1w;
 
-  // ── Fase 2: Is-pair-member check ───────────────────────────────────────
+  // ── Phase 2: Is-pair-member check ──────────────────────────────────────
   // moveq 0x1, D0
   // cmpa.l #0x400018, A2 / beq 0x25CA2
   // cmpa.l #0x4000FA, A2 / beq 0x25CA2
@@ -213,7 +213,7 @@ export function helper25C74(
   const isPair =
     obj === OBJ_PAIR_FIRST || obj === OBJ_PAIR_SECOND ? 1 : 0;
 
-  // ── Fase 3: State init basata su isPair ────────────────────────────────
+  // ── Phase 3: State init based on isPair ────────────────────────────────
   if (isPair !== 0) {
     // D2 != 0 → branch NOT taken (bne passes, beq goes to 0x25CBC)
     // cmpi.b #0x6, (0x1a,A2) / bne 0x25CB4
@@ -229,7 +229,7 @@ export function helper25C74(
     writeU8(wr, obj + 0x1a, 0x24);
   }
 
-  // ── Fase 4: obj_type delta + clamp a 0x7F ─────────────────────────────
+  // ── Phase 4: obj_type delta + clamp to 0x7F ───────────────────────────
   // move.b (0x57,A2), D0b  /  ext.w D0w  /  move.w D0w, D4w
   // add.w D1w, D4w
   // moveq 0x7f, D0; cmp.w D4w, D0w; bge 0x25CD4  (branch if 0x7F >= D4w)
@@ -248,7 +248,7 @@ export function helper25C74(
   }
   writeU8(wr, obj + 0x57, d4w & 0xff);
 
-  // ── Fase 5: Dispatch basato su isPair ──────────────────────────────────
+  // ── Phase 5: Dispatch based on isPair ──────────────────────────────────
   // tst.b D2b / beq 0x25DBA
   if (isPair === 0) {
     // ──────────────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ export function helper25C74(
   const d0 = sextB(byte56);          // sign-extend byte → 32-bit (JS number)
 
   // move.b (0x57,A2), D1b / ext.w D1w / ext.l D1
-  // NB: A2[+0x57] was just written in fase 4
+  // NB: A2[+0x57] was just written in phase 4
   const byte57new = readU8(wr, obj + 0x57);
   let d1 = sextB(byte57new);         // sign-extend byte → 32-bit
 

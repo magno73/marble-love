@@ -4,21 +4,21 @@
  *
  * scheduler. Args: 1 long on the stack (`argLong`).
  *
- * Logica:
+ * Logic:
  *   - For each slot D2 in [0..3]:
  *       if DATA_PTR[D2] == argLong: STATE[D2]=0; DATA_PTR[D2]=0;
  *   - jsr FUN_2ABC(argLong)  ← STUB injection
  *
- * Strategia:
+ * Strategy:
  *   - In TS, callback `fun_2abc` no-op
  *
- * Suite testate:
- *   - A: random argLong + random table (most slot non-match)
- *   - B: argLong = DATA_PTR[D2] of un slot random (sicuro match)
+ * Suites tested:
+ *   - A: random argLong + random table (most slots no-match)
+ *   - B: argLong = DATA_PTR[D2] of a random slot (guaranteed match)
  *   - C: argLong = DATA_PTR for multiple slots (multiple matches)
  *   - D: argLong = 0 with mixed DATA_PTR values at 0 (match for slot 0)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-2678-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-2678-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -38,7 +38,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_2678 = 0x00002678;
 const FUN_2ABC = 0x00002abc;
 
-/** Patch FUN_2ABC a `rts` (4E 75) per stub no-op. */
+/** Patch FUN_2ABC to `rts` (4E 75) as a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2ABC + 0, 1, 0x4e);
   pokeMem(cpu, FUN_2ABC + 1, 1, 0x75);
@@ -82,7 +82,7 @@ function compareStruct(
 
 async function main(): Promise<void> {
   const total = Number(process.argv[2] ?? "500");
-  // 4 suite, dividiamo equamente
+  // 4 suites, split evenly
   const perSuite = Math.floor(total / 4);
   const remainder = total - perSuite * 4;
 
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: arg = DATA_PTR[slot] of slot random ─────────────────────
+  // ─── Suite B: arg = DATA_PTR[slot] of a random slot ─────────────────────
   console.log(`\n=== Suite B: arg == DATA_PTR[random_slot] — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     // Pick 2-4 slots and assign them the same ptr.
     const numMatch = 2 + Math.floor(rng() * 3); // 2,3,4
     const slotIdx = [0, 1, 2, 3];
-    // Shuffle (Fisher-Yates corto)
+    // Shuffle (short Fisher-Yates)
     for (let j = 3; j > 0; j--) {
       const k = Math.floor(rng() * (j + 1));
       [slotIdx[j], slotIdx[k]] = [slotIdx[k]!, slotIdx[j]!];
@@ -199,13 +199,13 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: arg=0 + DATA_PTR misti zero ─────────────────────────────
+  // ─── Suite D: arg=0 + DATA_PTR mixed zero ─────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: arg=0 + table bordering zero — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
-    // Force some slot (random) a 0
+    // Force some slots (random) to 0
     for (let j = 0; j < 4; j++) {
       if (rng() < 0.5) {
         const off = 0x04 + j * 4;
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const { suite, tc, offset, bin, ts, arg } = failHolder.value;
     if (offset === -1) {

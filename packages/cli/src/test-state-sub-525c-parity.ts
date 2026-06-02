@@ -5,17 +5,17 @@
  *   1. `workRam[A2-0x400000+0x50 .. +0x50+D0*20-1]` = 0
  *   2. long-BE @ `0x401F5E` |= bitmask `bit 4..3+D0*2`
  *
- * Strategia parity:
+ * Parity strategy:
  *     `state.workRam` TS.
  *   - Set D0 = random count in `[1..14]` (range that produces side-effect
- *   - Setta A2 = pointer random in `[0x400600..0x401E00]` (multiplo of 4)
+ *   - Set A2 = random pointer in `[0x400600..0x401E00]` (multiple of 4)
  *     to stress different offsets and avoid overwriting status flags
  *     @ 0x401F5E.
  *   - Pre-populate `*0x401F5E` with a random long to verify that the path
- *     OR both cumulativo (e non un assignment).
- *   - Lancia `callFunction(cpu, 0x525C)` and `stateSub525C(state, d0, a2)`.
+ *     ORs cumulatively (and not an assignment).
+ *   - Run `callFunction(cpu, 0x525C)` and `stateSub525C(state, d0, a2)`.
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-525c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-525c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
     if (i === 0) {
       d0 = 1; // minimum sane: clear 20 byte, set bit 4|5
     } else if (i === 1) {
-      d0 = 2; // 4 bit settati
+      d0 = 2; // 4 bits set
     } else if (i === 2) {
       d0 = 14;
     } else if (i === 3) {
@@ -87,15 +87,15 @@ async function main(): Promise<void> {
     } else if (i === 4) {
       d0 = 7;
     } else {
-      // Random in [1..14] per termine rapido of the loop fase 2 (max 28 bsr).
+      // Random in [1..14] for a fast finish of loop phase 2 (max 28 bsr).
       d0 = (Math.floor(rng() * 14) + 1) >>> 0;
     }
 
     // A2: random workRam pointer, 4-byte-aligned offset, chosen so
     // Safe range: A2 in [0x400000..0x401E00], stride 4. The cleared region
-    // potrebbe sovrapporsi a 0x1F5E per A2 alti; lo evitiamo limitando.
-    // d0 max = 15 → 300 byte clearati. Limit sup = 0x401F5E - 0x50 - 300 = 0x401D6E.
-    const maxA2Off = 0x1d00; // safe per d0 up to ~22
+    // could overlap 0x1F5E for high A2; we avoid it by limiting.
+    // d0 max = 15 → 300 byte cleared. Upper limit = 0x401F5E - 0x50 - 300 = 0x401D6E.
+    const maxA2Off = 0x1d00; // safe for d0 up to ~22
     const a2OffRaw = Math.floor(rng() * (maxA2Off / 4)) * 4;
     const a2 = (WORK_RAM_BASE + a2OffRaw) >>> 0;
 
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     ssNs.stateSub525C(state, d0, a2);
 
     // those bytes keep the original random seed. Exclude `[0x1EE0..
-    // 0x1EFF]` per safety (margin extra). Anche `0x1F00` (stack pointer
+    // 0x1EFF]` for safety (extra margin). Also `0x1F00` (stack pointer
     // initial) and beyond should be intact, but we conservatively exclude them
     // up to 0x1F00.
     const STACK_LOW = 0x1ee0;
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
       const tsByte = state.workRam[k]! & 0xff;
       if (binByte !== tsByte) {
         diffOffsets.push(k);
-        if (diffOffsets.length > 16) break; // limita output
+        if (diffOffsets.length > 16) break; // limit output
       }
     }
 

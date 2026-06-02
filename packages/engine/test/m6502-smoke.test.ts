@@ -4,8 +4,8 @@
  * Verify key behaviors that are easy to miss in a port:
  *  - RESET fetches PC from $FFFC/$FFFD and sets SP=$FD.
  *  - JMP indirect NMOS bug ($xxFF wraps within the same high byte).
- *  - NMI prevale su IRQ; IRQ e' masked da FLAG_I.
- *  - Page-cross penalty su LDA abs,X (READ ops).
+ *  - NMI takes priority over IRQ; IRQ is masked by FLAG_I.
+ *  - Page-cross penalty on LDA abs,X (READ ops).
  *  - Stack push/pop coherent with SP wrap.
  *  - Branch taken / not-taken / page-cross cycle delta.
  *
@@ -36,9 +36,9 @@ function loadProgram(bus: { mem: Uint8Array }, addr: number, bytes: number[]): v
 }
 
 describe("m6502 reset", () => {
-  it("fetcha PC from the vector $FFFC/$FFFD and setta SP=$FD", () => {
+  it("fetches PC from the vector $FFFC/$FFFD and sets SP=$FD", () => {
     // Why: the correct RESET sequence is essential before any other
-    // test; un bug qui rompe all.
+    // test; a bug here breaks everything.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x34;
@@ -51,17 +51,17 @@ describe("m6502 reset", () => {
 });
 
 describe("m6502 JMP indirect NMOS bug", () => {
-  it("$xxFF wrap: high byte da $xx00, NOT da $(xx+1)00", () => {
-    // Why: this bug e' ben noto of the NMOS and ASSENTE in the 65C02. Se qualcuno
-    // accidentalmente porta 65C02 behavior this test fails.
+  it("$xxFF wrap: high byte from $xx00, NOT from $(xx+1)00", () => {
+    // Why: this bug is well known on the NMOS and absent on the 65C02. If someone
+    // accidentally ports 65C02 behavior, this test fails.
     const cpu = createCpu();
     const bus = makeBus();
     // Setup: JMP ($02FF). Target word reads $02FF (lo) + $0200 (hi, BUG).
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     loadProgram(bus, 0x8000, [0x6c, 0xff, 0x02]); // JMP ($02FF)
     bus.mem[0x02ff] = 0x78; // lo target
-    bus.mem[0x0200] = 0x56; // hi target — BUG: high byte da $xx00
-    bus.mem[0x0300] = 0xff; // this NOT must be used (65C02 lo would use)
+    bus.mem[0x0200] = 0x56; // hi target — BUG: high byte from $xx00
+    bus.mem[0x0300] = 0xff; // this must NOT be used (a 65C02 would use it)
     reset(cpu, bus);
     step(cpu, bus);
     expect(raw(cpu.rf.pc)).toBe(0x5678);
@@ -69,7 +69,7 @@ describe("m6502 JMP indirect NMOS bug", () => {
 });
 
 describe("m6502 NMI vs IRQ priority", () => {
-  it("NMI is servito first of IRQ", () => {
+  it("NMI is serviced before IRQ", () => {
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -77,16 +77,16 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0; // IRQ vector
     loadProgram(bus, 0x8000, [0xea]); // NOP
     reset(cpu, bus);
-    cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false); // sblocca IRQ
+    cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false); // unblock IRQ
     requestIrq(cpu);
     requestNmi(cpu);
     step(cpu, bus);
     expect(raw(cpu.rf.pc)).toBe(0x9000); // NMI vector
   });
 
-  it("IRQ masked da FLAG_I (default post-reset)", () => {
+  it("IRQ masked by FLAG_I (default post-reset)", () => {
     // Why: after reset I=1, IRQ is ignored; a masking bug would start
-    // l'IRQ handler invece of the opcode of programma.
+    // the IRQ handler instead of the program opcode.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -95,20 +95,20 @@ describe("m6502 NMI vs IRQ priority", () => {
     reset(cpu, bus);
     expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(true);
     requestIrq(cpu);
-    step(cpu, bus); // should eseguire NOP, non servire IRQ
+    step(cpu, bus); // should execute NOP, not service IRQ
     expect(raw(cpu.rf.pc)).toBe(0x8001);
   });
 
-  it("CLI lascia la visibilita' IRQ immediata in the modello default", () => {
-    // Why: il gate audio corrente and il replay runtime usano ancora il modello
-    // storico. La variante Visual6502 va opt-in finche' non preserva i gate.
+  it("CLI leaves immediate IRQ visibility in the default model", () => {
+    // Why: the current audio gate and the runtime replay still use the historic
+    // model. The Visual6502 variant is opt-in until it preserves the gates.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // non must be executed first of the IRQ in the default
+      0xea, // must not be executed before the IRQ in the default model
     ]);
     reset(cpu, bus);
     requestIrq(cpu);
@@ -121,7 +121,7 @@ describe("m6502 NMI vs IRQ priority", () => {
     expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 
-  it("CLI puo' ritardare la visibilita' IRQ of una istruzione in diagnostica", () => {
+  it("CLI can delay IRQ visibility by one instruction in diagnostics", () => {
     // Why: the NMOS 6502 samples the IRQ mask with a pipeline; Visual6502 shows
     // an IRQ already pending during CLI from interrupting the opcode immediately after.
     const cpu = createCpu();
@@ -130,25 +130,25 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // NOP: must ancora eseguire
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: must still execute
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setCliIrqDelay(cpu, true);
     requestIrq(cpu);
 
-    step(cpu, bus); // CLI: programmer-visible I=0, but IRQ ancora mascherato
+    step(cpu, bus); // CLI: programmer-visible I=0, but IRQ still masked
     expect(hasFlag(cpu.rf.p, FLAG_I)).toBe(false);
     expect(raw(cpu.rf.pc)).toBe(0x8001);
 
-    step(cpu, bus); // NOP post-CLI: ancora non serve IRQ
+    step(cpu, bus); // NOP post-CLI: still does not service IRQ
     expect(raw(cpu.rf.pc)).toBe(0x8002);
 
-    step(cpu, bus); // ora l'IRQ puo' be servito
+    step(cpu, bus); // now the IRQ can be serviced
     expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 
-  it("il diagnostico CLI ritarda also un IRQ richiesto subito dopo CLI", () => {
+  it("the CLI diagnostic also delays an IRQ requested right after CLI", () => {
     // Why: in the MAME-like model, the next opcode has already been prefetched
     // before CLI clears I; an IRQ arriving immediately after cannot replace it.
     const cpu = createCpu();
@@ -157,8 +157,8 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
       0x58, // CLI
-      0xea, // NOP: must ancora eseguire
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: must still execute
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setCliIrqDelay(cpu, true);
@@ -175,7 +175,7 @@ describe("m6502 NMI vs IRQ priority", () => {
     expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 
-  it("il diagnostico prefetch latch serve IRQ solo dopo il prefetch precedente", () => {
+  it("the prefetch-latch diagnostic services IRQ only after the previous prefetch", () => {
     // Why: MAME does not check the IRQ pin at instruction start; the prefetch of
     // previous instruction decides whether the next opcode becomes BRK/IRQ.
     const cpu = createCpu();
@@ -183,8 +183,8 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
-      0xea, // NOP: latchea l'IRQ a fine prefetch
-      0xea, // interrotto first of this fetch
+      0xea, // NOP: latches the IRQ at the end of prefetch
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false);
@@ -198,15 +198,15 @@ describe("m6502 NMI vs IRQ priority", () => {
     expect(raw(cpu.rf.pc)).toBe(0xa000);
   });
 
-  it("il diagnostico prefetch latch campiona CLI con il vecchio I flag", () => {
+  it("the prefetch-latch diagnostic samples CLI with the old I flag", () => {
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0;
     loadProgram(bus, 0x8000, [
-      0x58, // CLI: prefetch uses ancora I=1
-      0xea, // NOP: qui is latched l'IRQ
-      0xea, // interrotto first of this fetch
+      0x58, // CLI: prefetch still uses I=1
+      0xea, // NOP: here the IRQ is latched
+      0xea, // interrupted before this fetch
     ]);
     reset(cpu, bus);
     setIrqPrefetchLatch(cpu, true);
@@ -225,8 +225,8 @@ describe("m6502 NMI vs IRQ priority", () => {
 });
 
 describe("m6502 LDA page-cross", () => {
-  it("LDA abs,X paga +1 cycle se page cross", () => {
-    // Why: cycle-accuracy e' necessaria per Tom Harte + per la sincronia
+  it("LDA abs,X pays +1 cycle if page cross", () => {
+    // Why: cycle-accuracy is required for Tom Harte + for sync
     // with MAME (29830 cycles/frame = 1.789 MHz / 60).
     const cpu = createCpu();
     const bus = makeBus();
@@ -243,7 +243,7 @@ describe("m6502 LDA page-cross", () => {
     expect(raw(cpu.rf.a)).toBe(0x42);
   });
 
-  it("LDA abs,X no penalty se same page", () => {
+  it("LDA abs,X no penalty if same page", () => {
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -258,10 +258,10 @@ describe("m6502 LDA page-cross", () => {
 });
 
 describe("m6502 stack push/pop", () => {
-  it("PHA/PLA round-trip preserva A and tocca P solo su PLA", () => {
+  it("PHA/PLA round-trip preserves A and touches P only on PLA", () => {
     // Why: push wrap on SP=$00 -> $FF is an edge case that is easy to miss
     // if the implementation uses a native Array buffer instead of
-    // memory mappata.
+    // mapped memory.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
@@ -294,12 +294,12 @@ describe("m6502 branch", () => {
     bus.mem[0x80fa] = 0xa9; bus.mem[0x80fb] = 0x01; // LDA #$01
     bus.mem[0x80fc] = 0xd0; bus.mem[0x80fd] = 0x04; // BNE +4 (target $8102, page cross)
     bus.mem[0x80fe] = 0xa9; bus.mem[0x80ff] = 0xff; // dummy
-    bus.mem[0x8102] = 0xea; // NOP to the arrivo
+    bus.mem[0x8102] = 0xea; // NOP at the destination
     reset(cpu, bus);
     step(cpu, bus); // LDA #$01
     const start = cpu.cycles;
     step(cpu, bus); // BNE taken, page cross
-    // base 2 + taken(2 cycles totali extra: +1 taken, +1 cross) = 4
+    // base 2 + taken (2 extra cycles total: +1 taken, +1 cross) = 4
     expect(cpu.cycles - start).toBe(4);
     expect(raw(cpu.rf.pc)).toBe(0x8102);
   });
@@ -317,12 +317,12 @@ describe("m6502 branch", () => {
     const start = cpu.cycles;
     step(cpu, bus);
     expect(cpu.cycles - start).toBe(2);
-    expect(raw(cpu.rf.pc)).toBe(0x8004); // PC avanza solo of the literal
+    expect(raw(cpu.rf.pc)).toBe(0x8004); // PC advances only past the literal
   });
 });
 
 describe("m6502 undocumented opcode fail loud", () => {
-  it("lancia error su 0x02 (KIL)", () => {
+  it("throws error on 0x02 (KIL)", () => {
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;

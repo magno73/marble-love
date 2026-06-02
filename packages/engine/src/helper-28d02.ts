@@ -4,7 +4,7 @@
  * Saves or restores four playfield words per row between two circular banks
  * separated by 0x1000 bytes.
  *
- * **Disasm 0x28D02..0x28DB7** (46 istr, body range [0x28D02, 0x28DB7]):
+ * **Disasm 0x28D02..0x28DB7** (46 instr, body range [0x28D02, 0x28DB7]):
  *
  *   00028d02  movem.l {D3 D2},-(SP)          ; save D2, D3
  *   00028d06  move.b  (0xf,SP),D1b           ; D1b = flag (low byte of stack arg long)

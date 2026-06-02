@@ -2,15 +2,15 @@
 /**
  * test-render-string-entry-286b0-parity.ts — differential FUN_286B0.
  *
- * `(0x400410, attr_word)` (attr da arg4).
+ * `(0x400410, attr_word)` (attr from arg4).
  *
- * Strategia stub injection:
- *   - FUN_2572 (renderStringChain) → patched a `rts` (4E 75) → no-op.
- *
- *
+ * Stub injection strategy:
+ *   - FUN_2572 (renderStringChain) → patched to `rts` (4E 75) → no-op.
  *
  *
- * Uso: npx tsx packages/cli/src/test-render-string-entry-286b0-parity.ts [N]
+ *
+ *
+ * Usage: npx tsx packages/cli/src/test-render-string-entry-286b0-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -33,13 +33,13 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_286B0 = 0x000286b0;
 const FUN_2572 = 0x00002572;
 
-/** Patch FUN_2572 (renderStringChain) a `rts` (0x4E75) per stub no-op. */
+/** Patch FUN_2572 (renderStringChain) to `rts` (0x4E75) for a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_2572 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_2572 + 1, 1, 0x75);
 }
 
-/** Range workRam confrontato (struct @ 0x400410, dest buffer @ 0x400500..). */
+/** Compared workRam range (struct @ 0x400410, dest buffer @ 0x400500..). */
 const COMPARE_BASE = 0x00400400;
 const COMPARE_SIZE = 0x400; // 0x400400..0x4007FF (1 KB)
 const COMPARE_BASE_OFF = COMPARE_BASE - 0x00400000; // 0x400
@@ -223,12 +223,12 @@ async function main(): Promise<void> {
   const rl = (): number =>
     ((Math.floor(rng() * 0x10000) << 16) | Math.floor(rng() * 0x10000)) >>> 0;
 
-  /** Genera string null-terminated of lunghezza N (byte 0 including). */
+  /** Generate a null-terminated string of length N (including the 0 byte). */
   function rndString(maxNonZeroLen: number): number[] {
     const len = Math.max(0, Math.floor(rng() * (maxNonZeroLen + 1)));
     const out: number[] = [];
     for (let i = 0; i < len; i++) {
-      // garantisco non-zero (1..255)
+      // ensure non-zero (1..255)
       let b = rb();
       if (b === 0) b = 1;
       out.push(b);
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: stringa vuota (terminator only) — ${perSuite} cases ===`,
+    `\n=== Suite B: empty string (terminator only) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -268,7 +268,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: stringhe lunghe (60..120 byte) — ${perSuite} cases ===`,
+    `\n=== Suite C: long strings (60..120 bytes) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -289,7 +289,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: arg LSB ciclati 0x00 / 0xff ────────────────────────────
+  // ─── Suite D: arg LSB cycled 0x00 / 0xff ─────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: arg2/arg3 LSB in {0x00, 0xff} — ${sizeD} cases ===`,
@@ -298,7 +298,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < sizeD; i++) {
     const region = new Array(COMPARE_SIZE).fill(0).map(() => rb());
     const str = rndString(31);
-    // alternanza 0x00 / 0xff sui due byte LSB
+    // alternate 0x00 / 0xff on the two LSB bytes
     const a2lsb = (i & 1) === 0 ? 0x00 : 0xff;
     const a3lsb = (i & 2) === 0 ? 0x00 : 0xff;
     const arg2 = ((rl() & 0xffffff00) | a2lsb) >>> 0;
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

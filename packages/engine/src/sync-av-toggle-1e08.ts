@@ -24,7 +24,7 @@
  *   00001e3c    rts
  *
  *      D2.w takes high-nibble | rising-bits of the long returned.
- *      from the punto 1.
+ *      from point 1.
  *
  * here we use `iterations` as the safety cap).
  *
@@ -79,7 +79,7 @@ export interface SyncAvToggle1E08Result {
 
 /**
  *
- * @param state         GameState. Mutati: `*0x40017C` (via FUN_F6A) e
+ * @param state         GameState. Mutated: `*0x40017C` (via FUN_F6A) and
  *                      `*0x400006` (via FUN_2548).
  * @param subs          optional stub injection (see {@link SyncAvToggle1E08Subs}).
  *
@@ -130,7 +130,7 @@ export function syncAvToggle1E08(
     // 3. clr.w (0x00860000).l
     onMmio?.(MMIO_AV_CONTROL_ADDR, 0x0000);
 
-    // 4. inner loop 2: pop up to ottenere D0 == 1
+    // 4. inner loop 2: pop until D0 == 1
     while (true) {
       if (flagPops >= maxPops) {
         return { iterations, terminated: false, flagPops };

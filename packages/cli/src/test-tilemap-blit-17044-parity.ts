@@ -4,11 +4,11 @@
  *
  * total) from ROM @ 0x19F04 to PF RAM @ 0xA00116, with 0x80-byte stride
  *
- *   - the 240 byte of ROM @ 0x19F04..0x19FF3 (uguali in binary and TS — la ROM
+ *   - the 240 byte of ROM @ 0x19F04..0x19FF3 (identical in binary and TS — the ROM
  *
  *   1. Pre-fill PF RAM [0xA00000..0xA02000) with a deterministic pattern.
  *
- * Uso: npx tsx packages/cli/src/test-tilemap-blit-17044-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-tilemap-blit-17044-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
     //   4: incrementing pattern (j & 0xFF)
     //   5: pattern 0xFE
     //   6: pattern 0xCC marker
-    //   8..N: random uniforme
+    //   8..N: uniform random
     const pf = new Uint8Array(PF_RAM_SIZE);
     if (i === 0) pf.fill(0xff);
     else if (i === 1) pf.fill(0x00);

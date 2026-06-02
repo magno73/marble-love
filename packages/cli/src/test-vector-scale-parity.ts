@@ -2,10 +2,10 @@
 /**
  * test-vector-scale-parity.ts — differential FUN_25E7C vs vectorScale.
  *
- * 326 byte pure leaf, 0 jsr, 0 globali. Solo arg pointer + 1 byte mode.
- * Differential test su 8 byte of output (x, y long).
+ * 326 byte pure leaf, 0 jsr, 0 globals. Only a pointer arg + 1 byte mode.
+ * Differential test on 8 byte of output (x, y long).
  *
- * Uso: npx tsx packages/cli/src/test-vector-scale-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-vector-scale-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

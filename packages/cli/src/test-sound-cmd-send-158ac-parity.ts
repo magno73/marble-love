@@ -2,21 +2,21 @@
 /**
  * test-sound-cmd-send-158ac-parity.ts — differential FUN_158AC vs soundCmdSend158AC.
  *
- * comandi al sound CPU (6502 via mailbox MMIO 0xFE0000). 98 callsite in the ROM.
+ * commands to the sound CPU (6502 via mailbox MMIO 0xFE0000). 98 callsites in the ROM.
  *
- * Logica:
+ * Logic:
  *   2. If != 0 → skip, D0=0.
  *
- * Setup invariante per convergenza deterministica:
- *   - MMIO 0xF60001 = 0x00 (bit 7 clear = chip ready) → FUN_4C6E riesce al
+ * Invariant setup for deterministic convergence:
+ *   - MMIO 0xF60001 = 0x00 (bit 7 clear = chip ready) → FUN_4C6E succeeds on the
  *
  *   case 0: skipFlag=0, byteArg random → bin D0=1, ts D0=1
  *   case 1: skipFlag!=0, byteArg random → bin D0=0, ts D0=0
- *   case 2: skipFlag=0, byteArg=0x80 (sign-ext negativo) → D0=1
+ *   case 2: skipFlag=0, byteArg=0x80 (negative sign-ext) → D0=1
  *   case 3: skipFlag=0x0001 (low byte only) -> D0=0
  *   case >=4: full random (50/50 skip vs send)
  *
- * Uso: npx tsx packages/cli/src/test-sound-cmd-send-158ac-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-cmd-send-158ac-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -93,10 +93,10 @@ async function main(): Promise<void> {
         break;
       case 2:
         skipFlag = 0;
-        byteArg = 0x80; // sign-extend negativo
+        byteArg = 0x80; // negative sign-extend
         break;
       case 3:
-        skipFlag = 0x0001; // solo low byte
+        skipFlag = 0x0001; // low byte only
         byteArg = Math.floor(rng() * 256);
         break;
       default:
@@ -116,9 +116,9 @@ async function main(): Promise<void> {
     pokeMem(cpu, MAILBOX_ADDR, 2, 0x0000);
 
     const r = callFunction(cpu, FUN_158AC, [byteArg & 0xff]);
-    const binD0 = r.d0 & 0xff; // 0 o 1
+    const binD0 = r.d0 & 0xff; // 0 or 1
 
-    // Esegui TS replica.
+    // Run TS replica.
     const tsD0 = csNs.soundCmdSend158AC(state, byteArg);
 
     const match = binD0 === tsD0;

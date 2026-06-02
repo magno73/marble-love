@@ -8,11 +8,11 @@
  * - Scan loop @ 0x400018 stride 0xE2, limit *0x400396 (word): if A1[0x18]==1
  *   AND entity[0x1B] == A1[0x1B] == 6 → set entity[0x25]=1 (early exit).
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *     byte (to verify there are NO spurious writes).
  *   - Setup: entity @ 0x401D00, cursor @ 0x401E00.
  *
- * Uso: npx tsx packages/cli/src/test-sub-1d242-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-1d242-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

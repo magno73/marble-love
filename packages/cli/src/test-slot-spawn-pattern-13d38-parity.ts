@@ -3,11 +3,11 @@
  * test-slot-spawn-pattern-13d38-parity.ts — differential FUN_00013D38 vs
  * `slotSpawnPattern13D38`.
  *
- * `FUN_00013D38` (430 byte) emette un fan-pattern of 8 record da 6 byte in due
- * range of the proprio slot record (A0+0xA4 and A0+0x38), leggendo:
- *   - delta-stream byte signed @ ROM 0x1EF32 (16 byte = 8 coppie)
- *   - puntatori-slot @ ROM 0x1F016 indicizzati da `(A0+0x58).b sext.l <<2`
- *   - coords da `(A1+0x4E).l` and branch su `(A1+0x1F).b == 0xD`
+ * `FUN_00013D38` (430 bytes) emits a fan-pattern of 8 records of 6 bytes each into two
+ * ranges of its own slot record (A0+0xA4 and A0+0x38), reading:
+ *   - signed delta-stream byte @ ROM 0x1EF32 (16 bytes = 8 pairs)
+ *   - slot pointers @ ROM 0x1F016 indexed by `(A0+0x58).b sext.l <<2`
+ *   - coords from `(A1+0x4E).l` and branch on `(A1+0x1F).b == 0xD`
  *
  *   - `(A0+0x57).b` random (counter)
  *   - random `(A0+0x58).b` in [0..24], a valid table selector
@@ -18,9 +18,9 @@
  *   - byte `(A0+0x57)` (counter post-decrement)
  *   - byte `(A0+0x1C)` (mark)
  *   - 4 record × 6 byte @ `(A0+0xA4)..(A0+0xBB)`
- *   - 4 record × 6 byte @ `(A0+0x38)..(A0+0x4F)`
+ *   - 4 records × 6 byte @ `(A0+0x38)..(A0+0x4F)`
  *
- * Uso: npx tsx packages/cli/src/test-slot-spawn-pattern-13d38-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slot-spawn-pattern-13d38-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -130,17 +130,17 @@ async function main(): Promise<void> {
     for (let s = 0; s < SLOT_COUNT; s++) {
       const slot = slotPtrs[s]!;
       const slotOff = slot - 0x400000;
-      // be modificati from the pattern emit (38..4F, A4..BB).
+      // bytes modified by the pattern emit (38..4F, A4..BB).
       const ranges: Array<[number, number]> = [
         [0x18, 1],
         [0x1c, 1],
         [0x1e, 4],
         [0x1f, 1],
-        [0x38, 24], // 4 record da 6 byte
-        [0x4e, 4], // long (overlapping con 0x4e..0x51)
+        [0x38, 24], // 4 records of 6 byte each
+        [0x4e, 4], // long (overlapping with 0x4e..0x51)
         [0x57, 1],
         [0x58, 1],
-        [0xa4, 24], // 4 record da 6 byte
+        [0xa4, 24], // 4 records of 6 byte each
       ];
       for (const [off, size] of ranges) {
         for (let k = 0; k < size; k++) {
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     }
 
     // Set up A1 fields (A1 = slotPtrs[selectorByte] if selectorByte < 25).
-    // Setup random A1+0x4E (long) and A1+0x1F (byte). Con selectorByte ∈ [0..24]
+    // Setup random A1+0x4E (long) and A1+0x1F (byte). With selectorByte ∈ [0..24]
     // guarantee that A1 is a canonical slot (in work RAM).
     const a1Idx = selectorByte; // < 25 by construction
     if (a1Idx < SLOT_COUNT) {
@@ -177,7 +177,7 @@ async function main(): Promise<void> {
         pokeMem(cpu, a1Slot + 0x4e + k, 1, b);
         stateInst.workRam[a1SlotOff + 0x4e + k] = b;
       }
-      // 50% chance of mettere 0xD per esercitare il branch "subtract".
+      // 50% chance of setting 0xD to exercise the "subtract" branch.
       const kind1F = rng() < 0.5 ? 0x0d : Math.floor(rng() * 256) & 0xff;
       pokeMem(cpu, a1Slot + 0x1f, 1, kind1F);
       stateInst.workRam[a1SlotOff + 0x1f] = kind1F;

@@ -20,7 +20,7 @@ emu.register_frame_done(function()
         print(string.format("[min] sound_mem.install_read_tap = %s", tostring(sound_mem.install_read_tap)))
         print(string.format("[min] sound_mem.install_write_tap = %s", tostring(sound_mem.install_write_tap)))
 
-        -- Esattamente come playable_input_capture: lo=hi=0x1820
+        -- Exactly like playable_input_capture: lo=hi=0x1820
         local rt = sound_mem:install_read_tap(0x1820, 0x1820, "rtap", function(o, d, m)
             snd_r = snd_r + 1
             if snd_r < 5 then print(string.format("[min] snd READ tap: addr=%04x d=%02x", o, d)) end

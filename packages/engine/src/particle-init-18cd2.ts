@@ -62,10 +62,10 @@ function rng(state: GameState, limit: number): number {
 // ─── Sub injection ───────────────────────────────────────────────────────
 
 /**
- * Stub injection per le 2 JSR esterne.
+ * Stub injection for the 2 external JSRs.
  *
- *    Default: no-op. Replicabile via `paletteRngFill26CFATick(state, rom)`.
- *    Default: no-op. Replicabile via `slotInsertSorted18E6C(state, rom,
+ *    Default: no-op. Replicable via `paletteRngFill26CFATick(state, rom)`.
+ *    Default: no-op. Replicable via `slotInsertSorted18E6C(state, rom,
  *    0x2C, i, slotInsertSubs)`.
  */
 export interface ParticleInit18CD2Subs {
@@ -117,7 +117,7 @@ export interface ParticleInit18CD2Result {
  *      a. `entry[0..1] = ((rng(256) & 0xFF) + 0x24) << 4` (& 0xFFFF)
  *      b. `entry[2..3] = (rng(128) + 0x30) << 4` (& 0xFFFF)
  *      c. raw = `rng(96) - 0x30` (signed word); `entry[4..5] = raw & 0xFFFF`,
- *      d. raw = `rng(96) - 0x30`; idem per `entry[6..7]`.
+ *      d. raw = `rng(96) - 0x30`; same for `entry[6..7]`.
  *         11) & 0xFFFF`.
  *      f. `subs.fun_18e6c(state, 0x2C, i)`.
  *   3. `workRam[0x3E2] = count`.
@@ -174,7 +174,7 @@ export function particleInit18CD2(
       xvelOut = v;
     }
 
-    // ─── yvel: idem ───────────────────────────────────────────────────
+    // ─── yvel: same ───────────────────────────────────────────────────
     const r3 = rng(state, 0x60);
     const yvelRawSigned = r3 - 0x30;
     let yvelOut: number;
@@ -201,8 +201,8 @@ export function particleInit18CD2(
       modeWordPre = rng(state, 0x02);
     }
 
-    // 0x18D9A: move.w D0w << 11 → entry[8..9]. asl.w D1=11,D0 — opera su
-    // 16 bit, top bit shifted out ⇒ mask & 0xFFFF.
+    // 0x18D9A: move.w D0w << 11 → entry[8..9]. asl.w D1=11,D0 — operates on
+    // 16 bits, top bit shifted out ⇒ mask & 0xFFFF.
     const modeWord = (modeWordPre << 11) & 0xffff;
     writeWordBE(state, entryOff + 8, modeWord);
 

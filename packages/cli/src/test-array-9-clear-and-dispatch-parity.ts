@@ -6,7 +6,7 @@
  *
  *
  *   1. Patch FUN_18F46 to a custom thunk that logs `(arg1Long, arg2Long)`
- *      in una ring-buffer in work-RAM.
+ *      in a ring-buffer in work-RAM.
  *      Layout ring-buffer:
  *        - 0x401E00: 9 × 8 byte (arg1 long + arg2 long) = 72 byte slot
  *   3. Run TS with callback that does the same log + clear -> compare workRam
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, a, 1, v);
       stateInst.workRam[a - 0x400000] = v;
     }
-    // Ring + counter restano a 0 (richiesto from the thunk: parte da 0).
+    // Ring + counter stay at 0 (required by the thunk: starts at 0).
 
     callFunction(cpu, FUN_190EE, []);
     const binArray = readArrayBin(cpu);

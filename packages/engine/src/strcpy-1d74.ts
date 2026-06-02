@@ -1,7 +1,7 @@
 /**
  * strcpy-1d74.ts — replica `FUN_00001D74` (6 instr leaf, 3 callers).
  *
- * Classica `strcpy` C-style M68k:
+ * Classic C-style `strcpy` on M68k:
  *
  *   movea.l (0x4,SP),A1   ; A1 = dst
  *   movea.l (0x8,SP),A0   ; A0 = src

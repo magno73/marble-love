@@ -1,8 +1,8 @@
 /**
- * buffer-fill-1b12a.test.ts — unit tests per `bufferFill1B12A` (FUN_0001B12A).
+ * buffer-fill-1b12a.test.ts — unit tests for `bufferFill1B12A` (FUN_0001B12A).
  *
- * Bit-perfect parity verificata in `cli/src/test-buffer-fill-1b12a-parity.ts`.
- * Qui copriamo each path of dispatch + edge cases (typeCode 0, null-ptr, out-of-range).
+ * Bit-perfect parity verified in `cli/src/test-buffer-fill-1b12a-parity.ts`.
+ * Here we cover each dispatch path + edge cases (typeCode 0, null-ptr, out-of-range).
  */
 
 import { describe, it, expect } from "vitest";

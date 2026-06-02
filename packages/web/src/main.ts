@@ -1197,14 +1197,14 @@ fileInput.addEventListener("change", async () => {
   if (!files || files.length === 0) return;
   try {
     btn.disabled = true;
-    setRomStatus("Validazione ROM locale in corso...");
+    setRomStatus("Validating local ROM...");
     const rom = await extractRomZipFiles(files);
     const warningText =
       rom.validation.warnings.length > 0
         ? ` (${rom.validation.warnings.length} format warnings)`
         : "";
     setRomStatus(
-      `ROM valida: ${rom.validation.fileCount} file verificati CRC32${warningText}.`,
+      `Valid ROM: ${rom.validation.fileCount} files verified via CRC32${warningText}.`,
       "ok",
     );
     if (bootFlowConflictMessage !== undefined) {
@@ -1222,7 +1222,7 @@ fileInput.addEventListener("change", async () => {
   } catch (err) {
     console.error(err);
     setRomStatus(
-      "Errore caricando la ROM: " + (err instanceof Error ? err.message : err),
+      "Error loading the ROM: " + (err instanceof Error ? err.message : err),
       "error",
     );
     btn.disabled = false;

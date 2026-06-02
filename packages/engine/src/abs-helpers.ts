@@ -1,7 +1,7 @@
 /**
  * abs-helpers.ts — replica `FUN_0001B5A6` + `FUN_0001B5B4`.
  *
- * Due leaf helper signed-32-bit, opposti between their:
+ * Two signed-32-bit leaf helpers, opposites of each other:
  *
  * **FUN_1B5A6 absLong1B5A6** (7 instr, 6 callers): `abs(arg)`
  *
@@ -27,7 +27,7 @@
 export const ABS_LONG_1B5A6_ADDR = 0x0001b5a6 as const;
 export const NEG_ABS_LONG_1B5B4_ADDR = 0x0001b5b4 as const;
 
-/** Sign-extend signed 32-bit of un number (clamped a int32). */
+/** Sign-extend a number to signed 32-bit (clamped to int32). */
 function s32(value: number): number {
   return (value | 0);
 }

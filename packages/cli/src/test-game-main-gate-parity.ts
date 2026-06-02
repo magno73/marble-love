@@ -2,8 +2,8 @@
 /**
  * test-game-main-gate-parity.ts — differential FUN_28972 vs gameMainGate.
  *
- *   - FUN_2893C (debounce): replicato inline in TS
- *   - FUN_28D02 (control callback): patched a immediate `rts`
+ *   - FUN_2893C (debounce): replicated inline in TS
+ *   - FUN_28D02 (control callback): patched to an immediate `rts`
  *
  * potential infinite `bra .`. To avoid hang/spin in tests, set:
  *
@@ -11,7 +11,7 @@
  *   - workRam @ 0x400390 (game state word)
  *   - workRam @ 0x400396 (object count word)
  *
- * Uso: npx tsx packages/cli/src/test-game-main-gate-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-game-main-gate-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -29,8 +29,8 @@ import {
 import type { CpuSession } from "./binary-oracle-lib.js";
 
 const FUN_MAIN_GATE = 0x00028972;
-const FUN_GATE_CHECK = 0x000001cc; // → FUN_472A (jmp). Patch a `moveq #1,D0; rts`
-const FUN_CONTROL = 0x00028d02;    // patch a `rts`
+const FUN_GATE_CHECK = 0x000001cc; // → FUN_472A (jmp). Patch to `moveq #1,D0; rts`
+const FUN_CONTROL = 0x00028d02;    // patch to `rts`
 
 const MMIO_INPUT_ADDR = 0xf60001;
 
@@ -146,7 +146,7 @@ async function main(): Promise<void> {
   if (failA) console.log(`  First fail: case ${failA.case}, ${failA.field} @ 0x${failA.addr.toString(16)}: bin=0x${failA.bin.toString(16)} ts=0x${failA.ts.toString(16)}`);
 
   // ─── Suite B: MMIO bit 6 = 0 (Block C entry, spin patched) ───────────
-  // Setup: ensure obj[0] and obj[1] hanno state non-0 and non-2 per esercitare il
+  // Setup: ensure obj[0] and obj[1] have a state that is non-0 and non-2 to exercise the
   console.log(`\n=== gameMainGate (FUN_28972) — Suite B: MMIO bit 6 = 0 — ${n} cases ===`);
   let okB = 0;
   let failB: { case: number; field: string; addr: number; bin: number; ts: number } | null = null;

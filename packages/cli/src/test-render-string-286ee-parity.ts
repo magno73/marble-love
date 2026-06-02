@@ -4,8 +4,8 @@
  * `renderString286EE` TS replica.
  *
  *
- * **Strategia** — sentinel per le 2 sub esterne:
- *   Patch FUN_3874 and FUN_3520 a `addq.b #1, sentinel.l ; rts` (8 byte).
+ * **Strategy** — sentinel for the 2 external subs:
+ *   Patch FUN_3874 and FUN_3520 to `addq.b #1, sentinel.l ; rts` (8 bytes).
  *     - FUN_3874 → workRam[0x3D0]  (sentinelFmt)
  *     - FUN_3520 → workRam[0x3D1]  (sentinelRender)
  *
@@ -13,17 +13,17 @@
  *   the output (3 byte writes in struct @ 0x434/0x435/0x43A).
  *
  *   3. workRam[0x430..0x43F] (16 bytes around struct @ 0x434):
- *      - [0x434] = with the da ROM table @ 0x23D3C[ordinal_sext]
+ *      - [0x434] = col from ROM table @ 0x23D3C[ordinal_sext]
  *      - [0x435] = tickOff (0 if ordinal==3, else 1)
  *      - [0x43A] = 0 (marker clear)
  *
  * The compared region [0x430..0x43F] does not include buffer bytes
  *
  *   - A: score random (0..255), ordinal random 0..7
- *   - B: score = 0 and 99 alternati (boundary)
+ *   - B: score = 0 and 99 alternating (boundary)
  *   - C: score > 99 (100..200, clamp path)
  *
- * Uso: npx tsx packages/cli/src/test-render-string-286ee-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-render-string-286ee-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -62,9 +62,9 @@ const SLOT_ADDR_ABS = 0x00400082;
 const SLOT_ADDR_OFF = SLOT_ADDR_ABS - 0x400000; // 0x82
 
 /**
- * Encode `addq.b #1, (abs).l ; rts` (8 byte) in `rom` a `entry`.
- *   addq.b #1, (abs).l → 0x52 0x39 + abs long (6 byte)
- *   rts                → 0x4E 0x75              (2 byte)
+ * Encode `addq.b #1, (abs).l ; rts` (8 bytes) in `rom` at `entry`.
+ *   addq.b #1, (abs).l → 0x52 0x39 + abs long (6 bytes)
+ *   rts                → 0x4E 0x75              (2 bytes)
  */
 function patchStubAddq(rom: Buffer, entry: number, sentinelAddr: number): void {
   rom[entry + 0] = 0x52;
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Patch le 2 sub a stub addq sentinel+rts.
+  // Patch the 2 subs to stub addq sentinel+rts.
   patchStubAddq(romBuf, FUN_3874, SENTINEL_FMT);
   patchStubAddq(romBuf, FUN_3520, SENTINEL_RENDER);
 
@@ -239,8 +239,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: score boundary 0 / 99 alternati ─────────────────────────
-  console.log(`\n=== Suite B: score=0 and score=99 alternati — ${perSuite} cases ===`);
+  // ─── Suite B: score boundary 0 / 99 alternating ───────────────────────
+  console.log(`\n=== Suite B: score=0 and score=99 alternating — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const score = (i % 2 === 0) ? 0 : 99;
@@ -258,7 +258,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: score > 99 (clamp path, 100..200) ───────────────────────
-  console.log(`\n=== Suite C: score 100..200 (clamp a 99) — ${perSuite} cases ===`);
+  console.log(`\n=== Suite C: score 100..200 (clamp to 99) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const score = 100 + Math.floor(rng() * 101);
@@ -275,8 +275,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okC}/${perSuite} = ${((okC / perSuite) * 100).toFixed(1)}%`);
   totalOk += okC;
 
-  // ─── Suite D: ordinal 0..3 ciclato, score random 0..199 ──────────────
-  console.log(`\n=== Suite D: ordinal 0..3 ciclato — ${perSuite + remainder} cases ===`);
+  // ─── Suite D: ordinal 0..3 cycled, score random 0..199 ───────────────
+  console.log(`\n=== Suite D: ordinal 0..3 cycled — ${perSuite + remainder} cases ===`);
   let okD = 0;
   const dCount = perSuite + remainder;
   for (let i = 0; i < dCount; i++) {
@@ -295,7 +295,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ─── Summary ──────────────────────────────────────────────────────────
-  console.log(`\n=== TOTALE: ${totalOk}/${total} ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} ===`);
 
   if (failHolder.value !== null) {
     const f = failHolder.value;

@@ -5,7 +5,7 @@
  *   for i in [0..count-1]:
  *     FUN_33F4(ptr + i*4, sext_w_l((tileId + i) & 0xFFFF), 0)
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - Patch `FUN_33F4` with a **stub-probe** that records each call:
  *
  *   Stub bytes (22 byte):
@@ -18,13 +18,13 @@
  *
  * **Test counts cap**: max 50 call per case → max 300 byte per test in probe.
  *
- * Suite testate:
+ * Suites tested:
  *   - A: count random in [1..20], ptr/tileId random
  *   - B: count = 1 (single call), corner edge
- *   - C: tileId base near 0xFFFF (wrap a 16 bit attraverso il loop)
+ *   - C: tileId base near 0xFFFF (wraps at 16 bits through the loop)
  *   - D: count = 0 / count negative (no call expected)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-1eaa-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-1eaa-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,7 +52,7 @@ const PROBE_PTR_ADDR = 0x00401000; // long: current write pointer
 const PROBE_DATA_BASE = 0x00401010; // probe data starts here
 const PROBE_DATA_END = 0x00401400; // exclusive (1008 byte → 168 call max)
 
-/** Stub bytes per `FUN_33F4`: probe-recorder. 22 byte totali. */
+/** Stub bytes for `FUN_33F4`: probe-recorder. 22 bytes total. */
 const STUB_BYTES: readonly number[] = [
   0x20, 0x79, 0x00, 0x40, 0x10, 0x00, // movea.l (0x401000).l, A0
   0x20, 0xef, 0x00, 0x04, // move.l (4,SP), (A0)+
@@ -237,13 +237,13 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: tileId base near 0xFFFF (wrap a 16 bit) ────────────────
+  // ─── Suite C: tileId base near 0xFFFF (wrap at 16 bits) ────────────────
   console.log(
     `\n=== Suite C: tileId near wrap, count [3..15] — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
-    // Low word of arg2 in [0xFFF0, 0xFFFF] → during il loop wrappa a 0
+    // Low word of arg2 in [0xFFF0, 0xFFFF] → wraps to 0 during the loop
     const lo = (0xfff0 + Math.floor(rng() * 16)) & 0xffff;
     const arg2 = ((Math.floor(rng() * 0x10000) << 16) | lo) >>> 0;
     const tc: TestCase = {
@@ -278,7 +278,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     console.log(

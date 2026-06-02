@@ -1,5 +1,5 @@
 /**
- * render-string-entry-28fde.test.ts — smoke per FUN_28FDE.
+ * render-string-entry-28fde.test.ts — smoke for FUN_28FDE.
  *
  * `cli/src/test-render-string-entry-28fde-parity.ts` (500/500).
  */
@@ -17,7 +17,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("renderStringEntry28FDE (FUN_28FDE)", () => {
-  it("writes col, tickOff, marker=0 in the 3 byte attesi and invoca renderStringChain con (0x400434, 0x3400)", () => {
+  it("writes col, tickOff, marker=0 in the 3 expected bytes and invokes renderStringChain with (0x400434, 0x3400)", () => {
     const s = emptyGameState();
     // Pre-fill marker with non-zero sentinel to verify clear.
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xaa;
@@ -51,7 +51,7 @@ describe("renderStringEntry28FDE (FUN_28FDE)", () => {
     expect(renderArgs!.attr).toBe(0x3400);
   });
 
-  it("subs undefined → no-op on the render call, but byte writes avvengono comunque", () => {
+  it("subs undefined → no-op on the render call, but byte writes still happen", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + MARKER_BYTE_OFF] = 0xff;
     expect(() => {
@@ -62,7 +62,7 @@ describe("renderStringEntry28FDE (FUN_28FDE)", () => {
     expect(s.workRam[ENTRY_OFF + MARKER_BYTE_OFF]).toBe(0);
   });
 
-  it("solo the 3 bytes target are modificati (no spillage in [0x432..0x440] al of outside of +0/+1/+6)", () => {
+  it("only the 3 target bytes are modified (no spillage in [0x432..0x440] outside +0/+1/+6)", () => {
     const s = emptyGameState();
     // Pre-fill the entire span with sentinel.
     for (let i = ENTRY_OFF - 2; i < ENTRY_OFF + 0xc; i++) {
@@ -71,7 +71,7 @@ describe("renderStringEntry28FDE (FUN_28FDE)", () => {
 
     renderStringEntry28FDE(s, 0xff, 0xff);
 
-    // I 3 byte target.
+    // The 3 target bytes.
     expect(s.workRam[ENTRY_OFF + 0]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 1]).toBe(0xff);
     expect(s.workRam[ENTRY_OFF + 6]).toBe(0x00);
@@ -81,7 +81,7 @@ describe("renderStringEntry28FDE (FUN_28FDE)", () => {
     }
   });
 
-  it("calls renderStringChain also when the 3 bytes are already in the values target", () => {
+  it("calls renderStringChain even when the 3 bytes already hold the target values", () => {
     const s = emptyGameState();
     s.workRam[ENTRY_OFF + 0] = 0x42;
     s.workRam[ENTRY_OFF + 1] = 0x42;

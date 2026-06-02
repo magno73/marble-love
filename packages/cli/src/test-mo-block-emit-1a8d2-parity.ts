@@ -3,11 +3,11 @@
  * test-mo-block-emit-1a8d2-parity.ts — differential FUN_1A8D2 vs
  * `moBlockEmit1A8D2`.
  *
- * body via `header[+8] & ~1`, and itera un body word-stream (long branch) o
- * triple-stream (short branch, attivato da body[0]==0xFF) emettendo 4
- * word per iter su 4 buffer separati i which cursor pointer-long vivono in
+ * body via `header[+8] & ~1`, and iterates a body word-stream (long branch) or
+ * triple-stream (short branch, triggered by body[0]==0xFF) emitting 4
+ * words per iter into 4 separate buffers whose cursor pointer-longs live in
  *
- * Strategia parity:
+ * Parity strategy:
  *   - Set up workRam with 4 cursor pointers to sprite-RAM regions
  *     (4×0x80 byte buffer @ 0xA02000/2080/2100/2180), counter D7 random.
  *   - Set up header @ random workRam offset (with random byte fields and
@@ -15,7 +15,7 @@
  *   - Set up body with count + delta bytes (long-branch) or 0xFF + count +
  *     deltas + N triples (short-branch).
  *   - Run TS via `moBlockEmit1A8D2(state, arg0, arg1, arg2, arg3, {romRead})`.
- *   - Compare: spriteRam[0xA02000..0xA02200] (the 4 buffer da 0x80 byte
+ *   - Compare: spriteRam[0xA02000..0xA02200] (the 4 buffers of 0x80 byte
  *
  *   - i=0: arg0 == -1 (early exit, writeback only).
  *   - i=1: long-branch, count=1.
@@ -24,10 +24,10 @@
  *   - i=4: short-branch, count=1.
  *   - i=5: long-branch with bit0=1 in body_ptr (D5=0xFF00 decrement).
  *   - i=6: short-branch with bit0=1.
- *   - i=7: header byte negativo (sign-ext test).
+ *   - i=7: negative header byte (sign-ext test).
  *   - i>=8: random.
  *
- * Uso: npx tsx packages/cli/src/test-mo-block-emit-1a8d2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-mo-block-emit-1a8d2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -60,7 +60,7 @@ const CURSOR_A3_ADDR = 0x004003f6;
 const CURSOR_A4_ADDR = 0x00400402;
 const COUNTER_D7_ADDR = 0x00400406;
 
-/** Cursor iniziali (4 buffer paralleli in sprite-RAM). */
+/** Initial cursors (4 parallel buffers in sprite-RAM). */
 const A1_INIT = 0x00a02000;
 const A2_INIT = 0x00a02080;
 const A3_INIT = 0x00a02100;
@@ -94,7 +94,7 @@ interface TestCase {
 }
 
 /**
- * Costruisce un test case. `kind`:
+ * Builds a test case. `kind`:
  *   "earlyExit" | "long" | "short" | "long_hi" | "short_hi" | "random"
  */
 function makeCase(kind: string, rng: () => number): TestCase {
@@ -149,7 +149,7 @@ function makeCase(kind: string, rng: () => number): TestCase {
   // Build body.
   if (kind === "long" || kind === "long_hi") {
     // Long branch: body[0..3] = (count, dx, d4, dy), then N words.
-    // Count clamp: 1..16 (per limitare buffer overflow in the buffer 0x80).
+    // Count clamp: 1..16 (to limit buffer overflow in the 0x80 buffer).
     const count = (Math.floor(rng() * 16) + 1) & 0xff;
     wr[bodyOff] = count;
     wr[bodyOff + 1] = randByte(rng);
@@ -274,7 +274,7 @@ async function main(): Promise<void> {
       { romRead },
     );
 
-    // Compare sprite-RAM byte-by-byte (interi 0x1000 byte).
+    // Compare sprite-RAM byte-by-byte (all 0x1000 byte).
     const binSprite: number[] = [];
     const tsSprite: number[] = [];
     let match = true;

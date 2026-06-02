@@ -1,7 +1,7 @@
 /**
  * Test helper28C38 (FUN_00028C38) — cascading timer tick.
  *
- * 23 istr, 0x44 byte. Struct layout (5 byte at timerPtr):
+ * 23 instructions, 0x44 bytes. Struct layout (5 bytes at timerPtr):
  *   +0..1: outerCounter (u16 BE)
  *   +2:    mediumCounter (u8)
  *   +3:    padding (not touched)

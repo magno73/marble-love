@@ -7,7 +7,7 @@
  *   - 0xF60001 = 0x00 or 0x80 (models sound-pending bit 7)
  *   - D0 = random long
  *
- * Uso: npx tsx packages/cli/src/test-sound-status-check-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-status-check-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -93,8 +93,8 @@ async function main(): Promise<void> {
       pokeMem(cpu, a0 + 0x14 + k, 1, 0);
       state.workRam[offBase + 0x14 + k] = 0;
     }
-    // Pre-fill type byte with a sentinel (0xAA) to verify that the path
-    // "fail" NOT lo modifichi
+    // Pre-fill type byte with a sentinel (0xAA) to verify that the
+    // "fail" path does NOT modify it
     const sentinelType = 0xaa;
     pokeMem(cpu, a0 + 0x14, 1, sentinelType);
     state.workRam[offBase + 0x14] = sentinelType;

@@ -5,7 +5,7 @@
  *
  * of the entity subsystem. Args: one long on the stack (entityPtr).
  *
- * Logica:
+ * Logic:
  *   - cellX = signed_asr(*(long*)(ptr+0x0c), 19) & 0xffff
  *   - cellY = signed_asr(*(long*)(ptr+0x10), 19) & 0xffff
  *   - cursor = *(long*)(ptr+0x2c)
@@ -13,19 +13,19 @@
  *       *(long*)(ptr+0x2c) = *(long*)(ptr+0x30) + ext.l(signed cursor[2]) * 4
  *   - jsr FUN_1D242(entityPtr) ← STUB injection (rts no-op)
  *
- * Strategia:
+ * Strategy:
  *   - In TS, callback `fun_1d242` no-op
  *
- * Layout test:
+ * Test layout:
  *   - Entity struct @ 0x401E00 (offset 0x1E00 in workRam)
  *   - Cursor table @ 0x401E80 (offset 0x1E80 in workRam) — 8 byte slot
  *
- * Suite testate:
- *   - B: forced match (cursor[0..1] == cellX/Y derivati da pos)
+ * Suites tested:
+ *   - B: forced match (cursor[0..1] == cellX/Y derived from pos)
  *   - C: forced mismatch X (no-op write)
  *   - D: cursor[2] = signed byte random (including negative and edges)
  *
- * Uso: npx tsx packages/cli/src/test-entity-waypoint-step-1d1ec-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-entity-waypoint-step-1d1ec-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -48,7 +48,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_1D1EC = 0x0001d1ec;
 const FUN_1D242 = 0x0001d242;
 
-/** Patch FUN_1D242 a `rts` (4E 75) per stub no-op. */
+/** Patch FUN_1D242 to `rts` (4E 75) for a no-op stub. */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1D242 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_1D242 + 1, 1, 0x75);
@@ -60,7 +60,7 @@ const ENTITY_SIZE = 0x40; // 0x401E00..0x401E3F
 
 const CURSOR_ABS = 0x00401e80;
 const CURSOR_OFF = CURSOR_ABS - 0x400000;
-const CURSOR_SIZE = 0x10; // include cursor + alcunthe bytes trailing
+const CURSOR_SIZE = 0x10; // includes cursor + some trailing bytes
 
 const ARRAY_BASE_ABS = 0x00401e90;
 
@@ -153,7 +153,7 @@ function buildRandomCase(rng: () => number, opts?: {
     cursor[0] = cellX;
     cursor[1] = cellY;
   } else if (opts?.forceCursorMismatchX === true) {
-    // Sets cursor[0] != cellX (semplice + 1)
+    // Sets cursor[0] != cellX (simple + 1)
     cursor[0] = (cellX + 1) & 0xff;
   }
 
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: forced cursor X+Y match → step si applica ────────────
+  // ─── Suite B: forced cursor X+Y match → step applies ────────────
   console.log(`\n=== Suite B: forced cursor match → step apply — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -257,7 +257,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(

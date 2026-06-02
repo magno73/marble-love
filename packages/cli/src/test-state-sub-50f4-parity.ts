@@ -4,20 +4,20 @@
  *
  * of output to A2+D3w*10 and optionally applies single-bit correction.
  *
- * Convenzione caller (registri inheritati da `bsr.w` in FUN_4F38):
+ * Caller convention (registers inherited from `bsr.w` in FUN_4F38):
  *   - A2 (long ptr) = output buffer
  *   - A3 (long ptr) = input codeword base
  *   - D2w (word) = row index input (× 30)
  *   - D3w (word) = row index output (× 10)
- *   - D0 = D1 al return; D2/D3 += 1 al return (epilogue)
+ *   - D0 = D1 at return; D2/D3 += 1 at return (epilogue)
  *
- * Strategia parity:
- *   - Genera input codeword random in ROM (Musashi unified mem) o workRam
- *   - Setta A2 (workRam ptr), A3 (ROM o workRam ptr), D2w, D3w
- *   - Spinge sentinel ret addr, poi setRegister(pc, 0x50F4)
+ * Parity strategy:
+ *   - Generate a random input codeword in ROM (Musashi unified mem) or workRam
+ *   - Set A2 (workRam ptr), A3 (ROM or workRam ptr), D2w, D3w
+ *   - Push sentinel ret addr, then setRegister(pc, 0x50F4)
  *   - run loop up to PC == sentinel, capture D0/D2/D3 + workRam delta
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -58,7 +58,7 @@ interface CaptureResult {
   reachedRts: boolean;
   /** Snapshot of workRam at end of call (region under test). */
   outputBytes: Uint8Array;
-  /** Counter long-BE @ A2+0x11..0x12 al fine call. */
+  /** Counter long-BE @ A2+0x11..0x12 at end of call. */
   counterAfter: number;
 }
 
@@ -67,7 +67,7 @@ interface CaptureResult {
  *
  *   - pc = FUN_50F4
  *   - a2 = a2Ptr, a3 = a3Ptr
- *   - d2 = d2Word (zero-ext da word), d3 = d3Word
+ *   - d2 = d2Word (zero-ext from word), d3 = d3Word
  *
  * Note: FUN_50F4 has NO movem prologue at entry — it uses immediate lea ops that use
  */
@@ -88,7 +88,7 @@ function runAndCaptureBin(
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_50F4);
 
-  // Set context registers. D2/D3 zero-ext da word (high word = 0).
+  // Set context registers. D2/D3 zero-ext from word (high word = 0).
   sys.setRegister("a2", a2 >>> 0);
   sys.setRegister("a3", a3 >>> 0);
   sys.setRegister("d2", (d2Word & 0xffff) >>> 0);
@@ -136,7 +136,7 @@ function runAndCaptureBin(
 
 interface CaseSetup {
   a2: number; // workRam ptr (0x400000+)
-  a3: number; // ROM ptr (0x000000..0x80000) o workRam
+  a3: number; // ROM ptr (0x000000..0x80000) or workRam
   d2Word: number;
   d3Word: number;
   /** Bytes in input row at A3+D2w*30..A3+D2w*30+29 (30 byte). */
@@ -193,20 +193,20 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 1) {
-      // Single-bit error correggibile: input ha A0[2]=0x01, others 0.
+      // Correctable single-bit error: input has A0[2]=0x01, others 0.
       // Init D6b = ~0 ^ 0 ^ 0 ^ 0 ^ 1 = 0xFE. D2b=1.
-      // Iter loop bytes = 0 → no XOR change. Syndromi: D6b=0xFE, D2b=1, others=0.
+      // Iter loop bytes = 0 → no XOR change. Syndromes: D6b=0xFE, D2b=1, others=0.
       // Bit-iter 1: D0w = (0<<4)|0|0|0|1 = 1 (bit 4 NOT set) → uncorrectable!
-      // E table[D0w-0x10] != 0xFF. D0w = 0x13 → table[3] = 0x00 → corregge pos 0.
-      // Per D0w = 0x13: bit pattern (lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=1, lsbD2=1)
+      // And table[D0w-0x10] != 0xFF. D0w = 0x13 → table[3] = 0x00 → corrects pos 0.
+      // For D0w = 0x13: bit pattern (lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=1, lsbD2=1)
       // = (1<<4) | (1<<1) | 1 = 0x10 | 2 | 1 = 0x13. ✓
       //
-      // Setup: input zero TRANNE A0[0]=0xFE (→ D6b init = 0x01 with LSB=1),
+      // Setup: input zero EXCEPT A0[0]=0xFE (→ D6b init = 0x01 with LSB=1),
       // and other sets to get D3b LSB=1 and D2b LSB=1.
       // A0[2]=0x01 → D2b=0x01 (LSB=1), D6b ^= 1 → 0x00. Hmm conflicts.
       //
       // Empirical approach: use an arbitrary byte pattern and validate only
-      // coerenza bin/ts.
+      // bin/ts consistency.
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
       inputRow[2] = 0x01;
@@ -235,7 +235,7 @@ async function main(): Promise<void> {
     } else if (i === 3) {
       const inputRow = new Uint8Array(30);
       inputRow[0] = 0xff;
-      inputRow[8] = 0xab; // disturba syndromi
+      inputRow[8] = 0xab; // perturbs syndromes
       setup = {
         a2: WORK_RAM_BASE + 0x100,
         a3: 0x00400800,
@@ -246,9 +246,9 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i === 4) {
-      // Counter near overflow: 0xFFFE → +1 → 0xFFFF. Multipli increment.
+      // Counter near overflow: 0xFFFE → +1 → 0xFFFF. Multiple increments.
       const inputRow = new Uint8Array(30);
-      inputRow[2] = 0x01; // produce uncorrectable
+      inputRow[2] = 0x01; // produces uncorrectable
       setup = {
         a2: WORK_RAM_BASE + 0x100,
         a3: 0x00400800,
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i < 50) {
-      // Sweep deterministico su (a3, d2, d3).
+      // Deterministic sweep over (a3, d2, d3).
       const inputRow = new Uint8Array(30);
       for (let k = 0; k < 30; k++) {
         inputRow[k] = ((i * 0x37 + k * 0x11) ^ 0x55) & 0xff;
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
         initialOutput[k] = Math.floor(rng() * 256) & 0xff;
       }
       // a2: 4-byte-aligned workRam, avoid overlap with A3 and counter range.
-      // A2[0x11..0x12]. Limitiamo A2 a 0x400000..0x401C00 stride 4.
+      // A2[0x11..0x12]. Limit A2 to 0x400000..0x401C00 stride 4.
       const a2OffRaw = (Math.floor(rng() * 0x700) * 4) & 0x1ffc;
       // Small d2/d3 (0..15) to avoid wraparound.
       const d2Word = Math.floor(rng() * 16);
@@ -345,7 +345,7 @@ async function main(): Promise<void> {
       }
     } else {
       // A3 in ROM: setup.inputRowBytes must match the existing ROM.
-      // unified memory, scrivibile in test).
+      // unified memory, writable in test).
       const inputAbsAddr = setup.a3 + setup.d2Word * 30;
       for (let k = 0; k < 30; k++) {
         pokeMem(cpu, inputAbsAddr + k, 1, setup.inputRowBytes[k]!);

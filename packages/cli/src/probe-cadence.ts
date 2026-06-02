@@ -1,5 +1,5 @@
 // Probe: log frame, mailbox, cpuTicks, mainLoopBodyTicks, didBody for each tick.
-// 12003, 12005, 12007, 12008, 12009, 12011, ...). Diagnosi cadenza 30/60Hz.
+// 12003, 12005, 12007, 12008, 12009, 12011, ...). 30/60Hz cadence diagnosis.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, wrap } from "@marble-love/engine";
@@ -44,7 +44,7 @@ for (let i = 1; i <= lastIdx; i++) {
   const newBodyTicks = wrap.raw(s.clock.mainLoopBodyTicks);
   const cpuT = wrap.raw(s.clock.cpuTicks);
   const mb = s.workRam[0x16] ?? 0;
-  //                newBodyTicks DISPARI → era wait.
+  //                newBodyTicks ODD → was wait.
   const didBody = (newBodyTicks & 1) === 0;
   if (didBody) {
     didBodyCount++;

@@ -14,15 +14,15 @@
  *       move.w  (A1)+, (A0)+    ; *(word *)A0++ = *(word *)A1++ (BE)
  *       addq.b  #1, D0b
  *       cmpi.b  #0x14, D0b
- *       bne.b   inner           ; ripete 20 times (D0 da 1..0x14, exit a 0x14)
+ *       bne.b   inner           ; repeats 20 times (D0 from 1..0x14, exit at 0x14)
  *     moveq   #0x58, D0         ; D0 = 0x58 = 88
  *     adda.l  D0, A0            ; A0 += 88  (skip 44 word = 88 byte)
  *     addq.b  #1, D1b
  *     cmpi.b  #0x6, D1b
- *     bne.b   outer             ; ripete 6 times (D1 da 1..6, exit a 6)
+ *     bne.b   outer             ; repeats 6 times (D1 from 1..6, exit at 6)
  *   rts
  *
- * **Geometria**:
+ * **Geometry**:
  *   - ROM source: 240 byte contigui @ 0x19F04..0x19FF3 (6 × 20 word)
  *       offset PF = 0x116 + i*0x80 .. 0x116 + i*0x80 + 39  (40 byte = 20 word)
  *
@@ -58,8 +58,8 @@ export const TOTAL_BYTES_COPIED = ROW_COUNT * BYTES_PER_ROW; // 240
  *
  *   - Even/odd host bytes correspond 1:1 to ROM bytes
  *     `move.w (A1)+, (A0)+` of the 68k).
- *   - Le 5 finestre "skip" (88 byte ciascuna a 0xA0013E..0xA00195,
- *     0xA001BE..0xA00215, …, 0xA0033E..0xA00395) restano intatte.
+ *   - The 5 "skip" windows (88 bytes each at 0xA0013E..0xA00195,
+ *     0xA001BE..0xA00215, …, 0xA0033E..0xA00395) remain intact.
  */
 export function tilemapBlit17044(rom: RomImage, pfRam: Uint8Array): void {
   const program = rom.program;

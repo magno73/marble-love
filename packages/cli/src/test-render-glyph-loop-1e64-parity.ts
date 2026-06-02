@@ -3,11 +3,11 @@
  * test-render-glyph-loop-1e64-parity.ts — differential FUN_1E64 vs
  * `renderGlyphLoop1E64`.
  *
- * avanzando `bufPtr` of 2 (`charCode ∈ [0x26, 0x2D]` signed) o 4
+ * advancing `bufPtr` by 2 (`charCode ∈ [0x26, 0x2D]` signed) or 4
  *
- * **Strategia parity**: la replica TS NOT modifies alphaRam (FUN_32BA
+ * **Parity strategy**: the TS replica does NOT modify alphaRam (FUN_32BA
  *
- *     poi step instruction-by-instruction. On each visita of PC=0x32BA
+ *     then step instruction-by-instruction. On each visit of PC=0x32BA
  *     read from the stack `(bufPtr, charCode_long, mask_long)` (the 3 longs
  *     `BinaryCall`, then continue the step (FUN_32BA runs normally,
  *
@@ -16,14 +16,14 @@
  *
  *
  *
- * Suite testate (4 × 125 = 500):
- *   - A: count piccolo (1..4) random, charCode random low (0x00..0x80)
+ * Tested suites (4 × 125 = 500):
+ *   - A: small count (1..4) random, charCode random low (0x00..0x80)
  *   - B: charCode that crosses the narrow boundary [0x26, 0x2D]
- *   - C: count medio (5..12), charCode wide-only (0x30..0x7F)
- *   - D: edge cases — count=0/1, charCode = boundary esatti
+ *   - C: medium count (5..12), charCode wide-only (0x30..0x7F)
+ *   - D: edge cases — count=0/1, charCode = exact boundaries
  *         (0x25/0x26/0x2D/0x2E), charCode signed-negative (0xFF80..0xFFFF)
  *
- * Uso: npx tsx packages/cli/src/test-render-glyph-loop-1e64-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-render-glyph-loop-1e64-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -46,7 +46,7 @@ const SENTINEL_RET = 0xcafebabe >>> 0;
 
 interface BinaryCall {
   bufPtr: number;
-  charCode: number; // word (low 16 bits of the long pushato)
+  charCode: number; // word (low 16 bits of the pushed long)
   mask: number;
 }
 
@@ -72,9 +72,9 @@ function makeRng(seed: number): () => number {
 /**
  *
  * bufPtr_long (top -> bottom). The FUN_1E64 prologue does
- * `movem.l {D4 D3 D2}, -(SP)` (12 byte), portando the 3 args a (0x10, 0x14, 0x18).
+ * `movem.l {D4 D3 D2}, -(SP)` (12 bytes), moving the 3 args to (0x10, 0x14, 0x18).
  *
- * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 al momento of the RTS
+ * @returns `{ calls, endBufPtr }`. `endBufPtr` = D4 at the RTS
  */
 function runBinary(
   cpu: CpuSession,
@@ -107,7 +107,7 @@ function runBinary(
     }
     if (pc === FUN_32BA) {
       //   SP+0  = ret addr (0x1e88)
-      //   SP+4  = bufPtr long (D4 al momento of the push)
+      //   SP+4  = bufPtr long (D4 at the push)
       //   SP+8  = charCode long (sext_l(D3.w))
       //   SP+12 = mask long (clr.l, = 0)
       const spNow = sys.getRegisters().sp >>> 0;
@@ -115,7 +115,7 @@ function runBinary(
       const callCharLong = sys.read(spNow + 8, 4) >>> 0;
       const callMaskLong = sys.read(spNow + 12, 4) >>> 0;
       // charCode word = low 16 bits (= D3.w pre sign-extension).
-      // sext_l(d3w) preserva la rappresentazione: per charCode ∈ [0, 0x7FFF]
+      // sext_l(d3w) preserves the representation: for charCode ∈ [0, 0x7FFF]
       // Extract `& 0xFFFF` to recover the original word.
       calls.push({
         bufPtr: callBufPtr,
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
     charCode: number,
     count: number,
   ): boolean {
-    // confrontiamo alphaRam but azzeriamo per non confondere repeated-runs).
+    // we compare alphaRam but zero it out to avoid confusing repeated runs).
     for (let j = 0; j < 0x1000; j++) {
       pokeMem(cpu, 0xa03000 + j, 1, 0x00);
     }
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
 
   let totalOk = 0;
 
-  // ─── Suite A: count piccolo (1..4), charCode random low ──────────────
+  // ─── Suite A: small count (1..4), charCode random low ──────────────
   console.log(
     `\n=== renderGlyphLoop1E64 (FUN_1E64) — Suite A: count 1..4 random — ${perSuite} cases ===`,
   );
@@ -260,7 +260,7 @@ async function main(): Promise<void> {
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bufPtr = (0x00a03000 + (Math.floor(rng() * 0x700) & ~1)) >>> 0;
-    // charCode start in [0x20, 0x32], count tale da cross-are il range.
+    // charCode start in [0x20, 0x32], count large enough to cross the range.
     const charCode = 0x20 + Math.floor(rng() * 0x13); // 0x20..0x32
     const count = 2 + Math.floor(rng() * 8); // 2..9
     if (runOneCase("B", i, bufPtr, charCode, count)) okB++;
@@ -270,7 +270,7 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: count medio, charCode wide-only ────────────────────────
+  // ─── Suite C: medium count, charCode wide-only ────────────────────────
   console.log(
     `\n=== Suite C: count 5..12, charCode wide-only — ${perSuite} cases ===`,
   );
@@ -315,7 +315,7 @@ async function main(): Promise<void> {
       charCode = (0xfff0 + Math.floor(rng() * 0x10)) & 0xffff;
       count = 2 + Math.floor(rng() * 4);
     } else {
-      // count negativo (0x8000..0xFFFF) → no-op signed (D2 ≤ 0)
+      // negative count (0x8000..0xFFFF) → no-op signed (D2 ≤ 0)
       charCode = Math.floor(rng() * 0x100) & 0xffff;
       count = (0x8000 + Math.floor(rng() * 0x8000)) & 0xffff;
     }
@@ -325,7 +325,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (firstFail !== null) {
     const f = firstFail as FailRecord;

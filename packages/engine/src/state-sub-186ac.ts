@@ -16,7 +16,7 @@
  *          entry[4]   = byte ROM[0x24406 + D2]
  *          entry[5]   = byte ROM[0x2442A + D2]
  *          (call FUN_1BB28(entryAddr))
- *          entry[6..7]= u16 BE da ROM[0x2444E + D2*2]
+ *          entry[6..7]= u16 BE from ROM[0x2444E + D2*2]
  *        The teardown selector is stored and `*0x400760 = 1`.
  *      - **(sentinel != 0 && !hasArmed)**: **TEARDOWN path**. For each entry:
  *          entry[2..3] = 0   (u16)

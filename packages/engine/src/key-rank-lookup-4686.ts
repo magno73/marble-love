@@ -23,7 +23,7 @@
  *   0x46a0  move.w  D3w,D1w              ; D1.w = D3.w (= idx in locals)
  *   0x46a2  lea     (-0x4,A6),A0         ; A0 = &locals[0]
  *   0x46a6  move.b  D2b,D0b              ; D0.b = D2.b (low byte)
- *   0x46a8  andi.b  #-0x1,D0b            ; D0 &= 0xFF (effettivo no-op)
+ *   0x46a8  andi.b  #-0x1,D0b            ; D0 &= 0xFF (effective no-op)
  *   0x46ac  move.b  D0b,(0x0,A0,D1w*1)   ; locals[D3] = D2.b
  *   0x46b0  move.l  D2,D1
  *   0x46b2  lsr.l   #8,D1                ; D1 = D2 >> 8
@@ -39,7 +39,7 @@
  *   ; outer loop: row offsets {0,5,10,...,45}
  *   0x46c6  clr.w   D3w                  ; D3 = 0 (outer = row*5 byte offset)
  *   0x46c8  outer_top:
- *   0x46c8  clr.w   D2w                  ; D2 = 0 (inner = colonna 0..2)
+ *   0x46c8  clr.w   D2w                  ; D2 = 0 (inner = column 0..2)
  *   0x46ca  inner_top:
  *   0x46ca  move.w  D2w,D0w              ; D0 = inner zext
  *   0x46cc  ext.l   D0
@@ -62,26 +62,26 @@
  *   0x46f0  add.l   D1,D0
  *   0x46f2  movea.l D0,A0
  *   0x46f4  adda.l  D4,A0
- *   0x46f6  move.b  (A0),D0b             ; D0.b = table[outer+inner] (of nuovo)
+ *   0x46f6  move.b  (A0),D0b             ; D0.b = table[outer+inner] (again)
  *   0x46f8  move.w  D2w,D1w
  *   0x46fa  lea     (-0x4,A6),A0
  *   0x46fe  cmp.b   (0x0,A0,D1w*1),D0b
  *   0x4702  bcc.b   0x4710               ; bcc: locals >= tableByte (unsigned)
  *                                          ; equality after `bhi` was excluded
- *                                          ; → next with the
+ *                                          ; → next column
  *   ; locals[inner] < tableByte → MATCH FOUND
  *   0x4704  move.w  D3w,D0w              ; D0 = outer
  *   0x4706  ext.l   D0
  *   0x4708  divs.w  #5,D0                ; D0 = outer / 5 (signed div)
- *                                          ; risultato in D0w (.w in low,
- *                                          ; resto in D0 high word)
+ *                                          ; result in D0w (.w in low,
+ *                                          ; remainder in D0 high word)
  *   0x470c  ext.l   D0                   ; sign-ext D0w → D0l
  *   0x470e  bra.b   0x4722               ; → exit
  *   ; equality case: advance inner
  *   0x4710  addq.w  #1,D2w               ; inner++
  *   0x4712  moveq   #3,D0
  *   0x4714  cmp.w   D2w,D0w              ; flags = D0(=3) - D2(=inner)
- *   0x4716  bgt.b   0x46ca               ; bgt: 3 > inner (signed) → next with the
+ *   0x4716  bgt.b   0x46ca               ; bgt: 3 > inner (signed) → next column
  *                                          ; loop while inner < 3 (cols 0,1,2)
  *   ; exact row equality advances to the next row instead of matching here
  *   0x4718  addq.w  #5,D3w               ; outer += 5 (row stride)
@@ -123,12 +123,12 @@
  *
  * Stack/register conventions:
  *   - link.w A6,-0x4: A6 = SP (post-link), SP -= 4 per locals.
- *     Argomento a (0x8, A6) = caller's pushed long (stack post-jsr =
+ *     Argument at (0x8, A6) = caller's pushed long (stack post-jsr =
  *     ret_addr@0, A6_saved@4, arg@8 before SP -= 4).
  *   - movem.l {D4,D3,D2},-(SP): preserve D2/D3/D4 (12 byte).
- *   - Restauro inverso: movem.l (SP)+,{D2,D3,D4} (m68k movem reverse order).
+ *   - Reverse restore: movem.l (SP)+,{D2,D3,D4} (m68k movem reverse order).
  *
- * **Verifica bit-perfect**: `cli/src/test-key-rank-lookup-4686-parity.ts`
+ * **Bit-perfect verification**: `cli/src/test-key-rank-lookup-4686-parity.ts`
  *   (500 cases).
  */
 
@@ -161,10 +161,10 @@ const KEY_LEN = 3;
 export function keyRankLookup4686(state: GameState, argLong: number): number {
   const r = state.workRam;
 
-  // ─── Estrai key bytes (BE) and high byte ───────────────────────────────
-  // Equivalente al loop @ 0x46a0..0x46ba.
+  // ─── Extract key bytes (BE) and high byte ───────────────────────────────
+  // Equivalent to the loop @ 0x46a0..0x46ba.
   const arg = argLong >>> 0;
-  const argB0 = (arg >>> 24) & 0xff; // testato a 0x46bc
+  const argB0 = (arg >>> 24) & 0xff; // tested at 0x46bc
   const argB1 = (arg >>> 16) & 0xff; // locals[0]
   const argB2 = (arg >>> 8) & 0xff;  // locals[1]
   const argB3 = arg & 0xff;          // locals[2]

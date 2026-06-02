@@ -4,7 +4,7 @@
  * `stateSub16A20`.
  *
  * FUN_016A20 (1134 byte): "score-transition / player-summary dispatcher".
- * Quattro fasi:
+ * Four phases:
  *   1. Scan entity array → D4 (state==3 count), A0 (last state==1/3 entity).
  *      → FUN_1BA(slotArg), sound dispatch (gated D4==0).
  *   2. Display loop: updates entity[0x6D/0x6E], counts mode4/5, calls sound
@@ -13,9 +13,9 @@
  *   3. Secondary loop: render 5+3 strings + wait × 3 per entity state==1
  *      (gated D4==1). entity[0x6E] restore, *0x400390=0, clearDisplayRows.
  *   4. State-transition loop (gated count==2 && D4==1): dispatch
- *      objectStateEntry25BAE o FUN_18F46 per entity state==2.
+ *      objectStateEntry25BAE or FUN_18F46 per entity state==2.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   All external JSRs are patched with RTS (0x4E75):
  *     - FUN_000001BA (trampoline, obj-slot alloc)
  *     - FUN_0000158AC (soundCmd)
@@ -28,21 +28,21 @@
  *
  *   With everything stubbed, the binary's only side effects are direct writes
  *   in workRam:
- *     - entity[0x6D], entity[0x6E] (fasthe 2, 3)
- *     - entity[0x18] = 0 (fase 4 else-branch)
- *     - *0x400654 (byte, mode==4 fase 2)
- *     - *0x400656 (byte, mode==5 fase 2)
+ *     - entity[0x6D], entity[0x6E] (phases 2, 3)
+ *     - entity[0x18] = 0 (phase 4 else-branch)
+ *     - *0x400654 (byte, mode==4 phase 2)
+ *     - *0x400656 (byte, mode==5 phase 2)
  *     - *0x400390 (word, cleared in phase 3)
  *
- *   Compare: entity array completo + i 5 globali above.
+ *   Compare: full entity array + the 5 globals above.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random entities (state mix), random mode
- *   B: forced count==1, entity state==2 (fase 2 path)
- *   C: forced count==2, entity state∈{1,2} (all le fasi)
+ *   B: forced count==1, entity state==2 (phase 2 path)
+ *   C: forced count==2, entity state∈{1,2} (all phases)
  *   D: edge cases (count==0, D4==1 gating, state==3 trigger)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-16a20-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-16a20-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -305,7 +305,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: count==1, entity state==2 ──────────────────────────────────
-  console.log(`\n=== Suite B: count==1 state==2 (fase 2 path) — ${perSuite} cases ===`);
+  console.log(`\n=== Suite B: count==1 state==2 (phase 2 path) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const entityBytes = [makeEntity({ [0x18]: 0x02 })];
@@ -389,7 +389,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);

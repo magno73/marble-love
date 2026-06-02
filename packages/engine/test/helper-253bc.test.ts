@@ -6,14 +6,14 @@
  *   5. Long copy *(A0+0x14) → *(A0+0x2A)
  *   6. Byte copy *(A0+0x1B) → *(A0+0x1D)
  *
- * `packages/cli/src/test-object-helpers-parity.ts` (sezione objDeriveShorts vs Musashi).
+ * `packages/cli/src/test-object-helpers-parity.ts` (objDeriveShorts section vs Musashi).
  */
 
 import { describe, it, expect } from "vitest";
 import { helper253BC, HELPER_253BC_ADDR } from "../src/helper-253bc.js";
 import { emptyGameState } from "../src/state.js";
 
-// ─── Helpers locali ───────────────────────────────────────────────────────────
+// ─── Local helpers ───────────────────────────────────────────────────────────
 
 const OBJ_ABS = 0x00401d00;
 const OBJ_OFF = OBJ_ABS - 0x400000; // offset in workRam (0x1d00)
@@ -47,11 +47,11 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(HELPER_253BC_ADDR).toBe(0x000253bc);
   });
 
-  it("no-op se freeze flag (offset +0x36) != 0", () => {
+  it("no-op if freeze flag (offset +0x36) != 0", () => {
     const state = emptyGameState();
     const r = state.workRam;
 
-    writeU32(r, OBJ_OFF + 0x0c, 0x00800000); // longX → positivo
+    writeU32(r, OBJ_OFF + 0x0c, 0x00800000); // longX → positive
     writeU32(r, OBJ_OFF + 0x10, 0x00400000); // longY
     writeU32(r, OBJ_OFF + 0x14, 0xdeadbeef);
     r[OBJ_OFF + 0x1b] = 0x42;
@@ -62,7 +62,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     writeU32(r, OBJ_OFF + 0x2a, 0x11111111);
     r[OBJ_OFF + 0x1d] = 0x99;
 
-    // Setta freeze flag
+    // Set freeze flag
     r[OBJ_OFF + 0x36] = 0x01;
 
     helper253BC(state, OBJ_ABS);
@@ -75,7 +75,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x99);
   });
 
-  it("no-op con freeze flag qualsiasi value != 0", () => {
+  it("no-op with freeze flag any value != 0", () => {
     for (const freezeVal of [0x01, 0x02, 0x80, 0xff]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -89,7 +89,7 @@ describe("helper253BC (FUN_000253BC)", () => {
   it("runs when freeze flag == 0", () => {
     const state = emptyGameState();
     const r = state.workRam;
-    r[OBJ_OFF + 0x36] = 0x00; // non frozen
+    r[OBJ_OFF + 0x36] = 0x00; // not frozen
 
     writeU32(r, OBJ_OFF + 0x0c, 0x00800000); // longX = 0x800000 → >>19 = 4
     r[OBJ_OFF + 0x32] = 0xaa; // sentinel
@@ -99,7 +99,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x32]).not.toBe(0xaa);
   });
 
-  it("screen X: asr.l #19 su value positivo", () => {
+  it("screen X: asr.l #19 on positive value", () => {
     // asr.l #19: 0x00800000 >> 19 = 16 (0x10)
     const state = emptyGameState();
     const r = state.workRam;
@@ -109,7 +109,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(16);
   });
 
-  it("screen X: asr.l #19 su 0x00000000 → 0", () => {
+  it("screen X: asr.l #19 on 0x00000000 → 0", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -118,7 +118,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0);
   });
 
-  it("screen X: asr.l #19 su 0x7FFFFFFF → 0x0FFF (massimo positivo)", () => {
+  it("screen X: asr.l #19 on 0x7FFFFFFF → 0x0FFF (maximum positive)", () => {
     // 0x7FFFFFFF >> 19 = 0x00000FFF
     const state = emptyGameState();
     const r = state.workRam;
@@ -128,7 +128,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0x0fff);
   });
 
-  it("screen X: asr.l #19 su 0x80000000 → 0xFFFF (-1 as signed)", () => {
+  it("screen X: asr.l #19 on 0x80000000 → 0xFFFF (-1 as signed)", () => {
     // 0x80000000 signed = -2147483648; -2147483648 >> 19 = -4096 = 0xFFFFF000;
     // low word = 0xF000
     const state = emptyGameState();
@@ -140,7 +140,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0xf000);
   });
 
-  it("screen X: asr.l #19 su 0xFFFFFFFF → 0xFFFF (-1)", () => {
+  it("screen X: asr.l #19 on 0xFFFFFFFF → 0xFFFF (-1)", () => {
     // -1 >> 19 = -1; low word = 0xFFFF
     const state = emptyGameState();
     const r = state.workRam;
@@ -150,7 +150,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x32)).toBe(0xffff);
   });
 
-  it("screen Y: asr.l #19 su value positivo (0x00200000 → 4)", () => {
+  it("screen Y: asr.l #19 on positive value (0x00200000 → 4)", () => {
     // 0x00200000 >> 19 = 4
     const state = emptyGameState();
     const r = state.workRam;
@@ -160,7 +160,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(readU16(r, OBJ_OFF + 0x34)).toBe(4);
   });
 
-  it("screen Y: asr.l #19 su 0x80000000 → 0xF000 (negativo)", () => {
+  it("screen Y: asr.l #19 on 0x80000000 → 0xF000 (negative)", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -174,14 +174,14 @@ describe("helper253BC (FUN_000253BC)", () => {
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
     writeU32(r, OBJ_OFF + 0x14, 0x12345678);
-    writeU32(r, OBJ_OFF + 0x2a, 0x00000000); // cella destination zeroed
+    writeU32(r, OBJ_OFF + 0x2a, 0x00000000); // destination cell zeroed
 
     helper253BC(state, OBJ_ABS);
 
     expect(readU32(r, OBJ_OFF + 0x2a)).toBe(0x12345678);
   });
 
-  it("long copy: values of confine 0x00000000 and 0xFFFFFFFF", () => {
+  it("long copy: boundary values 0x00000000 and 0xFFFFFFFF", () => {
     for (const v of [0x00000000, 0xffffffff, 0xdeadbeef]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -204,7 +204,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x7e);
   });
 
-  it("byte copy: all i values 0x00 and 0xFF", () => {
+  it("byte copy: all values 0x00 and 0xFF", () => {
     for (const v of [0x00, 0xff, 0x55, 0xaa]) {
       const state = emptyGameState();
       const r = state.workRam;
@@ -216,7 +216,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     }
   });
 
-  it("all and 4 i fields aggiornati in una singola call", () => {
+  it("all 4 fields updated in a single call", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -238,7 +238,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     expect(r[OBJ_OFF + 0x1d]).toBe(0x33);
   });
 
-  it("non tocca byte al of outside of the 4 fields attesi", () => {
+  it("does not touch bytes outside the 4 expected fields", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;
@@ -266,7 +266,7 @@ describe("helper253BC (FUN_000253BC)", () => {
     }
   });
 
-  it("idempotente: doppia call con freeze=0 dà lo same risultato", () => {
+  it("idempotent: double call with freeze=0 gives the same result", () => {
     const state = emptyGameState();
     const r = state.workRam;
     r[OBJ_OFF + 0x36] = 0;

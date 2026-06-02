@@ -1,9 +1,9 @@
 /**
- * palette-init.ts — replica `FUN_0000565A` (46 byte).
+ * palette-init.ts — replica of `FUN_0000565A` (46 bytes).
  *
  * Init palette RAM:
- *   - Clear word a `0xB00400` (= colorRam[0x400..0x401])
- *   - Copy 8 word da ROM 0x7B18 a palette RAM @ 0xB00000..0xB00010
+ *   - Clear word at `0xB00400` (= colorRam[0x400..0x401])
+ *   - Copy 8 words from ROM 0x7B18 to palette RAM @ 0xB00000..0xB00010
  */
 
 import type { GameState } from "./state.js";

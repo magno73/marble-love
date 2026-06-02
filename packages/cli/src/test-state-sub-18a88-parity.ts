@@ -7,9 +7,9 @@
  * `entity[0x18] == 3` renders a summary screen through 8 sub-calls.
  * renderStringHelper ×N, addToObjectAccum + formatAndRender + waitVblank
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - All 8 external sub-jsrs are **patched with RTS** (`0x4E75`) to
- *     neutralize i side effects:
+ *     neutralize the side effects:
  *       * FUN_00018CD2 (particleInit) — RTS
  *       * FUN_00028C7E (clearAlphaTiles) — RTS
  *       * FUN_00000142 trampoline — RTS in place
@@ -21,14 +21,14 @@
  *       * FUN_00028DB8 (waitVblankStateGated) — RTS
  *
  *       * `*0x004003F0` (vblank tick): incremented 1 time + 3 times per
- *         entity matchata (= summary screens shown).
- *       * `*0x00400658` (summary counter): incremented 1 time per entity
- *         matchata.
+ *         matched entity (= summary screens shown).
+ *       * `*0x00400658` (summary counter): incremented 1 time per matched
+ *         entity.
  *
  *     The only "side-effect-free" observation left is these 2 bytes +
  *     the count-down loop termination itself (gated by D4 > 0). Because
  *
- *     Il **TS** corrispondente fornisce 8 sub no-op (default) per matchare.
+ *     The corresponding **TS** provides 8 no-op subs (default) to match.
  *
  *   - Compare:
  *       * `workRam[0x3F0]` (vblank counter)
@@ -38,11 +38,11 @@
  *
  * **Suite** (4 × 125 = 500):
  *   - B: forced count == 1, entity[0x18] == 3 (path 1-player)
- *   - C: forced count == 2, entity[0x18] == 3 per both (2-player)
+ *   - C: forced count == 2, entity[0x18] == 3 for both (2-player)
  *   - D: edge cases (count = 0, all entities with entity[0x18] != 3, count
  *        boundary)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-18a88-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-18a88-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -89,7 +89,7 @@ const OBJ_BASE_OFF = OBJ_BASE - WORK_RAM_BASE;
 const OBJ_COUNT_OFF = OBJ_COUNT_ADDR - WORK_RAM_BASE;
 
 /**
- * Patch JSR-stub: all le 8 sub-jsr → RTS (0x4E75).
+ * Patch JSR-stub: all 8 sub-jsrs → RTS (0x4E75).
  *
  * Note: TRAMP_142 and TRAMP_200 are trampolines (jmp.l), patching the first 2
  * bytes with 0x4E75 (= rts), turning them into functions that return
@@ -155,7 +155,7 @@ function snapshotTs(
 
 interface CaseInput {
   count: number; // word @ 0x400396
-  /** Per-entity bytes (count × OBJ_STRIDE = 0xE2 byte ciascuna). */
+  /** Per-entity bytes (count × OBJ_STRIDE = 0xE2 bytes each). */
   entityBytes: number[][];
   vblankTickInit: number;
   summaryCountInit: number;
@@ -224,7 +224,7 @@ async function main(): Promise<void> {
 
     // maxCycles bumped to 1M: FUN_18A88 count-down loop with D4=99000
     // runs ~396 iter/entity × 30 cycles ≈ 12000 cycles/entity. With count=2
-    // ≈ 24000 cycles; 1M lascia margin.
+    // ≈ 24000 cycles; 1M leaves margin.
     callFunction(cpu, FUN_18A88, [], 1_000_000);
     const binSnap = snapshotBinary(cpu, input.count);
 
@@ -273,7 +273,7 @@ async function main(): Promise<void> {
     if (forceState !== undefined) {
       bytes[0x18] = forceState & 0xff;
     }
-    // Vincoliamo counterA (entity[0x6A].w) and counterB (entity[0xD2].w) a
+    // We constrain counterA (entity[0x6A].w) and counterB (entity[0xD2].w) so
     // the binary would not finish in time. The TS version mirrors the steps
     const cA = Math.floor(rng() * 200); // 0..199
     bytes[0x6a] = (cA >>> 8) & 0xff;
@@ -288,7 +288,7 @@ async function main(): Promise<void> {
     // count limited to 0..3 to avoid overlap with globals @ 0x400394/96
     // (obj4 starts at 0x4003A0 and covers vblank tick @ 0x4003F0 and summary
     //  covers vblank tick @ 0x4003F0 but NOT il summary counter @ 0x400658).
-    // Per safety teniamo count = 0..2 (obj2 covers up to 0x4001DB).
+    // For safety we keep count = 0..2 (obj2 covers up to 0x4001DB).
     const count = forceCount ?? Math.floor(rng() * 3); // 0..2
     const entityBytes: number[][] = [];
     for (let i = 0; i < count; i++) {
@@ -326,7 +326,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: count == 2, entity[0x18] == 3 per both ─────────────
+  // ─── Suite C: count == 2, entity[0x18] == 3 for both ─────────────
   console.log(
     `\n=== Suite C: forced count=2 + entity[0x18]=3 for both — ${perSuite} cases ===`,
   );
@@ -374,7 +374,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

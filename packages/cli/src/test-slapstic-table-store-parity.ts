@@ -4,12 +4,12 @@
  *
  * passed on the stack by the caller (`move.l D0,-(SP); jsr; addq.l #4,SP`).
  *
- * **Strategia of setup**:
- *     and dst. Il buffer in TS rappresenta `0x80000..0x87FFF` (8 KB).
+ * **Setup strategy**:
+ *     and dst. The TS buffer represents `0x80000..0x87FFF` (8 KB).
  *
- *   - peekMem 8 byte da 0x87A48 vs slice of the buffer TS.
+ *   - peekMem 8 byte from 0x87A48 vs slice of the TS buffer.
  *
- * Uso: npx tsx packages/cli/src/test-slapstic-table-store-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slapstic-table-store-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -47,16 +47,16 @@ function makeRng(seed: number): () => number {
  *   - signExt = (doubled << 16) >> 16
  *   - dst = 0x87A48 + signExt
  *   - dst in [0x80000..0x87FFE)  →  signExt in [-0x7A48..-0x4A]
- * Restituisce un indexWord in [-0x3D24..-0x25] equivalentemente: idx in
- * [0x8000-0x3D24..0x10000-0x25] tradotto: idx*2 in [-0x7A48..-0x4A]
+ * Returns an indexWord in [-0x3D24..-0x25] equivalently: idx in
+ * [0x8000-0x3D24..0x10000-0x25] translated: idx*2 in [-0x7A48..-0x4A]
  */
 function pickIndexWord(rng: () => number): number {
   const r = rng();
   if (r < 0.4) {
-    // Caller comune: 0..3 (FUN_2BC5C).
+    // Common caller: 0..3 (FUN_2BC5C).
     return Math.floor(rng() * 4);
   } else if (r < 0.7) {
-    // Range piccolo positivo: idx*2 in [0..0xFC] → dst in [0x87A48..0x87B44).
+    // Small positive range: idx*2 in [0..0xFC] → dst in [0x87A48..0x87B44).
     // But 0x87B44 leaves slapstic range (limit 0x88000). Max safe idx*2 = 0x4B6.
     return Math.floor(rng() * 0x100);
   } else if (r < 0.85) {
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < total; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Randomizziamo the bytes relevant: src word + dst table 8 byte.
+    // Randomize the relevant bytes: src word + dst table 8 byte.
     // To avoid overwriting critical ROM, modify only the bytes
     const srcWord = Math.floor(rng() * 0x10000) & 0xffff;
     const dstSeed = new Array(8).fill(0).map(() => Math.floor(rng() * 256) & 0xff);
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
 
     const indexWord = pickIndexWord(rng);
 
-    // Calcoliamo dst per logging:
+    // Compute dst for logging:
     const idxLow = indexWord & 0xffff;
     const doubled = (idxLow + idxLow) & 0xffff;
     const signExt = (doubled << 16) >> 16;

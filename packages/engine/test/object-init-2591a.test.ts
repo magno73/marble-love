@@ -1,7 +1,7 @@
 /**
- * Test objectInit2591A (FUN_0002591A) — smoke tests on the orchestratore
+ * Test objectInit2591A (FUN_0002591A) — smoke tests on the orchestrator
  *
- * @ 0x400696/0x400698, and orchestra 6 sub-jsr (default no-op qui).
+ * @ 0x400696/0x400698, and orchestrates 6 sub-jsr (default no-op here).
  *
  * `cli/src/test-object-init-2591a-parity.ts` (500/500 cases).
  */
@@ -41,7 +41,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
 }
 
 describe("objectInit2591A (FUN_0002591A)", () => {
-  it("writes i 12 fields diretti su A2 + the 2 globals con FUN_1B9CC isolata", () => {
+  it("writes the 12 direct fields to A2 + the 2 globals with FUN_1B9CC isolated", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -81,7 +81,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
 
-  it("calls all and 6 le subs in the ordine binary, con args corretti", () => {
+  it("calls all 6 subs in binary order, with correct args", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1100;
     const calls: Array<{ name: string; args: readonly number[] }> = [];
@@ -112,7 +112,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     // objPtr propagated to all subs that require it.
     expect(calls[0]!.args).toEqual([objPtr]);
     expect(calls[1]!.args).toEqual([objPtr]);
-    expect(calls[2]!.args).toEqual([0]); // arg long zero
+    expect(calls[2]!.args).toEqual([0]); // long arg zero
     expect(calls[3]!.args).toEqual([objPtr]);
     expect(calls[4]!.args).toEqual([objPtr, 0]);
     expect(calls[5]!.args).toEqual([objPtr]);
@@ -121,7 +121,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU32BE(s.workRam, objOff + 0x14)).toBe(0xdeadbeef);
   });
 
-  it("subs esplicite no-op: non solleva, scritture dirette comunque applicate", () => {
+  it("explicit no-op subs: does not throw, direct writes still applied", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1200;
     expect(() => objectInit2591A(s, objPtr, { fun_1B9CC: () => undefined })).not.toThrow();
@@ -129,7 +129,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
 
-  it("non muta byte near ai fields scritti (0x19, 0x1A, 0x1C, 0x35, 0x37, 0x55, 0x57, 0x59)", () => {
+  it("does not mutate bytes near the written fields (0x19, 0x1A, 0x1C, 0x35, 0x37, 0x55, 0x57, 0x59)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1300;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -138,7 +138,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     //
     //   +0x14..17 (long), +0x1B (byte), +0x22..25, +0x26..29 (long),
     //   +0x36, +0x56, +0x58 (byte).
-    // Liberi adiacenti: +0x18, +0x19, +0x1A, +0x1C, +0x1D, +0x21, +0x2A,
+    // Free neighbors: +0x18, +0x19, +0x1A, +0x1C, +0x1D, +0x21, +0x2A,
     //   +0x35, +0x37, +0x55, +0x57, +0x59.
     const neighbors: Record<number, number> = {
       0x18: 0xa0,
@@ -165,12 +165,12 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     }
   });
 
-  it("propaga il GameState alle callback con state osservabile", () => {
+  it("propagates the GameState to callbacks with observable state", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1400;
 
     // (sentinel 0xFFFF @ 0x400696/0x400698) - callback FUN_1BAB2 must
-    // vedere = 0xFFFF.
+    // see = 0xFFFF.
     let observedTileX = -1;
     let observedTileY = -1;
     objectInit2591A(s, objPtr, {
@@ -183,7 +183,7 @@ describe("objectInit2591A (FUN_0002591A)", () => {
     expect(observedTileY).toBe(0xffff);
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("exposed constants: correct binary addresses", () => {
     expect(OBJECT_INIT_2591A_ADDR).toBe(0x2591a);
     expect(OBJECT_INIT_2591A_SUB_ADDRS).toEqual([
       0x262b2, 0x1bab2, 0x1cc62, 0x25b40, 0x1b9cc, 0x13966,

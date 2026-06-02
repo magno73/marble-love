@@ -7,18 +7,18 @@
  *   2. workRam[A2+0xE..A2+0x12] = 0
  *   3. workRam[0x1F5E..0x1F61] (long-BE) |= 0x3
  *   4. workRam[A2+0x14..A2+0x1D] = 0
- *   5. *0x401F5E |= bit derivato da byte @ A2+9 (preexisting)
- *   6. *0x401F5E |= bit derivato da long-BE @ SP+4 (saved A3 in produzione)
+ *   5. *0x401F5E |= bit derived from byte @ A2+9 (preexisting)
+ *   6. *0x401F5E |= bit derived from long-BE @ SP+4 (saved A3 in production)
  *
- * Strategia parity:
+ * Parity strategy:
  *     `state.workRam` TS.
- *   - Setta A2 = pointer random allineato 4 in `[0x400000..0x401C00]` (range
+ *   - Set A2 = random pointer 4-aligned in `[0x400000..0x401C00]` (range
  *     chosen to avoid overlap with the status-flags long @ 0x1F5E and the
- *     of the esecuzione and lo passiamo as `stackD0` al TS replica.
+ *     of the run and pass it as `stackD0` to the TS replica.
  *   - Pre-populate `*0x401F5E` with a random long to verify cumulative OR path.
- *   - Lancia `callFunction(cpu, 0x520E)` and `stateSub520E(state, a2, stackD0)`.
+ *   - Run `callFunction(cpu, 0x520E)` and `stateSub520E(state, a2, stackD0)`.
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-520e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-520e-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -79,11 +79,11 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", SP_INITIAL);
 
-    // A2: pointer random allineato 4 in workRam.
-    // Range sicuro: i clear touch A2+0..A2+0x1D (30 byte). Per non
-    // sovrapporre la status-flags long @ 0x1F5E (4 byte) and la area stack
-    // [0x1EE0..0x1F00] (32 byte), limitiamo a A2_off ≤ 0x1C00.
-    // Inoltre A2_off ≥ 0 ovviamente.
+    // A2: random pointer 4-aligned in workRam.
+    // Safe range: the clears touch A2+0..A2+0x1D (30 byte). To avoid
+    // overlapping the status-flags long @ 0x1F5E (4 byte) and the stack area
+    // [0x1EE0..0x1F00] (32 byte), limit to A2_off ≤ 0x1C00.
+    // Also A2_off ≥ 0 obviously.
     let a2: number;
     if (i === 0) {
       a2 = 0x00400000;
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
     ssNs.stateSub520E(state, a2, stackD0);
 
     // touched = [0x1EF8..0x1EFF] (8 bytes). TS does NOT model the stack.
-    // Escludiamo [0x1EE0..0x1F00) per safety (margin extra).
+    // Exclude [0x1EE0..0x1F00) for safety (extra margin).
     const STACK_LOW = 0x1ee0;
     const STACK_HIGH = 0x1f00;
     const diffOffsets: number[] = [];

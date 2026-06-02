@@ -1,7 +1,7 @@
 /**
- * string-viewport-hit-175c8.test.ts — smoke tests per `stringViewportHit175C8`.
+ * string-viewport-hit-175c8.test.ts — smoke tests for `stringViewportHit175C8`.
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated vs binary in
  * `packages/cli/src/test-string-viewport-hit-175c8-parity.ts`.
  */
 
@@ -76,15 +76,15 @@ interface SetupArgs {
   gameMode: number;
   marbleX: number;
   marbleY: number;
-  /** index per slot a "armare" (active=1). Lasciato vuoto → all inattivi. */
+  /** indexes of slots to "arm" (active=1). Left empty → all inactive. */
   activeSlots?: number[];
-  /** mappa idx → posizione (slotX, slotY). */
+  /** map idx → position (slotX, slotY). */
   slotPos?: Record<number, { x: number; y: number }>;
-  /** mappa idx → bbox addr (default sentinel). */
+  /** map idx → bbox addr (default sentinel). */
   slotBboxAddr?: Record<number, number>;
-  /** mappa addr → 4 byte signed bbox. */
+  /** map addr → 4 signed bbox bytes. */
   bboxes?: Record<number, { xMin: number; yMin: number; w: number; h: number }>;
-  /** mappa idx → byte scriptId (default 0). */
+  /** map idx → scriptId byte (default 0). */
   scriptId?: Record<number, number>;
 }
 
@@ -126,7 +126,7 @@ function setupChain(a: SetupArgs): void {
 }
 
 describe("stringViewportHit175C8 (FUN_000175C8)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(SLOT_BASE_ADDR).toBe(0x401482);
     expect(SLOT_STRIDE).toBe(0x42);
     expect(SLOT_COUNT).toBe(7);
@@ -152,10 +152,10 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(SOUND_HIT_COMMAND).toBe(0x5e);
   });
 
-  it("game-mode != {2,5} → early-exit, returns 0, niente scritture", () => {
+  it("game-mode != {2,5} → early-exit, returns 0, no writes", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
-    s.workRam.fill(0xaa); // pattern per rilevare scritture
+    s.workRam.fill(0xaa); // pattern to detect writes
     setupChain({
       s,
       gameMode: 4, // NOT 2, NOT 5
@@ -181,7 +181,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(Array.from(s.workRam)).toEqual(Array.from(pre));
   });
 
-  it("game-mode == 2 + slot 0 attivo + posizione coincidente → HIT, returns 1", () => {
+  it("game-mode == 2 + slot 0 active + coinciding position → HIT, returns 1", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setByte(s, objAddr + ENTITY_SCRIPT_ID_OFF, 0x99); // pre-fill
@@ -192,7 +192,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
       marbleX: 50,
       marbleY: 60,
       activeSlots: [0],
-      slotPos: { 0: { x: 50, y: 60 } }, // match esatto
+      slotPos: { 0: { x: 50, y: 60 } }, // exact match
       slotBboxAddr: { 0: BBOX_SENTINEL }, // bbox default (-2,-2,12,12)
       scriptId: { 0: 0x42 },
     });
@@ -224,7 +224,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     for (let i = 1; i < 7; i++) expect(r.perSlot[i]).toBe("skipped_after_hit");
   });
 
-  it("all slot inattivi → loop completo, retVal = sext(initialD2Byte)", () => {
+  it("all slots inactive → full loop, retVal = sext(initialD2Byte)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({
@@ -258,7 +258,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r3.retVal).toBe(0x7f);
   });
 
-  it("slot attivo but bbox far → miss, niente scritture", () => {
+  it("active slot but bbox far → miss, no writes", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({
@@ -297,7 +297,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(r.retVal).toBe(0xfffffff2);
   });
 
-  it("read-bbox path: reads xMin/yMin/width/height da bbox struct", () => {
+  it("read-bbox path: reads xMin/yMin/width/height from the bbox struct", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     const bboxAddr = 0x401f00;
@@ -331,7 +331,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     ).toBe(0x1c);
   });
 
-  it("read-bbox path: dereferences cursor and bbox also when puntano to the ROM", () => {
+  it("read-bbox path: dereferences cursor and bbox even when they point to the ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const objAddr = 0x401c00;
@@ -362,7 +362,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     expect(s.workRam[offOf(SLOT_BASE_ADDR + SLOT_NEW_STATE_OFF)]).toBe(0x1c);
   });
 
-  it("solo il PRIMO slot collidente fa hit (early-exit)", () => {
+  it("only the FIRST colliding slot triggers a hit (early-exit)", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({
@@ -372,8 +372,8 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
       marbleY: 50,
       activeSlots: [0, 1, 2, 3, 4, 5, 6],
       slotPos: {
-        0: { x: 50, y: 50 }, // hit candidato 1
-        1: { x: 50, y: 50 }, // hit candidato 2 (NOT visitato)
+        0: { x: 50, y: 50 }, // hit candidate 1
+        1: { x: 50, y: 50 }, // hit candidate 2 (NOT visited)
         2: { x: 50, y: 50 },
       },
       slotBboxAddr: {
@@ -390,16 +390,16 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
     });
 
     expect(r.hitSlotIndex).toBe(0); // first
-    expect(entityCalls).toBe(1); // SOLO 1 chiamata
-    expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0xaa); // scriptId of the SOLO slot 0
-    // slot 0 ha new_state=0x1c, slot 1/2 inalterati
+    expect(entityCalls).toBe(1); // ONLY 1 call
+    expect(s.workRam[offOf(objAddr + ENTITY_SCRIPT_ID_OFF)]).toBe(0xaa); // scriptId of the ONLY slot 0
+    // slot 0 has new_state=0x1c, slot 1/2 unchanged
     expect(s.workRam[offOf(SLOT_BASE_ADDR + 0 * SLOT_STRIDE + SLOT_NEW_STATE_OFF)]).toBe(0x1c);
     expect(s.workRam[offOf(SLOT_BASE_ADDR + 1 * SLOT_STRIDE + SLOT_NEW_STATE_OFF)]).toBe(0);
     expect(r.perSlot[0]).toBe("hit");
     expect(r.perSlot[1]).toBe("skipped_after_hit");
   });
 
-  it("subs default (no-op): non crasha, side-effects su workRam comunque applicati", () => {
+  it("default subs (no-op): does not crash, side-effects on workRam still applied", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
     setupChain({

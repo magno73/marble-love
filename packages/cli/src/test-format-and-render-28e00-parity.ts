@@ -3,28 +3,28 @@
  * test-format-and-render-28e00-parity.ts — differential FUN_28E00 vs
  * `formatAndRender28E00` TS replica.
  *
- * FUN_28E00 (60 byte) = wrapper "format hex value + render struct" composto
- * da:
+ * FUN_28E00 (60 byte) = wrapper "format hex value + render struct" composed
+ * of:
  *   1. `formatHex(arg1Long, *0x400436, sext_l(arg2Word), showSpaces)` via
  *      `jsr 0x10C` (=`jmp 0x3A08`).
  *      callFunction.
  *   2. `FUN_00028FDE(arg3Word, arg4Word)` =
  *      `initStructHeader(0x400434, arg3.lowByte, arg4.lowByte)` (FUN_255A)
- *      followed da `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
+ *      followed by `renderStringChain(rom, 0x400434, 0x3400)` (FUN_2572).
  *
- * Suite testate:
- *   - A: full random (value, numDigits 1..8, with the, tickOff, callerD2, attr
+ * Suites tested:
+ *   - A: full random (value, numDigits 1..8, field, tickOff, callerD2, attr
  *        globals random)
- *   - B: rotation 0 (lookup7294[0] piccolo, tickOff in range → render OK)
+ *   - B: rotation 0 (lookup7294[0] small, tickOff in range → render OK)
  *   - C: rotation random 0..7
- *   - D: numDigits piccolo (1..3) — typical HUD score
+ *   - D: numDigits small (1..3) — typical HUD score
  *
  * pattern of the parity test of FUN_2572).
  *
  * 4 KB alpha RAM (0xA03000..0xA03FFF) + formatHex buffer (16 bytes around
- * al bufEnd ptr).
+ * the bufEnd ptr).
  *
- * Uso: npx tsx packages/cli/src/test-format-and-render-28e00-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-format-and-render-28e00-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -51,7 +51,7 @@ const STRUCT_ADDR = 0x00400434;
 const STRUCT_BUFEND_PTR = 0x00400436; // = STRUCT_ADDR + 2 (struct's string-ptr field)
 
 // from the struct and scratch areas used by renderStringChain. workRam range
-// bufEnd in 0x401D00..0x401D40 (sicuro).
+// bufEnd in 0x401D00..0x401D40 (safe).
 const BUFEND_BASE = 0x00401d00; // bufEnd random in [BUFEND_BASE..BUFEND_BASE+0x10]
 
 function makeRng(seed: number): () => number {
@@ -260,8 +260,8 @@ async function main(): Promise<void> {
       const setup: CaseSetup = {
         arg1Long: Math.floor(rng() * 0x100000000) >>> 0,
         arg2Word: 1 + Math.floor(rng() * 8),
-        arg3Word: Math.floor(rng() * 32), // with the 0..31
-        arg4Word: tick & 0xff,            // tickOff likely "due"
+        arg3Word: Math.floor(rng() * 32), // field 0..31
+        arg4Word: tick & 0xff,            // tickOff likely "two"
         callerD2: rng() < 0.5 ? 0 : 1,    // showSpaces 0 or 1
         bufEnd: BUFEND_BASE + Math.floor(rng() * 16),
         attrGlobals: { valF00: 0, tick, rotation: 0 },
@@ -294,7 +294,7 @@ async function main(): Promise<void> {
     totalOk += okC;
   }
 
-  // ─── Suite D: numDigits piccolo (1..3) — HUD score-like ─────────────
+  // ─── Suite D: numDigits small (1..3) — HUD score-like ─────────────
   const sizeD = perSuite + remainder;
   console.log(`\n=== Suite D: numDigits 1..3 (HUD-like) — ${sizeD} cases ===`);
   let okD = 0;
@@ -317,7 +317,7 @@ async function main(): Promise<void> {
     totalOk += okD;
   }
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(

@@ -27,12 +27,12 @@ describe("helper1C88 (FUN_00001C88)", () => {
     expect(HELPER_1C88_ADDR).toBe(0x1c88);
   });
 
-  it("non crasha con state vuoto and rom undefined", () => {
+  it("does not crash with empty state and rom undefined", () => {
     const s = emptyGameState();
     expect(() => helper1C88(s, undefined)).not.toThrow();
   });
 
-  it("non crasha con emptyRomImage", () => {
+  it("does not crash with emptyRomImage", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => helper1C88(s, rom)).not.toThrow();
@@ -40,7 +40,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
 
   // ── Loop 1: Alpha RAM zeroed ────────────────────────────────────────────
 
-  it("azzera tutta alphaRam (0xA03000-0xA03FFE, 2048 word)", () => {
+  it("zeroes all alphaRam (0xA03000-0xA03FFE, 2048 words)", () => {
     const s = emptyGameState();
     s.alphaRam.fill(0xab);
     helper1C88(s, undefined);
@@ -49,19 +49,19 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("covers all the 4096 byte of alphaRam (0 .. 0xFFF)", () => {
+  it("covers all 4096 bytes of alphaRam (0 .. 0xFFF)", () => {
     const s = emptyGameState();
     s.alphaRam.fill(0xff);
     helper1C88(s, undefined);
-    // 2048 word = 4096 byte totali
+    // 2048 words = 4096 bytes total
     for (let off = 0; off <= 0x0ffe; off += 2) {
       expect(readWordBE(s.alphaRam, off)).toBe(0);
     }
   });
 
-  // ── Loop 2: Playfield RAM riempita ────────────────────────────────────────
+  // ── Loop 2: Playfield RAM filled ────────────────────────────────────────
 
-  it("riempie playfieldRam con 0 when vblankFlag == 0 and ROM16[0x10060] == 0", () => {
+  it("fills playfieldRam with 0 when vblankFlag == 0 and ROM16[0x10060] == 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // workRam[0x16..0x17] = 0 (default), ROM[0x10060] = 0 → fillWord = 0
@@ -72,7 +72,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("covers all i 8192 byte of playfieldRam (0 .. 0x1FFF)", () => {
+  it("covers all 8192 bytes of playfieldRam (0 .. 0x1FFF)", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xff);
     helper1C88(s, undefined);
@@ -81,7 +81,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("riempie playfieldRam con 0 when vblankFlag != 0 (indipendente da ROM)", () => {
+  it("fills playfieldRam with 0 when vblankFlag != 0 (independent of ROM)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Set ROM[0x10060] = 0x1234 and vblankFlag = 1 -> fillWord must be 0.
@@ -95,7 +95,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("riempie playfieldRam con ROM16[0x10060] when vblankFlag == 0 and ROM != 0", () => {
+  it("fills playfieldRam with ROM16[0x10060] when vblankFlag == 0 and ROM != 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // vblankFlag = 0, ROM[0x10060] = 0x0042 → fillWord = 0x0042
@@ -109,7 +109,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("sign-estende il fill word negativo: ROM16[0x10060] = 0x8000 → fillWord = 0x8000", () => {
+  it("sign-extends the negative fill word: ROM16[0x10060] = 0x8000 → fillWord = 0x8000", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10060] = 0x80;
@@ -136,7 +136,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
 
   // ── Epilog: sprite RAM ────────────────────────────────────────────────────
 
-  it("azzera word a spriteRam[0x000] (0xA02000)", () => {
+  it("zeroes word at spriteRam[0x000] (0xA02000)", () => {
     const s = emptyGameState();
     s.spriteRam[0] = 0xff;
     s.spriteRam[1] = 0xff;
@@ -144,7 +144,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     expect(readWordBE(s.spriteRam, 0x000)).toBe(0);
   });
 
-  it("azzera word a spriteRam[0x180] (0xA02180)", () => {
+  it("zeroes word at spriteRam[0x180] (0xA02180)", () => {
     const s = emptyGameState();
     s.spriteRam[0x180] = 0xff;
     s.spriteRam[0x181] = 0xff;
@@ -152,7 +152,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     expect(readWordBE(s.spriteRam, 0x180)).toBe(0);
   });
 
-  it("preserva spriteRam outside from the due offset azzerati (e.g. 0x002 and 0x182)", () => {
+  it("preserves spriteRam outside the two zeroed offsets (e.g. 0x002 and 0x182)", () => {
     const s = emptyGameState();
     s.spriteRam.fill(0x55);
     helper1C88(s, undefined);
@@ -164,7 +164,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
 
   // ── Epilog: palette RAM ───────────────────────────────────────────────────
 
-  it("azzera word a colorRam[0x400] (0xB00400)", () => {
+  it("zeroes word at colorRam[0x400] (0xB00400)", () => {
     const s = emptyGameState();
     s.colorRam[0x400] = 0xff;
     s.colorRam[0x401] = 0xff;
@@ -172,7 +172,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     expect(readWordBE(s.colorRam, 0x400)).toBe(0);
   });
 
-  it("preserva colorRam outside dto the offset 0x400", () => {
+  it("preserves colorRam outside offset 0x400", () => {
     const s = emptyGameState();
     s.colorRam.fill(0x77);
     helper1C88(s, undefined);
@@ -183,7 +183,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
 
   // ── Hook AV-control ───────────────────────────────────────────────────────
 
-  it("calls subs.onAvControl exactly una time", () => {
+  it("calls subs.onAvControl exactly one time", () => {
     const s = emptyGameState();
     const onAvControl = vi.fn();
     helper1C88(s, undefined, { onAvControl });
@@ -191,15 +191,15 @@ describe("helper1C88 (FUN_00001C88)", () => {
     expect(onAvControl).toHaveBeenCalledWith(s);
   });
 
-  it("funziona senza subs (default no-op)", () => {
+  it("works without subs (default no-op)", () => {
     const s = emptyGameState();
     expect(() => helper1C88(s, undefined, {})).not.toThrow();
     expect(() => helper1C88(s, undefined, undefined)).not.toThrow();
   });
 
-  // ── Isolamento RAM ────────────────────────────────────────────────────────
+  // ── RAM isolation ────────────────────────────────────────────────────────
 
-  it("non tocca workRam (eccetto la lettura of the vblankFlag)", () => {
+  it("does not touch workRam (except reading the vblankFlag)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xaa);
     helper1C88(s, undefined);
@@ -208,7 +208,7 @@ describe("helper1C88 (FUN_00001C88)", () => {
     }
   });
 
-  it("sequenza completa: all and 4 le regioni RAM modificate correttamente", () => {
+  it("complete sequence: all 4 RAM regions modified correctly", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     s.alphaRam.fill(0xff);

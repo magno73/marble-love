@@ -11,7 +11,7 @@
  *       2. Read descriptor: count (byte 0), pal-table-offset (byte 1), data (bytes 2..)
  *       3. For the in 0..count-1: deref u32 in palette pointer table
  *          @ ROM `0x20840 + pal_offset + i*4` → palette destination addr.
- *          Write u16 BE data[i] a quella destination.
+ *          Write u16 BE data[i] to that destination.
  *
  *   - **`paletteQueueScheduler3(state)`** <-> `FUN_00026D4E` (palette anim 3)
  *     Pushes command `*0x40045E + 12` into the queue.
@@ -79,15 +79,15 @@ function writeMemoryU16(state: GameState, addr: number, value: number): void {
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     writeU16BE(state.colorRam, addr - 0xb00000, value);
   }
-  // Altri range: ignored per ora (PF/MO/Alpha RAM, MMIO)
+  // Other ranges: ignored for now (PF/MO/Alpha RAM, MMIO)
 }
 
 // ─── Push (FUN_26B66) ─────────────────────────────────────────────────────
 
 /**
- * Push byte command to palette queue. Replica `FUN_00026B66`.
+ * Push byte command to palette queue. Replica of `FUN_00026B66`.
  *
- * Logica:
+ * Logic:
  *   ptr = *0x400408
  *   *ptr = value.b
  *   ptr += 1
@@ -112,7 +112,7 @@ export function paletteQueuePush(state: GameState, value: number): void {
 // ─── Drain (FUN_26B88) ────────────────────────────────────────────────────
 
 /**
- * Drain palette queue. Replica `FUN_00026B88`.
+ * Drain palette queue. Replica of `FUN_00026B88`.
  *
  *   1. cmd_byte = *(--ptr)
  *   2. descriptor_ptr = *(rom + 0x20AE4 + sext_w(cmd_byte) * 4)
@@ -149,7 +149,7 @@ export function paletteQueueDrain(state: GameState, rom: RomImage): void {
     //   ext.w D0     → D0.w = sext_w(D0.b)
     //   asl.w #2 D0  → D0.w << 2 (word op, may wrap within 16 bits)
     //   movea.l (0, A0, D0.w*1), A3 → index using sext_l(D0.w)
-    // Effettivamente: index = sext_l((sext_w(byte) << 2) & 0xFFFF)
+    // Effectively: index = sext_l((sext_w(byte) << 2) & 0xFFFF)
 
     // The shift is .w (word), so values can wrap within 16 bits. Then sign-extend.
     const cmdWord = sext8_i32(cmdByte) & 0xffff; // word value
@@ -190,9 +190,9 @@ export function paletteQueueDrain(state: GameState, rom: RomImage): void {
 // ─── Scheduler 3 (FUN_26D4E) ──────────────────────────────────────────────
 
 /**
- * Replica `FUN_00026D4E` — palette anim scheduler 3.
+ * Replica of `FUN_00026D4E` — palette anim scheduler 3.
  *
- * Logica:
+ * Logic:
  *   if signed(*0x400460) < 0: return  (disabled)
  *   *0x400460 += 1
  *   if signed(*0x400460) > 6:

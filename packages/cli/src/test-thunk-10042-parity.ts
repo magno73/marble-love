@@ -2,9 +2,9 @@
 /**
  * test-thunk-10042-parity.ts — differential FUN_00010042 vs thunk10042.
  *
- * of test-trackball-clamp-flags-28468-parity but entrando from the thunk address.
+ * of test-trackball-clamp-flags-28468-parity but entering from the thunk address.
  *
- * Uso: npx tsx packages/cli/src/test-thunk-10042-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-thunk-10042-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

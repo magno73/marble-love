@@ -44,7 +44,7 @@ local write_addrs_by_pc = {}
 local sr_f, sr_pc, sr_addr, sr_mask = {}, {}, {}, {}
 local sw_f, sw_pc, sw_addr, sw_data, sw_mask = {}, {}, {}, {}, {}
 
--- snapshot del word *0x400006 a inizio frame e fine frame
+-- snapshot of the word *0x400006 at frame start and frame end
 local word_at_start = {}
 local word_at_end = {}
 

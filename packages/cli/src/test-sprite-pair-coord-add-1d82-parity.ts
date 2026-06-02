@@ -3,21 +3,21 @@
  * test-sprite-pair-coord-add-1d82-parity.ts — differential FUN_1D82 vs
  * `spritePairCoordAdd1D82` TS replica.
  *
- * `FUN_00001D82` (134 byte) estrae la coord-9-bit signed da DUE word of
- * sprite-RAM (banks 0xA02000 and 0xA02100, separati of 0x100), somma due
- * delta, repacks, and writes back with bits 14 and 15 cleared.
+ * `FUN_00001D82` (134 bytes) extracts the signed 9-bit coord from TWO words of
+ * sprite-RAM (banks 0xA02000 and 0xA02100, separated by 0x100), adds two
+ * deltas, repacks, and writes back with bits 14 and 15 cleared.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *     (also with bits 14,15 and bit 4 set to test masks).
- *     un pattern noto per detectare write spurii.
+ *     a known pattern to detect spurious writes.
  *
- * Suite testate (4 × 125 = 500):
- *   - A: bank=0, with the random ∈ [0..0x7F] — base case, low addr.
- *   - B: bank random ∈ [0..7], with the random ∈ [0..0x7F] — full sweep.
- *   - C: bank=7, with the=0..0x7F — high addr (max range).
+ * Tested suites (4 × 125 = 500):
+ *   - A: bank=0, col random ∈ [0..0x7F] — base case, low addr.
+ *   - B: bank random ∈ [0..7], col random ∈ [0..0x7F] — full sweep.
+ *   - C: bank=7, col=0..0x7F — high addr (max range).
  *   - D: random delta + target word with bits 14,15 and low nibble set —
  *
- * Uso: npx tsx packages/cli/src/test-sprite-pair-coord-add-1d82-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-sprite-pair-coord-add-1d82-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -26,13 +26,13 @@ import { exit } from "node:process";
 
 import { state as stateNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
-// (`@marble-love/engine` linka via npm workspace al main repo, NOT al worktree).
+// (`@marble-love/engine` links via npm workspace to the main repo, NOT the worktree).
 // Import via relative path from the worktree src to test the version
 import * as sub1D82WorktreeNs from "../../engine/src/sprite-pair-coord-add-1d82.js";
 
 // from the main package. They are structurally identical (same layout of
 // Uint8Array/u8/u32), but TypeScript treats them as distinct types because of
-// tag nominal `__u32`. Cast esplicito for the typechecker.
+// nominal tag `__u32`. Explicit cast for the typechecker.
 const sub1D82Ns = sub1D82WorktreeNs as unknown as {
   spritePairCoordAdd1D82: (
     state: GameState,
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
       deltaB,
     );
 
-    // Compare le 2 word target.
+    // Compare the 2 target words.
     const binA = peekMem(cpu, SPRITE_BANK_A_ADDR + offA, 2);
     const tsA = readWord(stateInst.spriteRam, offA);
     if (binA !== tsA) {
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
 
   let totalOk = 0;
 
-  // ─── Suite A: bank=0, with the random ─────────────────────────────────────
+  // ─── Suite A: bank=0, col random ─────────────────────────────────────
   console.log(
     `\n=== spritePairCoordAdd1D82 (FUN_1D82) — Suite A: bank=0, col random — ${perSuite} cases ===`,
   );
@@ -280,7 +280,7 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: bank=7 (max), with the 0..0x7F ──────────────────────────────
+  // ─── Suite C: bank=7 (max), col 0..0x7F ──────────────────────────────
   console.log(
     `\n=== Suite C: bank=7 (max addr), col 0..0x7F — ${perSuite} cases ===`,
   );
@@ -299,7 +299,7 @@ async function main(): Promise<void> {
   );
   totalOk += okC;
 
-  // ─── Suite D: stress su bit-mask edge cases ──────────────────────────
+  // ─── Suite D: stress on bit-mask edge cases ──────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
     `\n=== Suite D: bit 14,15 set + low nibble set + extreme delta — ${sizeD} cases ===`,
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < sizeD; i++) {
     const col = Math.floor(rng() * 0x80);
     const bank = Math.floor(rng() * 8);
-    // delta in [0x8000..0xFFFF] (negative-ish) per testare wrapping.
+    // delta in [0x8000..0xFFFF] (negative-ish) to test wrapping.
     const deltaA = 0x8000 | randWord(rng);
     const deltaB = 0x8000 | randWord(rng);
     const oldA = randWord(rng) | 0xc00f;
@@ -321,7 +321,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

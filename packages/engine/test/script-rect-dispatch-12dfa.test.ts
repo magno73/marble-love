@@ -1,8 +1,8 @@
 /**
- * script-rect-dispatch-12dfa.test.ts — smoke per `scriptRectDispatch12DFA`
+ * script-rect-dispatch-12dfa.test.ts — smoke test for `scriptRectDispatch12DFA`
  * (`FUN_00012DFA`).
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated against the binary in
  * `packages/cli/src/test-script-rect-dispatch-12dfa-parity.ts`.
  */
 
@@ -33,7 +33,7 @@ function setupSlotPtrTable(rom: RomImage): void {
   }
 }
 
-/** Scrive un rect record (2 byte + 1 long) in ROM to the offset dato. */
+/** Writes a rect record (2 bytes + 1 long) into ROM at the given offset. */
 function writeRect(
   rom: RomImage,
   off: number,
@@ -46,7 +46,7 @@ function writeRect(
   writeU32Rom(rom, off + 2, scriptPtr);
 }
 
-/** Scrive il sentinel of fine rect-list. */
+/** Writes the end-of-rect-list sentinel. */
 function writeRectEnd(rom: RomImage, off: number): void {
   rom.program[off] = 0xff;
 }
@@ -63,22 +63,22 @@ function setRectListPtr(rom: RomImage, sel: number, ptr: number): void {
 }
 
 describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
-  it("rect-list vuota (subito 0xFF) → nessuno slot toccato, niente despawn", () => {
+  it("empty rect-list (immediate 0xFF) → no slot touched, no despawn", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
 
-    // Selector = 0 → leggi long @ 0x1DEC0.
+    // Selector = 0 → read long @ 0x1DEC0.
     setSelector(s, 0);
-    setRectListPtr(rom, 0, 0x20000); // rect-list base in ROM (qualunque)
-    writeRectEnd(rom, 0x20000); // 0xFF subito
+    setRectListPtr(rom, 0, 0x20000); // rect-list base in ROM (any value)
+    writeRectEnd(rom, 0x20000); // 0xFF immediately
 
     const before = new Uint8Array(s.workRam);
     scriptRectDispatch12DFA(s, rom, 0x12, 0x34);
     expect(s.workRam).toEqual(before);
   });
 
-  it("rect non-zero path: 1 rect → spawn 1 slot con scriptPtr and 0x52/0x54 sext", () => {
+  it("rect non-zero path: 1 rect → spawn 1 slot with scriptPtr and 0x52/0x54 sext", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
@@ -133,20 +133,20 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     writeRect(rom, 0x20000, 0x05, 0x14, 0xdeadbeef);
     writeRectEnd(rom, 0x20006);
 
-    // D3=0x99 → != 5 and != 20 → skip indipendentemente da D2.
+    // D3=0x99 → != 5 and != 20 → skip regardless of D2.
     const before = new Uint8Array(s.workRam);
     scriptRectDispatch12DFA(s, rom, 0x01, 0x99);
     expect(s.workRam).toEqual(before);
   });
 
-  it("despawn post-loop: slot occupied con D2==slot[0x52] AND D3<slot[0x52] → free (slot+0x18=0)", () => {
+  it("despawn post-loop: slot occupied with D2==slot[0x52] AND D3<slot[0x52] → free (slot+0x18=0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
 
     setSelector(s, 0);
     setRectListPtr(rom, 0, 0x20000);
-    writeRectEnd(rom, 0x20000); // niente spawn
+    writeRectEnd(rom, 0x20000); // no spawn
 
     // Prepopulate slot 7 as occupied with 0x52=0x000A (=10), 0x54=0x0050 (=80).
     const slotIdx = 7;
@@ -167,7 +167,7 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     expect(s.workRam[slotOff + 0x1a]).toBe(0);
   });
 
-  it("despawn condizione opposta: D2==slot[0x54] AND D3>slot[0x54] → free", () => {
+  it("despawn opposite condition: D2==slot[0x54] AND D3>slot[0x54] → free", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
@@ -192,7 +192,7 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     expect(s.workRam[slotOff + 0x1a]).toBe(0);
   });
 
-  it("despawn skip: slot occupied but D2/D3 outside dalle due condizioni → no free", () => {
+  it("despawn skip: slot occupied but D2/D3 outside both conditions → no free", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
@@ -214,11 +214,11 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     // D2 = 50 (∉ {10, 80}) → no despawn.
     scriptRectDispatch12DFA(s, rom, 0x32, 0x05);
 
-    expect(s.workRam[slotOff + 0x18]).toBe(0x01); // ancora occupied
+    expect(s.workRam[slotOff + 0x18]).toBe(0x01); // still occupied
     expect(s.workRam[slotOff + 0x1a]).toBe(0x03);
   });
 
-  it("FUN_12F44 mode-1 side effect: slot[0x1F]==6 decrementa byte @0x40075C", () => {
+  it("FUN_12F44 mode-1 side effect: slot[0x1F]==6 decrements byte @0x40075C", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupSlotPtrTable(rom);
@@ -235,14 +235,14 @@ describe("scriptRectDispatch12DFA (FUN_00012DFA)", () => {
     s.workRam[slotOff + 0x54] = 0x00;
     s.workRam[slotOff + 0x55] = 0x50;
     s.workRam[slotOff + 0x1e] = 0x01; // gate FUN_18F46
-    s.workRam[slotOff + 0x1f] = 0x06; // trigger decremento 40075C
+    s.workRam[slotOff + 0x1f] = 0x06; // trigger decrement of 40075C
 
-    s.workRam[0x75c] = 0x05; // counter iniziale
+    s.workRam[0x75c] = 0x05; // initial counter
 
     // D2=10, D3=5 → despawn.
     scriptRectDispatch12DFA(s, rom, 0x0a, 0x05);
 
     expect(s.workRam[slotOff + 0x18]).toBe(0);
-    expect(s.workRam[0x75c]).toBe(0x04); // decrementato of 1
+    expect(s.workRam[0x75c]).toBe(0x04); // decremented by 1
   });
 });

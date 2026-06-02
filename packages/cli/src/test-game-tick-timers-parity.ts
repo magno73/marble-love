@@ -4,14 +4,14 @@
  *
  * and `FUN_286EE` (HUD updater).
  *
- *     no-op equivalente.
+ *     equivalent no-op.
  *
  *   - count word @ 0x400396 (1..6)
  *   - for each obj: random state, flag, type, timer struct (5 bytes)
  *   - global timer @ 0x40039E (5 byte random)
  *   - game state word @ 0x400390 random
  *
- * Uso: npx tsx packages/cli/src/test-game-tick-timers-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-game-tick-timers-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -7,7 +7,7 @@
  * pair counts matches `entity[0x0C..0x0D].w >> 3 == X` with `entity[0x18]==1`,
  * does proximity-check Y if 1 match, and spawns in the first free slot. Exits if
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - `FUN_00019E42` (marble-cell-dispatch) **stubbed with RTS**.
  *   - `FUN_00018E6C` (slot-insert-sorted) **stubbed with RTS**.
  *   - `FUN_000158AC` (sound/event dispatch) **stubbed with RTS**.
@@ -15,7 +15,7 @@
  * **Suite** (4 × 125 = 500):
  *   - D: edge case with 9/10 occupied slots and exact X values from the ROM table
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-19a40-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-19a40-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -244,7 +244,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: forced match (1-3 slot con X = ROM pair) — ${perSuite} cases ===`,
+    `\n=== Suite C: forced match (1-3 slots with X = ROM pair) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -291,12 +291,12 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);
-    // Diff-dump first slot divergente.
+    // Diff-dump first divergent slot.
     for (let i = 0; i < TABLE_SIZE; i++) {
       if (f.binTable[i] !== f.tsTable[i]) {
         const slot = Math.floor(i / ENTITY_STRIDE);

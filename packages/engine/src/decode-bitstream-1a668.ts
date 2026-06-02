@@ -7,7 +7,7 @@
  *     A3 advances by one word whenever the bit pointer crosses byte 16.
  *   - an extra-byte stream read from `A1` as alternating `(count, value)` pairs.
  *     `count` controls how many consecutive tokens share the additive value.
- *   - due **lookup tabthe ROMs**:
+ *   - two **lookup ROM tables**:
  *     * `0x2499A` (32 words, 64 bytes), used by path C
  *     * `0x249DA` (8 words, 16 bytes), used by path D
  *
@@ -49,7 +49,7 @@
  *   0x1A6BA:  addi.l #0xE,D4                       ; D4 += 14
  *   0x1A6C0:  bra.w 0x1A784
  *
- *   ── @ 0x1A6C4 (bit 13 clear): controllo bit 12..10 (mask 0x1C00)
+ *   ── @ 0x1A6C4 (bit 13 clear): check bit 12..10 (mask 0x1C00)
  *   0x1A6C4:  move.w D5w,D1w
  *   0x1A6C6:  andi.w #0x1C00,D1w                   ; D1 = D5 & 0x1C00
  *   0x1A6CA:  bne.b 0x1A6F4                        ; if D1 != 0 → branch
@@ -79,7 +79,7 @@
  *   0x1A6F4:  cmpi.w #0x1C00,D1w
  *   0x1A6F8:  bne.b 0x1A71C                        ; if != 0x1C00 → branch
  *
- *   ── Path C (D1 == 0x1C00; "singthe ROMs-table-1 lookup + offset"):
+ *   ── Path C (D1 == 0x1C00; "single ROM-table-1 lookup + offset"):
  *   0x1A6FA:  tst.b D2b
  *   0x1A6FC:  bne.b 0x1A704
  *   0x1A6FE:  move.b (A1)+,D2b
@@ -264,7 +264,7 @@ const PATH_E_BASE_LOW = 0x4e;
 
 /**
  * Reads a byte from M68k absolute memory. Maps ROM (0..0x88000) and workRam
- * (0x400000..0x402000). Out-of-range ⇒ 0 (difensivo).
+ * (0x400000..0x402000). Out-of-range ⇒ 0 (defensive).
  */
 function read8Abs(state: GameState, rom: RomImage, abs: number): number {
   const a = abs >>> 0;
@@ -331,7 +331,7 @@ function write16Abs(state: GameState, abs: number, v: number): void {
  * D1 range) it is always a normal shift.
  */
 function asrL32(value: number, n: number): number {
-  const s = ((value | 0) >> (n & 31)) | 0; // JS `>>` e' arithmetic su int32
+  const s = ((value | 0) >> (n & 31)) | 0; // JS `>>` is arithmetic on int32
   return s | 0;
 }
 
@@ -450,7 +450,7 @@ export function decodeBitstream1A668(
         } while (cnt >= 0);
         d4 = (d4 + 0x7) | 0; // D4 += 7
       } else if (d1 === PATH_C_VAL) {
-        // ── Path C @ 0x1A6FA: singthe ROMs-table-1 lookup + offset.
+        // ── Path C @ 0x1A6FA: single ROM-table-1 lookup + offset.
         maybeReloadCache();
         // D5 = (D5 >> 4) & 0x3E
         const idx = ((d5 >>> 4) & 0x3e) | 0;

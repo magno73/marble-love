@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== paletteInit (FUN_565A) — 1 caso ===`);
+  console.log(`\n=== paletteInit (FUN_565A) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   // Pre-fill palette RAM with sentinel
   for (let j = 0; j < 0x800; j++) {

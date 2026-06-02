@@ -33,12 +33,12 @@ function getLong(buf: Uint8Array, off: number): number {
 }
 
 describe("soundIrqInputTick (FUN_4D1A)", () => {
-  it("non solleva con state vuoto and cmd 0", () => {
+  it("does not throw with empty state and cmd 0", () => {
     const s = emptyGameState();
     expect(() => soundIrqInputTick(s, 0)).not.toThrow();
   });
 
-  it("ack==0, idx=0: writes byte a buffer[0] and idx → 1", () => {
+  it("ack==0, idx=0: writes byte to buffer[0] and idx → 1", () => {
     const s = emptyGameState();
     s.workRam[SND_IRQ_IDX_OFF] = 0;
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0);
@@ -49,7 +49,7 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
     expect(s.workRam[SND_IRQ_IDX_OFF]).toBe(1);
   });
 
-  it("ack==0, idx=14: writes a buffer[14] and idx → 15", () => {
+  it("ack==0, idx=14: writes to buffer[14] and idx → 15", () => {
     const s = emptyGameState();
     s.workRam[SND_IRQ_IDX_OFF] = 14;
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0);
@@ -60,22 +60,22 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
     expect(s.workRam[SND_IRQ_IDX_OFF]).toBe(15);
   });
 
-  it("ack==0, idx=15: wrap → idx=0, writes a buffer[15]", () => {
+  it("ack==0, idx=15: wrap → idx=0, writes to buffer[15]", () => {
     const s = emptyGameState();
     s.workRam[SND_IRQ_IDX_OFF] = 15;
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0);
 
     soundIrqInputTick(s, 0xcc);
 
-    // PRE-increment idx era 15 → buffer[15] (offset 0x401F46+15 = 0x401F55)
+    // PRE-increment idx was 15 → buffer[15] (offset 0x401F46+15 = 0x401F55)
     expect(s.workRam[SND_IRQ_BUF_OFF + 15]).toBe(0xcc);
     // after addq.b 1 -> 16; bcs (idxPre<0xF) does not branch -> clr.b -> 0.
     expect(s.workRam[SND_IRQ_IDX_OFF]).toBe(0);
   });
 
-  it("ack!=0, counter>1: incr ackPtr, decr counter, writes a ackPtr (PRE)", () => {
+  it("ack!=0, counter>1: incr ackPtr, decr counter, writes to ackPtr (PRE)", () => {
     const s = emptyGameState();
-    // ackPtr punta dentro workRam (offset 0x1FE0 = 0x401FE0)
+    // ackPtr points inside workRam (offset 0x1FE0 = 0x401FE0)
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0x00401fe0);
     s.workRam[SND_IRQ_CNT_OFF] = 5;
 
@@ -83,13 +83,13 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
 
     // mmioByte written to 0x401FE0 (PRE-increment).
     expect(s.workRam[0x1fe0]).toBe(0x77);
-    // ackPtr incremented of 1 (long)
+    // ackPtr incremented by 1 (long)
     expect(getLong(s.workRam, SND_IRQ_ACK_PTR_OFF)).toBe(0x00401fe1);
-    // counter decrementato
+    // counter decremented
     expect(s.workRam[SND_IRQ_CNT_OFF]).toBe(4);
   });
 
-  it("ack!=0, counter==1: writes byte, poi azzera ackPtr (sequenza chiusa)", () => {
+  it("ack!=0, counter==1: writes byte, then clears ackPtr (sequence closed)", () => {
     const s = emptyGameState();
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0x00401fe0);
     s.workRam[SND_IRQ_CNT_OFF] = 1;
@@ -102,7 +102,7 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
     expect(s.workRam[SND_IRQ_CNT_OFF]).toBe(0);
   });
 
-  it("ack==0, byte=0: writes 0 in the buffer (cmd 0)", () => {
+  it("ack==0, byte=0: writes 0 into the buffer (cmd 0)", () => {
     const s = emptyGameState();
     s.workRam[SND_IRQ_IDX_OFF] = 5;
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0);
@@ -114,8 +114,8 @@ describe("soundIrqInputTick (FUN_4D1A)", () => {
     expect(s.workRam[SND_IRQ_IDX_OFF]).toBe(6);
   });
 
-  it("ack!=0, counter==0 → wrap subq.b → 0xFF, ackPtr restano valorizzati", () => {
-    // Caso atipico: counter parte a 0, subq.b 1 → 0xFF, bne skips clr.l.
+  it("ack!=0, counter==0 → wrap subq.b → 0xFF, ackPtr stays set", () => {
+    // Atypical case: counter starts at 0, subq.b 1 → 0xFF, bne skips clr.l.
     const s = emptyGameState();
     setLong(s.workRam, SND_IRQ_ACK_PTR_OFF, 0x00401fe0);
     s.workRam[SND_IRQ_CNT_OFF] = 0;

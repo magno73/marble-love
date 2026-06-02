@@ -4,15 +4,15 @@
  * `spriteProject1CC62`.
  *
  *
- * **Strategia parity**:
- *     deterministica.
+ * **Parity strategy**:
+ *     deterministic.
  *   - Compare:
  *
  * **Suite**:
  *   - A: random struct + random globals (mix bge-flag) + argByte random.
  *   - D: edge cases: 0x0000 / 0xFFFF / 0x7FFF / 0x8000 / sign-bit boundary.
  *
- * Uso: npx tsx packages/cli/src/test-sprite-project-1cc62-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sprite-project-1cc62-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -36,7 +36,7 @@ const FUN_1CC62 = 0x0001cc62;
 const FUN_1CABA = 0x0001caba;
 
 /**
- * Patch JSR-stubs: FUN_0001CABA → RTS (0x4E75) per neutralize il heavy
+ * Patch JSR-stubs: FUN_0001CABA → RTS (0x4E75) to neutralize the heavy
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_1CABA + 0, 1, 0x4e);
@@ -47,10 +47,10 @@ const STRUCT_BASE = 0x00401c28;
 const STRUCT_SIZE = 0x1c; // 0x401C28..0x401C43
 
 const GLOBALS_BASE = 0x00400690; // include 0x69E/0x6A0/0x6A2/0x6A4/0x6A6
-const GLOBALS_SIZE = 0x18; // 0x690..0x6A7 (24 byte)
+const GLOBALS_SIZE = 0x18; // 0x690..0x6A7 (24 bytes)
 
 // Compare range: only writes produced by CC62 + return value.
-// 0x6A4..0x6A7 (= 4 byte) and il return.
+// 0x6A4..0x6A7 (= 4 bytes) and the return.
 const COMPARE_BASE = 0x004006a4;
 const COMPARE_SIZE = 4;
 
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
     const argLong = rb(); // byte → low byte
     const structBytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
     const globBytes = new Array(GLOBALS_SIZE).fill(0).map(() => rb());
-    // bge-flag = *0x4006A2 → offset 0x12..0x13 in globBytes (relativo a 0x690).
+    // bge-flag = *0x4006A2 → offset 0x12..0x13 in globBytes (relative to 0x690).
     // 0x6A2 - 0x690 = 0x12.
     globBytes[0x12] = 0; globBytes[0x13] = 1; // word 0x0001 → != 0
     if (runOneCase("B", i, argLong, structBytes, globBytes)) okB++;
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
     structBytes[0x0e] = (wcx1 >>> 8) & 0xff; structBytes[0x0f] = wcx1 & 0xff;
     structBytes[0x10] = (wcy0 >>> 8) & 0xff; structBytes[0x11] = wcy0 & 0xff;
     structBytes[0x1a] = (wcz >>> 8) & 0xff; structBytes[0x1b] = wcz & 0xff;
-    // a edge per stress su muls.
+    // to edge values to stress muls.
     const wfx = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     const wfy = edgeWords[Math.floor(rng() * edgeWords.length)]!;
     globBytes[0x0e] = (wfx >>> 8) & 0xff; globBytes[0x0f] = wfx & 0xff;
@@ -264,7 +264,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

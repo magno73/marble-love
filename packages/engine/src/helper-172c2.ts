@@ -25,7 +25,7 @@
  *   000172de    tst.b  (0x18,A0,D0*0x1)        ; test [0x401482 + D2*0x42 + 0x18]
  *
  *   ; ── SAVE ADDRESS ────────────────────────────────────────────────────────
- *   000172e4    move.b D2b,D0b                 ; (ricalcola offset — idempotente)
+ *   000172e4    move.b D2b,D0b                 ; (recompute offset — idempotent)
  *   000172e6    ext.w  D0w
  *   000172e8    ext.l  D0
  *   000172ea    add.l  D0,D0
@@ -38,9 +38,9 @@
  *   ; ── LOOP CONTROL ────────────────────────────────────────────────────────
  *   000172fc    addq.b 0x1,D2b                 ; D2b++
  *   000172fe    cmpi.b #0x7,D2b                ; D2b == 7?
- *   00017302    bne.b  0x000172ca              ; no → torna al loop
+ *   00017302    bne.b  0x000172ca              ; no → back to loop
  *
- *   ; ── EPILOGO ─────────────────────────────────────────────────────────────
+ *   ; ── EPILOGUE ────────────────────────────────────────────────────────────
  *   00017306    movem.l (SP)+,{D2 D3}
  *   0001730a    rts
  *

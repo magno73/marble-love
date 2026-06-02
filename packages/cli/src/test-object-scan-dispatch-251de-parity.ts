@@ -5,7 +5,7 @@
  *
  * (stride 0xE2, count = `*0x400396`) that:
  *   - for each obj: skip if +0x18==0 (D2++), gate +0x6A.w > 400 -> FUN_2822E,
- *     `FUN_253EC(obj)` (object-step), poi raggruppa state==2/3 (counters);
+ *     `FUN_253EC(obj)` (object-step), then groups state==2/3 (counters);
  *   - if count==2 and filters pass (X-coord, +0x36, +0x1A): "respawn block"
  *     (12 writes to obj + 5 jsr + sound 0x3C + FUN_285B0(obj, 0xF));
  *   - post-loop: if D3==count or D2==count-1 (+ D3!=0) -> set
@@ -22,18 +22,18 @@
  *   - FUN_158AC  -> append-byte-to-buffer    (capture sound calls)
  *   - FUN_285B0  → `rts`                    (no-op)
  *
- * Strategia parity:
+ * Parity strategy:
  *        - count in {0..6} (30% bias toward 2 for respawn coverage)
  *        - level in {0,1,2,4,7,random} with 30% bias toward 4
  *        - for each obj in range [0..count): random bytes across span 0..0xE2
  *        - globals @ 0x400390/0x400394/0x400396/0x400462/0x400466/0x400472
- *        - to coverage: occasionalmente forziamo state=2/3 and respawn-eligible
+ *        - for coverage: occasionally force state=2/3 and respawn-eligible
  *   3. Run TS objectScanDispatch251DE on the workRam mirror (capture sound
- *      calls; all le altre subs no-op).
+ *      calls; all the other subs no-op).
  *        - byte-by-byte over [0x400018, 0x400018 + count*0xE2)
  *        - globals @ 0x400390 (word), 0x400696 / 0x400698 (word)
  *
- * Uso: npx tsx packages/cli/src/test-object-scan-dispatch-251de-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-scan-dispatch-251de-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -69,15 +69,15 @@ const WORK_RAM_SIZE = 0x2000;
 const OBJ_BASE = 0x00400018;
 const OBJ_STRIDE = 0xe2;
 // Max count = 3 → obj region [0x400018, 0x400018 + 3*0xE2) =
-// (count=4 obj[3] occupa 0x4002BE..0x4003A0, invadendo 0x400390 (level/count).
-//  Evitare per non auto-modificare lo state-machine during il loop.)
+// (count=4 obj[3] occupies 0x4002BE..0x4003A0, invading 0x400390 (level/count).
+//  Avoid it so we do not self-modify the state machine during the loop.)
 const MAX_OBJS = 3;
 
 const SOUND_BUF_BASE = 0x00401ff0; // 16 byte of buffer
 const SOUND_CUR_PTR = 0x00401fec; // long ptr to next slot
 
 /**
- * Patch a singthe ROMs entry point with the specified byte pattern.
+ * Patch a single ROM entry point with the specified byte pattern.
  */
 function patchRomBytes(
   rom: Buffer,
@@ -90,13 +90,13 @@ function patchRomBytes(
 }
 
 /**
- * Patch FUN_158AC: append byte arg LSB a (*SOUND_CUR_PTR)++.
+ * Patch FUN_158AC: append byte arg LSB to (*SOUND_CUR_PTR)++.
  *   move.b   (0x7,SP), D0           : 10 2F 00 07
  *   movea.l  (SOUND_CUR_PTR).l, A1  : 22 79 [SOUND_CUR_PTR BE 4 byte]
  *   move.b   D0, (A1)+              : 12 C0
  *   move.l   A1, (SOUND_CUR_PTR).l  : 23 C9 [SOUND_CUR_PTR BE 4 byte]
  *   rts                             : 4E 75
- * Totale 20 byte.
+ * Total 20 byte.
  */
 function patchSoundSink(rom: Buffer): void {
   const ptr = SOUND_CUR_PTR;
@@ -117,7 +117,7 @@ function patchSoundSink(rom: Buffer): void {
   ]);
 }
 
-/** Patcha all le 7 sub a `rts` (no-op) + FUN_1CC62 a `moveq #0,D0; rts`. */
+/** Patch all 7 subs to `rts` (no-op) + FUN_1CC62 to `moveq #0,D0; rts`. */
 function patchAllSubs(rom: Buffer): void {
   const rtsOnly = [0x4e, 0x75];
   patchRomBytes(rom, FUN_1BBAA, rtsOnly);
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, 0x00400696, 4, g696);
     pokeMem(cpu, 0x00400698, 4, g698);
 
-    // Per coverage of the filtro: occasionalmente forziamo state=2/3 e
+    // For coverage of the filter: occasionally force state=2/3 and
     const objBytes: Uint8Array[] = [];
     for (let k = 0; k < count; k++) {
       const buf = new Uint8Array(OBJ_STRIDE);
@@ -236,7 +236,7 @@ async function main(): Promise<void> {
       // Coverage of +0x18 (state):
       //   25% → 2 (state-2)
       //   25% → 3 (state-3)
-      //   20% → random (including 1, etc. → potenzialmente respawn)
+      //   20% → random (including 1, etc. → potentially respawn)
       const rState = rng();
       if (rState < 0.30) buf[0x18] = 0;
       else if (rState < 0.55) buf[0x18] = 2;
@@ -282,7 +282,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, SOUND_BUF_BASE + kk, 1, 0xff);
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror into state.workRam ──────────────────────────────────────
     for (let kk = 0; kk < WORK_RAM_SIZE; kk++) stateInst.workRam[kk] = 0;
     // count, level, 390
     stateInst.workRam[0x396] = (count >>> 8) & 0xff;
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
     // ── Run TS ─────────────────────────────────────────────────────────
     const tsSounds: number[] = [];
     scanNs.objectScanDispatch251DE(stateInst, stubRom, {
-      // Tutte no-op, eccetto soundCommand (capture) and fun_1CC62 (return 0).
+      // All no-op, except soundCommand (capture) and fun_1CC62 (return 0).
       fun_1BBAA: () => {
         /* no-op */
       },

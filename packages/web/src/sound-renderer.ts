@@ -117,7 +117,7 @@ function getAudioContextConstructor(): AudioContextConstructor | undefined {
   return globalWithWebAudio.AudioContext ?? globalWithWebAudio.webkitAudioContext;
 }
 
-/** YM2151 KC byte → frequenza Hz. Convention OPM:
+/** YM2151 KC byte → frequency Hz. OPM convention:
  *   octave = (kc >> 4) & 7, note = kc & 0x0F (skipping invalid note codes)
  *   Note codes valid: 0,1,2,4,5,6,8,9,10,12,13,14 (skip 3,7,11,15)
  *   Reference A4 = ~440Hz at kc=$4A (octave 4, note 10 = A).
@@ -136,7 +136,7 @@ export function ymKcToFreq(kc: number, kf: number): number {
   return 8.1758 * Math.pow(2, octave + (semi + kfFraction) / 12);
 }
 
-/** POKEY AUDF byte → frequenza Hz (clock 64KHz default, dist bit 7=pure). */
+/** POKEY AUDF byte → frequency Hz (clock 64KHz default, dist bit 7=pure). */
 export function pokeyAudfToFreq(audf: number, audc: number): { freq: number; noise: boolean } {
   // Default clock 64 KHz, divide by (audf + 1)
   // Real POKEY clock select via AUDCTL bits, V1 stub: 64KHz default
@@ -268,7 +268,7 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     const ymRegs = chip.ym2151.regs;
     const pkRegs = chip.pokey.writeRegs;
 
-    // ─── YM2151: 8 canali ───
+    // ─── YM2151: 8 channels ───
     for (let ch = 0; ch < 8; ch++) {
       const kc = ymRegs[0x28 + ch] ?? 0;
       const kf = ymRegs[0x30 + ch] ?? 0;
@@ -294,7 +294,7 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
       }
     }
 
-    // ─── POKEY: 4 canali ───
+    // ─── POKEY: 4 channels ───
     for (let ch = 0; ch < 4; ch++) {
       const audf = pkRegs[ch * 2] ?? 0;
       const audc = pkRegs[ch * 2 + 1] ?? 0;

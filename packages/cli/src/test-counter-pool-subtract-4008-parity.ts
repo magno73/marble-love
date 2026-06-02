@@ -3,32 +3,32 @@
  * test-counter-pool-subtract-4008-parity.ts — differential FUN_4008 vs
  * `counterPoolSubtract4008`.
  *
- * `FUN_00004008` (80 byte): tenta of sottrarre `arg1` from the pool combinato
+ * `FUN_00004008` (80 byte): attempts to subtract `arg1` from the combined pool
  * `(byte@0x401FF7 + byte@0x401FF5)`, draining counter@FF7 first and then
  * scaling the rest from acc@FF5. Returns 1 (success / no-op if status >=
- * 0xE0) o 0 (pool insufficient).
+ * 0xE0) or 0 (pool insufficient).
  *
- * Convenzione caller (cdecl push-RTL):
- *   - arg1 = SP+0xC = quantita' da sottrarre (long, sign-ext'd da word)
+ * Caller convention (cdecl push-RTL):
+ *   - arg1 = SP+0xC = amount to subtract (long, sign-ext'd from word)
  *
- * Strategia parity:
+ * Parity strategy:
  *   - Setup: random byte@FF5/FF7; fixed ptr struct @ 0x401A00 with bytes
  *     random +0xA / +0xB (~50% coherent as complements);
  *     workRam[0x1FFC..] = ptr (long BE).
  *   - Same setup between Musashi and TS (workRam vs unified mem).
  *   - For each random case: pick arg1 with pattern; call the binary;
- *     calls TS; compares `D0` AND the 2 modified bytes (FF5, FF7) AND the two
- *     byte of the player struct (mai modificati, but verifichiamo the invariante).
+ *     call TS; compare `D0` AND the 2 modified bytes (FF5, FF7) AND the two
+ *     bytes of the player struct (never modified, but we verify the invariant).
  *
  * Pattern coverage:
- *   - 30% arg1 in [0..pool*1.2] (range realistico)
+ *   - 30% arg1 in [0..pool*1.2] (realistic range)
  *   - 20% arg1 == 0
- *   - 20% arg1 grande (> pool, insufficient path)
+ *   - 20% arg1 large (> pool, insufficient path)
  *   - 15% status @ ptr+0xA in [0xE0..0xFF] with valid complement
  *         (early-exit path)
- *   - 15% sign-ext negativo / random long stress
+ *   - 15% sign-ext negative / random long stress
  *
- * Uso: npx tsx packages/cli/src/test-counter-pool-subtract-4008-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-counter-pool-subtract-4008-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,7 +52,7 @@ const PTR_FFC = 0x00401ffc;
 const ACC_FF5 = 0x00401ff5;
 const COUNTER_FF7 = 0x00401ff7;
 
-/** Indirizzo fissato of the player struct in the test (workRam-safe). */
+/** Fixed address of the player struct in the test (workRam-safe). */
 const PTR_VAL = 0x00401a00;
 
 function makeRng(seed: number): () => number {
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
       arg1 = Math.floor(rng() * 0x100);
     } else if (pick < 0.35) {
       pattern = "zero_arg";
-      // status valido + arg1 = 0 (no drain but sub.b 0 = no-op).
+      // valid status + arg1 = 0 (no drain but sub.b 0 = no-op).
       status = Math.floor(rng() * 0xe0); // < 0xE0 (helper > 0)
       notB = ~status & 0xff;
       ctr0 = Math.floor(rng() * 256);
@@ -142,11 +142,11 @@ async function main(): Promise<void> {
       notB = ~status & 0xff;
       ctr0 = Math.floor(rng() * 0x40); // 0..0x3F
       acc0 = Math.floor(rng() * 0x40); // 0..0x3F
-      // arg1 > pool, sign-ext da word valido (positivo).
+      // arg1 > pool, valid sign-ext from word (positive).
       arg1 = ctr0 + acc0 + 1 + Math.floor(rng() * 0x100);
     } else if (pick < 0.85) {
       pattern = "drain";
-      // pool >= arg1 in range realistico.
+      // pool >= arg1 in realistic range.
       status = Math.floor(rng() * 0xe0);
       notB = ~status & 0xff;
       ctr0 = Math.floor(rng() * 256);
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
       pattern = "mismatch_complement";
       // ptr+0xA != ~ptr+0xB -> internal helper clears D2 -> returns 1.
       status = Math.floor(rng() * 256);
-      // notB = qualcosa NOT pari a ~status.
+      // notB = something NOT equal to ~status.
       do {
         notB = Math.floor(rng() * 256);
       } while (notB === (~status & 0xff));
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
       arg1 = Math.floor(rng() * 0x200);
     } else {
       pattern = "stress";
-      // arg1 full random / sign-ext negativo (high bits set).
+      // arg1 full random / sign-ext negative (high bits set).
       status = Math.floor(rng() * 256);
       notB = Math.floor(rng() * 256);
       ctr0 = Math.floor(rng() * 256);
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       arg1 = (((hi << 16) >>> 0) | w) >>> 0;
     }
 
-    // ── Scrivthe bytes@FF5/FF7 and ptr+0xA / +0xB su both i sides. ──
+    // ── Write bytes@FF5/FF7 and ptr+0xA / +0xB on both sides. ──
     pokeMem(cpu, ACC_FF5, 1, acc0);
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
     pokeMem(cpu, PTR_VAL + 0xa, 1, status);

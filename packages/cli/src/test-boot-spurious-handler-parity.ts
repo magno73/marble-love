@@ -7,8 +7,8 @@
  * `jmp 0x117B2` (NO `rts`).
  *
  * To test via `callFunction` (which uses sentinel return + rts), patch
- * il `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) replacing the first 2
- * eseguiti.
+ * the `jmp 0x117B2.l` @ 0x100D2 (`4E F9 00 01 17 B2`) replacing the first 2
+ * bytes executed.
  *
  *   - 0x000E         (sentinel byte)
  *   - 0x0440..0443   (SP save long)
@@ -22,7 +22,7 @@
  * Writes to MMIO 0x840000, 0x860000, and 0xFE0000 are ignored by Musashi
  * (regions not mapped in the test layout) and by TS (which does not touch
  *
- * Uso: npx tsx packages/cli/src/test-boot-spurious-handler-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-boot-spurious-handler-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -45,7 +45,7 @@ const FUN_100D8 = 0x000100d8;
 /** Offset ROM of the `jmp 0x117B2.l` @ 0x100D2 (6 byte: 4EF9 0001 17B2). */
 const JMP_PATCH_OFF = 0x100d2;
 
-/** Offset workRam confrontati (relative a 0x400000). */
+/** workRam offsets compared (relative to 0x400000). */
 interface WatchedField {
   off: number;
   size: 1 | 2 | 4;
@@ -160,7 +160,7 @@ async function main(): Promise<void> {
   let firstFail: FailRecord | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP — la jsr 0x100E0 and la patched rts hanno bisogno of stack room.
+    // Reset SP — the jsr 0x100E0 and the patched rts need stack room.
     const spInitial = 0x00401efc;
     cpu.system.setRegister("sp", spInitial);
 
@@ -188,7 +188,7 @@ async function main(): Promise<void> {
     // ── Run TS replica ──────────────────────────────────────────────────
     bshNs.bootSpuriousHandler(stateInst, d0In, spAtMoveL);
 
-    // ── Diff workRam su WATCHED fields ──────────────────────────────────
+    // ── Diff workRam over WATCHED fields ────────────────────────────────
     let match = true;
     for (const f of WATCHED) {
       const bin = peekMem(cpu, 0x00400000 + f.off, f.size);

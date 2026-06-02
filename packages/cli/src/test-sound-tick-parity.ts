@@ -4,13 +4,13 @@
  *
  * Limitation: FUN_4CA0 calls 3 sub-functions:
  *   - FUN_3E1A (dispatch send)
- *   - FUN_4DCC (sound chip writer, GROSSA, NOT replicated)
+ *   - FUN_4DCC (sound chip writer, LARGE, NOT replicated)
  *   - FUN_4C3E (status check)
  *
  * To test the wrapper in isolation, patch all 3 binary subs
  * with an immediate `rts` (0x4E75). Then compare workRam state.
  *
- * Uso: npx tsx packages/cli/src/test-sound-tick-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sound-tick-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -45,9 +45,9 @@ async function main(): Promise<void> {
 
   // Patch ROM: stub sub-functions with `rts` (0x4E75) to isolate the wrapper.
   // For FUN_4C3E we want D0=1 (status ok). Patch the prologue:
-  //   moveq #1,D0  → 0x7001 (2 byte)
-  //   rts          → 0x4E75 (2 byte)
-  // 4 byte totali. Allineato a entry FUN_4C3E.
+  //   moveq #1,D0  → 0x7001 (2 bytes)
+  //   rts          → 0x4E75 (2 bytes)
+  // 4 bytes total. Aligned to FUN_4C3E entry.
   rom[FUN_3E1A] = 0x4e; rom[FUN_3E1A + 1] = 0x75;
   rom[FUN_4DCC] = 0x4e; rom[FUN_4DCC + 1] = 0x75;
   rom[FUN_4C3E] = 0x70; rom[FUN_4C3E + 1] = 0x01; // moveq #1,D0

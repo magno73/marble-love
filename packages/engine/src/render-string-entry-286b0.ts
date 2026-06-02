@@ -4,20 +4,20 @@
  * (`render-string-entry-28fde.ts`). Key differences:
  *
  *   - fixed work struct at `0x400410` (not `0x400434`).
- *     `arg4` (NOT hard-coded a `0x3400`).
+ *     `arg4` (NOT hard-coded to `0x3400`).
  *
  * **Disasm 0x286B0..0x286EE** (62 byte, 4 long-on-stack args, ret void):
  *
  *   000286b0  move.l A2,-(SP)                    ; save A2 (4 byte)
  *   000286b2  movea.l (0x8,SP),A0                ; A0 = arg1Long (ptr-to-ptr)
- *   000286b6  move.b  (0xf,SP),D1b               ; D1b = LSB of arg2Long (with the)
+ *   000286b6  move.b  (0xf,SP),D1b               ; D1b = LSB of arg2Long (col)
  *   000286ba  move.b  (0x13,SP),D0b              ; D0b = LSB of arg3Long (tickOff)
  *   000286be  movea.l #0x400410,A1               ; A1 = STRUCT_BASE
  *   000286c4  movea.l (A0),A2                    ; A2 = *(arg1) = source pointer
  *   000286c6  movea.l (0x2,A1),A0                ; A0 = *(0x400412) = dest ptr
  *   000286ca  move.b  (A2)+,(A0)+                ; copy byte src to dst (postinc)
  *   000286cc  bne.b   0x000286ca                 ; loop until written byte == 0
- *   000286ce  move.b  D1b,(A1)                   ; struct[0] = with the byte
+ *   000286ce  move.b  D1b,(A1)                   ; struct[0] = col byte
  *   000286d0  move.b  D0b,(0x1,A1)               ; struct[1] = tickOff byte
  *   000286d4  clr.b   (0x6,A1)                   ; struct[6] = 0 (marker)
  *   000286d8  move.w  (0x16,SP),D0w              ; D0.w = LOW WORD of arg4Long (attr)
@@ -33,17 +33,17 @@
  *
  *   pea     (attr_word).w        ; 4 bytes (BE: hi=00, lo=attr_word)
  *   move.l  D0,-(SP)             ; arg3Long (ext_l of tickOff byte)
- *   pea     (col_word).w         ; arg2Long (ext_l of with the byte)
+ *   pea     (col_word).w         ; arg2Long (ext_l of col byte)
  *   pea     (stringPtrPtr).l     ; arg1Long
  *   jsr     0x000286b0.l
  *
  *   - SP+0   saved A2  (4 byte)
  *   - SP+4   return PC (4 byte)
- *   - SP+8   arg1Long  (4 byte) — ptr-to-ptr a source string
+ *   - SP+8   arg1Long  (4 byte) — ptr-to-ptr to source string
  *
  * **Layout struct @ `0x400410`** (workRam off `0x410`):
  *
- *   +0  byte  : with the (written by FUN_286B0)
+ *   +0  byte  : col (written by FUN_286B0)
  *   +1  byte  : tickOff (written by FUN_286B0)
  *               not modified here; caller/init code configures it)
  *   +8  long  : pointer to the next entry (not modified here)
@@ -52,12 +52,12 @@
  *     `*(0x400412)` remains unchanged after the call. Destination pointer
  *     advancement is local to the A0 register.
  *
- * **Side effects** in workRam (relativi a base `0x400000`):
+ * **Side effects** in workRam (relative to base `0x400000`):
  *
  *      with `destOff = readLong(0x412)` mapped to work RAM and `N` equal to
  *      the copied string length; tests keep dest in the `[0..0x2000)` work RAM range.
  *
- *   2. `[0x410]` ← `arg2Long & 0xff`           (with the byte)
+ *   2. `[0x410]` ← `arg2Long & 0xff`           (col byte)
  *   3. `[0x411]` ← `arg3Long & 0xff`           (tickOff byte)
  *   4. `[0x416]` ← `0`                         (marker clear)
  *
@@ -65,7 +65,7 @@
  *
  * Final work RAM write order:
  *   1. string copy (postinc loop)
- *   2. struct[0] = with the
+ *   2. struct[0] = col
  *   3. struct[1] = tickOff
  *   4. struct[6] = 0
  *   5. jsr 0x142 (patched to `rts` in parity tests, so no extra effects)
@@ -121,7 +121,7 @@ function readLongBE(mem: Uint8Array, off: number): number {
  *
  *   1. **String copy** from `srcPtr = *(*arg1Long)` to `dstPtr = *(0x400412)`.
  *
- *   2. `workRam[0x410]` ← `arg2Long & 0xff`     (with the byte)
+ *   2. `workRam[0x410]` ← `arg2Long & 0xff`     (col byte)
  *   3. `workRam[0x411]` ← `arg3Long & 0xff`     (tickOff byte)
  *   4. `workRam[0x416]` ← `0`                    (marker clear)
  *
@@ -190,7 +190,7 @@ export function renderStringEntry286B0(
     if (byte === 0) break;
   }
 
-  // Step 4: byte writes on the struct (with the, tickOff, marker=0).
+  // Step 4: byte writes on the struct (col, tickOff, marker=0).
   r[STRUCT_OFF + COL_BYTE_OFF] = arg2Long & 0xff;
   r[STRUCT_OFF + TICKOFF_BYTE_OFF] = arg3Long & 0xff;
   r[STRUCT_OFF + MARKER_BYTE_OFF] = 0;

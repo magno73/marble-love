@@ -7,7 +7,7 @@
  * PRD §6 Phase 4 acceptance: "the first 10000 calls produce the same
  * oracle sequence".
  *
- * Uso:
+ * Usage:
  *   npx tsx packages/cli/src/test-rng-parity.ts [N]
  *
  * (N = number of test cases, default 100)
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Seed deterministica per test cases riproducibili
+  // Deterministic seed for reproducible test cases
   let prng_state = 0xABCD1234;
   const detRng = (): number => {
     prng_state = (prng_state * 1103515245 + 12345) >>> 0;
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
       if (printed >= 10) break;
     }
   } else {
-    console.log("✅ Tutti i casi matchano. RNG TS bit-perfect col binary.");
+    console.log("✅ All cases match. RNG TS bit-perfect with the binary.");
   }
 
   disposeCpu(cpu);

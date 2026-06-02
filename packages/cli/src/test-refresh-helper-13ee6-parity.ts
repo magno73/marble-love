@@ -3,9 +3,9 @@
  * test-refresh-helper-13ee6-parity.ts — differential FUN_00013EE6 vs
  * `refreshHelper13EE6`.
  *
- * decodeBitstream1A668 (replicato), FUN_144E4 (stub).
+ * decodeBitstream1A668 (replicated), FUN_144E4 (stub).
  *
- * Strategia parity:
+ * Parity strategy:
  *     and FUN_144E4 (intercepted via patch on the fly in the test).
  *   - We compare workRam[0..0x1000) and playfieldRam byte-per-byte.
  *
@@ -14,7 +14,7 @@
  *
  * to the tail section, which depends only on workRam flags and ROM constants.
  *
- * Uso: npx tsx packages/cli/src/test-refresh-helper-13ee6-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-refresh-helper-13ee6-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
       pokeW(cpu, stateInst, WORK_RAM_BASE + base + 0x1a, d2);
     }
 
-    // Il binary modifies stateInst.workRam via callback MMIO during the esecuzione.
+    // The binary modifies stateInst.workRam via callback MMIO during execution.
     const initWorkRam = Uint8Array.from(stateInst.workRam);
     const initPfRam   = Uint8Array.from(stateInst.playfieldRam);
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * test-palette-anim-parity.ts — differential testing per le N palette anim.
+ * test-palette-anim-parity.ts — differential testing for the N palette anims.
  *
- * Uso: npx tsx packages/cli/src/test-palette-anim-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-palette-anim-parity.ts [N]
  * Test each animation against the corresponding TS implementation, N cases each.
  */
 
@@ -111,7 +111,7 @@ function applyTestCase(cpu: CpuSession, state: GameState, tc: TestCase, anim: An
     state.workRam[objOff + 0xd8] = obj.skipFlag;
   }
 
-  // Count u16 BE — DOPO i fields (collisione obj[3].field_0xD8 a 0x400396).
+  // Count u16 BE — AFTER the fields (collision obj[3].field_0xD8 at 0x400396).
   pokeMem(cpu, 0x400396, 2, tc.count & 0xffff);
   state.workRam[0x396] = (tc.count >>> 8) & 0xff;
   state.workRam[0x397] = tc.count & 0xff;

@@ -1,17 +1,17 @@
 /**
- * event-flags.ts — gestione of "queue of flag" a 16 bit in the game state.
+ * event-flags.ts — management of a 16-bit "flag queue" in the game state.
  *
  * Marble Madness uses a word at `0x400006` as an **event-flags queue**:
- *   - I produttori settano bit specifici per signalare eventi
- *     (e.g. "biglia rotolata", "nemico spawnato", ...)
- *   - I consumatori chiamano `consumeEventFlag` (FUN_2548) per pop il bit
- *     uscito (in D0).
+ *   - Producers set specific bits to signal events
+ *     (e.g. "marble rolled", "enemy spawned", ...)
+ *   - Consumers call `consumeEventFlag` (FUN_2548) to pop the bit
+ *     that shifted out (in D0).
  *
  */
 
 import type { GameState } from "./state.js";
 
-/** Offset of the flag word in workRam (assoluto 0x400006). */
+/** Offset of the flag word in workRam (absolute 0x400006). */
 export const EVENT_FLAGS_OFF = 0x06 as const;
 
 /** Offset of the status-flags u32 BE bitmap (absolute 0x401F5E). */
@@ -32,7 +32,7 @@ export const OBJ_FIELD_ACCUM = 0xbc as const;      // u32 BE: long accumulator
  * Replica `FUN_00002548` — consume next event flag.
  *
  * Disassembly:
- *   lsr.w *0x400006     ; X = bit 0 (uscito)
+ *   lsr.w *0x400006     ; X = bit 0 (shifted out)
  *   bcc skip_set        ; if X == 0: D0 = 0
  *   moveq #1, D0
  *   rts
@@ -118,7 +118,7 @@ export function detectRisingEdgesAndPass(state: GameState): number {
  *   *0x40039C |= D0.b           ; set bit `type` in flag byte
  *   rts
  *
- * Use case: adds contributo (e.g. score, time bonus) to the accumulator
+ * Use case: adds a contribution (e.g. score, time bonus) to the accumulator
  */
 export function addToObjectAccumAndFlag(
   state: GameState,
@@ -156,7 +156,7 @@ export function addToObjectAccumAndFlag(
  *
  * Disassembly:
  *   D0 = arg long
- *   if D0 >= 2 (unsigned): D0 -= 2     ; (cmpi #2 + bcs poi subq.l 2)
+ *   if D0 >= 2 (unsigned): D0 -= 2     ; (cmpi #2 + bcs then subq.l 2)
  *   D1 = 1
  *   *0x401F5E |= D1
  *

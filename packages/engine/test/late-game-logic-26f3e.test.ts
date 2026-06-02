@@ -1,10 +1,10 @@
 /**
- * late-game-logic-26f3e.test.ts — unit tests per `lateGameLogic26F3E`.
+ * late-game-logic-26f3e.test.ts — unit tests for `lateGameLogic26F3E`.
  *
- * Qui copriamo:
- *   - structure of the flow main (phase 1 / 2 / 3 / 4 / exit)
- *   - cursor setup correct
- *   - early-exit condizioni (counter >= 0x3C, SENTINEL, bounds)
+ * Here we cover:
+ *   - structure of the main flow (phase 1 / 2 / 3 / 4 / exit)
+ *   - correct cursor setup
+ *   - early-exit conditions (counter >= 0x3C, SENTINEL, bounds)
  */
 
 import { describe, it, expect, vi } from "vitest";

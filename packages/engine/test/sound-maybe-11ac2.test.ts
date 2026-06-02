@@ -1,5 +1,5 @@
 /**
- * sound-maybe-11ac2.test.ts — unit test per soundMaybe11AC2 (FUN_11AC2).
+ * sound-maybe-11ac2.test.ts — unit test for soundMaybe11AC2 (FUN_11AC2).
  *
  * `packages/cli/src/test-sound-maybe-11ac2-parity.ts`.
  */
@@ -20,7 +20,7 @@ function makeRomWithTable(words: readonly number[]): ReturnType<typeof emptyRomI
 }
 
 describe("soundMaybe11AC2 (FUN_11AC2)", () => {
-  it("copies exactly 66 word (132 byte) da ROM a workRam", () => {
+  it("copies exactly 66 words (132 bytes) from ROM to workRam", () => {
     const state = emptyGameState();
     const words = Array.from({ length: COPY_WORD_COUNT }, (_, i) => i + 1);
     const rom = makeRomWithTable(words);
@@ -38,7 +38,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     }
   });
 
-  it("non tocca the bytes immediatamente first of the range of destination", () => {
+  it("does not touch the bytes immediately before the destination range", () => {
     const state = emptyGameState();
     if (WORK_RAM_DEST_OFFSET > 0) {
       state.workRam[WORK_RAM_DEST_OFFSET - 1] = 0xAB;
@@ -50,7 +50,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     }
   });
 
-  it("non tocca the bytes immediatamente dopo il range of destination", () => {
+  it("does not touch the bytes immediately after the destination range", () => {
     const state = emptyGameState();
     const endOff = WORK_RAM_DEST_OFFSET + COPY_WORD_COUNT * 2;
     state.workRam[endOff] = 0xCD;
@@ -59,19 +59,19 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     expect(state.workRam[endOff]).toBe(0xCD);
   });
 
-  it("copies word big-endian correttamente (byte alto pothe bytes basso)", () => {
+  it("copies words big-endian correctly (high byte then low byte)", () => {
     const state = emptyGameState();
     const rom = makeRomWithTable([0xDEAD, 0xBEEF]);
     soundMaybe11AC2(state, rom);
 
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 0]).toBe(0xDE);
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 1]).toBe(0xAD);
-    // Seconda word: 0xBEEF → byte 2 = 0xBE, byte 3 = 0xEF.
+    // Second word: 0xBEEF → byte 2 = 0xBE, byte 3 = 0xEF.
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 2]).toBe(0xBE);
     expect(state.workRam[WORK_RAM_DEST_OFFSET + 3]).toBe(0xEF);
   });
 
-  it("sovrascrive il contenuto precedente of workRam in the range", () => {
+  it("overwrites the previous workRam content in the range", () => {
     const state = emptyGameState();
     // Pre-fill the range with 0xFF.
     for (let i = 0; i < COPY_WORD_COUNT * 2; i++) {
@@ -84,9 +84,9 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     }
   });
 
-  it("con ROM tutta zero → workRam[0x76E..0x7F1] all zero", () => {
+  it("with all-zero ROM → workRam[0x76E..0x7F1] all zero", () => {
     const state = emptyGameState();
-    // Pre-sporciamo la area.
+    // Pre-dirty the area.
     for (let i = 0; i < COPY_WORD_COUNT * 2; i++) {
       state.workRam[WORK_RAM_DEST_OFFSET + i] = 0xAA;
     }
@@ -97,7 +97,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     }
   });
 
-  it("l'ultima word is copiata (boundary: i = 65)", () => {
+  it("the last word is copied (boundary: i = 65)", () => {
     const state = emptyGameState();
     const words = Array(COPY_WORD_COUNT).fill(0x0000) as number[];
     words[COPY_WORD_COUNT - 1] = 0x5A5A;
@@ -109,7 +109,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     expect(state.workRam[lastByteOff + 1]).toBe(0x5A);
   });
 
-  it("non modifies altri fields of GameState (spriteRam, alphaRam, colorRam, playfieldRam)", () => {
+  it("does not modify other GameState fields (spriteRam, alphaRam, colorRam, playfieldRam)", () => {
     const state = emptyGameState();
     const rom = makeRomWithTable(Array(COPY_WORD_COUNT).fill(0xFF00));
     const beforeSprite = new Uint8Array(state.spriteRam);
@@ -125,7 +125,7 @@ describe("soundMaybe11AC2 (FUN_11AC2)", () => {
     expect(state.playfieldRam).toEqual(beforePf);
   });
 
-  it("idempotente: seconda chiamata sovrascrive identicamente con same ROM", () => {
+  it("idempotent: second call overwrites identically with the same ROM", () => {
     const state = emptyGameState();
     const rom = makeRomWithTable(Array.from({ length: COPY_WORD_COUNT }, (_, i) => (i * 3 + 7) & 0xffff));
     soundMaybe11AC2(state, rom);

@@ -1,10 +1,10 @@
 /**
  * state-sub-50f4.test.ts — smoke tests of stateSub50F4 (FUN_50F4).
  *
- *   - 10 byte copied dto the input ai 10 byte of output (offsets 6,A,C,E,12,...,1C)
- *   - syndromi all zero → return 0, no mutation counter
- *   - syndrome non-zero → return 1 (correzione) o 0x80000001 (uncorrectable)
- *   - counter long-BE incremented a A2[0x11..0x12]
+ *   - 10 input bytes copied to the 10 output bytes (offsets 6,A,C,E,12,...,1C)
+ *   - all-zero syndromes → return 0, no counter mutation
+ *   - non-zero syndrome → return 1 (correction) or 0x80000001 (uncorrectable)
+ *   - long-BE counter incremented at A2[0x11..0x12]
  *   - epilogue: D2 += 1, D3 += 1
  */
 
@@ -25,7 +25,7 @@ const A2_BASE = 0x00400100; // workRam offset 0x100
 const A3_ROM_BASE = 0x00010000; // ROM offset 0x10000
 
 describe("stateSub50F4 (FUN_50F4)", () => {
-  it("copies 10 byte dto the input agli output offset corretti", () => {
+  it("copies 10 bytes from the input to the correct output offsets", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -43,20 +43,20 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     for (let i = 0; i < OUTPUT_BYTE_COUNT; i++) {
       const expected = inputBytes[ITER_BYTE_OFFSETS[i]!]!;
       expect(r.outputBytes[i]).toBe(expected);
-      // Anche workRam matches.
+      // workRam matches too.
       expect(state.workRam[(A2_BASE - 0x400000) + i]).toBe(expected);
     }
   });
 
-  it("syndromi zero → return 0, no mutation counter", () => {
+  it("zero syndromes → return 0, no counter mutation", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
     // Build input that produces all-zero syndromes.
     // Init: D6b = ~A0[0] ^ A0[16] ^ A0[8] ^ A0[4] ^ A0[2]
-    // Allora D6b = 0 ^ 0 ^ 0 ^ 0 ^ 0 = 0.
+    // So D6b = 0 ^ 0 ^ 0 ^ 0 ^ 0 = 0.
     rom.program[A3_ROM_BASE + 0x00] = 0xff;
-    // Output[i] = 0 ovunque.
+    // Output[i] = 0 everywhere.
 
     const counterAddrLo = (A2_BASE + COUNTER_LO_OFFSET) - 0x400000;
     const counterAddrHi = (A2_BASE + COUNTER_HI_OFFSET) - 0x400000;
@@ -108,7 +108,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     }
   });
 
-  it("syndrome non-zero con bit 4 unset → uncorrectable (D0 = 0x80000001)", () => {
+  it("non-zero syndrome with bit 4 unset → uncorrectable (D0 = 0x80000001)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -117,7 +117,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     // = 1.
     //
     // Init: D6b = 0x01 ^ 0 ^ 0 ^ 0 ^ 0 = 0x01.
-    // Inner loop: byte = 0 ovunque → D2..D6 invariati.
+    // Inner loop: byte = 0 everywhere → D2..D6 unchanged.
     // D6b = 0x01 (LSB=1), D2b..D5b = 0 (LSB=0).
     // Bit-iter 1: lsbD6=1, lsbD5=0, lsbD4=0, lsbD3=0, lsbD2=0.
     // D0w = (1 << 4) | 0 | 0 | 0 | 0 = 0x10. Bit 4 set → look up table[0].
@@ -142,7 +142,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     expect(r.d0 >>> 0).toBe(0x80000001 >>> 0);
   });
 
-  it("counter A2[0x11..0x12] incremented per syndrome non-zero", () => {
+  it("counter A2[0x11..0x12] incremented for non-zero syndrome", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
 
@@ -161,7 +161,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     expect(state.workRam[counterAddrLo]).toBeGreaterThanOrEqual(1);
   });
 
-  it("CORRECTION_TABLE costante valida (16 byte, 0xFF per indici non-correggibili)", () => {
+  it("CORRECTION_TABLE valid constant (16 bytes, 0xFF for uncorrectable indices)", () => {
     expect(CORRECTION_TABLE).toHaveLength(16);
     // Entries note: 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x01, ...
     expect(CORRECTION_TABLE[0]).toBe(0xff);
@@ -170,7 +170,7 @@ describe("stateSub50F4 (FUN_50F4)", () => {
     expect(CORRECTION_TABLE[15]).toBe(0xff);
   });
 
-  it("output buffer ha exactly 10 byte", () => {
+  it("output buffer has exactly 10 bytes", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = stateSub50F4(state, rom, A2_BASE, A3_ROM_BASE, 0, 0);

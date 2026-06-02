@@ -46,7 +46,7 @@ function writeU16BE(wr: Uint8Array, off: number, v: number): void {
 }
 
 describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
-  it("case 2: writes sprite/state/sound + clears + invoca soundCommand(0x38)", () => {
+  it("case 2: writes sprite/state/sound + clears + invokes soundCommand(0x38)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1000;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -67,7 +67,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
     // +0x18 not touched (pre-state was not 6).
     expect(s.workRam[objOff + 0x18]).toBe(0xee);
-    // Scritture case 2
+    // Case 2 writes
     expect(s.workRam[objOff + 0x5f]).toBe(0);
     expect(s.workRam[objOff + 0x60]).toBe(0x02);
     expect(readU32BE(s.workRam, objOff + 0x5a)).toBe(SPRITE_PTR_CASE2);
@@ -77,7 +77,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(sounds).toEqual([OBJECT_STATE_ENTRY_25BAE_SOUND_IDS.case2]);
   });
 
-  it("case 9: writes sprite/state, NESSUNA chiamata soundCommand", () => {
+  it("case 9: writes sprite/state, NO soundCommand call", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1100;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -91,7 +91,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     // Clears common
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
-    // Scritture case 9
+    // Case 9 writes
     expect(s.workRam[objOff + 0x5f]).toBe(0);
     expect(s.workRam[objOff + 0x60]).toBe(0x04);
     expect(readU32BE(s.workRam, objOff + 0x5a)).toBe(SPRITE_PTR_CASE9);
@@ -100,12 +100,12 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(sounds).toEqual([]);
   });
 
-  it("case 4 con A2[+0x57] == 0x65: invoca FUN_2591A + soundCommand(0x3C) + counter+1", () => {
+  it("case 4 with A2[+0x57] == 0x65: invokes FUN_2591A + soundCommand(0x3C) + counter+1", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1200;
     const objOff = objPtr - WORK_RAM_BASE;
 
-    // Pre-condition per branch match
+    // Pre-condition for branch match
     s.workRam[objOff + 0x57] = FIELD_57_MATCH_VALUE;
     // Counter pre = 0x00FE → +1 = 0x00FF
     writeU16BE(s.workRam, objOff + 0xd2, 0x00fe);
@@ -132,7 +132,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU16BE(s.workRam, objOff + 0xd2)).toBe(0x00ff);
   });
 
-  it("case 4 con A2[+0x57] != 0x65: invoca soundCommand(0x3D)", () => {
+  it("case 4 with A2[+0x57] != 0x65: invokes soundCommand(0x3D)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1300;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -149,7 +149,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(sounds).toEqual([OBJECT_STATE_ENTRY_25BAE_SOUND_IDS.case4_otherwise]);
   });
 
-  it("conditional +0x18: A2[+0x1A]==6 → A2[+0x18]=3 (executed first of the dispatch)", () => {
+  it("conditional +0x18: A2[+0x1A]==6 → A2[+0x18]=3 (executed before the dispatch)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1400;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -167,7 +167,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
   });
 
-  it("default (subStateCode out-of-set): solo clears + conditional, no sound, no fun_2591A", () => {
+  it("default (subStateCode out-of-set): only clears + conditional, no sound, no fun_2591A", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1500;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -190,7 +190,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
 
     expect(soundCalls).toBe(0);
     expect(fun2591ACalls).toBe(0);
-    // Solo clears common applicati
+    // Only the common clears applied
     expect(readU32BE(s.workRam, objOff + 0x00)).toBe(0);
     expect(readU32BE(s.workRam, objOff + 0x04)).toBe(0);
     expect(s.workRam[objOff + 0x5a]).toBe(0xaa);
@@ -202,7 +202,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(s.workRam[objOff + 0x56]).toBe(0x77);
   });
 
-  it("default subs={}: non solleva, scritture dirette comunque applicate", () => {
+  it("default subs={}: does not throw, direct writes still applied", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1600;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -220,7 +220,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(s.workRam[objOff + 0x1a]).toBe(0x04);
   });
 
-  it("addq.w #1 wrap a 16 bit: 0xFFFF → 0x0000", () => {
+  it("addq.w #1 16-bit wrap: 0xFFFF → 0x0000", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1700;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -233,13 +233,13 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(readU16BE(s.workRam, objOff + 0xd2)).toBe(0x0000);
   });
 
-  it("non muta byte near ai fields scritti (case 2 specifico)", () => {
+  it("does not mutate bytes near the written fields (case 2 specific)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1800;
     const objOff = objPtr - WORK_RAM_BASE;
 
     //   +0x5A..5D (long); +0x56 (byte); +0x1A (byte).
-    // Vicini free: +0x08, +0x09, +0x55, +0x57, +0x58, +0x59, +0x5E, +0x61.
+    // Free neighbors: +0x08, +0x09, +0x55, +0x57, +0x58, +0x59, +0x5E, +0x61.
     const neighbors: Record<number, number> = {
       0x08: 0xb0,
       0x09: 0xb1,
@@ -262,7 +262,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary + codici corretti", () => {
+  it("exposed constants: correct binary addresses + codes", () => {
     expect(OBJECT_STATE_ENTRY_25BAE_ADDR).toBe(0x25bae);
     expect(OBJECT_STATE_ENTRY_25BAE_SUB_ADDRS.fun_158AC).toBe(0x158ac);
     expect(OBJECT_STATE_ENTRY_25BAE_SUB_ADDRS.fun_2591A).toBe(0x2591a);
@@ -277,7 +277,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(FIELD_57_MATCH_VALUE).toBe(0x65);
   });
 
-  it("subStateCode high bits ignorati: solo LSB selettivo (0x102 → case 2)", () => {
+  it("subStateCode high bits ignored: only the LSB is selective (0x102 → case 2)", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1900;
     const objOff = objPtr - WORK_RAM_BASE;
@@ -292,7 +292,7 @@ describe("objectStateEntry25BAE (FUN_00025BAE)", () => {
     expect(s.workRam[objOff + 0x1a]).toBe(0x02);
   });
 
-  it("subs typing: ObjectStateEntry25BAESubs accetta solo soundCommand o solo fun_2591A", () => {
+  it("subs typing: ObjectStateEntry25BAESubs accepts only soundCommand or only fun_2591A", () => {
     const s = emptyGameState();
     const objPtr = WORK_RAM_BASE + 0x1a00;
 

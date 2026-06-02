@@ -763,7 +763,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
           commandNmiSampleCycle,
           ...(commandNmiDelayOverride === undefined ? {} : { commandNmiDelayOverride }),
         });
-        // Drain samples ma scarta (silent boot phase)
+        // Drain samples but discard them (silent boot phase)
         drainYm2151Samples(chip);
         drainPokeySamples(chip);
       }

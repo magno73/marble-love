@@ -40,12 +40,12 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     expect(GAME_MODE_PREP_10456_ADDR).toBe(0x00010456);
   });
 
-  it("smoke: runs senza errors su state vuoto", () => {
+  it("smoke: runs without errors on empty state", () => {
     const s = emptyGameState();
     expect(() => gameModePrep10456(s)).not.toThrow();
   });
 
-  describe("slot 0 (base 0x400018) con mode=0", () => {
+  describe("slot 0 (base 0x400018) with mode=0", () => {
     it("clr.l slot0+0xbc → [0x4000d4].l = 0", () => {
       const s = emptyGameState();
       // Pre-load some non-zero bytes at slot0+0xbc = 0x400018+0xbc = 0x4000d4
@@ -71,14 +71,14 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400031)).toBe(0);
     });
 
-    it("mode=0: slot0+0x18=0 (i=0 >= mode=0 → inattivo)", () => {
+    it("mode=0: slot0+0x18=0 (i=0 >= mode=0 → inactive)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 0);
       gameModePrep10456(s);
       expect(rb(s, 0x400030)).toBe(0);
     });
 
-    it("mode=1: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=1 → attivo)", () => {
+    it("mode=1: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=1 → active)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 1);
       gameModePrep10456(s);
@@ -86,7 +86,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400032)).toBe(6);
     });
 
-    it("mode=2: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=2 → attivo)", () => {
+    it("mode=2: slot0+0x18=3 and slot0+0x1a=6 (i=0 < mode=2 → active)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 2);
       gameModePrep10456(s);
@@ -95,7 +95,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     });
   });
 
-  describe("slot 1 (base 0x4000fa) con mode=1", () => {
+  describe("slot 1 (base 0x4000fa) with mode=1", () => {
     it("clr.l slot1+0xbc → [0x4001b6].l = 0", () => {
       const s = emptyGameState();
       s.workRam[0x1b6] = 0x11;
@@ -120,14 +120,14 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400113)).toBe(1);
     });
 
-    it("mode=1: slot1+0x18=0 (i=1 >= mode=1 → inattivo)", () => {
+    it("mode=1: slot1+0x18=0 (i=1 >= mode=1 → inactive)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 1);
       gameModePrep10456(s);
       expect(rb(s, 0x400112)).toBe(0);
     });
 
-    it("mode=2: slot1+0x18=3 and slot1+0x1a=6 (i=1 < mode=2 → attivo)", () => {
+    it("mode=2: slot1+0x18=3 and slot1+0x1a=6 (i=1 < mode=2 → active)", () => {
       const s = emptyGameState();
       ww(s, 0x400396, 2);
       gameModePrep10456(s);
@@ -136,7 +136,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     });
   });
 
-  describe("scritture a [0x40098c] array", () => {
+  describe("writes to [0x40098c] array", () => {
     it("slot i=0: [0x40098c + 0 + 0xa] = 0xff → [0x400996] = 0xff", () => {
       const s = emptyGameState();
       gameModePrep10456(s);
@@ -150,7 +150,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     });
   });
 
-  describe("globali post-loop", () => {
+  describe("post-loop globals", () => {
     it("[0x4003a4] = 0xff", () => {
       const s = emptyGameState();
       gameModePrep10456(s);
@@ -188,7 +188,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     });
   });
 
-  describe("mascheramento [0x400398] = [0x4003dc] & 0x30", () => {
+  describe("masking [0x400398] = [0x4003dc] & 0x30", () => {
     it("dc=0x00 → 0x400398=0x00", () => {
       const s = emptyGameState();
       wb(s, 0x4003dc, 0x00);
@@ -210,7 +210,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
       expect(rb(s, 0x400398)).toBe(0x10);
     });
 
-    it("dc=0xff → 0x400398=0x30 (solo bit 5-4 passano)", () => {
+    it("dc=0xff → 0x400398=0x30 (only bits 5-4 pass)", () => {
       const s = emptyGameState();
       wb(s, 0x4003dc, 0xff);
       gameModePrep10456(s);
@@ -225,7 +225,7 @@ describe("gameModePrep10456 (FUN_00010456)", () => {
     });
   });
 
-  describe("azzeramento byte [0x400654..0x400658]", () => {
+  describe("zeroing bytes [0x400654..0x400658]", () => {
     it("[0x400658] = 0", () => {
       const s = emptyGameState();
       wb(s, 0x400658, 0x99);

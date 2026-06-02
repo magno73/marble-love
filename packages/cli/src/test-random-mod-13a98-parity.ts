@@ -7,14 +7,14 @@
  *   1. Set RNG seed in Work RAM (0x004003A6) through pokeMem
  *   2. Call FUN_13A98 in the binary with maxExclusive as argument
  *   3. Call randomMod13A98(state, maxExclusive) in the TS implementation
- *   4. Compare: return value (D0.w) and seed aggiornato (0x004003A6)
+ *   4. Compare: return value (D0.w) and updated seed (0x004003A6)
  *
- * Uso:
+ * Usage:
  *   npx tsx packages/cli/src/test-random-mod-13a98-parity.ts [N]
  *
  * (N = number of test cases, default 500)
  *
- * Accettazione: 500/500 = 100%
+ * Acceptance: 500/500 = 100%
  */
 
 import { existsSync, readFileSync } from "node:fs";

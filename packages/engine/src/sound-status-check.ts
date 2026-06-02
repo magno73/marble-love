@@ -9,7 +9,7 @@
  *   tst.l   (0x16,A1)            ; long @ A1+0x16 (slot occupied?)
  *   bne     fail                 ; abort when nonzero
  *   swap    D0
- *   move.b  D0b,(0x14,A1)        ; byte a A1+0x14 = (D0_originale >> 16) & 0xFF
+ *   move.b  D0b,(0x14,A1)        ; byte at A1+0x14 = (D0_original >> 16) & 0xFF
  *   move.l  A0,(0x16,A1)         ; long at A1+0x16 = A0 (mark slot occupied)
  *   moveq   #1,D0                ; success
  *   bra     done
@@ -28,7 +28,7 @@
  *   0xFE0000      = sound CPU mailbox (write-only, 16 bit; MAME's 6502 sees
  *                    the low byte)
  *
- *   workRam[A0+0x14] ← (D0 >> 16) & 0xFF       (byte: comando "logico")
+ *   workRam[A0+0x14] ← (D0 >> 16) & 0xFF       (byte: "logical" command)
  *   workRam[A0+0x16..0x19] ← A0 (long, big-endian, slot owner pointer)
  *
  */
@@ -46,7 +46,7 @@ const WORK_RAM_BASE = 0x400000;
  * Replica `FUN_00004C3E` — sound command sender.
  *
  * @param d0       D0 (long, 32 bit). Bit 31..16 = "type byte" (in low 8),
- *                 bit 15..0 = parola spedita al chip.
+ *                 bit 15..0 = word sent to the chip.
  *                 also stored as the slot owner (A1 == A0 in the caller).
  *
  */

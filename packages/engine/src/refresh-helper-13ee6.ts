@@ -177,7 +177,7 @@ export function refreshHelper13EE6(
 ): void {
   const wr = state.workRam;
 
-  // === Prologo ===
+  // === Prologue ===
   // link.w A6,-0x2; movem.l {A5..A2,D7..D2},-(SP)
   // A2=0x40000a, A3=0x400004, A4=0x40000c (set via movea.l immediates)
 
@@ -381,7 +381,7 @@ export function refreshHelper13EE6(
   _pf094(state, rom, subs, sx16(scrollIdx));
 }
 
-// ─── Sezione 0x14094: write decoded tiles to PF RAM ──────────────────────────
+// ─── Section 0x14094: write decoded tiles to PF RAM ──────────────────────────
 
 function _pf094(
   state: GameState,
@@ -428,7 +428,7 @@ function _pf094(
   _blit104(state, rom, subs);
 }
 
-// ─── Sezione 0x14104: clear active, level helper, tail ───────────────────────
+// ─── Section 0x14104: clear active, level helper, tail ───────────────────────
 
 function _blit104(
   state: GameState,
@@ -447,7 +447,7 @@ function _blit104(
   _tail(state, rom, subs);
 }
 
-// ─── Sezione 0x1411c: tail — max/min scroll delta scan + update ──────────────
+// ─── Section 0x1411c: tail — max/min scroll delta scan + update ──────────────
 //
 // Disasm key:
 //   0x14204-0x14290: D3 init (accum lookup based on speed byte)
@@ -771,7 +771,7 @@ function _negUpdate(
   _scrollFinal(state, rom, subs, d3, initD3, d5, d6, d4flag);
 }
 
-// ─── Sezione 0x14448: scroll final write ─────────────────────────────────────
+// ─── Section 0x14448: scroll final write ─────────────────────────────────────
 
 function _scrollFinal(
   state: GameState,

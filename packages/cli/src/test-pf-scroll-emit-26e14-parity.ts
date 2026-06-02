@@ -2,18 +2,18 @@
 /**
  * test-pf-scroll-emit-26e14-parity.ts — differential FUN_26E14 vs pfScrollEmit26E14.
  *
- * Per N test cases:
+ * For N test cases:
  *   1. Setup workRam fields:
  *      - 0x4003AE (AV control word, random)
- *      - 0x4003F6/FA/FE/402 (long pointers — random but forniti per coerenza)
- *   2. Setup spriteRam[0..0x400] random (both le pages 0 / +0x200).
+ *      - 0x4003F6/FA/FE/402 (long pointers — random but provided for consistency)
+ *   2. Setup spriteRam[0..0x400] random (both pages 0 / +0x200).
  *   3. callFunction(0x26E14, [arg]) — push 1 long arg.
  *   4. pfScrollEmit26E14(state, arg)
  *      - workRam[0x3AE..0x3B1] (AV new word)
  *      - workRam[0x3F6..0x405] (4 long pointers)
  *      - spriteRam[0..0x400]
  *
- * Uso: npx tsx packages/cli/src/test-pf-scroll-emit-26e14-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-pf-scroll-emit-26e14-parity.ts [N]
  */
 
 import { readFileSync } from "node:fs";
@@ -78,16 +78,16 @@ async function main(): Promise<void> {
       state.workRam[off + 3] = v & 0xff;
     }
 
-    // Setup spriteRam (0xA02000-0xA023FF, 1024 byte = both i layout of
-    // rotazione). Random.
+    // Setup spriteRam (0xA02000-0xA023FF, 1024 byte = both rotation
+    // layouts). Random.
     for (let j = 0; j < 0x400; j++) {
       const v = Math.floor(rng() * 256);
       pokeMem(cpu, 0x00a02000 + j, 1, v);
       state.spriteRam[j] = v;
     }
 
-    // 30%: stop iter early. Calcoliamo la pagina ORIGINAL (orig AV, non toggled)
-    // and mettiamo cmpWord[k] = k al cmp ptr.
+    // 30%: stop iter early. Compute the ORIGINAL page (orig AV, not toggled)
+    // and set cmpWord[k] = k at the cmp ptr.
     if (rng() < 0.3) {
       const stopIter = Math.floor(rng() * 60);
       const offOld = (av & 8) << 6; // (av & 8) << 5 * 2 == << 6  → 0 o 0x200

@@ -46,7 +46,7 @@ function writeMemoryU8(state: GameState, addr: number, value: number): void {
   } else if (addr >= 0xb00000 && addr < 0xb00800) {
     state.colorRam[addr - 0xb00000] = v;
   }
-  // Altri range: ignored
+  // Other ranges: ignored
 }
 
 // ─── initStructHeader (FUN_255A) ──────────────────────────────────────────

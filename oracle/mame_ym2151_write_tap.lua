@@ -1,4 +1,4 @@
--- mame_ym2151_write_tap.lua — registra ogni write del sound 6502 a $1800/$1801
+-- mame_ym2151_write_tap.lua — records every sound 6502 write to $1800/$1801
 -- (YM2151 register select + data). Output the full sequence for comparison
 -- against the TS chip, which currently does not write voice registers.
 --
@@ -8,7 +8,7 @@
 -- Env:
 --   MARBLE_YM_TAP_FRAMES   max frames (default 1500)
 --   MARBLE_YM_TAP_OUT      output JSON (default /tmp/mame_ym_writes.json)
---   MARBLE_SOUND_COIN_FRAME, MARBLE_SOUND_START_FRAME come capture script
+--   MARBLE_SOUND_COIN_FRAME, MARBLE_SOUND_START_FRAME as in the capture script
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_YM_TAP_FRAMES") or "1500")
 local OUT_PATH = os.getenv("MARBLE_YM_TAP_OUT") or "/tmp/mame_ym_writes.json"

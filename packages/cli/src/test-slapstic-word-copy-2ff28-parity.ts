@@ -4,11 +4,11 @@
  * vs slapsticWordCopy2FF28.
  *
  *
- * **Strategia**:
+ * **Strategy**:
  *   - Randomize the source word at `0x87A28` and the 2 destination bytes
  *     match the bytes in the TS buffer.
  *
- * Uso: npx tsx packages/cli/src/test-slapstic-word-copy-2ff28-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slapstic-word-copy-2ff28-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

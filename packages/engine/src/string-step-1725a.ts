@@ -113,7 +113,7 @@ export function stringStep1725A(
     return;
   }
 
-  // 0x017296: move.l 0x3e(a2), 0x3a(a2)  — reload cursor da loop-start
+  // 0x017296: move.l 0x3e(a2), 0x3a(a2)  — reload cursor from loop-start
   wl(r, off + 0x3a, rl(r, off + 0x3e));
 
   // 0x01729c..0x0172a6: 0x0c += 0x00; 0x10 += 0x04
@@ -129,4 +129,5 @@ export function stringStep1725A(
   computeSpriteCoords_v3(state, slotPtr);
 }
 
+/** @public */
 export const STRING_STEP_1725A_ADDR = 0x0001725a as const;

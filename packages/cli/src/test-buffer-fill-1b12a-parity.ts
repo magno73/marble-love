@@ -2,11 +2,11 @@
 /**
  * test-buffer-fill-1b12a-parity.ts — differential FUN_0001B12A vs `bufferFill1B12A`.
  *
- * **Strategia**:
+ * **Strategy**:
  *   For each test case:
- *   1. Scelgo typeCode and subIdx.
+ *   1. Pick typeCode and subIdx.
  *   2. Read pointer tables from ROM to find the A1 object address
- *      (o A2 per tipthe 4/0xe).
+ *      (or A2 for type 4/0xe).
  *   3. Write random values into relevant fields of the base object
  *      (A1[0xc], A1[0x10], A1[0x14], A1[0x1a], A1[0x1c]/[0x3a]/[0x3e]/[0x58]).
  *   4. For types with sub-obj pointer, write NULL_PTR (0xffffffff) or
@@ -14,10 +14,10 @@
  *   5. Run binary and TS with the same configuration and compare the
  *      12 byte of output.
  *
- * This approach ensures that all memory reads stay in valid regions.
- * ben definite (ROM o work-RAM), eliminando le discrepanze da pointer garbage.
+ * This approach ensures that all memory reads stay in valid, well-defined
+ * regions (ROM or work-RAM), eliminating discrepancies from pointer garbage.
  *
- * Uso: npx tsx packages/cli/src/test-buffer-fill-1b12a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-buffer-fill-1b12a-parity.ts [N]
  *      default N=500
  */
 

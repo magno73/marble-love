@@ -1,5 +1,5 @@
 /**
- * Test clearPlayfieldStride (FUN_12186) — smoke tests sui branches principali.
+ * Test clearPlayfieldStride (FUN_12186) — smoke tests on the main branches.
  *
  */
 
@@ -22,7 +22,7 @@ function fillSentinel(buf: Uint8Array, value: number): void {
 }
 
 describe("clearPlayfieldStride (FUN_12186)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(PF_RAM_BASE_ADDR).toBe(0xa00000);
     expect(STRIDE_START_ADDR).toBe(0xa00006);
     expect(STRIDE_ENTRY_COUNT).toBe(64);
@@ -32,7 +32,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(STRIDE_CLEAR_BYTES + STRIDE_SKIP_BYTES).toBe(STRIDE_BYTES);
   });
 
-  it("preserva i first 6 byte (offset < 0xA00006)", () => {
+  it("preserves the first 6 bytes (offset < 0xA00006)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xaa);
     clearPlayfieldStride(pf);
@@ -41,7 +41,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("azzera 72 byte to the inizio of each entry, preserva i successivi 56", () => {
+  it("clears 72 bytes at the start of each entry, preserves the next 56", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xff);
     clearPlayfieldStride(pf);
@@ -49,13 +49,13 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     for (let entry = 0; entry < STRIDE_ENTRY_COUNT; entry++) {
       const base = STRIDE_OFF + entry * STRIDE_BYTES;
 
-      // Primi 72 byte = 0
+      // First 72 bytes = 0
       for (let j = 0; j < STRIDE_CLEAR_BYTES; j++) {
         const idx = base + j;
         if (idx >= PF_SIZE) break;
         expect(pf[idx]).toBe(0);
       }
-      // Successivi 56 byte = 0xFF (preservati)
+      // Next 56 bytes = 0xFF (preserved)
       for (let j = STRIDE_CLEAR_BYTES; j < STRIDE_BYTES; j++) {
         const idx = base + j;
         if (idx >= PF_SIZE) break;
@@ -64,7 +64,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("non writes beyond l'last byte cleared (0xA01FCD)", () => {
+  it("does not write beyond the last cleared byte (0xA01FCD)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0x5a);
     clearPlayfieldStride(pf);
@@ -72,13 +72,13 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     const lastClearedOff = STRIDE_OFF + (STRIDE_ENTRY_COUNT - 1) * STRIDE_BYTES + (STRIDE_CLEAR_BYTES - 1);
     expect(lastClearedOff).toBe(0x1fcd);
     expect(pf[lastClearedOff]).toBe(0);
-    // I 50 byte successivi (0x1FCE..0x1FFF) restano 0x5A
+    // The next 50 bytes (0x1FCE..0x1FFF) stay 0x5A
     for (let i = lastClearedOff + 1; i < PF_SIZE; i++) {
       expect(pf[i]).toBe(0x5a);
     }
   });
 
-  it("totale byte azzerati = 64 × 72 = 4608 (su buffer pre-fillato 0xFF)", () => {
+  it("total bytes cleared = 64 × 72 = 4608 (on a buffer pre-filled with 0xFF)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xff);
     clearPlayfieldStride(pf);
@@ -90,7 +90,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(zeros).toBe(4608);
   });
 
-  it("idempotente: call twice == una time", () => {
+  it("idempotent: call twice == once", () => {
     const a = new Uint8Array(PF_SIZE);
     fillSentinel(a, 0x33);
     clearPlayfieldStride(a);
@@ -103,13 +103,13 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(b).toEqual(a);
   });
 
-  it("buffer più corto: bound-safe, no overflow", () => {
+  it("shorter buffer: bound-safe, no overflow", () => {
     // 100-byte buffer: only entry 0 is partial.
     const small = new Uint8Array(100);
     fillSentinel(small, 0xc7);
     clearPlayfieldStride(small);
 
-    // Primi 6 byte preservati
+    // First 6 bytes preserved
     for (let i = 0; i < STRIDE_OFF; i++) {
       expect(small[i]).toBe(0xc7);
     }
@@ -117,13 +117,13 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     for (let i = STRIDE_OFF; i < STRIDE_OFF + STRIDE_CLEAR_BYTES && i < 100; i++) {
       expect(small[i]).toBe(0);
     }
-    // 78..99 (skip region entry 0) preservati
+    // 78..99 (skip region entry 0) preserved
     for (let i = STRIDE_OFF + STRIDE_CLEAR_BYTES; i < 100; i++) {
       expect(small[i]).toBe(0xc7);
     }
   });
 
-  it("buffer already a zero: no-op effective (stays all 0)", () => {
+  it("buffer already zero: effectively a no-op (stays all 0)", () => {
     const pf = new Uint8Array(PF_SIZE);
     clearPlayfieldStride(pf);
     for (let i = 0; i < PF_SIZE; i++) {

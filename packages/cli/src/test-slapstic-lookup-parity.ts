@@ -2,17 +2,17 @@
 /**
  * test-slapstic-lookup-parity.ts — differential FUN_2FFB8 vs slapsticLookup.
  *
- * la word a `0x80080 + signExt16((arg<<5)&0xFFFF)`.
+ * the word at `0x80080 + signExt16((arg<<5)&0xFFFF)`.
  *
  *
- * Pattern fissi to cover i branches chiave:
+ * Fixed patterns to cover the key branches:
  *   0..3: arg=0..3 (caller FUN_1ACE0)
  *   4..7: arg=0xE4, 0xC9, 0x4D, 0xFF (caller FUN_16F6C-style word)
- *   8: arg=0x400 (signExt → negativo, address < 0x80080)
+ *   8: arg=0x400 (signExt → negative, address < 0x80080)
  *   9: arg=0x800 (wrap → idx=0)
  *   ≥10: random
  *
- * Uso: npx tsx packages/cli/src/test-slapstic-lookup-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slapstic-lookup-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -79,10 +79,10 @@ async function main(): Promise<void> {
     else if (i === 6) argW = 0x4d;
     else if (i === 7) argW = 0xff;
     else if (i === 8) argW = 0x400; // shift → 0x8000, signExt16 → -0x8000
-    else if (i === 9) argW = 0x800; // shift → wrap a 0
+    else if (i === 9) argW = 0x800; // shift → wrap to 0
     else {
       // Bias of the random:
-      //   - 30% piccoli (0..0x7F)
+      //   - 30% small (0..0x7F)
       //   - 30% in the range that produces idx 0..0x7FE (arg 0..0x3F)
       //   - 10% full random
       const r = rng();

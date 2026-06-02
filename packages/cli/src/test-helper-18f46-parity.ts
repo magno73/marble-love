@@ -3,21 +3,21 @@
  * test-helper-18f46-parity.ts — differential FUN_18F46 vs `helper18F46`.
  *
  *
- * **Strategia parity**:
- *   1. Setup ROM lookup-table @ 0x1F0E2 puntando ai 16 slot @ 0x4001DC
+ * **Parity strategy**:
+ *   1. Setup ROM lookup-table @ 0x1F0E2 pointing to the 16 slots @ 0x4001DC
  *      (14-byte stride) - identical to `test-slot-insert-sorted-18e6c-parity.ts`.
  *
  *   2. Setup workRam:
  *      - Rect-slot (16 × 14 byte) @ 0x4001DC: first byte per slot = 0 (free)
- *        il corrispondente slot ha struct[0]=typeCode_del_slot,
- *        struct[1]=subIdx_del_slot.
+ *        the corresponding slot has struct[0]=slot_typeCode,
+ *        struct[1]=slot_subIdx.
  *
  *      → argsLong = [typeCode, subIdx].
  *
  *   4. Run TS via `helper18F46(state, rom, typeCode, subIdx)`.
  *
  *
- * Uso: npx tsx packages/cli/src/test-helper-18f46-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-18f46-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -73,7 +73,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Genera una word signed small in range [-32..+31]. */
+/** Generate a small signed word in range [-32..+31]. */
 function randWordSmall(rng: () => number): number {
   return (Math.floor(rng() * 64) - 32) & 0xffff;
 }
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);
 
-    // Compare slot-area (0x1B2 byte = area rettangoli @ 0x4001DC..0x40038E).
+    // Compare slot-area (0x1B2 byte = rectangle area @ 0x4001DC..0x40038E).
     const binSlots = readBin(cpu, RECT_SLOT_ABS, RECT_AREA_LEN);
     const tsSlots = readTs(stateInst, RECT_SLOT_ABS, RECT_AREA_LEN);
     const diffSL = diffBytes(binSlots, tsSlots);

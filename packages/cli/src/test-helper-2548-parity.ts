@@ -2,20 +2,20 @@
 /**
  * test-helper-2548-parity.ts — differential FUN_00002548 vs helper2548.
  *
- * `FUN_00002548` (10 byte, 0x002548-0x002558):
- *   lsr    (0x00400006).l   ; LSR.W su word @ 0x400006; carry = old bit 0
+ * `FUN_00002548` (10 bytes, 0x002548-0x002558):
+ *   lsr    (0x00400006).l   ; LSR.W on word @ 0x400006; carry = old bit 0
  *   moveq  0x1,D0           ; carry set → D0 = 1
  *   rts
  *   clr.l  D0               ; carry clear → D0 = 0
  *   rts
  *
- * Strategia:
- *   - Randomizza workRam[0x0006..0x0007] (word @ 0x400006).
- *   - Lancia `callFunction(cpu, 0x2548)` and `helper2548(state)`.
- *   - Ripete N (default 500) times, inclusi edge cases:
+ * Strategy:
+ *   - Randomize workRam[0x0006..0x0007] (word @ 0x400006).
+ *   - Run `callFunction(cpu, 0x2548)` and `helper2548(state)`.
+ *   - Repeat N (default 500) times, including edge cases:
  *     word=0, word=1, word=0xFFFF, word=0x8000, word=0x0001, word=0xFFFE.
  *
- * Uso: npx tsx packages/cli/src/test-helper-2548-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-2548-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   let firstFail: FailCase | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Genera il word da testare
+    // Generate the word to test
     const word0: number =
       i < edges.length
         ? edges[i]!

@@ -1,8 +1,8 @@
 /**
  * hi-score-decode-41c8.test.ts — smoke tests of `hiScoreDecode41c8` (FUN_41C8).
  *
- * Verifica i path principali of ritorno + invarianti (range arg1, score
- * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localizzato a
+ * Verifies the main return paths + invariants (arg1 range, score
+ * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localized to
  * 0x401F7A..0x401F80).
  *
  * Bit-perfect parity (500 random cases) verified in
@@ -48,7 +48,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
 
     expect(hiScoreDecode41c8(s, 10)).toBe(RET_INDEX_OOR);
     expect(hiScoreDecode41c8(s, 0xff)).toBe(RET_INDEX_OOR);
-    // arg1 = 0xFFFFFFFF (sign-ext negativo) -> bit 31 set -> grande unsigned -> OOR.
+    // arg1 = 0xFFFFFFFF (negative sign-ext) -> bit 31 set -> large unsigned -> OOR.
     expect(hiScoreDecode41c8(s, 0xffffffff)).toBe(RET_INDEX_OOR);
 
     // No workRam writes in any OOR call.
@@ -91,7 +91,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
     const entryOff = 0x101e + 0 * RECORD_STRIDE;
-    // Score irrilevante.
+    // Score irrelevant.
     s.workRam[entryOff + 0] = 0;
     s.workRam[entryOff + 1] = 0;
     s.workRam[entryOff + 2] = 0;
@@ -108,11 +108,11 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 6]).toBe(0x3c); // '<' (digit 39)
   });
 
-  it("boundary arg1 = MAX_INDEX (= 9) e' VALIDO; arg1 = 10 e' OOR", () => {
+  it("boundary arg1 = MAX_INDEX (= 9) is VALID; arg1 = 10 is OOR", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    // Entry 9: byte off = 9*5 = 45. Entry 9 inizio @ 0x101E + 45 = 0x104B.
+    // Entry 9: byte off = 9*5 = 45. Entry 9 starts @ 0x101E + 45 = 0x104B.
     const entryOff = 0x101e + 9 * RECORD_STRIDE;
     s.workRam[entryOff + 0] = 0xab;
     s.workRam[entryOff + 1] = 0xcd;
@@ -125,13 +125,13 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 2]).toBe(0xcd);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 3]).toBe(0xef);
 
-    // arg1 = 10 e' OOR.
+    // arg1 = 10 is OOR.
     const before = new Uint8Array(s.workRam);
     expect(hiScoreDecode41c8(s, 10)).toBe(RET_INDEX_OOR);
     expect(s.workRam).toEqual(before);
   });
 
-  it("ptr legato dinamicamente a *0x401FFC (cambiare ptr cambia base)", () => {
+  it("ptr bound dynamically to *0x401FFC (changing ptr changes base)", () => {
     const s = emptyGameState();
     // Setup A: ptr = 0x401000 -> table base = 0x40101E. Entry 0 byte 0 = 0xAA.
     writeLongBE(s.workRam, PTR_OFF, 0x401000);
@@ -154,7 +154,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 1]).toBe(0xbb);
   });
 
-  it("writes ESATTAMENTE 7 byte a 0x401F7A..0x401F80 (non beyond)", () => {
+  it("writes EXACTLY 7 bytes at 0x401F7A..0x401F80 (not beyond)", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
@@ -171,7 +171,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
 
     hiScoreDecode41c8(s, 0);
 
-    // Pre-buffer (4 byte) intact.
+    // Pre-buffer (4 bytes) intact.
     expect(s.workRam[OUTPUT_BUFFER_OFF - 4]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 3]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF - 2]).toBe(0x99);
@@ -185,7 +185,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     expect(s.workRam[OUTPUT_BUFFER_OFF + 4]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 5]).toBe(0x20);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 6]).toBe(0x20);
-    // Post-buffer (5 byte) intact.
+    // Post-buffer (5 bytes) intact.
     expect(s.workRam[OUTPUT_BUFFER_OFF + 7]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 8]).toBe(0x99);
     expect(s.workRam[OUTPUT_BUFFER_OFF + 9]).toBe(0x99);

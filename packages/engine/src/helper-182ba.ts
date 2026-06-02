@@ -1,10 +1,10 @@
 /**
- * helper-182ba.ts — replica `FUN_000182BA` (~100 istr, range 0x182BA..0x18449).
+ * helper-182ba.ts — replica `FUN_000182BA` (~100 instr, range 0x182BA..0x18449).
  *
  * **Caller**: `FUN_000158F6` ELSE-branch (line 0x15984), wired in
  * `refresh-frame-10fce.ts` via `objectUpdatePair158CC` callback.
  *
- * **Logica**:
+ * **Logic**:
  *   1. JSR FUN_15DB6(A2)                                — state-validate-grid
  *   2. if (0x36,A2) == 2 → goto GRAVITY (skip seek)
  *   3. A1 = (0x6e,A2)                                   — currentPtr (target byte ptr ROM)
@@ -37,7 +37,7 @@
  * **Sub callees**:
  *  - `FUN_15DB6` = `stateValidateGrid15DB6` (state-validate-grid-15db6.ts)
  *  - `FUN_26196` = `flagScaledMagnitudeDispatch` (flag-scaled-magnitude-dispatch.ts)
- *  - Inner of FUN_26196 = `FUN_261BC` (NOT replicato, default no-op)
+ *  - Inner of FUN_26196 = `FUN_261BC` (NOT replicated, default no-op)
  */
 
 import type { GameState } from "./state.js";
@@ -295,4 +295,5 @@ export function helper182BA(
   void skipSeek;
 }
 
+/** @public */
 export const HELPER_182BA_ADDR = 0x000182ba as const;

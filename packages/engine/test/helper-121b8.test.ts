@@ -2,13 +2,13 @@
  * helper-121b8.test.ts — smoke tests of `helper121B8` (FUN_000121B8).
  *
  * Verifies the function's main paths with every sub-callee
- * iniettati as no-op, isolando la logica interna of FUN_000121B8:
+ * injected as no-ops, isolating the internal logic of FUN_000121B8:
  *
- *   1. Costante `HELPER_121B8_ADDR`
+ *   1. Constant `HELPER_121B8_ADDR`
  *   2. Prologue: writes globals 0x400684/688/68C, 0x40069A/9C, 0x400696/698
- *   3. Percorso "out-of-range" non-player (fun_1cc62 returns large value)
- *   4. Percorso "out-of-range" player (isPlayer=true + out-of-range)
- *   5. Percorso "integrate velocity" (in-range): obj.x += vx, obj.y += vy, obj.z += vz
+ *   3. "out-of-range" path, non-player (fun_1cc62 returns large value)
+ *   4. "out-of-range" path, player (isPlayer=true + out-of-range)
+ *   5. "integrate velocity" path (in-range): obj.x += vx, obj.y += vy, obj.z += vz
  *   6. Bounce detection (doBounce=true → calls fun_12886, restores x/y from globals)
  *   7. State byte dispatch (0x2D → vectorScale mode 2)
  *   8. Player early exit via obj[0x1A] = 0x0B

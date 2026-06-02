@@ -80,7 +80,7 @@ function lerp(a: number, b: number, factor: number): number {
 }
 
 describe("spriteBracketLerp1C676 (FUN_0001C676)", () => {
-  it("azzera all the bytes of controllo to the inizio", () => {
+  it("clears all the control bytes at the start", () => {
     const s = emptyGameState();
     // Pre-set dirty values
     s.workRam[FLAGS_OFF] = 0xff;

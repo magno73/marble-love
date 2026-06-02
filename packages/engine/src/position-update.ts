@@ -1,20 +1,20 @@
 /**
  * Pure leaf port of ROM routine `FUN_0001706C`.
  *
- * ROM @ 0x23D40 indicizzata per "rotation index" and "inverse rotation index".
+ * ROM @ 0x23D40 indexed by "rotation index" and "inverse rotation index".
  *
  * Likely use case: playfield scroll/movement based on trackball direction
  * (4 direction bits plus 4 cardinal conditions).
  *
- *   0x40066A  byte: bitmap of flag of direzione (bit 0..3)
- *   0x40066C  byte: cardinale +X flag
- *   0x40066E  byte: cardinale +Y flag
- *   0x400670  byte: cardinale -X flag
- *   0x400672  byte: cardinale -Y flag
- *   0x400674  word: speed gate per +X
- *   0x400676  word: speed gate per +Y
- *   0x400678  word: speed gate per -X
- *   0x40067A  word: speed gate per -Y
+ *   0x40066A  byte: bitmap of direction flags (bit 0..3)
+ *   0x40066C  byte: cardinal +X flag
+ *   0x40066E  byte: cardinal +Y flag
+ *   0x400670  byte: cardinal -X flag
+ *   0x400672  byte: cardinal -Y flag
+ *   0x400674  word: speed gate for +X
+ *   0x400676  word: speed gate for +Y
+ *   0x400678  word: speed gate for -X
+ *   0x40067A  word: speed gate for -Y
  *
  * **ROM lookup table @ 0x23D40**: signed delta words. Indices 0..7 represent
  * the 8 cardinal/diagonal directions.
@@ -134,7 +134,7 @@ export function positionUpdate(
   const a4WordStored = (a4Word & 0xffff) & 0x8000 ? (a4Word & 0xffff) - 0x10000 : a4Word & 0xffff;
   const a0WordStored = (a0Word & 0xffff) & 0x8000 ? (a0Word & 0xffff) - 0x10000 : a0Word & 0xffff;
 
-  // ─── Cardinali (4 if independent) ────────────────────────────────────
+  // ─── Cardinals (4 independent ifs) ───────────────────────────────────
 
   // +X (D5 += localM4 if flag@66C != 0 && < 3 && d3 < 4 && gate@674 > 0 signed)
   const flagPx = r[POS_FLAG_PX_OFF] ?? 0;
@@ -160,7 +160,7 @@ export function positionUpdate(
     d6 = (d6 + a0WordStored) | 0;
   }
 
-  // ─── Bitmap @ 0x40066A: 4 bit per movimenti diagonali ─────────────────
+  // ─── Bitmap @ 0x40066A: 4 bits for diagonal movements ─────────────────
   const bitmap = r[POS_BITMAP_OFF] ?? 0;
 
   // bit 0: D5 += localM4, D6 += localM2 (NE diagonal-ish)

@@ -1,7 +1,7 @@
 /**
  * string-addr-check-39f0.ts — replica `FUN_0039F0` (24 byte, 0x0039F0–0x003A08).
  *
- * In TS restituiamo il flag Z as boolean.
+ * In TS we return the Z flag as a boolean.
  *
  * Disassembly:
  *   000039f0  cmpa.l #0x3850,A1

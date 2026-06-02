@@ -71,7 +71,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU32(s, off + 0x28)).toBe(0x0098006c);
   });
 
-  it("handles overflow word su D3w (yMinusX) as signed << 16 in the packed", () => {
+  it("handles overflow word on D3w (yMinusX) as signed << 16 in the packed", () => {
     const s = emptyGameState();
     const STRUCT = 0x00401000;
     const off = STRUCT - 0x400000;
@@ -95,7 +95,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU32(s, off + 0x28)).toBe(0x80884054);
   });
 
-  it("uses HUD_OFFSET globale @ 0x40097E in the calcolo of D2w", () => {
+  it("uses HUD_OFFSET global @ 0x40097E in the computation of D2w", () => {
     const s = emptyGameState();
     const STRUCT = 0x00401000;
     const off = STRUCT - 0x400000;
@@ -119,7 +119,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     expect(readU16(s, POS_Y_OFF)).toBe(0);
   });
 
-  it("returns verbatim il D0 of the callback inner264AA (non lo modifies)", () => {
+  it("returns the inner264AA callback's D0 verbatim (does not modify it)", () => {
     const s = emptyGameState();
     const STRUCT = 0x004015c0;
     const off = STRUCT - 0x400000;
@@ -137,7 +137,7 @@ describe("spriteCoordsJsr150D0 (FUN_000150D0)", () => {
     }
   });
 
-  it("la callback receives exactly (structPtr, 2) — mode hard-coded", () => {
+  it("the callback receives exactly (structPtr, 2) — mode hard-coded", () => {
     const s = emptyGameState();
     const STRUCT_LIST = [0x00400018, 0x004000fa, 0x00400500, 0x00401e00];
     for (const STRUCT of STRUCT_LIST) {

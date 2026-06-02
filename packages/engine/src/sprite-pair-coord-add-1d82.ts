@@ -9,7 +9,7 @@
  * **Disasm 0x1D82..0x1E07** (134 byte):
  *
  *   00001d82    movem.l {D3 D2},-(SP)         ; save D2,D3 (8 byte)
- *   00001d86    move.w  (0xe,SP),D1w          ; D1 = arg1.lo (with the index)
+ *   00001d86    move.w  (0xe,SP),D1w          ; D1 = arg1.lo (col index)
  *   00001d8a    move.w  (0x12,SP),D2w         ; D2 = arg2.lo (bank index)
  *   00001d8e    move.w  (0x16,SP),D3w         ; D3 = arg3.lo (delta A1)
  *   00001d92    movea.l #0xa02000,A1          ; A1 base = sprite-bank A
@@ -20,13 +20,13 @@
  *   00001da4    add.l   D0,D0                 ; D0 = D2 << 9
  *   00001da6    add.l   A1,D0
  *   00001da8    movea.l D0,A1                 ; A1 = 0xA02000 + D2*0x200
- *   00001daa..1db8  (idem per A0)             ; A0 = 0xA02100 + D2*0x200
+ *   00001daa..1db8  (same for A0)             ; A0 = 0xA02100 + D2*0x200
  *   00001db6    moveq   0x0,D0
  *   00001db8    move.w  D1w,D0w
  *   00001dba    add.l   D0,D0                 ; D0 = D1 << 1
  *   00001dbc    add.l   A1,D0
  *   00001dbe    movea.l D0,A1                 ; A1 += D1*2
- *   00001dc0..1dc8  (idem per A0)             ; A0 += D1*2
+ *   00001dc0..1dc8  (same for A0)             ; A0 += D1*2
  *   00001dca    move.w  (A1),D0w              ; D0 = *A1
  *   00001dcc    asr.w   #0x5,D0w              ; arithmetic >> 5 (signed)
  *   00001dce    andi.w  #0x1ff,D0w            ; mask low 9 bit
@@ -41,7 +41,7 @@
  *   00001de8    or.w    D0w,D1w
  *   00001dea    andi.w  #0x3fff,D1w           ; clear bit 14,15
  *   00001dee    move.w  D1w,(A1)              ; *A1 = repacked
- *   00001df0..1e00  (idem per A0)             ; *A0 = repacked
+ *   00001df0..1e00  (same for A0)             ; *A0 = repacked
  *   00001e02    movem.l (SP)+,{D2 D3}
  *   00001e06    rts
  *
@@ -49,19 +49,19 @@
  * bank offset by 0x100 (= 128 words = 64 entries at 4 bytes each). Each word
  * has this layout:
  *
- *   bit 13..5   : signed 9-bit "coord" (mask 0x1FF, asr per estrarre)
+ *   bit 13..5   : signed 9-bit "coord" (mask 0x1FF, asr to extract)
  *
  *
  * **Args** (4 longwords on the stack, 68k cdecl):
  *   - arg2 (long): bank index. Only low word (D2.w). Typical range [0..7].
  *   - arg3 (long): deltaA. Only low word (D3.w). Added word-wise to the coord
- *                  estratta da `*A1` (sprite-ram bank A).
+ *                  extracted from `*A1` (sprite-ram bank A).
  *   - arg4 (long): deltaB. Only low word (`(0x1A,SP)`). Added word-wise to the
  *                  coord extracted from `*A0` (sprite-ram bank B).
  *
  * **Side effects**:
- *   - `state.spriteRam[(bank*0x200)+(with the*2)..+1]`     (word, BE) — bank A
- *   - `state.spriteRam[0x100+(bank*0x200)+(with the*2)..]` (word, BE) — bank B
+ *   - `state.spriteRam[(bank*0x200)+(col*2)..+1]`     (word, BE) — bank A
+ *   - `state.spriteRam[0x100+(bank*0x200)+(col*2)..]` (word, BE) — bank B
  *
  * Used by scenes with precomputed delta-x and delta-y tables.
  *
@@ -128,14 +128,14 @@ function repackCoord(oldWord: number, delta: number): number {
 /**
  *
  * Applies `deltaA` to the 9-bit coordinate at bank A and `deltaB` to the
- * 9-bit coordinate at bank B for the given `bank` and `with the`.
+ * 9-bit coordinate at bank B for the given `bank` and `col`.
  *
- *                offset bytes = `with the * 2`. Callers typically use 0..0x37.
+ *                offset bytes = `col * 2`. Callers typically use 0..0x37.
  *                offset bytes = `bank * 0x200`. Callers typically use 0..7.
  * @param deltaA  Delta word (`arg3 & 0xFFFF`) added to the 9-bit coordinate of
- *                bank A (`*0xA02000 + bank*0x200 + with the*2`).
+ *                bank A (`*0xA02000 + bank*0x200 + col*2`).
  * @param deltaB  Delta word (`arg4 & 0xFFFF`) added to the 9-bit coordinate of
- *                bank B (`*0xA02100 + bank*0x200 + with the*2`).
+ *                bank B (`*0xA02100 + bank*0x200 + col*2`).
  *
  * parity tests use only valid input).
  */
@@ -152,7 +152,7 @@ export function spritePairCoordAdd1D82(
   const dA = deltaA & 0xffff;
   const dB = deltaB & 0xffff;
 
-  // A1 = 0xA02000 + (bank << 9) + (with the << 1) — long add wrapping a 32 bit.
+  // A1 = 0xA02000 + (bank << 9) + (col << 1) — long add wrapping at 32 bits.
   const baseOff = (((bankW << 9) >>> 0) + ((colW << 1) >>> 0)) >>> 0;
   // bank A: spriteRam offset 0 + baseOff
   const offA = baseOff;

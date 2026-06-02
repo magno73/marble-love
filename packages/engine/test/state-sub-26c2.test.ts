@@ -31,7 +31,7 @@ function readWord(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("stateSub26C2 (FUN_26C2)", () => {
-  it("registra slot 0 in state=5 con arg3.w >= 0 (threshold positiva)", () => {
+  it("registers slot 0 in state=5 with arg3.w >= 0 (positive threshold)", () => {
     const s = emptyGameState();
     const calls: Array<[number, number]> = [];
     const ret = stateSub26C2(s, 0xdeadbeef, 0x0000abcd, 0x00000042, {
@@ -48,7 +48,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     expect(readWord(s, COUNTER_BASE + 0)).toBe(0);
   });
 
-  it("registra in state=6 con arg3.w < 0 and uses abs as threshold", () => {
+  it("registers in state=6 with arg3.w < 0 and uses abs as threshold", () => {
     const s = emptyGameState();
     // arg3.w = 0xFF80 → -128 signed. abs = 128 = 0x0080.
     const ret = stateSub26C2(s, 0x11112222, 0x00003333, 0x0000ff80);
@@ -59,24 +59,24 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     expect(readLong(s, DATA_BASE + 0)).toBe(0x11112222);
   });
 
-  it("skips slot occupied and takes il first free", () => {
+  it("skips occupied slots and takes the first free one", () => {
     const s = emptyGameState();
     s.workRam[STATE_BASE + 0] = 1;
     s.workRam[STATE_BASE + 1] = 4;
-    // Slot 2 vuoto
+    // Slot 2 empty
     const ret = stateSub26C2(s, 0xcafebabe, 0x00001234, 0x00000005);
     expect(ret).toBe(1);
     expect(s.workRam[STATE_BASE + 2]).toBe(5);
     expect(readLong(s, DATA_BASE + 2 * 4)).toBe(0xcafebabe);
     expect(readWord(s, THRESHOLD_BASE + 2 * 2)).toBe(0x0005);
     expect(readWord(s, WORD16_BASE + 2 * 2)).toBe(0x1234);
-    // Altri slot intact
+    // Other slots intact
     expect(s.workRam[STATE_BASE + 0]).toBe(1);
     expect(s.workRam[STATE_BASE + 1]).toBe(4);
     expect(s.workRam[STATE_BASE + 3]).toBe(0);
   });
 
-  it("returns 0 but calls comunque renderStringChain se all slot busy", () => {
+  it("returns 0 but still calls renderStringChain if all slots busy", () => {
     const s = emptyGameState();
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = 1;
     const calls: Array<[number, number]> = [];
@@ -88,13 +88,13 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     expect(calls.length).toBe(1);
     expect(calls[0][0]).toBe(0x12345678);
     expect(calls[0][1] | 0).toBe(0xffff9abc | 0);
-    // Tutti the slot intact
+    // All slots intact
     for (let i = 0; i < 4; i++) expect(s.workRam[STATE_BASE + i]).toBe(1);
   });
 
-  it("uses solo low word of arg2 and arg3 (mask 0xFFFF)", () => {
+  it("uses only the low word of arg2 and arg3 (mask 0xFFFF)", () => {
     const s = emptyGameState();
-    // arg2 and arg3 high bits ignorati per WORD16/THRESHOLD.
+    // arg2 and arg3 high bits ignored for WORD16/THRESHOLD.
     const ret = stateSub26C2(s, 0xaaaabbbb, 0xdead5678, 0xbeef0001);
     expect(ret).toBe(1);
     expect(readWord(s, WORD16_BASE + 0)).toBe(0x5678);
@@ -102,7 +102,7 @@ describe("stateSub26C2 (FUN_26C2)", () => {
     expect(s.workRam[STATE_BASE + 0]).toBe(5); // 0x0001 >= 0
   });
 
-  it("non azzera FLAG34 (a differenza of FUN_2BDA/FUN_2C60)", () => {
+  it("does not clear FLAG34 (unlike FUN_2BDA/FUN_2C60)", () => {
     const s = emptyGameState();
     s.workRam[FLAG34_BASE + 0] = 0x77;
     const ret = stateSub26C2(s, 0x11111111, 0x2222, 0x3333);

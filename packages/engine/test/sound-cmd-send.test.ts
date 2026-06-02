@@ -23,7 +23,7 @@ describe("soundCmdSend (FUN_158AC)", () => {
     expect(r).toBe(1);
   });
 
-  it("skip flag con SOLO byte basso != 0 → comunque 0 (tst.w word)", () => {
+  it("skip flag with ONLY low byte != 0 → still 0 (tst.w word)", () => {
     const s = emptyGameState();
     s.workRam[0x3b8] = 0x00;
     s.workRam[0x3b9] = 0x01; // word = 0x0001
@@ -31,7 +31,7 @@ describe("soundCmdSend (FUN_158AC)", () => {
     expect(r).toBe(0);
   });
 
-  it("skip flag con SOLO byte alto != 0 → returns 0", () => {
+  it("skip flag with ONLY high byte != 0 → returns 0", () => {
     const s = emptyGameState();
     s.workRam[0x3b8] = 0x80;
     s.workRam[0x3b9] = 0x00; // word = 0x8000
@@ -39,21 +39,21 @@ describe("soundCmdSend (FUN_158AC)", () => {
     expect(r).toBe(0);
   });
 
-  it("chipPending=true (chip mai ready) → returns 0 also con skip=0", () => {
+  it("chipPending=true (chip never ready) → returns 0 even with skip=0", () => {
     const s = emptyGameState();
     const r = soundCmdSend(s, 0x42, true);
     expect(r).toBe(0);
   });
 
-  it("byteArg non influenza il return value (is solo dato spedito)", () => {
+  it("byteArg does not influence the return value (it is only the data sent)", () => {
     const s = emptyGameState();
     expect(soundCmdSend(s, 0x00)).toBe(1);
     expect(soundCmdSend(s, 0x7f)).toBe(1);
-    expect(soundCmdSend(s, 0x80)).toBe(1); // negative se sign-extended
+    expect(soundCmdSend(s, 0x80)).toBe(1); // negative if sign-extended
     expect(soundCmdSend(s, 0xff)).toBe(1);
   });
 
-  it("no side effect su workRam (ne in path skip ne in path send)", () => {
+  it("no side effect on workRam (neither in skip path nor in send path)", () => {
     const s = emptyGameState();
     s.workRam[0x3b8] = 0x12;
     s.workRam[0x3b9] = 0x34;

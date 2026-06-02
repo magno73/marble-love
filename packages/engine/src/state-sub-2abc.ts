@@ -39,7 +39,7 @@
  *   add.l  D1, D1                         ; D1 = 2 * rot (signed)
  *   movea.l #0x72A4, A1
  *   move.b (0x1, A1, D1*0x1), D1b         ; D1.b = byte @ 0x72A5 + 2*rot
- *   asl.l  D1, D0                         ; D0 = with the << (D1 & 0x3f)
+ *   asl.l  D1, D0                         ; D0 = column << (D1 & 0x3f)
  *   add.l  D2, D0                         ; D0 += D2
  *   add.l  D0, D0                         ; D0 *= 2
  *   adda.l D0, A3                         ; A3 = 0xA03000 + D0 (alpha tile addr)
@@ -72,10 +72,10 @@
  *   movem.l (SP)+, {D2 A2 A3 A4}
  *   rts
  *
- * **Semantica**: dato un pointer a struct "string entry":
+ * **Semantics**: given a pointer to a "string entry" struct:
  *        if rot == 0: D2 = sext(tickOff) << 6
  *        else:        D2 = 0x29 - sext(tickOff)
- *        D0 = ((sext(with the) << shift) + D2) * 2
+ *        D0 = ((sext(col) << shift) + D2) * 2
  *        a3 = 0xA03000 + D0
  *      where stride = signed word @ 0x72A0 + 2*rot.
  *   4. Chain check: if sext(marker) + sext(VAL_F00) > 1 -> A0 = *(A0+8)
@@ -103,7 +103,7 @@ const CHAIN_SAFETY = 1024 as const;
 const STRING_SAFETY = 4096 as const;
 
 /**
- * mantenuta per simmetria with the pattern altrui (state-sub-2678, state-sub-2da0).
+ * Kept for symmetry with the other helper patterns (state-sub-2678, state-sub-2da0).
  */
 export interface StateSub2ABCSubs {
 }
@@ -160,12 +160,12 @@ function clearAlphaWord(state: GameState, addr: number): void {
 /**
  *
  * @param state    GameState (modifies alphaRam @ 0xA03000..0xA03FFF).
- * @param arg1Long pointer (long) a struct "string entry": with the@+0, tickOff@+1,
+ * @param arg1Long pointer (long) to a "string entry" struct: col@+0, tickOff@+1,
  *                 stringPtr@+2 (long), marker@+6, nextPtr@+8 (long).
- * @param _subs    placeholder (FUN_2ABC non ha jsr).
+ * @param _subs    placeholder (FUN_2ABC has no jsr).
  *
  * **Side effects** in `state.alphaRam`:
- *     with the/tickOff/rot/stride/shift.
+ *     col/tickOff/rot/stride/shift.
  */
 export function stateSub2ABC(
   state: GameState,

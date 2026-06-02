@@ -1,7 +1,7 @@
 /**
  * pf-scroll.ts — playfield scroll update.
  *
- * Replica `FUN_00026D8A` (PF scroll setup, sub conditional of FUN_28788).
+ * Replica of `FUN_00026D8A` (PF scroll setup, conditional sub of FUN_28788).
  *
  *   *0x400008 != 0 AND *0x40000A >= 2 AND *0x400014 == 1
  *
@@ -36,7 +36,7 @@ function sext16(w: number): number {
 }
 
 /**
- * Replica `FUN_00026D8A` — playfield horizontal scroll update.
+ * Replica of `FUN_00026D8A` — playfield horizontal scroll update.
  *
  * *0x400008 != 0 AND *0x40000A >= 2 AND *0x400014 == 1.
  */
@@ -63,13 +63,13 @@ export function pfScrollUpdate(state: GameState): void {
 
   // Rotation index: D1 = ((AV & 8) << 5) (= 0 or 0x100)
   const av = readU16BE(r, AV_CONTROL_OFF);
-  const rotIndex = (av & 8) << 5; // 0 o 0x100
+  const rotIndex = (av & 8) << 5; // 0 or 0x100
 
-  // Base offsets: A0 = 0xA02000 + D1*2, A1 = 0xA02180 + D1*2 (D1*2 = 0 o 0x200)
+  // Base offsets: A0 = 0xA02000 + D1*2, A1 = 0xA02180 + D1*2 (D1*2 = 0 or 0x200)
   const a0Base = TILE_BASE + (rotIndex * 2);
   const a1Base = TILE_CMP_BASE + (rotIndex * 2);
 
-  // Loop: max 60 iter; exit appena D0 (= old D3) == cmpWord
+  // Loop: max 60 iter; exit as soon as D0 (= old D3) == cmpWord
   for (let d3 = 0; d3 < MAX_ITER; d3++) {
     const a0Off = a0Base + d3 * 2;
     const tileWord = readU16BE(sp, a0Off);

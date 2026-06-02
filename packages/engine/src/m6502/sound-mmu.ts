@@ -1,7 +1,7 @@
 /**
  * Atari System 1 sound-chip memory map for Marble Madness.
  *
- * Address space 64KB visto from the 6502:
+ * Address space 64KB as seen from the 6502:
  *
  *  $0000-$0FFF  RAM 4KB                                              [R/W]
  *  $1800-$1801  YM2151 register select / data                        [R/W]
@@ -210,7 +210,7 @@ export function createSoundMmu(cfg: SoundMmuConfig): SoundMmu {
       return;
     }
     // ROM range write: open bus, ignored (mirror MAME).
-    // Tutte le altre region: ignored.
+    // All other regions: ignored.
   }
 
   return {

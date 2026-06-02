@@ -1,5 +1,5 @@
 /**
- * waypoint-list-step-1815a.test.ts — smoke tests per `FUN_0001815A`.
+ * waypoint-list-step-1815a.test.ts — smoke tests for `FUN_0001815A`.
  *
  */
 
@@ -58,7 +58,7 @@ function setRecord(
 }
 
 describe("waypointListStep1815A (FUN_0001815A)", () => {
-  it("list_empty: pointer punta a terminator (byte 0) → exitMode=list_empty, no side effects", () => {
+  it("list_empty: pointer points to terminator (byte 0) → exitMode=list_empty, no side effects", () => {
     const s = emptyGameState();
     // List: terminator only.
     s.workRam[LIST_OFF] = 0;
@@ -69,21 +69,21 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.recordsConsumed).toBe(0);
     expect(r.soundDispatches).toBe(0);
     expect(r.fun26196Called).toBe(false);
-    // pointer non advanced by
+    // pointer not advanced
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
     // exhausted flag not touched.
     expect(s.workRam[FLAG_OFF]).toBe(0);
   });
 
-  it("in_range advance: target sufficientemente vicino al record → consume + sound + loop", () => {
+  it("in_range advance: target close enough to record → consume + sound + loop", () => {
     const s = emptyGameState();
-    // sx=1 → delta = (1<<19) - target_x + 0x40000. Per delta=0x40000 (in range
-    // as abs(0x40000)>>12 = 0x40, NOT in range). Dobbiamo |delta|<(0x20<<12)=0x20000.
-    // Scegliamo target_x = (1<<19) + 0x40000 = 0xC0000 → delta = 0x80000 - 0xC0000 + 0x40000 = 0
+    // sx=1 → delta = (1<<19) - target_x + 0x40000. For delta=0x40000 (in range
+    // as abs(0x40000)>>12 = 0x40, NOT in range). We need |delta|<(0x20<<12)=0x20000.
+    // We choose target_x = (1<<19) + 0x40000 = 0xC0000 → delta = 0x80000 - 0xC0000 + 0x40000 = 0
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0xc0000);
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_Y_OFFSET, 0xc0000);
 
-    // Lista: 1 record + terminator. sx=sy=1 → byte non zero (no terminator).
+    // List: 1 record + terminator. sx=sy=1 → byte non-zero (no terminator).
     setRecord(s, LIST_OFF + 0, 1, 1, 0x10, 5); // sound_idx=5 (>=0)
     s.workRam[LIST_OFF + 4] = 0; // terminator
     setLongBE(s, PTR_OFF, LIST_BASE);
@@ -108,7 +108,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(s.workRam[ENTITY_OFF + ENTITY_LIST_END_OFFSET]).toBe(0xff);
     // exhausted flag word = 1
     expect(((s.workRam[FLAG_OFF]! << 8) | s.workRam[FLAG_OFF + 1]!) & 0xffff).toBe(1);
-    // pointer advanced by of 4
+    // pointer advanced by 4
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE + 4);
   });
 
@@ -132,7 +132,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.exitMode).toBe("list_exhausted");
   });
 
-  it("out_of_range: target far → applica accelerazione and calls fun_26196", () => {
+  it("out_of_range: target far → applies acceleration and calls fun_26196", () => {
     const s = emptyGameState();
     // sx=1, target_x=0 → delta = 0x80000 - 0 + 0x40000 = 0xC0000.
     // asr 12 = 0xC0 ≥ 0x20 → out of range.
@@ -155,18 +155,18 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(r.soundDispatches).toBe(0);
     expect(fun26196Calls).toBe(1);
     expect(r.fun26196Called).toBe(true);
-    // pointer NOT advanced by
+    // pointer NOT advanced
     expect(getLongBE(s, PTR_OFF)).toBe(LIST_BASE);
     expect(getLongBE(s, ENTITY_OFF + ENTITY_X_OFFSET)).not.toBe(0);
   });
 
-  it("out_of_range + gravity flag: entity[0x8] decrementato and clampato a -0x50000", () => {
+  it("out_of_range + gravity flag: entity[0x8] decremented and clamped to -0x50000", () => {
     const s = emptyGameState();
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_Y_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_X_OFFSET, 0);
     setLongBE(s, ENTITY_OFF + ENTITY_Y_OFFSET, 0);
-    // entity.z partendo da -0x4F000 → -0x4F000 + (-0x6000) = -0x55000 < -0x50000 → clamp
+    // entity.z starting from -0x4F000 → -0x4F000 + (-0x6000) = -0x55000 < -0x50000 → clamp
     setLongBE(s, ENTITY_OFF + ENTITY_Z_OFFSET, (-0x4f000) >>> 0);
     s.workRam[ENTITY_OFF + ENTITY_GRAVITY_FLAG_OFFSET] = 1;
 
@@ -195,7 +195,7 @@ describe("waypointListStep1815A (FUN_0001815A)", () => {
     expect(getLongBE(s, ENTITY_OFF + ENTITY_Z_OFFSET)).toBe((-0x16000) >>> 0);
   });
 
-  it("subs assente → no crash; out_of_range path safe", () => {
+  it("subs absent → no crash; out_of_range path safe", () => {
     const s = emptyGameState();
     setLongBE(s, ENTITY_OFF + ENTITY_TARGET_X_OFFSET, 0);
     setRecord(s, LIST_OFF + 0, 1, 1, 0x10, 0x7f);

@@ -1,8 +1,8 @@
 /**
  * Test moScreenInit1A286 (FUN_0001A286) — smoke + side-effect coverage.
  *
- *   - 32 word in MO RAM (sprite RAM banks 0..3, 8 entry each)
- *   - 4 word in PF RAM @ A00A20/A28/A30/A38
+ *   - 32 words in MO RAM (sprite RAM banks 0..3, 8 entries each)
+ *   - 4 words in PF RAM @ A00A20/A28/A30/A38
  *
  * `cli/src/test-mo-screen-init-1a286-parity.ts` (500/500 cases).
  */
@@ -29,12 +29,12 @@ function readWordBE(buf: Uint8Array, off: number): number {
 }
 
 describe("moScreenInit1A286 (FUN_0001A286)", () => {
-  it("writes the 2 globali workRam, le 32 word MO RAM, le 4 word PF RAM", () => {
+  it("writes the 2 global workRam values, the 32 MO RAM words, the 4 PF RAM words", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const pfRam = new Uint8Array(0x2000);
 
-    // Sporco i target per verify l'overwrite completo.
+    // Dirty the targets to verify the complete overwrite.
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE] = 0xab;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_A_ADDR - WORK_RAM_BASE + 1] = 0xcd;
     s.workRam[MO_SCREEN_INIT_1A286_ISR_DST_B_ADDR - WORK_RAM_BASE] = 0xef;
@@ -69,7 +69,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     }
   });
 
-  it("calls all le sub in the ordine binary, renderString 2 times con args giusti", () => {
+  it("calls all the subs in binary order, renderString 2 times with the right args", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const pfRam = new Uint8Array(0x2000);
@@ -95,7 +95,7 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     expect(renderArgs).toEqual(MO_SCREEN_INIT_1A286_RENDER_STRING_ARGS);
   });
 
-  it("default no-op: non solleva su subs assenti / pfRam null / subs vuoti", () => {
+  it("default no-op: does not throw on missing subs / pfRam null / empty subs", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => moScreenInit1A286(s, rom)).not.toThrow();
@@ -105,16 +105,16 @@ describe("moScreenInit1A286 (FUN_0001A286)", () => {
     expect(readWordBE(s.spriteRam, 0x000)).toBe(0x1401);
   });
 
-  it("pfRam=null skips le 4 PF writes (the altri side effect avvengono)", () => {
+  it("pfRam=null skips the 4 PF writes (the other side effects still happen)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     moScreenInit1A286(s, rom, null);
-    // MO writes presenti
+    // MO writes present
     expect(readWordBE(s.spriteRam, 0x100)).toBe(0x0400);
     expect(readWordBE(s.spriteRam, 0x18e)).toBe(0x0007);
   });
 
-  it("costanti esposte: ADDR and SUB_ADDRS and args are bit-exact from the disasm", () => {
+  it("exposed constants: ADDR and SUB_ADDRS and args are bit-exact from the disasm", () => {
     expect(MO_SCREEN_INIT_1A286_ADDR).toBe(0x0001a286);
     expect(MO_SCREEN_INIT_1A286_SUB_ADDRS).toEqual([
       0x00028c7e,

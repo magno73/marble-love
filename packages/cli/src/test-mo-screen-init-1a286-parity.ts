@@ -2,10 +2,10 @@
 /**
  * test-mo-screen-init-1a286-parity.ts — differential FUN_1A286 vs moScreenInit1A286.
  *
- *   - 32 word in MO RAM (sprite RAM banks 0..3, 8 entry each)
- *   - 4 word in PF RAM (0xA00A20/A28/A30/A38)
+ *   - 32 words in MO RAM (sprite RAM banks 0..3, 8 entries each)
+ *   - 4 words in PF RAM (0xA00A20/A28/A30/A38)
  *   - 5 sub-jsr (clearAlphaTiles, paletteInitLevel, renderString trampoline ×2)
- *   - 3 spin-wait su MMIO (F60001 / *A2 frame-counter)
+ *   - 3 spin-waits on MMIO (F60001 / *A2 frame-counter)
  *
  *
  *   1. Patch ROM with `addq.b #1, sentinel.l ; rts` stubs (8 bytes) at the 3 entries
@@ -24,10 +24,10 @@
  *        - 3 sentinel byte (clearAlpha, paletteInit, renderString-counter)
  *
  *   5. Run `moScreenInit1A286()` with 3 callbacks that increment the
- *      stessi sentinel slot in `state.workRam`.
+ *      same sentinel slot in `state.workRam`.
  *
  *
- * Uso: npx tsx packages/cli/src/test-mo-screen-init-1a286-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-mo-screen-init-1a286-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -49,7 +49,7 @@ import {
 
 /**
  * Step-based callFunction: like `callFunction()` but uses `system.step()`
- * invece of `system.run(burst)`. Garantisce terminazione PRECISA non appena
+ * instead of `system.run(burst)`. Guarantees PRECISE termination as soon as
  * `pc == SENTINEL_RET_ADDR`, preventing a burst from executing extra
  * make the PC converge on FUN_2572 in a misleading way if the PC keeps
  * instructions from the unmapped 0xCAFEBABE post-rts address.
@@ -92,7 +92,7 @@ const SUB_RENDER_STRING = 0x00002572; // target of JMP.L @ 0x142
 const SPIN_WAIT_1_BEQ = 0x0001a296;
 const SPIN_WAIT_2_BEQ = 0x0001a2e0; // cmp.l (A2),D0 ; beq
 
-// Sentinel slot in work RAM (uno per stub).
+// Sentinel slot in work RAM (one per stub).
 const SENTINEL_BASE = 0x004003e0;
 const SENT_CLEAR_ALPHA = SENTINEL_BASE + 0;
 const SENT_PALETTE_INIT = SENTINEL_BASE + 1;
@@ -159,11 +159,11 @@ async function main(): Promise<void> {
   }
   const romBuf = Buffer.from(readFileSync(romPath));
 
-  // Pre-patch: stub addq+rts athe 3 entry sub.
+  // Pre-patch: stub addq+rts at the 3 sub entries.
   for (const sub of SUBS_LIST) {
     patchStubAddq(romBuf, sub.entry, sub.sentinel);
   }
-  // Pre-patch: NOP suthe 2 spin-wait `beq.b $-2`.
+  // Pre-patch: NOP over the 2 spin-waits `beq.b $-2`.
   patchNop(romBuf, SPIN_WAIT_1_BEQ);
   patchNop(romBuf, SPIN_WAIT_2_BEQ);
 
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
     stateInst.workRam[GLOB_ISR_DST_B - 0x400000] = (preIsrB >>> 8) & 0xff;
     stateInst.workRam[GLOB_ISR_DST_B - 0x400000 + 1] = preIsrB & 0xff;
 
-    // Pre-fill MO RAM (4 banks × 8 entry × 2 byte = 32 byte) randomico.
+    // Pre-fill MO RAM (4 banks × 8 entry × 2 byte = 32 byte) randomly.
     for (const bankOff of MO_BANK_OFFSETS) {
       for (let k = 0; k < MO_ENTRY_COUNT * 2; k++) {
         const v = rb();
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
       pfRamTs[off + 1] = word & 0xff;
     }
 
-    // Pre-fill 3 sentinel byte randomici.
+    // Pre-fill 3 random sentinel bytes.
     const scratch = new Uint8Array(3);
     for (let k = 0; k < 3; k++) {
       const v = rb();
@@ -233,7 +233,7 @@ async function main(): Promise<void> {
     }
 
     callFunctionStep(cpu, FUN_1A286, [], 50_000);
-    // Esegui TS
+    // Run TS
     msNs.moScreenInit1A286(stateInst, romView, pfRamTs, subs);
 
     let fail: FailRecord | null = null;

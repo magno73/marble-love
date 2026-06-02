@@ -2,7 +2,7 @@
  * object-helpers.ts — small utilities that operate on object structs.
  *
  * - **FUN_2648C — `copyGlobalsToObj(objAddr)`**: copies 3 longs from globals
- *   @ 0x400684/0x400688/0x40068C a obj+0xC/0x10/0x14.
+ *   @ 0x400684/0x400688/0x40068C to obj+0xC/0x10/0x14.
  *
  * - **FUN_160AE — `objIndexedByteAdvance(objAddr, idxWord)`**:
  *   *A0+0x6E = byte_at(*(A0+0x6E)+2 + idxWord) * 6 + *(A0+0x72)

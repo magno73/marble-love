@@ -1,6 +1,6 @@
 // Probe video parity: compare spriteRam / playfieldRam / alphaRam / colorRam
-// TS vs MAME a various frame. Output: byte diff for each video buffer.
-// If all the buffers are == 0 byte diff → output visual IDENTICO bit-perfect.
+// TS vs MAME at various frames. Output: byte diff for each video buffer.
+// If all the buffers are == 0 byte diff → output visually IDENTICAL bit-perfect.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";
@@ -66,4 +66,4 @@ for (const f of CHECK_FRAMES) {
   console.log(`${fStr} | ${dSp.toString().padStart(4)}/${(0x1000).toString(16)}  | ${dPf.toString().padStart(4)}/${(0x2000).toString(16)}   | ${dAl.toString().padStart(4)}/${(0x1000).toString(16)}  | ${dCol.toString().padStart(4)}/${(0x800).toString(16)}   | ${tot}`);
 }
 
-console.log("\nNote: diff < 50/buffer = visivamente impercettibile. diff == 0 = bit-perfect.");
+console.log("\nNote: diff < 50/buffer = visually imperceptible. diff == 0 = bit-perfect.");

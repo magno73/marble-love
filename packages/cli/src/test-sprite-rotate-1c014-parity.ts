@@ -3,19 +3,19 @@
  * test-sprite-rotate-1c014-parity.ts — differential FUN_0001C014 vs
  * `spriteRotate1C014`.
  *
- * FUN_0001C014 (1546 byte): "sprite rotation matrix builder + vertex
+ * FUN_0001C014 (1546 bytes): "sprite rotation matrix builder + vertex
  * `A2+0xA4`.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - Compare workRam:
- *       - matrice 3×3 + cols espansthe 3..7: A2+0x74..0xA3 (48 byte = 24 word×2)
+ *       - 3×3 matrix + expanded cols 3..7: A2+0x74..0xA3 (48 bytes = 24 words×2)
  *       - slot output: A2+0xA4..0xC3 (32 bytes = 4 slots x 8 bytes, use 4x6=24)
  *       - CA counter: A2+0xCA (1 byte).
  *
- * **Suite**:
+ * **Suites**:
  *   - B: force velocity idle (flag@+58=0xA) → slot-only path.
  *
- * Uso: npx tsx packages/cli/src/test-sprite-rotate-1c014-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sprite-rotate-1c014-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ─── Summary ───────────────────────────────────────────────────────────
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (firstFail !== null) {
     const f: FailRecord = firstFail;
     console.log(

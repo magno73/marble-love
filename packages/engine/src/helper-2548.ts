@@ -49,7 +49,7 @@ export function helper2548(state: GameState): number {
   const carry = word & 1;
   const shifted = (word >>> 1) & 0xffff;
 
-  // Riscrivi word BE
+  // Rewrite word BE
   r[LSR_FLAG_OFF] = (shifted >>> 8) & 0xff;
   r[LSR_FLAG_OFF + 1] = shifted & 0xff;
 

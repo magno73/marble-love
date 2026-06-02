@@ -10,7 +10,7 @@
  * Verifies the function does not throw and modifies the expected workRam areas.
  * without depending on the MAME binary.
  *
- * Uso: npx tsx packages/cli/src/test-sprite-rotate-1c014-smoke.ts
+ * Usage: npx tsx packages/cli/src/test-sprite-rotate-1c014-smoke.ts
  */
 
 import { exit } from "node:process";
@@ -32,12 +32,12 @@ function makeState(): { s: ReturnType<typeof stateNs.emptyGameState>; rom: RomIm
   return { s, rom };
 }
 
-/** Scrive word big-endian in workRam */
+/** Writes a big-endian word in workRam */
 function w16(s: ReturnType<typeof stateNs.emptyGameState>, off: number, v: number): void {
   s.workRam[off] = (v >>> 8) & 0xff;
   s.workRam[off + 1] = v & 0xff;
 }
-/** Scrive long big-endian in workRam */
+/** Writes a big-endian long in workRam */
 function w32(s: ReturnType<typeof stateNs.emptyGameState>, off: number, v: number): void {
   const u = v >>> 0;
   s.workRam[off] = (u >>> 24) & 0xff;
@@ -45,7 +45,7 @@ function w32(s: ReturnType<typeof stateNs.emptyGameState>, off: number, v: numbe
   s.workRam[off + 2] = (u >>> 8) & 0xff;
   s.workRam[off + 3] = u & 0xff;
 }
-/** Legge word unsigned big-endian */
+/** Reads an unsigned big-endian word */
 function r16(s: ReturnType<typeof stateNs.emptyGameState>, off: number): number {
   return (((s.workRam[off] ?? 0) << 8) | (s.workRam[off + 1] ?? 0)) & 0xffff;
 }

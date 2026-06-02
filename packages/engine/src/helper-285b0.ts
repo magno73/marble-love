@@ -1,9 +1,9 @@
 /**
- * helper-285b0.ts — replica `FUN_000285B0` (30 istr, 0x58 byte).
+ * helper-285b0.ts — replica `FUN_000285B0` (30 instr, 0x58 byte).
  *
  *
  *
- * **Disasm 0x285B0..0x28606** (30 istr):
+ * **Disasm 0x285B0..0x28606** (30 instr):
  *
  *   000285b0  movem.l {A2 D2},-(SP)               ; save A2, D2 (8 byte)
  *   000285b4  movea.l (0xc,SP),A2                 ; A2 = arg1 = objPtr
@@ -32,8 +32,8 @@
  *   00028606  rts
  *
  *   - `arg1Long` → A2 = `objPtr` (absolute workRam address of object struct).
- *   - `arg2Long` → D2.b = `modeByte` (low byte; normal range 0..16; trattato
- *     as signed byte per the indexing in the tabthe ROMs).
+ *   - `arg2Long` → D2.b = `modeByte` (low byte; normal range 0..16; treated
+ *     as signed byte for the indexing in the ROM tables).
  *
  * **ROM tables** (read from RomImage @ program[addr]):
  *   - Score word table @ 0x23CD4 — 17 signed words (mode 0..16):

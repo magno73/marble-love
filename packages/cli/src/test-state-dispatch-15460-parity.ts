@@ -14,11 +14,11 @@
  *     `(0x25,A0) = 0x02 if kind in {0,4} else 0x01`.
  *
  *   - B: random kind in [7..0x7F] (positive out-of-range) -> epilogue only.
- *   - C: kind random ∈ [0x80..0xFF] (out-of-range negativo signed) →
+ *   - C: kind random ∈ [0x80..0xFF] (out-of-range signed negative) →
  *        epilogue only (blt branch).
  *
  *
- * Uso: npx tsx packages/cli/src/test-state-dispatch-15460-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-dispatch-15460-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -53,7 +53,7 @@ const KIND_OFF = 0x1a;
 const TARGET_PTR_OFF = 0x4a;
 
 /**
- * Reset zone osservate (struct + target cell area).
+ * Reset observed zones (struct + target cell area).
  */
 function resetZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
@@ -161,7 +161,7 @@ function buildCase(
     writeLong(structBytes, 0x20, opts.case4FieldsOverride.v20);
   }
 
-  // touch unused: rl() per consumare RNG and mantenere determinismo
+  // touch unused: rl() to consume RNG and keep determinism
   void rl;
 
   return { structBytes, targetBytes };
@@ -178,7 +178,7 @@ function applyCase(
   for (let i = 0; i < TARGET_SIZE; i++) {
     pokeByteBoth(state, cpu, TARGET_BASE + i, c.targetBytes[i] ?? 0);
   }
-  void pokeLongBoth; // dummy reference per evitare unused-warning
+  void pokeLongBoth; // dummy reference to avoid unused-warning
 }
 
 async function main(): Promise<void> {
@@ -267,9 +267,9 @@ async function main(): Promise<void> {
   );
   totalOk += okA;
 
-  // ─── Suite B: kind ∈ [7..0x7F] (out-of-range positivo) ──────────────────
+  // ─── Suite B: kind ∈ [7..0x7F] (out-of-range positive) ──────────────────
   console.log(
-    `\n=== Suite B: kind ∈ [7..0x7F] (OOR signed≥0) — ${perSuite} cases ===`,
+    `\n=== Suite B: kind ∈ [7..0x7F] (OOR signed ≥ 0) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: kind ∈ [0x80..0xFF] (out-of-range negativo signed) ───────
+  // ─── Suite C: kind ∈ [0x80..0xFF] (out-of-range signed negative) ───────
   console.log(
     `\n=== Suite C: kind ∈ [0x80..0xFF] (OOR signed<0 → blt) — ${perSuite} cases ===`,
   );
@@ -303,7 +303,7 @@ async function main(): Promise<void> {
   // ─── Suite D: focus case 4 (velocity magnitude) ────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: kind=4 + (v1C, v20) pathologici — ${sizeD} cases ===`,
+    `\n=== Suite D: kind=4 + (v1C, v20) pathological — ${sizeD} cases ===`,
   );
   const pathologicalPairs = [
     [0x00000064, 0xffffffce], // |100| > |50|, D1 > 0  → X_POS
@@ -338,7 +338,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

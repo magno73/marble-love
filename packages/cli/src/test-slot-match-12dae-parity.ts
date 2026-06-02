@@ -11,9 +11,9 @@
  *   - long slot+0x3A: 30% == target (match key), 70% random.
  *   - byte slot+0x1F: 30% == 0xC, 70% random.
  *
- *   - D0 (byte low confrontato as byte → match of the single bit out).
+ *   - D0 (low byte compared as byte → match on the single output bit).
  *
- * Uso: npx tsx packages/cli/src/test-slot-match-12dae-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slot-match-12dae-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     //  >=5: random mix.
     const pattern = i < 5 ? i : 5;
 
-    // *(arg+2): per pattern 2/3 forziamo target=0 per attivare alt-path.
+    // *(arg+2): for patterns 2/3 we force target=0 to activate the alt-path.
     let target: number;
     if (pattern === 2 || pattern === 3) {
       target = 0;
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
     stateInst.workRam[(ARG_PTR - 0x400000) + 4] = (target >>> 8) & 0xff;
     stateInst.workRam[(ARG_PTR - 0x400000) + 5] = target & 0xff;
 
-    // Setup 25 slot.
+    // Setup 25 slots.
     for (let s = 0; s < SLOT_COUNT; s++) {
       const slot = SLOT_BASE + s * SLOT_STRIDE;
 
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
       stateInst.workRam[(slot - 0x400000) + 0x1f] = v1f;
     }
 
-    // Snapshot work RAM (per detect spurious writes side of the oracolo).
+    // Snapshot work RAM (to detect spurious writes on the oracle side).
     const tsBefore = new Uint8Array(stateInst.workRam);
 
     // Run binary

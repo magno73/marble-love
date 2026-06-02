@@ -18,7 +18,7 @@
  *   ext.l    D0                             ; sign-extend → long
  *   move.l   D0,D2
  *   asl.l    #0x8,D2                        ; D2 = dX << 8 (long)
- *   move.b   (0x26,A0),D0b                  ; (of nuovo)
+ *   move.b   (0x26,A0),D0b                  ; (again)
  *   ext.w    D0w
  *   add.w    D0w,D0w
  *   movea.l  #0x244d6,A1                    ; A1 = ROM dY table
@@ -38,8 +38,8 @@
  *   move.l   D1,D0
  *   asr.l    #0x2,D0                        ; D0 = dY_long / 4
  *   move.l   D0,D1
- *   move.l   D2,(A0)                        ; entity[0..3] = dX (forse /4)
- *   move.l   D1,(0x4,A0)                    ; entity[4..7] = dY (forse /4)
+ *   move.l   D2,(A0)                        ; entity[0..3] = dX (maybe /4)
+ *   move.l   D1,(0x4,A0)                    ; entity[4..7] = dY (maybe /4)
  *   move.l   (SP)+,D2
  *   rts
  *
@@ -52,18 +52,18 @@
  * `(state, rom, addr) => void` signature matches the ROM `jsr` call with
  * `entity` as the only long argument on the stack.
  *
- * **Wrapper helper** (`sub19976AsInjection`): produce una closure compatibile
+ * **Wrapper helper** (`sub19976AsInjection`): produces a closure compatible
  * with the `fun_19976` sub-injection from `state-sub-198bc.ts` / `sub-19692.ts`,
- * applicando la `RomImage` once al setup.
+ * applying the `RomImage` once at setup.
  *
  */
 
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
-/** Base ROM table per dX (word, signed). */
+/** Base ROM table for dX (word, signed). */
 export const ROM_DX_TABLE = 0x244b6 as const;
-/** Base ROM table per dY (word, signed). */
+/** Base ROM table for dY (word, signed). */
 export const ROM_DY_TABLE = 0x244d6 as const;
 
 /** Offset velocity cache long X (`entity[0..3]`). */
@@ -104,7 +104,7 @@ function readSignedWordRom(rom: RomImage, addr: number): number {
 /**
  *
  * @param state       GameState (modifies `entity[0x00..0x07]` and `entity[0x0C..0x13]`).
- * @param rom         RomImage per leggere le tabthe ROMs 0x244B6 (dX) and 0x244D6 (dY).
+ * @param rom         RomImage to read the ROM tables 0x244B6 (dX) and 0x244D6 (dY).
  */
 export function sub19976(state: GameState, rom: RomImage, entityAddr: number): void {
   const off = (entityAddr - 0x400000) >>> 0;
@@ -124,7 +124,7 @@ export function sub19976(state: GameState, rom: RomImage, entityAddr: number): v
   writeU32(state, off + ENTITY_POS_X_OFFSET, ((readU32(state, off + ENTITY_POS_X_OFFSET) + d2) >>> 0));
   writeU32(state, off + ENTITY_POS_Y_OFFSET, ((readU32(state, off + ENTITY_POS_Y_OFFSET) + d1) >>> 0));
 
-  // If state == 7 → asr.l #2 (signed shift right by 2) su d2 and d1.
+  // If state == 7 → asr.l #2 (signed shift right by 2) on d2 and d1.
   let velX = d2;
   let velY = d1;
   if ((r[off + ENTITY_STATE_OFFSET] ?? 0) === STATE_FINE_SCALE) {
@@ -140,7 +140,7 @@ export function sub19976(state: GameState, rom: RomImage, entityAddr: number): v
 /**
  * (`StateSub198BCSubs.fun_19976`, `Sub19692Subs.fun_19976`).
  *
- * @param rom  RomImage da iniettare (catturato in closure).
+ * @param rom  RomImage to inject (captured in the closure).
  * @returns    closure `(state, entityAddr) => void`.
  */
 export function sub19976AsInjection(

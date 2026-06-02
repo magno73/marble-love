@@ -1,5 +1,5 @@
 /**
- * state-sub-15bd0.test.ts — smoke + corner case of FUN_15BD0.
+ * state-sub-15bd0.test.ts — smoke + corner cases of FUN_15BD0.
  */
 
 import { describe, it, expect } from "vitest";
@@ -45,9 +45,9 @@ function makeRecorder(): {
 }
 
 describe("stateSub15BD0 (FUN_15BD0)", () => {
-  it("no-op completo se arg2.b == 0 && arg3.b == 0", () => {
+  it("full no-op if arg2.b == 0 && arg3.b == 0", () => {
     const s = emptyGameState();
-    // Sporca byte struct+0x18 per verify invarianza.
+    // Dirty byte struct+0x18 to verify invariance.
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0xaa;
     s.workRam[OBJ_COUNT_OFF] = 0;
     s.workRam[OBJ_COUNT_OFF + 1] = 5;
@@ -62,7 +62,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls285b0).toHaveLength(0);
   });
 
-  it("Block A only: arg3.b != 0 azzera struct+0x18 and calls fun_18f46(2, sext_l(byte19))", () => {
+  it("Block A only: arg3.b != 0 zeroes struct+0x18 and calls fun_18f46(2, sext_l(byte19))", () => {
     const s = emptyGameState();
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0xaa;
     s.workRam[STRUCT_PTR_OFF + 0x19] = 0xff; // signed -1 → sext_l → 0xFFFFFFFF
@@ -77,7 +77,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls285b0).toHaveLength(0);
   });
 
-  it("Block A: byte19 positivo (sign-extension non muta value)", () => {
+  it("Block A: positive byte19 (sign-extension does not change value)", () => {
     const s = emptyGameState();
     s.workRam[STRUCT_PTR_OFF + 0x19] = 0x42;
     const r = makeRecorder();
@@ -86,7 +86,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls18f46[0]?.arg2).toBe(0x42);
   });
 
-  it("Block B only: arg2.b != 0 itera *0x400396 obj and calls fun_285b0 where state ∉ {0,2}", () => {
+  it("Block B only: arg2.b != 0 iterates *0x400396 obj and calls fun_285b0 where state ∉ {0,2}", () => {
     const s = emptyGameState();
     // count word = 4
     s.workRam[OBJ_COUNT_OFF] = 0;
@@ -109,7 +109,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls18f46).toHaveLength(0);
   });
 
-  it("Block B: count == 0 → loop body mai executed", () => {
+  it("Block B: count == 0 → loop body never executed", () => {
     const s = emptyGameState();
     s.workRam[OBJ_COUNT_OFF] = 0;
     s.workRam[OBJ_COUNT_OFF + 1] = 0;
@@ -120,7 +120,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls285b0).toHaveLength(0);
   });
 
-  it("Entrambi i block: arg2.b != 0 && arg3.b != 0 → A poi B in sequenza", () => {
+  it("Both blocks: arg2.b != 0 && arg3.b != 0 → A then B in sequence", () => {
     const s = emptyGameState();
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0x99;
     s.workRam[STRUCT_PTR_OFF + 0x19] = 0x07;
@@ -138,7 +138,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(s.workRam[STRUCT_PTR_OFF + 0x18]).toBe(0); // cleared by Block A
   });
 
-  it("uses solo low byte of arg2 / arg3 (top 24 bit ignorati)", () => {
+  it("uses only the low byte of arg2 / arg3 (top 24 bits ignored)", () => {
     const s = emptyGameState();
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0x77;
     s.workRam[OBJ_COUNT_OFF] = 0;
@@ -161,7 +161,7 @@ describe("stateSub15BD0 (FUN_15BD0)", () => {
     expect(r.calls285b0).toHaveLength(1);
   });
 
-  it("default subs (omessi): no-op but side-effect Block A su workRam still applied", () => {
+  it("default subs (omitted): no-op but Block A side-effect on workRam still applied", () => {
     const s = emptyGameState();
     s.workRam[STRUCT_PTR_OFF + 0x18] = 0xaa;
     s.workRam[STRUCT_PTR_OFF + 0x19] = 0x55;

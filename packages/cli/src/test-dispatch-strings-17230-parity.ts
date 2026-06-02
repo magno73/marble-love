@@ -4,9 +4,9 @@
  * differential FUN_17230 vs `dispatchStrings17230`.
  *
  * times `FUN_0001725a(slotPtr)` with `slotPtr = 0x401482 + i*0x42` for
- * `i ∈ 0..6`. Per testare in isolamento la *sola* logica of dispatch
+ * `i ∈ 0..6`. To test the dispatch logic *alone* in isolation.
  *
- * **Stub layout** (20 byte) iniettato @ `0x0001725a`:
+ * **Stub layout** (20 byte) injected @ `0x0001725a`:
  *
  *   2079 0040 1BF8     ; movea.l (0x401BF8).l, A0   ; A0 = head pointer
  *   202F 0004          ; move.l  (4,SP), D0          ; D0 = slotPtr arg
@@ -22,13 +22,13 @@
  *   4. **TS side**: set head=0x401C00 (in pokeMem), run TS dispatcher with
  *      callback that invokes `callFunction(0x1725a, [slot])` (same stub).
  *   5. Snapshot workRam_post_ts.
- *   6. Compare byte-per-byte 0x400000..0x402000.
+ *   6. Compare byte-by-byte 0x400000..0x402000.
  *
  *
- *   - pre-fill workRam (pattern + random tail)
- *     dispatcher non clobberi nulla.
+ *   - pre-fill workRam (pattern + random tail) so the
+ *     dispatcher clobbers nothing.
  *
- * Uso: npx tsx packages/cli/src/test-dispatch-strings-17230-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-dispatch-strings-17230-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -52,9 +52,9 @@ const FUN_CALLEE = 0x0001725a;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 const QUEUE_HEAD_PTR = 0x00401bf8;
-const QUEUE_BASE = 0x00401c00; // base FIFO
+const QUEUE_BASE = 0x00401c00; // FIFO base
 
-/** Stub bytes: vedi disasm in header. */
+/** Stub bytes: see disasm in header. */
 const STUB_BYTES = [
   0x20, 0x79, 0x00, 0x40, 0x1b, 0xf8, // movea.l (0x401BF8).l, A0
   0x20, 0x2f, 0x00, 0x04, // move.l (4,SP), D0
@@ -71,7 +71,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Cattura workRam from the CPU in un Uint8Array. */
+/** Capture workRam from the CPU into a Uint8Array. */
 function captureWorkRam(cpu: ReturnType<typeof createCpuSync>): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -124,14 +124,14 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // but alcuni harness paranoid riapplicano).
+    // but some paranoid harnesses re-apply it).
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_CALLEE + k, 1, STUB_BYTES[k]!);
       }
     }
 
-    // ── Genera pre-fill workRam deterministico ──────────────────────────
+    // ── Generate deterministic workRam pre-fill ─────────────────────────
     const pre = new Uint8Array(WORK_RAM_SIZE);
     if (i === 0) pre.fill(0x00);
     else if (i === 1) pre.fill(0xff);
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
     const postTs = captureWorkRam(cpu);
 
     // ── Compare ─────────────────────────────────────────────────────────
-    // TS: 7× callFunction sentinel/arg). Questthe bytes are "tombstone"
+    // TS: 7× callFunction sentinel/arg). These bytes are "tombstone"
     //
     const STACK_SCRATCH_START = 0x1e80;
     let match = true;

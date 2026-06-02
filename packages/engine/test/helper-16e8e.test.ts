@@ -1,5 +1,5 @@
 /**
- * helper-16e8e.test.ts — unit tests per `FUN_00016E8E` (helper16E8E).
+ * helper-16e8e.test.ts — unit tests for `FUN_00016E8E` (helper16E8E).
  *
  *
  */
@@ -21,7 +21,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     expect(HELPER_16E8E_ADDR).toBe(0x00016e8e);
   });
 
-  it("arg=0x1e → no-op (startRow already al limit)", () => {
+  it("arg=0x1e → no-op (startRow already at the limit)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xff);
@@ -31,10 +31,10 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0x1f → no-op (bne: 0x1F ≠ 0x1E, poi 0x20 ≠ 0x1E, …, but 0x1F+1=0x20, poi 0x1E a wrap?)", () => {
-    // scorre up tol wrap 0xFF→0x00→...→0x1E. In pratica 0x1F==0x1F ≠ 0x1E
+  it("arg=0x1f → no-op (bne: 0x1F ≠ 0x1E, then 0x20 ≠ 0x1E, …, but 0x1F+1=0x20, then 0x1E at wrap?)", () => {
+    // scans up to the wrap 0xFF→0x00→...→0x1E. In practice 0x1F==0x1F ≠ 0x1E
     // terms; the implementation must handle wrap correctly.
-    // loop condition 0x20 ≠ 0x1e, poi 0x21... → loop infinito!
+    // loop condition 0x20 ≠ 0x1e, then 0x21... → infinite loop!
     // would loop. Verify only the no-op condition.
     const state = emptyGameState();
     const rom = makeRom();
@@ -45,7 +45,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0x1d → clears solo line 29 (0x24 word @ indirizzo line 29)", () => {
+  it("arg=0x1d → clears only line 29 (0x24 words @ address of line 29)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xcc);
@@ -65,12 +65,12 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=0 → clears all le lines 0..29 (0x24 word per line)", () => {
+  it("arg=0 → clears all lines 0..29 (0x24 words per line)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xbb);
     helper16E8E(state, rom, 0);
-    // (col=3+row*64)*2 siano zero.
+    // (col=3+row*64)*2 must be zero.
     for (let r = 0; r < 30; r++) {
       const base = (3 + r * 64) * 2;
       for (let i = 0; i < 0x24; i++) {
@@ -83,7 +83,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("arg=4 → clears lines 4..29 (caso caller mainLoopInit10504)", () => {
+  it("arg=4 → clears lines 4..29 (mainLoopInit10504 caller case)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xaa);
@@ -102,7 +102,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     expect(state.alphaRam[row0base]).toBe(0xaa);
   });
 
-  it("subs.getAlphaTileAddr può be iniettata", () => {
+  it("subs.getAlphaTileAddr can be injected", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xdd);
@@ -127,7 +127,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     }
   });
 
-  it("solo il low byte of arg is used (M68k move.b)", () => {
+  it("only the low byte of arg is used (M68k move.b)", () => {
     const state = emptyGameState();
     const rom = makeRom();
     fillAlpha(state, 0xff);

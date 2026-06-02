@@ -192,7 +192,7 @@ const FRICTION_TABLE: readonly number[] = [
   0x5000, // [15] 0.3125
 ] as const;
 
-// ─── Helpers interni ──────────────────────────────────────────────────────────
+// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function readU32(wr: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;

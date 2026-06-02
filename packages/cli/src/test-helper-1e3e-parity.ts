@@ -2,14 +2,14 @@
 /**
  * test-helper-1e3e-parity.ts — differential FUN_00001E3E vs `fillSeqWords1E3E`.
  *
- *   1. Genera `count` (0..64), `startValue` (0..0xFFFF), `destOffset` random.
- *   2. Sets scratch area (256 byte in workRam) a 0x55 in both (binary + TS).
+ *   1. Generates `count` (0..64), `startValue` (0..0xFFFF), `destOffset` random.
+ *   2. Sets scratch area (256 bytes in workRam) to 0x55 in both (binary + TS).
  *
  *   SP+0x0C  arg1 = dest (long)
- *   SP+0x12  arg2 = startValue (low word of un long — high word ignorato)
+ *   SP+0x12  arg2 = startValue (low word of a long — high word ignored)
  *   SP+0x14  arg3 = count (long, signed)
  *
- * Uso: npx tsx packages/cli/src/test-helper-1e3e-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-helper-1e3e-parity.ts [N]
  *      default N=500
  */
 
@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     const destOff    = maxOffset > 0 ? Math.floor(rng() * maxOffset) & ~1 : 0; // word-aligned
     const dest       = SCRATCH_ADDR + destOff;
 
-    // Sets scratch a 0x55 in both (binary + TS)
+    // Sets scratch to 0x55 in both (binary + TS)
     for (let j = 0; j < SCRATCH_SIZE; j++) {
       pokeMem(cpu, SCRATCH_ADDR + j, 1, 0x55);
       tsState.workRam[(SCRATCH_ADDR - WORK_RAM_BASE) + j] = 0x55;

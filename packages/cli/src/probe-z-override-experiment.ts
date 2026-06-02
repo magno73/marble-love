@@ -11,7 +11,7 @@ const warm = { workRam: hex2bytes(f0.workRam, 0x2000), playfieldRam: hex2bytes(f
 const s = stateNs.emptyGameState();
 bootInit(s, rom, { warmState: warm });
 
-// Tick + override obj0.z_long da MAME on each tick
+// Tick + override obj0.z_long from MAME on each tick
 for (let i = 1; i <= 99; i++) {
   tick(s, { rom, runMainLoopBody: true, p1X: 0xff, p1Y: 0xff, p2X: 0xff, p2Y: 0xff });
   // Override obj0.z_long (offset 0x2c..0x2f) from MAME snapshot[i]
@@ -22,7 +22,7 @@ for (let i = 1; i <= 99; i++) {
   s.workRam[0x2f] = mw[0x2f]!;
 }
 
-// Drift finale
+// Final drift
 const mw99 = hex2bytes(gt.snapshots[99]!.workRam, 0x2000);
 let total = 0, gameplay = 0, stack = 0;
 const isStack = (o: number) => (o >= 0x440 && o < 0x448) || (o >= 0x1D40 && o < 0x1E80) || (o >= 0x1EE0 && o < 0x1F00);

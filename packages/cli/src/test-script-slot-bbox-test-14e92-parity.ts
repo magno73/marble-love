@@ -3,11 +3,11 @@
  * test-script-slot-bbox-test-14e92-parity.ts — differential FUN_00014E92 vs
  * `scriptSlotBboxTest14E92`.
  *
- * (4 slot stride 0x60). Gated da `*0x400394 ∈ {1,2,5}`.
+ * (4 slot stride 0x60). Gated by `*0x400394 ∈ {1,2,5}`.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - `FUN_00015460` (514 bytes, direction dispatcher) **stubbed with RTS**
- *     (default). Side effects su slot[0x5C/0x58/0x24..0x27] non avvengono in
+ *     (default). Side effects on slot[0x5C/0x58/0x24..0x27] do not occur in
  *   - `FUN_000158AC` (sound command) **stubbed with RTS**. TS no-op. Match.
  *
  * **Suite** (4 × 125 = 500):
@@ -17,13 +17,13 @@
  *   - D: edge cases (selector boundary {0,1,2,3,5,6}, marble@(0,0,0),
  *        state in {0,1,2,5,7}).
  *
- * **Compare** (snapshot completo):
+ * **Compare** (full snapshot):
  *   - 4 slot × {byte+0x18, byte+0x1A, long+0, long+0x4, long+0x1C, long+0x20,
  *               word+0x56, long+0x58}
  *   - entity × {long+0, long+0x4, long+0xC, long+0x10, byte+0x19, byte+0x1A,
  *               byte+0x56, long+0x5A, byte+0x5F, byte+0x60}
  *
- * Uso: npx tsx packages/cli/src/test-script-slot-bbox-test-14e92-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-script-slot-bbox-test-14e92-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -42,7 +42,7 @@ import {
 } from "./binary-oracle-lib.js";
 import type { CpuSession } from "./binary-oracle-lib.js";
 
-/** Sentinel return address per detection of RTS. */
+/** Sentinel return address for detection of RTS. */
 const SENTINEL = 0xcafebabe >>> 0;
 
 /**
@@ -88,7 +88,7 @@ const SLOT_BASE = 0x00401302;
 const SLOT_STRIDE = 0x60;
 const SLOT_COUNT = 4;
 
-/** Aree of workRam libere per i record bbox-pointer (P1, P2). */
+/** Free workRam areas for the bbox-pointer records (P1, P2). */
 const REC_AREA_BASE = 0x00401e00;
 const ENTITY_BASE = 0x00401f00;
 
@@ -256,7 +256,7 @@ interface CaseSetup {
 }
 
 function applyCaseBinary(cpu: CpuSession, c: CaseSetup): void {
-  // Reset workRam (zone interessate).
+  // Reset workRam (affected zones).
   for (let off = 0; off < 0x2000; off++) {
     pokeMem(cpu, 0x400000 + off, 1, 0);
   }
@@ -413,7 +413,7 @@ function makeSlotInit(
   ri: (n: number) => number,
   cfg: { armedRate: number; useDefault: number; states: number[] },
 ): SlotInit {
-  // Allocazione record area: P1 and P2 per slot i.
+  // Record area allocation: P1 and P2 per slot i.
   const p1 = REC_AREA_BASE + i * 0x20; // 32 byte per slot.
   const p2 = REC_AREA_BASE + i * 0x20 + 0x10;
   const useDefault = rng() < cfg.useDefault;
@@ -477,7 +477,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `\n=== scriptSlotBboxTest14E92 (FUN_00014E92) — Suite A: slot spenti — ${perSuite} cases ===`,
+    `\n=== scriptSlotBboxTest14E92 (FUN_00014E92) — Suite A: slots off — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -562,7 +562,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: 1 slot armato bbox custom ──────────────────────────────
+  // ─── Suite C: 1 armed slot with custom bbox ──────────────────────────
   console.log(
     `\n=== Suite C: 1 slot bbox-custom — ${perSuite} cases ===`,
   );
@@ -585,11 +585,11 @@ async function main(): Promise<void> {
         init.x = slotX & 0xffff;
         init.y = slotY & 0xffff;
         init.z = slotZ & 0xffff;
-        // bbox bytes: deltas piccoli signed.
+        // bbox bytes: small signed deltas.
         init.bboxBytes = [
           ((ri(20) - 10) & 0xff),
           ((ri(20) - 10) & 0xff),
-          ((ri(30) + 1) & 0xff), // positivi (extent)
+          ((ri(30) + 1) & 0xff), // positive (extent)
           ((ri(30) + 1) & 0xff),
         ];
         return init;

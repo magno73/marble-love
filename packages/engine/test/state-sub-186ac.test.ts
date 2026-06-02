@@ -1,5 +1,5 @@
 /**
- * state-sub-186ac.test.ts — smoke tests per `FUN_000186AC`.
+ * state-sub-186ac.test.ts — smoke tests for `FUN_000186AC`.
  *
  * && hasArmed), teardown (sentinel!=0 && !hasArmed), noop (the other two).
  * `packages/cli/src/test-state-sub-186ac-parity.ts`.
@@ -61,11 +61,11 @@ function readLongBE(arr: Uint8Array, off: number): number {
 }
 
 describe("stateSub186AC (FUN_000186AC)", () => {
-  it("early_exit: game_mode != 3 → no scrittura, branch=early_exit", () => {
+  it("early_exit: game_mode != 3 → no write, branch=early_exit", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 4); // mode != 3
-    state.workRam[SENTINEL_ADDR - WORK_RAM_BASE] = 0xab; // sentinel arbitrario
+    state.workRam[SENTINEL_ADDR - WORK_RAM_BASE] = 0xab; // arbitrary sentinel
 
     const r = stateSub186AC(state, rom);
     expect(r.branch).toBe("early_exit");
@@ -97,7 +97,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0);
   });
 
-  it("noop: mode==3, sentinel!=0 && hasArmed → branch=noop, sentinel non toccato", () => {
+  it("noop: mode==3, sentinel!=0 && hasArmed → branch=noop, sentinel not touched", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
@@ -113,7 +113,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0xff);
   });
 
-  it("init: sentinel==0 && hasArmed → popola 0x24 entry, sentinel→1, fun_1bb28 chiamato 0x24 times", () => {
+  it("init: sentinel==0 && hasArmed → populates 0x24 entries, sentinel→1, fun_1bb28 called 0x24 times", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
@@ -169,7 +169,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(r.variant).toBeLessThan(4);
     expect(r.fun1BB28Calls).toBe(SLOT_ENTRY_COUNT);
     expect(r.fun18F46Calls).toBe(0);
-    // sentinel diventato 1
+    // sentinel became 1
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(1);
     expect(calledFor).toHaveLength(SLOT_ENTRY_COUNT);
     for (let i = 0; i < SLOT_ENTRY_COUNT; i++) {
@@ -189,7 +189,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     expect(selectorPtr).toBe(0x00013000 + r.variant * 0x100);
   });
 
-  it("teardown: sentinel!=0 && !hasArmed → clear 0x24 entry, sentinel→0; fun_18f46 chiamato per entry[2..3]==0xFFFF", () => {
+  it("teardown: sentinel!=0 && !hasArmed → clear 0x24 entries, sentinel→0; fun_18f46 called for entry[2..3]==0xFFFF", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setWordBE(state.workRam, GAME_MODE_ADDR - WORK_RAM_BASE, 3);
@@ -226,7 +226,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
 
     expect(state.workRam[SENTINEL_ADDR - WORK_RAM_BASE]).toBe(0);
 
-    // Tutte le entry hanno entry[2..3]=0, entry[4]=0, entry[5]=0, entry[6..7]=0
+    // All entries have entry[2..3]=0, entry[4]=0, entry[5]=0, entry[6..7]=0
     for (let i = 0; i < SLOT_ENTRY_COUNT; i++) {
       const entryOff = tableOff + i * SLOT_ENTRY_STRIDE;
       expect(readWordBE(state.workRam, entryOff + 2)).toBe(0);
@@ -244,7 +244,7 @@ describe("stateSub186AC (FUN_000186AC)", () => {
     setWordBE(state.workRam, OBJ_COUNT_ADDR - WORK_RAM_BASE, 0);
     state.workRam[SENTINEL_ADDR - WORK_RAM_BASE] = 1;
 
-    // Solo entry 0: entry[0]=0xFF, entry[2..3]=0xFFFF (trigger)
+    // Only entry 0: entry[0]=0xFF, entry[2..3]=0xFFFF (trigger)
     const tableOff = SLOT_TABLE_ADDR - WORK_RAM_BASE;
     state.workRam[tableOff + 0] = 0xff;
     setWordBE(state.workRam, tableOff + 2, TEARDOWN_TRIGGER_WORD);

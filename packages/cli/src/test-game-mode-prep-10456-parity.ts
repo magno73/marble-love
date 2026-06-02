@@ -3,7 +3,7 @@
  * test-game-mode-prep-10456-parity.ts — differential FUN_10456 vs gameModePrep10456.
  *
  *
- * Uso:
+ * Usage:
  *   bun packages/cli/src/test-game-mode-prep-10456-parity.ts [N=500]
  */
 

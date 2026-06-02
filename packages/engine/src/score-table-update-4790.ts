@@ -102,7 +102,7 @@ export type FieldFetch40D8 = (state: GameState, fieldId: number) => number;
 
 export interface ScoreTableUpdate4790Subs {
   /**
-   *   - second read: `(sign_ext >> 5) & 7`, the with the-offset threshold (local[-4])
+   *   - second read: `(sign_ext >> 5) & 7`, the col-offset threshold (local[-4])
    * Marble Madness program ROM uses `0xE3`.
    */
   romByte1006F?: number;
@@ -484,6 +484,6 @@ export function scoreTableUpdate4790(
     }
   }
 
-  // ── Epilogo: movem.l (SP)+,{D2..D7,A2..A5}; unlk; rts ──────────────────
+  // ── Epilogue: movem.l (SP)+,{D2..D7,A2..A5}; unlk; rts ──────────────────
   void d4; void d2;
 }

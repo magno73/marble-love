@@ -1,10 +1,10 @@
 /**
  * text-slot-writers.ts — replica `FUN_0000255A` + `FUN_00028F28` + `FUN_00028F62`.
  *
- * 3 helper text-slot related, callees indiretti of `FUN_28E3C` (render-score
+ * 3 text-slot-related helpers, indirect callees of `FUN_28E3C` (render-score
  *
- * **`FUN_255A`** (8 instr, 6 callers): write 2 byte + clear byte at +0x6 a
- *   un buffer pointed by A0 (arg long stack):
+ * **`FUN_255A`** (8 instr, 6 callers): write 2 bytes + clear byte at +0x6 to
+ *   a buffer pointed to by A0 (arg long stack):
  *     A0 = (4,SP).l    ; arg ptr
  *     D1.b = (B,SP).b  ; arg byte 1
  *     D0.b = (F,SP).b  ; arg byte 2
@@ -60,7 +60,7 @@ function writeU8Abs(state: GameState, addr: number, value: number): void {
  *   *(1,A0) = D0.b         ; slot[1] = color/byte2
  *   *(6,A0) = 0            ; slot[6] = enable flag = 0
  *
- * @param ptrAbs    Pointer assoluto M68k al text slot (workRam o ROM)
+ * @param ptrAbs    Absolute M68k pointer to the text slot (workRam or ROM)
  * @param byte1     Byte 1 (slot[0])
  * @param byte2     Byte 2 (slot[1])
  */
@@ -121,10 +121,10 @@ export function trimTrailingSpace28F28(
  *   cleanup, rts
  *
  * @param state    GameState
- * @param rom      ROM (per stateSub2572)
- * @param arg1     Word arg per textSlotInit255A byte1
- * @param arg2     Word arg per textSlotInit255A byte2
- * @param arg3     Word arg per stateSub2572 (text ptr long)
+ * @param rom      ROM (for stateSub2572)
+ * @param arg1     Word arg for textSlotInit255A byte1
+ * @param arg2     Word arg for textSlotInit255A byte2
+ * @param arg3     Word arg for stateSub2572 (text ptr long)
  */
 export function renderTextSlot28F62(
   state: GameState,

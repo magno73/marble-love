@@ -1,14 +1,14 @@
 /**
  * wait-vblank-state-gated.ts — replica `FUN_00028DB8` (50 byte).
  *
- * Variante "state-gated" of `vblank-wait.ts` (FUN_52B8). Differenze chiave:
+ * "state-gated" variant of `vblank-wait.ts` (FUN_52B8). Key differences:
  *
  *     FUN_52B8), but the primitive `FUN_00028DEA`, which:
  *       - clr.b *0x400016         (mailbox vblank ack)
  *       - spin: tst.b *0x400016; beq spin    (busy-wait IRQ vblank)
  *       - addq.b #1, *0x4003F0    (counter byte, wrap mod 256)
  *
- *     sign-extension of the LOW BYTE `*0x400391.b`. If i due differiscono,
+ *     sign-extension of the LOW BYTE `*0x400391.b`. If the two differ,
  *
  * **Disasm 0x28DB8..0x28DE9** (50 byte, 1 arg long-on-stack, ret void):
  *
@@ -33,7 +33,7 @@
  *   00028DE4  movem.l (SP)+, {D2 D3}
  *   00028DE8  rts
  *
- * **Convenzione caller** (cfr. xrefs FUN_10504 et al.):
+ * **Caller convention** (cf. xrefs FUN_10504 et al.):
  *   pea     (count).w        ; sext word→long, push 4 byte (BE: hi word, lo word)
  *   jsr     0x00028DB8.l
  *   addq.l  #4, SP           ; cleanup arg
@@ -42,7 +42,7 @@
  *
  *     - if bit 7 of D2b == 1 -> D0w = 0xFFxx
  *     - if bit 7 of D2b == 0 -> D0w = 0x00xx
- *     - "match" iff: high byte == 0x00 (D2b<0x80) o 0xFF (D2b>=0x80),
+ *     - "match" iff: high byte == 0x00 (D2b<0x80) or 0xFF (D2b>=0x80),
  *
  *   - workRam[0x16]   ← 0      (clr.b in FUN_28DEA)
  *   - workRam[0x3F0]  ← prev+1 (addq.b in FUN_28DEA, wrap mod 256)
@@ -58,7 +58,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta (the offset workRam of followed are relativi). */
+/** Absolute WORK RAM base (the following workRam offsets are relative). */
 export const WORK_RAM_BASE = 0x400000;
 
 /** byte mailbox vblank ack: clr+spin in FUN_28DEA. */
@@ -69,7 +69,7 @@ export const GAME_STATE_WORD_OFF = 0x390;
 export const GAME_STATE_LO_BYTE_OFF = 0x391;
 
 /**
- *     workRam[0x3F0] applicati).
+ *     workRam[0x3F0] applied).
  *   - `d0w`: low word of D0 on return (sext_w(initialLoByte) if at least
  */
 export interface WaitVblankStateGatedResult {
@@ -92,12 +92,12 @@ export function waitVblankStateGated(
   abortAtIter: number = 0,
   d0HiPrev: number = 0,
 ): WaitVblankStateGatedResult {
-  // Tronca arg a 16 bit and reinterpreta signed (tst.w + bgt usano flags signed).
+  // Truncate arg to 16 bits and reinterpret as signed (tst.w + bgt use signed flags).
   const argW = countWord & 0xffff;
   const argSigned = argW & 0x8000 ? argW - 0x10000 : argW;
 
   const initialLoByte = (state.workRam[GAME_STATE_LO_BYTE_OFF] ?? 0) & 0xff;
-  // sext_b -> word: if bit7, hthe bytes = 0xFF.
+  // sext_b -> word: if bit7, hi byte = 0xFF.
   const initialSextW =
     initialLoByte & 0x80 ? 0xff00 | initialLoByte : initialLoByte;
 
@@ -116,8 +116,8 @@ export function waitVblankStateGated(
   // hiByte != 0x00/0xFF consistent with bit 7 of loByte).
   const initialMismatch = initialSextW !== initialStateWord;
 
-  // loop while but avoids useless O(count) work.
-  // - abortAtIter in [1..argSigned]: abort to the iter k.
+  // loop while, but avoids useless O(count) work.
+  // - abortAtIter in [1..argSigned]: abort at iteration k.
   let iterations: number;
   let aborts: boolean;
   if (initialMismatch) {
@@ -149,6 +149,6 @@ export function waitVblankStateGated(
 }
 
 /**
- * Re-export of the simbolo as "FUN_00028DB8" per mappatura esplicita
+ * Re-export of the symbol as "FUN_00028DB8" for explicit mapping
  */
 export { waitVblankStateGated as FUN_00028DB8 };

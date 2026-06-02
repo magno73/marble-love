@@ -27,7 +27,7 @@ function setupCanonicalRomTable(rom: RomImage): void {
   }
 }
 
-/** Setup delta-stream @ 0x1EF32 (16 byte: 8 coppie of delta x/y). */
+/** Setup delta-stream @ 0x1EF32 (16 bytes: 8 pairs of delta x/y). */
 function setupDeltaStream(rom: RomImage, bytes: readonly number[]): void {
   for (let i = 0; i < bytes.length; i++) {
     rom.program[DELTA_STREAM + i] = bytes[i]! & 0xff;
@@ -35,7 +35,7 @@ function setupDeltaStream(rom: RomImage, bytes: readonly number[]): void {
 }
 
 describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
-  it("counter pre=1 → decrementa a 0 → returns 0x01; mark byte +0x1C = 1", () => {
+  it("counter pre=1 → decrements to 0 → returns 0x01; mark byte +0x1C = 1", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -53,7 +53,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);
   });
 
-  it("counter pre=2 → decrementa a 1 → returns 0; mark byte +0x1C = 1", () => {
+  it("counter pre=2 → decrements to 1 → returns 0; mark byte +0x1C = 1", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -71,7 +71,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);
   });
 
-  it("counter pre=0 → decrementa a 0xFF → returns 0 (counter post != 0)", () => {
+  it("counter pre=0 → decrements to 0xFF → returns 0 (counter post != 0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -88,7 +88,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x57]).toBe(0xff);
   });
 
-  it("counter pre=0x21 (D2=0x20-0x21=-1) → all i record skip (D1<0 base but D2<0 → first iter D1=-1<0 OK; but per D1>=8 must be D2>=8+iter*2). Verifica path emit con all delta=0 and selettore canonico", () => {
+  it("counter pre=0x21 (D2=0x20-0x21=-1) → all records skip (D1<0 base but D2<0 → first iter D1=-1<0 OK; but for D1>=8 must be D2>=8+iter*2). Verify emit path with all delta=0 and canonical selector", () => {
     // Iter 0: D1 = 0 → range [0..3] → emit @ 0xA4. Iter 1: D1 = -2 → use orig.
     const s = emptyGameState();
     const rom = emptyRomImage();
@@ -136,7 +136,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect((s.workRam[r7]! << 8) | s.workRam[r7 + 1]!).toBe(0x0112);
   });
 
-  it("counter pre=0xE0 (D2=0x20-(-0x20)=0x40) → all the iter hanno D1>=8 (skip): no emit, charcode all 0", () => {
+  it("counter pre=0xE0 (D2=0x20-(-0x20)=0x40) → all iterations have D1>=8 (skip): no emit, charcode all 0", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);
@@ -164,7 +164,7 @@ describe("slotSpawnPattern13D38 (FUN_00013D38)", () => {
     expect(s.workRam[argOff + 0x1c]).toBe(0x01);
   });
 
-  it("branch su (A1+0x1F)==0xD: counter pre=0x20, A1 in slot self, scrivi 0x0D in self+0x1F → branch 'subtract' attivo, charcode iter 0..7 ancora deterministici", () => {
+  it("branch on (A1+0x1F)==0xD: counter pre=0x20, A1 in slot self, write 0x0D into self+0x1F → 'subtract' branch active, charcode iter 0..7 still deterministic", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     setupCanonicalRomTable(rom);

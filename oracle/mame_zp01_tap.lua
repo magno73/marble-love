@@ -1,4 +1,4 @@
--- mame_zp01_tap.lua — log zp[$01] al momento del check $81D5 LDA $01
+-- mame_zp01_tap.lua — log zp[$01] at the moment of the $81D5 LDA $01 check
 local OUT_PATH = "/tmp/mame_zp01.json"
 local TARGET_FRAME = 500
 local audiocpu, sound_mem

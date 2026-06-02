@@ -4,7 +4,7 @@
  * Forwards two sign-extended global bytes plus one caller long from the stack
  * to `FUN_00005388`. This mirrors `state-sub-5334.ts`.
  *
- * **Disasm 0x535E..0x5387** (42 byte):
+ * **Disasm 0x535E..0x5387** (42 bytes):
  *
  *   move.l (0x4,SP),D0           ; D0 = caller arg long
  *   move.l D0,-(SP)              ; push arg -> becomes (0x10,SP) for the callee
@@ -57,8 +57,8 @@ export type Sub535ECallee = (
  * Sign-extend a byte (0..0xFF) to an M68k long (0..0xFFFFFFFF) with bit 7 as sign.
  *
  * `byte 0x7F → 0x0000007F`, `byte 0x80 → 0xFFFFFF80`, `byte 0xFF →
- * 0xFFFFFFFF`. Equivalente a `(b << 24) >> 24` (signed shift right) followed
- * da `>>> 0`.
+ * 0xFFFFFFFF`. Equivalent to `(b << 24) >> 24` (signed shift right) followed
+ * by `>>> 0`.
  */
 function signExtendByteToLong(b: number): number {
   return (((b & 0xff) << 24) >> 24) >>> 0;
@@ -90,10 +90,10 @@ export function stateSub535E(
   const byte99Signed = signExtendByteToLong(r[off99] ?? 0);
   const byte98Signed = signExtendByteToLong(r[off98] ?? 0);
 
-  // Normalizza arg a unsigned long.
+  // Normalize arg to unsigned long.
   const argU = arg >>> 0;
 
   // jsr inner(byte98, byte99, arg) — order matches stack push of binary
-  // (callee vede arg1=(0x4,SP)=byte98, arg2=(0x8,SP)=byte99, arg3=(0xC,SP)=arg).
+  // (callee sees arg1=(0x4,SP)=byte98, arg2=(0x8,SP)=byte99, arg3=(0xC,SP)=arg).
   return inner(byte98Signed, byte99Signed, argU) >>> 0;
 }

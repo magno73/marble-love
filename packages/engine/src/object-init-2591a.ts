@@ -24,8 +24,8 @@ const WORK_RAM_END = 0x402000;
 const GLOBAL_400462_OFF = 0x462;
 const GLOBAL_400466_OFF = 0x466;
 const GLOBAL_400472_OFF = 0x472;
-const GLOBAL_400696_OFF = 0x696; // word, scritto = 0xFFFF
-const GLOBAL_400698_OFF = 0x698; // word, scritto = 0xFFFF
+const GLOBAL_400696_OFF = 0x696; // word, written = 0xFFFF
+const GLOBAL_400698_OFF = 0x698; // word, written = 0xFFFF
 
 export const OBJECT_INIT_2591A_ADDR = 0x0002591a as const;
 
@@ -70,7 +70,7 @@ export const OBJECT_INIT_2591A_SUB_ADDRS = [
  */
 export interface ObjectInit2591ASubs {
   /**
-   * altrove). Default no-op.
+   * elsewhere). Default no-op.
    */
   fun_262B2?: (state: GameState, objPtr: number) => void;
   /**
@@ -90,7 +90,7 @@ export interface ObjectInit2591ASubs {
    */
   fun_25B40?: (state: GameState, objPtr: number) => void;
   /**
-   * Non modellato: default no-op.
+   * Not modeled: default no-op.
    */
   fun_1B9CC?: (state: GameState, objPtr: number, flagLong: number) => void;
   /**
@@ -98,7 +98,7 @@ export interface ObjectInit2591ASubs {
   fun_13966?: (state: GameState, objPtr: number) => void;
 }
 
-// ─── Helper interno: read/write namespace su workRam (BE M68k) ────────────
+// ─── Internal helper: read/write namespace on workRam (BE M68k) ────────────
 
 function readU32BE(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
@@ -171,7 +171,7 @@ export function objectInit2591A(
   const g462 = readU32BE(wr, WORK_RAM_BASE + GLOBAL_400462_OFF);
   // asl.l #16: low word → high word, low word zero. Wrap @ 32 bit unsigned.
   const shifted462 = (g462 << 16) >>> 0;
-  // Big-endian write a A2+0xC.
+  // Big-endian write to A2+0xC.
   if (
     objAbs >= WORK_RAM_BASE &&
     objAbs + 0x0c + 3 < WORK_RAM_END

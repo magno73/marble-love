@@ -2,10 +2,10 @@
  * test-slapstic-103-parity.ts — replay of the trace MAME slapstic vs the FSM TS
  * (`packages/engine/src/m68k/slapstic-103.ts`).
  *
- * Input: `/tmp/mame_slapstic_trace.json` prodotto da `oracle/mame_slapstic_tap.lua`.
+ * Input: `/tmp/mame_slapstic_trace.json` produced by `oracle/mame_slapstic_tap.lua`.
  *
  * For each `samples[i]` it runs `slapsticTick(fsm, addr)` and:
- *   - Counts how many accesses are "direct bank" (cioe' the FSM era in ACTIVE e
+ *   - Counts how many accesses are "direct bank" (i.e. the FSM was in ACTIVE and
  *     changed bank immediately, or left IDLE on a reset)
  *   - Print each frame: expected MAME bank when available vs TS bank
  *   - Verify that the bank after the last access of each frame matches
@@ -18,7 +18,7 @@
  *   1. FSM sequence consistency (no illegal transitions)
  *   2. final bank of each frame (verifiable if MAME exposed it)
  *   3. expected pattern: after `0x80000` reset, the next access must
- *      mappare ai bank addr 0x80080/0x800A0/0x800C0/0x800E0
+ *      map to the bank addrs 0x80080/0x800A0/0x800C0/0x800E0
  */
 
 import { readFileSync } from "node:fs";

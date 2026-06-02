@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * test-palette-rng-fill-26cfa-parity.ts — parity differential testing per
+ * test-palette-rng-fill-26cfa-parity.ts — parity differential testing for
  * `FUN_00026CFA` (palette RNG fill).
  *
  * For each case:
  *   1. Set RNG seed in both workRam (binary) and `state.rng.seed` (TS).
  *   2. Pre-fill palette RAM with sentinel bytes.
  *   3. Call FUN_00026CFA in the binary via Musashi.
- *   4. Chiama paletteRngFill26CFATick in TS
+ *   4. Call paletteRngFill26CFATick in TS
  *   5. Compare:
  *      - palette RAM in [0xB00202, 0xB00302) (8 entry × 32 byte)
  *      - RNG seed after 8 calls
  *
- * Uso: npx tsx packages/cli/src/test-palette-rng-fill-26cfa-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-palette-rng-fill-26cfa-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state });
 
-  console.log(`[palette-rng-fill-26cfa-parity] ${n} casi vs FUN_00026CFA`);
+  console.log(`[palette-rng-fill-26cfa-parity] ${n} cases vs FUN_00026CFA`);
 
   const rng = makeRng(0xcafe26cf);
   let pass = 0;

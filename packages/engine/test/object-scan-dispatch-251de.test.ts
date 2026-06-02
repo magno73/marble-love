@@ -1,5 +1,5 @@
 /**
- * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests on the orchestratore
+ * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests on the orchestrator
  *
  * count = `*0x400396`), for each obj: skip if +0x18==0 (D2++), gate
  * +0x6A.w > 400 -> FUN_2822E, run FUN_253EC, then group state==2 (D2++)
@@ -38,7 +38,7 @@ function readU16BE(wr: Uint8Array, off: number): number {
 }
 
 describe("objectScanDispatch251DE (FUN_000251DE)", () => {
-  it("loop vuoto (count=0): calls solo FUN_1BBAA; il check post-loop scatta (D3==count==0) → setta global=3", () => {
+  it("empty loop (count=0): calls only FUN_1BBAA; the post-loop check fires (D3==count==0) → sets global=3", () => {
     const s = emptyGameState();
     const calls: string[] = [];
 
@@ -56,11 +56,11 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     objectScanDispatch251DE(s, STUB_ROM, subs);
 
     expect(calls).toEqual(["1BBAA"]);
-    // Post-loop: D3=0 == count=0 → setFlag → *0x400390 = 3 (pre era ≠ 1).
+    // Post-loop: D3=0 == count=0 → setFlag → *0x400390 = 3 (pre was ≠ 1).
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
-  it("count=2, both state=3 → setta global *0x400390 = 3", () => {
+  it("count=2, both state=3 → sets global *0x400390 = 3", () => {
     const s = emptyGameState();
 
     // Setup: count=2, level=0 (irrelevant), state machine pre-flag = 0
@@ -80,7 +80,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
-  it("count=2, 1 state=3 + 1 state=2 (D2 == count-1=1, D3=1) → setta global=3", () => {
+  it("count=2, 1 state=3 + 1 state=2 (D2 == count-1=1, D3=1) → sets global=3", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 2);
     writeU16BE(s.workRam, 0x394, 0);
@@ -97,7 +97,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
-  it("count=2, *0x400390 == 1 (gioco already in state 1): NOT sovrascrive", () => {
+  it("count=2, *0x400390 == 1 (game already in state 1): does NOT overwrite", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 2);
     writeU16BE(s.workRam, 0x390, 1);
@@ -113,7 +113,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x390)).toBe(1);
   });
 
-  it("respawn block: calls 5 sub in the ordine correct + writes 12 fields obj", () => {
+  it("respawn block: calls 5 subs in the correct order + writes 12 obj fields", () => {
     const s = emptyGameState();
     const calls: Array<{ name: string; args: readonly number[] }> = [];
 
@@ -133,7 +133,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     s.workRam[obj0 + 0x1a] = 0;
     // 0x6A = 100 (≤ 0x190, no FUN_2822E)
     writeU16BE(s.workRam, obj0 + 0x6a, 100);
-    // 0xD2 word pre = 0x0010 (per check increment)
+    // 0xD2 word pre = 0x0010 (to check the increment)
     writeU16BE(s.workRam, obj0 + 0xd2, 0x0010);
 
     // Obj1: state=3 (skipped in filter, just D3++)
@@ -190,7 +190,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     const _285b0 = calls.find((c) => c.name === "285B0")!;
     expect(_285b0.args).toEqual([WORK_RAM_BASE + obj0, 0x0000000f]);
 
-    // Scritture chiave in the respawn block:
+    // Key writes in the respawn block:
     // A2[+0xC] = (0xAABBCCDD << 16) >>> 0 = 0xCCDD0000
     expect(
       (((s.workRam[obj0 + 0x0c] ?? 0) << 24) |
@@ -225,7 +225,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(readU16BE(s.workRam, 0x698)).toBe(0xffff);
   });
 
-  it("gate FUN_2822E: chiamato sse obj+0x6A.w > 400 (signed)", () => {
+  it("gate FUN_2822E: called iff obj+0x6A.w > 400 (signed)", () => {
     const s = emptyGameState();
     let count2822E = 0;
 
@@ -253,7 +253,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(count2822E).toBe(1);
   });
 
-  it("count != 2 NOT innesca respawn block (also con state 1)", () => {
+  it("count != 2 does NOT trigger respawn block (even with state 1)", () => {
     const s = emptyGameState();
     let respawnHits = 0;
 
@@ -271,7 +271,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(respawnHits).toBe(0);
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("exposed constants: correct binary addresses", () => {
     expect(OBJECT_SCAN_DISPATCH_251DE_ADDR).toBe(0x251de);
     expect(OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS).toEqual([
       0x1bbaa, 0x2822e, 0x253ec, 0x17934, 0x1bab2, 0x1cc62, 0x1b9cc, 0x158ac,
@@ -284,7 +284,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     expect(OBJ_STRIDE).toBe(0xe2);
   });
 
-  it("default subs={}: non solleva, fa solo le scritture autonome (count=0)", () => {
+  it("default subs={}: does not throw, performs only the standalone writes (count=0)", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 0);
     expect(() => objectScanDispatch251DE(s, STUB_ROM)).not.toThrow();

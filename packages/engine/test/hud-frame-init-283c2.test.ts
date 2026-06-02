@@ -1,5 +1,5 @@
 /**
- * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests sui branches principali.
+ * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests on the main branches.
  *
  * `cli/src/test-hud-frame-init-283c2-parity.ts` (500/500).
  */
@@ -40,14 +40,14 @@ function readAlphaWordBE(alpha: Uint8Array, off: number): number {
 }
 
 /**
- * rows and data; 12 word per cols 1P).
+ * rows and data; 12 words for 1P cols).
  */
 function setupRom(): RomImage {
   const rom = emptyRomImage();
-  // ROM lookup table @ 0x72A4 (alpha-pointer shift count). Per rotation=0,
+  // ROM lookup table @ 0x72A4 (alpha-pointer shift count). For rotation=0,
   rom.program[0x72a5] = 0x00;
 
-  // ROM cols 1P @ 0x23C2C (12 word).
+  // ROM cols 1P @ 0x23C2C (12 words).
   const cols1P = [
     0x0013, 0x0014, 0x0015, 0x0016, 0x0017, 0x0017, 0x0017, 0x0017,
     0x0016, 0x0015, 0x0014, 0x0013,
@@ -56,7 +56,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_COLS_1P + i * 2, cols1P[i]!);
   }
 
-  // ROM rows @ 0x23C44 (24 word).
+  // ROM rows @ 0x23C44 (24 words).
   const rows = [
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003,
     0x0003, 0x0003, 0x0003, 0x0003,
@@ -67,7 +67,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_ROWS + i * 2, rows[i]!);
   }
 
-  // ROM data @ 0x23C74 (24 word).
+  // ROM data @ 0x23C74 (24 words).
   const data = [
     0x005f, 0x005f, 0x005f, 0x005f, 0x00ff, 0x00df, 0x00df, 0x001b,
     0x005e, 0x005e, 0x005e, 0x005e,
@@ -78,7 +78,7 @@ function setupRom(): RomImage {
     writeRomWordBE(rom, ROM_DATA + i * 2, data[i]!);
   }
 
-  // ROM cols 2P @ 0x23CA4 (24 word).
+  // ROM cols 2P @ 0x23CA4 (24 words).
   const cols2P = [
     0x000d, 0x000e, 0x000f, 0x0010, 0x0011, 0x0011, 0x0011, 0x0011,
     0x0010, 0x000f, 0x000e, 0x000d,
@@ -93,24 +93,24 @@ function setupRom(): RomImage {
 }
 
 describe("hudFrameInit283C2 (FUN_000283C2)", () => {
-  it("Loop1 (rotation=0): clears 30 lines × 6 word = 360 byte of bordo con 0x3400", () => {
+  it("Loop1 (rotation=0): clears 30 lines × 6 words = 360 bytes of border with 0x3400", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // player count @ 0x396 = 0 (-> 2P branch, but this tests only Loop1:
-    writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1); // 1P (Loop2 mette 12 frame tile
+    writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1); // 1P (Loop2 places 12 frame tiles
 
     hudFrameInit283C2(s, rom);
 
     //   alpha[row*128 + 0..1, +2..3, +4..5] = 0x3400
     //   alpha[row*128 + 0x4E..0x4F, +0x50..0x51, +0x52..0x53] = 0x3400
     for (let row = 0; row < LOOP1_ROW_COUNT; row++) {
-      const base = row * 128; // shift 6 (cols=64) × 2 byte/word
-      // Sinistro: 3 word
+      const base = row * 128; // shift 6 (cols=64) × 2 bytes/word
+      // Left: 3 words
       for (let i = 0; i < LOOP1_GROUP_WORDS; i++) {
         const off = base + i * 2;
         expect(readAlphaWordBE(s.alphaRam, off), `row ${row}, left word ${i}`).toBe(LOOP1_CLEAR_WORD);
       }
-      // Destro: 3 word @ off+0x4E
+      // Right: 3 words @ off+0x4E
       for (let i = 0; i < LOOP1_GROUP_WORDS; i++) {
         const off = base + LOOP1_RIGHT_OFF + i * 2;
         expect(readAlphaWordBE(s.alphaRam, off), `row ${row}, right word ${i}`).toBe(LOOP1_CLEAR_WORD);
@@ -118,14 +118,14 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("Loop2 1P: con player count=1 disegna 12 tile usando ROM_COLS_1P", () => {
+  it("Loop2 1P: with player count=1 draws 12 tiles using ROM_COLS_1P", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1);
 
     hudFrameInit283C2(s, rom);
 
-    // **Overlap handling**: alcune tuple (col,row) si ripetono — l'ultima
+    // **Overlap handling**: some (col,row) tuples repeat — the last one wins.
     const cols1P = [0x13, 0x14, 0x15, 0x16, 0x17, 0x17, 0x17, 0x17, 0x16, 0x15, 0x14, 0x13];
     const rows = [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3];
     const data = [0x5f, 0x5f, 0x5f, 0x5f, 0xff, 0xdf, 0xdf, 0x1b, 0x5e, 0x5e, 0x5e, 0x5e];
@@ -140,7 +140,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("Loop2 2P: con player count=2 disegna 24 tile usando ROM_COLS_2P", () => {
+  it("Loop2 2P: with player count=2 draws 24 tiles using ROM_COLS_2P", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 2);
@@ -171,7 +171,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("count=0 (caso non-1P, default emptyGameState): takes il branch 2P (24 tile)", () => {
+  it("count=0 (non-1P case, default emptyGameState): takes the 2P branch (24 tiles)", () => {
     const s = emptyGameState();
     const rom = setupRom();
 
@@ -184,7 +184,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     expect(readAlphaWordBE(s.alphaRam, off12)).toBe((0x5f | LOOP2_MASK) & 0xffff);
   });
 
-  it("non muta state.workRam (la funzione is solo lettore of workRam)", () => {
+  it("does not mutate state.workRam (the function only reads workRam)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // Pollute workRam with a known pattern.
@@ -202,7 +202,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("non muta state.alphaRam outside dalle 30 lines HUD (byte 0xF00..0xFFF intact)", () => {
+  it("does not mutate state.alphaRam outside the 30 HUD lines (bytes 0xF00..0xFFF intact)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     for (let i = 0xf00; i < s.alphaRam.length; i++) s.alphaRam[i] = 0xaa;
@@ -215,7 +215,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("constants exposed: binary addresses correct", () => {
     expect(FUN_283C2_ADDR).toBe(0x000283c2);
     expect(PLAYER_COUNT_OFF).toBe(0x396);
     expect(LOOP1_ROW_COUNT).toBe(0x1e);

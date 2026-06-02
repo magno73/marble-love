@@ -1,25 +1,25 @@
 /**
- * state-sub-525c.ts — replica `FUN_0000525C` (40 byte).
+ * state-sub-525c.ts — `FUN_0000525C` replica (40 bytes).
  *
- * Sub of init "buffer + status flags" parametrica su un count `D0`. Esegue
- * due fasi:
+ * Init sub "buffer + status flags" parameterized on a count `D0`. Runs
+ * two phases:
  *
- *      semplicemente il clear of the range `[A2+0x50 .. A2+0x50+D0*20-1]`.
+ *      simply the clear of the range `[A2+0x50 .. A2+0x50+D0*20-1]`.
  *
- *      bitmap long @ `0x00401F5E` (`STATUS_FLAGS_OFF`). Per `D0_arg >= 2`
+ *      long bitmap @ `0x00401F5E` (`STATUS_FLAGS_OFF`). For `D0_arg >= 2`
  *      `4, 5, 6, ..., 4 + D0*2 - 1` = `4 .. 3 + D0*2`.
  *
- * **Disasm 0x525C..0x5283** (40 byte):
+ * **Disasm 0x525C..0x5283** (40 bytes):
  *
  *   move.l D2,-(SP)              ; preserve D2
- *   move.l D0,D2                 ; D2 = D0_orig (saved per fase 2)
+ *   move.l D0,D2                 ; D2 = D0_orig (saved for phase 2)
  *   moveq  #0x14,D1              ; D1 = 20
  *   mulu.w D1w,D0                ; D0 = (D0_orig & 0xFFFF) * 20  (long)
  *   subq.l #1,D0                 ; D0 = D0*20 - 1 (loop top)
  *   loop1:
  *     clr.b  (0x50,A2,D0w*1)     ; *(A2 + 0x50 + signext_w(D0w)) = 0
  *   add.l  D2,D2                 ; D2 *= 2
- *   subq.l #1,D2                 ; D2 = D2 - 1 (loop top per fase 2)
+ *   subq.l #1,D2                 ; D2 = D2 - 1 (loop top for phase 2)
  *   moveq  #6,D0                 ; D0 = 6 (first bit-arg)
  *   loop2:
  *     move.l D0,-(SP)            ; preserve D0
@@ -27,7 +27,7 @@
  *   move.l (SP)+,D2              ; restore D2
  *   rts
  *
- * **FUN_0000523A (callee, 20 byte)**:
+ * **FUN_0000523A (callee, 20 bytes)**:
  *
  *   cmpi.l #2,D0
  *   bcs.b  skip                  ; if D0 < 2 (unsigned) skip subq
@@ -125,7 +125,7 @@ export function fun523A(state: GameState, d0: number): void {
  *
  *   - `mulu.w D1w,D0` uses the low word: `(d0 & 0xFFFF) * 20` (no overflow word
  *   - `(0x50, A2, D0w*1)`: indexing displacement with D0w sign-extended.
- *   - `add.l D2,D2; subq.l #1,D2` su `d0`: D2 = `d0*2 - 1`.
+ *   - `add.l D2,D2; subq.l #1,D2` on `d0`: D2 = `d0*2 - 1`.
  *     `d0*2 <= 0x10000`).
  */
 export function stateSub525C(
@@ -168,7 +168,7 @@ export function stateSub525C(
     }
   }
 
-  // ── Fase 2: bit OR loop ────────────────────────────────────────────────
+  // ── Phase 2: bit OR loop ───────────────────────────────────────────────
   // add.l D2,D2 + subq.l #1,D2   →  d2 = d0*2 - 1 (long, mod 2^32)
   const d2Initial = ((d0u * 2) - 1) >>> 0;
   let d2w = d2Initial & 0xffff;

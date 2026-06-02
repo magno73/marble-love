@@ -8,7 +8,7 @@
  *   3. tickCascadingTimer(state, structPtr)
  *   4. Compare D0 (return) + 5 byte struct
  *
- * Uso: npx tsx packages/cli/src/test-timer-cascade-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-timer-cascade-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";

@@ -38,7 +38,7 @@ function setupRomLookup(rom: ReturnType<typeof emptyRomImage>): void {
 }
 
 /**
- * and il rect-slot indicizzato ha struct[0]=typeCode, struct[1]=subIdx.
+ * and the indexed rect-slot has struct[0]=typeCode, struct[1]=subIdx.
  *
  */
 function freshStateWithEntries(
@@ -52,7 +52,7 @@ function freshStateWithEntries(
     state.workRam[BYTE_OFF + i] = SENTINEL_BYTE;
   }
 
-  // Inserisci entries.
+  // Insert entries.
   for (let i = 0; i < entries.length; i++) {
     const { slotIdx, typeCode, subIdx } = entries[i]!;
     state.workRam[BYTE_OFF + i] = slotIdx & 0xff;
@@ -68,7 +68,7 @@ function freshStateWithEntries(
 // ─── Test cases ───────────────────────────────────────────────────────────────
 
 describe("helper18F46 (FUN_18F46)", () => {
-  it("non trova nulla in lista vuota (all sentinel)", () => {
+  it("finds nothing in empty list (all sentinel)", () => {
     const { state, rom } = freshStateWithEntries([]);
     const r = helper18F46(state, rom, 0x2c, 0x05);
 
@@ -81,7 +81,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     }
   });
 
-  it("rimuove l'single elemento of the lista", () => {
+  it("removes the single element of the list", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x2c, subIdx: 0x05 },
     ]);
@@ -97,7 +97,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0);
   });
 
-  it("rimuove il first of tre elementi, altri shiftati a sinistra", () => {
+  it("removes the first of three elements, others shifted left", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -121,7 +121,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0x03);
   });
 
-  it("rimuove il second of tre elementi", () => {
+  it("removes the second of three elements", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -142,7 +142,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("rimuove l'last of tre elementi", () => {
+  it("removes the last of three elements", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -163,7 +163,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 2 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("non trova nulla se typeCode non corresponds", () => {
+  it("finds nothing if typeCode does not match", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x10, subIdx: 0x20 },
     ]);
@@ -176,7 +176,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x10);
   });
 
-  it("non trova nulla se subIdx non corresponds (typeCode match, subIdx mismatch)", () => {
+  it("finds nothing if subIdx does not match (typeCode match, subIdx mismatch)", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x10, subIdx: 0x20 },
     ]);
@@ -188,7 +188,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF]).toBe(0x10);
   });
 
-  it("trova il first match su typeCode+subIdx esatti (non il second slot con same type)", () => {
+  it("finds the first match on exact typeCode+subIdx (not the second slot with same type)", () => {
     // Two slots with same typeCode 0x05, different subIdx values: 0x0A and 0x0B.
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x05, subIdx: 0x0a },
@@ -197,7 +197,7 @@ describe("helper18F46 (FUN_18F46)", () => {
 
     const r = helper18F46(state, rom, 0x05, 0x0b);
 
-    // Deve trovare il second (slotIdx=1, pos=BYTE_OFF+1)
+    // Must find the second (slotIdx=1, pos=BYTE_OFF+1)
     expect(r.removed).toBe(true);
     expect(r.foundPos).toBe(BYTE_OFF + 1);
     expect(r.slotIdx).toBe(1);
@@ -210,7 +210,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[RECT_SLOT_OFF + 1 * RECT_SLOT_STRIDE]).toBe(0);
   });
 
-  it("lista con un only ifntinel immediato (byte[0]=0xFF): no-op", () => {
+  it("list with only an immediate sentinel (byte[0]=0xFF): no-op", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     setupRomLookup(rom);
@@ -223,7 +223,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[BYTE_OFF]).toBe(SENTINEL_BYTE);
   });
 
-  it("rimozione from the fondo of una lista piena of 5 elementi: sentinel scritto correttamente", () => {
+  it("removal from the bottom of a full list of 5 elements: sentinel written correctly", () => {
     const entries = [
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -245,7 +245,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[BYTE_OFF + 4]).toBe(SENTINEL_BYTE);
   });
 
-  it("doppia rimozione: rimuovi due elementi in sequenza", () => {
+  it("double removal: remove two elements in sequence", () => {
     const { state, rom } = freshStateWithEntries([
       { slotIdx: 0, typeCode: 0x01, subIdx: 0x00 },
       { slotIdx: 1, typeCode: 0x02, subIdx: 0x00 },
@@ -259,7 +259,7 @@ describe("helper18F46 (FUN_18F46)", () => {
     expect(state.workRam[BYTE_OFF + 1]).toBe(2);
     expect(state.workRam[BYTE_OFF + 2]).toBe(SENTINEL_BYTE);
 
-    // Seconda rimozione: rimuovi typeCode=0x02 (ora al pos 0)
+    // Second removal: remove typeCode=0x02 (now at pos 0)
     const r2 = helper18F46(state, rom, 0x02, 0x00);
     expect(r2.removed).toBe(true);
     expect(r2.foundPos).toBe(BYTE_OFF);

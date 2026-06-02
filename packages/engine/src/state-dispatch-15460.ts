@@ -196,7 +196,7 @@
  *
  *   ; ============ CASE 6 (anim 0x20D6C) @ 0x1563A ============
  *   move.l  #0x20D6C,(0x5C,A0)
- *   ; fall-through al common epilog
+ *   ; fall-through to the common epilog
  *
  *   ; ============ COMMON EPILOG @ 0x15642 ============
  *   move.l  (0x5C,A0),(0x58,A0)             ; prevAnim = currentAnim
@@ -223,9 +223,9 @@
 import type { RomImage } from "./bus.js";
 import type { GameState } from "./state.js";
 
-/** WORK RAM base assoluta M68k. */
+/** Absolute M68k WORK RAM base. */
 const WORK_RAM_BASE = 0x00400000;
-/** Dimensione workRam (8 KB). */
+/** workRam size (8 KB). */
 const WORK_RAM_SIZE = 0x2000;
 
 export const KIND_BYTE_OFF = 0x1a as const;
@@ -234,9 +234,9 @@ export const KIND_BYTE_OFF = 0x1a as const;
 export const POS_X_OFF = 0x0c as const;
 /** Pos Y (long, 16.16 fixed-point) @ structPtr+0x10. */
 export const POS_Y_OFF = 0x10 as const;
-/** Field @ structPtr+0x1C (long, used da case 4 as "vel-x magnitude"). */
+/** Field @ structPtr+0x1C (long, used by case 4 as "vel-x magnitude"). */
 export const FIELD_1C_OFF = 0x1c as const;
-/** Field @ structPtr+0x20 (long, used da case 4 as "vel-y magnitude"). */
+/** Field @ structPtr+0x20 (long, used by case 4 as "vel-y magnitude"). */
 export const FIELD_20_OFF = 0x20 as const;
 /** Vel X (long) @ structPtr+0x00. */
 export const VEL_X_OFF = 0x00 as const;
@@ -278,18 +278,18 @@ function asrL(value: number, count: number): number {
   return ((value | 0) >> c) | 0;
 }
 
-/** asl.l (logical/arith, no diff per shift positivo) — count 0..63. */
+/** asl.l (logical/arith, no diff for positive shift) — count 0..63. */
 function aslL(value: number, count: number): number {
   const c = count & 0x3f;
   return ((value | 0) << c) | 0;
 }
 
-/** Sign-extend byte 0..0xFF a int32. */
+/** Sign-extend byte 0..0xFF to int32. */
 function sextByteL(b: number): number {
   return ((b & 0xff) << 24) >> 24;
 }
 
-/** Sign-extend low word a int32. */
+/** Sign-extend low word to int32. */
 function sextWordL(w: number): number {
   return ((w & 0xffff) << 16) >> 16;
 }
@@ -405,7 +405,7 @@ function caseTrackMarble(state: GameState, a0: number, rom?: RomImage): void {
   // Animation selection — D2 has priority over D3.
   // tst.b D2b: ble (D2 <= 0) → if D2 > 0 → DOWN
   // tst.b D2b: bge (D2 >= 0) → if D2 < 0 → UP
-  // (NB: the compare is on D2.b, but per as we write d2 (-8/0/+8),
+  // (NB: the compare is on D2.b, but since we write d2 (-8/0/+8),
   let animPtr: number;
   if (d2 > 0) {
     animPtr = ANIM_DOWN;
@@ -525,13 +525,13 @@ function commonEpilog(state: GameState, a0: number): void {
 /**
  * byte @ structPtr+0x1A, with common epilog.
  *
- *                       relativi a `structPtrLong - 0x400000`. Vedi sezione
- *                       "Side effects" of the docstring of the modulo.
- * @param structPtrLong  long (A0): pointer assoluto to the struct (workRam).
+ *                       relative to `structPtrLong - 0x400000`. See the
+ *                       "Side effects" section in the module docstring.
+ * @param structPtrLong  long (A0): absolute pointer to the struct (workRam).
  *
- * **Comportamento per kind**:
- *   - kind 0 → `caseTrackMarble`, poi epilog (write 0x25=2)
- *   - kind 1 → `caseAnim20CD8`, poi epilog (write 0x25=1)
+ * **Behavior per kind**:
+ *   - kind 0 → `caseTrackMarble`, then epilog (write 0x25=2)
+ *   - kind 1 → `caseAnim20CD8`, then epilog (write 0x25=1)
  *   - kind 2 -> `caseAnim20D64`, then epilog (write 0x25=1)
  *   - kind 3 -> `caseTrackMarble`, then epilog (write 0x25=1). Note: kind 3
  *               uses the same case 0 body but 0x25 ends as 0x01 (kind != 0/4).

@@ -3,7 +3,7 @@
  *
  * Original calling convention (68k, cdecl-like):
  *   `move.l A2, -(SP); jsr $1BC88.l; tst.l D0; addq.l #4, SP`
- *   → 1 arg long su stack (objAddr assoluto M68k).
+ *   → 1 long arg on stack (absolute M68k objAddr).
  *
  * @returns         D0.l (0 = no collision, 1 = collision).
  *

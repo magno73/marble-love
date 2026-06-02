@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * test-thunk-10042-smoke.ts — smoke tests per `thunk10042` (FUN_00010042).
+ * test-thunk-10042-smoke.ts — smoke tests for `thunk10042` (FUN_00010042).
  *
- * interamente a `trackballClampFlags28468`. I smoke qui verificano:
- *      (accumulatori a 0, input a 0) → flags = 0xF003 → sext = -4093.
- *      (e.g. 0x0050 > 0x40 → clamp a 0x40) and il thunk riflette la modifies.
+ * entirely to `trackballClampFlags28468`. The smoke tests here verify:
+ *      (accumulators at 0, input at 0) → flags = 0xF003 → sext = -4093.
+ *      (e.g. 0x0050 > 0x40 → clamp to 0x40) and the thunk reflects the change.
  *
- * Uso: npx tsx packages/cli/src/test-thunk-10042-smoke.ts
+ * Usage: npx tsx packages/cli/src/test-thunk-10042-smoke.ts
  */
 
 import { exit } from "node:process";
@@ -64,15 +64,15 @@ console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
   // mmioInputByte=0 → debounce clears bits 0 and 1 → flags = 0xF003 & 0xFFFE & 0xFFFD = 0xF000
   // sext16(0xF000) = -4096
   check("smoke1: retval = -4096 (0xF000 sign-extended, input bits cleared)", retThunk, -4096);
-  check("smoke1: accumX non modificato (input zero)", readWord(s1.workRam, cfNs.ACCUM_X_OFF), 0);
-  check("smoke1: accumY non modificato (input zero)", readWord(s1.workRam, cfNs.ACCUM_Y_OFF), 0);
+  check("smoke1: accumX unchanged (input zero)", readWord(s1.workRam, cfNs.ACCUM_X_OFF), 0);
+  check("smoke1: accumY unchanged (input zero)", readWord(s1.workRam, cfNs.ACCUM_Y_OFF), 0);
 }
 
 {
   const s = stateNs.emptyGameState();
   // Set accumX = 0x0050 (> PRE_CLAMP_LIMIT 0x40).
   writeWord(s.workRam, cfNs.ACCUM_X_OFF, 0x0050);
-  // accumY = -0x50 < -0x40 → clamp a -0x40
+  // accumY = -0x50 < -0x40 → clamp to -0x40
   writeWord(s.workRam, cfNs.ACCUM_Y_OFF, 0xffb0); // -0x50 in u16
 
   const ret = ns.thunk10042(s, inputs0);
@@ -80,7 +80,7 @@ console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
   // post-wrap: 0x40 > 0x18 → 0x40 - 0x18 = 0x28, bit12 cleared → flags &= ~0x1000
   const expectedX = 0x28;
   check("smoke2: accumX post-thunk = 0x28 (clamped 0x40 → wrap -0x18)", readWord(s.workRam, cfNs.ACCUM_X_OFF), expectedX);
-  // accumY clamped a -0x40, poi delta=0 → -0x40 < -0x18 → -0x40+0x18 = -0x28, bit13 cleared
+  // accumY clamped to -0x40, then delta=0 → -0x40 < -0x18 → -0x40+0x18 = -0x28, bit13 cleared
   const expectedY = -0x28;
   check("smoke2: accumY post-thunk = -0x28 (clamped -0x40 → wrap +0x18)", readWord(s.workRam, cfNs.ACCUM_Y_OFF), expectedY);
   // flags start: 0xF000 (input bits 0/1 cleared by debounce with mmio=0)

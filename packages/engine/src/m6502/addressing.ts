@@ -61,7 +61,8 @@ function readWordZP(bus: MemBus6502, zp: u8): u16 {
 
 // ─── Modes ────────────────────────────────────────────────────────────────
 
-/** Implied / accumulator: no operand and no effective address. */
+/** Implied / accumulator: no operand and no effective address.
+ * @public */
 export function mImplied(): void {
   // nop
 }
@@ -143,4 +144,5 @@ export function mRelative(rf: M6502RegFile, bus: MemBus6502): AddrResolved {
 }
 
 // Re-export helpers used by opcodes.ts/cpu.ts.
+/** @public */
 export { readPC, readPCWord, readWord };

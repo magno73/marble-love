@@ -248,7 +248,7 @@ export const FUN_18E6C_18F46_ARG1 = 0x4 as const;
 /**
  * Stub injection for the four external JSRs that are not replicated inline.
  *
- * Le 3 sub `findFreeSlotInTable` (`FUN_14BCE`), `slotMatchesPtr`
+ * The 3 subs `findFreeSlotInTable` (`FUN_14BCE`), `slotMatchesPtr`
  * (`FUN_14C0C`) and `deriveSpriteFromArg_v1` (`FUN_1BB08`) are replicated
  * in their modules and are not injected.
  */
@@ -397,7 +397,7 @@ function readByteAbs(state: GameState, rom: RomImage, addr: number): number {
  *   3. For each entry until sentinel `entry[0] == 0xFF`:
  *      e. If gated, initialize the slot.
  *      f. Advance A3 += 8.
- *   4. Tail walk suthe 4 slot @ 0x401302:
+ *   4. Tail walk on the 4 slots @ 0x401302:
  *      - For each active slot, if the boundary crosses, run teardown plus
  *        `subs.fun_18f46`.
  */

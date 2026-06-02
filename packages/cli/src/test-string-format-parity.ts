@@ -8,7 +8,7 @@
  *   3. Run TS formatHex on the same state
  *   4. Compare scratch byte-by-byte
  *
- * Uso: npx tsx packages/cli/src/test-string-format-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-format-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Random args. arg1 byte (with the), arg2 byte (row), arg3 word (attrs), arg4 word (tile).
+    // Random args. arg1 byte (col), arg2 byte (row), arg3 word (attrs), arg4 word (tile).
     const arg1 = Math.floor(rng() * 256) & 0xff;
     const arg2 = Math.floor(rng() * 0x29) & 0xff; // 0..40 to keep in alpha bounds
     const arg3 = Math.floor(rng() * 0x10000) & 0xffff;
@@ -217,7 +217,7 @@ async function main(): Promise<void> {
     const srcOff = Math.floor(rng() * (SCRATCH_SIZE - srcLen - 1));
     const dstOff = Math.floor(rng() * (SCRATCH_SIZE - srcLen - 1));
     const SRC_BASE = 0x401D00;
-    const DST_BASE = 0x401D80; // 128 byte separati per evitare overlap totale
+    const DST_BASE = 0x401D80; // 128 byte apart to avoid total overlap
     const srcAddr = SRC_BASE + srcOff;
     const dstAddr = DST_BASE + dstOff;
 

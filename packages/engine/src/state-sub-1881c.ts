@@ -381,13 +381,13 @@ export function stateSub1881C(
       const d1a = d0AfterRngA === 0 ? -MATH_DAMP_MAGNITUDE : MATH_DAMP_MAGNITUDE;
 
       // entity[0..3] = (entity[0..3] >> 1 signed) + d1  (i32 wrap)
-      // SECONDA JSR rng — la sua HIGH word determina il check `tst.l`.
+      // The second rng JSR — its HIGH word determines the `tst.l` check.
       const long0 = readLongBE(state, off + ENTITY_LONG0_OFFSET);
       const long0New = (((long0 | 0) >> 1) + d1a) | 0;
       writeLongBE(state, off + ENTITY_LONG0_OFFSET, long0New >>> 0);
 
       // ── RNG(2) #2 ──────────────────────────────────────────────────
-      // D0 entering second rng = long0New (32-bit). FUN_13A98 preserva D0.high.
+      // D0 entering second rng = long0New (32-bit). FUN_13A98 preserves D0.high.
       // After JSR: D0 = (long0New & 0xFFFF0000) | rngSignB.
       // tst.l → zero iff (long0New & 0xFFFF0000) == 0 AND rngSignB == 0.
       rngSignB = rng(state, MATH_RNG_LIMIT);

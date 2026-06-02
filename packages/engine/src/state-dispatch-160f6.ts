@@ -10,13 +10,13 @@
  *   movem.l  {D2-D7/A2-A4}, -(SP)
  *   move.l   (0xc,A6), D1          ; arg2: long prevTimer
  *   ```
- *   Epilogo: `movem.l (SP)+, {D2-D7/A2-A4}; unlk A6; rts`.
+ *   Epilogue: `movem.l (SP)+, {D2-D7/A2-A4}; unlk A6; rts`.
  *
  *   +0x08 (long) : vertical impulse (written as -0x6000)
  *   +0x30 (word) : snapshot tile-Y
  *
- * **Globals workRam** (offset da WORK_RAM_BASE = 0x400000):
- *   0x66a (byte): bitmask diagonali (bit0=NE,bit1=NW,bit2=SE,bit3=SW)
+ * **Globals workRam** (offset from WORK_RAM_BASE = 0x400000):
+ *   0x66a (byte): diagonals bitmask (bit0=NE,bit1=NW,bit2=SE,bit3=SW)
  *   0x66c/0x66e/0x670/0x672 (byte): input Left/Down/Right/Up
  *   0x674/0x676/0x678/0x67a (word): vel Left/Down/Right/Up
  *   0x67c/0x67e/0x680/0x682 (word): vel NE/NW/SE/SW
@@ -68,7 +68,7 @@ export const STRUCT_FIELDS = {
   charcode_58:  0x58,
 } as const;
 
-/** Globals workRam (offset da WORK_RAM_BASE). */
+/** Globals workRam (offset from WORK_RAM_BASE). */
 export const GLOBALS = {
   accumXPrev: 0x696, accumXCur: 0x69a,
   accumYPrev: 0x698, accumYCur: 0x69c,
@@ -288,7 +288,7 @@ export function stateDispatch160F6(
   // ── 0x1643a: check state==1 ───────────────────────────────────────────────
   if (rB(r, a2 + 0x36) !== 1) return;
 
-  // ── 0x16444–0x16495: abs deltas da snapshot ──────────────────────────────
+  // ── 0x16444–0x16495: abs deltas from snapshot ──────────────────────────────
   // D5w = |*0x400696 - (0x2e,A2)|
   // D6w = |*0x400698 - (0x30,A2)|
   // Replica M68k abs: tst.w; bge skip; moveq 0,D0; move.w,D0b; neg.l D0; bra

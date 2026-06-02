@@ -79,7 +79,7 @@ export function helper253BC(state: GameState, objPtr: number): void {
   if ((r[objOff + 0x36] ?? 0) !== 0) return;
 
   // move.l (0xc,A0),D1 → D1 = unsigned long
-  // asr.l  #19, D1     → arithmetic shift right: tratta D1 as signed 32-bit
+  // asr.l  #19, D1     → arithmetic shift right: treat D1 as signed 32-bit
   const longX = readU32(r, objOff + 0x0c);
   const longXSigned = longX >= 0x80000000 ? longX - 0x100000000 : longX;
   const screenX = (longXSigned >> 19) & 0xffff;

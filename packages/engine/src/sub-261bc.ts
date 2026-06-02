@@ -101,7 +101,7 @@
  *
  * **Sub callees**:
  *   - `FUN_28608` (objectAccumFlag28608) @ 0x2627A — already replicated
- *     in `object-accum-flag-28608.ts`. Modificable via `subs.fun28608`.
+ *     in `object-accum-flag-28608.ts`. Modifiable via `subs.fun28608`.
  *
  * **Slot writes**:
  *   - slot+0x00..0x03 (VX long)  via `(A2)`        — 0x2629C
@@ -114,7 +114,7 @@
  *     RTS chain.
  *   - Else: D0 = magnitude (D2 last copy at 0x26282).
  *
- * NOTE: callers (FUN_182BA via FUN_26196) ignorano il return value — the rts of
+ * NOTE: callers (FUN_182BA via FUN_26196) ignore the return value — the rts of
  */
 
 import type { GameState } from "./state.js";
@@ -122,7 +122,7 @@ import { objectAccumFlag28608 } from "./object-accum-flag-28608.js";
 
 const WORK_RAM_BASE = 0x00400000 as const;
 
-/** Base ROM table per angle interp. */
+/** Base ROM table for angle interp. */
 const ANGLE_TABLE_ROM_OFF = 0x0001eef8 as const;
 
 // ─── Helpers (M68k arithmetic, big-endian) ────────────────────────────────
@@ -184,7 +184,7 @@ export interface Sub261BCSubs {
  *                   angle-lookup branch; other slots jump directly to clamp.
  * @param magnitude  Long unsigned (M68k convention) — `0x40000` or `0x50000`
  *                   from `FUN_26196`.
- * @param rom        ROM program (per table 0x1eef8).
+ * @param rom        ROM program (for table 0x1eef8).
  * @param subs       Stub-injection (default = real callees).
  */
 export function fun261BC(
@@ -343,7 +343,7 @@ export function fun261BC(
     d0Vy = ((sextW(d0Vy & 0xffff) * sextW(quotientW)) | 0) >> 6;
     wL(state, a2Off + 0x04, d0Vy >>> 0);
 
-    // D0 al rts = scaled VY long
+    // D0 at the rts = scaled VY long
     retVal = d0Vy >>> 0;
   }
 
@@ -352,4 +352,5 @@ export function fun261BC(
   return retVal >>> 0;
 }
 
+/** @public */
 export const SUB_261BC_ADDR = 0x000261bc as const;

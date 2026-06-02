@@ -17,8 +17,8 @@
  *   00016e9a    ext.w   D0w                ; sign-extend byte → word
  *   00016e9c    ext.l   D0                 ; sign-extend word → long
  *   00016e9e    move.l  D0,-(SP)           ; push row (long) as arg
- *   00016ea0    pea     (0x3).w            ; push with the=3 as arg
- *   00016ea4    jsr     0x00000224.l       ; → getAlphaTileAddr(with the=3, row=D0)
+ *   00016ea0    pea     (0x3).w            ; push col=3 as arg
+ *   00016ea4    jsr     0x00000224.l       ; → getAlphaTileAddr(col=3, row=D0)
  *   00016eaa    movea.l D0,A0              ; A0 = returned address
  *   00016eac    clr.b   D0b               ; D0b = 0 (inner counter)
  *   00016eae    addq.l  0x8,SP             ; pop 2 × 4 byte args
@@ -44,7 +44,7 @@
  *     The low byte is the effective `startRow`.
  *
  * Side effects: clears words in `alphaRam` starting at the address returned by
- * `getAlphaTileAddr(with the=3, row=r)` for each row in [startRow, 0x1E).
+ * `getAlphaTileAddr(col=3, row=r)` for each row in [startRow, 0x1E).
  *
  * Out-of-range writes are ignored because this port models only alpha RAM.
  *
@@ -67,10 +67,10 @@ export const GET_ALPHA_TILE_ADDR_THUNK = 0x00000224 as const;
 export interface Helper16E8ESubs {
   /**
    * `FUN_37E4` via thunk `0x224`: compute the alpha-tile address for
-   * (with the=3, row=r). Default: `getAlphaTileAddr(state, rom, with the, row)`.
+   * (col=3, row=r). Default: `getAlphaTileAddr(state, rom, col, row)`.
    *
-   * Signature M68K: getAlphaTileAddr(with the: number, row: number) → address.
-   * TypeScript wrapper: (state, rom, with the, row) → number.
+   * Signature M68K: getAlphaTileAddr(col: number, row: number) → address.
+   * TypeScript wrapper: (state, rom, col, row) → number.
    */
   getAlphaTileAddr?: (
     state: GameState,
@@ -86,7 +86,7 @@ export interface Helper16E8ESubs {
  * Clear alpha-tilemap rows from `arg & 0xff` up to `0x1E` exclusive.
  *
  * For each row:
- *  1. `addr = getAlphaTileAddr(with the=3, row=r)` (via thunk 0x224)
+ *  1. `addr = getAlphaTileAddr(col=3, row=r)` (via thunk 0x224)
  *  2. Write 0x24 zero words starting at `addr` (72 bytes).
  *
  * @param state Game state; target rows in `alphaRam` are cleared.
@@ -112,7 +112,7 @@ export function helper16E8E(
     const d0 = (d2b & 0x80) ? ((d2b & 0xff) - 0x100) : (d2b & 0xff);
 
     // jsr 0x224 with args: pea(3) on top, then D0 below
-    // getAlphaTileAddr(with the=3, row=d0)
+    // getAlphaTileAddr(col=3, row=d0)
     const a0 = addrFn(state, rom, 3, d0) >>> 0;
 
     // Inner loop: clr.w (A0)+ × 0x24

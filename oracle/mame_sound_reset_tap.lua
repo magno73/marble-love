@@ -1,11 +1,11 @@
--- mame_sound_reset_tap.lua — capture write a $860001 dal main (bankselect_w).
--- Bit 7 = sound CPU reset (1 = run/release, 0 = hold). Aim: identificare il
--- Exact frame where MAME moves the sound 6502 from hold to run.
+-- mame_sound_reset_tap.lua — capture writes to $860001 from main (bankselect_w).
+-- Bit 7 = sound CPU reset (1 = run/release, 0 = hold). Aim: identify the
+-- exact frame where MAME moves the sound 6502 from hold to run.
 --
 -- Output JSON: { events: [{frame, byte, soundRun: bool}], firstReleaseFrame: N }
 --
 -- Env:
---   MARBLE_SOUND_RESET_TARGET_FRAME — capture fino a (default 600)
+--   MARBLE_SOUND_RESET_TARGET_FRAME — capture up to (default 600)
 --   MARBLE_SOUND_RESET_OUT          — output (default /tmp/mame_sound_reset.json)
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_SOUND_RESET_TARGET_FRAME") or "600")
@@ -24,7 +24,7 @@ local function install_tap()
     if maincpu == nil then return end
     main_mem = maincpu.spaces["program"]
     if main_mem == nil or main_mem.install_write_tap == nil then return end
-    -- $860001 = bankselect_w. 16-bit bus, low byte; usa range $860000-$860001
+    -- $860001 = bankselect_w. 16-bit bus, low byte; uses range $860000-$860001
     -- with mask filter.
     main_mem:install_write_tap(0x860000, 0x860001, "sound_reset_ctrl", function(o, d, m)
         if (m & 0xff) ~= 0 then
