@@ -1,5 +1,8 @@
 # Marble Love
 
+**[Status & parity matrix →](docs/STATUS.md)** — what is bit-perfect, what is
+behavioral, what is heuristic, and how to verify each claim.
+
 Marble Love is a TypeScript reimplementation of Atari's *Marble Madness*
 (1984). The project is built from ROM disassembly, Ghidra analysis, and
 differential testing against MAME. It contains a browser frontend, a pure
