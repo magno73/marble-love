@@ -48,9 +48,11 @@ active work.
   behavior pass.
 - Some CLI probes and oracle fixtures are intended for maintainers rather than
   casual users.
-- Large JSON fixtures are checked in under `oracle/` because they support
-  reproducible comparisons. Heavy gameplay snapshots are not part of the
-  browser public asset path.
+- Large JSON fixtures (~120 MB) are checked in under `oracle/` because they
+  support reproducible comparisons. Heavy gameplay snapshots are not part of the
+  browser public asset path. See
+  [docs/fixture-inventory.md](docs/fixture-inventory.md) for the size breakdown
+  and the relocation trade-off (LFS / separate repo / status quo).
 
 ## Known Gameplay Bugs
 
