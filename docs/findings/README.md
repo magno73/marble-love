@@ -14,6 +14,10 @@ Hacker News discussions, or post-launch writeups.
   - 2026-05-13. Hardware quirk in the slapstic 137412-103 chip. CPU prefetch
     outside the protected range can arm the FSM when it matches the `alt1`
     pattern. Impact: closed a 126-byte playfield diff at f12950.
+- [The Silly Race inverts the trackball with a single add/subtract flip](silly-race-inverted-trackball.md)
+  - 2026-06-02. The trackball-apply routine (`FUN_00025DF6`) adds the delta on
+    game mode 4 (the Silly Race) where every other level subtracts it, inverting
+    the marble's response. A decades-old gameplay gimmick reduced to one branch.
 - [Level descriptor header format](../level-header-format.md)
   - 2026-05-19. Byte-level layout of the six Marble Madness level descriptors,
     with M68010 consumers, MAME taps, parity artifacts, and verified unknowns.
