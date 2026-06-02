@@ -4,18 +4,18 @@
  *
  * `FUN_00003F78` (78 bytes) is called through thunk 0x160 from mainTick. Despite
  * the name "EEPROM commit", it touches no MMIO and no EEPROM: it reads `*0x401FFC`
- * (player struct ptr), valida lo status byte @ ptr+0xA contro il complement
- * @ ptr+0xB, and droppa/scala i contatori sound dispatch a `0x401FF5` / `0x401FF7`.
+ * (player struct ptr), validates the status byte @ ptr+0xA against the complement
+ * @ ptr+0xB, and drains/scales the sound dispatch counters at `0x401FF5` / `0x401FF7`.
  *
- * Confronto:
+ * Comparison:
  *   - return D0 (long)
- *   - byte @ 0x401FF5 (acc accumulator, clampato a 0x19 in the path "work")
+ *   - byte @ 0x401FF5 (acc accumulator, clamped to 0x19 in the "work" path)
  *   - byte @ 0x401FF7 (drain counter)
  *
  * Setup for each random case:
  *   - *0x401FFC = a2Addr (ptr struct), workRam-safe (0x401D00, not used by detail tests)
  *   - bytes @ a2Addr+0xA, +0xB = status + complement (with pattern mix)
- *   - *0x401FF5, *0x401FF7 = contatori random
+ *   - *0x401FF5, *0x401FF7 = random counters
  *
  * Pattern coverage:
  *   - 30% status >= 0xE0       -> early exit 0x18, no workRam delta
@@ -23,7 +23,7 @@
  *   - 35% status < 0xE0 valid  -> D1 in [1..4], drain + scale
  *   - 10% full random          -> stress
  *
- * Uso: npx tsx packages/cli/src/test-eeprom-commit-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-eeprom-commit-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   let firstFail: FailRecord | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Reset SP per la callFunction (push sentinel return).
+    // Reset SP for the callFunction (push sentinel return).
     cpu.system.setRegister("sp", 0x401f00);
 
     // Pattern selection
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
     const ctr0 = Math.floor(rng() * 256);
 
     // ── Setup binary side (Musashi) ─────────────────────────────────────
-    // Pulizia precedente: 0x401D00..0x401D20 (struct), and contatori.
+    // Clean previous: 0x401D00..0x401D20 (struct), and counters.
     for (let k = 0; k < 0x20; k++) {
       pokeMem(cpu, A2_ADDR + k, 1, 0);
     }
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, ACC_FF5, 1, acc0);
     pokeMem(cpu, COUNTER_FF7, 1, ctr0);
 
-    // ── Setup TS side (mirror su state.workRam) ─────────────────────────
+    // ── Setup TS side (mirror onto state.workRam) ───────────────────────
     // Consistent cleanup.
     for (let k = 0; k < 0x20; k++) {
       state.workRam[(A2_ADDR - 0x400000) + k] = 0;

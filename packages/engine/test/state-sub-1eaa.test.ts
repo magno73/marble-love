@@ -22,7 +22,7 @@ function recordingSubs(log: CallArgs[]): StateSub1EAASubs {
 }
 
 describe("stateSub1EAA (FUN_1EAA)", () => {
-  it("count <= 0: no chiamata and no eccezione", () => {
+  it("count <= 0: no call and no exception", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     expect(() => stateSub1EAA(s, 0xa03100, 5, 0, recordingSubs(log))).not.toThrow();
@@ -37,7 +37,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     expect(log).toHaveLength(0);
   });
 
-  it("count = 1: una chiamata con args base", () => {
+  it("count = 1: one call with base args", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0xa03100, 0x000a, 1, recordingSubs(log));
@@ -56,7 +56,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     ]);
   });
 
-  it("uses solo la low word of arg2 (mask 0xFFFF) and la sign-extend per la call", () => {
+  it("uses only the low word of arg2 (mask 0xFFFF) and sign-extends it for the call", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     // arg2 = 0xCAFE8000 → low word 0x8000 (= -32768 signed) → sext → -32768.
@@ -67,7 +67,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     ]);
   });
 
-  it("D3w wraps a 16 bit: 0xFFFE +1 → 0xFFFF (sext -1) +1 → 0x0000 (sext 0)", () => {
+  it("D3w wraps at 16 bits: 0xFFFE +1 → 0xFFFF (sext -1) +1 → 0x0000 (sext 0)", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0x400000, 0xfffe, 3, recordingSubs(log));
@@ -76,7 +76,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     expect(log[2]?.word).toBe(0); // sext(0x0000) — wrapped
   });
 
-  it("ptr (D4) wrap a 32 bit", () => {
+  it("ptr (D4) wraps at 32 bits", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0xfffffffc, 0, 2, recordingSubs(log));
@@ -89,7 +89,7 @@ describe("stateSub1EAA (FUN_1EAA)", () => {
     expect(() => stateSub1EAA(s, 0x400000, 0, 5)).not.toThrow();
   });
 
-  it("zero arg always passato as 0 (clr.l -(SP))", () => {
+  it("zero arg always passed as 0 (clr.l -(SP))", () => {
     const s = emptyGameState();
     const log: CallArgs[] = [];
     stateSub1EAA(s, 0x400000, 0xffff, 1, recordingSubs(log));

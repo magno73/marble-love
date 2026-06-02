@@ -24,7 +24,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("alphaRamBootInitED6 (FUN_ED6)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(ALPHA_RAM_BOOT_INIT_ED6_ADDR).toBe(0xed6);
     expect(ALPHA_RAM_BASE_ADDR).toBe(0xa03000);
     expect(SOURCE_TABLE_ROM_ADDR).toBe(0x6928);
@@ -39,7 +39,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     expect(FILL_LOOP_3_BASE_OFFSET).toBe(0xe80); // 0xA03E80 - 0xA03000
   });
 
-  it("copies il pattern ROM[0x6928 + D4*0x54] in 10 row consecutivi per each quadrante", () => {
+  it("copies the pattern ROM[0x6928 + D4*0x54] into 10 consecutive rows per quadrant", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < QUADRANT_COUNT * SOURCE_QUADRANT_STRIDE_BYTES; i++) {
@@ -75,7 +75,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("writes 0x2000 word a alphaRam[0x008..0x04B] (loop 2, 34 word)", () => {
+  it("writes 0x2000 word to alphaRam[0x008..0x04B] (loop 2, 34 words)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -96,7 +96,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("writes 0x2000 word a alphaRam[0xE88..0xECB] (loop 3, 34 word)", () => {
+  it("writes 0x2000 word to alphaRam[0xE88..0xECB] (loop 3, 34 words)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -109,7 +109,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("non tocca alphaRam[0xF00..0xFFF] (beyond l'last row)", () => {
+  it("does not touch alphaRam[0xF00..0xFFF] (beyond the last row)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.alphaRam.fill(0xcc);
@@ -126,7 +126,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     }
   });
 
-  it("is idempotente: invocations multiple producono lo same state", () => {
+  it("is idempotent: multiple invocations produce the same state", () => {
     const stateA = emptyGameState();
     const stateB = emptyGameState();
     const rom = emptyRomImage();

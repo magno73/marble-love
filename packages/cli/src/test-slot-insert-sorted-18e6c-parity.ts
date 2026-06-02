@@ -5,13 +5,13 @@
  *
  * `FUN_00018E6C` (218 bytes): insert-sort a new rect entry into the
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   1. Patch `FUN_0001B12A` (rect-builder, ~1244 bytes) with a thunk
- *      derivati da local[0]=D2, local[1]=D3:
+ *      derived from local[0]=D2, local[1]=D3:
  *        - local[2] = local[6] = local[A] = sign-ext word(D2)
  *        - local[4] = local[8] = local[C] = sign-ext word(D3)
  *
- *   2. Setup ROM lookup-table @ 0x1F0E2 puntando ai 16 slot @ 0x4001DC..
+ *   2. Setup ROM lookup-table @ 0x1F0E2 pointing to the 16 slots @ 0x4001DC..
  *      (stride 14 byte). Same layout of `test-sort-adjacent-objects-1a7a8`.
  *
  *   3. Setup workRam:
@@ -21,7 +21,7 @@
  *   5. Run TS via `slotInsertSorted18E6C(state, rom, typeCode, subIdx, subs)`.
  *
  *
- * Uso: npx tsx packages/cli/src/test-slot-insert-sorted-18e6c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-slot-insert-sorted-18e6c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -56,7 +56,7 @@ const RECT_SLOT_COUNT = 16;
 const RECT_AREA_LEN = 0x1b2;
 
 /**
- * Patch FUN_1B12A with the thunk deterministico.
+ * Patch FUN_1B12A with the deterministic thunk.
  *
  * Thunk (40 byte):
  *

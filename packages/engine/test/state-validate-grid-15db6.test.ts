@@ -1,5 +1,5 @@
 /**
- * state-validate-grid-15db6.test.ts — smoke per FUN_15DB6.
+ * state-validate-grid-15db6.test.ts — smoke for FUN_15DB6.
  *
  * Bit-perfect verified against the binary through
  * `cli/src/test-state-validate-grid-15db6-parity.ts` (500/500).
@@ -35,7 +35,7 @@ function asrL(v: number, c: number): number {
 }
 
 describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
-  it("match (X+Y celle coincidono) → fun_15e24(ptr, 1); kind originale 0x10 invariato", () => {
+  it("match (X+Y cells coincide) → fun_15e24(ptr, 1); original kind 0x10 unchanged", () => {
     const s = emptyGameState();
     const structPtr = 0x00400500;
     const currentPtr = 0x00401000;
@@ -60,10 +60,10 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     stateValidateGrid15DB6(s, structPtr, subs);
 
     expect(calls).toEqual([{ fn: "15e24", args: [structPtr, 1] }]);
-    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x10); // invariato
+    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x10); // unchanged
   });
 
-  it("match con kind originale 0x23 → mutation kind a 0x20 + fun_15e24(ptr, 1)", () => {
+  it("match with original kind 0x23 → mutates kind to 0x20 + fun_15e24(ptr, 1)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400600;
     const currentPtr = 0x00401100;
@@ -98,7 +98,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(s.workRam[so + KIND_BYTE_OFF]).toBe(KIND_TO); // 0x20
   });
 
-  it("mismatch X + kind != 0x23 → fun_15e24(ptr, 0); fun_15d10 NOT chiamato", () => {
+  it("mismatch X + kind != 0x23 → fun_15e24(ptr, 0); fun_15d10 NOT called", () => {
     const s = emptyGameState();
     const structPtr = 0x00400700;
     const currentPtr = 0x00401200;
@@ -118,10 +118,10 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     });
 
     expect(calls).toEqual([{ fn: "15e24", args: [structPtr, 0] }]);
-    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x05); // invariato
+    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(0x05); // unchanged
   });
 
-  it("mismatch + kind 0x23 → fun_15d10(ptr); kind invariato (no mutation)", () => {
+  it("mismatch + kind 0x23 → fun_15d10(ptr); kind unchanged (no mutation)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400800;
     const currentPtr = 0x00401300;
@@ -141,10 +141,10 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     });
 
     expect(calls).toEqual([{ fn: "15d10", args: [structPtr] }]);
-    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(KIND_FROM); // 0x23 invariato
+    expect(s.workRam[so + KIND_BYTE_OFF]).toBe(KIND_FROM); // 0x23 unchanged
   });
 
-  it("match X but mismatch Y → mismatch globale → fun_15e24(ptr, 0)", () => {
+  it("match X but mismatch Y → global mismatch → fun_15e24(ptr, 0)", () => {
     const s = emptyGameState();
     const structPtr = 0x00400900;
     const currentPtr = 0x00401400;
@@ -166,7 +166,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(calls).toEqual([{ fn: "15e24", args: [structPtr, 0] }]);
   });
 
-  it("match con field_x negativo (asr signed) and byte signed", () => {
+  it("match with negative field_x (signed asr) and signed byte", () => {
     const s = emptyGameState();
     const structPtr = 0x00400a00;
     const currentPtr = 0x00401500;
@@ -209,7 +209,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
     expect(() => stateValidateGrid15DB6(s, structPtr)).not.toThrow();
   });
 
-  it("byte signed-ext: cmp.l fail con high-bit byte vs positivo asr.l (parametrico)", () => {
+  it("byte signed-ext: cmp.l fails with high-bit byte vs positive asr.l (parametric)", () => {
     // currentPtr[0] = 0x80 → signExt_l = -128; asr.l(field_x, 19) = +128
     // (= 0x80 << 19) → cmp.l(-128, 128) ≠ → mismatch
     const s = emptyGameState();
@@ -229,7 +229,7 @@ describe("stateValidateGrid15DB6 (FUN_15DB6)", () => {
       fun_15e24: (p, f) => calls.push({ fn: "15e24", args: [p, f] }),
     });
 
-    // Aspettativa: mismatch (cmp.l(-128, +128) fail) → fun_15e24(ptr, 0)
+    // Expectation: mismatch (cmp.l(-128, +128) fails) → fun_15e24(ptr, 0)
     expect(calls).toEqual([{ fn: "15e24", args: [structPtr, 0] }]);
   });
 });

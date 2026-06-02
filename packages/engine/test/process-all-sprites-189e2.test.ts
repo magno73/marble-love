@@ -29,7 +29,7 @@ function setU16(
 }
 
 describe("processAllSprites (FUN_000189E2)", () => {
-  it("gate flag != 0 → returns immediato senza call la callback", () => {
+  it("gate flag != 0 → returns immediately without calling the callback", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0x0001); // gate set
     setU16(s, COUNT_OFF, 5);
@@ -40,7 +40,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gate=0, count=0 → loop a zero iterazioni", () => {
+  it("gate=0, count=0 → loop with zero iterations", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0);
     setU16(s, COUNT_OFF, 0);
@@ -51,7 +51,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(calls).toBe(0);
   });
 
-  it("gate=0, count=N → calls con base+i*0xC per i in [0..N)", () => {
+  it("gate=0, count=N → calls with base+i*0xC for i in [0..N)", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0);
     setU16(s, COUNT_OFF, 4);
@@ -67,9 +67,9 @@ describe("processAllSprites (FUN_000189E2)", () => {
     ]);
   });
 
-  it("gate flag in upper byte (0x0100) → ancora skip (tst.w word)", () => {
+  it("gate flag in upper byte (0x0100) → still skips (tst.w word)", () => {
     const s = emptyGameState();
-    setU16(s, GATE_OFF, 0x0100); // bit alto of the word
+    setU16(s, GATE_OFF, 0x0100); // high bit of the word
     setU16(s, COUNT_OFF, 3);
     let calls = 0;
     processAllSpritesWith(s, () => {
@@ -78,7 +78,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(calls).toBe(0);
   });
 
-  it("integration con computeSpriteCoords_v1: skip path (entry+0xA == 0xFF) non altera entry", () => {
+  it("integration with computeSpriteCoords_v1: skip path (entry+0xA == 0xFF) does not alter entry", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0);
     setU16(s, COUNT_OFF, 1);
@@ -97,14 +97,14 @@ describe("processAllSprites (FUN_000189E2)", () => {
     expect(s.workRam[entryOff + 0x9]).toBe(0xef);
   });
 
-  it("costanti esportate matchano il binario", () => {
+  it("exported constants match the binary", () => {
     expect(SPRITE_TABLE_BASE).toBe(0x40098c);
     expect(SPRITE_TABLE_ENTRY_STRIDE).toBe(0xc);
     expect(GATE_FLAG_ADDR).toBe(0x400394);
     expect(COUNT_ADDR).toBe(0x400396);
   });
 
-  it("gate=0, count=2 con gate scritto in big-endian: tst.w only if both the bytes are 0", () => {
+  it("gate=0, count=2 with gate written in big-endian: tst.w only if both bytes are 0", () => {
     const s = emptyGameState();
     // Only the low byte of the gate set (0x0001) → gate word = 1 → skip
     s.workRam[GATE_OFF] = 0x00;

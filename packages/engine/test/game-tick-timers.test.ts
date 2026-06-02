@@ -33,7 +33,7 @@ function setupTimer(
 }
 
 describe("gameTickTimers (FUN_28A96)", () => {
-  it("count=0: no iterazione, but global timer ticka", () => {
+  it("count=0: no iteration, but global timer ticks", () => {
     const s = emptyGameState();
     setCount(s, 0);
     // Disable global timer (inner = 0xFF) → no-op
@@ -42,7 +42,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(s.workRam[GLOBAL_TIMER_OFF + 4]).toBe(0xFF); // unchanged
   });
 
-  it("obj type=8 is saltato (no tick) but calls HUD", () => {
+  it("obj type=8 is skipped (no tick) but calls HUD", () => {
     const s = emptyGameState();
     setCount(s, 1);
     s.workRam[OBJECTS_BASE_OFF + 0x1A] = 8; // type=8
@@ -95,7 +95,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(s.colorRam[0x17]).toBe(0x0F);
   });
 
-  it("inner=5: no cascade, HUD non chiamato", () => {
+  it("inner=5: no cascade, HUD not called", () => {
     const s = emptyGameState();
     setCount(s, 1);
     setupTimer(s, OBJECTS_BASE_OFF + 0x6A, 0x100, 5, 5);
@@ -109,7 +109,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     expect(hud).not.toHaveBeenCalled();
   });
 
-  it("global timer bit 0: writes 0xFF a +0x4", () => {
+  it("global timer bit 0: writes 0xFF at +0x4", () => {
     const s = emptyGameState();
     setCount(s, 0);
     setupTimer(s, GLOBAL_TIMER_OFF, 0, 0, 0);

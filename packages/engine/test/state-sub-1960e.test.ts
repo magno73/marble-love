@@ -1,8 +1,8 @@
 /**
- * state-sub-1960e.test.ts — smoke tests per `FUN_0001960E`.
+ * state-sub-1960e.test.ts — smoke tests for `FUN_0001960E`.
  *
- * Verifica the 3 branch principali (state==7, long0==0, long0!=0), il
- * clear-block (state==9 && rng(4)==0) and l'invocation of the sub-stub
+ * Verifies the 3 main branches (state==7, long0==0, long0!=0), the
+ * clear-block (state==9 && rng(4)==0) and the invocation of the sub-stub
  * `fun_19692`, which must always run at the tail.
  */
 
@@ -39,7 +39,7 @@ function setLongBE(s: ReturnType<typeof emptyGameState>, off: number, v: number)
 }
 
 describe("stateSub1960E (FUN_0001960E)", () => {
-  it("branch state==7: jitter ±2 con 4-bit wrap; calls fun_19692 always", () => {
+  it("branch state==7: jitter ±2 with 4-bit wrap; calls fun_19692 always", () => {
     const s = emptyGameState();
     s.rng.seed = as_u32(0x1234);
     setByte(s, ENTITY_OFF + 0x25, 7);
@@ -55,7 +55,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(r.branch).toBe("state7");
     expect(r.firstRng).toBeGreaterThanOrEqual(0);
     expect(r.firstRng).toBeLessThan(5);
-    expect(r.finalRng).toBeNull(); // state==7 skips il middle
+    expect(r.finalRng).toBeNull(); // state==7 skips the middle
     expect(r.clearBlockExecuted).toBe(false);
     // newCounter = (5 + rng - 2) & 0xF
     expect(r.newCounter).toBe(((5 + r.firstRng - 2) & 0xff) & 0x0f);
@@ -126,15 +126,15 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(readLongBE(s, ENTITY_OFF + 0x04)).toBe(0);
   });
 
-  it("subs assente → no crash, fun_19692 silenziosamente skippato", () => {
+  it("subs absent → no crash, fun_19692 silently skipped", () => {
     const s = emptyGameState();
     setByte(s, ENTITY_OFF + 0x25, 0); // long0==0 default
     expect(() => stateSub1960E(s, ENTITY_BASE)).not.toThrow();
   });
 
-  it("state byte non-7-non-9: clear-block mai triggered even if rng(4)==0", () => {
+  it("state byte non-7-non-9: clear-block never triggered even if rng(4)==0", () => {
     const s = emptyGameState();
-    // Forza rng(4) = 0 cercando un seed
+    // Force rng(4) = 0 by searching for a seed
     let foundSeed = -1;
     for (let seed = 0; seed < 0x10000; seed++) {
       const probe = emptyGameState();
@@ -156,7 +156,7 @@ describe("stateSub1960E (FUN_0001960E)", () => {
     expect(r.clearBlockExecuted).toBe(false);
   });
 
-  it("state==7: la jitter wrap-around 4-bit funziona con counter=0xF, rng=4 → (0xF+4-2)&0xF = 1", () => {
+  it("state==7: the 4-bit jitter wrap-around works with counter=0xF, rng=4 → (0xF+4-2)&0xF = 1", () => {
     const s = emptyGameState();
     // Search for a seed that produces rng(5) = 4.
     let foundSeed = -1;

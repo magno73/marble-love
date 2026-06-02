@@ -1,5 +1,5 @@
 /**
- * Test auxTimer (FUN_10146) — smoke tests sui branches principali.
+ * Test auxTimer (FUN_10146) — smoke tests on the main branches.
  *
  */
 
@@ -27,7 +27,7 @@ function setQueue(s: ReturnType<typeof emptyGameState>, head: number, tail: numb
 }
 
 describe("auxTimer (FUN_10146)", () => {
-  it("queue vuota: no-op (no side effects)", () => {
+  it("empty queue: no-op (no side effects)", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0x01;
     s.workRam[COUNTDOWN_LO_OFF] = 0x2c;
@@ -41,7 +41,7 @@ describe("auxTimer (FUN_10146)", () => {
     expect(s.workRam[COUNTDOWN_LO_OFF]).toBe(0x2c);
     expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40);
     expect(s.workRam[COUNTER_OFF]).toBe(0x05);
-    expect(s.workRam[QUEUE_HEAD_OFF]).toBe(7); // head NOT avanza
+    expect(s.workRam[QUEUE_HEAD_OFF]).toBe(7); // head does NOT advance
   });
 
   it("countdown != 0 + byte 0xFF: clear countdown, NO inc counter", () => {
@@ -55,8 +55,8 @@ describe("auxTimer (FUN_10146)", () => {
 
     expect(s.workRam[COUNTDOWN_HI_OFF]).toBe(0);
     expect(s.workRam[COUNTDOWN_LO_OFF]).toBe(0);
-    expect(s.workRam[COUNTER_OFF]).toBe(0x05); // invariato
-    expect(s.workRam[QUEUE_HEAD_OFF]).toBe(1); // head advanced by
+    expect(s.workRam[COUNTER_OFF]).toBe(0x05); // unchanged
+    expect(s.workRam[QUEUE_HEAD_OFF]).toBe(1); // head advanced
   });
 
   it("countdown != 0 + byte != 0xFF: fall-through (counter++)", () => {
@@ -74,7 +74,7 @@ describe("auxTimer (FUN_10146)", () => {
     expect(s.workRam[COUNTER_OFF]).toBe(0x11);
   });
 
-  it("countdown == 0 + active flag set + byte multiplo of 8: reset coppia", () => {
+  it("countdown == 0 + active flag set + byte multiple of 8: reset pair", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0;
     s.workRam[COUNTDOWN_LO_OFF] = 0;
@@ -88,7 +88,7 @@ describe("auxTimer (FUN_10146)", () => {
     expect(s.workRam[COUNTER_OFF]).toBe(0);
   });
 
-  it("countdown == 0 + active flag set + byte non multiplo of 8: counter++", () => {
+  it("countdown == 0 + active flag set + byte not a multiple of 8: counter++", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0;
     s.workRam[COUNTDOWN_LO_OFF] = 0;
@@ -98,7 +98,7 @@ describe("auxTimer (FUN_10146)", () => {
 
     auxTimer(s);
 
-    expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40); // invariato
+    expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40); // unchanged
     expect(s.workRam[COUNTER_OFF]).toBe(0x08);
   });
 
@@ -115,7 +115,7 @@ describe("auxTimer (FUN_10146)", () => {
     expect(s.workRam[COUNTER_OFF]).toBe(0x00);
   });
 
-  it("countdown != 0 + 0xFF prevale on the check active flag", () => {
+  it("countdown != 0 + 0xFF takes precedence over the active flag check", () => {
     const s = emptyGameState();
     s.workRam[COUNTDOWN_HI_OFF] = 0x00;
     s.workRam[COUNTDOWN_LO_OFF] = 0x10;
@@ -127,7 +127,7 @@ describe("auxTimer (FUN_10146)", () => {
 
     expect(s.workRam[COUNTDOWN_HI_OFF]).toBe(0);
     expect(s.workRam[COUNTDOWN_LO_OFF]).toBe(0);
-    expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40); // NOT resettato
+    expect(s.workRam[ACTIVE_FLAG_OFF]).toBe(0x40); // NOT reset
     expect(s.workRam[COUNTER_OFF]).toBe(0x20); // NOT incremented
   });
 });

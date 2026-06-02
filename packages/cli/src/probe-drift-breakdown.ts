@@ -23,6 +23,6 @@ for (let i = 0; i < 0x2000; i++) {
 }
 console.log(`Drift @ f+99 (workRam):`);
 console.log(`  TOTAL:     ${total} / 8192 = ${(total/8192*100).toFixed(1)}% diverging`);
-console.log(`  STACK (0x1d70-0x1fef): ${stack} byte (M68K scratch, IRRIDUCIBILE senza byte emulation)`);
+console.log(`  STACK (0x1d70-0x1fef): ${stack} byte (M68K scratch, IRREDUCIBLE without byte emulation)`);
 console.log(`  NON-STACK: ${nonStack} byte / ${0x2000 - 0x280} = ${(nonStack/(0x2000-0x280)*100).toFixed(2)}% diverging (= fixable area)`);
 console.log(`  Match non-stack: ${100 - nonStack/(0x2000-0x280)*100}%`);

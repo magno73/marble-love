@@ -3,7 +3,7 @@
  * test-state-sub-5608-parity.ts — differential FUN_5608 vs stateSub5608.
  *
  * `FUN_00005608` (82 bytes): wrapper around 3 back-to-back callees with constant args
- * derivati da:
+ * derived from:
  *   - byte ROM @ 0x10072 (gate: D2 ∈ {4, 8})
  *   - long BE ROM @ 0x10074 (argLong → FUN_5334)
  *   - 4 immediate (0x7978, 0x7980, 0x1B, 0x1C)
@@ -12,14 +12,14 @@
  *   2. FUN_5334(*ROM[0x10074])
  *   3. FUN_52DA(D2+4, 0x1C,   0x7980)
  *
- * Strategia parity test:
- *   - Patch RTS sui due callee `FUN_52DA` (0x52DA) and `FUN_5334` (0x5334) per
+ * Parity-test strategy:
+ *   - Patch RTS over the two callees `FUN_52DA` (0x52DA) and `FUN_5334` (0x5334) to
  *     prevent their bodies from executing; their side effects are not relevant:
  *     for fault injection). Synchronize `tsRom.program` with the same bytes.
  *   - Run FUN_5608 step-by-step: each time PC == 0x52DA or PC == 0x5334
- *     dagli stub TS (inner52DA / inner5334).
+ *     from the TS stubs (inner52DA / inner5334).
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5608-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5608-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -81,7 +81,7 @@ interface CapturedSeq {
 /**
  * Run FUN_5608 step-by-step and capture args at the 0x52DA/0x5334 entries.
  *
- * stack), poi proseguiamo.
+ * stack), then we proceed.
  */
 function runAndCapture(cpu: CpuSession): CapturedSeq {
   const sys = cpu.system;
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sui callee (una sola time — la patch persiste in unified memory).
+  // Patch RTS over the callees (just once — the patch persists in unified memory).
   patchCallees(cpu);
 
   const tsRom: RomImage = busNs.emptyRomImage();
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern of coverage on the gate byte and on the handle long.
+    // Coverage pattern over the gate byte and the handle long.
     let gateByte: number;
     let handleLong: number;
     if (i === 0) {
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
       gateByte = 0x42;
       handleLong = 0xcafebabe;
     } else if (i < 20) {
-      // Sweep deterministico
+      // Deterministic sweep
       gateByte = (i - 5) & 0xff;
       handleLong = Math.floor(rng() * 0x100000000) >>> 0;
     } else {
@@ -228,7 +228,7 @@ async function main(): Promise<void> {
       handleLong = Math.floor(rng() * 0x100000000) >>> 0;
     }
 
-    // Inietta byte and long in ROM (Musashi unified memory) and in the mirror TS.
+    // Inject byte and long in ROM (Musashi unified memory) and in the TS mirror.
     pokeMem(cpu, ROM_GATE_BYTE_ADDR, 1, gateByte);
     tsRom.program[ROM_GATE_BYTE_ADDR] = gateByte & 0xff;
     pokeMem(cpu, ROM_HANDLE_LONG_ADDR, 4, handleLong >>> 0);

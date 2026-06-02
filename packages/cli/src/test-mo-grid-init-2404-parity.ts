@@ -3,17 +3,17 @@
  * test-mo-grid-init-2404-parity.ts — differential FUN_2404 vs moGridInit2404.
  *
  *
- * Convenzione caller (cdecl push-RTL):
+ * Caller convention (cdecl push-RTL):
  *   - return D0 not meaningful (caller does not use it)
  *
- * Strategia parity:
+ * Parity strategy:
  *
  *
- * from the 4 KB of SPRITE_RAM. Su Musashi, the unified memory ha SPRITE_RAM_BASE..
- * SPRITE_RAM_END + ALPHA_RAM_BASE..ALPHA_RAM_END contigui (0xA02000..0xA03FFF).
+ * from the 4 KB of SPRITE_RAM. On Musashi, the unified memory has SPRITE_RAM_BASE..
+ * SPRITE_RAM_END + ALPHA_RAM_BASE..ALPHA_RAM_END contiguous (0xA02000..0xA03FFF).
  * does: increment *0x40000C from 0).
  *
- * Uso: npx tsx packages/cli/src/test-mo-grid-init-2404-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-mo-grid-init-2404-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     } else if (i === 4) {
       arg1 = 5;
     } else if (i < 16) {
-      // Sweep deterministico 0..7 ripetuto.
+      // Repeated deterministic sweep 0..7.
       arg1 = (i - 5) % 8;
     } else {
       arg1 = Math.floor(rng() * 8);
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
 
     callFunction(cpu, FUN_2404, [arg1]);
 
-    // Esegui la replica TS.
+    // Run the TS replica.
     modNs.moGridInit2404(state, tsRom, arg1);
 
     let diffCount = 0;

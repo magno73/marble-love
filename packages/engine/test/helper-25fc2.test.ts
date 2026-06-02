@@ -90,7 +90,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(HELPER_25FC2_ADDR).toBe(0x00025fc2);
   });
 
-  it("2. costanti pubbliche corrette", () => {
+  it("2. public constants correct", () => {
     expect(ANIM_BASE_ROM).toBe(0x00020fde);
     expect(OBJECT_PAIR_BASE).toBe(0x00400018);
     expect(OBJECT_PAIR_SECOND_OFFSET).toBe(0xe2);
@@ -104,7 +104,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(HELPER_25FC2_SUB_ADDRS.fun_18F46).toBe(0x00018f46);
   });
 
-  it("3. early return: frame_ctr < frames_per_step → no avanzamento", () => {
+  it("3. early return: frame_ctr < frames_per_step → no advance", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -132,7 +132,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(ose25Calls).toHaveLength(0);
   });
 
-  it("4. main frame advance: frame_ctr == frames_per_step → avanza anim_ptr", () => {
+  it("4. main frame advance: frame_ctr == frames_per_step → advances anim_ptr", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;
@@ -199,7 +199,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtrBefore);
   });
 
-  it("7. sub-frame: sub_frame_ctr diventa 1 → reset + advance secondary_ptr", () => {
+  it("7. sub-frame: sub_frame_ctr becomes 1 → reset + advance secondary_ptr", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     const r = state.workRam;

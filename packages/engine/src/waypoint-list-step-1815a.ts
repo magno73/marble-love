@@ -129,9 +129,9 @@
  *   movem.l (SP)+,{D2-D6,A2,A3}
  *   rts
  *
- * ## Semantica
+ * ## Semantics
  *
- *     `(sx_i8, sy_i8, sm_i8, sound_i8)` terminato da byte 0 (`*A3 == 0`).
+ *     `(sx_i8, sy_i8, sm_i8, sound_i8)` terminated by byte 0 (`*A3 == 0`).
  *       dx = (sx<<19) - entity.x + 0x40000
  *       dy = (sy<<19) - entity.y + 0x40000
  *       D4 = abs(dx) >> 12, D6 = abs(dy) >> 12 (low word, signed asr)
@@ -154,12 +154,12 @@
  *         entity.z -= 0x6000
  *         if entity.z < -0x50000: entity.z = -0x50000
  *
- * ## JSR esterne
+ * ## External JSRs
  *
  *     in-range with sound_idx >= 0). 3 long args: (0x5a, 0x3400, table_value).
  *     Exposed as `subs.fun_012a`. Default no-op.
- *   - `FUN_00026196` (flag-scaled magnitude dispatch, replicated in
- *     branch out-of-range. Exposed as `subs.fun_26196`. Default no-op.
+ *   - `FUN_00026196` (flag-scaled magnitude dispatch, replicated in the
+ *     out-of-range branch. Exposed as `subs.fun_26196`. Default no-op.
  *
  *
  *   only if sound_idx >= 0. Our replica exposes a callback
@@ -169,13 +169,13 @@
  *
  *   - `entity[0x0..0x7]` modified (32-bit signed add) in the out-of-range branch.
  *   - `entity[0x8..0xb]` modified if `entity[0x36] != 0`.
- *   - `*(0x400446)` (long) advanced by of N*4 byte (N = record consumed in range).
+ *   - `*(0x400446)` (long) advanced by N*4 bytes (N = records consumed in range).
  *   - `*(0x40075a)` (word) = 1 if the list is exhausted.
  *
  * ## Caller
  *
  *   - `FUN_017F66 @ 0x17f8e`: gate `*(0x400390).w == 1` (homing-mode flag).
- *   - `FUN_000253ec @ 0x254de`: caller secondario.
+ *   - `FUN_000253ec @ 0x254de`: secondary caller.
  *
  */
 
@@ -188,7 +188,7 @@ export const GLOBAL_EXHAUSTED_FLAG_ADDR = 0x0040075a as const;
 
 // ─── Entity offsets ──────────────────────────────────────────────────────
 
-/** Entity X 32-bit (formato fixed-point). */
+/** Entity X 32-bit (fixed-point format). */
 export const ENTITY_X_OFFSET = 0x00 as const;
 /** Entity Y 32-bit. */
 export const ENTITY_Y_OFFSET = 0x04 as const;
@@ -198,40 +198,40 @@ export const ENTITY_TARGET_X_OFFSET = 0x0c as const;
 /** Target Y. */
 export const ENTITY_TARGET_Y_OFFSET = 0x10 as const;
 export const ENTITY_GRAVITY_FLAG_OFFSET = 0x36 as const;
-/** "List-end-reached" marker byte (set a 0xFF a list exhausted). */
+/** "List-end-reached" marker byte (set to 0xFF when the list is exhausted). */
 export const ENTITY_LIST_END_OFFSET = 0x6e as const;
 
-// ─── Costanti algoritmo ──────────────────────────────────────────────────
+// ─── Algorithm constants ───────────────────────────────────────────────────
 
-/** Bias additivo applicato ai delta: sext(byte) << 19 - entity.field + bias. */
+/** Additive bias applied to the deltas: sext(byte) << 19 - entity.field + bias. */
 export const DELTA_BIAS = 0x40000 as const;
-/** Soglia in-range (asr 12 of abs(delta)). */
+/** In-range threshold (asr 12 of abs(delta)). */
 export const RANGE_THRESHOLD = 0x20 as const;
 export const D5_OVERRIDE = 0xc000 as const;
-/** Soglia per override D5. */
+/** Threshold for the D5 override. */
 export const D5_OVERRIDE_DENOM_LIMIT = 0x40 as const;
-/** Decremento Z (gravity-like). */
+/** Z decrement (gravity-like). */
 export const Z_DECREMENT = -0x6000 as const;
-/** Floor Z (saturation lower bound). */
+/** Z floor (saturation lower bound). */
 export const Z_FLOOR = -0x50000 as const;
 /** Sound dispatch arg #0 (push pea (0x5a).w). */
 export const SOUND_ARG0 = 0x5a as const;
 /** Sound dispatch arg #1 (push pea (0x3400).w). */
 export const SOUND_ARG1 = 0x3400 as const;
-/** Base ROM table address per sound table lookup. */
+/** Base ROM table address for the sound table lookup. */
 export const SOUND_TABLE_ADDR = 0x000242aa as const;
-/** Tamanho of un record waypoint (4 byte). */
+/** Size of a waypoint record (4 bytes). */
 export const WAYPOINT_RECORD_SIZE = 4 as const;
 export const MAX_LIST_ITERATIONS = 1024 as const;
 
 // ─── Sub injection ───────────────────────────────────────────────────────
 
 /**
- * Stub injection per le JSR esterne.
+ * Stub injection for the external JSRs.
  *
  *   `(SOUND_ARG0, SOUND_ARG1, tableValue)`.
  * - `lookupSoundTable`: lookup `*(SOUND_TABLE_ADDR + idx*4)` 32-bit BE.
- *   Default 0 (matching binary stubbed). Per parity vera, la ROM image
+ *   Default 0 (matching the stubbed binary). For true parity, the ROM image
  */
 export interface WaypointListStep1815ASubs {
   fun_012a?: (arg0: number, arg1: number, tableValue: number) => void;
@@ -245,9 +245,9 @@ export type ExitMode = "out_of_range" | "list_exhausted" | "list_empty";
 
 export interface WaypointListStep1815AResult {
   exitMode: ExitMode;
-  /** Record consumed (in-range advances). */
+  /** Records consumed (in-range advances). */
   recordsConsumed: number;
-  /** Numero of sound dispatch invocati. */
+  /** Number of sound dispatches invoked. */
   soundDispatches: number;
   fun26196Called: boolean;
   listEndMarkerSet: boolean;
@@ -318,7 +318,7 @@ function sextB(v: number): number {
  *
  * In M68K, divs.w <ea>, Dn:
  *   - Dn (32-bit signed) / sext16(<ea>) truncated toward zero
- *   - If il quoziente sta in signed 16-bit [-0x8000..0x7FFF]:
+ *   - If the quotient fits in signed 16-bit [-0x8000..0x7FFF]:
  *       Dn.low_word = quot, Dn.high_word = remainder, V cleared
  *
  */
@@ -371,7 +371,7 @@ function negL(v: number): number {
  *
  *                    (e.g. `0x401e00`). Converted to workRam offset through
  *                    `entityAddr - 0x400000`.
- * @param subs        injection per sound, FUN_26196, sound-table lookup.
+ * @param subs        injection for sound, FUN_26196, sound-table lookup.
  *                    Default no-op / 0.
  *
  */

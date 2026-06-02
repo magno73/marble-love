@@ -605,12 +605,12 @@ async function main(): Promise<void> {
 
   // ─── Summary ─────────────────────────────────────────────────────────────────
   const grand = total;
-  console.log(`\n=== TOTALE: ${totalOk}/${grand} = ${((totalOk / grand) * 100).toFixed(2)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${grand} = ${((totalOk / grand) * 100).toFixed(2)}% ===`);
 
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.error(
-      `\nPRIMO FAIL: suite=${f.suite} caso=${f.i} slotPtr=0x${f.slotPtr.toString(16)} opcode=${f.opcode}`,
+      `\nFIRST FAIL: suite=${f.suite} case=${f.i} slotPtr=0x${f.slotPtr.toString(16)} opcode=${f.opcode}`,
     );
     console.error(`  diff: ${f.diff.what} bin=0x${f.diff.bin.toString(16)} ts=0x${f.diff.ts.toString(16)}`);
   }
@@ -618,7 +618,7 @@ async function main(): Promise<void> {
   disposeCpu(cpu);
 
   if (totalOk < grand) {
-    console.error(`\nPARITY FAIL: ${grand - totalOk} casi falliti su ${grand}`);
+    console.error(`\nPARITY FAIL: ${grand - totalOk} cases failed out of ${grand}`);
     exit(1);
   }
 

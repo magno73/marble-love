@@ -14,14 +14,14 @@ import {
 } from "../src/dispatch-strings-17230.js";
 
 describe("dispatchStrings17230 (FUN_17230)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(SLOT_BASE_ADDR).toBe(0x401482);
     expect(SLOT_STRIDE).toBe(0x42);
     expect(SLOT_COUNT).toBe(7);
     expect(CALLEE_ADDR).toBe(0x0001725a);
   });
 
-  it("invoca callee exactly 7 times, in the ordine 68k (i=0..6)", () => {
+  it("invokes the callee exactly 7 times, in 68k order (i=0..6)", () => {
     const calls: number[] = [];
     dispatchStrings17230((slot) => calls.push(slot >>> 0));
 
@@ -34,7 +34,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     ]);
   });
 
-  it("no side-effect of the dispatcher: callee no-op → no mutation osservabile", () => {
+  it("no side-effect from the dispatcher: callee no-op → no observable mutation", () => {
     let count = 0;
     dispatchStrings17230(() => {
       count++;
@@ -42,7 +42,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(count).toBe(7);
   });
 
-  it("callee può mutare strutture esterne senza interferire col loop", () => {
+  it("callee can mutate external structures without interfering with the loop", () => {
     const wr = new Uint8Array(0x2000);
     dispatchStrings17230((slot) => {
       const off = slot - 0x400000;
@@ -58,7 +58,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(mutated).toBe(SLOT_COUNT);
   });
 
-  it("ordine call deterministico: no bit outside posto col post-incremento of D3", () => {
+  it("deterministic call order: no bit out of place from D3's post-increment", () => {
     // from the add. Verify that the first arg is 0x401482, not 0x4014C4.
     const first: number[] = [];
     dispatchStrings17230((slot) => {
@@ -67,7 +67,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(first[0]).toBe(SLOT_BASE_ADDR);
   });
 
-  it("dispatcher is puro: due chiamate con callback identica → identici call sequences", () => {
+  it("dispatcher is pure: two calls with an identical callback → identical call sequences", () => {
     const a: number[] = [];
     const b: number[] = [];
     dispatchStrings17230((s) => a.push(s));
@@ -75,7 +75,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     expect(b).toEqual(a);
   });
 
-  it("eccezione lanciata from the callee si propaga (no swallowing)", () => {
+  it("exception thrown from the callee propagates (no swallowing)", () => {
     expect(() => {
       dispatchStrings17230((slot) => {
         if (slot === SLOT_BASE_ADDR + 3 * SLOT_STRIDE) {
@@ -85,7 +85,7 @@ describe("dispatchStrings17230 (FUN_17230)", () => {
     }).toThrow("test");
   });
 
-  it("last slot pushato is 0x40160E (i=6); D3 post-loop unused is 0x401650 (i=7)", () => {
+  it("last slot pushed is 0x40160E (i=6); D3 post-loop unused is 0x401650 (i=7)", () => {
     // The 7th (last) pushed pointer corresponds to i=6: 0x401482 + 6*0x42 = 0x40160E.
     const calls: number[] = [];
     dispatchStrings17230((s) => calls.push(s));

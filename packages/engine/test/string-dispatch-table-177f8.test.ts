@@ -52,7 +52,7 @@ function makeFreshFixtures(): {
 }
 
 describe("stringDispatchTable177F8 (FUN_177F8)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(ROM_TABLE_BASE_177F8_TBL1).toBe(0x0001eb3a);
     expect(ROM_TABLE_BASE_177F8_TBL2).toBe(0x0001ed0a);
     expect(ROM_TABLE_BIAS_177F8).toBe(0x0001ed62);
@@ -85,7 +85,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0);
     expect(res.earlyExit).toBe("bound");
 
-    // NOT both bound).
+    // NOT at the bound).
     const res2 = stringDispatchTable177F8Detailed(
       state,
       rom,
@@ -97,7 +97,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res2.earlyExit).not.toBe("bound");
   });
 
-  it("early-exit 'fff_zero': se A2-lookup returns 0 → returns 0", () => {
+  it("early-exit 'fff_zero': if A2-lookup returns 0 → returns 0", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     //   - bound check: bound = 0; arg0w = 0 → 0 NOT < 0 → WOULD BE bound exit.
     // Force bound > 0 to reach the central lookup.
@@ -170,7 +170,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.earlyExit).toBe("byte_zero");
   });
 
-  it("path 'top4_short': top4!=0 and mask hit → calcolo D0 from the short-form", () => {
+  it("path 'top4_short': top4!=0 and mask hit → compute D0 from the short-form", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
@@ -196,7 +196,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c0);
   });
 
-  it("reads also la finestra ROM slapstic when la string table punta above 0x80000", () => {
+  it("also reads the slapstic ROM window when the string table points above 0x80000", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);
@@ -216,7 +216,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c0);
   });
 
-  it("path 'no_bit11' con pixel != 0: produce D0.w deterministico", () => {
+  it("path 'no_bit11' with pixel != 0: produces a deterministic D0.w", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100); // bound = 100
@@ -252,7 +252,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(res.d0Word).toBe(0x00c2);
   });
 
-  it("returns always 0..0xFFFF (mask of output)", () => {
+  it("always returns 0..0xFFFF (output mask)", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 0x7fff); // big bound
@@ -264,7 +264,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     }
   });
 
-  it("dispatcher is puro: non writes in state.workRam, rom.program, pfRam", () => {
+  it("dispatcher is pure: does not write to state.workRam, rom.program, pfRam", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);
@@ -282,7 +282,7 @@ describe("stringDispatchTable177F8 (FUN_177F8)", () => {
     expect(pfRam).toEqual(pfCopy);
   });
 
-  it("API a 3 word args: arg0/1/2 are trattati as 16-bit (mask)", () => {
+  it("3-word-arg API: arg0/1/2 are treated as 16-bit (mask)", () => {
     const { state, rom, pfRam } = makeFreshFixtures();
     setLong(state.workRam, WR_LEVEL_HEADER_PTR_ABS - WORK_RAM_BASE, 0x401000);
     setWord(state.workRam, 0x1000 + 0x18, 100);

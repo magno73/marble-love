@@ -116,7 +116,7 @@ describe("clearPaletteRam (FUN_121A6)", () => {
 });
 
 describe("swapLongPair (FUN_12886)", () => {
-  it("scambia 2 long adiacenti", () => {
+  it("swaps 2 adjacent longs", () => {
     const s = emptyGameState();
     // *0x401D00 = 0xDEADBEEF, *0x401D04 = 0x12345678
     s.workRam[0x1D00] = 0xDE; s.workRam[0x1D01] = 0xAD;
@@ -135,7 +135,7 @@ describe("swapLongPair (FUN_12886)", () => {
     expect(s.workRam[0x1D07]).toBe(0xEF);
   });
 
-  it("non tocca byte adiacenti", () => {
+  it("does not touch adjacent bytes", () => {
     const s = emptyGameState();
     s.workRam[0x1CFF] = 0xAA;
     s.workRam[0x1D08] = 0xBB;

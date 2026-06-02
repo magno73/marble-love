@@ -1,5 +1,5 @@
 /**
- * state-sub-5584.test.ts — smoke test per stateSub5584 (FUN_5584).
+ * state-sub-5584.test.ts — smoke test for stateSub5584 (FUN_5584).
  *
  */
 
@@ -20,7 +20,7 @@ interface Call5468 {
 }
 
 describe("stateSub5584 (FUN_5584) — smoke", () => {
-  it("early-exit: 53EA dopo 540A returns 0 → return 0, no chiamata a 5468", () => {
+  it("early-exit: 53EA after 540A returns 0 → return 0, no call to 5468", () => {
     const s = emptyGameState();
     const calls540A: Call540A[] = [];
     const calls53EA: number[] = [];
@@ -53,7 +53,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
     expect(calls5468).toEqual([]);
   });
 
-  it("loop completo (5 iter) senza match: D4 = 3,6,9,12,15; D2 always != D5", () => {
+  it("full loop (5 iter) without match: D4 = 3,6,9,12,15; D2 always != D5", () => {
     const s = emptyGameState();
     const calls5468: Call5468[] = [];
     const calls53EA: number[] = [];
@@ -79,7 +79,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
       },
     );
 
-    // Esce from the loop completo. D0 = 0x12 (loop bound constant overwrite).
+    // Exits from the full loop. D0 = 0x12 (loop bound constant overwrite).
     expect(ret).toBe(0x12);
     // 5 iter: D4 = 3, 6, 9, 12, 15
     expect(calls5468.length).toBe(5);
@@ -91,7 +91,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
     expect(calls53EA.length).toBe(6);
   });
 
-  it("cmp-eq exit: D2 == D5 dopo first iter → return 53EA result", () => {
+  it("cmp-eq exit: D2 == D5 after first iter → return 53EA result", () => {
     const s = emptyGameState();
     const calls5468: Call5468[] = [];
 
@@ -112,13 +112,13 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
     );
 
     expect(ret).toBe(0x42);
-    // Solo 1 iter of loop: D4 = 3.
+    // Only 1 loop iter: D4 = 3.
     expect(calls5468.length).toBe(1);
     expect(calls5468[0]?.d2w).toBe(3);
     expect(calls5468[0]?.a2).toBe(0x402000);
   });
 
-  it("D2 = D6 (restore) when 53EA loop returns 0; cmp con D5 può ancora dare exit", () => {
+  it("D2 = D6 (restore) when 53EA loop returns 0; cmp with D5 can still trigger exit", () => {
     const s = emptyGameState();
     const calls5468: Call5468[] = [];
     const calls53EA: number[] = [];
@@ -151,14 +151,14 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
     expect(calls5468[4]?.a2).toBe(0x401111);
   });
 
-  it("default callbacks: all a 0 → early-exit immediato, return 0", () => {
+  it("default callbacks: all at 0 → immediate early-exit, return 0", () => {
     const s = emptyGameState();
     const ret = stateSub5584(s, 0x401234, 1, 2, 1, 0xffff);
     // 540A default = 0; 53EA(0) default = 0 → early-exit.
     expect(ret).toBe(0);
   });
 
-  it("D2 returns a D6 also dopo PRIMA iter; se D6 == D5 → cmp-eq exit", () => {
+  it("D2 returns to D6 even after the FIRST iter; if D6 == D5 → cmp-eq exit", () => {
     const s = emptyGameState();
     const ret = stateSub5584(
       s,
@@ -169,7 +169,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
       0x0001,
       () => 0x402222, // D5 == D6
       (_st, ptr) => (ptr === 0x402222 ? 0x99 : 0), // post-540A: 0x99; post-5468: 0
-      () => 0x405555, // 5468 → ptr step (qualsiasi)
+      () => 0x405555, // 5468 → ptr step (any)
     );
 
     // Iter 1: 5468 -> 0x405555; 53EA(0x405555) = 0 -> D2 = D6 = 0x402222. Cmp with
@@ -177,7 +177,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
     expect(ret).toBe(0);
   });
 
-  it("propagation of arg word: all i word args are mascherati a 16 bit", () => {
+  it("arg word propagation: all word args are masked to 16 bits", () => {
     const s = emptyGameState();
     const calls540A: Call540A[] = [];
     const calls5468: Call5468[] = [];
@@ -193,7 +193,7 @@ describe("stateSub5584 (FUN_5584) — smoke", () => {
         calls540A.push({ a2, d3w });
         return 0x401000;
       },
-      () => 0x77, // continua loop
+      () => 0x77, // continue loop
       (_st, a2, d3w, d2w, arg3w, arg4w) => {
         calls5468.push({ a2, d3w, d2w, arg3w, arg4w });
         return 0x402000;

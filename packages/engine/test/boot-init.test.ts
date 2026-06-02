@@ -1,8 +1,8 @@
 /**
  *
- *  - colorRam ha il pattern decrescente of the RESET handler
- *  - palette base inizializzata via paletteRamInitFull
- *  - workRam globals of state machine inizializzati (0x1F42 rotation flag)
+ *  - colorRam has the decreasing pattern from the RESET handler
+ *  - palette base initialized via paletteRamInitFull
+ *  - state-machine workRam globals initialized (0x1F42 rotation flag)
  */
 
 import { readFileSync } from "node:fs";
@@ -73,17 +73,17 @@ function highScoreTableHex(state: ReturnType<typeof emptyGameState>): string {
 }
 
 describe("bootInit", () => {
-  it("non solleva eccezioni con state vuoto + ROM vuota", () => {
+  it("does not raise exceptions with empty state + empty ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => bootInit(s, rom)).not.toThrow();
   });
 
-  it("color RAM hardware init: pattern decrescente -0x1000+4*i", () => {
+  it("color RAM hardware init: decreasing pattern -0x1000+4*i", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
-    //   0x020..0x1FE: hw pattern intact (paletteRamInitFull loop1 parte da 0x200)
+    //   0x020..0x1FE: hw pattern intact (paletteRamInitFull loop1 starts at 0x200)
     //   d0 = -0x1000 + 0x81*4 = -0xCFC = 0xF304
     const off = 0x100;
     const iter = (off / 2) + 1;
@@ -92,14 +92,14 @@ describe("bootInit", () => {
     expect(got).toBe(expected);
   });
 
-  it("palette region @ 0x200 inizializzata (paletteRamInitFull loop1)", () => {
+  it("palette region @ 0x200 initialized (paletteRamInitFull loop1)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
     expect(s.colorRam[0x200]).toBe(0);
   });
 
-  it("gameStateMachineInit: rotation flag = 0 con ROM vuota", () => {
+  it("gameStateMachineInit: rotation flag = 0 with empty ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
@@ -107,7 +107,7 @@ describe("bootInit", () => {
     expect(s.workRam[0x1f43]).toBe(0);
   });
 
-  it("gameStateMachineInit: rotation flag = 1 con ROM populata correttamente", () => {
+  it("gameStateMachineInit: rotation flag = 1 with ROM populated correctly", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x10000] = 0x4e;
@@ -158,11 +158,11 @@ describe("bootInit", () => {
     for (let i = 0; i < 0xF00; i++) {
       expect(s.alphaRam[i]).toBe(0);
     }
-    // 0xF00..0xFFF NOT cleared (gameStateMachineInit ferma a 0xF00)
+    // 0xF00..0xFFF NOT cleared (gameStateMachineInit stops at 0xF00)
     expect(s.alphaRam[0xF00]).toBe(0xCC);
   });
 
-  it("integrazione: bootInit + 5 tick → state evolve senza throw", () => {
+  it("integration: bootInit + 5 ticks → state evolves without throwing", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     bootInit(s, rom);
@@ -170,11 +170,11 @@ describe("bootInit", () => {
       expect(() => tick(s, { rom })).not.toThrow();
     }
     // state.clock.frame advances (canonical internal counter);
-    // workRam[0x14] and [0x16] are gestiti dalle sub IRQ4 + body — non are
+    // workRam[0x14] and [0x16] are handled by the IRQ4 sub + body — they are not
     expect(s.clock.frame).toBe(5);
   });
 
-  it("warmState restore resetta also clock and RNG transitori", () => {
+  it("warmState restore also resets transient clock and RNG", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const warm = {
@@ -211,7 +211,7 @@ describe("bootInit", () => {
     expect(s.videoScrollY).toBe(22);
   });
 
-  it("warmState restore arma il replay legacy solo per snapshot attract riconosciuti", () => {
+  it("warmState restore arms the legacy replay only for recognized attract snapshots", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const warm = {
@@ -236,7 +236,7 @@ describe("bootInit", () => {
     expect(s.clock.warmResidualReplayTick).toBe(0);
   });
 
-  it("HUD strings: cold-boot DISATTIVATO per allinearsi con MAME", () => {
+  it("HUD strings: cold-boot DISABLED to align with MAME", () => {
     // See comment in boot-init.ts: in attract_mode, the oracle does not populate
     // workRam[0x140-0x176] with HUD strings. The cold-boot path of
     const s = emptyGameState();

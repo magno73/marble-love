@@ -2,7 +2,7 @@
  * dispatch-table-1eea0.test.ts — corner cases of `dispatchTable1EEA0`
  * (replica `FUN_00011AD8`).
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated vs the binary in
  * `packages/cli/src/test-dispatch-table-1eea0-parity.ts`.
  */
 
@@ -30,7 +30,7 @@ function makeRecorder(): { calls: Call[]; cb: (a: number, b: number) => void } {
 }
 
 describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
-  it("argIdx = 0 → 10 chiamate (D2.b 0..9, ptr 0x1EEA0,0x1EEA8,...,0x1EEE8)", () => {
+  it("argIdx = 0 → 10 calls (D2.b 0..9, ptr 0x1EEA0,0x1EEA8,...,0x1EEE8)", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 
@@ -38,12 +38,12 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
 
     expect(rec.calls).toHaveLength(10);
     for (let k = 0; k < 10; k++) {
-      expect(rec.calls[k]!.arg1Long).toBe(k); // signExt of un byte non-negativo
+      expect(rec.calls[k]!.arg1Long).toBe(k); // signExt of a non-negative byte
       expect(rec.calls[k]!.arg2Long).toBe(TABLE_BASE + k * ENTRY_STRIDE);
     }
   });
 
-  it("argIdx = 9 → 1 chiamata sola (D2.b=9, ptr=0x1EEA0+9*8=0x1EEE8)", () => {
+  it("argIdx = 9 → exactly 1 call (D2.b=9, ptr=0x1EEA0+9*8=0x1EEE8)", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 
@@ -56,7 +56,7 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
     });
   });
 
-  it("argIdx = 0x0A → 0 chiamate (loop saltato from the test iniziale)", () => {
+  it("argIdx = 0x0A → 0 calls (loop skipped by the initial test)", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 
@@ -65,7 +65,7 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
     expect(rec.calls).toHaveLength(0);
   });
 
-  it("argIdx = 0xFF (signed -1 byte) → 11 chiamate; D2.b: FF,00..09; ptr da 0x1EEA0-8", () => {
+  it("argIdx = 0xFF (signed -1 byte) → 11 calls; D2.b: FF,00..09; ptr from 0x1EEA0-8", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 
@@ -87,7 +87,7 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
     expect(rec.calls[10]!.arg2Long).toBe(TABLE_BASE + 9 * ENTRY_STRIDE);
   });
 
-  it("argIdx = 0x80 (signed -128 byte) → 138 chiamate; arg1 wrap byte da -128 a 9", () => {
+  it("argIdx = 0x80 (signed -128 byte) → 138 calls; arg1 wraps byte from -128 to 9", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 
@@ -110,14 +110,14 @@ describe("dispatchTable1EEA0 (FUN_00011AD8)", () => {
     expect(rec.calls[137]!.arg1Long).toBe(9);
   });
 
-  it("subs assente → no error, runs il loop senza side effect", () => {
+  it("subs absent → no error, runs the loop without side effects", () => {
     const s = emptyGameState();
     const before = new Uint8Array(s.workRam);
     expect(() => dispatchTable1EEA0(s, 0)).not.toThrow();
     expect(s.workRam).toEqual(before);
   });
 
-  it("argIdx normalizzato a byte: 0x100 (= 0x00 byte) → 10 chiamate as argIdx=0", () => {
+  it("argIdx normalized to byte: 0x100 (= 0x00 byte) → 10 calls as argIdx=0", () => {
     const s = emptyGameState();
     const rec = makeRecorder();
 

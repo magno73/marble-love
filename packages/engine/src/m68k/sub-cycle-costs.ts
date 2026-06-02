@@ -67,7 +67,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // FUN_10FCE overhead without the 12 called subroutines:
   "FUN_10FCE_OVERHEAD": as_u32(304),
 
-  // ─── FUN_251DE: objectScanDispatch251DE (478 byte, ~120 istr) ───────────
+  // ─── FUN_251DE: objectScanDispatch251DE (478 bytes, ~120 instr) ─────────
   //
   // Outer loop: for each obj in [0..*0x400396) (typical count = 2 in attract,
   // 8-22 in gameplay):
@@ -102,9 +102,9 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // FAST (respawn gate skipped, no helper121B8 chain, count=2): ~700 cycles
   "FUN_251DE_FAST": as_u32(700),
   "FUN_251DE": as_u32(11180), // = AVG attract gameplay (count=2)
-  "FUN_251DE_HEAVY": as_u32(60000), // count=8-12 con full helper121B8 chain
+  "FUN_251DE_HEAVY": as_u32(60000), // count=8-12 with full helper121B8 chain
 
-  // ─── FUN_189E2: processAllSprites (60 byte, ~14 istr loop) ──────────────
+  // ─── FUN_189E2: processAllSprites (60 bytes, ~14 instr loop) ────────────
   //
   // Gate: *0x400394 == 0 -> skip when != 0 (`bne.w exit`). In gameplay
   // (*0x394 == 4) the gate is false and the routine skips completely. In
@@ -124,11 +124,11 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //
   // GATE OFF (game mode 4 = active gameplay): tst.w + bne.w + movem rts
   //   = 12 + 10 + 16 = 38 cycles, the fast path.
-  "FUN_189E2_FAST": as_u32(40), // gate off (gameplay attivo)
+  "FUN_189E2_FAST": as_u32(40), // gate off (active gameplay)
   "FUN_189E2": as_u32(470), // attract count=2
   "FUN_189E2_HEAVY": as_u32(4670), // gameplay count=22
 
-  // ─── FUN_158CC: objectUpdatePair158CC (42 byte, 12 istr loop) ───────────
+  // ─── FUN_158CC: objectUpdatePair158CC (42 bytes, 12 instr loop) ─────────
   //
   // Loop 2 iter (P1/P2 slot pair):
   //   movem (12) + 2 × (move/moveq/add/move/jsr+rts/addq/addq/cmpi/bne)
@@ -157,7 +157,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_158F6_STATE2": as_u32(970),
   "FUN_158F6_EMPTY": as_u32(60),
 
-  // ─── FUN_1493C: slotArrayTick (42 byte, loop 4 iter) ────────────────────
+  // ─── FUN_1493C: slotArrayTick (42 bytes, loop 4 iter) ───────────────────
   //
   // Same structure as 158CC but with 4 iterations; FUN_14966 is a minimal stub
   // (head-only ~100 cycles average; plus loop overhead ~80/iter).
@@ -170,7 +170,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_1493C": as_u32(770),
   "FUN_1493C_HEAVY": as_u32(3570),
 
-  // ─── FUN_17230: dispatchStrings17230 (42 byte, loop 7 iter) ─────────────
+  // ─── FUN_17230: dispatchStrings17230 (42 bytes, loop 7 iter) ────────────
   //
   // 7-iteration loop, FUN_1725A estimate per inactive slot ~30 cycles (tst+beq+
   // epilog), per active slot ~300-500 (typo/anim step).
@@ -178,11 +178,11 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //
   // Attract (HUD strings: 1-2 active slots out of 7): average ~120/slot
   //   = 32 + 7 × 200 + 16 = ~1448
-  // Gameplay (5-6 slot attivi): 32 + 7 × 500 + 16 = ~3548
+  // Gameplay (5-6 active slots): 32 + 7 × 500 + 16 = ~3548
   "FUN_17230": as_u32(1450),
   "FUN_17230_HEAVY": as_u32(3550),
 
-  // ─── FUN_13EE6: refreshHelper13EE6 (1190 byte, scroll+decode) ───────────
+  // ─── FUN_13EE6: refreshHelper13EE6 (1190 bytes, scroll+decode) ──────────
   //
   // Main gate: *0x400006 == 0 -> jump to the final branch (path 0x1411c).
   // In attract steady-state, *0x400006 is almost always 0 -> fast path.
@@ -196,20 +196,20 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //
   // Full path (gate true, active scroll + bitstream decode):
   //   - + levelHelper2FFB8 (slapstic lookup): ~200
-  //   - + calcolo scrollIdx: ~80
+  //   - + scrollIdx computation: ~80
   //   - + decodeBitstream1A668: ~4500 (see below)
   //   - + blit buffer in PF RAM: ~400
-  //   - + ramo finale loop as above: ~2000
+  //   - + final branch loop as above: ~2000
   //   Total: ~7200 cycles
   //
   // GATE PROBABILITY:
   //   *0x400006 is set when scrolling is active (= run/blit pending).
   //   In attract: ~5-10% of frames. In gameplay: ~30-50% of frames.
   "FUN_13EE6_FAST": as_u32(2300),
-  "FUN_13EE6": as_u32(2800), // attract media (90% fast + 10% full)
-  "FUN_13EE6_HEAVY": as_u32(7200), // gameplay con scroll attivo
+  "FUN_13EE6": as_u32(2800), // attract average (90% fast + 10% full)
+  "FUN_13EE6_HEAVY": as_u32(7200), // gameplay with active scroll
 
-  // ─── FUN_1A668: decodeBitstream1A668 (304 byte, 36 word output) ─────────
+  // ─── FUN_1A668: decodeBitstream1A668 (304 bytes, 36 word output) ────────
   //
   // Loop over 36 output words. Per token (path A/B/C/D mix):
   //   - read ctrl long, asr.l, mask: ~40 cycles
@@ -222,7 +222,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // included in FUN_13EE6_HEAVY (4500 decode cycles plus surrounding work).
   "FUN_1A668": as_u32(4400),
 
-  // ─── FUN_1912C: refreshHelper1912C (130 byte) ───────────────────────────
+  // ─── FUN_1912C: refreshHelper1912C (130 bytes) ──────────────────────────
   //
   // Gate: *0x400394 == 4. If != 4, immediate rts (~40 cycles).
   // If == 4: slot scan (count = *0x400396, ~22 obj) + entity loop (9
@@ -239,22 +239,22 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_1912C_FAST": as_u32(40),
   "FUN_1912C": as_u32(4700), // gameplay (game mode = 4)
 
-  // ─── FUN_19BAA: stateSub19BAA (490 byte) ────────────────────────────────
+  // ─── FUN_19BAA: stateSub19BAA (490 bytes) ───────────────────────────────
   //
   // Gate: *0x400394 == 4. If != 4 → rts (~40).
   // If == 4:
-  //   - tst.b *0x400762; spawn dispatcher gate 1/8: stima ~50 + (occasion.
-  //     1/8) FUN_19A40 ~600 = ~125 media
+  //   - tst.b *0x400762; spawn dispatcher gate 1/8: estimate ~50 + (occasion.
+  //     1/8) FUN_19A40 ~600 = ~125 average
   //   - outer loop entity (10 × 0x38 stride):
   //     * tst entity[0x18] / beq next: ~22 cycles (skip if entity inactive)
   //     * if active: addq + cmp + bgt movement path + AI block
-  //       - script terminator scan-others: 10 × 60 = 600 (raro)
+  //       - script terminator scan-others: 10 × 60 = 600 (rare)
   //       - movement block: ~300
   //       - jsr FUN_19E42 (marbleCellDispatch): ~400
   //     * average per active entity: ~700
-  //   - per attract (1-2 entity attive su 10): 10 × (skip 22 + actives 1.5
-  //     × 700) = 10 × 22 + 1050 = 1270
-  //   - per gameplay (5-6 entity attive): 10 × 22 + 5 × 700 = ~3720
+  //   - for attract (1-2 active entities out of 10): 10 × (skip 22 + actives
+  //     1.5 × 700) = 10 × 22 + 1050 = 1270
+  //   - for gameplay (5-6 active entities): 10 × 22 + 5 × 700 = ~3720
   //
   // Total full attract (*0x394 == 4 but 1-2 entity): ~125 + 1270 = ~1400
   // Total full gameplay: ~3850
@@ -262,10 +262,10 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_19BAA": as_u32(1400),
   "FUN_19BAA_HEAVY": as_u32(3850),
 
-  // ─── FUN_1844A: stateSub1844A (610 byte) ────────────────────────────────
+  // ─── FUN_1844A: stateSub1844A (610 bytes) ───────────────────────────────
   //
   // Gate: *0x400394 == 3 AND *0x400760 != 0. In attract: *0x394 == 0 → fast.
-  // In gameplay: *0x394 == 4 → fast. Solo during boss/transition (mode 3).
+  // In gameplay: *0x394 == 4 → fast. Only during boss/transition (mode 3).
   //
   // Fast: ~40 cycles (link+movem+gate+epilog)
   //
@@ -276,15 +276,15 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //     * pointer-walk path: addq + movea + cmp + jsr fun_18f46 ~300
   //       + reload timer ~50 = ~400 (rare ~5%)
   //     * sprite_check: cmpi + beq + jsr FUN_18972 ~200 (~70%)
-  //   - media per entry: 40 + 0.05*400 + 0.7*200 = ~200
+  //   - average per entry: 40 + 0.05*400 + 0.7*200 = ~200
   //   - 36 × 200 = ~7200
   //   - post-loop 3-bucket sound dispatch: ~150 × 3 = 450
   //   Total: ~7700 cycles
   "FUN_1844A_FAST": as_u32(40),
   "FUN_1844A": as_u32(40), // attract: gate off
-  "FUN_1844A_HEAVY": as_u32(7700), // mode 3 attivo
+  "FUN_1844A_HEAVY": as_u32(7700), // mode 3 active
 
-  // ─── FUN_12FD0: stateDispatch12FD0 (158 byte) ──────────────────────────
+  // ─── FUN_12FD0: stateDispatch12FD0 (158 bytes) ─────────────────────────
   //
   // Block 1: gate *0x400394 == 2 → scan player array for script. In attract
   // *0x394 == 0 → skip. Skip cost: ~30 (cmp + bne).
@@ -301,7 +301,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_12FD0": as_u32(1300), // attract default
   "FUN_12FD0_HEAVY": as_u32(5060),
 
-  // ─── FUN_28624: objDirtyDispatch28624 (140 byte) ───────────────────────
+  // ─── FUN_28624: objDirtyDispatch28624 (140 bytes) ──────────────────────
   //
   // Loop count = *0x400396 (= 2 in attract, 8-22 gameplay):
   //   - prologue per iter: moveq+move+asl+move+ext+ext+and+beq = ~30
@@ -315,7 +315,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   "FUN_28624": as_u32(230), // attract count=2
   "FUN_28624_HEAVY": as_u32(2140), // gameplay count=22
 
-  // ─── FUN_121B8: helper121B8 (1634 byte, 466 istr) ──────────────────────
+  // ─── FUN_121B8: helper121B8 (1634 bytes, 466 instr) ────────────────────
   //
   // **MONSTER FUNCTION**: dominates body cost when called. Estimate based on
   // disassembly (movem 28 + dead stores 4x16 + global writes 6x20 +
@@ -343,7 +343,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // (sub158F6 calls helper121B8 there), the INTEGRATE_VEL path is active.
   "FUN_121B8": as_u32(4500),
 
-  // ─── FUN_253BC: helper253BC (15 istr) ──────────────────────────────────
+  // ─── FUN_253BC: helper253BC (15 instr) ─────────────────────────────────
   //
   // - movea (0x4,SP),A0: 12
   // - tst.b (0x36,A0) / bne epilog: 12 + 10 (fast path skip)
@@ -353,7 +353,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // Full (default, freeze=0): ~200
   "FUN_253BC": as_u32(200),
 
-  // ─── FUN_17F66: objectStep17F66 (344 byte) ─────────────────────────────
+  // ─── FUN_17F66: objectStep17F66 (344 bytes) ────────────────────────────
   //
   // Dispatch: skip path / special / movement / stuck.
   // Default movement (gameplay obj0): ~600 cycles
@@ -364,7 +364,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // Skip (s18 in {2,3}): ~30
   "FUN_17F66": as_u32(600),
 
-  // ─── FUN_182BA: helper182BA (~100 istr) ────────────────────────────────
+  // ─── FUN_182BA: helper182BA (~100 instr) ───────────────────────────────
   //
   // For the non-player obj ELSE branch called by 158F6:
   //   - jsr FUN_15DB6 (stateValidateGrid): ~500 (grid bitmap check)
@@ -394,7 +394,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // FUN_1101E: mainLoopInit1101E (dispatcher orchestrator).
   //
   // Gate: stateWord = *0x400390. Attract path = stateWord == 0 → calls
-  // refreshFrame10FCE direttamente.
+  // refreshFrame10FCE directly.
   //
   // Dispatch + jsr 10FCE cost, excluding the 10FCE body: ~40 cycles.
   // Cases 1/2/3/4/5/6 have different costs, but case 0 is the dominant

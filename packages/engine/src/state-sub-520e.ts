@@ -1,28 +1,28 @@
 /**
- * state-sub-520e.ts — replica `FUN_0000520E` (64 byte, up tol `rts` @ 0x524E).
+ * state-sub-520e.ts — replica `FUN_0000520E` (64 bytes, up to the `rts` @ 0x524E).
  *
- * Sub of re-init "slot record" parametrica su `A2` (base struct in workRam).
- * Eseguita 3 times da `FUN_00004F38` (call sites @ 0x5032, 0x5078, 0x51FA) as
- * step of reset of un record of sound/voice channel. Tre fasi distinte of clear
+ * Re-init sub for a "slot record", parameterized on `A2` (struct base in workRam).
+ * Run 3 times by `FUN_00004F38` (call sites @ 0x5032, 0x5078, 0x51FA) as a
+ * step of resetting a sound/voice channel record. Three distinct clear phases
  *
- * **Disasm 0x520E..0x524E** (66 byte / 0x42; il prompt cita "40 byte" inteso
+ * **Disasm 0x520E..0x524E** (66 bytes / 0x42; the prompt says "40 bytes", meaning
  *
  *   0x520E:  moveq  #8,D0                 ; D0 = 0x00000008
  *   0x5210:  loop1: clr.b (0x0,A2,D0w*1)  ; *(A2 + D0w) = 0
- *   0x5214:        dbf D0w, loop1         ; clears A2+0..A2+8 (9 byte)
+ *   0x5214:        dbf D0w, loop1         ; clears A2+0..A2+8 (9 bytes)
  *   0x5218:  moveq  #4,D0                 ; D0 = 0x00000004
  *   0x521A:  loop2: clr.b (0xE,A2,D0w*1)
- *   0x521E:        dbf D0w, loop2         ; clears A2+0xE..A2+0x12 (5 byte)
+ *   0x521E:        dbf D0w, loop2         ; clears A2+0xE..A2+0x12 (5 bytes)
  *   0x5222:  moveq  #3,D1                 ; D1 = 3 (mask)
  *   0x5224:  bsr.b   0x5248                ; → or.l D1,(0x401F5E).l (sets bits 0,1)
  *   0x5226:  moveq  #9,D0                 ; D0 = 0x00000009
  *   0x5228:  loop3: clr.b (0x14,A2,D0w*1)
- *   0x522C:        dbf D0w, loop3         ; clears A2+0x14..A2+0x1D (10 byte)
+ *   0x522C:        dbf D0w, loop3         ; clears A2+0x14..A2+0x1D (10 bytes)
  *   0x5230:  move.b (0x9,A2),D0b          ; D0 = 0x0000FF00 | byte_at_A2+9
- *                                          ; (D0w high byte = 0xFF da loop3
+ *                                          ; (D0w high byte = 0xFF from loop3
  *   0x5234:  bsr.b   0x523A                ; → fun523A(D0): set bit
  *                                          ;   shift = (D0 - 2) & 0x3F (D0 ≥ 2)
- *                                          ;   |0x401F5E |= (1 << shift) o no-op
+ *                                          ;   |0x401F5E |= (1 << shift) or no-op
  *   0x523A:  fun523A: cmpi.l #2,D0
  *   0x5240:           bcs.b skip
  *   0x5242:           subq.l #2,D0
@@ -47,10 +47,10 @@
  *   - For A3 = 0x00F00001: D0 >= 2 -> subq -> 0x00EFFFFF -> `& 0x3F` = 63.
  *
  * **Side effects (workRam)**:
- *   1. byte clear:  A2[0..8]      (9 byte, offsets 0,1,...,8)
- *   2. byte clear:  A2[0xE..0x12] (5 byte)
+ *   1. byte clear:  A2[0..8]      (9 bytes, offsets 0,1,...,8)
+ *   2. byte clear:  A2[0xE..0x12] (5 bytes)
  *   3. long-BE OR:  *0x401F5E |= 0x00000003  (bits 0,1)
- *   4. byte clear:  A2[0x14..0x1D] (10 byte)
+ *   4. byte clear:  A2[0x14..0x1D] (10 bytes)
  *   5. long-BE OR:  *0x401F5E |= bitFromByteA2_9      (1 bit, byte∈[2,33] → bits 0..31)
  *   6. long-BE OR:  *0x401F5E |= bitFromStackD0       (1 bit derived from `(4,SP)`)
  *
@@ -91,7 +91,7 @@ export function fun523AInner(state: GameState, d0: number): void {
   const beforeShift = d0u < 2 ? d0u : (d0u - 2) >>> 0;
   const shift = beforeShift & 0x3f;
   const d1 = shift >= 32 ? 0 : ((1 << shift) >>> 0);
-  if (d1 === 0) return; // OR con 0 = no-op
+  if (d1 === 0) return; // OR with 0 = no-op
 
   const r = state.workRam;
   const cur =
@@ -117,13 +117,13 @@ export function fun523AInner(state: GameState, d0: number): void {
  *                 (2) workRam @ 0x1F5E (cumulative long-BE OR).
  * @param a2       Absolute M68k pointer (long). Must point into workRam
  *                 (`0x400000..0x401FFF`). Cleared ranges:
- *                   - `[A2+0,    A2+8]`  (9 byte)
- *                   - `[A2+0xE,  A2+0x12]` (5 byte)
- *                   - `[A2+0x14, A2+0x1D]` (10 byte)
- *                 next OR derivato).
+ *                   - `[A2+0,    A2+8]`  (9 bytes)
+ *                   - `[A2+0xE,  A2+0x12]` (5 bytes)
+ *                   - `[A2+0x14, A2+0x1D]` (10 bytes)
+ *                 derived next OR).
  *                 `lea (0xF00001).l, A3`). Default: `PRODUCTION_STACK_D0`.
  *
- * @returns void. Side effects elencati in the header.
+ * @returns void. Side effects listed in the header.
  */
 export function stateSub520E(
   state: GameState,
@@ -164,17 +164,17 @@ export function stateSub520E(
     if (off < r.length) r[off] = 0;
   }
 
-  // ── OR derivato from the byte @ A2+9 ───────────────────────────────────────
+  // ── OR derived from the byte @ A2+9 ─────────────────────────────────────────
   const d0FromByte = (0xff00 | byteAtA2Plus9) >>> 0;
   fun523AInner(state, d0FromByte);
 
   // ── Path "dead-code reachable": (4,SP) load + fall-through in 523A ────
-  // (long-BE da SP+4) and POI cade in the body of 523A of nuovo.
-  // In produzione SP+4 = saved A3 = 0x00F00001 → shift = 63 → D1 = 0 → no-op.
+  // (long-BE from SP+4) and THEN falls into the body of 523A again.
+  // In production SP+4 = saved A3 = 0x00F00001 → shift = 63 → D1 = 0 → no-op.
   fun523AInner(state, stackD0 >>> 0);
 }
 
-/** Helper interno: OR cumulativo of una mask in the long-BE @ 0x401F5E. */
+/** Internal helper: cumulative OR of a mask into the long-BE @ 0x401F5E. */
 function applyStatusFlagsOr(r: Uint8Array, mask: number): void {
   const m = mask >>> 0;
   if (m === 0) return;

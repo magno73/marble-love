@@ -46,7 +46,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(s.workRam[FF7_OFF]).toBe(0x77);
   });
 
-  it("complement mismatch (status != ~complByte) -> status forzato a 0; D1=1; computazione normale", () => {
+  it("complement mismatch (status != ~complByte) -> status forced to 0; D1=1; normal computation", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -65,7 +65,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0xfc);
   });
 
-  it("D1=4, drain finisce con counter < D1 (no underflow byte)", () => {
+  it("D1=4, drain ends with counter < D1 (no byte underflow)", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -81,7 +81,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(24);
   });
 
-  it("clamp a 0x19: acc that supera 0x19 is clampato and poi scaled", () => {
+  it("clamp at 0x19: acc that exceeds 0x19 is clamped and then scaled", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -97,7 +97,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0x12c);
   });
 
-  it("counter < divisor a inizio loop: zero iter, acc invariato, result = (acc*12)/D1", () => {
+  it("counter < divisor at loop start: zero iters, acc unchanged, result = (acc*12)/D1", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -113,7 +113,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(15);
   });
 
-  it("status = 0xDF (below soglia per 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
+  it("status = 0xDF (below threshold by 1 byte): D1 = (0xDF & 3) + 1 = 4", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;
@@ -127,7 +127,7 @@ describe("eepromCommit (FUN_3F78)", () => {
     expect(r).toBe(0);
   });
 
-  it("status = 0xE0 esatto: helper returns 0 -> early exit 0x18", () => {
+  it("status = 0xE0 exact: helper returns 0 -> early exit 0x18", () => {
     const s = emptyGameState();
     const ptr = 0x401d00;
     const ptrOff = ptr - 0x400000;

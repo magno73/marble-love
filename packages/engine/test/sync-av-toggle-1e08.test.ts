@@ -15,7 +15,7 @@ const EDGE_PREV_OFF = 0x17c; // *0x40017C (BE word)
 const FLAGS_OFF = 0x06; // *0x400006 (BE word)
 
 describe("syncAvToggle1E08 (FUN_1E08)", () => {
-  it("termina to the 1° iterazione: bit0(*0x400000)=1 and bit0(prev)=0", () => {
+  it("terminates on the 1st iteration: bit0(*0x400000)=1 and bit0(prev)=0", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0001 (bit 0 set, low2 = 1)
     s.workRam[PORT_OFF] = 0x00;
@@ -49,7 +49,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     expect(s.workRam[FLAGS_OFF + 1]).toBe(0x00);
   });
 
-  it("skips zeri in the queue first of trovare il bit 1 (bit 0 and bit 5 set)", () => {
+  it("skips zeros in the queue before finding the 1 bit (bit 0 and bit 5 set)", () => {
     const s = emptyGameState();
     s.workRam[PORT_OFF] = 0x00;
     s.workRam[PORT_OFF + 1] = 0x01;
@@ -99,7 +99,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     }
   });
 
-  it("also con bit 0 cur = 1 non termina se bit 0 prev = 1 (no rising)", () => {
+  it("even with bit 0 cur = 1 it does not terminate if bit 0 prev = 1 (no rising)", () => {
     const s = emptyGameState();
     // *0x400000.w = 0x0001
     s.workRam[PORT_OFF] = 0x00;
@@ -120,7 +120,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     expect(DEFAULT_MAX_ITERATIONS).toBe(256);
   });
 
-  it("uses cap maxFlagPops difensivo if the queue is tutta zero", () => {
+  it("uses the defensive maxFlagPops cap if the queue is all zero", () => {
     const s = emptyGameState();
     // bit0(cur) = 1, bit0(prev) = 0 -> would terminate at the 1st iter, but
     s.workRam[PORT_OFF + 1] = 0x01;

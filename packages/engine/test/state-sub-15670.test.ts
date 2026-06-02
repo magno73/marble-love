@@ -1,5 +1,5 @@
 /**
- * state-sub-15670.test.ts — smoke tests per `stateSub15670` (FUN_15670).
+ * state-sub-15670.test.ts — smoke tests for `stateSub15670` (FUN_15670).
  *
  * `cli/src/test-state-sub-15670-parity.ts`.
  */
@@ -36,12 +36,12 @@ function readU16BE(s: Uint8Array, off: number): number {
 }
 
 describe("stateSub15670 (FUN_15670)", () => {
-  it("count == 0 → epilog senza side effect", () => {
+  it("count == 0 → epilog without side effect", () => {
     const s = emptyGameState();
     // Arg struct in workRam (e.g. @ 0x401500). count word @ 0x400396 = 0.
     writeU16BE(s.workRam, 0x396, 0);
     const argAbs = 0x00401500;
-    // Pre-write per detectare side effect su (0x56,A2)
+    // Pre-write to detect side effects on (0x56,A2)
     writeU16BE(s.workRam, 0x1500 + 0x56, 0xabcd);
     s.workRam[0x1500 + 0x1a] = 0x42;
 
@@ -63,13 +63,13 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(SLOT_COUNT).toBe(4);
   });
 
-  it("no candidato qualificato → solo epilog (D2 invariato == count.w)", () => {
+  it("no qualified candidate → epilog only (D2 unchanged == count.w)", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 1);
     // Obj 0 @ 0x400018: state byte = 0 (default, not 1) → skip.
     const objOff0 = 0x18;
     s.workRam[objOff0 + 0x18] = 0; // not 1 → skip filter
-    // Pos x/y irrilevanti.
+    // Pos x/y irrelevant.
     const argAbs = 0x00401500;
     writeU16BE(s.workRam, 0x1500 + 0x56, 0x1234);
     s.workRam[0x1500 + 0x1a] = 0x99;
@@ -84,7 +84,7 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(calls15460).toHaveLength(0);
   });
 
-  it("1 candidato valido, distanza outside range → writes solo (0x56,A2)", () => {
+  it("1 valid candidate, distance outside range → writes only (0x56,A2)", () => {
     const s = emptyGameState();
     // count = 1
     writeU16BE(s.workRam, 0x396, 1);
@@ -101,12 +101,12 @@ describe("stateSub15670 (FUN_15670)", () => {
 
     // (default zero, OK)
 
-    // Arg struct @ 0x00401500: zorder = 0xAA (match), x/y = 0 → distanza grande.
+    // Arg struct @ 0x00401500: zorder = 0xAA (match), x/y = 0 → large distance.
     const argOff = 0x1500;
     s.workRam[argOff + 0x1b] = 0xaa;
     writeS32BE(s.workRam, argOff + 0x0c, 0x00000000); // arg.x
     writeS32BE(s.workRam, argOff + 0x10, 0x00000000); // arg.y
-    s.workRam[argOff + 0x1a] = 0x77; // pre-write (must restare 0x77)
+    s.workRam[argOff + 0x1a] = 0x77; // pre-write (must remain 0x77)
     writeU16BE(s.workRam, argOff + 0x56, 0xdead); // pre
 
     const calls15460: number[] = [];
@@ -126,7 +126,7 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(calls15460).toHaveLength(0);
   });
 
-  it("trigger: 1 candidato and distanza in range (0x180,0x280) → mutate kind + jsr fun_15460", () => {
+  it("trigger: 1 candidate and distance in range (0x180,0x280) → mutate kind + jsr fun_15460", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 1);
     const o0 = 0x18;
@@ -139,9 +139,9 @@ describe("stateSub15670 (FUN_15670)", () => {
     // Sum |x|+|y| > 0xC000: x = 0x100000, y = 0x100000
     writeS32BE(s.workRam, o0 + 0x00, 0x00100000);
     writeS32BE(s.workRam, o0 + 0x04, 0x00100000);
-    // Field 0xC and 0x10 of the obj (a1.x, a1.y per la distanza): obj+0xC, obj+0x10
-    // (0xC,A1) and (0x10,A1) per la distanza (NOT are x/y "abs" filter, are
-    //  separated). Diff with arg.0xC and arg.0x10. Set to 0x200 << 12 = 0x200000.
+    // Field 0xC and 0x10 of the obj (a1.x, a1.y for the distance): obj+0xC, obj+0x10
+    // (0xC,A1) and (0x10,A1) for the distance (these are NOT the x/y "abs" filter,
+    //  they are separate). Diff with arg.0xC and arg.0x10. Set to 0x200 << 12 = 0x200000.
     writeS32BE(s.workRam, o0 + 0x0c, 0x00200000);
     writeS32BE(s.workRam, o0 + 0x10, 0x00000000); // dy = 0
 
@@ -164,7 +164,7 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(calls15460).toEqual([0x00400000 + argOff]);
   });
 
-  it("inner-loop collision: candidato is scartato se 1 marble-slot match", () => {
+  it("inner-loop collision: candidate is discarded if 1 marble-slot matches", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 1);
     const o0 = 0x18;
@@ -196,7 +196,7 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(calls15460).toHaveLength(0);
   });
 
-  it("(0x56,A2).w receives signExt(obj.flag19), non il D2 decrementato", () => {
+  it("(0x56,A2).w receives signExt(obj.flag19), not the decremented D2", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 1);
     const o0 = 0x18;
@@ -220,7 +220,7 @@ describe("stateSub15670 (FUN_15670)", () => {
     expect(readU16BE(s.workRam, argOff + 0x56)).toBe(0xfffe);
   });
 
-  it("count == 2 and D2 == 0 → calls fun_15fe6 per scegliere between 2 oggetti", () => {
+  it("count == 2 and D2 == 0 → calls fun_15fe6 to choose between 2 objects", () => {
     const s = emptyGameState();
     writeU16BE(s.workRam, 0x396, 2); // count = 2
     for (let i = 0; i < 2; i++) {

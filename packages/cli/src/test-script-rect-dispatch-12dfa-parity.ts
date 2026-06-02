@@ -4,28 +4,28 @@
  * `scriptRectDispatch12DFA`.
  *
  * `FUN_00012DFA` (330 byte): rect-list spawn + region-bound despawn.
- *   - For each rect (6 byte: lo.b, hi.b, scriptPtr.l) → testa via FUN_12DAE,
- *     poi D2/D3 vs lo/hi, and o spawn 4 marble (zero-path) o spawn 1 (long-path).
+ *   - For each rect (6 byte: lo.b, hi.b, scriptPtr.l) → tested via FUN_12DAE,
+ *     then D2/D3 vs lo/hi, and either spawn 4 marbles (zero-path) or spawn 1 (long-path).
  *     FUN_12F44 mode-1.
  *
- * **Strategia parity**:
- *   - `FUN_12DAE` (read-only) live: replicato in TS (slot-match-12dae.ts).
- *   - `FUN_12D6E` (read-only) live: replicato in TS (slot-search.ts).
- *     normalizzazione `r >= limit`.
- *   - `FUN_18F46` (137 byte, side-effect su 0x4003BC + ROM table @0x1F0E2)
+ * **Parity strategy**:
+ *   - `FUN_12DAE` (read-only) live: replicated in TS (slot-match-12dae.ts).
+ *   - `FUN_12D6E` (read-only) live: replicated in TS (slot-search.ts).
+ *     `r >= limit` normalization.
+ *   - `FUN_18F46` (137 byte, side-effect on 0x4003BC + ROM table @0x1F0E2)
  *     (consistent with stub-RTS).
  *
  * **Suite** (4 × 125 = 500):
- *   - A: random selector + random D2/D3 + slot vuoti (test spawn pure).
+ *   - A: random selector + random D2/D3 + empty slots (pure spawn test).
  *   - B: random selector + slots pre-populated with FUN_12DAE-match (skip test).
  *        slots pre-populated with random region [0x52,0x54] for despawn tests.
  *
- * **Compare** (snapshot completo):
- *   - 25 slot × {byte+0x18, byte+0x1A, long+0x3A, word+0x52, word+0x54}
+ * **Compare** (full snapshot):
+ *   - 25 slots × {byte+0x18, byte+0x1A, long+0x3A, word+0x52, word+0x54}
  *   - byte @0x40075C, long @0x400974, long @0x400978
  *   - RNG seed @0x4003A6
  *
- * Uso: npx tsx packages/cli/src/test-script-rect-dispatch-12dfa-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-script-rect-dispatch-12dfa-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -376,9 +376,9 @@ async function main(): Promise<void> {
   const failHolder: { value: FailRecord | null } = { value: null };
   let totalOk = 0;
 
-  // ─── Suite A: random selector, slot vuoti, random D2/D3 ───────────────
+  // ─── Suite A: random selector, empty slots, random D2/D3 ──────────────
   console.log(
-    `\n=== scriptRectDispatch12DFA (FUN_00012DFA) — Suite A: spawn pure (slot vuoti) — ${perSuite} cases ===`,
+    `\n=== scriptRectDispatch12DFA (FUN_00012DFA) — Suite A: pure spawn (empty slots) — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -428,7 +428,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: despawn focus (occupied slots with region matching D2/D3) ──
   console.log(
-    `\n=== Suite C: focus despawn (region [lo,hi] matchata da D2/D3) — ${perSuite} cases ===`,
+    `\n=== Suite C: focus despawn (region [lo,hi] matched by D2/D3) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {

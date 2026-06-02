@@ -11,7 +11,7 @@
  *
  * D5 flag-word starts as `0xF003` (bits 0,1,12,13,14,15 set) and bits
  *
- * **Disasm 0x28468..0x2857F** (280 byte):
+ * **Disasm 0x28468..0x2857F** (280 bytes):
  *
  *   00028468  movem.l {A3 A2 D5 D4 D3 D2}, -(SP)    ; save 24 bytes
  *   0002846C  movea.l #0x4006A6, A3                 ; A3 = ptr OUT-Y word
@@ -139,7 +139,7 @@
  *     converting the returned "no wrap" bits into "wrap happened" bits in the
  *     global control word @ 0x400000.
  *
- *   1. *0x4006A4 / *0x4006A6 saturate ±0x40 (X poi Y, cap upper poi lower)
+ *   1. *0x4006A4 / *0x4006A6 saturate ±0x40 (X then Y, cap upper then lower)
  *   5. *0x4006A4 += sext_w(D1b), *0x4006A6 += sext_w(D2b)
  *   6. *0x4006A6 wrap ±0x18, *0x4006A4 wrap ±0x18
  *
@@ -216,12 +216,12 @@ function writeWord(state: GameState, off: number, value: number): void {
   state.workRam[off + 1] = v & 0xff;
 }
 
-/** Sign-extend byte (low 8 bit) → i32 signed. */
+/** Sign-extend byte (low 8 bits) → i32 signed. */
 function sext8(b: number): number {
   return ((b & 0xff) << 24) >> 24;
 }
 
-/** Sign-extend word (low 16 bit) → i32 signed. */
+/** Sign-extend word (low 16 bits) → i32 signed. */
 function sext16(w: number): number {
   return ((w & 0xffff) << 16) >> 16;
 }
@@ -299,8 +299,8 @@ export function trackballClampFlags28468(
   const A_byte = (state.workRam[PICKED_DELTA_Y_OFF] ?? 0) & 0xff;
   const B_byte = (state.workRam[PICKED_DELTA_X_OFF] ?? 0) & 0xff;
 
-  // D1b = byte( -sext_l(A) ) = (-A) & 0xFF (per via of the overflow byte).
-  // Poi D1b -= B (mod 256).
+  // D1b = byte( -sext_l(A) ) = (-A) & 0xFF (because of the byte overflow).
+  // Then D1b -= B (mod 256).
   const negA_byte = (-sext8(A_byte)) & 0xff;
   const D1_byte = (negA_byte - B_byte) & 0xff;
   const D2_byte = (A_byte - B_byte) & 0xff;
@@ -308,9 +308,9 @@ export function trackballClampFlags28468(
   // ─── Step 9: D3 = abs8(D1), D4 = abs8(D2) (byte unsigned) ─────────────
   // - if D1b >= 0 (signed): D3 = D1b (0..127)
   // - if D1b <  0 (signed): D3 = (-D1b)&0xFF = (256 - D1b)&0xFF
-  //   Ma neg.l su long(D1b zero-ext) = -D1b (long), pothe bytes = -D1b & 0xFF.
-  //   Per D1b in [-128, -1] (sext range), |D1b| in [1, 128].
-  //   Esempi: D1b = 0x80 (=-128), D3 = (-128)&0xFF = 0x80. abs(-128) = 128 ✓
+  //   But neg.l on long(D1b zero-ext) = -D1b (long), so the bytes = -D1b & 0xFF.
+  //   For D1b in [-128, -1] (sext range), |D1b| in [1, 128].
+  //   Examples: D1b = 0x80 (=-128), D3 = (-128)&0xFF = 0x80. abs(-128) = 128 ✓
   //   D1b = 0xFF (=-1), D3 = (-(-1))&0xFF = 1. ✓
   const D3_byte = sext8(D1_byte) >= 0 ? D1_byte : (-D1_byte) & 0xff;
   const D4_byte = sext8(D2_byte) >= 0 ? D2_byte : (-D2_byte) & 0xff;
@@ -338,11 +338,11 @@ export function trackballClampFlags28468(
         D1_final = 0;
       }
     }
-    // else: SKIP — D1, D2 invariati
+    // else: SKIP — D1, D2 unchanged
   }
 
-  // ─── Step 11: Add sext(D1b) a *0x6A4, sext(D2b) a *0x6A6 ──────────────
-  // ext.w of un byte zero-esteso → sext_w of the byte signed.
+  // ─── Step 11: Add sext(D1b) to *0x6A4, sext(D2b) to *0x6A6 ────────────
+  // ext.w of a zero-extended byte → sext_w of the signed byte.
   const xCur = readSignedWord(state, ACCUM_X_OFF);
   const xNew = sext16((xCur + sext8(D1_final)) & 0xffff);
   writeWord(state, ACCUM_X_OFF, xNew);

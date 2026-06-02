@@ -3,9 +3,9 @@
  * test-slot-array-init-parity.ts — differential FUN_10392 vs slotArrayBulkInit.
  *
  * FUN_10392 initializes 6 slot arrays at fixed addresses. Verify that
- * all the bytes modificati combacino byte-byte.
+ * all the modified bytes match byte-by-byte.
  *
- * Uso: npx tsx packages/cli/src/test-slot-array-init-parity.ts
+ * Usage: npx tsx packages/cli/src/test-slot-array-init-parity.ts
  */
 
 import { readFileSync } from "node:fs";
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  console.log(`\n=== slotArrayBulkInit (FUN_10392) — 1 caso ===`);
+  console.log(`\n=== slotArrayBulkInit (FUN_10392) — 1 case ===`);
 
   cpu.system.setRegister("sp", 0x401f00);
 

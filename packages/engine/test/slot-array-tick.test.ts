@@ -12,7 +12,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("slotArrayTick (FUN_1493C)", () => {
-  it("calls il sub 4 times coi pointer slot deterministici", () => {
+  it("calls the sub 4 times with deterministic slot pointers", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     slotArrayTick(s, {
@@ -35,7 +35,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
     }
   });
 
-  it("senza subs is no-op (workRam invariata, no eccezione)", () => {
+  it("without subs is a no-op (workRam unchanged, no exception)", () => {
     const s = emptyGameState();
     s.workRam[0x1302 + 0x18] = 0xaa;
     s.workRam[0x1422 + 0x05] = 0x55;
@@ -46,7 +46,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("forwarda la state instance al callback (same reference)", () => {
+  it("forwards the state instance to the callback (same reference)", () => {
     const s = emptyGameState();
     let seen: ReturnType<typeof emptyGameState> | null = null;
     let count = 0;
@@ -60,7 +60,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
     expect(seen).toBe(s);
   });
 
-  it("le mutazioni of the callback ai workRam of the slot persistono between chiamate", () => {
+  it("callback mutations to the slot workRam persist between calls", () => {
     const s = emptyGameState();
     slotArrayTick(s, {
       fun_14966: (ptr, state) => {
@@ -78,7 +78,7 @@ describe("slotArrayTick (FUN_1493C)", () => {
     expect(s.workRam[0x1422 + 0x5f]).toBe(0);
   });
 
-  it("ordine of chiamata strictly sequenziale (slot 0 → 3, no shuffle)", () => {
+  it("call order strictly sequential (slot 0 → 3, no shuffle)", () => {
     const s = emptyGameState();
     const order: number[] = [];
     slotArrayTick(s, {

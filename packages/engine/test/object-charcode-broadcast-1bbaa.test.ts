@@ -68,7 +68,7 @@ function objBroadcastFlag(s: GameState, i: number): number {
 
 /**
  * Create a minimal ROM with ptr-table and byte-table placed at their addresses
- * pian piano scritta in ROM @ `listAddr` (of default 0x24a9a, in area table).
+ * written into ROM @ `listAddr` (default 0x24a9a, in the table area).
  */
 function makeRom(
   listBytes: number[],
@@ -93,7 +93,7 @@ function makeRom(
 }
 
 describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
-  it("exit immediato se gate flag *0x40076C == 0", () => {
+  it("immediate exit when gate flag *0x40076C == 0", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 0); // gate off
@@ -108,7 +108,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 1)).toBe(0);
   });
 
-  it("exit immediato se threshold ≤ progress (BLS unsigned)", () => {
+  it("immediate exit when threshold ≤ progress (BLS unsigned)", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -121,7 +121,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("exit immediato se char-list vuota (first byte = 0xFF)", () => {
+  it("immediate exit when char-list is empty (first byte = 0xFF)", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -134,13 +134,13 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("nominal: 1 obj match → broadcast su all the obj con state==1", () => {
+  it("nominal: 1 obj match → broadcast to all objs with state==1", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
     writeByte(s, PROGRESS_ADDR, 0x10);
     writeWord(s, OBJ_COUNT_ADDR, 4);
-    // obj0: state=1, charcode=0x42 (in lista), 0x6a=4 (in [3,6]), filter=0 → MATCH outer
+    // obj0: state=1, charcode=0x42 (in list), 0x6a=4 (in [3,6]), filter=0 → MATCH outer
     setupObj(s, 0, { state: 1, filterFlag: 0, charcode: 0x42, signedRange: 4 });
     setupObj(s, 1, { state: 1, filterFlag: 0, charcode: 0x99, signedRange: 0 });
     setupObj(s, 2, { state: 2, filterFlag: 0, charcode: 0x42, signedRange: 4 });
@@ -188,7 +188,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 3)).toBe(1);
   });
 
-  it("no obj con charcode in lista → no broadcast", () => {
+  it("no obj with charcode in list → no broadcast", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 0);
     writeByte(s, GATE_FLAG_ADDR, 1);
@@ -216,7 +216,7 @@ describe("objectCharcodeBroadcast1BBAA (FUN_0001BBAA)", () => {
     expect(objBroadcastFlag(s, 0)).toBe(0);
   });
 
-  it("level index != 0 → cambia ptr+threshold", () => {
+  it("level index != 0 → changes ptr+threshold", () => {
     const s = emptyGameState();
     writeWord(s, LEVEL_IDX_ADDR, 3);
     writeByte(s, GATE_FLAG_ADDR, 1);

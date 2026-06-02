@@ -5,7 +5,7 @@
  * Runs 0x28788..0x287D8 before the jsr calls to sub-updates. Compares work RAM
  * deltas between the binary and TS `mainUpdateScrollSync`.
  *
- * Uso: npx tsx packages/cli/src/test-main-prefix-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-main-prefix-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -25,7 +25,7 @@ import {
 import type { CpuSession } from "./binary-oracle-lib.js";
 
 const MAIN_PREFIX_START = 0x00028788;
-const MAIN_PREFIX_END = 0x000287d8; // subito dopo le scritture MMIO, first of the demo check
+const MAIN_PREFIX_END = 0x000287d8; // right after the MMIO writes, first of the demo check
 
 interface TestCase {
   scrollDirtyFlag: number;     // u8 @ 0x40039A
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state });
 
-  console.log(`\n=== mainUpdateScrollSync vs FUN_28788 prefix (${n} casi) ===`);
+  console.log(`\n=== mainUpdateScrollSync vs FUN_28788 prefix (${n} cases) ===`);
   const rng = makeRng(0xdead);
   let ok = 0;
   let firstMismatch: { tc: TestCase; bin: Snapshot; ts: Snapshot } | null = null;
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
     // Run binary from prefix start to prefix end (step-by-step)
     const r = runUntil(cpu, MAIN_PREFIX_START, MAIN_PREFIX_END, 1_000);
     if (!r.reachedTarget) {
-      console.log(`  case ${i}: binary NON ha raggiunto 0x287D8 dopo ${r.instructions} istruzioni`);
+      console.log(`  case ${i}: binary did NOT reach 0x287D8 after ${r.instructions} instructions`);
       continue;
     }
     const bin = snapshotBinary(cpu);

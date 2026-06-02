@@ -61,7 +61,7 @@ function setupRomTables(rom: RomImage, t1: number[], t2: number[]): void {
 }
 
 describe("decodeBitstream1A668 (FUN_0001A668)", () => {
-  it("Path B (token=0): produce 36 word con D6 incrementale + offset costante", () => {
+  it("Path B (token=0): produces 36 words with incrementing D6 + constant offset", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Output @ workRam off 0x100, ctrl @ off 0x200 (all zero), ext @ off 0x300.
@@ -82,7 +82,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     }
   });
 
-  it("Path A (bit 13 set, token = 0x2010): 1 word con D5_shifted + D3", () => {
+  it("Path A (bit 13 set, token = 0x2010): 1 word with D5_shifted + D3", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -128,7 +128,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     //   via mask 0x3E). idx_word = 0x02/2 = 1.
     //   → ROM table1[1] = 0xA001. + D3 = 0xA001 + 0x2000 = 0xC001.
     //
-    // Verifica: 0x1C30 binary = 1110 0011 0000. After bclr #13 → 0011 0000.
+    // Check: 0x1C30 binary = 1110 0011 0000. After bclr #13 → 0011 0000.
     //   Wait. 0x1C30 = 0001 1100 0011 0000. Bit 13 = 0 (since 0x2000 = bit 13).
     //   Path: D1 = D5 & 0x1C00 = 0x1C00 → path C.
     //   D5 = 0x1C30 (or after bclr stays 0x1C30 since bit 13 was 0).
@@ -168,7 +168,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 2)).toBe(0x2001);
   });
 
-  it("Path D (token = 0x1000): consecutive run con ROM table-2 constant", () => {
+  it("Path D (token = 0x1000): consecutive run with ROM table-2 constant", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -213,7 +213,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 0)).toBe((0xb004 + 0x2500) & 0xffff);
   });
 
-  it("Path E (token = 0x1400): consecutive run con toggle base 0x4D/0x4E", () => {
+  it("Path E (token = 0x1400): consecutive run with toggle base 0x4D/0x4E", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -233,7 +233,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 0)).toBe(0x304d);
   });
 
-  it("Path E con count=1 (token=0x1480): toggle D5 ^= 3 between 2 output", () => {
+  it("Path E with count=1 (token=0x1480): toggle D5 ^= 3 between 2 outputs", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;
@@ -253,7 +253,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     expect(readOutWord(s, 0x100, 1)).toBe(0x304e);
   });
 
-  it("Pure: writes solo in the 0x48 byte of output (+overshoot)", () => {
+  it("Pure: writes only the 0x48 bytes of output (+overshoot)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const outAbs = WORK_RAM_BASE + 0x100;

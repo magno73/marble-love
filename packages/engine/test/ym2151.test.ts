@@ -1,10 +1,10 @@
 /**
  * ym2151.test.ts — Phase 5 register-state parity smoke + protocol.
  *
- * Intent: in V2 il bit-perfect target e' il REGISTER FILE, non il sample audio.
+ * Intent: in V2 the bit-perfect target is the REGISTER FILE, not the audio sample.
  * Tests verify that the WR_ADDR + WR_DATA pattern stores the correct byte in
  * expected reg slot (MAME ym2151.cpp register_w mirror). A violation here makes
- * diverge il shadow vs MAME oracle in Phase 8, mascherando il debug of the sound
+ * the shadow diverge vs the MAME oracle in Phase 8, masking the debug of the sound
  * driver from the 6502 side.
  */
 
@@ -33,7 +33,7 @@ import {
 } from "../src/audio/ym2151-envelope.js";
 
 describe("YM2151 register file", () => {
-  it("init pulita: regs all 0, selected=0, flags=false", () => {
+  it("clean init: regs all 0, selected=0, flags=false", () => {
     const ym = createYM2151();
     expect(ym.regs.length).toBe(256);
     expect(Array.from(ym.regs).every((b) => b === 0)).toBe(true);
@@ -42,7 +42,7 @@ describe("YM2151 register file", () => {
     expect(ym.timerBOverflow).toBe(false);
   });
 
-  it("write addr + write data: byte stora in reg slot selezionato", () => {
+  it("write addr + write data: byte stored in the selected reg slot", () => {
     const ym = createYM2151();
     // Pattern from the 6502: STA $1800 (addr=0x20) + STA $1801 (data=0xC0)
     ym2151WriteAddr(ym, as_u8(0x20));  // channel 0: RL+FB+CONN
@@ -54,26 +54,26 @@ describe("YM2151 register file", () => {
     expect(ym.regs[0xFF]).toBe(0);
   });
 
-  it("write multipli aggiornano lo same reg finche' addr non cambia", () => {
+  it("multiple writes update the same reg until addr changes", () => {
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x08));  // KEY ON
     ym2151WriteData(ym, as_u8(0x01));
     expect(ym.regs[0x08]).toBe(0x01);
-    ym2151WriteData(ym, as_u8(0x78));  // all operatori on
+    ym2151WriteData(ym, as_u8(0x78));  // all operators on
     expect(ym.regs[0x08]).toBe(0x78);
-    // Cambio addr: prossima write va al nuovo slot
+    // Change addr: next write goes to the new slot
     ym2151WriteAddr(ym, as_u8(0x40));
     ym2151WriteData(ym, as_u8(0x55));
     expect(ym.regs[0x40]).toBe(0x55);
-    expect(ym.regs[0x08]).toBe(0x78);  // immutato
+    expect(ym.regs[0x08]).toBe(0x78);  // unchanged
   });
 
-  it("write addr wrap 8-bit: addr=0x100 effettivo 0x00", () => {
+  it("write addr wrap 8-bit: addr=0x100 effective 0x00", () => {
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0xFF));
     ym2151WriteData(ym, as_u8(0xAA));
     expect(ym.regs[0xFF]).toBe(0xAA);
-    // Verifica boundary: scrivere a $FF non corrompe $100..
+    // Boundary check: writing to $FF does not corrupt $100..
     expect(ym.regs.length).toBe(256);
   });
 });
@@ -84,26 +84,26 @@ describe("YM2151 status read (Phase 5 stub)", () => {
     expect(ym2151ReadStatus(ym) as number).toBe(0);
   });
 
-  it("status con timer A overflow set → bit 0", () => {
+  it("status with timer A overflow set → bit 0", () => {
     const ym = createYM2151();
     ym.timerAOverflow = true;
     expect(ym2151ReadStatus(ym) as number).toBe(0x01);
   });
 
-  it("status con timer B overflow set → bit 1", () => {
+  it("status with timer B overflow set → bit 1", () => {
     const ym = createYM2151();
     ym.timerBOverflow = true;
     expect(ym2151ReadStatus(ym) as number).toBe(0x02);
   });
 
-  it("status con both i timer overflow → bit 0 + bit 1", () => {
+  it("status with both timers overflow → bit 0 + bit 1", () => {
     const ym = createYM2151();
     ym.timerAOverflow = true;
     ym.timerBOverflow = true;
     expect(ym2151ReadStatus(ym) as number).toBe(0x03);
   });
 
-  it("write data asserisce busy bit per 64 cycle YM", async () => {
+  it("write data asserts the busy bit for 64 YM cycles", async () => {
     const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x20));
@@ -133,7 +133,7 @@ describe("YM2151 status read (Phase 5 stub)", () => {
 });
 
 describe("YM2151 Timer A counter (V3)", () => {
-  it("write $14 bit 0 arma Timer A, $10/$11 settano periodo", async () => {
+  it("write $14 bit 0 arms Timer A, $10/$11 set the period", async () => {
     const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     // Period max = 1024 tick (val=0 in $10/$11)
@@ -146,7 +146,7 @@ describe("YM2151 Timer A counter (V3)", () => {
     ym2151WriteData(ym, as_u8(0x01));
     expect(ym.timerAActive).toBe(true);
     expect(ym.timerACounter).toBe(1024);
-    // Avanza 1024 tick × 64 cycle YM = 65536 cycle YM = 32768 cycle 6502
+    // Advance 1024 tick × 64 YM cycles = 65536 YM cycles = 32768 6502 cycles
     ym2151TickCycles(ym, 32768);
     expect(ym.timerAOverflow).toBe(false);
     expect(ym.timerACounter).toBeGreaterThan(0);  // auto-restart
@@ -165,21 +165,21 @@ describe("YM2151 Timer A counter (V3)", () => {
     expect(ym.timerAOverflow).toBe(false);
   });
 
-  it("Timer A periodo variabile via $10/$11 (val=1023 → period=1 tick)", async () => {
+  it("Timer A variable period via $10/$11 (val=1023 → period=1 tick)", async () => {
     const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0xFF));
     ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x03));
     ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x01));
     expect(ym.timerACounter).toBe(1);
-    ym2151TickCycles(ym, 32);  // 1 tick × 64 cycle YM = 64 YM = 32 6502
+    ym2151TickCycles(ym, 32);  // 1 tick × 64 YM cycles = 64 YM = 32 6502
     expect(ym.timerAOverflow).toBe(false);
   });
 
-  it("Timer A load resetta il prescaler timer senza usare il sample accumulator", async () => {
+  it("Timer A load resets the timer prescaler without using the sample accumulator", async () => {
     const { ym2151TickCycles } = await import("../src/audio/ym2151.js");
     const ym = createYM2151();
-    ym2151TickCycles(ym, 23);  // lascia il sample/env accumulator a 46 YM cycle
+    ym2151TickCycles(ym, 23);  // leaves the sample/env accumulator at 46 YM cycles
     ym2151WriteAddr(ym, as_u8(0x10)); ym2151WriteData(ym, as_u8(0xFF));
     ym2151WriteAddr(ym, as_u8(0x11)); ym2151WriteData(ym, as_u8(0x03));
     ym2151WriteAddr(ym, as_u8(0x14)); ym2151WriteData(ym, as_u8(0x05));
@@ -240,7 +240,7 @@ describe("YM2151 Timer A counter (V3)", () => {
 });
 
 describe("YM2151 reset", () => {
-  it("reset pulisce reg file, selected, flags", () => {
+  it("reset clears reg file, selected, flags", () => {
     const ym = createYM2151();
     ym2151WriteAddr(ym, as_u8(0x40));
     ym2151WriteData(ym, as_u8(0xFF));
@@ -317,10 +317,10 @@ describe("YM2151 LFO noise waveform", () => {
   });
 });
 
-describe("YM2151 sequenza realistica boot 6502", () => {
+describe("YM2151 realistic 6502 boot sequence", () => {
   it("init pattern: clear LFO + key off + reset timer + setup ch0 voice", () => {
     const ym = createYM2151();
-    // Marble sound driver init (approssimato pattern Yamaha):
+    // Marble sound driver init (approximated Yamaha pattern):
     const seq: Array<[number, number]> = [
       [0x01, 0x02],  // TEST: LFO reset
       [0x08, 0x00],  // KEY OFF ch0
@@ -352,7 +352,7 @@ describe("YM2151 OPM phase step", () => {
     ym2151WriteData(ym, as_u8(val));
   }
 
-  it("KC=$4A, KF=0, MUL=1 produce il passo phase OPM tabellato", () => {
+  it("KC=$4A, KF=0, MUL=1 produces the tabulated OPM phase step", () => {
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
     writeReg(ym, 0x30, 0x00);
@@ -362,7 +362,7 @@ describe("YM2151 OPM phase step", () => {
     expect(ym.channels[0]!.op[0]!.phaseInc).toBe(8248);
   });
 
-  it("KF aumenta il passo phase senza cambiare KC", () => {
+  it("KF increases the phase step without changing KC", () => {
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
     writeReg(ym, 0x30, 0x00);
@@ -376,7 +376,7 @@ describe("YM2151 OPM phase step", () => {
     expect(ym.channels[0]!.op[0]!.phaseInc).toBeGreaterThan(base);
   });
 
-  it("PM delta non modifies il keycode used dto the envelope", async () => {
+  it("PM delta does not modify the keycode used by the envelope", async () => {
     const { operatorSetOpmBlockFreq } = await import("../src/audio/ym2151-operator.js");
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
@@ -391,7 +391,7 @@ describe("YM2151 OPM phase step", () => {
     expect(op.keyCode).toBe(keyCode);
   });
 
-  it("MUL scala il passo phase of the operatore", () => {
+  it("MUL scales the phase step of the operator", () => {
     const ym = createYM2151();
     writeReg(ym, 0x28, 0x4a);
     writeReg(ym, 0x30, 0x00);

@@ -422,7 +422,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: forced match (cell ↔ field) with random kind ─────────────
   console.log(
-    `\n=== Suite B: forced match (cell ↔ field>>19) con kind random — ${perSuite} cases ===`,
+    `\n=== Suite B: forced match (cell ↔ field>>19) with random kind — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -463,7 +463,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

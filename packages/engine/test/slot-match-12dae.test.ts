@@ -1,7 +1,7 @@
 /**
- * slot-match-12dae.test.ts — smoke per `slotMatch12DAE` (FUN_00012DAE).
+ * slot-match-12dae.test.ts — smoke for `slotMatch12DAE` (FUN_00012DAE).
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated vs binary in
  * `packages/cli/src/test-slot-match-12dae-parity.ts`.
  */
 
@@ -14,7 +14,7 @@ const SLOT_TABLE_BASE = 0x400a9c;
 const SLOT_STRIDE = 0x56;
 const SLOT_COUNT = 25;
 
-/** Scrive un long big-endian in work RAM to the offset (relativo a 0x400000). */
+/** Writes a big-endian long into work RAM at the offset (relative to 0x400000). */
 function writeU32(s: ReturnType<typeof emptyGameState>, off: number, v: number): void {
   s.workRam[off] = (v >>> 24) & 0xff;
   s.workRam[off + 1] = (v >>> 16) & 0xff;
@@ -28,11 +28,11 @@ function setArgTarget(s: ReturnType<typeof emptyGameState>, argPtr: number, targ
 }
 
 describe("slotMatch12DAE (FUN_00012DAE)", () => {
-  it("nessuno slot occupied → D0 = 0 (no-match, default)", () => {
+  it("no slot occupied → D0 = 0 (no-match, default)", () => {
     const s = emptyGameState();
     const argPtr = 0x401d00;
     setArgTarget(s, argPtr, 0xdeadbeef);
-    // Tutti the slot hanno byte+0x18 = 0 (default zero-init).
+    // All slots have byte+0x18 = 0 (default zero-init).
     expect(slotMatch12DAE(s, argPtr)).toBe(0);
   });
 
@@ -52,7 +52,7 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
   it("target = 0 and *(slot+0x1F) == 0xC → D0 = 1 (match alt path)", () => {
     const s = emptyGameState();
     const argPtr = 0x401d00;
-    setArgTarget(s, argPtr, 0); // *(arg+2) = 0 → attiva alt-path
+    setArgTarget(s, argPtr, 0); // *(arg+2) = 0 → activates alt-path
     const slotAddr = SLOT_TABLE_BASE + 7 * SLOT_STRIDE;
     const slotOff = slotAddr - WORK_RAM_BASE;
     s.workRam[slotOff + 0x18] = 1;
@@ -78,7 +78,7 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
     expect(slotMatch12DAE(s, argPtr)).toBe(0);
   });
 
-  it("slot occupied but byte+0x18 != 1 (e.g. 2) → NOT counts as occupied (cmpi.b #1 stretto)", () => {
+  it("slot occupied but byte+0x18 != 1 (e.g. 2) → does NOT count as occupied (strict cmpi.b #1)", () => {
     const s = emptyGameState();
     const argPtr = 0x401d00;
     const target = 0xaabbccdd;
@@ -86,15 +86,15 @@ describe("slotMatch12DAE (FUN_00012DAE)", () => {
     const slotAddr = SLOT_TABLE_BASE + 3 * SLOT_STRIDE;
     const slotOff = slotAddr - WORK_RAM_BASE;
     s.workRam[slotOff + 0x18] = 2; // NOT 1 → cmpi.b #1 fails → skip
-    writeU32(s, slotOff + 0x3a, target); // even if key match, il check of occupied skips la entry
+    writeU32(s, slotOff + 0x3a, target); // even if key matches, the occupied check skips the entry
 
     expect(slotMatch12DAE(s, argPtr)).toBe(0);
   });
 
-  it("early-exit al first match: il binario non scansiona beyond", () => {
+  it("early-exit at the first match: the binary does not scan beyond", () => {
     // First slot occupied with type 0xC (target=0 activates alt-path), all
-    // later slots too -> returns 1 regardless. Verify that no
-    // side effect ci both (read-only).
+    // later slots too -> returns 1 regardless. Verify that there are no
+    // side effects (read-only).
     const s = emptyGameState();
     const argPtr = 0x401d00;
     setArgTarget(s, argPtr, 0);

@@ -139,14 +139,14 @@ async function main(): Promise<void> {
     if (r < 0.25) return 0x02;
     if (r < 0.5) return 0x09;
     if (r < 0.75) return 0x04;
-    return rb(); // qualsiasthe bytes (potrebbe random-coincidere con 2/9/4 — ok)
+    return rb(); // any byte (may randomly coincide with 2/9/4 — ok)
   };
 
   let ok = 0;
   let firstFail: FailRecord | null = null;
 
   // Field offsets potentially touched by writes, used to scrub the mirror.
-  // Scelti da disasm: 0x00..07, 0x18, 0x1A, 0x56, 0x5A..5D, 0x5F, 0x60, 0xD2..D3.
+  // Chosen from disasm: 0x00..07, 0x18, 0x1A, 0x56, 0x5A..5D, 0x5F, 0x60, 0xD2..D3.
   const SCRATCH_FIELDS = [
     0x00, 0x01, 0x02, 0x03,
     0x04, 0x05, 0x06, 0x07,
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
       pokeMem(cpu, ptr + k, 1, scratchObj[k]!);
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror into state.workRam ──────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // Object scratch in the mirror
     for (let k = 0; k < 0xe0; k++) {
@@ -218,8 +218,8 @@ async function main(): Promise<void> {
     }
 
     // ── Run binary ─────────────────────────────────────────────────────
-    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB of un long).
-    // callFunction li pusha both as long RTL → SP+8 = arg1, SP+12..15 = arg2 long
+    // Args: arg1=objPtr (long), arg2=subStateCode (byte LSB of a long).
+    // callFunction pushes both as long RTL → SP+8 = arg1, SP+12..15 = arg2 long
     callFunction(cpu, FUN_25BAE, [ptr, code]);
 
     const binCurEnd = peekMem(cpu, SOUND_CUR_PTR, 4) >>> 0;

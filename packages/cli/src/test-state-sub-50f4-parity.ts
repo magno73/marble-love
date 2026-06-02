@@ -4,20 +4,20 @@
  *
  * of output to A2+D3w*10 and optionally applies single-bit correction.
  *
- * Convenzione caller (registri inheritati da `bsr.w` in FUN_4F38):
+ * Caller convention (registers inherited from `bsr.w` in FUN_4F38):
  *   - A2 (long ptr) = output buffer
  *   - A3 (long ptr) = input codeword base
  *   - D2w (word) = row index input (× 30)
  *   - D3w (word) = row index output (× 10)
- *   - D0 = D1 al return; D2/D3 += 1 al return (epilogue)
+ *   - D0 = D1 at return; D2/D3 += 1 at return (epilogue)
  *
- * Strategia parity:
- *   - Genera input codeword random in ROM (Musashi unified mem) o workRam
- *   - Setta A2 (workRam ptr), A3 (ROM o workRam ptr), D2w, D3w
- *   - Spinge sentinel ret addr, poi setRegister(pc, 0x50F4)
+ * Parity strategy:
+ *   - Generate a random input codeword in ROM (Musashi unified mem) or workRam
+ *   - Set A2 (workRam ptr), A3 (ROM or workRam ptr), D2w, D3w
+ *   - Push sentinel ret addr, then setRegister(pc, 0x50F4)
  *   - run loop up to PC == sentinel, capture D0/D2/D3 + workRam delta
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-50f4-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -58,7 +58,7 @@ interface CaptureResult {
   reachedRts: boolean;
   /** Snapshot of workRam at end of call (region under test). */
   outputBytes: Uint8Array;
-  /** Counter long-BE @ A2+0x11..0x12 al fine call. */
+  /** Counter long-BE @ A2+0x11..0x12 at end of call. */
   counterAfter: number;
 }
 
@@ -67,7 +67,7 @@ interface CaptureResult {
  *
  *   - pc = FUN_50F4
  *   - a2 = a2Ptr, a3 = a3Ptr
- *   - d2 = d2Word (zero-ext da word), d3 = d3Word
+ *   - d2 = d2Word (zero-ext from word), d3 = d3Word
  *
  * Note: FUN_50F4 has NO movem prologue at entry — it uses immediate lea ops that use
  */
@@ -88,7 +88,7 @@ function runAndCaptureBin(
   sys.setRegister("sp", sp);
   sys.setRegister("pc", FUN_50F4);
 
-  // Set context registers. D2/D3 zero-ext da word (high word = 0).
+  // Set context registers. D2/D3 zero-ext from word (high word = 0).
   sys.setRegister("a2", a2 >>> 0);
   sys.setRegister("a3", a3 >>> 0);
   sys.setRegister("d2", (d2Word & 0xffff) >>> 0);
@@ -136,7 +136,7 @@ function runAndCaptureBin(
 
 interface CaseSetup {
   a2: number; // workRam ptr (0x400000+)
-  a3: number; // ROM ptr (0x000000..0x80000) o workRam
+  a3: number; // ROM ptr (0x000000..0x80000) or workRam
   d2Word: number;
   d3Word: number;
   /** Bytes in input row at A3+D2w*30..A3+D2w*30+29 (30 byte). */
@@ -285,7 +285,7 @@ async function main(): Promise<void> {
         initialOutputBytes: new Uint8Array(10),
       };
     } else if (i < 50) {
-      // Sweep deterministico su (a3, d2, d3).
+      // Deterministic sweep over (a3, d2, d3).
       const inputRow = new Uint8Array(30);
       for (let k = 0; k < 30; k++) {
         inputRow[k] = ((i * 0x37 + k * 0x11) ^ 0x55) & 0xff;

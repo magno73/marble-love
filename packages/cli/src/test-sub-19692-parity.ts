@@ -2,31 +2,31 @@
 /**
  * test-sub-19692-parity.ts — differential FUN_00019692 vs `sub19692`.
  *
- * FUN_00019692 (164 byte): "Entity move-and-validate retry loop (heavy)".
+ * FUN_00019692 (164 bytes): "Entity move-and-validate retry loop (heavy)".
  * FUN_198BC variant called at the tail of FUN_1960E (case 0 of dispatcher
  * 194BA). Attempts move via FUN_19976 + validate via FUN_1937C; if the 1st validate
  * fails (free/skip), restore pos and return. If it passes, loop up to 12 iter
  * by rotating entity[0x26] by step (1 if state==7, otherwise 4). Exits with
  * stuck marker (entity[0x26]=0x10, entity[0..7]=0) if the loop is exhausted.
  *
- * **Differenze da FUN_198BC**:
+ * **Differences from FUN_198BC**:
  *   - NO pre-decrement entity[0x26].
  *   - NO original direction save (no D4).
  *   - NO cycle-back check.
- *   - Max iter = 0xC (12), non 9.
+ *   - Max iter = 0xC (12), not 9.
  *
- * **Strategia parity**:
- *   - FUN_19976 **lasciato live** (replica `sub19976`).
- *   - FUN_1937C **lasciato live** (replica `sub1937C`).
+ * **Parity strategy**:
+ *   - FUN_19976 **left live** (replica `sub19976`).
+ *   - FUN_1937C **left live** (replica `sub1937C`).
  *   - Compare: entity[0..0x28] + proxArray[0x401890..0x401a28].
  *
- * **Suite** (4 × 125 = 500):
+ * **Suites** (4 × 125 = 500):
  *   - A: random
  *   - B: forced state==7
- *   - C: pos in area valida grid (validate path varied)
+ *   - C: pos in valid grid area (validate path varied)
  *   - D: edge cases (counter saturation, state boundaries, marker 0x10)
  *
- * Uso: npx tsx packages/cli/src/test-sub-19692-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-sub-19692-parity.ts [N]
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // Suite C: pos in grid valido
+  // Suite C: pos in valid grid
   console.log(`\n=== Suite C: pos in grid range — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -218,7 +218,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okD}/${sizeD} = ${((okD / sizeD) * 100).toFixed(1)}%`);
   totalOk += okD;
 
-  console.log(`\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
+  console.log(`\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`);
   if (failHolder.value !== null) {
     const f = failHolder.value;
     console.log(`  First fail (suite ${f.suite} tc=${f.tc}): ${f.reason}`);

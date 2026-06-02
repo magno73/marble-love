@@ -3,17 +3,17 @@
  * test-find-nearest-target-2637a-parity.ts — differential FUN_0002637A vs
  * findNearestTarget2637A.
  *
- * (terminata da 0xFF), filtra per byte (≡ A2[+0x1D] sign-ext), valida via
- * `*0x400472.b`) for the miglior candidato visibile.
+ * (terminated by 0xFF), filters by byte (≡ A2[+0x1D] sign-ext), validates via
+ * `*0x400472.b`) for the best visible candidate.
  *
- * Strategia parity:
+ * Parity strategy:
  *
- * 1. Patcha in ROM:
- *      `0x1EF1A + (*0x400394.w * 4)`): we write *0x400394 = K e
+ * 1. Patch in ROM:
+ *      `0x1EF1A + (*0x400394.w * 4)`): we write *0x400394 = K and
  *      place at `(0x1EF1A + K*4)` a long that points to our buffer
- *      of candidates (also in ROM, in area free).
+ *      of candidates (also in ROM, in a free region).
  *
- *    CPU. We use area ROM free (e.g. `0x3F000`) and we inject a set
+ *    CPU. We use a free ROM region (e.g. `0x3F000`) and we inject a set
  *
  *    - Generate obj with A2[+0x1D]=filter, A2[+0x32].w=objX, A2[+0x34].w=objY.
  *    - Pre-fill globals 0x400462/466/472 with sentinels.
@@ -23,7 +23,7 @@
  *    `tableReader = (a) => romBuf[a]` and `lineOfSight17CB8 = () => 0`.
  *
  *
- * Uso: npx tsx packages/cli/src/test-find-nearest-target-2637a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-find-nearest-target-2637a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -79,10 +79,10 @@ function patchRomBytes(
   }
 }
 
-/** Patcha FUN_17CB8 a `moveq #0,D0; rts` (4 byte). */
+/** Patch FUN_17CB8 to `moveq #0,D0; rts` (4 byte). */
 function patchSubsRom(rom: Buffer): void {
   patchRomBytes(rom, FUN_17CB8, [0x70, 0x00, 0x4e, 0x75]);
-  // Patcha dispatch slot @ 0x1F01A: long pointer = SCRATCH_TABLE_ROM.
+  // Patch dispatch slot @ 0x1F01A: long pointer = SCRATCH_TABLE_ROM.
   // Big-endian.
   rom[DISPATCH_SLOT_ADDR + 0] = (SCRATCH_TABLE_ROM >>> 24) & 0xff;
   rom[DISPATCH_SLOT_ADDR + 1] = (SCRATCH_TABLE_ROM >>> 16) & 0xff;
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
       }
     }
 
-    // ── Mirror su state.workRam ────────────────────────────────────────
+    // ── Mirror into state.workRam ──────────────────────────────────────
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
     // *0x400394
     stateInst.workRam[0x394] = (DISPATCH_K >>> 8) & 0xff;

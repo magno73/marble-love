@@ -1,5 +1,5 @@
 /**
- * helper-182ba.test.ts — smoke tests per FUN_182BA replica.
+ * helper-182ba.test.ts — smoke tests for the FUN_182BA replica.
  */
 import { describe, it, expect } from "vitest";
 import { helper182BA } from "../src/helper-182ba.js";
@@ -7,7 +7,7 @@ import { emptyGameState } from "../src/state.js";
 import { emptyRomImage } from "../src/bus.js";
 
 describe("helper182BA (FUN_182BA)", () => {
-  it("non solleva eccezioni con state vuoto and slot vuoto", () => {
+  it("does not throw exceptions with empty state and empty slot", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => helper182BA(s, 0x400a20, rom)).not.toThrow();
@@ -31,18 +31,18 @@ describe("helper182BA (FUN_182BA)", () => {
     s.workRam[off + 0x36] = 0x01; // gravity-on, non-skip-seek
     // VZ = 0
     helper182BA(s, 0x400a20, rom);
-    // Dopo gravity: vz = 0 - 0x6000 = -0x6000 → 0xffffa000 (signed)
+    // After gravity: vz = 0 - 0x6000 = -0x6000 → 0xffffa000 (signed)
     const vzU = (s.workRam[off + 0x08] ?? 0) << 24 |
                 (s.workRam[off + 0x09] ?? 0) << 16 |
                 (s.workRam[off + 0x0a] ?? 0) << 8  |
                 (s.workRam[off + 0x0b] ?? 0);
     const vz = vzU | 0;
     // Exact result depends on the seek path, which may have written vy/vx/vz first.
-    // Ma vz should esserci una some mutation (≠ seed 0).
+    // But vz should show some mutation (≠ seed 0).
     expect(vz).not.toBe(0);
   });
 
-  it("clamp gravity: vz iniziale < -0x4F000 → diventa -0x50000", () => {
+  it("clamp gravity: initial vz < -0x4F000 → becomes -0x50000", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const off = 0xa20;

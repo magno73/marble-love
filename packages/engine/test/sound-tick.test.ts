@@ -10,12 +10,12 @@ import { soundTick } from "../src/sound-tick.js";
 import { emptyGameState } from "../src/state.js";
 
 describe("soundTick (FUN_4CA0 wrapper)", () => {
-  it("non solleva eccezioni con state vuoto", () => {
+  it("does not throw with empty state", () => {
     const s = emptyGameState();
     expect(() => soundTick(s)).not.toThrow();
   });
 
-  it("cmd < 0x40 con last_sent bit 7 set: dispatch and mark sent", () => {
+  it("cmd < 0x40 with last_sent bit 7 set: dispatch and mark sent", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x10; // cmd
     s.workRam[0x1f45] = 0x82; // last_sent (bit 7 set, value 0x02)
@@ -28,12 +28,12 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(calls).toEqual([(0x10 << 8) | 0x02]); // dispatch
     expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // last_sent updated + flag
     // 0x1f44 cleared by simulated sound-CPU ack in default fun_4dcc
-    // (M6502 reads mailbox and acks; without sound CPU emulation, simulate ack
-    // immediato per matchare frame-done dump MAME). Pre-fix era 0x10|0x80.
+    // (M6502 reads mailbox and acks; without sound CPU emulation, simulate
+    // immediate ack to match the MAME frame-done dump). Pre-fix was 0x10|0x80.
     expect(s.workRam[0x1f44]).toBe(0); // cmd ack-cleared from the sound CPU sim
   });
 
-  it("cmd >= 0x40: skip queue dispatch, solo mark sent", () => {
+  it("cmd >= 0x40: skip queue dispatch, only mark sent", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x80; // cmd >= 0x40 (bit 7 already set)
     s.workRam[0x1f45] = 0x12;
@@ -49,7 +49,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1f44]).toBe(0); // ack-cleared
   });
 
-  it("cmd < 0x40 con last_sent bit 7 zero: no dispatch but update last_sent", () => {
+  it("cmd < 0x40 with last_sent bit 7 zero: no dispatch but update last_sent", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x10;
     s.workRam[0x1f45] = 0x05; // bit 7 zero
@@ -70,10 +70,10 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     soundTick(s, { fun_3e1a: (arg) => calls.push(arg) });
 
     expect(calls.length).toBe(0); // skip dispatch (cmd == last)
-    expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // ancora 0x90
+    expect(s.workRam[0x1f45]).toBe(0x10 | 0x80); // still 0x90
   });
 
-  it("FUN_4DCC sub is invocata", () => {
+  it("FUN_4DCC sub is invoked", () => {
     const s = emptyGameState();
     let called = false;
     soundTick(s, { fun_4dcc: () => { called = true; } });
@@ -88,7 +88,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0xff); // 0xfe+1 = 0xff
   });
 
-  it("cmd >= 0x40 + FUN_4C3E returns 0 con retry overflow: satura a 0xff", () => {
+  it("cmd >= 0x40 + FUN_4C3E returns 0 with retry overflow: saturates at 0xff", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x80; // cmd >= 0x40 → no reset
     s.workRam[0x1ff4] = 0xff;
@@ -104,7 +104,7 @@ describe("soundTick (FUN_4CA0 wrapper)", () => {
     expect(s.workRam[0x1ff4]).toBe(0x42); // unchanged
   });
 
-  it("cmd < 0x40: retry counter reset a 0", () => {
+  it("cmd < 0x40: retry counter reset to 0", () => {
     const s = emptyGameState();
     s.workRam[0x1f44] = 0x10; // cmd < 0x40 → reset
     s.workRam[0x1ff4] = 0xab;

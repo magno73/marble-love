@@ -22,7 +22,7 @@ function fillSentinel(buf: Uint8Array, value: number): void {
 }
 
 describe("clearPlayfieldStride (FUN_12186)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(PF_RAM_BASE_ADDR).toBe(0xa00000);
     expect(STRIDE_START_ADDR).toBe(0xa00006);
     expect(STRIDE_ENTRY_COUNT).toBe(64);
@@ -32,7 +32,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(STRIDE_CLEAR_BYTES + STRIDE_SKIP_BYTES).toBe(STRIDE_BYTES);
   });
 
-  it("preserva i first 6 byte (offset < 0xA00006)", () => {
+  it("preserves the first 6 bytes (offset < 0xA00006)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xaa);
     clearPlayfieldStride(pf);
@@ -41,7 +41,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("azzera 72 byte to the inizio of each entry, preserva i successivi 56", () => {
+  it("clears 72 bytes at the start of each entry, preserves the next 56", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xff);
     clearPlayfieldStride(pf);
@@ -64,7 +64,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("non writes beyond l'last byte cleared (0xA01FCD)", () => {
+  it("does not write beyond the last cleared byte (0xA01FCD)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0x5a);
     clearPlayfieldStride(pf);
@@ -78,7 +78,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     }
   });
 
-  it("totale byte azzerati = 64 × 72 = 4608 (su buffer pre-fillato 0xFF)", () => {
+  it("total bytes cleared = 64 × 72 = 4608 (on a buffer pre-filled with 0xFF)", () => {
     const pf = new Uint8Array(PF_SIZE);
     fillSentinel(pf, 0xff);
     clearPlayfieldStride(pf);
@@ -90,7 +90,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(zeros).toBe(4608);
   });
 
-  it("idempotente: call twice == una time", () => {
+  it("idempotent: call twice == once", () => {
     const a = new Uint8Array(PF_SIZE);
     fillSentinel(a, 0x33);
     clearPlayfieldStride(a);
@@ -103,7 +103,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     expect(b).toEqual(a);
   });
 
-  it("buffer più corto: bound-safe, no overflow", () => {
+  it("shorter buffer: bound-safe, no overflow", () => {
     // 100-byte buffer: only entry 0 is partial.
     const small = new Uint8Array(100);
     fillSentinel(small, 0xc7);

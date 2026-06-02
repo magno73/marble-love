@@ -7,16 +7,16 @@ import {
 } from "../src/abs-helpers.js";
 
 describe("FUN_1B5A6 absLong1B5A6", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(ABS_LONG_1B5A6_ADDR).toBe(0x1b5a6);
   });
 
-  it("positivo → invariato", () => {
+  it("positive → unchanged", () => {
     expect(absLong1B5A6(42)).toBe(42);
     expect(absLong1B5A6(0x7fffffff)).toBe(0x7fffffff);
   });
 
-  it("negativo → negato", () => {
+  it("negative → negated", () => {
     expect(absLong1B5A6(-42)).toBe(42);
     expect(absLong1B5A6(-1)).toBe(1);
   });
@@ -25,7 +25,7 @@ describe("FUN_1B5A6 absLong1B5A6", () => {
     expect(absLong1B5A6(0)).toBe(0);
   });
 
-  it("INT32_MIN edge case → invariato (M68k neg.l overflow)", () => {
+  it("INT32_MIN edge case → unchanged (M68k neg.l overflow)", () => {
     expect(absLong1B5A6(-2147483648)).toBe(-2147483648);
   });
 
@@ -36,16 +36,16 @@ describe("FUN_1B5A6 absLong1B5A6", () => {
 });
 
 describe("FUN_1B5B4 negAbsLong1B5B4", () => {
-  it("expone l'address of the binario", () => {
+  it("exposes the binary address", () => {
     expect(NEG_ABS_LONG_1B5B4_ADDR).toBe(0x1b5b4);
   });
 
-  it("positivo → negato", () => {
+  it("positive → negated", () => {
     expect(negAbsLong1B5B4(42)).toBe(-42);
     expect(negAbsLong1B5B4(0x7fffffff)).toBe(-0x7fffffff);
   });
 
-  it("negativo → invariato", () => {
+  it("negative → unchanged", () => {
     expect(negAbsLong1B5B4(-42)).toBe(-42);
     expect(negAbsLong1B5B4(-1)).toBe(-1);
   });
@@ -54,7 +54,7 @@ describe("FUN_1B5B4 negAbsLong1B5B4", () => {
     expect(negAbsLong1B5B4(0)).toBe(0);
   });
 
-  it("simmetrico a absLong1B5A6 modulo zero", () => {
+  it("symmetric to absLong1B5A6 modulo zero", () => {
     for (const v of [42, -42, 100, -100, 1, -1]) {
       expect(negAbsLong1B5B4(v)).toBe(-Math.abs(v));
     }

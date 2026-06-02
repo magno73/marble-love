@@ -32,7 +32,7 @@ import { emptyRomImage } from "../src/bus.js";
 function makeRomFixture() {
   const rom = emptyRomImage();
 
-  // Tabella Y reale: 16× 0x00C8, 16× 0x00A0, 16× 0x0078, 8× 0x0050
+  // Real Y table: 16× 0x00C8, 16× 0x00A0, 16× 0x0078, 8× 0x0050
   const yTable: number[] = [];
   for (let i = 0; i < 16; i++) yTable.push(0x00c8);
   for (let i = 0; i < 16; i++) yTable.push(0x00a0);
@@ -68,7 +68,7 @@ function readWordBE(buf: Uint8Array, off: number): number {
 }
 
 describe("moGridInit2404 (FUN_2404)", () => {
-  it("arg1=0: bank 0, MMIO=0, writes 56 slot, code=0x0002, link=1..56", () => {
+  it("arg1=0: bank 0, MMIO=0, writes 56 slots, code=0x0002, link=1..56", () => {
     const s = emptyGameState();
     const { rom, yTable, xTable } = makeRomFixture();
 
@@ -80,10 +80,10 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // A single MMIO write, value = arg1<<3 = 0.
     expect(writes).toEqual([{ addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 }]);
 
-    // Bank offset = arg1<<9 = 0. Tutti the slot in spriteRam[0..0x1EF].
+    // Bank offset = arg1<<9 = 0. All slots in spriteRam[0..0x1EF].
     for (let i = 0; i < NUM_SLOTS; i++) {
       const slotPos = i * 2;
-      const tableIdx = NUM_SLOTS - 1 - i; // index decrescente
+      const tableIdx = NUM_SLOTS - 1 - i; // descending index
 
       // Y = (TABLE_Y[tableIdx] << 5) & 0xFFFF
       const expectedY = (yTable[tableIdx]! << 5) & 0xffff;
@@ -100,7 +100,7 @@ describe("moGridInit2404 (FUN_2404)", () => {
       expect(readWordBE(s.spriteRam, slotPos + MO_FIELD_LINK_OFF)).toBe(i + 1);
     }
 
-    // Bytes beyond il bank (0x1F0..0xFFF) restano 0.
+    // Bytes beyond the bank (0x1F0..0xFFF) remain 0.
     for (let off = MO_BANK_SIZE; off < s.spriteRam.length; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
@@ -144,19 +144,19 @@ describe("moGridInit2404 (FUN_2404)", () => {
       expect(readWordBE(s.spriteRam, slotPos + MO_FIELD_LINK_OFF)).toBe(i + 1);
     }
 
-    // Banks successivi (0x800..) restano 0.
+    // Subsequent banks (0x800..) remain 0.
     for (let off = bankOff + MO_BANK_SIZE; off < s.spriteRam.length; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
   });
 
-  it("arg1=0x10000: long shift wrap, MMIO=0x0 (bit 16 esce from the word)", () => {
+  it("arg1=0x10000: long shift wrap, MMIO=0x0 (bit 16 falls out of the word)", () => {
     const s = emptyGameState();
     const { rom } = makeRomFixture();
 
     const writes: Array<{ addr: number; value: number }> = [];
-    // arg1 = 0x10000 → arg1<<3 = 0x80000 → low word = 0x0000 (i 16 bit alti escono).
-    // arg1<<9 = 0x2000000 → bank offset assoluto enorme: cade outside from the 4KB of
+    // arg1 = 0x10000 → arg1<<3 = 0x80000 → low word = 0x0000 (the high 16 bits fall out).
+    // arg1<<9 = 0x2000000 → enormous absolute bank offset: falls outside the 4KB of
     // spriteRam. The TS replica must no-op out-of-bounds writes (not
     // crash).
     moGridInit2404(s, rom, 0x10000, {
@@ -166,20 +166,20 @@ describe("moGridInit2404 (FUN_2404)", () => {
     // MMIO = 0x80000 & 0xFFFF = 0x0000.
     expect(writes).toEqual([{ addr: MMIO_AV_CONTROL_ADDR, value: 0x0000 }]);
 
-    // SpriteRam intera = 0 (all i write cadono outside bound).
+    // Entire spriteRam = 0 (all writes fall out of bounds).
     for (let off = 0; off < s.spriteRam.length; off++) {
       expect(s.spriteRam[off]).toBe(0);
     }
   });
 
-  it("arg1=1: code bias wrap mod 0x10000 con arg1=0xFFFE → code=0x0000", () => {
+  it("arg1=1: code bias wrap mod 0x10000 with arg1=0xFFFE → code=0x0000", () => {
     const s = emptyGameState();
     const { rom } = makeRomFixture();
 
     const writes: Array<{ addr: number; value: number }> = [];
     // arg1 = 0xFFFE → arg1<<3 = 0x7FFF0 → MMIO low word = 0xFFF0
-    // arg1<<9 = 0x1FFFC00 → outside from the 4KB. spriteRam non scritta.
-    // Ma proviamo arg1=0 per code wrap:
+    // arg1<<9 = 0x1FFFC00 → outside the 4KB. spriteRam not written.
+    // But let's try arg1=0 for code wrap:
     // (0 + 0x0002) & 0xFFFF = 0x0002.
     // To test wrap, inject a different bias.
     rom.program[ROM_CODE_BIAS_ADDR] = 0xff;
@@ -200,16 +200,16 @@ describe("moGridInit2404 (FUN_2404)", () => {
     }
   });
 
-  it("subs.onMmioWrite opzionale: senza callback non crasha", () => {
+  it("subs.onMmioWrite optional: does not crash without a callback", () => {
     const s = emptyGameState();
     const { rom } = makeRomFixture();
 
     expect(() => moGridInit2404(s, rom, 0)).not.toThrow();
 
     // Verify spriteRam was still written correctly.
-    // (almeno il first slot).
+    // (at least the first slot).
     expect(readWordBE(s.spriteRam, MO_FIELD_LINK_OFF)).toBe(1);
-    // L'last slot link = 56.
+    // The last slot link = 56.
     expect(readWordBE(s.spriteRam, 55 * 2 + MO_FIELD_LINK_OFF)).toBe(56);
   });
 });

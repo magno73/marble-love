@@ -33,7 +33,7 @@ function readSWord(ram: Uint8Array, off: number): number {
 }
 
 describe("trackballClampFlags28468 (FUN_00028468)", () => {
-  it("pre-clamp ±0x40: accumulator iniziale > 0x40 is cap a 0x40 first of all", () => {
+  it("pre-clamp ±0x40: initial accumulator > 0x40 is capped to 0x40 first of all", () => {
     const s = emptyGameState();
     writeSWord(s.workRam, ACCUM_X_OFF, 0x0100);
     writeSWord(s.workRam, ACCUM_Y_OFF, -0x80);
@@ -50,7 +50,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(-0x40 + POST_WRAP_LIMIT);
   });
 
-  it("flag bits: input bit 0 stable mantiene D5 bit 0 set; bit 0 unstable lo clear", () => {
+  it("flag bits: stable input bit 0 keeps D5 bit 0 set; unstable bit 0 clears it", () => {
     const s = emptyGameState();
     // Setup debounce: prev = 0x01, oldDeb = 0x01 → cur=0x01 → newDeb = (0x01 | (0x01 & 0x01)) & (0x01 | 0x01) = 0x01
     s.workRam[0x3a8] = 0x01; // prev sample
@@ -92,7 +92,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(-0x10);
   });
 
-  it("axis-lock: con A=0x10, B=0x00 → D1=-0x10, D2=0x10, abs uguali → SKIP", () => {
+  it("axis-lock: with A=0x10, B=0x00 → D1=-0x10, D2=0x10, equal abs → SKIP", () => {
     // To get controlled picked deltas, we set both obj C6/C7 to
     const s = emptyGameState();
     // obj0 @ 0x18: C6 = 0x10 (pickedY = A), C7 = 0x00 (pickedX = B)
@@ -133,14 +133,14 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     //                   D2b = A - B = 0x10 (sext = +16)
     // D3 = abs8(D1) = 0x10, D4 = abs8(D2) = 0x10.
     // 2*D4 = 0x20. D3 (0x10) > 0x20? no. fallthrough.
-    // 2*D3 = 0x20. D4 (0x10) <= 0x20? yes (bls) → SKIP. D1, D2 invariati.
+    // 2*D3 = 0x20. D4 (0x10) <= 0x20? yes (bls) → SKIP. D1, D2 unchanged.
     // Add: *0x6A4 += sext_w(D1b) = -16 → -16. *0x6A6 += sext_w(D2b) = 16 → 16.
-    // No wrap (|-16| <= 0x18, |16| <= 0x18).
+    // No wrap (|-16| <= 0x18, |16| <= 0x18). D1, D2 unchanged.
     expect(readSWord(s.workRam, ACCUM_X_OFF)).toBe(-16);
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(16);
   });
 
-  it("debounceInput modifies *0x4003A8/AA/AC as parte of the chiamata", () => {
+  it("debounceInput modifies *0x4003A8/AA/AC as part of the call", () => {
     const s = emptyGameState();
     // Setup: prev=0xFF, oldDeb=0xFF → cur=0xFF → newDeb=0xFF (stable hi).
     s.workRam[0x3a8] = 0xff;
@@ -159,7 +159,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     expect(s.workRam[0x3a8]).toBe(0xff); // prev = curr = 0xFF
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("constants exposed: correct binary addresses", () => {
     expect(FUN_28468_ADDR).toBe(0x00028468);
     expect(ACCUM_X_OFF).toBe(0x6a4);
     expect(ACCUM_Y_OFF).toBe(0x6a6);

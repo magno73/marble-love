@@ -25,7 +25,7 @@ function readLongBE(workRam: Uint8Array, off: number): number {
 }
 
 describe("stateSub5250 (FUN_5250) — smoke", () => {
-  it("d1=0: both i long rimangono invariati (OR con 0 = no-op)", () => {
+  it("d1=0: both longs remain unchanged (OR with 0 = no-op)", () => {
     const s = emptyGameState();
     s.workRam[PRIMARY_FLAGS_OFF]     = 0x12;
     s.workRam[PRIMARY_FLAGS_OFF + 1] = 0x34;
@@ -42,7 +42,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0xabcdef00);
   });
 
-  it("d1=0xFFFFFFFF con both a 0: setta all i bit in primary and secondary", () => {
+  it("d1=0xFFFFFFFF with both at 0: sets all bits in primary and secondary", () => {
     const s = emptyGameState();
 
     stateSub5250(s, 0xffffffff);
@@ -51,7 +51,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0xffffffff);
   });
 
-  it("d1=0x00000001: setta solo il bit 0 in both i long", () => {
+  it("d1=0x00000001: sets only bit 0 in both longs", () => {
     const s = emptyGameState();
 
     stateSub5250(s, 0x00000001);
@@ -60,7 +60,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0x00000001);
   });
 
-  it("d1=0x80000000: setta solo il bit 31 (MSB) in both i long", () => {
+  it("d1=0x80000000: sets only bit 31 (MSB) in both longs", () => {
     const s = emptyGameState();
 
     stateSub5250(s, 0x80000000);
@@ -69,7 +69,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0x80000000);
   });
 
-  it("OR cumulativo: bit pre-esistenti are preservati (non sovrascritti)", () => {
+  it("cumulative OR: pre-existing bits are preserved (not overwritten)", () => {
     const s = emptyGameState();
     // pre-set bit 8 in primary, bit 16 in secondary
     s.workRam[PRIMARY_FLAGS_OFF + 2] = 0x01; // bit 8
@@ -100,7 +100,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0xffffffff);
   });
 
-  it("idempotenza: call twice con lo same d1 dà lo same risultato of the first", () => {
+  it("idempotence: calling twice with the same d1 gives the same result as the first", () => {
     const s = emptyGameState();
 
     stateSub5250(s, 0x12345678);
@@ -115,7 +115,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(secondary2).toBe(secondary1);
   });
 
-  it("OR non tocca altrthe bytes of the workRam (no side-effect outside from the due long)", () => {
+  it("OR does not touch other bytes of the workRam (no side-effect outside the two longs)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x5a);
     // Zero out only the 8 bytes of the two long targets.
@@ -138,7 +138,7 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
     expect(s.workRam[0x0100]).toBe(0x5a);
   });
 
-  it("costanti esportate corrette (indirizzi and offset)", () => {
+  it("correct exported constants (addresses and offsets)", () => {
     expect(PRIMARY_FLAGS_OFF).toBe(0x1f5e);
     expect(SECONDARY_FLAGS_OFF).toBe(0x1f76);
     expect(PRIMARY_FLAGS_ADDR).toBe(0x00401f5e);

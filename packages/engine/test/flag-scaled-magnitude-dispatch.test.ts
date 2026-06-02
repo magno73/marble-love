@@ -15,7 +15,7 @@ import {
 import { emptyGameState } from "../src/state.js";
 
 describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
-  it("flag byte == 0 → magnitude 0x40000 passata a inner", () => {
+  it("flag byte == 0 → magnitude 0x40000 passed to inner", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
     s.workRam[(ptr - 0x400000) + 0x1a] = 0x00;
@@ -30,7 +30,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(r).toBe(0xdeadbeef);
   });
 
-  it("flag byte == 0x01 → magnitude 0x50000 passata a inner", () => {
+  it("flag byte == 0x01 → magnitude 0x50000 passed to inner", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
     s.workRam[(ptr - 0x400000) + 0x1a] = 0x01;
@@ -43,7 +43,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(r).toBe(0x12345678);
   });
 
-  it("flag byte == 0xFF (qualsiasi non-zero) → magnitude 0x50000", () => {
+  it("flag byte == 0xFF (any non-zero) → magnitude 0x50000", () => {
     const s = emptyGameState();
     const ptr = 0x401e00;
     s.workRam[(ptr - 0x400000) + 0x1a] = 0xff;
@@ -55,7 +55,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(mag).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("flag byte == 0x80 (alto bit set) → magnitude 0x50000 (solo zero/non-zero counts)", () => {
+  it("flag byte == 0x80 (high bit set) → magnitude 0x50000 (only zero/non-zero counts)", () => {
     const s = emptyGameState();
     const ptr = 0x401080;
     s.workRam[(ptr - 0x400000) + 0x1a] = 0x80;
@@ -67,7 +67,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(mag).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("returns exactly that that inner returns (long unsigned)", () => {
+  it("returns exactly what inner returns (long unsigned)", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
     expect(
@@ -78,7 +78,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     ).toBe(0);
   });
 
-  it("flagByteOverride bypassa la lettura da workRam", () => {
+  it("flagByteOverride bypasses the read from workRam", () => {
     const s = emptyGameState();
     const ptr = 0x401f44;
     // workRam says "0", but override forces non-zero -> large magnitude
@@ -109,7 +109,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(mag).toBe(0x40000);
   });
 
-  it("structPtr passato verbatim a inner (no offset)", () => {
+  it("structPtr passed verbatim to inner (no offset)", () => {
     const s = emptyGameState();
     const ptr = 0x401abc;
     let seen = -1;
@@ -129,7 +129,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(selectMagnitude(0x1ff)).toBe(MAGNITUDE_FLAG_SET);
   });
 
-  it("costanti esposte hanno i values giusti", () => {
+  it("exposed constants have the right values", () => {
     expect(MAGNITUDE_FLAG_CLEAR).toBe(0x40000);
     expect(MAGNITUDE_FLAG_SET).toBe(0x50000);
   });

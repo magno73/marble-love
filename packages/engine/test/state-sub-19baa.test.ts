@@ -100,7 +100,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     const rom = emptyRomImage();
     writeWord(s, GAME_MODE_WORD_OFF, GAME_MODE_REQUIRED);
 
-    // Caso 1: enable=0
+    // Case 1: enable=0
     s.workRam[SPAWN_ENABLE_BYTE_OFF] = 0;
     writeLong(s, FRAME_COUNTER_LONG_OFF, 0);
     let calls = 0;
@@ -108,7 +108,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(r.spawnDispatched).toBe(false);
     expect(calls).toBe(0);
 
-    // Caso 2: enable=1, frame=8 (low 3 bits = 0)
+    // Case 2: enable=1, frame=8 (low 3 bits = 0)
     s.workRam[SPAWN_ENABLE_BYTE_OFF] = 1;
     writeLong(s, FRAME_COUNTER_LONG_OFF, 8);
     calls = 0;
@@ -116,7 +116,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(r.spawnDispatched).toBe(true);
     expect(calls).toBe(1);
 
-    // Caso 3: enable=1, frame=9 (low 3 bits != 0)
+    // Case 3: enable=1, frame=9 (low 3 bits != 0)
     s.workRam[SPAWN_ENABLE_BYTE_OFF] = 1;
     writeLong(s, FRAME_COUNTER_LONG_OFF, 9);
     calls = 0;
@@ -125,12 +125,12 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(calls).toBe(0);
   });
 
-  it("entity inattiva (entity[0x18] == 0) → skip senza side effect", () => {
+  it("inactive entity (entity[0x18] == 0) → skip without side effect", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeWord(s, GAME_MODE_WORD_OFF, GAME_MODE_REQUIRED);
 
-    // Slot 0: inattivo.
+    // Slot 0: inactive.
     s.workRam[ENTITY_OFF(0) + ENTITY_ACTIVE_OFFSET] = 0;
     s.workRam[ENTITY_OFF(0) + ENTITY_ANIM_COUNTER_OFFSET] = 0xaa;
 
@@ -141,7 +141,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(s.workRam[ENTITY_OFF(0) + ENTITY_ANIM_COUNTER_OFFSET]).toBe(0xaa);
   });
 
-  it("entity attiva con state>counter+1 → bgt (skip script-advance), entra movement-block (substate=0)", () => {
+  it("active entity with state>counter+1 → bgt (skip script-advance), enters movement-block (substate=0)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeWord(s, GAME_MODE_WORD_OFF, GAME_MODE_REQUIRED);
@@ -164,7 +164,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
       fun_19e42: () => { e42Calls++; },
     });
 
-    // Counter incremented a 6.
+    // Counter incremented to 6.
     expect(s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET]).toBe(6);
     expect(result.perEntity[0]?.scriptAdvanced).toBe(false);
     expect(result.perEntity[0]?.enteredMovement).toBe(true);
@@ -174,7 +174,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     expect(e42Calls).toBe(1);
   });
 
-  it("Y-clamp: cc62Result > entity[0x14] → ripristina Y mascherato + arma D3 sound", () => {
+  it("Y-clamp: cc62Result > entity[0x14] → restore masked Y + arm D3 sound", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeWord(s, GAME_MODE_WORD_OFF, GAME_MODE_REQUIRED);
@@ -201,7 +201,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     });
 
     expect(result.perEntity[0]?.yClamped).toBe(true);
-    // Y mascherato: savedY & 0xFFFC0000.
+    // Masked Y: savedY & 0xFFFC0000.
     expect(readLong(s, off + ENTITY_POS_Y_OFFSET)).toBe((savedY & Y_CLAMP_MASK) >>> 0);
     expect(readLong(s, off + ENTITY_SCRIPT_PTR_OFFSET)).toBe(SCRIPT_PTR_CLAMP);
     expect(s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET]).toBe(0);
@@ -216,7 +216,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     const rom = emptyRomImage();
     writeWord(s, GAME_MODE_WORD_OFF, GAME_MODE_REQUIRED);
 
-    // Iniettiamo terminator -1 in ROM @ 0x10000.
+    // Inject terminator -1 into ROM @ 0x10000.
     rom.program[0x10000] = 0xff;
     rom.program[0x10001] = 0xff;
     rom.program[0x10002] = 0xff;
@@ -227,7 +227,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET] = 5;
     // state == 5 → counter incremented a 6, cmp.b: 5 - 6 = -1 (< 0) → bgt false → script-advance
     s.workRam[off + ENTITY_STATE_OFFSET] = 5;
-    s.workRam[off + ENTITY_SUBSTATE_OFFSET] = 0; // != 2 → entra scan-block
+    s.workRam[off + ENTITY_SUBSTATE_OFFSET] = 0; // != 2 → enters scan-block
     s.workRam[off + ENTITY_TIMER_OFFSET] = 1; // dec → 0 → state branch
     writeLong(s, off + ENTITY_SCRIPT_PTR_OFFSET, 0x0000fffc); // +4 → 0x10000 (terminator)
     writeLong(s, off + ENTITY_VEL_OFFSET, 0xdeadbeef); // != 0xFFFE0000 → else branch

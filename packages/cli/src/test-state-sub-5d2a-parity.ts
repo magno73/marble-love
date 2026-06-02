@@ -4,13 +4,13 @@
  *
  * `FUN_00005D2A` (194 bytes): row-render with bit-mask scan. Iterates 16 times
  *
- * Strategia parity test:
- *   - Patch RTS (0x4E75) to the entry of FUN_3784 per intercettare each call.
- *   - Inietta byte ROM @ 0x10072 via pokeMem (Musashi unified memory).
+ * Parity-test strategy:
+ *   - Patch RTS (0x4E75) at the entry of FUN_3784 to intercept each call.
+ *   - Inject ROM byte @ 0x10072 via pokeMem (Musashi unified memory).
  *   - Pushes 2 long args + sentinel return address on the stack.
- *     callback TS (inner3784).
+ *     TS callback (inner3784).
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-5d2a-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-5d2a-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -45,7 +45,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patcha RTS (0x4E75) to the entry of FUN_3784. */
+/** Patch RTS (0x4E75) at the entry of FUN_3784. */
 function patchCallees(cpu: CpuSession): void {
   pokeMem(cpu, FUN_3784 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_3784 + 1, 1, 0x75);
@@ -70,7 +70,7 @@ interface CapturedSeq {
  *
  * FUN_3784 args on the stack (RTL push order = arg4, attr, x, y):
  *   (0,SP)  = ret addr (toward 0x5DB4 or 0x5DD4)
- *   (4,SP)  = y (long, sign-ext da D6w)
+ *   (4,SP)  = y (long, sign-ext from D6w)
  *   (8,SP)  = x (long, sign-extended sum A3+A4 or (15-A4)+A3)
  */
 function runAndCapture(
@@ -94,7 +94,7 @@ function runAndCapture(
 
   const calls: Call3784[] = [];
 
-  // Numero step necessari: ~16 iter × ~30 instr = ~500. Plus overhead.
+  // Steps needed: ~16 iter × ~30 instr = ~500. Plus overhead.
   // We use 2000 as safety.
   let safety = 2000;
   let reachedRts = false;
@@ -140,7 +140,7 @@ function runTsAndCapture(
     (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
       return 0;
-                 // non lo confrontiamo (il loop overwrites D0 on each iter).
+                 // we do not compare it (the loop overwrites D0 on each iter).
     },
   );
   return { calls, finalD0: finalD0 >>> 0 };
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sui callee (una sola time).
+  // Patch RTS over the callees (just once).
   patchCallees(cpu);
 
   const tsRom: RomImage = busNs.emptyRomImage();
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern of coverage su (arg0, arg1, gate byte).
+    // Coverage pattern over (arg0, arg1, gate byte).
     let arg0: number;
     let arg1: number;
     let gateByte: number;
@@ -221,12 +221,12 @@ async function main(): Promise<void> {
       arg1 = 0x0042;
       gateByte = 0x00;
     } else if (i === 7) {
-      // Sweep arg1 = 0..15 sequenziale via i mod.
+      // Sweep arg1 = 0..15 sequentially via i mod.
       arg0 = 0x8421;
       arg1 = 0x0000;
       gateByte = 0x00;
     } else if (i < 24) {
-      // Sweep deterministico arg1 = 0..15.
+      // Deterministic sweep arg1 = 0..15.
       arg0 = (i * 0x1111) & 0xffff;
       arg1 = (i - 8) & 0xf;
       gateByte = 0x00;
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
       gateByte = Math.floor(rng() * 0x100) & 0xff;
     }
 
-    // Inietta gate byte in ROM (Musashi unified memory) and mirror TS.
+    // Inject gate byte in ROM (Musashi unified memory) and TS mirror.
     pokeMem(cpu, ROM_GATE_BYTE_ADDR, 1, gateByte);
     tsRom.program[ROM_GATE_BYTE_ADDR] = gateByte & 0xff;
 

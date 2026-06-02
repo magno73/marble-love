@@ -3,20 +3,21 @@
  * test-flag-scaled-magnitude-dispatch-parity.ts —
  * differential FUN_26196 vs `flagScaledMagnitudeDispatch`.
  *
- * **Strategia**:
+ * **Strategy**:
  *
- * Per testare in isolamento la logica of selezione, **patch-iamo
+ * To test the selection logic in isolation, we patch `FUN_261BC` with a shim:
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = magnitude
  *     4E 75          ; rts
  *
- * compare it with `magnitude` computed by TS via callback.
+ * then compare it with `magnitude` computed by TS via callback.
  *
- * preserved** by the shim (no clobber/no truncation between `jsr` and `rts`).
+ * The argument is preserved by the shim (no clobber/no truncation between
+ * `jsr` and `rts`).
  *
- * `pokeMem` a 0x261BC, poi resettiamo the stack pointer ed eseguiamo).
+ * (`pokeMem` at 0x261BC, then reset the stack pointer and run.)
  *
- * Uso: npx tsx packages/cli/src/test-flag-scaled-magnitude-dispatch-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-flag-scaled-magnitude-dispatch-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -70,7 +71,7 @@ async function main(): Promise<void> {
     `\n=== flagScaledMagnitudeDispatch (FUN_26196) — ${n} cases ===`,
   );
   console.log(
-    `  (FUN_261BC patched in-memory con stub move.l (8,SP),D0;rts)`,
+    `  (FUN_261BC patched in-memory with stub move.l (8,SP),D0;rts)`,
   );
 
   const rng = makeRng(0xb16fa6);

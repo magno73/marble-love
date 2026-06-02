@@ -64,7 +64,7 @@ describe("slapstic-103 — verified against MAME trace (140 accesses, f12000-120
   // Source: /tmp/mame_slapstic_trace.json analyzed via Python script.
   // Expected bank after f=12000: 1, verified via data match against ROM blob.
   // Expected bank after f=12001: 1 (with 1->2->1 transitions in between via lookups).
-  it("bank=1 a inizio f=12000 → 7 access non-trigger → bank=1 a fine", () => {
+  it("bank=1 at start of f=12000 → 7 non-trigger accesses → bank=1 at end", () => {
     const fsm = { bank: 1, state: "IDLE" as const, loadedBank: 0 };
     const f12000_addrs = [0x080dc2, 0x0809e4, 0x080910, 0x081072, 0x081072, 0x080ff6, 0x080ff6];
     for (const a of f12000_addrs) slapsticTick(fsm, a);
@@ -91,7 +91,7 @@ describe("slapstic-103 — alt sequence does NOT inadvertently break on normal r
     // observed trace: no alt1 trigger in the window analyzed.
     slapsticTick(fsm, 0x00005a); // force alt1 trigger (test_any matches 0x5A)
     expect(fsm.state).toBe("ALT_VALID");
-    // Non-alt2 read → torna ACTIVE
+    // Non-alt2 read → back to ACTIVE
     slapsticTick(fsm, 0x080dc2);
     expect(fsm.state).toBe("ACTIVE");
   });

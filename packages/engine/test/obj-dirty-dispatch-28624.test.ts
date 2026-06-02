@@ -56,7 +56,7 @@ function makeTrackedSubs(): {
 }
 
 describe("objDirtyDispatch28624 (FUN_00028624)", () => {
-  it("count=0: no invocation, but la bitmap is comunque zeroed", () => {
+  it("count=0: no invocation, but the bitmap is zeroed anyway", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 0); // count = 0
@@ -132,7 +132,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bitmap selettiva (0b00001010): calls solo D2=1 and D2=3", () => {
+  it("selective bitmap (0b00001010): calls only D2=1 and D2=3", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0b00001010; // bit 1 and bit 3
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 5);
@@ -148,7 +148,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
 
     expect(calls).toHaveLength(2);
     expect(calls[0]?.arg1).toBe(0xdead0001);
-    // arg3 of D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) but in our
+    // arg3 of D2=1: byte 0xa2 sext_l → 0xffffffa2 (signed) but in our representation
     expect(calls[0]?.arg3).toBe(0xa2 | 0xffffff00 | 0); // = -94 in JS signed
     expect(calls[0]?.arg6).toBe(0x2400); // D2=1
     expect(calls[1]?.arg1).toBe(0xdead0003);
@@ -157,7 +157,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("bit beyond count: ignorati. Bitmap=0xFF, count=2 → solo 2 chiamate", () => {
+  it("bits beyond count: ignored. Bitmap=0xFF, count=2 → only 2 calls", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 2);
@@ -176,7 +176,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("default no-op: non solleva su subs={}, but azzera comunque la bitmap", () => {
+  it("default no-op: does not throw on subs={}, but still zeroes the bitmap", () => {
     const s = emptyGameState();
     s.workRam[DIRTY_BITMAP_OFF] = 0xff;
     writeWordBE(s.workRam, OBJECT_COUNT_OFF, 3);
@@ -187,7 +187,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     expect(s.workRam[DIRTY_BITMAP_OFF]).toBe(0);
   });
 
-  it("non muta workRam outside from the bitmap byte (verifica side effect localizzato)", () => {
+  it("does not mutate workRam outside the bitmap byte (verifies localized side effect)", () => {
     const s = emptyGameState();
     // pollute random
     for (let i = 0; i < s.workRam.length; i++) s.workRam[i] = i & 0xff;
@@ -212,7 +212,7 @@ describe("objDirtyDispatch28624 (FUN_00028624)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("exposed constants: correct binary addresses", () => {
     expect(FUN_28624_ADDR).toBe(0x28624);
     expect(OBJECTS_BASE_OFF).toBe(0x18);
     expect(OBJECT_STRIDE).toBe(0xe2);

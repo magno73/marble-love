@@ -5,11 +5,11 @@
  *
  * FUN_00014C46 (422 byte): "range-boundary slot spawn/despawn dispatcher".
  * Iterates entry list `ROM[0x2257A + mode*4]` to spawn-init the 4 slots
- * @ 0x401302 (stride 0x60), poi tail walk per teardown su boundary cross.
+ * @ 0x401302 (stride 0x60), then a tail walk for teardown on boundary cross.
  *
- * **Strategia parity**:
- *   - `FUN_14BCE` (findFreeSlotInTable), `FUN_14C0C` (slotMatchesPtr) e
- *     `FUN_1BB08` (deriveSpriteFromArg_v1) **lasciati live**: replicati
+ * **Parity strategy**:
+ *   - `FUN_14BCE` (findFreeSlotInTable), `FUN_14C0C` (slotMatchesPtr) and
+ *     `FUN_1BB08` (deriveSpriteFromArg_v1) **left live**: replicated
  *     bit-perfect in `slot-search.ts` / `sprite-derive.ts`.
  *   - `FUN_1CC62` stubbed with `moveq #0, D0; rts` (D0 = 0).
  *   - `FUN_150D0` stubbed with RTS (no return value).
@@ -25,7 +25,7 @@
  *   - C: forced teardown (slot in use, D2 == slot[0x52]/[0x54], D3 cross)
  *   - D: edge cases (direct sentinel, all slots in use, mode out of range)
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-14c46-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-14c46-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -66,9 +66,9 @@ const SPRITE_GLOBALS_LEN = 0x18; // 0x690..0x6A7
 
 /**
  * Patch JSR-stub:
- *   - FUN_1CC62 → `moveq #0, D0; rts` (D0=0 deterministico).
+ *   - FUN_1CC62 → `moveq #0, D0; rts` (D0=0 deterministic).
  *   - FUN_150D0 / FUN_18E6C / FUN_18F46 → RTS.
- *   FUN_14BCE / FUN_14C0C / FUN_1BB08 lasciati live.
+ *   FUN_14BCE / FUN_14C0C / FUN_1BB08 left live.
  */
 function patchSubs(cpu: CpuSession): void {
   // FUN_1CC62: moveq #0, D0 (0x7000) ; rts (0x4E75)
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
     for (let i = 0; i < SLOT_AREA_BYTES; i++) {
       pokeMem(cpu, SLOT_ARRAY_ADDR + i, 1, input.slotAreaPre[i] ?? 0);
     }
-    // 3. Sprite globals pre-zero (per non avere garbage da test precedenti)
+    // 3. Sprite globals pre-zeroed (to avoid garbage from previous tests)
     for (let i = 0; i < SPRITE_GLOBALS_LEN; i++) {
       pokeMem(cpu, WORK_RAM_BASE + SPRITE_GLOBALS_OFF + i, 1, 0);
     }
@@ -352,7 +352,7 @@ async function main(): Promise<void> {
       d3: e0, // == entry[0] → boundary match
       slotAreaPre: new Array(SLOT_AREA_BYTES).fill(0), // all slot free
       entryListOverride: {
-        listAddr: 0x00400500, // workRam (entryPtr used also da slotMatchesPtr that fa argOff = ptr - 0x400000)
+        listAddr: 0x00400500, // workRam (entryPtr also used by slotMatchesPtr, which does argOff = ptr - 0x400000)
         listBytes: [
           e0,
           e1,
@@ -487,7 +487,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

@@ -1,5 +1,5 @@
 /**
- * Test bootHelper1464A (FUN_1464A) — smoke tests per side effects su workRam.
+ * Test bootHelper1464A (FUN_1464A) — smoke tests for side effects on workRam.
  *
  * `cli/src/test-boot-helper-1464a-parity.ts`.
  */
@@ -35,7 +35,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(BOOT_HELPER_1464A_ADDR).toBe(0x0001464a);
   });
 
-  it("azzera workRam 0x400000 and 0x400002", () => {
+  it("clears workRam 0x400000 and 0x400002", () => {
     const s = emptyGameState();
     s.workRam[0] = 0xAB;
     s.workRam[1] = 0xCD;
@@ -46,7 +46,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rw(s, 0x400002)).toBe(0);
   });
 
-  it("inizializza 2 player object slot @ 0x400018 and 0x4000FA", () => {
+  it("initializes 2 player object slots @ 0x400018 and 0x4000FA", () => {
     const s = emptyGameState();
     bootHelper1464A(s, {});
 
@@ -69,7 +69,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rb(s, 0x4000fa + 0xc2)).toBe(0x41);
   });
 
-  it("azzera 0x4009A4+0x18 (slot 0) and 0x4009A4+0x7C+0x18 (slot 1)", () => {
+  it("clears 0x4009A4+0x18 (slot 0) and 0x4009A4+0x7C+0x18 (slot 1)", () => {
     const s = emptyGameState();
     s.workRam[0x4009a4 + 0x18 - WRAM] = 0xAA;
     s.workRam[0x4009a4 + 0x7c + 0x18 - WRAM] = 0xBB;
@@ -78,7 +78,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rb(s, 0x4009a4 + 0x7c + 0x18)).toBe(0);
   });
 
-  it("writes globals workRam standard", () => {
+  it("writes the standard workRam globals", () => {
     const s = emptyGameState();
     bootHelper1464A(s, {});
 
@@ -102,7 +102,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rl(s, 0x00400408)).toBe(0x0040040c);
   });
 
-  it("increments 0x4003F0 tre times (0x14768, 0x1488E, 0x14920)", () => {
+  it("increments 0x4003F0 three times (0x14768, 0x1488E, 0x14920)", () => {
     const s = emptyGameState();
     s.workRam[off(0x004003f0)] = 5;
     bootHelper1464A(s, {});
@@ -110,7 +110,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rb(s, 0x004003f0)).toBe(8);
   });
 
-  it("calls slotArrayBulkInit10392 (o il default)", () => {
+  it("calls slotArrayBulkInit10392 (or the default)", () => {
     const s = emptyGameState();
     let called = false;
     bootHelper1464A(s, {
@@ -159,7 +159,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rw(s, 0x004003ea)).toBe(0xffff);
   });
 
-  it("calls soundCmd158AC(state, 0x61) to the fine", () => {
+  it("calls soundCmd158AC(state, 0x61) at the end", () => {
     const s = emptyGameState();
     const calls: number[] = [];
     bootHelper1464A(s, {
@@ -170,7 +170,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(calls[calls.length - 1]).toBe(0x61);
   });
 
-  it("sets 0x40039E=0x1E, 0x4003A0=0, 0x4003A2=0 in the path normale", () => {
+  it("sets 0x40039E=0x1E, 0x4003A0=0, 0x4003A2=0 on the normal path", () => {
     const s = emptyGameState();
     // Disable vblankAck loop by setting 0x4003AC & 3 != 0
     s.workRam[off(0x004003ac)] = 0x01;
@@ -180,7 +180,7 @@ describe("bootHelper1464A (FUN_1464A)", () => {
     expect(rb(s, 0x004003a2)).toBe(0);
   });
 
-  it("bootHelper1464ADefault funziona senza crash", () => {
+  it("bootHelper1464ADefault works without crashing", () => {
     const s = emptyGameState();
     expect(() => bootHelper1464ADefault(s)).not.toThrow();
     // Should still set the standard globals

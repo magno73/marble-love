@@ -1,13 +1,13 @@
 /**
  * entity-waypoint-step-1d1ec.test.ts — smoke + corner case of FUN_1D1EC.
  *
- * Test in-WORK_RAM: alloca struct entity in 0x401E00 (offset 0x1E00 in
- * workRam) and cursor array in 0x401E80 (offset 0x1E80). Verifica:
+ * In-WORK_RAM test: allocates the entity struct at 0x401E00 (offset 0x1E00 in
+ * workRam) and the cursor array at 0x401E80 (offset 0x1E80). Verifies:
  *   1. Match X+Y -> cursor advances by step*4
  *   2. Mismatch X -> cursor unchanged (early-exit)
  *   3. Mismatch Y (but X matches) -> cursor unchanged
- *   4. Step negativo (signed byte) → cursor decrementa
- *   5. Coordinate negative → asr.l 19 mantiene segno
+ *   4. Negative step (signed byte) → cursor decrements
+ *   5. Negative coordinates → asr.l 19 preserves the sign
  *   6. fun_1d242 always called, even on skip
  */
 
@@ -22,7 +22,7 @@ const ENTITY_BASE_ABS = 0x401e00;
 const ENTITY_OFF = 0x1e00; // offset in workRam
 const CURSOR_BASE_ABS = 0x401e80;
 const CURSOR_OFF = 0x1e80;
-const ARRAY_BASE_ABS = 0x401e90; // base per offset relativo
+const ARRAY_BASE_ABS = 0x401e90; // base for the relative offset
 const ARRAY_BASE = 0x401e90;
 
 function writeLong(s: GameState, off: number, v: number): void {
@@ -74,7 +74,7 @@ function setup(opts: {
 }
 
 describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
-  it("match X+Y → cursor diventa base + step*4 (step positivo)", () => {
+  it("match X+Y → cursor becomes base + step*4 (positive step)", () => {
     // cellX = (0x00280000 >> 19) & 0xffff = 5
     // cellY = (0x00100000 >> 19) & 0xffff = 2
     const s = setup({
@@ -86,7 +86,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe((ARRAY_BASE + 7 * 4) >>> 0);
   });
 
-  it("mismatch X → cursor invariato", () => {
+  it("mismatch X → cursor unchanged", () => {
     const s = setup({
       posX: 0x00280000, // cellX=5
       posY: 0x00100000, // cellY=2
@@ -96,7 +96,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe(CURSOR_BASE_ABS);
   });
 
-  it("X match but mismatch Y → cursor invariato", () => {
+  it("X match but mismatch Y → cursor unchanged", () => {
     const s = setup({
       posX: 0x00280000, // cellX=5
       posY: 0x00100000, // cellY=2
@@ -106,7 +106,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe(CURSOR_BASE_ABS);
   });
 
-  it("step negativo (signed byte) → cursor decrementa relative a base", () => {
+  it("negative step (signed byte) → cursor decrements relative to base", () => {
     // cellX=5, cellY=2 (match), step = -3 (0xFD signed)
     const s = setup({
       posX: 0x00280000,
@@ -118,7 +118,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe((ARRAY_BASE - 12) >>> 0);
   });
 
-  it("coordinate negative (asr.l 19 signed)", () => {
+  it("negative coordinates (asr.l 19 signed)", () => {
     // posX = -0x00280000 → asr.l 19 = -5; low word = 0xFFFB
     // cursor[0] = -5 (0xFB) sign-ext = 0xFFFB → match
     const posX = (-0x00280000) >>> 0;
@@ -132,7 +132,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(readLong(s, ENTITY_OFF + 0x2c)).toBe((ARRAY_BASE + 4) >>> 0);
   });
 
-  it("subs.fun_1d242 chiamato always (also when skip per mismatch)", () => {
+  it("subs.fun_1d242 always called (even on skip due to mismatch)", () => {
     const cb = vi.fn();
     const s = setup({
       posX: 0,
@@ -144,7 +144,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(cb).toHaveBeenCalledWith(ENTITY_BASE_ABS);
   });
 
-  it("subs.fun_1d242 chiamato also when match avviene", () => {
+  it("subs.fun_1d242 also called when a match happens", () => {
     const cb = vi.fn();
     const s = setup({
       posX: 0,
@@ -155,7 +155,7 @@ describe("entityWaypointStep1D1EC (FUN_1D1EC)", () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 
-  it("reads waypoint ROM and passa la ROM al follow-up FUN_1D242", () => {
+  it("reads waypoint ROM and passes the ROM to the follow-up FUN_1D242", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     const cursor = 0x23000;

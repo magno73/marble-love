@@ -1,5 +1,5 @@
 /**
- * Test vectorScale (FUN_25E7C) — 326 byte pure leaf.
+ * Test vectorScale (FUN_25E7C) — 326-byte pure leaf.
  *
  * Bit-perfect verified against the binary (2000/2000) through
  * `cli/src/test-vector-scale-parity.ts` with input range [-256, 255]
@@ -29,7 +29,7 @@ function writeU32(s: ReturnType<typeof emptyGameState>, addr: number, v: number)
 }
 
 describe("vectorScale (FUN_25E7C)", () => {
-  it("zero vector: writes (0,0) con clamp D3=0x100", () => {
+  it("zero vector: writes (0,0) with clamp D3=0x100", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     writeU32(s, 0x401D00, 0);
@@ -40,7 +40,7 @@ describe("vectorScale (FUN_25E7C)", () => {
     expect(readU32(s, 0x401D04)).toBe(0);
   });
 
-  it("non-zero vector: produce risultato deterministic con ROM zero", () => {
+  it("non-zero vector: produces a deterministic result with zero ROM", () => {
     const s = emptyGameState();
     const rom = emptyRomImage(); // ROM zero — D5 and V_next both 0
     writeU32(s, 0x401D00, 100);

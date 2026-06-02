@@ -6,7 +6,7 @@
  *      snapshots saved, impulse written, sound emitted).
  *      snapshots updated, impulse written.
  *
- * Uso: npx tsx packages/cli/src/test-state-dispatch-160f6-smoke.ts
+ * Usage: npx tsx packages/cli/src/test-state-dispatch-160f6-smoke.ts
  */
 
 import { exit } from "node:process";
@@ -80,7 +80,7 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   const s = makeState();
   const r = s.workRam;
   r[SO + 0x36] = 0x00;
-  r[SO + 0x58] = 0x17; // in whitelist but non 0x12/0x20 → sound
+  r[SO + 0x58] = 0x17; // in whitelist but not 0x12/0x20 → sound
   // pos14 = 0x70000, prevTimer = 0 → diff = 0x70000 > 0x60000
   writeL(r, SO + 0x14, 0x70000);
   writeW(r, 0x696, 0x0003); // accumXPrev word
@@ -91,9 +91,9 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   });
   check("smoke2: state = 2 (locked)", r[SO + 0x36], 0x02);
   check("smoke2: impulse = 0xffffa000", readL(r, SO + 0x08), 0xffffa000);
-  check("smoke2: snapshotX salvato", readW(r, SO + 0x2e), 0x0003);
-  check("smoke2: snapshotY salvato", readW(r, SO + 0x30), 0x0007);
-  check("smoke2: sound emesso", soundCalled, true);
+  check("smoke2: snapshotX saved", readW(r, SO + 0x2e), 0x0003);
+  check("smoke2: snapshotY saved", readW(r, SO + 0x30), 0x0007);
+  check("smoke2: sound emitted", soundCalled, true);
 }
 
 // ── Smoke 3: D2 != 0, charcode NOT in whitelist → no-op ──────────────────────
@@ -101,7 +101,7 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   const s = makeState();
   const r = s.workRam;
   r[SO + 0x36] = 0x00;
-  r[SO + 0x58] = 0x01; // non in whitelist
+  r[SO + 0x58] = 0x01; // not in whitelist
   r[0x66c] = 0x01;
   writeW(r, TXO, 3);  // tileX = 3
   writeW(r, 0x674, 2); // velLeft = 2
@@ -150,7 +150,7 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   writeW(r, SO + 0x30, 0);
   writeL(r, SO + 0x14, 0xCAFEBABE);
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0);
-  check("smoke6: position_14 non modificato (D5>=2 early exit)", readL(r, SO + 0x14), 0xCAFEBABE >>> 0);
+  check("smoke6: position_14 unchanged (D5>=2 early exit)", readL(r, SO + 0x14), 0xCAFEBABE >>> 0);
 }
 
 {
@@ -179,10 +179,10 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   ns.stateDispatch160F6(s, STRUCT, TILE_X, TILE_Y, 0, {
     romByte: (_addr) => 1,
   });
-  check("smoke7: position_14 aggiornato (+0x10000)", readL(r, SO + 0x14), 0x10000);
+  check("smoke7: position_14 updated (+0x10000)", readL(r, SO + 0x14), 0x10000);
 }
 
-// ── Smoke 8: miss → locked (via D2!=0 + charcode non in whitelist) ────────────
+// ── Smoke 8: miss → locked (via D2!=0 + charcode not in whitelist) ────────────
 {
   const s = makeState();
   const r = s.workRam;
@@ -203,8 +203,8 @@ console.log("\n=== stateDispatch160F6 (FUN_000160F6) smoke tests ===\n");
   });
   check("smoke8: state = 2 (miss → locked)", r[SO + 0x36], 0x02);
   check("smoke8: impulse = 0xffffa000 (miss)", readL(r, SO + 0x08), 0xffffa000);
-  // charcode=0x01 != 0x12/0x20 → sound emesso
-  check("smoke8: sound emesso su miss", soundCalled, true);
+  // charcode=0x01 != 0x12/0x20 → sound emitted
+  check("smoke8: sound emitted on miss", soundCalled, true);
 }
 
 console.log(`\nSmoke: ${passed} passed, ${failed} failed`);

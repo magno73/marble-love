@@ -1,6 +1,6 @@
 /**
  * Test objectArrayInit25B40 (FUN_00025B40) - smoke tests for writes
- * of 24 word array @ A1+0x74/0x84/0x94 + byte clear @ A1+0xCA.
+ * of 24-word array @ A1+0x74/0x84/0x94 + byte clear @ A1+0xCA.
  *
  * Bit-perfect verified against the binary through
  * `cli/src/test-object-array-init-25b40-parity.ts` (500/500 cases).
@@ -44,7 +44,7 @@ function makeRomWithTables(
 }
 
 describe("objectArrayInit25B40 (FUN_00025B40)", () => {
-  it("writes 3 array da 8 word + byte clear @ +0xCA con tabelle ROM reali", () => {
+  it("writes 3 arrays of 8 words + byte clear @ +0xCA with real ROM tables", () => {
     // Real tables extracted from ROM @ 0x1D3F4 / 0x1D3FC.
     const tableA = [0x02, 0x02, 0x00, 0xfe, 0xfc, 0xfe, 0x00, 0x04];
     const tableB = [0x02, 0xfe, 0xfc, 0xfe, 0x00, 0x02, 0x04, 0x00];
@@ -86,7 +86,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     expect(readU16BE(s.workRam, objOff + 0x74 + 7 * 2)).toBe(0x2000);
   });
 
-  it("non muta byte near ai range scritti (0x70..0x73, 0xA4..0xC9, 0xCB..0xCF)", () => {
+  it("does not mutate bytes near the written ranges (0x70..0x73, 0xA4..0xC9, 0xCB..0xCF)", () => {
     const rom = makeRomWithTables(
       [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08],
       [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18],
@@ -119,7 +119,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     }
   });
 
-  it("ROM con tabelle all zero → all the array a zero, byte +0xCA a zero", () => {
+  it("ROM with all-zero tables → all arrays zero, byte +0xCA zero", () => {
     const rom = makeRomWithTables(
       [0, 0, 0, 0, 0, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0, 0],
@@ -143,7 +143,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     expect(s.workRam[objOff + 0xca]).toBe(0);
   });
 
-  it("tabelle con all byte 0xFF (sext=-1) → array A/B = 0xF800 << 11 wrap", () => {
+  it("tables with all bytes 0xFF (sext=-1) → array A/B = 0xF800 << 11 wrap", () => {
     // 0xFF sext_w = 0xFFFF. asl.w #11 → (0xFFFF << 11) & 0xFFFF = 0xF800.
     const rom = makeRomWithTables(
       [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff],
@@ -163,7 +163,7 @@ describe("objectArrayInit25B40 (FUN_00025B40)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary and ROM corretti", () => {
+  it("exposed constants: correct binary and ROM addresses", () => {
     expect(OBJECT_ARRAY_INIT_25B40_ADDR).toBe(0x25b40);
     expect(OBJECT_ARRAY_INIT_25B40_TABLE_A_ROM).toBe(0x1d3f4);
     expect(OBJECT_ARRAY_INIT_25B40_TABLE_B_ROM).toBe(0x1d3fc);

@@ -3,18 +3,18 @@
  * test-state-sub-198bc-parity.ts — differential FUN_000198BC vs
  * `stateSub198BC`.
  *
- * FUN_000198BC (186 byte): "entity move-and-validate retry loop". Tenta of
+ * FUN_000198BC (186 byte): "entity move-and-validate retry loop". Attempts to
  * move the entity through `FUN_19976` (applyMoveVelocity) + `FUN_1937C`
  * (validatePosition); if invalid on first attempt -> restore. If valid, loop
  * for up to 9 iterations by rotating `entity[0x26]` by step (1 if state==7,
  * otherwise 4) and re-validating. Exit with stuck marker (`entity[0x26]=0x10`,
  * `entity[0..7]=0`) if the loop is exhausted.
  *
- * **Strategia parity**:
- *   - `FUN_00019976` (move-velocity) **lasciato live**: replicato bit-perfect
+ * **Parity strategy**:
+ *   - `FUN_00019976` (move-velocity) **left live**: replicated bit-perfect
  *     in `move-velocity.ts:applyMoveVelocity`, already 100% validated (cf.
  *     test-move-velocity-parity).
- *   - `FUN_0001937C` (validate-position) **lasciato live**: replicato in
+ *   - `FUN_0001937C` (validate-position) **left live**: replicated in
  *     `proximity-check.ts:validatePosition`, already 100% validated (cf.
  *     test-proximity-check-parity).
  *   - Compare:
@@ -27,7 +27,7 @@
  *   - C: position near the ROM grid (testGridBitmap likely true)
  *   - D: edge cases — counter saturation, state boundaries, marker 0x10
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-198bc-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-198bc-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -65,7 +65,7 @@ const PROX_ARRAY_END = PROX_ARRAY_BASE + PROX_ARRAY_COUNT * PROX_ENTRY_SIZE;
 
 /**
  * Patch JSR-stub: none. Both `FUN_19976` and `FUN_1937C` are left
- * **live** and replicati 1:1 in TS.
+ * **live** and replicated 1:1 in TS.
  */
 function patchSubs(_cpu: CpuSession): void {
   // No-op: live mode.
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: pos near grid origin (validate often returns 0) ─────────
   console.log(
-    `\n=== Suite C: pos vicina alla grid (validate path varied) — ${perSuite} cases ===`,
+    `\n=== Suite C: pos near the grid (validate path varied) — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -300,7 +300,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

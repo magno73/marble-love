@@ -1,5 +1,5 @@
 /**
- * script-slot-bbox-test-14e92.test.ts — smoke per `scriptSlotBboxTest14E92`
+ * script-slot-bbox-test-14e92.test.ts — smoke test for `scriptSlotBboxTest14E92`
  * (`FUN_00014E92`).
  *
  * `packages/cli/src/test-script-slot-bbox-test-14e92-parity.ts`.
@@ -75,7 +75,7 @@ function setWorld(s: State, x: number, y: number, z: number): void {
   setWordBE(s, WORLD_Z_WORD_OFF, z & 0xffff);
 }
 
-/** Configura uno slot armato + bbox-default (slot[0x58] punta a un long
+/** Configures an armed slot + default bbox (slot[0x58] points to a long).
   */
 function armSlotWithDefaultBbox(
   s: State,
@@ -121,9 +121,9 @@ function armSlotWithCustomBbox(
 }
 
 describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
-  it("selettore outside range {1,2,5} → no side effect", () => {
+  it("selector outside range {1,2,5} → no side effect", () => {
     const s = emptyGameState();
-    // Selector = 3 (non valido) → early exit.
+    // Selector = 3 (invalid) → early exit.
     setSelector(s, 3);
     setWorld(s, 100, 100, 50);
     armSlotWithDefaultBbox(
@@ -138,7 +138,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("selettore valido (=1) but slot non-armed → no side effect", () => {
+  it("valid selector (=1) but slot non-armed → no side effect", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -147,7 +147,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(s.workRam).toEqual(before);
   });
 
-  it("hit con bbox-default + state=0 → state=2 + entity field copy", () => {
+  it("hit with default bbox + state=0 → state=2 + entity field copy", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     // World @ (10, 10, 5). Marble bbox: X[7..13], Y[7..13], Z[5..19].
@@ -181,7 +181,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, off + 0x20)).toBe(0xcafebabe);
   });
 
-  it("miss su X (marble outside range slot) → no scrittura", () => {
+  it("miss on X (marble outside slot range) → no write", () => {
     const s = emptyGameState();
     setSelector(s, 2);
     // World @ (100, 0, 0). Marble bbox X [97..103].
@@ -199,11 +199,11 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readByte(s, off + 0x1a)).toBe(stateBefore);
   });
 
-  it("hit con state=1 + key NO match → write slot[0x56] and entity dispatch state-1", () => {
+  it("hit with state=1 + key NO match → write slot[0x56] and entity dispatch state-1", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
-    // Slot 0 @ (0,0,0) overlap centrato. State=1 (alt-key path).
+    // Slot 0 @ (0,0,0) centered overlap. State=1 (alt-key path).
     armSlotWithDefaultBbox(
       s,
       0,
@@ -220,8 +220,8 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
 
     scriptSlotBboxTest14E92(s, ENTITY_BASE);
 
-    // No early exit (key non match), no bind (state=1, non in {0,3}).
-    // slot[0x56] sovrascritto = 0x0042 (sext).
+    // No early exit (key not matched), no bind (state=1, not in {0,3}).
+    // slot[0x56] overwritten = 0x0042 (sext).
     expect(readWordBE(s, off + 0x56)).toBe(0x0042);
     // entity dispatch state=1: entity[0x5F]=0, entity[0x60]=2, entity[0x5A]=0x20FB6.
     expect(readByte(s, ENTITY_OFF + 0x5f)).toBe(0x00);
@@ -232,7 +232,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readByte(s, ENTITY_OFF + 0x56)).toBe(0x32);
   });
 
-  it("hit con state=1 + key MATCH → early exit (no scritture entity)", () => {
+  it("hit with state=1 + key MATCH → early exit (no entity writes)", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -255,12 +255,12 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     // Early exit: entity unchanged.
     expect(readByte(s, ENTITY_OFF + 0x1a)).toBe(0x01);
     expect(readByte(s, ENTITY_OFF + 0x56)).toBe(0xff);
-    // slot[0x56] non riscritto.
+    // slot[0x56] not rewritten.
     expect(readWordBE(s, off + 0x56)).toBe(0x0042);
     expect(readByte(s, off + 0x1a)).toBe(0x01);
   });
 
-  it("hit con bbox custom: solo slot 1 colpito (slot 0 mancato)", () => {
+  it("hit with custom bbox: only slot 1 hit (slot 0 missed)", () => {
     const s = emptyGameState();
     setSelector(s, 5);
     setWorld(s, 50, 50, 10);
@@ -296,7 +296,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     const off1 = slotOff(1);
     // Slot 0: state unchanged (missed).
     expect(readByte(s, off0 + 0x1a)).toBe(0x03);
-    // Slot 1: state=2 (era 3, hit + bind).
+    // Slot 1: state=2 (was 3, hit + bind).
     expect(readByte(s, off1 + 0x1a)).toBe(0x02);
     expect(readLongBE(s, off1 + 0x00)).toBe(0x11111111);
     expect(readLongBE(s, off1 + 0x1c)).toBe(0x11111111);
@@ -304,7 +304,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, off1 + 0x20)).toBe(0x22222222);
   });
 
-  it("globali 0x400684/0x400688 copied in entity[0xC]/[0x10] su hit", () => {
+  it("globals 0x400684/0x400688 copied into entity[0xC]/[0x10] on hit", () => {
     const s = emptyGameState();
     setSelector(s, 2);
     setWorld(s, 0, 0, 0);
@@ -317,7 +317,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     );
     setLongBE(s, GLOBAL_684_LONG_OFF, 0xfeedface);
     setLongBE(s, GLOBAL_688_LONG_OFF, 0xbaadf00d);
-    setByte(s, ENTITY_OFF + 0x1a, 0x02); // non-1, non-5 → default branch (sound+ptr_default)
+    setByte(s, ENTITY_OFF + 0x1a, 0x02); // not 1, not 5 → default branch (sound+ptr_default)
     setByte(s, ENTITY_OFF + 0x19, 0x10);
 
     let soundCmd = -1;
@@ -335,7 +335,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(readLongBE(s, ENTITY_OFF + 0x5a)).toBe(0x00020faa);
   });
 
-  it("FUN_15460 stub is chiamato solo in the bind path (state ∈ {0,3})", () => {
+  it("FUN_15460 stub is called only in the bind path (state ∈ {0,3})", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -361,7 +361,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(calledWith).toBe(SLOT_ARRAY_BASE_ADDR);
   });
 
-  it("state slot=2 (non in {0,3} né in {1,5,6}) → no bind, no early exit, no key write skip", () => {
+  it("slot state=2 (not in {0,3} nor in {1,5,6}) → no bind, no early exit, no key write skip", () => {
     const s = emptyGameState();
     setSelector(s, 1);
     setWorld(s, 0, 0, 0);
@@ -369,7 +369,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
       s,
       0,
       { x: 0, y: 0, z: 0 },
-      0x02, // non bind (state != 0,3), non alt-key (state != 1,5,6)
+      0x02, // not bind (state != 0,3), not alt-key (state != 1,5,6)
       0x401f00,
     );
     const off = slotOff(0);
@@ -387,7 +387,7 @@ describe("scriptSlotBboxTest14E92 (FUN_00014E92)", () => {
     expect(bindCalls).toBe(0);
     // slot state unchanged.
     expect(readByte(s, off + 0x1a)).toBe(0x02);
-    // slot[0x56] sovrascritto: entity[0x1A]=5 → SKIP write.
+    // slot[0x56] overwrite: entity[0x1A]=5 → SKIP write.
     expect(readWordBE(s, off + 0x56)).toBe(0xaaaa);
   });
 });

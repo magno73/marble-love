@@ -32,7 +32,7 @@
  *
  * **External sub-jsrs (5)**:
  *              `*0x400394`, `*0x400396`, etc.).
- *              modellato, default no-op).
+ *              modeled, default no-op).
  *   - 0x253EC  `FUN_253EC(obj)` — object-step inner for each obj. Callback
  *              required (but default no-op).
  *              no-op).
@@ -43,29 +43,29 @@
  *      but we replicated `& 0xFF` for safety.
  *
  *   2. **`ext.w; ext.l` on D2/D3 byte**: sign-extend byte → word → long.
- *      For byte ≤ 0x7F it is equivalent to unsigned. Replicate via guard
+ *      For byte ≤ 0x7F it is equivalent to unsigned. Replicated via guard
  *      `(b & 0x80) ? b - 0x100 : b`.
  *
  *
  *
- *   5. **`cmpi.w #0xEC; ble`** followed da level-check (`*0x400394 == 4`).
+ *   5. **`cmpi.w #0xEC; ble`** followed by a level-check (`*0x400394 == 4`).
  *      Logic: skip respawn if signed X > 0xEC AND level != 4. Then if X
- *      (signed) >= -8 AND level != 4: skip respawn. Equivalente:
+ *      (signed) >= -8 AND level != 4: skip respawn. Equivalent:
  *      respawn requires `(-8 < X <= 0xEC) OR level == 4`.
  *
  *   6. **`asl.l #16, D1` with globals @ 0x400462/0x400466**: replicated as
- *      `(g << 16) >>> 0` (big-endian long). Identico a `objectInit2591A`.
+ *      `(g << 16) >>> 0` (big-endian long). Identical to `objectInit2591A`.
  *
- *   7. **`pea (0x3C).l`** vs **`pea (0xF).w`**: il first pusha long 0x3C,
- *      sign-ext = 0x0000000F. Replicato as int32.
+ *   7. **`pea (0x3C).l`** vs **`pea (0xF).w`**: the first pushes long 0x3C,
+ *      sign-ext = 0x0000000F. Replicated as int32.
  *
- *      signed word. Replichiamo via sign-extension.
+ *      signed word. Replicated via sign-extension.
  *
  *   9. **`addq.w #1,(0xD2,A2)`**: 16-bit wrap.
  *
  *  10. **State machine global @ 0x400390**: `cmp.w (0x00400390).l, D0w` with
  *
- * **Caller noto**: `FUN_00010FCE` @ 0x10FD4 (UNCONDITIONAL_CALL).
+ * **Known caller**: `FUN_00010FCE` @ 0x10FD4 (UNCONDITIONAL_CALL).
  *
  */
 
@@ -91,7 +91,7 @@ export const GLOBAL_BYTE_472_ADDR = 0x00400472 as const;
 export const GLOBAL_TILE_X_ADDR = 0x00400696 as const;
 export const GLOBAL_TILE_Y_ADDR = 0x00400698 as const;
 
-/** Stride between object struct adiacenti. */
+/** Stride between adjacent object structs. */
 export const OBJ_STRIDE = 0xe2 as const;
 
 export const OBJECT_SCAN_DISPATCH_251DE_SUB_ADDRS = [
@@ -144,7 +144,7 @@ export interface ObjectScanDispatch251DESubs {
   fun_285B0?: (state: GameState, objPtr: number, modeLong: number) => void;
 }
 
-// ─── Helper interni: read/write su workRam (BE M68k) ─────────────────────
+// ─── Internal helpers: read/write on workRam (BE M68k) ───────────────────
 
 function readU32BE(workRam: Uint8Array, addrAbs: number): number {
   const a = addrAbs >>> 0;
@@ -220,7 +220,7 @@ export function objectScanDispatch251DE(
 ): void {
   const wr = state.workRam;
 
-  // ── 0x251E2: A3 = 0x400396 (count) — chiamiamo objectCharcodeBroadcast1BBAA.
+  // ── 0x251E2: A3 = 0x400396 (count) — call objectCharcodeBroadcast1BBAA.
   subs.fun_1BBAA?.(state, rom);
 
   // ── 0x251EE..0x251F0: D2 = 0, D3 = 0 (counters). 0x251F8: D4 = 0 (idx).
@@ -251,7 +251,7 @@ export function objectScanDispatch251DE(
       const w6a = readU16BE(wr, a2 + 0x6a);
       const w6aS = sext16(w6a);
       // cmpi.w #0x190 with dst (0x6a,A2): set CCR on (dst - 0x190).
-      // ble = N|Z|V branch — equivalente a `dst <= 0x190` signed.
+      // ble = N|Z|V branch — equivalent to `dst <= 0x190` signed.
       // bne (skip jsr) when ble fails → dst > 0x190 (signed).
       if (w6aS > 0x190) {
         subs.fun_2822E?.(state);
@@ -268,7 +268,7 @@ export function objectScanDispatch251DE(
         // 0x25238..0x2523A: D3++, skip
         d3 = (d3 + 1) & 0xff;
       } else {
-        // 0x2523E..0x25242: gate "count == 2" (i.e. 2 == *0x400396)
+        // 0x2523E..0x25242: gate "count == 2" (that is, 2 == *0x400396)
         // moveq #2, D0; cmp.w (A3), D0w; bne skip
         // (bne if D0(=2) != count) → skip if count != 2
         const countNow = readU16BE(wr, GLOBAL_OBJ_COUNT_ADDR) & 0xffff;

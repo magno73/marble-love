@@ -50,7 +50,7 @@ function readU32BE(buf: Uint8Array, off: number): number {
 }
 
 describe("objectStep17F66 (FUN_17F66)", () => {
-  it("costanti coerenti col disasm", () => {
+  it("constants consistent with the disasm", () => {
     expect(VEL_SCALE).toBe(0x160);
     expect(DEPTH_BASE).toBe(0x1f);
     expect(MODE_5_FLOOR).toBe(4);
@@ -84,7 +84,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(s.workRam[A2_OFF + 0x08]).toBe(0xcc);
   });
 
-  it("skip path: state18 == 3 → identico al ramo 2", () => {
+  it("skip path: state18 == 3 → identical to branch 2", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 3;
     const { callees, log } = makeCallees();
@@ -93,7 +93,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toHaveLength(0);
   });
 
-  it("special-dispatch: *0x400390 word == 1 → fun1815A(a2) and poi return", () => {
+  it("special-dispatch: *0x400390 word == 1 → fun1815A(a2) and then return", () => {
     const s = emptyGameState();
     s.workRam[0x0390] = 0x00;
     s.workRam[0x0391] = 0x01;
@@ -129,7 +129,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("movement path: global396 == 1 → fun180BE() invece of store byte", () => {
+  it("movement path: global396 == 1 → fun180BE() instead of store byte", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     // global396 word == 1
@@ -158,7 +158,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     ]);
   });
 
-  it("movement path: mode==5 con D1 < 4 → clamp D1=4 in the scaling", () => {
+  it("movement path: mode==5 with D1 < 4 → clamp D1=4 in the scaling", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[A2_OFF + 0x58] = 0x2e; // whitelist
@@ -181,7 +181,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(readU32BE(s.workRam, A2_OFF + 0x04)).toBe(-704 >>> 0);
   });
 
-  it("movement path: mode==1 senza clamp (D1 può be < 4 senza clamp)", () => {
+  it("movement path: mode==1 without clamp (D1 can be < 4 without clamp)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[A2_OFF + 0x58] = 0x31; // whitelist
@@ -235,7 +235,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("stuck path: post-addi >= -0x50000 → NESSUN clamp (also con cmd bit7 set)", () => {
+  it("stuck path: post-addi >= -0x50000 → NO clamp (even with cmd bit7 set)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[A2_OFF + 0x58] = 0xff; // bit7 set but irrelevant (the logic is cmpi.l)
@@ -266,7 +266,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });
 
-  it("priorita': skip > special > movement/stuck (skip vince also con global390==1)", () => {
+  it("priority: skip > special > movement/stuck (skip wins even with global390==1)", () => {
     const s = emptyGameState();
     s.workRam[0x0390] = 0x00;
     s.workRam[0x0391] = 0x01; // would trigger special
@@ -292,7 +292,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(readU32BE(s.workRam, A2_OFF + 0x08)).toBe(0xffffd000);
   });
 
-  it("global390 cmp e' WORD a 0x400390 (BE), non long: byte 0x390=0x00 0x391=0x02 NOT triggera", () => {
+  it("global390 cmp is WORD at 0x400390 (BE), not long: bytes 0x390=0x00 0x391=0x02 do NOT trigger", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
     s.workRam[0x0390] = 0x00;

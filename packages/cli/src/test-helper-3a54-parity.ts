@@ -190,7 +190,7 @@ async function main(): Promise<void> {
   if (firstFail) {
     const { i, value, bufEnd, numDigits, showSpaces, scratchOffset, bin, ts } =
       firstFail;
-    console.log(`  First fail @ caso ${i}:`);
+    console.log(`  First fail @ case ${i}:`);
     console.log(
       `    value=${value}  bufEnd=0x${bufEnd.toString(16)}  digits=${numDigits}  showSpaces=${showSpaces}`,
     );

@@ -3,30 +3,30 @@
  * test-object-render-update-1365c-parity.ts —
  * differential FUN_0001365C vs `objectRenderUpdate1365C`.
  *
- * **Strategia**:
- * FUN_1365C ha 4 path macro observable:
+ * **Strategy**:
+ * FUN_1365C has 4 observable macro paths:
  *   A. Early-exit (unchanged POS: A1==frame[-c] && A4==frame[-a]).
  *   B. Loop-scan without a valid match -> no writes to A2.
- *   C. Match → A2+0x1b aggiornato, poi ramo -1 (new state, palette, sound).
- *   D. Match → A2+0x1b = 4 + gameMode==3 → loop 25 slot @ 0x400a9c.
+ *   C. Match → A2+0x1b updated, then the -1 branch (new state, palette, sound).
+ *   D. Match → A2+0x1b = 4 + gameMode==3 → loop 25 slots @ 0x400a9c.
  *
- * Sub non replicated (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
+ * Subroutines not replicated (FUN_285B0, FUN_158AC, FUN_12F44, FUN_12896, FUN_13966)
  * are patched with `rts` (4E75) in the binary. TS callbacks are no-ops.
  * `paletteQueuePush` and `soundPair15884` are replicated → side effect observable.
  *
- * Observable comparate:
+ * Observables compared:
  *   - workRam @ A2..A2+0x80 (object struct)
  *   - workRam @ 0x4003a4 (byte global)
  *   - workRam @ 0x400408..0x40040f (palette queue)
- *   - workRam @ 0x400a9c..0x400a9c+25*0x56 (slot array, per ramo D)
+ *   - workRam @ 0x400a9c..0x400a9c+25*0x56 (slot array, for branch D)
  *
  * Suites:
  *   A (smoke): early-exit (unchanged POS).
  *   B: random POS + random game mode → scan with random table.
  *   C: force match -> A2+0x1b==-1 branch (new state).
- *   D: game mode==3, A2+0x1b==4 → ramo slot loop.
+ *   D: game mode==3, A2+0x1b==4 → slot loop branch.
  *
- * Uso: npx tsx packages/cli/src/test-object-render-update-1365c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-render-update-1365c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
     OBJ_PTR_CHOICES[Math.floor(rng() * OBJ_PTR_CHOICES.length)]!;
 
   // ─── Suite A: early-exit (unchanged POS) ────────────────────────────────
-  console.log(`\n=== FUN_0001365C — Suite A: early-exit (POS invariato) — ${perSuite} cases ===`);
+  console.log(`\n=== FUN_0001365C — Suite A: early-exit (POS unchanged) — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const objPtr = pickPtr();
@@ -376,7 +376,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

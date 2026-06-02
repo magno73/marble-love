@@ -25,13 +25,13 @@ describe("dequeueByte (FUN_4D68)", () => {
     return s;
   }
 
-  it("queue vuota (head==tail): returns 0xFFFFFFFF", () => {
+  it("empty queue (head==tail): returns 0xFFFFFFFF", () => {
     const s = setupQueue(0, 0, []);
     expect(dequeueByte(s)).toBe(0xFFFFFFFF);
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(0); // unchanged
   });
 
-  it("queue vuota a metà (head==tail==5)", () => {
+  it("queue empty mid-buffer (head==tail==5)", () => {
     const s = setupQueue(5, 5, []);
     expect(dequeueByte(s)).toBe(0xFFFFFFFF);
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(5);
@@ -43,7 +43,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(1);
   });
 
-  it("head=15 (wrap): dopo dequeue head torna a 0", () => {
+  it("head=15 (wrap): after dequeue head returns to 0", () => {
     const s = setupQueue(15, 14, [
       0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0, 0xCC, // buffer[15] = 0xCC
     ]);
@@ -51,7 +51,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(s.workRam[QUEUE_HEAD_OFF]).toBe(0);
   });
 
-  it("head=14 (no wrap): dopo dequeue head=15", () => {
+  it("head=14 (no wrap): after dequeue head=15", () => {
     const s = setupQueue(14, 13, [
       0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0xDD,
     ]);
@@ -64,7 +64,7 @@ describe("dequeueByte (FUN_4D68)", () => {
     expect(dequeueByte(s)).toBe(0xFF); // not -1
   });
 
-  it("non modifies tail", () => {
+  it("does not modify tail", () => {
     const s = setupQueue(2, 5, [0,0,0xAA]);
     dequeueByte(s);
     expect(s.workRam[QUEUE_TAIL_OFF]).toBe(5);
@@ -79,14 +79,14 @@ describe("orPairBytes (FUN_53EA)", () => {
     expect(orPairBytes(s, 0x400100)).toBe(0);
   });
 
-  it("solo first set → first byte", () => {
+  it("only first set → first byte", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0xAB;
     s.workRam[0x101] = 0;
     expect(orPairBytes(s, 0x400100)).toBe(0xAB);
   });
 
-  it("only ifcondo set → second byte", () => {
+  it("only second set → second byte", () => {
     const s = emptyGameState();
     s.workRam[0x100] = 0;
     s.workRam[0x101] = 0xCD;

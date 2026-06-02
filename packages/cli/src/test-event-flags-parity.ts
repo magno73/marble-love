@@ -3,10 +3,10 @@
  * test-event-flags-parity.ts — differential FUN_2548 vs consumeEventFlag.
  *
  * For N random flag words: set *0x400006, callFunction(0x2548), compare:
- *   - D0 (return value, 0 o 1)
+ *   - D0 (return value, 0 or 1)
  *   - *0x400006 after the call, shifted right by 1
  *
- * Uso: npx tsx packages/cli/src/test-event-flags-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-event-flags-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     const initial = (Math.floor(rng() * 0x100000000) >>> 0);
-    const bitNum = Math.floor(rng() * 35); // 0..34, covers il caso shift >=32
+    const bitNum = Math.floor(rng() * 35); // 0..34, covers the shift >=32 case
 
     pokeMem(cpu, 0x401f5e, 4, initial);
     state.workRam[0x1f5e] = (initial >>> 24) & 0xff;

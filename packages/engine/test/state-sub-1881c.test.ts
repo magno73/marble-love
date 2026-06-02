@@ -1,7 +1,7 @@
 /**
- * state-sub-1881c.test.ts — smoke tests per `FUN_0001881C`.
+ * state-sub-1881c.test.ts — smoke tests for `FUN_0001881C`.
  *
- * Verifica:
+ * Verifies:
  *   - early-out (gameMode != 3 OR byte760 == 0)
  *   - loop with empty table -> result = 0, hits = []
  *   - reflect-neg branch (first 3 match, second check fails, dist < 12)
@@ -100,13 +100,13 @@ describe("stateSub1881C (FUN_0001881C)", () => {
   it("early-out: gameMode==3 but byte760==0 → result=0", () => {
     const s = emptyGameState();
     setWordBE(s, GAME_MODE_OFFSET, GAME_MODE_ACTIVE);
-    setByte(s, SECONDARY_GATE_OFFSET, 0); // gate chiuso
+    setByte(s, SECONDARY_GATE_OFFSET, 0); // gate closed
     const r = stateSub1881C(s, ENTITY_BASE);
     expect(r.earlyOut).toBe(true);
     expect(r.result).toBe(0);
   });
 
-  it("loop con table vuota (all entry inattivi) → result=0", () => {
+  it("loop with empty table (all entries inactive) → result=0", () => {
     const s = emptyGameState();
     setupActive(s);
     // Prepopulate entity to verify it is not touched.
@@ -119,13 +119,13 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET)).toBe(0x12345678);
   });
 
-  it("reflect-neg: first 3 match, second check fails, dist < 12 → nega entity[0..3] and [4..7]", () => {
+  it("reflect-neg: first 3 match, second check fails, dist < 12 → negate entity[0..3] and [4..7]", () => {
     const s = emptyGameState();
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0xaa);
     setByte(s, SPAWN_BYTE1_OFFSET, 0xbb);
-    // long684/688: their byte((>>19)) values must not match 0xaa/0xbb (for
-    // forzare reflect path). Lasciali a 0 → byte((0>>19))=0 != 0xaa.
+    // long684/688: their byte((>>19)) values must not match 0xaa/0xbb (to
+    // force the reflect path). Leave them at 0 → byte((0>>19))=0 != 0xaa.
     setLongBE(s, WORLD_X_OFFSET, 0);
     setLongBE(s, WORLD_Y_OFFSET, 0);
 
@@ -148,9 +148,9 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(r.hits[0]!.branch).toBe("reflect_neg");
     expect(r.hits[0]!.index).toBe(5);
 
-    // entity[0..3] negato: 0x10000 → -0x10000 = 0xFFFF0000
+    // entity[0..3] negated: 0x10000 → -0x10000 = 0xFFFF0000
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG0_OFFSET)).toBe(0xffff0000);
-    // entity[4..7] negato: 0xFFFE0000 (signed -0x20000) → +0x20000 = 0x00020000
+    // entity[4..7] negated: 0xFFFE0000 (signed -0x20000) → +0x20000 = 0x00020000
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG1_OFFSET)).toBe(0x00020000);
     // entity[0xc] / [0x10] always written on first-3 match.
     expect(readLongBE(s, ENTITY_OFF + ENTITY_LONG3_OFFSET)).toBe(0); // = long684
@@ -190,7 +190,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     s.rng.seed = as_u32(0x1234);
     setupActive(s);
 
-    // Forza byte((long@684)>>19) = 0x10 and byte((long@688)>>19) = 0x20.
+    // Force byte((long@684)>>19) = 0x10 and byte((long@688)>>19) = 0x20.
     // long684 = 0x10 << 19 = 0x800000 → byte((0x800000 >> 19)) = 0x10 ✓
     // long688 = 0x20 << 19 = 0x1000000
     setLongBE(s, WORLD_X_OFFSET, 0x10 << 19);
@@ -205,7 +205,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     setWordBE(s, e0 + ENTRY_KEY_WORD_OFFSET, 0x0033);
     // entity[0x14].w == entry word
     setWordBE(s, ENTITY_OFF + ENTITY_LONG5_OFFSET, 0x0033);
-    // entity[0x14..0x17] full long, low word = 0x0000 (irrilevante per cmp.w)
+    // entity[0x14..0x17] full long, low word = 0x0000 (irrelevant for cmp.w)
     setLongBE(s, ENTITY_OFF + ENTITY_LONG5_OFFSET, 0x00330000);
 
     setLongBE(s, ENTITY_OFF + ENTITY_LONG0_OFFSET, 0x00040000);
@@ -243,7 +243,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect([0x0003a000, 0x00046000]).toContain(long1After);
   });
 
-  it("subs assente → no crash also su math branch", () => {
+  it("subs absent → no crash even on math branch", () => {
     const s = emptyGameState();
     setupActive(s);
     setLongBE(s, WORLD_X_OFFSET, 0x10 << 19);
@@ -259,7 +259,7 @@ describe("stateSub1881C (FUN_0001881C)", () => {
     expect(() => stateSub1881C(s, ENTITY_BASE)).not.toThrow();
   });
 
-  it("entity[0xc] / [0x10] always scritti su first-3 match (even if reflect-skip)", () => {
+  it("entity[0xc] / [0x10] always written on first-3 match (even if reflect-skip)", () => {
     const s = emptyGameState();
     setupActive(s);
     setByte(s, SPAWN_BYTE0_OFFSET, 0x77);

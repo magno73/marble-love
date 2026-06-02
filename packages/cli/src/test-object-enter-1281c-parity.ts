@@ -3,7 +3,7 @@
  * test-object-enter-1281c-parity.ts —
  * differential FUN_1281C vs `objectEnter1281C`.
  *
- * **Strategia**:
+ * **Strategy**:
  * `(0x1C,A0)`, (2) gate range -16 < D1w < 256 on the word a `(0x20,A0)`, (3)
  *
  * To test the shim logic in isolation, we **patch
@@ -23,7 +23,7 @@
  *   - Pattern >=8 : random mix (range word random, ptr random)
  *
  *
- * Uso: npx tsx packages/cli/src/test-object-enter-1281c-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-enter-1281c-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n=== objectEnter1281C (FUN_0001281C) — ${n} cases ===`);
-  console.log(`  (FUN_264AA patched in-memory con stub move.l (8,SP),D0;rts)`);
+  console.log(`  (FUN_264AA patched in-memory with stub move.l (8,SP),D0;rts)`);
 
   const rng = makeRng(0x1281c);
   let ok = 0;

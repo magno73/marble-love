@@ -64,8 +64,8 @@ console.log("\n=== thunk10042 (FUN_00010042) smoke tests ===\n");
   // mmioInputByte=0 → debounce clears bits 0 and 1 → flags = 0xF003 & 0xFFFE & 0xFFFD = 0xF000
   // sext16(0xF000) = -4096
   check("smoke1: retval = -4096 (0xF000 sign-extended, input bits cleared)", retThunk, -4096);
-  check("smoke1: accumX non modificato (input zero)", readWord(s1.workRam, cfNs.ACCUM_X_OFF), 0);
-  check("smoke1: accumY non modificato (input zero)", readWord(s1.workRam, cfNs.ACCUM_Y_OFF), 0);
+  check("smoke1: accumX unchanged (input zero)", readWord(s1.workRam, cfNs.ACCUM_X_OFF), 0);
+  check("smoke1: accumY unchanged (input zero)", readWord(s1.workRam, cfNs.ACCUM_Y_OFF), 0);
 }
 
 {

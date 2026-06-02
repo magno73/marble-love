@@ -3,7 +3,7 @@ import { emptyGameState } from "../src/state.js";
 import { clearPlayfieldOther12186 } from "../src/clear-playfield-other-12186.js";
 
 describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
-  it("azzera 72 byte per 64 iterazioni, partendo dto the offset 6", () => {
+  it("clears 72 bytes for 64 iterations, starting from offset 6", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xab);
     clearPlayfieldOther12186(s);
@@ -18,7 +18,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     }
   });
 
-  it("non tocca i first 6 byte of playfieldRam (pre-offset)", () => {
+  it("does not touch the first 6 bytes of playfieldRam (pre-offset)", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xcd);
     clearPlayfieldOther12186(s);
@@ -28,7 +28,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     }
   });
 
-  it("preserva i 56 byte saltati in each iterazione", () => {
+  it("preserves the 56 skipped bytes in each iteration", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xef);
     clearPlayfieldOther12186(s);
@@ -47,7 +47,7 @@ describe("clearPlayfieldOther12186 (FUN_00012186)", () => {
     }
   });
 
-  it("non tocca workRam, alphaRam, spriteRam, colorRam", () => {
+  it("does not touch workRam, alphaRam, spriteRam, colorRam", () => {
     const s = emptyGameState();
     s.playfieldRam.fill(0xff);
     s.workRam[0x100] = 0x42;

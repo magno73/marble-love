@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const r = rng(0xface);
 
   // FUN_11AC2: 1 deterministic case.
-  console.log(`\n=== copyRomToWorkram66Words (FUN_11AC2) — 1 caso ===`);
+  console.log(`\n=== copyRomToWorkram66Words (FUN_11AC2) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 200; j++) {
     pokeMem(cpu, 0x40076E + j, 1, 0xCC);
@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok1 ? 1 : 0}/1`);
 
   // FUN_26B10: 1 deterministic case.
-  console.log(`\n=== copyRomToPalette32Words (FUN_26B10) — 1 caso ===`);
+  console.log(`\n=== copyRomToPalette32Words (FUN_26B10) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 100; j++) {
     pokeMem(cpu, 0xB00000 + j, 1, 0xAA);
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2 ? 1 : 0}/1`);
 
   // FUN_1CEA: palette init full
-  console.log(`\n=== paletteRamInitFull (FUN_1CEA) — 1 caso ===`);
+  console.log(`\n=== paletteRamInitFull (FUN_1CEA) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 0x800; j++) {
     pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okPF ? 1 : 0}/1`);
 
   // FUN_1A41E: palette init level
-  console.log(`\n=== paletteInitLevel (FUN_1A41E) — 1 caso ===`);
+  console.log(`\n=== paletteInitLevel (FUN_1A41E) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 0x800; j++) {
     pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okGI2}/10`);
 
   // FUN_E24: palette bootstrap
-  console.log(`\n=== paletteBootstrapInit (FUN_E24) — 1 caso ===`);
+  console.log(`\n=== paletteBootstrapInit (FUN_E24) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   for (let j = 0; j < 0x80; j++) {
     pokeMem(cpu, 0xB00000 + j, 1, 0xCC);
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okPE}/5`);
 
   // FUN_31D0: game state machine init
-  console.log(`\n=== gameStateMachineInit (FUN_31D0) — 1 caso ===`);
+  console.log(`\n=== gameStateMachineInit (FUN_31D0) — 1 case ===`);
   cpu.system.setRegister("sp", 0x401f00);
   // Pre-fill: workRam globals and alpha
   for (const off of [0x1f00, 0x1f02, 0x1f3a, 0x1f3c, 0x1f3e, 0x1f42]) {

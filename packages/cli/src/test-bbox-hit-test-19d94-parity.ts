@@ -8,24 +8,24 @@
  * overlap with (marble.x, marble.y), then writes slot fields, entity fields,
  * and triggers sound 0x3E through `FUN_158AC` on hit.
  *
- * **Strategia parity**:
+ * **Parity strategy**:
  *   - `FUN_00158AC` (sound command sender) **stubbed with RTS** (0x4E75) to
  *     neutralize side effects on the sound MMIO. The TS uses
- *     `subs.soundCommand = noop` per matchare.
+ *     `subs.soundCommand = noop` to match.
  *   - Compare:
  *       * For each of the 10 slots: the full 0x38 bytes starting at
  *         `0x4019F8 + i*0x38`.
- *       * I 0x60 byte of the entity @ ENTITY_BASE (covers 0x1A and 0x57).
+ *       * The 0x60 byte of the entity @ ENTITY_BASE (covers 0x1A and 0x57).
  *       * Flag word @ 0x400394 (game-mode), not written but verified
- *         was not corrupted.
+ *         not to be corrupted.
  *
  * **Suite** (4 × 125 = 500):
  *   - A: random everything
- *   - B: forced game-mode = 4 + slot 0 armata + bbox centrato → guaranteed hit
+ *   - B: forced game-mode = 4 + slot 0 armed + bbox centered → guaranteed hit
  *   - C: game-mode = 4, armed slots with various bbox boundary edge cases
  *   - D: game-mode != 4 -> early-exit (entity/slot not touched)
  *
- * Uso: npx tsx packages/cli/src/test-bbox-hit-test-19d94-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-bbox-hit-test-19d94-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -59,11 +59,11 @@ const MARBLE_Y_ADDR = 0x00400692;
 
 /**
  * Patch JSR-stub:
- *   - FUN_158AC → RTS (0x4E75) per neutralize il sound command sender.
+ *   - FUN_158AC → RTS (0x4E75) to neutralize the sound command sender.
  *
- * Note: `pea (cmd).l; jsr FUN_158AC; addq.l #4, SP` - caller binary
+ * Note: `pea (cmd).l; jsr FUN_158AC; addq.l #4, SP` - the caller binary
  * pushes the long and, after the stub RTS, does addq.l #4,SP to clean the
- * stack. Quindi RTS-only va bene.
+ * stack. So RTS-only is fine.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_158AC + 0, 1, 0x4e);
@@ -80,7 +80,7 @@ function makeRng(seed: number): () => number {
 
 interface Snapshot {
   entity: number[]; // 0x60 byte (covers [0..0x57])
-  slots: number[]; // 10 × 0x38 byte concatenati
+  slots: number[]; // 10 × 0x38 byte concatenated
   gameMode: number; // word @ 0x400394
   marbleX: number; // word @ 0x400690
   marbleY: number; // word @ 0x400692
@@ -271,18 +271,18 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: gameMode=4, slot 0 armata centrata su marble → hit ─────
+  // ─── Suite B: gameMode=4, slot 0 armed centered on marble → hit ──────
   console.log(
-    `\n=== Suite B: gameMode=4 + slot 0 armata + bbox-centered (guaranteed hit) — ${perSuite} cases ===`,
+    `\n=== Suite B: gameMode=4 + slot 0 armed + bbox-centered (guaranteed hit) — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const slots = randomSlots();
-    // Forza all le slot a NOT armate
+    // Force all slots to NOT armed
     for (let s = 0; s < SLOT_COUNT; s++) {
       slots[s * SLOT_STRIDE + 0x18] = 0;
     }
-    // Slot 0 armata + free + bbox centrato su (mx, my)
+    // Slot 0 armed + free + bbox centered on (mx, my)
     const mx = (rw() & 0x7fff) - 0x4000; // signed-ish range
     const my = (rw() & 0x7fff) - 0x4000;
     slots[0 * SLOT_STRIDE + 0x18] = 1;
@@ -305,16 +305,16 @@ async function main(): Promise<void> {
 
   // ─── Suite C: gameMode=4, edge cases bbox boundaries ─────────────────
   console.log(
-    `\n=== Suite C: gameMode=4 + slot armate con bbox boundary edges — ${perSuite} cases ===`,
+    `\n=== Suite C: gameMode=4 + armed slots with bbox boundary edges — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const slots = randomSlots();
-    // Tutte le slot armate + libere
+    // All slots armed + free
     for (let s = 0; s < SLOT_COUNT; s++) {
       slots[s * SLOT_STRIDE + 0x18] = 1;
       slots[s * SLOT_STRIDE + 0x1a] = 0;
-      // Posizioni random word
+      // Random word positions
       const sx = rw();
       const sy = rw();
       slots[s * SLOT_STRIDE + 0x0c] = (sx >>> 8) & 0xff;
@@ -352,14 +352,14 @@ async function main(): Promise<void> {
   // ─── Suite D: edge — gameMode != 4 (early exit) + slot states mixed ──
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: gameMode != 4 (early exit) + slot states miscellanei — ${sizeD} cases ===`,
+    `\n=== Suite D: gameMode != 4 (early exit) + miscellaneous slot states — ${sizeD} cases ===`,
   );
   let okD = 0;
   const gameModeChoices = [0, 1, 2, 3, 5, 6, 0xff, 0xffff, 0x0400];
   for (let i = 0; i < sizeD; i++) {
     const slots = randomSlots();
     for (let s = 0; s < SLOT_COUNT; s++) {
-      // mix: alcune armate, alcune occupate, alcune libere
+      // mix: some armed, some occupied, some free
       const mode = i % 3;
       if (mode === 0) {
         slots[s * SLOT_STRIDE + 0x18] = 1;
@@ -385,7 +385,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

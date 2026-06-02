@@ -1,7 +1,7 @@
 /**
- * helper-1e3e.test.ts — unit test per `fillSeqWords1E3E` (FUN_00001E3E).
+ * helper-1e3e.test.ts — unit test for `fillSeqWords1E3E` (FUN_00001E3E).
  *
- * Qui copriamo: basic fill, edge cases (count=0, count negativo, wrap word).
+ * Here we cover: basic fill, edge cases (count=0, negative count, word wrap).
  */
 
 import { describe, it, expect } from "vitest";
@@ -36,7 +36,7 @@ describe("HELPER_1E3E_ADDR", () => {
 // ─── FUN_00001E3E alias ───────────────────────────────────────────────────────
 
 describe("FUN_00001E3E alias", () => {
-  it("is identico a fillSeqWords1E3E", () => {
+  it("is identical to fillSeqWords1E3E", () => {
     expect(FUN_00001E3E).toBe(fillSeqWords1E3E);
   });
 });
@@ -44,7 +44,7 @@ describe("FUN_00001E3E alias", () => {
 // ─── fillSeqWords1E3E — basic fill ───────────────────────────────────────────
 
 describe("fillSeqWords1E3E", () => {
-  it("count=0 → no-op, workRam invariata", () => {
+  it("count=0 → no-op, workRam unchanged", () => {
     const s = emptyGameState();
     s.workRam.fill(0xAA);
     fillSeqWords1E3E(s, 0x401000, 0x0010, 0);
@@ -53,7 +53,7 @@ describe("fillSeqWords1E3E", () => {
     }
   });
 
-  it("count negativo → no-op", () => {
+  it("negative count → no-op", () => {
     const s = emptyGameState();
     s.workRam.fill(0xBB);
     fillSeqWords1E3E(s, 0x401000, 0x0010, -1);
@@ -62,7 +62,7 @@ describe("fillSeqWords1E3E", () => {
     }
   });
 
-  it("count=1 → writes un solo word", () => {
+  it("count=1 → writes a single word", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     fillSeqWords1E3E(s, 0x401100, 0x0042, 1);
@@ -95,7 +95,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readWord(s, dest + 6)).toBe(0x0001);
   });
 
-  it("start is mascherato a 16 bit (e.g. 0x10042 → 0x0042)", () => {
+  it("start is masked to 16 bits (e.g. 0x10042 → 0x0042)", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     const dest = 0x401400;
@@ -104,7 +104,7 @@ describe("fillSeqWords1E3E", () => {
     expect(readWord(s, dest + 2)).toBe(0x0043);
   });
 
-  it("byte adiacenti al buffer non are toccati (no overflow write)", () => {
+  it("bytes adjacent to the buffer are not touched (no overflow write)", () => {
     const s = emptyGameState();
     s.workRam.fill(0xCC);
     const dest = 0x401500;
@@ -145,14 +145,14 @@ describe("fillSeqWords1E3E", () => {
     expect((((s.colorRam[2] ?? 0) << 8) | (s.colorRam[3] ?? 0)) & 0xffff).toBe(0x0301);
   });
 
-  it("indirizzi outside range are no-op (non sollevano eccezione)", () => {
+  it("addresses outside range are no-op (do not raise an exception)", () => {
     const s = emptyGameState();
     expect(() => fillSeqWords1E3E(s, 0x900000, 0, 4)).not.toThrow();
     // ROM area 0x000000 → no crash, no write
     expect(() => fillSeqWords1E3E(s, 0x000100, 0, 2)).not.toThrow();
   });
 
-  it("count grande (e.g. 0x400 entry) writes correttamente", () => {
+  it("large count (e.g. 0x400 entries) writes correctly", () => {
     const s = emptyGameState();
     s.workRam.fill(0x00);
     const dest = 0x400000;

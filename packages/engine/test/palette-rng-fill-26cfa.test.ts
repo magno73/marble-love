@@ -1,7 +1,7 @@
 /**
  * Test paletteRngFill26CFA (FUN_00026CFA).
  *
- * Smoke tests: verifichiamo le invarianti strutturali (header words, stride,
+ * Smoke tests: we verify the structural invariants (header words, stride,
  * `packages/cli/src/test-palette-rng-fill-26cfa-parity.ts`.
  */
 
@@ -27,7 +27,7 @@ function readPalU16BE(state: ReturnType<typeof emptyGameState>, addr: number): n
 }
 
 describe("paletteRngFill26CFATick", () => {
-  it("writes 8 entry: each header inizia con HEADER_WORD_1 / HEADER_WORD_2", () => {
+  it("writes 8 entries: each header starts with HEADER_WORD_1 / HEADER_WORD_2", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.rng.seed = as_u16(0x1234);
@@ -41,7 +41,7 @@ describe("paletteRngFill26CFATick", () => {
     }
   });
 
-  it("byte between entry consecutive (offset 10..31) restano invariati", () => {
+  it("bytes between consecutive entries (offset 10..31) remain unchanged", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     // Pre-fill gap region with sentinel 0xA5 to detect any unwanted write.
@@ -65,7 +65,7 @@ describe("paletteRngFill26CFATick", () => {
     }
   });
 
-  it("avanza RNG of 8 step (8 chiamate a rngNext con limit=2)", () => {
+  it("advances RNG by 8 steps (8 calls to rngNext with limit=2)", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
     state.rng.seed = as_u16(0x4321);
@@ -95,7 +95,7 @@ describe("paletteRngFill26CFATick", () => {
       const tmpState = emptyGameState();
       tmpState.rng.seed = as_u16(s);
       paletteRngFill26CFATick(tmpState, rom);
-      // Se entry 0 word3 == 0x1122 → rnd era 0
+      // If entry 0 word3 == 0x1122 → rnd was 0
       if (readPalU16BE(tmpState, PAL_DEST_BASE + 4) === 0x1122) {
         seedFound = s;
         break;
@@ -127,7 +127,7 @@ describe("paletteRngFill26CFATick", () => {
       const tmpState = emptyGameState();
       tmpState.rng.seed = as_u16(s);
       paletteRngFill26CFATick(tmpState, rom);
-      // Se entry 0 word3 == 0xAABB → rnd era != 0
+      // If entry 0 word3 == 0xAABB → rnd was != 0
       if (readPalU16BE(tmpState, PAL_DEST_BASE + 4) === 0xaabb) {
         seedFound = s;
         break;
@@ -143,10 +143,10 @@ describe("paletteRngFill26CFATick", () => {
     expect(readPalU16BE(state, PAL_DEST_BASE + 8)).toBe(0xeeff);
   });
 
-  it("ROM table al of outside of the first entry (i=3): reads offset 0x20BB4 + 36", () => {
+  it("ROM table beyond the first entry (i=3): reads offset 0x20BB4 + 36", () => {
     const state = emptyGameState();
     const rom = emptyRomImage();
-    // Entry 3 sub-entry +0 (RNG=0): bytes a 0x20BB4 + 36..41
+    // Entry 3 sub-entry +0 (RNG=0): bytes at 0x20BB4 + 36..41
     const i = 3;
     const tableI = ROM_TABLE_BASE + i * 12;
     rom.program[tableI + 0] = 0xde;

@@ -27,7 +27,7 @@ function readWord(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("stateSub2C60 (FUN_2C60)", () => {
-  it("non solleva eccezioni con state vuoto and claima il first slot", () => {
+  it("does not raise exceptions with empty state and claims the first slot", () => {
     const s = emptyGameState();
     const out = stateSub2C60(s, 0xdeadbeef, 0x1234);
     expect(out.claimed).toBe(1);
@@ -39,7 +39,7 @@ describe("stateSub2C60 (FUN_2C60)", () => {
     expect(s.workRam[FLAG34_BASE + 0]).toBe(0);
   });
 
-  it("skips slot busy and claima il first free", () => {
+  it("skips busy slots and claims the first free one", () => {
     const s = emptyGameState();
     // Slot 0 and 1 occupied
     s.workRam[STATE_BASE + 0] = 3;
@@ -52,20 +52,20 @@ describe("stateSub2C60 (FUN_2C60)", () => {
     expect(out.claimed).toBe(1);
     expect(out.slot).toBe(2);
 
-    // Slot 2 popolato
+    // Slot 2 populated
     expect(readLong(s, DATA_BASE + 2 * 4)).toBe(0xcafe1234);
     expect(s.workRam[STATE_BASE + 2]).toBe(4);
     expect(readWord(s, THRESHOLD_BASE + 2 * 2)).toBe(0xabcd);
     expect(readWord(s, COUNTER_BASE + 2 * 2)).toBe(0);
     expect(s.workRam[FLAG34_BASE + 2]).toBe(0);
 
-    // Slot 0/1/3 invariati (state)
+    // Slot 0/1/3 unchanged (state)
     expect(s.workRam[STATE_BASE + 0]).toBe(3);
     expect(s.workRam[STATE_BASE + 1]).toBe(5);
     expect(s.workRam[STATE_BASE + 3]).toBe(7);
   });
 
-  it("nessuno slot free → claimed=0, no modifies", () => {
+  it("no slot free → claimed=0, no changes", () => {
     const s = emptyGameState();
     for (let i = 0; i < 4; i++) {
       s.workRam[STATE_BASE + i] = i + 1;
@@ -88,14 +88,14 @@ describe("stateSub2C60 (FUN_2C60)", () => {
     }
   });
 
-  it("solo low word of arg2 is scritto in THRESHOLD (matching move.w)", () => {
+  it("only the low word of arg2 is written into THRESHOLD (matching move.w)", () => {
     const s = emptyGameState();
     const out = stateSub2C60(s, 0xdeadbeef, 0x12345678);
     expect(out.claimed).toBe(1);
     expect(readWord(s, THRESHOLD_BASE)).toBe(0x5678);
   });
 
-  it("threshold con bit 15 set (negativo signed) preservato as word puro", () => {
+  it("threshold with bit 15 set (signed negative) preserved as a pure word", () => {
     const s = emptyGameState();
     // arg2 = -1 (sign-extended 0xFFFFFFFF)
     const out = stateSub2C60(s, 0x10000, 0xffffffff | 0);
@@ -103,7 +103,7 @@ describe("stateSub2C60 (FUN_2C60)", () => {
     expect(readWord(s, THRESHOLD_BASE)).toBe(0xffff);
   });
 
-  it("choice slot 3 when slot 0/1/2 are busy", () => {
+  it("chooses slot 3 when slots 0/1/2 are busy", () => {
     const s = emptyGameState();
     s.workRam[STATE_BASE + 0] = 1;
     s.workRam[STATE_BASE + 1] = 2;

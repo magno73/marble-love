@@ -33,7 +33,7 @@ function readWord(s: ReturnType<typeof emptyGameState>, off: number): number {
 }
 
 describe("stateSub28EA (FUN_28EA)", () => {
-  it("writes 0x401F3E con la target word PRIMA of the render (even if no slot free)", () => {
+  it("writes 0x401F3E with the target word BEFORE the render (even if no slot free)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     for (let i = 0; i < 4; i++) s.workRam[STATE_BASE + i] = 1;
@@ -55,7 +55,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     for (let i = 0; i < 4; i++) expect(s.workRam[STATE_BASE + i]).toBe(1);
   });
 
-  it("registra slot 0 con state=7, dataPtr long, word16 word — non tocca THRESHOLD/COUNTER/FLAG34", () => {
+  it("registers slot 0 with state=7, dataPtr long, word16 word — does not touch THRESHOLD/COUNTER/FLAG34", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // Pre-fill slot 0 THRESHOLD/COUNTER/FLAG34 with sentinels: they must not change.
@@ -99,7 +99,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(readLong(s, DATA_BASE + 3 * 4)).toBe(0);
   });
 
-  it("passa sext.l(arg2.w) a fun_2572 (sign-extension da word a long)", () => {
+  it("passes sext.l(arg2.w) to fun_2572 (sign-extension from word to long)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     let observedAttr = 0;
@@ -113,7 +113,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     stateSub28EA(s, rom, 0, 0xdead8000, 0, subs);
     expect(observedAttr).toBe(-32768);
 
-    // arg2.w = 0x7FFF → sext.l = 32767 positivo
+    // arg2.w = 0x7FFF → sext.l = 32767 positive
     stateSub28EA(s, rom, 0, 0x12347fff, 0, subs);
     expect(observedAttr).toBe(0x7fff);
 
@@ -122,7 +122,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(observedAttr).toBe(-1);
   });
 
-  it("default subs: no eccezione se fun_2572 is not iniettato (no-op)", () => {
+  it("default subs: no exception if fun_2572 is not injected (no-op)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => stateSub28EA(s, rom, 0xdeadbeef, 0x1111, 0x2222)).not.toThrow();
@@ -133,7 +133,7 @@ describe("stateSub28EA (FUN_28EA)", () => {
     expect(readWord(s, TARGET_OFF)).toBe(0x2222);
   });
 
-  it("uses solo low word of arg2 and arg3 (mask 0xFFFF; high word ignorato)", () => {
+  it("uses only the low word of arg2 and arg3 (mask 0xFFFF; high word ignored)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     stateSub28EA(s, rom, 0x00000000, 0xffff5678, 0xdead9abc);

@@ -16,12 +16,12 @@
  *   - D: top4 != 0 + mask miss (top4_search → bias lookup).
  *        / bias_sentinel / bit11_set re-loop).
  *
- *     destinatario in memory address).
- *   - Le high 16 bits of D0 dipendono from the D0 of the caller pre-call (la sub
+ *     recipient in memory address).
+ *   - The high 16 bits of D0 depend on the caller's D0 pre-call (the sub
  *     uses only `move.w` and `move.b` on D0). Our TS replica returns
  *     of `callFunction`, but only in the high bits.
  *
- * Uso: npx tsx packages/cli/src/test-string-dispatch-table-177f8-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-string-dispatch-table-177f8-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -53,7 +53,7 @@ const WR_BIAS_Y_LONG = 0x00400988;
 const WR_BIAS_X_WORD = 0x0040098a;
 const WR_STRING_TABLE_PTR = 0x0040065a;
 
-// ─── RNG deterministico ─────────────────────────────────────────────────────
+// ─── Deterministic RNG ─────────────────────────────────────────────────────
 function makeRng(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -101,9 +101,9 @@ function setWordBE(buf: Uint8Array, off: number, v: number): void {
 }
 
 /**
- * Costruisce a setup "base" comune: workRam pseudo-random + PF RAM
+ * Builds a common "base" setup: workRam pseudo-random + PF RAM
  * pseudo-random + level header @ 0x401000 with generous bound, string-table
- * @ 0x401200 (in the workRam), base-offset table @ 0x400478 sane.
+ * @ 0x401200 (in the workRam), sane base-offset table @ 0x400478.
  */
 function buildBaseFill(rngSeed: number, args: {
   arg0w: number;
@@ -122,13 +122,13 @@ function buildBaseFill(rngSeed: number, args: {
   setLongBE(wr, WR_LEVEL_HEADER_PTR - WORK_RAM_BASE, 0x401000);
   // bound @ levelHeader + 0x18 (= workRam off 0x1018)
   setWordBE(wr, 0x1000 + 0x18, args.bound & 0xffff);
-  // A0_deref ∈ [0xa00000..0xa04000) for the path no_bit11. Il D0_sext aggiunto
+  // A0_deref ∈ [0xa00000..0xa04000) for the no_bit11 path. The added D0_sext
   setLongBE(wr, 0x1000, 0xa00800);
 
   // string-table ptr @ 0x40065a -> 0x401200 (workRam)
   setLongBE(wr, WR_STRING_TABLE_PTR - WORK_RAM_BASE, 0x401200);
 
-  // bias-Y long @ 0x400988 -> 0 (semplifichiamo: bias_y = 0)
+  // bias-Y long @ 0x400988 -> 0 (we simplify: bias_y = 0)
   setLongBE(wr, WR_BIAS_Y_LONG - WORK_RAM_BASE, 0);
   setWordBE(wr, WR_BIAS_X_WORD - WORK_RAM_BASE, 0);
 
@@ -246,10 +246,10 @@ async function main(): Promise<void> {
   const ri = (max: number): number => Math.floor(rng() * max);
 
   // ── Suite A: bound-exit ────────────────────────────────────────────────
-  console.log(`\n  Suite A (bound-exit, D2.w >= bound) — ${perSuite} casi`);
+  console.log(`\n  Suite A (bound-exit, D2.w >= bound) — ${perSuite} cases`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
-    const bound = 1 + ri(50); // bound piccolo
+    const bound = 1 + ri(50); // small bound
     const arg0w = bound + ri(0x1000); // arg0 ≥ bound (signed)
     const setup = buildBaseFill(0x10000 + i, {
       arg0w,
@@ -263,23 +263,23 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: no_bit11 path (top4 = 0, bit 11 = 0) ──────────────────────
-  //   - D3.l = sext(arg2w) + globalLong988. Vogliamo D3.l piccolo (0..0xF).
-  //     Con globalLong988=0 and arg2w piccolo (positive 0..0xF) → D3.l = arg2w.
+  //   - D3.l = sext(arg2w) + globalLong988. We want D3.l small (0..0xF).
+  //     With globalLong988=0 and arg2w small (positive 0..0xF) → D3.l = arg2w.
   //   - A0_deref = 0xa00800 (in PF RAM); D0_sext ∈ [0x40..0x7ff] → A1 ∈
   //   - offset0/offset4 from ROM are small (0..0x12121200, but we inspect
   //     only entries 0..15 = 0..0xF). A3 still = A1 + offset0 and A1 += offset4.
   //     With offset0 in {0..3, 0x12120300...}, this lands in different places. But in
-  //     pratica per le entries 0..7 le offset are 0..3 (vedi rom dump @ 0x2417e),
+  //     practice for entries 0..7 the offsets are 0..3 (see rom dump @ 0x2417e),
   //     arg2w ∈ [0..7].
   //     in PF RAM if A1_pre >= 0xa00000.
-  console.log(`\n  Suite B (no_bit11 path) — ${perSuite} casi`);
+  console.log(`\n  Suite B (no_bit11 path) — ${perSuite} cases`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bound = 100;
     const arg0w = ri(50);
     // arg2w in [0..7]: D3.l = 0..7, asl.l #3 = 0..0x38, A2 = 0x2417e..0x241b6.
     const arg2w = ri(8);
-    // arg1w controllato: vogliamo D0_init in [0x40..0x100] (positivo, piccolo)
+    // arg1w controlled: we want D0_init in [0x40..0x100] (positive, small)
     const arg1w = ri(0x80) * 2;
     const setup = buildBaseFill(0x20000 + i, {
       arg0w,
@@ -287,7 +287,7 @@ async function main(): Promise<void> {
       arg2w,
       bound,
     });
-    // Forziamo D0 lookup @ A2: a `0x401200 + qualcosa` → vogliamo top4=0,
+    // We force the D0 lookup @ A2: at `0x401200 + something` → we want top4=0,
     // bit11=0, fff in [0x40..0x7ff].
     // Need to fill the entire potential range (D1.w masked ∈ [0..0x7fe]).
     for (let j = 0; j < 0x400; j++) {
@@ -301,10 +301,10 @@ async function main(): Promise<void> {
 
   // ── Suite C: top4 != 0, mask hit (top4_short) ──────────────────────────
   // top4_short does not re-read PF RAM; only workRam @ 0x400478 + 2*arg0w and
-  // ROM @ 0x24176 + D3.w*2). Vincoli:
-  //     (0x24176..0x2417d). Con globalLong988=0 and arg2w ∈ [0..3], D3.w =
+  // ROM @ 0x24176 + D3.w*2). Constraints:
+  //     (0x24176..0x2417d). With globalLong988=0 and arg2w ∈ [0..3], D3.w =
   //     arg2w, D3.w*2 ∈ [0..6]. ✓
-  console.log(`\n  Suite C (top4_short path) — ${perSuite} casi`);
+  console.log(`\n  Suite C (top4_short path) — ${perSuite} cases`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bound = 100;
@@ -329,7 +329,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ── Suite D: top4 != 0 with hit/miss mix -> top4_short / top4_search ──
-  console.log(`\n  Suite D (top4 mixed path) — ${perSuite} casi`);
+  console.log(`\n  Suite D (top4 mixed path) — ${perSuite} cases`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const bound = 100;
@@ -357,7 +357,7 @@ async function main(): Promise<void> {
   // Random arg0w/arg1w/arg2w, but with reduced D3.l (small arg2w + bias_y=0)
   // to avoid reads from unmapped memory.
   const sizeE = perSuite + remainder;
-  console.log(`\n  Suite E (random + safe ranges) — ${sizeE} casi`);
+  console.log(`\n  Suite E (random + safe ranges) — ${sizeE} cases`);
   let okE = 0;
   for (let i = 0; i < sizeE; i++) {
     const bound = 1 + ri(120);
@@ -376,7 +376,7 @@ async function main(): Promise<void> {
   totalOk += okE;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

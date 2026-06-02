@@ -5,18 +5,18 @@
  *
  * **Strategy**: `FUN_00017F66` (344 bytes) is an "object step" subroutine that
  * decides between 4 paths (skip / special-dispatch / movement / stuck) and calls
- * up to 1 sub interna per path:
+ * up to 1 internal sub per path:
  *   - special: `FUN_1815A(A2)`
- *   - movement (ramo `*0x400396 == 1`): `FUN_180BE()`
+ *   - movement (branch `*0x400396 == 1`): `FUN_180BE()`
  *   - movement / stuck (epilogue): `FUN_26196(A2)`
  *
- * Per testare in isolamento la *sola* logica of dispatch / aritmetica
+ * To test the *dispatch / arithmetic* logic alone in isolation
  * (whitelist, scaling, addi.l, clamp, ...), **patch the 3 callees with a
- * pure `rts` stub** in ROM. Thus the binary only performs the side effect of
- * dispatcher (writes at 0x4006A8/AA, 0xC6/C7, and add.l at +0/+4/+8), so
+ * pure `rts` stub** in ROM. Thus the binary only performs the side effects of
+ * the dispatcher (writes at 0x4006A8/AA, 0xC6/C7, and add.l at +0/+4/+8), so
  * post-call workRam depends only on our logic.
  *
- * **Stubs** iniettati (2 byte each = `4E 75` rts):
+ * **Stubs** injected (2 byte each = `4E 75` rts):
  *   - `0x0001815A`: `rts`
  *   - `0x000180BE`: `rts`
  *   - `0x00026196`: `rts`
@@ -24,14 +24,14 @@
  * For each case:
  *   1. Pre-fill workRam with a deterministic pattern.
  *   2. Pick A2 (random workRam offset, 4-byte aligned, with struct bytes
- *      determinati from the pattern).
+ *      determined from the pattern).
  *   3. **Side binary**: copy pre-fill into CPU memory, push A2 on the stack,
  *      call FUN_17F66, snapshot workRam.
  *   4. **TS side**: copies the pre-fill into `state.workRam`, calls
  *      `objectStep17F66(state, A2_addr, no-op-callees)`.
- *   5. Compare workRam byte-per-byte (escludendo area stack scratch).
+ *   5. Compare workRam byte-by-byte (excluding the stack scratch area).
  *
- * Patterns coperti:
+ * Patterns covered:
  *   - skip path (state18 ∈ {2, 3})
  *   - special-dispatch (global390 word == 1)
  *   - movement: cmd in whitelist + global396 word != 1 (store branch)
@@ -42,7 +42,7 @@
  *   - stuck: state36 == 0 (no addi)
  *   - stuck: cmd bit7 set (clamp -0x50000)
  *
- * Uso: npx tsx packages/cli/src/test-object-step-17f66-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-object-step-17f66-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -70,7 +70,7 @@ const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 /** "Stack scratch" area excluded from compare: callFunction leaves tombstone
  *  residue (pushed args/sentinel) that is not part of the
- *  sub. Coverage abbondante: SP=0x401F00 scende al massimo a ~0x401EE0. */
+ *  sub. Ample coverage: SP=0x401F00 descends at most to ~0x401EE0. */
 const STACK_SCRATCH_START = 0x1e80;
 
 /** RTS: opcode 68k 0x4E75 (2 byte big-endian). */
@@ -89,7 +89,7 @@ function makeRng(seed: number): () => number {
 
 type CpuSync = Awaited<ReturnType<typeof createCpu>>;
 
-/** Cattura workRam from the CPU in un Uint8Array. */
+/** Capture workRam from the CPU into a Uint8Array. */
 function captureWorkRam(cpu: CpuSync): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -98,7 +98,7 @@ function captureWorkRam(cpu: CpuSync): Uint8Array {
   return out;
 }
 
-/** Carica un buffer in workRam from the CPU. */
+/** Load a buffer into workRam on the CPU. */
 function loadWorkRam(cpu: CpuSync, src: Uint8Array): void {
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
     pokeMem(cpu, WORK_RAM_BASE + i, 1, src[i] ?? 0);
@@ -119,11 +119,11 @@ interface CaseSetup {
   pre: Uint8Array;
 }
 
-/** Genera 1 case deterministico second `i` and rng. */
+/** Generate 1 deterministic case from `i` and rng. */
 function genCase(i: number, rng: () => number): CaseSetup {
   const pre = new Uint8Array(WORK_RAM_SIZE);
 
-  // Base fill: pattern deterministico per i piccoli, random successivamente.
+  // Base fill: deterministic pattern for small i, random afterwards.
   if (i === 0) pre.fill(0x00);
   else if (i === 1) pre.fill(0xff);
   else if (i === 2) pre.fill(0x55);
@@ -142,8 +142,8 @@ function genCase(i: number, rng: () => number): CaseSetup {
   const a2Off = a2Slot >>> 0;
   const a2Addr = (WORK_RAM_BASE + a2Off) >>> 0;
 
-  // Sovrascrivi the bytes struct chiave second il pattern.
-  // Pattern bucket selection (10% ognuno).
+  // Overwrite the key struct bytes according to the pattern.
+  // Pattern bucket selection (10% each).
   const pick = rng();
   let pattern: string;
 
@@ -225,7 +225,7 @@ function genCase(i: number, rng: () => number): CaseSetup {
     }
   }
 
-  // Scrivi the bytes struct.
+  // Write the struct bytes.
   pre[a2Off + 0x18] = state18 & 0xff;
   pre[a2Off + 0x1a] = mode & 0xff;
   pre[a2Off + 0x36] = state36 & 0xff;
@@ -269,12 +269,12 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch iniziale.
+  // Initial patch.
   patchStubs(cpu);
 
   console.log(`\n=== objectStep17F66 (FUN_17F66) — ${n} cases ===`);
   console.log(
-    `  (FUN_1815A / FUN_180BE / FUN_26196 patchate con stub 'rts')`,
+    `  (FUN_1815A / FUN_180BE / FUN_26196 patched with 'rts' stub)`,
   );
 
   const rng = makeRng(0x17f66ace);

@@ -92,7 +92,7 @@ describe("setFlagBit (FUN_5236)", () => {
     expect(readU32(s)).toBe(0x2);
   });
 
-  it("arg=2 → bit 0 (riusato)", () => {
+  it("arg=2 → bit 0 (reused)", () => {
     const s = emptyGameState();
     setFlagBit(s, 2);
     expect(readU32(s)).toBe(0x1);
@@ -110,7 +110,7 @@ describe("setFlagBit (FUN_5236)", () => {
     expect(readU32(s)).toBe(0x100);
   });
 
-  it("OR con state esistente (non clear)", () => {
+  it("OR with existing state (does not clear)", () => {
     const s = emptyGameState();
     s.workRam[STATUS_FLAGS_OFF] = 0xAB;
     s.workRam[STATUS_FLAGS_OFF + 1] = 0xCD;
@@ -127,13 +127,13 @@ describe("anyStatusFlagsSet (FUN_52A2)", () => {
     expect(anyStatusFlagsSet(s)).toBe(0);
   });
 
-  it("solo primary set → 1", () => {
+  it("only primary set → 1", () => {
     const s = emptyGameState();
     s.workRam[STATUS_FLAGS_OFF + 3] = 1;
     expect(anyStatusFlagsSet(s)).toBe(1);
   });
 
-  it("only ifcondary set → 1", () => {
+  it("only secondary set → 1", () => {
     const s = emptyGameState();
     s.workRam[SECONDARY_FLAGS_OFF + 3] = 1;
     expect(anyStatusFlagsSet(s)).toBe(1);
@@ -146,7 +146,7 @@ describe("anyStatusFlagsSet (FUN_52A2)", () => {
     expect(anyStatusFlagsSet(s)).toBe(1);
   });
 
-  it("bit alti of the long: primary @ byte 0 → 1", () => {
+  it("high bits of the long: primary @ byte 0 → 1", () => {
     const s = emptyGameState();
     s.workRam[STATUS_FLAGS_OFF] = 0x80;
     expect(anyStatusFlagsSet(s)).toBe(1);
@@ -172,7 +172,7 @@ describe("addToObjectAccumAndFlag (FUN_28608)", () => {
     ) >>> 0;
   }
 
-  it("increments accumulator and setta bit `type`", () => {
+  it("increments accumulator and sets bit `type`", () => {
     const s = emptyGameState();
     setObj(s, 0x401D00, 100, 3);
     addToObjectAccumAndFlag(s, 0x401D00, 50);
@@ -180,14 +180,14 @@ describe("addToObjectAccumAndFlag (FUN_28608)", () => {
     expect(s.workRam[OBJECT_TRIGGER_FLAGS_OFF]).toBe(1 << 3);
   });
 
-  it("type=0 setta bit 0", () => {
+  it("type=0 sets bit 0", () => {
     const s = emptyGameState();
     setObj(s, 0x401D00, 0, 0);
     addToObjectAccumAndFlag(s, 0x401D00, 0);
     expect(s.workRam[OBJECT_TRIGGER_FLAGS_OFF]).toBe(1);
   });
 
-  it("OR su flag esistente", () => {
+  it("OR onto existing flag", () => {
     const s = emptyGameState();
     setObj(s, 0x401D00, 0, 5);
     s.workRam[OBJECT_TRIGGER_FLAGS_OFF] = 0xAA;
@@ -195,7 +195,7 @@ describe("addToObjectAccumAndFlag (FUN_28608)", () => {
     expect(s.workRam[OBJECT_TRIGGER_FLAGS_OFF]).toBe(0xAA | (1 << 5));
   });
 
-  it("type >= 8: OR a 8 bit (mask cap a 0xFF)", () => {
+  it("type >= 8: OR at 8 bits (mask capped at 0xFF)", () => {
     // type=10: 1<<10 = 0x400, but byte OR uses only low 8 bits = 0
     const s = emptyGameState();
     setObj(s, 0x401D00, 0, 10);
@@ -204,7 +204,7 @@ describe("addToObjectAccumAndFlag (FUN_28608)", () => {
     expect(s.workRam[OBJECT_TRIGGER_FLAGS_OFF]).toBe(0); // bit shifted out of byte
   });
 
-  it("accumulator wrap a 32-bit", () => {
+  it("accumulator wraps at 32-bit", () => {
     const s = emptyGameState();
     setObj(s, 0x401D00, 0xFFFFFFFE, 0);
     addToObjectAccumAndFlag(s, 0x401D00, 5);
@@ -223,7 +223,7 @@ describe("detectRisingEdgesAndPass (FUN_F6A)", () => {
     return s;
   }
 
-  it("no cambiamento: no rising edges, returns solo high nibble", () => {
+  it("no change: no rising edges, returns only high nibble", () => {
     // flag = 0x3000 (high nibble + low 0), prev = 0
     const s = setup(0x3000, 0);
     expect(detectRisingEdgesAndPass(s)).toBe(0x3000);
@@ -236,13 +236,13 @@ describe("detectRisingEdgesAndPass (FUN_F6A)", () => {
     expect(detectRisingEdgesAndPass(s)).toBe(1);
   });
 
-  it("falling edge bit 0 (NO ritorno)", () => {
+  it("falling edge bit 0 (NOT returned)", () => {
     // flag = 0 (current low bits = 0), prev = 1 → bit 0 fell, NOT rising
     const s = setup(0, 1);
     expect(detectRisingEdgesAndPass(s)).toBe(0);
   });
 
-  it("salva nuovo prev (low 2 bits of flag)", () => {
+  it("saves new prev (low 2 bits of flag)", () => {
     const s = setup(0xABC3, 0); // low 2 bits = 3
     detectRisingEdgesAndPass(s);
     const newPrev = ((s.workRam[EDGE_DETECTOR_PREV_OFF] ?? 0) << 8) |

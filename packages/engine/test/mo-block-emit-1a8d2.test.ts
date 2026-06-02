@@ -1,7 +1,7 @@
 /**
  * mo-block-emit-1a8d2.test.ts — smoke test of FUN_1A8D2.
  *
- * Qui copriamo i path principali of the modulo (early-exit, long-branch,
+ * Here we cover the module's main paths (early-exit, long-branch).
  */
 
 import { describe, it, expect } from "vitest";
@@ -75,14 +75,14 @@ function setupCursors(
 }
 
 describe("moBlockEmit1A8D2 — early exit (arg0 == -1)", () => {
-  it("arg0 == 0xFFFFFFFF → solo writeback, no scrittura sprite-RAM", () => {
+  it("arg0 == 0xFFFFFFFF → writeback only, no sprite-RAM write", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0x1234);
     const spriteBefore = new Uint8Array(s.spriteRam);
 
     moBlockEmit1A8D2(s, ARG0_SENTINEL, 0x100, 0x200, 0x300);
 
-    // Sprite RAM intatta.
+    // Sprite RAM untouched.
     expect(s.spriteRam).toEqual(spriteBefore);
 
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02000);
@@ -94,7 +94,7 @@ describe("moBlockEmit1A8D2 — early exit (arg0 == -1)", () => {
 });
 
 describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
-  it("body con count=2 → 2 iter, 4 output ognuna, D7 increments of 2", () => {
+  it("body with count=2 → 2 iters, 4 outputs each, D7 increments by 2", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -126,7 +126,7 @@ describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
     // Call: arg1 = 0 (X bias), arg2 = 0 (Y bias), arg3 = 0x4000 (OR mask).
     moBlockEmit1A8D2(s, headerAbs, 0, 0, 0x4000);
 
-    // Calcoli attesi:
+    // Expected computations:
     //   D1 = 0; D2 = 0; D3 = 0x4000;
     //   header[+0] = 0x05 (s8 = +5) → D1 += 5 → D1 = 5;
     //   header[+1] = 0x03 (s8 = +3) → D2 += 3 → D2 = 3;
@@ -161,7 +161,7 @@ describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
     expect(readWordSprite(s, 0xa02180)).toBe(0x0000);
     expect(readWordSprite(s, 0xa02182)).toBe(0x0001);
 
-    // Cursor writeback: avanzati of 4 byte (2 iter × 2 byte/iter).
+    // Cursor writeback: advanced by 4 bytes (2 iters × 2 bytes/iter).
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02004);
     expect(readLongWorkRam(s, CURSOR_A2_ADDR)).toBe(0xa02084);
     expect(readLongWorkRam(s, CURSOR_A3_ADDR)).toBe(0xa02104);
@@ -209,7 +209,7 @@ describe("moBlockEmit1A8D2 — long branch (word-stream)", () => {
 });
 
 describe("moBlockEmit1A8D2 — short branch (triple-stream)", () => {
-  it("body[0] == 0xFF → triple-stream, 3 iter con D4 reset per iter", () => {
+  it("body[0] == 0xFF → triple-stream, 3 iters with D4 reset per iter", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -281,7 +281,7 @@ describe("moBlockEmit1A8D2 — short branch (triple-stream)", () => {
     expect(readWordWorkRam(s, COUNTER_D7_ADDR)).toBe(2);
   });
 
-  it("short branch con bit0=1 ⇒ D4 mantiene 0x8000 attraverso le iter", () => {
+  it("short branch with bit0=1 ⇒ D4 keeps 0x8000 across iters", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -312,7 +312,7 @@ describe("moBlockEmit1A8D2 — short branch (triple-stream)", () => {
 });
 
 describe("moBlockEmit1A8D2 — sign-ext byte arithmetic", () => {
-  it("header byte negativo (0xFF = -1) ⇒ D1 decrementa", () => {
+  it("negative header byte (0xFF = -1) ⇒ D1 decrements", () => {
     const s = emptyGameState();
     setupCursors(s, 0xa02000, 0xa02080, 0xa02100, 0xa02180, 0);
 
@@ -359,7 +359,7 @@ describe("moBlockEmit1A8D2 — count = 1 path (single iter)", () => {
 
     // Exactly 1 word written in each buffer.
     expect(readWordSprite(s, 0xa02000)).toBe(0xdead);
-    // Cursor advanced by of exactly 2 byte.
+    // Cursor advanced by exactly 2 bytes.
     expect(readLongWorkRam(s, CURSOR_A1_ADDR)).toBe(0xa02002);
     expect(readWordWorkRam(s, COUNTER_D7_ADDR)).toBe(1);
   });

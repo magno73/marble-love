@@ -20,17 +20,17 @@ describe("formatHex (FUN_3A08)", () => {
     return bytes.join("");
   }
 
-  it("value=0, digits=4, no spaces: '0\\0' a bufEnd-1", () => {
+  it("value=0, digits=4, no spaces: '0\\0' at bufEnd-1", () => {
     const s = emptyGameState();
     formatHex(s, 0, 0x401D00, 4, 0);
     // bufEnd=0x401D00, digits=4. Function writes: bufEnd+4 = 0 (NUL),
-    // poi siccome value==0: *(--A0) = '0', D0 -= 1.
-    // Quindi: bufEnd+3='0' (=0x30), bufEnd+4=0
+    // then since value==0: *(--A0) = '0', D0 -= 1.
+    // So: bufEnd+3='0' (=0x30), bufEnd+4=0
     expect(s.workRam[0x1D00 + 3]).toBe(0x30); // '0'
     expect(s.workRam[0x1D00 + 4]).toBe(0); // NUL
   });
 
-  it("value=0xABCD, digits=4: ASCII 'ABCD' a bufEnd..bufEnd+3", () => {
+  it("value=0xABCD, digits=4: ASCII 'ABCD' at bufEnd..bufEnd+3", () => {
     const s = emptyGameState();
     formatHex(s, 0xABCD, 0x401D00, 4, 0);
     expect(s.workRam[0x1D00 + 0]).toBe(0x41); // 'A'
@@ -40,7 +40,7 @@ describe("formatHex (FUN_3A08)", () => {
     expect(s.workRam[0x1D00 + 4]).toBe(0); // NUL
   });
 
-  it("value=0x12345678, digits=8: writes 8 cifre", () => {
+  it("value=0x12345678, digits=8: writes 8 digits", () => {
     const s = emptyGameState();
     formatHex(s, 0x12345678, 0x401D00, 8, 0);
     expect(readBytes(s, 0x401D00, 9)).toBe("12345678\\x00");
@@ -94,11 +94,11 @@ describe("setAlphaTile (FUN_3784)", () => {
 });
 
 describe("strcpy (FUN_1D74)", () => {
-  it("copies stringa con null terminator (workRam → workRam)", () => {
+  it("copies a string with null terminator (workRam → workRam)", () => {
     const s = emptyGameState();
     const SRC = 0x401D00;
     const DST = 0x401E00;
-    // Scrivi "HELLO\0" in src
+    // Write "HELLO\0" in src
     const msg = "HELLO";
     for (let i = 0; i < msg.length; i++) {
       s.workRam[(SRC - 0x400000) + i] = msg.charCodeAt(i);
@@ -114,7 +114,7 @@ describe("strcpy (FUN_1D74)", () => {
     expect(s.workRam[(DST - 0x400000) + msg.length]).toBe(0);
   });
 
-  it("stringa vuota: copies solo il null", () => {
+  it("empty string: copies only the null", () => {
     const s = emptyGameState();
     const SRC = 0x401D00;
     const DST = 0x401E00;
@@ -126,7 +126,7 @@ describe("strcpy (FUN_1D74)", () => {
     expect(s.workRam[(DST - 0x400000)]).toBe(0);
   });
 
-  it("reads da ROM se src < 0x80000", () => {
+  it("reads from ROM if src < 0x80000", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     rom.program[0x1000] = 0x41; // 'A'
