@@ -8,26 +8,26 @@
  *   - max records = `(int8)ROM[0x1006F] sign-ext-long & 7` (per marble = 3)
  *   - returns -1 if arg2 > 0x12, -2 if arg1 >= max, otherwise byte/word record data
  *
- * Convenzione caller (cdecl push-RTL):
- *   - arg1 = SP+0x14 = record index (long, sign-ext'd da word from the caller)
- *   - arg2 = SP+0x18 = byte offset (long, sign-ext'd da word from the caller)
+ * Caller convention (cdecl push-RTL):
+ *   - arg1 = SP+0x14 = record index (long, sign-ext'd from word from the caller)
+ *   - arg2 = SP+0x18 = byte offset (long, sign-ext'd from word from the caller)
  *
- * Strategia parity:
- *   - Setup: workRam[0x1FFC..] = ptr (long BE, dentro range workRam-safe);
- *     populate random bytes at several record_base+offset locations; write ROM byte
- *     reale in Musashi (da `ghidra_project/marble_program.bin`); for the TS
+ * Parity strategy:
+ *   - Setup: workRam[0x1FFC..] = ptr (long BE, within workRam-safe range);
+ *     populate random bytes at several record_base+offset locations; write the real ROM byte
+ *     in Musashi (from `ghidra_project/marble_program.bin`); for the TS
  *     uses the same ROM read from the same file (passed as byte param).
  *   - For each random case: set up arg1, arg2; call binary; call TS;
  *     compare D0.
  *
  * Pattern coverage:
- *   - 30% arg1 in [0..7], arg2 in [0..0x12]   -> path #3 (byte) o #4 (word)
+ *   - 30% arg1 in [0..7], arg2 in [0..0x12]   -> path #3 (byte) or #4 (word)
  *   - 25% arg2 > 0x12                          -> path #1 (-1)
  *   - 25% arg1 in [0..0xFF]                    -> mix of #2 and #3/#4
- *   - 10% arg1 sign-ext negativo               -> stress #2
- *   - 10% full random long                     -> stress generale
+ *   - 10% arg1 sign-ext negative               -> stress #2
+ *   - 10% full random long                     -> general stress
  *
- * Uso: npx tsx packages/cli/src/test-field-fetch-4058-parity.ts [N=500]
+ * Usage: npx tsx packages/cli/src/test-field-fetch-4058-parity.ts [N=500]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -88,12 +88,12 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Costante ROM @ 0x1006F. Per marble = 0xE3 -> D4 = 3.
-  // La passiamo al TS as byte raw (il modulo applica & 7 internamente).
+  // ROM constant @ 0x1006F. For marble = 0xE3 -> D4 = 3.
+  // We pass it to the TS as a raw byte (the module applies & 7 internally).
   const romByteReal = rom[0x1006f] ?? 0;
 
   console.log(
-    `\n=== fieldFetch4058 (FUN_4058) — ${n} casi (ROM[0x1006F]=0x${romByteReal.toString(16)}) ===`,
+    `\n=== fieldFetch4058 (FUN_4058) — ${n} cases (ROM[0x1006F]=0x${romByteReal.toString(16)}) ===`,
   );
 
   const rng = makeRng(0x40584058);
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // ── Setup struct: scrivi NUM_RECORDS record × RECORD_BYTES byte random.
+    // ── Setup struct: write NUM_RECORDS records × RECORD_BYTES random bytes.
     // Same content in Musashi and state.workRam.
     for (let r = 0; r < NUM_RECORDS; r++) {
       for (let b = 0; b < RECORD_BYTES; b++) {
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     } else if (pick < 0.55) {
       pattern = "offset_oor";
       arg1 = Math.floor(rng() * 0x100);
-      // arg2 > 0x12 (sign-ext da word -> in the range word valido).
+      // arg2 > 0x12 (sign-ext from word -> within the valid word range).
       arg2 = (0x13 + Math.floor(rng() * 0xeed)) & 0xffff;
     } else if (pick < 0.8) {
       pattern = "mixed";
@@ -158,8 +158,8 @@ async function main(): Promise<void> {
     }
 
     // ── Run binary (2 long args, push-RTL: arg2 first, arg1 second/top).
-    // callFunction takes args in ordine logico (arg1, arg2): the helper li
-    // pusha right-to-left as da convenzione cdecl.
+    // callFunction takes args in logical order (arg1, arg2): the helper
+    // pushes them right-to-left as per the cdecl convention.
     const r = callFunction(cpu, FUN_4058, [arg1, arg2]);
     const binD0 = r.d0 >>> 0;
 

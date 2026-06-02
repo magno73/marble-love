@@ -1,5 +1,5 @@
 /**
- * marble-cell-dispatch-19e42.test.ts — smoke tests per `FUN_00019E42`.
+ * marble-cell-dispatch-19e42.test.ts — smoke tests for `FUN_00019E42`.
  *
  *   2. Branch HIT (cellX ∈ {0x29, 0x31, 0x39} AND cellY signed >= 0x34):
  *   5. Boundary cellY = 0x33 (signed) → MISS.
@@ -44,7 +44,7 @@ function readLongBE(s: State, off: number): number {
 }
 
 /**
- * Entity.y = `cellY << 3` analogamente.
+ * Entity.y = `cellY << 3` analogously.
  */
 function setupEntity(
   s: State,
@@ -77,7 +77,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
 
     const r = marbleCellDispatch19E42(s, ENTITY_BASE);
 
-    // Globals POS_X/POS_Y copied dto the entity.
+    // Globals POS_X/POS_Y copied from the entity.
     expect(readWordBE(s, POS_X_WORD_OFF)).toBe(0x0100);
     expect(readWordBE(s, POS_Y_WORD_OFF)).toBe(0x0080);
 
@@ -90,7 +90,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     //   packed = (0x0008 << 16) | 0xFFE4 = 0x0008FFE4
     expect(readLongBE(s, ENTITY_OFF + ENTITY_PACKED_OFF)).toBe(0x0008ffe4);
 
-    // MISS branch confermato.
+    // MISS branch confirmed.
     expect(r.branch).toBe("miss");
     expect(r.innerCalls).toBe(0);
     expect(r.cellX).toBe(0x20);
@@ -102,7 +102,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     }
   });
 
-  it("HIT: cellX=0x29 + cellY=0x40 → inner264AA chiamato con (entity, 3), niente clear", () => {
+  it("HIT: cellX=0x29 + cellY=0x40 → inner264AA called with (entity, 3), no clear", () => {
     const s = emptyGameState();
     setupEntity(s, 0x29, 0x40);
     // Placeholders not zeroed pre-call.
@@ -130,7 +130,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     expect(readWordBE(s, ENTITY_OFF + 0x32)).toBe(0xc3c3);
   });
 
-  it("HIT: all i cellX ammessi (0x29, 0x31, 0x39) con cellY ok → branch hit", () => {
+  it("HIT: all allowed cellX (0x29, 0x31, 0x39) with cellY ok → branch hit", () => {
     for (const cx of HIT_CELLX_SET) {
       const s = emptyGameState();
       setupEntity(s, cx, 0x50);
@@ -147,7 +147,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     }
   });
 
-  it("MISS: cellX non in set (0x28) → clear loop, niente inner", () => {
+  it("MISS: cellX not in set (0x28) → clear loop, no inner", () => {
     const s = emptyGameState();
     setupEntity(s, 0x28, 0x50);
     let calls = 0;
@@ -190,7 +190,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     expect(r.cellY).toBe(0x33);
   });
 
-  it("MISS: cellY signed-negativo (e.g. 0xC0 = -64) also con cellX ok", () => {
+  it("MISS: cellY signed-negative (e.g. 0xC0 = -64) even with cellX ok", () => {
     const s = emptyGameState();
     // entity.y = -1 word (0xFFFF). asr.w #3 of 0xFFFF = 0xFFFF (signed -1).
     // low byte = 0xFF (signed -1) < 0x34 → MISS.
@@ -202,7 +202,7 @@ describe("marbleCellDispatch19E42 (FUN_00019E42)", () => {
     expect(r.cellY).toBe(0xff);
   });
 
-  it("subs assente → no crash, ramo HIT non calls nulla (innerCalls=0)", () => {
+  it("subs absent → no crash, HIT branch calls nothing (innerCalls=0)", () => {
     const s = emptyGameState();
     setupEntity(s, 0x39, 0x40);
     expect(() => marbleCellDispatch19E42(s, ENTITY_BASE)).not.toThrow();

@@ -42,7 +42,7 @@
  *
  * **Caller** (10):
  *   0x1022, 0x1268, 0x1384, 0x14BC, 0x161A, 0x1EF2, 0x2182, 0x222E, 0x3B30
- *   (+ 0x1122 per un totale of 10 JSR $1C88)
+ *   (+ 0x1122 for a total of 10 JSR $1C88)
  *
  *
  */
@@ -121,7 +121,7 @@ function colW16(state: GameState, off: number, v: number): void {
  * Replica `FUN_00001C88`.
  *
  *
- * @param subs   Hook opzionali (MMIO write AV-control).
+ * @param subs   Optional hooks (MMIO write AV-control).
  */
 export function helper1C88(
   state: GameState,
@@ -148,7 +148,7 @@ export function helper1C88(
   spW16(state, SPRITE_OFF_0000, 0);
   // clr.w (0xA02180) → spriteRam[0x180]
   spW16(state, SPRITE_OFF_0180, 0);
-  // clr.w $860000.l → MMIO AV-control (no-op in RAM; notificato via hook)
+  // clr.w $860000.l → MMIO AV-control (no-op in RAM; notified via hook)
   (subs?.onAvControl ?? ((_s) => {}))(state);
   // clr.w $B00400.l → colorRam[0x400]
   colW16(state, COLOR_OFF_0400, 0);

@@ -7,11 +7,11 @@
 //  - first divergence frame
 //
 // Also, for each divergent slot:
-//  - quale entity byte (= entityList[idx]) si mappa al slot
-//  - quale typeCode/subIdx ha
+//  - which entity byte (= entityList[idx]) maps to the slot
+//  - which typeCode/subIdx it has
 //  - where coords are read from (ROM or workRam obj struct)
 //
-// Output: console + opzionale markdown report.
+// Output: console + optional markdown report.
 //
 // Constraint: no state edits. Drift at f+99 must remain unchanged.
 

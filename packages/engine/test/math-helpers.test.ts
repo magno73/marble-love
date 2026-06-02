@@ -12,35 +12,35 @@ describe("absLong (FUN_1216A / FUN_1B5A6)", () => {
     expect(absLong(0)).toBe(0);
   });
 
-  it("positivo → invariato", () => {
+  it("positive → unchanged", () => {
     expect(absLong(42)).toBe(42);
     expect(absLong(0x12345678)).toBe(0x12345678);
     expect(absLong(0x7FFFFFFF)).toBe(0x7FFFFFFF);
   });
 
-  it("negativo → positivo", () => {
+  it("negative → positive", () => {
     expect(absLong(-1 >>> 0)).toBe(1);
     expect(absLong(0xFFFFFFFE)).toBe(2); // -2 → 2
     expect(absLong(0x80000001)).toBe(0x7FFFFFFF); // -INT_MAX → INT_MAX
   });
 
-  it("INT_MIN (0x80000000) → INT_MIN (overflow of the neg, M68k quirk)", () => {
+  it("INT_MIN (0x80000000) → INT_MIN (negation overflow, M68k quirk)", () => {
     expect(absLong(0x80000000)).toBe(0x80000000);
   });
 });
 
 describe("negateIfPositive (FUN_1B5B4)", () => {
-  it("zero → zero (ble si applica)", () => {
+  it("zero → zero (ble applies)", () => {
     expect(negateIfPositive(0)).toBe(0);
   });
 
-  it("positivo → negativo", () => {
+  it("positive → negative", () => {
     expect(negateIfPositive(1)).toBe(0xFFFFFFFF); // -1 unsigned
     expect(negateIfPositive(42)).toBe((-42 >>> 0));
     expect(negateIfPositive(0x7FFFFFFF)).toBe(0x80000001);
   });
 
-  it("negativo → invariato", () => {
+  it("negative → unchanged", () => {
     expect(negateIfPositive(-1 >>> 0)).toBe(0xFFFFFFFF);
     expect(negateIfPositive(0x80000000)).toBe(0x80000000);
   });

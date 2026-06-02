@@ -3,9 +3,9 @@
  * test-marble-cell-dispatch-19e42-parity.ts —
  * differential FUN_00019E42 vs `marbleCellDispatch19E42`.
  *
- * **Strategia**:
+ * **Strategy**:
  * dispatch") with two key differences:
- *      o azzerare 3 word @ `entity[0x26, 0x2C, 0x32]` (MISS).
+ *      or zero 3 words @ `entity[0x26, 0x2C, 0x32]` (MISS).
  *
  * To test in isolation, patch `FUN_000264AA` with a stub:
  *
@@ -15,11 +15,11 @@
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
  *   - struct @ A1..A1+0x40 (including A1+0x20 packed long, A1+0x26..0x33 clear)
  *
- * Suite testate (4 × 125 = 500):
+ * Suites tested (4 × 125 = 500):
  *   - A: HUD random + struct random + ptr random (fully random)
  *   - C: w0/w2/w4/HUD estremi (signed overflow)
  *
- * Uso: npx tsx packages/cli/src/test-marble-cell-dispatch-19e42-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-marble-cell-dispatch-19e42-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -47,7 +47,7 @@ const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 const HUD_OFFSET_ADDR = 0x0040097e;
 const POS_X_ADDR = 0x00400690;
 
-/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
+/** Candidate slot pointers for the struct (work RAM, far from globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
   ): boolean {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Re-applica patch periodicamente (safety contro overwrite accidentali).
+    // Re-apply patch periodically (safety against accidental overwrites).
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_264AA + k, 1, STUB_BYTES[k]!);
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
 
     setupStruct(structPtr, bytes);
 
-    // Estrai w0/w2/w4 for the fail report.
+    // Extract w0/w2/w4 for the fail report.
     const off = (structPtr - 0x400000) >>> 0;
     const w0 =
       ((stateInst.workRam[off + 0xc] ?? 0) << 8) |
@@ -250,8 +250,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: w0/w2/w4/HUD estremi ──────────────────────────────────
-  console.log(`\n=== Suite C: w0/w2/w4/HUD estremi — ${perSuite} cases ===`);
+  // ─── Suite C: w0/w2/w4/HUD extremes ──────────────────────────────────
+  console.log(`\n=== Suite C: w0/w2/w4/HUD extremes — ${perSuite} cases ===`);
   let okC = 0;
   const extremes = [0x0000, 0x7fff, 0x8000, 0xffff, 0x8001, 0x7ffe, 0xfffc, 0x4000];
   for (let i = 0; i < perSuite; i++) {
@@ -301,7 +301,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   console.log(
-    `\n=== TOTALE: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
+    `\n=== TOTAL: ${totalOk}/${total} = ${((totalOk / total) * 100).toFixed(1)}% ===`,
   );
   if (failHolder.value !== null) {
     const f = failHolder.value;

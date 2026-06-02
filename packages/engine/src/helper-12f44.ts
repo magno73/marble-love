@@ -6,9 +6,9 @@
  * slot and runs the type/sub-index cleanup; values outside 0..1 are no-ops.
  *
  * **Calling convention M68k** (RTL, 3 arg long):
- *   - `SP+8`  → byte al offset `SP+B` = `mode` (sign-extended a long in A1).
+ *   - `SP+8`  → byte at offset `SP+B` = `mode` (sign-extended to a long in A1).
  *
- *   Tipico pattern caller mode-0:
+ *   Typical mode-0 caller pattern:
  *   ```
  *     move.l  <scriptPtr>,-(SP)   ; arg3 = scriptPtr
  *     clr.l   -(SP)               ; arg2 = mode=0
@@ -16,7 +16,7 @@
  *     jsr     0x00012F44.l
  *     lea     (0xC,SP),SP
  *   ```
- *   Tipico pattern caller mode-1:
+ *   Typical mode-1 caller pattern:
  *   ```
  *     clr.l   -(SP)               ; arg3 = 0
  *     pea     (0x1).w             ; arg2 = mode=1
@@ -86,7 +86,7 @@
  *   - `FUN_00012D46` @ 0x12D60 — mode-0, bind script slot.
  *   - `FUN_00012DFA` @ 0x12E96, 0x12ED6, 0x12F28 — mode-0, bind (rect-dispatch).
  *   - `FUN_0001365C` @ 0x138B4 — mode-1, free slot.
- *   - `FUN_00012896` @ 0x12C74 — mode-0 o mode-1 (vedi FUN_12896).
+ *   - `FUN_00012896` @ 0x12C74 — mode-0 or mode-1 (see FUN_12896).
  *
  *   `packages/cli/src/test-helper-12f44-parity.ts` (500/500).
  */

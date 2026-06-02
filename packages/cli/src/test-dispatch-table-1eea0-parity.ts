@@ -3,14 +3,14 @@
  * test-dispatch-table-1eea0-parity.ts — differential FUN_11AD8 vs
  * `dispatchTable1EEA0`.
  *
- * `FUN_00011AD8` (64 byte) itera `D2.b` da `argIdx` up to `0x0A` (cmp byte) e
+ * `FUN_00011AD8` (64 byte) iterates `D2.b` from `argIdx` up to `0x0A` (cmp byte) and
  * Starts at `0x1EEA0 + signExt(argIdx)*8` and increments by 8 each iteration.
  *
  * pattern `array9ClearAndDispatch` — ring buffer + thunk patch).
  *
- * Strategia:
+ * Strategy:
  *   1. Patch `FUN_0000428E` to a mini-thunk that logs `(arg1Long, arg2Long)`
- *      in una ring-buffer in **cartridge RAM** (0x900000+, 1 MB free —
+ *      in a ring-buffer in **cartridge RAM** (0x900000+, 1 MB free —
  *
  *      from Musashi; reset TS-side ring; run TS with stub-logger.
  *
@@ -19,7 +19,7 @@
  *
  *   - tc ≥16    : argIdx random in [0..0xFF]
  *
- * Uso: npx tsx packages/cli/src/test-dispatch-table-1eea0-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-dispatch-table-1eea0-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -95,7 +95,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Reset binary ring (Musashi) a 0. */
+/** Reset binary ring (Musashi) to 0. */
 function resetRingBin(cpu: CpuSession): void {
   for (let i = 0; i < RING_CAPACITY_BYTES; i++) {
     pokeMem(cpu, RING_BASE + i, 1, 0);
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   let firstFail: FailRecord | null = null;
 
   // Cycle cap must be large enough: 256 iters x about 30 cycles per iter.
-  // (push args + jsr + 30-byte thunk + pop). Bound prudente: 200_000 cycles.
+  // (push args + jsr + 30-byte thunk + pop). Conservative bound: 200_000 cycles.
   const MAX_CYCLES = 200_000;
 
   for (let tc = 0; tc < total; tc++) {

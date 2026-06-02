@@ -74,13 +74,13 @@ export interface LevelHeader {
   rowBuildBitListPtr: number;
   /**
    * `+0x0C` (long): RLE-compressed scroll-row source pointer.
-   * Espanso da `FUN_18FD0` (`rle-expand.ts:54`) in `0x400478+`.
+   * Expanded by `FUN_18FD0` (`rle-expand.ts:54`) into `0x400478+`.
    */
   rleSourcePtr: number;
   /**
    * `+0x10` (signed word): Y scroll base / boundary anchor.
-   * Inizializza `0x40097c` (`OFF_SRTGT`). NOT e' un timer (vedi
-   * `docs/level-header-format.md` per la nota on the naming
+   * Initializes `0x40097c` (`OFF_SRTGT`). It is NOT a timer (see
+   * `docs/level-header-format.md` for the note on the naming
    * `LEVEL_TIMER_OFF`).
    */
   yScrollBase: number;
@@ -100,7 +100,7 @@ export interface LevelHeader {
   /**
    * `+0x18` (signed word): Max tile bound. Column-index limit for the
    * tile-redraw loop and boundary for `string-dispatch-table-177f8`.
-   * **Nota**: byte fisicamente sovrapposto a `entityInitPositions[2]`.
+   * **Note**: byte physically overlapped with `entityInitPositions[2]`.
    * The two semantics do not collide in natural paths because entity 2
    * is not active in state 3.
    */
@@ -108,13 +108,13 @@ export interface LevelHeader {
   /**
    * `+0x1A` (signed word): Tile-line descriptor count per chunk.
    * Consumed by `FUN_1A444` as the loop limit for calls to `FUN_1AD54`.
-   * Sovrapposto fisicamente a `entityInitPositions[3]`.
+   * Physically overlapped with `entityInitPositions[3]`.
    */
   rowBuildEntryCount: number;
   /**
    * `+0x1C` (long): Tile-line descriptor table pointer.
    * Base passed from `FUN_1A444` to `FUN_1AD54` with 8-byte stride.
-   * Sovrapposta fisicamente a `entityInitPositions[4..5]`.
+   * Physically overlapped with `entityInitPositions[4..5]`.
    */
   tileLineDescriptorPtr: number;
   /**
@@ -131,7 +131,7 @@ export interface LevelHeader {
   binsearchEndIndex: number;
   /**
    * `+0x26` (long): Binsearch base pointer.
-   * Terrain-code lookup table. Stored a `0x40065a` from the `FUN_16EC6`
+   * Terrain-code lookup table. Stored at `0x40065a` by `FUN_16EC6`
    * (`level-dispatcher-16ec6.ts:131`), consumed from the tile-redraw
    * (`sub-1caba-tile-redraw.ts:376`).
    */
@@ -153,17 +153,17 @@ export interface LevelHeader {
  * `LevelData.postHeader` and `decodeTerrainCode`.
  */
 export interface HeightRecord {
-  /** word a offset 0 (16-bit BE). */
+  /** word at offset 0 (16-bit BE). */
   word0: number;
-  /** word a offset 2 — UNKNOWN. */
+  /** word at offset 2 — UNKNOWN. */
   word1: number;
-  /** word a offset 4 — UNKNOWN. */
+  /** word at offset 4 — UNKNOWN. */
   word2: number;
-  /** word a offset 6 — UNKNOWN. */
+  /** word at offset 6 — UNKNOWN. */
   word3: number;
   /** Extracted from word0 bits 12-15: slope orientation (0..15). */
   slopeOrient: number;
-  /** Estratti da word0 bits 8-11: magnitudine slope (0..15). */
+  /** Extracted from word0 bits 8-11: slope magnitude (0..15). */
   slopeVal: number;
   /** Bytes raw (8). */
   raw: Uint8Array;
@@ -266,7 +266,7 @@ export interface LevelPostHeaderLayout {
   /**
    * Long pointer table at `levelPtr + 0x2E`, terminated by `0xFFFF`.
    * `FUN_264AA` indexes this table using a runtime signed offset at
-   * `0x40045C`, so consumers must not treat it as simple `with the 0 == entry 0`
+   * `0x40045C`, so consumers must not treat it as a simple `offset 0 == entry 0`
    * in every path.
    */
   terrainRowPointers: TerrainRowPointerTable;
@@ -361,7 +361,7 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
   }
 
   // Max tile bound: same physical location as entityInitPositions[2] (+0x18).
-  // Semantica indipendente — non collide in path testati.
+  // Independent semantics — does not collide in tested paths.
   const maxTileBound = signExtendWord(readU16BE(raw, 0x18));
   const rowBuildEntryCount = signExtendWord(readU16BE(raw, 0x1a));
   const tileLineDescriptorPtr = readU32BE(raw, 0x1c);
@@ -391,9 +391,9 @@ export function decodeLevelHeader(raw: Uint8Array): LevelHeader {
 }
 
 /**
- * Decodifica un height record da 8 byte.
+ * Decode an 8-byte height record.
  *
- * Layout (best-guess da marble-madness-2026, da riverificare):
+ * Layout (best-guess from marble-madness-2026, to be re-verified):
  *   word 0: bits 12-15 = slopeOrient, bits 8-11 = slopeVal, bits 0-7 = ?
  *   word 1: ?
  *   word 2: ?
@@ -731,7 +731,7 @@ export function loadLevel(rom: RomImage, index: number): LevelData {
   return { index, romOffset: startOffset, byteSize, header, postHeader, records };
 }
 
-/** Carica all i 6 livelli. Comodo per smoke test. */
+/** Load all 6 levels. Handy for smoke tests. */
 export function loadAllLevels(rom: RomImage): readonly LevelData[] {
   return Array.from({ length: LEVEL_COUNT }, (_, i) => loadLevel(rom, i));
 }

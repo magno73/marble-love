@@ -37,7 +37,7 @@ export function absLong1216A(arg: number): number {
  *   A0 += D0 * 2         ; offset = tileIndex * 2
  *   *(A0).w = D1.w
  *
- * Equivale a `state.alphaRam[tileIndex*2..*2+1] = data` (big-endian word).
+ * Equivalent to `state.alphaRam[tileIndex*2..*2+1] = data` (big-endian word).
  */
 export function alphaTileWordWrite383A(
   state: GameState,
@@ -52,7 +52,7 @@ export function alphaTileWordWrite383A(
 
 /**
  * Replica `FUN_0000565A` — palette init: copies 8 words from ROM[0x7B18] into
- * colorRam[0..0xF], poi clear word @ colorRam[0x400] (per quel slot).
+ * colorRam[0..0xF], then clears word @ colorRam[0x400] (for that slot).
  *
  *   A1 = 0xB00000 (colorRam base)
  *   A2 = 0x7B18 (ROM source)

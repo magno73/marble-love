@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0x40d840d8);
 
   console.log(
-    `\n=== eepromHelper40D8 (FUN_40D8) — ${n} casi (ROM[0x1006F]=0x${romMaxRecordsByte.toString(16)}) ===`,
+    `\n=== eepromHelper40D8 (FUN_40D8) — ${n} cases (ROM[0x1006F]=0x${romMaxRecordsByte.toString(16)}) ===`,
   );
 
   let ok = 0;
