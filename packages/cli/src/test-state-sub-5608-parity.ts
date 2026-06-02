@@ -109,9 +109,9 @@ function runAndCapture(cpu: CpuSession): CapturedSeq {
     }
     if (pc === FUN_52DA) {
       //   (0,SP)  = ret addr (toward 0x5630 or 0x5652)
-      //   (4,SP)  = arg1 (D2+3 oppure D2+4)
-      //   (8,SP)  = arg2 (0x1B oppure 0x1C)
-      //   (0xC,SP)= arg3 (0x7978 oppure 0x7980)
+      //   (4,SP)  = arg1 (D2+3 or D2+4)
+      //   (8,SP)  = arg2 (0x1B or 0x1C)
+      //   (0xC,SP)= arg3 (0x7978 or 0x7980)
       const spNow = sys.getRegisters().sp >>> 0;
       const a1 = peekMem(cpu, spNow + 4, 4) >>> 0;
       const a2 = peekMem(cpu, spNow + 8, 4) >>> 0;

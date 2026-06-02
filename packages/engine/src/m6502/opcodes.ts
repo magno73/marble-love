@@ -191,7 +191,7 @@ function branchIf(rf: M6502RegFile, bus: MemBus6502, cond: boolean): number {
 function doBRK(rf: M6502RegFile, bus: MemBus6502): void {
   // BRK is a 2-byte instruction (opcode + padding), and PC has already advanced.
   // di 1 (opcode fetch in cpu.ts); avanziamolo di 1 in piu' per saltare il
-  // padding byte e pushare il return PC corretto.
+  // padding byte and push the correct return PC.
   rf.pc = as_u16(((rf.pc as number) + 1) & 0xffff);
   push16(rf, bus, rf.pc);
   push8(rf, bus, as_u8((rf.p as number) | FLAG_B | FLAG_U));

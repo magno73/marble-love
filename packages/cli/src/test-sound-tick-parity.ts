@@ -2,7 +2,7 @@
 /**
  * test-sound-tick-parity.ts — differential FUN_4CA0 vs soundTick wrapper.
  *
- * Limitazione: FUN_4CA0 chiama 3 sub-functions:
+ * Limitation: FUN_4CA0 calls 3 sub-functions:
  *   - FUN_3E1A (dispatch send)
  *   - FUN_4DCC (sound chip writer, GROSSA, NON replicata)
  *   - FUN_4C3E (status check)

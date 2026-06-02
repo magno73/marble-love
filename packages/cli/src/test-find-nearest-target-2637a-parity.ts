@@ -151,7 +151,7 @@ async function main(): Promise<void> {
 
     const filterByte = (rb() & 0x7f) | 0x01;
 
-    // range della metric: max diff fino a 0xFE). Sceglie 0..0xFF.
+    // metric range: max diff up to 0xFE). Picks 0..0xFF.
     const objX = rb() & 0xff;
     const objY = rb() & 0xff;
 

@@ -2,7 +2,7 @@
  * particle-bounce.ts — `FUN_00018DCA` (162 byte): particle bounce on screen edges.
  *
  * Loop su array @ 0x400A9C, stride 0xA, count = byte @ 0x4003E2. Per ogni entry:
- *   - newX = xpos + xvel; newY = ypos + yvel (entrambi word)
+ *   - newX = xpos + xvel; newY = ypos + yvel (both words)
  *   - D3 = newX >> 4 (signed); D2 = newY >> 4
  *   - X bounce: if (D3 < 8 AND xvel < 0) OR (D3 > 0x148 AND xvel > 0): xvel = -xvel
  *   - Y bounce: if (D2 < 0 AND yvel < 0) OR (D2 > 0xE0 AND yvel > 0): yvel = -yvel

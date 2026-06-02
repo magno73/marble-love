@@ -233,7 +233,7 @@ export interface RenderString286EESubs {
  *                  `objectSlotAddr(i) + 0x6a` = `0x400018 + i*0xE2 + 0x6a`).
  * @param ordinal   arg2 long: player ordinal (typically `playerCount + i - 1`);
  * @param subs      Stub injection per `numberFormatter` e `renderStringChain2`.
- *                  Default: entrambi no-op.
+ *                  Default: both no-op.
  *
  * **Side effects in `state.workRam`** (struct @ offset 0x434):
  *   1. `*(bufEndPtr)..*(bufEndPtr+N)` ← ASCII digits + null (via numberFormatter).

@@ -82,7 +82,7 @@ export function objectEnter1281C(
 
   const mode = a0 === SINGLETON_SLOT_A || a0 === SINGLETON_SLOT_B ? 0 : 1;
 
-  // sopravvive all'`addq.l #8,SP; rts` dello shim → ritornato verbatim.
+  // survives the shim's `addq.l #8,SP; rts` → returned verbatim.
   return inner(a0, mode) >>> 0;
 }
 

@@ -5,13 +5,13 @@
  *
  * FUN_0001960E (132 byte): "entity RNG-driven state-byte resampler". Resampla
  * `entity[0x26]` via PRNG `FUN_13A98` in 3 branch (state==7 jitter ±2,
- * long0==0 → {0,8}, long0!=0 → {4,12}). In coda chiama `FUN_19692`.
+ * long0==0 → {0,8}, long0!=0 → {4,12}). At the tail it calls `FUN_19692`.
  *
  * **Strategia parity**:
  *   - `FUN_00013A98` (RNG @ 0x4003A6) **lasciato live**: piccolo, replicato
  *     bit-perfect in `rng.ts`.
  *   - `FUN_00019692` (heavy entity update) **stubbed with RTS** (0x4E75) for
- *     neutralizzare side effects. Il TS usa `subs.fun_19692 = noop`.
+ *     neutralize side effects. The TS uses `subs.fun_19692 = noop`.
  *   - Compare:
  *       * `entity[0x00..0x27]` (0x28 byte = 1 entity stride completa)
  *       * `*0x004003A6` (RNG seed) post-call

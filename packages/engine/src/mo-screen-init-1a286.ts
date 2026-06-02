@@ -86,7 +86,7 @@ export function moScreenInit1A286(
   subs.renderString?.(state, 0x22906, 0x2000);
 
   // 0x1A2C6..0x1A2D6: A1 = *0x1D8 (= 0x400008), A0 = *0x1DC (= 0x40000A)
-  // D0 = 0; *A0 = D0w ; *A1 = D0w (entrambe word).
+  // D0 = 0; *A0 = D0w ; *A1 = D0w (both words).
   writeWordBE(state.workRam, ISR_WRITE_DST_A_OFF, 0x0000);
   writeWordBE(state.workRam, ISR_WRITE_DST_B_OFF, 0x0000);
 

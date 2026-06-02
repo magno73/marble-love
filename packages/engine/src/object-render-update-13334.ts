@@ -234,7 +234,7 @@ function readU32Anywhere(
 
 /**
  *
- * `rts` (`4E 75`) e usa una callback no-op qui.
+ * `rts` (`4E 75`) and uses a no-op callback here.
  */
 export type Inner1D06A = (paletteByteSigned: number) => void;
 
@@ -251,7 +251,7 @@ export interface ObjectRenderUpdate13334Subs {
  *                  globals, struct fields (+0x42, +0x4E), palette queue.
  * @param rom       ROM image (per leggere la table @ `0x1DF18` e per
  *                  dereferencing `struct[0x3e]` if it points into ROM).
- *                  su `(A2, ...)` toccano work RAM.
+ *                  on `(A2, ...)` touch work RAM.
  * @param subs      Stub injection per `FUN_1D06A` (callback no-op in test).
  */
 export function objectRenderUpdate13334(

@@ -6,7 +6,7 @@
  * **Strategia**:
  * `(0x1C,A0)`, (2) gate range -16 < D1w < 256 sul word a `(0x20,A0)`, (3)
  *
- * Per testare in isolamento la logica dello shim, **patch-iamo
+ * To test the shim logic in isolation, we **patch
  * on the stack (= `mode` chosen by the shim):
  *
  *     20 2F 00 08    ; move.l (8,SP), D0   ; D0 = mode
@@ -14,7 +14,7 @@
  *
  * `D0 = 0xFFFFFFF0` (path out-of-range — `moveq #-0x10,D0` sopravvive).
  *
- *   - D0 (long, mode 0/1 oppure 0xFFFFFFF0)
+ *   - D0 (long, mode 0/1 or 0xFFFFFFF0)
  *   - absence of spurious writes to other standard record offsets.
  *
  * Pattern coverage (500 iter):

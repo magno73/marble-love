@@ -102,7 +102,7 @@
  *        be 24 (4 extra bytes). Source: RET ADDR. movem decrements SP after the
  *        return address is already on stack. Recount: post-prologue delta from caller_SP
  *        pre-jsr = 20 (movem) + 4 (ret) = 24. Args @ caller_SP + 0..0x13.
- *        N = 24 + 0x12 = 0x36? No anche qui sbagliato.
+ *        N = 24 + 0x12 = 0x36? No, wrong here too.
  *
  *      Direct approach: the disassembly reads (0x18, SP) as arg0, and
  *      0x18 -> 0x1e = 6 bytes (= 2 words: arg0 long ends at +3, then 2 bytes
@@ -232,7 +232,7 @@ export type Sub5584Inner5468 = (
  *
  *
  * 1. `D0 = arg2_word` zero-ext (moveq #0; move.w → D0 = 0x0000WWWW).
- * 2. FUN_540A riceve `(arg0Long, D0)` come (long, long pushato).
+ * 2. FUN_540A receives `(arg0Long, D0)` as (long, pushed long).
  * 4. FUN_53EA(D2): `D0 = pair`. If 0 -> exit with D0 = 0.
  * 5. Loop body with D4 = 3, 6, 9, 12, 15:
  *    - FUN_5468(D2_pre, D3=arg1, D4, arg3, arg4) → D0

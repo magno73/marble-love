@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     cpu.system.setRegister("sp", 0x401f00);
 
     // valF00 = 0 guarantees immediate chain end (marker=0 + valF00=0 = sum 0 <= 1).
-    // Senza questo, la chain advance walka memoria random.
+    // Without this, the chain advance walks random memory.
     const valF00 = 0;
     const tick = Math.floor(rng() * 0x10000) & 0xffff;
     const rotation = Math.floor(rng() * 8) & 0xffff; // rotation 0..7

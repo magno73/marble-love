@@ -2,7 +2,7 @@
 /**
  * test-state-sub-26c2-parity.ts — differential FUN_26C2 vs stateSub26C2.
  *
- * FUN_26C2 (164 byte) esegue:
+ * FUN_26C2 (164 bytes) runs:
  *   1. JSR FUN_2572 (renderStringChain) with (arg1, sext(arg2.w))
  *   2. Slot search [0..3]: first with STATE[i] == 0:
  *        DATA_PTR[i] = arg1 (long)

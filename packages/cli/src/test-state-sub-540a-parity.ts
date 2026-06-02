@@ -5,7 +5,7 @@
  *
  * Convenzione caller (cdecl push-RTL):
  *   - arg2 long  = D3 (sign-extended from the original word)
- *   - return D0 long = 0 oppure A2 post-walk
+ *   - return D0 long = 0 or A2 post-walk
  *
  * Strategia parity:
  *   - Setta SP, poi callFunction(0x540A, [a2, d3]).

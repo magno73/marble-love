@@ -26,7 +26,7 @@
  *   jsr      0x0001960E.l                ; FUN_1960E(obj)
  *   move.l   A2,-(SP)                    ; push obj (arg per FUN_1953E)
  *   jsr      0x0001953E.l                ; FUN_1953E(obj)
- *   addq.l   #8,SP                       ; pop entrambi gli arg long
+ *   addq.l   #8,SP                       ; pop both long args
  *   bra.b    0x1953A                     ; epilog
  *
  *   ; case 1 @ 0x194FA:
@@ -34,7 +34,7 @@
  *   jsr      0x0001973C.l                ; FUN_1973C(obj)
  *   move.l   A2,-(SP)                    ; push obj
  *   jsr      0x0001953E.l                ; FUN_1953E(obj)
- *   addq.l   #8,SP                       ; pop entrambi
+ *   addq.l   #8,SP                       ; pop both
  *   bra.b    0x1953A                     ; epilog
  *
  *   ; case 2 @ 0x1950E:
@@ -172,6 +172,6 @@ export function objectTypeDispatch194BA(
     return { branch: "case2", fnPtrWritten: fnPtr >>> 0 };
   }
 
-  // kind < 0 oppure kind >= 3 → no-op (epilog).
+  // kind < 0 or kind >= 3 → no-op (epilog).
   return { branch: "skip", fnPtrWritten: null };
 }

@@ -206,7 +206,7 @@ async function main(): Promise<void> {
       // Path A: bit 13 set ⇒ top 14 bit ∈ [0x2000, 0x3FFF]. Top byte high nibble
       // ha bit 5 set. Bias: byte alto ha bit 5 set (0x20 / 0x80 / 0xA0).
       for (let i = 0; i < CTRL_BYTES; i++) {
-        // Top byte: bit 7 (= bit 31 dello stream) random, ma bit 5 (= bit 29)
+        // Top byte: bit 7 (= bit 31 of the stream) random, but bit 5 (= bit 29)
         // alto. Setting top byte = 0x80..0xBF assicura bit 13 di token spesso set.
         buf[i] = 0x80 + Math.floor(rng() * 0x40);
       }

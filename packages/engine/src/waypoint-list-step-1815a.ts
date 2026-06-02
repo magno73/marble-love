@@ -240,7 +240,7 @@ export interface WaypointListStep1815ASubs {
 }
 
 
-/** Tipo di terminazione della call. */
+/** Termination type of the call. */
 export type ExitMode = "out_of_range" | "list_exhausted" | "list_empty";
 
 export interface WaypointListStep1815AResult {

@@ -10,7 +10,7 @@
  *
  * **Strategia parity**:
  *   - `FUN_00158AC` (sound command sender) **stubbed with RTS** (0x4E75) to
- *     neutralizzare side effects su MMIO sound. Il TS usa
+ *     neutralize side effects on the sound MMIO. The TS uses
  *     `subs.soundCommand = noop` per matchare.
  *   - Compare:
  *       * For each of the 10 slots: the full 0x38 bytes starting at

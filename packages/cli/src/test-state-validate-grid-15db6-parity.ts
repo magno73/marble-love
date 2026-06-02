@@ -4,7 +4,7 @@
  * `stateValidateGrid15DB6`.
  *
  * `FUN_00015DB6` (110 byte) valida la match-cell del currentPtr vs
- * field_x/field_y >> 19 dello struct, eventualmente muta `kind` 0x23 → 0x20,
+ * field_x/field_y >> 19 of the struct, possibly mutating `kind` 0x23 → 0x20,
  * poi dispatcha a una di:
  *
  * **Strategia stub injection**:
@@ -207,7 +207,7 @@ function compareZone(
 }
 
 interface CaseSetup {
-  /** Bytes dello struct (size STRUCT_SIZE). */
+  /** Bytes of the struct (size STRUCT_SIZE). */
   structBytes: number[];
   /** Bytes dell'area currentPtr (size CURRENT_PTR_SIZE). */
   currentBytes: number[];

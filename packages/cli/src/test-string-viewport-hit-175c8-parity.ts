@@ -15,7 +15,7 @@
  *
  * **Strategia parity**:
  *   - `FUN_00025BAE` (entity state-transition) **stubbed with RTS** (0x4E75)
- *     per neutralizzare i side effects su obj. TS usa
+ *     to neutralize the side effects on obj. TS uses
  *     `subs.entityStateTransition = noop` per matchare.
  *   - `FUN_000158AC` (sound command sender) stubbed with RTS, TS no-op.
  *

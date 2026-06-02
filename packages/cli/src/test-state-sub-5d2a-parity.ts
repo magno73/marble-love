@@ -71,7 +71,7 @@ interface CapturedSeq {
  * FUN_3784 args on the stack (RTL push order = arg4, attr, x, y):
  *   (0,SP)  = ret addr (toward 0x5DB4 or 0x5DD4)
  *   (4,SP)  = y (long, sign-ext da D6w)
- *   (8,SP)  = x (long, sign-ext somma A3+A4 oppure (15-A4)+A3)
+ *   (8,SP)  = x (long, sign-extended sum A3+A4 or (15-A4)+A3)
  */
 function runAndCapture(
   cpu: CpuSession,

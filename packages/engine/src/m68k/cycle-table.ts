@@ -268,8 +268,8 @@ export const CYC_MULU_W = as_u32(30);
 
 /**
  * DIVS.W / DIVU.W:
- *  - DIVS.W: 122 cicli + EA (L569-570)
- *  - DIVU.W: 108 cicli + EA (L571-572)
+ *  - DIVS.W: 122 cycles + EA (L569-570)
+ *  - DIVU.W: 108 cycles + EA (L571-572)
  */
 export const CYC_DIVS_W = as_u32(122);
 export const CYC_DIVU_W = as_u32(108);

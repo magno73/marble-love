@@ -134,7 +134,7 @@ export function stateSub520E(
   const r = state.workRam;
 
   // ── Pre-capture byte @ A2+9 ───────────────────────────────────────────
-  // Le tre fasi di clear NON toccano il byte a A2+9 (offsets clearati:
+  // The three clear phases do NOT touch the byte at A2+9 (cleared offsets:
   const a2Off = (a2u - WORK_RAM_BASE) >>> 0;
   const byteAtA2Plus9Addr = a2Off + 9;
   const byteAtA2Plus9 =

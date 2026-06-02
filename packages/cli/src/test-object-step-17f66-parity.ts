@@ -4,7 +4,7 @@
  * differential FUN_17F66 vs `objectStep17F66`.
  *
  * **Strategy**: `FUN_00017F66` (344 bytes) is an "object step" subroutine that
- * decide tra 4 path (skip / special-dispatch / movement / stuck) e chiama
+ * decides between 4 paths (skip / special-dispatch / movement / stuck) and calls
  * fino a 1 sub interna per path:
  *   - special: `FUN_1815A(A2)`
  *   - movement (ramo `*0x400396 == 1`): `FUN_180BE()`
@@ -27,7 +27,7 @@
  *      determinati dal pattern).
  *   3. **Side binary**: copy pre-fill into CPU memory, push A2 on the stack,
  *      call FUN_17F66, snapshot workRam.
- *   4. **Side TS**: copia pre-fill in `state.workRam`, chiama
+ *   4. **TS side**: copies the pre-fill into `state.workRam`, calls
  *      `objectStep17F66(state, A2_addr, no-op-callees)`.
  *   5. Compara workRam byte-per-byte (escludendo zona stack scratch).
  *

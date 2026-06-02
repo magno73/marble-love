@@ -265,7 +265,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   paletteAnim3Tick(state);
   paletteQueueDrain(state, rom);
 
-  // Default state-machine subs: chiama le sub replicate. 10/10 subs
+  // Default state-machine subs: calls the replicated subs. 10/10 subs
   // disponibili: 2abc/2678/2bda/2da0/2c60 (Claude) + 2572/2766/2818/295a/2cd4
   // (Codex), tutte parity 500/500.
   const stateMachineSubs: GameStateMachineSubs = opts.stateMachineSubs ?? {
@@ -290,7 +290,7 @@ export function mainTick(state: GameState, opts: MainTickOptions): void {
   const soundSubs: SoundTickSubs = opts.soundSubs ?? {
     fun_3e1a: (argLong) => soundDispatchSend(state, rom, argLong),
     fun_4c3e: (st, d0, a0) => soundStatusCheck(st, d0, a0),
-    // fun_4dcc: undefined → soundTick usa default mini-stub (counter increment)
+    // fun_4dcc: undefined → soundTick uses the default mini-stub (counter increment)
   };
   soundTick(state, soundSubs);
 
