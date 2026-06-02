@@ -361,10 +361,16 @@ export function fun253ECDispatch(state: GameState, rom: RomImage, a2: number): v
     }
   }
 
-  // NORMAL path for s1a=0 with guard 0xd8==0 and cb==0:
+  // NORMAL path for s1a=0, gated ONLY on cb==0 (per the disasm: JT[0]=0x256d2
+  // does `tst.b (0xcb,A2); beq → 0x25730 NORMAL chain`). The 0xd8 guard
+  // (0x25412) only controls the "body intermedio" wobble above and then FALLS
+  // THROUGH to the JT — so helper121B8 (physics) runs even while 0xd8!=0. The
+  // marble does the squash wobble visually but keeps moving (no freeze), which
+  // is why the arcade has no pause on a Silly Race worm squash. (A spurious
+  // `sd8===0` here was freezing the marble for the whole ~2.7s wobble.)
   //   0x2548c (skip body intermedio) → JT[0]=0x256d2 → 0x25730:
   //     jsr helper253BC; jsr objectStep17F66; jsr helper121B8; bra epilog.
-  if (s1a === 0 && sd8 === 0 && scb === 0) {
+  if (s1a === 0 && scb === 0) {
     helper253BC(state, a2);
     objectStep17F66(state, a2, {
       fun1815A: (a2Addr) => { stepWaypointList(state, a2Addr); },
