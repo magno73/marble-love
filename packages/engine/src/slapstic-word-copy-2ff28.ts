@@ -29,7 +29,7 @@ export const DST_ADDR = 0x87a48 as const;
  * @param bufferBase   Absolute M68k address corresponding to
  *                     `slapsticBuf[0]`. For the standard region: `0x80000`.
  *
- * `DST_ADDR - bufferBase` copiandoli da `SRC_ADDR - bufferBase`.
+ * `DST_ADDR - bufferBase`, copying them from `SRC_ADDR - bufferBase`.
  */
 export function slapsticWordCopy2FF28(
   slapsticBuf: Uint8Array,

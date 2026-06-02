@@ -6,7 +6,7 @@
  *
  *   1. Saves A1/A0/D0 on the stack (irrelevant in TS).
  *   2. A1 = 0x401F44 (base struct mailbox).
- *   3. A0 = (long *)(A1+0x16) = LONG @ 0x401F5A. Lo chiamiamo `ackPtr`.
+ *   3. A0 = (long *)(A1+0x16) = LONG @ 0x401F5A. We call it `ackPtr`.
  *        - idx = (byte)*(A1+0x13) @ 0x401F57   (cyclic index 0..14)
  *        - A0 = A1 + 2 + idx                    @ 0x401F46+idx (entry buffer)
  *        - *(A1+0x13)++                         (post-increment)

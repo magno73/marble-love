@@ -78,7 +78,7 @@ export function strcpy(
 /**
  * Replica `FUN_00003784` — `setAlphaTile(arg1, arg2, arg3, arg4)`.
  *
- * (with the, row) in the HUD overlay.
+ * (col, row) in the HUD overlay.
  *
  * Disassembly (cdecl 4 long args):
  *   D1 = arg1.b (low byte of long arg1 @ SP+12)

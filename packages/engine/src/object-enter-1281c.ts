@@ -72,7 +72,7 @@ export function objectEnter1281C(
 
   const rangeSigned = rangeWord & 0x8000 ? rangeWord - 0x10000 : rangeWord;
 
-  // Bounds gate: body runs sse RANGE_LOWER_BOUND < rangeSigned < RANGE_UPPER_BOUND.
+  // Bounds gate: body runs if RANGE_LOWER_BOUND < rangeSigned < RANGE_UPPER_BOUND.
   // And `cmpi.w #0x100,D1; bge done` -> skip if D1 >= 256.)
   if (rangeSigned <= RANGE_LOWER_BOUND || rangeSigned >= RANGE_UPPER_BOUND) {
     return OUT_OF_RANGE_D0 >>> 0;

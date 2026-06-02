@@ -99,7 +99,7 @@
  *      also for byte > 15; the table has 16 valid contiguous entries 0..15.
  *
  *
- *   - workRam[0x3BC..0x3DC] subisce 0..31 swap (a coppie distanti `stride`).
+ *   - workRam[0x3BC..0x3DC] undergoes 0..31 swaps (in pairs `stride` apart).
  *
  */
 
@@ -155,7 +155,7 @@ function s16(w: number): number {
  *
  * Inputs: two absolute M68k pointers to 14-byte structs in work RAM.
  *
- * isolata.
+ * in isolation.
  *
  * @param ptrA1  Pointer to rect A1 (absolute M68k, typically 0x4001DC..).
  * @param ptrA0  Pointer to rect A0.
@@ -239,11 +239,11 @@ export interface SortAdjacentObjects1A7A8Subs {
  *
  * See the file header for disassembly and semantics.
  *
- * @param state    GameState (workRam[0x3BC..0x3DC) MUTATO via swap).
+ * @param state    GameState (workRam[0x3BC..0x3DC) MUTATED via swap).
  * @param stride   Byte stride between A2 and A3 (caller arg LSB). Known callers
  *                 pass 1, 2, 3 in sequence. Valid range 0..31.
  *                 - `0`: A2 == A3, so swap is no-op, but the loop advances until
- *                   first 0xFF o up to A2 == A5 (32 iter max).
+ *                   first 0xFF or up to A2 == A5 (32 iter max).
  * @param subs     Callback bag (default = inline).
  *
  * **Mutation**: only `workRam[0x3BC..0x3DC)`. Rect structs at `0x1DC..`
@@ -280,8 +280,8 @@ export function sortAdjacentObjects1A7A8(
     // 0x1A7D2..0x1A7E2: lookup ROM and push args (modeled as local vars).
     const idxA2 = read8(a2Off);
     const idxA3 = read8(a3Off);
-    const ptrA1 = lookupRectPtr(rom, idxA2); // arg second-pushato → A1 in 1A80A
-    const ptrA0 = lookupRectPtr(rom, idxA3); // arg first-pushato → A0 in 1A80A
+    const ptrA1 = lookupRectPtr(rom, idxA2); // arg pushed second → A1 in 1A80A
+    const ptrA0 = lookupRectPtr(rom, idxA3); // arg pushed first → A0 in 1A80A
 
     // 0x1A7E6: jsr 1A80A
     const cmp = compare(state, ptrA1, ptrA0) | 0;

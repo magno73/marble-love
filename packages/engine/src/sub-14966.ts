@@ -254,7 +254,7 @@ export function sub14966(state: GameState, rom: RomImage, slotPtr: number): void
 
 /**
  * Reset path body (0x149ae..0x149e0): slot[0x58] = slot[0x5c], optional pos
- * += vel (state ∈ {0,3} AND step > 0), no jsr 15148 (caller fa).
+ * += vel (state ∈ {0,3} AND step > 0), no jsr 15148 (caller does it).
  */
 function pathCResetBody(state: GameState, _rom: RomImage, sp: number): void {
   // 0x149ae  slot[0x58] = slot[0x5c]

@@ -103,7 +103,7 @@ export function objDirtyDispatch28624(
 
   // Loop D2 = 0..count-1.
   for (let d2 = 0; d2 < count; d2++) {
-    // mask = 1 << (d2 & 31), zero-extended a 32 bit (= asl.l).
+    // mask = 1 << (d2 & 31), zero-extended to 32 bits (= asl.l).
     const mask = ((1 << (d2 & 31)) >>> 0) & 0xffffffff;
     const hit = (mask & bitmap32) >>> 0;
     if (hit !== 0) {

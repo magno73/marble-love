@@ -38,7 +38,7 @@ export const SOUND_MAYBE_11AC2_ADDR = 0x00011ac2 as const;
 
 /**
  *
- * `rom.program[ROM_TABLE_OFFSET..]` a `state.workRam[WORK_RAM_DEST_OFFSET..]`.
+ * `rom.program[ROM_TABLE_OFFSET..]` to `state.workRam[WORK_RAM_DEST_OFFSET..]`.
  *
  *   3. Advances both pointers by 2.
  *

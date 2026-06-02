@@ -122,7 +122,7 @@ export function soundDispatchSend(
 
     // ── Branch on D5 ──────────────────────────────────────────────────
     if (d5 === 0) {
-      // tst.w D5; bne skip — D5==0 qui.
+      // tst.w D5; bne skip — D5==0 here.
       // D0 = (D3 & 0xC) → asr.l #2 = D0 / 4 → D1 = D0.w
       let d1Inner = (d3 & 0xc) >>> 2;
       // beq skip mul

@@ -93,7 +93,7 @@ import type { GameState } from "./state.js";
 
 /** Absolute M68k WORK RAM base. */
 const WORK_RAM_BASE = 0x00400000;
-/** Dimensione workRam (8 KB). */
+/** workRam size (8 KB). */
 const WORK_RAM_SIZE = 0x2000;
 
 export const FIELD_X_OFF = 0x0c as const;
@@ -105,17 +105,17 @@ export const KIND_TO = 0x20 as const;
 export const ASR_COUNT = 0x13 as const;
 
 /**
- * Stub injection per le 2 JSR of the validatore.
+ * Stub injection for the 2 JSRs of the validator.
  *
  *   Default no-op.
  */
 export interface StateValidateGrid15DB6Subs {
   /**
-   * `FUN_00015D10(structPtr) → void`. Handler "fallback" per kind 0x23
+   * `FUN_00015D10(structPtr) → void`. "fallback" handler for kind 0x23
    */
   fun_15d10?: (structPtrLong: number) => void;
   /**
-   * `FUN_00015E24(structPtr, flagLong) → void`. Handler "main";
+   * `FUN_00015E24(structPtr, flagLong) → void`. "main" handler;
    */
   fun_15e24?: (structPtrLong: number, flagLong: number) => void;
   /**
@@ -154,13 +154,13 @@ function writeByteAbs(state: GameState, addr: number, value: number): void {
   state.workRam[a - WORK_RAM_BASE] = value & 0xff;
 }
 
-/** Signed asr.l su 32 bit. */
+/** Signed asr.l on 32 bits. */
 function asrL(value: number, count: number): number {
   const c = count & 0x3f;
   return ((value | 0) >> c) | 0;
 }
 
-/** Sign-extend byte 0..0xFF a int32 signed. */
+/** Sign-extend byte 0..0xFF to signed int32. */
 function sextByteL(b: number): number {
   return ((b & 0xff) << 24) >> 24;
 }
@@ -168,7 +168,7 @@ function sextByteL(b: number): number {
 /**
  * the byte-pair @ `currentPtr` and cell `(field_x>>19, field_y>>19)`,
  * optionally mutates `kind` 0x23 → 0x20, then dispatches to
- * `fun_15d10` o `fun_15e24`.
+ * `fun_15d10` or `fun_15e24`.
  *
  *                       (mutated to 0x20 if match and original = 0x23).
  *                       2 byte @ currentPtr+{0,1}.
@@ -210,7 +210,7 @@ export function stateValidateGrid15DB6(
 
   if (matched) {
     if (kindByte === KIND_FROM) {
-      // Mutazione 0x23 → 0x20 in workRam
+      // Mutation 0x23 → 0x20 in workRam
       writeByteAbs(state, a0 + KIND_BYTE_OFF, KIND_TO);
       kindByte = KIND_TO;
     }
@@ -219,7 +219,7 @@ export function stateValidateGrid15DB6(
     flagLow = 0; // clr.b D0b (low byte = 0)
   }
 
-  // Re-check post-mutate kind per scegliere il dispatch.
+  // Re-check post-mutate kind to choose the dispatch.
   if (kindByte === KIND_FROM) {
     subs?.fun_15d10?.(a0);
     return;

@@ -7,7 +7,7 @@
  *
  * **Calling convention**: two long args pushed RTL by the caller.
  *   - `arg1` (LSB byte -> D2): type code for the new entry
- *     `(0xF, A6)`. (D2/D3 are SOLO i low byte; il modello accetta byte.)
+ *     `(0xF, A6)`. (D2/D3 are only the low byte; the model accepts a byte.)
  *
  * **Disasm 0x18E6C..0x18F46** (218 byte):
  *
@@ -109,15 +109,15 @@
  *
  * **Edge cases**:
  *   - Loop 1 stops at the first `0xFF`, so insertPos points to that byte.
- *     non-zero): insertPos al limit ⇒ exit a 0x18F3E (no insert).
- *   - Loop 2 esaurisce the slot (D1 == 31, A1 >= A2+0x1B2): no insert.
+ *     non-zero): insertPos at the limit ⇒ exit at 0x18F3E (no insert).
+ *   - Loop 2 exhausts the slots (D1 == 31, A1 >= A2+0x1B2): no insert.
  *   - The shift does not touch byte[0x1F], preserving the sentinel.
  *
  *   - Bytes shifted-right in `byteArray[A3..0x1E]` (1 byte → 2 byte → ...).
  *
  * **Known callers** (14 xrefs): `FUN_14C46`, `FUN_15A12`, `FUN_17346` (x2),
  * `FUN_18FFA`, `FUN_259B4`, `FUN_18CD2`, `FUN_121B8` (×3), `FUN_1844A`,
- * `FUN_19A40`, `FUN_12896`. Tipico pattern call: `pea (typeCode).w; move.l
+ * `FUN_19A40`, `FUN_12896`. Typical call pattern: `pea (typeCode).w; move.l
  * D0,-(SP); jsr 0x18E6C; addq.l #8, SP`.
  *
  */
@@ -234,7 +234,7 @@ function compareWithSlot(
   const a0_a = localReadWord(0xa);
   const a0_c = localReadWord(0xc);
 
-  // Same algoritmo of fun1A80A.
+  // Same algorithm as fun1A80A.
   const D4 = s16(a1_6) + s16(a1_4) + s16(a1_2);
   const D3 = s16(a1_c) + s16(a1_a) + s16(a1_8);
   const D2 = s16(a0_6) + s16(a0_4) + s16(a0_2);
@@ -278,7 +278,7 @@ export interface SlotInsertSorted18E6CResult {
  *     to populate it. The TS replica allocates `localRect = new Uint8Array(14)`
  *     and invokes `subs.fun_1b12a` (default: zero-filled local[2..0xD]).
  *   - The first `cmpa.l A0,A3` with `A3 = A2 + 0x20 - 1 = A2 + 0x1F` uses
- *     `bcc` (branch carry clear = unsigned >=). Modello: `>=`.
+ *     `bcc` (branch carry clear = unsigned >=). Model: `>=`.
  *   - The right shift ends with `byte[0x1F]` unchanged (clamp).
  */
 export function slotInsertSorted18E6C(

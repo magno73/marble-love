@@ -4,21 +4,21 @@
  * Busy-wait loop: invokes the sound chip writer, waits a short delay, pets
  * the watchdog, checks two long-BE status-flag bitmaps in work RAM, and
  *
- * **Disasm 0x5284..0x52A1** (30 byte):
+ * **Disasm 0x5284..0x52A1** (30 bytes):
  *
  *   0x5284  jsr    0x00004DCC.l       ; sound chip writer (FUN_4DCC). No args.
  *                                     ;   Side effect: addq.l #1,(0x00401FF8).l
  *                                     ;   Rest of the sub interacts with the chip
- *                                     ;   YM2151 via MMIO 0xF00001 — stub-injectabile.
+ *                                     ;   YM2151 via MMIO 0xF00001 — stub-injectable.
  *   0x528A  move.l #0x1A0A,D0         ; D0 = 0x1A0A = 6666 (delay seed)
  *   0x5290  subq.l #1,D0              ; D0--
  *                                     ;   At exit: D0 == 0 (long).
- *   0x5294  move.w D0w,(0x00880000).l ; write 0 (word) al watchdog reset latch.
- *                                     ;   resetta il watchdog timer of the System1
+ *   0x5294  move.w D0w,(0x00880000).l ; write 0 (word) to the watchdog reset latch.
+ *                                     ;   resets the System1 watchdog timer
  *   0x529C  bne.b  0x5284             ; if D0 != 0 → loop back to 0x5284
  *   0x529E  bra.w  0x00004F38         ; tail-call FUN_4F38 (state machine entry)
  *
- * **FUN_000052A2** (10 byte, helper inline):
+ * **FUN_000052A2** (10 bytes, inline helper):
  *
  *   0x52A2  move.l (0x00401F76).l,D0  ; D0 = secondary flags long-BE
  *   0x52A8  or.l   (0x00401F5E).l,D0  ; D0 |= primary flags long-BE
@@ -33,12 +33,12 @@
  *   - FUN_52A2: pure read.
  *
  * **Side effects on workRam** (path "loop" = flags non-zero at the check):
- *   - Watchdog: N strobe.
+ *   - Watchdog: N strobes.
  *
  * FUN_4F38 (entry point of the sound/EEPROM/init state machine). In the replica
  *
  *   3. **`bne.b 0x5284`**: branch to the body (full loop, restarts from jsr 4DCC).
- *      Test su Z flag from the D0 returned da FUN_52A2: D0=0 → exit, D0=1 → loop.
+ *      Test on the Z flag from the D0 returned by FUN_52A2: D0=0 → exit, D0=1 → loop.
  *   4. **`bra.w 0x4F38`**: tail-call (no rts).
  *
  *
@@ -79,7 +79,7 @@ export interface StateSub5284Subs {
   fun_4dcc?: (state: GameState) => void;
   /**
    * `FUN_00004F38` — state machine head (tail-call target). No args, no return
-   * il loop). Default: no-op.
+   * (the loop). Default: no-op.
    */
   fun_4f38?: (state: GameState) => void;
   /**
@@ -146,7 +146,7 @@ export interface StateSub5284Result {
  *                 enter with flags=0 and one iter is enough; tests can raise
  *                 the cap to simulate the loop until `irq` clears it.
  *
- *                 deterministica).
+ *                 deterministic).
  *
  */
 export function stateSub5284(
@@ -165,7 +165,7 @@ export function stateSub5284(
     // 1. jsr 0x4DCC — sound chip writer.
     dccImpl(state);
 
-    //    Lasciato esplicito per documentazione (DELAY_LOOP_SEED esportato).
+    //    Left explicit for documentation (DELAY_LOOP_SEED exported).
 
     // 3. move.w D0w,(0x880000).l — watchdog strobe. No-op in TS (MMIO write
 
@@ -175,7 +175,7 @@ export function stateSub5284(
 
     // 4. bsr 0x52A2 — status check. If both flags are zero → exit the loop.
     if (fun52A2(state) === 0) {
-      // 5. bra.w 0x4F38 — tail-call (modellato as callback).
+      // 5. bra.w 0x4F38 — tail-call (modeled as a callback).
       if (f4f38 !== undefined) {
         f4f38(state);
       }
@@ -184,6 +184,6 @@ export function stateSub5284(
     // bne.b 0x5284 — loop body again.
   }
 
-  // raggiunto in produzione.
+  // reached in production.
   return { iterations: iter, flagsCleared: false };
 }

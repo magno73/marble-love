@@ -99,7 +99,7 @@
  *   00017788   movem.l (SP)+, { D2 D3 D4 D5 A2 }
  *   0001778c   rts
  *
- * **Algoritmo riassunto**:
+ * **Algorithm summary**:
  *   1. Index = workRam[obj+0x58]
  *   2. slot  = 0x401482 + Index * 0x42
  *   3. bboxPtrPtr = workRam.long_at(slot + 0x3A)
@@ -120,7 +120,7 @@
  *      obj[+0x10..+0x13] = ((stepY + curY) << 16) >>> 0
  *
  * **Side effects**:
- *     (bboxPtrPtr long), 0 o 4 byte (bbox+4..+7), 4 byte (slot+0xC..+0xF
+ *     (bboxPtrPtr long), 0 or 4 byte (bbox+4..+7), 4 byte (slot+0xC..+0xF
  *     word + word "tail"), 4 byte (obj+0xC..+0xF word + word tail), 4 byte
  *     (obj+0x10..+0x13 word + word tail).
  *
@@ -210,7 +210,7 @@ function sextW(w: number): number {
   return v & 0x8000 ? v - 0x10000 : v;
 }
 
-/** Signed compare ⇒ −1 / 0 / +1. Mimica:
+/** Signed compare ⇒ −1 / 0 / +1. Mimics:
  *   if a > b → −1   (cmp.w b,a; ble skip; moveq #-1)
  *   if a < b → +1   (cmp.w b,a; bge skip; moveq #+1)
  *   if a == b → 0
@@ -294,7 +294,7 @@ export function stringTargetStep176D2(
   const width = bbox.width;
   const height = bbox.height;
 
-  // slot per leggere i word (xCenter, yCenter "extra"): ricaviamo the addr una
+  // slot used to read the words (xCenter, yCenter "extra"): derive the addr once
   const idx = sextB(rb(state, obj + OBJ_INDEX_BYTE_OFF));
   const slotAddr = ((SLOT_BASE_ADDR + idx * SLOT_STRIDE) >>> 0);
 
@@ -308,7 +308,7 @@ export function stringTargetStep176D2(
   const targetX = sextW((widthAsr + xMin + slotCx) & 0xffff);
   const targetY = sextW((heightAsr + yMin + slotCy) & 0xffff);
 
-  // curX, curY: word a obj+0xC, obj+0x10
+  // curX, curY: word at obj+0xC, obj+0x10
   const curX = sextW(rwU(state, obj + OBJ_X_LONG_OFF));
   const curY = sextW(rwU(state, obj + OBJ_Y_LONG_OFF));
 

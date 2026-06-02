@@ -10,7 +10,7 @@
  *   - tableI  = 0x20BB4 + i*12
  *   - rnd     = rngNext(state.rng, 2)         ; 0 or 1
  *   - srcOff  = (rnd != 0) ? 6 : 0
- *   - src     = tableI + srcOff               ; 6 byte / 3 word
+ *   - src     = tableI + srcOff               ; 6 bytes / 3 words
  *   - palette[dest + 0..1]  = 0xAFFF          ; (-0x5001 sext signed → u16)
  *   - palette[dest + 2..3]  = 0xCFC0          ; (-0x3040 sext signed → u16)
  *   - palette[dest + 4..5]  = ROM_BE_u16(src + 0)
@@ -34,7 +34,7 @@ export const PAL_DEST_BASE = 0xb00202 as const;
 export const PAL_DEST_STRIDE = 0x20 as const;
 /** Number of generated entries. */
 export const ENTRY_COUNT = 8 as const;
-/** ROM table base (8 entries × 12 byte). */
+/** ROM table base (8 entries × 12 bytes). */
 export const ROM_TABLE_BASE = 0x20bb4 as const;
 /** ROM table entry stride (two 6-byte sub-entries). */
 export const ROM_TABLE_STRIDE = 12 as const;

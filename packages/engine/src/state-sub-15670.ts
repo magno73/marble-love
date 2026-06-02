@@ -27,7 +27,7 @@
  * **Known caller** (1 site):
  *   - `0x15270` in `FUN_00015148`: `move.l A2,-(SP); jsr 0x15670.l;
  *
- * **Disasm 0x15670..0x15883** (532 byte) — compatto:
+ * **Disasm 0x15670..0x15883** (532 byte) — compact:
  *
  *   movem.l  {A5 A4 A3 A2 D6 D5 D4 D3 D2}, -(SP)   ; save 9 regs (36 byte)
  *   movea.l  (0x28,SP),A2                          ; A2 = arg1 long

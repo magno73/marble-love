@@ -1,10 +1,10 @@
 /**
  *
- * Le 4 palette anim (FUN_26BEE, FUN_26C78, FUN_26D4E, FUN_26B88) condividono
+ * The 4 palette anims (FUN_26BEE, FUN_26C78, FUN_26D4E, FUN_26B88) share
  * the same loop structure but differ in:
- *   - lookup tables in ROM (per type==0 and type!=0)
- *   - destination addresses in palette RAM (per type==0 and type!=0)
- *   - asr shift (div 2 o div 4 per indice)
+ *   - lookup tables in ROM (for type==0 and type!=0)
+ *   - destination addresses in palette RAM (for type==0 and type!=0)
+ *   - asr shift (div 2 or div 4 per index)
  *   - wrap value (signed > N → reset to 0)
  *
  *
@@ -32,13 +32,13 @@ export const OBJ_FIELD_ANIM = 0x70 as const;
 
 export interface PaletteAnimParams {
   ctrOffset: number;
-  /** Lookup table per type == 0 (in ROM program). */
+  /** Lookup table for type == 0 (in ROM program). */
   tableTypeZero: number;
-  /** Lookup table per type != 0. */
+  /** Lookup table for type != 0. */
   tableTypeNonZero: number;
   /** Palette destination for type == 0 (absolute 68010 offset). */
   palDestTypeZero: number;
-  /** Palette destination per type != 0. */
+  /** Palette destination for type != 0. */
   palDestTypeNonZero: number;
   asrShift: number;
   wrapMax: number;
@@ -92,7 +92,7 @@ function sext8_i32(byte: number): number {
 // ─── Generic tick ─────────────────────────────────────────────────────────
 
 /**
- * Esegue una palette animation parametrica. Replica:
+ * Runs a parametric palette animation. Mirrors:
  *   for i in 0..count-1:
  *     if obj[i].ctr == 0xFF or obj[i].skip != 0: continue
  *     table = (obj[i].type != 0) ? params.tableA : params.tableB

@@ -65,7 +65,7 @@
  *   0x5D9E  ext.l   D0                      ; D0 = sign-ext(A3w)
  *   0x5DA0  move.w  A4w,D1w                 ; D1w = A4w
  *   0x5DA2  ext.l   D1                      ; D1 = sign-ext(A4w)
- *   0x5DA4  add.l   D1,D0                   ; D0 = A3 + A4 (long, sign-ext somma)
+ *   0x5DA4  add.l   D1,D0                   ; D0 = A3 + A4 (long, sign-ext sum)
  *   0x5DA6  move.l  D0,-(SP)                ; push x_left (arg2)
  *   0x5DA8  move.w  D6w,D0w                 ; D0w = D6w
  *   0x5DAA  ext.l   D0                      ; D0 = sign-ext(D6w)

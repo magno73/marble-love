@@ -867,7 +867,7 @@ export function refreshFrame10FCE(
   // 00010FD4: jsr 0x000251DE
   // FUN_253EC chain MAME-canonical (disasm 0x253EC..0x25918, JT @ 0x254BA):
   //
-  //   Prologo (0x253ec): D1 = (0x1a,A2).b ext.w (= s1a).
+  //   Prologue (0x253ec): D1 = (0x1a,A2).b ext.w (= s1a).
   //   Guard @ 0x25412: tst.b (0xd8,A2); beq → 0x2548c (skip the "intermediate body").
   //   Intermediate body (0x25416..0x25488): for `(0xd8,A2)!=0` AND s1a∉{2,4,7,a,b},
   //     handle `(0x68,A2)` transition with clamp and flag manipulation on `(0xd8,A2)`.
@@ -893,7 +893,7 @@ export function refreshFrame10FCE(
   //   plus spriteRotate1C014 and internal subs (29CCE/1BC88/1924E/25C74).
   //
   //   MAME f12000+ per obj0 (player1 @ 0x400018): s1a=0, s18=1, 0xcb=0,
-  //   0xd8=0 → path NORMAL stabile, no respawn, no out_of_range. FUN_29CCE
+  //   0xd8=0 → NORMAL path stable, no respawn, no out_of_range. FUN_29CCE
   // FUN_251DE: cost dominated by the per-object chain (helper121B8 ~4500/obj).
   // count<=2 = attract (AVG 11180), count>6 = HEAVY (~60000).
   // helper121B8 chain inside fun253ECDispatch).

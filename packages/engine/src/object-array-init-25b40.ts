@@ -44,7 +44,7 @@ export const OBJECT_ARRAY_INIT_25B40_WRITTEN_RANGE = {
   /** [0x74, 0xA3] inclusive: 48 contiguous bytes (24 words). */
   contiguousLow: 0x74,
   contiguousHigh: 0xa3,
-  /** Byte isolato. */
+  /** Isolated byte. */
   isolatedByte: 0xca,
 } as const;
 

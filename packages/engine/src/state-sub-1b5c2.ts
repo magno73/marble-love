@@ -5,7 +5,7 @@
  * applies `absLong` / `negateIfPositive` to D3 (coord X long) and D4 (coord Y
  * long) of struct A2 based on 8 conditional blocks that test:
  *
- *   - flag cardinali @ `0x40066c/0x40066e/0x400670/0x400672` (byte)
+ *   - cardinal flags @ `0x40066c/0x40066e/0x400670/0x400672` (byte)
  *   - gate word `0x400674/0x400676/0x400678/0x40067a`
  *   - gate word `0x40067c/0x40067e/0x400680/0x400682`
  *   - gate word `0x4006a0` (direct word)
@@ -300,7 +300,7 @@ function sextB(b: number): number {
  *
  *                +4 (y long), +0xC (dest x long), +0x10 (dest y long)
  *                `btst.b #N,(A3)` per N=0..7
- *                `exg D2,A0; cmp.w (A0),D0w` (typically offset rotazione)
+ *                `exg D2,A0; cmp.w (A0),D0w` (typically rotation offset)
  * @param subs    Injection per `FUN_000158AC` (default no-op)
  */
 export function stateSub1B5C2(

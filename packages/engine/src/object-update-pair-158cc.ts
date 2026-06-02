@@ -21,17 +21,17 @@
  *   movem.l  (SP)+, {D2 D3}             ; restore D2/D3
  *   rts
  *
- * **Comportamento**:
+ * **Behavior**:
  *       1) with arg = `0x004009A4` (slot 0)
  *       2) with arg = `0x00400A20` (slot 1, = base + 0x7C)
- *     `FUN_158F6` internamente.
+ *     `FUN_158F6` internally.
  *
  * **Side effects** (of FUN_158CC itself, excluding the helper):
  *
- * 0x23 via `FUN_160D4`, and altre logiche complesse — cfr. la disasm of
- * `ObjectUpdatePair158CCSubs.objectUpdate`. Il caller (mainTick / la root
+ * 0x23 via `FUN_160D4`, and other complex logic — cf. the disasm of
+ * `ObjectUpdatePair158CCSubs.objectUpdate`. The caller (mainTick / the root
  *
- * Pattern speculare a `sound-pair-15884.ts` and `special-attract.ts`.
+ * Mirror pattern of `sound-pair-15884.ts` and `special-attract.ts`.
  *
  * `cli/src/test-object-update-pair-158cc-parity.ts` (500/500 cases).
  */
@@ -43,7 +43,7 @@ export const WORK_RAM_BASE = 0x400000 as const;
 
 export const SLOT_PAIR_BASE_ADDR = 0x004009a4 as const;
 
-/** Stride between due slot (`moveq #0x7C, D0`). */
+/** Stride between the two slots (`moveq #0x7C, D0`). */
 export const SLOT_PAIR_STRIDE = 0x7c as const;
 
 export const SLOT_PAIR_COUNT = 2 as const;
@@ -60,7 +60,7 @@ export interface ObjectUpdatePair158CCSubs {
 }
 
 /**
- * `FUN_000158F6` su ciascuna.
+ * `FUN_000158F6` on each.
  *
  *
  */
@@ -68,7 +68,7 @@ export function objectUpdatePair158CC(
   state: GameState,
   subs?: ObjectUpdatePair158CCSubs,
 ): void {
-  // injection" (e per consentire al caller of passarne un riferimento
+  // injection" (and to allow the caller to pass a reference into
   // work RAM.
   void state;
 

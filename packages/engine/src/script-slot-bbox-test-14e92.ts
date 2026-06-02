@@ -53,7 +53,7 @@
  * The loop stops at the first hit. Non-armed slots (`slot[0x18] == 0`) are skipped.
  *
  * **Sub-call side effects**:
- *     (long), `slot[0x58..0x5B]` (long), `slot[0x24..0x27]` (4 byte). Solo
+ *     (long), `slot[0x58..0x5B]` (long), `slot[0x24..0x27]` (4 byte). Only
  *     stub injection via `subs.fun_15460`. Default = no-op (matching parity
  *     tests that patch FUN_15460 to RTS, or a TS-side mirror thunk).
  *   - `FUN_158AC(0x39)`: sound command (`sound-cmd-send.ts`). Default no-op.
@@ -540,7 +540,7 @@ export function scriptSlotBboxTest14E92(
       writeByte(state, entityOff + ENTITY_FIELD_56_OFF, ENTITY_FINAL_FIELD_56);
     }
 
-    // Hit consumato → exit (single match per call).
+    // Hit consumed → exit (single match per call).
     return;
   }
 }

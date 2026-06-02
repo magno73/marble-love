@@ -1,13 +1,13 @@
 /**
  *
- * (xref single: `FUN_000253ec` @ 0x25648, JSR.L). Riceve un singolo long arg
+ * (xref single: `FUN_000253ec` @ 0x25648, JSR.L). Receives a single long arg
  * `script-rect-dispatch-12dfa`).
  *
  * The A0 record has a `(A0+0x57).b` counter that decrements on every call and
- * I "tile delta" (A3 = ROM table @ `0x1EF32`) are coppie of byte signed
+ * the "tile deltas" (A3 = ROM table @ `0x1EF32`) are pairs of signed bytes
  *
  *   - the first 4 in `(A0+0xA4)..(A0+0xBB)`
- *   - i secondthe 4 in `(A0+0x38)..(A0+0x4F)`
+ *   - the second 4 in `(A0+0x38)..(A0+0x4F)`
  *
  *   - charcode = `iter + 0x10B` (iter ∈ 0..7)
  *
@@ -190,13 +190,13 @@
  *   00013eda  seq     D0b
  *   00013edc  neg.b   D0b                         ; D0 = (counter == 0) ? 0xFF : 0
  *
- *   - `moveq #0,D0` → D0 = 0 (intero long).
+ *   - `moveq #0,D0` → D0 = 0 (long integer).
  *       - if D0.b was 0xFF -> -0xFF mod 256 = 0x01 -> D0.b = 0x01
  *       - if D0.b was 0x00 -> 0 -> D0.b = 0x00
  *
  * **Side effects** (`state.workRam`):
- *   - `(A0+0x57).b` decrementato (modulo 256).
- *   - `(A0+0x1C).b` = 1 (mark "pattern emesso").
+ *   - `(A0+0x57).b` decremented (mod 256).
+ *   - `(A0+0x1C).b` = 1 (mark "pattern emitted").
  *   - 4 word triples @ `(A0+0xA4)..(A0+0xBB)` (four 6-byte records).
  *   - 4 word triples @ `(A0+0x38)..(A0+0x4F)` (four 6-byte records).
  *     consecutive (charcode, x, y).
@@ -327,7 +327,7 @@ export function slotSpawnPattern13D38(
   // Signed displacement used by adda.
   const selectorIdx = ((selectorSextL | 0) << 2) | 0;
   // movea.l (0x0,A1,D0*1),A1 -> A1 = readU32(0x1F016 + selectorIdx).
-  // but full 32-bit indirizzamento; per parity basta `>>>0`).
+  // but full 32-bit addressing; for parity just `>>>0`).
   const a1Addr = (SLOT_PTR_TABLE_ROM + selectorIdx) >>> 0;
   const a1 = readU32Rom(rom, a1Addr) >>> 0;
 
@@ -351,7 +351,7 @@ export function slotSpawnPattern13D38(
   const frameMinus6 = (argCoordsLong >>> 16) & 0xffff;
   const a4w = argCoordsLong & 0xffff;
 
-  // ── Branch su (A1+0x1F).b == 0xD ───────────────────────────────────
+  // ── Branch on (A1+0x1F).b == 0xD ───────────────────────────────────
   const a1KindAddr = (a1 + A1_KIND_BYTE_OFF) >>> 0;
   let a1KindByte: number;
   if (a1KindAddr >= WORK_RAM_BASE && a1KindAddr < WORK_RAM_BASE + state.workRam.length) {
@@ -471,7 +471,7 @@ export function slotSpawnPattern13D38(
   state.workRam[argOff + ARG_READY_BYTE_OFF] = 0x01;
 
   // D0 = (A0+0x57.b == 0) ? 0x01 : 0x00 (low byte; high bytes 0).
-  // Catena: moveq #0,D0 → seq D0b (Z?0xFF:0x00) → neg.b D0b (0xFF→0x01, 0→0).
+  // Chain: moveq #0,D0 → seq D0b (Z?0xFF:0x00) → neg.b D0b (0xFF→0x01, 0→0).
   const counterPost = state.workRam[argOff + ARG_COUNTER_BYTE_OFF] ?? 0;
   return counterPost === 0 ? 0x00000001 : 0x00000000;
 }

@@ -56,7 +56,7 @@
  *
  * The inner routine is modeled through callback `inner` (see `Inner264AA` in
  * `object-enter-1281c.ts`). The parity test patches the `jsr` with a stub
- * `move.l (8,SP),D0; rts` per esporre il `mode=2` as `D0`.
+ * `move.l (8,SP),D0; rts` to expose `mode=2` as `D0`.
  *
  */
 

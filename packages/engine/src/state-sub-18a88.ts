@@ -14,7 +14,7 @@
  *           - `0x22B0A` (entry struct ptr, attr = D5 = 0x1400 for p1 else 0x1000)
  *           - `0x22AAA` (entry struct ptr, attr = D6 = 0x1000 for p1 else 0x1400)
  *      e. If `count == 2` (2-player): render "TAG" with
- *         `FUN_000286B0(romPtr=*(0x1EEF0+i*4), with the=0xC, tickOff=5,
+ *         `FUN_000286B0(romPtr=*(0x1EEF0+i*4), col=0xC, tickOff=5,
  *                       attr=0x2000 if i==0 else 0x2400)`.
  *      f. Score formatting through `FUN_00028E3C` (renderStringHelper, 6 args):
  *         - clamp `entity[0x6A].w` to 0x63 (99) -> "minute" or counter A
@@ -28,7 +28,7 @@
  *           - `(D6, 6, 0x13, 0x20, 0, D4)`              [total - initial]
  *      g. `*0x4003F0 += 1`.
  *      h. Render "BONUS" labels: two `FUN_2572` (renderString) calls into the
- *         alpha tilemap, attr = D5 (player with the):
+ *         alpha tilemap, attr = D5 (player column):
  *           - `0x22AF2` (label "BONUS")
  *           - `0x22AFE` (label "TIME")
  *           - `D4 -= 250`
@@ -197,9 +197,9 @@ export interface StateSub18A88Subs {
   /**
    * `FUN_000286B0` (renderStringEntry286B0). Args (4 long):
    *   - `arg1Long`: ROM ptr-to-ptr (lookup table @ 0x1EEF0 + i*4).
-   *   - `arg2Long`: with the (0xC).
+   *   - `arg2Long`: col (0xC).
    *   - `arg3Long`: tickOff (5).
-   *   - `arg4Long`: attr (0x2000 o 0x2400).
+   *   - `arg4Long`: attr (0x2000 or 0x2400).
    *
    * Default: no-op. Called only when `count == 2`.
    */
@@ -419,7 +419,7 @@ export function stateSub18A88(
       (readByte(state, VBLANK_TICK_COUNTER_OFF) + 1) & 0xff,
     );
 
-    // d. determine D5 / D6 da entity[0x19]
+    // d. determine D5 / D6 from entity[0x19]
     // Disasm:
     //   tst.b (0x19,A2)  → beq.b 0x18ae2 ⇒ D0=0x1000   (zero)
     //   move D0,D5
@@ -441,14 +441,14 @@ export function stateSub18A88(
     if (count === 2) {
       const tagAttr = i === 0 ? TAG_ATTR_PRIMARY : TAG_ATTR_SECONDARY;
       const romPtrSlot = (ROM_TAG_TABLE + i * 4) >>> 0;
-      // arg1 = romPtrSlot (long), arg2 = with the (0xC), arg3 = tickOff (5),
+      // arg1 = romPtrSlot (long), arg2 = col (0xC), arg3 = tickOff (5),
       // arg4 = tagAttr (low word)
-      //   move.l D0,-(SP)            ; D0 = 0x2000 o 0x2400 (tagAttr)
+      //   move.l D0,-(SP)            ; D0 = 0x2000 or 0x2400 (tagAttr)
       //   pea (0x5).w                ; tickOff
-      //   pea (0xc).w                ; with the
+      //   pea (0xc).w                ; col
       //   move.l (0,A0,D0*1),-(SP)   ; romPtrSlot
       //   jsr 0x286b0
-      // FUN_286B0 firma: (arg1=ptr-to-ptr, arg2=with the, arg3=tickOff, arg4=attr).
+      // FUN_286B0 signature: (arg1=ptr-to-ptr, arg2=col, arg3=tickOff, arg4=attr).
       subs.renderTag?.(
         state,
         romPtrSlot,

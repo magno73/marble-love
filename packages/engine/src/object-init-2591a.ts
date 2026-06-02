@@ -70,7 +70,7 @@ export const OBJECT_INIT_2591A_SUB_ADDRS = [
  */
 export interface ObjectInit2591ASubs {
   /**
-   * altrove). Default no-op.
+   * elsewhere). Default no-op.
    */
   fun_262B2?: (state: GameState, objPtr: number) => void;
   /**
@@ -90,7 +90,7 @@ export interface ObjectInit2591ASubs {
    */
   fun_25B40?: (state: GameState, objPtr: number) => void;
   /**
-   * Non modellato: default no-op.
+   * Not modeled: default no-op.
    */
   fun_1B9CC?: (state: GameState, objPtr: number, flagLong: number) => void;
   /**
@@ -171,7 +171,7 @@ export function objectInit2591A(
   const g462 = readU32BE(wr, WORK_RAM_BASE + GLOBAL_400462_OFF);
   // asl.l #16: low word → high word, low word zero. Wrap @ 32 bit unsigned.
   const shifted462 = (g462 << 16) >>> 0;
-  // Big-endian write a A2+0xC.
+  // Big-endian write to A2+0xC.
   if (
     objAbs >= WORK_RAM_BASE &&
     objAbs + 0x0c + 3 < WORK_RAM_END

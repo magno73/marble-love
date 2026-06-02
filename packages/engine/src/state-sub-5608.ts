@@ -131,7 +131,7 @@ function readLongBE(bytes: Uint8Array, off: number): number {
  * @param inner5334     Callback that models `FUN_00005334`. Invoked 1 time
  *                      with `(*ROM[0x10074])`. Default `() => 0`.
  *
- *          and 0x5B7A ignorano D0).
+ *          and 0x5B7A ignore D0).
  *
  *     `inner52DA` #1 modifies workRam @ `0x401F98/99`, then `inner5334`
  */
@@ -144,9 +144,9 @@ export function stateSub5608(
   const gateByte = rom.program[ROM_GATE_BYTE_ADDR] ?? 0;
   const d2 = gateByte === 0 ? 8 : 4;
 
-  // ─── Fase 1: FUN_52DA(D2+3, 0x1B, 0x7978) ───────────────────────────────
+  // ─── Phase 1: FUN_52DA(D2+3, 0x1B, 0x7978) ───────────────────────────────
   // Push order RTL: 0x7978 (arg3), 0x1B (arg2), D2+3 (arg1).
-  // Callee vede arg1=(0x4,SP), arg2=(0x8,SP), arg3=(0xC,SP).
+  // Callee sees arg1=(0x4,SP), arg2=(0x8,SP), arg3=(0xC,SP).
   const phase1Arg1 = (d2 + ARG1_BIAS_PHASE1) >>> 0;
   inner52DA(phase1Arg1, ROW_IMM_1, PTR_LITERAL_1);
 

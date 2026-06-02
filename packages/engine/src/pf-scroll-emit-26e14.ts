@@ -1,5 +1,5 @@
 /**
- * pf-scroll-emit-26e14.ts — replica `FUN_00026E14` (298 byte).
+ * pf-scroll-emit-26e14.ts — replica of `FUN_00026E14` (298 bytes).
  *
  * Emits the sprite list into the "next" buffer during scroll/page flip.
  *
@@ -10,10 +10,10 @@
  *   - Uses the original AV value for the four read pointers. Tile words are
  *     merged with `0x3FE0`-style low-bit adjustment while preserving bits 14..15.
  *
- * Strutture in spriteRam (4 sub-buffer × 0x80 byte = 64 word):
- *   0xA02000+  (A2 in source) — tile linee A
- *   0xA02080+  (D3 in source) — tile linee B (passthrough)
- *   0xA02100+  (A4 in source) — tile linee C (passthrough)
+ * Structures in spriteRam (4 sub-buffers × 0x80 bytes = 64 words):
+ *   0xA02000+  (A2 in source) — tile lines A
+ *   0xA02080+  (D3 in source) — tile lines B (passthrough)
+ *   0xA02100+  (A4 in source) — tile lines C (passthrough)
  *   0xA02180+  (A3 in source) — comparison column (loop guard)
  * With AV bit 3 set, bases become +0x200 / +0x280 / +0x300 / +0x380.
  *
@@ -140,7 +140,7 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
       a2 = (a2 + 2) & 0xffff;
     }
 
-    // ── Buffer B (0xA02080+, passthrough da D3 cursor) ──
+    // ── Buffer B (0xA02080+, passthrough from D3 cursor) ──
     {
       const wptr = readU32BE(r, WPTR_B_OFF) >>> 0;
       const wOff = (wptr - SPRITE_RAM_BASE) >>> 0;
@@ -150,7 +150,7 @@ export function pfScrollEmit26E14(state: GameState, arg: number): void {
       d3 = (d3 + 2) & 0xffff;
     }
 
-    // ── Buffer C (0xA02100+, passthrough da A4) ──
+    // ── Buffer C (0xA02100+, passthrough from A4) ──
     {
       const wptr = readU32BE(r, WPTR_C_OFF) >>> 0;
       const wOff = (wptr - SPRITE_RAM_BASE) >>> 0;

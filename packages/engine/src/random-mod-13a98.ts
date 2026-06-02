@@ -16,7 +16,7 @@
  * skip:
  *   asl.b    #2, d2               ; X = bit 6 of the byte
  *   roxl.w   #1, d0               ; D0 = (D0 << 1) | X  (LFSR step)
- *   rol.l    #1, d3               ; D3 ruota (mask helper)
+ *   rol.l    #1, d3               ; D3 rotates (mask helper)
  *   bne.b    loop
  *   ; end loop
  *   move.w   d0, ($4003A6)        ; save new seed
@@ -32,11 +32,11 @@
  *   move.l   a1, d3               ; restore D3
  *   rts                           ; return D0.w
  *
- * Semantica:
- *   N = number of shift-right per portare `limit` a zero (= bit_length(limit))
+ * Semantics:
+ *   N = number of right-shifts needed to bring `limit` to zero (= bit_length(limit))
  *   The LFSR advances by N steps.
  *   result = newSeed & mask
- *   Riduzione: while (result >= limit) result -= limit  ← bgt = "if D1>D0 skip"
+ *   Reduction: while (result >= limit) result -= limit  ← bgt = "if D1>D0 skip"
  *
  */
 
@@ -75,7 +75,7 @@ export function randomMod13A98(state: GameState, maxExclusive: number): number {
     d1 = (d1 >>> 1) & 0xffff;
   }
 
-  // Salva nuovo seed
+  // Save new seed
   state.rng.seed = as_u32(seed);
   state.rng.callsThisFrame = as_u32((state.rng.callsThisFrame as unknown as number) + 1);
 

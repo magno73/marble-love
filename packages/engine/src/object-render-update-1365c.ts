@@ -33,8 +33,8 @@
  *   - `0x1eb16` — long-table per-game-mode (entry-list ptr).
  *   - `0x1eb2e` — byte-table 6 entry (velocity X per game mode).
  *   - `0x1eb34` — byte-table 6 entry (velocity Y per game mode).
- *   - `0x1ef72` — long-table ptr (indicizzata da `A2+0x19.b`).
- *   - `0x1ef5a` — long-table ptr (indicizzata da `A3+0x1b.b - 0x1e`).
+ *   - `0x1ef72` — long-table ptr (indexed by `A2+0x19.b`).
+ *   - `0x1ef5a` — long-table ptr (indexed by `A3+0x1b.b - 0x1e`).
  *
  *
  * **External sub-jsrs (7 distinct)**:

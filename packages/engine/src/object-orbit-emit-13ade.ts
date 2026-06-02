@@ -28,9 +28,9 @@ const ARG_READY_BYTE_OFF = 0x1c; // byte: written = 1 in epilogue
 const ARG_COORDS_LONG_OFF = 0x1e; // long: hi word = ref-X, lo word = ref-Y
 const ARG_MIRROR_BYTE_OFF = 0x1a; // byte: == 0x0B → mirror D1 = 0x24 - D1
 const ARG_ANGLE_WORD_OFF = 0x2e;
-const ARG_OUT_2ND_HALF_OFF = 0x38; // 4 record da 6 byte (emit index 4..7)
-const ARG_OUT_1ST_HALF_OFF = 0xa4; // 4 record da 6 byte (emit index 0..3)
-const ARG_COUNTER_BYTE_OFF = 0x57; // byte: counter decrementato each call
+const ARG_OUT_2ND_HALF_OFF = 0x38; // 4 records of 6 bytes (emit index 4..7)
+const ARG_OUT_1ST_HALF_OFF = 0xa4; // 4 records of 6 bytes (emit index 0..3)
+const ARG_COUNTER_BYTE_OFF = 0x57; // byte: counter decremented each call
 
 const HALF_RECORDS = 4 as const;
 /** Emitted record stride (6 bytes = 3 words). */
@@ -144,14 +144,14 @@ function lookupSinCos(
 /**
  * Emits the circular trajectory records for `argPtr`.
  *
- * @param state   GameState. Modifica `workRam` su:
+ * @param state   GameState. Modifies `workRam` at:
  *                - `(argPtr+0x57).b` decrement (with optional reset trigger)
  *                - `(argPtr+0x1c).b = 1`
- *                - up to 4 record × 6 byte @ `(argPtr+0xA4)..(argPtr+0xBB)`
- *                - up to 4 record × 6 byte @ `(argPtr+0x38)..(argPtr+0x4F)`
- * @param rom     ROM image (per sin/cos table @ `0x1EDA2` and delta stream
+ *                - up to 4 records × 6 bytes @ `(argPtr+0xA4)..(argPtr+0xBB)`
+ *                - up to 4 records × 6 bytes @ `(argPtr+0x38)..(argPtr+0x4F)`
+ * @param rom     ROM image (for sin/cos table @ `0x1EDA2` and delta stream
  *                @ `0x1EF32`).
- * @param argPtr  Long pushato from the caller. MUST be in work RAM
+ * @param argPtr  Long pushed from the caller. MUST be in work RAM
  *                (`0x400000..0x401FFF`).
  */
 export function objectOrbitEmit13ADE(

@@ -17,9 +17,9 @@
  *   byte[6]  : extra; bit 7 sets A4 |= 0x80, bit[6:5] contributes to A4,
  *               bit[4:0] is the pointer-table sub-index.
  *   byte[7]  : lookup_byte; bit 3 selects "sub mode", bit[2:0] indexes the
- *               direction tabthe ROMs @0x1ECEA (8 dx/dy word pairs).
+ *               direction ROM table @0x1ECEA (8 dx/dy word pairs).
  *
- * **Direction tabthe ROMs @0x1ECEA**: 8 pairs of signed words (dx, dy), two
+ * **Direction ROM table @0x1ECEA**: 8 pairs of signed words (dx, dy), two
  * words per pair, for indices 0..7. `dx = local[-12]`,
  * `dy = local[-14]`.
  *   - dx < 0: outer var = y (local[-4]), end = local[-2] - 1
@@ -29,8 +29,8 @@
  *
  *
  * **Output buffer** @0x400A9C in work RAM (absolute base 0x400000):
- *   cellAddr = (row * 0x16 + with the) * 8 + 0x400A9C
- *   where `row = A0w`, `with the = A1w >> 1` after clipping.
+ *   cellAddr = (row * 0x16 + col) * 8 + 0x400A9C
+ *   where `row = A0w`, `col = A1w >> 1` after clipping.
  *
  * **Return** (D0): A4 flag word (sign-extended a long).
  *
@@ -258,8 +258,8 @@ export function renderTileLine1AD54(
   const loc_neg6w = (loc_neg6 << 16) >> 16;
   const loc_neg8w = (loc_neg8 << 16) >> 16;
 
-  // ── D3 < 4 → "row-major" (outer = row A3, inner = with the D6)
-  // ── D3 >= 4 → "column-major" (outer = with the A3, inner = row D6)
+  // ── D3 < 4 → "row-major" (outer = row A3, inner = col D6)
+  // ── D3 >= 4 → "column-major" (outer = col A3, inner = row D6)
   const rowMajor = dirIdx < 4;
 
   // ── Outer/inner loop ──────────────────────────────────────────────────────
@@ -420,7 +420,7 @@ export function renderTileLine1AD54(
 
 /**
  *
- * Corrisponde alle sequenze 0x1AF5A-0x1AFC6 (row-major) e
+ * Corresponds to the sequences 0x1AF5A-0x1AFC6 (row-major) and
  * 0x1B07C-0x1B0E8 (column-major), which are structurally identical.
  *
  *   +0, +2, +4, +6 (word offsets)

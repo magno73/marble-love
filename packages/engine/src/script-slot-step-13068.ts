@@ -22,12 +22,12 @@
  * **Internal helper `FUN_132E0`** (0x132e0..0x13332 = 82 bytes):
  *   Advances `slot[0x3e]` by +4, with an extra +4 when `slot[0x1e]!=0`.
  *
- * **Sub esterne**:
- *     Riceve (state, slotPtr).
+ * **External subs**:
+ *     Receives (state, slotPtr).
  *   - `FUN_13334`: replicated as `objectRenderUpdate13334` in
  *     `advanceAndWrap132E0`.
  *
- * **Disasm** (estratto chiave da 0x13068..0x132DE):
+ * **Disasm** (key excerpt from 0x13068..0x132DE):
  *
  *   00013068  movem.l {A5,A4,A3,A2,D4,D3,D2},-(SP)
  *   0001306c  movea.l (0x20,SP),A2          ; A2 = slotPtr
@@ -309,11 +309,11 @@ function advanceAndWrap132E0(
 
 /**
  *
- * @param state    GameState. Modifica workRam (slot fields, globals 0x400456 etc.).
- * @param rom      ROM image (per dereferenziare record ptr ROM-side).
+ * @param state    GameState. Modifies workRam (slot fields, globals 0x400456 etc.).
+ * @param rom      ROM image (to dereference ROM-side record ptr).
  * @param slotPtr  Absolute workRam address of the script-state slot
  *                 (0x400a9c + i*0x56, i ∈ 0..24).
- * @param subs     Stub injection per `FUN_12896` (e `inner1D06A` passthrough).
+ * @param subs     Stub injection for `FUN_12896` (and `inner1D06A` passthrough).
  */
 export function scriptSlotStep13068(
   state: GameState,

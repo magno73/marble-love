@@ -24,7 +24,7 @@
  *   0001cc90  beq.b   0x1cc98
  *   0001cc92  jsr     0x0001caba.l                   ; heavy renderer (same
  *                                                     ; sub of sprite-pos-update
- *                                                     ; -1bab2): ridraw of the tile
+ *                                                     ; -1bab2): redraw of the tile
  *   0001cc98  tst.w   (0x4006a2).l                   ; bge-flag from the derive
  *   0001cc9e  beq.b   0x1ccbc                        ; if 0 → else-branch
  *
@@ -72,19 +72,19 @@
  *   0001ccfa  movem.l (SP)+, {D2,D3,D4,A2,A3,A4,A5}
  *   0001ccfe  rts
  *
- * **Semantica** (deduzione from the 21 caller):
- *     +0x04: cx0   (componente X, "old"?)
- *     +0x0E: cx1   (componente X, "new"?)
- *     +0x10: cy0   (componente Y, "old"?)
- *     +0x1A: cz    (componente Z, sign-extesa in the return high word)
+ * **Semantics** (deduced from the 21 callers):
+ *     +0x04: cx0   (X component, "old"?)
+ *     +0x0E: cx1   (X component, "new"?)
+ *     +0x10: cy0   (Y component, "old"?)
+ *     +0x1A: cz    (Z component, sign-extended into the return high word)
  *   - bge-flag (`*0x4006A2`) distinguishes whether (y&7) >= (x&7), an iso-projection
- *     half-plane. If SI: `*0x4006A4 = cx1-cx0`, `*0x4006A6 = cx0-cz`.
+ *     half-plane. If YES: `*0x4006A4 = cx1-cx0`, `*0x4006A6 = cx0-cz`.
  *     If NO: `*0x4006A4 = cy0-cz`,  `*0x4006A6 = cx1-cy0`.
  *   - Return long: `(sext16(cz) << 16) + ((dy*(y&7) + dx*(x&7)) << 13)`,
  *     where dx = `*0x4006A4` post-write, dy = `*0x4006A6` post-write. Looks like
  *     (caller @ 0x12250 does `cmpi.l #0x100000` = 1<<20 against D0-(0x14,A2)).
  *
- * **JSR esterne**:
+ * **External JSRs**:
  *     ONLY if `argByte != 0`. Exposed as sub injection
  *     (`spriteProject1CC62Subs.fun_1CABA`); default no-op.
  *
@@ -159,7 +159,7 @@ export interface SpriteProject1CC62Subs {
  * @returns Long signed (32 bit) — packed result. Layout:
  *          `result = (sext16(cz) << 16) + ((dy*(y&7) + dx*(x&7)) << 13)`,
  *          where `cz = *(STRUCT+0x1A)`, `dx = *0x6A4` post-write,
- *          `dy = *0x6A6` post-write. Truncato a 32 bit signed (i32 wrap).
+ *          `dy = *0x6A6` post-write. Truncated to 32-bit signed (i32 wrap).
  *
  * **Side effects** in `state.workRam`:
  *   - `0x6A4..0x6A5` (OUT-X delta word, big-endian)

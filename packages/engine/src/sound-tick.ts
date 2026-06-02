@@ -9,11 +9,11 @@
  *   1. Reads command byte at 0x401F44 (D0)
  *   2. If D0 < 0x40 (valid pending command):
  *      a. Reset retry counter 0x401FF4 = 0
- *      b. If 0x401F45 ha bit 7 set (last sent was pending):
+ *      b. If 0x401F45 has bit 7 set (last sent was pending):
  *           - If cmd != last sent: call FUN_3E1A((D0<<8)|D1)
  *      c. *0x401F45 = *0x401F44 | 0x80 (mark as sent)
  *   3. *0x401F44 |= 0x80 (mark as sent)
- *   4. Chiama FUN_4DCC (sound chip ops) — STUB
+ *   4. Calls FUN_4DCC (sound chip ops) — STUB
  *   5. Call FUN_4C3E with D0=0x10003, A0=0x401F44 — STUB
  *      If it returns 0:
  *        *0x401FF4++; if it overflows to 0, decrement back to saturate

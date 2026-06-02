@@ -14,9 +14,9 @@
  * | +0xA4  | slot×6 | 4 slot sprite output (4 × 6 byte, stride 6)          |
  *
  * ## ROM tables
- *   - `0x1EDA2` — word seno/coseno, indice (D2.l*2) o ((D2+1).l*2).
+ *   - `0x1EDA2` — sine/cosine word, index (D2.l*2) or ((D2+1).l*2).
  *
- * ## JSR esterne
+ * ## External JSRs
  *
  */
 
@@ -24,14 +24,14 @@ import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 import { lerpFromRom } from "./lerp.js";
 
-// ─── Costanti ──────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 /** `*0x400394` word — game mode selector. */
 const GAME_MODE_OFF = 0x394;
 
-/** ROM: seno/coseno table (word, signed). */
+/** ROM: sine/cosine table (word, signed). */
 const ROM_SINE_BASE = 0x1eda2;
-/** ROM: angolo-tile table (word, unsigned). */
+/** ROM: angle-tile table (word, unsigned). */
 const ROM_ANGLE_BASE = 0x24ade;
 /** ROM: offset-Y slot table (byte, signed via ext.w). */
 const ROM_OFFY_BASE = 0x24b2c;
@@ -445,7 +445,7 @@ export function spriteRotate1C014(
     wu16(state, objOff + 0x94 + off2, newD2);
   }
 
-  // ─── 0x1c402: expand cols 3..7 from D2/D3 pairs at with the 0..3 ──────────
+  // ─── 0x1c402: expand cols 3..7 from D2/D3 pairs from the 0..3 ──────────
 
   // lea (0x74,A2),A0; clr.w D4w; loop D4=0: bgt D4<3 (moveq #3, bgt 0x1c408)
   // Each iteration reads 2 words D2/D3 from A0 and writes 6 derived words.

@@ -165,7 +165,7 @@ export function objectStep17F66(
   const cmd = (r[a2Off + F_CMD] ?? 0) & 0xff;
   const state36 = (r[a2Off + F_STATE36] ?? 0) & 0xff;
   // beq.w 0x1808E if state36 == 2 -> stuck path.
-  // Altrimenti, whitelist test su cmd.
+  // Otherwise, whitelist test on cmd.
   const goStuck = state36 === 2 || !COMMAND_WHITELIST.has(cmd);
 
   if (!goStuck) {
@@ -200,9 +200,9 @@ export function objectStep17F66(
       const depthW = sextW(sextB(depthB) & 0xffff); // sext byte → word (signed)
       let d1 = sextW((DEPTH_BASE - depthW) & 0xffff);
 
-      // Solo in the mode == 5: clamp D1 = max(D1, 4).
+      // Only in mode == 5: clamp D1 = max(D1, 4).
       // cmp.w D1w, D0w with D0w = 4 -> ble = D0 <= D1 signed.
-      // If 4 <= D1: skip. Altrimenti (D1 < 4): D1 = 4.
+      // If 4 <= D1: skip. Otherwise (D1 < 4): D1 = 4.
       if (mode === 5) {
         if (4 > d1) {
           d1 = 4;
@@ -210,7 +210,7 @@ export function objectStep17F66(
       }
 
       // asr.l #8; muls.w D1w; asl.l #3.
-      // asr.l: shift right aritmetico 8 (signed shift in JS via i32).
+      // asr.l: arithmetic right shift by 8 (signed shift in JS via i32).
       // muls.w: low word of D0 (post-shift) × low word of D1.
       const d3sh = (d3 >> 8) | 0;
       const d2sh = (d2 >> 8) | 0;
