@@ -30,7 +30,7 @@ import { clearAlphaTilesFromIndex } from "./alpha-tilemap.js";
 import { initFnPointers28580 } from "./init-fn-pointers-28580.js";
 import { objectSlotLookup11B18 } from "./object-slot-lookup-11b18.js";
 import { startHighScoreInitialsEntry } from "./high-score-initials-entry.js";
-import { helper11FF8Default } from "./helper-11ff8.js";
+import { helper11FF8Default } from "./read-abs-byte-11ff8.js";
 import { vblankAck28DEA } from "./vblank-helpers.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";

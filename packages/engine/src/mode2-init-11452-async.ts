@@ -18,7 +18,7 @@ import { sceneObjInit28CA6Default } from "./scene-obj-init-28ca6.js";
 import { lateGameLogic26F3E } from "./late-game-logic-26f3e.js";
 import { gameStateBanner26B2A } from "./game-state-banner-26b2a.js";
 import { bannerHelper26B66 } from "./banner-helper-26b66.js";
-import { helper11FF8Default } from "./helper-11ff8.js";
+import { helper11FF8Default } from "./read-abs-byte-11ff8.js";
 import { tilemapBlit17044 } from "./tilemap-blit-17044.js";
 import { finalize11654 } from "./finalize-11654.js";
 import { particleInit18CD2 } from "./particle-init-18cd2.js";
