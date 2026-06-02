@@ -1,5 +1,5 @@
 /**
- * state-sub-5200.ts - port of `FUN_00005200` (14 bytes, 0x005200-0x00520E).
+ * buffer-clear-status-5200.ts (FUN_5200) - port of `FUN_00005200` (14 bytes, 0x005200-0x00520E).
  *
  *
  * **Disasm 0x5200..0x520E** (14 bytes):
