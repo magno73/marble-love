@@ -1,9 +1,11 @@
 # PRD — Marble Love: HN Readiness
 
 **Owner**: Marco Magnocavallo (marco@magno.me)
-**Branch base**: `main` @ `7cb4de8` (`Skip stale l4 gate state-10 aspirator route test`)
+**Branch base**: `main` @ `71f0f07` (merge of the worm/heuristic gameplay fixes into the PRD branch; original base was `7cb4de8`)
 **Target outcome**: il repository regge una submission su Hacker News + un articolo standalone sulla finding dello slapstic, senza che la prima ondata di commentatori trovi gap evidenti di igiene, parità o trasparenza.
 **Non-goal**: aggiungere feature di gameplay, chiudere bug noti del gameplay, alzare la copertura di parità del marble o dell'audio. **Tutto il lavoro è di consolidamento, non di funzionalità.**
+
+> **Revision note (audit 2026-06-02).** Il codice è stato riverificato contro lo stato attuale. Correzioni applicate: **W1 era basato su una diagnosi sbagliata** — i "44 test rossi" non sono codice rotto, sono i test che caricano il ROM `ghidra_project/marble_program.bin` (gitignored, copyright, non shippabile): con il ROM presente fallisce **1 solo** test (`l5-silly-race-surface`, bug birds noto), senza il ROM ne falliscono **44 file** (clone pulito / CI). W1 è stato riscritto di conseguenza. Aggiornati anche i numeri stale (branch 21 non 22, oracle ~120 MB non 97, naming 212/309). Nota: i bug gameplay worm-freeze/music-loop/vacuum sono stati **risolti** dopo la stesura originale → la lista "Known Gameplay Bugs" del README è più corta (rilevante per W4).
 
 ---
 
@@ -11,13 +13,13 @@
 
 Marble Love è una reimplementazione TypeScript di Marble Madness (Atari 1984), portata function-by-function dal binario 68010 contro MAME come oracolo. Lo stato attuale, verificato:
 
-- 727 commit in 9 giorni (20–28 maggio 2026), 22 branch `codex/*` e `claude/*` sul remote.
-- 273 file di test, ma la CI ne esegue **3**. Sulla suite engine completa, **44 test falliscono su `main`** in 9 file (`level-intro-banner-resume`, `boot-init`, `l5-silly-race-surface`, `terrain-wave-update-1d06a`, ecc.).
-- 97 MB di JSON oracle trackati in git sotto `oracle/scenarios/` e `oracle/tom_harte_m68000/`.
-- Commenti misti italiano/inglese in `packages/engine/src/*.ts`.
-- Naming dei file ancora a indirizzo Ghidra (`state-sub-2678.ts`, `helper-1cd00.ts`, ecc.) per ~250 file su 334.
+- 727 commit in 9 giorni (20–28 maggio 2026), **21** branch `codex/*` e `claude/*` sul remote.
+- La CI esegue **3** test (web). La suite engine ha **2343 test in 258 file**; con il ROM presente fallisce **1 solo** test (`l5-silly-race-surface`, bug birds documentato). **Senza** il ROM `ghidra_project/marble_program.bin` (gitignored → assente su clone pulito / CI) **falliscono 44 file** che lo caricano via `readFileSync`. Questo, non "codice rotto", è il vero problema di W1 (vedi W1 riscritto).
+- ~120 MB di JSON oracle trackati in git: **97 MB** sotto `oracle/scenarios/` + **22 MB** sotto `oracle/tom_harte_m68000/` (`.git` pesa 44 MB).
+- Commenti misti italiano/inglese in `packages/engine/src/*.ts` (modesto: ~8 file con spy-word).
+- Naming dei file ancora a indirizzo Ghidra (`state-sub-2678.ts`, `helper-1cd00.ts`, ecc.) per **212 file su 309** in `packages/engine/src` (426/720 su tutto `packages/*/src`).
 - Un solo finding pubblicato: `docs/findings/slapstic-prefetch-side-channel.md`.
-- Stato dichiarato bene in README ("Known Limitations" + "Known Gameplay Bugs"). **Da preservare.**
+- Stato dichiarato bene in README ("Known Limitations" + "Known Gameplay Bugs"). **Da preservare** — ma nota che worm-freeze, music-loop e vacuum-sound sono **già risolti**, quindi la lista è più corta della stesura originale.
 
 ---
 
@@ -64,26 +66,28 @@ Ordine di esecuzione consigliato: **W1 → W2 → W3 → W4 → W5 → W6 → W7
 
 ---
 
-## W1 — Health della suite di test e CI
+## W1 — Health della suite di test e CI (ROM-gating)
 
-**Problema**: 44 test rossi su `main`, CI esegue 3 test. Il primo commentatore HN cloneranno e troveranno la suite rossa.
+**Problema (RIDIAGNOSTICATO)**: NON ci sono 44 test "rotti". Misurato: con il ROM presente la suite engine ha **1 solo** fallimento (`l5-silly-race-surface`, bug birds noto/documentato); **senza** il ROM `ghidra_project/marble_program.bin` (gitignored, copyright → assente su ogni clone pulito e in CI) **falliscono 44 file** perché lo caricano con `readFileSync` e nessuno ha un guard. Quindi un commentatore HN clona, fa `npm test`, e vede 44 rossi **non perché il codice sia rotto, ma perché manca un ROM che il repo non può legalmente distribuire**. È questo il problema da risolvere.
 
 **In-scope**:
-- Inventario dei 44 fallimenti (file, descrizione test, errore esatto). Output: `docs/work/hn-ready/test-failures-inventory.md` (non pubblicare, solo working note).
-- Classificazione di ogni fallimento in: (a) regressione da bug recente → root-cause + fix surgical, (b) fixture stale → `.skip` con TODO + link a STATUS, (c) test difensivo obsoleto → cancellare con motivazione.
-- Per la categoria (a), **al massimo 2 fix di codice non banale**; per qualunque cosa più complessa, `.skip` (b) e segnala.
-- Estendere il workflow CI (`.github/workflows/*.yml`) per eseguire l'intera suite engine (`vitest run packages/engine`), oltre ai 3 test web attuali. Target tempo: < 60 s.
+- **Guard ROM**: aggiungere un helper condiviso (es. `packages/engine/test/_rom.ts`) che cerca `ghidra_project/marble_program.bin` e, se assente, fa `describe.skip`/`it.skip` con messaggio chiaro ("ROM not present — provide a legal dump at ghidra_project/marble_program.bin to run this suite"). Applicarlo ai ~44 file ROM-dipendenti (13 lo caricano direttamente, gli altri via `loadRomBlob`/helper — partire da lì).
+- **Inventario**: `docs/work/hn-ready/test-failures-inventory.md` con i due numeri (1 con ROM / 44 senza) e la lista dei file ROM-gated (working note, non pubblicare).
+- **Il fallimento reale** (`l5-silly-race-surface`, birds): `.skip` con `// TODO(hn-ready W1): L5 flying-bird sprite indices diverge — see docs/STATUS.md#known-gaps` (è un Known Gameplay Bug, non una regressione).
+- **CI**: estendere `.github/workflows/ci.yml` per eseguire `vitest run packages/engine` — **ma solo dopo il guard ROM**, altrimenti la CI (che non ha il ROM) passerebbe da 3-verdi a 44-rossi. Con il guard, la CI gira il sottoinsieme ROM-free verde + onesto. Target: < 60 s.
+- **Documentare la dipendenza dal ROM** in README ("Validation") e CONTRIBUTING: la suite engine completa richiede un ROM locale; senza, i file ROM-gated vengono skippati di proposito.
 
-**Out-of-scope**: aggiornare fixture, modificare logica gameplay/audio, aggiungere nuovi test.
+**Out-of-scope**: aggiornare fixture, modificare logica gameplay/audio, aggiungere nuovi test, committare il ROM.
 
 **Acceptance criteria**:
-- `npx vitest run packages/engine` → 0 failures, 0 unexpected skip; gli skip sono solo quelli marcati con TODO esplicito.
-- CI di PR + push esegue almeno: typecheck, `vitest run packages/engine`, i 3 test web esistenti, web build, git diff check.
-- README sezione "Validation" allineata.
+- Su un clone **senza** ROM: `npx vitest run packages/engine` → **0 failures**, gli unici skip sono i file ROM-gated (con messaggio) + il birds-TODO.
+- Su un ambiente **con** ROM: stesso comando → 0 failures, 0 skip oltre il birds-TODO.
+- CI di PR + push esegue: typecheck, `vitest run packages/engine` (verde grazie al guard), i 3 test web esistenti, web build, git diff check.
+- README "Validation" + CONTRIBUTING allineati sulla dipendenza dal ROM.
 
-**Validazione**: i comandi globali + `npx vitest run packages/engine`.
+**Validazione**: comandi globali + `npx vitest run packages/engine` **due volte** (con e senza il ROM rinominato temporaneamente — entrambe verdi).
 
-**Risk note per l'agent**: alcuni fallimenti potrebbero rivelare bug reali del runtime (es. `level-intro-banner-resume`). **Non avventurarti nel runtime**: documenta il bug in `docs/work/hn-ready/test-failures-inventory.md`, fai `.skip` con TODO, e lascia il fix al maintainer umano. Lo scopo qui è verde della CI, non chiusura bug.
+**Risk note per l'agent**: NON inseguire i "44 fallimenti" come bug — sono tutti l'assenza del ROM. L'unico fallimento da trattare come bug-noto è `l5-silly-race-surface` (birds), e va **skippato** con TODO, non fixato (è gameplay/runtime — fuori scope). Verifica con: rinomina `ghidra_project/marble_program.bin`, esegui la suite, conta i fallimenti, ripristina il ROM.
 
 ---
 
@@ -220,7 +224,7 @@ Ordine di esecuzione consigliato: **W1 → W2 → W3 → W4 → W5 → W6 → W7
 
 ## W7 — Relocate dei fixture pesanti
 
-**Problema**: 97 MB di JSON oracle in git → pack pesa, clone lento, commento HN garantito.
+**Problema**: ~120 MB di JSON oracle in git (97 MB `oracle/scenarios/` + 22 MB `oracle/tom_harte_m68000/`) → pack pesa (`.git` ≈ 44 MB), clone lento, commento HN garantito.
 
 **In-scope** (scelta da Marco, default: **opzione B**):
 
@@ -258,7 +262,7 @@ Ordine di esecuzione consigliato: **W1 → W2 → W3 → W4 → W5 → W6 → W7
 1. Identificare un candidato dalla storia commit + dai commenti `FIXME`/`HACK`/`AHA` nei sorgenti. Candidati noti:
    - L'inversione di segno condizionata da `*0x400394 == 4` in `trackball-apply.ts` (FUN_25DF6) — perché esiste questa modalità di compensazione e cosa la triggera?
    - La quirk `lsr.w #3 / mulu.w #3` invece di `>>3` in `waypoint-list-step-1815a.ts` — overflow protection? approximation?
-   - La cadenza dinamica 30/60Hz del main loop dettata dal cycle budget — quando si triggera e con quale magnitudo è osservabile in MAME?
+   - La cadenza dinamica 30/60Hz del main loop dettata dal cycle budget — quando si triggera e con quale magnitudo è osservabile in MAME? **(Candidato forte, con dato fresco: durante il debug del worm-freeze L5 si è osservato che la logica oggetti avanza ~1 frame ogni ~2 frame video — un wobble da 0x28 step ci mette ~170 frame video ≈ 2.7s. Il timer/contatore che governa la cadenza è già parzialmente isolato in `helper-285b0`/`refresh-frame-10fce`.)**
 2. Scrivere `docs/findings/<topic>-<short-desc>.md` seguendo **lo stesso template** dello slapstic finding: TL;DR, Background, Anomaly, Discovery, Fix, Reflections, References, Commits.
 3. Aggiungere voce nel `docs/findings/README.md`.
 4. Eventuale test di regressione se l'analisi ne rivela uno mancante (max 1 test nuovo).
