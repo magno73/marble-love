@@ -187,7 +187,7 @@ describe("stateSub18A88 (FUN_00018A88)", () => {
     expect(trace.clearAlphaTiles).toEqual([0]);
     // renderStringVia200 called 4 times (header1 + 2x BONUS labels = 3,
     // wait: header1 (1) + label BONUS (1) + label TIME (1) = 3, NOT 4)
-    // Verifica entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
+    // Verify entry: [0x22B0A,0x1000], [0x22AF2,0x1000], [0x22AFE,0x1000]
     expect(trace.renderStringVia200).toEqual([
       { entryPtr: ROM_HEADER_STRING_1, attr: 0x1000 },
       { entryPtr: ROM_LABEL_BONUS, attr: 0x1000 },

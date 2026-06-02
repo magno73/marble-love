@@ -3,7 +3,7 @@ import { emptyGameState, snapshotGameState } from "../src/state.js";
 import { as_u32 } from "../src/wrap.js";
 
 describe("GameState basics", () => {
-  it("emptyGameState ha sizing RAM expected (verificato Phase 1)", () => {
+  it("emptyGameState has the expected RAM sizing (verified in Phase 1)", () => {
     const s = emptyGameState();
     expect(s.workRam.byteLength).toBe(0x2000);     // 8 KB work RAM
     expect(s.playfieldRam.byteLength).toBe(0x2000); // 8 KB playfield tilemap

@@ -47,7 +47,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     };
   }
 
-  it("delta normale: cur=110, prev=100 → delta=10, save cur", () => {
+  it("normal delta: cur=110, prev=100 → delta=10, save cur", () => {
     const s = setup({ obj0: { trackballX: 100, deltaX: 0, trackballY: 50, deltaY: 0 } });
     trackballInputTick(s, 110, 60, 0, 0);
     const o = readObj(s, 0);
@@ -57,7 +57,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o.deltaY).toBe(10);
   });
 
-  it("delta out of range, sign DIFF da prev → saturate", () => {
+  it("delta out of range, sign DIFFERENT from prev → saturate", () => {
     // prev_delta=100, cur=200, prev_X=50 → delta = 200-50 = 150 = -106 i8.
     // |delta|=106 > 96 → out of range. XOR(prev_delta=100, delta=-106) → 0x64 ^ 0x96 = 0xF2 = -14 i8 < 0 → SATURATE.
     // delta < 0 → saturate to 0x7F.
@@ -68,7 +68,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o.deltaX).toBe(0x7f); // saturated
   });
 
-  it("delta out of range, sign UGUALE a prev → keep delta", () => {
+  it("delta out of range, sign SAME as prev → keep delta", () => {
     // prev_delta=100 (positive), cur=200, prev_X=80 → delta = 200-80 = 120, signed = 120.
     // |delta|=120 > 96 → out of range. XOR(100, 120) = 0x64 ^ 0x78 = 0x1C = +28 i8 >= 0 → SAME sign → keep.
     const s = setup({ obj0: { trackballX: 80, deltaX: 100, trackballY: 0, deltaY: 0 } });
@@ -78,7 +78,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o.deltaX).toBe(120);
   });
 
-  it("processa both P1 and P2 (slot 0 and 1)", () => {
+  it("processes both P1 and P2 (slot 0 and 1)", () => {
     const s = setup({
       obj0: { trackballX: 0, deltaX: 0, trackballY: 0, deltaY: 0 },
       obj1: { trackballX: 50, deltaX: 0, trackballY: 100, deltaY: 0 },
@@ -92,7 +92,7 @@ describe("trackballInputTick (FUN_1AC18)", () => {
     expect(o1.trackballY).toBe(110); expect(o1.deltaY).toBe(10);
   });
 
-  it("delta zero: stessi values MMIO", () => {
+  it("delta zero: same MMIO values", () => {
     const s = setup({ obj0: { trackballX: 100, deltaX: 50, trackballY: 100, deltaY: 50 } });
     trackballInputTick(s, 100, 100, 0, 0);
     const o = readObj(s, 0);

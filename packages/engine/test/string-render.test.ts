@@ -18,7 +18,7 @@ describe("renderStringChain (FUN_2572)", () => {
     expect(r).toBe(1);
   });
 
-  it("D1 > lookup → skip render, exit immediato (marker check)", () => {
+  it("D1 > lookup → skip render, immediate exit (marker check)", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // tickOff = 100, tick = 0 → D1 = 100. Lookup[0] = 0x1E = 30 (small).
@@ -37,7 +37,7 @@ describe("renderStringChain (FUN_2572)", () => {
     }
   });
 
-  it("space char (0x20): writes solo attr in the tile", () => {
+  it("space char (0x20): writes only attr in the tile", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     // String = " " (space + null)

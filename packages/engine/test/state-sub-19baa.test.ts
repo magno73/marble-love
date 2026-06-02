@@ -225,7 +225,7 @@ describe("stateSub19BAA (FUN_00019BAA)", () => {
     const off = ENTITY_OFF(0);
     s.workRam[off + ENTITY_ACTIVE_OFFSET] = 1;
     s.workRam[off + ENTITY_ANIM_COUNTER_OFFSET] = 5;
-    // state == 5 → counter incremented a 6, cmp.b: 5 - 6 = -1 (< 0) → bgt false → script-advance
+    // state == 5 → counter incremented to 6, cmp.b: 5 - 6 = -1 (< 0) → bgt false → script-advance
     s.workRam[off + ENTITY_STATE_OFFSET] = 5;
     s.workRam[off + ENTITY_SUBSTATE_OFFSET] = 0; // != 2 → enters scan-block
     s.workRam[off + ENTITY_TIMER_OFFSET] = 1; // dec → 0 → state branch
