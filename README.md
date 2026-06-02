@@ -179,6 +179,10 @@ The project uses several complementary sources of truth:
 The goal is to build an understandable TypeScript implementation while keeping
 behavior tied to reproducible evidence rather than visual guesswork.
 
+See [docs/cpu-config.md](docs/cpu-config.md) for the CPU/chip model choices
+(source-level reimplementation, not cycle-accurate emulation) and the Atari
+System 1 hardware reference.
+
 ## Legal
 
 This repository contains original Marble Love source code under the MIT license.
