@@ -1,5 +1,5 @@
 /**
- * Test clearPlayfieldStride (FUN_12186) — smoke tests sui branches principali.
+ * Test clearPlayfieldStride (FUN_12186) — smoke tests on the main branches.
  *
  */
 
@@ -49,13 +49,13 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     for (let entry = 0; entry < STRIDE_ENTRY_COUNT; entry++) {
       const base = STRIDE_OFF + entry * STRIDE_BYTES;
 
-      // Primi 72 byte = 0
+      // First 72 bytes = 0
       for (let j = 0; j < STRIDE_CLEAR_BYTES; j++) {
         const idx = base + j;
         if (idx >= PF_SIZE) break;
         expect(pf[idx]).toBe(0);
       }
-      // Successivi 56 byte = 0xFF (preservati)
+      // Next 56 bytes = 0xFF (preserved)
       for (let j = STRIDE_CLEAR_BYTES; j < STRIDE_BYTES; j++) {
         const idx = base + j;
         if (idx >= PF_SIZE) break;
@@ -72,7 +72,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     const lastClearedOff = STRIDE_OFF + (STRIDE_ENTRY_COUNT - 1) * STRIDE_BYTES + (STRIDE_CLEAR_BYTES - 1);
     expect(lastClearedOff).toBe(0x1fcd);
     expect(pf[lastClearedOff]).toBe(0);
-    // I 50 byte successivi (0x1FCE..0x1FFF) restano 0x5A
+    // The next 50 bytes (0x1FCE..0x1FFF) stay 0x5A
     for (let i = lastClearedOff + 1; i < PF_SIZE; i++) {
       expect(pf[i]).toBe(0x5a);
     }
@@ -109,7 +109,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     fillSentinel(small, 0xc7);
     clearPlayfieldStride(small);
 
-    // Primi 6 byte preservati
+    // First 6 bytes preserved
     for (let i = 0; i < STRIDE_OFF; i++) {
       expect(small[i]).toBe(0xc7);
     }
@@ -117,7 +117,7 @@ describe("clearPlayfieldStride (FUN_12186)", () => {
     for (let i = STRIDE_OFF; i < STRIDE_OFF + STRIDE_CLEAR_BYTES && i < 100; i++) {
       expect(small[i]).toBe(0);
     }
-    // 78..99 (skip region entry 0) preservati
+    // 78..99 (skip region entry 0) preserved
     for (let i = STRIDE_OFF + STRIDE_CLEAR_BYTES; i < 100; i++) {
       expect(small[i]).toBe(0xc7);
     }

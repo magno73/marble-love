@@ -7,7 +7,7 @@
  *   2. Early return (frame_ctr < frames_per_step)
  *   3. Main frame advance (frame_ctr == frames_per_step)
  *   4. Sub-frame advance (state==2, anim_ptr in range, index > 9)
- *   5. Sub-frame: sub_frame_ctr == 1 → azz. + advance secondary_ptr
+ *   5. Sub-frame: sub_frame_ctr == 1 → clear + advance secondary_ptr
  *   6. Sub-frame: sub_frame_ctr != 1 → no secondary advance
  *   9. Sentinel + state 1: A2[+0x56] > 6 → anim 0x20FB6
  *  10. Sentinel + state 1: A2[+0x56] <= 6 → anim 0x20FD2
@@ -124,9 +124,9 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
       objectStateEntry25BAE: (_s, p, c) => ose25Calls.push({ objPtr: p, code: c }),
     });
 
-    // frame_ctr advanced by a 2 (1→2), but fps=5 > 2 → return early
+    // frame_ctr advanced to 2 (1→2), but fps=5 > 2 → return early
     expect(r[OBJ_OFF + 0x5f]).toBe(2);
-    // anim_ptr NOT advanced by
+    // anim_ptr NOT advanced
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr);
     expect(sounds).toHaveLength(0);
     expect(ose25Calls).toHaveLength(0);
@@ -170,7 +170,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     helper25FC2(state, rom, OBJ_ABS, {});
 
     expect(r[OBJ_OFF + 0x5f]).toBe(1);
-    expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr); // non advanced by
+    expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr); // not advanced
   });
 
   it("6. sub-frame advance: state==2, ptr in range, index > 9 → incr sub_frame_ctr", () => {
@@ -195,7 +195,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     // sub_frame_ctr: 3 → 4
     expect(r[OBJ_OFF + 0x66]).toBe(4);
-    // secondary_ptr NOT advanced by (sub_frame_ctr != 1)
+    // secondary_ptr NOT advanced (sub_frame_ctr != 1)
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtrBefore);
   });
 
@@ -219,7 +219,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     helper25FC2(state, rom, OBJ_ABS, {});
 
     expect(r[OBJ_OFF + 0x66]).toBe(0);
-    // secondary_ptr advanced by of 4
+    // secondary_ptr advanced by 4
     expect(readU32BE(r, OBJ_OFF + 0x62)).toBe(secPtr + 4);
   });
 
@@ -262,7 +262,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     r[OBJ_OFF + 0x5f] = 0x01;
     r[OBJ_OFF + 0x60] = 0x02; // fps = 2 → 2 > 2? No → advance
 
-    r[OBJ_OFF + 0x66] = 0xaa; // sub_frame_ctr pre (non in range sub-frame: index 8 <= 9)
+    r[OBJ_OFF + 0x66] = 0xaa; // sub_frame_ctr pre (not in sub-frame range: index 8 <= 9)
     r[OBJ_OFF + 0x67] = 0x00;
     writeU32BE(r, OBJ_OFF + 0x62, 0x00021000); // secondary_ptr pre
 
@@ -301,7 +301,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     });
 
     expect(ose25Calls).toHaveLength(0);
-    // anim_ptr advanced by of 4
+    // anim_ptr advanced by 4
     expect(readU32BE(r, OBJ_OFF + 0x5a)).toBe(animPtr + 4);
   });
 
@@ -313,7 +313,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const animPtr = 0x00020fe2;
     // advance: frame_ctr=1, fps=1 → advance → new_ptr=animPtr+4
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
-    setSentinel(rom, animPtr + 4); // il nuovo ptr punta a sentinel
+    setSentinel(rom, animPtr + 4); // the new ptr points to sentinel
 
     r[OBJ_OFF + 0x1a] = 0x01; // state = 1
     r[OBJ_OFF + 0x56] = 0x07; // step56 = 7 > 6 → highCount
@@ -446,7 +446,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     });
 
     expect(r[OBJ_OFF + 0x67]).toBe(0);
-    // obj_type impostato a 0x65
+    // obj_type set to 0x65
     expect(r[OBJ_OFF + 0x57]).toBe(0x65);
     expect(ose25Calls).toHaveLength(1);
     expect(ose25Calls[0]).toEqual({ objPtr: OBJ_ABS, code: 0x04 });
@@ -643,7 +643,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const rom = emptyRomImage();
     const r = state.workRam;
 
-    // anim_ptr == A1 → non > A1 → skip sub-frame
+    // anim_ptr == A1 → not > A1 → skip sub-frame
     writeU32BE(r, OBJ_OFF + 0x5a, ANIM_BASE_ROM);
     clearSentinel(rom, ANIM_BASE_ROM + 4);
 
@@ -654,7 +654,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     helper25FC2(state, rom, OBJ_ABS, {});
 
-    expect(r[OBJ_OFF + 0x66]).toBe(0); // sub_frame_ctr non toccato
+    expect(r[OBJ_OFF + 0x66]).toBe(0); // sub_frame_ctr untouched
   });
 
   it("25. sub-frame: non attivo se index <= 9", () => {
@@ -662,7 +662,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
     const rom = emptyRomImage();
     const r = state.workRam;
 
-    // index = 9: non > 9 → skip sub-frame
+    // index = 9: not > 9 → skip sub-frame
     const animPtr = ANIM_BASE_ROM + 9 * 4;
     writeU32BE(r, OBJ_OFF + 0x5a, animPtr);
     clearSentinel(rom, animPtr + 4);
@@ -692,7 +692,7 @@ describe("helper25FC2 (FUN_00025FC2)", () => {
 
     helper25FC2(state, rom, OBJ_ABS, {});
 
-    // 0xFF + 1 = 0x00, poi 5 > 0 (signed: both +ve) → early return
+    // 0xFF + 1 = 0x00, then 5 > 0 (signed: both +ve) → early return
     expect(r[OBJ_OFF + 0x5f]).toBe(0x00);
   });
 });

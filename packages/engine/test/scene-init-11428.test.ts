@@ -1,5 +1,5 @@
 /**
- * Test sceneInit11428 (FUN_00011428) — smoke tests on the orchestratore.
+ * Test sceneInit11428 (FUN_00011428) — smoke tests on the orchestrator.
  *
  * is preserved and default no-ops do not throw.
  *

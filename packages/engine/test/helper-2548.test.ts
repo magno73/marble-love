@@ -1,7 +1,7 @@
 /**
- * helper-2548.test.ts — smoke test per helper2548 (FUN_00002548).
+ * helper-2548.test.ts — smoke test for helper2548 (FUN_00002548).
  *
- * **Semantica**: LSR.W su *0x400006 (workRam[0x0006..0x0007]).
+ * **Semantics**: LSR.W on *0x400006 (workRam[0x0006..0x0007]).
  *
  * `packages/cli/src/test-helper-2548-parity.ts` vs Musashi.
  */
@@ -115,7 +115,7 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
 
     helper2548(s);
 
-    // Byte adiacenti intact
+    // Adjacent bytes intact
     expect(s.workRam[LSR_FLAG_OFF - 1]).toBe(0xa5);
     expect(s.workRam[LSR_FLAG_OFF + 2]).toBe(0xa5);
     expect(s.workRam[0x0100]).toBe(0xa5);
@@ -123,10 +123,10 @@ describe("helper2548 (FUN_00002548) — smoke", () => {
 
   it("simulazione spin-wait: 8 bit of 0x00FF consumed correttamente", () => {
     const s = emptyGameState();
-    // 0x00FF = 0b11111111: 8 × bit-1 in posizioni 0..7
+    // 0x00FF = 0b11111111: 8 × bit-1 in positions 0..7
     writeWordBE(s.workRam, LSR_FLAG_OFF, 0x00ff);
 
-    // Le prime 8 call alternano: bit0=1, poi shift rivela bit1=1, etc.
+    // The first 8 calls alternate: bit0=1, then shift reveals bit1=1, etc.
     for (let i = 0; i < 8; i++) {
       expect(helper2548(s)).toBe(1);
     }

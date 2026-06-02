@@ -36,7 +36,7 @@ describe("disableInterrupts10110 (FUN_00010110, 6 byte)", () => {
   it("SR_IPL7_SUPERVISOR: bit 13 (supervisor) and bit 10-8 (IPL=7) settati", () => {
     // bit 13 = 0x2000 (supervisor mode)
     expect(SR_IPL7_SUPERVISOR & 0x2000).toBe(0x2000);
-    // bit 10-8 = 0x0700 (IPL = 7)
+    // bits 10-8 = 0x0700 (IPL = 7)
     expect(SR_IPL7_SUPERVISOR & 0x0700).toBe(0x0700);
     expect(SR_IPL7_SUPERVISOR & 0x001f).toBe(0x0000);
   });

@@ -39,11 +39,11 @@
  *   00028752  move.l   d0, -(a7)                 ; push tickOff long
  *   00028754  move.b   d2, d0                    ; D0.b = ordinal
  *   00028756  ext.w    d0                        ; sext byte → word
- *   00028758  movea.l  #$23d3c, a0               ; A0 = ROM with the-table
+ *   00028758  movea.l  #$23d3c, a0               ; A0 = ROM column table
  *   0002875E  move.b   (a0, d0.w), d0            ; D0.b = table[ordinal]
  *   00028762  ext.w    d0                        ; sext byte → word
  *   00028764  ext.l    d0                        ; sext word → long
- *   00028766  move.l   d0, -(a7)                 ; push with the long
+ *   00028766  move.l   d0, -(a7)                 ; push column long
  *   00028768  pea.l    (a2)                      ; push 0x400434
  *   0002876A  jsr      $13c.l                    ; → FUN_255A (struct init)
  *   00028770  move.w   d3, d0                    ; D0 = attr
@@ -59,7 +59,7 @@
  *   - SP+0x10 : arg1 long (slotAddr, absolute M68k address in workRam)
  *   - SP+0x14 : arg2 long; LSB @ SP+0x17 → D2.b = ordinal byte
  *
- * **Step semantici**:
+ * **Step semantics**:
  *
  *         value=sext_l(score), bufEnd=*(0x400436), fmtMode='d'(0x64),
  *         width=1, fillExtra=2.
@@ -71,15 +71,15 @@
  *         else         → 1
  *         entryPtr=0x400434, attrLong=sext_l(attrWord).
  *
- * **ROM with the-table @ 0x23D3C** (8 byte, ordinal 0..7):
- *   ordinal 0 → with the 0x13 (19)
- *   ordinal 1 → with the 0x0D (13)
- *   ordinal 2 → with the 0x19 (25)
- *   ordinal 3 → with the 0x13 (19)
- *   ordinal 4 → with the 0x30 (48)
- *   ordinal 5 → with the 0x00 (0)
- *   ordinal 6 → with the 0x2C (44)
- *   ordinal 7 → with the 0x00 (0)
+ * **ROM column table @ 0x23D3C** (8 byte, ordinal 0..7):
+ *   ordinal 0 → column 0x13 (19)
+ *   ordinal 1 → column 0x0D (13)
+ *   ordinal 2 → column 0x19 (25)
+ *   ordinal 3 → column 0x13 (19)
+ *   ordinal 4 → column 0x30 (48)
+ *   ordinal 5 → column 0x00 (0)
+ *   ordinal 6 → column 0x2C (44)
+ *   ordinal 7 → column 0x00 (0)
  *
  * **JSR sub injection**:
  *   - `FUN_255A` (struct init): replicated inline (3 byte writes, deterministic).
@@ -87,7 +87,7 @@
  *
  * **Side effects in workRam** (struct @ 0x400434):
  *   1. `*(0x400436)` buffer written by `FUN_3874` with ASCII digits + null.
- *   2. `workRam[0x434] = with the`        (byte from ROM table)
+ *   2. `workRam[0x434] = column`        (byte from ROM table)
  *   3. `workRam[0x435] = tickOff`    (0 or 1 from ordinal)
  *   4. `workRam[0x43A] = 0`          (marker clear)
  *   5. call `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
@@ -107,7 +107,7 @@ export const ENTRY_ABS_ADDR = 0x00400434 as const;
 /** Offset entry in `state.workRam` (= ENTRY_ABS_ADDR - 0x400000). */
 export const ENTRY_OFF = 0x434 as const;
 
-/** Offset workRam: with the byte (entry[0]). */
+/** Offset workRam: column byte (entry[0]). */
 export const COL_BYTE_OFF = 0 as const;
 /** Offset workRam: tickOff byte (entry[1]). */
 export const TICKOFF_BYTE_OFF = 1 as const;
@@ -128,9 +128,9 @@ export const FMT_WIDTH = 1 as const;
 /** FillExtra (2) passed to FUN_3874. */
 export const FMT_FILL_EXTRA = 2 as const;
 
-/** Attr word per ordinal == 2. */
+/** Attr word for ordinal == 2. */
 export const ATTR_ORDINAL_2 = 0x2c00 as const;
-/** Attr word per ordinal == 3. */
+/** Attr word for ordinal == 3. */
 export const ATTR_ORDINAL_3 = 0x3400 as const;
 /** Attr word default (ordinal != 2 and != 3). */
 export const ATTR_DEFAULT = 0x2800 as const;
@@ -182,9 +182,9 @@ function sextWordToLong(w: number): number {
 // ─── Sub injection ────────────────────────────────────────────────────────
 
 /**
- * Stub injection per le due JSR esterne.
+ * Stub injection for the two external JSRs.
  *
- * iniettare). `FUN_3874` and `FUN_3520` are sub-call esterne.
+ * (injectable). `FUN_3874` and `FUN_3520` are external sub-calls.
  */
 export interface RenderString286EESubs {
   /**
@@ -193,7 +193,7 @@ export interface RenderString286EESubs {
    * `bufEnd` (the long @ workRam[0x436]), with `fmtMode='d'`, `width=1`,
    * `fillExtra=2`.
    *
-   *   - `bufEnd`     : `*(0x400436)` long-BE — pointer al buffer destination.
+   *   - `bufEnd`     : `*(0x400436)` long-BE — pointer to the destination buffer.
    *   - `fmtMode`    : 0x64 long ('d', decimal). Hardcoded.
    *   - `width`      : 1 long. Hardcoded.
    *   - `fillExtra`  : 2 long. Hardcoded.
@@ -213,7 +213,7 @@ export interface RenderString286EESubs {
    * `FUN_3520` (via trampoline 0x200) — renderStringChain2.
    *
    *
-   *   - `entryPtr` : 0x400434 (costante).
+   *   - `entryPtr` : 0x400434 (constant).
    *   - `attrLong` : sext_l(attrWord) — attr word sign-extended.
    *
    * Default: no-op.
@@ -228,17 +228,17 @@ export interface RenderString286EESubs {
  * Invokes renderStringChain2 through a stub.
  *
  * @param state     GameState (mutated in place: workRam[0x434..0x43A]).
- * @param rom       RomImage (for the with the-lookup table @ 0x23D3C).
+ * @param rom       RomImage (for the column-lookup table @ 0x23D3C).
  *                  "score" word of the object struct (typically
  *                  `objectSlotAddr(i) + 0x6a` = `0x400018 + i*0xE2 + 0x6a`).
  * @param ordinal   arg2 long: player ordinal (typically `playerCount + i - 1`);
- * @param subs      Stub injection per `numberFormatter` and `renderStringChain2`.
+ * @param subs      Stub injection for `numberFormatter` and `renderStringChain2`.
  *                  Default: both no-op.
  *
  * **Side effects in `state.workRam`** (struct @ offset 0x434):
  *   1. `*(bufEndPtr)..*(bufEndPtr+N)` ← ASCII digits + null (via numberFormatter).
  *      `bufEndPtr = readLongBE(workRam, 0x436)`.
- *   2. `workRam[0x434]` ← with the byte (ROM table @ 0x23D3C indexed by ordinal LSB).
+ *   2. `workRam[0x434]` ← column byte (ROM table @ 0x23D3C indexed by ordinal LSB).
  *   4. `workRam[0x43A]` ← 0 (marker clear).
  *   5. invocation `subs.renderStringChain2(0x400434, sext_l(attrWord))`.
  */
@@ -297,7 +297,7 @@ export function renderString286EE(
   // cmpi.b #3, D2; beq; moveq #1, D0; bra; moveq #0, D0
   const tickOff = ordinalByte === 3 ? 0 : 1;
 
-  // Step 5: read with the from ROM with the-table @ 0x23D3C + ordinal.
+  // Step 5: read column from ROM column table @ 0x23D3C + ordinal.
   // move.b D2, D0; ext.w D0; movea.l #0x23D3C, A0
   // move.b (A0, D0.w), D0 — D0.w is sext of ordinalByte
   // The m68k `(A0, D0.w)` uses D0.w sign-extended to compute offset.
@@ -306,7 +306,7 @@ export function renderString286EE(
   // Then move.b (A0, D0.w): uses the sign-extended WORD as displacement.
   // For ordinal 0..7 (typical), ordinalSext = ordinal (positive).
   const colByte = readRomByte(rom, (COL_TABLE_ROM_ADDR + ordinalSext) >>> 0);
-  // ext.w D0; ext.l D0: sext the with the byte to long
+  // ext.w D0; ext.l D0: sext the column byte to long
   const colLong = sextByte(colByte); // sext byte → signed number
   // The binary pushes D0 (long), FUN_255A reads (0xB,SP).b = low byte = colByte & 0xff
 
@@ -316,7 +316,7 @@ export function renderString286EE(
   //   move.l col_long, -(SP)      → no — actually read disasm again:
   //
   // 00028752: move.l D0, -(SP)   (D0 = tickOff long at this point)
-  // 00028766: move.l D0, -(SP)   (D0 = with the long after sext)
+  // 00028766: move.l D0, -(SP)   (D0 = column long after sext)
   // 00028768: pea.l (A2)         (A2 = 0x400434)
   // 0002876A: jsr 0x13C
   //
@@ -341,5 +341,5 @@ export function renderString286EE(
   subs?.renderStringChain2?.(ENTRY_ABS_ADDR, attrLong);
 }
 
-/** Re-export of the simbolo as "FUN_000286EE" per cross-reference. */
+/** Re-export of the symbol as "FUN_000286EE" for cross-reference. */
 export { renderString286EE as FUN_000286EE };

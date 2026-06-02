@@ -3,7 +3,7 @@
  *
  * Extracted from Musashi (MIT, https://github.com/kstenerud/Musashi)
  * @ commit `313ebf1bd9f4d0d93341eb5ce21fd8a119e9dbdd` (tip 2026-05-11):
- *   - opcode cycles: `m68k_in.c` colonna `010`
+ *   - opcode cycles: `m68k_in.c` column `010`
  *   - EA cycle table: `m68kmake.c` `g_ea_cycle_table[..][1][..]`
  *   - JSR/JMP/LEA/PEA/MOVEM EA extras: matching tables in `m68kmake.c`
  *   - movem per-register / bcc-notake / dbcc-noexp: `m68kcpu.c` `case
@@ -14,7 +14,7 @@
  *
  * Covers only the instructions that dominate body cost: MOVEM (prologue/
  * epilogue), JSR/RTS/LINK/UNLK, MOVE/MOVE.L with EA, MULS/MULU/DIVS/DIVU,
- * Bcc/DBcc, BCLR/BSET/BTST, and una manciata of ALU common.
+ * Bcc/DBcc, BCLR/BSET/BTST, and a handful of common ALU.
  *
  * License Musashi: MIT (Karl Stenerud).
  */
@@ -254,7 +254,7 @@ export const moveDstBase: Readonly<
   Imm: { b_w: as_u32(0), l: as_u32(0) }, // illegal dst
 };
 
-// ─── Moltiplicazione / Divisione 16-bit (peso significativo) ──────────────
+// ─── 16-bit Multiply / Divide (significant weight) ────────────────────────
 
 /**
  * MULS.W / MULU.W: 68010 accelerates these vs 68000.
@@ -280,12 +280,12 @@ export const CYC_DIVU_W = as_u32(108);
  * 68010 cycles per BCLR/BSET/BTST. On the 010, BCLR takes 10 cycles with a
  * memory destination (Musashi L469), while the others take 8/12 (see tables).
  *
- * Forme:
+ * Forms:
  *  - r (Dn source bit number), dest=Dn 32-bit: BCLR=10, BSET=8, BTST=6
  *  - r, dest=mem 8-bit:                        BCLR=10, BSET=8, BTST=4
  *  - s (imm bit number), dest=Dn 32-bit:       BCLR=14, BSET=12, BTST=10
  *  - s, dest=mem 8-bit:                        BCLR=12, BSET=12, BTST=8
- * Si adds `eaCycles[ea].b_w` per dest mem.
+ * Add `eaCycles[ea].b_w` for a memory destination.
  */
 export const CYC_BCLR_R_D = as_u32(10);
 export const CYC_BCLR_R_M = as_u32(10);
@@ -492,7 +492,7 @@ export function estimateCycles(instr: InstrEstimate): u32 {
     }
     case "dbcc": {
       // Base 12 = "cond false, decrement, branch". For the cycle counting body:
-      //   cond_false_loop  : 12  (iter normale)
+      //   cond_false_loop  : 12  (normal iteration)
       //   cond_false_expire: 12 + 6 = 18  (counter==-1)
       //   cond_true        : 12 + 0 = 12  (Musashi: cyc_dbcc_f_noexp=0)
       if (instr.outcome === "cond_false_expire") {

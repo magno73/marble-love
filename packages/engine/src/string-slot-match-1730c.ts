@@ -23,7 +23,7 @@
  *   ; epilog:
  *   0001733c   move.b  D2b, D0b
  *   0001733e   ext.w   D0w
- *   00017340   ext.l   D0                     ; D0 = sign-extend of D2.b (0 o 1)
+ *   00017340   ext.l   D0                     ; D0 = sign-extend of D2.b (0 or 1)
  *   00017342   move.l  (SP)+, D2              ; restore D2
  *   00017344   rts
  *
@@ -72,17 +72,17 @@ function readU32BE(state: GameState, off: number): number {
 /**
  *
  *
- *                 il long a `argPtr+0x2`.
- * @param _subs    placeholder (FUN_1730C non ha JSR).
+ *                 the long at `argPtr+0x2`.
+ * @param _subs    placeholder (FUN_1730C has no JSR).
  *
- * palette / sprite / alpha RAM are invariati.
+ * palette / sprite / alpha RAM are unchanged.
  */
 export function stringSlotMatch1730C(
   state: GameState,
   argPtr: number,
   _subs?: StringSlotMatch1730CSubs,
 ): number {
-  // *(argPtr + 0x2) long — ID candidato.
+  // *(argPtr + 0x2) long — candidate ID.
   const argOff = ((argPtr - WORK_RAM_BASE) >>> 0) + ARG_ID_LONG_OFF;
   const targetId = readU32BE(state, argOff);
 

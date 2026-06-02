@@ -1,5 +1,5 @@
 /**
- * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests on the orchestratore
+ * Test objectScanDispatch251DE (FUN_000251DE) — smoke tests on the orchestrator
  *
  * count = `*0x400396`), for each obj: skip if +0x18==0 (D2++), gate
  * +0x6A.w > 400 -> FUN_2822E, run FUN_253EC, then group state==2 (D2++)
@@ -56,7 +56,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     objectScanDispatch251DE(s, STUB_ROM, subs);
 
     expect(calls).toEqual(["1BBAA"]);
-    // Post-loop: D3=0 == count=0 → setFlag → *0x400390 = 3 (pre era ≠ 1).
+    // Post-loop: D3=0 == count=0 → setFlag → *0x400390 = 3 (pre was ≠ 1).
     expect(readU16BE(s.workRam, 0x390)).toBe(3);
   });
 
@@ -133,7 +133,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     s.workRam[obj0 + 0x1a] = 0;
     // 0x6A = 100 (≤ 0x190, no FUN_2822E)
     writeU16BE(s.workRam, obj0 + 0x6a, 100);
-    // 0xD2 word pre = 0x0010 (per check increment)
+    // 0xD2 word pre = 0x0010 (to check the increment)
     writeU16BE(s.workRam, obj0 + 0xd2, 0x0010);
 
     // Obj1: state=3 (skipped in filter, just D3++)
@@ -190,7 +190,7 @@ describe("objectScanDispatch251DE (FUN_000251DE)", () => {
     const _285b0 = calls.find((c) => c.name === "285B0")!;
     expect(_285b0.args).toEqual([WORK_RAM_BASE + obj0, 0x0000000f]);
 
-    // Scritture chiave in the respawn block:
+    // Key writes in the respawn block:
     // A2[+0xC] = (0xAABBCCDD << 16) >>> 0 = 0xCCDD0000
     expect(
       (((s.workRam[obj0 + 0x0c] ?? 0) << 24) |

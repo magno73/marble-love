@@ -37,7 +37,7 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     slapsticTableStore(buf, SLAPSTIC_BASE, 0);
 
     expect(readDstWord(buf, 0)).toBe(0xea39);
-    // Le altre entry restano 0.
+    // The other entries stay 0.
     expect(readDstWord(buf, 1)).toBe(0);
     expect(readDstWord(buf, 2)).toBe(0);
     expect(readDstWord(buf, 3)).toBe(0);
@@ -107,8 +107,8 @@ describe("slapsticTableStore (FUN_2FF40)", () => {
     const before = new Uint8Array(buf);
 
     // index=0x8000: doubled=0 (16-bit add wraps), signExt=0 → dst=DST_BASE.
-    const smallBuf = new Uint8Array(0x100); // troppo piccolo
-    setSrcWord(smallBuf, 0xface); // off-by-bound, but non fa throw
+    const smallBuf = new Uint8Array(0x100); // too small
+    setSrcWord(smallBuf, 0xface); // off-by-bound, but does not throw
     expect(() => slapsticTableStore(smallBuf, SLAPSTIC_BASE, 0)).not.toThrow();
     void before;
   });

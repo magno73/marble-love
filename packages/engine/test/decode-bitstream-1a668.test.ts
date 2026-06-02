@@ -2,8 +2,8 @@
  * decode-bitstream-1a668.test.ts — smoke test of FUN_0001A668.
  *
  * Bit-perfect parity vs binary in
- * `packages/cli/src/test-decode-bitstream-1a668-parity.ts`. Qui copriamo i 5
- * path principali (A, B, C, D, E) and the edge case (cache reload, A3 advance,
+ * `packages/cli/src/test-decode-bitstream-1a668-parity.ts`. Here we cover the 5
+ * main paths (A, B, C, D, E) and the edge cases (cache reload, A3 advance,
  * output overshoot) without Musashi.
  */
 
@@ -29,7 +29,7 @@ function setBytes(s: GameState, off: number, bytes: number[]): void {
   }
 }
 
-/** Setup ctrl stream long-aligned ad un offset, scrivendo `longs` as 32-bit BE. */
+/** Setup ctrl stream long-aligned at an offset, writing `longs` as 32-bit BE. */
 function setLongs(s: GameState, off: number, longs: number[]): void {
   for (let i = 0; i < longs.length; i++) {
     const v = longs[i]! >>> 0;
@@ -90,12 +90,12 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     const extAbs = WORK_RAM_BASE + 0x300;
     // Token1: bit 13 set + low bits 0x010.
     //   14-bit token = 0x2010. After bclr #13 -> 0x10. asr.w #1 -> 0x8.
-    //   bit 0 era 0 → carry CLEAR → D6 NOT aggiornato.
-    //   add D3 = 0x1500 (da extra stream 0x15) → out = 0x1508.
+    //   bit 0 was 0 → carry CLEAR → D6 NOT updated.
+    //   add D3 = 0x1500 (from extra stream 0x15) → out = 0x1508.
     // Token2..onwards: zero -> path B (consecutive). D6 starts from 0 (never
     //   updated in path A because token bit 0 was 0).
     // Long ctrl @ +0: bit 31..18 = 10 0000 0001 0000 → 0x80400000.
-    //   bit 17..0 = zero. Quindi long = 0x80400000.
+    //   bit 17..0 = zero. So long = 0x80400000.
     setLongs(s, 0x200, [0x80400000, 0x00000000, 0x00000000]);
     setBytes(s, 0x300, [0xff, 0x15]);
 
@@ -104,7 +104,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     // Out[0] = 0x8 + 0x1500 = 0x1508 (path A, single literal).
     expect(readOutWord(s, 0x100, 0)).toBe(0x1508);
     // Out[1..35] from path B: D6 was 0, not updated after path A (bit 0 = 0).
-    //   Ogni path B iter D6++ → 1, 2, 3, ... 35. Output = D6 + 0x1500.
+    //   Each path B iter D6++ → 1, 2, 3, ... 35. Output = D6 + 0x1500.
     for (let i = 1; i < OUTPUT_LEN_WORDS; i++) {
       expect(readOutWord(s, 0x100, i)).toBe((i + 0x1500) & 0xffff);
     }
@@ -155,7 +155,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
 
     // Out[0] = ROM_table1[1] + 0x2000 = 0xA001 + 0x2000 = 0xC001.
     expect(readOutWord(s, 0x100, 0)).toBe(0xc001);
-    // Path C consuma 9 bit. d4 = 9. No bit 4 (9 = 0b1001). a3 NOT advanced.
+    // Path C consumes 9 bits. d4 = 9. No bit 4 (9 = 0b1001). a3 NOT advanced.
     // Iter 2: d4=9, d1Shift = 18-9 = 9. asr.l 9 → 0x70c00000 >> 9 = 0x386000.
     //   token = 0x6000 & 0x3FFF = 0x2000. bit 13 set! Path A.
     //   D5 = 0x2000 ^ bit13 = 0. asr.w #1 → 0. carry = 0 (LSB was 0).
@@ -262,7 +262,7 @@ describe("decodeBitstream1A668 (FUN_0001A668)", () => {
     // Ctrl: zero → path B (1 output per iter). Output: 36 word = 72 byte = 0x48.
     // Ctrl region zeroed (default).
     setBytes(s, 0x300, [0xff, 0x00]);
-    // Snapshot of tutta workRam pre-call.
+    // Snapshot of the entire workRam pre-call.
     const before = new Uint8Array(s.workRam);
 
     decodeBitstream1A668(s, rom, outAbs, ctrlAbs, extAbs);

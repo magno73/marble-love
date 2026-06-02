@@ -1,5 +1,5 @@
 /**
- * Test objectStep17F66 (FUN_17F66) — smoke tests sui branches principali.
+ * Test objectStep17F66 (FUN_17F66) — smoke tests on the main branches.
  *
  */
 
@@ -56,7 +56,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     expect(MODE_5_FLOOR).toBe(4);
     expect(STUCK_DELTA).toBe(-0x6000);
     expect(STUCK_CLAMP).toBe(0xfffb0000);
-    // Whitelist ha exactly 10 byte ammessi.
+    // Whitelist has exactly 10 allowed bytes.
     expect(COMMAND_WHITELIST.size).toBe(10);
     for (const v of [0x00, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x38, 0x39, 0x3a, 0x3b]) {
       expect(COMMAND_WHITELIST.has(v)).toBe(true);
@@ -197,16 +197,16 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     const { callees } = makeCallees();
     objectStep17F66(s, A2_ADDR, callees);
 
-    // d3 iniz = 5632; asr.l #8 = 22; muls.w D1w (D1=-33) = -726; asl.l #3 = -5808.
+    // d3 init = 5632; asr.l #8 = 22; muls.w D1w (D1=-33) = -726; asl.l #3 = -5808.
     expect(readU32BE(s.workRam, A2_OFF + 0x00)).toBe(-5808 >>> 0);
-    // d2 iniz = -5632; asr.l #8 = -22 (signed); muls.w (-33) = 726; asl.l #3 = 5808.
+    // d2 init = -5632; asr.l #8 = -22 (signed); muls.w (-33) = 726; asl.l #3 = 5808.
     expect(readU32BE(s.workRam, A2_OFF + 0x04)).toBe(5808 >>> 0);
   });
 
   it("stuck path: state36==2 bypass whitelist; (8,A2) post-addi >= -0x50000 → no clamp", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0x2d; // whitelist match (irrilevante: state36==2 bypass)
+    s.workRam[A2_OFF + 0x58] = 0x2d; // whitelist match (irrelevant: state36==2 bypass)
     s.workRam[A2_OFF + 0x36] = 2;
     writeU32BE(s.workRam, A2_OFF + 0x08, 0x00010000);
 
@@ -222,9 +222,9 @@ describe("objectStep17F66 (FUN_17F66)", () => {
   it("stuck path: post-addi value < -0x50000 signed → clamp 0xFFFB0000", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0x80; // NOT in whitelist (irrilevante per clamp ora)
+    s.workRam[A2_OFF + 0x58] = 0x80; // NOT in whitelist (irrelevant for clamp now)
     s.workRam[A2_OFF + 0x36] = 1;
-    // Inizia molto negativo: -0x4FFFF + ulteriore -0x6000 = -0x55FFF < -0x50000 → clamp.
+    // Starts very negative: -0x4FFFF plus a further -0x6000 = -0x55FFF < -0x50000 → clamp.
     writeU32BE(s.workRam, A2_OFF + 0x08, (-0x4ffff) >>> 0);
 
     const { callees, log } = makeCallees();
@@ -238,9 +238,9 @@ describe("objectStep17F66 (FUN_17F66)", () => {
   it("stuck path: post-addi >= -0x50000 → NESSUN clamp (also con cmd bit7 set)", () => {
     const s = emptyGameState();
     s.workRam[A2_OFF + 0x18] = 0;
-    s.workRam[A2_OFF + 0x58] = 0xff; // bit7 set but irrilevante (la logica e' cmpi.l)
+    s.workRam[A2_OFF + 0x58] = 0xff; // bit7 set but irrelevant (the logic is cmpi.l)
     s.workRam[A2_OFF + 0x36] = 1;
-    // Inizia 0 → post-addi = -0x6000. -0x6000 >= -0x50000 → no clamp.
+    // Starts at 0 → post-addi = -0x6000. -0x6000 >= -0x50000 → no clamp.
     writeU32BE(s.workRam, A2_OFF + 0x08, 0);
 
     const { callees } = makeCallees();
@@ -261,7 +261,7 @@ describe("objectStep17F66 (FUN_17F66)", () => {
     const r = objectStep17F66(s, A2_ADDR, callees);
 
     expect(r.path).toBe("stuck");
-    // (8,A2) inalterato.
+    // (8,A2) unchanged.
     expect(readU32BE(s.workRam, A2_OFF + 0x08)).toBe(0xcafef00d);
     expect(log).toEqual([{ kind: "26196", arg: A2_ADDR }]);
   });

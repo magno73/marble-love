@@ -1,7 +1,7 @@
 /**
- * string-viewport-hit-175c8.test.ts — smoke tests per `stringViewportHit175C8`.
+ * string-viewport-hit-175c8.test.ts — smoke tests for `stringViewportHit175C8`.
  *
- * Bit-perfect parity validata vs binary in
+ * Bit-perfect parity validated vs binary in
  * `packages/cli/src/test-string-viewport-hit-175c8-parity.ts`.
  */
 
@@ -76,15 +76,15 @@ interface SetupArgs {
   gameMode: number;
   marbleX: number;
   marbleY: number;
-  /** index per slot a "armare" (active=1). Lasciato vuoto → all inattivi. */
+  /** indexes of slots to "arm" (active=1). Left empty → all inactive. */
   activeSlots?: number[];
-  /** mappa idx → posizione (slotX, slotY). */
+  /** map idx → position (slotX, slotY). */
   slotPos?: Record<number, { x: number; y: number }>;
-  /** mappa idx → bbox addr (default sentinel). */
+  /** map idx → bbox addr (default sentinel). */
   slotBboxAddr?: Record<number, number>;
-  /** mappa addr → 4 byte signed bbox. */
+  /** map addr → 4 signed bbox bytes. */
   bboxes?: Record<number, { xMin: number; yMin: number; w: number; h: number }>;
-  /** mappa idx → byte scriptId (default 0). */
+  /** map idx → scriptId byte (default 0). */
   scriptId?: Record<number, number>;
 }
 
@@ -155,7 +155,7 @@ describe("stringViewportHit175C8 (FUN_000175C8)", () => {
   it("game-mode != {2,5} → early-exit, returns 0, niente scritture", () => {
     const s = emptyGameState();
     const objAddr = 0x401c00;
-    s.workRam.fill(0xaa); // pattern per rilevare scritture
+    s.workRam.fill(0xaa); // pattern to detect writes
     setupChain({
       s,
       gameMode: 4, // NOT 2, NOT 5

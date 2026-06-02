@@ -124,7 +124,7 @@ describe("flagScaledMagnitudeDispatch (FUN_26196)", () => {
     expect(selectMagnitude(0x00)).toBe(MAGNITUDE_FLAG_CLEAR);
     expect(selectMagnitude(0x01)).toBe(MAGNITUDE_FLAG_SET);
     expect(selectMagnitude(0xff)).toBe(MAGNITUDE_FLAG_SET);
-    // Solo i low 8 bit contano (mask & 0xFF):
+    // Only the low 8 bits count (mask & 0xFF):
     expect(selectMagnitude(0x100)).toBe(MAGNITUDE_FLAG_CLEAR);
     expect(selectMagnitude(0x1ff)).toBe(MAGNITUDE_FLAG_SET);
   });

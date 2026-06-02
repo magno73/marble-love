@@ -1,8 +1,8 @@
 /**
  * field-fetch-4058.test.ts — smoke tests of `fieldFetch4058` (FUN_4058).
  *
- * Verifica the 4 path of ritorno + invarianti chiave + bit-perfectness of the
- * sign-ext of the costante ROM and of the addressing record.
+ * Verifies the 4 return paths + key invariants + bit-perfectness of the
+ * sign-ext of the ROM constant and of the record addressing.
  *
  * Bit-perfect parity (500 random cases) verified in
  * `packages/cli/src/test-field-fetch-4058-parity.ts` vs Musashi.
@@ -27,13 +27,13 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
   ram[off + 3] = val & 0xff;
 }
 
-/** ROM[0x1006F] = 0xE3 -> sign-ext-long & 7 = 3. Marble program reale. */
+/** ROM[0x1006F] = 0xE3 -> sign-ext-long & 7 = 3. Real Marble program. */
 const ROM_BYTE_REAL = 0xe3;
 
 describe("fieldFetch4058 (FUN_4058)", () => {
   it("path #1: arg2 > 0x12 -> ret -1 (RET_OFFSET_OOR)", () => {
     const s = emptyGameState();
-    // Pointer dentro workRam, struct base = 0x401D00 + 0x50 = 0x401D50.
+    // Pointer inside workRam, struct base = 0x401D00 + 0x50 = 0x401D50.
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
     // Even with valid arg1, arg2 > 0x12 always returns -1.
     expect(fieldFetch4058(s, 0, 0x13, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);
@@ -47,7 +47,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
     // ROM_BYTE_REAL = 0xE3 -> D4 = 3. arg1=3,4,5,... -> ret -2.
     expect(fieldFetch4058(s, 3, 0, ROM_BYTE_REAL)).toBe(RET_INDEX_OOR);
     expect(fieldFetch4058(s, 7, 0x12, ROM_BYTE_REAL)).toBe(RET_INDEX_OOR);
-    // Con romByte = 0x00 (D4 = 0), qualsiasi arg1 e' OOR.
+    // With romByte = 0x00 (D4 = 0), any arg1 is OOR.
     expect(fieldFetch4058(s, 0, 0, 0x00)).toBe(RET_INDEX_OOR);
   });
 
@@ -85,7 +85,7 @@ describe("fieldFetch4058 (FUN_4058)", () => {
   it("priorita' check: arg2 > 0x12 vince even if arg1 e' outside range", () => {
     // The binary checks arg2 > 0x12 first (set D3=1), then arg1 vs D4
     // (skipped by bne). Therefore arg2 > 0x12 always forces ret -1 even if
-    // arg1 e' also lui invalido.
+    // arg1 is also invalid.
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, 0x401d00);
     expect(fieldFetch4058(s, 99, 0x13, ROM_BYTE_REAL)).toBe(RET_OFFSET_OOR);

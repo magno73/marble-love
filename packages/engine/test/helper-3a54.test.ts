@@ -1,11 +1,11 @@
 /**
- * helper-3a54.test.ts — smoke test per helper3A54 (FUN_3A54).
+ * helper-3a54.test.ts — smoke test for helper3A54 (FUN_3A54).
  *
- * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal string
- * ASCII in memory, usando BCD packed as intermediario (via FUN_3A6A) e
+ * `FUN_00003A54` (27 instructions): formats a 32-bit value as a decimal ASCII
+ * string in memory, using packed BCD as an intermediate (via FUN_3A6A) and
  * then writing with FUN_3A08.
  *
- * Bit-perfect parity verificata vs binary in
+ * Bit-perfect parity verified vs binary in
  * `packages/cli/src/test-helper-3a54-parity.ts` (500/500).
  */
 
@@ -24,7 +24,7 @@ function readByte(state: ReturnType<typeof emptyGameState>, addr: number): numbe
   return state.workRam[addr - WR_BASE] ?? 0;
 }
 
-/** Legge `n` byte a partire da `addr` as stringa leggibile. */
+/** Reads `n` bytes starting at `addr` as a readable string. */
 function readStr(
   state: ReturnType<typeof emptyGameState>,
   addr: number,

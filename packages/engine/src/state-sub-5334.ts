@@ -8,7 +8,7 @@
  *             signExt32(byte @ 0x401F99),    // arg2 (long)
  *             argLong )                      // arg3 (long, pass-through)
  *
- * non ha link-frame proprio).
+ * has no link-frame of its own).
  *
  * **Disasm 0x5334..0x535D** (42 byte = 0x2A):
  *
@@ -53,10 +53,10 @@ export const ARG1_BYTE_ADDR = 0x00401f98 as const;
 
 export const ARG2_BYTE_ADDR = 0x00401f99 as const;
 
-// ─── Tipi ────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────
 
 /**
- * Signature of the callee `FUN_000052DA`. Riceve 3 long unsigned (0..0xFFFFFFFF):
+ * Signature of the callee `FUN_000052DA`. Receives 3 unsigned longs (0..0xFFFFFFFF):
  *   - `arg1` = signExt32 of the byte @ 0x401F98
  *   - `arg2` = signExt32 of the byte @ 0x401F99
  *   - `arg3` = argLong pass-through from the caller of FUN_5334
@@ -94,14 +94,14 @@ function signExtByteToU32(b: number): number {
 
 /**
  *
- *                 as arg3 a `inner`.
+ *                 as arg3 to `inner`.
  * @param inner    Callback that models `FUN_00005334`'s callee `FUN_000052DA`.
  *
  * Note of low-level fidelity:
- *     of the `ext.w`/`ext.l` M68k.
- *     indipendenti.
- *     exactly that of `inner` (clamped a uint32).
- *     D2..D7 / A2..A6 beyond a those of the callee).
+ *     of the M68k `ext.w`/`ext.l`.
+ *     independent.
+ *     exactly that of `inner` (clamped to uint32).
+ *     D2..D7 / A2..A6 beyond those of the callee).
  */
 export function stateSub5334(
   state: GameState,
@@ -114,7 +114,7 @@ export function stateSub5334(
   const byte98 = state.workRam[off98] ?? 0;
   const byte99 = state.workRam[off99] ?? 0;
 
-  // Sign-extend byte → unsigned32 (rispetta `ext.w`/`ext.l` M68k).
+  // Sign-extend byte → unsigned32 (matches the M68k `ext.w`/`ext.l`).
   const arg1 = signExtByteToU32(byte98);
   const arg2 = signExtByteToU32(byte99);
   const arg3 = argLong >>> 0;

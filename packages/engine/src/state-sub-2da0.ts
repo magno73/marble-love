@@ -126,8 +126,8 @@ function clearAlphaWord(state: GameState, addr: number): void {
 
 /**
  *
- * @param arg1Long pointer a struct (long): with the@+0, tickOff@+1, stringPtr_long@+2.
- * @param _subs    placeholder (FUN_2DA0 non ha jsr).
+ * @param arg1Long pointer to a struct (long): col@+0, tickOff@+1, stringPtr_long@+2.
+ * @param _subs    placeholder (FUN_2DA0 has no jsr).
  *
  * **Side effects** in `state.alphaRam`:
  */
@@ -161,7 +161,7 @@ export function stateSub2DA0(
     d3 = (tickOffSigned << 6) | 0;
   }
 
-  // D0 = sext_l(byte @ A0)  (with the, signed)
+  // D0 = sext_l(byte @ A0)  (column, signed)
   const colByte = readByteAbs(state, rom, a0);
   const colSigned = colByte & 0x80 ? colByte - 0x100 : colByte;
 
@@ -169,7 +169,7 @@ export function stateSub2DA0(
   let d0 = (colSigned + argByte) | 0;
 
   // D1 = rotation, ext to long, *2
-  // Notare: move.w + ext.l → sign-extend of the word.
+  // Note: move.w + ext.l → sign-extend of the word.
   const rotationSigned =
     rotationWord & 0x8000 ? rotationWord - 0x10000 : rotationWord;
   const d1Word = (rotationSigned * 2) | 0;
@@ -197,12 +197,12 @@ export function stateSub2DA0(
   const stringByte = readByteAbs(state, rom, a2);
 
   if (stringByte === 0) {
-    // moveq #0, D0 → return 0 (terminator: caller resetta state)
+    // moveq #0, D0 → return 0 (terminator: caller resets state)
     return 0;
   }
 
   // clr.w (A1) — alpha tilemap word a 0
   clearAlphaWord(state, a1);
-  // moveq #4, D0 → return 4 (state machine continua in state 4)
+  // moveq #4, D0 → return 4 (state machine continues in state 4)
   return 4;
 }

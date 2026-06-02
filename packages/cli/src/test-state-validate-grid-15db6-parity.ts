@@ -3,55 +3,55 @@
  * test-state-validate-grid-15db6-parity.ts — differential FUN_15DB6 vs
  * `stateValidateGrid15DB6`.
  *
- * `FUN_00015DB6` (110 byte) valida la match-cell of the currentPtr vs
+ * `FUN_00015DB6` (110 bytes) validates the match-cell of the currentPtr vs
  * field_x/field_y >> 19 of the struct, possibly mutating `kind` 0x23 → 0x20,
- * poi dispatcha a una of:
+ * then dispatches to one of:
  *
- * **Strategia stub injection**:
+ * **Stub injection strategy**:
  *
- *      uno slot @ `0x401E00` (4 byte structPtr + 4 byte counter @ 0x401E04).
+ *      one slot @ `0x401E00` (4-byte structPtr + 4-byte counter @ 0x401E04).
  *
- *      Layout stub (22 byte):
- *        movea.l #0x00401E00, A0      ; 207C 0040 1E00     (6 byte)
- *        move.l  0x00401E04.l, D0     ; 2039 0040 1E04     (6 byte) (counter)
+ *      Stub layout (22 bytes):
+ *        movea.l #0x00401E00, A0      ; 207C 0040 1E00     (6 bytes)
+ *        move.l  0x00401E04.l, D0     ; 2039 0040 1E04     (6 bytes) (counter)
  *        ; structPtr in ((4,SP)) → A0[counter*4]
- *        move.l  (4,SP), (A0)         ; 20AF 0004          (4 byte)
- *        addq.l  #1, 0x00401E04.l     ; 52B9 0040 1E04     (6 byte)
- *        rts                           ; 4E75               (2 byte)
+ *        move.l  (4,SP), (A0)         ; 20AF 0004          (4 bytes)
+ *        addq.l  #1, 0x00401E04.l     ; 52B9 0040 1E04     (6 bytes)
+ *        rts                           ; 4E75               (2 bytes)
  *
- *      of the case). Stub minimale (8 byte):
+ *      of the case). Minimal stub (8 bytes):
  *
- *        addq.l  #1, 0x00401E00.l     ; 52B9 0040 1E00     (6 byte)
- *        rts                           ; 4E75               (2 byte)
+ *        addq.l  #1, 0x00401E00.l     ; 52B9 0040 1E00     (6 bytes)
+ *        rts                           ; 4E75               (2 bytes)
  *
  *      slot @ `0x401E10`:
  *        - `0x401E10` (long): structPtr received as arg1
  *        - `0x401E14` (long): flagLong received as arg2
  *
- *      Stack al momento of the JSR a FUN_15E24 from the caller (FUN_15DB6):
+ *      Stack at the JSR to FUN_15E24 from the caller (FUN_15DB6):
  *        (0,SP)  = ret addr
  *        (4,SP)  = arg1 (structPtr) — long
  *        (8,SP)  = arg2 (flagLong)  — long
  *
- *      Layout stub:
+ *      Stub layout:
  *        ; save arg1, arg2 in slot
- *        move.l  (4,SP), 0x00401E10.l    ; 23EF 0004 0040 1E10  (8 byte)
- *        move.l  (8,SP), 0x00401E14.l    ; 23EF 0008 0040 1E14  (8 byte)
- *        addq.l  #1, 0x00401E18.l        ; 52B9 0040 1E18       (6 byte)
- *        rts                              ; 4E75                  (2 byte)
- *        TOTAL: 24 byte.
+ *        move.l  (4,SP), 0x00401E10.l    ; 23EF 0004 0040 1E10  (8 bytes)
+ *        move.l  (8,SP), 0x00401E14.l    ; 23EF 0008 0040 1E14  (8 bytes)
+ *        addq.l  #1, 0x00401E18.l        ; 52B9 0040 1E18       (6 bytes)
+ *        rts                              ; 4E75                  (2 bytes)
+ *        TOTAL: 24 bytes.
  *
  *      `move.l (offset,SP), abs.L` opcode = 23EF (move.l (d16,An), abs.L
  *      with An=A7=SP). Encoding: 23EF dddd LLLL (16-bit displacement,
- *      32-bit absolute address) — 8 byte.
+ *      32-bit absolute address) — 8 bytes.
  *
- * struct kind byte (per verify la mutation 0x23→0x20).
+ * struct kind byte (to verify the 0x23→0x20 mutation).
  *
- *   - A: setup random byte-by-byte (struct + currentPtr + kind random).
- *        Cattura mismatch generico.
+ *   - A: random byte-by-byte setup (struct + currentPtr + kind random).
+ *        Captures generic mismatch.
  *   - B: forced match (currentPtr[0..1] = field_x/y >> 19) with random kind.
  *
- * Uso: npx tsx packages/cli/src/test-state-validate-grid-15db6-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-validate-grid-15db6-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -142,7 +142,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Reset zone osservate (struct + currentPtr area + logger). */
+/** Reset the observed zones (struct + currentPtr area + logger). */
 function resetZones(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -209,11 +209,11 @@ function compareZone(
 interface CaseSetup {
   /** Bytes of the struct (size STRUCT_SIZE). */
   structBytes: number[];
-  /** Bytes of the area currentPtr (size CURRENT_PTR_SIZE). */
+  /** Bytes of the currentPtr area (size CURRENT_PTR_SIZE). */
   currentBytes: number[];
 }
 
-/** Setup random + override opzionali. */
+/** Random setup + optional overrides. */
 function buildCase(
   rng: () => number,
   opts: {
@@ -249,8 +249,8 @@ function buildCase(
   writeLong(structBytes, FIELD_Y_OFF, fieldY);
 
   if (opts.forceMatch === true) {
-    // currentPtr[0..1] = byte signed-ext-equal a (field >> 19)
-    // signed byte (-128..127), poi field = target << 19, byte = target & 0xFF.
+    // currentPtr[0..1] = byte signed-ext-equal to (field >> 19)
+    // signed byte (-128..127), then field = target << 19, byte = target & 0xFF.
     const targetX = (Math.floor(rng() * 256) - 128) | 0; // -128..127
     const targetY = (Math.floor(rng() * 256) - 128) | 0;
     fieldX = (targetX << ASR_COUNT) >>> 0;
@@ -260,7 +260,7 @@ function buildCase(
     currentBytes[0] = targetX & 0xff;
     currentBytes[1] = targetY & 0xff;
   } else if (opts.forceMismatch === true) {
-    // Garantisce X mismatch — currentPtr[0] = (asr(fieldX,19) + 1) & 0xFF
+    // Guarantees X mismatch — currentPtr[0] = (asr(fieldX,19) + 1) & 0xFF
     const cellX = (((fieldX | 0) >> ASR_COUNT) | 0) & 0xff;
     currentBytes[0] = (cellX + 1) & 0xff;
   }

@@ -10,12 +10,12 @@
  *
  * `F(n)` = `FUN_000040D8(n)` (config-field fetch). The three ids used: 3, 4, 5.
  *
- * Strategia parity:
- *   - Patch RTS on the entry of FUN_40D8 (0x40D8) per impedire the esecuzione.
- *     iniettati in D0 a ciascuna entry callee.
+ * Parity strategy:
+ *   - Patch RTS on the entry of FUN_40D8 (0x40D8) to prevent its execution.
+ *     injected into D0 at each callee entry.
  *   - Capture args on the stack at callee entry, also checking
  *
- * Uso: npx tsx packages/cli/src/test-state-sub-59d2-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-state-sub-59d2-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -46,10 +46,10 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patcha RTS (0x4E75) to the entry of FUN_40D8. */
+/** Patch RTS (0x4E75) at the entry of FUN_40D8. */
 function patchCallees(cpu: CpuSession): void {
   // FUN_40D8: original word `movem.l {A2 D6 D5 D4 D3 D2},-(SP)` (0x48E7).
-  // Patcha a 0x4E75 (rts).
+  // Patch to 0x4E75 (rts).
   pokeMem(cpu, FUN_40D8 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_40D8 + 1, 1, 0x75);
 }
@@ -61,13 +61,13 @@ interface Call40D8 {
 
 interface CapturedSeq {
   calls: Call40D8[];
-  /** D0 al momento of the rts of FUN_59D2. */
+  /** D0 at the RTS of FUN_59D2. */
   finalD0: number;
   reachedRts: boolean;
 }
 
 /**
- * Esegue FUN_59D2 step-by-step.
+ * Runs FUN_59D2 step-by-step.
  * For each FUN_40D8 entry, capture fieldId (on the stack at (4,SP)) and
  *
  * @param cpu       CPU session.
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS on the callee (una sola time — la patch persiste).
+  // Patch RTS on the callee (just once — the patch persists).
   patchCallees(cpu);
 
   console.log(`\n=== stateSub59D2 (FUN_59D2) — ${n} cases ===`);
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern of coverage sui return of F(4), F(3), F(5).
+    // Coverage pattern over the returns of F(4), F(3), F(5).
     let rets: [number, number, number];
     if (i === 0) {
       // Early-exit: 2*F(4)+F(3) = 0 → ret 0
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
       // denom = 1, num = 100 → 6000 (no overflow, bypass halve).
       rets = [0, 1, 100];
     } else if (i === 3) {
-      // divu overflow: denom=1, num=1100 → quoziente teorico 66000 > 0xFFFF.
+      // divu overflow: denom=1, num=1100 → theoretical quotient 66000 > 0xFFFF.
       // D1 pre-divu = 1100*60 = 66000 = 0x101D0. Low word = 0x01D0.
       rets = [0, 1, 1100];
     } else if (i === 4) {
@@ -213,10 +213,10 @@ async function main(): Promise<void> {
       // mulu: 5*60 = 300. divu: 300/0x8001 = 0.
       rets = [0x8001, 0, 10];
     } else if (i === 9) {
-      // denom = 60 esatto, num = 1 → 60/60 = 1.
+      // denom = 60 exactly, num = 1 → 60/60 = 1.
       rets = [30, 0, 1];
     } else if (i < 30) {
-      // Sweep deterministico
+      // Deterministic sweep
       const seed = i - 10;
       rets = [
         (seed * 7) & 0xffff,
@@ -231,7 +231,7 @@ async function main(): Promise<void> {
       const f5 = (seed * 11) & 0xffff;
       rets = [f4, f3, f5];
     } else {
-      // Random ampio
+      // Wide random
       const f4 = Math.floor(rng() * 0x100000) >>> 0;
       const f3 = Math.floor(rng() * 0x100000) >>> 0;
       const f5 = Math.floor(rng() * 0x100000) >>> 0;
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
 
     const bin = runAndCapture(cpu, rets);
 
-    // Esegue TS.
+    // Run TS.
     const ts = runTsAndCapture(state, rets);
 
     const sameCalls =

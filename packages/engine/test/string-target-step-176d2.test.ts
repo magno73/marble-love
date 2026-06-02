@@ -1,5 +1,5 @@
 /**
- * string-target-step-176d2.test.ts — smoke tests per `stringTargetStep176D2`.
+ * string-target-step-176d2.test.ts — smoke tests for `stringTargetStep176D2`.
  *
  * `packages/cli/src/test-string-target-step-176d2-parity.ts`.
  */
@@ -74,7 +74,7 @@ function getLong(s: GameState, addr: number): number {
   );
 }
 
-/** Setup of una chain: obj@objAddr, slot indicizzato da idx, bboxPtrPtr@p1, bboxPtr@p2 (o sentinel). */
+/** Set up a chain: obj@objAddr, slot indexed by idx, bboxPtrPtr@p1, bboxPtr@p2 (or sentinel). */
 function setupChain(args: {
   s: GameState;
   objAddr: number;
@@ -162,7 +162,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
 
     stringTargetStep176D2(s, objAddr);
 
-    // step = 0 per both → newX = (4 + 0) << 16 = 4 << 16 = 0x40000
+    // step = 0 for both → newX = (4 + 0) << 16 = 4 << 16 = 0x40000
     expect(getLong(s, objAddr + OBJ_X_LONG_OFF)).toBe(0x00040000);
     expect(getLong(s, objAddr + OBJ_Y_LONG_OFF)).toBe(0x00040000);
   });
@@ -235,7 +235,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
       bboxAddr: BBOX_SENTINEL,
       slotCx: 0,
       slotCy: 0,
-      // curX deriva da (0xDEAD as i16) = -8531; curY = (0xCAFE as i16) = -13570
+      // curX derives from (0xDEAD as i16) = -8531; curY = (0xCAFE as i16) = -13570
     });
     setWord(s, objAddr + OBJ_X_LONG_OFF, 100);
     s.workRam[offOf(objAddr + OBJ_X_LONG_OFF) + 2] = 0xff;
@@ -418,7 +418,7 @@ describe("stringTargetStep176D2 (FUN_000176D2)", () => {
     for (let i = 0; i < s.workRam.length; i++) {
       if (s.workRam[i] !== pre[i]) writtenOffs.add(i);
     }
-    // I 4 byte of obj+0xC..+0xF: pre era 0xAA0000AA + l'high word=4 da setupChain.
+    // The 4 bytes of obj+0xC..+0xF: pre was 0xAA0000AA + the high word=4 from setupChain.
     for (const off of writtenOffs) {
       const a = off + WORK_RAM_BASE;
       const inX = a >= objAddr + OBJ_X_LONG_OFF && a < objAddr + OBJ_X_LONG_OFF + 4;

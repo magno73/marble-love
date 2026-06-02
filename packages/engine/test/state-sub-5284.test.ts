@@ -1,7 +1,7 @@
 /**
  * state-sub-5284.test.ts — corner cases of stateSub5284 (FUN_5284).
  *
- * Bit-perfect parity verificata vs binary in `test-state-sub-5284-parity.ts`.
+ * Bit-perfect parity verified vs binary in `test-state-sub-5284-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";
@@ -54,7 +54,7 @@ describe("fun52A2 (FUN_52A2 helper)", () => {
 describe("stateSub5284 (FUN_5284)", () => {
   it("flags=0 entry → 1 iter, flagsCleared=true, default fun_4dcc increments 0x401FF8", () => {
     const s = emptyGameState();
-    // counter @ 0x401FF8 inizializzato a 0
+    // counter @ 0x401FF8 initialized to 0
     const r = stateSub5284(s);
     expect(r.iterations).toBe(1);
     expect(r.flagsCleared).toBe(true);

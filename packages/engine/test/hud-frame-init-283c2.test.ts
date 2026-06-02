@@ -1,5 +1,5 @@
 /**
- * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests sui branches principali.
+ * Test hudFrameInit283C2 (FUN_000283C2) — smoke tests on the main branches.
  *
  * `cli/src/test-hud-frame-init-283c2-parity.ts` (500/500).
  */
@@ -40,11 +40,11 @@ function readAlphaWordBE(alpha: Uint8Array, off: number): number {
 }
 
 /**
- * rows and data; 12 word per cols 1P).
+ * rows and data; 12 words for 1P cols).
  */
 function setupRom(): RomImage {
   const rom = emptyRomImage();
-  // ROM lookup table @ 0x72A4 (alpha-pointer shift count). Per rotation=0,
+  // ROM lookup table @ 0x72A4 (alpha-pointer shift count). For rotation=0,
   rom.program[0x72a5] = 0x00;
 
   // ROM cols 1P @ 0x23C2C (12 word).
@@ -97,7 +97,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // player count @ 0x396 = 0 (-> 2P branch, but this tests only Loop1:
-    writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1); // 1P (Loop2 mette 12 frame tile
+    writeWordBE(s.workRam, PLAYER_COUNT_OFF, 1); // 1P (Loop2 places 12 frame tiles
 
     hudFrameInit283C2(s, rom);
 
@@ -105,12 +105,12 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     //   alpha[row*128 + 0x4E..0x4F, +0x50..0x51, +0x52..0x53] = 0x3400
     for (let row = 0; row < LOOP1_ROW_COUNT; row++) {
       const base = row * 128; // shift 6 (cols=64) × 2 byte/word
-      // Sinistro: 3 word
+      // Left: 3 words
       for (let i = 0; i < LOOP1_GROUP_WORDS; i++) {
         const off = base + i * 2;
         expect(readAlphaWordBE(s.alphaRam, off), `row ${row}, left word ${i}`).toBe(LOOP1_CLEAR_WORD);
       }
-      // Destro: 3 word @ off+0x4E
+      // Right: 3 words @ off+0x4E
       for (let i = 0; i < LOOP1_GROUP_WORDS; i++) {
         const off = base + LOOP1_RIGHT_OFF + i * 2;
         expect(readAlphaWordBE(s.alphaRam, off), `row ${row}, right word ${i}`).toBe(LOOP1_CLEAR_WORD);
@@ -125,7 +125,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
 
     hudFrameInit283C2(s, rom);
 
-    // **Overlap handling**: alcune tuple (col,row) si ripetono — l'ultima
+    // **Overlap handling**: some (col,row) tuples repeat — the last one wins.
     const cols1P = [0x13, 0x14, 0x15, 0x16, 0x17, 0x17, 0x17, 0x17, 0x16, 0x15, 0x14, 0x13];
     const rows = [0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3];
     const data = [0x5f, 0x5f, 0x5f, 0x5f, 0xff, 0xdf, 0xdf, 0x1b, 0x5e, 0x5e, 0x5e, 0x5e];

@@ -1,7 +1,7 @@
 /**
- * Test trackballClampFlags28468 (FUN_00028468) — smoke tests sui branches principali.
+ * Test trackballClampFlags28468 (FUN_00028468) — smoke tests on the main branches.
  *
- * `FUN_00028468` (280 byte): pre-clamp ±0x40 sui due accumulator
+ * `FUN_00028468` (280 byte): pre-clamp ±0x40 on the two accumulators
  * (*0x4006A4 / *0x4006A6), debounce input, axis-lock 2:1 for trackball deltas
  * `cli/src/test-trackball-clamp-flags-28468-parity.ts` (500/500).
  */
@@ -71,7 +71,7 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
 
   it("post-wrap: no overflow → wrap-bits 12-15 all set in D5w", () => {
     const s = emptyGameState();
-    // Input zero, accumulator iniziali entro [-0x18, 0x18] → no wrap.
+    // Input zero, initial accumulators within [-0x18, 0x18] → no wrap.
     writeSWord(s.workRam, ACCUM_X_OFF, 0x10);
     writeSWord(s.workRam, ACCUM_Y_OFF, -0x10);
 
@@ -87,13 +87,13 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     // cur=0 → newDeb = 0 → bit 0 and 1 cleared.
     expect(flags & 0x0003).toBe(0x0000);
     expect((flags >>> 12) & 0x0f).toBe(0x0f);
-    // Accumulator invariati (input 0, no axis-lock effect).
+    // Accumulators unchanged (input 0, no axis-lock effect).
     expect(readSWord(s.workRam, ACCUM_X_OFF)).toBe(0x10);
     expect(readSWord(s.workRam, ACCUM_Y_OFF)).toBe(-0x10);
   });
 
   it("axis-lock: con A=0x10, B=0x00 → D1=-0x10, D2=0x10, abs uguali → SKIP", () => {
-    // Per ottenere picked deltas controllati, settiamo both obj C6/C7 al
+    // To get controlled picked deltas, we set both obj C6/C7 to
     const s = emptyGameState();
     // obj0 @ 0x18: C6 = 0x10 (pickedY = A), C7 = 0x00 (pickedX = B)
     s.workRam[0x18 + 0xc6] = 0x10;
@@ -104,17 +104,17 @@ describe("trackballClampFlags28468 (FUN_00028468)", () => {
     // Setup: obj0 savedX=0xC9, savedY=0xC8 → set savedX = 0, savedY = 0xF0.
     // p1X = 0 → deltaX = 0 - 0 = 0; p1Y = 0 → deltaY = 0 - 0xF0 = 0x10 (mod 256)
     // (0xF0 sext = -16, 0 - (-16) = +16 = 0x10. delta out of [-0x60, 0x60]?
-    //  +0x10 = 16 < 0x60 → no clamp). Ottimo.
+    //  +0x10 = 16 < 0x60 → no clamp). Good.
     s.workRam[0x18 + 0xc9] = 0x00; // savedX
     s.workRam[0x18 + 0xc8] = 0xf0; // savedY
-    s.workRam[0x18 + 0xc7] = 0x00; // deltaX init (per evitare clamp anti-wrap)
+    s.workRam[0x18 + 0xc7] = 0x00; // deltaX init (to avoid anti-wrap clamp)
     s.workRam[0x18 + 0xc6] = 0x00; // deltaY init
     s.workRam[0xfa + 0xc9] = 0x00;
     s.workRam[0xfa + 0xc8] = 0x00;
     s.workRam[0xfa + 0xc7] = 0x00;
     s.workRam[0xfa + 0xc6] = 0x00;
 
-    // Pre-set accumulator a 0 per pulire output.
+    // Pre-set accumulators to 0 to clean output.
     writeSWord(s.workRam, ACCUM_X_OFF, 0);
     writeSWord(s.workRam, ACCUM_Y_OFF, 0);
 

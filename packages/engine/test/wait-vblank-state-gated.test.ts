@@ -1,5 +1,5 @@
 /**
- * Test waitVblankStateGated (FUN_28DB8) — smoke tests sui branches principali.
+ * Test waitVblankStateGated (FUN_28DB8) — smoke tests on the main branches.
  *
  * Bit-perfect verified against the binary through
  * `cli/src/test-wait-vblank-state-gated-parity.ts`.
@@ -25,14 +25,14 @@ describe("waitVblankStateGated (FUN_28DB8)", () => {
     expect(r0.iterations).toBe(0);
     expect(r0.d0w).toBe(0);
     expect(r0.aborted).toBe(false);
-    expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // invariato
-    expect(s.workRam[VBLANK_MAILBOX_OFF]).toBe(0x99); // invariato
+    expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // unchanged
+    expect(s.workRam[VBLANK_MAILBOX_OFF]).toBe(0x99); // unchanged
 
-    // count signed negativo (e.g. 0xFFFF = -1)
+    // count signed negative (e.g. 0xFFFF = -1)
     const rNeg = waitVblankStateGated(s, 0xffff);
     expect(rNeg.iterations).toBe(0);
     expect(rNeg.d0w).toBe(0xffff); // count word returned as-is
-    expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // ancora invariato
+    expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x42); // still unchanged
   });
 
   it("count > 0, no abort: increments 0x3F0 of N, mailbox cleared, D0w = sext(loByte)", () => {
@@ -46,7 +46,7 @@ describe("waitVblankStateGated (FUN_28DB8)", () => {
     expect(r.aborted).toBe(false);
     expect(r.d0w).toBe(0x0005);
     expect(s.workRam[VBLANK_TICK_COUNTER_OFF]).toBe(0x17); // 0x10 + 7
-    expect(s.workRam[VBLANK_MAILBOX_OFF]).toBe(0); // clr.b finale
+    expect(s.workRam[VBLANK_MAILBOX_OFF]).toBe(0); // final clr.b
   });
 
   it("counter wrap mod 256 (addq.b semantica)", () => {

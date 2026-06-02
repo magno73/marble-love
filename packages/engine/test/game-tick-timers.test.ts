@@ -59,7 +59,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
   it("timer cascade bit 0 (full wrap) → reset + palette FX", () => {
     const s = emptyGameState();
     setCount(s, 1);
-    // Setup timer: outer=0, medium=0, inner=0 → tick decrementa inner a 0xFF →
+    // Setup timer: outer=0, medium=0, inner=0 → tick decrements inner to 0xFF →
     setupTimer(s, OBJECTS_BASE_OFF + 0x6A, 0, 0, 0);
     s.workRam[OBJECTS_BASE_OFF + 0x19] = 1; // flag != 0 → palette FX A
     s.workRam[GLOBAL_TIMER_OFF + 4] = 0xFF;
@@ -68,7 +68,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
 
     // obj +0x18 must be 2.
     expect(s.workRam[OBJECTS_BASE_OFF + 0x18]).toBe(2);
-    // Timer struct resettata
+    // Timer struct reset
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6A]).toBe(0);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6B]).toBe(0);
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6C]).toBe(0);
@@ -104,7 +104,7 @@ describe("gameTickTimers (FUN_28A96)", () => {
     const hud = vi.fn();
     gameTickTimers(s, hud);
 
-    // inner decrementato a 4
+    // inner decremented to 4
     expect(s.workRam[OBJECTS_BASE_OFF + 0x6E]).toBe(4);
     expect(hud).not.toHaveBeenCalled();
   });

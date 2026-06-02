@@ -1,7 +1,7 @@
 /**
- * Test levelFractionRender28232 (FUN_00028232) — smoke test sui branches principali.
+ * Test levelFractionRender28232 (FUN_00028232) — smoke test on the main branches.
  *
- * mode selector, level idx and level number da workRam, dispatcha 5
+ * mode selector, level idx and level number from workRam, dispatches 5
  * workRam @ 0x42A.
  *
  * `cli/src/test-level-fraction-render-28232-parity.ts` (500/500).
@@ -60,7 +60,7 @@ function writeRomLongBE(rom: RomImage, addr: number, value: number): void {
   rom.program[addr + 3] = value & 0xff;
 }
 
-/** Trace bag: registra le 3 sub-call per assertion. */
+/** Trace bag: records the 3 sub-calls for assertions. */
 interface SubsTrace {
   renderChainCalls: Array<{ entryPtr: number; attrLong: number }>;
   initStructCalls: Array<{
@@ -121,7 +121,7 @@ function setupRom(): RomImage {
 /**
  *  Buffer target: workRam[bufOff..bufOff+4]. */
 function setFractionBuffer(s: GameState, bufOff: number): void {
-  // a 0x1FFF (8 KB workRam). Per scrivere effettivamente a workRam[bufOff],
+  // up to 0x1FFF (8 KB workRam). To actually write to workRam[bufOff],
   writeLongBE(s.workRam, FRACTION_PTR_OFF, 0x00400000 | bufOff);
 }
 
@@ -253,7 +253,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
 
     levelFractionRender28232(s, rom, subs);
 
-    // 2 renderStringChain (Step B + Step C), poi early-out.
+    // 2 renderStringChain (Step B + Step C), then early-out.
     expect(trace.renderChainCalls).toHaveLength(2);
     expect(trace.renderChainCalls[0]).toEqual({
       entryPtr: 0xdeadbeef,
@@ -273,7 +273,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
   });
 
   it("dispatch fraction string: D3==3 → ' 1/4', D3==4 → ' 1/3', etc.", () => {
-    // Per ottenere D3 (=remainder) specifici: levelNum % 12 = D3 desiderato.
+    // To obtain specific D3 (=remainder) values: levelNum % 12 = desired D3.
     const cases: Array<{
       levelNum: number;
       expectedRemainder: number;

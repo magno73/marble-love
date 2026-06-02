@@ -1,7 +1,7 @@
 /**
  * Test initLevelLoad1A236 (FUN_0001A236) — smoke + side-effect coverage.
  *
- *   - default no-op non solleva
+ *   - default no-op does not throw
  *
  * `cli/src/test-init-level-load-1a236-parity.ts` (500/500 cases).
  */

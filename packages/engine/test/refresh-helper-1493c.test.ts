@@ -1,5 +1,5 @@
 /**
- * Test refreshHelper1493C (FUN_1493C) — smoke tests sui branches principali.
+ * Test refreshHelper1493C (FUN_1493C) — smoke tests on the main branches.
  *
  * `cli/src/test-refresh-helper-1493c-parity.ts`.
  */

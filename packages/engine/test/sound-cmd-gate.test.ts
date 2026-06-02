@@ -1,7 +1,7 @@
 /**
  * sound-cmd-gate.test.ts — corner cases of soundCmdGate (FUN_4420).
  *
- * Bit-perfect parity verificata vs binary in `test-sound-cmd-gate-parity.ts`.
+ * Bit-perfect parity verified vs binary in `test-sound-cmd-gate-parity.ts`.
  */
 
 import { describe, it, expect } from "vitest";

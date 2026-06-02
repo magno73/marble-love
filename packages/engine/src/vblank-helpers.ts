@@ -1,13 +1,13 @@
 /**
  * vblank-helpers.ts — replica `FUN_00028DEA` + `FUN_00028DB8` + `FUN_000121A6`.
  *
- * Tre helper of synchronization vblank, chiamati da molte sub:
+ * Three vblank synchronization helpers, called by many subs:
  *
  * **FUN_28DEA** (`vblankAck28DEA`, 5 instr, 15 callers): busy-wait that
  *
  * **FUN_28DB8** (`wait28DB8`, 18 instr, 19 callers): frame countdown
  *   "gated by state". Waits N frames (arg word), but if `*0x400390`
- *   a 0 (= early exit).
+ *   changes (= early exit).
  *
  * **FUN_121A6** (`clearPaletteRam121A6`, 5 instr, 4 callers): clear of
  */
@@ -27,8 +27,8 @@ export const CLEAR_PALETTE_RAM_121A6_ADDR = 0x000121a6 as const;
  *         beq loop             ; wait until non-zero
  *   addq.b  #1, *0x4003F0      ; counter++
  *
- * (= flag set as post-IRQ) and incrementiamo `*0x3F0`. Il busy-wait
- * non ha equivalente in the modello synchronous TS.
+ * (= flag set as post-IRQ) and we increment `*0x3F0`. The busy-wait
+ * has no equivalent in the synchronous TS model.
  */
 export function vblankAck28DEA(state: GameState): void {
   state.workRam[0x16] = 1;
@@ -49,10 +49,10 @@ export function vblankAck28DEA(state: GameState): void {
  *     D3--
  *   rts
  *
- * Logica: aspetta `frames` frame (incrementando *0x3F0), early exit
+ * Logic: waits `frames` frames (incrementing *0x3F0), early exit
  */
 export function wait28DB8(state: GameState, frames: number): void {
-  // Cattura state byte to the inizio (low byte of word @ 0x390).
+  // Capture the state byte at the start (low byte of word @ 0x390).
   const initialStateByte = state.workRam[0x391] ?? 0;
   let counter = frames & 0xffff;
   while (counter > 0) {

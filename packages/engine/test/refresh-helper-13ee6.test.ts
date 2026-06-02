@@ -1,5 +1,5 @@
 /**
- * Test refreshHelper13EE6 (FUN_00013EE6) — smoke tests sui branches principali.
+ * Test refreshHelper13EE6 (FUN_00013EE6) — smoke tests on the main branches.
  *
  *   `cli/src/test-refresh-helper-13ee6-parity.ts`
  */
@@ -12,7 +12,7 @@ import {
   REFRESH_HELPER_13EE6_ADDR,
 } from "../src/refresh-helper-13ee6.js";
 
-// Offsets workRam (da state.workRam[off])
+// workRam offsets (from state.workRam[off])
 const OFF_ACTIVE  = 0x0006; // *0x400006 byte — blit-active flag
 const OFF_RUN     = 0x0008; // *0x400008 byte — scroll-running flag
 const OFF_DIR     = 0x0004; // *0x400004 byte — direction

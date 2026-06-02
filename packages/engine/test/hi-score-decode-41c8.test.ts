@@ -1,8 +1,8 @@
 /**
  * hi-score-decode-41c8.test.ts — smoke tests of `hiScoreDecode41c8` (FUN_41C8).
  *
- * Verifica i path principali of ritorno + invarianti (range arg1, score
- * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localizzato a
+ * Verifies the main return paths + invariants (arg1 range, score
+ * decoding 24-bit BE, radix-40 unpack 3 chars, side-effect localized to
  * 0x401F7A..0x401F80).
  *
  * Bit-perfect parity (500 random cases) verified in
@@ -48,7 +48,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
 
     expect(hiScoreDecode41c8(s, 10)).toBe(RET_INDEX_OOR);
     expect(hiScoreDecode41c8(s, 0xff)).toBe(RET_INDEX_OOR);
-    // arg1 = 0xFFFFFFFF (sign-ext negativo) -> bit 31 set -> grande unsigned -> OOR.
+    // arg1 = 0xFFFFFFFF (negative sign-ext) -> bit 31 set -> large unsigned -> OOR.
     expect(hiScoreDecode41c8(s, 0xffffffff)).toBe(RET_INDEX_OOR);
 
     // No workRam writes in any OOR call.
@@ -91,7 +91,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
     const entryOff = 0x101e + 0 * RECORD_STRIDE;
-    // Score irrilevante.
+    // Score irrelevant.
     s.workRam[entryOff + 0] = 0;
     s.workRam[entryOff + 1] = 0;
     s.workRam[entryOff + 2] = 0;
@@ -112,7 +112,7 @@ describe("hiScoreDecode41c8 (FUN_41C8)", () => {
     const s = emptyGameState();
     const ptr = 0x401000;
     writeLongBE(s.workRam, PTR_OFF, ptr);
-    // Entry 9: byte off = 9*5 = 45. Entry 9 inizio @ 0x101E + 45 = 0x104B.
+    // Entry 9: byte off = 9*5 = 45. Entry 9 starts @ 0x101E + 45 = 0x104B.
     const entryOff = 0x101e + 9 * RECORD_STRIDE;
     s.workRam[entryOff + 0] = 0xab;
     s.workRam[entryOff + 1] = 0xcd;

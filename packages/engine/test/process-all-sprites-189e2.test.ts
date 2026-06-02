@@ -1,7 +1,7 @@
 /**
- * process-all-sprites-189e2.test.ts — smoke per FUN_000189E2.
+ * process-all-sprites-189e2.test.ts — smoke for FUN_000189E2.
  *
- * Bit-perfect parity verificata in
+ * Bit-perfect parity verified in
  * `packages/cli/src/test-process-all-sprites-189e2-parity.ts` (500/500).
  */
 
@@ -82,7 +82,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
     const s = emptyGameState();
     setU16(s, GATE_OFF, 0);
     setU16(s, COUNT_OFF, 1);
-    // Entry @ 0x40098C: marca byte+0xA = 0xFF → computeSpriteCoords_v1 skip
+    // Entry @ 0x40098C: mark byte+0xA = 0xFF → computeSpriteCoords_v1 skip
     const entryOff = 0x98c;
     s.workRam[entryOff + 0xa] = 0xff;
     // Pre-fill output zone (entry+0x6..0x9) to verify it remains unchanged.
@@ -106,7 +106,7 @@ describe("processAllSprites (FUN_000189E2)", () => {
 
   it("gate=0, count=2 con gate scritto in big-endian: tst.w only if both the bytes are 0", () => {
     const s = emptyGameState();
-    // Solo byte basso of the gate set (0x0001) → gate word = 1 → skip
+    // Only the low byte of the gate set (0x0001) → gate word = 1 → skip
     s.workRam[GATE_OFF] = 0x00;
     s.workRam[GATE_OFF + 1] = 0x01;
     setU16(s, COUNT_OFF, 2);

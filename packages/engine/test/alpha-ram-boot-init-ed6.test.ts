@@ -51,7 +51,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     alphaRamBootInitED6(state, rom);
 
     // For each D4 quadrant, every D5 row must contain ROM[0x6928 + D4*0x54..].
-    // athe bytes [row .. row + WORDS_PER_ROW*2 - 1] = [row .. row+0x53].
+    // The bytes [row .. row + WORDS_PER_ROW*2 - 1] = [row .. row+0x53].
     for (let d4 = 0; d4 < QUADRANT_COUNT; d4++) {
       const srcBase = SOURCE_TABLE_ROM_ADDR + d4 * SOURCE_QUADRANT_STRIDE_BYTES;
       for (let d5 = 0; d5 < ROW_PER_QUADRANT; d5++) {
@@ -66,7 +66,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
           const expected = rom.program[srcBase + b] ?? 0;
           expect(state.alphaRam[absOff]).toBe(expected);
         }
-        // I byte [row + 0x54 .. row + 0x7F] (44 byte) restano 0xCC.
+        // The bytes [row + 0x54 .. row + 0x7F] (44 bytes) stay 0xCC.
         for (let b = WORDS_PER_ROW * 2; b < ROW_STRIDE_BYTES; b++) {
           const absOff = rowOff + b;
           expect(state.alphaRam[absOff]).toBe(0xcc);
@@ -81,13 +81,13 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
     state.alphaRam.fill(0xcc);
     alphaRamBootInitED6(state, rom);
 
-    // 34 word a partire da offset 0x008 (D2=4 → D2*2=8).
+    // 34 words starting at offset 0x008 (D2=4 → D2*2=8).
     for (let i = 0; i < FILL_LOOP_COUNT; i++) {
       const off = FILL_LOOP_2_BASE_OFFSET + (4 + i) * 2;
       expect(state.alphaRam[off]).toBe(0x20);
       expect(state.alphaRam[off + 1]).toBe(0x00);
     }
-    // (qui ROM = 0 → alphaRam[0..7] = 0).
+    // (here ROM = 0 → alphaRam[0..7] = 0).
     for (let i = 0; i < 8; i++) {
       expect(state.alphaRam[i]).toBe(0x00);
     }
@@ -117,7 +117,7 @@ describe("alphaRamBootInitED6 (FUN_ED6)", () => {
 
     // The last row written by loop 1 starts at 0xE80 and covers 42 words through 0xED3.
     // Loop 3 overwrites 0xE88..0xECB. Bytes 0xED4..0xEFF (44 skipped row-9 bytes)
-    // and 0xF00..0xFFF (beyond il range of the loop 1) restano sentinel.
+    // and 0xF00..0xFFF (beyond the range of loop 1) stay sentinel.
     for (let i = 0xed4; i < 0xf00; i++) {
       expect(state.alphaRam[i]).toBe(0xcc);
     }

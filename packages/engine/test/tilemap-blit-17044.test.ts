@@ -1,5 +1,5 @@
 /**
- * Test tilemapBlit17044 (FUN_17044) — smoke tests sui branches principali.
+ * Test tilemapBlit17044 (FUN_17044) — smoke tests on the main branches.
  *
  * `cli/src/test-tilemap-blit-17044-parity.ts`.
  */
@@ -43,13 +43,13 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
 
   it("copies 240 byte contigui from the ROM in 6 finestre da 40 byte (preservando i 88 byte of skip)", () => {
     const rom = emptyRomImage();
-    // Pattern incrementale per beccare each byte univocamente.
+    // Incremental pattern to catch each byte uniquely.
     fillRomSource(rom, (i) => (i + 1) & 0xff);
     const pf = new Uint8Array(PF_SIZE).fill(0xcc);
 
     tilemapBlit17044(rom, pf);
 
-    // Pre-DEST byte = 0xCC preservati
+    // Pre-DEST byte = 0xCC preserved
     for (let i = 0; i < DEST_OFF; i++) expect(pf[i]).toBe(0xcc);
 
     for (let row = 0; row < ROW_COUNT; row++) {
@@ -79,7 +79,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
 
     tilemapBlit17044(rom, pf);
 
-    // [0..0x115] preservati
+    // [0..0x115] preserved
     for (let i = 0; i < DEST_OFF; i++) expect(pf[i]).toBe(before[i]);
 
     for (let row = 0; row < ROW_COUNT; row++) {
@@ -110,7 +110,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
 
   it("BE word preservato: high byte to the offset pari, low byte al dispari", () => {
     const rom = emptyRomImage();
-    // ROM ha pattern 0xAB,0xCD,0xAB,0xCD,... → each word = 0xABCD
+    // ROM has pattern 0xAB,0xCD,0xAB,0xCD,... → each word = 0xABCD
     for (let i = 0; i < TOTAL_BYTES_COPIED; i += 2) {
       rom.program[ROM_SOURCE_ADDR + i] = 0xab;
       rom.program[ROM_SOURCE_ADDR + i + 1] = 0xcd;
@@ -146,7 +146,7 @@ describe("tilemapBlit17044 (FUN_17044)", () => {
     fillRomSource(rom, (i) => (i + 1) & 0xff);
     const small = new Uint8Array(0x200).fill(0xee);
     tilemapBlit17044(rom, small);
-    // [0..0x115] preservati
+    // [0..0x115] preserved
     for (let i = 0; i < DEST_OFF; i++) expect(small[i]).toBe(0xee);
     for (let j = 0; j < BYTES_PER_ROW; j++) {
       expect(small[DEST_OFF + j]).toBe((j + 1) & 0xff);

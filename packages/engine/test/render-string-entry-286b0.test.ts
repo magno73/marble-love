@@ -16,7 +16,7 @@ import {
 } from "../src/render-string-entry-286b0.js";
 import { emptyGameState } from "../src/state.js";
 
-/** Pone il dest pointer (long-BE) in workRam @ 0x412 = `dstAbs`. */
+/** Places the dest pointer (long-BE) in workRam @ 0x412 = `dstAbs`. */
 function setDestPtr(s: ReturnType<typeof emptyGameState>, dstAbs: number): void {
   const off = STRUCT_OFF + DEST_PTR_LONG_OFF;
   s.workRam[off] = (dstAbs >>> 24) & 0xff;
@@ -115,7 +115,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
   it("stringa vuota ('\\0') → copies 1 byte (terminator), struct popolato comunque", () => {
     const s = emptyGameState();
     const SRC_OFF = 0x100;
-    s.workRam[SRC_OFF] = 0; // first byte = 0 → terminator immediato
+    s.workRam[SRC_OFF] = 0; // first byte = 0 → immediate terminator
     const ARG1_OFF = 0x200;
     setArg1PtrToPtr(s, ARG1_OFF, WORK_RAM_BASE + SRC_OFF);
     const DST_OFF = 0x300;

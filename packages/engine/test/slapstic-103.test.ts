@@ -1,8 +1,8 @@
 /**
  * slapstic-103.test.ts - verifies chip 137412-103 state machine with scenarios
- * derivati from the MAME source (`mame/src/mame/atari/slapstic.cpp`).
+ * derived from the MAME source (`mame/src/mame/atari/slapstic.cpp`).
  *
- * I test are "intent" (Rule 9): codificano cosa la state machine MUST fare
+ * These tests are "intent" (Rule 9): they encode what the state machine MUST do
  * for every branch (idle/active/alt/bit), not only reproduce behavior.
  */
 
@@ -34,7 +34,7 @@ describe("slapstic-103 — reset access transitions IDLE → ACTIVE", () => {
     const fsm = createSlapsticFsm();
     slapsticTick(fsm, 0x080000);
     expect(fsm.state).toBe("ACTIVE");
-    expect(fsm.bank).toBe(3); // bank invariato
+    expect(fsm.bank).toBe(3); // bank unchanged
   });
 
   it("non-reset address in IDLE leaves FSM in IDLE", () => {
@@ -61,7 +61,7 @@ describe("slapstic-103 — direct bank switch (ACTIVE → IDLE)", () => {
 });
 
 describe("slapstic-103 — verified against MAME trace (140 accesses, f12000-12005)", () => {
-  // Source: /tmp/mame_slapstic_trace.json analizzato via Python script.
+  // Source: /tmp/mame_slapstic_trace.json analyzed via Python script.
   // Expected bank after f=12000: 1, verified via data match against ROM blob.
   // Expected bank after f=12001: 1 (with 1->2->1 transitions in between via lookups).
   it("bank=1 a inizio f=12000 → 7 access non-trigger → bank=1 a fine", () => {
@@ -86,10 +86,10 @@ describe("slapstic-103 — alt sequence does NOT inadvertently break on normal r
     const fsm = createSlapsticFsm();
     slapsticTick(fsm, 0x080000); // → ACTIVE
     // ALT1 test_any: (addr & 0xFE) == 0x5A. E.g. addr 0x0000005A (lookup wrap).
-    // For chip 103, l'arg=0xD (15) prodotto da `arg<<5 = 0x1A0`, signed = 0x1A0.
+    // For chip 103, arg=0xD (15) produced by `arg<<5 = 0x1A0`, signed = 0x1A0.
     // Could a "0x5A" value on the bus be triggered? In practice, MAME
-    // observed trace: no alt1 trigger in la window analizzata.
-    slapsticTick(fsm, 0x00005a); // forza alt1 trigger (test_any matches 0x5A)
+    // observed trace: no alt1 trigger in the window analyzed.
+    slapsticTick(fsm, 0x00005a); // force alt1 trigger (test_any matches 0x5A)
     expect(fsm.state).toBe("ALT_VALID");
     // Non-alt2 read → torna ACTIVE
     slapsticTick(fsm, 0x080dc2);

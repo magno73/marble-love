@@ -1,7 +1,7 @@
 /**
  * state-sub-5250.test.ts — smoke test per stateSub5250 (FUN_5250).
  *
- * Qui copriamo i path principali: OR su primary and secondary flags, idempotenza,
+ * Here we cover the main paths: OR on primary and secondary flags, idempotence,
  */
 
 import { describe, it, expect } from "vitest";
@@ -126,11 +126,11 @@ describe("stateSub5250 (FUN_5250) — smoke", () => {
 
     stateSub5250(s, 0xdeadbeef);
 
-    // I due long aggiornati correttamente
+    // The two longs updated correctly
     expect(readLongBE(s.workRam, PRIMARY_FLAGS_OFF)).toBe(0xdeadbeef);
     expect(readLongBE(s.workRam, SECONDARY_FLAGS_OFF)).toBe(0xdeadbeef);
 
-    // Byte adiacenti intact
+    // Adjacent bytes intact
     expect(s.workRam[PRIMARY_FLAGS_OFF - 1]).toBe(0x5a);
     expect(s.workRam[PRIMARY_FLAGS_OFF + 4]).toBe(0x5a);
     expect(s.workRam[SECONDARY_FLAGS_OFF - 1]).toBe(0x5a);

@@ -1,5 +1,5 @@
 /**
- * helper-16e8e.test.ts — unit tests per `FUN_00016E8E` (helper16E8E).
+ * helper-16e8e.test.ts — unit tests for `FUN_00016E8E` (helper16E8E).
  *
  *
  */
@@ -32,9 +32,9 @@ describe("helper16E8E (FUN_00016E8E)", () => {
   });
 
   it("arg=0x1f → no-op (bne: 0x1F ≠ 0x1E, poi 0x20 ≠ 0x1E, …, but 0x1F+1=0x20, poi 0x1E a wrap?)", () => {
-    // scorre up tol wrap 0xFF→0x00→...→0x1E. In pratica 0x1F==0x1F ≠ 0x1E
+    // scans up to the wrap 0xFF→0x00→...→0x1E. In practice 0x1F==0x1F ≠ 0x1E
     // terms; the implementation must handle wrap correctly.
-    // loop condition 0x20 ≠ 0x1e, poi 0x21... → loop infinito!
+    // loop condition 0x20 ≠ 0x1e, then 0x21... → infinite loop!
     // would loop. Verify only the no-op condition.
     const state = emptyGameState();
     const rom = makeRom();
@@ -70,7 +70,7 @@ describe("helper16E8E (FUN_00016E8E)", () => {
     const rom = makeRom();
     fillAlpha(state, 0xbb);
     helper16E8E(state, rom, 0);
-    // (col=3+row*64)*2 siano zero.
+    // (col=3+row*64)*2 must be zero.
     for (let r = 0; r < 30; r++) {
       const base = (3 + r * 64) * 2;
       for (let i = 0; i < 0x24; i++) {

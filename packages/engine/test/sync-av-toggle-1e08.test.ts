@@ -23,9 +23,9 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     // *0x40017C.w = 0x0000 (bit 0 == 0 → rising edge bit 0 = 1)
     s.workRam[EDGE_PREV_OFF] = 0x00;
     s.workRam[EDGE_PREV_OFF + 1] = 0x00;
-    // Event flag word: due 1-bit per cover the 2 inner pop.
+    // Event flag word: two 1-bits to cover the 2 inner pops.
     s.workRam[FLAGS_OFF] = 0x00;
-    s.workRam[FLAGS_OFF + 1] = 0b11; // bit 0 and bit 1 settati
+    s.workRam[FLAGS_OFF + 1] = 0b11; // bit 0 and bit 1 set
 
     const writes: Array<{ addr: number; value: number }> = [];
     const result = syncAvToggle1E08(s, {
@@ -34,7 +34,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
 
     expect(result.terminated).toBe(true);
     expect(result.iterations).toBe(1);
-    // 2 pop totali (consumed both i bit set, in 1 sola pop each).
+    // 2 pops total (consumed both set bits, in 1 single pop each).
     expect(result.flagPops).toBe(2);
     // 2 MMIO writes: 0x0000, then 0x0080.
     expect(writes).toEqual([
@@ -55,7 +55,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     s.workRam[PORT_OFF + 1] = 0x01;
     // Queue: bit 0 set, bit 5 set, all others 0.
     // Pop sequence (lsr → bit 0 popped first):
-    //   pop1 → 1 (bit 0). Queue ora 0b00100000 >> 0 wait: 0b100001 >>1 = 0b10000 → 0b00010000
+    //   pop1 → 1 (bit 0). Queue now 0b00100000 >> 0 wait: 0b100001 >>1 = 0b10000 → 0b00010000
     //   inner1 done. Then inner2:
     //   pop2 → 0 (bit 0 of 0b00010000 = 0). Queue >>= 1 → 0b00001000 (= 8)
     //   pop3 → 0 → 0b00000100 (= 4)
@@ -78,7 +78,7 @@ describe("syncAvToggle1E08 (FUN_1E08)", () => {
     // -> rising bit 0 = 0 always, even with prev = 0.
     s.workRam[PORT_OFF] = 0x00;
     s.workRam[PORT_OFF + 1] = 0x02;
-    // ⇒ 16 pop totali → ok. Limitiamo iterations a 5, flagPops large.
+    // ⇒ 16 pops total → ok. We limit iterations to 5, flagPops large.
     s.workRam[FLAGS_OFF] = 0xff;
     s.workRam[FLAGS_OFF + 1] = 0xff;
 

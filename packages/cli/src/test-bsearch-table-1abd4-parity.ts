@@ -3,34 +3,34 @@
  * test-bsearch-table-1abd4-parity.ts — differential FUN_0001ABD4 vs
  * `bsearchTable1ABD4`.
  *
- * FUN_0001ABD4 (68 byte) e' un binary-search per word: cerca il low-word
- * of `arg1Long` dentro la table puntata da `*(0x40065A)..*(0x40065E)`,
+ * FUN_0001ABD4 (68 bytes) is a per-word binary search: it looks for the low
+ * word of `arg1Long` inside the table pointed to by `*(0x40065A)..*(0x40065E)`,
  * with initial 0x400-byte step, halved on every iter. It terminates only
- * to the equality. Ritorna in D0 il word-index `(matchPtr - basePtr) / 2`.
+ * on equality. It returns in D0 the word index `(matchPtr - basePtr) / 2`.
  *
- * Strategia stub injection:
+ * Stub injection strategy:
  *   - FUN_0001ABD4 calls no JSR -> nothing to patch.
  *   - The only requirement is that the target is present in the table,
- *     otherwise the binary would enter an infinite loop. Tests
- *     costruiscono table garantite "complete".
+ *     otherwise the binary would enter an infinite loop. The tests
+ *     build tables guaranteed to be "complete".
  *
  * Setup table: use identity `table[i] = i` for i in [0..0x200)
- * (512 word, 1 KB), stoccata @ workRam off 0x1000. Pointer base = 0x401000,
+ * (512 words, 1 KB), stored @ workRam off 0x1000. Pointer base = 0x401000,
  * pointer end = 0x4011FE. Convergence is proven for every target in
  * [0..0x1FF]: bisection reaches step=2 in <=10 iterations and finds a match.
  *
  * Tested suites (4 x 125 = 500 cases):
- *   - A: identity table 512 word, target random in [0..0x1FF]
- *   - B: identity table, target random + bit alti random in the long
+ *   - A: identity table 512 words, target random in [0..0x1FF]
+ *   - B: identity table, target random + random high bits in the long
  *        (checks mask 0xFFFF)
- *   - C: identity table 256 word (table piu' piccola), target in [0..0xFF]
+ *   - C: identity table 256 words (smaller table), target in [0..0xFF]
  *        - checks top-side clamp
  *   - D: identity table displaced @ off 0x800 (different base), random target
  *        - checks independence from base addr
  *
- * Confronto: D0.w (return = word index).
+ * Comparison: D0.w (return = word index).
  *
- * Uso: npx tsx packages/cli/src/test-bsearch-table-1abd4-parity.ts [N]
+ * Usage: npx tsx packages/cli/src/test-bsearch-table-1abd4-parity.ts [N]
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -53,9 +53,9 @@ const FUN_1ABD4 = 0x0001abd4;
 const PTR_BASE_SLOT = 0x0040065a;
 const PTR_END_SLOT = 0x0040065e;
 
-/** Patch JSR-stubs. FUN_1ABD4 non ha JSR → no-op. */
+/** Patch JSR-stubs. FUN_1ABD4 has no JSR → no-op. */
 function patchSubs(_cpu: CpuSession): void {
-  // Nessuna JSR in the range.
+  // No JSR in the range.
 }
 
 /** Write a long-BE in both binary+TS. */
@@ -95,8 +95,8 @@ function pokeWord(
 }
 
 /**
- * Setup identity table @ workRam off `tableOff`, lunghezza `nWords` word.
- * Configura *(0x40065A) and *(0x40065E) puntando a base/end.
+ * Setup identity table @ workRam off `tableOff`, length `nWords` words.
+ * Configures *(0x40065A) and *(0x40065E) pointing to base/end.
  */
 function setupIdentityTable(
   state: ReturnType<typeof stateNs.emptyGameState>,

@@ -2,8 +2,8 @@
  * Test findNearestTarget2637A (FUN_0002637A) - smoke tests for the scanner
  * for nearest-neighbor with filter + line-of-sight.
  *
- * ROM, filtra per byte (≡ A2[+0x1D] sign-ext), valida via `FUN_17CB8` e
- * miglior candidato visibile.
+ * ROM, filters by byte (≡ A2[+0x1D] sign-ext), validates via `FUN_17CB8`, and
+ * picks the best visible candidate.
  *
  * `cli/src/test-find-nearest-target-2637a-parity.ts` (500/500 cases).
  */
@@ -31,8 +31,8 @@ function readU32BE(wr: Uint8Array, off: number): number {
   );
 }
 
-/** Costruisce un reader bytewise su un Uint8Array indicizzato da
- *  un base-address fittizio (e.g. 0x20000 = ROM area).
+/** Builds a bytewise reader over a Uint8Array indexed from
+ *  a fictitious base address (e.g. 0x20000 = ROM area).
  */
 function makeTableReader(
   base: number,
@@ -155,7 +155,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
       lineOfSight17CB8: () => 0,
     });
 
-    // Globals invariati
+    // Globals unchanged
     expect(readU32BE(s.workRam, 0x462)).toBe(0xdeadbeef >>> 0);
     expect(readU32BE(s.workRam, 0x466)).toBe(0xcafebabe >>> 0);
     expect(s.workRam[0x472]).toBe(0xa5);
@@ -167,7 +167,7 @@ describe("findNearestTarget2637A (FUN_0002637A)", () => {
     const objOff = objPtr - WORK_RAM_BASE;
 
     // Filter sign-ext: 0xFE (.b) → 0xFFFE (.w sign-ext).
-    // Il candidato ha filter byte 0xFE (.b) → 0x00FE (.w zero-ext, moveq #0,D0).
+    // The candidate has filter byte 0xFE (.b) → 0x00FE (.w zero-ext, moveq #0,D0).
     //   D0.w = zero-ext byte from A3[+2] (= 0x00FE)
     // vs
     //   word at (-2,A6) = sign-ext A2[+0x1D] (= 0xFFFE per 0xFE)

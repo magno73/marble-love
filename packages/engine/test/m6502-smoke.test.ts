@@ -4,8 +4,8 @@
  * Verify key behaviors that are easy to miss in a port:
  *  - RESET fetches PC from $FFFC/$FFFD and sets SP=$FD.
  *  - JMP indirect NMOS bug ($xxFF wraps within the same high byte).
- *  - NMI prevale su IRQ; IRQ e' masked da FLAG_I.
- *  - Page-cross penalty su LDA abs,X (READ ops).
+ *  - NMI takes priority over IRQ; IRQ is masked by FLAG_I.
+ *  - Page-cross penalty on LDA abs,X (READ ops).
  *  - Stack push/pop coherent with SP wrap.
  *  - Branch taken / not-taken / page-cross cycle delta.
  *
@@ -38,7 +38,7 @@ function loadProgram(bus: { mem: Uint8Array }, addr: number, bytes: number[]): v
 describe("m6502 reset", () => {
   it("fetcha PC from the vector $FFFC/$FFFD and setta SP=$FD", () => {
     // Why: the correct RESET sequence is essential before any other
-    // test; un bug qui rompe all.
+    // test; a bug here breaks everything.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x34;
@@ -52,16 +52,16 @@ describe("m6502 reset", () => {
 
 describe("m6502 JMP indirect NMOS bug", () => {
   it("$xxFF wrap: high byte da $xx00, NOT da $(xx+1)00", () => {
-    // Why: this bug e' ben noto of the NMOS and ASSENTE in the 65C02. Se qualcuno
-    // accidentalmente porta 65C02 behavior this test fails.
+    // Why: this bug is well known on the NMOS and absent on the 65C02. If someone
+    // accidentally ports 65C02 behavior, this test fails.
     const cpu = createCpu();
     const bus = makeBus();
     // Setup: JMP ($02FF). Target word reads $02FF (lo) + $0200 (hi, BUG).
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;
     loadProgram(bus, 0x8000, [0x6c, 0xff, 0x02]); // JMP ($02FF)
     bus.mem[0x02ff] = 0x78; // lo target
-    bus.mem[0x0200] = 0x56; // hi target — BUG: high byte da $xx00
-    bus.mem[0x0300] = 0xff; // this NOT must be used (65C02 lo would use)
+    bus.mem[0x0200] = 0x56; // hi target — BUG: high byte from $xx00
+    bus.mem[0x0300] = 0xff; // this must NOT be used (a 65C02 would use it)
     reset(cpu, bus);
     step(cpu, bus);
     expect(raw(cpu.rf.pc)).toBe(0x5678);
@@ -77,7 +77,7 @@ describe("m6502 NMI vs IRQ priority", () => {
     bus.mem[0xfffe] = 0x00; bus.mem[0xffff] = 0xa0; // IRQ vector
     loadProgram(bus, 0x8000, [0xea]); // NOP
     reset(cpu, bus);
-    cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false); // sblocca IRQ
+    cpu.rf.p = setFlag(cpu.rf.p, FLAG_I, false); // unblock IRQ
     requestIrq(cpu);
     requestNmi(cpu);
     step(cpu, bus);
@@ -86,7 +86,7 @@ describe("m6502 NMI vs IRQ priority", () => {
 
   it("IRQ masked da FLAG_I (default post-reset)", () => {
     // Why: after reset I=1, IRQ is ignored; a masking bug would start
-    // l'IRQ handler invece of the opcode of programma.
+    // the IRQ handler instead of the program opcode.
     const cpu = createCpu();
     const bus = makeBus();
     bus.mem[0xfffc] = 0x00; bus.mem[0xfffd] = 0x80;

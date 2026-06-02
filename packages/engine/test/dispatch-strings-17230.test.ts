@@ -1,5 +1,5 @@
 /**
- * Test dispatchStrings17230 (FUN_17230) — smoke tests sui branches principali.
+ * Test dispatchStrings17230 (FUN_17230) — smoke tests on the main branches.
  *
  * `cli/src/test-dispatch-strings-17230-parity.ts`.
  */

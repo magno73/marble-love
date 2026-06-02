@@ -1,9 +1,9 @@
 /**
- * helper-5236.test.ts — smoke test per helper5236 (FUN_5236).
+ * helper-5236.test.ts — smoke test for helper5236 (FUN_5236).
  *
  * `packages/cli/src/test-helper-5236-parity.ts`.
- * Qui copriamo i path principali: arg < 2, arg >= 2, shift=0 → mask=1,
- * from the long target.
+ * Here we cover the main paths: arg < 2, arg >= 2, shift=0 → mask=1,
+ * on the target long.
  */
 
 import { describe, it, expect } from "vitest";
@@ -116,7 +116,7 @@ describe("helper5236 (FUN_5236) — smoke", () => {
     helper5236(s, 0); // mask=1
 
     expect(readLongBE(s.workRam, STATUS_FLAGS_OFF)).toBe(0x00000001);
-    // Byte adiacenti intact
+    // Adjacent bytes intact
     expect(s.workRam[STATUS_FLAGS_OFF - 1]).toBe(0xa5);
     expect(s.workRam[STATUS_FLAGS_OFF + 4]).toBe(0xa5);
     expect(s.workRam[0x0100]).toBe(0xa5);
