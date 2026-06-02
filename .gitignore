@@ -65,7 +65,8 @@ tasks/*/artifacts/
 # --- Local-only historical project notes ---
 CLAUDE.md
 GOAL.md
-STATUS.md
+# Anchored to repo root so it does not also ignore docs/STATUS.md (W4 deliverable).
+/STATUS.md
 PROMPT.md
 HANDOFF_*.md
 marble-love-prd-v*.md
