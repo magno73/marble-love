@@ -118,7 +118,7 @@ async function main(): Promise<void> {
     const byteAtA2_9 = state.workRam[(a2 - WORK_RAM_BASE + 9) >>> 0]! & 0xff;
 
     // Capture long-BE @ SP+4 (= 0x401F00 → workRam[0x1F00..0x1F03])
-    // Le tre fasi di clear NON toccano [0x1F00..0x1F03] (clear = A2+0..0x1D
+    // The three clear phases do NOT touch [0x1F00..0x1F03] (clear = A2+0..0x1D
     // where A2 <= 0x1C00 -> max cleared addr = 0x1C1D < 0x1F00). The bsr to
     // 0x5224 + 0x5234 touch only SP region [0x1EF8..0x1EFB] (ret addrs).
     const stackD0 =

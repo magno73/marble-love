@@ -441,7 +441,7 @@ function sextWord(w: number): number {
  *              consuma RNG via `state.rng` per i path "state-branch").
  * @param subs  injection stub per le 6 sub esterne. Default tutte no-op (e
  *
- * @returns dettaglio del gate, dello spawn-dispatch e del per-entity tick.
+ * @returns detail of the gate, the spawn-dispatch and the per-entity tick.
  */
 export function stateSub19BAA(
   state: GameState,

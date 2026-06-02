@@ -6,7 +6,7 @@
  *   - 1 long + 1 word (skipped on last iter D2==5)
  * Output al `dst` ptr (post-incrementing).
  *
- * Le rotazioni `ror.l` mescolano nibbles cross-word, quindi va replicato
+ * The `ror.l` rotations mix nibbles cross-word, so it must be replicated
  * carefully.
  */
 

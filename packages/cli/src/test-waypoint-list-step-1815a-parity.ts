@@ -7,9 +7,9 @@
  *
  * **Strategia parity**:
  *   - `FUN_0000012a` (sound dispatch) **stubbed with RTS** (0x4E75) for
- *     neutralizzare side effects. TS usa `subs.fun_012a = noop`.
+ *     neutralize side effects. TS uses `subs.fun_012a = noop`.
  *   - `FUN_00026196` (flag-scaled magnitude dispatch) **stubbed with RTS**.
- *     TS usa `subs.fun_26196 = noop`.
+ *     TS uses `subs.fun_26196 = noop`.
  *   - Compare:
  *       * `entity[0x00..0x6F]` (0x70 byte = full entity stride, copre 0x6e)
  *       * waypoint list bytes (0x40 byte a partire dal LIST_BASE)

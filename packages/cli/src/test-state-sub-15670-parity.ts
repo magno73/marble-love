@@ -7,7 +7,7 @@
  *
  * **Strategia stub injection**:
  *
- *      controllato. Il TS reimpl usa `compareObjDepth` di default ma noi
+ *      controlled. The TS reimpl uses `compareObjDepth` by default but we
  *
  *      Layout stub (8 byte):
  *        move.l 0x00401E40.l, D0    ; 2039 0040 1E40   (6 byte)

@@ -25,7 +25,7 @@
  *       * `*0x00400658` (summary counter): incrementato 1 volta per entity
  *         matchata.
  *
- *     L'unica osservazione "side-effect-free" rimasta sono questi 2 byte +
+ *     The only "side-effect-free" observation left is these 2 bytes +
  *     the count-down loop termination itself (gated by D4 > 0). Because
  *
  *     Il **TS** corrispondente fornisce 8 sub no-op (default) per matchare.
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
     setupCase(input);
 
     // maxCycles bumped to 1M: FUN_18A88 count-down loop with D4=99000
-    // esegue ~396 iter/entity × 30 cicli ≈ 12000 cicli/entity. Con count=2
+    // runs ~396 iter/entity × 30 cycles ≈ 12000 cycles/entity. With count=2
     // ≈ 24000 cicli; 1M lascia margine.
     callFunction(cpu, FUN_18A88, [], 1_000_000);
     const binSnap = snapshotBinary(cpu, input.count);

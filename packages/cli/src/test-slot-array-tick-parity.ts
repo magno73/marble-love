@@ -11,7 +11,7 @@
  *   3. Run TS with a callback that emits the same log -> compare workRam
  *      bit-by-bit (incluso ring-buffer + counter).
  *
- * Il thunk patch (32 byte, < dimensione di FUN_14966) sostituisce l'header:
+ * The thunk patch (32 bytes, < size of FUN_14966) replaces the header:
  *   movea.l #0x00401FE0, A0       ; 207C 0040 1FE0          (6 byte)
  *   move.l  0x00401FF8.l, D1      ; 2239 0040 1FF8          (6 byte)
  *   adda.l  D1, A0                ; D1C1                    (2 byte) ; A0 += D1*1 (long)
@@ -42,7 +42,7 @@ import type { CpuSession } from "./binary-oracle-lib.js";
 const FUN_1493C = 0x0001493c;
 const FUN_14966 = 0x00014966;
 
-/** Indirizzi della ring-buffer in work-RAM (offset 0x1FE0..0x1FFB). */
+/** Addresses of the ring-buffer in work-RAM (offset 0x1FE0..0x1FFB). */
 const RING_COUNTER = 0x00401ff8;
 
 /** Patch FUN_14966 col thunk-logger (26 byte). */

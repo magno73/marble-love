@@ -17,7 +17,7 @@
  *     workRam[0x1FFC..] = ptr (long BE).
  *   - Same setup between Musashi and TS (workRam vs unified mem).
  *   - For each random case: pick arg1 with pattern; call the binary;
- *     chiama TS; confronta `D0` E i 2 byte modificati (FF5, FF7) E i due
+ *     calls TS; compares `D0` AND the 2 modified bytes (FF5, FF7) AND the two
  *     byte del player struct (mai modificati, ma verifichiamo l'invariante).
  *
  * Pattern coverage:

@@ -353,7 +353,7 @@ export function write8(bus: Bus, addr: number, value: u8): void {
     return; // alt path, used by roadbls2
   }
 
-  // ADC (Marble non usa, ma scriviamo no-op)
+  // ADC (Marble does not use it, but we write a no-op)
   if (a >= MMIO_ADC_BASE && a < MMIO_ADC_END) {
     return;
   }

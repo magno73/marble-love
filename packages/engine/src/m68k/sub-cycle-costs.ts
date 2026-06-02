@@ -150,7 +150,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //
   // 158CC total (attract, both slot pairs active ELSE):
   //   ~208 + 2 × 5740 = ~11688
-  // 158CC fast (slot pair entrambi s18=0): ~208 + 2 × 60 = ~328
+  // 158CC fast (slot pair both s18=0): ~208 + 2 × 60 = ~328
   "FUN_158CC_FAST": as_u32(330),
   "FUN_158CC": as_u32(11700), // attract gameplay (P1+P2 active ELSE)
   "FUN_158F6_ELSE": as_u32(5740),
@@ -267,7 +267,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   // Gate: *0x400394 == 3 AND *0x400760 != 0. In attract: *0x394 == 0 → fast.
   // In gameplay: *0x394 == 4 → fast. Solo durante boss/transition (mode 3).
   //
-  // Fast: ~40 cicli (link+movem+gate+epilog)
+  // Fast: ~40 cycles (link+movem+gate+epilog)
   //
   // Full (mode 3):
   //   - 36 entries × 0x10 stride:
@@ -279,7 +279,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
   //   - media per entry: 40 + 0.05*400 + 0.7*200 = ~200
   //   - 36 × 200 = ~7200
   //   - post-loop 3-bucket sound dispatch: ~150 × 3 = 450
-  //   Total: ~7700 cicli
+  //   Total: ~7700 cycles
   "FUN_1844A_FAST": as_u32(40),
   "FUN_1844A": as_u32(40), // attract: gate off
   "FUN_1844A_HEAVY": as_u32(7700), // mode 3 attivo
@@ -393,7 +393,7 @@ export const SUB_CYCLE_ESTIMATE: Readonly<Record<string, u32>> = {
 
   // FUN_1101E: mainLoopInit1101E (dispatcher orchestrator).
   //
-  // Gate: stateWord = *0x400390. Path attract = stateWord == 0 → chiama
+  // Gate: stateWord = *0x400390. Attract path = stateWord == 0 → calls
   // refreshFrame10FCE direttamente.
   //
   // Dispatch + jsr 10FCE cost, excluding the 10FCE body: ~40 cycles.
@@ -449,7 +449,7 @@ export const BODY_ITER_ESTIMATE_FAST: u32 = as_u32(31634);
  *   FUN_28624 heavy             2140
  *   FUN_26F3E                   7400
  *  ─────────────────────────────────
- *                             117254 cicli
+ *                             117254 cycles
  *
  * Marginally < CYCLES_PER_VBLANK (119316): in heavy gameplay the body fits
  * inside one vblank with a narrow margin. Adding 1-2 object scans with the full

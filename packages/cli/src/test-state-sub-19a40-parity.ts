@@ -48,7 +48,7 @@ const ENTITY_COUNT = 10;
 const TABLE_SIZE = ENTITY_STRIDE * ENTITY_COUNT; // 0x230
 
 /**
- * indipendentemente da cosa fanno le sub. Il TS usa `subs.fun_* = noop`.
+ * regardless of what the subs do. The TS uses `subs.fun_* = noop`.
  */
 function patchSubs(cpu: CpuSession): void {
   pokeMem(cpu, FUN_19E42 + 0, 1, 0x4e);

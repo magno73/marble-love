@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * test-rng-parity.ts — differential testing del RNG: chiama FUN_13A98 nel
+ * test-rng-parity.ts — differential testing of the RNG: calls FUN_13A98 in the
  * binary via Musashi, compares the seed delta and return value with the
  * our TS implementation in `@marble-love/engine/rng`.
  *

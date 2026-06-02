@@ -169,11 +169,11 @@ import type { GameState } from "./state.js";
 
 // ─── Globals (offset workRam relativi a 0x400000) ────────────────────────
 
-/** Offset workRam della "game mode" word (assoluto = 0x400394). */
+/** workRam offset of the "game mode" word (absolute = 0x400394). */
 export const GAME_MODE_WORD_OFF = 0x394 as const;
-/** Offset workRam della marble x-word (assoluto = 0x400690). */
+/** workRam offset of the marble x-word (absolute = 0x400690). */
 export const MARBLE_X_WORD_OFF = 0x690 as const;
-/** Offset workRam della marble y-word (assoluto = 0x400692). */
+/** workRam offset of the marble y-word (absolute = 0x400692). */
 export const MARBLE_Y_WORD_OFF = 0x692 as const;
 
 export const REQUIRED_GAME_MODE_A = 0x0002 as const;
@@ -267,9 +267,9 @@ export interface StringViewportHit175C8Result {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
-/** Base della work RAM (0x400000..0x401FFF, 8 KB). */
+/** Base of the work RAM (0x400000..0x401FFF, 8 KB). */
 const WORK_RAM_BASE = 0x400000;
-/** End della work RAM (esclusivo). */
+/** End of the work RAM (exclusive). */
 const WORK_RAM_END = 0x402000;
 
 function rb(state: GameState, addr: number): number {

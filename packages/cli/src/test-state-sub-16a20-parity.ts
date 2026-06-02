@@ -7,7 +7,7 @@
  * Quattro fasi:
  *   1. Scan entity array → D4 (state==3 count), A0 (last state==1/3 entity).
  *      → FUN_1BA(slotArg), sound dispatch (gated D4==0).
- *   2. Display loop: aggiorna entity[0x6D/0x6E], conta mode4/5, chiama sound
+ *   2. Display loop: updates entity[0x6D/0x6E], counts mode4/5, calls sound
  *      pair, render string x 5 (or 7 if count==2) per entity state==2.
  *      → waitVblankStateGated(0xB4), clearDisplayRows(0x14).
  *   3. Secondary loop: render 5+3 strings + wait × 3 per entity state==1

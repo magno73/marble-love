@@ -51,7 +51,7 @@ export function alphaTileWordWrite383A(
 }
 
 /**
- * Replica `FUN_0000565A` — palette init: copia 8 word da ROM[0x7B18] in
+ * Replica `FUN_0000565A` — palette init: copies 8 words from ROM[0x7B18] into
  * colorRam[0..0xF], poi clear word @ colorRam[0x400] (per quel slot).
  *
  *   A1 = 0xB00000 (colorRam base)

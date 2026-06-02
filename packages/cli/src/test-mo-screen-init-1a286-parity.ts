@@ -12,7 +12,7 @@
  *      of the real subs:
  *        FUN_28C7E      → sentinel byte 0x4003E0
  *        FUN_1A41E      → sentinel byte 0x4003E1
- *        FUN_2572       → sentinel byte 0x4003E2 (bersaglio della JMP.L 0x142)
+ *        FUN_2572       → sentinel byte 0x4003E2 (target of the JMP.L 0x142)
  *
  *   2. Patch ROM with NOP (0x4E71) over the 2 internal `beq.b $-2` spin-waits (offset
  *      `*0xF60001 bit 0 == 0` (default zero region in unified memory).
@@ -48,7 +48,7 @@ import {
 } from "./binary-oracle-lib.js";
 
 /**
- * Step-based callFunction: come `callFunction()` ma usa `system.step()`
+ * Step-based callFunction: like `callFunction()` but uses `system.step()`
  * invece di `system.run(burst)`. Garantisce terminazione PRECISA non appena
  * `pc == SENTINEL_RET_ADDR`, preventing a burst from executing extra
  * make the PC converge on FUN_2572 in a misleading way if the PC keeps

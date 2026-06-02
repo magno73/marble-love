@@ -48,7 +48,7 @@ import {
 const FUN_4058 = 0x00004058;
 const PTR_FFC = 0x00401ffc;
 
-/** Indirizzo fissato della struct base nel test (workRam-safe). */
+/** Fixed address of the base struct in the test (workRam-safe). */
 const PTR_VAL = 0x00401a00;
 const STRUCT_BASE = PTR_VAL + 0x50; // 0x401A50
 
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
     } else {
       pattern = "random";
       // arg1 and arg2 are full random longs; the binary caller always passes sign-ext from
-      // word, quindi alto = 0 oppure 0xFFFF; qui stress-test allargato a long).
+      // word, so high = 0 or 0xFFFF; here stress-tested widened to long).
       const a1w = Math.floor(rng() * 0x10000);
       const a1h = rng() < 0.5 ? 0 : a1w & 0x8000 ? 0xffff : 0;
       arg1 = (((a1h << 16) >>> 0) | a1w) >>> 0;

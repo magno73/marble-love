@@ -56,7 +56,7 @@
  * and defaults to no-op.
  *
  * **Callers** (xref):
- *     attr=arg4.w) come terzo step della pipeline `format-and-render-28e00`.
+ *     attr=arg4.w) as the third step of the pipeline `format-and-render-28e00`.
  *     attr=0x1000).
  */
 

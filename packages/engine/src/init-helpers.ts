@@ -1,12 +1,12 @@
 /**
  * init-helpers.ts — piccole utility init/copy/transform.
  *
- * - **FUN_11AC2 (22 byte)** — `copyRomToWorkram66Words()`: copia 66 word
+ * - **FUN_11AC2 (22 byte)** — `copyRomToWorkram66Words()`: copies 66 words
  *   da ROM 0x1D370 a workRam 0x40076E.
- * - **FUN_26B10 (26 byte)** — `copyRomToPalette32Words()`: copia 32 word
+ * - **FUN_26B10 (26 byte)** — `copyRomToPalette32Words()`: copies 32 words
  *   da ROM 0x1FBD0 a palette RAM 0xB00000.
  * - **FUN_1286E (24 byte)** — `negateXYSwap(ptr)`: scambia (x, y) e nega
- *   entrambi: result.x = -y_old, result.y = -x_old.
+ *   both: result.x = -y_old, result.y = -x_old.
  */
 
 import type { GameState } from "./state.js";

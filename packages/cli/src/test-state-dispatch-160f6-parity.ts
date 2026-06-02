@@ -16,7 +16,7 @@
  *   Layout stub FUN_158AC (20 byte):
  *     movea.l #0x00401E00, A0    ; 207C 0040 1E00  (6 byte)
  *     move.l  0x00401E04.l, D1   ; 2239 0040 1E04  (6 byte)
- *     move.l  (4,SP), (0,A0,D1) ; nope: usa addq e move sequenziale
+ *     move.l  (4,SP), (0,A0,D1) ; nope: uses addq and a sequential move
  *   Simplify with a fixed-slot log (max 4 calls):
  *     movea.l #0x00401E00, A0         ; 207C 0040 1E00  (6 byte)
  *     move.l  0x00401E04.l, D1        ; 2239 0040 1E04  (6 byte)

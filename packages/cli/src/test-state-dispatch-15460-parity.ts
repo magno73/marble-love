@@ -123,9 +123,9 @@ function compareZone(
 }
 
 interface CaseSetup {
-  /** Bytes dello struct (size STRUCT_SIZE). */
+  /** Bytes of the struct (size STRUCT_SIZE). */
   structBytes: number[];
-  /** Bytes della target cell area (size TARGET_SIZE). */
+  /** Bytes of the target cell area (size TARGET_SIZE). */
   targetBytes: number[];
 }
 

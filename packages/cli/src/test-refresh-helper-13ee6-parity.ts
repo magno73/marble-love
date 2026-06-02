@@ -10,7 +10,7 @@
  *   - Confrontiamo workRam[0..0x1000) e playfieldRam byte-per-byte.
  *
  * so the Musashi CPU treats them as no-ops. TS uses the default stub
- * da queste due funzioni.
+ * from these two functions.
  *
  * to the tail section, which depends only on workRam flags and ROM constants.
  *

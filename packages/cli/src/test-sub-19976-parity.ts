@@ -3,7 +3,7 @@
  * test-sub-19976-parity.ts — differential FUN_00019976 vs `sub19976`.
  *
  * FUN_00019976 (96 byte): "Entity move-velocity step". Legge entity[0x26] come
- * signed byte (direzione), usa la direzione per leggere 2 word signed dalle ROM
+ * signed byte (direction); uses the direction to read 2 signed words from the ROMs
  * table @ 0x244B6 (dX) e @ 0x244D6 (dY), scalata `<<8`, e aggiunge a
  * entity[0xC..0x13]. Se state==7 → velocity cache /4 in entity[0..7]. Altrimenti
  * cache = delta non scalato.

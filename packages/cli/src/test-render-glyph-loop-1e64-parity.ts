@@ -9,7 +9,7 @@
  *
  *     poi step instruction-by-instruction. Ad ogni visita di PC=0x32BA
  *     read from the stack `(bufPtr, charCode_long, mask_long)` (the 3 longs
- *     `BinaryCall`, poi continuo lo step (FUN_32BA esegue normalmente,
+ *     `BinaryCall`, then continue the step (FUN_32BA runs normally,
  *
  *   - **TS replica**: call `renderGlyphLoop1E64` with a callback
  *     `(bufPtr, charCode_low_word)` 1:1.
@@ -85,7 +85,7 @@ function runBinary(
 ): { calls: BinaryCall[]; reachedSentinel: boolean } {
   const sys = cpu.system;
 
-  // del 1E08 test ma simile). Allochiamo room per molti push.
+  // of the 1E08 test but similar). We allocate room for many pushes.
   let sp = 0x401e80 >>> 0;
 
   sp = (sp - 4) >>> 0; sys.write(sp, 4, count >>> 0);

@@ -46,7 +46,7 @@ const COMPARE_BASE = 0x00400418;
 const COMPARE_SIZE = 0x10; // 0x400418..0x400427
 const COMPARE_BASE_OFF = COMPARE_BASE - 0x00400000; // 0x418
 
-/** Offset dell'entry rispetto a COMPARE_BASE. */
+/** Offset of the entry relative to COMPARE_BASE. */
 const ENTRY_OFF_IN_REGION = 0x40041c - COMPARE_BASE; // 0x4
 
 function makeRng(seed: number): () => number {

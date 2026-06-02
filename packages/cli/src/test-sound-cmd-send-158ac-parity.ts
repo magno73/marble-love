@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   pokeMem(cpu, CHIP_STATUS_ADDR, 1, 0x00);
 
   for (let i = 0; i < n; i++) {
-    // Reset SP (callFunction usa lo stack per il sentinel return + arg).
+    // Reset SP (callFunction uses the stack for the sentinel return + arg).
     cpu.system.setRegister("sp", 0x401f00);
 
     const pattern = i < 4 ? i : Math.floor(rng() * 4) + 4;
