@@ -1,4 +1,4 @@
--- mame_ym2151_write_log.lua — log ogni (reg, val, cycle, pc) di write YM2151
+-- mame_ym2151_write_log.lua — log every YM2151 write (reg, val, cycle, pc)
 -- in MAME. Pattern: write $1800 sets selectedReg, write $1801 commits data.
 -- Output JSON for diff with TS write log -> identifies first divergence.
 local OUT_PATH = os.getenv("MARBLE_YM_OUT") or os.getenv("MARBLE_YM_TAP_OUT") or "/tmp/mame_ym_writes.json"

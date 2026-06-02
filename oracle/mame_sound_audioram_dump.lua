@@ -48,8 +48,8 @@ local function install_taps()
     sound_mem = audiocpu.spaces["program"]
     ports = manager.machine.ioport.ports
 
-    -- Identical to mame_sound_cmd_capture.lua because different setup changes
-    -- la timing del 6502 e l'audioRam.
+    -- Identical to mame_sound_cmd_capture.lua because a different setup changes
+    -- the 6502 timing and the audioRam.
     table.insert(tap_handles,
         main_mem:install_read_tap(0xF20000, 0xF20007, "dump_trackball", function(o, d, m) return d end))
     table.insert(tap_handles,

@@ -352,4 +352,5 @@ export function fun261BC(
   return retVal >>> 0;
 }
 
+/** @public */
 export const SUB_261BC_ADDR = 0x000261bc as const;

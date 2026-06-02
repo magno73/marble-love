@@ -31,9 +31,9 @@ emu.register_frame_done(function()
         table.insert(tap_handles, sound_mem:install_read_tap(0x1820, 0x1820, "st_coin",
             function(o,d,m) return d end))
 
-        -- Write tap su slot table $0248-$0267 (16 LO bytes + 16 HI bytes)
+        -- Write tap on slot table $0248-$0267 (16 LO bytes + 16 HI bytes)
         -- Filter: only HI writes ($0258-$0267) with value $CC/$CD (= attract
-        -- music tracks). Skip noise di slot copy/update routine.
+        -- music tracks). Skip noise from the slot copy/update routine.
         table.insert(tap_handles, sound_mem:install_write_tap(0x0258, 0x0267, "st_w",
             function(o, d, m)
                 local val = d & 0xff

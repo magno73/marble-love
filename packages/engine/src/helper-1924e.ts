@@ -205,4 +205,5 @@ export function helper1924E(
   }
 }
 
+/** @public */
 export const HELPER_1924E_ADDR = 0x0001924e as const;

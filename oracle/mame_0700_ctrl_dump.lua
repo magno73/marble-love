@@ -14,12 +14,12 @@
 -- for hypothesis B5): if equal, ROM source is coherent; if different, MAME reads
 -- from an alternative source (mirror, ext RAM, slapstic, scratch).
 --
--- Range catturati = 4 (oltre il cluster):
+-- Captured ranges = 4 (beyond the cluster):
 --   primary  0x07F0FB..0x07F1FA (256B, direct target)
---   adj_lo   0x07F000..0x07F0FA (251B, contesto immediato sotto)
---   adj_hi   0x07F1FB..0x07F2FA (256B, contesto immediato sopra)
+--   adj_lo   0x07F000..0x07F0FA (251B, immediate context below)
+--   adj_hi   0x07F1FB..0x07F2FA (256B, immediate context above)
 --   zone     0x070000..0x07FFFF: only a 16B sample-test every 0x1000 (checks
---                                 uniformita' della zona "vuota")
+--                                 uniformity of the "empty" zone)
 
 local function getenv(name, fallback)
     local v = os.getenv(name)
@@ -29,10 +29,10 @@ end
 
 local OUT_PATH    = getenv("MARBLE_TRACE_OUT", "/tmp/mame_0700_ctrl_dump.json")
 local FRAMES      = { 12001, 12002, 12003 }
-local STOP_FRAME  = 12005  -- usciamo dopo aver coperto le 3 sample
+local STOP_FRAME  = 12005  -- exit after covering the 3 samples
 
 local PRIMARY_LO  = 0x07F0FB
-local PRIMARY_HI  = 0x07F1FA  -- inclusivo, 256 byte
+local PRIMARY_HI  = 0x07F1FA  -- inclusive, 256 bytes
 
 local ADJ_LO_LO   = 0x07F000
 local ADJ_LO_HI   = 0x07F0FA
@@ -56,7 +56,7 @@ local function read_hex(lo, hi)
 end
 
 local function read_zone_samples()
-    -- 16 byte sample ogni 0x1000 da 0x70000 a 0x7F000
+    -- 16-byte sample every 0x1000 from 0x70000 to 0x7F000
     local zone = {}
     for base = 0x070000, 0x07F000, 0x1000 do
         zone[#zone+1] = { addr = base, hex = read_hex(base, base + 15) }

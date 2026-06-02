@@ -76,8 +76,9 @@ import { helper121B8 } from "./helper-121b8.js";
 import type { Helper121B8Subs } from "./helper-121b8.js";
 import { findNearestNeighbor } from "./nearest-neighbor.js";
 
-// ─── Costanti ────────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
+/** @public */
 export const SUB_158F6_ADDR = 0x000158f6 as const;
 
 const WORK_RAM_BASE = 0x00400000 as const;

@@ -462,7 +462,7 @@ export interface Sub29CCESubs {
 }
 
 
-/** ROM address of `FUN_00029CCE`. */
+/** ROM address of `FUN_00029CCE`. @public */
 export const SUB_29CCE_ADDR = 0x00029cce as const;
 
 /**

@@ -115,7 +115,7 @@ local script_trackball_x = 0xff
 local script_trackball_y = 0xff
 local route_steps = {}
 local route_total = 0
--- I tap handle restituiti da install_*_tap MUSCONO essere mantenuti in vita:
+-- The tap handles returned by install_*_tap MUST be kept alive:
 -- without a Lua reference, GC releases them and the tap stops firing (verified
 -- empirically). Mame_playable_input_capture.lua applies the same pattern.
 local tap_handles = {}
@@ -336,7 +336,7 @@ local function install_taps()
             return d
         end))
 
-    -- Il tap critico: $FE0001 write da main = soundlatch cmd al sound 6502.
+    -- The critical tap: $FE0001 write from main = soundlatch cmd to the sound 6502.
     -- 68010 16-bit bus: write to $FE0000 with mask & 0xff != 0 hits
     -- the odd byte ($FE0001), the real soundlatch.
     -- ALSO captures sub-frame cycle offset for cycle-precise replay (sessione 4l).

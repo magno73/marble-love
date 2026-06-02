@@ -22,7 +22,7 @@
 --     partial, so values are not suitable for field-level comparison.
 --   MARBLE_LEVEL_TAP_FORCE_ENTITY_INIT_COUNT=N forces diagnostic RAM
 --     objCount=N and obj[i]+0x18=3 during bootstrap. It only serves to
---     esercitare il consumer ROM `FUN_259B4` sugli slot entity-init.
+--     exercise the ROM consumer `FUN_259B4` on the entity-init slots.
 --
 -- Output format for each read:
 --   FRAME=N PC=0xPPPPPP OFFSET=0xOOOO LEVEL=L FIELD=name VALUE=0xVVVV SIZE=word|long
@@ -33,7 +33,7 @@
 local cpu = manager.machine.devices[":maincpu"]
 local space = cpu.spaces["program"]
 
--- Pointer table ROM (verificata Phase 4b)
+-- Pointer table ROM (verified Phase 4b)
 local LEVEL_ROM_BASES = {
   [0] = 0x2BEE2, -- Practice
   [1] = 0x2C54C, -- Beginner
@@ -52,7 +52,7 @@ local LEVEL_NAMES = {
   [5] = "Ultimate",
 }
 
--- Campi noti del header. Format: {offset, size_bytes, field_name}
+-- Known header fields. Format: {offset, size_bytes, field_name}
 local KNOWN_FIELDS = {
   { 0x00, 4, "directTerrainPtr" },
   { 0x04, 4, "tileWordTablePtr" },

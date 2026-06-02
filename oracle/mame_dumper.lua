@@ -122,7 +122,7 @@ local function parse_inputs_json(path)
     end
     if depth ~= 0 then return {} end
     local body = s:sub(open_brace, j - 1)  -- include both braces
-    -- Per ogni "frame_num": { ... }
+    -- For each "frame_num": { ... }
     -- Lua patterns do not support nested {}: use an iterative scan.
     local p = 1
     local count = 0
@@ -149,7 +149,7 @@ local function parse_inputs_json(path)
 end
 
 -- ─── Input application ───────────────────────────────────────────────────
--- Marble usa trackball (IN0/IN1 P1, IN2/IN3 P2) + button COIN/START.
+-- Marble uses a trackball (IN0/IN1 P1, IN2/IN3 P2) + button COIN/START.
 
 local function apply_input_at_frame(frame)
     local entry = input_schedule[frame]

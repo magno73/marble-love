@@ -186,7 +186,9 @@ function state11452Case3(state: GameState, subs: MainLoopInit11452Subs, rom?: Ro
   }
 }
 
+/** @public */
 export const MAIN_LOOP_INIT_11452_ADDR = 0x00011452 as const;
+/** @public */
 export const MAIN_LOOP_INIT_11452_SUB_ADDRS = [
   0x0000019c, 0x000158ac, 0x00011428, 0x00010456, 0x00016ec6,
   0x00010504, 0x00026b2a, 0x00026b66, 0x00028dea, 0x00018cd2,

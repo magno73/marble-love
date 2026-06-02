@@ -1,6 +1,6 @@
 -- mame_ym2151_write_pc_tap.lua - records every YM2151 write with the PC of the
--- sound 6502 al momento del write. Permette di mappare ogni reg write a una
--- specific code location nel sound ROM.
+-- sound 6502 at the moment of the write. Lets each reg write be mapped to a
+-- specific code location in the sound ROM.
 --
 -- Output: list of (addr, data, PC) for the first N writes.
 

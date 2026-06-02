@@ -1,13 +1,13 @@
--- mame_decoder_stream_tap.lua — token-level trace del decoder FUN_1A668
+-- mame_decoder_stream_tap.lua — token-level trace of the FUN_1A668 decoder
 --
--- Per ogni body in window [FROM_FR..TO_FR]:
---  1. Tap WRITE su 0x400700..0x40074F filtrato dai PC del decoder
+-- For each body in window [FROM_FR..TO_FR]:
+--  1. WRITE tap on 0x400700..0x40074F filtered by the decoder PCs
 --     (0x01a6ba A, 0x01a6e8 B, 0x01a714 C, 0x01a748 D, 0x01a778 E).
---     Cattura A0..A7 + D0..D7 + PC + sp al momento di OGNI write.
---  2. Tap READ su 0x000-0xFFFFF program space FILTRATO sui PC del decoder
---     (specifico: 0x1a690 long-read di A3, 0x1a6a8/0x1a6d8/0x1a6fe/0x1a73a/0x1a76a byte-read di A1).
+--     Capture A0..A7 + D0..D7 + PC + sp at the moment of EVERY write.
+--  2. READ tap on 0x000-0xFFFFF program space FILTERED on the decoder PCs
+--     (specifically: 0x1a690 long-read of A3, 0x1a6a8/0x1a6d8/0x1a6fe/0x1a73a/0x1a76a byte-read of A1).
 --     Capture read addr and value.
---  3. Stack di execution: usa cpu_pc to filter only "inside decoder" reads
+--  3. Execution stack: uses cpu_pc to filter only "inside decoder" reads
 --     (range 0x1a668..0x1a797).
 --
 -- Output JSON: /tmp/mame_decoder_stream.json
@@ -27,7 +27,7 @@ local FROM_FR  = tonumber(getenv("MARBLE_TRACE_FROM", "12000"))
 local TO_FR    = tonumber(getenv("MARBLE_TRACE_TO", "12010"))
 local OUT_PATH = getenv("MARBLE_TRACE_OUT", "/tmp/mame_decoder_stream.json")
 
--- PC writers del decoder (path A/B/C/D/E).
+-- Decoder PC writers (path A/B/C/D/E).
 local PC_PATH = {
     [0x1a6ba] = "A",
     [0x1a6e8] = "B",
@@ -36,7 +36,7 @@ local PC_PATH = {
     [0x1a778] = "E",
 }
 
--- PC reader addr critici (estrazione token + ricarica byte cache).
+-- Critical PC reader addrs (token extraction + byte cache reload).
 -- Ctrl long-read @ 0x1a690 (move.l (A3),D0)
 -- Ext byte-read @ 0x1a6a8 + 0x1a6aa (path A), 0x1a6d8 + 0x1a6da (B),
 --                0x1a6fe + 0x1a700 (C), 0x1a73a + 0x1a73c (D), 0x1a76a + 0x1a76c (E)
@@ -61,15 +61,15 @@ local reg_a, reg_d = {}, {}
 local frame_count = 0
 local installed = false
 
--- Writes nel range 0x400700..0x40074F (output buffer + tail) durante decoder.
+-- Writes in range 0x400700..0x40074F (output buffer + tail) during decoder.
 local writes = {}        -- {f, body_idx, pc, addr, data, mask, sp, a={}, d={}}
-local body_idx = 0       -- inkrementa ad ogni new body entry @ 0x1a668
+local body_idx = 0       -- increments on each new body entry @ 0x1a668
 local in_decoder = false
 
 -- Stream reads (ctrl + ext) from the decoder only.
 local stream_reads = {}  -- {f, body_idx, pc, addr, value, kind="ctrl"|"ext"}
 
--- Body entry/exit snapshots (regs al PC=0x1a668 e al PC=0x1a796).
+-- Body entry/exit snapshots (regs at PC=0x1a668 and at PC=0x1a796).
 local body_entries = {}  -- {f, idx, pc=0x1a668, a={}, d={}, sp}
 local body_exits = {}    -- {f, idx, pc=0x1a796, a={}, d={}, sp}
 
@@ -119,7 +119,7 @@ local function install_taps()
             }
             return
         end
-        -- Tutto il resto e' ctrl/ext stream content.
+        -- Everything else is ctrl/ext stream content.
         local kind = "?"
         if o >= 0x800e4 and o < 0x2be18 then kind = "ctrl"
         elseif o >= 0x2be18 and o < 0x88000 then kind = "ext"

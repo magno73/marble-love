@@ -129,4 +129,5 @@ export function stringStep1725A(
   computeSpriteCoords_v3(state, slotPtr);
 }
 
+/** @public */
 export const STRING_STEP_1725A_ADDR = 0x0001725a as const;

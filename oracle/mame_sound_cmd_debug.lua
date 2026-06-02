@@ -1,8 +1,8 @@
--- mame_sound_cmd_debug.lua — diagnostic completo:
---   1) Lista TUTTE le port names + fields al boot
---   2) Wide write tap su $F00000-$FFFFFF, top 30 addresses
+-- mame_sound_cmd_debug.lua — full diagnostic:
+--   1) List ALL port names + fields at boot
+--   2) Wide write tap on $F00000-$FFFFFF, top 30 addresses
 --   3) Inject coin+start with set_value above the default value
---   4) Stampa ogni 200 frame: PC main, PC sound, count writes finora
+--   4) Print every 200 frames: PC main, PC sound, write count so far
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_SOUND_CMD_TARGET_FRAME") or "2400")
 local OUT_PATH = os.getenv("MARBLE_SOUND_CMD_OUT") or "/tmp/mame_sound_debug.json"

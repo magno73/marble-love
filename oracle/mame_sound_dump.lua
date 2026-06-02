@@ -2,8 +2,8 @@
 -- mailbox) at a specific frame. Output: JSON with audiocpu regs, audioRam,
 -- mailbox, ym2151 e pokey register shadow.
 --
--- Variabili d'ambiente:
---   MARBLE_SOUND_DUMP_TARGET_FRAME — frame al quale salvare (default 600)
+-- Environment variables:
+--   MARBLE_SOUND_DUMP_TARGET_FRAME — frame at which to save (default 600)
 --   MARBLE_SOUND_DUMP_OUT          — file output (default /tmp/mame_sound_state.json)
 
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_SOUND_DUMP_TARGET_FRAME") or "600")
@@ -98,7 +98,7 @@ local function install_taps()
         audio_mem:install_write_tap(0x1801, 0x1801, "ym_data", function(o, d, m)
             ym_shadow[ym_latched_reg] = d & 0xff
         end)
-        -- POKEY: mappa $1870-$187F sul bus 6502. Ogni byte e' un registro
+        -- POKEY: maps $1870-$187F onto the 6502 bus. Each byte is a register
         -- direct write; there is no separate address latch.
         audio_mem:install_write_tap(0x1870, 0x187f, "pokey_write", function(o, d, m)
             pokey_shadow[o - 0x1870] = d & 0xff

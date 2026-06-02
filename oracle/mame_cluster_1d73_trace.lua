@@ -2,8 +2,8 @@
 -- Identifies writer PCs for the drift cluster @ 0x1d73..0x1e67 in the demo window.
 --
 -- MAME 0.286 bug: install_write_tap silently disables itself after
--- ~200 frames if installed at startup. Workaround: install the tap once at
--- ridosso della window (qui a fc = FROM_FR - 1).
+-- ~200 frames if installed at startup. Workaround: install the tap once
+-- right before the window (here at fc = FROM_FR - 1).
 --
 -- Env vars:
 --   MARBLE_TRACE_LO   — region low (default 0x401d70)

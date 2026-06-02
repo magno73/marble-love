@@ -295,4 +295,5 @@ export function helper182BA(
   void skipSeek;
 }
 
+/** @public */
 export const HELPER_182BA_ADDR = 0x000182ba as const;

@@ -11,6 +11,7 @@
 import type { GameState } from "./state.js";
 import type { RomImage } from "./bus.js";
 
+/** @public */
 export const TERRAIN_WAVE_UPDATE_1D06A_ADDR = 0x0001d06a as const;
 
 const WORK_RAM_BASE = 0x00400000 as const;
@@ -109,4 +110,5 @@ export function terrainWaveUpdate1D06A(
   }
 }
 
+/** @public */
 export { terrainWaveUpdate1D06A as FUN_0001D06A };

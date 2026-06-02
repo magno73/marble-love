@@ -1,8 +1,8 @@
--- mame_irq4_tap.lua — diagnostica IRQ4 interleaving vs body main thread.
+-- mame_irq4_tap.lua — diagnose IRQ4 interleaving vs body main thread.
 --
--- Tappa:
+-- Taps:
 --   1) ENTRY IRQ4 @ PC 0x34A (vector dispatch handler).
---   2) EXIT  IRQ4 @ PC 0x10144 (rte di MainTick @ 0x10116).
+--   2) EXIT  IRQ4 @ PC 0x10144 (rte of MainTick @ 0x10116).
 --   3) All writes to workRam 0x400000..0x401FFF while "in_irq" = true.
 --
 -- Output JSON with one entry per IRQ4 firing in frames [FROM, TO]:

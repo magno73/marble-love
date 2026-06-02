@@ -553,6 +553,7 @@ export function ym2151SetDiagnosticChannelStateTrace(
   };
 }
 
+/** @public */
 export function ym2151ClearDiagnosticChannelStateTrace(ym: YM2151): void {
   ym.diagnosticChannelStateTrace = undefined;
 }

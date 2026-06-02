@@ -269,8 +269,9 @@ export function operatorSetOpmBlockFreq(
   op.phaseInc = Math.trunc((detuned * multiple) / 2);
 }
 
-/** Aggiorna phaseInc dato il key code base (Hz) and MUL.
- * phaseInc is measured in phase units per sample in the 20-bit domain. */
+/** Updates phaseInc given the key code base (Hz) and MUL.
+ * phaseInc is measured in phase units per sample in the 20-bit domain.
+ * @public */
 export function operatorSetFreq(op: Operator, baseFreqHz: number, sampleRate: number): void {
   const mul = MUL_TABLE[op.mul] ?? 1;
   // Phase increment per sample in the 20-bit phase domain.

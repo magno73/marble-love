@@ -1,5 +1,5 @@
--- mame_sound_zp_dump.lua — dump zero-page del sound 6502 a frame target.
--- Permette diff TS vs MAME del music sequencer state byte ($32/$33/$34) +
+-- mame_sound_zp_dump.lua — dump the sound 6502 zero-page at target frames.
+-- Enables TS vs MAME diff of the music sequencer state byte ($32/$33/$34) +
 -- other critical zero-page locations.
 
 local TARGET_FRAMES_RAW = os.getenv("MARBLE_ZP_FRAMES") or "12000,12100,12200,12300,12400,12450,12480,12485,12490,12500"

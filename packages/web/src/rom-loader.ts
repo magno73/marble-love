@@ -362,11 +362,6 @@ export function extractRomZipBytes(
   return extractRomZipArchives([zipBytes], options);
 }
 
-export async function extractRomZip(file: File): Promise<ExtractedRomImage> {
-  console.log("rom file", file.name, file.size, "bytes");
-  return extractRomZipBytes(new Uint8Array(await file.arrayBuffer()));
-}
-
 export async function extractRomZipFiles(
   files: Iterable<File>,
   options?: RomLoadOptions,

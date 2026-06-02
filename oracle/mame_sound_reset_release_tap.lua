@@ -1,11 +1,11 @@
 -- mame_sound_reset_release_tap.lua - identifies when main 68K releases the
--- sound 6502 dal hold reset.
+-- sound 6502 from hold reset.
 --
 -- Atarisy1: write to $860001 bit 7 == 1 releases the sound CPU.
 -- bankselect_w in atarisy1.cpp handles both bank select and sound reset.
 --
 -- Also captures the first cmd writes to $FE0001 and dumps an audioRam snapshot.
--- (sound CPU RAM $0000-$0FFF) ai frame intorno al reset release.
+-- (sound CPU RAM $0000-$0FFF) at the frames around the reset release.
 
 local OUT_PATH = os.getenv("MARBLE_RST_OUT") or "/tmp/mame_reset_release.json"
 local TARGET_FRAME = tonumber(os.getenv("MARBLE_RST_TARGET") or "1500")

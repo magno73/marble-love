@@ -135,7 +135,7 @@ function sextByteSigned(b: number): number {
   return (b & 0x80) ? (b & 0xff) - 0x100 : b & 0xff;
 }
 
-/** Original subroutine address. */
+/** Original subroutine address. @public */
 export const SUB_14966_ADDR = 0x00014966 as const;
 
 /**
