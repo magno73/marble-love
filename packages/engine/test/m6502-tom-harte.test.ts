@@ -1,16 +1,16 @@
 /**
- * m6502-tom-harte.test.ts — Runner per oracle/tom_harte_m6502/*.json.
+ * m6502-tom-harte.test.ts — Runner for oracle/tom_harte_m6502/*.json.
  *
  * Mirror pattern of the M68000 runner. For each `<hex>.json` file in
- * directory oracle, runs all i test:
- *  1. Inizializza Uint8Array(0x10000) zero, applica sparse `initial.ram`.
+ * the oracle directory, runs all tests:
+ *  1. Initialize zeroed Uint8Array(0x10000), apply sparse `initial.ram`.
  *  2. Create CPU with regs from `initial`.
- *  3. step() una singola istruzione.
- *  4. Confronta regs (A,X,Y,SP,P,PC) and cycle count.
+ *  3. step() a single instruction.
+ *  4. Compare regs (A,X,Y,SP,P,PC) and cycle count.
  *  5. Compare RAM only on bytes listed by `final.ram` (sparse comparison).
  *
- * Se la directory oracle e' vuota (dataset non fetched), il file uses
- * `it.skip` → run e' un no-op, NOT falla.
+ * If the oracle directory is empty (dataset not fetched), the file uses
+ * `it.skip` → run is a no-op, NOT a failure.
  *
  * Status flag mask: NV-DIZC (exclude B and U from the compare because they are
  * "soft flags" that depend only on PHP/BRK; the upstream datasheet does not
@@ -66,7 +66,7 @@ function makeBusFromRam(initRam: Array<[number, number]>): MemBus6502 & { mem: U
   };
 }
 
-// Mask per comparison flag: esclude B (0x10) and U (0x20) — soft flags.
+// Mask for flag comparison: excludes B (0x10) and U (0x20) — soft flags.
 const FLAG_MASK_COMPARE = 0xcf;
 
 function runOpcodeFile(file: string): void {
@@ -89,15 +89,15 @@ function runOpcodeFile(file: string): void {
 
         const cyclesUsed = step(cpu, bus);
 
-        // Regs: compare direttamente
+        // Regs: compare directly
         expect(raw(cpu.rf.a)).toBe(t.final.a);
         expect(raw(cpu.rf.x)).toBe(t.final.x);
         expect(raw(cpu.rf.y)).toBe(t.final.y);
         expect(raw(cpu.rf.sp)).toBe(t.final.s);
         expect(raw(cpu.rf.pc)).toBe(t.final.pc);
-        // Flag: escludi B/U (vedi commento above)
+        // Flags: exclude B/U (see comment above)
         expect((cpu.rf.p as number) & FLAG_MASK_COMPARE).toBe(t.final.p & FLAG_MASK_COMPARE);
-        // Cycle count: lunghezza array cycles upstream
+        // Cycle count: length of upstream cycles array
         expect(cyclesUsed).toBe(t.cycles.length);
 
         // RAM: sparse compare; every byte listed by final.ram.
@@ -113,7 +113,7 @@ const files = listOpcodeFiles();
 
 if (files.length === 0) {
   describe.skip("m6502 Tom Harte (dataset not fetched)", () => {
-    it("placeholder — run oracle/tom_harte_m6502/build_subset.py per popolare", () => {
+    it("placeholder — run oracle/tom_harte_m6502/build_subset.py to populate", () => {
       expect(true).toBe(true);
     });
   });

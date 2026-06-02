@@ -53,7 +53,7 @@ function setArg1PtrToPtr(
 const WORK_RAM_BASE = 0x00400000;
 
 describe("renderStringEntry286B0 (FUN_286B0)", () => {
-  it("copies stringa null-terminated, writes col/tickOff/marker, invoca renderStringChain con (0x400410, attrWord)", () => {
+  it("copies the null-terminated string, writes col/tickOff/marker, invokes renderStringChain with (0x400410, attrWord)", () => {
     const s = emptyGameState();
 
     // Setup: source string @ workRam 0x100 = "HELLO"
@@ -112,7 +112,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     expect(renderArgs!.attr).toBe(0x3400);
   });
 
-  it("stringa vuota ('\\0') → copies 1 byte (terminator), struct popolato comunque", () => {
+  it("empty string ('\\0') → copies 1 byte (terminator), struct populated anyway", () => {
     const s = emptyGameState();
     const SRC_OFF = 0x100;
     s.workRam[SRC_OFF] = 0; // first byte = 0 → immediate terminator
@@ -134,13 +134,13 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     // 1 byte (terminator) written -> dst[0] = 0, dst[1] unchanged.
     expect(s.workRam[DST_OFF]).toBe(0);
     expect(s.workRam[DST_OFF + 1]).toBe(0x99);
-    // Struct popolato.
+    // Struct populated.
     expect(s.workRam[STRUCT_OFF + COL_BYTE_OFF]).toBe(0x55);
     expect(s.workRam[STRUCT_OFF + TICKOFF_BYTE_OFF]).toBe(0x33);
     expect(s.workRam[STRUCT_OFF + MARKER_BYTE_OFF]).toBe(0);
   });
 
-  it("solo low byte of arg2/arg3 and low word of arg4 are used (matching move.b/move.w)", () => {
+  it("only the low byte of arg2/arg3 and the low word of arg4 are used (matching move.b/move.w)", () => {
     const s = emptyGameState();
     const SRC_OFF = 0x100;
     putString(s, SRC_OFF, "X");
@@ -167,7 +167,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     expect(attrSeen).toBe(0x5678);
   });
 
-  it("copies stringa lunga: mantiene l'ordine byte (no spillage first of the inizio)", () => {
+  it("copies a long string: preserves byte order (no spillage before the start)", () => {
     const s = emptyGameState();
     const SRC_OFF = 0x100;
     putString(s, SRC_OFF, "ABCDE0123456789");
@@ -179,7 +179,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
 
     renderStringEntry286B0(s, WORK_RAM_BASE + ARG1_OFF, 1, 2, 0x3400);
 
-    expect(s.workRam[DST_OFF - 1]).toBe(0xee); // pre-byte invariato
+    expect(s.workRam[DST_OFF - 1]).toBe(0xee); // pre-byte unchanged
     for (let i = 0; i < 15; i++) {
       const expected = "ABCDE0123456789".charCodeAt(i);
       expect(s.workRam[DST_OFF + i]).toBe(expected);
@@ -187,7 +187,7 @@ describe("renderStringEntry286B0 (FUN_286B0)", () => {
     expect(s.workRam[DST_OFF + 15]).toBe(0); // terminator copied
   });
 
-  it("subs undefined → no throw; string copy + byte writes avvengono comunque", () => {
+  it("subs undefined → no throw; string copy + byte writes still happen", () => {
     const s = emptyGameState();
     const SRC_OFF = 0x100;
     putString(s, SRC_OFF, "OK");

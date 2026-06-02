@@ -1,7 +1,7 @@
 /**
  * m6502-sound-smoke.test.ts — Phase 4 success criterion smoke.
  *
- * Carica ROM reale Marble Madness (136033.421 + .422), istanzia CPU + MMU
+ * Loads the real Marble Madness ROM (136033.421 + .422), instantiates CPU + MMU
  * wired through createSoundMmu, runs the RESET sequence, and verifies:
  *
  *   1) Reset vector $FFFC/$FFFD read correctly -> valid PC (>= $4000)
@@ -10,10 +10,10 @@
  *
  * If this smoke fails, the sound ROM has 6502 opcodes outside the documented
  * 151 that `cpu.ts` throws as Error. In that case the fix is in
- * `opcodes.ts` (aggiungere il documented opcode mancante o implementare
- * undocumented stub) — non sopprimere l'error.
+ * `opcodes.ts` (add the missing documented opcode or implement an
+ * undocumented stub) — do not suppress the error.
  *
- * Le ROM file are estratte una tantum a `/tmp/sound-roms/` (vedi
+ * The ROM files are extracted once to `/tmp/sound-roms/` (see
  * `unzip -o roms/marble.zip 136033.421 136033.422 -d /tmp/sound-roms/`).
  * If they are missing: skip with a clear message, not a silent crash.
  */
@@ -31,7 +31,7 @@ const ROM_422 = `${ROM_DIR}/136033.422`;
 
 const haveRoms = existsSync(ROM_421) && existsSync(ROM_422);
 
-describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
+describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (real ROM)", () => {
   function buildMmu() {
     const rom = buildSoundRom({
       rom421: new Uint8Array(readFileSync(ROM_421)),
@@ -44,7 +44,7 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     });
   }
 
-  it("reset vector $FFFC/$FFFD: PC valido in the rom range", () => {
+  it("reset vector $FFFC/$FFFD: valid PC in the rom range", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);
@@ -57,7 +57,7 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);
-    // 1000 cycle ≈ 0.56 ms of clock 6502 @ 1.789 MHz. Se boot code stalla in
+    // 1000 cycles ≈ 0.56 ms of 6502 clock @ 1.789 MHz. If the boot code stalls in
     // a tight polling loop on mailbox or YM2151 status should still complete
     // because mailbox pending=false and the YM2151 stub returns 0 (= "not busy").
     expect(() => runForCycles(cpu, mmu, 1000)).not.toThrow();
@@ -65,7 +65,7 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
     expect(cpu.cycles).toBeGreaterThanOrEqual(1000);
   });
 
-  it("mailbox round-trip via MMU non crasha during boot", () => {
+  it("mailbox round-trip via MMU does not crash during boot", () => {
     const cpu = createCpu();
     const mmu = buildMmu();
     reset(cpu, mmu);
@@ -77,6 +77,6 @@ describe.skipIf(!haveRoms)("sound chip Phase 4 smoke (ROM reale)", () => {
   });
 });
 
-describe.skipIf(haveRoms)("sound chip smoke: rom assenti, skip", () => {
-  it.skip("estrai roms con: unzip -o roms/marble.zip 136033.421 136033.422 -d /tmp/sound-roms/", () => {});
+describe.skipIf(haveRoms)("sound chip smoke: roms absent, skip", () => {
+  it.skip("extract roms with: unzip -o roms/marble.zip 136033.421 136033.422 -d /tmp/sound-roms/", () => {});
 });

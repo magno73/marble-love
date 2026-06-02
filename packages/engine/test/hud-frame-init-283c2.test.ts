@@ -140,7 +140,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("Loop2 2P: con player count=2 disegna 24 tile usando ROM_COLS_2P", () => {
+  it("Loop2 2P: with player count=2 draws 24 tiles using ROM_COLS_2P", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, PLAYER_COUNT_OFF, 2);
@@ -171,7 +171,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("count=0 (caso non-1P, default emptyGameState): takes il branch 2P (24 tile)", () => {
+  it("count=0 (non-1P case, default emptyGameState): takes the 2P branch (24 tiles)", () => {
     const s = emptyGameState();
     const rom = setupRom();
 
@@ -184,7 +184,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     expect(readAlphaWordBE(s.alphaRam, off12)).toBe((0x5f | LOOP2_MASK) & 0xffff);
   });
 
-  it("non muta state.workRam (la funzione is solo lettore of workRam)", () => {
+  it("does not mutate state.workRam (the function only reads workRam)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // Pollute workRam with a known pattern.
@@ -202,7 +202,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("non muta state.alphaRam outside dalle 30 lines HUD (byte 0xF00..0xFFF intact)", () => {
+  it("does not mutate state.alphaRam outside the 30 HUD lines (bytes 0xF00..0xFFF intact)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     for (let i = 0xf00; i < s.alphaRam.length; i++) s.alphaRam[i] = 0xaa;
@@ -215,7 +215,7 @@ describe("hudFrameInit283C2 (FUN_000283C2)", () => {
     }
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("constants exposed: binary addresses correct", () => {
     expect(FUN_283C2_ADDR).toBe(0x000283c2);
     expect(PLAYER_COUNT_OFF).toBe(0x396);
     expect(LOOP1_ROW_COUNT).toBe(0x1e);

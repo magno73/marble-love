@@ -126,7 +126,7 @@ function setFractionBuffer(s: GameState, bufOff: number): void {
 }
 
 describe("levelFractionRender28232 (FUN_00028232)", () => {
-  it("D2==0, idx=0, no early-out: 4 renderStringChain + 1 helper + 1 initStruct + 1 finale (5 chain totali)", () => {
+  it("D2==0, idx=0, no early-out: 4 renderStringChain + 1 helper + 1 initStruct + 1 final (5 chains total)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // mode selector != 2 → D2 = 0.
@@ -198,7 +198,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[0x104]).toBe(0x00);
   });
 
-  it("D2!=0 (mode==2): skip 2 jsr condizionali → 3 renderStringChain (no Step B, no Step E)", () => {
+  it("D2!=0 (mode==2): skip 2 conditional jsr → 3 renderStringChain (no Step B, no Step E)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     // mode selector = 2 → D2 = 0x2000.
@@ -236,7 +236,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(trace.renderHelperCalls[0]?.arg6).toBe(attrAlways);
   });
 
-  it("idx=-1 (sentinel): early-out dopo Step C (2 renderStringChain totali, no helper, no initStruct)", () => {
+  it("idx=-1 (sentinel): early-out after Step C (2 renderStringChain total, no helper, no initStruct)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0); // D2 = 0
@@ -318,7 +318,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     }
   });
 
-  it("default no-op subs: no eccezione; fraction string scritta inline; struct NOT scritto (initStructHeader no-op)", () => {
+  it("default no-op subs: no exception; fraction string written inline; struct NOT written (initStructHeader no-op)", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0);
@@ -342,7 +342,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[0x304]).toBe(0x00);
   });
 
-  it("defaultInitStructHeader: applicare la callback default produce le 3 byte writes attese", () => {
+  it("defaultInitStructHeader: applying the default callback produces the 3 expected byte writes", () => {
     const s = emptyGameState();
     const rom = setupRom();
     writeWordBE(s.workRam, MODE_SELECTOR_OFF, 0);
@@ -359,7 +359,7 @@ describe("levelFractionRender28232 (FUN_00028232)", () => {
     expect(s.workRam[STRUCT_BASE_OFF + INIT_STRUCT_MARKER_OFF]).toBe(0);
   });
 
-  it("costanti exposed: indirizzi binary corretti", () => {
+  it("constants exposed: binary addresses correct", () => {
     expect(FUN_28232_ADDR).toBe(0x00028232);
     expect(MODE_SELECTOR_OFF).toBe(0x392);
     expect(LEVEL_IDX_OFF).toBe(0x3de);

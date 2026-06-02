@@ -1,6 +1,6 @@
 /**
  * score-table-update-4790.test.ts — smoke tests of `scoreTableUpdate4790`
- * (FUN_004790, 1178 byte).
+ * (FUN_004790, 1178 bytes).
  *
  * `packages/cli/src/test-score-table-update-4790-parity.ts` vs Musashi.
  */
@@ -49,18 +49,18 @@ const SUBS_BASE: ScoreTableUpdate4790Subs = {
 };
 
 describe("scoreTableUpdate4790 (FUN_4790)", () => {
-  it("no delta → table invariata, flag2 non set", () => {
+  it("no delta → table unchanged, flag2 not set", () => {
     const s = makeState();
-    // Accumulatori = 0 → both le entry saltate
+    // Accumulators = 0 → both entries skipped
     const before = Array.from(s.workRam.slice(BASE_OFF, BASE_OFF + 60));
     scoreTableUpdate4790(s, 0x1000, 2, 0x2000, 2, 0, 0, 0, SUBS_BASE);
     const after = Array.from(s.workRam.slice(BASE_OFF, BASE_OFF + 60));
     expect(after).toEqual(before);
   });
 
-  it("first entry con delta non-zero → cella [row*20+col] incrementata of 1", () => {
+  it("first entry with non-zero delta → cell [row*20+col] incremented by 1", () => {
     const s = makeState();
-    // Sets accumulatore A2 (0x401F86) = 600 (> 0, < divisor*colThresh overflow)
+    // Set accumulator A2 (0x401F86) = 600 (> 0, < divisor*colThresh overflow)
     writeLongBE(s.workRam, A2_OFF, 600);
     // divisorW = 300, colThresh = 7
     // quotient = 600/300 = 2; A0 = max(0, 2-7)=0 (2 < 7 → A0=0)
@@ -71,18 +71,18 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
     expect(readLongBE(s.workRam, A2_OFF)).toBe(0);
   });
 
-  it("delta grande → col clamped a 0x11 (17)", () => {
+  it("large delta → col clamped to 0x11 (17)", () => {
     const s = makeState();
-    // Sets A2 = 100_000 (grande)
+    // Set A2 = 100_000 (large)
     writeLongBE(s.workRam, A2_OFF, 100_000);
-    // quotient = 100000/300 = 333; A0 = 333 - 7 = 326 > 17 → clamped a 17
+    // quotient = 100000/300 = 333; A0 = 333 - 7 = 326 > 17 → clamped to 17
     // row cap arg2=0; numRec=3 (>0); 3>0 → rowD2=0
     // D5 = 0*20 + 17 = 17 → base[17]++
     scoreTableUpdate4790(s, 0x500, 0, 0, 0, 0, 0, 0, SUBS_BASE);
     expect(s.workRam[BASE_OFF + 17]).toBe(1);
   });
 
-  it("overflow cella 0xFF→0x00 → setta flag2 → decay (lsr.b #1) su all le celle", () => {
+  it("cell overflow 0xFF→0x00 → sets flag2 → decay (lsr.b #1) on all cells", () => {
     const s = makeState();
     s.workRam[BASE_OFF + 0] = 0xff;
     s.workRam[BASE_OFF + 1] = 0x80;
@@ -100,7 +100,7 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
   });
 
   // ── Smoke 5: sound dispatch per bonus fields ──────────────────────────────
-  it("bonus arg5 != 0 → soundDispatch chiamato con cmdIndex=7", () => {
+  it("bonus arg5 != 0 → soundDispatch called with cmdIndex=7", () => {
     const s = makeState();
     const calls: Array<[number, number]> = [];
     const subs: ScoreTableUpdate4790Subs = {
@@ -113,7 +113,7 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
     expect(has7).toBe(true);
   });
 
-  it("seconda entry non-zero → score accumulatore @ 0x401F92 aggiornato", () => {
+  it("second entry non-zero → score accumulator @ 0x401F92 updated", () => {
     const s = makeState();
     writeLongBE(s.workRam, A2_OFF, 0);
     writeLongBE(s.workRam, A2_OFF + 4, 500);
@@ -123,14 +123,14 @@ describe("scoreTableUpdate4790 (FUN_4790)", () => {
   });
 
   // ── Smoke 7: score wrap beyond 0xE10 ─────────────────────────────────────
-  it("score accum >= 0xE10 → wrap: dispatch cmd 5 and sottrai multiplo", () => {
+  it("score accum >= 0xE10 → wrap: dispatch cmd 5 and subtract a multiple", () => {
     const s = makeState();
     const calls: Array<[number, number]> = [];
     const subs: ScoreTableUpdate4790Subs = {
       ...SUBS_BASE,
       soundDispatch: (cmd, data) => { calls.push([cmd, data]); return 0; },
     };
-    // Sets A2+4 = 3601 (> 0xE10=3600)
+    // Set A2+4 = 3601 (> 0xE10=3600)
     writeLongBE(s.workRam, A2_OFF + 4, 3601);
     scoreTableUpdate4790(s, 0, 0, 0, 0, 0, 0, 0, subs);
     // 3601 > 3600 → wrap: wrapDiv = floor(3601/3600) = 1; dispatch (5, ff5+1+1)

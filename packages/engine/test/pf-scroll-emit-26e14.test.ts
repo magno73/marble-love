@@ -88,7 +88,7 @@ describe("pfScrollEmit26E14", () => {
     // merged = ((0xC000 + 0x40) & 0x3FFF) | (0xC000 & 0xC000) = 0x40 | 0xC000 = 0xC040
     // cmp word @ +0x180 (orig page) = 0xFFFF does not match d4=0; then advance and cmp with d4=1...
     writeU16(s.spriteRam, 0x180, 0xffff);
-    writeU16(s.spriteRam, 0x182, 0x0001); // d4=1 al check iter 1 → exit
+    writeU16(s.spriteRam, 0x182, 0x0001); // d4=1 at the check on iter 1 → exit
 
     pfScrollEmit26E14(s, 2);
 

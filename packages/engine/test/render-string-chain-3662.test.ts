@@ -302,7 +302,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
     const state = emptyGameState();
     const rom = makeTestRom();
 
-    // VAL_F00 @ 0x401F00 = 5 (positivo, signed)
+    // VAL_F00 @ 0x401F00 = 5 (positive, signed)
     writeWordWR(state.workRam, 0x1f00, 5);
 
     // String 1: "A" @ 0x100
@@ -310,7 +310,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
     // String 2: "B" @ 0x180
     writeStr(state.workRam, 0x180, "B");
 
-    // Entry 2 @ 0x300: marker = 0 → sum = 0+5 = 5 > 1 → continua...
+    // Entry 2 @ 0x300: marker = 0 → sum = 0+5 = 5 > 1 → continues...
     // sum = -100 + 5 = -95 ≤ 1 → exit.
     const entry2Addr = setupEntry(
       state,
@@ -338,13 +338,13 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
       fun_32ba: (c) => calls.push(c),
     });
     expect(ret).toBe(1);
-    // Due char processati: 'A' (entry1) + 'B' (entry2)
+    // Two chars processed: 'A' (entry1) + 'B' (entry2)
     expect(calls).toHaveLength(2);
     expect(calls[0]!.charByte).toBe(0x41);
     expect(calls[1]!.charByte).toBe(0x42);
   });
 
-  it("marker + valF00 ≤ 1 (default 0+0 = 0) → ferma dopo 1ª entry", () => {
+  it("marker + valF00 ≤ 1 (default 0+0 = 0) → stops after the 1st entry", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeStr(state.workRam, 0x100, "AB");
@@ -355,7 +355,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
       0,
       WORK_RAM_BASE + 0x100,
       0,
-      0xdeadbeef, // nextPtr — NOT must be followed
+      0xdeadbeef, // nextPtr — must NOT be followed
     );
 
     const calls: RenderCharCall[] = [];
@@ -367,7 +367,7 @@ describe("renderStringChain3662 (FUN_3662) — chain advance via marker", () => 
 });
 
 describe("renderStringChain3662 (FUN_3662) — pure read", () => {
-  it("non writes in alphaRam né workRam", () => {
+  it("does not write to alphaRam or workRam", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeStr(state.workRam, 0x100, "ABC");
@@ -391,7 +391,7 @@ describe("renderStringChain3662 (FUN_3662) — pure read", () => {
     expect(state.alphaRam).toEqual(alphaBefore);
   });
 
-  it("returns SEMPRE 1 (also su input degenerati)", () => {
+  it("ALWAYS returns 1 (even on degenerate input)", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     // stringPtr=0, first byte=0 → exit. marker=0 → sum=0 → return 1.
@@ -400,8 +400,8 @@ describe("renderStringChain3662 (FUN_3662) — pure read", () => {
   });
 });
 
-describe("renderStringChain3662 (FUN_3662) — _attrWord ignorato", () => {
-  it("attrWord diverso non cambia il comportamento", () => {
+describe("renderStringChain3662 (FUN_3662) — _attrWord ignored", () => {
+  it("a different attrWord does not change the behavior", () => {
     const state = emptyGameState();
     const rom = makeTestRom();
     writeStr(state.workRam, 0x100, "X");

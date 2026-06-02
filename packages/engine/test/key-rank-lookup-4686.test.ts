@@ -29,10 +29,10 @@ function writeLongBE(ram: Uint8Array, off: number, val: number): void {
 
 /**
  * Set up a 10x5-byte table. Rows are passed as 5-byte arrays;
- * the bytes non specificati are lasciati a 0.
+ * the bytes not specified are left at 0.
  */
 function setupTable(ram: Uint8Array, rows: ReadonlyArray<readonly number[]>): void {
-  // Pulisce 50 byte
+  // Clear 50 bytes
   for (let i = 0; i < 50; i++) ram[TABLE_OFF + i] = 0;
   for (let r = 0; r < rows.length && r < 10; r++) {
     const row = rows[r]!;
@@ -53,7 +53,7 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
     expect(keyRankLookup4686(s, 0xff112233)).toBe(-1);
   });
 
-  it("DESC table, key > prefix of all le lines → returns 0 (first row gia' < key)", () => {
+  it("DESC table, key > prefix of all lines → returns 0 (first row already < key)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, PTR_ABS);
     // DESC: row 0 max, row 9 min
@@ -69,7 +69,7 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
       [0x00, 0x20, 0x00, 0, 0],
       [0x00, 0x10, 0x00, 0, 0], // row 9
     ]);
-    // key 00:FF:FF > all i prefix → row 0 prefix 00:a0:00 < key per col 1
+    // key 00:FF:FF > all prefixes → row 0 prefix 00:a0:00 < key for col 1
     // (table[1]=0xa0 < key[1]=0xff) → return 0
     expect(keyRankLookup4686(s, 0x0000ffff)).toBe(0);
   });
@@ -98,7 +98,7 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
     expect(keyRankLookup4686(s, 0x00005500)).toBe(5);
   });
 
-  it("DESC table, key < prefix of all le lines → returns 10", () => {
+  it("DESC table, key < prefix of all lines → returns 10", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, PTR_ABS);
     setupTable(s.workRam, [
@@ -113,19 +113,19 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
       [0x00, 0x20, 0x00, 0, 0],
       [0x00, 0x10, 0x00, 0, 0], // row 9: prefix 00:10:00
     ]);
-    // key 00:00:01 < all i prefix (col 1: 0 < all) → each cmp.b: tableByte
+    // key 00:00:01 < all prefixes (col 1: 0 < all) → each cmp.b: tableByte
     // > keyByte (col 0 ==, col 1 >) → bhi → advance row → 10 advance →
     // return 10
     expect(keyRankLookup4686(s, 0x00000001)).toBe(10);
   });
 
-  it("key exactly uguale a row r → returns r+1 (post-bhi/bcc semantics)", () => {
+  it("key exactly equal to row r → returns r+1 (post-bhi/bcc semantics)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, PTR_ABS);
     setupTable(s.workRam, [
       [0x00, 0xa0, 0x00, 0, 0], // row 0
       [0x00, 0x80, 0x00, 0, 0], // row 1: 80
-      [0x00, 0x70, 0x00, 0, 0], // row 2 (per dare row 1 spazio dopo)
+      [0x00, 0x70, 0x00, 0, 0], // row 2 (to give row 1 space after)
       [0x00, 0x60, 0x00, 0, 0],
       [0x00, 0x50, 0x00, 0, 0],
       [0x00, 0x40, 0x00, 0, 0],
@@ -134,13 +134,13 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
       [0x00, 0x10, 0x00, 0, 0],
       [0x00, 0x05, 0x00, 0, 0],
     ]);
-    // key 00:80:00 == row 1 prefix esatto. row 0 (a0) > key → advance;
+    // key 00:80:00 == exact row 1 prefix. row 0 (a0) > key → advance;
     //              row 1: all 3 col == → fall-through advance row;
     //              row 2 (70) < key (80) col 1 → return 2.
     expect(keyRankLookup4686(s, 0x00008000)).toBe(2);
   });
 
-  it("low 24 bit estratti correttamente (high == 0, key=0)", () => {
+  it("low 24 bits extracted correctly (high == 0, key=0)", () => {
     const s = emptyGameState();
     writeLongBE(s.workRam, PTR_OFF, PTR_ABS);
     // DESC table with row 9 prefix 00:00:00.
@@ -156,8 +156,8 @@ describe("keyRankLookup4686 (FUN_4686)", () => {
       [0x00, 0x02, 0x00, 0, 0],
       [0x00, 0x00, 0x00, 0, 0], // row 9: prefix 00:00:00
     ]);
-    // key 00:00:00 == row 9 esatto. Row 0..8 hanno prefix > 0 → bhi → advance.
-    // Row 9: all 3 col == → fall-through. Loop completato. → return 10.
+    // key 00:00:00 == exact row 9. Rows 0..8 have prefix > 0 → bhi → advance.
+    // Row 9: all 3 col == → fall-through. Loop complete. → return 10.
     expect(keyRankLookup4686(s, 0x00000000)).toBe(10);
   });
 });

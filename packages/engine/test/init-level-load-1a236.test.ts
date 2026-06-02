@@ -50,7 +50,7 @@ function makeRomWithLevelPointer(ptr: number): ReturnType<typeof emptyRomImage> 
 }
 
 describe("initLevelLoad1A236 (FUN_0001A236)", () => {
-  it("setta the 3 globali and carica il level pointer dto the entry 0 of the table", () => {
+  it("sets the 3 globals and loads the level pointer from entry 0 of the table", () => {
     const s = emptyGameState();
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE] = 0x12;
     s.workRam[INIT_LEVEL_LOAD_1A236_GAME_MODE_ADDR - WORK_RAM_BASE + 1] = 0x34;
@@ -69,7 +69,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     expect(readLongWorkRam(s, INIT_LEVEL_LOAD_1A236_LEVEL_PTR_DST_ADDR)).toBe(0x0002bee2);
   });
 
-  it("calls all and 4 le subs in the ordine binary", () => {
+  it("calls all 4 subs in binary order", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0x12345678);
     const calls: string[] = [];
@@ -90,14 +90,14 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     ]);
   });
 
-  it("default no-op: non solleva su subs assenti o subs={}", () => {
+  it("default no-op: does not throw on missing subs or subs={}", () => {
     const s = emptyGameState();
     const rom = emptyRomImage();
     expect(() => initLevelLoad1A236(s, rom)).not.toThrow();
     expect(() => initLevelLoad1A236(s, rom, {})).not.toThrow();
   });
 
-  it("subs parziali: invoca solo quelle definite, skips the undefined", () => {
+  it("partial subs: invokes only those defined, skips the undefined", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0xdeadbeef);
     const calls: string[] = [];
@@ -114,7 +114,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     expect(readLongWorkRam(s, INIT_LEVEL_LOAD_1A236_LEVEL_PTR_DST_ADDR)).toBe(0xdeadbeef);
   });
 
-  it("le sub vedono i globali GIÀ settati and il level ptr GIÀ scritto", () => {
+  it("the subs see the globals ALREADY set and the level ptr ALREADY written", () => {
     const s = emptyGameState();
     const rom = makeRomWithLevelPointer(0x00abcdef);
     const snapshots: Record<string, { gameMode: number; counter: number; ptr: number }> = {};
@@ -137,7 +137,7 @@ describe("initLevelLoad1A236 (FUN_0001A236)", () => {
     }
   });
 
-  it("costanti esposte: ADDR and SUB_ADDRS are bit-exact from the disasm", () => {
+  it("exposed constants: ADDR and SUB_ADDRS are bit-exact from the disasm", () => {
     expect(INIT_LEVEL_LOAD_1A236_ADDR).toBe(0x0001a236);
     expect(INIT_LEVEL_LOAD_1A236_SUB_ADDRS).toEqual([
       0x00028c7e,
