@@ -56,10 +56,10 @@ export const ARG2_BYTE_ADDR = 0x00401f99 as const;
 // ─── Tipi ────────────────────────────────────────────────────────────────
 
 /**
- * Signature del callee `FUN_000052DA`. Riceve 3 long unsigned (0..0xFFFFFFFF):
- *   - `arg1` = signExt32 del byte @ 0x401F98
- *   - `arg2` = signExt32 del byte @ 0x401F99
- *   - `arg3` = argLong pass-through dal caller di FUN_5334
+ * Signature of the callee `FUN_000052DA`. Riceve 3 long unsigned (0..0xFFFFFFFF):
+ *   - `arg1` = signExt32 of the byte @ 0x401F98
+ *   - `arg2` = signExt32 of the byte @ 0x401F99
+ *   - `arg3` = argLong pass-through from the caller of FUN_5334
  *
  */
 export type Sub5334Inner = (
@@ -94,14 +94,14 @@ function signExtByteToU32(b: number): number {
 
 /**
  *
- *                 come arg3 a `inner`.
+ *                 as arg3 a `inner`.
  * @param inner    Callback that models `FUN_00005334`'s callee `FUN_000052DA`.
  *
- * Note di low-level fidelity:
- *     dell'`ext.w`/`ext.l` M68k.
+ * Note of low-level fidelity:
+ *     of the `ext.w`/`ext.l` M68k.
  *     indipendenti.
- *     esattamente quello di `inner` (clamped a uint32).
- *     D2..D7 / A2..A6 oltre a quelli del callee).
+ *     exactly that of `inner` (clamped a uint32).
+ *     D2..D7 / A2..A6 beyond a quelli of the callee).
  */
 export function stateSub5334(
   state: GameState,

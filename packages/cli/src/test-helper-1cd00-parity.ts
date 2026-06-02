@@ -273,7 +273,7 @@ async function main(): Promise<void> {
     return b;
   }
 
-  console.log(`\n=== helper1CD00 (FUN_1CD00) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== helper1CD00 (FUN_1CD00) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const indexByte = Math.floor(rng() * 7); // 0..6
@@ -290,7 +290,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: index=0xFF → early-exit return 0 ─────────────────────────
-  console.log(`\n=== Suite B: index=0xFF (early-exit) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: index=0xFF (early-exit) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const setup: CaseSetup = {
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   // Shape[0] bbox: x=[-8,8], y=[-4,36], z=[-16,32]
   // x1 = (A1[0xC]+8) - worldX = 0 if worldX = (A1[0xC]+8)
   // Place worldX = (A1[0xC]+8) so x1=0 which is in [-8,8]
-  console.log(`\n=== Suite C: in-bbox forzato — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: in-bbox forzato — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const wX = randWord(rng);
@@ -338,7 +338,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const mode = i % 5;

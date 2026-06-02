@@ -173,7 +173,7 @@ void _readLsbFirstBit;
  * Layout selection per decodeObjectTile.
  * - "playfield": MAME atarisy1 gfx_tile_layout, plane stride 0x10000
  * - "mob": MAME atarisy1 gfx_mob_layout, plane stride 0x40000 (RGN_FRAC(1,4)
- *   di TILE_REGION_SIZE 0x100000)
+ *   of TILE_REGION_SIZE 0x100000)
  */
 export type GfxLayoutKind = "playfield" | "mob";
 

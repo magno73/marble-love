@@ -42,7 +42,7 @@ import {
 } from "./binary-oracle-lib.js";
 import type { CpuSession } from "./binary-oracle-lib.js";
 
-/** Sentinel return address per detection di RTS. */
+/** Sentinel return address per detection of RTS. */
 const SENTINEL = 0xcafebabe >>> 0;
 
 /**
@@ -88,7 +88,7 @@ const SLOT_BASE = 0x00401302;
 const SLOT_STRIDE = 0x60;
 const SLOT_COUNT = 4;
 
-/** Aree di workRam libere per i record bbox-pointer (P1, P2). */
+/** Aree of workRam libere per i record bbox-pointer (P1, P2). */
 const REC_AREA_BASE = 0x00401e00;
 const ENTITY_BASE = 0x00401f00;
 
@@ -296,7 +296,7 @@ function applyCaseBinary(cpu: CpuSession, c: CaseSetup): void {
   pokeMem(cpu, ENTITY_BASE + 0x5f, 1, c.entityF5F & 0xff);
   pokeMem(cpu, ENTITY_BASE + 0x60, 1, c.entityF60 & 0xff);
 
-  // l'entity).
+  // the entity).
   cpu.system.setRegister("sp", 0x401fe0);
 }
 
@@ -477,7 +477,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `\n=== scriptSlotBboxTest14E92 (FUN_00014E92) — Suite A: slot spenti — ${perSuite} casi ===`,
+    `\n=== scriptSlotBboxTest14E92 (FUN_00014E92) — Suite A: slot spenti — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -511,7 +511,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: 1 slot bbox-default — ${perSuite} casi ===`,
+    `\n=== Suite B: 1 slot bbox-default — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -564,7 +564,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: 1 slot armato bbox custom ──────────────────────────────
   console.log(
-    `\n=== Suite C: 1 slot bbox-custom — ${perSuite} casi ===`,
+    `\n=== Suite C: 1 slot bbox-custom — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -625,7 +625,7 @@ async function main(): Promise<void> {
   // ─── Suite D: edge cases ─────────────────────────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: edge cases — ${sizeD} casi ===`,
+    `\n=== Suite D: edge cases — ${sizeD} cases ===`,
   );
   let okD = 0;
   const allSelectors = [0, 1, 2, 3, 4, 5, 6, 7];

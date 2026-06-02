@@ -3,15 +3,15 @@
  * test-helper-12f44-parity.ts — differential FUN_12F44 vs `helper12F44`.
  *
  * `FUN_00012F44` (37 istr, 139 byte): dispatcher mode-0/mode-1/no-op su un
- * record di slot in work RAM.
+ * record of slot in work RAM.
  *
  * **Strategia parity**:
- *   - Setup: un record di slot @ slot_base (variabile per test case).
+ *   - Setup: un record of slot @ slot_base (variabile per test case).
  *   - Setup ROM lookup-table @ 0x1F0E2 puntante a 16 rect-slot @ 0x4001DC
- *   - Per ogni test case:
+ *   - For each test case:
  *       4. Esegue `callFunction(0x12F44, [slotPtr, mode, scriptPtr])`.
  *       5. Esegue `helper12F44(state, rom, slotPtr, mode, scriptPtr)`.
- *            - Il record di slot (0x56 byte).
+ *            - Il record of slot (0x56 byte).
  *            - L'area rect-slot @ 0x4001DC (0x1B2 byte).
  *
  * Uso: npx tsx packages/cli/src/test-helper-12f44-parity.ts [N]
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, off, 1, romView.program[off]!);
   }
 
-  console.log(`\n=== helper12F44 (FUN_12F44) — ${total} casi ===`);
+  console.log(`\n=== helper12F44 (FUN_12F44) — ${total} cases ===`);
 
   const rng = makeRng(0x12f44);
   let ok = 0;
@@ -256,7 +256,7 @@ async function main(): Promise<void> {
     // ─── Esegui TS ──────────────────────────────────────────────────────────
     helper12F44Ns.helper12F44(stateInst, romView, slotPtr, mode, scriptPtr);
 
-    // 1. Record di slot (0x56 byte).
+    // 1. Record of slot (0x56 byte).
     const binSlot = readBin(cpu, slotPtr, SLOT_STRIDE);
     const tsSlot  = readTs(stateInst, slotPtr, SLOT_STRIDE);
     const dSlot   = diffBytes(binSlot, tsSlot);

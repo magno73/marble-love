@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0x5ee);
 
-  console.log(`\n=== compareObjDepth (FUN_15FE6) — ${n} casi ===`);
+  console.log(`\n=== compareObjDepth (FUN_15FE6) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

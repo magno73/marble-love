@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== objectAccumFlag28608 (FUN_00028608) — ${n} casi ===`);
+  console.log(`\n=== objectAccumFlag28608 (FUN_00028608) — ${n} cases ===`);
   const rng = makeRng(0x28608);
 
   let ok = 0;

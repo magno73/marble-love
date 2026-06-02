@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   const OBJ = 0x00401D00;
 
   // FUN_2648C
-  console.log(`\n=== copyGlobalsToObj (FUN_2648C) — ${n} casi ===`);
+  console.log(`\n=== copyGlobalsToObj (FUN_2648C) — ${n} cases ===`);
   let ok1 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok1}/${n} = ${((ok1/n)*100).toFixed(1)}%`);
 
   // FUN_160AE
-  console.log(`\n=== objIndexedByteAdvance (FUN_160AE) — ${n} casi ===`);
+  console.log(`\n=== objIndexedByteAdvance (FUN_160AE) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== objDeriveShorts (FUN_253BC) — ${n} casi ===`);
+  console.log(`\n=== objDeriveShorts (FUN_253BC) — ${n} cases ===`);
   let okDS = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okDS}/${n} = ${((okDS/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== eepromCommitDelta (FUN_4008) — ${n} casi ===`);
+  console.log(`\n=== eepromCommitDelta (FUN_4008) — ${n} cases ===`);
   let okCD = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -150,7 +150,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okCD}/${n} = ${((okCD/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== triggerObjectEvent (FUN_285B0) — ${n} casi ===`);
+  console.log(`\n=== triggerObjectEvent (FUN_285B0) — ${n} cases ===`);
   let okT = 0;
   // Need ROM
   const tsRom2 = (await import("@marble-love/engine")).bus.emptyRomImage();
@@ -180,7 +180,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${okT}/${n} = ${((okT/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== eepromValidateAndClassify (FUN_3F3E) — ${n} casi ===`);
+  console.log(`\n=== eepromValidateAndClassify (FUN_3F3E) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -201,7 +201,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   // Init obj arrays test
-  console.log(`\n=== initObjArrays (FUN_25B40) — ${n} casi ===`);
+  console.log(`\n=== initObjArrays (FUN_25B40) — ${n} cases ===`);
   let okIO = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

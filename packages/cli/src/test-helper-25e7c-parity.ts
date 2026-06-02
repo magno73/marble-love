@@ -3,7 +3,7 @@
  * test-helper-25e7c-parity.ts — differential FUN_00025E7C vs `helper25E7C` TS replica.
  *
  * `FUN_00025E7C` (51 istr, 0x25E7C–0x25FC0):
- *   "velocity friction/damping" — applica un fattore di attrito a due
+ *   "velocity friction/damping" — applica un fattore of attrito a due
  *   with 5 response curves selected by the `mode` parameter.
  *
  * **Calling convention** (RTL, 2 long):
@@ -150,7 +150,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== helper25E7C (FUN_00025E7C) — ${n} casi ===`);
+  console.log(`\n=== helper25E7C (FUN_00025E7C) — ${n} cases ===`);
 
   const rng = makeRng(0x25e7c_cafe);
   let ok = 0;

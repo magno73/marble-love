@@ -324,7 +324,7 @@ export function stateSub15670(
   // (0x56,A2).w via signExt.
   d2Byte = readByteAbs(state, a1 + OBJ_FLAG19_OFF);
 
-  // ─── Distanza octant-approx tra arg (A2) e candidato (A1) ───────────
+  // ─── Distanza octant-approx between arg (A2) e candidato (A1) ───────────
   const argX = readLongSignedAbs(state, a2 + ARG_FX_OFF);
   const argY = readLongSignedAbs(state, a2 + ARG_FY_OFF);
   const a1X = readLongSignedAbs(state, a1 + ARG_FX_OFF);

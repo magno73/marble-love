@@ -3,7 +3,7 @@
  * test-string-render-parity.ts — differential FUN_2572 vs renderStringChain.
  *
  * 262 byte pure leaf. Setup:
- *   - Linked list di entry in workRam scratch
+ *   - Linked list of entry in workRam scratch
  *   - String terminata da 0
  *   - Globals @ 0x401F00, 0x401F3A, 0x401F42 random
  *   - attr word random
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== renderStringChain (FUN_2572) — ${n} casi ===`);
+  console.log(`\n=== renderStringChain (FUN_2572) — ${n} cases ===`);
 
   const rng = makeRng(0x5aff);
   const STRUCT_ADDR = 0x00401D00; // entry 1
@@ -82,12 +82,12 @@ async function main(): Promise<void> {
     stateInst.workRam[0x1F43] = rotation & 0xff;
 
     // Setup entry struct @ STRUCT_ADDR (single entry, marker forces exit)
-    // +0  byte: col
+    // +0  byte: with the
     // +1  byte: tickOffset
     // +2  long: stringPtr → STRING_ADDR
     // +6  byte: marker (= 0 to force exit immediately, since marker + valF00 <= 1)
     // +8  long: next ptr (irrelevant since we exit)
-    const col = Math.floor(rng() * 32) & 0xff;          // small col
+    const col = Math.floor(rng() * 32) & 0xff;          // small with the
     const tickOff = (tick & 0xff);                       // make it likely "due"
     const marker = 0;                                    // chain end signal (with valF00 logic)
     pokeMem(cpu, STRUCT_ADDR + 0, 1, col);

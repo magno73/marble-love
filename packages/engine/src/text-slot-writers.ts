@@ -1,7 +1,7 @@
 /**
  * text-slot-writers.ts — replica `FUN_0000255A` + `FUN_00028F28` + `FUN_00028F62`.
  *
- * 3 helper text-slot related, callees indiretti di `FUN_28E3C` (render-score
+ * 3 helper text-slot related, callees indiretti of `FUN_28E3C` (render-score
  *
  * **`FUN_255A`** (8 instr, 6 callers): write 2 byte + clear byte at +0x6 a
  *   un buffer pointed by A0 (arg long stack):

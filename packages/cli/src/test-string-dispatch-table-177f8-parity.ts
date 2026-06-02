@@ -7,9 +7,9 @@
  * `D0 & 0xFFFF`. Pre-populate workRam + PF RAM with deterministic patterns
  *   1. Side binary: `callFunction(cpu, 0x177F8, [arg0L, arg1L, arg2L])` →
  *      capture `r.d0 & 0xFFFF`.
- *   2. Side TS: snapshot di workRam → `state.workRam`; snapshot di PF RAM
+ *   2. Side TS: snapshot of workRam → `state.workRam`; snapshot of PF RAM
  *      `stringDispatchTable177F8(state, rom, pfRam, arg0w, arg1w, arg2w)`.
- *   3. Compara D0.w.
+ *   3. Compare D0.w.
  *
  *   - A: forced bound-exit (D2.w >= bound).
  *   - C: top4 != 0 + mask hit (top4_short path).
@@ -17,7 +17,7 @@
  *        / bias_sentinel / bit11_set re-loop).
  *
  *     destinatario in memory address).
- *   - Le high 16 bits di D0 dipendono dal D0 del caller pre-call (la sub
+ *   - Le high 16 bits of D0 dipendono from the D0 of the caller pre-call (la sub
  *     uses only `move.w` and `move.b` on D0). Our TS replica returns
  *     of `callFunction`, but only in the high bits.
  *
@@ -101,9 +101,9 @@ function setWordBE(buf: Uint8Array, off: number, v: number): void {
 }
 
 /**
- * Costruisce un setup "base" comune: workRam pseudo-random + PF RAM
+ * Costruisce a setup "base" comune: workRam pseudo-random + PF RAM
  * pseudo-random + level header @ 0x401000 with generous bound, string-table
- * @ 0x401200 (nel workRam), base-offset table @ 0x400478 sane.
+ * @ 0x401200 (in the workRam), base-offset table @ 0x400478 sane.
  */
 function buildBaseFill(rngSeed: number, args: {
   arg0w: number;
@@ -122,7 +122,7 @@ function buildBaseFill(rngSeed: number, args: {
   setLongBE(wr, WR_LEVEL_HEADER_PTR - WORK_RAM_BASE, 0x401000);
   // bound @ levelHeader + 0x18 (= workRam off 0x1018)
   setWordBE(wr, 0x1000 + 0x18, args.bound & 0xffff);
-  // A0_deref ∈ [0xa00000..0xa04000) per il path no_bit11. Il D0_sext aggiunto
+  // A0_deref ∈ [0xa00000..0xa04000) for the path no_bit11. Il D0_sext aggiunto
   setLongBE(wr, 0x1000, 0xa00800);
 
   // string-table ptr @ 0x40065a -> 0x401200 (workRam)
@@ -167,7 +167,7 @@ async function runCase(
 
   // ── Side TS ─────────────────────────────────────────────────────────────
   state.workRam.set(setup.workRam);
-  // Costruiamo un pfRam separato per TS (snapshot pre-call).
+  // We build a separate pfRam for TS (snapshot pre-call).
   const tsPfRam = new Uint8Array(setup.pfRam);
   const tsD0w =
     ns.stringDispatchTable177F8(
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBytes, state });
 
-  console.log(`\n=== stringDispatchTable177F8 (FUN_177F8) — ${total} casi ===`);
+  console.log(`\n=== stringDispatchTable177F8 (FUN_177F8) — ${total} cases ===`);
 
   let totalOk = 0;
   interface FailRecord {

@@ -6,7 +6,7 @@
  *   1. Setup 5 byte struct in workRam scratch area
  *   2. callFunction(0x28C38, [structPtr])  — MAME/musashi-wasm binary.
  *   3. helper28C38(state, structPtr)       — replica TS
- *   4. Confronta D0.b (return low byte) + 5 byte struct post-call
+ *   4. Compare D0.b (return low byte) + 5 byte struct post-call
  *
  * Uso: npx tsx packages/cli/src/test-helper-28c38-parity.ts [N]
  */
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== helper28C38 (FUN_00028C38) — ${n} casi ===`);
+  console.log(`\n=== helper28C38 (FUN_00028C38) — ${n} cases ===`);
 
   const rng = makeRng(0x28c38);
   let ok = 0;

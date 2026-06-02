@@ -40,7 +40,7 @@
  *   0001782a  addq.w   #2, D0w                         ; D0.w += 2
  *
  *   0001782c  moveq    #0, D1                          ; D1 = 0
- *   0001782e  move.b   D2b, D1b                        ; D1.b = D2.b (low byte di arg0)
+ *   0001782e  move.b   D2b, D1b                        ; D1.b = D2.b (low byte of arg0)
  *   00017830  bclr.l   #0, D1                          ; D1 &= ~1; Z = (oldBit0==0)
  *   00017834  beq.b    0x0001783a                      ; bit0==0 → skip add 0x16
  *   00017836    addi.w   #0x16, D0w                    ; bit0==1 → D0.w += 0x16
@@ -199,7 +199,7 @@ export const LEVEL_HEADER_BOUND_OFF = 0x18 as const;
 const WORK_RAM_BASE_ADDR = 0x00400000 as const;
 const WORK_RAM_SIZE = 0x2000 as const;
 
-/** Range PF/sprite/alpha (insieme): 0xA00000..0xA04000. */
+/** Range PF/sprite/alpha (together): 0xA00000..0xA04000. */
 const PFRAM_BASE_ADDR = 0x00a00000 as const;
 const PFRAM_END_ADDR = 0x00a04000 as const;
 
@@ -376,13 +376,13 @@ export function stringDispatchTable177F8Detailed(
   const shift_byte = rb(shift_addr) & 0xff;
   // D0.b = shift_byte. The high bits of D0 are unchanged. For lsr.l D0,D1 the
   // shift count is (D0 mod 64). Since shift_byte is the low 8 bits of D0, and
-  // the higher bits of D0 (bits 8..31) come from before, we need them. But
+  // the higher bits of D0 (bits 8..31) as from before, we need them. But
   // for `Dn mod 64`, only bits 0..5 of D0 matter. Since D0.b is the new value,
   // the bits 0..5 are shift_byte & 0x3f. So shift_count = shift_byte & 0x3f.
   const shift_count = shift_byte & 0x3f;
 
   // ── D1 >>>= D0.b (unsigned long shift) ────────────────────────────────
-  // 68k `lsr.l Dn,Dy` interpreta lo shift count come `Dn mod 64`. Per shift
+  // 68k `lsr.l Dn,Dy` interpreta lo shift count as `Dn mod 64`. Per shift
   // dobbiamo gestire separatamente count ≥ 32.
   if (shift_count >= 32) {
     D1_l_loaded = 0;

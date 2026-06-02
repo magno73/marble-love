@@ -79,7 +79,7 @@ function writeLongBE(r: Uint8Array, off: number, value: number): void {
 // ─── Main function ─────────────────────────────────────────────────────────
 
 /**
- * Replica bit-perfect di `FUN_00028608`.
+ * Replica bit-perfect of `FUN_00028608`.
  *
  * Adds `value` to the long accumulator at `*(objPtr + 0xBC)` in workRam,
  * then sets bit `(1 << flagIdx) & 0xFF` in the dirty-bitmap byte at

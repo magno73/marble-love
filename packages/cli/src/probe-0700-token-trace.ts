@@ -1,10 +1,10 @@
 // probe-0700-token-trace.ts — runs an INSTRUMENTED version of the decoder
 // FUN_1A668 with the same args MAME uses at the first body (f12002), and dumps:
 //   - for each iter: token14, path A/B/C/D/E, d4_pre, d6_pre, d6_post,
-//     d3, d2_pre, ext bytes consumati, output words emesse
-//   - tutti gli stream content read (a3 long, a1 byte)
+//     d3, d2_pre, ext bytes consumed, output words emesse
+//   - all the stream content read (a3 long, a1 byte)
 //
-// Args derivati dal MAME tap (mame_decoder_stream_tap.lua):
+// Args derivati from the MAME tap (mame_decoder_stream_tap.lua):
 //   outAbs   = 0x400706
 //   ctrlAbs  = 0x080650
 //   extAbs   = 0x02BE18
@@ -262,7 +262,7 @@ function runDecoder(outAbs: number, ctrlAbs: number, extAbs: number): void {
   }
 }
 
-// ─── Driver: warm state @ f12000, run 5 tick, intercetta primo body decoder ────
+// ─── Driver: warm state @ f12000, run 5 tick, intercetta first body decoder ────
 // In practice, run only the decoder with fixed MAME args.
 
 runDecoder(ARG_OUT, ARG_CTRL, ARG_EXT);

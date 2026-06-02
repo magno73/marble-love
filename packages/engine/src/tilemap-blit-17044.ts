@@ -14,12 +14,12 @@
  *       move.w  (A1)+, (A0)+    ; *(word *)A0++ = *(word *)A1++ (BE)
  *       addq.b  #1, D0b
  *       cmpi.b  #0x14, D0b
- *       bne.b   inner           ; ripete 20 volte (D0 da 1..0x14, exit a 0x14)
+ *       bne.b   inner           ; ripete 20 times (D0 da 1..0x14, exit a 0x14)
  *     moveq   #0x58, D0         ; D0 = 0x58 = 88
  *     adda.l  D0, A0            ; A0 += 88  (skip 44 word = 88 byte)
  *     addq.b  #1, D1b
  *     cmpi.b  #0x6, D1b
- *     bne.b   outer             ; ripete 6 volte (D1 da 1..6, exit a 6)
+ *     bne.b   outer             ; ripete 6 times (D1 da 1..6, exit a 6)
  *   rts
  *
  * **Geometria**:
@@ -57,7 +57,7 @@ export const TOTAL_BYTES_COPIED = ROW_COUNT * BYTES_PER_ROW; // 240
  *              out-of-bounds writes).
  *
  *   - Even/odd host bytes correspond 1:1 to ROM bytes
- *     `move.w (A1)+, (A0)+` del 68k).
+ *     `move.w (A1)+, (A0)+` of the 68k).
  *   - Le 5 finestre "skip" (88 byte ciascuna a 0xA0013E..0xA00195,
  *     0xA001BE..0xA00215, …, 0xA0033E..0xA00395) restano intatte.
  */

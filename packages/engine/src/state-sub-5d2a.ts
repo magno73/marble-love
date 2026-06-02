@@ -2,7 +2,7 @@
  * state-sub-5d2a.ts — replica `FUN_00005D2A` (194 byte = 0xC2).
  *
  * "Row-render with bit-mask scan" wrapper that draws 16 cell pairs
- * iterando una bitmap di 16 bit (`arg0` low word) MSB→LSB. Per ogni bit
+ * iterando una bitmap of 16 bit (`arg0` low word) MSB→LSB. For each bit
  *
  *   - Trailing arg   : 0 (immediate `clr.l -(SP)`)
  *
@@ -70,9 +70,9 @@
  *   0x5DA8  move.w  D6w,D0w                 ; D0w = D6w
  *   0x5DAA  ext.l   D0                      ; D0 = sign-ext(D6w)
  *   0x5DAC  move.l  D0,-(SP)                ; push y (arg1)
- *   0x5DB4  clr.l   -(SP)                   ; push 0 (arg4 di call #2)
- *   0x5DB6  clr.l   -(SP)                   ; push 0 (arg3 di call #2)
- *                                            ; NB: attr = 0 NON 0xA0/0x20!
+ *   0x5DB4  clr.l   -(SP)                   ; push 0 (arg4 of call #2)
+ *   0x5DB6  clr.l   -(SP)                   ; push 0 (arg3 of call #2)
+ *                                            ; NB: attr = 0 NOT 0xA0/0x20!
  *   0x5DB8  moveq   #0xf,D0                 ; D0 = 15
  *   0x5DBA  move.w  A4w,D1w
  *   0x5DBC  ext.l   D1                      ; D1 = sign-ext(A4w)
@@ -108,7 +108,7 @@
  *
  *   each invocation with its four args.
  *
- * **Note di low-level fidelity**:
+ * **Note of low-level fidelity**:
  *
  *  1. **Stack offsets `(0x2a, SP)` and `(0x2e, SP)`**: post-movem (9 regs x 4 =
  *     36 = 0x24) + ret addr (4) = 40 = 0x28. Caller_SP_args = SP + 0x28.
@@ -135,8 +135,8 @@
  *  8. **`subq.w #1, D4w; tst.w D4w; bge.w 0x5D42`**: word decrement, signed
  *     N=1, bge fails (signed N XOR V = 1). 16 iter totali (D4=15..0).
  *
- *  9. **Args di FUN_3784 (push order RTL)**:
- *     CALL #1: push (0, attr, x_left, y) → callee vede args al stack come:
+ *  9. **Args of FUN_3784 (push order RTL)**:
+ *     CALL #1: push (0, attr, x_left, y) → callee vede args al stack as:
  *        (0x4, SP) = y (long, sign-ext da D6w)
  *        (0x8, SP) = x_left (long, sign-ext somma A3+A4)
  *        (0xC, SP) = attr (long, 0x20 o 0xA0)
@@ -144,12 +144,12 @@
  *     CALL #2: push (0, 0, x_right, y) → callee vede:
  *        (0x4, SP) = y
  *        (0x8, SP) = x_right
- *        (0xC, SP) = 0  ← ATTR = 0, NON l'attr di CALL #1!
+ *        (0xC, SP) = 0  ← ATTR = 0, NOT the attr of CALL #1!
  *        (0x10, SP) = 0
  *
  *     `x_right` with the same `y`.
  *
- * 11. **D0 al rts**: l'epilogue movem NON tocca D0. D0 conserva il suo
+ * 11. **D0 al rts**: the epilogue movem NOT tocca D0. D0 conserva il suo
  *
  *   - `0x5C44` in FUN_5BB8 — jsr 0x5D2A (UNCONDITIONAL_CALL)
  *   - `0x5CC4` in FUN_5BB8 — jsr 0x5D2A (UNCONDITIONAL_CALL)
@@ -161,10 +161,10 @@ import type { RomImage } from "./bus.js";
 
 // ─── ROM addresses ────────────────────────────────────────────────────────
 
-/** Byte ROM @ 0x10072: gate per il branch `D4 == 7` (D5w/A3w override). */
+/** Byte ROM @ 0x10072: gate for the branch `D4 == 7` (D5w/A3w override). */
 export const ROM_GATE_BYTE_ADDR = 0x00010072 as const;
 
-// ─── Costanti derivate dal disasm ─────────────────────────────────────────
+// ─── Costanti derivate from the disasm ─────────────────────────────────────────
 
 export const LOOP_ITER_COUNT = 16 as const;
 
@@ -197,7 +197,7 @@ export const TRAILING_ARG = 0 as const;
 // ─── Tipi callback ─────────────────────────────────────────────────────────
 
 /**
- * Signature di `FUN_00003784` — "draw cell" callee.
+ * Signature of `FUN_00003784` — "draw cell" callee.
  *
  *               if gate-byte != 0).
  *
@@ -213,7 +213,7 @@ export type Sub5D2AInner3784 = (
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 /**
- * Sign-extend low word di `v` a long unsigned32.
+ * Sign-extend low word of `v` a long unsigned32.
  *   - if `v & 0x8000` -> hi word = 0xFFFF
  */
 function signExtWord(v: number): number {
@@ -246,7 +246,7 @@ function subLong(a: number, b: number): number {
  *                      `arg1_low ∈ {0..15}`, la cella a `D4 == arg1_low`
  *                      iter 0 left, iter 0 right, iter 1 left, ... iter 15 right.
  *
- * @returns long unsigned32 (D0 al rts). In pratica = D0 lasciato dall'ultima
+ * @returns long unsigned32 (D0 al rts). In pratica = D0 lasciato dto the ultima
  *          inner3784, or 0 if default no-op).
  *
  *
@@ -281,7 +281,7 @@ export function stateSub5D2A(
 
   const gateByte = rom.program[ROM_GATE_BYTE_ADDR] ?? 0;
 
-  // D0 al rts: si propaga dall'ultimo `inner3784`. Default 0.
+  // D0 al rts: si propaga dto the last `inner3784`. Default 0.
   let lastD0 = 0;
 
   // ─── Loop principale: D4 = 15 → 0 (16 iter, signed bge.w on D4w) ───────
@@ -297,7 +297,7 @@ export function stateSub5D2A(
 
     // ─── Test bit `mask & arg0_word` → A4 ∈ {7, 8} ─────────────────────
     // moveq #0, D0; move.w A2w, D0w; move.w D3w, D1w; ext.l D1; and.l D1,D0.
-    // D0 = (mask zero-ext) & sign-ext(arg0_word). Se arg0_word < 0x8000,
+    // D0 = (mask zero-ext) & sign-ext(arg0_word). If arg0_word < 0x8000,
     // sign-ext = zero-ext (hi=0); if >= 0x8000, sign-ext (hi=0xFFFF). But
     const bitTest = (maskWord & arg0Word) >>> 0;
     const a4Word = bitTest === 0 ? 8 : 7;

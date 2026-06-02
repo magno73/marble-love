@@ -256,7 +256,7 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
     if (d3 > 0) {
       animPtr = ANIM_EAST;
     } else {
-      animPtr = ANIM_WEST; // d3 <= 0 (incluso d3 == 0)
+      animPtr = ANIM_WEST; // d3 <= 0 (including d3 == 0)
     }
   }
 
@@ -292,9 +292,9 @@ export function sub1D242(state: GameState, entityPtr: number, rom?: RomImage): v
   for (let d1 = 0; ; d1++) {
     // Loop check: D0w = sext_w(D1b); cmp.w (0x400396), D0w; bne → enter loop body
     const d1AsByte = d1 & 0xff;
-    const d0AsWord = sextB(d1AsByte) & 0xffff; // ext.w di byte D1b
+    const d0AsWord = sextB(d1AsByte) & 0xffff; // ext.w of byte D1b
     if (d0AsWord === loopLimit) break;
-    // wrappa a 256. Se limit > 256 il loop diventa effettivamente infinito
+    // wrappa a 256. If limit > 256 il loop diventa effettivamente infinito
     if (d1 > 4096) break;
     void limitSigned;
 

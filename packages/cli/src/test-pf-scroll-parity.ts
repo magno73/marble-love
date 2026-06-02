@@ -9,7 +9,7 @@
  *      (optionally with cmpWord = D3 at some index -> exit loop).
  *   3. callFunction(0x26D8A) — no args, no return.
  *   4. pfScrollUpdate(state)
- *   5. Confronta workRam[0x02..0x03] e spriteRam[0..0x300] byte-by-byte.
+ *   5. Compare workRam[0x02..0x03] e spriteRam[0..0x300] byte-by-byte.
  *
  * Uso: npx tsx packages/cli/src/test-pf-scroll-parity.ts [N]
  */
@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state });
   const rng = makeRng(0x26d8a);
 
-  console.log(`\n=== pfScrollUpdate (FUN_26D8A) — ${n} casi ===`);
+  console.log(`\n=== pfScrollUpdate (FUN_26D8A) — ${n} cases ===`);
   let ok = 0;
   let firstFail: { tc: number; addr: number; bin: number; ts: number } | null = null;
 
@@ -69,15 +69,15 @@ async function main(): Promise<void> {
     state.workRam[0x3AE] = (av >>> 8) & 0xff;
     state.workRam[0x3AF] = av & 0xff;
 
-    // Setup spriteRam (0xA02000-0xA022FF, 768 byte = abbastanza per entrambi
-    // i layout di rotazione). Random tile words.
+    // Setup spriteRam (0xA02000-0xA022FF, 768 byte = abbastanza per both
+    // i layout of rotazione). Random tile words.
     for (let j = 0; j < 0x300; j++) {
       const v = Math.floor(rng() * 256);
       pokeMem(cpu, 0x00a02000 + j, 1, v);
       state.spriteRam[j] = v;
     }
 
-    // Optional: 30% chance di setting up cmp values per fare exit early
+    // Optional: 30% chance of setting up cmp values per fare exit early
     // (forziamo cmpWord[k] = k a un indice random k in [0, 60))
     if (rng() < 0.3) {
       const stopIter = Math.floor(rng() * 60);

@@ -33,7 +33,7 @@
  *
  *
  * The differential test uses a constant inner stub to isolate the gating logic.
- * logica di gating.
+ * logica of gating.
  */
 
 /**
@@ -51,7 +51,7 @@ export const CLAMP_THRESHOLD = 0x0b as const;
  *                  `cmdIndex < 0x0B` (unsigned).
  * @param inner     callback that models `FUN_00004442`. Default = `() => 0`
  *
- * Note di low-level fidelity:
+ * Note of low-level fidelity:
  *     `cmdIndex >= 0x0B` (unsigned) preserves `data`. Indices `0..0x0A`
  *     inclusive clear it. Very large longs (`>= 0x0B` up to `0xFFFFFFFF`) do
  *     not clear it. Return behavior is delegated to the inner dispatcher.

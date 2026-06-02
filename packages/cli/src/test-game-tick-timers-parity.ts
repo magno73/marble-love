@@ -98,7 +98,7 @@ async function main(): Promise<void> {
 
   patchHudToRts(cpu);
 
-  console.log(`\n=== gameTickTimers (FUN_28A96) — ${n} casi ===`);
+  console.log(`\n=== gameTickTimers (FUN_28A96) — ${n} cases ===`);
   console.log(`  (FUN_286EE @ 0x${FUN_HUD_UPDATER.toString(16)} patched → rts)`);
 
   const rng = makeRng(0xfee15);

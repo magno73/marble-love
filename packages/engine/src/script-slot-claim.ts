@@ -63,7 +63,7 @@ export function claimScriptSlot(
     return NOT_FOUND;
   }
 
-  // Path "found": inline del mode-0 di FUN_12F44.
+  // Path "found": inline of the mode-0 of FUN_12F44.
   const slotOff = (slotPtr - WORK_RAM_BASE) >>> 0;
   const arg = argPtr >>> 0;
 

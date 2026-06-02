@@ -3,8 +3,8 @@
  * test-sprite-pair-coord-add-1d82-parity.ts — differential FUN_1D82 vs
  * `spritePairCoordAdd1D82` TS replica.
  *
- * `FUN_00001D82` (134 byte) estrae la coord-9-bit signed da DUE word di
- * sprite-RAM (banchi 0xA02000 e 0xA02100, separati di 0x100), somma due
+ * `FUN_00001D82` (134 byte) estrae la coord-9-bit signed da DUE word of
+ * sprite-RAM (banks 0xA02000 e 0xA02100, separati of 0x100), somma due
  * delta, repacks, and writes back with bits 14 and 15 cleared.
  *
  * **Strategia parity**:
@@ -12,9 +12,9 @@
  *     un pattern noto per detectare write spurii.
  *
  * Suite testate (4 × 125 = 500):
- *   - A: bank=0, col random ∈ [0..0x7F] — base case, low addr.
- *   - B: bank random ∈ [0..7], col random ∈ [0..0x7F] — full sweep.
- *   - C: bank=7, col=0..0x7F — high addr (max range).
+ *   - A: bank=0, with the random ∈ [0..0x7F] — base case, low addr.
+ *   - B: bank random ∈ [0..7], with the random ∈ [0..0x7F] — full sweep.
+ *   - C: bank=7, with the=0..0x7F — high addr (max range).
  *   - D: random delta + target word with bits 14,15 and low nibble set —
  *
  * Uso: npx tsx packages/cli/src/test-sprite-pair-coord-add-1d82-parity.ts [N=500]
@@ -26,13 +26,13 @@ import { exit } from "node:process";
 
 import { state as stateNs } from "@marble-love/engine";
 import type { GameState } from "@marble-love/engine";
-// (`@marble-love/engine` linka via npm workspace al main repo, NON al worktree).
+// (`@marble-love/engine` linka via npm workspace al main repo, NOT al worktree).
 // Import via relative path from the worktree src to test the version
 import * as sub1D82WorktreeNs from "../../engine/src/sprite-pair-coord-add-1d82.js";
 
 // from the main package. They are structurally identical (same layout of
 // Uint8Array/u8/u32), but TypeScript treats them as distinct types because of
-// tag nominal `__u32`. Cast esplicito per il typechecker.
+// tag nominal `__u32`. Cast esplicito for the typechecker.
 const sub1D82Ns = sub1D82WorktreeNs as unknown as {
   spritePairCoordAdd1D82: (
     state: GameState,
@@ -242,9 +242,9 @@ async function main(): Promise<void> {
 
   let totalOk = 0;
 
-  // ─── Suite A: bank=0, col random ─────────────────────────────────────
+  // ─── Suite A: bank=0, with the random ─────────────────────────────────────
   console.log(
-    `\n=== spritePairCoordAdd1D82 (FUN_1D82) — Suite A: bank=0, col random — ${perSuite} casi ===`,
+    `\n=== spritePairCoordAdd1D82 (FUN_1D82) — Suite A: bank=0, col random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: bank random ∈ [0..7] ───────────────────────────────────
   console.log(
-    `\n=== Suite B: bank random ∈ [0..7], col random — ${perSuite} casi ===`,
+    `\n=== Suite B: bank random ∈ [0..7], col random — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -280,9 +280,9 @@ async function main(): Promise<void> {
   );
   totalOk += okB;
 
-  // ─── Suite C: bank=7 (max), col 0..0x7F ──────────────────────────────
+  // ─── Suite C: bank=7 (max), with the 0..0x7F ──────────────────────────────
   console.log(
-    `\n=== Suite C: bank=7 (max addr), col 0..0x7F — ${perSuite} casi ===`,
+    `\n=== Suite C: bank=7 (max addr), col 0..0x7F — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -302,7 +302,7 @@ async function main(): Promise<void> {
   // ─── Suite D: stress su bit-mask edge cases ──────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: bit 14,15 set + low nibble set + extreme delta — ${sizeD} casi ===`,
+    `\n=== Suite D: bit 14,15 set + low nibble set + extreme delta — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

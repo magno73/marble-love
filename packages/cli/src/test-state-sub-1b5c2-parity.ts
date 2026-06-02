@@ -4,7 +4,7 @@
  * `stateSub1B5C2`.
  *
  * FUN_0001B5C2 (838 byte, 0x1B5C2-0x1B908): "position-steering applicator".
- * Applica absLong / negateIfPositive a D3 (x) e D4 (y) del struct A2 in base
+ * Applica absLong / negateIfPositive a D3 (x) e D4 (y) of the struct A2 based on
  * a 8 blocchi condizionali (flag cardinali, gate word, direction bitmap).
  *
  * **Strategia parity**:
@@ -12,15 +12,15 @@
  *     **non-stubbed** ROM subs (left live in the binary).
  *   - FUN_000158AC (sound cmd) **stubbed with RTS** (side-effect-only).
  *   - Call the function body from 0x1B5F6 (first known instruction) after
- *     aver fakato il frame salvato sul stack (8 long dummy per soddisfare il
- *     `movem.l (SP)+,...` dell'epilogo) e pre-settato i registri D2/D3/A2/A3/A4.
+ *     aver fakato il frame salvato on the stack (8 long dummy per soddisfare il
+ *     `movem.l (SP)+,...` of the epilogue) e pre-set i registri D2/D3/A2/A3/A4.
  *   - A4 = 0x1B5B4 (fixed address of negateIfPositive in ROM).
  *   - Compare: intera workRam [0x400000..0x402000) eccl. stack area.
  *
  * **Suite** (4 × 125 = 500):
  *   A: random — random globals + random struct + random bitmap
  *   B: all direction flags off - no active block
- *   C: forced gate active + all cardinals active — massima copertura
+ *   C: forced gate active + all cardinals active — massima coverage
  *   D: edge - extreme values (0x80000000, 0, -1, velocity pivot)
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-1b5c2-parity.ts [N]
@@ -108,9 +108,9 @@ const SAVE_FRAME_REGS = 8;
 
 /**
  * Run the body of FUN_0001B5C2 starting at 0x1B5F6, with:
- *   - stack frame fake (8 long per `movem.l (SP)+` dell'epilogo)
+ *   - stack frame fake (8 long per `movem.l (SP)+` of the epilogue)
  *   - D2 = d2Addr, D3 = d3Val, A2 = a2Addr, A3 = a3Addr, A4 = FUN_1B5B4
- *   - sentinel return address sopra il frame fake
+ *   - sentinel return address above il frame fake
  *
  * Reuse the `callFunction` pattern but without stack args.
  */
@@ -311,7 +311,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: full random ────────────────────────────────────────────────
-  console.log(`\n=== stateSub1B5C2 (FUN_0001B5C2) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub1B5C2 (FUN_0001B5C2) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const ram = makeRamBlob();
@@ -330,7 +330,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: all flags off — no blocks should fire ──────────────────────
-  console.log(`\n=== Suite B: all direction flags off — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: all direction flags off — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const ram = makeRamBlob();
@@ -350,7 +350,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: all gates active + all cardinals on + varied bitmap ─────────
-  console.log(`\n=== Suite C: gates active + all cardinals on — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: gates active + all cardinals on — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const ram = makeRamBlob();
@@ -393,7 +393,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases ─────────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases (INT_MIN, 0x80000000, vel pivot) — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases (INT_MIN, 0x80000000, vel pivot) — ${sizeD} cases ===`);
   let okD = 0;
   const edgeVals = [0x80000000, 0xffff8000, 0xffff0001, 0x00000001, 0x00000000, 0xffffffff];
   for (let i = 0; i < sizeD; i++) {

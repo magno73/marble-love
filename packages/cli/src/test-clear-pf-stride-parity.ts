@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== clearPlayfieldStride (FUN_12186) — ${n} casi ===`);
+  console.log(`\n=== clearPlayfieldStride (FUN_12186) — ${n} cases ===`);
 
   const rng = makeRng(0xb1deca57);
   let ok = 0;
@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 
     //   5: incrementing pattern (i & 0xFF)
     //   6: pattern 0xFE per beccare endian sui long
-    //   7: pattern di "marker" 0xCC
+    //   7: pattern of "marker" 0xCC
     //   8..N: random uniforme
     const pf = new Uint8Array(PF_RAM_SIZE);
 

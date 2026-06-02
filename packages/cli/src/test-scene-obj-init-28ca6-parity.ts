@@ -99,7 +99,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== sceneObjInit28CA6 (FUN_28CA6) — ${n} casi ===`);
+  console.log(`\n=== sceneObjInit28CA6 (FUN_28CA6) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

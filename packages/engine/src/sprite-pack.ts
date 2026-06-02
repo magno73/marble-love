@@ -1,7 +1,7 @@
 /**
  * sprite-pack.ts — `FUN_0001A9CC` (88 byte): pack 6 sprite records.
  *
- * Loops 6 volte. Per ogni record (40 byte da `src`), pack i campi in:
+ * Loops 6 times. For each record (40 byte da `src`), pack i fields in:
  *   - 1 long (always written)
  *   - 1 long + 1 word (skipped on last iter D2==5)
  * Output al `dst` ptr (post-incrementing).

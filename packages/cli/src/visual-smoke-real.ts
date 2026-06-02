@@ -517,7 +517,7 @@ function main(): void {
     }
   }
 
-  // ASCII art map del playfield (40 col × 30 row = 320×240 viewport / 8x8 tile)
+  // ASCII art map of the playfield (40 with the × 30 row = 320×240 viewport / 8x8 tile)
   console.log(`\n  --- ASCII map (60×30, '#'=tile != 0, '.'=tile 0, '@'=sprite) ---`);
   const tileMap = new Map<string, "#" | "@">();
   for (const t of frame.playfield) {
@@ -566,8 +566,8 @@ function main(): void {
 
   console.log(`\n=== Diagnosis ===`);
   if (frame.playfield.length === 0 && pfNz > 0) {
-    console.log(`  ⚠️  playfieldRam popolata (${pfNz} byte) ma Frame.playfield=0.`);
-    console.log(`      → Lookup miss: i word in pfRam decodano lookupIndex non in tabella.`);
+    console.log(`  ⚠️  playfieldRam populated (${pfNz} bytes) but Frame.playfield=0.`);
+    console.log(`      → Lookup miss: i words in pfRam decode a lookupIndex not in the table.`);
   } else if (frame.playfield.length > 0) {
     console.log(`  ✅ Frame.playfield popolato: ${frame.playfield.length} tile.`);
   } else {
@@ -575,13 +575,13 @@ function main(): void {
   }
 
   if (frame.sprites.length === 0 && sprNz > 0) {
-    console.log(`  ⚠️  spriteRam popolata (${sprNz} byte) ma Frame.sprites=0.`);
+    console.log(`  ⚠️  spriteRam populated (${sprNz} bytes) but Frame.sprites=0.`);
   } else if (frame.sprites.length > 0) {
     console.log(`  ✅ Frame.sprites popolato: ${frame.sprites.length}.`);
   }
 
   if (frame.alpha.length === 0 && alpNz > 0) {
-    console.log(`  ⚠️  alphaRam popolata (${alpNz} byte) ma Frame.alpha=0.`);
+    console.log(`  ⚠️  alphaRam populated (${alpNz} bytes) but Frame.alpha=0.`);
   } else if (frame.alpha.length > 0) {
     console.log(`  ✅ Frame.alpha popolato: ${frame.alpha.length}.`);
   }

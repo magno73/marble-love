@@ -6,7 +6,7 @@
  * case shifting for 'A'..'Z'.
  *
  * **Layout entry struct (8+ bytes)**:
- *   +0  byte  : col (column in tile units)
+ *   +0  byte  : with the (column in tile units)
  *   +1  byte  : tick offset (entry becomes due when offset - tick <= lookup)
  *   +2  long  : pointer to the zero-terminated string
  *   +6  byte  : marker for chain end check
@@ -26,7 +26,7 @@
  * **Algorithm**:
  *   1. Read tick offset, compute D1 = offset - tick
  *   2. If D1 > lookup7294[rotation]: skip render
- *   3. Else compute alpha base: ALPHA + 2 * (col << shift + d3)
+ *   3. Else compute alpha base: ALPHA + 2 * (with the << shift + d3)
  *      with d3 = (rotation != 0) ? (0x29 - D1) : (D1 * 64)
  *   4. For each char in string:
  *      - if char == 0: end string
@@ -151,7 +151,7 @@ export function renderStringChain(
         d3 = (d1Signed << 6) | 0;
       }
 
-      // Read col byte at A1
+      // Read with the byte at A1
       const colByte = readByteAbs(state, rom, a1);
       const colSigned = colByte & 0x80 ? colByte - 0x100 : colByte;
 

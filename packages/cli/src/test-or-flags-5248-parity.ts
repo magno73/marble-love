@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   // Edge cases: D1=0, D1=0xFFFFFFFF, D1=3 (callers tipici), D1=1, D1=0x80000001
   const edges = [0, 0xffffffff, 3, 1, 0x80000001];
 
-  console.log(`\n=== orFlags5248 (FUN_5248) — ${n} casi ===`);
+  console.log(`\n=== orFlags5248 (FUN_5248) — ${n} cases ===`);
   let ok = 0;
   let fail: { d1: number; flags0: number; binResult: number; tsResult: number } | null = null;
 

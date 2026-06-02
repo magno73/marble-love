@@ -127,7 +127,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== spriteHelper1B9CC (FUN_1B9CC) — ${n} casi ===`);
+  console.log(`\n=== spriteHelper1B9CC (FUN_1B9CC) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

@@ -3,7 +3,7 @@
  * test-math-helpers-parity.ts — differential FUN_1216A/FUN_1B5A6 (abs) +
  * FUN_1B5B4 (negateIfPositive).
  *
- * Tutte le funzioni: 1 long arg, ritornano long in D0.
+ * Tutte le functions: 1 long arg, ritornano long in D0.
  *
  * Uso: npx tsx packages/cli/src/test-math-helpers-parity.ts [N]
  */
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   const rng = makeRng(0xfade);
 
   function diffFn(label: string, addr: number, tsFn: (v: number) => number): boolean {
-    console.log(`\n=== ${label} — ${n} casi ===`);
+    console.log(`\n=== ${label} — ${n} cases ===`);
     let ok = 0;
     let firstFail: { input: number; bin: number; ts: number } | null = null;
 

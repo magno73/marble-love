@@ -4,7 +4,7 @@
  * differential FUN_17230 vs `dispatchStrings17230`.
  *
  * times `FUN_0001725a(slotPtr)` with `slotPtr = 0x401482 + i*0x42` for
- * `i ∈ 0..6`. Per testare in isolamento la *sola* logica di dispatch
+ * `i ∈ 0..6`. Per testare in isolamento la *sola* logica of dispatch
  *
  * **Stub layout** (20 byte) iniettato @ `0x0001725a`:
  *
@@ -22,7 +22,7 @@
  *   4. **TS side**: set head=0x401C00 (in pokeMem), run TS dispatcher with
  *      callback that invokes `callFunction(0x1725a, [slot])` (same stub).
  *   5. Snapshot workRam_post_ts.
- *   6. Compara byte-per-byte 0x400000..0x402000.
+ *   6. Compare byte-per-byte 0x400000..0x402000.
  *
  *
  *   - pre-fill workRam (pattern + random tail)
@@ -71,7 +71,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Cattura workRam dal CPU in un Uint8Array. */
+/** Cattura workRam from the CPU in un Uint8Array. */
 function captureWorkRam(cpu: ReturnType<typeof createCpuSync>): Uint8Array {
   const out = new Uint8Array(WORK_RAM_SIZE);
   for (let i = 0; i < WORK_RAM_SIZE; i++) {
@@ -109,9 +109,9 @@ async function main(): Promise<void> {
     pokeMem(cpu, FUN_CALLEE + i, 1, STUB_BYTES[i]!);
   }
 
-  console.log(`\n=== dispatchStrings17230 (FUN_17230) — ${n} casi ===`);
+  console.log(`\n=== dispatchStrings17230 (FUN_17230) — ${n} cases ===`);
   console.log(
-    `  (FUN_1725A patched in-memory con stub di queue-write @ 0x401C00)`,
+    `  (FUN_1725A patched in-memory with a queue-write stub @ 0x401C00)`,
   );
 
   const rng = makeRng(0x17230a17);
@@ -124,7 +124,7 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // ma alcuni harness paranoid riapplicano).
+    // but alcuni harness paranoid riapplicano).
     if (i % 100 === 0) {
       for (let k = 0; k < STUB_BYTES.length; k++) {
         pokeMem(cpu, FUN_CALLEE + k, 1, STUB_BYTES[k]!);

@@ -39,7 +39,7 @@
  *   add.l  D1, D1                         ; D1 = 2 * rot (signed)
  *   movea.l #0x72A4, A1
  *   move.b (0x1, A1, D1*0x1), D1b         ; D1.b = byte @ 0x72A5 + 2*rot
- *   asl.l  D1, D0                         ; D0 = col << (D1 & 0x3f)
+ *   asl.l  D1, D0                         ; D0 = with the << (D1 & 0x3f)
  *   add.l  D2, D0                         ; D0 += D2
  *   add.l  D0, D0                         ; D0 *= 2
  *   adda.l D0, A3                         ; A3 = 0xA03000 + D0 (alpha tile addr)
@@ -75,7 +75,7 @@
  * **Semantica**: dato un pointer a struct "string entry":
  *        if rot == 0: D2 = sext(tickOff) << 6
  *        else:        D2 = 0x29 - sext(tickOff)
- *        D0 = ((sext(col) << shift) + D2) * 2
+ *        D0 = ((sext(with the) << shift) + D2) * 2
  *        a3 = 0xA03000 + D0
  *      where stride = signed word @ 0x72A0 + 2*rot.
  *   4. Chain check: if sext(marker) + sext(VAL_F00) > 1 -> A0 = *(A0+8)
@@ -98,12 +98,12 @@ const ALPHA_BASE = 0xa03000 as const;
 const ROM_STRIDE_TABLE = 0x72a0 as const;
 const ROM_SHIFT_TABLE = 0x72a4 as const;
 
-/** Cap di sicurezza per chain-walk (evita infinite loop su catene self-referential). */
+/** Safety cap for chain-walk (avoids infinite loops on self-referential chains). */
 const CHAIN_SAFETY = 1024 as const;
 const STRING_SAFETY = 4096 as const;
 
 /**
- * mantenuta per simmetria col pattern altrui (state-sub-2678, state-sub-2da0).
+ * mantenuta per simmetria with the pattern altrui (state-sub-2678, state-sub-2da0).
  */
 export interface StateSub2ABCSubs {
 }
@@ -159,13 +159,13 @@ function clearAlphaWord(state: GameState, addr: number): void {
 
 /**
  *
- * @param state    GameState (modifica alphaRam @ 0xA03000..0xA03FFF).
- * @param arg1Long pointer (long) a struct "string entry": col@+0, tickOff@+1,
+ * @param state    GameState (modifies alphaRam @ 0xA03000..0xA03FFF).
+ * @param arg1Long pointer (long) a struct "string entry": with the@+0, tickOff@+1,
  *                 stringPtr@+2 (long), marker@+6, nextPtr@+8 (long).
  * @param _subs    placeholder (FUN_2ABC non ha jsr).
  *
  * **Side effects** in `state.alphaRam`:
- *     col/tickOff/rot/stride/shift.
+ *     with the/tickOff/rot/stride/shift.
  */
 export function stateSub2ABC(
   state: GameState,

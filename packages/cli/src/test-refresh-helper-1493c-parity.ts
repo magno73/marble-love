@@ -144,7 +144,7 @@ async function main(): Promise<void> {
     s.workRam[o] = ((s.workRam[o] ?? 0) + 1) & 0xff;
   };
 
-  console.log(`\n=== refreshHelper1493C (FUN_1493C) — ${n} casi ===`);
+  console.log(`\n=== refreshHelper1493C (FUN_1493C) — ${n} cases ===`);
 
   let ok = 0;
   let firstFail: FailRecord | null = null;

@@ -8,7 +8,7 @@
  *          (`*0x400690`, `*0x400692`, `*0x400694`).
  *        - **Set 2** (`x2, y2, z2`): like set 1 but subtracting vectors from
  *          `*0x40068C.w`).
- *      `nx -= 0x1000`, `wrapFlag = 1` (entry terminale). Se `nx <= 0x800`:
+ *      `nx -= 0x1000`, `wrapFlag = 1` (entry terminale). If `nx <= 0x800`:
  *      and all 6 comparisons pass, `hit1 = 1`.
  *   7. **Bbox hit-test 2** (`x2/y2/z2` vs stessi bounds): → `hit2 = 1`.
  *      - `D5 = nx*(x1-cx) + ny*(y1-cy) + nz*(z1-cz)` (usando set 1)

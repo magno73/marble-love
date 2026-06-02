@@ -29,7 +29,7 @@ export const ROM_CODE_BIAS_ADDR = 0x0001006a as const;
 
 export const NUM_SLOTS = 56 as const;
 
-/** Dimensione di un bank MO in byte (= 64 × 4 word = 0x200). */
+/** Dimensione of un bank MO in byte (= 64 × 4 word = 0x200). */
 export const MO_BANK_SIZE = 0x200 as const;
 
 export const MO_FIELD_Y_OFF = 0x000 as const;
@@ -71,10 +71,10 @@ function writeWordBE(buf: Uint8Array, off: number, value: number): void {
  * Replica `FUN_00002404` — Motion Object grid initializer.
  *
  *
- * @param state  GameState. Modificato: `state.spriteRam` (224 byte nel bank
+ * @param state  GameState. Modificato: `state.spriteRam` (224 byte in the bank
  *               0x1006A.
  *               - bank offset = `(arg1 << 9) & 0xFFFFFFFF` (long shift)
- *               - MMIO write   = `(arg1 << 3) & 0xFFFF`     (word di long)
+ *               - MMIO write   = `(arg1 << 3) & 0xFFFF`     (word of long)
  *               - code field   = `(arg1 + ROM[0x1006A].w) & 0xFFFF`
  * @param subs   Stub injection opzionali (vedi {@link MoGridInit2404Subs}).
  *
@@ -96,8 +96,8 @@ export function moGridInit2404(
   const arg1Long = arg1 >>> 0;
 
   // 1. MMIO AV-control = (arg1 << 3) word.
-  //    M68k: `asl.l #0x3, D0; move.w D0w, (0x860000)`. Il word write prende
-  //    i 16 bit bassi del long shift.
+  //    M68k: `asl.l #0x3, D0; move.w D0w, (0x860000)`. Il word write takes
+  //    i 16 bit bassi of the long shift.
   const mmioVal = ((arg1Long << 3) >>> 0) & 0xffff;
   onMmio?.(MMIO_AV_CONTROL_ADDR, mmioVal);
 

@@ -8,7 +8,7 @@
  *   3. Decrement path: timer > 1 → decrementato, no insert.
  *   4. Insert path: timer == 1 → decrementato a 0 → insert triggered, timer
  *      risettato a 0xFFFF, entry[0x8..0xB] = 0x21342.
- *   5. Ptr-walk path: timer == -1 → ptr avanzato di 4.
+ *   5. Ptr-walk path: timer == -1 → ptr advanced by of 4.
  */
 
 import { exit } from "node:process";

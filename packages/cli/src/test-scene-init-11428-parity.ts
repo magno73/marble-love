@@ -106,7 +106,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== sceneInit11428 (FUN_00011428) — ${n} casi ===`);
+  console.log(`\n=== sceneInit11428 (FUN_00011428) — ${n} cases ===`);
   const rng = makeRng(0x11428);
 
   // TS subs that increment sentinel slots in workRam.

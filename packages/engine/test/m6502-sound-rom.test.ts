@@ -42,12 +42,12 @@ describe("buildSoundRom layout", () => {
     expect(buf[0xBFFD]).toBe(0x80);
   });
 
-  it("fail loud su size sbagliato (Rule 12)", () => {
+  it("fails loud on a wrong size (Rule 12)", () => {
     const tooSmall = new Uint8Array(0x2000);
     const ok = new Uint8Array(0x4000);
     expect(() => buildSoundRom({ rom421: tooSmall, rom422: ok }))
-      .toThrow(/136033\.421 size atteso 0x4000/);
+      .toThrow(/136033\.421 size expected 0x4000/);
     expect(() => buildSoundRom({ rom421: ok, rom422: tooSmall }))
-      .toThrow(/136033\.422 size atteso 0x4000/);
+      .toThrow(/136033\.422 size expected 0x4000/);
   });
 });

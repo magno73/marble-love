@@ -115,7 +115,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== objectSlotLookup11B18 (FUN_11B18 early return) — ${n} casi ===`);
+  console.log(`\n=== objectSlotLookup11B18 (FUN_11B18 early return) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

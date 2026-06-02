@@ -3,7 +3,7 @@
  *
  * Exports core module namespaces. Pure logic only: no DOM, no PixiJS.
  *
- * Uso tipico:
+ * Uso typical:
  *   import { wrap, state, rng, bus, physics, ai, level, render, audio, trace }
  *     from "@marble-love/engine";
  */
@@ -323,14 +323,14 @@ import { mainTick as runMainTick } from "./main-tick.js";
 import type { MainTickOptions } from "./main-tick.js";
 
 /**
- * Tick principale del game engine — 1 frame @ 60 Hz.
+ * Tick principale of the game engine — 1 frame @ 60 Hz.
  *
  * Orchestrator that calls 14 root sub-systems mirrored bit-perfect from the
  * original binary (`FUN_00028788`). Updates `state.workRam`,
  * `state.playfieldRam`, `state.colorRam`, `state.alphaRam`, `state.spriteRam`
  * consistently with the binary.
  *
- * Per integrare col renderer:
+ * Per integrare with the renderer:
  * ```ts
  * tick(state, {rom});
  * const frame = render.buildFrame(state);

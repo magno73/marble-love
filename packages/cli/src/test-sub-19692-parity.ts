@@ -23,7 +23,7 @@
  * **Suite** (4 × 125 = 500):
  *   - A: random
  *   - B: forced state==7
- *   - C: pos in zona valida grid (validate path varied)
+ *   - C: pos in area valida grid (validate path varied)
  *   - D: edge cases (counter saturation, state boundaries, marker 0x10)
  *
  * Uso: npx tsx packages/cli/src/test-sub-19692-parity.ts [N]
@@ -162,7 +162,7 @@ async function main(): Promise<void> {
   const genProx = (): number[] => new Array(PROX_BYTES).fill(0).map(() => rb());
 
   // Suite A: random
-  console.log(`\n=== sub19692 (FUN_19692) — Suite A: random — ${perSuite} casi ===`);
+  console.log(`\n=== sub19692 (FUN_19692) — Suite A: random — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     if (runOneCase("A", i, genEntity(), genProx())) okA++;
@@ -171,7 +171,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // Suite B: forced state==7.
-  console.log(`\n=== Suite B: forced state==7 (step=1, apply ogni iter) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: forced state==7 (step=1, apply each iter) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -183,7 +183,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // Suite C: pos in grid valido
-  console.log(`\n=== Suite C: pos in grid range — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: pos in grid range — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const e = genEntity();
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
 
   // Suite D: edge cases
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   const stateBytes = [0x00, 0x01, 0x06, 0x07, 0x08, 0x09, 0xff];
   const counterBytes = [0x00, 0x01, 0x07, 0x08, 0x0f, 0x10, 0x11, 0xff];

@@ -14,7 +14,7 @@
  *   0x5290  subq.l #1,D0              ; D0--
  *                                     ;   At exit: D0 == 0 (long).
  *   0x5294  move.w D0w,(0x00880000).l ; write 0 (word) al watchdog reset latch.
- *                                     ;   resetta il watchdog timer del System1
+ *                                     ;   resetta il watchdog timer of the System1
  *   0x529C  bne.b  0x5284             ; if D0 != 0 → loop back to 0x5284
  *   0x529E  bra.w  0x00004F38         ; tail-call FUN_4F38 (state machine entry)
  *
@@ -38,7 +38,7 @@
  * FUN_4F38 (entry point of the sound/EEPROM/init state machine). In the replica
  *
  *   3. **`bne.b 0x5284`**: branch al body (loop completo, riparte da jsr 4DCC).
- *      Test su Z flag dal D0 ritornato da FUN_52A2: D0=0 → exit, D0=1 → loop.
+ *      Test su Z flag from the D0 returned da FUN_52A2: D0=0 → exit, D0=1 → loop.
  *   4. **`bra.w 0x4F38`**: tail-call (no rts).
  *
  *
@@ -109,7 +109,7 @@ export function fun52A2(state: GameState): number {
   return (primary | secondary) === 0 ? 0 : 1;
 }
 
-/** Default impl di `FUN_4DCC`: replica `addq.l #1,(0x00401FF8).l` long-BE. */
+/** Default impl of `FUN_4DCC`: replica `addq.l #1,(0x00401FF8).l` long-BE. */
 function defaultFun4DCC(state: GameState): void {
   const r = state.workRam;
   let cnt =
@@ -175,7 +175,7 @@ export function stateSub5284(
 
     // 4. bsr 0x52A2 — status check. If both flags are zero → exit the loop.
     if (fun52A2(state) === 0) {
-      // 5. bra.w 0x4F38 — tail-call (modellato come callback).
+      // 5. bra.w 0x4F38 — tail-call (modellato as callback).
       if (f4f38 !== undefined) {
         f4f38(state);
       }

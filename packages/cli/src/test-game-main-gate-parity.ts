@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: MMIO bit 6 = 1 (early exit, only Block A/B) ─────────────
-  console.log(`\n=== gameMainGate (FUN_28972) — Suite A: MMIO bit 6 = 1 — ${n} casi ===`);
+  console.log(`\n=== gameMainGate (FUN_28972) — Suite A: MMIO bit 6 = 1 — ${n} cases ===`);
   let okA = 0;
   let failA: { case: number; field: string; addr: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: MMIO bit 6 = 0 (Block C entry, spin patched) ───────────
   // Setup: ensure obj[0] e obj[1] hanno state non-0 e non-2 per esercitare il
-  console.log(`\n=== gameMainGate (FUN_28972) — Suite B: MMIO bit 6 = 0 — ${n} casi ===`);
+  console.log(`\n=== gameMainGate (FUN_28972) — Suite B: MMIO bit 6 = 0 — ${n} cases ===`);
   let okB = 0;
   let failB: { case: number; field: string; addr: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {

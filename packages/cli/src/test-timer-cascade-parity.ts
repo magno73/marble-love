@@ -6,7 +6,7 @@
  *   1. Setup 5 byte struct in workRam scratch
  *   2. callFunction(0x28C38, [structPtr])
  *   3. tickCascadingTimer(state, structPtr)
- *   4. Confronta D0 (return) + 5 byte struct
+ *   4. Compare D0 (return) + 5 byte struct
  *
  * Uso: npx tsx packages/cli/src/test-timer-cascade-parity.ts [N]
  */
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== tickCascadingTimer (FUN_28C38) — ${n} casi ===`);
+  console.log(`\n=== tickCascadingTimer (FUN_28C38) — ${n} cases ===`);
 
   const rng = makeRng(0xddee);
   const STRUCT_ADDR = 0x401d00;

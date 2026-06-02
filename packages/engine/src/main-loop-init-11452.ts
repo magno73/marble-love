@@ -1,5 +1,5 @@
 /**
- * main-loop-init-11452.ts — replica branchata di `FUN_00011452`.
+ * main-loop-init-11452.ts — replica branchata of `FUN_00011452`.
  */
 
 import type { GameState } from "./state.js";

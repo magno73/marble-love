@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   const STRUCT = 0x00401D00, STRING_ADDR = 0x00401D40;
 
   // ─── FUN_2ABC: clearStringChain ─────────────────────────────────
-  console.log(`\n=== clearStringChain (FUN_2ABC) — ${n} casi ===`);
+  console.log(`\n=== clearStringChain (FUN_2ABC) — ${n} cases ===`);
   let okC = 0, failC: any = null;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   if (failC) console.log(`  First fail: case ${failC.case} @ alpha+0x${failC.offset.toString(16)}`);
 
   // ─── FUN_2678: removeFromSlots ─────────────────────────────────
-  console.log(`\n=== removeFromSlots (FUN_2678) — ${n} casi ===`);
+  console.log(`\n=== removeFromSlots (FUN_2678) — ${n} cases ===`);
   let okR = 0, failR: any = null;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, 0x00401F42, 2, 0);
     stateInst.workRam[0x1F00] = 0; stateInst.workRam[0x1F01] = 0;
     stateInst.workRam[0x1F42] = 0; stateInst.workRam[0x1F43] = 0;
-    pokeMem(cpu, STRUCT + 0, 1, 0);  // col=0
+    pokeMem(cpu, STRUCT + 0, 1, 0);  // with the=0
     pokeMem(cpu, STRUCT + 1, 1, 0);  // tickOff=0
     pokeMem(cpu, STRUCT + 2, 4, STRING_ADDR);
     pokeMem(cpu, STRUCT + 6, 1, 0); // marker=0

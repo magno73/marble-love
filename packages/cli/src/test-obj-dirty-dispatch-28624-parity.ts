@@ -8,7 +8,7 @@
  *
  *   - In TS, `objDirtyDispatch28624` receives a `renderStringHelper` sub that
  *     increments the same byte in `state.workRam[0x3E0]`.
- *       2. bitmap byte @ 0x40039C (DEVE essere 0 in entrambi i lati).
+ *       2. bitmap byte @ 0x40039C (MUST be 0 in both i sides).
  *       3. count word @ 0x400396 unchanged.
  *       4. 64 bytes of workRam scratch around 0x39C (bitmap + sentinel +
  *
@@ -74,7 +74,7 @@ interface CaseSetup {
   count: number;
   bitmap: number;
   sentinelInit: number;
-  objArg1: number[]; // long per ogni obj 0..count-1
+  objArg1: number[]; // long for each obj 0..count-1
 }
 
 interface FailRecord {
@@ -101,13 +101,13 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  // Leggiamo 16 byte (count max nei test = 8, ma teniamo margine).
+  // Leggiamo 16 byte (count max in the test = 8, but teniamo margin).
   const romTab = new Uint8Array(16);
   for (let k = 0; k < 16; k++) {
     romTab[k] = romBuf[ROM_TABLE_ADDR + k] ?? 0;
   }
 
-  console.log(`\n=== objDirtyDispatch28624 (FUN_00028624) — ${n} casi ===`);
+  console.log(`\n=== objDirtyDispatch28624 (FUN_00028624) — ${n} cases ===`);
   const rng = makeRng(0x28624);
 
   const subs: dispatchNs.ObjDirtyDispatch28624Subs = {

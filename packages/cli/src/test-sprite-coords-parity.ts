@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   }
 
   // V1
-  console.log(`\n=== computeSpriteCoords_v1 (FUN_18A1E) — ${n} casi ===`);
+  console.log(`\n=== computeSpriteCoords_v1 (FUN_18A1E) — ${n} cases ===`);
   let ok1 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok1}/${n} = ${((ok1/n)*100).toFixed(1)}%`);
 
   // V2
-  console.log(`\n=== computeSpriteCoords_v2 (FUN_199D6) — ${n} casi ===`);
+  console.log(`\n=== computeSpriteCoords_v2 (FUN_199D6) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok2}/${n} = ${((ok2/n)*100).toFixed(1)}%`);
 
   // V4
-  console.log(`\n=== computeSpriteCoords_v4 (FUN_18972) — ${n} casi ===`);
+  console.log(`\n=== computeSpriteCoords_v4 (FUN_18972) — ${n} cases ===`);
   let okV4 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okV4}/${n} = ${((okV4/n)*100).toFixed(1)}%`);
 
   // V3
-  console.log(`\n=== computeSpriteCoords_v3 (FUN_1778E) — ${n} casi ===`);
+  console.log(`\n=== computeSpriteCoords_v3 (FUN_1778E) — ${n} cases ===`);
   let ok3 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${ok3}/${n} = ${((ok3/n)*100).toFixed(1)}%`);
 
   // processAllSprites_v1
-  console.log(`\n=== processAllSprites_v1 (FUN_189E2) — ${n} casi ===`);
+  console.log(`\n=== processAllSprites_v1 (FUN_189E2) — ${n} cases ===`);
   let okPA = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

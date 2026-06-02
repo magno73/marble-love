@@ -1,4 +1,4 @@
-// probe-0700-per-frame.ts — confronta cluster 0x0700..0x077f TS vs MAME ad ogni frame
+// probe-0700-per-frame.ts — compare cluster 0x0700..0x077f TS vs MAME on each frame
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";

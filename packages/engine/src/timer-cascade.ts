@@ -63,7 +63,7 @@ function writeMemoryU8(state: GameState, addr: number, v: number): void {
 }
 
 /**
- * Replica `FUN_00028C38` — tick di un timer cascading.
+ * Replica `FUN_00028C38` — tick of un timer cascading.
  *
  * @param state    GameState
  * @returns        Flags: bit 0 = outer wrapped, bit 1 = cascade triggered

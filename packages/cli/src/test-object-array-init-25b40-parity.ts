@@ -8,12 +8,12 @@
  *
  * Strategia parity (no sub-jsr, modulo puro):
  *   1. For each random case, randomize:
- *        - objPtr in {0x401000, ..., 0x401C00} (12 candidati)
- *        - byte di "scratch" su tutti i campi target di A1 (per check write)
- *        - byte vicini ai campi target (per check no-spill)
+ *        - objPtr in {0x401000, ..., 0x401C00} (12 candidates)
+ *        - "scratch" bytes su all i fields target of A1 (for the check write)
+ *        - byte near ai fields target (for the check no-spill)
  *   2. Run the real binary @ FUN_00025B40.
  *   3. Run TS objectArrayInit25B40 on the workRam mirror, with the same ROM.
- *   4. Confronta i 24 word + 1 byte target su A1 + i vicini.
+ *   4. Compare i 24 word + 1 byte target su A1 + i near.
  *
  * Uso: npx tsx packages/cli/src/test-object-array-init-25b40-parity.ts [N]
  */
@@ -28,7 +28,7 @@ import {
 } from "@marble-love/engine";
 import type { RomImage } from "@marble-love/engine";
 // Direct import from engine src (modulo nuovo non ancora ri-esportato in
-// node_modules @marble-love/engine fino a build/install successive).
+// node_modules @marble-love/engine up to build/install successive).
 import * as oaiNsRaw from "../../engine/src/object-array-init-25b40.js";
 const oaiNs = oaiNsRaw as unknown as {
   objectArrayInit25B40: (
@@ -50,7 +50,7 @@ const FUN_25B40 = 0x00025b40;
 const WORK_RAM_BASE = 0x00400000;
 const WORK_RAM_SIZE = 0x2000;
 
-// Pointer candidates (well within workRam, lascia margine per stack a 0x401F00).
+// Pointer candidates (well within workRam, lascia margin per stack a 0x401F00).
 const PTR_CANDIDATES = [
   0x00401000, 0x00401100, 0x00401200, 0x00401300,
   0x00401400, 0x00401500, 0x00401600, 0x00401700,
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== objectArrayInit25B40 (FUN_00025B40) — ${n} casi ===`);
+  console.log(`\n=== objectArrayInit25B40 (FUN_00025B40) — ${n} cases ===`);
 
   const rng = makeRng(0x25b40);
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
     0xcb, 0xcc, 0xcd,
   ] as const;
 
-  // Tabelle ROM lette (per check).
+  // Tabelthe ROMs lette (for the check).
   const TABLE_A_ROM = 0x0001d3f4;
   const TABLE_B_ROM = 0x0001d3fc;
 
@@ -142,7 +142,7 @@ async function main(): Promise<void> {
     // ── Mirror su state.workRam ────────────────────────────────────────
     // Reset workRam to avoid cross-contamination from the previous case.
     for (let k = 0; k < WORK_RAM_SIZE; k++) stateInst.workRam[k] = 0;
-    // Object scratch nel mirror
+    // Object scratch in the mirror
     for (let k = 0; k < 0x100; k++) {
       stateInst.workRam[off + k] = scratchObj[k]!;
     }

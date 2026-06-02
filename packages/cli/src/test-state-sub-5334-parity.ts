@@ -4,12 +4,12 @@
  *
  * `FUN_000052DA` with `(byte98_signExt32, byte99_signExt32, argLong)`.
  *
- * Strategia di parity test:
- *     scriviamo i due byte in work RAM (sia in unified memory di Musashi
+ * Strategia of parity test:
+ *     we write i due byte in work RAM (both in unified memory of Musashi
  *     stack `(0x4,SP)`, `(0x8,SP)`, `(0xC,SP)` (callee view with ret
  *     addr in `(0,SP)`).
- *   - Confrontiamo `(arg1, arg2, arg3)` osservati vs. quelli passati allo
- *     stub `inner` di TS.
+ *   - Confrontiamo `(arg1, arg2, arg3)` osservati vs. quelli passati to the
+ *     stub `inner` of TS.
  *
  * Uso: npx tsx packages/cli/src/test-state-sub-5334-parity.ts [N]
  */
@@ -56,12 +56,12 @@ function captureEnter52DAArgs(
 ): Captured {
   const sys = cpu.system;
 
-  // memory di Musashi a 0x00401F98 / 0x00401F99 (MMIO non interessato qui:
+  // memory of Musashi a 0x00401F98 / 0x00401F99 (MMIO non interessato qui:
   // sono in work RAM 0x400000+).
   pokeMem(cpu, 0x00401f98, 1, byte98 & 0xff);
   pokeMem(cpu, 0x00401f99, 1, byte99 & 0xff);
 
-  // Usiamo 0x401F00 (pattern di sound-cmd-gate parity).
+  // We use 0x401F00 (pattern of sound-cmd-gate parity).
   const sp0 = 0x401f00;
   let sp = sp0;
   sp = (sp - 4) >>> 0;
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub5334 (FUN_5334) — ${n} casi ===`);
+  console.log(`\n=== stateSub5334 (FUN_5334) — ${n} cases ===`);
 
   const rng = makeRng(0xfeedface);
   let ok = 0;
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   } | null = null;
 
   for (let i = 0; i < n; i++) {
-    // Pattern: copertura boundary sign-extension + random
+    // Pattern: coverage boundary sign-extension + random
     let byte98: number;
     let byte99: number;
     let argLong: number;

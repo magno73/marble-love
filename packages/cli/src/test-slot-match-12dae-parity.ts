@@ -7,11 +7,11 @@
  *     ( long slot+0x3A == *(arg+2).l OR
  *       ( *(arg+2).l == 0 AND byte slot+0x1F == 0xC ) )
  *
- *   - byte slot+0x18: 50% == 1 (occupato match-eligible), 25% == 0, 25% random.
+ *   - byte slot+0x18: 50% == 1 (occupied match-eligible), 25% == 0, 25% random.
  *   - long slot+0x3A: 30% == target (match key), 70% random.
  *   - byte slot+0x1F: 30% == 0xC, 70% random.
  *
- *   - D0 (byte low confrontato come byte → match dell'unico bit out).
+ *   - D0 (byte low confrontato as byte → match of the single bit out).
  *
  * Uso: npx tsx packages/cli/src/test-slot-match-12dae-parity.ts [N]
  */
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
   tsRom.program.set(romBuf.subarray(0, tsRom.program.length));
   void tsRom;
 
-  console.log(`\n=== slotMatch12DAE (FUN_00012DAE) — ${n} casi ===`);
+  console.log(`\n=== slotMatch12DAE (FUN_00012DAE) — ${n} cases ===`);
 
   const rng = makeRng(0x12dae);
   let ok = 0;
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
       stateInst.workRam[(slot - 0x400000) + 0x1f] = v1f;
     }
 
-    // Snapshot work RAM (per detect spurious writes side dell'oracolo).
+    // Snapshot work RAM (per detect spurious writes side of the oracolo).
     const tsBefore = new Uint8Array(stateInst.workRam);
 
     // Run binary

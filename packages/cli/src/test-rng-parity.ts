@@ -10,7 +10,7 @@
  * Uso:
  *   npx tsx packages/cli/src/test-rng-parity.ts [N]
  *
- * (N = numero di test cases, default 100)
+ * (N = number of test cases, default 100)
  */
 
 import { existsSync, readFileSync } from "node:fs";

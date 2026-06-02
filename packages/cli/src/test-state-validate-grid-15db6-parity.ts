@@ -3,9 +3,9 @@
  * test-state-validate-grid-15db6-parity.ts — differential FUN_15DB6 vs
  * `stateValidateGrid15DB6`.
  *
- * `FUN_00015DB6` (110 byte) valida la match-cell del currentPtr vs
+ * `FUN_00015DB6` (110 byte) valida la match-cell of the currentPtr vs
  * field_x/field_y >> 19 of the struct, possibly mutating `kind` 0x23 → 0x20,
- * poi dispatcha a una di:
+ * poi dispatcha a una of:
  *
  * **Strategia stub injection**:
  *
@@ -19,16 +19,16 @@
  *        addq.l  #1, 0x00401E04.l     ; 52B9 0040 1E04     (6 byte)
  *        rts                           ; 4E75               (2 byte)
  *
- *      del case). Stub minimale (8 byte):
+ *      of the case). Stub minimale (8 byte):
  *
  *        addq.l  #1, 0x00401E00.l     ; 52B9 0040 1E00     (6 byte)
  *        rts                           ; 4E75               (2 byte)
  *
  *      slot @ `0x401E10`:
- *        - `0x401E10` (long): structPtr ricevuto come arg1
- *        - `0x401E14` (long): flagLong ricevuto come arg2
+ *        - `0x401E10` (long): structPtr received as arg1
+ *        - `0x401E14` (long): flagLong received as arg2
  *
- *      Stack al momento del JSR a FUN_15E24 dal caller (FUN_15DB6):
+ *      Stack al momento of the JSR a FUN_15E24 from the caller (FUN_15DB6):
  *        (0,SP)  = ret addr
  *        (4,SP)  = arg1 (structPtr) — long
  *        (8,SP)  = arg2 (flagLong)  — long
@@ -209,7 +209,7 @@ function compareZone(
 interface CaseSetup {
   /** Bytes of the struct (size STRUCT_SIZE). */
   structBytes: number[];
-  /** Bytes dell'area currentPtr (size CURRENT_PTR_SIZE). */
+  /** Bytes of the area currentPtr (size CURRENT_PTR_SIZE). */
   currentBytes: number[];
 }
 
@@ -408,7 +408,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== stateValidateGrid15DB6 (FUN_15DB6) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== stateValidateGrid15DB6 (FUN_15DB6) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -422,7 +422,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: forced match (cell ↔ field) with random kind ─────────────
   console.log(
-    `\n=== Suite B: forced match (cell ↔ field>>19) con kind random — ${perSuite} casi ===`,
+    `\n=== Suite B: forced match (cell ↔ field>>19) con kind random — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -435,7 +435,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   console.log(
-    `\n=== Suite C: forced match + kind = 0x23 → mutazione — ${perSuite} casi ===`,
+    `\n=== Suite C: forced match + kind = 0x23 → mutazione — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -450,7 +450,7 @@ async function main(): Promise<void> {
   // ─── Suite D: forced mismatch + kind = 0x23 (capture fun_15d10) ────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: forced mismatch + kind = 0x23 → fun_15d10 — ${sizeD} casi ===`,
+    `\n=== Suite D: forced mismatch + kind = 0x23 → fun_15d10 — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

@@ -49,7 +49,7 @@ const OBJ_STRIDE = 0xe2;
 const ROM_PTR_TABLE_BASE = 0x00024aae;
 const ROM_BYTE_TABLE_BASE = 0x00024a94;
 
-/** Range di obj iterati nel test (count ≤ MAX_OBJ_COUNT). */
+/** Range of obj iterati in the test (count ≤ MAX_OBJ_COUNT). */
 const MAX_OBJ_COUNT = 8;
 const LIST_BASE_ADDR = 0x024b00;
 /** Lunghezza max char-list (incl. terminator). */
@@ -70,7 +70,7 @@ interface TestCase {
   thresholdByte: number;       // ROM byte @ 0x24a94 + idx
   listBytes: number[];         // char-list (last byte = 0xFF terminator)
   count: number;               // word @ 0x400396
-  /** Per ogni slot: state, filterFlag, charcode, signedRange (word), broadcastFlag. */
+  /** For each slot: state, filterFlag, charcode, signedRange (word), broadcastFlag. */
   objs: Array<{
     state: number;
     filterFlag: number;
@@ -149,7 +149,7 @@ interface FailRecord {
   ts: number;
 }
 
-/** Compara byte-by-byte le aree workRam interessate. */
+/** Compare byte-by-byte le aree workRam interessate. */
 function compareWorkRam(
   state: ReturnType<typeof stateNs.emptyGameState>,
   cpu: CpuSession,
@@ -253,7 +253,7 @@ async function main(): Promise<void> {
     const listBytes: number[] = [];
     for (let i = 0; i < llen - 1; i++) {
       let b = rb();
-      if (b === 0xff) b = 0xfe; // evita terminator prematuro
+      if (b === 0xff) b = 0xfe; // avoids a premature terminator
       listBytes.push(b);
     }
     listBytes.push(0xff);
@@ -272,7 +272,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random ──────────────────────────────────────────────────
   console.log(
-    `\n=== objectCharcodeBroadcast1BBAA (FUN_0001BBAA) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== objectCharcodeBroadcast1BBAA (FUN_0001BBAA) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -282,7 +282,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: forced match (gate=1, progress<threshold, char in list) ──
-  console.log(`\n=== Suite B: forced match — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: forced match — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const c = randomCase({
@@ -305,8 +305,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okB}/${perSuite} = ${((okB / perSuite) * 100).toFixed(1)}%`);
   totalOk += okB;
 
-  // ─── Suite C: forced no-match (gate=1 ma filtri falliscono) ────────────
-  console.log(`\n=== Suite C: forced no-match — ${perSuite} casi ===`);
+  // ─── Suite C: forced no-match (gate=1 but filtri falliscono) ────────────
+  console.log(`\n=== Suite C: forced no-match — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const c = randomCase({
@@ -325,7 +325,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases ──────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const sub = i % 6;
@@ -344,7 +344,7 @@ async function main(): Promise<void> {
       const v = rb();
       c = randomCase({ gateByte: 1, progressByte: v, thresholdByte: v });
     } else if (sub === 4) {
-      // signedRange = 7 / 2 (bordi del filtro)
+      // signedRange = 7 / 2 (edges of the filtro)
       c = randomCase({ gateByte: 1, progressByte: 0x10, thresholdByte: 0x80 });
       for (let j = 0; j < c.objs.length; j++) {
         c.objs[j]!.signedRange = j % 2 === 0 ? 2 : 7;

@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   const stateInst = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state: stateInst });
 
-  console.log(`\n=== isKnownStringAddr (FUN_0039F0) — ${n} casi ===`);
+  console.log(`\n=== isKnownStringAddr (FUN_0039F0) — ${n} cases ===`);
 
   const rng = makeRng(0x39f039f0);
 
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     return match;
   };
 
-  // Smoke: 3 noti e 8 negativi
+  // Smoke: 3 noti e 8 negative
   for (const a of knownAddrs) testAddr(a);
   for (const a of negAddrs) testAddr(a);
 

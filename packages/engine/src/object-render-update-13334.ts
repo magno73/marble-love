@@ -162,7 +162,7 @@ const STRUCT_FINAL_COPY_OFF = 0x42; // long @ A2+0x42 (← struct[0x3E])
 const STRUCT_BASE_PTR_OFF = 0x46; // long @ A2+0x46 (subtracted base)
 const STRUCT_PACKED_DST_OFF = 0x4e; // long @ A2+0x4E (packed coords)
 
-/** ROM byte table indicizzata sul path `1f == 3`. */
+/** ROM byte table indicizzata on the path `1f == 3`. */
 export const PALETTE_INDEX_TABLE_ROM = 0x1df18 as const;
 
 /** Magic constant compared with `struct[0x46]` for the +7 bonus. */
@@ -213,7 +213,7 @@ function sext16_i32(word: number): number {
 }
 
 /**
- * (dereferenza `*A0` nel disasm). I record possono vivere sia in ROM
+ * (dereferenza `*A0` in the disasm). I record possono vivere both in ROM
  * non distingue (m68k unified addressing). La replica accede ai due buffer
  */
 function readU32Anywhere(

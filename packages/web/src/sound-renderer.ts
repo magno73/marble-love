@@ -390,8 +390,8 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     return ctx?.sampleRate ?? 44100;
   }
 
-  /** V3 chip-perfect: prende samples interleaved L/R @ nativeSampleRate,
-   * resample a output ctx.sampleRate, posta come Float32Array al worklet. */
+  /** V3 chip-perfect: takes samples interleaved L/R @ nativeSampleRate,
+   * resample to the output ctx.sampleRate, posted as a Float32Array to the worklet. */
   function pushYm2151Samples(samples: number[], nativeSampleRate: number, options?: PcmPushOptions): void {
     if ((node === null && scriptNode === null) || samples.length === 0) return;
     const outputSampleRate = getSampleRate();

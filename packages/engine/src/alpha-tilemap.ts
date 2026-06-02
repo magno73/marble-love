@@ -92,8 +92,8 @@ export function setAlphaWord(state: GameState, index: number, value: number): vo
  * @param startRow Starting row (0..30 in normal use)
  */
 /**
- * Mirrors `FUN_000037E4` - `getAlphaTileAddr(col, row)`. Computes the alpha
- * tilemap address for `(col, row)` bytes. Same formula as setAlphaTile, but
+ * Mirrors `FUN_000037E4` - `getAlphaTileAddr(with the, row)`. Computes the alpha
+ * tilemap address for `(with the, row)` bytes. Same formula as setAlphaTile, but
  * return-only with no write. Returns a long address.
  */
 export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array }, colByte: number, rowByte: number): number {
@@ -129,7 +129,7 @@ export function getAlphaTileAddr(state: GameState, rom: { program: Uint8Array },
  * Replica `FUN_00016E8E` — clear alpha tile rows.
  *
  * For each row r in [arg1.b .. 0x1E):
- *   Call getAlphaTileAddr(col=3, row=r) → addr
+ *   Call getAlphaTileAddr(with the=3, row=r) → addr
  *   Clear 0x24 words from addr
  */
 export function clearAlphaRows(

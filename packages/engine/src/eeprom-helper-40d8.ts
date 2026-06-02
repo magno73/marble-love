@@ -82,7 +82,7 @@ function signExtendByteToLong(byte: number): number {
 }
 
 /**
- * Replica bit-perfect di `FUN_000040D8`.
+ * Replica bit-perfect of `FUN_000040D8`.
  *
  * @param state                GameState; reads `*0x401FFC` and bytes relative
  *                             to that pointer.

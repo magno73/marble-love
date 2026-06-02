@@ -194,7 +194,7 @@ export function counterPoolSubtract4008(
   // Loop body: D2 -= 1 (long); counter -= 1 (byte).
   //
   // D2 is a small positive value here, so `tst.l + ble` acts like `while > 0`.
-  let d2 = arg1l | 0; // signed view (i32) per il check `ble` (D2 <= 0 signed).
+  let d2 = arg1l | 0; // signed view (i32) for the check `ble` (D2 <= 0 signed).
   let counter = counter0;
   while (d2 > 0 && counter !== 0) {
     d2 = (d2 - 1) | 0;

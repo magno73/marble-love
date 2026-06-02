@@ -532,7 +532,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: mode 0/1/2/5, random from/to/boundary ─────────────────────
-  console.log(`\n=== FUN_000144E4 — Suite A: mode 0/1/2/5 (scaling+12DFA dispatch) — ${perSuite} casi ===`);
+  console.log(`\n=== FUN_000144E4 — Suite A: mode 0/1/2/5 (scaling+12DFA dispatch) — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const boundary = ri(0x200) - 0x100; // boundary in [-256..255]
@@ -566,7 +566,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: mode 3, boundary crossing at 0x29 ──────────────────────────
-  console.log(`\n=== Suite B: mode 3 (bannerHelper26B66 dispatch) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: mode 3 (bannerHelper26B66 dispatch) — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const boundary = ri(0x100) & 0xffff;
@@ -617,7 +617,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: mode 4, range checks + 0x400762 ────────────────────────────
-  console.log(`\n=== Suite C: mode 4 (18FFA/190EE/400762 dispatch) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: mode 4 (18FFA/190EE/400762 dispatch) — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const boundary = ri(0x100) & 0xffff;
@@ -670,7 +670,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: edge cases ─────────────────────────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: edge cases — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: edge cases — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const sub = ri(6);

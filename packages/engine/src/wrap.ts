@@ -1,11 +1,11 @@
 /**
  *
- * Branded types: u8, u16, u32, i8, i16, i32 (alias di number, ma incompatibili
+ * Branded types: u8, u16, u32, i8, i16, i32 (alias of number, but incompatibili
  *
  * Regole:
  *    fails in `packages/engine/src`.
  *  - Per >>= preferisci `u32_shr` (zero-fill) o `i32_sar` (arithmetic).
- *    `as_u8/as_u16/as_u32` per essere brandizzati.
+ *    `as_u8/as_u16/as_u32` to be brandizzati.
  */
 
 declare const __u8: unique symbol;
@@ -135,10 +135,10 @@ export const sext_8_16 = (a: u8): i16 => as_i16(((a as number) << 24) >> 24);
 export const sext_8_32 = (a: u8): i32 => as_i32(((a as number) << 24) >> 24);
 export const sext_16_32 = (a: u16): i32 => as_i32(((a as number) << 16) >> 16);
 
-// ─── Flag helpers (CCR del 68010) ─────────────────────────────────────────
+// ─── Flag helpers (CCR of the 68010) ─────────────────────────────────────────
 
 /**
- *  (JS bitwise tornerebbe -1, inutile per confronti unsigned). */
+ *  (JS bitwise would return -1, useless for unsigned comparisons). */
 const umask = (bits: 8 | 16 | 32): number =>
   bits === 32 ? 0xffffffff : (1 << bits) - 1;
 

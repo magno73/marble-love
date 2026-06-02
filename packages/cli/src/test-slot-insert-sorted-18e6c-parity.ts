@@ -12,7 +12,7 @@
  *        - local[4] = local[8] = local[C] = sign-ext word(D3)
  *
  *   2. Setup ROM lookup-table @ 0x1F0E2 puntando ai 16 slot @ 0x4001DC..
- *      (stride 14 byte). Stesso layout di `test-sort-adjacent-objects-1a7a8`.
+ *      (stride 14 byte). Same layout of `test-sort-adjacent-objects-1a7a8`.
  *
  *   3. Setup workRam:
  *      - Slot rect (16 × 14 byte) @ 0x4001DC: random word in offset 2..C.
@@ -56,7 +56,7 @@ const RECT_SLOT_COUNT = 16;
 const RECT_AREA_LEN = 0x1b2;
 
 /**
- * Patch FUN_1B12A col thunk deterministico.
+ * Patch FUN_1B12A with the thunk deterministico.
  *
  * Thunk (40 byte):
  *
@@ -151,7 +151,7 @@ function setupRomLookup(romView: Uint8Array): void {
 /**
  *
  * - byteArray[0..0x1F]: i primi `numActive` byte sono indici random 0..15;
- *   compare anche per slot occupati.
+ *   compare also for occupied slots.
  */
 function setupBaseline(
   workRam: Uint8Array,
@@ -162,7 +162,7 @@ function setupBaseline(
   // Slot rect fields (offsets 2,4,6,8,A,C — 6 word per slot).
   for (let i = 0; i < RECT_SLOT_COUNT; i++) {
     const base = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) - WORK_RAM_BASE;
-    // Slot[0] = "occupato" flag.
+    // Slot[0] = "occupied" flag.
     workRam[base] = slotOccupied[i] ? 0x80 + i : 0;
     workRam[base + 1] = 0;
     // Slot[2..0xD]: 6 word random small.
@@ -243,7 +243,7 @@ async function main(): Promise<void> {
     fun_1b12a: tsFun1B12A,
   };
 
-  console.log(`\n=== slotInsertSorted18E6C (FUN_18E6C) — ${total} casi ===`);
+  console.log(`\n=== slotInsertSorted18E6C (FUN_18E6C) — ${total} cases ===`);
 
   const rng = makeRng(0x18e6c);
   let ok = 0;
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
   for (let tc = 0; tc < total; tc++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: copertura controllata + random.
+    // Pattern: coverage controllata + random.
     let typeCode: number;
     let subIdx: number;
     let numActive: number;
@@ -276,7 +276,7 @@ async function main(): Promise<void> {
       // List with a single element.
       typeCode = 0x04; subIdx = 1; numActive = 1;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(false);
-      slotOccupied[0] = true; // slot 0 occupato (corrisponde all'unico byte)
+      slotOccupied[0] = true; // slot 0 occupied (corresponds to the only byte)
     } else if (tc === 2) {
       typeCode = 0x29; subIdx = 0; numActive = 0;
       slotOccupied = new Array<boolean>(RECT_SLOT_COUNT).fill(true);
@@ -318,7 +318,7 @@ async function main(): Promise<void> {
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);
 
-    // Compara slot-area (224 byte = 16 × 14, ma anche oltre fino a A4+0x1B2 per
+    // Compare slot-area (224 byte = 16 × 14, but also beyond up to A4+0x1B2 per
     // safety; FUN_18E6C scans up to A4+0x1B2 = 0x4001DC + 0x1B2 = 0x40038E.
     const binSlots = readBin(cpu, RECT_SLOT_ABS, RECT_AREA_LEN);
     const tsSlots = readTs(stateInst, RECT_SLOT_ABS, RECT_AREA_LEN);

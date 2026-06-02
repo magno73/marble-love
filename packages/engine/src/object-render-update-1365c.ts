@@ -640,7 +640,7 @@ export function objectRenderUpdate1365C(
         }
       }
     }
-    // (both rami 0x1379a and 0x13880 fall through to 0x13938)
+    // (both branches 0x1379a and 0x13880 fall through to 0x13938)
 
     // ── 11. Post-action: 0x13938 ──────────────────────────────────────────
     // 0x13938: cmp.b (0x1b,A2), D2b; beq 0x1395e (epilogue)

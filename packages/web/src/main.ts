@@ -1201,7 +1201,7 @@ fileInput.addEventListener("change", async () => {
     const rom = await extractRomZipFiles(files);
     const warningText =
       rom.validation.warnings.length > 0
-        ? ` (${rom.validation.warnings.length} avvisi di formato)`
+        ? ` (${rom.validation.warnings.length} format warnings)`
         : "";
     setRomStatus(
       `ROM valida: ${rom.validation.fileCount} file verificati CRC32${warningText}.`,
@@ -2452,7 +2452,7 @@ async function startGame(
       renderer.draw(s);
     }
 
-    // Debug log ogni 60 frame: state RAM occupancy + Frame stats.
+    // Debug log every 60 frames: state RAM occupancy + Frame stats.
     if (frameCount % 60 === 0) {
       const pfNz = countNonZero(s.playfieldRam);
       const sprNz = countNonZero(s.spriteRam);

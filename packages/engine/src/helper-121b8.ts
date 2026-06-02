@@ -821,7 +821,7 @@ export function helper121B8(
     }
 
     // FUN_160F6 sets A3=0x40069E and A4=0x4006A0 internally; keep the TS
-    // parameter order aligned with the dispatcher model's tileX/tileY reads.
+    // parameter order aligned with the dispatcher modethe s tileX/tileY reads.
     if (subs.fun_160f6 !== undefined) {
       subs.fun_160f6(state, a2, 0x40069e, 0x4006a0, d4_timer);
     } else {

@@ -134,7 +134,7 @@ export function paletteAnimTick(
     colorRamWriteU16BE(state, palOffset, palWord);
 
     let newCtr = ((animCtr & 0xff) + 1) & 0xff;
-    // ble skip; clr.b ctr` → 64..127 (signed pos > wrapMax) reset, ma
+    // ble skip; clr.b ctr` → 64..127 (signed pos > wrapMax) reset, but
     // 128..255 (signed neg) NO.
     const signedCtr = (newCtr & 0x80) !== 0 ? newCtr - 0x100 : newCtr;
     if (signedCtr > params.wrapMax) {

@@ -5,7 +5,7 @@
  * scheduler. Args: 1 long on the stack (`argLong`).
  *
  * Logica:
- *   - Per ogni slot D2 in [0..3]:
+ *   - For each slot D2 in [0..3]:
  *       if DATA_PTR[D2] == argLong: STATE[D2]=0; DATA_PTR[D2]=0;
  *   - jsr FUN_2ABC(argLong)  ← STUB injection
  *
@@ -14,7 +14,7 @@
  *
  * Suite testate:
  *   - A: random argLong + random table (most slot non-match)
- *   - B: argLong = DATA_PTR[D2] di un slot random (sicuro match)
+ *   - B: argLong = DATA_PTR[D2] of un slot random (sicuro match)
  *   - C: argLong = DATA_PTR for multiple slots (multiple matches)
  *   - D: argLong = 0 with mixed DATA_PTR values at 0 (match for slot 0)
  *
@@ -142,7 +142,7 @@ async function main(): Promise<void> {
     ((Math.floor(rng() * 0x10000) << 16) | Math.floor(rng() * 0x10000)) >>> 0;
 
   // ─── Suite A: random everything ──────────────────────────────────────
-  console.log(`\n=== stateSub2678 (FUN_2678) — Suite A: random arg & table — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub2678 (FUN_2678) — Suite A: random arg & table — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -152,8 +152,8 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  // ─── Suite B: arg = DATA_PTR[slot] di slot random ─────────────────────
-  console.log(`\n=== Suite B: arg == DATA_PTR[random_slot] — ${perSuite} casi ===`);
+  // ─── Suite B: arg = DATA_PTR[slot] of slot random ─────────────────────
+  console.log(`\n=== Suite B: arg == DATA_PTR[random_slot] — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: arg matches multiple slots ──────────────────────────────
-  console.log(`\n=== Suite C: arg matches multiple slots — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: arg matches multiple slots — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -201,7 +201,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: arg=0 + DATA_PTR misti zero ─────────────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: arg=0 + table bordering zero — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: arg=0 + table bordering zero — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());

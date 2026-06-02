@@ -20,7 +20,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xb44);
 
-  console.log(`\n=== particleBounce (FUN_18DCA) — ${n} casi ===`);
+  console.log(`\n=== particleBounce (FUN_18DCA) — ${n} cases ===`);
   let ok = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

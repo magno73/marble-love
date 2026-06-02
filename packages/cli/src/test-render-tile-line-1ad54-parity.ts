@@ -4,7 +4,7 @@
  * `renderTileLine1AD54`.
  *
  * `FUN_0001AD54` (982 byte, 0x01AD54-0x01B12A): tile-line renderer.
- * una direction table ROM @0x1ECEA, e uno stream dati via pointer-table
+ * una direction tabthe ROMs @0x1ECEA, e uno stream dati via pointer-table
  * ancorata a *(0x400474).
  *
  * Strategia parity:
@@ -16,8 +16,8 @@
  *       * Cell buffer zeroed @ 0x400A9C (0x400 byte).
  *       [ptrAbs, d5, d4, limit, flag]).
  *   - Run TS via renderTileLine1AD54(...).
- *   - Compara workRam[0xA9C..0xEA0) (1024 byte) byte-by-byte.
- *   - Compara anche return D0 (low word).
+ *   - Compare workRam[0xA9C..0xEA0) (1024 byte) byte-by-byte.
+ *   - Compare also return D0 (low word).
  *
  *   A: flag=0 (early exit, returns only A4)
  *   B: dirIdx 0..3 (row-major), small coordinates, random subMode
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   pokeMem(cpu, FUN_2BC5C,     1, 0x4e);
   pokeMem(cpu, FUN_2BC5C + 1, 1, 0x75);
 
-  console.log(`\n=== renderTileLine1AD54 (FUN_0001AD54) — ${total} casi ===`);
+  console.log(`\n=== renderTileLine1AD54 (FUN_0001AD54) — ${total} cases ===`);
 
   const failHolder: { value: FailRecord | null } = { value: null };
 
@@ -281,7 +281,7 @@ async function main(): Promise<void> {
   }
 
   // ─── Suite A: flag=0 (early exit) ────────────────────────────────────────
-  console.log(`\n=== Suite A: flag=0 (early exit) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite A: flag=0 (early exit) — ${perSuite} cases ===`);
   const rngA = makeRng(0x1ad54);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -303,7 +303,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA/perSuite)*100).toFixed(1)}%`);
 
   // ─── Suite B: dirIdx 0..3, row-major, small coordinates ─────────────────
-  console.log(`\n=== Suite B: row-major (dirIdx 0..3) — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: row-major (dirIdx 0..3) — ${perSuite} cases ===`);
   const rngB = makeRng(0x2ad54);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -332,7 +332,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: dirIdx 4..7, column-major ──────────────────────────────────
   const sizeC = perSuite + remainder;
-  console.log(`\n=== Suite C: column-major (dirIdx 4..7) — ${sizeC} casi ===`);
+  console.log(`\n=== Suite C: column-major (dirIdx 4..7) — ${sizeC} cases ===`);
   const rngC = makeRng(0x3ad54);
   let okC = 0;
   for (let i = 0; i < sizeC; i++) {

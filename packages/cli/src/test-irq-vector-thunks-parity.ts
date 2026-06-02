@@ -8,7 +8,7 @@
  *   1. Identify each (sourceAddr, targetAddr) from THUNK_TABLE.
  *
  *
- * come "timeout_skip" e li riporta a fine run.
+ * as "timeout_skip" e reports them at the end of the run.
  *
  * Uso: npx tsx packages/cli/src/test-irq-vector-thunks-parity.ts [N=100]
  */
@@ -178,7 +178,7 @@ async function main(): Promise<void> {
           `(src ${deltaSrc.size} changed, tgt ${deltaTgt.size} changed)`,
         );
         if (failures.length >= 10) {
-          console.error("Troppi errori, abort early.");
+          console.error("Too many errors, abort early.");
           break;
         }
       }

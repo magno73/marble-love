@@ -62,13 +62,13 @@
  *   0x46f0  add.l   D1,D0
  *   0x46f2  movea.l D0,A0
  *   0x46f4  adda.l  D4,A0
- *   0x46f6  move.b  (A0),D0b             ; D0.b = table[outer+inner] (di nuovo)
+ *   0x46f6  move.b  (A0),D0b             ; D0.b = table[outer+inner] (of nuovo)
  *   0x46f8  move.w  D2w,D1w
  *   0x46fa  lea     (-0x4,A6),A0
  *   0x46fe  cmp.b   (0x0,A0,D1w*1),D0b
  *   0x4702  bcc.b   0x4710               ; bcc: locals >= tableByte (unsigned)
  *                                          ; equality after `bhi` was excluded
- *                                          ; → next col
+ *                                          ; → next with the
  *   ; locals[inner] < tableByte → MATCH FOUND
  *   0x4704  move.w  D3w,D0w              ; D0 = outer
  *   0x4706  ext.l   D0
@@ -81,7 +81,7 @@
  *   0x4710  addq.w  #1,D2w               ; inner++
  *   0x4712  moveq   #3,D0
  *   0x4714  cmp.w   D2w,D0w              ; flags = D0(=3) - D2(=inner)
- *   0x4716  bgt.b   0x46ca               ; bgt: 3 > inner (signed) → next col
+ *   0x4716  bgt.b   0x46ca               ; bgt: 3 > inner (signed) → next with the
  *                                          ; loop while inner < 3 (cols 0,1,2)
  *   ; exact row equality advances to the next row instead of matching here
  *   0x4718  addq.w  #5,D3w               ; outer += 5 (row stride)
@@ -134,7 +134,7 @@
 
 import type { GameState } from "./state.js";
 
-/** WorkRam offset del long pointer @ 0x401FFC. */
+/** WorkRam offset of the long pointer @ 0x401FFC. */
 const PTR_FFC_OFF = 0x1ffc;
 
 /** RAM base. */

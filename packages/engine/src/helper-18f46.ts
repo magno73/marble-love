@@ -101,9 +101,9 @@
  *
  * **Memory layout** (shared with `slot-insert-sorted-18e6c.ts`):
  *     Elemento i: byte = "rect slot index" (0..30) indicizzando la
- *     lookup-table ROM @ `0x1F0E2`.
- *   - Rect-slot i: `workRam[0x4001DC + i * 0xE]` (14 byte ciascuno).
- *     `slot[0]` = type-code / "occupato flag". Se 0 → slot libero.
+ *     lookup-tabthe ROMs @ `0x1F0E2`.
+ *   - Rect-slot i: `workRam[0x4001DC + i * 0xE]` (14 byte each).
+ *     `slot[0]` = type-code / "occupied flag". If 0 → slot free.
  *     `slot[1]` = sub-index.
  *   - ROM lookup-table @ `0x1F0E2` (32 x 4 bytes): absolute M68k pointers to
  *     rect-slot in workRam. Entry i → `workRam[lookup[i]]`.
@@ -120,8 +120,8 @@
  *   - `FUN_00025FC2` @ 0x2615C
  *   - `FUN_00019BAA` @ 0x19CEA
  *
- *   1. Se trovata la entry: `workRam[structOff]` = 0 (free-slot mark su rect).
- *      di 1 (compattati).
+ *   1. If trovata la entry: `workRam[structOff]` = 0 (free-slot mark su rect).
+ *      of 1 (packed).
  *   3. `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo terminatore).
  *
  */
@@ -194,8 +194,8 @@ export interface Helper18F46Result {
  * @returns         Removal details.
  *
  * **Mutation** (only if an entry is found):
- *   - `workRam[structOff]` = 0 (rect slot marcato libero).
- *   - `workRam[0x3BC + foundPos .. 0x3BC + endPos - 1]` compattati.
+ *   - `workRam[structOff]` = 0 (rect slot marcato free).
+ *   - `workRam[0x3BC + foundPos .. 0x3BC + endPos - 1]` packed.
  *   - `workRam[0x3BC + endPos - 1]` = 0xFF (nuovo sentinel).
  */
 export function helper18F46(

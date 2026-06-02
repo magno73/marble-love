@@ -1,4 +1,4 @@
-// probe-0700-divergence-f58.ts — confronta state TS vs MAME a f+57 (pre) e f+58 (esplosione)
+// probe-0700-divergence-f58.ts — compare state TS vs MAME a f+57 (pre) e f+58 (esplosione)
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { state as stateNs, bus as busNs, bootInit, tick, applySlapsticBank } from "@marble-love/engine";

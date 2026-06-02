@@ -58,7 +58,7 @@ async function main(): Promise<void> {
     else firstFail ??= { caseNo: i, argLong, bin, ts };
   }
 
-  console.log(`\n=== levelHelper2FFB8 (FUN_2FFB8) — ${n} casi ===`);
+  console.log(`\n=== levelHelper2FFB8 (FUN_2FFB8) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

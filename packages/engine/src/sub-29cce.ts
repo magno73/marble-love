@@ -462,11 +462,11 @@ export interface Sub29CCESubs {
 }
 
 
-/** ROM address di `FUN_00029CCE`. */
+/** ROM address of `FUN_00029CCE`. */
 export const SUB_29CCE_ADDR = 0x00029cce as const;
 
 /**
- * Replica di `FUN_00029CCE`.
+ * Replica of `FUN_00029CCE`.
  *
  */
 export function fun29CCE(

@@ -861,8 +861,8 @@ export function initRenderer(
         }
         indirectSprite.x = 0;
         indirectSprite.y = 0;
-        // Skip drawPlayfield/drawSprites — combined nel indirectSprite.
-        // Alpha layer (HUD) sopra come separato — quello rimane al direct path.
+        // Skip drawPlayfield/drawSprites — combined in the indirectSprite.
+        // Alpha layer (HUD) on top as a separate pass — that stays on the direct path.
         // Clear playfield/sprite graphics fallback layer.
         layers.playfieldGraphics.clear();
         layers.spriteGraphics.clear();

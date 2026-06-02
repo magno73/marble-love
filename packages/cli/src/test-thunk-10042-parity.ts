@@ -2,7 +2,7 @@
 /**
  * test-thunk-10042-parity.ts — differential FUN_00010042 vs thunk10042.
  *
- * di test-trackball-clamp-flags-28468-parity ma entrando dal thunk address.
+ * of test-trackball-clamp-flags-28468-parity but entrando from the thunk address.
  *
  * Uso: npx tsx packages/cli/src/test-thunk-10042-parity.ts [N]
  */
@@ -215,7 +215,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== thunk10042 (FUN_00010042 → FUN_00028468) — ${n} casi ===`);
+  console.log(`\n=== thunk10042 (FUN_00010042 → FUN_00028468) — ${n} cases ===`);
 
   const rng = makeRng(0x10042);
   let ok = 0;

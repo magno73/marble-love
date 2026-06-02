@@ -7,15 +7,15 @@
  * using a sin/cos table @ 0x1EDA2 and a delta-stream @ 0x1EF32, with:
  *   - reset trigger su counter ∈ {0x64, 0x65, 0x66}
  *   - mirror su (A0+0x1A).b == 0x0B
- *   - angolo advance di 0x0A (modulo 0x192) per call
+ *   - angolo advance of 0x0A (modulo 0x192) per call
  *   - emit [charcode, x, y] records with bounds checking
  *
  * Random setup for each case:
- *   - `(A0+0x57).b` random (counter, include trigger values per coprire i path)
+ *   - `(A0+0x57).b` random (counter, include trigger values to cover i path)
  *   - `(A0+0x1a).b` random (mirror gate)
  *   - `(A0+0x2e).w` random (angolo iniziale)
  *   - `(A0+0x1e).l` random (coords source)
- *   - workRam/ROM pre-azzerata sui campi output
+ *   - workRam/ROM pre-zeroed sui fields output
  *
  * Confronto:
  *   - D0 (low byte: 0x01 o 0x00)
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     slotPtrs.push(readU32BE(romBuf, SLOT_PTR_TABLE + i * 4));
   }
 
-  console.log(`\n=== objectOrbitEmit13ADE (FUN_00013ADE) — ${n} casi ===`);
+  console.log(`\n=== objectOrbitEmit13ADE (FUN_00013ADE) — ${n} cases ===`);
 
   const rng = makeRng(0x13ade);
   let ok = 0;

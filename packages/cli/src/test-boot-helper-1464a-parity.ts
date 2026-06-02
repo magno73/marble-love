@@ -360,7 +360,7 @@ async function main(): Promise<void> {
     soundCmd158AC: (s: GameState) => incSent(s, SENT_SOUND),
   };
 
-  console.log(`\n=== bootHelper1464A (FUN_1464A) — ${n} casi ===`);
+  console.log(`\n=== bootHelper1464A (FUN_1464A) — ${n} cases ===`);
 
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

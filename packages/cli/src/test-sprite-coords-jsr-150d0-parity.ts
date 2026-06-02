@@ -12,7 +12,7 @@
  *
  *   - D0 long
  *   - workRam @ 0x400690..0x400693 (POS_X/Y globals)
- *   - struct @ A1..A1+0x40 (incluso A1+0x28 packed long)
+ *   - struct @ A1..A1+0x40 (including A1+0x28 packed long)
  *
  * Suite testate:
  *   - A: HUD random + struct random + ptr random (fully random)
@@ -48,7 +48,7 @@ const STUB_BYTES = [0x20, 0x2f, 0x00, 0x08, 0x4e, 0x75] as const;
 const HUD_OFFSET_ADDR = 0x0040097e;
 const POS_X_ADDR = 0x00400690;
 
-/** Slot pointers candidati per la struct (work RAM, lontani da globals). */
+/** Slot pointers candidates per la struct (work RAM, lontani da globals). */
 const PTR_CHOICES = [
   0x00401000,
   0x004012a0,
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
 
     setupStruct(structPtr, bytes);
 
-    // Estrai w0/w2/w4 per il fail report.
+    // Estrai w0/w2/w4 for the fail report.
     const off = (structPtr - 0x400000) >>> 0;
     const w0 =
       ((stateInst.workRam[off + 0xc] ?? 0) << 8) |
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ─────────────────────────────────────
   console.log(
-    `\n=== spriteCoordsJsr150D0 (FUN_000150D0) — Suite A: random — ${perSuite} casi ===`,
+    `\n=== spriteCoordsJsr150D0 (FUN_000150D0) — Suite A: random — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ─── Suite B: estremi su w0/w2 (signed overflow su yMinusX) ─────────
-  console.log(`\n=== Suite B: w0/w2 estremi — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: w0/w2 estremi — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const hud = setHud(rng);
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ─── Suite C: estremi su w4 + HUD ───────────────────────────────────
-  console.log(`\n=== Suite C: w4/HUD estremi — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: w4/HUD estremi — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     // Force HUD estremo
@@ -266,7 +266,7 @@ async function main(): Promise<void> {
 
   // ─── Suite D: HUD=0, struct random (baseline) ───────────────────────
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: HUD=0, struct random — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: HUD=0, struct random — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     pokeMem(cpu, HUD_OFFSET_ADDR, 1, 0);

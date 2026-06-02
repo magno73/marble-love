@@ -64,7 +64,7 @@ async function main(): Promise<void> {
     else firstFail ??= { caseNo: i, flag, prev, binD0, tsD0, binPrev, tsPrev };
   }
 
-  console.log(`\n=== scrollFlagHelperF6A (FUN_F6A) — ${n} casi ===`);
+  console.log(`\n=== scrollFlagHelperF6A (FUN_F6A) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

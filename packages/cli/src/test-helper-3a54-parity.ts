@@ -65,7 +65,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== helper3A54 (FUN_3A54) — ${n} casi ===`);
+  console.log(`\n=== helper3A54 (FUN_3A54) — ${n} cases ===`);
 
   const rng = makeRng(0x3a543a54);
   let ok = 0;

@@ -105,7 +105,7 @@ export const KIND_TO = 0x20 as const;
 export const ASR_COUNT = 0x13 as const;
 
 /**
- * Stub injection per le 2 JSR del validatore.
+ * Stub injection per le 2 JSR of the validatore.
  *
  *   Default no-op.
  */
@@ -225,7 +225,7 @@ export function stateValidateGrid15DB6(
     return;
   }
 
-  // signExt_l di 0/1 = 0/1 long.
+  // signExt_l of 0/1 = 0/1 long.
   const flagLong = sextByteL(flagLow) | 0;
   subs?.fun_15e24?.(a0, flagLong >>> 0);
 }

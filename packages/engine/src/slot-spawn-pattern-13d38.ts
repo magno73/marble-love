@@ -1,10 +1,10 @@
 /**
  *
- * (xref unico: `FUN_000253ec` @ 0x25648, JSR.L). Riceve un singolo long arg
+ * (xref single: `FUN_000253ec` @ 0x25648, JSR.L). Riceve un singolo long arg
  * `script-rect-dispatch-12dfa`).
  *
  * The A0 record has a `(A0+0x57).b` counter that decrements on every call and
- * I "tile delta" (A3 = ROM table @ `0x1EF32`) sono coppie di byte signed
+ * I "tile delta" (A3 = ROM table @ `0x1EF32`) sono coppie of byte signed
  *
  *   - i primi 4 in `(A0+0xA4)..(A0+0xBB)`
  *   - i secondi 4 in `(A0+0x38)..(A0+0x4F)`
@@ -327,7 +327,7 @@ export function slotSpawnPattern13D38(
   // Signed displacement used by adda.
   const selectorIdx = ((selectorSextL | 0) << 2) | 0;
   // movea.l (0x0,A1,D0*1),A1 -> A1 = readU32(0x1F016 + selectorIdx).
-  // ma full 32-bit indirizzamento; per parity basta `>>>0`).
+  // but full 32-bit indirizzamento; per parity basta `>>>0`).
   const a1Addr = (SLOT_PTR_TABLE_ROM + selectorIdx) >>> 0;
   const a1 = readU32Rom(rom, a1Addr) >>> 0;
 

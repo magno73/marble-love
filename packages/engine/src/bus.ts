@@ -384,7 +384,7 @@ export function write32(bus: Bus, addr: number, value: u32): void {
  *   F20004 (P2, X read): cur[1][0]
  *   F20006 (P2, Y read): cur[1][1]
  *
- * posx/posy values come from `state.input.trackballDx/Dy`.
+ * posx/posy values as from `state.input.trackballDx/Dy`.
  */
 function readTrackball(bus: Bus, addr: number): u8 {
   const a = addr - MMIO_TRAKBALL_BASE;

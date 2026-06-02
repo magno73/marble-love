@@ -9,7 +9,7 @@
  *   1. Reads command byte at 0x401F44 (D0)
  *   2. If D0 < 0x40 (valid pending command):
  *      a. Reset retry counter 0x401FF4 = 0
- *      b. Se 0x401F45 ha bit 7 set (last sent was pending):
+ *      b. If 0x401F45 ha bit 7 set (last sent was pending):
  *           - If cmd != last sent: call FUN_3E1A((D0<<8)|D1)
  *      c. *0x401F45 = *0x401F44 | 0x80 (mark as sent)
  *   3. *0x401F44 |= 0x80 (mark as sent)

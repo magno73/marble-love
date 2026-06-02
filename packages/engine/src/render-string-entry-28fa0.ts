@@ -27,12 +27,12 @@
  *   ext.l  D0                  ; sign-extend arg1.w -> arg1.l
  *   move.l D0,-(SP)            ; push arg1_ext.l
  *   pea    (0x40041C).l        ; push entry pointer
- *   jsr    0x0000013c.l        ; FUN_255A: byte writes (col, tickOff, clr marker)
+ *   jsr    0x0000013c.l        ; FUN_255A: byte writes (with the, tickOff, clr marker)
  *     ; FUN_255A:
  *     ;   movea.l (0x4,SP),A0  ; A0 = 0x40041C
  *     ;   move.b  (0xb,SP),D1b ; D1.b = arg1_ext_l & 0xff = arg1Long & 0xff
  *     ;   move.b  (0xf,SP),D0b ; D0.b = arg2_ext_l & 0xff = arg2Long & 0xff
- *     ;   move.b  D1b,(A0)     ; entry[0] = col
+ *     ;   move.b  D1b,(A0)     ; entry[0] = with the
  *     ;   move.b  D0b,(0x1,A0) ; entry[1] = tickOff
  *     ;   clr.b   (0x6,A0)     ; entry[6] = 0
  *     ;   rts
@@ -49,13 +49,13 @@
  *
  * **Args**:
  *   - `arg1Long`: long pushed by the caller; only `arg1Long & 0xff` lands in
- *     `entry[0]` (col). Binary path: word -> ext.l -> push long -> byte read at
+ *     `entry[0]` (with the). Binary path: word -> ext.l -> push long -> byte read at
  *     SP+0xb extracts the low byte. ext.l preserves the low byte.
  *   - `arg2Long`: same path -> `entry[1]` (tickOff).
  *   - `arg3Long`: propagated to the stub after low-word sign extension, matching
  *     the "long argument with effective low word" convention used elsewhere.
  *
- *   1. `state.workRam[0x41C] = arg1Long & 0xff`   (col)
+ *   1. `state.workRam[0x41C] = arg1Long & 0xff`   (with the)
  *   2. `state.workRam[0x41D] = arg2Long & 0xff`   (tickOff)
  *   3. `state.workRam[0x422] = 0`                 (marker)
  *   4. Calls `subs.renderStringChain2(state, 0x40041C, arg3LongExtL)` via stub.
@@ -114,7 +114,7 @@ export interface RenderStringEntry28FA0Subs {
  * @param subs      stub injection for `renderStringChain2` (default no-op).
  *
  * **Side effects** in `state.workRam`:
- *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (col byte)
+ *   - `[ENTRY_OFF + 0]   = arg1Long & 0xff`   (with the byte)
  *   - `[ENTRY_OFF + 1]   = arg2Long & 0xff`   (tickOff byte)
  *   - `[ENTRY_OFF + 6]   = 0`                 (marker clear)
  *     the three byte writes.

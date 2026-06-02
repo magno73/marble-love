@@ -2,8 +2,8 @@
 /**
  * test-render-string-entry-28f62-parity.ts — differential FUN_28F62.
  *
- * di una string-chain entry fissa @ 0x40041C (col, tickOff, marker=0), poi
- * arg3 del caller (vs 0x3400 cabled in FUN_28FDE).
+ * of una string-chain entry fixed @ 0x40041C (with the, tickOff, marker=0), poi
+ * arg3 of the caller (vs 0x3400 cabled in FUN_28FDE).
  *
  * Stub injection strategy, identical to 28FDE:
  *     in TS).
@@ -154,7 +154,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: random everything ──────────────────────────────────────
   console.log(
-    `\n=== renderStringEntry28F62 (FUN_28F62) — Suite A: random region & args — ${perSuite} casi ===`,
+    `\n=== renderStringEntry28F62 (FUN_28F62) — Suite A: random region & args — ${perSuite} cases ===`,
   );
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   console.log(
-    `\n=== Suite B: arg1/arg2 LSB = 0x00 — ${perSuite} casi ===`,
+    `\n=== Suite B: arg1/arg2 LSB = 0x00 — ${perSuite} cases ===`,
   );
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: arg1/arg2 LSB = 0xFF (saturazione) ─────────────────────
   console.log(
-    `\n=== Suite C: arg1/arg2 LSB = 0xFF — ${perSuite} casi ===`,
+    `\n=== Suite C: arg1/arg2 LSB = 0xFF — ${perSuite} cases ===`,
   );
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
   // ─── Suite D: marker pre-set ciclato 0..255 ──────────────────────────
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: marker @ +6 ciclato 0..255 — ${sizeD} casi ===`,
+    `\n=== Suite D: marker @ +6 ciclato 0..255 — ${sizeD} cases ===`,
   );
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {

@@ -9,7 +9,7 @@
  *     For each popped byte:
  *       1. Index in u32 lookup table @ ROM `0x20AE4` → command descriptor ptr
  *       2. Read descriptor: count (byte 0), pal-table-offset (byte 1), data (bytes 2..)
- *       3. Per i in 0..count-1: deref u32 in palette pointer table
+ *       3. For the in 0..count-1: deref u32 in palette pointer table
  *          @ ROM `0x20840 + pal_offset + i*4` → palette destination addr.
  *          Write u16 BE data[i] a quella destination.
  *

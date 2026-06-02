@@ -24,7 +24,7 @@
  *
  * **Sub esterne**:
  *     Riceve (state, slotPtr).
- *   - `FUN_13334`: replicata come `objectRenderUpdate13334` in
+ *   - `FUN_13334`: replicata as `objectRenderUpdate13334` in
  *     `advanceAndWrap132E0`.
  *
  * **Disasm** (estratto chiave da 0x13068..0x132DE):

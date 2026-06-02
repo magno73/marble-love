@@ -127,7 +127,7 @@ export function paletteCopy26B10(state: GameState, rom: RomImage): void {
 }
 
 /**
- * Replica `FUN_00026B2A` — banner display setup per il `mode` indicato.
+ * Replica `FUN_00026B2A` — banner display setup for the `mode` indicato.
  *
  * Side effects:
  *  - 195-word scatter-write from ROM[BANNER_ROM_BASE + mode*0x186] to

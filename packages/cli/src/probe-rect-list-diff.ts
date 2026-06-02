@@ -1,4 +1,4 @@
-// Probe: byte-by-byte mapping del rect-list cluster (workRam[0x01DC..0x02BC]).
+// Probe: byte-by-byte mapping of the rect-list cluster (workRam[0x01DC..0x02BC]).
 //
 // For each divergent byte:
 //  - slot index (= (off - 0x1DC) / 14)

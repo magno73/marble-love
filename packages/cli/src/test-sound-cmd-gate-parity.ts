@@ -4,7 +4,7 @@
  *
  * `FUN_00004442`.
  *
- * Strategia di parity test:
+ * Strategia of parity test:
  *     point), then read the 2 longs on the stack `(0x4,SP)` and
  *     `(0x8,SP)` (stack as seen by the callee with ret addr at (0,SP)).
  *     that captures the same parameters.
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== soundCmdGate (FUN_4420) — ${n} casi ===`);
+  console.log(`\n=== soundCmdGate (FUN_4420) — ${n} cases ===`);
 
   const rng = makeRng(0xdeadbeef);
   let ok = 0;
@@ -127,7 +127,7 @@ async function main(): Promise<void> {
       cmdIdx = (i - 5) & 0x1f;
       data = Math.floor(rng() * 0x100000000) >>> 0;
     } else {
-      // Bias: 30% nel range [0,0x14] per stressare il bordo, 70% full random
+      // Bias: 30% in the range [0,0x14] per stressare il bordo, 70% full random
       const inBoundary = rng() < 0.3;
       cmdIdx = inBoundary
         ? Math.floor(rng() * 0x15)

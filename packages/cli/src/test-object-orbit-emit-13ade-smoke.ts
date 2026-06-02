@@ -5,7 +5,7 @@
  *   1. Esegua il reset trigger 0x64 → counter = 0x30, angle = 0.
  *   2. Esegua il reset trigger 0x65 → counter = 0x18, angle = 0.
  *   3. Esegua il reset trigger 0x66 → counter = 0x24, angle = 0.
- *   7. Faccia l'angle advance (0x0A) e il wrap a 0x192.
+ *   7. Faccia the angle advance (0x0A) e il wrap a 0x192.
  *   8. Apply mirroring if (A0+0x1A).b == 0x0B.
  *
  * Uso: npx tsx packages/cli/src/test-object-orbit-emit-13ade-smoke.ts
@@ -60,7 +60,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   s.workRam[ARG_OFF + 0x2f] = 0x00;
   ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
   check("trigger 0x64: counter after = 0x2F", s.workRam[ARG_OFF + 0x57], 0x2f);
-  // angle: reset a 0, poi avanzato di 0x0A → 0x000A
+  // angle: reset a 0, poi advanced by of 0x0A → 0x000A
   check("trigger 0x64: angle after = 0x000A", readU16(s, ARG_OFF + 0x2e), 0x000a);
   check("trigger 0x64: ready byte = 1", s.workRam[ARG_OFF + 0x1c], 1);
 }
@@ -94,7 +94,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   const rom = makeRom();
   s.workRam[ARG_OFF + 0x57] = 0x01;
   const d0 = ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
-  check("D0 = 1 quando counter post == 0", d0, 0x00000001);
+  check("D0 = 1 when counter post == 0", d0, 0x00000001);
   check("counter post == 0", s.workRam[ARG_OFF + 0x57], 0x00);
 }
 
@@ -103,7 +103,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   const rom = makeRom();
   s.workRam[ARG_OFF + 0x57] = 0x10;
   const d0 = ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
-  check("D0 = 0 quando counter post != 0", d0, 0x00000000);
+  check("D0 = 0 when counter post != 0", d0, 0x00000000);
   check("counter post == 0x0F", s.workRam[ARG_OFF + 0x57], 0x0f);
 }
 
@@ -135,7 +135,7 @@ console.log("\n=== objectOrbitEmit13ADE smoke tests ===\n");
   s.workRam[ARG_OFF + 0x57] = 0x10;
   s.workRam[ARG_OFF + 0x1c] = 0x00; // pre-clear
   ns.objectOrbitEmit13ADE(s, rom, ARG_PTR);
-  check("ready byte (0x1C) = 1 sempre", s.workRam[ARG_OFF + 0x1c], 1);
+  check("ready byte (0x1C) = 1 always", s.workRam[ARG_OFF + 0x1c], 1);
 }
 
 console.log(`\nSmoke: ${passed} passed, ${failed} failed`);

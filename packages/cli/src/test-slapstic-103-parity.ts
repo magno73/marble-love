@@ -1,11 +1,11 @@
 /**
- * test-slapstic-103-parity.ts — replay del trace MAME slapstic vs la FSM TS
+ * test-slapstic-103-parity.ts — replay of the trace MAME slapstic vs the FSM TS
  * (`packages/engine/src/m68k/slapstic-103.ts`).
  *
  * Input: `/tmp/mame_slapstic_trace.json` prodotto da `oracle/mame_slapstic_tap.lua`.
  *
  * For each `samples[i]` it runs `slapsticTick(fsm, addr)` and:
- *   - Conta quanti accessi sono "direct bank" (cioe' la FSM era in ACTIVE e
+ *   - Counts how many accesses sono "direct bank" (cioe' the FSM era in ACTIVE e
  *     changed bank immediately, or left IDLE on a reset)
  *   - Print each frame: expected MAME bank when available vs TS bank
  *   - Verify that the bank after the last access of each frame matches
@@ -122,7 +122,7 @@ for (const sum of summaries) {
 }
 
 // Sanity check: the first access to 0x80000 from IDLE -> ACTIVE must exist.
-// E un accesso successivo a 0x80080/A0/C0/E0 e' un direct bank switch.
+// And a subsequent access to 0x80080/A0/C0/E0 is a direct bank switch.
 let directSwitches = 0;
 let bankSwitchHistory: number[] = [];
 const fsm2 = createSlapsticFsm();

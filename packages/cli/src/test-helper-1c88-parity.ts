@@ -133,7 +133,7 @@ async function main(): Promise<void> {
   // CPU musashi
   const cpu = await createCpu({ rom: romBuf, state: stateInst });
 
-  console.log(`\n=== helper1C88 (FUN_1C88) — ${n} casi ===`);
+  console.log(`\n=== helper1C88 (FUN_1C88) — ${n} cases ===`);
 
   let ok = 0;
   let firstFail: FailRecord | null = null;

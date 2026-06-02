@@ -13,7 +13,7 @@
  *   00010FFE  jsr 0x00019BAA    ; stateSub19BAA
  *   00011004  jsr 0x0001844A    ; stateSub1844A
  *   0001100A  jsr 0x00012FD0    ; stateDispatch12FD0
- *   00011010  addq.b #1, (0x004003F0).l   ; frame-counter++ (secondo)
+ *   00011010  addq.b #1, (0x004003F0).l   ; frame-counter++ (second)
  *   00011016  jsr 0x00028624    ; objDirtyDispatch28624
  *   0001101C  rts
  *

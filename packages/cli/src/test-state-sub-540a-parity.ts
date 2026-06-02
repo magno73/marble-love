@@ -69,7 +69,7 @@ function pickSafeHeader(rng: () => number): number {
   //   shift_byte large (negative) → count=0 → 1 string (e.g. hdr=0x05 → (1)-5=-4)
   //   shift_byte=16 → count=0 → 1 string (hdr=0xF0 → (16)-0=16)
   //
-  // Lista di header sicuri:
+  // Lista of header safe:
   const safe = [
     0x12, // shift_byte=0, count=1, 2 strings
     0x00, // shift_byte=1, count=2, 3 strings
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== stateSub540A (FUN_540A) — ${n} casi ===`);
+  console.log(`\n=== stateSub540A (FUN_540A) — ${n} cases ===`);
 
   const rng = makeRng(0x540a540a);
   let ok = 0;
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     // Reset SP
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern: copertura controllata.
+    // Pattern: coverage controllata.
     let d3: number;
     let numRecordsToWrite: number;
     let terminate: boolean;
@@ -306,10 +306,10 @@ async function main(): Promise<void> {
   }
   if (modified > 0) {
     console.log(
-      `  WARN: binary modificato ${modified} byte di workRam (atteso 0 — pure-read)`,
+      `  WARN: binary modified ${modified} bytes of workRam (expected 0 — pure-read)`,
     );
   } else {
-    console.log(`  OK: workRam non modificata dal binario (pure-read).`);
+    console.log(`  OK: workRam unmodified by the binary (pure-read).`);
   }
 
   disposeCpu(cpu);

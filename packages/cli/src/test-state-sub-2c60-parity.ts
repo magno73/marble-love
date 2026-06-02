@@ -157,7 +157,7 @@ async function main(): Promise<void> {
     ((Math.floor(rng() * 0x10000) << 16) | Math.floor(rng() * 0x10000)) >>> 0;
 
   // ─── Suite A: random everything ─────────────────────────────────────
-  console.log(`\n=== stateSub2C60 (FUN_2C60) — Suite A: random table & args — ${perSuite} casi ===`);
+  console.log(`\n=== stateSub2C60 (FUN_2C60) — Suite A: random table & args — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
   console.log(`  Match: ${okA}/${perSuite} = ${((okA / perSuite) * 100).toFixed(1)}%`);
   totalOk += okA;
 
-  console.log(`\n=== Suite B: all slots free → claim slot 0 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: all slots free → claim slot 0 — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // Suite C: only slot N free (random N).
-  console.log(`\n=== Suite C: only one specific slot free — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: only one specific slot free — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   const sizeD = perSuite + remainder;
-  console.log(`\n=== Suite D: all slots busy → claimed=0 — ${sizeD} casi ===`);
+  console.log(`\n=== Suite D: all slots busy → claimed=0 — ${sizeD} cases ===`);
   let okD = 0;
   for (let i = 0; i < sizeD; i++) {
     const bytes = new Array(STRUCT_SIZE).fill(0).map(() => rb());

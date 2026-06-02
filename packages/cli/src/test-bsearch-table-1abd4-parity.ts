@@ -4,9 +4,9 @@
  * `bsearchTable1ABD4`.
  *
  * FUN_0001ABD4 (68 byte) e' un binary-search per word: cerca il low-word
- * di `arg1Long` dentro la table puntata da `*(0x40065A)..*(0x40065E)`,
+ * of `arg1Long` dentro la table puntata da `*(0x40065A)..*(0x40065E)`,
  * with initial 0x400-byte step, halved on every iter. It terminates only
- * all'equality. Ritorna in D0 il word-index `(matchPtr - basePtr) / 2`.
+ * to the equality. Ritorna in D0 il word-index `(matchPtr - basePtr) / 2`.
  *
  * Strategia stub injection:
  *   - FUN_0001ABD4 calls no JSR -> nothing to patch.
@@ -21,7 +21,7 @@
  *
  * Tested suites (4 x 125 = 500 cases):
  *   - A: identity table 512 word, target random in [0..0x1FF]
- *   - B: identity table, target random + bit alti random nel long
+ *   - B: identity table, target random + bit alti random in the long
  *        (checks mask 0xFFFF)
  *   - C: identity table 256 word (table piu' piccola), target in [0..0xFF]
  *        - checks top-side clamp
@@ -55,7 +55,7 @@ const PTR_END_SLOT = 0x0040065e;
 
 /** Patch JSR-stubs. FUN_1ABD4 non ha JSR → no-op. */
 function patchSubs(_cpu: CpuSession): void {
-  // Nessuna JSR nel range.
+  // Nessuna JSR in the range.
 }
 
 /** Write a long-BE in both binary+TS. */
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
 
   // ─── Suite A: identity 512-word, target in [0..0x1FF] ────────────────
   console.log(
-    `\n=== bsearchTable1ABD4 (FUN_0001ABD4) — Suite A: identity 512w, target in [0..0x1FF] — ${perSuite} casi ===`,
+    `\n=== bsearchTable1ABD4 (FUN_0001ABD4) — Suite A: identity 512w, target in [0..0x1FF] — ${perSuite} cases ===`,
   );
   setupIdentityTable(stateInst, cpu, 0x1000, 0x200);
   let okA = 0;
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
 
   // ─── Suite B: identity 512-word, low-word in range, high-bit garbage ─
   console.log(
-    `\n=== Suite B: identity 512w, target = (rand_high<<16) | low_word — ${perSuite} casi ===`,
+    `\n=== Suite B: identity 512w, target = (rand_high<<16) | low_word — ${perSuite} cases ===`,
   );
   // Table already set by Suite A.
   let okB = 0;
@@ -204,7 +204,7 @@ async function main(): Promise<void> {
 
   // ─── Suite C: identity 256-word, target in [0..0xFF] ─────────────────
   console.log(
-    `\n=== Suite C: identity 256w, target in [0..0xFF] — ${perSuite} casi ===`,
+    `\n=== Suite C: identity 256w, target in [0..0xFF] — ${perSuite} cases ===`,
   );
   setupIdentityTable(stateInst, cpu, 0x1000, 0x100);
   let okC = 0;
@@ -218,7 +218,7 @@ async function main(): Promise<void> {
   // Suite D: identity 512-word @ off 0x800 (different base).
   const sizeD = perSuite + remainder;
   console.log(
-    `\n=== Suite D: identity 512w @ off 0x800, target in [0..0x1FF] — ${sizeD} casi ===`,
+    `\n=== Suite D: identity 512w @ off 0x800, target in [0..0x1FF] — ${sizeD} cases ===`,
   );
   setupIdentityTable(stateInst, cpu, 0x800, 0x200);
   let okD = 0;

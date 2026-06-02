@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== soundPair15884 (FUN_15884) — ${n} casi ===`);
+  console.log(`\n=== soundPair15884 (FUN_15884) — ${n} cases ===`);
 
   const rng = makeRng(0x158841);
   let ok = 0;
@@ -99,14 +99,14 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern di copertura:
+    // Pattern of coverage:
     //   0  : mode = 0x0000 (default, full pair)
     //   1  : mode = 0x0001 (full pair)
     //   2  : mode = 0x0002 (gate: only 0x3A)
     //   3  : mode = 0x0003 (full pair, just above gate)
     //   6  : mode = 0x0102 (high byte non-zero)
     //   7  : mode = 0x8002 (high byte set + low == 2 → low non basta!)
-    //   8  : mode = 0x0200 (low == 0 ma high == 2: cmp.w == 0x0200 ≠ 2 → pair)
+    //   8  : mode = 0x0200 (low == 0 but high == 2: cmp.w == 0x0200 ≠ 2 → pair)
     //   pattern 9..32: cluster plus/minus 5 around 0x0002
     //   pattern >= 32: random uint16
     let mode: number;

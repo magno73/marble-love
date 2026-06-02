@@ -37,7 +37,7 @@
  * **Sub callees**:
  *  - `FUN_15DB6` = `stateValidateGrid15DB6` (state-validate-grid-15db6.ts)
  *  - `FUN_26196` = `flagScaledMagnitudeDispatch` (flag-scaled-magnitude-dispatch.ts)
- *  - Inner di FUN_26196 = `FUN_261BC` (NON replicato, default no-op)
+ *  - Inner of FUN_26196 = `FUN_261BC` (NOT replicato, default no-op)
  */
 
 import type { GameState } from "./state.js";

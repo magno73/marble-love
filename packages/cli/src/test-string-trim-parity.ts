@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   const cpu = await createCpu({ rom, state: stateInst });
   const r = rng(0xab12);
 
-  console.log(`\n=== trimTrailingSpace (FUN_28F28) — ${n} casi ===`);
+  console.log(`\n=== trimTrailingSpace (FUN_28F28) — ${n} cases ===`);
   let ok1 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   }
   console.log(`  Match: ${ok1}/${n} = ${((ok1/n)*100).toFixed(1)}%`);
 
-  console.log(`\n=== findLastActiveSlot (FUN_172C2) — ${n} casi ===`);
+  console.log(`\n=== findLastActiveSlot (FUN_172C2) — ${n} cases ===`);
   let ok2 = 0;
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);

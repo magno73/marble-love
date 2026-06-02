@@ -118,7 +118,7 @@ async function main(): Promise<void> {
     else firstFail ??= { caseNo: i, binD0, tsD0, binSlot, tsSlot };
   }
 
-  console.log(`\n=== stringHelper17CB8 (FUN_17CB8) — ${n} casi ===`);
+  console.log(`\n=== stringHelper17CB8 (FUN_17CB8) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) console.log(`  First fail: ${JSON.stringify(firstFail)}`);
   disposeCpu(cpu);

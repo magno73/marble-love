@@ -1,5 +1,5 @@
 /**
- * probe-converge-multi.ts — valida l'evoluzione TS frame-per-frame contro
+ * probe-converge-multi.ts — valida the evoluzione TS frame-per-frame contro
  * MAME oracle multi-frame.
  *
  * Input: JSON multi-snapshot prodotto da `oracle/mame_state_multidump.lua`,
@@ -7,8 +7,8 @@
  *   spriteRam, alphaRam, colorRam}, ...] }
  *
  * Strategy:
- *   - Scegli baseFrame = primo snapshot (= warmState seed)
- *   - Per ogni snapshot N successivo:
+ *   - Pick baseFrame = first snapshot (= warmState seed)
+ *   - For each subsequent snapshot N:
  *     - bootInit({warmState: snapshots[0]})
  *     - tick(N - baseFrame, {runMainLoopBody:true})
  *

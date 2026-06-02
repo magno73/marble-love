@@ -139,7 +139,7 @@ async function main(): Promise<void> {
   // Random byte generator
   const rb = (): number => Math.floor(rng() * 256) & 0xff;
 
-  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite A: tutti state=0 — ${n} casi ===`);
+  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite A: all state=0 — ${n} cases ===`);
   let okA = 0;
   let failA: { case: number; offset: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {
@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   if (failA) console.log(`  First fail: case ${failA.case} @ struct+0x${failA.offset.toString(16)}: bin=0x${failA.bin.toString(16)} ts=0x${failA.ts.toString(16)}`);
 
   // ─── Suite B: state misti 1..6 ────────────────────────────────────
-  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite B: state misti 1..6 — ${n} casi ===`);
+  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite B: state misti 1..6 — ${n} cases ===`);
   let okB = 0;
   let failB: { case: number; offset: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
   if (failB) console.log(`  First fail: case ${failB.case} @ struct+0x${failB.offset.toString(16)}: bin=0x${failB.bin.toString(16)} ts=0x${failB.ts.toString(16)}`);
 
   // ─── Suite C: Branch A (mode != 0, state=7) ────────────────────────
-  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite C: Branch A (mode≠0, state=7) — ${n} casi ===`);
+  console.log(`\n=== gameStateMachineTick (FUN_2E18) — Suite C: Branch A (mode≠0, state=7) — ${n} cases ===`);
   let okC = 0;
   let failC: { case: number; offset: number; bin: number; ts: number } | null = null;
   for (let i = 0; i < n; i++) {

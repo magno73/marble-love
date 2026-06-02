@@ -7,7 +7,7 @@
  * **Strategia stub injection**:
  *
  *   1. **FUN_12D46** (40 bytes @ 0x12D46): replaced with a stub (26 bytes)
- *      il counter @ 0x401904 di +4.
+ *      il counter @ 0x401904 of +4.
  *
  *      Layout stub (26 byte):
  *        movea.l  #$401900, A0         ; 207C 0040 1900   (6 byte)
@@ -37,7 +37,7 @@
  *   0x401900..0x401903  — last arg a fun_12d46 (long BE)
  *   0x401974..0x401977  — counter ring fun_13068 (long BE)
  *
- *   - C: gameMode!=2 (varie combinazioni di flag75c/75e)
+ *   - C: gameMode!=2 (various combinazioni of flag75c/75e)
  *
  *
  * Uso: npx tsx packages/cli/src/test-state-dispatch-12fd0-parity.ts [N]
@@ -333,7 +333,7 @@ async function main(): Promise<void> {
   }
 
   // ── Suite A: gameMode=2, dispatch triggered ────────────────────────────
-  console.log(`\n=== stateDispatch12FD0 (FUN_12FD0) — Suite A: gameMode=2 dispatch — ${perSuite} casi ===`);
+  console.log(`\n=== stateDispatch12FD0 (FUN_12FD0) — Suite A: gameMode=2 dispatch — ${perSuite} cases ===`);
   let okA = 0;
   for (let i = 0; i < perSuite; i++) {
     const objCount = 1 + Math.floor(rng() * 4); // 1..4 objects
@@ -355,7 +355,7 @@ async function main(): Promise<void> {
   totalOk += okA;
 
   // ── Suite B: gameMode=2, no dispatch (various blocking conditions) ─────
-  console.log(`\n=== Suite B: gameMode=2 no-dispatch — ${perSuite} casi ===`);
+  console.log(`\n=== Suite B: gameMode=2 no-dispatch — ${perSuite} cases ===`);
   let okB = 0;
   for (let i = 0; i < perSuite; i++) {
     const variant = i % 4;
@@ -397,7 +397,7 @@ async function main(): Promise<void> {
   totalOk += okB;
 
   // ── Suite C: gameMode != 2 ─────────────────────────────────────────────
-  console.log(`\n=== Suite C: gameMode != 2 — ${perSuite} casi ===`);
+  console.log(`\n=== Suite C: gameMode != 2 — ${perSuite} cases ===`);
   let okC = 0;
   for (let i = 0; i < perSuite; i++) {
     let mode = rw();
@@ -419,7 +419,7 @@ async function main(): Promise<void> {
   totalOk += okC;
 
   // ── Suite D: flag75c variations, 25 slot calls ─────────────────────────
-  console.log(`\n=== Suite D: flag75c variations + 25 slot calls — ${perSuite} casi ===`);
+  console.log(`\n=== Suite D: flag75c variations + 25 slot calls — ${perSuite} cases ===`);
   let okD = 0;
   for (let i = 0; i < perSuite; i++) {
     const flag75c = i % 3 === 0 ? 0 : (i % 3 === 1 ? 0x01 : rb());
@@ -435,7 +435,7 @@ async function main(): Promise<void> {
   totalOk += okD;
 
   // ── Suite E: edge cases ───────────────────────────────────────────────
-  console.log(`\n=== Suite E: edge cases — ${extraE} casi ===`);
+  console.log(`\n=== Suite E: edge cases — ${extraE} cases ===`);
   let okE = 0;
   const edgeCases: Array<Record<string, number>> = [
     // objCount = 0 with gameMode=2

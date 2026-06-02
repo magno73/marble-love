@@ -8,7 +8,7 @@
  *      (14-byte stride) - identical to `test-slot-insert-sorted-18e6c-parity.ts`.
  *
  *   2. Setup workRam:
- *      - Rect-slot (16 × 14 byte) @ 0x4001DC: primo byte per slot = 0 (libero)
+ *      - Rect-slot (16 × 14 byte) @ 0x4001DC: first byte per slot = 0 (free)
  *        il corrispondente slot ha struct[0]=typeCode_del_slot,
  *        struct[1]=subIdx_del_slot.
  *
@@ -87,14 +87,14 @@ function randWordSmall(rng: () => number): number {
 function setupBaseline(
   workRam: Uint8Array,
   numActive: number,
-  typeTable: Uint8Array, // typeTable[i] = typeCode di slot i
-  subTable: Uint8Array,  // subTable[i]  = subIdx  di slot i
+  typeTable: Uint8Array, // typeTable[i] = typeCode of slot i
+  subTable: Uint8Array,  // subTable[i]  = subIdx  of slot i
   rng: () => number,
 ): void {
   // Rect-slot fields (offsets 2,4,6,8,A,C — 6 word per slot).
   for (let i = 0; i < RECT_SLOT_COUNT; i++) {
     const base = (RECT_SLOT_ABS + i * RECT_SLOT_STRIDE) - WORK_RAM_BASE;
-    workRam[base] = 0;     // struct[0] = 0 (libero by default)
+    workRam[base] = 0;     // struct[0] = 0 (free by default)
     workRam[base + 1] = 0; // struct[1] = 0
     for (const off of [2, 4, 6, 8, 0xa, 0xc]) {
       const w = randWordSmall(rng);
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
     pokeMem(cpu, off, 1, romView.program[off]!);
   }
 
-  console.log(`\n=== helper18F46 (FUN_18F46) — ${total} casi ===`);
+  console.log(`\n=== helper18F46 (FUN_18F46) — ${total} cases ===`);
 
   const rng = makeRng(0x18f46);
   let ok = 0;
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
     const tsByteArray = readTs(stateInst, BYTE_ARRAY_ABS, BYTE_ARRAY_LEN);
     const diffBA = diffBytes(binByteArray, tsByteArray);
 
-    // Compara slot-area (0x1B2 byte = area rettangoli @ 0x4001DC..0x40038E).
+    // Compare slot-area (0x1B2 byte = area rettangoli @ 0x4001DC..0x40038E).
     const binSlots = readBin(cpu, RECT_SLOT_ABS, RECT_AREA_LEN);
     const tsSlots = readTs(stateInst, RECT_SLOT_ABS, RECT_AREA_LEN);
     const diffSL = diffBytes(binSlots, tsSlots);

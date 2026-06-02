@@ -9,9 +9,9 @@
  * The rest of the alpha RAM (44 "skip" bytes per row + 0xF00..0xFFF)
  * resta com'era.
  *
- * Strategia di test:
+ * Strategia of test:
  *     1. Pre-fill alpha RAM [0xA03000..0xA04000) with a random pattern
- *        (sincronizzato fra binary e TS).
+ *        (sincronizzato between binary e TS).
  *
  *
  * Uso: npx tsx packages/cli/src/test-alpha-ram-boot-init-ed6-parity.ts [N]
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== alphaRamBootInitED6 (FUN_ED6) — ${n} casi ===`);
+  console.log(`\n=== alphaRamBootInitED6 (FUN_ED6) — ${n} cases ===`);
 
   const rng = makeRng(0xed6deadc);
   let ok = 0;
@@ -89,15 +89,15 @@ async function main(): Promise<void> {
       }
     }
 
-    // ─── Setup: pre-fill alpha RAM su entrambi i lati ─────────────────────
+    // ─── Setup: pre-fill alpha RAM su both i sides ─────────────────────
     for (let j = 0; j < ALPHA_RAM_SIZE; j++) {
       pokeMem(cpu, ALPHA_RAM_BASE + j, 1, pattern[j] ?? 0);
       stateInst.alphaRam[j] = pattern[j] ?? 0;
     }
 
     // ─── Run binary ──────────────────────────────────────────────────────
-    // FUN_ED6 ha 30×42 + 34 + 34 = ~1330 word writes ⇒ ~50-60k cicli.
-    // Default callFunction maxCycles = 100k. Bump per sicurezza.
+    // FUN_ED6 ha 30×42 + 34 + 34 = ~1330 word writes ⇒ ~50-60k cycles.
+    // Default callFunction maxCycles = 100k. Bump for safety.
     callFunction(cpu, FUN_ED6, [], 5_000_000);
 
     // ─── Run TS ──────────────────────────────────────────────────────────

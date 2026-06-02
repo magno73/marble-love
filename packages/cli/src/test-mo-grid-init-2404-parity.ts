@@ -9,7 +9,7 @@
  * Strategia parity:
  *
  *
- * dai 4 KB di SPRITE_RAM. Su Musashi, l'unified memory ha SPRITE_RAM_BASE..
+ * from the 4 KB of SPRITE_RAM. Su Musashi, the unified memory ha SPRITE_RAM_BASE..
  * SPRITE_RAM_END + ALPHA_RAM_BASE..ALPHA_RAM_END contigui (0xA02000..0xA03FFF).
  * does: increment *0x40000C from 0).
  *
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== moGridInit2404 (FUN_2404) — ${n} casi ===`);
+  console.log(`\n=== moGridInit2404 (FUN_2404) — ${n} cases ===`);
 
   const rng = makeRng(0x24042404);
   let ok = 0;
@@ -78,14 +78,14 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern di copertura su arg1.
+    // Pattern of coverage su arg1.
     let arg1: number;
     if (i === 0) {
       arg1 = 0; // bank 0, MMIO=0
     } else if (i === 1) {
       arg1 = 1;
     } else if (i === 2) {
-      arg1 = 7; // bank 7 (ultimo bank valido in 4KB)
+      arg1 = 7; // bank 7 (last bank valido in 4KB)
     } else if (i === 3) {
       arg1 = 3;
     } else if (i === 4) {

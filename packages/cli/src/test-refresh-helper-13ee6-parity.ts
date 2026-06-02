@@ -6,7 +6,7 @@
  * decodeBitstream1A668 (replicato), FUN_144E4 (stub).
  *
  * Strategia parity:
- *     e FUN_144E4 (intercettati via patch al volo nel test).
+ *     e FUN_144E4 (intercepted via patch on the fly in the test).
  *   - Confrontiamo workRam[0..0x1000) e playfieldRam byte-per-byte.
  *
  * so the Musashi CPU treats them as no-ops. TS uses the default stub
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
       pokeW(cpu, stateInst, WORK_RAM_BASE + base + 0x1a, d2);
     }
 
-    // Il binary modifica stateInst.workRam via callback MMIO durante l'esecuzione.
+    // Il binary modifies stateInst.workRam via callback MMIO durante the esecuzione.
     const initWorkRam = Uint8Array.from(stateInst.workRam);
     const initPfRam   = Uint8Array.from(stateInst.playfieldRam);
 
@@ -301,7 +301,7 @@ async function main(): Promise<void> {
     if (match) ok++;
   }
 
-  console.log(`\n=== refreshHelper13EE6 (FUN_00013EE6) — ${n} casi ===`);
+  console.log(`\n=== refreshHelper13EE6 (FUN_00013EE6) — ${n} cases ===`);
   console.log(`  Match: ${ok}/${n} = ${((ok / n) * 100).toFixed(1)}%`);
   if (firstFail) {
     console.log(`  First fail: ${JSON.stringify(firstFail)}`);

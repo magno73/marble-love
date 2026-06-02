@@ -8,7 +8,7 @@
  *
  *   - queue head/tail in 0..15 (random; ~30% empty)
  *   - 16 random bytes in the buffer (with bias toward 0xFF and multiples of 8 for
- *     coprire i branch sensibili)
+ *     cover i branch sensitive)
  *   - random countdown word (with bias toward 0)
  *   - random active flag byte (with bias toward 0x00 / 0x40)
  *
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  console.log(`\n=== auxTimer (FUN_10146) — ${n} casi ===`);
+  console.log(`\n=== auxTimer (FUN_10146) — ${n} cases ===`);
 
   const rng = makeRng(0xa11dec0d);
   let ok = 0;
@@ -86,7 +86,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern-driven first 8 cases per coprire i rami chiave:
+    // Pattern-driven first 8 cases to cover i branches chiave:
     //   0: empty queue
     //   1: countdown!=0, byte 0xFF (clear path)
     //   2: countdown!=0, byte 0x42 (fall-through, counter++)
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
       if (rng() < 0.25) tail = head;
       const r = rng();
       if (r < 0.2) buf0 = 0xff;
-      else if (r < 0.4) buf0 = (Math.floor(rng() * 32) * 8) & 0xff; // multipli di 8
+      else if (r < 0.4) buf0 = (Math.floor(rng() * 32) * 8) & 0xff; // multipli of 8
       else buf0 = Math.floor(rng() * 256) & 0xff;
       countdown = rng() < 0.3 ? 0 : Math.floor(rng() * 0x10000) & 0xffff;
       // Active flag: bias toward 0x00 and 0x40.

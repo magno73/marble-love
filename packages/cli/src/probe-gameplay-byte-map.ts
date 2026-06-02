@@ -129,7 +129,7 @@ function firstDivergeFrame(off: number): number {
 // ─── Struct field identification (heuristic) ─────────────────────────────────
 
 /**
- * Mappa offset → string label. Combinazione di:
+ * Mappa offset → string label. Combinazione of:
  *  - globals header
  *  - obj0 struct (0x18..0xF0 +0xD9 = 0xF1)
  *  - obj1 / obj2 / obj3 strutture seguenti
@@ -225,7 +225,7 @@ function objField(off: number, base: number, label: string): string | null {
 function slotPairField(off: number, base: number, slotLabel: string): string | null {
   const f = off - base;
   if (f < 0 || f >= 0x7c) return null;
-  // Slot pair fields (0x4009A4 P1 / 0x400A20 P2). Stesso layout obj-like
+  // Slot pair fields (0x4009A4 P1 / 0x400A20 P2). Same layout obj-like
   // limitato a 0x7C byte.
   const subFields: Record<number, string> = {
     0x00: "vx_b0",
@@ -398,7 +398,7 @@ function identifyField(off: number): string {
   const o0 = objField(off, 0x18, "obj0");
   if (o0) return o0;
   // 3) obj1 = 0x0F1..0x1C9 ? Skip if empty; use 0xF1.
-  // (precedente analysis: obj1 NOT diff). Lasciamo come fallback range.
+  // (precedente analysis: obj1 NOT diff). Lasciamo as fallback range.
   if (off >= 0xf1 && off < 0x1ca) {
     return objField(off, 0xf1, "obj1") ?? `obj1.+0x${(off - 0xf1).toString(16)}`;
   }
@@ -566,7 +566,7 @@ const mdLines: string[] = [];
 mdLines.push(`# Gameplay drift byte map @ f+${lastIdx}`);
 mdLines.push("");
 mdLines.push(
-  `Totale: **${rows.length} byte gameplay** (di cui ${
+  `Totale: **${rows.length} byte gameplay** (of which ${
     totW - totGameplay
   }B stack residue esclusi da invariante).`,
 );
@@ -577,7 +577,7 @@ mdLines.push("");
 mdLines.push(`## Top-10 bottleneck "early diverge"`);
 mdLines.push("");
 mdLines.push(
-  `I byte che divergono prima sono i candidati root cascade. Una volta fixati questi, molti downstream collassano.`,
+  `The bytes that diverge first are the root-cascade candidates. Once these are fixed, many downstream ones collapse.`,
 );
 mdLines.push("");
 mdLines.push(`| offset | TS | MAME | first_diverge | field | candidate writer |`);
@@ -636,4 +636,4 @@ for (let i = 0; i < clustersRanked.length; i++) {
 
 mkdirSync("docs", { recursive: true });
 writeFileSync("docs/gameplay-drift-byte-map.md", mdLines.join("\n"));
-console.log(`\nReport scritto in: docs/gameplay-drift-byte-map.md (${mdLines.length} righe)`);
+console.log(`\nReport written to: docs/gameplay-drift-byte-map.md (${mdLines.length} lines)`);

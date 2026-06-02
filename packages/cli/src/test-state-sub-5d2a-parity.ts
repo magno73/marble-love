@@ -5,7 +5,7 @@
  * `FUN_00005D2A` (194 bytes): row-render with bit-mask scan. Iterates 16 times
  *
  * Strategia parity test:
- *   - Patch RTS (0x4E75) all'entry di FUN_3784 per intercettare ogni call.
+ *   - Patch RTS (0x4E75) to the entry of FUN_3784 per intercettare each call.
  *   - Inietta byte ROM @ 0x10072 via pokeMem (Musashi unified memory).
  *   - Pushes 2 long args + sentinel return address on the stack.
  *     callback TS (inner3784).
@@ -45,7 +45,7 @@ function makeRng(seed: number): () => number {
   };
 }
 
-/** Patcha RTS (0x4E75) all'entry di FUN_3784. */
+/** Patcha RTS (0x4E75) to the entry of FUN_3784. */
 function patchCallees(cpu: CpuSession): void {
   pokeMem(cpu, FUN_3784 + 0, 1, 0x4e);
   pokeMem(cpu, FUN_3784 + 1, 1, 0x75);
@@ -95,7 +95,7 @@ function runAndCapture(
   const calls: Call3784[] = [];
 
   // Numero step necessari: ~16 iter × ~30 instr = ~500. Plus overhead.
-  // Usiamo 2000 come safety.
+  // We use 2000 as safety.
   let safety = 2000;
   let reachedRts = false;
   let lastD0 = 0;
@@ -140,7 +140,7 @@ function runTsAndCapture(
     (_st, y, x, attr, extra) => {
       calls.push({ y, x, attr, extra });
       return 0;
-                 // non lo confrontiamo (il loop overwrites D0 ad ogni iter).
+                 // non lo confrontiamo (il loop overwrites D0 on each iter).
     },
   );
   return { calls, finalD0: finalD0 >>> 0 };
@@ -163,13 +163,13 @@ async function main(): Promise<void> {
   const state = stateNs.emptyGameState();
   const cpu = await createCpu({ rom, state });
 
-  // Patch RTS sui callee (una sola volta).
+  // Patch RTS sui callee (una sola time).
   patchCallees(cpu);
 
   const tsRom: RomImage = busNs.emptyRomImage();
   tsRom.program.set(rom.subarray(0, tsRom.program.length));
 
-  console.log(`\n=== stateSub5D2A (FUN_5D2A) — ${n} casi ===`);
+  console.log(`\n=== stateSub5D2A (FUN_5D2A) — ${n} cases ===`);
 
   const rng = makeRng(0x5d2a5d2a);
   let ok = 0;
@@ -185,7 +185,7 @@ async function main(): Promise<void> {
   for (let i = 0; i < n; i++) {
     cpu.system.setRegister("sp", 0x401f00);
 
-    // Pattern di copertura su (arg0, arg1, gate byte).
+    // Pattern of coverage su (arg0, arg1, gate byte).
     let arg0: number;
     let arg1: number;
     let gateByte: number;
@@ -216,7 +216,7 @@ async function main(): Promise<void> {
       arg1 = 0xcafe000a; // arg1 low = 0x000a
       gateByte = 0x00;
     } else if (i === 6) {
-      // arg1 in range 0..15 ma non match D4: arg1 = 0x42 → no highlight.
+      // arg1 in range 0..15 but non match D4: arg1 = 0x42 → no highlight.
       arg0 = 0x1234;
       arg1 = 0x0042;
       gateByte = 0x00;

@@ -8,7 +8,7 @@
  *   2. Pre-fill palette RAM with sentinel bytes.
  *   3. Call FUN_00026CFA in the binary via Musashi.
  *   4. Chiama paletteRngFill26CFATick in TS
- *   5. Confronta:
+ *   5. Compare:
  *      - palette RAM in [0xB00202, 0xB00302) (8 entry × 32 byte)
  *      - RNG seed after 8 calls
  *
