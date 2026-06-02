@@ -1,8 +1,60 @@
 # CPU Config - Marble Madness
 
-> **Status:** Phase 1.
 > **MAME ref:** `atarisy1.cpp:769-831` (`atarisy1` machine config) and
 > `atarisy1.cpp:833-839` (`marble` overlay).
+
+This page has two parts: the **reimplementation model** (the design choice and
+what it does / does not guarantee), then the **hardware reference** (clocks,
+vectors, IRQ map) used to drive that model. See [STATUS.md](STATUS.md) for the
+per-subsystem parity matrix.
+
+## Reimplementation model — source-level, not cycle-accurate
+
+Marble Love is a **source-level reimplementation**, not a cycle-accurate
+emulator. Each routine of the 68010 program is ported function-by-function from
+the disassembly into readable TypeScript, and checked against MAME (and Musashi
+for focused 68010 subroutines) as the oracle.
+
+**What this guarantees:**
+
+- **Observable state parity** at the verified points: the bytes the original
+  writes to work RAM / playfield / sprite / alpha RAM match at the frames and
+  routines covered by the parity tests (see STATUS.md).
+- **Event ordering**: the sequence of sound commands, IRQ-driven side effects,
+  and per-frame routine calls follows the original order.
+
+**What this does NOT guarantee:**
+
+- **Cycle-accurate bus timing.** Instruction and bus cycle counts are a
+  documented heuristic (`packages/engine/src/m68k/sub-cycle-costs.ts`), used only
+  to drive the 30/60 Hz main-loop cadence, not to reproduce exact timing.
+- **Rare timing-dependent races.** Behaviours that depend on sub-instruction bus
+  arbitration or exact interrupt latency are out of scope unless a parity test
+  pins them.
+
+**Rationale.** The goal is an *understandable* model of the gameplay code tied to
+reproducible evidence. A function-by-function port keeps the gameplay logic
+legible (and reviewable against the disassembly) in a way a raw instruction
+emulator would not, at the cost of not being cycle-exact.
+
+### Model per component
+
+| Component | Model | Notes |
+| --- | --- | --- |
+| 68010 main program | **Hand-port**, function-by-function from the ROM | Not an instruction emulator; Musashi runs the real binary only as a per-subroutine oracle |
+| 6502 sound program | **Instruction-level emulator** (`packages/engine/src/m6502/`) | The sound ROM runs on a small 6502 core |
+| Slapstic 137412-103 | **FSM port** | Bit-perfect, incl. the prefetch side-channel (see findings) |
+| YM2151 / POKEY | **Behavioral chip models** | Register/envelope level; not sample-exact PCM |
+| 68010 cycle timing | **Heuristic table** (`sub-cycle-costs.ts`) | Drives cadence only; not cycle-exact |
+| TMS5220C / 6522 VIA / ADC0809 | **Not modeled** | Unused by Marble (see hardware reference below) |
+
+### Future: if cycle-accuracy is ever needed
+
+A cycle-accurate path would most likely wrap **Musashi (the 68000/68010 core
+already used for oracle runs) compiled to WASM** and drive it from the same
+fixtures, keeping the readable TS port as the reference model. This is **not on
+the roadmap** and carries no commitment; it is recorded here only so the
+trade-off is explicit.
 
 ## Master Oscillator
 
