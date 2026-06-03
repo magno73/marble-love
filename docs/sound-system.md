@@ -18,7 +18,8 @@ audio architecture.
 There are two intentionally separate browser audio paths:
 
 - `?soundReplay=...`: deterministic oracle replay from command tapes. This is
-  the primary path for chip-write and PCM parity work.
+  the primary path for chip-write and PCM parity work. Browser query-driven
+  tape paths are restricted to same-origin `scenarios/sound/` assets.
 - live gameplay audio: enabled by default and disabled with `?sound=0`. This
   uses commands emitted by the TypeScript gameplay path and must not mutate
   `GameState`.

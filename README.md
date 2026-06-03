@@ -3,11 +3,17 @@
 **[Status & parity matrix →](docs/STATUS.md)** — what is bit-perfect, what is
 behavioral, what is heuristic, and how to verify each claim.
 
-Marble Love is a TypeScript reimplementation of Atari's *Marble Madness*
-(1984). The project is built from ROM disassembly, Ghidra analysis, and
-differential testing against MAME. It contains a browser frontend, a pure
-TypeScript engine, command-line oracle/probe tools, and validation fixtures used
-to compare reimplemented routines against the original arcade behavior.
+Marble Love is a readable TypeScript reimplementation of Atari's *Marble
+Madness* (1984), ported function-by-function from the 68010 disassembly and
+checked against MAME as the behavioral oracle. It is source-level code, not a
+cycle-accurate emulator.
+
+The project contains a browser frontend, a pure TypeScript engine,
+command-line oracle/probe tools, and validation fixtures used to compare
+reimplemented routines against the original arcade behavior. One byte-diff
+investigation also surfaced an undocumented Slapstic/68010 prefetch side
+channel; see
+[docs/findings/slapstic-prefetch-side-channel.md](docs/findings/slapstic-prefetch-side-channel.md).
 
 No ROMs or copyrighted game assets are included. To run the browser version you
 must provide your own legally obtained MAME ROM ZIPs.
@@ -89,19 +95,12 @@ Requirements:
 - Node.js 22 or newer.
 - npm.
 - Legally obtained MAME ROM ZIPs for `marble` and the Atari System 1 BIOS files
-  expected by MAME.
+  expected by MAME if you want ROM-backed gameplay.
 
 Install dependencies:
 
 ```sh
 npm ci
-```
-
-Place your local ROM ZIPs where the dev server can serve them:
-
-```text
-packages/web/public/roms/marble.zip
-packages/web/public/roms/atarisy1.zip
 ```
 
 Start the web frontend:
@@ -110,15 +109,44 @@ Start the web frontend:
 npm --workspace @marble-love/web run dev -- --host 0.0.0.0
 ```
 
+Vite uses `http://localhost:5173/` by default, but it may choose the next free
+port if 5173 is already in use. Replace the port in the URLs below with the one
+printed by Vite.
+
+Fast no-ROM smoke check:
+
+```text
+http://localhost:5173/?autoLoad=0
+```
+
+This opens the ROM-free synthetic/demo path. It is useful for checking the
+browser renderer starts, but it is not the original game and does not include
+copyrighted game assets.
+
+Manual ROM picker:
+
+```text
+http://localhost:5173/?rom=1
+```
+
+Local ROM auto-load:
+
+```sh
+mkdir -p packages/web/public/roms
+cp /path/to/marble.zip packages/web/public/roms/
+cp /path/to/atarisy1.zip packages/web/public/roms/
+```
+
 Open:
 
 ```text
-http://localhost:5173/
+http://localhost:5173/?autoLoad=1
 ```
 
-In dev mode, the root URL auto-loads the local ROM ZIPs from
-`packages/web/public/roms/` when they are present. Use `?rom=1` for the manual
-ROM picker, or `?sound=0` to disable gameplay audio.
+In dev mode, the root URL attempts to auto-load local ROM ZIPs from
+`packages/web/public/roms/` when they are present. If they are absent, the page
+keeps the manual ROM picker visible instead of treating Vite's HTML fallback as
+a ZIP file. Use `?sound=0` to disable gameplay audio.
 
 Controls:
 

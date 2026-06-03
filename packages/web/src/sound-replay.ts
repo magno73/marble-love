@@ -49,10 +49,19 @@ import {
   type SoundReplayCommandReadEvent,
 } from "./sound-replay-command-edge.js";
 import { applySoundReplayPreset } from "./sound-replay-presets.js";
+import { normalizePublicFetchPath } from "./public-fetch-url.js";
 
 type Rom = Awaited<ReturnType<typeof extractRomZipFiles>>;
 
 const FRAME_INTERVAL_MS = 1000 / 60;
+const SOUND_REPLAY_ALLOWED_PREFIXES = ["scenarios/sound/"] as const;
+
+function normalizeSoundReplayPath(paramName: string, raw: string): string {
+  return normalizePublicFetchPath(raw, {
+    allowedPrefixes: SOUND_REPLAY_ALLOWED_PREFIXES,
+    paramName,
+  });
+}
 
 type SoundReplayTape = CmdTape & {
   readonly mainReplyReads?: ReadonlyArray<Record<string, unknown>>;
@@ -452,7 +461,14 @@ function cmdTapeYmStreamSampleOffset(
 }
 
 export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
-  setStatus(`[soundReplay] loading tape ${tapeUrl}...`);
+  let safeTapeUrl: string;
+  try {
+    safeTapeUrl = normalizeSoundReplayPath("soundReplay", tapeUrl);
+  } catch (e) {
+    setStatus(`[soundReplay] FAIL: ${e instanceof Error ? e.message : String(e)}`);
+    return;
+  }
+  setStatus(`[soundReplay] loading tape ${safeTapeUrl}...`);
 
   const soundRomFull = rom.sound;
   if (soundRomFull === undefined || soundRomFull.length < 0x10000) {
@@ -462,9 +478,9 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   const rom421 = soundRomFull.slice(0x8000, 0xc000);
   const rom422 = soundRomFull.slice(0xc000, 0x10000);
 
-  const resp = await fetch(tapeUrl);
+  const resp = await fetch(safeTapeUrl);
   if (!resp.ok) {
-    setStatus(`[soundReplay] FAIL: fetch ${tapeUrl} → ${resp.status}`);
+    setStatus(`[soundReplay] FAIL: fetch ${safeTapeUrl} → ${resp.status}`);
     return;
   }
   const tapeJson = (await resp.json()) as SoundReplayTape;
@@ -478,7 +494,16 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
     setStatus(`[soundReplay] FAIL: ${e instanceof Error ? e.message : String(e)}`);
     return;
   }
-  const replyAckUrl = searchParams.get("soundReplayReplyAck");
+  const replyAckUrlRaw = searchParams.get("soundReplayReplyAck");
+  let replyAckUrl: string | null = null;
+  if (replyAckUrlRaw !== null && replyAckUrlRaw !== "") {
+    try {
+      replyAckUrl = normalizeSoundReplayPath("soundReplayReplyAck", replyAckUrlRaw);
+    } catch (e) {
+      setStatus(`[soundReplay] FAIL: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
+  }
   const ymScheduler = soundReplayYmSchedulerFromQuery(searchParams);
   const ymNativeSampleRate = soundReplayYmNativeSampleRateFromQuery(searchParams, ymScheduler);
   const ymResampleOffset = finiteQueryNumber(searchParams, "soundReplayYmResampleOffset");
@@ -598,7 +623,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       ? ""
       : `pokeyCommandEdgeRawCycleOffsetOpcodes=${fmtRegisterOffsets(pokeyCommandEdgeRawCycleOffsetOpcodes)}\n`);
   let replyAckSource: ReplyAckSource | undefined;
-  if (replyAckUrl !== null && replyAckUrl !== "") {
+  if (replyAckUrl !== null) {
     const ackResp = await fetch(replyAckUrl);
     if (!ackResp.ok) {
       setStatus(`[soundReplay] FAIL: fetch ${replyAckUrl} -> ${ackResp.status}`);

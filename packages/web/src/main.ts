@@ -74,6 +74,14 @@ import {
 } from "@marble-love/engine";
 import { createSoundRenderer, type SoundRenderer } from "./sound-renderer.js";
 import { runSoundReplay } from "./sound-replay.js";
+import {
+  fetchAutoLoadRomZips,
+  isAutoLoadRomUnavailableError,
+} from "./auto-load-rom.js";
+import {
+  normalizePublicFetchPath,
+  optionalPublicFetchPath,
+} from "./public-fetch-url.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
@@ -84,8 +92,9 @@ const forceRomPicker = searchParams.get("rom") === "1";
 const forceEngineDiagnosticFrame = searchParams.get("engine") === "1";
 const forceDemoFrame = searchParams.get("demo") === "1";
 const forceRealRendering = searchParams.get("real") === "1";
+const explicitAutoLoad = searchParams.get("autoLoad") === "1";
 const forceAutoLoad =
-  searchParams.get("autoLoad") === "1" ||
+  explicitAutoLoad ||
   (
     searchParams.get("autoLoad") !== "0" &&
     import.meta.env.DEV &&
@@ -105,6 +114,19 @@ const runSoundChip = enableSound && searchParams.get("soundChip") !== "0";
 // startGame run, execute only SoundChip + cmd-tape replay (audio chip-perfect).
 // Path relative to /public, for example `scenarios/sound/cmd-tape-attract.json`.
 const soundReplayUrl = searchParams.get("soundReplay");
+const soundTapeAllowedPrefixes = ["scenarios/sound/"] as const;
+function normalizeSoundTapePath(paramName: string, raw: string): string {
+  return normalizePublicFetchPath(raw, {
+    allowedPrefixes: soundTapeAllowedPrefixes,
+    paramName,
+  });
+}
+function optionalSoundTapePath(paramName: string, fallback: string): string {
+  return optionalPublicFetchPath(searchParams.get(paramName), fallback, {
+    allowedPrefixes: soundTapeAllowedPrefixes,
+    paramName,
+  });
+}
 const levelTimeOverride = parseLevelTimeOverrideParam(searchParams.get("levelTime"));
 const showObjectDebugOverlay =
   searchParams.get("debugObjects") === "1" || searchParams.get("debugState") === "1";
@@ -1172,21 +1194,18 @@ if (forceAutoLoad) {
     try {
       setRomStatus("Auto-loading ROMs from /roms/...");
       btn.disabled = true;
-      const [r1, r2] = await Promise.all([
-        fetch("/roms/marble.zip"),
-        fetch("/roms/atarisy1.zip"),
-      ]);
-      if (!r1.ok || !r2.ok) throw new Error(`fetch fail: ${r1.status}/${r2.status}`);
-      const [b1, b2] = await Promise.all([r1.blob(), r2.blob()]);
-      const f1 = new File([b1], "marble.zip");
-      const f2 = new File([b2], "atarisy1.zip");
+      const files = await fetchAutoLoadRomZips();
       const dt = new DataTransfer();
-      dt.items.add(f1);
-      dt.items.add(f2);
+      for (const file of files) dt.items.add(file);
       fileInput.files = dt.files;
       fileInput.dispatchEvent(new Event("change", { bubbles: true }));
     } catch (e) {
-      setRomStatus("autoLoad failed: " + (e instanceof Error ? e.message : e), "error");
+      const message = e instanceof Error ? e.message : String(e);
+      if (isAutoLoadRomUnavailableError(e)) {
+        setRomStatus(message, explicitAutoLoad ? "error" : "idle");
+      } else {
+        setRomStatus("autoLoad failed: " + message, "error");
+      }
       btn.disabled = false;
     }
   })();
@@ -1215,7 +1234,7 @@ fileInput.addEventListener("change", async () => {
     }
     splash.remove();
     if (soundReplayUrl !== null) {
-      await runSoundReplay(rom, soundReplayUrl);
+      await runSoundReplay(rom, normalizeSoundTapePath("soundReplay", soundReplayUrl));
       return;
     }
     await startGame(rom);
@@ -1613,17 +1632,17 @@ async function startGame(
     soundPrewarmFrameParam !== null,
   );
   const soundPrewarmTapeUrl =
-    searchParams.get("soundPrewarmTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+    optionalSoundTapePath("soundPrewarmTape", "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json");
   const soundAttractEnabled = searchParams.get("soundAttract") === "1";
   const soundAttractTapeUrl =
-    searchParams.get("soundAttractTape") ?? "scenarios/sound/cmd-tape-attract-music.json";
+    optionalSoundTapePath("soundAttractTape", "scenarios/sound/cmd-tape-attract-music.json");
   const soundAttractStartFrame = Math.max(
     0,
     Number.parseInt(searchParams.get("soundAttractStartFrame") ?? "244", 10) || 244,
   );
   const soundCoinEnabled = searchParams.get("soundCoin") === "1";
   const soundCoinTapeUrl =
-    searchParams.get("soundCoinTape") ?? "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json";
+    optionalSoundTapePath("soundCoinTape", "scenarios/sound/cmd-tape-gameplay-coin-start-4200.json");
   const soundCoinStartFrame = Math.max(
     0,
     Number.parseInt(searchParams.get("soundCoinStartFrame") ?? "1217", 10) || 1217,
