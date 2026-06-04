@@ -41,14 +41,14 @@ describe("browser input mapping", () => {
   });
 
   it("normalizes keyboard trackball step for debug tuning", () => {
-    expect(normalizeKeyboardTrackballStep(undefined)).toBe(32);
+    expect(normalizeKeyboardTrackballStep(undefined)).toBe(24);
     expect(normalizeKeyboardTrackballStep(16.4)).toBe(16);
     expect(normalizeKeyboardTrackballStep(0)).toBe(1);
     expect(normalizeKeyboardTrackballStep(999)).toBe(64);
   });
 
   it("normalizes pointer/touch trackball scale for debug tuning", () => {
-    expect(normalizePointerTrackballScale(undefined)).toBe(2);
+    expect(normalizePointerTrackballScale(undefined)).toBe(1);
     expect(normalizePointerTrackballScale(1.5)).toBe(1.5);
     expect(normalizePointerTrackballScale(0)).toBe(0.25);
     expect(normalizePointerTrackballScale(999)).toBe(8);
@@ -76,6 +76,8 @@ describe("browser input mapping", () => {
       handler({ key: "ArrowRight", repeat: false, preventDefault() {} });
     }
 
+    // Constant step per frame (MAME keydelta model): screen-right maps to a
+    // negative trackball delta, so 0xff - 16 = 0xef.
     expect(input.consumeP1X()).toBe(0xef);
     expect(input.consumeP1Y()).toBe(0xff);
   });
@@ -105,8 +107,10 @@ describe("browser input mapping", () => {
       handler({ touches: [{ clientX: 110, clientY: 90 }] });
     }
 
-    expect(input.consumeP1X()).toBe(0xeb);
-    expect(input.consumeP1Y()).toBe(0x13);
+    // Default pointer scale 1 (1:1): raw (+10,-10) → trackball (-10,+10),
+    // integrated onto the idle 0xff baseline.
+    expect(input.consumeP1X()).toBe(0xf5);
+    expect(input.consumeP1Y()).toBe(0x09);
   });
 
   it("allows touch/pointer scale override without changing keyboard step", () => {

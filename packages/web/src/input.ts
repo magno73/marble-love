@@ -20,9 +20,18 @@
  * Future mobile work can add virtual buttons and accelerometer input here.
  */
 
-const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 32;
+// Keyboard is digital, so — like MAME's `keydelta` for an analog port — a held
+// key adds a constant trackball step every frame. No invented acceleration
+// curve: the flat-vs-climb trade-off is inherent to digitally driving an analog
+// trackball game, exactly as it is in MAME. Default 24 is tuned by feel (clears
+// climbs while staying controllable); override via ?keyboardStep.
+const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 24;
 const MAX_KEYBOARD_TRACKBALL_EQUIV = 64;
-const DEFAULT_POINTER_TRACKBALL_SCALE = 2;
+// Pointer (mouse/touch) is analog — the faithful analogue of the physical
+// trackball. `scale` is its sensitivity (trackball counts per screen pixel), the
+// counterpart of MAME's PORT_SENSITIVITY. Default 1 (1:1) is tuned by feel;
+// override via ?trackballScale.
+const DEFAULT_POINTER_TRACKBALL_SCALE = 1;
 const MIN_POINTER_TRACKBALL_SCALE = 0.25;
 const MAX_POINTER_TRACKBALL_SCALE = 8;
 const TRACKBALL_KEYS = new Set([
