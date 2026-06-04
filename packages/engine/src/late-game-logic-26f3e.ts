@@ -611,7 +611,10 @@ function dispatchType7_9(
   const subIdxB = rb(state, rom, a1Ptr + 1);
   const sp = romL(rom, (0x1f096 + (s8(subIdxB) << 2)) >>> 0);
   const [d5, d4] = loadCoords(state, rom, sp, 0x20, 0x18, 0x10);
-  if (s16(d4) <= -0x10 || s16(d4) >= 0x100) return;
+  const culled = s16(d4) <= -0x10 || s16(d4) >= 0x100;
+  if (culled) {
+    return;
+  }
   const om7: Record<number, number> = { 7: 0x2800, 8: 0x3000, 9: 0x2000 };
   moEmit(state, rom, rl(state, rom, rl(state, rom, sp + 0x1c)), d5, d4, om7[entityType] ?? 0x2800, subs);
 }

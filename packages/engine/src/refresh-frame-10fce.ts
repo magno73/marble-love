@@ -49,6 +49,8 @@ import { sub14966 } from "./sub-14966.js";
 import { dispatchStrings17230 } from "./dispatch-strings-17230.js";
 import { stringStep1725A } from "./string-step-1725a.js";
 import { stateSub19BAA } from "./state-sub-19baa.js";
+import { stateSub19A40 } from "./state-sub-19a40.js";
+import { sub1BB08 } from "./sub-1bb08.js";
 import { marbleCellDispatch19E42 } from "./marble-cell-dispatch-19e42.js";
 import { stateSub1844A } from "./read-abs-long-1844a.js";
 import { stateDispatch12FD0 } from "./state-dispatch-12fd0.js";
@@ -1010,7 +1012,25 @@ export function refreshFrame10FCE(
         : "FUN_19BAA"
       : "FUN_19BAA_FAST";
   callSub(state, fun19BAAKey, () => {
-    (subs.stateSub19BAA ?? ((s) => { stateSub19BAA(s, rom, { fun_19e42: marbleCellDispatch19E42 }); }))(state);
+    (subs.stateSub19BAA ?? ((s) => {
+      stateSub19BAA(s, rom, {
+        // FUN_19A40 spawn dispatcher (gated: gameMode==4, *0x762!=0, every 8
+        // frames). Inserts the type-15 "silly" creatures (e.g. the L5 Silly
+        // Race butterflies) into the entity draw list via FUN_18E6C(0x0F,..).
+        fun_19a40: (st) => {
+          stateSub19A40(st, rom, {
+            fun_19e42: marbleCellDispatch19E42,
+            fun_18e6c: (s2, typeCode, subIdx) => { slotInsertSorted18E6C(s2, rom, typeCode, subIdx); },
+            fun_158ac: (s2, arg) => { soundCmdSend158AC(s2, arg); },
+          });
+        },
+        fun_18f46: (st, arg1, arg2) => { helper18F46(st, rom, arg1, arg2); },
+        fun_1bb08: sub1BB08,
+        fun_1cc62: (st, arg) => spriteProject1CC62(st, arg, { fun_1CABA: (s2) => { sub1CABATileRedraw(s2, rom); } }),
+        fun_19e42: marbleCellDispatch19E42,
+        fun_158ac: (st, arg) => { soundCmdSend158AC(st, arg); },
+      });
+    }))(state);
   });
 
   // 00011004: jsr 0x0001844A

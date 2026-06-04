@@ -81,7 +81,6 @@ These are current browser-gameplay issues, not original arcade behavior:
 
 - Practice Race: a corrupt motion-object sprite can appear near the end of the
   level.
-- Silly Race: the flying bird motion objects are not rendered yet.
 - Silly Race: the browser can become very slow on this level.
 - The high-score / insert-coin screen still needs visual polish and a final
   behavior pass.

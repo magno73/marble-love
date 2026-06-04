@@ -20,7 +20,7 @@ those suites skip themselves. See the README "Validation" section.
 | Subsystem | Claim | Evidence | Verify |
 |---|---|---|---|
 | Slapstic 137412-103 bank FSM | Bit-perfect, including an **undocumented 68010-prefetch side-channel** we discovered | [finding](findings/slapstic-prefetch-side-channel.md); `slapstic-103.test.ts` (12/12) | `npx vitest run packages/engine/test/slapstic-103.test.ts` |
-| 68010 helper routines (function-by-function) | Behavioral parity vs MAME / Musashi oracle | ~2340-test engine suite (1 known failure: L5 birds, see gaps) + 267 `packages/cli/src/test-*-parity.ts` runners | `npx vitest run packages/engine` (needs a local ROM) |
+| 68010 helper routines (function-by-function) | Behavioral parity vs MAME / Musashi oracle | ~2340-test engine suite (all green; 20 skipped) + 267 `packages/cli/src/test-*-parity.ts` runners | `npx vitest run packages/engine` (needs a local ROM) |
 | Trackball input apply + clamp | Behavioral parity | `trackball-apply.test.ts` (4/4), `trackball-input.test.ts` (5/5), `trackball-clamp-flags-28468.test.ts` (6/6) | `npx vitest run packages/engine/test/trackball-apply.test.ts packages/engine/test/trackball-input.test.ts` |
 | Slope / waypoint attractor (FUN_1815A) | Behavioral parity | `waypoint-list-step-1815a.test.ts` (7/7) | `npx vitest run packages/engine/test/waypoint-list-step-1815a.test.ts` |
 | Per-level gameplay sound-command selection | Verified selectors per race | `sound-gameplay-profile.test.ts` (6/6) | `npx vitest run packages/web/test/sound-gameplay-profile.test.ts` |
@@ -46,10 +46,11 @@ The single source of truth is the README, to avoid drift:
 - [Known Limitations](../README.md#known-limitations)
 - [Known Gameplay Bugs](../README.md#known-gameplay-bugs)
 
-Highlights relevant to the matrix: the L5 Silly Race flying-bird motion objects
-are not rendered yet (the one failing engine test, skipped on the ROM-less CI
-subset); attract-mode music and insert-coin sound are still active work; PCM
-audio is not globally bit-perfect.
+Highlights relevant to the matrix: attract-mode music and insert-coin sound are
+still active work; PCM audio is not globally bit-perfect. (The L5 Silly Race
+flying motion objects — the pink butterflies — now spawn and render; the older
+`l5-silly-race-surface` fixture remains skipped because it asserts presence
+during the frozen intro, where they are correctly absent.)
 
 ## How to verify a claim
 

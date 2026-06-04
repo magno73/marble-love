@@ -707,7 +707,8 @@ function renderIndirectViewport(
     const pos = motionObjectScreenPosition(frame, sprite, h);
     const drawX = pos.x;
     const drawY = pos.y;
-    if (drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0) continue;
+    const offScreen = drawX >= W || drawY >= H || drawX + w <= 0 || drawY + h <= 0;
+    if (offScreen) continue;
 
     // sprite.paletteIndex is already normalized by the engine: normal MO uses
     // 0x20 + color * 2, while high-priority MO keeps the 0x40 + color path.
