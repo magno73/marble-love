@@ -50,6 +50,7 @@ import {
 } from "./sound-replay-command-edge.js";
 import { applySoundReplayPreset } from "./sound-replay-presets.js";
 import { normalizePublicFetchPath } from "./public-fetch-url.js";
+import { publicUrl } from "./public-base-url.js";
 
 type Rom = Awaited<ReturnType<typeof extractRomZipFiles>>;
 
@@ -478,7 +479,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
   const rom421 = soundRomFull.slice(0x8000, 0xc000);
   const rom422 = soundRomFull.slice(0xc000, 0x10000);
 
-  const resp = await fetch(safeTapeUrl);
+  const resp = await fetch(publicUrl(safeTapeUrl));
   if (!resp.ok) {
     setStatus(`[soundReplay] FAIL: fetch ${safeTapeUrl} → ${resp.status}`);
     return;
@@ -624,7 +625,7 @@ export async function runSoundReplay(rom: Rom, tapeUrl: string): Promise<void> {
       : `pokeyCommandEdgeRawCycleOffsetOpcodes=${fmtRegisterOffsets(pokeyCommandEdgeRawCycleOffsetOpcodes)}\n`);
   let replyAckSource: ReplyAckSource | undefined;
   if (replyAckUrl !== null) {
-    const ackResp = await fetch(replyAckUrl);
+    const ackResp = await fetch(publicUrl(replyAckUrl));
     if (!ackResp.ok) {
       setStatus(`[soundReplay] FAIL: fetch ${replyAckUrl} -> ${ackResp.status}`);
       return;

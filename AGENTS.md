@@ -1,7 +1,5 @@
 # AGENTS.md
 
-Repository root: `/Users/magnus-bot/Code/marble-love`.
-
 Use this file as the startup context for AI agents. Keep it short. Do not paste
 long history, trace output, or snapshot JSON into agent prompts.
 

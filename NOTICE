@@ -1,0 +1,14 @@
+Marble Love — Notice
+
+The MIT license in LICENSE covers the original code authored as part of
+Marble Love. It does NOT cover, and does NOT grant any rights to, the
+original Marble Madness ROM data (Atari, 1984), graphics, audio,
+trademarks, or other original game assets, which remain the property of
+their respective rights holders. No ROM files or extracted game assets are
+included in this repository. End users must legally obtain their own ROM
+dumps; the browser ROM loader reads local ZIP files only and never uploads
+ROM data.
+
+Marble Madness, Atari, and related names/assets are the property of their
+respective rights holders. This project is not affiliated with, sponsored
+by, or endorsed by Atari or any current rights holder.

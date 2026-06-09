@@ -4,10 +4,19 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0a0a0a" />
-    <title>Marble Love</title>
+    <meta
+      name="description"
+      content="Marble Love: a function-by-function TypeScript reimplementation of Atari's Marble Madness (1984), checked against MAME as the behavioral oracle. ROM-free demo in the browser."
+    />
+    <meta property="og:title" content="Marble Love — Marble Madness reimplemented in TypeScript" />
+    <meta
+      property="og:description"
+      content="Source-level, function-by-function port of the 68010 game code, differentially tested against MAME. Includes an undocumented Slapstic side-channel finding."
+    />
+    <title>Marble Love — Marble Madness reimplemented in TypeScript</title>
     <style>
       :root {
         color-scheme: dark;
@@ -16,7 +25,6 @@
       body {
         margin: 0;
         padding: 0;
-        height: 100%;
         background: #0a0a0a;
         color: #f4f4f4;
         font-family:
@@ -24,26 +32,94 @@
           system-ui,
           -apple-system,
           sans-serif;
-        overflow: hidden;
       }
-      #app {
-        position: fixed;
-        inset: 0;
-        display: grid;
-        place-items: center;
+      a {
+        color: #8ecbff;
+      }
+      code {
+        background: #1c1c1c;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.92em;
       }
       canvas {
         display: block;
         image-rendering: pixelated;
       }
+      #stage {
+        position: relative;
+        height: 100svh;
+        min-height: 320px;
+        background: #000;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      #stage-badge {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        z-index: 5;
+        max-width: min(440px, calc(100vw - 24px));
+        background: rgba(10, 10, 10, 0.85);
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        line-height: 1.5;
+        pointer-events: none;
+      }
+      #stage-badge a {
+        pointer-events: auto;
+      }
+      .content {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 20px 8px;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+      .content h2 {
+        font-size: 21px;
+        margin: 0 0 14px;
+      }
+      .content p {
+        margin: 0 0 14px;
+        opacity: 0.92;
+      }
+      .content ul {
+        margin: 0 0 14px;
+        padding-left: 22px;
+      }
+      .content li {
+        margin-bottom: 6px;
+      }
+      figure {
+        margin: 0;
+      }
+      figure img {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #2a2a2a;
+      }
+      figcaption {
+        font-size: 13px;
+        opacity: 0.75;
+        margin-top: 8px;
+        line-height: 1.5;
+      }
       .splash {
         text-align: center;
         max-width: 480px;
+        margin: 0 auto;
         padding: 24px;
+        border: 1px solid #2a2a2a;
+        border-radius: 10px;
+        background: #111;
       }
       .splash h1 {
         font-weight: 700;
-        font-size: 28px;
+        font-size: 22px;
         margin: 0 0 12px;
       }
       .splash p {
@@ -79,29 +155,133 @@
       .splash input[type="file"] {
         display: none;
       }
+      footer {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+        font-size: 13px;
+        opacity: 0.65;
+        line-height: 1.6;
+      }
     </style>
   </head>
   <body>
-    <div id="app">
-      <div class="splash" id="splash">
-        <h1>Marble Love</h1>
+    <main>
+      <section id="stage" aria-label="Live demo stage">
+        <div id="stage-badge">
+          <strong>Marble Love</strong> — ROM-free synthetic demo (not the
+          original game). Scroll down for what this is, the Slapstic finding,
+          and how to play with your own ROMs.
+        </div>
+      </section>
+
+      <section class="content" id="about">
+        <h2>What is this?</h2>
         <p>
-          TypeScript reimplementation of Marble Madness (Atari, 1984). Load your local
-          ROM ZIPs (<code>marble.zip</code> and, when needed, <code>atarisy1.zip</code>).
-          ROM data stays on this device and is never uploaded.
+          Marble Love is a reimplementation of Atari's <em>Marble Madness</em>
+          (1984) in TypeScript. It is <strong>not an emulator</strong>: each
+          routine of the 68010 game program is ported function by function from
+          the disassembly into readable code, then checked byte for byte
+          against MAME as the behavioral oracle. The result is gameplay logic
+          you can read <em>and</em> verify — every parity claim comes with a
+          command that reproduces it.
         </p>
-        <label>
-          <input id="rom-input" type="file" accept=".zip" multiple />
-          <button id="rom-btn" type="button">Load ROMs</button>
-        </label>
-        <p class="status" id="rom-status" data-tone="idle"></p>
-        <p style="opacity:0.7;font-size:0.85em;margin-top:1em;">
-          Tip: select <code>marble.zip</code> and <code>atarisy1.zip</code> together
-          (Cmd/Ctrl-click). After loading, use the <strong>arrow keys</strong> to scroll
-          the 64x64 tilemap viewport (Shift = 8x faster).
+        <ul>
+          <li>
+            <a href="https://github.com/magno73/marble-love">Source on GitHub</a>
+            (MIT; no ROMs or game assets included)
+          </li>
+          <li>
+            <a href="https://github.com/magno73/marble-love/blob/main/docs/STATUS.md"
+              >Parity matrix</a
+            >
+            — what is bit-perfect, behavioral, or heuristic, with a verify
+            command per claim
+          </li>
+          <li>
+            <a href="./slapstic/">The Slapstic side-channel write-up</a> —
+            published article
+          </li>
+        </ul>
+      </section>
+
+      <section class="content" id="finding">
+        <h2>The Slapstic finding</h2>
+        <p>
+          A 126-byte playfield mismatch at exactly one frame traced to the
+          cartridge's <strong>Slapstic security chip</strong> (137412-103)
+          observing the 68010's <em>instruction prefetch</em> outside its
+          protected ROM window — a hardware side channel not described in the
+          MAME source or any public datasheet we could find. Modeling the
+          prefetch into the chip's state machine closed the byte diff to zero,
+          and a regression test pins it.
         </p>
-      </div>
-    </div>
+        <p>
+          <a href="./slapstic/">Read the full write-up →</a>
+        </p>
+      </section>
+
+      <section class="content" id="gameplay">
+        <h2>Real gameplay</h2>
+        <figure id="gameplay-figure">
+          <img
+            src="media/demo.gif"
+            alt="Marble Madness gameplay running in Marble Love"
+            loading="lazy"
+            onerror="const s = this.closest('section'); if (s) s.style.display = 'none';"
+          />
+          <figcaption>
+            Real gameplay, captured locally with legally owned ROMs — the live
+            demo at the top of this page is the ROM-free synthetic path. No
+            game assets ship with this site or the repository; ROMs you load
+            stay in your browser.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="content" id="play">
+        <h2>Play with your own ROMs</h2>
+        <p>
+          The repository ships no copyrighted game data. If you legally own
+          MAME ROM ZIPs for <code>marble</code> (and the Atari System&nbsp;1
+          BIOS, <code>atarisy1.zip</code>), you can load them here:
+          <strong>everything is read locally in your browser; nothing is
+          uploaded.</strong>
+        </p>
+        <div class="splash" id="splash">
+          <h1>Load ROMs</h1>
+          <p>
+            Select <code>marble.zip</code> and <code>atarisy1.zip</code>
+            together (Cmd/Ctrl-click). Files are validated by name, size, and
+            CRC32, then the game starts in the stage above.
+          </p>
+          <label>
+            <input id="rom-input" type="file" accept=".zip" multiple />
+            <button id="rom-btn" type="button">Load ROMs</button>
+          </label>
+          <p class="status" id="rom-status" data-tone="idle"></p>
+        </div>
+        <p style="margin-top: 16px">
+          Controls: <code>5</code>/<code>C</code> insert coin,
+          <code>Enter</code>/<code>Space</code> start; mouse, WASD, arrow keys,
+          or gamepad move the marble. The first coin/start/click also unlocks
+          Web Audio. Known gameplay and audio gaps are
+          <a
+            href="https://github.com/magno73/marble-love/blob/main/README.md#known-limitations"
+            >documented in the README</a
+          >, not hidden.
+        </p>
+      </section>
+
+      <footer>
+        Marble Love source code is MIT licensed. <em>Marble Madness</em>,
+        Atari, and related names/assets are the property of their respective
+        rights holders; this project is not affiliated with, sponsored by, or
+        endorsed by Atari or any current rights holder. See the repository's
+        <a href="https://github.com/magno73/marble-love/blob/main/NOTICE">NOTICE</a>
+        for details.
+      </footer>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -82,6 +82,7 @@ import {
   normalizePublicFetchPath,
   optionalPublicFetchPath,
 } from "./public-fetch-url.js";
+import { publicUrl } from "./public-base-url.js";
 
 const splash = document.getElementById("splash") as HTMLDivElement;
 const fileInput = document.getElementById("rom-input") as HTMLInputElement;
@@ -207,10 +208,11 @@ const useBootFlow = shouldUseBootFlow({
 });
 const DEFAULT_WARM_PLAY_LOOP_RESET = 180;
 const SCENARIO_LOOP_RESET = 100;
-// Synthetic demo only in dev when explicitly requested. The default dev root
-// auto-loads local ROM ZIPs when they are available.
+// Synthetic ROM-free demo. In dev the default root auto-loads local ROM ZIPs
+// when they are available; in production builds (e.g. the GitHub Pages site)
+// the root starts the synthetic demo immediately while the ROM picker stays
+// available in the page below the stage.
 const useSyntheticDemoFrame =
-  import.meta.env.DEV &&
   !forceRomPicker &&
   !forceEngineDiagnosticFrame &&
   !forceDemoFrame &&
@@ -1233,6 +1235,10 @@ fileInput.addEventListener("change", async () => {
       return;
     }
     splash.remove();
+    // The badge describes the ROM-free synthetic demo; once real ROM content
+    // takes the stage it no longer applies.
+    document.getElementById("stage-badge")?.remove();
+    document.getElementById("stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
     if (soundReplayUrl !== null) {
       await runSoundReplay(rom, normalizeSoundTapePath("soundReplay", soundReplayUrl));
       return;
@@ -1248,23 +1254,42 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
+// Loading ROMs while the synthetic demo runs replaces the demo Application
+// with the real game in the same stage.
+let stopActiveGame: (() => void) | undefined;
+
 if (useSyntheticDemoFrame || (import.meta.env.DEV && (forceEngineDiagnosticFrame || forceDemoFrame))) {
-  splash.remove();
+  // The synthetic demo coexists with the in-page ROM picker (the landing
+  // keeps the picker section below the stage); diagnostic frames still take
+  // the page for themselves.
+  if (!useSyntheticDemoFrame) splash.remove();
   void startGame();
 }
 
 async function startGame(
   rom?: Awaited<ReturnType<typeof extractRomZipFiles>>,
 ): Promise<void> {
+  stopActiveGame?.();
+  stopActiveGame = undefined;
+  // Drop fixed UI created by a previous run (demo replaced by ROM gameplay).
+  for (const el of document.querySelectorAll("[data-marble-ui]")) el.remove();
+  const stageEl = document.getElementById("stage");
   const app = new Application();
   await app.init({
     background: "#0a0a0a",
-    resizeTo: window,
+    resizeTo: stageEl ?? window,
     antialias: false,
     autoDensity: true,
     resolution: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
   });
-  document.body.appendChild(app.canvas);
+  (stageEl ?? document.body).appendChild(app.canvas);
+  stopActiveGame = () => {
+    try {
+      app.destroy(true);
+    } catch {
+      // Already destroyed (e.g. page teardown); replacing the app proceeds.
+    }
+  };
 
   const s = stateNs.emptyGameState();
   // Real ROM when the user loaded one; otherwise an empty ROM keeps ticks safe
@@ -1296,7 +1321,7 @@ async function startGame(
   }
   const loadPlayableSeedWarmState = async (seedName: string): Promise<LoadedPlayableSeed | undefined> => {
     const safeSeedName = seedName.replace(/[^a-z0-9_-]/gi, "");
-    const r = await fetch(`/scenarios/playable/${safeSeedName}.seed.json`);
+    const r = await fetch(publicUrl(`scenarios/playable/${safeSeedName}.seed.json`));
     if (!r.ok) throw new Error(`fetch fail: ${r.status}`);
     const seed = await r.json() as {
       frame: number;
@@ -1384,7 +1409,7 @@ async function startGame(
   } else if (scenarioName !== null) {
     // ?scenario=NAME: load the first gameplay warm-state snapshot.
     try {
-      const r = await fetch(`/scenarios/gameplay/${scenarioName}.json`);
+      const r = await fetch(publicUrl(`scenarios/gameplay/${scenarioName}.json`));
       if (r.ok) {
         const rawJson = await r.json() as { snapshots: Array<{
           frame: number; slapsticBank?: number; workRam: string;
@@ -1416,7 +1441,7 @@ async function startGame(
     }
   } else if (useMameDump || useMameLive) {
     try {
-      const r = await fetch("/mame_state.json");
+      const r = await fetch(publicUrl("mame_state.json"));
       if (r.ok) {
         const dump = await r.json() as {
           frame: number;
@@ -1545,6 +1570,8 @@ async function startGame(
   ): HTMLButtonElement => {
     const b = document.createElement("button");
     b.textContent = label;
+    b.dataset.marbleUi = "1";
+    b.dataset.stageUi = "1";
     b.style.cssText =
       `position:fixed;bottom:20px;right:${right}px;z-index:9999;` +
       `padding:14px 20px;font-size:18px;` +
@@ -1572,6 +1599,21 @@ async function startGame(
     inputState.triggerStartPulse();
     console.log("[mobile] START pulse triggered");
   }, 20, "#4a2a2a");
+
+  // The landing page scrolls past the stage; fixed game controls only make
+  // sense while the stage is on screen.
+  const stageForUi = document.getElementById("stage");
+  if (stageForUi !== null && typeof IntersectionObserver !== "undefined") {
+    new IntersectionObserver(
+      (entries) => {
+        const stageVisible = entries[0]?.isIntersecting ?? true;
+        for (const el of document.querySelectorAll<HTMLElement>("[data-stage-ui]")) {
+          el.style.display = stageVisible ? "" : "none";
+        }
+      },
+      { threshold: 0.15 },
+    ).observe(stageForUi);
+  }
 
   function maybeApplyLevelTimeOverride(reason: string): void {
     if (levelTimeOverride === undefined) return;
@@ -1752,7 +1794,7 @@ async function startGame(
       releaseSoundReset(chip);
       return;
     }
-    const response = await fetch(soundPrewarmTapeUrl);
+    const response = await fetch(publicUrl(soundPrewarmTapeUrl));
     if (!response.ok) throw new Error(`fetch ${soundPrewarmTapeUrl} failed: ${response.status}`);
     const tapeJson = await response.json() as CmdTape;
     const tape = loadCmdTape(tapeJson);
@@ -1770,7 +1812,7 @@ async function startGame(
 
   async function loadSoundAttractTape(): Promise<LoadedCmdTape> {
     if (soundAttractTape !== undefined) return soundAttractTape;
-    const response = await fetch(soundAttractTapeUrl);
+    const response = await fetch(publicUrl(soundAttractTapeUrl));
     if (!response.ok) throw new Error(`fetch ${soundAttractTapeUrl} failed: ${response.status}`);
     const tapeJson = await response.json() as CmdTape;
     const tape = loadCmdTape(tapeJson);
@@ -1780,7 +1822,7 @@ async function startGame(
 
   async function loadSoundCoinTape(): Promise<LoadedCmdTape> {
     if (soundCoinTape !== undefined) return soundCoinTape;
-    const response = await fetch(soundCoinTapeUrl);
+    const response = await fetch(publicUrl(soundCoinTapeUrl));
     if (!response.ok) throw new Error(`fetch ${soundCoinTapeUrl} failed: ${response.status}`);
     const tapeJson = await response.json() as CmdTape;
     const tape = loadCmdTape(tapeJson);
@@ -2180,6 +2222,8 @@ async function startGame(
 
       const btnAudio = document.createElement("button");
       btnAudio.textContent = "🔊 Audio ready";
+      btnAudio.dataset.marbleUi = "1";
+      btnAudio.dataset.stageUi = "1";
       btnAudio.style.cssText =
         "position:fixed;top:10px;right:10px;z-index:9999;padding:8px 12px;" +
         "background:#1a1a1a;color:#fff;border:1px solid #444;cursor:pointer;";

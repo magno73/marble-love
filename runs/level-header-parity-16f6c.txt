@@ -1,6 +1,0 @@
-=== levelInit16F6C (FUN_16F6C) - 500 cases ===
-Match: 500/500 = 100.0%
-First fail: none
-
-Patched JSRs: FUN_2FFB8, FUN_2FF40, FUN_1A668 -> sentinel addq + RTS.
-Compared sentinel side effects and checked decoded ctrl/ext/y-range first row arguments.

@@ -37,6 +37,7 @@
  *   renderer.stop();
  */
 
+import { publicUrl } from "./public-base-url.js";
 import {
   StreamingLinearResampler,
   StreamingMameLofiResampler,
@@ -218,7 +219,7 @@ export async function createSoundRenderer(): Promise<SoundRenderer> {
     const AudioWorkletNodeCtor = globalThis.AudioWorkletNode;
     if (audioWorklet !== undefined && AudioWorkletNodeCtor !== undefined) {
       try {
-        await audioWorklet.addModule("/sound-worklet.js");
+        await audioWorklet.addModule(publicUrl("sound-worklet.js"));
         node = new AudioWorkletNodeCtor(ctx, "marble-sound", {
           outputChannelCount: [2],
         });

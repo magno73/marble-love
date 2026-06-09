@@ -1,4 +1,6 @@
-const AUTO_LOAD_ROM_BASE = "/roms";
+import { publicUrl } from "./public-base-url.js";
+
+const AUTO_LOAD_ROM_BASE = "roms";
 
 export const AUTO_LOAD_ROM_UNAVAILABLE_MESSAGE =
   "No local ROM ZIPs found under /roms. Use Load ROMs or create packages/web/public/roms/ with marble.zip and atarisy1.zip.";
@@ -30,7 +32,7 @@ function hasZipMagic(bytes: Uint8Array): boolean {
 }
 
 function formatAutoLoadPath(name: string): string {
-  return `${AUTO_LOAD_ROM_BASE}/${name}`;
+  return publicUrl(`${AUTO_LOAD_ROM_BASE}/${name}`);
 }
 
 export async function fetchAutoLoadRomZip(

@@ -1,6 +1,0 @@
-=== levelDispatcher16EC6 (FUN_16EC6) - 500 cases ===
-Match: 500/500 = 100.0%
-First fail: none
-
-Patched JSRs: FUN_2FFB8, FUN_2FF28, FUN_18FD0, FUN_1A444 -> RTS.
-Compared observable workRam writes and checked decoded binsearch/y-scroll fields.

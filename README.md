@@ -1,7 +1,8 @@
 # Marble Love
 
-**[Status & parity matrix →](docs/STATUS.md)** — what is bit-perfect, what is
-behavioral, what is heuristic, and how to verify each claim.
+**[Live demo (ROM-free) →](https://magno73.github.io/marble-love/)** ·
+**[Status & parity matrix →](docs/STATUS.md)** ·
+**[The Slapstic side-channel write-up →](https://magno73.github.io/marble-love/slapstic/)**
 
 Marble Love is a readable TypeScript reimplementation of Atari's *Marble
 Madness* (1984), ported function-by-function from the 68010 disassembly and
@@ -34,15 +35,12 @@ active work.
 
 ## Demo
 
-<!-- Generated locally by `tools/record_demo.sh` (needs your own ROMs); see
-     docs/media/README.md. Once produced, embed it here:
-     ![Marble Love gameplay](docs/media/demo.gif) -->
+![Marble Love gameplay](docs/media/demo.gif)
 
-A gameplay capture (`docs/media/demo.gif`) is produced by
-[`tools/record_demo.sh`](tools/record_demo.sh) — a headless-Chromium screencast
-of live gameplay turned into mp4/gif by ffmpeg. The media itself is not checked
-in because recording requires your own legally obtained ROMs; see
-[docs/media/README.md](docs/media/README.md).
+*Real gameplay, captured by the maintainer from legally owned ROMs (see
+[docs/media/README.md](docs/media/README.md) for provenance and the capture
+pipeline). For a demo you can run right now without ROMs, open the
+[ROM-free live demo](https://magno73.github.io/marble-love/).*
 
 ## What Works
 
@@ -226,9 +224,10 @@ System 1 hardware reference.
 
 ## Legal
 
-This repository contains original Marble Love source code under the MIT license.
-It does not contain Marble Madness ROMs, extracted graphics, extracted audio, or
-other copyrighted game assets.
+This repository contains original Marble Love source code under the MIT license
+(see [LICENSE](LICENSE) and [NOTICE](NOTICE)). It does not contain Marble
+Madness ROMs, extracted graphics, extracted audio, or other copyrighted game
+assets.
 
 *Marble Madness*, Atari, and related names/assets are the property of their
 respective rights holders. This project is not affiliated with, sponsored by, or

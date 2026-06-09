@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta
+      name="description"
+      content="How a function-by-function TypeScript reimplementation of Marble Madness, checked byte for byte against MAME, surfaced an undocumented Atari Slapstic side channel driven by 68010 instruction prefetch."
+    />
+    <meta
+      property="og:title"
+      content="Finding an undocumented Atari Slapstic side-channel by differential debugging in TypeScript"
+    />
+    <meta
+      property="og:description"
+      content="A 126-byte playfield mismatch at one frame turned out to be a 40-year-old security chip observing CPU instruction prefetch outside its protected ROM window."
+    />
+    <title>An undocumented Atari Slapstic side-channel, found by differential debugging — Marble Love</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #0a0a0a;
+        color: #f4f4f4;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      a {
+        color: #8ecbff;
+      }
+      article {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 20px 64px;
+        font-size: 16px;
+        line-height: 1.7;
+      }
+      article h1 {
+        font-size: 28px;
+        line-height: 1.3;
+        margin: 0 0 8px;
+      }
+      article h2 {
+        font-size: 21px;
+        margin: 36px 0 12px;
+      }
+      article p,
+      article ul,
+      article ol {
+        margin: 0 0 16px;
+      }
+      article li {
+        margin-bottom: 6px;
+      }
+      .lede {
+        font-size: 17px;
+        opacity: 0.85;
+      }
+      .backlink {
+        font-size: 14px;
+        margin-bottom: 24px;
+        display: inline-block;
+      }
+      code {
+        background: #1c1c1c;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      pre {
+        background: #141414;
+        border: 1px solid #2a2a2a;
+        border-radius: 8px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-size: 13.5px;
+        line-height: 1.55;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        font-size: inherit;
+      }
+      .note {
+        font-size: 13.5px;
+        opacity: 0.7;
+        border-top: 1px solid #2a2a2a;
+        margin-top: 40px;
+        padding-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <article>
+      <a class="backlink" href="../">← Marble Love (live demo &amp; project page)</a>
+      <h1>
+        Finding an undocumented Atari Slapstic side-channel by differential
+        debugging in TypeScript
+      </h1>
+      <p class="lede">
+        A 126-byte mismatch in a playfield buffer, at exactly one frame, turned
+        out to be a 40-year-old hardware security chip leaking state through
+        the CPU's instruction prefetch. Here is how a function-by-function
+        reimplementation of <em>Marble Madness</em> (Atari, 1984), checked
+        against MAME byte for byte, surfaced a behavior that is not in the MAME
+        source or any datasheet I could find.
+      </p>
+
+      <h2>The project, briefly</h2>
+      <p>
+        <a href="https://github.com/magno73/marble-love">Marble Love</a> is a
+        from-scratch reimplementation of Marble Madness in TypeScript. It is
+        not an emulator. Instead of running the 68010 machine code on an
+        instruction core, each routine of the game program is
+        <strong>ported function by function</strong> from the disassembly into
+        readable TypeScript, and then checked against MAME as a behavioral
+        oracle.
+      </p>
+      <p>Two deliberate choices make the rest of this story possible:</p>
+      <ul>
+        <li>
+          <strong>Source-level, not cycle-accurate.</strong> The goal is a
+          legible model of the gameplay code tied to evidence, not a
+          timing-exact emulator. We guarantee the <em>observable state</em>
+          (the bytes written to work RAM, the playfield, sprite and alpha RAM)
+          matches at the verified points, and the <em>order</em> of side
+          effects; we do not promise cycle-exact bus timing.
+        </li>
+        <li>
+          <strong>MAME as the oracle.</strong> MAME already runs the original
+          ROM faithfully. So for any frame we can dump its RAM and compare ours
+          against it, byte by byte. That comparison is the engine of every
+          discovery here.
+        </li>
+      </ul>
+      <p>
+        Most retro reimplementations sit at one of two extremes. An
+        <strong>emulator</strong> runs the real machine code and is faithful by
+        construction, but the gameplay logic stays locked inside opaque
+        instruction execution — you can run it, not read it. A
+        <strong>visual clone</strong> is readable but invents its own logic, so
+        it is only as accurate as someone's eyeballs. The function-by-function
+        approach is a third option: the code is as legible as a clone, but
+        every routine is pinned to the original's observed behavior. The cost
+        is real — you port and verify hundreds of routines by hand — but the
+        payoff is that the gameplay is <em>both</em> readable <em>and</em>
+        checkable. The rest of this post is one thing that falls out of that
+        combination. Musashi (a 68000/68010 core) is also wired in as a
+        per-subroutine oracle, so individual ports can be diffed against the
+        real instruction semantics in isolation, not just at the whole-frame
+        level.
+      </p>
+
+      <h2>What a slapstic is</h2>
+      <p>
+        Atari System 1 cartridges protect part of their program ROM with a
+        custom chip called a <strong>slapstic</strong> (Marble Madness uses the
+        <code>137412-103</code>). It bank-switches a 32&nbsp;KB region
+        (<code>0x080000</code>–<code>0x087FFF</code>, four 8&nbsp;KB banks)
+        and, crucially, it is a little state machine that
+        <em>watches the addresses the CPU reads</em> in that window. A specific
+        dance of reads — a "reset" access, then magic <code>alt</code> values,
+        then a final read from a protected address pair — is what selects a
+        bank. Copy the ROM without reproducing the dance and you get the wrong
+        bank, which is exactly the point: it is a 1980s anti-piracy device.
+      </p>
+      <p>
+        To reimplement the game we modeled this chip as an FSM driven by the
+        addresses our port "accesses":
+      </p>
+      <pre><code>IDLE ──(reset access: 0x80000, low 15 bits = 0)──▶ ACTIVE
+ACTIVE ──(alt1..alt4 magic values)──▶ ALT_VALID
+ALT_VALID ──(protected pair read)──▶ BANK_COMMIT
+BANK_COMMIT ──(bank selected)──▶ IDLE</code></pre>
+      <p>
+        MAME implements the same FSM. So the two should agree — and for a long
+        time, in the region that mattered, they did.
+      </p>
+
+      <h2>The anomaly</h2>
+      <p>
+        The workflow for a hard divergence is blunt and effective. Pick a
+        frame, dump both sides, diff the RAM:
+      </p>
+      <pre><code># our state vs MAME at a target frame, byte for byte
+TARGET_FRAME=12950 npx tsx packages/cli/src/probe-diff-bytes.ts</code></pre>
+      <p>
+        At frame 12950 a residual would not close: <strong>126 bytes</strong>
+        of difference in the playfield RAM, concentrated in the tile-rendering
+        descriptors the game rebuilds that frame. (Downstream, by f13200, the
+        same root cause had grown to 414 bytes.) Everything upstream matched.
+        The routine that produced those descriptors read from the
+        slapstic-banked region — so the suspicion was immediate: we were
+        committing a different bank than the hardware.
+      </p>
+      <p>
+        But our slapstic FSM was a faithful port. It observed the protected
+        window exactly as documented: reset, alt, protected pair. The protected
+        reads alone produced bank <em>N</em>; MAME, from the same protected
+        reads, was using bank <em>M</em>.
+      </p>
+
+      <h2>The discovery</h2>
+      <p>
+        The leap was to stop trusting the documented window. On a 68010, the
+        CPU does <strong>instruction prefetch</strong>: it fetches ahead of the
+        program counter. Those fetches are real bus accesses with real
+        addresses — and the slapstic FSM is wired to the bus, not to the game's
+        intentions.
+      </p>
+      <p>
+        We logged every address the CPU's prefetch touched around the
+        divergence and fed those into the FSM as well. One of them lit up: the
+        prefetch of address <code>0x02ff5a</code>, inside
+        <code>FUN_2FF40</code>, <strong>matches the slapstic's
+        <code>alt1</code> pattern</strong> — and it happens <em>before</em> the
+        protected pair (<code>0x87a28</code> →
+        <code>0x87a48&nbsp;+&nbsp;idx*2</code>) is read. That stray prefetch
+        nudges the FSM into a different state, so the <em>same</em> protected
+        reads then commit a <em>different</em> bank.
+      </p>
+      <p>
+        In other words: the chip observes CPU prefetch <strong>outside</strong>
+        its protected ROM window, and that observation changes the bank it
+        selects. It is a hardware side channel. It is not described in the MAME
+        source (MAME happens to reproduce the effect because it models the bus
+        accesses, but it does not call it out), and I could not find it in any
+        public slapstic datasheet or write-up.
+      </p>
+      <p>
+        Modeling the prefetch into our FSM closed the 126-byte diff at f12950
+        and the 414-byte diff at f13200 to zero.
+      </p>
+      <pre><code># the regression test that pins the FSM, including the prefetch path
+npx vitest run packages/engine/test/slapstic-103.test.ts   # 12/12</code></pre>
+
+      <h2>The method, generalized</h2>
+      <p>Nothing about this was clever in isolation. It was the loop:</p>
+      <ol>
+        <li>
+          <strong>Have an oracle.</strong> MAME runs the real ROM. Any
+          divergence is a fact, not an opinion.
+        </li>
+        <li>
+          <strong>Diff state, not output.</strong> Comparing rendered frames
+          hides the cause; comparing the <em>bytes the program wrote</em>
+          points straight at the routine.
+        </li>
+        <li>
+          <strong>Bisect to a frame and a routine.</strong> The first frame
+          that differs, and the buffer it differs in, name the suspect.
+        </li>
+        <li>
+          <strong>Distrust the documentation at the point of
+          contradiction.</strong> The port was "correct" by the datasheet. The
+          datasheet was incomplete. The bus said so.
+        </li>
+        <li>
+          <strong>Re-pin with a test.</strong> A discovery you cannot re-run is
+          a story; one you can is a regression test.
+        </li>
+      </ol>
+      <p>
+        A readable port is what makes step 4 affordable. When the suspect
+        routine is a page of TypeScript you can read against the disassembly —
+        rather than opaque emulator internals — "what address would the real
+        CPU touch here, and who is watching the bus?" becomes a question you
+        can actually chase.
+      </p>
+
+      <h2>It generalizes: a second finding</h2>
+      <p>
+        One discovery is luck; two is a method. The same readability that
+        exposed the slapstic side channel also explains gameplay quirks that
+        have nothing to do with hardware.
+      </p>
+      <p>
+        The trackball routine (<code>FUN_00025DF6</code>) reads the per-frame
+        trackball delta, scales it, and applies it to the marble's position.
+        Reading the port, the final step is a single branch on the game's mode
+        byte (<code>0x400394</code>, equal to <code>level - 1</code>):
+      </p>
+      <pre><code>if (gameState === 4) {            // game mode 4 = the Silly Race (level 5)
+  pos += (delta &lt;&lt; 11);           // add
+} else {
+  pos -= (delta &lt;&lt; 11);           // every other level subtracts
+}</code></pre>
+      <p>
+        Adding rather than subtracting the same delta
+        <strong>inverts the marble's response</strong>. That one branch is the
+        entire "the marble fights you" feel of Marble Madness's gag level: same
+        physics, same input pipeline as every other level, with one sign flip
+        keyed on the level number. A decades-old gameplay gimmick reduced to a
+        branch you can point at — and a
+        <a
+          href="https://github.com/magno73/marble-love/blob/main/packages/engine/test/trackball-apply.test.ts"
+          >parity test</a
+        >
+        that makes the claim checkable rather than anecdotal.
+      </p>
+      <p>
+        The slapstic finding is a hardware secret; this is a design detail.
+        Both came out of the same loop, which is the point: a faithful, legible
+        model lets you ask "why does the game do <em>this</em>?" and answer it
+        with a line number.
+      </p>
+
+      <h2>On the workflow behind it</h2>
+      <p>
+        Much of this reimplementation, including the differential-debugging
+        loops, was driven with an LLM agent in the loop. That is a tool, not
+        the point. The interesting artifact is not "AI wrote a game"; it is
+        that a faithful, <em>evidence-checked</em> model of a 1984 program is
+        legible enough that a 40-year-old hardware quirk falls out of a byte
+        diff. The agent loop helped sustain the tedious diff-bisect-explain
+        cycle; the oracle and the tests are what make any of it trustworthy.
+      </p>
+
+      <h2>Try it / read more</h2>
+      <ul>
+        <li>
+          <a href="../">Live ROM-free demo and project page</a>
+        </li>
+        <li>
+          Repo:
+          <a href="https://github.com/magno73/marble-love"
+            >github.com/magno73/marble-love</a
+          >
+        </li>
+        <li>
+          What is bit-perfect vs behavioral vs heuristic, with a command to
+          verify each:
+          <a
+            href="https://github.com/magno73/marble-love/blob/main/docs/STATUS.md"
+            >docs/STATUS.md</a
+          >
+        </li>
+        <li>
+          The finding, with exact addresses and commits:
+          <a
+            href="https://github.com/magno73/marble-love/blob/main/docs/findings/slapstic-prefetch-side-channel.md"
+            >docs/findings/slapstic-prefetch-side-channel.md</a
+          >
+        </li>
+      </ul>
+      <p>
+        You need your own legally dumped ROMs to run real gameplay; the repo
+        and this site ship no game assets.
+      </p>
+
+      <p class="note">
+        Reproducibility note: the commands above were run against the repo at
+        publication time. <code>slapstic-103.test.ts</code> reports 12/12; the
+        byte-diff probe and the slapstic fix commit (<code>4a5d27b</code>) are
+        in the history.
+      </p>
+    </article>
+  </body>
+</html>

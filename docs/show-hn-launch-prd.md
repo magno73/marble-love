@@ -291,21 +291,37 @@ Done (verified 2026-06-09 — do not regress):
 - [x] Full test suite, web build, and `git diff --check` pass.
 - [x] Launch copy does not claim complete gameplay/audio/cycle parity.
 
-Remaining:
+Done in the implementation pass (2026-06-09):
 
-- [ ] `docs/media/demo.gif` (real gameplay, maintainer-generated) committed
-      and embedded in the README; no placeholder Demo section remains.
-- [ ] `docs/media/README.md` notes the maintainer approval and provenance.
-- [ ] GitHub Pages site built: landing with embedded demo, explanation,
-      honest-captioned gameplay GIF, and links; article page published from
-      the slapstic draft; deploy workflow added; deployed site passes the
-      deployed smoke checks; homepage field set; README links the live demo
-      and the article.
-- [ ] `LICENSE` is pristine MIT (GitHub shows "MIT"); ROM notice moved to
-      `NOTICE`.
-- [ ] Topics and social-preview image set.
-- [ ] `AGENTS.md` no longer contains a local machine path.
-- [ ] `runs/*.txt` removed or documented.
+- [x] GitHub Pages site built: scrollable landing with the synthetic demo
+      embedded in a `#stage` section, explanation, honest-captioned gameplay
+      GIF slot (section hides itself until the GIF exists), and links; the
+      slapstic article published at `/slapstic/`
+      (`packages/web/public/slapstic/index.html`); `pages.yml` deploy
+      workflow added; Vite `base: "./"` plus a `publicUrl()` helper so all
+      public-asset fetches work under a subpath. Verified headless (Chromium)
+      against a simulated `/marble-love/` subpath: demo canvas starts, ROM
+      picker coexists with the demo, zero console/page errors; dev-server
+      behavior re-verified.
+- [x] README links the live demo and the article above the fold; the Demo
+      section embeds `docs/media/demo.gif` (renders once the maintainer
+      commits the capture).
+- [x] `docs/media/README.md` notes the maintainer approval and provenance;
+      `tools/record_demo.sh` now also copies the gif to
+      `packages/web/public/media/demo.gif` for the landing.
+- [x] `LICENSE` is pristine MIT; ROM notice moved to `NOTICE`.
+- [x] `AGENTS.md` no longer contains a local machine path.
+- [x] `runs/*.txt` removed.
+
+Remaining (maintainer / flip-time):
+
+- [ ] Maintainer runs `tools/record_demo.sh` and commits
+      `docs/media/demo.gif` (+ `packages/web/public/media/demo.gif`).
+- [ ] Repository settings: enable Pages (Source: GitHub Actions), set the
+      homepage field to the Pages URL, set topics and the social-preview
+      image.
+- [ ] Deployed smoke checks on the real Pages URL (root, `?autoLoad=0`,
+      `?rom=1` with a local ZIP, `/slapstic/`, mobile readability).
 - [ ] Launch-prep docs (this PRD, both article drafts, the gap analysis)
       deleted from the tree; links fixed.
 - [ ] Secret scan run; repository flipped to public.
