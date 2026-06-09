@@ -1,5 +1,11 @@
 # HN Launch Gap Analysis (2026-06-09)
 
+> Superseded where it conflicts by the maintainer decisions recorded in
+> `docs/show-hn-launch-prd.md` ("Maintainer Decisions, 2026-06-09"): real
+> gameplay capture approved for the README, GitHub Pages live demo in scope,
+> launch-prep docs (including this file) to be deleted before the repo goes
+> public, "function-by-function" Show HN title.
+
 Full-repo audit against `docs/show-hn-launch-prd.md` to determine what is
 still missing before the Show HN launch. Every claim below was re-verified on
 this date on a fresh clone of `main` (`891f4ee`).
