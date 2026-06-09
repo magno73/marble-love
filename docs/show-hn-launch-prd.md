@@ -32,16 +32,25 @@ These supersede any earlier open questions in this document:
    publishing a ROM-backed gameplay capture (GIF/MP4 containing original game
    graphics) in the README. The maintainer generates it locally with
    `tools/record_demo.sh` using legally owned ROMs.
-2. **Live demo: GitHub Pages.** The ROM-free synthetic demo path is deployed
-   to GitHub Pages and set as the repository homepage. The Show HN post links
-   to it.
-3. **Launch-prep docs are removed before the repo goes public.** This PRD,
+2. **Live site: GitHub Pages, landing + embedded demo on one page.** The
+   deployed root is a single page: the ROM-free demo canvas above the fold,
+   with project context below (what it is, the slapstic finding, parity
+   matrix, repo link, ROM/legal note). Set as the repository homepage; the
+   Show HN post links to it.
+3. **The slapstic article is published on the Pages site** (e.g.
+   `/slapstic/`). Its source lives in the repo as site content; the working
+   draft in `docs/articles/` is deleted pre-flip once the final version is
+   in place.
+4. **The approved real-gameplay GIF also appears on the landing page**, with
+   an honest caption distinguishing it from the clickable ROM-free demo.
+5. **Launch-prep docs are removed before the repo goes public.** This PRD,
    `docs/articles/show-hn-post-draft.md`,
-   `docs/articles/slapstic-finding-hn-draft.md`, and
-   `docs/hn-launch-gap-analysis.md` are deleted from the tree before the
-   visibility flip (they remain in git history; no history rewrite). The
-   technical finding `docs/findings/slapstic-prefetch-side-channel.md` stays.
-4. **Show HN title:** the "function-by-function" variant (see Draft Show HN
+   `docs/articles/slapstic-finding-hn-draft.md` (after its content ships as
+   the published site article), and `docs/hn-launch-gap-analysis.md` are
+   deleted from the tree before the visibility flip (they remain in git
+   history; no history rewrite). The technical finding
+   `docs/findings/slapstic-prefetch-side-channel.md` stays.
+6. **Show HN title:** the "function-by-function" variant (see Draft Show HN
    Copy below).
 
 ## Current Readiness Summary
@@ -83,8 +92,9 @@ Remaining launch blockers:
 1. Make the repo understandable in under 30 seconds.
 2. Ship a real-gameplay demo capture in the README (maintainer-approved) and
    keep the legal, ROM-free demo path working after `npm ci`.
-3. Deploy the ROM-free demo to GitHub Pages and link it from the README and
-   the Show HN post.
+3. Deploy a GitHub Pages site — embedded ROM-free demo, project explanation,
+   and the published slapstic article — and link it from the README and the
+   Show HN post.
 4. Make the missing-ROM path clear and non-alarming. *(Done — keep it that
    way.)*
 5. Keep ROM-backed loading local, explicit, and privacy-preserving.
@@ -122,27 +132,65 @@ Remaining launch blockers:
 - The ROM-free synthetic path (`?autoLoad=0`) remains documented in the
   quickstart as the no-ROM smoke check.
 
-### Hosted Live Demo (GitHub Pages)
+### GitHub Pages Site (landing + embedded demo + article)
+
+The deployed site is not the bare app: an HN visitor who clicks "live demo"
+must immediately understand what they are looking at and why it is
+interesting.
+
+Root page (single page, demo-first):
+
+- The ROM-free demo canvas is visible above the fold and starts without any
+  ROM. The existing "CLASSIC FRAME DEMO" labeling stays so nobody mistakes
+  the synthetic path for the original game.
+- Below the canvas (scroll), in sober HN-friendly prose:
+  - One short paragraph: source-level TypeScript reimplementation, ported
+    function-by-function from the 68010 disassembly, checked against MAME as
+    the oracle — not an emulator, not a MAME replacement.
+  - The hook: two or three sentences on the slapstic prefetch side-channel,
+    linking to the site article page.
+  - The approved real-gameplay GIF with an honest caption, e.g. "Real
+    gameplay (requires your own legally dumped ROMs) — the live demo above is
+    the ROM-free synthetic path."
+  - Links: GitHub repo, `docs/STATUS.md` parity matrix, the finding doc.
+  - ROM/legal note: no game assets are shipped; the ROM picker reads local
+    ZIPs in the browser only, nothing is uploaded.
+  - Controls summary for visitors who load their own ROMs.
+- The manual ROM picker remains reachable from the page (the existing
+  `?rom=1` flow or an equivalent visible control).
+
+Article page:
+
+- The finalized slapstic article is published as a page of the site (e.g.
+  `/slapstic/`), produced from `docs/articles/slapstic-finding-hn-draft.md`.
+  Its source moves into the web package as site content; the draft is then
+  deleted from `docs/articles/` (see Pre-Flip Cleanup).
+- The article keeps the reproduce-commands and links back to the repo,
+  `docs/findings/slapstic-prefetch-side-channel.md`, and the landing page.
+
+Deployment mechanics:
 
 - Add a Pages deploy workflow (e.g. `.github/workflows/pages.yml`) that builds
   `@marble-love/web` and publishes `dist/`.
 - Configure Vite `base` so the app works under the
   `https://<user>.github.io/marble-love/` subpath; verify the synthetic demo,
-  the manual ROM picker, and the diagnostic-fetch allowlist all behave under
-  that base path.
-- The deployed root must land on the ROM-free experience (synthetic demo
-  and/or the clear "no local ROMs" message + Load ROMs picker) with no console
-  errors. ROM loading stays strictly local to the visitor's browser.
+  the manual ROM picker, the diagnostic-fetch allowlist, and all internal
+  links (landing ↔ article) behave under that base path.
+- ROM loading stays strictly local to the visitor's browser.
 - Set the repository homepage field to the Pages URL.
 - README links the live demo above the fold.
 
 Acceptance criteria:
 
-- Pages URL loads the synthetic demo with no console errors.
+- Pages root loads the embedded synthetic demo with no console errors, and
+  the explanation/links are present below it.
+- The article page renders and is linked from the landing page and README.
+- The landing GIF carries the honest real-vs-synthetic caption.
 - The ROM picker works on the deployed site with a local ZIP (manual check by
   the maintainer; ROM data must not leave the browser).
 - `?autoLoad=1` on the deployed site does not produce a misleading error when
   no `/roms/` assets exist.
+- The page is readable on mobile (HN traffic is heavily mobile).
 
 ### License Detection Fix
 
@@ -169,13 +217,15 @@ Ordered launch sequence:
 1. License/NOTICE split, AGENTS.md path, `runs/` tidy (minutes).
 2. Maintainer generates and commits the gameplay capture; README Demo section
    updated.
-3. Pages workflow + Vite base + homepage + topics + social preview.
+3. Build the Pages site: landing with embedded demo + context + GIF, article
+   page from the slapstic draft, deploy workflow + Vite base; then homepage
+   field, topics, social preview.
 4. Delete launch-prep docs from the tree: this PRD,
    `docs/articles/show-hn-post-draft.md`,
-   `docs/articles/slapstic-finding-hn-draft.md`,
-   `docs/hn-launch-gap-analysis.md`. Keep
-   `docs/findings/slapstic-prefetch-side-channel.md` and `docs/STATUS.md`.
-   Fix any links that pointed at the removed files.
+   `docs/articles/slapstic-finding-hn-draft.md` (only after its content is
+   published as the site article page), `docs/hn-launch-gap-analysis.md`.
+   Keep `docs/findings/slapstic-prefetch-side-channel.md` and
+   `docs/STATUS.md`. Fix any links that pointed at the removed files.
 5. Run GitHub secret scanning; final validation pass (commands below).
 6. Flip the repository to public.
 7. Post the Show HN (copy below), from the maintainer's own account, ideally
@@ -223,6 +273,7 @@ Deployed smoke (after Pages deploy):
 https://<user>.github.io/marble-love/
 https://<user>.github.io/marble-love/?autoLoad=0
 https://<user>.github.io/marble-love/?rom=1   (manual ROM picker, local ZIP)
+https://<user>.github.io/marble-love/slapstic/   (published article)
 ```
 
 ## Acceptance Checklist
@@ -245,8 +296,11 @@ Remaining:
 - [ ] `docs/media/demo.gif` (real gameplay, maintainer-generated) committed
       and embedded in the README; no placeholder Demo section remains.
 - [ ] `docs/media/README.md` notes the maintainer approval and provenance.
-- [ ] GitHub Pages deploy workflow added; deployed site passes the deployed
-      smoke checks; homepage field set; README links the live demo.
+- [ ] GitHub Pages site built: landing with embedded demo, explanation,
+      honest-captioned gameplay GIF, and links; article page published from
+      the slapstic draft; deploy workflow added; deployed site passes the
+      deployed smoke checks; homepage field set; README links the live demo
+      and the article.
 - [ ] `LICENSE` is pristine MIT (GitHub shows "MIT"); ROM notice moved to
       `NOTICE`.
 - [ ] Topics and social-preview image set.
@@ -281,9 +335,10 @@ original game logic readable and testable. One byte-diff led to an
 undocumented slapstic/prefetch side-channel; the repo includes the write-up,
 parity matrix, and commands to reproduce the claims.
 
-There is a ROM-free demo running on GitHub Pages (link in the README). Real
-gameplay requires legally obtained ROMs, loaded locally in your browser. Known
-gameplay/audio gaps are documented rather than hidden.
+There is a ROM-free demo plus a write-up of the slapstic finding on the
+project's GitHub Pages site (linked in the README). Real gameplay requires
+legally obtained ROMs, loaded locally in your browser. Known gameplay/audio
+gaps are documented rather than hidden.
 ```
 
 Keep the copy sober and falsifiable; no marketing language. Expected top
