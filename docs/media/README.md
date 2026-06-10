@@ -7,10 +7,9 @@ Demo media for the README and the GitHub Pages landing page:
   `packages/web/public/media/demo.gif` for the Pages landing page
 
 Provenance: the committed capture is **generated and approved by the
-maintainer** from legally owned ROM ZIPs (decision recorded in
-`docs/show-hn-launch-prd.md`). Agents must not generate or commit ROM-backed
-media themselves: producing it needs local ROMs that are not in the
-repository.
+maintainer** from legally owned ROM ZIPs. Agents must not generate or commit
+ROM-backed media themselves: producing it needs local ROMs that are not in
+the repository.
 
 The maintainer generates the files with:
 
