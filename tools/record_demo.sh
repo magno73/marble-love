@@ -42,9 +42,12 @@ for _ in $(seq 1 60); do
 done
 
 # 2. Capture frames via puppeteer (Chrome DevTools screencast).
+# DEMO_QUERY picks what to capture (default: boot flow). For live gameplay
+# use e.g.: DEMO_QUERY="?autoLoad=1&startLevel=1&sound=0"
+QUERY="${DEMO_QUERY:-?autoLoad=1}"
 DEMO_FRAMES_DIR="$FRAMES" \
 DEMO_SECONDS="$SECONDS_LEN" \
-DEMO_URL="http://127.0.0.1:$PORT/?autoLoad=1" \
+DEMO_URL="http://127.0.0.1:$PORT/$QUERY" \
   node "$ROOT/tools/record_demo.mjs"
 
 # 3. Assemble an mp4 and a small (<= ~6 MB) palette-based gif.
