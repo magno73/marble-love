@@ -58,11 +58,11 @@ ffmpeg -y -i "$OUTDIR/demo.mp4" -vf "fps=15,scale=480:-1:flags=lanczos,palettege
 ffmpeg -y -i "$OUTDIR/demo.mp4" -i /tmp/marble-demo-pal.png \
   -lavfi "fps=15,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse" "$OUTDIR/demo.gif"
 
-# 4. Copy the gif where the Pages landing serves it (media/demo.gif).
+# 4. Copy media where the Pages landing serves it (media/demo.mp4).
 WEB_MEDIA="$ROOT/packages/web/public/media"
 mkdir -p "$WEB_MEDIA"
-cp "$OUTDIR/demo.gif" "$WEB_MEDIA/demo.gif"
+cp "$OUTDIR/demo.mp4" "$WEB_MEDIA/demo.mp4"
 
 echo "wrote $OUTDIR/demo.mp4 and $OUTDIR/demo.gif"
-echo "copied demo.gif to $WEB_MEDIA/demo.gif (used by the Pages landing page)"
+echo "copied demo.mp4 to $WEB_MEDIA/demo.mp4 (used by the Pages landing page)"
 echo "if demo.gif > 6 MB, lower DEMO_SECONDS or the fps/scale in this script."

@@ -35,7 +35,14 @@ active work.
 
 ## Demo
 
-![Marble Love gameplay](docs/media/demo.gif)
+<!-- To get an inline video player here, edit this file on github.com and
+     drag docs/media/demo.mp4 into the editor below this comment: GitHub
+     uploads it and inserts a playable user-attachments URL. A committed
+     .mp4 path does not render as a player in READMEs. -->
+
+A gameplay capture plays on the
+[project site](https://magno73.github.io/marble-love/#gameplay); the source
+video is committed at [docs/media/demo.mp4](docs/media/demo.mp4).
 
 *Real gameplay, captured by the maintainer from legally owned ROMs (see
 [docs/media/README.md](docs/media/README.md) for provenance and the capture

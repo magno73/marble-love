@@ -107,10 +107,12 @@
       figure {
         margin: 0;
       }
-      figure img {
+      figure img,
+      figure video {
         width: 100%;
         border-radius: 8px;
         border: 1px solid #2a2a2a;
+        display: block;
       }
       figcaption {
         font-size: 13px;
@@ -253,12 +255,15 @@
       <section class="content" id="gameplay">
         <h2>Real gameplay</h2>
         <figure id="gameplay-figure">
-          <img
-            src="media/demo.gif"
-            alt="Marble Madness gameplay running in Marble Love"
-            loading="lazy"
+          <video
+            src="media/demo.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            controls
             onerror="const s = this.closest('section'); if (s) s.style.display = 'none';"
-          />
+          ></video>
           <figcaption>
             Real gameplay, captured locally with legally owned ROMs. No game
             assets ship with this site or the repository; load your own ROMs
