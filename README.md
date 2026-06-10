@@ -35,10 +35,8 @@ active work.
 
 ## Demo
 
-<!-- To get an inline video player here, edit this file on github.com and
-     drag docs/media/demo.mp4 into the editor below this comment: GitHub
-     uploads it and inserts a playable user-attachments URL. A committed
-     .mp4 path does not render as a player in READMEs. -->
+https://github.com/user-attachments/assets/090ffd1b-7a1b-486f-a438-ae04cfbb76e4
+
 
 A gameplay capture plays on the
 [project site](https://magno73.github.io/marble-love/#gameplay); the source
