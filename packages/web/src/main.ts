@@ -1258,23 +1258,13 @@ fileInput.addEventListener("change", async () => {
 // with the real game in the same stage.
 let stopActiveGame: (() => void) | undefined;
 
-// On the bare root URL the stage shows a placeholder with explicit choices
-// (load ROMs / run the synthetic demo) instead of autostarting the demo,
-// which first-time visitors read as a broken game. Any explicit URL
-// parameter (e.g. the documented ?autoLoad=0 smoke check) keeps the
-// immediate start behavior.
-const stageRunDemoBtn = document.getElementById("stage-run-demo");
-const stageLoadRomsBtn = document.getElementById("stage-load-roms");
-stageLoadRomsBtn?.addEventListener("click", () => fileInput.click());
-stageRunDemoBtn?.addEventListener("click", () => {
-  if (useSyntheticDemoFrame) void startGame();
-});
+// On the bare root URL the stage shows the ROM-loading card instead of
+// autostarting the synthetic demo, which first-time visitors read as a
+// broken game. Any explicit URL parameter (e.g. the documented ?autoLoad=0
+// smoke check) keeps the immediate start behavior.
 const autoStartSyntheticDemo = useSyntheticDemoFrame && window.location.search !== "";
 
 if (autoStartSyntheticDemo || (import.meta.env.DEV && (forceEngineDiagnosticFrame || forceDemoFrame))) {
-  // The synthetic demo coexists with the in-page ROM picker (the landing
-  // keeps the picker section below the stage); diagnostic frames still take
-  // the page for themselves.
   if (!useSyntheticDemoFrame) splash.remove();
   void startGame();
 }

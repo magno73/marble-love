@@ -58,51 +58,12 @@
       #stage-placeholder {
         position: relative;
         z-index: 4;
-        max-width: 480px;
-        text-align: center;
-        padding: 28px 24px;
-        border: 1px solid #2a2a2a;
-        border-radius: 12px;
-        background: #111;
         margin: 16px;
-      }
-      #stage-placeholder h1 {
-        font-weight: 700;
-        font-size: 26px;
-        margin: 0 0 12px;
-      }
-      #stage-placeholder p {
-        font-size: 14px;
-        line-height: 1.55;
-        opacity: 0.85;
-        margin: 0 0 8px;
       }
       #stage-placeholder .hint {
         font-size: 12.5px;
         opacity: 0.6;
         margin: 14px 0 0;
-      }
-      .stage-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-top: 16px;
-      }
-      .stage-actions button {
-        padding: 12px 20px;
-        background: #f4f4f4;
-        color: #0a0a0a;
-        border: 0;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      .stage-actions button.secondary {
-        background: #1c1c1c;
-        color: #f4f4f4;
-        border: 1px solid #444;
       }
       #stage-badge {
         position: absolute;
@@ -218,24 +179,28 @@
     <main>
       <section id="stage" aria-label="Game stage">
         <div id="stage-placeholder">
-          <h1>Marble Love</h1>
-          <p>
-            This stage runs the game. Load your own legally dumped ROM ZIPs to
-            play the real <em>Marble Madness</em> — everything stays in your
-            browser, nothing is uploaded — or run the ROM-free synthetic demo.
-          </p>
-          <div class="stage-actions">
-            <button id="stage-load-roms" type="button">Load your ROMs</button>
-            <button id="stage-run-demo" type="button" class="secondary">
-              Run ROM-free demo
-            </button>
+          <div class="splash" id="splash">
+            <h1>Marble Love</h1>
+            <p>
+              This stage runs the game. Load your own legally dumped MAME ROM
+              ZIPs — <code>marble.zip</code> and <code>atarisy1.zip</code>,
+              selected together — to play the real <em>Marble Madness</em>.
+              Everything stays in your browser; nothing is uploaded.
+            </p>
+            <label>
+              <input id="rom-input" type="file" accept=".zip" multiple />
+              <button id="rom-btn" type="button">Load your ROMs</button>
+            </label>
+            <p class="status" id="rom-status" data-tone="idle"></p>
+            <p class="hint">
+              Scroll down for what this project is and the Slapstic finding.
+            </p>
           </div>
-          <p class="hint">Scroll down for what this project is and the Slapstic finding.</p>
         </div>
         <div id="stage-badge" style="display: none">
           <strong>Marble Love</strong> — ROM-free synthetic demo (not the
-          original game). Scroll down for the project story, or load your own
-          ROMs below to play the real thing in this stage.
+          original game). Open the
+          <a href="./">page root</a> to load your own ROMs.
         </div>
       </section>
 
@@ -295,10 +260,9 @@
             onerror="const s = this.closest('section'); if (s) s.style.display = 'none';"
           />
           <figcaption>
-            Real gameplay, captured locally with legally owned ROMs — the live
-            demo at the top of this page is the ROM-free synthetic path. No
-            game assets ship with this site or the repository; ROMs you load
-            stay in your browser.
+            Real gameplay, captured locally with legally owned ROMs. No game
+            assets ship with this site or the repository; load your own ROMs
+            in the stage above to play, and they stay in your browser.
           </figcaption>
         </figure>
       </section>
@@ -308,24 +272,14 @@
         <p>
           The repository ships no copyrighted game data. If you legally own
           MAME ROM ZIPs for <code>marble</code> (and the Atari System&nbsp;1
-          BIOS, <code>atarisy1.zip</code>), you can load them here:
-          <strong>everything is read locally in your browser; nothing is
+          BIOS, <code>atarisy1.zip</code>), load them with the button in the
+          stage at the top of this page — select both ZIPs together
+          (Cmd/Ctrl-click). Files are validated by name, size, and CRC32, then
+          the game starts right there.
+          <strong>Everything is read locally in your browser; nothing is
           uploaded.</strong>
         </p>
-        <div class="splash" id="splash">
-          <h1>Load ROMs</h1>
-          <p>
-            Select <code>marble.zip</code> and <code>atarisy1.zip</code>
-            together (Cmd/Ctrl-click). Files are validated by name, size, and
-            CRC32, then the game starts in the stage above.
-          </p>
-          <label>
-            <input id="rom-input" type="file" accept=".zip" multiple />
-            <button id="rom-btn" type="button">Load ROMs</button>
-          </label>
-          <p class="status" id="rom-status" data-tone="idle"></p>
-        </div>
-        <p style="margin-top: 16px">
+        <p>
           Controls: <code>5</code>/<code>C</code> insert coin,
           <code>Enter</code>/<code>Space</code> start; mouse, WASD, arrow keys,
           or gamepad move the marble. The first coin/start/click also unlocks

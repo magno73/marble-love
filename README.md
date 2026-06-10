@@ -1,6 +1,6 @@
 # Marble Love
 
-**[Live demo (ROM-free) →](https://magno73.github.io/marble-love/)** ·
+**[Try it in the browser →](https://magno73.github.io/marble-love/)** ·
 **[Status & parity matrix →](docs/STATUS.md)** ·
 **[The Slapstic side-channel write-up →](https://magno73.github.io/marble-love/slapstic/)**
 
@@ -39,8 +39,10 @@ active work.
 
 *Real gameplay, captured by the maintainer from legally owned ROMs (see
 [docs/media/README.md](docs/media/README.md) for provenance and the capture
-pipeline). For a demo you can run right now without ROMs, open the
-[ROM-free live demo](https://magno73.github.io/marble-love/).*
+pipeline). To play with your own ROMs in the browser, open the
+[project site](https://magno73.github.io/marble-love/); for the ROM-free
+synthetic smoke path, add
+[`?autoLoad=0`](https://magno73.github.io/marble-love/?autoLoad=0).*
 
 ## What Works
 
