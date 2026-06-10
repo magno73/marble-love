@@ -4,6 +4,7 @@ import {
   initInput,
   isCoinKey,
   isStartKey,
+  keyboardRampStep,
   mapLiveScreenDeltaToTrackballDelta,
   normalizeKeyboardTrackballStep,
   normalizePointerTrackballScale,
@@ -52,6 +53,51 @@ describe("browser input mapping", () => {
     expect(normalizePointerTrackballScale(1.5)).toBe(1.5);
     expect(normalizePointerTrackballScale(0)).toBe(0.25);
     expect(normalizePointerTrackballScale(999)).toBe(8);
+  });
+
+  it("ramps the keyboard step on a sustained hold, keeping taps at the base step", () => {
+    // Tap window (~0.5 s): base step, unchanged fine control.
+    expect(keyboardRampStep(24, 1)).toBe(24);
+    expect(keyboardRampStep(24, 30)).toBe(24);
+    // Ramp: grows linearly after the delay...
+    expect(keyboardRampStep(24, 31)).toBeGreaterThan(24);
+    expect(keyboardRampStep(24, 53)).toBe(44); // midpoint of the 45-frame ramp
+    // ...and saturates at the trackball ceiling for long climbs.
+    expect(keyboardRampStep(24, 75)).toBe(64);
+    expect(keyboardRampStep(24, 600)).toBe(64);
+    // A base step already at the ceiling never ramps.
+    expect(keyboardRampStep(64, 600)).toBe(64);
+  });
+
+  it("delivers the ramped step through live polling on a long hold", () => {
+    type KeyHandler = (event: { key: string; repeat?: boolean; preventDefault(): void }) => void;
+    const listeners: Record<string, KeyHandler[]> = {};
+    vi.stubGlobal("window", {
+      addEventListener(type: string, handler: KeyHandler) {
+        listeners[type] ??= [];
+        listeners[type].push(handler);
+      },
+    });
+    vi.stubGlobal("document", {
+      pointerLockElement: null,
+      body: { requestPointerLock: undefined },
+    });
+    vi.stubGlobal("navigator", {
+      getGamepads: () => [],
+    });
+
+    const input = initInput();
+    for (const handler of listeners.keydown ?? []) {
+      handler({ key: "ArrowRight", repeat: false, preventDefault() {} });
+    }
+
+    // First polls deliver the base step (24)...
+    let prev = input.consumeP1X();
+    expect((0xff - prev) & 0xff).toBe(24);
+    // ...and after enough held frames each poll delivers the ceiling (64).
+    for (let i = 0; i < 90; i += 1) prev = input.consumeP1X();
+    const next = input.consumeP1X();
+    expect((prev - next) & 0xff).toBe(64);
   });
 
   it("uses configured keyboard step for live input", () => {
