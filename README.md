@@ -236,6 +236,12 @@ endorsed by Atari or any current rights holder.
 Users are responsible for obtaining their own legal ROM dumps. The browser ROM
 loader reads ZIP files locally; ROM data is not uploaded by the application.
 
+## Author
+
+Marble Love is a personal project by
+[Marco Magnocavallo](https://www.magno.me), an entrepreneur in Milan who has
+been writing software since the early '90s.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
