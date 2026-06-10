@@ -21,12 +21,16 @@
  */
 
 // Keyboard is digital, so — like MAME's `keydelta` for an analog port — a held
-// key adds a constant trackball step every frame. No invented acceleration
-// curve: the flat-vs-climb trade-off is inherent to digitally driving an analog
-// trackball game, exactly as it is in MAME. Default 24 is tuned by feel (clears
-// climbs while staying controllable); override via ?keyboardStep.
+// key adds a trackball step every frame. Taps use the base step (default 24,
+// tuned by feel; override via ?keyboardStep). A key held beyond a short delay
+// ramps the step up to the trackball ceiling: a physical trackball can be
+// spun hard, and some spots genuinely need that (the Silly Race counter-slope
+// climb is unpassable at a constant 24), so a sustained hold is mapped to a
+// sustained hard spin while short presses keep their fine control.
 const DEFAULT_KEYBOARD_TRACKBALL_EQUIV = 24;
 const MAX_KEYBOARD_TRACKBALL_EQUIV = 64;
+const KEYBOARD_RAMP_DELAY_FRAMES = 30; // ~0.5 s at 60 fps before ramping
+const KEYBOARD_RAMP_FRAMES = 45; // frames from ramp start to the ceiling
 // Pointer (mouse/touch) is analog — the faithful analogue of the physical
 // trackball. `scale` is its sensitivity (trackball counts per screen pixel), the
 // counterpart of MAME's PORT_SENSITIVITY. Default 1 (1:1) is tuned by feel;
@@ -77,6 +81,19 @@ export function normalizeKeyboardTrackballStep(value: number | undefined): numbe
 export function normalizePointerTrackballScale(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) return DEFAULT_POINTER_TRACKBALL_SCALE;
   return Math.max(MIN_POINTER_TRACKBALL_SCALE, Math.min(MAX_POINTER_TRACKBALL_SCALE, value));
+}
+
+/**
+ * Per-frame keyboard trackball step for a direction held `framesHeld` frames:
+ * the base step within the tap window, then a linear ramp to the trackball
+ * ceiling so long holds deliver a hard sustained spin.
+ */
+export function keyboardRampStep(baseStep: number, framesHeld: number): number {
+  if (framesHeld <= KEYBOARD_RAMP_DELAY_FRAMES || baseStep >= MAX_KEYBOARD_TRACKBALL_EQUIV) {
+    return baseStep;
+  }
+  const t = Math.min(1, (framesHeld - KEYBOARD_RAMP_DELAY_FRAMES) / KEYBOARD_RAMP_FRAMES);
+  return Math.round(baseStep + t * (MAX_KEYBOARD_TRACKBALL_EQUIV - baseStep));
 }
 
 export function rotateMarbleTrackballDelta(dx: number, dy: number): { x: number; y: number } {
@@ -187,12 +204,18 @@ export function initInput(options: InputOptions = {}): InputState {
     lastTouch = null;
   });
 
+  const keyboardHeldFrames = { left: 0, right: 0, up: 0, down: 0 };
+  function keyboardDirectionStep(active: boolean, dir: keyof typeof keyboardHeldFrames): number {
+    keyboardHeldFrames[dir] = active ? keyboardHeldFrames[dir] + 1 : 0;
+    return active ? keyboardRampStep(keyboardTrackballStep, keyboardHeldFrames[dir]) : 0;
+  }
+
   function pollKeyboardAndGamepad(): void {
     let dx = 0, dy = 0;
-    if (keys.has("arrowleft")  || keys.has("a")) dx -= keyboardTrackballStep;
-    if (keys.has("arrowright") || keys.has("d")) dx += keyboardTrackballStep;
-    if (keys.has("arrowup")    || keys.has("w")) dy -= keyboardTrackballStep;
-    if (keys.has("arrowdown")  || keys.has("s")) dy += keyboardTrackballStep;
+    dx -= keyboardDirectionStep(keys.has("arrowleft") || keys.has("a"), "left");
+    dx += keyboardDirectionStep(keys.has("arrowright") || keys.has("d"), "right");
+    dy -= keyboardDirectionStep(keys.has("arrowup") || keys.has("w"), "up");
+    dy += keyboardDirectionStep(keys.has("arrowdown") || keys.has("s"), "down");
     const gp = navigator.getGamepads?.()[0];
     if (gp) {
       dx += Math.round((gp.axes[2] ?? 0) * keyboardTrackballStep);
