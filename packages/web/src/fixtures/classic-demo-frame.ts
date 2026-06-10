@@ -5,7 +5,6 @@ type Frame = renderNs.Frame;
 type PaletteEntry = renderNs.PaletteEntry;
 type TileCommand = renderNs.TileCommand;
 type SpriteCommand = renderNs.SpriteCommand;
-type AlphaCommand = renderNs.AlphaCommand;
 
 const TILE_SIZE = 8;
 const NATIVE_WIDTH = 336;
@@ -129,37 +128,6 @@ function buildSprites(frameNumber: number): SpriteCommand[] {
   ];
 }
 
-function buildAlpha(): AlphaCommand[] {
-  const alpha: AlphaCommand[] = [];
-  const topText = "1UP   000000   TIME 60";
-  const bottomText = "CLASSIC FRAME DEMO";
-
-  for (let i = 0; i < topText.length; i += 1) {
-    if (topText[i] !== " ") {
-      alpha.push({
-        tileIndex: topText.charCodeAt(i),
-        x: 8 + i * TILE_SIZE,
-        y: 8,
-        paletteIndex: 7,
-        opaque: false,
-      });
-    }
-  }
-
-  for (let i = 0; i < bottomText.length; i += 1) {
-    if (bottomText[i] !== " ") {
-      alpha.push({
-        tileIndex: bottomText.charCodeAt(i),
-        x: 8 + i * TILE_SIZE,
-        y: NATIVE_HEIGHT - 18,
-        paletteIndex: 5,
-        opaque: false,
-      });
-    }
-  }
-
-  return alpha;
-}
 
 export function buildClassicDemoFrame(frameNumber: number): Frame {
   return {
@@ -169,7 +137,10 @@ export function buildClassicDemoFrame(frameNumber: number): Frame {
     palette,
     playfield: buildPlayfield(frameNumber),
     sprites: buildSprites(frameNumber),
-    alpha: buildAlpha(),
+    // No HUD text: without ROM graphics, alpha tiles render as synthetic
+    // noise that reads as corrupted pixels. The landing page badge labels
+    // the demo instead.
+    alpha: [],
     debugLabel: "synthetic-classic-demo",
   };
 }

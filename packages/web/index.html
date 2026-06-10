@@ -55,6 +55,55 @@
         place-items: center;
         overflow: hidden;
       }
+      #stage-placeholder {
+        position: relative;
+        z-index: 4;
+        max-width: 480px;
+        text-align: center;
+        padding: 28px 24px;
+        border: 1px solid #2a2a2a;
+        border-radius: 12px;
+        background: #111;
+        margin: 16px;
+      }
+      #stage-placeholder h1 {
+        font-weight: 700;
+        font-size: 26px;
+        margin: 0 0 12px;
+      }
+      #stage-placeholder p {
+        font-size: 14px;
+        line-height: 1.55;
+        opacity: 0.85;
+        margin: 0 0 8px;
+      }
+      #stage-placeholder .hint {
+        font-size: 12.5px;
+        opacity: 0.6;
+        margin: 14px 0 0;
+      }
+      .stage-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+      .stage-actions button {
+        padding: 12px 20px;
+        background: #f4f4f4;
+        color: #0a0a0a;
+        border: 0;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .stage-actions button.secondary {
+        background: #1c1c1c;
+        color: #f4f4f4;
+        border: 1px solid #444;
+      }
       #stage-badge {
         position: absolute;
         left: 12px;
@@ -167,11 +216,26 @@
   </head>
   <body>
     <main>
-      <section id="stage" aria-label="Live demo stage">
-        <div id="stage-badge">
+      <section id="stage" aria-label="Game stage">
+        <div id="stage-placeholder">
+          <h1>Marble Love</h1>
+          <p>
+            This stage runs the game. Load your own legally dumped ROM ZIPs to
+            play the real <em>Marble Madness</em> — everything stays in your
+            browser, nothing is uploaded — or run the ROM-free synthetic demo.
+          </p>
+          <div class="stage-actions">
+            <button id="stage-load-roms" type="button">Load your ROMs</button>
+            <button id="stage-run-demo" type="button" class="secondary">
+              Run ROM-free demo
+            </button>
+          </div>
+          <p class="hint">Scroll down for what this project is and the Slapstic finding.</p>
+        </div>
+        <div id="stage-badge" style="display: none">
           <strong>Marble Love</strong> — ROM-free synthetic demo (not the
-          original game). Scroll down for what this is, the Slapstic finding,
-          and how to play with your own ROMs.
+          original game). Scroll down for the project story, or load your own
+          ROMs below to play the real thing in this stage.
         </div>
       </section>
 

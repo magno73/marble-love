@@ -1258,7 +1258,20 @@ fileInput.addEventListener("change", async () => {
 // with the real game in the same stage.
 let stopActiveGame: (() => void) | undefined;
 
-if (useSyntheticDemoFrame || (import.meta.env.DEV && (forceEngineDiagnosticFrame || forceDemoFrame))) {
+// On the bare root URL the stage shows a placeholder with explicit choices
+// (load ROMs / run the synthetic demo) instead of autostarting the demo,
+// which first-time visitors read as a broken game. Any explicit URL
+// parameter (e.g. the documented ?autoLoad=0 smoke check) keeps the
+// immediate start behavior.
+const stageRunDemoBtn = document.getElementById("stage-run-demo");
+const stageLoadRomsBtn = document.getElementById("stage-load-roms");
+stageLoadRomsBtn?.addEventListener("click", () => fileInput.click());
+stageRunDemoBtn?.addEventListener("click", () => {
+  if (useSyntheticDemoFrame) void startGame();
+});
+const autoStartSyntheticDemo = useSyntheticDemoFrame && window.location.search !== "";
+
+if (autoStartSyntheticDemo || (import.meta.env.DEV && (forceEngineDiagnosticFrame || forceDemoFrame))) {
   // The synthetic demo coexists with the in-page ROM picker (the landing
   // keeps the picker section below the stage); diagnostic frames still take
   // the page for themselves.
@@ -1273,6 +1286,14 @@ async function startGame(
   stopActiveGame = undefined;
   // Drop fixed UI created by a previous run (demo replaced by ROM gameplay).
   for (const el of document.querySelectorAll("[data-marble-ui]")) el.remove();
+  // The stage placeholder gives way to whatever starts; the synthetic-demo
+  // badge only applies while the ROM-free demo is the thing on stage.
+  document.getElementById("stage-placeholder")?.remove();
+  const stageBadge = document.getElementById("stage-badge");
+  if (stageBadge !== null) {
+    if (rom === undefined && useSyntheticDemoFrame) stageBadge.style.display = "";
+    else stageBadge.remove();
+  }
   const stageEl = document.getElementById("stage");
   const app = new Application();
   await app.init({
