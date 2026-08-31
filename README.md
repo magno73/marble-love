@@ -4,17 +4,11 @@
 **[Status & parity matrix →](docs/STATUS.md)** ·
 **[The Slapstic side-channel write-up →](https://magno73.github.io/marble-love/slapstic/)**
 
-Marble Love is a readable TypeScript reimplementation of Atari's *Marble
-Madness* (1984), ported function-by-function from the 68010 disassembly and
-checked against MAME as the behavioral oracle. It is source-level code, not a
-cycle-accurate emulator.
+A function-by-function TypeScript port of *Marble Madness* (1984 arcade), not an emulator.
+Every routine was reverse-engineered from the 68010 disassembly and tested against MAME as the behavioral oracle.
+The investigation surfaced an [undocumented Slapstic/68010 prefetch side-channel](docs/findings/slapstic-prefetch-side-channel.md).
 
-The project contains a browser frontend, a pure TypeScript engine,
-command-line oracle/probe tools, and validation fixtures used to compare
-reimplemented routines against the original arcade behavior. One byte-diff
-investigation also surfaced an undocumented Slapstic/68010 prefetch side
-channel; see
-[docs/findings/slapstic-prefetch-side-channel.md](docs/findings/slapstic-prefetch-side-channel.md).
+The project includes a browser frontend, a pure TypeScript engine, command-line oracle/probe tools, and validation fixtures that compare reimplemented routines against the original arcade behavior.
 
 No ROMs or copyrighted game assets are included. To run the browser version you
 must provide your own legally obtained MAME ROM ZIPs.
